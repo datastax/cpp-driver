@@ -1,0 +1,54 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
+# cmake output
+CMakeFiles
+CMakeCache.txt
+CTestTestfile.cmake
+Makefile
+cmake_install.cmake
+cmake_uninstall.cmake
+cassandra-config-version.cmake
+cassandra-config.cmake
+cassandra-targets.cmake
+install_manifest.txt
+
+# build files
+build/
+Testing/
+demo/cql_demo
+test/unit_tests/cql_test
+
+# external deps
+ext/bin
+ext/lib
+ext/src
+ext/share
+ext/include
+ext/ssl
+ext/tmp
+
+# editor
+*.swp
+*~
+.#*
+#*
+
+# OSX
+.DS_Store
+
+# Eclipse
+.cproject
+.project
+

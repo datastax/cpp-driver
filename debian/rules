@@ -1,0 +1,73 @@
+#!/usr/bin/make -f
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+Makefile:
+	dh_testdir
+	# Add here commands to configure the package.
+	cmake -D CMAKE_INSTALL_PREFIX=/usr .
+
+build: build-stamp
+build-stamp: Makefile
+	dh_testdir
+	# Add here commands to compile the package.
+	$(MAKE) VERBOSE=1
+	touch $@
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp 
+	# Add here commands to clean up after the build process.
+	-$(MAKE) clean
+	rm -rf build 
+	dh_clean 
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k 
+	dh_installdirs
+
+	# Add here commands to install the package into debian/tmp
+	$(MAKE) DESTDIR=$(CURDIR)/debian/tmp install
+
+
+# Build architecture-independent files here.
+binary-indep: build install
+# We have nothing to do by default.
+
+# Build architecture-dependent files here.
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs 
+	dh_installdocs
+	dh_installexamples
+	dh_install --sourcedir=debian/tmp --autodest
+#	dh_installmenu
+#	dh_installdebconf	
+#	dh_installlogrotate
+#	dh_installemacsen
+#	dh_installpam
+#	dh_installmime
+#	dh_installinit
+#	dh_installcron
+#	dh_installinfo
+	dh_installman
+	dh_link
+	dh_strip
+	dh_compress
+	dh_fixperms
+#	dh_perl
+#	dh_python
+#	dh_makeshlibs
+	dh_installdeb
+	dh_shlibdeps -- -v
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install 
