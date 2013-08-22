@@ -49,6 +49,17 @@ print_rows(
     }
 }
 
+
+// This function is called asynchronously every time an event is logged
+void
+log_callback(
+    const cql::cql_short_t,
+    const std::string& message)
+{
+    std::cout << "LOG: " << message << std::endl;
+}
+
+
 int
 main(int argc,
      char**)
@@ -65,23 +76,25 @@ main(int argc,
         //
         // Also, typically the boost::asio::io_service::run will exit as soon as it's work is done, which we want to prevent
         // because it's in it's own thread.  Using boost::asio::io_service::work prevents the thread from exiting.
-        std::auto_ptr<boost::asio::io_service::work> work(new boost::asio::io_service::work(io_service));
+        boost::scoped_ptr<boost::asio::io_service::work> work(new boost::asio::io_service::work(io_service));
         boost::thread thread(boost::bind(static_cast<size_t(boost::asio::io_service::*)()>(&boost::asio::io_service::run), &io_service));
 
-		std::auto_ptr<cql::cql_builder_t> builder (cql::cql_cluster_t::builder());
+		cql::cql_builder_t builder = cql::cql_cluster_t::builder();
 
-		builder->add_contact_point("192.168.13.1");
+		builder.with_log_callback(&log_callback);
 
-	    boost::asio::ssl::context ctx(boost::asio::ssl::context::sslv23);
+		builder.add_contact_point("192.168.13.1");
+
+		boost::shared_ptr<boost::asio::ssl::context> ctx(new boost::asio::ssl::context(boost::asio::ssl::context::sslv23));
 		// decide which client factory we want, SSL or non-SSL.  This is a hack, if you pass any commandline arg to the
         // binary it will use the SSL factory, non-SSL by default
 		if (argc > 1) {
-			builder->with_ssl(&ctx);
-        }
+			builder.with_ssl(ctx);
+		}
 
-		std::auto_ptr<cql::cql_cluster_t> cluster (builder->build());
+		boost::shared_ptr<cql::cql_cluster_t> cluster (builder.build());
 
-		std::auto_ptr<cql::cql_session_t> session (cluster->connect(io_service));
+		boost::shared_ptr<cql::cql_session_t> session (cluster->connect(io_service));
 
 		if(session.get()!=0){
 			

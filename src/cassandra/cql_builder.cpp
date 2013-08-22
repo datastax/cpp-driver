@@ -3,7 +3,7 @@
 
 namespace cql {
 
-	cql_cluster_t* cql_builder_t::build()
+	boost::shared_ptr<cql_cluster_t> cql_builder_t::build()
 	{
 		return cql_cluster_t::built_from(*this);
 	}

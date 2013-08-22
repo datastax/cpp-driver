@@ -31,17 +31,17 @@
 #include "cassandra/cql_builder.hpp"
 
 
-cql::cql_cluster_t* cql::cql_cluster_t::built_from(const cql_initializer_t& initializer)
+boost::shared_ptr<cql::cql_cluster_t> cql::cql_cluster_t::built_from(const cql_initializer_t& initializer)
 {
-	return new cql::cql_cluster_t(initializer.get_contact_points(), *initializer.get_configuration());
+	return boost::shared_ptr<cql::cql_cluster_t>(new cql::cql_cluster_t(initializer.get_contact_points(), initializer.get_configuration()));
 }
 
-cql::cql_builder_t* cql::cql_cluster_t::builder()
+cql::cql_builder_t cql::cql_cluster_t::builder()
 {
-	return new cql::cql_builder_t();
+	return cql::cql_builder_t();
 }
 
-cql::cql_session_t* cql::cql_cluster_t::connect(boost::asio::io_service& io_service)
+boost::shared_ptr<cql::cql_session_t> cql::cql_cluster_t::connect(boost::asio::io_service& io_service)
 {
 	return connect(io_service, "");
 }
@@ -100,41 +100,31 @@ private:
     cql::cql_client_t::cql_log_callback_t _log_callback;
 };
 
-
-
-// This function is called asynchronously every time an event is logged
-void
-log_callback(
-    const cql::cql_short_t,
-    const std::string& message)
-{
-    std::cout << "LOG: " << message << std::endl;
-}
-
-
-cql::cql_session_t* cql::cql_cluster_t::connect(boost::asio::io_service& io_service, const std::string& keyspace)
+boost::shared_ptr<cql::cql_session_t> cql::cql_cluster_t::connect(boost::asio::io_service& io_service, const std::string& keyspace)
 {
 		// decide which client factory we want, SSL or non-SSL.  This is a hack, if you pass any commandline arg to the
         // binary it will use the SSL factory, non-SSL by default
 
         cql::cql_session_t::cql_client_callback_t client_factory;
-		const boost::asio::ssl::context* ssl_context = _configuration.get_protocol_options()->get_ssl_context();
+		boost::asio::ssl::context* ssl_context = _configuration->get_protocol_options().get_ssl_context().get();
+		cql::cql_client_t::cql_log_callback_t log_callback = _configuration->get_client_options().get_log_callback();
+
 		if (ssl_context!=0) {
-            client_factory = client_ssl_functor_t(io_service, const_cast<boost::asio::ssl::context&>(*ssl_context), &log_callback);
+            client_factory = client_ssl_functor_t(io_service, const_cast<boost::asio::ssl::context&>(*ssl_context), log_callback);
         }
         else {
-            client_factory = client_functor_t(io_service, &log_callback);
+            client_factory = client_functor_t(io_service, log_callback);
         }
 
         // Construct the pool
-        std::auto_ptr<cql::cql_session_t> session(cql::cql_cluster_t::create_client_pool_t(client_factory, NULL, NULL));
+        boost::shared_ptr<cql::cql_session_t> session(cql::cql_cluster_t::create_client_pool_t(client_factory, NULL, NULL));
 
-		int port = _configuration.get_protocol_options()->get_port();
+		int port = _configuration->get_protocol_options().get_port();
 
 		bool wasError = false;
 
         // Add a client to the pool, this operation returns a future.
-		std::list<std::string> contact_points =_configuration.get_protocol_options()->get_contact_points();
+		std::list<std::string> contact_points =_configuration->get_protocol_options().get_contact_points();
 		for(std::list<std::string>::iterator it = contact_points.begin();it!=contact_points.end();++it)
 		{
 			boost::shared_future<cql::cql_future_connection_t> connect_future = session->add_client(*it, port);
@@ -151,7 +141,7 @@ cql::cql_session_t* cql::cql_cluster_t::connect(boost::asio::io_service& io_serv
         // Check whether or not the connection was successful.
         std::cout << "connect successfull? ";
         if (!wasError) {
-			return session.release();
+			return session;
 		}
 		else{
 			return 0;

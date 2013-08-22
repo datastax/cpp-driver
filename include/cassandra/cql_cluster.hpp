@@ -19,6 +19,7 @@
 #ifndef CQL_CLIENT_POOL_FACTORY_H_
 #define CQL_CLIENT_POOL_FACTORY_H_
 
+#include <boost/shared_ptr.hpp>
 #include "cassandra/cql_session.hpp"
 #include "cassandra/cql_builder.hpp"
 
@@ -27,16 +28,16 @@ namespace cql {
     class cql_cluster_t {
 	private:
 		const std::list<std::string> _contact_points;
-		const cql_configuration_t& _configuration;
-		cql_cluster_t(const std::list<std::string>& contact_points, const cql_configuration_t& configuration)
-			:_contact_points(contact_points),_configuration(configuration) {}
+		boost::shared_ptr<cql_configuration_t> _configuration;
+		cql_cluster_t(const std::list<std::string>& contact_points, boost::shared_ptr<cql_configuration_t> configuration)
+			:_contact_points(contact_points), _configuration(configuration){}
 
 	public:
-		static cql_cluster_t* built_from(const cql_initializer_t& initializer);
-		static cql_builder_t* builder();
+		static boost::shared_ptr<cql_cluster_t> built_from(const cql_initializer_t& initializer);
+		static cql_builder_t builder();
 
-		cql_session_t* connect(boost::asio::io_service& io_service);
-		cql_session_t* connect(boost::asio::io_service& io_service, const std::string& keyspace);
+		boost::shared_ptr<cql_session_t> connect(boost::asio::io_service& io_service);
+		boost::shared_ptr<cql_session_t> connect(boost::asio::io_service& io_service, const std::string& keyspace);
 		void shutdown(int timeout_ms=-1);
 
 		~cql_cluster_t()
