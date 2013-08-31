@@ -16,8 +16,8 @@
   limitations under the License.
 */
 
-#ifndef CQL_CLIENT_POOL_H_
-#define CQL_CLIENT_POOL_H_
+#ifndef CQL_SESSION_H_
+#define CQL_SESSION_H_
 
 #include <list>
 #include <map>
@@ -48,28 +48,8 @@ namespace cql {
         typedef boost::function<void(cql_session_t*, cql::cql_client_t&, const cql::cql_error_t&)> cql_connection_errback_t;
         typedef boost::function<void(const cql::cql_short_t, const std::string&)>                      cql_log_callback_t;
 
-        virtual
+		virtual
         ~cql_session_t(){};
-
-        virtual boost::shared_future<cql::cql_future_connection_t>
-        add_client(
-            const std::string& server,
-            unsigned int       port) = 0;
-
-        virtual boost::shared_future<cql::cql_future_connection_t>
-        add_client(
-            const std::string&                      server,
-            unsigned int                            port,
-            cql::cql_client_t::cql_event_callback_t event_callback,
-            const std::list<std::string>&           events) = 0;
-
-        virtual boost::shared_future<cql::cql_future_connection_t>
-        add_client(
-            const std::string&                        server,
-            unsigned int                              port,
-            cql::cql_client_t::cql_event_callback_t   event_callback,
-            const std::list<std::string>&             events,
-            const std::map<std::string, std::string>& credentials) = 0;
 
         virtual cql::cql_stream_id_t
         query(
@@ -121,4 +101,4 @@ namespace cql {
 
 } // namespace cql
 
-#endif // CQL_CLIENT_POOL_H_
+#endif // CQL_SESSION_H_

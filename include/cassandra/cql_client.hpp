@@ -47,6 +47,12 @@ namespace cql {
 
     public:
 
+		bool is_healthy(){return true;}
+		bool is_busy(int){return false;}
+		bool is_free(int){return false;}
+		int allocate_stream_id(){return 10;}
+		long get_id(){return 0;}
+
         typedef boost::function<void(const cql::cql_short_t, const std::string&)> cql_log_callback_t;
 
         typedef boost::function<void(cql_client_t&)> cql_connection_callback_t;

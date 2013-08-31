@@ -16,8 +16,8 @@
   limitations under the License.
 */
 
-#ifndef CQL_CLIENT_POOL_IMPL_H_
-#define CQL_CLIENT_POOL_IMPL_H_
+#ifndef CQL_SESSION_IMPL_H_
+#define CQL_SESSION_IMPL_H_
 
 #include <istream>
 #include <list>
@@ -28,10 +28,14 @@
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/ptr_container/ptr_deque.hpp>
-
+#include <boost/thread/mutex.hpp>
 #include "cassandra/cql.hpp"
 #include "cassandra/cql_client.hpp"
 #include "cassandra/cql_session.hpp"
+#include "cassandra/cql_builder.hpp"
+#include "cassandra/cql_cluster.hpp"
+#include "cassandra/cql_load_balancing_policy.hpp"
+
 
 namespace cql {
 
@@ -41,32 +45,52 @@ namespace cql {
     class cql_execute_t;
     struct cql_error_t;
 
-    class cql_client_pool_impl_t :
+    class cql_session_impl_t :
         public cql_session_t,
         boost::noncopyable
     {
 
-    public:
-        cql_client_pool_impl_t(
+	private:
+		boost::shared_ptr<cql_configuration_t> _configuration;
+		boost::mutex _connection_pool_mtx;
+		std::map<std::string, std::map<long,boost::shared_ptr<cql_client_t> > > _trashcan;
+		std::map<std::string, std::map<long,boost::shared_ptr<cql_client_t> > > _connection_pool;
+		std::map<std::string, long > _allocated_connections;
+
+	public:
+
+        cql_session_impl_t(
+            cql::cql_session_t::cql_client_callback_t  client_callback,
+            boost::shared_ptr<cql_configuration_t> configuration);
+
+		void init();
+
+		boost::shared_ptr<cql_client_t> connect(cql::cql_query_plan_t& hostIter, int& streamId, std::list<std::string>& triedHosts);
+		boost::shared_ptr<cql_client_t> cql_session_impl_t::allocate_connection(const std::string& address, cql_host_distance_t distance);
+		void trashcan_put(boost::shared_ptr<cql_client_t> connection);
+		boost::shared_ptr<cql_client_t> trashcan_recycle(const std::string& address);
+		void free_connection(boost::shared_ptr<cql_client_t> connection);
+
+		virtual ~cql_session_impl_t(){};
+
+	private:
+        cql_session_impl_t(
             cql::cql_session_t::cql_client_callback_t  client_callback,
             cql::cql_session_t::cql_ready_callback_t   ready_callback,
             cql::cql_session_t::cql_defunct_callback_t defunct_callback);
 
-        cql_client_pool_impl_t(
+        cql_session_impl_t(
             cql::cql_session_t::cql_client_callback_t  client_callback,
             cql::cql_session_t::cql_ready_callback_t   ready_callback,
             cql::cql_session_t::cql_defunct_callback_t defunct_callback,
             cql::cql_session_t::cql_log_callback_t     log_callback);
 
-        cql_client_pool_impl_t(
+        cql_session_impl_t(
             cql::cql_session_t::cql_client_callback_t  client_callback,
             cql::cql_session_t::cql_ready_callback_t   ready_callback,
             cql::cql_session_t::cql_defunct_callback_t defunct_callback,
             cql::cql_session_t::cql_log_callback_t     log_callback,
             size_t                                         reconnect_limit);
-
-        virtual
-        ~cql_client_pool_impl_t(){};
 
         boost::shared_future<cql::cql_future_connection_t>
         add_client(
@@ -194,4 +218,4 @@ namespace cql {
 
 } // namespace cql
 
-#endif // CQL_CLIENT_POOL_IMPL_H_
+#endif // CQL_SESSION_IMPL_H_
