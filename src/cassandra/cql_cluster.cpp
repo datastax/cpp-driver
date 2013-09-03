@@ -30,6 +30,21 @@
 #include "cassandra/cql_cluster.hpp"
 #include "cassandra/cql_builder.hpp"
 
+#if defined(cql_EXPORTS)
+
+// TODO: define EXPORT_ATTRIBUTE macro
+// that allows to export import symbols on
+// various platforms, WE MUST AT LEAST
+// support Visual C++, CLang and GCC (unfortunately
+// every of these compilers have diffenerent keywords to
+// export/import classes).
+
+__declspec(dllexport) void export_test() {
+	return;
+}
+
+#endif
+
 namespace cql
 {
 

@@ -1,8 +1,8 @@
 #include <boost/test/unit_test.hpp>
-#include "libcql/cql.hpp"
-#include "libcql/cql_error.hpp"
-#include "libcql/internal/cql_defines.hpp"
-#include "libcql/internal/cql_message_ready_impl.hpp"
+#include "cassandra/cql.hpp"
+#include "cassandra/cql_error.hpp"
+#include "cassandra/internal/cql_defines.hpp"
+#include "cassandra/internal/cql_message_ready_impl.hpp"
 
 BOOST_AUTO_TEST_SUITE(cql_message_ready)
 

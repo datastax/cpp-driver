@@ -1,9 +1,9 @@
 #include <boost/test/unit_test.hpp>
-#include "libcql/cql.hpp"
-#include "libcql/cql_error.hpp"
-#include "libcql/internal/cql_util.hpp"
-#include "libcql/internal/cql_defines.hpp"
-#include "../src/libcql/cql_serialization.cpp"
+#include "cassandra/cql.hpp"
+#include "cassandra/cql_error.hpp"
+#include "cassandra/internal/cql_util.hpp"
+#include "cassandra/internal/cql_defines.hpp"
+#include "../src/cassandra/cql_serialization.cpp"
 
 BOOST_AUTO_TEST_SUITE(serialization)
 

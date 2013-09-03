@@ -1,3 +1,2 @@
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE libcql
+#define BOOST_TEST_MODULE cassandra
 #include <boost/test/included/unit_test.hpp>

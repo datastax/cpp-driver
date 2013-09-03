@@ -1,13 +1,13 @@
 #include <boost/test/unit_test.hpp>
 #include <string.h>
 
-#include "libcql/cql.hpp"
-#include "libcql/cql_error.hpp"
-#include "libcql/cql_list.hpp"
-#include "libcql/cql_set.hpp"
-#include "libcql/cql_map.hpp"
-#include "libcql/internal/cql_defines.hpp"
-#include "libcql/internal/cql_message_result_impl.hpp"
+#include "cassandra/cql.hpp"
+#include "cassandra/cql_error.hpp"
+#include "cassandra/cql_list.hpp"
+#include "cassandra/cql_set.hpp"
+#include "cassandra/cql_map.hpp"
+#include "cassandra/internal/cql_defines.hpp"
+#include "cassandra/internal/cql_message_result_impl.hpp"
 
 BOOST_AUTO_TEST_SUITE(cql_message_result)
 
