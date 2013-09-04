@@ -20,8 +20,8 @@ endif()
 
 target_link_libraries(${TEST} ${PROJECT_LIB_NAME_STATIC} ${LIBS} ${PLATFORM_DEPENDENT_LIBS})
 
-MESSAGE("boost.test link: ${PROJECT_LIB_NAME_STATIC} ${LIBS}")
-MESSAGE("boost.test incl: ${INCLUDES}")
+MESSAGE(STATUS "boost.test link: ${PROJECT_LIB_NAME_STATIC} ${LIBS}")
+MESSAGE(STATUS "boost.test incl: ${INCLUDES}")
 
 set_property(
   TARGET ${TEST}

@@ -62,10 +62,10 @@ set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
 
 #!!!!
-message("info include_directories: ${INCLUDES}")
+message(STATUS "info include_directories: ${INCLUDES}")
 
 #!!!!!!!
-message("info target_link_libraries: ${LIBS}")
+message(STATUS "info target_link_libraries: ${LIBS}")
 
 # OS specific compiler options
 set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic")
@@ -75,15 +75,16 @@ set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic")
 # static and shared version of driver
 add_definitions(-DBOOST_ALL_NO_LIB )
 
+set(MULTICORE_CORES_NUMBER "3" CACHE STRING "Number of cores (for multicore compilation)")
 option(MULTICORE_COMPILATION "Enable multicore compilation" OFF)
 
 if(MULTICORE_COMPILATION)
     # MULTICORE BUILD
     # by default we use 3 cores
     if(MSVC)
-        add_definitions(/MP3)
+        add_definitions("/MP${MULTICORE_CORES_NUMBER}")
     else()
-        add_definitions(-j3)
+        add_definitions("-j${MULTICORE_CORES_NUMBER}")
     endif()
 endif()
 
@@ -108,7 +109,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-message("info CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
+message(STATUS "info CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
 
 include_directories(${INCLUDES})
 
