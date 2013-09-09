@@ -12,7 +12,7 @@ namespace CCMBridge {
 		const std::string& cassandara_version() const;
 
 		const std::string& ssh_host() const;
-		int ssh_port() const;
+		short ssh_port() const;
 		const std::string& ssh_username() const;
 		const std::string& ssh_password() const;
 
@@ -46,7 +46,7 @@ namespace CCMBridge {
 		std::string _ip_prefix;
 		std::string _cassandra_version;
 		std::string _ssh_host;
-		int _ssh_port;
+		short _ssh_port;
 		std::string _ssh_user;
 		std::string _ssh_pass;
 		bool _use_buffering;

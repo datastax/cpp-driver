@@ -9,6 +9,7 @@
 #include <boost/log/sources/record_ostream.hpp>
 
 #include "configuration.hpp"
+#include "ccm_bridge.hpp"
 
 using namespace std;
 using namespace CCMBridge;
@@ -19,13 +20,11 @@ namespace keywords = boost::log::keywords;
 
 int main() { 
 	//boost::log::add_file_log("log.txt");
-
+	{
 	const Configuration& config = get_configuration();
 
-	std::cout << "ssh host: " << config.ssh_host() << std::endl;
-	std::cout << "ssh port: " << config.ssh_port() << std::endl;
-	std::cout << "ssh user: " << config.ssh_username() << std::endl;
-	std::cout << "ssh pass: " << config.ssh_password() << std::endl;
+	::CCMBridge::CCMBridge b(config);
+	}
 
 	system("pause >nul");
 }

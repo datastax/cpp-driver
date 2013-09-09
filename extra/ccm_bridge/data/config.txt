@@ -7,10 +7,12 @@
 IP_PREFIX=192.168.13.
 CASSANDRA_VERSION=1.2.5
 
-SSH_HOST=192.168.13.1
+# Addresses MUST be in IP form
+
+SSH_HOST=54.224.125.58
 SSH_PORT=22
-SSH_USERNAME=user
-SSH_PASSWORD=password
+SSH_USERNAME=ubuntu
+SSH_PASSWORD=secred
 
 #
 # Use NO or YES for binary options

@@ -35,7 +35,7 @@ namespace CCMBridge {
 		return _ssh_host;
 	}
 
-	int Configuration::ssh_port() const{
+	short Configuration::ssh_port() const{
 		return _ssh_port;
 	}
 
@@ -142,7 +142,7 @@ namespace CCMBridge {
 		}
 		else if(key == "ssh_port") {
 			try {
-				_ssh_port = boost::lexical_cast<int>(value);
+				_ssh_port = boost::lexical_cast<short>(value);
 			}
 			catch(boost::bad_lexical_cast&) {
 				BOOST_LOG_TRIVIAL(error)
