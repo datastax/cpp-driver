@@ -12,8 +12,13 @@ set(LIBRARIES "")
 # -------------------------------------------------------------
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_STATIC_RUNTIME OFF)
+set(Boost_USE_MULTITHREADED ON)
 
-find_package(Boost 1.54.0 COMPONENTS log REQUIRED)
+# needed by boost to link dynamically
+add_definitions(-DBOOST_ALL_DYN_LINK)
+
+# boost log depends on boost thread
+find_package(Boost 1.54.0 COMPONENTS thread log REQUIRED)
 
 set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
 set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
@@ -55,8 +60,10 @@ endif()
 # -------------------------------------------------------------
 
 # Add project include directory to INCLUDES
-file(GLOB INC_FILES ${PROJECT_SOURCE_DIR}/include/*.hpp)
-set(INCLUDES ${INCLUDES} ${INC_FILES})
+# Group include files into INC_FILES
+set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
+file(GLOB INC_FILES ${PROJECT_INCLUDE_DIR}/*.hpp)
+set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
 
 # Get project files used to create executable
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp )
