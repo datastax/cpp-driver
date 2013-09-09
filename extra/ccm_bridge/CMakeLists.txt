@@ -18,7 +18,7 @@ set(Boost_USE_MULTITHREADED ON)
 add_definitions(-DBOOST_ALL_DYN_LINK)
 
 # boost log depends on boost thread
-find_package(Boost 1.54.0 COMPONENTS thread log REQUIRED)
+find_package(Boost 1.54.0 COMPONENTS system filesystem chrono date_time thread log_setup log REQUIRED)
 
 set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
 set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
@@ -68,9 +68,12 @@ set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
 # Get project files used to create executable
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp )
 
+# Get project data files (currently only 1 file)
+set(DATA_FILES ${PROJECT_SOURCE_DIR}/data/config.txt)
+
 # SPECIFY TARGET
 # Change to STATIC library
-add_executable(CCMBridge ${SRC_FILES} ${INC_FILES})
+add_executable(CCMBridge ${SRC_FILES} ${INC_FILES} ${DATA_FILES})
 
 # Set project includes and lib directories
 target_include_directories(CCMBridge PUBLIC ${INCLUDES})
@@ -80,3 +83,6 @@ target_link_libraries(CCMBridge ${LIBRARIES})
 # neat folder structure in Visual Studio...
 source_group("Source Files" FILES ${SRC_FILES})
 source_group("Header Files" FILES ${INC_FILES})
+
+# Copy data file to output directory
+configure_file(${DATA_FILES} ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)

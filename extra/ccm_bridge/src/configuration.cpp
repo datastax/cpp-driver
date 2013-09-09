@@ -65,14 +65,25 @@ namespace CCMBridge {
 		string line;
 		ifstream settings_file(file_name, ios_base::in);
 
+		if(!settings_file) {
+			BOOST_LOG_TRIVIAL(error) 
+				<< "Cannot open configuration file: " << file_name;
+			return settings;
+		}
+
 		while(getline(settings_file, line)) {
-			if(is_comment(line))
+			if(is_comment(line) || is_empty(line))
 				continue;
 
 			add_setting(settings, line);
 		}
 
 		return settings;
+	}
+
+	bool Configuration::is_empty(string line) {
+		boost::trim(line);
+		return line.empty();
 	}
 
 	bool Configuration::is_comment(string line) {
@@ -95,7 +106,7 @@ namespace CCMBridge {
 				settings[key] = value;
 				BOOST_LOG_TRIVIAL(info) 
 					<< "Configuration key: " << key
-					<< "equals value: " << value;
+					<< " equals value: " << value;
 				return;
 			}
 		}
@@ -123,7 +134,7 @@ namespace CCMBridge {
 	}
 
 	void Configuration::apply_setting(const string& key, const string& value) {
-		if(key == "ssh_user") {
+		if(key == "ssh_username") {
 			_ssh_user = value;
 		}
 		else if(key == "ssh_password") {

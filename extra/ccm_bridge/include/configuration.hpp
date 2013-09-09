@@ -28,6 +28,7 @@ namespace CCMBridge {
 		void read_configuration(const std::string& file_name);		 
 		
 		bool is_comment(std::string line);
+		bool is_empty(std::string line);
 
 		typedef
 			std::map<std::string, std::string> 
