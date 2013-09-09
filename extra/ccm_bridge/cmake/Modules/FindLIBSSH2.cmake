@@ -20,17 +20,33 @@ find_path(LIBSSH2_INCLUDE_DIRS
 			PATH_SUFFIXES include
 			DOC "LIBSSH include directory")
 			
-set(SSH2_LIB_SUFFIX)
-
-if((CMAKE_BUILD_TYPE MATCHES DEBUG) AND MSVC)
-	set(SSH2_LIB_SUFFIX "d")
-endif()
-			
-find_library(LIBSSH2_LIBRARIES
-			NAMES "libssh2${SSH2_LIB_SUFFIX}" "ssh2${SSH2_LIB_SUFFIX}"
+if(WIN32 AND MSVC)
+	# In Visual Studio we must link to proper version of library
+	find_library(LIBSSH2_LIBRARY_RELEASE
+			NAMES libssh2
 			PATHS ENV LIBSSH2_ROOT
 			PATH_SUFFIXES lib
 			DOC "LIBSSH library directory")
+	
+	find_library(LIBSSH2_LIBRARY_DEBUG
+			NAMES libssh2d
+			PATHS ENV LIBSSH2_ROOT
+			PATH_SUFFIXES lib
+			DOC "LIBSSH library directory")
+	
+	# Select debug or release version of library
+	include(SelectLibraryConfigurations)
+    select_library_configurations(LIBSSH2)
+
+	set(LIBSSH2_LIBRARIES ${LIBSSH2_LIBRARY})
+else()
+	find_library(LIBSSH2_LIBRARIES
+			NAMES libssh2 ssh2
+			PATHS ENV LIBSSH2_ROOT
+			PATH_SUFFIXES lib
+			DOC "LIBSSH library directory")
+endif()
+
 			
 find_package_handle_standard_args(LIBSSH2 DEFAULT_MSG LIBSSH2_LIBRARIES LIBSSH2_INCLUDE_DIRS)
 mark_as_advanced(LIBSSH2_INCLUDE_DIRS LIBSSH2_LIBRARIES)

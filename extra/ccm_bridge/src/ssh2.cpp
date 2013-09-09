@@ -53,7 +53,7 @@ static void kbd_callback(const char *name, int name_len,
 } /* kbd_callback */
 
 
-int main(int argc, char *argv[])
+int main22(int argc, char *argv[])
 {
     unsigned long hostaddr;
     int rc, sock, i, auth_pw = 0;

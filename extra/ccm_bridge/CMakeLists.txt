@@ -5,14 +5,71 @@ project(CCMBridge C CXX)
 # Allow access to custom FindLIBSSH2 module
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
+set(INCLUDES "")
+set(LIBRARIES "")
+
+# Find boost log library 
+# -------------------------------------------------------------
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_STATIC_RUNTIME OFF)
+
+find_package(Boost 1.54.0 COMPONENTS log REQUIRED)
+
+set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
+set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
+
+# -------------------------------------------------------------
+
+# Find libSSH2 library
+# -------------------------------------------------------------
 find_package(LIBSSH2 REQUIRED)
 
-message(STATUS ${LIBSSH2_FOUND})
-message(STATUS ${LIBSSH2_INCLUDE_DIRS})
-message(STATUS ${LIBSSH2_LIBRARIES})
-message(STATUS "lib path:: " ${CMAKE_LIBRARY_PATH})
+set(LIBRARIES ${LIBRARIES} ${LIBSSH2_LIBRARIES})
+set(INCLUDES ${INCLUDES} ${LIBSSH2_INCLUDE_DIRS})
 
-include_directories(${LIBSSH2_INCLUDE_DIRS})
-link_libraries(${LIBSSH2_LIBRARIES})
+# -------------------------------------------------------------
 
-add_executable(testSsh src/ssh2.c)
+# Find OpenSSL library
+# -------------------------------------------------------------
+find_package(OpenSSL REQUIRED)
+
+set(LIBRARIES ${LIBRARIES} ${OPENSSL_LIBRARIES})
+set(INCLUDES ${INCLUDES} ${OPENSSL_INCLUDE_DIR})
+	
+# -------------------------------------------------------------
+
+# Find ZLIB library
+# -------------------------------------------------------------
+find_package(ZLIB REQUIRED)
+
+set(LIBRARIES ${LIBRARIES} ${ZLIB_LIBRARIES})
+set(INCLUDES ${INCLUDES} ${ZLIB_INCLUDE_DIR})
+# -------------------------------------------------------------
+
+# On Windows $#%#%$# box we must link to socket library!
+# -------------------------------------------------------------
+if(WIN32)
+	set(LIBRARIES ${LIBRARIES} wsock32 ws2_32)
+endif()
+
+# -------------------------------------------------------------
+
+# Add project include directory to INCLUDES
+file(GLOB INC_FILES ${PROJECT_SOURCE_DIR}/include/*.hpp)
+set(INCLUDES ${INCLUDES} ${INC_FILES})
+
+# Get project files used to create executable
+file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp )
+
+# SPECIFY TARGET
+# Change to STATIC library
+add_executable(CCMBridge ${SRC_FILES} ${INC_FILES})
+
+# Set project includes and lib directories
+target_include_directories(CCMBridge PUBLIC ${INCLUDES})
+target_link_libraries(CCMBridge ${LIBRARIES})
+
+# Create source groups - this is only needed to create
+# neat folder structure in Visual Studio...
+source_group("Source Files" FILES ${SRC_FILES})
+source_group("Header Files" FILES ${INC_FILES})
