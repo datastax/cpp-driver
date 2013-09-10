@@ -37,6 +37,7 @@ namespace Cassandra {
 		static boost::shared_ptr<CCMBridge> create(
 			const Configuration& settings,
 			const std::string& name);
+
 		static boost::shared_ptr<CCMBridge> create(
 			const Configuration& settings,
 			const std::string& name,

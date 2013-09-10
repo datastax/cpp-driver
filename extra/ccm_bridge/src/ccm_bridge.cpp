@@ -261,7 +261,7 @@ namespace Cassandra {
 				execute_ccm_and_print("remove test");
 				execute_command("killall java");
 
-				throw CCMBridgeException("not implemented ReusableCCMCluster.Reset();");
+				// throw CCMBridgeException("not implemented ReusableCCMCluster.Reset();");
 			}
 		}
 		
