@@ -6,6 +6,16 @@
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
 
+#ifdef WIN32
+#       include <winsock2.h>
+#elif UNIX
+#       include <sys/socket.h>
+#       include <netinet/in.h>
+#       include <arpa/inet.h>
+#else
+#       error "Unsupported system"
+#endif
+
 #include "ccm_bridge.hpp"
 #include "safe_advance.hpp"
 
@@ -139,7 +149,7 @@ namespace Cassandra {
 #ifdef WIN32
 		closesocket(_socket);
 #else
-		close(socket);
+		close(_socket);
 #endif
 		_socket = -1;
 	}
@@ -285,7 +295,7 @@ namespace Cassandra {
 	}
 
 	void CCMBridge::start(int node) {
-		execute_ccm_command(str(boost::format("node%1% start") % node));
+		execute_ccm_command(boost::str(boost::format("node%1% start") % node));
 	}
 
 	void CCMBridge::stop() {
@@ -293,7 +303,7 @@ namespace Cassandra {
 	}
 
 	void CCMBridge::stop(int node) {
-		execute_ccm_command(str(boost::format("node%1% stop") % node));
+		execute_ccm_command(boost::str(boost::format("node%1% stop") % node));
 	}
 
 	void CCMBridge::kill() {
@@ -301,7 +311,7 @@ namespace Cassandra {
 	}
 
 	void CCMBridge::kill(int node) {
-		execute_ccm_command(str(boost::format("node%1% stop --not-gently") % node));
+		execute_ccm_command(boost::str(boost::format("node%1% stop --not-gently") % node));
 	}
 
 	void CCMBridge::remove() {
@@ -310,13 +320,13 @@ namespace Cassandra {
 	}
 
 	void CCMBridge::ring(int node) {
-		execute_ccm_command(str(boost::format("node%1% ring") % node));
+		execute_ccm_command(boost::str(boost::format("node%1% ring") % node));
 	}
 
 	void CCMBridge::bootstrap(int node, const std::string& dc) {
 
 	   if (dc.empty()) {
-		   execute_ccm_command(str(
+		   execute_ccm_command(boost::str(
 			   boost::format("add node%1% -i %2%%3% -j %4% -b") 
 					% node
 					% _ip_prefix
@@ -324,7 +334,7 @@ namespace Cassandra {
 					% (7000 + 100 * node)));
 	   }
        else {
-		   execute_ccm_command(str(
+		   execute_ccm_command(boost::str(
 			   boost::format("add node%1% -i %2%%3% -j %4% -b -d %5%") 
 					% node
 					% _ip_prefix
@@ -338,7 +348,7 @@ namespace Cassandra {
 	}
 
 	void CCMBridge::decommission(int node) {
-		execute_ccm_command(str(boost::format("node%1% decommission") % node));
+		execute_ccm_command(boost::str(boost::format("node%1% decommission") % node));
 	}
 
 	boost::shared_ptr<CCMBridge> CCMBridge::create(
@@ -347,7 +357,7 @@ namespace Cassandra {
 	{
 		boost::shared_ptr<CCMBridge> bridge(new CCMBridge(settings));
 
-		bridge->execute_ccm_command(str(
+		bridge->execute_ccm_command(boost::str(
 			boost::format("Create %1% -b -i %2% %3%")
 				% name
 				% settings.ip_prefix()
@@ -360,11 +370,11 @@ namespace Cassandra {
 		const Configuration& settings,
 		const std::string& name,
 		unsigned nodes_count,
-		bool use_already_existing = false)
+		bool use_already_existing)
 	{
 		boost::shared_ptr<CCMBridge> bridge(new CCMBridge(settings));
 
-		bridge->execute_ccm_command(str(
+		bridge->execute_ccm_command(boost::str(
 			boost::format("Create %1% -n %2% -s -i %3% -b %4%")
 				% name
 				% nodes_count
@@ -379,11 +389,11 @@ namespace Cassandra {
 		const std::string& name,
 		unsigned nodes_count_dc1,
 		unsigned nodes_count_dc2,
-		bool use_already_existing = false)
+		bool use_already_existing)
 	{
 		boost::shared_ptr<CCMBridge> bridge(new CCMBridge(settings));
 
-		bridge->execute_ccm_command(str(
+		bridge->execute_ccm_command(boost::str(
 			boost::format("Create %1% -n %2%:%3% -s -i %4% -b %5%")
 				% name
 				% nodes_count_dc1

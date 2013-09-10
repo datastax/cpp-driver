@@ -63,7 +63,7 @@ namespace Cassandra {
 		KeyValuePairs settings;
 
 		string line;
-		ifstream settings_file(file_name, ios_base::in);
+		ifstream settings_file(file_name.c_str(), ios_base::in);
 
 		if(!settings_file) {
 			BOOST_LOG_TRIVIAL(error) 

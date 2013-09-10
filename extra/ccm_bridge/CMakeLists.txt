@@ -51,10 +51,16 @@ set(LIBRARIES ${LIBRARIES} ${ZLIB_LIBRARIES})
 set(INCLUDES ${INCLUDES} ${ZLIB_INCLUDE_DIR})
 # -------------------------------------------------------------
 
+# Set platform conditional compilation flags.
+# We define WIN32 on windows, and UNIX on Linux/OS X/Unix
+#
 # On Windows $#%#%$# box we must link to socket library!
 # -------------------------------------------------------------
 if(WIN32)
 	set(LIBRARIES ${LIBRARIES} wsock32 ws2_32)
+        add_definitions(-DWIN32)
+elseif(UNIX)
+        add_definitions(-DUNIX)
 endif()
 
 # -------------------------------------------------------------

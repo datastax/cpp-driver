@@ -97,7 +97,7 @@ namespace Cassandra {
 		CCMBridgeException(const char* message)
 			: _message(message) { }
 
-		virtual const char* what() const { 
+		virtual const char* what() const throw() { 
 			return _message;
 		}
 	private:

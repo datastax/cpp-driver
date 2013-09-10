@@ -1,4 +1,5 @@
 #include <cctype>
+#include <cstring>
 #include "esc_seq_remover.hpp"
 
 using namespace std;
