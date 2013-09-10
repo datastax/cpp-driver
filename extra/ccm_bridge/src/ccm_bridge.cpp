@@ -340,4 +340,57 @@ namespace Cassandra {
 	void CCMBridge::decommission(int node) {
 		execute_ccm_command(str(boost::format("node%1% decommission") % node));
 	}
+
+	boost::shared_ptr<CCMBridge> CCMBridge::create(
+		const Configuration& settings,
+		const std::string& name)
+	{
+		boost::shared_ptr<CCMBridge> bridge(new CCMBridge(settings));
+
+		bridge->execute_ccm_command(str(
+			boost::format("Create %1% -b -i %2% %3%")
+				% name
+				% settings.ip_prefix()
+				% settings.cassandara_version()));
+		
+		return bridge;
+	}
+
+	boost::shared_ptr<CCMBridge> CCMBridge::create(
+		const Configuration& settings,
+		const std::string& name,
+		unsigned nodes_count,
+		bool use_already_existing = false)
+	{
+		boost::shared_ptr<CCMBridge> bridge(new CCMBridge(settings));
+
+		bridge->execute_ccm_command(str(
+			boost::format("Create %1% -n %2% -s -i %3% -b %4%")
+				% name
+				% nodes_count
+				% settings.ip_prefix()
+				% settings.cassandara_version()), use_already_existing);
+		
+		return bridge;
+	}
+
+	boost::shared_ptr<CCMBridge> CCMBridge::create(
+		const Configuration& settings,
+		const std::string& name,
+		unsigned nodes_count_dc1,
+		unsigned nodes_count_dc2,
+		bool use_already_existing = false)
+	{
+		boost::shared_ptr<CCMBridge> bridge(new CCMBridge(settings));
+
+		bridge->execute_ccm_command(str(
+			boost::format("Create %1% -n %2%:%3% -s -i %4% -b %5%")
+				% name
+				% nodes_count_dc1
+				% nodes_count_dc2
+				% settings.ip_prefix()
+				% settings.cassandara_version()), use_already_existing);
+		
+		return bridge;
+	}
 }

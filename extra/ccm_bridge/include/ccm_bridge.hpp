@@ -4,6 +4,7 @@
 #include <exception>
 #include <deque>
 #include <libssh2.h>
+#include <boost/smart_ptr.hpp>
 
 #include "configuration.hpp"
 #include "esc_seq_remover.hpp"
@@ -32,7 +33,27 @@ namespace Cassandra {
 		void bootstrap(int node, const std::string& dc = "");
 
 		void decommission(int node);
+
+		static boost::shared_ptr<CCMBridge> create(
+			const Configuration& settings,
+			const std::string& name);
+		static boost::shared_ptr<CCMBridge> create(
+			const Configuration& settings,
+			const std::string& name,
+			unsigned nodes_count,
+			bool use_already_existing = false);
+
+		static boost::shared_ptr<CCMBridge> create(
+			const Configuration& settings,
+			const std::string& name,
+			unsigned nodes_count_dc1,
+			unsigned nodes_count_dc2,
+			bool use_already_existing = false);
 	private:
+		// disable copying and assigning
+		CCMBridge(const CCMBridge&);
+		CCMBridge& operator =(const CCMBridge&);
+
 		/* CCM functionality */
 		static const std::string CCM_COMMAND;
 		const std::string _ip_prefix;
