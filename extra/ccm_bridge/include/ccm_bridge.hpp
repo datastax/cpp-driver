@@ -19,16 +19,40 @@ namespace Cassandra {
 		// shell prompth.
 		std::string execute_command(const std::string& command);
 
+		void start();
+		void start(int node);
+		void stop();
+		void stop(int node);
+		void kill();
+		void kill(int node);
+
+		void remove();
+		void ring(int node);
+
+		void bootstrap(int node, const std::string& dc = "");
+
+		void decommission(int node);
 	private:
+		/* CCM functionality */
+		static const std::string CCM_COMMAND;
+		const std::string _ip_prefix;
+
+		void execute_ccm_command(const std::string& ccm_args, 
+								 bool use_already_existing = false);
+
+		void execute_ccm_and_print(const std::string& ccm_args);
+
+		/* SSH connection functionality */
+
 		void initialize_environment();
 		void wait_for_shell_prompth();
 
 		std::string terminal_read_stdout();
 		std::string terminal_read_stderr();
-		void terminal_write(const std::string& command);
 		std::string terminal_read(EscapeSequencesRemover& buffer, int stream);
-
 		void terminal_read_stream(EscapeSequencesRemover& buffer, int stream);
+
+		void terminal_write(const std::string& command);
 		
 		void initialize_socket_library();
 		void finalize_socket_library();

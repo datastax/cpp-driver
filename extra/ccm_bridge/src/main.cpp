@@ -20,8 +20,26 @@ namespace src = boost::log::sources;
 namespace sinks = boost::log::sinks;
 namespace keywords = boost::log::keywords;
 
+void setup_boost_log() {
+	boost::log::add_common_attributes();
+	/*boost::log::add_file_log
+    (
+        keywords::file_name = "log.txt",                                        
+        keywords::format = "[%TimeStamp%] (%Severity%): %Message%"                                 
+    );
+	*/
+
+ //	  BOOST_LOG_TRIVIAL(trace) << "A trace severity message";
+ //   BOOST_LOG_TRIVIAL(debug) << "A debug severity message";
+ //   BOOST_LOG_TRIVIAL(info) << "An informational severity message";
+ //   BOOST_LOG_TRIVIAL(warning) << "A warning severity message";
+ //   BOOST_LOG_TRIVIAL(error) << "An error severity message";
+ //   BOOST_LOG_TRIVIAL(fatal) << "A fatal severity message";
+}
+
 int main() { 
-	//boost::log::add_file_log("log.txt");
+	setup_boost_log();
+
 	try  {
 		const Configuration& config = get_configuration();
 		CCMBridge b(config);

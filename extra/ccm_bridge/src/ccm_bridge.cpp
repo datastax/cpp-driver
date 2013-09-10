@@ -2,6 +2,9 @@
 #include <algorithm>
 #include <iterator>
 #include <boost/thread.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/format.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "ccm_bridge.hpp"
 #include "safe_advance.hpp"
@@ -12,10 +15,16 @@ const int SSH_STDOUT = 0;
 const int SSH_STDERR = 1;
 
 namespace Cassandra {
-	CCMBridge::CCMBridge(const Configuration& settings) {
+	const string CCMBridge::CCM_COMMAND = "ccm";
+
+	CCMBridge::CCMBridge(const Configuration& settings) 
+		:	_socket(-1),
+			_session(0), _channel(0),
+			_ip_prefix(settings.ip_prefix())
+	{
 		initialize_socket_library();
 
-		try {
+		try { 
 			// initialize libssh2 - not thread safe
 			if(0 != libssh2_init(0))
 				throw CCMBridgeException("cannot initialized libssh2 library");
@@ -41,7 +50,7 @@ namespace Cassandra {
 			throw;
 		}
 
-
+		initialize_environment();
 	}
 
 	CCMBridge::~CCMBridge() {
@@ -124,8 +133,6 @@ namespace Cassandra {
 			close_ssh_session();
 			throw;
 		}
-
-		initialize_environment();
 	}
 
 	void CCMBridge::close_socket() {
@@ -232,5 +239,105 @@ namespace Cassandra {
 		// enable blocking
 		libssh2_channel_set_blocking(_channel, 1);
 		libssh2_channel_write(_channel, command.c_str(), command.size());
+	}
+
+	void CCMBridge::execute_ccm_command(const string& ccm_args, 
+										bool use_already_existing)
+	{
+		const int RETRY_TIMES = 2;
+
+		for(int retry = 0; retry < RETRY_TIMES; retry++) {
+			BOOST_LOG_TRIVIAL(info) << "CCM " << ccm_args;
+			string result = execute_command(CCM_COMMAND + " " + ccm_args);
+			
+			if(boost::algorithm::contains(result, "[Errno")) {
+				BOOST_LOG_TRIVIAL(error) << "CCM ERROR: " << result;
+			}
+
+			if(boost::algorithm::contains(result, "[Errno 17")) {
+				if (use_already_existing)
+					return;
+
+				execute_ccm_and_print("remove test");
+				execute_command("killall java");
+
+				throw CCMBridgeException("not implemented ReusableCCMCluster.Reset();");
+			}
+		}
+		
+		throw CCMBridgeException("ccm operation failed");
+	}
+
+	void CCMBridge::execute_ccm_and_print(const string& ccm_args) {
+		BOOST_LOG_TRIVIAL(info) << "CCM " << ccm_args;
+		string result = execute_command(CCM_COMMAND + " " + ccm_args);
+			
+		if(boost::algorithm::contains(result, "[Errno")) {
+			BOOST_LOG_TRIVIAL(error) << "CCM ERROR: " << result;
+		}
+		else {
+			BOOST_LOG_TRIVIAL(info) << "CCM RESULT: " << result;
+		}
+	}
+
+	void CCMBridge::start() {
+		execute_ccm_command("start");
+	}
+
+	void CCMBridge::start(int node) {
+		execute_ccm_command(str(boost::format("node%1% start") % node));
+	}
+
+	void CCMBridge::stop() {
+		execute_ccm_command("stop");
+	}
+
+	void CCMBridge::stop(int node) {
+		execute_ccm_command(str(boost::format("node%1% stop") % node));
+	}
+
+	void CCMBridge::kill() {
+		execute_ccm_command("stop --not-gently");
+	}
+
+	void CCMBridge::kill(int node) {
+		execute_ccm_command(str(boost::format("node%1% stop --not-gently") % node));
+	}
+
+	void CCMBridge::remove() {
+		stop();
+		execute_ccm_command("remove");
+	}
+
+	void CCMBridge::ring(int node) {
+		execute_ccm_command(str(boost::format("node%1% ring") % node));
+	}
+
+	void CCMBridge::bootstrap(int node, const std::string& dc) {
+
+	   if (dc.empty()) {
+		   execute_ccm_command(str(
+			   boost::format("add node%1% -i %2%%3% -j %4% -b") 
+					% node
+					% _ip_prefix
+					% node
+					% (7000 + 100 * node)));
+	   }
+       else {
+		   execute_ccm_command(str(
+			   boost::format("add node%1% -i %2%%3% -j %4% -b -d %5%") 
+					% node
+					% _ip_prefix
+					% node
+					% (7000 + 100 * node)
+					% dc));
+
+	   }
+
+	   start(node);
+	}
+
+	void CCMBridge::decommission(int node) {
+		execute_ccm_command(str(boost::format("node%1% decommission") % node));
 	}
 }

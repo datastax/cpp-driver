@@ -14,7 +14,7 @@ CASSANDRA_VERSION=1.2.5
 SSH_HOST=127.0.0.1
 SSH_PORT=22
 SSH_USERNAME=!mc
-SSH_PASSWORD=alamakota
+SSH_PASSWORD=mdzMEjW4
 
 #
 # Use NO or YES for binary options
