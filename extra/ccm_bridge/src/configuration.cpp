@@ -7,7 +7,7 @@
 
 using namespace std;
 
-namespace CCMBridge {
+namespace Cassandra {
 	const int Configuration::DEFAULT_SSH_PORT = 22;
 
 	Configuration::Configuration() 

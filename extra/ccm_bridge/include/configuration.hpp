@@ -5,7 +5,7 @@
 #include <exception>
 #include <map>
 
-namespace CCMBridge {
+namespace Cassandra {
 	class Configuration {
 	public:
 		const std::string& ip_prefix() const;
