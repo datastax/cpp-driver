@@ -26,8 +26,7 @@ cql::cql_set_impl_t::cql_set_impl_t(cql::cql_byte_t*          start,
                                     std::string&              custom_class) :
     _start(start),
     _element_type(element_type),
-    _custom_class(custom_class)
-{
+    _custom_class(custom_class) {
     cql::cql_short_t count = 0;
     cql::cql_byte_t* _pos = cql::decode_short(_start, count);
     _elements.reserve(count);
@@ -42,8 +41,7 @@ cql::cql_set_impl_t::cql_set_impl_t(cql::cql_byte_t*          start,
 
 bool
 cql::cql_set_impl_t::get_bool(size_t i,
-                              bool& output) const
-{
+                              bool& output) const {
     if (i > _elements.size()) {
         return false;
     }
@@ -54,8 +52,7 @@ cql::cql_set_impl_t::get_bool(size_t i,
 
 bool
 cql::cql_set_impl_t::get_int(size_t i,
-                             cql_int_t& output) const
-{
+                             cql_int_t& output) const {
     if (i > _elements.size()) {
         return false;
     }
@@ -66,8 +63,7 @@ cql::cql_set_impl_t::get_int(size_t i,
 
 bool
 cql::cql_set_impl_t::get_float(size_t i,
-                               float& output) const
-{
+                               float& output) const {
     if (i > _elements.size()) {
         return false;
     }
@@ -78,8 +74,7 @@ cql::cql_set_impl_t::get_float(size_t i,
 
 bool
 cql::cql_set_impl_t::get_double(size_t i,
-                                double& output) const
-{
+                                double& output) const {
     if (i > _elements.size()) {
         return false;
     }
@@ -90,8 +85,7 @@ cql::cql_set_impl_t::get_double(size_t i,
 
 bool
 cql::cql_set_impl_t::get_bigint(size_t i,
-                                cql::cql_bigint_t& output) const
-{
+                                cql::cql_bigint_t& output) const {
     if (i > _elements.size()) {
         return false;
     }
@@ -102,8 +96,7 @@ cql::cql_set_impl_t::get_bigint(size_t i,
 
 bool
 cql::cql_set_impl_t::get_string(size_t i,
-                                std::string& output) const
-{
+                                std::string& output) const {
     cql_byte_t* data = 0;
     cql_short_t size = 0;
     if (get_data(i, &data, size)) {
@@ -116,8 +109,7 @@ cql::cql_set_impl_t::get_string(size_t i,
 bool
 cql::cql_set_impl_t::get_data(size_t i,
                               cql::cql_byte_t** output,
-                              cql::cql_short_t& size) const
-{
+                              cql::cql_short_t& size) const {
     if (i > _elements.size()) {
         return false;
     }
@@ -127,25 +119,21 @@ cql::cql_set_impl_t::get_data(size_t i,
 }
 
 std::string
-cql::cql_set_impl_t::str() const
-{
+cql::cql_set_impl_t::str() const {
     return "set";
 }
 
 cql::cql_column_type_enum
-cql::cql_set_impl_t::element_type() const
-{
+cql::cql_set_impl_t::element_type() const {
     return _element_type;
 }
 
 const std::string&
-cql::cql_set_impl_t::custom_class() const
-{
+cql::cql_set_impl_t::custom_class() const {
     return _custom_class;
 }
 
 size_t
-cql::cql_set_impl_t::size() const
-{
+cql::cql_set_impl_t::size() const {
     return _elements.size();
 }

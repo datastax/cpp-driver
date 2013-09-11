@@ -24,44 +24,43 @@
 
 namespace cql {
 
-    class cql_message_register_impl_t :
-        public cql_message_t
-    {
+class cql_message_register_impl_t :
+    public cql_message_t {
 
-    public:
+public:
 
-        cql_message_register_impl_t();
+    cql_message_register_impl_t();
 
-        cql_message_register_impl_t(size_t size);
+    cql_message_register_impl_t(size_t size);
 
-        cql::cql_opcode_enum
-        opcode() const;
+    cql::cql_opcode_enum
+    opcode() const;
 
-        cql_int_t
-        size() const;
+    cql_int_t
+    size() const;
 
-        void
-        events(const std::list<std::string>& c);
+    void
+    events(const std::list<std::string>& c);
 
-        const std::list<std::string>&
-        events() const;
+    const std::list<std::string>&
+    events() const;
 
-        std::string
-        str() const;
+    std::string
+    str() const;
 
-        bool
-        consume(cql::cql_error_t* err);
+    bool
+    consume(cql::cql_error_t* err);
 
-        bool
-        prepare(cql::cql_error_t* err);
+    bool
+    prepare(cql::cql_error_t* err);
 
-        cql_message_buffer_t
-        buffer();
+    cql_message_buffer_t
+    buffer();
 
-    private:
-        cql::cql_message_buffer_t _buffer;
-        std::list<std::string>    _events;
-    };
+private:
+    cql::cql_message_buffer_t _buffer;
+    std::list<std::string>    _events;
+};
 
 } // namespace cql
 

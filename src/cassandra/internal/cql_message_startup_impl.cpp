@@ -38,58 +38,49 @@ cql::cql_message_startup_impl_t::cql_message_startup_impl_t(size_t size) :
 {}
 
 cql::cql_message_buffer_t
-cql::cql_message_startup_impl_t::buffer()
-{
+cql::cql_message_startup_impl_t::buffer() {
     return _buffer;
 }
 
 void
-cql::cql_message_startup_impl_t::compression(const std::string& c)
-{
+cql::cql_message_startup_impl_t::compression(const std::string& c) {
     _compression = c;
 }
 
 const std::string&
-cql::cql_message_startup_impl_t::compression() const
-{
+cql::cql_message_startup_impl_t::compression() const {
     return _compression;
 }
 
 void
-cql::cql_message_startup_impl_t::version(const std::string& v)
-{
+cql::cql_message_startup_impl_t::version(const std::string& v) {
     _version = v;
 }
 
 const std::string&
-cql::cql_message_startup_impl_t::version() const
-{
+cql::cql_message_startup_impl_t::version() const {
     return _version;
 }
 
 cql::cql_opcode_enum
-cql::cql_message_startup_impl_t::opcode() const
-{
+cql::cql_message_startup_impl_t::opcode() const {
     return CQL_OPCODE_STARTUP;
 }
 
 cql::cql_int_t
-cql::cql_message_startup_impl_t::size() const
-{
+cql::cql_message_startup_impl_t::size() const {
     return _buffer->size();
 }
 
 std::string
-cql::cql_message_startup_impl_t::str() const
-{
+cql::cql_message_startup_impl_t::str() const {
     std::stringstream output;
     output << "{version: " << _version << ", compression: " << _compression << "}";
     return output.str();
 }
 
 bool
-cql::cql_message_startup_impl_t::consume(cql::cql_error_t*)
-{
+cql::cql_message_startup_impl_t::consume(cql::cql_error_t*) {
     cql::vector_stream_t buffer(*_buffer);
     std::istream stream(&buffer);
 
@@ -108,8 +99,7 @@ cql::cql_message_startup_impl_t::consume(cql::cql_error_t*)
 }
 
 bool
-cql::cql_message_startup_impl_t::prepare(cql::cql_error_t*)
-{
+cql::cql_message_startup_impl_t::prepare(cql::cql_error_t*) {
     std::map<std::string, std::string> startup;
     size_t size = sizeof(cql::cql_short_t);
 

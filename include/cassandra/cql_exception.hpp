@@ -1,4 +1,4 @@
-/* 
+/*
  * File:   cql_exception.hpp
  * Author: mc
  *
@@ -11,17 +11,17 @@
 #include <exception>
 
 namespace cql {
-    class cql_exception: public std::exception {
-    public:
-        cql_exception(const char* message)
-                : _message(message) { }
-                
-        virtual const char* what() const throw() {
-            return _message;
-        }
-    private:
-        const char* const _message;
-    };
+class cql_exception: public std::exception {
+public:
+    cql_exception(const char* message)
+        : _message(message) { }
+
+    virtual const char* what() const throw() {
+        return _message;
+    }
+private:
+    const char* const _message;
+};
 }
 
 #endif	/* CQL_EXCEPTION_HPP */

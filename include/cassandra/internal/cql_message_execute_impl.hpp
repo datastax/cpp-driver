@@ -28,86 +28,85 @@
 
 namespace cql {
 
-    class cql_message_execute_impl_t :
-        boost::noncopyable,
-        public cql_message_t
-    {
+class cql_message_execute_impl_t :
+    boost::noncopyable,
+    public cql_message_t {
 
-    public:
-        typedef std::vector<cql::cql_byte_t> param_t;
+public:
+    typedef std::vector<cql::cql_byte_t> param_t;
 
-        cql_message_execute_impl_t();
+    cql_message_execute_impl_t();
 
-        cql_message_execute_impl_t(size_t size);
+    cql_message_execute_impl_t(size_t size);
 
-        cql_message_execute_impl_t(const std::vector<cql::cql_byte_t>& id,
-                                   cql::cql_consistency_enum consistency);
+    cql_message_execute_impl_t(const std::vector<cql::cql_byte_t>& id,
+                               cql::cql_consistency_enum consistency);
 
-        const std::vector<cql::cql_byte_t>&
-        query_id() const;
+    const std::vector<cql::cql_byte_t>&
+    query_id() const;
 
-        void
-        query_id(const std::vector<cql::cql_byte_t>& id);
+    void
+    query_id(const std::vector<cql::cql_byte_t>& id);
 
-        cql::cql_consistency_enum
-        consistency() const;
+    cql::cql_consistency_enum
+    consistency() const;
 
-        void
-        consistency(const cql::cql_consistency_enum consistency);
+    void
+    consistency(const cql::cql_consistency_enum consistency);
 
-        void
-        push_back(const param_t& val);
+    void
+    push_back(const param_t& val);
 
-        void
-        push_back(const std::string& val);
+    void
+    push_back(const std::string& val);
 
-        void
-        push_back(const cql::cql_short_t val);
+    void
+    push_back(const cql::cql_short_t val);
 
-        void
-        push_back(const cql_int_t val);
+    void
+    push_back(const cql_int_t val);
 
-        void
-        push_back(const cql::cql_bigint_t val);
+    void
+    push_back(const cql::cql_bigint_t val);
 
-        void
-        push_back(const float val);
+    void
+    push_back(const float val);
 
-        void
-        push_back(const double val);
+    void
+    push_back(const double val);
 
-        void
-        push_back(const bool val);
+    void
+    push_back(const bool val);
 
-        void
-        pop_back();
+    void
+    pop_back();
 
-        cql::cql_opcode_enum
-        opcode() const;
+    cql::cql_opcode_enum
+    opcode() const;
 
-        cql_int_t
-        size() const;
+    cql_int_t
+    size() const;
 
-        std::string
-        str() const;
+    std::string
+    str() const;
 
-        bool
-        consume(cql::cql_error_t* err);
+    bool
+    consume(cql::cql_error_t* err);
 
-        bool
-        prepare(cql::cql_error_t* err);
+    bool
+    prepare(cql::cql_error_t* err);
 
-        cql_message_buffer_t
-        buffer();
+    cql_message_buffer_t
+    buffer();
 
-    private:
-        typedef std::list<param_t> params_container_t;
+private:
+    typedef std::list<param_t> params_container_t;
 
-        cql::cql_message_buffer_t    _buffer;
-        std::vector<cql::cql_byte_t> _query_id;
-        cql::cql_consistency_enum    _consistency;
-        params_container_t           _params;
-    };
+    cql::cql_message_buffer_t    _buffer;
+    std::vector<cql::cql_byte_t> _query_id;
+    cql::cql_consistency_enum    _consistency;
+    params_container_t           _params;
+};
 
 } // namespace cql
 

@@ -24,54 +24,53 @@
 
 namespace cql {
 
-    class cql_message_query_impl_t :
-        public cql_message_t
-    {
+class cql_message_query_impl_t :
+    public cql_message_t {
 
-    public:
+public:
 
-        cql_message_query_impl_t();
+    cql_message_query_impl_t();
 
-        cql_message_query_impl_t(size_t size);
+    cql_message_query_impl_t(size_t size);
 
-        cql_message_query_impl_t(const std::string& query,
-                                 cql::cql_short_t consistency);
+    cql_message_query_impl_t(const std::string& query,
+                             cql::cql_short_t consistency);
 
-        const std::string&
-        query() const;
+    const std::string&
+    query() const;
 
-        cql::cql_short_t
-        consistency() const;
+    cql::cql_short_t
+    consistency() const;
 
-        void
-        query(const std::string& q);
+    void
+    query(const std::string& q);
 
-        void
-        consistency(cql::cql_short_t consistency);
+    void
+    consistency(cql::cql_short_t consistency);
 
-        cql::cql_opcode_enum
-        opcode() const;
+    cql::cql_opcode_enum
+    opcode() const;
 
-        cql_int_t
-        size() const;
+    cql_int_t
+    size() const;
 
-        std::string
-        str() const;
+    std::string
+    str() const;
 
-        bool
-        consume(cql::cql_error_t* err);
+    bool
+    consume(cql::cql_error_t* err);
 
-        bool
-        prepare(cql::cql_error_t* err);
+    bool
+    prepare(cql::cql_error_t* err);
 
-        cql_message_buffer_t
-        buffer();
+    cql_message_buffer_t
+    buffer();
 
-    private:
-        cql::cql_message_buffer_t _buffer;
-        cql::cql_short_t          _consistency;
-        std::string               _query;
-    };
+private:
+    cql::cql_message_buffer_t _buffer;
+    cql::cql_short_t          _consistency;
+    std::string               _query;
+};
 
 } // namespace cql
 

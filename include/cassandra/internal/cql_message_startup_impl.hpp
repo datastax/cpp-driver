@@ -24,51 +24,50 @@
 
 namespace cql {
 
-    class cql_message_startup_impl_t :
-        public cql_message_t
-    {
+class cql_message_startup_impl_t :
+    public cql_message_t {
 
-    public:
+public:
 
-        cql_message_startup_impl_t();
+    cql_message_startup_impl_t();
 
-        cql_message_startup_impl_t(size_t size);
+    cql_message_startup_impl_t(size_t size);
 
-        void
-        compression(const std::string& c);
+    void
+    compression(const std::string& c);
 
-        const std::string&
-        compression() const;
+    const std::string&
+    compression() const;
 
-        void
-        version(const std::string& v);
+    void
+    version(const std::string& v);
 
-        const std::string&
-        version() const;
+    const std::string&
+    version() const;
 
-        cql::cql_opcode_enum
-        opcode() const;
+    cql::cql_opcode_enum
+    opcode() const;
 
-        cql_int_t
-        size() const;
+    cql_int_t
+    size() const;
 
-        std::string
-        str() const;
+    std::string
+    str() const;
 
-        bool
-        consume(cql::cql_error_t* err);
+    bool
+    consume(cql::cql_error_t* err);
 
-        bool
-        prepare(cql::cql_error_t* err);
+    bool
+    prepare(cql::cql_error_t* err);
 
-        cql_message_buffer_t
-        buffer();
+    cql_message_buffer_t
+    buffer();
 
-    private:
-        cql::cql_message_buffer_t _buffer;
-        std::string               _version;
-        std::string               _compression;
-    };
+private:
+    cql::cql_message_buffer_t _buffer;
+    std::string               _version;
+    std::string               _compression;
+};
 
 } // namespace cql
 

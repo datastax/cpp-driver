@@ -29,91 +29,76 @@ cql::cql_execute_t::cql_execute_t(const std::vector<cql::cql_byte_t>& id,
     _impl(new cql_message_execute_impl_t(id, consistency))
 {}
 
-cql::cql_execute_t::~cql_execute_t()
-{
+cql::cql_execute_t::~cql_execute_t() {
     delete _impl;
 }
 
 const std::vector<cql::cql_byte_t>&
-cql::cql_execute_t::query_id() const
-{
+cql::cql_execute_t::query_id() const {
     return _impl->query_id();
 }
 
 void
-cql::cql_execute_t::query_id(const std::vector<cql::cql_byte_t>& id)
-{
+cql::cql_execute_t::query_id(const std::vector<cql::cql_byte_t>& id) {
     _impl->query_id(id);
 }
 
 cql::cql_consistency_enum
-cql::cql_execute_t::consistency() const
-{
+cql::cql_execute_t::consistency() const {
     return _impl->consistency();
 }
 
 void
-cql::cql_execute_t::consistency(const cql::cql_consistency_enum consistency)
-{
+cql::cql_execute_t::consistency(const cql::cql_consistency_enum consistency) {
     _impl->consistency(consistency);
 }
 
 void
-cql::cql_execute_t::push_back(const std::vector<cql::cql_byte_t>& val)
-{
+cql::cql_execute_t::push_back(const std::vector<cql::cql_byte_t>& val) {
     _impl->push_back(val);
 }
 
 void
-cql::cql_execute_t::push_back(const std::string& val)
-{
+cql::cql_execute_t::push_back(const std::string& val) {
     _impl->push_back(val);
 }
 
 void
-cql::cql_execute_t::push_back(const cql::cql_short_t val)
-{
+cql::cql_execute_t::push_back(const cql::cql_short_t val) {
     _impl->push_back(val);
 }
 
 void
-cql::cql_execute_t::push_back(const cql_int_t val)
-{
+cql::cql_execute_t::push_back(const cql_int_t val) {
     _impl->push_back(val);
 }
 
 void
-cql::cql_execute_t::push_back(const cql::cql_bigint_t val)
-{
+cql::cql_execute_t::push_back(const cql::cql_bigint_t val) {
     _impl->push_back(val);
 }
 
 void
-cql::cql_execute_t::push_back(const float val)
-{
+cql::cql_execute_t::push_back(const float val) {
     _impl->push_back(val);
 }
 
 void
-cql::cql_execute_t::push_back(const double val)
-{
+cql::cql_execute_t::push_back(const double val) {
     _impl->push_back(val);
 }
 
 void
-cql::cql_execute_t::push_back(const bool val)
-{
+cql::cql_execute_t::push_back(const bool val) {
     _impl->push_back(val);
 }
 
 void
-cql::cql_execute_t::pop_back()
-{
+cql::cql_execute_t::pop_back() {
     _impl->pop_back();
 }
 
 cql::cql_message_execute_impl_t*
-cql::cql_execute_t::impl() const
-{
+cql::cql_execute_t::impl() const {
     return _impl;
 }

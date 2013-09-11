@@ -25,33 +25,29 @@
 
 namespace cql {
 
-        struct vector_stream_t : std::streambuf
-        {
-            vector_stream_t(std::vector<cql::cql_byte_t>& vec)
-            {
-                char* start = reinterpret_cast<char*>(&vec[0]);
-                this->setg(start, start, start + vec.size());
-                this->setp(start, start + vec.size());
-            }
+struct vector_stream_t : std::streambuf {
+    vector_stream_t(std::vector<cql::cql_byte_t>& vec) {
+        char* start = reinterpret_cast<char*>(&vec[0]);
+        this->setg(start, start, start + vec.size());
+        this->setp(start, start + vec.size());
+    }
 
-            vector_stream_t(std::vector<cql::cql_byte_t>& vec,
-                            size_t offset)
-            {
-                char* start = reinterpret_cast<char*>(&vec[0]);
-                this->setg(start, start + offset, start + vec.size());
-                this->setp(start + offset, start + vec.size());
+    vector_stream_t(std::vector<cql::cql_byte_t>& vec,
+                    size_t offset) {
+        char* start = reinterpret_cast<char*>(&vec[0]);
+        this->setg(start, start + offset, start + vec.size());
+        this->setp(start + offset, start + vec.size());
 
-            }
+    }
 
-            vector_stream_t(std::vector<cql::cql_byte_t>& vec,
-                            size_t offset,
-                            size_t limit)
-            {
-                char* start = reinterpret_cast<char*>(&vec[0]);
-                this->setg(start, start + offset, start + offset + limit);
-                this->setp(start + offset, start + offset + limit);
-            }
-        };
+    vector_stream_t(std::vector<cql::cql_byte_t>& vec,
+                    size_t offset,
+                    size_t limit) {
+        char* start = reinterpret_cast<char*>(&vec[0]);
+        this->setg(start, start + offset, start + offset + limit);
+        this->setp(start + offset, start + offset + limit);
+    }
+};
 } // namespace cql
 
 #endif // CQL_VECTOR_STREAM_H_

@@ -24,73 +24,73 @@
 
 namespace cql {
 
-    struct cql_error_t;
+struct cql_error_t;
 
-    class cql_header_impl_t {
+class cql_header_impl_t {
 
-    public:
+public:
 
-        cql_header_impl_t();
+    cql_header_impl_t();
 
-        cql_header_impl_t(cql::cql_byte_t version,
-                          cql::cql_byte_t flags,
-                          cql::cql_stream_id_t stream,
-                          cql::cql_byte_t opcode,
-                          cql_int_t length);
+    cql_header_impl_t(cql::cql_byte_t version,
+                      cql::cql_byte_t flags,
+                      cql::cql_stream_id_t stream,
+                      cql::cql_byte_t opcode,
+                      cql_int_t length);
 
-        std::string
-        str() const;
+    std::string
+    str() const;
 
-        bool
-        consume(cql::cql_error_t* err);
+    bool
+    consume(cql::cql_error_t* err);
 
-        bool
-        prepare(cql::cql_error_t* err);
+    bool
+    prepare(cql::cql_error_t* err);
 
-        cql_message_buffer_t
-        buffer();
+    cql_message_buffer_t
+    buffer();
 
-        cql_int_t
-        size() const;
+    cql_int_t
+    size() const;
 
-        cql::cql_byte_t
-        version() const;
+    cql::cql_byte_t
+    version() const;
 
-        cql::cql_byte_t
-        flags() const;
+    cql::cql_byte_t
+    flags() const;
 
-        cql::cql_stream_id_t
-        stream() const;
+    cql::cql_stream_id_t
+    stream() const;
 
-        cql::cql_byte_t
-        opcode() const;
+    cql::cql_byte_t
+    opcode() const;
 
-        cql_int_t
-        length() const;
+    cql_int_t
+    length() const;
 
-        void
-        version(cql::cql_byte_t v);
+    void
+    version(cql::cql_byte_t v);
 
-        void
-        flags(cql::cql_byte_t v);
+    void
+    flags(cql::cql_byte_t v);
 
-        void
-        stream(cql::cql_stream_id_t v);
+    void
+    stream(cql::cql_stream_id_t v);
 
-        void
-        opcode(cql::cql_byte_t v);
+    void
+    opcode(cql::cql_byte_t v);
 
-        void
-        length(cql_int_t v);
+    void
+    length(cql_int_t v);
 
-    private:
-        cql_message_buffer_t _buffer;
-        cql::cql_byte_t      _version;
-        cql::cql_byte_t      _flags;
-        cql::cql_stream_id_t _stream;
-        cql::cql_byte_t      _opcode;
-        cql::cql_int_t       _length;
-    };
+private:
+    cql_message_buffer_t _buffer;
+    cql::cql_byte_t      _version;
+    cql::cql_byte_t      _flags;
+    cql::cql_stream_id_t _stream;
+    cql::cql_byte_t      _opcode;
+    cql::cql_int_t       _length;
+};
 
 } // namespace cql
 

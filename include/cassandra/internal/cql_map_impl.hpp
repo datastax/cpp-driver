@@ -26,103 +26,102 @@
 
 namespace cql {
 
-    class cql_map_impl_t :
-        public cql_map_t
-    {
+class cql_map_impl_t :
+    public cql_map_t {
 
-    public:
+public:
 
-        cql_map_impl_t(cql::cql_byte_t*          start,
-                       cql::cql_column_type_enum key_type,
-                       cql::cql_column_type_enum value_type,
-                       std::string&              key_custom_class,
-                       std::string&              value_custom_class);
+    cql_map_impl_t(cql::cql_byte_t*          start,
+                   cql::cql_column_type_enum key_type,
+                   cql::cql_column_type_enum value_type,
+                   std::string&              key_custom_class,
+                   std::string&              value_custom_class);
 
-        bool
-        get_key_bool(size_t i,
-                     bool& output) const;
+    bool
+    get_key_bool(size_t i,
+                 bool& output) const;
 
-        bool
-        get_key_int(size_t i,
-                    cql_int_t& output) const;
+    bool
+    get_key_int(size_t i,
+                cql_int_t& output) const;
 
-        bool
-        get_key_float(size_t i,
-                      float& output) const;
+    bool
+    get_key_float(size_t i,
+                  float& output) const;
 
-        bool
-        get_key_double(size_t i,
-                       double& output) const;
+    bool
+    get_key_double(size_t i,
+                   double& output) const;
 
-        bool
-        get_key_bigint(size_t i,
-                       cql::cql_bigint_t& output) const;
+    bool
+    get_key_bigint(size_t i,
+                   cql::cql_bigint_t& output) const;
 
-        bool
-        get_key_string(size_t i,
-                       std::string& output) const;
+    bool
+    get_key_string(size_t i,
+                   std::string& output) const;
 
-        bool
-        get_key_data(size_t i,
-                     cql::cql_byte_t** output,
-                     cql::cql_short_t& size) const;
+    bool
+    get_key_data(size_t i,
+                 cql::cql_byte_t** output,
+                 cql::cql_short_t& size) const;
 
-        bool
-        get_value_bool(size_t i,
-                       bool& output) const;
+    bool
+    get_value_bool(size_t i,
+                   bool& output) const;
 
-        bool
-        get_value_int(size_t i,
-                      cql_int_t& output) const;
+    bool
+    get_value_int(size_t i,
+                  cql_int_t& output) const;
 
-        bool
-        get_value_float(size_t i,
-                        float& output) const;
+    bool
+    get_value_float(size_t i,
+                    float& output) const;
 
-        bool
-        get_value_double(size_t i,
-                         double& output) const;
+    bool
+    get_value_double(size_t i,
+                     double& output) const;
 
-        bool
-        get_value_bigint(size_t i,
-                         cql::cql_bigint_t& output) const;
+    bool
+    get_value_bigint(size_t i,
+                     cql::cql_bigint_t& output) const;
 
-        bool
-        get_value_string(size_t i,
-                         std::string& output) const;
+    bool
+    get_value_string(size_t i,
+                     std::string& output) const;
 
-        bool
-        get_value_data(size_t i,
-                       cql::cql_byte_t** output,
-                       cql::cql_short_t& size) const;
+    bool
+    get_value_data(size_t i,
+                   cql::cql_byte_t** output,
+                   cql::cql_short_t& size) const;
 
-        std::string
-        str() const;
+    std::string
+    str() const;
 
-        cql::cql_column_type_enum
-        key_type() const;
+    cql::cql_column_type_enum
+    key_type() const;
 
-        const std::string&
-        key_custom_class() const;
+    const std::string&
+    key_custom_class() const;
 
-        cql::cql_column_type_enum
-        value_type() const;
+    cql::cql_column_type_enum
+    value_type() const;
 
-        const std::string&
-        value_custom_class() const;
+    const std::string&
+    value_custom_class() const;
 
-        size_t
-        size() const;
+    size_t
+    size() const;
 
-    private:
-        cql::cql_byte_t*              _start;
-        std::vector<cql::cql_byte_t*> _keys;
-        std::vector<cql::cql_byte_t*> _values;
-        cql::cql_column_type_enum     _key_type;
-        cql::cql_column_type_enum     _value_type;
-        std::string                   _key_custom_class;
-        std::string                   _value_custom_class;
-    };
+private:
+    cql::cql_byte_t*              _start;
+    std::vector<cql::cql_byte_t*> _keys;
+    std::vector<cql::cql_byte_t*> _values;
+    cql::cql_column_type_enum     _key_type;
+    cql::cql_column_type_enum     _value_type;
+    std::string                   _key_custom_class;
+    std::string                   _value_custom_class;
+};
 
 
 } // namespace cql

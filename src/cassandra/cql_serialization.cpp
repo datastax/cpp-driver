@@ -19,7 +19,7 @@
 #include <vector>
 
 #ifdef _WIN32
-#include <Winsock2.h> 
+#include <Winsock2.h>
 #else
 #include <arpa/inet.h>
 #endif
@@ -38,8 +38,8 @@ swap_double(double source) {
     return *reinterpret_cast<double*>(&swapped);
 #else
     union {
-	    uint64_t bytes;
-	    double src;
+        uint64_t bytes;
+        double src;
     } q;
     q.src = source;
     q.bytes = __builtin_bswap64(q.bytes);
@@ -55,8 +55,8 @@ swap_float(float source) {
     return *reinterpret_cast<float*>(&swapped);
 #else
     union {
-	    uint32_t bytes;
-	    float src;
+        uint32_t bytes;
+        float src;
     } q;
     q.src = source;
     q.bytes = __builtin_bswap32(q.bytes);
@@ -85,12 +85,10 @@ builtin ntoh(const builtin input) {
 
 std::ostream&
 cql::encode_bool(std::ostream& output,
-                 bool value)
-{
+                 bool value) {
     if (value) {
         output.put(0x01);
-    }
-    else {
+    } else {
         output.put(0x00);
     }
     return output;
@@ -98,21 +96,18 @@ cql::encode_bool(std::ostream& output,
 
 void
 cql::encode_bool(std::vector<cql::cql_byte_t>& output,
-                 const bool value)
-{
+                 const bool value) {
     output.resize(1, 0);
     if (value) {
         output[0] = 0x01;
-    }
-    else {
+    } else {
         output[0] = 0x00;
     }
 }
 
 std::istream&
 cql::decode_bool(std::istream& input,
-                 bool& value)
-{
+                 bool& value) {
     std::vector<char> v(1, 0);
     input.read(reinterpret_cast<char*>(&v), 1);
     value = v[0] == 0x01;
@@ -120,15 +115,13 @@ cql::decode_bool(std::istream& input,
 }
 
 bool
-cql::decode_bool(const std::vector<cql::cql_byte_t>& input)
-{
+cql::decode_bool(const std::vector<cql::cql_byte_t>& input) {
     return input[0] ? true : false;
 }
 
 std::ostream&
 cql::encode_short(std::ostream& output,
-                  const cql::cql_short_t value)
-{
+                  const cql::cql_short_t value) {
     cql::cql_short_t s = htons(value);
     output.write(reinterpret_cast<char*>(&s), sizeof(s));
     return output;
@@ -136,8 +129,7 @@ cql::encode_short(std::ostream& output,
 
 void
 cql::encode_short(std::vector<cql::cql_byte_t>& output,
-                  const cql::cql_short_t value)
-{
+                  const cql::cql_short_t value) {
     cql::cql_short_t s = htons(value);
     output.resize(sizeof(s));
     const cql::cql_byte_t* it = reinterpret_cast<cql::cql_byte_t*>(&s);
@@ -146,31 +138,27 @@ cql::encode_short(std::vector<cql::cql_byte_t>& output,
 
 std::istream&
 cql::decode_short(std::istream& input,
-                  cql::cql_short_t& value)
-{
+                  cql::cql_short_t& value) {
     input.read(reinterpret_cast<char*>(&value), sizeof(value));
     value = ntohs(value);
     return input;
 }
 
 cql::cql_short_t
-cql::decode_short(const std::vector<cql::cql_byte_t>& input)
-{
+cql::decode_short(const std::vector<cql::cql_byte_t>& input) {
     return ntohs(*(reinterpret_cast<const cql_short_t*>(&input[0])));
 }
 
 cql::cql_byte_t*
 cql::decode_short(cql::cql_byte_t* input,
-                  cql::cql_short_t& value)
-{
+                  cql::cql_short_t& value) {
     value = ntohs(*(reinterpret_cast<const cql_short_t*>(input)));
     return input + sizeof(cql::cql_short_t);
 }
 
 std::ostream&
 cql::encode_int(std::ostream& output,
-                const cql::cql_int_t value)
-{
+                const cql::cql_int_t value) {
     cql::cql_int_t l = htonl(value);
     output.write(reinterpret_cast<char*>(&l), sizeof(l));
     return output;
@@ -178,8 +166,7 @@ cql::encode_int(std::ostream& output,
 
 void
 cql::encode_int(std::vector<cql::cql_byte_t>& output,
-                const cql::cql_int_t value)
-{
+                const cql::cql_int_t value) {
     cql::cql_int_t l = htonl(value);
     output.resize(sizeof(l));
     const cql::cql_byte_t* it = reinterpret_cast<cql::cql_byte_t*>(&l);
@@ -188,32 +175,28 @@ cql::encode_int(std::vector<cql::cql_byte_t>& output,
 
 std::istream&
 cql::decode_int(std::istream& input,
-                cql::cql_int_t& value)
-{
+                cql::cql_int_t& value) {
     input.read(reinterpret_cast<char*>(&value), sizeof(value));
     value = ntohl(value);
     return input;
 }
 
 cql::cql_int_t
-cql::decode_int(const std::vector<cql::cql_byte_t>& input)
-{
+cql::decode_int(const std::vector<cql::cql_byte_t>& input) {
     return ntohl(*(reinterpret_cast<const cql::cql_int_t*>(&input[0])));
 }
 
 cql::cql_byte_t*
 cql::decode_int(cql::cql_byte_t* input,
-                cql::cql_int_t& output)
-{
+                cql::cql_int_t& output) {
     output = ntohl(*(reinterpret_cast<const cql::cql_int_t*>(input)));
     return input + sizeof(cql::cql_int_t);
 }
 
 std::ostream&
 cql::encode_float(std::ostream& output,
-                  const float value)
-{
-	float swapped_float = swap_float(value);
+                  const float value) {
+    float swapped_float = swap_float(value);
     cql::cql_int_t l = *reinterpret_cast<cql::cql_int_t *>(&swapped_float);
     output.write(reinterpret_cast<char*>(&l), sizeof(l));
     return output;
@@ -221,8 +204,7 @@ cql::encode_float(std::ostream& output,
 
 void
 cql::encode_float(std::vector<cql::cql_byte_t>& output,
-                  const float value)
-{
+                  const float value) {
     cql::cql_int_t l = swap_float(value);
     output.resize(sizeof(l));
     const cql::cql_byte_t* it = reinterpret_cast<cql::cql_byte_t*>(&l);
@@ -231,31 +213,27 @@ cql::encode_float(std::vector<cql::cql_byte_t>& output,
 
 std::istream&
 cql::decode_float(std::istream& input,
-                  float& value)
-{
+                  float& value) {
     input.read(reinterpret_cast<char*>(&value), sizeof(value));
     value = swap_float(value);
     return input;
 }
 
 float
-cql::decode_float(const std::vector<cql::cql_byte_t>& input)
-{
+cql::decode_float(const std::vector<cql::cql_byte_t>& input) {
     return swap_float(*(reinterpret_cast<const float*>(&input[0])));
 }
 
 cql::cql_byte_t*
 cql::decode_float(cql::cql_byte_t* input,
-                  float& output)
-{
+                  float& output) {
     output = swap_float(*(reinterpret_cast<const float*>(input)));
     return input + sizeof(float);
 }
 
 std::ostream&
 cql::encode_double(std::ostream& output,
-                   const double value)
-{
+                   const double value) {
     double d = swap_double(value);
     output.write(reinterpret_cast<char*>(&d), sizeof(d));
     return output;
@@ -263,8 +241,7 @@ cql::encode_double(std::ostream& output,
 
 void
 cql::encode_double(std::vector<cql::cql_byte_t>& output,
-                   const double value)
-{
+                   const double value) {
     double d = swap_double(value);
     output.resize(sizeof(d));
     const cql::cql_byte_t* it = reinterpret_cast<cql::cql_byte_t*>(&d);
@@ -273,31 +250,27 @@ cql::encode_double(std::vector<cql::cql_byte_t>& output,
 
 std::istream&
 cql::decode_double(std::istream& input,
-                   double& value)
-{
+                   double& value) {
     input.read(reinterpret_cast<char*>(&value), sizeof(value));
     value = swap_double(value);
     return input;
 }
 
 double
-cql::decode_double(const std::vector<cql::cql_byte_t>& input)
-{
+cql::decode_double(const std::vector<cql::cql_byte_t>& input) {
     return swap_double(*(reinterpret_cast<const double*>(&input[0])));
 }
 
 cql::cql_byte_t*
 cql::decode_double(cql::cql_byte_t* input,
-                   double& output)
-{
+                   double& output) {
     output = swap_double(*(reinterpret_cast<const double*>(input)));
     return input + sizeof(double);
 }
 
 std::ostream&
 cql::encode_bigint(std::ostream& output,
-                   const cql::cql_bigint_t value)
-{
+                   const cql::cql_bigint_t value) {
     cql::cql_bigint_t d = ntoh<cql::cql_bigint_t>(value);
     output.write(reinterpret_cast<char*>(&d), sizeof(d));
     return output;
@@ -305,9 +278,8 @@ cql::encode_bigint(std::ostream& output,
 
 void
 cql::encode_bigint(std::vector<cql::cql_byte_t>& output,
-                   const cql::cql_bigint_t value)
-{
-	cql::cql_bigint_t d = ntoh<cql::cql_bigint_t>(value);
+                   const cql::cql_bigint_t value) {
+    cql::cql_bigint_t d = ntoh<cql::cql_bigint_t>(value);
     output.resize(sizeof(d));
     const cql::cql_byte_t* it = reinterpret_cast<cql::cql_byte_t*>(&d);
     output.assign(it, it + sizeof(d));
@@ -315,31 +287,27 @@ cql::encode_bigint(std::vector<cql::cql_byte_t>& output,
 
 std::istream&
 cql::decode_bigint(std::istream& input,
-                   cql::cql_bigint_t& value)
-{
+                   cql::cql_bigint_t& value) {
     input.read(reinterpret_cast<char*>(&value), sizeof(value));
     value = ntoh<cql::cql_bigint_t>(value);
     return input;
 }
 
 cql::cql_bigint_t
-cql::decode_bigint(const std::vector<cql::cql_byte_t>& input)
-{
+cql::decode_bigint(const std::vector<cql::cql_byte_t>& input) {
     return ntoh<cql::cql_bigint_t>(*(reinterpret_cast<const cql::cql_bigint_t*>(&input[0])));
 }
 
 cql::cql_byte_t*
 cql::decode_bigint(cql::cql_byte_t* input,
-                   cql::cql_bigint_t& output)
-{
+                   cql::cql_bigint_t& output) {
     output = ntoh<cql::cql_bigint_t>(*(reinterpret_cast<const cql::cql_bigint_t*>(input)));
     return input + sizeof(cql::cql_bigint_t);
 }
 
 std::ostream&
 cql::encode_string(std::ostream& output,
-                   const std::string& value)
-{
+                   const std::string& value) {
     cql::encode_short(output, value.size());
     output.write(reinterpret_cast<const char*>(value.c_str()), value.size());
     return output;
@@ -347,8 +315,7 @@ cql::encode_string(std::ostream& output,
 
 std::istream&
 cql::decode_string(std::istream& input,
-                   std::string& value)
-{
+                   std::string& value) {
     cql::cql_short_t len;
     cql::decode_short(input, len);
 
@@ -359,15 +326,13 @@ cql::decode_string(std::istream& input,
 }
 
 std::string
-cql::decode_string(const std::vector<cql::cql_byte_t>& input)
-{
+cql::decode_string(const std::vector<cql::cql_byte_t>& input) {
     return std::string(input.begin(), input.end());
 }
 
 cql::cql_byte_t*
 cql::decode_string(cql::cql_byte_t* input,
-                   std::string& value)
-{
+                   std::string& value) {
     cql::cql_short_t len;
     input = cql::decode_short(input, len);
     value.assign(input, input + len);
@@ -376,8 +341,7 @@ cql::decode_string(cql::cql_byte_t* input,
 
 std::ostream&
 cql::encode_bytes(std::ostream& output,
-                  const std::vector<cql::cql_byte_t>& value)
-{
+                  const std::vector<cql::cql_byte_t>& value) {
     cql::cql_int_t len = htonl(value.size());
     output.write(reinterpret_cast<char*>(&len), sizeof(len));
     output.write(reinterpret_cast<const char*>(&value[0]), value.size());
@@ -386,8 +350,7 @@ cql::encode_bytes(std::ostream& output,
 
 std::istream&
 cql::decode_bytes(std::istream& input,
-                  std::vector<cql::cql_byte_t>& value)
-{
+                  std::vector<cql::cql_byte_t>& value) {
     cql::cql_int_t len;
     input.read(reinterpret_cast<char*>(&len), sizeof(len));
     len = ntohl(len);
@@ -399,8 +362,7 @@ cql::decode_bytes(std::istream& input,
 
 std::ostream&
 cql::encode_short_bytes(std::ostream& output,
-                        const std::vector<cql::cql_byte_t>& value)
-{
+                        const std::vector<cql::cql_byte_t>& value) {
     cql::cql_short_t len = htons(value.size());
     output.write(reinterpret_cast<char*>(&len), sizeof(len));
     output.write(reinterpret_cast<const char*>(&value[0]), value.size());
@@ -409,8 +371,7 @@ cql::encode_short_bytes(std::ostream& output,
 
 std::istream&
 cql::decode_short_bytes(std::istream& input,
-                        std::vector<cql::cql_byte_t>& value)
-{
+                        std::vector<cql::cql_byte_t>& value) {
     cql::cql_short_t len;
     input.read(reinterpret_cast<char*>(&len), sizeof(len));
     len = ntohs(len);
@@ -422,8 +383,7 @@ cql::decode_short_bytes(std::istream& input,
 
 cql::cql_byte_t*
 cql::decode_short_bytes(cql::cql_byte_t* input,
-                        std::vector<cql::cql_byte_t>& value)
-{
+                        std::vector<cql::cql_byte_t>& value) {
     cql::cql_short_t len;
     input = cql::decode_short(input, len);
 
@@ -434,8 +394,7 @@ cql::decode_short_bytes(cql::cql_byte_t* input,
 
 std::ostream&
 cql::encode_long_string(std::ostream& output,
-                        const std::string& value)
-{
+                        const std::string& value) {
     cql::cql_int_t len = htonl(value.size());
     output.write(reinterpret_cast<char*>(&len), sizeof(len));
     output.write(reinterpret_cast<const char*>(value.c_str()), value.size());
@@ -444,8 +403,7 @@ cql::encode_long_string(std::ostream& output,
 
 std::istream&
 cql::decode_long_string(std::istream& input,
-                        std::string& value)
-{
+                        std::string& value) {
     cql::cql_int_t len;
     input.read(reinterpret_cast<char*>(&len), sizeof(len));
     len = ntohl(len);
@@ -458,8 +416,7 @@ cql::decode_long_string(std::istream& input,
 
 std::ostream&
 cql::encode_string_list(std::ostream& output,
-                        const std::list<std::string>& list)
-{
+                        const std::list<std::string>& list) {
     cql::cql_short_t len = htons(list.size());
     output.write(reinterpret_cast<char*>(&len), sizeof(len));
     BOOST_FOREACH(const std::string& s, list) {
@@ -470,8 +427,7 @@ cql::encode_string_list(std::ostream& output,
 
 std::istream&
 cql::decode_string_list(std::istream& input,
-                        std::list<std::string>& list)
-{
+                        std::list<std::string>& list) {
     cql::cql_short_t len;
     input.read(reinterpret_cast<char*>(&len), sizeof(len));
     len = ntohs(len);
@@ -488,8 +444,7 @@ cql::decode_string_list(std::istream& input,
 
 std::ostream&
 cql::encode_string_map(std::ostream& output,
-                       const std::map<std::string, std::string>& map)
-{
+                       const std::map<std::string, std::string>& map) {
     cql::cql_short_t len = htons(map.size());
     output.write(reinterpret_cast<char*>(&len), sizeof(len));
 
@@ -504,8 +459,7 @@ cql::encode_string_map(std::ostream& output,
 
 std::istream&
 cql::decode_string_map(std::istream& input,
-                       std::map<std::string, std::string>& map)
-{
+                       std::map<std::string, std::string>& map) {
     cql::cql_short_t len;
     input.read(reinterpret_cast<char*>(&len), sizeof(len));
     len = ntohs(len);
@@ -524,8 +478,7 @@ cql::decode_string_map(std::istream& input,
 
 std::ostream&
 cql::encode_string_multimap(std::ostream& output,
-                            const std::map<std::string, std::list<std::string> >& map)
-{
+                            const std::map<std::string, std::list<std::string> >& map) {
     cql::cql_short_t len = htons(map.size());
     output.write(reinterpret_cast<char*>(&len), sizeof(len));
 
@@ -540,8 +493,7 @@ cql::encode_string_multimap(std::ostream& output,
 
 std::istream&
 cql::decode_string_multimap(std::istream& input,
-                            std::map<std::string, std::list<std::string> >& map)
-{
+                            std::map<std::string, std::list<std::string> >& map) {
     cql::cql_short_t len;
     input.read(reinterpret_cast<char*>(&len), sizeof(len));
     len = ntohs(len);
@@ -560,8 +512,7 @@ cql::decode_string_multimap(std::istream& input,
 }
 
 inline cql::cql_column_type_enum
-short_to_column_type(cql::cql_short_t input)
-{
+short_to_column_type(cql::cql_short_t input) {
     switch (input) {
     case 0x0000:
         return cql::CQL_COLUMN_TYPE_CUSTOM;
@@ -611,8 +562,7 @@ short_to_column_type(cql::cql_short_t input)
 std::ostream&
 cql::encode_option(std::ostream& output,
                    cql::cql_column_type_enum& id,
-                   const std::string& value)
-{
+                   const std::string& value) {
     cql::encode_short(output, reinterpret_cast<cql::cql_short_t&>(id));
     if (id == CQL_COLUMN_TYPE_CUSTOM) {
         cql::encode_string(output, value);
@@ -623,8 +573,7 @@ cql::encode_option(std::ostream& output,
 std::istream&
 cql::decode_option(std::istream& input,
                    cql::cql_column_type_enum& id,
-                   std::string& value)
-{
+                   std::string& value) {
     cql::cql_short_t t = 0xFFFF;
     cql::decode_short(input, t);
     id = short_to_column_type(t);
@@ -638,8 +587,7 @@ cql::decode_option(std::istream& input,
 cql::cql_byte_t*
 cql::decode_option(cql::cql_byte_t* input,
                    cql::cql_column_type_enum& id,
-                   std::string& value)
-{
+                   std::string& value) {
     cql::cql_short_t t = 0xFFFF;
     input = cql::decode_short(input, t);
     id = short_to_column_type(t);
@@ -653,8 +601,7 @@ cql::decode_option(cql::cql_byte_t* input,
 std::ostream&
 cql::encode_inet(std::ostream& output,
                  const std::string& ip,
-                 const cql::cql_int_t port)
-{
+                 const cql::cql_int_t port) {
     cql::encode_string(output, ip);
     cql::encode_int(output, port);
     return output;
@@ -663,8 +610,7 @@ cql::encode_inet(std::ostream& output,
 std::istream&
 cql::decode_inet(std::istream& input,
                  std::string& ip,
-                 cql::cql_int_t& port)
-{
+                 cql::cql_int_t& port) {
     cql::decode_string(input, ip);
     cql::decode_int(input, port);
     return input;

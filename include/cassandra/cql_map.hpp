@@ -23,90 +23,89 @@
 
 namespace cql {
 
-    class cql_map_t
-    {
+class cql_map_t {
 
-    public:
-        virtual
-        ~cql_map_t(){};
+public:
+    virtual
+    ~cql_map_t() {};
 
-        virtual bool
-        get_key_bool(size_t i,
-                     bool& output) const = 0;
+    virtual bool
+    get_key_bool(size_t i,
+                 bool& output) const = 0;
 
-        virtual bool
-        get_key_int(size_t i,
-                    cql_int_t& output) const = 0;
+    virtual bool
+    get_key_int(size_t i,
+                cql_int_t& output) const = 0;
 
-        virtual bool
-        get_key_float(size_t i,
-                      float& output) const = 0;
+    virtual bool
+    get_key_float(size_t i,
+                  float& output) const = 0;
 
-        virtual bool
-        get_key_double(size_t i,
-                       double& output) const = 0;
+    virtual bool
+    get_key_double(size_t i,
+                   double& output) const = 0;
 
-        virtual bool
-        get_key_bigint(size_t i,
-                       cql::cql_bigint_t& output) const = 0;
+    virtual bool
+    get_key_bigint(size_t i,
+                   cql::cql_bigint_t& output) const = 0;
 
-        virtual bool
-        get_key_string(size_t i,
-                       std::string& output) const = 0;
+    virtual bool
+    get_key_string(size_t i,
+                   std::string& output) const = 0;
 
-        virtual bool
-        get_key_data(size_t i,
-                     cql::cql_byte_t** output,
-                     cql::cql_short_t& size) const = 0;
+    virtual bool
+    get_key_data(size_t i,
+                 cql::cql_byte_t** output,
+                 cql::cql_short_t& size) const = 0;
 
-        virtual bool
-        get_value_bool(size_t i,
-                       bool& output) const = 0;
+    virtual bool
+    get_value_bool(size_t i,
+                   bool& output) const = 0;
 
-        virtual bool
-        get_value_int(size_t i,
-                      cql_int_t& output) const = 0;
+    virtual bool
+    get_value_int(size_t i,
+                  cql_int_t& output) const = 0;
 
-        virtual bool
-        get_value_float(size_t i,
-                        float& output) const = 0;
+    virtual bool
+    get_value_float(size_t i,
+                    float& output) const = 0;
 
-        virtual bool
-        get_value_double(size_t i,
-                         double& output) const = 0;
+    virtual bool
+    get_value_double(size_t i,
+                     double& output) const = 0;
 
-        virtual bool
-        get_value_bigint(size_t i,
-                         cql::cql_bigint_t& output) const = 0;
+    virtual bool
+    get_value_bigint(size_t i,
+                     cql::cql_bigint_t& output) const = 0;
 
-        virtual bool
-        get_value_string(size_t i,
-                         std::string& output) const = 0;
+    virtual bool
+    get_value_string(size_t i,
+                     std::string& output) const = 0;
 
-        virtual bool
-        get_value_data(size_t i,
-                       cql::cql_byte_t** output,
-                       cql::cql_short_t& size) const = 0;
+    virtual bool
+    get_value_data(size_t i,
+                   cql::cql_byte_t** output,
+                   cql::cql_short_t& size) const = 0;
 
-        virtual std::string
-        str() const = 0;
+    virtual std::string
+    str() const = 0;
 
-        virtual cql::cql_column_type_enum
-        key_type() const = 0;
+    virtual cql::cql_column_type_enum
+    key_type() const = 0;
 
-        virtual const std::string&
-        key_custom_class() const = 0;
+    virtual const std::string&
+    key_custom_class() const = 0;
 
-        virtual cql::cql_column_type_enum
-        value_type() const = 0;
+    virtual cql::cql_column_type_enum
+    value_type() const = 0;
 
-        virtual const std::string&
-        value_custom_class() const = 0;
+    virtual const std::string&
+    value_custom_class() const = 0;
 
-        virtual size_t
-        size() const = 0;
+    virtual size_t
+    size() const = 0;
 
-    };
+};
 
 
 } // namespace cql

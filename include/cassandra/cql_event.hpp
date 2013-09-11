@@ -23,35 +23,35 @@
 
 namespace cql {
 
-    class cql_event_t {
-    public:
-        virtual cql_event_enum
-        event_type() const = 0;
+class cql_event_t {
+public:
+    virtual cql_event_enum
+    event_type() const = 0;
 
-        virtual cql_event_topology_enum
-        topology_change() const = 0;
+    virtual cql_event_topology_enum
+    topology_change() const = 0;
 
-        virtual cql_event_status_enum
-        status_change() const = 0;
+    virtual cql_event_status_enum
+    status_change() const = 0;
 
-        virtual cql_event_schema_enum
-        schema_change() const = 0;
+    virtual cql_event_schema_enum
+    schema_change() const = 0;
 
-        virtual const std::string&
-        keyspace() const = 0;
+    virtual const std::string&
+    keyspace() const = 0;
 
-        virtual const std::string&
-        column_family() const = 0;
+    virtual const std::string&
+    column_family() const = 0;
 
-        virtual const std::string&
-        ip() const = 0;
+    virtual const std::string&
+    ip() const = 0;
 
-        virtual cql_int_t
-        port() const = 0;
+    virtual cql_int_t
+    port() const = 0;
 
-        virtual
-        ~cql_event_t(){};
-    };
+    virtual
+    ~cql_event_t() {};
+};
 
 } // namespace cql
 

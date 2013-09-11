@@ -28,37 +28,31 @@ cql::cql_message_ready_impl_t::cql_message_ready_impl_t(size_t size) :
 {}
 
 cql::cql_message_buffer_t
-cql::cql_message_ready_impl_t::buffer()
-{
+cql::cql_message_ready_impl_t::buffer() {
     return _buffer;
 }
 
 cql::cql_opcode_enum
-cql::cql_message_ready_impl_t::opcode() const
-{
+cql::cql_message_ready_impl_t::opcode() const {
     return CQL_OPCODE_READY;
 }
 
 cql::cql_int_t
-cql::cql_message_ready_impl_t::size() const
-{
+cql::cql_message_ready_impl_t::size() const {
     return 0;
 }
 
 std::string
-cql::cql_message_ready_impl_t::str() const
-{
+cql::cql_message_ready_impl_t::str() const {
     return "READY";
 }
 
 bool
-cql::cql_message_ready_impl_t::consume(cql::cql_error_t*)
-{
+cql::cql_message_ready_impl_t::consume(cql::cql_error_t*) {
     return true;
 }
 
 bool
-cql::cql_message_ready_impl_t::prepare(cql::cql_error_t*)
-{
+cql::cql_message_ready_impl_t::prepare(cql::cql_error_t*) {
     return true;
 }

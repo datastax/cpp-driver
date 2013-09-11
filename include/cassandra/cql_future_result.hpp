@@ -25,40 +25,39 @@
 
 namespace cql {
 
-    // Forward declarations
-    class cql_client_t;
+// Forward declarations
+class cql_client_t;
 
-    struct cql_future_result_t
-    {
+struct cql_future_result_t {
 
-        cql_future_result_t() :
-            client(NULL),
-            stream(0)
-        {}
+    cql_future_result_t() :
+        client(NULL),
+        stream(0)
+    {}
 
-        cql_future_result_t(
-            cql::cql_client_t*   client,
-            cql::cql_stream_id_t stream,
-            cql::cql_result_t*   result) :
-            client(client),
-            stream(stream),
-            result(result)
-        {}
+    cql_future_result_t(
+        cql::cql_client_t*   client,
+        cql::cql_stream_id_t stream,
+        cql::cql_result_t*   result) :
+        client(client),
+        stream(stream),
+        result(result)
+    {}
 
-        cql_future_result_t(
-            cql::cql_client_t*   client,
-            cql::cql_stream_id_t stream,
-            cql::cql_error_t     error) :
-            client(client),
-            stream(stream),
-            error(error)
-        {}
+    cql_future_result_t(
+        cql::cql_client_t*   client,
+        cql::cql_stream_id_t stream,
+        cql::cql_error_t     error) :
+        client(client),
+        stream(stream),
+        error(error)
+    {}
 
-        cql::cql_client_t*                   client;
-        cql::cql_stream_id_t                 stream;
-        boost::shared_ptr<cql::cql_result_t> result;
-        cql::cql_error_t                     error;
-    };
+    cql::cql_client_t*                   client;
+    cql::cql_stream_id_t                 stream;
+    boost::shared_ptr<cql::cql_result_t> result;
+    cql::cql_error_t                     error;
+};
 
 
 } // namespace cql

@@ -40,123 +40,106 @@ cql::cql_message_execute_impl_t::cql_message_execute_impl_t(size_t size) :
 {}
 
 cql::cql_message_execute_impl_t::cql_message_execute_impl_t(const std::vector<cql::cql_byte_t>& id,
-                                                            cql::cql_consistency_enum consistency) :
+        cql::cql_consistency_enum consistency) :
     _buffer(new std::vector<cql_byte_t>()),
     _query_id(id),
     _consistency(consistency)
 {}
 
 cql::cql_message_buffer_t
-cql::cql_message_execute_impl_t::buffer()
-{
+cql::cql_message_execute_impl_t::buffer() {
     return _buffer;
 }
 
 const std::vector<cql::cql_byte_t>&
-cql::cql_message_execute_impl_t::query_id() const
-{
+cql::cql_message_execute_impl_t::query_id() const {
     return _query_id;
 }
 
 void
-cql::cql_message_execute_impl_t::query_id(const std::vector<cql::cql_byte_t>& id)
-{
+cql::cql_message_execute_impl_t::query_id(const std::vector<cql::cql_byte_t>& id) {
     _query_id = id;
 }
 
 cql::cql_consistency_enum
-cql::cql_message_execute_impl_t::consistency() const
-{
+cql::cql_message_execute_impl_t::consistency() const {
     return _consistency;
 }
 
 void
-cql::cql_message_execute_impl_t::consistency(const cql::cql_consistency_enum consistency)
-{
+cql::cql_message_execute_impl_t::consistency(const cql::cql_consistency_enum consistency) {
     _consistency = consistency;
 }
 
 void
-cql::cql_message_execute_impl_t::push_back(const param_t& val)
-{
+cql::cql_message_execute_impl_t::push_back(const param_t& val) {
     _params.push_back(param_t(val.begin(), val.end()));
 }
 
 void
-cql::cql_message_execute_impl_t::push_back(const std::string& val)
-{
+cql::cql_message_execute_impl_t::push_back(const std::string& val) {
     _params.push_back(param_t(val.begin(), val.end()));
 }
 
 void
-cql::cql_message_execute_impl_t::push_back(const cql::cql_short_t val)
-{
+cql::cql_message_execute_impl_t::push_back(const cql::cql_short_t val) {
     cql::cql_message_execute_impl_t::param_t p;
     cql::encode_short(p, val);
     _params.push_back(p);
 }
 
 void
-cql::cql_message_execute_impl_t::push_back(const cql::cql_int_t val)
-{
+cql::cql_message_execute_impl_t::push_back(const cql::cql_int_t val) {
     cql::cql_message_execute_impl_t::param_t p;
     cql::encode_int(p, val);
     _params.push_back(p);
 }
 
 void
-cql::cql_message_execute_impl_t::push_back(const cql::cql_bigint_t val)
-{
+cql::cql_message_execute_impl_t::push_back(const cql::cql_bigint_t val) {
     cql::cql_message_execute_impl_t::param_t p;
     cql::encode_bigint(p, val);
     _params.push_back(p);
 }
 
 void
-cql::cql_message_execute_impl_t::push_back(const float val)
-{
+cql::cql_message_execute_impl_t::push_back(const float val) {
     cql::cql_message_execute_impl_t::param_t p;
     cql::encode_float(p, val);
     _params.push_back(p);
 }
 
 void
-cql::cql_message_execute_impl_t::push_back(const double val)
-{
+cql::cql_message_execute_impl_t::push_back(const double val) {
     cql::cql_message_execute_impl_t::param_t p;
     cql::encode_double(p, val);
     _params.push_back(p);
 }
 
 void
-cql::cql_message_execute_impl_t::push_back(const bool val)
-{
+cql::cql_message_execute_impl_t::push_back(const bool val) {
     cql::cql_message_execute_impl_t::param_t p;
     cql::encode_bool(p, val);
     _params.push_back(p);
 }
 
 void
-cql::cql_message_execute_impl_t::pop_back()
-{
+cql::cql_message_execute_impl_t::pop_back() {
     _params.pop_back();
 }
 
 cql::cql_opcode_enum
-cql::cql_message_execute_impl_t::opcode() const
-{
+cql::cql_message_execute_impl_t::opcode() const {
     return CQL_OPCODE_EXECUTE;
 }
 
 cql::cql_int_t
-cql::cql_message_execute_impl_t::size() const
-{
+cql::cql_message_execute_impl_t::size() const {
     return _buffer->size();
 }
 
 std::string
-cql::cql_message_execute_impl_t::str() const
-{
+cql::cql_message_execute_impl_t::str() const {
     std::stringstream output;
     output << "EXECUTE";
 
@@ -172,8 +155,7 @@ cql::cql_message_execute_impl_t::str() const
 }
 
 bool
-cql::cql_message_execute_impl_t::consume(cql::cql_error_t*)
-{
+cql::cql_message_execute_impl_t::consume(cql::cql_error_t*) {
     cql::vector_stream_t buffer(*_buffer);
     std::istream stream(&buffer);
 
@@ -231,8 +213,7 @@ cql::cql_message_execute_impl_t::consume(cql::cql_error_t*)
 }
 
 bool
-cql::cql_message_execute_impl_t::prepare(cql::cql_error_t*)
-{
+cql::cql_message_execute_impl_t::prepare(cql::cql_error_t*) {
     size_t size = (3 * sizeof(cql_short_t)) + _query_id.size();
     BOOST_FOREACH(const param_t& p, _params) {
         size += p.size() + sizeof(cql_int_t);

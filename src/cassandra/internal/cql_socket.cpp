@@ -19,30 +19,25 @@
 #include "cassandra/internal/cql_socket.hpp"
 
 cql::cql_socket_t::cql_socket_t(boost::asio::io_service& io_service) :
-    _socket(new boost::asio::ip::tcp::socket(io_service))
-{
+    _socket(new boost::asio::ip::tcp::socket(io_service)) {
 }
 
 boost::asio::io_service&
-cql::cql_socket_t::get_io_service()
-{
+cql::cql_socket_t::get_io_service() {
     return _socket->get_io_service();
 }
 
 bool
-cql::cql_socket_t::requires_handshake()
-{
+cql::cql_socket_t::requires_handshake() {
     return false;
 }
 
 boost::asio::ip::tcp::socket&
-cql::cql_socket_t::lowest_layer()
-{
+cql::cql_socket_t::lowest_layer() {
     return *_socket;
 }
 
 void
-cql::cql_socket_t::reset()
-{
+cql::cql_socket_t::reset() {
     _socket.reset(new boost::asio::ip::tcp::socket(_socket->get_io_service()));
 }

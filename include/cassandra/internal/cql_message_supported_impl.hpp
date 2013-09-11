@@ -28,51 +28,50 @@
 
 namespace cql {
 
-    class cql_message_supported_impl_t :
-        public cql_message_t
-    {
+class cql_message_supported_impl_t :
+    public cql_message_t {
 
-    public:
+public:
 
-        cql_message_supported_impl_t();
+    cql_message_supported_impl_t();
 
-        cql_message_supported_impl_t(size_t size);
+    cql_message_supported_impl_t(size_t size);
 
-        void
-        compressions(const std::list<std::string>& c);
+    void
+    compressions(const std::list<std::string>& c);
 
-        const std::list<std::string>&
-        compressions() const;
+    const std::list<std::string>&
+    compressions() const;
 
-        void
-        versions(const std::list<std::string>& v);
+    void
+    versions(const std::list<std::string>& v);
 
-        const std::list<std::string>&
-        version() const;
+    const std::list<std::string>&
+    version() const;
 
-        cql::cql_opcode_enum
-        opcode() const;
+    cql::cql_opcode_enum
+    opcode() const;
 
-        cql_int_t
-        size() const;
+    cql_int_t
+    size() const;
 
-        std::string
-        str() const;
+    std::string
+    str() const;
 
-        bool
-        consume(cql::cql_error_t* err);
+    bool
+    consume(cql::cql_error_t* err);
 
-        bool
-        prepare(cql::cql_error_t* err);
+    bool
+    prepare(cql::cql_error_t* err);
 
-        cql_message_buffer_t
-        buffer();
+    cql_message_buffer_t
+    buffer();
 
-    private:
-        cql::cql_message_buffer_t _buffer;
-        std::list<std::string>    _versions;
-        std::list<std::string>    _compressions;
-    };
+private:
+    cql::cql_message_buffer_t _buffer;
+    std::list<std::string>    _versions;
+    std::list<std::string>    _compressions;
+};
 
 } // namespace cql
 

@@ -25,66 +25,65 @@
 
 namespace cql {
 
-    class cql_message_execute_impl_t;
+class cql_message_execute_impl_t;
 
-    class cql_execute_t :
-        boost::noncopyable
-    {
+class cql_execute_t :
+        boost::noncopyable {
 
-    public:
+public:
 
-        cql_execute_t();
+    cql_execute_t();
 
-        ~cql_execute_t();
+    ~cql_execute_t();
 
-        cql_execute_t(const std::vector<cql::cql_byte_t>& id,
-                      cql::cql_consistency_enum consistency);
+    cql_execute_t(const std::vector<cql::cql_byte_t>& id,
+                  cql::cql_consistency_enum consistency);
 
-        const std::vector<cql::cql_byte_t>&
-        query_id() const;
+    const std::vector<cql::cql_byte_t>&
+    query_id() const;
 
-        void
-        query_id(const std::vector<cql::cql_byte_t>& id);
+    void
+    query_id(const std::vector<cql::cql_byte_t>& id);
 
-        cql::cql_consistency_enum
-        consistency() const;
+    cql::cql_consistency_enum
+    consistency() const;
 
-        void
-        consistency(const cql::cql_consistency_enum consistency);
+    void
+    consistency(const cql::cql_consistency_enum consistency);
 
-        void
-        push_back(const std::vector<cql::cql_byte_t>& val);
+    void
+    push_back(const std::vector<cql::cql_byte_t>& val);
 
-        void
-        push_back(const std::string& val);
+    void
+    push_back(const std::string& val);
 
-        void
-        push_back(const cql::cql_short_t val);
+    void
+    push_back(const cql::cql_short_t val);
 
-        void
-        push_back(const cql_int_t val);
+    void
+    push_back(const cql_int_t val);
 
-        void
-        push_back(const cql::cql_bigint_t val);
+    void
+    push_back(const cql::cql_bigint_t val);
 
-        void
-        push_back(const float val);
+    void
+    push_back(const float val);
 
-        void
-        push_back(const double val);
+    void
+    push_back(const double val);
 
-        void
-        push_back(const bool val);
+    void
+    push_back(const bool val);
 
-        void
-        pop_back();
+    void
+    pop_back();
 
-        cql_message_execute_impl_t*
-        impl() const;
+    cql_message_execute_impl_t*
+    impl() const;
 
-    private:
-        cql_message_execute_impl_t* _impl;
-    };
+private:
+    cql_message_execute_impl_t* _impl;
+};
 
 } // namespace cql
 

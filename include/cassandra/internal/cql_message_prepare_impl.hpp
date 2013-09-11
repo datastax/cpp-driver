@@ -24,46 +24,45 @@
 
 namespace cql {
 
-    class cql_message_prepare_impl_t :
-        public cql_message_t
-    {
+class cql_message_prepare_impl_t :
+    public cql_message_t {
 
-    public:
+public:
 
-        cql_message_prepare_impl_t();
+    cql_message_prepare_impl_t();
 
-        cql_message_prepare_impl_t(size_t size);
+    cql_message_prepare_impl_t(size_t size);
 
-        cql_message_prepare_impl_t(const std::string& query);
+    cql_message_prepare_impl_t(const std::string& query);
 
-        const std::string&
-        query() const;
+    const std::string&
+    query() const;
 
-        void
-        query(const std::string& q);
+    void
+    query(const std::string& q);
 
-        cql::cql_opcode_enum
-        opcode() const;
+    cql::cql_opcode_enum
+    opcode() const;
 
-        cql_int_t
-        size() const;
+    cql_int_t
+    size() const;
 
-        std::string
-        str() const;
+    std::string
+    str() const;
 
-        bool
-        consume(cql::cql_error_t* err);
+    bool
+    consume(cql::cql_error_t* err);
 
-        bool
-        prepare(cql::cql_error_t* err);
+    bool
+    prepare(cql::cql_error_t* err);
 
-        cql_message_buffer_t
-        buffer();
+    cql_message_buffer_t
+    buffer();
 
-    private:
-        cql::cql_message_buffer_t _buffer;
-        std::string               _query;
-    };
+private:
+    cql::cql_message_buffer_t _buffer;
+    std::string               _query;
+};
 
 } // namespace cql
 

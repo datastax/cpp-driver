@@ -24,46 +24,46 @@
 #include "cassandra/cql_client.hpp"
 
 namespace cql {
-    class cql_client_factory_t {
-    public:
+class cql_client_factory_t {
+public:
 
-        /** Instantiate a new cql_client_t. Client is not capable of SSL.
+    /** Instantiate a new cql_client_t. Client is not capable of SSL.
 
-            @param service the boost IO service used for all network IO
-        */
-        static cql_client_t*
-        create_cql_client_t(boost::asio::io_service& service);
+        @param service the boost IO service used for all network IO
+    */
+    static cql_client_t*
+    create_cql_client_t(boost::asio::io_service& service);
 
-        /** Instantiate a new cql_client_t. The client will attempt an SSL handshake on connect.
+    /** Instantiate a new cql_client_t. The client will attempt an SSL handshake on connect.
 
-            @param service the boost IO service used for all network IO
-            @param context the boost SSL context, dictates cert validation behavior and SSL version
-        */
-        static cql_client_t*
-        create_cql_client_t(boost::asio::io_service& service,
-                            boost::asio::ssl::context& context);
+        @param service the boost IO service used for all network IO
+        @param context the boost SSL context, dictates cert validation behavior and SSL version
+    */
+    static cql_client_t*
+    create_cql_client_t(boost::asio::io_service& service,
+                        boost::asio::ssl::context& context);
 
-        /** Instantiate a new cql_client_t. Client is not capable of SSL.
+    /** Instantiate a new cql_client_t. Client is not capable of SSL.
 
-            @param service the boost IO service used for all network IO
-            @param log_callback a callback which will be triggered for all internally generated log messages
-        */
-        static cql_client_t*
-        create_cql_client_t(boost::asio::io_service& service,
-                            cql::cql_client_t::cql_log_callback_t log_callback);
+        @param service the boost IO service used for all network IO
+        @param log_callback a callback which will be triggered for all internally generated log messages
+    */
+    static cql_client_t*
+    create_cql_client_t(boost::asio::io_service& service,
+                        cql::cql_client_t::cql_log_callback_t log_callback);
 
-        /** Instantiate a new cql_client_t. The client will attempt an SSL handshake on connect.
+    /** Instantiate a new cql_client_t. The client will attempt an SSL handshake on connect.
 
-            @param service the boost IO service used for all network IO
-            @param context the boost SSL context, dictates cert validation behavior and SSL version
-            @param log_callback a callback which will be triggered for all internally generated log messages
-        */
-        static cql_client_t*
-        create_cql_client_t(boost::asio::io_service& service,
-                            boost::asio::ssl::context& context,
-                            cql::cql_client_t::cql_log_callback_t log_callback);
+        @param service the boost IO service used for all network IO
+        @param context the boost SSL context, dictates cert validation behavior and SSL version
+        @param log_callback a callback which will be triggered for all internally generated log messages
+    */
+    static cql_client_t*
+    create_cql_client_t(boost::asio::io_service& service,
+                        boost::asio::ssl::context& context,
+                        cql::cql_client_t::cql_log_callback_t log_callback);
 
-    };
+};
 } // namespace cql
 
 #endif // CQL_CLIENT_FACTORY_H_

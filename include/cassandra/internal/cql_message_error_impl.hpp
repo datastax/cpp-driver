@@ -24,54 +24,53 @@
 
 namespace cql {
 
-    class cql_message_error_impl_t :
-        public cql_message_t
-    {
+class cql_message_error_impl_t :
+    public cql_message_t {
 
-    public:
+public:
 
-        cql_message_error_impl_t();
+    cql_message_error_impl_t();
 
-        cql_message_error_impl_t(size_t size);
+    cql_message_error_impl_t(size_t size);
 
-        cql_message_error_impl_t(cql_int_t code,
-                                 const std::string& message);
+    cql_message_error_impl_t(cql_int_t code,
+                             const std::string& message);
 
-        const std::string&
-        message() const;
+    const std::string&
+    message() const;
 
-        void
-        message(const std::string& m);
+    void
+    message(const std::string& m);
 
-        cql_int_t
-        code() const;
+    cql_int_t
+    code() const;
 
-        void
-        code(cql_int_t c);
+    void
+    code(cql_int_t c);
 
-        cql::cql_opcode_enum
-        opcode() const;
+    cql::cql_opcode_enum
+    opcode() const;
 
-        cql_int_t
-        size() const;
+    cql_int_t
+    size() const;
 
-        std::string
-        str() const;
+    std::string
+    str() const;
 
-        bool
-        consume(cql::cql_error_t* err);
+    bool
+    consume(cql::cql_error_t* err);
 
-        bool
-        prepare(cql::cql_error_t* err);
+    bool
+    prepare(cql::cql_error_t* err);
 
-        cql_message_buffer_t
-        buffer();
+    cql_message_buffer_t
+    buffer();
 
-    private:
-        cql::cql_message_buffer_t _buffer;
-        cql_int_t                 _code;
-        std::string               _message;
-    };
+private:
+    cql::cql_message_buffer_t _buffer;
+    cql_int_t                 _code;
+    std::string               _message;
+};
 
 } // namespace cql
 

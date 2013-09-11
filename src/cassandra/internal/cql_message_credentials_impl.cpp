@@ -45,38 +45,32 @@ cql::cql_message_credentials_impl_t::cql_message_credentials_impl_t(size_t size)
 {}
 
 cql::cql_message_buffer_t
-cql::cql_message_credentials_impl_t::buffer()
-{
+cql::cql_message_credentials_impl_t::buffer() {
     return _buffer;
 }
 
 void
-cql::cql_message_credentials_impl_t::credentials(const std::map<std::string, std::string>& c)
-{
+cql::cql_message_credentials_impl_t::credentials(const std::map<std::string, std::string>& c) {
     _credentials = c;
 }
 
 const std::map<std::string, std::string>&
-cql::cql_message_credentials_impl_t::credentials() const
-{
+cql::cql_message_credentials_impl_t::credentials() const {
     return _credentials;
 }
 
 cql::cql_opcode_enum
-cql::cql_message_credentials_impl_t::opcode() const
-{
+cql::cql_message_credentials_impl_t::opcode() const {
     return CQL_OPCODE_CREDENTIALS;
 }
 
 cql::cql_int_t
-cql::cql_message_credentials_impl_t::size() const
-{
+cql::cql_message_credentials_impl_t::size() const {
     return _buffer->size();
 }
 
 std::string
-cql::cql_message_credentials_impl_t::str() const
-{
+cql::cql_message_credentials_impl_t::str() const {
     std::list<std::string> keys;
 #if BOOST_VERSION >= 104300
     boost::copy(_credentials | boost::adaptors::map_keys, std::back_inserter(keys));
@@ -90,8 +84,7 @@ cql::cql_message_credentials_impl_t::str() const
 }
 
 bool
-cql::cql_message_credentials_impl_t::consume(cql::cql_error_t*)
-{
+cql::cql_message_credentials_impl_t::consume(cql::cql_error_t*) {
     cql::vector_stream_t buffer(*_buffer);
     std::istream stream(&buffer);
 
@@ -100,8 +93,7 @@ cql::cql_message_credentials_impl_t::consume(cql::cql_error_t*)
 }
 
 bool
-cql::cql_message_credentials_impl_t::prepare(cql::cql_error_t*)
-{
+cql::cql_message_credentials_impl_t::prepare(cql::cql_error_t*) {
     size_t size = 0;
     BOOST_FOREACH(const credentials_map_t::value_type& pair, _credentials) {
         size += pair.first.size();

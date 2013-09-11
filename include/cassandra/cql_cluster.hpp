@@ -25,29 +25,29 @@
 
 namespace cql {
 
-	class cql_session_t;
-	class cql_initializer_t;
-	class cql_builder_t;
+class cql_session_t;
+class cql_initializer_t;
+class cql_builder_t;
 
-	class cql_cluster_pimpl_t;
+class cql_cluster_pimpl_t;
 
-    class cql_cluster_t: boost::noncopyable {
+class cql_cluster_t: boost::noncopyable {
 
-	private: //PIMPL
-		std::auto_ptr<cql_cluster_pimpl_t> _pimpl;
+private: //PIMPL
+    std::auto_ptr<cql_cluster_pimpl_t> _pimpl;
 
-		//private constructor
-		cql_cluster_t(cql_cluster_pimpl_t* pimpl) : _pimpl(pimpl) {}
+    //private constructor
+    cql_cluster_t(cql_cluster_pimpl_t* pimpl) : _pimpl(pimpl) {}
 
-	public:
-		static boost::shared_ptr<cql_cluster_t> built_from(const cql_initializer_t& initializer);
-		static boost::shared_ptr<cql_builder_t> builder();
+public:
+    static boost::shared_ptr<cql_cluster_t> built_from(const cql_initializer_t& initializer);
+    static boost::shared_ptr<cql_builder_t> builder();
 
-		boost::shared_ptr<cql_session_t> connect();
-		boost::shared_ptr<cql_session_t> connect(const std::string& keyspace);
-		void shutdown(int timeout_ms=-1);
-		~cql_cluster_t();
-    };
-} 
+    boost::shared_ptr<cql_session_t> connect();
+    boost::shared_ptr<cql_session_t> connect(const std::string& keyspace);
+    void shutdown(int timeout_ms=-1);
+    ~cql_cluster_t();
+};
+}
 
 #endif // CQL_CLUSTER_H_

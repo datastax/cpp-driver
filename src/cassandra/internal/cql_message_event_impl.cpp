@@ -42,80 +42,67 @@ cql::cql_message_event_impl_t::cql_message_event_impl_t(size_t size) :
 {}
 
 cql::cql_message_buffer_t
-cql::cql_message_event_impl_t::buffer()
-{
+cql::cql_message_event_impl_t::buffer() {
     return _buffer;
 }
 
 cql::cql_opcode_enum
-cql::cql_message_event_impl_t::opcode() const
-{
+cql::cql_message_event_impl_t::opcode() const {
     return CQL_OPCODE_EVENT;
 }
 
 std::string
-cql::cql_message_event_impl_t::str() const
-{
+cql::cql_message_event_impl_t::str() const {
     return "EVENT";
 }
 
 cql::cql_event_enum
-cql::cql_message_event_impl_t::event_type() const
-{
+cql::cql_message_event_impl_t::event_type() const {
     return _event_type;
 }
 
 cql::cql_event_schema_enum
-cql::cql_message_event_impl_t::schema_change() const
-{
+cql::cql_message_event_impl_t::schema_change() const {
     return _schema_change;
 }
 
 cql::cql_event_topology_enum
-cql::cql_message_event_impl_t::topology_change() const
-{
+cql::cql_message_event_impl_t::topology_change() const {
     return _topology_change;
 }
 
 cql::cql_event_status_enum
-cql::cql_message_event_impl_t::status_change() const
-{
+cql::cql_message_event_impl_t::status_change() const {
     return _status_change;
 }
 
 const std::string&
-cql::cql_message_event_impl_t::keyspace() const
-{
+cql::cql_message_event_impl_t::keyspace() const {
     return _keyspace;
 }
 
 const std::string&
-cql::cql_message_event_impl_t::column_family() const
-{
+cql::cql_message_event_impl_t::column_family() const {
     return _column_family;
 }
 
 const std::string&
-cql::cql_message_event_impl_t::ip() const
-{
+cql::cql_message_event_impl_t::ip() const {
     return _ip;
 }
 
 cql::cql_int_t
-cql::cql_message_event_impl_t::port() const
-{
+cql::cql_message_event_impl_t::port() const {
     return _port;
 }
 
 cql::cql_int_t
-cql::cql_message_event_impl_t::size() const
-{
+cql::cql_message_event_impl_t::size() const {
     return _buffer->size();
 }
 
 bool
-cql::cql_message_event_impl_t::consume(cql::cql_error_t*)
-{
+cql::cql_message_event_impl_t::consume(cql::cql_error_t*) {
     _ip = "";
     _port = 0;
     _keyspace = "";
@@ -140,15 +127,12 @@ cql::cql_message_event_impl_t::consume(cql::cql_error_t*)
 
         if (change == CQL_EVENT_TOPOLOGY_CHANGE_NEW) {
             _topology_change = CQL_EVENT_TOPOLOGY_ADD_NODE;
-        }
-        else if (change == CQL_EVENT_TOPOLOGY_CHANGE_REMOVE) {
+        } else if (change == CQL_EVENT_TOPOLOGY_CHANGE_REMOVE) {
             _topology_change = CQL_EVENT_TOPOLOGY_REMOVE_NODE;
-        }
-        else {
+        } else {
             _topology_change = CQL_EVENT_TOPOLOGY_UNKNOWN;
         }
-    }
-    else if (event_type == CQL_EVENT_STATUS_CHANGE) {
+    } else if (event_type == CQL_EVENT_STATUS_CHANGE) {
         _event_type = CQL_EVENT_TYPE_STATUS;
 
         std::string change;
@@ -157,15 +141,12 @@ cql::cql_message_event_impl_t::consume(cql::cql_error_t*)
 
         if (change == CQL_EVENT_STATUS_CHANGE_UP) {
             _status_change = CQL_EVENT_STATUS_UP;
-        }
-        else if (change == CQL_EVENT_STATUS_CHANGE_DOWN) {
+        } else if (change == CQL_EVENT_STATUS_CHANGE_DOWN) {
             _status_change = CQL_EVENT_STATUS_DOWN;
-        }
-        else {
+        } else {
             _status_change = CQL_EVENT_STATUS_UNKNOWN;
         }
-    }
-    else if (event_type == CQL_EVENT_SCHEMA_CHANGE) {
+    } else if (event_type == CQL_EVENT_SCHEMA_CHANGE) {
         _event_type = CQL_EVENT_TYPE_SCHEMA;
 
         std::string change;
@@ -175,14 +156,11 @@ cql::cql_message_event_impl_t::consume(cql::cql_error_t*)
 
         if (change == CQL_EVENT_SCHEMA_CHANGE_CREATED) {
             _schema_change = CQL_EVENT_SCHEMA_CREATED;
-        }
-        else if (change == CQL_EVENT_SCHEMA_CHANGE_DROPPED) {
+        } else if (change == CQL_EVENT_SCHEMA_CHANGE_DROPPED) {
             _schema_change = CQL_EVENT_SCHEMA_DROPPED;
-        }
-        else if (change == CQL_EVENT_SCHEMA_CHANGE_UPDATED) {
+        } else if (change == CQL_EVENT_SCHEMA_CHANGE_UPDATED) {
             _schema_change = CQL_EVENT_SCHEMA_UPDATED;
-        }
-        else {
+        } else {
             _schema_change = CQL_EVENT_SCHEMA_UNKNOWN;
         }
     }
@@ -191,8 +169,7 @@ cql::cql_message_event_impl_t::consume(cql::cql_error_t*)
 }
 
 bool
-cql::cql_message_event_impl_t::prepare(cql::cql_error_t*)
-{
+cql::cql_message_event_impl_t::prepare(cql::cql_error_t*) {
     cql::vector_stream_t buffer(*_buffer);
     std::ostream stream(&buffer);
 

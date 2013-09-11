@@ -24,27 +24,25 @@
 
 namespace cql {
 
-    struct cql_error_t
-    {
-        bool        cassandra;
-        bool        transport;
-        bool        library;
-        int         code;
-        std::string message;
+struct cql_error_t {
+    bool        cassandra;
+    bool        transport;
+    bool        library;
+    int         code;
+    std::string message;
 
-        cql_error_t() :
-            cassandra(false),
-            transport(false),
-            library(false),
-            code(0)
-        {}
+    cql_error_t() :
+        cassandra(false),
+        transport(false),
+        library(false),
+        code(0)
+    {}
 
-        inline bool
-        is_err() const
-        {
-            return cassandra || transport || library;
-        }
-    };
+    inline bool
+    is_err() const {
+        return cassandra || transport || library;
+    }
+};
 } // namespace cql
 
 #endif // CQL_ERROR_H_

@@ -26,71 +26,70 @@
 
 namespace cql {
 
-    class cql_message_event_impl_t :
-        public cql_event_t,
-        public cql_message_t
-    {
-    public:
+class cql_message_event_impl_t :
+    public cql_event_t,
+    public cql_message_t {
+public:
 
-        cql_message_event_impl_t();
+    cql_message_event_impl_t();
 
-        cql_message_event_impl_t(size_t size);
+    cql_message_event_impl_t(size_t size);
 
-        cql::cql_opcode_enum
-        opcode() const;
+    cql::cql_opcode_enum
+    opcode() const;
 
-        cql_int_t
-        size() const;
+    cql_int_t
+    size() const;
 
-        std::string
-        str() const;
+    std::string
+    str() const;
 
-        virtual cql_event_enum
-        event_type() const;
+    virtual cql_event_enum
+    event_type() const;
 
-        virtual cql_event_topology_enum
-        topology_change() const;
+    virtual cql_event_topology_enum
+    topology_change() const;
 
-        virtual cql_event_status_enum
-        status_change() const;
+    virtual cql_event_status_enum
+    status_change() const;
 
-        virtual cql_event_schema_enum
-        schema_change() const;
+    virtual cql_event_schema_enum
+    schema_change() const;
 
-        virtual const std::string&
-        keyspace() const;
+    virtual const std::string&
+    keyspace() const;
 
-        virtual const std::string&
-        column_family() const;
+    virtual const std::string&
+    column_family() const;
 
-        virtual const std::string&
-        ip() const;
+    virtual const std::string&
+    ip() const;
 
-        virtual cql_int_t
-        port() const;
+    virtual cql_int_t
+    port() const;
 
-        bool
-        consume(cql::cql_error_t* err);
+    bool
+    consume(cql::cql_error_t* err);
 
-        bool
-        prepare(cql::cql_error_t* err);
+    bool
+    prepare(cql::cql_error_t* err);
 
-        cql_message_buffer_t
-        buffer();
+    cql_message_buffer_t
+    buffer();
 
-    private:
-        cql::cql_message_buffer_t _buffer;
+private:
+    cql::cql_message_buffer_t _buffer;
 
-        cql_event_enum            _event_type;
-        cql_event_topology_enum   _topology_change;
-        cql_event_schema_enum     _schema_change;
-        cql_event_status_enum     _status_change;
+    cql_event_enum            _event_type;
+    cql_event_topology_enum   _topology_change;
+    cql_event_schema_enum     _schema_change;
+    cql_event_status_enum     _status_change;
 
-        std::string               _ip;
-        cql_int_t                 _port;
-        std::string               _keyspace;
-        std::string               _column_family;
-    };
+    std::string               _ip;
+    cql_int_t                 _port;
+    std::string               _keyspace;
+    std::string               _column_family;
+};
 
 } // namespace cql
 

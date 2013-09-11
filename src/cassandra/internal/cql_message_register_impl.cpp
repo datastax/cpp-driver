@@ -34,44 +34,37 @@ cql::cql_message_register_impl_t::cql_message_register_impl_t(size_t size) :
 {}
 
 cql::cql_message_buffer_t
-cql::cql_message_register_impl_t::buffer()
-{
+cql::cql_message_register_impl_t::buffer() {
     return _buffer;
 }
 
 cql::cql_opcode_enum
-cql::cql_message_register_impl_t::opcode() const
-{
+cql::cql_message_register_impl_t::opcode() const {
     return CQL_OPCODE_REGISTER;
 }
 
 cql::cql_int_t
-cql::cql_message_register_impl_t::size() const
-{
+cql::cql_message_register_impl_t::size() const {
     return _buffer->size();
 }
 
 void
-cql::cql_message_register_impl_t::events(const std::list<std::string>& c)
-{
+cql::cql_message_register_impl_t::events(const std::list<std::string>& c) {
     _events = c;
 }
 
 const std::list<std::string>&
-cql::cql_message_register_impl_t::events() const
-{
+cql::cql_message_register_impl_t::events() const {
     return _events;
 }
 
 std::string
-cql::cql_message_register_impl_t::str() const
-{
+cql::cql_message_register_impl_t::str() const {
     return std::string("[") + boost::algorithm::join(_events, ", ") + "]";
 }
 
 bool
-cql::cql_message_register_impl_t::consume(cql::cql_error_t*)
-{
+cql::cql_message_register_impl_t::consume(cql::cql_error_t*) {
     cql::vector_stream_t buffer(*_buffer);
     std::istream stream(&buffer);
 
@@ -80,8 +73,7 @@ cql::cql_message_register_impl_t::consume(cql::cql_error_t*)
 }
 
 bool
-cql::cql_message_register_impl_t::prepare(cql::cql_error_t*)
-{
+cql::cql_message_register_impl_t::prepare(cql::cql_error_t*) {
     size_t size = sizeof(cql_short_t);
     BOOST_FOREACH(const std::string& event, _events) {
         size += event.size() + sizeof(cql_short_t);

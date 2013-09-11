@@ -21,30 +21,25 @@
 cql::cql_socket_ssl_t::cql_socket_ssl_t(boost::asio::io_service& io_service,
                                         boost::asio::ssl::context& ctx) :
     _socket(new cql::cql_socket_ssl_t::socket_t(io_service, ctx)),
-    _ctx(ctx)
-{
+    _ctx(ctx) {
 }
 
 boost::asio::io_service&
-cql::cql_socket_ssl_t::get_io_service()
-{
+cql::cql_socket_ssl_t::get_io_service() {
     return _socket->get_io_service();
 }
 
 bool
-cql::cql_socket_ssl_t::requires_handshake()
-{
+cql::cql_socket_ssl_t::requires_handshake() {
     return true;
 }
 
 boost::asio::ip::tcp::socket&
-cql::cql_socket_ssl_t::lowest_layer()
-{
+cql::cql_socket_ssl_t::lowest_layer() {
     return _socket->next_layer();
 }
 
 void
-cql::cql_socket_ssl_t::reset()
-{
+cql::cql_socket_ssl_t::reset() {
     _socket.reset(new cql::cql_socket_ssl_t::socket_t(_socket->get_io_service(), _ctx));
 }

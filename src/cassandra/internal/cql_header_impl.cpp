@@ -38,10 +38,10 @@ cql::cql_header_impl_t::cql_header_impl_t() :
 {}
 
 cql::cql_header_impl_t::cql_header_impl_t(cql::cql_byte_t version,
-                                          cql::cql_byte_t flags,
-                                          cql::cql_stream_id_t stream,
-                                          cql::cql_byte_t opcode,
-                                          cql::cql_int_t length) :
+        cql::cql_byte_t flags,
+        cql::cql_stream_id_t stream,
+        cql::cql_byte_t opcode,
+        cql::cql_int_t length) :
     _buffer(new std::vector<cql_byte_t>(CQL_HEADER_SIZE, 0)),
     _version(version),
     _flags(flags),
@@ -51,14 +51,12 @@ cql::cql_header_impl_t::cql_header_impl_t(cql::cql_byte_t version,
 {}
 
 cql::cql_message_buffer_t
-cql::cql_header_impl_t::buffer()
-{
+cql::cql_header_impl_t::buffer() {
     return _buffer;
 }
 
 std::string
-cql::cql_header_impl_t::str() const
-{
+cql::cql_header_impl_t::str() const {
     std::stringstream output;
     output << std::setfill('0') << "0x";
 
@@ -76,8 +74,7 @@ cql::cql_header_impl_t::str() const
 }
 
 bool
-cql::cql_header_impl_t::prepare(cql::cql_error_t*)
-{
+cql::cql_header_impl_t::prepare(cql::cql_error_t*) {
     cql::vector_stream_t buffer(*_buffer);
     std::ostream stream(&buffer);
 
@@ -90,8 +87,7 @@ cql::cql_header_impl_t::prepare(cql::cql_error_t*)
 }
 
 bool
-cql::cql_header_impl_t::consume(cql::cql_error_t*)
-{
+cql::cql_header_impl_t::consume(cql::cql_error_t*) {
     cql::vector_stream_t buffer(*_buffer);
     std::istream stream(&buffer);
 
@@ -104,67 +100,56 @@ cql::cql_header_impl_t::consume(cql::cql_error_t*)
 }
 
 cql::cql_int_t
-cql::cql_header_impl_t::size() const
-{
+cql::cql_header_impl_t::size() const {
     return CQL_HEADER_SIZE;
 }
 
 cql::cql_byte_t
-cql::cql_header_impl_t::version() const
-{
+cql::cql_header_impl_t::version() const {
     return _version;
 }
 
 cql::cql_byte_t
-cql::cql_header_impl_t::flags() const
-{
+cql::cql_header_impl_t::flags() const {
     return _flags;
 }
 
 cql::cql_stream_id_t
-cql::cql_header_impl_t::stream() const
-{
+cql::cql_header_impl_t::stream() const {
     return _stream;
 }
 
 cql::cql_byte_t
-cql::cql_header_impl_t::opcode() const
-{
+cql::cql_header_impl_t::opcode() const {
     return _opcode;
 }
 
 cql::cql_int_t
-cql::cql_header_impl_t::length() const
-{
+cql::cql_header_impl_t::length() const {
     return _length;
 }
 
 void
-cql::cql_header_impl_t::version(cql::cql_byte_t v)
-{
+cql::cql_header_impl_t::version(cql::cql_byte_t v) {
     _version = v;
 }
 
 void
-cql::cql_header_impl_t::flags(cql::cql_byte_t v)
-{
+cql::cql_header_impl_t::flags(cql::cql_byte_t v) {
     _flags = v;
 }
 
 void
-cql::cql_header_impl_t::stream(cql::cql_stream_id_t v)
-{
+cql::cql_header_impl_t::stream(cql::cql_stream_id_t v) {
     _stream = v;
 }
 
 void
-cql::cql_header_impl_t::opcode(cql::cql_byte_t v)
-{
+cql::cql_header_impl_t::opcode(cql::cql_byte_t v) {
     _opcode = v;
 }
 
 void
-cql::cql_header_impl_t::length(cql::cql_int_t v)
-{
+cql::cql_header_impl_t::length(cql::cql_int_t v) {
     _length = v;
 }
