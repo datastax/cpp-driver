@@ -66,7 +66,7 @@ namespace cql {
 		void init();
 
 		boost::shared_ptr<cql_client_t> connect(cql::cql_query_plan_t& hostIter, int& streamId, std::list<std::string>& triedHosts);
-		boost::shared_ptr<cql_client_t> cql_session_impl_t::allocate_connection(const std::string& address, cql_host_distance_t distance);
+		boost::shared_ptr<cql_client_t> allocate_connection(const std::string& address, cql_host_distance_t distance);
 		void trashcan_put(boost::shared_ptr<cql_client_t> connection);
 		boost::shared_ptr<cql_client_t> trashcan_recycle(const std::string& address);
 		void free_connection(boost::shared_ptr<cql_client_t> connection);

@@ -41,7 +41,7 @@ namespace cql {
 
 	public:
 		static boost::shared_ptr<cql_cluster_t> built_from(const cql_initializer_t& initializer);
-		static cql_builder_t builder();
+		static boost::shared_ptr<cql_builder_t> builder();
 
 		boost::shared_ptr<cql_session_t> connect();
 		boost::shared_ptr<cql_session_t> connect(const std::string& keyspace);

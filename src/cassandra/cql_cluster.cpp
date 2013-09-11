@@ -30,21 +30,6 @@
 #include "cassandra/cql_cluster.hpp"
 #include "cassandra/cql_builder.hpp"
 
-#if defined(cql_EXPORTS)
-
-// TODO: define EXPORT_ATTRIBUTE macro
-// that allows to export import symbols on
-// various platforms, WE MUST AT LEAST
-// support Visual C++, CLang and GCC (unfortunately
-// every of these compilers have diffenerent keywords to
-// export/import classes).
-
-__declspec(dllexport) void export_test() {
-	return;
-}
-
-#endif
-
 namespace cql
 {
 
@@ -119,7 +104,7 @@ namespace cql
         boost::thread thread;
 
 	public:
-		cql_cluster_pimpl_t::cql_cluster_pimpl_t(const std::list<std::string>& contact_points, boost::shared_ptr<cql::cql_configuration_t> configuration)
+		cql_cluster_pimpl_t(const std::list<std::string>& contact_points, boost::shared_ptr<cql::cql_configuration_t> configuration)
 			:_contact_points(contact_points), _configuration(configuration),
 				work(new boost::asio::io_service::work(io_service)),
 				thread(boost::bind(static_cast<size_t(boost::asio::io_service::*)()>(&boost::asio::io_service::run), &io_service))
@@ -166,9 +151,9 @@ boost::shared_ptr<cql::cql_cluster_t> cql::cql_cluster_t::built_from(const cql_i
 	return boost::shared_ptr<cql::cql_cluster_t>(new cql::cql_cluster_t(new cql::cql_cluster_pimpl_t(initializer.get_contact_points(), initializer.get_configuration())));
 }
 
-cql::cql_builder_t cql::cql_cluster_t::builder()
+boost::shared_ptr<cql::cql_builder_t> cql::cql_cluster_t::builder()
 {
-	return cql::cql_builder_t();
+	return boost::shared_ptr<cql::cql_builder_t>(new cql::cql_builder_t());
 }
 
 boost::shared_ptr<cql::cql_session_t> cql::cql_cluster_t::connect()

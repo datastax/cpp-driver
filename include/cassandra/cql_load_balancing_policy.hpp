@@ -60,14 +60,14 @@ namespace cql {
 			}
 			virtual boost::shared_ptr<cql_host_t> current()
 			{
-				return 0;
+				return boost::shared_ptr<cql_host_t>();
 			}
 
 		};
 
 		virtual boost::shared_ptr<cql_query_plan_t> new_query_plan(boost::shared_ptr<cql_query_t> query)
 		{
-				return 0;
+				return boost::shared_ptr<cql_query_plan_t>();
 		}
 
 	};

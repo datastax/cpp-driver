@@ -1,0 +1,480 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="80">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <df name="cpp-driver" root=".">
+      <df name="CMakeFiles">
+        <df name="2.8.11.2">
+          <df name="CompilerIdC">
+            <in>CMakeCCompilerId.c</in>
+            <in>a.out</in>
+          </df>
+          <df name="CompilerIdCXX">
+            <in>CMakeCXXCompilerId.cpp</in>
+            <in>a.out</in>
+          </df>
+          <in>CMakeCCompiler.cmake</in>
+          <in>CMakeCXXCompiler.cmake</in>
+          <in>CMakeDetermineCompilerABI_C.bin</in>
+          <in>CMakeSystem.cmake</in>
+        </df>
+        <df name="CMakeTmp">
+        </df>
+        <df name="CompilerIdC">
+          <in>CMakeCCompilerId.c</in>
+        </df>
+        <df name="CompilerIdCXX">
+          <in>CMakeCXXCompilerId.cpp</in>
+        </df>
+        <df name="cql.dir">
+          <df name="src">
+            <df name="cassandra">
+              <df name="internal">
+              </df>
+            </df>
+          </df>
+        </df>
+        <df name="cql_static.dir">
+          <df name="src">
+            <df name="cassandra">
+              <df name="internal">
+              </df>
+            </df>
+          </df>
+        </df>
+        <df name="UNINSTALL.dir">
+        </df>
+      </df>
+      <df name="debian">
+      </df>
+      <df name="demo">
+        <df name="CMakeFiles">
+          <df name="Demo_cql.dir">
+          </df>
+        </df>
+        <in>main.cpp</in>
+      </df>
+      <df name="ext">
+      </df>
+      <df name="extra">
+        <df name="ccm_bridge">
+          <df name="cmake">
+            <df name="Modules">
+            </df>
+          </df>
+          <df name="CMakeFiles">
+            <df name="2.8.11.2">
+              <df name="CompilerIdC">
+                <in>CMakeCCompilerId.c</in>
+              </df>
+              <df name="CompilerIdCXX">
+                <in>CMakeCXXCompilerId.cpp</in>
+              </df>
+            </df>
+            <df name="CCMBridge.dir">
+              <df name="src">
+              </df>
+            </df>
+            <df name="CMakeTmp">
+            </df>
+          </df>
+          <df name="data">
+          </df>
+          <df name="include">
+            <in>ccm_bridge.hpp</in>
+            <in>configuration.hpp</in>
+            <in>esc_seq_remover.hpp</in>
+            <in>safe_advance.hpp</in>
+          </df>
+          <df name="src">
+            <in>ccm_bridge.cpp</in>
+            <in>configuration.cpp</in>
+            <in>esc_seq_remover.cpp</in>
+          </df>
+        </df>
+      </df>
+      <df name="include">
+        <df name="cassandra">
+          <df name="internal">
+            <in>cql_callback_storage.hpp</in>
+            <in>cql_client_impl.hpp</in>
+            <in>cql_defines.hpp</in>
+            <in>cql_header_impl.hpp</in>
+            <in>cql_list_impl.hpp</in>
+            <in>cql_map_impl.hpp</in>
+            <in>cql_message.hpp</in>
+            <in>cql_message_credentials_impl.hpp</in>
+            <in>cql_message_error_impl.hpp</in>
+            <in>cql_message_event_impl.hpp</in>
+            <in>cql_message_execute_impl.hpp</in>
+            <in>cql_message_options_impl.hpp</in>
+            <in>cql_message_prepare_impl.hpp</in>
+            <in>cql_message_query_impl.hpp</in>
+            <in>cql_message_ready_impl.hpp</in>
+            <in>cql_message_register_impl.hpp</in>
+            <in>cql_message_result_impl.hpp</in>
+            <in>cql_message_startup_impl.hpp</in>
+            <in>cql_message_supported_impl.hpp</in>
+            <in>cql_result_metadata.hpp</in>
+            <in>cql_session_impl.hpp</in>
+            <in>cql_set_impl.hpp</in>
+            <in>cql_socket.hpp</in>
+            <in>cql_socket_ssl.hpp</in>
+            <in>cql_util.hpp</in>
+          </df>
+          <in>cql.hpp</in>
+          <in>cql_builder.hpp</in>
+          <in>cql_client.hpp</in>
+          <in>cql_client_factory.hpp</in>
+          <in>cql_cluster.hpp</in>
+          <in>cql_config.hpp</in>
+          <in>cql_error.hpp</in>
+          <in>cql_event.hpp</in>
+          <in>cql_exception.hpp</in>
+          <in>cql_execute.hpp</in>
+          <in>cql_future_connection.hpp</in>
+          <in>cql_future_result.hpp</in>
+          <in>cql_list.hpp</in>
+          <in>cql_load_balancing_policy.hpp</in>
+          <in>cql_map.hpp</in>
+          <in>cql_policies.hpp</in>
+          <in>cql_result.hpp</in>
+          <in>cql_serialization.hpp</in>
+          <in>cql_session.hpp</in>
+          <in>cql_set.hpp</in>
+          <in>cql_vector_stream.hpp</in>
+          <in>version.hpp</in>
+        </df>
+      </df>
+      <df name="src">
+        <df name="cassandra">
+          <df name="internal">
+            <in>cql_header_impl.cpp</in>
+            <in>cql_list_impl.cpp</in>
+            <in>cql_map_impl.cpp</in>
+            <in>cql_message_credentials_impl.cpp</in>
+            <in>cql_message_error_impl.cpp</in>
+            <in>cql_message_event_impl.cpp</in>
+            <in>cql_message_execute_impl.cpp</in>
+            <in>cql_message_options_impl.cpp</in>
+            <in>cql_message_prepare_impl.cpp</in>
+            <in>cql_message_query_impl.cpp</in>
+            <in>cql_message_ready_impl.cpp</in>
+            <in>cql_message_register_impl.cpp</in>
+            <in>cql_message_result_impl.cpp</in>
+            <in>cql_message_startup_impl.cpp</in>
+            <in>cql_message_supported_impl.cpp</in>
+            <in>cql_result_metadata.cpp</in>
+            <in>cql_session_impl.cpp</in>
+            <in>cql_set_impl.cpp</in>
+            <in>cql_socket.cpp</in>
+            <in>cql_socket_ssl.cpp</in>
+          </df>
+          <in>cql_builder.cpp</in>
+          <in>cql_client_factory.cpp</in>
+          <in>cql_cluster.cpp</in>
+          <in>cql_execute.cpp</in>
+          <in>cql_serialization.cpp</in>
+        </df>
+      </df>
+      <df name="test">
+        <df name="linux_test_scripts">
+        </df>
+        <df name="unit_tests">
+          <df name="CMakeFiles">
+            <df name="UnitTests_cql.dir">
+            </df>
+          </df>
+          <in>cql_header.cpp</in>
+          <in>cql_message_error.cpp</in>
+          <in>cql_message_event.cpp</in>
+          <in>cql_message_options.cpp</in>
+          <in>cql_message_prepare.cpp</in>
+          <in>cql_message_query.cpp</in>
+          <in>cql_message_ready.cpp</in>
+          <in>cql_message_result.cpp</in>
+          <in>cql_message_startup.cpp</in>
+          <in>cql_serialization.cpp</in>
+          <in>main.cpp</in>
+        </df>
+      </df>
+    </df>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>CMakeLists.txt</itemPath>
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
+  </logicalFolder>
+  <sourceFolderFilter>^(nbproject)$</sourceFolderFilter>
+  <sourceRootList>
+    <Elem>.</Elem>
+  </sourceRootList>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Default" type="0">
+      <toolsSet>
+        <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
+        <compilerSet>default</compilerSet>
+      </toolsSet>
+      <makefileType>
+        <makeTool>
+          <buildCommandWorkingDir>.</buildCommandWorkingDir>
+          <buildCommand>${MAKE} -f Makefile</buildCommand>
+          <cleanCommand>${MAKE} -f Makefile clean</cleanCommand>
+          <executablePath></executablePath>
+          <ccTool>
+            <incDir>
+              <pElem>../../boost_1_54_0</pElem>
+              <pElem>include</pElem>
+            </incDir>
+            <preprocessorList>
+              <Elem>BOOST_ALL_NO_LIB</Elem>
+            </preprocessorList>
+          </ccTool>
+        </makeTool>
+      </makefileType>
+      <item path="CMakeFiles/2.8.11.2/CMakeCCompiler.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/2.8.11.2/CMakeCXXCompiler.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/2.8.11.2/CMakeDetermineCompilerABI_C.bin"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/2.8.11.2/CMakeSystem.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/2.8.11.2/CompilerIdC/CMakeCCompilerId.c"
+            ex="true"
+            tool="0"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/2.8.11.2/CompilerIdC/a.out"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/2.8.11.2/CompilerIdCXX/CMakeCXXCompilerId.cpp"
+            ex="true"
+            tool="1"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/2.8.11.2/CompilerIdCXX/a.out"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/CompilerIdC/CMakeCCompilerId.c"
+            ex="true"
+            tool="0"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/CompilerIdCXX/CMakeCXXCompilerId.cpp"
+            ex="true"
+            tool="1"
+            flavor="0">
+      </item>
+      <item path="demo/main.cpp" ex="true" tool="1" flavor="0">
+      </item>
+      <item path="extra/ccm_bridge/CMakeFiles/2.8.11.2/CompilerIdC/CMakeCCompilerId.c"
+            ex="true"
+            tool="0"
+            flavor="0">
+      </item>
+      <item path="extra/ccm_bridge/CMakeFiles/2.8.11.2/CompilerIdCXX/CMakeCXXCompilerId.cpp"
+            ex="true"
+            tool="1"
+            flavor="0">
+      </item>
+      <item path="extra/ccm_bridge/include/ccm_bridge.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="extra/ccm_bridge/include/configuration.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="extra/ccm_bridge/include/esc_seq_remover.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="extra/ccm_bridge/include/safe_advance.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <folder path="cpp-driver/extra">
+        <ccTool>
+          <incDir>
+            <pElem>extra/ccm_bridge</pElem>
+            <pElem>extra/ccm_bridge/include</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>BOOST_ALL_DYN_LINK</Elem>
+            <Elem>UNIX</Elem>
+          </preprocessorList>
+        </ccTool>
+      </folder>
+      <folder path="cpp-driver/src">
+        <ccTool>
+          <incDir>
+            <pElem>.</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>cql_EXPORTS</Elem>
+          </preprocessorList>
+        </ccTool>
+      </folder>
+      <folder path="cpp-driver/test">
+        <ccTool>
+          <incDir>
+            <pElem>/extra/ccm_bridge/include</pElem>
+            <pElem>extra/ccm_bridge/include</pElem>
+          </incDir>
+        </ccTool>
+      </folder>
+      <item path="include/cassandra/cql_config.hpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="include/cassandra/cql_event.hpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="include/cassandra/cql_list.hpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="include/cassandra/cql_map.hpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="include/cassandra/cql_policies.hpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="include/cassandra/cql_serialization.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/cql_set.hpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="include/cassandra/cql_vector_stream.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_callback_storage.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_client_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_header_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_list_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_map_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_message_credentials_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_message_error_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_message_event_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_message_options_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_message_prepare_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_message_query_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_message_ready_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_message_register_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_message_result_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_message_startup_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_message_supported_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_result_metadata.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_set_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_socket.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_socket_ssl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_util.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/version.hpp" ex="true" tool="3" flavor="0">
+      </item>
+    </conf>
+  </confs>
+</configurationDescriptor>

@@ -91,7 +91,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     add_definitions(-D_WIN32_WINNT=0x0501)
 else()
 	# GCC specific compiler options
-	set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic")
+        # I disabled long-long warning because boost generates about 50 such warnings
+	set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic -std=c++03 -Wno-long-long")
 endif()
 
 

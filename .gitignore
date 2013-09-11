@@ -52,3 +52,5 @@ ext/tmp
 .cproject
 .project
 
+/extra/ccm_bridge/nbproject/private/
+/nbproject/private/

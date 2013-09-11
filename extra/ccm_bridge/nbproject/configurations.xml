@@ -18,18 +18,8 @@
         <df name="CCMBridge.dir">
           <df name="src">
           </df>
-          <in>DependInfo.cmake</in>
-          <in>build.make</in>
-          <in>cmake_clean.cmake</in>
-          <in>depend.make</in>
-          <in>flags.make</in>
-          <in>link.txt</in>
-          <in>progress.make</in>
         </df>
         <df name="CMakeTmp">
-        </df>
-        <df name="Progress">
-          <in>count.txt</in>
         </df>
       </df>
       <df name="data">
@@ -44,7 +34,6 @@
         <in>ccm_bridge.cpp</in>
         <in>configuration.cpp</in>
         <in>esc_seq_remover.cpp</in>
-        <in>main.cpp</in>
       </df>
     </df>
     <logicalFolder name="ExternalFiles"
@@ -74,31 +63,6 @@
           <executablePath></executablePath>
         </makeTool>
       </makefileType>
-      <item path="CMakeFiles/CCMBridge.dir/DependInfo.cmake"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="CMakeFiles/CCMBridge.dir/build.make" ex="true" tool="3" flavor="0">
-      </item>
-      <item path="CMakeFiles/CCMBridge.dir/cmake_clean.cmake"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="CMakeFiles/CCMBridge.dir/depend.make" ex="true" tool="3" flavor="0">
-      </item>
-      <item path="CMakeFiles/CCMBridge.dir/flags.make" ex="true" tool="3" flavor="0">
-      </item>
-      <item path="CMakeFiles/CCMBridge.dir/link.txt" ex="true" tool="3" flavor="0">
-      </item>
-      <item path="CMakeFiles/CCMBridge.dir/progress.make"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="CMakeFiles/Progress/count.txt" ex="true" tool="3" flavor="0">
-      </item>
       <folder path="ccm_bridge/src">
         <ccTool>
           <incDir>
