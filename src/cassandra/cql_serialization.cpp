@@ -122,7 +122,7 @@ cql::decode_bool(std::istream& input,
 bool
 cql::decode_bool(const std::vector<cql::cql_byte_t>& input)
 {
-    return input[0];
+    return input[0] ? true : false;
 }
 
 std::ostream&
@@ -213,7 +213,8 @@ std::ostream&
 cql::encode_float(std::ostream& output,
                   const float value)
 {
-    cql::cql_int_t l = swap_float(value);
+	float swapped_float = swap_float(value);
+    cql::cql_int_t l = *reinterpret_cast<cql::cql_int_t *>(&swapped_float);
     output.write(reinterpret_cast<char*>(&l), sizeof(l));
     return output;
 }

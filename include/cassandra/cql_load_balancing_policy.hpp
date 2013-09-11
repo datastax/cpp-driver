@@ -7,7 +7,10 @@ namespace cql {
 	
 	class cql_cluster_t;
 
-	enum cql_host_distance_t {cql_host_remote, cql_host_local};
+	enum cql_host_distance_t {
+		CQL_HOST_REMOTE, 
+		CQL_HOST_LOCAL
+	};
 
 	class cql_host_t
 	{
@@ -43,9 +46,10 @@ namespace cql {
         virtual void Initialize(boost::shared_ptr<cql_cluster_t> cluster)
 		{
 		}
+
         virtual cql_host_distance_t distance(const cql_host_t* host)
 		{
-			return cql_host_distance_t::cql_host_local;
+			return CQL_HOST_LOCAL;
 		}
 
 		class round_robin_query_plan_t:public cql_query_plan_t

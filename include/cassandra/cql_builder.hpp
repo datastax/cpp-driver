@@ -85,9 +85,9 @@ namespace cql {
         {
             switch (distance)
             {
-                case cql_host_local:
+                case CQL_HOST_LOCAL:
                     return _min_simultaneous_requests_for_local;
-                case cql_host_remote:
+                case CQL_HOST_REMOTE:
                     return _min_simultaneous_requests_for_remote;
                 default:
                     return 0;
@@ -98,10 +98,10 @@ namespace cql {
         {
             switch (distance)
             {
-                case cql_host_local:
+                case CQL_HOST_LOCAL:
                     _min_simultaneous_requests_for_local = minSimultaneousRequests;
                     break;
-                case cql_host_remote:
+                case CQL_HOST_REMOTE:
                     _min_simultaneous_requests_for_remote = minSimultaneousRequests;
                     break;
                 default:
@@ -114,9 +114,9 @@ namespace cql {
         {
             switch (distance)
             {
-                case cql_host_local:
+                case CQL_HOST_LOCAL:
                     return _max_simultaneous_requests_for_local;
-                case cql_host_remote:
+                case CQL_HOST_REMOTE:
                     return _max_simultaneous_requests_for_remote;
                 default:
                     return 0;
@@ -127,10 +127,10 @@ namespace cql {
         {
             switch (distance)
             {
-                case cql_host_local:
+                case CQL_HOST_LOCAL:
                     _max_simultaneous_requests_for_local = maxSimultaneousRequests;
                     break;
-                case cql_host_remote:
+                case CQL_HOST_REMOTE:
                     _max_simultaneous_requests_for_remote = maxSimultaneousRequests;
                     break;
                 default:
@@ -143,9 +143,9 @@ namespace cql {
         {
             switch (distance)
             {
-                case cql_host_local:
+                case CQL_HOST_LOCAL:
                     return _core_connections_for_local;
-                case cql_host_remote:
+                case CQL_HOST_REMOTE:
                     return _core_connections_for_remote;
                 default:
                     return 0;
@@ -156,10 +156,10 @@ namespace cql {
         {
             switch (distance)
             {
-                case cql_host_local:
+                case CQL_HOST_LOCAL:
                     _core_connections_for_local = coreConnections;
                     break;
-                case cql_host_remote:
+                case CQL_HOST_REMOTE:
                     _core_connections_for_remote = coreConnections;
                     break;
                 default:
@@ -172,9 +172,9 @@ namespace cql {
         {
             switch (distance)
             {
-                case cql_host_local:
+                case CQL_HOST_LOCAL:
                     return _max_connections_for_local;
-                case cql_host_remote:
+                case CQL_HOST_REMOTE:
                     return _max_connections_for_remote;
                 default:
                     return 0;
@@ -185,10 +185,10 @@ namespace cql {
         {
             switch (distance)
             {
-                case cql_host_local:
+                case CQL_HOST_LOCAL:
                     _max_connections_for_local = maxConnections;
                     break;
-                case cql_host_remote:
+                case CQL_HOST_REMOTE:
                     _max_connections_for_remote = maxConnections;
                     break;
                 default:
