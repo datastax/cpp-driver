@@ -6,6 +6,7 @@
 #include <string>
 #include <boost/asio/ssl.hpp>
 #include <boost/smart_ptr.hpp>
+
 #include "cassandra/cql_client.hpp"
 #include "cassandra/cql_load_balancing_policy.hpp"
 
@@ -15,13 +16,13 @@ class cql_cluster_t;
 
 class cql_client_options_t {
 private:
-    cql::cql_client_t::cql_log_callback_t _log_callback;
+    cql_client_t::cql_log_callback_t _log_callback;
 
 public:
-    cql_client_options_t(cql::cql_client_t::cql_log_callback_t log_callback)
+    cql_client_options_t(cql_client_t::cql_log_callback_t log_callback)
         : _log_callback(log_callback) {}
 
-    cql::cql_client_t::cql_log_callback_t get_log_callback() const {
+    cql_client_t::cql_log_callback_t get_log_callback() const {
         return _log_callback;
     }
 };
@@ -34,15 +35,22 @@ private:
 
 
 public:
-    cql_protocol_options_t(const std::list<std::string>& contact_points, int port, boost::shared_ptr<boost::asio::ssl::context> ssl_context)
-        : _contact_points(contact_points), _port(port),_ssl_context(ssl_context) {}
+    cql_protocol_options_t(
+            const std::list<std::string>& contact_points, 
+            int port, 
+            boost::shared_ptr<boost::asio::ssl::context> ssl_context)
+        : _contact_points(contact_points), 
+          _port(port),
+          _ssl_context(ssl_context) { }
 
     std::list<std::string> get_contact_points() const {
         return _contact_points;
     }
+    
     int get_port() const {
         return _port;
     }
+    
     boost::shared_ptr<boost::asio::ssl::context> get_ssl_context() const {
         return _ssl_context;
     }
@@ -85,6 +93,7 @@ public:
         _max_connections_for_local = default_max_pool_local;
         _max_connections_for_remote = default_max_pool_remote;
     }
+    
     int get_min_simultaneous_requests_per_connection_treshold(cql_host_distance_t distance) {
         switch (distance) {
         case CQL_HOST_LOCAL:
@@ -92,7 +101,7 @@ public:
         case CQL_HOST_REMOTE:
             return _min_simultaneous_requests_for_remote;
         default:
-            return 0;
+            throw std::invalid_argument("Invalid enumeration value.");
         }
     }
 
@@ -105,7 +114,7 @@ public:
             _min_simultaneous_requests_for_remote = minSimultaneousRequests;
             break;
         default:
-            throw std::out_of_range("Cannot set min streams per connection threshold");
+            throw std::out_of_range("Cannot set min streams per connection threshold.");
         }
         return *this;
     }
@@ -117,7 +126,7 @@ public:
         case CQL_HOST_REMOTE:
             return _max_simultaneous_requests_for_remote;
         default:
-            return 0;
+            throw std::invalid_argument("Invalid enumeration value.");
         }
     }
 
@@ -142,7 +151,7 @@ public:
         case CQL_HOST_REMOTE:
             return _core_connections_for_remote;
         default:
-            return 0;
+            throw std::invalid_argument("Invalid enumeration value.");
         }
     }
 

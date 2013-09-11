@@ -211,7 +211,7 @@ private:
     cql::cql_session_t::cql_defunct_callback_t   _defunct_callback;
     cql::cql_session_t::cql_log_callback_t       _log_callback;
     cql::cql_session_t::cql_connection_errback_t _connect_errback;
-    size_t                                           _reconnect_limit;
+    size_t                                       _reconnect_limit;
 };
 
 } // namespace cql

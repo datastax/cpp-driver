@@ -17,6 +17,7 @@ public:
     std::string get_address() {
         return "127.0.0.1";
     }
+    
     bool is_considerably_up() {
         return false;
     }

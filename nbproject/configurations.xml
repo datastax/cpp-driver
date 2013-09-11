@@ -6,16 +6,10 @@
         <df name="2.8.11.2">
           <df name="CompilerIdC">
             <in>CMakeCCompilerId.c</in>
-            <in>a.out</in>
           </df>
           <df name="CompilerIdCXX">
             <in>CMakeCXXCompilerId.cpp</in>
-            <in>a.out</in>
           </df>
-          <in>CMakeCCompiler.cmake</in>
-          <in>CMakeCXXCompiler.cmake</in>
-          <in>CMakeDetermineCompilerABI_C.bin</in>
-          <in>CMakeSystem.cmake</in>
         </df>
         <df name="CMakeTmp">
         </df>
@@ -40,6 +34,8 @@
               </df>
             </df>
           </df>
+        </df>
+        <df name="Progress">
         </df>
         <df name="UNINSTALL.dir">
         </df>
@@ -234,44 +230,14 @@
           </ccTool>
         </makeTool>
       </makefileType>
-      <item path="CMakeFiles/2.8.11.2/CMakeCCompiler.cmake"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="CMakeFiles/2.8.11.2/CMakeCXXCompiler.cmake"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="CMakeFiles/2.8.11.2/CMakeDetermineCompilerABI_C.bin"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="CMakeFiles/2.8.11.2/CMakeSystem.cmake"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
       <item path="CMakeFiles/2.8.11.2/CompilerIdC/CMakeCCompilerId.c"
             ex="true"
             tool="0"
             flavor="0">
       </item>
-      <item path="CMakeFiles/2.8.11.2/CompilerIdC/a.out"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
       <item path="CMakeFiles/2.8.11.2/CompilerIdCXX/CMakeCXXCompilerId.cpp"
             ex="true"
             tool="1"
-            flavor="0">
-      </item>
-      <item path="CMakeFiles/2.8.11.2/CompilerIdCXX/a.out"
-            ex="true"
-            tool="3"
             flavor="0">
       </item>
       <item path="CMakeFiles/CompilerIdC/CMakeCCompilerId.c"
