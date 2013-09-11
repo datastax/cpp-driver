@@ -61,14 +61,6 @@ set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS} )
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
 
-#!!!!
-message(STATUS "info include_directories: ${INCLUDES}")
-
-#!!!!!!!
-message(STATUS "info target_link_libraries: ${LIBS}")
-
-# OS specific compiler options
-set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic")
 
 # disable boost auto linking feature
 # it prevents visual studio from simultaneously building
@@ -97,6 +89,9 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 
     # needed for windows sockets (not verified)
     add_definitions(-D_WIN32_WINNT=0x0501)
+else()
+	# GCC specific compiler options
+	set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic")
 endif()
 
 
@@ -116,21 +111,31 @@ include_directories(${INCLUDES})
 # we must add header files as dependencies (if header
 # changes project must be recompiled, right).
 file(GLOB INC_FILES
-    ${PROJECT_SOURCE_DIR}/include/cassandra/internal/*.hpp 
 	${PROJECT_SOURCE_DIR}/include/cassandra/*.hpp) 
+	
+file(GLOB INC_FILES_INTERNAL
+	${PROJECT_SOURCE_DIR}/include/cassandra/internal/*.hpp )
 
-file(GLOB SRC_FILES 
-    ${PROJECT_SOURCE_DIR}/src/cassandra/internal/*.cpp 
+file(GLOB SRC_FILES
 	${PROJECT_SOURCE_DIR}/src/cassandra/*.cpp)
 
+file(GLOB SRC_FILES_INTERNAL
+	${PROJECT_SOURCE_DIR}/src/cassandra/internal/*.cpp )
+	
 source_group("Source Files" FILES ${SRC_FILES})
+source_group("Source Files\\Internal" FILES ${SRC_FILES_INTERNAL})
 source_group("Header Files" FILES ${INC_FILES})
+source_group("Header Files\\Internal" FILES ${INC_FILES_INTERNAL})
+
+set(ALL_SOURCE_FILES 
+	${SRC_FILES} ${SRC_FILES_INTERNAL} 
+	${INC_FILES} ${INC_FILES_INTERNAL})
 
 # build dynamic and static version of library
-add_library(${PROJECT_LIB_NAME} SHARED ${SRC_FILES} ${INC_FILES})
+add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})
 
 set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
-add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${SRC_FILES} ${INC_FILES})
+add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${ALL_SOURCE_FILES})
 
 target_link_libraries(${PROJECT_LIB_NAME} ${LIBS})
 target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${LIBS})
@@ -188,7 +193,7 @@ add_custom_target(UNINSTALL
 # Boost unit tests
 #-------------------
 
-enable_testing()
+add_subdirectory(extra/ccm_bridge)
 add_subdirectory(test/unit_tests)
 
 #-------------------

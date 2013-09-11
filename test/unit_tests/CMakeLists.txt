@@ -1,30 +1,44 @@
+cmake_minimum_required(VERSION 2.8.11)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ".")
 set(TEST UnitTests_${CQL_DRIVER_PROJECT_NAME})
-project(${TEST})
+project(${TEST} C CXX)
 
-include_directories(${INCLUDES})
-
+# Setup files that are part of unit tests
 file(GLOB SRC_FILES *.cpp)
+
+# ---------------------------------------------------------------
+# SPECIFY TARGET
+
 add_executable(${TEST} ${SRC_FILES})
 
-add_dependencies(${TEST} ${PROJECT_LIB_NAME_STATIC})
-# add_definitions(-DBOOST_TEST_DYN_LINK) 
-
-# link to STATIC version of cql driver
-
-if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    # add socket library 
-    set(PLATFORM_DEPENDENT_LIBS "Ws2_32.lib")
-endif()
-
-target_link_libraries(${TEST} ${PROJECT_LIB_NAME_STATIC} ${LIBS} ${PLATFORM_DEPENDENT_LIBS})
-
-MESSAGE(STATUS "boost.test link: ${PROJECT_LIB_NAME_STATIC} ${LIBS}")
-MESSAGE(STATUS "boost.test incl: ${INCLUDES}")
-
 set_property(
-  TARGET ${TEST}
-  APPEND PROPERTY COMPILE_FLAGS ${PROJECT_COMPILER_FLAGS})
+	TARGET ${TEST}
+	APPEND PROPERTY COMPILE_FLAGS ${PROJECT_COMPILER_FLAGS})
 
+# Setup include directories 
+# Directories are inherited from parent project 
+set(CCM_BRIDGE_INCLUDES "${CMAKE_PROJECT_SOURCE}/extra/ccm_bridge/include")
+target_include_directories(${TEST} PUBLIC ${INCLUDES} ${CCM_BRIDGE_INCLUDES})
+
+target_link_libraries(${TEST} 
+	${PROJECT_LIB_NAME_STATIC} ${LIBS} ${PLATFORM_DEPENDENT_LIBS} CCMBridge)
+
+# ---------------------------------------------------------------
+
+# ---------------------------------------------------------------
+# SPECIFY TEST DEPENDENCIES
+
+# Dependency to libcql
+add_dependencies(${TEST} ${PROJECT_LIB_NAME_STATIC})
+
+# Dependency to ccm_bridge
+add_dependencies(${TEST} CCMBridge)
+
+# ----------------------------------------------------------------
+
+# ----------------------------------------------------------------
+# TEST WITH CTEST FRAMEWORK
+
+enable_testing()
 add_test(${TEST} ${TEST})
+# ----------------------------------------------------------------
