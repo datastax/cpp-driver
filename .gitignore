@@ -53,5 +53,8 @@ ext/tmp
 .cproject
 .project
 
+# AStyle backup
+*.orig
+
 /extra/ccm_bridge/nbproject/private/
 /nbproject/private/
