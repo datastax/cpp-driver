@@ -33,6 +33,8 @@
 #include <cassandra/cql_execute.hpp>
 #include <cassandra/cql_result.hpp>
 
+#include <ccm_bridge.hpp>
+
 // helper function to print query results
 void
 print_rows(
@@ -67,6 +69,11 @@ main(int argc,
 {
     try
     {
+
+		Cassandra::CCMBridge ccmBridge(Cassandra::get_configuration());
+
+		ccmBridge.create(Cassandra::get_configuration(),"test");
+
 		boost::shared_ptr<cql::cql_builder_t> builder = cql::cql_cluster_t::builder();
 
 		builder->with_log_callback(&log_callback);
