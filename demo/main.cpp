@@ -67,19 +67,19 @@ main(int argc,
 {
     try
     {
-		cql::cql_builder_t builder = cql::cql_cluster_t::builder();
+		boost::shared_ptr<cql::cql_builder_t> builder = cql::cql_cluster_t::builder();
 
-		builder.with_log_callback(&log_callback);
+		builder->with_log_callback(&log_callback);
 
-		builder.add_contact_point("192.168.13.1");
+		builder->add_contact_point("192.168.13.1");
 
 		// decide which client factory we want, SSL or non-SSL.  This is a hack, if you pass any commandline arg to the
 		// binary it will use the SSL factory, non-SSL by default
 		if (argc > 1) {
-			builder.with_ssl();
+			builder->with_ssl();
 		}
 
-		boost::shared_ptr<cql::cql_cluster_t> cluster (builder.build());
+		boost::shared_ptr<cql::cql_cluster_t> cluster (builder->build());
 
 		boost::shared_ptr<cql::cql_session_t> session (cluster->connect());
 
