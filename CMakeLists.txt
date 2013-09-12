@@ -65,6 +65,8 @@ set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
 # disable boost auto linking feature
 # it prevents visual studio from simultaneously building
 # static and shared version of driver
+# needed by boost to link dynamically
+add_definitions(-DBOOST_ALL_DYN_LINK)
 add_definitions(-DBOOST_ALL_NO_LIB )
 
 set(MULTICORE_CORES_NUMBER "3" CACHE STRING "Number of cores (for multicore compilation)")
