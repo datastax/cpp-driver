@@ -358,7 +358,7 @@ namespace Cassandra {
 		boost::shared_ptr<CCMBridge> bridge(new CCMBridge(settings));
 
 		bridge->execute_ccm_command(boost::str(
-			boost::format("Create %1% -b -i %2% %3%")
+			boost::format("Create %1% -b -i %2% -v %3%")
 				% name
 				% settings.ip_prefix()
 				% settings.cassandara_version()));
@@ -375,7 +375,7 @@ namespace Cassandra {
 		boost::shared_ptr<CCMBridge> bridge(new CCMBridge(settings));
 
 		bridge->execute_ccm_command(boost::str(
-			boost::format("Create %1% -n %2% -s -i %3% -b %4%")
+			boost::format("Create %1% -n %2% -s -i %3% -b -v %4%")
 				% name
 				% nodes_count
 				% settings.ip_prefix()
@@ -394,7 +394,7 @@ namespace Cassandra {
 		boost::shared_ptr<CCMBridge> bridge(new CCMBridge(settings));
 
 		bridge->execute_ccm_command(boost::str(
-			boost::format("Create %1% -n %2%:%3% -s -i %4% -b %5%")
+			boost::format("Create %1% -n %2%:%3% -s -i %4% -b -v %5%")
 				% name
 				% nodes_count_dc1
 				% nodes_count_dc2

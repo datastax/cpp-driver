@@ -21,6 +21,8 @@
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
+#include <boost/format.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <cassandra/cql.hpp>
 #include <cassandra/cql_error.hpp>
@@ -70,15 +72,16 @@ main(int argc,
     try
     {
 
-		Cassandra::CCMBridge ccmBridge(Cassandra::get_configuration());
+		int numberOfNodes = 1;
 
-		ccmBridge.create(Cassandra::get_configuration(),"test");
+		auto ccm = Cassandra::CCMBridge::create(Cassandra::get_configuration(),"test",numberOfNodes,true);
 
 		boost::shared_ptr<cql::cql_builder_t> builder = cql::cql_cluster_t::builder();
 
 		builder->with_log_callback(&log_callback);
 
-		builder->add_contact_point("192.168.13.1");
+		for(int i=1;i<=numberOfNodes;i++)
+			builder->add_contact_point(boost::str(boost::format("%1%%2%") % Cassandra::get_configuration().ip_prefix() % i));
 
 		// decide which client factory we want, SSL or non-SSL.  This is a hack, if you pass any commandline arg to the
 		// binary it will use the SSL factory, non-SSL by default
