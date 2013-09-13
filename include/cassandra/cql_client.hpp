@@ -46,18 +46,12 @@ class cql_client_t :
 
 public:
 
-    bool is_healthy() {
-        return true;
-    }
-    bool is_busy(int) {
-        return false;
-    }
-    bool is_free(int) {
-        return false;
-    }
-    int allocate_stream_id() {
-        return 10;
-    }
+    virtual bool is_healthy()=0;
+    virtual bool is_busy(int)=0;
+    virtual bool is_free(int)=0;
+
+    virtual cql_stream_id_t allocate_stream_id() = 0;
+
     long get_id() {
         return 0;
     }
