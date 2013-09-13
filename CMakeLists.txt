@@ -67,7 +67,7 @@ set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
 # static and shared version of driver
 # needed by boost to link dynamically
 add_definitions(-DBOOST_ALL_DYN_LINK)
-add_definitions(-DBOOST_ALL_NO_LIB )
+add_definitions(-DBOOST_ALL_NO_LIB)
 
 set(MULTICORE_CORES_NUMBER "3" CACHE STRING "Number of cores (for multicore compilation)")
 option(MULTICORE_COMPILATION "Enable multicore compilation" OFF)
