@@ -5,8 +5,9 @@
 # Result of this commands are send to programmers
 # working on project.
 
-# Read test configuration
-. config.sh
+# Read configuration
+CONF_SCRIPT="$(dirname $(readlink -f $0))/config.sh"
+. "${CONF_SCRIPT}"
 
 # Create report directory
 echo "Creating report directory..."
@@ -88,10 +89,15 @@ fi
 # Execute unit tests...
 
 echo "Executing unit tests..."
+add_preamble "exec ${UNIT_TEST_TARGET}"
+"${REPO_DIR}/${UNIT_TEST_TARGET}" &>> "${FULL_OUTPUT_REPORT}"
 
-echo TODO EXECUTE UNIT TESTS
+if (( $? != 0 )); then
+	echo "At least one unit test failed..."
+	set_failure_marker
+	"${TEST_ROOT}/clean_up.sh"
+	exit 4
+fi
 
-
-"${TEST_DIR}/clean_up.sh"
+"${TEST_ROOT}/clean_up.sh"
 exit 0
-

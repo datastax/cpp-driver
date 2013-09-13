@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Read configuration
-. config.sh
+CONF_SCRIPT="$(dirname $(readlink -f $0))/config.sh"
+. "${CONF_SCRIPT}"
 
 # Download code, cmake, make, unit 
 # if something goes wrong failure marker will be set

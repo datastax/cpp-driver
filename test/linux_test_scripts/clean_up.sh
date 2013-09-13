@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Read test configuration
-. config.sh
+# Read configuration
+CONF_SCRIPT="$(dirname $(readlink -f $0))/config.sh"
+. "${CONF_SCRIPT}"
 
 echo "Cleaning..."
 
