@@ -20,7 +20,9 @@ set(CCM_BRIDGE_INCLUDES "${CMAKE_PROJECT_SOURCE}/extra/ccm_bridge/include")
 target_include_directories(${TEST} PUBLIC ${INCLUDES} ${CCM_BRIDGE_INCLUDES})
 
 target_link_libraries(${TEST} 
-	${LIBS} ${PROJECT_LIB_NAME_STATIC} ${PLATFORM_DEPENDENT_LIBS} CCMBridge)
+	${LIBS} ${PROJECT_LIB_NAME_STATIC} CCMBridge)
+
+message("ut libs: ${LIBS} ${PROJECT_LIB_NAME_STATIC} CCMBridge")
 
 # ---------------------------------------------------------------
 
