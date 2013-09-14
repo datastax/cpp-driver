@@ -6,18 +6,15 @@
         <df name="2.8.11.2">
           <df name="CompilerIdC">
             <in>CMakeCCompilerId.c</in>
+            <in>a.out</in>
           </df>
           <df name="CompilerIdCXX">
             <in>CMakeCXXCompilerId.cpp</in>
+            <in>a.out</in>
           </df>
+          <in>CMakeSystem.cmake</in>
         </df>
         <df name="CMakeTmp">
-        </df>
-        <df name="CompilerIdC">
-          <in>CMakeCCompilerId.c</in>
-        </df>
-        <df name="CompilerIdCXX">
-          <in>CMakeCXXCompilerId.cpp</in>
         </df>
         <df name="cql.dir">
           <df name="src">
@@ -26,6 +23,13 @@
               </df>
             </df>
           </df>
+          <in>DependInfo.cmake</in>
+          <in>build.make</in>
+          <in>cmake_clean.cmake</in>
+          <in>depend.make</in>
+          <in>flags.make</in>
+          <in>link.txt</in>
+          <in>progress.make</in>
         </df>
         <df name="cql_static.dir">
           <df name="src">
@@ -34,18 +38,38 @@
               </df>
             </df>
           </df>
-        </df>
-        <df name="Progress">
+          <in>DependInfo.cmake</in>
+          <in>build.make</in>
+          <in>cmake_clean.cmake</in>
+          <in>cmake_clean_target.cmake</in>
+          <in>depend.make</in>
+          <in>flags.make</in>
+          <in>link.txt</in>
+          <in>progress.make</in>
         </df>
         <df name="UNINSTALL.dir">
+          <in>DependInfo.cmake</in>
+          <in>build.make</in>
+          <in>cmake_clean.cmake</in>
+          <in>progress.make</in>
         </df>
+        <in>CMakeOutput.log</in>
       </df>
       <df name="debian">
       </df>
       <df name="demo">
         <df name="CMakeFiles">
           <df name="Demo_cql.dir">
+            <in>DependInfo.cmake</in>
+            <in>build.make</in>
+            <in>cmake_clean.cmake</in>
+            <in>depend.make</in>
+            <in>flags.make</in>
+            <in>link.txt</in>
+            <in>progress.make</in>
           </df>
+          <in>CMakeDirectoryInformation.cmake</in>
+          <in>progress.marks</in>
         </df>
         <in>main.cpp</in>
       </df>
@@ -58,20 +82,20 @@
             </df>
           </df>
           <df name="CMakeFiles">
-            <df name="2.8.11.2">
-              <df name="CompilerIdC">
-                <in>CMakeCCompilerId.c</in>
-              </df>
-              <df name="CompilerIdCXX">
-                <in>CMakeCXXCompilerId.cpp</in>
-              </df>
-            </df>
             <df name="CCMBridge.dir">
               <df name="src">
               </df>
+              <in>DependInfo.cmake</in>
+              <in>build.make</in>
+              <in>cmake_clean.cmake</in>
+              <in>cmake_clean_target.cmake</in>
+              <in>depend.make</in>
+              <in>flags.make</in>
+              <in>link.txt</in>
+              <in>progress.make</in>
             </df>
-            <df name="CMakeTmp">
-            </df>
+            <in>CMakeDirectoryInformation.cmake</in>
+            <in>progress.marks</in>
           </df>
           <df name="data">
           </df>
@@ -178,7 +202,16 @@
         <df name="unit_tests">
           <df name="CMakeFiles">
             <df name="UnitTests_cql.dir">
+              <in>DependInfo.cmake</in>
+              <in>build.make</in>
+              <in>cmake_clean.cmake</in>
+              <in>depend.make</in>
+              <in>flags.make</in>
+              <in>link.txt</in>
+              <in>progress.make</in>
             </df>
+            <in>CMakeDirectoryInformation.cmake</in>
+            <in>progress.marks</in>
           </df>
           <in>cql_header.cpp</in>
           <in>cql_message_error.cpp</in>
@@ -230,54 +263,175 @@
           </ccTool>
         </makeTool>
       </makefileType>
-      <item path="CMakeFiles/2.8.11.2/CompilerIdC/CMakeCCompilerId.c"
+      <item path="CMakeFiles/2.8.11.2/CMakeSystem.cmake"
             ex="true"
-            tool="0"
+            tool="3"
             flavor="0">
       </item>
-      <item path="CMakeFiles/2.8.11.2/CompilerIdCXX/CMakeCXXCompilerId.cpp"
+      <item path="CMakeFiles/2.8.11.2/CompilerIdC/a.out"
             ex="true"
-            tool="1"
+            tool="3"
             flavor="0">
       </item>
-      <item path="CMakeFiles/CompilerIdC/CMakeCCompilerId.c"
+      <item path="CMakeFiles/2.8.11.2/CompilerIdCXX/a.out"
             ex="true"
-            tool="0"
+            tool="3"
             flavor="0">
       </item>
-      <item path="CMakeFiles/CompilerIdCXX/CMakeCXXCompilerId.cpp"
+      <item path="CMakeFiles/CMakeOutput.log" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="CMakeFiles/UNINSTALL.dir/DependInfo.cmake"
             ex="true"
-            tool="1"
+            tool="3"
             flavor="0">
+      </item>
+      <item path="CMakeFiles/UNINSTALL.dir/build.make" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="CMakeFiles/UNINSTALL.dir/cmake_clean.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/UNINSTALL.dir/progress.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/cql.dir/DependInfo.cmake" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="CMakeFiles/cql.dir/build.make" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="CMakeFiles/cql.dir/cmake_clean.cmake" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="CMakeFiles/cql.dir/depend.make" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="CMakeFiles/cql.dir/flags.make" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="CMakeFiles/cql.dir/link.txt" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="CMakeFiles/cql.dir/progress.make" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="CMakeFiles/cql_static.dir/DependInfo.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/cql_static.dir/build.make" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="CMakeFiles/cql_static.dir/cmake_clean.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/cql_static.dir/cmake_clean_target.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/cql_static.dir/depend.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="CMakeFiles/cql_static.dir/flags.make" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="CMakeFiles/cql_static.dir/link.txt" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="CMakeFiles/cql_static.dir/progress.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="demo/CMakeFiles/CMakeDirectoryInformation.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="demo/CMakeFiles/Demo_cql.dir/DependInfo.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="demo/CMakeFiles/Demo_cql.dir/build.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="demo/CMakeFiles/Demo_cql.dir/cmake_clean.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="demo/CMakeFiles/Demo_cql.dir/depend.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="demo/CMakeFiles/Demo_cql.dir/flags.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="demo/CMakeFiles/Demo_cql.dir/link.txt"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="demo/CMakeFiles/Demo_cql.dir/progress.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="demo/CMakeFiles/progress.marks" ex="true" tool="3" flavor="0">
       </item>
       <item path="demo/main.cpp" ex="true" tool="1" flavor="0">
       </item>
-      <item path="extra/ccm_bridge/CMakeFiles/2.8.11.2/CompilerIdC/CMakeCCompilerId.c"
-            ex="true"
-            tool="0"
-            flavor="0">
-      </item>
-      <item path="extra/ccm_bridge/CMakeFiles/2.8.11.2/CompilerIdCXX/CMakeCXXCompilerId.cpp"
-            ex="true"
-            tool="1"
-            flavor="0">
-      </item>
-      <item path="extra/ccm_bridge/include/ccm_bridge.hpp"
+      <item path="extra/ccm_bridge/CMakeFiles/CCMBridge.dir/DependInfo.cmake"
             ex="true"
             tool="3"
             flavor="0">
       </item>
-      <item path="extra/ccm_bridge/include/configuration.hpp"
+      <item path="extra/ccm_bridge/CMakeFiles/CCMBridge.dir/build.make"
             ex="true"
             tool="3"
             flavor="0">
       </item>
-      <item path="extra/ccm_bridge/include/esc_seq_remover.hpp"
+      <item path="extra/ccm_bridge/CMakeFiles/CCMBridge.dir/cmake_clean.cmake"
             ex="true"
             tool="3"
             flavor="0">
       </item>
-      <item path="extra/ccm_bridge/include/safe_advance.hpp"
+      <item path="extra/ccm_bridge/CMakeFiles/CCMBridge.dir/cmake_clean_target.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="extra/ccm_bridge/CMakeFiles/CCMBridge.dir/depend.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="extra/ccm_bridge/CMakeFiles/CCMBridge.dir/flags.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="extra/ccm_bridge/CMakeFiles/CCMBridge.dir/link.txt"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="extra/ccm_bridge/CMakeFiles/CCMBridge.dir/progress.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="extra/ccm_bridge/CMakeFiles/CMakeDirectoryInformation.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="extra/ccm_bridge/CMakeFiles/progress.marks"
             ex="true"
             tool="3"
             flavor="0">
@@ -300,6 +454,7 @@
             <pElem>.</pElem>
           </incDir>
           <preprocessorList>
+            <Elem>BOOST_ALL_DYN_LINK</Elem>
             <Elem>cql_EXPORTS</Elem>
           </preprocessorList>
         </ccTool>
@@ -310,136 +465,61 @@
             <pElem>/extra/ccm_bridge/include</pElem>
             <pElem>extra/ccm_bridge/include</pElem>
           </incDir>
+          <preprocessorList>
+            <Elem>BOOST_ALL_DYN_LINK</Elem>
+          </preprocessorList>
         </ccTool>
       </folder>
       <item path="include/cassandra/cql_config.hpp" ex="true" tool="3" flavor="0">
       </item>
-      <item path="include/cassandra/cql_event.hpp" ex="true" tool="3" flavor="0">
-      </item>
-      <item path="include/cassandra/cql_list.hpp" ex="true" tool="3" flavor="0">
-      </item>
-      <item path="include/cassandra/cql_map.hpp" ex="true" tool="3" flavor="0">
-      </item>
       <item path="include/cassandra/cql_policies.hpp" ex="true" tool="3" flavor="0">
       </item>
-      <item path="include/cassandra/cql_serialization.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/cql_set.hpp" ex="true" tool="3" flavor="0">
-      </item>
-      <item path="include/cassandra/cql_vector_stream.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_callback_storage.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_client_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_header_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_list_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_map_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_message_credentials_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_message_error_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_message_event_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_message_options_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_message_prepare_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_message_query_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_message_ready_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_message_register_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_message_result_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_message_startup_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_message_supported_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_result_metadata.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_set_impl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_socket.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_socket_ssl.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cassandra/internal/cql_util.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
       <item path="include/cassandra/version.hpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="test/unit_tests/CMakeFiles/CMakeDirectoryInformation.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/unit_tests/CMakeFiles/UnitTests_cql.dir/DependInfo.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/unit_tests/CMakeFiles/UnitTests_cql.dir/build.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/unit_tests/CMakeFiles/UnitTests_cql.dir/cmake_clean.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/unit_tests/CMakeFiles/UnitTests_cql.dir/depend.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/unit_tests/CMakeFiles/UnitTests_cql.dir/flags.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/unit_tests/CMakeFiles/UnitTests_cql.dir/link.txt"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/unit_tests/CMakeFiles/UnitTests_cql.dir/progress.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/unit_tests/CMakeFiles/progress.marks"
+            ex="true"
+            tool="3"
+            flavor="0">
       </item>
     </conf>
   </confs>

@@ -28,15 +28,14 @@
 namespace cql {
 
 cql_session_impl_t::cql_session_impl_t(
-    cql_session_t::cql_client_callback_t  client_callback,
-    boost::shared_ptr<cql_configuration_t> configuration
-) :
+    cql_session_t::cql_client_callback_t    client_callback,
+    boost::shared_ptr<cql_configuration_t>  configuration
+    ) :
     _ready(false),
     _defunct(false),
     _client_callback(client_callback),
-    _configuration(configuration),
-    _reconnect_limit(0) {
-}
+    _reconnect_limit(0),
+    _configuration(configuration) { }
 
 void cql_session_impl_t::init() {
     int port = _configuration->get_protocol_options().get_port();
@@ -175,6 +174,7 @@ cql_session_impl_t::connect(cql_query_plan_t& hostIter, int& streamId, std::list
                         streamId = conn->allocate_stream_id();
                         return conn;
                     } else {
+                        
                         if (current_connection_pool->second.size() > _configuration->get_pooling_options().get_core_connections_per_host(hostDistance)) {
                             if (conn->is_free(_configuration->get_pooling_options().get_min_simultaneous_requests_per_connection_treshold(hostDistance))) {
                                 to_remove.push_back(kv->first);

@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_CASE(serialization_to_byte)
     m.version(CQL_VERSION_IMPL);
     cql::cql_error_t err;
     m.prepare(&err);
-    BOOST_CHECK_EQUAL(sizeof(TEST_MESSAGE_STARTUP), m.size());
+    BOOST_CHECK_EQUAL((int)sizeof(TEST_MESSAGE_STARTUP), m.size());
     BOOST_CHECK(memcmp(TEST_MESSAGE_STARTUP, &(*m.buffer())[0], sizeof(TEST_MESSAGE_STARTUP)) == 0);
 }
 

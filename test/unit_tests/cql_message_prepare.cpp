@@ -24,7 +24,7 @@ BOOST_AUTO_TEST_CASE(serialization_to_byte)
 	cql::cql_message_prepare_impl_t m("SELECT * from schema_keyspaces;");
     cql::cql_error_t err;
     m.prepare(&err);
-    BOOST_CHECK_EQUAL(sizeof(TEST_MESSAGE_PREPARE), m.size());
+    BOOST_CHECK_EQUAL((int)sizeof(TEST_MESSAGE_PREPARE), m.size());
     BOOST_CHECK(memcmp(TEST_MESSAGE_PREPARE, &(*m.buffer())[0], sizeof(TEST_MESSAGE_PREPARE)) == 0);
 }
 

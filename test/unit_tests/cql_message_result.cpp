@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE(serialization_from_byte_row_count)
     m.buffer()->assign(TEST_MESSAGE_RESULT, TEST_MESSAGE_RESULT + sizeof(TEST_MESSAGE_RESULT));
     cql::cql_error_t err;
     m.consume(&err);
-    BOOST_CHECK_EQUAL(2, m.row_count());
+    BOOST_CHECK_EQUAL(2u, m.row_count());
 }
 
 BOOST_AUTO_TEST_CASE(serialization_from_byte_column_count)
@@ -179,7 +179,7 @@ BOOST_AUTO_TEST_CASE(serialization_from_byte_column_count)
     m.buffer()->assign(TEST_MESSAGE_RESULT, TEST_MESSAGE_RESULT + sizeof(TEST_MESSAGE_RESULT));
     cql::cql_error_t err;
     m.consume(&err);
-    BOOST_CHECK_EQUAL(17, m.column_count());
+    BOOST_CHECK_EQUAL(17u, m.column_count());
 }
 
 BOOST_AUTO_TEST_CASE(column_index_by_name)
@@ -435,7 +435,7 @@ BOOST_AUTO_TEST_CASE(deserialize_list)
     cql::cql_list_t* list = NULL;
 
     BOOST_CHECK_EQUAL(true, m.get_list(1, &list));
-    BOOST_CHECK_EQUAL(3, list->size());
+    BOOST_CHECK_EQUAL(3u, list->size());
 
     bool value = false;
     BOOST_CHECK_EQUAL(true, list->get_bool(0, value));
@@ -461,7 +461,7 @@ BOOST_AUTO_TEST_CASE(deserialize_set)
     cql::cql_set_t* set = NULL;
 
     BOOST_CHECK_EQUAL(true, m.get_set(3, &set));
-    BOOST_CHECK_EQUAL(3, set->size());
+    BOOST_CHECK_EQUAL(3u, set->size());
 
     cql::cql_int_t value = -1;
     BOOST_CHECK_EQUAL(true, set->get_int(0, value));
@@ -487,7 +487,7 @@ BOOST_AUTO_TEST_CASE(deserialize_map)
     cql::cql_map_t* map = NULL;
 
     BOOST_CHECK_EQUAL(true, m.get_map(2, &map));
-    BOOST_CHECK_EQUAL(2, map->size());
+    BOOST_CHECK_EQUAL(2u, map->size());
 
     std::string key;
     BOOST_CHECK_EQUAL(true, map->get_key_string(0, key));

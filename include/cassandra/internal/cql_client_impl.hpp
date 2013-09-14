@@ -94,6 +94,7 @@ public:
         _transport(transport),
         _request_buffer(0),
         _callback_storage(128),
+        _numer_of_free_stream_ids(127),
         _connect_callback(0),
         _connect_errback(0),
         _log_callback(0),
@@ -102,8 +103,7 @@ public:
         _defunct(false),
         _ready(false),
         _closing(false),
-        _reserved_stream_id(_callback_storage.allocate()),
-		_numer_of_free_stream_ids(127)
+        _reserved_stream_id(_callback_storage.allocate())
     {}
 
     cql_client_impl_t(
@@ -115,6 +115,7 @@ public:
         _transport(transport),
         _request_buffer(0),
         _callback_storage(128),
+        _numer_of_free_stream_ids(127),
         _connect_callback(0),
         _connect_errback(0),
         _log_callback(log_callback),
@@ -123,8 +124,7 @@ public:
         _defunct(false),
         _ready(false),
         _closing(false),
-        _reserved_stream_id(_callback_storage.allocate()),
-		_numer_of_free_stream_ids(127)
+        _reserved_stream_id(_callback_storage.allocate())
     {}
 
     boost::shared_future<cql::cql_future_connection_t>
@@ -740,7 +740,7 @@ private:
     cql::cql_header_impl_t               _response_header;
     std::auto_ptr<cql::cql_message_t>    _response_message;
     callback_storage_t                   _callback_storage;
-	boost::atomic_int					 _numer_of_free_stream_ids;
+    boost::atomic_int                    _numer_of_free_stream_ids;
     cql_connection_callback_t            _connect_callback;
     cql_connection_errback_t             _connect_errback;
     cql_log_callback_t                   _log_callback;

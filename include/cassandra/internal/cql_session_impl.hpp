@@ -48,14 +48,6 @@ struct cql_error_t;
 class cql_session_impl_t :
     public cql_session_t,
         boost::noncopyable {
-
-private:
-    boost::shared_ptr<cql_configuration_t> _configuration;
-    boost::mutex _connection_pool_mtx;
-    std::map<std::string, std::map<long,boost::shared_ptr<cql_client_t> > > _trashcan;
-    std::map<std::string, std::map<long,boost::shared_ptr<cql_client_t> > > _connection_pool;
-    std::map<std::string, long > _allocated_connections;
-
 public:
 
     cql_session_impl_t(
@@ -158,8 +150,6 @@ private:
     bool
     empty();
 
-private:
-
     struct client_container_t {
         client_container_t(
             cql::cql_client_t* c) :
@@ -201,17 +191,26 @@ private:
     cql::cql_client_t*
     next_client();
 
-    typedef boost::ptr_deque<client_container_t>     clients_collection_t;
-    clients_collection_t                             _clients;
-    boost::mutex                                     _mutex;
-    bool                                             _ready;
-    bool                                             _defunct;
+    typedef 
+        boost::ptr_deque<client_container_t> 
+        clients_collection_t;
+    
+    clients_collection_t                         _clients;
+    boost::mutex                                 _mutex;
+    bool                                         _ready;
+    bool                                         _defunct;
     cql::cql_session_t::cql_client_callback_t    _client_callback;
     cql::cql_session_t::cql_ready_callback_t     _ready_callback;
     cql::cql_session_t::cql_defunct_callback_t   _defunct_callback;
     cql::cql_session_t::cql_log_callback_t       _log_callback;
     cql::cql_session_t::cql_connection_errback_t _connect_errback;
     size_t                                       _reconnect_limit;
+    
+    boost::shared_ptr<cql_configuration_t> _configuration;
+    boost::mutex _connection_pool_mtx;
+    std::map<std::string, std::map<long,boost::shared_ptr<cql_client_t> > > _trashcan;
+    std::map<std::string, std::map<long,boost::shared_ptr<cql_client_t> > > _connection_pool;
+    std::map<std::string, long > _allocated_connections;
 };
 
 } // namespace cql
