@@ -22,6 +22,10 @@
               <df name="internal">
               </df>
             </df>
+            <df name="cql">
+              <df name="internal">
+              </df>
+            </df>
           </df>
           <in>DependInfo.cmake</in>
           <in>build.make</in>
@@ -34,6 +38,10 @@
         <df name="cql_static.dir">
           <df name="src">
             <df name="cassandra">
+              <df name="internal">
+              </df>
+            </df>
+            <df name="cql">
               <df name="internal">
               </df>
             </df>
@@ -113,7 +121,7 @@
         </df>
       </df>
       <df name="include">
-        <df name="cassandra">
+        <df name="cql">
           <df name="internal">
             <in>cql_callback_storage.hpp</in>
             <in>cql_client_impl.hpp</in>
@@ -166,7 +174,7 @@
         </df>
       </df>
       <df name="src">
-        <df name="cassandra">
+        <df name="cql">
           <df name="internal">
             <in>cql_header_impl.cpp</in>
             <in>cql_list_impl.cpp</in>
@@ -470,12 +478,6 @@
           </preprocessorList>
         </ccTool>
       </folder>
-      <item path="include/cassandra/cql_config.hpp" ex="true" tool="3" flavor="0">
-      </item>
-      <item path="include/cassandra/cql_policies.hpp" ex="true" tool="3" flavor="0">
-      </item>
-      <item path="include/cassandra/version.hpp" ex="true" tool="3" flavor="0">
-      </item>
       <item path="test/unit_tests/CMakeFiles/CMakeDirectoryInformation.cmake"
             ex="true"
             tool="3"

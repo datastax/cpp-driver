@@ -114,16 +114,16 @@ include_directories(${INCLUDES})
 # we must add header files as dependencies (if header
 # changes project must be recompiled, right).
 file(GLOB INC_FILES
-	${PROJECT_SOURCE_DIR}/include/cassandra/*.hpp) 
+	${PROJECT_SOURCE_DIR}/include/cql/*.hpp) 
 	
 file(GLOB INC_FILES_INTERNAL
-	${PROJECT_SOURCE_DIR}/include/cassandra/internal/*.hpp )
+	${PROJECT_SOURCE_DIR}/include/cql/internal/*.hpp )
 
 file(GLOB SRC_FILES
-	${PROJECT_SOURCE_DIR}/src/cassandra/*.cpp)
+	${PROJECT_SOURCE_DIR}/src/cql/*.cpp)
 
 file(GLOB SRC_FILES_INTERNAL
-	${PROJECT_SOURCE_DIR}/src/cassandra/internal/*.cpp )
+	${PROJECT_SOURCE_DIR}/src/cql/internal/*.cpp )
 	
 source_group("Source Files" FILES ${SRC_FILES})
 source_group("Source Files\\Internal" FILES ${SRC_FILES_INTERNAL})
@@ -163,10 +163,10 @@ set_property(
 # install target
 #-------------------
 
-file(GLOB INSTALL_HEADERS "${PROJECT_INCLUDE_DIR}/cassandra/*.hpp")
+file(GLOB INSTALL_HEADERS "${PROJECT_INCLUDE_DIR}/cql/*.hpp")
 
 # Where to put headers
-set(INSTALL_HEADERS_DIR "${CMAKE_INSTALL_PREFIX}/include/casandra")
+set(INSTALL_HEADERS_DIR "${CMAKE_INSTALL_PREFIX}/include/cql")
 install(FILES ${INSTALL_HEADERS} DESTINATION "${INSTALL_HEADERS_DIR}")
 
 # Where to put libraries
