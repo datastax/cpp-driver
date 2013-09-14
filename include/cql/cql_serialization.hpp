@@ -30,8 +30,6 @@
 
 namespace cql {
 
-class cql_inet_t;
-
 std::ostream&
 encode_bool(std::ostream& output,
             bool value);

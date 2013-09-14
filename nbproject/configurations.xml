@@ -121,6 +121,52 @@
         </df>
       </df>
       <df name="include">
+        <df name="cassandra">
+          <df name="internal">
+            <in>cql_callback_storage.hpp</in>
+            <in>cql_defines.hpp</in>
+            <in>cql_header_impl.hpp</in>
+            <in>cql_list_impl.hpp</in>
+            <in>cql_map_impl.hpp</in>
+            <in>cql_message.hpp</in>
+            <in>cql_message_credentials_impl.hpp</in>
+            <in>cql_message_error_impl.hpp</in>
+            <in>cql_message_event_impl.hpp</in>
+            <in>cql_message_execute_impl.hpp</in>
+            <in>cql_message_options_impl.hpp</in>
+            <in>cql_message_prepare_impl.hpp</in>
+            <in>cql_message_query_impl.hpp</in>
+            <in>cql_message_ready_impl.hpp</in>
+            <in>cql_message_register_impl.hpp</in>
+            <in>cql_message_result_impl.hpp</in>
+            <in>cql_message_startup_impl.hpp</in>
+            <in>cql_message_supported_impl.hpp</in>
+            <in>cql_result_metadata.hpp</in>
+            <in>cql_set_impl.hpp</in>
+            <in>cql_socket.hpp</in>
+            <in>cql_socket_ssl.hpp</in>
+            <in>cql_util.hpp</in>
+          </df>
+          <in>cql.hpp</in>
+          <in>cql_builder.hpp</in>
+          <in>cql_client.hpp</in>
+          <in>cql_client_factory.hpp</in>
+          <in>cql_cluster.hpp</in>
+          <in>cql_error.hpp</in>
+          <in>cql_event.hpp</in>
+          <in>cql_exception.hpp</in>
+          <in>cql_execute.hpp</in>
+          <in>cql_future_connection.hpp</in>
+          <in>cql_future_result.hpp</in>
+          <in>cql_list.hpp</in>
+          <in>cql_load_balancing_policy.hpp</in>
+          <in>cql_map.hpp</in>
+          <in>cql_result.hpp</in>
+          <in>cql_serialization.hpp</in>
+          <in>cql_session.hpp</in>
+          <in>cql_set.hpp</in>
+          <in>cql_vector_stream.hpp</in>
+        </df>
         <df name="cql">
           <df name="internal">
             <in>cql_callback_storage.hpp</in>
@@ -478,6 +524,132 @@
           </preprocessorList>
         </ccTool>
       </folder>
+      <item path="include/cassandra/internal/cql_client_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cassandra/internal/cql_session_impl.hpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="include/cql/cql_config.hpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="include/cql/cql_policies.hpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="include/cql/version.hpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="src/cassandra/cql_builder.cpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="src/cassandra/cql_client_factory.cpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="src/cassandra/cql_cluster.cpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="src/cassandra/cql_execute.cpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="src/cassandra/cql_serialization.cpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_header_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_list_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_map_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_message_credentials_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_message_error_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_message_event_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_message_execute_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_message_options_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_message_prepare_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_message_query_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_message_ready_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_message_register_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_message_result_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_message_startup_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_message_supported_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_result_metadata.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_session_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_set_impl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_socket.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="src/cassandra/internal/cql_socket_ssl.cpp"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
       <item path="test/unit_tests/CMakeFiles/CMakeDirectoryInformation.cmake"
             ex="true"
             tool="3"
