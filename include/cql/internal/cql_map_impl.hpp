@@ -20,6 +20,8 @@
 #define CQL_MAP_IMPL_H_
 
 #include <vector>
+#include <string>
+
 #include "cql/cql.hpp"
 #include "cql/cql_map.hpp"
 

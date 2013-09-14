@@ -19,6 +19,7 @@
 #ifndef CQL_SET_H_
 #define CQL_SET_H_
 
+#include <string>
 #include "cql/cql.hpp"
 
 namespace cql {

@@ -26,19 +26,19 @@
 
 namespace cql {
 
-struct HexCharStruct {
+struct cql_hex_char_struct_t {
     unsigned char c;
-    HexCharStruct(unsigned char _c) : c(_c) { }
+    cql_hex_char_struct_t(unsigned char _c) : c(_c) { }
 };
 
 inline std::ostream&
-operator<<(std::ostream& o, const HexCharStruct& hs) {
+operator<<(std::ostream& o, const cql_hex_char_struct_t& hs) {
     return (o << std::hex << (int)hs.c);
 }
 
 inline
-HexCharStruct hex(unsigned char _c) {
-    return HexCharStruct(_c);
+cql_hex_char_struct_t hex(unsigned char _c) {
+    return cql_hex_char_struct_t(_c);
 }
 
 inline std::string
