@@ -80,10 +80,21 @@ class cql_client_impl_t :
     public cql::cql_client_t {
 
 public:
-    typedef std::list<cql::cql_message_buffer_t> request_buffer_t;
-    typedef std::pair<cql_message_callback_t, cql_message_errback_t> callback_pair_t;
-    typedef cql::small_indexed_storage<callback_pair_t> callback_storage_t;
-    typedef boost::function<void(const boost::system::error_code&, std::size_t)> write_callback_t;
+    typedef 
+        std::list<cql::cql_message_buffer_t> 
+        request_buffer_t;
+    
+    typedef 
+        std::pair<cql_message_callback_t, cql_message_errback_t> 
+        callback_pair_t;
+    
+    typedef 
+        cql::small_indexed_storage<callback_pair_t> 
+        callback_storage_t;
+    
+    typedef 
+        boost::function<void(const boost::system::error_code&, std::size_t)> 
+        write_callback_t;
 
 
     cql_client_impl_t(
@@ -130,8 +141,11 @@ public:
     boost::shared_future<cql::cql_future_connection_t>
     connect(const std::string& server,
             unsigned int port) {
-        boost::shared_ptr<boost::promise<cql::cql_future_connection_t> > promise(new boost::promise<cql::cql_future_connection_t>());
-        boost::shared_future<cql::cql_future_connection_t> shared_future(promise->get_future());
+        boost::shared_ptr<boost::promise<cql::cql_future_connection_t> > 
+                promise(new boost::promise<cql::cql_future_connection_t>());
+        
+        boost::shared_future<cql::cql_future_connection_t> 
+                shared_future(promise->get_future());
 
         connect(server,
                 port,

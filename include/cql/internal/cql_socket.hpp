@@ -19,6 +19,8 @@
 #ifndef CQL_SOCKET_H_
 #define CQL_SOCKET_H_
 
+#include <memory>
+#include <boost/noncopyable.hpp>
 #include <boost/asio.hpp>
 
 namespace cql {
@@ -32,23 +34,23 @@ public:
     boost::asio::io_service&
     get_io_service();
 
-    template<typename ConstBufferSequence, typename WriteHandler>
+    template<typename TConstBufferSequence, typename TWriteHandler>
     void
-    async_write_some(const ConstBufferSequence& buffers,
-                     WriteHandler handler) {
+    async_write_some(const TConstBufferSequence& buffers,
+                     TWriteHandler handler) {
         _socket->async_write_some(buffers, handler);
     }
 
-    template<typename MutableBufferSequence, typename ReadHandler>
+    template<typename TMutableBufferSequence, typename TReadHandler>
     void
-    async_read_some(const MutableBufferSequence& buffers,
-                    ReadHandler handler) {
+    async_read_some(const TMutableBufferSequence& buffers,
+                    TReadHandler handler) {
         _socket->async_read_some(buffers, handler);
     }
 
-    template<typename HandshakeHandler>
+    template<typename THandshakeHandler>
     void
-    async_handshake(HandshakeHandler)
+    async_handshake(THandshakeHandler)
     {}
 
     bool

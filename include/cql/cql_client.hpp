@@ -126,7 +126,9 @@ public:
     /**
        Prepare a CQL statement.
 
-       When the callback is triggered it will be passed a cql_message_result_t which contains the ID of the prepared statement. This ID is used when composing execution messages.
+       When the callback is triggered it will be passed a cql_message_result_t 
+       which contains the ID of the prepared statement. 
+       This ID is used when composing execution messages.
 
        @param query query string.
        @param callback callback for successful query results.
