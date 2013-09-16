@@ -9,13 +9,39 @@
 #ifndef CQL_WRITE_TIMEOUT_EXCEPTION_H_
 #define	CQL_WRITE_TIMEOUT_EXCEPTION_H_
 
-#include "cql/exceptions/cql_exception.hpp"
+#include <string>
+#include "cql/exceptions/cql_query_timeout_exception.hpp"
 
 namespace cql {
-class cql_write_timeout_exception: public cql_exception {
+// A Cassandra timeout during a write query.
+class cql_write_timeout_exception: public cql_query_timeout_exception {
 public:
-    cql_write_timeout_exception(const char* message)
-        : cql_exception(message) { }
+    cql_write_timeout_exception( 
+            cql_consistency_enum consistency_level,
+            cql_int_t received, 
+            cql_int_t required,
+            const char* write_type)
+    
+        : cql_query_timeout_exception(
+            create_message(consistency_level, received, required).c_str(),
+            consistency_level, received, required),
+          _write_type(write_type)
+        { }
+        
+        
+    const char*
+    write_type() const {
+        return _write_type;
+    }
+    
+private:
+    std::string 
+    create_message(
+        cql_consistency_enum consistency_level,
+        cql_int_t received,
+        cql_int_t required);
+    
+    const char* _write_type;
 };
 }
 

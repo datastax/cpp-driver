@@ -14,3 +14,10 @@ cql::safe_strncpy(char* dest, const char* src, const size_t count) {
 
 	return dest;
 }
+
+const char*
+cql::empty_when_null(const char* str) {
+    if(!str)
+        return "";
+    return str;
+}

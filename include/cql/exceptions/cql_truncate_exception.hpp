@@ -9,13 +9,14 @@
 #ifndef CQL_TRUNCATE_EXCEPTION_H_
 #define	CQL_TRUNCATE_EXCEPTION_H_
 
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql/exceptions/cql_query_execution_exception.hpp"
 
 namespace cql {
-class cql_truncate_exception: public cql_exception {
+// Error during a truncation operation.
+class cql_truncate_exception: public cql_query_execution_exception {
 public:
     cql_truncate_exception(const char* message)
-        : cql_exception(message) { }
+        : cql_query_execution_exception(message) { }
 };
 }
 

@@ -8,10 +8,11 @@
 #ifndef CQL_EXCEPTION_HPP
 #define	CQL_EXCEPTION_HPP
 
+#include <cstdlib>
 #include <exception>
 
 namespace cql {
-// Size of buffer used to hold what message and other strings
+// Size of buffer used to hold user message and other strings
 // in cql exceptions.
 const size_t CQL_EXCEPTION_BUFFER_SIZE = 128;
 
@@ -21,15 +22,27 @@ const size_t CQL_EXCEPTION_WHAT_BUFFER_SIZE = 512;
 // Base class for all exceptions throwed by driver.
 class cql_exception: public std::exception {
 public:
-    cql_exception(const char* message)
-        : _message(message) { }
-
-    virtual const char* what() const throw() {
-        return _message;
-    }
-
+    // Returns text message that describes exception.
+    virtual const char* what() const throw();
+    
+protected:
+    // This constructor doesn't initialize what buffer
+    cql_exception();
+    
+    // Method overriden in derived classes that is responisble 
+    // for populating what message buffer.
+    // This is only called on first call to what.
+    virtual void prepare_what_buffer() const = 0;
+    
+    // We allow use of dynamically generated strings in exceptions
+    // by coping message passed by user to internal buffer.
+    // We cannot use std::string here, because its copy
+    // constructor can throw exception (e.g. no memory available),
+    // which will result in std::terminate().
+    mutable char _what_buffer[CQL_EXCEPTION_WHAT_BUFFER_SIZE];
+    
 private:
-    const char* const _message;
+    mutable bool _what_buffer_initialized;
 };
 
 }

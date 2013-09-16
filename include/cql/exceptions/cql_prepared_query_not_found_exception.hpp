@@ -9,13 +9,29 @@
 #ifndef CQL_PREPARED_QUERY_NOT_FOUND_EXCEPTION_H_
 #define	CQL_PREPARED_QUERY_NOT_FOUND_EXCEPTION_H_
 
+#include <vector>
+
+#include "cql/cql.hpp"
 #include "cql/exceptions/cql_exception.hpp"
 
 namespace cql {
 class cql_prepared_query_not_found_exception: public cql_exception {
 public:
-    cql_prepared_query_not_found_exception(const char* message)
-        : cql_exception(message) { }
+    cql_prepared_query_not_found_exception(cql_byte_t query_id)
+        : cql_exception(),
+          _query_id(query_id) { }
+        
+    cql_byte_t query_id() const {
+        return _query_id;
+    }
+        
+protected:
+    // @override
+    virtual void
+    prepare_what_buffer() const;
+   
+private:
+    cql_byte_t _query_id;
 };
 }
 

@@ -9,13 +9,16 @@
 #ifndef CQL_QUERY_EXECUTION_EXCEPTION_H_
 #define	CQL_QUERY_EXECUTION_EXCEPTION_H_
 
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql/exceptions/cql_query_validation_exception.hpp"
 
 namespace cql {
-class cql_query_execution_exception: public cql_exception {
+// Exception related to the execution of a query. This correspond to the
+// exception that Cassandra throw when a (valid) query cannot be executed
+// (TimeoutException, UnavailableException, ...).
+class cql_query_execution_exception: public cql_query_validation_exception {
 public:
     cql_query_execution_exception(const char* message)
-        : cql_exception(message) { }
+        : cql_query_validation_exception(message) { }
 };
 }
 

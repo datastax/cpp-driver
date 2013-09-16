@@ -20,15 +20,16 @@ public:
 		const char* message,
 		boost::asio::ip::address& host);
 
-	virtual const char* what() const throw();
-
 	// Gets the host for which the authentication failed. 
 	boost::asio::ip::address host() const throw();
 
+protected:
+    // @override
+    virtual void prepare_what_buffer() const;
+    
 private:
 	boost::asio::ip::address _ip_address;
 	char _user_message[CQL_EXCEPTION_BUFFER_SIZE];
-	mutable char _what_buffer[CQL_EXCEPTION_WHAT_BUFFER_SIZE];
 };
 
 }

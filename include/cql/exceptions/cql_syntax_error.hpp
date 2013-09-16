@@ -12,13 +12,11 @@
 #include "cql/exceptions/cql_query_validation_exception.hpp"
 
 namespace cql {
-/************************************************************************/
-/* Indicates a syntax error in a query.                                 */
-/************************************************************************/
-class cql_syntax_error: public cql_exception {
+// Indicates a syntax error in a query.
+class cql_syntax_error: public cql_query_validation_exception {
 public:
     cql_syntax_error(const char* message)
-        : cql_exception(message) { }
+        : cql_query_validation_exception(message) { }
 };
 }
 

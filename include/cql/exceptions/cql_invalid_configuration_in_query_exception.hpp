@@ -12,10 +12,10 @@
 #include "cql/exceptions/cql_invalid_query_exception.hpp"
 
 namespace cql {
-	//	A specific invalid query exception that indicates that the query is invalid
-	//  because of some configuration problem. This is generally throw by query
-	//  that manipulate the schema (CREATE and ALTER) when the required configuration
-	//  options are invalid.
+//	A specific invalid query exception that indicates that the query is invalid
+//  because of some configuration problem. This is generally throw by query
+//  that manipulate the schema (CREATE and ALTER) when the required configuration
+//  options are invalid.
 class cql_invalid_configuration_in_query_exception: public cql_invalid_query_exception {
 public:
     cql_invalid_configuration_in_query_exception(const char* message)
