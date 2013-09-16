@@ -10,7 +10,6 @@ BOOST_AUTO_TEST_SUITE(cql_header)
 
 BOOST_AUTO_TEST_CASE(getters_and_constructor)
 {
-    std::stringstream output;
     cql::cql_header_impl_t header(CQL_VERSION_1_REQUEST, CQL_FLAG_NOFLAG, 1, cql::CQL_OPCODE_READY, 5);
     BOOST_CHECK_EQUAL(1, header.version());
     BOOST_CHECK_EQUAL(0, header.flags());

@@ -171,7 +171,7 @@ cql::cql_message_event_impl_t::consume(cql::cql_error_t*) {
 bool
 cql::cql_message_event_impl_t::prepare(cql::cql_error_t*) {
     cql::vector_stream_t buffer(*_buffer);
-    std::ostream stream(&buffer);
+//    std::ostream stream(&buffer);
 
 
     return true;

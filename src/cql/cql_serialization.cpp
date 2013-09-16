@@ -454,7 +454,7 @@ cql::encode_string_map(ostream& output,
     output.write(reinterpret_cast<char*>(&len), sizeof(len));
 
     std::map<string,string>::const_iterator it = map.begin();
-    for (; it != map.end(); it++) {
+    for (; it != map.end(); ++it) {
         cql::encode_string(output, (*it).first);
         cql::encode_string(output, (*it).second);
     }
@@ -488,7 +488,7 @@ cql::encode_string_multimap(ostream& output,
     output.write(reinterpret_cast<char*>(&len), sizeof(len));
 
     std::map<string, list<string> >::const_iterator it = map.begin();
-    for (; it != map.end(); it++) {
+    for (; it != map.end(); ++it) {
         cql::encode_string(output, (*it).first);
         cql::encode_string_list(output, (*it).second);
     }

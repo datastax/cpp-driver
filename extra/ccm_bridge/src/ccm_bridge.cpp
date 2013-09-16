@@ -225,13 +225,13 @@ namespace Cassandra {
 
 	void CCMBridge::terminal_read_stream(EscapeSequencesRemover& buffer, int stream) {
 		char buf[128];
-		ssize_t readed;
-
+		
 		while(true) {
 			// disable blocking
 			libssh2_session_set_blocking(_session, 0);
 			
-			readed = libssh2_channel_read_ex(_channel, stream, buf, sizeof(buf));
+			ssize_t readed = 
+				libssh2_channel_read_ex(_channel, stream, buf, sizeof(buf));
 			
 			// return if no data to read
 			if(readed == LIBSSH2_ERROR_EAGAIN || readed == 0)

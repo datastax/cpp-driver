@@ -183,7 +183,7 @@ namespace Cassandra {
 	// Singleton implementation by static variable
 	const Configuration& get_configuration() {
 		static Configuration config;
-		bool initialized = false;
+		static bool initialized = false;
 
 		if(!initialized) {
 			const std::string CONFIG_FILE_NAME = "config.txt";
