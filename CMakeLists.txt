@@ -87,7 +87,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     # -fPIC is not used on Windows platform (all DLLs are
     # relocable), -Wall generates about 30k stupid warnings
     # that can hide useful ones.
-    set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "")
+    set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-D_CRT_SECURE_NO_WARNINGS")
 
     # needed for windows sockets (not verified)
     add_definitions(-D_WIN32_WINNT=0x0501)
@@ -116,23 +116,31 @@ include_directories(${INCLUDES})
 file(GLOB INC_FILES
 	${PROJECT_SOURCE_DIR}/include/cql/*.hpp) 
 	
+file(GLOB INC_EXCEPTION_FILES
+  ${PROJECT_SOURCE_DIR}/include/cql/exceptions/*.hpp) 
+	
 file(GLOB INC_FILES_INTERNAL
 	${PROJECT_SOURCE_DIR}/include/cql/internal/*.hpp )
 
 file(GLOB SRC_FILES
 	${PROJECT_SOURCE_DIR}/src/cql/*.cpp)
 
+file(GLOB SRC_EXCEPTION_FILES
+	${PROJECT_SOURCE_DIR}/src/cql/exceptions/*.cpp )
+
 file(GLOB SRC_FILES_INTERNAL
 	${PROJECT_SOURCE_DIR}/src/cql/internal/*.cpp )
 	
 source_group("Source Files" FILES ${SRC_FILES})
 source_group("Source Files\\Internal" FILES ${SRC_FILES_INTERNAL})
+source_group("Source Files\\Exceptions" FILES ${SRC_EXCEPTION_FILES})
 source_group("Header Files" FILES ${INC_FILES})
 source_group("Header Files\\Internal" FILES ${INC_FILES_INTERNAL})
+source_group("Header Files\\Exceptions" FILES ${INC_EXCEPTION_FILES})
 
 set(ALL_SOURCE_FILES 
-	${SRC_FILES} ${SRC_FILES_INTERNAL} 
-	${INC_FILES} ${INC_FILES_INTERNAL})
+	${SRC_FILES} ${SRC_FILES_INTERNAL} ${SRC_EXCEPTION_FILES}
+	${INC_FILES} ${INC_FILES_INTERNAL} ${INC_EXCEPTION_FILES})
 
 # build dynamic and static version of library
 add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})

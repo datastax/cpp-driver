@@ -23,7 +23,7 @@
 
 #include "cql/internal/cql_defines.hpp"
 #include "cql/internal/cql_session_impl.hpp"
-#include "cql/cql_exception.hpp"
+#include "cql/exceptions/cql_exception.hpp"
 
 namespace cql {
 

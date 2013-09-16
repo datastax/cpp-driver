@@ -22,7 +22,9 @@
 #include <ostream>
 #include <streambuf>
 #include <vector>
+
 #include "cql/cql.hpp"
+#include "cql/internal/cql_system_dependent.hpp"
 
 namespace cql {
 
@@ -72,6 +74,10 @@ get_consistency_string(const cql::cql_short_t consistency) {
         return "UNKNOWN";
     }
 }
+
+// Safe version of strncpy (this method always null terminates
+// dest buffer).
+char* safe_strncpy(char* dest, const char* src, const size_t count);
 
 } // namespace cql
 
