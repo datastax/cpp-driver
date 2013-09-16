@@ -8,25 +8,25 @@
 #ifndef CQL_INVALID_TYPE_EXCEPTION_HPP
 #define	CQL_INVALID_TYPE_EXCEPTION_HPP
 
-#include "cql/exceptions/cql_exception.hpp"
+#include <string>
+
+#include "cql/exceptions/cql_generic_exception.hpp"
 
 namespace cql {
-    class cql_invalid_type_exception : public cql_exception {
+    class cql_invalid_type_exception : public cql_generic_exception {
     public:
         cql_invalid_type_exception(
-            const char* param_name,
-            const char* expected_type,
-            const char* received_type);
-        
-    protected:
-        // @override
-        virtual void
-        prepare_what_buffer() const;
+                const char* param_name,
+                const char* expected_type,
+                const char* received_type)
+            : cql_generic_exception(create_message(param_name, expected_type, received_type).c_str()) { }
         
     private:
-        char _parameter_name[CQL_EXCEPTION_BUFFER_SIZE];
-        char _received_type[CQL_EXCEPTION_BUFFER_SIZE];
-        char _expected_type[CQL_EXCEPTION_BUFFER_SIZE];
+        std::string
+        create_message(
+            const char* param_name,
+            const char* expected_type,
+            const char* received_type) const;
     };
 }
 
