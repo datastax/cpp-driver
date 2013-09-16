@@ -24,16 +24,16 @@
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include <cassandra/cql.hpp>
-#include <cassandra/cql_error.hpp>
-#include <cassandra/cql_event.hpp>
-#include <cassandra/cql_client.hpp>
-#include <cassandra/cql_client_factory.hpp>
-#include <cassandra/cql_session.hpp>
-#include <cassandra/cql_cluster.hpp>
-#include <cassandra/cql_builder.hpp>
-#include <cassandra/cql_execute.hpp>
-#include <cassandra/cql_result.hpp>
+#include <cql/cql.hpp>
+#include <cql/cql_error.hpp>
+#include <cql/cql_event.hpp>
+#include <cql/cql_client.hpp>
+#include <cql/cql_client_factory.hpp>
+#include <cql/cql_session.hpp>
+#include <cql/cql_cluster.hpp>
+#include <cql/cql_builder.hpp>
+#include <cql/cql_execute.hpp>
+#include <cql/cql_result.hpp>
 
 #include <ccm_bridge.hpp>
 

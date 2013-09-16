@@ -201,8 +201,8 @@ cql::decode_int(cql::cql_byte_t* input,
 ostream&
 cql::encode_float(ostream& output,
                   const float value) {
-    float swapped_float = swap_float(value);
-    cql::cql_int_t l = *reinterpret_cast<cql::cql_int_t *>(&swapped_float);
+    float network_order_float = swap_float(value);
+    cql::cql_int_t l = *reinterpret_cast<cql::cql_int_t *>(&network_order_float);
     output.write(reinterpret_cast<char*>(&l), sizeof(l));
     return output;
 }
@@ -210,7 +210,8 @@ cql::encode_float(ostream& output,
 void
 cql::encode_float(vector<cql::cql_byte_t>& output,
                   const float value) {
-    cql::cql_int_t l = swap_float(value);
+	float swapped = swap_float(value);
+    cql::cql_int_t l = *reinterpret_cast<cql::cql_int_t*>(&swapped);
     output.resize(sizeof(l));
     const cql::cql_byte_t* it = reinterpret_cast<cql::cql_byte_t*>(&l);
     output.assign(it, it + sizeof(l));
