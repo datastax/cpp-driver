@@ -32,14 +32,14 @@ if(WIN32 AND MSVC)
 			DOC "LIBCDS library directory")
 else()
 	find_library(LIBCDS_LIBRARY_RELEASE
-			NAMES libcds
+			NAMES libcds cds
 			PATHS ENV LIBCDS_ROOT
 				  /usr/local/lib
 			PATH_SUFFIXES lib
 			DOC "LIBSSH library directory")
 	
 	find_library(LIBCDS_LIBRARY_DEBUG
-			NAMES libcds-debug
+			NAMES libcds-debug cds-debug
 			PATHS ENV LIBCDS_ROOT
 				  /usr/local/lib
 			PATH_SUFFIXES lib
