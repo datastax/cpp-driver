@@ -8,7 +8,7 @@ cql::cql_host_t::cql_host_t(
 	  _datacenter("unknown"),
 	  _rack("unknown"),
 	  _is_up(false),
-	  _next_up_time(date_time::NumSpecialValues.min_date_time),
+	  _next_up_time(boost::posix_time::min_date_time),
 	  _reconnection_policy(reconnection_policy),
 	  _reconnection_schedule(reconnection_policy->new_schedule())
 { }
@@ -42,7 +42,7 @@ cql::cql_host_t::is_considerably_up() const
 	if(is_up())
 		return true;
 
-	ptime utc_time = boost::posix_time::microsec_clock::universal_time();
+	boost::posix_time::ptime utc_time = utc_now();
 	return (_next_up_time <= utc_time);
 }
 
@@ -53,7 +53,7 @@ cql::cql_host_t::set_down()
 		boost::posix_time::time_duration delay = 
 					_reconnection_schedule->get_delay();
 
-		ptime now = utc_now();
+		boost::posix_time::ptime now = utc_now();
 
 		_next_up_time = now + delay;
 	}

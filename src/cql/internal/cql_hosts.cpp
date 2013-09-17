@@ -1,4 +1,8 @@
 #include <exception>
+#include <boost/shared_ptr.hpp>
+
+#include "cql/internal/cql_hosts.hpp"
+
 
 cql::cql_hosts_t 
 cql::cql_hosts_t::create( 
