@@ -9,6 +9,7 @@
 #ifndef CQL_TRUNCATE_EXCEPTION_H_
 #define	CQL_TRUNCATE_EXCEPTION_H_
 
+#include <string>
 #include "cql/exceptions/cql_query_execution_exception.hpp"
 
 namespace cql {
@@ -17,6 +18,9 @@ class cql_truncate_exception: public cql_query_execution_exception {
 public:
     cql_truncate_exception(const char* message)
         : cql_query_execution_exception(message) { }
+
+	cql_truncate_exception(const std::string& message)
+		: cql_query_execution_exception(message) { }
 };
 }
 

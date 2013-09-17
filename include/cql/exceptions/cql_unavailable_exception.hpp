@@ -31,17 +31,20 @@ public:
         { }
 
         // Gets the consistency level of the operation triggering this unavailable exception.
-        cql_consistency_enum consistency_level() const {
+        inline cql_consistency_enum 
+		consistency_level() const {
             return _consistency_level;
         }
         
         // Gets the number of replica acknowledgements/responses required to perform the operation (with its required consistency level). 
-        cql_int_t required_replicas() const {
+        inline cql_int_t 
+		required_replicas() const {
             return _required;
         }
         
         // Gets the number of replica that were known to be alive by the Cassandra coordinator node when it tried to execute the operation. 
-        cql_int_t alive_replicas() const {
+        inline cql_int_t 
+		alive_replicas() const {
             return _alive;
         }
 private:

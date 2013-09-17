@@ -9,18 +9,21 @@
 #ifndef CQL_QUERY_VALIDATION_EXCEPTION_H_
 #define	CQL_QUERY_VALIDATION_EXCEPTION_H_
 
+#include <string>
 #include "cql/exceptions/cql_exception.hpp"
-#include "cql_generic_exception.hpp"
 
 namespace cql {
 /**
  * An exception indicating that a query cannot be executed because it is
  * incorrect syntactically, invalid, unauthorized or any other reason.
  */
-class cql_query_validation_exception: public cql_generic_exception {
+class cql_query_validation_exception: public cql_exception {
 protected:
     cql_query_validation_exception(const char* message)
-        : cql_generic_exception(message) { }
+        : cql_exception(message) { }
+
+	cql_query_validation_exception(const std::string& message)
+		: cql_exception(message) { }
 };
 }
 

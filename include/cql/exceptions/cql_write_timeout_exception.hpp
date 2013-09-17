@@ -23,13 +23,15 @@ public:
             const char* write_type)
     
         : cql_query_timeout_exception(
-            create_message(consistency_level, received, required).c_str(),
-            consistency_level, received, required),
+            create_message(consistency_level, received, required),
+            consistency_level, 
+			received, 
+			required),
           _write_type(write_type)
         { }
         
         
-    const char*
+    inline const char*
     write_type() const {
         return _write_type;
     }

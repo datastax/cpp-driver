@@ -24,11 +24,23 @@ public:
         cql_int_t received, 
         cql_int_t required)
         
-    :   cql_query_execution_exception(message),
-            _consistency(consistency_level),
-            _recv_acknowledgements(received),
-            _req_acknowledgements(required)
+		:		cql_query_execution_exception(message),
+		_consistency(consistency_level),
+		_recv_acknowledgements(received),
+		_req_acknowledgements(required)
         { }
+
+	cql_query_timeout_exception(
+		const std::string& message,
+		cql_consistency_enum consistency_level,
+		cql_int_t received, 
+		cql_int_t required)
+
+		:   cql_query_execution_exception(message),
+		_consistency(consistency_level),
+		_recv_acknowledgements(received),
+		_req_acknowledgements(required)
+	{ }
         
     // Gets the number of replica that had acknowledged/responded to the operation before it time outed. 
     cql_int_t 
@@ -36,7 +48,7 @@ public:
         return _recv_acknowledgements;
     }
     
-    // Gets the minimum number of replica acknowledgements/responses that were required to fulfill the operation. 
+    // Gets the minimum number of replica acknowledgments/responses that were required to fulfill the operation. 
     cql_int_t
     required_acknowledgements() const  {
         return _req_acknowledgements;

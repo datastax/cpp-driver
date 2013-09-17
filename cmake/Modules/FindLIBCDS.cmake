@@ -26,7 +26,7 @@ if(WIN32 AND MSVC)
 			DOC "LIBSSH library directory")
 	
 	find_library(LIBCDS_LIBRARY_DEBUG
-			NAMES libcds-x86-vc10
+			NAMES libcds-x86-vc10_debug
 			PATHS ENV LIBCDS_ROOT
 			PATH_SUFFIXES lib
 			DOC "LIBCDS library directory")

@@ -10,23 +10,23 @@
 
 #include <string>
 
-#include "cql/exceptions/cql_generic_exception.hpp"
+#include "cql/exceptions/cql_exception.hpp"
 
 namespace cql {
-    class cql_invalid_type_exception : public cql_generic_exception {
+    class cql_invalid_type_exception : public cql_exception {
     public:
         cql_invalid_type_exception(
-                const char* param_name,
-                const char* expected_type,
-                const char* received_type)
-            : cql_generic_exception(create_message(param_name, expected_type, received_type).c_str()) { }
+                const std::string& param_name,
+                const std::string& expected_type,
+                const std::string& received_type)
+            : cql_exception(create_message(param_name, expected_type, received_type)) { }
         
     private:
         std::string
         create_message(
-            const char* param_name,
-            const char* expected_type,
-            const char* received_type) const;
+		const std::string& param_name,
+		const std::string& expected_type,
+		const std::string& received_type) const;
     };
 }
 

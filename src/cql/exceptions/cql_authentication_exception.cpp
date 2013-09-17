@@ -5,10 +5,10 @@
 
 std::string
 cql::cql_authentication_exception::create_message(
-        const char* message, 
+        const std::string& message, 
         const boost::asio::ip::address& ip_address) 
 {
     return boost::str(boost::format("Authentication error on host %1%: %2%")
         % _ip_address.to_string()
-        % empty_when_null(message));
+        % message);
 }

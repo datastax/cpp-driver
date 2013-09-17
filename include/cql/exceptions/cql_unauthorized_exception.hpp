@@ -9,6 +9,7 @@
 #ifndef CQL_UNAUTHORIZED_EXCEPTION_H_
 #define	CQL_UNAUTHORIZED_EXCEPTION_H_
 
+#include <string>
 #include "cql/exceptions/cql_query_validation_exception.hpp"
 
 namespace cql {
@@ -17,6 +18,9 @@ class cql_unauthorized_exception: public cql_query_validation_exception {
 public:
     cql_unauthorized_exception(const char* message)
         : cql_query_validation_exception(message) { }
+
+	cql_unauthorized_exception(const std::string& message)
+		: cql_query_validation_exception(message) { }
 };
 }
 

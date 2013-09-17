@@ -12,16 +12,16 @@
 #include <string>
 
 #include <boost/asio/ip/address.hpp>
-#include "cql/exceptions/cql_generic_exception.hpp"
+#include "cql/exceptions/cql_exception.hpp"
 
 namespace cql {
 // Indicates an error during the authentication phase while connecting to a node.
-class cql_authentication_exception: public cql_generic_exception {
+class cql_authentication_exception: public cql_exception {
 public:
     cql_authentication_exception(
-            const char* message,
+            const std::string& message,
             boost::asio::ip::address& host)
-        : cql_generic_exception(create_message(message, host).c_str()),
+        : cql_exception(create_message(message, host)),
           _ip_address(host)  
         { }
 
@@ -33,7 +33,7 @@ public:
 
 private:
     std::string
-    create_message(const char* message, const boost::asio::ip::address& ip_address);
+    create_message(const std::string& message, const boost::asio::ip::address& ip_address);
     
 	boost::asio::ip::address _ip_address;
 };

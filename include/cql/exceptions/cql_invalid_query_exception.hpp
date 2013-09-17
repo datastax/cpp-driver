@@ -9,6 +9,7 @@
 #ifndef CQL_INVALID_QUERY_EXCEPTION_H_
 #define	CQL_INVALID_QUERY_EXCEPTION_H_
 
+#include <string>
 #include "cql/exceptions/cql_query_validation_exception.hpp"
 
 namespace cql {
@@ -17,6 +18,9 @@ class cql_invalid_query_exception: public cql_query_validation_exception {
 public:
     cql_invalid_query_exception(const char* message)
         : cql_query_validation_exception(message) { }
+
+	cql_invalid_query_exception(const std::string& message)
+		: cql_query_validation_exception(message) { }
 };
 }
 

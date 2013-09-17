@@ -23,7 +23,7 @@
 
 #include "cql/internal/cql_defines.hpp"
 #include "cql/internal/cql_session_impl.hpp"
-#include "cql/exceptions/cql_generic_exception.hpp"
+#include "cql/exceptions/cql_exception.hpp"
 
 namespace cql {
 
@@ -56,7 +56,7 @@ void cql_session_impl_t::init() {
     }
 
     if (wasError) {
-        throw cql_generic_exception("cannot connect");
+        throw cql_exception("cannot connect.");
     }
 }
 
@@ -153,7 +153,7 @@ cql_session_impl_t::connect(cql_query_plan_t& hostIter, int& streamId, std::list
     while (true) {
         boost::shared_ptr<cql_host_t> currentHost = hostIter.current();
         if (currentHost.get() == NULL)
-            throw cql_generic_exception("no host avaliable");
+            throw cql_exception("no host available.");
 
         if (currentHost->is_considerably_up()) {
             triedHosts.push_back(currentHost->get_address());
@@ -213,7 +213,7 @@ cql_session_impl_t::connect(cql_query_plan_t& hostIter, int& streamId, std::list
         }
 
         if (!hostIter.move_next())
-            throw cql_generic_exception("no host avaliable.");
+            throw cql_exception("no host avaliable.");
     }
 }
 

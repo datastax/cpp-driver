@@ -12,15 +12,15 @@
 #include "cql/exceptions/cql_query_validation_exception.hpp"
 
 namespace cql {
-    // Exception thrown when a query attemps to create a keyspace that
+    // Exception thrown when a query attempts to create a keyspace that
     // already exists.
     class cql_keyspace_already_exists_exception : public cql_query_validation_exception {
     public:
-        cql_keyspace_already_exists_exception(const char* keyspace);
+        cql_keyspace_already_exists_exception(const std::string& keyspace);
     
     private:
         std::string
-        create_message(const char* keyspace);
+        create_message(const std::string& keyspace);
     };
 }
 

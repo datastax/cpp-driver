@@ -18,15 +18,18 @@ class cql_read_timeout_exception: public cql_query_timeout_exception {
 public:
     cql_read_timeout_exception(
         cql_consistency_enum consistency_level,
-        cql_int_t received, cql_int_t required,
+        cql_int_t received, 
+		cql_int_t required,
         bool data_present
         )
         : cql_query_timeout_exception(
-                create_message(consistency_level, received, required, data_present).c_str(), 
-                consistency_level, received, required),
+                create_message(consistency_level, received, required, data_present), 
+                consistency_level, 
+				received, 
+				required),
           _data_present(data_present) { }
         
-        bool
+        inline bool
         data_retrieved() const {
             return _data_present;
         }
@@ -34,13 +37,15 @@ private:
     std::string
     create_message(
         cql_consistency_enum consistency_level,
-        cql_int_t received, cql_int_t required,
-        bool data_present);
+        cql_int_t	received, 
+		cql_int_t	required,
+        bool		data_present);
     
     std::string
     get_message_details(
-        cql_int_t received, cql_int_t required,
-        bool data_present);
+        cql_int_t	received, 
+		cql_int_t	required,
+        bool		data_present);
     
     bool _data_present;
 };
