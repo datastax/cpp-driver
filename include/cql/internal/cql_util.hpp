@@ -43,38 +43,6 @@ cql_hex_char_struct_t hex(unsigned char _c) {
     return cql_hex_char_struct_t(_c);
 }
 
-inline std::string
-get_consistency_string(const cql::cql_short_t consistency) {
-    switch (consistency) {
-    case CQL_CONSISTENCY_ANY:
-        return "CQL_CONSISTENCY_ANY";
-        break;
-    case CQL_CONSISTENCY_ONE:
-        return "CQL_CONSISTENCY_ONE";
-        break;
-    case CQL_CONSISTENCY_TWO:
-        return "CQL_CONSISTENCY_TWO";
-        break;
-    case CQL_CONSISTENCY_THREE:
-        return "CQL_CONSISTENCY_THREE";
-        break;
-    case CQL_CONSISTENCY_QUORUM:
-        return "CQL_CONSISTENCY_QUORUM";
-        break;
-    case CQL_CONSISTENCY_ALL:
-        return "CQL_CONSISTENCY_ALL";
-        break;
-    case CQL_CONSISTENCY_LOCAL_QUORUM:
-        return "CQL_CONSISTENCY_LOCAL_QUORUM";
-        break;
-    case CQL_CONSISTENCY_EACH_QUORUM:
-        return "CQL_CONSISTENCY_EACH_QUORUM";
-        break;
-    default:
-        return "UNKNOWN";
-    }
-}
-
 // Safe version of strncpy (this method always null terminates
 // dest buffer).
 char* 

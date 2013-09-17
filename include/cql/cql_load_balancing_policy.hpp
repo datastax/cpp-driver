@@ -7,11 +7,6 @@ namespace cql {
 
 class cql_cluster_t;
 
-enum cql_host_distance_t {
-    CQL_HOST_REMOTE,
-    CQL_HOST_LOCAL
-};
-
 class cql_host_t {
 public:
     std::string get_address() {
@@ -37,7 +32,7 @@ class cql_load_balancing_policy_t {
 public:
     virtual ~cql_load_balancing_policy_t() {}
     virtual void Initialize(boost::shared_ptr<cql_cluster_t> cluster) =0;
-    virtual cql_host_distance_t distance(const cql_host_t* host) =0;
+    virtual cql_host_distance_enum distance(const cql_host_t* host) =0;
     virtual boost::shared_ptr<cql_query_plan_t> new_query_plan(boost::shared_ptr<cql_query_t> query) = 0;
 };
 
@@ -46,7 +41,7 @@ public:
     virtual void Initialize(boost::shared_ptr<cql_cluster_t> cluster) {
     }
 
-    virtual cql_host_distance_t distance(const cql_host_t* host) {
+    virtual cql_host_distance_enum distance(const cql_host_t* host) {
         return CQL_HOST_LOCAL;
     }
 

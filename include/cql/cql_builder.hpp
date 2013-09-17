@@ -94,7 +94,7 @@ public:
         _max_connections_for_remote = default_max_pool_remote;
     }
     
-    int get_min_simultaneous_requests_per_connection_treshold(cql_host_distance_t distance) {
+    int get_min_simultaneous_requests_per_connection_treshold(cql_host_distance_enum distance) {
         switch (distance) {
         case CQL_HOST_LOCAL:
             return _min_simultaneous_requests_for_local;
@@ -105,7 +105,7 @@ public:
         }
     }
 
-    cql_pooling_options_t& set_min_simultaneous_requests_per_connection_treshold(cql_host_distance_t distance, int minSimultaneousRequests) {
+    cql_pooling_options_t& set_min_simultaneous_requests_per_connection_treshold(cql_host_distance_enum distance, int minSimultaneousRequests) {
         switch (distance) {
         case CQL_HOST_LOCAL:
             _min_simultaneous_requests_for_local = minSimultaneousRequests;
@@ -119,7 +119,7 @@ public:
         return *this;
     }
 
-    int get_max_simultaneous_requests_per_connection_treshold(cql_host_distance_t distance) {
+    int get_max_simultaneous_requests_per_connection_treshold(cql_host_distance_enum distance) {
         switch (distance) {
         case CQL_HOST_LOCAL:
             return _max_simultaneous_requests_for_local;
@@ -130,7 +130,7 @@ public:
         }
     }
 
-    cql_pooling_options_t& set_max_simultaneous_requests_per_connection_treshold(cql_host_distance_t distance, int maxSimultaneousRequests) {
+    cql_pooling_options_t& set_max_simultaneous_requests_per_connection_treshold(cql_host_distance_enum distance, int maxSimultaneousRequests) {
         switch (distance) {
         case CQL_HOST_LOCAL:
             _max_simultaneous_requests_for_local = maxSimultaneousRequests;
@@ -144,7 +144,7 @@ public:
         return *this;
     }
 
-    int get_core_connections_per_host(cql_host_distance_t distance) {
+    int get_core_connections_per_host(cql_host_distance_enum distance) {
         switch (distance) {
         case CQL_HOST_LOCAL:
             return _core_connections_for_local;
@@ -155,7 +155,7 @@ public:
         }
     }
 
-    cql_pooling_options_t& set_core_connections_per_host(cql_host_distance_t distance, int coreConnections) {
+    cql_pooling_options_t& set_core_connections_per_host(cql_host_distance_enum distance, int coreConnections) {
         switch (distance) {
         case CQL_HOST_LOCAL:
             _core_connections_for_local = coreConnections;
@@ -169,7 +169,7 @@ public:
         return *this;
     }
 
-    int get_max_connection_per_host(cql_host_distance_t distance) {
+    int get_max_connection_per_host(cql_host_distance_enum distance) {
         switch (distance) {
         case CQL_HOST_LOCAL:
             return _max_connections_for_local;
@@ -180,7 +180,7 @@ public:
         }
     }
 
-    cql_pooling_options_t& set_max_connections_per_host(cql_host_distance_t distance, int maxConnections) {
+    cql_pooling_options_t& set_max_connections_per_host(cql_host_distance_enum distance, int maxConnections) {
         switch (distance) {
         case CQL_HOST_LOCAL:
             _max_connections_for_local = maxConnections;

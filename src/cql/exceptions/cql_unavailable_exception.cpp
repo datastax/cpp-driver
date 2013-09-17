@@ -12,7 +12,7 @@ cql::cql_unavailable_exception::create_message(
 {
     return boost::str(boost::format(
         "Not enough replica available for query at consistency %1% (%2% required but only %3% alive)")
-        % get_consistency_string(consistency_level)
+        % to_string(consistency_level)
         % required
         % alive);
 }

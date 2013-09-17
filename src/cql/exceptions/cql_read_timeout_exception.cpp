@@ -13,7 +13,7 @@ cql::cql_read_timeout_exception::create_message(
 {
     return boost::str(
         boost::format("Cassandra timeout during read query at consistency %1% (%2%)")
-            % get_consistency_string(consistency_level)
+            % to_string(consistency_level)
             % get_message_details(received, required, data_present)
             );
 }

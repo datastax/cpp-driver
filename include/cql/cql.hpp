@@ -121,5 +121,32 @@ enum cql_event_topology_enum {
     CQL_EVENT_TOPOLOGY_REMOVE_NODE = 0x02
 };
 
+//  The distance to a Cassandra node as assigned by a
+//  com.datastax.driver.core.policies.LoadBalancingPolicy (through
+//  its *distance method). The distance assigned to an host
+//  influence how many connections the driver maintains towards this host. If for
+//  a given host the assigned HostDistance is CQL_HOST_LOCAL or
+//  CQL_HOST_REMOTE, some connections will be maintained by the driver to
+//  this host. More active connections will be kept to CQL_HOST_LOCAL host
+//  than to a CQL_HOST_REMOTE one (and thus well behaving
+//  cql_load_balancing_policy_t should assign a CQL_HOST_REMOTE distance
+//  only to hosts that are the less often queried). However, if an host is
+//  assigned the distance CQL_HOST_IGNORE, no connection to that host will
+//  maintained active. In other words, CQL_HOST_IGNORE should be assigned to
+//  hosts that should not be used by this driver (because they are in a remote
+//  data center for instance).
+enum cql_host_distance_enum {
+	CQL_HOST_LOCAL,
+	CQL_HOST_REMOTE,
+	CQL_HOST_IGNORE
+};
+
+
+const char*
+to_string(const cql_host_distance_enum);
+
+const char*
+to_string(const cql_consistency_enum);
+
 } // namespace cql
 #endif // __CQL_H_INCLUDED__

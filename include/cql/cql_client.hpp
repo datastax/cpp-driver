@@ -107,7 +107,7 @@ public:
     virtual cql::cql_stream_id_t
     query(
         const std::string&     query,
-        cql_int_t              consistency,
+        cql_consistency_enum   consistency,
         cql_message_callback_t callback,
         cql_message_errback_t  errback) = 0;
 
@@ -120,8 +120,8 @@ public:
      */
     virtual boost::shared_future<cql::cql_future_result_t>
     query(
-        const std::string& query,
-        cql_int_t          consistency) = 0;
+        const std::string&		query,
+        cql_consistency_enum    consistency) = 0;
 
     /**
        Prepare a CQL statement.

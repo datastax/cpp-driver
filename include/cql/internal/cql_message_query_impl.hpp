@@ -34,19 +34,19 @@ public:
     cql_message_query_impl_t(size_t size);
 
     cql_message_query_impl_t(const std::string& query,
-                             cql::cql_short_t consistency);
+                             cql::cql_consistency_enum consistency);
 
     const std::string&
     query() const;
 
-    cql::cql_short_t
+    cql::cql_consistency_enum
     consistency() const;
 
     void
     query(const std::string& q);
 
     void
-    consistency(cql::cql_short_t consistency);
+    consistency(cql::cql_consistency_enum consistency);
 
     cql::cql_opcode_enum
     opcode() const;
@@ -68,7 +68,7 @@ public:
 
 private:
     cql::cql_message_buffer_t _buffer;
-    cql::cql_short_t          _consistency;
+    cql::cql_consistency_enum _consistency;
     std::string               _query;
 };
 

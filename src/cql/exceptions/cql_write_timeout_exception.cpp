@@ -11,9 +11,9 @@ cql::cql_write_timeout_exception::create_message(
     cql::cql_int_t required)
 {
     return boost::str(boost::format(
-        "Cassandra timeout during write query at consitency %1% "
+        "Cassandra timeout during write query at consistency %1% "
         "(%2% replica acknowledged the write over %3% required)")
-            % get_consistency_string(consistency_level)
+            % to_string(consistency_level)
             % received
             % required);
 }

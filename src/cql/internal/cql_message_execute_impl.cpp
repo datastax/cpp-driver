@@ -150,7 +150,7 @@ cql::cql_message_execute_impl_t::str() const {
             output << std::setw(2) << cql::hex(c);
         }
     }
-    output << " " << cql::get_consistency_string(_consistency);
+    output << " " << cql::to_string(_consistency);
     return output.str();
 }
 

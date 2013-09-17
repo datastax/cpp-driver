@@ -57,7 +57,7 @@ public:
     void init();
 
     boost::shared_ptr<cql_client_t> connect(cql::cql_query_plan_t& hostIter, int& streamId, std::list<std::string>& triedHosts);
-    boost::shared_ptr<cql_client_t> allocate_connection(const std::string& address, cql_host_distance_t distance);
+    boost::shared_ptr<cql_client_t> allocate_connection(const std::string& address, cql_host_distance_enum distance);
     void trashcan_put(boost::shared_ptr<cql_client_t> connection);
     boost::shared_ptr<cql_client_t> trashcan_recycle(const std::string& address);
     void free_connection(boost::shared_ptr<cql_client_t> connection);
@@ -106,7 +106,7 @@ private:
     cql::cql_stream_id_t
     query(
         const std::string&                        query,
-        cql_int_t                                 consistency,
+        cql::cql_consistency_enum				  consistency,
         cql::cql_client_t::cql_message_callback_t callback,
         cql::cql_client_t::cql_message_errback_t  errback);
 
@@ -125,7 +125,7 @@ private:
     boost::shared_future<cql::cql_future_result_t>
     query(
         const std::string& query,
-        cql_int_t          consistency);
+        cql::cql_consistency_enum consistency);
 
     boost::shared_future<cql::cql_future_result_t>
     prepare(

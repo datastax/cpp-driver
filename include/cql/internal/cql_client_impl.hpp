@@ -168,8 +168,8 @@ public:
     }
 
     boost::shared_future<cql::cql_future_result_t>
-    query(const std::string& query_string,
-          cql_int_t          consistency) {
+    query(const std::string&			query_string,
+          cql::cql_consistency_enum     consistency) {
 
         boost::shared_ptr<boost::promise<cql::cql_future_result_t> > promise(new boost::promise<cql::cql_future_result_t>());
         boost::shared_future<cql::cql_future_result_t> shared_future(promise->get_future());
@@ -208,7 +208,7 @@ public:
 
     cql::cql_stream_id_t
     query(const std::string&                        query,
-          cql_int_t                                 consistency,
+          cql::cql_consistency_enum                 consistency,
           cql::cql_client_t::cql_message_callback_t callback,
           cql::cql_client_t::cql_message_errback_t  errback) {
 

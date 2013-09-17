@@ -157,7 +157,7 @@ cql_session_impl_t::connect(cql_query_plan_t& hostIter, int& streamId, std::list
 
         if (currentHost->is_considerably_up()) {
             triedHosts.push_back(currentHost->get_address());
-            cql_host_distance_t hostDistance= _configuration->get_policies().get_load_balancing_policy()->distance(currentHost.get());
+            cql_host_distance_enum hostDistance= _configuration->get_policies().get_load_balancing_policy()->distance(currentHost.get());
 
             std::map<std::string, std::map<long,boost::shared_ptr<cql_client_t> > >::iterator current_connection_pool;
             if ( (current_connection_pool = _connection_pool.find(currentHost->get_address())) != _connection_pool.end())
@@ -218,7 +218,7 @@ cql_session_impl_t::connect(cql_query_plan_t& hostIter, int& streamId, std::list
 }
 
 boost::shared_ptr<cql_client_t>
-cql_session_impl_t::allocate_connection(const std::string& address, cql_host_distance_t distance) {
+cql_session_impl_t::allocate_connection(const std::string& address, cql_host_distance_enum distance) {
     return boost::shared_ptr<cql_client_t>();
 }
 
@@ -236,7 +236,7 @@ void cql_session_impl_t::free_connection(boost::shared_ptr<cql_client_t> connect
 cql_stream_id_t
 cql_session_impl_t::query(
     const std::string&                        query,
-    cql_int_t                            consistency,
+    cql_consistency_enum                      consistency,
     cql_client_t::cql_message_callback_t callback,
     cql_client_t::cql_message_errback_t  errback) {
     boost::mutex::scoped_lock lock(_mutex);
@@ -278,8 +278,8 @@ cql_session_impl_t::execute(
 
 boost::shared_future<cql_future_result_t>
 cql_session_impl_t::query(
-    const std::string& query,
-    cql_int_t          consistency) {
+    const std::string&		 query,
+    cql_consistency_enum     consistency) {
     boost::mutex::scoped_lock lock(_mutex);
 
     cql_client_t* client = next_client();

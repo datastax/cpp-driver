@@ -32,18 +32,18 @@
 
 cql::cql_message_query_impl_t::cql_message_query_impl_t() :
     _buffer(new std::vector<cql_byte_t>()),
-    _consistency(0),
+    _consistency(CQL_CONSISTENCY_ANY),
     _query()
 {}
 
 cql::cql_message_query_impl_t::cql_message_query_impl_t(size_t size) :
     _buffer(new std::vector<cql_byte_t>(size)),
-    _consistency(0),
+    _consistency(CQL_CONSISTENCY_ANY),
     _query()
 {}
 
 cql::cql_message_query_impl_t::cql_message_query_impl_t(const std::string& query,
-        cql::cql_short_t consistency) :
+        cql::cql_consistency_enum consistency) :
     _buffer(new std::vector<cql_byte_t>()),
     _consistency(consistency),
     _query(query)
@@ -59,7 +59,7 @@ cql::cql_message_query_impl_t::query() const {
     return _query;
 }
 
-cql::cql_short_t
+cql::cql_consistency_enum
 cql::cql_message_query_impl_t::consistency() const {
     return _consistency;
 }
@@ -70,7 +70,7 @@ cql::cql_message_query_impl_t::query(const std::string& q) {
 }
 
 void
-cql::cql_message_query_impl_t::consistency(cql::cql_short_t consistency) {
+cql::cql_message_query_impl_t::consistency(cql::cql_consistency_enum consistency) {
     _consistency = consistency;
 }
 
@@ -86,7 +86,7 @@ cql::cql_message_query_impl_t::size() const {
 
 std::string
 cql::cql_message_query_impl_t::str() const {
-    return _query + " " + cql::get_consistency_string(_consistency);
+    return _query + " " + cql::to_string(_consistency);
 }
 
 bool
@@ -94,8 +94,11 @@ cql::cql_message_query_impl_t::consume(cql::cql_error_t*) {
     cql::vector_stream_t buffer(*_buffer);
     std::istream stream(&buffer);
     cql::decode_long_string(stream, _query);
-    stream.read(reinterpret_cast<char*>(&_consistency), sizeof(_consistency));
-    _consistency = ntohs(_consistency);
+
+	cql::cql_short_t consistency_bytes;
+    stream.read(reinterpret_cast<char*>(&consistency_bytes), sizeof(consistency_bytes));
+    _consistency = (cql::cql_consistency_enum) ntohs(consistency_bytes);
+
     return true;
 }
 
@@ -106,6 +109,6 @@ cql::cql_message_query_impl_t::prepare(cql::cql_error_t*) {
     cql::vector_stream_t buffer(*_buffer);
     std::ostream stream(&buffer);
     cql::encode_long_string(stream, _query);
-    cql::encode_short(stream, _consistency);
+    cql::encode_short(stream, static_cast<cql::cql_short_t>(_consistency));
     return true;
 }
