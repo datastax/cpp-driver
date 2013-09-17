@@ -16,7 +16,7 @@ namespace cql {
 // Exception related to the execution of a query. This correspond to the
 // exception that Cassandra throw when a (valid) query cannot be executed
 // (TimeoutException, UnavailableException, ...).
-class cql_query_execution_exception: public cql_query_validation_exception {
+class DLL_PUBLIC cql_query_execution_exception: public cql_query_validation_exception {
 public:
     cql_query_execution_exception(const char* message)
         : cql_query_validation_exception(message) { }

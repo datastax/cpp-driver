@@ -14,7 +14,7 @@
 
 namespace cql {
 // A Cassandra timeout during a write query.
-class cql_write_timeout_exception: public cql_query_timeout_exception {
+class DLL_PUBLIC cql_write_timeout_exception: public cql_query_timeout_exception {
 public:
     cql_write_timeout_exception( 
             cql_consistency_enum consistency_level,

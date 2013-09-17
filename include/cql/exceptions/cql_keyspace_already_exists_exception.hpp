@@ -14,7 +14,7 @@
 namespace cql {
     // Exception thrown when a query attempts to create a keyspace that
     // already exists.
-    class cql_keyspace_already_exists_exception : public cql_query_validation_exception {
+    class DLL_PUBLIC cql_keyspace_already_exists_exception : public cql_query_validation_exception {
     public:
         cql_keyspace_already_exists_exception(const std::string& keyspace);
     

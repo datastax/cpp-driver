@@ -141,7 +141,6 @@ enum cql_host_distance_enum {
 	CQL_HOST_IGNORE
 };
 
-
 const char*
 to_string(const cql_host_distance_enum);
 

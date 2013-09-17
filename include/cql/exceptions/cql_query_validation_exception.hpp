@@ -17,7 +17,7 @@ namespace cql {
  * An exception indicating that a query cannot be executed because it is
  * incorrect syntactically, invalid, unauthorized or any other reason.
  */
-class cql_query_validation_exception: public cql_exception {
+class DLL_PUBLIC cql_query_validation_exception: public cql_exception {
 protected:
     cql_query_validation_exception(const char* message)
         : cql_exception(message) { }

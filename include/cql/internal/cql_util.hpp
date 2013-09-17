@@ -50,14 +50,19 @@ safe_strncpy(char* dest, const char* src, const size_t count);
 
 // When str is NULL returns empty string(""), in any other
 // case returns str.
-const char* 
-empty_when_null(const char* str);
+inline const char* 
+empty_when_null(const char* str) {
+		if(!str)
+			return "";
+		return str;
+}
 
 // Checks if given string is null or empty.
 inline bool 
 is_null_or_empty(const char* str) {
     return !str || !*str;
 }
+
 
 } // namespace cql
 

@@ -14,7 +14,7 @@
 
 namespace cql {
 //  Exception thrown if a query trace cannot be retrieved.
-class cql_trace_retrieval_exception: public cql_exception {
+class DLL_PUBLIC cql_trace_retrieval_exception: public cql_exception {
 public:
     cql_trace_retrieval_exception(const char* message)
         : cql_generic_exception(message) { }

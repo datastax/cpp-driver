@@ -14,7 +14,7 @@
 
 namespace cql {
 // Indicates a syntactically correct but invalid query.
-class cql_invalid_query_exception: public cql_query_validation_exception {
+class DLL_PUBLIC cql_invalid_query_exception: public cql_query_validation_exception {
 public:
     cql_invalid_query_exception(const char* message)
         : cql_query_validation_exception(message) { }

@@ -14,7 +14,7 @@
 
 namespace cql {
 // Error during a truncation operation.
-class cql_truncate_exception: public cql_query_execution_exception {
+class DLL_PUBLIC cql_truncate_exception: public cql_query_execution_exception {
 public:
     cql_truncate_exception(const char* message)
         : cql_query_execution_exception(message) { }

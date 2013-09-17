@@ -13,7 +13,7 @@
 #include "cql/exceptions/cql_exception.hpp"
 
 namespace cql {
-    class cql_invalid_type_exception : public cql_exception {
+    class DLL_PUBLIC cql_invalid_type_exception : public cql_exception {
     public:
         cql_invalid_type_exception(
                 const std::string& param_name,

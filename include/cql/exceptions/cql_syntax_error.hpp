@@ -14,7 +14,7 @@
 
 namespace cql {
 // Indicates a syntax error in a query.
-class cql_syntax_error: public cql_query_validation_exception {
+class DLL_PUBLIC cql_syntax_error: public cql_query_validation_exception {
 public:
     cql_syntax_error(const char* message)
         : cql_query_validation_exception(message) { }
