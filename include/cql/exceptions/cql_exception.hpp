@@ -25,14 +25,14 @@ public:
 	// Constructor version for dynamically generated strings
 	cql_exception(const std::string& message);
 
-	virtual ~cql_exception();
+	virtual ~cql_exception() throw();
 
 	// Returns text message that describes exception.
 	virtual const char* what() const throw();
 
 private:
-    bool _buffer_allocated;
 	const char* _buffer;
+    bool        _buffer_allocated;
 };
 
 }

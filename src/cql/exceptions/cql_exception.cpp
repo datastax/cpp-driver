@@ -8,8 +8,8 @@ cql::cql_exception::cql_exception(
 
 cql::cql_exception::cql_exception(
 		const std::string& message)
-	: _buffer(""), 
-	_buffer_allocated(false)
+	:   _buffer(""), 
+        _buffer_allocated(false)
 {
 	size_t string_length = message.length() + 1; 
 
@@ -22,7 +22,7 @@ cql::cql_exception::cql_exception(
 	}
 }
 
-cql::cql_exception::~cql_exception()
+cql::cql_exception::~cql_exception() throw()
 {
 	if(_buffer_allocated && _buffer) {
 		free((void *)_buffer);

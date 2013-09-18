@@ -2,6 +2,10 @@
 <configurationDescriptor version="80">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <df name="cpp-driver" root=".">
+      <df name="cmake">
+        <df name="Modules">
+        </df>
+      </df>
       <df name="CMakeFiles">
         <df name="2.8.11.2">
           <df name="CompilerIdC">
@@ -161,6 +165,7 @@
             <in>cql_client_impl.hpp</in>
             <in>cql_defines.hpp</in>
             <in>cql_header_impl.hpp</in>
+            <in>cql_hosts.hpp</in>
             <in>cql_list_impl.hpp</in>
             <in>cql_map_impl.hpp</in>
             <in>cql_message.hpp</in>
@@ -196,10 +201,14 @@
           <in>cql_execute.hpp</in>
           <in>cql_future_connection.hpp</in>
           <in>cql_future_result.hpp</in>
+          <in>cql_host.hpp</in>
           <in>cql_list.hpp</in>
           <in>cql_load_balancing_policy.hpp</in>
+          <in>cql_lockfree_map.hpp</in>
           <in>cql_map.hpp</in>
           <in>cql_policies.hpp</in>
+          <in>cql_reconnection_policy.hpp</in>
+          <in>cql_reconnection_schedule.hpp</in>
           <in>cql_result.hpp</in>
           <in>cql_serialization.hpp</in>
           <in>cql_session.hpp</in>
@@ -213,7 +222,6 @@
           <df name="exceptions">
             <in>cql_authentication_exception.cpp</in>
             <in>cql_exception.cpp</in>
-            <in>cql_generic_exception.cpp</in>
             <in>cql_invalid_type_exception.cpp</in>
             <in>cql_keyspace_already_exists.cpp</in>
             <in>cql_read_timeout_exception.cpp</in>
@@ -223,6 +231,7 @@
           </df>
           <df name="internal">
             <in>cql_header_impl.cpp</in>
+            <in>cql_hosts.cpp</in>
             <in>cql_list_impl.cpp</in>
             <in>cql_map_impl.cpp</in>
             <in>cql_message_credentials_impl.cpp</in>
@@ -245,10 +254,13 @@
             <in>cql_system_dependent.cpp</in>
             <in>cql_util.cpp</in>
           </df>
+          <in>cql.cpp</in>
           <in>cql_builder.cpp</in>
           <in>cql_client_factory.cpp</in>
           <in>cql_cluster.cpp</in>
           <in>cql_execute.cpp</in>
+          <in>cql_host.cpp</in>
+          <in>cql_lockfree_map.cpp</in>
           <in>cql_serialization.cpp</in>
         </df>
       </df>
@@ -316,6 +328,7 @@
         <ccTool>
           <incDir>
             <pElem>extra/ccm_bridge</pElem>
+            <pElem>../../cds</pElem>
             <pElem>extra/ccm_bridge/include</pElem>
           </incDir>
           <preprocessorList>
@@ -327,17 +340,18 @@
       <folder path="cpp-driver/src">
         <ccTool>
           <incDir>
+            <pElem>../../cds</pElem>
             <pElem>.</pElem>
           </incDir>
           <preprocessorList>
             <Elem>BOOST_ALL_DYN_LINK</Elem>
-            <Elem>cql_EXPORTS</Elem>
           </preprocessorList>
         </ccTool>
       </folder>
       <folder path="cpp-driver/test">
         <ccTool>
           <incDir>
+            <pElem>../../cds</pElem>
             <pElem>/extra/ccm_bridge/include</pElem>
             <pElem>extra/ccm_bridge/include</pElem>
           </incDir>
@@ -346,7 +360,7 @@
           </preprocessorList>
         </ccTool>
       </folder>
-      <item path="include/cql/cql_config.hpp" ex="true" tool="3" flavor="0">
+      <item path="include/cql/cql_lockfree_map.hpp" ex="true" tool="3" flavor="0">
       </item>
       <item path="include/cql/cql_policies.hpp" ex="true" tool="3" flavor="0">
       </item>

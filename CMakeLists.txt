@@ -88,10 +88,13 @@ if(MULTICORE_COMPILATION)
     # MULTICORE BUILD
     # by default we use 3 cores
     if(MSVC)
-        add_definitions("/MP${MULTICORE_CORES_NUMBER}")
-    else()
-        add_definitions("-j${MULTICORE_CORES_NUMBER}")
+        add_definitions("/MP${MULTICORE_CORES_NUMBER}")    
     endif()
+    # on linux platform this parameter is named -j e.g. -j 5
+    # but should be passed to MAKE program not to compiler!
+    # You can do this by settings MAKEFLAGS env variable to
+    # -j 5. On ubuntu box this can be done by editing
+    # ~/.pam_environment file (in any case check man).
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
