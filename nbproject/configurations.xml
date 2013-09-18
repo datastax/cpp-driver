@@ -87,60 +87,11 @@
         </df>
       </df>
       <df name="include">
-        <df name="cassandra">
-          <df name="internal">
-            <in>cql_callback_storage.hpp</in>
-            <in>cql_client_impl.hpp</in>
-            <in>cql_defines.hpp</in>
-            <in>cql_header_impl.hpp</in>
-            <in>cql_list_impl.hpp</in>
-            <in>cql_map_impl.hpp</in>
-            <in>cql_message.hpp</in>
-            <in>cql_message_credentials_impl.hpp</in>
-            <in>cql_message_error_impl.hpp</in>
-            <in>cql_message_event_impl.hpp</in>
-            <in>cql_message_execute_impl.hpp</in>
-            <in>cql_message_options_impl.hpp</in>
-            <in>cql_message_prepare_impl.hpp</in>
-            <in>cql_message_query_impl.hpp</in>
-            <in>cql_message_ready_impl.hpp</in>
-            <in>cql_message_register_impl.hpp</in>
-            <in>cql_message_result_impl.hpp</in>
-            <in>cql_message_startup_impl.hpp</in>
-            <in>cql_message_supported_impl.hpp</in>
-            <in>cql_result_metadata.hpp</in>
-            <in>cql_session_impl.hpp</in>
-            <in>cql_set_impl.hpp</in>
-            <in>cql_socket.hpp</in>
-            <in>cql_socket_ssl.hpp</in>
-            <in>cql_util.hpp</in>
-          </df>
-          <in>cql.hpp</in>
-          <in>cql_builder.hpp</in>
-          <in>cql_client.hpp</in>
-          <in>cql_client_factory.hpp</in>
-          <in>cql_cluster.hpp</in>
-          <in>cql_error.hpp</in>
-          <in>cql_event.hpp</in>
-          <in>cql_exception.hpp</in>
-          <in>cql_execute.hpp</in>
-          <in>cql_future_connection.hpp</in>
-          <in>cql_future_result.hpp</in>
-          <in>cql_list.hpp</in>
-          <in>cql_load_balancing_policy.hpp</in>
-          <in>cql_map.hpp</in>
-          <in>cql_result.hpp</in>
-          <in>cql_serialization.hpp</in>
-          <in>cql_session.hpp</in>
-          <in>cql_set.hpp</in>
-          <in>cql_vector_stream.hpp</in>
-        </df>
         <df name="cql">
           <df name="exceptions">
             <in>cql_authentication_exception.hpp</in>
             <in>cql_driver_internal_error.hpp</in>
             <in>cql_exception.hpp</in>
-            <in>cql_generic_exception.hpp</in>
             <in>cql_invalid_configuration_in_query_exception.hpp</in>
             <in>cql_invalid_query_exception.hpp</in>
             <in>cql_invalid_type_exception.hpp</in>
@@ -197,7 +148,6 @@
           <in>cql_config.hpp</in>
           <in>cql_error.hpp</in>
           <in>cql_event.hpp</in>
-          <in>cql_exception.hpp</in>
           <in>cql_execute.hpp</in>
           <in>cql_future_connection.hpp</in>
           <in>cql_future_result.hpp</in>
@@ -268,17 +218,9 @@
         <df name="libcds_demo">
           <df name="CMakeFiles">
             <df name="libcds_demo.dir">
-              <in>DependInfo.cmake</in>
-              <in>build.make</in>
-              <in>cmake_clean.cmake</in>
-              <in>depend.make</in>
-              <in>flags.make</in>
-              <in>link.txt</in>
-              <in>progress.make</in>
             </df>
-            <in>CMakeDirectoryInformation.cmake</in>
-            <in>progress.marks</in>
           </df>
+          <in>lockfree_hash_map.hpp</in>
           <in>main.cpp</in>
         </df>
         <df name="linux_test_scripts">
@@ -326,7 +268,7 @@
           <buildCommandWorkingDir>.</buildCommandWorkingDir>
           <buildCommand>${MAKE} -f Makefile</buildCommand>
           <cleanCommand>${MAKE} -f Makefile clean</cleanCommand>
-          <executablePath></executablePath>
+          <executablePath>libcds_demo</executablePath>
           <ccTool>
             <incDir>
               <pElem>../../boost_1_54_0</pElem>
@@ -437,51 +379,6 @@
             flavor="0">
       </item>
       <item path="include/cql/version.hpp" ex="true" tool="3" flavor="0">
-      </item>
-      <item path="test/libcds_demo/CMakeFiles/CMakeDirectoryInformation.cmake"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="test/libcds_demo/CMakeFiles/libcds_demo.dir/DependInfo.cmake"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="test/libcds_demo/CMakeFiles/libcds_demo.dir/build.make"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="test/libcds_demo/CMakeFiles/libcds_demo.dir/cmake_clean.cmake"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="test/libcds_demo/CMakeFiles/libcds_demo.dir/depend.make"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="test/libcds_demo/CMakeFiles/libcds_demo.dir/flags.make"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="test/libcds_demo/CMakeFiles/libcds_demo.dir/link.txt"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="test/libcds_demo/CMakeFiles/libcds_demo.dir/progress.make"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="test/libcds_demo/CMakeFiles/progress.marks"
-            ex="true"
-            tool="3"
-            flavor="0">
       </item>
     </conf>
   </confs>

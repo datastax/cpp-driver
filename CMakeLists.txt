@@ -53,15 +53,15 @@ set(LIBS ${LIBS} ${Boost_LIBRARIES})
 find_package(Threads REQUIRED)
 set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
-# Allow access to custom FindLIBCDS module
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
-
 # -------------------------------------------------------------
 # Find libCDS library
 # -------------------------------------------------------------
+# Allow access to custom FindLIBCDS module
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
+
 find_package(LIBCDS REQUIRED)
 
-set(LIBRARIES ${LIBRARIES} ${LIBCDS_LIBRARIES})
+set(LIBS ${LIBS} ${LIBCDS_LIBRARIES})
 set(INCLUDES ${INCLUDES} ${LIBCDS_INCLUDE_DIRS})
 # -------------------------------------------------------------
 
