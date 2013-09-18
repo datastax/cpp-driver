@@ -14,6 +14,7 @@
 #include <functional>
 #include <utility>
 #include <cassert>
+#include <iterator>
 
 #include <cds/opt/hash.h>
 #include <cds/container/michael_list_hp.h>
@@ -42,30 +43,31 @@ namespace cql {
             base_hash_map;
     
         private:
+            
+        // Functor copies value associated with given key 
+        // in hash_map to storage pointed by param storage.
         struct copy_value_functor_t {
-            typedef
-                typename base_hash_map::value_type
-                value_type;
-
-            copy_value_functor_t(value_type* storage)
+            inline
+            copy_value_functor_t(TValue* storage)
                     : _storage(storage) 
             {
                 assert(storage != NULL);
             };
             
-            void operator ()(value_type const& item_in_map) {
-                // we must sync access to item_in_map if it is modified
-                _item.first = item_in_map.first;
-                _item.second = item_in_map.second;
+            inline void
+            operator ()(std::pair<TKey const, TValue> const& pair) {
+                *_storage = pair.second;
             }
-
-            inline value_type const& 
-            value() const {
-                return _item;
+            
+            inline void
+            operator ()(bool is_new, std::pair<TKey const, TValue> const& pair) {
+                // is_new is true when this function is called for newly
+                // inserted item
+                *_storage = pair.second;
             }
             
         private:
-            value_type _storage;
+            TValue* const _storage;
         };
         
     public:
@@ -85,6 +87,35 @@ namespace cql {
         try_add(TKey const& key, TValue const& value) {
             return _map.insert(key, value);
         }
+        
+        inline bool
+        try_erase(TKey const& key, TValue& value) {
+            copy_value_functor_t f(&value);
+            return _map.erase(key, f);
+        }
+        
+        inline bool
+        try_get(TKey const& key, TValue& value) {
+            copy_value_functor_t f(&value);
+            return _map.find(key, f);
+        }
+        
+        // Inserts hash map key to container using back inserter.
+        // How to use:
+        // std::vector<TKey> keys;
+        // map.unsafe_get_keys(back_inserter(keys));
+        // 
+        // Warning: This is called unsafe because it may not return all keys
+        // contained in map.
+        template<typename TContainer>
+        inline void
+        unsafe_get_keys(std::back_insert_iterator<TContainer> b_inserter) {
+            typename base_hash_map::iterator it = _map.begin();
+            for(; it != _map.end(); ++it) {
+                *b_inserter++ = it->first; // copy key
+            }
+        }
+        
     public:
         base_hash_map   _map;
     };

@@ -65,10 +65,11 @@ do_job() {
     
     std::cout << foop.first << ", " << foop.second;
     
-    auto it = foo._map.begin();
-    for(; it != foo._map.end(); ++it) {
-         std::cout << "map[" << it->first << "] = " << it->second << std::endl;
-    }
+    std::vector<std::string> fooz;
+    foo.unsafe_get_keys(back_inserter(fooz));
+    
+    for(auto it = fooz.begin(); it != fooz.end(); ++it)
+        std::cout << "value: " << *it << std::endl;
     
     std::cout << "it's working!" << std::endl;
 }
