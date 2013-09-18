@@ -89,14 +89,16 @@ namespace cql {
         }
         
         inline bool
-        try_erase(TKey const& key, TValue& value) {
-            copy_value_functor_t f(&value);
+        try_erase(TKey const& key, TValue* const value) {
+            assert(value != NULL);
+            copy_value_functor_t f(value);
             return _map.erase(key, f);
         }
         
         inline bool
-        try_get(TKey const& key, TValue& value) {
-            copy_value_functor_t f(&value);
+        try_get(TKey const& key, TValue* const value) {
+            assert(value != NULL);
+            copy_value_functor_t f(value);
             return _map.find(key, f);
         }
         
