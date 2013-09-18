@@ -116,6 +116,15 @@ namespace cql {
             }
         }
         
+        template<typename TContainer>
+        inline void
+        unsafe_get_values(std::back_insert_iterator<TContainer> b_inserter) {
+            typename base_hash_map::iterator it = _map.begin();
+            for(; it != _map.end(); ++it) {
+                *b_inserter++ = it->second; // copy key
+            }
+        }
+        
     public:
         base_hash_map   _map;
     };
