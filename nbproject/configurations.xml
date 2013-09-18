@@ -265,6 +265,22 @@
         </df>
       </df>
       <df name="test">
+        <df name="libcds_demo">
+          <df name="CMakeFiles">
+            <df name="libcds_demo.dir">
+              <in>DependInfo.cmake</in>
+              <in>build.make</in>
+              <in>cmake_clean.cmake</in>
+              <in>depend.make</in>
+              <in>flags.make</in>
+              <in>link.txt</in>
+              <in>progress.make</in>
+            </df>
+            <in>CMakeDirectoryInformation.cmake</in>
+            <in>progress.marks</in>
+          </df>
+          <in>main.cpp</in>
+        </df>
         <df name="linux_test_scripts">
         </df>
         <df name="unit_tests">
@@ -352,12 +368,18 @@
         <ccTool>
           <incDir>
             <pElem>../../cds</pElem>
-            <pElem>/extra/ccm_bridge/include</pElem>
-            <pElem>extra/ccm_bridge/include</pElem>
           </incDir>
           <preprocessorList>
             <Elem>BOOST_ALL_DYN_LINK</Elem>
           </preprocessorList>
+        </ccTool>
+      </folder>
+      <folder path="cpp-driver/test/unit_tests">
+        <ccTool>
+          <incDir>
+            <pElem>/extra/ccm_bridge/include</pElem>
+            <pElem>extra/ccm_bridge/include</pElem>
+          </incDir>
         </ccTool>
       </folder>
       <item path="include/cql/cql_lockfree_map.hpp" ex="true" tool="3" flavor="0">
@@ -415,6 +437,51 @@
             flavor="0">
       </item>
       <item path="include/cql/version.hpp" ex="true" tool="3" flavor="0">
+      </item>
+      <item path="test/libcds_demo/CMakeFiles/CMakeDirectoryInformation.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/libcds_demo/CMakeFiles/libcds_demo.dir/DependInfo.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/libcds_demo/CMakeFiles/libcds_demo.dir/build.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/libcds_demo/CMakeFiles/libcds_demo.dir/cmake_clean.cmake"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/libcds_demo/CMakeFiles/libcds_demo.dir/depend.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/libcds_demo/CMakeFiles/libcds_demo.dir/flags.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/libcds_demo/CMakeFiles/libcds_demo.dir/link.txt"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/libcds_demo/CMakeFiles/libcds_demo.dir/progress.make"
+            ex="true"
+            tool="3"
+            flavor="0">
+      </item>
+      <item path="test/libcds_demo/CMakeFiles/progress.marks"
+            ex="true"
+            tool="3"
+            flavor="0">
       </item>
     </conf>
   </confs>

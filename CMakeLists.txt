@@ -109,7 +109,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 else()
 	# GCC specific compiler options
         # I disabled long-long warning because boost generates about 50 such warnings
-	set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic -std=c++03 -Wno-long-long")
+        # -fno-strict-aliasing :: required by libcds
+	set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic -std=c++03 -Wno-long-long -fno-strict-aliasing")
 endif()
 
 
@@ -231,3 +232,9 @@ add_subdirectory(test/unit_tests)
 #-------------------
 
 add_subdirectory(demo)
+
+#-------------------
+# test libcds
+#-------------------
+
+add_subdirectory(test/libcds_demo)
