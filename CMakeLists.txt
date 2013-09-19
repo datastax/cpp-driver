@@ -46,7 +46,7 @@ endif()
 
 # Boost
 set(Boost_USE_MULTITHREADED ON)
-find_package(Boost 1.54.0 COMPONENTS system thread unit_test_framework date_time REQUIRED)
+find_package(Boost 1.54.0 COMPONENTS atomic system thread unit_test_framework date_time REQUIRED)
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
 
 # Threading

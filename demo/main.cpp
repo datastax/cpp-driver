@@ -34,6 +34,7 @@
 #include <cql/cql_builder.hpp>
 #include <cql/cql_execute.hpp>
 #include <cql/cql_result.hpp>
+#include <cql/internal/cql_thread_safe_array.hpp>
 
 #include <ccm_bridge.hpp>
 
@@ -71,6 +72,7 @@ main(int argc,
 {
     try
     {
+		
 
 		int numberOfNodes = 1;
 

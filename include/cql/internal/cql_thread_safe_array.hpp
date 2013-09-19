@@ -13,7 +13,7 @@ namespace cql {
 // Size - size of array, should not exceed 4096
 // 	for performance reasons.
 template<typename TType, size_t Size>
-class cql_thread_safe_array_t
+class cql_thread_safe_array_t {
 public:
 	
 	class index_t {
@@ -53,7 +53,6 @@ public:
 		: _free_indexes(Size) 
 	{
 		populate_free_indexes();
-		initialize_allocated_markers();
 	}
 
 	// Returns size of array.
@@ -104,7 +103,7 @@ public:
 	}
 
 	TType 
-	operator [](const index_t& index) {
+	get_at(const index_t& index) {
 		if(index.is_invalid())
 			throw std::invalid_argument("index is invalid.");
 		
@@ -116,7 +115,7 @@ public:
 	}
 
 	void
-	operator [](const index_t& index, const TType& value) {
+	put_at(const index_t& index, const TType& value) {
 		if(index.is_invalid())
 			throw std::invalid_argument("index is invalid.");
 
@@ -134,15 +133,12 @@ private:
 			_free_indexes.unsynchronized_push(index);
 	}
 
-	void
-	initialize_allocated_markers() {
-		memset(_allocated_marker, 0, sizeof(_allocated_marker));
-	}
-
 	TType							_contents[Size];
 	boost::atomic_bool				_is_used[Size];
-	boost::spinlock 				_locks[Size];
+	boost::detail::spinlock 		_locks[Size];
 	boost::lockfree::stack<size_t> 	_free_indexes;
+};
+
 }
 
 #endif // CQL_THREAD_SAFE_ARRAY_HPP_
