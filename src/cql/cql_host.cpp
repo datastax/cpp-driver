@@ -13,7 +13,7 @@ cql::cql_host_t::cql_host_t(
 	  _reconnection_schedule(reconnection_policy->new_schedule())
 { }
 
-cql::cql_host_t
+::boost::shared_ptr<cql::cql_host_t>
 cql::cql_host_t::create(
 	const ip_address& address, 
 	const boost::shared_ptr<cql_reconnection_policy_t>& reconnection_policy)
@@ -24,7 +24,7 @@ cql::cql_host_t::create(
 	if(!reconnection_policy)
 		throw std::invalid_argument("reconnection policy cannot be null.");
 
-	return cql_host_t(address, reconnection_policy);
+	return ::boost::shared_ptr<cql::cql_host_t>(new cql_host_t(address, reconnection_policy));
 }
 
 void 

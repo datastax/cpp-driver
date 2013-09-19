@@ -5,8 +5,8 @@
  * Created on September 18, 2013, 1:20 PM
  */
 
-#ifndef LOCKFREE_HASH_MAP_HPP_
-#define	LOCKFREE_HASH_MAP_HPP_
+#ifndef CQL_LOCKFREE_HASH_MAP_HPP_
+#define	CQL_LOCKFREE_HASH_MAP_HPP_
 
 //
 // REQUIRES NEW C++11 STANDARD
@@ -22,7 +22,7 @@
 
 namespace cql {
     template<typename TKey, typename TValue>
-    struct lockfree_hash_map_traits_t
+    struct cql_lockfree_hash_map_traits_t
         : public cds::container::split_list::type_traits 
     {
 
@@ -36,10 +36,10 @@ namespace cql {
     };
     
     template<typename TKey, typename TValue>
-    class lockfree_hash_map_t { 
+    class cql_lockfree_hash_map_t { 
     public:
         typedef
-            cds::container::SplitListMap<cds::gc::HP, TKey, TValue, lockfree_hash_map_traits_t<TKey, TValue> > 
+            cds::container::SplitListMap<cds::gc::HP, TKey, TValue, cql_lockfree_hash_map_traits_t<TKey, TValue> > 
             base_hash_map;
     
         private:
@@ -72,10 +72,10 @@ namespace cql {
         
     public:
         
-        lockfree_hash_map_t() 
+        cql_lockfree_hash_map_t() 
             : _map() { }
     
-        lockfree_hash_map_t(size_t expected_items_count, size_t load_factor = 1)
+        cql_lockfree_hash_map_t(size_t expected_items_count, size_t load_factor = 1)
             : _map(expected_items_count, load_factor) { }        
         
         inline size_t
@@ -137,5 +137,5 @@ namespace cql {
     };
 }
 
-#endif	/* LOCKFREE_HASH_MAP_HPP_ */
+#endif	/* CQL_LOCKFREE_HASH_MAP_HPP_ */
 

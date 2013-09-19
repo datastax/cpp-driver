@@ -44,7 +44,7 @@ namespace cql {
 			const std::string& datacenter,
 			const std::string& rack);
 		
-		static cql_host_t 
+		static ::boost::shared_ptr<cql_host_t>
 		create(
 			const ip_address& address, 
 			const boost::shared_ptr<cql_reconnection_policy_t>& reconnection_policy);
