@@ -19,7 +19,7 @@
 #ifndef CQL_CALLBACK_STORAGE_H_
 #define CQL_CALLBACK_STORAGE_H_
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <stdint.h>
 #include <new>
 
