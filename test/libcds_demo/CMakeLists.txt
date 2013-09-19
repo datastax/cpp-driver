@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.8.11)
 set(LIBCDS_DEMO libcds_demo)
 project(${LIBCDS_DEMO} C CXX)
 
-file(GLOB LIBCDS_DEMO_SRC_FILES *.cpp)
+file(GLOB LIBCDS_DEMO_SRC_FILES *.cpp *.hpp)
 add_executable(${LIBCDS_DEMO} ${LIBCDS_DEMO_SRC_FILES})
 
 # change -std=c++03 into -std=c++0x for linux

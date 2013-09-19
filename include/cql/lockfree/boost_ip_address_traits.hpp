@@ -1,25 +1,10 @@
-#include <cstdlib>
-#include <iostream>
+#ifndef BOOST_IP_ADDRESS_TRAITS_
+#define BOOST_IP_ADDRESS_TRAITS_
 
-#include <functional>
+// File contains specializations of std::less<>
+// and std::hash<> for boost::asio::ip:address type.
 
-#include <boost/thread.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/asio/ip/address.hpp>
-
-#include <cds/init.h>
-#include <cds/gc/hp.h>
-
-#include <cds/opt/hash.h>
-#include <cds/container/michael_list_hp.h>
-#include <cds/container/split_list_map.h>
-namespace cc = cds::container;
-
-
-
-#include "lockfree_hash_map.hpp"
-using namespace cql;
 
 namespace std {
 
@@ -107,6 +92,7 @@ namespace std {
 			ip_v6::bytes_type::const_iterator first_it = first_bytes.cbegin();
 			ip_v6::bytes_type::const_iterator second_it = second_bytes.cbegin();
 
+			// compare addresses bytes
 			for(; first_it != first_bytes.cend(); ++first_it, ++second_it) {
 				int delta = (int)*first_it - (int)*second_it;
 				if(delta != 0)
@@ -119,62 +105,4 @@ namespace std {
 	};
 }
 
-#define IP4(b1, b2, b3, b4) ip4(b4 + 256U * (b3 + 256U * (b2 + 256U * b1)))
-
-
-void
-do_job() {
-    typedef 
-		::boost::asio::ip::address 
-		ip_addr;
-
-	typedef 
-		::boost::asio::ip::address_v4
-		ip4;
-	
-	using boost::shared_ptr;
-	
-	lockfree_hash_map_t<ip_addr, shared_ptr<std::string> > h;
-
-	ip_addr a1(IP4(10, 0, 8, 1));
-	ip_addr a2(IP4(10, 0, 8, 2));
-	ip_addr a3(IP4(10, 8, 2, 1));
-	ip_addr a4(IP4(192, 168, 0, 1));
-
-	h.try_add(a1, shared_ptr<std::string>(new std::string("a1")));
-	h.try_add(a2, shared_ptr<std::string>(new std::string("a2")));
-	h.try_add(a3, shared_ptr<std::string>(new std::string("a3")));
-	h.try_add(a4, shared_ptr<std::string>(new std::string("a4")));
-
-	std::cout << "h.size() = " << h.size() << std::endl;
-
-	std::cout << "keys: " << std::endl;
-	std::vector<ip_addr> ips;
-	h.unsafe_get_keys(back_inserter(ips));
-	for(auto it = ips.begin(); it != ips.end(); ++it) 
-		std::cout << it->to_string() <<  std::endl;
-
-	std::vector<shared_ptr<std::string>> names;
-	h.unsafe_get_values(back_inserter(names));
-	for(auto it = names.begin(); it != names.end(); ++it) {
-		std::cout << **it << std::endl;
-	}
-
-	shared_ptr<std::string> result;
-	h.try_get(a1, &result);
-	std::cout << "h[a1]: " << *result << std::endl;
-
-	std::cout << "h[non-ex] " << h.try_get(ip_addr(IP4(100,100,0,0)), &result) << std::endl;
-}
-
-int 
-main(int argc, char* argv[]) {
-    cds::Initialize();
-    {
-        cds::gc::HP hp_infrastructure;
-        cds::gc::HP::thread_gc hp_thread_gc;
-    
-        do_job();
-    }
-    cds::Terminate();
-}
+#endif // BOOST_IP_ADDRESS_TRAITS_

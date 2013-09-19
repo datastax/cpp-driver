@@ -109,8 +109,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 else()
 	# GCC specific compiler options
         # I disabled long-long warning because boost generates about 50 such warnings
-        # -fno-strict-aliasing :: required by libcds
-	set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic -std=c++03 -Wno-long-long -fno-strict-aliasing")
+        # -std=c++0x, -fno-strict-aliasing :: required by libcds
+	set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic -std=c++0x -Wno-long-long -fno-strict-aliasing")
 endif()
 
 
@@ -138,6 +138,9 @@ file(GLOB INC_EXCEPTION_FILES
 file(GLOB INC_FILES_INTERNAL
 	${PROJECT_SOURCE_DIR}/include/cql/internal/*.hpp )
 
+file(GLOB INC_FILES_LOCKFREE
+	${PROJECT_SOURCE_DIR}/include/cql/lockfree/*.hpp )
+
 file(GLOB SRC_FILES
 	${PROJECT_SOURCE_DIR}/src/cql/*.cpp)
 
@@ -146,17 +149,23 @@ file(GLOB SRC_EXCEPTION_FILES
 
 file(GLOB SRC_FILES_INTERNAL
 	${PROJECT_SOURCE_DIR}/src/cql/internal/*.cpp )
+
+file(GLOB SRC_FILES_LOCKFREE
+	${PROJECT_SOURCE_DIR}/src/cql/lockfree/*.hpp )
 	
 source_group("Source Files" FILES ${SRC_FILES})
 source_group("Source Files\\Internal" FILES ${SRC_FILES_INTERNAL})
 source_group("Source Files\\Exceptions" FILES ${SRC_EXCEPTION_FILES})
+source_group("Source Files\\Lock Free" FILES ${SRC_FILES_LOCKFREE})
+
 source_group("Header Files" FILES ${INC_FILES})
 source_group("Header Files\\Internal" FILES ${INC_FILES_INTERNAL})
 source_group("Header Files\\Exceptions" FILES ${INC_EXCEPTION_FILES})
+source_group("Header Files\\Lock Free" FILES ${INC_FILES_LOCKFREE})
 
 set(ALL_SOURCE_FILES 
-	${SRC_FILES} ${SRC_FILES_INTERNAL} ${SRC_EXCEPTION_FILES}
-	${INC_FILES} ${INC_FILES_INTERNAL} ${INC_EXCEPTION_FILES})
+	${SRC_FILES} ${SRC_FILES_INTERNAL} ${SRC_EXCEPTION_FILES} ${SRC_FILES_LOCKFREE}
+	${INC_FILES} ${INC_FILES_INTERNAL} ${INC_EXCEPTION_FILES} ${INC_FILES_LOCKFREE})
 
 # build dynamic and static version of library
 
@@ -237,4 +246,5 @@ add_subdirectory(demo)
 # test libcds
 #-------------------
 
-add_subdirectory(test/libcds_demo)
+# Exclude demo from CMAKE build system
+# add_subdirectory(test/libcds_demo)
