@@ -116,7 +116,7 @@ public:
 		
 		slot.check_index();
 		size_t index = slot._index;
-
+		// bla
 		boost::lock_guard<boost::detail::spinlock> lock(_locks[index]);
 		return _contents[index];
 	}
