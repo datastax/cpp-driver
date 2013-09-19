@@ -45,7 +45,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/unordered_map.hpp>
-#include <boost/atomic/atomic.hpp>
+#include <boost/atomic.hpp>
 #include <boost/lockfree/stack.hpp>
 
 
@@ -57,7 +57,7 @@
 #include "cql/cql_future_result.hpp"
 #include "cql/internal/cql_message.hpp"
 #include "cql/internal/cql_defines.hpp"
-#include "cql/internal/cql_callback_storage.hpp"
+#include "cql/internal/cql_thread_safe_array.hpp"
 #include "cql/internal/cql_header_impl.hpp"
 #include "cql/internal/cql_message_event_impl.hpp"
 #include "cql/internal/cql_message_execute_impl.hpp"
@@ -89,7 +89,7 @@ public:
         callback_pair_t;
     
     typedef 
-        cql::small_indexed_storage<callback_pair_t> 
+        cql::cql_thread_safe_array_t<callback_pair_t, 128> 
         callback_storage_t;
     
     typedef 
@@ -104,7 +104,7 @@ public:
         _resolver(io_service),
         _transport(transport),
         _request_buffer(0),
-        _callback_storage(128),
+        _callback_storage(),
         _numer_of_free_stream_ids(127),
         _connect_callback(0),
         _connect_errback(0),
@@ -114,7 +114,7 @@ public:
         _defunct(false),
         _ready(false),
         _closing(false),
-        _reserved_stream_id(_callback_storage.allocate())
+        _reserved_stream_id(_callback_storage.allocate_slot())
     {}
 
     cql_client_impl_t(
@@ -125,7 +125,7 @@ public:
         _resolver(io_service),
         _transport(transport),
         _request_buffer(0),
-        _callback_storage(128),
+        _callback_storage(),
         _numer_of_free_stream_ids(127),
         _connect_callback(0),
         _connect_errback(0),
@@ -135,7 +135,7 @@ public:
         _defunct(false),
         _ready(false),
         _closing(false),
-        _reserved_stream_id(_callback_storage.allocate())
+        _reserved_stream_id(_callback_storage.allocate_slot())
     {}
 
     boost::shared_future<cql::cql_future_connection_t>
@@ -212,17 +212,17 @@ public:
           cql::cql_client_t::cql_message_callback_t callback,
           cql::cql_client_t::cql_message_errback_t  errback) {
 
-		  cql::cql_stream_id_t stream = allocate_stream_id();
+		  callback_storage_t::index_t	 stream = allocate_stream_id();
 
 
-        if (stream != -1) {
+        if (!stream.is_invalid()) {
 			  create_request(new cql::cql_message_query_impl_t(query, consistency),
                                       boost::bind(&cql_client_impl_t::write_handle,
                                               this,
                                               boost::asio::placeholders::error,
                                               boost::asio::placeholders::bytes_transferred),stream);
 
-            _callback_storage.put(stream, callback_pair_t(callback, errback));
+            _callback_storage.put_at(stream, callback_pair_t(callback, errback));
             return stream;
         } else {
             errback(*this, stream, create_stream_id_error());
@@ -235,16 +235,16 @@ public:
             cql::cql_client_t::cql_message_callback_t callback,
             cql::cql_client_t::cql_message_errback_t  errback) {
 
-		cql::cql_stream_id_t stream = allocate_stream_id();
+		callback_storage_t::index_t stream = allocate_stream_id();
 
-        if (stream != -1) {
+        if (!stream.is_invalid()) {
 		  create_request(new cql::cql_message_prepare_impl_t(query),
                                       boost::bind(&cql_client_impl_t::write_handle,
                                               this,
                                               boost::asio::placeholders::error,
                                               boost::asio::placeholders::bytes_transferred),stream);
 
-            _callback_storage.put(stream, callback_pair_t(callback, errback));
+            _callback_storage.put_at(stream, callback_pair_t(callback, errback));
             return stream;
         } else {
             errback(*this, stream, create_stream_id_error());
@@ -257,9 +257,9 @@ public:
             cql::cql_client_t::cql_message_callback_t callback,
             cql::cql_client_t::cql_message_errback_t  errback) {
 
-		cql::cql_stream_id_t stream = allocate_stream_id();
+		callback_storage_t::index_t stream = allocate_stream_id();
 
-        if (stream != -1) {
+        if (!stream.is_invalid()) {
 			create_request(message->impl(),
                                       boost::bind(&cql_client_impl_t::write_handle,
                                               this,
@@ -267,7 +267,7 @@ public:
                                               boost::asio::placeholders::bytes_transferred),stream);
 
 
-            _callback_storage.put(stream, callback_pair_t(callback, errback));
+            _callback_storage.put_at(stream, callback_pair_t(callback, errback));
             return stream;
         } else {
             errback(*this, stream, create_stream_id_error());
@@ -454,10 +454,10 @@ private:
         }
     }
 
-    virtual cql_stream_id_t allocate_stream_id()
+    virtual callback_storage_t::index_t allocate_stream_id()
 	{
 		  _numer_of_free_stream_ids--;
-		  return _callback_storage.allocate();
+		  return _callback_storage.allocate_slot();
 	}
 
 	virtual bool is_healthy() {
@@ -765,7 +765,7 @@ private:
     bool                                 _defunct;
     bool                                 _ready;
     bool                                 _closing;
-    cql::cql_stream_id_t                 _reserved_stream_id;
+    callback_storage_t::index_t			 _reserved_stream_id;
 };
 
 } // namespace cql

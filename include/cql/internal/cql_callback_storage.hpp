@@ -1,151 +1,151 @@
-/*
-  Copyright (c) 2013 Matthew Stump
+#ifndef CQL_CALLBACK_STORAGE_HPP_
+#define CQL_CALLBACK_STORAGE_HPP_
 
-  This file is part of cassandra.
+#include <cstddef>
+#include <boost/atomic.hpp>
+#include <boost/lockfree/stack.hpp>
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+#include "cql/cql.hpp"
 
-  http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-*/
-
-#ifndef CQL_CALLBACK_STORAGE_H_
-#define CQL_CALLBACK_STORAGE_H_
-
-#include <cstdlib>
-#include <stdint.h>
-#include <new>
-
+// std::lock_guard<boost::detail::spinlock>
 namespace cql {
-// this template class stores up to 128 values no more
-template<typename value_t>
-class small_indexed_storage {
-private:
-    template <typename _value_t>
-    class entry_t {
-        struct {
-            struct {
-                // -1 - there is no next free index
-                // -2 - flags that his one has been allocated (for checks and stuff)
-                int32_t index; // signed because might be -1
-                int32_t count; // doesn't matter never should be negative (see index restrictions)
-            } next_free;
-            _value_t value;
-        } e;
 
-    public:
-        _value_t&
-        value() {
-            return e.value;
-        }
-
-        const _value_t&
-        value() const {
-            return e.value;
-        }
-
-        int8_t
-        next_free_index() const {
-            return e.next_free.index;
-        }
-
-        // not counting this (so 0 means there are no free blocks behind this one)
-        int8_t
-        next_free_cnt() const {
-            return e.next_free.count;
-        }
-
-        // count does not include this (so 0 means there are no free blocks behind this one)
-        // you won't need to set cnt in any case except initial allocation
-        void
-        set_next_free(int32_t index,
-                      int32_t cnt = 0) {
-            e.next_free.index = index;
-            e.next_free.count = cnt;
-        }
-
-        void
-        set_value(const _value_t& val) {
-            e.value = val;
-        }
-
-        bool
-        is_allocated() {
-            return e.next_free.index == -2;
-        }
-
-        void
-        set_allocated() {
-            e.next_free.index = -2;
-        }
-    };
-
-    typedef entry_t<value_t> array_entry_t;
-    array_entry_t* array;
-    int32_t next_free_index;
+// TType - type of array items, 
+//	must have default constructor.
+// Size - size of array, should not exceed 4096
+// 	for performance reasons.
+template<typename TType, size_t Size>
+class cql_thread_safe_array_t {
 public:
-    explicit
-    small_indexed_storage(uint16_t size) :
-        next_free_index(0) {
-        array = new array_entry_t[size];
-        array[0].set_next_free(-1, size-1);
-    }
+	
+	class slot_t {
+	public:
+		// Returns true when given slot is invalid.
+		inline bool 
+		is_invalid() const {
+			return (_index == (size_t)(-1));
+		}
 
-    ~small_indexed_storage() {
-        delete [] array;
-    }
+		// Returns stream ID associated with given slot.
+		inline cql::cql_stream_id_t
+		stream_id() const {
+			return (cql::cql_stream_id_t)_index;
+		}
+	private:
+		inline
+		index_t(size_t index)
+			: _index(index) { }
 
-    int32_t
-    allocate() {
-        int32_t result;
-        if ( (result = next_free_index) >= 0) {
-            if (array[next_free_index].next_free_cnt() > 0) {
-                array[++next_free_index].set_next_free(array[result].next_free_index(), array[result].next_free_cnt()-1);
-            } else {
-                next_free_index = array[next_free_index].next_free_index();
-            }
-            // mark it allocated
-            array[result].set_allocated();
-        }
+		// throw std::argument_exception when
+		// this instance represent index greater than
+		// or equal Size;
+		void 
+		check_index() const {
+			if(_index >= Size)
+				throw std::out_of_range("index is greater than size()")
+		}
 
-        return result;
-    }
+		static inline index_t 
+		invalid_index() {
+			return index_t((size_t)(-1));
+		}
 
-    void
-    release(int32_t index) {
-        array[index].set_next_free(next_free_index);
-        next_free_index = index;
-    }
+		size_t _index;
 
-    bool
-    has(int32_t index) const {
-        return array[index].is_allocated();
-    }
+		template<typename _TArg1, size_t _TArg2>
+		friend class cql_thread_safe_array_t;
+	};
 
-    value_t&
-    get(int32_t index) {
-        return array[index].value();
-    }
+	cql_thread_safe_array_t()
+		: _free_indexes(Size) 
+	{
+		populate_free_indexes();
+	}
 
-    const value_t&
-    get(int32_t index) const {
-        return array[index].value();
-    }
+	// Returns size of array.
+	inline size_t 
+	size() const {
+		return Size;
+	}
 
-    void
-    put(int32_t index,
-        const value_t& val) {
-        array[index].set_value(val);
-    }
+	// Attempts to allocate free array slot.
+	// Returns (size_t)-1 on error, otherwise returns
+	// index of newly allocated slot.
+	inline index_t 
+	allocate_slot() {
+		size_t index;
 
+		if(!_free_indexes.pop(&index))
+			return index_t::invalid_index();
+
+		_is_used[index] = true;
+		return index_t(index);
+	} 
+
+	void
+	release_slot(index_t& index) {
+		if(index.is_invalid())
+			return;
+
+		index.check_index();
+
+		size_t i = index._index;
+		_is_used[i] = false;
+
+		while(!_free_indexes.push(i))
+			;
+
+		index = index_t::invalid_index();
+	}
+
+	// Returns true when given slot is used.
+	bool
+	is_free_slot(const index_t& index) const {
+		if(index.is_invalid())
+			return false;
+
+		index.check_index();
+
+		return !_is_used[index._index];
+	}
+
+	TType 
+	get(const index_t& slot) {
+		if(slot.is_invalid())
+			throw std::invalid_argument("index is invalid.");
+		
+		slot.check_index();
+		size_t index = slot._index;
+
+		boost::lock_guard<boost::detail::spinlock> lock(_locks[index]);
+		return _contents[index];
+	}
+
+	void
+	put(const index_t& slot, const TType& value) {
+		if(slot.is_invalid())
+			throw std::invalid_argument("index is invalid.");
+
+		slot.check_index();
+		size_t index = slot._index;
+
+		boost::lock_guard<boost::detail::spinlock> lock(_locks[index]);
+		_contents[index] = value;
+	}
+
+private:
+	void
+	populate_free_indexes() {
+		for(size_t index = 0; index < Size; index++)
+			_free_indexes.unsynchronized_push(index);
+	}
+
+	TType							_contents[Size];
+	boost::atomic_bool				_is_used[Size];
+	boost::detail::spinlock 		_locks[Size];
+	boost::lockfree::stack<size_t> 	_free_indexes;
 };
+
 }
 
-#endif // CQL_CALLBACK_STORAGE_H_
+#endif // CQL_CALLBACK_STORAGE_HPP_
