@@ -88,7 +88,7 @@ namespace cql {
 							 sizeof(socket_address));
 		if(result == -1) {
 			close_socket();
-			throw new cql_ccm_bridge_exception_t("cannot connect to remote host");
+			throw cql_ccm_bridge_exception_t("cannot connect to remote host");
 		}
 	}
 
@@ -100,7 +100,7 @@ namespace cql {
 	void cql_ccm_bridge_t::start_ssh_connection(const cql_ccm_bridge_configuration_t& settings) {
 		 _session = libssh2_session_init();
 		 if(!_session)
-			 throw new cql_ccm_bridge_exception_t("cannot create ssh session");
+			 throw cql_ccm_bridge_exception_t("cannot create ssh session");
 
 		 try {
 			if (libssh2_session_handshake(_session, _socket))
@@ -158,7 +158,7 @@ namespace cql {
 #ifdef WIN32
 		WSADATA wsadata;
 		if(0 != WSAStartup(MAKEWORD(2,0), &wsadata)) {
-			throw new cql_ccm_bridge_tException("cannot initialize windows sockets");
+			throw cql_ccm_bridge_tException("cannot initialize windows sockets");
 		}
 #endif
 	}
