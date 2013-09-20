@@ -50,6 +50,7 @@ public:
     virtual bool is_busy(int)=0;
     virtual bool is_free(int)=0;
 
+
     virtual cql_stream_id_t allocate_stream_id() = 0;
 
     long get_id() {

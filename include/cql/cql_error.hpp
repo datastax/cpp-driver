@@ -37,10 +37,31 @@ struct cql_error_t {
         library(false),
         code(0)
     {}
-
+    
+    cql_error_t(bool cassandra_,
+                bool transport_,
+                bool library_,
+                int code_,
+                const std::string& message_)
+                :   cassandra(cassandra_),
+                    transport(transport_),
+                    library(library_),
+                    code(code_),
+                    message(message_) { }
+    
     inline bool
     is_err() const {
         return cassandra || transport || library;
+    }
+    
+    static cql_error_t
+    cassandra_error(int code, const std::string& message) {
+        return cql_error_t(
+            /*cassandra:*/  true,
+            /*transport:*/  false,
+            /*library:*/    false,
+            /*code:*/       code,
+            /*message:*/    message);
     }
 };
 } // namespace cql

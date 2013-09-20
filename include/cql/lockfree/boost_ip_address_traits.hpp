@@ -9,7 +9,7 @@
 namespace std {
 
 	template<>
-	struct hash<::boost::asio::ip::address> {
+	struct hash< ::boost::asio::ip::address> {
 	public:
 		typedef 
 			::boost::asio::ip::address 
@@ -28,7 +28,7 @@ namespace std {
 
 			unsigned long hash = 5381;
 			
-			for(TBytesType::const_iterator it = ip_bytes.cbegin(); 
+			for(typename TBytesType::const_iterator it = ip_bytes.cbegin(); 
 				it != ip_bytes.cend(); ++it) 
 			{
 				hash = ((hash << 5) + hash) + *it;
@@ -50,7 +50,7 @@ namespace std {
 	};
 
 	template<>
-	struct less<::boost::asio::ip::address> {
+	struct less< ::boost::asio::ip::address> {
 	public:
 		typedef 
 			::boost::asio::ip::address

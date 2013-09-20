@@ -25,6 +25,7 @@
 #include <ostream>
 #include <string>
 
+#include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/ptr_container/ptr_deque.hpp>
@@ -152,12 +153,12 @@ private:
 
     struct client_container_t {
         client_container_t(
-            cql::cql_client_t* c) :
+            const boost::shared_ptr<cql::cql_client_t>& c) :
             client(c),
             errors(0)
         {}
 
-        std::auto_ptr<cql::cql_client_t> client;
+        boost::shared_ptr<cql::cql_client_t> client;
         size_t errors;
     };
 

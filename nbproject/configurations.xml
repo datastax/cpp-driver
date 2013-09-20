@@ -140,6 +140,10 @@
             <in>cql_system_dependent.hpp</in>
             <in>cql_util.hpp</in>
           </df>
+          <df name="lockfree">
+            <in>boost_ip_address_traits.hpp</in>
+            <in>cql_lockfree_hash_map.hpp</in>
+          </df>
           <in>cql.hpp</in>
           <in>cql_builder.hpp</in>
           <in>cql_client.hpp</in>
@@ -210,7 +214,6 @@
           <in>cql_cluster.cpp</in>
           <in>cql_execute.cpp</in>
           <in>cql_host.cpp</in>
-          <in>cql_lockfree_map.cpp</in>
           <in>cql_serialization.cpp</in>
         </df>
       </df>

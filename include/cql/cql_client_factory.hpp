@@ -19,6 +19,7 @@
 #ifndef CQL_CLIENT_FACTORY_H_
 #define CQL_CLIENT_FACTORY_H_
 
+#include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include "cql/cql_client.hpp"
@@ -31,7 +32,7 @@ public:
 
         @param service the boost IO service used for all network IO
     */
-    static cql_client_t*
+    static boost::shared_ptr<cql_client_t>
     create_cql_client_t(boost::asio::io_service& service);
 
     /** Instantiate a new cql_client_t. The client will attempt an SSL handshake on connect.
@@ -39,7 +40,7 @@ public:
         @param service the boost IO service used for all network IO
         @param context the boost SSL context, dictates cert validation behavior and SSL version
     */
-    static cql_client_t*
+    static boost::shared_ptr<cql_client_t>
     create_cql_client_t(boost::asio::io_service& service,
                         boost::asio::ssl::context& context);
 
@@ -48,7 +49,7 @@ public:
         @param service the boost IO service used for all network IO
         @param log_callback a callback which will be triggered for all internally generated log messages
     */
-    static cql_client_t*
+    static boost::shared_ptr<cql_client_t>
     create_cql_client_t(boost::asio::io_service& service,
                         cql::cql_client_t::cql_log_callback_t log_callback);
 
@@ -58,7 +59,7 @@ public:
         @param context the boost SSL context, dictates cert validation behavior and SSL version
         @param log_callback a callback which will be triggered for all internally generated log messages
     */
-    static cql_client_t*
+    static boost::shared_ptr<cql_client_t>
     create_cql_client_t(boost::asio::io_service& service,
                         boost::asio::ssl::context& context,
                         cql::cql_client_t::cql_log_callback_t log_callback);

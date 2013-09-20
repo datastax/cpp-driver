@@ -43,7 +43,7 @@ public:
         _log_callback(log_callback)
     {}
 
-    cql::cql_client_t*
+    inline boost::shared_ptr<cql::cql_client_t>
     operator()() {
         // called every time the pool needs to initiate a new connection to a host
         return cql::cql_client_factory_t::create_cql_client_t(_io_service, _log_callback);
@@ -68,7 +68,7 @@ public:
         _log_callback(log_callback)
     {}
 
-    cql::cql_client_t*
+    inline boost::shared_ptr<cql::cql_client_t>
     operator()() {
         // called every time the pool needs to initiate a new connection to a host
         return cql::cql_client_factory_t::create_cql_client_t(_io_service, _ssl_ctx, _log_callback);

@@ -23,6 +23,7 @@
 #include <map>
 #include <string>
 
+#include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/thread/future.hpp>
 #include "cql/cql_future_connection.hpp"
@@ -41,11 +42,27 @@ struct cql_error_t;
 class cql_session_t {
 
 public:
-    typedef boost::function<cql::cql_client_t*()>                                                  cql_client_callback_t;
-    typedef boost::function<void(cql_session_t*)>                                              cql_ready_callback_t;
-    typedef boost::function<void(cql_session_t*)>                                              cql_defunct_callback_t;
-    typedef boost::function<void(cql_session_t*, cql::cql_client_t&, const cql::cql_error_t&)> cql_connection_errback_t;
-    typedef boost::function<void(const cql::cql_short_t, const std::string&)>                      cql_log_callback_t;
+    typedef 
+        boost::function<boost::shared_ptr<cql::cql_client_t>()>             
+        cql_client_callback_t;
+    
+    typedef 
+        boost::function<void(cql_session_t *)>             
+        cql_ready_callback_t;
+    
+    typedef 
+        boost::function<void(cql_session_t *)>             
+        cql_defunct_callback_t;
+    
+    typedef 
+        boost::function<void(cql_session_t *, 
+                             cql::cql_client_t&, 
+                             const cql::cql_error_t&)>                      
+        cql_connection_errback_t;
+    
+    typedef 
+        boost::function<void(const cql::cql_short_t, const std::string&)>                      
+        cql_log_callback_t;
 
     virtual
     ~cql_session_t() {};
