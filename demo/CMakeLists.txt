@@ -7,7 +7,10 @@ set(DEMO Demo_${CQL_DRIVER_PROJECT_NAME})
 project(${DEMO} C CXX)
 
 file(GLOB DEMO_SRC_FILES *.cpp)
-add_executable(${DEMO} EXCLUDE_FROM_ALL ${DEMO_SRC_FILES})
+
+# Add EXCLUDE_FROM_ALL flag to exclude demo project
+# from ALL target
+add_executable(${DEMO}  ${DEMO_SRC_FILES})
 
 set_property(
   TARGET ${DEMO}

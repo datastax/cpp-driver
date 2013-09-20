@@ -34,9 +34,10 @@
 #include <cql/cql_builder.hpp>
 #include <cql/cql_execute.hpp>
 #include <cql/cql_result.hpp>
-#include <cql/internal/cql_thread_safe_array.hpp>
 
-#include <ccm_bridge.hpp>
+#include <cql_ccm_bridge.hpp>
+
+using namespace cql;
 
 // helper function to print query results
 void
@@ -47,7 +48,9 @@ print_rows(
         for (size_t i = 0; i < result.column_count(); ++i) {
             cql::cql_byte_t* data = NULL;
             cql::cql_int_t size = 0;
+            
             result.get_data(i, &data, size);
+            
             std::cout.write(reinterpret_cast<char*>(data), size);
             std::cout << " | ";
         }
@@ -73,17 +76,17 @@ main(int argc,
     try
     {
 		
-
 		int numberOfNodes = 1;
 
-		auto ccm = Cassandra::CCMBridge::create(Cassandra::get_configuration(),"test",numberOfNodes,true);
+        const cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+		boost::shared_ptr<cql_ccm_bridge_t> ccm = 
+            cql_ccm_bridge_t::create(conf, "test", numberOfNodes, true);
 
 		boost::shared_ptr<cql::cql_builder_t> builder = cql::cql_cluster_t::builder();
-
 		builder->with_log_callback(&log_callback);
 
 		for(int i=1;i<=numberOfNodes;i++)
-			builder->add_contact_point(boost::str(boost::format("%1%%2%") % Cassandra::get_configuration().ip_prefix() % i));
+			builder->add_contact_point(boost::str(boost::format("%1%%2%") % conf.ip_prefix() % i));
 
 		// decide which client factory we want, SSL or non-SSL.  This is a hack, if you pass any commandline arg to the
 		// binary it will use the SSL factory, non-SSL by default
@@ -92,7 +95,6 @@ main(int argc,
 		}
 
 		boost::shared_ptr<cql::cql_cluster_t> cluster (builder->build());
-
 		boost::shared_ptr<cql::cql_session_t> session (cluster->connect());
 
 		if(session.get()!=0){

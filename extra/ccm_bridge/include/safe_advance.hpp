@@ -1,7 +1,7 @@
 #ifndef _CASSANDRA_SAFE_ADVANCE_H_INCLUDE_
 #define _CASSANDRA_SAFE_ADVANCE_H_INCLUDE_
 
-namespace Cassandra {
+namespace cql {
 	// Advances iterator diff times (must be positive).
 	// Stops when iterator reaches sequence end.
 	template<typename TIterator>

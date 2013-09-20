@@ -74,24 +74,73 @@
           <df name="data">
           </df>
           <df name="include">
-            <in>ccm_bridge.hpp</in>
-            <in>configuration.hpp</in>
-            <in>esc_seq_remover.hpp</in>
+            <in>cql_ccm_bridge.hpp</in>
+            <in>cql_ccm_bridge_configuration.hpp</in>
+            <in>cql_escape_sequences_remover.hpp</in>
             <in>safe_advance.hpp</in>
           </df>
           <df name="src">
-            <in>ccm_bridge.cpp</in>
-            <in>configuration.cpp</in>
-            <in>esc_seq_remover.cpp</in>
+            <in>cql_ccm_bridge.cpp</in>
+            <in>cql_ccm_bridge_configuration.cpp</in>
+            <in>cql_escape_sequences_remover.cpp</in>
           </df>
         </df>
       </df>
       <df name="include">
+        <df name="cassandra">
+          <df name="internal">
+            <in>cql_callback_storage.hpp</in>
+            <in>cql_client_impl.hpp</in>
+            <in>cql_defines.hpp</in>
+            <in>cql_header_impl.hpp</in>
+            <in>cql_list_impl.hpp</in>
+            <in>cql_map_impl.hpp</in>
+            <in>cql_message.hpp</in>
+            <in>cql_message_credentials_impl.hpp</in>
+            <in>cql_message_error_impl.hpp</in>
+            <in>cql_message_event_impl.hpp</in>
+            <in>cql_message_execute_impl.hpp</in>
+            <in>cql_message_options_impl.hpp</in>
+            <in>cql_message_prepare_impl.hpp</in>
+            <in>cql_message_query_impl.hpp</in>
+            <in>cql_message_ready_impl.hpp</in>
+            <in>cql_message_register_impl.hpp</in>
+            <in>cql_message_result_impl.hpp</in>
+            <in>cql_message_startup_impl.hpp</in>
+            <in>cql_message_supported_impl.hpp</in>
+            <in>cql_result_metadata.hpp</in>
+            <in>cql_session_impl.hpp</in>
+            <in>cql_set_impl.hpp</in>
+            <in>cql_socket.hpp</in>
+            <in>cql_socket_ssl.hpp</in>
+            <in>cql_util.hpp</in>
+          </df>
+          <in>cql.hpp</in>
+          <in>cql_builder.hpp</in>
+          <in>cql_client.hpp</in>
+          <in>cql_client_factory.hpp</in>
+          <in>cql_cluster.hpp</in>
+          <in>cql_error.hpp</in>
+          <in>cql_event.hpp</in>
+          <in>cql_exception.hpp</in>
+          <in>cql_execute.hpp</in>
+          <in>cql_future_connection.hpp</in>
+          <in>cql_future_result.hpp</in>
+          <in>cql_list.hpp</in>
+          <in>cql_load_balancing_policy.hpp</in>
+          <in>cql_map.hpp</in>
+          <in>cql_result.hpp</in>
+          <in>cql_serialization.hpp</in>
+          <in>cql_session.hpp</in>
+          <in>cql_set.hpp</in>
+          <in>cql_vector_stream.hpp</in>
+        </df>
         <df name="cql">
           <df name="exceptions">
             <in>cql_authentication_exception.hpp</in>
             <in>cql_driver_internal_error.hpp</in>
             <in>cql_exception.hpp</in>
+            <in>cql_generic_exception.hpp</in>
             <in>cql_invalid_configuration_in_query_exception.hpp</in>
             <in>cql_invalid_query_exception.hpp</in>
             <in>cql_invalid_type_exception.hpp</in>
@@ -152,6 +201,7 @@
           <in>cql_config.hpp</in>
           <in>cql_error.hpp</in>
           <in>cql_event.hpp</in>
+          <in>cql_exception.hpp</in>
           <in>cql_execute.hpp</in>
           <in>cql_future_connection.hpp</in>
           <in>cql_future_result.hpp</in>
@@ -283,8 +333,18 @@
           </ccTool>
         </makeTool>
       </makefileType>
-      <item path="demo/main.cpp" ex="true" tool="1" flavor="0">
-      </item>
+      <folder path="cpp-driver/demo">
+        <ccTool>
+          <incDir>
+            <pElem>../../cds</pElem>
+            <pElem>/extra/ccm_bridge/include</pElem>
+            <pElem>extra/ccm_bridge/include</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>BOOST_ALL_DYN_LINK</Elem>
+          </preprocessorList>
+        </ccTool>
+      </folder>
       <folder path="cpp-driver/extra">
         <ccTool>
           <incDir>
