@@ -46,6 +46,7 @@ public:
     boost::shared_ptr<cql_session_t> connect();
     boost::shared_ptr<cql_session_t> connect(const std::string& keyspace);
     void shutdown(int timeout_ms=-1);
+    
     ~cql_cluster_t();
 };
 }

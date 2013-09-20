@@ -19,6 +19,7 @@ set_property(
 # Setup include directories 
 # Directories are inherited from parent project 
 set(CCM_BRIDGE_INCLUDES "${CMAKE_PROJECT_SOURCE}/extra/ccm_bridge/include")
+
 target_include_directories(${DEMO} PUBLIC ${INCLUDES} ${CCM_BRIDGE_INCLUDES})
 target_link_libraries(${DEMO} ${LIBS} ${PROJECT_LIB_NAME_STATIC} CCMBridge)
 

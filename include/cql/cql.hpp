@@ -20,6 +20,7 @@
 #define __CQL_H_INCLUDED__
 
 #include <stdint.h>
+#include <boost/noncopyable.hpp>
 
 namespace cql {
     
@@ -146,6 +147,32 @@ to_string(const cql_host_distance_enum);
 
 const char*
 to_string(const cql_consistency_enum);
+
+// Initializes cql library, must be called before any interaction
+// with library.
+// This function MUST be called only once.
+// This function is NOT thread safe.
+void
+cql_initialize();
+
+// Terminates cql library.
+// This function must be called at program end, this MUST
+// be called only once.
+void 
+cql_terminate();
+
+struct cql_thread_infrastructure_impl_t;
+
+// This class must be instantinated on EVERY thread that uses libcql.
+class cql_thread_infrastructure_t: public boost::noncopyable {
+public:
+    // Throws cql::cql_initialization_exception when initializaton
+    // fails.
+    cql_thread_infrastructure_t();
+    ~cql_thread_infrastructure_t();
+private:
+    cql_thread_infrastructure_impl_t* _this;
+};
 
 } // namespace cql
 #endif // __CQL_H_INCLUDED__

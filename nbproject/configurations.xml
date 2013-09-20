@@ -140,7 +140,7 @@
             <in>cql_authentication_exception.hpp</in>
             <in>cql_driver_internal_error.hpp</in>
             <in>cql_exception.hpp</in>
-            <in>cql_generic_exception.hpp</in>
+            <in>cql_initialization_exception.hpp</in>
             <in>cql_invalid_configuration_in_query_exception.hpp</in>
             <in>cql_invalid_query_exception.hpp</in>
             <in>cql_invalid_type_exception.hpp</in>
@@ -201,7 +201,6 @@
           <in>cql_config.hpp</in>
           <in>cql_error.hpp</in>
           <in>cql_event.hpp</in>
-          <in>cql_exception.hpp</in>
           <in>cql_execute.hpp</in>
           <in>cql_future_connection.hpp</in>
           <in>cql_future_result.hpp</in>

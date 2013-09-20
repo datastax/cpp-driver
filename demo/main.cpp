@@ -73,20 +73,21 @@ int
 main(int argc,
      char**)
 {
+    cql::cql_initialize();
+    cql::cql_thread_infrastructure_t cql_ti;
+    
     try
     {
-		
 		int numberOfNodes = 1;
 
         const cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-		boost::shared_ptr<cql_ccm_bridge_t> ccm = 
-            cql_ccm_bridge_t::create(conf, "test", numberOfNodes, true);
+        // cql_ccm_bridge_t::create(conf, "test", numberOfNodes, true);
 
 		boost::shared_ptr<cql::cql_builder_t> builder = cql::cql_cluster_t::builder();
 		builder->with_log_callback(&log_callback);
 
 		for(int i=1;i<=numberOfNodes;i++)
-			builder->add_contact_point(boost::str(boost::format("%1%%2%") % conf.ip_prefix() % i));
+			builder->add_contact_point(conf.ssh_host());
 
 		// decide which client factory we want, SSL or non-SSL.  This is a hack, if you pass any commandline arg to the
 		// binary it will use the SSL factory, non-SSL by default
@@ -136,5 +137,7 @@ main(int argc,
     {
         std::cout << "Exception: " << e.what() << std::endl;
     }
+    
+    cql::cql_terminate();
     return 0;
 }

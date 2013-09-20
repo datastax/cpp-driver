@@ -238,8 +238,11 @@ public:
 
 class cql_initializer_t {
 public:
-    virtual std::list<std::string> get_contact_points() const = 0;
-    virtual boost::shared_ptr<cql_configuration_t> get_configuration() const = 0;
+    virtual std::list<std::string> 
+    get_contact_points() const = 0;
+    
+    virtual boost::shared_ptr<cql_configuration_t> 
+    get_configuration() const = 0;
 };
 
 class cql_builder_t : public cql_initializer_t, boost::noncopyable {

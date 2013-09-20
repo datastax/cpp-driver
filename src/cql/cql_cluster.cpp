@@ -97,12 +97,20 @@ private:
     boost::scoped_ptr<boost::asio::io_service::work> work;
     boost::thread thread;
 
+    // Main function of thread on which we call io_service::run
+    static void
+    asio_thread_main(boost::asio::io_service* io_service) {
+        cql::cql_thread_infrastructure_t gc;
+        io_service->run();
+    }
+    
 public:
     cql_cluster_pimpl_t(const std::list<std::string>& contact_points, boost::shared_ptr<cql::cql_configuration_t> configuration)
         :_contact_points(contact_points), _configuration(configuration),
          work(new boost::asio::io_service::work(io_service)),
-         thread(boost::bind(static_cast<size_t(boost::asio::io_service::*)()>(&boost::asio::io_service::run), &io_service))
-    {}
+         thread(boost::bind(&cql_cluster_pimpl_t::asio_thread_main, &io_service))
+    { }
+        
 
     boost::shared_ptr<cql::cql_session_t> connect(const std::string& keyspace) {
         // decide which client factory we want, SSL or non-SSL.  This is a hack, if you pass any commandline arg to the
