@@ -130,10 +130,10 @@ include_directories(${INCLUDES})
 # we must add header files as dependencies (if header
 # changes project must be recompiled, right).
 file(GLOB INC_FILES
-	${PROJECT_SOURCE_DIR}/include/cql/*.hpp) 
+	${PROJECT_SOURCE_DIR}/include/cql/*.hpp ) 
 	
 file(GLOB INC_EXCEPTION_FILES
-  ${PROJECT_SOURCE_DIR}/include/cql/exceptions/*.hpp) 
+  ${PROJECT_SOURCE_DIR}/include/cql/exceptions/*.hpp ) 
 	
 file(GLOB INC_FILES_INTERNAL
 	${PROJECT_SOURCE_DIR}/include/cql/internal/*.hpp )
@@ -141,6 +141,9 @@ file(GLOB INC_FILES_INTERNAL
 file(GLOB INC_FILES_LOCKFREE
 	${PROJECT_SOURCE_DIR}/include/cql/lockfree/*.hpp )
 
+file(GLOB INC_FILES_POLICIES
+	${PROJECT_SOURCE_DIR}/include/cql/policies/*.hpp )
+	
 file(GLOB SRC_FILES
 	${PROJECT_SOURCE_DIR}/src/cql/*.cpp)
 
@@ -151,21 +154,26 @@ file(GLOB SRC_FILES_INTERNAL
 	${PROJECT_SOURCE_DIR}/src/cql/internal/*.cpp )
 
 file(GLOB SRC_FILES_LOCKFREE
-	${PROJECT_SOURCE_DIR}/src/cql/lockfree/*.hpp )
+	${PROJECT_SOURCE_DIR}/src/cql/lockfree/*.cpp )
+	
+file(GLOB SRC_FILES_POLICIES
+	${PROJECT_SOURCE_DIR}/src/cql/policies/*.cpp )
 	
 source_group("Source Files" FILES ${SRC_FILES})
 source_group("Source Files\\Internal" FILES ${SRC_FILES_INTERNAL})
 source_group("Source Files\\Exceptions" FILES ${SRC_EXCEPTION_FILES})
 source_group("Source Files\\Lock Free" FILES ${SRC_FILES_LOCKFREE})
+source_group("Source Files\\Policies" FILES ${SRC_FILES_POLICIES})
 
 source_group("Header Files" FILES ${INC_FILES})
 source_group("Header Files\\Internal" FILES ${INC_FILES_INTERNAL})
 source_group("Header Files\\Exceptions" FILES ${INC_EXCEPTION_FILES})
 source_group("Header Files\\Lock Free" FILES ${INC_FILES_LOCKFREE})
+source_group("Header Files\\Policies" FILES ${INC_FILES_POLICIES})
 
 set(ALL_SOURCE_FILES 
-	${SRC_FILES} ${SRC_FILES_INTERNAL} ${SRC_EXCEPTION_FILES} ${SRC_FILES_LOCKFREE}
-	${INC_FILES} ${INC_FILES_INTERNAL} ${INC_EXCEPTION_FILES} ${INC_FILES_LOCKFREE})
+	${SRC_FILES} ${SRC_FILES_INTERNAL} ${SRC_EXCEPTION_FILES} ${SRC_FILES_LOCKFREE} ${SRC_FILES_POLICIES}
+	${INC_FILES} ${INC_FILES_INTERNAL} ${INC_EXCEPTION_FILES} ${INC_FILES_LOCKFREE} ${INC_FILES_POLICIES})
 
 # build dynamic and static version of library
 

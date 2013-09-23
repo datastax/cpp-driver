@@ -8,7 +8,7 @@
 #include <boost/smart_ptr.hpp>
 
 #include "cql/cql_client.hpp"
-#include "cql/cql_load_balancing_policy.hpp"
+#include "cql/policies/cql_load_balancing_policy.hpp"
 
 namespace cql {
 

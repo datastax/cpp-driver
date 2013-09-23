@@ -49,6 +49,7 @@ public:
     
     ~cql_cluster_t();
 };
+
 }
 
 #endif // CQL_CLUSTER_H_

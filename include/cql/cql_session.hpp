@@ -26,6 +26,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/thread/future.hpp>
+
 #include "cql/cql_future_connection.hpp"
 #include "cql/cql_client.hpp"
 #include "cql/cql.hpp"

@@ -29,6 +29,7 @@
 
 #include "cql/cql_cluster.hpp"
 #include "cql/cql_builder.hpp"
+#include "cql/cql_metadata.hpp"
 
 namespace cql {
 

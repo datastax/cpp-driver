@@ -35,7 +35,7 @@
 #include "cql/cql_session.hpp"
 #include "cql/cql_builder.hpp"
 #include "cql/cql_cluster.hpp"
-#include "cql/cql_load_balancing_policy.hpp"
+#include "cql/policies/cql_load_balancing_policy.hpp"
 
 
 namespace cql {
@@ -74,7 +74,7 @@ public:
 	free_connection(boost::shared_ptr<cql_client_t> connection);
 
     virtual 
-	~cql_session_impl_t() {};
+	~cql_session_impl_t() { }
 
 private:
     cql_session_impl_t(
@@ -93,7 +93,7 @@ private:
         cql::cql_session_t::cql_ready_callback_t   ready_callback,
         cql::cql_session_t::cql_defunct_callback_t defunct_callback,
         cql::cql_session_t::cql_log_callback_t     log_callback,
-        size_t                                         reconnect_limit);
+        size_t                                     reconnect_limit);
 
     boost::shared_future<cql::cql_future_connection_t>
     add_client(
