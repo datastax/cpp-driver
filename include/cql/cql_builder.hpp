@@ -96,9 +96,9 @@ public:
     
     int get_min_simultaneous_requests_per_connection_treshold(cql_host_distance_enum distance) {
         switch (distance) {
-        case CQL_HOST_LOCAL:
+        case CQL_HOST_DISTANCE_LOCAL:
             return _min_simultaneous_requests_for_local;
-        case CQL_HOST_REMOTE:
+        case CQL_HOST_DISTANCE_REMOTE:
             return _min_simultaneous_requests_for_remote;
         default:
             throw std::invalid_argument("Invalid enumeration value.");
@@ -107,10 +107,10 @@ public:
 
     cql_pooling_options_t& set_min_simultaneous_requests_per_connection_treshold(cql_host_distance_enum distance, int minSimultaneousRequests) {
         switch (distance) {
-        case CQL_HOST_LOCAL:
+        case CQL_HOST_DISTANCE_LOCAL:
             _min_simultaneous_requests_for_local = minSimultaneousRequests;
             break;
-        case CQL_HOST_REMOTE:
+        case CQL_HOST_DISTANCE_REMOTE:
             _min_simultaneous_requests_for_remote = minSimultaneousRequests;
             break;
         default:
@@ -121,9 +121,9 @@ public:
 
     int get_max_simultaneous_requests_per_connection_treshold(cql_host_distance_enum distance) {
         switch (distance) {
-        case CQL_HOST_LOCAL:
+        case CQL_HOST_DISTANCE_LOCAL:
             return _max_simultaneous_requests_for_local;
-        case CQL_HOST_REMOTE:
+        case CQL_HOST_DISTANCE_REMOTE:
             return _max_simultaneous_requests_for_remote;
         default:
             throw std::invalid_argument("Invalid enumeration value.");
@@ -132,10 +132,10 @@ public:
 
     cql_pooling_options_t& set_max_simultaneous_requests_per_connection_treshold(cql_host_distance_enum distance, int maxSimultaneousRequests) {
         switch (distance) {
-        case CQL_HOST_LOCAL:
+        case CQL_HOST_DISTANCE_LOCAL:
             _max_simultaneous_requests_for_local = maxSimultaneousRequests;
             break;
-        case CQL_HOST_REMOTE:
+        case CQL_HOST_DISTANCE_REMOTE:
             _max_simultaneous_requests_for_remote = maxSimultaneousRequests;
             break;
         default:
@@ -146,9 +146,9 @@ public:
 
     int get_core_connections_per_host(cql_host_distance_enum distance) {
         switch (distance) {
-        case CQL_HOST_LOCAL:
+        case CQL_HOST_DISTANCE_LOCAL:
             return _core_connections_for_local;
-        case CQL_HOST_REMOTE:
+        case CQL_HOST_DISTANCE_REMOTE:
             return _core_connections_for_remote;
         default:
             throw std::invalid_argument("Invalid enumeration value.");
@@ -157,10 +157,10 @@ public:
 
     cql_pooling_options_t& set_core_connections_per_host(cql_host_distance_enum distance, int coreConnections) {
         switch (distance) {
-        case CQL_HOST_LOCAL:
+        case CQL_HOST_DISTANCE_LOCAL:
             _core_connections_for_local = coreConnections;
             break;
-        case CQL_HOST_REMOTE:
+        case CQL_HOST_DISTANCE_REMOTE:
             _core_connections_for_remote = coreConnections;
             break;
         default:
@@ -171,9 +171,9 @@ public:
 
     int get_max_connection_per_host(cql_host_distance_enum distance) {
         switch (distance) {
-        case CQL_HOST_LOCAL:
+        case CQL_HOST_DISTANCE_LOCAL:
             return _max_connections_for_local;
-        case CQL_HOST_REMOTE:
+        case CQL_HOST_DISTANCE_REMOTE:
             return _max_connections_for_remote;
         default:
             return 0;
@@ -182,10 +182,10 @@ public:
 
     cql_pooling_options_t& set_max_connections_per_host(cql_host_distance_enum distance, int maxConnections) {
         switch (distance) {
-        case CQL_HOST_LOCAL:
+        case CQL_HOST_DISTANCE_LOCAL:
             _max_connections_for_local = maxConnections;
             break;
-        case CQL_HOST_REMOTE:
+        case CQL_HOST_DISTANCE_REMOTE:
             _max_connections_for_remote = maxConnections;
             break;
         default:

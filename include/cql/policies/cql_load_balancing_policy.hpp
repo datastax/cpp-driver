@@ -10,15 +10,17 @@
 namespace cql {
 
 class cql_cluster_t;
-
-class cql_query_t { };
-
+class cql_query_t;
 
 class cql_query_plan_t {
 public:
 	// Returns next host to query.
-	boost::shared_ptr<cql_host_t>
-	next_host_to_query();
+	// Returns NULL when all hosts were tried.
+	virtual boost::shared_ptr<cql_host_t>
+	next_host_to_query() = 0;
+
+	virtual 
+	~cql_query_plant_t() { }
 };
 
 // Interface class for implementing load balanacing policies.
@@ -28,7 +30,7 @@ public:
 
 	// Initializes policy object.
     virtual void 
-	init(boost::shared_ptr<cql_cluster_t> cluster) = 0;
+	init(const boost::shared_ptr<cql_cluster_t>& cluster) = 0;
 
 
     virtual cql_host_distance_enum 
@@ -36,32 +38,7 @@ public:
 
 	// Returns new query plan.
     virtual boost::shared_ptr<cql_query_plan_t> 
-	new_query_plan(boost::shared_ptr<cql_query_t> query) = 0;
-};
-
-class cql_round_robin_policy_t: public cql_load_balancing_policy_t {
-public:
-    virtual void Initialize(boost::shared_ptr<cql_cluster_t> cluster) {
-    }
-
-    virtual cql_host_distance_enum distance(const cql_host_t* host) {
-        return CQL_HOST_LOCAL;
-    }
-
-    class round_robin_query_plan_t:public cql_query_plan_t {
-        virtual bool move_next() {
-            return false;
-        }
-        virtual boost::shared_ptr<cql_host_t> current() {
-            return boost::shared_ptr<cql_host_t>();
-        }
-
-    };
-
-    virtual boost::shared_ptr<cql_query_plan_t> new_query_plan(boost::shared_ptr<cql_query_t> query) {
-        return boost::shared_ptr<cql_query_plan_t>();
-    }
-
+	new_query_plan(const boost::shared_ptr<cql_query_t>& query) = 0;
 };
 
 } // namespace cql
