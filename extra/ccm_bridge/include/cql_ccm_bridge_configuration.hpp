@@ -55,7 +55,7 @@ namespace cql {
 		bool _use_logger;
 		bool _use_compression;
         
-        friend const cql_ccm_bridge_configuration_t& cql::get_ccm_bridge_configuration();
+        friend const cql_ccm_bridge_configuration_t& get_ccm_bridge_configuration();
 	};
 
 
