@@ -8,7 +8,7 @@
 
 #include "cql/cql.hpp"
 #include "cql/cql_config.hpp"
-#include "cql/cql_reconnection_policy.hpp"
+#include "cql/policies/cql_reconnection_policy.hpp"
 #include "cql/cql_reconnection_schedule.hpp"
 
 namespace cql {

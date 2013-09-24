@@ -37,26 +37,29 @@ cql_session_impl_t::cql_session_impl_t(
     _reconnect_limit(0),
     _configuration(configuration) { }
 
-void cql_session_impl_t::init() {
+void 
+cql_session_impl_t::init() {
     int port = _configuration->get_protocol_options().get_port();
 
-    bool wasError = false;
+    bool was_error = false;
 
     // Add a client to the pool, this operation returns a future.
-    std::list<std::string> contact_points =_configuration->get_protocol_options().get_contact_points();
+    std::list<std::string> contact_points =
+        _configuration->get_protocol_options().get_contact_points();
+    
     for(std::list<std::string>::iterator it = contact_points.begin(); it!=contact_points.end(); ++it) {
         boost::shared_future<cql_future_connection_t> connect_future = add_client(*it, port);
         // Wait until the connection is complete, or has failed.
         connect_future.wait();
 
         if (connect_future.get().error.is_err()) {
-            wasError = true;
+            was_error = true;
             break;
         }
     }
 
-    if (wasError) {
-        throw cql_exception("cannot connect.");
+    if (was_error) {
+        throw cql_exception("cannot connect to host.");
     }
 }
 
@@ -130,10 +133,13 @@ cql_session_impl_t::add_client(
     const std::map<std::string, std::string>& credentials) {
     boost::mutex::scoped_lock lock(_mutex);
 
-    boost::shared_ptr<boost::promise<cql_future_connection_t> > promise(new boost::promise<cql_future_connection_t>());
+    boost::shared_ptr<boost::promise<cql_future_connection_t> > promise(
+        new boost::promise<cql_future_connection_t>());
+        
     boost::shared_future<cql_future_connection_t> shared_future(promise->get_future());
 
-    std::auto_ptr<cql_session_impl_t::client_container_t> client_container(new cql_session_impl_t::client_container_t(_client_callback()));
+    std::auto_ptr<cql_session_impl_t::client_container_t> client_container(
+        new cql_session_impl_t::client_container_t(_client_callback()));
 
     client_container->client->events(event_callback, events);
     client_container->client->credentials(credentials);
@@ -147,7 +153,11 @@ cql_session_impl_t::add_client(
 
 
 boost::shared_ptr<cql_client_t>
-cql_session_impl_t::connect(cql_query_plan_t& hostIter, int& streamId, std::list<std::string>& triedHosts) {
+cql_session_impl_t::connect(
+        cql_query_plan_t& hostIter, 
+        int& streamId, 
+        std::list<std::string>& triedHosts) 
+{
     boost::mutex::scoped_lock lock(_connection_pool_mtx);
 
     while (true) {
@@ -157,15 +167,20 @@ cql_session_impl_t::connect(cql_query_plan_t& hostIter, int& streamId, std::list
 
         if (currentHost->is_considerably_up()) {
             triedHosts.push_back(currentHost->get_address());
-            cql_host_distance_enum hostDistance= _configuration->get_policies().get_load_balancing_policy()->distance(currentHost.get());
+            cql_host_distance_enum hostDistance= 
+                    _configuration->get_policies()
+                    .get_load_balancing_policy()
+                    ->distance(currentHost.get());
 
-            std::map<std::string, std::map<long,boost::shared_ptr<cql_client_t> > >::iterator current_connection_pool;
+            std::map<std::string, std::map<long, boost::shared_ptr<cql_client_t> > >::iterator current_connection_pool;
             if ( (current_connection_pool = _connection_pool.find(currentHost->get_address())) != _connection_pool.end())
                 _connection_pool.insert(std::make_pair(currentHost->get_address(),std::map<long,boost::shared_ptr<cql_client_t> >()));
 
             std::list<long> to_remove;
 
-            for(std::map<long,boost::shared_ptr<cql_client_t> >::iterator kv = current_connection_pool->second.begin(); kv!=current_connection_pool->second.end(); ++kv) {
+            for(std::map<long,boost::shared_ptr<cql_client_t> >::iterator kv = current_connection_pool->second.begin(); 
+                kv!=current_connection_pool->second.end(); ++kv) 
+            {
                 boost::shared_ptr<cql_client_t> conn = kv->second;
                 if (!conn->is_healthy()) {
                     to_remove.push_back(kv->first);
@@ -184,6 +199,7 @@ cql_session_impl_t::connect(cql_query_plan_t& hostIter, int& streamId, std::list
                     }
                 }
             }
+            
             for(std::list<long>::iterator it = to_remove.begin(); it!=to_remove.end(); ++it) {
                 free_connection(current_connection_pool->second[*it]);
                 current_connection_pool->second.erase(*it);
@@ -222,29 +238,33 @@ cql_session_impl_t::allocate_connection(const std::string& address, cql_host_dis
     return boost::shared_ptr<cql_client_t>();
 }
 
-void cql_session_impl_t::trashcan_put(boost::shared_ptr<cql_client_t> connection) {
+void 
+cql_session_impl_t::trashcan_put(boost::shared_ptr<cql_client_t> connection) {
 }
 
-boost::shared_ptr<cql_client_t> cql_session_impl_t::trashcan_recycle(const std::string& address) {
+boost::shared_ptr<cql_client_t> 
+cql_session_impl_t::trashcan_recycle(const std::string& address) {
     return boost::shared_ptr<cql_client_t>();
 }
 
-void cql_session_impl_t::free_connection(boost::shared_ptr<cql_client_t> connection) {
+void 
+cql_session_impl_t::free_connection(boost::shared_ptr<cql_client_t> connection) {
 }
-
 
 cql_stream_id_t
 cql_session_impl_t::query(
-    const std::string&                        query,
-    cql_consistency_enum                      consistency,
+    const std::string&                   query,
+    cql_consistency_enum                 consistency,
     cql_client_t::cql_message_callback_t callback,
-    cql_client_t::cql_message_errback_t  errback) {
+    cql_client_t::cql_message_errback_t  errback) 
+{
     boost::mutex::scoped_lock lock(_mutex);
 
     cql_client_t* client = next_client();
     if (client) {
         return client->query(query, consistency, callback, errback);
     }
+    
     return 0;
 }
 
@@ -312,7 +332,7 @@ cql_session_impl_t::prepare(
 
     cql_future_result_t future_result;
     future_result.error.library = true;
-    future_result.error.message = "could not obtain viable client from the pool";
+    future_result.error.message = "could not obtain viable client from the pool.";
     promise.set_value(future_result);
     return shared_future;
 }
@@ -332,7 +352,7 @@ cql_session_impl_t::execute(
 
     cql_future_result_t future_result;
     future_result.error.library = true;
-    future_result.error.message = "could not obtain viable client from the pool";
+    future_result.error.message = "could not obtain viable client from the pool.";
     promise.set_value(future_result);
     return shared_future;
 }

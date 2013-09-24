@@ -29,6 +29,7 @@
 
 #include "cql/cql_cluster.hpp"
 #include "cql/cql_builder.hpp"
+#include "cql/cql_metadata.hpp"
 
 namespace cql {
 
@@ -82,8 +83,8 @@ private:
 
 class cql_cluster_pimpl_t {
 private:
-    const std::list<std::string> _contact_points;
-    boost::shared_ptr<cql_configuration_t> _configuration;
+    const std::list<std::string> 			_contact_points;
+    boost::shared_ptr<cql_configuration_t> 	_configuration;
 
     // Initialize the IO service, this allows us to perform network operations asyncronously
     boost::asio::io_service io_service;
@@ -105,8 +106,11 @@ private:
     }
     
 public:
-    cql_cluster_pimpl_t(const std::list<std::string>& contact_points, boost::shared_ptr<cql::cql_configuration_t> configuration)
-        :_contact_points(contact_points), _configuration(configuration),
+    cql_cluster_pimpl_t(
+			const std::list<std::string>& contact_points, 
+			boost::shared_ptr<cql::cql_configuration_t> configuration)
+        :_contact_points(contact_points), 
+		 _configuration(configuration),
          work(new boost::asio::io_service::work(io_service)),
          thread(boost::bind(&cql_cluster_pimpl_t::asio_thread_main, &io_service))
     { }
@@ -117,11 +121,20 @@ public:
         // binary it will use the SSL factory, non-SSL by default
 
         cql::cql_session_t::cql_client_callback_t client_factory;
-        boost::asio::ssl::context* ssl_context = _configuration->get_protocol_options().get_ssl_context().get();
-        cql::cql_client_t::cql_log_callback_t log_callback = _configuration->get_client_options().get_log_callback();
+        boost::asio::ssl::context* ssl_context = 
+				_configuration->get_protocol_options()
+							   .get_ssl_context()
+							   .get();
+							   
+        cql::cql_client_t::cql_log_callback_t log_callback = 
+				_configuration->get_client_options()
+							   .get_log_callback();
 
-        if (ssl_context!=0) {
-            client_factory = client_ssl_functor_t(io_service, const_cast<boost::asio::ssl::context&>(*ssl_context), log_callback);
+        if (ssl_context != 0) {
+            client_factory = client_ssl_functor_t(
+				io_service, 
+				const_cast<boost::asio::ssl::context&>(*ssl_context), 
+				log_callback);
         } else {
             client_factory = client_functor_t(io_service, log_callback);
         }
@@ -144,23 +157,32 @@ public:
 };
 }
 
-boost::shared_ptr<cql::cql_cluster_t> cql::cql_cluster_t::built_from(const cql_initializer_t& initializer) {
-    return boost::shared_ptr<cql::cql_cluster_t>(new cql::cql_cluster_t(new cql::cql_cluster_pimpl_t(initializer.get_contact_points(), initializer.get_configuration())));
+boost::shared_ptr<cql::cql_cluster_t> 
+cql::cql_cluster_t::built_from(const cql_initializer_t& initializer) {
+    return boost::shared_ptr<cql::cql_cluster_t>(
+		new cql::cql_cluster_t(
+			new cql::cql_cluster_pimpl_t(
+				initializer.get_contact_points(), 
+				initializer.get_configuration())));
 }
 
-boost::shared_ptr<cql::cql_builder_t> cql::cql_cluster_t::builder() {
+boost::shared_ptr<cql::cql_builder_t> 
+cql::cql_cluster_t::builder() {
     return boost::shared_ptr<cql::cql_builder_t>(new cql::cql_builder_t());
 }
 
-boost::shared_ptr<cql::cql_session_t> cql::cql_cluster_t::connect() {
+boost::shared_ptr<cql::cql_session_t> 
+cql::cql_cluster_t::connect() {
     return connect("");
 }
 
-boost::shared_ptr<cql::cql_session_t> cql::cql_cluster_t::connect(const std::string& keyspace) {
+boost::shared_ptr<cql::cql_session_t> 
+cql::cql_cluster_t::connect(const std::string& keyspace) {
     return _pimpl->connect(keyspace);
 }
 
-void cql::cql_cluster_t::shutdown(int timeout_ms) {
+void 
+cql::cql_cluster_t::shutdown(int timeout_ms) {
     _pimpl->shutdown(timeout_ms);
 }
 

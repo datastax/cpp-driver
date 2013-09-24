@@ -37,7 +37,7 @@ private: //PIMPL
     std::auto_ptr<cql_cluster_pimpl_t> _pimpl;
 
     //private constructor
-    cql_cluster_t(cql_cluster_pimpl_t* pimpl) : _pimpl(pimpl) {}
+    cql_cluster_t(cql_cluster_pimpl_t* pimpl) : _pimpl(pimpl) { }
 
 public:
     static boost::shared_ptr<cql_cluster_t> built_from(const cql_initializer_t& initializer);
@@ -45,10 +45,11 @@ public:
 
     boost::shared_ptr<cql_session_t> connect();
     boost::shared_ptr<cql_session_t> connect(const std::string& keyspace);
-    void shutdown(int timeout_ms=-1);
+    void shutdown(int timeout_ms = -1);
     
     ~cql_cluster_t();
 };
+
 }
 
 #endif // CQL_CLUSTER_H_

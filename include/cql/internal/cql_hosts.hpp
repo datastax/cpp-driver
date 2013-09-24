@@ -7,7 +7,7 @@
 #include <boost/asio/ip/address.hpp>
 
 #include "cql/cql_host.hpp"
-#include "cql/cql_reconnection_policy.hpp"
+#include "cql/policies/cql_reconnection_policy.hpp"
 #include "cql/lockfree/boost_ip_address_traits.hpp"
 #include "cql/lockfree/cql_lockfree_hash_map.hpp"
 

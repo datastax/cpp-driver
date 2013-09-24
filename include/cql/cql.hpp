@@ -54,7 +54,8 @@ enum cql_consistency_enum {
     CQL_CONSISTENCY_QUORUM       = 0x0004,
     CQL_CONSISTENCY_ALL          = 0x0005,
     CQL_CONSISTENCY_LOCAL_QUORUM = 0x0006,
-    CQL_CONSISTENCY_EACH_QUORUM  = 0x0007
+    CQL_CONSISTENCY_EACH_QUORUM  = 0x0007,
+	CQL_CONSISTENCY_DEFAULT = CQL_CONSISTENCY_ONE
 };
 
 enum cql_column_type_enum {
@@ -126,20 +127,20 @@ enum cql_event_topology_enum {
 //  com.datastax.driver.core.policies.LoadBalancingPolicy (through
 //  its *distance method). The distance assigned to an host
 //  influence how many connections the driver maintains towards this host. If for
-//  a given host the assigned HostDistance is CQL_HOST_LOCAL or
-//  CQL_HOST_REMOTE, some connections will be maintained by the driver to
-//  this host. More active connections will be kept to CQL_HOST_LOCAL host
-//  than to a CQL_HOST_REMOTE one (and thus well behaving
-//  cql_load_balancing_policy_t should assign a CQL_HOST_REMOTE distance
+//  a given host the assigned HostDistance is CQL_HOST_DISTANCE_LOCAL or
+//  CQL_HOST_DISTANCE_REMOTE, some connections will be maintained by the driver to
+//  this host. More active connections will be kept to CQL_HOST_DISTANCE_LOCAL host
+//  than to a CQL_HOST_DISTANCE_REMOTE one (and thus well behaving
+//  cql_load_balancing_policy_t should assign a CQL_HOST_DISTANCE_REMOTE distance
 //  only to hosts that are the less often queried). However, if an host is
-//  assigned the distance CQL_HOST_IGNORE, no connection to that host will
-//  maintained active. In other words, CQL_HOST_IGNORE should be assigned to
+//  assigned the distance CQL_HOST_DISTANCE_IGNORE, no connection to that host will
+//  maintained active. In other words, CQL_HOST_DISTANCE_IGNORE should be assigned to
 //  hosts that should not be used by this driver (because they are in a remote
 //  data center for instance).
 enum cql_host_distance_enum {
-	CQL_HOST_LOCAL,
-	CQL_HOST_REMOTE,
-	CQL_HOST_IGNORE
+	CQL_HOST_DISTANCE_LOCAL,
+	CQL_HOST_DISTANCE_REMOTE,
+	CQL_HOST_DISTANCE_IGNORE
 };
 
 const char*

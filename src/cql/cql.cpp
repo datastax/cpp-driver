@@ -27,9 +27,9 @@ cql::to_string(const cql_consistency_enum consistency) {
 const char*
 cql::to_string(const cql_host_distance_enum host_distance) {
 	switch(host_distance) {
-		CASE_STRING_FOR_ENUM(CQL_HOST_LOCAL);
-		CASE_STRING_FOR_ENUM(CQL_HOST_IGNORE);
-		CASE_STRING_FOR_ENUM(CQL_HOST_REMOTE);
+		CASE_STRING_FOR_ENUM(CQL_HOST_DISTANCE_LOCAL);
+		CASE_STRING_FOR_ENUM(CQL_HOST_DISTANCE_IGNORE);
+		CASE_STRING_FOR_ENUM(CQL_HOST_DISTANCE_REMOTE);
 	default:
 		return "Unknown " BOOST_PP_STRINGIZE(cql_host_distance_enum) " value";
 	}

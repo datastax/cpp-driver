@@ -158,7 +158,7 @@ namespace cql {
 #ifdef WIN32
 		WSADATA wsadata;
 		if(0 != WSAStartup(MAKEWORD(2,0), &wsadata)) {
-			throw cql_ccm_bridge_tException("cannot initialize windows sockets");
+			throw cql_ccm_bridge_exception_t("cannot initialize windows sockets");
 		}
 #endif
 	}
