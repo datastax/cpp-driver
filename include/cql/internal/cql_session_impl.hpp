@@ -31,7 +31,7 @@
 #include <boost/ptr_container/ptr_deque.hpp>
 #include <boost/thread/mutex.hpp>
 #include "cql/cql.hpp"
-#include "cql/cql_client.hpp"
+#include "cql/cql_connection.hpp"
 #include "cql/cql_session.hpp"
 #include "cql/cql_builder.hpp"
 #include "cql/cql_cluster.hpp"
@@ -58,25 +58,51 @@ public:
 
     void init();
 
-    boost::shared_ptr<cql_client_t> 
-	connect(cql::cql_query_plan_t& hostIter, int& streamId, std::list<std::string>& triedHosts);
+    boost::shared_ptr<cql_connection_t> 
+	connect(
+        cql::cql_query_plan_t& query_plan, 
+        int& stream_id, 
+        std::list<std::string>& tried_hosts);
     
-	boost::shared_ptr<cql_client_t> 
-	allocate_connection(const std::string& address, cql_host_distance_enum distance);
-    
-	void 
-	trashcan_put(boost::shared_ptr<cql_client_t> connection);
-    
-	boost::shared_ptr<cql_client_t> 
-	trashcan_recycle(const std::string& address);
+	boost::shared_ptr<cql_connection_t> 
+	allocate_connection(const boost::asio::ip::address& address, cql_host_distance_enum distance);
     
 	void 
-	free_connection(boost::shared_ptr<cql_client_t> connection);
+	trashcan_put(boost::shared_ptr<cql_connection_t> connection);
+    
+	boost::shared_ptr<cql_connection_t> 
+	trashcan_recycle(const boost::asio::ip::address& address);
+    
+	void 
+	free_connection(boost::shared_ptr<cql_connection_t> connection);
 
     virtual 
 	~cql_session_impl_t() { }
 
-private:
+private:    
+    struct client_container_t {
+        client_container_t(
+            const boost::shared_ptr<cql::cql_connection_t>& c) :
+            client(c),
+            errors(0)
+        {}
+
+        boost::shared_ptr<cql::cql_connection_t> client;
+        size_t errors;
+    };
+    
+    typedef 
+        boost::ptr_deque<client_container_t> 
+        clients_collection_t;
+    
+    typedef
+        std::map<long, boost::shared_ptr<cql_connection_t> >
+        connections_collection_t;  
+    
+    typedef
+        std::map<std::string, connections_collection_t>
+        connection_pool_t;
+    
     cql_session_impl_t(
         cql::cql_session_t::cql_client_callback_t  client_callback,
         cql::cql_session_t::cql_ready_callback_t   ready_callback,
@@ -104,14 +130,14 @@ private:
     add_client(
         const std::string&                      server,
         unsigned int                            port,
-        cql::cql_client_t::cql_event_callback_t event_callback,
+        cql::cql_connection_t::cql_event_callback_t event_callback,
         const std::list<std::string>&           events);
 
     boost::shared_future<cql::cql_future_connection_t>
     add_client(
         const std::string&                        server,
         unsigned int                              port,
-        cql::cql_client_t::cql_event_callback_t   event_callback,
+        cql::cql_connection_t::cql_event_callback_t   event_callback,
         const std::list<std::string>&             events,
         const std::map<std::string, std::string>& credentials);
 
@@ -119,20 +145,20 @@ private:
     query(
         const std::string&                        query,
         cql::cql_consistency_enum				  consistency,
-        cql::cql_client_t::cql_message_callback_t callback,
-        cql::cql_client_t::cql_message_errback_t  errback);
+        cql::cql_connection_t::cql_message_callback_t callback,
+        cql::cql_connection_t::cql_message_errback_t  errback);
 
     cql::cql_stream_id_t
     prepare(
         const std::string&                        query,
-        cql::cql_client_t::cql_message_callback_t callback,
-        cql::cql_client_t::cql_message_errback_t  errback);
+        cql::cql_connection_t::cql_message_callback_t callback,
+        cql::cql_connection_t::cql_message_errback_t  errback);
 
     cql::cql_stream_id_t
     execute(
         cql::cql_execute_t*                       message,
-        cql::cql_client_t::cql_message_callback_t callback,
-        cql::cql_client_t::cql_message_errback_t  errback);
+        cql::cql_connection_t::cql_message_callback_t callback,
+        cql::cql_connection_t::cql_message_errback_t  errback);
 
     boost::shared_future<cql::cql_future_result_t>
     query(
@@ -162,17 +188,6 @@ private:
     bool
     empty();
 
-    struct client_container_t {
-        client_container_t(
-            const boost::shared_ptr<cql::cql_client_t>& c) :
-            client(c),
-            errors(0)
-        {}
-
-        boost::shared_ptr<cql::cql_client_t> client;
-        size_t errors;
-    };
-
     inline void
     log(
         cql::cql_short_t level,
@@ -181,31 +196,40 @@ private:
     void
     connect_callback(
         boost::shared_ptr<boost::promise<cql::cql_future_connection_t> > promise,
-        cql::cql_client_t& client);
+        cql::cql_connection_t& client);
 
     void
     connect_errback(
         boost::shared_ptr<boost::promise<cql::cql_future_connection_t> > promise,
-        cql::cql_client_t& client,
+        cql::cql_connection_t& client,
         const cql_error_t& error);
 
     void
     connect_future_callback(
         boost::shared_ptr<boost::promise<cql::cql_future_connection_t> > promise,
-        cql::cql_client_t&                                               client);
+        cql::cql_connection_t&                                               client);
 
     void
     connect_future_errback(
         boost::shared_ptr<boost::promise<cql::cql_future_connection_t> > promise,
-        cql::cql_client_t&                                               client,
+        cql::cql_connection_t&                                               client,
         const cql_error_t&                     error);
 
-    cql::cql_client_t*
+    cql::cql_connection_t*
     next_client();
 
-    typedef 
-        boost::ptr_deque<client_container_t> 
-        clients_collection_t;
+    cql_host_distance_enum
+    get_host_distance(boost::shared_ptr<cql_host_t> host);
+     
+    void
+    free_connections(
+        connections_collection_t& connections, 
+        const std::list<long>& connections_to_remove);
+
+    
+    connections_collection_t&
+    add_to_connection_pool(
+        const boost::asio::ip::address& host_address);
     
     clients_collection_t                         _clients;
     boost::mutex                                 _mutex;
@@ -220,9 +244,9 @@ private:
     
     boost::shared_ptr<cql_configuration_t> _configuration;
     boost::mutex _connection_pool_mtx;
-    std::map<std::string, std::map<long,boost::shared_ptr<cql_client_t> > > _trashcan;
-    std::map<std::string, std::map<long,boost::shared_ptr<cql_client_t> > > _connection_pool;
-    std::map<std::string, long > _allocated_connections;
+    connection_pool_t _trashcan;
+    connection_pool_t _connection_pool;
+    std::map<std::string, long> _allocated_connections;
 };
 
 } // namespace cql

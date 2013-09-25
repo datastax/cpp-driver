@@ -15,7 +15,7 @@ namespace cql {
 
 	class cql_retry_decision_t {
 	public:
-		inline cql_retry_decision_t
+		inline cql_retry_decision_enum
 		retry_decision() const { return _retry_decision; }
 
 		inline const boost::optional<cql_consistency_enum>&
@@ -44,12 +44,12 @@ namespace cql {
 
 	private:
 		cql_retry_decision_t(
-			cql_retry_decision_t retry_decision,
+			cql_retry_decision_enum retry_decision,
 			const boost::optional<cql_consistency_enum>& consistency)
 			: _retry_decision(retry_decision),
 			_consistency(_consistency) { }
 
-		cql_retry_decision_t					_retry_decision;
+		cql_retry_decision_enum					_retry_decision;
 		boost::optional<cql_consistency_enum>	_consistency;
 	};
 

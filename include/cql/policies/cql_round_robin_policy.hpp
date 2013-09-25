@@ -24,7 +24,7 @@ namespace cql {
 	private:
 		unsigned										_index;
 		unsigned										_current;
-		std::vector<boost::shared_ptr<cql_host_t>>		_hosts;
+		std::vector<boost::shared_ptr<cql_host_t> >		_hosts;
 	};
 
 	class cql_round_robin_policy_t: 
@@ -40,7 +40,7 @@ namespace cql {
 		init(const boost::shared_ptr<cql_cluster_t>& cluster);
 
 		virtual cql_host_distance_enum 
-		distance(const cql_host_t* host);
+		distance(const cql_host_t& host);
 
 		virtual boost::shared_ptr<cql_query_plan_t> 
 		new_query_plan(const boost::shared_ptr<cql_query_t>& query);

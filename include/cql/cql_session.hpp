@@ -28,13 +28,13 @@
 #include <boost/thread/future.hpp>
 
 #include "cql/cql_future_connection.hpp"
-#include "cql/cql_client.hpp"
+#include "cql/cql_connection.hpp"
 #include "cql/cql.hpp"
 
 namespace cql {
 
 // Forward declarations
-class cql_client_t;
+class cql_connection_t;
 class cql_event_t;
 class cql_result_t;
 class cql_execute_t;
@@ -44,7 +44,7 @@ class cql_session_t {
 
 public:
     typedef 
-        boost::function<boost::shared_ptr<cql::cql_client_t>()>             
+        boost::function<boost::shared_ptr<cql::cql_connection_t>()>             
         cql_client_callback_t;
     
     typedef 
@@ -57,7 +57,7 @@ public:
     
     typedef 
         boost::function<void(cql_session_t *, 
-                             cql::cql_client_t&, 
+                             cql::cql_connection_t&, 
                              const cql::cql_error_t&)>                      
         cql_connection_errback_t;
     
@@ -72,20 +72,20 @@ public:
     query(
         const std::string&                        query,
         cql::cql_consistency_enum                 consistency,
-        cql::cql_client_t::cql_message_callback_t callback,
-        cql::cql_client_t::cql_message_errback_t  errback) = 0;
+        cql::cql_connection_t::cql_message_callback_t callback,
+        cql::cql_connection_t::cql_message_errback_t  errback) = 0;
 
     virtual cql::cql_stream_id_t
     prepare(
         const std::string&                        query,
-        cql::cql_client_t::cql_message_callback_t callback,
-        cql::cql_client_t::cql_message_errback_t  errback) = 0;
+        cql::cql_connection_t::cql_message_callback_t callback,
+        cql::cql_connection_t::cql_message_errback_t  errback) = 0;
 
     virtual cql::cql_stream_id_t
     execute(
         cql::cql_execute_t*                       message,
-        cql::cql_client_t::cql_message_callback_t callback,
-        cql::cql_client_t::cql_message_errback_t  errback) = 0;
+        cql::cql_connection_t::cql_message_callback_t callback,
+        cql::cql_connection_t::cql_message_errback_t  errback) = 0;
 
     virtual boost::shared_future<cql::cql_future_result_t>
     query(

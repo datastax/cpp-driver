@@ -42,6 +42,8 @@
               </df>
               <df name="internal">
               </df>
+              <df name="policies">
+              </df>
             </df>
           </df>
         </df>
@@ -114,7 +116,8 @@
           </df>
           <df name="internal">
             <in>cql_callback_storage.hpp</in>
-            <in>cql_client_impl.hpp</in>
+            <in>cql_cluster_impl.hpp</in>
+            <in>cql_connection_impl.hpp</in>
             <in>cql_defines.hpp</in>
             <in>cql_header_impl.hpp</in>
             <in>cql_hosts.hpp</in>
@@ -133,6 +136,7 @@
             <in>cql_message_result_impl.hpp</in>
             <in>cql_message_startup_impl.hpp</in>
             <in>cql_message_supported_impl.hpp</in>
+            <in>cql_rand.hpp</in>
             <in>cql_result_metadata.hpp</in>
             <in>cql_session_impl.hpp</in>
             <in>cql_set_impl.hpp</in>
@@ -145,12 +149,19 @@
             <in>boost_ip_address_traits.hpp</in>
             <in>cql_lockfree_hash_map.hpp</in>
           </df>
+          <df name="policies">
+            <in>cql_default_retry_policy.hpp</in>
+            <in>cql_load_balancing_policy.hpp</in>
+            <in>cql_reconnection_policy.hpp</in>
+            <in>cql_retry_policy.hpp</in>
+            <in>cql_round_robin_policy.hpp</in>
+          </df>
           <in>cql.hpp</in>
           <in>cql_builder.hpp</in>
-          <in>cql_client.hpp</in>
-          <in>cql_client_factory.hpp</in>
           <in>cql_cluster.hpp</in>
           <in>cql_config.hpp</in>
+          <in>cql_connection.hpp</in>
+          <in>cql_connection_factory.hpp</in>
           <in>cql_error.hpp</in>
           <in>cql_event.hpp</in>
           <in>cql_execute.hpp</in>
@@ -158,13 +169,14 @@
           <in>cql_future_result.hpp</in>
           <in>cql_host.hpp</in>
           <in>cql_list.hpp</in>
-          <in>cql_load_balancing_policy.hpp</in>
           <in>cql_lockfree_map.hpp</in>
           <in>cql_map.hpp</in>
+          <in>cql_metadata.hpp</in>
           <in>cql_policies.hpp</in>
-          <in>cql_reconnection_policy.hpp</in>
+          <in>cql_query.hpp</in>
           <in>cql_reconnection_schedule.hpp</in>
           <in>cql_result.hpp</in>
+          <in>cql_routing_key.hpp</in>
           <in>cql_serialization.hpp</in>
           <in>cql_session.hpp</in>
           <in>cql_set.hpp</in>
@@ -201,6 +213,7 @@
             <in>cql_message_result_impl.cpp</in>
             <in>cql_message_startup_impl.cpp</in>
             <in>cql_message_supported_impl.cpp</in>
+            <in>cql_rand.cpp</in>
             <in>cql_result_metadata.cpp</in>
             <in>cql_session_impl.cpp</in>
             <in>cql_set_impl.cpp</in>
@@ -209,12 +222,18 @@
             <in>cql_system_dependent.cpp</in>
             <in>cql_util.cpp</in>
           </df>
+          <df name="policies">
+            <in>cql_default_retry_policy.cpp</in>
+            <in>cql_round_rubin_policy.cpp</in>
+          </df>
           <in>cql.cpp</in>
           <in>cql_builder.cpp</in>
           <in>cql_client_factory.cpp</in>
           <in>cql_cluster.cpp</in>
           <in>cql_execute.cpp</in>
           <in>cql_host.cpp</in>
+          <in>cql_metadata.cpp</in>
+          <in>cql_query.cpp</in>
           <in>cql_serialization.cpp</in>
         </df>
       </df>

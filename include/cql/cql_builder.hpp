@@ -7,8 +7,9 @@
 #include <boost/asio/ssl.hpp>
 #include <boost/smart_ptr.hpp>
 
-#include "cql/cql_client.hpp"
+#include "cql/cql_connection.hpp"
 #include "cql/policies/cql_load_balancing_policy.hpp"
+#include "cql/policies/cql_round_robin_policy.hpp"
 
 namespace cql {
 
@@ -16,13 +17,13 @@ class cql_cluster_t;
 
 class cql_client_options_t {
 private:
-    cql_client_t::cql_log_callback_t _log_callback;
+    cql_connection_t::cql_log_callback_t _log_callback;
 
 public:
-    cql_client_options_t(cql_client_t::cql_log_callback_t log_callback)
+    cql_client_options_t(cql_connection_t::cql_log_callback_t log_callback)
         : _log_callback(log_callback) {}
 
-    cql_client_t::cql_log_callback_t get_log_callback() const {
+    cql_connection_t::cql_log_callback_t get_log_callback() const {
         return _log_callback;
     }
 };
@@ -198,8 +199,10 @@ public:
 class cql_policies_t {
 private:
     boost::shared_ptr<cql_load_balancing_policy_t> _load_balancing_policy;
+    
 public:
-    cql_policies_t():_load_balancing_policy(new cql_round_robin_policy_t()) {}
+    cql_policies_t() : _load_balancing_policy(new cql_round_robin_policy_t()) {}
+    
     boost::shared_ptr<cql_load_balancing_policy_t> get_load_balancing_policy() {
         return _load_balancing_policy;
     }
@@ -250,7 +253,7 @@ private:
     std::list<std::string> _contact_points;
     int _port;
     boost::shared_ptr<boost::asio::ssl::context> _ssl_context;
-    cql::cql_client_t::cql_log_callback_t _log_callback;
+    cql::cql_connection_t::cql_log_callback_t _log_callback;
 
 public:
 
@@ -297,7 +300,7 @@ public:
         return *this;
     }
 
-    cql_builder_t& with_log_callback(cql::cql_client_t::cql_log_callback_t log_callback) {
+    cql_builder_t& with_log_callback(cql::cql_connection_t::cql_log_callback_t log_callback) {
         _log_callback = log_callback;
         return *this;
     }

@@ -117,7 +117,7 @@ public:
 	bool
 	is_free_slot(const slot_t& slot) const {
 		if(slot.is_invalid())
-			return true;
+			return false;
 
 		slot.check_index_boundaries();
 		return !_is_used[slot._index];

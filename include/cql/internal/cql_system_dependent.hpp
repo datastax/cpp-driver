@@ -7,8 +7,6 @@
 
 #ifdef _WIN32
 #define snprintf _snprintf
-#else
-  // do nothing on Linux box
 #endif
 
 

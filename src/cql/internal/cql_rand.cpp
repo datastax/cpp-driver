@@ -1,7 +1,9 @@
 #include <cstdlib>
 #include <boost/atomic.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/locks.hpp>
 
-#include "cql/cql_rand.hpp"
+#include "cql/internal/cql_rand.hpp"
 
 int
 cql::cql_rand() {
@@ -10,7 +12,7 @@ cql::cql_rand() {
 
 	boost::lock_guard<boost::detail::spinlock> lock(sl);
 	if(!rand_initialized)
-		srand((unsinged)time(NULL));
+		srand((unsigned)time(NULL));
 
 	return rand();
 }

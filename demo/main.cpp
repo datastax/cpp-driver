@@ -27,8 +27,8 @@
 #include <cql/cql.hpp>
 #include <cql/cql_error.hpp>
 #include <cql/cql_event.hpp>
-#include <cql/cql_client.hpp>
-#include <cql/cql_client_factory.hpp>
+#include <cql/cql_connection.hpp>
+#include <cql/cql_connection_factory.hpp>
 #include <cql/cql_session.hpp>
 #include <cql/cql_cluster.hpp>
 #include <cql/cql_builder.hpp>

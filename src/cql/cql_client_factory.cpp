@@ -17,48 +17,48 @@
 */
 
 
-#include "cql/internal/cql_client_impl.hpp"
+#include "cql/internal/cql_connection_impl.hpp"
 #include "cql/internal/cql_defines.hpp"
 #include "cql/internal/cql_socket.hpp"
 #include "cql/internal/cql_socket_ssl.hpp"
 
-#include "cql/cql_client_factory.hpp"
+#include "cql/cql_connection_factory.hpp"
 
-typedef cql::cql_client_impl_t<cql::cql_socket_t> client_t;
-typedef cql::cql_client_impl_t<cql::cql_socket_ssl_t> client_ssl_t;
+typedef cql::cql_connection_impl_t<cql::cql_socket_t> client_t;
+typedef cql::cql_connection_impl_t<cql::cql_socket_ssl_t> client_ssl_t;
 
-boost::shared_ptr<cql::cql_client_t>
-cql::cql_client_factory_t::create_cql_client_t(boost::asio::io_service& io_service) 
+boost::shared_ptr<cql::cql_connection_t>
+cql::cql_connection_factory_t::create_connection(boost::asio::io_service& io_service) 
 {
-    return boost::shared_ptr<cql::cql_client_t>(
+    return boost::shared_ptr<cql::cql_connection_t>(
             new client_t(io_service, new cql::cql_socket_t(io_service)));
 }
 
-boost::shared_ptr<cql::cql_client_t>
-cql::cql_client_factory_t::create_cql_client_t(
+boost::shared_ptr<cql::cql_connection_t>
+cql::cql_connection_factory_t::create_connection(
         boost::asio::io_service& io_service,
         boost::asio::ssl::context& context) 
 {
-    return boost::shared_ptr<cql::cql_client_t>(
+    return boost::shared_ptr<cql::cql_connection_t>(
         new client_ssl_t(io_service, new cql::cql_socket_ssl_t(io_service, context)));
 }
 
-boost::shared_ptr<cql::cql_client_t>
-cql::cql_client_factory_t::create_cql_client_t(
+boost::shared_ptr<cql::cql_connection_t>
+cql::cql_connection_factory_t::create_connection(
         boost::asio::io_service& io_service,
-        cql::cql_client_t::cql_log_callback_t log_callback) 
+        cql::cql_connection_t::cql_log_callback_t log_callback) 
 {
-    return boost::shared_ptr<cql::cql_client_t>(
+    return boost::shared_ptr<cql::cql_connection_t>(
         new client_t(io_service, new cql::cql_socket_t(io_service), log_callback));
 }
 
-boost::shared_ptr<cql::cql_client_t>
-cql::cql_client_factory_t::create_cql_client_t(
+boost::shared_ptr<cql::cql_connection_t>
+cql::cql_connection_factory_t::create_connection(
         boost::asio::io_service& io_service,
         boost::asio::ssl::context& context,
-        cql::cql_client_t::cql_log_callback_t log_callback) 
+        cql::cql_connection_t::cql_log_callback_t log_callback) 
 {
-    return boost::shared_ptr<cql::cql_client_t>(
+    return boost::shared_ptr<cql::cql_connection_t>(
         new client_ssl_t(io_service,
                          new cql::cql_socket_ssl_t(io_service, context),
                          log_callback));

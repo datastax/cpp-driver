@@ -25,13 +25,17 @@
 #include "cql/cql.hpp"
 
 namespace cql {
+    
 struct cql_error_t;
 
-typedef boost::shared_ptr<std::vector<cql::cql_byte_t> > cql_message_buffer_t;
+typedef 
+    boost::shared_ptr<std::vector<cql::cql_byte_t> > 
+    cql_message_buffer_t;
 
 class cql_message_t {
 public:
 
+    // Returns message type.
     virtual cql::cql_opcode_enum
     opcode() const = 0;
 
@@ -41,17 +45,21 @@ public:
     virtual std::string
     str() const = 0;
 
+    // Parsers binary message.
     virtual bool
     consume(cql::cql_error_t* err) = 0;
 
+    // Creates binary message.
     virtual bool
     prepare(cql::cql_error_t* err) = 0;
 
+    // Buffer that contains message to parse, or
+    // that will contain created binary message.
     virtual cql_message_buffer_t
     buffer() = 0;
 
     virtual
-    ~cql_message_t() {};
+    ~cql_message_t() { };
 };
 
 } // namespace cql

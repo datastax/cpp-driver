@@ -19,7 +19,7 @@ namespace cql {
 			int required_responses, 
 			int received_responses, 
 			bool data_retrieved, 
-			int retry_number) const;
+			int retry_number);
 
 		virtual cql_retry_decision_t
 		write_timeout(
@@ -29,7 +29,7 @@ namespace cql {
 			int required_acks, 
 			int received_acks, 
 			int retry_number
-			) const;
+			);
 
 		virtual cql_retry_decision_t
 		unavailable(
@@ -37,7 +37,7 @@ namespace cql {
 			cql_consistency_enum consistency, 
 			int required_replica, 
 			int alive_replica,
-			int retry_number) const;
+			int retry_number);
 
 	private:
 		cql_default_retry_policy_t() { };

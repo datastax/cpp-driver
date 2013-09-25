@@ -4,13 +4,13 @@
 #include <vector>
 #include <boost/smart_ptr.hpp>
 
-#include "cql/cql_builder.hpp"
-#include "cql/cql_host.hpp"
+#include "cql/cql.hpp"
 
 namespace cql {
 
 class cql_cluster_t;
 class cql_query_t;
+class cql_host_t;
 
 class cql_query_plan_t {
 public:
@@ -20,13 +20,14 @@ public:
 	next_host_to_query() = 0;
 
 	virtual 
-	~cql_query_plant_t() { }
+	~cql_query_plan_t() { }
 };
 
 // Interface class for implementing load balanacing policies.
 class cql_load_balancing_policy_t {
 public:
-    virtual ~cql_load_balancing_policy_t() {}
+    virtual 
+    ~cql_load_balancing_policy_t() {}
 
 	// Initializes policy object.
     virtual void 
@@ -34,7 +35,7 @@ public:
 
 
     virtual cql_host_distance_enum 
-	distance(const cql_host_t* host) = 0;
+	distance(const cql_host_t& host) = 0;
 
 	// Returns new query plan.
     virtual boost::shared_ptr<cql_query_plan_t> 

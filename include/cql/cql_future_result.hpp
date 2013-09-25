@@ -26,7 +26,7 @@
 namespace cql {
 
 // Forward declarations
-class cql_client_t;
+class cql_connection_t;
 
 struct cql_future_result_t {
 
@@ -36,7 +36,7 @@ struct cql_future_result_t {
     {}
 
     cql_future_result_t(
-        cql::cql_client_t*   client,
+        cql::cql_connection_t*   client,
         cql::cql_stream_id_t stream,
         cql::cql_result_t*   result) :
         client(client),
@@ -45,7 +45,7 @@ struct cql_future_result_t {
     {}
 
     cql_future_result_t(
-        cql::cql_client_t*   client,
+        cql::cql_connection_t*   client,
         cql::cql_stream_id_t stream,
         cql::cql_error_t     error) :
         client(client),
@@ -53,7 +53,7 @@ struct cql_future_result_t {
         error(error)
     {}
 
-    cql::cql_client_t*                   client;
+    cql::cql_connection_t*                   client;
     cql::cql_stream_id_t                 stream;
     boost::shared_ptr<cql::cql_result_t> result;
     cql::cql_error_t                     error;

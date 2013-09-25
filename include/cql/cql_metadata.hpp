@@ -33,7 +33,6 @@ namespace cql {
 				_ip_addr(ip_addr), 
 				_ip_port(ip_port) { }
 
-		friend class ::cql::cql_metadata_t;
 
 		new_host_state_enum			_new_host_state;
 		boost::asio::ip::address&	_ip_addr;
@@ -73,10 +72,10 @@ namespace cql {
 		std::string				_table;
 	};
 
+    // CURRENTLY THIS IS MOCK THAT IS USED ONLY IN POLICIES
+    // TO POPULATE HOSTS COLLECTIONS.
 	class cql_metadata_t: boost::noncopyable {
 	public:
-		cql_metadata_t(cql_reconnection_policy_t& reconnection_policy);
-
 		typedef
 			boost::signals2::signal<void(const cql_host_state_changed_info_t&)>
 			on_host_state_changed_t;
@@ -94,7 +93,12 @@ namespace cql {
 		on_schema_changed(const on_schema_changed_t::slot_type& slot) {
 			_schema_changed.connect(slot);
 		}
+        
 	private:
+        cql_metadata(const cql_cluster_t* cluster);
+        
+        friend class cql_cluster_t;
+        
 		on_host_state_changed_t	_host_state_changed;
 		on_schema_changed_t		_schema_changed;
 	};
