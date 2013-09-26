@@ -29,12 +29,15 @@
 namespace cql {
 
 cql_session_impl_t::cql_session_impl_t(
-    cql_session_t::cql_client_callback_t    client_callback,
+    const cql_session_callback_info_t& callbacks,
     boost::shared_ptr<cql_configuration_t>  configuration
     ) :
     _ready(false),
     _defunct(false),
-    _client_callback(client_callback),
+    _client_callback(callbacks.client_callback()),
+    _ready_callback(callbacks.ready_callback()),
+    _defunct_callback(callbacks.defunct_callback()),
+    _log_callback(callbacks.log_callback()),
     _reconnect_limit(0),
     _configuration(configuration) { }
 

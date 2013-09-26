@@ -46,6 +46,65 @@ class cql_result_t;
 class cql_execute_t;
 struct cql_error_t;
 
+class cql_session_callback_info_t {
+public:
+    cql_session_callback_info_t(
+        const cql_session_t::cql_client_callback_t  client  = 0,
+        const cql_session_t::cql_ready_callback_t   ready   = 0,
+        const cql_session_t::cql_defunct_callback_t defunct = 0,
+        const cql_session_t::cql_log_callback_t     log     = 0)
+            : _client_callback(client),
+              _ready_callback(ready),
+              _defunct_callback(defunct),
+              _log_callback(log) { }
+
+    inline void 
+    set_client_callback(const cql_session_t::cql_client_callback_t& client_callback) {
+        _client_callback = client_callback;
+    }
+    
+    inline void
+    set_ready_callback(const cql_session_t::cql_ready_callback_t& ready_callback) {
+        _ready_callback = ready_callback;
+    }
+    
+    inline void
+    set_defunct_callback(const cql_session_t::cql_defunct_callback_t& defunct_callback) {
+        _defunct_callback = defunct_callback;
+    }
+    
+    inline void
+    set_log_callback(const cql_session_t::cql_log_callback_t& log_callback) {
+        _log_callback = log_callback;
+    }
+    
+private:
+    cql_session_t::cql_client_callback_t client_callback() const {
+        return _client_callback;
+    }
+    
+    cql_session_t::cql_ready_callback_t ready_callback() const {
+        return _ready_callback;
+    }
+    
+    cql_session_t::cql_defunct_callback_t defunct_callback() const {
+        return _defunct_callback;
+    }
+    
+    cql_session_t::cql_log_callback_t log_callback() const {
+        return _log_callback;
+    }
+    
+    friend class cql_session_impl_t;
+    
+private:
+    
+    cql_session_t::cql_client_callback_t   _client_callback;
+    cql_session_t::cql_ready_callback_t    _ready_callback;
+    cql_session_t::cql_defunct_callback_t  _defunct_callback;
+    cql_session_t::cql_log_callback_t      _log_callback;
+};
+
 class cql_session_impl_t :
     public cql_session_t,
     boost::noncopyable 
@@ -53,8 +112,8 @@ class cql_session_impl_t :
 public:
 
     cql_session_impl_t(
-        cql::cql_session_t::cql_client_callback_t  client_callback,
-        boost::shared_ptr<cql_configuration_t> configuration);
+        const cql_session_callback_info_t& callbacks,
+        boost::shared_ptr<cql_configuration_t>  configuration);
 
     void init();
 

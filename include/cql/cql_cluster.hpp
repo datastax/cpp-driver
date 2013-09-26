@@ -58,7 +58,7 @@ public:
     
     // returns MOCK metadata object.
     boost::shared_ptr<cql_metadata_t>
-    metadata();
+    metadata() const;
     
     ~cql_cluster_t();
 };

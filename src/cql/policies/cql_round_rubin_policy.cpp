@@ -1,14 +1,17 @@
+#include <algorithm>
 #include <cassert>
 
 #include "cql/policies/cql_round_robin_policy.hpp"
 #include "cql/cql_host.hpp"
+#include "cql/cql_cluster.hpp"
+#include "cql/cql_metadata.hpp"
 
 cql::cql_round_robin_query_plan_t::cql_round_robin_query_plan_t(
 	const boost::shared_ptr<cql::cql_cluster_t>& cluster, 
 	unsigned index)
 {
-	"TODO: Get hosts from cluster - metadata - not yet implemented";
-	assert(0);
+    cluster->metadata()
+           ->get_hosts(_hosts);
 
 	_index = index;
 	_current = 0;

@@ -61,6 +61,11 @@ cql::cql_cluster_t::shutdown(int timeout_ms) {
     _pimpl->shutdown(timeout_ms);
 }
 
+boost::shared_ptr<cql::cql_metadata_t>
+cql::cql_cluster_t::metadata() const {
+    return _pimpl->metadata();
+}
+
 cql::cql_cluster_t::~cql_cluster_t() {
     shutdown();
 }

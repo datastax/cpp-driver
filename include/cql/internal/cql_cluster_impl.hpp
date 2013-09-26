@@ -106,10 +106,11 @@ public:
                     policies.get_reconnection_policy()
                 ));
             
-            
+            _metadata->add_contact_points(contact_points);
     }
         
-    boost::shared_ptr<cql::cql_session_t> connect(const std::string& keyspace) {
+    boost::shared_ptr<cql::cql_session_t> 
+    connect(const std::string& keyspace) {
         // decide which client factory we want, SSL or non-SSL.  This is a hack, if you pass any commandline arg to the
         // binary it will use the SSL factory, non-SSL by default
 
@@ -140,11 +141,17 @@ public:
         return session;
     }
 
-    void shutdown(int timeout_ms) {
+    void 
+    shutdown(int timeout_ms) {
         if(work.get()!=NULL) {
             work.reset();
             thread.join();
         }
+    }
+    
+    boost::shared_ptr<cql_metadata_t> 
+    metadata() const {
+        return _metadata;
     }
     
     friend class cql_metadata_t;

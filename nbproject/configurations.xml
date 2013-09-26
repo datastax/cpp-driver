@@ -151,6 +151,7 @@
           </df>
           <df name="policies">
             <in>cql_default_retry_policy.hpp</in>
+            <in>cql_exponential_reconnection_policy_t.hpp</in>
             <in>cql_load_balancing_policy.hpp</in>
             <in>cql_reconnection_policy.hpp</in>
             <in>cql_retry_policy.hpp</in>
@@ -224,6 +225,7 @@
           </df>
           <df name="policies">
             <in>cql_default_retry_policy.cpp</in>
+            <in>cql_exponential_reconnection_policy_t.cpp</in>
             <in>cql_round_rubin_policy.cpp</in>
           </df>
           <in>cql.cpp</in>
