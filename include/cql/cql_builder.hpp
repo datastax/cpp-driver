@@ -8,8 +8,10 @@
 #include <boost/smart_ptr.hpp>
 
 #include "cql/cql_connection.hpp"
-#include "cql/policies/cql_load_balancing_policy.hpp"
+
 #include "cql/policies/cql_round_robin_policy.hpp"
+#include "cql/policies/cql_exponential_reconnection_policy_t.hpp"
+#include "cql/policies/cql_default_retry_policy.hpp"
 
 namespace cql {
 
@@ -197,15 +199,45 @@ public:
 };
 
 class cql_policies_t {
-private:
-    boost::shared_ptr<cql_load_balancing_policy_t> _load_balancing_policy;
-    
 public:
-    cql_policies_t() : _load_balancing_policy(new cql_round_robin_policy_t()) {}
+    cql_policies_t() 
+        : _load_balancing_policy(new cql_round_robin_policy_t()),
+          _reconnection_policy(new cql_exponential_reconnection_policy_t(
+                /* base dealy: */ boost::posix_time::seconds(1), 
+                /* max delay : */ boost::posix_time::minutes(10))),
+          _retry_policy(new cql_default_retry_policy_t())
+        { }
+        
+
+    cql_policies_t(
+        boost::shared_ptr<cql_load_balancing_policy_t> load_balancing_policy,
+        boost::shared_ptr<cql_reconnection_policy_t>   reconnection_policy,
+        boost::shared_ptr<cql_retry_policy_t>          retry_policy) 
+        : _load_balancing_policy(load_balancing_policy),
+          _reconnection_policy(reconnection_policy),
+          _retry_policy(retry_policy) 
+    { }
     
-    boost::shared_ptr<cql_load_balancing_policy_t> get_load_balancing_policy() {
+    inline boost::shared_ptr<cql_load_balancing_policy_t> 
+    get_load_balancing_policy() {
         return _load_balancing_policy;
     }
+    
+    inline boost::shared_ptr<cql_reconnection_policy_t> 
+    get_reconnection_policy() {
+        return _reconnection_policy;
+    }
+    
+    inline boost::shared_ptr<cql_retry_policy_t>
+    get_retry_policy() {
+        return _retry_policy;
+    }
+    
+private:
+    boost::shared_ptr<cql_load_balancing_policy_t>  _load_balancing_policy;
+    boost::shared_ptr<cql_reconnection_policy_t>    _reconnection_policy;
+    boost::shared_ptr<cql_retry_policy_t>           _retry_policy;
+    
 };
 
 class cql_configuration_t {

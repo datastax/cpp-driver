@@ -1,12 +1,5 @@
 #include "cql/policies/cql_default_retry_policy.hpp"
 
-namespace cql {
-boost::shared_ptr<cql_default_retry_policy_t> 
-get_default_retry_policy() {
-	return boost::shared_ptr<cql_default_retry_policy_t>(new cql_default_retry_policy_t());
-}
-}
-
 cql::cql_retry_decision_t
 cql::cql_default_retry_policy_t::read_timeout(
 	const cql_query_t& query,

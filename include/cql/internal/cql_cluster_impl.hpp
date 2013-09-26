@@ -13,6 +13,9 @@
 #include "cql/cql_connection_factory.hpp"
 #include "cql/cql_connection.hpp"
 #include "cql/cql_session.hpp"
+#include "cql/internal/cql_session_impl.hpp"
+#include "cql/cql_builder.hpp"
+#include "cql/cql_metadata.hpp"
 
 namespace cql {
 
@@ -78,6 +81,9 @@ private:
     boost::scoped_ptr<boost::asio::io_service::work> work;
     boost::thread thread;
 
+    boost::shared_ptr<cql_metadata_t> _metadata;
+    
+private:
     // Main function of thread on which we call io_service::run
     static void
     asio_thread_main(boost::asio::io_service* io_service) {
@@ -88,14 +94,21 @@ private:
 public:
     cql_cluster_pimpl_t(
 			const std::list<std::string>& contact_points, 
-			boost::shared_ptr<cql::cql_configuration_t> configuration)
+			boost::shared_ptr<cql_configuration_t> configuration)
         :_contact_points(contact_points), 
 		 _configuration(configuration),
          work(new boost::asio::io_service::work(io_service)),
          thread(boost::bind(&cql_cluster_pimpl_t::asio_thread_main, &io_service))
-    { }
+    { 
+            cql_policies_t& policies = configuration->get_policies();
+            
+            _metadata = boost::shared_ptr<cql_metadata_t>(new cql_metadata_t(
+                    policies.get_reconnection_policy()
+                ));
+            
+            
+    }
         
-
     boost::shared_ptr<cql::cql_session_t> connect(const std::string& keyspace) {
         // decide which client factory we want, SSL or non-SSL.  This is a hack, if you pass any commandline arg to the
         // binary it will use the SSL factory, non-SSL by default
@@ -120,8 +133,8 @@ public:
         }
 
         // Construct the session
-        boost::shared_ptr<cql::cql_session_impl_t> session(
-            new cql::cql_session_impl_t(client_factory, _configuration));
+        boost::shared_ptr<cql_session_impl_t> session(
+            new cql_session_impl_t(client_factory, _configuration));
 
         session->init();
         return session;
@@ -133,6 +146,8 @@ public:
             thread.join();
         }
     }
+    
+    friend class cql_metadata_t;
 };
 
 }

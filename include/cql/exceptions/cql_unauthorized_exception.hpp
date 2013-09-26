@@ -14,7 +14,7 @@
 
 namespace cql {
 //  Indicates that a query cannot be performed due to the authorization restrictions of the logged user.
-class DLL_PUBLIC cql_unauthorized_exception: public cql_query_validation_exception {
+class CQL_EXPORT cql_unauthorized_exception: public cql_query_validation_exception {
 public:
     cql_unauthorized_exception(const char* message)
         : cql_query_validation_exception(message) { }

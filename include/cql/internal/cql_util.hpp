@@ -22,6 +22,7 @@
 #include <ostream>
 #include <streambuf>
 #include <vector>
+#include <boost/asio/ip/address.hpp>
 
 #include "cql/cql.hpp"
 #include "cql/internal/cql_system_dependent.hpp"
@@ -62,6 +63,12 @@ inline bool
 is_null_or_empty(const char* str) {
     return !str || !*str;
 }
+
+// tries to convert given string to boost asio ip address.
+// return false when conversion fails, return true otherwise.
+// if this returns true then result will contain valid ip address.
+bool 
+to_ipaddr(const std::string& str, boost::asio::ip::address* result);
 
 
 } // namespace cql

@@ -11,7 +11,7 @@
 #define	CQL_INITIALIZATION_EXCEPTION_HPP_
 
 namespace cql {
-    class DLL_PUBLIC cql_initialization_exception
+    class CQL_EXPORT cql_initialization_exception
         : public cql_exception 
     {
     public:

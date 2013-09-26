@@ -39,11 +39,7 @@ namespace cql {
 			int alive_replica,
 			int retry_number);
 
-	private:
 		cql_default_retry_policy_t() { };
-		
-		friend boost::shared_ptr<cql_default_retry_policy_t> 
-		get_default_retry_policy();
 	};
 }
 

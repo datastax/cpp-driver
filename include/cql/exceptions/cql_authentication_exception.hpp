@@ -16,7 +16,7 @@
 
 namespace cql {
 // Indicates an error during the authentication phase while connecting to a node.
-class DLL_PUBLIC cql_authentication_exception: public cql_exception {
+class CQL_EXPORT cql_authentication_exception: public cql_exception {
 public:
     cql_authentication_exception(
             const std::string& message,

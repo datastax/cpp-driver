@@ -14,7 +14,7 @@
 namespace cql {
 //  An unexpected error happened internally. This should never be raise and
 //  indicates a bug (either in the driver or in Cassandra).
-class DLL_PUBLIC cql_driver_internal_error_exception: public cql_exception {
+class CQL_EXPORT cql_driver_internal_error_exception: public cql_exception {
 public:
     cql_driver_internal_error_exception(const char* message)
         : cql_exception(message) { }

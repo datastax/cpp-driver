@@ -28,6 +28,7 @@ namespace cql {
 class cql_session_t;
 class cql_initializer_t;
 class cql_builder_t;
+class cql_metadata_t;
 
 class cql_cluster_pimpl_t;
 
@@ -40,12 +41,24 @@ private: //PIMPL
     cql_cluster_t(cql_cluster_pimpl_t* pimpl) : _pimpl(pimpl) { }
 
 public:
-    static boost::shared_ptr<cql_cluster_t> built_from(const cql_initializer_t& initializer);
-    static boost::shared_ptr<cql_builder_t> builder();
+    static boost::shared_ptr<cql_cluster_t> 
+    built_from(const cql_initializer_t& initializer);
+    
+    static boost::shared_ptr<cql_builder_t> 
+    builder();
 
-    boost::shared_ptr<cql_session_t> connect();
-    boost::shared_ptr<cql_session_t> connect(const std::string& keyspace);
-    void shutdown(int timeout_ms = -1);
+    boost::shared_ptr<cql_session_t> 
+    connect();
+    
+    boost::shared_ptr<cql_session_t> 
+    connect(const std::string& keyspace);
+    
+    void 
+    shutdown(int timeout_ms = -1);
+    
+    // returns MOCK metadata object.
+    boost::shared_ptr<cql_metadata_t>
+    metadata();
     
     ~cql_cluster_t();
 };

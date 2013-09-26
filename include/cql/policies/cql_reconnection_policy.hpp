@@ -2,8 +2,9 @@
 #define CQL_RECONNECTION_POLICY_HPP_
 
 #include <boost/shared_ptr.hpp>
-#include <cql/cql_config.hpp>
-#include <cql/cql_reconnection_schedule.hpp>
+
+#include "cql/cql_config.hpp"
+#include "cql/cql_reconnection_schedule.hpp"
 
 namespace cql {
 	// Policy that decides how often the reconnection to a dead node is attempted.
@@ -17,7 +18,7 @@ namespace cql {
 	//  node will be canceled and a new one will be created (in effect, the driver
 	//  reset the scheduler). The default cql_exponential_reconnection_policy
 	//  policy is usually adequate.
-	class DLL_PUBLIC cql_reconnection_policy_t {
+	class CQL_EXPORT cql_reconnection_policy_t {
 	public:
 		//  Creates a new schedule for reconnection attempts.
 		virtual boost::shared_ptr<cql_reconnection_schedule_t>

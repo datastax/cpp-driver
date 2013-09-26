@@ -17,7 +17,7 @@
 namespace cql {
 // Exception thrown when the coordinator knows there is not enough replica alive
 // to perform a query with the requested consistency level.
-class DLL_PUBLIC cql_unavailable_exception: public cql_query_execution_exception {
+class CQL_EXPORT cql_unavailable_exception: public cql_query_execution_exception {
 public:
     cql_unavailable_exception(
             cql_consistency_enum consistency_level,

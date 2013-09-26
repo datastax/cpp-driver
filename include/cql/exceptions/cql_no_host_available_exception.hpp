@@ -12,7 +12,7 @@
 #include "cql/exceptions/cql_exception.hpp"
 
 namespace cql {
-class DLL_PUBLIC cql_no_host_available_exception: public cql_exception {
+class CQL_EXPORT cql_no_host_available_exception: public cql_exception {
 public:
     cql_no_host_available_exception()
         : cql_exception("All host tried for query are in error.") { }

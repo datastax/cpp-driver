@@ -17,7 +17,7 @@ namespace cql {
 //  because of some configuration problem. This is generally throw by query
 //  that manipulate the schema (CREATE and ALTER) when the required configuration
 //  options are invalid.
-class DLL_PUBLIC cql_invalid_configuration_in_query_exception: public cql_invalid_query_exception {
+class CQL_EXPORT cql_invalid_configuration_in_query_exception: public cql_invalid_query_exception {
 public:
     cql_invalid_configuration_in_query_exception(const char* message)
         : cql_invalid_query_exception(message) { }

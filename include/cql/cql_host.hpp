@@ -12,7 +12,7 @@
 #include "cql/cql_reconnection_schedule.hpp"
 
 namespace cql {
-	class DLL_PUBLIC cql_host_t {
+	class CQL_EXPORT cql_host_t {
 	public:
 		typedef 
 			boost::asio::ip::address

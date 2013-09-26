@@ -17,7 +17,7 @@
 namespace cql {
 
 // Base class for all exceptions thrown by the driver.
-class DLL_PUBLIC cql_exception: public std::exception {
+class CQL_EXPORT cql_exception: public std::exception {
 public:
     // Constructor version for STATIC strings
     cql_exception(const char* message);

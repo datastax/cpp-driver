@@ -14,7 +14,7 @@
 namespace cql {
     // Exception thrown when a query attempts to create a table that
     // already exists.
-    class DLL_PUBLIC cql_table_already_exists_exception : public cql_query_validation_exception {
+    class CQL_EXPORT cql_table_already_exists_exception : public cql_query_validation_exception {
     public:
         cql_table_already_exists_exception(const std::string& table_name);
 

@@ -15,7 +15,7 @@
 #include "cql/exceptions/cql_exception.hpp"
 
 namespace cql {
-class DLL_PUBLIC cql_prepared_query_not_found_exception: public cql_exception {
+class CQL_EXPORT cql_prepared_query_not_found_exception: public cql_exception {
 public:
     cql_prepared_query_not_found_exception(cql_byte_t query_id)
         : cql_exception("prepared query not found."),
