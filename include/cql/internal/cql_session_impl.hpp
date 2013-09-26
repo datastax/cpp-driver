@@ -30,12 +30,14 @@
 #include <boost/noncopyable.hpp>
 #include <boost/ptr_container/ptr_deque.hpp>
 #include <boost/thread/mutex.hpp>
+
 #include "cql/cql.hpp"
 #include "cql/cql_connection.hpp"
 #include "cql/cql_session.hpp"
 #include "cql/cql_builder.hpp"
 #include "cql/cql_cluster.hpp"
 #include "cql/policies/cql_load_balancing_policy.hpp"
+#include "cql/lockfree/cql_lockfree_hash_map.hpp"
 
 
 namespace cql {
@@ -285,10 +287,14 @@ private:
         connections_collection_t& connections, 
         const std::list<long>& connections_to_remove);
 
-    
     connections_collection_t&
     add_to_connection_pool(
         const boost::asio::ip::address& host_address);
+    
+    virtual cql_uuid_t
+    session_uuid() const;
+    
+private:
     
     clients_collection_t                         _clients;
     boost::mutex                                 _mutex;
@@ -301,11 +307,12 @@ private:
     cql::cql_session_t::cql_connection_errback_t _connect_errback;
     size_t                                       _reconnect_limit;
     
-    boost::shared_ptr<cql_configuration_t> _configuration;
-    boost::mutex _connection_pool_mtx;
-    connection_pool_t _trashcan;
-    connection_pool_t _connection_pool;
-    std::map<std::string, long> _allocated_connections;
+    cql::cql_uuid_t                             _uuid;
+    boost::shared_ptr<cql_configuration_t>      _configuration;
+    boost::mutex                                _connection_pool_mtx;
+    connection_pool_t                           _trashcan;
+    connection_pool_t                           _connection_pool;
+    std::map<std::string, long>                 _allocated_connections;
 };
 
 } // namespace cql

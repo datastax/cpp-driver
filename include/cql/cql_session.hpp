@@ -30,6 +30,7 @@
 #include "cql/cql_future_connection.hpp"
 #include "cql/cql_connection.hpp"
 #include "cql/cql.hpp"
+#include "cql/cql_uuid.hpp"
 
 namespace cql {
 
@@ -114,6 +115,10 @@ public:
 
     virtual bool
     empty() = 0;
+    
+    // Returns unique session identifier
+    virtual cql_uuid_t
+    session_uuid() const = 0;
 };
 
 } // namespace cql

@@ -39,6 +39,7 @@ cql_session_impl_t::cql_session_impl_t(
     _defunct_callback(callbacks.defunct_callback()),
     _log_callback(callbacks.log_callback()),
     _reconnect_limit(0),
+    _uuid(cql_uuid_t::create()),
     _configuration(configuration) { }
 
 void 
@@ -72,7 +73,8 @@ cql_session_impl_t::cql_session_impl_t(
     _ready_callback(ready_callback),
     _defunct_callback(defunct_callback),
     _log_callback(NULL),
-    _reconnect_limit(0)
+    _reconnect_limit(0),
+    _uuid(cql_uuid_t::create())
 {}
 
 cql_session_impl_t::cql_session_impl_t(
@@ -86,7 +88,8 @@ cql_session_impl_t::cql_session_impl_t(
     _ready_callback(ready_callback),
     _defunct_callback(defunct_callback),
     _log_callback(log_callback),
-    _reconnect_limit(0)
+    _reconnect_limit(0),
+    _uuid(cql_uuid_t::create())
 {}
 
 cql_session_impl_t::cql_session_impl_t(
@@ -101,7 +104,8 @@ cql_session_impl_t::cql_session_impl_t(
     _ready_callback(ready_callback),
     _defunct_callback(defunct_callback),
     _log_callback(log_callback),
-    _reconnect_limit(reconnect_limit)
+    _reconnect_limit(reconnect_limit),
+    _uuid(cql_uuid_t::create())
 {}
 
 boost::shared_future<cql_future_connection_t>
@@ -483,6 +487,11 @@ cql_session_impl_t::next_client() {
         return output;
     }
     return NULL;
+}
+
+cql_uuid_t
+cql_session_impl_t::session_uuid() const {
+    return _uuid;
 }
 
 }

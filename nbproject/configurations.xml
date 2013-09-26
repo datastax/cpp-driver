@@ -181,6 +181,7 @@
           <in>cql_serialization.hpp</in>
           <in>cql_session.hpp</in>
           <in>cql_set.hpp</in>
+          <in>cql_uuid.hpp</in>
           <in>cql_vector_stream.hpp</in>
           <in>version.hpp</in>
         </df>
@@ -237,6 +238,7 @@
           <in>cql_metadata.cpp</in>
           <in>cql_query.cpp</in>
           <in>cql_serialization.cpp</in>
+          <in>cql_uuid.cpp</in>
         </df>
       </df>
       <df name="test">

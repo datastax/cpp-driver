@@ -66,24 +66,6 @@ private:
 
 class cql_cluster_pimpl_t {
 private:
-    const std::list<std::string> 			_contact_points;
-    boost::shared_ptr<cql_configuration_t> 	_configuration;
-
-    // Initialize the IO service, this allows us to perform network operations asyncronously
-    boost::asio::io_service io_service;
-
-    // Typically async operations are performed in the thread performing the request, because we want synchronous behavior
-    // we're going to spawn a thread whose sole purpose is to perform network communication, and we'll use this thread to
-    // initiate and check the status of requests.
-    //
-    // Also, typically the boost::asio::io_service::run will exit as soon as it's work is done, which we want to prevent
-    // because it's in it's own thread.  Using boost::asio::io_service::work prevents the thread from exiting.
-    boost::scoped_ptr<boost::asio::io_service::work> work;
-    boost::thread thread;
-
-    boost::shared_ptr<cql_metadata_t> _metadata;
-    
-private:
     // Main function of thread on which we call io_service::run
     static void
     asio_thread_main(boost::asio::io_service* io_service) {
@@ -155,6 +137,24 @@ public:
     }
     
     friend class cql_metadata_t;
+    
+private:
+    const std::list<std::string> 			_contact_points;
+    boost::shared_ptr<cql_configuration_t> 	_configuration;
+
+    // Initialize the IO service, this allows us to perform network operations asyncronously
+    boost::asio::io_service io_service;
+
+    // Typically async operations are performed in the thread performing the request, because we want synchronous behavior
+    // we're going to spawn a thread whose sole purpose is to perform network communication, and we'll use this thread to
+    // initiate and check the status of requests.
+    //
+    // Also, typically the boost::asio::io_service::run will exit as soon as it's work is done, which we want to prevent
+    // because it's in it's own thread.  Using boost::asio::io_service::work prevents the thread from exiting.
+    boost::scoped_ptr<boost::asio::io_service::work> work;
+    boost::thread thread;
+
+    boost::shared_ptr<cql_metadata_t> _metadata;
 };
 
 }
