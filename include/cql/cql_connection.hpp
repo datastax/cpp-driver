@@ -32,6 +32,7 @@
 #include "cql/cql.hpp"
 #include "cql/cql_future_connection.hpp"
 #include "cql/cql_future_result.hpp"
+#include "cql/cql_uuid.hpp"
 
 namespace cql {
 
@@ -46,17 +47,24 @@ class cql_connection_t :
 
 public:
 
-    virtual bool is_healthy()=0;
-    virtual bool is_busy(int)=0;
-    virtual bool is_free(int)=0;
+    virtual bool 
+    is_healthy()=0;
+    
+    virtual bool 
+    is_busy(int)=0;
+    
+    virtual bool 
+    is_free(int)=0;
 
+    virtual cql_stream_id_t 
+    allocate_stream_id() = 0;
+    
+    virtual void 
+    release_stream_id(cql_stream_id_t stream_id) = 0;
 
-    virtual cql_stream_id_t allocate_stream_id() = 0;
-
-    long get_id() {
-        return 0;
-    }
-
+    virtual cql_uuid_t
+    id() const = 0;
+    
     typedef 
         boost::function<void(const cql::cql_short_t, const std::string&)> 
         cql_log_callback_t;
@@ -263,6 +271,7 @@ public:
     */
     virtual void
     reconnect() = 0;
+    
 };
 
 } // namespace cql

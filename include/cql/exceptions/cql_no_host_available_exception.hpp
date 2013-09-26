@@ -16,6 +16,9 @@ class CQL_EXPORT cql_no_host_available_exception: public cql_exception {
 public:
     cql_no_host_available_exception()
         : cql_exception("All host tried for query are in error.") { }
+        
+    cql_no_host_available_exception(const char* message)
+        : cql_exception(message) { }
 };
 }
 

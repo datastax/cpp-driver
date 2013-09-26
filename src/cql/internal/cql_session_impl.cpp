@@ -16,6 +16,7 @@
   limitations under the License.
 */
 
+#include <cassert>
 #include <algorithm>
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
@@ -24,12 +25,13 @@
 #include "cql/internal/cql_defines.hpp"
 #include "cql/internal/cql_session_impl.hpp"
 #include "cql/exceptions/cql_exception.hpp"
+#include "cql/exceptions/cql_no_host_available_exception.hpp"
 #include "cql/cql_host.hpp"
 
 namespace cql {
 
 cql_session_impl_t::cql_session_impl_t(
-    const cql_session_callback_info_t& callbacks,
+    const cql_session_callback_info_t&      callbacks,
     boost::shared_ptr<cql_configuration_t>  configuration
     ) :
     _ready(false),
@@ -40,73 +42,49 @@ cql_session_impl_t::cql_session_impl_t(
     _log_callback(callbacks.log_callback()),
     _reconnect_limit(0),
     _uuid(cql_uuid_t::create()),
-    _configuration(configuration) { }
+    _configuration(configuration)
+    
+{ }
 
 void 
-cql_session_impl_t::init() {
-    int port = _configuration->get_protocol_options().get_port();
-
-    // Add a client to the pool, this operation returns a future.
-    std::list<std::string> contact_points =
-        _configuration->get_protocol_options().get_contact_points();
+cql_session_impl_t::init(boost::asio::io_service& io_service) {
+//    int port = _configuration->get_protocol_options().get_port();
+//
+//    // Add a client to the pool, this operation returns a future.
+//    std::list<std::string> contact_points =
+//        _configuration->get_protocol_options().get_contact_points();
+//    
+//    for(std::list<std::string>::iterator it = contact_points.begin(); 
+//        it != contact_points.end(); ++it) 
+//    {
+//        boost::shared_future<cql_future_connection_t> connect_future = add_client(*it, port);
+//        // Wait until the connection is complete, or has failed.
+//        connect_future.wait();
+//
+//        if (connect_future.get().error.is_err()) {
+//            throw cql_exception("cannot connect to host.");
+//        }
+//    }
     
-    for(std::list<std::string>::iterator it = contact_points.begin(); 
-        it != contact_points.end(); ++it) 
-    {
-        boost::shared_future<cql_future_connection_t> connect_future = add_client(*it, port);
-        // Wait until the connection is complete, or has failed.
-        connect_future.wait();
-
-        if (connect_future.get().error.is_err()) {
-            throw cql_exception("cannot connect to host.");
-        }
-    }
+    boost::shared_ptr<cql_query_plan_t> query_plan = _configuration->get_policies()
+                   .get_load_balancing_policy()
+                  ->new_query_plan(boost::shared_ptr<cql_query_t>());
+    
+    boost::shared_ptr<cql_host_t> host = query_plan->next_host_to_query();
+    if(!host)
+        throw cql_no_host_available_exception(
+            "No host is available according to load balancing policy.");
+    
+    int stream_id;
+    std::list<std::string> tried_hosts;
+    
+    boost::shared_ptr<cql_connection_t> conn =
+        connect(query_plan, &stream_id, &tried_hosts);
+    conn->release_stream_id(stream_id);
+    
+    _trashcan_timer = boost::shared_ptr<boost::asio::deadline_timer>(
+        new boost::asio::deadline_timer(io_service));
 }
-
-cql_session_impl_t::cql_session_impl_t(
-    cql_session_t::cql_client_callback_t  client_callback,
-    cql_session_t::cql_ready_callback_t   ready_callback,
-    cql_session_t::cql_defunct_callback_t defunct_callback) :
-    _ready(false),
-    _defunct(false),
-    _client_callback(client_callback),
-    _ready_callback(ready_callback),
-    _defunct_callback(defunct_callback),
-    _log_callback(NULL),
-    _reconnect_limit(0),
-    _uuid(cql_uuid_t::create())
-{}
-
-cql_session_impl_t::cql_session_impl_t(
-    cql_session_t::cql_client_callback_t  client_callback,
-    cql_session_t::cql_ready_callback_t   ready_callback,
-    cql_session_t::cql_defunct_callback_t defunct_callback,
-    cql_session_t::cql_log_callback_t     log_callback) :
-    _ready(false),
-    _defunct(false),
-    _client_callback(client_callback),
-    _ready_callback(ready_callback),
-    _defunct_callback(defunct_callback),
-    _log_callback(log_callback),
-    _reconnect_limit(0),
-    _uuid(cql_uuid_t::create())
-{}
-
-cql_session_impl_t::cql_session_impl_t(
-    cql_session_t::cql_client_callback_t  client_callback,
-    cql_session_t::cql_ready_callback_t   ready_callback,
-    cql_session_t::cql_defunct_callback_t defunct_callback,
-    cql_session_t::cql_log_callback_t     log_callback,
-    size_t                                         reconnect_limit) :
-    _ready(false),
-    _defunct(false),
-    _client_callback(client_callback),
-    _ready_callback(ready_callback),
-    _defunct_callback(defunct_callback),
-    _log_callback(log_callback),
-    _reconnect_limit(reconnect_limit),
-    _uuid(cql_uuid_t::create())
-{}
 
 boost::shared_future<cql_future_connection_t>
 cql_session_impl_t::add_client(
@@ -172,12 +150,12 @@ cql_session_impl_t::get_host_distance(boost::shared_ptr<cql::cql_host_t> host) {
 void
 cql_session_impl_t::free_connections(
     connections_collection_t& connections,
-    const std::list<long>& connections_to_remove)
+    const std::list<cql_uuid_t>& connections_to_remove)
 {
-    for(std::list<long>::const_iterator it = connections_to_remove.begin(); 
+    for(std::list<cql_uuid_t>::const_iterator it = connections_to_remove.begin(); 
         it != connections_to_remove.end(); ++it)
     {
-        long connection_id = *it;
+        cql_uuid_t connection_id = *it;
         
         free_connection(connections[connection_id]);
         connections.erase(connection_id);
@@ -202,24 +180,27 @@ cql_session_impl_t::add_to_connection_pool(
 
 boost::shared_ptr<cql_connection_t>
 cql_session_impl_t::connect(
-        cql_query_plan_t& query_plan, 
-        int& stream_id, 
-        std::list<std::string>& tried_hosts) 
+        boost::shared_ptr<cql::cql_query_plan_t>    query_plan, 
+        int*                                        stream_id, 
+        std::list<std::string>*                     tried_hosts) 
 {
+    assert(stream_id != NULL);
+    assert(tried_hosts != NULL);
+    
     boost::mutex::scoped_lock lock_(_connection_pool_mtx);
 
-    while (boost::shared_ptr<cql_host_t> host = query_plan.next_host_to_query()) 
+    while (boost::shared_ptr<cql_host_t> host = query_plan->next_host_to_query()) 
     {
         if (!host->is_considerably_up())
             continue;
 
         boost::asio::ip::address host_addr = host->address();
-        tried_hosts.push_back( host_addr.to_string() );
+        tried_hosts->push_back( host_addr.to_string() );
 
         connections_collection_t connections = add_to_connection_pool(host_addr);
         cql_host_distance_enum distance = get_host_distance(host);
 
-        std::list<long> to_remove;
+        std::list<cql_uuid_t> to_remove;
 
         for(connections_collection_t::iterator kv = connections.begin(); 
             kv != connections.end(); ++kv) 
@@ -229,7 +210,7 @@ cql_session_impl_t::connect(
             if (!client->is_healthy()) {
                 to_remove.push_back(kv->first);
             } else if (!client->is_busy(_configuration->get_pooling_options().get_max_simultaneous_requests_per_connection_treshold(distance))) {
-                stream_id = client->allocate_stream_id();
+                *stream_id = client->allocate_stream_id();
                 return client;
             } else if (connections.size() > _configuration->get_pooling_options().get_core_connections_per_host(distance)) {
                 if (client->is_free(_configuration->get_pooling_options().get_min_simultaneous_requests_per_connection_treshold(distance))) {
@@ -256,8 +237,8 @@ cql_session_impl_t::connect(
             continue;
 
         
-        connections.insert(std::make_pair(client->get_id(), client));
-        stream_id = client->allocate_stream_id();
+        connections.insert(std::make_pair(client->id(), client));
+        *stream_id = client->allocate_stream_id();
         return client;
     }
     

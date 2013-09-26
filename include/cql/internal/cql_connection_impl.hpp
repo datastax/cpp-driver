@@ -72,6 +72,7 @@
 #include "cql/internal/cql_message_startup_impl.hpp"
 #include "cql/internal/cql_message_supported_impl.hpp"
 #include "cql/cql_serialization.hpp"
+#include "cql/cql_uuid.hpp"
 
 namespace cql {
 
@@ -113,7 +114,8 @@ public:
         _defunct(false),
         _ready(false),
         _closing(false),
-        _reserved_stream_id(_callback_storage.acquire_slot())
+        _reserved_stream_id(_callback_storage.acquire_slot()),
+        _uuid(cql_uuid_t::create())
     { }
 
     cql_connection_impl_t(
@@ -134,7 +136,8 @@ public:
         _defunct(false),
         _ready(false),
         _closing(false),
-        _reserved_stream_id(_callback_storage.acquire_slot())
+        _reserved_stream_id(_callback_storage.acquire_slot()),
+        _uuid(cql_uuid_t::create())
     { }
 
     boost::shared_future<cql::cql_future_connection_t>
@@ -166,6 +169,11 @@ public:
         _connect_callback = callback;
         _connect_errback = errback;
         resolve();
+    }
+    
+    virtual cql_uuid_t
+    id() const {
+        return _uuid;
     }
 
     boost::shared_future<cql::cql_future_result_t>
@@ -474,6 +482,13 @@ private:
             return (cql::cql_stream_id_t)(-1);
         
         return slot.stream_id();
+    }
+    
+    virtual void
+    release_stream_id(const cql_stream_id_t stream_id) {
+        callback_storage_t::slot_t slot =
+            callback_storage_t::slot_t::slot_for(stream_id);
+        release_callback_slot(slot);
     }
     
     callback_storage_t::slot_t 
@@ -813,6 +828,7 @@ private:
     bool                                 _closing;
     // Stream with ID equal 0
     callback_storage_t::slot_t			 _reserved_stream_id;
+    cql_uuid_t                           _uuid;
 };
 
 } // namespace cql

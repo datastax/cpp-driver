@@ -16,6 +16,8 @@
 #include "cql/internal/cql_session_impl.hpp"
 #include "cql/cql_builder.hpp"
 #include "cql/cql_metadata.hpp"
+#include "cql/lockfree/cql_lockfree_hash_map.hpp"
+#include "cql/cql_uuid.hpp"
 
 namespace cql {
 
@@ -79,8 +81,8 @@ public:
 			boost::shared_ptr<cql_configuration_t> configuration)
         :_contact_points(contact_points), 
 		 _configuration(configuration),
-         work(new boost::asio::io_service::work(io_service)),
-         thread(boost::bind(&cql_cluster_pimpl_t::asio_thread_main, &io_service))
+         work(new boost::asio::io_service::work(_io_service)),
+         thread(boost::bind(&cql_cluster_pimpl_t::asio_thread_main, &_io_service))
     { 
             cql_policies_t& policies = configuration->get_policies();
             
@@ -108,18 +110,22 @@ public:
 
         if (ssl_context != 0) {
             client_factory = client_ssl_functor_t(
-				io_service, 
+				_io_service, 
 				const_cast<boost::asio::ssl::context&>(*ssl_context), 
 				log_callback);
         } else {
-            client_factory = client_functor_t(io_service, log_callback);
+            client_factory = client_functor_t(_io_service, log_callback);
         }
 
         // Construct the session
         boost::shared_ptr<cql_session_impl_t> session(
             new cql_session_impl_t(client_factory, _configuration));
 
-        session->init();
+        session->init(_io_service);
+        
+        while(!_connected_sessions.try_add(session->session_uuid(), session))
+            ;
+        
         return session;
     }
 
@@ -143,7 +149,7 @@ private:
     boost::shared_ptr<cql_configuration_t> 	_configuration;
 
     // Initialize the IO service, this allows us to perform network operations asyncronously
-    boost::asio::io_service io_service;
+    boost::asio::io_service _io_service;
 
     // Typically async operations are performed in the thread performing the request, because we want synchronous behavior
     // we're going to spawn a thread whose sole purpose is to perform network communication, and we'll use this thread to
@@ -154,7 +160,8 @@ private:
     boost::scoped_ptr<boost::asio::io_service::work> work;
     boost::thread thread;
 
-    boost::shared_ptr<cql_metadata_t> _metadata;
+    boost::shared_ptr<cql_metadata_t>                                           _metadata;
+    cql_lockfree_hash_map_t<cql_uuid_t, boost::shared_ptr<cql_session_t> >      _connected_sessions;
 };
 
 }

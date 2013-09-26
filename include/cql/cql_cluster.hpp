@@ -22,6 +22,7 @@
 #include <memory>
 #include <boost/shared_ptr.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/asio/io_service.hpp>
 
 namespace cql {
 

@@ -30,6 +30,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/ptr_container/ptr_deque.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/asio.hpp>
 
 #include "cql/cql.hpp"
 #include "cql/cql_connection.hpp"
@@ -37,7 +38,6 @@
 #include "cql/cql_builder.hpp"
 #include "cql/cql_cluster.hpp"
 #include "cql/policies/cql_load_balancing_policy.hpp"
-#include "cql/lockfree/cql_lockfree_hash_map.hpp"
 
 
 namespace cql {
@@ -117,23 +117,20 @@ public:
         const cql_session_callback_info_t& callbacks,
         boost::shared_ptr<cql_configuration_t>  configuration);
 
-    void init();
+    void init(boost::asio::io_service& io_service);
 
     boost::shared_ptr<cql_connection_t> 
 	connect(
-        cql::cql_query_plan_t& query_plan, 
-        int& stream_id, 
-        std::list<std::string>& tried_hosts);
+        boost::shared_ptr<cql::cql_query_plan_t>    query_plan, 
+        int*                                        stream_id, 
+        std::list<std::string>*                     tried_hosts);
+        
+    virtual cql_uuid_t
+    session_uuid() const;
     
 	boost::shared_ptr<cql_connection_t> 
 	allocate_connection(const boost::asio::ip::address& address, cql_host_distance_enum distance);
-    
-	void 
-	trashcan_put(boost::shared_ptr<cql_connection_t> connection);
-    
-	boost::shared_ptr<cql_connection_t> 
-	trashcan_recycle(const boost::asio::ip::address& address);
-    
+
 	void 
 	free_connection(boost::shared_ptr<cql_connection_t> connection);
 
@@ -157,30 +154,18 @@ private:
         clients_collection_t;
     
     typedef
-        std::map<long, boost::shared_ptr<cql_connection_t> >
+        std::map<cql_uuid_t, boost::shared_ptr<cql_connection_t> >
         connections_collection_t;  
     
     typedef
         std::map<std::string, connections_collection_t>
         connection_pool_t;
+          
+	void 
+	trashcan_put(boost::shared_ptr<cql_connection_t> connection);
     
-    cql_session_impl_t(
-        cql::cql_session_t::cql_client_callback_t  client_callback,
-        cql::cql_session_t::cql_ready_callback_t   ready_callback,
-        cql::cql_session_t::cql_defunct_callback_t defunct_callback);
-
-    cql_session_impl_t(
-        cql::cql_session_t::cql_client_callback_t  client_callback,
-        cql::cql_session_t::cql_ready_callback_t   ready_callback,
-        cql::cql_session_t::cql_defunct_callback_t defunct_callback,
-        cql::cql_session_t::cql_log_callback_t     log_callback);
-
-    cql_session_impl_t(
-        cql::cql_session_t::cql_client_callback_t  client_callback,
-        cql::cql_session_t::cql_ready_callback_t   ready_callback,
-        cql::cql_session_t::cql_defunct_callback_t defunct_callback,
-        cql::cql_session_t::cql_log_callback_t     log_callback,
-        size_t                                     reconnect_limit);
+	boost::shared_ptr<cql_connection_t> 
+	trashcan_recycle(const boost::asio::ip::address& address);
 
     boost::shared_future<cql::cql_future_connection_t>
     add_client(
@@ -285,14 +270,12 @@ private:
     void
     free_connections(
         connections_collection_t& connections, 
-        const std::list<long>& connections_to_remove);
+        const std::list<cql_uuid_t>& connections_to_remove);
 
     connections_collection_t&
     add_to_connection_pool(
         const boost::asio::ip::address& host_address);
-    
-    virtual cql_uuid_t
-    session_uuid() const;
+
     
 private:
     
@@ -307,12 +290,13 @@ private:
     cql::cql_session_t::cql_connection_errback_t _connect_errback;
     size_t                                       _reconnect_limit;
     
-    cql::cql_uuid_t                             _uuid;
+    cql_uuid_t                                  _uuid;
     boost::shared_ptr<cql_configuration_t>      _configuration;
     boost::mutex                                _connection_pool_mtx;
     connection_pool_t                           _trashcan;
     connection_pool_t                           _connection_pool;
     std::map<std::string, long>                 _allocated_connections;
+    boost::shared_ptr<boost::asio::deadline_timer> _trashcan_timer;
 };
 
 } // namespace cql

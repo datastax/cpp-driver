@@ -47,7 +47,7 @@ cql::cql_round_robin_policy_t::distance(const cql::cql_host_t& host) {
 
 boost::shared_ptr<cql::cql_query_plan_t> 
 cql::cql_round_robin_policy_t::new_query_plan(
-	const boost::shared_ptr<cql::cql_query_t>& query)
+	const boost::shared_ptr<cql::cql_query_t>&)
 {
 	_index++;
 

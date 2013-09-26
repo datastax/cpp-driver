@@ -43,7 +43,8 @@ cql::cql_cluster_t::built_from(const cql_initializer_t& initializer) {
 
 boost::shared_ptr<cql::cql_builder_t> 
 cql::cql_cluster_t::builder() {
-    return boost::shared_ptr<cql::cql_builder_t>(new cql::cql_builder_t());
+    return boost::shared_ptr<cql::cql_builder_t>(
+        new cql::cql_builder_t());
 }
 
 boost::shared_ptr<cql::cql_session_t> 
