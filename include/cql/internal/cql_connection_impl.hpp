@@ -77,8 +77,10 @@
 namespace cql {
 
 template <typename TSocket>
-class cql_connection_impl_t : public cql::cql_connection_t {
-
+class cql_connection_impl_t 
+    : public cql::cql_connection_t,
+      boost::noncopyable
+{
 public:
     typedef 
         std::list<cql::cql_message_buffer_t> 
@@ -119,8 +121,7 @@ public:
     { }
 
     boost::shared_future<cql::cql_future_connection_t>
-    connect(const std::string& server,
-            unsigned int port) 
+    connect(const cql_endpoint_t& endpoint) 
     {
         boost::shared_ptr<boost::promise<cql::cql_future_connection_t> > 
                 promise(new boost::promise<cql::cql_future_connection_t>());
@@ -128,8 +129,8 @@ public:
         boost::shared_future<cql::cql_future_connection_t> 
                 shared_future(promise->get_future());
 
-        connect(server,
-                port,
+        connect(endpoint.address(),
+                endpoint.port(),
                 boost::bind(&cql_connection_impl_t::_connection_future_callback, this, promise, ::_1),
                 boost::bind(&cql_connection_impl_t::_connection_future_errback, this, promise, ::_1, ::_2));
 
@@ -137,22 +138,18 @@ public:
     }
 
     void
-    connect(const std::string& server,
-            unsigned int port,
-            cql_connection_callback_t callback,
-            cql_connection_errback_t errback) 
+    connect(const cql_endpoint_t&      endpoint,
+            cql_connection_callback_t   callback,
+            cql_connection_errback_t    errback) 
     {
-        _server = server;
-        _port = port;
+        _endpoint = endpoint;
         _connect_callback = callback;
         _connect_errback = errback;
         resolve();
     }
     
     virtual cql_uuid_t
-    id() const {
-        return _uuid;
-    }
+    id() const { return _uuid; }
 
     boost::shared_future<cql::cql_future_result_t>
     query(const std::string&			query_string,
@@ -292,15 +289,8 @@ public:
         _transport->lowest_layer().close();
     }
 
-    const std::string&
-    server() const {
-        return _server;
-    }
-
-    unsigned int
-    port() const {
-        return _port;
-    }
+    virtual const cql_endpoint_t&
+    endpoint() const { return _endpoint; }
 
     void
     events(
@@ -392,8 +382,14 @@ private:
 
     void
     resolve() {
-        log(CQL_LOG_DEBUG, "resolving remote host " + _server + ":" + boost::lexical_cast<std::string>(_port));
-        boost::asio::ip::tcp::resolver::query query(_server, boost::lexical_cast<std::string>(_port));
+        boost::asio::ip::address server = _endpoint.address();
+        unsigned short port = _endpoint.port();
+        
+        log(CQL_LOG_DEBUG, 
+            "resolving remote host " + server + 
+            ":" + boost::lexical_cast<std::string>(port));
+        
+        boost::asio::ip::tcp::resolver::query query(server, boost::lexical_cast<std::string>(port));
         _resolver.async_resolve(query,
                                 boost::bind(&cql_connection_impl_t::resolve_handle,
                                             this,
@@ -785,8 +781,7 @@ private:
         }
     }
 
-    std::string                          _server;
-    unsigned int                         _port;
+    cql_endpoint_t                       _endpoint;
     boost::asio::ip::tcp::resolver       _resolver;
     std::auto_ptr<TSocket>               _transport;
     cql::cql_stream_id_t                 _stream_counter;

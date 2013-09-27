@@ -31,6 +31,18 @@ namespace cql {
             return _address.is_unspecified();
         }
         
+        friend bool 
+        operator ==(const cql_endpoint_t& left, const cql_endpoint_t& right) {
+            return (left._port == right._port) 
+                && (left._address == right._address);
+        }
+        
+        friend bool
+        operator !=(const cql_endpoint_t& left, const cql_endpoint_t& right) {
+            return (left._port != right._port) 
+                || (left._address != right._address);
+        }
+        
     private:
         ::boost::asio::ip::address      _address;
         unsigned short                  _port;

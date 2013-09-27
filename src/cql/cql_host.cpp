@@ -80,3 +80,11 @@ cql::cql_host_t::bring_up()
 	
 	return false;
 }
+
+cql::cql_host_distance_enum
+cql::cql_host_t::distance(const cql_policies_t& policies) const {
+    cql_host_distance_enum distance = policies
+                                     .load_balancing_policy()
+                                    ->distance(*this);
+    return distance;
+}

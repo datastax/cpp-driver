@@ -41,8 +41,8 @@ operator<<(std::ostream& o, const cql_hex_char_struct_t& hs) {
     return (o << std::hex << (int)hs.c);
 }
 
-inline
-cql_hex_char_struct_t hex(unsigned char _c) {
+inline cql_hex_char_struct_t 
+hex(unsigned char _c) {
     return cql_hex_char_struct_t(_c);
 }
 
@@ -60,12 +60,6 @@ empty_when_null(const char* str) {
 		return str;
 }
 
-// Checks if given string is null or empty.
-inline bool 
-is_null_or_empty(const char* str) {
-    return !str || !*str;
-}
-
 // tries to convert given string to boost asio ip address.
 // return false when conversion fails, return true otherwise.
 // if this returns true then result will contain valid ip address.
@@ -78,7 +72,6 @@ to_ipaddr(const std::string& str, boost::asio::ip::address* result);
 // system settings which may be modified by user.
 boost::posix_time::ptime 
 utc_now();
-
 
 } // namespace cql
 

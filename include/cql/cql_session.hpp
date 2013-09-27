@@ -118,7 +118,7 @@ public:
     
     // Returns unique session identifier
     virtual cql_uuid_t
-    session_uuid() const = 0;
+    id() const = 0;
 };
 
 } // namespace cql

@@ -11,6 +11,7 @@
 #include "cql/cql_endpoint.hpp"
 #include "cql/policies/cql_reconnection_policy.hpp"
 #include "cql/cql_reconnection_schedule.hpp"
+#include "cql/cql_builder.hpp"
 
 namespace cql {
 	class CQL_EXPORT cql_host_t {
@@ -39,6 +40,9 @@ namespace cql {
 		
 		bool
 		is_considerably_up() const;
+        
+        cql_host_distance_enum
+        distance(const cql_policies_t& policies) const;
 		
 		bool
 		set_down();

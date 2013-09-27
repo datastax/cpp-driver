@@ -243,17 +243,17 @@ public:
     { }
     
     inline boost::shared_ptr<cql_load_balancing_policy_t> 
-    load_balancing_policy() {
+    load_balancing_policy() const {
         return _load_balancing_policy;
     }
     
     inline boost::shared_ptr<cql_reconnection_policy_t> 
-    reconnection_policy() {
+    reconnection_policy() const {
         return _reconnection_policy;
     }
     
     inline boost::shared_ptr<cql_retry_policy_t>
-    retry_policy() {
+    retry_policy() const {
         return _retry_policy;
     }
     

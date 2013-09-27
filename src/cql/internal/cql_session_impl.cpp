@@ -29,9 +29,7 @@
 #include "cql/cql_host.hpp"
 
 
-namespace cql {
-
-cql_session_impl_t::cql_session_impl_t(
+cql::cql_session_impl_t::cql_session_impl_t(
     const cql_session_callback_info_t&      callbacks,
     boost::shared_ptr<cql_configuration_t>  configuration
     ) :
@@ -48,7 +46,7 @@ cql_session_impl_t::cql_session_impl_t(
 { }
 
 void 
-cql_session_impl_t::init(boost::asio::io_service& io_service) {
+cql::cql_session_impl_t::init(boost::asio::io_service& io_service) {
 //    int port = _configuration->get_protocol_options().get_port();
 //
 //    // Add a client to the pool, this operation returns a future.
@@ -77,26 +75,26 @@ cql_session_impl_t::init(boost::asio::io_service& io_service) {
             "No host is available according to load balancing policy.");
     
     int stream_id;
-    std::list<ip_address_t> tried_hosts;
+    std::list<cql_endpoint_t> tried_hosts;
     
     boost::shared_ptr<cql_connection_t> conn =
-        connect(query_plan, &stream_id, &tried_hosts);
+            connect(query_plan, &stream_id, &tried_hosts);
     conn->release_stream_id(stream_id);
     
     _trashcan_timer = boost::shared_ptr<boost::asio::deadline_timer>(
         new boost::asio::deadline_timer(io_service));
 }
 
-boost::shared_future<cql_future_connection_t>
-cql_session_impl_t::add_client(
+boost::shared_future<cql::cql_future_connection_t>
+cql::cql_session_impl_t::add_client(
     const std::string& server,
     unsigned int       port) {
     std::list<std::string> e;
     return add_client(server, port, NULL, e);
 }
 
-boost::shared_future<cql_future_connection_t>
-cql_session_impl_t::add_client(
+boost::shared_future<cql::cql_future_connection_t>
+cql::cql_session_impl_t::add_client(
     const std::string&                      server,
     unsigned int                            port,
     cql_connection_t::cql_event_callback_t event_callback,
@@ -106,8 +104,8 @@ cql_session_impl_t::add_client(
 }
 
 
-boost::shared_future<cql_future_connection_t>
-cql_session_impl_t::add_client(
+boost::shared_future<cql::cql_future_connection_t>
+cql::cql_session_impl_t::add_client(
     const std::string&                        server,
     unsigned int                              port,
     cql_connection_t::cql_event_callback_t   event_callback,
@@ -131,39 +129,79 @@ cql_session_impl_t::add_client(
     _clients.push_back(client_container.release());
     return shared_future;
 }
-
-cql::cql_host_distance_enum
-cql_session_impl_t::get_host_distance(boost::shared_ptr<cql::cql_host_t> host) {
-    cql_host_t* p_host = host.get();
-    
-    cql_host_distance_enum distance = 
-        _configuration
-            ->policies()
-             .load_balancing_policy()
-            ->distance(*p_host);
-    
-    return distance;
-}
-
      
 void
-cql_session_impl_t::free_connections(
-    connections_collection_t& connections,
-    const std::list<cql_uuid_t>& connections_to_remove)
+cql::cql_session_impl_t::free_connections(
+    connections_collection_t&       connections,
+    const std::list<cql_uuid_t>&    connections_to_remove)
 {
     for(std::list<cql_uuid_t>::const_iterator it = connections_to_remove.begin(); 
         it != connections_to_remove.end(); ++it)
     {
-        cql_uuid_t connection_id = *it;
+        cql_uuid_t conn_id = *it;
+        boost::shared_ptr<cql_connection_t> conn;
         
-        free_connection(connections[connection_id]);
-        connections.erase(connection_id);
+        if(connections.try_get(conn_id, &conn)) {
+            while(!connections.try_erase(conn_id))
+                ;
+            
+            free_connection(conn);
+        }
     }
 }
 
+void 
+cql::cql_session_impl_t::free_connection(boost::shared_ptr<cql_connection_t> connection) {
+}
+
+boost::shared_ptr<cql::cql_connection_t>
+cql::cql_session_impl_t::allocate_connection(const boost::asio::ip::address& address, cql_host_distance_enum distance) {
+    return boost::shared_ptr<cql_connection_t>();
+}
+
+void
+cql::cql_session_impl_t::trashcan_timer_timeout(
+    const boost::system::error_code& error)
+{
+    if(!error) {
+        trashcan_cleanup();
+    }
+}
+
+void
+cql::cql_session_impl_t::trashcan_cleanup() {
+    for(connection_pool_t::iterator it = _trashcan.begin();
+        it != _trashcan.end(); ++it)
+    {
+        boost::shared_ptr<connections_collection_t> connections = it->second;
+        trashcan_remove_empty_connections
+    }
+}
+
+void 
+cql::cql_session_impl_t::trashcan_put(
+        boost::shared_ptr<connections_collection_t>& connections,
+        const cql_uuid_t&                           connection_id) 
+{
+    boost::shared_ptr<cql_connection_t> conn;
     
-boost::shared_ptr<cql_session_impl_t::connections_collection_t>
-cql_session_impl_t::add_to_connection_pool(
+    if(connections->try_erase(connection_id, &conn)) {
+        trashcan_put(conn);
+    }
+}
+
+void
+cql::cql_session_impl_t::trashcan_put(boost::shared_ptr<cql_connection_t>& connection) {
+    
+}
+
+boost::shared_ptr<cql::cql_connection_t> 
+cql::cql_session_impl_t::trashcan_recycle(const boost::asio::ip::address& address) {
+    return boost::shared_ptr<cql_connection_t>();
+}
+    
+boost::shared_ptr<cql::cql_session_impl_t::connections_collection_t>
+cql::cql_session_impl_t::add_to_connection_pool(
     const boost::asio::ip::address& host_address) 
 {
     boost::shared_ptr<connections_collection_t> result, empty_collection;
@@ -181,7 +219,7 @@ cql_session_impl_t::add_to_connection_pool(
 }
 
 void 
-cql_session_impl_t::try_remove_connection(
+cql::cql_session_impl_t::try_remove_connection(
     boost::shared_ptr<connections_collection_t>& connections,
     const cql_uuid_t& connection_id) 
 {
@@ -195,8 +233,8 @@ cql_session_impl_t::try_remove_connection(
     }
 }
 
-boost::shared_ptr<cql_connection_t>
-cql_session_impl_t::try_find_free_stream(
+boost::shared_ptr<cql::cql_connection_t>
+cql::cql_session_impl_t::try_find_free_stream(
     boost::shared_ptr<cql_host_t>               host, 
     boost::shared_ptr<connections_collection_t> connections,
     int*                                        stream_id)
@@ -229,8 +267,8 @@ cql_session_impl_t::try_find_free_stream(
     return boost::shared_ptr<cql_connection_t>();
 }
 
-boost::shared_ptr<cql_connection_t>
-cql_session_impl_t::connect(
+boost::shared_ptr<cql::cql_connection_t>
+cql::cql_session_impl_t::connect(
         boost::shared_ptr<cql::cql_query_plan_t>    query_plan, 
         int*                                        stream_id, 
         std::list<boost::asio::ip::address>*        tried_hosts) 
@@ -276,39 +314,10 @@ cql_session_impl_t::connect(
     throw cql_exception("no host avaliable.");
 }
 
-boost::shared_ptr<cql_connection_t>
-cql_session_impl_t::allocate_connection(const boost::asio::ip::address& address, cql_host_distance_enum distance) {
-    return boost::shared_ptr<cql_connection_t>();
-}
 
-void 
-cql_session_impl_t::trashcan_put(
-        boost::shared_ptr<connections_collection_t>& connections,
-        const cql_uuid_t&                           connection_id) 
-{
-    boost::shared_ptr<cql_connection_t> conn;
-    
-    if(connections->try_erase(connection_id, &conn)) {
-        trashcan_put(conn);
-    }
-}
 
-void
-cql_session_impl_t::trashcan_put(boost::shared_ptr<cql_connection_t>& connection) {
-    
-}
-
-boost::shared_ptr<cql_connection_t> 
-cql_session_impl_t::trashcan_recycle(const boost::asio::ip::address& address) {
-    return boost::shared_ptr<cql_connection_t>();
-}
-
-void 
-cql_session_impl_t::free_connection(boost::shared_ptr<cql_connection_t> connection) {
-}
-
-cql_stream_id_t
-cql_session_impl_t::query(
+cql::cql_stream_id_t
+cql::cql_session_impl_t::query(
     const std::string&                   query,
     cql_consistency_enum                 consistency,
     cql_connection_t::cql_message_callback_t callback,
@@ -324,8 +333,8 @@ cql_session_impl_t::query(
     return 0;
 }
 
-cql_stream_id_t
-cql_session_impl_t::prepare(
+cql::cql_stream_id_t
+cql::cql_session_impl_t::prepare(
     const std::string&                        query,
     cql_connection_t::cql_message_callback_t callback,
     cql_connection_t::cql_message_errback_t  errback) {
@@ -338,8 +347,8 @@ cql_session_impl_t::prepare(
     return 0;
 }
 
-cql_stream_id_t
-cql_session_impl_t::execute(
+cql::cql_stream_id_t
+cql::cql_session_impl_t::execute(
     cql_execute_t*                       message,
     cql_connection_t::cql_message_callback_t callback,
     cql_connection_t::cql_message_errback_t  errback) {
@@ -352,8 +361,8 @@ cql_session_impl_t::execute(
     return 0;
 }
 
-boost::shared_future<cql_future_result_t>
-cql_session_impl_t::query(
+boost::shared_future<cql::cql_future_result_t>
+cql::cql_session_impl_t::query(
     const std::string&		 query,
     cql_consistency_enum     consistency) {
     boost::mutex::scoped_lock lock(_mutex);
@@ -373,8 +382,8 @@ cql_session_impl_t::query(
     return shared_future;
 }
 
-boost::shared_future<cql_future_result_t>
-cql_session_impl_t::prepare(
+boost::shared_future<cql::cql_future_result_t>
+cql::cql_session_impl_t::prepare(
     const std::string& query) {
     boost::mutex::scoped_lock lock(_mutex);
 
@@ -393,8 +402,8 @@ cql_session_impl_t::prepare(
     return shared_future;
 }
 
-boost::shared_future<cql_future_result_t>
-cql_session_impl_t::execute(
+boost::shared_future<cql::cql_future_result_t>
+cql::cql_session_impl_t::execute(
     cql_execute_t* message) {
     boost::mutex::scoped_lock lock(_mutex);
 
@@ -414,17 +423,17 @@ cql_session_impl_t::execute(
 }
 
 bool
-cql_session_impl_t::defunct() {
+cql::cql_session_impl_t::defunct() {
     return _defunct;
 }
 
 bool
-cql_session_impl_t::ready() {
+cql::cql_session_impl_t::ready() {
     return _ready;
 }
 
 void
-cql_session_impl_t::close() {
+cql::cql_session_impl_t::close() {
     boost::mutex::scoped_lock lock(_mutex);
 
     BOOST_FOREACH(cql_session_impl_t::client_container_t& c, _clients) {
@@ -433,17 +442,17 @@ cql_session_impl_t::close() {
 }
 
 size_t
-cql_session_impl_t::size() {
+cql::cql_session_impl_t::size() {
     return _clients.size();
 }
 
 bool
-cql_session_impl_t::empty() {
+cql::cql_session_impl_t::empty() {
     return _clients.empty();
 }
 
 inline void
-cql_session_impl_t::log(
+cql::cql_session_impl_t::log(
     cql_short_t level,
     const std::string& message) {
     if (_log_callback) {
@@ -452,7 +461,7 @@ cql_session_impl_t::log(
 }
 
 void
-cql_session_impl_t::connect_callback(
+cql::cql_session_impl_t::connect_callback(
     boost::shared_ptr<boost::promise<cql_future_connection_t> > promise,
     cql_connection_t&                                               client) {
     _defunct = false;
@@ -465,7 +474,7 @@ cql_session_impl_t::connect_callback(
 }
 
 void
-cql_session_impl_t::connect_errback(
+cql::cql_session_impl_t::connect_errback(
     boost::shared_ptr<boost::promise<cql_future_connection_t> > promise,
     cql_connection_t&                                               client,
     const cql_error_t&                                               error) {
@@ -503,8 +512,8 @@ cql_session_impl_t::connect_errback(
     }
 }
 
-cql_connection_t*
-cql_session_impl_t::next_client() {
+cql::cql_connection_t*
+cql::cql_session_impl_t::next_client() {
     if (_ready && !_defunct && !_clients.empty()) {
         clients_collection_t::auto_type client = _clients.pop_front();
         cql_connection_t* output = client->client.get();
@@ -514,9 +523,7 @@ cql_session_impl_t::next_client() {
     return NULL;
 }
 
-cql_uuid_t
-cql_session_impl_t::session_uuid() const {
+cql::cql_uuid_t
+cql::cql_session_impl_t::id() const {
     return _uuid;
-}
-
 }

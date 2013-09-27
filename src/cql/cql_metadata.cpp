@@ -62,19 +62,9 @@ cql::cql_metadata_t::cql_metadata_t(
 { }
 
 void
-cql::cql_metadata_t::add_contact_points(const std::list<std::string>& contact_points) 
-{
-    std::vector<boost::asio::ip::address> addresses;
-    
-    for(std::list<std::string>::const_iterator it = contact_points.begin();
-        it != contact_points.end(); ++it) 
-    {
-        boost::asio::ip::address address;
-        if(!::cql::to_ipaddr(*it, &address))
-            throw std::invalid_argument("IP address [" + *it + "] is invalid.");
-            
-        addresses.push_back(address);
-    }
-    
-    std::for_each(addresses.begin(), addresses.end(), boost::bind(&cql_metadata_t::add_host, this, _1));
+cql::cql_metadata_t::add_hosts(
+    const std::list<cql_endpoint_t>& endpoints) 
+{ 
+    std::for_each(endpoints.begin(), endpoints.end(), 
+        boost::bind(&cql_metadata_t::add_host, this, _1));
 }

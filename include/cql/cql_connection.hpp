@@ -33,6 +33,7 @@
 #include "cql/cql_future_connection.hpp"
 #include "cql/cql_future_result.hpp"
 #include "cql/cql_uuid.hpp"
+#include "cql_endpoint.hpp"
 
 namespace cql {
 
@@ -55,6 +56,9 @@ public:
     
     virtual bool 
     is_free(int)=0;
+    
+    virtual bool
+    is_empty() = 0;
 
     virtual cql_stream_id_t 
     allocate_stream_id() = 0;
@@ -99,27 +103,23 @@ public:
     /**
        Connect to the server at the specified address and port.
 
-       @param server host
-       @param port port
+       @param ip address and port
      */
     virtual boost::shared_future<cql::cql_future_connection_t>
-    connect(const std::string& server,
-            unsigned int port) = 0;
+    connect(const cql_endpoint_t& address) = 0;
 
     /**
        Connect to the server at the specified address and port.
 
-       @param server host
-       @param port port
+       @param ip address and port
        @param callback Callback function which will be called when connection is complete and ready for use.
        @param errback Errback which will be called for transport errors encountered at any point in the lifecycle of the client.
      */
     virtual void
     connect(
-        const std::string&        server,
-        unsigned int              port,
-        cql_connection_callback_t callback,
-        cql_connection_errback_t  errback) = 0;
+        const cql_endpoint_t&       address,
+        cql_connection_callback_t   callback,
+        cql_connection_errback_t    errback) = 0;
 
     /**
        Perform an ad-hoc query using the specified string and consistency.
@@ -176,8 +176,7 @@ public:
        @return populated when results or error is obtained
      */
     virtual boost::shared_future<cql::cql_future_result_t>
-    prepare(
-        const std::string& query) = 0;
+    prepare(const std::string& query) = 0;
 
     /**
        Execute a prepared CQL statement.
@@ -222,16 +221,10 @@ public:
     close() = 0;
 
     /**
-       Server address.
+       IP endpoint.
      */
-    virtual const std::string&
-    server() const = 0;
-
-    /**
-       Server port.
-     */
-    virtual unsigned int
-    port() const = 0;
+    virtual const cql_endpoint_t&
+    endpoint();
 
     /**
        List of registered events.

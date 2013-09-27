@@ -77,9 +77,9 @@ private:
     
 public:
     cql_cluster_pimpl_t(
-			const std::list<std::string>& contact_points, 
-			boost::shared_ptr<cql_configuration_t> configuration)
-        :_contact_points(contact_points), 
+            const std::list<cql_endpoint_t>&        endpoints, 
+			boost::shared_ptr<cql_configuration_t>  configuration)
+        :_contact_points(endpoints), 
 		 _configuration(configuration),
          work(new boost::asio::io_service::work(_io_service)),
          thread(boost::bind(&cql_cluster_pimpl_t::asio_thread_main, &_io_service))
@@ -90,7 +90,7 @@ public:
                     policies.reconnection_policy()
                 ));
             
-            _metadata->add_contact_points(contact_points);
+            _metadata->add_hosts(endpoints);
     }
         
     boost::shared_ptr<cql::cql_session_t> 
@@ -145,7 +145,7 @@ public:
     friend class cql_metadata_t;
     
 private:
-    const std::list<std::string> 			_contact_points;
+    const std::list<cql_endpoint_t> 		_contact_points;
     boost::shared_ptr<cql_configuration_t> 	_configuration;
 
     // Initialize the IO service, this allows us to perform network operations asyncronously

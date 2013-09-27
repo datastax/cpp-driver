@@ -96,6 +96,7 @@ namespace cql {
 ////			_schema_changed.connect(slot);
 //		}
 //        
+        
         // Puts all known hosts at the end of @collection.
         void
         get_hosts(std::vector<boost::shared_ptr<cql_host_t> >& collection) const; 
@@ -113,7 +114,7 @@ namespace cql {
         add_host(const cql_endpoint_t& endpoint);
         
         void
-        add_contact_points(const std::list<std::string>& contact_points);
+        add_hosts(const std::list<cql_endpoint_t>& endpoints);
         
         void
         remove_host(const cql_endpoint_t& endpoint);
