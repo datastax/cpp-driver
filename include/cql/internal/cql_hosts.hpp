@@ -6,17 +6,16 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/asio/ip/address.hpp>
 
-#include "cql/cql_host.hpp"
-#include "cql/policies/cql_reconnection_policy.hpp"
 #include "cql/lockfree/boost_ip_address_traits.hpp"
 #include "cql/lockfree/cql_lockfree_hash_map.hpp"
+#include "cql/cql_host.hpp"
+#include "cql/cql_endpoint.hpp"
+#include "cql/policies/cql_reconnection_policy.hpp"
+
 
 namespace cql {
 	class cql_hosts_t {
-		typedef 
-			::boost::asio::ip::address
-			ip_addr;
-
+        
 		typedef
 			::boost::shared_ptr<cql_host_t>
 			host_ptr_t;
@@ -24,11 +23,11 @@ namespace cql {
 	public:
 
 		inline bool
-		try_get(const ip_addr& ip_address, host_ptr_t* host) {
+		try_get(const cql_endpoint_t& endpoint, host_ptr_t* host) {
 			if(!host)
 				throw std::invalid_argument("host cannot be null.");
 
-			return _hosts.try_get(ip_address, host);
+			return _hosts.try_get(endpoint, host);
 		}
 
 		// Concurrently returns list of hosts. 
@@ -42,16 +41,22 @@ namespace cql {
 
 		// See get_hosts comment.
 		void
-		get_addresses(std::vector<ip_addr>* empty_vector);
+		get_endpoints(std::vector<cql::cql_endpoint_t>* empty_vector);
 
+        // brigns up specifed host. if host doesn't exist it
+        // is created.
 		bool
-		add_if_not_exists_or_bring_up_if_down(const ip_addr& ip_address);
+		bring_up(const cql_endpoint_t& endpoint);
 
+        // sets host down if it exists in collection, otherwise
+        // do nothing.
 		bool
-		set_down_if_exists(const ip_addr& ip_address);
+		set_down(const cql_endpoint_t& endpoint);
 
-		void
-		remove_if_exists(const ip_addr& ip_address);
+        // removes host from collection, returns true when
+        // host was removed, false otherwise.
+        bool
+		try_remove(const cql_endpoint_t& endpoint);
 
 		// expected_load - specify how many host you expect will be used
 		// by this class. This can speed up certain operations like host lookup.
@@ -70,7 +75,7 @@ namespace cql {
 		boost::shared_ptr<cql_reconnection_policy_t>
 			_reconnection_policy;
 
-		cql_lockfree_hash_map_t<ip_addr, host_ptr_t> _hosts;
+		cql_lockfree_hash_map_t<cql_endpoint_t, host_ptr_t> _hosts;
 	};
 }
 

@@ -47,6 +47,8 @@
             </df>
           </df>
         </df>
+        <df name="Progress">
+        </df>
         <df name="UNINSTALL.dir">
         </df>
       </df>
@@ -163,6 +165,7 @@
           <in>cql_config.hpp</in>
           <in>cql_connection.hpp</in>
           <in>cql_connection_factory.hpp</in>
+          <in>cql_endpoint.hpp</in>
           <in>cql_error.hpp</in>
           <in>cql_event.hpp</in>
           <in>cql_execute.hpp</in>

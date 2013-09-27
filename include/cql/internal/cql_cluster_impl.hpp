@@ -84,10 +84,10 @@ public:
          work(new boost::asio::io_service::work(_io_service)),
          thread(boost::bind(&cql_cluster_pimpl_t::asio_thread_main, &_io_service))
     { 
-            cql_policies_t& policies = configuration->get_policies();
+            cql_policies_t& policies = configuration->policies();
             
             _metadata = boost::shared_ptr<cql_metadata_t>(new cql_metadata_t(
-                    policies.get_reconnection_policy()
+                    policies.reconnection_policy()
                 ));
             
             _metadata->add_contact_points(contact_points);
@@ -100,13 +100,13 @@ public:
 
         cql::cql_session_t::cql_client_callback_t client_factory;
         boost::asio::ssl::context* ssl_context = 
-				_configuration->get_protocol_options()
-							   .get_ssl_context()
+				_configuration->protocol_options()
+							   .ssl_context()
 							   .get();
 							   
         cql::cql_connection_t::cql_log_callback_t log_callback = 
-				_configuration->get_client_options()
-							   .get_log_callback();
+				_configuration->client_options()
+							   .log_callback();
 
         if (ssl_context != 0) {
             client_factory = client_ssl_functor_t(

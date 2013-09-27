@@ -140,6 +140,7 @@ enum cql_event_topology_enum {
 enum cql_host_distance_enum {
 	CQL_HOST_DISTANCE_LOCAL,
 	CQL_HOST_DISTANCE_REMOTE,
+    // host ignored by driver (no connection allowed)
 	CQL_HOST_DISTANCE_IGNORE
 };
 

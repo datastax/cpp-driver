@@ -28,6 +28,7 @@
 #include "cql/exceptions/cql_no_host_available_exception.hpp"
 #include "cql/cql_host.hpp"
 
+
 namespace cql {
 
 cql_session_impl_t::cql_session_impl_t(
@@ -66,8 +67,8 @@ cql_session_impl_t::init(boost::asio::io_service& io_service) {
 //        }
 //    }
     
-    boost::shared_ptr<cql_query_plan_t> query_plan = _configuration->get_policies()
-                   .get_load_balancing_policy()
+    boost::shared_ptr<cql_query_plan_t> query_plan = _configuration->policies()
+                   .load_balancing_policy()
                   ->new_query_plan(boost::shared_ptr<cql_query_t>());
     
     boost::shared_ptr<cql_host_t> host = query_plan->next_host_to_query();
@@ -76,7 +77,7 @@ cql_session_impl_t::init(boost::asio::io_service& io_service) {
             "No host is available according to load balancing policy.");
     
     int stream_id;
-    std::list<std::string> tried_hosts;
+    std::list<ip_address_t> tried_hosts;
     
     boost::shared_ptr<cql_connection_t> conn =
         connect(query_plan, &stream_id, &tried_hosts);
@@ -113,8 +114,6 @@ cql_session_impl_t::add_client(
     const std::list<std::string>&             events,
     const std::map<std::string, std::string>& credentials) 
 {
-    boost::mutex::scoped_lock lock(_mutex);
-
     boost::shared_ptr<boost::promise<cql_future_connection_t> > promise(
         new boost::promise<cql_future_connection_t>());
         
@@ -139,8 +138,8 @@ cql_session_impl_t::get_host_distance(boost::shared_ptr<cql::cql_host_t> host) {
     
     cql_host_distance_enum distance = 
         _configuration
-            ->get_policies()
-            .get_load_balancing_policy()
+            ->policies()
+             .load_balancing_policy()
             ->distance(*p_host);
     
     return distance;
@@ -163,31 +162,81 @@ cql_session_impl_t::free_connections(
 }
 
     
-cql_session_impl_t::connections_collection_t&
+boost::shared_ptr<cql_session_impl_t::connections_collection_t>
 cql_session_impl_t::add_to_connection_pool(
     const boost::asio::ip::address& host_address) 
 {
-    std::string address_string = host_address.to_string();
-    connection_pool_t::iterator it = _connection_pool.find(address_string);
+    boost::shared_ptr<connections_collection_t> result, empty_collection;
     
-    if (it  == _connection_pool.end()) {
-        _connection_pool.insert(
-            std::make_pair(address_string, connections_collection_t()));
+    while(!_connection_pool.try_get(host_address, &result)) {
+        if(!empty_collection) {
+            empty_collection = boost::shared_ptr<connections_collection_t>(
+                new connections_collection_t());
+        }
+        
+        _connection_pool.try_add(host_address, empty_collection);
     }
+        
+    return result;
+}
 
-    return _connection_pool[address_string];
+void 
+cql_session_impl_t::try_remove_connection(
+    boost::shared_ptr<connections_collection_t>& connections,
+    const cql_uuid_t& connection_id) 
+{
+    // TODO: How we can guarantee that any other thread is not using
+    // this connection object ?
+    
+    boost::shared_ptr<cql_connection_t> conn;
+    
+    if(connections->try_erase(connection_id, &conn)) {
+        free_connection(conn);
+    }
+}
+
+boost::shared_ptr<cql_connection_t>
+cql_session_impl_t::try_find_free_stream(
+    boost::shared_ptr<cql_host_t>               host, 
+    boost::shared_ptr<connections_collection_t> connections,
+    int*                                        stream_id)
+{
+    cql_pooling_options_t& pooling_options  = _configuration->pooling_options();
+    cql_host_distance_enum distance         = get_host_distance(host);
+    
+    for(connections_collection_t::iterator kv = connections->begin(); 
+        kv != connections->end(); ++kv)
+    {  
+        cql_uuid_t                          conn_id = kv->first;
+        boost::shared_ptr<cql_connection_t> conn    = kv->second;
+
+        if (!conn->is_healthy()) {
+            try_remove_connection(conn_id);
+        } 
+        else if (!conn->is_busy(pooling_options.max_simultaneous_requests_per_connection_treshold(distance))) {
+            *stream_id = conn->allocate_stream_id();
+            if(*stream_id != (-1))
+                return conn;
+        } 
+        else if (connections->size() > pooling_options.core_connections_per_host(distance)) {
+            if (conn->is_free(pooling_options.min_simultaneous_requests_per_connection_treshold(distance))) {
+                trashcan_put(connections, conn_id);
+            }
+        }
+    }
+    
+    *stream_id = (-1);
+    return boost::shared_ptr<cql_connection_t>();
 }
 
 boost::shared_ptr<cql_connection_t>
 cql_session_impl_t::connect(
         boost::shared_ptr<cql::cql_query_plan_t>    query_plan, 
         int*                                        stream_id, 
-        std::list<std::string>*                     tried_hosts) 
+        std::list<boost::asio::ip::address>*        tried_hosts) 
 {
     assert(stream_id != NULL);
     assert(tried_hosts != NULL);
-    
-    boost::mutex::scoped_lock lock_(_connection_pool_mtx);
 
     while (boost::shared_ptr<cql_host_t> host = query_plan->next_host_to_query()) 
     {
@@ -195,30 +244,12 @@ cql_session_impl_t::connect(
             continue;
 
         boost::asio::ip::address host_addr = host->address();
-        tried_hosts->push_back( host_addr.to_string() );
+        tried_hosts->push_back( host_addr );
 
-        connections_collection_t connections = add_to_connection_pool(host_addr);
-        cql_host_distance_enum distance = get_host_distance(host);
-
-        std::list<cql_uuid_t> to_remove;
-
-        for(connections_collection_t::iterator kv = connections.begin(); 
-            kv != connections.end(); ++kv) 
-        {
-            boost::shared_ptr<cql_connection_t> client = kv->second;
-
-            if (!client->is_healthy()) {
-                to_remove.push_back(kv->first);
-            } else if (!client->is_busy(_configuration->get_pooling_options().get_max_simultaneous_requests_per_connection_treshold(distance))) {
-                *stream_id = client->allocate_stream_id();
-                return client;
-            } else if (connections.size() > _configuration->get_pooling_options().get_core_connections_per_host(distance)) {
-                if (client->is_free(_configuration->get_pooling_options().get_min_simultaneous_requests_per_connection_treshold(distance))) {
-                    to_remove.push_back(kv->first);
-                    trashcan_put(kv->second);
-                }
-            }
-        }
+        boost::shared_ptr<connections_collection_t> connections 
+            = add_to_connection_pool(host_addr);
+        
+        
 
         free_connections(connections, to_remove);
 
@@ -251,7 +282,20 @@ cql_session_impl_t::allocate_connection(const boost::asio::ip::address& address,
 }
 
 void 
-cql_session_impl_t::trashcan_put(boost::shared_ptr<cql_connection_t> connection) {
+cql_session_impl_t::trashcan_put(
+        boost::shared_ptr<connections_collection_t>& connections,
+        const cql_uuid_t&                           connection_id) 
+{
+    boost::shared_ptr<cql_connection_t> conn;
+    
+    if(connections->try_erase(connection_id, &conn)) {
+        trashcan_put(conn);
+    }
+}
+
+void
+cql_session_impl_t::trashcan_put(boost::shared_ptr<cql_connection_t>& connection) {
+    
 }
 
 boost::shared_ptr<cql_connection_t> 

@@ -8,6 +8,7 @@
 
 #include "cql/cql.hpp"
 #include "cql/cql_config.hpp"
+#include "cql/cql_endpoint.hpp"
 #include "cql/policies/cql_reconnection_policy.hpp"
 #include "cql/cql_reconnection_schedule.hpp"
 
@@ -16,14 +17,20 @@ namespace cql {
 	public:
 		typedef 
 			boost::asio::ip::address
-			ip_address;
+			ip_address_t;
 
 		inline bool 
 		is_up() const { return _is_up; }
 		
-		inline ip_address
-		address() const { return _ip_address; }
+		inline const ip_address_t&
+		address() const { return _endpoint.address(); }
 		
+        inline unsigned short 
+        port() const { return _endpoint.port(); }
+        
+        inline const cql_endpoint_t&
+        endpoint() const { return _endpoint; }
+        
 		inline const std::string&
 		datacenter() const { return _datacenter; }
 		
@@ -37,7 +44,7 @@ namespace cql {
 		set_down();
 		
 		bool
-		bring_up_if_down();
+		bring_up();
 		
 		void
 		set_location_info(
@@ -46,26 +53,24 @@ namespace cql {
 		
 		static ::boost::shared_ptr<cql_host_t>
 		create(
-			const ip_address& address, 
+			const cql_endpoint_t& endpoint,
 			const boost::shared_ptr<cql_reconnection_policy_t>& reconnection_policy);
 	private:
 		cql_host_t(
-			const ip_address& address, 
+            const cql_endpoint_t& endpoint,
 			const boost::shared_ptr<cql_reconnection_policy_t>& reconnection_policy);
 
-		boost::posix_time::ptime utc_now() const;
-
-		ip_address	_ip_address;
-		std::string _datacenter;
-		std::string _rack;
-		bool		_is_up;
+        cql_endpoint_t  _endpoint;
+		std::string     _datacenter;
+		std::string     _rack;
+		bool            _is_up;
 		boost::posix_time::ptime _next_up_time;
 		
 		boost::shared_ptr<cql_reconnection_policy_t>
-			_reconnection_policy;
+                        _reconnection_policy;
 			
 		boost::shared_ptr<cql_reconnection_schedule_t>
-			_reconnection_schedule;
+                        _reconnection_schedule;
 	};
 }
 

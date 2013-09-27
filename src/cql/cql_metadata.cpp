@@ -1,5 +1,6 @@
 #include <cassert>
 #include <algorithm>
+#include <exception>
 
 #include "cql/internal/cql_util.hpp"
 #include "cql/cql_metadata.hpp"
@@ -7,6 +8,7 @@
 #include "cql/internal/cql_cluster_impl.hpp"
 #include "cql/cql_builder.hpp"
 #include "cql/internal/cql_hosts.hpp"
+#include "cql/lockfree/boost_ip_address_traits.hpp"
 
 void
 cql::cql_metadata_t::get_hosts(std::vector<boost::shared_ptr<cql::cql_host_t> >& collection) const {
@@ -14,39 +16,43 @@ cql::cql_metadata_t::get_hosts(std::vector<boost::shared_ptr<cql::cql_host_t> >&
 }
         
 boost::shared_ptr<cql::cql_host_t>
-cql::cql_metadata_t::get_host(const boost::asio::ip::address& ip_address) const {
+cql::cql_metadata_t::get_host(const cql_endpoint_t& endpoint) const {
     boost::shared_ptr<cql_host_t> host;
     
-    if(_hosts->try_get(ip_address, &host))
+    if(_hosts->try_get(endpoint, &host))
         return host;
     
     return boost::shared_ptr<cql_host_t>();
 }
         
 void
-cql::cql_metadata_t::get_host_addresses(std::vector<boost::asio::ip::address>& collection) const {
-    _hosts->get_addresses(&collection);
+cql::cql_metadata_t::get_endpoints(std::vector<cql::cql_endpoint_t>* collection) const {
+    if(!collection)
+        throw std::invalid_argument("collection cannot be null.");
+    
+    _hosts->get_endpoints(collection);
 }
 
 boost::shared_ptr<cql::cql_host_t>
-cql::cql_metadata_t::add_host(const boost::asio::ip::address& ip_address) {
-    _hosts->add_if_not_exists_or_bring_up_if_down(ip_address);
-    return get_host(ip_address);
+cql::cql_metadata_t::add_host(const cql_endpoint_t& endpoint) 
+{
+    _hosts->bring_up(endpoint);
+    return get_host(endpoint);
 }
 
 void
-cql::cql_metadata_t::remove_host(const boost::asio::ip::address& ip_address) {
-    _hosts->remove_if_exists(ip_address);
+cql::cql_metadata_t::remove_host(const cql_endpoint_t& endpoint) {
+    _hosts->try_remove(endpoint);
 }
 
 void
-cql::cql_metadata_t::set_down_host(const boost::asio::ip::address& ip_address) {
-    _hosts->set_down_if_exists(ip_address);
+cql::cql_metadata_t::set_down_host(const cql_endpoint_t& endpoint) {
+    _hosts->set_down(endpoint);
 }
         
 void
-cql::cql_metadata_t::bring_up_host(const boost::asio::ip::address& ip_address) {
-    _hosts->add_if_not_exists_or_bring_up_if_down(ip_address);
+cql::cql_metadata_t::bring_up_host(const cql_endpoint_t& endpoint) {
+    _hosts->bring_up(endpoint);
 }
 
 cql::cql_metadata_t::cql_metadata_t(

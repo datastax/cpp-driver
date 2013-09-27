@@ -37,8 +37,8 @@ cql::cql_cluster_t::built_from(const cql_initializer_t& initializer) {
     return boost::shared_ptr<cql::cql_cluster_t>(
 		new cql::cql_cluster_t(
 			new cql::cql_cluster_pimpl_t(
-				initializer.get_contact_points(), 
-				initializer.get_configuration())));
+				initializer.contact_points(), 
+				initializer.configuration())));
 }
 
 boost::shared_ptr<cql::cql_builder_t> 

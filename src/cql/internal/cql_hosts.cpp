@@ -21,49 +21,45 @@ cql::cql_hosts_t::get_hosts(std::vector<host_ptr_t>* empty_vector) {
 	if(!empty_vector)
 		throw std::invalid_argument("empty_vector cannot be null.");
 
-	_hosts.unsafe_get_values(std::back_inserter(*empty_vector));
+	_hosts.get_values(std::back_inserter(*empty_vector));
 }
 
 bool 
-cql::cql_hosts_t::add_if_not_exists_or_bring_up_if_down( 
-	const cql::cql_hosts_t::ip_addr& ip_address )
+cql::cql_hosts_t::bring_up(const cql::cql_endpoint_t& endpoint)
 {
 	boost::shared_ptr<cql_host_t> new_host = 
-		cql_host_t::create(ip_address, _reconnection_policy);
+		cql_host_t::create(endpoint, _reconnection_policy);
 	
-	if (_hosts.try_add(ip_address, new_host))
-		return true;
+	_hosts.try_add(endpoint, new_host);
 
 	boost::shared_ptr<cql_host_t> host;
-	if(_hosts.try_get(ip_address, &host))
-		return host->bring_up_if_down();
+	if(_hosts.try_get(endpoint, &host))
+		return host->bring_up();
 	else
 		return false;
 }
 
 bool 
-cql::cql_hosts_t::set_down_if_exists( 
-	const boost::asio::ip::address& ip_address )
+cql::cql_hosts_t::set_down(const cql::cql_endpoint_t& endpoint)
 {
 	boost::shared_ptr<cql_host_t> host;
 
-	if (_hosts.try_get(ip_address, &host))
+	if (_hosts.try_get(endpoint, &host))
 		return host->set_down();
 	else
 		return false;
 }
 
-void 
-cql::cql_hosts_t::remove_if_exists(
-	const boost::asio::ip::address& ip_address )
+bool 
+cql::cql_hosts_t::try_remove(const cql::cql_endpoint_t& endpoint)
 {
-	_hosts.try_erase(ip_address);
+	return _hosts.try_erase(endpoint);
 }
 
 void
-cql::cql_hosts_t::get_addresses(std::vector<cql::cql_hosts_t::ip_addr>* empty_vector) {
+cql::cql_hosts_t::get_endpoints(std::vector<cql::cql_endpoint_t>* empty_vector) {
 	if(!empty_vector)
 		throw std::invalid_argument("empty_vector cannot be null.");
 
-	_hosts.unsafe_get_keys(std::back_inserter(*empty_vector));
+	_hosts.get_keys(std::back_inserter(*empty_vector));
 }

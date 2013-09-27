@@ -31,3 +31,8 @@ cql::to_ipaddr(const std::string& str, boost::asio::ip::address* const result)
      
      return true;
 }
+
+boost::posix_time::ptime 
+cql::utc_now() {
+    return boost::posix_time::microsec_clock::universal_time();
+}

@@ -23,9 +23,11 @@
 #include <streambuf>
 #include <vector>
 #include <boost/asio/ip/address.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include "cql/cql.hpp"
 #include "cql/internal/cql_system_dependent.hpp"
+#include "cql/cql_endpoint.hpp"
 
 namespace cql {
 
@@ -69,6 +71,13 @@ is_null_or_empty(const char* str) {
 // if this returns true then result will contain valid ip address.
 bool 
 to_ipaddr(const std::string& str, boost::asio::ip::address* result);
+
+
+// returns current UTC time.
+// result of this functions depends on local 
+// system settings which may be modified by user.
+boost::posix_time::ptime 
+utc_now();
 
 
 } // namespace cql

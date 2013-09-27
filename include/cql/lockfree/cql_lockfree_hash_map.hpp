@@ -41,7 +41,15 @@ namespace cql {
         typedef
             cds::container::SplitListMap<cds::gc::HP, TKey, TValue, cql_lockfree_hash_map_traits_t<TKey, TValue> > 
             base_hash_map;
-    
+        
+        typedef
+            typename base_hash_map::iterator
+            iterator;
+        
+        typedef
+            typename base_hash_map::const_iterator
+            const_iterator;
+        
         private:
             
         // Functor copies value associated with given key 
@@ -116,7 +124,7 @@ namespace cql {
         // contained in map.
         template<typename TOutputIterator>
         inline void
-        unsafe_get_keys(TOutputIterator b_inserter) {
+        get_keys(TOutputIterator b_inserter) {
             typename base_hash_map::iterator it = _map.begin();
             for(; it != _map.end(); ++it) {
                 *b_inserter++ = it->first; // copy key
@@ -125,11 +133,34 @@ namespace cql {
         
         template<typename TOutputIterator>
         inline void
-        unsafe_get_values(TOutputIterator b_inserter) {
+        get_values(TOutputIterator b_inserter) {
             typename base_hash_map::iterator it = _map.begin();
             for(; it != _map.end(); ++it) {
                 *b_inserter++ = it->second; // copy key
             }
+        }
+        
+        // Retruns map iterator.
+        // This may not traverse all hash map elements
+        // due to concurrency issues.
+        inline iterator
+        begin() {
+            return _map.begin();
+        }
+        
+        inline iterator
+        end() {
+            return _map.end();
+        }
+        
+        inline const_iterator
+        cbegin() const {
+            return _map.cbegin();
+        }
+        
+        inline const_iterator
+        cend() const {
+            return _map.cend();
         }
         
     public:

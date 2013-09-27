@@ -38,7 +38,8 @@
 #include "cql/cql_builder.hpp"
 #include "cql/cql_cluster.hpp"
 #include "cql/policies/cql_load_balancing_policy.hpp"
-
+#include "cql/lockfree/boost_ip_address_traits.hpp"
+#include "cql/lockfree/cql_lockfree_hash_map.hpp"
 
 namespace cql {
 
@@ -123,7 +124,7 @@ public:
 	connect(
         boost::shared_ptr<cql::cql_query_plan_t>    query_plan, 
         int*                                        stream_id, 
-        std::list<std::string>*                     tried_hosts);
+        std::list<boost::asio::ip::address>*        tried_hosts);
         
     virtual cql_uuid_t
     session_uuid() const;
@@ -149,23 +150,26 @@ private:
         size_t errors;
     };
     
+    typedef
+        ::boost::asio::ip::address
+        ip_address_t;
+    
     typedef 
         boost::ptr_deque<client_container_t> 
         clients_collection_t;
     
     typedef
-        std::map<cql_uuid_t, boost::shared_ptr<cql_connection_t> >
+        cql::cql_lockfree_hash_map_t<
+            cql_uuid_t, 
+            boost::shared_ptr<cql_connection_t> >
         connections_collection_t;  
     
     typedef
-        std::map<std::string, connections_collection_t>
+        cql::cql_lockfree_hash_map_t<
+                ip_address_t, 
+                boost::shared_ptr<connections_collection_t> >
         connection_pool_t;
           
-	void 
-	trashcan_put(boost::shared_ptr<cql_connection_t> connection);
-    
-	boost::shared_ptr<cql_connection_t> 
-	trashcan_recycle(const boost::asio::ip::address& address);
 
     boost::shared_future<cql::cql_future_connection_t>
     add_client(
@@ -174,10 +178,10 @@ private:
 
     boost::shared_future<cql::cql_future_connection_t>
     add_client(
-        const std::string&                      server,
+        std::string const&                      server,
         unsigned int                            port,
         cql::cql_connection_t::cql_event_callback_t event_callback,
-        const std::list<std::string>&           events);
+        std::list<std::string> const&           events);
 
     boost::shared_future<cql::cql_future_connection_t>
     add_client(
@@ -272,9 +276,31 @@ private:
         connections_collection_t& connections, 
         const std::list<cql_uuid_t>& connections_to_remove);
 
-    connections_collection_t&
+    boost::shared_ptr<connections_collection_t>
     add_to_connection_pool(
         const boost::asio::ip::address& host_address);
+
+    void
+    try_remove_connection(
+        boost::shared_ptr<connections_collection_t>& connections,
+        const cql_uuid_t& connection_id);
+
+    void
+    try_find_free_stream(
+        boost::shared_ptr<cql_host_t> const& host,
+        boost::shared_ptr<connections_collection_t> connections);
+    
+    void 
+	trashcan_put(
+        boost::shared_ptr<connections_collection_t>& connections,
+        const cql_uuid_t&                           connection_id);
+    
+    void
+    trashcan_put(
+        boost::shared_ptr<cql_connection_t>& connection);
+    
+	boost::shared_ptr<cql_connection_t> 
+	trashcan_recycle(ip_address_t const& address);
 
     
 private:
@@ -292,7 +318,6 @@ private:
     
     cql_uuid_t                                  _uuid;
     boost::shared_ptr<cql_configuration_t>      _configuration;
-    boost::mutex                                _connection_pool_mtx;
     connection_pool_t                           _trashcan;
     connection_pool_t                           _connection_pool;
     std::map<std::string, long>                 _allocated_connections;

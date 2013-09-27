@@ -96,32 +96,10 @@ public:
         boost::function<void(const boost::system::error_code&, std::size_t)> 
         write_callback_t;
 
-
     cql_connection_impl_t(
-        boost::asio::io_service& io_service,
-        TSocket*                 transport) :
-        _port(0),
-        _resolver(io_service),
-        _transport(transport),
-        _request_buffer(0),
-        _callback_storage(),
-        _numer_of_free_stream_ids(127),
-        _connect_callback(0),
-        _connect_errback(0),
-        _log_callback(0),
-        _events_registered(false),
-        _event_callback(0),
-        _defunct(false),
-        _ready(false),
-        _closing(false),
-        _reserved_stream_id(_callback_storage.acquire_slot()),
-        _uuid(cql_uuid_t::create())
-    { }
-
-    cql_connection_impl_t(
-        boost::asio::io_service&              io_service,
-        TSocket*                      transport,
-        cql::cql_connection_t::cql_log_callback_t log_callback) :
+        boost::asio::io_service&                    io_service,
+        TSocket*                                    transport,
+        cql::cql_connection_t::cql_log_callback_t   log_callback = 0) :
         _port(0),
         _resolver(io_service),
         _transport(transport),
@@ -474,6 +452,7 @@ private:
         }
     }
 
+    // returns (-1) when cannot allocate stream id
     virtual cql::cql_stream_id_t
     allocate_stream_id() {
         callback_storage_t::slot_t slot = allocate_callback_slot();
@@ -809,7 +788,7 @@ private:
     std::string                          _server;
     unsigned int                         _port;
     boost::asio::ip::tcp::resolver       _resolver;
-    std::auto_ptr<TSocket>       _transport;
+    std::auto_ptr<TSocket>               _transport;
     cql::cql_stream_id_t                 _stream_counter;
     request_buffer_t                     _request_buffer;
     cql::cql_header_impl_t               _response_header;

@@ -9,6 +9,7 @@
 #include <boost/noncopyable.hpp>
 
 #include "cql/policies/cql_reconnection_policy.hpp"
+#include "cql/cql_endpoint.hpp"
 
 namespace cql {
 	class cql_host_state_changed_info_t {
@@ -19,27 +20,20 @@ namespace cql {
 		};
 
 		inline new_host_state_enum
-		new_host_state() const { return _new_host_state; }
+		new_state() const { return _new_state; }
 
-		inline const boost::asio::ip::address&
-		host_address() const { return _ip_addr; }
-
-		inline short
-		host_port() const { return _ip_port; }
+        inline const cql_endpoint_t&
+        endpoint() const { return _endpoint; }
 
 	private:
 		cql_host_state_changed_info_t(
-			new_host_state_enum new_host_state,
-			boost::asio::ip::address& ip_addr,
-			short ip_port)
-			:	_new_host_state(new_host_state),
-				_ip_addr(ip_addr), 
-				_ip_port(ip_port) { }
+			new_host_state_enum     new_host_state,
+            const cql_endpoint_t&   endpoint)
+			:	_new_state(new_host_state),
+				_endpoint(endpoint) { }
 
-
-		new_host_state_enum			_new_host_state;
-		boost::asio::ip::address&	_ip_addr;
-		short						_ip_port;
+		new_host_state_enum			_new_state;
+        cql_endpoint_t              _endpoint;
 	};
 
 	class cql_schema_changed_info_t {
@@ -83,6 +77,7 @@ namespace cql {
     
 	class cql_metadata_t: boost::noncopyable {
 	public:
+// TODO: Provide notifications for events
 //		typedef
 //			boost::signals2::signal<void(const cql_host_state_changed_info_t&)>
 //			on_host_state_changed_t;
@@ -106,28 +101,28 @@ namespace cql {
         get_hosts(std::vector<boost::shared_ptr<cql_host_t> >& collection) const; 
         
         boost::shared_ptr<cql_host_t>
-        get_host(const boost::asio::ip::address& ip_address) const;
+        get_host(const cql_endpoint_t& endpoint) const;
         
         // Puts host addresses at the end of @collection
         void
-        get_host_addresses(std::vector<boost::asio::ip::address>& collection) const;
+        get_endpoints(std::vector<cql_endpoint_t>* collection) const;
         
     private:
         
         boost::shared_ptr<cql_host_t>
-        add_host(const boost::asio::ip::address& ip_address);
+        add_host(const cql_endpoint_t& endpoint);
         
         void
         add_contact_points(const std::list<std::string>& contact_points);
         
         void
-        remove_host(const boost::asio::ip::address& ip_address);
+        remove_host(const cql_endpoint_t& endpoint);
         
         void
-        set_down_host(const boost::asio::ip::address& ip_address);
+        set_down_host(const cql_endpoint_t& endpoint);
         
         void
-        bring_up_host(const boost::asio::ip::address& ip_address);
+        bring_up_host(const cql_endpoint_t& endpoint);
         
 	private:
         cql_metadata_t(

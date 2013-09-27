@@ -1,10 +1,11 @@
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include "cql/cql_host.hpp"
+#include "cql/internal/cql_util.hpp"
 
 cql::cql_host_t::cql_host_t(
-	const ip_address& address, 
+	const cql_endpoint_t& endpoint,
 	const boost::shared_ptr<cql_reconnection_policy_t>& reconnection_policy)
-	: _ip_address(address),
+	: _endpoint(endpoint),
 	  _datacenter("unknown"),
 	  _rack("unknown"),
 	  _is_up(false),
@@ -15,16 +16,17 @@ cql::cql_host_t::cql_host_t(
 
 ::boost::shared_ptr<cql::cql_host_t>
 cql::cql_host_t::create(
-	const ip_address& address, 
+	const cql_endpoint_t& endpoint,
 	const boost::shared_ptr<cql_reconnection_policy_t>& reconnection_policy)
 {
-	if(address.is_unspecified())
+	if(endpoint.is_unspecified())
 		throw std::invalid_argument("unspecified IP address.");
 
 	if(!reconnection_policy)
 		throw std::invalid_argument("reconnection policy cannot be null.");
 
-	return ::boost::shared_ptr<cql::cql_host_t>(new cql_host_t(address, reconnection_policy));
+	return ::boost::shared_ptr<cql::cql_host_t>(
+        new cql_host_t(endpoint, reconnection_policy));
 }
 
 void 
@@ -66,14 +68,8 @@ cql::cql_host_t::set_down()
 	return false;
 }
 
-boost::posix_time::ptime 
-cql::cql_host_t::utc_now() const
-{
-	return boost::posix_time::microsec_clock::universal_time();
-}
-
 bool 
-cql::cql_host_t::bring_up_if_down()
+cql::cql_host_t::bring_up()
 {
 	_reconnection_schedule = _reconnection_policy->new_schedule();
 	
