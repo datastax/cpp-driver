@@ -48,6 +48,7 @@
           </df>
         </df>
         <df name="Progress">
+          <in>count.txt</in>
         </df>
         <df name="UNINSTALL.dir">
         </df>
@@ -186,6 +187,7 @@
           <in>cql_serialization.hpp</in>
           <in>cql_session.hpp</in>
           <in>cql_set.hpp</in>
+          <in>cql_stream.hpp</in>
           <in>cql_uuid.hpp</in>
           <in>cql_vector_stream.hpp</in>
           <in>version.hpp</in>
@@ -263,7 +265,6 @@
             <df name="UnitTests_cql.dir">
             </df>
           </df>
-          <in>cql_header.cpp</in>
           <in>cql_message_error.cpp</in>
           <in>cql_message_event.cpp</in>
           <in>cql_message_options.cpp</in>

@@ -73,6 +73,7 @@
 #include "cql/internal/cql_message_supported_impl.hpp"
 #include "cql/cql_serialization.hpp"
 #include "cql/cql_uuid.hpp"
+#include "cql/cql_stream.hpp"
 
 namespace cql {
 
@@ -118,7 +119,7 @@ public:
         _defunct(false),
         _ready(false),
         _closing(false),
-        _reserved_stream_id(_callback_storage.acquire_slot()),
+        _reserved_stream(_callback_storage.acquire_stream()),
         _uuid(cql_uuid_t::create())
     { }
 
@@ -192,82 +193,74 @@ public:
         return shared_future;
     }
 
-    cql::cql_stream_id_t
+    cql::cql_stream_t
     query(const std::string&                        query,
           cql::cql_consistency_enum                 consistency,
           cql::cql_connection_t::cql_message_callback_t callback,
           cql::cql_connection_t::cql_message_errback_t  errback) 
     {
-		  callback_storage_t::slot_t slot = allocate_callback_slot();
-          
-          if(slot.is_invalid()) {
-                errback(*this, (cql_stream_id_t)(-1), create_stream_id_error());
-                return -1;
+		  cql_stream_t stream = acquire_stream();
+          if(stream.is_invalid()) {
+                errback(*this, stream, create_stream_id_error());
+                return stream;
           }
 
-          _callback_storage.put_at(slot, callback_pair_t(callback, errback));
-          
-          cql_stream_id_t stream_id = slot.stream_id();
-          
+          _callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
+
           create_request(new cql::cql_message_query_impl_t(query, consistency),
                                   boost::bind(&cql_connection_impl_t::write_handle,
                                           this,
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred),
-                                    stream_id);
+                                    stream);
 
-           return stream_id;
+           return stream;
     }
 
-    cql::cql_stream_id_t
+    cql::cql_stream_t
     prepare(const std::string&                        query,
             cql::cql_connection_t::cql_message_callback_t callback,
             cql::cql_connection_t::cql_message_errback_t  errback) {
 
-		callback_storage_t::slot_t slot = allocate_callback_slot();
-        
-        if(slot.is_invalid()) {
-            errback(*this, (cql_stream_id_t)(-1), create_stream_id_error());
-            return (-1);
+        cql_stream_t stream = acquire_stream();
+        if(stream.is_invalid()) {
+            errback(*this, stream, create_stream_id_error());
+            return stream;
         }
-
-        cql_stream_id_t stream_id = slot.stream_id();
+        
+        _callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
         
         create_request(new cql::cql_message_prepare_impl_t(query),
                                   boost::bind(&cql_connection_impl_t::write_handle,
                                           this,
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred),
-                                  stream_id);
+                                  stream);
 
-        _callback_storage.put_at(slot, callback_pair_t(callback, errback));
-        return stream_id;
+        return stream;
     }
 
-    cql::cql_stream_id_t
+    cql::cql_stream_t
     execute(cql::cql_execute_t*                       message,
             cql::cql_connection_t::cql_message_callback_t callback,
             cql::cql_connection_t::cql_message_errback_t  errback) {
 
-		callback_storage_t::slot_t slot = allocate_callback_slot();
+        cql_stream_t stream = acquire_stream();
 
-        if(slot.is_invalid()) {
-            errback(*this, (cql_stream_id_t)(-1), create_stream_id_error());
-            return (-1);
+        if(stream.is_invalid()) {
+            errback(*this, stream, create_stream_id_error());
+            return stream;
         }
         
-        cql_stream_id_t stream_id = slot.stream_id();
-        
+        _callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
         create_request(message->impl(),
                                   boost::bind(&cql_connection_impl_t::write_handle,
                                           this,
                                           boost::asio::placeholders::error,
                                           boost::asio::placeholders::bytes_transferred),
-                                  stream_id);
+                                  stream);
 
-
-        _callback_storage.put_at(slot, callback_pair_t(callback, errback));
-        return stream_id;
+       return stream;
     }
 
     bool
@@ -367,7 +360,7 @@ private:
     _statement_future_callback(
         boost::shared_ptr<boost::promise<cql::cql_future_result_t> > promise,
         cql_connection_t&,
-        const cql::cql_stream_id_t                                   stream,
+        const cql::cql_stream_t&                                     stream,
         cql::cql_result_t*                                           result_ptr) {
         promise->set_value(cql::cql_future_result_t(this, stream, result_ptr));
     }
@@ -376,7 +369,7 @@ private:
     _statement_future_errback(
         boost::shared_ptr<boost::promise<cql::cql_future_result_t> > promise,
         cql_connection_t&,
-        const cql::cql_stream_id_t                                   stream,
+        const cql::cql_stream_t&                                     stream,
         const cql_error_t&                                           error) {
         promise->set_value(cql::cql_future_result_t(this, stream, error));
     }
@@ -443,66 +436,50 @@ private:
         }
     }
 
-    // returns (-1) when cannot allocate stream id
-    virtual cql::cql_stream_id_t
-    allocate_stream_id() {
-        callback_storage_t::slot_t slot = allocate_callback_slot();
-        
-        if(slot.is_invalid())
-            return (cql::cql_stream_id_t)(-1);
-        
-        return slot.stream_id();
+    // if stream cannot be acquired returns invalid stream
+    virtual cql::cql_stream_t
+    acquire_stream() {
+        cql_stream_t stream = _callback_storage.acquire_stream();
+        return stream;
     }
     
+    // releases stream, parameter will be set  to invalid stream.
     virtual void
-    release_stream_id(const cql_stream_id_t stream_id) {
-        callback_storage_t::slot_t slot =
-            callback_storage_t::slot_t::slot_for(stream_id);
-        release_callback_slot(slot);
+    release_stream(cql_stream_t& stream) {
+        _callback_storage.release_stream(stream);
     }
     
-    callback_storage_t::slot_t 
-    allocate_callback_slot() {
-		  _numer_of_free_stream_ids--;
-		  return _callback_storage.acquire_slot();
-	}
-    
-    void
-    release_callback_slot(callback_storage_t::slot_t& slot) {
-        _numer_of_free_stream_ids++;
-		_callback_storage.release_slot(slot);
-    }
-
 	virtual bool 
-    is_healthy() {
+    is_healthy() const {
         return true;
     }
 
 	virtual bool 
-    is_busy(int max) {
+    is_busy(int max) const {
 		return (NUMBER_OF_STREAMS - _numer_of_free_stream_ids.load(boost::memory_order_acquire)) >= max;
     }
     
 	virtual bool 
-    is_free(int min) {
+    is_free(int min) const {
 		return (NUMBER_OF_STREAMS - _numer_of_free_stream_ids.load(boost::memory_order_acquire)) <= min;
     }
     
     virtual bool
-    is_empty() {
+    is_empty() const {
         return (NUMBER_OF_USER_STREAMS == _numer_of_free_stream_ids.load(boost::memory_order_acquire));
     }
 
     void
-    create_request(cql::cql_message_t* message,
-                   write_callback_t callback,
-				   cql_stream_id_t id) {
+    create_request(cql::cql_message_t*    message,
+                   write_callback_t         callback,
+				   cql_stream_t&            stream) 
+    {
         cql::cql_error_t err;
         message->prepare(&err);
 
         cql::cql_header_impl_t header(CQL_VERSION_1_REQUEST,
                                       CQL_FLAG_NOFLAG,
-                                      id,
+                                      stream,
                                       message->opcode(),
                                       message->size());
         header.prepare(&err);
@@ -640,15 +617,14 @@ private:
         {
             log(CQL_LOG_DEBUG, "received result message " + header.str());
             
-            cql_stream_id_t stream_id = header.stream();
-            callback_storage_t::slot_t slot = callback_storage_t::slot_t::slot_for(stream_id);
-
-            if(_callback_storage.is_free_slot(slot)) {
+            cql_stream_t stream = header.stream();
+            
+            if(!_callback_storage.has_callbacks(stream)) {
                 log(CQL_LOG_INFO, "no callback found for message " + header.str());
             }
             else {
-                callback_pair_t callback_pair = _callback_storage.get_at(slot);
-                release_callback_slot(slot);
+                callback_pair_t callback_pair = _callback_storage.get_callbacks(stream);
+                release_stream(stream);
                 
                 callback_pair.first(*this, header.stream(), dynamic_cast<cql::cql_message_result_impl_t*>(_response_message.release()));
             }
@@ -664,15 +640,14 @@ private:
 
         case CQL_OPCODE_ERROR: 
         {
-            cql_stream_id_t stream_id = header.stream();
-            callback_storage_t::slot_t slot = callback_storage_t::slot_t::slot_for(stream_id);
-            
-            if(_callback_storage.is_free_slot(slot)) {
+            cql_stream_t stream = header.stream();
+
+            if(!_callback_storage.has_callbacks(stream)) {
                 log(CQL_LOG_INFO, "no callback found for message " + header.str() + " " + _response_message->str());
             }
             else {
-                callback_pair_t callback_pair = _callback_storage.get_at(slot);
-                release_callback_slot(slot);
+                callback_pair_t callback_pair = _callback_storage.get_callbacks(stream);
+                release_stream(stream);
                 
                 cql::cql_message_error_impl_t* m = 
                     dynamic_cast<cql::cql_message_error_impl_t*>(_response_message.get());
@@ -680,7 +655,7 @@ private:
                 cql::cql_error_t cql_error = 
                     cql::cql_error_t::cassandra_error(m->code(), m->message());
                 
-                callback_pair.second(*this, header.stream(), cql_error);
+                callback_pair.second(*this, stream, cql_error);
             } 
             break;
         }
@@ -709,6 +684,7 @@ private:
 
         default:
             log(CQL_LOG_ERROR, "unhandled opcode " + header.str());
+            break;
         }
 
         header_read(); // loop
@@ -724,7 +700,7 @@ private:
                                    this,
                                    boost::asio::placeholders::error,
                                    boost::asio::placeholders::bytes_transferred),
-                        _reserved_stream_id.stream_id());
+                        _reserved_stream);
 
         _events_registered = true;
     }
@@ -736,7 +712,7 @@ private:
                                this,
                                boost::asio::placeholders::error,
                                boost::asio::placeholders::bytes_transferred),
-                       _reserved_stream_id.stream_id());
+                       _reserved_stream);
 
         // start listening
         header_read();
@@ -751,7 +727,7 @@ private:
                                    this,
                                    boost::asio::placeholders::error,
                                    boost::asio::placeholders::bytes_transferred),
-                       _reserved_stream_id.stream_id());
+                       _reserved_stream);
     }
 
     void
@@ -763,7 +739,7 @@ private:
                                    this,
                                    boost::asio::placeholders::error,
                                    boost::asio::placeholders::bytes_transferred),
-                       _reserved_stream_id.stream_id());
+                       _reserved_stream);
     }
 
     inline void
@@ -802,7 +778,7 @@ private:
     bool                                 _ready;
     bool                                 _closing;
     // Stream with ID equal 0
-    callback_storage_t::slot_t			 _reserved_stream_id;
+    cql_stream_t                         _reserved_stream;
     cql_uuid_t                           _uuid;
 };
 

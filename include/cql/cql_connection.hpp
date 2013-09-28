@@ -33,7 +33,8 @@
 #include "cql/cql_future_connection.hpp"
 #include "cql/cql_future_result.hpp"
 #include "cql/cql_uuid.hpp"
-#include "cql_endpoint.hpp"
+#include "cql/cql_endpoint.hpp"
+#include "cql/cql_stream.hpp"
 
 namespace cql {
 
@@ -49,22 +50,22 @@ class cql_connection_t :
 public:
 
     virtual bool 
-    is_healthy() = 0;
+    is_healthy() const = 0;
     
     virtual bool 
-    is_busy(int) = 0;
+    is_busy(int) const = 0;
     
     virtual bool 
-    is_free(int) = 0;
+    is_free(int) const = 0;
     
     virtual bool
-    is_empty() = 0;
+    is_empty() const = 0;
 
-    virtual cql_stream_id_t 
-    allocate_stream_id() = 0;
+    virtual cql_stream_t 
+    acquire_stream()  = 0;
     
     virtual void 
-    release_stream_id(cql_stream_id_t stream_id) = 0;
+    release_stream(cql_stream_t& stream) = 0;
 
     virtual cql_uuid_t
     id() const = 0;
@@ -86,11 +87,11 @@ public:
         cql_event_callback_t;
 
     typedef 
-        boost::function<void(cql_connection_t&, const cql::cql_stream_id_t, cql::cql_result_t*)> 
+        boost::function<void(cql_connection_t&, const cql::cql_stream_t&, cql::cql_result_t*)> 
         cql_message_callback_t;
     
     typedef 
-        boost::function<void(cql_connection_t&, const cql::cql_stream_id_t, const cql_error_t&)> 
+        boost::function<void(cql_connection_t&, const cql::cql_stream_t&, const cql_error_t&)> 
         cql_message_errback_t;
 
     typedef 
@@ -130,7 +131,7 @@ public:
        @param errback callback for un-successful query results. Only triggered for application level errors, transport level errors trigger the connect errback.
        @return stream ID of the message. Results can be returned out of order, and the stream ID is used to correlate the results with the message.
      */
-    virtual cql::cql_stream_id_t
+    virtual cql::cql_stream_t
     query(
         const std::string&     query,
         cql_consistency_enum   consistency,
@@ -161,7 +162,7 @@ public:
        @param errback callback for un-successful query results. Only triggered for application level errors, transport level errors trigger the connect errback.
        @return stream ID of the message. Results can be returned out of order, and the stream ID is used to correlate the results with the message.
      */
-    virtual cql::cql_stream_id_t
+    virtual cql::cql_stream_t
     prepare(
         const std::string&     query,
         cql_message_callback_t callback,
@@ -186,7 +187,7 @@ public:
        @param errback callback for un-successful query results. Only triggered for application level errors, transport level errors trigger the connect errback.
        @return stream ID of the message. Results can be returned out of order, and the stream ID is used to correlate the results with the message.
      */
-    virtual cql::cql_stream_id_t
+    virtual cql::cql_stream_t
     execute(
         cql::cql_execute_t*    message,
         cql_message_callback_t callback,

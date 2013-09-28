@@ -26,22 +26,26 @@
 
 #include "cql/internal/cql_header_impl.hpp"
 
-#define CQL_HEADER_SIZE sizeof(_version) + sizeof(_flags) + sizeof(_stream) + sizeof(_opcode) + sizeof(_length)
+#define CQL_HEADER_SIZE sizeof(_version) +  \
+                        sizeof(_flags)   +  \
+                        sizeof(_stream.stream_id())  +  \
+                        sizeof(_opcode)  +  \
+                        sizeof(_length)
 
 cql::cql_header_impl_t::cql_header_impl_t() :
     _buffer(new std::vector<cql_byte_t>(CQL_HEADER_SIZE, 0)),
     _version(0),
     _flags(0),
-    _stream(0),
+    _stream(),
     _opcode(0),
     _length(0)
 {}
 
 cql::cql_header_impl_t::cql_header_impl_t(cql::cql_byte_t version,
-        cql::cql_byte_t flags,
-        cql::cql_stream_id_t stream,
-        cql::cql_byte_t opcode,
-        cql::cql_int_t length) :
+        cql::cql_byte_t             flags,
+        const cql::cql_stream_t&    stream,
+        cql::cql_byte_t             opcode,
+        cql::cql_int_t              length) :
     _buffer(new std::vector<cql_byte_t>(CQL_HEADER_SIZE, 0)),
     _version(version),
     _flags(flags),
@@ -65,10 +69,10 @@ cql::cql_header_impl_t::str() const {
     }
 
     output << " {version: 0x" << std::setw(2) << cql::hex(_version);
-    output << ", flags: 0x" << std::setw(2) << cql::hex(_flags);
-    output << ", stream: 0x" << std::setw(2) << cql::hex(_stream);
-    output << ", opcode: 0x" << std::setw(2) << cql::hex(_opcode);
-    output << ", length: " << boost::lexical_cast<std::string>(_length) << "}";
+    output << ", flags: 0x"   << std::setw(2) << cql::hex(_flags);
+    output << ", stream: 0x"  << std::setw(2) << cql::hex(_stream.stream_id());
+    output << ", opcode: 0x"  << std::setw(2) << cql::hex(_opcode);
+    output << ", length: "    << boost::lexical_cast<std::string>(_length) << "}";
 
     return output.str();
 }
@@ -80,7 +84,7 @@ cql::cql_header_impl_t::prepare(cql::cql_error_t*) {
 
     stream.put(_version);
     stream.put(_flags);
-    stream.put(_stream);
+    stream.put(_stream.stream_id());
     stream.put(_opcode);
     cql::encode_int(stream, _length);
     return true;
@@ -93,7 +97,7 @@ cql::cql_header_impl_t::consume(cql::cql_error_t*) {
 
     _version = stream.get();
     _flags = stream.get();
-    _stream = stream.get();
+    _stream = cql_stream_t::from_stream_id(stream.get());
     _opcode = stream.get();
     cql::decode_int(stream, _length);
     return true;
@@ -114,7 +118,7 @@ cql::cql_header_impl_t::flags() const {
     return _flags;
 }
 
-cql::cql_stream_id_t
+const cql::cql_stream_t&
 cql::cql_header_impl_t::stream() const {
     return _stream;
 }
@@ -130,26 +134,26 @@ cql::cql_header_impl_t::length() const {
 }
 
 void
-cql::cql_header_impl_t::version(cql::cql_byte_t v) {
+cql::cql_header_impl_t::set_version(cql::cql_byte_t v) {
     _version = v;
 }
 
 void
-cql::cql_header_impl_t::flags(cql::cql_byte_t v) {
+cql::cql_header_impl_t::set_flags(cql::cql_byte_t v) {
     _flags = v;
 }
 
 void
-cql::cql_header_impl_t::stream(cql::cql_stream_id_t v) {
+cql::cql_header_impl_t::set_stream(const cql::cql_stream_t& v) {
     _stream = v;
 }
 
 void
-cql::cql_header_impl_t::opcode(cql::cql_byte_t v) {
+cql::cql_header_impl_t::set_opcode(cql::cql_byte_t v) {
     _opcode = v;
 }
 
 void
-cql::cql_header_impl_t::length(cql::cql_int_t v) {
+cql::cql_header_impl_t::set_length(cql::cql_int_t v) {
     _length = v;
 }

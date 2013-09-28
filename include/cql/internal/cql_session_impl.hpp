@@ -132,7 +132,7 @@ public:
     boost::shared_ptr<cql_connection_t> 
 	connect(
         boost::shared_ptr<cql::cql_query_plan_t>    query_plan, 
-        int*                                        stream_id, 
+        cql_stream_t*                               stream, 
         std::list<cql_endpoint_t>*                  tried_hosts);
         
     virtual cql_uuid_t
@@ -186,20 +186,20 @@ private:
         const std::list<std::string>&                   events,
         const std::map<std::string, std::string>&       credentials);
 
-    cql::cql_stream_id_t
+    cql::cql_stream_t
     query(
         const std::string&                              query,
         cql::cql_consistency_enum                       consistency,
         cql::cql_connection_t::cql_message_callback_t   callback,
         cql::cql_connection_t::cql_message_errback_t    errback);
 
-    cql::cql_stream_id_t
+    cql::cql_stream_t
     prepare(
         const std::string&                              query,
         cql::cql_connection_t::cql_message_callback_t   callback,
         cql::cql_connection_t::cql_message_errback_t    errback);
 
-    cql::cql_stream_id_t
+    cql::cql_stream_t
     execute(
         cql::cql_execute_t*                             message,
         cql::cql_connection_t::cql_message_callback_t   callback,
@@ -280,9 +280,9 @@ private:
 
     boost::shared_ptr<cql::cql_connection_t>
     try_find_free_stream(
-        boost::shared_ptr<cql_host_t> const& host,
+        boost::shared_ptr<cql_host_t> const&             host,
         boost::shared_ptr<cql_connections_collection_t>& connections,
-        int* stream_id);
+        cql_stream_t*                                    stream);
     
     friend class cql_trashcan_t;
     

@@ -31,6 +31,7 @@
 #include "cql/cql_connection.hpp"
 #include "cql/cql.hpp"
 #include "cql/cql_uuid.hpp"
+#include "cql/cql_stream.hpp"
 
 namespace cql {
 
@@ -69,24 +70,24 @@ public:
     virtual
     ~cql_session_t() {};
 
-    virtual cql::cql_stream_id_t
+    virtual cql::cql_stream_t
     query(
-        const std::string&                        query,
-        cql::cql_consistency_enum                 consistency,
-        cql::cql_connection_t::cql_message_callback_t callback,
-        cql::cql_connection_t::cql_message_errback_t  errback) = 0;
+        const std::string&                              query,
+        cql::cql_consistency_enum                       consistency,
+        cql::cql_connection_t::cql_message_callback_t   callback,
+        cql::cql_connection_t::cql_message_errback_t    errback) = 0;
 
-    virtual cql::cql_stream_id_t
+    virtual cql::cql_stream_t
     prepare(
-        const std::string&                        query,
-        cql::cql_connection_t::cql_message_callback_t callback,
-        cql::cql_connection_t::cql_message_errback_t  errback) = 0;
+        const std::string&                              query,
+        cql::cql_connection_t::cql_message_callback_t   callback,
+        cql::cql_connection_t::cql_message_errback_t    errback) = 0;
 
-    virtual cql::cql_stream_id_t
+    virtual cql::cql_stream_t
     execute(
-        cql::cql_execute_t*                       message,
-        cql::cql_connection_t::cql_message_callback_t callback,
-        cql::cql_connection_t::cql_message_errback_t  errback) = 0;
+        cql::cql_execute_t*                             message,
+        cql::cql_connection_t::cql_message_callback_t   callback,
+        cql::cql_connection_t::cql_message_errback_t    errback) = 0;
 
     virtual boost::shared_future<cql::cql_future_result_t>
     query(

@@ -22,6 +22,7 @@
 #include "cql/cql.hpp"
 #include "cql/cql_error.hpp"
 #include "cql/cql_result.hpp"
+#include "cql/cql_stream.hpp"
 
 namespace cql {
 
@@ -32,31 +33,31 @@ struct cql_future_result_t {
 
     cql_future_result_t() :
         client(NULL),
-        stream(0)
+        stream()
     {}
 
     cql_future_result_t(
         cql::cql_connection_t*   client,
-        cql::cql_stream_id_t stream,
-        cql::cql_result_t*   result) :
-        client(client),
-        stream(stream),
-        result(result)
+        const cql::cql_stream_t& stream,
+        cql::cql_result_t*       result) :
+            client(client),
+            stream(stream),
+            result(result)
     {}
 
     cql_future_result_t(
         cql::cql_connection_t*   client,
-        cql::cql_stream_id_t stream,
-        cql::cql_error_t     error) :
-        client(client),
-        stream(stream),
-        error(error)
+        const cql::cql_stream_t& stream,
+        cql::cql_error_t         error) :
+            client(client),
+            stream(stream),
+            error(error)
     {}
 
-    cql::cql_connection_t*                   client;
-    cql::cql_stream_id_t                 stream;
-    boost::shared_ptr<cql::cql_result_t> result;
-    cql::cql_error_t                     error;
+    cql::cql_connection_t*                  client;
+    cql::cql_stream_t                       stream;
+    boost::shared_ptr<cql::cql_result_t>    result;
+    cql::cql_error_t                        error;
 };
 
 
