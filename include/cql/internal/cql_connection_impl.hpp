@@ -77,10 +77,13 @@
 namespace cql {
 
 template <typename TSocket>
-class cql_connection_impl_t 
-    : public cql::cql_connection_t,
-      boost::noncopyable
+class cql_connection_impl_t : public cql::cql_connection_t
 {
+    static const int NUMBER_OF_STREAMS = 128;
+    // stream with is 0 is dedicated to events messages and
+    // connection management.
+    static const int NUMBER_OF_USER_STREAMS = 127;
+    
 public:
     typedef 
         std::list<cql::cql_message_buffer_t> 
@@ -91,7 +94,7 @@ public:
         callback_pair_t;
     
     typedef 
-        cql::cql_callback_storage_t<callback_pair_t, 128> 
+        cql::cql_callback_storage_t<callback_pair_t, NUMBER_OF_STREAMS> 
         callback_storage_t;
     
     typedef 
@@ -102,12 +105,11 @@ public:
         boost::asio::io_service&                    io_service,
         TSocket*                                    transport,
         cql::cql_connection_t::cql_log_callback_t   log_callback = 0) :
-        _port(0),
         _resolver(io_service),
         _transport(transport),
         _request_buffer(0),
         _callback_storage(),
-        _numer_of_free_stream_ids(127),
+        _numer_of_free_stream_ids(NUMBER_OF_USER_STREAMS),
         _connect_callback(0),
         _connect_errback(0),
         _log_callback(log_callback),
@@ -129,8 +131,7 @@ public:
         boost::shared_future<cql::cql_future_connection_t> 
                 shared_future(promise->get_future());
 
-        connect(endpoint.address(),
-                endpoint.port(),
+        connect(endpoint,
                 boost::bind(&cql_connection_impl_t::_connection_future_callback, this, promise, ::_1),
                 boost::bind(&cql_connection_impl_t::_connection_future_errback, this, promise, ::_1, ::_2));
 
@@ -382,15 +383,9 @@ private:
 
     void
     resolve() {
-        boost::asio::ip::address server = _endpoint.address();
-        unsigned short port = _endpoint.port();
+        log(CQL_LOG_DEBUG, "resolving remote host: " + _endpoint.to_string());
         
-        log(CQL_LOG_DEBUG, 
-            "resolving remote host " + server + 
-            ":" + boost::lexical_cast<std::string>(port));
-        
-        boost::asio::ip::tcp::resolver::query query(server, boost::lexical_cast<std::string>(port));
-        _resolver.async_resolve(query,
+        _resolver.async_resolve(_endpoint.resolver_query(),
                                 boost::bind(&cql_connection_impl_t::resolve_handle,
                                             this,
                                             boost::asio::placeholders::error,
@@ -485,11 +480,17 @@ private:
 
 	virtual bool 
     is_busy(int max) {
-		return (128 - _numer_of_free_stream_ids.load(boost::memory_order_acquire)) >= max;
+		return (NUMBER_OF_STREAMS - _numer_of_free_stream_ids.load(boost::memory_order_acquire)) >= max;
     }
     
-	virtual bool is_free(int min) {
-		return (128 - _numer_of_free_stream_ids.load(boost::memory_order_acquire)) <= min;
+	virtual bool 
+    is_free(int min) {
+		return (NUMBER_OF_STREAMS - _numer_of_free_stream_ids.load(boost::memory_order_acquire)) <= min;
+    }
+    
+    virtual bool
+    is_empty() {
+        return (NUMBER_OF_USER_STREAMS == _numer_of_free_stream_ids.load(boost::memory_order_acquire));
     }
 
     void

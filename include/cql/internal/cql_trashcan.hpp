@@ -24,7 +24,7 @@ namespace cql {
     public:
         cql_trashcan_t(
             boost::asio::io_service& timer_service,
-            const cql_session_impl_t&     session)
+            cql_session_impl_t&     session)
             : _timer(timer_service),
               _session(session) { }
                 

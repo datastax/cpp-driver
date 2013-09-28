@@ -145,6 +145,7 @@
             <in>cql_socket.hpp</in>
             <in>cql_socket_ssl.hpp</in>
             <in>cql_system_dependent.hpp</in>
+            <in>cql_trashcan.hpp</in>
             <in>cql_util.hpp</in>
           </df>
           <df name="lockfree">
@@ -159,6 +160,7 @@
             <in>cql_retry_policy.hpp</in>
             <in>cql_round_robin_policy.hpp</in>
           </df>
+          <in>common_type_definitions.hpp</in>
           <in>cql.hpp</in>
           <in>cql_builder.hpp</in>
           <in>cql_cluster.hpp</in>
@@ -225,6 +227,7 @@
             <in>cql_socket.cpp</in>
             <in>cql_socket_ssl.cpp</in>
             <in>cql_system_dependent.cpp</in>
+            <in>cql_trashcan.cpp</in>
             <in>cql_util.cpp</in>
           </df>
           <df name="policies">
@@ -234,8 +237,8 @@
           </df>
           <in>cql.cpp</in>
           <in>cql_builder.cpp</in>
-          <in>cql_client_factory.cpp</in>
           <in>cql_cluster.cpp</in>
+          <in>cql_connection_factory.cpp</in>
           <in>cql_execute.cpp</in>
           <in>cql_host.cpp</in>
           <in>cql_metadata.cpp</in>

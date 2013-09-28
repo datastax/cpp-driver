@@ -8,13 +8,20 @@
 #ifndef CQL_ENDPOINT_HPP_
 #define	CQL_ENDPOINT_HPP_
 
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/address.hpp>
+#include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
+
 #include "cql/lockfree/boost_ip_address_traits.hpp"
 
 namespace cql {
     
     class cql_endpoint_t {
     public:
+        cql_endpoint_t() 
+            : _address(), _port(0) { }
+        
         cql_endpoint_t(
             const ::boost::asio::ip::address& address,
             unsigned short                    port)
@@ -25,6 +32,17 @@ namespace cql {
                 
         inline unsigned short
         port() const { return _port; }
+        
+        inline boost::asio::ip::tcp::resolver::query
+        resolver_query() const {
+            return boost::asio::ip::tcp::resolver::query(
+                _address.to_string(), boost::lexical_cast<std::string>(_port));
+        }
+        
+        inline std::string
+        to_string() const {
+            return boost::str(boost::format("%1%:%2%") % _address % _port);
+        }
         
         inline bool
         is_unspecified() const {

@@ -10,6 +10,8 @@
 
 #include "cql/cql_endpoint.hpp"
 #include "cql/lockfree/cql_lockfree_hash_map.hpp"
+#include "cql/cql_uuid.hpp"
+#include "cql/cql_connection.hpp"
 
 namespace cql {
     

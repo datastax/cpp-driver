@@ -49,13 +49,13 @@ class cql_connection_t :
 public:
 
     virtual bool 
-    is_healthy()=0;
+    is_healthy() = 0;
     
     virtual bool 
-    is_busy(int)=0;
+    is_busy(int) = 0;
     
     virtual bool 
-    is_free(int)=0;
+    is_free(int) = 0;
     
     virtual bool
     is_empty() = 0;
@@ -98,7 +98,7 @@ public:
         cql_credentials_t;
 
     virtual
-    ~cql_connection_t() {};
+    ~cql_connection_t() { }
 
     /**
        Connect to the server at the specified address and port.
@@ -224,7 +224,7 @@ public:
        IP endpoint.
      */
     virtual const cql_endpoint_t&
-    endpoint();
+    endpoint() const = 0;
 
     /**
        List of registered events.

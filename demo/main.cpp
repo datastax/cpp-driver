@@ -89,7 +89,9 @@ main(int argc,
 		builder->with_log_callback(&log_callback);
 
 		for(int i=1;i<=numberOfNodes;i++)
-			builder->add_contact_point(conf.ip_prefix() + boost::lexical_cast<std::string>(i));
+			builder->add_contact_point(
+                boost::asio::ip::address::from_string(
+                    conf.ip_prefix() + boost::lexical_cast<std::string>(i)));
 
 		// decide which client factory we want, SSL or non-SSL.  This is a hack, if you pass any commandline arg to the
 		// binary it will use the SSL factory, non-SSL by default

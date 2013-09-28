@@ -1,3 +1,5 @@
+#include <boost/bind.hpp>
+
 #include "cql/internal/cql_trashcan.hpp"
 #include "cql/internal/cql_session_impl.hpp"
 
@@ -17,10 +19,10 @@ cql::cql_trashcan_t::put(const boost::shared_ptr<cql_connection_t>& connection) 
         _trashcan.try_add(endpoint, conn);
     }
     
-    result->try_add(connection->id(), connection);
-    
-    _timer->expires_from_now(timer_expires_time());
-    _timer->async_wait(boost::bind(cql_trashcan_t::timeout, this, _1));
+    if(result->try_add(connection->id(), connection)) {
+        _timer.expires_from_now(timer_expires_time());
+        _timer.async_wait(boost::bind(&cql_trashcan_t::timeout, this, _1));
+    }
 }
 
 boost::posix_time::time_duration
@@ -32,7 +34,7 @@ boost::shared_ptr<cql::cql_connection_t>
 cql::cql_trashcan_t::recycle(const cql_endpoint_t& endpoint) {
     boost::shared_ptr<cql_connections_collection_t> connectons;
     
-    if(!_trashcan->try_get(endpoint, &connectons))
+    if(!_trashcan.try_get(endpoint, &connectons))
         return boost::shared_ptr<cql::cql_connection_t>();
     
     boost::shared_ptr<cql_connection_t> conn;
@@ -59,7 +61,7 @@ cql::cql_trashcan_t::cleanup(
             _session.free_connection(conn);
         }
         else {
-            conn->try_add(connection_id, conn);
+            connections->try_add(connection_id, conn);
         }
     }
 }
