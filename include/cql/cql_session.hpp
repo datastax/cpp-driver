@@ -32,6 +32,7 @@
 #include "cql/cql.hpp"
 #include "cql/cql_uuid.hpp"
 #include "cql/cql_stream.hpp"
+#include "cql/cql_query.hpp"
 
 namespace cql {
 
@@ -46,7 +47,7 @@ class cql_session_t {
 
 public:
     typedef 
-        boost::function<boost::shared_ptr<cql::cql_connection_t>()>             
+        boost::function<boost::shared_ptr<cql_connection_t>()>             
         cql_client_callback_t;
     
     typedef 
@@ -59,48 +60,43 @@ public:
     
     typedef 
         boost::function<void(cql_session_t *, 
-                             cql::cql_connection_t&, 
-                             const cql::cql_error_t&)>                      
+                             cql_connection_t&, 
+                             const cql_error_t&)>                      
         cql_connection_errback_t;
     
     typedef 
-        boost::function<void(const cql::cql_short_t, const std::string&)>                      
+        boost::function<void(const cql_short_t, const std::string&)>                      
         cql_log_callback_t;
 
     virtual
     ~cql_session_t() {};
 
-    virtual cql::cql_stream_t
+    virtual cql_stream_t
     query(
-        const std::string&                              query,
-        cql::cql_consistency_enum                       consistency,
-        cql::cql_connection_t::cql_message_callback_t   callback,
-        cql::cql_connection_t::cql_message_errback_t    errback) = 0;
+        const cql_query_t&                         query,
+        cql_connection_t::cql_message_callback_t   callback,
+        cql_connection_t::cql_message_errback_t    errback) = 0;
 
-    virtual cql::cql_stream_t
+    virtual cql_stream_t
     prepare(
-        const std::string&                              query,
-        cql::cql_connection_t::cql_message_callback_t   callback,
-        cql::cql_connection_t::cql_message_errback_t    errback) = 0;
+        const cql_query_t&                         query,
+        cql_connection_t::cql_message_callback_t   callback,
+        cql_connection_t::cql_message_errback_t    errback) = 0;
 
-    virtual cql::cql_stream_t
+    virtual cql_stream_t
     execute(
-        cql::cql_execute_t*                             message,
-        cql::cql_connection_t::cql_message_callback_t   callback,
-        cql::cql_connection_t::cql_message_errback_t    errback) = 0;
+        cql_execute_t*                             message,
+        cql_connection_t::cql_message_callback_t   callback,
+        cql_connection_t::cql_message_errback_t    errback) = 0;
 
-    virtual boost::shared_future<cql::cql_future_result_t>
-    query(
-        const std::string& query,
-        cql::cql_consistency_enum consistency) = 0;
+    virtual boost::shared_future<cql_future_result_t>
+    query(const cql_query_t& query) = 0;
 
-    virtual boost::shared_future<cql::cql_future_result_t>
-    prepare(
-        const std::string& query) = 0;
+    virtual boost::shared_future<cql_future_result_t>
+    prepare(const cql_query_t& query) = 0;
 
-    virtual boost::shared_future<cql::cql_future_result_t>
-    execute(
-        cql::cql_execute_t* message) = 0;
+    virtual boost::shared_future<cql_future_result_t>
+    execute(cql_execute_t* message) = 0;
 
     virtual bool
     defunct() = 0;

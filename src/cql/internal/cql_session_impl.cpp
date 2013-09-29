@@ -50,25 +50,8 @@ cql::cql_session_impl_t::cql_session_impl_t(
 { }
 
 void 
-cql::cql_session_impl_t::init(boost::asio::io_service& io_service) {
-//    int port = _configuration->get_protocol_options().get_port();
-//
-//    // Add a client to the pool, this operation returns a future.
-//    std::list<std::string> contact_points =
-//        _configuration->get_protocol_options().get_contact_points();
-//    
-//    for(std::list<std::string>::iterator it = contact_points.begin(); 
-//        it != contact_points.end(); ++it) 
-//    {
-//        boost::shared_future<cql_future_connection_t> connect_future = add_client(*it, port);
-//        // Wait until the connection is complete, or has failed.
-//        connect_future.wait();
-//
-//        if (connect_future.get().error.is_err()) {
-//            throw cql_exception("cannot connect to host.");
-//        }
-//    }
-    
+cql::cql_session_impl_t::init(boost::asio::io_service& io_service) 
+{
     boost::shared_ptr<cql_query_plan_t> query_plan = _configuration->policies()
                    .load_balancing_policy()
                   ->new_query_plan(boost::shared_ptr<cql_query_t>());
@@ -79,48 +62,6 @@ cql::cql_session_impl_t::init(boost::asio::io_service& io_service) {
     boost::shared_ptr<cql_connection_t> conn =
             connect(query_plan, &stream, &tried_hosts);
     conn->release_stream(stream);
-}
-
-boost::shared_future<cql::cql_future_connection_t>
-cql::cql_session_impl_t::add_client(const cql_endpoint_t& endpoint) 
-{
-    std::list<std::string> e;
-    return add_client(endpoint, NULL, e);
-}
-
-boost::shared_future<cql::cql_future_connection_t>
-cql::cql_session_impl_t::add_client(
-    const cql_endpoint_t&                   endpoint,
-    cql_connection_t::cql_event_callback_t  event_callback,
-    const std::list<std::string>&           events) 
-{
-    std::map<std::string, std::string> credentials;
-    return add_client(endpoint, event_callback, events, credentials);
-}
-
-
-boost::shared_future<cql::cql_future_connection_t>
-cql::cql_session_impl_t::add_client(
-    const cql_endpoint_t&                       endpoint,
-    cql_connection_t::cql_event_callback_t      event_callback,
-    const std::list<std::string>&               events,
-    const std::map<std::string, std::string>&   credentials) 
-{
-    boost::shared_ptr<boost::promise<cql_future_connection_t> > promise(
-        new boost::promise<cql_future_connection_t>());
-        
-    boost::shared_future<cql_future_connection_t> shared_future(promise->get_future());
-
-    std::auto_ptr<cql_session_impl_t::client_container_t> client_container(
-        new cql_session_impl_t::client_container_t(_client_callback()));
-
-    client_container->connection->events(event_callback, events);
-    client_container->connection->credentials(credentials);
-    client_container->connection->connect(endpoint,
-                                      boost::bind(&cql_session_impl_t::connect_callback, this, promise, ::_1),
-                                      boost::bind(&cql_session_impl_t::connect_errback, this, promise, ::_1, ::_2));
-    _clients.push_back(client_container.release());
-    return shared_future;
 }
      
 void
@@ -291,7 +232,7 @@ cql::cql_session_impl_t::try_find_free_stream(
             if(!stream->is_invalid())
                 return conn;
         } 
-        else if (connections->size() > pooling_options.core_connections_per_host(distance)) {
+        else if ((long)connections->size() > pooling_options.core_connections_per_host(distance)) {
             if (conn->is_free(pooling_options.min_simultaneous_requests_per_connection_treshold(distance))) {
                 if(connections->try_erase(conn_id))
                     _trashcan.put(conn);
@@ -354,13 +295,10 @@ cql::cql_session_impl_t::connect(
 
 cql::cql_stream_t
 cql::cql_session_impl_t::query(
-    const std::string&                   query,
-    cql_consistency_enum                 consistency,
+    const cql_query_t&                       query,
     cql_connection_t::cql_message_callback_t callback,
     cql_connection_t::cql_message_errback_t  errback) 
 {
-    boost::mutex::scoped_lock lock(_mutex);
-
     cql_connection_t* conn = next_client();
     if (conn) {
         return conn->query(query, consistency, callback, errback);
@@ -472,7 +410,6 @@ cql::cql_session_impl_t::ready() {
 
 void
 cql::cql_session_impl_t::close() {
-    boost::mutex::scoped_lock lock(_mutex);
 
     BOOST_FOREACH(cql_session_impl_t::client_container_t& c, _clients) {
         c.connection->close();
@@ -550,15 +487,17 @@ cql::cql_session_impl_t::connect_errback(
     }
 }
 
-cql::cql_connection_t*
-cql::cql_session_impl_t::next_client() {
-    if (_ready && !_defunct && !_clients.empty()) {
-        clients_collection_t::auto_type client = _clients.pop_front();
-        cql_connection_t* output = client->connection.get();
-        _clients.push_back(client.release());
-        return output;
-    }
-    return NULL;
+ boost::shared_ptr<cql::cql_connection_t>
+cql::cql_session_impl_t::get_connection(cql_stream_t* stream) 
+ {
+    boost::shared_ptr<cql_query_plan_t> query_plan = _configuration
+                                                        ->policies()
+                                                         .load_balancing_policy()
+                                                        ->new_query_plan();
+    
+    std::list<cql_endpoint_t> tried_hosts;
+    
+    return connect(query_plan, stream, &tried_hosts);
 }
 
 cql::cql_uuid_t

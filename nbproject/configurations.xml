@@ -47,6 +47,8 @@
             </df>
           </df>
         </df>
+        <df name="Progress">
+        </df>
         <df name="UNINSTALL.dir">
         </df>
       </df>
@@ -107,7 +109,7 @@
             <in>cql_read_timeout_exception.hpp</in>
             <in>cql_syntax_error.hpp</in>
             <in>cql_table_already_exists.hpp</in>
-            <in>cql_to_many_connections_per_host_exception.hpp</in>
+            <in>cql_too_many_connections_per_host_exception.hpp</in>
             <in>cql_trace_retrieval_exception.hpp</in>
             <in>cql_truncate_exception.hpp</in>
             <in>cql_unauthorized_exception.hpp</in>
