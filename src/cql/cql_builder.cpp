@@ -78,3 +78,16 @@ cql::cql_builder_t::build() {
     return cql_cluster_t::built_from(*this);
 }
 
+cql::cql_builder_t&
+cql::cql_builder_t::with_credentials(
+        const std::string& user_name, 
+        const std::string& password) 
+{
+    cql_credentials_t credentials;
+
+    credentials["username"] = user_name;
+    credentials["password"] = password;
+
+    _credentials = credentials;
+}
+

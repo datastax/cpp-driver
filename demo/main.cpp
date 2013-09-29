@@ -102,7 +102,9 @@ main(int argc,
 		boost::shared_ptr<cql::cql_cluster_t> cluster (builder->build());
 		boost::shared_ptr<cql::cql_session_t> session (cluster->connect());
 
-		if(session.get()!=0) {
+		if(session) {
+            
+            
 			
             // The connection succeeded
             std::cout << "TRUE" << std::endl;

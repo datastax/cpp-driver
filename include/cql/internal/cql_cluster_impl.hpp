@@ -84,7 +84,7 @@ public:
          work(new boost::asio::io_service::work(_io_service)),
          thread(boost::bind(&cql_cluster_pimpl_t::asio_thread_main, &_io_service))
     { 
-            cql_policies_t& policies = configuration->policies();
+            const cql_policies_t& policies = configuration->policies();
             
             _metadata = boost::shared_ptr<cql_metadata_t>(new cql_metadata_t(
                     policies.reconnection_policy()
@@ -123,8 +123,8 @@ public:
 
         session->init(_io_service);
         
-        while(!_connected_sessions.try_add(session->id(), session))
-            ;
+        bool session_add = _connected_sessions.try_add(session->id(), session);
+        assert(session_add);
         
         return session;
     }

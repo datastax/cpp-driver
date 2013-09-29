@@ -151,11 +151,11 @@ private:
     struct client_container_t {
         client_container_t(
             const boost::shared_ptr<cql::cql_connection_t>& c) :
-            client(c),
+            connection(c),
             errors(0)
         {}
 
-        boost::shared_ptr<cql::cql_connection_t> client;
+        boost::shared_ptr<cql::cql_connection_t> connection;
         size_t errors;
     };
     
@@ -164,9 +164,13 @@ private:
         clients_collection_t;
 
     typedef
+        boost::atomic<long>
+        connection_counter_t;
+    
+    typedef
         cql::cql_lockfree_hash_map_t<
             cql_endpoint_t,
-            boost::shared_ptr<boost::atomic<long> > >
+            boost::shared_ptr<connection_counter_t> >
         connections_counter_t;
         
     
@@ -284,6 +288,19 @@ private:
         boost::shared_ptr<cql_connections_collection_t>& connections,
         cql_stream_t*                                    stream);
     
+    bool
+    increase_connection_counter(
+        const boost::shared_ptr<cql_host_t>& host);
+    
+    bool
+    decrease_connection_counter(
+        const boost::shared_ptr<cql_host_t>& host);
+    
+    long
+    get_max_connections_number(
+        const boost::shared_ptr<cql_host_t>& host);
+    
+    
     friend class cql_trashcan_t;
     
 private:
@@ -303,9 +320,8 @@ private:
     boost::shared_ptr<cql_configuration_t>      _configuration;
 
     cql_connection_pool_t                        _connection_pool;
-    std::map<std::string, long>                 _allocated_connections;
     cql_trashcan_t                              _trashcan;
-    connections_counter_t                       _connections_counter;
+    connections_counter_t                       _connection_counters;
 };
 
 } // namespace cql

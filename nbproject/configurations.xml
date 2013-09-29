@@ -47,9 +47,6 @@
             </df>
           </df>
         </df>
-        <df name="Progress">
-          <in>count.txt</in>
-        </df>
         <df name="UNINSTALL.dir">
         </df>
       </df>
@@ -246,6 +243,7 @@
           <in>cql_metadata.cpp</in>
           <in>cql_query.cpp</in>
           <in>cql_serialization.cpp</in>
+          <in>cql_stream.cpp</in>
           <in>cql_uuid.cpp</in>
         </df>
       </df>
@@ -398,11 +396,6 @@
             flavor="0">
       </item>
       <item path="include/cql/exceptions/cql_syntax_error.hpp"
-            ex="true"
-            tool="3"
-            flavor="0">
-      </item>
-      <item path="include/cql/exceptions/cql_to_many_connections_per_host_exception.hpp"
             ex="true"
             tool="3"
             flavor="0">

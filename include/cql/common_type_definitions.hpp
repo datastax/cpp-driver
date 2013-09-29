@@ -8,6 +8,9 @@
 #ifndef COMMON_TYPE_DEFINITIONS_HPP_
 #define	COMMON_TYPE_DEFINITIONS_HPP_
 
+#include <map>
+#include <string>
+
 #include "cql/cql_endpoint.hpp"
 #include "cql/lockfree/cql_lockfree_hash_map.hpp"
 #include "cql/cql_uuid.hpp"
@@ -26,6 +29,10 @@ typedef
         cql_endpoint_t, 
         boost::shared_ptr<cql_connections_collection_t> >
     cql_connection_pool_t;
+
+typedef
+    std::map<std::string, std::string>
+    cql_credentials_t;
 }
 
 #endif	/* COMMON_TYPE_DEFINITIONS_HPP_ */

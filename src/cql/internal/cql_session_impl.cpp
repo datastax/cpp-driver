@@ -27,6 +27,7 @@
 #include "cql/internal/cql_session_impl.hpp"
 #include "cql/exceptions/cql_exception.hpp"
 #include "cql/exceptions/cql_no_host_available_exception.hpp"
+#include "cql/exceptions/cql_too_many_connections_per_host_exception.hpp"
 #include "cql/cql_host.hpp"
 #include "cql/internal/cql_trashcan.hpp"
 
@@ -113,9 +114,9 @@ cql::cql_session_impl_t::add_client(
     std::auto_ptr<cql_session_impl_t::client_container_t> client_container(
         new cql_session_impl_t::client_container_t(_client_callback()));
 
-    client_container->client->events(event_callback, events);
-    client_container->client->credentials(credentials);
-    client_container->client->connect(endpoint,
+    client_container->connection->events(event_callback, events);
+    client_container->connection->credentials(credentials);
+    client_container->connection->connect(endpoint,
                                       boost::bind(&cql_session_impl_t::connect_callback, this, promise, ::_1),
                                       boost::bind(&cql_session_impl_t::connect_errback, this, promise, ::_1, ::_2));
     _clients.push_back(client_container.release());
@@ -133,24 +134,105 @@ cql::cql_session_impl_t::free_connections(
         cql_uuid_t conn_id = *it;
         boost::shared_ptr<cql_connection_t> conn;
         
-        if(connections.try_get(conn_id, &conn)) {
-            while(!connections.try_erase(conn_id))
-                ;
+        while(connections.try_get(conn_id, &conn))
+            connections.try_erase(conn_id, &conn);
             
-            free_connection(conn);
-        }
+        free_connection(conn);
     }
 }
 
 void 
-cql::cql_session_impl_t::free_connection(boost::shared_ptr<cql_connection_t> connection) {
+cql::cql_session_impl_t::free_connection(
+        boost::shared_ptr<cql_connection_t> connection) 
+{
+    if(!connection)
+        return;
+    
+    cql_endpoint_t connection_endpoint = connection->endpoint();
+    connection->close();
+    
+    boost::shared_ptr<connection_counter_t> counter;
+    if(_connection_counters.try_get(connection_endpoint, &counter)) {
+        (*counter)--;
+    }
+}
+
+long
+cql::cql_session_impl_t::get_max_connections_number(
+    const boost::shared_ptr<cql_host_t>& host)
+{
+    cql_host_distance_enum  distance = host->distance(_configuration->policies());
+    
+    long max_connections_per_host = _configuration
+        ->pooling_options()
+         .max_connection_per_host(distance);
+    
+    return max_connections_per_host;
+}
+
+bool
+cql::cql_session_impl_t::increase_connection_counter(
+    const boost::shared_ptr<cql_host_t>& host)
+{
+    cql_endpoint_t  endpoint        = host->endpoint();
+    long            max_connections = get_max_connections_number(host);
+    
+    boost::shared_ptr<connection_counter_t> counter(new connection_counter_t(1));
+    if(!_connection_counters.try_add(endpoint, counter)) {
+        bool get_result = _connection_counters.try_get(endpoint, &counter);
+        assert(get_result == true);
+        
+        (*counter)++;
+        if((long)(*counter) > max_connections) {
+            (*counter)--;
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+
+bool
+cql::cql_session_impl_t::decrease_connection_counter(
+    const boost::shared_ptr<cql_host_t>& host)
+{
+    boost::shared_ptr<connection_counter_t> counter;
+    
+    if(_connection_counters.try_get(host->endpoint(), &counter)) {
+        (*counter)--;
+        return true;
+    }
+    
+    return false;
 }
 
 boost::shared_ptr<cql::cql_connection_t>
-cql::cql_session_impl_t::allocate_connection(const boost::shared_ptr<cql_host_t>& host) 
+cql::cql_session_impl_t::allocate_connection(
+        const boost::shared_ptr<cql_host_t>& host) 
 {
-    cql_host_distance_enum distance = host->distance(_configuration->policies());
-    return boost::shared_ptr<cql_connection_t>();
+    if(!increase_connection_counter(host))
+        throw cql_too_many_connections_per_host_exception();
+    
+    boost::shared_ptr<boost::promise<cql_future_connection_t> > promise(
+        new boost::promise<cql_future_connection_t>());
+    
+    boost::shared_future<cql_future_connection_t> shared_future(promise->get_future());
+
+    boost::shared_ptr<cql_connection_t> connection(_client_callback());
+
+    connection->credentials(_configuration->credentials());
+    connection->connect(host->endpoint(),
+                        boost::bind(&cql_session_impl_t::connect_callback, this, promise, ::_1),
+                        boost::bind(&cql_session_impl_t::connect_errback, this, promise, ::_1, ::_2));
+    
+    shared_future.wait();
+    if(shared_future.get().error.is_err()) {
+        decrease_connection_counter(host);
+        throw cql_exception("cannot connect to host: " + host->endpoint().to_string());
+    }
+    
+    return connection;
 }
     
 boost::shared_ptr<cql::cql_connections_collection_t>
@@ -192,8 +274,8 @@ cql::cql_session_impl_t::try_find_free_stream(
     boost::shared_ptr<cql_connections_collection_t>& connections,
     cql_stream_t*                                    stream)
 {
-    cql_pooling_options_t& pooling_options  = _configuration->pooling_options();
-    cql_host_distance_enum distance         = host->distance(_configuration->policies());
+    const cql_pooling_options_t&    pooling_options    = _configuration->pooling_options();
+    cql_host_distance_enum          distance           = host->distance(_configuration->policies());
     
     for(cql_connections_collection_t::iterator kv = connections->begin(); 
         kv != connections->end(); ++kv)
@@ -393,7 +475,7 @@ cql::cql_session_impl_t::close() {
     boost::mutex::scoped_lock lock(_mutex);
 
     BOOST_FOREACH(cql_session_impl_t::client_container_t& c, _clients) {
-        c.client->close();
+        c.connection->close();
     }
 }
 
@@ -440,7 +522,7 @@ cql::cql_session_impl_t::connect_errback(
     for (; pos != _clients.end(); ++pos) {
         cql_session_impl_t::client_container_t& client_container = (*pos);
 
-        if (client_container.client.get() == &client) {
+        if (client_container.connection.get() == &client) {
 
             if (++client_container.errors > _reconnect_limit) {
                 clients_collection_t::auto_type client_ptr = _clients.release(pos);
@@ -461,7 +543,7 @@ cql::cql_session_impl_t::connect_errback(
                 }
             } else {
                 log(CQL_LOG_INFO, "attempting to reconnect client");
-                client_container.client->reconnect();
+                client_container.connection->reconnect();
             }
             break;
         }
@@ -472,7 +554,7 @@ cql::cql_connection_t*
 cql::cql_session_impl_t::next_client() {
     if (_ready && !_defunct && !_clients.empty()) {
         clients_collection_t::auto_type client = _clients.pop_front();
-        cql_connection_t* output = client->client.get();
+        cql_connection_t* output = client->connection.get();
         _clients.push_back(client.release());
         return output;
     }

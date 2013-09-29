@@ -43,7 +43,7 @@ namespace cql {
         
         cql_host_distance_enum
         distance(const cql_policies_t& policies) const;
-		
+        
 		bool
 		set_down();
 		

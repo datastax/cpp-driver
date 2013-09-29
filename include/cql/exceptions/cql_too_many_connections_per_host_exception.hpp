@@ -11,10 +11,10 @@
 #include "cql/exceptions/cql_exception.hpp"
 
 namespace cql {
-    class CQL_EXPORT cql_to_many_connections_per_host_exception: public cql_exception {
+    class CQL_EXPORT cql_too_many_connections_per_host_exception: public cql_exception {
     public:
-        cql_to_many_connections_per_host_exception()
-            : cql_generic_exception("maximum number of connections per host is reached.") { }
+        cql_too_many_connections_per_host_exception()
+            : cql_exception("maximum number of connections per host is reached.") { }
     };
 }
 
