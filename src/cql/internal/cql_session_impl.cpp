@@ -291,7 +291,25 @@ cql::cql_session_impl_t::connect(
     throw cql_exception("no host is available according to load balancing policy.");
 }
 
+cql::cql_stream_t
+cql::cql_session_impl_t::execute_operation(
+	const cql_query_t&							query,
+	cql_connection_t::cql_message_callback_t	callback,
+    cql_connection_t::cql_message_errback_t		errback,
+	exec_query_method_t							method)
+{
+	cql_stream_t stream;
+    boost::shared_ptr<cql_connection_t> conn = get_connection(&stream);
 
+    if (conn) {
+		cql_query_t tmp = query;
+		tmp.set_stream(stream);
+
+		return ((*conn).*method)(tmp, callback, errback);
+    }
+    
+    return cql_stream_t();
+}
 
 cql::cql_stream_t
 cql::cql_session_impl_t::query(
@@ -299,53 +317,47 @@ cql::cql_session_impl_t::query(
     cql_connection_t::cql_message_callback_t callback,
     cql_connection_t::cql_message_errback_t  errback) 
 {
-    cql_connection_t* conn = next_client();
+	return execute_operation(query, callback, errback, &cql_connection_t::query);
+}
+
+cql::cql_stream_t
+cql::cql_session_impl_t::prepare(
+    const cql_query_t&						 query,
+    cql_connection_t::cql_message_callback_t callback,
+    cql_connection_t::cql_message_errback_t  errback) 
+{
+	return execute_operation(query, callback, errback, &cql_connection_t::prepare);
+}
+
+cql::cql_stream_t
+cql::cql_session_impl_t::execute(
+    cql_execute_t*                           message,
+    cql_connection_t::cql_message_callback_t callback,
+    cql_connection_t::cql_message_errback_t  errback) 
+{
+	cql_stream_t stream;
+    boost::shared_ptr<cql_connection_t> conn = get_connection(&stream);
+
+	assert(0); "Not implemented";
+
+    /*if (conn) {
+
+        return conn->execute(message, callback, errback);
+    }*/
+    
+    return cql_stream_t();
+}
+
+boost::shared_future<cql::cql_future_result_t>
+cql::cql_session_impl_t::query(const cql_query_t& query)
+{
+	cql_stream_t stream;
+    boost::shared_ptr<cql_connection_t> conn = get_connection(&stream);
+
     if (conn) {
-        return conn->query(query, consistency, callback, errback);
-    }
-    
-    return cql_stream_t();
-}
-
-cql::cql_stream_t
-cql::cql_session_impl_t::prepare(
-    const std::string&                        query,
-    cql_connection_t::cql_message_callback_t callback,
-    cql_connection_t::cql_message_errback_t  errback) {
-    boost::mutex::scoped_lock lock(_mutex);
-
-    cql_connection_t* client = next_client();
-    if (client) {
-        return client->prepare(query, callback, errback);
-    }
-    
-    return cql_stream_t();
-}
-
-cql::cql_stream_t
-cql::cql_session_impl_t::execute(
-    cql_execute_t*                       message,
-    cql_connection_t::cql_message_callback_t callback,
-    cql_connection_t::cql_message_errback_t  errback) {
-    boost::mutex::scoped_lock lock(_mutex);
-
-    cql_connection_t* client = next_client();
-    if (client) {
-        return client->execute(message, callback, errback);
-    }
-    
-    return cql_stream_t();
-}
-
-boost::shared_future<cql::cql_future_result_t>
-cql::cql_session_impl_t::query(
-    const std::string&		 query,
-    cql_consistency_enum     consistency) {
-    boost::mutex::scoped_lock lock(_mutex);
-
-    cql_connection_t* client = next_client();
-    if (client) {
-        return client->query(query, consistency);
+		cql_query_t q = query;
+		q.set_stream(stream);
+		return conn->query(q);
     }
 
     boost::promise<cql_future_result_t> promise;
@@ -359,13 +371,14 @@ cql::cql_session_impl_t::query(
 }
 
 boost::shared_future<cql::cql_future_result_t>
-cql::cql_session_impl_t::prepare(
-    const std::string& query) {
-    boost::mutex::scoped_lock lock(_mutex);
+cql::cql_session_impl_t::prepare(const cql_query_t& query) {
+    cql_stream_t stream;
+    boost::shared_ptr<cql_connection_t> conn = get_connection(&stream);
 
-    cql_connection_t* client = next_client();
-    if (client) {
-        return client->prepare(query);
+    if (conn) {
+		cql_query_t q = query;
+		q.set_stream(stream);
+		return conn->query(q);
     }
 
     boost::promise<cql_future_result_t> promise;
@@ -380,12 +393,16 @@ cql::cql_session_impl_t::prepare(
 
 boost::shared_future<cql::cql_future_result_t>
 cql::cql_session_impl_t::execute(
-    cql_execute_t* message) {
-    boost::mutex::scoped_lock lock(_mutex);
+    cql_execute_t* message) 
+{
+	cql_stream_t stream;
+    boost::shared_ptr<cql_connection_t> conn = get_connection(&stream);
+    
+	assert(0);
+	// TODO: Not implemented - change event to class and pass stream to execute
 
-    cql_connection_t* client = next_client();
-    if (client) {
-        return client->execute(message);
+	if (conn) {
+        return conn->execute(message);
     }
 
     boost::promise<cql_future_result_t> promise;
@@ -410,20 +427,39 @@ cql::cql_session_impl_t::ready() {
 
 void
 cql::cql_session_impl_t::close() {
+	// TODO: Connection closing that considers connection counters and
+	// removes closed connections from collections...
 
-    BOOST_FOREACH(cql_session_impl_t::client_container_t& c, _clients) {
-        c.connection->close();
-    }
+	for(cql_connection_pool_t::iterator host_it = _connection_pool.begin();
+		host_it != _connection_pool.end(); ++host_it)
+	{
+		boost::shared_ptr<cql_connections_collection_t> connections = host_it->second;
+
+		for(cql_connections_collection_t::iterator conn_it = connections->begin();
+			conn_it != connections->end(); ++conn_it)
+		{
+			conn_it->second->close();
+		}
+	}
 }
 
 size_t
 cql::cql_session_impl_t::size() {
-    return _clients.size();
+    size_t connections_count = 0;
+
+	for(cql_connection_pool_t::const_iterator host_it = _connection_pool.cbegin();
+		host_it != _connection_pool.cend(); ++host_it)
+	{
+		boost::shared_ptr<cql_connections_collection_t> connections = host_it->second;
+		connections_count += connections->size();
+	}
+
+	return connections_count;
 }
 
 bool
 cql::cql_session_impl_t::empty() {
-    return _clients.empty();
+    return (this->size() == 0u);
 }
 
 inline void
@@ -451,9 +487,14 @@ cql::cql_session_impl_t::connect_callback(
 void
 cql::cql_session_impl_t::connect_errback(
     boost::shared_ptr<boost::promise<cql_future_connection_t> > promise,
-    cql_connection_t&                                               client,
-    const cql_error_t&                                               error) {
-    boost::mutex::scoped_lock lock(_mutex);
+    cql_connection_t&                                           connection,
+    const cql_error_t&                                          error) 
+{
+
+	boost::shared_ptr<cql_connections_collection_t> connection;
+	if(!_connection_pool.try_get(connection.endpoint(), &connection))
+		return;
+
 
     clients_collection_t::iterator pos = _clients.begin();
     for (; pos != _clients.end(); ++pos) {
@@ -487,9 +528,9 @@ cql::cql_session_impl_t::connect_errback(
     }
 }
 
- boost::shared_ptr<cql::cql_connection_t>
+boost::shared_ptr<cql::cql_connection_t>
 cql::cql_session_impl_t::get_connection(cql_stream_t* stream) 
- {
+{
     boost::shared_ptr<cql_query_plan_t> query_plan = _configuration
                                                         ->policies()
                                                          .load_balancing_policy()

@@ -12,22 +12,25 @@
 
 #include "cql/cql.hpp"
 #include "cql/policies/cql_retry_policy.hpp"
+#include "cql/cql_stream.hpp"
 
 namespace cql {
     
 class cql_query_t
-    : private boost::noncopyable 
 {
 public:
-    cql_query_t()
-        : _consistency(CQL_CONSISTENCY_DEFAULT), 
-          _is_traced(false),
-          _retry_policy() { }
+    cql_query_t(const std::string& query_string)
+        : _query_string(query_string)
+		, _consistency(CQL_CONSISTENCY_DEFAULT) 
+        , _is_traced(false)
+        , _retry_policy() { }
     
-        cql_query_t(const cql_consistency_enum consistency,
+        cql_query_t(const std::string& query_string,
+					const cql_consistency_enum consistency,
                     const bool  is_traced = false,
                     const boost::shared_ptr<cql_retry_policy_t> retry_policy = 0)
-            : _consistency(consistency)
+            : _query_string(query_string)
+			, _consistency(consistency)
             , _is_traced(is_traced)
             , _retry_policy(retry_policy) { }
     
@@ -58,11 +61,27 @@ public:
     
     inline bool
     has_retry_policy() const { return (bool)_retry_policy; }
+
+	inline const cql_stream_t&
+	stream() const { return _stream; }
     
+	inline void
+	set_stream(const cql_stream_t& stream) {
+		_stream = stream;
+	}
+
+	inline const std::string&
+	query() const { return _query_string; }
+
+	inline void
+	set_query(const std::string& query_string) { _query_string = query_string; }
+
 private:
+	std::string								_query_string;
     cql_consistency_enum                    _consistency;
     bool                                    _is_traced;
     boost::shared_ptr<cql_retry_policy_t>   _retry_policy;
+	cql_stream_t							_stream;
 };
 
 }

@@ -89,5 +89,6 @@ cql::cql_builder_t::with_credentials(
     credentials["password"] = password;
 
     _credentials = credentials;
+    return *this;
 }
 

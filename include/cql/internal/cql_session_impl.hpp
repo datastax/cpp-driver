@@ -173,6 +173,18 @@ private:
 	void 
 	free_connection(boost::shared_ptr<cql_connection_t> connection);
 
+	typedef
+		cql_stream_t (::cql::cql_connection_t::* exec_query_method_t )(
+			const cql_query_t&						   query,
+			cql_connection_t::cql_message_callback_t   callback,
+			cql_connection_t::cql_message_errback_t    errback);
+
+	cql_stream_t
+	execute_operation(
+		const cql_query_t&							query,
+		cql_connection_t::cql_message_callback_t	callback,
+        cql_connection_t::cql_message_errback_t		errback,
+		exec_query_method_t							method); 
 
     cql_stream_t
     query(
@@ -244,7 +256,7 @@ private:
         const cql_error_t&                                          error);
 
     boost::shared_ptr<cql_connection_t>
-    get_connection(const cql_query_t& query, cql_stream_t* stream);
+    get_connection(cql_stream_t* stream);
 
     cql_host_distance_enum
     get_host_distance(boost::shared_ptr<cql_host_t> host);
