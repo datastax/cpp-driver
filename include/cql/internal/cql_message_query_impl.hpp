@@ -21,6 +21,7 @@
 
 #include "cql/cql.hpp"
 #include "cql/internal/cql_message.hpp"
+#include "cql/cql_query.hpp"
 
 namespace cql {
 
@@ -33,8 +34,7 @@ public:
 
     cql_message_query_impl_t(size_t size);
 
-    cql_message_query_impl_t(const std::string& query,
-                             cql::cql_consistency_enum consistency);
+    cql_message_query_impl_t(const cql_query_t& query);
 
     const std::string&
     query() const;

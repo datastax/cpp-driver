@@ -69,4 +69,5 @@ cql::cql_cluster_t::metadata() const {
 
 cql::cql_cluster_t::~cql_cluster_t() {
     shutdown();
+	delete _pimpl;
 }

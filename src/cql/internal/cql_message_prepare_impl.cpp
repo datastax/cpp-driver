@@ -31,9 +31,9 @@ cql::cql_message_prepare_impl_t::cql_message_prepare_impl_t(size_t size) :
     _buffer(new std::vector<cql_byte_t>(size))
 {}
 
-cql::cql_message_prepare_impl_t::cql_message_prepare_impl_t(const std::string& query) :
+cql::cql_message_prepare_impl_t::cql_message_prepare_impl_t(const cql_query_t& query) :
     _buffer(new std::vector<cql_byte_t>()),
-    _query(query)
+    _query(query.query())
 {}
 
 cql::cql_message_buffer_t

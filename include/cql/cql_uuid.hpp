@@ -48,6 +48,7 @@ namespace std {
 
     template<>
     struct hash<cql::cql_uuid_t> {
+	public:
         typedef
             cql::cql_uuid_t
             argument_type;

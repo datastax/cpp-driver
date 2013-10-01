@@ -36,7 +36,7 @@ class cql_cluster_pimpl_t;
 class cql_cluster_t: boost::noncopyable {
 
 private: //PIMPL
-    std::auto_ptr<cql_cluster_pimpl_t> _pimpl;
+    cql_cluster_pimpl_t* const _pimpl;
 
     //private constructor
     cql_cluster_t(cql_cluster_pimpl_t* pimpl) : _pimpl(pimpl) { }

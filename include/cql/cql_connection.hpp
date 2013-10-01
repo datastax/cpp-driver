@@ -35,6 +35,7 @@
 #include "cql/cql_uuid.hpp"
 #include "cql/cql_endpoint.hpp"
 #include "cql/cql_stream.hpp"
+#include "cql/cql_query.hpp"
 
 namespace cql {
 
@@ -133,8 +134,7 @@ public:
      */
     virtual cql::cql_stream_t
     query(
-        const std::string&     query,
-        cql_consistency_enum   consistency,
+        const cql_query_t&	   query,
         cql_message_callback_t callback,
         cql_message_errback_t  errback) = 0;
 
@@ -146,9 +146,7 @@ public:
        @return populated when results or error is obtained
      */
     virtual boost::shared_future<cql::cql_future_result_t>
-    query(
-        const std::string&		query,
-        cql_consistency_enum    consistency) = 0;
+    query(const cql_query_t& query) = 0;
 
     /**
        Prepare a CQL statement.
@@ -164,8 +162,8 @@ public:
      */
     virtual cql::cql_stream_t
     prepare(
-        const std::string&     query,
-        cql_message_callback_t callback,
+		const cql_query_t&	   query,
+		cql_message_callback_t callback,
         cql_message_errback_t  errback) = 0;
 
     /**
@@ -177,7 +175,7 @@ public:
        @return populated when results or error is obtained
      */
     virtual boost::shared_future<cql::cql_future_result_t>
-    prepare(const std::string& query) = 0;
+    prepare(const cql_query_t& query) = 0;
 
     /**
        Execute a prepared CQL statement.
@@ -200,8 +198,7 @@ public:
        @return populated when results or error is obtained
      */
     virtual boost::shared_future<cql::cql_future_result_t>
-    execute(
-        cql::cql_execute_t* message) = 0;
+    execute(cql::cql_execute_t* message) = 0;
 
     /**
        If the connection errback is triggered, this function is used to determine whether the underlying transport is still valid or if a reconnect is neccessary.
@@ -239,7 +236,7 @@ public:
     virtual void
     events(
         cql::cql_connection_t::cql_event_callback_t event_callback,
-        const std::list<std::string>&           events) = 0;
+        const std::list<std::string>&               events) = 0;
 
     /**
        Callback triggered for registered events.
@@ -257,8 +254,7 @@ public:
        Credentials used if prompted for authentication
      */
     virtual void
-    credentials(
-        const cql::cql_connection_t::cql_credentials_t credentials) = 0;
+    credentials(const cql_credentials_t& credentials) = 0;
 
     /**
        Force reconnect

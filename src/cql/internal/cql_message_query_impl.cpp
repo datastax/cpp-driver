@@ -42,11 +42,10 @@ cql::cql_message_query_impl_t::cql_message_query_impl_t(size_t size) :
     _query()
 {}
 
-cql::cql_message_query_impl_t::cql_message_query_impl_t(const std::string& query,
-        cql::cql_consistency_enum consistency) :
-    _buffer(new std::vector<cql_byte_t>()),
-    _consistency(consistency),
-    _query(query)
+cql::cql_message_query_impl_t::cql_message_query_impl_t(const cql_query_t& query) 
+	: _buffer(new std::vector<cql_byte_t>())
+	, _consistency(query.consistency())
+	, _query(query.query())
 {}
 
 cql::cql_message_buffer_t
