@@ -43,6 +43,7 @@
 #include "cql/cql_endpoint.hpp"
 #include "cql/common_type_definitions.hpp"
 #include "cql/internal/cql_trashcan.hpp"
+#include "cql/internal/cql_promise.hpp"
 
 namespace cql {
 
@@ -220,23 +221,23 @@ private:
 
     void
     connect_callback(
-        boost::shared_ptr<boost::promise<cql_future_connection_t> > promise,
+        boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
         cql_connection_t& client);
 
     void
     connect_errback(
-        boost::shared_ptr<boost::promise<cql_future_connection_t> > promise,
+        boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
         cql_connection_t& client,
         const cql_error_t& error);
 
     void
     connect_future_callback(
-        boost::shared_ptr<boost::promise<cql_future_connection_t> > promise,
+        boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
         cql_connection_t&                                           client);
 
     void
     connect_future_errback(
-        boost::shared_ptr<boost::promise<cql_future_connection_t> > promise,
+        boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
         cql_connection_t&                                           client,
         const cql_error_t&                                          error);
 

@@ -156,11 +156,9 @@ cql::cql_session_impl_t::allocate_connection(
     if(!increase_connection_counter(host))
         throw cql_too_many_connections_per_host_exception();
     
-    boost::shared_ptr<boost::promise<cql_future_connection_t> > promise(
-        new boost::promise<cql_future_connection_t>());
+    boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise(
+        new cql_promise_t<cql_future_connection_t>());
     
-    boost::shared_future<cql_future_connection_t> shared_future(promise->get_future());
-
     boost::shared_ptr<cql_connection_t> connection(_client_callback());
 
     connection->set_credentials(_configuration->credentials());
@@ -168,7 +166,10 @@ cql::cql_session_impl_t::allocate_connection(
                         boost::bind(&cql_session_impl_t::connect_callback, this, promise, ::_1),
                         boost::bind(&cql_session_impl_t::connect_errback, this, promise, ::_1, ::_2));
     
+    
+    boost::shared_future<cql_future_connection_t> shared_future = promise->shared_future();
     shared_future.wait();
+    
     if(shared_future.get().error.is_err()) {
         decrease_connection_counter(host);
         throw cql_exception("cannot connect to host: " + host->endpoint().to_string());
@@ -442,7 +443,7 @@ cql::cql_session_impl_t::log(
 
 void
 cql::cql_session_impl_t::connect_callback(
-    boost::shared_ptr<boost::promise<cql_future_connection_t> > promise,
+    boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
     cql_connection_t&                                               client) 
 {
     promise->set_value(cql_future_connection_t(&client));
@@ -453,11 +454,13 @@ cql::cql_session_impl_t::connect_callback(
 
 void
 cql::cql_session_impl_t::connect_errback(
-    boost::shared_ptr<boost::promise<cql_future_connection_t> > promise,
+    boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
     cql_connection_t&                                           connection,
     const cql_error_t&                                          error) 
 {
-
+    // when connection breaks this will be called two times
+    // one for async read, and one for asyn write requests
+    
 	promise->set_value(cql_future_connection_t(&connection, error));
 
     if (_connect_errback) {

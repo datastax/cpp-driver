@@ -36,3 +36,13 @@ boost::posix_time::ptime
 cql::utc_now() {
     return boost::posix_time::microsec_clock::universal_time();
 }
+
+bool
+cql::try_acquire_lock(const boost::shared_ptr<boost::atomic_bool>& lock) {
+     bool expected = false;
+     bool changed = lock->compare_exchange_strong(expected, true, 
+                                    boost::memory_order_seq_cst, 
+                                    boost::memory_order_seq_cst);
+
+     return (true == changed);
+}

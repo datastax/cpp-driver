@@ -74,6 +74,8 @@
 #include "cql/cql_serialization.hpp"
 #include "cql/cql_uuid.hpp"
 #include "cql/cql_stream.hpp"
+#include "cql/internal/cql_util.hpp"
+#include "cql/internal/cql_promise.hpp"
 
 namespace cql {
 
@@ -126,17 +128,14 @@ public:
     boost::shared_future<cql::cql_future_connection_t>
     connect(const cql_endpoint_t& endpoint) 
     {
-        boost::shared_ptr<boost::promise<cql::cql_future_connection_t> > 
-                promise(new boost::promise<cql::cql_future_connection_t>());
-        
-        boost::shared_future<cql::cql_future_connection_t> 
-                shared_future(promise->get_future());
+        boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise(
+            new cql_promise_t<cql_future_connection_t>()); 
 
         connect(endpoint,
                 boost::bind(&cql_connection_impl_t::_connection_future_callback, this, promise, ::_1),
                 boost::bind(&cql_connection_impl_t::_connection_future_errback, this, promise, ::_1, ::_2));
 
-        return shared_future;
+        return promise->shared_future();
     }
 
     void
@@ -156,40 +155,40 @@ public:
     boost::shared_future<cql::cql_future_result_t>
     query(const boost::shared_ptr<cql_query_t>& query_) 
     {
-        boost::shared_ptr<boost::promise<cql::cql_future_result_t> > promise(new boost::promise<cql::cql_future_result_t>());
-        boost::shared_future<cql::cql_future_result_t> shared_future(promise->get_future());
-
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise(
+            new cql_promise_t<cql_future_result_t>());
+        
 		query(query_,
               boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
               boost::bind(&cql_connection_impl_t::_statement_future_errback, this, promise, ::_1, ::_2, ::_3));
 
-        return shared_future;
+        return promise->shared_future();
     }
 
     boost::shared_future<cql::cql_future_result_t>
     prepare(const boost::shared_ptr<cql_query_t>& query) 
 	{
-        boost::shared_ptr<boost::promise<cql::cql_future_result_t> > promise(new boost::promise<cql::cql_future_result_t>());
-        boost::shared_future<cql::cql_future_result_t> shared_future(promise->get_future());
-
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise(
+            new cql_promise_t<cql_future_result_t>());
+        
         prepare(query,
                 boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
                 boost::bind(&cql_connection_impl_t::_statement_future_errback, this, promise, ::_1, ::_2, ::_3));
 
-        return shared_future;
+        return promise->shared_future();
     }
 
     boost::shared_future<cql::cql_future_result_t>
     execute(const boost::shared_ptr<cql::cql_execute_t>& message) 
 	{
-        boost::shared_ptr<boost::promise<cql::cql_future_result_t> > promise(new boost::promise<cql::cql_future_result_t>());
-        boost::shared_future<cql::cql_future_result_t> shared_future(promise->get_future());
-
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise(
+            new cql_promise_t<cql_future_result_t>());
+        
         execute(message,
                 boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
                 boost::bind(&cql_connection_impl_t::_statement_future_errback, this, promise, ::_1, ::_2, ::_3));
 
-        return shared_future;
+        return promise->shared_future();
     }
 
     cql::cql_stream_t
@@ -343,34 +342,38 @@ private:
 
     void
     _connection_future_callback(
-        boost::shared_ptr<boost::promise<cql::cql_future_connection_t> > promise,
-        cql_connection_t&) {
+        boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
+        cql_connection_t&) 
+    {
         promise->set_value(cql::cql_future_connection_t(this));
     }
 
     void
     _connection_future_errback(
-        boost::shared_ptr<boost::promise<cql::cql_future_connection_t> > promise,
+        boost::shared_ptr<cql_promise_t<cql_future_connection_t> >       promise,
         cql_connection_t&,
-        const cql_error_t&                                           error) {
+        const cql_error_t&                                               error) 
+    {
         promise->set_value(cql::cql_future_connection_t(this, error));
     }
 
     void
     _statement_future_callback(
-        boost::shared_ptr<boost::promise<cql::cql_future_result_t> > promise,
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
         cql_connection_t&,
         const cql::cql_stream_t&                                     stream,
-        cql::cql_result_t*                                           result_ptr) {
+        cql::cql_result_t*                                           result_ptr) 
+    {
         promise->set_value(cql::cql_future_result_t(this, stream, result_ptr));
     }
 
     void
     _statement_future_errback(
-        boost::shared_ptr<boost::promise<cql::cql_future_result_t> > promise,
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> >   promise,
         cql_connection_t&,
         const cql::cql_stream_t&                                     stream,
-        const cql_error_t&                                           error) {
+        const cql_error_t&                                           error) 
+    {
         promise->set_value(cql::cql_future_result_t(this, stream, error));
     }
 

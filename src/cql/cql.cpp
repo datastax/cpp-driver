@@ -2,6 +2,7 @@
 #include <boost/shared_ptr.hpp>
 #include <cds/init.h>
 #include <cds/gc/hp.h>
+#include <cds/threading/model.h>
 
 #include "cql/cql.hpp"
 
@@ -67,14 +68,16 @@ namespace cql {
 struct cql_thread_infrastructure_impl_t {
 public:
     // libcds thread garbage collector.
-    cds::gc::HP::thread_gc _thread_gc;
+    // cds::gc::HP::thread_gc _thread_gc;
 };
 }
 
 cql::cql_thread_infrastructure_t::cql_thread_infrastructure_t() {
-    _this = new cql_thread_infrastructure_impl_t;
+    cds::gc::hzp::GarbageCollector::Construct();
+    cds::threading::Manager::attachThread();
 }
 
 cql::cql_thread_infrastructure_t::~cql_thread_infrastructure_t() {
-    delete _this;
+    cds::threading::Manager::detachThread() ; 
+    cds::gc::hzp::GarbageCollector::Destruct();
 }

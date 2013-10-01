@@ -136,6 +136,7 @@
             <in>cql_message_result_impl.hpp</in>
             <in>cql_message_startup_impl.hpp</in>
             <in>cql_message_supported_impl.hpp</in>
+            <in>cql_promise.hpp</in>
             <in>cql_rand.hpp</in>
             <in>cql_result_metadata.hpp</in>
             <in>cql_session_impl.hpp</in>

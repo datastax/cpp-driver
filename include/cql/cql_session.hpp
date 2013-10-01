@@ -69,7 +69,7 @@ public:
         cql_log_callback_t;
 
     virtual
-    ~cql_session_t() {};
+    ~cql_session_t() { }
 
     virtual cql_stream_t
     query(

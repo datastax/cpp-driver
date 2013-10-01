@@ -24,6 +24,7 @@
 #include <vector>
 #include <boost/asio/ip/address.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/atomic.hpp>
 
 #include "cql/cql.hpp"
 #include "cql/internal/cql_system_dependent.hpp"
@@ -72,6 +73,11 @@ to_ipaddr(const std::string& str, boost::asio::ip::address* result);
 // system settings which may be modified by user.
 boost::posix_time::ptime 
 utc_now();
+
+// tries to change lock sate to true, returns true lock state
+// was changed, false otherwise.
+bool
+try_acquire_lock(const boost::shared_ptr<boost::atomic_bool>& lock);
 
 } // namespace cql
 
