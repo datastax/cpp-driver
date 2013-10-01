@@ -66,7 +66,7 @@ private:
     cql::cql_connection_t::cql_log_callback_t _log_callback;
 };
 
-class cql_cluster_pimpl_t {
+class cql_cluster_impl_t: public cql_cluster_t {
 private:
     // Main function of thread on which we call io_service::run
     static void
@@ -76,15 +76,16 @@ private:
     }
     
 public:
-    cql_cluster_pimpl_t(
+    cql_cluster_impl_t(
             const std::list<cql_endpoint_t>&        endpoints, 
 			boost::shared_ptr<cql_configuration_t>  configuration)
-        :_contact_points(endpoints), 
-		 _configuration(configuration),
-         work(new boost::asio::io_service::work(_io_service)),
-         thread(boost::bind(&cql_cluster_pimpl_t::asio_thread_main, &_io_service))
+        : _contact_points(endpoints)
+		, _configuration(configuration)
+        , work(new boost::asio::io_service::work(_io_service))
+        , thread(boost::bind(&cql_cluster_impl_t::asio_thread_main, &_io_service))
     { 
-            const cql_policies_t& policies = configuration->policies();
+            _configuration->init(this);
+            const cql_policies_t& policies = _configuration->policies();
             
             _metadata = boost::shared_ptr<cql_metadata_t>(new cql_metadata_t(
                     policies.reconnection_policy()
@@ -93,7 +94,17 @@ public:
             _metadata->add_hosts(endpoints);
     }
         
-    boost::shared_ptr<cql::cql_session_t> 
+     virtual 
+     ~cql_cluster_impl_t() {
+         shutdown(-1);
+     }
+        
+    virtual boost::shared_ptr<cql::cql_session_t>
+    connect() {
+        return connect("");
+    }
+        
+    virtual boost::shared_ptr<cql::cql_session_t> 
     connect(const std::string& keyspace) {
         // decide which client factory we want, SSL or non-SSL.  This is a hack, if you pass any commandline arg to the
         // binary it will use the SSL factory, non-SSL by default
@@ -129,7 +140,7 @@ public:
         return session;
     }
 
-    void 
+    virtual void 
     shutdown(int timeout_ms) {
         if(work.get()!=NULL) {
             work.reset();
@@ -137,7 +148,7 @@ public:
         }
     }
     
-    boost::shared_ptr<cql_metadata_t> 
+    virtual boost::shared_ptr<cql_metadata_t> 
     metadata() const {
         return _metadata;
     }

@@ -10,11 +10,12 @@
 
 namespace cql {
 	class cql_host_t;
+    class cql_cluster_t;
 
 	class cql_round_robin_query_plan_t: public cql_query_plan_t {
 	public:
 		cql_round_robin_query_plan_t(
-			const boost::shared_ptr<cql_cluster_t>& cluster, 
+			const cql_cluster_t* cluster, 
 			unsigned index);
 
 		// Returns next host to query.
@@ -36,17 +37,18 @@ namespace cql {
 			: _cluster(),
 			  _index(0) { }
 
-		virtual void 
-		init(const boost::shared_ptr<cql_cluster_t>& cluster);
-
 		virtual cql_host_distance_enum 
 		distance(const cql_host_t& host);
 
 		virtual boost::shared_ptr<cql_query_plan_t> 
 		new_query_plan(const boost::shared_ptr<cql_query_t>& query);
 
+    protected:    
+        virtual void 
+		init(cql_cluster_t* cluster);
+        
 	private:
-		boost::shared_ptr<cql_cluster_t> _cluster;
+		cql_cluster_t*          _cluster;
 		boost::atomic<unsigned> _index;
 	};
 }

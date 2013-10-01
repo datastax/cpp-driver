@@ -29,17 +29,19 @@ public:
     virtual 
     ~cql_load_balancing_policy_t() {}
 
-	// Initializes policy object.
-    virtual void 
-	init(const boost::shared_ptr<cql_cluster_t>& cluster) = 0;
-
-
     virtual cql_host_distance_enum 
 	distance(const cql_host_t& host) = 0;
 
 	// Returns new query plan.
     virtual boost::shared_ptr<cql_query_plan_t> 
 	new_query_plan(const boost::shared_ptr<cql_query_t>& query) = 0;
+    
+protected:
+    friend class cql_policies_t;
+    
+    virtual void 
+	init(cql_cluster_t* cluster) = 0;
+
 };
 
 } // namespace cql

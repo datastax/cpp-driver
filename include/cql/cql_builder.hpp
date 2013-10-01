@@ -5,6 +5,7 @@
 #include <list>
 #include <map>
 #include <string>
+#include <cassert>
 #include <boost/asio/ssl.hpp>
 #include <boost/smart_ptr.hpp>
 #include <boost/asio/ip/address.hpp>
@@ -263,6 +264,14 @@ public:
     }
     
 private:
+    friend class cql_configuration_t;
+
+    virtual void 
+    init(cql_cluster_t* cluster) {
+        assert(cluster != NULL);
+        _load_balancing_policy->init(cluster);
+    }
+    
     boost::shared_ptr<cql_load_balancing_policy_t>  _load_balancing_policy;
     boost::shared_ptr<cql_reconnection_policy_t>    _reconnection_policy;
     boost::shared_ptr<cql_retry_policy_t>           _retry_policy;
@@ -308,6 +317,13 @@ public:
     }
 
 private:
+    friend class cql_cluster_impl_t;
+    
+    void 
+    init(cql_cluster_t* cluster) {
+        _policies.init(cluster);
+    }
+    
     cql_client_options_t    _client_options;
     cql_protocol_options_t  _protocol_options;
     cql_pooling_options_t   _pooling_options;

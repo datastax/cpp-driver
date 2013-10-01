@@ -34,11 +34,9 @@
 
 boost::shared_ptr<cql::cql_cluster_t> 
 cql::cql_cluster_t::built_from(const cql_initializer_t& initializer) {
-    return boost::shared_ptr<cql::cql_cluster_t>(
-		new cql::cql_cluster_t(
-			new cql::cql_cluster_pimpl_t(
-				initializer.contact_points(), 
-				initializer.configuration())));
+    return boost::shared_ptr<cql::cql_cluster_t>(new cql::cql_cluster_impl_t(
+        initializer.contact_points(), 
+        initializer.configuration()));
 }
 
 boost::shared_ptr<cql::cql_builder_t> 
@@ -47,27 +45,3 @@ cql::cql_cluster_t::builder() {
         new cql::cql_builder_t());
 }
 
-boost::shared_ptr<cql::cql_session_t> 
-cql::cql_cluster_t::connect() {
-    return connect("");
-}
-
-boost::shared_ptr<cql::cql_session_t> 
-cql::cql_cluster_t::connect(const std::string& keyspace) {
-    return _pimpl->connect(keyspace);
-}
-
-void 
-cql::cql_cluster_t::shutdown(int timeout_ms) {
-    _pimpl->shutdown(timeout_ms);
-}
-
-boost::shared_ptr<cql::cql_metadata_t>
-cql::cql_cluster_t::metadata() const {
-    return _pimpl->metadata();
-}
-
-cql::cql_cluster_t::~cql_cluster_t() {
-    shutdown();
-	delete _pimpl;
-}

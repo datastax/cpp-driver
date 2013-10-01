@@ -80,6 +80,7 @@ main(int argc,
     try
     {
         cql::cql_thread_infrastructure_t cql_ti;
+        {
 		int numberOfNodes = 1;
 
         const cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
@@ -144,6 +145,7 @@ main(int argc,
 
 		cluster->shutdown();
         std::cout << "THE END" << std::endl;
+        }
     }
     catch (std::exception& e)
     {

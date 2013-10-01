@@ -7,7 +7,7 @@
 #include "cql/cql_metadata.hpp"
 
 cql::cql_round_robin_query_plan_t::cql_round_robin_query_plan_t(
-	const boost::shared_ptr<cql::cql_cluster_t>& cluster, 
+	const cql_cluster_t* cluster, 
 	unsigned index)
 {
     cluster->metadata()
@@ -33,8 +33,7 @@ cql::cql_round_robin_query_plan_t::next_host_to_query() {
 }
 
 void
-cql::cql_round_robin_policy_t::init(
-	const boost::shared_ptr<cql_cluster_t>& cluster)
+cql::cql_round_robin_policy_t::init(cql_cluster_t* cluster)
 {
 	_cluster = cluster;
 	_index = (unsigned)cql_rand();

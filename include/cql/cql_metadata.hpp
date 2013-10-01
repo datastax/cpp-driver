@@ -129,7 +129,7 @@ namespace cql {
         cql_metadata_t(
             boost::shared_ptr<cql_reconnection_policy_t> reconnection_policy);
         
-        friend class cql_cluster_pimpl_t;
+        friend class cql_cluster_impl_t;
         
 		//on_host_state_changed_t	_host_state_changed;
 		//on_schema_changed_t		_schema_changed;
