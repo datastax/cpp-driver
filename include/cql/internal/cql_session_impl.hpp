@@ -244,7 +244,7 @@ private:
         const cql_error_t&                                          error);
 
     boost::shared_ptr<cql_connection_t>
-    get_connection(const cql_query_t& query, cql_stream_t* stream);
+    get_connection(cql_stream_t* stream);
 
     cql_host_distance_enum
     get_host_distance(boost::shared_ptr<cql_host_t> host);
