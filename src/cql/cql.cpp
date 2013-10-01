@@ -68,16 +68,14 @@ namespace cql {
 struct cql_thread_infrastructure_impl_t {
 public:
     // libcds thread garbage collector.
-    // cds::gc::HP::thread_gc _thread_gc;
+    cds::gc::HP::thread_gc _thread_gc;
 };
 }
 
 cql::cql_thread_infrastructure_t::cql_thread_infrastructure_t() {
-    cds::gc::hzp::GarbageCollector::Construct();
-    cds::threading::Manager::attachThread();
+    _this  = new cql_thread_infrastructure_impl_t();
 }
 
 cql::cql_thread_infrastructure_t::~cql_thread_infrastructure_t() {
-    cds::threading::Manager::detachThread() ; 
-    cds::gc::hzp::GarbageCollector::Destruct();
+    delete _this;
 }
