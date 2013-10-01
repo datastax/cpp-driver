@@ -73,45 +73,33 @@ public:
 
     virtual cql_stream_t
     query(
-        const cql_query_t&                         query,
+        const boost::shared_ptr<cql_query_t>&      query,
         cql_connection_t::cql_message_callback_t   callback,
         cql_connection_t::cql_message_errback_t    errback) = 0;
 
     virtual cql_stream_t
     prepare(
-        const cql_query_t&                         query,
+        const boost::shared_ptr<cql_query_t>&      query,
         cql_connection_t::cql_message_callback_t   callback,
         cql_connection_t::cql_message_errback_t    errback) = 0;
 
     virtual cql_stream_t
     execute(
-        cql_execute_t*                             message,
+        const boost::shared_ptr<cql_execute_t>&    message,
         cql_connection_t::cql_message_callback_t   callback,
         cql_connection_t::cql_message_errback_t    errback) = 0;
 
     virtual boost::shared_future<cql_future_result_t>
-    query(const cql_query_t& query) = 0;
+    query(const boost::shared_ptr<cql_query_t>& query) = 0;
 
     virtual boost::shared_future<cql_future_result_t>
-    prepare(const cql_query_t& query) = 0;
+    prepare(const boost::shared_ptr<cql_query_t>& query) = 0;
 
     virtual boost::shared_future<cql_future_result_t>
-    execute(cql_execute_t* message) = 0;
-
-    virtual bool
-    defunct() = 0;
-
-    virtual bool
-    ready() = 0;
+    execute(const boost::shared_ptr<cql_execute_t>& message) = 0;
 
     virtual void
     close() = 0;
-
-    virtual size_t
-    size() = 0;
-
-    virtual bool
-    empty() = 0;
     
     // Returns unique session identifier
     virtual cql_uuid_t

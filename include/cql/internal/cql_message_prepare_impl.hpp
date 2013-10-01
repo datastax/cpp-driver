@@ -34,13 +34,13 @@ public:
 
     cql_message_prepare_impl_t(size_t size);
 
-    cql_message_prepare_impl_t(const cql_query_t& query);
+    cql_message_prepare_impl_t(const boost::shared_ptr<cql_query_t>& query);
 
     const std::string&
     query() const;
 
     void
-    query(const std::string& q);
+    set_query(const std::string& q);
 
     cql::cql_opcode_enum
     opcode() const;

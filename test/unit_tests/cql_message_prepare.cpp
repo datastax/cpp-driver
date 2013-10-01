@@ -1,6 +1,10 @@
+#include <string>
+#include <boost/shared_ptr.hpp>
 #include <boost/test/unit_test.hpp>
+
 #include "cql/cql.hpp"
 #include "cql/cql_error.hpp"
+#include "cql/cql_query.hpp"
 #include "cql/internal/cql_defines.hpp"
 #include "cql/internal/cql_message_prepare_impl.hpp"
 
@@ -21,7 +25,9 @@ BOOST_AUTO_TEST_CASE(opcode)
 
 BOOST_AUTO_TEST_CASE(serialization_to_byte)
 {
-	cql::cql_message_prepare_impl_t m("SELECT * from schema_keyspaces;");
+    const std::string statement = "SELECT * from schema_keyspaces;";
+    boost::shared_ptr<cql::cql_query_t> query(new cql::cql_query_t(statement));
+	cql::cql_message_prepare_impl_t m(query);
     cql::cql_error_t err;
     m.prepare(&err);
     BOOST_CHECK_EQUAL((int)sizeof(TEST_MESSAGE_PREPARE), m.size());

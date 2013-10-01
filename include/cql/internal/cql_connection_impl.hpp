@@ -154,7 +154,7 @@ public:
     id() const { return _uuid; }
 
     boost::shared_future<cql::cql_future_result_t>
-    query(const cql_query_t& query_) 
+    query(const boost::shared_ptr<cql_query_t>& query_) 
     {
         boost::shared_ptr<boost::promise<cql::cql_future_result_t> > promise(new boost::promise<cql::cql_future_result_t>());
         boost::shared_future<cql::cql_future_result_t> shared_future(promise->get_future());
@@ -167,7 +167,7 @@ public:
     }
 
     boost::shared_future<cql::cql_future_result_t>
-    prepare(const cql_query_t& query) 
+    prepare(const boost::shared_ptr<cql_query_t>& query) 
 	{
         boost::shared_ptr<boost::promise<cql::cql_future_result_t> > promise(new boost::promise<cql::cql_future_result_t>());
         boost::shared_future<cql::cql_future_result_t> shared_future(promise->get_future());
@@ -180,7 +180,7 @@ public:
     }
 
     boost::shared_future<cql::cql_future_result_t>
-    execute(cql::cql_execute_t* message) 
+    execute(const boost::shared_ptr<cql::cql_execute_t>& message) 
 	{
         boost::shared_ptr<boost::promise<cql::cql_future_result_t> > promise(new boost::promise<cql::cql_future_result_t>());
         boost::shared_future<cql::cql_future_result_t> shared_future(promise->get_future());
@@ -193,17 +193,16 @@ public:
     }
 
     cql::cql_stream_t
-    query(const cql_query_t&							query,
+    query(const boost::shared_ptr<cql_query_t>& 		query,
           cql::cql_connection_t::cql_message_callback_t callback,
           cql::cql_connection_t::cql_message_errback_t  errback) 
     {
-		/*cql_stream_t stream = acquire_stream();
-		if(stream.is_invalid()) {
-		errback(*this, stream, create_stream_id_error());
-		return stream;
-		}*/
-
-		cql_stream_t stream = query.stream();
+		cql_stream_t stream = query->stream();
+        
+        if(stream.is_invalid()) {
+            errback(*this, stream, create_stream_id_error());
+            return stream;
+		}
 
 		_callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
 
@@ -218,17 +217,16 @@ public:
     }
 
     cql::cql_stream_t
-    prepare(const cql_query_t&                            query,
+    prepare(const boost::shared_ptr<cql_query_t>&        query,
             cql::cql_connection_t::cql_message_callback_t callback,
-            cql::cql_connection_t::cql_message_errback_t  errback) {
-
-        /*cql_stream_t stream = acquire_stream();
+            cql::cql_connection_t::cql_message_errback_t  errback) 
+    {
+		cql_stream_t stream = query->stream();
+     
         if(stream.is_invalid()) {
             errback(*this, stream, create_stream_id_error());
             return stream;
-        }*/
-        
-		cql_stream_t stream = query.stream();
+        }
 
         _callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
         
@@ -243,11 +241,12 @@ public:
     }
 
     cql::cql_stream_t
-    execute(cql::cql_execute_t*                           message,
+    execute(const boost::shared_ptr<cql::cql_execute_t>& message,
             cql::cql_connection_t::cql_message_callback_t callback,
             cql::cql_connection_t::cql_message_errback_t  errback) {
 
         cql_stream_t stream = acquire_stream();
+        assert(0); // TODO: change this method to use new stream allocation mechanism
 
         if(stream.is_invalid()) {
             errback(*this, stream, create_stream_id_error());
@@ -289,7 +288,7 @@ public:
     endpoint() const { return _endpoint; }
 
     void
-    events(
+    set_events(
         cql::cql_connection_t::cql_event_callback_t event_callback,
         const std::list<std::string>&           events) {
         _event_callback = event_callback;
@@ -312,7 +311,7 @@ public:
     }
 
     void
-    credentials(const cql_connection_t::cql_credentials_t& credentials) {
+    set_credentials(const cql_connection_t::cql_credentials_t& credentials) {
         _credentials = credentials;
     }
 

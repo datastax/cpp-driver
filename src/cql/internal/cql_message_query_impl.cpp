@@ -42,10 +42,10 @@ cql::cql_message_query_impl_t::cql_message_query_impl_t(size_t size) :
     _query()
 {}
 
-cql::cql_message_query_impl_t::cql_message_query_impl_t(const cql_query_t& query) 
+cql::cql_message_query_impl_t::cql_message_query_impl_t(const boost::shared_ptr<cql_query_t>& query) 
 	: _buffer(new std::vector<cql_byte_t>())
-	, _consistency(query.consistency())
-	, _query(query.query())
+	, _consistency(query->consistency())
+	, _query(query->query())
 {}
 
 cql::cql_message_buffer_t
@@ -64,12 +64,12 @@ cql::cql_message_query_impl_t::consistency() const {
 }
 
 void
-cql::cql_message_query_impl_t::query(const std::string& q) {
+cql::cql_message_query_impl_t::set_query(const std::string& q) {
     _query = q;
 }
 
 void
-cql::cql_message_query_impl_t::consistency(cql::cql_consistency_enum consistency) {
+cql::cql_message_query_impl_t::set_consistency(cql::cql_consistency_enum consistency) {
     _consistency = consistency;
 }
 

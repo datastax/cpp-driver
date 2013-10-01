@@ -31,10 +31,10 @@ cql::cql_message_prepare_impl_t::cql_message_prepare_impl_t(size_t size) :
     _buffer(new std::vector<cql_byte_t>(size))
 {}
 
-cql::cql_message_prepare_impl_t::cql_message_prepare_impl_t(const cql_query_t& query) :
-    _buffer(new std::vector<cql_byte_t>()),
-    _query(query.query())
-{}
+cql::cql_message_prepare_impl_t::cql_message_prepare_impl_t(
+        const boost::shared_ptr<cql_query_t>& query)
+    : _buffer(new std::vector<cql_byte_t>())
+    , _query(query->query())  { }
 
 cql::cql_message_buffer_t
 cql::cql_message_prepare_impl_t::buffer() {
@@ -47,7 +47,7 @@ cql::cql_message_prepare_impl_t::query() const {
 }
 
 void
-cql::cql_message_prepare_impl_t::query(const std::string& q) {
+cql::cql_message_prepare_impl_t::set_query(const std::string& q) {
     _query = q;
 }
 

@@ -89,3 +89,22 @@ cql::cql_trashcan_t::timeout(const boost::system::error_code& error) {
     if(!error)
         cleanup();
 }
+
+void
+cql::cql_trashcan_t::remove_all() {
+    _timer.cancel();
+    
+    boost::shared_ptr<cql_connections_collection_t> connections;
+        
+    for(cql_connection_pool_t::iterator host_it = _trashcan.begin();
+        host_it != _trashcan.end(); ++host_it)
+    {
+        connections = host_it->second;
+        
+        for(cql_connections_collection_t::iterator conn_it = connections->begin();
+            conn_it != connections->end(); ++conn_it)
+        {
+            _session.free_connection(conn_it->second);
+        }
+    }
+}

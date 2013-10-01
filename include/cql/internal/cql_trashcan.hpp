@@ -33,6 +33,9 @@ namespace cql {
         
         boost::shared_ptr<cql_connection_t>
         recycle(const cql_endpoint_t& address);
+        
+        void
+        remove_all();
             
     private:
         void

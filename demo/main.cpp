@@ -110,7 +110,11 @@ main(int argc,
             std::cout << "TRUE" << std::endl;
 
             // execute a query, switch keyspaces
-            boost::shared_future<cql::cql_future_result_t> future = session->query("USE system;", cql::CQL_CONSISTENCY_ONE);
+            boost::shared_ptr<cql::cql_query_t> use_system(
+                new cql::cql_query_t("USE system;", cql::CQL_CONSISTENCY_ONE));
+            
+            
+            boost::shared_future<cql::cql_future_result_t> future = session->query(use_system);
 
             // wait for the query to execute
             future.wait();
@@ -119,7 +123,9 @@ main(int argc,
             std::cout << "switch keyspace successfull? " << (!future.get().error.is_err() ? "true" : "false") << std::endl;
 
             // execute a query, select all rows from the keyspace
-            future = session->query("SELECT * from schema_keyspaces;", cql::CQL_CONSISTENCY_ONE);
+            boost::shared_ptr<cql::cql_query_t> select(
+                new cql::cql_query_t("SELECT * from schema_keyspaces;", cql::CQL_CONSISTENCY_ONE));
+            future = session->query(select);
 
             // wait for the query to execute
             future.wait();

@@ -19,7 +19,10 @@ BOOST_AUTO_TEST_CASE(opcode)
 
 BOOST_AUTO_TEST_CASE(serialization_to_byte)
 {
-	cql::cql_message_query_impl_t m("use system;", cql::CQL_CONSISTENCY_ALL);
+    const std::string statement = "USE system;";
+    boost::shared_ptr<cql::cql_query_t> query(new cql::cql_query_t(statement));
+    
+	cql::cql_message_query_impl_t m(query);
     cql::cql_error_t err;
     m.prepare(&err);
     BOOST_CHECK_EQUAL((int)sizeof(TEST_MESSAGE_QUERY), m.size());

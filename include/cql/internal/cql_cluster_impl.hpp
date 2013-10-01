@@ -119,7 +119,7 @@ public:
 
         // Construct the session
         boost::shared_ptr<cql_session_impl_t> session(
-            new cql_session_impl_t(_io_service, client_factory, _configuration));
+            new cql_session_impl_t(client_factory, _configuration));
 
         session->init(_io_service);
         

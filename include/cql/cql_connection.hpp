@@ -47,30 +47,7 @@ struct cql_error_t;
 
 class cql_connection_t :
         boost::noncopyable {
-
 public:
-
-    virtual bool 
-    is_healthy() const = 0;
-    
-    virtual bool 
-    is_busy(int) const = 0;
-    
-    virtual bool 
-    is_free(int) const = 0;
-    
-    virtual bool
-    is_empty() const = 0;
-
-    virtual cql_stream_t 
-    acquire_stream()  = 0;
-    
-    virtual void 
-    release_stream(cql_stream_t& stream) = 0;
-
-    virtual cql_uuid_t
-    id() const = 0;
-    
     typedef 
         boost::function<void(const cql::cql_short_t, const std::string&)> 
         cql_log_callback_t;
@@ -102,6 +79,27 @@ public:
     virtual
     ~cql_connection_t() { }
 
+    virtual bool 
+    is_healthy() const = 0;
+    
+    virtual bool 
+    is_busy(int) const = 0;
+    
+    virtual bool 
+    is_free(int) const = 0;
+    
+    virtual bool
+    is_empty() const = 0;
+
+    virtual cql_stream_t 
+    acquire_stream()  = 0;
+    
+    virtual void 
+    release_stream(cql_stream_t& stream) = 0;
+
+    virtual cql_uuid_t
+    id() const = 0;
+    
     /**
        Connect to the server at the specified address and port.
 
@@ -134,9 +132,9 @@ public:
      */
     virtual cql::cql_stream_t
     query(
-        const cql_query_t&	   query,
-        cql_message_callback_t callback,
-        cql_message_errback_t  errback) = 0;
+        const boost::shared_ptr<cql_query_t>&   query,
+        cql_message_callback_t                  callback,
+        cql_message_errback_t                   errback) = 0;
 
     /**
        Perform an ad-hoc query using the specified string and consistency.
@@ -146,7 +144,7 @@ public:
        @return populated when results or error is obtained
      */
     virtual boost::shared_future<cql::cql_future_result_t>
-    query(const cql_query_t& query) = 0;
+    query(const boost::shared_ptr<cql_query_t>& query) = 0;
 
     /**
        Prepare a CQL statement.
@@ -162,9 +160,9 @@ public:
      */
     virtual cql::cql_stream_t
     prepare(
-		const cql_query_t&	   query,
-		cql_message_callback_t callback,
-        cql_message_errback_t  errback) = 0;
+		const boost::shared_ptr<cql_query_t>&	    query,
+		cql_message_callback_t                      callback,
+        cql_message_errback_t                       errback) = 0;
 
     /**
        Prepare a CQL statement.
@@ -175,7 +173,7 @@ public:
        @return populated when results or error is obtained
      */
     virtual boost::shared_future<cql::cql_future_result_t>
-    prepare(const cql_query_t& query) = 0;
+    prepare(const boost::shared_ptr<cql_query_t>& query) = 0;
 
     /**
        Execute a prepared CQL statement.
@@ -187,9 +185,9 @@ public:
      */
     virtual cql::cql_stream_t
     execute(
-        cql::cql_execute_t*    message,
-        cql_message_callback_t callback,
-        cql_message_errback_t  errback) = 0;
+        const boost::shared_ptr<cql::cql_execute_t>&    message,
+        cql_message_callback_t                          callback,
+        cql_message_errback_t                           errback) = 0;
 
     /**
        Execute a prepared CQL statement.
@@ -198,7 +196,7 @@ public:
        @return populated when results or error is obtained
      */
     virtual boost::shared_future<cql::cql_future_result_t>
-    execute(cql::cql_execute_t* message) = 0;
+    execute(const boost::shared_ptr<cql::cql_execute_t>& message) = 0;
 
     /**
        If the connection errback is triggered, this function is used to determine whether the underlying transport is still valid or if a reconnect is neccessary.
@@ -234,7 +232,7 @@ public:
        Set list of registered events and callback
      */
     virtual void
-    events(
+    set_events(
         cql::cql_connection_t::cql_event_callback_t event_callback,
         const std::list<std::string>&               events) = 0;
 
@@ -254,7 +252,7 @@ public:
        Credentials used if prompted for authentication
      */
     virtual void
-    credentials(const cql_credentials_t& credentials) = 0;
+    set_credentials(const cql_credentials_t& credentials) = 0;
 
     /**
        Force reconnect

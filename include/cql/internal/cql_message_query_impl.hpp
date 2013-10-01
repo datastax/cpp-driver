@@ -34,7 +34,7 @@ public:
 
     cql_message_query_impl_t(size_t size);
 
-    cql_message_query_impl_t(const cql_query_t& query);
+    cql_message_query_impl_t(const boost::shared_ptr<cql_query_t>& query);
 
     const std::string&
     query() const;
@@ -43,10 +43,10 @@ public:
     consistency() const;
 
     void
-    query(const std::string& q);
+    set_query(const std::string& q);
 
     void
-    consistency(cql::cql_consistency_enum consistency);
+    set_consistency(cql::cql_consistency_enum consistency);
 
     cql::cql_opcode_enum
     opcode() const;
