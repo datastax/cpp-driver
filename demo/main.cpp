@@ -58,6 +58,8 @@ print_rows(
             result.get_data(i, &data, size);
             
             std::cout.write(reinterpret_cast<char*>(data), size);
+            for(int i = size; i < 25; i++)
+                std::cout << ' ' ;
             std::cout << " | ";
         }
         std::cout << std::endl;
@@ -74,16 +76,11 @@ log_callback(
     std::cout << "LOG: " << message << std::endl;
 }
 
-
-int
-main(int argc, char**)
-{
-    cql::cql_initialize();
+void demo(bool use_ssl) {
+    cql::cql_thread_infrastructure_t cql_ti;
     
     try
     {
-        cql::cql_thread_infrastructure_t cql_ti;
-        {
 		int numberOfNodes = 1;
 
         const cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
@@ -99,16 +96,15 @@ main(int argc, char**)
 
 		// decide which client factory we want, SSL or non-SSL.  This is a hack, if you pass any commandline arg to the
 		// binary it will use the SSL factory, non-SSL by default
-		if (argc > 1) {
+		if (use_ssl) {
 			builder->with_ssl();
 		}
 
-		boost::shared_ptr<cql::cql_cluster_t> cluster (builder->build());
-		boost::shared_ptr<cql::cql_session_t> session (cluster->connect());
+		boost::shared_ptr<cql::cql_cluster_t> cluster(builder->build());
+		boost::shared_ptr<cql::cql_session_t> session(cluster->connect());
 
 		if(session) {
-            
-            
+           
 			
             // The connection succeeded
             std::cout << "TRUE" << std::endl;
@@ -143,18 +139,89 @@ main(int argc, char**)
 
             // close the connection session
             session->close();
-
 		}
 
 		cluster->shutdown();
         std::cout << "THE END" << std::endl;
-        }
     }
     catch (std::exception& e)
     {
         std::cout << "Exception: " << e.what() << std::endl;
     }
+}
+
+int
+main(int argc, char**)
+{
+    cql::cql_initialize(512);
+    
+    bool use_ssl = argc > 1;
+    demo(use_ssl);
     
     cql::cql_terminate();
     return 0;
+}
+
+template<typename TKey, typename TValue>
+struct split_list_map_traits_t
+    : public cds::container::split_list::type_traits  
+{
+    typedef cds::container::michael_list_tag  ordered_list    ;
+    typedef std::hash<TKey>                   hash            ;
+
+    struct ordered_list_traits: public cds::container::michael_list::type_traits {
+        typedef std::less<TKey> less; 
+    };
+};
+
+template<typename TKey, typename TValue> 
+struct sl_map_t {
+    typedef
+        cds::container::SplitListMap<cds::gc::HP, TKey, TValue, cql_lockfree_hash_map_traits_t<TKey, TValue> > 
+        type;
+};
+
+class my_type {
+public:
+    my_type(const std::string& name)
+        : _name(name) {
+            std::cout << "type with name '" << name << "' created" << std::endl;
+        }
+        
+    ~my_type() {
+        std::cout << "type with name '" << _name << "' destroyed" << std::endl;
+    }
+    
+    const std::string&
+    name() const { return _name; }
+private:
+    std::string _name;
+};
+
+int main3(int, char**) {
+    cql::cql_initialize();
+    {
+        cql::cql_thread_infrastructure_t t;
+    
+        {
+            sl_map_t<long, boost::shared_ptr<my_type> >::type map;
+            for(int i = 0; i < 10; i++) {
+                map.insert(i, 
+                    boost::shared_ptr<my_type>(new my_type("foo" + boost::lexical_cast<std::string>(i))));
+            }
+            
+            for(sl_map_t<long, boost::shared_ptr<my_type> >::type::iterator it = map.begin();
+                it != map.end(); ++it)
+            {
+                std::cout << "key: " << it->first << ", value: " << it->second->name() << std::endl;
+                map.erase(it->first);
+            }
+            
+            std::cout << "after loop, size:" << map.size() << std::endl;
+        }
+    }
+    
+    std::cout << "before terminate" << std::endl;
+    cql::cql_terminate();
+    std::cout << "after terminate" << std::endl;
 }

@@ -44,9 +44,7 @@ cql::cql_session_impl_t::cql_session_impl_t(
     _configuration(configuration)
 { }
 
-cql::cql_session_impl_t::~cql_session_impl_t() {
-    close();
-}
+cql::cql_session_impl_t::~cql_session_impl_t() { }
 
 void 
 cql::cql_session_impl_t::init(boost::asio::io_service& io_service) 
@@ -423,19 +421,31 @@ cql::cql_session_impl_t::execute(
 void
 cql::cql_session_impl_t::close() 
 {
-	_trashcan->remove_all();
+    if(_trashcan) {
+        _trashcan->remove_all();
+        _trashcan = boost::shared_ptr<cql_trashcan_t>();
+    }
     
 	for(cql_connection_pool_t::iterator host_it = _connection_pool.begin();
 		host_it != _connection_pool.end(); ++host_it)
 	{
 		cql_connections_collection_t* connections = host_it->second;
+        if(!_connection_pool.try_erase(host_it->first))
+            continue;
 
 		for(cql_connections_collection_t::iterator conn_it = connections->begin();
 			conn_it != connections->end(); ++conn_it)
 		{
-            free_connection(conn_it->second);
+            boost::shared_ptr<cql_connection_t> conn;
+            if(connections->try_erase(conn_it->first, &conn))
+                free_connection(conn);
 		}
+
+        delete connections;
 	}
+    
+    log(0, "size of session::_connection_poll is " 
+        + boost::lexical_cast<std::string>(_connection_pool.size()));
 }
 
 inline void

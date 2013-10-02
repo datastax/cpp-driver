@@ -55,6 +55,7 @@ struct cql_error_t;
 
 class cql_session_callback_info_t {
 public:
+    explicit
     cql_session_callback_info_t(
         const cql_session_t::cql_client_callback_t  client  = 0,
         const cql_session_t::cql_ready_callback_t   ready   = 0,

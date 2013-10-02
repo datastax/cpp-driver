@@ -544,7 +544,11 @@ private:
             } else {
                 log(CQL_LOG_ERROR, "error decoding header " + _response_header.str());
             }
-        } else {
+        } 
+        else if(err.value() == boost::system::errc::operation_canceled) {
+            /* do nothing */
+        }
+        else {
             log(CQL_LOG_ERROR, "error reading header " + err.message());
             check_transport_err(err);
         }

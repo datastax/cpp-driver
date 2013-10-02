@@ -95,9 +95,7 @@ public:
     }
         
      virtual 
-     ~cql_cluster_impl_t() {
-         shutdown(-1);
-     }
+     ~cql_cluster_impl_t() { }
         
     virtual boost::shared_ptr<cql::cql_session_t>
     connect() {
@@ -129,19 +127,26 @@ public:
         }
 
         // Construct the session
+        cql_session_callback_info_t session_callbacks;
+        session_callbacks.set_client_callback(client_factory);
+        session_callbacks.set_log_callback(log_callback);
+        
         boost::shared_ptr<cql_session_impl_t> session(
-            new cql_session_impl_t(client_factory, _configuration));
+            new cql_session_impl_t(session_callbacks, _configuration));
 
         session->init(_io_service);
         
-        bool session_add = _connected_sessions.try_add(session->id(), session);
-        assert(session_add);
+        // HACK: Comment this out to get libcds gc bug
+       // bool session_add = _connected_sessions.try_add(session->id(), session);
+       // assert(session_add);
         
         return session;
     }
 
     virtual void 
     shutdown(int timeout_ms) {
+        close_sessions();
+                
         if(work.get()!=NULL) {
             work.reset();
             thread.join();
@@ -156,6 +161,22 @@ public:
     friend class cql_metadata_t;
     
 private:
+    
+    typedef
+        cql_lockfree_hash_map_t<cql_uuid_t, boost::shared_ptr<cql_session_t> >  
+        connected_sessions_t;
+    
+    void
+    close_sessions() {
+        for(connected_sessions_t::iterator it = _connected_sessions.begin();
+            it != _connected_sessions.end(); ++it)
+        {
+            boost::shared_ptr<cql_session_t> session;
+            if(_connected_sessions.try_erase(it->first, &session))
+                session->close();
+        }
+    }
+    
     const std::list<cql_endpoint_t> 		_contact_points;
     boost::shared_ptr<cql_configuration_t> 	_configuration;
 
@@ -171,8 +192,8 @@ private:
     boost::scoped_ptr<boost::asio::io_service::work> work;
     boost::thread thread;
 
-    boost::shared_ptr<cql_metadata_t>                                           _metadata;
-    cql_lockfree_hash_map_t<cql_uuid_t, boost::shared_ptr<cql_session_t> >      _connected_sessions;
+    boost::shared_ptr<cql_metadata_t>     _metadata;
+    connected_sessions_t                  _connected_sessions;
 };
 
 }

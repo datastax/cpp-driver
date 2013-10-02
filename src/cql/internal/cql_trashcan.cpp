@@ -5,16 +5,7 @@
 #include "cql/internal/cql_trashcan.hpp"
 #include "cql/internal/cql_session_impl.hpp"
 
-cql::cql_trashcan_t::~cql_trashcan_t() {
-    std::vector<cql_connections_collection_t*> pointers;
-    _trashcan.get_values(std::back_inserter(pointers));
-    
-    for(std::vector<cql_connections_collection_t*>::iterator it = pointers.begin();
-        it != pointers.end(); ++it)
-    {
-        delete *it;
-    }
-}
+cql::cql_trashcan_t::~cql_trashcan_t() { }
 
 void
 cql::cql_trashcan_t::put(const boost::shared_ptr<cql_connection_t>& connection) {
@@ -84,12 +75,12 @@ cql::cql_trashcan_t::cleanup(
 
 void
 cql::cql_trashcan_t::cleanup() {
-    cql_connections_collection_t* connections;
-    
     for(cql_connection_pool_t::iterator host_it = _trashcan.begin();
         host_it != _trashcan.end(); ++host_it)
     {
-        connections = host_it->second;
+        cql_connections_collection_t* connections = host_it->second;
+        if(!_trashcan.try_erase(host_it->first))
+            continue;
         
         for(cql_connections_collection_t::iterator conn_it = connections->begin();
             conn_it != connections->end(); ++conn_it)
@@ -97,6 +88,8 @@ cql::cql_trashcan_t::cleanup() {
             cleanup(/* connection id: */   conn_it->first, 
                     /* all connections: */ connections);
         }
+        
+        delete connections;
     }
 }
 
@@ -114,11 +107,14 @@ cql::cql_trashcan_t::remove_all() {
         host_it != _trashcan.end(); ++host_it)
     {
         cql_connections_collection_t* connections = host_it->second;
+        if(!_trashcan.try_erase(host_it->first))
+            continue;
         
         for(cql_connections_collection_t::iterator conn_it = connections->begin();
             conn_it != connections->end(); ++conn_it)
         {
-            _session.free_connection(conn_it->second);
+            if(connections->try_erase(conn_it->first))
+                _session.free_connection(conn_it->second);
         }
     }
 }
