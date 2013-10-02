@@ -84,11 +84,19 @@ namespace cql {
             : _map() { }
     
         cql_lockfree_hash_map_t(size_t expected_items_count, size_t load_factor = 1)
-            : _map(expected_items_count, load_factor) { }        
+            : _map(expected_items_count, load_factor) { }  
+        
+        inline virtual
+        ~cql_lockfree_hash_map_t() { }
         
         inline size_t
         size() const {
             return _map.size();
+        }
+        
+        inline void
+        clear() {
+            _map.clear();
         }
     
         inline bool 
@@ -155,7 +163,7 @@ namespace cql {
         
         inline const_iterator
         cbegin() const {
-            return _map.cbegin();
+            return _map.cbegin(); 
         }
         
         inline const_iterator

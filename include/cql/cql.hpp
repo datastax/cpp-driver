@@ -154,8 +154,10 @@ to_string(const cql_consistency_enum);
 // with library.
 // This function MUST be called only once.
 // This function is NOT thread safe.
+// @hazard_pointers_count - number of hazard pointers used by
+// libcds.
 void
-cql_initialize();
+cql_initialize(size_t const hazard_pointers_count = 128);
 
 // Terminates cql library.
 // This function must be called at program end, this MUST

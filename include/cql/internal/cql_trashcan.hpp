@@ -28,6 +28,8 @@ namespace cql {
             : _timer(timer_service),
               _session(session) { }
                 
+        ~cql_trashcan_t();    
+            
         void
         put(const boost::shared_ptr<cql_connection_t>& connection);
         
@@ -44,7 +46,7 @@ namespace cql {
         void
         cleanup(
             const cql_uuid_t& connection_id,
-            const boost::shared_ptr<cql_connections_collection_t>& connections);
+            cql_connections_collection_t* const connections);
         
         void
         timeout(const boost::system::error_code& error);

@@ -16,6 +16,8 @@
   limitations under the License.
 */
 
+#include <cassert>
+
 #include <boost/bind.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/foreach.hpp>
@@ -34,6 +36,10 @@
 #include <cql/cql_builder.hpp>
 #include <cql/cql_execute.hpp>
 #include <cql/cql_result.hpp>
+#include <cql/lockfree/cql_lockfree_hash_map.hpp>
+
+#include <cds/init.h>
+#include <cds/gc/hp.h>
 
 #include <cql_ccm_bridge.hpp>
 
@@ -70,13 +76,10 @@ log_callback(
 
 
 int
-main(int argc,
-     char**)
+main(int argc, char**)
 {
     cql::cql_initialize();
     
-	std::cout << "THREADS #" << boost::thread::hardware_concurrency() << std::endl;
-
     try
     {
         cql::cql_thread_infrastructure_t cql_ti;

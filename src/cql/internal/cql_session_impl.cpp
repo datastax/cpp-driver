@@ -33,8 +33,8 @@
 
 
 cql::cql_session_impl_t::cql_session_impl_t(
-    const cql_session_callback_info_t&      callbacks,
-    boost::shared_ptr<cql_configuration_t>  configuration
+        const cql_session_callback_info_t&      callbacks,
+        boost::shared_ptr<cql_configuration_t>  configuration
     ) :
     _client_callback(callbacks.client_callback()),
     _ready_callback(callbacks.ready_callback()),
@@ -43,6 +43,10 @@ cql::cql_session_impl_t::cql_session_impl_t(
     _uuid(cql_uuid_t::create()),
     _configuration(configuration)
 { }
+
+cql::cql_session_impl_t::~cql_session_impl_t() {
+    close();
+}
 
 void 
 cql::cql_session_impl_t::init(boost::asio::io_service& io_service) 
@@ -178,28 +182,31 @@ cql::cql_session_impl_t::allocate_connection(
     return connection;
 }
     
-boost::shared_ptr<cql::cql_connections_collection_t>
+cql::cql_connections_collection_t*
 cql::cql_session_impl_t::add_to_connection_pool(
     const cql_endpoint_t& host_address) 
 {
-    boost::shared_ptr<cql_connections_collection_t> result, empty_collection;
+    cql_connections_collection_t* result = NULL;
+    cql_connections_collection_t* empty_collection = NULL;
     
     while(!_connection_pool.try_get(host_address, &result)) {
         if(!empty_collection) {
-            empty_collection = boost::shared_ptr<cql_connections_collection_t>(
-                new cql_connections_collection_t());
+            empty_collection = new cql_connections_collection_t();
         }
         
         _connection_pool.try_add(host_address, empty_collection);
     }
+    
+    if(empty_collection && (result != empty_collection))
+        delete empty_collection;
         
     return result;
 }
 
 void 
 cql::cql_session_impl_t::try_remove_connection(
-    boost::shared_ptr<cql_connections_collection_t>& connections,
-    const cql_uuid_t&                                connection_id) 
+    cql_connections_collection_t* const connections,
+    const cql_uuid_t&                   connection_id) 
 {
     // TODO: How we can guarantee that any other thread is not using
     // this connection object ?
@@ -213,9 +220,9 @@ cql::cql_session_impl_t::try_remove_connection(
 
 boost::shared_ptr<cql::cql_connection_t>
 cql::cql_session_impl_t::try_find_free_stream(
-    boost::shared_ptr<cql_host_t> const&             host, 
-    boost::shared_ptr<cql_connections_collection_t>& connections,
-    cql_stream_t*                                    stream)
+    boost::shared_ptr<cql_host_t> const&    host, 
+    cql_connections_collection_t* const     connections,
+    cql_stream_t*                           stream)
 {
     const cql_pooling_options_t&    pooling_options    = _configuration->pooling_options();
     cql_host_distance_enum          distance           = host->distance(_configuration->policies());
@@ -264,8 +271,7 @@ cql::cql_session_impl_t::connect(
         
         tried_hosts->push_back(host_address);
 
-        boost::shared_ptr<cql_connections_collection_t> connections 
-            = add_to_connection_pool(host_address);
+        cql_connections_collection_t* connections = add_to_connection_pool(host_address);
         
         boost::shared_ptr<cql_connection_t> conn =
             try_find_free_stream(host, connections, stream);
@@ -422,7 +428,7 @@ cql::cql_session_impl_t::close()
 	for(cql_connection_pool_t::iterator host_it = _connection_pool.begin();
 		host_it != _connection_pool.end(); ++host_it)
 	{
-		boost::shared_ptr<cql_connections_collection_t> connections = host_it->second;
+		cql_connections_collection_t* connections = host_it->second;
 
 		for(cql_connections_collection_t::iterator conn_it = connections->begin();
 			conn_it != connections->end(); ++conn_it)

@@ -27,7 +27,10 @@ typedef
 typedef
     cql::cql_lockfree_hash_map_t<
         cql_endpoint_t, 
-        boost::shared_ptr<cql_connections_collection_t> >
+        // if we use shared_ptr's here, there would be an assertion error at program end
+        // i cannot figure out what was cause of this bug, but not using
+        // shared_ptr's helped.
+        cql_connections_collection_t* >
     cql_connection_pool_t;
 
 typedef

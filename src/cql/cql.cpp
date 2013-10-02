@@ -42,15 +42,14 @@ namespace {
 }
 
 void
-cql::cql_initialize() {
+cql::cql_initialize(size_t const hazard_pointers_count) {
     if(cql_library_initialized)
         return;
     
     cql_library_initialized = true;
     
     cds::Initialize(0);
-    cql_hp_singleton = boost::shared_ptr<cds::gc::HP>(
-        new cds::gc::HP());
+    cql_hp_singleton = boost::shared_ptr<cds::gc::HP>(new cds::gc::HP(hazard_pointers_count));
 }
 
 void
@@ -67,6 +66,7 @@ cql::cql_terminate() {
 namespace cql {
 struct cql_thread_infrastructure_impl_t {
 public:
+    
     // libcds thread garbage collector.
     cds::gc::HP::thread_gc _thread_gc;
 };

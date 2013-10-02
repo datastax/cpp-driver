@@ -139,7 +139,7 @@ public:
     
 
     virtual 
-	~cql_session_impl_t() { }
+	~cql_session_impl_t();
 
 private:    
     struct client_container_t {
@@ -253,20 +253,20 @@ private:
         cql_connections_collection_t& connections, 
         const std::list<cql_uuid_t>& connections_to_remove);
 
-    boost::shared_ptr<cql_connections_collection_t>
+    cql_connections_collection_t*
     add_to_connection_pool(
         const cql_endpoint_t& host_address);
 
     void
     try_remove_connection(
-        boost::shared_ptr<cql_connections_collection_t>& connections,
+        cql_connections_collection_t* const connections,
         const cql_uuid_t& connection_id);
 
     boost::shared_ptr<cql_connection_t>
     try_find_free_stream(
-        boost::shared_ptr<cql_host_t> const&             host,
-        boost::shared_ptr<cql_connections_collection_t>& connections,
-        cql_stream_t*                                    stream);
+        boost::shared_ptr<cql_host_t> const&    host,
+        cql_connections_collection_t* const     connections,
+        cql_stream_t*                           stream);
     
     bool
     increase_connection_counter(

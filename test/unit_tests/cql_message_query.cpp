@@ -1,3 +1,4 @@
+#include <iomanip>
 #include <boost/test/unit_test.hpp>
 #include "cql/cql.hpp"
 #include "cql/cql_error.hpp"
@@ -19,12 +20,13 @@ BOOST_AUTO_TEST_CASE(opcode)
 
 BOOST_AUTO_TEST_CASE(serialization_to_byte)
 {
-    const std::string statement = "USE system;";
-    boost::shared_ptr<cql::cql_query_t> query(new cql::cql_query_t(statement));
+    const std::string statement = "use system;";
+    boost::shared_ptr<cql::cql_query_t> query(new cql::cql_query_t(statement, cql::CQL_CONSISTENCY_ALL));
     
 	cql::cql_message_query_impl_t m(query);
     cql::cql_error_t err;
     m.prepare(&err);
+    
     BOOST_CHECK_EQUAL((int)sizeof(TEST_MESSAGE_QUERY), m.size());
     BOOST_CHECK(memcmp(TEST_MESSAGE_QUERY, &(*m.buffer())[0], sizeof(TEST_MESSAGE_QUERY)) == 0);
 }

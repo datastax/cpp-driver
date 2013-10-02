@@ -149,6 +149,7 @@
           </df>
           <df name="lockfree">
             <in>boost_ip_address_traits.hpp</in>
+            <in>cql_2hashmap.hpp</in>
             <in>cql_lockfree_hash_map.hpp</in>
           </df>
           <df name="policies">
