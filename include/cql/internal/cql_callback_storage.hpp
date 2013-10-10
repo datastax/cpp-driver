@@ -21,6 +21,10 @@ public:
 	cql_callback_storage_t()
 		: _free_indexes(Size) 
 	{
+#ifdef _WIN32
+		for(int index =0;index<Size;index++)
+			_locks[index].unlock();
+#endif
 		populate_free_indexes();
 	}
 

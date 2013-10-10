@@ -84,7 +84,7 @@ void demo(bool use_ssl) {
 		int numberOfNodes = 1;
 
         const cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-        // cql_ccm_bridge_t::create(conf, "test", numberOfNodes, true);
+        cql_ccm_bridge_t::create(conf, "test", numberOfNodes, true);
 
 		boost::shared_ptr<cql::cql_builder_t> builder = cql::cql_cluster_t::builder();
 		builder->with_log_callback(&log_callback);
@@ -142,6 +142,7 @@ void demo(bool use_ssl) {
 		}
 
 		cluster->shutdown();
+		cds::gc::HP::force_dispose(); 
         std::cout << "THE END" << std::endl;
     }
     catch (std::exception& e)
@@ -224,4 +225,5 @@ int main3(int, char**) {
     std::cout << "before terminate" << std::endl;
     cql::cql_terminate();
     std::cout << "after terminate" << std::endl;
+	return 0;
 }

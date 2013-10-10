@@ -73,6 +73,7 @@ private:
     asio_thread_main(boost::asio::io_service* io_service) {
         cql::cql_thread_infrastructure_t gc;
         io_service->run();
+		cds::gc::HP::force_dispose(); 
     }
     
 public:
