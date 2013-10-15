@@ -30,29 +30,26 @@ At this stage CCM should work fine.
 
 1. The toolchain
 
-We recommend to install recent GCC (in my case it was ver. 4.8), as we had no luck 
-with early Clang nor with builtin GCC-LLVM. Simplest way to get GCC is to download
-it via Homebrew:
+The following procedure aims at setting up Clang toolchain to build our cpp-driver,
+with Xcode as the preferred IDE.
 
-    brew tap homebrew/versions
-    brew install gcc48
+a. Update the Xcode to the recent version (5.0 at the time of this writing)
+b. Launch Xcode and go to Preferences->Downloads. Download and install the latest
+ command line tools.
 
-(Yes, it will complain about Macports and Homebrew being used at the same time.
+Now you need to get the Boost libraries. There is one caveat, though: Boost
+packaged by Homebrew is linked by default against GNU libstdc++. We suggest to 
+stick to the libc++ throughout the further development and not to mix both standard
+libraries. We therefore need to build the Boost with Clang and link it with libc++.
+This is easiest done by:
+
+brew update
+brew install boost --with-c++11
+
+(Yes, Homebrew will complain about Macports and Homebrew being used at the same time.
 Unfortunately, Homebrew does not have a CCM package, so we had to use MacPorts there.)
 
-Now we would recommend to change the aliases 'gcc' and 'g++' to point at gcc-4.8:
-
-    sudo rm /usr/bin/gcc
-    sudo ln -s /usr/local/bin/gcc-4.8 /usr/bin/gcc
-    sudo rm /usr/bin/g++
-    sudo ln -s /usr/local/bin/g++-4.8 /usr/bin/g++
-
-This will save us some problems later. In case you don't have Boost installed,
-just install it:
-    
-    brew install boost
-
-Same thing with libopenssl:
+In the same spirit you can install libopenssl, which is also required by the project:
 
     brew install openssl
 
@@ -61,49 +58,39 @@ Same thing with libopenssl:
 2. LibCDS (tested on ver. 1.4.0)
 
 Apparently, libcds does not have a predefined build configuration for Mac OS X.
-We have to apply minor modifications to use a combination of 'Linux' and 'NetBSD'
-targets here.
+We have to apply minor modifications to use the 'Linux' target here.
 
-First, download the sources of libcds and go to 'build' directory therein. Edit
-the 'build.sh' script. We need to change a few things there:
+For the impatient: you can find the modified sources in the cpp-driver/ext directory.
+Please, just unpack them and run the build/build-iMac.sh script.
+
+Otherwise, first download the original sources of libcds and go to 'build' directory
+therein. Edit the 'build.sh' script. We need to change a few things there:
 
 - In the section 'Determine OS family', add target 'darwin' to the family of 
 'linux|sunos|hpux|aix|...' (so that you have 'darwin|linux|sunos|hpux|aix|...').
 Otherwise the script will halt here with complain about "Unknown operation system".
 
-- In the section 'Determine compiler flags' we changed the settings for gcc under x86
-and added 'darwin' as possible OS_FAMILY.
+- In the section 'Determine compiler flags' we added 'darwin' as possible OS_FAMILY.
 
    x86)
        case $OS_FAMILY in
           linux|freebsd|darwin)
-              buildCXXflags="-mno-avx -fPIC -march=$ArchFlag"
-              buildCflags="-mno-avx -fPIC -march=$ArchFlag"
-              buildLDflags="-mno-avx -fPIC"
-              buildTestLDflags="-mno-avx -fPIC"
+              buildCXXflags="-m64 -fPIC -march=$ArchFlag"
+              buildCflags="-m64 -fPIC -march=$ArchFlag"
+              buildLDflags="-m64 -fPIC"
+              buildTestLDflags="-m64 -fPIC"
           ;;
 
-Why? Well, my assembler was unable to generate correct AVX instructions. YMMV
-depending on your hardware.
-
-After editing the build script, go to the cds/compiler/gcc/defs.h file. All 
-you have to do there is to direct the preprocessor onto the "NetBSD path". We simply
+After editing the build script, go to the cds/compiler/clang/defs.h file. All 
+you have to do there is to direct the preprocessor onto the "Linux path". We simply
 
 ...changed this line:
-#elif defined( __NetBSD__)
+#if defined( __linux__ )
 to this:
-#elif defined( __NetBSD__) || defined(__APPLE__)
+#if defined( __linux__ ) || defined(__APPLE__)
 
-However, the interfaces for getting high resolution time apparently differ in NetBSD
-and in Mac OS X. To fix this, first go to cds/os/timer.h and 
-
-...change this line:
-#elif CDS_OS_TYPE == CDS_OS_LINUX
-to this:
-#elif CDS_OS_TYPE == CDS_OS_LINUX || CDS_OS_TYPE == CDS_OS_NET_BSD
-
-...so that we will use Linux codebase, adapted to Mac. To do this adaptation, open file
-cds/os/linux/timer.h and add the following lines among other #includes:
+However, the interfaces for getting high resolution time apparently differ in Linux
+and in OS X. To fix this, go to cds/os/linux/timer.h and add the following lines among other #includes:
 
 #ifdef __APPLE__
   #include <mach/clock.h>
@@ -123,26 +110,26 @@ static void current( native_timer_type& tmr )
     mach_port_deallocate(mach_task_self(), cclock);
     tmr.tv_sec = mts.tv_sec;
     tmr.tv_nsec = mts.tv_nsec;
-#else
+#elce
     clock_gettime(CLOCK_REALTIME, &tmr);
 #endif
 }
 
-Now try to build the project with the following command:
+Now cd to the build/ directory and try to build the project with the following command:
 
-./build.sh --with-make make --with-boost /usr/local/include -c gcc -x g++ \
-           -z '-std=c++0x -Wall -pedantic' \
-           -l "-L/usr/local/lib" 2>&1 | tee build.log
+./build.sh --with-make make --with-boost /usr/local/include -c clang -x clang++ \
+           -z '-std=c++11 -stdlib=libc++ -Wall -pedantic' \
+           -l "-L/usr/local/lib -stdlib=libc++" 2>&1 | tee build.log
 
 (Please mind the library paths; in your environment they may differ.)
 
-If it fails at linking, you may need to edit the Makefile. In my case it was necessary
+If it fails at linking, you may need to edit the Makefile. In our cases it was necessary
 to add the '-mt' suffix to boost libs listed there. We also removed '-lrt' from linker
 input and added '-lboost_system-mt'.
 
 After building the libcds.so.x.y.z and libcds-debug.so.x.y.z, copy them to the 
 libpath in your system and create the appropriate aliases there, e.g. 
-'libcds.dylib' and 'libcds-debug.dylib'. Do not forget to run the tests before deployment!
+'libcds.dylib' and 'libcds-debug.dylib'. You can also run the tests before deployment.
 (find the test app in bin/gcc-platform-darwin-0/test-hdr)
 
 -------------------------------------------------------------------------------
@@ -150,15 +137,13 @@ libpath in your system and create the appropriate aliases there, e.g.
 3. Building the cpp driver
 
 This one is relatively straightforward. Once you have all the libraries installed, just run
-the CMake. In my case CMake was unable to find the cds header files; most likely
+the CMake in 'cpp-driver's root folder:
+
+cmake -G "Xcode"
+
+In our case CMake was unable to find the cds header files; most likely
 you will encounter the same issue. In such case you can edit CMakeCache.txt and manually
 set LIBCDS_INCLUDE_DIRS to point the *root directory* of CDS. Alternatively, you
 can think of copying the cds headers to appropriate system-wide locations.
 
 -------------------------------------------------------------------------------
-
-PROBLEMS
-
-- At the time of this writing we still had issues with Boost.Log (it segfaults).
-We don't know yet whether it's Mac-specific or toolchain-specific, or just PEBKAC.
-Temporarily, you can switch to other logging method.
