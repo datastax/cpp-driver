@@ -279,7 +279,7 @@ private:
 
 class cql_configuration_t {
 public:
-    cql_configuration_t(const cql_client_options_t&   client_options,
+    cql_configuration_t(const cql_client_options_t&     client_options,
                         const cql_protocol_options_t&   protocol_options,
                         const cql_pooling_options_t&    pooling_options,
                         const cql_policies_t&           policies,

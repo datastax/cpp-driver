@@ -14,6 +14,7 @@
 #include "cql/cql_connection.hpp"
 #include "cql/cql_session.hpp"
 #include "cql/internal/cql_session_impl.hpp"
+#include "cql/internal/cql_control_connection.hpp"
 #include "cql/cql_builder.hpp"
 #include "cql/cql_metadata.hpp"
 #include "cql/lockfree/cql_lockfree_hash_map.hpp"
@@ -84,15 +85,22 @@ public:
 		, _configuration(configuration)
         , work(new boost::asio::io_service::work(_io_service))
         , thread(boost::bind(&cql_cluster_impl_t::asio_thread_main, &_io_service))
-    { 
+    {
             _configuration->init(this);
             const cql_policies_t& policies = _configuration->policies();
             
             _metadata = boost::shared_ptr<cql_metadata_t>(new cql_metadata_t(
                     policies.reconnection_policy()
                 ));
-            
+        
             _metadata->add_hosts(endpoints);
+        
+            _control_connection = boost::shared_ptr<cql_control_connection_t>(
+                new cql_control_connection_t(
+                    *this,
+                    _io_service,
+                    configuration
+                ));
     }
         
      virtual 
@@ -136,6 +144,7 @@ public:
             new cql_session_impl_t(session_callbacks, _configuration));
 
         session->init(_io_service);
+        _control_connection->init();
         
         // HACK: Comment this out to get libcds gc bug
        // bool session_add = _connected_sessions.try_add(session->id(), session);
@@ -147,7 +156,8 @@ public:
     virtual void 
     shutdown(int timeout_ms) {
         close_sessions();
-                
+        _control_connection->shutdown();
+        
         if(work.get()!=NULL) {
             work.reset();
             thread.join();
@@ -195,6 +205,8 @@ private:
 
     boost::shared_ptr<cql_metadata_t>     _metadata;
     connected_sessions_t                  _connected_sessions;
+    
+    boost::shared_ptr<cql_control_connection_t> _control_connection;
 };
 
 }
