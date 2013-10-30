@@ -50,7 +50,6 @@ private:
     bool
     refresh_hosts();
     
-    
     void
     reconnection_callback();
 
@@ -64,6 +63,7 @@ private:
     boost::shared_ptr<cql_configuration_t>  _configuration;
     boost::asio::deadline_timer             _timer;
     cql_connection_t::cql_log_callback_t    _log_callback;
+    boost::shared_ptr<cql_connection_t>     _active_connection;
     
     boost::shared_ptr<cql_reconnection_schedule_t> _reconnection_schedule;
     

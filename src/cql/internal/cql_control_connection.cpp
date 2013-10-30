@@ -22,9 +22,8 @@ cql_control_connection_t::cql_control_connection_t(cql_cluster_t&               
 
     cql::cql_session_t::cql_client_callback_t client_factory;
     boost::asio::ssl::context* ssl_context =
-    _configuration->protocol_options()
-    .ssl_context()
-    .get();
+        _configuration->protocol_options()
+            .ssl_context().get();
     
     if (ssl_context != 0) {
         client_factory = client_ssl_functor_t(
@@ -87,17 +86,65 @@ cql_control_connection_t::metadata_hosts_event(void* sender,
 void
 cql_control_connection_t::setup_event_listener()
 {
+    boost::shared_ptr<cql_query_plan_t> query_plan = _configuration->policies()
+        .load_balancing_policy()
+            ->new_query_plan(boost::shared_ptr<cql_query_t>());
+    
+    cql_stream_t stream;
+    std::list<cql_endpoint_t> tried_hosts;
+    
+    _active_connection = _session->connect(query_plan, &stream, &tried_hosts);
 }
     
 void
 cql_control_connection_t::refresh_node_list_and_token_map()
 {
+    if(_log_callback)
+        _log_callback(CQL_LOG_INFO, "Refreshing node list and token map...");
+    
+    boost::shared_future<cql_future_result_t> query_future_result = _active_connection
+        ->query(boost::make_shared<cql_query_t>(cql_query_t(select_peers_expression())));
+    
+    if(query_future_result.timed_wait(boost::posix_time::seconds(10))) { // THINKOF(JS): do blocking wait?
+        cql_future_result_t query_result = query_future_result.get();
+        
+        if(query_result.error.is_err()) {
+            if(_log_callback) _log_callback(CQL_LOG_ERROR, query_result.error.message);
+            return;
+        }
+        
+        boost::shared_ptr<cql::cql_result_t> result = query_result.result;
+        // TODO(JS) : process the result
+            
+    }
+    else {
+        if(_log_callback)
+            _log_callback(CQL_LOG_ERROR, "Query timed out");
+    }
 }
     
 void
 cql_control_connection_t::conn_cassandra_event(void* sender,
                                                boost::shared_ptr<cql_event_t> event)
 {
+}
+ 
+bool
+cql_control_connection_t::refresh_hosts()
+{
+    boost::mutex::scoped_lock lock(_mutex);
+    try {
+        if(_is_open) {
+            refresh_node_list_and_token_map();
+            return true;
+        }
+        else return false;
+    }
+    catch(cql_exception& ex) {
+        if(_log_callback)
+            _log_callback(CQL_LOG_ERROR, ex.what());
+        return false;
+    }
 }
     
 void
