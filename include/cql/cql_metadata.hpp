@@ -108,6 +108,7 @@ namespace cql {
         void
         get_endpoints(std::vector<cql_endpoint_t>* collection) const;
         
+        friend class cql_control_connection_t;
     private:
         
         boost::shared_ptr<cql_host_t>

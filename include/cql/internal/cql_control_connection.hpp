@@ -9,6 +9,7 @@
 
 #include "cql/cql_builder.hpp"
 #include "cql/internal/cql_session_impl.hpp"
+#include "cql/cql_host.hpp"
 
 #include <string>
 
@@ -67,25 +68,28 @@ private:
     
     boost::shared_ptr<cql_reconnection_schedule_t> _reconnection_schedule;
     
+    static cql_host_t::ip_address_t
+    make_ipv4_address_from_bytes(cql::cql_byte_t* data);
+    
     static std::string
     select_keyspaces_expression() {
-        return "SELECT * FROM system.schema_keyspaces";
+        return "SELECT * FROM system.schema_keyspaces;";
     }
     static std::string
     select_column_families_expression() {
-        return "SELECT * FROM system.schema_columnfamilies";
+        return "SELECT * FROM system.schema_columnfamilies;";
     }
     static std::string
     select_columns_expression() {
-        return "SELECT * FROM system.schema_columns";
+        return "SELECT * FROM system.schema_columns;";
     }
     static std::string
     select_peers_expression() {
-        return "SELECT peer, data_center, rack, tokens, rpc_address FROM system.peers";
+        return "SELECT peer, data_center, rack, tokens, rpc_address FROM system.peers;";
     }
     static std::string
     select_local_expression() {
-       return "SELECT cluster_name, data_center, rack, tokens, partitioner FROM system.local WHERE key='local'";
+       return "SELECT cluster_name, data_center, rack, tokens, partitioner FROM system.local WHERE key='local';";
     }
     
 };
