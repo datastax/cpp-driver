@@ -25,7 +25,7 @@ A high performance implementation of the [Cassandra binary protocol](https://git
 - Query tracing
 
 ## Building
-The library known to work on Ubuntu >= 10.04.4 LTS (Lucid Lynx), and OSX 10.8.3 with homebrew. The build-chain is CMake, so it should be fairly straight forward to get cassandra to build on other systems, but no attempt has been made to do so.
+The library known to work on Ubuntu >= 10.04.4 LTS (Lucid Lynx), and OSX 10.8.3 with Clang/libc++. The build-chain is CMake, so it should be fairly straightforward to get cassandra to build on other systems, but no attempt has been made to do so. Please refer to particular build instructions in separate files in this folder.
 
 The library has two dependencies [Boost::Asio](http://www.boost.org/doc/libs/1_53_0/doc/html/boost_asio.html) and [OpenSSL](http://www.openssl.org/). It's required that Boost::Asio be installed prior to build. If OpenSSL isn't present (OSX 10.8) cassandra will automaticly download, build, and staticly link the library.
 
@@ -40,150 +40,52 @@ Running ```make help``` will give you a list of available make targets
 ## Examples
 In addition to the sample code below there is a fully functional [demo](https://github.com/mstump/cassandra/blob/master/demo/main.cpp) which exploits most of the functionality of the library.
 
-
-### Instantiate a client and connect to Cassandra
+### Minimal Working Example - simple query against system.schema_keyspaces.
 ```c++
+// Includes
 #include <boost/asio.hpp>
-#include <cassandra/cql.hpp>
-#include <cassandra/cql_error.hpp>
-#include <cassandra/cql_client.hpp>
-#include <cassandra/cql_client_factory.hpp>
-#include <cassandra/cql_result.hpp>
-
-void
-query_callback(cql::cql_client_t& client,
-               int8_t stream,
-               const cql::cql_result_t* result)
-{
-    // close the connection
-    client.close();
-}
-
-void
-message_errback(cql::cql_client_t& client,
-                int8_t stream,
-                const cql::cql_error_t& err)
-{
-    std::cerr << "ERROR " << err.message << std::endl;
-}
-
-void
-connect_callback(cql::cql_client_t& client)
-{
-    // Called after a successfull connection, or
-    // if using SSL it's called after a successfull handshake.
-
-    // perform a query
-    client.query("use system;",
-                 cql::CQL_CONSISTENCY_ALL,
-                 &query_callback,
-                 &message_errback);
-}
+#include <cql/cql.hpp>
+#include <cql/cql_connection.hpp>
+#include <cql/cql_session.hpp>
+#include <cql/cql_cluster.hpp>
+#include <cql/cql_builder.hpp>
+#include <cql/cql_result.hpp>
+#include <cds/gc/hp.h>
 
 int
-main(int argc,
-     char* argv[])
+main(int argc, char**)
 {
-    // setup Boost ASIO
-    boost::asio::io_service io_service;
-
-    // instantiate a client
-    std::auto_ptr<cql::cql_client_t> client(cql::cql_client_factory_t::create_cql_client_t(io_service));
-
-    // Connect to localhost
-    client->connect("localhost", 9042, &connect_callback, NULL);
-
-    // Start the event loop
-    io_service.run();
+    using namespace cql;
+    using boost::shared_ptr;
+    
+    // Boilerplate: initialize cql with 512 hazard pointers.
+    cql_initialize(512);
+    cql_thread_infrastructure_t cql_ti;
+    
+    // Suppose you have the Cassandra cluster at 127.0.0.1,
+    // listening at default port (9042).
+    shared_ptr<cql::cql_builder_t> builder = cql::cql_cluster_t::builder();
+    builder->add_contact_point(boost::asio::ip::address::from_string("127.0.0.1"));
+    
+    // Now build a model of cluster and connect it to DB.
+    shared_ptr<cql::cql_cluster_t> cluster(builder->build());
+    shared_ptr<cql::cql_session_t> session(cluster->connect());
+    
+    // Write a query, switch keyspaces.
+    shared_ptr<cql::cql_query_t> my_first_query(new cql::cql_query_t("SELECT * FROM system.schema_keyspaces;"));
+        
+    // Send the query.
+    boost::shared_future<cql::cql_future_result_t> future = session->query(my_first_query);
+        
+    // Wait for the query to execute; retrieve the result.
+    future.wait();
+    shared_ptr<cql_result_t> result = future.get().result;
+    
+    // Boilerplate: close the connection session and perform the cleanup.
+    session->close();
+    cluster->shutdown();
+    cds::gc::HP::force_dispose();
     return 0;
 }
-
 ```
 
-
-### Connect to the Cassandra cluster using a connection pool
-```c++
-#include <boost/asio.hpp>
-#include <cassandra/cql.hpp>
-#include <cassandra/cql_error.hpp>
-#include <cassandra/cql_client_pool.hpp>
-#include <cassandra/cql_client_pool_factory.hpp>
-#include <cassandra/cql_result.hpp>
-
-void
-message_errback(cql::cql_client_t& client,
-                int8_t stream,
-                const cql::cql_error_t& err)
-{
-    std::cerr << "ERROR " << err.message << std::endl;
-}
-
-void
-use_query_callback(cql::cql_client_t& client,
-                   int8_t stream,
-                   const cql::cql_result_t* result)
-{
-    // close the connection
-    client.close();
-}
-
-void
-connect_callback(cql::cql_client_pool_t* pool)
-{
-    // Called after a successfull connection, or
-    // if using SSL it's called after a successfull handshake.
-    // Lets perform an ad-hoc query.
-    pool->query("USE system;",
-                cql::CQL_CONSISTENCY_ALL,
-                &use_query_callback,
-                &message_errback);
-}
-
-/**
-  A factory functor which instantiates clients.
-  For SSL connections this is how you set OpenSSL cert validation and algo options
-*/
-struct client_functor_t
-{
-
-public:
-
-    client_functor_t(boost::asio::io_service&              service,
-                     cql::cql_client_t::cql_log_callback_t log_callback) :
-        _io_service(service),
-        _log_callback(log_callback)
-    {}
-
-    cql::cql_client_t*
-    operator()()
-    {
-        return cql::cql_client_factory_t::create_cql_client_t(_io_service, _log_callback);
-    }
-
-private:
-    boost::asio::io_service&              _io_service;
-    cql::cql_client_t::cql_log_callback_t _log_callback;
-};
-
-int
-main(int argc,
-     char* argv[])
-{
-    // setup Boost ASIO
-    boost::asio::io_service io_service;
-
-    // Create a client factory for the pool
-    cql::cql_client_pool_t::cql_client_callback_t client_factory = client_functor_t(io_service, &log_callback);
-
-    // Instantiate the pool
-    std::auto_ptr<cql::cql_client_pool_t> pool(cql::cql_client_pool_factory_t::create_client_pool_t(client_factory, &connect_callback, NULL));
-
-    // Connect to localhost
-    pool->add_client("localhost", 9042);
-
-    // Start the event loop
-    io_service.run();
-    return 0;
-}
-
-```
