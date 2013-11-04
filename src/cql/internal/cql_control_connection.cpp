@@ -1,7 +1,11 @@
 #include <exception>
-#include <iterator>
+#include <list>
+#include <vector>
+#include <map>
+#include <string>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/tuple/tuple.hpp>
 
 #include "cql/internal/cql_control_connection.hpp"
 #include "cql/internal/cql_cluster_impl.hpp"
@@ -94,7 +98,7 @@ cql_control_connection_t::setup_event_listener()
     cql_stream_t stream;
     std::list<cql_endpoint_t> tried_hosts;
     
-    _active_connection = _session->connect(query_plan, &stream, &tried_hosts); // not needed?
+    _active_connection = _session->connect(query_plan, &stream, &tried_hosts);
 }
 
 cql_host_t::ip_address_t
@@ -131,13 +135,18 @@ cql_control_connection_t::refresh_node_list_and_token_map()
         
         boost::shared_ptr<cql_metadata_t> clusters_metadata = _cluster.metadata();
 
+        std::list<boost::tuple<cql_host_t::ip_address_t,
+                                            std::string,
+                                            std::string,
+                                            std::string> > rows; // (address, data_center, rack, tokens)
+        
         boost::shared_ptr<cql::cql_result_t> result = query_result.result;
         while(result->next())
         {
             cql_host_t::ip_address_t peer_address;
             bool output = false;
             
-            if(!(result->is_null("rpc_address", output)) || !output)
+            if(!(result->is_null("rpc_address", output)) && !output)
             {
                 cql::cql_byte_t* data = NULL;
                 cql::cql_int_t size = 0;
@@ -147,7 +156,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
             }
             if(peer_address.is_unspecified())
             {
-                if(!(result->is_null("peer", output)) || !output)
+                if(!(result->is_null("peer", output)) && !output)
                 {
                     cql::cql_byte_t* data = NULL;
                     cql::cql_int_t size = 0;
@@ -158,15 +167,61 @@ cql_control_connection_t::refresh_node_list_and_token_map()
                 else if(_log_callback)
                     _log_callback(CQL_LOG_ERROR, "No rpc_address found for host in peers system table.");
             }
-            
-            cql_endpoint_t peer_endpoint(peer_address, cql_builder_t::DEFAULT_PORT);
-            if(!clusters_metadata->get_host(peer_endpoint))
-                clusters_metadata->add_host(peer_endpoint);
-            
-            //TODO: read token map
-            //TODO: set hosts location
+            if(!(peer_address.is_unspecified()))
+            {
+                std::string data_center, rack, tokens;
+                result->get_string("data_center", data_center);
+                result->get_string("rack", rack);
+                result->get_string("tokens", tokens);
+                rows.push_back(boost::make_tuple(peer_address, data_center, rack, tokens));
+            }
             
         }
+        // TODO(JS) make 'select_local" query here.
+        
+        // Now we will determine the port number, assuming there is one (common for whole cluster).
+        // Otherwise, we use default 9042.
+        int port_number;
+        {
+            std::vector<cql_endpoint_t> current_endpoints;
+            clusters_metadata->get_endpoints(&current_endpoints);
+            port_number = current_endpoints.empty() ? cql_builder_t::DEFAULT_PORT
+                                                    : current_endpoints[0].port();
+        }
+        
+        for(auto row : rows)
+        {
+            cql_host_t::ip_address_t host_address = row.get<0>();
+            std::string              data_center  = row.get<1>(),
+                                     rack         = row.get<2>(),
+                                     tokens       = row.get<3>();
+            
+            cql_endpoint_t peer_endpoint(host_address, port_number);
+            boost::shared_ptr<cql_host_t> host = clusters_metadata->get_host(peer_endpoint);
+            if(!host) host = clusters_metadata->add_host(peer_endpoint);
+            
+            host->set_location_info(data_center, rack);
+        }
+        {
+            // Now we will remove dead hosts.
+            std::map<cql_host_t::ip_address_t, bool> hosts_addresses_map;
+            for(auto row : rows)
+                hosts_addresses_map[row.get<0>()] = true;
+            
+            std::vector<boost::shared_ptr<cql_host_t> > clusters_hosts;
+            clusters_metadata->get_hosts(clusters_hosts);
+            
+            for(auto host : clusters_hosts)
+            {
+                if(hosts_addresses_map.find(host->address()) == hosts_addresses_map.end()
+                       && host->address() != _active_connection->endpoint().address())
+                    clusters_metadata->remove_host(host->endpoint());
+            }
+        }
+
+        //TODO(JS) : clusters_metadata->rebuildTokenMap(...)
+            
+        if(_log_callback) _log_callback(CQL_LOG_INFO, "NodeList and TokenMap successfully refreshed.");
     }
     else {
         if(_log_callback)
