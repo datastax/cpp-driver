@@ -1,5 +1,5 @@
-cassandra
-======
+DataStax C++ Driver for Apache Cassandra (Beta)
+===============================================
 
 A high performance implementation of the [Cassandra binary protocol](https://github.com/apache/cassandra/blob/trunk/doc/native_protocol_v1.spec) in C++
 
