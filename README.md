@@ -1,7 +1,12 @@
 DataStax C++ Driver for Apache Cassandra (Beta)
 ===============================================
 
-A high performance implementation of the [Cassandra binary protocol](https://github.com/apache/cassandra/blob/trunk/doc/native_protocol_v1.spec) in C++
+A C++ driver for Apache Cassandra. This driver works exclusively with
+the Cassandra Query Language version 3 (CQL3) and Cassandra's binary protocol.
+
+- JIRA: https://datastax-oss.atlassian.net/browse/CPP
+- MAILING LIST: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
+- IRC: #datastax-drivers on `irc.freenode.net <http://freenode.net>`_
 
 ### Current Functionality and Design
 - Completely asynchronous
