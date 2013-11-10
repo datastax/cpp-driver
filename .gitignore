@@ -14,15 +14,13 @@
 *.a
 
 # cmake output
+*.cmake
+*.build
+*.xcodeproj
 CMakeFiles
 CMakeCache.txt
-CTestTestfile.cmake
+CMakeScripts
 Makefile
-cmake_install.cmake
-cmake_uninstall.cmake
-cassandra-config-version.cmake
-cassandra-config.cmake
-cassandra-targets.cmake
 install_manifest.txt
 
 # build files
@@ -39,6 +37,8 @@ ext/share
 ext/include
 ext/ssl
 ext/tmp
+ext/libcds_osx_srcs
+ext/__MACOSX
 
 # editor
 *.swp
