@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.1)
+cmake_minimum_required(VERSION 2.6.4)
 set(PROJECT_NAME_STR cql)
 # Alias for project name used in unit tests
 set(CQL_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
@@ -7,7 +7,6 @@ project(${PROJECT_NAME_STR} C CXX)
 #-------------------
 # The version number
 #-------------------
-
 set(PROJECT_VERSION_MAJOR 0)
 set(PROJECT_VERSION_MINOR 7)
 set(PROJECT_VERSION_PATCH 0)
