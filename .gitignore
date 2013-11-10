@@ -24,8 +24,9 @@ Makefile
 install_manifest.txt
 
 # build files
-build/
-Testing/
+build
+Testing
+Debug
 demo/cql_demo
 test/unit_tests/cql_test
 
