@@ -15,12 +15,12 @@ namespace cql {
 		//  the host is detected down to schedule the first reconnection attempt, and
 		//  then once after each failed reconnection attempt to schedule the next one.
 		//  Hence each call to this method are free to return a different value.
-		// 
+		//
 		//  @returns a time in milliseconds to wait before attempting the next reconnection.
 		virtual boost::posix_time::time_duration
 		get_delay() = 0;
 
-		virtual 
+		virtual
         ~cql_reconnection_schedule_t() {  }
 	};
 }

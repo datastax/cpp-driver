@@ -16,45 +16,45 @@
 namespace cql {
 	class CQL_EXPORT cql_host_t {
 	public:
-		typedef 
+		typedef
 			boost::asio::ip::address
 			ip_address_t;
 
-		inline bool 
+		inline bool
 		is_up() const { return _is_up; }
-		
+
 		inline const ip_address_t&
 		address() const { return _endpoint.address(); }
-		
-        inline unsigned short 
+
+        inline unsigned short
         port() const { return _endpoint.port(); }
-        
+
         inline const cql_endpoint_t&
         endpoint() const { return _endpoint; }
-        
+
 		inline const std::string&
 		datacenter() const { return _datacenter; }
-		
+
 		inline const std::string&
 		rack() const { return _rack; }
-		
+
 		bool
 		is_considerably_up() const;
-        
+
         cql_host_distance_enum
         distance(const cql_policies_t& policies) const;
-        
+
 		bool
 		set_down();
-		
+
 		bool
 		bring_up();
-		
+
 		void
 		set_location_info(
 			const std::string& datacenter,
 			const std::string& rack);
-		
+
 		static ::boost::shared_ptr<cql_host_t>
 		create(
 			const cql_endpoint_t& endpoint,
@@ -69,10 +69,10 @@ namespace cql {
 		std::string     _rack;
 		bool            _is_up;
 		boost::posix_time::ptime _next_up_time;
-		
+
 		boost::shared_ptr<cql_reconnection_policy_t>
                         _reconnection_policy;
-			
+
 		boost::shared_ptr<cql_reconnection_schedule_t>
                         _reconnection_schedule;
 	};
