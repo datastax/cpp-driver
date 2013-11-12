@@ -116,14 +116,11 @@ include_directories(${INCLUDES})
 file(GLOB INC_FILES
 	${PROJECT_SOURCE_DIR}/include/cql/*.hpp )
 
-file(GLOB INC_EXCEPTION_FILES
+file(GLOB INC_FILES_EXCEPTIONS
   ${PROJECT_SOURCE_DIR}/include/cql/exceptions/*.hpp )
 
 file(GLOB INC_FILES_INTERNAL
 	${PROJECT_SOURCE_DIR}/include/cql/internal/*.hpp )
-
-file(GLOB INC_FILES_LOCKFREE
-	${PROJECT_SOURCE_DIR}/include/cql/lockfree/*.hpp )
 
 file(GLOB INC_FILES_POLICIES
 	${PROJECT_SOURCE_DIR}/include/cql/policies/*.hpp )
@@ -131,33 +128,28 @@ file(GLOB INC_FILES_POLICIES
 file(GLOB SRC_FILES
 	${PROJECT_SOURCE_DIR}/src/cql/*.cpp)
 
-file(GLOB SRC_EXCEPTION_FILES
+file(GLOB SRC_FILES_EXCEPTIONS
 	${PROJECT_SOURCE_DIR}/src/cql/exceptions/*.cpp )
 
 file(GLOB SRC_FILES_INTERNAL
 	${PROJECT_SOURCE_DIR}/src/cql/internal/*.cpp )
-
-file(GLOB SRC_FILES_LOCKFREE
-	${PROJECT_SOURCE_DIR}/src/cql/lockfree/*.cpp )
 
 file(GLOB SRC_FILES_POLICIES
 	${PROJECT_SOURCE_DIR}/src/cql/policies/*.cpp )
 
 source_group("Source Files" FILES ${SRC_FILES})
 source_group("Source Files\\Internal" FILES ${SRC_FILES_INTERNAL})
-source_group("Source Files\\Exceptions" FILES ${SRC_EXCEPTION_FILES})
-source_group("Source Files\\Lock Free" FILES ${SRC_FILES_LOCKFREE})
+source_group("Source Files\\Exceptions" FILES ${SRC_FILES_EXCEPTIONS})
 source_group("Source Files\\Policies" FILES ${SRC_FILES_POLICIES})
 
 source_group("Header Files" FILES ${INC_FILES})
 source_group("Header Files\\Internal" FILES ${INC_FILES_INTERNAL})
-source_group("Header Files\\Exceptions" FILES ${INC_EXCEPTION_FILES})
-source_group("Header Files\\Lock Free" FILES ${INC_FILES_LOCKFREE})
+source_group("Header Files\\Exceptions" FILES ${INC_FILES_EXCEPTIONS})
 source_group("Header Files\\Policies" FILES ${INC_FILES_POLICIES})
 
 set(ALL_SOURCE_FILES
-	${SRC_FILES} ${SRC_FILES_INTERNAL} ${SRC_EXCEPTION_FILES} ${SRC_FILES_LOCKFREE} ${SRC_FILES_POLICIES}
-	${INC_FILES} ${INC_FILES_INTERNAL} ${INC_EXCEPTION_FILES} ${INC_FILES_LOCKFREE} ${INC_FILES_POLICIES})
+	${SRC_FILES} ${SRC_FILES_INTERNAL} ${SRC_FILES_EXCEPTIONS} ${SRC_FILES_POLICIES}
+	${INC_FILES} ${INC_FILES_INTERNAL} ${INC_FILES_EXCEPTIONS} ${INC_FILES_POLICIES})
 
 # build dynamic and static version of library
 add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})
@@ -188,23 +180,26 @@ set_property(
 # install target
 #-------------------
 
-file(GLOB INSTALL_HEADERS "${PROJECT_INCLUDE_DIR}/cql/*.hpp")
-
 # Where to put headers
 set(INSTALL_HEADERS_DIR "${CMAKE_INSTALL_PREFIX}/include/cql")
-install(FILES ${INSTALL_HEADERS} DESTINATION "${INSTALL_HEADERS_DIR}")
+install(FILES ${INC_FILES} DESTINATION "${INSTALL_HEADERS_DIR}")
+install(FILES ${INC_FILES_EXCEPTIONS} DESTINATION "${INSTALL_HEADERS_DIR}/exceptions")
+install(FILES ${INC_FILES_POLICIES} DESTINATION "${INSTALL_HEADERS_DIR}/policies")
 
 # Where to put libraries
 set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib")
 # For windows only
 set(INSTALL_DLL_DIR "${CMAKE_INSTALL_PREFIX}/bin")
 
-#install(TARGETS ${PROJECT_LIB_NAME_STATIC} ${PROJECT_LIB_NAME}
-install(TARGETS ${PROJECT_LIB_NAME_STATIC}
-   RUNTIME DESTINATION ${INSTALL_DLL_DIR}  # for dll files
-   LIBRARY DESTINATION ${INSTALL_LIB_DIR}  # for shared library
-   ARCHIVE DESTINATION ${INSTALL_LIB_DIR}) # for static library
+install(TARGETS ${PROJECT_LIB_NAME}
+  RUNTIME DESTINATION ${INSTALL_DLL_DIR}  # for dll files
+  LIBRARY DESTINATION ${INSTALL_LIB_DIR}  # for shared library
+  ARCHIVE DESTINATION ${INSTALL_LIB_DIR}) # for static library
 
+install(TARGETS ${PROJECT_LIB_NAME_STATIC}
+  RUNTIME DESTINATION ${INSTALL_DLL_DIR}  # for dll files
+  LIBRARY DESTINATION ${INSTALL_LIB_DIR}  # for shared library
+  ARCHIVE DESTINATION ${INSTALL_LIB_DIR}) # for static library
 
 #-------------------
 # uninstall target
@@ -217,7 +212,6 @@ configure_file(
 
 add_custom_target(UNINSTALL
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
-
 
 #-------------------
 # Boost unit tests
