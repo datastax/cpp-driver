@@ -13,18 +13,22 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#include <boost/atomic.hpp>
+#include <boost/thread.hpp>
+
 #include "cql/cql_uuid.hpp"
 
 cql::cql_uuid_t
 cql::cql_uuid_t::create() {
-    static boost::atomic_ulong id; 
+    static unsigned long id;
+    static boost::mutex mutex;
+
+    boost::mutex::scoped_lock lock(mutex);
     return cql::cql_uuid_t(id++);
-}    
+}
 
 namespace cql {
-bool
-operator <(const cql::cql_uuid_t& left, const cql::cql_uuid_t& right) {
-    return (left._uuid < right._uuid);
-}
+    bool
+    operator <(const cql::cql_uuid_t& left, const cql::cql_uuid_t& right) {
+        return (left._uuid < right._uuid);
+    }
 }

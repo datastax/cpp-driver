@@ -22,26 +22,27 @@
 #include "cql/cql_metadata.hpp"
 
 cql::cql_round_robin_query_plan_t::cql_round_robin_query_plan_t(
-	const cql_cluster_t* cluster, 
+	const cql_cluster_t* cluster,
 	unsigned index)
 {
-    cluster->metadata()
-           ->get_hosts(_hosts);
-
+    boost::mutex::scoped_lock lock(_mutex);
+    cluster->metadata()->get_hosts(_hosts);
 	_index = index;
 	_current = 0;
 }
 
 boost::shared_ptr<cql::cql_host_t>
-cql::cql_round_robin_query_plan_t::next_host_to_query() {
-
-	while(_current < _hosts.size()) {
+cql::cql_round_robin_query_plan_t::next_host_to_query()
+{
+    boost::mutex::scoped_lock lock(_mutex);
+	while (_current < _hosts.size()) {
 		unsigned host_to_try = (_index + _current) % _hosts.size();
 		_current++;
 
 		boost::shared_ptr<cql::cql_host_t> host = _hosts[host_to_try];
-		if(host->is_considerably_up())
+		if (host->is_considerably_up()) {
 			return host;
+        }
 	}
 
 	return boost::shared_ptr<cql::cql_host_t>();
@@ -50,19 +51,23 @@ cql::cql_round_robin_query_plan_t::next_host_to_query() {
 void
 cql::cql_round_robin_policy_t::init(cql_cluster_t* cluster)
 {
+    boost::mutex::scoped_lock lock(_mutex);
 	_cluster = cluster;
-	_index = (unsigned)cql_rand();
+	_index = (unsigned) cql_rand();
 }
 
-cql::cql_host_distance_enum 
-cql::cql_round_robin_policy_t::distance(const cql::cql_host_t& host) {
+cql::cql_host_distance_enum
+cql::cql_round_robin_policy_t::distance(
+    const cql::cql_host_t& host)
+{
 	return cql::CQL_HOST_DISTANCE_LOCAL;
 }
 
-boost::shared_ptr<cql::cql_query_plan_t> 
+boost::shared_ptr<cql::cql_query_plan_t>
 cql::cql_round_robin_policy_t::new_query_plan(
 	const boost::shared_ptr<cql::cql_query_t>&)
 {
+    boost::mutex::scoped_lock lock(_mutex);
 	_index++;
 
 	return boost::shared_ptr<cql_query_plan_t>(

@@ -62,27 +62,6 @@ cql::cql_session_impl_t::init(
     conn->release_stream(stream);
 }
 
-// void
-// cql::cql_session_impl_t::free_connections(
-//     cql_connections_collection_t& connections,
-//     const std::list<cql_uuid_t>&  connections_to_remove)
-// {
-//     for (std::list<cql_uuid_t>::const_iterator it = connections_to_remove.begin();
-//          it != connections_to_remove.end(); ++it)
-//     {
-//         cql_uuid_t conn_id = *it;
-//         boost::shared_ptr<cql_connection_t> conn;
-
-//         while (!connections.try_erase(conn_id, &conn)) {
-//             if (!connections.try_get(conn_id, &conn)) {
-//                 break;
-//             }
-//         }
-
-//         free_connection(conn);
-//     }
-// }
-
 void
 cql::cql_session_impl_t::free_connection(
     boost::shared_ptr<cql_connection_t> connection)

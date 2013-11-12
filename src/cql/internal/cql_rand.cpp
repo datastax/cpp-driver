@@ -14,7 +14,6 @@
  *   limitations under the License.
  */
 #include <cstdlib>
-#include <boost/atomic.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
 

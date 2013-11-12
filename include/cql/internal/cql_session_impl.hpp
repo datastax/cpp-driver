@@ -163,7 +163,7 @@ private:
             const boost::shared_ptr<cql_connection_t>& c) :
             connection(c),
             errors(0)
-        { }
+        {}
 
         boost::shared_ptr<cql_connection_t> connection;
         size_t errors;
@@ -173,9 +173,7 @@ private:
     boost::ptr_deque<client_container_t>
     clients_collection_t;
 
-    typedef
-    boost::atomic<long>
-    connection_counter_t;
+    typedef long connection_counter_t;
 
     typedef
     std::map<
@@ -195,32 +193,32 @@ private:
 		cql_stream_t(cql::cql_connection_t::* exec_query_method_t )(
             const boost::shared_ptr<cql_query_t>&	 query,
             cql_connection_t::cql_message_callback_t callback,
-            cql_connection_t::cql_message_errback_t      errback);
+            cql_connection_t::cql_message_errback_t  errback);
 
 	cql_stream_t
 	execute_operation(
-		const boost::shared_ptr<cql_query_t>&		query,
-		cql_connection_t::cql_message_callback_t	callback,
-        cql_connection_t::cql_message_errback_t		errback,
-		exec_query_method_t							method);
+		const boost::shared_ptr<cql_query_t>&	 query,
+		cql_connection_t::cql_message_callback_t callback,
+        cql_connection_t::cql_message_errback_t	 errback,
+		exec_query_method_t						 method);
 
     cql_stream_t
     query(
-        const boost::shared_ptr<cql_query_t>&      query,
-        cql_connection_t::cql_message_callback_t   callback,
-        cql_connection_t::cql_message_errback_t    errback);
+        const boost::shared_ptr<cql_query_t>&    query,
+        cql_connection_t::cql_message_callback_t callback,
+        cql_connection_t::cql_message_errback_t  errback);
 
     cql_stream_t
     prepare(
-        const boost::shared_ptr<cql_query_t>&      query,
-        cql_connection_t::cql_message_callback_t   callback,
-        cql_connection_t::cql_message_errback_t    errback);
+        const boost::shared_ptr<cql_query_t>&    query,
+        cql_connection_t::cql_message_callback_t callback,
+        cql_connection_t::cql_message_errback_t  errback);
 
     cql_stream_t
     execute(
-        const boost::shared_ptr<cql_execute_t>&    message,
-        cql_connection_t::cql_message_callback_t   callback,
-        cql_connection_t::cql_message_errback_t    errback);
+        const boost::shared_ptr<cql_execute_t>&  message,
+        cql_connection_t::cql_message_callback_t callback,
+        cql_connection_t::cql_message_errback_t  errback);
 
     boost::shared_future<cql_future_result_t>
     query(
@@ -289,9 +287,9 @@ private:
 
     boost::shared_ptr<cql_connection_t>
     try_find_free_stream(
-        boost::shared_ptr<cql_host_t> const&    host,
-        cql_connections_collection_t* const     connections,
-        cql_stream_t*                           stream);
+        boost::shared_ptr<cql_host_t> const& host,
+        cql_connections_collection_t* const  connections,
+        cql_stream_t*                        stream);
 
     bool
     increase_connection_counter(

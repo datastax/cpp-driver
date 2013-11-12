@@ -26,16 +26,20 @@
 #include "cql/internal/cql_cluster_impl.hpp"
 #include "cql/exceptions/cql_exception.hpp"
 
+typedef boost::tuple<cql::cql_host_t::ip_address_t, std::string, std::string, std::string> row_t;
+typedef std::list<row_t> row_collection_t;
+
 namespace cql {
 
-cql_control_connection_t::cql_control_connection_t(cql_cluster_t&                         cluster,
-                                                   boost::asio::io_service&               io_service,
-                                                   boost::shared_ptr<cql_configuration_t> configuration)
-    : _cluster(cluster)
-    , _io_service(io_service)
-    , _configuration(configuration)
-    , _timer(io_service)
-    , _log_callback(_configuration->client_options().log_callback())
+cql_control_connection_t::cql_control_connection_t(
+    cql_cluster_t&                         cluster,
+    boost::asio::io_service&               io_service,
+    boost::shared_ptr<cql_configuration_t> configuration) :
+    _cluster(cluster),
+    _io_service(io_service),
+    _configuration(configuration),
+    _timer(io_service),
+    _log_callback(_configuration->client_options().log_callback())
 {
     cql_session_callback_info_t session_callbacks;
 
@@ -46,9 +50,9 @@ cql_control_connection_t::cql_control_connection_t(cql_cluster_t&               
 
     if (ssl_context != 0) {
         client_factory = client_ssl_functor_t(
-                                              _io_service,
-                                              const_cast<boost::asio::ssl::context&>(*ssl_context),
-                                              _log_callback);
+            _io_service,
+            const_cast<boost::asio::ssl::context&>(*ssl_context),
+            _log_callback);
     }
     else {
         client_factory = client_functor_t(_io_service, _log_callback);
@@ -60,8 +64,9 @@ cql_control_connection_t::cql_control_connection_t(cql_cluster_t&               
     session_callbacks.set_log_callback(_log_callback);
 
     boost::scoped_ptr<cql_reconnection_policy_t> _reconnection_policy_tmp(
-        new cql_exponential_reconnection_policy_t(boost::posix_time::seconds(2),
-                                                  boost::posix_time::minutes(5)));
+        new cql_exponential_reconnection_policy_t(
+            boost::posix_time::seconds(2),
+            boost::posix_time::minutes(5)));
 
     _reconnection_schedule = _reconnection_policy_tmp->new_schedule();
 
@@ -79,11 +84,11 @@ cql_control_connection_t::init()
 void
 cql_control_connection_t::shutdown(int timeout_ms)
 {
+    boost::mutex::scoped_lock lock(_mutex);
     // NOTE: seems that session does not support timeout?
-    if(_is_open.exchange(false, boost::memory_order_acq_rel)) {
-        _timer.cancel();
-        boost::static_pointer_cast<cql_session_t>(_session)->close();
-    }
+    _is_open = false;
+    _timer.cancel();
+    boost::static_pointer_cast<cql_session_t>(_session)->close();
 }
 
 cql_control_connection_t::~cql_control_connection_t()
@@ -92,23 +97,24 @@ cql_control_connection_t::~cql_control_connection_t()
         shutdown();
     }
     catch(...) {
-        if(_log_callback)
+        if (_log_callback) {
             _log_callback(CQL_LOG_ERROR, "Error while shutting down control connection");
+        }
     }
 }
 
 void
-cql_control_connection_t::metadata_hosts_event(void* sender,
-                                               boost::shared_ptr<cql_event_t> event)
-{// Just a stub (At this point)
-}
+cql_control_connection_t::metadata_hosts_event(
+    void*                          sender,
+    boost::shared_ptr<cql_event_t> event)
+{}
 
 void
 cql_control_connection_t::setup_event_listener()
 {
     boost::shared_ptr<cql_query_plan_t> query_plan = _configuration->policies()
         .load_balancing_policy()
-            ->new_query_plan(boost::shared_ptr<cql_query_t>());
+        ->new_query_plan(boost::shared_ptr<cql_query_t>());
 
     cql_stream_t stream;
     std::list<cql_endpoint_t> tried_hosts;
@@ -117,72 +123,70 @@ cql_control_connection_t::setup_event_listener()
 }
 
 cql_host_t::ip_address_t
-cql_control_connection_t::make_ipv4_address_from_bytes(cql::cql_byte_t* data)
+cql_control_connection_t::make_ipv4_address_from_bytes(
+    cql::cql_byte_t* data)
 {
-    int digit0 = int(data[0]),
-        digit1 = int(data[1]),
-        digit2 = int(data[2]),
-        digit3 = int(data[3]);
+    int digit0 = int(data[0]);
+    int digit1 = int(data[1]);
+    int digit2 = int(data[2]);
+    int digit3 = int(data[3]);
 
-    return cql_host_t::ip_address_t::from_string(boost::lexical_cast<std::string>(digit0) + "."
-                                               + boost::lexical_cast<std::string>(digit1) + "."
-                                               + boost::lexical_cast<std::string>(digit2) + "."
-                                               + boost::lexical_cast<std::string>(digit3));
+    return cql_host_t::ip_address_t::from_string(
+        boost::lexical_cast<std::string>(digit0) + "."
+        + boost::lexical_cast<std::string>(digit1) + "."
+        + boost::lexical_cast<std::string>(digit2) + "."
+        + boost::lexical_cast<std::string>(digit3));
 }
 
 void
 cql_control_connection_t::refresh_node_list_and_token_map()
 {
-    if(_log_callback)
+    if (_log_callback) {
         _log_callback(CQL_LOG_INFO, "Refreshing node list and token map...");
+    }
 
     boost::shared_future<cql_future_result_t> query_future_result =
         boost::static_pointer_cast<cql::cql_session_t>(_session)
             ->query(boost::make_shared<cql_query_t>(cql_query_t(select_peers_expression())));
 
-    if(query_future_result.timed_wait(boost::posix_time::seconds(10))) { // THINKOF(JS): do blocking wait?
+    if (query_future_result.timed_wait(boost::posix_time::seconds(10))) { // THINKOF(JS): do blocking wait?
         cql_future_result_t query_result = query_future_result.get();
 
-        if(query_result.error.is_err()) {
-            if(_log_callback) _log_callback(CQL_LOG_ERROR, query_result.error.message);
+        if (query_result.error.is_err()) {
+            if (_log_callback) {
+                _log_callback(CQL_LOG_ERROR, query_result.error.message);
+            }
             return;
         }
 
         boost::shared_ptr<cql_metadata_t> clusters_metadata = _cluster.metadata();
-
-        std::list<boost::tuple<cql_host_t::ip_address_t,
-                                            std::string,
-                                            std::string,
-                                            std::string> > rows; // (address, data_center, rack, tokens)
+        row_collection_t rows; // (address, data_center, rack, tokens)
 
         boost::shared_ptr<cql::cql_result_t> result = query_result.result;
-        while(result->next())
-        {
+        while (result->next()) {
             cql_host_t::ip_address_t peer_address;
             bool output = false;
 
-            if(!(result->is_null("rpc_address", output)) && !output)
-            {
+            if (!(result->is_null("rpc_address", output)) && !output) {
                 cql::cql_byte_t* data = NULL;
                 cql::cql_int_t size = 0;
                 result->get_data("rpc_address", &data, size);
-                if(size == 4)
+                if (size == 4)
                     peer_address = make_ipv4_address_from_bytes(data);
             }
-            if(peer_address.is_unspecified())
-            {
-                if(!(result->is_null("peer", output)) && !output)
-                {
+
+            if (peer_address.is_unspecified()) {
+                if (!(result->is_null("peer", output)) && !output) {
                     cql::cql_byte_t* data = NULL;
                     cql::cql_int_t size = 0;
                     result->get_data("peer", &data, size);
-                    if(size == 4)
+                    if (size == 4)
                         peer_address = make_ipv4_address_from_bytes(data);
                 }
-                else if(_log_callback)
+                else if (_log_callback)
                     _log_callback(CQL_LOG_ERROR, "No rpc_address found for host in peers system table.");
             }
-            if(!(peer_address.is_unspecified()))
+            if (!(peer_address.is_unspecified()))
             {
                 std::string data_center, rack, tokens;
                 result->get_string("data_center", data_center);
@@ -204,50 +208,60 @@ cql_control_connection_t::refresh_node_list_and_token_map()
                                                     : current_endpoints[0].port();
         }
 
-        for(auto row : rows)
-        {
+        for (row_collection_t::iterator riter = rows.begin(); riter != rows.end(); ++riter) {
+            row_t row = *riter;
             cql_host_t::ip_address_t host_address = row.get<0>();
-            std::string              data_center  = row.get<1>(),
-                                     rack         = row.get<2>(),
-                                     tokens       = row.get<3>();
+            std::string              data_center  = row.get<1>();
+            std::string              rack         = row.get<2>();
+            std::string              tokens       = row.get<3>();
 
             cql_endpoint_t peer_endpoint(host_address, port_number);
             boost::shared_ptr<cql_host_t> host = clusters_metadata->get_host(peer_endpoint);
-            if(!host) host = clusters_metadata->add_host(peer_endpoint);
+            if (!host) {
+                host = clusters_metadata->add_host(peer_endpoint);
+            }
 
             host->set_location_info(data_center, rack);
         }
-        {
+
+        //{
             // Now we will remove dead hosts.
             std::map<cql_host_t::ip_address_t, bool> hosts_addresses_map;
-            for(auto row : rows)
-                hosts_addresses_map[row.get<0>()] = true;
+            for (row_collection_t::iterator riter = rows.begin(); riter != rows.end(); ++riter) {
+                hosts_addresses_map[riter->get<0>()] = true;
+            }
 
             std::vector<boost::shared_ptr<cql_host_t> > clusters_hosts;
             clusters_metadata->get_hosts(clusters_hosts);
 
-            for(auto host : clusters_hosts)
-            {
-                if(hosts_addresses_map.find(host->address()) == hosts_addresses_map.end()
-                       && host->address() != _active_connection->endpoint().address())
-                    clusters_metadata->remove_host(host->endpoint());
+            for (std::vector<boost::shared_ptr<cql_host_t> >::iterator hiter = clusters_hosts.begin(); hiter != clusters_hosts.end(); ++hiter) {
+                if (hosts_addresses_map.find((*hiter)->address()) == hosts_addresses_map.end()
+                    && (*hiter)->address() != _active_connection->endpoint().address())
+                {
+                    clusters_metadata->remove_host((*hiter)->endpoint());
+                }
             }
-        }
+            //}
 
         //TODO(JS) : clusters_metadata->rebuildTokenMap(...)
 
-        if(_log_callback) _log_callback(CQL_LOG_INFO, "NodeList and TokenMap successfully refreshed.");
+        if (_log_callback) {
+            _log_callback(CQL_LOG_INFO, "NodeList and TokenMap successfully refreshed.");
+        }
     }
     else {
-        if(_log_callback)
+        if (_log_callback) {
             _log_callback(CQL_LOG_ERROR, "Query timed out");
+        }
     }
 }
 
 void
-cql_control_connection_t::conn_cassandra_event(void* sender,
-                                               boost::shared_ptr<cql_event_t> event)
-{// Just a stub (at this point)
+cql_control_connection_t::conn_cassandra_event(
+    void*                          sender,
+    boost::shared_ptr<cql_event_t> event)
+{
+// Just a stub (at this point)
 }
 
 bool
@@ -255,62 +269,72 @@ cql_control_connection_t::refresh_hosts()
 {
     boost::mutex::scoped_lock lock(_mutex);
     try {
-        if(_is_open) {
+        if (_is_open) {
             refresh_node_list_and_token_map();
             return true;
         }
         else return false;
     }
     catch(cql_exception& ex) {
-        if(_log_callback)
+        if (_log_callback) {
             _log_callback(CQL_LOG_ERROR, ex.what());
+        }
         return false;
     }
 }
 
 void
-cql_control_connection_t::setup_control_connection(bool refresh_only)
+cql_control_connection_t::setup_control_connection(
+    bool refresh_only)
 {
     boost::mutex::scoped_lock lock(_mutex);
 
-    if(_log_callback) _log_callback(CQL_LOG_INFO,
+    if (_log_callback) {
+        _log_callback(
+            CQL_LOG_INFO,
             refresh_only ? "Refreshing control connection..."
-                         : "Setting up control connection...");
+            : "Setting up control connection...");
+    }
 
     try {
         _timer.cancel();
 
-        if(!refresh_only) setup_event_listener();
+        if (!refresh_only) {
+            setup_event_listener();
+        }
         refresh_node_list_and_token_map();
 
         _is_open = true;
-        if(_log_callback) _log_callback(CQL_LOG_INFO,
+        if (_log_callback) {
+            _log_callback(
+                CQL_LOG_INFO,
                 refresh_only ? "Done refreshing control connection."
-                             : "Done setting up control connection.");
+                : "Done setting up control connection.");
+        }
     }
     catch (cql_exception& ex) {
         _is_open = false;
 
         _timer.expires_from_now(_reconnection_schedule->get_delay());
         _timer.async_wait(boost::bind(
-            &cql_control_connection_t::reconnection_callback, this));
+                              &cql_control_connection_t::reconnection_callback, this));
 
-        if(_log_callback)
+        if (_log_callback) {
             _log_callback(CQL_LOG_ERROR, ex.what());
+        }
     }
 }
 
 void
 cql_control_connection_t::reconnection_callback()
 {
-    try
-    {
+    try {
         setup_control_connection();
     }
-    catch (cql_exception& ex)
-    {
-        if(_log_callback)
+    catch (cql_exception& ex) {
+        if (_log_callback) {
             _log_callback(CQL_LOG_ERROR, ex.what());
+        }
     }
 }
 

@@ -24,7 +24,6 @@
 #include <vector>
 #include <boost/asio/ip/address.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/atomic.hpp>
 
 #include "cql/cql.hpp"
 #include "cql/internal/cql_system_dependent.hpp"
@@ -42,19 +41,19 @@ operator<<(std::ostream& o, const cql_hex_char_struct_t& hs) {
     return (o << std::hex << (int)hs.c);
 }
 
-inline cql_hex_char_struct_t 
+inline cql_hex_char_struct_t
 hex(unsigned char _c) {
     return cql_hex_char_struct_t(_c);
 }
 
 // Safe version of strncpy (this method always null terminates
 // dest buffer).
-char* 
+char*
 safe_strncpy(char* dest, const char* src, const size_t count);
 
 // When str is NULL returns empty string(""), in any other
 // case returns str.
-inline const char* 
+inline const char*
 empty_when_null(const char* str) {
 		if(!str)
 			return "";
@@ -64,20 +63,15 @@ empty_when_null(const char* str) {
 // tries to convert given string to boost asio ip address.
 // return false when conversion fails, return true otherwise.
 // if this returns true then result will contain valid ip address.
-bool 
+bool
 to_ipaddr(const std::string& str, boost::asio::ip::address* result);
 
 
 // returns current UTC time.
-// result of this functions depends on local 
+// result of this functions depends on local
 // system settings which may be modified by user.
-boost::posix_time::ptime 
+boost::posix_time::ptime
 utc_now();
-
-// tries to change lock sate to true, returns true lock state
-// was changed, false otherwise.
-bool
-try_acquire_lock(const boost::shared_ptr<boost::atomic_bool>& lock);
 
 } // namespace cql
 
