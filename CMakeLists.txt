@@ -90,7 +90,6 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 else()
 	# GCC specific compiler options
         # I disabled long-long warning because boost generates about 50 such warnings
-        # -std=c++0x, -fno-strict-aliasing
 	set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic -Wno-long-long -fno-strict-aliasing")
 endif()
 
