@@ -19,6 +19,7 @@
 #include <cassert>
 
 #include <boost/bind.hpp>
+#include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
@@ -75,11 +76,10 @@ log_callback(
 void
 demo(
     const std::string& host,
-    bool use_ssl)
+    bool               use_ssl)
 {
     try
     {
-
 		boost::shared_ptr<cql::cql_builder_t> builder = cql::cql_cluster_t::builder();
 		builder->with_log_callback(&log_callback);
         builder->add_contact_point(boost::asio::ip::address::from_string(host));

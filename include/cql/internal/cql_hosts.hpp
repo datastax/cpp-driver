@@ -29,7 +29,7 @@ namespace cql {
         {
             boost::mutex::scoped_lock lock(_mutex);
 
-			if(!host) {
+			if (!host) {
 				throw std::invalid_argument("host cannot be null.");
             }
 

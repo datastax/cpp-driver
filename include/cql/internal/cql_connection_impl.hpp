@@ -40,11 +40,12 @@
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/thread/condition_variable.hpp>
 #include <boost/thread/future.hpp>
-#include <boost/unordered_map.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include "cql/cql.hpp"
 #include "cql/cql_connection.hpp"

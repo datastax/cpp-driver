@@ -27,7 +27,9 @@
 
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/thread/condition_variable.hpp>
 #include <boost/thread/future.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include "cql/cql.hpp"
 #include "cql/cql_future_connection.hpp"
@@ -48,58 +50,58 @@ struct cql_error_t;
 class cql_connection_t :
         boost::noncopyable {
 public:
-    typedef 
-        boost::function<void(const cql::cql_short_t, const std::string&)> 
+    typedef
+        boost::function<void(const cql::cql_short_t, const std::string&)>
         cql_log_callback_t;
 
-    typedef 
-        boost::function<void(cql_connection_t&)> 
+    typedef
+        boost::function<void(cql_connection_t&)>
         cql_connection_callback_t;
-    
-    typedef 
-        boost::function<void(cql_connection_t&, const cql_error_t&)> 
+
+    typedef
+        boost::function<void(cql_connection_t&, const cql_error_t&)>
         cql_connection_errback_t;
-    
-    typedef 
-        boost::function<void(cql_connection_t&, cql_event_t*)> 
+
+    typedef
+        boost::function<void(cql_connection_t&, cql_event_t*)>
         cql_event_callback_t;
 
-    typedef 
-        boost::function<void(cql_connection_t&, const cql::cql_stream_t&, cql::cql_result_t*)> 
+    typedef
+        boost::function<void(cql_connection_t&, const cql::cql_stream_t&, cql::cql_result_t*)>
         cql_message_callback_t;
-    
-    typedef 
-        boost::function<void(cql_connection_t&, const cql::cql_stream_t&, const cql_error_t&)> 
+
+    typedef
+        boost::function<void(cql_connection_t&, const cql::cql_stream_t&, const cql_error_t&)>
         cql_message_errback_t;
 
-    typedef 
-        std::map<std::string, std::string> 
+    typedef
+        std::map<std::string, std::string>
         cql_credentials_t;
 
     virtual
     ~cql_connection_t() { }
 
-    virtual bool 
+    virtual bool
     is_healthy() const = 0;
-    
-    virtual bool 
+
+    virtual bool
     is_busy(int) const = 0;
-    
-    virtual bool 
+
+    virtual bool
     is_free(int) const = 0;
-    
+
     virtual bool
     is_empty() const = 0;
 
-    virtual cql_stream_t 
+    virtual cql_stream_t
     acquire_stream()  = 0;
-    
-    virtual void 
+
+    virtual void
     release_stream(cql_stream_t& stream) = 0;
 
     virtual cql_uuid_t
     id() const = 0;
-    
+
     /**
        Connect to the server at the specified address and port.
 
@@ -149,8 +151,8 @@ public:
     /**
        Prepare a CQL statement.
 
-       When the callback is triggered it will be passed a cql_message_result_t 
-       which contains the ID of the prepared statement. 
+       When the callback is triggered it will be passed a cql_message_result_t
+       which contains the ID of the prepared statement.
        This ID is used when composing execution messages.
 
        @param query query string.
@@ -259,7 +261,7 @@ public:
     */
     virtual void
     reconnect() = 0;
-    
+
 };
 
 } // namespace cql

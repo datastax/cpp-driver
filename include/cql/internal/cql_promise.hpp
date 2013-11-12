@@ -31,7 +31,7 @@ public:
         const TResult& value)
     {
         boost::mutex::scoped_lock lock(*_mutex);
-        if (*_value_set) {
+        if (!*_value_set) {
             _promise->set_value(value);
             return true;
         }
@@ -43,7 +43,7 @@ public:
         const boost::exception_ptr& exception)
     {
         boost::mutex::scoped_lock lock(*_mutex);
-        if (*_value_set) {
+        if (!*_value_set) {
             _promise->set_exception(exception);
             return true;
         }

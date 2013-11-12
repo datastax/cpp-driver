@@ -145,9 +145,8 @@ cql_control_connection_t::refresh_node_list_and_token_map()
         _log_callback(CQL_LOG_INFO, "Refreshing node list and token map...");
     }
 
-    boost::shared_future<cql_future_result_t> query_future_result =
-        boost::static_pointer_cast<cql::cql_session_t>(_session)
-            ->query(boost::make_shared<cql_query_t>(cql_query_t(select_peers_expression())));
+    boost::shared_ptr<cql_query_t> query(new cql_query_t(select_peers_expression()));
+    boost::shared_future<cql_future_result_t> query_future_result = boost::static_pointer_cast<cql::cql_session_t>(_session)->query(query);
 
     if (query_future_result.timed_wait(boost::posix_time::seconds(10))) { // THINKOF(JS): do blocking wait?
         cql_future_result_t query_result = query_future_result.get();
@@ -171,23 +170,25 @@ cql_control_connection_t::refresh_node_list_and_token_map()
                 cql::cql_byte_t* data = NULL;
                 cql::cql_int_t size = 0;
                 result->get_data("rpc_address", &data, size);
-                if (size == 4)
+                if (size == 4) {
                     peer_address = make_ipv4_address_from_bytes(data);
+                }
             }
 
-            if (peer_address.is_unspecified()) {
+            if (peer_address == ::boost::asio::ip::address()) {
                 if (!(result->is_null("peer", output)) && !output) {
                     cql::cql_byte_t* data = NULL;
                     cql::cql_int_t size = 0;
                     result->get_data("peer", &data, size);
-                    if (size == 4)
+                    if (size == 4) {
                         peer_address = make_ipv4_address_from_bytes(data);
+                    }
                 }
-                else if (_log_callback)
+                else if (_log_callback) {
                     _log_callback(CQL_LOG_ERROR, "No rpc_address found for host in peers system table.");
+                }
             }
-            if (!(peer_address.is_unspecified()))
-            {
+            else {
                 std::string data_center, rack, tokens;
                 result->get_string("data_center", data_center);
                 result->get_string("rack", rack);

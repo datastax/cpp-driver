@@ -15,8 +15,8 @@ namespace cql {
 }
 
 namespace std {
-    template<>
-    struct hash<cql::cql_uuid_t>;
+    // template<>
+    // struct hash<cql::cql_uuid_t>;
 }
 
 namespace cql {
@@ -39,32 +39,32 @@ private:
 
     unsigned long    _uuid;
 
-    friend struct std::hash<cql_uuid_t>;
+    // friend struct std::hash<cql_uuid_t>;
 };
 
 }
 
-namespace std {
+// namespace std {
 
-    template<>
-    struct hash<cql::cql_uuid_t> {
-	public:
-        typedef
-            cql::cql_uuid_t
-            argument_type;
+//     template<>
+//     struct hash<cql::cql_uuid_t> {
+// 	public:
+//         typedef
+//             cql::cql_uuid_t
+//             argument_type;
 
-        typedef
-            size_t
-            result_type;
+//         typedef
+//             size_t
+//             result_type;
 
-        size_t
-        operator ()(const cql::cql_uuid_t& id) const {
-            return
-                ((id._uuid * 3169) << 16) +
-                ((id._uuid * 23) << 8) +
-                id._uuid;
-        }
-    };
-}
+//         size_t
+//         operator ()(const cql::cql_uuid_t& id) const {
+//             return
+//                 ((id._uuid * 3169) << 16) +
+//                 ((id._uuid * 23) << 8) +
+//                 id._uuid;
+//         }
+//     };
+// }
 
 #endif	/* CQL_UUID_HPP_ */

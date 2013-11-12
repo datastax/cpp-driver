@@ -29,16 +29,19 @@
 
 #include "cql/internal/cql_cluster_impl.hpp"
 
-boost::shared_ptr<cql::cql_cluster_t> 
-cql::cql_cluster_t::built_from(const cql_initializer_t& initializer) {
-    return boost::shared_ptr<cql::cql_cluster_t>(new cql::cql_cluster_impl_t(
-        initializer.contact_points(), 
-        initializer.configuration()));
+boost::shared_ptr<cql::cql_cluster_t>
+cql::cql_cluster_t::built_from(
+    cql_initializer_t& initializer)
+{
+    return boost::shared_ptr<cql::cql_cluster_t>(
+        new cql::cql_cluster_impl_t(
+            initializer.contact_points(),
+            initializer.configuration()));
 }
 
-boost::shared_ptr<cql::cql_builder_t> 
-cql::cql_cluster_t::builder() {
+boost::shared_ptr<cql::cql_builder_t>
+cql::cql_cluster_t::builder()
+{
     return boost::shared_ptr<cql::cql_builder_t>(
         new cql::cql_builder_t());
 }
-

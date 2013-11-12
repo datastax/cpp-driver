@@ -87,26 +87,27 @@ private:
 
 public:
     cql_cluster_impl_t(
-            const std::list<cql_endpoint_t>&        endpoints,
-			boost::shared_ptr<cql_configuration_t>  configuration) :
+        const std::list<cql_endpoint_t>&        endpoints,
+        boost::shared_ptr<cql_configuration_t>  configuration) :
+        _io_service(configuration->io_service()),
         _contact_points(endpoints),
         _configuration(configuration),
-        _work(new boost::asio::io_service::work(_io_service)),
-        _thread(boost::bind(&cql_cluster_impl_t::asio_thread_main, &_io_service))
+        _work(new boost::asio::io_service::work(configuration->io_service())),
+        _thread(boost::bind(&cql_cluster_impl_t::asio_thread_main, &configuration->io_service()))
     {
-            _configuration->init(this);
-            const cql_policies_t& policies = _configuration->policies();
+        _configuration->init(this);
+        const cql_policies_t& policies = _configuration->policies();
 
-            _metadata = boost::shared_ptr<cql_metadata_t>(new cql_metadata_t(policies.reconnection_policy()));
+        _metadata = boost::shared_ptr<cql_metadata_t>(new cql_metadata_t(policies.reconnection_policy()));
 
-            _metadata->add_hosts(endpoints);
+        _metadata->add_hosts(endpoints);
 
-            _control_connection = boost::shared_ptr<cql_control_connection_t>(
-                new cql_control_connection_t(
-                    *this,
-                    _io_service,
-                    configuration
-                    ));
+        _control_connection = boost::shared_ptr<cql_control_connection_t>(
+            new cql_control_connection_t(
+                *this,
+                _io_service,
+                configuration
+                ));
     }
 
     virtual
@@ -120,7 +121,8 @@ public:
     }
 
     virtual boost::shared_ptr<cql::cql_session_t>
-    connect(const std::string& keyspace)
+    connect(
+        const std::string& keyspace)
     {
         // decide which client factory we want, SSL or non-SSL.  This is a hack, if you pass any commandline arg to the
         // binary it will use the SSL factory, non-SSL by default
@@ -193,11 +195,9 @@ private:
         }
     }
 
-    const std::list<cql_endpoint_t> 		_contact_points;
-    boost::shared_ptr<cql_configuration_t> 	_configuration;
-
-    // Initialize the IO service, this allows us to perform network operations asyncronously
-    boost::asio::io_service _io_service;
+    boost::asio::io_service&               _io_service;
+    const std::list<cql_endpoint_t> 	   _contact_points;
+    boost::shared_ptr<cql_configuration_t> _configuration;
 
     // Typically async operations are performed in the thread performing the request, because we want synchronous behavior
     // we're going to spawn a thread whose sole purpose is to perform network communication, and we'll use this thread to
