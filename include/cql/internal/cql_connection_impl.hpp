@@ -45,7 +45,6 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/unordered_map.hpp>
-#include <boost/atomic.hpp>
 
 #include "cql/cql.hpp"
 #include "cql/cql_connection.hpp"
@@ -110,7 +109,7 @@ public:
         _transport(transport),
         _request_buffer(0),
         _callback_storage(NUMBER_OF_STREAMS),
-        _numer_of_free_stream_ids(NUMBER_OF_USER_STREAMS),
+        _number_of_free_stream_ids(NUMBER_OF_USER_STREAMS),
         _connect_callback(0),
         _connect_errback(0),
         _log_callback(log_callback),
@@ -505,19 +504,19 @@ private:
 	virtual bool
     is_busy(int max) const
     {
-		return (NUMBER_OF_STREAMS - _numer_of_free_stream_ids.load(boost::memory_order_acquire)) >= max;
+		return (NUMBER_OF_STREAMS - _number_of_free_stream_ids) >= max;
     }
 
 	virtual bool
     is_free(int min) const
     {
-		return (NUMBER_OF_STREAMS - _numer_of_free_stream_ids.load(boost::memory_order_acquire)) <= min;
+		return (NUMBER_OF_STREAMS - _number_of_free_stream_ids) <= min;
     }
 
     virtual bool
     is_empty() const
     {
-        return (NUMBER_OF_USER_STREAMS == _numer_of_free_stream_ids.load(boost::memory_order_acquire));
+        return (NUMBER_OF_USER_STREAMS == _number_of_free_stream_ids);
     }
 
     void
@@ -842,7 +841,7 @@ private:
     cql::cql_header_impl_t                   _response_header;
     std::auto_ptr<cql::cql_message_t>        _response_message;
     callback_storage_t                       _callback_storage;
-    boost::atomic_int                        _numer_of_free_stream_ids;
+    int                                      _number_of_free_stream_ids;
     cql_connection_callback_t                _connect_callback;
     cql_connection_errback_t                 _connect_errback;
     cql_log_callback_t                       _log_callback;

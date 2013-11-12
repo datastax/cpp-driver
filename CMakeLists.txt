@@ -41,7 +41,7 @@ else()
 endif()
 
 set(Boost_USE_MULTITHREADED ON)
-find_package(Boost 1.41.0 COMPONENTS atomic system thread unit_test_framework date_time program_options REQUIRED)
+find_package(Boost 1.41.0 COMPONENTS system thread unit_test_framework date_time program_options REQUIRED)
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
 
 find_package(OpenSSL REQUIRED)
