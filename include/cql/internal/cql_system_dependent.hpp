@@ -2,7 +2,7 @@
 #ifndef CQL_SYSTEM_DEPENDENT_H_
 #define CQL_SYSTEM_DEPENDENT_H_
 
-// snprintf 
+// snprintf
 #include <cstdio>
 
 #ifdef _WIN32

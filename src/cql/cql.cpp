@@ -15,9 +15,6 @@
  */
 #include <boost/preprocessor.hpp>
 #include <boost/shared_ptr.hpp>
-#include <cds/init.h>
-#include <cds/gc/hp.h>
-#include <cds/threading/model.h>
 
 #include "cql/cql.hpp"
 
@@ -53,44 +50,20 @@ cql::to_string(const cql_host_distance_enum host_distance) {
 
 namespace {
     bool cql_library_initialized = false;
-    boost::shared_ptr<cds::gc::HP> cql_hp_singleton;
 }
 
 void
-cql::cql_initialize(size_t const hazard_pointers_count) {
+cql::cql_initialize() {
     if(cql_library_initialized)
         return;
-    
+
     cql_library_initialized = true;
-    
-    cds::Initialize(0);
-    cql_hp_singleton = boost::shared_ptr<cds::gc::HP>(new cds::gc::HP(hazard_pointers_count));
 }
 
 void
 cql::cql_terminate() {
     if(!cql_library_initialized)
         return;
-    
+
     cql_library_initialized = false;
-    
-    cql_hp_singleton.reset();
-    cds::Terminate();
-}
-
-namespace cql {
-struct cql_thread_infrastructure_impl_t {
-public:
-    
-    // libcds thread garbage collector.
-    cds::gc::HP::thread_gc _thread_gc;
-};
-}
-
-cql::cql_thread_infrastructure_t::cql_thread_infrastructure_t() {
-    _this  = new cql_thread_infrastructure_impl_t();
-}
-
-cql::cql_thread_infrastructure_t::~cql_thread_infrastructure_t() {
-    delete _this;
 }

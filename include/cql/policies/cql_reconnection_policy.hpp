@@ -27,5 +27,4 @@ namespace cql {
 		virtual ~cql_reconnection_policy_t() { }
 	};
 }
-
 #endif // CQL_RECONNECTION_POLICY_HPP_

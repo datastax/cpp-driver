@@ -250,14 +250,6 @@
         </df>
       </df>
       <df name="test">
-        <df name="libcds_demo">
-          <df name="CMakeFiles">
-            <df name="libcds_demo.dir">
-            </df>
-          </df>
-          <in>lockfree_hash_map.hpp</in>
-          <in>main.cpp</in>
-        </df>
         <df name="linux_test_scripts">
         </df>
         <df name="unit_tests">
@@ -302,7 +294,6 @@
           <buildCommandWorkingDir>.</buildCommandWorkingDir>
           <buildCommand>${MAKE} -f Makefile</buildCommand>
           <cleanCommand>${MAKE} -f Makefile clean</cleanCommand>
-          <executablePath>libcds_demo</executablePath>
           <ccTool>
             <incDir>
               <pElem>../../boost_1_54_0</pElem>
@@ -317,7 +308,6 @@
       <folder path="cpp-driver/demo">
         <ccTool>
           <incDir>
-            <pElem>../../cds</pElem>
             <pElem>/extra/ccm_bridge/include</pElem>
             <pElem>extra/ccm_bridge/include</pElem>
           </incDir>
@@ -330,7 +320,6 @@
         <ccTool>
           <incDir>
             <pElem>extra/ccm_bridge</pElem>
-            <pElem>../../cds</pElem>
             <pElem>extra/ccm_bridge/include</pElem>
           </incDir>
           <preprocessorList>
@@ -342,7 +331,6 @@
       <folder path="cpp-driver/src">
         <ccTool>
           <incDir>
-            <pElem>../../cds</pElem>
             <pElem>.</pElem>
           </incDir>
           <preprocessorList>
@@ -353,7 +341,6 @@
       <folder path="cpp-driver/test">
         <ccTool>
           <incDir>
-            <pElem>../../cds</pElem>
           </incDir>
           <preprocessorList>
             <Elem>BOOST_ALL_DYN_LINK</Elem>

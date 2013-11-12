@@ -34,25 +34,25 @@ class cql_metadata_t;
 
 class cql_cluster_t: boost::noncopyable {
 public:
-    static boost::shared_ptr<cql_cluster_t> 
-    built_from(const cql_initializer_t& initializer);
-    
-    static boost::shared_ptr<cql_builder_t> 
+    static boost::shared_ptr<cql_cluster_t>
+    built_from(cql_initializer_t& initializer);
+
+    static boost::shared_ptr<cql_builder_t>
     builder();
 
-    virtual boost::shared_ptr<cql_session_t> 
+    virtual boost::shared_ptr<cql_session_t>
     connect() = 0;
-    
-    virtual boost::shared_ptr<cql_session_t> 
+
+    virtual boost::shared_ptr<cql_session_t>
     connect(const std::string& keyspace) = 0;
-    
-    virtual void 
+
+    virtual void
     shutdown(int timeout_ms = -1) = 0;
-    
+
     // returns MOCK metadata object.
     virtual boost::shared_ptr<cql_metadata_t>
     metadata() const = 0;
-    
+
     virtual inline
     ~cql_cluster_t() { }
 };

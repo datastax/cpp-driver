@@ -20,30 +20,23 @@
 #include "cql/internal/cql_trashcan.hpp"
 #include "cql/internal/cql_session_impl.hpp"
 
-cql::cql_trashcan_t::~cql_trashcan_t() { }
-
 void
-cql::cql_trashcan_t::put(const boost::shared_ptr<cql_connection_t>& connection) {
+cql::cql_trashcan_t::put(
+    const boost::shared_ptr<cql_connection_t>& connection)
+{
+    boost::mutex::scoped_lock lock(_mutex);
     cql_endpoint_t endpoint = connection->endpoint();
-    
-    cql_connections_collection_t* conn   = NULL;
-    cql_connections_collection_t* result = NULL;
-    
-    while(!_trashcan.try_get(endpoint, &result)) {
-        if(!conn) {
-            conn = new cql_connections_collection_t();
-        }
-        
-        _trashcan.try_add(endpoint, conn);
+
+    connection_pool_t::iterator it = _trashcan.find(endpoint);
+    if (it == _trashcan.end()) {
+        it = _trashcan.insert(endpoint, new cql_connections_collection_t()).first;
     }
-    
-    if(conn && (result != conn))
-        delete conn;
-    
-    if(result->try_add(connection->id(), connection)) {
-        _timer.expires_from_now(timer_expires_time());
-        _timer.async_wait(boost::bind(&cql_trashcan_t::timeout, this, _1));
-    }
+
+    (*it->second)[connection->id()] = connection;
+
+    // TODO XXX WTF
+    // _timer.expires_from_now(timer_expires_time());
+    // _timer.async_wait(boost::bind(&cql_trashcan_t::timeout, this, _1));
 }
 
 boost::posix_time::time_duration
@@ -52,84 +45,50 @@ cql::cql_trashcan_t::timer_expires_time() const {
 }
 
 boost::shared_ptr<cql::cql_connection_t>
-cql::cql_trashcan_t::recycle(const cql_endpoint_t& endpoint) 
+cql::cql_trashcan_t::recycle(
+    const cql_endpoint_t& endpoint)
 {
-    cql_connections_collection_t* connectons;
-    
-    if(!_trashcan.try_get(endpoint, &connectons))
+    boost::mutex::scoped_lock lock(_mutex);
+
+    connection_pool_t::iterator it = _trashcan.find(endpoint);
+    if (it == _trashcan.end()) {
         return boost::shared_ptr<cql::cql_connection_t>();
-    
-    boost::shared_ptr<cql_connection_t> conn;
-    
-    for(cql_connections_collection_t::iterator it = connectons->begin();
-        it != connectons->end(); ++it)
-    {
-        if(connectons->try_erase(it->first, &conn))
-            return conn;
     }
-    
+
+    cql_connections_collection_t* connections = it->second;
+    for (cql_connections_collection_t::iterator it = connections->begin();
+         it != connections->end();
+         ++it)
+    {
+        boost::shared_ptr<cql::cql_connection_t> conn = it->second;
+        connections->erase(it);
+        return conn;
+    }
+
     return boost::shared_ptr<cql::cql_connection_t>();
 }
 
 void
-cql::cql_trashcan_t::cleanup(
-    const cql_uuid_t& connection_id, 
-    cql_connections_collection_t* const connections)
-{
-    boost::shared_ptr<cql_connection_t> conn;
-    
-    if(connections->try_erase(connection_id, &conn)) {
-        if(conn->is_empty()) {
-            _session.free_connection(conn);
-        }
-        else {
-            connections->try_add(connection_id, conn);
-        }
-    }
-}
-
-void
-cql::cql_trashcan_t::cleanup() {
-    for(cql_connection_pool_t::iterator host_it = _trashcan.begin();
-        host_it != _trashcan.end(); ++host_it)
-    {
-        cql_connections_collection_t* connections = host_it->second;
-        if(!_trashcan.try_erase(host_it->first))
-            continue;
-        
-        for(cql_connections_collection_t::iterator conn_it = connections->begin();
-            conn_it != connections->end(); ++conn_it)
-        {
-            cleanup(/* connection id: */   conn_it->first, 
-                    /* all connections: */ connections);
-        }
-        
-        delete connections;
-    }
-}
-
-void
 cql::cql_trashcan_t::timeout(const boost::system::error_code& error) {
-    if(!error)
-        cleanup();
+    if (!error) {
+        // cleanup();
+    }
 }
 
 void
 cql::cql_trashcan_t::remove_all() {
+    boost::mutex::scoped_lock lock(_mutex);
     _timer.cancel();
-     
-    for(cql_connection_pool_t::iterator host_it = _trashcan.begin();
-        host_it != _trashcan.end(); ++host_it)
+
+    for (connection_pool_t::iterator host_it = _trashcan.begin();
+         host_it != _trashcan.end(); ++host_it)
     {
-        cql_connections_collection_t* connections = host_it->second;
-        if(!_trashcan.try_erase(host_it->first))
-            continue;
-        
-        for(cql_connections_collection_t::iterator conn_it = connections->begin();
-            conn_it != connections->end(); ++conn_it)
+        for (cql_connections_collection_t::iterator conn_it = host_it->second->begin();
+             conn_it != host_it->second->end(); ++conn_it)
         {
-            if(connections->try_erase(conn_it->first))
-                _session.free_connection(conn_it->second);
+            _session.free_connection(conn_it->second);
+            host_it->second->erase(conn_it);
         }
     }
+    _trashcan.clear();
 }

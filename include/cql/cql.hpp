@@ -23,7 +23,7 @@
 #include <boost/noncopyable.hpp>
 
 namespace cql {
-    
+
 typedef ::uint8_t   cql_byte_t;
 typedef ::uint16_t  cql_short_t;
 typedef ::int32_t   cql_int_t;
@@ -154,29 +154,14 @@ to_string(const cql_consistency_enum);
 // with library.
 // This function MUST be called only once.
 // This function is NOT thread safe.
-// @hazard_pointers_count - number of hazard pointers used by
-// libcds.
 void
-cql_initialize(size_t const hazard_pointers_count = 128);
+cql_initialize();
 
 // Terminates cql library.
 // This function must be called at program end, this MUST
 // be called only once.
-void 
+void
 cql_terminate();
-
-struct cql_thread_infrastructure_impl_t;
-
-// This class must be instantinated on EVERY thread that uses libcql.
-class cql_thread_infrastructure_t: public boost::noncopyable {
-public:
-    // Throws cql::cql_initialization_exception when initializaton
-    // fails.
-    cql_thread_infrastructure_t();
-    ~cql_thread_infrastructure_t();
-private:
-    cql_thread_infrastructure_impl_t* _this;
-};
 
 } // namespace cql
 #endif // __CQL_H_INCLUDED__

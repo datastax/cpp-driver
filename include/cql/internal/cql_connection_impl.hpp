@@ -40,14 +40,12 @@
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/noncopyable.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/thread/condition_variable.hpp>
 #include <boost/thread/future.hpp>
-#include <boost/unordered_map.hpp>
-#include <boost/atomic.hpp>
-#include <boost/lockfree/stack.hpp>
-
+#include <boost/thread/mutex.hpp>
 
 #include "cql/cql.hpp"
 #include "cql/cql_connection.hpp"
@@ -86,22 +84,22 @@ class cql_connection_impl_t : public cql::cql_connection_t
     // stream with is 0 is dedicated to events messages and
     // connection management.
     static const int NUMBER_OF_USER_STREAMS = 127;
-    
+
 public:
-    typedef 
-        std::list<cql::cql_message_buffer_t> 
+    typedef
+        std::list<cql::cql_message_buffer_t>
         request_buffer_t;
-    
-    typedef 
-        std::pair<cql_message_callback_t, cql_message_errback_t> 
+
+    typedef
+        std::pair<cql_message_callback_t, cql_message_errback_t>
         callback_pair_t;
-    
-    typedef 
-        cql::cql_callback_storage_t<callback_pair_t, NUMBER_OF_STREAMS> 
+
+    typedef
+        cql::cql_callback_storage_t<callback_pair_t>
         callback_storage_t;
-    
-    typedef 
-        boost::function<void(const boost::system::error_code&, std::size_t)> 
+
+    typedef
+        boost::function<void(const boost::system::error_code&, std::size_t)>
         write_callback_t;
 
     cql_connection_impl_t(
@@ -111,8 +109,8 @@ public:
         _resolver(io_service),
         _transport(transport),
         _request_buffer(0),
-        _callback_storage(),
-        _numer_of_free_stream_ids(NUMBER_OF_USER_STREAMS),
+        _callback_storage(NUMBER_OF_STREAMS),
+        _number_of_free_stream_ids(NUMBER_OF_USER_STREAMS),
         _connect_callback(0),
         _connect_errback(0),
         _log_callback(log_callback),
@@ -123,41 +121,47 @@ public:
         _closing(false),
         _reserved_stream(_callback_storage.acquire_stream()),
         _uuid(cql_uuid_t::create())
-    { }
+    {}
 
     boost::shared_future<cql::cql_future_connection_t>
-    connect(const cql_endpoint_t& endpoint) 
+    connect(const cql_endpoint_t& endpoint)
     {
         boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise(
-            new cql_promise_t<cql_future_connection_t>()); 
+            new cql_promise_t<cql_future_connection_t>());
 
-        connect(endpoint,
-                boost::bind(&cql_connection_impl_t::_connection_future_callback, this, promise, ::_1),
-                boost::bind(&cql_connection_impl_t::_connection_future_errback, this, promise, ::_1, ::_2));
+        connect(
+            endpoint,
+            boost::bind(&cql_connection_impl_t::_connection_future_callback, this, promise, ::_1),
+            boost::bind(&cql_connection_impl_t::_connection_future_errback, this, promise, ::_1, ::_2));
 
         return promise->shared_future();
     }
 
     void
-    connect(const cql_endpoint_t&       endpoint,
-            cql_connection_callback_t   callback,
-            cql_connection_errback_t    errback) 
+    connect(
+        const cql_endpoint_t&       endpoint,
+        cql_connection_callback_t   callback,
+        cql_connection_errback_t    errback)
     {
         _endpoint = endpoint;
         _connect_callback = callback;
         _connect_errback = errback;
         resolve();
     }
-    
+
     virtual cql_uuid_t
-    id() const { return _uuid; }
+    id() const
+    {
+        return _uuid;
+    }
 
     boost::shared_future<cql::cql_future_result_t>
-    query(const boost::shared_ptr<cql_query_t>& query_) 
+    query(
+        const boost::shared_ptr<cql_query_t>& query_)
     {
         boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise(
             new cql_promise_t<cql_future_result_t>());
-        
+
 		query(query_,
               boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
               boost::bind(&cql_connection_impl_t::_statement_future_errback, this, promise, ::_1, ::_2, ::_3));
@@ -166,11 +170,12 @@ public:
     }
 
     boost::shared_future<cql::cql_future_result_t>
-    prepare(const boost::shared_ptr<cql_query_t>& query) 
+    prepare(
+        const boost::shared_ptr<cql_query_t>& query)
 	{
         boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise(
             new cql_promise_t<cql_future_result_t>());
-        
+
         prepare(query,
                 boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
                 boost::bind(&cql_connection_impl_t::_statement_future_errback, this, promise, ::_1, ::_2, ::_3));
@@ -179,11 +184,12 @@ public:
     }
 
     boost::shared_future<cql::cql_future_result_t>
-    execute(const boost::shared_ptr<cql::cql_execute_t>& message) 
+    execute(
+        const boost::shared_ptr<cql::cql_execute_t>& message)
 	{
         boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise(
             new cql_promise_t<cql_future_result_t>());
-        
+
         execute(message,
                 boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
                 boost::bind(&cql_connection_impl_t::_statement_future_errback, this, promise, ::_1, ::_2, ::_3));
@@ -192,13 +198,14 @@ public:
     }
 
     cql::cql_stream_t
-    query(const boost::shared_ptr<cql_query_t>& 		query,
-          cql::cql_connection_t::cql_message_callback_t callback,
-          cql::cql_connection_t::cql_message_errback_t  errback) 
+    query(
+        const boost::shared_ptr<cql_query_t>&         query,
+        cql::cql_connection_t::cql_message_callback_t callback,
+        cql::cql_connection_t::cql_message_errback_t  errback)
     {
 		cql_stream_t stream = query->stream();
-        
-        if(stream.is_invalid()) {
+
+        if (stream.is_invalid()) {
             errback(*this, stream, create_stream_id_error());
             return stream;
 		}
@@ -216,106 +223,124 @@ public:
     }
 
     cql::cql_stream_t
-    prepare(const boost::shared_ptr<cql_query_t>&        query,
-            cql::cql_connection_t::cql_message_callback_t callback,
-            cql::cql_connection_t::cql_message_errback_t  errback) 
+    prepare(
+        const boost::shared_ptr<cql_query_t>&         query,
+        cql::cql_connection_t::cql_message_callback_t callback,
+        cql::cql_connection_t::cql_message_errback_t  errback)
     {
 		cql_stream_t stream = query->stream();
-     
-        if(stream.is_invalid()) {
+
+        if (stream.is_invalid()) {
             errback(*this, stream, create_stream_id_error());
             return stream;
         }
 
         _callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
-        
-        create_request(new cql::cql_message_prepare_impl_t(query),
-                                  boost::bind(&cql_connection_impl_t::write_handle,
-                                          this,
-                                          boost::asio::placeholders::error,
-                                          boost::asio::placeholders::bytes_transferred),
-                                  stream);
+
+        create_request(
+            new cql::cql_message_prepare_impl_t(query),
+            boost::bind(&cql_connection_impl_t::write_handle,
+                        this,
+                        boost::asio::placeholders::error,
+                        boost::asio::placeholders::bytes_transferred),
+            stream);
 
         return stream;
     }
 
     cql::cql_stream_t
-    execute(const boost::shared_ptr<cql::cql_execute_t>& message,
-            cql::cql_connection_t::cql_message_callback_t callback,
-            cql::cql_connection_t::cql_message_errback_t  errback) {
+    execute(
+        const boost::shared_ptr<cql::cql_execute_t>&  message,
+        cql::cql_connection_t::cql_message_callback_t callback,
+        cql::cql_connection_t::cql_message_errback_t  errback)
+    {
 
         cql_stream_t stream = acquire_stream();
         assert(0); // TODO: change this method to use new stream allocation mechanism
 
-        if(stream.is_invalid()) {
+        if (stream.is_invalid()) {
             errback(*this, stream, create_stream_id_error());
             return stream;
         }
-        
+
         _callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
-        create_request(message->impl(),
-                                  boost::bind(&cql_connection_impl_t::write_handle,
-                                          this,
-                                          boost::asio::placeholders::error,
-                                          boost::asio::placeholders::bytes_transferred),
-                                  stream);
+        create_request(
+            message->impl(),
+            boost::bind(&cql_connection_impl_t::write_handle,
+                        this,
+                        boost::asio::placeholders::error,
+                        boost::asio::placeholders::bytes_transferred),
+            stream);
 
        return stream;
     }
 
     bool
-    defunct() const {
+    defunct() const
+    {
         return _defunct;
     }
 
     bool
-    ready() const {
+    ready() const
+    {
         return _ready;
     }
 
     void
-    close() {
+    close()
+    {
         _closing = true;
         log(CQL_LOG_INFO, "closing connection");
-        
+
         boost::system::error_code ec;
         _transport->lowest_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         _transport->lowest_layer().close();
     }
 
     virtual const cql_endpoint_t&
-    endpoint() const { return _endpoint; }
+    endpoint() const
+    {
+        return _endpoint;
+    }
 
     void
     set_events(
         cql::cql_connection_t::cql_event_callback_t event_callback,
-        const std::list<std::string>&           events) {
+        const std::list<std::string>&               events)
+    {
         _event_callback = event_callback;
         _events = events;
     }
 
     const std::list<std::string>&
-    events() const {
+    events() const
+    {
         return _events;
     }
 
     cql::cql_connection_t::cql_event_callback_t
-    event_callback() const {
+    event_callback() const
+    {
         return _event_callback;
     }
 
     const cql_credentials_t&
-    credentials() const {
+    credentials() const
+    {
         return _credentials;
     }
 
     void
-    set_credentials(const cql_connection_t::cql_credentials_t& credentials) {
+    set_credentials(
+        const cql_connection_t::cql_credentials_t& credentials)
+    {
         _credentials = credentials;
     }
 
     void
-    reconnect() {
+    reconnect()
+    {
         _closing = false;
         _events_registered = false;
         _ready = false;
@@ -325,7 +350,8 @@ public:
 
 private:
     inline cql::cql_error_t
-    create_stream_id_error() {
+    create_stream_id_error()
+    {
         cql::cql_error_t error;
         error.library = true;
         error.message = "Too many streams. The maximum value of parallel requests is 127 (1 is reserved by this library)";
@@ -333,8 +359,10 @@ private:
     }
 
     inline void
-    log(cql::cql_short_t level,
-        const std::string& message) {
+    log(
+        cql::cql_short_t level,
+        const std::string& message)
+    {
         if (_log_callback) {
             _log_callback(level, message);
         }
@@ -343,7 +371,7 @@ private:
     void
     _connection_future_callback(
         boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
-        cql_connection_t&) 
+        cql_connection_t&)
     {
         promise->set_value(cql::cql_future_connection_t(this));
     }
@@ -352,7 +380,7 @@ private:
     _connection_future_errback(
         boost::shared_ptr<cql_promise_t<cql_future_connection_t> >       promise,
         cql_connection_t&,
-        const cql_error_t&                                               error) 
+        const cql_error_t&                                               error)
     {
         promise->set_value(cql::cql_future_connection_t(this, error));
     }
@@ -362,7 +390,7 @@ private:
         boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
         cql_connection_t&,
         const cql::cql_stream_t&                                     stream,
-        cql::cql_result_t*                                           result_ptr) 
+        cql::cql_result_t*                                           result_ptr)
     {
         promise->set_value(cql::cql_future_result_t(this, stream, result_ptr));
     }
@@ -372,68 +400,82 @@ private:
         boost::shared_ptr<cql_promise_t<cql_future_result_t> >   promise,
         cql_connection_t&,
         const cql::cql_stream_t&                                     stream,
-        const cql_error_t&                                           error) 
+        const cql_error_t&                                           error)
     {
         promise->set_value(cql::cql_future_result_t(this, stream, error));
     }
 
     void
-    resolve() {
+    resolve()
+    {
         log(CQL_LOG_DEBUG, "resolving remote host: " + _endpoint.to_string());
-        
-        _resolver.async_resolve(_endpoint.resolver_query(),
-                                boost::bind(&cql_connection_impl_t::resolve_handle,
-                                            this,
-                                            boost::asio::placeholders::error,
-                                            boost::asio::placeholders::iterator));
+
+        _resolver.async_resolve(
+            _endpoint.resolver_query(),
+            boost::bind(&cql_connection_impl_t::resolve_handle,
+                        this,
+                        boost::asio::placeholders::error,
+                        boost::asio::placeholders::iterator));
     }
 
     void
-    resolve_handle(const boost::system::error_code& err,
-                   boost::asio::ip::tcp::resolver::iterator endpoint_iterator) {
+    resolve_handle(
+        const boost::system::error_code&         err,
+        boost::asio::ip::tcp::resolver::iterator endpoint_iterator)
+    {
         if (!err) {
             log(CQL_LOG_DEBUG, "resolved remote host, attempting to connect");
 #if BOOST_VERSION >= 104800
-            boost::asio::async_connect(_transport->lowest_layer(),
-                                       endpoint_iterator,
-                                       boost::bind(&cql_connection_impl_t::connect_handle,
-                                                   this,
-                                                   boost::asio::placeholders::error));
+            boost::asio::async_connect(
+                _transport->lowest_layer(),
+                endpoint_iterator,
+                boost::bind(&cql_connection_impl_t::connect_handle,
+                            this,
+                            boost::asio::placeholders::error));
 #else
-            _transport->lowest_layer().async_connect(*endpoint_iterator,
-                    boost::bind(&cql_connection_impl_t::connect_handle,
-                                this,
-                                boost::asio::placeholders::error));
+            _transport->lowest_layer().async_connect(
+                *endpoint_iterator,
+                boost::bind(&cql_connection_impl_t::connect_handle,
+                            this,
+                            boost::asio::placeholders::error));
 #endif
-        } else {
+        }
+        else {
             log(CQL_LOG_CRITICAL, "error resolving remote host " + err.message());
             check_transport_err(err);
         }
     }
 
     void
-    connect_handle(const boost::system::error_code& err) {
+    connect_handle(
+        const boost::system::error_code& err)
+    {
         if (!err) {
             log(CQL_LOG_DEBUG, "connection successful to remote host");
             if (_transport->requires_handshake()) {
-                _transport->async_handshake(boost::bind(&cql_connection_impl_t::handshake_handle,
-                                                        this,
-                                                        boost::asio::placeholders::error));
-            } else {
+                _transport->async_handshake(
+                    boost::bind(&cql_connection_impl_t::handshake_handle,
+                                this,
+                                boost::asio::placeholders::error));
+            }
+            else {
                 options_write();
             }
-        } else {
+        }
+        else {
             log(CQL_LOG_CRITICAL, "error connecting to remote host " + err.message());
             check_transport_err(err);
         }
     }
 
     void
-    handshake_handle(const boost::system::error_code& err) {
+    handshake_handle(
+        const boost::system::error_code& err) {
         if (!err) {
             log(CQL_LOG_DEBUG, "successful ssl handshake with remote host");
             options_write();
-        } else {
+        }
+        else {
             log(CQL_LOG_CRITICAL, "error performing ssl handshake " + err.message());
             check_transport_err(err);
         }
@@ -441,41 +483,48 @@ private:
 
     // if stream cannot be acquired returns invalid stream
     virtual cql::cql_stream_t
-    acquire_stream() {
+    acquire_stream()
+    {
         cql_stream_t stream = _callback_storage.acquire_stream();
         return stream;
     }
-    
+
     // releases stream, parameter will be set  to invalid stream.
     virtual void
-    release_stream(cql_stream_t& stream) {
+    release_stream(cql_stream_t& stream)
+    {
         _callback_storage.release_stream(stream);
     }
-    
-	virtual bool 
-    is_healthy() const {
+
+	virtual bool
+    is_healthy() const
+    {
         return true;
     }
 
-	virtual bool 
-    is_busy(int max) const {
-		return (NUMBER_OF_STREAMS - _numer_of_free_stream_ids.load(boost::memory_order_acquire)) >= max;
+	virtual bool
+    is_busy(int max) const
+    {
+		return (NUMBER_OF_STREAMS - _number_of_free_stream_ids) >= max;
     }
-    
-	virtual bool 
-    is_free(int min) const {
-		return (NUMBER_OF_STREAMS - _numer_of_free_stream_ids.load(boost::memory_order_acquire)) <= min;
+
+	virtual bool
+    is_free(int min) const
+    {
+		return (NUMBER_OF_STREAMS - _number_of_free_stream_ids) <= min;
     }
-    
+
     virtual bool
-    is_empty() const {
-        return (NUMBER_OF_USER_STREAMS == _numer_of_free_stream_ids.load(boost::memory_order_acquire));
+    is_empty() const
+    {
+        return (NUMBER_OF_USER_STREAMS == _number_of_free_stream_ids);
     }
 
     void
-    create_request(cql::cql_message_t*    message,
-                   write_callback_t         callback,
-				   cql_stream_t&            stream) 
+    create_request(
+        cql::cql_message_t* message,
+        write_callback_t    callback,
+        cql_stream_t&       stream)
     {
         cql::cql_error_t err;
         message->prepare(&err);
@@ -490,23 +539,26 @@ private:
         log(CQL_LOG_DEBUG, "sending message: " + header.str() + " " + message->str());
 
         std::vector<boost::asio::const_buffer> buf;
-        
+
         buf.push_back(boost::asio::buffer(header.buffer()->data(), header.size()));
         _request_buffer.push_back(header.buffer());
-        
+
         if (header.length() != 0) {
             buf.push_back(boost::asio::buffer(message->buffer()->data(), message->size()));
             _request_buffer.push_back(message->buffer());
-        } else {
+        }
+        else {
             _request_buffer.push_back(cql_message_buffer_t());
         }
-        
+
         boost::asio::async_write(*_transport, buf, callback);
     }
 
     void
-    write_handle(const boost::system::error_code& err,
-                 std::size_t num_bytes) {
+    write_handle(
+        const boost::system::error_code& err,
+        std::size_t                      num_bytes)
+    {
         if (!_request_buffer.empty()) {
             // the write request is complete free the request buffers
             _request_buffer.pop_front();
@@ -514,16 +566,19 @@ private:
                 _request_buffer.pop_front();
             }
         }
+
         if (!err) {
             log(CQL_LOG_DEBUG, "wrote to socket " + boost::lexical_cast<std::string>(num_bytes) + " bytes");
-        } else {
+        }
+        else {
             log(CQL_LOG_ERROR, "error writing to socket " + err.message());
             check_transport_err(err);
         }
     }
 
     void
-    header_read() {
+    header_read()
+    {
         boost::asio::async_read(*_transport,
                                 boost::asio::buffer(_response_header.buffer()->data(), _response_header.size()),
 #if BOOST_VERSION >= 104800
@@ -535,17 +590,20 @@ private:
     }
 
     void
-    header_read_handle(const boost::system::error_code& err) {
+    header_read_handle(
+        const boost::system::error_code& err)
+    {
         if (!err) {
             cql::cql_error_t decode_err;
             if (_response_header.consume(&decode_err)) {
                 log(CQL_LOG_DEBUG, "received header for message " + _response_header.str());
                 body_read(_response_header);
-            } else {
+            }
+            else {
                 log(CQL_LOG_ERROR, "error decoding header " + _response_header.str());
             }
-        } 
-        else if(err.value() == boost::system::errc::operation_canceled) {
+        }
+        else if (err.value() == boost::system::errc::operation_canceled) {
             /* do nothing */
         }
         else {
@@ -598,41 +656,42 @@ private:
 
 
     void
-    body_read_handle(const cql::cql_header_impl_t& header,
-                     const boost::system::error_code& err) {
-
+    body_read_handle(
+        const cql::cql_header_impl_t& header,
+        const boost::system::error_code& err)
+    {
         log(CQL_LOG_DEBUG, "received body for message " + header.str());
 
-        if(err) {
+        if (err) {
             log(CQL_LOG_ERROR, "error reading body " + err.message());
             check_transport_err(err);
-            
+
             header_read(); // loop
             return;
         }
-        
+
         cql::cql_error_t consume_error;
         if (!_response_message->consume(&consume_error)) {
             log(CQL_LOG_ERROR, "error deserializing result message " + consume_error.message);
-            
+
             header_read();
             return;
         }
 
         switch (header.opcode()) {
-        case CQL_OPCODE_RESULT: 
+        case CQL_OPCODE_RESULT:
         {
             log(CQL_LOG_DEBUG, "received result message " + header.str());
-            
+
             cql_stream_t stream = header.stream();
-            
-            if(!_callback_storage.has_callbacks(stream)) {
+
+            if (!_callback_storage.has_callbacks(stream)) {
                 log(CQL_LOG_INFO, "no callback found for message " + header.str());
             }
             else {
                 callback_pair_t callback_pair = _callback_storage.get_callbacks(stream);
                 release_stream(stream);
-                
+
                 callback_pair.first(*this, header.stream(), dynamic_cast<cql::cql_message_result_impl_t*>(_response_message.release()));
             }
             break;
@@ -645,33 +704,34 @@ private:
             }
             break;
 
-        case CQL_OPCODE_ERROR: 
+        case CQL_OPCODE_ERROR:
         {
             cql_stream_t stream = header.stream();
 
-            if(!_callback_storage.has_callbacks(stream)) {
+            if (!_callback_storage.has_callbacks(stream)) {
                 log(CQL_LOG_INFO, "no callback found for message " + header.str() + " " + _response_message->str());
             }
             else {
                 callback_pair_t callback_pair = _callback_storage.get_callbacks(stream);
                 release_stream(stream);
-                
-                cql::cql_message_error_impl_t* m = 
+
+                cql::cql_message_error_impl_t* m =
                     dynamic_cast<cql::cql_message_error_impl_t*>(_response_message.get());
-                
-                cql::cql_error_t cql_error = 
+
+                cql::cql_error_t cql_error =
                     cql::cql_error_t::cassandra_error(m->code(), m->message());
-                
+
                 callback_pair.second(*this, stream, cql_error);
-            } 
+            }
             break;
         }
-        
+
         case CQL_OPCODE_READY:
             log(CQL_LOG_DEBUG, "received ready message");
             if (!_events_registered) {
                 events_register();
-            } else  {
+            }
+            else  {
                 _ready = true;
                 if (_connect_callback) {
                     // let the caller know that the connection is ready
@@ -698,7 +758,8 @@ private:
     }
 
     void
-    events_register() {
+    events_register()
+    {
         std::auto_ptr<cql::cql_message_register_impl_t> m(new cql::cql_message_register_impl_t());
         m->events(_events);
 
@@ -713,44 +774,52 @@ private:
     }
 
     void
-    options_write() {
-		create_request(new cql::cql_message_options_impl_t(),
-                       (boost::function<void (const boost::system::error_code &, std::size_t)>)boost::bind(&cql_connection_impl_t::write_handle,
-                               this,
-                               boost::asio::placeholders::error,
-                               boost::asio::placeholders::bytes_transferred),
-                       _reserved_stream);
+    options_write()
+    {
+		create_request(
+            new cql::cql_message_options_impl_t(),
+            (boost::function<void (const boost::system::error_code &, std::size_t)>)boost::bind(
+                &cql_connection_impl_t::write_handle,
+                this,
+                boost::asio::placeholders::error,
+                boost::asio::placeholders::bytes_transferred),
+            _reserved_stream);
 
         // start listening
         header_read();
     }
 
     void
-    startup_write() {
+    startup_write()
+    {
         std::auto_ptr<cql::cql_message_startup_impl_t> m(new cql::cql_message_startup_impl_t());
         m->version(CQL_VERSION_IMPL);
-        create_request(m.release(),
-                       boost::bind(&cql_connection_impl_t::write_handle,
-                                   this,
-                                   boost::asio::placeholders::error,
-                                   boost::asio::placeholders::bytes_transferred),
-                       _reserved_stream);
+        create_request(
+            m.release(),
+            boost::bind(&cql_connection_impl_t::write_handle,
+                        this,
+                        boost::asio::placeholders::error,
+                        boost::asio::placeholders::bytes_transferred),
+            _reserved_stream);
     }
 
     void
-    credentials_write() {
+    credentials_write()
+    {
         std::auto_ptr<cql::cql_message_credentials_impl_t> m(new cql::cql_message_credentials_impl_t());
         m->credentials(_credentials);
-        create_request(m.release(),
-                       boost::bind(&cql_connection_impl_t::write_handle,
-                                   this,
-                                   boost::asio::placeholders::error,
-                                   boost::asio::placeholders::bytes_transferred),
-                       _reserved_stream);
+        create_request(
+            m.release(),
+            boost::bind(&cql_connection_impl_t::write_handle,
+                        this,
+                        boost::asio::placeholders::error,
+                        boost::asio::placeholders::bytes_transferred),
+            _reserved_stream);
     }
 
     inline void
-    check_transport_err(const boost::system::error_code& err) {
+    check_transport_err(const boost::system::error_code& err)
+    {
         if (!_transport->lowest_layer().is_open()) {
             _ready = false;
             _defunct = true;
@@ -765,28 +834,27 @@ private:
         }
     }
 
-    cql_endpoint_t                       _endpoint;
-    boost::asio::ip::tcp::resolver       _resolver;
-    std::auto_ptr<TSocket>               _transport;
-    cql::cql_stream_id_t                 _stream_counter;
-    request_buffer_t                     _request_buffer;
-    cql::cql_header_impl_t               _response_header;
-    std::auto_ptr<cql::cql_message_t>    _response_message;
-    callback_storage_t                   _callback_storage;
-    boost::atomic_int                    _numer_of_free_stream_ids;
-    cql_connection_callback_t            _connect_callback;
-    cql_connection_errback_t             _connect_errback;
-    cql_log_callback_t                   _log_callback;
-    bool                                 _events_registered;
-    std::list<std::string>               _events;
-    cql_event_callback_t                 _event_callback;
+    cql_endpoint_t                           _endpoint;
+    boost::asio::ip::tcp::resolver           _resolver;
+    std::auto_ptr<TSocket>                   _transport;
+    cql::cql_stream_id_t                     _stream_counter;
+    request_buffer_t                         _request_buffer;
+    cql::cql_header_impl_t                   _response_header;
+    std::auto_ptr<cql::cql_message_t>        _response_message;
+    callback_storage_t                       _callback_storage;
+    int                                      _number_of_free_stream_ids;
+    cql_connection_callback_t                _connect_callback;
+    cql_connection_errback_t                 _connect_errback;
+    cql_log_callback_t                       _log_callback;
+    bool                                     _events_registered;
+    std::list<std::string>                   _events;
+    cql_event_callback_t                     _event_callback;
     cql::cql_connection_t::cql_credentials_t _credentials;
-    bool                                 _defunct;
-    bool                                 _ready;
-    bool                                 _closing;
-    // Stream with ID equal 0
-    cql_stream_t                         _reserved_stream;
-    cql_uuid_t                           _uuid;
+    bool                                     _defunct;
+    bool                                     _ready;
+    bool                                     _closing;
+    cql_stream_t                             _reserved_stream;
+    cql_uuid_t                               _uuid;
 };
 
 } // namespace cql

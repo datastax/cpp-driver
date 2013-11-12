@@ -19,62 +19,68 @@
 #include "cql/internal/cql_hosts.hpp"
 
 
-::boost::shared_ptr<cql::cql_hosts_t>
-cql::cql_hosts_t::create( 
-	const boost::shared_ptr<cql_reconnection_policy_t>& reconnection_policy,
-	const size_t expected_load)
+boost::shared_ptr<cql::cql_hosts_t>
+cql::cql_hosts_t::create(
+    const boost::shared_ptr<cql_reconnection_policy_t>& reconnection_policy)
 {
-	if(!reconnection_policy)
+	if(!reconnection_policy) {
 		throw std::invalid_argument("reconnection_policy cannot be null.");
+    }
 
-	return ::boost::shared_ptr<cql::cql_hosts_t>(new 
-		cql::cql_hosts_t(reconnection_policy, expected_load));
+	return ::boost::shared_ptr<cql::cql_hosts_t>(new cql::cql_hosts_t(reconnection_policy));
 }
 
 void
-cql::cql_hosts_t::get_hosts(std::vector<host_ptr_t>* empty_vector) {
-	if(!empty_vector)
-		throw std::invalid_argument("empty_vector cannot be null.");
+cql::cql_hosts_t::get_hosts(
+    std::vector<host_ptr_t>& empty_vector)
+{
+    boost::mutex::scoped_lock lock(_mutex);
 
-	_hosts.get_values(std::back_inserter(*empty_vector));
+    for (hosts_map_t::const_iterator it = _hosts.begin(); it != _hosts.end(); ++it) {
+        empty_vector.push_back(it->second);
+    }
 }
 
-bool 
-cql::cql_hosts_t::bring_up(const cql::cql_endpoint_t& endpoint)
+bool
+cql::cql_hosts_t::bring_up(
+    const cql::cql_endpoint_t& endpoint)
 {
-	boost::shared_ptr<cql_host_t> new_host = 
-		cql_host_t::create(endpoint, _reconnection_policy);
-	
-	_hosts.try_add(endpoint, new_host);
+    boost::mutex::scoped_lock lock(_mutex);
 
-	boost::shared_ptr<cql_host_t> host;
-	if(_hosts.try_get(endpoint, &host))
-		return host->bring_up();
-	else
-		return false;
+	boost::shared_ptr<cql_host_t> new_host = cql_host_t::create(endpoint, _reconnection_policy);
+	_hosts[endpoint] = new_host;
+    return new_host->bring_up();
 }
 
-bool 
-cql::cql_hosts_t::set_down(const cql::cql_endpoint_t& endpoint)
+bool
+cql::cql_hosts_t::set_down(
+    const cql::cql_endpoint_t& endpoint)
 {
+    boost::mutex::scoped_lock     lock(_mutex);
 	boost::shared_ptr<cql_host_t> host;
 
-	if (_hosts.try_get(endpoint, &host))
+	if (try_get(endpoint, &host)) {
 		return host->set_down();
-	else
+    }
+	else {
 		return false;
+    }
 }
 
-bool 
-cql::cql_hosts_t::try_remove(const cql::cql_endpoint_t& endpoint)
+bool
+cql::cql_hosts_t::try_remove(
+    const cql::cql_endpoint_t& endpoint)
 {
-	return _hosts.try_erase(endpoint);
+    boost::mutex::scoped_lock lock(_mutex);
+	return _hosts.erase(endpoint);
 }
 
 void
-cql::cql_hosts_t::get_endpoints(std::vector<cql::cql_endpoint_t>* empty_vector) {
-	if(!empty_vector)
-		throw std::invalid_argument("empty_vector cannot be null.");
-
-	_hosts.get_keys(std::back_inserter(*empty_vector));
+cql::cql_hosts_t::get_endpoints(
+    std::vector<cql::cql_endpoint_t>& empty_vector)
+{
+    boost::mutex::scoped_lock lock(_mutex);
+    for (hosts_map_t::const_iterator it = _hosts.begin(); it != _hosts.end(); ++it) {
+        empty_vector.push_back(it->first);
+    }
 }

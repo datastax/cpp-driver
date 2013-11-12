@@ -14,31 +14,21 @@
 *.a
 
 # cmake output
+*.cmake
+*.build
+*.xcodeproj
 CMakeFiles
 CMakeCache.txt
-CTestTestfile.cmake
+CMakeScripts
 Makefile
-cmake_install.cmake
-cmake_uninstall.cmake
-cassandra-config-version.cmake
-cassandra-config.cmake
-cassandra-targets.cmake
 install_manifest.txt
 
 # build files
-build/
-Testing/
+build
+Testing
+Debug
 demo/cql_demo
 test/unit_tests/cql_test
-
-# external deps
-ext/bin
-ext/lib
-ext/src
-ext/share
-ext/include
-ext/ssl
-ext/tmp
 
 # editor
 *.swp
