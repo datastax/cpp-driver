@@ -75,6 +75,13 @@ namespace cql {
     class cql_host_t;
     class cql_hosts_t;
 
+    class cql_token_map_t: boost::noncopyable {
+    public:
+        
+    private:
+        
+    };
+
 	class cql_metadata_t: boost::noncopyable {
 	public:
 // TODO: Provide notifications for events
@@ -126,6 +133,9 @@ namespace cql {
         void
         bring_up_host(const cql_endpoint_t& endpoint);
 
+        void
+        set_cluster_name(const std::string& new_name);
+
 	private:
         cql_metadata_t(
             boost::shared_ptr<cql_reconnection_policy_t> reconnection_policy);
@@ -137,6 +147,8 @@ namespace cql {
 
         boost::shared_ptr<cql_reconnection_policy_t>    _reconnection_policy;
         boost::shared_ptr<cql_hosts_t>                  _hosts;
+        std::string                                     _cluster_name;
+        cql_token_map_t                                 _token_map;
 	};
 }
 

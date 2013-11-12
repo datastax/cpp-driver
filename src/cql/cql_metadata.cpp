@@ -66,6 +66,11 @@ cql::cql_metadata_t::bring_up_host(const cql_endpoint_t& endpoint) {
     _hosts->bring_up(endpoint);
 }
 
+void
+cql::cql_metadata_t::set_cluster_name(const std::string& new_name) {
+    _cluster_name = new_name;
+}
+
 cql::cql_metadata_t::cql_metadata_t(
     boost::shared_ptr<cql_reconnection_policy_t> reconnection_policy)
     : _reconnection_policy(reconnection_policy),
