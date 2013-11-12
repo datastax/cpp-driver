@@ -1,4 +1,4 @@
-/* 
+/*
  * File:   cql_trashcan.hpp
  * Author: mc
  *
@@ -8,58 +8,59 @@
 #ifndef CQL_TRASHCAN_HPP_
 #define	CQL_TRASHCAN_HPP_
 
-#include <boost/noncopyable.hpp>
 #include <boost/asio.hpp>
+#include <boost/noncopyable.hpp>
+#include <boost/ptr_container/ptr_map.hpp>
+#include <boost/thread/mutex.hpp>
 
-#include "cql/lockfree/cql_lockfree_hash_map.hpp"
 #include "cql/common_type_definitions.hpp"
+
 #include "cql/cql_endpoint.hpp"
 #include "cql/cql_connection.hpp"
 
 namespace cql {
     class cql_session_impl_t;
-    
-    class cql_trashcan_t: boost::noncopyable 
+
+    class cql_trashcan_t :
+        boost::noncopyable
     {
     public:
         cql_trashcan_t(
             boost::asio::io_service& timer_service,
-            cql_session_impl_t&     session)
-            : _timer(timer_service),
-              _session(session) { }
-                
-        ~cql_trashcan_t();    
-            
+            cql_session_impl_t&      session) :
+            _timer(timer_service),
+            _session(session)
+        {}
+
         void
-        put(const boost::shared_ptr<cql_connection_t>& connection);
-        
+        put(
+            const boost::shared_ptr<cql_connection_t>& connection);
+
         boost::shared_ptr<cql_connection_t>
-        recycle(const cql_endpoint_t& address);
-        
+        recycle(
+            const cql_endpoint_t& address);
+
         void
         remove_all();
-            
+
     private:
+        typedef std::map<cql_uuid_t, boost::shared_ptr<cql_connection_t> > cql_connections_collection_t;
+
         void
-        cleanup();
-        
-        void
-        cleanup(
-            const cql_uuid_t& connection_id,
-            cql_connections_collection_t* const connections);
-        
-        void
-        timeout(const boost::system::error_code& error);
-        
+        timeout(
+            const boost::system::error_code& error);
+
         boost::posix_time::time_duration
         timer_expires_time() const;
-        
-        boost::asio::deadline_timer     _timer;
-        cql_connection_pool_t           _trashcan;
-        cql_session_impl_t&             _session;
+
+        typedef boost::ptr_map<cql_endpoint_t, cql_connections_collection_t> connection_pool_t;
+
+        boost::mutex                _mutex;
+        boost::asio::deadline_timer _timer;
+        connection_pool_t           _trashcan;
+        cql_session_impl_t&         _session;
     };
 }
 
 
 #endif	/* CQL_TRASHCAN_HPP_ */
-

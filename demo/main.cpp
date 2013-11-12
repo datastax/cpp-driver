@@ -39,10 +39,6 @@
 #include <cql/cql_builder.hpp>
 #include <cql/cql_execute.hpp>
 #include <cql/cql_result.hpp>
-#include <cql/lockfree/cql_lockfree_hash_map.hpp>
-
-#include <cds/init.h>
-#include <cds/gc/hp.h>
 
 // helper function to print query results
 void
@@ -57,8 +53,9 @@ print_rows(
             result.get_data(i, &data, size);
 
             std::cout.write(reinterpret_cast<char*>(data), size);
-            for(int i = size; i < 25; i++)
+            for (int i = size; i < 25; i++) {
                 std::cout << ' ' ;
+            }
             std::cout << " | ";
         }
         std::cout << std::endl;
@@ -80,8 +77,6 @@ demo(
     const std::string& host,
     bool use_ssl)
 {
-    cql::cql_thread_infrastructure_t cql_ti;
-
     try
     {
 
@@ -131,7 +126,6 @@ demo(
 		}
 
 		cluster->shutdown();
-		cds::gc::HP::force_dispose();
         std::cout << "THE END" << std::endl;
     }
     catch (std::exception& e)
@@ -145,7 +139,6 @@ main(
     int    argc,
     char** vargs)
 {
-
     bool ssl = false;
     std::string host;
 
@@ -171,7 +164,7 @@ main(
         return 0;
     }
 
-    cql::cql_initialize(512);
+    cql::cql_initialize();
     demo(host, ssl);
 
     cql::cql_terminate();

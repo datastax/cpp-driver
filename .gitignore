@@ -30,17 +30,6 @@ Debug
 demo/cql_demo
 test/unit_tests/cql_test
 
-# external deps
-ext/bin
-ext/lib
-ext/src
-ext/share
-ext/include
-ext/ssl
-ext/tmp
-ext/libcds_osx_srcs
-ext/__MACOSX
-
 # editor
 *.swp
 *~

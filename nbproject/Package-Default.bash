@@ -12,8 +12,6 @@ CND_DISTDIR=dist
 CND_BUILDDIR=build
 NBTMPDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}/tmp-packaging
 TMPDIRNAME=tmp-packaging
-OUTPUT_PATH=libcds_demo
-OUTPUT_BASENAME=libcds_demo
 PACKAGE_TOP_DIR=cpp-driver/
 
 # Functions

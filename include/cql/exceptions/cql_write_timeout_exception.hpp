@@ -14,35 +14,36 @@
 
 namespace cql {
 // A Cassandra timeout during a write query.
-class CQL_EXPORT cql_write_timeout_exception: public cql_query_timeout_exception {
+class CQL_EXPORT cql_write_timeout_exception :
+        public cql_query_timeout_exception
+{
 public:
-    cql_write_timeout_exception( 
-            cql_consistency_enum consistency_level,
-            cql_int_t received, 
-            cql_int_t required,
-            const char* write_type)
-    
-        : cql_query_timeout_exception(
+    cql_write_timeout_exception(
+        cql_consistency_enum consistency_level,
+        cql_int_t received,
+        cql_int_t required,
+        const char* write_type) :
+        cql_query_timeout_exception(
             create_message(consistency_level, received, required),
-            consistency_level, 
-			received, 
+            consistency_level,
+			received,
 			required),
-          _write_type(write_type)
-        { }
-        
-        
+        _write_type(write_type)
+        {}
+
+
     inline const char*
     write_type() const {
         return _write_type;
     }
-    
+
 private:
-    std::string 
+    std::string
     create_message(
         cql_consistency_enum consistency_level,
         cql_int_t received,
         cql_int_t required);
-    
+
     const char* _write_type;
 };
 }

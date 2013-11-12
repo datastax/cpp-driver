@@ -54,17 +54,6 @@ set(LIBS ${LIBS} ${ZLIB_LIBRARIES})
 find_package(Threads REQUIRED)
 set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
-# -------------------------------------------------------------
-# Find libCDS library
-# -------------------------------------------------------------
-# Allow access to custom FindLIBCDS module
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
-find_package(LIBCDS REQUIRED)
-set(LIBS ${LIBS} ${LIBCDS_LIBRARIES})
-set(INCLUDES ${INCLUDES} ${LIBCDS_INCLUDE_DIRS})
-
-# -------------------------------------------------------------
-
 # Build up the include path's
 set(INCLUDES ${INCLUDES} ${OPENSSL_INCLUDE_DIR} )
 set(INCLUDES ${INCLUDES} ${ZLIB_INCLUDE_DIR} )
@@ -101,7 +90,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 else()
 	# GCC specific compiler options
         # I disabled long-long warning because boost generates about 50 such warnings
-        # -std=c++0x, -fno-strict-aliasing :: required by libcds
+        # -std=c++0x, -fno-strict-aliasing
 	set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic -std=c++0x -stdlib=libc++ -Wno-long-long -fno-strict-aliasing")
 endif()
 
@@ -241,12 +230,4 @@ add_custom_target(UNINSTALL
 #-------------------
 # the demo program
 #-------------------
-
 add_subdirectory(demo)
-
-#-------------------
-# test libcds
-#-------------------
-
-# Exclude demo from CMAKE build system
-# add_subdirectory(test/libcds_demo)

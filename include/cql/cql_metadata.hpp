@@ -37,7 +37,7 @@ namespace cql {
 	};
 
 	class cql_schema_changed_info_t {
-	public:	
+	public:
 		enum schema_change_type_enum {
 			SCHEMA_CHANGE_TYPE_CREATED,
 			SCHEMA_CHANGE_TYPE_DROPPED,
@@ -59,7 +59,7 @@ namespace cql {
 			const std::string& keyspace,
 			const std::string& table)
 			: _change_type(change_type),
-			  _keyspace(keyspace), 
+			  _keyspace(keyspace),
 			  _table(table) { }
 
 
@@ -70,11 +70,11 @@ namespace cql {
 
     // CURRENTLY THIS IS MOCK THAT IS USED ONLY IN POLICIES
     // TO POPULATE HOSTS COLLECTIONS.
-    
+
     class cql_cluster_impl_t;
     class cql_host_t;
     class cql_hosts_t;
-    
+
 	class cql_metadata_t: boost::noncopyable {
 	public:
 // TODO: Provide notifications for events
@@ -82,59 +82,59 @@ namespace cql {
 //			boost::signals2::signal<void(const cql_host_state_changed_info_t&)>
 //			on_host_state_changed_t;
 //
-//		inline void 
+//		inline void
 //		on_host_state_changed(const on_host_state_changed_t::slot_type& slot) {
 ////			_host_state_changed.connect(slot);
 //		}
-//		
+//
 //		typedef
 //			boost::signals2::signal<void(const cql_schema_changed_info_t&)>
 //			on_schema_changed_t;
 //
-//		inline void 
+//		inline void
 //		on_schema_changed(const on_schema_changed_t::slot_type& slot) {
 ////			_schema_changed.connect(slot);
 //		}
-//        
-        
+//
+
         // Puts all known hosts at the end of @collection.
         void
-        get_hosts(std::vector<boost::shared_ptr<cql_host_t> >& collection) const; 
-        
+        get_hosts(std::vector<boost::shared_ptr<cql_host_t> >& collection) const;
+
         boost::shared_ptr<cql_host_t>
         get_host(const cql_endpoint_t& endpoint) const;
-        
+
         // Puts host addresses at the end of @collection
         void
-        get_endpoints(std::vector<cql_endpoint_t>* collection) const;
-        
+        get_endpoints(std::vector<cql_endpoint_t>& collection) const;
+
         friend class cql_control_connection_t;
     private:
-        
+
         boost::shared_ptr<cql_host_t>
         add_host(const cql_endpoint_t& endpoint);
-        
+
         void
         add_hosts(const std::list<cql_endpoint_t>& endpoints);
-        
+
         void
         remove_host(const cql_endpoint_t& endpoint);
-        
+
         void
         set_down_host(const cql_endpoint_t& endpoint);
-        
+
         void
         bring_up_host(const cql_endpoint_t& endpoint);
-        
+
 	private:
         cql_metadata_t(
             boost::shared_ptr<cql_reconnection_policy_t> reconnection_policy);
-        
+
         friend class cql_cluster_impl_t;
-        
+
 		//on_host_state_changed_t	_host_state_changed;
 		//on_schema_changed_t		_schema_changed;
-        
+
         boost::shared_ptr<cql_reconnection_policy_t>    _reconnection_policy;
         boost::shared_ptr<cql_hosts_t>                  _hosts;
 	};
