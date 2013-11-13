@@ -308,28 +308,35 @@ cql_control_connection_t::refresh_node_list_and_token_map()
         host->set_location_info(data_centers[i], racks[i]);
         
         if(partitioner != "") {
-            for(auto one_token : all_tokens[i])
-                token_map[host_address][one_token.first] = true;
+            for(std::map<std::string,bool>::iterator
+                    one_token  = all_tokens[i].begin();
+                    one_token != all_tokens[i].end(); ++one_token)
+            {
+                token_map[host_address][one_token->first] = true;
+            }
         }
     }
     {
         // Now we will remove dead hosts.
         std::map<cql_host_t::ip_address_t, bool> hosts_addresses_map;
-        for(size_t i = 0; i < found_hosts.size(); ++i)
+        for(size_t i = 0; i < found_hosts.size(); ++i) {
             hosts_addresses_map[found_hosts[i]] = true;
+        }
         
         std::vector<boost::shared_ptr<cql_host_t> > clusters_hosts;
         clusters_metadata->get_hosts(clusters_hosts);
         
-        for(auto host : clusters_hosts)
+        for(std::vector<boost::shared_ptr<cql_host_t> >::iterator
+                host  = clusters_hosts.begin();
+                host != clusters_hosts.end(); ++host)
         {
-            if(hosts_addresses_map.find(host->address()) == hosts_addresses_map.end()
-               && host->address() != _active_connection->endpoint().address()) {
-                clusters_metadata->remove_host(host->endpoint());
+            if(hosts_addresses_map.find((*host)->address()) == hosts_addresses_map.end()
+                && (*host)->address() != _active_connection->endpoint().address())
+            {
+                clusters_metadata->remove_host((*host)->endpoint());
             }
         }
     }
-    
     
     //TODO(JS) : clusters_metadata->rebuildTokenMap(...)
     

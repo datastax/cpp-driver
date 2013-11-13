@@ -656,6 +656,12 @@ private:
 
 
     void
+    preprocess_result_message(cql::cql_message_result_impl_t* response_message)
+    {
+        
+    }
+    
+    void
     body_read_handle(
         const cql::cql_header_impl_t& header,
         const boost::system::error_code& err)
@@ -691,8 +697,12 @@ private:
             else {
                 callback_pair_t callback_pair = _callback_storage.get_callbacks(stream);
                 release_stream(stream);
+                
+                cql::cql_message_result_impl_t* response_message =
+                    dynamic_cast<cql::cql_message_result_impl_t*>(_response_message.release());
 
-                callback_pair.first(*this, header.stream(), dynamic_cast<cql::cql_message_result_impl_t*>(_response_message.release()));
+                preprocess_result_message(response_message);
+                callback_pair.first(*this, header.stream(), response_message);
             }
             break;
         }
