@@ -35,15 +35,15 @@ The library known to work on Ubuntu >= 10.04.4 LTS (Lucid Lynx), and OSX 10.8.3 
 The library has two dependencies [Boost::Asio](http://www.boost.org/doc/libs/1_53_0/doc/html/boost_asio.html) and [OpenSSL](http://www.openssl.org/). It's required that Boost::Asio be installed prior to build. If OpenSSL isn't present (OSX 10.8) cassandra will automaticly download, build, and staticly link the library.
 
 ```
-git clone https://github.com/mstump/cassandra
-cd cassandra
+git clone https://github.com/datastax/cpp-driver.git
+cd cpp-driver
 cmake . && make && make cql_demo && make cql_test && make test && make install
 ```
 
 Running ```make help``` will give you a list of available make targets
 
 ## Examples
-In addition to the sample code below there is a fully functional [demo](https://github.com/mstump/cassandra/blob/master/demo/main.cpp) which exploits most of the functionality of the library.
+In addition to the sample code below there is a fully functional [demo](https://github.com/datastax/cpp-driver/blob/master/demo/main.cpp) which exploits most of the functionality of the library.
 
 ### Minimal Working Example - simple query against system.schema_keyspaces.
 ```c++
