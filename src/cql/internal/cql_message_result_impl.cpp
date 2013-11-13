@@ -504,3 +504,9 @@ cql::cql_message_result_impl_t::get_map(const std::string& column,
     }
     return false;
 }
+
+bool
+cql::cql_message_result_impl_t::get_keyspace_name(std::string& output) const {
+    output = _keyspace_name;
+    return true;
+}

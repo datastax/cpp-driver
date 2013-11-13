@@ -70,6 +70,7 @@
 #include "cql/internal/cql_message_startup_impl.hpp"
 #include "cql/internal/cql_message_supported_impl.hpp"
 #include "cql/cql_serialization.hpp"
+#include "cql/cql_session.hpp"
 #include "cql/cql_uuid.hpp"
 #include "cql/cql_stream.hpp"
 #include "cql/internal/cql_util.hpp"
@@ -120,7 +121,8 @@ public:
         _ready(false),
         _closing(false),
         _reserved_stream(_callback_storage.acquire_stream()),
-        _uuid(cql_uuid_t::create())
+        _uuid(cql_uuid_t::create()),
+        _session_ptr(NULL)
     {}
 
     boost::shared_future<cql::cql_future_connection_t>
@@ -155,6 +157,12 @@ public:
         return _uuid;
     }
 
+    void
+    set_session_ptr(cql_session_t* session_ptr)
+    {
+        _session_ptr = session_ptr;
+    }
+    
     boost::shared_future<cql::cql_future_result_t>
     query(
         const boost::shared_ptr<cql_query_t>& query_)
@@ -336,6 +344,19 @@ public:
         const cql_connection_t::cql_credentials_t& credentials)
     {
         _credentials = credentials;
+    }
+    
+    bool
+    is_keyspace_syncd() const
+    {
+        return _selected_keyspace_name == _current_keyspace_name
+                    || _selected_keyspace_name == "";
+    }
+    
+    void
+    set_keyspace(const std::string& new_keyspace_name)
+    {
+        _selected_keyspace_name = new_keyspace_name;
     }
 
     void
@@ -653,12 +674,22 @@ private:
 #endif
                                 boost::bind(&cql_connection_impl_t<TSocket>::body_read_handle, this, header, boost::asio::placeholders::error));
     }
-
-
+    
     void
     preprocess_result_message(cql::cql_message_result_impl_t* response_message)
     {
-        
+        switch(response_message->result_type()) {
+            case CQL_RESULT_SET_KEYSPACE:
+                response_message->get_keyspace_name(_current_keyspace_name);
+                if (_session_ptr) {
+                    _session_ptr->set_keyspace(_current_keyspace_name);
+                }
+                break;
+                
+            case CQL_RESULT_PREPARED:
+                //TODO(JS)
+                break;
+        }
     }
     
     void
@@ -865,6 +896,10 @@ private:
     bool                                     _closing;
     cql_stream_t                             _reserved_stream;
     cql_uuid_t                               _uuid;
+    
+    std::string                              _current_keyspace_name,
+                                             _selected_keyspace_name;
+    cql_session_t*                           _session_ptr;
 };
 
 } // namespace cql

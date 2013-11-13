@@ -43,6 +43,8 @@ namespace cql {
         void
         remove_all();
 
+        friend class cql_session_impl_t;
+        
     private:
         typedef std::map<cql_uuid_t, boost::shared_ptr<cql_connection_t> > cql_connections_collection_t;
 

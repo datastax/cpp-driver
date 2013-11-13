@@ -154,6 +154,9 @@ public:
     virtual
 	~cql_session_impl_t();
 
+    void
+    set_keyspace(const std::string& new_keyspace);
+
 private:
     typedef std::map<cql_uuid_t, boost::shared_ptr<cql_connection_t> > cql_connections_collection_t;
 
@@ -219,6 +222,9 @@ private:
         const boost::shared_ptr<cql_execute_t>&  message,
         cql_connection_t::cql_message_callback_t callback,
         cql_connection_t::cql_message_errback_t  errback);
+
+    bool
+    setup_keyspace(boost::shared_ptr<cql_connection_t> conn);
 
     boost::shared_future<cql_future_result_t>
     query(
@@ -303,7 +309,6 @@ private:
     get_max_connections_number(
         const boost::shared_ptr<cql_host_t>& host);
 
-
     friend class cql_trashcan_t;
     typedef boost::ptr_map<cql_endpoint_t, cql_connections_collection_t> connection_pool_t;
 
@@ -318,6 +323,7 @@ private:
     connection_pool_t                       _connection_pool;
     boost::shared_ptr<cql_trashcan_t>       _trashcan;
     connections_counter_t                   _connection_counters;
+    std::string                             _keyspace_name;
 };
 
 } // namespace cql

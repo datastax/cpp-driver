@@ -99,6 +99,9 @@ public:
     execute(const boost::shared_ptr<cql_execute_t>& message) = 0;
 
     virtual void
+    set_keyspace(const std::string& new_keyspace) = 0;
+
+    virtual void
     close() = 0;
     
     // Returns unique session identifier

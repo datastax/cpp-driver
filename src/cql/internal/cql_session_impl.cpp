@@ -90,6 +90,37 @@ cql::cql_session_impl_t::get_max_connections_number(
     return max_connections_per_host;
 }
 
+void
+cql::cql_session_impl_t::set_keyspace(const std::string& new_keyspace)
+{
+    boost::mutex::scoped_lock lock(_mutex);
+    _keyspace_name = new_keyspace;
+
+    for(connection_pool_t::iterator I  = _connection_pool.begin();
+        I != _connection_pool.end(); ++I)
+    {
+        cql_connections_collection_t& conn_collection_ptr = *(I->second);
+        for(cql_connections_collection_t::iterator
+                J  = conn_collection_ptr.begin();
+                J != conn_collection_ptr.end(); ++J)
+        {
+            J->second->set_keyspace(new_keyspace);
+        }
+    }
+    
+    for(connection_pool_t::iterator I  = _trashcan->_trashcan.begin();
+        I != _trashcan->_trashcan.end(); ++I)
+    {
+        cql_connections_collection_t& conn_collection_ptr = *(I->second);
+        for(cql_connections_collection_t::iterator
+                J  = conn_collection_ptr.begin();
+                J != conn_collection_ptr.end(); ++J)
+        {
+            J->second->set_keyspace(new_keyspace);
+        }
+    }
+}
+
 bool
 cql::cql_session_impl_t::increase_connection_counter(
     const boost::shared_ptr<cql_host_t>& host)
@@ -316,6 +347,25 @@ cql::cql_session_impl_t::execute(
     return cql_stream_t();
 }
 
+bool
+cql::cql_session_impl_t::setup_keyspace(
+    boost::shared_ptr<cql_connection_t> conn)
+{
+    if (!conn) {
+        return false;
+    }
+    
+    if (!(conn->is_keyspace_syncd())) {
+        boost::shared_ptr<cql_query_t> use_my_keyspace(
+            new cql_query_t("USE "+_keyspace_name+";"));
+
+        boost::shared_future<cql::cql_future_result_t> future_result
+            = conn->query(use_my_keyspace);
+        return future_result.timed_wait(boost::posix_time::seconds(30)); // TODO(JS): that's ugly
+    }
+    return true;
+}
+
 boost::shared_future<cql::cql_future_result_t>
 cql::cql_session_impl_t::query(
     const boost::shared_ptr<cql_query_t>& query)
@@ -347,7 +397,7 @@ cql::cql_session_impl_t::prepare(
 
     if (conn) {
         query->set_stream(stream);
-		return conn->query(query);
+		return conn->prepare(query);
     }
 
     boost::promise<cql_future_result_t>       promise;
@@ -460,7 +510,14 @@ cql::cql_session_impl_t::get_connection(
         ->new_query_plan(query);
 
     std::list<cql_endpoint_t> tried_hosts;
-    return connect(query_plan, stream, &tried_hosts);
+    boost::shared_ptr<cql::cql_connection_t> conn
+        = connect(query_plan, stream, &tried_hosts);
+    
+    if (conn) {
+        conn->set_keyspace(_keyspace_name);
+        setup_keyspace(conn);
+    }
+    return conn;
 }
 
 cql::cql_uuid_t

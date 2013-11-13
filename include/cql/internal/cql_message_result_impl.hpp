@@ -187,6 +187,9 @@ public:
     get_map(const std::string& column,
             cql::cql_map_t** output) const;
 
+    bool
+    get_keyspace_name(std::string& output) const;
+        
     inline bool
     is_valid(int i,
              cql::cql_column_type_enum column_type) const {
