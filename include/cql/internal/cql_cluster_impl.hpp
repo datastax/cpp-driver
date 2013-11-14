@@ -24,7 +24,7 @@
 namespace cql {
     
 // This is a non-SSL client factory
-    struct client_functor_t : public client_abstract_functor_t
+    struct client_functor_t
 {
 public:
 
@@ -32,17 +32,8 @@ public:
         boost::asio::io_service&                  service,
         cql::cql_connection_t::cql_log_callback_t log_callback) :
         _io_service(service),
-        _log_callback(log_callback),
-        _session_ptr(NULL)
+        _log_callback(log_callback)
     {}
-
-    // The pointer to session object is kept to allow for backpropagation
-    // of information. The connections are given this pointer to inform
-    // the session about USEd keyspaces, prepared statements, etc.
-    void
-    set_session_ptr(cql_session_t* session_ptr) {
-        _session_ptr = session_ptr;
-    }
     
     inline boost::shared_ptr<cql::cql_connection_t>
     operator()()
@@ -50,18 +41,16 @@ public:
         // called every time the pool needs to initiate a new connection to a host
         boost::shared_ptr<cql::cql_connection_t> ret_val
             = cql::cql_connection_factory_t::create_connection(_io_service, _log_callback);
-        ret_val->set_session_ptr(_session_ptr);
         return ret_val;
     }
 
 private:
     boost::asio::io_service&                  _io_service;
     cql::cql_connection_t::cql_log_callback_t _log_callback;
-    cql_session_t*                            _session_ptr;
 };
 
 // This is an SSL client factory
-    struct client_ssl_functor_t : public client_abstract_functor_t
+    struct client_ssl_functor_t
 {
     public:
 
@@ -70,25 +59,15 @@ private:
                          cql::cql_connection_t::cql_log_callback_t log_callback) :
         _io_service(service),
         _ssl_ctx(context),
-        _log_callback(log_callback),
-        _session_ptr(NULL)
+        _log_callback(log_callback)
     {}
 
-    // The pointer to session object is kept to allow for backpropagation
-    // of information. The connections are given this pointer to inform
-    // the session about USEd keyspaces, prepared statements, etc.
-    void
-    set_session_ptr(cql_session_t* session_ptr) {
-        _session_ptr = session_ptr;
-    }
-    
     inline boost::shared_ptr<cql::cql_connection_t>
     operator()()
     {
         // called every time the pool needs to initiate a new connection to a host
         boost::shared_ptr<cql::cql_connection_t> ret_val
             = cql::cql_connection_factory_t::create_connection(_io_service, _ssl_ctx, _log_callback);
-        ret_val->set_session_ptr(_session_ptr);
         return ret_val;
     }
 
@@ -96,7 +75,6 @@ private:
     boost::asio::io_service&                  _io_service;
     boost::asio::ssl::context&                _ssl_ctx;
     cql::cql_connection_t::cql_log_callback_t _log_callback;
-    cql_session_t*                            _session_ptr;
 };
 
 class cql_cluster_impl_t :
@@ -181,8 +159,8 @@ public:
         boost::shared_ptr<cql_session_impl_t> session(
             new cql_session_impl_t(session_callbacks, _configuration));
 
-        session->set_keyspace(keyspace);
         session->init(_io_service);
+        session->set_keyspace(keyspace);
         _control_connection->init();
 
         return session;

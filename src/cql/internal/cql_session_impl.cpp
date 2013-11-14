@@ -271,8 +271,9 @@ cql::cql_session_impl_t::connect(
         cql_endpoint_t host_address = host->endpoint();
         tried_hosts->push_back(host_address);
         cql_connections_collection_t* connections = add_to_connection_pool(host_address);
-
-        boost::shared_ptr<cql_connection_t> conn = try_find_free_stream(host, connections, stream);
+        
+        boost::shared_ptr<cql_connection_t> conn;
+        conn = try_find_free_stream(host, connections, stream);
         if (conn) {
             return conn;
         }
@@ -349,7 +350,8 @@ cql::cql_session_impl_t::execute(
 
 bool
 cql::cql_session_impl_t::setup_keyspace(
-    boost::shared_ptr<cql_connection_t> conn)
+    boost::shared_ptr<cql_connection_t> conn,
+    cql_stream_t*                       stream)
 {
     if (!conn) {
         return false;
@@ -359,9 +361,13 @@ cql::cql_session_impl_t::setup_keyspace(
         boost::shared_ptr<cql_query_t> use_my_keyspace(
             new cql_query_t("USE "+_keyspace_name+";"));
 
+        use_my_keyspace->set_stream(*stream);
         boost::shared_future<cql::cql_future_result_t> future_result
             = conn->query(use_my_keyspace);
-        return future_result.timed_wait(boost::posix_time::seconds(30)); // TODO(JS): that's ugly
+        future_result.timed_wait(boost::posix_time::seconds(30)); // TODO(JS): that's ugly
+        
+        // The stream was released after receiving the body. Now we need to re-acquire it.
+        *stream = conn->acquire_stream();
     }
     return true;
 }
@@ -514,8 +520,9 @@ cql::cql_session_impl_t::get_connection(
         = connect(query_plan, stream, &tried_hosts);
     
     if (conn) {
+        conn->set_session_ptr(this);
         conn->set_keyspace(_keyspace_name);
-        setup_keyspace(conn);
+        setup_keyspace(conn, stream);
     }
     return conn;
 }

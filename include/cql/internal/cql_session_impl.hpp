@@ -224,7 +224,9 @@ private:
         cql_connection_t::cql_message_errback_t  errback);
 
     bool
-    setup_keyspace(boost::shared_ptr<cql_connection_t> conn);
+    setup_keyspace(
+        boost::shared_ptr<cql_connection_t> conn,
+        cql_stream_t*                       stream);
 
     boost::shared_future<cql_future_result_t>
     query(
