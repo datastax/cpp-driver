@@ -90,7 +90,8 @@ class cql_connection_impl_t : public cql::cql_connection_t
 	{
 	public:
 		boolkeeper():value(false){}
-		volatile bool value;
+		bool value;
+		boost::mutex mutex;
 	};
 	//is_disposed flag - value of it is set within the destructor
 	boost::shared_ptr<boolkeeper> _is_disposed;
@@ -136,6 +137,7 @@ public:
 
 	virtual ~cql_connection_impl_t()
 	{
+		boost::mutex::scoped_lock(_is_disposed->mutex);
 		// lets set the disposed flag (the shared counter will prevent it from being destroyed)
 		_is_disposed->value=true;
 	}
@@ -612,26 +614,27 @@ private:
         const boost::system::error_code& err)
     {
 		// if the connection was already disposed we return here immediatelly
+		boost::mutex::scoped_lock(is_disposed->mutex);
 		if(is_disposed->value)
 			return;
-        if (!err) {
-            cql::cql_error_t decode_err;
-            if (_response_header.consume(&decode_err)) {
-                log(CQL_LOG_DEBUG, "received header for message " + _response_header.str());
-                body_read(_response_header);
-            }
-            else {
-                log(CQL_LOG_ERROR, "error decoding header " + _response_header.str());
-            }
-        }
-        else if (err.value() == boost::system::errc::operation_canceled) {
-            /* do nothing */
-        }
-        else {
-            log(CQL_LOG_ERROR, "error reading header " + err.message());
-            check_transport_err(err);
-        }
-    }
+		if (!err) {
+			cql::cql_error_t decode_err;
+			if (_response_header.consume(&decode_err)) {
+				log(CQL_LOG_DEBUG, "received header for message " + _response_header.str());
+				body_read(_response_header);
+			}
+			else {
+				log(CQL_LOG_ERROR, "error decoding header " + _response_header.str());
+			}
+		}
+		else if (err.value() == boost::system::errc::operation_canceled) {
+			/* do nothing */
+		}
+		else {
+			log(CQL_LOG_ERROR, "error reading header " + err.message());
+			check_transport_err(err);
+		}
+	}
 
     void
     body_read(const cql::cql_header_impl_t& header) {
@@ -688,6 +691,7 @@ private:
 		boost::shared_ptr<boolkeeper> is_disposed,
         const boost::system::error_code& err)
     {
+		boost::mutex::scoped_lock(is_disposed->mutex);
 		// if the connection was already disposed we return here immediatelly
 		if(is_disposed->value)
 			return;
