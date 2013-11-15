@@ -85,6 +85,16 @@ class cql_connection_impl_t : public cql::cql_connection_t
     // connection management.
     static const int NUMBER_OF_USER_STREAMS = 127;
 
+	//helper boolean value holder
+	class boolkeeper
+	{
+	public:
+		boolkeeper():value(false){}
+		volatile bool value;
+	};
+	//is_disposed flag - value of it is set within the destructor
+	boost::shared_ptr<boolkeeper> _is_disposed;
+
 public:
     typedef
         std::list<cql::cql_message_buffer_t>
@@ -120,8 +130,15 @@ public:
         _ready(false),
         _closing(false),
         _reserved_stream(_callback_storage.acquire_stream()),
-        _uuid(cql_uuid_t::create())
+        _uuid(cql_uuid_t::create()),
+		_is_disposed(new boolkeeper)
     {}
+
+	virtual ~cql_connection_impl_t()
+	{
+		// lets set the disposed flag (the shared counter will prevent it from being destroyed)
+		_is_disposed->value=true;
+	}
 
     boost::shared_future<cql::cql_future_connection_t>
     connect(const cql_endpoint_t& endpoint)
@@ -586,13 +603,17 @@ private:
 #else
                                 boost::asio::transfer_all(),
 #endif
-                                boost::bind(&cql_connection_impl_t<TSocket>::header_read_handle, this, boost::asio::placeholders::error));
+                                boost::bind(&cql_connection_impl_t<TSocket>::header_read_handle, this, _is_disposed, boost::asio::placeholders::error));
     }
 
     void
     header_read_handle(
+		boost::shared_ptr<boolkeeper> is_disposed,
         const boost::system::error_code& err)
     {
+		// if the connection was already disposed we return here immediatelly
+		if(is_disposed->value)
+			return;
         if (!err) {
             cql::cql_error_t decode_err;
             if (_response_header.consume(&decode_err)) {
@@ -651,7 +672,7 @@ private:
 #else
                                 boost::asio::transfer_all(),
 #endif
-                                boost::bind(&cql_connection_impl_t<TSocket>::body_read_handle, this, header, boost::asio::placeholders::error));
+                                boost::bind(&cql_connection_impl_t<TSocket>::body_read_handle, this, header,_is_disposed, boost::asio::placeholders::error));
     }
 
 
@@ -664,8 +685,13 @@ private:
     void
     body_read_handle(
         const cql::cql_header_impl_t& header,
+		boost::shared_ptr<boolkeeper> is_disposed,
         const boost::system::error_code& err)
     {
+		// if the connection was already disposed we return here immediatelly
+		if(is_disposed->value)
+			return;
+
         log(CQL_LOG_DEBUG, "received body for message " + header.str());
 
         if (err) {
