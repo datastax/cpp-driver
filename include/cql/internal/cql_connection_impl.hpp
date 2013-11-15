@@ -93,8 +93,6 @@ class cql_connection_impl_t : public cql::cql_connection_t
 		bool value;
 		boost::mutex mutex;
 	};
-	//is_disposed flag - value of it is set within the destructor
-	boost::shared_ptr<boolkeeper> _is_disposed;
 
 public:
     typedef
@@ -682,9 +680,9 @@ private:
     void
     preprocess_result_message(cql::cql_message_result_impl_t* response_message)
     {
-        
+
     }
-    
+
     void
     body_read_handle(
         const cql::cql_header_impl_t& header,
@@ -727,7 +725,7 @@ private:
             else {
                 callback_pair_t callback_pair = _callback_storage.get_callbacks(stream);
                 release_stream(stream);
-                
+
                 cql::cql_message_result_impl_t* response_message =
                     dynamic_cast<cql::cql_message_result_impl_t*>(_response_message.release());
 
@@ -895,6 +893,7 @@ private:
     bool                                     _closing;
     cql_stream_t                             _reserved_stream;
     cql_uuid_t                               _uuid;
+	boost::shared_ptr<boolkeeper>            _is_disposed;
 };
 
 } // namespace cql

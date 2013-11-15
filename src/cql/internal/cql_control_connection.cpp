@@ -19,6 +19,7 @@
 #include <string>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/make_shared.hpp>
 #include <boost/tuple/tuple.hpp>
 
 #include "cql/internal/cql_control_connection.hpp"
@@ -142,39 +143,39 @@ cql_control_connection_t::refresh_node_list_and_token_map()
     if(_log_callback) {
         _log_callback(CQL_LOG_INFO, "Refreshing node list and token map...");
     }
-    
+
     boost::shared_ptr<cql_metadata_t> clusters_metadata = _cluster.metadata();
     std::string partitioner;
-    
+
     // (ip_address, data_center, rack, tokens):
     std::vector<cql_host_t::ip_address_t>    found_hosts;
     std::vector<std::string>                 data_centers,
                                              racks;
     std::vector<std::map<std::string,bool> > all_tokens;
-    
+
     std::map<cql_host_t::ip_address_t, std::map<std::string,bool> > token_map;
-    
+
     {// SELECT PEERS
         boost::shared_future<cql_future_result_t> query_future_result =
         boost::static_pointer_cast<cql::cql_session_t>(_session)
             ->query(boost::make_shared<cql_query_t>(cql_query_t(select_peers_expression())));
-        
+
         if(query_future_result.timed_wait(boost::posix_time::seconds(10))) {
             cql_future_result_t query_result = query_future_result.get();
-            
+
             if(query_result.error.is_err()) {
                 if(_log_callback) {
                     _log_callback(CQL_LOG_ERROR, query_result.error.message);
                 }
                 return;
             }
-            
+
             boost::shared_ptr<cql::cql_result_t> result = query_result.result;
             while(result->next())
             {
                 cql_host_t::ip_address_t peer_address;
                 bool output = false;
-                
+
                 if(!(result->is_null("rpc_address", output)) && !output)
                 {
                     cql::cql_byte_t* data = NULL;
@@ -202,15 +203,15 @@ cql_control_connection_t::refresh_node_list_and_token_map()
                 {
                     std::string peer_data_center, peer_rack;
                     cql_set_t* peer_tokens_set;
-                    
+
                     result->get_string("data_center", peer_data_center);
                     result->get_string("rack", peer_rack);
                     result->get_set("tokens", &peer_tokens_set);
-                    
+
                     found_hosts.push_back(peer_address);
                     data_centers.push_back(peer_data_center);
                     racks.push_back(peer_rack);
-                    
+
                     all_tokens.push_back(std::map<std::string,bool>());
                     for(size_t i = 0u; i < peer_tokens_set->size(); ++i) {
                         std::string single_peers_token;
@@ -231,17 +232,17 @@ cql_control_connection_t::refresh_node_list_and_token_map()
         boost::shared_future<cql_future_result_t> query_future_result =
         boost::static_pointer_cast<cql::cql_session_t>(_session)
             ->query(boost::make_shared<cql_query_t>(cql_query_t(select_local_expression())));
-        
+
         if(query_future_result.timed_wait(boost::posix_time::seconds(10))) {
             cql_future_result_t query_result = query_future_result.get();
-            
+
             if(query_result.error.is_err()) {
                 if(_log_callback) {
                     _log_callback(CQL_LOG_ERROR, query_result.error.message);
                 }
                 return;
             }
-            
+
             boost::shared_ptr<cql_host_t> local_host = clusters_metadata->get_host(_active_connection->endpoint());
             boost::shared_ptr<cql::cql_result_t> result = query_result.result;
             if(result->next())
@@ -255,12 +256,12 @@ cql_control_connection_t::refresh_node_list_and_token_map()
                     result->get_string("data_center", local_data_center);
                     result->get_string("rack", local_rack);
                     local_host->set_location_info(local_data_center, local_rack);
-                    
+
                     result->get_string("partitioner", partitioner);
-                    
+
                     cql_set_t* local_tokens_set;
                     result->get_set("tokens", &local_tokens_set);
-                    
+
                     if(partitioner != "" && local_tokens_set->size() > 0u) {
                         std::map<std::string,bool> local_tokens_map;
                         for(size_t i = 0u; i < local_tokens_set->size(); ++i) {
@@ -268,7 +269,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
                             local_tokens_set->get_string(i, single_local_token);
                             local_tokens_map[single_local_token] = true;
                         }
-                        
+
                         if(token_map.find(local_host->address()) == token_map.end()) {
                             token_map[local_host->address()] = std::map<std::string,bool>();
                         }
@@ -277,7 +278,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
                     }
                 }
             }
-            
+
         }
         else {
             if(_log_callback) {
@@ -286,7 +287,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
             return;
         }
     }
-    
+
     // Now we will determine the port number, assuming there is one (common for whole cluster).
     // Otherwise, we use default 9042.
     int port_number;
@@ -296,17 +297,17 @@ cql_control_connection_t::refresh_node_list_and_token_map()
         port_number = current_endpoints.empty() ? cql_builder_t::DEFAULT_PORT
         : current_endpoints[0].port();
     }
-    
+
     for(size_t i = 0u; i < found_hosts.size(); ++i)
     {
         cql_host_t::ip_address_t host_address = found_hosts[i];
-        
+
         cql_endpoint_t peer_endpoint(host_address, port_number);
         boost::shared_ptr<cql_host_t> host = clusters_metadata->get_host(peer_endpoint);
         if(!host) host = clusters_metadata->add_host(peer_endpoint);
-        
+
         host->set_location_info(data_centers[i], racks[i]);
-        
+
         if(partitioner != "") {
             for(std::map<std::string,bool>::iterator
                     one_token  = all_tokens[i].begin();
@@ -322,10 +323,10 @@ cql_control_connection_t::refresh_node_list_and_token_map()
         for(size_t i = 0; i < found_hosts.size(); ++i) {
             hosts_addresses_map[found_hosts[i]] = true;
         }
-        
+
         std::vector<boost::shared_ptr<cql_host_t> > clusters_hosts;
         clusters_metadata->get_hosts(clusters_hosts);
-        
+
         for(std::vector<boost::shared_ptr<cql_host_t> >::iterator
                 host  = clusters_hosts.begin();
                 host != clusters_hosts.end(); ++host)
@@ -337,14 +338,14 @@ cql_control_connection_t::refresh_node_list_and_token_map()
             }
         }
     }
-    
+
     //TODO(JS) : clusters_metadata->rebuildTokenMap(...)
-    
+
     if(_log_callback) {
         _log_callback(CQL_LOG_INFO, "NodeList and TokenMap successfully refreshed.");
     }
 }
-    
+
 void
 cql_control_connection_t::conn_cassandra_event(
     void*                          sender,
