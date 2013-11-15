@@ -75,14 +75,17 @@ log_callback(
 
 void
 demo(
-    const std::string& host,
+    const std::vector<std::string>& hosts,
     bool               use_ssl)
 {
     try
     {
 		boost::shared_ptr<cql::cql_builder_t> builder = cql::cql_cluster_t::builder();
 		builder->with_log_callback(&log_callback);
-        builder->add_contact_point(boost::asio::ip::address::from_string(host));
+
+		for (std::vector<std::string>::const_iterator it = hosts.begin(); it != hosts.end(); it++) {
+			builder->add_contact_point(boost::asio::ip::address::from_string(*it));
+		}
 
 		if (use_ssl) {
 			builder->with_ssl();
@@ -140,13 +143,14 @@ main(
     char** vargs)
 {
     bool ssl = false;
-    std::string host;
+    std::string hoststr;
+	std::vector<std::string> hosts;
 
     boost::program_options::options_description desc("Options");
     desc.add_options()
         ("help", "produce help message")
         ("ssl", boost::program_options::value<bool>(&ssl)->default_value(false), "use SSL")
-        ("host", boost::program_options::value<std::string>(&host)->default_value("127.0.0.1"), "node to use as initial contact point");
+        ("hosts", boost::program_options::value<std::string>(&hoststr)->default_value("127.0.0.1"), "comma separated list of notes to use as initial contact point");
 
     boost::program_options::variables_map variables_map;
     try {
@@ -164,8 +168,14 @@ main(
         return 0;
     }
 
+	std::stringstream ss(hoststr);
+	std::string s;
+	while (getline(ss, s, ',')) {
+		hosts.push_back(s);
+	} 
+
     cql::cql_initialize();
-    demo(host, ssl);
+    demo(hosts, ssl);
 
     cql::cql_terminate();
     return 0;

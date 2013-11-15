@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6.4)
-set(PROJECT_NAME_STR cql)
+set(PROJECT_NAME_STR datastaxcql)
 # Alias for project name used in unit tests
 set(CQL_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
 project(${PROJECT_NAME_STR} C CXX)
@@ -8,7 +8,7 @@ project(${PROJECT_NAME_STR} C CXX)
 # The version number
 #-------------------
 set(PROJECT_VERSION_MAJOR 0)
-set(PROJECT_VERSION_MINOR 7)
+set(PROJECT_VERSION_MINOR 8)
 set(PROJECT_VERSION_PATCH 0)
 set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
@@ -224,3 +224,8 @@ add_custom_target(UNINSTALL
 # the demo program
 #-------------------
 add_subdirectory(demo)
+
+#-------------------
+# the stress test
+#-------------------
+add_subdirectory(stress)
