@@ -224,3 +224,8 @@ add_custom_target(UNINSTALL
 # the demo program
 #-------------------
 add_subdirectory(demo)
+
+#-------------------
+# the stress test
+#-------------------
+add_subdirectory(stress)
