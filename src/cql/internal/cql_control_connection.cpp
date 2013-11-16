@@ -184,7 +184,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
                     if(size == 4)
                         peer_address = make_ipv4_address_from_bytes(data);
                 }
-                if(peer_address.is_unspecified())
+                if(peer_address == ::boost::asio::ip::address())
                 {
                     if(!(result->is_null("peer", output)) && !output)
                     {
@@ -199,7 +199,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
                         _log_callback(CQL_LOG_ERROR, "No rpc_address found for host in peers system table.");
                     }
                 }
-                if(!(peer_address.is_unspecified()))
+                if(!(peer_address == ::boost::asio::ip::address()))
                 {
                     std::string peer_data_center, peer_rack;
                     cql_set_t* peer_tokens_set;
