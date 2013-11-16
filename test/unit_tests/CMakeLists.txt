@@ -1,43 +1,18 @@
-cmake_minimum_required(VERSION 2.8.11)
+#-------------------
+# Test
+#-------------------
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ".")
+set(PROJECT_TEST_NAME ${PROJECT_NAME_STR}_test)
+set(TEST ${PROJECT_TEST_NAME})
+include_directories(${INCLUDES} ${PROJECT_SOURCE_DIR}/src/)
 
-set(TEST UnitTests_${CQL_DRIVER_PROJECT_NAME})
-project(${TEST} C CXX)
-
-# ---------------------------------------------------------------
-# SPECIFY TARGET
-
-# Setup files that are part of unit tests
-file(GLOB SRC_FILES *.cpp)
-add_executable(${TEST} ${SRC_FILES})
+file(GLOB TEST_SRC_FILES *.cpp)
+add_executable(${PROJECT_TEST_NAME} EXCLUDE_FROM_ALL ${TEST_SRC_FILES})
+target_link_libraries(${PROJECT_TEST_NAME} ${PROJECT_LIB_NAME} ${Boost_LIBRARIES} ${zlib_LIBRARIES} ${OpenSSL_LIBRARIES} "pthread")
 
 set_property(
-	TARGET ${TEST}
-	APPEND PROPERTY COMPILE_FLAGS ${PROJECT_COMPILER_FLAGS})
-
-# Setup include directories 
-# Directories are inherited from parent project 
-set(CCM_BRIDGE_INCLUDES "${CMAKE_PROJECT_SOURCE}/extra/ccm_bridge/include")
-target_include_directories(${TEST} PUBLIC ${INCLUDES} ${CCM_BRIDGE_INCLUDES})
-
-target_link_libraries(${TEST} 
-	${LIBS} ${PROJECT_LIB_NAME_STATIC} CCMBridge)
-
-# ---------------------------------------------------------------
-
-# ---------------------------------------------------------------
-# SPECIFY TEST DEPENDENCIES
-
-# Dependency to libcql
-add_dependencies(${TEST} ${PROJECT_LIB_NAME_STATIC})
-
-# Dependency to ccm_bridge
-add_dependencies(${TEST} CCMBridge)
-
-# ----------------------------------------------------------------
-
-# ----------------------------------------------------------------
-# TEST WITH CTEST FRAMEWORK
+  TARGET ${PROJECT_TEST_NAME}
+  APPEND PROPERTY COMPILE_FLAGS ${PROJECT_COMPILER_FLAGS})
 
 enable_testing()
-add_test(${TEST} ${TEST})
-# ----------------------------------------------------------------
+add_test(${PROJECT_TEST_NAME} ${PROJECT_TEST_NAME})
