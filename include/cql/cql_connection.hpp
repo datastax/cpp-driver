@@ -277,14 +277,6 @@ public:
     virtual void
     get_unprepared_statements(
         std::vector<std::vector<cql_byte_t> > &output) const = 0;
-            
-    /**
-        Asks whether any "PREPARE" statements are awaiting execution by this connection.
-        Complexity: constant.
-        Recommended only for advanced users.
-    */
-    virtual bool
-    is_prepare_syncd() = 0;
 
     /**
         The connection may be forced (externally) to use a different keyspace than the one

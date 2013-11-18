@@ -93,18 +93,18 @@ demo(
 
 		if (session) {
 
-            // execute a query, switch keyspaces
+            // write a query that switches current keyspace to "system"
             boost::shared_ptr<cql::cql_query_t> use_system(
                 new cql::cql_query_t("USE system;", cql::CQL_CONSISTENCY_ONE));
 
-
+            // send the query to Cassandra
             boost::shared_future<cql::cql_future_result_t> future = session->query(use_system);
 
             // wait for the query to execute
             future.wait();
 
             // check whether the query succeeded
-            std::cout << "switch keyspace successfull? " << (!future.get().error.is_err() ? "true" : "false") << std::endl;
+            std::cout << "switch keyspace successful? " << (!future.get().error.is_err() ? "true" : "false") << std::endl;
 
             // execute a query, select all rows from the keyspace
             boost::shared_ptr<cql::cql_query_t> select(
@@ -115,12 +115,38 @@ demo(
             future.wait();
 
             // check whether the query succeeded
-            std::cout << "select successfull? " << (!future.get().error.is_err() ? "true" : "false") << std::endl;
+            std::cout << "select successful? " << (!future.get().error.is_err() ? "true" : "false") << std::endl;
             if (future.get().result) {
                 // print the rows return by the successful query
                 print_rows(*future.get().result);
             }
 
+            // now a small demonstration on the usage of prepared statements:
+            boost::shared_ptr<cql::cql_query_t> unbound_select(
+                new cql::cql_query_t("SELECT * FROM schema_keyspaces WHERE keyspace_name=?;", cql::CQL_CONSISTENCY_ONE));
+            
+            // compile the parametrized query on the server
+            future = session->prepare(unbound_select);
+            future.wait();
+            std::cout << "prepare successful? " << (!future.get().error.is_err() ? "true" : "false") << std::endl;
+            
+            // read the hash (ID) returned by Cassandra as identificator of prepared query
+            std::vector<cql::cql_byte_t> queryid = future.get().result->query_id();
+            
+            boost::shared_ptr<cql::cql_execute_t> bound(
+                new cql::cql_execute_t(queryid, cql::CQL_CONSISTENCY_ONE));
+            
+            // bind the query with concrete parameter: "system_auth"
+            bound->push_back("system_auth");
+
+            // send the concrete (bound) query
+            future = session->execute(bound);
+            future.wait();
+            std::cout << "execute successful? " << (!future.get().error.is_err() ? "true" : "false") << std::endl;
+            if (future.get().result) {
+                print_rows(*future.get().result);
+            }
+            
             // close the connection session
             session->close();
 		}

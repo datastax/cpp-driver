@@ -399,11 +399,6 @@ cql::cql_session_impl_t::setup_prepared_statements(
         return false;
     }
     
-    if (conn->is_prepare_syncd()) {
-        // Quick exit - intended to prevent unnecessary execution of get_unprepared_statements().
-        return true;
-    }
-    
     std::vector<std::vector<cql_byte_t> > unprepared;
     conn->get_unprepared_statements(unprepared);
 

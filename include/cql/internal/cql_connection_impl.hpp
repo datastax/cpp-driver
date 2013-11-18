@@ -104,6 +104,10 @@ struct cql_prepare_statements_t
     get_unprepared_statements(
         std::vector<cql_query_id_t> &output) const
     {
+        if (_is_syncd) {
+            return;
+        }
+            
         bool none_returned = true;
         
         boost::mutex::scoped_lock(_mutex);
@@ -132,15 +136,9 @@ struct cql_prepare_statements_t
         _collection[query_id] = true;
         return true;
     }
-    
-    bool
-    is_syncd()
-    {
-        return _is_syncd;
-    }
 
 private:
-    
+
     typedef
         std::map<cql_query_id_t, bool>
         prepare_statements_collection_t;
@@ -435,13 +433,7 @@ public:
     {
         _prepare_statements.set(id);
     }
-
-    bool
-    is_prepare_syncd()
-    {
-        return _prepare_statements.is_syncd();
-    }
-    
+   
     void
     get_unprepared_statements(
         std::vector<std::vector<cql_byte_t> > &output) const
