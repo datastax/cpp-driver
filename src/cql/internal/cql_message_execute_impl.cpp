@@ -267,3 +267,16 @@ cql::cql_message_execute_impl_t::prepare(cql::cql_error_t*) {
     cql::encode_short(stream, consistency);
     return true;
 }
+
+cql::cql_stream_t
+cql::cql_message_execute_impl_t::stream()
+{
+    return _stream;
+}
+
+void
+cql::cql_message_execute_impl_t::set_stream(const cql_stream_t& stream)
+{
+    _stream = stream;
+}
+

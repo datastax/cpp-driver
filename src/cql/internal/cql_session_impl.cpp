@@ -27,6 +27,8 @@
 #include "cql/exceptions/cql_too_many_connections_per_host_exception.hpp"
 #include "cql/cql_host.hpp"
 #include "cql/internal/cql_trashcan.hpp"
+#include "cql/internal/cql_socket.hpp"
+#include "cql/internal/cql_connection_impl.hpp"
 
 
 cql::cql_session_impl_t::cql_session_impl_t(
@@ -37,7 +39,8 @@ cql::cql_session_impl_t::cql_session_impl_t(
     _defunct_callback(callbacks.defunct_callback()),
     _log_callback(callbacks.log_callback()),
     _uuid(cql_uuid_t::create()),
-    _configuration(configuration)
+    _configuration(configuration),
+    _stream_id_vs_query_string(cql::cql_connection_impl_t<cql::cql_socket_t>::NUMBER_OF_STREAMS, "")
 {}
 
 cql::cql_session_impl_t::~cql_session_impl_t()
@@ -119,6 +122,45 @@ cql::cql_session_impl_t::set_keyspace(const std::string& new_keyspace)
             J->second->set_keyspace(new_keyspace);
         }
     }
+}
+
+void
+cql::cql_session_impl_t::set_prepare_statement(
+    const std::vector<cql_byte_t>& query_id,
+    const std::string& query_text)
+{
+    boost::mutex::scoped_lock lock(_mutex);    
+    _prepare_statements[query_id] = query_text;
+    
+    for(connection_pool_t::iterator I  = _connection_pool.begin();
+        I != _connection_pool.end(); ++I)
+    {
+        cql_connections_collection_t& conn_collection_ptr = *(I->second);
+        for(cql_connections_collection_t::iterator
+            J  = conn_collection_ptr.begin();
+            J != conn_collection_ptr.end(); ++J)
+        {
+            J->second->set_prepared_statement(query_id);
+        }
+    }
+    
+    for(connection_pool_t::iterator I  = _trashcan->_trashcan.begin();
+        I != _trashcan->_trashcan.end(); ++I)
+    {
+        cql_connections_collection_t& conn_collection_ptr = *(I->second);
+        for(cql_connections_collection_t::iterator
+            J  = conn_collection_ptr.begin();
+            J != conn_collection_ptr.end(); ++J)
+        {
+            J->second->set_prepared_statement(query_id);
+        }
+    }
+}
+
+std::vector<std::string>&
+cql::cql_session_impl_t::get_active_queries_strings()
+{
+    return _stream_id_vs_query_string;
 }
 
 bool
@@ -349,7 +391,7 @@ cql::cql_session_impl_t::execute(
 }
 
 bool
-cql::cql_session_impl_t::setup_keyspace(
+cql::cql_session_impl_t::setup_prepared_statements(
     boost::shared_ptr<cql_connection_t> conn,
     cql_stream_t*                       stream)
 {
@@ -357,6 +399,61 @@ cql::cql_session_impl_t::setup_keyspace(
         return false;
     }
     
+    if (conn->is_prepare_syncd()) {
+        // Quick exit - intended to prevent unnecessary execution of get_unprepared_statements().
+        return true;
+    }
+    
+    std::vector<std::vector<cql_byte_t> > unprepared;
+    conn->get_unprepared_statements(unprepared);
+
+    bool is_success = true;
+    
+    for (size_t i = 0u; i < unprepared.size(); ++i) {
+        if (_prepare_statements.find(unprepared[i]) == _prepare_statements.end()) {
+            is_success = false;
+            continue;
+        }
+    
+        std::string prepare_query_text = _prepare_statements[unprepared[i]];
+        boost::shared_ptr<cql_query_t> prepare_query(
+            new cql_query_t(prepare_query_text));
+
+        prepare_query->set_stream(*stream);
+
+        boost::shared_future<cql::cql_future_result_t> future_result
+            = conn->query(prepare_query);
+            
+        if (future_result.timed_wait(boost::posix_time::seconds(30))) { // TODO: set sensible (or none) time limit
+            // The stream was released after receiving the body. Now we need to re-acquire it.
+            *stream = conn->acquire_stream();
+            
+            if (future_result.get().error.is_err()) {
+                is_success = false;
+            }
+            else {
+                // It's a good idea to check whether returned query_id matches the requested one.
+                BOOST_ASSERT(future_result.get().result->query_id() == unprepared[i]);
+            }
+        }
+        else {
+            is_success = false;
+        }
+    }
+    
+    return is_success;
+}
+
+bool
+cql::cql_session_impl_t::setup_keyspace(
+    boost::shared_ptr<cql_connection_t> conn,
+    cql_stream_t*                       stream)
+{
+    if (!conn) {
+        return false;
+    }
+
+    bool is_success = true;
     if (!(conn->is_keyspace_syncd())) {
         boost::shared_ptr<cql_query_t> use_my_keyspace(
             new cql_query_t("USE "+_keyspace_name+";"));
@@ -364,12 +461,19 @@ cql::cql_session_impl_t::setup_keyspace(
         use_my_keyspace->set_stream(*stream);
         boost::shared_future<cql::cql_future_result_t> future_result
             = conn->query(use_my_keyspace);
-        future_result.timed_wait(boost::posix_time::seconds(30)); // TODO(JS): that's ugly
-        
-        // The stream was released after receiving the body. Now we need to re-acquire it.
-        *stream = conn->acquire_stream();
+        if (future_result.timed_wait(boost::posix_time::seconds(30))) { // TODO: set sensible (or none) time limit
+            // The stream was released after receiving the body. Now we need to re-acquire it.
+            *stream = conn->acquire_stream();
+            
+            if (future_result.get().error.is_err()) {
+                is_success = false;
+            }
+        }
+        else {
+            is_success = false;
+        }
     }
-    return true;
+    return is_success;
 }
 
 boost::shared_future<cql::cql_future_result_t>
@@ -423,11 +527,9 @@ cql::cql_session_impl_t::execute(
 {
 	cql_stream_t stream;
     boost::shared_ptr<cql_connection_t> conn = get_connection(boost::shared_ptr<cql_query_t>(), &stream);
-
-	assert(0);
-	// TODO: Not implemented - change event to class and pass stream to execute
-
+    
 	if (conn) {
+        message->set_stream(stream);
         return conn->execute(message);
     }
 
@@ -519,11 +621,22 @@ cql::cql_session_impl_t::get_connection(
     boost::shared_ptr<cql::cql_connection_t> conn
         = connect(query_plan, stream, &tried_hosts);
     
+    bool is_setup_keyspace_successful = false;
+    bool is_setup_prepared_successful = false;
+    
     if (conn) {
         conn->set_session_ptr(this);
-        conn->set_keyspace(_keyspace_name);
-        setup_keyspace(conn, stream);
+        is_setup_keyspace_successful = setup_keyspace(conn, stream);
+        is_setup_prepared_successful = setup_prepared_statements(conn, stream);
+        if (!(stream->is_invalid()) && query != NULL) {
+            _stream_id_vs_query_string[stream->stream_id()] = query->query();
+        }
     }
+    
+    if (!is_setup_keyspace_successful || !is_setup_prepared_successful) {
+        conn = NULL;
+    }
+        
     return conn;
 }
 

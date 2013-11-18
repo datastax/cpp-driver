@@ -24,6 +24,7 @@
 #include <boost/ptr_container/ptr_list.hpp>
 
 #include "cql/cql.hpp"
+#include "cql/cql_stream.hpp"
 #include "cql/internal/cql_message.hpp"
 
 namespace cql {
@@ -98,6 +99,12 @@ public:
 
     cql_message_buffer_t
     buffer();
+        
+    cql_stream_t
+    stream();
+
+    void
+    set_stream(const cql_stream_t& stream);
 
 private:
     typedef std::list<param_t> params_container_t;
@@ -106,6 +113,7 @@ private:
     std::vector<cql::cql_byte_t> _query_id;
     cql::cql_consistency_enum    _consistency;
     params_container_t           _params;
+    cql_stream_t                 _stream;
 };
 
 } // namespace cql

@@ -156,8 +156,17 @@ public:
 
     void
     set_keyspace(const std::string& new_keyspace);
-
+    
+    void
+    set_prepare_statement(
+                          const std::vector<cql_byte_t>& query_id,
+                          const std::string& query_text);
+    
+    std::vector<std::string>&
+    get_active_queries_strings();
+    
 private:
+    
     typedef std::map<cql_uuid_t, boost::shared_ptr<cql_connection_t> > cql_connections_collection_t;
 
     struct client_container_t
@@ -223,6 +232,11 @@ private:
         cql_connection_t::cql_message_callback_t callback,
         cql_connection_t::cql_message_errback_t  errback);
 
+    bool
+    setup_prepared_statements(
+        boost::shared_ptr<cql_connection_t> conn,
+        cql_stream_t*                       stream);
+    
     bool
     setup_keyspace(
         boost::shared_ptr<cql_connection_t> conn,
@@ -325,7 +339,12 @@ private:
     connection_pool_t                       _connection_pool;
     boost::shared_ptr<cql_trashcan_t>       _trashcan;
     connections_counter_t                   _connection_counters;
+    
     std::string                             _keyspace_name;
+
+    cql_id_query_map_t                      _prepare_statements;
+    std::vector<std::string>                _stream_id_vs_query_string;
+    
 };
 
 } // namespace cql

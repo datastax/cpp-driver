@@ -78,15 +78,87 @@
 
 namespace cql {
 
+// The following class is a collection of the prepared statements
+struct cql_prepare_statements_t
+{
+    cql_prepare_statements_t() : _is_syncd(true) {}
+    
+    typedef
+        std::vector<cql_byte_t>
+        cql_query_id_t;
+    
+    void
+    set(
+        const cql_query_id_t& query_id)
+    {
+        boost::mutex::scoped_lock(_mutex);
+        
+        if (_collection.find(query_id) != _collection.end()) {
+            return;
+        }
+        _collection[query_id] = false;
+        _is_syncd = false;
+    }
+    
+    void
+    get_unprepared_statements(
+        std::vector<cql_query_id_t> &output) const
+    {
+        bool none_returned = true;
+        
+        boost::mutex::scoped_lock(_mutex);
+        for(prepare_statements_collection_t::const_iterator
+                I  = _collection.begin();
+                I != _collection.end(); ++I)
+        {
+            if (I->second == false) {
+                output.push_back(I->first);
+                none_returned = false;
+            }
+        }
+        _is_syncd = none_returned;
+    }
+    
+    bool
+    enable(
+        const cql_query_id_t& query_id)
+    {
+        boost::mutex::scoped_lock(_mutex);
+        
+        if (_collection.find(query_id) == _collection.end())
+        {
+            return false;
+        }
+        _collection[query_id] = true;
+        return true;
+    }
+    
+    bool
+    is_syncd()
+    {
+        return _is_syncd;
+    }
+
+private:
+    
+    typedef
+        std::map<cql_query_id_t, bool>
+        prepare_statements_collection_t;
+    
+    prepare_statements_collection_t   _collection;
+    mutable volatile bool             _is_syncd;
+    boost::mutex                      _mutex;
+};
+    
 template <typename TSocket>
 class cql_connection_impl_t : public cql::cql_connection_t
 {
+public:
     static const int NUMBER_OF_STREAMS = 128;
     // stream with is 0 is dedicated to events messages and
     // connection management.
     static const int NUMBER_OF_USER_STREAMS = 127;
-
-public:
+    
     typedef
         std::list<cql::cql_message_buffer_t>
         request_buffer_t;
@@ -263,8 +335,7 @@ public:
         cql::cql_connection_t::cql_message_errback_t  errback)
     {
 
-        cql_stream_t stream = acquire_stream();
-        assert(0); // TODO: change this method to use new stream allocation mechanism
+        cql_stream_t stream = message->stream();
 
         if (stream.is_invalid()) {
             errback(*this, stream, create_stream_id_error());
@@ -357,6 +428,25 @@ public:
     set_keyspace(const std::string& new_keyspace_name)
     {
         _selected_keyspace_name = new_keyspace_name;
+    }
+    
+    void
+    set_prepared_statement(const std::vector<cql_byte_t>& id)
+    {
+        _prepare_statements.set(id);
+    }
+
+    bool
+    is_prepare_syncd()
+    {
+        return _prepare_statements.is_syncd();
+    }
+    
+    void
+    get_unprepared_statements(
+        std::vector<std::vector<cql_byte_t> > &output) const
+    {
+        _prepare_statements.get_unprepared_statements(output);
     }
 
     void
@@ -687,7 +777,17 @@ private:
                 break;
                 
             case CQL_RESULT_PREPARED:
-                //TODO(JS)
+                const std::vector<cql_byte_t>& query_id = response_message->query_id();
+                set_prepared_statement(query_id);
+                _prepare_statements.enable(query_id);
+                if (_session_ptr) {
+                    cql_stream_id_t stream_id = _response_header.stream().stream_id();
+                    
+                    //TODO: write to stream_id_vs_query_id map in session object!!!
+                    _session_ptr->set_prepare_statement(
+                        query_id,
+                        _session_ptr->get_active_queries_strings()[stream_id]);
+                }
                 break;
         }
     }
@@ -899,6 +999,9 @@ private:
     
     std::string                              _current_keyspace_name,
                                              _selected_keyspace_name;
+    
+    cql_prepare_statements_t                 _prepare_statements;
+    
     cql_session_t*                           _session_ptr;
 };
 

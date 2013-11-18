@@ -61,6 +61,11 @@ cql::cql_execute_t::push_back(const std::string& val) {
 }
 
 void
+cql::cql_execute_t::push_back(const char* val) {
+    _impl->push_back(std::string(val));
+}
+
+void
 cql::cql_execute_t::push_back(const cql::cql_short_t val) {
     _impl->push_back(val);
 }
@@ -98,4 +103,16 @@ cql::cql_execute_t::pop_back() {
 cql::cql_message_execute_impl_t*
 cql::cql_execute_t::impl() const {
     return _impl;
+}
+
+cql::cql_stream_t
+cql::cql_execute_t::stream()
+{
+    return impl()->stream();
+}
+
+void
+cql::cql_execute_t::set_stream(const cql_stream_t& stream)
+{
+    impl()->set_stream(stream);
 }
