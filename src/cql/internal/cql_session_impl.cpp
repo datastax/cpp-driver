@@ -390,6 +390,9 @@ cql::cql_session_impl_t::execute(
     return cql_stream_t();
 }
 
+/** Assigns all the prepared statements (ever created within the session)
+    to the given connection. Possibly modifies the value pointed by `stream'.
+*/
 bool
 cql::cql_session_impl_t::setup_prepared_statements(
     boost::shared_ptr<cql_connection_t> conn,
@@ -406,6 +409,8 @@ cql::cql_session_impl_t::setup_prepared_statements(
     
     for (size_t i = 0u; i < unprepared.size(); ++i) {
         if (_prepare_statements.find(unprepared[i]) == _prepare_statements.end()) {
+            // This should not happen: the connection was told to prepare a
+            // statement, but session knows nothing about it. We'll skip this statement.
             is_success = false;
             continue;
         }
@@ -428,6 +433,7 @@ cql::cql_session_impl_t::setup_prepared_statements(
             }
             else {
                 // It's a good idea to check whether returned query_id matches the requested one.
+                // If they don't - it would be a sign of a severe failure.
                 BOOST_ASSERT(future_result.get().result->query_id() == unprepared[i]);
             }
         }
@@ -439,6 +445,9 @@ cql::cql_session_impl_t::setup_prepared_statements(
     return is_success;
 }
 
+/** Assigns the keyspace name for the connection with the value used by session.
+    Possibly modifies the value pointed by `stream'.
+*/
 bool
 cql::cql_session_impl_t::setup_keyspace(
     boost::shared_ptr<cql_connection_t> conn,
@@ -620,16 +629,30 @@ cql::cql_session_impl_t::get_connection(
     bool is_setup_prepared_successful = false;
     
     if (conn) {
+        // Connection must know the pointer to the containing session.
+        // Otherwise it would be unable to propagate the result if
+        // employed for, e.g. USE query.
         conn->set_session_ptr(this);
+
+        // We cannot be sure if the new connection knows the
+        // name of used keyspace (or the prepared statements).
+        // Both must be set prior to usage.
         is_setup_keyspace_successful = setup_keyspace(conn, stream);
         is_setup_prepared_successful = setup_prepared_statements(conn, stream);
+        
+        // We also maintain a session-wide dictionary (vector, really) that maps
+        // from stream IDs to recent queries' strings. It is used to retrieve the
+        // the recipes for prepared queries if needed by a connection.
         if (!(stream->is_invalid()) && query != NULL) {
             _stream_id_vs_query_string[stream->stream_id()] = query->query();
         }
     }
     
     if (!is_setup_keyspace_successful || !is_setup_prepared_successful) {
-        conn = NULL;
+        // With unset keyspace name or without the full set of prepared
+        // statements, the connection is unlikely to work. Therefore,
+        // we pass null instead of a valid connection.
+        conn.reset();
     }
         
     return conn;

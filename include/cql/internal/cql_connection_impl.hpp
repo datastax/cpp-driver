@@ -757,6 +757,9 @@ private:
                                 boost::bind(&cql_connection_impl_t<TSocket>::body_read_handle, this, header, boost::asio::placeholders::error));
     }
     
+    
+    /* The purpose of this method is to propagate the results of USE and PREPARE
+       queries across the session. */
     void
     preprocess_result_message(cql::cql_message_result_impl_t* response_message)
     {
@@ -775,7 +778,6 @@ private:
                 if (_session_ptr) {
                     cql_stream_id_t stream_id = _response_header.stream().stream_id();
                     
-                    //TODO: write to stream_id_vs_query_id map in session object!!!
                     _session_ptr->set_prepare_statement(
                         query_id,
                         _session_ptr->get_active_queries_strings()[stream_id]);
@@ -819,12 +821,12 @@ private:
             }
             else {
                 callback_pair_t callback_pair = _callback_storage.get_callbacks(stream);
-                release_stream(stream);
                 
                 cql::cql_message_result_impl_t* response_message =
                     dynamic_cast<cql::cql_message_result_impl_t*>(_response_message.release());
 
                 preprocess_result_message(response_message);
+                release_stream(stream);
                 callback_pair.first(*this, header.stream(), response_message);
             }
             break;
