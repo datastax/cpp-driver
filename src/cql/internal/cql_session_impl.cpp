@@ -76,6 +76,7 @@ cql::cql_session_impl_t::free_connection(
 
     connections_counter_t::iterator it = _connection_counters.find(connection->endpoint());
     if (it != _connection_counters.end()) {
+        boost::mutex::scoped_lock(_mutex);
         (*it->second)--;
     }
 }
@@ -266,6 +267,8 @@ cql::cql_session_impl_t::try_find_free_stream(
     cql_connections_collection_t* const     connections,
     cql_stream_t*                           stream)
 {
+    boost::mutex::scoped_lock(_mutex);
+    
     const cql_pooling_options_t& pooling_options = _configuration->pooling_options();
     cql_host_distance_enum       distance        = host->distance(_configuration->policies());
 
@@ -317,6 +320,10 @@ cql::cql_session_impl_t::connect(
         boost::shared_ptr<cql_connection_t> conn;
         conn = try_find_free_stream(host, connections, stream);
         if (conn) {
+            // Connection must know the pointer to the containing session.
+            // Otherwise it would be unable to propagate the result if
+            // employed for, e.g. USE query.
+            conn->set_session_ptr(this);
             return conn;
         }
 
@@ -332,8 +339,11 @@ cql::cql_session_impl_t::connect(
             }
         }
 
-        *stream = conn->acquire_stream();
-        (*connections)[conn->id()] = conn;
+        if (conn) {
+            *stream = conn->acquire_stream();
+            (*connections)[conn->id()] = conn;
+            conn->set_session_ptr(this);
+        }
         return conn;
     }
 
@@ -616,6 +626,8 @@ cql::cql_session_impl_t::get_connection(
         const boost::shared_ptr<cql_query_t>& query,
         cql_stream_t*                         stream)
 {
+    boost::mutex::scoped_lock(_mutex);
+    
     boost::shared_ptr<cql_query_plan_t> query_plan = _configuration
         ->policies()
         .load_balancing_policy()
@@ -629,11 +641,6 @@ cql::cql_session_impl_t::get_connection(
     bool is_setup_prepared_successful = false;
     
     if (conn) {
-        // Connection must know the pointer to the containing session.
-        // Otherwise it would be unable to propagate the result if
-        // employed for, e.g. USE query.
-        conn->set_session_ptr(this);
-
         // We cannot be sure if the new connection knows the
         // name of used keyspace (or the prepared statements).
         // Both must be set prior to usage.
