@@ -13,8 +13,8 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#include "cql/cql_vector_stream.hpp"
-#include "cql/cql_serialization.hpp"
+#include "cql/internal/cql_vector_stream.hpp"
+#include "cql/internal/cql_serialization.hpp"
 #include "cql/internal/cql_defines.hpp"
 
 #include "cql/internal/cql_message_event_impl.hpp"

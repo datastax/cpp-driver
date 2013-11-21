@@ -74,11 +74,13 @@ cql::cql_session_impl_t::free_connection(
     }
     connection->close();
 
-    connections_counter_t::iterator it = _connection_counters.find(connection->endpoint());
-    if (it != _connection_counters.end()) {
+	{
         boost::mutex::scoped_lock(_mutex);
-        (*it->second)--;
-    }
+		connections_counter_t::iterator it = _connection_counters.find(connection->endpoint());
+		if (it != _connection_counters.end()) {
+			(*it->second)--;
+		}
+	}
 }
 
 long

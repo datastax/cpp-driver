@@ -3,7 +3,7 @@
 #include "cql/cql_error.hpp"
 #include "cql/internal/cql_util.hpp"
 #include "cql/internal/cql_defines.hpp"
-#include "../src/cql/cql_serialization.cpp"
+#include "../src/cql/internal/cql_serialization.cpp"
 
 BOOST_AUTO_TEST_SUITE(serialization)
 

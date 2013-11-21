@@ -14,8 +14,8 @@
  *   limitations under the License.
  */
 #include <iomanip>
-#include "cql/cql_vector_stream.hpp"
-#include "cql/cql_serialization.hpp"
+#include "cql/internal/cql_vector_stream.hpp"
+#include "cql/internal/cql_serialization.hpp"
 #include "cql/internal/cql_defines.hpp"
 
 #include "cql/internal/cql_message_prepare_impl.hpp"

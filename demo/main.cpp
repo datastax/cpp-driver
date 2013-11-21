@@ -34,7 +34,6 @@
 #include <cql/cql_error.hpp>
 #include <cql/cql_event.hpp>
 #include <cql/cql_connection.hpp>
-#include <cql/cql_connection_factory.hpp>
 #include <cql/cql_session.hpp>
 #include <cql/cql_cluster.hpp>
 #include <cql/cql_builder.hpp>
@@ -172,7 +171,7 @@ main(
     desc.add_options()
         ("help", "produce help message")
         ("ssl", boost::program_options::value<bool>(&ssl)->default_value(false), "use SSL")
-        ("host", boost::program_options::value<std::string>(&host)->default_value("127.0.0.1"), "node to use as initial contact point");
+        ("host", boost::program_options::value<std::string>(&host)->default_value("192.168.13.1"), "node to use as initial contact point");
 
     boost::program_options::variables_map variables_map;
     try {

@@ -13,7 +13,7 @@
 
 #include "cql/cql_builder.hpp"
 #include "cql/cql_connection.hpp"
-#include "cql/cql_connection_factory.hpp"
+#include "cql/internal/cql_connection_factory.hpp"
 #include "cql/cql_metadata.hpp"
 #include "cql/cql_session.hpp"
 #include "cql/cql_uuid.hpp"

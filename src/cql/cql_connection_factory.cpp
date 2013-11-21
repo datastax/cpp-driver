@@ -18,7 +18,7 @@
 #include "cql/internal/cql_socket.hpp"
 #include "cql/internal/cql_socket_ssl.hpp"
 
-#include "cql/cql_connection_factory.hpp"
+#include "cql/internal/cql_connection_factory.hpp"
 
 typedef cql::cql_connection_impl_t<cql::cql_socket_t>       connection_t;
 typedef cql::cql_connection_impl_t<cql::cql_socket_ssl_t>   ssl_connection_t;

@@ -20,8 +20,8 @@
 #else
 #include <arpa/inet.h>
 #endif
-#include "cql/cql_vector_stream.hpp"
-#include "cql/cql_serialization.hpp"
+#include "cql/internal/cql_vector_stream.hpp"
+#include "cql/internal/cql_serialization.hpp"
 #include "cql/internal/cql_util.hpp"
 #include "cql/internal/cql_defines.hpp"
 

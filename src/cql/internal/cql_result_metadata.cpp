@@ -26,7 +26,7 @@
 #include <ext/functional>
 #endif
 #include "cql/internal/cql_defines.hpp"
-#include "cql/cql_serialization.hpp"
+#include "cql/internal/cql_serialization.hpp"
 
 #include "cql/internal/cql_result_metadata.hpp"
 

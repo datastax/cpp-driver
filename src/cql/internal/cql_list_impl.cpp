@@ -14,7 +14,7 @@
  *   limitations under the License.
  */
 #include <boost/function.hpp>
-#include "cql/cql_serialization.hpp"
+#include "cql/internal/cql_serialization.hpp"
 #include "cql/internal/cql_defines.hpp"
 #include "cql/internal/cql_list_impl.hpp"
 

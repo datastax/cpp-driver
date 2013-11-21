@@ -69,7 +69,7 @@
 #include "cql/internal/cql_message_register_impl.hpp"
 #include "cql/internal/cql_message_startup_impl.hpp"
 #include "cql/internal/cql_message_supported_impl.hpp"
-#include "cql/cql_serialization.hpp"
+#include "cql/internal/cql_serialization.hpp"
 #include "cql/cql_session.hpp"
 #include "cql/cql_uuid.hpp"
 #include "cql/cql_stream.hpp"
