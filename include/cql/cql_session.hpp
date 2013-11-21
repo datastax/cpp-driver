@@ -101,28 +101,12 @@ public:
     virtual void
     set_keyspace(const std::string& new_keyspace) = 0;
 
-    virtual std::vector<std::string>&
-    get_active_queries_strings() = 0;
-
-    /** Tells the session to use given prepared statement. 
-        For advanced users; normally this should be done by sending
-        an appropriate "PREPARE" query.
-    */
-    virtual void
-    set_prepare_statement(
-                          const std::vector<cql_byte_t>& query_id,
-                          const std::string& query_text) = 0;
     virtual void
     close() = 0;
     
     // Returns unique session identifier
     virtual cql_uuid_t
     id() const = 0;
-
-protected:
-    typedef
-        std::map<std::vector<cql_byte_t>, std::string>
-        cql_id_query_map_t;
 };
 
 } // namespace cql

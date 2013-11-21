@@ -75,6 +75,7 @@
 #include "cql/cql_stream.hpp"
 #include "cql/internal/cql_util.hpp"
 #include "cql/internal/cql_promise.hpp"
+#include "cql/internal/cql_session_impl.hpp"
 
 namespace cql {
 
@@ -249,7 +250,7 @@ public:
     void
     set_session_ptr(cql_session_t* session_ptr)
     {
-        _session_ptr = session_ptr;
+        _session_ptr = static_cast<cql_session_impl_t*>(session_ptr);
     }
     
     boost::shared_future<cql::cql_future_result_t>
@@ -1027,7 +1028,7 @@ private:
     
     cql_prepare_statements_t                 _prepare_statements;
     
-    cql_session_t*                           _session_ptr;
+    cql_session_impl_t*                      _session_ptr;
 };
 
 } // namespace cql

@@ -133,6 +133,7 @@ class cql_session_impl_t :
     public cql_session_t,
     boost::noncopyable
 {
+
 public:
     cql_session_impl_t(
         const cql_session_callback_info_t&      callbacks,
@@ -168,6 +169,9 @@ public:
 private:
     
     typedef std::map<cql_uuid_t, boost::shared_ptr<cql_connection_t> > cql_connections_collection_t;
+    typedef
+        std::map<std::vector<cql_byte_t>, std::string>
+        cql_id_query_map_t;
 
     struct client_container_t
     {
