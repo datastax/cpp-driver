@@ -10,6 +10,7 @@
 #include <boost/smart_ptr.hpp>
 #include <boost/asio/ip/address.hpp>
 
+#include "cql/cql_config.hpp"
 #include "cql/cql_connection.hpp"
 
 #include "cql/policies/cql_round_robin_policy.hpp"
@@ -384,7 +385,7 @@ public:
     configuration() = 0;
 };
 
-class cql_builder_t :
+class CQL_EXPORT cql_builder_t :
         public cql_initializer_t,
         boost::noncopyable
 {

@@ -21,13 +21,14 @@
 
 #include <vector>
 #include <boost/noncopyable.hpp>
+#include "cql/cql_config.hpp"
 #include "cql/cql.hpp"
 
 namespace cql {
 
 class cql_message_execute_impl_t;
 
-class cql_execute_t :
+class CQL_EXPORT cql_execute_t :
         boost::noncopyable {
 
 public:

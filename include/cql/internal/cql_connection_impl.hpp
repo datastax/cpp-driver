@@ -203,7 +203,7 @@ public:
         _closing(false),
         _reserved_stream(_callback_storage.acquire_stream()),
         _uuid(cql_uuid_t::create()),
-        _session_ptr(NULL)
+        _session_ptr(NULL),
 		_is_disposed(new boolkeeper)
     {}
 

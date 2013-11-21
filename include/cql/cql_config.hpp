@@ -8,6 +8,14 @@
 #ifndef _CQL_CONFIG_HPP_INCLUDE_
 #define	_CQL_CONFIG_HPP_INCLUDE_
 
+//restrict it for windows only by now
+#ifdef _WIN32
+#ifdef cql_EXPORTS
+#define CQL_LINK_DYN
+#define CQL_EXPORTS
+#endif
+#endif
+
 // define CQL_LINK_DYN to link dynamically (via .dll or .so)
 // with cql library.
 

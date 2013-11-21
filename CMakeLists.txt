@@ -196,11 +196,17 @@ configure_file(
 add_custom_target(UNINSTALL
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
+
 #-------------------
 # Boost unit tests
 #-------------------
-# add_subdirectory(extra/ccm_bridge)
 add_subdirectory(test/unit_tests)
+
+#-------------------
+# Integration tests
+#-------------------
+add_subdirectory(extra/ccm_bridge)
+add_subdirectory(test/integration_tests)
 
 #-------------------
 # the demo program

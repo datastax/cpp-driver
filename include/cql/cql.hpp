@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <boost/noncopyable.hpp>
+#include <cql/cql_config.hpp>
 
 namespace cql {
 
@@ -154,14 +155,12 @@ to_string(const cql_consistency_enum);
 // with library.
 // This function MUST be called only once.
 // This function is NOT thread safe.
-void
-cql_initialize();
+CQL_EXPORT void cql_initialize();
 
 // Terminates cql library.
 // This function must be called at program end, this MUST
 // be called only once.
-void
-cql_terminate();
+CQL_EXPORT void cql_terminate();
 
 } // namespace cql
 #endif // __CQL_H_INCLUDED__
