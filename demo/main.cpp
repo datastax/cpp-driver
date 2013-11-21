@@ -172,7 +172,7 @@ main(
     desc.add_options()
         ("help", "produce help message")
         ("ssl", boost::program_options::value<bool>(&ssl)->default_value(false), "use SSL")
-        ("host", boost::program_options::value<std::string>(&host)->default_value("192.168.13.1"), "node to use as initial contact point");
+        ("host", boost::program_options::value<std::string>(&host)->default_value("127.0.0.1"), "node to use as initial contact point");
 
     boost::program_options::variables_map variables_map;
     try {
