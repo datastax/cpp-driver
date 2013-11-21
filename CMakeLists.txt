@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 2.6.4)
 set(PROJECT_NAME_STR cql)
-# Alias for project name used in unit tests
 set(CQL_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
 project(${PROJECT_NAME_STR} C CXX)
 
@@ -17,28 +16,16 @@ set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${P
 #-------------------
 # setup deps
 #-------------------
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_STATIC_RUNTIME OFF)
 
-# ${PROJECT_SOURCE_DIR} is not src directory but
-# project root directory.
-set(EXT_PREFIX ${PROJECT_SOURCE_DIR}/ext)
-set(CMAKE_MODULE_PATH ${EXT_PREFIX})
-
-# OS specific lib stuff
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	set(Boost_USE_STATIC_LIBS ON)
-	set(Boost_USE_STATIC_RUNTIME ON)
-else()
-	set(Boost_USE_STATIC_LIBS OFF)
-	set(Boost_USE_STATIC_RUNTIME OFF)
-
-    # Disable boost auto linking feature
-    # it prevents visual studio from simultaneously building
-    # static and shared version of driver
-    # needed by boost to link dynamically
-    # this is a noop on platforms other than windows
-    add_definitions(-DBOOST_ALL_DYN_LINK)
-    add_definitions(-DBOOST_ALL_NO_LIB)
-endif()
+# Disable boost auto linking feature
+# it prevents visual studio from simultaneously building
+# static and shared version of driver
+# needed by boost to link dynamically
+# this is a noop on platforms other than windows
+add_definitions(-DBOOST_ALL_DYN_LINK)
+add_definitions(-DBOOST_ALL_NO_LIB)
 
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost 1.41.0 COMPONENTS system thread unit_test_framework date_time program_options REQUIRED)
@@ -92,11 +79,6 @@ else()
         # I disabled long-long warning because boost generates about 50 such warnings
 	set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic -Wno-long-long -fno-strict-aliasing")
 endif()
-
-
-# add_custom_target (AppDependencies ALL
-#   DEPENDS ${APP_DEPENDENCIES}
-#   COMMENT "Installing any missing dependencies.")
 
 #-------------------
 # Cassandra static and shared
@@ -188,6 +170,7 @@ install(FILES ${INC_FILES_POLICIES} DESTINATION "${INSTALL_HEADERS_DIR}/policies
 
 # Where to put libraries
 set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib")
+
 # For windows only
 set(INSTALL_DLL_DIR "${CMAKE_INSTALL_PREFIX}/bin")
 
@@ -216,9 +199,8 @@ add_custom_target(UNINSTALL
 #-------------------
 # Boost unit tests
 #-------------------
-
 # add_subdirectory(extra/ccm_bridge)
-# add_subdirectory(test/unit_tests)
+add_subdirectory(test/unit_tests)
 
 #-------------------
 # the demo program
