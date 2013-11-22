@@ -43,22 +43,19 @@ namespace cql {
 		static boost::shared_ptr<cql_ccm_bridge_t> create(
 			const cql_ccm_bridge_configuration_t& settings,
 			const std::string& name,
-			unsigned nodes_count,
-			bool use_already_existing = false);
+			unsigned nodes_count);
 
 		static boost::shared_ptr<cql_ccm_bridge_t> create(
 			const cql_ccm_bridge_configuration_t& settings,
 			const std::string& name,
 			unsigned nodes_count_dc1,
-			unsigned nodes_count_dc2,
-			bool use_already_existing = false);
+			unsigned nodes_count_dc2);
 	private:
 		/* CCM functionality */
 		static const std::string CCM_COMMAND;
 		const std::string _ip_prefix;
 
-		void execute_ccm_command(const std::string& ccm_args, 
-								 bool use_already_existing = false);
+		void execute_ccm_command(const std::string& ccm_args);
 
 		void execute_ccm_and_print(const std::string& ccm_args);
 

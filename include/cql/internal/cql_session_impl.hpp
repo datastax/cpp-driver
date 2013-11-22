@@ -344,6 +344,9 @@ private:
     std::string                             _keyspace_name;
 
     cql_id_query_map_t                      _prepare_statements;    
+
+	bool _Iam_closed;
+    
 };
 
 } // namespace cql

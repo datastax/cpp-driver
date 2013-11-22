@@ -34,6 +34,7 @@
 cql::cql_session_impl_t::cql_session_impl_t(
     const cql_session_callback_info_t&      callbacks,
     boost::shared_ptr<cql_configuration_t>  configuration) :
+	_Iam_closed(false),
     _client_callback(callbacks.client_callback()),
     _ready_callback(callbacks.ready_callback()),
     _defunct_callback(callbacks.defunct_callback()),
@@ -43,7 +44,9 @@ cql::cql_session_impl_t::cql_session_impl_t(
 {}
 
 cql::cql_session_impl_t::~cql_session_impl_t()
-{}
+{
+	close();
+}
 
 void
 cql::cql_session_impl_t::init(
@@ -556,6 +559,8 @@ void
 cql::cql_session_impl_t::close()
 {
     boost::mutex::scoped_lock lock(_mutex);
+	if(_Iam_closed)
+		return;
 
 	for (connection_pool_t::iterator host_it = _connection_pool.begin();
          host_it != _connection_pool.end();
@@ -578,6 +583,8 @@ cql::cql_session_impl_t::close()
 
     log(0, "size of session::_connection_poll is "
         + boost::lexical_cast<std::string>(_connection_pool.size()));
+
+	_Iam_closed = true;
 }
 
 inline void

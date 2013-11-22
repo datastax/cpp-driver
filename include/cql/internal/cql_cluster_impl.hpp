@@ -89,10 +89,13 @@ private:
         io_service->run();
     }
 
+	bool _Iam_shotdown;
+
 public:
     cql_cluster_impl_t(
         const std::list<cql_endpoint_t>&        endpoints,
         boost::shared_ptr<cql_configuration_t>  configuration) :
+		_Iam_shotdown(false),
         _io_service(configuration->io_service()),
         _contact_points(endpoints),
         _configuration(configuration),
@@ -116,7 +119,9 @@ public:
 
     virtual
     ~cql_cluster_impl_t()
-    {}
+    {
+		shutdown(60*1000);
+	}
 
     virtual boost::shared_ptr<cql::cql_session_t>
     connect()
@@ -168,6 +173,8 @@ public:
 
     virtual void
     shutdown(int timeout_ms) {
+		if(_Iam_shotdown)
+			return;
         close_sessions();
         _control_connection->shutdown();
 
@@ -175,6 +182,7 @@ public:
             _work.reset();
             _thread.join();
         }
+		_Iam_shotdown = true;
     }
 
     virtual boost::shared_ptr<cql_metadata_t>

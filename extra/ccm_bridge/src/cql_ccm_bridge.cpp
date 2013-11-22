@@ -251,30 +251,27 @@ namespace cql {
 		libssh2_channel_write(_channel, command.c_str(), command.size());
 	}
 
-	void cql_ccm_bridge_t::execute_ccm_command(const string& ccm_args, 
-										bool use_already_existing)
+	void cql_ccm_bridge_t::execute_ccm_command(const string& ccm_args)
 	{
 		const int RETRY_TIMES = 2;
 
-		for(int retry = 0; retry < RETRY_TIMES; retry++) {
+		for(int retry = 0; retry < RETRY_TIMES; retry++) 
+		{
 			BOOST_LOG_TRIVIAL(info) << "CCM " << ccm_args;
 			string result = execute_command(CCM_COMMAND + " " + ccm_args);
 			
 			if(boost::algorithm::contains(result, "[Errno")) {
 				BOOST_LOG_TRIVIAL(error) << "CCM ERROR: " << result;
+
+				if(boost::algorithm::contains(result, "[Errno 17")) 
+				{
+					execute_ccm_and_print("remove test");
+					execute_command("killall java");
+				}
 			}
-
-			if(boost::algorithm::contains(result, "[Errno 17")) {
-				if (use_already_existing)
-					return;
-
-				execute_ccm_and_print("remove test");
-				execute_command("killall java");
-
-				// throw cql_ccm_bridge_tException("not implemented ReusableCCMCluster.Reset();");
-			}
+			else
+				return;
 		}
-		
 		throw cql_ccm_bridge_exception_t("ccm operation failed");
 	}
 
@@ -369,8 +366,7 @@ namespace cql {
 	boost::shared_ptr<cql_ccm_bridge_t> cql_ccm_bridge_t::create(
 		const cql_ccm_bridge_configuration_t& settings,
 		const std::string& name,
-		unsigned nodes_count,
-		bool use_already_existing)
+		unsigned nodes_count)
 	{
 		boost::shared_ptr<cql_ccm_bridge_t> bridge(new cql_ccm_bridge_t(settings));
 
@@ -379,7 +375,7 @@ namespace cql {
 				% name
 				% nodes_count
 				% settings.ip_prefix()
-				% settings.cassandara_version()), use_already_existing);
+				% settings.cassandara_version()));
 		
 		return bridge;
 	}
@@ -388,8 +384,7 @@ namespace cql {
 		const cql_ccm_bridge_configuration_t& settings,
 		const std::string& name,
 		unsigned nodes_count_dc1,
-		unsigned nodes_count_dc2,
-		bool use_already_existing)
+		unsigned nodes_count_dc2)
 	{
 		boost::shared_ptr<cql_ccm_bridge_t> bridge(new cql_ccm_bridge_t(settings));
 
@@ -399,7 +394,7 @@ namespace cql {
 				% nodes_count_dc1
 				% nodes_count_dc2
 				% settings.ip_prefix()
-				% settings.cassandara_version()), use_already_existing);
+				% settings.cassandara_version()));
 		
 		return bridge;
 	}
