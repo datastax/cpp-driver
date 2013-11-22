@@ -15,7 +15,7 @@
  */
 #include <boost/function.hpp>
 
-#include "cql/cql_serialization.hpp"
+#include "cql/internal/cql_serialization.hpp"
 #include "cql/internal/cql_defines.hpp"
 #include "cql/internal/cql_map_impl.hpp"
 

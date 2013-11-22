@@ -11,7 +11,6 @@
 #include <boost/asio/ip/address.hpp>
 
 #include "cql/cql_config.hpp"
-#include "cql/cql_connection.hpp"
 
 #include "cql/policies/cql_round_robin_policy.hpp"
 #include "cql/policies/cql_exponential_reconnection_policy_t.hpp"

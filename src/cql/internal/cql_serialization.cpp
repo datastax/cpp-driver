@@ -27,7 +27,7 @@
 #include <boost/detail/endian.hpp>
 
 #include "cql/internal/cql_defines.hpp"
-#include "cql/cql_serialization.hpp"
+#include "cql/internal/cql_serialization.hpp"
 
 using namespace std;
 

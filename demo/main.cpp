@@ -34,7 +34,6 @@
 #include <cql/cql_error.hpp>
 #include <cql/cql_event.hpp>
 #include <cql/cql_connection.hpp>
-#include <cql/cql_connection_factory.hpp>
 #include <cql/cql_session.hpp>
 #include <cql/cql_cluster.hpp>
 #include <cql/cql_builder.hpp>

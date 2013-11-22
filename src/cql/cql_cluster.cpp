@@ -19,15 +19,12 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 
-#include "cql/internal/cql_session_impl.hpp"
-
 #include "cql/cql_connection.hpp"
-#include "cql/cql_connection_factory.hpp"
-
 #include "cql/cql_cluster.hpp"
 #include "cql/cql_builder.hpp"
-
 #include "cql/internal/cql_cluster_impl.hpp"
+#include "cql/internal/cql_connection_factory.hpp"
+#include "cql/internal/cql_session_impl.hpp"
 
 boost::shared_ptr<cql::cql_cluster_t>
 cql::cql_cluster_t::built_from(

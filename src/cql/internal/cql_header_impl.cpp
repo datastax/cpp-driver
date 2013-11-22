@@ -16,8 +16,8 @@
 #include <iomanip>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
-#include "cql/cql_vector_stream.hpp"
-#include "cql/cql_serialization.hpp"
+#include "cql/internal/cql_vector_stream.hpp"
+#include "cql/internal/cql_serialization.hpp"
 #include "cql/internal/cql_defines.hpp"
 #include "cql/internal/cql_util.hpp"
 

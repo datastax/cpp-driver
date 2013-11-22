@@ -16,8 +16,8 @@
 #include <map>
 #include <sstream>
 #include <boost/algorithm/string/join.hpp>
-#include "cql/cql_vector_stream.hpp"
-#include "cql/cql_serialization.hpp"
+#include "cql/internal/cql_vector_stream.hpp"
+#include "cql/internal/cql_serialization.hpp"
 #include "cql/internal/cql_defines.hpp"
 
 #include "cql/internal/cql_message_startup_impl.hpp"
