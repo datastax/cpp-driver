@@ -995,7 +995,7 @@ private:
     inline void
     check_transport_err(const boost::system::error_code& err)
     {
-        if (!_transport->lowest_layer().is_open()) {
+        if (!_closing && !_transport->lowest_layer().is_open()) {
             _ready = false;
             _defunct = true;
         }
