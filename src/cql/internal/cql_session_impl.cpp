@@ -39,8 +39,7 @@ cql::cql_session_impl_t::cql_session_impl_t(
     _defunct_callback(callbacks.defunct_callback()),
     _log_callback(callbacks.log_callback()),
     _uuid(cql_uuid_t::create()),
-    _configuration(configuration),
-    _stream_id_vs_query_string(cql::cql_connection_impl_t<cql::cql_socket_t>::NUMBER_OF_STREAMS, "")
+    _configuration(configuration)
 {}
 
 cql::cql_session_impl_t::~cql_session_impl_t()
@@ -156,12 +155,6 @@ cql::cql_session_impl_t::set_prepare_statement(
             J->second->set_prepared_statement(query_id);
         }
     }
-}
-
-std::vector<std::string>&
-cql::cql_session_impl_t::get_active_queries_strings()
-{
-    return _stream_id_vs_query_string;
 }
 
 bool
@@ -647,11 +640,14 @@ cql::cql_session_impl_t::get_connection(
         is_setup_keyspace_successful = setup_keyspace(conn, stream);
         is_setup_prepared_successful = setup_prepared_statements(conn, stream);
         
+        
         // We also maintain a session-wide dictionary (vector, really) that maps
         // from stream IDs to recent queries' strings. It is used to retrieve the
         // the recipes for prepared queries if needed by a connection.
         if (!(stream->is_invalid()) && query != NULL) {
-            _stream_id_vs_query_string[stream->stream_id()] = query->query();
+            boost::shared_ptr<cql_connection_impl_t<cql_socket_t> > conn_impl
+                = boost::static_pointer_cast<cql_connection_impl_t<cql_socket_t> >(conn);
+            conn_impl->set_stream_id_vs_query_string(stream->stream_id(), query->query());
         }
     }
     

@@ -119,6 +119,7 @@ cql_control_connection_t::setup_event_listener()
     std::list<cql_endpoint_t> tried_hosts;
 
     _active_connection = _session->connect(query_plan, &stream, &tried_hosts);
+    
 }
 
 cql_host_t::ip_address_t

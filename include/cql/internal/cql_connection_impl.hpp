@@ -205,7 +205,8 @@ public:
         _reserved_stream(_callback_storage.acquire_stream()),
         _uuid(cql_uuid_t::create()),
         _session_ptr(NULL),
-		_is_disposed(new boolkeeper)
+        _is_disposed(new boolkeeper),
+        _stream_id_vs_query_string(NUMBER_OF_STREAMS, "")
     {}
 
 	virtual ~cql_connection_impl_t()
@@ -469,6 +470,14 @@ public:
         _ready = false;
         _defunct = false;
         resolve();
+    }
+    
+    void
+    set_stream_id_vs_query_string(
+        cql_byte_t stream_id,
+        const std::string& query_string)
+    {
+        _stream_id_vs_query_string[stream_id] = query_string;
     }
 
 private:
@@ -805,7 +814,7 @@ private:
                     
                     _session_ptr->set_prepare_statement(
                         query_id,
-                        _session_ptr->get_active_queries_strings()[stream_id]);
+                        _stream_id_vs_query_string[stream_id]);
                 }
                 break;
         }
@@ -1026,6 +1035,8 @@ private:
     std::string                              _current_keyspace_name,
                                              _selected_keyspace_name;
     
+    std::vector<std::string>                 _stream_id_vs_query_string;
+
     cql_prepare_statements_t                 _prepare_statements;
     
     cql_session_impl_t*                      _session_ptr;

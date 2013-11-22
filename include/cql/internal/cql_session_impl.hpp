@@ -163,9 +163,6 @@ public:
                           const std::vector<cql_byte_t>& query_id,
                           const std::string& query_text);
     
-    std::vector<std::string>&
-    get_active_queries_strings();
-    
 private:
     
     typedef std::map<cql_uuid_t, boost::shared_ptr<cql_connection_t> > cql_connections_collection_t;
@@ -346,9 +343,7 @@ private:
     
     std::string                             _keyspace_name;
 
-    cql_id_query_map_t                      _prepare_statements;
-    std::vector<std::string>                _stream_id_vs_query_string;
-    
+    cql_id_query_map_t                      _prepare_statements;    
 };
 
 } // namespace cql
