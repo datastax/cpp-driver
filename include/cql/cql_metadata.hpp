@@ -7,6 +7,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/asio/ip/address.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/signals2/signal.hpp>
 
 #include "cql/policies/cql_reconnection_policy.hpp"
 #include "cql/cql_endpoint.hpp"
@@ -84,25 +85,24 @@ namespace cql {
 
 	class cql_metadata_t: boost::noncopyable {
 	public:
-// TODO: Provide notifications for events
-//		typedef
-//			boost::signals2::signal<void(const cql_host_state_changed_info_t&)>
-//			on_host_state_changed_t;
-//
-//		inline void
-//		on_host_state_changed(const on_host_state_changed_t::slot_type& slot) {
-////			_host_state_changed.connect(slot);
-//		}
-//
-//		typedef
-//			boost::signals2::signal<void(const cql_schema_changed_info_t&)>
-//			on_schema_changed_t;
-//
-//		inline void
-//		on_schema_changed(const on_schema_changed_t::slot_type& slot) {
-////			_schema_changed.connect(slot);
-//		}
-//
+		typedef
+			boost::signals2::signal<void(const cql_host_state_changed_info_t&)>
+			on_host_state_changed_t;
+
+		inline void
+		on_host_state_changed(const on_host_state_changed_t::slot_type& slot) {
+			_host_state_changed.connect(slot);
+		}
+
+		typedef
+			boost::signals2::signal<void(const cql_schema_changed_info_t&)>
+			on_schema_changed_t;
+
+		inline void
+		on_schema_changed(const on_schema_changed_t::slot_type& slot) {
+			_schema_changed.connect(slot);
+		}
+
 
         // Puts all known hosts at the end of @collection.
         void
@@ -142,8 +142,8 @@ namespace cql {
 
         friend class cql_cluster_impl_t;
 
-		//on_host_state_changed_t	_host_state_changed;
-		//on_schema_changed_t		_schema_changed;
+		on_host_state_changed_t                         _host_state_changed;
+		on_schema_changed_t                             _schema_changed;
 
         boost::shared_ptr<cql_reconnection_policy_t>    _reconnection_policy;
         boost::shared_ptr<cql_hosts_t>                  _hosts;

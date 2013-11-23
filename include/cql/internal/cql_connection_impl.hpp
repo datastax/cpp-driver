@@ -410,6 +410,22 @@ public:
         _event_callback = event_callback;
         _events = events;
     }
+    
+    void
+    events_register()
+    {
+        std::auto_ptr<cql::cql_message_register_impl_t> m(new cql::cql_message_register_impl_t());
+        m->events(_events);
+        
+        create_request(m.release(),
+                       boost::bind(&cql_connection_impl_t::write_handle,
+                                   this,
+                                   boost::asio::placeholders::error,
+                                   boost::asio::placeholders::bytes_transferred),
+                       _reserved_stream);
+        
+        _events_registered = true;
+    }
 
     const std::list<std::string>&
     events() const
@@ -903,15 +919,10 @@ private:
 
         case CQL_OPCODE_READY:
             log(CQL_LOG_DEBUG, "received ready message");
-            if (!_events_registered) {
-                events_register();
-            }
-            else  {
-                _ready = true;
-                if (_connect_callback) {
-                    // let the caller know that the connection is ready
-                    _connect_callback(*this);
-                }
+            _ready = true;
+            if (_connect_callback) {
+                // let the caller know that the connection is ready
+                _connect_callback(*this);
             }
             break;
 
@@ -930,22 +941,6 @@ private:
         }
 
         header_read(); // loop
-    }
-
-    void
-    events_register()
-    {
-        std::auto_ptr<cql::cql_message_register_impl_t> m(new cql::cql_message_register_impl_t());
-        m->events(_events);
-
-        create_request(m.release(),
-                       boost::bind(&cql_connection_impl_t::write_handle,
-                                   this,
-                                   boost::asio::placeholders::error,
-                                   boost::asio::placeholders::bytes_transferred),
-                        _reserved_stream);
-
-        _events_registered = true;
     }
 
     void

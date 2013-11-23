@@ -22,7 +22,7 @@
 
 cql::cql_message_event_impl_t::cql_message_event_impl_t() :
     _buffer(new std::vector<cql_byte_t>(0)),
-    _event_type(CQL_EVENT_TYPE_UNKOWN),
+    _event_type(CQL_EVENT_TYPE_UNKNOWN),
     _topology_change(CQL_EVENT_TOPOLOGY_UNKNOWN),
     _schema_change(CQL_EVENT_SCHEMA_UNKNOWN),
     _status_change(CQL_EVENT_STATUS_UNKNOWN),
@@ -31,7 +31,7 @@ cql::cql_message_event_impl_t::cql_message_event_impl_t() :
 
 cql::cql_message_event_impl_t::cql_message_event_impl_t(size_t size) :
     _buffer(new std::vector<cql_byte_t>(size)),
-    _event_type(CQL_EVENT_TYPE_UNKOWN),
+    _event_type(CQL_EVENT_TYPE_UNKNOWN),
     _topology_change(CQL_EVENT_TOPOLOGY_UNKNOWN),
     _schema_change(CQL_EVENT_SCHEMA_UNKNOWN),
     _status_change(CQL_EVENT_STATUS_UNKNOWN),
@@ -104,7 +104,7 @@ cql::cql_message_event_impl_t::consume(cql::cql_error_t*) {
     _port = 0;
     _keyspace = "";
     _column_family = "";
-    _event_type = CQL_EVENT_TYPE_UNKOWN;
+    _event_type = CQL_EVENT_TYPE_UNKNOWN;
     _topology_change = CQL_EVENT_TOPOLOGY_UNKNOWN;
     _status_change = CQL_EVENT_STATUS_UNKNOWN;
     _schema_change = CQL_EVENT_SCHEMA_UNKNOWN;

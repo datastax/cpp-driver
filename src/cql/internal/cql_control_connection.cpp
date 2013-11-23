@@ -23,9 +23,12 @@
 #include <boost/tuple/tuple.hpp>
 
 #include "cql/internal/cql_control_connection.hpp"
+#include "cql/internal/cql_connection_impl.hpp"
 #include "cql/internal/cql_cluster_impl.hpp"
 #include "cql/exceptions/cql_exception.hpp"
 #include "cql/cql_set.hpp"
+#include "cql/internal/cql_defines.hpp"
+#include "cql/internal/cql_socket.hpp"
 
 namespace cql {
 
@@ -120,6 +123,20 @@ cql_control_connection_t::setup_event_listener()
 
     _active_connection = _session->connect(query_plan, &stream, &tried_hosts);
     
+    std::list<std::string> events;
+    events.push_back(CQL_EVENT_TOPOLOGY_CHANGE);
+    events.push_back(CQL_EVENT_STATUS_CHANGE);
+    events.push_back(CQL_EVENT_SCHEMA_CHANGE);
+
+    _active_connection->set_events(
+        boost::bind(&cql_control_connection_t::conn_cassandra_event, this, _1, _2),
+        events);
+    
+    boost::shared_ptr<cql_connection_impl_t<cql_socket_t> > active_connection_impl
+        = boost::dynamic_pointer_cast<cql_connection_impl_t<cql_socket_t> >(_active_connection);
+    if (active_connection_impl) {
+        active_connection_impl->events_register();
+    }
 }
 
 cql_host_t::ip_address_t
@@ -349,10 +366,37 @@ cql_control_connection_t::refresh_node_list_and_token_map()
 
 void
 cql_control_connection_t::conn_cassandra_event(
-    void*                          sender,
-    boost::shared_ptr<cql_event_t> event)
+    cql_connection_t& connection,
+    cql_event_t* event)
 {
-// Just a stub (at this point)
+    switch(event->event_type())
+    {
+        case CQL_EVENT_TYPE_TOPOLOGY:
+            if (event->topology_change() == CQL_EVENT_TOPOLOGY_ADD_NODE) {
+                setup_control_connection(true);
+                cql_host_t::ip_address_t ip_address
+                    = cql_host_t::ip_address_t::from_string(event->ip());
+                _cluster.metadata()->add_host(cql_endpoint_t(ip_address, event->port()));
+            }
+            else if (event->topology_change() == CQL_EVENT_TOPOLOGY_REMOVE_NODE) {
+                bool refresh_only = false;
+                if (_active_connection) {
+                    cql_host_t::ip_address_t ip_address
+                        = cql_host_t::ip_address_t::from_string(event->ip());
+                    refresh_only = !(_active_connection->endpoint().address() == ip_address);
+                }
+                setup_control_connection(refresh_only);
+            }
+            break;
+        case CQL_EVENT_TYPE_STATUS:
+            
+            break;
+        case CQL_EVENT_TYPE_SCHEMA:
+            
+            break;
+        case CQL_EVENT_TYPE_UNKNOWN:
+            break;
+    }
 }
 
 bool

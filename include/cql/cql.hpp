@@ -99,7 +99,7 @@ enum cql_result_type_enum {
 };
 
 enum cql_event_enum {
-    CQL_EVENT_TYPE_UNKOWN   = 0x00,
+    CQL_EVENT_TYPE_UNKNOWN  = 0x00,
     CQL_EVENT_TYPE_TOPOLOGY = 0x01,
     CQL_EVENT_TYPE_STATUS   = 0x02,
     CQL_EVENT_TYPE_SCHEMA   = 0x03
