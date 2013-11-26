@@ -389,7 +389,16 @@ cql_control_connection_t::conn_cassandra_event(
             }
             break;
         case CQL_EVENT_TYPE_STATUS:
-            
+            if (event->status_change() == CQL_EVENT_STATUS_UP) {
+                cql_host_t::ip_address_t ip_address
+                    = cql_host_t::ip_address_t::from_string(event->ip());
+                _cluster.metadata()->bring_up_host(cql_endpoint_t(ip_address, event->port()));
+            }
+            else if (event->status_change() == CQL_EVENT_STATUS_DOWN) {
+                cql_host_t::ip_address_t ip_address
+                    = cql_host_t::ip_address_t::from_string(event->ip());
+                _cluster.metadata()->set_down_host(cql_endpoint_t(ip_address, event->port()));
+            }
             break;
         case CQL_EVENT_TYPE_SCHEMA:
             

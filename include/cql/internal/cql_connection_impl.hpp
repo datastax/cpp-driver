@@ -417,6 +417,12 @@ public:
         std::auto_ptr<cql::cql_message_register_impl_t> m(new cql::cql_message_register_impl_t());
         m->events(_events);
         
+        // We need to reset _connect_callback here. Otherwise, registering an event
+        // may fire cql_session_impl_t::connect_callback(...) which is the default
+        // value of _connect_callback. That can result in havoc, since bound variable
+        // `promise' may no longer exist. Anyway, this callback was not that crucial.
+        _connect_callback = 0;
+        
         create_request(m.release(),
                        boost::bind(&cql_connection_impl_t::write_handle,
                                    this,
