@@ -255,8 +255,9 @@ public:
 
         _callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
 
+        cql::cql_message_prepare_impl_t message(query),
         create_request(
-            new cql::cql_message_prepare_impl_t(query),
+            &message,
             boost::bind(&cql_connection_impl_t::write_handle,
                         this,
                         boost::asio::placeholders::error,
@@ -815,8 +816,9 @@ private:
     void
     options_write()
     {
+        cql::cql_message_options_impl_t message();
 		create_request(
-            new cql::cql_message_options_impl_t(),
+            &message,
             (boost::function<void (const boost::system::error_code &, std::size_t)>)boost::bind(
                 &cql_connection_impl_t::write_handle,
                 this,
