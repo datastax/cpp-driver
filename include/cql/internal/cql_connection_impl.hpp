@@ -229,7 +229,8 @@ public:
 
 		_callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
 
-		create_request(new cql::cql_message_query_impl_t(query),
+		cql::cql_message_query_impl_t message(query);
+		create_request(&message,
 			boost::bind(&cql_connection_impl_t::write_handle,
 			this,
 			boost::asio::placeholders::error,
