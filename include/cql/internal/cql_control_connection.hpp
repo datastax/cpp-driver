@@ -79,7 +79,7 @@ private:
 
     static cql_host_t::ip_address_t
     make_ipv4_address_from_bytes(
-        cql::cql_byte_t* data);
+        const cql::cql_byte_t* data);
 
     static std::string
     select_keyspaces_expression()

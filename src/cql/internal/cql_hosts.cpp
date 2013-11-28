@@ -56,10 +56,10 @@ bool
 cql::cql_hosts_t::set_down(
     const cql::cql_endpoint_t& endpoint)
 {
-    boost::mutex::scoped_lock     lock(_mutex);
 	boost::shared_ptr<cql_host_t> host;
 
 	if (try_get(endpoint, &host)) {
+        boost::mutex::scoped_lock lock(_mutex);
 		return host->set_down();
     }
 	else {

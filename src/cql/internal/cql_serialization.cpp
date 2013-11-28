@@ -25,6 +25,7 @@
 
 #include <boost/foreach.hpp>
 #include <boost/detail/endian.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "cql/internal/cql_defines.hpp"
 #include "cql/internal/cql_serialization.hpp"
@@ -601,10 +602,26 @@ cql::decode_option(cql::cql_byte_t* input,
     return input;
 }
 
+std::string
+cql::decode_ipv4_from_bytes(const cql::cql_byte_t* data)
+{
+    int digit0 = int(data[0]);
+    int digit1 = int(data[1]);
+    int digit2 = int(data[2]);
+    int digit3 = int(data[3]);
+    
+    return boost::lexical_cast<std::string>(digit0) + "."
+            + boost::lexical_cast<std::string>(digit1) + "."
+            + boost::lexical_cast<std::string>(digit2) + "."
+            + boost::lexical_cast<std::string>(digit3);
+}
+
 ostream&
 cql::encode_inet(ostream& output,
                  const string& ip,
                  const cql::cql_int_t port) {
+    
+    // FIXME: encode address length with just one byte.
     cql::encode_string(output, ip);
     cql::encode_int(output, port);
     return output;
@@ -614,7 +631,14 @@ istream&
 cql::decode_inet(istream& input,
                  string& ip,
                  cql::cql_int_t& port) {
-    cql::decode_string(input, ip);
+    cql::cql_byte_t len;
+    input.read(reinterpret_cast<char*>(&len), sizeof(len));
+    
+    vector<cql::cql_byte_t> buffer(len, 0);
+    input.read(reinterpret_cast<char*>(&buffer[0]), len);
+    ip = decode_ipv4_from_bytes(&buffer[0]);
+    //TODO: handle ipv6
+
     cql::decode_int(input, port);
     return input;
 }

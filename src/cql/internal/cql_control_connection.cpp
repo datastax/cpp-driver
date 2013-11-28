@@ -29,6 +29,7 @@
 #include "cql/cql_set.hpp"
 #include "cql/internal/cql_defines.hpp"
 #include "cql/internal/cql_socket.hpp"
+#include "cql/internal/cql_serialization.hpp"
 
 namespace cql {
 
@@ -141,18 +142,10 @@ cql_control_connection_t::setup_event_listener()
 
 cql_host_t::ip_address_t
 cql_control_connection_t::make_ipv4_address_from_bytes(
-    cql::cql_byte_t* data)
+    const cql::cql_byte_t* data)
 {
-    int digit0 = int(data[0]);
-    int digit1 = int(data[1]);
-    int digit2 = int(data[2]);
-    int digit3 = int(data[3]);
-
     return cql_host_t::ip_address_t::from_string(
-        boost::lexical_cast<std::string>(digit0) + "."
-        + boost::lexical_cast<std::string>(digit1) + "."
-        + boost::lexical_cast<std::string>(digit2) + "."
-        + boost::lexical_cast<std::string>(digit3));
+        decode_ipv4_from_bytes(data));
 }
 
 void
