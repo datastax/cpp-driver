@@ -19,6 +19,7 @@
 
 #ifdef _WIN32
 #include <Winsock2.h>
+#include <string.h> // For memset and memcpy.
 #else
 #include <arpa/inet.h>
 #endif
@@ -602,18 +603,96 @@ cql::decode_option(cql::cql_byte_t* input,
     return input;
 }
 
+#ifdef _WIN32
+    // Interface to WinAPI's `WSAAddressToString'.
+    static const char*
+    cql::inet_ntop_ipv4(const void* src, char* dst, int cnt)
+    {
+        struct sockaddr_in srcaddr;
+    
+        memset(&srcaddr, 0, sizeof(struct sockaddr_in));
+        memcpy(&(srcaddr.sin_addr), src, sizeof(srcaddr.sin_addr));
+    
+        srcaddr.sin_family = AF_INET;
+        if (WSAAddressToString((struct sockaddr*) &srcaddr, sizeof(struct sockaddr_in), 0, dst, (LPDWORD) &cnt)) {
+            DWORD rv = WSAGetLastError();
+            return NULL;
+        }
+        return dst;
+    }
+
+    static const char*
+    cql::inet_ntop_ipv6(const void* src, char* dst, int cnt)
+    {
+        struct sockaddr_in6 srcaddr;
+    
+        memset(&srcaddr, 0, sizeof(struct sockaddr_in6));
+        memcpy(&(srcaddr.sin6_addr), src, sizeof(srcaddr.sin6_addr));
+    
+        srcaddr.sin6_family = AF_INET6;
+        if (WSAAddressToString((struct sockaddr*) &srcaddr, sizeof(struct sockaddr_in6), 0, dst, (LPDWORD) &cnt)) {
+            DWORD rv = WSAGetLastError();
+            return NULL;
+        }
+        return dst;
+    }
+#else
+    // Thin wrappers around POSIX's inet_ntop()
+    static const char*
+    cql::inet_ntop_ipv4(const void* src, char* dst, int cnt)
+    {
+        return inet_ntop(AF_INET, src, dst, cnt);
+    }
+
+    static const char*
+    cql::inet_ntop_ipv6(const void* src, char* dst, int cnt)
+    {
+        return inet_ntop(AF_INET6, src, dst, cnt);
+    }
+#endif
+
 std::string
 cql::decode_ipv4_from_bytes(const cql::cql_byte_t* data)
 {
-    int digit0 = int(data[0]);
-    int digit1 = int(data[1]);
-    int digit2 = int(data[2]);
-    int digit3 = int(data[3]);
+    // It is worthwhile to check if cast of `data' to struct `in_addr'
+    // will not corrupt memory.
+    BOOST_STATIC_ASSERT(sizeof(in_addr) == 4 && "Check for IPv4 address size failed");
     
-    return boost::lexical_cast<std::string>(digit0) + "."
-            + boost::lexical_cast<std::string>(digit1) + "."
-            + boost::lexical_cast<std::string>(digit2) + "."
-            + boost::lexical_cast<std::string>(digit3);
+#ifdef _WIN32
+    // Max length of the output string; value copied from OS X headers.
+    const int out_buffer_size = 16;
+#else
+    // POSIX provides convenient macro for the max length of output buffer.
+    const int out_buffer_size = INET_ADDRSTRLEN;
+#endif
+    
+    char result[out_buffer_size];
+    if (inet_ntop_ipv4(data, result, out_buffer_size)) {
+        return std::string(result);
+    }
+    else return "";
+}
+
+std::string
+cql::decode_ipv6_from_bytes(const cql::cql_byte_t* data)
+{
+    // It is worthwhile to check if cast of `data' to struct `in6_addr'
+    // will not corrupt memory.
+    BOOST_STATIC_ASSERT(sizeof(in6_addr) == 16 && "Check for IPv6 address size failed");
+
+#ifdef _WIN32
+    // Max length of the output string; value copied from OS X headers.
+    const int out_buffer_size = 46;
+#else
+    // POSIX provides convenient macro for the max length of output buffer.
+    const int out_buffer_size = INET6_ADDRSTRLEN;
+#endif
+    
+    char result[out_buffer_size];
+    if (inet_ntop_ipv6(data, result, out_buffer_size)) {
+        return std::string(result);
+    }
+    else return "";
 }
 
 ostream&
@@ -636,9 +715,13 @@ cql::decode_inet(istream& input,
     
     vector<cql::cql_byte_t> buffer(len, 0);
     input.read(reinterpret_cast<char*>(&buffer[0]), len);
-    ip = decode_ipv4_from_bytes(&buffer[0]);
-    //TODO: handle ipv6
-
+    
+    if (len == 4) {
+        ip = decode_ipv4_from_bytes(&buffer[0]);
+    } else if (len == 16) {
+        ip = decode_ipv6_from_bytes(&buffer[0]);
+    }
+    
     cql::decode_int(input, port);
     return input;
 }
