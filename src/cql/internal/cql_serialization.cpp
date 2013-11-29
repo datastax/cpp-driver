@@ -603,57 +603,50 @@ cql::decode_option(cql::cql_byte_t* input,
     return input;
 }
 
+static const char*
+cql::inet_ntop_ipv4(const void* src, char* dst, int cnt) {
 #ifdef _WIN32
-    // Interface to WinAPI's `WSAAddressToString'.
-    static const char*
-    cql::inet_ntop_ipv4(const void* src, char* dst, int cnt)
-    {
-        struct sockaddr_in srcaddr;
+// Interface to WinAPI's `WSAAddressToString'.
+    struct sockaddr_in srcaddr;
     
-        memset(&srcaddr, 0, sizeof(struct sockaddr_in));
-        memcpy(&(srcaddr.sin_addr), src, sizeof(srcaddr.sin_addr));
+    memset(&srcaddr, 0, sizeof(struct sockaddr_in));
+    memcpy(&(srcaddr.sin_addr), src, sizeof(srcaddr.sin_addr));
     
-        srcaddr.sin_family = AF_INET;
-        if (WSAAddressToString((struct sockaddr*) &srcaddr, sizeof(struct sockaddr_in), 0, dst, (LPDWORD) &cnt)) {
-            DWORD rv = WSAGetLastError();
-            return NULL;
-        }
-        return dst;
+    srcaddr.sin_family = AF_INET;
+    if (WSAAddressToString((struct sockaddr*) &srcaddr, sizeof(struct sockaddr_in), 0, dst, (LPDWORD) &cnt)) {
+        DWORD rv = WSAGetLastError();
+        return NULL;
     }
-
-    static const char*
-    cql::inet_ntop_ipv6(const void* src, char* dst, int cnt)
-    {
-        struct sockaddr_in6 srcaddr;
-    
-        memset(&srcaddr, 0, sizeof(struct sockaddr_in6));
-        memcpy(&(srcaddr.sin6_addr), src, sizeof(srcaddr.sin6_addr));
-    
-        srcaddr.sin6_family = AF_INET6;
-        if (WSAAddressToString((struct sockaddr*) &srcaddr, sizeof(struct sockaddr_in6), 0, dst, (LPDWORD) &cnt)) {
-            DWORD rv = WSAGetLastError();
-            return NULL;
-        }
-        return dst;
-    }
+    return dst;
 #else
-    // Thin wrappers around POSIX's inet_ntop()
-    static const char*
-    cql::inet_ntop_ipv4(const void* src, char* dst, int cnt)
-    {
-        return inet_ntop(AF_INET, src, dst, cnt);
-    }
-
-    static const char*
-    cql::inet_ntop_ipv6(const void* src, char* dst, int cnt)
-    {
-        return inet_ntop(AF_INET6, src, dst, cnt);
-    }
+// Thin wrapper around POSIX inet_ntop
+    return inet_ntop(AF_INET, src, dst, cnt);
 #endif
+}
+
+static const char*
+cql::inet_ntop_ipv6(const void* src, char* dst, int cnt) {
+#ifdef _WIN32
+// Interface to WinAPI's `WSAAddressToString'.
+    struct sockaddr_in6 srcaddr;
+    
+    memset(&srcaddr, 0, sizeof(struct sockaddr_in6));
+    memcpy(&(srcaddr.sin6_addr), src, sizeof(srcaddr.sin6_addr));
+    
+    srcaddr.sin6_family = AF_INET6;
+    if (WSAAddressToString((struct sockaddr*) &srcaddr, sizeof(struct sockaddr_in6), 0, dst, (LPDWORD) &cnt)) {
+        DWORD rv = WSAGetLastError();
+        return NULL;
+    }
+    return dst;
+#else
+// Thin wrapper around POSIX inet_ntop
+    return inet_ntop(AF_INET6, src, dst, cnt);
+#endif
+}
 
 std::string
-cql::decode_ipv4_from_bytes(const cql::cql_byte_t* data)
-{
+cql::decode_ipv4_from_bytes(const cql::cql_byte_t* data) {
     // It is worthwhile to check if cast of `data' to struct `in_addr'
     // will not corrupt memory.
     BOOST_STATIC_ASSERT(sizeof(in_addr) == 4 && "Check for IPv4 address size failed");
@@ -674,8 +667,7 @@ cql::decode_ipv4_from_bytes(const cql::cql_byte_t* data)
 }
 
 std::string
-cql::decode_ipv6_from_bytes(const cql::cql_byte_t* data)
-{
+cql::decode_ipv6_from_bytes(const cql::cql_byte_t* data) {
     // It is worthwhile to check if cast of `data' to struct `in6_addr'
     // will not corrupt memory.
     BOOST_STATIC_ASSERT(sizeof(in6_addr) == 16 && "Check for IPv6 address size failed");
@@ -695,13 +687,57 @@ cql::decode_ipv6_from_bytes(const cql::cql_byte_t* data)
     else return "";
 }
 
+static int
+cql::inet_pton_ipv4(const char* src,
+                    void* dst) {
+#ifdef _WIN32
+    retun InetPton(AF_INET, src, dst);
+#else
+    return inet_pton(AF_INET, src, dst);
+#endif
+}
+
+static int
+cql::inet_pton_ipv6(const char* src,
+                    void* dst) {
+#ifdef _WIN32
+    retun InetPton(AF_INET6, src, dst);
+#else
+    return inet_pton(AF_INET6, src, dst);
+#endif
+}
+
+ostream&
+cql::encode_ipv4(ostream& output,
+                 const string& ip) {
+    char buffer[sizeof(in_addr)];
+    if (inet_pton_ipv4(ip.c_str(), buffer)) {
+        output.write(buffer, sizeof(in_addr));
+    }
+    return output;
+}
+ostream&
+cql::encode_ipv6(ostream& output,
+                 const string& ip) {
+    char buffer[sizeof(in6_addr)];
+    if (inet_pton_ipv6(ip.c_str(), buffer)) {
+        output.write(buffer, sizeof(in6_addr));
+    }
+    return output;
+}
+
 ostream&
 cql::encode_inet(ostream& output,
                  const string& ip,
                  const cql::cql_int_t port) {
     
-    // FIXME: encode address length with just one byte.
-    cql::encode_string(output, ip);
+    if (ip.find(":") == std::string::npos) {
+    // Likely it is an IPv4 address
+        encode_ipv4(output, ip);
+    } else {
+        encode_ipv6(output, ip);
+    }
+    
     cql::encode_int(output, port);
     return output;
 }
