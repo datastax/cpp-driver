@@ -710,18 +710,22 @@ cql::inet_pton_ipv6(const char* src,
 ostream&
 cql::encode_ipv4(ostream& output,
                  const string& ip) {
-    char buffer[sizeof(in_addr)];
+    const char buffer_size = sizeof(in_addr);
+    char buffer[buffer_size];
     if (inet_pton_ipv4(ip.c_str(), buffer)) {
-        output.write(buffer, sizeof(in_addr));
+        output.write(&buffer_size, sizeof(buffer_size));
+        output.write(buffer, buffer_size);
     }
     return output;
 }
 ostream&
 cql::encode_ipv6(ostream& output,
                  const string& ip) {
-    char buffer[sizeof(in6_addr)];
+    const char buffer_size = sizeof(in6_addr);
+    char buffer[buffer_size];
     if (inet_pton_ipv6(ip.c_str(), buffer)) {
-        output.write(buffer, sizeof(in6_addr));
+        output.write(&buffer_size, sizeof(buffer_size));
+        output.write(buffer, buffer_size);
     }
     return output;
 }
