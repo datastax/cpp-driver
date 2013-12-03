@@ -691,7 +691,7 @@ static int
 cql::inet_pton_ipv4(const char* src,
                     void* dst) {
 #ifdef _WIN32
-    retun InetPton(AF_INET, src, dst);
+    return InetPton(AF_INET, src, dst);
 #else
     return inet_pton(AF_INET, src, dst);
 #endif
@@ -701,7 +701,7 @@ static int
 cql::inet_pton_ipv6(const char* src,
                     void* dst) {
 #ifdef _WIN32
-    retun InetPton(AF_INET6, src, dst);
+    return InetPton(AF_INET6, src, dst);
 #else
     return inet_pton(AF_INET6, src, dst);
 #endif
@@ -718,6 +718,7 @@ cql::encode_ipv4(ostream& output,
     }
     return output;
 }
+
 ostream&
 cql::encode_ipv6(ostream& output,
                  const string& ip) {
