@@ -1,3 +1,8 @@
+#define BOOST_TEST_DYN_LINK
+#ifdef STAND_ALONE
+#   define BOOST_TEST_MODULE cassandra
+#endif
+
 #include "cql/cql.hpp"
 #include "cql_ccm_bridge.hpp"
 
@@ -209,7 +214,7 @@ BOOST_AUTO_TEST_CASE(collections_list)
 		boost::shared_ptr<cql::cql_session_t> session(cluster->connect());
 
 	if (!session) {
-		BOOST_FAIL("Session creation failture.");
+		BOOST_FAIL("Session creation failure.");
 	}
 			std::string keyspace_name = "test_ks";
 			boost::shared_ptr<cql::cql_query_t> create_keyspace(

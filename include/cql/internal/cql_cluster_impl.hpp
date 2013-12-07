@@ -115,6 +115,7 @@ public:
                 _io_service,
                 configuration
                 ));
+        _control_connection->init();
     }
 
     virtual
@@ -166,7 +167,6 @@ public:
 
         session->init(_io_service);
         session->set_keyspace(keyspace);
-        _control_connection->init();
 
         return session;
     }

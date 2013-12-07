@@ -26,13 +26,13 @@ namespace cql {
         inline const cql_endpoint_t&
         endpoint() const { return _endpoint; }
 
-	private:
 		cql_host_state_changed_info_t(
-			new_host_state_enum     new_host_state,
+            new_host_state_enum     new_host_state,
             const cql_endpoint_t&   endpoint)
-			:	_new_state(new_host_state),
-				_endpoint(endpoint) { }
-
+            :	_new_state(new_host_state),
+                _endpoint(endpoint) { }
+        
+	private:
 		new_host_state_enum			_new_state;
         cql_endpoint_t              _endpoint;
 	};
@@ -54,15 +54,15 @@ namespace cql {
 		const std::string&
 		table() const;
 
-	private:
 		cql_schema_changed_info_t(
-			schema_change_type_enum change_type,
-			const std::string& keyspace,
-			const std::string& table)
-			: _change_type(change_type),
-			  _keyspace(keyspace),
-			  _table(table) { }
+            schema_change_type_enum change_type,
+            const std::string& keyspace,
+            const std::string& table)
+                : _change_type(change_type),
+                  _keyspace(keyspace),
+                  _table(table) { }
 
+	private:
 
 		schema_change_type_enum	_change_type;
 		std::string				_keyspace;

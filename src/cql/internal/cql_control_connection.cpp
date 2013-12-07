@@ -79,8 +79,10 @@ cql_control_connection_t::cql_control_connection_t(
 void
 cql_control_connection_t::init()
 {
-    _session->init(_io_service);
-    setup_control_connection();
+    if (!_is_open) {
+        _session->init(_io_service);
+        setup_control_connection();
+    }
 }
 
 void
@@ -381,17 +383,33 @@ cql_control_connection_t::conn_cassandra_event(
                 setup_control_connection(refresh_only);
             }
             break;
+            
         case CQL_EVENT_TYPE_STATUS:
             if (event->status_change() == CQL_EVENT_STATUS_UP) {
                 cql_host_t::ip_address_t ip_address
                     = cql_host_t::ip_address_t::from_string(event->ip());
-                _cluster.metadata()->bring_up_host(cql_endpoint_t(ip_address, event->port()));
+                cql_endpoint_t endpoint(ip_address, event->port());
+                
+                _cluster.metadata()->bring_up_host(endpoint);
+                
+                cql_host_state_changed_info_t event_info(
+                    cql_host_state_changed_info_t::NEW_HOST_STATE_UP,
+                    endpoint);
+                _cluster.metadata()->_host_state_changed(event_info);
             }
             else if (event->status_change() == CQL_EVENT_STATUS_DOWN) {
                 cql_host_t::ip_address_t ip_address
                     = cql_host_t::ip_address_t::from_string(event->ip());
-                _cluster.metadata()->set_down_host(cql_endpoint_t(ip_address, event->port()));
+                cql_endpoint_t endpoint(ip_address, event->port());
+                
+                _cluster.metadata()->set_down_host(endpoint);
+
+                cql_host_state_changed_info_t event_info(
+                    cql_host_state_changed_info_t::NEW_HOST_STATE_DOWN,
+                    endpoint);
+                _cluster.metadata()->_host_state_changed(event_info);
             }
+            
             break;
         case CQL_EVENT_TYPE_SCHEMA:
             
