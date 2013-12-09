@@ -26,13 +26,22 @@ namespace cql {
         inline const cql_endpoint_t&
         endpoint() const { return _endpoint; }
 
+        static boost::shared_ptr<cql_host_state_changed_info_t>
+		make_instance(
+            new_host_state_enum     new_host_state,
+            const cql_endpoint_t&   endpoint)
+        {
+            return boost::shared_ptr<cql_host_state_changed_info_t>(
+               new cql_host_state_changed_info_t(new_host_state, endpoint));
+        }
+        
+	private:
 		cql_host_state_changed_info_t(
             new_host_state_enum     new_host_state,
             const cql_endpoint_t&   endpoint)
             :	_new_state(new_host_state),
                 _endpoint(endpoint) { }
         
-	private:
 		new_host_state_enum			_new_state;
         cql_endpoint_t              _endpoint;
 	};
@@ -54,16 +63,25 @@ namespace cql {
 		const std::string&
 		table() const;
 
+        static boost::shared_ptr<cql_schema_changed_info_t>
+		make_instance(
+            schema_change_type_enum change_type,
+            const std::string& keyspace,
+                      const std::string& table)
+        {
+            return boost::shared_ptr<cql_schema_changed_info_t>(
+                new cql_schema_changed_info_t(change_type, keyspace, table));
+        }
+        
+	private:
 		cql_schema_changed_info_t(
             schema_change_type_enum change_type,
             const std::string& keyspace,
             const std::string& table)
-                : _change_type(change_type),
-                  _keyspace(keyspace),
-                  _table(table) { }
-
-	private:
-
+            : _change_type(change_type),
+              _keyspace(keyspace),
+              _table(table) { }
+        
 		schema_change_type_enum	_change_type;
 		std::string				_keyspace;
 		std::string				_table;
@@ -86,7 +104,7 @@ namespace cql {
 	class cql_metadata_t: boost::noncopyable {
 	public:
 		typedef
-			boost::signals2::signal<void(const cql_host_state_changed_info_t&)>
+            boost::signals2::signal<void(boost::shared_ptr<cql_host_state_changed_info_t>)>
 			on_host_state_changed_t;
 
 		inline void
@@ -95,7 +113,7 @@ namespace cql {
 		}
 
 		typedef
-			boost::signals2::signal<void(const cql_schema_changed_info_t&)>
+			boost::signals2::signal<void(boost::shared_ptr<cql_schema_changed_info_t>)>
 			on_schema_changed_t;
 
 		inline void

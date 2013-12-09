@@ -51,10 +51,11 @@ log_callback(
 }
 
 void
-state_change_callback(boost::promise<cql::cql_host_state_changed_info_t::new_host_state_enum>& promise,
-                           const cql::cql_host_state_changed_info_t& info)
+state_change_callback(
+    boost::promise<cql::cql_host_state_changed_info_t::new_host_state_enum>& promise,
+    boost::shared_ptr<cql::cql_host_state_changed_info_t> info)
 {
-    promise.set_value(info.new_state());
+    promise.set_value(info->new_state());
 }
 
 BOOST_AUTO_TEST_CASE(status_event_down)

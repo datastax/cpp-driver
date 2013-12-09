@@ -392,9 +392,10 @@ cql_control_connection_t::conn_cassandra_event(
                 
                 _cluster.metadata()->bring_up_host(endpoint);
                 
-                cql_host_state_changed_info_t event_info(
-                    cql_host_state_changed_info_t::NEW_HOST_STATE_UP,
-                    endpoint);
+                boost::shared_ptr<cql_host_state_changed_info_t> event_info =
+                    cql_host_state_changed_info_t::make_instance(
+                        cql_host_state_changed_info_t::NEW_HOST_STATE_UP,
+                        endpoint);
                 _cluster.metadata()->_host_state_changed(event_info);
             }
             else if (event->status_change() == CQL_EVENT_STATUS_DOWN) {
@@ -404,9 +405,10 @@ cql_control_connection_t::conn_cassandra_event(
                 
                 _cluster.metadata()->set_down_host(endpoint);
 
-                cql_host_state_changed_info_t event_info(
-                    cql_host_state_changed_info_t::NEW_HOST_STATE_DOWN,
-                    endpoint);
+                boost::shared_ptr<cql_host_state_changed_info_t> event_info =
+                    cql_host_state_changed_info_t::make_instance(
+                        cql_host_state_changed_info_t::NEW_HOST_STATE_DOWN,
+                        endpoint);
                 _cluster.metadata()->_host_state_changed(event_info);
             }
             
