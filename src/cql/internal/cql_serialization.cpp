@@ -18,7 +18,11 @@
 #include <string>
 
 #ifdef _WIN32
+#define NTDDI_VERSION 0x06000000
+#define _WIN32_WINNT 0x0600
+#include <Ws2tcpip.h>
 #include <Winsock2.h>
+
 #include <string.h> // For memset and memcpy.
 #else
 #include <arpa/inet.h>
@@ -649,7 +653,7 @@ std::string
 cql::decode_ipv4_from_bytes(const cql::cql_byte_t* data) {
     // It is worthwhile to check if cast of `data' to struct `in_addr'
     // will not corrupt memory.
-    BOOST_STATIC_ASSERT(sizeof(in_addr) == 4 && "Check for IPv4 address size failed");
+//    BOOST_STATIC_ASSERT(sizeof(in_addr) == 4 && "Check for IPv4 address size failed");
     
 #ifdef _WIN32
     // Max length of the output string; value copied from OS X headers.
@@ -670,7 +674,7 @@ std::string
 cql::decode_ipv6_from_bytes(const cql::cql_byte_t* data) {
     // It is worthwhile to check if cast of `data' to struct `in6_addr'
     // will not corrupt memory.
-    BOOST_STATIC_ASSERT(sizeof(in6_addr) == 16 && "Check for IPv6 address size failed");
+//    BOOST_STATIC_ASSERT(sizeof(in6_addr) == 16 && "Check for IPv6 address size failed");
 
 #ifdef _WIN32
     // Max length of the output string; value copied from OS X headers.

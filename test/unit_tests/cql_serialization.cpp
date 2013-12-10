@@ -1,3 +1,5 @@
+#define NTDDI_VERSION 0x06000000
+#define _WIN32_WINNT 0x0600
 #include <boost/test/unit_test.hpp>
 #include "cql/cql.hpp"
 #include "cql/cql_error.hpp"
