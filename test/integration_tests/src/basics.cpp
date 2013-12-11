@@ -76,55 +76,55 @@ boost::shared_ptr<cql::cql_result_t> simple_insert_test(boost::shared_ptr<cql::c
 }
 
 
-//BOOST_AUTO_TEST_CASE(simple_insert_int32)
-//{
-//	int test_val = 2147483647;
-//	std::string conv_val = boost::lexical_cast<std::string>(test_val);
-//	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_INT, conv_val);
-//	int res;
-//	result->get_int("test_val", res);
-//	assert(test_val == res);
-//}
-//
-//BOOST_AUTO_TEST_CASE(simple_insert_int64)
-//{
-//	INT64 test_val = 2147483648;
-//	std::string conv_val = boost::lexical_cast<std::string>(test_val);
-//	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_BIGINT, conv_val);
-//	INT64 res;
-//	result->get_bigint("test_val", res);
-//	assert(test_val == res);
-//}
-//
-//BOOST_AUTO_TEST_CASE(simple_insert_boolean)
-//{
-//	bool test_val = false;
-//	std::string conv_val = "false";
-//	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_BOOLEAN, conv_val);
-//	bool res;
-//	result->get_bool("test_val", res);
-//	assert(test_val == res);
-//}
-//
-//BOOST_AUTO_TEST_CASE(simple_insert_float)
-//{
-//	float test_val = 3.1415926f;
-//	std::string conv_val = boost::lexical_cast<std::string>(test_val);
-//	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_FLOAT, conv_val);
-//	float res;
-//	result->get_float("test_val", res);
-//	assert(test_val == res);
-//}
-//
-//BOOST_AUTO_TEST_CASE(simple_insert_double)
-//{
-//	double test_val = 3.141592653589793;
-//	std::string conv_val = boost::lexical_cast<std::string>(test_val);
-//	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_DOUBLE, conv_val);
-//	double res;
-//	result->get_double("test_val", res);
-//	assert(test_val == res);
-//}
+BOOST_AUTO_TEST_CASE(simple_insert_int32)
+{
+	int test_val = 2147483647;
+	std::string conv_val = boost::lexical_cast<std::string>(test_val);
+	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_INT, conv_val);
+	int res;
+	result->get_int("test_val", res);
+	assert(test_val == res);
+}
+
+BOOST_AUTO_TEST_CASE(simple_insert_int64)
+{
+	INT64 test_val = 2147483648;
+	std::string conv_val = boost::lexical_cast<std::string>(test_val);
+	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_BIGINT, conv_val);
+	INT64 res;
+	result->get_bigint("test_val", res);
+	assert(test_val == res);
+}
+
+BOOST_AUTO_TEST_CASE(simple_insert_boolean)
+{
+	bool test_val = false;
+	std::string conv_val = "false";
+	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_BOOLEAN, conv_val);
+	bool res;
+	result->get_bool("test_val", res);
+	assert(test_val == res);
+}
+
+BOOST_AUTO_TEST_CASE(simple_insert_float)
+{
+	float test_val = 3.1415926f;
+	std::string conv_val = boost::lexical_cast<std::string>(test_val);
+	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_FLOAT, conv_val);
+	float res;
+	result->get_float("test_val", res);
+	assert(test_val == res);
+}
+
+BOOST_AUTO_TEST_CASE(simple_insert_double)
+{
+	double test_val = 3.141592653589793;
+	std::string conv_val = boost::lexical_cast<std::string>(test_val);
+	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_DOUBLE, conv_val);
+	double res;
+	result->get_double("test_val", res);
+	assert(test_val == res);
+}
 
 BOOST_AUTO_TEST_CASE(simple_insert_string)
 {
