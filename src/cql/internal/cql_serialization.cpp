@@ -31,6 +31,7 @@
 #include <boost/foreach.hpp>
 #include <boost/detail/endian.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/mpl/sizeof.hpp> // BOOST_MPL_ASSERT_RELATION
 
 #include "cql/internal/cql_defines.hpp"
 #include "cql/internal/cql_serialization.hpp"
@@ -654,6 +655,7 @@ cql::decode_ipv4_from_bytes(const cql::cql_byte_t* data) {
     // It is worthwhile to check if cast of `data' to struct `in_addr'
     // will not corrupt memory.
 //    BOOST_STATIC_ASSERT(sizeof(in_addr) == 4 && "Check for IPv4 address size failed");
+    BOOST_MPL_ASSERT_RELATION( boost::mpl::sizeof_<in_addr>::value, ==, 4 );
     
 #ifdef _WIN32
     // Max length of the output string; value copied from OS X headers.
@@ -675,7 +677,8 @@ cql::decode_ipv6_from_bytes(const cql::cql_byte_t* data) {
     // It is worthwhile to check if cast of `data' to struct `in6_addr'
     // will not corrupt memory.
 //    BOOST_STATIC_ASSERT(sizeof(in6_addr) == 16 && "Check for IPv6 address size failed");
-
+    BOOST_MPL_ASSERT_RELATION( boost::mpl::sizeof_<in6_addr>::value, ==, 16 );
+    
 #ifdef _WIN32
     // Max length of the output string; value copied from OS X headers.
     const int out_buffer_size = 46;

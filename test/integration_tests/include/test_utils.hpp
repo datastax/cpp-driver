@@ -1,5 +1,5 @@
 #pragma once
-#include <cql\cql_session.hpp>
+#include "cql/cql_session.hpp"
 class test_utils
 {
 public:
