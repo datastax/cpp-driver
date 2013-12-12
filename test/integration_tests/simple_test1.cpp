@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE(collections_set)
 		boost::shared_ptr<cql::cql_session_t> session(cluster->connect());
 
 	if (!session) {
-		BOOST_FAIL("Session creation failture.");
+		BOOST_FAIL("Session creation failure.");
 	}
 			std::string keyspace_name = "test_ks";
 			boost::shared_ptr<cql::cql_query_t> create_keyspace(
@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE(collections_map)
 		boost::shared_ptr<cql::cql_session_t> session(cluster->connect());
 
 	if (!session) {
-		BOOST_FAIL("Session creation failture.");
+		BOOST_FAIL("Session creation failure.");
 	}
 			std::string keyspace_name = "test_ks";
 			boost::shared_ptr<cql::cql_query_t> create_keyspace(
@@ -287,7 +287,7 @@ BOOST_AUTO_TEST_CASE(test1)
 		boost::shared_ptr<cql::cql_session_t> session(cluster->connect());
 
 	if (!session) {
-		BOOST_FAIL("Session creation failture.");
+		BOOST_FAIL("Session creation failure.");
 	}
 
             // write a query that switches current keyspace to "system"

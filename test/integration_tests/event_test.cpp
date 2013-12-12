@@ -20,7 +20,7 @@ struct CCM_SETUP1 {
     CCM_SETUP1() : conf(cql::get_ccm_bridge_configuration())
 	{
 		boost::debug::detect_memory_leaks(true);
-		int numberOfNodes = 3;
+		int numberOfNodes = 1;
 		ccm = cql::cql_ccm_bridge_t::create(conf, "test", numberOfNodes, true);
 		ccm_contact_seed = boost::asio::ip::address::from_string(conf.ip_prefix() + "1");
 		use_ssl=false;
@@ -50,12 +50,25 @@ log_callback(
     std::cout << "LOG: " << message << std::endl;
 }
 
+boost::condition_variable cond;
+boost::mutex mut;
+
+volatile cql::cql_host_state_changed_info_t::new_host_state_enum new_state;
+volatile bool is_ready;
+
 void
 state_change_callback(
-    boost::promise<cql::cql_host_state_changed_info_t::new_host_state_enum>& promise,
     boost::shared_ptr<cql::cql_host_state_changed_info_t> info)
 {
-    promise.set_value(info->new_state());
+    // Let the main thread hit the condition. (TODO: any better idea?)
+    boost::this_thread::sleep(boost::posix_time::seconds(1));
+    
+    {
+        boost::lock_guard<boost::mutex> lock(mut);
+        new_state = info->new_state();
+        is_ready = true;
+    }
+    cond.notify_one();
 }
 
 BOOST_AUTO_TEST_CASE(status_event_down)
@@ -70,24 +83,47 @@ BOOST_AUTO_TEST_CASE(status_event_down)
     }
     
     boost::shared_ptr<cql::cql_cluster_t> cluster(builder->build());
+    cluster->metadata()->on_host_state_changed(&state_change_callback);
     
-    boost::promise<      cql::cql_host_state_changed_info_t::new_host_state_enum>
-        event_handled_promise;
-    boost::shared_future<cql::cql_host_state_changed_info_t::new_host_state_enum>
-        event_handled_future = event_handled_promise.get_future();
-    
-    cluster->metadata()->on_host_state_changed(boost::bind(state_change_callback,
-                                                           boost::ref(event_handled_promise),
-                                                           _1));
-
-    ccm->kill(2);
-    // Take some time to let the event propagate.
-    if (event_handled_future.timed_wait(boost::posix_time::seconds(60))) {
-        if (event_handled_future.get() != cql::cql_host_state_changed_info_t::NEW_HOST_STATE_DOWN) {
-            BOOST_ERROR("Event received, but state change misinterpreted");
+    // Test the event generated when stopping a host:
+    { // Scope limiter for `lock'
+        boost::unique_lock<boost::mutex> lock(mut);
+        new_state = (cql::cql_host_state_changed_info_t::new_host_state_enum)(-1);
+        is_ready = false;
+        ccm->stop(2);
+        while(!is_ready) {
+            cond.timed_wait(lock, boost::posix_time::seconds(30));
         }
-    } else {
-        BOOST_ERROR("Timeout expired - no event received");
+
+        if (new_state != cql::cql_host_state_changed_info_t::NEW_HOST_STATE_DOWN) {
+            BOOST_ERROR("Event received, but with wrong state change description");
+        }
+    }
+
+    // Test the event generated when starting a host:
+    { // Scope limiter for `lock'
+        boost::unique_lock<boost::mutex> lock(mut);
+        new_state = (cql::cql_host_state_changed_info_t::new_host_state_enum)(-1);
+        is_ready = false;
+        ccm->start(2);
+        while(!is_ready) {
+            cond.timed_wait(lock, boost::posix_time::seconds(30));
+        }
+        
+        if (new_state != cql::cql_host_state_changed_info_t::NEW_HOST_STATE_UP) {
+            
+            // We will give ourselves another chance - this is because HOST_STATE_DOWN
+            // was being fired (again) before HOST_STATE_UP at the time of this writing.
+            new_state = (cql::cql_host_state_changed_info_t::new_host_state_enum)(-1);
+            is_ready = false;
+            while(!is_ready) {
+                cond.timed_wait(lock, boost::posix_time::seconds(30));
+            }
+            
+            if (new_state != cql::cql_host_state_changed_info_t::NEW_HOST_STATE_UP) {
+                BOOST_ERROR("Event received, but with wrong state change description");
+            }
+        }
     }
     
 	cluster->shutdown();
