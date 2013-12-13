@@ -1,53 +1,30 @@
+#define BOOST_TEST_DYN_LINK
+#ifdef STAND_ALONE
+#   define BOOST_TEST_MODULE cassandra
+#endif
+
 #include "cql/cql.hpp"
 #include "cql_ccm_bridge.hpp"
 #include "test_utils.hpp"
 
-#include <cql/cql_session.hpp>
-#include <cql/cql_cluster.hpp>
-#include <cql/cql_builder.hpp>
+#include "cql/cql_session.hpp"
+#include "cql/cql_cluster.hpp"
+#include "cql/cql_builder.hpp"
 
-#include <cql/cql_list.hpp>
-#include <cql/cql_set.hpp>
-#include <cql/cql_map.hpp>
+#include "cql/cql_list.hpp"
+#include "cql/cql_set.hpp"
+#include "cql/cql_map.hpp"
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
 #include <boost/lexical_cast.hpp>
-
 #include <boost/cstdint.hpp>
 
-struct CCM_SETUP {
-
-    CCM_SETUP() :conf(cql::get_ccm_bridge_configuration())
-	{
-		boost::debug::detect_memory_leaks(true);
-		int numberOfNodes = 1;
-		ccm = cql::cql_ccm_bridge_t::create(conf, "test", numberOfNodes, true);
-		ccm_contact_seed = boost::asio::ip::address::from_string(conf.ip_prefix() + "1");
-		use_ssl=false;
-
-		builder = cql::cql_cluster_t::builder();
-		builder->with_log_callback(&test_utils::log_callback);		
-	    builder->add_contact_point(ccm_contact_seed);
-		
-		if (use_ssl) {
-			builder->with_ssl();
-		}
-	}
-
-    ~CCM_SETUP()         
-	{ 
-		ccm->remove();
-	}
-
-	boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
-	const cql::cql_ccm_bridge_configuration_t& conf;
-	boost::asio::ip::address ccm_contact_seed;
-	bool use_ssl;
-	boost::shared_ptr<cql::cql_builder_t> builder;
+struct MY_CCM_SETUP : test_utils::CCM_SETUP {
+    MY_CCM_SETUP() : CCM_SETUP(1) {}
 };
 
-BOOST_FIXTURE_TEST_SUITE( basics, CCM_SETUP )
+BOOST_FIXTURE_TEST_SUITE( basics, MY_CCM_SETUP )
 
 boost::shared_ptr<cql::cql_result_t> simple_insert_test(boost::shared_ptr<cql::cql_cluster_t> cluster, cql::cql_column_type_enum col_type, std::string value_to_insert )
 {

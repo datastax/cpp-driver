@@ -5,50 +5,22 @@
 
 #include "cql/cql.hpp"
 #include "cql_ccm_bridge.hpp"
+#include "test_utils.hpp"
 
-#include <cql/cql_session.hpp>
-#include <cql/cql_cluster.hpp>
-#include <cql/cql_builder.hpp>
+#include "cql/cql_session.hpp"
+#include "cql/cql_cluster.hpp"
+#include "cql/cql_builder.hpp"
 
-#include <cql/cql_metadata.hpp>
+#include "cql/cql_metadata.hpp"
 
 #include <boost/test/unit_test.hpp>
-#include <boost/test/debug.hpp>
 #include <boost/thread/future.hpp>
 
-struct CCM_SETUP1 {
-    CCM_SETUP1() : conf(cql::get_ccm_bridge_configuration())
-	{
-		boost::debug::detect_memory_leaks(true);
-		int numberOfNodes = 1;
-		ccm = cql::cql_ccm_bridge_t::create(conf, "test", numberOfNodes, true);
-		ccm_contact_seed = boost::asio::ip::address::from_string(conf.ip_prefix() + "1");
-		use_ssl=false;
-	}
-
-    ~CCM_SETUP1()
-	{ 
-		ccm->remove();
-	}
-
-	boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
-	const cql::cql_ccm_bridge_configuration_t& conf;
-	boost::asio::ip::address ccm_contact_seed;
-	bool use_ssl;
-    
-    cql::cql_host_state_changed_info_t::new_host_state_enum expected_host_state_change;
+struct MY_CCM_SETUP : test_utils::CCM_SETUP {
+    MY_CCM_SETUP() : CCM_SETUP(1) {}
 };
 
-BOOST_FIXTURE_TEST_SUITE( event_test, CCM_SETUP1 )
-
-// This function is called asynchronously every time an event is logged
-void
-log_callback(
-    const cql::cql_short_t,
-    const std::string& message)
-{
-    std::cout << "LOG: " << message << std::endl;
-}
+BOOST_FIXTURE_TEST_SUITE( event_test, MY_CCM_SETUP )
 
 boost::condition_variable cond;
 boost::mutex mut;
@@ -71,10 +43,9 @@ state_change_callback(
     cond.notify_one();
 }
 
-BOOST_AUTO_TEST_CASE(status_event_down)
+BOOST_AUTO_TEST_CASE(status_event)
 {
     boost::shared_ptr<cql::cql_builder_t> builder = cql::cql_cluster_t::builder();
-    builder->with_log_callback(&log_callback);
 		
     builder->add_contact_point(ccm_contact_seed);
 
