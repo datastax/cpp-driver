@@ -609,7 +609,7 @@ cql::decode_option(cql::cql_byte_t* input,
 }
 
 static const char*
-cql::inet_ntop_ipv4(const void* src, char* dst, int cnt) {
+inet_ntop_ipv4(const void* src, char* dst, int cnt) {
 #ifdef _WIN32
 // Interface to WinAPI's `WSAAddressToString'.
     struct sockaddr_in srcaddr;
@@ -630,7 +630,7 @@ cql::inet_ntop_ipv4(const void* src, char* dst, int cnt) {
 }
 
 static const char*
-cql::inet_ntop_ipv6(const void* src, char* dst, int cnt) {
+inet_ntop_ipv6(const void* src, char* dst, int cnt) {
 #ifdef _WIN32
 // Interface to WinAPI's `WSAAddressToString'.
     struct sockaddr_in6 srcaddr;
@@ -695,7 +695,7 @@ cql::decode_ipv6_from_bytes(const cql::cql_byte_t* data) {
 }
 
 static int
-cql::inet_pton_ipv4(const char* src,
+inet_pton_ipv4(const char* src,
                     void* dst) {
 #ifdef _WIN32
     return InetPton(AF_INET, src, dst);
@@ -705,7 +705,7 @@ cql::inet_pton_ipv4(const char* src,
 }
 
 static int
-cql::inet_pton_ipv6(const char* src,
+inet_pton_ipv6(const char* src,
                     void* dst) {
 #ifdef _WIN32
     return InetPton(AF_INET6, src, dst);

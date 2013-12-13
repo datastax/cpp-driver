@@ -204,9 +204,9 @@ public:
         _closing(false),
         _reserved_stream(_callback_storage.acquire_stream()),
         _uuid(cql_uuid_t::create()),
-        _session_ptr(NULL),
         _is_disposed(new boolkeeper),
-        _stream_id_vs_query_string(NUMBER_OF_STREAMS, "")
+        _stream_id_vs_query_string(NUMBER_OF_STREAMS, ""),
+        _session_ptr(NULL)
     {}
 
 	virtual ~cql_connection_impl_t()
@@ -826,14 +826,16 @@ private:
     preprocess_result_message(cql::cql_message_result_impl_t* response_message)
     {
         switch(response_message->result_type()) {
-            case CQL_RESULT_SET_KEYSPACE:
+                
+            case CQL_RESULT_SET_KEYSPACE: {
                 response_message->get_keyspace_name(_current_keyspace_name);
                 if (_session_ptr) {
                     _session_ptr->set_keyspace(_current_keyspace_name);
                 }
-                break;
+            }
+            break;
                 
-            case CQL_RESULT_PREPARED:
+            case CQL_RESULT_PREPARED: {
                 const std::vector<cql_byte_t>& query_id = response_message->query_id();
                 set_prepared_statement(query_id);
                 _prepare_statements.enable(query_id);
@@ -844,7 +846,11 @@ private:
                         query_id,
                         _stream_id_vs_query_string[stream_id]);
                 }
-                break;
+            }
+            break;
+                
+            default: {}
+            break;
         }
     }
 

@@ -11,15 +11,15 @@ namespace cql {
 	const int cql_ccm_bridge_configuration_t::DEFAULT_SSH_PORT = 22;
 
 	cql_ccm_bridge_configuration_t::cql_ccm_bridge_configuration_t() 
-		: _ssh_port(22),
-		  _ssh_host("localhost"),
-		  _ssh_user(), 
-		  _ssh_pass(),
-		  _cassandra_version("1.2.5"),
-		  _use_compression(false),
-		  _use_buffering(true),
-		  _use_logger(false),
-		  _ip_prefix()
+    :     _ip_prefix(),
+          _cassandra_version("1.2.5"),
+          _ssh_host("localhost"),
+          _ssh_port(22),
+          _ssh_user(),
+          _ssh_pass(),
+          _use_buffering(true),
+          _use_logger(false),
+          _use_compression(false)
 	{
 	}
 

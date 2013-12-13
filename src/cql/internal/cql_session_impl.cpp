@@ -34,13 +34,13 @@
 cql::cql_session_impl_t::cql_session_impl_t(
     const cql_session_callback_info_t&      callbacks,
     boost::shared_ptr<cql_configuration_t>  configuration) :
-	_Iam_closed(false),
     _client_callback(callbacks.client_callback()),
     _ready_callback(callbacks.ready_callback()),
     _defunct_callback(callbacks.defunct_callback()),
     _log_callback(callbacks.log_callback()),
     _uuid(cql_uuid_t::create()),
-    _configuration(configuration)
+    _configuration(configuration),
+    _Iam_closed(false)
 {}
 
 cql::cql_session_impl_t::~cql_session_impl_t()

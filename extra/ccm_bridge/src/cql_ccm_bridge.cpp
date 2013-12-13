@@ -28,9 +28,10 @@ namespace cql {
 	const string cql_ccm_bridge_t::CCM_COMMAND = "ccm";
 
 	cql_ccm_bridge_t::cql_ccm_bridge_t(const cql_ccm_bridge_configuration_t& settings) 
-		:	_socket(-1),
-			_session(0), _channel(0),
-			_ip_prefix(settings.ip_prefix())
+		:	_ip_prefix(settings.ip_prefix()),
+            _socket(-1),
+            _session(0),
+            _channel(0)
 	{
 		initialize_socket_library();
 

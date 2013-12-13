@@ -227,24 +227,12 @@ decode_option(cql::cql_byte_t* input,
               cql::cql_column_type_enum& id,
               std::string& value);
 
-static const char*
-inet_ntop_ipv4(const void* src, char* dst, int cnt);
-    
-static const char*
-inet_ntop_ipv6(const void* src, char* dst, int cnt);
-
 std::string
 decode_ipv4_from_bytes(const cql::cql_byte_t* data);
     
 std::string
 decode_ipv6_from_bytes(const cql::cql_byte_t* data);
 
-static int
-inet_pton_ipv4(const char* src, void* dst);
-    
-static int
-inet_pton_ipv6(const char* src, void* dst);
-    
 std::ostream&
 encode_ipv4(std::ostream& output,
             const std::string& ip);

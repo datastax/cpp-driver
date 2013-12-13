@@ -394,6 +394,8 @@ public:
     cql_builder_t() :
         _log_callback(0)
     {}
+    
+    virtual ~cql_builder_t() {}
 
     inline virtual const std::list<cql_endpoint_t>&
     contact_points() const

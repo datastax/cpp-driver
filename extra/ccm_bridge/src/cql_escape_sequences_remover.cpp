@@ -14,7 +14,7 @@ namespace cql {
 		case ESC_SEQ_STATE_OUTSIDE:
 			if(c == ESCAPE)
 				go_to_state(ESC_SEQ_STATE_AFTER_ESCAPE);
-			else if(c == CSI)
+			else if((unsigned char)c == CSI)
 				go_to_state(ESC_SEQ_STATE_AFTER_ESCAPE_BRACKET);
 			else if(is_control_character(c))
 				go_to_state(ESC_SEQ_STATE_OUTSIDE);
