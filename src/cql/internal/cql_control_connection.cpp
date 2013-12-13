@@ -276,6 +276,8 @@ cql_control_connection_t::refresh_node_list_and_token_map()
                         token_map[local_host->address()].insert(local_tokens_map.begin(),
                                                                 local_tokens_map.end());
                     }
+
+                    delete local_tokens_set;
                 }
             }
 

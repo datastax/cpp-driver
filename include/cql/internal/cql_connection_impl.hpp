@@ -135,7 +135,7 @@ public:
 
 	virtual ~cql_connection_impl_t()
 	{
-		boost::mutex::scoped_lock(_is_disposed->mutex);
+		boost::mutex::scoped_lock lock(_is_disposed->mutex);
 		// lets set the disposed flag (the shared counter will prevent it from being destroyed)
 		_is_disposed->value=true;
 	}
@@ -229,7 +229,10 @@ public:
 
 		_callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
 
-		create_request(new cql::cql_message_query_impl_t(query),
+        cql::cql_message_query_impl_t messageQuery(query);
+
+		create_request(
+            &messageQuery,
 			boost::bind(&cql_connection_impl_t::write_handle,
 			this,
 			boost::asio::placeholders::error,
@@ -254,8 +257,10 @@ public:
 
         _callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
 
+        cql::cql_message_query_impl_t messageQuery(query);
+
         create_request(
-            new cql::cql_message_prepare_impl_t(query),
+            &messageQuery,
             boost::bind(&cql_connection_impl_t::write_handle,
                         this,
                         boost::asio::placeholders::error,
@@ -612,7 +617,7 @@ private:
         const boost::system::error_code& err)
     {
 		// if the connection was already disposed we return here immediatelly
-		boost::mutex::scoped_lock(is_disposed->mutex);
+        boost::mutex::scoped_lock lock(is_disposed->mutex);
 		if(is_disposed->value)
 			return;
 		if (!err) {
@@ -689,7 +694,7 @@ private:
 		boost::shared_ptr<boolkeeper> is_disposed,
         const boost::system::error_code& err)
     {
-		boost::mutex::scoped_lock(is_disposed->mutex);
+		boost::mutex::scoped_lock lock(is_disposed->mutex);
 		// if the connection was already disposed we return here immediatelly
 		if(is_disposed->value)
 			return;
@@ -798,10 +803,10 @@ private:
     void
     events_register()
     {
-        std::auto_ptr<cql::cql_message_register_impl_t> m(new cql::cql_message_register_impl_t());
-        m->events(_events);
+        cql::cql_message_register_impl_t messageRegister;
+        messageRegister.events(_events);
 
-        create_request(m.release(),
+        create_request(&messageRegister,
                        boost::bind(&cql_connection_impl_t::write_handle,
                                    this,
                                    boost::asio::placeholders::error,
@@ -814,8 +819,9 @@ private:
     void
     options_write()
     {
+        cql::cql_message_options_impl_t messageOption;
 		create_request(
-            new cql::cql_message_options_impl_t(),
+            &messageOption,
             (boost::function<void (const boost::system::error_code &, std::size_t)>)boost::bind(
                 &cql_connection_impl_t::write_handle,
                 this,
@@ -830,10 +836,10 @@ private:
     void
     startup_write()
     {
-        std::auto_ptr<cql::cql_message_startup_impl_t> m(new cql::cql_message_startup_impl_t());
-        m->version(CQL_VERSION_IMPL);
+        cql::cql_message_startup_impl_t m;
+        m.version(CQL_VERSION_IMPL);
         create_request(
-            m.release(),
+            &m,
             boost::bind(&cql_connection_impl_t::write_handle,
                         this,
                         boost::asio::placeholders::error,
@@ -844,10 +850,10 @@ private:
     void
     credentials_write()
     {
-        std::auto_ptr<cql::cql_message_credentials_impl_t> m(new cql::cql_message_credentials_impl_t());
-        m->credentials(_credentials);
+        cql::cql_message_credentials_impl_t m;
+        m.credentials(_credentials);
         create_request(
-            m.release(),
+            &m,
             boost::bind(&cql_connection_impl_t::write_handle,
                         this,
                         boost::asio::placeholders::error,
