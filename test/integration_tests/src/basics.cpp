@@ -53,7 +53,7 @@ boost::shared_ptr<cql::cql_result_t> simple_insert_test(boost::shared_ptr<cql::c
 }
 
 
-BOOST_AUTO_TEST_CASE(simple_insert_int32) // FIXME: fails here
+BOOST_AUTO_TEST_CASE(simple_insert_int32)
 {
 	int test_val = 2147483647;
 	std::string conv_val = boost::lexical_cast<std::string>(test_val);
@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(simple_insert_int32) // FIXME: fails here
 
 BOOST_AUTO_TEST_CASE(simple_insert_int64)
 {
-    boost::int64_t test_val = 2147483648;
+	boost::int64_t test_val = 2147483648;
 	std::string conv_val = boost::lexical_cast<std::string>(test_val);
 	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_BIGINT, conv_val);
 	boost::int64_t res;
