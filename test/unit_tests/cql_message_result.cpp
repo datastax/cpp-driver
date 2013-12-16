@@ -517,7 +517,7 @@ BOOST_AUTO_TEST_CASE(not_null)
     BOOST_CHECK_EQUAL(true, m.next());
 
     bool is_null = false;
-    BOOST_CHECK_EQUAL(true, m.is_null(16, is_null));
+    BOOST_CHECK_EQUAL(false, m.is_null(16, is_null));
     BOOST_CHECK_EQUAL(false, is_null);
 }
 
@@ -531,7 +531,7 @@ BOOST_AUTO_TEST_CASE(null_columns_map)
     BOOST_CHECK_EQUAL(true, m.next());
 
     bool is_null = false;
-    BOOST_CHECK_EQUAL(true, m.is_null(2, is_null));
+    BOOST_CHECK_EQUAL(false, m.is_null(2, is_null));
     BOOST_CHECK_EQUAL(true, is_null);
 
     cql::cql_map_t* map = NULL;
@@ -549,7 +549,7 @@ BOOST_AUTO_TEST_CASE(null_columns_text)
     BOOST_CHECK_EQUAL(true, m.next());
 
     bool is_null = false;
-    BOOST_CHECK_EQUAL(true, m.is_null(11, is_null));
+    BOOST_CHECK_EQUAL(false, m.is_null(11, is_null));
     BOOST_CHECK_EQUAL(true, is_null);
 
     std::string val;
