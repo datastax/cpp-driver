@@ -41,7 +41,7 @@ namespace test_utils {
     parametrized ctor. Derive from it to use it in your tests.
  */
 struct CCM_SETUP {
-    CCM_SETUP(int numberOfNodes);
+    CCM_SETUP(int numberOfNodesDC1, int numberOfNodesDC2 = 0);
     virtual ~CCM_SETUP();
     
 	boost::shared_ptr<cql::cql_ccm_bridge_t>   ccm;

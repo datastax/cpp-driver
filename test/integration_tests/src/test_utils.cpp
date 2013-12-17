@@ -72,10 +72,10 @@ const std::string INSERT_FORMAT = "INSERT INTO {0} (k, t, i, f) VALUES ('{1}', '
 const std::string SELECT_ALL_FORMAT = "SELECT * FROM {0}";
 const std::string SELECT_WHERE_FORMAT = "SELECT * FROM {0} WHERE {1}";
 //-----------------------------------------------------------------------------------
-CCM_SETUP::CCM_SETUP(int numberOfNodes) : conf(cql::get_ccm_bridge_configuration())
+CCM_SETUP::CCM_SETUP(int numberOfNodesDC1, int numberOfNodesDC2) : conf(cql::get_ccm_bridge_configuration())
 {
     boost::debug::detect_memory_leaks(true);
-    ccm = cql::cql_ccm_bridge_t::create(conf, "test", numberOfNodes, true);
+    ccm = cql::cql_ccm_bridge_t::create(conf, "test", numberOfNodesDC1, numberOfNodesDC2);
     ccm_contact_seed = boost::asio::ip::address::from_string(conf.ip_prefix() + "1");
     use_ssl=false;
     
