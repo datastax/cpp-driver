@@ -17,7 +17,7 @@
 #include <boost/thread/future.hpp>
 
 struct MY_CCM_SETUP : test_utils::CCM_SETUP {
-    MY_CCM_SETUP() : CCM_SETUP(1) {}
+    MY_CCM_SETUP() : CCM_SETUP(1,1) {}
 };
 
 BOOST_FIXTURE_TEST_SUITE( event_test, MY_CCM_SETUP )

@@ -17,7 +17,7 @@
 
 
 struct MY_CCM_SETUP : test_utils::CCM_SETUP {
-    MY_CCM_SETUP() : CCM_SETUP(2) {}	
+    MY_CCM_SETUP() : CCM_SETUP(1,1) {}
 };
 
 
@@ -30,7 +30,7 @@ void create_schema(boost::shared_ptr<cql::cql_session_t> session, int replicatio
 
 void init(boost::shared_ptr<cql::cql_session_t> session,int n, cql::cql_consistency_enum cl)
 {
-	for( int i =0; i< n; ++i)	 
+	for( int i = 0; i < n; ++i)	 
 		test_utils::query(session, str(boost::format("INSERT INTO %s(k, i) VALUES (0, 0)") % test_utils::SIMPLE_TABLE), cl);
 }
 

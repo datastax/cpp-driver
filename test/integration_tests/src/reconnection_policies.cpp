@@ -16,7 +16,7 @@
 #include <boost/test/unit_test.hpp>
 
 struct MY_CCM_SETUP : test_utils::CCM_SETUP {
-    MY_CCM_SETUP() : CCM_SETUP(1) {}
+    MY_CCM_SETUP() : CCM_SETUP(1,1) {}
 };
 
 BOOST_AUTO_TEST_CASE(exponential_policy_construction_test)

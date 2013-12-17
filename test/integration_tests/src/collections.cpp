@@ -19,7 +19,7 @@
 #include <boost/test/debug.hpp>
 
 struct MY_CCM_SETUP : test_utils::CCM_SETUP {
-    MY_CCM_SETUP() : CCM_SETUP(1) {}
+    MY_CCM_SETUP() : CCM_SETUP(1,0) {}
 };
 
 BOOST_FIXTURE_TEST_SUITE( collections, MY_CCM_SETUP )

@@ -21,7 +21,7 @@
 #include <boost/cstdint.hpp>
 
 struct MY_CCM_SETUP : test_utils::CCM_SETUP {
-    MY_CCM_SETUP() : CCM_SETUP(1) {}
+    MY_CCM_SETUP() : CCM_SETUP(1,0) {}
 };
 
 BOOST_FIXTURE_TEST_SUITE( basics, MY_CCM_SETUP )
@@ -30,7 +30,7 @@ boost::shared_ptr<cql::cql_result_t> simple_insert_test(boost::shared_ptr<cql::c
 {
 	boost::shared_ptr<cql::cql_session_t> session(cluster->connect());
 	if (!session) {
-		BOOST_FAIL("Session creation failture.");
+		BOOST_FAIL("Session creation failure.");
 	}
 
 	test_utils::query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
