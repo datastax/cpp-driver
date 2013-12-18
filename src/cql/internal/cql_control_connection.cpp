@@ -41,7 +41,8 @@ cql_control_connection_t::cql_control_connection_t(
     _io_service(io_service),
     _configuration(configuration),
     _timer(io_service),
-    _log_callback(_configuration->client_options().log_callback())
+    _log_callback(_configuration->client_options().log_callback()),
+    _is_open(false)
 {
     cql_session_callback_info_t session_callbacks;
 
