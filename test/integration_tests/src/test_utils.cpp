@@ -62,6 +62,28 @@ get_cql(cql::cql_column_type_enum col_type)
     
     return ctts.CQL_TYPE.at(col_type);
 }
+
+void
+waitFor(
+	boost::asio::ip::address node,
+	boost::shared_ptr<cql::cql_cluster_t> cluster,
+	int maxTry,
+	bool waitForDead,
+	bool waitForOut)
+{
+	boost::this_thread::sleep(boost::posix_time::seconds(60)); // Workaround for now, while events doesn't work properly
+}
+
+void 
+waitForDownWithWait(
+	boost::asio::ip::address node,
+	boost::shared_ptr<cql::cql_cluster_t> cluster,
+	int waitTime)
+{
+	boost::this_thread::sleep(boost::posix_time::seconds(60)); // Workaround for now, while events doesn't work properly
+}
+
+
 //-----------------------------------------------------------------------------------
 const std::string CREATE_KEYSPACE_SIMPLE_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %s }";
 const std::string CREATE_KEYSPACE_GENERIC_FORMAT = "CREATE KEYSPACE {0} WITH replication = { 'class' : '{1}', {2} }";

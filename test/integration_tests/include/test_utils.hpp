@@ -7,6 +7,7 @@
 namespace cql {
     class cql_result_t;
     class cql_session_t;
+	class cql_cluster_t;
     class cql_ccm_bridge_t;
     class cql_builder_t;
 }
@@ -27,6 +28,21 @@ namespace test_utils {
     
 	std::string
     get_cql(cql::cql_column_type_enum);
+
+	void
+		waitFor(
+		boost::asio::ip::address node,
+		boost::shared_ptr<cql::cql_cluster_t> cluster,
+		int maxTry,
+		bool waitForDead,
+		bool waitForOut);
+
+	void 
+	waitForDownWithWait(
+		boost::asio::ip::address node,
+		boost::shared_ptr<cql::cql_cluster_t> cluster,
+		int waitTime);
+
 
 	extern const std::string CREATE_KEYSPACE_SIMPLE_FORMAT;
 	extern const std::string CREATE_KEYSPACE_GENERIC_FORMAT;
