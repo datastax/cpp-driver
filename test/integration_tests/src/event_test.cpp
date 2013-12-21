@@ -16,11 +16,11 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/thread/future.hpp>
 
-struct MY_CCM_SETUP : test_utils::CCM_SETUP {
-    MY_CCM_SETUP() : CCM_SETUP(1,1) {}
+struct EVENTS_CCM_SETUP : test_utils::CCM_SETUP {
+    EVENTS_CCM_SETUP() : CCM_SETUP(2,0) {}
 };
 
-BOOST_FIXTURE_TEST_SUITE( event_test, MY_CCM_SETUP )
+BOOST_FIXTURE_TEST_SUITE( event_test, EVENTS_CCM_SETUP )
 
 boost::condition_variable cond;
 boost::mutex mut;

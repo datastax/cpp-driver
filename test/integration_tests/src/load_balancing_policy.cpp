@@ -16,8 +16,8 @@
 #include <boost/test/debug.hpp>
 
 
-struct MY_CCM_SETUP : test_utils::CCM_SETUP {
-    MY_CCM_SETUP() : CCM_SETUP(1,1) {}
+struct LB_POLICY_CCM_SETUP : test_utils::CCM_SETUP {
+    LB_POLICY_CCM_SETUP() : CCM_SETUP(1,1) {}
 };
 
 
@@ -72,7 +72,7 @@ void query(boost::shared_ptr<cql::cql_session_t> session, int n, cql::cql_consis
 	}
 }
 
-BOOST_FIXTURE_TEST_SUITE( _load_balancing_policy, MY_CCM_SETUP )
+BOOST_FIXTURE_TEST_SUITE( _load_balancing_policy, LB_POLICY_CCM_SETUP )
 
 BOOST_AUTO_TEST_CASE( round_robin )
 {

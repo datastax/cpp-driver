@@ -20,11 +20,11 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/cstdint.hpp>
 
-struct MY_CCM_SETUP : test_utils::CCM_SETUP {
-    MY_CCM_SETUP() : CCM_SETUP(1,0) {}
+struct BASICS_CCM_SETUP : test_utils::CCM_SETUP {
+    BASICS_CCM_SETUP() : CCM_SETUP(1,0) {}
 };
 
-BOOST_FIXTURE_TEST_SUITE( basics, MY_CCM_SETUP )
+BOOST_FIXTURE_TEST_SUITE( basics, BASICS_CCM_SETUP )
 
 boost::shared_ptr<cql::cql_result_t> simple_insert_test(boost::shared_ptr<cql::cql_cluster_t> cluster, cql::cql_column_type_enum col_type, std::string value_to_insert )
 {

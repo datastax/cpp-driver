@@ -15,8 +15,8 @@
 
 #include <boost/test/unit_test.hpp>
 
-struct MY_CCM_SETUP : test_utils::CCM_SETUP {
-    MY_CCM_SETUP() : CCM_SETUP(1,1) {}
+struct RECONN_POLICY_CCM_SETUP : test_utils::CCM_SETUP {
+    RECONN_POLICY_CCM_SETUP() : CCM_SETUP(1,1) {}
 };
 
 BOOST_AUTO_TEST_CASE(exponential_policy_construction_test)
@@ -72,6 +72,6 @@ BOOST_AUTO_TEST_CASE(exponential_policy_delays_test)
     BOOST_CHECK_EQUAL(schedule->get_delay(), boost::posix_time::seconds(32));
 }
     
-BOOST_FIXTURE_TEST_SUITE( reconnection_policy_test, MY_CCM_SETUP )
+BOOST_FIXTURE_TEST_SUITE( reconnection_policy_test, RECONN_POLICY_CCM_SETUP )
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -18,11 +18,11 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
 
-struct MY_CCM_SETUP : test_utils::CCM_SETUP {
-    MY_CCM_SETUP() : CCM_SETUP(1,0) {}
+struct COLLECTIONS_CCM_SETUP : test_utils::CCM_SETUP {
+    COLLECTIONS_CCM_SETUP() : CCM_SETUP(1,0) {}
 };
 
-BOOST_FIXTURE_TEST_SUITE( collections, MY_CCM_SETUP )
+BOOST_FIXTURE_TEST_SUITE( collections, COLLECTIONS_CCM_SETUP )
 
 void collection_test(boost::shared_ptr<cql::cql_cluster_t> cluster, std::string collection_type, bool list_prepending = false)
 {

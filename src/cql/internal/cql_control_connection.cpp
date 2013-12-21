@@ -37,6 +37,7 @@ cql_control_connection_t::cql_control_connection_t(
     cql_cluster_t&                         cluster,
     boost::asio::io_service&               io_service,
     boost::shared_ptr<cql_configuration_t> configuration) :
+    _is_open(false),
     _cluster(cluster),
     _io_service(io_service),
     _configuration(configuration),

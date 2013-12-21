@@ -328,10 +328,11 @@ cql::decode_string(istream& input,
                    string& value) {
     cql::cql_short_t len;
     cql::decode_short(input, len);
-
-    vector<char> buffer(len, 0);
-    input.read(&buffer[0], len);
-    value.assign(buffer.begin(), buffer.end());
+	if (len) {
+	    vector<char> buffer(len, 0);
+		input.read(&buffer[0], len);
+		value.assign(buffer.begin(), buffer.end());
+	}
     return input;
 }
 
@@ -366,7 +367,9 @@ cql::decode_bytes(istream& input,
     len = ntohl(len);
 
     value.resize(len, 0);
-    input.read(reinterpret_cast<char*>(&value[0]), len);
+    if (len) {
+        input.read(reinterpret_cast<char*>(&value[0]), len);
+    }
     return input;
 }
 
@@ -387,7 +390,9 @@ cql::decode_short_bytes(istream& input,
     len = ntohs(len);
 
     value.resize(len, 0);
-    input.read(reinterpret_cast<char*>(&value[0]), len);
+    if (len) {
+        input.read(reinterpret_cast<char*>(&value[0]), len);
+	}
     return input;
 }
 
@@ -418,9 +423,11 @@ cql::decode_long_string(istream& input,
     input.read(reinterpret_cast<char*>(&len), sizeof(len));
     len = ntohl(len);
 
-    vector<char> buffer(len);
-    input.read(&buffer[0], len);
-    value.assign(buffer.begin(), buffer.end());
+    if (len) {
+        vector<char> buffer(len);
+        input.read(&buffer[0], len);
+        value.assign(buffer.begin(), buffer.end());
+    }
     return input;
 }
 
@@ -768,6 +775,9 @@ cql::decode_inet(istream& input,
         ip = decode_ipv4_from_bytes(&buffer[0]);
     } else if (len == 16) {
         ip = decode_ipv6_from_bytes(&buffer[0]);
+    }
+    else {
+        assert(false && "Expected inet address to be 4 or 16 bytes long");
     }
     
     cql::decode_int(input, port);
