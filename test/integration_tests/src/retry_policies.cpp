@@ -16,12 +16,12 @@
 #include <boost/test/debug.hpp>
 
 
-struct MY_CCM_SETUP : test_utils::CCM_SETUP {
-	MY_CCM_SETUP() : CCM_SETUP(2) {}	
+struct RETRY_CCM_SETUP : test_utils::CCM_SETUP {
+	RETRY_CCM_SETUP() : CCM_SETUP(2,0) {}
 };
 
 
-BOOST_FIXTURE_TEST_SUITE( retry_policies, MY_CCM_SETUP )
+BOOST_FIXTURE_TEST_SUITE( retry_policies, RETRY_CCM_SETUP )
 
 BOOST_AUTO_TEST_CASE( default_retry_policy )
 {
@@ -85,9 +85,9 @@ BOOST_AUTO_TEST_CASE( default_retry_policy )
 	}
 
 		// Ensure the full cycle was completed	
-		assert(successfulQuery, "Hit testing race condition. [Never completed successfully.] (Shouldn't be an issue.):\n");
-		assert(readTimeoutOnce, "Hit testing race condition. [Never encountered a ReadTimeoutException.] (Shouldn't be an issue.):\n");
-		assert(unavailableOnce, "Hit testing race condition. [Never encountered an UnavailableException.] (Shouldn't be an issue.):\n");
+		BOOST_REQUIRE_MESSAGE(successfulQuery, "Hit testing race condition. [Never completed successfully.] (Shouldn't be an issue.):\n");
+		BOOST_REQUIRE_MESSAGE(readTimeoutOnce, "Hit testing race condition. [Never encountered a ReadTimeoutException.] (Shouldn't be an issue.):\n");
+		BOOST_REQUIRE_MESSAGE(unavailableOnce, "Hit testing race condition. [Never encountered an UnavailableException.] (Shouldn't be an issue.):\n");
 
 		// A weak test to ensure that the nodes were contacted
 		policy_tools::assertQueriedAtLeast(host1, 1);
@@ -134,9 +134,9 @@ BOOST_AUTO_TEST_CASE( default_retry_policy )
 				successfulQuery = true;
 		}
 		// Ensure the full cycle was completed
-		assert(successfulQuery, "Hit testing race condition. [Never completed successfully.] (Shouldn't be an issue.):\n");
-		assert(writeTimeoutOnce, "Hit testing race condition. [Never encountered a ReadTimeoutException.] (Shouldn't be an issue.):\n");
-		assert(unavailableOnce, "Hit testing race condition. [Never encountered an UnavailableException.] (Shouldn't be an issue.):\n");
+		BOOST_REQUIRE_MESSAGE(successfulQuery, "Hit testing race condition. [Never completed successfully.] (Shouldn't be an issue.):\n");
+		BOOST_REQUIRE_MESSAGE(writeTimeoutOnce, "Hit testing race condition. [Never encountered a ReadTimeoutException.] (Shouldn't be an issue.):\n");
+		BOOST_REQUIRE_MESSAGE(unavailableOnce, "Hit testing race condition. [Never encountered an UnavailableException.] (Shouldn't be an issue.):\n");
 
 
 		// Test batch writes
@@ -178,9 +178,9 @@ BOOST_AUTO_TEST_CASE( default_retry_policy )
 				successfulQuery = true;
 		}
 		// Ensure the full cycle was completed
-		assert(successfulQuery, "Hit testing race condition. [Never completed successfully.] (Shouldn't be an issue.):\n");
-		assert(writeTimeoutOnce, "Hit testing race condition. [Never encountered a ReadTimeoutException.] (Shouldn't be an issue.):\n");
-		assert(unavailableOnce, "Hit testing race condition. [Never encountered an UnavailableException.] (Shouldn't be an issue.):\n");
+		BOOST_REQUIRE_MESSAGE(successfulQuery, "Hit testing race condition. [Never completed successfully.] (Shouldn't be an issue.):\n");
+		BOOST_REQUIRE_MESSAGE(writeTimeoutOnce, "Hit testing race condition. [Never encountered a ReadTimeoutException.] (Shouldn't be an issue.):\n");
+		BOOST_REQUIRE_MESSAGE(unavailableOnce, "Hit testing race condition. [Never encountered an UnavailableException.] (Shouldn't be an issue.):\n");
 
 		session->close();
 		cluster->shutdown();

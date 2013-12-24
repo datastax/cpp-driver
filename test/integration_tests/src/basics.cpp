@@ -49,7 +49,7 @@ boost::shared_ptr<cql::cql_result_t> simple_insert_test(boost::shared_ptr<cql::c
 		session->close();
 		return result;
 	}
-	else assert(false);	
+	else BOOST_FAIL("Empty result received.");
 }
 
 
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(simple_insert_int32)
 	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_INT, conv_val);
 	int res;
 	result->get_int("test_val", res);
-	assert(test_val == res);
+	BOOST_REQUIRE(test_val == res);
 }
 
 BOOST_AUTO_TEST_CASE(simple_insert_int64)
@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(simple_insert_int64)
 	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_BIGINT, conv_val);
 	boost::int64_t res;
 	result->get_bigint("test_val", res);
-	assert(test_val == res);
+	BOOST_REQUIRE(test_val == res);
 }
 
 BOOST_AUTO_TEST_CASE(simple_insert_boolean)
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(simple_insert_boolean)
 	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_BOOLEAN, conv_val);
 	bool res;
 	result->get_bool("test_val", res);
-	assert(test_val == res);
+	BOOST_REQUIRE(test_val == res);
 }
 
 BOOST_AUTO_TEST_CASE(simple_insert_float)
@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(simple_insert_float)
 	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_FLOAT, conv_val);
 	float res;
 	result->get_float("test_val", res);
-	assert(test_val == res);
+	BOOST_REQUIRE(test_val == res);
 }
 
 BOOST_AUTO_TEST_CASE(simple_insert_double)
@@ -100,7 +100,7 @@ BOOST_AUTO_TEST_CASE(simple_insert_double)
 	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_DOUBLE, conv_val);
 	double res;
 	result->get_double("test_val", res);
-	assert(test_val == res);
+	BOOST_REQUIRE(test_val == res);
 }
 
 BOOST_AUTO_TEST_CASE(simple_insert_string)
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE(simple_insert_string)
 	boost::shared_ptr<cql::cql_result_t> result = simple_insert_test(builder->build(), cql::CQL_COLUMN_TYPE_TEXT, test_val);
 	std::string res;
 	result->get_string("test_val", res);
-	assert(test_val == res);
+	BOOST_REQUIRE(test_val == res);
 }
 
 

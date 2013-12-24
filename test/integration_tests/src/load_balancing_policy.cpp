@@ -18,7 +18,7 @@
 
 
 struct LB_CCM_SETUP : test_utils::CCM_SETUP {
-    LB_CCM_SETUP() : CCM_SETUP(1,1) {}
+    LB_CCM_SETUP() : CCM_SETUP(2,0) {}
 };
 
 

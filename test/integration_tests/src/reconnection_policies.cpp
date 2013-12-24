@@ -16,7 +16,7 @@
 #include <boost/test/unit_test.hpp>
 
 struct RECONN_POLICY_CCM_SETUP : test_utils::CCM_SETUP {
-    RECONN_POLICY_CCM_SETUP() : CCM_SETUP(1,1) {}
+    RECONN_POLICY_CCM_SETUP() : CCM_SETUP(1,0) {}
 };
 
 BOOST_AUTO_TEST_CASE(exponential_policy_construction_test)
@@ -72,6 +72,25 @@ BOOST_AUTO_TEST_CASE(exponential_policy_delays_test)
     BOOST_CHECK_EQUAL(schedule->get_delay(), boost::posix_time::seconds(32));
 }
     
-BOOST_FIXTURE_TEST_SUITE( reconnection_policy_test, RECONN_POLICY_CCM_SETUP )
+BOOST_FIXTURE_TEST_SUITE( reconnection_policy_integration_tests, RECONN_POLICY_CCM_SETUP )
+
+BOOST_AUTO_TEST_CASE( exp_reconnection_policy_integration_test )
+{
+    boost::shared_ptr<cql::cql_builder_t> builder = cql::cql_cluster_t::builder();
+    builder->add_contact_point(ccm_contact_seed);
+    
+    if (use_ssl) {
+        builder->with_ssl();
+    }
+    
+    boost::shared_ptr<cql::cql_cluster_t> cluster(builder->build());
+	boost::shared_ptr<cql::cql_session_t> session(cluster->connect());
+	if (!session) {
+		BOOST_FAIL("Session creation failure.");
+	}
+    
+    session->close();
+    cluster->shutdown();
+}
 
 BOOST_AUTO_TEST_SUITE_END()

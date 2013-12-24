@@ -78,9 +78,9 @@ assertQueried(
 	int n)
 {
 	if(coordinators.count(coord_addr)!=0)	 
-		assert(coordinators[coord_addr] == n);
+		BOOST_REQUIRE(coordinators[coord_addr] == n);
 	else
-		assert(n == 0);	 
+		BOOST_REQUIRE(n == 0);
 }
 
 void 
@@ -89,7 +89,7 @@ assertQueriedAtLeast(
 	int n)
 {
 	int queried = coordinators[coord_addr];
-	assert(queried >= n);
+	BOOST_REQUIRE(queried >= n);
 }
 
 int

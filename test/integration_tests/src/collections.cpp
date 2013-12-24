@@ -58,33 +58,33 @@ void collection_test(boost::shared_ptr<cql::cql_cluster_t> cluster, std::string 
 				{
 					cql::cql_set_t* collection_row;
 					result->get_set("some_collection", &collection_row);
-					assert( collection_row->size() == number_of_updates +1);
+					BOOST_REQUIRE( collection_row->size() == number_of_updates +1);
 					
 					for( size_t i = 0u; i < collection_row->size(); i++)
 					{
 						int val;
 						collection_row->get_int(i, val);
-						assert(val == i);
+						BOOST_REQUIRE(val == i);
 					}				
 				}
 				else if(collection_type == "list")
 				{
 					cql::cql_list_t* collection_row;
 					result->get_list("some_collection", &collection_row);
-					assert( collection_row->size() == number_of_updates +1);
+					BOOST_REQUIRE( collection_row->size() == number_of_updates +1);
 					
 					for( size_t i = 0u; i < collection_row->size(); i++)
 					{
 						int val;
 						collection_row->get_int(i, val);
-						assert(val == (list_prepending ? (number_of_updates - i) : i));
+						BOOST_REQUIRE(val == (list_prepending ? (number_of_updates - i) : i));
 					}				
 				}
 				else
 				{
 					cql::cql_map_t* collection_row;
 					result->get_map("some_collection", &collection_row);
-					assert( collection_row->size() == number_of_updates +1);
+					BOOST_REQUIRE( collection_row->size() == number_of_updates +1);
 					for( size_t i = 0u; i < collection_row->size(); i++)
 					{
 						int key_value;
@@ -92,13 +92,13 @@ void collection_test(boost::shared_ptr<cql::cql_cluster_t> cluster, std::string 
 						int val;
 						collection_row->get_value_int(i, val);
 					
-						assert(key_value == i);
-						assert(val == i);
+						BOOST_REQUIRE(key_value == i);
+						BOOST_REQUIRE(val == i);
 					}				
 				}
 			}
 			else
-				assert(false);			
+				BOOST_FAIL("Empty result.");
 	session->close();
 	cluster->shutdown();				
 }
