@@ -204,6 +204,18 @@ cql::cql_message_result_impl_t::exists(const std::string& column) const {
 }
 
 bool
+cql::cql_message_result_impl_t::column_name(int i,
+                                            std::string& output_keyspace,
+                                            std::string& output_table,
+                                            std::string& output_column) const
+{
+    return _metadata.column_name(i,
+                                 output_keyspace,
+                                 output_table,
+                                 output_column);
+}
+
+bool
 cql::cql_message_result_impl_t::column_class(int i,
         std::string& output) const {
     return _metadata.column_class(i, output);
@@ -364,7 +376,9 @@ cql::cql_message_result_impl_t::get_double(const std::string& column,
 bool
 cql::cql_message_result_impl_t::get_bigint(int i,
         cql::cql_bigint_t& output) const {
-    if (is_valid(i, cql::CQL_COLUMN_TYPE_BIGINT)) {
+    if (is_valid(i, cql::CQL_COLUMN_TYPE_BIGINT)
+          || is_valid(i, cql::CQL_COLUMN_TYPE_TIMESTAMP)
+          || is_valid(i, cql::CQL_COLUMN_TYPE_COUNTER)) {
         cql::decode_bigint(_row[i] + sizeof(cql_int_t), output);
         return true;
     }
