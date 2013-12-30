@@ -78,7 +78,7 @@
 #include "cql/internal/cql_session_impl.hpp"
 
 namespace cql {
-
+    
 // The following class is a collection of the prepared statements
 struct cql_prepare_statements_t
 {
@@ -92,7 +92,7 @@ struct cql_prepare_statements_t
     set(
         const cql_query_id_t& query_id)
     {
-        boost::mutex::scoped_lock(_mutex);
+        boost::mutex::scoped_lock lock(_mutex);
         
         if (_collection.find(query_id) != _collection.end()) {
             return;
@@ -111,7 +111,8 @@ struct cql_prepare_statements_t
             
         bool none_returned = true;
         
-        boost::mutex::scoped_lock(_mutex);
+        boost::mutex::scoped_lock lock(_mutex);
+        
         for(prepare_statements_collection_t::const_iterator
                 I  = _collection.begin();
                 I != _collection.end(); ++I)
@@ -128,10 +129,9 @@ struct cql_prepare_statements_t
     enable(
         const cql_query_id_t& query_id)
     {
-        boost::mutex::scoped_lock(_mutex);
+        boost::mutex::scoped_lock lock(_mutex);
         
-        if (_collection.find(query_id) == _collection.end())
-        {
+        if (_collection.find(query_id) == _collection.end()) {
             return false;
         }
         _collection[query_id] = true;
@@ -146,7 +146,7 @@ private:
     
     prepare_statements_collection_t   _collection;
     mutable volatile bool             _is_syncd;
-    boost::mutex                      _mutex;
+    mutable boost::mutex              _mutex;
 };
     
 template <typename TSocket>
@@ -236,6 +236,7 @@ public:
         cql_connection_callback_t   callback,
         cql_connection_errback_t    errback)
     {
+        boost::mutex::scoped_lock lock(_mutex);
         _endpoint = endpoint;
         _connect_callback = callback;
         _connect_errback = errback;
@@ -339,7 +340,7 @@ public:
 
         _callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
 
-        cql::cql_message_query_impl_t messageQuery(query);
+        cql::cql_message_prepare_impl_t messageQuery(query);
 
         create_request(
             &messageQuery,
@@ -569,13 +570,20 @@ private:
     resolve()
     {
         log(CQL_LOG_DEBUG, "resolving remote host: " + _endpoint.to_string());
-
+        
         _resolver.async_resolve(
             _endpoint.resolver_query(),
             boost::bind(&cql_connection_impl_t::resolve_handle,
                         this,
                         boost::asio::placeholders::error,
                         boost::asio::placeholders::iterator));
+        
+        /*
+         // Equivalent synchronous call (for debug purposes)
+         boost::system::error_code err;
+         boost::asio::ip::tcp::resolver::iterator endpoint_iterator = _resolver.resolve(_endpoint.resolver_query(), err);
+         resolve_handle(err, endpoint_iterator);
+         */
     }
 
     void
@@ -1023,6 +1031,8 @@ private:
         }
     }
 
+    boost::mutex                             _mutex;
+    
     cql_endpoint_t                           _endpoint;
     boost::asio::ip::tcp::resolver           _resolver;
     std::auto_ptr<TSocket>                   _transport;

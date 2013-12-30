@@ -103,7 +103,9 @@ query(
 		boost::shared_ptr<cql::cql_query_t> _query(
 			new cql::cql_query_t(str(boost::format("SELECT * FROM %s WHERE k = 0") % test_utils::SIMPLE_TABLE),cl));
 		boost::shared_future<cql::cql_future_result_t> query_future = session->query(_query);
-		query_future.wait();
+		if (!(query_future.timed_wait(boost::posix_time::seconds(10)))) {
+            BOOST_FAIL("Query timed out");
+        }
 
 		cql::cql_future_result_t query_result = query_future.get();
 		std::cout << query_result.client->endpoint().to_string();

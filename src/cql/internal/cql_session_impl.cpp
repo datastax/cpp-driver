@@ -629,8 +629,6 @@ cql::cql_session_impl_t::get_connection(
         const boost::shared_ptr<cql_query_t>& query,
         cql_stream_t*                         stream)
 {
-    boost::mutex::scoped_lock(_mutex);
-    
     boost::shared_ptr<cql_query_plan_t> query_plan = _configuration
         ->policies()
         .load_balancing_policy()
