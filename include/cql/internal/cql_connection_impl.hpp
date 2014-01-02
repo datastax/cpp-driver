@@ -255,7 +255,7 @@ public:
 
         _callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
 
-        cql::cql_message_prepare_impl_t message(query),
+        cql::cql_message_prepare_impl_t message(query);
         create_request(
             &message,
             boost::bind(&cql_connection_impl_t::write_handle,
