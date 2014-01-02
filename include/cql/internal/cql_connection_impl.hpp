@@ -816,9 +816,9 @@ private:
     void
     options_write()
     {
-        cql::cql_message_options_impl_t message();
+        std::auto_ptr<cql::cql_message_options_impl_t> m(new cql::cql_message_options_impl_t());
 		create_request(
-            &message,
+            m.release(),
             (boost::function<void (const boost::system::error_code &, std::size_t)>)boost::bind(
                 &cql_connection_impl_t::write_handle,
                 this,
