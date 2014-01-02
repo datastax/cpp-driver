@@ -64,7 +64,8 @@ private:
     refresh_hosts();
 
     void
-    reconnection_callback();
+    reconnection_callback(
+        const boost::system::error_code& err);
 
     boost::mutex                                   _mutex;
     bool                                           _is_open;

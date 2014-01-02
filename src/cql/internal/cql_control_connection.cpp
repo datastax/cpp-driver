@@ -173,7 +173,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
         boost::shared_future<cql_future_result_t> query_future_result =
         boost::static_pointer_cast<cql::cql_session_t>(_session)
             ->query(boost::make_shared<cql_query_t>(cql_query_t(select_peers_expression())));
-
+        
         if (query_future_result.timed_wait(boost::posix_time::seconds(10))) {
             cql_future_result_t query_result = query_future_result.get();
 
@@ -374,7 +374,7 @@ cql_control_connection_t::conn_cassandra_event(
                 setup_control_connection(true);
                 cql_host_t::ip_address_t ip_address
                     = cql_host_t::ip_address_t::from_string(event->ip());
-                _cluster.metadata()->add_host(cql_endpoint_t(ip_address, event->port()));
+//                _cluster.metadata()->add_host(cql_endpoint_t(ip_address, event->port()));
             }
             else if (event->topology_change() == CQL_EVENT_TOPOLOGY_REMOVE_NODE) {
                 bool refresh_only = false;
@@ -477,7 +477,9 @@ cql_control_connection_t::setup_control_connection(
 
         _timer.expires_from_now(_reconnection_schedule->get_delay());
         _timer.async_wait(boost::bind(
-                              &cql_control_connection_t::reconnection_callback, this));
+            &cql_control_connection_t::reconnection_callback,
+            this,
+            boost::asio::placeholders::error));
 
         if (_log_callback) {
             _log_callback(CQL_LOG_ERROR, ex.what());
@@ -486,14 +488,17 @@ cql_control_connection_t::setup_control_connection(
 }
 
 void
-cql_control_connection_t::reconnection_callback()
+cql_control_connection_t::reconnection_callback(
+    const boost::system::error_code& err)
 {
-    try {
-        setup_control_connection();
-    }
-    catch (cql_exception& ex) {
-        if (_log_callback) {
-            _log_callback(CQL_LOG_ERROR, ex.what());
+    if (!err) {
+        try {
+            setup_control_connection();
+        }
+        catch (cql_exception& ex) {
+            if (_log_callback) {
+                _log_callback(CQL_LOG_ERROR, ex.what());
+            }
         }
     }
 }

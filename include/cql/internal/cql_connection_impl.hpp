@@ -189,6 +189,7 @@ public:
         boost::asio::io_service&                    io_service,
         TSocket*                                    transport,
         cql::cql_connection_t::cql_log_callback_t   log_callback = 0) :
+        _io_service(io_service),
         _resolver(io_service),
         _transport(transport),
         _request_buffer(0),
@@ -571,6 +572,7 @@ private:
     {
         log(CQL_LOG_DEBUG, "resolving remote host: " + _endpoint.to_string());
         
+        
         _resolver.async_resolve(
             _endpoint.resolver_query(),
             boost::bind(&cql_connection_impl_t::resolve_handle,
@@ -579,11 +581,11 @@ private:
                         boost::asio::placeholders::iterator));
         
         /*
-         // Equivalent synchronous call (for debug purposes)
-         boost::system::error_code err;
-         boost::asio::ip::tcp::resolver::iterator endpoint_iterator = _resolver.resolve(_endpoint.resolver_query(), err);
-         resolve_handle(err, endpoint_iterator);
-         */
+        // Equivalent synchronous call (for debug purposes; avoids spawning internal asio threads)
+        boost::system::error_code err;
+        boost::asio::ip::tcp::resolver::iterator endpoint_iterator = _resolver.resolve(_endpoint.resolver_query(), err);
+        resolve_handle(err, endpoint_iterator);
+        */
     }
 
     void
@@ -762,7 +764,7 @@ private:
 		boost::shared_ptr<boolkeeper> is_disposed,
         const boost::system::error_code& err)
     {
-		// if the connection was already disposed we return here immediatelly
+		// if the connection was already disposed we return here immediately
         boost::mutex::scoped_lock lock(is_disposed->mutex);
 		if(is_disposed->value)
 			return;
@@ -917,7 +919,11 @@ private:
         case CQL_OPCODE_EVENT:
             log(CQL_LOG_DEBUG, "received event message");
             if (_event_callback) {
-                _event_callback(*this, dynamic_cast<cql::cql_message_event_impl_t*>(_response_message.release()));
+                _io_service.post(boost::bind(_event_callback,
+                                             boost::ref(*this),
+                                             dynamic_cast<cql::cql_message_event_impl_t*>(_response_message.release())));
+                
+                //_event_callback(*this, dynamic_cast<cql::cql_message_event_impl_t*>(_response_message.release()));
             }
             break;
 
@@ -1033,6 +1039,7 @@ private:
 
     boost::mutex                             _mutex;
     
+    boost::asio::io_service&                 _io_service;
     cql_endpoint_t                           _endpoint;
     boost::asio::ip::tcp::resolver           _resolver;
     std::auto_ptr<TSocket>                   _transport;
