@@ -33,7 +33,7 @@ using namespace std;
 
 inline double
 swap_double(double source) {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__GNUC__)
     uint64_t bytes = *reinterpret_cast<uint64_t*>(&source);
     uint64_t swapped = _byteswap_uint64(bytes);
     return *reinterpret_cast<double*>(&swapped);
@@ -50,7 +50,7 @@ swap_double(double source) {
 
 inline float
 swap_float(float source) {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__GNUC__)
     uint32_t bytes = *reinterpret_cast<uint32_t*>(&source);
     uint32_t swapped = _byteswap_ulong(bytes);
     return *reinterpret_cast<float*>(&swapped);

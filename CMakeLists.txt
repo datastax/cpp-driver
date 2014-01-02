@@ -70,7 +70,12 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     # -fPIC is not used on Windows platform (all DLLs are
     # relocable), -Wall generates about 30k stupid warnings
     # that can hide useful ones.
-    set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-D_CRT_SECURE_NO_WARNINGS")
+	if (${MSVC})
+		set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-D_CRT_SECURE_NO_WARNINGS")
+	elseif (${MINGW})
+		set(LIBS ${LIBS} ws2_32)
+	
+	endif()
 
     # needed for windows sockets (not verified)
     add_definitions(-D_WIN32_WINNT=0x0501)
