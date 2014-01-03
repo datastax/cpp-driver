@@ -307,12 +307,12 @@ class cql_configuration_t
 {
 public:
     cql_configuration_t(
-        boost::asio::io_service&      io_service,
-        const cql_client_options_t&   client_options,
-        const cql_protocol_options_t& protocol_options,
-        const cql_pooling_options_t&  pooling_options,
-        const cql_policies_t&         policies,
-        const cql_credentials_t&      credentials) :
+        boost::shared_ptr<boost::asio::io_service> io_service,
+        const cql_client_options_t&                client_options,
+        const cql_protocol_options_t&              protocol_options,
+        const cql_pooling_options_t&               pooling_options,
+        const cql_policies_t&                      policies,
+        const cql_credentials_t&                   credentials) :
         _io_service(io_service),
         _client_options(client_options),
         _protocol_options(protocol_options),
@@ -351,7 +351,7 @@ public:
         return _credentials;
     }
 
-    inline boost::asio::io_service&
+    inline boost::shared_ptr<boost::asio::io_service>
     io_service()
     {
         return _io_service;
@@ -366,12 +366,12 @@ private:
         _policies.init(cluster);
     }
 
-    boost::asio::io_service& _io_service;
-    cql_client_options_t     _client_options;
-    cql_protocol_options_t   _protocol_options;
-    cql_pooling_options_t    _pooling_options;
-    cql_policies_t           _policies;
-    cql_credentials_t        _credentials;
+    boost::shared_ptr<boost::asio::io_service> _io_service;
+    cql_client_options_t                       _client_options;
+    cql_protocol_options_t                     _protocol_options;
+    cql_pooling_options_t                      _pooling_options;
+    cql_policies_t                             _policies;
+    cql_credentials_t                          _credentials;
 };
 
 class cql_initializer_t
@@ -392,6 +392,7 @@ public:
     static const int DEFAULT_PORT = 9042;
 
     cql_builder_t() :
+        _io_service(new boost::asio::io_service),
         _log_callback(0)
     {}
     
@@ -474,7 +475,7 @@ public:
         const std::string& password);
 
 private:
-    boost::asio::io_service                      _io_service;
+    boost::shared_ptr<boost::asio::io_service>   _io_service;
     std::list<cql_endpoint_t>                    _contact_points;
     boost::shared_ptr<boost::asio::ssl::context> _ssl_context;
     cql_connection_t::cql_log_callback_t         _log_callback;

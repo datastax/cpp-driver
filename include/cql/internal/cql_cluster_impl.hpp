@@ -84,7 +84,7 @@ private:
     // Main function of thread on which we call io_service::run
     static void
     asio_thread_main(
-        boost::asio::io_service* io_service)
+                     boost::shared_ptr<boost::asio::io_service> io_service)
     {
         io_service->run();
     }
@@ -99,8 +99,9 @@ public:
         _io_service(configuration->io_service()),
         _contact_points(endpoints),
         _configuration(configuration),
-        _work(new boost::asio::io_service::work(configuration->io_service())),
-        _thread(boost::bind(&cql_cluster_impl_t::asio_thread_main, &configuration->io_service()))
+        _work(new boost::asio::io_service::work(*configuration->io_service())),
+        _thread2(boost::bind(&cql_cluster_impl_t::asio_thread_main, _io_service)), // TODO: thread pool
+        _thread(boost::bind(&cql_cluster_impl_t::asio_thread_main, _io_service))
     {
         _configuration->init(this);
         const cql_policies_t& policies = _configuration->policies();
@@ -112,7 +113,7 @@ public:
         _control_connection = boost::shared_ptr<cql_control_connection_t>(
             new cql_control_connection_t(
                 *this,
-                _io_service,
+                *_io_service,
                 configuration
                 ));
         _control_connection->init();
@@ -149,12 +150,12 @@ public:
 
         if (ssl_context != 0) {
             client_factory = client_ssl_functor_t(
-				_io_service,
+				*_io_service,
 				const_cast<boost::asio::ssl::context&>(*ssl_context),
 				log_callback);
         }
         else {
-            client_factory = client_functor_t(_io_service, log_callback);
+            client_factory = client_functor_t(*_io_service, log_callback);
         }
         
         // Construct the session
@@ -165,7 +166,7 @@ public:
         boost::shared_ptr<cql_session_impl_t> session(
             new cql_session_impl_t(session_callbacks, _configuration));
 
-        session->init(_io_service);
+        session->init(*_io_service);
         session->set_keyspace(keyspace);
 
         return session;
@@ -208,9 +209,9 @@ private:
         }
     }
 
-    boost::asio::io_service&               _io_service;
-    const std::list<cql_endpoint_t> 	   _contact_points;
-    boost::shared_ptr<cql_configuration_t> _configuration;
+    boost::shared_ptr<boost::asio::io_service> _io_service;
+    const std::list<cql_endpoint_t> 	       _contact_points;
+    boost::shared_ptr<cql_configuration_t>     _configuration;
 
     // Typically async operations are performed in the thread performing the request, because we want synchronous behavior
     // we're going to spawn a thread whose sole purpose is to perform network communication, and we'll use this thread to
@@ -220,6 +221,7 @@ private:
     // because it's in it's own thread.  Using boost::asio::io_service::work prevents the thread from exiting.
     boost::mutex                                     _mutex;
     boost::scoped_ptr<boost::asio::io_service::work> _work;
+    boost::thread                                    _thread2; // TODO: temporary solution, instead of thread pool
     boost::thread                                    _thread;
     boost::shared_ptr<cql_metadata_t>                _metadata;
     connected_sessions_t                             _connected_sessions;
