@@ -374,15 +374,18 @@ cql_control_connection_t::conn_cassandra_event(
                 setup_control_connection(true);
                 cql_host_t::ip_address_t ip_address
                     = cql_host_t::ip_address_t::from_string(event->ip());
-//                _cluster.metadata()->add_host(cql_endpoint_t(ip_address, event->port()));
+                _cluster.metadata()->add_host(cql_endpoint_t(ip_address, event->port())); // Just in case.
             }
             else if (event->topology_change() == CQL_EVENT_TOPOLOGY_REMOVE_NODE) {
+                cql_host_t::ip_address_t ip_address
+                    = cql_host_t::ip_address_t::from_string(event->ip());
+                _cluster.metadata()->remove_host(cql_endpoint_t(ip_address, event->port()));
+                
                 bool refresh_only = false;
                 if (_active_connection) {
-                    cql_host_t::ip_address_t ip_address
-                        = cql_host_t::ip_address_t::from_string(event->ip());
                     refresh_only = !(_active_connection->endpoint().address() == ip_address);
                 }
+
                 setup_control_connection(refresh_only);
             }
             break;
@@ -422,6 +425,9 @@ cql_control_connection_t::conn_cassandra_event(
         case CQL_EVENT_TYPE_UNKNOWN:
             break;
     }
+    
+    // We have the ownership of event.
+    delete event;
 }
 
 bool

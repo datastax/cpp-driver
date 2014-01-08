@@ -73,6 +73,7 @@
 #include "cql/cql_session.hpp"
 #include "cql/cql_uuid.hpp"
 #include "cql/cql_stream.hpp"
+#include "cql/cql_host.hpp"
 #include "cql/internal/cql_util.hpp"
 #include "cql/internal/cql_promise.hpp"
 #include "cql/internal/cql_session_impl.hpp"
@@ -669,7 +670,7 @@ private:
 	virtual bool
     is_healthy() const
     {
-        return true;
+        return _ready && !_defunct && !_closing && !_is_disposed->value;
     }
 
 	virtual bool
@@ -766,6 +767,7 @@ private:
     {
 		// if the connection was already disposed we return here immediately
         boost::mutex::scoped_lock lock(is_disposed->mutex);
+        std::cerr << "Reading header sent from address: " << _endpoint.address() << std::endl; // DEBUG
 		if(is_disposed->value)
 			return;
 		if (!err) {
@@ -780,6 +782,11 @@ private:
 		}
 		else if (err.value() == boost::system::errc::operation_canceled) {
 			/* do nothing */
+		}
+		else if (err == boost::asio::error::eof) {
+            // Endopint was closed. The connection is set to defunct state and should not throw.
+			_defunct = true;
+            is_disposed->value = true;
 		}
 		else {
 			log(CQL_LOG_ERROR, "error reading header " + err.message());
@@ -919,11 +926,20 @@ private:
         case CQL_OPCODE_EVENT:
             log(CQL_LOG_DEBUG, "received event message");
             if (_event_callback) {
+                cql_message_event_impl_t* event
+                    = dynamic_cast<cql::cql_message_event_impl_t*>(_response_message.release());
+
+                if ((event->topology_change() == CQL_EVENT_TOPOLOGY_REMOVE_NODE
+                        || event->status_change() == CQL_EVENT_STATUS_DOWN)
+                        && cql_host_t::ip_address_t::from_string(event->ip()) == _endpoint.address()) {
+                    // The event says that the endpoint for this connection is dead.
+                    _is_disposed->value = true;
+                    close();
+                }
+                
                 _io_service.post(boost::bind(_event_callback,
                                              boost::ref(*this),
-                                             dynamic_cast<cql::cql_message_event_impl_t*>(_response_message.release())));
-                
-                //_event_callback(*this, dynamic_cast<cql::cql_message_event_impl_t*>(_response_message.release()));
+                                             event));
             }
             break;
 

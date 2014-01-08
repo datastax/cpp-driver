@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE( round_robin )
 	policy_tools::reset_coordinators();
 	ccm->bootstrap(3);
 
-	boost::this_thread::sleep(boost::posix_time::seconds(5)); // wait for node 3 to be up
+	boost::this_thread::sleep(boost::posix_time::seconds(15)); // wait for node 3 to be up
 	boost::asio::ip::address host3 = boost::asio::ip::address::from_string(conf.ip_prefix() + "3");
 
 	policy_tools::query(session, 12, cql::CQL_CONSISTENCY_ONE);
@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE( round_robin )
 
 	policy_tools::reset_coordinators();
 	ccm->decommission(1);
-	boost::this_thread::sleep(boost::posix_time::seconds(5)); // wait for node 1 to be down
+	boost::this_thread::sleep(boost::posix_time::seconds(15)); // wait for node 1 to be down
 
 	policy_tools::query(session, 12, cql::CQL_CONSISTENCY_ONE);
 
