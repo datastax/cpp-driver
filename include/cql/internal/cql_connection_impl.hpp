@@ -787,6 +787,7 @@ private:
             // Endopint was closed. The connection is set to defunct state and should not throw.
 			_defunct = true;
             is_disposed->value = true;
+            log(CQL_LOG_ERROR, "error reading header " + err.message());
 		}
 		else {
 			log(CQL_LOG_ERROR, "error reading header " + err.message());
