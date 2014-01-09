@@ -77,7 +77,7 @@ cql::cql_session_impl_t::free_connection(
     connection->close();
 
 	{
-        boost::mutex::scoped_lock(_mutex);
+        boost::mutex::scoped_lock lock(_mutex);
 		connections_counter_t::iterator it = _connection_counters.find(connection->endpoint());
 		if (it != _connection_counters.end()) {
 			(*it->second)--;
@@ -191,7 +191,7 @@ bool
 cql::cql_session_impl_t::decrease_connection_counter(
     const boost::shared_ptr<cql_host_t>& host)
 {
-    boost::mutex::scoped_lock       lock(_mutex);
+    boost::mutex::scoped_lock lock(_mutex);
     connections_counter_t::iterator it = _connection_counters.find(host->endpoint());
 
     if (it != _connection_counters.end()) {
@@ -266,7 +266,7 @@ cql::cql_session_impl_t::try_find_free_stream(
     cql_connections_collection_t* const     connections,
     cql_stream_t*                           stream)
 {
-    boost::mutex::scoped_lock(_mutex);
+    boost::mutex::scoped_lock lock(_mutex);
     
     const cql_pooling_options_t& pooling_options = _configuration->pooling_options();
     cql_host_distance_enum       distance        = host->distance(_configuration->policies());

@@ -767,7 +767,7 @@ private:
     {
 		// if the connection was already disposed we return here immediately
         boost::mutex::scoped_lock lock(is_disposed->mutex);
-        std::cerr << "Reading header sent from address: " << _endpoint.address() << std::endl; // DEBUG
+
 		if(is_disposed->value)
 			return;
 		if (!err) {

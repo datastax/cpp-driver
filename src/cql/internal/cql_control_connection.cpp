@@ -125,6 +125,9 @@ cql_control_connection_t::setup_event_listener()
     cql_stream_t stream;
     std::list<cql_endpoint_t> tried_hosts;
 
+    if (_active_connection) {
+        _active_connection->close();
+    }
     _active_connection = _session->connect(query_plan, &stream, &tried_hosts);
     
     std::list<std::string> events;
@@ -140,6 +143,9 @@ cql_control_connection_t::setup_event_listener()
         = boost::dynamic_pointer_cast<cql_connection_impl_t<cql_socket_t> >(_active_connection);
     if (active_connection_impl) {
         active_connection_impl->events_register();
+    }
+    else if (_log_callback) {
+        _log_callback(CQL_LOG_ERROR, "Unreachable code reached while setting up event listener for control connection");
     }
 }
 
@@ -170,9 +176,11 @@ cql_control_connection_t::refresh_node_list_and_token_map()
     std::map<cql_host_t::ip_address_t, std::map<std::string,bool> > token_map;
 
     {// SELECT PEERS
+        cql_stream_t stream = _active_connection->acquire_stream();
+        boost::shared_ptr<cql_query_t> query = boost::make_shared<cql_query_t>(                                                                               select_peers_expression());
+        query->set_stream(stream);
         boost::shared_future<cql_future_result_t> query_future_result =
-        boost::static_pointer_cast<cql::cql_session_t>(_session)
-            ->query(boost::make_shared<cql_query_t>(cql_query_t(select_peers_expression())));
+            _active_connection->query(query);
         
         if (query_future_result.timed_wait(boost::posix_time::seconds(10))) {
             cql_future_result_t query_result = query_future_result.get();
@@ -243,9 +251,11 @@ cql_control_connection_t::refresh_node_list_and_token_map()
         }
     }
     {// SELECT LOCAL
+        cql_stream_t stream = _active_connection->acquire_stream();
+        boost::shared_ptr<cql_query_t> query = boost::make_shared<cql_query_t>(                                                                               select_local_expression());
+        query->set_stream(stream);
         boost::shared_future<cql_future_result_t> query_future_result =
-        boost::static_pointer_cast<cql::cql_session_t>(_session)
-            ->query(boost::make_shared<cql_query_t>(cql_query_t(select_local_expression())));
+            _active_connection->query(query);
 
         if (query_future_result.timed_wait(boost::posix_time::seconds(10))) {
             cql_future_result_t query_result = query_future_result.get();
