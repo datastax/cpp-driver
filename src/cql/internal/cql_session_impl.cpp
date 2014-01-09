@@ -77,7 +77,7 @@ cql::cql_session_impl_t::free_connection(
     connection->close();
 
 	{
-        boost::mutex::scoped_lock lock(_mutex);
+        boost::recursive_mutex::scoped_lock lock(_mutex);
 		connections_counter_t::iterator it = _connection_counters.find(connection->endpoint());
 		if (it != _connection_counters.end()) {
 			(*it->second)--;
@@ -101,7 +101,7 @@ cql::cql_session_impl_t::get_max_connections_number(
 void
 cql::cql_session_impl_t::set_keyspace(const std::string& new_keyspace)
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    boost::recursive_mutex::scoped_lock lock(_mutex);
     _keyspace_name = new_keyspace;
 
     for(connection_pool_t::iterator I  = _connection_pool.begin();
@@ -134,7 +134,7 @@ cql::cql_session_impl_t::set_prepare_statement(
     const std::vector<cql_byte_t>& query_id,
     const std::string& query_text)
 {
-    boost::mutex::scoped_lock lock(_mutex);    
+    boost::recursive_mutex::scoped_lock lock(_mutex);
     _prepare_statements[query_id] = query_text;
     
     for(connection_pool_t::iterator I  = _connection_pool.begin();
@@ -166,7 +166,7 @@ bool
 cql::cql_session_impl_t::increase_connection_counter(
     const boost::shared_ptr<cql_host_t>& host)
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    boost::recursive_mutex::scoped_lock lock(_mutex);
     cql_endpoint_t            endpoint        = host->endpoint();
     long                      max_connections = get_max_connections_number(host);
 
@@ -191,7 +191,7 @@ bool
 cql::cql_session_impl_t::decrease_connection_counter(
     const boost::shared_ptr<cql_host_t>& host)
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    boost::recursive_mutex::scoped_lock lock(_mutex);
     connections_counter_t::iterator it = _connection_counters.find(host->endpoint());
 
     if (it != _connection_counters.end()) {
@@ -236,7 +236,7 @@ cql::cql_session_impl_t::cql_connections_collection_t*
 cql::cql_session_impl_t::add_to_connection_pool(
     cql_endpoint_t& endpoint)
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    boost::recursive_mutex::scoped_lock lock(_mutex);
     connection_pool_t::iterator it = _connection_pool.find(endpoint);
     if (it == _connection_pool.end()) {
         it = _connection_pool.insert(endpoint, new cql_connections_collection_t()).first;
@@ -266,7 +266,7 @@ cql::cql_session_impl_t::try_find_free_stream(
     cql_connections_collection_t* const     connections,
     cql_stream_t*                           stream)
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    boost::recursive_mutex::scoped_lock lock(_mutex);
     
     const cql_pooling_options_t& pooling_options = _configuration->pooling_options();
     cql_host_distance_enum       distance        = host->distance(_configuration->policies());
@@ -559,7 +559,7 @@ cql::cql_session_impl_t::execute(
 void
 cql::cql_session_impl_t::close()
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    boost::recursive_mutex::scoped_lock lock(_mutex);
 	if(_Iam_closed)
 		return;
 

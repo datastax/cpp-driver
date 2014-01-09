@@ -329,7 +329,7 @@ private:
     friend class cql_trashcan_t;
     typedef boost::ptr_map<cql_endpoint_t, cql_connections_collection_t> connection_pool_t;
 
-    boost::mutex                            _mutex;
+    boost::recursive_mutex                  _mutex;
     cql_session_t::cql_client_callback_t    _client_callback;
     cql_session_t::cql_ready_callback_t     _ready_callback;
     cql_session_t::cql_defunct_callback_t   _defunct_callback;
