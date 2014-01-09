@@ -5,7 +5,11 @@ Maintainer: A. Anonymous <a.anonymous@no.net>
 Build-Depends: debhelper (>= 5), cmake, make,
 	libssl-dev,
 	libboost-dev,
-	libboost-system-dev
+	libboost-system-dev,
+	libboost-thread-dev,
+	libboost-test-dev,
+	libboost-date-time-dev,
+	libboost-program-options-dev
 Standards-Version: 3.7.2
 
 Package: cassandra0
