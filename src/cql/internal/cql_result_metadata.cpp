@@ -162,7 +162,7 @@ cql::cql_result_metadata_t::column_name(int i,
                                         std::string& output_table,
                                         std::string& output_column) const
 {
-    if (i > _column_count || i < 0) {
+    if (i >= _column_count || i < 0) {
         return false;
     }
 
@@ -175,7 +175,7 @@ cql::cql_result_metadata_t::column_name(int i,
 bool
 cql::cql_result_metadata_t::column_class(int i,
         std::string& output) const {
-    if (i > _column_count || i < 0) {
+    if (i >= _column_count || i < 0) {
         return false;
     }
 
@@ -210,7 +210,7 @@ cql::cql_result_metadata_t::column_class(const std::string& keyspace,
 bool
 cql::cql_result_metadata_t::column_type(int i,
                                         cql::cql_column_type_enum& output) const {
-    if (i > _column_count || i < 0) {
+    if (i >= _column_count || i < 0) {
         return false;
     }
 
@@ -292,7 +292,7 @@ cql::cql_result_metadata_t::get_index(const std::string& keyspace,
 bool
 cql::cql_result_metadata_t::collection_primary_class(int i,
         std::string& output) const {
-    if (i > _column_count || i < 0) {
+    if (i >= _column_count || i < 0) {
         return false;
     }
 
@@ -327,7 +327,7 @@ cql::cql_result_metadata_t::collection_primary_class(const std::string& keyspace
 bool
 cql::cql_result_metadata_t::collection_primary_type(int i,
         cql::cql_column_type_enum& output) const {
-    if (i > _column_count || i < 0) {
+    if (i >= _column_count || i < 0) {
         return false;
     }
 
@@ -362,7 +362,7 @@ cql::cql_result_metadata_t::collection_primary_type(const std::string& keyspace,
 bool
 cql::cql_result_metadata_t::collection_secondary_class(int i,
         std::string& output) const {
-    if (i > _column_count || i < 0) {
+    if (i >= _column_count || i < 0) {
         return false;
     }
 
@@ -397,7 +397,7 @@ cql::cql_result_metadata_t::collection_secondary_class(const std::string& keyspa
 bool
 cql::cql_result_metadata_t::collection_secondary_type(int i,
         cql::cql_column_type_enum& output) const {
-    if (i > _column_count || i < 0) {
+    if (i >= _column_count || i < 0) {
         return false;
     }
 

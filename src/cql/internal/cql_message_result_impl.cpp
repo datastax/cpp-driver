@@ -269,7 +269,7 @@ bool
 cql::cql_message_result_impl_t::is_null(
     int   i,
     bool& output) const {
-    if (i > _column_count || i < 0) {
+    if (i >= _column_count || i < 0) {
         return true;
     }
     cql::cql_int_t row_size = 0;
