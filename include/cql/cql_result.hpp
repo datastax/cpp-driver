@@ -59,6 +59,12 @@ public:
     exists(const std::string& column) const = 0;
 
     virtual bool
+    column_name(int i,
+                std::string& output_keyspace,
+                std::string& output_table,
+                std::string& output_column) const = 0;
+
+    virtual bool
     column_class(int i,
                  std::string& output) const = 0;
 

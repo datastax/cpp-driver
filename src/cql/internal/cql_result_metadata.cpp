@@ -99,8 +99,8 @@ cql::cql_result_metadata_t::read(cql::cql_byte_t* input) {
             input = cql::decode_option(input, option.collection_secondary_type, option.collection_secondary_class);
         }
 
-        column_name_t name(keyspace_name, table_name, column_name);
-        _column_name_idx.insert(column_name_idx_t::value_type(name, i));
+        option.name = column_name_t(keyspace_name, table_name, column_name);
+        _column_name_idx.insert(column_name_idx_t::value_type(option.name, i));
         _columns.push_back(option);
     }
     return input;
@@ -154,6 +154,22 @@ cql::cql_result_metadata_t::global_table() const {
 void
 cql::cql_result_metadata_t::global_table(const std::string& table) {
     _global_table_name = table;
+}
+
+bool
+cql::cql_result_metadata_t::column_name(int i,
+                                        std::string& output_keyspace,
+                                        std::string& output_table,
+                                        std::string& output_column) const
+{
+    if (i > _column_count || i < 0) {
+        return false;
+    }
+
+    output_keyspace = _columns[i].name.get<0>();
+    output_table = _columns[i].name.get<1>();
+    output_column = _columns[i].name.get<2>();
+    return true;
 }
 
 bool
