@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 2.6.4)
 
 project(CCMBridge C CXX)
 
@@ -18,7 +18,7 @@ set(Boost_USE_MULTITHREADED ON)
 add_definitions(-DBOOST_ALL_DYN_LINK)
 
 # boost log depends on boost thread
-find_package(Boost 1.54.0 COMPONENTS system filesystem chrono date_time thread log_setup log REQUIRED)
+find_package(Boost 1.41.0 COMPONENTS system filesystem chrono date_time thread log_setup log REQUIRED)
 
 set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
 set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
