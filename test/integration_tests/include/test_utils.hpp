@@ -10,6 +10,7 @@ namespace cql {
 	class cql_cluster_t;
     class cql_ccm_bridge_t;
     class cql_builder_t;
+	class cql_execute_t;
 }
 
 /** Random, reusable tools for testing. */
@@ -26,6 +27,41 @@ namespace test_utils {
         std::string,
         cql::cql_consistency_enum cl = cql::CQL_CONSISTENCY_ONE);
     
+	template<class T>
+	boost::shared_ptr<cql::cql_result_t>
+	prepared_query(
+		boost::shared_ptr<cql::cql_session_t> session,
+		std::string query_string,
+		T binding_value,
+		cql::cql_consistency_enum cl = cql::CQL_CONSISTENCY_ONE);
+	
+	template<class T>
+	boost::shared_ptr<cql::cql_result_t>
+	prepared_query(
+		boost::shared_ptr<cql::cql_session_t> session,
+		std::string query_string,
+		T binding_value,
+		cql::cql_consistency_enum cl)
+	{
+		boost::shared_ptr<cql::cql_query_t> _prep_query(
+			new cql::cql_query_t(query_string,cl));
+		boost::shared_future<cql::cql_future_result_t> query_future = session->prepare(_prep_query);
+		query_future.wait();
+		assert(!query_future.get().error.is_err());
+
+		std::vector<cql::cql_byte_t> queryid = query_future.get().result->query_id();
+		boost::shared_ptr<cql::cql_execute_t> bound(
+			new cql::cql_execute_t(queryid, cl));
+
+		bound->push_back(binding_value);
+
+		query_future = session->execute(bound);
+		query_future.wait();
+
+		cql::cql_future_result_t query_result = query_future.get();
+		return query_result.result;
+	}
+
 	std::string
     get_cql(cql::cql_column_type_enum);
 
