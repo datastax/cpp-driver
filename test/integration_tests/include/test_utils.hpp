@@ -1,5 +1,8 @@
 #pragma once
 #include "cql/cql.hpp"
+#include "cql/cql_session.hpp"
+#include "cql/cql_execute.hpp"
+#include "cql/cql_result.hpp"
 
 #include <boost/asio/ip/address.hpp>
 

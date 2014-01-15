@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <iterator>
 #include <boost/thread.hpp>
-#include <boost/log/trivial.hpp>
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
 
@@ -16,6 +15,7 @@
 #       error "Unsupported system"
 #endif
 
+#include "logger.hpp"
 #include "cql_ccm_bridge.hpp"
 #include "safe_advance.hpp"
 
@@ -258,11 +258,11 @@ namespace cql {
 
 		for(int retry = 0; retry < RETRY_TIMES; retry++) 
 		{
-			BOOST_LOG_TRIVIAL(info) << "CCM " << ccm_args;
+			CQL_LOG(info) << "CCM " << ccm_args;
 			string result = execute_command(CCM_COMMAND + " " + ccm_args);
 			
 			if(boost::algorithm::contains(result, "[Errno")) {
-				BOOST_LOG_TRIVIAL(error) << "CCM ERROR: " << result;
+				CQL_LOG(error) << "CCM ERROR: " << result;
 
 				if(boost::algorithm::contains(result, "[Errno 17")) 
 				{
@@ -277,14 +277,14 @@ namespace cql {
 	}
 
 	void cql_ccm_bridge_t::execute_ccm_and_print(const string& ccm_args) {
-		BOOST_LOG_TRIVIAL(info) << "CCM " << ccm_args;
+		CQL_LOG(info) << "CCM " << ccm_args;
 		string result = execute_command(CCM_COMMAND + " " + ccm_args);
 			
 		if(boost::algorithm::contains(result, "[Errno")) {
-			BOOST_LOG_TRIVIAL(error) << "CCM ERROR: " << result;
+			CQL_LOG(error) << "CCM ERROR: " << result;
 		}
 		else {
-			BOOST_LOG_TRIVIAL(info) << "CCM RESULT: " << result;
+			CQL_LOG(info) << "CCM RESULT: " << result;
 		}
 	}
 
