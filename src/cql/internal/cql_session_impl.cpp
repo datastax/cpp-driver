@@ -25,6 +25,7 @@
 #include "cql/exceptions/cql_exception.hpp"
 #include "cql/exceptions/cql_no_host_available_exception.hpp"
 #include "cql/exceptions/cql_too_many_connections_per_host_exception.hpp"
+#include "cql/exceptions/cql_connection_allocation_error.hpp"
 #include "cql/cql_host.hpp"
 #include "cql/internal/cql_trashcan.hpp"
 #include "cql/internal/cql_socket.hpp"
@@ -226,7 +227,8 @@ cql::cql_session_impl_t::allocate_connection(
 
     if (shared_future.get().error.is_err()) {
         decrease_connection_counter(host);
-        throw cql_exception("cannot connect to host: " + host->endpoint().to_string());
+        throw cql_connection_allocation_error(
+                ("Error when connecting to host: " + host->endpoint().to_string()).c_str());
         connection.reset();
     }
 
@@ -344,11 +346,12 @@ cql::cql_session_impl_t::connect(
                     continue;
                 }
             }
-            catch (cql_exception& e) { // TODO: How about something more specific than cql_exception?
+            catch (cql_connection_allocation_error& e) {
                 // Failed attempt to allocate connection in interpreted as host being dead.
                 host->set_down();
                 continue;
             }
+            host->bring_up();
         }
 
         if (conn) {

@@ -108,7 +108,7 @@ query(
         }
 
 		cql::cql_future_result_t query_result = query_future.get();
-		std::cout << query_result.client->endpoint().to_string();
+		std::cout << "Querying endpoint: " << query_result.client->endpoint().to_string() << std::endl;
 
 		add_coordinator(query_result.client->endpoint().address());		
 		if(query_result.error.code != 0)
