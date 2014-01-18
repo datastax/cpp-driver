@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE( exp_reconnection_policy_integration_test )
     restart_time += schedule->get_delay().total_seconds();
     restart_time += schedule->get_delay().total_seconds();
     
-    // retry_time is the expected time before 4th reconnection minus two seconds.
+    // retry_time is the expected time before 4th reconnection
     const long retry_time = restart_time - 2 + schedule->get_delay().total_seconds();
     const long break_time = 2*retry_time + 2;
     
@@ -179,6 +179,7 @@ BOOST_AUTO_TEST_CASE( exp_reconnection_policy_integration_test )
         policy_tools::reset_coordinators();
 
         ccm->stop(1);
+        restarted = false;
         then = boost::posix_time::second_clock::local_time();
         
         // Ensure that the node is down.

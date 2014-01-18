@@ -227,6 +227,7 @@ cql::cql_session_impl_t::allocate_connection(
     if (shared_future.get().error.is_err()) {
         decrease_connection_counter(host);
         throw cql_exception("cannot connect to host: " + host->endpoint().to_string());
+        connection.reset();
     }
 
     return connection;
@@ -334,11 +335,18 @@ cql::cql_session_impl_t::connect(
         conn = _trashcan->recycle(host_address);
         if (conn && !conn->is_healthy()) {
             free_connection(conn);
-            conn = boost::shared_ptr<cql_connection_t>();
+            conn.reset();
         }
 
         if (!conn) {
-            if (!(conn = allocate_connection(host))) {
+            try {
+                if (!(conn = allocate_connection(host))) {
+                    continue;
+                }
+            }
+            catch (cql_exception& e) { // TODO: How about something more specific than cql_exception?
+                // Failed attempt to allocate connection in interpreted as host being dead.
+                host->set_down();
                 continue;
             }
         }
@@ -351,7 +359,7 @@ cql::cql_session_impl_t::connect(
         return conn;
     }
 
-    throw cql_exception("no host is available according to load balancing policy.");
+    throw cql_no_host_available_exception("no host is available according to load balancing policy.");
 }
 
 cql::cql_stream_t
