@@ -347,8 +347,12 @@ cql::cql_session_impl_t::connect(
                 }
             }
             catch (cql_connection_allocation_error& e) {
-                // Failed attempt to allocate connection in interpreted as host being dead.
+                // This error is interpreted as host being dead.
                 host->set_down();
+                continue;
+            }
+            catch (cql_too_many_connections_per_host_exception& e) {
+                // This happens; let's try with another host.
                 continue;
             }
             host->bring_up();

@@ -405,6 +405,8 @@ public:
         _closing = true;
         log(CQL_LOG_INFO, "closing connection");
 
+        // TODO (JS): set all promises on all callbacks to some defunct state.
+        
         boost::system::error_code ec;
         _transport->lowest_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         _transport->lowest_layer().close();
@@ -914,6 +916,14 @@ private:
         log(CQL_LOG_DEBUG, "received body for message " + header.str());
 
         if (err) {
+            if (err == boost::asio::error::eof) {
+                // Endopint was closed. The connection is set to defunct state and should not throw.
+                _defunct = true;
+                is_disposed->value = true;
+                log(CQL_LOG_ERROR, "error reading body " + err.message());
+                return;
+            }
+            
             log(CQL_LOG_ERROR, "error reading body " + err.message());
             check_transport_err(err);
 
