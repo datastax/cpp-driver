@@ -753,12 +753,10 @@ private:
 		boost::shared_ptr<boolkeeper> is_disposed,
         const boost::system::error_code& err)
     {
-        {
-            // if the connection was already disposed we return here immediately
-            boost::mutex::scoped_lock lock(is_disposed->mutex);
-	        if (is_disposed->value) {
-			    return;
-            }
+        // if the connection was already disposed we return here immediately
+        boost::mutex::scoped_lock lock(is_disposed->mutex);
+	    if (is_disposed->value) {
+			return;
         }
     
 		if (!err) {
