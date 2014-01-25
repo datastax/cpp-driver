@@ -205,9 +205,9 @@ private:
              it != _connected_sessions.end(); ++it)
         {
             it->second->close();
-            _connected_sessions.erase(it);
         }
-    }
+		_connected_sessions.clear();
+	}
 
     boost::shared_ptr<boost::asio::io_service> _io_service;
     const std::list<cql_endpoint_t> 	       _contact_points;
