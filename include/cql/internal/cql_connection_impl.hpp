@@ -46,6 +46,7 @@
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/asio/strand.hpp>
 
 #include "cql/cql.hpp"
 #include "cql/cql_connection.hpp"
@@ -191,9 +192,9 @@ public:
         TSocket*                                    transport,
         cql::cql_connection_t::cql_log_callback_t   log_callback = 0) :
         _io_service(io_service),
+        _strand(io_service),
         _resolver(io_service),
         _transport(transport),
-        _request_buffer(0),
         _callback_storage(NUMBER_OF_STREAMS),
         _number_of_free_stream_ids(NUMBER_OF_USER_STREAMS),
         _connect_callback(0),
@@ -712,14 +713,9 @@ private:
         std::vector<boost::asio::const_buffer> buf;
 
         buf.push_back(boost::asio::buffer(header.buffer()->data(), header.size()));
-        _request_buffer.push_back(header.buffer());
 
         if (header.length() != 0) {
             buf.push_back(boost::asio::buffer(message->buffer()->data(), message->size()));
-            _request_buffer.push_back(message->buffer());
-        }
-        else {
-            _request_buffer.push_back(cql_message_buffer_t());
         }
 
         boost::asio::async_write(*_transport, buf, callback);
@@ -730,14 +726,6 @@ private:
         const boost::system::error_code& err,
         std::size_t                      num_bytes)
     {
-        if (!_request_buffer.empty()) {
-            // the write request is complete free the request buffers
-            _request_buffer.pop_front();
-            if (!_request_buffer.empty()) {
-                _request_buffer.pop_front();
-            }
-        }
-
         if (!err) {
             log(CQL_LOG_DEBUG, "wrote to socket " + boost::lexical_cast<std::string>(num_bytes) + " bytes");
         }
@@ -757,7 +745,7 @@ private:
 #else
                                 boost::asio::transfer_all(),
 #endif
-                                boost::bind(&cql_connection_impl_t<TSocket>::header_read_handle, this, _is_disposed, boost::asio::placeholders::error));
+                                _strand.wrap(boost::bind(&cql_connection_impl_t<TSocket>::header_read_handle, this, _is_disposed, boost::asio::placeholders::error)));
     }
 
     void
@@ -765,11 +753,14 @@ private:
 		boost::shared_ptr<boolkeeper> is_disposed,
         const boost::system::error_code& err)
     {
-		// if the connection was already disposed we return here immediately
-        boost::mutex::scoped_lock lock(is_disposed->mutex);
-
-		if(is_disposed->value)
-			return;
+        {
+            // if the connection was already disposed we return here immediately
+            boost::mutex::scoped_lock lock(is_disposed->mutex);
+	        if (is_disposed->value) {
+			    return;
+            }
+        }
+    
 		if (!err) {
 			cql::cql_error_t decode_err;
 			if (_response_header.consume(&decode_err)) {
@@ -834,7 +825,7 @@ private:
 #else
                                 boost::asio::transfer_all(),
 #endif
-                                boost::bind(&cql_connection_impl_t<TSocket>::body_read_handle, this, header,_is_disposed, boost::asio::placeholders::error));
+                                _strand.wrap(boost::bind(&cql_connection_impl_t<TSocket>::body_read_handle, this, header,_is_disposed, boost::asio::placeholders::error)));
     }
     
     
@@ -846,7 +837,10 @@ private:
         switch(response_message->result_type()) {
                 
             case CQL_RESULT_SET_KEYSPACE: {
-                response_message->get_keyspace_name(_current_keyspace_name);
+                {
+                    boost::mutex::scoped_lock lock(_mutex);
+                    response_message->get_keyspace_name(_current_keyspace_name);
+                }
                 if (_session_ptr) {
                     _session_ptr->set_keyspace(_current_keyspace_name);
                 }
@@ -886,6 +880,14 @@ private:
         log(CQL_LOG_DEBUG, "received body for message " + header.str());
 
         if (err) {
+            if (err == boost::asio::error::eof) {
+                // Endopint was closed. The connection is set to defunct state and should not throw.
+                _defunct = true;
+                is_disposed->value = true;
+                log(CQL_LOG_ERROR, "error reading body " + err.message());
+                return;
+            }
+            
             log(CQL_LOG_ERROR, "error reading body " + err.message());
             check_transport_err(err);
 
@@ -1057,11 +1059,12 @@ private:
     boost::mutex                             _mutex;
     
     boost::asio::io_service&                 _io_service;
+    boost::asio::strand                      _strand;
+    
     cql_endpoint_t                           _endpoint;
     boost::asio::ip::tcp::resolver           _resolver;
     std::auto_ptr<TSocket>                   _transport;
     cql::cql_stream_id_t                     _stream_counter;
-    request_buffer_t                         _request_buffer;
     cql::cql_header_impl_t                   _response_header;
     std::auto_ptr<cql::cql_message_t>        _response_message;
     callback_storage_t                       _callback_storage;

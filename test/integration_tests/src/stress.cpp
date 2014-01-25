@@ -32,6 +32,7 @@ struct stress_thread_func_ctx
 {
 	int idx;
 	boost::shared_ptr<cql::cql_session_t> session;
+	boost::mutex* ar_guard;
 	boost::barrier* barier;
 	std::vector<boost::shared_future<cql::cql_future_result_t> >* ar;
 };
@@ -43,6 +44,7 @@ static void stress_thread_func(stress_thread_func_ctx& ctx)
 		ctx.barier->wait();
 		std::string query_string(boost::str(boost::format("INSERT INTO %s (tweet_id,author,body)VALUES (%d,'author%d','body%d');") % test_utils::SIMPLE_TABLE%ctx.idx%ctx.idx%ctx.idx));
 		boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,cql::CQL_CONSISTENCY_ANY));
+		boost::mutex::scoped_lock lock(*ctx.ar_guard);
 		(*ctx.ar)[ctx.idx]= ctx.session->query(_query);
     }
 	catch(std::exception& ex)
@@ -66,12 +68,11 @@ BOOST_AUTO_TEST_CASE(parallel_insert_test)
     {
 		test_utils::query(session, str(boost::format("CREATE TABLE %s(tweet_id int PRIMARY KEY, author text, body text);") % test_utils::SIMPLE_TABLE ));
 
-		
-
-        int RowsNo = 100;
+        int RowsNo = 1000;
 		boost::barrier barier(RowsNo);
 
 		std::vector<boost::shared_future<cql::cql_future_result_t> > ar(RowsNo);
+		boost::mutex ar_guard;
 
 		std::vector<boost::shared_ptr<boost::thread> > threads(RowsNo); 
 
@@ -82,6 +83,7 @@ BOOST_AUTO_TEST_CASE(parallel_insert_test)
 			ctx.barier=&barier;
 			ctx.session=session;
 			ctx.idx=idx;
+			ctx.ar_guard = &ar_guard;
 			threads[idx]=boost::shared_ptr<boost::thread>(new boost::thread(boost::bind(stress_thread_func,ctx)));
 		};
 
@@ -91,9 +93,19 @@ BOOST_AUTO_TEST_CASE(parallel_insert_test)
         {
 			for (int i = 0; i < RowsNo; i++)
 			{
-				if(ar[i].is_ready())
-					if(ar[i].timed_wait(boost::posix_time::milliseconds(0)))
-						done.insert(i);
+				if(!(done.find(i)!=done.end()))
+					if(ar[i].is_ready())
+					{
+						if(ar[i].timed_wait(boost::posix_time::milliseconds(10)))
+						{
+							done.insert(i);
+							std::cout.put('+');
+						}
+						else
+						{
+							std::cout.put('-');
+						}
+					}
 			}
 		}
 
