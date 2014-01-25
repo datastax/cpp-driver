@@ -245,7 +245,7 @@ cql::cql_session_impl_t::add_to_connection_pool(
     return it->second;
 }
 
-void
+cql::cql_session_impl_t::cql_connections_collection_t::iterator
 cql::cql_session_impl_t::try_remove_connection(
     cql_connections_collection_t* const connections,
     const cql_uuid_t&                   connection_id)
@@ -253,11 +253,14 @@ cql::cql_session_impl_t::try_remove_connection(
     // TODO: How we can guarantee that any other thread is not using
     // this connection object ?
 
-    cql_connections_collection_t::iterator iter = connections->find(connection_id);
+    cql_connections_collection_t::iterator tmp, iter = connections->find(connection_id);
+    tmp = iter;
     if (iter != connections->end()) {
+        ++tmp;
         free_connection(iter->second);
         connections->erase(iter);
     }
+    return tmp;
 }
 
 boost::shared_ptr<cql::cql_connection_t>
@@ -272,13 +275,14 @@ cql::cql_session_impl_t::try_find_free_stream(
     cql_host_distance_enum       distance        = host->distance(_configuration->policies());
 
     for (cql_connections_collection_t::iterator kv = connections->begin();
-         kv != connections->end(); ++kv)
+         kv != connections->end(); /* No increment */)
     {
         cql_uuid_t                          conn_id = kv->first;
         boost::shared_ptr<cql_connection_t> conn    = kv->second;
 
         if (!conn->is_healthy()) {
-            try_remove_connection(connections, conn_id);
+            kv = try_remove_connection(connections, conn_id);
+            continue;
         }
         else if (!conn->is_busy(pooling_options.max_simultaneous_requests_per_connection_treshold(distance))) {
             *stream = conn->acquire_stream();
@@ -292,6 +296,7 @@ cql::cql_session_impl_t::try_find_free_stream(
                 connections->erase(kv);
             }
         }
+        ++kv;
     }
 
     *stream = cql_stream_t();

@@ -303,7 +303,9 @@ private:
     add_to_connection_pool(
         cql_endpoint_t& host_address);
 
-    void
+    /* Note: the method returns an iterator to the next-after-removed-one element of `connections'.
+       Or connections->end() if no such element is present. */
+    cql_connections_collection_t::iterator
     try_remove_connection(
         cql_connections_collection_t* const connections,
         const cql_uuid_t&                   connection_id);
