@@ -512,6 +512,15 @@ public:
         _stream_id_vs_query_string[stream_id] = query_string;
     }
 
+#ifdef _DEBUG
+	void 
+	inject_lowest_layer_shutdown()
+	{
+        boost::system::error_code ec;
+        _transport->lowest_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+	}
+#endif
+
 private:
     inline cql::cql_error_t
     create_stream_id_error()
@@ -1053,8 +1062,8 @@ private:
             _connect_errback(*this, e);
         }
     }
-
-    boost::mutex                             _mutex;
+	
+	boost::mutex                             _mutex;
     
     boost::asio::io_service&                 _io_service;
     boost::asio::strand                      _strand;
