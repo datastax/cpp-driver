@@ -274,7 +274,7 @@ cql::cql_message_result_impl_t::is_null(
     }
     cql::cql_int_t row_size = 0;
     cql::decode_int(_row[i], row_size);
-    output = row_size <= 0;
+    output = (row_size <= 0);
     return false;
 }
 
@@ -286,7 +286,7 @@ cql::cql_message_result_impl_t::is_null(
     if (_metadata.get_index(column, i)) {
         cql::cql_int_t row_size = 0;
         cql::decode_int(_row[i], row_size);
-        output = row_size <= 0;
+        output = (row_size <= 0);
         return false;
     }
     return true;

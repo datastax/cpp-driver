@@ -99,7 +99,7 @@ public:
 
 		return _contents[index];
 	}
-
+    
 	void
 	set_callbacks(
         const cql_stream_t& stream,

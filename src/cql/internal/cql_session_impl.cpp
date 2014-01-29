@@ -296,7 +296,9 @@ cql::cql_session_impl_t::try_find_free_stream(
         else if ((long)connections->size() > pooling_options.core_connections_per_host(distance)) {
             if (conn->is_free(pooling_options.min_simultaneous_requests_per_connection_treshold(distance))) {
                 _trashcan->put(conn);
-                connections->erase(kv);
+                cql_connections_collection_t::iterator tmp = kv++;
+                connections->erase(tmp);
+                continue;
             }
         }
         ++kv;

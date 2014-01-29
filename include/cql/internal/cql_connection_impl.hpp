@@ -402,10 +402,36 @@ public:
     void
     close()
     {
+        boost::mutex::scoped_lock lock(_mutex);
+        
+        if (_closing) {
+            return;
+        }
+        
         _closing = true;
         log(CQL_LOG_INFO, "closing connection");
 
-        // TODO (JS): set all promises on all callbacks to some defunct state.
+        const cql_error_t error
+            = cql_error_t::transport_error(boost::system::errc::connection_aborted,
+                                           "The connection was closed.");
+        
+        // Now we will set the promises on all callbacks to some error state.
+        // Otherwise, if disposed, all futures would throw `broken_promise' exception.
+        for (int i = 0; i < NUMBER_OF_STREAMS; ++i) {
+            const cql_stream_t consecutive_stream
+                = cql_stream_t::from_stream_id(cql_stream_id_t(i));
+            
+            if (_callback_storage.has_callbacks(consecutive_stream)) {
+                callback_pair_t callback_and_errback
+                    = _callback_storage.get_callbacks(consecutive_stream);
+                cql_message_errback_t errback
+                    = callback_and_errback.second;
+                
+                if (errback) {
+                    errback(*this, consecutive_stream, error);
+                }
+            }
+        }
         
         boost::system::error_code ec;
         _transport->lowest_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
@@ -813,7 +839,7 @@ private:
 		else if (err == boost::asio::error::eof) {
             // Endopint was closed. The connection is set to defunct state and should not throw.
 			_defunct = true;
-            is_disposed->value = true;
+            //is_disposed->value = true;
             log(CQL_LOG_ERROR, "error reading header " + err.message());
 		}
 		else {
@@ -1091,7 +1117,7 @@ private:
             _connect_errback(*this, e);
         }
     }
-
+    
     boost::mutex                             _mutex;
     
     boost::asio::io_service&                 _io_service;

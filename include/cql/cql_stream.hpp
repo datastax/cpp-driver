@@ -27,12 +27,12 @@ public:
     cql_stream_id_t
     stream_id() const { return _stream_id; }
 
+    static cql_stream_t
+    from_stream_id(const cql_stream_id_t& stream_id);
+
 private:
     cql_stream_t(cql_stream_id_t stream_id)
         : _stream_id(stream_id) { }
-
-    static cql_stream_t
-    from_stream_id(const cql_stream_id_t& stream_id);
 
     static const cql_stream_t&
     invalid_stream();

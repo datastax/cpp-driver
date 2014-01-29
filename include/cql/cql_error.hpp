@@ -63,6 +63,16 @@ struct cql_error_t {
             /*code:*/       code,
             /*message:*/    message);
     }
+
+    static cql_error_t
+    transport_error(int code, const std::string& message) {
+        return cql_error_t(
+                           /*cassandra:*/  false,
+                           /*transport:*/  true,
+                           /*library:*/    false,
+                           /*code:*/       code,
+                           /*message:*/    message);
+    }
 };
 } // namespace cql
 
