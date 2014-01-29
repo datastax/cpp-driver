@@ -23,7 +23,7 @@
 #include <boost/thread/barrier.hpp>
 
 struct STRESS_CCM_SETUP : test_utils::CCM_SETUP {
-    STRESS_CCM_SETUP() : CCM_SETUP(1,0) {}
+    STRESS_CCM_SETUP() : CCM_SETUP(4,0) {}
 };
 
 BOOST_FIXTURE_TEST_SUITE( stress_test_suite, STRESS_CCM_SETUP )

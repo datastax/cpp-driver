@@ -33,6 +33,7 @@ public:
         boost::mutex::scoped_lock lock(*_mutex);
         if (!*_value_set) {
             _promise->set_value(value);
+			(*_value_set)=true;
             return true;
         }
         return false;
@@ -45,6 +46,7 @@ public:
         boost::mutex::scoped_lock lock(*_mutex);
         if (!*_value_set) {
             _promise->set_exception(exception);
+			(*_value_set)=true;
             return true;
         }
 

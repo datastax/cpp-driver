@@ -25,7 +25,7 @@
 #include <boost/thread/barrier.hpp>
 
 struct ERROR_INJECTION_CCM_SETUP : test_utils::CCM_SETUP {
-    ERROR_INJECTION_CCM_SETUP() : CCM_SETUP(1,0) {}
+    ERROR_INJECTION_CCM_SETUP() : CCM_SETUP(4,0) {}
 };
 
 BOOST_FIXTURE_TEST_SUITE( error_injection_test_suite, ERROR_INJECTION_CCM_SETUP )
@@ -91,9 +91,15 @@ BOOST_AUTO_TEST_CASE(error_injection_parallel_insert_test)
 
 		std::set<int> done; 
 
+		int itercnt = 1;
         while (done.size() < RowsNo)
         {
-			session.get()->inject_random_connection_lowest_layer_shutdown();
+			if(itercnt++%1000==0 && itercnt<1100)
+			{
+				session.get()->inject_random_connection_lowest_layer_shutdown();
+				std::cout.put('^');
+
+			}
 			for (int i = 0; i < RowsNo; i++)
 			{
 				if(!(done.find(i)!=done.end()))
