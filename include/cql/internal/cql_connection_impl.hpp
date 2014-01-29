@@ -1068,17 +1068,23 @@ private:
     inline void
     check_transport_err(const boost::system::error_code& err)
     {
-        if (!_closing && !_transport->lowest_layer().is_open()) {
-            _ready = false;
-            _defunct = true;
-        }
+        try
+        {
+            if (!_closing && !_transport->lowest_layer().is_open()) {
+                _ready = false;
+                _defunct = true;
+            }
 
-        if (_connect_errback && !_closing) {
-            cql::cql_error_t e;
-            e.transport = true;
-            e.code = err.value();
-            e.message = err.message();
-            _connect_errback(*this, e);
+            if (_connect_errback && !_closing) {
+                cql::cql_error_t e;
+                e.transport = true;
+                e.code = err.value();
+                e.message = err.message();
+                _connect_errback(*this, e);
+            }
+        } catch (std::exception& ex)
+        {
+            std::cout << "in check_transport_err caught: " << ex.what() << std::endl;
         }
     }
 
