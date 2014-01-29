@@ -223,7 +223,7 @@ private:
     // because it's in it's own thread.  Using boost::asio::io_service::work prevents the thread from exiting.
     boost::mutex                                     _mutex;
     boost::scoped_ptr<boost::asio::io_service::work> _work;
-	std::vector<boost::shared_ptr<boost::thread>>	 _threads;
+	std::vector<boost::shared_ptr<boost::thread> >	 _threads;
     boost::shared_ptr<cql_metadata_t>                _metadata;
     connected_sessions_t                             _connected_sessions;
     boost::shared_ptr<cql_control_connection_t>      _control_connection;
