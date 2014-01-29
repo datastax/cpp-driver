@@ -300,6 +300,10 @@ public:
     virtual void
     reconnect() = 0;
 
+#ifdef _DEBUG
+	virtual void 
+	inject_lowest_layer_shutdown() = 0;
+#endif
 };
 
 } // namespace cql

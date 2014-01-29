@@ -102,7 +102,8 @@ CCM_SETUP::CCM_SETUP(int numberOfNodesDC1, int numberOfNodesDC2) : conf(cql::get
     use_ssl=false;
     
     builder = cql::cql_cluster_t::builder();
-    builder->with_log_callback(&test_utils::log_callback);
+	if(conf.use_logger())	
+	    builder->with_log_callback(&test_utils::log_callback);
     builder->add_contact_point(ccm_contact_seed);
     
     if (use_ssl) {

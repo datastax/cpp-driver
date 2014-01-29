@@ -61,7 +61,7 @@ cql::cql_trashcan_t::recycle(
          ++it)
     {
         boost::shared_ptr<cql::cql_connection_t> conn = it->second;
-        connections->erase(it);
+        connections->erase(it); //this is safe as long as we return in the next line
         return conn;
     }
 
@@ -87,8 +87,8 @@ cql::cql_trashcan_t::remove_all() {
              conn_it != host_it->second->end(); ++conn_it)
         {
             _session.free_connection(conn_it->second);
-            host_it->second->erase(conn_it);
         }
+		host_it->second->clear();
     }
     _trashcan.clear();
 }

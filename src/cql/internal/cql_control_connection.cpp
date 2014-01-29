@@ -224,7 +224,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
                 if (!(peer_address == ::boost::asio::ip::address()))
                 {
                     std::string peer_data_center, peer_rack;
-                    cql_set_t* peer_tokens_set;
+                    cql_set_t* peer_tokens_set = NULL;
 
                     result->get_string("data_center", peer_data_center);
                     result->get_string("rack", peer_rack);
@@ -235,11 +235,14 @@ cql_control_connection_t::refresh_node_list_and_token_map()
                     racks.push_back(peer_rack);
 
                     all_tokens.push_back(std::map<std::string,bool>());
-                    for (size_t i = 0u; i < peer_tokens_set->size(); ++i) {
-                        std::string single_peers_token;
-                        peer_tokens_set->get_string(i, single_peers_token);
-                        all_tokens.back()[single_peers_token] = true;
-                    }
+					if(peer_tokens_set!=NULL)
+					{
+						for (size_t i = 0u; i < peer_tokens_set->size(); ++i) {
+							std::string single_peers_token;
+							peer_tokens_set->get_string(i, single_peers_token);
+							all_tokens.back()[single_peers_token] = true;
+						}
+					}
                 }
             }
         }

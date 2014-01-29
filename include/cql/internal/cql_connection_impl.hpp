@@ -195,11 +195,6 @@ public:
         _strand(io_service),
         _resolver(io_service),
         _transport(transport),
-
-        // Note: _request_buffer is currently unused and causes race conditions.
-        // I (JS) decided to comment it out for now.
-        //_request_buffer(0),
-    
         _callback_storage(NUMBER_OF_STREAMS),
         _number_of_free_stream_ids(NUMBER_OF_USER_STREAMS),
         _connect_callback(0),
@@ -545,6 +540,15 @@ public:
         _stream_id_vs_query_string[stream_id] = query_string;
     }
 
+#ifdef _DEBUG
+	void 
+	inject_lowest_layer_shutdown()
+	{
+        boost::system::error_code ec;
+        _transport->lowest_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+	}
+#endif
+
 private:
     inline cql::cql_error_t
     create_stream_id_error()
@@ -746,26 +750,10 @@ private:
         std::vector<boost::asio::const_buffer> buf;
 
         buf.push_back(boost::asio::buffer(header.buffer()->data(), header.size()));
-        
-        
-        // Note: _request_buffer is currently unused and causes race conditions.
-        // I (JS) decided to comment it out for now.
-        if (header.length() != 0) {
-            buf.push_back(boost::asio::buffer(message->buffer()->data(), message->size()));
-        }
-        /*
-        boost::mutex::scoped_lock lock(_mutex);
-        // Note: _request_buffer can be shared among threads
-        _request_buffer.push_back(header.buffer());
 
         if (header.length() != 0) {
             buf.push_back(boost::asio::buffer(message->buffer()->data(), message->size()));
-            _request_buffer.push_back(message->buffer());
         }
-        else {
-            _request_buffer.push_back(cql_message_buffer_t());
-        }
-         */
 
         boost::asio::async_write(*_transport, buf, callback);
     }
@@ -775,19 +763,6 @@ private:
         const boost::system::error_code& err,
         std::size_t                      num_bytes)
     {
-        // Note: _request_buffer is currently unused and causes race conditions.
-        // I (JS) decided to comment it out for now.
-        /*
-        boost::mutex::scoped_lock lock(_mutex);
-        if (!_request_buffer.empty()) {
-            // the write request is complete free the request buffers
-            _request_buffer.pop_front();
-            if (!_request_buffer.empty()) {
-                _request_buffer.pop_front();
-            }
-        }
-        */
-        
         if (!err) {
             log(CQL_LOG_DEBUG, "wrote to socket " + boost::lexical_cast<std::string>(num_bytes) + " bytes");
         }
@@ -1117,8 +1092,8 @@ private:
             _connect_errback(*this, e);
         }
     }
-    
-    boost::mutex                             _mutex;
+	
+	boost::mutex                             _mutex;
     
     boost::asio::io_service&                 _io_service;
     boost::asio::strand                      _strand;
@@ -1127,11 +1102,6 @@ private:
     boost::asio::ip::tcp::resolver           _resolver;
     std::auto_ptr<TSocket>                   _transport;
     cql::cql_stream_id_t                     _stream_counter;
-    
-    // Note: _request_buffer is currently unused and causes race conditions.
-    // I (JS) decided to comment it out for now.
-    //request_buffer_t                         _request_buffer;
-    
     cql::cql_header_impl_t                   _response_header;
     std::auto_ptr<cql::cql_message_t>        _response_message;
     callback_storage_t                       _callback_storage;

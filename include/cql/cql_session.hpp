@@ -107,6 +107,11 @@ public:
     // Returns unique session identifier
     virtual cql_uuid_t
     id() const = 0;
+
+#ifdef _DEBUG
+	virtual void 
+	inject_random_connection_lowest_layer_shutdown() = 0;
+#endif
 };
 
 } // namespace cql

@@ -162,7 +162,12 @@ public:
     set_prepare_statement(
                           const std::vector<cql_byte_t>& query_id,
                           const std::string& query_text);
-    
+
+#ifdef _DEBUG
+	void 
+	inject_random_connection_lowest_layer_shutdown();
+#endif
+
 private:
     
     typedef std::map<cql_uuid_t, boost::shared_ptr<cql_connection_t> > cql_connections_collection_t;

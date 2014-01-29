@@ -26,8 +26,10 @@ class cql_client_options_t
 {
 public:
     cql_client_options_t(
-        cql_connection_t::cql_log_callback_t log_callback) :
-        _log_callback(log_callback)
+        cql_connection_t::cql_log_callback_t log_callback,
+		int thread_pool_size) :
+        _log_callback(log_callback),
+		_thread_pool_size(thread_pool_size)
     {}
 
     inline cql_connection_t::cql_log_callback_t
@@ -36,8 +38,14 @@ public:
         return _log_callback;
     }
 
+	inline int thread_pool_size() const
+	{
+		return _thread_pool_size;
+	}
+
 private:
     cql_connection_t::cql_log_callback_t _log_callback;
+	int _thread_pool_size;
 };
 
 class cql_protocol_options_t
@@ -393,7 +401,8 @@ public:
 
     cql_builder_t() :
         _io_service(new boost::asio::io_service),
-        _log_callback(0)
+        _log_callback(0),
+		_thread_pool_size(2)
     {}
     
     virtual ~cql_builder_t() {}
@@ -410,7 +419,7 @@ public:
         return boost::shared_ptr<cql_configuration_t>(
                    new cql_configuration_t(
                        _io_service,
-                       cql_client_options_t(_log_callback),
+					   cql_client_options_t(_log_callback,_thread_pool_size),
                        cql_protocol_options_t(
                            _contact_points,
                            _ssl_context),
@@ -474,13 +483,21 @@ public:
         const std::string& user_name,
         const std::string& password);
 
+	cql_builder_t&
+	set_thread_pool_size(int thread_pool_size)
+	{
+		_thread_pool_size=thread_pool_size;
+		return *this;
+	}
+
+
 private:
     boost::shared_ptr<boost::asio::io_service>   _io_service;
     std::list<cql_endpoint_t>                    _contact_points;
     boost::shared_ptr<boost::asio::ssl::context> _ssl_context;
     cql_connection_t::cql_log_callback_t         _log_callback;
     cql_credentials_t                            _credentials;
-
+	int											 _thread_pool_size;
 };
 
 } // namespace cql

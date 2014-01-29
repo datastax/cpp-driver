@@ -163,6 +163,7 @@ cql::cql_session_impl_t::set_prepare_statement(
     }
 }
 
+
 bool
 cql::cql_session_impl_t::increase_connection_counter(
     const boost::shared_ptr<cql_host_t>& host)
@@ -695,3 +696,31 @@ cql::cql_uuid_t
 cql::cql_session_impl_t::id() const {
     return _uuid;
 }
+
+#ifdef _DEBUG
+void
+cql::cql_session_impl_t::inject_random_connection_lowest_layer_shutdown()
+{
+	boost::recursive_mutex::scoped_lock lock(_mutex);
+
+	size_t select_pool = (rand()*_connection_pool.size())/RAND_MAX;
+    for(connection_pool_t::iterator I  = _connection_pool.begin();
+        I != _connection_pool.end(); ++I)
+    {
+		if((select_pool--)==0)
+		{
+			size_t select_conn = (rand()*(*(I->second)).size())/RAND_MAX;
+			cql_connections_collection_t& conn_collection_ptr = *(I->second);
+			for(cql_connections_collection_t::iterator
+					J  = conn_collection_ptr.begin();
+					J != conn_collection_ptr.end(); ++J)
+			{
+				if((select_conn--)==0)
+				{
+					J->second->inject_lowest_layer_shutdown();
+				}
+			}
+		}
+    }
+}
+#endif
