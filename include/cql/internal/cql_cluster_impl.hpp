@@ -99,11 +99,12 @@ public:
         _io_service(configuration->io_service()),
         _contact_points(endpoints),
         _configuration(configuration),
-        _work(new boost::asio::io_service::work(*configuration->io_service())),
-        _thread2(boost::bind(&cql_cluster_impl_t::asio_thread_main, _io_service)), // TODO: thread pool
-        _thread(boost::bind(&cql_cluster_impl_t::asio_thread_main, _io_service))
+        _work(new boost::asio::io_service::work(*configuration->io_service()))
     {
-        _configuration->init(this);
+		for(int i=0;i<configuration->client_options().thread_pool_size();i++)
+			_threads.push_back(boost::shared_ptr<boost::thread>(new boost::thread(boost::bind(&cql_cluster_impl_t::asio_thread_main, _io_service))));
+
+		_configuration->init(this);
         const cql_policies_t& policies = _configuration->policies();
 
         _metadata = boost::shared_ptr<cql_metadata_t>(new cql_metadata_t(policies.reconnection_policy()));
@@ -181,7 +182,8 @@ public:
 
         if (_work.get() != NULL) {
             _work.reset();
-            _thread.join();
+			for(std::vector<boost::shared_ptr<boost::thread> >::iterator pos = _threads.begin() ;pos!=_threads.end();++pos)
+				(*pos)->join();
         }
 		_Iam_shotdown = true;
     }
@@ -221,8 +223,7 @@ private:
     // because it's in it's own thread.  Using boost::asio::io_service::work prevents the thread from exiting.
     boost::mutex                                     _mutex;
     boost::scoped_ptr<boost::asio::io_service::work> _work;
-    boost::thread                                    _thread2; // TODO: temporary solution, instead of thread pool
-    boost::thread                                    _thread;
+	std::vector<boost::shared_ptr<boost::thread>>	 _threads;
     boost::shared_ptr<cql_metadata_t>                _metadata;
     connected_sessions_t                             _connected_sessions;
     boost::shared_ptr<cql_control_connection_t>      _control_connection;

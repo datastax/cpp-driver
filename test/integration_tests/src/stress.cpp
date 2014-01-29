@@ -55,6 +55,7 @@ static void stress_thread_func(stress_thread_func_ctx& ctx)
 
 BOOST_AUTO_TEST_CASE(parallel_insert_test)
 {
+	builder->set_thread_pool_size(10);
 	boost::shared_ptr<cql::cql_cluster_t> cluster = builder->build();
 	boost::shared_ptr<cql::cql_session_t> session = cluster->connect();
 	if (!session) {
