@@ -437,7 +437,7 @@ public:
         boost::shared_ptr<boost::asio::ssl::context> ssl_context(
             new boost::asio::ssl::context(
 #if BOOST_VERSION <= 104800
-                _io_service,
+                *_io_service.get(),
 #endif
                 boost::asio::ssl::context::sslv23));
         _ssl_context = ssl_context;
