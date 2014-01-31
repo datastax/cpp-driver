@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(prepared_insert_float)
 
 BOOST_AUTO_TEST_CASE(prepared_insert_int64)
 {
-	boost::int64_t to_insert = 2147483648;
+	boost::int64_t to_insert = 2147483648LL;
 	boost::shared_ptr<cql::cql_result_t> result = prepared_insert_test(builder->build(),cql::CQL_COLUMN_TYPE_BIGINT, to_insert);
 	boost::int64_t res;
 	result->get_bigint("test_val", res);

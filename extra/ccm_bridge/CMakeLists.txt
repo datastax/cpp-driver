@@ -17,7 +17,7 @@ set(Boost_USE_MULTITHREADED ON)
 # needed by boost to link dynamically
 add_definitions(-DBOOST_ALL_DYN_LINK)
 
-find_package(Boost 1.41.0 COMPONENTS system chrono date_time REQUIRED)
+find_package(Boost 1.41.0 COMPONENTS system date_time REQUIRED)
 set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
 set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
 
@@ -88,7 +88,7 @@ set(DATA_FILES ${PROJECT_SOURCE_DIR}/data/config.txt)
 add_library(CCMBridge STATIC ${SRC_FILES} ${INC_FILES} ${DATA_FILES})
 
 # Set project includes and lib directories
-target_include_directories(CCMBridge PUBLIC ${INCLUDES})
+include_directories(PUBLIC ${INCLUDES})
 target_link_libraries(CCMBridge ${LIBRARIES})
 
 # Create source groups - this is only needed to create

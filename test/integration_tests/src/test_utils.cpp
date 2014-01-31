@@ -1,8 +1,8 @@
 #include "cql/cql.hpp"
-#include "cql/cql_session.hpp"
 #include "cql/cql_cluster.hpp"
 #include "cql/cql_builder.hpp"
 #include "cql_ccm_bridge.hpp"
+#include "cql/cql_session.hpp"
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>

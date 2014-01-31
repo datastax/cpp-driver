@@ -23,6 +23,7 @@
 #include <map>
 #include <string>
 
+#include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/thread/future.hpp>

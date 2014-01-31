@@ -16,6 +16,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <cassert>
 
 #ifdef _WIN32
 #define NTDDI_VERSION 0x06000000
