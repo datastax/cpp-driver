@@ -5,6 +5,8 @@
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <libssh2.h>
+
 #ifdef WIN32
 #       include <winsock2.h>
 #elif UNIX
@@ -25,13 +27,22 @@ const int SSH_STDOUT = 0;
 const int SSH_STDERR = 1;
 
 namespace cql {
+
+	struct cql_ccm_bridge_t::ssh_internals
+	{
+	public:
+		ssh_internals():_session(0),_channel(0){}
+		LIBSSH2_SESSION* _session;
+		LIBSSH2_CHANNEL* _channel;
+	};
+
+
 	const string cql_ccm_bridge_t::CCM_COMMAND = "ccm";
 
 	cql_ccm_bridge_t::cql_ccm_bridge_t(const cql_ccm_bridge_configuration_t& settings) 
 		:	_ip_prefix(settings.ip_prefix()),
             _socket(-1),
-            _session(0),
-            _channel(0)
+            _ssh_internals(new ssh_internals())
 	{
 		initialize_socket_library();
 
@@ -65,7 +76,7 @@ namespace cql {
 	}
 
 	cql_ccm_bridge_t::~cql_ccm_bridge_t() {
-		libssh2_channel_free(_channel);
+		libssh2_channel_free(_ssh_internals->_channel);
 		close_ssh_session();
 		
 		close_socket();
@@ -94,22 +105,22 @@ namespace cql {
 	}
 
 	void cql_ccm_bridge_t::close_ssh_session() {
-		libssh2_session_disconnect(_session, "Requested by user.");
-		libssh2_session_free(_session);
+		libssh2_session_disconnect(_ssh_internals->_session, "Requested by user.");
+		libssh2_session_free(_ssh_internals->_session);
 	}
 
 	void cql_ccm_bridge_t::start_ssh_connection(const cql_ccm_bridge_configuration_t& settings) {
-		 _session = libssh2_session_init();
-		 if(!_session)
+		 _ssh_internals->_session = libssh2_session_init();
+		 if(!_ssh_internals->_session)
 			 throw cql_ccm_bridge_exception_t("cannot create ssh session");
 
 		 try {
-			if (libssh2_session_handshake(_session, _socket))
+			if (libssh2_session_handshake(_ssh_internals->_session, _socket))
 				throw cql_ccm_bridge_exception_t("ssh session handshake failed");
 
 			// get authentication modes supported by server
 			char* auth_methods = libssh2_userauth_list(
-									_session,
+									_ssh_internals->_session,
 									settings.ssh_username().c_str(), 
 									settings.ssh_username().size());
 
@@ -117,27 +128,27 @@ namespace cql {
 				throw cql_ccm_bridge_exception_t("server doesn't support authentication by password");
 
 			// try to login using username and password
-			int auth_result = libssh2_userauth_password(_session, 
+			int auth_result = libssh2_userauth_password(_ssh_internals->_session, 
 										  settings.ssh_username().c_str(), 
 										  settings.ssh_password().c_str());
 			
 			if(auth_result != 0)
 				throw cql_ccm_bridge_exception_t("invalid password or user");
 
-			if (!(_channel = libssh2_channel_open_session(_session)))
+			if (!(_ssh_internals->_channel = libssh2_channel_open_session(_ssh_internals->_session)))
 				throw cql_ccm_bridge_exception_t("cannot open ssh session");
 
 			try {
 
-				if (libssh2_channel_request_pty(_channel, "vanilla"))
+				if (libssh2_channel_request_pty(_ssh_internals->_channel, "vanilla"))
 					throw cql_ccm_bridge_exception_t("pty requests failed");
 
-				if (libssh2_channel_shell(_channel))
+				if (libssh2_channel_shell(_ssh_internals->_channel))
 					throw cql_ccm_bridge_exception_t("cannot open shell");
 			}
 			catch(cql_ccm_bridge_exception_t&) {
 				// calls channel_close
-				libssh2_channel_free(_channel);
+				libssh2_channel_free(_ssh_internals->_channel);
 			}
 		}
 		catch(cql_ccm_bridge_exception_t&) {
@@ -199,7 +210,7 @@ namespace cql {
 		const char SHELL_PROMPTH_CHARACTER = '$';
 		
 		while(!_esc_remover_stdout.ends_with_character(SHELL_PROMPTH_CHARACTER)) {
-			if(libssh2_channel_eof(_channel))
+			if(libssh2_channel_eof(_ssh_internals->_channel))
 				throw cql_ccm_bridge_exception_t("connection closed by remote host");
 
 			terminal_read_stream(_esc_remover_stdout, SSH_STDOUT);
@@ -229,10 +240,10 @@ namespace cql {
 		
 		while(true) {
 			// disable blocking
-			libssh2_session_set_blocking(_session, 0);
+			libssh2_session_set_blocking(_ssh_internals->_session, 0);
 			
 			ssize_t readed = 
-				libssh2_channel_read_ex(_channel, stream, buf, sizeof(buf));
+				libssh2_channel_read_ex(_ssh_internals->_channel, stream, buf, sizeof(buf));
 			
 			// return if no data to read
 			if(readed == LIBSSH2_ERROR_EAGAIN || readed == 0)
@@ -248,8 +259,8 @@ namespace cql {
 
 	void cql_ccm_bridge_t::terminal_write(const string& command) {
 		// enable blocking
-		libssh2_channel_set_blocking(_channel, 1);
-		libssh2_channel_write(_channel, command.c_str(), command.size());
+		libssh2_channel_set_blocking(_ssh_internals->_channel, 1);
+		libssh2_channel_write(_ssh_internals->_channel, command.c_str(), command.size());
 	}
 
 	void cql_ccm_bridge_t::execute_ccm_command(const string& ccm_args)

@@ -3,7 +3,6 @@
 
 #include <exception>
 #include <deque>
-#include <libssh2.h>
 
 #include <boost/smart_ptr.hpp>
 #include <boost/noncopyable.hpp>
@@ -83,8 +82,8 @@ namespace cql {
 		cql_escape_sequences_remover_t _esc_remover_stderr;
 
 		int _socket;
-		LIBSSH2_SESSION* _session;
-		LIBSSH2_CHANNEL* _channel;
+		struct ssh_internals;
+		boost::scoped_ptr<ssh_internals> _ssh_internals;
 	};
 
 	class cql_ccm_bridge_exception_t : public std::exception { 
