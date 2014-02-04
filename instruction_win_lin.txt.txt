@@ -4,16 +4,17 @@
         (with some Ubuntu- and Windows-specific info. For OS X please refer to macosx_instruction.txt)
 ----------------------------------------------------------------------------------------------------------------
 
-0. CMake
-  - The project uses CMake as configuration creator. Under Windows it is recommended to install it from http://cmaketools.codeplex.com/.
-  - Under Ubuntu it might be necessay to build CMake from sources (at the time of this writing we used CMake 2.8.11).
-  - We made efforts to keep CMakeLists.txt files well documented. You should have no problems with manual adjustments of build settings.
-
-
 1. How to build the project
-  - Dependencies: Boost (currently tested with Boost 1.54), libssh.
-  - Additional dependencies that are necessary and may or may not be present on your system: zlib, openssl.
-  - On Windows only the 32 bit version was tested. Please remember that whenever you wish to use dynamically linked libraries (DLLs), they must be located in right directory. For the 64-bit DLLs the right directoy is c:/Windows/System32 (sic) and the 32-bit ones in c:/windows/SysWOW64 (sic).
+  - Dependencies: Boost (ver 1.41+), zlib, openssl, libssh2, cmake. 
+    Boost.Log is helpful but not necessary.
+
+  - under Ubuntu LTS (Precise) or Debian Wheezy you can get them all with:
+     $> sudo apt-get install build-essential cmake libasio-dev libboost-system-dev libboost-thread-dev libboost-test-dev libboost-program-options-dev libboost-filesystem-dev libboost-log-dev libssh2-1-dev
+
+  - under CentOS/RHEL 6.4 you can get all the dependencies with:
+     $> sudo yum install gcc-c++ glibc glibc-devel boost boost-devel openssl openssl-devel libssh2 libssh2-devel zlib zlib-devel make cmake
+
+  - Under Windows Boost and libssh2 must be compiled manually. Zlib and openssl binaries are available from GnuWin project. Only the 32-bit version was tested. Please remember that whenever you wish to use dynamically linked libraries (DLLs), they must be located in right directory. For the 64-bit DLLs the right directoy is c:/Windows/System32 (sic) and the 32-bit ones in c:/windows/SysWOW64 (sic). You can also place them in situ (i.e. together with build products).
 
 
 2. Random remarks
