@@ -9,7 +9,8 @@ Build-Depends: debhelper (>= 5), cmake, make,
 	libboost-date-time-dev,
 	libboost-thread-dev,
 	libboost-program-options-dev,
-	libboost-test-dev
+	libboost-test-dev,
+	libssh2-1-dev
 Standards-Version: 3.7.2
 
 Package: cassandra0
