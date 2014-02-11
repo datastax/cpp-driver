@@ -397,11 +397,11 @@ public:
     void
     close()
     {
-        boost::mutex::scoped_lock lock(_mutex);
-        
         if (_closing) {
             return;
         }
+        
+        boost::mutex::scoped_lock lock(_mutex);
         
         _closing = true;
         log(CQL_LOG_INFO, "closing connection");

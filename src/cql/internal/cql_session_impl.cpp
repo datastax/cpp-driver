@@ -230,7 +230,6 @@ cql::cql_session_impl_t::allocate_connection(
         decrease_connection_counter(host);
         throw cql_connection_allocation_error(
                 ("Error when connecting to host: " + host->endpoint().to_string()).c_str());
-        connection.reset();
     }
 
     return connection;
@@ -363,6 +362,8 @@ cql::cql_session_impl_t::connect(
 
         if (conn) {
             *stream = conn->acquire_stream();
+
+            boost::recursive_mutex::scoped_lock lock(_mutex);
             (*connections)[conn->id()] = conn;
             conn->set_session_ptr(this);
         }
