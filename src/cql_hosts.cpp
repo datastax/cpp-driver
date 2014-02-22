@@ -16,7 +16,7 @@
 #include <exception>
 #include <iterator>
 
-#include "cql/internal/cql_hosts.hpp"
+#include "cql_hosts.hpp"
 
 
 boost::shared_ptr<cql::cql_hosts_t>

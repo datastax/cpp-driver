@@ -10,7 +10,7 @@
 #define	CQL_UNAUTHORIZED_EXCEPTION_H_
 
 #include <string>
-#include "cql/exceptions/cql_query_validation_exception.hpp"
+#include "cql_query_validation_exception.hpp"
 
 namespace cql {
 //  Indicates that a query cannot be performed due to the authorization restrictions of the logged user.

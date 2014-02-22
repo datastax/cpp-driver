@@ -17,15 +17,15 @@
 #include <iostream>
 #include <sstream>
 #include <boost/foreach.hpp>
-#include "cql/internal/cql_serialization.hpp"
-#include "cql/internal/cql_vector_stream.hpp"
-#include "cql/internal/cql_defines.hpp"
-#include "cql/internal/cql_list_impl.hpp"
-#include "cql/internal/cql_map_impl.hpp"
-#include "cql/internal/cql_set_impl.hpp"
-#include "cql/internal/cql_util.hpp"
+#include "cql_serialization.hpp"
+#include "cql_vector_stream.hpp"
+#include "cql_defines.hpp"
+#include "cql_list_impl.hpp"
+#include "cql_map_impl.hpp"
+#include "cql_set_impl.hpp"
+#include "cql_util.hpp"
 
-#include "cql/internal/cql_message_result_impl.hpp"
+#include "cql_message_result_impl.hpp"
 
 std::string
 result_type_string(cql::cql_short_t t) {

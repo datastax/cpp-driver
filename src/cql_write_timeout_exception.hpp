@@ -10,7 +10,7 @@
 #define	CQL_WRITE_TIMEOUT_EXCEPTION_H_
 
 #include <string>
-#include "cql/exceptions/cql_query_timeout_exception.hpp"
+#include "cql_query_timeout_exception.hpp"
 
 namespace cql {
 // A Cassandra timeout during a write query.

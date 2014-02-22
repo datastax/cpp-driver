@@ -10,7 +10,7 @@
 
 #include <string>
 
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql_exception.hpp"
 
 namespace cql {
     class CQL_EXPORT cql_invalid_type_exception : public cql_exception {

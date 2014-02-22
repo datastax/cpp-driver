@@ -9,7 +9,7 @@
 #define	CQL_KEYSPACE_ALREADY_EXISTS_EXCEPTION_HPP_
 
 #include <string>
-#include "cql/exceptions/cql_query_validation_exception.hpp"
+#include "cql_query_validation_exception.hpp"
 
 namespace cql {
     // Exception thrown when a query attempts to create a keyspace that

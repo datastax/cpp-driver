@@ -15,8 +15,8 @@
  */
 #include <boost/format.hpp>
 
-#include "cql/internal/cql_util.hpp"
-#include "cql/exceptions/cql_invalid_type_exception.hpp"
+#include "cql_util.hpp"
+#include "cql_invalid_type_exception.hpp"
 
 using namespace boost;
 

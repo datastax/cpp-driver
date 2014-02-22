@@ -14,9 +14,9 @@
  *   limitations under the License.
  */
 #include <boost/function.hpp>
-#include "cql/internal/cql_serialization.hpp"
-#include "cql/internal/cql_defines.hpp"
-#include "cql/internal/cql_list_impl.hpp"
+#include "cql_serialization.hpp"
+#include "cql_defines.hpp"
+#include "cql_list_impl.hpp"
 
 cql::cql_list_impl_t::cql_list_impl_t(cql::cql_byte_t*          start,
                                       cql::cql_column_type_enum element_type,

@@ -9,7 +9,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/signals2/signal.hpp>
 
-#include "cql/policies/cql_reconnection_policy.hpp"
+#include "cql_reconnection_policy.hpp"
 #include "cql/cql_endpoint.hpp"
 
 namespace cql {

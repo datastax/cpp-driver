@@ -17,8 +17,8 @@
 #include <iterator>
 #include <boost/bind.hpp>
 
-#include "cql/internal/cql_trashcan.hpp"
-#include "cql/internal/cql_session_impl.hpp"
+#include "cql_trashcan.hpp"
+#include "cql_session_impl.hpp"
 
 void
 cql::cql_trashcan_t::put(

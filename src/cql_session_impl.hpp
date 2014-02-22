@@ -39,10 +39,10 @@
 #include "cql/cql_connection.hpp"
 #include "cql/cql_endpoint.hpp"
 #include "cql/cql_session.hpp"
-#include "cql/policies/cql_load_balancing_policy.hpp"
+#include "cql_load_balancing_policy.hpp"
 
-#include "cql/internal/cql_promise.hpp"
-#include "cql/internal/cql_trashcan.hpp"
+#include "cql_promise.hpp"
+#include "cql_trashcan.hpp"
 
 namespace cql {
 

@@ -14,9 +14,9 @@
  *   limitations under the License.
  */
 #include <boost/function.hpp>
-#include "cql/internal/cql_serialization.hpp"
-#include "cql/internal/cql_defines.hpp"
-#include "cql/internal/cql_set_impl.hpp"
+#include "cql_serialization.hpp"
+#include "cql_defines.hpp"
+#include "cql_set_impl.hpp"
 
 using namespace std;
 

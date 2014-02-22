@@ -13,7 +13,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#include "cql/policies/cql_default_retry_policy.hpp"
+#include "cql_default_retry_policy.hpp"
 
 cql::cql_retry_decision_t
 cql::cql_default_retry_policy_t::read_timeout(

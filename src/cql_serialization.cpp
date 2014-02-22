@@ -34,8 +34,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/mpl/sizeof.hpp> // BOOST_MPL_ASSERT_RELATION
 
-#include "cql/internal/cql_defines.hpp"
-#include "cql/internal/cql_serialization.hpp"
+#include "cql_defines.hpp"
+#include "cql_serialization.hpp"
 
 using namespace std;
 

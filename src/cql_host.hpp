@@ -9,7 +9,7 @@
 #include "cql/cql.hpp"
 #include "cql/cql_config.hpp"
 #include "cql/cql_endpoint.hpp"
-#include "cql/policies/cql_reconnection_policy.hpp"
+#include "cql_reconnection_policy.hpp"
 #include "cql/cql_reconnection_schedule.hpp"
 #include "cql/cql_builder.hpp"
 

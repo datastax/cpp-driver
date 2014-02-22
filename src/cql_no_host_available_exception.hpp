@@ -9,7 +9,7 @@
 #ifndef CQL_NO_HOST_AVAILABLE_EXCEPTION_H_
 #define	CQL_NO_HOST_AVAILABLE_EXCEPTION_H_
 
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql_exception.hpp"
 
 namespace cql {
 class CQL_EXPORT cql_no_host_available_exception: public cql_exception {

@@ -11,7 +11,7 @@
 #include <boost/noncopyable.hpp>
 
 #include "cql/cql.hpp"
-#include "cql/policies/cql_retry_policy.hpp"
+#include "cql_retry_policy.hpp"
 #include "cql/cql_stream.hpp"
 
 namespace cql {

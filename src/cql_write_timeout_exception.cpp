@@ -16,8 +16,8 @@
 #include <string>
 #include <boost/format.hpp>
 
-#include "cql/internal/cql_util.hpp"
-#include "cql/exceptions/cql_write_timeout_exception.hpp"
+#include "cql_util.hpp"
+#include "cql_write_timeout_exception.hpp"
 
 std::string
 cql::cql_write_timeout_exception::create_message(

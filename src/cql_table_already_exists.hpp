@@ -6,7 +6,7 @@
  */
 
 #include <string>
-#include "cql/exceptions/cql_query_validation_exception.hpp"
+#include "cql_query_validation_exception.hpp"
 
 #ifndef CQL_TABLE_ALREADY_EXISTS_EXCEPTION_HPP_
 #define	CQL_TABLE_ALREADY_EXISTS_EXCEPTION_HPP_

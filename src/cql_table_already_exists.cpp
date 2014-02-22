@@ -15,8 +15,8 @@
  */
 #include <boost/format.hpp>
 
-#include "cql/internal/cql_util.hpp"
-#include "cql/exceptions/cql_table_already_exists.hpp"
+#include "cql_util.hpp"
+#include "cql_table_already_exists.hpp"
 
 cql::cql_table_already_exists_exception::
 	cql_table_already_exists_exception(const std::string& table_name) 

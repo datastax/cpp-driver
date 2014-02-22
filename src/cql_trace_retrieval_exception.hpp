@@ -10,7 +10,7 @@
 #define	CQL_TRACE_RETRIEVAL_EXCEPTION_H_
 
 #include <string>
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql_exception.hpp"
 
 namespace cql {
 //  Exception thrown if a query trace cannot be retrieved.

@@ -9,7 +9,7 @@
 #ifndef CQL_DRIVER_INTERNAL_ERROR_H_
 #define	CQL_DRIVER_INTERNAL_ERROR_H_
 
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql_exception.hpp"
 
 namespace cql {
 //  An unexpected error happened internally. This should never be raise and

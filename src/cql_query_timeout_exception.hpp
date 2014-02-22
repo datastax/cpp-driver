@@ -10,7 +10,7 @@
 #define	CQL_QUERY_TIMEOUT_EXCEPTION_H_
 
 #include "cql/cql.hpp"
-#include "cql/exceptions/cql_query_execution_exception.hpp"
+#include "cql_query_execution_exception.hpp"
 
 namespace cql {
 // A Cassandra timeout during a query. Such an exception is returned when the

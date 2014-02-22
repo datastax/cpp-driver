@@ -20,7 +20,7 @@
 #define CQL_HEADER_IMPL_H_
 
 #include "cql/cql.hpp"
-#include "cql/internal/cql_message.hpp"
+#include "cql_message.hpp"
 #include "cql/cql_stream.hpp"
 
 namespace cql {

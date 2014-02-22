@@ -7,7 +7,7 @@
 #include <boost/thread/mutex.hpp>
 
 #include "cql/cql_builder.hpp"
-#include "cql/internal/cql_session_impl.hpp"
+#include "cql_session_impl.hpp"
 #include "cql/cql_host.hpp"
 
 #include <string>

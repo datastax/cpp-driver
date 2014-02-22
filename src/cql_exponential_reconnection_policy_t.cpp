@@ -18,7 +18,7 @@
 #include <limits>
 #include <cmath>
 
-#include "cql/policies/cql_exponential_reconnection_policy_t.hpp"
+#include "cql_exponential_reconnection_policy_t.hpp"
 
 boost::posix_time::time_duration
 cql::cql_exponential_reconnection_schedule_t::get_delay() 

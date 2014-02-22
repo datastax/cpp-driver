@@ -8,7 +8,7 @@
 #ifndef CQL_TO_MANY_CONNECTIONS_PER_HOST_EXCEPTION_HPP_
 #define	CQL_TO_MANY_CONNECTIONS_PER_HOST_EXCEPTION_HPP_
 
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql_exception.hpp"
 
 namespace cql {
     class CQL_EXPORT cql_too_many_connections_per_host_exception: public cql_exception {

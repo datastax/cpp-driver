@@ -23,8 +23,8 @@
 
 #include "cql/cql.hpp"
 #include "cql/cql_result.hpp"
-#include "cql/internal/cql_message.hpp"
-#include "cql/internal/cql_result_metadata.hpp"
+#include "cql_message.hpp"
+#include "cql_result_metadata.hpp"
 
 namespace cql {
 

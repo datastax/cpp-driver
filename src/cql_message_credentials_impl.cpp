@@ -27,11 +27,11 @@
 #endif
 #include <boost/algorithm/string/join.hpp>
 
-#include "cql/internal/cql_vector_stream.hpp"
-#include "cql/internal/cql_serialization.hpp"
-#include "cql/internal/cql_defines.hpp"
+#include "cql_vector_stream.hpp"
+#include "cql_serialization.hpp"
+#include "cql_defines.hpp"
 
-#include "cql/internal/cql_message_credentials_impl.hpp"
+#include "cql_message_credentials_impl.hpp"
 
 cql::cql_message_credentials_impl_t::cql_message_credentials_impl_t() :
     _buffer(new std::vector<cql_byte_t>(0))

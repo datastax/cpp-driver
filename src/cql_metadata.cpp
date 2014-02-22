@@ -17,12 +17,12 @@
 #include <algorithm>
 #include <exception>
 
-#include "cql/internal/cql_util.hpp"
+#include "cql_util.hpp"
 #include "cql/cql_metadata.hpp"
 #include "cql/cql_host.hpp"
-#include "cql/internal/cql_cluster_impl.hpp"
+#include "cql_cluster_impl.hpp"
 #include "cql/cql_builder.hpp"
-#include "cql/internal/cql_hosts.hpp"
+#include "cql_hosts.hpp"
 
 void
 cql::cql_metadata_t::get_hosts(std::vector<boost::shared_ptr<cql::cql_host_t> >& collection) const {

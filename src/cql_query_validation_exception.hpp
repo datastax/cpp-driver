@@ -10,7 +10,7 @@
 #define	CQL_QUERY_VALIDATION_EXCEPTION_H_
 
 #include <string>
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql_exception.hpp"
 
 namespace cql {
 /**

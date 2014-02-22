@@ -10,7 +10,7 @@
 #define	CQL_TRUNCATE_EXCEPTION_H_
 
 #include <string>
-#include "cql/exceptions/cql_query_execution_exception.hpp"
+#include "cql_query_execution_exception.hpp"
 
 namespace cql {
 // Error during a truncation operation.

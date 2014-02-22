@@ -16,12 +16,12 @@
 #include <iomanip>
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
-#include "cql/internal/cql_vector_stream.hpp"
-#include "cql/internal/cql_serialization.hpp"
-#include "cql/internal/cql_defines.hpp"
-#include "cql/internal/cql_util.hpp"
+#include "cql_vector_stream.hpp"
+#include "cql_serialization.hpp"
+#include "cql_defines.hpp"
+#include "cql_util.hpp"
 
-#include "cql/internal/cql_header_impl.hpp"
+#include "cql_header_impl.hpp"
 
 #define CQL_HEADER_SIZE sizeof(_version) +  \
                         sizeof(_flags)   +  \

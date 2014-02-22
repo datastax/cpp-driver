@@ -25,10 +25,10 @@
 #include <algorithm>
 #include <ext/functional>
 #endif
-#include "cql/internal/cql_defines.hpp"
-#include "cql/internal/cql_serialization.hpp"
+#include "cql_defines.hpp"
+#include "cql_serialization.hpp"
 
-#include "cql/internal/cql_result_metadata.hpp"
+#include "cql_result_metadata.hpp"
 
 struct column_name_to_str {
     typedef std::string result_type;

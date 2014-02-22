@@ -19,12 +19,12 @@
 #include <sstream>
 #include <vector>
 
-#include "cql/internal/cql_vector_stream.hpp"
-#include "cql/internal/cql_serialization.hpp"
-#include "cql/internal/cql_defines.hpp"
-#include "cql/internal/cql_util.hpp"
+#include "cql_vector_stream.hpp"
+#include "cql_serialization.hpp"
+#include "cql_defines.hpp"
+#include "cql_util.hpp"
 
-#include "cql/internal/cql_message_execute_impl.hpp"
+#include "cql_message_execute_impl.hpp"
 
 cql::cql_message_execute_impl_t::cql_message_execute_impl_t() :
     _buffer(new std::vector<cql_byte_t>()),

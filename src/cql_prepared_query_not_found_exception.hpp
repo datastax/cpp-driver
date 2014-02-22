@@ -12,7 +12,7 @@
 #include <string>
 
 #include "cql/cql.hpp"
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql_exception.hpp"
 
 namespace cql {
 class CQL_EXPORT cql_prepared_query_not_found_exception: public cql_exception {

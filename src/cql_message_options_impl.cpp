@@ -13,8 +13,8 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#include "cql/internal/cql_defines.hpp"
-#include "cql/internal/cql_message_options_impl.hpp"
+#include "cql_defines.hpp"
+#include "cql_message_options_impl.hpp"
 
 cql::cql_message_options_impl_t::cql_message_options_impl_t() :
     _buffer(new std::vector<cql::cql_byte_t>(0))

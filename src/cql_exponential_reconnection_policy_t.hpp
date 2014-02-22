@@ -10,7 +10,7 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-#include "cql/policies/cql_reconnection_policy.hpp"
+#include "cql_reconnection_policy.hpp"
 
 namespace cql {
     class cql_exponential_reconnection_schedule_t;

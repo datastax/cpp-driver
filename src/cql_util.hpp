@@ -26,7 +26,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include "cql/cql.hpp"
-#include "cql/internal/cql_system_dependent.hpp"
+#include "cql_system_dependent.hpp"
 #include "cql/cql_endpoint.hpp"
 
 namespace cql {

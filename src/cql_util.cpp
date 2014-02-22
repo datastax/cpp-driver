@@ -16,7 +16,7 @@
 #include <cassert>
 #include <cstring>
 
-#include "cql/internal/cql_util.hpp"
+#include "cql_util.hpp"
 
 char*
 cql::safe_strncpy(char* dest, const char* src, const size_t count) {

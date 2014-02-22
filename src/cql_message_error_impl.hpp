@@ -20,7 +20,7 @@
 #define CQL_MESSAGE_ERROR_IMPL_H_
 
 #include "cql/cql.hpp"
-#include "cql/internal/cql_message.hpp"
+#include "cql_message.hpp"
 
 namespace cql {
 

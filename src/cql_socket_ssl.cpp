@@ -13,7 +13,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#include "cql/internal/cql_socket_ssl.hpp"
+#include "cql_socket_ssl.hpp"
 
 cql::cql_socket_ssl_t::cql_socket_ssl_t(boost::asio::io_service& io_service,
                                         boost::asio::ssl::context& ctx) :

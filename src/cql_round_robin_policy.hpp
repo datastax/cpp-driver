@@ -5,7 +5,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include "cql/policies/cql_load_balancing_policy.hpp"
+#include "cql_load_balancing_policy.hpp"
 
 namespace cql {
 	class cql_host_t;

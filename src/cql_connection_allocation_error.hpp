@@ -5,7 +5,7 @@
 #ifndef CQL_CONNECTION_ALLOCATION_ERROR_H_
 #define	CQL_CONNECTION_ALLOCATION_ERROR_H_
 
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql_exception.hpp"
 
 namespace cql {
 class CQL_EXPORT cql_connection_allocation_error: public cql_exception {

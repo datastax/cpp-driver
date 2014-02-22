@@ -10,7 +10,7 @@
 #define	CQL_INVALID_CONFIGURATION_IN_QUERY_EXCEPTION_H_
 
 #include <string>
-#include "cql/exceptions/cql_invalid_query_exception.hpp"
+#include "cql_invalid_query_exception.hpp"
 
 namespace cql {
 //	A specific invalid query exception that indicates that the query is invalid

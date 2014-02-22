@@ -22,14 +22,14 @@
 #include <boost/make_shared.hpp>
 #include <boost/tuple/tuple.hpp>
 
-#include "cql/internal/cql_control_connection.hpp"
-#include "cql/internal/cql_connection_impl.hpp"
-#include "cql/internal/cql_cluster_impl.hpp"
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql_control_connection.hpp"
+#include "cql_connection_impl.hpp"
+#include "cql_cluster_impl.hpp"
+#include "cql_exception.hpp"
 #include "cql/cql_set.hpp"
-#include "cql/internal/cql_defines.hpp"
-#include "cql/internal/cql_socket.hpp"
-#include "cql/internal/cql_serialization.hpp"
+#include "cql_defines.hpp"
+#include "cql_socket.hpp"
+#include "cql_serialization.hpp"
 
 namespace cql {
 

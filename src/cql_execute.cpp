@@ -13,7 +13,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#include "cql/internal/cql_message_execute_impl.hpp"
+#include "cql_message_execute_impl.hpp"
 
 #include "cql/cql_execute.hpp"
 

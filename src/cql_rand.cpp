@@ -17,7 +17,7 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
 
-#include "cql/internal/cql_rand.hpp"
+#include "cql_rand.hpp"
 
 int
 cql::cql_rand() {

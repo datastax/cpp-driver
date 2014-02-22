@@ -10,7 +10,7 @@
 #define	CQL_INVALID_QUERY_EXCEPTION_H_
 
 #include <string>
-#include "cql/exceptions/cql_query_validation_exception.hpp"
+#include "cql_query_validation_exception.hpp"
 
 namespace cql {
 // Indicates a syntactically correct but invalid query.

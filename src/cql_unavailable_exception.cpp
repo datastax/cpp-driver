@@ -16,8 +16,8 @@
 #include <string>
 #include <boost/format.hpp>
 
-#include "cql/exceptions/cql_unavailable_exception.hpp"
-#include "cql/internal/cql_util.hpp"
+#include "cql_unavailable_exception.hpp"
+#include "cql_util.hpp"
 
 std::string
 cql::cql_unavailable_exception::create_message(

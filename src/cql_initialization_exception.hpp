@@ -5,7 +5,7 @@
  * Created on September 20, 2013, 12:19 PM
  */
 
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql_exception.hpp"
 
 #ifndef CQL_INITIALIZATION_EXCEPTION_HPP_
 #define	CQL_INITIALIZATION_EXCEPTION_HPP_

@@ -12,7 +12,7 @@
 #include <string>
 
 #include "cql/cql.hpp"
-#include "cql/exceptions/cql_query_execution_exception.hpp"
+#include "cql_query_execution_exception.hpp"
 
 namespace cql {
 // Exception thrown when the coordinator knows there is not enough replica alive

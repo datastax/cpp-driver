@@ -13,8 +13,8 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#include "cql/internal/cql_util.hpp"
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql_util.hpp"
+#include "cql_exception.hpp"
 
 cql::cql_exception::cql_exception(
 		const char* message)

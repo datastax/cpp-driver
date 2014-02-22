@@ -15,9 +15,9 @@
  */
 #include <boost/format.hpp>
 
-#include "cql/internal/cql_util.hpp"
-#include "cql/exceptions/cql_keyspace_already_exists_exception.hpp"
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql_util.hpp"
+#include "cql_keyspace_already_exists_exception.hpp"
+#include "cql_exception.hpp"
 
 using namespace boost;
 

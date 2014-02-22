@@ -13,11 +13,11 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#include "cql/internal/cql_vector_stream.hpp"
-#include "cql/internal/cql_serialization.hpp"
-#include "cql/internal/cql_defines.hpp"
+#include "cql_vector_stream.hpp"
+#include "cql_serialization.hpp"
+#include "cql_defines.hpp"
 
-#include "cql/internal/cql_message_event_impl.hpp"
+#include "cql_message_event_impl.hpp"
 
 
 cql::cql_message_event_impl_t::cql_message_event_impl_t() :

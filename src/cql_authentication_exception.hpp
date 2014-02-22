@@ -12,7 +12,7 @@
 #include <string>
 
 #include <boost/asio/ip/address.hpp>
-#include "cql/exceptions/cql_exception.hpp"
+#include "cql_exception.hpp"
 
 namespace cql {
 // Indicates an error during the authentication phase while connecting to a node.

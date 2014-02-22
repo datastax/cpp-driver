@@ -15,7 +15,7 @@
  */
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include "cql/cql_host.hpp"
-#include "cql/internal/cql_util.hpp"
+#include "cql_util.hpp"
 
 cql::cql_host_t::cql_host_t(
 	const cql_endpoint_t& endpoint,
