@@ -26,7 +26,7 @@
 #include "cql_connection_impl.hpp"
 #include "cql_cluster_impl.hpp"
 #include "cql_exception.hpp"
-#include "cql/cql_set.hpp"
+#include "cql_set.hpp"
 #include "cql_defines.hpp"
 #include "cql_socket.hpp"
 #include "cql_serialization.hpp"

@@ -4,7 +4,7 @@
 #include <vector>
 #include <boost/smart_ptr.hpp>
 
-#include "cql/cql.hpp"
+#include "cql.hpp"
 
 namespace cql {
 

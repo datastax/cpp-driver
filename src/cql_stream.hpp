@@ -8,7 +8,7 @@
 #ifndef CQL_STREAM_HPP
 #define	CQL_STREAM_HPP
 
-#include "cql/cql.hpp"
+#include "cql.hpp"
 
 namespace cql {
 

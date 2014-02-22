@@ -8,8 +8,8 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include "cql/cql_host.hpp"
-#include "cql/cql_endpoint.hpp"
+#include "cql_host.hpp"
+#include "cql_endpoint.hpp"
 #include "cql_reconnection_policy.hpp"
 
 

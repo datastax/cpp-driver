@@ -10,7 +10,7 @@
 #include <boost/signals2/signal.hpp>
 
 #include "cql_reconnection_policy.hpp"
-#include "cql/cql_endpoint.hpp"
+#include "cql_endpoint.hpp"
 
 namespace cql {
 	class cql_host_state_changed_info_t {

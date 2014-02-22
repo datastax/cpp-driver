@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <boost/smart_ptr.hpp>
 #include <boost/noncopyable.hpp>
-#include "cql/cql_load_balancing_policy.h"
+#include "cql_load_balancing_policy.h"
 
 namespace cql {
 

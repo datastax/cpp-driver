@@ -11,9 +11,9 @@
 #include <map>
 #include <string>
 
-#include "cql/cql_endpoint.hpp"
-#include "cql/cql_uuid.hpp"
-#include "cql/cql_connection.hpp"
+#include "cql_endpoint.hpp"
+#include "cql_uuid.hpp"
+#include "cql_connection.hpp"
 
 namespace cql {
 

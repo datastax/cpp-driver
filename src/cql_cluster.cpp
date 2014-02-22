@@ -19,9 +19,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 
-#include "cql/cql_connection.hpp"
-#include "cql/cql_cluster.hpp"
-#include "cql/cql_builder.hpp"
+#include "cql_connection.hpp"
+#include "cql_cluster.hpp"
+#include "cql_builder.hpp"
 #include "cql_cluster_impl.hpp"
 #include "cql_connection_factory.hpp"
 #include "cql_session_impl.hpp"

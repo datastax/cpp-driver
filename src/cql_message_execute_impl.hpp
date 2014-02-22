@@ -23,8 +23,8 @@
 #include <boost/noncopyable.hpp>
 #include <boost/ptr_container/ptr_list.hpp>
 
-#include "cql/cql.hpp"
-#include "cql/cql_stream.hpp"
+#include "cql.hpp"
+#include "cql_stream.hpp"
 #include "cql_message.hpp"
 
 namespace cql {

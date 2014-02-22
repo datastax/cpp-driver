@@ -16,9 +16,9 @@
 #include <algorithm>
 #include <cassert>
 
-#include "cql/cql_host.hpp"
-#include "cql/cql_cluster.hpp"
-#include "cql/cql_metadata.hpp"
+#include "cql_host.hpp"
+#include "cql_cluster.hpp"
+#include "cql_metadata.hpp"
 #include "cql_rand.hpp"
 
 #include "cql_round_robin_policy.hpp"

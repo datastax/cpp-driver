@@ -18,10 +18,10 @@
 #include <exception>
 
 #include "cql_util.hpp"
-#include "cql/cql_metadata.hpp"
-#include "cql/cql_host.hpp"
+#include "cql_metadata.hpp"
+#include "cql_host.hpp"
 #include "cql_cluster_impl.hpp"
-#include "cql/cql_builder.hpp"
+#include "cql_builder.hpp"
 #include "cql_hosts.hpp"
 
 void

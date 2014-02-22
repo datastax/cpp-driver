@@ -10,12 +10,12 @@
 #include <boost/smart_ptr.hpp>
 #include <boost/asio/ip/address.hpp>
 
-#include "cql/cql_config.hpp"
+#include "cql_config.hpp"
 
 #include "cql_round_robin_policy.hpp"
 #include "cql_exponential_reconnection_policy_t.hpp"
 #include "cql_default_retry_policy.hpp"
-#include "cql/cql_endpoint.hpp"
+#include "cql_endpoint.hpp"
 #include "common_type_definitions.hpp"
 
 namespace cql {

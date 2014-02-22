@@ -19,9 +19,9 @@
 #ifndef CQL_MESSAGE_PREPARE_IMPL_H_
 #define CQL_MESSAGE_PREPARE_IMPL_H_
 
-#include "cql/cql.hpp"
+#include "cql.hpp"
 #include "cql_message.hpp"
-#include "cql/cql_query.hpp"
+#include "cql_query.hpp"
 
 namespace cql {
 

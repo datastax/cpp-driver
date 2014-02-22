@@ -4,8 +4,8 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
 
-#include "cql/cql.hpp"
-#include "cql/cql_config.hpp"
+#include "cql.hpp"
+#include "cql_config.hpp"
 
 namespace cql {
 	//  Schedules reconnection attempts to a node.

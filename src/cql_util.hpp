@@ -25,9 +25,9 @@
 #include <boost/asio/ip/address.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-#include "cql/cql.hpp"
+#include "cql.hpp"
 #include "cql_system_dependent.hpp"
-#include "cql/cql_endpoint.hpp"
+#include "cql_endpoint.hpp"
 
 namespace cql {
 

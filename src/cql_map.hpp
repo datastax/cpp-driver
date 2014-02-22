@@ -19,7 +19,7 @@
 #ifndef CQL_MAP_H_
 #define CQL_MAP_H_
 
-#include "cql/cql.hpp"
+#include "cql.hpp"
 
 namespace cql {
 

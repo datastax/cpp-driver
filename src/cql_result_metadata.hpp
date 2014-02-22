@@ -25,7 +25,7 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/unordered_map.hpp>
 
-#include "cql/cql.hpp"
+#include "cql.hpp"
 
 namespace cql {
 

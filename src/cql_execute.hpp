@@ -21,8 +21,8 @@
 
 #include <vector>
 #include <boost/noncopyable.hpp>
-#include "cql/cql_config.hpp"
-#include "cql/cql.hpp"
+#include "cql_config.hpp"
+#include "cql.hpp"
 
 namespace cql {
 

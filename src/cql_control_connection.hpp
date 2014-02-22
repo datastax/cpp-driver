@@ -6,9 +6,9 @@
 #include <boost/noncopyable.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include "cql/cql_builder.hpp"
+#include "cql_builder.hpp"
 #include "cql_session_impl.hpp"
-#include "cql/cql_host.hpp"
+#include "cql_host.hpp"
 
 #include <string>
 

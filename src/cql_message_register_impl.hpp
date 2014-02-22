@@ -19,7 +19,7 @@
 #ifndef CQL_MESSAGE_REGISTER_IMPL_H_
 #define CQL_MESSAGE_REGISTER_IMPL_H_
 
-#include "cql/cql.hpp"
+#include "cql.hpp"
 #include "cql_message.hpp"
 
 namespace cql {

@@ -10,9 +10,9 @@
 
 #include <boost/noncopyable.hpp>
 
-#include "cql/cql.hpp"
+#include "cql.hpp"
 #include "cql_retry_policy.hpp"
-#include "cql/cql_stream.hpp"
+#include "cql_stream.hpp"
 
 namespace cql {
 

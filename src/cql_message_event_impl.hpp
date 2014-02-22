@@ -21,7 +21,7 @@
 
 #include <string>
 
-#include "cql/cql_event.hpp"
+#include "cql_event.hpp"
 #include "cql_message.hpp"
 
 namespace cql {

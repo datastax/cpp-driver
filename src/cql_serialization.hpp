@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 
-#include "cql/cql.hpp"
+#include "cql.hpp"
 
 namespace cql {
 

@@ -12,7 +12,7 @@
 #include <string>
 #include <exception>
 
-#include "cql/cql_config.hpp"
+#include "cql_config.hpp"
 
 namespace cql {
 

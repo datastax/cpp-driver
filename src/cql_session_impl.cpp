@@ -19,14 +19,14 @@
 #include <boost/foreach.hpp>
 #include <boost/make_shared.hpp>
 
-#include "cql/common_type_definitions.hpp"
+#include "common_type_definitions.hpp"
 #include "cql_defines.hpp"
 #include "cql_session_impl.hpp"
 #include "cql_exception.hpp"
 #include "cql_no_host_available_exception.hpp"
 #include "cql_too_many_connections_per_host_exception.hpp"
 #include "cql_connection_allocation_error.hpp"
-#include "cql/cql_host.hpp"
+#include "cql_host.hpp"
 #include "cql_trashcan.hpp"
 #include "cql_socket.hpp"
 #include "cql_connection_impl.hpp"

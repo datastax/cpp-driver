@@ -11,12 +11,12 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include "cql/cql_builder.hpp"
-#include "cql/cql_connection.hpp"
+#include "cql_builder.hpp"
+#include "cql_connection.hpp"
 #include "cql_connection_factory.hpp"
-#include "cql/cql_metadata.hpp"
-#include "cql/cql_session.hpp"
-#include "cql/cql_uuid.hpp"
+#include "cql_metadata.hpp"
+#include "cql_session.hpp"
+#include "cql_uuid.hpp"
 
 #include "cql_control_connection.hpp"
 #include "cql_session_impl.hpp"

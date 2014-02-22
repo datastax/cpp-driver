@@ -20,7 +20,7 @@
 #define CQL_ERROR_H_
 
 #include <string>
-#include "cql/cql.hpp"
+#include "cql.hpp"
 
 namespace cql {
 

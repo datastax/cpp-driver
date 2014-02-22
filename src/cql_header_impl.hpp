@@ -19,9 +19,9 @@
 #ifndef CQL_HEADER_IMPL_H_
 #define CQL_HEADER_IMPL_H_
 
-#include "cql/cql.hpp"
+#include "cql.hpp"
 #include "cql_message.hpp"
-#include "cql/cql_stream.hpp"
+#include "cql_stream.hpp"
 
 namespace cql {
 

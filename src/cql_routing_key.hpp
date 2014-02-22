@@ -4,7 +4,7 @@
 #include <vector>
 #include <boost/shared_ptr.hpp>
 
-#include "cql/cql.hpp"
+#include "cql.hpp"
 
 namespace cql {
 	class cql_routing_key_t {

@@ -19,10 +19,10 @@
 #ifndef CQL_FUTURE_RESULT_H_
 #define CQL_FUTURE_RESULT_H_
 
-#include "cql/cql.hpp"
-#include "cql/cql_error.hpp"
-#include "cql/cql_result.hpp"
-#include "cql/cql_stream.hpp"
+#include "cql.hpp"
+#include "cql_error.hpp"
+#include "cql_result.hpp"
+#include "cql_stream.hpp"
 
 namespace cql {
 

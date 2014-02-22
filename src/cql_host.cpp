@@ -14,7 +14,7 @@
  *   limitations under the License.
  */
 #include <boost/date_time/gregorian/gregorian.hpp>
-#include "cql/cql_host.hpp"
+#include "cql_host.hpp"
 #include "cql_util.hpp"
 
 cql::cql_host_t::cql_host_t(

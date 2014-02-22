@@ -19,8 +19,8 @@
 #ifndef CQL_FUTURE_CONNECTION_H_
 #define CQL_FUTURE_CONNECTION_H_
 
-#include "cql/cql.hpp"
-#include "cql/cql_error.hpp"
+#include "cql.hpp"
+#include "cql_error.hpp"
 
 namespace cql {
 

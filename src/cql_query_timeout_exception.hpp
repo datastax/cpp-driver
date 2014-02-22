@@ -9,7 +9,7 @@
 #ifndef CQL_QUERY_TIMEOUT_EXCEPTION_H_
 #define	CQL_QUERY_TIMEOUT_EXCEPTION_H_
 
-#include "cql/cql.hpp"
+#include "cql.hpp"
 #include "cql_query_execution_exception.hpp"
 
 namespace cql {

@@ -31,13 +31,13 @@
 #include <boost/thread/future.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include "cql/cql.hpp"
-#include "cql/cql_future_connection.hpp"
-#include "cql/cql_future_result.hpp"
-#include "cql/cql_uuid.hpp"
-#include "cql/cql_endpoint.hpp"
-#include "cql/cql_stream.hpp"
-#include "cql/cql_query.hpp"
+#include "cql.hpp"
+#include "cql_future_connection.hpp"
+#include "cql_future_result.hpp"
+#include "cql_uuid.hpp"
+#include "cql_endpoint.hpp"
+#include "cql_stream.hpp"
+#include "cql_query.hpp"
 
 namespace cql {
 

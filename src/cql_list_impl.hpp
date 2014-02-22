@@ -20,8 +20,8 @@
 #define CQL_LIST_IMPL_H_
 
 #include <vector>
-#include "cql/cql.hpp"
-#include "cql/cql_list.hpp"
+#include "cql.hpp"
+#include "cql_list.hpp"
 
 
 namespace cql {

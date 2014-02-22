@@ -3,8 +3,8 @@
 
 #include <boost/shared_ptr.hpp>
 
-#include "cql/cql_config.hpp"
-#include "cql/cql_reconnection_schedule.hpp"
+#include "cql_config.hpp"
+#include "cql_reconnection_schedule.hpp"
 
 namespace cql {
 	// Policy that decides how often the reconnection to a dead node is attempted.

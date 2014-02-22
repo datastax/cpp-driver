@@ -32,13 +32,13 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include "cql/common_type_definitions.hpp"
-#include "cql/cql.hpp"
-#include "cql/cql_builder.hpp"
-#include "cql/cql_cluster.hpp"
-#include "cql/cql_connection.hpp"
-#include "cql/cql_endpoint.hpp"
-#include "cql/cql_session.hpp"
+#include "common_type_definitions.hpp"
+#include "cql.hpp"
+#include "cql_builder.hpp"
+#include "cql_cluster.hpp"
+#include "cql_connection.hpp"
+#include "cql_endpoint.hpp"
+#include "cql_session.hpp"
 #include "cql_load_balancing_policy.hpp"
 
 #include "cql_promise.hpp"

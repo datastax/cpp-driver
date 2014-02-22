@@ -13,10 +13,10 @@
 #include <boost/ptr_container/ptr_map.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include "cql/common_type_definitions.hpp"
+#include "common_type_definitions.hpp"
 
-#include "cql/cql_endpoint.hpp"
-#include "cql/cql_connection.hpp"
+#include "cql_endpoint.hpp"
+#include "cql_connection.hpp"
 
 namespace cql {
     class cql_session_impl_t;

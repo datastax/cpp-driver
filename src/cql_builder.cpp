@@ -16,8 +16,8 @@
 #include <algorithm>
 #include <boost/bind.hpp>
 
-#include "cql/cql_cluster.hpp"
-#include "cql/cql_builder.hpp"
+#include "cql_cluster.hpp"
+#include "cql_builder.hpp"
 #include "cql_util.hpp"
 
 cql::cql_builder_t&

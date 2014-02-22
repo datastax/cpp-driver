@@ -11,7 +11,7 @@
 
 #include <string>
 
-#include "cql/cql.hpp"
+#include "cql.hpp"
 #include "cql_exception.hpp"
 
 namespace cql {

@@ -15,7 +15,7 @@
  */
 #include <boost/thread.hpp>
 
-#include "cql/cql_uuid.hpp"
+#include "cql_uuid.hpp"
 
 cql::cql_uuid_t
 cql::cql_uuid_t::create() {

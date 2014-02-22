@@ -4,7 +4,7 @@
 #include <string>
 #include <boost/optional.hpp>
 #include <boost/shared_ptr.hpp>
-#include "cql/cql.hpp"
+#include "cql.hpp"
 
 namespace cql {
 	enum cql_retry_decision_enum {

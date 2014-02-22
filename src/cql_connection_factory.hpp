@@ -22,7 +22,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
-#include "cql/cql_connection.hpp"
+#include "cql_connection.hpp"
 
 namespace cql {
 class cql_connection_factory_t {

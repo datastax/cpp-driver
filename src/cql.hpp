@@ -21,7 +21,7 @@
 
 #include <stdint.h>
 #include <boost/noncopyable.hpp>
-#include <cql/cql_config.hpp>
+#include "cql_config.hpp"
 
 namespace cql {
 

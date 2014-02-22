@@ -21,8 +21,8 @@
 
 #include <boost/asio/buffer.hpp>
 
-#include "cql/cql.hpp"
-#include "cql/cql_result.hpp"
+#include "cql.hpp"
+#include "cql_result.hpp"
 #include "cql_message.hpp"
 #include "cql_result_metadata.hpp"
 

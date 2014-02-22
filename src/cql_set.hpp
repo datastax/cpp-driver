@@ -20,7 +20,7 @@
 #define CQL_SET_H_
 
 #include <string>
-#include "cql/cql.hpp"
+#include "cql.hpp"
 
 namespace cql {
 

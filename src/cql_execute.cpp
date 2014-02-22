@@ -15,7 +15,7 @@
  */
 #include "cql_message_execute_impl.hpp"
 
-#include "cql/cql_execute.hpp"
+#include "cql_execute.hpp"
 
 cql::cql_execute_t::cql_execute_t() :
     _impl(new cql_message_execute_impl_t())
