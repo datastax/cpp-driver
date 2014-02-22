@@ -53,31 +53,31 @@ set(MULTICORE_CORES_NUMBER "3" CACHE STRING "Number of cores (for multicore comp
 option(MULTICORE_COMPILATION "Enable multicore compilation" OFF)
 
 if(MULTICORE_COMPILATION)
-    # MULTICORE BUILD
-    # by default we use 3 cores
-    if(MSVC)
-        add_definitions("/MP${MULTICORE_CORES_NUMBER}")
-    endif()
-    # on linux platform this parameter is named -j e.g. -j 5
-    # but should be passed to MAKE program not to compiler!
-    # You can do this by settings MAKEFLAGS env variable to
-    # -j 5. On ubuntu box this can be done by editing
-    # ~/.pam_environment file (in any case check man).
+  # MULTICORE BUILD
+  # by default we use 3 cores
+  if(MSVC)
+    add_definitions("/MP${MULTICORE_CORES_NUMBER}")
+  endif()
+  # on linux platform this parameter is named -j e.g. -j 5
+  # but should be passed to MAKE program not to compiler!
+  # You can do this by settings MAKEFLAGS env variable to
+  # -j 5. On ubuntu box this can be done by editing
+  # ~/.pam_environment file (in any case check man).
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    # On Visual C++ -pedantic flag is not used,
-    # -fPIC is not used on Windows platform (all DLLs are
-    # relocable), -Wall generates about 30k stupid warnings
-    # that can hide useful ones.
-    set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-D_CRT_SECURE_NO_WARNINGS")
+  # On Visual C++ -pedantic flag is not used,
+  # -fPIC is not used on Windows platform (all DLLs are
+  # relocable), -Wall generates about 30k stupid warnings
+  # that can hide useful ones.
+  set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-D_CRT_SECURE_NO_WARNINGS")
 
-    # needed for windows sockets (not verified)
-    add_definitions(-D_WIN32_WINNT=0x0501)
+  # needed for windows sockets (not verified)
+  add_definitions(-D_WIN32_WINNT=0x0501)
 else()
-	# GCC specific compiler options
-        # I disabled long-long warning because boost generates about 50 such warnings
-	set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic -Wno-long-long -fno-strict-aliasing")
+  # GCC specific compiler options
+  # I disabled long-long warning because boost generates about 50 such warnings
+  set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic -Wno-long-long -fno-strict-aliasing")
 endif()
 
 #-------------------
@@ -96,42 +96,17 @@ include_directories(${INCLUDES})
 # we must add header files as dependencies (if header
 # changes project must be recompiled, right).
 file(GLOB INC_FILES
-	${PROJECT_SOURCE_DIR}/include/cql/*.hpp )
-
-file(GLOB INC_FILES_EXCEPTIONS
-  ${PROJECT_SOURCE_DIR}/include/cql/exceptions/*.hpp )
-
-file(GLOB INC_FILES_INTERNAL
-	${PROJECT_SOURCE_DIR}/include/cql/internal/*.hpp )
-
-file(GLOB INC_FILES_POLICIES
-	${PROJECT_SOURCE_DIR}/include/cql/policies/*.hpp )
+  ${PROJECT_SOURCE_DIR}/include/*.h )
 
 file(GLOB SRC_FILES
-	${PROJECT_SOURCE_DIR}/src/cql/*.cpp)
-
-file(GLOB SRC_FILES_EXCEPTIONS
-	${PROJECT_SOURCE_DIR}/src/cql/exceptions/*.cpp )
-
-file(GLOB SRC_FILES_INTERNAL
-	${PROJECT_SOURCE_DIR}/src/cql/internal/*.cpp )
-
-file(GLOB SRC_FILES_POLICIES
-	${PROJECT_SOURCE_DIR}/src/cql/policies/*.cpp )
+  ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
 source_group("Source Files" FILES ${SRC_FILES})
-source_group("Source Files\\Internal" FILES ${SRC_FILES_INTERNAL})
-source_group("Source Files\\Exceptions" FILES ${SRC_FILES_EXCEPTIONS})
-source_group("Source Files\\Policies" FILES ${SRC_FILES_POLICIES})
-
 source_group("Header Files" FILES ${INC_FILES})
-source_group("Header Files\\Internal" FILES ${INC_FILES_INTERNAL})
-source_group("Header Files\\Exceptions" FILES ${INC_FILES_EXCEPTIONS})
-source_group("Header Files\\Policies" FILES ${INC_FILES_POLICIES})
 
 set(ALL_SOURCE_FILES
-	${SRC_FILES} ${SRC_FILES_INTERNAL} ${SRC_FILES_EXCEPTIONS} ${SRC_FILES_POLICIES}
-	${INC_FILES} ${INC_FILES_INTERNAL} ${INC_FILES_EXCEPTIONS} ${INC_FILES_POLICIES})
+  ${SRC_FILES}
+  ${INC_FILES})
 
 # build dynamic and static version of library
 add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})
@@ -151,8 +126,8 @@ set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VE
 set(PROJECT_COMPILER_FLAGS "${CMAKE_CXX_FLAGS} ${PLATFORM_DEPENDENT_COMPILER_OPTIONS}")
 
 set_property(
- TARGET ${PROJECT_LIB_NAME}
- APPEND PROPERTY COMPILE_FLAGS ${PROJECT_COMPILER_FLAGS})
+  TARGET ${PROJECT_LIB_NAME}
+  APPEND PROPERTY COMPILE_FLAGS ${PROJECT_COMPILER_FLAGS})
 
 set_property(
   TARGET ${PROJECT_LIB_NAME_STATIC}
@@ -163,10 +138,8 @@ set_property(
 #-------------------
 
 # Where to put headers
-set(INSTALL_HEADERS_DIR "${CMAKE_INSTALL_PREFIX}/include/cql")
+set(INSTALL_HEADERS_DIR "${CMAKE_INSTALL_PREFIX}/include/")
 install(FILES ${INC_FILES} DESTINATION "${INSTALL_HEADERS_DIR}")
-install(FILES ${INC_FILES_EXCEPTIONS} DESTINATION "${INSTALL_HEADERS_DIR}/exceptions")
-install(FILES ${INC_FILES_POLICIES} DESTINATION "${INSTALL_HEADERS_DIR}/policies")
 
 # Where to put libraries
 set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib")
@@ -189,12 +162,12 @@ install(TARGETS ${PROJECT_LIB_NAME_STATIC}
 #-------------------
 
 configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-    IMMEDIATE @ONLY)
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+  IMMEDIATE @ONLY)
 
 add_custom_target(UNINSTALL
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
 
 #-------------------
