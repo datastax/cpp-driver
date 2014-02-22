@@ -55,13 +55,12 @@ cql_free(
    void* instance);
 
 /**
- * Initialize a new cluster builder
+ * Initialize a new cluster builder. Instance must be freed by caller.
  *
  * @return
  */
 CQL_EXPORT void*
 cql_builder_new();
-
 
 /**
  * Set an option on the specified connection builder
@@ -96,7 +95,7 @@ cql_builder_getopt(
    size_t* datalen);
 
 /**
- * Instantiate a new cluster using the specified builder instance
+ * Instantiate a new cluster using the specified builder instance. Instance must be freed by caller.
  *
  * @param builder
  * @param cluster
@@ -137,6 +136,14 @@ cql_cluster_connect_keyspace(
    void*  cluster,
    char*  keyspace,
    void** future);
+
+/***********************************************************************************
+*
+* Functions which allow for the interaction with futures. Everything that the library
+* does is asynchronous, and we use futures to let the caller know when the task is
+* complete and if that task returned data or resulted in an error.
+*
+************************************************************************************/
 
 /**
  * Is the specified future ready
@@ -229,6 +236,13 @@ CQL_EXPORT void
 cql_session_shutdown(
    void*  session);
 
+/***********************************************************************************
+*
+* Functions which create ad-hoc queries, prepared statements, bound statements, and
+* allow for the composition of batch statements from queries and bound statements.
+*
+************************************************************************************/
+
 /**
  * Initialize a query statement, reserving N slots for parameters
  *
@@ -265,7 +279,8 @@ cql_session_prepare(
    void** future);
 
 /**
- * Initialize a bound statement, reserving N slots for parameters
+ * Initialize a bound statement from a pre-prepared statement, reserving N slots for
+ * parameters
  *
  * @param session
  * @param prepared
@@ -281,8 +296,227 @@ cql_prepared_bind(
    size_t params,
    void** bound);
 
+CQL_EXPORT int
+cql_statement_setopt(
+   int    option,
+   void*  data,
+   size_t datalen);
+
+CQL_EXPORT int
+cql_statement_getopt(
+   int     option,
+   void**  data,
+   size_t* datalen);
+
 /**
- * Execute a query or bound statement and obtain a future. Future must be freed by
+ * Bind a short to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return
+ */
+CQL_EXPORT int
+cql_statement_bind_short(
+   void*   statement,
+   size_t  index,
+   int16_t value);
+
+/**
+ * Bind an int to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return
+ */
+CQL_EXPORT int
+cql_statement_bind_int(
+   void*   statement,
+   size_t  index,
+   int32_t value);
+
+/**
+ * Bind a bigint to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return
+ */
+CQL_EXPORT int
+cql_statement_bind_bigint(
+   void*   statement,
+   size_t  index,
+   int64_t value);
+
+/**
+ * Bind a float to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return
+ */
+CQL_EXPORT int
+cql_statement_bind_float(
+   void*  statement,
+   size_t index,
+   float  value);
+
+/**
+ * Bind a double to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return error
+ */
+CQL_EXPORT int
+cql_statement_bind_double(
+   void*  statement,
+   size_t index,
+   double value);
+
+/**
+ * Bind a bool to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return error
+ */
+CQL_EXPORT int
+cql_statement_bind_bool(
+   void*  statement,
+   size_t index,
+   float  value);
+
+/**
+ * Bind a time stamp to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return error
+ */
+CQL_EXPORT int
+cql_statement_bind_time(
+   void*   statement,
+   size_t  index,
+   int64_t value);
+
+/**
+ * Bind a UUID to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return error
+ */
+CQL_EXPORT int
+cql_statement_bind_uuid(
+   void*      statement,
+   size_t     index,
+   cql_uuid_t value);
+
+/**
+ * Bind a counter to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return error
+ */
+CQL_EXPORT int
+cql_statement_bind_counter(
+   void*   statement,
+   size_t  index,
+   int64_t value);
+
+/**
+ * Bind a string to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ * @param length
+ *
+ * @return error
+ */
+CQL_EXPORT int
+cql_statement_bind_string(
+   void*   statement,
+   size_t  index,
+   char*   value,
+   size_t  length);
+
+/**
+ * Bind a blob to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param output
+ * @param length
+ * @param total
+ *
+ * @return error
+ */
+CQL_EXPORT int
+cql_statement_bind_blob(
+   void*    statement,
+   size_t   index,
+   uint8_t* output,
+   size_t   length,
+   size_t*  total);
+
+/**
+ * Bind a decimal to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param scale
+ * @param value
+ * @param length
+ *
+ * @return error
+ */
+CQL_EXPORT int
+cql_statement_bind_decimal(
+   void*    statement,
+   size_t   index,
+   uint32_t scale,
+   uint8_t* value,
+   size_t   length);
+
+/**
+ * Bind a varint to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ * @param length
+ *
+ * @return error
+ */
+CQL_EXPORT int
+cql_statement_bind_varint(
+   void*    statement,
+   size_t   index,
+   uint8_t* value,
+   size_t   length);
+
+/**
+ * Execute a query, bound or batch statement and obtain a future. Future must be freed by
  * caller.
  *
  * @param session
@@ -297,17 +531,13 @@ cql_statement_exec(
    void*  statement,
    void** future);
 
-CQL_EXPORT int
-cql_statement_setopt(
-   int    option,
-   void*  data,
-   size_t datalen);
 
-CQL_EXPORT int
-cql_statement_getopt(
-   int     option,
-   void**  data,
-   size_t* datalen);
+/***********************************************************************************
+*
+* Functions dealing with fetching data and meta information from statement results
+*
+************************************************************************************/
+
 
 /**
  * Get number of rows for the specified result
@@ -671,6 +901,14 @@ CQL_EXPORT int
 cql_map_get_value(
    void*  item,
    void** output);
+
+
+/***********************************************************************************
+*
+* Misc
+*
+************************************************************************************/
+
 
 /**
  * Get the corresponding string for the specified error. This function follows the
