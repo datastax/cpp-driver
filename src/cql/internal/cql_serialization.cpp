@@ -27,6 +27,8 @@
 #include <string.h> // For memset and memcpy.
 #else
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #endif
 
 #include <boost/foreach.hpp>
