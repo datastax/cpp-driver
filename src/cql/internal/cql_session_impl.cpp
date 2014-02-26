@@ -454,7 +454,7 @@ cql::cql_session_impl_t::setup_prepared_statements(
         prepare_query->set_stream(*stream);
 
         boost::shared_future<cql::cql_future_result_t> future_result
-            = conn->query(prepare_query);
+            = conn->prepare(prepare_query);
             
         if (future_result.timed_wait(boost::posix_time::seconds(30))) { // TODO: set sensible (or none) time limit
             // The stream was released after receiving the body. Now we need to re-acquire it.
