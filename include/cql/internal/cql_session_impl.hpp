@@ -162,6 +162,15 @@ public:
     set_prepare_statement(
                           const std::vector<cql_byte_t>& query_id,
                           const std::string& query_text);
+    
+    void
+    retry_callback_query(const boost::shared_ptr<cql_query_t>& query);
+
+    void
+    retry_callback_prepare(const boost::shared_ptr<cql_query_t>& query);
+
+    void
+    retry_callback_execute(const boost::shared_ptr<cql_execute_t>& message);
 
 #ifdef _DEBUG
 	void 

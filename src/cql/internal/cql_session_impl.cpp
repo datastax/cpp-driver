@@ -163,6 +163,26 @@ cql::cql_session_impl_t::set_prepare_statement(
     }
 }
 
+void
+cql::cql_session_impl_t::retry_callback_query(
+    const boost::shared_ptr<cql_query_t>& query)
+{
+    
+}
+
+void
+cql::cql_session_impl_t::retry_callback_prepare(
+    const boost::shared_ptr<cql_query_t>& query)
+{
+    
+}
+
+void
+cql::cql_session_impl_t::retry_callback_execute(
+    const boost::shared_ptr<cql_execute_t>& message)
+{
+    
+}
 
 bool
 cql::cql_session_impl_t::increase_connection_counter(

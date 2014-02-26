@@ -72,7 +72,7 @@ public:
         cql_message_callback_t;
 
     typedef
-        boost::function<void(cql_connection_t&, const cql::cql_stream_t&, const cql_error_t&)>
+        boost::function<void(const cql::cql_stream_t&, const cql_error_t&)>
         cql_message_errback_t;
 
     typedef

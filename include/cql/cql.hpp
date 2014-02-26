@@ -59,6 +59,12 @@ enum cql_consistency_enum {
 	CQL_CONSISTENCY_DEFAULT = CQL_CONSISTENCY_ONE
 };
 
+enum cql_cassandra_error_code_enum {
+    CQL_WRITE_TIMEOUT_ERROR   = 4352,
+    CQL_READ_TIMEOUT_ERROR    = 4608,
+    CQL_UNAVAILABLE_ERROR     = 4096
+};
+    
 enum cql_column_type_enum {
     CQL_COLUMN_TYPE_UNKNOWN   = 0xFFFF,
     CQL_COLUMN_TYPE_CUSTOM    = 0x0000,

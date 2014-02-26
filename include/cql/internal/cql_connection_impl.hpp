@@ -78,6 +78,8 @@
 #include "cql/internal/cql_util.hpp"
 #include "cql/internal/cql_promise.hpp"
 #include "cql/internal/cql_session_impl.hpp"
+#include "cql/exceptions/cql_query_timeout_exception.hpp"
+#include "cql/exceptions/cql_unavailable_exception.hpp"
 
 namespace cql {
     
@@ -267,21 +269,21 @@ public:
 
 		query(query_,
               boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
-              boost::bind(&cql_connection_impl_t::_statement_future_errback, this, promise, ::_1, ::_2, ::_3));
+              boost::bind(&cql_connection_impl_t::_statement_future_errback_query, this, promise, query_, ::_1, ::_2));
 
         return promise->shared_future();
     }
 
     boost::shared_future<cql::cql_future_result_t>
     prepare(
-        const boost::shared_ptr<cql_query_t>& query)
+        const boost::shared_ptr<cql_query_t>& query_)
 	{
         boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise(
             new cql_promise_t<cql_future_result_t>());
 
-        prepare(query,
+        prepare(query_,
                 boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
-                boost::bind(&cql_connection_impl_t::_statement_future_errback, this, promise, ::_1, ::_2, ::_3));
+                boost::bind(&cql_connection_impl_t::_statement_future_errback_prepare, this, promise, query_, ::_1, ::_2));
 
         return promise->shared_future();
     }
@@ -295,7 +297,7 @@ public:
 
         execute(message,
                 boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
-                boost::bind(&cql_connection_impl_t::_statement_future_errback, this, promise, ::_1, ::_2, ::_3));
+                boost::bind(&cql_connection_impl_t::_statement_future_errback_execute, this, promise, message, ::_1, ::_2));
 
         return promise->shared_future();
     }
@@ -309,7 +311,7 @@ public:
 		cql_stream_t stream = query->stream();
 
         if (stream.is_invalid()) {
-            errback(*this, stream, create_stream_id_error());
+            errback(stream, create_stream_id_error());
             return stream;
 		}
 
@@ -337,7 +339,7 @@ public:
 		cql_stream_t stream = query->stream();
 
         if (stream.is_invalid()) {
-            errback(*this, stream, create_stream_id_error());
+            errback(stream, create_stream_id_error());
             return stream;
         }
 
@@ -366,7 +368,7 @@ public:
         cql_stream_t stream = message->stream();
 
         if (stream.is_invalid()) {
-            errback(*this, stream, create_stream_id_error());
+            errback(stream, create_stream_id_error());
             return stream;
         }
 
@@ -423,7 +425,7 @@ public:
                     = callback_and_errback.second;
                 
                 if (errback) {
-                    errback(*this, consecutive_stream, error);
+                    errback(consecutive_stream, error);
                 }
             }
         }
@@ -583,6 +585,7 @@ private:
         cql_connection_t&,
         const cql_error_t&                                               error)
     {
+        
         promise->set_value(cql::cql_future_connection_t(this, error));
     }
 
@@ -596,14 +599,119 @@ private:
         promise->set_value(cql::cql_future_result_t(this, stream, result_ptr));
     }
 
-    void
-    _statement_future_errback(
-        boost::shared_ptr<cql_promise_t<cql_future_result_t> >   promise,
-        cql_connection_t&,
-        const cql::cql_stream_t&                                     stream,
-        const cql_error_t&                                           error)
+    template <typename TQueryType>
+    cql_retry_decision_t
+    _get_retry_decision(
+        const boost::shared_ptr<TQueryType>&                     query,
+        const cql_error_t&                                       error)
     {
-        promise->set_value(cql::cql_future_result_t(this, stream, error));
+        cql_retry_decision_t decision = cql_retry_decision_t::rethrow_decision();
+            
+        switch (error.code) {
+            case CQL_READ_TIMEOUT_ERROR : {
+                // TODO(JS): what about the integer parameters to retry decision?
+                decision = query->retry_policy()
+                                ->read_timeout(query->consistency(), 1, 0, false, 1);
+                break;
+            }
+            case CQL_WRITE_TIMEOUT_ERROR : {
+                // TODO(JS): what about the integer parameters to retry decision?
+                decision = query->retry_policy()
+                                ->write_timeout(query->consistency(), "", 1, 0, 1);
+                break;
+            }
+            case CQL_UNAVAILABLE_ERROR : {
+                // TODO(JS): what about the integer parameters to retry decision?
+                decision = query->retry_policy()
+                                ->unavailable(query->consistency(), 1, 0, 1);
+                break;
+            }
+            default : {}
+        }
+        return decision;
+    }
+
+    template <typename TQueryType>
+    void
+    _handle_rethrow(
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> >   promise,
+        const boost::shared_ptr<TQueryType>&                     query,
+        const cql_error_t&                                       error)
+    {
+        switch (error.code) {
+            case CQL_READ_TIMEOUT_ERROR : {
+                cql_query_timeout_exception exception(error.message,
+                                                      query->consistency(), 0, 1);
+                promise->set_exception(boost::copy_exception(exception));
+                break;
+            }
+            case CQL_WRITE_TIMEOUT_ERROR : {
+                cql_query_timeout_exception exception(error.message,
+                                                      query->consistency(), 0, 1);
+                promise->set_exception(boost::copy_exception(exception));
+                break;
+            }
+            case CQL_UNAVAILABLE_ERROR : {
+                cql_unavailable_exception exception(query->consistency(), 1, 0);
+                promise->set_exception(boost::copy_exception(exception));
+                break;
+            }
+            default : {}
+        }
+    }
+
+    template <typename TQueryType, typename TCallbackType>
+    void
+    _handle_query_error(
+                  boost::shared_ptr<cql_promise_t<cql_future_result_t> >   promise,
+                  const boost::shared_ptr<TQueryType>&                     query,
+                  const cql::cql_stream_t&                                 stream,
+                  const cql_error_t&                                       error,
+                  TCallbackType                                            retry_callback)
+    {
+        if (!error.cassandra) {
+            promise->set_value(cql::cql_future_result_t(this, stream, error));
+        }
+        else {
+            cql_retry_decision_t decision = _get_retry_decision(query, error);
+            if (decision.retry_decision() == CQL_RETRY_DECISION_RETRY) {
+                _io_service.post(boost::bind(retry_callback, _session_ptr, query));
+            }
+            else if (decision.retry_decision() == CQL_RETRY_DECISION_RETHROW) {
+                _handle_rethrow(promise, query, error);
+            }
+        }
+    }
+
+    void
+    _statement_future_errback_query(
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> >   promise,
+        const boost::shared_ptr<cql_query_t>&                    query,
+        const cql::cql_stream_t&                                 stream,
+        const cql_error_t&                                       error)
+    {
+        _handle_query_error(promise, query, stream, error, &cql_session_impl_t::retry_callback_query);
+    }
+    
+    void
+    _statement_future_errback_prepare(
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> >  promise,
+        const boost::shared_ptr<cql_query_t>&                   query,
+        const cql::cql_stream_t&                                stream,
+        const cql_error_t&                                      error)
+    {
+        _handle_query_error(promise, query, stream, error, &cql_session_impl_t::retry_callback_prepare);
+    }
+
+    void
+    _statement_future_errback_execute(
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> >   promise,
+        const boost::shared_ptr<cql_execute_t>&                  message,
+        const cql::cql_stream_t&                                 stream,
+        const cql_error_t&                                       error)
+    {
+        //TODO(JS): no retry_policy in execute queries?
+        //_handle_query_error(promise, message, stream, error, &cql_session_impl_t::retry_callback_execute);
     }
 
     void
@@ -898,8 +1006,7 @@ private:
             }
             break;
                 
-            default: {}
-            break;
+            default : {}
         }
     }
 
@@ -1000,7 +1107,7 @@ private:
                 cql::cql_error_t cql_error =
                     cql::cql_error_t::cassandra_error(m->code(), m->message());
 
-                callback_pair.second(*this, stream, cql_error);
+                callback_pair.second(stream, cql_error);
             }
             break;
         }

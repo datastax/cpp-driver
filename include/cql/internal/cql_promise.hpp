@@ -34,7 +34,6 @@ public:
         if (!*_value_set) {
             *_value_set = true;
             _promise->set_value(value);
-			(*_value_set)=true;
             return true;
         }
         return false;
@@ -48,7 +47,6 @@ public:
         if (!*_value_set) {
             *_value_set = true;
             _promise->set_exception(exception);
-			(*_value_set)=true;
             return true;
         }
 
