@@ -61,9 +61,9 @@ public:
     
     inline void
     swap(
-        boost::shared_ptr<boost::promise<TResult> > promise)
+        boost::shared_ptr<cql_promise_t<TResult> > other_promise)
     {
-        _promise->swap(*promise);
+        _promise->swap(*(other_promise->_promise));
     }
 
 private:

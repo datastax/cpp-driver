@@ -167,22 +167,26 @@ void
 cql::cql_session_impl_t::retry_callback_query(
     const boost::shared_ptr<cql_query_t>&                  query,
     boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+    cql_connection_t&                                      conn,
     bool                                                   is_transport_error)
 {
-	cql_stream_t stream;
-    boost::shared_ptr<cql_connection_t> conn;
-    
     if (is_transport_error) {
-    // Query next host according to load balancing policy
-        conn = get_connection(query, &stream);
-        if (conn) {
-            query->set_stream(stream);
-//            return conn->query(query, promise);
+    // Use the next host according to load balancing policy
+        cql_stream_t stream;
+        boost::shared_ptr<cql_connection_t> conn_to_query
+            = get_connection(query, &stream);
+        if (conn_to_query && !stream.is_invalid()) {
+            conn_to_query->query(query)->swap(promise);
+        } else {
+            throw std::runtime_error("Attempt to query a null connection during retry");
         }
     }
     else {
-    // Query the same host
-        
+    // Use the same host
+        cql_stream_t stream = conn.acquire_stream();
+        if (!stream.is_invalid()) {
+            conn.query(query)->swap(promise);
+        }
     }
 }
 
@@ -190,18 +194,54 @@ void
 cql::cql_session_impl_t::retry_callback_prepare(
     const boost::shared_ptr<cql_query_t>&                  query,
     boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+    cql_connection_t&                                      conn,
     bool                                                   is_transport_error)
 {
-    
+    if (is_transport_error) {
+        // Use the next host according to load balancing policy
+        cql_stream_t stream;
+        boost::shared_ptr<cql_connection_t> conn_to_query
+            = get_connection(query, &stream);
+        if (conn_to_query && !stream.is_invalid()) {
+            conn_to_query->prepare(query)->swap(promise);
+        } else {
+            throw std::runtime_error("Attempt to query a null connection during retry");
+        }
+    }
+    else {
+        // Use the same host
+        cql_stream_t stream = conn.acquire_stream();
+        if (!stream.is_invalid()) {
+            conn.prepare(query)->swap(promise);
+        }
+    }
 }
 
 void
 cql::cql_session_impl_t::retry_callback_execute(
     const boost::shared_ptr<cql_execute_t>&                message,
     boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+    cql_connection_t&                                      conn,
     bool                                                   is_transport_error)
 {
-    
+    if (is_transport_error) {
+        // Use the next host according to load balancing policy
+        cql_stream_t stream;
+        boost::shared_ptr<cql_connection_t> conn_to_query
+            = get_connection(boost::shared_ptr<cql_query_t>(), &stream);
+        if (conn_to_query && !stream.is_invalid()) {
+            conn_to_query->execute(message)->swap(promise);
+        } else {
+            throw std::runtime_error("Attempt to query a null connection during retry");
+        }
+    }
+    else {
+        // Use the same host
+        cql_stream_t stream = conn.acquire_stream();
+        if (!stream.is_invalid()) {
+            conn.execute(message)->swap(promise);
+        }
+    }
 }
 
 bool

@@ -671,14 +671,14 @@ private:
     {
         if (!error.cassandra) {
             if (error.transport) {
-                _io_service.post(boost::bind(retry_callback, _session_ptr, query, promise, true));
+                _io_service.post(boost::bind(retry_callback, _session_ptr, query, promise, boost::ref(*this), true));
             }
             promise->set_value(cql::cql_future_result_t(this, stream, error));
         }
         else {
             cql_retry_decision_t decision = _get_retry_decision(query, error);
             if (decision.retry_decision() == CQL_RETRY_DECISION_RETRY) {
-                _io_service.post(boost::bind(retry_callback, _session_ptr, query, promise, false));
+                _io_service.post(boost::bind(retry_callback, _session_ptr, query, promise, boost::ref(*this), false));
             }
             else if (decision.retry_decision() == CQL_RETRY_DECISION_RETHROW) {
                 _handle_rethrow(promise, query, error);

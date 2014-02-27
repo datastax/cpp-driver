@@ -167,18 +167,21 @@ public:
     retry_callback_query(
         const boost::shared_ptr<cql_query_t>& query,
         boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+        cql_connection_t& conn,
         bool is_transport_error);
 
     void
     retry_callback_prepare(
         const boost::shared_ptr<cql_query_t>& query,
         boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+        cql_connection_t& conn,
         bool is_transport_error);
 
     void
     retry_callback_execute(
         const boost::shared_ptr<cql_execute_t>& message,
         boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+        cql_connection_t& conn,
         bool is_transport_error);
 
 #ifdef _DEBUG
