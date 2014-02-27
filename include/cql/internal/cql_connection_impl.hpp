@@ -260,7 +260,7 @@ public:
         _session_ptr = static_cast<cql_session_impl_t*>(session_ptr);
     }
     
-    boost::shared_future<cql::cql_future_result_t>
+    boost::shared_ptr<cql_promise_t<cql_future_result_t> >
     query(
         const boost::shared_ptr<cql_query_t>& query_)
     {
@@ -271,10 +271,10 @@ public:
               boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
               boost::bind(&cql_connection_impl_t::_statement_future_errback_query, this, promise, query_, ::_1, ::_2));
 
-        return promise->shared_future();
+        return promise;
     }
 
-    boost::shared_future<cql::cql_future_result_t>
+    boost::shared_ptr<cql_promise_t<cql_future_result_t> >
     prepare(
         const boost::shared_ptr<cql_query_t>& query_)
 	{
@@ -285,10 +285,10 @@ public:
                 boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
                 boost::bind(&cql_connection_impl_t::_statement_future_errback_prepare, this, promise, query_, ::_1, ::_2));
 
-        return promise->shared_future();
+        return promise;
     }
 
-    boost::shared_future<cql::cql_future_result_t>
+    boost::shared_ptr<cql_promise_t<cql_future_result_t> >
     execute(
         const boost::shared_ptr<cql::cql_execute_t>& message)
 	{
@@ -299,7 +299,7 @@ public:
                 boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
                 boost::bind(&cql_connection_impl_t::_statement_future_errback_execute, this, promise, message, ::_1, ::_2));
 
-        return promise->shared_future();
+        return promise;
     }
 
     cql::cql_stream_t
@@ -670,12 +670,15 @@ private:
                   TCallbackType                                            retry_callback)
     {
         if (!error.cassandra) {
+            if (error.transport) {
+                _io_service.post(boost::bind(retry_callback, _session_ptr, query, promise, true));
+            }
             promise->set_value(cql::cql_future_result_t(this, stream, error));
         }
         else {
             cql_retry_decision_t decision = _get_retry_decision(query, error);
             if (decision.retry_decision() == CQL_RETRY_DECISION_RETRY) {
-                _io_service.post(boost::bind(retry_callback, _session_ptr, query));
+                _io_service.post(boost::bind(retry_callback, _session_ptr, query, promise, false));
             }
             else if (decision.retry_decision() == CQL_RETRY_DECISION_RETHROW) {
                 _handle_rethrow(promise, query, error);

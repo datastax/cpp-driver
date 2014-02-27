@@ -165,21 +165,41 @@ cql::cql_session_impl_t::set_prepare_statement(
 
 void
 cql::cql_session_impl_t::retry_callback_query(
-    const boost::shared_ptr<cql_query_t>& query)
+    const boost::shared_ptr<cql_query_t>&                  query,
+    boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+    bool                                                   is_transport_error)
 {
+	cql_stream_t stream;
+    boost::shared_ptr<cql_connection_t> conn;
     
+    if (is_transport_error) {
+    // Query next host according to load balancing policy
+        conn = get_connection(query, &stream);
+        if (conn) {
+            query->set_stream(stream);
+//            return conn->query(query, promise);
+        }
+    }
+    else {
+    // Query the same host
+        
+    }
 }
 
 void
 cql::cql_session_impl_t::retry_callback_prepare(
-    const boost::shared_ptr<cql_query_t>& query)
+    const boost::shared_ptr<cql_query_t>&                  query,
+    boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+    bool                                                   is_transport_error)
 {
     
 }
 
 void
 cql::cql_session_impl_t::retry_callback_execute(
-    const boost::shared_ptr<cql_execute_t>& message)
+    const boost::shared_ptr<cql_execute_t>&                message,
+    boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+    bool                                                   is_transport_error)
 {
     
 }
@@ -474,7 +494,7 @@ cql::cql_session_impl_t::setup_prepared_statements(
         prepare_query->set_stream(*stream);
 
         boost::shared_future<cql::cql_future_result_t> future_result
-            = conn->query(prepare_query);
+            = conn->query(prepare_query)->shared_future();
             
         if (future_result.timed_wait(boost::posix_time::seconds(30))) { // TODO: set sensible (or none) time limit
             // The stream was released after receiving the body. Now we need to re-acquire it.
@@ -516,7 +536,7 @@ cql::cql_session_impl_t::setup_keyspace(
 
         use_my_keyspace->set_stream(*stream);
         boost::shared_future<cql::cql_future_result_t> future_result
-            = conn->query(use_my_keyspace);
+            = conn->query(use_my_keyspace)->shared_future();
         if (future_result.timed_wait(boost::posix_time::seconds(30))) { // TODO: set sensible (or none) time limit
             // The stream was released after receiving the body. Now we need to re-acquire it.
             *stream = conn->acquire_stream();
@@ -541,7 +561,7 @@ cql::cql_session_impl_t::query(
 
     if (conn) {
         query->set_stream(stream);
-		return conn->query(query);
+		return conn->query(query)->shared_future();
     }
 
     boost::promise<cql_future_result_t>       promise;
@@ -563,7 +583,7 @@ cql::cql_session_impl_t::prepare(
 
     if (conn) {
         query->set_stream(stream);
-		return conn->prepare(query);
+		return conn->prepare(query)->shared_future();
     }
 
     boost::promise<cql_future_result_t>       promise;
@@ -586,7 +606,7 @@ cql::cql_session_impl_t::execute(
     
 	if (conn) {
         message->set_stream(stream);
-        return conn->execute(message);
+        return conn->execute(message)->shared_future();
     }
 
     boost::promise<cql_future_result_t> promise;

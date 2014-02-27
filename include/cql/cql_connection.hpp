@@ -38,6 +38,7 @@
 #include "cql/cql_endpoint.hpp"
 #include "cql/cql_stream.hpp"
 #include "cql/cql_query.hpp"
+#include "cql/internal/cql_promise.hpp"
 
 namespace cql {
 
@@ -147,9 +148,9 @@ public:
 
        @param query query string.
        @param consistency desired consistency.
-       @return populated when results or error is obtained
+       @return a promise. Get the future from it and it will be populated when query finishes.
      */
-    virtual boost::shared_future<cql::cql_future_result_t>
+    virtual boost::shared_ptr<cql_promise_t<cql_future_result_t> >
     query(const boost::shared_ptr<cql_query_t>& query) = 0;
 
     /**
@@ -176,9 +177,9 @@ public:
        When the callback is triggered it will be passed a cql_message_result_t which contains the ID of the prepared statement. This ID is used when composing execution messages.
 
        @param query query string.
-       @return populated when results or error is obtained
+       @return a promise. Get the future from it and it will be populated when query finishes.
      */
-    virtual boost::shared_future<cql::cql_future_result_t>
+    virtual boost::shared_ptr<cql_promise_t<cql_future_result_t> >
     prepare(const boost::shared_ptr<cql_query_t>& query) = 0;
 
     /**
@@ -199,9 +200,9 @@ public:
        Execute a prepared CQL statement.
 
        @param message execute message
-       @return populated when results or error is obtained
+       @return a promise. Get the future from it and it will be populated when query finishes.
      */
-    virtual boost::shared_future<cql::cql_future_result_t>
+    virtual boost::shared_ptr<cql_promise_t<cql_future_result_t> >
     execute(const boost::shared_ptr<cql::cql_execute_t>& message) = 0;
 
     /**

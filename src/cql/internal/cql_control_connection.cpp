@@ -180,7 +180,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
         boost::shared_ptr<cql_query_t> query = boost::make_shared<cql_query_t>(                                                                               select_peers_expression());
         query->set_stream(stream);
         boost::shared_future<cql_future_result_t> query_future_result =
-            _active_connection->query(query);
+            _active_connection->query(query)->shared_future();
         
         if (query_future_result.timed_wait(boost::posix_time::seconds(10))) {
             cql_future_result_t query_result = query_future_result.get();
@@ -258,7 +258,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
         boost::shared_ptr<cql_query_t> query = boost::make_shared<cql_query_t>(                                                                               select_local_expression());
         query->set_stream(stream);
         boost::shared_future<cql_future_result_t> query_future_result =
-            _active_connection->query(query);
+            _active_connection->query(query)->shared_future();
 
         if (query_future_result.timed_wait(boost::posix_time::seconds(10))) {
             cql_future_result_t query_result = query_future_result.get();

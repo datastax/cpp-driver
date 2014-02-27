@@ -160,17 +160,26 @@ public:
     
     void
     set_prepare_statement(
-                          const std::vector<cql_byte_t>& query_id,
-                          const std::string& query_text);
+        const std::vector<cql_byte_t>& query_id,
+        const std::string& query_text);
     
     void
-    retry_callback_query(const boost::shared_ptr<cql_query_t>& query);
+    retry_callback_query(
+        const boost::shared_ptr<cql_query_t>& query,
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+        bool is_transport_error);
 
     void
-    retry_callback_prepare(const boost::shared_ptr<cql_query_t>& query);
+    retry_callback_prepare(
+        const boost::shared_ptr<cql_query_t>& query,
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+        bool is_transport_error);
 
     void
-    retry_callback_execute(const boost::shared_ptr<cql_execute_t>& message);
+    retry_callback_execute(
+        const boost::shared_ptr<cql_execute_t>& message,
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+        bool is_transport_error);
 
 #ifdef _DEBUG
 	void 

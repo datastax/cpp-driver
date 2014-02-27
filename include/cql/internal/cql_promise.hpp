@@ -58,6 +58,13 @@ public:
     {
         return _future;
     }
+    
+    inline void
+    swap(
+        boost::shared_ptr<boost::promise<TResult> > promise)
+    {
+        _promise->swap(*promise);
+    }
 
 private:
     boost::shared_ptr<boost::mutex>              _mutex;
