@@ -608,19 +608,19 @@ private:
         cql_retry_decision_t decision = cql_retry_decision_t::rethrow_decision();
             
         switch (error.code) {
-            case CQL_READ_TIMEOUT_ERROR : {
+            case CQL_ERROR_READ_TIMEOUT : {
                 // TODO(JS): what about the integer parameters to retry decision?
                 decision = query->retry_policy()
                                 ->read_timeout(query->consistency(), 1, 0, false, 1);
                 break;
             }
-            case CQL_WRITE_TIMEOUT_ERROR : {
+            case CQL_ERROR_WRITE_TIMEOUT : {
                 // TODO(JS): what about the integer parameters to retry decision?
                 decision = query->retry_policy()
                                 ->write_timeout(query->consistency(), "", 1, 0, 1);
                 break;
             }
-            case CQL_UNAVAILABLE_ERROR : {
+            case CQL_ERROR_UNAVAILABLE : {
                 // TODO(JS): what about the integer parameters to retry decision?
                 decision = query->retry_policy()
                                 ->unavailable(query->consistency(), 1, 0, 1);
@@ -639,19 +639,19 @@ private:
         const cql_error_t&                                       error)
     {
         switch (error.code) {
-            case CQL_READ_TIMEOUT_ERROR : {
+            case CQL_ERROR_READ_TIMEOUT : {
                 cql_query_timeout_exception exception(error.message,
                                                       query->consistency(), 0, 1);
                 promise->set_exception(boost::copy_exception(exception));
                 break;
             }
-            case CQL_WRITE_TIMEOUT_ERROR : {
+            case CQL_ERROR_WRITE_TIMEOUT : {
                 cql_query_timeout_exception exception(error.message,
                                                       query->consistency(), 0, 1);
                 promise->set_exception(boost::copy_exception(exception));
                 break;
             }
-            case CQL_UNAVAILABLE_ERROR : {
+            case CQL_ERROR_UNAVAILABLE : {
                 cql_unavailable_exception exception(query->consistency(), 1, 0);
                 promise->set_exception(boost::copy_exception(exception));
                 break;
@@ -1019,10 +1019,12 @@ private:
 		boost::shared_ptr<boolkeeper> is_disposed,
         const boost::system::error_code& err)
     {
-		boost::mutex::scoped_lock lock(is_disposed->mutex);
-		// if the connection was already disposed we return here immediatelly
-		if(is_disposed->value)
-			return;
+        {
+            boost::mutex::scoped_lock lock(is_disposed->mutex);
+            // if the connection was already disposed we return here immediatelly
+            if(is_disposed->value)
+                return;
+        }
 
         log(CQL_LOG_DEBUG, "received body for message " + header.str());
 
@@ -1104,13 +1106,19 @@ private:
                 callback_pair_t callback_pair = _callback_storage.get_callbacks(stream);
                 release_stream(stream);
 
+                /*
                 cql::cql_message_error_impl_t* m =
                     dynamic_cast<cql::cql_message_error_impl_t*>(_response_message.get());
-
                 cql::cql_error_t cql_error =
                     cql::cql_error_t::cassandra_error(m->code(), m->message());
-
-                callback_pair.second(stream, cql_error);
+                 */
+                
+                // The consumption was already done (above).
+                // Note: meaning of consume_error() in cql_message_error_impl_t is a little
+                // different from what we have in other message types. It decodes the ERROR
+                // ITSELF and stores the retrieved data in provided instance of cql_error_t.
+                
+                callback_pair.second(stream, consume_error);
             }
             break;
         }

@@ -83,6 +83,28 @@ cql::cql_message_error_impl_t::consume(cql::cql_error_t*) {
 
     cql::decode_int(input, _code);
     cql::decode_string(input, _message);
+    
+    switch (_code) {
+        case CQL_ERROR_SERVER:
+        case CQL_ERROR_PROTOCOL:
+        case CQL_ERROR_BAD_CREDENTIALS:
+        case CQL_ERROR_UNAVAILABLE:
+        case CQL_ERROR_OVERLOADED:
+        case CQL_ERROR_IS_BOOTSTRAPPING:
+        case CQL_ERROR_TRUNCATE:
+        case CQL_ERROR_WRITE_TIMEOUT:
+        case CQL_ERROR_READ_TIMEOUT:
+        case CQL_ERROR_SYNTAX:
+        case CQL_ERROR_UNAUTHORIZED:
+        case CQL_ERROR_INVALID:
+        case CQL_ERROR_CONFIG:
+        case CQL_ERROR_ALREADY_EXISTS:
+        case CQL_ERROR_UNPREPARED:
+        default: {
+            assert(0 && "Cassandra responded with unknown error code.");
+        }
+    }
+    
     return true;
 }
 
@@ -101,4 +123,94 @@ cql::cql_message_error_impl_t::prepare(cql::cql_error_t*) {
 cql::cql_message_buffer_t
 cql::cql_message_error_impl_t::buffer() {
     return _buffer;
+}
+
+bool
+cql::cql_message_error_impl_t::_read_server_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
+}
+
+bool
+cql::cql_message_error_impl_t::_read_protocol_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
+}
+
+bool
+cql::cql_message_error_impl_t::_read_bad_credentials_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
+}
+
+bool
+cql::cql_message_error_impl_t::_read_unavailable_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
+}
+
+bool
+cql::cql_message_error_impl_t::_read_overloaded_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
+}
+
+bool
+cql::cql_message_error_impl_t::_read_is_bootstrapping_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
+}
+
+bool
+cql::cql_message_error_impl_t::_read_truncate_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
+}
+
+bool
+cql::cql_message_error_impl_t::_read_write_timeout_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
+}
+
+bool
+cql::cql_message_error_impl_t::_read_read_timeout_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
+}
+
+bool
+cql::cql_message_error_impl_t::_read_syntax_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
+}
+
+bool
+cql::cql_message_error_impl_t::_read_unauthorized_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
+}
+
+bool
+cql::cql_message_error_impl_t::_read_invalid_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
+}
+
+bool
+cql::cql_message_error_impl_t::_read_config_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
+}
+
+bool
+cql::cql_message_error_impl_t::_read_already_exists_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
+}
+
+bool
+cql::cql_message_error_impl_t::_read_unprepared_error(cql_error_t* error, std::istream& input) const
+{
+    assert(0 && "Not implemented");
 }

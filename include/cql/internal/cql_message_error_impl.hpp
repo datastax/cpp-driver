@@ -67,6 +67,38 @@ public:
     buffer();
 
 private:
+        
+    bool
+    _read_server_error(cql_error_t* error, std::istream& input) const;
+    bool
+    _read_protocol_error(cql_error_t* error, std::istream& input) const;
+    bool
+    _read_bad_credentials_error(cql_error_t* error, std::istream& input) const;
+    bool
+    _read_unavailable_error(cql_error_t* error, std::istream& input) const;
+    bool
+    _read_overloaded_error(cql_error_t* error, std::istream& input) const;
+    bool
+    _read_is_bootstrapping_error(cql_error_t* error, std::istream& input) const;
+    bool
+    _read_truncate_error(cql_error_t* error, std::istream& input) const;
+    bool
+    _read_write_timeout_error(cql_error_t* error, std::istream& input) const;
+    bool
+    _read_read_timeout_error(cql_error_t* error, std::istream& input) const;
+    bool
+    _read_syntax_error(cql_error_t* error, std::istream& input) const;
+    bool
+    _read_unauthorized_error(cql_error_t* error, std::istream& input) const;
+    bool
+    _read_invalid_error(cql_error_t* error, std::istream& input) const;
+    bool
+    _read_config_error(cql_error_t* error, std::istream& input) const;
+    bool
+    _read_already_exists_error(cql_error_t* error, std::istream& input) const;
+    bool
+    _read_unprepared_error(cql_error_t* error, std::istream& input) const;
+        
     cql::cql_message_buffer_t _buffer;
     cql_int_t                 _code;
     std::string               _message;
