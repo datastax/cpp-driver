@@ -60,9 +60,21 @@ enum cql_consistency_enum {
 };
 
 enum cql_cassandra_error_code_enum {
-    CQL_WRITE_TIMEOUT_ERROR   = 4352,
-    CQL_READ_TIMEOUT_ERROR    = 4608,
-    CQL_UNAVAILABLE_ERROR     = 4096
+    CQL_ERROR_SERVER           = 0x0000,
+    CQL_ERROR_PROTOCOL         = 0x000A,
+    CQL_ERROR_BAD_CREDENTIALS  = 0x0100,
+    CQL_ERROR_UNAVAILABLE      = 0x1000,
+    CQL_ERROR_OVERLOADED       = 0x1001,
+    CQL_ERROR_IS_BOOTSTRAPPING = 0x1002,
+    CQL_ERROR_TRUNCATE         = 0x1003,
+    CQL_ERROR_WRITE_TIMEOUT    = 0x1100,
+    CQL_ERROR_READ_TIMEOUT     = 0x1200,
+    CQL_ERROR_SYNTAX           = 0x2000,
+    CQL_ERROR_UNAUTHORIZED     = 0x2100,
+    CQL_ERROR_INVALID          = 0x2200,
+    CQL_ERROR_CONFIG           = 0x2300,
+    CQL_ERROR_ALREADY_EXISTS   = 0x2400,
+    CQL_ERROR_UNPREPARED       = 0x2500
 };
     
 enum cql_column_type_enum {

@@ -74,9 +74,9 @@ BOOST_AUTO_TEST_CASE( default_retry_policy )
 		int error_code = policy_tools::query(session, 12, cql::CQL_CONSISTENCY_ONE);
 		if( error_code != 0)
 		{
-			if(error_code == 4608) // cql_read_timeout_exception
+			if(error_code == cql::CQL_ERROR_READ_TIMEOUT) // cql_read_timeout_exception
 				readTimeoutOnce = true;
-			if(error_code == 4096) // cql_unavailable_exception								
+            if(error_code == cql::CQL_ERROR_UNAVAILABLE) // cql_unavailable_exception
 				unavailableOnce = true;				
 		}
 
@@ -124,9 +124,9 @@ BOOST_AUTO_TEST_CASE( default_retry_policy )
 			int error_code = policy_tools::init(session, 12, cql::CQL_CONSISTENCY_ONE);
 			if( error_code != 0)
 			{
-				if(error_code == 4352) // cql_write_timeout_exception
+				if(error_code == cql::CQL_ERROR_WRITE_TIMEOUT) // cql_write_timeout_exception
 					writeTimeoutOnce = true;
-				if(error_code == 4096) // cql_unavailable_exception								
+				if(error_code == cql::CQL_ERROR_UNAVAILABLE) // cql_unavailable_exception
 					unavailableOnce = true;				
 			}
 
@@ -168,9 +168,9 @@ BOOST_AUTO_TEST_CASE( default_retry_policy )
 			int error_code = policy_tools::init(session, 12, cql::CQL_CONSISTENCY_ONE, true);
 			if( error_code != 0)
 			{
-				if(error_code == 4352) // cql_write_timeout_exception
+				if(error_code == cql::CQL_ERROR_WRITE_TIMEOUT) // cql_write_timeout_exception
 					writeTimeoutOnce = true;
-				if(error_code == 4096) // cql_unavailable_exception								
+				if(error_code == cql::CQL_ERROR_UNAVAILABLE) // cql_unavailable_exception
 					unavailableOnce = true;				
 			}
 
