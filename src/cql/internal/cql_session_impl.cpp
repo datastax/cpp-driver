@@ -136,6 +136,12 @@ cql::cql_session_impl_t::set_prepare_statement(
     const std::string& query_text)
 {
     boost::recursive_mutex::scoped_lock lock(_mutex);
+   
+    // Ensure set_prepare_statement is called once only
+    if(_prepare_statements[query_id] != "") {
+        return;
+    }
+
     _prepare_statements[query_id] = query_text;
     
     for(connection_pool_t::iterator I  = _connection_pool.begin();
