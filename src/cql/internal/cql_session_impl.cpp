@@ -672,7 +672,7 @@ cql::cql_session_impl_t::get_connection(
         is_setup_prepared_successful = setup_prepared_statements(conn, stream);
         
         
-        // We also maintain a session-wide dictionary (vector, really) that maps
+        // We also maintain a connection-wide dictionary (vector, really) that maps
         // from stream IDs to recent queries' strings. It is used to retrieve the
         // the recipes for prepared queries if needed by a connection.
         if (!(stream->is_invalid()) && query != NULL) {

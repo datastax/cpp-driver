@@ -340,6 +340,7 @@ public:
             errback(*this, stream, create_stream_id_error());
             return stream;
         }
+        _stream_id_vs_query_string[stream.stream_id()] = query->query();
 
         _callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
 
