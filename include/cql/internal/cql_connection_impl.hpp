@@ -269,7 +269,7 @@ public:
 
 		query(query_,
               boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
-              boost::bind(&cql_connection_impl_t::_statement_future_errback_query, this, promise, query_, ::_1, ::_2));
+              boost::bind(&cql_connection_impl_t::_statement_future_errback_query, this, promise, query_, ::_1, ::_2, ::_3));
 
         return promise;
     }
@@ -283,7 +283,7 @@ public:
 
         prepare(query_,
                 boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
-                boost::bind(&cql_connection_impl_t::_statement_future_errback_prepare, this, promise, query_, ::_1, ::_2));
+                boost::bind(&cql_connection_impl_t::_statement_future_errback_prepare, this, promise, query_, ::_1, ::_2, ::_3));
 
         return promise;
     }
@@ -297,7 +297,7 @@ public:
 
         execute(message,
                 boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
-                boost::bind(&cql_connection_impl_t::_statement_future_errback_execute, this, promise, message, ::_1, ::_2));
+                boost::bind(&cql_connection_impl_t::_statement_future_errback_execute, this, promise, message, ::_1, ::_2, ::_3));
 
         return promise;
     }
@@ -311,7 +311,7 @@ public:
 		cql_stream_t stream = query->stream();
 
         if (stream.is_invalid()) {
-            errback(stream, create_stream_id_error());
+            errback(stream, create_stream_id_error(), NULL);
             return stream;
 		}
 
@@ -339,7 +339,7 @@ public:
 		cql_stream_t stream = query->stream();
 
         if (stream.is_invalid()) {
-            errback(stream, create_stream_id_error());
+            errback(stream, create_stream_id_error(), NULL);
             return stream;
         }
 
@@ -368,7 +368,7 @@ public:
         cql_stream_t stream = message->stream();
 
         if (stream.is_invalid()) {
-            errback(stream, create_stream_id_error());
+            errback(stream, create_stream_id_error(), NULL);
             return stream;
         }
 
@@ -425,7 +425,7 @@ public:
                     = callback_and_errback.second;
                 
                 if (errback) {
-                    errback(consecutive_stream, error);
+                    errback(consecutive_stream, error, NULL);
                 }
             }
         }
@@ -691,8 +691,15 @@ private:
         boost::shared_ptr<cql_promise_t<cql_future_result_t> >   promise,
         const boost::shared_ptr<cql_query_t>&                    query,
         const cql::cql_stream_t&                                 stream,
-        const cql_error_t&                                       error)
+        const cql_error_t&                                       error,
+        cql::cql_message_t*                                      err_message)
     {
+        // ACHTUNG: `err_message' will be destroyed after exit from this function.
+        // Do NOT rely on its persistence (e.g. do not boost::bind it).
+        
+        cql_message_error_impl_t* err_message_downcast
+            = dynamic_cast<cql_message_error_impl_t*>(err_message);
+        
         _handle_query_error(promise, query, stream, error, &cql_session_impl_t::retry_callback_query);
     }
     
@@ -701,8 +708,15 @@ private:
         boost::shared_ptr<cql_promise_t<cql_future_result_t> >  promise,
         const boost::shared_ptr<cql_query_t>&                   query,
         const cql::cql_stream_t&                                stream,
-        const cql_error_t&                                      error)
+        const cql_error_t&                                      error,
+        cql::cql_message_t*                                     err_message)
     {
+        // ACHTUNG: `err_message' will be destroyed after exit from this function.
+        // Do NOT rely on its persistence (e.g. do not boost::bind it).
+        
+        cql_message_error_impl_t* err_message_downcast
+            = dynamic_cast<cql_message_error_impl_t*>(err_message);
+        
         _handle_query_error(promise, query, stream, error, &cql_session_impl_t::retry_callback_prepare);
     }
 
@@ -711,8 +725,15 @@ private:
         boost::shared_ptr<cql_promise_t<cql_future_result_t> >   promise,
         const boost::shared_ptr<cql_execute_t>&                  message,
         const cql::cql_stream_t&                                 stream,
-        const cql_error_t&                                       error)
+        const cql_error_t&                                       error,
+        cql::cql_message_t*                                      err_message)
     {
+        // ACHTUNG: `err_message' will be destroyed after exit from this function.
+        // Do NOT rely on its persistence (e.g. do not boost::bind it).
+        
+        cql_message_error_impl_t* err_message_downcast
+            = dynamic_cast<cql_message_error_impl_t*>(err_message);
+        
         //TODO(JS): no retry_policy in execute queries?
         //_handle_query_error(promise, message, stream, error, &cql_session_impl_t::retry_callback_execute);
     }
@@ -1106,19 +1127,12 @@ private:
                 callback_pair_t callback_pair = _callback_storage.get_callbacks(stream);
                 release_stream(stream);
 
-                /*
                 cql::cql_message_error_impl_t* m =
                     dynamic_cast<cql::cql_message_error_impl_t*>(_response_message.get());
                 cql::cql_error_t cql_error =
                     cql::cql_error_t::cassandra_error(m->code(), m->message());
-                 */
                 
-                // The consumption was already done (above).
-                // Note: meaning of consume_error() in cql_message_error_impl_t is a little
-                // different from what we have in other message types. It decodes the ERROR
-                // ITSELF and stores the retrieved data in provided instance of cql_error_t.
-                
-                callback_pair.second(stream, consume_error);
+                callback_pair.second(stream, cql_error, m);
             }
             break;
         }

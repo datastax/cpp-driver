@@ -77,7 +77,7 @@ cql::cql_message_error_impl_t::str() const {
 }
 
 bool
-cql::cql_message_error_impl_t::consume(cql::cql_error_t*) {
+cql::cql_message_error_impl_t::consume(cql::cql_error_t* err) {
     cql::vector_stream_t buffer(*_buffer);
     std::istream input(&buffer);
 
@@ -86,20 +86,50 @@ cql::cql_message_error_impl_t::consume(cql::cql_error_t*) {
     
     switch (_code) {
         case CQL_ERROR_SERVER:
+            _read_server_error(err, input);
+            break;
         case CQL_ERROR_PROTOCOL:
+            _read_protocol_error(err, input);
+            break;
         case CQL_ERROR_BAD_CREDENTIALS:
+            _read_bad_credentials_error(err, input);
+            break;
         case CQL_ERROR_UNAVAILABLE:
+            _read_unavailable_error(err, input);
+            break;
         case CQL_ERROR_OVERLOADED:
+            _read_overloaded_error(err, input);
+            break;
         case CQL_ERROR_IS_BOOTSTRAPPING:
+            _read_is_bootstrapping_error(err, input);
+            break;
         case CQL_ERROR_TRUNCATE:
+            _read_truncate_error(err, input);
+            break;
         case CQL_ERROR_WRITE_TIMEOUT:
+            _read_write_timeout_error(err, input);
+            break;
         case CQL_ERROR_READ_TIMEOUT:
+            _read_read_timeout_error(err, input);
+            break;
         case CQL_ERROR_SYNTAX:
+            _read_syntax_error(err, input);
+            break;
         case CQL_ERROR_UNAUTHORIZED:
+            _read_unauthorized_error(err, input);
+            break;
         case CQL_ERROR_INVALID:
+            _read_invalid_error(err, input);
+            break;
         case CQL_ERROR_CONFIG:
+            _read_config_error(err, input);
+            break;
         case CQL_ERROR_ALREADY_EXISTS:
+            _read_already_exists_error(err, input);
+            break;
         case CQL_ERROR_UNPREPARED:
+            _read_unprepared_error(err, input);
+            break;
         default: {
             assert(0 && "Cassandra responded with unknown error code.");
         }

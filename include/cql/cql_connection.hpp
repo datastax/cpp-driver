@@ -47,6 +47,7 @@ class cql_event_t;
 class cql_result_t;
 class cql_execute_t;
 class cql_session_t;
+class cql_message_t;
 struct cql_error_t;
 
 class cql_connection_t :
@@ -73,7 +74,7 @@ public:
         cql_message_callback_t;
 
     typedef
-        boost::function<void(const cql::cql_stream_t&, const cql_error_t&)>
+        boost::function<void(const cql::cql_stream_t&, const cql_error_t&, cql_message_t*)>
         cql_message_errback_t;
 
     typedef
