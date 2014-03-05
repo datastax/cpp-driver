@@ -224,13 +224,21 @@ cql::cql_session_impl_t::allocate_connection(
     connection->set_keyspace(_keyspace_name);
 
     boost::shared_future<cql_future_connection_t> shared_future = promise->shared_future();
-    shared_future.wait();
-
-    if (shared_future.get().error.is_err()) {
+    
+    if(! shared_future.timed_wait(boost::posix_time::seconds(30))) {
         decrease_connection_counter(host);
         throw cql_connection_allocation_error(
-                ("Error when connecting to host: " + host->endpoint().to_string()).c_str());
+                ("Connection to host host: " 
+                + host->endpoint().to_string()
+                + " timed out after 30 seconds").c_str());
         connection.reset();
+    } else {
+        if (shared_future.get().error.is_err()) {
+            decrease_connection_counter(host);
+            throw cql_connection_allocation_error(
+                    ("Error when connecting to host: " + host->endpoint().to_string()).c_str());
+            connection.reset();
+        }
     }
 
     return connection;
