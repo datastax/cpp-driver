@@ -270,12 +270,12 @@ cql::cql_message_result_impl_t::is_null(
     int   i,
     bool& output) const {
     if (i >= _column_count || i < 0) {
-        return true;
+        return false;
     }
     cql::cql_int_t row_size = 0;
     cql::decode_int(_row[i], row_size);
     output = (row_size <= 0);
-    return false;
+    return true;
 }
 
 bool
@@ -287,9 +287,9 @@ cql::cql_message_result_impl_t::is_null(
         cql::cql_int_t row_size = 0;
         cql::decode_int(_row[i], row_size);
         output = (row_size <= 0);
-        return false;
+        return true;
     }
-    return true;
+    return false;
 }
 
 bool
@@ -422,7 +422,7 @@ cql::cql_message_result_impl_t::get_data(int i,
         cql::cql_byte_t** output,
         cql::cql_int_t& size) const {
     bool empty = false;
-    if (!is_null(i, empty)) {
+    if (is_null(i, empty)) {
         if (!empty) {
             cql_byte_t* pos = _row[i];
             *output = cql::decode_int(pos, size);
