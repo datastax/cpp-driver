@@ -242,6 +242,8 @@ cql_control_connection_t::refresh_node_list_and_token_map()
 							peer_tokens_set->get_string(i, single_peers_token);
 							all_tokens.back()[single_peers_token] = true;
 						}
+						
+						delete peer_tokens_set;
 					}
                 }
             }
