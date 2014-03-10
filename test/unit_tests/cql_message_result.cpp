@@ -112,7 +112,7 @@ TEST_MESSAGE_RESULT[] = { 0x00, 0x00, 0x00, 0x02, // result_type(int=2)
                           0xff, 0xff, 0xff, 0xff,
                           0xff, 0xff, 0xff, 0xff,
                           0x00, 0x00, 0x00, 0x00,  // 15
-                          0x00, 0x01, 0xFF, 0xFF}; // this is different that real life, which would be 1 null byte, needed to test the negative is_null case
+                          0x00, 0x01, 0xFF, 0xFF}; // this is different that real life, which would be 1 null byte, needed to test the negative get_nullity case
 
 
 BOOST_AUTO_TEST_CASE(opcode)
@@ -517,7 +517,7 @@ BOOST_AUTO_TEST_CASE(not_null)
     BOOST_CHECK_EQUAL(true, m.next());
 
     bool is_null = false;
-    BOOST_CHECK_EQUAL(false, m.is_null(16, is_null));
+    BOOST_CHECK_EQUAL(true, m.get_nullity(16, is_null));
     BOOST_CHECK_EQUAL(false, is_null);
 }
 
@@ -531,7 +531,7 @@ BOOST_AUTO_TEST_CASE(null_columns_map)
     BOOST_CHECK_EQUAL(true, m.next());
 
     bool is_null = false;
-    BOOST_CHECK_EQUAL(false, m.is_null(2, is_null));
+    BOOST_CHECK_EQUAL(true, m.get_nullity(2, is_null));
     BOOST_CHECK_EQUAL(true, is_null);
 
     cql::cql_map_t* map = NULL;
@@ -549,7 +549,7 @@ BOOST_AUTO_TEST_CASE(null_columns_text)
     BOOST_CHECK_EQUAL(true, m.next());
 
     bool is_null = false;
-    BOOST_CHECK_EQUAL(false, m.is_null(11, is_null));
+    BOOST_CHECK_EQUAL(true, m.get_nullity(11, is_null));
     BOOST_CHECK_EQUAL(true, is_null);
 
     std::string val;
