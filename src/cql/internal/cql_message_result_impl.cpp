@@ -266,7 +266,7 @@ cql::cql_message_result_impl_t::next() {
 }
 
 bool
-cql::cql_message_result_impl_t::is_null(
+cql::cql_message_result_impl_t::get_nullity(
     int   i,
     bool& output) const {
     if (i >= _column_count || i < 0) {
@@ -279,7 +279,7 @@ cql::cql_message_result_impl_t::is_null(
 }
 
 bool
-cql::cql_message_result_impl_t::is_null(
+cql::cql_message_result_impl_t::get_nullity(
     const std::string& column,
     bool&              output) const {
     int i = 0;
@@ -422,7 +422,7 @@ cql::cql_message_result_impl_t::get_data(int i,
         cql::cql_byte_t** output,
         cql::cql_int_t& size) const {
     bool empty = false;
-    if (is_null(i, empty)) {
+    if (get_nullity(i, empty)) {
         if (!empty) {
             cql_byte_t* pos = _row[i];
             *output = cql::decode_int(pos, size);
