@@ -604,27 +604,42 @@ private:
     cql_retry_decision_t
     _get_retry_decision(
         const boost::shared_ptr<TQueryType>&                     query,
-        const cql_error_t&                                       error)
+        const cql_error_t&                                       error,
+        cql::cql_message_error_impl_t*                           err_message)
     {
         cql_retry_decision_t decision = cql_retry_decision_t::rethrow_decision();
+        int retry_count = query->get_retry_counter();
             
         switch (error.code) {
             case CQL_ERROR_READ_TIMEOUT : {
-                // TODO(JS): what about the integer parameters to retry decision?
-                decision = query->retry_policy()
-                                ->read_timeout(query->consistency(), 1, 0, false, 1);
+                cql_consistency_enum consistency;
+                int received, block_for;
+                bool data_present;
+                
+                if (err_message && err_message->get_read_timeout_data(consistency, received, block_for, data_present)) {
+                    decision = query->retry_policy()
+                                    ->read_timeout(consistency, block_for, received, data_present, retry_count);
+                }
                 break;
             }
             case CQL_ERROR_WRITE_TIMEOUT : {
-                // TODO(JS): what about the integer parameters to retry decision?
-                decision = query->retry_policy()
-                                ->write_timeout(query->consistency(), "", 1, 0, 1);
+                cql_consistency_enum consistency;
+                int received, block_for;
+                std::string write_type;
+                if (err_message && err_message->get_write_timeout_data(consistency, received, block_for, write_type)) {
+                    decision = query->retry_policy()
+                                    ->write_timeout(consistency, write_type, block_for, received, retry_count);
+                }
                 break;
             }
             case CQL_ERROR_UNAVAILABLE : {
-                // TODO(JS): what about the integer parameters to retry decision?
-                decision = query->retry_policy()
-                                ->unavailable(query->consistency(), 1, 0, 1);
+                cql_consistency_enum consistency;
+                int required, alive;
+                
+                if (err_message && err_message->get_unavailable_data(consistency, required, alive)) {
+                    decision = query->retry_policy()
+                                    ->unavailable(consistency, required, alive, retry_count);
+                }
                 break;
             }
             default : {}
@@ -632,29 +647,45 @@ private:
         return decision;
     }
 
-    template <typename TQueryType>
     void
     _handle_rethrow(
         boost::shared_ptr<cql_promise_t<cql_future_result_t> >   promise,
-        const boost::shared_ptr<TQueryType>&                     query,
-        const cql_error_t&                                       error)
+        const cql_error_t&                                       error,
+        cql_message_error_impl_t*                                err_message)
     {
         switch (error.code) {
             case CQL_ERROR_READ_TIMEOUT : {
-                cql_query_timeout_exception exception(error.message,
-                                                      query->consistency(), 0, 1);
-                promise->set_exception(boost::copy_exception(exception));
+                cql_consistency_enum consistency;
+                int received, block_for;
+                bool data_present;
+                
+                if (err_message && err_message->get_read_timeout_data(consistency, received, block_for, data_present)) {
+                    cql_query_timeout_exception exception(error.message, consistency,
+                                                          received, block_for);
+                    promise->set_exception(boost::copy_exception(exception));
+                }
                 break;
             }
             case CQL_ERROR_WRITE_TIMEOUT : {
-                cql_query_timeout_exception exception(error.message,
-                                                      query->consistency(), 0, 1);
-                promise->set_exception(boost::copy_exception(exception));
+                cql_consistency_enum consistency;
+                int received, block_for;
+                std::string write_type;
+                
+                if (err_message && err_message->get_write_timeout_data(consistency, received, block_for, write_type)) {
+                    cql_query_timeout_exception exception(error.message, consistency,
+                                                          received, block_for);
+                    promise->set_exception(boost::copy_exception(exception));
+                }
                 break;
             }
             case CQL_ERROR_UNAVAILABLE : {
-                cql_unavailable_exception exception(query->consistency(), 1, 0);
-                promise->set_exception(boost::copy_exception(exception));
+                cql_consistency_enum consistency;
+                int required, alive;
+
+                if (err_message && err_message->get_unavailable_data(consistency, required, alive)) {
+                    cql_unavailable_exception exception(consistency, required, alive);
+                    promise->set_exception(boost::copy_exception(exception));
+                }
                 break;
             }
             default : {}
@@ -668,21 +699,25 @@ private:
                   const boost::shared_ptr<TQueryType>&                     query,
                   const cql::cql_stream_t&                                 stream,
                   const cql_error_t&                                       error,
-                  TCallbackType                                            retry_callback)
+                  TCallbackType                                            retry_callback,
+                  cql::cql_message_error_impl_t*                           err_message)
     {
         if (!error.cassandra) {
-            if (error.transport) {
-                _io_service.post(boost::bind(retry_callback, _session_ptr, query, promise, boost::ref(*this), true));
+            if (error.transport && error.code != boost::system::errc::connection_aborted) {
+                _io_service.post(boost::bind(retry_callback, _session_ptr, query,
+                                             promise, boost::ref(*this), true));
             }
             promise->set_value(cql::cql_future_result_t(this, stream, error));
         }
         else {
-            cql_retry_decision_t decision = _get_retry_decision(query, error);
+            cql_retry_decision_t decision = _get_retry_decision(query, error, err_message);
             if (decision.retry_decision() == CQL_RETRY_DECISION_RETRY) {
-                _io_service.post(boost::bind(retry_callback, _session_ptr, query, promise, boost::ref(*this), false));
+                query->increment_retry_counter();
+                _io_service.post(boost::bind(retry_callback, _session_ptr, query,
+                                             promise, boost::ref(*this), false));
             }
             else if (decision.retry_decision() == CQL_RETRY_DECISION_RETHROW) {
-                _handle_rethrow(promise, query, error);
+                _handle_rethrow(promise, error, err_message);
             }
         }
     }
@@ -697,11 +732,14 @@ private:
     {
         // ACHTUNG: `err_message' will be destroyed after exit from this function.
         // Do NOT rely on its persistence (e.g. do not boost::bind it).
+        // Also, please remember that it can be NULL.
         
         cql_message_error_impl_t* err_message_downcast
             = dynamic_cast<cql_message_error_impl_t*>(err_message);
         
-        _handle_query_error(promise, query, stream, error, &cql_session_impl_t::retry_callback_query);
+        _handle_query_error(promise, query, stream, error,
+                            &cql_session_impl_t::retry_callback_query,
+                            err_message_downcast);
     }
     
     void
@@ -714,11 +752,14 @@ private:
     {
         // ACHTUNG: `err_message' will be destroyed after exit from this function.
         // Do NOT rely on its persistence (e.g. do not boost::bind it).
+        // Also, please remember that it can be NULL.
         
         cql_message_error_impl_t* err_message_downcast
             = dynamic_cast<cql_message_error_impl_t*>(err_message);
         
-        _handle_query_error(promise, query, stream, error, &cql_session_impl_t::retry_callback_prepare);
+        _handle_query_error(promise, query, stream, error,
+                            &cql_session_impl_t::retry_callback_prepare,
+                            err_message_downcast);
     }
 
     void
@@ -731,6 +772,7 @@ private:
     {
         // ACHTUNG: `err_message' will be destroyed after exit from this function.
         // Do NOT rely on its persistence (e.g. do not boost::bind it).
+        // Also, please remember that it can be NULL.
         
         cql_message_error_impl_t* err_message_downcast
             = dynamic_cast<cql_message_error_impl_t*>(err_message);
@@ -1054,7 +1096,7 @@ private:
             if (err == boost::asio::error::eof) {
                 // Endopint was closed. The connection is set to defunct state and should not throw.
                 _defunct = true;
-                is_disposed->value = true;
+                // is_disposed->value = true;
                 log(CQL_LOG_ERROR, "error reading body " + err.message());
                 return;
             }

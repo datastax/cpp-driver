@@ -268,7 +268,6 @@ cql::cql_session_impl_t::increase_connection_counter(
     return true;
 }
 
-
 bool
 cql::cql_session_impl_t::decrease_connection_counter(
     const boost::shared_ptr<cql_host_t>& host)

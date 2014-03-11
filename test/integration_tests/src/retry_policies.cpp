@@ -71,7 +71,8 @@ BOOST_AUTO_TEST_CASE( default_retry_policy )
 			restartOnce = true;
 		}
 
-		int error_code = policy_tools::query(session, 12, cql::CQL_CONSISTENCY_ONE);
+        int error_code = policy_tools::query(session, 12, cql::CQL_CONSISTENCY_ONE);
+        
 		if( error_code != 0)
 		{
 			if(error_code == cql::CQL_ERROR_READ_TIMEOUT) // cql_read_timeout_exception
@@ -82,7 +83,7 @@ BOOST_AUTO_TEST_CASE( default_retry_policy )
 
 		if (restartOnce)
 			successfulQuery = true;		
-	}
+    }
 
 		// Ensure the full cycle was completed	
 		BOOST_REQUIRE_MESSAGE(successfulQuery, "Hit testing race condition. [Never completed successfully.] (Shouldn't be an issue.):\n");

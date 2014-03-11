@@ -71,7 +71,7 @@ waitFor(
 	bool waitForDead,
 	bool waitForOut)
 {
-	boost::this_thread::sleep(boost::posix_time::seconds(60)); // Workaround for now, while events doesn't work properly
+	boost::this_thread::sleep(boost::posix_time::seconds(60)); // Workaround for now
 }
 
 void 
@@ -80,7 +80,7 @@ waitForDownWithWait(
 	boost::shared_ptr<cql::cql_cluster_t> cluster,
 	int waitTime)
 {
-	boost::this_thread::sleep(boost::posix_time::seconds(60)); // Workaround for now, while events doesn't work properly
+	boost::this_thread::sleep(boost::posix_time::seconds(60)); // Workaround for now
 }
 
 
