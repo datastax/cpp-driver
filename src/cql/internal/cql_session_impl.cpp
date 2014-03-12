@@ -219,8 +219,8 @@ cql::cql_session_impl_t::allocate_connection(
 
     connection->set_credentials(_configuration->credentials());
     connection->connect(host->endpoint(),
-                        boost::bind(&cql_session_impl_t::connect_callback, this, promise, ::_1),
-                        boost::bind(&cql_session_impl_t::connect_errback, this, promise, ::_1, ::_2));
+                        boost::bind(&cql_session_impl_t::connect_callback, shared_from_this(), promise, ::_1),
+                        boost::bind(&cql_session_impl_t::connect_errback, shared_from_this(), promise, ::_1, ::_2));
     connection->set_keyspace(_keyspace_name);
 
     boost::shared_future<cql_future_connection_t> shared_future = promise->shared_future();
