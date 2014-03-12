@@ -26,6 +26,7 @@
 #include <string>
 
 #include <boost/asio.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <boost/function.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/ptr_container/ptr_deque.hpp>
@@ -131,6 +132,7 @@ private:
 
 class cql_session_impl_t :
     public cql_session_t,
+    public boost::enable_shared_from_this<cql_session_impl_t>,
     boost::noncopyable
 {
 
