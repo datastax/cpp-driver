@@ -11,7 +11,7 @@
 #include <boost/noncopyable.hpp>
 
 #include "cql/cql.hpp"
-#include "cql/policies/cql_retry_policy.hpp"
+#include "cql/policies/cql_default_retry_policy.hpp"
 #include "cql/cql_stream.hpp"
 
 namespace cql {
@@ -24,7 +24,7 @@ public:
         _query_string(query_string),
         _consistency(CQL_CONSISTENCY_DEFAULT),
         _is_traced(false),
-        _retry_policy(),
+        _retry_policy(new cql_default_retry_policy_t()),
         _retry_counter(0)
     {}
 
@@ -34,7 +34,7 @@ public:
         _query_string(query_string),
         _consistency(consistency),
         _is_traced(false),
-        _retry_policy(),
+        _retry_policy(new cql_default_retry_policy_t()),
         _retry_counter(0)
     {}
 
@@ -45,7 +45,7 @@ public:
         _query_string(query_string),
         _consistency(consistency),
         _is_traced(is_traced),
-        _retry_policy(),
+        _retry_policy(new cql_default_retry_policy_t()),
         _retry_counter(0)
     {}
 

@@ -25,6 +25,10 @@ public:
 	// Constructor version for dynamically generated strings
 	cql_exception(const std::string& message);
 
+    // cql_exception must be copyable to be used with boost::promises.
+    // It allocates memory, so custom copy ctor is needed. I'm sorry.
+    cql_exception(const cql_exception&);
+    
 	virtual ~cql_exception() throw();
 
 	// Returns text message that describes exception.

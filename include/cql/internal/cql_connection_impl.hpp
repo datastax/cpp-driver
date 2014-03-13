@@ -608,7 +608,9 @@ private:
         cql::cql_message_error_impl_t*                           err_message)
     {
         cql_retry_decision_t decision = cql_retry_decision_t::rethrow_decision();
-        int retry_count = query->get_retry_counter();
+        
+        // This retry would be the n+1-th retry:
+        const int retry_count = query->get_retry_counter() + 1;
             
         switch (error.code) {
             case CQL_ERROR_READ_TIMEOUT : {
@@ -1150,7 +1152,7 @@ private:
                         && cql_host_t::ip_address_t::from_string(event->ip()) == _endpoint.address()) {
                     // The event says that the endpoint for this connection is dead.
                     _is_disposed->value = true;
-                    close();
+                    //close();
                 }
                 
                 _io_service.post(boost::bind(_event_callback,
