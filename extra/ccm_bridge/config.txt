@@ -5,16 +5,16 @@
 # 
 
 IP_PREFIX=192.168.13.
-CASSANDRA_VERSION=1.2.5
+CASSANDRA_VERSION=1.2.8
 
 # Addresses MUST be in IP form
 
 # Amazon 
 # SSH_HOST=54.224.125.58
-SSH_HOST=127.0.0.1
+SSH_HOST=192.168.13.1
 SSH_PORT=22
-SSH_USERNAME=!mc
-SSH_PASSWORD=passpass
+SSH_USERNAME=user
+SSH_PASSWORD=password
 
 #
 # Use NO or YES for binary options

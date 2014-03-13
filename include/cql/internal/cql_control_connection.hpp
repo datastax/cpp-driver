@@ -38,6 +38,9 @@ public:
     virtual
     ~cql_control_connection_t();
 
+    bool
+    refresh_hosts();
+
 private:
 
     void
@@ -59,9 +62,6 @@ private:
     void
     setup_control_connection(
         bool refresh_only = false);
-
-    bool
-    refresh_hosts();
 
     void
     reconnection_callback(

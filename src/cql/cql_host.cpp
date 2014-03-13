@@ -51,6 +51,7 @@ cql::cql_host_t::set_location_info(
 	const std::string& datacenter,
 	const std::string& rack )
 {
+    boost::unique_lock<boost::mutex> lock(_mutex);
 	_datacenter = datacenter;
 	_rack = rack;
 }

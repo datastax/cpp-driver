@@ -44,16 +44,27 @@ namespace cql {
             return _endpoint;
         }
 
-		inline const std::string&
+		inline const std::string
         datacenter() const
         {
-            return _datacenter;
+            boost::unique_lock<boost::mutex> lock(_mutex);
+            std::string retVal = _datacenter.c_str();  // dont share buffer across threads
+            return retVal;
         }
 
-		inline const std::string&
+        // avoid string allocation
+        inline bool in_datacenter(const std::string& datacenter) const
+        {
+            boost::unique_lock<boost::mutex> lock(_mutex);
+            return _datacenter == datacenter;
+        }
+
+		inline const std::string
 		rack() const
         {
-            return _rack;
+            boost::unique_lock<boost::mutex> lock(_mutex);
+            std::string retVal = _rack.c_str();  // dont share buffer across threads
+            return retVal;
         }
 
 		bool
@@ -90,6 +101,7 @@ namespace cql {
 		boost::posix_time::ptime                       _next_up_time;
 		boost::shared_ptr<cql_reconnection_policy_t>   _reconnection_policy;
 		boost::shared_ptr<cql_reconnection_schedule_t> _reconnection_schedule;
+        mutable boost::mutex                           _mutex;
 	};
 }
 
