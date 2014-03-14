@@ -11,6 +11,8 @@
 #include "cql/cql_session.hpp"
 #include "cql/cql_cluster.hpp"
 #include "cql/cql_builder.hpp"
+#include "cql/exceptions/cql_query_timeout_exception.hpp"
+#include "cql/exceptions/cql_unavailable_exception.hpp"
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
@@ -71,15 +73,25 @@ BOOST_AUTO_TEST_CASE( default_retry_policy )
 			restartOnce = true;
 		}
 
-        int error_code = policy_tools::query(session, 12, cql::CQL_CONSISTENCY_ONE);
+        try { // Attention: query can result in an error or a throw.
+            int error_code = policy_tools::query(session, 12, cql::CQL_CONSISTENCY_ONE);
         
-		if( error_code != 0)
-		{
-			if(error_code == cql::CQL_ERROR_READ_TIMEOUT) // cql_read_timeout_exception
-				readTimeoutOnce = true;
-            if(error_code == cql::CQL_ERROR_UNAVAILABLE) // cql_unavailable_exception
-				unavailableOnce = true;				
-		}
+            if( error_code != 0)
+            {
+                if(error_code == cql::CQL_ERROR_READ_TIMEOUT) { // cql_read_timeout_exception
+                    readTimeoutOnce = true;
+                }
+                if(error_code == cql::CQL_ERROR_UNAVAILABLE) { // cql_unavailable_exception
+                    unavailableOnce = true;
+                }
+            }
+        }
+        catch (cql::cql_query_timeout_exception& e) {
+            readTimeoutOnce = true;
+        }
+        catch (cql::cql_unavailable_exception& e) {
+            unavailableOnce = true;
+        }
 
 		if (restartOnce)
 			successfulQuery = true;		
@@ -122,15 +134,23 @@ BOOST_AUTO_TEST_CASE( default_retry_policy )
 				restartOnce = true;
 			}
 
-			int error_code = policy_tools::init(session, 12, cql::CQL_CONSISTENCY_ONE);
-			if( error_code != 0)
-			{
-				if(error_code == cql::CQL_ERROR_WRITE_TIMEOUT) // cql_write_timeout_exception
-					writeTimeoutOnce = true;
-				if(error_code == cql::CQL_ERROR_UNAVAILABLE) // cql_unavailable_exception
-					unavailableOnce = true;				
-			}
-
+            try { // Attention: query can result in an error or a throw.
+                int error_code = policy_tools::init(session, 12, cql::CQL_CONSISTENCY_ONE);
+                if( error_code != 0)
+                {
+                    if(error_code == cql::CQL_ERROR_WRITE_TIMEOUT) // cql_write_timeout_exception
+                        writeTimeoutOnce = true;
+                    if(error_code == cql::CQL_ERROR_UNAVAILABLE) // cql_unavailable_exception
+                        unavailableOnce = true;
+                    }
+            }
+            catch (cql::cql_query_timeout_exception& e) {
+                writeTimeoutOnce = true;
+            }
+            catch (cql::cql_unavailable_exception& e) {
+                unavailableOnce = true;
+            }
+    
 			if (restartOnce)
 				successfulQuery = true;
 		}
@@ -166,15 +186,24 @@ BOOST_AUTO_TEST_CASE( default_retry_policy )
 				restartOnce = true;
 			}
 
-			int error_code = policy_tools::init(session, 12, cql::CQL_CONSISTENCY_ONE, true);
-			if( error_code != 0)
-			{
-				if(error_code == cql::CQL_ERROR_WRITE_TIMEOUT) // cql_write_timeout_exception
-					writeTimeoutOnce = true;
-				if(error_code == cql::CQL_ERROR_UNAVAILABLE) // cql_unavailable_exception
-					unavailableOnce = true;				
-			}
-
+            try { // Attention: query can result in an error or a throw.
+                int error_code = policy_tools::init(session, 12, cql::CQL_CONSISTENCY_ONE, true);
+                
+                if( error_code != 0)
+                {
+                    if(error_code == cql::CQL_ERROR_WRITE_TIMEOUT) // cql_write_timeout_exception
+                        writeTimeoutOnce = true;
+                    if(error_code == cql::CQL_ERROR_UNAVAILABLE) // cql_unavailable_exception
+                        unavailableOnce = true;
+                }
+            }
+            catch (cql::cql_query_timeout_exception& e) {
+                writeTimeoutOnce = true;
+            }
+            catch (cql::cql_unavailable_exception& e) {
+                unavailableOnce = true;
+            }
+            
 			if (restartOnce)
 				successfulQuery = true;
 		}

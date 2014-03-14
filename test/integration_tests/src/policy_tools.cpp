@@ -110,16 +110,20 @@ query(
             BOOST_FAIL("Query timed out");
         }
             
-        if (query_future.has_exception()) {
-            std::cout << "Response contains EXCEPTION!" << std::endl;
-        }
-        
-        if (query_future.has_value()) {
+        try {
             cql::cql_future_result_t query_result = query_future.get();
-            std::cout << "Queried endpoint: " << query_result.client->endpoint().to_string() << std::endl;
-            add_coordinator(query_result.client->endpoint().address());
-            if(query_result.error.code != 0)
-                return query_result.error.code;
+        
+            if (query_future.has_value()) {
+                std::cout << "Queried endpoint: " << query_result.client->endpoint().to_string() << std::endl;
+                add_coordinator(query_result.client->endpoint().address());
+                if(query_result.error.code != 0) {
+                    return query_result.error.code;
+                }
+            }
+        }
+        catch (...) {
+            BOOST_MESSAGE("Response contains EXCEPTION");
+            throw;
         }
 	}
 	return 0;
