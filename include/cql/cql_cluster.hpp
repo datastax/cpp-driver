@@ -54,6 +54,11 @@ public:
     virtual boost::shared_ptr<cql_metadata_t>
     metadata() const = 0;
 
+    // refresh hosts. generally managed internally, but if a host is stuck on having
+    // datacenter or rack with the initialized but unset value "unknown", then this
+    // call may be able to fix it.
+    virtual void refresh_hosts() = 0;
+
     virtual inline
     ~cql_cluster_t() { }
 };

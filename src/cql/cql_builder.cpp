@@ -20,6 +20,10 @@
 #include "cql/cql_builder.hpp"
 #include "cql/internal/cql_util.hpp"
 
+boost::shared_ptr<cql::cql_load_balancing_policy_t> 
+   cql::cql_policies_t::_default_load_balancing_policy(new cql::cql_round_robin_policy_t());
+boost::mutex cql::cql_policies_t::_mutex;
+
 cql::cql_builder_t&
 cql::cql_builder_t::add_contact_point(
     const ::boost::asio::ip::address& address)

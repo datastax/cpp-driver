@@ -193,6 +193,14 @@ public:
         return _metadata;
     }
 
+    virtual void refresh_hosts() 
+    {
+        if (_control_connection)
+        {
+            _control_connection->refresh_hosts();
+        }
+    }
+
     friend class cql_metadata_t;
 
 private:

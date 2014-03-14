@@ -31,6 +31,42 @@
 #include "cql/internal/cql_socket.hpp"
 #include "cql/internal/cql_connection_impl.hpp"
 
+namespace
+{
+    class endless_dump_t
+    {
+    public:
+
+        void store_connection(boost::shared_ptr<cql::cql_connection_t> bad_conn,
+                              boost::shared_ptr<cql::cql_promise_t<cql::cql_future_connection_t> > promise)
+        {
+            MyLock lock(_mutex);
+            if (bad_conn)
+            {
+                bad_conn->close();
+                _bad_conns.push_back(bad_conn_data(bad_conn, promise));
+            }
+        }
+
+    private:
+        typedef boost::unique_lock<boost::mutex> MyLock;
+        boost::mutex _mutex;
+        struct bad_conn_data
+        {
+            bad_conn_data( boost::shared_ptr<cql::cql_connection_t> conn,
+                           boost::shared_ptr<cql::cql_promise_t<cql::cql_future_connection_t> > promise)
+                : _conn(conn),
+                  _promise(promise)
+            {
+            }
+
+            boost::shared_ptr<cql::cql_connection_t> _conn;
+            boost::shared_ptr<cql::cql_promise_t<cql::cql_future_connection_t> > _promise;
+        };
+        std::list< bad_conn_data > _bad_conns;
+    };
+    endless_dump_t endless_dump;
+}
 
 cql::cql_session_impl_t::cql_session_impl_t(
     const cql_session_callback_info_t&      callbacks,
@@ -307,9 +343,9 @@ cql::cql_session_impl_t::allocate_connection(
 
     if (shared_future.get().error.is_err()) {
         decrease_connection_counter(host);
+        endless_dump.store_connection(connection, promise);
         throw cql_connection_allocation_error(
                 ("Error when connecting to host: " + host->endpoint().to_string()).c_str());
-        connection.reset();
     }
 
     return connection;
@@ -401,6 +437,8 @@ cql::cql_session_impl_t::connect(
         if (!host->is_considerably_up()) {
             continue;
         }
+
+        boost::recursive_mutex::scoped_lock lock(_mutex);
 
         cql_endpoint_t host_address = host->endpoint();
         tried_hosts->push_back(host_address);

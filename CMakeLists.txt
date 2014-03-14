@@ -13,6 +13,10 @@ set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${P
 
 # todo: add version header
 
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+  add_definitions (-D_DEBUG=1 -O0 -g)
+endif()
+
 #-------------------
 # setup deps
 #-------------------

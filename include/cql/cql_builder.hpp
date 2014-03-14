@@ -260,7 +260,7 @@ private:
 class cql_policies_t {
 public:
     cql_policies_t() :
-        _load_balancing_policy(new cql_round_robin_policy_t()),
+        _load_balancing_policy(default_load_balancing_policy()),
         _reconnection_policy(
             new cql_exponential_reconnection_policy_t(
                 boost::posix_time::seconds(1), // base dealy:
@@ -296,6 +296,21 @@ public:
         return _retry_policy;
     }
 
+    static boost::shared_ptr<cql_load_balancing_policy_t>
+            default_load_balancing_policy()
+            {
+                boost::unique_lock<boost::mutex> lock(_mutex);
+                boost::shared_ptr<cql_load_balancing_policy_t> retVal = _default_load_balancing_policy;
+                return retVal;
+            }
+
+    static void
+            default_load_balancing_policy(boost::shared_ptr<cql_load_balancing_policy_t> policy)
+            {
+                boost::unique_lock<boost::mutex> lock(_mutex);
+                _default_load_balancing_policy  = policy;
+            }
+
 private:
     friend class cql_configuration_t;
 
@@ -309,6 +324,10 @@ private:
     boost::shared_ptr<cql_load_balancing_policy_t>  _load_balancing_policy;
     boost::shared_ptr<cql_reconnection_policy_t>    _reconnection_policy;
     boost::shared_ptr<cql_retry_policy_t>           _retry_policy;
+
+    static boost::shared_ptr<cql_load_balancing_policy_t> _default_load_balancing_policy;
+
+    static boost::mutex _mutex;
 };
 
 class cql_configuration_t
