@@ -43,6 +43,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/thread/mutex.hpp>
@@ -154,7 +155,8 @@ private:
 };
     
 template <typename TSocket>
-class cql_connection_impl_t : public cql::cql_connection_t
+class cql_connection_impl_t : public cql::cql_connection_t,
+                              public boost::enable_shared_from_this<cql_connection_impl_t<TSocket> >
 {
 public:
     static const int NUMBER_OF_STREAMS = 128;
@@ -170,8 +172,6 @@ public:
 		bool value;
 		boost::mutex mutex;
 	};
-
-public:
     
     typedef
         std::list<cql::cql_message_buffer_t>
@@ -189,35 +189,21 @@ public:
         boost::function<void(const boost::system::error_code&, std::size_t)>
         write_callback_t;
 
-    cql_connection_impl_t(
+    static boost::shared_ptr<cql_connection_impl_t>
+    make_instance(
         boost::asio::io_service&                    io_service,
         TSocket*                                    transport,
-        cql::cql_connection_t::cql_log_callback_t   log_callback = 0) :
-        _io_service(io_service),
-        _strand(io_service),
-        _resolver(io_service),
-        _transport(transport),
-        _callback_storage(NUMBER_OF_STREAMS),
-        _number_of_free_stream_ids(NUMBER_OF_USER_STREAMS),
-        _connect_callback(0),
-        _connect_errback(0),
-        _log_callback(log_callback),
-        _events_registered(false),
-        _event_callback(0),
-        _defunct(false),
-        _ready(false),
-        _closing(false),
-        _reserved_stream(_callback_storage.acquire_stream()),
-        _uuid(cql_uuid_t::create()),
-        _is_disposed(new boolkeeper),
-        _stream_id_vs_query_string(NUMBER_OF_STREAMS, "")
-    {}
-
+        cql::cql_connection_t::cql_log_callback_t   log_callback = 0)
+    {
+        return boost::shared_ptr<cql_connection_impl_t>(
+            new cql_connection_impl_t(io_service, transport, log_callback));
+    }
+    
 	virtual ~cql_connection_impl_t()
 	{
 		boost::mutex::scoped_lock lock(_is_disposed->mutex);
 		// lets set the disposed flag (the shared counter will prevent it from being destroyed)
-		_is_disposed->value=true;
+		_is_disposed->value = true;
 	}
 
     boost::shared_future<cql::cql_future_connection_t>
@@ -228,8 +214,8 @@ public:
 
         connect(
             endpoint,
-            boost::bind(&cql_connection_impl_t::_connection_future_callback, this, promise, ::_1),
-            boost::bind(&cql_connection_impl_t::_connection_future_errback, this, promise, ::_1, ::_2));
+            boost::bind(&cql_connection_impl_t::_connection_future_callback, this->shared_from_this(), promise, ::_1),
+            boost::bind(&cql_connection_impl_t::_connection_future_errback, this->shared_from_this(), promise, ::_1, ::_2));
 
         return promise->shared_future();
     }
@@ -267,8 +253,10 @@ public:
             new cql_promise_t<cql_future_result_t>());
 
 		query(query_,
-              boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
-              boost::bind(&cql_connection_impl_t::_statement_future_errback_query, this, promise, query_, ::_1, ::_2, ::_3));
+              boost::bind(&cql_connection_impl_t::_statement_future_callback,
+                          this->shared_from_this(), promise, ::_1, ::_2, ::_3),
+              boost::bind(&cql_connection_impl_t::_statement_future_errback_query,
+                          this->shared_from_this(), promise, query_, ::_1, ::_2, ::_3));
 
         return promise;
     }
@@ -281,8 +269,10 @@ public:
             new cql_promise_t<cql_future_result_t>());
 
         prepare(query_,
-                boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
-                boost::bind(&cql_connection_impl_t::_statement_future_errback_prepare, this, promise, query_, ::_1, ::_2, ::_3));
+                boost::bind(&cql_connection_impl_t::_statement_future_callback,
+                            this->shared_from_this(), promise, ::_1, ::_2, ::_3),
+                boost::bind(&cql_connection_impl_t::_statement_future_errback_prepare,
+                            this->shared_from_this(), promise, query_, ::_1, ::_2, ::_3));
 
         return promise;
     }
@@ -295,8 +285,10 @@ public:
             new cql_promise_t<cql_future_result_t>());
 
         execute(message,
-                boost::bind(&cql_connection_impl_t::_statement_future_callback, this, promise, ::_1, ::_2, ::_3),
-                boost::bind(&cql_connection_impl_t::_statement_future_errback_execute, this, promise, message, ::_1, ::_2, ::_3));
+                boost::bind(&cql_connection_impl_t::_statement_future_callback,
+                            this->shared_from_this(), promise, ::_1, ::_2, ::_3),
+                boost::bind(&cql_connection_impl_t::_statement_future_errback_execute,
+                            this->shared_from_this(), promise, message, ::_1, ::_2, ::_3));
 
         return promise;
     }
@@ -322,7 +314,7 @@ public:
 		create_request(
             messageQuery,
 			boost::bind(&cql_connection_impl_t::write_handle,
-			this,
+			this->shared_from_this(),
 			boost::asio::placeholders::error,
 			boost::asio::placeholders::bytes_transferred),
 			stream);
@@ -352,7 +344,7 @@ public:
         create_request(
             messageQuery,
             boost::bind(&cql_connection_impl_t::write_handle,
-                        this,
+                        this->shared_from_this(),
                         boost::asio::placeholders::error,
                         boost::asio::placeholders::bytes_transferred),
             stream);
@@ -378,7 +370,7 @@ public:
         create_request(
             message->impl(),
             boost::bind(&cql_connection_impl_t::write_handle,
-                        this,
+                        this->shared_from_this(),
                         boost::asio::placeholders::error,
                         boost::asio::placeholders::bytes_transferred),
             stream);
@@ -468,7 +460,7 @@ public:
 
         create_request(messageRegister,
                        boost::bind(&cql_connection_impl_t::write_handle,
-                                   this,
+                                   this->shared_from_this(),
                                    boost::asio::placeholders::error,
                                    boost::asio::placeholders::bytes_transferred),
                        _reserved_stream);
@@ -555,6 +547,32 @@ public:
 #endif
 
 private:
+    
+    // Private ctor - to comply with boost::enable_shared_from_this
+    cql_connection_impl_t(
+        boost::asio::io_service&                    io_service,
+        TSocket*                                    transport,
+        cql::cql_connection_t::cql_log_callback_t   log_callback = 0) :
+        _io_service(io_service),
+        _strand(io_service),
+        _resolver(io_service),
+        _transport(transport),
+        _callback_storage(NUMBER_OF_STREAMS),
+        _number_of_free_stream_ids(NUMBER_OF_USER_STREAMS),
+        _connect_callback(0),
+        _connect_errback(0),
+        _log_callback(log_callback),
+        _events_registered(false),
+        _event_callback(0),
+        _defunct(false),
+        _ready(false),
+        _closing(false),
+        _reserved_stream(_callback_storage.acquire_stream()),
+        _uuid(cql_uuid_t::create()),
+        _is_disposed(new boolkeeper),
+        _stream_id_vs_query_string(NUMBER_OF_STREAMS, "")
+    {}
+
     inline cql::cql_error_t
     create_stream_id_error()
     {
@@ -795,7 +813,7 @@ private:
         _resolver.async_resolve(
             _endpoint.resolver_query(),
             boost::bind(&cql_connection_impl_t::resolve_handle,
-                        this,
+                        this->shared_from_this(),
                         boost::asio::placeholders::error,
                         boost::asio::placeholders::iterator));
         
@@ -819,13 +837,13 @@ private:
                 _transport->lowest_layer(),
                 endpoint_iterator,
                 boost::bind(&cql_connection_impl_t::connect_handle,
-                            this,
+                            this->shared_from_this(),
                             boost::asio::placeholders::error));
 #else
             _transport->lowest_layer().async_connect(
                 *endpoint_iterator,
                 boost::bind(&cql_connection_impl_t::connect_handle,
-                            this,
+                            this->shared_from_this(),
                             boost::asio::placeholders::error));
 #endif
         }
@@ -844,7 +862,7 @@ private:
             if (_transport->requires_handshake()) {
                 _transport->async_handshake(
                     boost::bind(&cql_connection_impl_t::handshake_handle,
-                                this,
+                                this->shared_from_this(),
                                 boost::asio::placeholders::error));
             }
             else {
@@ -962,7 +980,9 @@ private:
 #else
                                 boost::asio::transfer_all(),
 #endif
-                                _strand.wrap(boost::bind(&cql_connection_impl_t<TSocket>::header_read_handle, this, _is_disposed, boost::asio::placeholders::error)));
+                                _strand.wrap(boost::bind(&cql_connection_impl_t<TSocket>::header_read_handle,
+                                                         this->shared_from_this(), _is_disposed,
+                                                         boost::asio::placeholders::error)));
     }
 
     void
@@ -1042,7 +1062,9 @@ private:
 #else
                                 boost::asio::transfer_all(),
 #endif
-                                _strand.wrap(boost::bind(&cql_connection_impl_t<TSocket>::body_read_handle, this, header,_is_disposed, boost::asio::placeholders::error)));
+                                _strand.wrap(boost::bind(&cql_connection_impl_t<TSocket>::body_read_handle,
+                                                         this->shared_from_this(), header,_is_disposed,
+                                                         boost::asio::placeholders::error)));
     }
     
     
@@ -1220,7 +1242,7 @@ private:
             messageOption,
             (boost::function<void (const boost::system::error_code &, std::size_t)>)boost::bind(
                 &cql_connection_impl_t::write_handle,
-                this,
+                this->shared_from_this(),
                 boost::asio::placeholders::error,
                 boost::asio::placeholders::bytes_transferred),
             _reserved_stream);
@@ -1239,7 +1261,7 @@ private:
         create_request(
             m,
             boost::bind(&cql_connection_impl_t::write_handle,
-                        this,
+                        this->shared_from_this(),
                         boost::asio::placeholders::error,
                         boost::asio::placeholders::bytes_transferred),
             _reserved_stream);
@@ -1255,7 +1277,7 @@ private:
         create_request(
             m,
             boost::bind(&cql_connection_impl_t::write_handle,
-                        this,
+                        this->shared_from_this(),
                         boost::asio::placeholders::error,
                         boost::asio::placeholders::bytes_transferred),
             _reserved_stream);
