@@ -144,7 +144,7 @@ public:
         boost::shared_ptr<cql_configuration_t>  configuration);
     
     void
-    init(boost::asio::io_service& io_service);
+    init(boost::shared_ptr<boost::asio::io_service> io_service);
 
     boost::shared_ptr<cql_connection_t>
 	connect(

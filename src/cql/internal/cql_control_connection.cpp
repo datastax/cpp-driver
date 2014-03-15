@@ -63,12 +63,12 @@ cql_control_connection_t::cql_control_connection_t(
 
     if (ssl_context != 0) {
         client_factory = client_ssl_functor_t(
-            *_io_service,
+            _io_service,
             const_cast<boost::asio::ssl::context&>(*ssl_context),
             _log_callback);
     }
     else {
-        client_factory = client_functor_t(*_io_service, _log_callback);
+        client_factory = client_functor_t(_io_service, _log_callback);
     }
 
     session_callbacks.set_client_callback(client_factory);
@@ -90,7 +90,7 @@ void
 cql_control_connection_t::init()
 {
     if (!_is_open) {
-        _session->init(*_io_service);
+        _session->init(_io_service);
         setup_control_connection();
     }
 }

@@ -24,32 +24,32 @@ typedef cql::cql_connection_impl_t<cql::cql_socket_t>       connection_t;
 typedef cql::cql_connection_impl_t<cql::cql_socket_ssl_t>   ssl_connection_t;
 
 boost::shared_ptr<cql::cql_connection_t>
-cql::cql_connection_factory_t::create_connection(boost::asio::io_service& io_service) 
+cql::cql_connection_factory_t::create_connection(boost::shared_ptr<boost::asio::io_service> io_service)
 {
     return connection_t::make_instance(io_service, new cql::cql_socket_t(io_service));
 }
 
 boost::shared_ptr<cql::cql_connection_t>
 cql::cql_connection_factory_t::create_connection(
-        boost::asio::io_service& io_service,
-        boost::asio::ssl::context& context) 
+        boost::shared_ptr<boost::asio::io_service> io_service,
+        boost::asio::ssl::context&                 context)
 {
     return ssl_connection_t::make_instance(io_service, new cql::cql_socket_ssl_t(io_service, context));
 }
 
 boost::shared_ptr<cql::cql_connection_t>
 cql::cql_connection_factory_t::create_connection(
-        boost::asio::io_service& io_service,
-        cql::cql_connection_t::cql_log_callback_t log_callback) 
+        boost::shared_ptr<boost::asio::io_service> io_service,
+        cql::cql_connection_t::cql_log_callback_t  log_callback)
 {
     return connection_t::make_instance(io_service, new cql::cql_socket_t(io_service), log_callback);
 }
 
 boost::shared_ptr<cql::cql_connection_t>
 cql::cql_connection_factory_t::create_connection(
-        boost::asio::io_service& io_service,
-        boost::asio::ssl::context& context,
-        cql::cql_connection_t::cql_log_callback_t log_callback) 
+        boost::shared_ptr<boost::asio::io_service> io_service,
+        boost::asio::ssl::context&                 context,
+        cql::cql_connection_t::cql_log_callback_t  log_callback)
 {
     return ssl_connection_t::make_instance(
                 io_service,

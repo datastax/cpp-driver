@@ -191,7 +191,7 @@ public:
 
     static boost::shared_ptr<cql_connection_impl_t>
     make_instance(
-        boost::asio::io_service&                    io_service,
+        boost::shared_ptr<boost::asio::io_service>  io_service,
         TSocket*                                    transport,
         cql::cql_connection_t::cql_log_callback_t   log_callback = 0)
     {
@@ -550,12 +550,12 @@ private:
     
     // Private ctor - to comply with boost::enable_shared_from_this
     cql_connection_impl_t(
-        boost::asio::io_service&                    io_service,
+        boost::shared_ptr<boost::asio::io_service>  io_service,
         TSocket*                                    transport,
         cql::cql_connection_t::cql_log_callback_t   log_callback = 0) :
         _io_service(io_service),
-        _strand(io_service),
-        _resolver(io_service),
+        _strand(*io_service),
+        _resolver(*io_service),
         _transport(transport),
         _callback_storage(NUMBER_OF_STREAMS),
         _number_of_free_stream_ids(NUMBER_OF_USER_STREAMS),
@@ -726,8 +726,8 @@ private:
     {
         if (!error.cassandra) {
             if (error.transport && error.code != boost::system::errc::connection_aborted) {
-                _io_service.post(boost::bind(retry_callback, _session_ptr, query,
-                                             promise, this->shared_from_this(), true));
+                _io_service->post(boost::bind(retry_callback, _session_ptr, query,
+                                              promise, this->shared_from_this(), true));
             }
             promise->set_value(cql::cql_future_result_t(this->shared_from_this(), stream, error));
         }
@@ -735,8 +735,8 @@ private:
             cql_retry_decision_t decision = _get_retry_decision(query, error, err_message);
             if (decision.retry_decision() == CQL_RETRY_DECISION_RETRY) {
                 query->increment_retry_counter();
-                _io_service.post(boost::bind(retry_callback, _session_ptr, query,
-                                             promise, this->shared_from_this(), false));
+                _io_service->post(boost::bind(retry_callback, _session_ptr, query,
+                                              promise, this->shared_from_this(), false));
             }
             else if (decision.retry_decision() == CQL_RETRY_DECISION_RETHROW) {
                 _handle_rethrow(promise, error, err_message);
@@ -1180,9 +1180,9 @@ private:
                     //close();
                 }
                 
-                _io_service.post(boost::bind(_event_callback,
-                                             this->shared_from_this(),
-                                             event));
+                _io_service->post(boost::bind(_event_callback,
+                                              this->shared_from_this(),
+                                              event));
             }
             break;
 
@@ -1302,8 +1302,8 @@ private:
 	
 	boost::mutex                             _mutex;
     
-    boost::asio::io_service&                 _io_service;
-    boost::asio::strand                      _strand;
+    boost::shared_ptr<boost::asio::io_service> _io_service;
+    boost::asio::strand                        _strand;
     
     cql_endpoint_t                           _endpoint;
     boost::asio::ip::tcp::resolver           _resolver;

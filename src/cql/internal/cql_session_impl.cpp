@@ -61,10 +61,10 @@ cql::cql_session_impl_t::~cql_session_impl_t()
 
 void
 cql::cql_session_impl_t::init(
-    boost::asio::io_service& io_service)
+    boost::shared_ptr<boost::asio::io_service> io_service)
 {
     _trashcan = boost::shared_ptr<cql_trashcan_t>(
-        new cql_trashcan_t(io_service, *this));
+        new cql_trashcan_t(io_service, this->shared_from_this()));
 
     boost::shared_ptr<cql_query_plan_t> query_plan = _configuration->policies()
         .load_balancing_policy()
@@ -716,7 +716,7 @@ cql::cql_session_impl_t::connect_callback(
 {
     promise->set_value(cql_future_connection_t(client));
     if (_ready_callback) {
-        _ready_callback(this);
+        _ready_callback(this->shared_from_this());
     }
 }
 
@@ -732,7 +732,7 @@ cql::cql_session_impl_t::connect_errback(
 	promise->set_value(cql_future_connection_t(connection, error));
 
     if (_connect_errback) {
-        _connect_errback(this, connection, error);
+        _connect_errback(this->shared_from_this(), connection, error);
     }
 }
 
