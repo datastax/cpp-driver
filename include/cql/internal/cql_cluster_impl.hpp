@@ -164,8 +164,8 @@ public:
         session_callbacks.set_client_callback(client_factory);
         session_callbacks.set_log_callback(log_callback);
 
-        boost::shared_ptr<cql_session_impl_t> session(
-            new cql_session_impl_t(session_callbacks, _configuration));
+        boost::shared_ptr<cql_session_impl_t> session =
+            cql_session_impl_t::make_instance(session_callbacks, _configuration);
 
         session->init(*_io_service);
         session->set_keyspace(keyspace);

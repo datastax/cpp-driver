@@ -44,6 +44,16 @@ cql::cql_session_impl_t::cql_session_impl_t(
     _Iam_closed(false)
 {}
 
+boost::shared_ptr<cql::cql_session_impl_t>
+cql::cql_session_impl_t::make_instance(
+    const cql_session_callback_info_t&      callbacks,
+    boost::shared_ptr<cql_configuration_t>  configuration)
+{
+    return boost::shared_ptr<cql_session_impl_t>(
+                new cql_session_impl_t(callbacks, configuration));
+}
+
+
 cql::cql_session_impl_t::~cql_session_impl_t()
 {
 	close();
@@ -412,7 +422,7 @@ cql::cql_session_impl_t::connect(
             // Connection must know the pointer to the containing session.
             // Otherwise it would be unable to propagate the result if
             // employed for, e.g. USE query.
-            conn->set_session_ptr(this);
+            conn->set_session_ptr(this->shared_from_this());
             return conn;
         }
 
@@ -443,7 +453,7 @@ cql::cql_session_impl_t::connect(
         if (conn) {
             *stream = conn->acquire_stream();
             (*connections)[conn->id()] = conn;
-            conn->set_session_ptr(this);
+            conn->set_session_ptr(this->shared_from_this());
         }
         return conn;
     }

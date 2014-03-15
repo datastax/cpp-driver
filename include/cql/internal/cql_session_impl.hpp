@@ -30,6 +30,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/ptr_container/ptr_deque.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <boost/thread/mutex.hpp>
 
 #include "cql/common_type_definitions.hpp"
@@ -131,14 +132,17 @@ private:
 
 class cql_session_impl_t :
     public cql_session_t,
+    public boost::enable_shared_from_this<cql_session_impl_t>,
     boost::noncopyable
 {
 
 public:
-    cql_session_impl_t(
+    
+    static boost::shared_ptr<cql_session_impl_t>
+    make_instance(
         const cql_session_callback_info_t&      callbacks,
         boost::shared_ptr<cql_configuration_t>  configuration);
-
+    
     void
     init(boost::asio::io_service& io_service);
 
@@ -191,6 +195,12 @@ public:
 
 private:
     
+    /** Private ctor. Use factory method instead.
+        Purpose: to prevent wild stack allocations of instances of cql_session_impl_t-s. */
+    cql_session_impl_t(
+        const cql_session_callback_info_t&      callbacks,
+        boost::shared_ptr<cql_configuration_t>  configuration);
+
     typedef std::map<cql_uuid_t, boost::shared_ptr<cql_connection_t> > cql_connections_collection_t;
     typedef
         std::map<std::vector<cql_byte_t>, std::string>
@@ -355,6 +365,7 @@ private:
         const boost::shared_ptr<cql_host_t>& host);
 
     friend class cql_trashcan_t;
+    
     typedef boost::ptr_map<cql_endpoint_t, cql_connections_collection_t> connection_pool_t;
 
     boost::recursive_mutex                  _mutex;

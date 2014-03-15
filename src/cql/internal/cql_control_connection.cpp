@@ -73,8 +73,7 @@ cql_control_connection_t::cql_control_connection_t(
 
     _reconnection_schedule = _reconnection_policy_tmp->new_schedule();
 
-    _session = boost::shared_ptr<cql_session_impl_t>(
-                    new cql_session_impl_t(session_callbacks, configuration));
+    _session = cql_session_impl_t::make_instance(session_callbacks, configuration);
 }
 
 void

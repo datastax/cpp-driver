@@ -106,7 +106,7 @@ public:
     id() const = 0;
 
     virtual void
-    set_session_ptr(cql_session_t* session_ptr) = 0;
+    set_session_ptr(boost::shared_ptr<cql_session_t> session_ptr) = 0;
             
     /**
        Connect to the server at the specified address and port.

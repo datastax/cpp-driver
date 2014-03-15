@@ -210,8 +210,7 @@ public:
         _reserved_stream(_callback_storage.acquire_stream()),
         _uuid(cql_uuid_t::create()),
         _is_disposed(new boolkeeper),
-        _stream_id_vs_query_string(NUMBER_OF_STREAMS, ""),
-        _session_ptr(NULL)
+        _stream_id_vs_query_string(NUMBER_OF_STREAMS, "")
     {}
 
 	virtual ~cql_connection_impl_t()
@@ -255,9 +254,9 @@ public:
     }
 
     void
-    set_session_ptr(cql_session_t* session_ptr)
+    set_session_ptr(boost::shared_ptr<cql_session_t> session_ptr)
     {
-        _session_ptr = static_cast<cql_session_impl_t*>(session_ptr);
+        _session_ptr = boost::static_pointer_cast<cql_session_impl_t>(session_ptr);
     }
     
     boost::shared_ptr<cql_promise_t<cql_future_result_t> >
@@ -1313,7 +1312,7 @@ private:
 
     cql_prepare_statements_t                 _prepare_statements;
     
-    cql_session_impl_t*                      _session_ptr;
+    boost::shared_ptr<cql_session_impl_t>    _session_ptr;
 };
 
 } // namespace cql
