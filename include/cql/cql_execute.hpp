@@ -87,7 +87,7 @@ public:
     void
     pop_back();
 
-    cql_message_execute_impl_t*
+    boost::shared_ptr<cql_message_execute_impl_t>
     impl() const;
             
     boost::shared_ptr<cql_retry_policy_t>
@@ -113,7 +113,7 @@ public:
     set_stream(const cql_stream_t& stream);
 
 private:
-    cql_message_execute_impl_t* _impl;
+    boost::shared_ptr<cql_message_execute_impl_t> _impl;
 };
 
 } // namespace cql

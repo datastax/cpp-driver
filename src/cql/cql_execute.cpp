@@ -29,7 +29,6 @@ cql::cql_execute_t::cql_execute_t(const std::vector<cql::cql_byte_t>& id,
 {}
 
 cql::cql_execute_t::~cql_execute_t() {
-    delete _impl;
 }
 
 const std::vector<cql::cql_byte_t>&
@@ -102,7 +101,7 @@ cql::cql_execute_t::pop_back() {
     _impl->pop_back();
 }
 
-cql::cql_message_execute_impl_t*
+boost::shared_ptr<cql::cql_message_execute_impl_t>
 cql::cql_execute_t::impl() const {
     return _impl;
 }

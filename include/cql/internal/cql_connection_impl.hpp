@@ -317,10 +317,11 @@ public:
 
 		_callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
 
-        cql::cql_message_query_impl_t messageQuery(query);
+        boost::shared_ptr<cql_message_query_impl_t> messageQuery =
+            boost::make_shared<cql_message_query_impl_t>(query);
 
 		create_request(
-            &messageQuery,
+            messageQuery,
 			boost::bind(&cql_connection_impl_t::write_handle,
 			this,
 			boost::asio::placeholders::error,
@@ -346,10 +347,11 @@ public:
 
         _callback_storage.set_callbacks(stream, callback_pair_t(callback, errback));
 
-        cql::cql_message_prepare_impl_t messageQuery(query);
+        boost::shared_ptr<cql_message_prepare_impl_t> messageQuery
+            = boost::make_shared<cql_message_prepare_impl_t>(query);
 
         create_request(
-            &messageQuery,
+            messageQuery,
             boost::bind(&cql_connection_impl_t::write_handle,
                         this,
                         boost::asio::placeholders::error,
@@ -455,8 +457,9 @@ public:
     events_register()
     {
 
-        cql::cql_message_register_impl_t messageRegister;
-        messageRegister.events(_events);
+        boost::shared_ptr<cql_message_register_impl_t> messageRegister =
+            boost::make_shared<cql_message_register_impl_t>();
+        messageRegister->events(_events);
         
         // We need to reset _connect_callback here. Otherwise, registering an event
         // may fire cql_session_impl_t::connect_callback(...) which is the default
@@ -464,7 +467,7 @@ public:
         // `promise' may no longer exist. Anyway, this callback was not that crucial.
         _connect_callback = 0;
 
-        create_request(&messageRegister,
+        create_request(messageRegister,
                        boost::bind(&cql_connection_impl_t::write_handle,
                                    this,
                                    boost::asio::placeholders::error,
@@ -909,7 +912,7 @@ private:
 
     void
     create_request(
-        cql::cql_message_t* message,
+        boost::shared_ptr<cql::cql_message_t> message,
         write_callback_t    callback,
         cql_stream_t&       stream)
     {
@@ -1212,9 +1215,10 @@ private:
     void
     options_write()
     {
-        cql::cql_message_options_impl_t messageOption;
+        boost::shared_ptr<cql_message_options_impl_t> messageOption =
+            boost::make_shared<cql_message_options_impl_t>();
 		create_request(
-            &messageOption,
+            messageOption,
             (boost::function<void (const boost::system::error_code &, std::size_t)>)boost::bind(
                 &cql_connection_impl_t::write_handle,
                 this,
@@ -1229,10 +1233,12 @@ private:
     void
     startup_write()
     {
-        cql::cql_message_startup_impl_t m;
-        m.version(CQL_VERSION_IMPL);
+        boost::shared_ptr<cql_message_startup_impl_t> m =
+            boost::make_shared<cql_message_startup_impl_t>();
+        
+        m->version(CQL_VERSION_IMPL);
         create_request(
-            &m,
+            m,
             boost::bind(&cql_connection_impl_t::write_handle,
                         this,
                         boost::asio::placeholders::error,
@@ -1243,10 +1249,12 @@ private:
     void
     credentials_write()
     {
-        cql::cql_message_credentials_impl_t m;
-        m.credentials(_credentials);
+        boost::shared_ptr<cql_message_credentials_impl_t> m =
+            boost::make_shared<cql_message_credentials_impl_t>();
+        
+        m->credentials(_credentials);
         create_request(
-            &m,
+            m,
             boost::bind(&cql_connection_impl_t::write_handle,
                         this,
                         boost::asio::placeholders::error,
