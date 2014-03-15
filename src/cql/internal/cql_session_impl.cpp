@@ -177,7 +177,7 @@ void
 cql::cql_session_impl_t::retry_callback_query(
     const boost::shared_ptr<cql_query_t>&                  query,
     boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
-    cql_connection_t&                                      conn,
+    boost::shared_ptr<cql_connection_t>                    conn,
     bool                                                   is_transport_error)
 {
     if (is_transport_error) {
@@ -193,9 +193,9 @@ cql::cql_session_impl_t::retry_callback_query(
     }
     else {
     // Use the same host
-        cql_stream_t stream = conn.acquire_stream();
+        cql_stream_t stream = conn->acquire_stream();
         if (!stream.is_invalid()) {
-            conn.query(query)->swap(promise);
+            conn->query(query)->swap(promise);
         }
     }
 }
@@ -204,7 +204,7 @@ void
 cql::cql_session_impl_t::retry_callback_prepare(
     const boost::shared_ptr<cql_query_t>&                  query,
     boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
-    cql_connection_t&                                      conn,
+    boost::shared_ptr<cql_connection_t>                    conn,
     bool                                                   is_transport_error)
 {
     if (is_transport_error) {
@@ -220,9 +220,9 @@ cql::cql_session_impl_t::retry_callback_prepare(
     }
     else {
         // Use the same host
-        cql_stream_t stream = conn.acquire_stream();
+        cql_stream_t stream = conn->acquire_stream();
         if (!stream.is_invalid()) {
-            conn.prepare(query)->swap(promise);
+            conn->prepare(query)->swap(promise);
         }
     }
 }
@@ -231,7 +231,7 @@ void
 cql::cql_session_impl_t::retry_callback_execute(
     const boost::shared_ptr<cql_execute_t>&                message,
     boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
-    cql_connection_t&                                      conn,
+    boost::shared_ptr<cql_connection_t>                    conn,
     bool                                                   is_transport_error)
 {
     if (is_transport_error) {
@@ -247,9 +247,9 @@ cql::cql_session_impl_t::retry_callback_execute(
     }
     else {
         // Use the same host
-        cql_stream_t stream = conn.acquire_stream();
+        cql_stream_t stream = conn->acquire_stream();
         if (!stream.is_invalid()) {
-            conn.execute(message)->swap(promise);
+            conn->execute(message)->swap(promise);
         }
     }
 }
@@ -308,8 +308,8 @@ cql::cql_session_impl_t::allocate_connection(
 
     connection->set_credentials(_configuration->credentials());
     connection->connect(host->endpoint(),
-                        boost::bind(&cql_session_impl_t::connect_callback, this, promise, ::_1),
-                        boost::bind(&cql_session_impl_t::connect_errback, this, promise, ::_1, ::_2));
+                        boost::bind(&cql_session_impl_t::connect_callback, this->shared_from_this(), promise, ::_1),
+                        boost::bind(&cql_session_impl_t::connect_errback,  this->shared_from_this(), promise, ::_1, ::_2));
     connection->set_keyspace(_keyspace_name);
 
     boost::shared_future<cql_future_connection_t> shared_future = promise->shared_future();
@@ -712,9 +712,9 @@ cql::cql_session_impl_t::log(
 void
 cql::cql_session_impl_t::connect_callback(
     boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
-    cql_connection_t&                                          client)
+    boost::shared_ptr<cql_connection_t>                        client)
 {
-    promise->set_value(cql_future_connection_t(&client));
+    promise->set_value(cql_future_connection_t(client));
     if (_ready_callback) {
         _ready_callback(this);
     }
@@ -723,13 +723,13 @@ cql::cql_session_impl_t::connect_callback(
 void
 cql::cql_session_impl_t::connect_errback(
     boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
-    cql_connection_t&                                          connection,
+    boost::shared_ptr<cql_connection_t>                        connection,
     const cql_error_t&                                         error)
 {
     // when connection breaks this will be called two times
     // one for async read, and one for asyn write requests
 
-	promise->set_value(cql_future_connection_t(&connection, error));
+	promise->set_value(cql_future_connection_t(connection, error));
 
     if (_connect_errback) {
         _connect_errback(this, connection, error);

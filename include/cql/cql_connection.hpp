@@ -58,19 +58,19 @@ public:
         cql_log_callback_t;
 
     typedef
-        boost::function<void(cql_connection_t&)>
+        boost::function<void(boost::shared_ptr<cql_connection_t>)>
         cql_connection_callback_t;
 
     typedef
-        boost::function<void(cql_connection_t&, const cql_error_t&)>
+        boost::function<void(boost::shared_ptr<cql_connection_t>, const cql_error_t&)>
         cql_connection_errback_t;
 
     typedef
-        boost::function<void(cql_connection_t&, cql_event_t*)>
+        boost::function<void(boost::shared_ptr<cql_connection_t>, cql_event_t*)>
         cql_event_callback_t;
 
     typedef
-        boost::function<void(cql_connection_t&, const cql::cql_stream_t&, cql::cql_result_t*)>
+        boost::function<void(boost::shared_ptr<cql_connection_t>, const cql::cql_stream_t&, cql::cql_result_t*)>
         cql_message_callback_t;
 
     typedef

@@ -33,15 +33,25 @@
 
 namespace cql {
 
+boost::shared_ptr<cql_control_connection_t>
+cql_control_connection_t::make_instance(
+    cql_cluster_t&                             cluster,
+    boost::shared_ptr<boost::asio::io_service> io_service,
+    boost::shared_ptr<cql_configuration_t>     configuration)
+{
+    return boost::shared_ptr<cql_control_connection_t>(
+        new cql_control_connection_t(cluster, io_service, configuration));
+}
+    
 cql_control_connection_t::cql_control_connection_t(
-    cql_cluster_t&                         cluster,
-    boost::asio::io_service&               io_service,
-    boost::shared_ptr<cql_configuration_t> configuration) :
+    cql_cluster_t&                             cluster,
+    boost::shared_ptr<boost::asio::io_service> io_service,
+    boost::shared_ptr<cql_configuration_t>     configuration) :
     _is_open(false),
     _cluster(cluster),
     _io_service(io_service),
     _configuration(configuration),
-    _timer(io_service),
+    _timer(*io_service),
     _log_callback(_configuration->client_options().log_callback())
 {
     cql_session_callback_info_t session_callbacks;
@@ -53,12 +63,12 @@ cql_control_connection_t::cql_control_connection_t(
 
     if (ssl_context != 0) {
         client_factory = client_ssl_functor_t(
-            _io_service,
+            *_io_service,
             const_cast<boost::asio::ssl::context&>(*ssl_context),
             _log_callback);
     }
     else {
-        client_factory = client_functor_t(_io_service, _log_callback);
+        client_factory = client_functor_t(*_io_service, _log_callback);
     }
 
     session_callbacks.set_client_callback(client_factory);
@@ -80,7 +90,7 @@ void
 cql_control_connection_t::init()
 {
     if (!_is_open) {
-        _session->init(_io_service);
+        _session->init(*_io_service);
         setup_control_connection();
     }
 }
@@ -135,7 +145,7 @@ cql_control_connection_t::setup_event_listener()
     events.push_back(CQL_EVENT_SCHEMA_CHANGE);
 
     _active_connection->set_events(
-        boost::bind(&cql_control_connection_t::conn_cassandra_event, this, _1, _2),
+        boost::bind(&cql_control_connection_t::conn_cassandra_event, this->shared_from_this(), _1, _2),
         events);
     
     boost::shared_ptr<cql_connection_impl_t<cql_socket_t> > active_connection_impl
@@ -378,7 +388,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
 
 void
 cql_control_connection_t::conn_cassandra_event(
-    cql_connection_t& connection,
+    boost::shared_ptr<cql_connection_t> connection,
     cql_event_t* event)
 {
     switch(event->event_type())
@@ -498,7 +508,7 @@ cql_control_connection_t::setup_control_connection(
         _timer.expires_from_now(_reconnection_schedule->get_delay());
         _timer.async_wait(boost::bind(
             &cql_control_connection_t::reconnection_callback,
-            this,
+            this->shared_from_this(),
             boost::asio::placeholders::error));
 
         if (_log_callback) {

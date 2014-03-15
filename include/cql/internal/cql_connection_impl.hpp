@@ -215,7 +215,7 @@ public:
         connect(
             endpoint,
             boost::bind(&cql_connection_impl_t::_connection_future_callback, this->shared_from_this(), promise, ::_1),
-            boost::bind(&cql_connection_impl_t::_connection_future_errback, this->shared_from_this(), promise, ::_1, ::_2));
+            boost::bind(&cql_connection_impl_t::_connection_future_errback,  this->shared_from_this(), promise, ::_1, ::_2));
 
         return promise->shared_future();
     }
@@ -595,29 +595,29 @@ private:
     void
     _connection_future_callback(
         boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
-        cql_connection_t&)
+        boost::shared_ptr<cql_connection_t>)
     {
-        promise->set_value(cql::cql_future_connection_t(this));
+        promise->set_value(cql::cql_future_connection_t(this->shared_from_this()));
     }
 
     void
     _connection_future_errback(
         boost::shared_ptr<cql_promise_t<cql_future_connection_t> >       promise,
-        cql_connection_t&,
+        boost::shared_ptr<cql_connection_t>,
         const cql_error_t&                                               error)
     {
         
-        promise->set_value(cql::cql_future_connection_t(this, error));
+        promise->set_value(cql::cql_future_connection_t(this->shared_from_this(), error));
     }
 
     void
     _statement_future_callback(
         boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
-        cql_connection_t&,
+        boost::shared_ptr<cql_connection_t>,
         const cql::cql_stream_t&                                     stream,
         cql::cql_result_t*                                           result_ptr)
     {
-        promise->set_value(cql::cql_future_result_t(this, stream, result_ptr));
+        promise->set_value(cql::cql_future_result_t(this->shared_from_this(), stream, result_ptr));
     }
 
     template <typename TQueryType>
@@ -727,16 +727,16 @@ private:
         if (!error.cassandra) {
             if (error.transport && error.code != boost::system::errc::connection_aborted) {
                 _io_service.post(boost::bind(retry_callback, _session_ptr, query,
-                                             promise, boost::ref(*this), true));
+                                             promise, this->shared_from_this(), true));
             }
-            promise->set_value(cql::cql_future_result_t(this, stream, error));
+            promise->set_value(cql::cql_future_result_t(this->shared_from_this(), stream, error));
         }
         else {
             cql_retry_decision_t decision = _get_retry_decision(query, error, err_message);
             if (decision.retry_decision() == CQL_RETRY_DECISION_RETRY) {
                 query->increment_retry_counter();
                 _io_service.post(boost::bind(retry_callback, _session_ptr, query,
-                                             promise, boost::ref(*this), false));
+                                             promise, this->shared_from_this(), false));
             }
             else if (decision.retry_decision() == CQL_RETRY_DECISION_RETHROW) {
                 _handle_rethrow(promise, error, err_message);
@@ -1063,7 +1063,7 @@ private:
                                 boost::asio::transfer_all(),
 #endif
                                 _strand.wrap(boost::bind(&cql_connection_impl_t<TSocket>::body_read_handle,
-                                                         this->shared_from_this(), header,_is_disposed,
+                                                         this->shared_from_this(), header, _is_disposed,
                                                          boost::asio::placeholders::error)));
     }
     
@@ -1161,7 +1161,7 @@ private:
 
                 preprocess_result_message(response_message);
                 release_stream(stream);
-                callback_pair.first(*this, header.stream(), response_message);
+                callback_pair.first(this->shared_from_this(), header.stream(), response_message);
             }
             break;
         }
@@ -1181,7 +1181,7 @@ private:
                 }
                 
                 _io_service.post(boost::bind(_event_callback,
-                                             boost::ref(*this),
+                                             this->shared_from_this(),
                                              event));
             }
             break;
@@ -1212,7 +1212,7 @@ private:
             _ready = true;
             if (_connect_callback) {
                 // let the caller know that the connection is ready
-                _connect_callback(*this);
+                _connect_callback(this->shared_from_this());
             }
             break;
 
@@ -1296,7 +1296,7 @@ private:
             e.transport = true;
             e.code = err.value();
             e.message = err.message();
-            _connect_errback(*this, e);
+            _connect_errback(this->shared_from_this(), e);
         }
     }
 	

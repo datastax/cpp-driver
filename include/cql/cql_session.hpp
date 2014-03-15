@@ -61,7 +61,7 @@ public:
     
     typedef 
         boost::function<void(cql_session_t *, 
-                             cql_connection_t&, 
+                             boost::shared_ptr<cql_connection_t>, 
                              const cql_error_t&)>                      
         cql_connection_errback_t;
     

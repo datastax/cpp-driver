@@ -111,12 +111,8 @@ public:
 
         _metadata->add_hosts(endpoints);
 
-        _control_connection = boost::shared_ptr<cql_control_connection_t>(
-            new cql_control_connection_t(
-                *this,
-                *_io_service,
-                configuration
-                ));
+        _control_connection =
+            cql_control_connection_t::make_instance(*this, _io_service, configuration);
         _control_connection->init();
     }
 

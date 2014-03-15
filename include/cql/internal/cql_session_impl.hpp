@@ -171,21 +171,21 @@ public:
     retry_callback_query(
         const boost::shared_ptr<cql_query_t>& query,
         boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
-        cql_connection_t& conn,
+        boost::shared_ptr<cql_connection_t> conn,
         bool is_transport_error);
 
     void
     retry_callback_prepare(
         const boost::shared_ptr<cql_query_t>& query,
         boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
-        cql_connection_t& conn,
+        boost::shared_ptr<cql_connection_t> conn,
         bool is_transport_error);
 
     void
     retry_callback_execute(
         const boost::shared_ptr<cql_execute_t>& message,
         boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
-        cql_connection_t& conn,
+        boost::shared_ptr<cql_connection_t> conn,
         bool is_transport_error);
 
 #ifdef _DEBUG
@@ -302,23 +302,23 @@ private:
     void
     connect_callback(
         boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
-        cql_connection_t& client);
+        boost::shared_ptr<cql_connection_t>                        client);
 
     void
     connect_errback(
         boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
-        cql_connection_t&                                          client,
+        boost::shared_ptr<cql_connection_t>                        client,
         const cql_error_t&                                         error);
 
     void
     connect_future_callback(
         boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
-        cql_connection_t&                                          client);
+        boost::shared_ptr<cql_connection_t>                        client);
 
     void
     connect_future_errback(
         boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
-        cql_connection_t&                                          client,
+        boost::shared_ptr<cql_connection_t>                        client,
         const cql_error_t&                                         error);
 
     boost::shared_ptr<cql_connection_t>
