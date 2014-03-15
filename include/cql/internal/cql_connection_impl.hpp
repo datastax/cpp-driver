@@ -302,7 +302,7 @@ public:
 		cql_stream_t stream = query->stream();
 
         if (stream.is_invalid()) {
-            errback(stream, create_stream_id_error(), NULL);
+            errback(stream, create_stream_id_error(), boost::shared_ptr<cql_message_t>());
             return stream;
 		}
 
@@ -331,7 +331,7 @@ public:
 		cql_stream_t stream = query->stream();
 
         if (stream.is_invalid()) {
-            errback(stream, create_stream_id_error(), NULL);
+            errback(stream, create_stream_id_error(), boost::shared_ptr<cql_message_t>());
             return stream;
         }
         _stream_id_vs_query_string[stream.stream_id()] = query->query();
@@ -362,7 +362,7 @@ public:
         cql_stream_t stream = message->stream();
 
         if (stream.is_invalid()) {
-            errback(stream, create_stream_id_error(), NULL);
+            errback(stream, create_stream_id_error(), boost::shared_ptr<cql_message_t>());
             return stream;
         }
 
@@ -419,7 +419,7 @@ public:
                     = callback_and_errback.second;
                 
                 if (errback) {
-                    errback(consecutive_stream, error, NULL);
+                    errback(consecutive_stream, error, boost::shared_ptr<cql_message_t>());
                 }
             }
         }
@@ -614,8 +614,8 @@ private:
     _statement_future_callback(
         boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
         boost::shared_ptr<cql_connection_t>,
-        const cql::cql_stream_t&                                     stream,
-        cql::cql_result_t*                                           result_ptr)
+        const cql::cql_stream_t&                               stream,
+        boost::shared_ptr<cql_result_t>                        result_ptr)
     {
         promise->set_value(cql::cql_future_result_t(this->shared_from_this(), stream, result_ptr));
     }
@@ -625,7 +625,7 @@ private:
     _get_retry_decision(
         const boost::shared_ptr<TQueryType>&                     query,
         const cql_error_t&                                       error,
-        cql::cql_message_error_impl_t*                           err_message)
+        boost::shared_ptr<cql_message_error_impl_t>              err_message)
     {
         cql_retry_decision_t decision = cql_retry_decision_t::rethrow_decision();
         
@@ -673,7 +673,7 @@ private:
     _handle_rethrow(
         boost::shared_ptr<cql_promise_t<cql_future_result_t> >   promise,
         const cql_error_t&                                       error,
-        cql_message_error_impl_t*                                err_message)
+        boost::shared_ptr<cql_message_error_impl_t>              err_message)
     {
         switch (error.code) {
             case CQL_ERROR_READ_TIMEOUT : {
@@ -722,7 +722,7 @@ private:
                   const cql::cql_stream_t&                                 stream,
                   const cql_error_t&                                       error,
                   TCallbackType                                            retry_callback,
-                  cql::cql_message_error_impl_t*                           err_message)
+                  boost::shared_ptr<cql_message_error_impl_t>              err_message)
     {
         if (!error.cassandra) {
             if (error.transport && error.code != boost::system::errc::connection_aborted) {
@@ -750,14 +750,12 @@ private:
         const boost::shared_ptr<cql_query_t>&                    query,
         const cql::cql_stream_t&                                 stream,
         const cql_error_t&                                       error,
-        cql::cql_message_t*                                      err_message)
+        boost::shared_ptr<cql_message_t>                         err_message)
     {
-        // ACHTUNG: `err_message' will be destroyed after exit from this function.
-        // Do NOT rely on its persistence (e.g. do not boost::bind it).
-        // Also, please remember that it can be NULL.
+        // Please remember that err_message can be NULL.
         
-        cql_message_error_impl_t* err_message_downcast
-            = dynamic_cast<cql_message_error_impl_t*>(err_message);
+        boost::shared_ptr<cql_message_error_impl_t> err_message_downcast
+            = boost::dynamic_pointer_cast<cql_message_error_impl_t>(err_message);
         
         _handle_query_error(promise, query, stream, error,
                             &cql_session_impl_t::retry_callback_query,
@@ -770,14 +768,12 @@ private:
         const boost::shared_ptr<cql_query_t>&                   query,
         const cql::cql_stream_t&                                stream,
         const cql_error_t&                                      error,
-        cql::cql_message_t*                                     err_message)
+        boost::shared_ptr<cql_message_t>                        err_message)
     {
-        // ACHTUNG: `err_message' will be destroyed after exit from this function.
-        // Do NOT rely on its persistence (e.g. do not boost::bind it).
-        // Also, please remember that it can be NULL.
+        // Please remember that err_message can be NULL.
         
-        cql_message_error_impl_t* err_message_downcast
-            = dynamic_cast<cql_message_error_impl_t*>(err_message);
+        boost::shared_ptr<cql_message_error_impl_t> err_message_downcast
+            = boost::dynamic_pointer_cast<cql_message_error_impl_t>(err_message);
         
         _handle_query_error(promise, query, stream, error,
                             &cql_session_impl_t::retry_callback_prepare,
@@ -790,14 +786,12 @@ private:
         const boost::shared_ptr<cql_execute_t>&                  message,
         const cql::cql_stream_t&                                 stream,
         const cql_error_t&                                       error,
-        cql::cql_message_t*                                      err_message)
+        boost::shared_ptr<cql_message_t>                         err_message)
     {
-        // ACHTUNG: `err_message' will be destroyed after exit from this function.
-        // Do NOT rely on its persistence (e.g. do not boost::bind it).
-        // Also, please remember that it can be NULL.
+        // Please remember that err_message can be NULL.
         
-        cql_message_error_impl_t* err_message_downcast
-            = dynamic_cast<cql_message_error_impl_t*>(err_message);
+        boost::shared_ptr<cql_message_error_impl_t> err_message_downcast
+            = boost::dynamic_pointer_cast<cql_message_error_impl_t>(err_message);
         
         _handle_query_error(promise, message, stream, error,
                             &cql_session_impl_t::retry_callback_execute,
@@ -1025,7 +1019,6 @@ private:
 
     void
     body_read(const cql::cql_header_impl_t& header) {
-
         switch (header.opcode()) {
 
         case CQL_OPCODE_ERROR:
@@ -1071,7 +1064,7 @@ private:
     /* The purpose of this method is to propagate the results of USE and PREPARE
        queries across the session. */
     void
-    preprocess_result_message(cql::cql_message_result_impl_t* response_message)
+    preprocess_result_message(boost::shared_ptr<cql_message_result_impl_t> response_message)
     {
         switch(response_message->result_type()) {
                 
@@ -1156,8 +1149,9 @@ private:
             else {
                 callback_pair_t callback_pair = _callback_storage.get_callbacks(stream);
 
-                cql::cql_message_result_impl_t* response_message =
-                    dynamic_cast<cql::cql_message_result_impl_t*>(_response_message.release());
+                boost::shared_ptr<cql_message_result_impl_t> response_message =
+                    boost::dynamic_pointer_cast<cql_message_result_impl_t>(
+                        boost::shared_ptr<cql_message_t>(_response_message));
 
                 preprocess_result_message(response_message);
                 release_stream(stream);
@@ -1169,8 +1163,9 @@ private:
         case CQL_OPCODE_EVENT:
             log(CQL_LOG_DEBUG, "received event message");
             if (_event_callback) {
-                cql_message_event_impl_t* event
-                    = dynamic_cast<cql::cql_message_event_impl_t*>(_response_message.release());
+                boost::shared_ptr<cql_message_event_impl_t> event =
+                    boost::dynamic_pointer_cast<cql_message_event_impl_t>(
+                        boost::shared_ptr<cql_message_t>(_response_message));
 
                 if ((event->topology_change() == CQL_EVENT_TOPOLOGY_REMOVE_NODE
                         || event->status_change() == CQL_EVENT_STATUS_DOWN)
@@ -1197,8 +1192,10 @@ private:
                 callback_pair_t callback_pair = _callback_storage.get_callbacks(stream);
                 release_stream(stream);
 
-                cql::cql_message_error_impl_t* m =
-                    dynamic_cast<cql::cql_message_error_impl_t*>(_response_message.get());
+                boost::shared_ptr<cql_message_error_impl_t> m =
+                    boost::dynamic_pointer_cast<cql_message_error_impl_t>(
+                        boost::shared_ptr<cql_message_t>(_response_message));
+                
                 cql::cql_error_t cql_error =
                     cql::cql_error_t::cassandra_error(m->code(), m->message());
                 

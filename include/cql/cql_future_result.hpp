@@ -36,21 +36,21 @@ struct cql_future_result_t {
     {}
 
     cql_future_result_t(
-        boost::shared_ptr<cql::cql_connection_t> client,
-        const cql::cql_stream_t&                 stream,
-        cql::cql_result_t*                       result) :
-            client(client),
-            stream(stream),
-            result(result)
+        boost::shared_ptr<cql::cql_connection_t> client_,
+        const cql::cql_stream_t&                 stream_,
+        boost::shared_ptr<cql_result_t>          result_) :
+            client(client_),
+            stream(stream_),
+            result(result_)
     {}
 
     cql_future_result_t(
-        boost::shared_ptr<cql::cql_connection_t> client,
-        const cql::cql_stream_t&                 stream,
-        cql::cql_error_t                         error) :
-            client(client),
-            stream(stream),
-            error(error)
+        boost::shared_ptr<cql::cql_connection_t> client_,
+        const cql::cql_stream_t&                 stream_,
+        cql::cql_error_t                         error_) :
+            client(client_),
+            stream(stream_),
+            error(error_)
     {}
 
     boost::shared_ptr<cql::cql_connection_t> client;

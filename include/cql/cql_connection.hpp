@@ -66,15 +66,15 @@ public:
         cql_connection_errback_t;
 
     typedef
-        boost::function<void(boost::shared_ptr<cql_connection_t>, cql_event_t*)>
+        boost::function<void(boost::shared_ptr<cql_connection_t>, boost::shared_ptr<cql_event_t>)>
         cql_event_callback_t;
 
     typedef
-        boost::function<void(boost::shared_ptr<cql_connection_t>, const cql::cql_stream_t&, cql::cql_result_t*)>
+        boost::function<void(boost::shared_ptr<cql_connection_t>, const cql::cql_stream_t&, boost::shared_ptr<cql_result_t>)>
         cql_message_callback_t;
 
     typedef
-        boost::function<void(const cql::cql_stream_t&, const cql_error_t&, cql_message_t*)>
+        boost::function<void(const cql::cql_stream_t&, const cql_error_t&, boost::shared_ptr<cql_message_t>)>
         cql_message_errback_t;
 
     typedef

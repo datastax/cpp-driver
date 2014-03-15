@@ -63,7 +63,7 @@ private:
     void
     conn_cassandra_event(
         boost::shared_ptr<cql_connection_t>,
-        cql_event_t*);
+        boost::shared_ptr<cql_event_t>);
 
     void
     setup_control_connection(

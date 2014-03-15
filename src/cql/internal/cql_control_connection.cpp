@@ -389,7 +389,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
 void
 cql_control_connection_t::conn_cassandra_event(
     boost::shared_ptr<cql_connection_t> connection,
-    cql_event_t* event)
+    boost::shared_ptr<cql_event_t>      event)
 {
     switch(event->event_type())
     {
@@ -449,9 +449,6 @@ cql_control_connection_t::conn_cassandra_event(
         case CQL_EVENT_TYPE_UNKNOWN:
             break;
     }
-    
-    // We have the ownership of event.
-    delete event;
 }
 
 bool
