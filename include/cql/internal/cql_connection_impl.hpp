@@ -779,8 +779,9 @@ private:
         cql_message_error_impl_t* err_message_downcast
             = dynamic_cast<cql_message_error_impl_t*>(err_message);
         
-        //TODO(JS): no retry_policy in execute queries?
-        //_handle_query_error(promise, message, stream, error, &cql_session_impl_t::retry_callback_execute);
+        _handle_query_error(promise, message, stream, error,
+                            &cql_session_impl_t::retry_callback_execute,
+                            err_message_downcast);
     }
 
     void
