@@ -100,8 +100,8 @@ namespace cql {
     private:
         
     };
-
-	class cql_metadata_t: boost::noncopyable {
+		
+	class CQL_EXPORT cql_metadata_t: boost::noncopyable {
 	public:
 		typedef
             boost::signals2::signal<void(boost::shared_ptr<cql_host_state_changed_info_t>)>
