@@ -13,6 +13,15 @@ namespace policy_tools{
 
 std::map<boost::asio::ip::address, int> coordinators;
 
+		
+void show_coordinators()				// show what queries went to what nodes IP.	
+{
+	for( std::map<boost::asio::ip::address, int>::const_iterator p = coordinators.begin(); p != coordinators.end(); ++p )
+	{
+		std::cout << p->first.to_string() << " : " << p->second << std::endl;
+	}
+}
+
 void 
 create_schema(
 	boost::shared_ptr<cql::cql_session_t> session,

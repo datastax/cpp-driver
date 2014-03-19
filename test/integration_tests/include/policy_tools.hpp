@@ -4,12 +4,14 @@
 namespace policy_tools{
 
 	extern std::map<boost::asio::ip::address, int> coordinators;
-	
+			
+	void show_coordinators();			// show what queries went to what node IP.	
+
 	void 
 	create_schema(
 		boost::shared_ptr<cql::cql_session_t> session,
 		int replicationFactor);
-
+		
 	int 
 	init(
 		boost::shared_ptr<cql::cql_session_t> session,
