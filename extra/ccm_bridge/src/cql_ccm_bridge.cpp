@@ -49,7 +49,7 @@ namespace cql {
 		try { 
 			// initialize libssh2 - not thread safe
 			if(0 != libssh2_init(0))
-				throw cql_ccm_bridge_exception_t("cannot initialized libssh2 library");
+				throw cql_ccm_bridge_exception_t("cannot initialize libssh2 library");
 
 			try {
 				start_connection(settings);
