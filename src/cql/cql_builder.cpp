@@ -113,7 +113,7 @@ cql::cql_builder_t& cql::cql_builder_t::with_load_balancing_policy( boost::share
 	if( load_balancing_policy == NULL )
 		return *this;
 		
-	if( load_balancing_policy == nullptr )
+	if( load_balancing_policy == NULL )
 		return *this;
 
 	_load_balancing_policy = load_balancing_policy;	
@@ -128,7 +128,7 @@ cql::cql_builder_t& cql::cql_builder_t::with_reconnection_policy( boost::shared_
 	if( reconnection_policy == NULL )
 		return *this;
 		
-	if( reconnection_policy == nullptr )
+	if( reconnection_policy == NULL )
 		return *this;
 
 	_reconnection_policy = reconnection_policy;	
@@ -141,7 +141,7 @@ cql::cql_builder_t& cql::cql_builder_t::with_retry_policy( boost::shared_ptr< cq
 	if( retry_policy == NULL )
 		return *this;
 		
-	if( retry_policy == nullptr )
+	if( retry_policy == NULL )
 		return *this;
 
 	_retry_policy = retry_policy;	
