@@ -11,7 +11,7 @@
 #include <boost/noncopyable.hpp>
 
 #include "cql/cql.hpp"
-#include "cql/policies/cql_retry_policy.hpp"
+#include "cql/policies/cql_default_retry_policy.hpp"
 #include "cql/cql_stream.hpp"
 
 namespace cql {
@@ -24,7 +24,8 @@ public:
         _query_string(query_string),
         _consistency(CQL_CONSISTENCY_DEFAULT),
         _is_traced(false),
-        _retry_policy()
+        _retry_policy(new cql_default_retry_policy_t()),
+        _retry_counter(0)
     {}
 
     cql_query_t(
@@ -33,7 +34,8 @@ public:
         _query_string(query_string),
         _consistency(consistency),
         _is_traced(false),
-        _retry_policy()
+        _retry_policy(new cql_default_retry_policy_t()),
+        _retry_counter(0)
     {}
 
     cql_query_t(
@@ -43,7 +45,8 @@ public:
         _query_string(query_string),
         _consistency(consistency),
         _is_traced(is_traced),
-        _retry_policy()
+        _retry_policy(new cql_default_retry_policy_t()),
+        _retry_counter(0)
     {}
 
     cql_query_t(
@@ -54,7 +57,8 @@ public:
         _query_string(query_string),
         _consistency(consistency),
         _is_traced(is_traced),
-        _retry_policy(retry_policy)
+        _retry_policy(retry_policy),
+        _retry_counter(0)
     {}
 
     inline bool
@@ -131,6 +135,16 @@ public:
     {
         _query_string = query_string;
     }
+    
+    inline void
+    increment_retry_counter() {
+        ++_retry_counter;
+    }
+    
+    inline int
+    get_retry_counter() const {
+        return _retry_counter;
+    }
 
 private:
 	std::string							  _query_string;
@@ -138,6 +152,7 @@ private:
     bool                                  _is_traced;
     boost::shared_ptr<cql_retry_policy_t> _retry_policy;
 	cql_stream_t						  _stream;
+    int                                   _retry_counter;
 };
 
 }

@@ -32,7 +32,7 @@ public:
         @param service the boost IO service used for all network IO
     */
     static boost::shared_ptr<cql_connection_t>
-    create_connection(boost::asio::io_service& service);
+    create_connection(boost::shared_ptr<boost::asio::io_service> service);
 
     /** Instantiate a new cql_connection_t. The client will attempt an SSL handshake on connect.
 
@@ -40,7 +40,7 @@ public:
         @param context the boost SSL context, dictates cert validation behavior and SSL version
     */
     static boost::shared_ptr<cql_connection_t>
-    create_connection(boost::asio::io_service& service,
+    create_connection(boost::shared_ptr<boost::asio::io_service> service,
                         boost::asio::ssl::context& context);
 
     /** Instantiate a new cql_connection_t. Client is not capable of SSL.
@@ -49,7 +49,7 @@ public:
         @param log_callback a callback which will be triggered for all internally generated log messages
     */
     static boost::shared_ptr<cql_connection_t>
-    create_connection(boost::asio::io_service& service,
+    create_connection(boost::shared_ptr<boost::asio::io_service> service,
                         cql::cql_connection_t::cql_log_callback_t log_callback);
 
     /** Instantiate a new cql_connection_t. The client will attempt an SSL handshake on connect.
@@ -59,7 +59,7 @@ public:
         @param log_callback a callback which will be triggered for all internally generated log messages
     */
     static boost::shared_ptr<cql_connection_t>
-    create_connection(boost::asio::io_service& service,
+    create_connection(boost::shared_ptr<boost::asio::io_service> service,
                         boost::asio::ssl::context& context,
                         cql::cql_connection_t::cql_log_callback_t log_callback);
 

@@ -28,8 +28,8 @@ class cql_socket_ssl_t :
         boost::noncopyable {
 public:
 
-    cql_socket_ssl_t(boost::asio::io_service& io_service,
-                     boost::asio::ssl::context& ctx);
+    cql_socket_ssl_t(boost::shared_ptr<boost::asio::io_service> io_service,
+                     boost::asio::ssl::context&                 ctx);
 
     boost::asio::io_service&
     get_io_service();

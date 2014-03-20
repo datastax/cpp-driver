@@ -15,9 +15,9 @@
  */
 #include "cql/internal/cql_socket_ssl.hpp"
 
-cql::cql_socket_ssl_t::cql_socket_ssl_t(boost::asio::io_service& io_service,
-                                        boost::asio::ssl::context& ctx) :
-    _socket(new cql::cql_socket_ssl_t::socket_t(io_service, ctx)),
+cql::cql_socket_ssl_t::cql_socket_ssl_t(boost::shared_ptr<boost::asio::io_service> io_service,
+                                        boost::asio::ssl::context&                 ctx) :
+    _socket(new cql::cql_socket_ssl_t::socket_t(*io_service, ctx)),
     _ctx(ctx) {
 }
 

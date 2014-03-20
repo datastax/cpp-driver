@@ -17,7 +17,7 @@
 
 cql::cql_retry_decision_t
 cql::cql_default_retry_policy_t::read_timeout(
-	const cql_query_t& query,
+//    const cql_query_t& query,
 	cql_consistency_enum consistency, 
 	int required_responses, 
 	int received_responses, 
@@ -35,7 +35,7 @@ cql::cql_default_retry_policy_t::read_timeout(
 
 cql::cql_retry_decision_t
 cql::cql_default_retry_policy_t::write_timeout(
-	const cql_query_t& query,
+//	const cql_query_t& query,
 	cql_consistency_enum consistency, 
 	const std::string& write_type,
 	int required_acks, 
@@ -53,7 +53,7 @@ cql::cql_default_retry_policy_t::write_timeout(
 
 cql::cql_retry_decision_t
 cql::cql_default_retry_policy_t::unavailable(
-	const cql_query_t& query,
+//	const cql_query_t& query,
 	cql_consistency_enum consistency, 
 	int required_replica, 
 	int alive_replica,

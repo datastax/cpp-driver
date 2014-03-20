@@ -86,7 +86,7 @@ cql::cql_trashcan_t::remove_all() {
         for (cql_connections_collection_t::iterator conn_it = host_it->second->begin();
              conn_it != host_it->second->end(); ++conn_it)
         {
-            _session.free_connection(conn_it->second);
+            _session->free_connection(conn_it->second);
         }
 		host_it->second->clear();
     }

@@ -24,21 +24,24 @@
 
 cql::cql_message_error_impl_t::cql_message_error_impl_t() :
     _buffer(new std::vector<cql::cql_byte_t>()),
-    _code(0),
-    _message()
+    _code(-1),
+    _message(),
+    _is_data_read(false)
 {}
 
 cql::cql_message_error_impl_t::cql_message_error_impl_t(size_t size) :
     _buffer(new std::vector<cql::cql_byte_t>(size)),
-    _code(0),
-    _message()
+    _code(-1),
+    _message(),
+    _is_data_read(false)
 {}
 
 cql::cql_message_error_impl_t::cql_message_error_impl_t(cql::cql_int_t code,
         const std::string& message) :
     _buffer(new std::vector<cql::cql_byte_t>(0)),
     _code(code),
-    _message(message)
+    _message(message),
+    _is_data_read(false)
 {}
 
 const std::string&
@@ -77,12 +80,64 @@ cql::cql_message_error_impl_t::str() const {
 }
 
 bool
-cql::cql_message_error_impl_t::consume(cql::cql_error_t*) {
+cql::cql_message_error_impl_t::consume(cql::cql_error_t* err) {
     cql::vector_stream_t buffer(*_buffer);
     std::istream input(&buffer);
 
     cql::decode_int(input, _code);
     cql::decode_string(input, _message);
+    
+    switch (_code) {
+        case CQL_ERROR_SERVER:
+            _is_data_read = _read_server_error(err, input);
+            break;
+        case CQL_ERROR_PROTOCOL:
+            _is_data_read = _read_protocol_error(err, input);
+            break;
+        case CQL_ERROR_BAD_CREDENTIALS:
+            _is_data_read = _read_bad_credentials_error(err, input);
+            break;
+        case CQL_ERROR_UNAVAILABLE:
+            _is_data_read = _read_unavailable_error(err, input);
+            break;
+        case CQL_ERROR_OVERLOADED:
+            _is_data_read = _read_overloaded_error(err, input);
+            break;
+        case CQL_ERROR_IS_BOOTSTRAPPING:
+            _is_data_read = _read_is_bootstrapping_error(err, input);
+            break;
+        case CQL_ERROR_TRUNCATE:
+            _is_data_read = _read_truncate_error(err, input);
+            break;
+        case CQL_ERROR_WRITE_TIMEOUT:
+            _is_data_read = _read_write_timeout_error(err, input);
+            break;
+        case CQL_ERROR_READ_TIMEOUT:
+            _is_data_read = _read_read_timeout_error(err, input);
+            break;
+        case CQL_ERROR_SYNTAX:
+            _is_data_read = _read_syntax_error(err, input);
+            break;
+        case CQL_ERROR_UNAUTHORIZED:
+            _is_data_read = _read_unauthorized_error(err, input);
+            break;
+        case CQL_ERROR_INVALID:
+            _is_data_read = _read_invalid_error(err, input);
+            break;
+        case CQL_ERROR_CONFIG:
+            _is_data_read = _read_config_error(err, input);
+            break;
+        case CQL_ERROR_ALREADY_EXISTS:
+            _is_data_read = _read_already_exists_error(err, input);
+            break;
+        case CQL_ERROR_UNPREPARED:
+            _is_data_read = _read_unprepared_error(err, input);
+            break;
+        default: {
+            assert(0 && "Cassandra responded with unknown error code.");
+        }
+    }
+    
     return true;
 }
 
@@ -101,4 +156,184 @@ cql::cql_message_error_impl_t::prepare(cql::cql_error_t*) {
 cql::cql_message_buffer_t
 cql::cql_message_error_impl_t::buffer() {
     return _buffer;
+}
+
+
+bool
+cql::cql_message_error_impl_t::get_unavailable_data(
+    cql_consistency_enum& consistency,
+    int&                  required,
+    int&                  alive) const
+{
+    if ((cql_cassandra_error_code_enum)_code != CQL_ERROR_UNAVAILABLE
+            || !_is_data_read) {
+        return false;
+    }
+    consistency = _consistency;
+    required    = _required;
+    alive       = _alive;
+    return true;
+}
+
+bool
+cql::cql_message_error_impl_t::get_write_timeout_data(
+    cql_consistency_enum& consistency,
+    int&                  received,
+    int&                  block_for,
+    std::string&          write_type) const
+{
+    if ((cql_cassandra_error_code_enum)_code != CQL_ERROR_WRITE_TIMEOUT
+            || !_is_data_read) {
+        return false;
+    }
+    
+    consistency = _consistency;
+    received    = _received;
+    block_for   = _block_for;
+    write_type  = _write_type;
+    return true;
+}
+
+bool
+cql::cql_message_error_impl_t::get_read_timeout_data(
+    cql_consistency_enum& consistency,
+    int&                  received,
+    int&                  block_for,
+    bool&                 data_present) const
+{
+    if ((cql_cassandra_error_code_enum)_code != CQL_ERROR_READ_TIMEOUT
+            || !_is_data_read) {
+        return false;
+    }
+
+    consistency  = _consistency;
+    received     = _received;
+    block_for    = _block_for;
+    data_present = _data_present;
+    return true;
+}
+
+bool
+cql::cql_message_error_impl_t::_read_server_error(cql_error_t* error, std::istream& input)
+{
+    assert(0 && "Not implemented");
+    return true; // It is important to return true if succeeded!
+}
+
+bool
+cql::cql_message_error_impl_t::_read_protocol_error(cql_error_t* error, std::istream& input)
+{
+    assert(0 && "Not implemented");
+    return true; // It is important to return true if succeeded!
+}
+
+bool
+cql::cql_message_error_impl_t::_read_bad_credentials_error(cql_error_t* error, std::istream& input)
+{
+    assert(0 && "Not implemented");
+    return true; // It is important to return true if succeeded!
+}
+
+bool
+cql::cql_message_error_impl_t::_read_unavailable_error(cql_error_t* error, std::istream& input)
+{
+    cql_short_t consistency_short;
+    decode_short(input, consistency_short);
+    _consistency = (cql_consistency_enum)consistency_short;
+    
+    decode_int(input, _required);
+    decode_int(input, _alive);
+
+    return input.fail() ? false : true; // It is important to tell whether succeeded.
+}
+
+bool
+cql::cql_message_error_impl_t::_read_overloaded_error(cql_error_t* error, std::istream& input)
+{
+    assert(0 && "Not implemented");
+    return true; // It is important to return true if succeeded!
+}
+
+bool
+cql::cql_message_error_impl_t::_read_is_bootstrapping_error(cql_error_t* error, std::istream& input)
+{
+    assert(0 && "Not implemented");
+    return true; // It is important to return true if succeeded!
+}
+
+bool
+cql::cql_message_error_impl_t::_read_truncate_error(cql_error_t* error, std::istream& input)
+{
+    assert(0 && "Not implemented");
+    return true; // It is important to return true if succeeded!
+}
+
+bool
+cql::cql_message_error_impl_t::_read_write_timeout_error(cql_error_t* error, std::istream& input)
+{
+    cql_short_t consistency_short;
+    decode_short(input, consistency_short);
+    _consistency = (cql_consistency_enum)consistency_short;
+    
+    decode_int(input, _received);
+    decode_int(input, _block_for);
+    decode_string(input, _write_type);
+    
+    return input.fail() ? false : true; // It is important to tell whether succeeded.
+}
+
+bool
+cql::cql_message_error_impl_t::_read_read_timeout_error(cql_error_t* error, std::istream& input)
+{
+    cql_short_t consistency_short;
+    cql::decode_short(input, consistency_short);
+    _consistency = (cql_consistency_enum)consistency_short;
+    
+    decode_int(input, _received);
+    decode_int(input, _block_for);
+    decode_bool(input, _data_present);
+    
+    return input.fail() ? false : true; // It is important to tell whether succeeded.
+}
+
+bool
+cql::cql_message_error_impl_t::_read_syntax_error(cql_error_t* error, std::istream& input)
+{
+    assert(0 && "Not implemented");
+    return true; // It is important to return true if succeeded!
+}
+
+bool
+cql::cql_message_error_impl_t::_read_unauthorized_error(cql_error_t* error, std::istream& input)
+{
+    assert(0 && "Not implemented");
+    return true; // It is important to return true if succeeded!
+}
+
+bool
+cql::cql_message_error_impl_t::_read_invalid_error(cql_error_t* error, std::istream& input)
+{
+    assert(0 && "Not implemented");
+    return true; // It is important to return true if succeeded!
+}
+
+bool
+cql::cql_message_error_impl_t::_read_config_error(cql_error_t* error, std::istream& input)
+{
+    assert(0 && "Not implemented");
+    return true; // It is important to return true if succeeded!
+}
+
+bool
+cql::cql_message_error_impl_t::_read_already_exists_error(cql_error_t* error, std::istream& input)
+{
+    assert(0 && "Not implemented");
+    return true; // It is important to return true if succeeded!
+}
+
+bool
+cql::cql_message_error_impl_t::_read_unprepared_error(cql_error_t* error, std::istream& input) 
+{
+    assert(0 && "Not implemented");
+    return true; // It is important to return true if succeeded!
 }

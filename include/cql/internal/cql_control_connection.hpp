@@ -19,14 +19,16 @@ class cql_session_t;
 class cql_configuration_t;
 class cql_connection_t;
 
-class cql_control_connection_t :
-        private boost::noncopyable
+class cql_control_connection_t : public boost::enable_shared_from_this<cql_control_connection_t>,
+                                 private boost::noncopyable
 {
 public:
-    cql_control_connection_t(
-        cql_cluster_t&                         cluster,
-        boost::asio::io_service&               io_service,
-        boost::shared_ptr<cql_configuration_t> configuration);
+    
+    static boost::shared_ptr<cql_control_connection_t>
+    make_instance(
+        cql_cluster_t&                             cluster,
+        boost::shared_ptr<boost::asio::io_service> io_service,
+        boost::shared_ptr<cql_configuration_t>     configuration);
 
     void
     init();
@@ -39,6 +41,13 @@ public:
     ~cql_control_connection_t();
 
 private:
+
+    /** Private ctor. Instances of cql_control_connection_t are bound to event callback,
+        so they should be persistent. */
+    cql_control_connection_t(
+        cql_cluster_t&                             cluster,
+        boost::shared_ptr<boost::asio::io_service> io_service,
+        boost::shared_ptr<cql_configuration_t>     configuration);
 
     void
     metadata_hosts_event(
@@ -53,8 +62,8 @@ private:
 
     void
     conn_cassandra_event(
-        cql_connection_t&,
-        cql_event_t*);
+        boost::shared_ptr<cql_connection_t>,
+        boost::shared_ptr<cql_event_t>);
 
     void
     setup_control_connection(
@@ -71,7 +80,7 @@ private:
     bool                                           _is_open;
     boost::shared_ptr<cql_session_impl_t>          _session;
     cql_cluster_t&                                 _cluster;
-    boost::asio::io_service&                       _io_service;
+    boost::shared_ptr<boost::asio::io_service>     _io_service;
     boost::shared_ptr<cql_configuration_t>         _configuration;
     boost::asio::deadline_timer                    _timer;
     cql_connection_t::cql_log_callback_t           _log_callback;

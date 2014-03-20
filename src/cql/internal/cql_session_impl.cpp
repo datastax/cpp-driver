@@ -44,6 +44,16 @@ cql::cql_session_impl_t::cql_session_impl_t(
     _Iam_closed(false)
 {}
 
+boost::shared_ptr<cql::cql_session_impl_t>
+cql::cql_session_impl_t::make_instance(
+    const cql_session_callback_info_t&      callbacks,
+    boost::shared_ptr<cql_configuration_t>  configuration)
+{
+    return boost::shared_ptr<cql_session_impl_t>(
+                new cql_session_impl_t(callbacks, configuration));
+}
+
+
 cql::cql_session_impl_t::~cql_session_impl_t()
 {
 	close();
@@ -51,10 +61,10 @@ cql::cql_session_impl_t::~cql_session_impl_t()
 
 void
 cql::cql_session_impl_t::init(
-    boost::asio::io_service& io_service)
+    boost::shared_ptr<boost::asio::io_service> io_service)
 {
     _trashcan = boost::shared_ptr<cql_trashcan_t>(
-        new cql_trashcan_t(io_service, *this));
+        new cql_trashcan_t(io_service, this->shared_from_this()));
 
     boost::shared_ptr<cql_query_plan_t> query_plan = _configuration->policies()
         .load_balancing_policy()
@@ -163,6 +173,86 @@ cql::cql_session_impl_t::set_prepare_statement(
     }
 }
 
+void
+cql::cql_session_impl_t::retry_callback_query(
+    const boost::shared_ptr<cql_query_t>&                  query,
+    boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+    boost::shared_ptr<cql_connection_t>                    conn,
+    bool                                                   is_transport_error)
+{
+    if (is_transport_error) {
+    // Use the next host according to load balancing policy
+        cql_stream_t stream;
+        boost::shared_ptr<cql_connection_t> conn_to_query
+            = get_connection(query, &stream);
+        if (conn_to_query && !stream.is_invalid()) {
+            conn_to_query->query(query)->swap(promise);
+        } else {
+            throw std::runtime_error("Attempt to query a null connection during retry");
+        }
+    }
+    else {
+    // Use the same host
+        cql_stream_t stream = conn->acquire_stream();
+        if (!stream.is_invalid()) {
+            conn->query(query)->swap(promise);
+        }
+    }
+}
+
+void
+cql::cql_session_impl_t::retry_callback_prepare(
+    const boost::shared_ptr<cql_query_t>&                  query,
+    boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+    boost::shared_ptr<cql_connection_t>                    conn,
+    bool                                                   is_transport_error)
+{
+    if (is_transport_error) {
+        // Use the next host according to load balancing policy
+        cql_stream_t stream;
+        boost::shared_ptr<cql_connection_t> conn_to_query
+            = get_connection(query, &stream);
+        if (conn_to_query && !stream.is_invalid()) {
+            conn_to_query->prepare(query)->swap(promise);
+        } else {
+            throw std::runtime_error("Attempt to query a null connection during retry");
+        }
+    }
+    else {
+        // Use the same host
+        cql_stream_t stream = conn->acquire_stream();
+        if (!stream.is_invalid()) {
+            conn->prepare(query)->swap(promise);
+        }
+    }
+}
+
+void
+cql::cql_session_impl_t::retry_callback_execute(
+    const boost::shared_ptr<cql_execute_t>&                message,
+    boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+    boost::shared_ptr<cql_connection_t>                    conn,
+    bool                                                   is_transport_error)
+{
+    if (is_transport_error) {
+        // Use the next host according to load balancing policy
+        cql_stream_t stream;
+        boost::shared_ptr<cql_connection_t> conn_to_query
+            = get_connection(boost::shared_ptr<cql_query_t>(), &stream);
+        if (conn_to_query && !stream.is_invalid()) {
+            conn_to_query->execute(message)->swap(promise);
+        } else {
+            throw std::runtime_error("Attempt to query a null connection during retry");
+        }
+    }
+    else {
+        // Use the same host
+        cql_stream_t stream = conn->acquire_stream();
+        if (!stream.is_invalid()) {
+            conn->execute(message)->swap(promise);
+        }
+    }
+}
 
 bool
 cql::cql_session_impl_t::increase_connection_counter(
@@ -187,7 +277,6 @@ cql::cql_session_impl_t::increase_connection_counter(
 
     return true;
 }
-
 
 bool
 cql::cql_session_impl_t::decrease_connection_counter(
@@ -219,8 +308,8 @@ cql::cql_session_impl_t::allocate_connection(
 
     connection->set_credentials(_configuration->credentials());
     connection->connect(host->endpoint(),
-                        boost::bind(&cql_session_impl_t::connect_callback, this, promise, ::_1),
-                        boost::bind(&cql_session_impl_t::connect_errback, this, promise, ::_1, ::_2));
+                        boost::bind(&cql_session_impl_t::connect_callback, this->shared_from_this(), promise, ::_1),
+                        boost::bind(&cql_session_impl_t::connect_errback,  this->shared_from_this(), promise, ::_1, ::_2));
     connection->set_keyspace(_keyspace_name);
 
     boost::shared_future<cql_future_connection_t> shared_future = promise->shared_future();
@@ -333,7 +422,7 @@ cql::cql_session_impl_t::connect(
             // Connection must know the pointer to the containing session.
             // Otherwise it would be unable to propagate the result if
             // employed for, e.g. USE query.
-            conn->set_session_ptr(this);
+            conn->set_session_ptr(this->shared_from_this());
             return conn;
         }
 
@@ -364,7 +453,7 @@ cql::cql_session_impl_t::connect(
         if (conn) {
             *stream = conn->acquire_stream();
             (*connections)[conn->id()] = conn;
-            conn->set_session_ptr(this);
+            conn->set_session_ptr(this->shared_from_this());
         }
         return conn;
     }
@@ -454,7 +543,7 @@ cql::cql_session_impl_t::setup_prepared_statements(
         prepare_query->set_stream(*stream);
 
         boost::shared_future<cql::cql_future_result_t> future_result
-            = conn->prepare(prepare_query);
+            = conn->prepare(prepare_query)->shared_future();
             
         if (future_result.timed_wait(boost::posix_time::seconds(30))) { // TODO: set sensible (or none) time limit
             // The stream was released after receiving the body. Now we need to re-acquire it.
@@ -496,7 +585,7 @@ cql::cql_session_impl_t::setup_keyspace(
 
         use_my_keyspace->set_stream(*stream);
         boost::shared_future<cql::cql_future_result_t> future_result
-            = conn->query(use_my_keyspace);
+            = conn->query(use_my_keyspace)->shared_future();
         if (future_result.timed_wait(boost::posix_time::seconds(30))) { // TODO: set sensible (or none) time limit
             // The stream was released after receiving the body. Now we need to re-acquire it.
             *stream = conn->acquire_stream();
@@ -521,7 +610,7 @@ cql::cql_session_impl_t::query(
 
     if (conn) {
         query->set_stream(stream);
-		return conn->query(query);
+		return conn->query(query)->shared_future();
     }
 
     boost::promise<cql_future_result_t>       promise;
@@ -543,7 +632,7 @@ cql::cql_session_impl_t::prepare(
 
     if (conn) {
         query->set_stream(stream);
-		return conn->prepare(query);
+		return conn->prepare(query)->shared_future();
     }
 
     boost::promise<cql_future_result_t>       promise;
@@ -566,7 +655,7 @@ cql::cql_session_impl_t::execute(
     
 	if (conn) {
         message->set_stream(stream);
-        return conn->execute(message);
+        return conn->execute(message)->shared_future();
     }
 
     boost::promise<cql_future_result_t> promise;
@@ -623,27 +712,27 @@ cql::cql_session_impl_t::log(
 void
 cql::cql_session_impl_t::connect_callback(
     boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
-    cql_connection_t&                                          client)
+    boost::shared_ptr<cql_connection_t>                        client)
 {
-    promise->set_value(cql_future_connection_t(&client));
+    promise->set_value(cql_future_connection_t(client));
     if (_ready_callback) {
-        _ready_callback(this);
+        _ready_callback(this->shared_from_this());
     }
 }
 
 void
 cql::cql_session_impl_t::connect_errback(
     boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
-    cql_connection_t&                                          connection,
+    boost::shared_ptr<cql_connection_t>                        connection,
     const cql_error_t&                                         error)
 {
     // when connection breaks this will be called two times
     // one for async read, and one for asyn write requests
 
-	promise->set_value(cql_future_connection_t(&connection, error));
+	promise->set_value(cql_future_connection_t(connection, error));
 
     if (_connect_errback) {
-        _connect_errback(this, connection, error);
+        _connect_errback(this->shared_from_this(), connection, error);
     }
 }
 

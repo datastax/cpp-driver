@@ -28,24 +28,23 @@ namespace cql {
 class cql_connection_t;
 
 struct cql_future_connection_t {
-    cql_future_connection_t() :
-        client(NULL)
+    cql_future_connection_t()
     {}
 
     cql_future_connection_t(
-        cql::cql_connection_t* client) :
+        boost::shared_ptr<cql::cql_connection_t> client) :
         client(client)
     {}
 
     cql_future_connection_t(
-        cql::cql_connection_t* client,
+        boost::shared_ptr<cql::cql_connection_t> client,
         cql::cql_error_t   error) :
         client(client),
         error(error)
     {}
 
-    cql::cql_connection_t*                   client;
-    cql::cql_error_t                     error;
+    boost::shared_ptr<cql::cql_connection_t> client;
+    cql::cql_error_t                         error;
 };
 
 

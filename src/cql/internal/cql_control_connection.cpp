@@ -33,15 +33,25 @@
 
 namespace cql {
 
+boost::shared_ptr<cql_control_connection_t>
+cql_control_connection_t::make_instance(
+    cql_cluster_t&                             cluster,
+    boost::shared_ptr<boost::asio::io_service> io_service,
+    boost::shared_ptr<cql_configuration_t>     configuration)
+{
+    return boost::shared_ptr<cql_control_connection_t>(
+        new cql_control_connection_t(cluster, io_service, configuration));
+}
+    
 cql_control_connection_t::cql_control_connection_t(
-    cql_cluster_t&                         cluster,
-    boost::asio::io_service&               io_service,
-    boost::shared_ptr<cql_configuration_t> configuration) :
+    cql_cluster_t&                             cluster,
+    boost::shared_ptr<boost::asio::io_service> io_service,
+    boost::shared_ptr<cql_configuration_t>     configuration) :
     _is_open(false),
     _cluster(cluster),
     _io_service(io_service),
     _configuration(configuration),
-    _timer(io_service),
+    _timer(*io_service),
     _log_callback(_configuration->client_options().log_callback())
 {
     cql_session_callback_info_t session_callbacks;
@@ -73,8 +83,7 @@ cql_control_connection_t::cql_control_connection_t(
 
     _reconnection_schedule = _reconnection_policy_tmp->new_schedule();
 
-    _session = boost::shared_ptr<cql_session_impl_t>(
-                    new cql_session_impl_t(session_callbacks, configuration));
+    _session = cql_session_impl_t::make_instance(session_callbacks, configuration);
 }
 
 void
@@ -136,7 +145,7 @@ cql_control_connection_t::setup_event_listener()
     events.push_back(CQL_EVENT_SCHEMA_CHANGE);
 
     _active_connection->set_events(
-        boost::bind(&cql_control_connection_t::conn_cassandra_event, this, _1, _2),
+        boost::bind(&cql_control_connection_t::conn_cassandra_event, this->shared_from_this(), _1, _2),
         events);
     
     boost::shared_ptr<cql_connection_impl_t<cql_socket_t> > active_connection_impl
@@ -180,7 +189,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
         boost::shared_ptr<cql_query_t> query = boost::make_shared<cql_query_t>(                                                                               select_peers_expression());
         query->set_stream(stream);
         boost::shared_future<cql_future_result_t> query_future_result =
-            _active_connection->query(query);
+            _active_connection->query(query)->shared_future();
         
         if (query_future_result.timed_wait(boost::posix_time::seconds(10))) {
             cql_future_result_t query_result = query_future_result.get();
@@ -260,7 +269,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
         boost::shared_ptr<cql_query_t> query = boost::make_shared<cql_query_t>(                                                                               select_local_expression());
         query->set_stream(stream);
         boost::shared_future<cql_future_result_t> query_future_result =
-            _active_connection->query(query);
+            _active_connection->query(query)->shared_future();
 
         if (query_future_result.timed_wait(boost::posix_time::seconds(10))) {
             cql_future_result_t query_result = query_future_result.get();
@@ -379,8 +388,8 @@ cql_control_connection_t::refresh_node_list_and_token_map()
 
 void
 cql_control_connection_t::conn_cassandra_event(
-    cql_connection_t& connection,
-    cql_event_t* event)
+    boost::shared_ptr<cql_connection_t> connection,
+    boost::shared_ptr<cql_event_t>      event)
 {
     switch(event->event_type())
     {
@@ -440,9 +449,6 @@ cql_control_connection_t::conn_cassandra_event(
         case CQL_EVENT_TYPE_UNKNOWN:
             break;
     }
-    
-    // We have the ownership of event.
-    delete event;
 }
 
 bool
@@ -499,7 +505,7 @@ cql_control_connection_t::setup_control_connection(
         _timer.expires_from_now(_reconnection_schedule->get_delay());
         _timer.async_wait(boost::bind(
             &cql_control_connection_t::reconnection_callback,
-            this,
+            this->shared_from_this(),
             boost::asio::placeholders::error));
 
         if (_log_callback) {

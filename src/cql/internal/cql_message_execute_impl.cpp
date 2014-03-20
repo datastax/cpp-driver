@@ -23,24 +23,34 @@
 #include "cql/internal/cql_serialization.hpp"
 #include "cql/internal/cql_defines.hpp"
 #include "cql/internal/cql_util.hpp"
+#include "cql/policies/cql_default_retry_policy.hpp"
 
 #include "cql/internal/cql_message_execute_impl.hpp"
 
 cql::cql_message_execute_impl_t::cql_message_execute_impl_t() :
     _buffer(new std::vector<cql_byte_t>()),
-    _consistency(cql::CQL_CONSISTENCY_ONE)
+    _consistency(cql::CQL_CONSISTENCY_ONE),
+    _retry_policy(new cql_default_retry_policy_t()),
+    _retry_counter(0)
 {}
 
 cql::cql_message_execute_impl_t::cql_message_execute_impl_t(size_t size) :
     _buffer(new std::vector<cql_byte_t>(size)),
-    _consistency(cql::CQL_CONSISTENCY_ONE)
+    _consistency(cql::CQL_CONSISTENCY_ONE),
+    _retry_policy(new cql_default_retry_policy_t()),
+    _retry_counter(0)
 {}
 
-cql::cql_message_execute_impl_t::cql_message_execute_impl_t(const std::vector<cql::cql_byte_t>& id,
-        cql::cql_consistency_enum consistency) :
+cql::cql_message_execute_impl_t::cql_message_execute_impl_t(
+    const std::vector<cql::cql_byte_t>& id,
+    cql::cql_consistency_enum consistency,
+    boost::shared_ptr<cql_retry_policy_t> retry_policy) :
+
     _buffer(new std::vector<cql_byte_t>()),
     _query_id(id),
-    _consistency(consistency)
+    _consistency(consistency),
+    _retry_policy(retry_policy),
+    _retry_counter(0)
 {}
 
 cql::cql_message_buffer_t
@@ -266,6 +276,37 @@ cql::cql_message_execute_impl_t::prepare(cql::cql_error_t*) {
 
     cql::encode_short(stream, consistency);
     return true;
+}
+
+boost::shared_ptr<cql::cql_retry_policy_t>
+cql::cql_message_execute_impl_t::retry_policy() const
+{
+    return _retry_policy;
+}
+
+void
+cql::cql_message_execute_impl_t::set_retry_policy(
+    const boost::shared_ptr<cql_retry_policy_t>& retry_policy)
+{
+    _retry_policy = retry_policy;
+}
+
+bool
+cql::cql_message_execute_impl_t::has_retry_policy() const
+{
+    return (bool)_retry_policy;
+}
+
+void
+cql::cql_message_execute_impl_t::increment_retry_counter()
+{
+    ++_retry_counter;
+}
+
+int
+cql::cql_message_execute_impl_t::get_retry_counter() const
+{
+    return _retry_counter;
 }
 
 cql::cql_stream_t
