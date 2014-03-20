@@ -51,7 +51,7 @@ cql::cql_one_node_query_plan_t::next_host_to_query()
 	{
 		for( int i = 0; i < _hosts.size(); ++i )
 		{
-			if( _hosts[ i ].get() != nullptr )
+			if( _hosts[ i ].get() != NULL )
 			{							   
 				if( _hosts[ i ].get()->address().to_string() == _hostAddress )
 				{
