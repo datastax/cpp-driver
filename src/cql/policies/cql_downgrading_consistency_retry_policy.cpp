@@ -90,13 +90,13 @@ cql::cql_retry_decision_t
 cql::cql_downgrading_consistency_retry_policy_t::max_likely_to_work_cl(int knownOk)
 {		
 	if (knownOk >= 3)
-		return cql_retry_decision_t::retry_decision_with( cql_consistency_enum::CQL_CONSISTENCY_THREE );
+		return cql_retry_decision_t::retry_decision_with( CQL_CONSISTENCY_THREE );
 	else if (knownOk >= 2)
-		return cql_retry_decision_t::retry_decision_with( cql_consistency_enum::CQL_CONSISTENCY_TWO );
+		return cql_retry_decision_t::retry_decision_with( CQL_CONSISTENCY_TWO );
 	else if (knownOk >= 1)
-		return cql_retry_decision_t::retry_decision_with( cql_consistency_enum::CQL_CONSISTENCY_ONE );
-	else
-		return cql_retry_decision_t::rethrow_decision();
+		return cql_retry_decision_t::retry_decision_with( CQL_CONSISTENCY_ONE );
+
+	return cql_retry_decision_t::rethrow_decision();
 }		
 		
 		

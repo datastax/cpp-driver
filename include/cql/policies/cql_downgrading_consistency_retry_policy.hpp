@@ -43,8 +43,7 @@ namespace cql {
 						
 	private:		
 						
-	cql::cql_retry_decision_t	
-		cql::cql_downgrading_consistency_retry_policy_t::max_likely_to_work_cl( int knownOk );
+		cql::cql_retry_decision_t max_likely_to_work_cl( int knownOk );
 
 	};
 }

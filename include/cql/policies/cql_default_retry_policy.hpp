@@ -7,7 +7,7 @@
 #include "cql/policies/cql_retry_policy.hpp"
 
 namespace cql {
-	class cql_default_retry_policy_t:
+	class CQL_EXPORT cql_default_retry_policy_t:
 		public cql_retry_policy_t,
 		boost::noncopyable
 	{

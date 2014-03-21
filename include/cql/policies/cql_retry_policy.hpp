@@ -13,7 +13,7 @@ namespace cql {
 		CQL_RETRY_DECISION_IGNORE
 	};
 
-	class cql_retry_decision_t {
+	class CQL_EXPORT cql_retry_decision_t {
 	public:
 		inline cql_retry_decision_enum
 		retry_decision() const { return _retry_decision; }
@@ -55,7 +55,7 @@ namespace cql {
 
 	class cql_query_t;
 
-	class cql_retry_policy_t {
+	class CQL_EXPORT cql_retry_policy_t {
 	public:
 		virtual cql_retry_decision_t
 		read_timeout(
