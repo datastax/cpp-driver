@@ -29,8 +29,8 @@ namespace cql {
 		unsigned									_current;
 		std::vector<boost::shared_ptr<cql_host_t> >	_hosts;
 	};
-
-	class cql_round_robin_policy_t :
+		
+	class CQL_EXPORT cql_round_robin_policy_t :
 		public cql_load_balancing_policy_t,
 		boost::noncopyable
 	{

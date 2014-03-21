@@ -6,15 +6,15 @@
 
 #include "cql/policies/cql_retry_policy.hpp"
 
-namespace cql {
-	class CQL_EXPORT cql_default_retry_policy_t:
+namespace cql {		
+	class cql_downgrading_consistency_retry_policy_t:				
 		public cql_retry_policy_t,
 		boost::noncopyable
 	{
 	public:
 		virtual cql_retry_decision_t
 		read_timeout(
-			//const cql_query_t& query,
+			const cql_query_t& query,
 			cql_consistency_enum consistency,
 			int required_responses,
 			int received_responses,
@@ -23,7 +23,7 @@ namespace cql {
 
 		virtual cql_retry_decision_t
 		write_timeout(
-			//const cql_query_t& query,
+			const cql_query_t& query,
 			cql_consistency_enum consistency,
 			const std::string& write_type,
 			int required_acks,
@@ -33,13 +33,18 @@ namespace cql {
 
 		virtual cql_retry_decision_t
 		unavailable(
-			//const cql_query_t& query,
+			const cql_query_t& query,
 			cql_consistency_enum consistency,
 			int required_replica,
 			int alive_replica,
 			int retry_number);
+						
+		cql_downgrading_consistency_retry_policy_t() {};
+						
+	private:		
+						
+		cql::cql_retry_decision_t max_likely_to_work_cl( int knownOk );
 
-		cql_default_retry_policy_t() { };
 	};
 }
 

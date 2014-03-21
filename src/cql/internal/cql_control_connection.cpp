@@ -207,7 +207,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
                 cql_host_t::ip_address_t peer_address;
                 bool output = false;
 
-                if (!(result->is_null("rpc_address", output)) && !output)
+                if (result->get_nullity("rpc_address", output) && !output)
                 {
                     cql::cql_byte_t* data = NULL;
                     cql::cql_int_t size = 0;
@@ -217,7 +217,7 @@ cql_control_connection_t::refresh_node_list_and_token_map()
                 }
                 if (peer_address == ::boost::asio::ip::address())
                 {
-                    if (!(result->is_null("peer", output)) && !output)
+                    if (result->get_nullity("peer", output) && !output)
                     {
                         cql::cql_byte_t* data = NULL;
                         cql::cql_int_t size = 0;

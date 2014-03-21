@@ -85,12 +85,12 @@ public:
               int& output) const = 0;
 
     virtual bool
-    is_null(int i,
-            bool& output) const = 0;
+    get_nullity(int i,
+                bool& output) const = 0;
 
     virtual bool
-    is_null(const std::string& column,
-            bool& output) const = 0;
+    get_nullity(const std::string& column,
+                bool& output) const = 0;
 
     virtual bool
     get_bool(int i,

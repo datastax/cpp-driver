@@ -38,7 +38,7 @@
 #include "cql/cql_endpoint.hpp"
 #include "cql/cql_stream.hpp"
 #include "cql/cql_query.hpp"
-#include "cql/internal/cql_promise.hpp"
+#include "cql/cql_promise.hpp"
 
 namespace cql {
 

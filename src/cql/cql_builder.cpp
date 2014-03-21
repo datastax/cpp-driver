@@ -14,8 +14,8 @@
  *   limitations under the License.
  */
 #include <algorithm>
-#include <boost/bind.hpp>
-
+#include <boost/bind.hpp>	
+	
 #include "cql/cql_cluster.hpp"
 #include "cql/cql_builder.hpp"
 #include "cql/internal/cql_util.hpp"
@@ -105,4 +105,47 @@ cql::cql_builder_t::with_credentials(
 
     _credentials = credentials;
     return *this;
-}
+}				
+				
+							
+cql::cql_builder_t& cql::cql_builder_t::with_load_balancing_policy( boost::shared_ptr< cql::cql_load_balancing_policy_t > load_balancing_policy )
+{		
+	if( load_balancing_policy == NULL )
+		return *this;
+		
+	if( load_balancing_policy == NULL )
+		return *this;
+
+	_load_balancing_policy = load_balancing_policy;	
+		
+	return *this;
+}		
+		
+
+cql::cql_builder_t& cql::cql_builder_t::with_reconnection_policy( boost::shared_ptr< cql::cql_reconnection_policy_t > reconnection_policy )
+{	
+
+	if( reconnection_policy == NULL )
+		return *this;
+		
+	if( reconnection_policy == NULL )
+		return *this;
+
+	_reconnection_policy = reconnection_policy;	
+	return *this;
+}			
+
+
+cql::cql_builder_t& cql::cql_builder_t::with_retry_policy( boost::shared_ptr< cql::cql_retry_policy_t > retry_policy )
+{	
+	if( retry_policy == NULL )
+		return *this;
+		
+	if( retry_policy == NULL )
+		return *this;
+
+	_retry_policy = retry_policy;	
+	return *this;
+}		
+
+

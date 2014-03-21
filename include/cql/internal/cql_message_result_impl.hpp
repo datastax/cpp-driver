@@ -104,12 +104,12 @@ public:
               int& output) const;
 
     bool
-    is_null(int i,
-            bool& output) const;
+    get_nullity(int i,
+                bool& output) const;
 
     bool
-    is_null(const std::string& column,
-            bool& output) const;
+    get_nullity(const std::string& column,
+                bool& output) const;
 
     bool
     get_bool(int i,
@@ -200,7 +200,7 @@ public:
     is_valid(int i,
              cql::cql_column_type_enum column_type) const {
         bool index_null = false;
-        if (is_null(i, index_null) || index_null) {
+        if (!get_nullity(i, index_null) || index_null) {
             return false;
         }
 

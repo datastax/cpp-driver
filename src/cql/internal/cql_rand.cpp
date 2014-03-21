@@ -25,8 +25,12 @@ cql::cql_rand() {
 	static bool rand_initialized = false;
 
 	boost::lock_guard<boost::detail::spinlock> lock(sl);
+		
 	if(!rand_initialized)
+	{
 		srand((unsigned)time(NULL));
+		rand_initialized = true;	
+	}
 
 	return rand();
 }

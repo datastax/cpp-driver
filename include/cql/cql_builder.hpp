@@ -1,7 +1,6 @@
 #ifndef CQL_BUILDER_H_
 #define CQL_BUILDER_H_
 
-
 #include <list>
 #include <map>
 #include <string>
@@ -9,9 +8,7 @@
 #include <boost/asio/ssl.hpp>
 #include <boost/smart_ptr.hpp>
 #include <boost/asio/ip/address.hpp>
-
 #include "cql/cql_config.hpp"
-
 #include "cql/policies/cql_round_robin_policy.hpp"
 #include "cql/policies/cql_exponential_reconnection_policy_t.hpp"
 #include "cql/policies/cql_default_retry_policy.hpp"
@@ -257,6 +254,7 @@ private:
     int _max_connections_for_remote;
 };
 
+
 class cql_policies_t {
 public:
     cql_policies_t() :
@@ -266,25 +264,50 @@ public:
                 boost::posix_time::seconds(1), // base dealy:
                 boost::posix_time::minutes(10))), // max delay
         _retry_policy(new cql_default_retry_policy_t())
-    {}
-
-
-    cql_policies_t(
+    {}				
+					
+					
+    cql_policies_t(	
         boost::shared_ptr<cql_load_balancing_policy_t> load_balancing_policy,
         boost::shared_ptr<cql_reconnection_policy_t>   reconnection_policy,
         boost::shared_ptr<cql_retry_policy_t>          retry_policy) :
         _load_balancing_policy(load_balancing_policy),
         _reconnection_policy(reconnection_policy),
         _retry_policy(retry_policy)
-    {}
+    {		
+			if( _load_balancing_policy.get() == NULL )
+				_load_balancing_policy.reset( new cql_round_robin_policy_t() );
 
-    inline boost::shared_ptr<cql_load_balancing_policy_t>
+			if( _reconnection_policy.get() == NULL )
+				_reconnection_policy.reset( new cql_exponential_reconnection_policy_t( boost::posix_time::seconds(1), boost::posix_time::minutes(10) ) );
+
+			if( _retry_policy.get() == NULL )
+				_retry_policy.reset( new cql_default_retry_policy_t() );
+	}						
+					
+			
+	void with_load_balancing_policy( boost::shared_ptr< cql::cql_load_balancing_policy_t > balancing_policy )
+	{		
+		_load_balancing_policy = balancing_policy;	
+	}		
+
+	void with_reconnection_policy( boost::shared_ptr< cql::cql_reconnection_policy_t > reconnection_policy )
+	{		
+		_reconnection_policy = reconnection_policy;	
+	}		
+
+	void with_retry_policy( boost::shared_ptr< cql::cql_retry_policy_t > retry_policy )
+	{		
+		_retry_policy = retry_policy;	
+	}		
+	
+    inline boost::shared_ptr<cql_load_balancing_policy_t>   
     load_balancing_policy() const
-    {
+    {				
         return _load_balancing_policy;
-    }
-
-    inline boost::shared_ptr<cql_reconnection_policy_t>
+    }			
+				
+    inline boost::shared_ptr<cql_reconnection_policy_t>		
     reconnection_policy() const
     {
         return _reconnection_policy;
@@ -299,17 +322,19 @@ public:
 private:
     friend class cql_configuration_t;
 
-    virtual void
-    init(cql_cluster_t* cluster)
-    {
+	virtual void		
+    init(cql_cluster_t* cluster)				
+    {	
         assert(cluster != NULL);
         _load_balancing_policy->init(cluster);
-    }
-
+    }	
+		
     boost::shared_ptr<cql_load_balancing_policy_t>  _load_balancing_policy;
     boost::shared_ptr<cql_reconnection_policy_t>    _reconnection_policy;
     boost::shared_ptr<cql_retry_policy_t>           _retry_policy;
 };
+
+	
 
 class cql_configuration_t
 {
@@ -319,16 +344,18 @@ public:
         const cql_client_options_t&                client_options,
         const cql_protocol_options_t&              protocol_options,
         const cql_pooling_options_t&               pooling_options,
-        const cql_policies_t&                      policies,
-        const cql_credentials_t&                   credentials) :
+        const cql_policies_t&					   policies,			
+        const cql_credentials_t&                   credentials		
+		) :
         _io_service(io_service),
         _client_options(client_options),
         _protocol_options(protocol_options),
         _pooling_options(pooling_options),
-        _policies(policies),
+        _policies(policies),			
         _credentials(credentials)
-    {}
-
+    {			
+	}					
+				
     inline const cql_protocol_options_t&
     protocol_options() const
     {
@@ -345,14 +372,14 @@ public:
     pooling_options() const
     {
         return _pooling_options;
-    }
-
-    inline const cql_policies_t&
+    }		
+			
+    inline const cql_policies_t&									
     policies() const
-    {
+    {			
         return _policies;
     }
-
+	
     inline const cql_credentials_t&
     credentials() const
     {
@@ -363,24 +390,27 @@ public:
     io_service()
     {
         return _io_service;
-    }
-
+    }	
+					
 private:
     friend class cql_cluster_impl_t;
-
-    void
+											
+    void														
     init(cql_cluster_t* cluster)
     {
         _policies.init(cluster);
     }
-
+			
+				
     boost::shared_ptr<boost::asio::io_service> _io_service;
     cql_client_options_t                       _client_options;
     cql_protocol_options_t                     _protocol_options;
     cql_pooling_options_t                      _pooling_options;
-    cql_policies_t                             _policies;
-    cql_credentials_t                          _credentials;
-};
+    cql_policies_t                             _policies;		
+	cql_credentials_t                          _credentials;
+};					
+			
+	
 
 class cql_initializer_t
 {
@@ -391,6 +421,8 @@ public:
     virtual boost::shared_ptr<cql_configuration_t>
     configuration() = 0;
 };
+
+
 
 class CQL_EXPORT cql_builder_t :
         public cql_initializer_t,
@@ -418,16 +450,17 @@ public:
     {
         return boost::shared_ptr<cql_configuration_t>(
                    new cql_configuration_t(
-                       _io_service,
-					   cql_client_options_t(_log_callback,_thread_pool_size),
-                       cql_protocol_options_t(
-                           _contact_points,
-                           _ssl_context),
-                       cql_pooling_options_t(),
-                       cql_policies_t(),
-                       _credentials));
-    }
-
+						_io_service,
+						cql_client_options_t(_log_callback,_thread_pool_size),
+						cql_protocol_options_t(
+							_contact_points,
+							_ssl_context),
+						cql_pooling_options_t(),														
+						cql_policies_t( _load_balancing_policy, _reconnection_policy, _retry_policy ),								
+						_credentials					
+						));			
+    }							
+								
     boost::shared_ptr<cql_cluster_t>
     build();
 
@@ -488,18 +521,31 @@ public:
 	{
 		_thread_pool_size=thread_pool_size;
 		return *this;
-	}
-
-
-private:
+	}		
+					
+	cql::cql_builder_t& 
+		with_load_balancing_policy( boost::shared_ptr< cql::cql_load_balancing_policy_t > load_balancing_policy );
+					
+	cql::cql_builder_t& 
+		with_reconnection_policy( boost::shared_ptr< cql::cql_reconnection_policy_t > reconnection_policy );
+									
+	cql::cql_builder_t& 
+		with_retry_policy( boost::shared_ptr< cql::cql_retry_policy_t > retry_policy );
+															
+private:		
     boost::shared_ptr<boost::asio::io_service>   _io_service;
     std::list<cql_endpoint_t>                    _contact_points;
     boost::shared_ptr<boost::asio::ssl::context> _ssl_context;
     cql_connection_t::cql_log_callback_t         _log_callback;
     cql_credentials_t                            _credentials;
 	int											 _thread_pool_size;
-};
-
-} // namespace cql
-
-#endif // CQL_BUILDER_H_
+			
+	boost::shared_ptr<cql_load_balancing_policy_t> _load_balancing_policy;		
+    boost::shared_ptr<cql_reconnection_policy_t>   _reconnection_policy;			
+    boost::shared_ptr<cql_retry_policy_t>          _retry_policy;				
+};							
+									
+} // namespace cql					
+							
+#endif // CQL_BUILDER_H_	
+		
