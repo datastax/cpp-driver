@@ -42,7 +42,7 @@
 #include "cql/cql_session.hpp"
 #include "cql/policies/cql_load_balancing_policy.hpp"
 
-#include "cql/internal/cql_promise.hpp"
+#include "cql/cql_promise.hpp"
 #include "cql/internal/cql_trashcan.hpp"
 
 namespace cql {
