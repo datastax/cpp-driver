@@ -314,9 +314,9 @@ public:
 		create_request(
             messageQuery,
 			boost::bind(&cql_connection_impl_t::write_handle,
-			this->shared_from_this(),
-			boost::asio::placeholders::error,
-			boost::asio::placeholders::bytes_transferred),
+                        this->shared_from_this(),
+                        boost::asio::placeholders::error,
+                        boost::asio::placeholders::bytes_transferred),
 			stream);
 
 		return stream;
@@ -1237,7 +1237,7 @@ private:
             boost::make_shared<cql_message_options_impl_t>();
 		create_request(
             messageOption,
-            (boost::function<void (const boost::system::error_code &, std::size_t)>)boost::bind(
+            boost::bind(
                 &cql_connection_impl_t::write_handle,
                 this->shared_from_this(),
                 boost::asio::placeholders::error,
