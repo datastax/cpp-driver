@@ -213,6 +213,36 @@ cql::cql_message_error_impl_t::get_read_timeout_data(
     return true;
 }
 
+
+bool 
+cql::cql_message_error_impl_t::get_unprepared_data( 
+													std::vector<cql_byte_t> & unknown_id ) const 
+{			
+	if ((cql_cassandra_error_code_enum)_code != CQL_ERROR_UNPREPARED
+       || !_is_data_read) {
+        return false;
+    }	
+		
+	unknown_id = _unknown_id_unprepared_error;
+	return true;
+}		
+
+
+bool
+cql::cql_message_error_impl_t::get_already_exists_data( std::string & keyspace, 
+														std::string & table_name ) const
+{
+	if ((cql_cassandra_error_code_enum)_code != CQL_ERROR_ALREADY_EXISTS
+		|| !_is_data_read) {
+        return false;
+    }		
+			
+	keyspace = _key_space_exists;
+	table_name = _table_exists;
+	return true;
+}			
+
+
 bool  
 cql::cql_message_error_impl_t::_read_server_error(cql_error_t* error, std::istream& input)
 {		    
@@ -312,30 +342,24 @@ bool
 cql::cql_message_error_impl_t::_read_config_error(cql_error_t* error, std::istream& input)
 {
     return input.fail() ? false : true;		
-}			
-								
-bool	
+}						
+						
+							
+bool					
 cql::cql_message_error_impl_t::_read_already_exists_error(cql_error_t* error, std::istream& input)
 {			
 	std::string key_space;						
 	std::string table_name;						
-	decode_string(input, key_space);			
-	decode_string(input, table_name);			
-			
-	_write_type = key_space;					
-				
-	if( !table_name.empty() )					
-		_write_type += ":" + table_name;		
-			
+	decode_string(input, _key_space_exists);			
+	decode_string(input, _table_exists );									
     return input.fail() ? false : true;			
-}			
-									
+}				
+
+	
 bool	
 cql::cql_message_error_impl_t::_read_unprepared_error(cql_error_t* error, std::istream& input) 
 {
-	cql_short_t error_message_id;				
-    decode_short(input, error_message_id);		
-	_received = error_message_id;				
+	decode_short_bytes( input, _unknown_id_unprepared_error );
     return input.fail() ? false : true;			
 }		
 		
