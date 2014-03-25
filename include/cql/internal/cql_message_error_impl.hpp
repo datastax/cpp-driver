@@ -107,7 +107,26 @@ public:
                           int&                  received,
                           int&                  block_for,
                           bool&                 data_present) const;
-        
+			
+	 /**
+     Reads the data provided with UNPREPARED error
+     @param[out] unknown_id   the ID of the prepared statement
+     @return true if accessed data is indeed available, false otherwise
+    */
+	bool	
+	get_unprepared_data(std::vector<cql_byte_t> & unknown_id) const;
+
+	 /**
+     Reads the data provided with ALREADY_EXISTS_DATA error
+     @param[out] keyspace   the name of the keyspace which already exits
+     @param[out] table_name   the name of the table which already exists
+     @return true if accessed data is indeed available, false otherwise
+    */
+	bool
+	get_already_exists_data(std::string & keyspace,
+                            std::string & table_name) const;
+
+
 private:
         
     bool
@@ -153,8 +172,11 @@ private:
     int                       _block_for;
     std::string               _write_type;
     bool                      _data_present;
-};
-
+	std::string				  _key_space_exists;
+	std::string				  _table_exists;	
+	std::vector<cql_byte_t>   _unknown_id_unprepared_error;
+};			
+			
 } // namespace cql
 
 #endif // CQL_MESSAGE_ERROR_IMPL_H_
