@@ -62,7 +62,7 @@ public:
     bool
     get_key_string(size_t i,
                    std::string& output) const;
-
+		
     bool
     get_key_data(size_t i,
                  cql::cql_byte_t** output,
@@ -92,11 +92,6 @@ public:
     get_value_string(size_t i,
                      std::string& output) const;
 
-    bool
-    get_value_data(size_t i,
-                   cql::cql_byte_t** output,
-                   cql::cql_short_t& size) const;
-
     std::string
     str() const;
 
@@ -114,8 +109,14 @@ public:
 
     size_t
     size() const;
+				
+private:		
+				
+    bool
+    get_value_data(size_t i,
+                   cql::cql_byte_t** output,
+                   cql::cql_short_t& size) const;
 
-private:
     cql::cql_byte_t*              _start;
     std::vector<cql::cql_byte_t*> _keys;
     std::vector<cql::cql_byte_t*> _values;

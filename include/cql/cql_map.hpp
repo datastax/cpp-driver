@@ -57,7 +57,7 @@ public:
     get_key_data(size_t i,
                  cql::cql_byte_t** output,
                  cql::cql_short_t& size) const = 0;
-
+	
     virtual bool
     get_value_bool(size_t i,
                    bool& output) const = 0;
@@ -82,11 +82,6 @@ public:
     get_value_string(size_t i,
                      std::string& output) const = 0;
 
-    virtual bool
-    get_value_data(size_t i,
-                   cql::cql_byte_t** output,
-                   cql::cql_short_t& size) const = 0;
-
     virtual std::string
     str() const = 0;
 
@@ -104,6 +99,13 @@ public:
 
     virtual size_t
     size() const = 0;
+
+private:
+
+    virtual bool	
+    get_value_data(size_t i,
+                   cql::cql_byte_t** output,
+                   cql::cql_short_t& size) const = 0;
 
 };
 

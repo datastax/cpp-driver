@@ -173,10 +173,42 @@ public:
     virtual bool
     get_map(const std::string& column,
             cql::cql_map_t** output) const = 0;
+		
+	virtual bool		
+    get_data(int i,	
+             boost::shared_ptr< cql::cql_byte_t > & output,					
+             cql::cql_int_t& size) const = 0;
 
+	virtual bool		
+    get_data(const std::string& column,	
+             boost::shared_ptr< cql::cql_byte_t > & output,					
+             cql::cql_int_t& size) const = 0;
 
-};
+	virtual bool
+    get_list(int i,
+             boost::shared_ptr< cql::cql_list_t > & output) const = 0;			
 
+	virtual bool
+    get_list(const std::string& column,	
+             boost::shared_ptr< cql::cql_list_t > & output) const = 0;			
+
+	virtual bool
+    get_set(int i,
+            boost::shared_ptr< cql::cql_set_t > & output) const = 0;		
+
+	virtual bool
+    get_set(const std::string& column,
+            boost::shared_ptr< cql::cql_set_t > & output) const = 0;		
+
+	virtual bool
+    get_map(int i,	
+            boost::shared_ptr< cql::cql_map_t > & output) const = 0;		
+
+	virtual bool
+    get_map(const std::string& column,
+            boost::shared_ptr< cql::cql_map_t > & output) const = 0;					
+};			
+			
 } // namespace cql
 
 #endif // CQL_RESULT_H_

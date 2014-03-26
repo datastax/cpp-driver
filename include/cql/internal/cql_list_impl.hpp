@@ -66,16 +66,17 @@ public:
     bool
     get_string(size_t i,
                std::string& output) const;
+	
+    size_t
+    size() const;
+
+private:	
 
     bool
     get_data(size_t i,
              cql::cql_byte_t** output,
              cql::cql_short_t& size) const;
 
-    size_t
-    size() const;
-
-private:
     cql::cql_byte_t*              _start;
     std::vector<cql::cql_byte_t*> _elements;
     cql::cql_column_type_enum     _element_type;
