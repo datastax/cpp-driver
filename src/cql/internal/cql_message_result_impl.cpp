@@ -441,7 +441,7 @@ cql::cql_message_result_impl_t::get_data(const std::string& column,
         return get_data(i, output, size);
     }
     return false;
-}
+}			
 
 bool
 cql::cql_message_result_impl_t::get_list(int i,
@@ -458,9 +458,33 @@ cql::cql_message_result_impl_t::get_list(int i,
 }
 
 bool
+cql::cql_message_result_impl_t::get_list(int i,
+        boost::shared_ptr< cql::cql_list_t > & output) const {
+    if (is_valid(i, cql::CQL_COLUMN_TYPE_LIST)) {
+        cql::cql_column_type_enum member_type;
+        std::string member_class;
+        _metadata.collection_primary_type(i, member_type);
+        _metadata.collection_primary_class(i, member_class);
+        output.reset( new cql::cql_list_impl_t(_row[i] + sizeof(cql_int_t), member_type, member_class) );
+        return true;
+    }
+    return false;
+}
+
+bool
 cql::cql_message_result_impl_t::get_list(const std::string& column,
         cql::cql_list_t** output) const {
     int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_list(i, output);
+    }
+    return false;
+}
+
+bool
+cql::cql_message_result_impl_t::get_list(const std::string& column,
+        boost::shared_ptr< cql::cql_list_t > & output) const {	
+    int i = 0;	
     if (_metadata.get_index(column, i)) {
         return get_list(i, output);
     }
@@ -482,8 +506,32 @@ cql::cql_message_result_impl_t::get_set(int i,
 }
 
 bool
+cql::cql_message_result_impl_t::get_set(int i,	
+                                        boost::shared_ptr< cql::cql_set_t > & output) const {
+    if (is_valid(i, cql::CQL_COLUMN_TYPE_SET)) {
+        cql::cql_column_type_enum member_type;
+        std::string member_class;
+        _metadata.collection_primary_type(i, member_type);
+        _metadata.collection_primary_class(i, member_class);	
+        output.reset( new cql::cql_set_impl_t(_row[i] + sizeof(cql_int_t), member_type, member_class) );
+        return true;
+    }
+    return false;
+}
+
+bool
 cql::cql_message_result_impl_t::get_set(const std::string& column,
                                         cql::cql_set_t** output) const {
+    int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_set(i, output);
+    }
+    return false;
+}
+
+bool
+cql::cql_message_result_impl_t::get_set(const std::string& column,	
+                                        boost::shared_ptr< cql::cql_set_t > & output) const {
     int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_set(i, output);
@@ -510,8 +558,36 @@ cql::cql_message_result_impl_t::get_map(int i,
 }
 
 bool
+cql::cql_message_result_impl_t::get_map(int i,	
+                                        boost::shared_ptr< cql::cql_map_t > & output) const {
+    if (is_valid(i, cql::CQL_COLUMN_TYPE_MAP)) {
+        cql::cql_column_type_enum key_type;
+        cql::cql_column_type_enum value_type;
+        std::string key_class;
+        std::string value_class;
+        _metadata.collection_primary_type(i, key_type);
+        _metadata.collection_primary_class(i, key_class);
+        _metadata.collection_secondary_type(i, value_type);
+        _metadata.collection_secondary_class(i, value_class);
+        output.reset( new cql::cql_map_impl_t(_row[i] + sizeof(cql_int_t), key_type, value_type, key_class, value_class) );	
+        return true;
+    }
+    return false;
+}
+
+bool
 cql::cql_message_result_impl_t::get_map(const std::string& column,
                                         cql::cql_map_t** output) const {
+    int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_map(i, output);
+    }
+    return false;
+}
+
+bool
+cql::cql_message_result_impl_t::get_map(const std::string& column,	
+                                        boost::shared_ptr< cql::cql_map_t > & output) const {	
     int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_map(i, output);
@@ -524,3 +600,4 @@ cql::cql_message_result_impl_t::get_keyspace_name(std::string& output) const {
     output = _keyspace_name;
     return true;
 }
+
