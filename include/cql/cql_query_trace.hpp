@@ -8,7 +8,7 @@
 #include <boost/format.hpp>
 #include <boost/noncopyable.hpp>
 
-#include <cstring>
+#include <string>
 #include <list>
 
 namespace cql {
@@ -22,7 +22,7 @@ struct cql_trace_id_t { // TODO (JS) this should (?) be cql_uuid_t
     
 //-------------------------------------------------------------------------------------
     
-struct cql_trace_event_t {
+struct CQL_EXPORT cql_trace_event_t {
     
     cql_trace_event_t(
         const std::string               name_,
@@ -52,7 +52,7 @@ struct cql_trace_event_t {
     
 //-------------------------------------------------------------------------------------
     
-class cql_query_trace_t :
+class CQL_EXPORT cql_query_trace_t :
     boost::noncopyable // Required as long as some raw pointers are used inside.
 {
 public:

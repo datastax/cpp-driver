@@ -1,45 +1,65 @@
 /*
- * File:   cql_uuid_t.hpp
- * Author: mc
- *
- * Created on September 26, 2013, 12:35 PM
+ This file is part of cassandra.
+ 
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+ 
+ http://www.apache.org/licenses/LICENSE-2.0
+ 
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
  */
 
 #ifndef CQL_UUID_HPP_
 #define	CQL_UUID_HPP_
 
-#include <functional>
+#include "cql/cql.hpp"
+
+#include <string>
 
 namespace cql {
     class cql_uuid_t;
 }
 
+/*
 namespace std {
-    // template<>
-    // struct hash<cql::cql_uuid_t>;
+     template<>
+     struct hash<cql::cql_uuid_t>;
 }
+*/
 
 namespace cql {
 
-class cql_uuid_t {
+class CQL_EXPORT cql_uuid_t {
 public:
-    // TODO: This is currently implemented as simple long
-    // but soon we switch to official UUID implementation
-    // as described here:
-    // http://www.ietf.org/rfc/rfc4122.txt
-
     static cql_uuid_t
     create();
+    
+    static size_t
+    size() {
+        return _size;
+    }
 
+    cql_uuid_t();
+    cql_uuid_t(const std::string& uuid_string);
+
+    bool
+    empty() const;
+
+    std::string
+    to_string() const;
+    
+    // friend struct std::hash<cql_uuid_t>;
     friend bool
     operator <(const cql_uuid_t& left, const cql_uuid_t& right);
-
+    
 private:
-    cql_uuid_t(unsigned long uuid): _uuid(uuid) { }
-
-    unsigned long    _uuid;
-
-    // friend struct std::hash<cql_uuid_t>;
+    static const size_t _size = 16; // Size in bytes.
+    cql_byte_t          _uuid[_size];
 };
 
 }

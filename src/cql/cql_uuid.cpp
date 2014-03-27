@@ -13,17 +13,210 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#include <boost/thread.hpp>
 
 #include "cql/cql_uuid.hpp"
+#include "cql/internal/cql_serialization.hpp"
+
+#include <boost/thread.hpp>
+#include <boost/random/mersenne_twister.hpp>
+
+#include <stdint.h>
+#include <algorithm>
+#include <exception>
+
+//----------------------------------------------------------------------------------------
+namespace { // Anonymous namespace with helper tools. Adapted from boost.
+    
+template <typename CharIterator>
+typename std::iterator_traits<CharIterator>::value_type
+get_next_char(CharIterator& begin, CharIterator end) {
+    if (begin == end) {
+        throw std::invalid_argument("String to make UUID from cannot be empty");
+    }
+    return *begin++;
+}
+
+/*
+// WCHAR overloads are commented out. Uncomment them if needed.
+unsigned char
+get_value(wchar_t c) {
+    static wchar_t const*const digits_begin = L"0123456789abcdefABCDEF";
+    static wchar_t const*const digits_end   = digits_begin + 22;
+    
+    static unsigned char const values[] =
+        { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,10,11,12,13,14,15
+            , static_cast<unsigned char>(-1) };
+    
+    wchar_t const* d = std::find(digits_begin, digits_end, c);
+    return values[d - digits_begin];
+}
+bool is_dash(wchar_t c) {
+    return c == L'-';
+}
+bool is_open_brace(wchar_t c) {
+    return (c == L'{');
+}
+void check_close_brace(wchar_t c, wchar_t open_brace) {
+    if (open_brace == L'{' && c == L'}') {
+        // great
+    } else {
+        throw std::invalid_argument("String to make UUID from has an unclosed brace");
+    }
+}
+inline wchar_t to_wchar(size_t i) {
+    if (i <= 9) {
+        return static_cast<wchar_t>(L'0' + i);
+    } else {
+        return static_cast<wchar_t>(L'a' + (i-10));
+    }
+}
+*/
+
+unsigned char
+get_value(char c) {
+    static char const * const digits_begin = "0123456789abcdefABCDEF";
+    static char const * const digits_end   = digits_begin + 22;
+    
+    static unsigned char const values[] =
+        { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,10,11,12,13,14,15
+            , static_cast<unsigned char>(-1) };
+    
+    char const* d = std::find(digits_begin, digits_end, c);
+    return values[d - digits_begin];
+}
+bool is_dash(char c) {
+    return c == '-';
+}
+bool is_open_brace(char c) {
+    return (c == '{');
+}
+void check_close_brace(char c, char open_brace) {
+    if (open_brace == '{' && c == '}') {
+        //great
+    } else {
+        throw std::invalid_argument("String to make UUID from has an unclosed brace");
+    }
+}
+inline char to_char(size_t i) {
+    if (i <= 9) {
+        return static_cast<char>('0' + i);
+    } else {
+        return static_cast<char>('a' + (i-10));
+    }
+}
+
+} // End of anonymous namespace.
+//----------------------------------------------------------------------------------------
 
 cql::cql_uuid_t
 cql::cql_uuid_t::create() {
-    static unsigned long id;
     static boost::mutex mutex;
-
     boost::mutex::scoped_lock lock(mutex);
-    return cql::cql_uuid_t(id++);
+    
+    static ::uint64_t id = 0xAAAAAAAAAAAAAAAAUL;
+    static boost::mt19937_64 mt;
+
+    cql_uuid_t ret;
+    *reinterpret_cast< ::uint64_t*>(&ret._uuid[0]) = id++;
+    *reinterpret_cast< ::uint64_t*>(&ret._uuid[8]) = mt();
+    
+    // set variant and version (adapted from boost::uuids)
+    *(ret._uuid+8) &= 0xBF;
+    *(ret._uuid+8) |= 0x80;
+    *(ret._uuid+6) &= 0x4F;
+    *(ret._uuid+6) |= 0x40;
+
+    return ret;
+}
+
+cql::cql_uuid_t::cql_uuid_t() {
+    for (size_t i = 0u; i < _size; ++i) {
+        _uuid[i] = 0;
+    }
+}
+
+// Adapted from boost::uuids
+cql::cql_uuid_t::cql_uuid_t(const std::string& uuid_string) {
+    typedef std::string::value_type char_type;
+    std::string::const_iterator begin = uuid_string.begin(),
+                                end   = uuid_string.end();
+    
+    // check open brace
+    char_type c = get_next_char(begin, end);
+    bool has_open_brace = is_open_brace(c);
+    char_type open_brace_char = c;
+    if (has_open_brace) {
+        c = get_next_char(begin, end);
+    }
+    
+    bool has_dashes = false;
+    
+    size_t i = 0u;
+    for (cql_byte_t* it_byte = _uuid; it_byte != _uuid+_size; ++it_byte, ++i) {
+        if (it_byte != _uuid) {
+            c = get_next_char(begin, end);
+        }
+        
+        if (i == 4) {
+            has_dashes = is_dash(c);
+            if (has_dashes) {
+                c = get_next_char(begin, end);
+            }
+        }
+        
+        if (has_dashes) {
+            if (i == 6 || i == 8 || i == 10) {
+                if (is_dash(c)) {
+                    c = get_next_char(begin, end);
+                } else {
+                    throw std::invalid_argument("String to make UUID from has a misplaced dash");
+                }
+            }
+        }
+        
+        *it_byte = get_value(c);
+        
+        c = get_next_char(begin, end);
+        *it_byte <<= 4;
+        *it_byte |= get_value(c);
+    }
+    
+    // check close brace
+    if (has_open_brace) {
+        c = get_next_char(begin, end);
+        check_close_brace(c, open_brace_char);
+    }
+}
+
+bool
+cql::cql_uuid_t::empty() const {
+    for (size_t i = 0u; i < _size; ++i) {
+        if (_uuid[i] != 0) {
+            return false;
+        }
+    }
+    return false;
+}
+
+std::string
+cql::cql_uuid_t::to_string() const
+{
+    std::string result;
+    result.reserve(36);
+    
+    size_t i = 0u;
+    for (const cql_byte_t* it_data = _uuid; it_data != _uuid+_size; ++it_data, ++i) {
+        const size_t hi = ((*it_data) >> 4) & 0x0F;
+        result += to_char(hi);
+        
+        const size_t lo = (*it_data) & 0x0F;
+        result += to_char(lo);
+        
+        if (i == 3 || i == 5 || i == 7 || i == 9) {
+            result += '-';
+        }
+    }
+    return result;
 }
 
 namespace cql {
@@ -32,3 +225,4 @@ namespace cql {
         return (left._uuid < right._uuid);
     }
 }
+

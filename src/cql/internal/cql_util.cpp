@@ -14,7 +14,7 @@
  *   limitations under the License.
  */
 #include <cassert>
-#include <cstring>
+#include <string>
 
 #include "cql/internal/cql_util.hpp"
 
