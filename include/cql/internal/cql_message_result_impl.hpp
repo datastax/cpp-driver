@@ -158,25 +158,15 @@ public:
     bool
     get_string(const std::string& column,
                std::string& output) const;
-									
+	
     bool
     get_data(int i,
              cql::cql_byte_t** output,
              cql::cql_int_t& size) const;
 				
-	bool		
-    get_data(int i,	
-             boost::shared_ptr< cql::cql_byte_t > & output,		
-             cql::cql_int_t& size) const;
-
     bool		
     get_data(const std::string& column,
              cql::cql_byte_t** output,
-             cql::cql_int_t& size) const;
-
-    bool		
-    get_data(const std::string& column,	
-             boost::shared_ptr< cql::cql_byte_t > & output,		
              cql::cql_int_t& size) const;
 
     bool
@@ -226,8 +216,8 @@ public:
     bool
     get_map(const std::string& column,
             boost::shared_ptr< cql::cql_map_t > & output) const;
-
-    bool
+				
+    bool		
     get_keyspace_name(std::string& output) const;
         
     inline bool

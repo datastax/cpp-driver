@@ -433,21 +433,6 @@ cql::cql_message_result_impl_t::get_data(int i,
 }
 
 bool
-cql::cql_message_result_impl_t::get_data(int i,
-        boost::shared_ptr< cql::cql_byte_t > & output,	
-        cql::cql_int_t& size) const {
-    bool empty = false;
-    if (get_nullity(i, empty)) {
-        if (!empty) {
-            cql_byte_t* pos = _row[i];
-            output.reset( cql::decode_int(pos, size) );		
-            return true;
-        }
-    }
-    return false;
-}
-
-bool
 cql::cql_message_result_impl_t::get_data(const std::string& column,
         cql::cql_byte_t** output,
         cql::cql_int_t& size) const {
@@ -457,17 +442,6 @@ cql::cql_message_result_impl_t::get_data(const std::string& column,
     }
     return false;
 }			
-			
-bool		
-cql::cql_message_result_impl_t::get_data(const std::string& column,
-        boost::shared_ptr< cql::cql_byte_t > & output,
-        cql::cql_int_t& size) const {
-    int i = 0;
-    if (_metadata.get_index(column, i)) {
-        return get_data(i, output, size);	
-    }
-    return false;
-}
 
 bool
 cql::cql_message_result_impl_t::get_list(int i,

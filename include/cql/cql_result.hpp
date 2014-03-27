@@ -139,21 +139,21 @@ public:
     virtual bool
     get_string(const std::string& column,
                std::string& output) const = 0;
-
+			
     virtual bool
     get_data(int i,
              cql::cql_byte_t** output,
              cql::cql_int_t& size) const = 0;
-
+			
     virtual bool
     get_data(const std::string& column,
              cql::cql_byte_t** output,
              cql::cql_int_t& size) const = 0;
-
+			
     virtual bool
     get_list(int i,
              cql::cql_list_t** output) const = 0;
-
+			
     virtual bool
     get_list(const std::string& column,
              cql::cql_list_t** output) const = 0;
@@ -165,7 +165,7 @@ public:
     virtual bool
     get_set(const std::string& column,
             cql::cql_set_t** output) const = 0;
-
+			
     virtual bool
     get_map(int i,
             cql::cql_map_t** output) const = 0;
@@ -173,17 +173,7 @@ public:
     virtual bool
     get_map(const std::string& column,
             cql::cql_map_t** output) const = 0;
-		
-	virtual bool		
-    get_data(int i,	
-             boost::shared_ptr< cql::cql_byte_t > & output,					
-             cql::cql_int_t& size) const = 0;
-
-	virtual bool		
-    get_data(const std::string& column,	
-             boost::shared_ptr< cql::cql_byte_t > & output,					
-             cql::cql_int_t& size) const = 0;
-
+			
 	virtual bool
     get_list(int i,
              boost::shared_ptr< cql::cql_list_t > & output) const = 0;			
