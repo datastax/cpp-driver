@@ -22,6 +22,8 @@
 #include <string>
 #include "cql/cql.hpp"
 
+#include <boost/shared_ptr.hpp>	
+
 namespace cql {
 
 class cql_set_t {
@@ -62,14 +64,16 @@ public:
     virtual bool
     get_string(size_t i,
                std::string& output) const = 0;
+													
+    virtual size_t
+    size() const = 0;
 
+private:			
+			
     virtual bool
     get_data(size_t i,
              cql::cql_byte_t** output,
              cql::cql_short_t& size) const = 0;
-
-    virtual size_t
-    size() const = 0;
 
 };
 
