@@ -17,13 +17,13 @@
 #include <iostream>
 #include <sstream>
 #include <boost/foreach.hpp>
+
 #include "cql/internal/cql_serialization.hpp"
 #include "cql/internal/cql_vector_stream.hpp"
 #include "cql/internal/cql_defines.hpp"
 #include "cql/internal/cql_list_impl.hpp"
 #include "cql/internal/cql_map_impl.hpp"
 #include "cql/internal/cql_set_impl.hpp"
-#include "cql/internal/cql_util.hpp"
 
 #include "cql/internal/cql_message_result_impl.hpp"
 
