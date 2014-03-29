@@ -188,14 +188,21 @@ cql::cql_uuid_t::cql_uuid_t(const std::string& uuid_string) {
     }
 }
 
+cql::cql_uuid_t::cql_uuid_t(cql_byte_t* bytes) {
+    // We allow for shorter uuids (i.e. shorter than cql_uuid_t::_size bytes)
+    for (size_t i = 0u; i < _size; ++i) {
+        _uuid[i] = bytes[i];
+    }
+}
+
 bool
 cql::cql_uuid_t::empty() const {
     for (size_t i = 0u; i < _size; ++i) {
         if (_uuid[i] != 0) {
             return false;
-        }
+         }
     }
-    return false;
+    return true;
 }
 
 std::string
@@ -217,6 +224,11 @@ cql::cql_uuid_t::to_string() const
         }
     }
     return result;
+}
+
+std::vector<cql::cql_byte_t>
+cql::cql_uuid_t::get_data() const {
+    return std::vector<cql_byte_t>(_uuid, _uuid + _size);
 }
 
 namespace cql {

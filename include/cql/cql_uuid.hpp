@@ -20,6 +20,7 @@
 #include "cql/cql.hpp"
 
 #include <string>
+#include <vector>
 
 namespace cql {
     class cql_uuid_t;
@@ -46,12 +47,16 @@ public:
 
     cql_uuid_t();
     cql_uuid_t(const std::string& uuid_string);
+    cql_uuid_t(cql_byte_t* bytes);
 
     bool
     empty() const;
 
     std::string
     to_string() const;
+    
+    std::vector<cql_byte_t>
+    get_data() const;
     
     // friend struct std::hash<cql_uuid_t>;
     friend bool

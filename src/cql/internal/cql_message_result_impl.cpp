@@ -16,7 +16,11 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+
 #include <boost/foreach.hpp>
+
+#include "cql/cql_uuid.hpp"
+
 #include "cql/internal/cql_serialization.hpp"
 #include "cql/internal/cql_vector_stream.hpp"
 #include "cql/internal/cql_defines.hpp"
@@ -24,7 +28,6 @@
 #include "cql/internal/cql_map_impl.hpp"
 #include "cql/internal/cql_set_impl.hpp"
 #include "cql/internal/cql_util.hpp"
-
 #include "cql/internal/cql_message_result_impl.hpp"
 
 std::string
@@ -422,7 +425,7 @@ cql::cql_message_result_impl_t::get_data(int i,
         cql::cql_byte_t** output,
         cql::cql_int_t& size) const {
     bool empty = false;
-    if (get_nullity(i, empty)) {
+    if (!get_nullity(i, empty)) {
         if (!empty) {
             cql_byte_t* pos = _row[i];
             *output = cql::decode_int(pos, size);
@@ -442,6 +445,18 @@ cql::cql_message_result_impl_t::get_data(const std::string& column,
     }
     return false;
 }			
+
+bool
+cql::cql_message_result_impl_t::get_uuid(int i,
+    boost::shared_ptr< cql::cql_uuid_t > & output) const {
+    bool is_empty = true;
+    if (is_valid(i, cql::CQL_COLUMN_TYPE_UUID) && !get_nullity(i, is_empty) && !is_empty) {
+        output.reset(new cql_uuid_t(_row[i])); // TODO: how to get sure about 16-byte row length?
+        return true;
+    }
+    return false;
+}
+
 
 bool
 cql::cql_message_result_impl_t::get_list(int i,

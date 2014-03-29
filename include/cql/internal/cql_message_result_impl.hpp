@@ -27,6 +27,8 @@
 #include "cql/internal/cql_result_metadata.hpp"
 
 namespace cql {
+    
+class cql_uuid_t;
 
 class cql_message_result_impl_t :
     boost::noncopyable,
@@ -169,6 +171,10 @@ public:
              cql::cql_byte_t** output,
              cql::cql_int_t& size) const;
 
+    bool
+    get_uuid(int i,
+             boost::shared_ptr< cql::cql_uuid_t > & output) const;
+        
     bool
     get_list(int i,
              cql::cql_list_t** output) const;
