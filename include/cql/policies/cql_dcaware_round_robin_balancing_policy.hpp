@@ -58,13 +58,15 @@ namespace cql {
 			int					 usedHostsPerRemoteDc	
 			);   // the only one address the query will go to		
 							
-		virtual boost::shared_ptr<cql_host_t> next_host_to_query();			// Returns next host to query.
-										
-	private:													
+		virtual boost::shared_ptr<cql_host_t> next_host_to_query();		// Returns next host to query.
+											
+	private:												
+		std::vector<boost::shared_ptr<cql_host_t> > local_hosts;		// local hosts	
+		std::vector<boost::shared_ptr<cql_host_t> > remote_hosts;		// remote hosts	
 		boost::mutex					_mutex2;
 		std::string						_localDc;		// the address IP of the node the query will go to
 		const cql_cluster_t*			_cluster2;		// 	
-		int								_index2;		// 	
+		int 							_index2;		// 	
 		std::map< std::string, long >	_dcQueryCount;	// how many times we queried each data center.	
 		int								_usedHostsPerRemoteDc;	
 	};						

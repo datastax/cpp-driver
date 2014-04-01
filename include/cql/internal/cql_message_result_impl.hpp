@@ -170,6 +170,14 @@ public:
              cql::cql_byte_t** output,
              cql::cql_int_t& size) const;
 
+	virtual bool
+    get_data(int i,
+			 std::vector< cql::cql_byte_t > & output ) const;
+			
+    virtual bool
+    get_data(const std::string& column,
+             std::vector< cql::cql_byte_t > & output ) const;	
+			
     CQL_DEPRECATED bool
     get_list(int i,
              cql::cql_list_t** output) const;

@@ -443,6 +443,48 @@ cql::cql_message_result_impl_t::get_data(const std::string& column,
     return false;
 }			
 
+
+
+			
+bool								// j.kasprzak 
+cql::cql_message_result_impl_t::get_data( int i,
+										  std::vector< cql::cql_byte_t > & output ) const
+{
+	cql::cql_byte_t* output_ptr = NULL;
+
+	bool empty = false;
+    if (get_nullity(i, empty)) {
+        if (!empty) {
+            cql_byte_t* pos = _row[i];
+			cql::cql_int_t size( 0 );
+            output_ptr = cql::decode_int(pos, size);	
+				
+			output.resize( size );
+			for( int i = 0; i < size; ++i )
+			{	
+				output[ i ] = *(output_ptr + i);	
+			}	
+				
+            return true;
+        }		
+    }			
+}				
+				
+
+
+
+bool								// j.kasprzak 
+cql::cql_message_result_impl_t::get_data( const std::string & column,
+										  std::vector< cql::cql_byte_t > & output ) const
+{
+	int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_data(i, output );
+    }
+    return false;
+}
+			
+			
 bool
 cql::cql_message_result_impl_t::get_list(int i,
         cql::cql_list_t** output) const {

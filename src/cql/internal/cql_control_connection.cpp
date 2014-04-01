@@ -209,23 +209,21 @@ cql_control_connection_t::refresh_node_list_and_token_map()
 
                 if (result->get_nullity("rpc_address", output) && !output)
                 {
-                    cql::cql_byte_t* data = NULL;
-                    cql::cql_int_t size = 0;
-                    result->get_data("rpc_address", &data, size);
-                    if (size == 4)
-                        peer_address = make_ipv4_address_from_bytes(data);
+                    std::vector< cql::cql_byte_t > data;   
+                    result->get_data("rpc_address", data );
+                    if (data.size() == 4)
+                        peer_address = make_ipv4_address_from_bytes( &data[ 0 ] );	
                 }
                 if (peer_address == ::boost::asio::ip::address())
                 {
                     if (result->get_nullity("peer", output) && !output)
-                    {
-                        cql::cql_byte_t* data = NULL;
-                        cql::cql_int_t size = 0;
-                        result->get_data("peer", &data, size);
-                        if (size == 4) {
-                            peer_address = make_ipv4_address_from_bytes(data);
-                        }
-                    }
+                    {		
+						std::vector< cql::cql_byte_t > data;   
+                        result->get_data("peer", data );
+                        if (data.size() == 4) {		
+                            peer_address = make_ipv4_address_from_bytes( &data[ 0 ] );
+                        }		
+                    }			
                     else if (_log_callback) {
                         _log_callback(CQL_LOG_ERROR, "No rpc_address found for host in peers system table.");
                     }

@@ -377,14 +377,13 @@ BOOST_AUTO_TEST_CASE(deserialize_data_0)
     m.consume(&err);
     BOOST_CHECK_EQUAL(true, m.next());
 
-    cql::cql_byte_t* data = 0;
-    cql::cql_int_t size = 0;
+    std::vector< cql::cql_byte_t > data;	
 
     const char test_str[] = {0x61, 0x73, 0x63, 0x69, 0x69};
 
-    BOOST_CHECK_EQUAL(true, m.get_data(0, &data, size));
-    BOOST_CHECK_EQUAL(5, size);
-    BOOST_CHECK(memcmp(test_str, reinterpret_cast<const char*>(data), sizeof(test_str)) == 0);
+    BOOST_CHECK_EQUAL(true, m.get_data(0, data ));
+    BOOST_CHECK_EQUAL(5, data.size() );	
+    BOOST_CHECK(memcmp(test_str, reinterpret_cast<const char*>(&data[0]), sizeof(test_str)) == 0);
 }
 
 BOOST_AUTO_TEST_CASE(deserialize_data_10)
@@ -395,14 +394,13 @@ BOOST_AUTO_TEST_CASE(deserialize_data_10)
     m.consume(&err);
     BOOST_CHECK_EQUAL(true, m.next());
 
-    cql::cql_byte_t* data = 0;
-    cql::cql_int_t size = 0;
+    std::vector< cql::cql_byte_t > data;
 
     const char test_str[] = {0x00, 0x04, 0x00, 0x00};
 
-    BOOST_CHECK_EQUAL(true, m.get_data(10, &data, size));
-    BOOST_CHECK_EQUAL(4, size);
-    BOOST_CHECK_EQUAL(0, strncmp(test_str, reinterpret_cast<const char*>(data), sizeof(test_str)));
+    BOOST_CHECK_EQUAL(true, m.get_data(10, data ));
+    BOOST_CHECK_EQUAL(4, data.size() );	
+    BOOST_CHECK_EQUAL(0, strncmp(test_str, reinterpret_cast<const char*>(&data[0]), sizeof(test_str)));
 }
 
 BOOST_AUTO_TEST_CASE(deserialize_data_14)
@@ -413,15 +411,14 @@ BOOST_AUTO_TEST_CASE(deserialize_data_14)
     m.consume(&err);
     BOOST_CHECK_EQUAL(true, m.next());
 
-    cql::cql_byte_t* data = 0;
-    cql::cql_int_t size = 0;
+    std::vector< cql::cql_byte_t > data;
 
     const unsigned char test_str[] = {0x21, 0xc9, 0xb0, 0x31, 0xa3, 0xdc, 0x45, 0x56,
                                       0xb4, 0x2f, 0x12, 0xc2, 0x86, 0x7c, 0x7d, 0x4a, 0x00}; // one extra byte for null terminiation
 
-    BOOST_CHECK_EQUAL(true, m.get_data(14, &data, size));
-    BOOST_CHECK_EQUAL(16, size);
-    BOOST_CHECK(memcmp(test_str, reinterpret_cast<const char*>(data), sizeof(test_str)) == 0);
+    BOOST_CHECK_EQUAL(true, m.get_data(14, data ));
+    BOOST_CHECK_EQUAL(16, data.size() );	
+    BOOST_CHECK(memcmp(test_str, reinterpret_cast<const char*>( &data[0]), sizeof(test_str)) == 0);
 }
 
 BOOST_AUTO_TEST_CASE(deserialize_list)
