@@ -47,13 +47,10 @@ print_rows(
 {
     while (result.next()) {
         for (size_t i = 0; i < result.column_count(); ++i) {
-            cql::cql_byte_t* data = NULL;
-            cql::cql_int_t size = 0;
-
-            result.get_data(i, &data, size);
-
-            std::cout.write(reinterpret_cast<char*>(data), size);
-            for (int i = size; i < 25; i++) {
+			std::vector< cql::cql_byte_t > data;
+            result.get_data(i, data );					
+            std::cout.write(reinterpret_cast<char*>(&data[0]), data.size() );
+            for (int i = data.size(); i < 25; i++) {
                 std::cout << ' ' ;
             }
             std::cout << " | ";

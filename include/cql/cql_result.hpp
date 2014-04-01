@@ -27,6 +27,7 @@ namespace cql {
 class cql_list_t;
 class cql_map_t;
 class cql_set_t;
+class cql_uuid_t;
 
 class cql_result_t {
 
@@ -140,21 +141,33 @@ public:
     get_string(const std::string& column,
                std::string& output) const = 0;
 			
-    virtual bool
+    CQL_DEPRECATED virtual bool
     get_data(int i,
              cql::cql_byte_t** output,
              cql::cql_int_t& size) const = 0;
 			
-    virtual bool
+    CQL_DEPRECATED virtual bool
     get_data(const std::string& column,
              cql::cql_byte_t** output,
              cql::cql_int_t& size) const = 0;
+
+    virtual bool
+    get_uuid(int i,
+             boost::shared_ptr<cql::cql_uuid_t>& output) const = 0;
+
+	virtual bool
+    get_data(int i,
+			 std::vector< cql::cql_byte_t > & output ) const = 0;
 			
     virtual bool
+    get_data(const std::string& column,
+             std::vector< cql::cql_byte_t > & output ) const = 0;
+									
+    CQL_DEPRECATED virtual bool
     get_list(int i,
              cql::cql_list_t** output) const = 0;
 			
-    virtual bool
+    CQL_DEPRECATED virtual bool
     get_list(const std::string& column,
              cql::cql_list_t** output) const = 0;
 
@@ -162,15 +175,15 @@ public:
     get_set(int i,
             cql::cql_set_t** output) const = 0;
 
-    virtual bool
+    CQL_DEPRECATED virtual bool
     get_set(const std::string& column,
             cql::cql_set_t** output) const = 0;
 			
-    virtual bool
+    CQL_DEPRECATED virtual bool
     get_map(int i,
             cql::cql_map_t** output) const = 0;
 
-    virtual bool
+    CQL_DEPRECATED virtual bool
     get_map(const std::string& column,
             cql::cql_map_t** output) const = 0;
 			

@@ -23,13 +23,14 @@
 
 #include "cql/cql.hpp"
 #include "cql/cql_result.hpp"
+#include "cql/internal/cql_util.hpp"
 #include "cql/internal/cql_message.hpp"
 #include "cql/internal/cql_result_metadata.hpp"
 
 namespace cql {
-    
-class cql_uuid_t;
 
+class cql_uuid_t;
+    
 class cql_message_result_impl_t :
     boost::noncopyable,
 public cql_message_t,
@@ -162,20 +163,29 @@ public:
                std::string& output) const;
 	
     bool
+    get_uuid(int i,
+             boost::shared_ptr<cql::cql_uuid_t>& output) const;
+
+        
+    CQL_DEPRECATED bool
     get_data(int i,
              cql::cql_byte_t** output,
              cql::cql_int_t& size) const;
 				
-    bool		
+    CQL_DEPRECATED bool		
     get_data(const std::string& column,
              cql::cql_byte_t** output,
              cql::cql_int_t& size) const;
 
-    bool
-    get_uuid(int i,
-             boost::shared_ptr< cql::cql_uuid_t > & output) const;
-        
-    bool
+	virtual bool
+    get_data(int i,
+			 std::vector< cql::cql_byte_t > & output ) const;
+			
+    virtual bool
+    get_data(const std::string& column,
+             std::vector< cql::cql_byte_t > & output ) const;	
+			
+    CQL_DEPRECATED bool
     get_list(int i,
              cql::cql_list_t** output) const;
 
@@ -183,7 +193,7 @@ public:
     get_list(int i,
              boost::shared_ptr< cql::cql_list_t > & output) const;	
 
-    bool
+    CQL_DEPRECATED bool
     get_list(const std::string& column,
              cql::cql_list_t** output) const;
 
@@ -191,7 +201,7 @@ public:
     get_list(const std::string& column,	
              boost::shared_ptr< cql::cql_list_t > & output) const;	
 
-    bool
+    CQL_DEPRECATED bool
     get_set(int i,
             cql::cql_set_t** output) const;
 
@@ -199,7 +209,7 @@ public:
     get_set(int i,
             boost::shared_ptr< cql::cql_set_t > & output) const;
 
-    bool
+    CQL_DEPRECATED bool
     get_set(const std::string& column,
             cql::cql_set_t** output) const;
 
@@ -207,7 +217,7 @@ public:
     get_set(const std::string& column,
             boost::shared_ptr< cql::cql_set_t > & output) const;
 
-    bool
+    CQL_DEPRECATED bool
     get_map(int i,
             cql::cql_map_t** output) const;
 
@@ -215,7 +225,7 @@ public:
     get_map(int i,	
             boost::shared_ptr< cql::cql_map_t > & output) const;
 
-    bool
+    CQL_DEPRECATED bool
     get_map(const std::string& column,
             cql::cql_map_t** output) const;
 

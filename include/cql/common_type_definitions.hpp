@@ -20,6 +20,7 @@ namespace cql {
     typedef
     std::map<std::string, std::string>
     cql_credentials_t;
+    
 }
 
 #endif	/* COMMON_TYPE_DEFINITIONS_HPP_ */

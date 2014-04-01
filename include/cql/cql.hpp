@@ -23,6 +23,15 @@
 #include <boost/noncopyable.hpp>
 #include <cql/cql_config.hpp>
 
+#ifdef __GNUC__
+#define CQL_DEPRECATED __attribute__ ((deprecated))
+#elif defined(_MSC_VER)
+#define CQL_DEPRECATED __declspec(deprecated)
+#else
+#pragma message("CQL WARNING: deprecation messages will not be visible")
+#define CQL_DEPRECATED
+#endif
+
 namespace cql {
 
 typedef ::uint8_t   cql_byte_t;

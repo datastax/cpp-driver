@@ -67,20 +67,23 @@ int get_last_part_of_ip( std::string ip )		// get the last part of IP address.
 std::string Tx( int i )		// simple conversion from int to string.	
 {
 	return boost::str(boost::format("%d") % i );
-}	
+}		
 					
-
+		
 BOOST_FIXTURE_TEST_SUITE( dcaware_algorithm_test, DC_AWARE_ALGORITHM_TEST )     //// dcaware_algorithm_test/dc_aware_algorithm
 					
+			
+//// This part of the test simulates the case when a node in each query plan is not available and within the same query plan
+//// we to reach reach to the next node. Here we have the limit of nodes in each remote datacenter.	
 BOOST_AUTO_TEST_CASE(dc_aware_algorithm)
-{								
+{							
 	cql::cql_cluster_dcaware_testing_t cluster_dcaware_testing;	
-					
+							
 	srand( (unsigned)time(NULL) );
 										
-	int the_number_of_data_centers( 30 );		
-	int the_number_of_nodes_in_each_data_center( 40 );	
-	int the_limit_of_number_of_queries_for_each_remote_data_center( 20 );	
+	int the_number_of_data_centers( 40 );		
+	int the_number_of_nodes_in_each_data_center( 80 );		
+	int the_limit_of_number_of_queries_for_each_remote_data_center( 25 );	
 						
 	//// populate the cluster with many nodes in many remote datacenters.	
 	for( int i1 = 10; i1 < 10 + the_number_of_data_centers; ++i1 )		// the number of remote data centers.
@@ -96,11 +99,9 @@ BOOST_AUTO_TEST_CASE(dc_aware_algorithm)
 			new_host->set_location_info( "dc" + Tx( i1 ), "rack" + Tx( i1 ) );		// set the datacenter name and rack name.	
 			cluster_dcaware_testing.metadata()->_collection.push_back( new_host );
 		}							
-	}								
+	}					
 										
-
-
-		
+						
 	{   //// Select only the local nodes. Ask for a local node which exists. Count the queries to each node. It should be linear round-robin on local nodes.	
 		//// The same nodes should be taken many times. 
 		cql::cql_dcaware_round_robin_balancing_policy_t dc_balancing( "dc10", the_limit_of_number_of_queries_for_each_remote_data_center );	
@@ -115,7 +116,9 @@ BOOST_AUTO_TEST_CASE(dc_aware_algorithm)
 		{				
 			boost::shared_ptr< cql::cql_host_t> host = query_plan_dc->next_host_to_query();			// Returns next host to query.
 			if( host.get() != NULL )
-			{
+			{	
+				//// std::cout << host->endpoint().to_string() << std::endl;	
+
 				std::map< std::string, long >::iterator p = dc_query_quantity.find( host->datacenter() );
 										
 				if( p == dc_query_quantity.end() )
@@ -180,9 +183,11 @@ BOOST_AUTO_TEST_CASE(dc_aware_algorithm)
 		{				
 			boost::shared_ptr< cql::cql_host_t> host = query_plan_dc->next_host_to_query();			// Returns next host to query.
 			if( host.get() != NULL )
-			{															
+			{																		
+				///// std::cout << host->endpoint().to_string() << std::endl;	
+							
 				int const last_part_of_ip = get_last_part_of_ip( host->endpoint().to_string() );
-						
+							
 				std::map< std::string, long >::iterator p = dc_query_quantity.find( host->datacenter() );
 										
 				if( p == dc_query_quantity.end() )
@@ -198,6 +203,173 @@ BOOST_AUTO_TEST_CASE(dc_aware_algorithm)
 				if( p3 != last_ip_part_query_quantity.end() )
 				{	
 					++( p3->second );	
+				}					
+			}						
+			else					
+			{						
+				break;				
+			}						
+		}							
+									
+		std::vector< int > occu;							//// the number of queries to each fourth part of IP address. 
+				
+		for( std::map< long, long >::const_iterator p4 = last_ip_part_query_quantity.begin(); p4 != last_ip_part_query_quantity.end(); ++p4 )
+			occu.push_back( p4->second );		
+					
+		if( occu.size() < 4 )
+		{		
+			BOOST_REQUIRE( false );							//// to few nodes to compute the reliable reulsts of the test.
+		}		
+				
+		std::sort( occu.begin(), occu.end() );				//// Sort by the number of queries by each last number of IP address.
+		
+		for( int i = occu.size() - the_limit_of_number_of_queries_for_each_remote_data_center; i < occu.size(); ++i )
+		{		
+			BOOST_REQUIRE( occu[ i ] >= query_qnt / ( the_number_of_data_centers * 2 ) );					
+		}		
+				
+		int sum( 0 );
+		for( int i = 0; i < occu.size(); ++i )
+			sum += occu[ i ];	
+				
+		BOOST_REQUIRE( sum == query_qnt );									
+	}														
+}							
+							
+
+
+
+
+													
+//// Another type of testing, where each query plan is created each time inside the loop. This is the normal behaviour of the database,
+//// when nodes are available and we connect only to the first node from the pool of nodes which can be return by each plan. 
+//// In this "normal behaviour" there is no limit to the nodes to each datacenter. 
+BOOST_AUTO_TEST_CASE(dc_aware_algorithm_one_query_per_plan)		// //// dcaware_algorithm_test/dc_aware_algorithm_one_query_per_plan
+{						
+	cql::cql_cluster_dcaware_testing_t cluster_dcaware_testing;	
+						
+	srand( (unsigned)time(NULL) );
+											
+	int the_number_of_data_centers( 40 );				
+	int the_number_of_nodes_in_each_data_center( 80 );	
+	int the_limit_of_number_of_queries_for_each_remote_data_center( 25 );	
+						
+	//// populate the cluster with many nodes in many remote datacenters.	
+	for( int i1 = 10; i1 < 10 + the_number_of_data_centers; ++i1 )		// the number of remote data centers.
+	{					
+		for( int i2 = 10; i2 < 10 + the_number_of_nodes_in_each_data_center; ++i2 )	// the number of nodes in each data centers.
+		{								
+			std::string add = "192.168." + Tx( i1 ) + "." + Tx( i2 );
+			boost::asio::ip::address address( boost::asio::ip::address::from_string( add ) );	
+			std::string kkk = address.to_string();		
+			cql::cql_endpoint_t  end_point( address, 30000 );			
+			std::string end_point_data = end_point.to_string();		
+			boost::shared_ptr<cql::cql_host_t> new_host = cql::cql_host_t::create( end_point, boost::shared_ptr< cql::cql_reconnection_policy_t>( new cql::cql_constant_reconnection_policy_t( boost::posix_time::seconds(1))) );
+			new_host->set_location_info( "dc" + Tx( i1 ), "rack" + Tx( i1 ) );		// set the datacenter name and rack name.	
+			cluster_dcaware_testing.metadata()->_collection.push_back( new_host );
+		}							
+	}								
+												
+	{   //// Select only the local nodes. Ask for a local node which exists. Count the queries to each node. It should be linear round-robin on local nodes.	
+		//// The same nodes should be taken many times. 
+		cql::cql_dcaware_round_robin_balancing_policy_t dc_balancing( "dc10", the_limit_of_number_of_queries_for_each_remote_data_center );	
+		dc_balancing.init( &cluster_dcaware_testing );	
+													
+		std::map< std::string, long >	dc_query_quantity;	
+		std::map< std::string, long >	ip_query_quantity;	
+		
+		for( int i = 0; i < cluster_dcaware_testing.metadata()->_collection.size(); ++i)
+		{	
+			boost::shared_ptr< cql::cql_query_plan_t> query_plan_dc = dc_balancing.new_query_plan( boost::shared_ptr< cql::cql_query_t>() );
+				
+			boost::shared_ptr< cql::cql_host_t> host = query_plan_dc->next_host_to_query();			// Returns next host to query.
+			if( host.get() != NULL )
+			{			
+				//// std::cout << host->endpoint().to_string() << std::endl;	
+						
+				std::map< std::string, long >::iterator p = dc_query_quantity.find( host->datacenter() );
+										
+				if( p == dc_query_quantity.end() )
+				{	
+					dc_query_quantity.insert( std::make_pair( host->datacenter(), 1 ) );
+				}	
+				else
+				{
+					++( p->second );	
+				}	
+					
+				std::map< std::string, long >::iterator p2 = ip_query_quantity.find( host->endpoint().to_string() );
+										
+				if( p2 == ip_query_quantity.end() )
+				{	
+					ip_query_quantity.insert( std::make_pair( host->endpoint().to_string(), 1 ) );
+				}	
+				else
+				{	
+					++( p2->second );	
+				}											
+			}	
+			else
+			{
+				break;	
+			}
+		}				
+							
+		BOOST_REQUIRE( dc_query_quantity.size() == 1 );				//// there should be only one datacenter which was queried.
+						
+		std::map< std::string, long >::const_iterator p2 = dc_query_quantity.find( "dc10" );		//// check if this is the local datacenter.		
+			
+		BOOST_REQUIRE( p2 != dc_query_quantity.end() );
+		BOOST_REQUIRE( p2->second == cluster_dcaware_testing.metadata()->_collection.size() );	
+						
+		for( std::map< std::string, long >::const_iterator p = ip_query_quantity.begin(); p != ip_query_quantity.end(); ++p )
+		{																// each node should be taken the same number of times,
+			BOOST_REQUIRE( p->second == the_number_of_data_centers );	// because this is the linear round-robin.	
+		}									
+	}							
+								
+
+											
+	{ // Select only the remote nodes. Ask for a local node which does not exist. Count the queries to each last number of IP address.	
+		cql::cql_dcaware_round_robin_balancing_policy_t dc_balancing( "dc1", the_limit_of_number_of_queries_for_each_remote_data_center );	
+		dc_balancing.init( &cluster_dcaware_testing );	
+												
+		std::map< std::string, long > dc_query_quantity;		// how many queries for each data centers.
+		std::map< long, long > last_ip_part_query_quantity;		// how many queries for each last part of ip address.	
+								
+		for( int i2 = 10; i2 < 10 + the_number_of_nodes_in_each_data_center; ++i2 )	// the number of nodes in each data centers.
+		{			
+			last_ip_part_query_quantity.insert( std::make_pair( i2, 0 ) );		//// prepare the map for counting the number of queries for each last part of address.	
+		}				
+				
+		int const query_qnt = the_number_of_data_centers * the_number_of_nodes_in_each_data_center;		// how many queries. 
+					
+		for( int i = 0; i < query_qnt; ++i)
+		{		
+			boost::shared_ptr< cql::cql_query_plan_t> query_plan_dc = dc_balancing.new_query_plan( boost::shared_ptr< cql::cql_query_t>() );
+				
+			boost::shared_ptr< cql::cql_host_t> host = query_plan_dc->next_host_to_query();			// Returns next host to query.
+			if( host.get() != NULL )
+			{					
+				////// std::cout << host->endpoint().to_string() << std::endl;	
+						
+				int const last_part_of_ip = get_last_part_of_ip( host->endpoint().to_string() );
+						
+				std::map< std::string, long >::iterator p = dc_query_quantity.find( host->datacenter() );
+										
+				if( p == dc_query_quantity.end() )
+				{		
+					dc_query_quantity.insert( std::make_pair( host->datacenter(), 1 ) );
+				}		
+				else	
+				{
+					++( p->second );	
+				}	
+
+				std::map< long, long >::iterator p3 = last_ip_part_query_quantity.find( last_part_of_ip );
+				if( p3 != last_ip_part_query_quantity.end() )
+				{	
+					++( p3->second );	
 				}			
 			}				
 			else			
@@ -205,33 +377,16 @@ BOOST_AUTO_TEST_CASE(dc_aware_algorithm)
 				break;			
 			}					
 		}						
-								
-		std::vector< int > occu;						//// the number of queries to each fourth part of IP address. 
-				
+												
+		BOOST_REQUIRE( last_ip_part_query_quantity.size() == the_number_of_nodes_in_each_data_center );
+												
 		for( std::map< long, long >::const_iterator p4 = last_ip_part_query_quantity.begin(); p4 != last_ip_part_query_quantity.end(); ++p4 )
-			occu.push_back( p4->second );		
-					
-		if( occu.size() < 4 )
-		{		
-			BOOST_REQUIRE( false );				//// to few nodes to compute the reliable reulsts of the test.
-		}		
-				
-		std::sort( occu.begin(), occu.end() );			//// Sort by the number of queries by each last number of IP address.
-				
-		int index1 = occu.size() / 4;					//// Take the value of the vector of about 25% of the length and of about the 75% of the length.
-		int index2 = index1 * 3;						//// Compute what is the difference. There should be small difference. The less the better. 
-			
-		if( index1 < occu.size() && index2 < occu.size() )
-		{	
-			int lowValue = occu[ index1 ];					
-			int highValue = occu[ index2 ];					
-							
-			BOOST_REQUIRE( lowValue > 0 );					
-			BOOST_REQUIRE( highValue / lowValue < 3 );
-		}				
-	}					
-									
+		{			
+			BOOST_REQUIRE( p4->second == the_number_of_data_centers );		//// this is linear round robin through the pool of nodes, so each node should be taken the same number of times.	
+		}					
+	}										
 }						
-						
+					
+					
 BOOST_AUTO_TEST_SUITE_END()	
 			
