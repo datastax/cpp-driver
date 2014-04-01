@@ -60,20 +60,20 @@ cql::cql_query_trace_t::do_fetch_trace() {
                 boost::shared_ptr<cql::cql_result_t> result = query_result.result;
                 while (result->next()) {
                     bool is_empty = true;
-                    if (!result->get_nullity("request", is_empty) && !is_empty) {
+                    if (result->get_nullity("request", is_empty) && !is_empty) {
                         result->get_string("request", _request_type);
                     }
-                    if (!result->get_nullity("duration", is_empty) && !is_empty) {
+                    if (result->get_nullity("duration", is_empty) && !is_empty) {
                         result->get_bigint("duration", _duration);
                     }
-                    if (!result->get_nullity("coordinator", is_empty) && !is_empty) {
+                    if (result->get_nullity("coordinator", is_empty) && !is_empty) {
                     // TODO(JS): deserialize ip addresses at last.
                     //    result->get_ip_address("coordinator", _coordinator);
                     }
-                    if (!result->get_nullity("parameters", is_empty) && !is_empty) {
+                    if (result->get_nullity("parameters", is_empty) && !is_empty) {
                         result->get_map("parameters", &_parameters);
                     }
-                    if (!result->get_nullity("started_at", is_empty) && !is_empty) {
+                    if (result->get_nullity("started_at", is_empty) && !is_empty) {
                         result->get_bigint("started_at", _started_at);
                     }
                     break;
@@ -112,20 +112,20 @@ cql::cql_query_trace_t::do_fetch_trace() {
                     
                     bool is_empty = true;
                         
-                    if (!result->get_nullity("activity", is_empty) && !is_empty) {
+                    if (result->get_nullity("activity", is_empty) && !is_empty) {
                         result->get_string("activity", activity);
                     }
-                    if (!result->get_nullity("event_id", is_empty) && !is_empty) {
+                    if (result->get_nullity("event_id", is_empty) && !is_empty) {
                         result->get_string("event_id", event_id); // TODO (JS) this should (?) be cql_uuid_t
                     }
-                    if (!result->get_nullity("source", is_empty) && !is_empty) {
+                    if (result->get_nullity("source", is_empty) && !is_empty) {
                         // TODO(JS) :
                         // result->get_ip_address("source", source);
                     }
-                    if (!result->get_nullity("source_elapsed", is_empty) && !is_empty) {
+                    if (result->get_nullity("source_elapsed", is_empty) && !is_empty) {
                         result->get_bigint("source_elapsed", source_elapsed);
                     }
-                    if (!result->get_nullity("thread", is_empty) && !is_empty) {
+                    if (result->get_nullity("thread", is_empty) && !is_empty) {
                         result->get_string("thread", thread);
                     }
                     
