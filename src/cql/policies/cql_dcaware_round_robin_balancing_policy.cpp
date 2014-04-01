@@ -130,7 +130,10 @@ cql::cql_dcaware_round_robin_query_plan_t::next_host_to_query()
 	if( !local_hosts.empty() )		// if there are local hosts available
 	{		
 		return local_hosts[ ( _index2++ ) %  local_hosts.size() ];		//// return the next host in the round-robin loop
-	}		
+	}			
+				
+	if( _usedHostsPerRemoteDc == 0 )							// If the limit to remote nodes is zero, then
+		return boost::shared_ptr<cql::cql_host_t>();			// do not waste time to anlyse the remote nodes. 
 				
 	if( remote_hosts.empty() )		// if the vector with remote hosts is empty.
 	{								// create the vector with remote hosts.
