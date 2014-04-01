@@ -627,7 +627,7 @@ private:
         const cql_error_t&                                       error,
         boost::shared_ptr<cql_message_error_impl_t>              err_message)
     {
-        cql_retry_decision_t decision = cql_retry_decision_t::rethrow_decision();
+        cql_retry_decision_t decision = cql_retry_decision_t::ignore();
         
         // This retry would be the n+1-th retry:
         const int retry_count = query->get_retry_counter() + 1;
@@ -740,6 +740,9 @@ private:
             }
             else if (decision.retry_decision() == CQL_RETRY_DECISION_RETHROW) {
                 _handle_rethrow(promise, error, err_message);
+            }
+            else {
+                promise->set_value(cql::cql_future_result_t(this->shared_from_this(), stream, error));
             }
         }
     }
