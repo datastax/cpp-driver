@@ -163,6 +163,8 @@ public:
         boost::shared_ptr<cql_session_impl_t> session =
             cql_session_impl_t::make_instance(session_callbacks, _configuration);
 
+        _connected_sessions[session->id()] = session;
+        
         session->init(_io_service);
         session->set_keyspace(keyspace);
 
