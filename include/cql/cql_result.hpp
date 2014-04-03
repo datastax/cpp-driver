@@ -139,9 +139,7 @@ public:
     virtual bool
     get_string(const std::string& column,
                std::string& output) const = 0;
-		
-private:		
-		
+			
     CQL_DEPRECATED virtual bool
     get_data(int i,
              cql::cql_byte_t** output,
@@ -152,8 +150,6 @@ private:
              cql::cql_byte_t** output,
              cql::cql_int_t& size) const = 0;
 
-public:
-	
 	virtual bool
     get_data(int i,
 			 std::vector< cql::cql_byte_t > & output ) const = 0;
@@ -161,11 +157,43 @@ public:
     virtual bool
     get_data(const std::string& column,
              std::vector< cql::cql_byte_t > & output ) const = 0;
-									
+				
+	virtual bool
+    get_uuid(int i,
+			 std::vector< cql::cql_byte_t > & output ) const = 0;
+				
+    virtual bool
+    get_uuid(const std::string& column,
+             std::vector< cql::cql_byte_t > & output ) const = 0;
+				
+	virtual bool
+    get_uuid(int i,
+			 std::string & output ) const = 0;
+				
+    virtual bool
+    get_uuid(const std::string& column,
+             std::string & output ) const = 0;
+
+	virtual bool	
+	get_timestamp(int i,
+        cql::cql_bigint_t& output) const = 0;
+		
+	virtual bool
+	get_timestamp(const std::string& column,
+        cql::cql_bigint_t& output) const = 0;	
+
+	virtual bool	
+	get_timeuuid(int i,
+        cql::cql_bigint_t& output) const = 0;
+		
+	virtual bool
+	get_timeuuid(const std::string& column,
+        cql::cql_bigint_t& output) const = 0;	
+						
     CQL_DEPRECATED virtual bool
     get_list(int i,
              cql::cql_list_t** output) const = 0;
-			
+				
     CQL_DEPRECATED virtual bool
     get_list(const std::string& column,
              cql::cql_list_t** output) const = 0;
