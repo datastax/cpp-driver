@@ -372,9 +372,9 @@ cql::cql_message_result_impl_t::get_double(const std::string& column,
         return get_double(i, output);
     }
     return false;
-}
+}		
 
-bool
+bool	
 cql::cql_message_result_impl_t::get_bigint(int i,
         cql::cql_bigint_t& output) const {
     if (is_valid(i, cql::CQL_COLUMN_TYPE_BIGINT)
@@ -396,6 +396,69 @@ cql::cql_message_result_impl_t::get_bigint(const std::string& column,
     return false;
 }
 
+bool	
+cql::cql_message_result_impl_t::get_timestamp(int i,
+        cql::cql_bigint_t& output) const {
+    if( is_valid(i, cql::CQL_COLUMN_TYPE_TIMESTAMP) )
+    {
+        cql::decode_bigint(_row[i] + sizeof(cql_int_t), output);
+        return true;
+    }
+    return false;
+}
+
+bool
+cql::cql_message_result_impl_t::get_timestamp(const std::string& column,
+        cql::cql_bigint_t& output) const {
+    int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_timestamp(i, output);
+    }
+    return false;
+}
+
+bool	
+cql::cql_message_result_impl_t::get_timeuuid(int i,
+	cql::cql_bigint_t& output) const
+{
+	std::vector< cql::cql_byte_t > v;
+	if( !get_data( i, v ) )
+		return false;
+
+	if( v.size() != 16 )
+		return false;
+				
+	cql::cql_bigint_t result( 0 );	
+				
+	static int indexes[] = {6,7,4,5,0,1,2,3};		//// take bytes of the array in this order.		
+				
+	for( int i = 0; i < 8; ++i )
+	{		
+		result = result << 8;	
+		int const index = indexes[i];
+		cql::cql_bigint_t t1 = static_cast< cql::cql_bigint_t >( v[index] );
+			
+		if( index == 6 )		//// the four most significant bits are the version. Ignore these bits.		
+			t1 = t1 & 0x0F;		//// take only half of this byte. 
+			
+		result = result | t1;			
+	}		
+
+	output = result;
+	return true;			
+}				
+				
+bool			
+cql::cql_message_result_impl_t::get_timeuuid(const std::string& column,
+	cql::cql_bigint_t& output) const
+{
+    int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_timeuuid(i, output);
+    }	
+    return false;
+}		
+
 bool
 cql::cql_message_result_impl_t::get_string(int i,
         std::string& output) const {
@@ -414,17 +477,6 @@ cql::cql_message_result_impl_t::get_string(const std::string& column,
     int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_string(i, output);
-    }
-    return false;
-}
-
-bool
-cql::cql_message_result_impl_t::get_uuid(int i,
-        boost::shared_ptr< cql::cql_uuid_t > & output) const {
-    bool is_empty = true;
-    if (is_valid(i, cql::CQL_COLUMN_TYPE_UUID) && get_nullity(i, is_empty) && !is_empty) {
-        output.reset(new cql_uuid_t(_row[i])); // TODO: how to get sure about 16-byte row length?
-        return true;
     }
     return false;
 }
@@ -456,10 +508,7 @@ cql::cql_message_result_impl_t::get_data(const std::string& column,
     return false;
 }			
 
-
-
-			
-bool								// j.kasprzak 
+bool						 
 cql::cql_message_result_impl_t::get_data( int i,
 										  std::vector< cql::cql_byte_t > & output ) const
 {
@@ -483,10 +532,7 @@ cql::cql_message_result_impl_t::get_data( int i,
     }			
 }				
 				
-
-
-
-bool								// j.kasprzak 
+bool								
 cql::cql_message_result_impl_t::get_data( const std::string & column,
 										  std::vector< cql::cql_byte_t > & output ) const
 {
@@ -496,7 +542,6 @@ cql::cql_message_result_impl_t::get_data( const std::string & column,
     }
     return false;
 }
-			
 			
 bool
 cql::cql_message_result_impl_t::get_list(int i,
@@ -654,5 +699,76 @@ bool
 cql::cql_message_result_impl_t::get_keyspace_name(std::string& output) const {
     output = _keyspace_name;
     return true;
+}			
+			
+bool		
+cql::cql_message_result_impl_t::get_uuid( int i,
+										  std::vector< cql::cql_byte_t > & output ) const
+{
+	return get_data( i, output );
+}
+				
+bool
+cql::cql_message_result_impl_t::get_uuid( const std::string& column,
+										  std::vector< cql::cql_byte_t > & output ) const
+{
+	return get_data( column, output );	
+}		
+		
+		
+bool	
+cql::cql_message_result_impl_t::get_uuid( int i,
+										  std::string & output ) const
+{
+	std::vector< cql::cql_byte_t > v;
+	if( !get_data( i, v ) )
+		return false;
+
+	if( v.size() != 16 )
+		return false;
+
+	output = convert_uuid_to_string( v );
+	return true;
+}
+				
+bool
+cql::cql_message_result_impl_t::get_uuid( const std::string& column,
+										  std::string & output ) const
+{
+	std::vector< cql::cql_byte_t > v;
+	if( !get_data( column, v ) )
+		return false;
+
+	if( v.size() != 16 )
+		return false;
+
+	output = convert_uuid_to_string( v );
+	return true;	
+}		
+		
+std::string cql::cql_message_result_impl_t::convert_uuid_to_string( std::vector< cql::cql_byte_t > const & v ) const
+{		
+	if( v.size() != 16 )
+		return "";
+		
+	std::string result;
+		
+	for( int i = 0; i < 16; ++i )
+	{
+		cql::cql_byte_t b[2];
+		b[0] = v[ i ] & 0xF0;
+		b[1] = v[ i ] & 0x0F;
+		b[0] = b[0] >> 4;
+
+		if( i == 4 || i == 6 || i == 8 || i == 10 )
+			result += "-";	
+		
+		for( int j = 0; j < 2; ++j )
+		{
+			result += ( b[j] < 10 ) ? ( '0' + b[j] ) : ( 'a' + b[j] - 10 );
+		}	
+	}		
+
+	return result;	
 }
 

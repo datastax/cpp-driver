@@ -14,13 +14,13 @@ namespace test_utils {
 //-----------------------------------------------------------------------------------
 // This function is called asynchronously every time an event is logged
 
-//boost::mutex logging_mutex; // For use when you want to avoid data races on output.
+boost::mutex logging_mutex; // For use when you want to avoid data races on output.
 void
 log_callback(
     const cql::cql_short_t,
     const std::string& message)
 {
-//    boost::mutex::scoped_lock lock(logging_mutex); // For use when you want to avoid data races on output.
+    boost::mutex::scoped_lock lock(logging_mutex); // For use when you want to avoid data races on output.
     std::cout << "LOG: " << message << std::endl;
 }
 
