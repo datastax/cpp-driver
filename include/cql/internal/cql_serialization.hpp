@@ -163,6 +163,12 @@ decode_string(cql::cql_byte_t* input,
 std::ostream&
 encode_bytes(std::ostream& output,
              const std::vector<cql::cql_byte_t>& value);
+             
+std::ostream&
+encode_null_byte(std::ostream& output);
+
+void
+encode_null_byte(std::vector<cql::cql_byte_t>& output);
 
 std::istream&
 decode_bytes(std::istream& input,
