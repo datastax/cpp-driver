@@ -133,13 +133,37 @@ public:
                cql::cql_bigint_t& output) const = 0;
 
     virtual bool
+    get_counter(int i,
+               cql::cql_bigint_t& output) const = 0;
+
+    virtual bool
+    get_counter(const std::string& column,
+               cql::cql_bigint_t& output) const = 0;
+
+    virtual bool
     get_string(int i,
                std::string& output) const = 0;
 
     virtual bool
     get_string(const std::string& column,
                std::string& output) const = 0;
-			
+		
+	virtual bool
+    get_ascii(int i,
+               std::string& output) const = 0;
+
+    virtual bool
+    get_ascii(const std::string& column,
+               std::string& output) const = 0;
+
+	virtual bool
+    get_varchar(int i,
+               std::string& output) const = 0;
+
+    virtual bool
+    get_varchar(const std::string& column,
+               std::string& output) const = 0;
+
     CQL_DEPRECATED virtual bool
     get_data(int i,
              cql::cql_byte_t** output,

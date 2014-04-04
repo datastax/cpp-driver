@@ -459,6 +459,20 @@ cql::cql_message_result_impl_t::get_timeuuid(const std::string& column,
 }		
 
 bool
+cql::cql_message_result_impl_t::get_counter(int i,
+               cql::cql_bigint_t& output) const
+{
+	return get_bigint( i, output );
+}
+
+bool
+cql::cql_message_result_impl_t::get_counter(const std::string& column,
+               cql::cql_bigint_t& output) const
+{
+	return get_bigint( column, output );
+}
+	
+bool
 cql::cql_message_result_impl_t::get_string(int i,
         std::string& output) const {
     cql_byte_t* data = 0;
@@ -469,7 +483,7 @@ cql::cql_message_result_impl_t::get_string(int i,
     }
     return false;
 }
-
+		
 bool
 cql::cql_message_result_impl_t::get_string(const std::string& column,
         std::string& output) const {
@@ -478,8 +492,36 @@ cql::cql_message_result_impl_t::get_string(const std::string& column,
         return get_string(i, output);
     }
     return false;
+}		
+		
+bool	
+cql::cql_message_result_impl_t::get_ascii(int i,
+               std::string& output) const
+{
+	return get_string( i, output );
+}		
+		
+bool		
+cql::cql_message_result_impl_t::get_ascii(const std::string& column,
+               std::string& output) const
+{
+	return get_string( column, output );
+}
+	
+bool	
+cql::cql_message_result_impl_t::get_varchar(int i,
+               std::string& output) const
+{
+	return get_string( i, output );
 }
 
+bool	
+cql::cql_message_result_impl_t::get_varchar(const std::string& column,
+               std::string& output) const
+{
+	return get_string( column, output );
+}
+	
 bool
 cql::cql_message_result_impl_t::get_data(int i,
         cql::cql_byte_t** output,
