@@ -134,13 +134,37 @@ public:
                cql::cql_bigint_t& output) const = 0;
 
     virtual bool
+    get_counter(int i,
+               cql::cql_bigint_t& output) const = 0;
+
+    virtual bool
+    get_counter(const std::string& column,
+               cql::cql_bigint_t& output) const = 0;
+
+    virtual bool
     get_string(int i,
                std::string& output) const = 0;
 
     virtual bool
     get_string(const std::string& column,
                std::string& output) const = 0;
-			
+		
+	virtual bool
+    get_ascii(int i,
+               std::string& output) const = 0;
+
+    virtual bool
+    get_ascii(const std::string& column,
+               std::string& output) const = 0;
+
+	virtual bool
+    get_varchar(int i,
+               std::string& output) const = 0;
+
+    virtual bool
+    get_varchar(const std::string& column,
+               std::string& output) const = 0;
+
     CQL_DEPRECATED virtual bool
     get_data(int i,
              cql::cql_byte_t** output,
@@ -237,7 +261,53 @@ public:
 
 	virtual bool
     get_map(const std::string& column,
-            boost::shared_ptr< cql::cql_map_t > & output) const = 0;					
+            boost::shared_ptr< cql::cql_map_t > & output) const = 0;				
+
+		
+	//////// methods for deserializing DECIMAL:
+				
+	virtual bool 
+	get_decimal_is_int( int i ) const = 0;								//// is it possible to convert the DECIMAL to int ( 32 bits ) without rounding.		
+
+	virtual bool 
+	get_decimal_is_int_64( int i ) const = 0;							//// is it possible to convert the DECIMAL to int64 ( 64 bits ) without rounding.	
+
+	virtual bool 
+	get_decimal_is_double( int i ) const = 0;							//// is it possible to convert the DECIMAL to double even with small roundings error.
+				
+	virtual bool 
+	get_decimal_int( int i, 
+	                 cql::cql_int_t & output ) const = 0;				//// convert DECIMAL to 32-int if it is possible
+
+	virtual bool 
+	get_decimal_int_64( int i, 
+	                    cql::cql_bigint_t & output ) const = 0;			//// convert DECIMAL to 64-int if it is possible
+	
+	virtual bool 
+	get_decimal_double( int i, 
+	                    double & output ) const = 0;					//// convert DECIMAL to double with roundings error.	
+			
+	virtual bool 
+	get_decimal_is_int( std::string const & column ) const = 0;			//// is it possible to convert the DECIMAL to int ( 32 bits ) without rounding.		
+
+	virtual bool 
+	get_decimal_is_int_64( std::string const & column ) const = 0;		//// is it possible to convert the DECIMAL to int64 ( 64 bits ) without rounding.	
+
+	virtual bool 
+	get_decimal_is_double( std::string const & column ) const = 0;		//// is it possible to convert the DECIMAL to double even with small roundings error.
+				
+	virtual bool 
+	get_decimal_int( std::string const & column, 
+	                 cql::cql_int_t & output ) const = 0;				//// convert DECIMAL to 32-int if it is possible
+
+	virtual bool	
+	get_decimal_int_64( std::string const & column, 
+	                    cql::cql_bigint_t & output ) const = 0;			//// convert DECIMAL to 64-int if it is possible
+
+	virtual bool 
+	get_decimal_double( std::string const & column, 
+	                    double & output ) const = 0;					//// convert DECIMAL to double with roundings error.	
+				
 };			
 			
 } // namespace cql
