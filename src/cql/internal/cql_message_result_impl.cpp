@@ -744,16 +744,22 @@ cql::cql_message_result_impl_t::get_keyspace_name(std::string& output) const {
 			
 bool		
 cql::cql_message_result_impl_t::get_uuid( int i,
-										  std::vector< cql::cql_byte_t > & output ) const
+										  cql_uuid_t& output ) const
 {
-	return get_data( i, output );
+    std::vector<cql_byte_t> buffer;
+	bool ret_val = get_data(i, buffer);
+    output = cql_uuid_t(buffer);
+    return ret_val && (buffer.size() == 16);
 }
 				
 bool
 cql::cql_message_result_impl_t::get_uuid( const std::string& column,
-										  std::vector< cql::cql_byte_t > & output ) const
+										  cql_uuid_t& output ) const
 {
-	return get_data( column, output );	
+    std::vector<cql_byte_t> buffer;
+	bool ret_val = get_data(column, buffer);
+    output = cql_uuid_t(buffer);
+    return ret_val && (buffer.size() == 16);
 }		
 		
 		
@@ -761,32 +767,23 @@ bool
 cql::cql_message_result_impl_t::get_uuid( int i,
 										  std::string & output ) const
 {
-	std::vector< cql::cql_byte_t > v;
-	if( !get_data( i, v ) )
-		return false;
-
-	if( v.size() != 16 )
-		return false;
-
-	output = convert_uuid_to_string( v );
-	return true;
+    cql_uuid_t uuid_out;
+    bool ret_val = get_uuid(i, uuid_out);
+    output = uuid_out.to_string();
+    return ret_val;
 }
 				
 bool
 cql::cql_message_result_impl_t::get_uuid( const std::string& column,
 										  std::string & output ) const
 {
-	std::vector< cql::cql_byte_t > v;
-	if( !get_data( column, v ) )
-		return false;
+    cql_uuid_t uuid_out;
+    bool ret_val = get_uuid(column, uuid_out);
+    output = uuid_out.to_string();
+    return ret_val;
+}
 
-	if( v.size() != 16 )
-		return false;
-
-	output = convert_uuid_to_string( v );
-	return true;	
-}		
-			
+/*
 std::string 
 cql::cql_message_result_impl_t::convert_uuid_to_string( std::vector< cql::cql_byte_t > const & v ) const
 {		
@@ -813,7 +810,7 @@ cql::cql_message_result_impl_t::convert_uuid_to_string( std::vector< cql::cql_by
 
 	return result;	
 }
-
+*/
 
 bool 
 cql::cql_message_result_impl_t::get_decimal_is_int( std::string const & column ) const		//// is it possible to convert the DECIMAL to int ( 32 bits ) without rounding.		

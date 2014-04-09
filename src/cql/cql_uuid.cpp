@@ -189,8 +189,13 @@ cql::cql_uuid_t::cql_uuid_t(const std::string& uuid_string) {
 }
 
 cql::cql_uuid_t::cql_uuid_t(cql_byte_t* bytes) {
-    // We allow for shorter uuids (i.e. shorter than cql_uuid_t::_size bytes)
     for (size_t i = 0u; i < _size; ++i) {
+        _uuid[i] = bytes[i];
+    }
+}
+
+cql::cql_uuid_t::cql_uuid_t(const std::vector<cql_byte_t>& bytes) {
+    for (size_t i = 0u; i < _size && i < bytes.size(); ++i) {
         _uuid[i] = bytes[i];
     }
 }
@@ -203,6 +208,19 @@ cql::cql_uuid_t::empty() const {
          }
     }
     return true;
+}
+
+cql::cql_bigint_t
+cql::cql_uuid_t::get_timestamp() const {
+    cql_bigint_t ret_val;
+    cql_byte_t bytes[sizeof(cql_bigint_t)];
+    std::copy(_uuid, _uuid+sizeof(cql_bigint_t), bytes);
+    
+    // This was rewritten straight from C#:
+    bytes[7] &= (cql_byte_t)0x0f;
+    // decode_bigint assumes network byte order. UUIDs also do, so can be used here.
+    decode_bigint(bytes, ret_val);
+    return ret_val;
 }
 
 std::string
@@ -231,10 +249,21 @@ cql::cql_uuid_t::get_data() const {
     return std::vector<cql_byte_t>(_uuid, _uuid + _size);
 }
 
+bool
+cql::cql_uuid_t::operator==(const cql_uuid_t& other) const {
+    for (size_t i = 0u; i < _size; ++i) {
+        if (_uuid[i] != other._uuid[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 namespace cql {
     bool
     operator <(const cql::cql_uuid_t& left, const cql::cql_uuid_t& right) {
-        return (left._uuid < right._uuid);
+        return (*(cql_bigint_t*)(left._uuid)
+                  < *(cql_bigint_t*)(right._uuid));
     }
 }
 

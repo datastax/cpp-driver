@@ -185,19 +185,19 @@ public:
 				
 	virtual bool
     get_uuid(int i,
-			 std::vector< cql::cql_byte_t > & output ) const = 0;
+			 cql_uuid_t& output) const = 0;
 				
     virtual bool
     get_uuid(const std::string& column,
-             std::vector< cql::cql_byte_t > & output ) const = 0;
+             cql_uuid_t& output) const = 0;
 				
 	virtual bool
     get_uuid(int i,
-			 std::string & output ) const = 0;
+			 std::string & output) const = 0;
 				
     virtual bool
     get_uuid(const std::string& column,
-             std::string & output ) const = 0;
+             std::string & output) const = 0;
 
 	virtual bool	
 	get_timestamp(int i,

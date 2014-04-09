@@ -206,19 +206,19 @@ public:
 
 	bool
     get_uuid(int i,
-			 std::vector< cql::cql_byte_t > & output ) const;
+			 cql_uuid_t& output) const;
 				
     bool
     get_uuid(const std::string& column,
-             std::vector< cql::cql_byte_t > & output ) const;
+             cql_uuid_t& output) const;
 				
 	bool
     get_uuid(int i,
-			 std::string & output ) const;
+			 std::string & output) const;
 				
     bool
     get_uuid(const std::string& column,
-             std::string & output ) const;
+             std::string & output) const;
 		
 	bool	
 	get_timestamp( int i,

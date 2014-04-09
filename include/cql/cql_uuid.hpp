@@ -35,7 +35,8 @@ namespace std {
 
 namespace cql {
 
-class CQL_EXPORT cql_uuid_t {
+class CQL_EXPORT cql_uuid_t
+{
 public:
     static cql_uuid_t
     create();
@@ -48,9 +49,13 @@ public:
     cql_uuid_t();
     cql_uuid_t(const std::string& uuid_string);
     cql_uuid_t(cql_byte_t* bytes);
+    cql_uuid_t(const std::vector<cql_byte_t>& bytes);
 
     bool
     empty() const;
+    
+    cql_bigint_t
+    get_timestamp() const;
 
     std::string
     to_string() const;
@@ -61,6 +66,9 @@ public:
     // friend struct std::hash<cql_uuid_t>;
     friend bool
     operator <(const cql_uuid_t& left, const cql_uuid_t& right);
+    
+    bool
+    operator==(const cql_uuid_t& other) const;
     
 private:
     static const size_t _size = 16; // Size in bytes.
