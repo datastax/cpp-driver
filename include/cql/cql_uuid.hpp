@@ -64,6 +64,8 @@ public:
     get_data() const;
     
     // friend struct std::hash<cql_uuid_t>;
+    
+    /** The `<' operator sorts the UUIDs according to their timestamps. */
     friend bool
     operator <(const cql_uuid_t& left, const cql_uuid_t& right);
     

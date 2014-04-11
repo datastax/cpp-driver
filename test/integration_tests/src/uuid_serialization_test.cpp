@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_CASE(consistency_uuid_test_1)
 		time_stamp_map.insert( std::make_pair( i, ts ) );
 		timeuuid_map.insert( std::make_pair( i, timestamp ) );
 								
-		std::string query_string( boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3,t4,t5) VALUES (%d,%d,%d,%s,%d,%d);") % test_utils::SIMPLE_TABLE % i % i % i % uuid_string % ts % timeuuid_string));	
+		std::string query_string( boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3,t4,t5) VALUES (%d,%d,%d,%s,%d,%s);") % test_utils::SIMPLE_TABLE % i % i % i % uuid_string % ts % timeuuid_string));	
 		boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,cql::CQL_CONSISTENCY_ANY));	
 		session->query(_query);
 	}				

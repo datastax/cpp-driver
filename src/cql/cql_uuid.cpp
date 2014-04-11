@@ -262,8 +262,7 @@ cql::cql_uuid_t::operator==(const cql_uuid_t& other) const {
 namespace cql {
     bool
     operator <(const cql::cql_uuid_t& left, const cql::cql_uuid_t& right) {
-        return (*(cql_bigint_t*)(left._uuid)
-                  < *(cql_bigint_t*)(right._uuid));
+        return (left.get_timestamp() < right.get_timestamp());
     }
 }
 
