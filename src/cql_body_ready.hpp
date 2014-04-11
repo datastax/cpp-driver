@@ -14,33 +14,46 @@
   limitations under the License.
 */
 
-#ifndef __ERROR_HPP_INCLUDED__
-#define __ERROR_HPP_INCLUDED__
+#ifndef __BODY_READY_HPP_INCLUDED__
+#define __BODY_READY_HPP_INCLUDED__
 
-#include <string>
+#include "cql_body.hpp"
 
 namespace cql {
 
-struct Error {
-  Error(
-      int                source,
-      int                code,
-      const std::string& message,
-      const std::string& file,
-      int                line) :
-      source(source),
-      code(code),
-      message(message),
-      file(file),
-      line(line)
+struct BodyReady
+    : public Body {
+
+  BodyReady()
   {}
 
-  int         source;
-  int         code;
-  std::string message;
-  std::string file;
-  int         line;
+  uint8_t
+  opcode() {
+    return CQL_OPCODE_READY;
+  }
+
+  bool
+  consume(
+      char*  buffer,
+      size_t size) {
+    (void) buffer;
+    (void) size;
+    return true;
+  }
+
+  bool
+  prepare(
+      size_t  reserved,
+      char**  output,
+      size_t& size) {
+    *output = new char[size];
+    size = reserved;
+    return true;
+  }
+
+ private:
+  BodyReady(const BodyReady&) {}
+  void operator=(const BodyReady&) {}
 };
 }
-
 #endif

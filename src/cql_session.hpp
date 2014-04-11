@@ -1,7 +1,5 @@
 /*
-  Copyright (c) 2013 Matthew Stump
-
-  This file is part of cassandra.
+  Copyright 2014 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,105 +14,134 @@
   limitations under the License.
 */
 
-#ifndef CQL_SESSION_H_
-#define CQL_SESSION_H_
+#ifndef __SESSION_HPP_INCLUDED__
+#define __SESSION_HPP_INCLUDED__
 
-#include <list>
-#include <map>
+#include <uv.h>
 #include <string>
-
-#include <boost/thread.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/function.hpp>
-#include <boost/thread/future.hpp>
-
-#include "cql_future_connection.hpp"
-#include "cql_connection.hpp"
-#include "cql.hpp"
-#include "cql_uuid.hpp"
-#include "cql_stream.hpp"
-#include "cql_query.hpp"
+#include <unordered_map>
+#include <vector>
+#include "cql_mpmc_queue.hpp"
+#include "cql_pool.hpp"
+#include "cql_request.hpp"
 
 namespace cql {
 
-// Forward declarations
-class cql_connection_t;
-class cql_event_t;
-class cql_result_t;
-class cql_execute_t;
-struct cql_error_t;
+class Session {
+  struct IOWorker {
+    typedef std::shared_ptr<cql::Pool>  PoolPtr;
+    typedef std::unordered_map<std::string, PoolPtr> PoolCollection;
 
-class cql_session_t {
+    uv_thread_t    thread;
+    uv_loop_t*     loop;
+    SSLContext*    ssl_context;
+    PoolCollection pools;
 
-public:
-    typedef 
-        boost::function<boost::shared_ptr<cql_connection_t>()>             
-        cql_client_callback_t;
-    
-    typedef 
-        boost::function<void(cql_session_t *)>             
-        cql_ready_callback_t;
-    
-    typedef 
-        boost::function<void(cql_session_t *)>             
-        cql_defunct_callback_t;
-    
-    typedef 
-        boost::function<void(cql_session_t *, 
-                             cql_connection_t&, 
-                             const cql_error_t&)>                      
-        cql_connection_errback_t;
-    
-    typedef 
-        boost::function<void(const cql_short_t, const std::string&)>                      
-        cql_log_callback_t;
+    IOWorker() :
+        loop(uv_loop_new())
+    {}
 
-    virtual
-    ~cql_session_t() { }
+    void
+    add_pool(
+        const std::string& host,
+        size_t             core_connections_per_host,
+        size_t             max_connections_per_host) {
+      pools.insert(
+          std::make_pair(
+              host,
+              PoolPtr(
+                  new cql::Pool(
+                      loop,
+                      ssl_context,
+                      host,
+                      core_connections_per_host,
+                      max_connections_per_host))));
+    }
 
-    virtual cql_stream_t
-    query(
-        const boost::shared_ptr<cql_query_t>&      query,
-        cql_connection_t::cql_message_callback_t   callback,
-        cql_connection_t::cql_message_errback_t    errback) = 0;
+    static void
+    run(
+        void* data) {
+      IOWorker* worker = reinterpret_cast<IOWorker*>(data);
+      uv_run(worker->loop, UV_RUN_DEFAULT);
+    }
 
-    virtual cql_stream_t
-    prepare(
-        const boost::shared_ptr<cql_query_t>&      query,
-        cql_connection_t::cql_message_callback_t   callback,
-        cql_connection_t::cql_message_errback_t    errback) = 0;
+    void
+    run_async() {
+      uv_thread_create(&thread, &IOWorker::run, this);
+    }
 
-    virtual cql_stream_t
-    execute(
-        const boost::shared_ptr<cql_execute_t>&    message,
-        cql_connection_t::cql_message_callback_t   callback,
-        cql_connection_t::cql_message_errback_t    errback) = 0;
+    void
+    stop() {
+      uv_stop(loop);
+    }
 
-    virtual boost::shared_future<cql_future_result_t>
-    query(const boost::shared_ptr<cql_query_t>& query) = 0;
+    void
+    join() {
+      uv_thread_join(&thread);
+    }
 
-    virtual boost::shared_future<cql_future_result_t>
-    prepare(const boost::shared_ptr<cql_query_t>& query) = 0;
+    ~IOWorker() {
+      uv_loop_delete(loop);
+    }
+  };
 
-    virtual boost::shared_future<cql_future_result_t>
-    execute(const boost::shared_ptr<cql_execute_t>& message) = 0;
+  std::vector<IOWorker*>              io_loops_;
+  cql::SSLContext*                    ssl_context_;
+  cql::LogCallback                    log_callback_;
+  cql::MpmcQueue<cql::CallerRequest*> queue_;
 
-    virtual void
-    set_keyspace(const std::string& new_keyspace) = 0;
+  Session(
+      size_t io_loop_count) :
+      io_loops_(io_loop_count, NULL),
+      queue_(1024) {
+    for (size_t i = 0; i < io_loops_.size(); ++i) {
+      io_loops_[i] = new IOWorker();
+    }
+  }
 
-    virtual void
-    close() = 0;
-    
-    // Returns unique session identifier
-    virtual cql_uuid_t
-    id() const = 0;
+  SSLSession*
+  ssl_session_new() {
+    if (ssl_context_) {
+      return ssl_context_->session_new();
+    }
+    return NULL;
+  }
 
-#ifdef _DEBUG
-	virtual void 
-	inject_random_connection_lowest_layer_shutdown() = 0;
-#endif
+  inline void
+  log(
+      int         level,
+      const char* message) {
+    (void) level;
+    std::cout << message << std::endl;
+  }
+
+  inline void
+  log(
+      int                level,
+      const std::string& message) {
+    (void) level;
+    std::cout << message << std::endl;
+  }
+
+ public:
+  CallerRequest*
+  prepare() {
+    return nullptr;
+  }
+
+  CallerRequest*
+  execute() {
+    return nullptr;
+  }
+
+  void
+  shutdown() {
+  }
+
+  void
+  set_keyspace() {
+  }
+
 };
-
-} // namespace cql
-
-#endif // CQL_SESSION_H_
+}
+#endif

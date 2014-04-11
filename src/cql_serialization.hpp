@@ -1,7 +1,5 @@
 /*
-  Copyright (c) 2013 Matthew Stump
-
-  This file is part of cassandra.
+  Copyright 2014 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,241 +14,187 @@
   limitations under the License.
 */
 
-#ifndef CQL_SERIALIZATION_H_
-#define CQL_SERIALIZATION_H_
+#ifndef __SERIALIZATION_HPP_INCLUDED__
+#define __SERIALIZATION_HPP_INCLUDED__
 
-#include <istream>
 #include <list>
 #include <map>
-#include <ostream>
 #include <string>
-#include <vector>
-
-#include "cql.hpp"
 
 namespace cql {
 
-std::ostream&
-encode_bool(std::ostream& output,
-            bool value);
+inline char*
+encode_byte(
+    char*   output,
+    uint8_t value) {
+  *output = value;
+  return output + 1;
+}
 
-void
-encode_bool(std::vector<cql::cql_byte_t>& output,
-            const bool value);
+inline char*
+decode_short(
+    char*    input,
+    int16_t& output) {
+  output = ntohs(*(reinterpret_cast<int16_t*>(input)));
+  return input + sizeof(int16_t);
+}
 
-std::istream&
-decode_bool(std::istream& input,
-            bool& value);
+inline char*
+encode_short(
+    char*   output,
+    int16_t value) {
+  int16_t net_value = htons(value);
+  memcpy(output, &net_value, sizeof(net_value));
+  return output + sizeof(int16_t);
+}
 
-bool
-decode_bool(const std::vector<cql::cql_byte_t>& input);
+inline char*
+decode_int(
+    char*    input,
+    int32_t& output) {
+  output = ntohl(*(reinterpret_cast<const int32_t*>(input)));
+  return input + sizeof(int32_t);
+}
 
-std::ostream&
-encode_short(std::ostream& output,
-             cql::cql_short_t value);
+inline char*
+encode_int(
+    char*   output,
+    int32_t value) {
+  int32_t net_value = htonl(value);
+  memcpy(output, &net_value, sizeof(net_value));
+  return output + sizeof(int32_t);
+}
 
-void
-encode_short(std::vector<cql::cql_byte_t>& output,
-             const cql::cql_short_t value);
+inline char*
+decode_string(
+    char*   input,
+    char**  output,
+    size_t& size) {
+  *output = decode_short(input, ((int16_t&) size));
+  return *output + size;
+}
 
-std::istream&
-decode_short(std::istream& input,
-             cql::cql_short_t& value);
+inline char*
+encode_string(
+    char*       output,
+    const char* input,
+    size_t      size) {
+  char* buffer = encode_short(output, size);
+  memcpy(buffer, input, size);
+  return buffer + size;
+}
 
-cql::cql_short_t
-decode_short(const std::vector<cql::cql_byte_t>& input);
+inline char*
+decode_long_string(
+    char*   input,
+    char**  output,
+    size_t& size) {
+  *output = decode_int(input, ((int32_t&) size));
+  return *output + size;
+}
 
-cql::cql_byte_t*
-decode_short(cql::cql_byte_t*,
-             cql::cql_short_t& value);
+inline char*
+encode_long_string(
+    char*       output,
+    const char* input,
+    size_t      size) {
+  char* buffer = encode_int(output, size);
+  memcpy(buffer, input, size);
+  return buffer + size;
+}
 
-std::ostream&
-encode_int(std::ostream& output,
-           const cql::cql_int_t value);
+inline char*
+encode_string_map(
+    char*                                     output,
+    const std::map<std::string, std::string>& map) {
 
-void
-encode_int(std::vector<cql::cql_byte_t>& output,
-           const cql::cql_int_t value);
+  char* buffer = encode_short(output, map.size());
+  for (std::map<std::string, std::string>::const_iterator it = map.begin();
+       it != map.end();
+       ++it) {
+    buffer = encode_string(buffer, it->first.c_str(), it->first.size());
+    buffer = encode_string(buffer, it->second.c_str(), it->second.size());
+  }
+  return buffer;
+}
 
-std::istream&
-decode_int(std::istream& input,
-           cql::cql_int_t& value);
+inline char*
+decode_string_map(
+    char*                               input,
+    std::map<std::string, std::string>& map) {
 
-cql::cql_byte_t*
-decode_int(cql::cql_byte_t* input,
-           cql::cql_int_t& output);
+  map.clear();
+  int16_t len    = 0;
+  char*   buffer = decode_short(input, len);
 
-cql_int_t
-decode_int(const std::vector<cql::cql_byte_t>& input);
+  for (int i = 0; i < len; i++) {
+    char*  key        = 0;
+    size_t key_size   = 0;
+    char*  value      = 0;
+    size_t value_size = 0;
 
+    buffer = decode_string(buffer, &key, key_size);
+    buffer = decode_string(buffer, &value, value_size);
+    map.insert(
+        std::make_pair(
+            std::string(key, key_size),
+            std::string(value, value_size)));
+  }
+  return buffer;
+}
 
-std::ostream&
-encode_float(std::ostream& output,
-             const float value);
+inline char*
+decode_stringlist(
+    char*                   input,
+    std::list<std::string>& output) {
+  output.clear();
+  int16_t len    = 0;
+  char*   buffer = decode_short(input, len);
 
-void
-encode_float(std::vector<cql::cql_byte_t>& output,
-             const float value);
+  for (int i = 0; i < len; i++) {
+    char*  s      = NULL;
+    size_t s_size = 0;
 
-std::istream&
-decode_float(std::istream& input,
-             float& value);
+    buffer = decode_string(buffer, &s, s_size);
+    output.push_back(std::string(s, s_size));
+  }
+  return buffer;
+}
 
-float
-decode_float(const std::vector<cql::cql_byte_t>& input);
+typedef std::map<std::string, std::list<std::string> > string_multimap_t;
 
-cql::cql_byte_t*
-decode_float(cql::cql_byte_t* input,
-             float& output);
+inline char*
+decode_string_multimap(
+    char*              input,
+    string_multimap_t& output) {
 
-std::ostream&
-encode_double(std::ostream& output,
-              const double value);
-void
-encode_double(std::vector<cql::cql_byte_t>& output,
-              const double value);
+  output.clear();
+  int16_t len    = 0;
+  char*   buffer = decode_short(input, len);
 
-std::istream&
-decode_double(std::istream& input,
-              double& value);
+  for (int i = 0; i < len; i++) {
+    char*                  key        = 0;
+    size_t                 key_size   = 0;
+    std::list<std::string> value;
 
-double
-decode_double(const std::vector<cql::cql_byte_t>& input);
+    buffer = decode_string(buffer, &key, key_size);
+    buffer = decode_stringlist(buffer, value);
+    output.insert(std::make_pair(std::string(key, key_size), value));
+  }
+  return buffer;
+}
 
-
-std::istream&
-decode_double(std::istream& input,
-              double& value);
-
-cql::cql_byte_t*
-decode_double(cql::cql_byte_t* input,
-              double& output);
-
-std::ostream&
-encode_bigint(std::ostream& output,
-              const cql::cql_bigint_t value);
-
-void
-encode_bigint(std::vector<cql::cql_byte_t>& output,
-              const cql::cql_bigint_t value);
-
-std::istream&
-decode_bigint(std::istream& input,
-              cql::cql_bigint_t& value);
-
-cql::cql_bigint_t
-decode_bigint(const std::vector<cql::cql_byte_t>& input);
-
-cql::cql_byte_t*
-decode_bigint(cql::cql_byte_t* input,
-              cql::cql_bigint_t& output);
-
-std::ostream&
-encode_string(std::ostream& output,
-              const std::string& value);
-
-std::istream&
-decode_string(std::istream& input,
-              std::string& value);
-
-std::string
-decode_string(const std::vector<cql::cql_byte_t>& input);
-
-cql::cql_byte_t*
-decode_string(cql::cql_byte_t* input,
-              std::string& value);
-
-std::ostream&
-encode_bytes(std::ostream& output,
-             const std::vector<cql::cql_byte_t>& value);
-
-std::istream&
-decode_bytes(std::istream& input,
-             std::vector<cql::cql_byte_t>& value);
-
-std::ostream&
-encode_short_bytes(std::ostream& output,
-                   const std::vector<cql::cql_byte_t>& value);
-
-std::istream&
-decode_short_bytes(std::istream& input,
-                   std::vector<cql::cql_byte_t>& value);
-
-cql::cql_byte_t*
-decode_short_bytes(cql::cql_byte_t* input,
-                   std::vector<cql::cql_byte_t>& value);
-
-std::ostream&
-encode_long_string(std::ostream& output,
-                   const std::string& value);
-
-std::istream&
-decode_long_string(std::istream& input,
-                   std::string& value);
-
-std::ostream&
-encode_string_list(std::ostream& output,
-                   const std::list<std::string>& list);
-
-std::istream&
-decode_string_list(std::istream& input,
-                   std::list<std::string>& list);
-
-std::ostream&
-encode_string_map(std::ostream& output,
-                  const std::map<std::string, std::string>& map);
-
-std::istream&
-decode_string_map(std::istream& input,
-                  std::map<std::string, std::string>& map);
-
-std::ostream&
-encode_string_multimap(std::ostream& output,
-                       const std::map<std::string, std::list<std::string> >& map);
-
-std::istream&
-decode_string_multimap(std::istream& input,
-                       std::map<std::string, std::list<std::string> >& map);
-
-std::ostream&
-encode_option(std::ostream& output,
-              cql::cql_column_type_enum& id,
-              const std::string& value);
-
-std::istream&
-decode_option(std::istream& input,
-              cql::cql_column_type_enum& id,
-              std::string& value);
-
-cql::cql_byte_t*
-decode_option(cql::cql_byte_t* input,
-              cql::cql_column_type_enum& id,
-              std::string& value);
-
-std::string
-decode_ipv4_from_bytes(const cql::cql_byte_t* data);
-    
-std::string
-decode_ipv6_from_bytes(const cql::cql_byte_t* data);
-
-std::ostream&
-encode_ipv4(std::ostream& output,
-            const std::string& ip);
-
-std::ostream&
-encode_ipv6(std::ostream& output,
-            const std::string& ip);
-
-std::ostream&
-encode_inet(std::ostream& output,
-            const std::string& ip,
-            const cql_int_t port);
-
-std::istream&
-decode_inet(std::istream& input,
-            std::string& ip,
-            cql_int_t& port);
-
-} // namespace cql
-
-#endif // CQL_SERIALIZATION_H_
+inline char*
+decode_option(
+    char*    input,
+    int16_t& type,
+    char**   class_name,
+    size_t&  class_name_size) {
+  char* buffer = decode_short(input, type);
+  if (type == CQL_COLUMN_TYPE_CUSTOM) {
+    buffer = decode_string(buffer, class_name, class_name_size);
+  }
+  return buffer;
+}
+}
+#endif

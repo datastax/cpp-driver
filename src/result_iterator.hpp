@@ -14,33 +14,33 @@
   limitations under the License.
 */
 
-#ifndef __ERROR_HPP_INCLUDED__
-#define __ERROR_HPP_INCLUDED__
+#ifndef __RESULT_ITERATOR_HPP_INCLUDED__
+#define __RESULT_ITERATOR_HPP_INCLUDED__
 
-#include <string>
+#include "iterable.hpp"
+#include "body_result.hpp"
 
 namespace cql {
 
-struct Error {
-  Error(
-      int                source,
-      int                code,
-      const std::string& message,
-      const std::string& file,
-      int                line) :
-      source(source),
-      code(code),
-      message(message),
-      file(file),
-      line(line)
-  {}
+struct BodyResult;
 
-  int         source;
-  int         code;
-  std::string message;
-  std::string file;
-  int         line;
-};
+// struct ResultIterator : Iterable {
+//   BodyResult* result;
+//   int32_t     row_position;
+//   char*       position;
+
+//   ResultIterator(
+//       BodyResult* result) :
+//       Iterable(CQL_ITERABLE_TYPE_RESULT),
+//       result(result),
+//       row_position(0),
+//       position(result->rows)
+//   {}
+
+//   inline bool
+//   next() {
+//     return false;
+//   }
+// };
 }
-
 #endif

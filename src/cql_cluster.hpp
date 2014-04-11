@@ -1,7 +1,5 @@
 /*
-  Copyright (c) 2013 Matthew Stump
-
-  This file is part of cassandra.
+  Copyright 2014 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,48 +14,109 @@
   limitations under the License.
 */
 
-#ifndef CQL_CLUSTER_H_
-#define CQL_CLUSTER_H_
+#ifndef __CQL_CLUSTER_HPP_INCLUDED__
+#define __CQL_CLUSTER_HPP_INCLUDED__
 
-#include <memory>
-#include <boost/shared_ptr.hpp>
-#include <boost/noncopyable.hpp>
+#include <list>
+#include <string>
 
-#include "cql_config.hpp"
+#include "cql_session.hpp"
 
 namespace cql {
 
-class cql_session_t;
-class cql_initializer_t;
-class cql_builder_t;
-class cql_metadata_t;
+class Cluster {
+  std::string            port_;
+  std::string            cql_version_;
+  int                    compression_;
+  size_t                 max_schema_agreement_wait_;
+  size_t                 control_connection_timeout_;
+  std::list<std::string> contact_points_;
+  size_t                 thread_count_io_;
+  size_t                 thread_count_callback_;
+  LogCallback            log_callback_;
 
 
-class CQL_EXPORT cql_cluster_t: boost::noncopyable {
-public:
-    static boost::shared_ptr<cql_cluster_t>
-    built_from(cql_initializer_t& initializer);
+ public:
+  Cluster() :
+      port_("9042"),
+      cql_version_("3.0.0"),
+      compression_(0),
+      max_schema_agreement_wait_(10),
+      control_connection_timeout_(10),
+      thread_count_io_(1),
+      thread_count_callback_(4),
+      log_callback_(nullptr)
+  {}
 
-    static boost::shared_ptr<cql_builder_t>
-    builder();
+  void
+  log_callback(
+      LogCallback callback) {
+    log_callback_ = callback;
+  }
 
-    virtual boost::shared_ptr<cql_session_t>
-    connect() = 0;
+  cql::Session*
+  connect() {
+    return connect(NULL, 0);
+  }
 
-    virtual boost::shared_ptr<cql_session_t>
-    connect(const std::string& keyspace) = 0;
+  cql::Session*
+  connect(
+      const std::string keyspace) {
+    return connect(keyspace.c_str(), keyspace.size());
+  }
 
-    virtual void
-    shutdown(int timeout_ms = -1) = 0;
+  cql::Session*
+  connect(
+      const char* keyspace,
+      size_t      size) {
+    (void) keyspace;
+    (void) size;
+    return NULL;
+  }
 
-    // returns MOCK metadata object.
-    virtual boost::shared_ptr<cql_metadata_t>
-    metadata() const = 0;
+  void
+  option(
+      int         option,
+      const void* value,
+      size_t      size) {
+    int int_value = *(reinterpret_cast<const int*>(value));
 
-    virtual inline
-    ~cql_cluster_t() { }
+    switch (option) {
+      case CQL_OPTION_THREADS_IO:
+        thread_count_io_ = int_value;
+        break;
+
+      case CQL_OPTION_THREADS_CALLBACK:
+        thread_count_callback_ = int_value;
+        break;
+
+      case CQL_OPTION_CONTACT_POINT_ADD:
+        contact_points_.push_back(
+            std::string(reinterpret_cast<const char*>(value), size));
+        break;
+
+      case CQL_OPTION_PORT:
+        port_.assign(reinterpret_cast<const char*>(value), size);
+        break;
+
+      case CQL_OPTION_CQL_VERSION:
+        cql_version_.assign(reinterpret_cast<const char*>(value), size);
+        break;
+
+      case CQL_OPTION_COMPRESSION:
+        compression_ = int_value;
+        break;
+
+      case CQL_OPTION_CONTROL_CONNECTION_TIMEOUT:
+        control_connection_timeout_ = int_value;
+        break;
+
+      case CQL_OPTION_SCHEMA_AGREEMENT_WAIT:
+        max_schema_agreement_wait_ = int_value;
+        break;
+    }
+  }
+
 };
-
 }
-
-#endif // CQL_CLUSTER_H_
+#endif

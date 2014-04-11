@@ -14,33 +14,25 @@
   limitations under the License.
 */
 
-#ifndef __ERROR_HPP_INCLUDED__
-#define __ERROR_HPP_INCLUDED__
-
-#include <string>
+#ifndef __ITERABLE_HPP_INCLUDED__
+#define __ITERABLE_HPP_INCLUDED__
 
 namespace cql {
 
-struct Error {
-  Error(
-      int                source,
-      int                code,
-      const std::string& message,
-      const std::string& file,
-      int                line) :
-      source(source),
-      code(code),
-      message(message),
-      file(file),
-      line(line)
+enum IterableType {
+  CQL_ITERABLE_TYPE_RESULT,
+  CQL_ITERABLE_TYPE_UNKNOWN
+};
+
+struct Iterable {
+  const IterableType type;
+
+  Iterable(
+      IterableType type) :
+      type(type)
   {}
 
-  int         source;
-  int         code;
-  std::string message;
-  std::string file;
-  int         line;
+  virtual ~Iterable() {}
 };
 }
-
 #endif
