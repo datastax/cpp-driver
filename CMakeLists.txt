@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 2.6.4)
+
 set(PROJECT_NAME_STR cql)
+set(PROJECT_LIB_NAME ${PROJECT_NAME_STR})
+set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
+
 set(CQL_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
 project(${PROJECT_NAME_STR} C CXX)
 
@@ -11,35 +15,32 @@ set(PROJECT_VERSION_MINOR 7)
 set(PROJECT_VERSION_PATCH 0)
 set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
-# todo: add version header
+# TODO(mstump) add version header
 
 #-------------------
 # setup deps
 #-------------------
-set(Boost_USE_STATIC_LIBS OFF)
-set(Boost_USE_STATIC_RUNTIME OFF)
-
-# Disable boost auto linking feature
-# it prevents visual studio from simultaneously building
-# static and shared version of driver
-# needed by boost to link dynamically
-# this is a noop on platforms other than windows
-add_definitions(-DBOOST_ALL_DYN_LINK)
-add_definitions(-DBOOST_ALL_NO_LIB)
-
-set(Boost_USE_MULTITHREADED ON)
-find_package(Boost 1.41.0 COMPONENTS system thread unit_test_framework date_time program_options REQUIRED)
-set(LIBS ${LIBS} ${Boost_LIBRARIES})
-
 find_package(OpenSSL REQUIRED)
 set(LIBS ${LIBS} ${OPENSSL_LIBRARIES})
 
 find_package(ZLIB REQUIRED)
 set(LIBS ${LIBS} ${ZLIB_LIBRARIES})
 
-# Threading
-find_package(Threads REQUIRED)
-set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
+# libuv
+set(LIBUV_INCLUDE_NAMES uv.h)
+set(LIBUV_LIBRARY_NAMES libuv.dylib)
+
+find_path(LIBUV_INCLUDE_DIRS NAMES ${LIBUV_INCLUDE_NAMES} HINTS /usr/include /usr/local/include)
+find_library(LIBUV_LIBRARIES NAMES ${LIBUV_LIBRARY_NAMES} HINTS /usr/include /usr/local/include)
+
+if(LIBUV_INCLUDE_DIRS AND LIBUV_LIBRARIES)
+  set(LIBUV_FOUND TRUE)
+  set(INCLUDES ${INCLUDES} ${LIBUV_INCLUDE_DIR} )
+  set(LIBS ${LIBS} ${LIBUV_LIBRARIES} )
+  message(STATUS "Found LIBUV: ${LIBUV_LIBRARIES}")
+else(LIBUV_INCLUDE_DIRS AND LIBUV_LIBRARIES)
+  message(FATAL_ERROR "Could not find LIBUV library.")
+endif(LIBUV_INCLUDE_DIRS AND LIBUV_LIBRARIES)
 
 # Build up the include path's
 set(INCLUDES ${INCLUDES} ${OPENSSL_INCLUDE_DIR} )
@@ -75,23 +76,21 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   # needed for windows sockets (not verified)
   add_definitions(-D_WIN32_WINNT=0x0501)
 else()
-  # GCC specific compiler options
+  # GCC/Clang specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-fPIC -Wall -pedantic -Wno-long-long -fno-strict-aliasing")
+  set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-std=c++0x -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-c++11-narrowing -Wno-deprecated-declarations -Wno-unused-parameter")
 endif()
 
 #-------------------
 # Cassandra static and shared
 #-------------------
+include_directories(${INCLUDES})
 
-set(PROJECT_LIB_NAME ${PROJECT_NAME_STR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 message(STATUS "info CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
-
-include_directories(${INCLUDES})
 
 # we must add header files as dependencies (if header
 # changes project must be recompiled, right).
@@ -110,8 +109,6 @@ set(ALL_SOURCE_FILES
 
 # build dynamic and static version of library
 add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})
-
-set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
 add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${ALL_SOURCE_FILES})
 
 target_link_libraries(${PROJECT_LIB_NAME} ${LIBS})
@@ -169,17 +166,16 @@ configure_file(
 add_custom_target(UNINSTALL
   COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
-
 #-------------------
-# Boost unit tests
+# Unit tests
 #-------------------
 add_subdirectory(test/unit_tests)
 
 #-------------------
 # Integration tests
 #-------------------
-add_subdirectory(extra/ccm_bridge)
-add_subdirectory(test/integration_tests)
+# add_subdirectory(extra/ccm_bridge)
+# add_subdirectory(test/integration_tests)
 
 #-------------------
 # the demo program

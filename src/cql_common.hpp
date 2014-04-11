@@ -30,9 +30,6 @@
 #include <string>
 
 #include "cql.h"
-#include "cql_request.hpp"
-#include "cql_error.hpp"
-#include "cql_message.hpp"
 
 #define CQL_OPCODE_ERROR        0x00
 #define CQL_OPCODE_STARTUP      0x01
@@ -47,6 +44,11 @@
 #define CQL_OPCODE_EXECUTE      0x0A
 #define CQL_OPCODE_REGISTER     0x0B
 #define CQL_OPCODE_EVENT        0x0C
+
+#include "cql_request.hpp"
+#include "cql_error.hpp"
+#include "cql_message.hpp"
+
 
 namespace cql {
 

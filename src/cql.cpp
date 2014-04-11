@@ -14,54 +14,28 @@
   limitations under the License.
 */
 
-#ifndef __CQL_H_INCLUDED__
-#define __CQL_H_INCLUDED__
-
-#include <stddef.h>
-#include <stdint.h>
-
-#if defined _WIN32
-#   if defined CQL_STATIC
-#       define CQL_EXPORT
-#   elif defined DLL_EXPORT
-#       define CQL_EXPORT __declspec(dllexport)
-#   else
-#       define CQL_EXPORT __declspec(dllimport)
-#   endif
-#else
-#   if defined __SUNPRO_C  || defined __SUNPRO_CC
-#       define CQL_EXPORT __global
-#   elif (defined __GNUC__ && __GNUC__ >= 4) || defined __INTEL_COMPILER
-#       define CQL_EXPORT __attribute__ ((visibility("default")))
-#   else
-#       define CQL_EXPORT
-#   endif
-#endif
-
-typedef uint8_t cql_uuid_t[16];
-
-struct cql_inet_t {
-  uint8_t  length;
-  uint8_t  address[6];
-  uint32_t port;
-};
+#include "cql.h"
 
 /**
  * Free an instance allocated by the library, works for all types unless otherwise noted
  *
  * @param instance
  */
-CQL_EXPORT void
+void
 cql_free(
-    void* instance);
+    void* instance) {
+  (void) instance;
+}
 
 /**
  * Initialize a new cluster builder. Instance must be freed by caller.
  *
  * @return
  */
-CQL_EXPORT void*
-cql_builder_new();
+void*
+cql_builder_new() {
+  return NULL;
+}
 
 /**
  * Set an option on the specified connection builder
@@ -73,12 +47,18 @@ cql_builder_new();
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_builder_setopt(
     void*  builder,
     int    option,
     void*  data,
-    size_t datalen);
+    size_t datalen) {
+  (void) builder;
+  (void) option;
+  (void) data;
+  (void) datalen;
+  return nullptr;
+}
 
 /**
  * Get the option value for the specified builder
@@ -89,11 +69,13 @@ cql_builder_setopt(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_builder_getopt(
     int     option,
     void**  data,
-    size_t* datalen);
+    size_t* datalen) {
+  return nullptr;
+}
 
 /**
  * Instantiate a new cluster using the specified builder instance. Instance must be freed by caller.
@@ -103,10 +85,12 @@ cql_builder_getopt(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_cluster_new(
     void*  builder,
-    void** cluster);
+    void** cluster) {
+  return nullptr;
+}
 
 /**
  * Initiate a session using the specified cluster. Resulting
@@ -117,10 +101,12 @@ cql_cluster_new(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_cluster_connect(
     void*  cluster,
-    void** future);
+    void** future) {
+  return nullptr;
+}
 
 /**
  * Initiate a session using the specified cluster, and set the keyspace. Resulting
@@ -132,11 +118,13 @@ cql_cluster_connect(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_cluster_connect_keyspace(
     void*  cluster,
     char*  keyspace,
-    void** future);
+    void** future) {
+  return nullptr;
+}
 
 /***********************************************************************************
  *
@@ -153,18 +141,21 @@ cql_cluster_connect_keyspace(
  *
  * @return true if ready
  */
-CQL_EXPORT int
+int
 cql_future_ready(
-    void* future);
+    void* future) {
+  return 0;
+}
 
 /**
  * Wait the linked event occurs or error condition is reached
  *
  * @param future
  */
-CQL_EXPORT void
+void
 cql_future_wait(
-    void* future);
+    void* future) {
+}
 
 /**
  * Wait the linked event occurs, error condition is reached, or time has elapsed.
@@ -174,10 +165,12 @@ cql_future_wait(
  *
  * @return false if returned due to timeout
  */
-CQL_EXPORT int
+int
 cql_future_wait_timed(
     void*    future,
-    uint64_t wait);
+    uint64_t wait) {
+  return 0;
+}
 
 /**
  * If the linked event resulted in an error, get that error
@@ -186,9 +179,11 @@ cql_future_wait_timed(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_future_get_error(
-    void* future);
+    void* future) {
+  return nullptr;
+}
 
 /**
  * If the server returned an error message obtain the string. This function follows
@@ -204,12 +199,14 @@ cql_future_get_error(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_future_get_error_string(
     void*   future,
     char*   output,
     size_t  n,
-    size_t* total);
+    size_t* total) {
+  return nullptr;
+}
 
 /**
  * Get the data returned by the linked event and set the underlying
@@ -222,10 +219,12 @@ cql_future_get_error_string(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_future_release_data(
     void*  future,
-    void** data);
+    void** data) {
+  return nullptr;
+}
 
 /**
  * Shutdown the session instance, output a shutdown future which can
@@ -233,9 +232,10 @@ cql_future_release_data(
  *
  * @param session
  */
-CQL_EXPORT void
+void
 cql_session_shutdown(
-    void*  session);
+    void*  session) {
+}
 
 /***********************************************************************************
  *
@@ -254,13 +254,15 @@ cql_session_shutdown(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_session_query(
     void*  session,
     char*  statement,
     size_t length,
     size_t params,
-    void** query);
+    void** query) {
+  return nullptr;
+}
 
 /**
  * Create a prepared statement. Future must be freed by caller.
@@ -272,12 +274,14 @@ cql_session_query(
  *
  * @return
  */
-CQL_EXPORT void*
+void*
 cql_session_prepare(
     void*  session,
     char*  query,
     size_t length,
-    void** future);
+    void** future) {
+  return nullptr;
+}
 
 /**
  * Initialize a bound statement from a pre-prepared statement, reserving N slots for
@@ -290,24 +294,30 @@ cql_session_prepare(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_prepared_bind(
     void*  session,
     void*  prepared,
     size_t params,
-    void** bound);
+    void** bound) {
+  return nullptr;
+}
 
-CQL_EXPORT void*
+void*
 cql_statement_setopt(
     int    option,
     void*  data,
-    size_t datalen);
+    size_t datalen) {
+  return nullptr;
+}
 
-CQL_EXPORT void*
+void*
 cql_statement_getopt(
     int     option,
     void**  data,
-    size_t* datalen);
+    size_t* datalen) {
+  return nullptr;
+}
 
 /**
  * Bind a short to a query or bound statement at the specified index
@@ -318,11 +328,13 @@ cql_statement_getopt(
  *
  * @return
  */
-CQL_EXPORT void*
+void*
 cql_statement_bind_short(
     void*   statement,
     size_t  index,
-    int16_t value);
+    int16_t value) {
+  return nullptr;
+}
 
 /**
  * Bind an int to a query or bound statement at the specified index
@@ -333,11 +345,13 @@ cql_statement_bind_short(
  *
  * @return
  */
-CQL_EXPORT void*
+void*
 cql_statement_bind_int(
     void*   statement,
     size_t  index,
-    int32_t value);
+    int32_t value) {
+  return nullptr;
+}
 
 /**
  * Bind a bigint to a query or bound statement at the specified index
@@ -348,11 +362,13 @@ cql_statement_bind_int(
  *
  * @return
  */
-CQL_EXPORT void*
+void*
 cql_statement_bind_bigint(
     void*   statement,
     size_t  index,
-    int64_t value);
+    int64_t value) {
+  return nullptr;
+}
 
 /**
  * Bind a float to a query or bound statement at the specified index
@@ -363,11 +379,13 @@ cql_statement_bind_bigint(
  *
  * @return
  */
-CQL_EXPORT void*
+void*
 cql_statement_bind_float(
     void*  statement,
     size_t index,
-    float  value);
+    float  value) {
+  return nullptr;
+}
 
 /**
  * Bind a double to a query or bound statement at the specified index
@@ -378,11 +396,13 @@ cql_statement_bind_float(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_statement_bind_double(
     void*  statement,
     size_t index,
-    double value);
+    double value) {
+  return nullptr;
+}
 
 /**
  * Bind a bool to a query or bound statement at the specified index
@@ -393,11 +413,13 @@ cql_statement_bind_double(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_statement_bind_bool(
     void*  statement,
     size_t index,
-    float  value);
+    float  value) {
+  return nullptr;
+}
 
 /**
  * Bind a time stamp to a query or bound statement at the specified index
@@ -408,11 +430,13 @@ cql_statement_bind_bool(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_statement_bind_time(
     void*   statement,
     size_t  index,
-    int64_t value);
+    int64_t value) {
+  return nullptr;
+}
 
 /**
  * Bind a UUID to a query or bound statement at the specified index
@@ -423,11 +447,13 @@ cql_statement_bind_time(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_statement_bind_uuid(
     void*      statement,
     size_t     index,
-    cql_uuid_t value);
+    cql_uuid_t value) {
+  return nullptr;
+}
 
 /**
  * Bind a counter to a query or bound statement at the specified index
@@ -438,11 +464,13 @@ cql_statement_bind_uuid(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_statement_bind_counter(
     void*   statement,
     size_t  index,
-    int64_t value);
+    int64_t value) {
+  return nullptr;
+}
 
 /**
  * Bind a string to a query or bound statement at the specified index
@@ -454,12 +482,14 @@ cql_statement_bind_counter(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_statement_bind_string(
     void*   statement,
     size_t  index,
     char*   value,
-    size_t  length);
+    size_t  length) {
+  return nullptr;
+}
 
 /**
  * Bind a blob to a query or bound statement at the specified index
@@ -472,13 +502,15 @@ cql_statement_bind_string(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_statement_bind_blob(
     void*    statement,
     size_t   index,
     uint8_t* output,
     size_t   length,
-    size_t*  total);
+    size_t*  total) {
+  return nullptr;
+}
 
 /**
  * Bind a decimal to a query or bound statement at the specified index
@@ -491,13 +523,15 @@ cql_statement_bind_blob(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_statement_bind_decimal(
     void*    statement,
     size_t   index,
     uint32_t scale,
     uint8_t* value,
-    size_t   length);
+    size_t   length) {
+  return nullptr;
+}
 
 /**
  * Bind a varint to a query or bound statement at the specified index
@@ -509,12 +543,14 @@ cql_statement_bind_decimal(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_statement_bind_varint(
     void*    statement,
     size_t   index,
     uint8_t* value,
-    size_t   length);
+    size_t   length) {
+  return nullptr;
+}
 
 /**
  * Execute a query, bound or batch statement and obtain a future. Future must be freed by
@@ -526,11 +562,13 @@ cql_statement_bind_varint(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_statement_exec(
     void*  session,
     void*  statement,
-    void** future);
+    void** future) {
+  return nullptr;
+}
 
 
 /***********************************************************************************
@@ -547,9 +585,11 @@ cql_statement_exec(
  *
  * @return
  */
-CQL_EXPORT size_t
+size_t
 cql_result_rowcount(
-    void* result);
+    void* result) {
+  return 0;
+}
 
 /**
  * Get number of columns per row for the specified result
@@ -558,9 +598,11 @@ cql_result_rowcount(
  *
  * @return
  */
-CQL_EXPORT size_t
+size_t
 cql_result_colcount(
-    void* result);
+    void* result) {
+  return 0;
+}
 
 /**
  * Get the type for the column at index for the specified result
@@ -571,11 +613,13 @@ cql_result_colcount(
  *
  * @return
  */
-CQL_EXPORT void*
+void*
 cql_result_coltype(
     void*   result,
     size_t  index,
-    size_t* coltype);
+    size_t* coltype) {
+  return nullptr;
+}
 
 /**
  * Get an iterator for the specified result or collection. Iterator must be freed by caller.
@@ -585,10 +629,12 @@ cql_result_coltype(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_iterator_new(
     void*  value,
-    void** iterator);
+    void** iterator) {
+  return nullptr;
+}
 
 /**
  * Advance the iterator to the next row or collection item.
@@ -597,9 +643,11 @@ cql_iterator_new(
  *
  * @return next row, NULL if no rows remain or error
  */
-CQL_EXPORT void*
+void*
 cql_iterator_next(
-    void* iterator);
+    void* iterator) {
+  return nullptr;
+}
 
 /**
  * Get the column value at index for the specified row.
@@ -610,11 +658,13 @@ cql_iterator_next(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_row_getcol(
     void*  row,
     size_t index,
-    void** value);
+    void** value) {
+  return nullptr;
+}
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -625,10 +675,12 @@ cql_row_getcol(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_decode_short(
     void*   source,
-    int16_t value);
+    int16_t value) {
+  return nullptr;
+}
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -639,10 +691,12 @@ cql_decode_short(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_decode_int(
     void*   source,
-    int32_t value);
+    int32_t value) {
+  return nullptr;
+}
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -653,10 +707,12 @@ cql_decode_int(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_decode_bigint(
     void*   source,
-    int64_t value);
+    int64_t value) {
+  return nullptr;
+}
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -667,10 +723,12 @@ cql_decode_bigint(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_decode_float(
     void*  source,
-    float  value);
+    float  value) {
+  return nullptr;
+}
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -681,10 +739,12 @@ cql_decode_float(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_decode_double(
     void*  source,
-    double  value);
+    double  value) {
+  return nullptr;
+}
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -695,10 +755,12 @@ cql_decode_double(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_decode_bool(
     void*  source,
-    float  value);
+    float  value) {
+  return nullptr;
+}
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -709,10 +771,12 @@ cql_decode_bool(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_decode_time(
     void*   source,
-    int64_t value);
+    int64_t value) {
+  return nullptr;
+}
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -723,10 +787,12 @@ cql_decode_time(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_decode_uuid(
     void*      source,
-    cql_uuid_t value);
+    cql_uuid_t value) {
+  return nullptr;
+}
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -737,10 +803,12 @@ cql_decode_uuid(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_decode_counter(
     void*   source,
-    int64_t value);
+    int64_t value) {
+  return nullptr;
+}
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -757,12 +825,14 @@ cql_decode_counter(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_decode_string(
     void*   source,
     char*   output,
     size_t  n,
-    size_t* total);
+    size_t* total) {
+  return nullptr;
+}
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -779,12 +849,14 @@ cql_decode_string(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_decode_blob(
     void*    source,
     uint8_t* output,
     size_t   n,
-    size_t*  total);
+    size_t*  total) {
+  return nullptr;
+}
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -795,12 +867,14 @@ cql_decode_blob(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_decode_decimal(
     void*     source,
     uint32_t* scale,
     uint8_t** value,
-    size_t*   len);
+    size_t*   len) {
+  return nullptr;
+}
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -817,12 +891,14 @@ cql_decode_decimal(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_decode_varint(
     void*    source,
     uint8_t* output,
     size_t   n,
-    size_t*  total);
+    size_t*  total) {
+  return nullptr;
+}
 
 /**
  * Get the number of items in a collection. Works for all collection types.
@@ -831,9 +907,11 @@ cql_decode_varint(
  *
  * @return size, 0 if error
  */
-CQL_EXPORT size_t
+size_t
 cql_collection_count(
-    void*  source);
+    void*  source) {
+  return 0;
+}
 
 /**
  * Get the collection sub-type. Works for collections that have a single sub-type
@@ -844,10 +922,12 @@ cql_collection_count(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_collection_subtype(
     void*   collection,
-    size_t* output);
+    size_t* output) {
+  return nullptr;
+}
 
 /**
  * Get the sub-type of the key for a map collection. Works only for maps.
@@ -857,10 +937,12 @@ cql_collection_subtype(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_collection_map_key_type(
     void*   collection,
-    size_t* output);
+    size_t* output) {
+  return nullptr;
+}
 
 /**
  * Get the sub-type of the value for a map collection. Works only for maps.
@@ -870,10 +952,12 @@ cql_collection_map_key_type(
  *
  * @return
  */
-CQL_EXPORT void*
+void*
 cql_collection_map_value_type(
     void*   collection,
-    size_t* output);
+    size_t* output) {
+  return nullptr;
+}
 
 /**
  * Use an iterator to obtain each pair from a map. Once a pair has been obtained from
@@ -884,10 +968,12 @@ cql_collection_map_value_type(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_map_get_key(
     void*  item,
-    void** output);
+    void** output) {
+  return nullptr;
+}
 
 /**
  * Use an iterator to obtain each pair from a map. Once a pair has been obtained from
@@ -898,10 +984,12 @@ cql_map_get_key(
  *
  * @return error pointer, NULL otherwise
  */
-CQL_EXPORT void*
+void*
 cql_map_get_value(
     void*  item,
-    void** output);
+    void** output) {
+  return nullptr;
+}
 
 
 /***********************************************************************************
@@ -924,30 +1012,34 @@ cql_map_get_value(
  *
  * @return total message size irrespective of output buffer size
  */
-CQL_EXPORT size_t
+size_t
 cql_error_string(
     int    error,
     char*  output,
-    size_t n);
+    size_t n) {
+  return 0;
+}
 
 /**
  * Generate a new V1 (time) UUID
  *
  * @param output
  */
-CQL_EXPORT void
+void
 cql_uuid_v1(
-    cql_uuid_t* output);
+    cql_uuid_t* output) {
+}
 
 /**
  * Generate a new V1 (time) UUID for the specified time
  *
  * @param output
  */
-CQL_EXPORT void
+void
 cql_uuid_v1_for_time(
     uint64_t    time,
-    cql_uuid_t* output);
+    cql_uuid_t* output) {
+}
 
 /**
  * Generate a new V4 (random) UUID
@@ -956,9 +1048,10 @@ cql_uuid_v1_for_time(
  *
  * @return
  */
-CQL_EXPORT void
+void
 cql_uuid_v4(
-    cql_uuid_t* output);
+    cql_uuid_t* output) {
+}
 
 /**
  * Return the corresponding null terminated string for the specified UUID.
@@ -968,80 +1061,9 @@ cql_uuid_v4(
  *
  * @return
  */
-CQL_EXPORT void*
+void*
 cql_uuid_string(
     cql_uuid_t uuid,
-    char*      output);
-
-#define CQL_LOG_CRITICAL 0x00
-#define CQL_LOG_ERROR    0x01
-#define CQL_LOG_INFO     0x02
-#define CQL_LOG_DEBUG    0x03
-
-#define CQL_ERROR_SOURCE_OS          1
-#define CQL_ERROR_SOURCE_NETWORK     2
-#define CQL_ERROR_SOURCE_SSL         3
-#define CQL_ERROR_SOURCE_COMPRESSION 4
-#define CQL_ERROR_SOURCE_SERVER      5
-#define CQL_ERROR_SOURCE_LIBRARY     6
-
-#define CQL_ERROR_NO_ERROR            0
-#define CQL_ERROR_SSL_CERT            1000000
-#define CQL_ERROR_SSL_PRIVATE_KEY     1000001
-#define CQL_ERROR_SSL_CA_CERT         1000002
-#define CQL_ERROR_SSL_CRL             1000003
-#define CQL_ERROR_SSL_READ            1000004
-#define CQL_ERROR_SSL_WRITE           1000005
-#define CQL_ERROR_SSL_READ_WAITING    1000006
-#define CQL_ERROR_SSL_WRITE_WAITING   1000007
-#define CQL_ERROR_LIB_NO_STREAMS      1000008
-#define CQL_ERROR_LIB_MAX_CONNECTIONS 1000009
-
-#define CQL_CONSISTENCY_ANY          0x0000
-#define CQL_CONSISTENCY_ONE          0x0001
-#define CQL_CONSISTENCY_TWO          0x0002
-#define CQL_CONSISTENCY_THREE        0x0003
-#define CQL_CONSISTENCY_QUORUM       0x0004
-#define CQL_CONSISTENCY_ALL          0x0005
-#define CQL_CONSISTENCY_LOCAL_QUORUM 0x0006
-#define CQL_CONSISTENCY_EACH_QUORUM  0x0007
-#define CQL_CONSISTENCY_SERIAL       0x0008
-#define CQL_CONSISTENCY_LOCAL_SERIAL 0x0009
-#define CQL_CONSISTENCY_LOCAL_ONE    0x000A
-
-#define CQL_COLUMN_TYPE_UNKNOWN   0xFFFF
-#define CQL_COLUMN_TYPE_CUSTOM    0x0000
-#define CQL_COLUMN_TYPE_ASCII     0x0001
-#define CQL_COLUMN_TYPE_BIGINT    0x0002
-#define CQL_COLUMN_TYPE_BLOB      0x0003
-#define CQL_COLUMN_TYPE_BOOLEAN   0x0004
-#define CQL_COLUMN_TYPE_COUNTER   0x0005
-#define CQL_COLUMN_TYPE_DECIMAL   0x0006
-#define CQL_COLUMN_TYPE_DOUBLE    0x0007
-#define CQL_COLUMN_TYPE_FLOAT     0x0008
-#define CQL_COLUMN_TYPE_INT       0x0009
-#define CQL_COLUMN_TYPE_TEXT      0x000A
-#define CQL_COLUMN_TYPE_TIMESTAMP 0x000B
-#define CQL_COLUMN_TYPE_UUID      0x000C
-#define CQL_COLUMN_TYPE_VARCHAR   0x000D
-#define CQL_COLUMN_TYPE_VARINT    0x000E
-#define CQL_COLUMN_TYPE_TIMEUUID  0x000F
-#define CQL_COLUMN_TYPE_INET      0x0010
-#define CQL_COLUMN_TYPE_LIST      0x0020
-#define CQL_COLUMN_TYPE_MAP       0x0021
-#define CQL_COLUMN_TYPE_SET       0x0022
-
-#define CQL_OPTION_THREADS_IO                 1
-#define CQL_OPTION_THREADS_CALLBACK           2
-#define CQL_OPTION_CONTACT_POINT_ADD          3
-#define CQL_OPTION_PORT                       4
-#define CQL_OPTION_CQL_VERSION                5
-#define CQL_OPTION_SCHEMA_AGREEMENT_WAIT      6
-#define CQL_OPTION_CONTROL_CONNECTION_TIMEOUT 7
-
-#define CQL_OPTION_COMPRESSION                9
-#define CQL_OPTION_COMPRESSION_NONE           0
-#define CQL_OPTION_COMPRESSION_SNAPPY         1
-#define CQL_OPTION_COMPRESSION_LZ4            2
-
-#endif // __CQL_H_INCLUDED__
+    char*      output) {
+  return nullptr;
+}

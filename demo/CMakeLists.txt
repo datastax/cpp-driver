@@ -3,22 +3,6 @@
 #-------------------
 cmake_minimum_required(VERSION 2.6.4)
 
-# set(DEMO Demo_${CQL_DRIVER_PROJECT_NAME})
-# project(${DEMO} C CXX)
-
-# file(GLOB DEMO_SRC_FILES *.cpp)
-
-# # Add EXCLUDE_FROM_ALL flag to exclude demo project
-# # from ALL target
-# add_executable(${DEMO}  ${DEMO_SRC_FILES})
-
-# set_property(
-#   TARGET ${DEMO}
-#   APPEND PROPERTY COMPILE_FLAGS ${PROJECT_COMPILER_FLAGS})
-
-
-
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ".")
 set(PROJECT_DEMO_NAME ${PROJECT_NAME_STR}_demo)
 
