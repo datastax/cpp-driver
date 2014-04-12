@@ -306,9 +306,48 @@ public:
 	virtual bool 
 	get_decimal_double( std::string const & column, 
 	                    double & output ) const = 0;					//// convert DECIMAL to double with roundings error.	
+
+	virtual bool 
+	get_varint( std::string const & column, 
+	            cql::cql_bigint_t & output ) const = 0;			//// convert varint to int64.	
+
+	virtual bool 
+	get_varint( int i, 
+	            cql::cql_bigint_t & output ) const = 0;			//// convert varint to int64.	
+
+	virtual bool 
+	get_inet( int i, 
+	            std::string & output ) const = 0;			//// return inet.
+					
+	virtual bool	
+	get_inet( std::string const & column, 
+	            std::string & output ) const = 0;			//// return inet.
+		
+	virtual bool 
+	get_blob( int i, 
+	          std::vector< cql::cql_byte_t > & output ) const = 0;			//// return blob as vector. Data is copied
+					
+	virtual bool	
+	get_blob( std::string const & column, 
+	          std::vector< cql::cql_byte_t > & output ) const = 0;			//// return blob as vector. Data is copied
+
+	virtual bool 
+	get_blob( int i,
+		      std::pair< cql::cql_byte_t *, cql::cql_int_t > & output ) const = 0;			//// return blob as pure pointer. Data is not copied
+					
+	virtual bool	
+	get_blob( std::string const & column, 
+	          std::pair< cql::cql_byte_t *, cql::cql_int_t > & output ) const = 0;			//// return blob as pure pointer. Data is not copied		
 				
-};			
-			
+	virtual bool
+    get_text(int i,
+               std::string& output) const = 0;
+				
+    virtual bool
+    get_text(const std::string& column,
+               std::string& output) const = 0;
+};				
+				
 } // namespace cql
 
 #endif // CQL_RESULT_H_

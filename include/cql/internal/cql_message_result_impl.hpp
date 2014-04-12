@@ -349,7 +349,47 @@ public:
 	get_decimal_double( std::string const & column, 
 	                    double & output ) const;					//// convert DECIMAL to double with roundings error.	
 							
-private:			
+	bool	
+	get_varint( std::string const & column, 
+	                    cql::cql_bigint_t & output ) const;			//// convert varint to int64.	
+
+	bool	
+	get_varint( int i, 
+	            cql::cql_bigint_t & output ) const;					//// convert varint to int64.	
+		
+	bool 
+	get_inet( int i, 
+	            std::string & output ) const;						//// return inet.
+					
+	bool		
+	get_inet( std::string const & column, 
+	            std::string & output ) const;						//// return inet.
+				
+	bool		
+	get_blob( int i, 
+	          std::vector< cql::cql_byte_t > & output ) const;	//// return blob as vector. Data is copied
+					
+	bool	
+	get_blob( std::string const & column, 
+	          std::vector< cql::cql_byte_t > & output ) const;	//// return blob as vector. Data is copied
+
+	bool 
+	get_blob( int i,
+		      std::pair< cql::cql_byte_t *, cql::cql_int_t > & output ) const;		//// return blob as pure pointer and size. Data is not copied
+					
+	bool	
+	get_blob( std::string const & column, 
+	          std::pair< cql::cql_byte_t *, cql::cql_int_t > & output ) const;		//// return blob as pure pointer and size. Data is not copied		
+
+	bool
+    get_text(int i,
+               std::string& output) const;
+				
+    bool
+    get_text(const std::string& column,
+               std::string& output) const;
+
+private:				
 					
 	std::string convert_uuid_to_string( std::vector< cql::cql_byte_t > const & v ) const;	
 

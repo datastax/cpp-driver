@@ -949,10 +949,10 @@ cql::cql_message_result_impl_t::get_decimal_int( int i,
 		
 	if( v.size() > 8 )		//// the data consists of more than 32 bits. It will not be convertible to int32;	
 		return false;
-			
-	cql::cql_int_t const first_digit = v[ 4 ];		//// take the first digit of the data bytes.
-	cql::cql_int_t const last_byte_first_digit = first_digit & 0x80;		//// take the most meaning bit of the first byte.
-	
+				
+	unsigned char const first_digit = v[ 4 ];		//// take the first digit of the data bytes.
+	unsigned char const last_byte_first_digit = first_digit & 0x80;		//// take the most meaning bit of the first byte.
+				
 	unsigned char arr[ 4 ];				//// temporary array for making conversion to int. 
 
 	unsigned char byte_for_filling( 0x00 );		//// the byte for filling in the more significant bytes. 
@@ -1005,9 +1005,9 @@ cql::cql_message_result_impl_t::get_decimal_int_64( int i,
 		
 	if( v.size() > 12 )		//// the data consists of more than 64 bits. It will not be convertible to int64;	
 		return false;
-			
-	cql::cql_int_t const first_digit = v[ 4 ];		//// take the first digit of the data bytes.
-	cql::cql_int_t const last_byte_first_digit = first_digit & 0x80;		//// take the most meaning bit of the first byte.
+				
+	unsigned char const first_digit = v[ 4 ];		//// take the first digit of the data bytes.
+	unsigned char const last_byte_first_digit = first_digit & 0x80;		//// take the most meaning bit of the first byte.
 	
 	unsigned char arr[ 8 ];				//// temporary array for making conversion to int. 
 
@@ -1069,8 +1069,8 @@ cql::cql_message_result_impl_t::get_decimal_double( int i,
 	if( v.size() > 12 )		//// the data consists of more than 64 bits. It will not be convertible to double.;	
 		return false;
 				
-	cql::cql_int_t const first_digit = v[ 4 ];								//// take the first digit of the data bytes.
-	cql::cql_int_t const last_byte_first_digit = first_digit & 0x80;		//// take the most meaning bit of the first byte.
+	unsigned char const first_digit = v[ 4 ];								//// take the first digit of the data bytes.
+	unsigned char const last_byte_first_digit = first_digit & 0x80;		//// take the most meaning bit of the first byte.
 	
 	unsigned char arr[ 8 ];						//// temporary array for making conversion to int64.	 
 
@@ -1118,4 +1118,183 @@ cql::cql_message_result_impl_t::get_decimal_double( int i,
 	return true;			
 }			
 
-	
+
+bool 
+cql::cql_message_result_impl_t::get_varint( std::string const & column, 
+	                    cql::cql_bigint_t & output ) const			//// convert varint to int64.	
+{
+	int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_varint(i, output);
+    }
+    return false;
+}			
+
+
+			
+bool		
+cql::cql_message_result_impl_t::get_varint( int i, 
+	            cql::cql_bigint_t & output ) const					//// convert varint to int64.
+{
+
+	std::vector< cql::cql_byte_t > v;
+	if( !get_data( i, v ) )
+		return false;
+
+	std::size_t const t = v.size();
+		
+	if( t < 1 || t > 8 )
+		return false;		
+		
+	unsigned char const first_digit = v[ 0 ];		//// take the first digit of the data bytes.
+	unsigned char const last_byte_first_digit = first_digit & 0x80;		//// take the most meaning bit of the first byte.
+		
+	unsigned char arr[ 8 ];				//// temporary array for making conversion to int. 
+
+	unsigned char byte_for_filling( 0x00 );		//// the byte for filling in the more significant bytes. 
+
+	if( last_byte_first_digit == 0x80 )
+	{	//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 
+		byte_for_filling = 0xFF;		//// the filing will be with 0xFF value.
+	}		
+			
+	int const number_of_bytes_for_filling( 8 - v.size() );
+			
+	for( int i = 0; i < number_of_bytes_for_filling; ++i )
+	{		
+		arr[ i ] = byte_for_filling;		
+	}			
+					
+	int const number_of_bytes_to_copy( v.size() );	
+				
+	for( i = 0; i < number_of_bytes_to_copy; ++i )
+	{			
+		arr[ i + number_of_bytes_for_filling ] = v[ i ];	
+	}		
+			
+	cql::cql_bigint_t result( 0 );
+			
+	for( int i = 0;  i < 8; ++i )
+	{
+		result = result << 8;	
+		result = result | static_cast< int >( arr[ i ] );
+	}		
+			
+	output = result;		
+	return true;	
+}			
+			
+bool		
+cql::cql_message_result_impl_t::get_inet( std::string const & column, 
+	            std::string & output ) const						//// return inet.
+{
+	int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_inet(i, output);
+    }
+    return false;
+		
+}		
+		
+bool	
+cql::cql_message_result_impl_t::get_inet( int i, 
+	            std::string & output ) const						//// return inet.
+{		
+	std::vector< cql::cql_byte_t > v;
+	if( !get_data( i, v ) )
+		return false;
+
+	if( v.size() == 4 )  // IPv4
+	{
+		std::string inet_string( boost::str(boost::format("%d.%d.%d.%d") % static_cast< int >( v[ 0 ] ) % static_cast< int >( v[ 1 ] ) % static_cast< int >( v[ 2 ] ) % static_cast< int >( v[ 3 ] ) ) );	
+		output = inet_string;
+		return true;
+	}	
+		
+	if( v.size() == 16 )	// IPv6
+	{
+		std::string res;
+		for( int i = 0; i < 16; ++i )	
+		{
+			if( i > 1 && i % 2 == 0 )
+				res += ":";
+					
+			int k = v[ i ];
+			std::string s = ( boost::str(boost::format("%x") % k ) );
+
+			if( s.length() == 1 )
+				res += "0";
+				
+			res += s;	
+		}
+		output = res;
+		return true;
+	}	
+		
+	return false;
+}		
+		
+
+bool		
+cql::cql_message_result_impl_t::get_blob( int i, 
+										  std::vector< cql::cql_byte_t > & output ) const	//// return blob as vector. Data is copied
+{	
+ 	return get_data( i, output );
+}	
+					
+bool	
+cql::cql_message_result_impl_t::get_blob( std::string const & column, 
+									      std::vector< cql::cql_byte_t > & output ) const	//// return blob as vector. Data is copied
+{
+	int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_blob(i, output);
+    }
+    return false;
+}
+
+bool 
+cql::cql_message_result_impl_t::get_blob( int i,
+										  std::pair< cql::cql_byte_t *, cql::cql_int_t > & output ) const		//// return blob as pure pointer and size. Data is not copied
+{
+	cql::cql_byte_t* output_ptr = NULL;
+	bool empty = false;
+    if (get_nullity(i, empty)) {
+        if (!empty) 
+		{
+            cql_byte_t* pos = _row[i];
+			cql::cql_int_t size( 0 );
+            output_ptr = cql::decode_int(pos, size);	
+			output.first = output_ptr;
+			output.second = size;
+            return true;
+        }		
+    }			
+	return false;
+}
+					
+bool	
+cql::cql_message_result_impl_t::get_blob( std::string const & column, 
+										  std::pair< cql::cql_byte_t *, cql::cql_int_t > & output ) const		//// return blob as pure pointer and size. Data is not copied		
+{
+	int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_blob(i, output);
+    }
+    return false;
+}		
+			
+bool
+cql::cql_message_result_impl_t::get_text(int i,
+               std::string& output) const
+{
+	return get_ascii( i, output );
+}
+				
+bool
+cql::cql_message_result_impl_t::get_text(const std::string& column,
+               std::string& output) const
+{	
+	return get_ascii( column, output );
+}
+
