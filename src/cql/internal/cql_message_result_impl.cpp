@@ -61,7 +61,8 @@ cql::cql_message_result_impl_t::cql_message_result_impl_t() :
     _row_count(0),
     _column_count(0),
     _query_id(0),
-    _result_type(cql::CQL_RESULT_VOID)
+    _result_type(cql::CQL_RESULT_VOID),
+    _am_i_traced(false)
 {}
 
 cql::cql_message_result_impl_t::cql_message_result_impl_t(size_t size) :
@@ -71,7 +72,8 @@ cql::cql_message_result_impl_t::cql_message_result_impl_t(size_t size) :
     _row_count(0),
     _column_count(0),
     _query_id(0),
-    _result_type(cql::CQL_RESULT_VOID)
+    _result_type(cql::CQL_RESULT_VOID),
+    _am_i_traced(false)
 {}
 
 cql::cql_message_buffer_t
@@ -122,6 +124,10 @@ cql::cql_message_result_impl_t::consume(cql::cql_error_t*) {
     _row_count = 0;
     _row_pos = 0;
     _pos = &((*_buffer)[0]);
+    
+    if (_am_i_traced) {
+        _pos = decode_uuid(_pos, _tracing_id);
+    }
 
     cql::cql_int_t result_type = 0;
     _pos = cql::decode_int(_pos, result_type);
@@ -192,6 +198,17 @@ cql::cql_message_result_impl_t::row_count() const {
 size_t
 cql::cql_message_result_impl_t::column_count() const {
     return _column_count;
+}
+
+void
+cql::cql_message_result_impl_t::set_as_traced() {
+    _am_i_traced = true;
+}
+
+bool
+cql::cql_message_result_impl_t::get_tracing_id(cql_uuid_t& tracing_id_) const {
+    tracing_id_ = _tracing_id;
+    return !(_tracing_id.empty());
 }
 
 const std::vector<cql::cql_byte_t>&
@@ -570,7 +587,10 @@ cql::cql_message_result_impl_t::get_data( int i,
 				
             return true;
         }		
-    }			
+    }
+    else {
+        return false;
+    }
 }				
 				
 bool								

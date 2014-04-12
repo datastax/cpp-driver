@@ -24,10 +24,6 @@
 #define CQL_VERSION_1_REQUEST  0x01
 #define CQL_VERSION_1_RESPONSE 0x81
 
-#define CQL_FLAG_NOFLAG      0x00
-#define CQL_FLAG_COMPRESSION 0x01
-#define CQL_FLAG_TRACE       0x02
-
 #define CQL_VERSION       "CQL_VERSION"
 #define CQL_VERSION_IMPL  "3.0.0"
 #define CQL_VERSION_3_0_0 "3.0.0"

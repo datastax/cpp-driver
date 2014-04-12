@@ -71,9 +71,10 @@ public:
     
     bool
     operator==(const cql_uuid_t& other) const;
-    
-private:
+
     static const size_t _size = 16; // Size in bytes.
+
+private:
     cql_byte_t          _uuid[_size];
 };
 

@@ -56,6 +56,12 @@ enum cql_opcode_enum {
     CQL_OPCODE_EVENT        = 0x0C
 };
 
+enum cql_header_flag_enum {
+    CQL_FLAG_NOFLAG      = 0x00,
+    CQL_FLAG_COMPRESSION = 0x01,
+    CQL_FLAG_TRACE       = 0x02
+};
+    
 enum cql_consistency_enum {
     CQL_CONSISTENCY_ANY          = 0x0000,
     CQL_CONSISTENCY_ONE          = 0x0001,

@@ -33,7 +33,7 @@ public:
 
     cql_header_impl_t();
 
-    cql_header_impl_t(cql::cql_byte_t         version,
+    cql_header_impl_t(cql::cql_byte_t           version,
                       cql::cql_byte_t           flags,
                       const cql::cql_stream_t&  stream,
                       cql::cql_byte_t           opcode,

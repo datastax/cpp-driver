@@ -934,7 +934,7 @@ private:
         message->prepare(&err);
 
         cql::cql_header_impl_t header(CQL_VERSION_1_REQUEST,
-                                      CQL_FLAG_NOFLAG,
+                                      message->flag(),
                                       stream,
                                       message->opcode(),
                                       message->size());
@@ -1030,6 +1030,12 @@ private:
 
         case CQL_OPCODE_RESULT:
             _response_message.reset(new cql::cql_message_result_impl_t(header.length()));
+            if ((header.flags() & CQL_FLAG_TRACE) == CQL_FLAG_TRACE) {
+                // This is a response to traced query.
+                // Here we tell the _response_message to expect tracing ID at the beginning of buffer.
+                boost::dynamic_pointer_cast<cql_message_result_impl_t>(
+                    boost::shared_ptr<cql_message_t>(_response_message))->set_as_traced();
+            }
             break;
 
         case CQL_OPCODE_SUPPORTED:

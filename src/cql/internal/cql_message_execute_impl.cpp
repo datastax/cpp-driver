@@ -30,6 +30,7 @@
 cql::cql_message_execute_impl_t::cql_message_execute_impl_t() :
     _buffer(new std::vector<cql_byte_t>()),
     _consistency(cql::CQL_CONSISTENCY_ONE),
+    _is_traced(false),
     _retry_policy(new cql_default_retry_policy_t()),
     _retry_counter(0)
 {}
@@ -37,6 +38,7 @@ cql::cql_message_execute_impl_t::cql_message_execute_impl_t() :
 cql::cql_message_execute_impl_t::cql_message_execute_impl_t(size_t size) :
     _buffer(new std::vector<cql_byte_t>(size)),
     _consistency(cql::CQL_CONSISTENCY_ONE),
+    _is_traced(false),
     _retry_policy(new cql_default_retry_policy_t()),
     _retry_counter(0)
 {}
@@ -44,11 +46,13 @@ cql::cql_message_execute_impl_t::cql_message_execute_impl_t(size_t size) :
 cql::cql_message_execute_impl_t::cql_message_execute_impl_t(
     const std::vector<cql::cql_byte_t>& id,
     cql::cql_consistency_enum consistency,
-    boost::shared_ptr<cql_retry_policy_t> retry_policy) :
+    boost::shared_ptr<cql_retry_policy_t> retry_policy,
+    bool is_traced) :
 
     _buffer(new std::vector<cql_byte_t>()),
     _query_id(id),
     _consistency(consistency),
+    _is_traced(is_traced),
     _retry_policy(retry_policy),
     _retry_counter(0)
 {}
@@ -138,6 +142,15 @@ cql::cql_message_execute_impl_t::pop_back() {
 cql::cql_opcode_enum
 cql::cql_message_execute_impl_t::opcode() const {
     return CQL_OPCODE_EXECUTE;
+}
+
+cql::cql_byte_t
+cql::cql_message_execute_impl_t::flag() const {
+    cql_byte_t ret_val = static_cast<cql_byte_t>(CQL_FLAG_NOFLAG);
+    if (_is_traced) {
+        ret_val |= static_cast<cql_byte_t>(CQL_FLAG_TRACE);
+    }
+    return ret_val;
 }
 
 cql::cql_int_t

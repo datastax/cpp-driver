@@ -50,7 +50,7 @@ public:
 
     cql::cql_opcode_enum
     opcode() const;
-
+       
     cql_int_t
     size() const;
 

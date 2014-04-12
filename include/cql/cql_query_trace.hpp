@@ -46,7 +46,7 @@ struct CQL_EXPORT cql_trace_event_t {
 //-------------------------------------------------------------------------------------
     
 class CQL_EXPORT cql_query_trace_t :
-    boost::noncopyable // Required as long as some raw pointers are used inside.
+    boost::noncopyable
 {
 public:
     cql_query_trace_t(
@@ -57,14 +57,7 @@ public:
               _session(session),
               _log_callback(log_callback),
               _duration(UNAVAILABLE_YET),
-              _parameters(NULL),
               _started_at(0) {}
-    
-    virtual ~cql_query_trace_t() {
-        if (_parameters) {
-            delete _parameters;
-        }
-    }
     
     cql_uuid_t
     get_trace_id() const {
@@ -97,9 +90,9 @@ public:
         Caller (you) DOES NOT have the ownership of this pointer! 
         Lifetime of the underlying map equals the lifetime of this cql_query_trace_t object. */
     inline bool
-    get_parameters(cql_map_t** parameters_) { // TODO(JS): some smart ptr here?
+    get_parameters(boost::shared_ptr<cql_map_t>& parameters_) {
         if (maybe_fetch_trace()) {
-            *parameters_ = _parameters;
+            parameters_ = _parameters;
             return true;
         }
         else return false;
@@ -154,7 +147,7 @@ private:
     std::string                          _request_type;
     cql_bigint_t                         _duration;
     boost::asio::ip::address             _coordinator;
-    cql_map_t*                           _parameters;
+    boost::shared_ptr<cql_map_t>         _parameters;
     std::list<cql_trace_event_t>         _events;
     cql_bigint_t                         _started_at;
 };

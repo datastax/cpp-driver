@@ -23,6 +23,8 @@
 
 #include "cql/cql.hpp"
 #include "cql/cql_result.hpp"
+#include "cql/cql_uuid.hpp"
+
 #include "cql/internal/cql_util.hpp"
 #include "cql/internal/cql_message.hpp"
 #include "cql/internal/cql_result_metadata.hpp"
@@ -58,10 +60,16 @@ public:
 
     size_t
     row_count() const;
-
+        
     const std::vector<cql::cql_byte_t>&
     query_id() const;
 
+    void
+    set_as_traced();
+        
+    bool
+    get_tracing_id(cql_uuid_t& tracing_id_) const;
+        
     bool
     next();
 
@@ -366,6 +374,8 @@ private:
     std::string                   _keyspace_name;
     std::string                   _table_name;
     cql::cql_result_metadata_t    _metadata;
+    cql_uuid_t                    _tracing_id;
+    bool                          _am_i_traced;
 };
 
 } // namespace cql

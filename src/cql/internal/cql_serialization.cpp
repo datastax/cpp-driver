@@ -38,6 +38,7 @@
 
 #include "cql/internal/cql_defines.hpp"
 #include "cql/internal/cql_serialization.hpp"
+#include "cql/cql_uuid.hpp"
 
 using namespace std;
 
@@ -374,6 +375,13 @@ cql::decode_bytes(istream& input,
         input.read(reinterpret_cast<char*>(&value[0]), len);
     }
     return input;
+}
+
+cql::cql_byte_t*
+cql::decode_uuid(cql::cql_byte_t* input,
+                 cql_uuid_t&      value) {
+    value = cql_uuid_t(input);
+    return input+cql_uuid_t::_size;
 }
 
 ostream&

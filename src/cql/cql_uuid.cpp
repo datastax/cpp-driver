@@ -120,7 +120,7 @@ cql::cql_uuid_t::create() {
     *reinterpret_cast< ::uint64_t*>(&ret._uuid[0]) = id++;
     *reinterpret_cast< ::uint64_t*>(&ret._uuid[8]) = mt();
     
-    // set variant and version (adapted from boost::uuids)
+    // set some variant and version (adapted from boost::uuids)
     *(ret._uuid+8) &= 0xBF;
     *(ret._uuid+8) |= 0x80;
     *(ret._uuid+6) &= 0x4F;

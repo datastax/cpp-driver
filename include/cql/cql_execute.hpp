@@ -43,7 +43,8 @@ public:
 
     cql_execute_t(const std::vector<cql::cql_byte_t>& id,
                   cql::cql_consistency_enum consistency,
-                  boost::shared_ptr<cql_retry_policy_t> retry_policy = boost::shared_ptr<cql_retry_policy_t>(new cql_default_retry_policy_t()));
+                  boost::shared_ptr<cql_retry_policy_t> retry_policy = boost::shared_ptr<cql_retry_policy_t>(new cql_default_retry_policy_t()),
+                  bool is_traced = false);
 
     const std::vector<cql::cql_byte_t>&
     query_id() const;

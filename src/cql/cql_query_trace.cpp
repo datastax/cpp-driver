@@ -1,7 +1,8 @@
 #include "cql/cql_query_trace.hpp"
 #include "cql/cql_query.hpp"
 #include "cql/cql_session.hpp"
-#include "cql/exceptions/cql_exception.hpp"
+
+#include "cql/exceptions/cql_trace_retrieval_exception.hpp"
 
 #include <boost/format.hpp>
 
@@ -44,6 +45,7 @@ cql::cql_query_trace_t::do_fetch_trace() {
                     _log_callback(CQL_LOG_ERROR,
                                     "Query against system_traces.sessions timed out");
                 }
+                // TODO: How about throwing some exceptions?
                 return false;
             }
             else {
@@ -54,6 +56,7 @@ cql::cql_query_trace_t::do_fetch_trace() {
                         _log_callback(CQL_LOG_ERROR,
                                         "Error while querying system_traces.sessions: " + query_result.error.message);
                     }
+                    // TODO: How about throwing some exceptions?
                     return false;
                 }
                 
@@ -71,7 +74,7 @@ cql::cql_query_trace_t::do_fetch_trace() {
                     //    result->get_ip_address("coordinator", _coordinator);
                     }
                     if (result->get_nullity("parameters", is_empty) && !is_empty) {
-                        result->get_map("parameters", &_parameters);
+                        result->get_map("parameters", _parameters);
                     }
                     if (result->get_nullity("started_at", is_empty) && !is_empty) {
                         result->get_bigint("started_at", _started_at);
@@ -91,6 +94,7 @@ cql::cql_query_trace_t::do_fetch_trace() {
                     _log_callback(CQL_LOG_ERROR,
                                     "Query against system_traces.events timed out");
                 }
+                // TODO: How about throwing some exception?
                 return false;
             }
             else {
@@ -101,12 +105,14 @@ cql::cql_query_trace_t::do_fetch_trace() {
                         _log_callback(CQL_LOG_ERROR,
                                         "Error while querying system_traces.events: " + query_result.error.message);
                     }
+                    // TODO: How about throwing some exception?
                     return false;
                 }
                 
                 boost::shared_ptr<cql::cql_result_t> result = query_result.result;
                 while (result->next()) {
-                    std::string activity, thread, event_id;
+                    std::string activity, thread;
+                    cql_uuid_t event_id;
                     cql_bigint_t source_elapsed = 0;
                     boost::asio::ip::address source;
                     
@@ -116,7 +122,7 @@ cql::cql_query_trace_t::do_fetch_trace() {
                         result->get_string("activity", activity);
                     }
                     if (result->get_nullity("event_id", is_empty) && !is_empty) {
-                        result->get_string("event_id", event_id); // TODO (JS) this should (?) be cql_uuid_t
+                        result->get_uuid("event_id", event_id);
                     }
                     if (result->get_nullity("source", is_empty) && !is_empty) {
                         // TODO(JS) :
@@ -141,6 +147,7 @@ cql::cql_query_trace_t::do_fetch_trace() {
             _log_callback(CQL_LOG_ERROR,
                             std::string("Unexpected exception while fetching query trace ") + e.what());
         }
+        throw cql_trace_retrieval_exception(e.what());
     }
     return true;
 }

@@ -44,7 +44,8 @@ public:
 
     cql_message_execute_impl_t(const std::vector<cql::cql_byte_t>& id,
                                cql::cql_consistency_enum consistency,
-                               boost::shared_ptr<cql_retry_policy_t> retry_policy);
+                               boost::shared_ptr<cql_retry_policy_t> retry_policy,
+                               bool is_traced);
 
     const std::vector<cql::cql_byte_t>&
     query_id() const;
@@ -87,6 +88,9 @@ public:
 
     cql::cql_opcode_enum
     opcode() const;
+
+    cql_byte_t
+    flag() const;
 
     cql_int_t
     size() const;
@@ -133,6 +137,7 @@ private:
     cql::cql_consistency_enum    _consistency;
     params_container_t           _params;
     cql_stream_t                 _stream;
+    bool                         _is_traced;
         
     boost::shared_ptr<cql_retry_policy_t> _retry_policy;
     int                                   _retry_counter;

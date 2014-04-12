@@ -68,7 +68,7 @@ convert_timestamp_to_uuid(cql::cql_bigint_t ts)
 	cql::cql_byte_t t6 = 0xF0 & static_cast< cql::cql_byte_t >( rand() % 256 );
 	v_bytes[ 6 ] = v_bytes[ 6 ] | t6;
 	
-    return cql::cql_uuid_t(&v_bytes[0]);
+    return cql::cql_uuid_t(v_bytes);
 }
 
 cql::cql_bigint_t generate_random_time_stamp()
