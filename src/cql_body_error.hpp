@@ -20,8 +20,6 @@
 #include "cql_body.hpp"
 #include "cql_serialization.hpp"
 
-namespace cql {
-
 struct BodyError
     : public Body {
 
@@ -80,5 +78,5 @@ struct BodyError
   BodyError(const BodyError&) {}
   void operator=(const BodyError&) {}
 };
-}
+
 #endif

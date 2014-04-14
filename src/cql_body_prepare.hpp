@@ -20,10 +20,8 @@
 #include <string>
 #include "cql_body.hpp"
 
-namespace cql {
-
 class BodyPrepare
-    : public cql::Body {
+    : public Body {
  private:
   std::string _prepare;
 
@@ -76,5 +74,5 @@ class BodyPrepare
   BodyPrepare(const BodyPrepare&) {}
   void operator=(const BodyPrepare&) {}
 };
-}
+
 #endif

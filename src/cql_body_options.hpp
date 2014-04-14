@@ -19,8 +19,6 @@
 
 #include "cql_body.hpp"
 
-namespace cql {
-
 struct BodyOptions
     : public Body {
 
@@ -55,5 +53,5 @@ struct BodyOptions
   BodyOptions(const BodyOptions&) {}
   void operator=(const BodyOptions&) {}
 };
-}
+
 #endif

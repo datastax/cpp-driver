@@ -14,113 +14,82 @@
   limitations under the License.
 */
 
-#ifndef __SESSION_HPP_INCLUDED__
-#define __SESSION_HPP_INCLUDED__
+#ifndef __CQL_SESSION_HPP_INCLUDED__
+#define __CQL_SESSION_HPP_INCLUDED__
 
 #include <uv.h>
+#include <list>
 #include <string>
-#include <unordered_map>
 #include <vector>
+#include "cql_error.hpp"
 #include "cql_mpmc_queue.hpp"
 #include "cql_pool.hpp"
 #include "cql_request.hpp"
+#include "cql_io_worker.hpp"
 
-namespace cql {
+typedef Request<CqlSession*, CqlError*, CqlSession*> CqlSessionRequest;
 
-class Session {
-  struct IOWorker {
-    typedef std::shared_ptr<cql::Pool>  PoolPtr;
-    typedef std::unordered_map<std::string, PoolPtr> PoolCollection;
-
-    uv_thread_t    thread;
-    uv_loop_t*     loop;
-    SSLContext*    ssl_context;
-    PoolCollection pools;
-
-    IOWorker() :
-        loop(uv_loop_new())
-    {}
-
-    void
-    add_pool(
-        const std::string& host,
-        size_t             core_connections_per_host,
-        size_t             max_connections_per_host) {
-      pools.insert(
-          std::make_pair(
-              host,
-              PoolPtr(
-                  new cql::Pool(
-                      loop,
-                      ssl_context,
-                      host,
-                      core_connections_per_host,
-                      max_connections_per_host))));
-    }
-
-    static void
-    run(
-        void* data) {
-      IOWorker* worker = reinterpret_cast<IOWorker*>(data);
-      uv_run(worker->loop, UV_RUN_DEFAULT);
-    }
-
-    void
-    run_async() {
-      uv_thread_create(&thread, &IOWorker::run, this);
-    }
-
-    void
-    stop() {
-      uv_stop(loop);
-    }
-
-    void
-    join() {
-      uv_thread_join(&thread);
-    }
-
-    ~IOWorker() {
-      uv_loop_delete(loop);
-    }
+struct CqlSession {
+  enum CqlSessionState {
+    SESSION_STATE_NEW,
+    SESSION_STATE_READY,
+    SESSION_STATE_DISCONNECTING,
+    SESSION_STATE_DISCONNECTED
   };
 
-  std::vector<IOWorker*>              io_loops_;
-  cql::SSLContext*                    ssl_context_;
-  cql::LogCallback                    log_callback_;
-  cql::MpmcQueue<cql::CallerRequest*> queue_;
+  std::vector<IOWorker*>        io_loops;
+  SSLContext*                   ssl_context;
+  LogCallback                   log_callback;
+  MpmcQueue<CallerRequest*>     queue;
+  std::string                   keyspace;
+  std::list<CqlSessionRequest*> connect_listeners;
+  std::mutex                    mutex;
+  CqlSessionState               state;
 
-  Session(
-      size_t io_loop_count) :
-      io_loops_(io_loop_count, NULL),
-      queue_(1024) {
-    for (size_t i = 0; i < io_loops_.size(); ++i) {
-      io_loops_[i] = new IOWorker();
+  CqlSession(
+      size_t io_loop_count,
+      size_t io_queue_size) :
+      io_loops(io_loop_count, NULL),
+      queue(io_queue_size) {
+    for (size_t i = 0; i < io_loops.size(); ++i) {
+      io_loops[i] = new IOWorker();
     }
+  }
+
+  CqlSessionRequest*
+  connect(
+      const char* ks) {
+    return connect(std::string(ks));
+  }
+
+  CqlSessionRequest*
+  connect(
+      const std::string& ks) {
+    std::unique_lock<std::mutex> lock(mutex);
+    CqlSessionRequest* output = new CqlSessionRequest();
+
+    if (state == SESSION_STATE_NEW) {
+      keyspace = ks;
+      output->data = this;
+      connect_listeners.push_back(output);
+    } else {
+      output->error = new CqlError(
+          CQL_ERROR_SOURCE_LIBRARY,
+          CQL_ERROR_LIB_SESSION_STATE,
+          "invalid session state",
+          __FILE__,
+          __LINE__);
+      output->notify(NULL);
+    }
+    return output;
   }
 
   SSLSession*
   ssl_session_new() {
-    if (ssl_context_) {
-      return ssl_context_->session_new();
+    if (ssl_context) {
+      return ssl_context->session_new();
     }
     return NULL;
-  }
-
-  inline void
-  log(
-      int         level,
-      const char* message) {
-    (void) level;
-    std::cout << message << std::endl;
-  }
-
-  inline void
-  log(
-      int                level,
-      const std::string& message) {
-    (void) level;
-    std::cout << message << std::endl;
   }
 
  public:
@@ -134,14 +103,16 @@ class Session {
     return nullptr;
   }
 
-  void
+  CqlSessionRequest*
   shutdown() {
+    std::unique_lock<std::mutex> lock(mutex);
+    CqlSessionRequest* output = new CqlSessionRequest();
+    return output;
   }
 
   void
   set_keyspace() {
   }
-
 };
-}
+
 #endif

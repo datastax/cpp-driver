@@ -21,8 +21,6 @@
 #include <map>
 #include <string>
 
-namespace cql {
-
 inline char*
 encode_byte(
     char*   output,
@@ -196,5 +194,5 @@ decode_option(
   }
   return buffer;
 }
-}
+
 #endif

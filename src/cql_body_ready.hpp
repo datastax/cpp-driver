@@ -19,8 +19,6 @@
 
 #include "cql_body.hpp"
 
-namespace cql {
-
 struct BodyReady
     : public Body {
 
@@ -55,5 +53,5 @@ struct BodyReady
   BodyReady(const BodyReady&) {}
   void operator=(const BodyReady&) {}
 };
-}
+
 #endif

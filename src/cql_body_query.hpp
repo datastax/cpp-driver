@@ -29,10 +29,8 @@
 #define CQL_QUERY_FLAG_PAGING_STATE       0x08
 #define CQL_QUERY_FLAG_SERIAL_CONSISTENCY 0x10
 
-namespace cql {
-
 class BodyQuery
-    : public cql::Body {
+    : public Body {
  private:
   typedef std::pair<const char*, size_t> Value;
   typedef std::list<Value>               ValueCollection;
@@ -204,5 +202,5 @@ class BodyQuery
   BodyQuery(const BodyQuery&) {}
   void operator=(const BodyQuery&) {}
 };
-}
+
 #endif

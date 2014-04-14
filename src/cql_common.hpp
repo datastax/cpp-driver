@@ -49,11 +49,8 @@
 #include "cql_error.hpp"
 #include "cql_message.hpp"
 
-
-namespace cql {
-
 typedef std::function<void(int, const char*, size_t)> LogCallback;
-typedef cql::Request<std::string, cql::Error*, cql::Message*> CallerRequest;
+typedef Request<std::string, CqlError*, Message*> CallerRequest;
 
 uv_buf_t
 alloc_buffer(
@@ -126,5 +123,5 @@ enum HostDistance {
   REMOTE,
   IGNORED
 };
-}
+
 #endif

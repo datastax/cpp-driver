@@ -36,8 +36,6 @@
 
 #define BUFFER_SIZE 66560
 
-namespace cql {
-
 #define CQL_SSL_CHECK_ERROR(ssl, input) {       \
   int  err    = SSL_get_error(ssl, input);      \
   if (err    != SSL_ERROR_NONE                  \
@@ -47,7 +45,7 @@ namespace cql {
       err,                                      \
       message,                                  \
       sizeof(message));                         \
-  return new cql::Error(                        \
+  return new CqlError(                          \
       CQL_ERROR_SOURCE_SSL,                     \
       err,                                      \
       std::string(message),                     \
@@ -123,7 +121,7 @@ class SSLSession {
     return SSL_CIPHER_description(sc, output, size);
   }
 
-  Error*
+  CqlError*
   read_write(
       char*   read_input,
       size_t  read_input_size,
@@ -174,5 +172,5 @@ class SSLSession {
     return NULL;
   }
 };
-}
+
 #endif

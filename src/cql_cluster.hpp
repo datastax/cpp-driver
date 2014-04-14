@@ -22,9 +22,7 @@
 
 #include "cql_session.hpp"
 
-namespace cql {
-
-class Cluster {
+struct CqlCluster {
   std::string            port_;
   std::string            cql_version_;
   int                    compression_;
@@ -33,11 +31,11 @@ class Cluster {
   std::list<std::string> contact_points_;
   size_t                 thread_count_io_;
   size_t                 thread_count_callback_;
+  size_t                 queue_size_io_;
   LogCallback            log_callback_;
 
-
  public:
-  Cluster() :
+  CqlCluster() :
       port_("9042"),
       cql_version_("3.0.0"),
       compression_(0),
@@ -54,24 +52,11 @@ class Cluster {
     log_callback_ = callback;
   }
 
-  cql::Session*
-  connect() {
-    return connect(NULL, 0);
-  }
-
-  cql::Session*
-  connect(
-      const std::string keyspace) {
-    return connect(keyspace.c_str(), keyspace.size());
-  }
-
-  cql::Session*
-  connect(
-      const char* keyspace,
-      size_t      size) {
-    (void) keyspace;
-    (void) size;
-    return NULL;
+  CqlSession*
+  new_session() {
+    return new CqlSession(
+        thread_count_io_,
+        queue_size_io_);
   }
 
   void
@@ -116,7 +101,6 @@ class Cluster {
         break;
     }
   }
-
 };
-}
+
 #endif

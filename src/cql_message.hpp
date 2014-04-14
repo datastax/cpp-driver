@@ -28,8 +28,6 @@
 
 #define CQL_HEADER_SIZE 8
 
-namespace cql {
-
 struct Message {
   uint8_t               version;
   int8_t                flags;
@@ -204,5 +202,5 @@ struct Message {
     return input_pos - input;
   }
 };
-}
+
 #endif

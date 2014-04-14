@@ -17,8 +17,6 @@
 #ifndef __STREAM_STORAGE_HPP_INCLUDED__
 #define __STREAM_STORAGE_HPP_INCLUDED__
 
-namespace cql {
-
 template <typename IdType,
           typename StorageType,
           size_t   Max>
@@ -32,12 +30,12 @@ class StreamStorage {
     }
   }
 
-  inline Error*
+  inline CqlError*
   set_stream(
       const StorageType& input,
       IdType&      output) {
     if (available_streams_index_ >= Max) {
-      return new Error(
+      return new CqlError(
           CQL_ERROR_SOURCE_LIBRARY,
           CQL_ERROR_LIB_NO_STREAMS,
           "no available streams",
@@ -52,7 +50,7 @@ class StreamStorage {
     return CQL_ERROR_NO_ERROR;
   }
 
-  inline Error*
+  inline CqlError*
   get_stream(
       const IdType& input,
       StorageType&  output,
@@ -63,7 +61,7 @@ class StreamStorage {
         available_streams_[--available_streams_index_] = input;
         allocated_streams_[input] = false;
       } else {
-        return new Error(
+        return new CqlError(
             CQL_ERROR_SOURCE_LIBRARY,
             CQL_ERROR_LIB_NO_STREAMS,
             "this stream has already been released",
@@ -85,5 +83,5 @@ class StreamStorage {
   bool        allocated_streams_[Max];
   StorageType storage_[Max];
 };
-}
+
 #endif

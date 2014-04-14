@@ -28,37 +28,6 @@
 
 #include "cql.h"
 
-// void
-// ready(
-//     cql::ClientConnection* connection,
-//     cql::Error*            err) {
-
-//   if (err) {
-//     std::cout << err->message << std::endl;
-//   } else {
-//     std::cout << "ready" << std::endl;
-//     connection->set_keyspace("system");
-//   }
-// }
-
-// void
-// keyspace_set(
-//     cql::ClientConnection* connection,
-//     const char*            keyspace,
-//     size_t                 size) {
-//   (void) connection;
-//   (void) size;
-//   std::cout << "keyspace_set: " << keyspace << std::endl;
-// }
-
-// void
-// error(
-//     cql::ClientConnection* connection,
-//     cql::Error*            err) {
-//   (void) connection;
-//   std::cout << "error: " << err->message << std::endl;
-// }
-
 void
 print_log(
     int         level,
@@ -66,13 +35,25 @@ print_log(
     size_t      size) {
   (void) level;
   (void) size;
-  std::cout << "log: " << message << std::endl;
+  std::cout << "LOG: " << message << std::endl;
 }
 
 int
 main() {
-  // cql::Cluster cluster;
-  // cluster.log_callback(print_log);
-  // cql::Session* session = cluster.connect();
-  // session->shutdown();
+  CqlCluster* cluster = cql_cluster_new();
+  CqlSession* session = NULL;
+  CqlError*   err     = NULL;
+
+  err = cql_session_new(cluster, &session);
+  if (err) {
+    // TODO(mstump)
+    printf("Error do something\n");
+  }
+
+  CqlSessionFuture* shutdown_future = NULL;
+  cql_session_shutdown(session, &shutdown_future);
+  cql_session_future_wait(shutdown_future);
+  cql_session_future_free(shutdown_future);
+  cql_session_free(session);
+  cql_cluster_free(cluster);
 }

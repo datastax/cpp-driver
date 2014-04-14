@@ -20,8 +20,6 @@
 #include "iterable.hpp"
 #include "body_result.hpp"
 
-namespace cql {
-
 struct BodyResult;
 
 // struct ResultIterator : Iterable {
@@ -42,5 +40,5 @@ struct BodyResult;
 //     return false;
 //   }
 // };
-}
+
 #endif

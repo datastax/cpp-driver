@@ -36,8 +36,6 @@
 #define CQL_RESULT_FLAG_HAS_MORE_PAGES   2
 #define CQL_RESULT_FLAG_NO_METADATA      4
 
-namespace cql {
-
 struct ResultIterator;
 
 struct BodyResult
@@ -326,5 +324,4 @@ struct ResultIterator : Iterable {
   }
 };
 
-}
 #endif

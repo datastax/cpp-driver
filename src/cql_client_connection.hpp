@@ -28,8 +28,6 @@
 #define CQL_ADDRESS_MAX_LENGTH 46
 #define CQL_STREAM_ID_MAX      127
 
-namespace cql {
-
 struct ClientConnection {
   enum ClientConnectionState {
     CLIENT_STATE_NEW,
@@ -57,7 +55,7 @@ struct ClientConnection {
   typedef int8_t Stream;
 
   typedef std::function<void(ClientConnection*,
-                             cql::Error*)> ConnectionCallback;
+                             CqlError*)> ConnectionCallback;
 
   typedef std::function<void(ClientConnection*,
                              const char*, size_t)> KeyspaceCallback;
@@ -68,11 +66,11 @@ struct ClientConnection {
                              const char*, size_t)> SchemaCallback;
 
   typedef std::function<void(ClientConnection*,
-                             cql::Error*,
+                             CqlError*,
                              const char*, size_t,
                              const char*, size_t)> PrepareCallback;
 
-  typedef cql::StreamStorage<
+  typedef StreamStorage<
     Stream,
     CallerRequest*,
     CQL_STREAM_ID_MAX> StreamStorageCollection;
@@ -82,14 +80,14 @@ struct ClientConnection {
     ClientConnection* connection;
   };
 
-  ClientConnectionState         state_;
-  uv_loop_t*                    loop_;
-  std::unique_ptr<cql::Message> incomming_;
-  StreamStorageCollection       stream_storage_;
-  ConnectionCallback            connect_callback_;
-  KeyspaceCallback              keyspace_callback_;
-  PrepareCallback               prepare_callback_;
-  LogCallback                   log_callback_;
+  ClientConnectionState    state_;
+  uv_loop_t*               loop_;
+  std::unique_ptr<Message> incomming_;
+  StreamStorageCollection  stream_storage_;
+  ConnectionCallback       connect_callback_;
+  KeyspaceCallback         keyspace_callback_;
+  PrepareCallback          prepare_callback_;
+  LogCallback              log_callback_;
 
   // DNS and hostname stuff
   struct sockaddr_in       address_;
@@ -115,7 +113,7 @@ struct ClientConnection {
   explicit
   ClientConnection(
       uv_loop_t* loop,
-      cql::SSLSession* ssl_session) :
+      SSLSession* ssl_session) :
       state_(CLIENT_STATE_NEW),
       loop_(loop),
       incomming_(new Message()),
@@ -338,14 +336,14 @@ struct ClientConnection {
     free_buffer(buf);
   }
 
-  Error*
+  CqlError*
   send_data(
       char*  input,
       size_t size) {
     return send_data(uv_buf_init(input, size));
   }
 
-  Error*
+  CqlError*
   send_data(
       uv_buf_t buf) {
     uv_write_t        *req  = new uv_write_t;
@@ -429,7 +427,7 @@ struct ClientConnection {
       Message* response) {
     log(CQL_LOG_DEBUG, "on_result");
 
-    Error*         err     = NULL;
+    CqlError*      err     = NULL;
     CallerRequest* request = NULL;
     BodyResult*    result  = static_cast<BodyResult*>(response->body.get());
 
@@ -492,7 +490,7 @@ struct ClientConnection {
 
     if (state_ < CLIENT_STATE_READY) {
       notify_error(
-          new Error(
+          new CqlError(
               CQL_ERROR_SOURCE_SERVER,
               0,
               error->message,
@@ -545,7 +543,7 @@ struct ClientConnection {
 
   void
   notify_error(
-      Error* err) {
+      CqlError* err) {
     log(CQL_LOG_DEBUG, "notify_error");
     if (connect_callback_) {
       connect_callback_(this, err);
@@ -601,7 +599,7 @@ struct ClientConnection {
     request->callback = callback;
     request->data.assign(statement, size);
 
-    Error* err = send_message(message, request);
+    CqlError* err = send_message(message, request);
     if (err) {
       request->error = err;
       request->notify(loop_);
@@ -615,7 +613,7 @@ struct ClientConnection {
       CallerRequest::Callback callback = NULL) {
     CallerRequest* request = new CallerRequest();
     request->callback = callback;
-    Error* err = send_message(message, request);
+    CqlError* err = send_message(message, request);
     if (err) {
       request->error = err;
       request->notify(loop_);
@@ -623,12 +621,12 @@ struct ClientConnection {
     return request;
   }
 
-  Error*
+  CqlError*
   send_message(
       Message* message,
       CallerRequest* request = NULL) {
     uv_buf_t   buf;
-    Error*     err = stream_storage_.set_stream(request, message->stream);
+    CqlError*  err = stream_storage_.set_stream(request, message->stream);
     if (err) {
       return err;
     }
@@ -715,5 +713,5 @@ struct ClientConnection {
   ClientConnection(const ClientConnection&) {}
   void operator=(const ClientConnection&) {}
 };
-}
+
 #endif

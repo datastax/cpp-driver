@@ -20,8 +20,6 @@
 #include <atomic>
 #include <uv.h>
 
-namespace cql {
-
 template<typename Data,
          typename Error,
          typename Result>
@@ -71,7 +69,7 @@ struct Request {
     condition.notify_all();
 
     if (callback) {
-      if (use_local_loop) {
+      if (use_local_loop || loop == NULL) {
         callback(this);
       } else {
         // we execute the callback in a separate thread so that badly
@@ -118,6 +116,7 @@ struct Request {
           time,
           std::bind(&Request<Data, Error, Result>::ready, this));
     }
+    return true;
   }
 
  private:
@@ -145,5 +144,5 @@ struct Request {
   Request(Request<Data, Error, Result>&) {}
   void operator=(const Request&) {}
 };
-}
+
 #endif

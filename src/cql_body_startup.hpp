@@ -22,10 +22,8 @@
 
 #include "cql_body.hpp"
 
-namespace cql {
-
 struct BodyStartup
-    : public cql::Body {
+    : public Body {
   std::unique_ptr<char> guard;
   std::string           cql_version;
   std::string           compression;
@@ -93,5 +91,5 @@ struct BodyStartup
   BodyStartup(const BodyStartup&) {}
   void operator=(const BodyStartup&) {}
 };
-}
+
 #endif

@@ -24,10 +24,8 @@
 #include "cql_client_connection.hpp"
 #include "cql_cluster.hpp"
 
-namespace cql {
-
 class Pool {
-  typedef std::list<cql::ClientConnection*> ConnectionCollection;
+  typedef std::list<ClientConnection*> ConnectionCollection;
 
   uv_loop_t*           loop_;
   SSLContext*          ssl_context_;
@@ -63,7 +61,7 @@ class Pool {
   void
   connect_callback(
       ClientConnection* connection,
-      cql::Error*       error) {
+      CqlError*         error) {
 
     (void) connection;
     (void) error;
@@ -142,7 +140,7 @@ class Pool {
     return nullptr;
   }
 
-  Error*
+  CqlError*
   borrow_connection(
       ClientConnection** output) {
     *output = find_least_busy();
@@ -151,7 +149,7 @@ class Pool {
     }
 
     if (connections_.size() >= max_connections_per_host_) {
-      return new Error(
+      return new CqlError(
           CQL_ERROR_SOURCE_LIBRARY,
           CQL_ERROR_LIB_MAX_CONNECTIONS,
           "all connections busy",
@@ -161,8 +159,6 @@ class Pool {
 
     return CQL_ERROR_NO_ERROR;
   }
-
-
 };
-}
+
 #endif

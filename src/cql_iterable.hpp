@@ -17,8 +17,6 @@
 #ifndef __ITERABLE_HPP_INCLUDED__
 #define __ITERABLE_HPP_INCLUDED__
 
-namespace cql {
-
 enum IterableType {
   CQL_ITERABLE_TYPE_RESULT,
   CQL_ITERABLE_TYPE_UNKNOWN
@@ -34,5 +32,5 @@ struct Iterable {
 
   virtual ~Iterable() {}
 };
-}
+
 #endif

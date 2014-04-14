@@ -30,8 +30,6 @@
 
 #include "cql_ssl_session.hpp"
 
-namespace cql {
-
 class SSLContext {
  public:
   typedef int (*pem_callback_t)(char *, int, int, void *);
@@ -70,9 +68,9 @@ class SSLContext {
     return CQL_ERROR_NO_ERROR;
   }
 
-  cql::SSLSession*
+  SSLSession*
   session_new() {
-    return new cql::SSLSession(_ssl_ctx);
+    return new SSLSession(_ssl_ctx);
   }
 
   int
@@ -384,5 +382,5 @@ class SSLContext {
   SSL_CTX*          _ssl_ctx;
   X509_STORE*       _ca_store;
 };
-}
+
 #endif

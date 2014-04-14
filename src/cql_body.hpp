@@ -17,8 +17,6 @@
 #ifndef __BODY_HPP_INCLUDED__
 #define __BODY_HPP_INCLUDED__
 
-namespace cql {
-
 struct Body {
   virtual ~Body()
   {}
@@ -37,5 +35,5 @@ struct Body {
       char**  output,
       size_t& size) = 0;
 };
-}
+
 #endif

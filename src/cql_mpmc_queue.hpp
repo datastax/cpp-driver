@@ -25,8 +25,6 @@
 #include <atomic>
 #include <assert.h>
 
-namespace cql {
-
 template<typename T>
 class MpmcQueue {
  public:
@@ -162,5 +160,5 @@ class MpmcQueue {
   MpmcQueue(const MpmcQueue&) {}
   void operator=(const MpmcQueue&) {}
 };
-}
+
 #endif

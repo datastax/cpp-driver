@@ -22,8 +22,6 @@
 
 #include "cql_body.hpp"
 
-namespace cql {
-
 struct BodySupported
     : public Body {
   std::list<std::string> compression;
@@ -72,5 +70,5 @@ struct BodySupported
   BodySupported(const BodySupported&) {}
   void operator=(const BodySupported&) {}
 };
-}
+
 #endif
