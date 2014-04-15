@@ -24,7 +24,8 @@
 #include "cql/internal/cql_list_impl.hpp"
 #include "cql/internal/cql_map_impl.hpp"
 #include "cql/internal/cql_set_impl.hpp"
-
+#include "cql/cql_uuid.hpp"
+	
 #include "cql/internal/cql_message_result_impl.hpp"
 
 std::string
@@ -207,8 +208,7 @@ bool
 cql::cql_message_result_impl_t::column_name(int i,
                                             std::string& output_keyspace,
                                             std::string& output_table,
-                                            std::string& output_column) const
-{
+                                            std::string& output_column) const {
     return _metadata.column_name(i,
                                  output_keyspace,
                                  output_table,
@@ -398,8 +398,7 @@ cql::cql_message_result_impl_t::get_bigint(const std::string& column,
 bool	
 cql::cql_message_result_impl_t::get_timestamp(int i,
         cql::cql_bigint_t& output) const {
-    if( is_valid(i, cql::CQL_COLUMN_TYPE_TIMESTAMP) )
-    {
+    if( is_valid(i, cql::CQL_COLUMN_TYPE_TIMESTAMP) ) {
         cql::decode_bigint(_row[i] + sizeof(cql_int_t), output);
         return true;
     }
@@ -414,43 +413,40 @@ cql::cql_message_result_impl_t::get_timestamp(const std::string& column,
         return get_timestamp(i, output);
     }
     return false;
-}
-
+}		
+			
 bool	
 cql::cql_message_result_impl_t::get_timeuuid(int i,
-	cql::cql_bigint_t& output) const
-{
+	cql::cql_bigint_t& output) const {
 	std::vector< cql::cql_byte_t > v;
 	if( !get_data( i, v ) )
 		return false;
 
 	if( v.size() != 16 )
 		return false;
-				
-	cql::cql_bigint_t result( 0 );	
+		
+	cql::cql_bigint_t result(0);	
 				
 	static int indexes[] = {6,7,4,5,0,1,2,3};		//// take bytes of the array in this order.		
 				
-	for( int i = 0; i < 8; ++i )
-	{		
+	for(int i = 0; i < 8; ++i) {		
 		result = result << 8;	
 		int const index = indexes[i];
-		cql::cql_bigint_t t1 = static_cast< cql::cql_bigint_t >( v[index] );
+		cql::cql_bigint_t t1 = static_cast< cql::cql_bigint_t >(v[index]);
 			
-		if( index == 6 )		//// the four most significant bits are the version. Ignore these bits.		
+		if(index == 6)			//// the four most significant bits are the version. Ignore these bits.		
 			t1 = t1 & 0x0F;		//// take only half of this byte. 
 			
 		result = result | t1;			
 	}		
-
+			
 	output = result;
 	return true;			
 }				
 				
 bool			
 cql::cql_message_result_impl_t::get_timeuuid(const std::string& column,
-	cql::cql_bigint_t& output) const
-{
+	cql::cql_bigint_t& output) const {
     int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_timeuuid(i, output);
@@ -460,15 +456,13 @@ cql::cql_message_result_impl_t::get_timeuuid(const std::string& column,
 
 bool
 cql::cql_message_result_impl_t::get_counter(int i,
-               cql::cql_bigint_t& output) const
-{
+               cql::cql_bigint_t& output) const {
 	return get_bigint( i, output );
 }
 
 bool
 cql::cql_message_result_impl_t::get_counter(const std::string& column,
-               cql::cql_bigint_t& output) const
-{
+               cql::cql_bigint_t& output) const {
 	return get_bigint( column, output );
 }
 	
@@ -496,29 +490,25 @@ cql::cql_message_result_impl_t::get_string(const std::string& column,
 		
 bool	
 cql::cql_message_result_impl_t::get_ascii(int i,
-               std::string& output) const
-{
+               std::string& output) const {
 	return get_string( i, output );
 }		
 		
 bool		
 cql::cql_message_result_impl_t::get_ascii(const std::string& column,
-               std::string& output) const
-{
+               std::string& output) const {
 	return get_string( column, output );
 }
 	
 bool	
 cql::cql_message_result_impl_t::get_varchar(int i,
-               std::string& output) const
-{
+               std::string& output) const {
 	return get_string( i, output );
 }
 
 bool	
 cql::cql_message_result_impl_t::get_varchar(const std::string& column,
-               std::string& output) const
-{
+               std::string& output) const {
 	return get_string( column, output );
 }
 	
@@ -550,8 +540,7 @@ cql::cql_message_result_impl_t::get_data(const std::string& column,
 
 bool						 
 cql::cql_message_result_impl_t::get_data( int i,
-										  std::vector< cql::cql_byte_t > & output ) const
-{
+										  std::vector< cql::cql_byte_t > & output ) const {
 	cql::cql_byte_t* output_ptr = NULL;
 
 	bool empty = false;
@@ -562,8 +551,7 @@ cql::cql_message_result_impl_t::get_data( int i,
             output_ptr = cql::decode_int(pos, size);	
 				
 			output.resize( size );
-			for( int i = 0; i < size; ++i )
-			{	
+			for( int i = 0; i < size; ++i ) {	
 				output[ i ] = *(output_ptr + i);	
 			}	
 				
@@ -574,8 +562,7 @@ cql::cql_message_result_impl_t::get_data( int i,
 				
 bool								
 cql::cql_message_result_impl_t::get_data( const std::string & column,
-										  std::vector< cql::cql_byte_t > & output ) const
-{
+										  std::vector< cql::cql_byte_t > & output ) const {
 	int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_data(i, output );
@@ -743,80 +730,43 @@ cql::cql_message_result_impl_t::get_keyspace_name(std::string& output) const {
 			
 bool		
 cql::cql_message_result_impl_t::get_uuid( int i,
-										  std::vector< cql::cql_byte_t > & output ) const
+										  cql_uuid_t& output ) const
 {
-	return get_data( i, output );
+    std::vector<cql_byte_t> buffer;
+	bool ret_val = get_data(i, buffer);
+    output = cql_uuid_t(buffer);
+    return ret_val && (buffer.size() == 16);
 }
 				
 bool
 cql::cql_message_result_impl_t::get_uuid( const std::string& column,
-										  std::vector< cql::cql_byte_t > & output ) const
-{
-	return get_data( column, output );	
+										  cql_uuid_t& output ) const {
+    std::vector<cql_byte_t> buffer;
+	bool ret_val = get_data(column, buffer);
+    output = cql_uuid_t(buffer);
+    return ret_val && (buffer.size() == 16);
 }		
-		
-		
+				
 bool	
 cql::cql_message_result_impl_t::get_uuid( int i,
-										  std::string & output ) const
-{
-	std::vector< cql::cql_byte_t > v;
-	if( !get_data( i, v ) )
-		return false;
-
-	if( v.size() != 16 )
-		return false;
-
-	output = convert_uuid_to_string( v );
-	return true;
+										  std::string & output ) const {
+	cql_uuid_t uuid_out;
+    bool ret_val = get_uuid(i, uuid_out);
+    output = uuid_out.to_string();
+    return ret_val;
 }
 				
 bool
 cql::cql_message_result_impl_t::get_uuid( const std::string& column,
-										  std::string & output ) const
-{
-	std::vector< cql::cql_byte_t > v;
-	if( !get_data( column, v ) )
-		return false;
-
-	if( v.size() != 16 )
-		return false;
-
-	output = convert_uuid_to_string( v );
-	return true;	
+										  std::string & output ) const {
+    cql_uuid_t uuid_out;
+    bool ret_val = get_uuid(column, uuid_out);
+    output = uuid_out.to_string();
+    return ret_val;
 }		
 			
-std::string 
-cql::cql_message_result_impl_t::convert_uuid_to_string( std::vector< cql::cql_byte_t > const & v ) const
-{		
-	if( v.size() != 16 )
-		return "";
-		
-	std::string result;
-		
-	for( int i = 0; i < 16; ++i )
-	{
-		cql::cql_byte_t b[2];
-		b[0] = v[ i ] & 0xF0;
-		b[1] = v[ i ] & 0x0F;
-		b[0] = b[0] >> 4;
-
-		if( i == 4 || i == 6 || i == 8 || i == 10 )
-			result += "-";	
-		
-		for( int j = 0; j < 2; ++j )
-		{
-			result += ( b[j] < 10 ) ? ( '0' + b[j] ) : ( 'a' + b[j] - 10 );
-		}	
-	}		
-
-	return result;	
-}
-
-
-bool 
-cql::cql_message_result_impl_t::get_decimal_is_int( std::string const & column ) const		//// is it possible to convert the DECIMAL to int ( 32 bits ) without rounding.		
-{
+bool //// is it possible to convert the DECIMAL to int ( 32 bits ) without rounding.
+cql::cql_message_result_impl_t::get_decimal_is_int( std::string const & column ) const { 
 	int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_decimal_is_int(i);
@@ -824,9 +774,8 @@ cql::cql_message_result_impl_t::get_decimal_is_int( std::string const & column )
     return false;
 }
 
-bool 
-cql::cql_message_result_impl_t::get_decimal_is_int_64( std::string const & column ) const		//// is it possible to convert the DECIMAL to int64 ( 64 bits ) without rounding.	
-{
+bool //// is it possible to convert the DECIMAL to int64 ( 64 bits ) without rounding.	
+cql::cql_message_result_impl_t::get_decimal_is_int_64( std::string const & column ) const { 
 	int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_decimal_is_int_64(i);
@@ -834,9 +783,8 @@ cql::cql_message_result_impl_t::get_decimal_is_int_64( std::string const & colum
     return false;
 }
 
-bool 
-cql::cql_message_result_impl_t::get_decimal_is_double( std::string const & column ) const		//// is it possible to convert the DECIMAL to double even with small roundings error.
-{
+bool 	//// is it possible to convert the DECIMAL to double even with small roundings error.
+cql::cql_message_result_impl_t::get_decimal_is_double( std::string const & column ) const {	
 	int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_decimal_is_double(i);
@@ -846,8 +794,7 @@ cql::cql_message_result_impl_t::get_decimal_is_double( std::string const & colum
 				
 bool 
 cql::cql_message_result_impl_t::get_decimal_int( std::string const & column, 
-	                 cql::cql_int_t & output ) const				//// convert DECIMAL to 32-int if it is possible
-{
+	                 cql::cql_int_t & output ) const {				//// convert DECIMAL to 32-int if it is possible
 	int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_decimal_int(i, output);
@@ -857,8 +804,7 @@ cql::cql_message_result_impl_t::get_decimal_int( std::string const & column,
 
 bool 
 cql::cql_message_result_impl_t::get_decimal_int_64( std::string const & column, 
-	                    cql::cql_bigint_t & output ) const		//// convert DECIMAL to 64-int if it is possible
-{
+	                    cql::cql_bigint_t & output ) const {		//// convert DECIMAL to 64-int if it is possible
 	int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_decimal_int_64(i, output);
@@ -868,8 +814,7 @@ cql::cql_message_result_impl_t::get_decimal_int_64( std::string const & column,
 
 bool 
 cql::cql_message_result_impl_t::get_decimal_double( std::string const & column, 
-	                    double & output ) const					//// convert DECIMAL to double with roundings error.	
-{
+	                    double & output ) const {					//// convert DECIMAL to double with roundings error.	
 	int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_decimal_double(i, output);
@@ -878,8 +823,7 @@ cql::cql_message_result_impl_t::get_decimal_double( std::string const & column,
 }
 		
 bool		
-cql::cql_message_result_impl_t::get_decimal_is_int( int i ) const			//// is it possible to convert the DECIMAL to int ( 32 bits ) without rounding.		
-{			
+cql::cql_message_result_impl_t::get_decimal_is_int( int i ) const {			//// is it possible to convert the DECIMAL to int ( 32 bits ) without rounding.		
 	std::vector< cql::cql_byte_t > v;
 	if( !get_data( i, v ) )
 		return false;
@@ -894,8 +838,7 @@ cql::cql_message_result_impl_t::get_decimal_is_int( int i ) const			//// is it p
 }		
 					
 bool	
-cql::cql_message_result_impl_t::get_decimal_is_int_64( int i ) const		//// is it possible to convert the DECIMAL to int64 ( 64 bits ) without rounding.	
-{
+cql::cql_message_result_impl_t::get_decimal_is_int_64( int i ) const {		//// is it possible to convert the DECIMAL to int64 ( 64 bits ) without rounding.	
 	std::vector< cql::cql_byte_t > v;
 	if( !get_data( i, v ) )
 		return false;
@@ -910,8 +853,7 @@ cql::cql_message_result_impl_t::get_decimal_is_int_64( int i ) const		//// is it
 }				
 								
 bool			
-cql::cql_message_result_impl_t::get_decimal_is_double( int i ) const		//// is it possible to convert the DECIMAL to double even with small roundings error.
-{			
+cql::cql_message_result_impl_t::get_decimal_is_double( int i ) const {		//// is it possible to convert the DECIMAL to double even with small roundings error.
 	std::vector< cql::cql_byte_t > v;
 	if( !get_data( i, v ) )
 		return false;
@@ -922,11 +864,9 @@ cql::cql_message_result_impl_t::get_decimal_is_double( int i ) const		//// is it
 	if( v[ 0 ] != 0 || v[ 1 ] != 0 || v[ 2 ] != 0 )		//// the first three bytes must be zero. 
 		return false;		
 
-	if( v.size() == 5 && v[ 4 ] == 0 )
-	{
+	if( v.size() == 5 && v[ 4 ] == 0 ) 
 		return true;		//// the value inside is exactly zero.	
-	}	
-			
+					
 	if( v.size() > 12 )		//// the data consists of more than 64 bits. It will not be convertible to double.;	
 		return false;
 
@@ -935,8 +875,7 @@ cql::cql_message_result_impl_t::get_decimal_is_double( int i ) const		//// is it
 						
 bool		
 cql::cql_message_result_impl_t::get_decimal_int( int i, 
-												 cql::cql_int_t & output ) const				//// convert DECIMAL to 32-int if it is possible
-{		
+												 cql::cql_int_t & output ) const {				//// convert DECIMAL to 32-int if it is possible
 	std::vector< cql::cql_byte_t > v;
 	if( !get_data( i, v ) )
 		return false;
@@ -957,42 +896,36 @@ cql::cql_message_result_impl_t::get_decimal_int( int i,
 
 	unsigned char byte_for_filling( 0x00 );		//// the byte for filling in the more significant bytes. 
 		
-	if( last_byte_first_digit == 0x80 )
-	{	//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 
+	if( last_byte_first_digit == 0x80 ) {	//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 
 		byte_for_filling = 0xFF;		//// the filing will be with 0xFF value.
 	}		
 			
 	int const number_of_bytes_for_filling( 8 - v.size() );
 			
-	for( int i = 0; i < number_of_bytes_for_filling; ++i )
-	{		
+	for( int i = 0; i < number_of_bytes_for_filling; ++i ) {		
 		arr[ i ] = byte_for_filling;		
 	}			
 				
 	int const number_of_bytes_to_copy( v.size() - 4 );	
 				
-	for( i = 0; i < number_of_bytes_to_copy; ++i )
-	{		
+	for( int i = 0; i < number_of_bytes_to_copy; ++i ) {		
 		arr[ i + number_of_bytes_for_filling ] = v[ i + 4 ];	
 	}		
 			
 	int result( 0 );
 			
-	for( int i = 0;  i < 4; ++i )
-	{
+	for( int i = 0;  i < 4; ++i ) {
 		result = result << 8;	
 		result = result | static_cast< int >( arr[ i ] );
 	}		
 
-	output = result;		
-							
+	output = result;									
 	return true;
 }			
 				
 bool		
 cql::cql_message_result_impl_t::get_decimal_int_64( int i, 
-													cql::cql_bigint_t & output ) const		//// convert DECIMAL to 64-int if it is possible
-{
+													cql::cql_bigint_t & output ) const {		//// convert DECIMAL to 64-int if it is possible
 	std::vector< cql::cql_byte_t > v;
 	if( !get_data( i, v ) )
 		return false;
@@ -1013,43 +946,37 @@ cql::cql_message_result_impl_t::get_decimal_int_64( int i,
 
 	unsigned char byte_for_filling( 0x00 );		//// the byte for filling in the more significant bytes. 
 
-	if( last_byte_first_digit == 0x80 )
-	{	//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 
+	if( last_byte_first_digit == 0x80 ) {	//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 
 		byte_for_filling = 0xFF;		//// the filing will be with 0xFF value.
 	}		
 			
 	int const number_of_bytes_for_filling( 12 - v.size() );
 			
-	for( int i = 0; i < number_of_bytes_for_filling; ++i )
-	{		
+	for( int i = 0; i < number_of_bytes_for_filling; ++i ) {		
 		arr[ i ] = byte_for_filling;		
 	}			
 				
 	int const number_of_bytes_to_copy( v.size() - 4 );	
-				
-	for( i = 0; i < number_of_bytes_to_copy; ++i )
-	{		
+					
+	for( int i = 0; i < number_of_bytes_to_copy; ++i ) {		
 		arr[ i + number_of_bytes_for_filling ] = v[ i + 4 ];	
 	}		
 			
 	cql::cql_bigint_t result( 0 );
 			
-	for( int i = 0;  i < 8; ++i )
-	{
+	for( int i = 0;  i < 8; ++i ) {
 		result = result << 8;	
 		result = result | static_cast< int >( arr[ i ] );
 	}		
 			
-	output = result;		
-				
+	output = result;						
 	return true;
 }			
 			
 	
 bool 
 cql::cql_message_result_impl_t::get_decimal_double( int i, 
-													double & output ) const					//// convert DECIMAL to double with roundings error.	
-{				
+													double & output ) const {					//// convert DECIMAL to double with roundings error.	
 	std::vector< cql::cql_byte_t > v;
 	if( !get_data( i, v ) )
 		return false;
@@ -1060,8 +987,7 @@ cql::cql_message_result_impl_t::get_decimal_double( int i,
 	if( v[ 0 ] != 0 || v[ 1 ] != 0 || v[ 2 ] != 0 )		//// the first three bytes must be zero. 
 		return false;		
 
-	if( v.size() == 5 && v[ 4 ] == 0 )
-	{
+	if( v.size() == 5 && v[ 4 ] == 0 ) {
 		output = 0.0;		//// the first bytes are zero. This is ZERO. 
 		return true;		
 	}	
@@ -1076,66 +1002,55 @@ cql::cql_message_result_impl_t::get_decimal_double( int i,
 
 	unsigned char byte_for_filling( 0x00 );		//// the byte for filling in the more significant bytes. 
 
-	if( last_byte_first_digit == 0x80 )
-	{	//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 
+	if( last_byte_first_digit == 0x80 ) {	//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 
 		byte_for_filling = 0xFF;		//// the filing will be with 0xFF value.
 	}		
 			
 	int const number_of_bytes_for_filling( 12 - v.size() );
 			
-	for( int i = 0; i < number_of_bytes_for_filling; ++i )
-	{		
-		arr[ i ] = byte_for_filling;		
+	for( int j = 0; j < number_of_bytes_for_filling; ++j ) {		
+		arr[ j ] = byte_for_filling;		
 	}			
 				
 	int const number_of_bytes_to_copy( v.size() - 4 );	
-				
-	for( i = 0; i < number_of_bytes_to_copy; ++i )
-	{		
-		arr[ i + number_of_bytes_for_filling ] = v[ i + 4 ];	
+					
+	for( int j = 0; j < number_of_bytes_to_copy; ++j ) {		
+		arr[ j + number_of_bytes_for_filling ] = v[ j + 4 ];	
 	}			
 			
 	cql::cql_bigint_t result( 0 );
 			
-	for( int i = 0;  i < 8; ++i )
-	{
+	for( int j = 0;  j < 8; ++j ) {
 		result = result << 8;	
-		result = result | static_cast< int >( arr[ i ] );
+		result = result | static_cast< int >( arr[ j ] );
 	}		
 
 	unsigned char const number_of_position_after_dot( v[ 3 ] );
 		
 	double const f1 = static_cast< double >( result );
 
-	if( number_of_position_after_dot == 0 )
-	{
+	if( number_of_position_after_dot == 0 ) {
 		output = f1;
 		return true;
 	}		
-		
-	output = f1 / pow( 10.0, number_of_position_after_dot );	
-								
+			
+	output = f1 / pow( 10.0, number_of_position_after_dot );									
 	return true;			
 }			
 
-
 bool 
 cql::cql_message_result_impl_t::get_varint( std::string const & column, 
-	                    cql::cql_bigint_t & output ) const			//// convert varint to int64.	
-{
+	                    cql::cql_bigint_t & output ) const {			//// convert varint to int64.	
 	int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_varint(i, output);
     }
     return false;
 }			
-
-
 			
 bool		
 cql::cql_message_result_impl_t::get_varint( int i, 
-	            cql::cql_bigint_t & output ) const					//// convert varint to int64.
-{
+	            cql::cql_bigint_t & output ) const {					//// convert varint to int64.
 
 	std::vector< cql::cql_byte_t > v;
 	if( !get_data( i, v ) )
@@ -1153,29 +1068,25 @@ cql::cql_message_result_impl_t::get_varint( int i,
 
 	unsigned char byte_for_filling( 0x00 );		//// the byte for filling in the more significant bytes. 
 
-	if( last_byte_first_digit == 0x80 )
-	{	//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 
+	if( last_byte_first_digit == 0x80 ) {	//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 
 		byte_for_filling = 0xFF;		//// the filing will be with 0xFF value.
 	}		
 			
 	int const number_of_bytes_for_filling( 8 - v.size() );
 			
-	for( int i = 0; i < number_of_bytes_for_filling; ++i )
-	{		
-		arr[ i ] = byte_for_filling;		
+	for( int j = 0; j < number_of_bytes_for_filling; ++j ) {		
+		arr[ j ] = byte_for_filling;		
 	}			
 					
 	int const number_of_bytes_to_copy( v.size() );	
 				
-	for( i = 0; i < number_of_bytes_to_copy; ++i )
-	{			
+	for( i = 0; i < number_of_bytes_to_copy; ++i ) {			
 		arr[ i + number_of_bytes_for_filling ] = v[ i ];	
 	}		
 			
 	cql::cql_bigint_t result( 0 );
 			
-	for( int i = 0;  i < 8; ++i )
-	{
+	for( int i = 0;  i < 8; ++i ) {
 		result = result << 8;	
 		result = result | static_cast< int >( arr[ i ] );
 	}		
@@ -1183,69 +1094,16 @@ cql::cql_message_result_impl_t::get_varint( int i,
 	output = result;		
 	return true;	
 }			
-			
-bool		
-cql::cql_message_result_impl_t::get_inet( std::string const & column, 
-	            std::string & output ) const						//// return inet.
-{
-	int i = 0;
-    if (_metadata.get_index(column, i)) {
-        return get_inet(i, output);
-    }
-    return false;
-		
-}		
-		
-bool	
-cql::cql_message_result_impl_t::get_inet( int i, 
-	            std::string & output ) const						//// return inet.
-{		
-	std::vector< cql::cql_byte_t > v;
-	if( !get_data( i, v ) )
-		return false;
-
-	if( v.size() == 4 )  // IPv4
-	{
-		std::string inet_string( boost::str(boost::format("%d.%d.%d.%d") % static_cast< int >( v[ 0 ] ) % static_cast< int >( v[ 1 ] ) % static_cast< int >( v[ 2 ] ) % static_cast< int >( v[ 3 ] ) ) );	
-		output = inet_string;
-		return true;
-	}	
-		
-	if( v.size() == 16 )	// IPv6
-	{
-		std::string res;
-		for( int i = 0; i < 16; ++i )	
-		{
-			if( i > 1 && i % 2 == 0 )
-				res += ":";
 					
-			int k = v[ i ];
-			std::string s = ( boost::str(boost::format("%x") % k ) );
-
-			if( s.length() == 1 )
-				res += "0";
-				
-			res += s;	
-		}
-		output = res;
-		return true;
-	}	
-		
-	return false;
-}		
-		
-
 bool		
 cql::cql_message_result_impl_t::get_blob( int i, 
-										  std::vector< cql::cql_byte_t > & output ) const	//// return blob as vector. Data is copied
-{	
+										  std::vector< cql::cql_byte_t > & output ) const {	//// return blob as vector. Data is copied
  	return get_data( i, output );
 }	
 					
 bool	
 cql::cql_message_result_impl_t::get_blob( std::string const & column, 
-									      std::vector< cql::cql_byte_t > & output ) const	//// return blob as vector. Data is copied
-{
+									      std::vector< cql::cql_byte_t > & output ) const {	//// return blob as vector. Data is copied
 	int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_blob(i, output);
@@ -1255,13 +1113,11 @@ cql::cql_message_result_impl_t::get_blob( std::string const & column,
 
 bool 
 cql::cql_message_result_impl_t::get_blob( int i,
-										  std::pair< cql::cql_byte_t *, cql::cql_int_t > & output ) const		//// return blob as pure pointer and size. Data is not copied
-{
+										  std::pair< cql::cql_byte_t *, cql::cql_int_t > & output ) const {		//// return blob as pure pointer and size. Data is not copied
 	cql::cql_byte_t* output_ptr = NULL;
 	bool empty = false;
     if (get_nullity(i, empty)) {
-        if (!empty) 
-		{
+        if (!empty) {
             cql_byte_t* pos = _row[i];
 			cql::cql_int_t size( 0 );
             output_ptr = cql::decode_int(pos, size);	
@@ -1275,8 +1131,7 @@ cql::cql_message_result_impl_t::get_blob( int i,
 					
 bool	
 cql::cql_message_result_impl_t::get_blob( std::string const & column, 
-										  std::pair< cql::cql_byte_t *, cql::cql_int_t > & output ) const		//// return blob as pure pointer and size. Data is not copied		
-{
+										  std::pair< cql::cql_byte_t *, cql::cql_int_t > & output ) const {		//// return blob as pure pointer and size. Data is not copied		
 	int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_blob(i, output);
@@ -1286,15 +1141,48 @@ cql::cql_message_result_impl_t::get_blob( std::string const & column,
 			
 bool
 cql::cql_message_result_impl_t::get_text(int i,
-               std::string& output) const
-{
+               std::string& output) const {
 	return get_ascii( i, output );
 }
 				
 bool
 cql::cql_message_result_impl_t::get_text(const std::string& column,
-               std::string& output) const
-{	
+               std::string& output) const {
 	return get_ascii( column, output );
+}		
+			
+bool			
+cql::cql_message_result_impl_t::get_inet(std::string const& column, 
+										 /*cql_host_t::ip_address_t*/ boost::asio::ip::address& output) const {			//// return inet.
+	int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_inet(i, output);
+    }
+    return false;
 }
+			
+bool		
+cql::cql_message_result_impl_t::get_inet(int i, 
+			 /*cql_host_t::ip_address_t*/ boost::asio::ip::address& output) const {			//// return inet.
+	cql_byte_t* output_ptr(NULL);
+    bool empty = false;
+    if (get_nullity(i, empty)) {
+        if (!empty) {
+			cql::cql_int_t size(0);
+            cql_byte_t* pos = _row[i];
+            output_ptr = cql::decode_int(pos, size);
 
+			if(size == 4) {  // IPv4
+				std::string const ip_str = cql::decode_ipv4_from_bytes(output_ptr);					
+				output = /*cql::cql_host_t::ip_address_t*/boost::asio::ip::address::from_string(ip_str);
+				return true;
+			}
+			else if(size == 16) {	// IPv6		
+				std::string const ip_str = cql::decode_ipv6_from_bytes(output_ptr);
+				output = /*cql::cql_host_t::ip_address_t*/boost::asio::ip::address::from_string(ip_str);
+				return true;
+			}
+		}
+	}
+	return false;	
+}	
