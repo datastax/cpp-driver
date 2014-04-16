@@ -37,7 +37,7 @@ public:
         _retry_policy(new cql_default_retry_policy_t()),
         _retry_counter(0)
     {}
-
+    
     cql_query_t(
         const std::string&         query_string,
         const cql_consistency_enum consistency,

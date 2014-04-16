@@ -107,7 +107,7 @@ public:
     
     /** Returns false if the result is unavailable yet.
         Otherwise, the list of events is written under the reference argument.
-        Any content of the list gets disregarded. */
+        All contents of the list are discarded. */
     inline bool
     get_events(std::list<cql_trace_event_t>& events_) {
         if (maybe_fetch_trace()) {

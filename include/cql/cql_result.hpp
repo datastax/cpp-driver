@@ -50,6 +50,10 @@ public:
     virtual size_t
     row_count() const = 0;
 
+    virtual bool
+    get_tracing_id(cql_uuid_t& tracing_id_) const = 0;
+
+    /** Returns the MD5 hash of a query. Applicable only to results of PREARE queries. */
     virtual const std::vector<cql::cql_byte_t>&
     query_id() const = 0;
 

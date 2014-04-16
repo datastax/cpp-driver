@@ -1029,15 +1029,18 @@ private:
             break;
 
         case CQL_OPCODE_RESULT:
-            _response_message.reset(new cql::cql_message_result_impl_t(header.length()));
+        {
+            cql_message_result_impl_t* new_result
+                = new cql_message_result_impl_t(header.length());
+            
             if ((header.flags() & CQL_FLAG_TRACE) == CQL_FLAG_TRACE) {
                 // This is a response to traced query.
                 // Here we tell the _response_message to expect tracing ID at the beginning of buffer.
-                boost::dynamic_pointer_cast<cql_message_result_impl_t>(
-                    boost::shared_ptr<cql_message_t>(_response_message))->set_as_traced();
+                new_result->set_as_traced();
             }
+            _response_message.reset(new_result);
             break;
-
+        }
         case CQL_OPCODE_SUPPORTED:
             _response_message.reset(new cql::cql_message_supported_impl_t(header.length()));
             break;
@@ -1160,7 +1163,7 @@ private:
 
                 boost::shared_ptr<cql_message_result_impl_t> response_message =
                     boost::dynamic_pointer_cast<cql_message_result_impl_t>(
-                        boost::shared_ptr<cql_message_t>(_response_message));
+                        boost::shared_ptr<cql_message_t>(_response_message.release()));
 
                 preprocess_result_message(response_message);
                 release_stream(stream);
@@ -1174,7 +1177,7 @@ private:
             if (_event_callback) {
                 boost::shared_ptr<cql_message_event_impl_t> event =
                     boost::dynamic_pointer_cast<cql_message_event_impl_t>(
-                        boost::shared_ptr<cql_message_t>(_response_message));
+                        boost::shared_ptr<cql_message_t>(_response_message.release()));
 
                 if ((event->topology_change() == CQL_EVENT_TOPOLOGY_REMOVE_NODE
                         || event->status_change() == CQL_EVENT_STATUS_DOWN)
@@ -1203,7 +1206,7 @@ private:
 
                 boost::shared_ptr<cql_message_error_impl_t> m =
                     boost::dynamic_pointer_cast<cql_message_error_impl_t>(
-                        boost::shared_ptr<cql_message_t>(_response_message));
+                        boost::shared_ptr<cql_message_t>(_response_message.release()));
                 
                 cql::cql_error_t cql_error =
                     cql::cql_error_t::cassandra_error(m->code(), m->message());
