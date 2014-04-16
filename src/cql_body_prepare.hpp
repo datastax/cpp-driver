@@ -14,19 +14,18 @@
   limitations under the License.
 */
 
-#ifndef __PREPARE_HPP_INCLUDED__
-#define __PREPARE_HPP_INCLUDED__
+#ifndef __CQL_PREPARE_HPP_INCLUDED__
+#define __CQL_PREPARE_HPP_INCLUDED__
 
 #include <string>
-#include "cql_body.hpp"
+#include "cql_message_body.hpp"
 
-class BodyPrepare
-    : public Body {
- private:
-  std::string _prepare;
+struct CqlPrepare
+    : public CqlMessageBody {
 
- public:
-  BodyPrepare()
+  std::string statement;
+
+  CqlPrepare()
   {}
 
   uint8_t
@@ -38,13 +37,13 @@ class BodyPrepare
   prepare_string(
       const char* input,
       size_t      size) {
-    _prepare.assign(input, size);
+    statement.assign(input, size);
   }
 
   void
   prepare_string(
       const std::string& input) {
-    _prepare = input;
+    statement = input;
   }
 
   bool
@@ -61,18 +60,18 @@ class BodyPrepare
       size_t reserved,
       char** output,
       size_t& size) {
-    size    = reserved + sizeof(int32_t) + _prepare.size();
+    size    = reserved + sizeof(int32_t) + statement.size();
     *output = new char[size];
     encode_long_string(
         *output + reserved,
-        _prepare.c_str(),
-        _prepare.size());
+        statement.c_str(),
+        statement.size());
     return true;
   }
 
  private:
-  BodyPrepare(const BodyPrepare&) {}
-  void operator=(const BodyPrepare&) {}
+  CqlPrepare(const CqlPrepare&) {}
+  void operator=(const CqlPrepare&) {}
 };
 
 #endif

@@ -50,6 +50,8 @@ main() {
     printf("Error do something\n");
   }
 
+
+
   CqlSessionFuture* shutdown_future = NULL;
   cql_session_shutdown(session, &shutdown_future);
   cql_session_future_wait(shutdown_future);

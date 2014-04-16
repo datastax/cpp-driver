@@ -23,7 +23,7 @@
 #include <utility>
 #include <vector>
 
-#include "cql_body.hpp"
+#include "cql_message_body.hpp"
 #include "cql_iterable.hpp"
 
 #define CQL_RESULT_KIND_VOID          1
@@ -38,8 +38,8 @@
 
 struct ResultIterator;
 
-struct BodyResult
-    : public Body {
+struct CqlMessageBodyResult
+    : public CqlMessageBody {
 
   struct ColumnMetaData {
     ColumnMetaData() :
@@ -106,7 +106,7 @@ struct BodyResult
   int32_t            row_count;
   char*              rows;
 
-  BodyResult() :
+  CqlMessageBodyResult() :
       kind(0),
       more_pages(false),
       no_metadata(false),
@@ -274,21 +274,21 @@ struct BodyResult
   }
 
  private:
-  BodyResult(const BodyResult&) {}
-  void operator=(const BodyResult&) {}
+  CqlMessageBodyResult(const CqlMessageBodyResult&) {}
+  void operator=(const CqlMessageBodyResult&) {}
 };
 
 struct ResultIterator : Iterable {
   typedef std::pair<char*, size_t> Column;
 
-  BodyResult*         result;
+  CqlMessageBodyResult*         result;
   int32_t             row_position;
   char*               position;
   char*               position_next;
   std::vector<Column> row;
 
   ResultIterator(
-      BodyResult* result) :
+      CqlMessageBodyResult* result) :
       Iterable(CQL_ITERABLE_TYPE_RESULT),
       result(result),
       row_position(0),

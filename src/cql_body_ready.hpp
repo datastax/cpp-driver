@@ -17,12 +17,12 @@
 #ifndef __BODY_READY_HPP_INCLUDED__
 #define __BODY_READY_HPP_INCLUDED__
 
-#include "cql_body.hpp"
+#include "cql_message_body.hpp"
 
-struct BodyReady
-    : public Body {
+struct CqlMessageBodyReady
+    : public CqlMessageBody {
 
-  BodyReady()
+  CqlMessageBodyReady()
   {}
 
   uint8_t
@@ -50,8 +50,8 @@ struct BodyReady
   }
 
  private:
-  BodyReady(const BodyReady&) {}
-  void operator=(const BodyReady&) {}
+  CqlMessageBodyReady(const CqlMessageBodyReady&) {}
+  void operator=(const CqlMessageBodyReady&) {}
 };
 
 #endif

@@ -46,11 +46,13 @@ struct CqlInet {
   uint32_t port;
 };
 
-struct CqlError;
 struct CqlCluster;
+struct CqlError;
+struct CqlPrepareFuture;
+struct CqlResultFuture;
 struct CqlSession;
 struct CqlSessionFuture;
-struct CqlResultFuture;
+struct CqlStatement;
 
 /**
  * Initialize a new cluster. Instance must be freed by caller.
@@ -83,7 +85,7 @@ CQL_EXPORT CqlError*
 cql_cluster_setopt(
     struct CqlCluster* cluster,
     int                option,
-    void*              data,
+    const void*        data,
     size_t             datalen);
 
 /**
@@ -207,76 +209,6 @@ cql_session_future_wait_timed(
     struct CqlSessionFuture* future,
     size_t                   wait);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/***********************************************************************************
- *
- * Functions which allow for the interaction with futures. Everything that the library
- * does is asynchronous, and we use futures to let the caller know when the task is
- * complete and if that task returned data or resulted in an error.
- *
- ************************************************************************************/
-
-/**
- * Is the specified future ready
- *
- * @param future
- *
- * @return true if ready
- */
-CQL_EXPORT int
-cql_future_ready(
-    void* future);
-
-/**
- * Wait the linked event occurs or error condition is reached
- *
- * @param future
- */
-CQL_EXPORT void
-cql_future_wait(
-    void* future);
-
-/**
- * Wait the linked event occurs, error condition is reached, or time has elapsed.
- *
- * @param future
- * @param wait time in microseconds
- *
- * @return false if returned due to timeout
- */
-CQL_EXPORT int
-cql_future_wait_timed(
-    void*    future,
-    size_t    wait);
-
 /**
  * If the linked event resulted in an error, get that error
  *
@@ -286,44 +218,60 @@ cql_future_wait_timed(
  */
 CQL_EXPORT CqlError*
 cql_future_get_error(
-    void* future);
+    struct CqlSessionFuture* future);
+
+
+
+
+
+
+
 
 /**
- * If the server returned an error message obtain the string. This function follows
- * the pattern similar to that of snprintf. The user passes in a pre-allocated buffer
- * of size n, to which the decoded value will be copied. The number of bytes written
- * had the buffer been sufficiently large will be returned via the output parameter
- * 'total'. Only when total is less than n has the buffer been fully consumed.
+ * Obtain the message from an error structure. This function follows
+ * the pattern similar to that of snprintf. The user passes in a
+ * pre-allocated buffer of size n, to which the decoded value will be
+ * copied. The number of bytes written had the buffer been
+ * sufficiently large will be returned via the output parameter
+ * 'total'. Only when total is less than n has the buffer been fully
+ * consumed.
  *
  * @param source
  * @param output
  * @param n
  * @param total
  *
- * @return NULL if successful, otherwise pointer to CqlError structure
  */
-CQL_EXPORT CqlError*
-cql_future_get_error_string(
-    void*   future,
-    char*   output,
-    size_t  n,
-    size_t* total);
+CQL_EXPORT void
+cql_error_string(
+    CqlError* error,
+    char*     output,
+    size_t    n,
+    size_t*   total);
 
 /**
- * Get the data returned by the linked event and set the underlying
- * pointer to NULL. Once the data is released ownership is transferred
- * to the caller. Prior to release the life-cycle of the data is bound
- * to the future. This method may only be called once.
+ * Obtain the code from an error structure.
  *
- * @param future
- * @param data
+ * @param error
  *
- * @return NULL if successful, otherwise pointer to CqlError structure
+ * @return error code
+ *
  */
-CQL_EXPORT CqlError*
-cql_future_release_data(
-    void*  future,
-    void** data);
+CQL_EXPORT int
+cql_error_source(
+    CqlError* error);
+
+/**
+ * Obtain the source from an error structure.
+ *
+ * @param error
+ *
+ * @return source code
+ *
+ */
+CQL_EXPORT int
+cql_error_code(
+    CqlError* error);
 
 
 /***********************************************************************************
@@ -334,10 +282,10 @@ cql_future_release_data(
  ************************************************************************************/
 
 /**
- * Initialize a query statement, reserving N slots for parameters
+ * Initialize an ad-hoc query statement
  *
  * @param session
- * @param query
+ * @param statement
  * @param length
  * @param query
  *
@@ -345,11 +293,10 @@ cql_future_release_data(
  */
 CQL_EXPORT CqlError*
 cql_session_query(
-    void*  session,
-    char*  statement,
-    size_t length,
-    size_t params,
-    void** query);
+    CqlSession*    session,
+    char*          statement,
+    size_t         length,
+    CqlStatement** output);
 
 /**
  * Create a prepared statement. Future must be freed by caller.
@@ -385,18 +332,6 @@ cql_prepared_bind(
     void*  prepared,
     size_t params,
     void** bound);
-
-CQL_EXPORT CqlError*
-cql_statement_setopt(
-    int    option,
-    void*  data,
-    size_t datalen);
-
-CQL_EXPORT CqlError*
-cql_statement_getopt(
-    int     option,
-    void**  data,
-    size_t* datalen);
 
 /**
  * Bind a short to a query or bound statement at the specified index

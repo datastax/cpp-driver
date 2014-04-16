@@ -20,11 +20,12 @@
 #include "cql_body_error.hpp"
 #include "cql_body_options.hpp"
 #include "cql_body_prepare.hpp"
-#include "cql_body_query.hpp"
 #include "cql_body_ready.hpp"
 #include "cql_body_result.hpp"
 #include "cql_body_startup.hpp"
 #include "cql_body_supported.hpp"
+#include "cql_query.hpp"
+
 
 #define CQL_HEADER_SIZE 8
 
@@ -38,7 +39,7 @@ struct Message {
   bool                  header_received;
   char                  header_buffer[CQL_HEADER_SIZE];
   char*                 header_buffer_pos;
-  std::unique_ptr<Body> body;
+  std::unique_ptr<CqlMessageBody> body;
   std::unique_ptr<char> body_buffer;
   char*                 body_buffer_pos;
   bool                  body_ready;
@@ -70,33 +71,33 @@ struct Message {
       body_ready(false)
   {}
 
-  inline static Body*
+  inline static CqlMessageBody*
   allocate_body(
       uint8_t  opcode) {
     switch (opcode) {
       case CQL_OPCODE_RESULT:
-        return static_cast<Body*>(new BodyResult());
+        return static_cast<CqlMessageBody*>(new CqlMessageBodyResult());
 
       case CQL_OPCODE_PREPARE:
-        return static_cast<Body*>(new BodyPrepare());
+        return static_cast<CqlMessageBody*>(new CqlPrepare());
 
       case CQL_OPCODE_ERROR:
-        return static_cast<Body*>(new BodyError());
+        return static_cast<CqlMessageBody*>(new CqlMessageBodyError());
 
       case CQL_OPCODE_OPTIONS:
-        return static_cast<Body*>(new BodyOptions());
+        return static_cast<CqlMessageBody*>(new CqlMessageBodyOptions());
 
       case CQL_OPCODE_STARTUP:
-        return static_cast<Body*>(new BodyStartup());
+        return static_cast<CqlMessageBody*>(new CqlMessageBodyStartup());
 
       case CQL_OPCODE_SUPPORTED:
-        return static_cast<Body*>(new BodySupported());
+        return static_cast<CqlMessageBody*>(new CqlMessageBodySupported());
 
       case CQL_OPCODE_QUERY:
-        return static_cast<Body*>(new BodyQuery());
+        return static_cast<CqlMessageBody*>(new CqlQuery());
 
       case CQL_OPCODE_READY:
-        return static_cast<Body*>(new BodyReady());
+        return static_cast<CqlMessageBody*>(new CqlMessageBodyReady());
 
       default:
         assert(false);

@@ -20,15 +20,15 @@
 #include <map>
 #include <string>
 
-#include "cql_body.hpp"
+#include "cql_message_body.hpp"
 
-struct BodyStartup
-    : public Body {
+struct CqlMessageBodyStartup
+    : public CqlMessageBody {
   std::unique_ptr<char> guard;
   std::string           cql_version;
   std::string           compression;
 
-  BodyStartup() :
+  CqlMessageBodyStartup() :
       cql_version("3.0.0"),
       compression("")
   {}
@@ -88,8 +88,8 @@ struct BodyStartup
  private:
   typedef std::map<std::string, std::string> OptionsCollection;
 
-  BodyStartup(const BodyStartup&) {}
-  void operator=(const BodyStartup&) {}
+  CqlMessageBodyStartup(const CqlMessageBodyStartup&) {}
+  void operator=(const CqlMessageBodyStartup&) {}
 };
 
 #endif

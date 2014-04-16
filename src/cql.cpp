@@ -27,7 +27,6 @@ struct CqlSessionFuture {
   }
 };
 
-
 CqlCluster*
 cql_cluster_new() {
   return new CqlCluster();
@@ -37,6 +36,16 @@ void
 cql_cluster_free(
     struct CqlCluster* cluster) {
   delete cluster;
+}
+
+CqlError*
+cql_cluster_setopt(
+    struct CqlCluster* cluster,
+    int                option,
+    const void*        data,
+    size_t             datalen) {
+  cluster->option(option, data, datalen);
+  return CQL_ERROR_NO_ERROR;
 }
 
 CqlError*
@@ -103,4 +112,70 @@ cql_session_future_wait_timed(
   return static_cast<int>(
       future->request->wait_for(
           std::chrono::microseconds(wait)));
+}
+
+CqlError*
+cql_future_get_error(
+    struct CqlSessionFuture* future) {
+  return future->request->error;
+}
+
+void
+cql_error_string(
+    CqlError* error,
+    char*     output,
+    size_t    n,
+    size_t*   total) {
+  *total = error->message.copy(output, n);
+}
+
+int
+cql_error_source(
+    CqlError* error) {
+  return error->source;
+}
+
+int
+cql_error_code(
+    CqlError* error) {
+  return error->code;
+}
+
+
+/***********************************************************************************
+ *
+ * Functions which create ad-hoc queries, prepared statements, bound statements, and
+ * allow for the composition of batch statements from queries and bound statements.
+ *
+ ************************************************************************************/
+
+CqlError*
+cql_session_query(
+    CqlSession* session,
+    char*       statement,
+    size_t      length,
+    size_t      consistency,
+    CqlQuery**  output) {
+  (void) session;
+  *output = new CqlQuery();
+  (*output)->statement(statement, length);
+  (*output)->consistency(consistency);
+  return CQL_ERROR_NO_ERROR;
+}
+
+CqlError*
+cql_session_prepare(
+    CqlSession*         session,
+    char*               statement,
+    size_t              length,
+    CqlPrepareFuture** output) {
+  return CQL_ERROR_NO_ERROR;
+}
+
+CqlError*
+cql_statement_add_value(
+    CqlStatement* statement,
+    char*         value,
+    size_t        size) {
+  return CQL_ERROR_NO_ERROR;
 }

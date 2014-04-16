@@ -17,8 +17,8 @@
 #ifndef __BODY_HPP_INCLUDED__
 #define __BODY_HPP_INCLUDED__
 
-struct Body {
-  virtual ~Body()
+struct CqlMessageBody {
+  virtual ~CqlMessageBody()
   {}
 
   virtual uint8_t

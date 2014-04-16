@@ -17,12 +17,12 @@
 #ifndef __OPTIONS_HPP_INCLUDED__
 #define __OPTIONS_HPP_INCLUDED__
 
-#include "cql_body.hpp"
+#include "cql_message_body.hpp"
 
-struct BodyOptions
-    : public Body {
+struct CqlMessageBodyOptions
+    : public CqlMessageBody {
 
-  BodyOptions()
+  CqlMessageBodyOptions()
   {}
 
   uint8_t
@@ -50,8 +50,8 @@ struct BodyOptions
   }
 
  private:
-  BodyOptions(const BodyOptions&) {}
-  void operator=(const BodyOptions&) {}
+  CqlMessageBodyOptions(const CqlMessageBodyOptions&) {}
+  void operator=(const CqlMessageBodyOptions&) {}
 };
 
 #endif

@@ -429,7 +429,7 @@ struct ClientConnection {
 
     CqlError*      err     = NULL;
     CallerRequest* request = NULL;
-    BodyResult*    result  = static_cast<BodyResult*>(response->body.get());
+    CqlMessageBodyResult*    result  = static_cast<CqlMessageBodyResult*>(response->body.get());
 
     switch (result->kind) {
       case CQL_RESULT_KIND_SET_KEYSPACE:
@@ -486,7 +486,7 @@ struct ClientConnection {
   on_error(
       Message* response) {
     log(CQL_LOG_DEBUG, "on_error");
-    BodyError* error = static_cast<BodyError*>(response->body.get());
+    CqlMessageBodyError* error = static_cast<CqlMessageBodyError*>(response->body.get());
 
     if (state_ < CLIENT_STATE_READY) {
       notify_error(
@@ -513,8 +513,8 @@ struct ClientConnection {
   on_supported(
       Message* response) {
     log(CQL_LOG_DEBUG, "on_supported");
-    BodySupported* supported
-        = static_cast<BodySupported*>(response->body.get());
+    CqlMessageBodySupported* supported
+        = static_cast<CqlMessageBodySupported*>(response->body.get());
 
     // TODO(mstump) do something with the supported info
     (void) supported;
@@ -527,9 +527,9 @@ struct ClientConnection {
   void
   set_keyspace(
       const std::string& keyspace) {
-    Message    message(CQL_OPCODE_QUERY);
-    BodyQuery* query = static_cast<BodyQuery*>(message.body.get());
-    query->query_string("USE " + keyspace);
+    Message   message(CQL_OPCODE_QUERY);
+    CqlQuery* query = static_cast<CqlQuery*>(message.body.get());
+    query->statement("USE " + keyspace);
     send_message(&message, NULL);
   }
 
@@ -561,7 +561,7 @@ struct ClientConnection {
   send_startup() {
     log(CQL_LOG_DEBUG, "send_startup");
     Message      message(CQL_OPCODE_STARTUP);
-    BodyStartup* startup = static_cast<BodyStartup*>(message.body.get());
+    CqlMessageBodyStartup* startup = static_cast<CqlMessageBodyStartup*>(message.body.get());
     startup->cql_version = cql_version_;
     send_message(&message, NULL);
   }
@@ -593,7 +593,7 @@ struct ClientConnection {
       CallerRequest::Callback callback = NULL) {
     CallerRequest* request = new CallerRequest();
     Message*       message = new Message(CQL_OPCODE_PREPARE);
-    BodyPrepare*   prepare = static_cast<BodyPrepare*>(message->body.get());
+    CqlPrepare*   prepare = static_cast<CqlPrepare*>(message->body.get());
     prepare->prepare_string(statement, size);
 
     request->callback = callback;

@@ -20,15 +20,15 @@
 #include "iterable.hpp"
 #include "body_result.hpp"
 
-struct BodyResult;
+struct CqlMessageBodyResult;
 
 // struct ResultIterator : Iterable {
-//   BodyResult* result;
+//   CqlMessageBodyResult* result;
 //   int32_t     row_position;
 //   char*       position;
 
 //   ResultIterator(
-//       BodyResult* result) :
+//       CqlMessageBodyResult* result) :
 //       Iterable(CQL_ITERABLE_TYPE_RESULT),
 //       result(result),
 //       row_position(0),

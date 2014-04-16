@@ -14,61 +14,70 @@
   limitations under the License.
 */
 
-#ifndef __BODY_SUPPORTED_HPP_INCLUDED__
-#define __BODY_SUPPORTED_HPP_INCLUDED__
+#ifndef __CQL_PREPARE_HPP_INCLUDED__
+#define __CQL_PREPARE_HPP_INCLUDED__
 
-#include <list>
 #include <string>
-
 #include "cql_message_body.hpp"
 
-struct CqlMessageBodySupported
+struct CqlPrepare
     : public CqlMessageBody {
-  std::list<std::string> compression;
-  std::list<std::string> cql_versions;
 
-  CqlMessageBodySupported()
+  std::string statement;
+
+  CqlPrepare()
   {}
 
   uint8_t
+  kind() {
+    // used for batch statements
+    return 1;
+  }
+
+  uint8_t
   opcode() {
-    return CQL_OPCODE_SUPPORTED;
+    return CQL_OPCODE_PREPARE;
+  }
+
+  void
+  prepare_string(
+      const char* input,
+      size_t      size) {
+    statement.assign(input, size);
+  }
+
+  void
+  prepare_string(
+      const std::string& input) {
+    statement = input;
   }
 
   bool
   consume(
       char*  buffer,
       size_t size) {
+    (void) buffer;
     (void) size;
-    string_multimap_t supported;
-
-    decode_string_multimap(buffer, supported);
-    string_multimap_t::const_iterator it = supported.find("COMPRESSION");
-    if (it != supported.end()) {
-      compression = it->second;
-    }
-
-    it = supported.find("CQL_VERSION");
-    if (it != supported.end()) {
-      cql_versions = it->second;
-    }
     return true;
   }
 
   bool
   prepare(
-      size_t  reserved,
-      char**  output,
+      size_t reserved,
+      char** output,
       size_t& size) {
-    (void) reserved;
-    (void) output;
-    (void) size;
-    return false;
+    size    = reserved + sizeof(int32_t) + statement.size();
+    *output = new char[size];
+    encode_long_string(
+        *output + reserved,
+        statement.c_str(),
+        statement.size());
+    return true;
   }
 
  private:
-  CqlMessageBodySupported(const CqlMessageBodySupported&) {}
-  void operator=(const CqlMessageBodySupported&) {}
+  CqlPrepare(const CqlPrepare&) {}
+  void operator=(const CqlPrepare&) {}
 };
 
 #endif

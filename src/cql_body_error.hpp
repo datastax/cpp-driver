@@ -17,24 +17,24 @@
 #ifndef __BODY_ERROR_HPP_INCLUDED__
 #define __BODY_ERROR_HPP_INCLUDED__
 
-#include "cql_body.hpp"
+#include "cql_message_body.hpp"
 #include "cql_serialization.hpp"
 
-struct BodyError
-    : public Body {
+struct CqlMessageBodyError
+    : public CqlMessageBody {
 
   std::unique_ptr<char> guard;
   int32_t               code;
   char*                 message;
   size_t                message_size;
 
-  BodyError() :
+  CqlMessageBodyError() :
       code(0xFFFFFFFF),
       message(NULL),
       message_size(0)
   {}
 
-  BodyError(
+  CqlMessageBodyError(
       int32_t     code,
       const char* input,
       size_t      input_size) :
@@ -75,8 +75,8 @@ struct BodyError
   }
 
  private:
-  BodyError(const BodyError&) {}
-  void operator=(const BodyError&) {}
+  CqlMessageBodyError(const CqlMessageBodyError&) {}
+  void operator=(const CqlMessageBodyError&) {}
 };
 
 #endif
