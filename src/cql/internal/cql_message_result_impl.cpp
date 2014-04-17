@@ -1153,7 +1153,7 @@ cql::cql_message_result_impl_t::get_text(const std::string& column,
 			
 bool			
 cql::cql_message_result_impl_t::get_inet(std::string const& column, 
-										 /*cql_host_t::ip_address_t*/ boost::asio::ip::address& output) const {			//// return inet.
+										 /*cql_host_t::ip_address_t*/ boost::asio::ip::address & output) const {			//// return inet.
 	int i = 0;
     if (_metadata.get_index(column, i)) {
         return get_inet(i, output);
@@ -1161,9 +1161,9 @@ cql::cql_message_result_impl_t::get_inet(std::string const& column,
     return false;
 }
 			
-bool		
+bool	
 cql::cql_message_result_impl_t::get_inet(int i, 
-			 /*cql_host_t::ip_address_t*/ boost::asio::ip::address& output) const {			//// return inet.
+			 /*cql_host_t::ip_address_t*/ boost::asio::ip::address & output) const {			//// return inet.
 	cql_byte_t* output_ptr(NULL);
     bool empty = false;
     if (get_nullity(i, empty)) {
@@ -1186,3 +1186,70 @@ cql::cql_message_result_impl_t::get_inet(int i,
 	}
 	return false;	
 }	
+		
+bool
+cql::cql_message_result_impl_t::get_varint(std::string const& column, 
+										   boost::multiprecision::cpp_int & output) const			//// return boost multiprecision cpp_int
+{
+	int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_varint(i, output);
+    }
+    return false;
+}
+
+bool 
+cql::cql_message_result_impl_t::get_varint(int i,		
+										   boost::multiprecision::cpp_int & output) const			//// return boost multiprecision cpp_int
+{		
+	if(!is_valid(i,cql::CQL_COLUMN_TYPE_VARINT)) 
+		return false;
+
+	std::vector<cql::cql_byte_t> v;
+	if(!get_data(i,v))
+		return false;
+
+	std::size_t const t = v.size();
+		
+	if(t < 1)
+		return false;		
+
+	if(t == 1 && v[0] == 0) {
+		output = 0;
+		return true;
+	}
+		
+	unsigned char const first_digit = v[0];								//// take the first digit of the data bytes.
+	unsigned char const last_byte_first_digit = first_digit & 0x80;		//// take the most meaning bit of the first byte.
+
+	boost::multiprecision::cpp_int r(0);
+
+	if(last_byte_first_digit == 0x80) {					//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 		
+		std::vector<cql::cql_byte_t> v1 = v;
+
+		for(int i = 0; i < v1.size(); ++i)
+			v1[i] = v1[i] ^ 0xFF;						//// negate all bits to negate the value
+
+		for( int i = 0; i < t; ++i ) {
+			r = r << 8;
+			boost::multiprecision::cpp_int k = v1[i];	
+			r = r | k;
+		}	
+				
+		r = r + 1;			
+		boost::multiprecision::cpp_int const r_neg(-1);
+		r = r * r_neg;				
+	}		
+	else	
+	{	// the number is POSITIVE.
+		for( int i = 0; i < t; ++i ) {
+			r = r << 8;
+			boost::multiprecision::cpp_int k = v[i];	
+			r = r | k;
+		}	
+	}		
+	
+	output = r;	
+	return true;							
+}
+		

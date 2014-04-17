@@ -21,16 +21,49 @@
 	
 #include <vector>
 #include "cql/cql.hpp"
+
+#include <boost/multiprecision/cpp_int.hpp>		
 #include <boost/asio/ip/address.hpp>
-	
 
-
-
+//// cos takiego sie kompiluje.	
 //namespace cql {
-//class cql_result_t;
+//	class cql_host_t;
 //}
-// #include "cql/cql_host.hpp"
 
+	
+///// to nie dziala. Nie kompiluje sie.	
+//namespace cql {
+//	class cql_host_t;
+//	class cql_host_t::ip_address_t;
+//}
+
+	
+/////// to nie dziala. 
+//namespace cql {
+//	class cql_host_t
+//	{};
+//}
+
+
+/////// to nie dziala. 
+//namespace cql {
+//	class cql_host_t
+//	{
+//	public:
+//		typedef
+//			boost::asio::ip::address
+//			ip_address_t;
+//	};
+//};
+
+
+//// #include <boost/asio/ip/address.hpp>
+	
+//namespace cql {
+//	class cql_result_t;
+//}
+//
+//#include "cql/cql_host.hpp"
 
 
 namespace cql {
@@ -353,12 +386,20 @@ public:
 
 	virtual bool 
 	get_inet(int i,		
-	         /*cql_host_t::ip_address_t*/ boost::asio::ip::address & output) const = 0;			//// return inet.
-
+	         /* cql_host_t::ip_address_t */ boost::asio::ip::address & output) const = 0;			//// return inet.
+						
 	virtual bool		
 	get_inet(std::string const& column, 
-	         /*cql_host_t::ip_address_t*/ boost::asio::ip::address & output) const = 0;			//// return inet.			
-};
+	         /* cql_host_t::ip_address_t */ boost::asio::ip::address & output) const = 0;			//// return inet.			
+	
+	virtual bool 
+	get_varint(int i,		
+			   boost::multiprecision::cpp_int & output) const = 0;			//// return boost multiprecision cpp_int
+					
+	virtual bool
+	get_varint(std::string const& column, 
+			   boost::multiprecision::cpp_int & output) const = 0;			//// return boost multiprecision cpp_int
+};		
 			
 } // namespace cql
 

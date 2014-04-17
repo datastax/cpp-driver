@@ -17,6 +17,7 @@
 #include <boost/test/debug.hpp>
 #include "cql/policies/cql_round_robin_policy.hpp"
 
+	
 struct CONSISTENCY_MY_TESTS_FOR_DIFFERENT_TYPES : test_utils::CCM_SETUP {
     CONSISTENCY_MY_TESTS_FOR_DIFFERENT_TYPES() : CCM_SETUP(1,0) {}
 };																						
@@ -34,12 +35,12 @@ generate_random_blob(std::vector<cql::cql_byte_t>& output,
 }	
 		
 std::string 
-convert_blob_vector_to_string( std::vector<cql::cql_byte_t> const & v )
+convert_blob_vector_to_string(std::vector<cql::cql_byte_t> const & v)
 {	
 	std::string res;
 
 	for(int i = 0; i < v.size(); ++i) {	
-		std::string k = ( boost::str(boost::format("%x") % static_cast< int >( v[i] ) ) );	
+		std::string k = (boost::str(boost::format("%x") % static_cast<int>(v[i])));	
 		if(k.length() == 1)
 			res += "0";
 
@@ -50,14 +51,14 @@ convert_blob_vector_to_string( std::vector<cql::cql_byte_t> const & v )
 }	
 		
 std::string 
-convert_vec_of_bytes_to_str(std::vector<cql::cql_byte_t> const & v )
-{			
+convert_vec_of_bytes_to_str(std::vector<cql::cql_byte_t> const & v)
+{	
 	std::string result;
 			
 	for(int i = 0; i < v.size(); ++i) {		
 		cql::cql_byte_t b[2];
-		b[0] = v[ i ] & 0xF0;
-		b[1] = v[ i ] & 0x0F;
+		b[0] = v[i] & 0xF0;
+		b[1] = v[i] & 0x0F;
 		b[0] = b[0] >> 4;
 		
 		for(int j = 0; j < 2; ++j) {
@@ -73,7 +74,7 @@ convert_vec_of_bytes_to_str(std::vector<cql::cql_byte_t> const & v )
 cql::cql_bigint_t 
 generate_random_int_64()
 {
-	cql::cql_bigint_t result( 0 );
+	cql::cql_bigint_t result(0);
 		
 	for(int i = 0; i < 8; ++i) {	
 		result = result << 8;	
@@ -103,7 +104,7 @@ generate_random_string(int size)
 cql::cql_int_t 
 generate_random_int_32()
 {		
-	cql::cql_int_t result( 0 );
+	cql::cql_int_t result(0);
 		
 	for(int i = 0; i < 4; ++i) {	
 		result = result << 8;	
@@ -127,11 +128,11 @@ generate_random_double()
 								
 		if(rnd == 0) {					
 			for(int i = 0; i < count; ++i)
-				r1 = r1 / ( ( static_cast<double>(rand() ) + 100.0 ));	 
+				r1 = r1 / ((static_cast<double>(rand()) + 100.0));	 
 		}
 		else if(rnd == 1) {		
 			for(int i = 0; i < count; ++i)
-				r2 = r2 / ( ( static_cast<double>( rand() ) + 100.0 ));	 
+				r2 = r2 / ((static_cast<double>(rand()) + 100.0));	 
 		}	
 				
 		double r3 = r1 / r2;
@@ -160,7 +161,7 @@ std::string
 generate_random_inet()
 {		
 	int arr[4];
-	for( int i = 0; i < 4; ++i )
+	for(int i = 0; i < 4; ++i)
 		arr[ i ] = rand() % 256;
 		
 	std::string a1 = (boost::str(boost::format("%d.%d.%d.%d") % arr[0] % arr[1] % arr[2] % arr[3]));				
@@ -171,7 +172,7 @@ cql::cql_bigint_t
 generate_random_time_stamp_2()
 {							
 	int const max_rand(3600);
-	cql::cql_bigint_t result( rand() % max_rand );
+	cql::cql_bigint_t result(rand() % max_rand);
 	cql::cql_bigint_t t100 = max_rand;
 								
 	for(int i = 0; i < 4; ++i) {		
@@ -183,8 +184,8 @@ generate_random_time_stamp_2()
 void 
 generate_random_uuid_2(std::vector<cql::cql_byte_t>& v )
 {		
-	v.resize( 16 );
-		
+	v.resize(16);
+	
 	for(int i = 0; i < 16; ++i) {
 		v[i] = rand() % 256;	
 	}		
@@ -208,13 +209,13 @@ convert_timestamp_to_uuid_2( cql::cql_bigint_t ts,
 		ts = ts >> 8;			
 	}		
 			
-	v_bytes[3] = chars_vec[0];
-	v_bytes[2] = chars_vec[1];
-	v_bytes[1] = chars_vec[2];
-	v_bytes[0] = chars_vec[3];
-	v_bytes[5] = chars_vec[4];
-	v_bytes[4] = chars_vec[5];
-	v_bytes[7] = chars_vec[6];							
+	v_bytes[3] = chars_vec[0] ;
+	v_bytes[2] = chars_vec[1] ;
+	v_bytes[1] = chars_vec[2] ;
+	v_bytes[0] = chars_vec[3] ;
+	v_bytes[5] = chars_vec[4] ;
+	v_bytes[4] = chars_vec[5] ;
+	v_bytes[7] = chars_vec[6] ;							
 	v_bytes[6] = chars_vec[7] & 0x0F;		//// take only half of the byte, because the timeuuid is only 60 bits, not 64. 
 	cql::cql_byte_t t6 = 0x10;					
 	v_bytes[6] = v_bytes[6] | t6;			
@@ -245,8 +246,7 @@ make_conversion_uuid_to_string_2(std::vector<cql::cql_byte_t> const & v)
 			
 	return result;	
 }		
-	
-			
+				
 bool	
 compare_two_inet_ipv6( std::string const a1, std::string const a2 )
 {		
@@ -308,13 +308,30 @@ compare_two_inet_ipv6( std::string const a1, std::string const a2 )
 
 	return true;	
 }		
+
+
+boost::multiprecision::cpp_int generate_random_cpp_int(int digits_number)
+{
+	boost::multiprecision::cpp_int result(rand() + 600);
+
+	for( int i = 0; i < digits_number; ++i )
+		result = result * boost::multiprecision::cpp_int(rand() + 600 ) + rand();
+
+	if(rand() % 2 == 0)
+	{
+		result = result * boost::multiprecision::cpp_int(-1);
+	}
+
+	return result;
+}
+
 	
 	
 /////  --run_test=consistency_my_tests_types/consistency_my_tests_2
 BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
-{								
+{		
 	int const number_of_records_inserted_to_one_table = 300;		// number of rows inserted to each table.	
-				
+			
 	srand( (unsigned)time(NULL) );																			
 	cql::cql_consistency_enum consistency = cql::CQL_CONSISTENCY_QUORUM;
 																																				
@@ -334,8 +351,61 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 														
 	test_utils::query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
 	session->set_keyspace(test_utils::SIMPLE_KEYSPACE);					
+					
+	{	// 1. Check deserialization of VARINT into boost::multiprecision::cpp_int
+		std::string const table_name = "table_varint_boost";
+		std::string const create_table_query = "CREATE TABLE " + table_name + " ( t00 bigint PRIMARY KEY, t01 varint );";
+		test_utils::query(session, create_table_query, consistency);
+
+		std::map<int,boost::multiprecision::cpp_int> m_multiprec;
+		
+		int const integer_number_of_rows = number_of_records_inserted_to_one_table;
+		for(int i = 0; i < integer_number_of_rows; ++i) {
+			boost::multiprecision::cpp_int const t01 = generate_random_cpp_int( rand() % 100 + 1 );	
+			m_multiprec.insert(std::make_pair(i,t01));		
+			std::string ts = t01.str();	
+			std::string query_string( boost::str(boost::format("INSERT INTO %s (t00,t01) VALUES (%d,%s);")  % table_name % i % ts ));
+			std::cout << query_string << std::endl;	
+			boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));	
+			session->query(_query);			
+		}
+
+		boost::shared_ptr<cql::cql_result_t> result = test_utils::query(session,str(boost::format("SELECT t00,t01 FROM %s;") % table_name),consistency);		
+				
+		int number_of_rows_selected(0);
+		while(result->next()) {					
+			++number_of_rows_selected;
+
+			cql::cql_bigint_t t_00_(0);
+			if(!result->get_bigint( 0, t_00_ ) )
+			{
+				BOOST_FAIL("Fail in reading data from result.");
+			}
+			
+			boost::multiprecision::cpp_int t1(0);
+			if(!result->get_varint(1,t1)) {
+				BOOST_FAIL("Fail in reading data from result.");
+			}	
+
+			std::map< int, boost::multiprecision::cpp_int >::const_iterator p = m_multiprec.find(t_00_);
+			if( p == m_multiprec.end() ) {
+				BOOST_FAIL("Fail in reading data from result.");
+			}
+
+			if(p->second != t1) {	
+				BOOST_FAIL("Fail in reading data from result.");
+			}		
 						
-	{  //// 1. Check all types in one huge table 
+			std::cout << t_00_ << " -> " << t1 << std::endl << std::endl;
+		}	
+
+		if(number_of_rows_selected != integer_number_of_rows) {										
+			BOOST_FAIL( "varint. The number of selected rows is wrong. " );
+		}				
+
+	}
+
+	{  //// 2. Check all types in one huge table 
 					
 		std::string const table_name = "table_test_all";
 		std::string const create_table_query = 				
@@ -642,7 +712,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 		}				
 	}					
 						
-	//// 1. Check blob.		
+	//// 3. Check blob.		
 	{						
 		std::string const table_name = test_utils::SIMPLE_TABLE + "_blob";
 		test_utils::query(session,str(boost::format("CREATE TABLE %s(tweet_id bigint PRIMARY KEY, t1 bigint, t2 blob, t3 bigint );") % table_name),consistency);
@@ -710,7 +780,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 					
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 							
-	//// 1. Check inet.		
+	//// 4. Check inet.		
 	{						
 		std::string const table_name = test_utils::SIMPLE_TABLE + "_var_inet";
 		test_utils::query(session,str(boost::format("CREATE TABLE %s(tweet_id bigint PRIMARY KEY, t1 bigint, t2 inet, t3 bigint );") % table_name ),consistency);
@@ -752,7 +822,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 				}		
 												
 				if(inet_3.to_string() != p->second) {	
-					std::string a1 = inet_3.to_string();
+					std::string a1 = inet_3.to_string();   //// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
 					std::string a2 = p->second;	
 					if(!compare_two_inet_ipv6(a1,a2)) {
 						BOOST_FAIL("The value of inet is not correct.");
@@ -771,7 +841,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	//// 2. Check the varint.	
+	//// 5. Check the varint.	
 						
 	{					
 		std::string const table_name = test_utils::SIMPLE_TABLE + "_var_int";
@@ -836,7 +906,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 										
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	{	//// 3. Check the 32-int.		
+	{	//// 6. Check the 32-int.		
 		test_utils::query(session,str(boost::format("CREATE TABLE %s(tweet_id bigint PRIMARY KEY, t1 bigint, t2 decimal, t3 bigint );") % test_utils::SIMPLE_TABLE),consistency);
 														
 		std::map<int,cql::cql_int_t> int_map;
@@ -900,7 +970,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 						
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//						
-	{	//// 4. Check the 64-int.	
+	{	//// 7. Check the 64-int.	
 						
 		std::string const table_name = test_utils::SIMPLE_TABLE + "_int64";					
 		test_utils::query(session,str(boost::format("CREATE TABLE %s(tweet_id bigint PRIMARY KEY, t1 bigint, t2 decimal, t3 bigint );") % table_name),consistency);					
@@ -969,7 +1039,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 						
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//			
-	{	//// 5. Check the double	
+	{	//// 8. Check the double	
 						
 		std::string const table_name = test_utils::SIMPLE_TABLE + "_double_test";			
 		test_utils::query(session,str(boost::format("CREATE TABLE %s(tweet_id bigint PRIMARY KEY, t1 bigint, t2 decimal, t3 bigint );") % table_name ),consistency);					
