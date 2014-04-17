@@ -48,6 +48,7 @@ struct CqlInet {
 
 struct CqlCluster;
 struct CqlError;
+struct CqlPrepared;
 struct CqlPrepareFuture;
 struct CqlResultFuture;
 struct CqlSession;
@@ -167,6 +168,12 @@ cql_session_shutdown(
     CqlSession*        session,
     CqlSessionFuture** future);
 
+/***********************************************************************************
+ *
+ * Functions which deal with futures
+ *
+ ***********************************************************************************/
+
 /**
  * Free a session instance.
  *
@@ -217,15 +224,14 @@ cql_session_future_wait_timed(
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
 CQL_EXPORT CqlError*
-cql_future_get_error(
+cql_session_future_get_error(
     struct CqlSessionFuture* future);
 
-
-
-
-
-
-
+/***********************************************************************************
+ *
+ * Functions which deal with errors
+ *
+ ***********************************************************************************/
 
 /**
  * Obtain the message from an error structure. This function follows
@@ -279,7 +285,7 @@ cql_error_code(
  * Functions which create ad-hoc queries, prepared statements, bound statements, and
  * allow for the composition of batch statements from queries and bound statements.
  *
- ************************************************************************************/
+ ***********************************************************************************/
 
 /**
  * Initialize an ad-hoc query statement
@@ -310,28 +316,26 @@ cql_session_query(
  */
 CQL_EXPORT CqlError*
 cql_session_prepare(
-    void*  session,
-    char*  query,
-    size_t length,
-    void** future);
+    CqlSession*        session,
+    char*              statement,
+    size_t             length,
+    CqlPrepareFuture** output);
 
 /**
- * Initialize a bound statement from a pre-prepared statement, reserving N slots for
+ * Initialize a bound statement from a pre-prepared statement
  * parameters
  *
  * @param session
  * @param prepared
- * @param params count
- * @param bound
+ * @param output
  *
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
 CQL_EXPORT CqlError*
-cql_prepared_bind(
-    void*  session,
-    void*  prepared,
-    size_t params,
-    void** bound);
+cql_session_bind(
+    CqlSession*    session,
+    CqlPrepared*   prepared,
+    CqlStatement** output);
 
 /**
  * Bind a short to a query or bound statement at the specified index
@@ -540,6 +544,23 @@ cql_statement_bind_varint(
     uint8_t* value,
     size_t   length);
 
+/***********************************************************************************
+ *
+ * Functions dealing with batching multiple statements
+ *
+ ***********************************************************************************/
+
+CQL_EXPORT CqlError*
+cql_session_batch(
+    CqlSession*    session,
+    size_t         consistency,
+    CqlStatement** output);
+
+CQL_EXPORT CqlError*
+cql_batch_add_statement(
+    CqlStatement* batch,
+    CqlStatement* statement);
+
 /**
  * Execute a query, bound or batch statement and obtain a future. Future must be freed by
  * caller.
@@ -561,7 +582,7 @@ cql_statement_exec(
  *
  * Functions dealing with fetching data and meta information from statement results
  *
- ************************************************************************************/
+ ***********************************************************************************/
 
 
 /**

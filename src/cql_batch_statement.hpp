@@ -14,14 +14,15 @@
   limitations under the License.
 */
 
-#ifndef __CQL_BATCH_HPP_INCLUDED__
-#define __CQL_BATCH_HPP_INCLUDED__
+#ifndef __CQL_BATCH_STATEMENT_HPP_INCLUDED__
+#define __CQL_BATCH_STATEMENT_HPP_INCLUDED__
 
 #include <list>
 #include <string>
 #include <utility>
 #include <vector>
-#include "cql_body.hpp"
+#include "cql_message_body.hpp"
+#include "cql_serialization.hpp"
 #include "cql_statement.hpp"
 
 #define CQL_QUERY_FLAG_VALUES             0x01
@@ -30,7 +31,7 @@
 #define CQL_QUERY_FLAG_PAGING_STATE       0x08
 #define CQL_QUERY_FLAG_SERIAL_CONSISTENCY 0x10
 
-struct CqlBatch
+struct CqlBatchStatement
     : public CqlMessageBody {
   typedef std::list<CqlStatement*> StatementCollection;
 
@@ -38,24 +39,24 @@ struct CqlBatch
   StatementCollection statements;
   int16_t             consistency;
 
-  CqlBatch() :
+  CqlBatchStatement() :
       consistency(CQL_CONSISTENCY_ANY)
   {}
 
-  ~CqlBatch() {
-    for (Statement* statement : statements) {
+  ~CqlBatchStatement() {
+    for (CqlStatement* statement : statements) {
       delete statement;
     }
   }
 
   uint8_t
-  opcode() {
+  opcode() const {
     return CQL_OPCODE_BATCH;
   }
 
   void
   add_statement(
-      Statement* statement) {
+      CqlStatement* statement) {
     statements.push_back(statement);
   }
 
@@ -85,7 +86,7 @@ struct CqlBatch
       }
       size += statement->statement_size();
 
-      for (auto value : statement) {
+      for (const auto& value : *statement) {
         size += sizeof(int32_t);
         size += value.second;
       }
@@ -96,10 +97,10 @@ struct CqlBatch
     char* buffer = encode_byte(*output + reserved, type);
     buffer = encode_short(buffer, statements.size());
 
-    for (const Statement* statement : statements) {
+    for (const CqlStatement* statement : statements) {
       buffer = encode_byte(buffer, statement->kind());
 
-      if (statements->kind() == 0) {
+      if (statement->kind() == 0) {
         buffer = encode_long_string(
             buffer,
             statement->statement(),
@@ -112,8 +113,8 @@ struct CqlBatch
       }
 
       buffer = encode_short(buffer, statement->size());
-      for (const auto& value : statement) {
-        buffer = encode_long_string(buffer, value->first, value->second);
+      for (const auto& value : *statement) {
+        buffer = encode_long_string(buffer, value.first, value.second);
       }
     }
     encode_short(buffer, consistency);
@@ -121,8 +122,8 @@ struct CqlBatch
   }
 
  private:
-  CqlQuery(const CqlQuery&) {}
-  void operator=(const CqlQuery&) {}
+  CqlBatchStatement(const CqlBatchStatement&) {}
+  void operator=(const CqlBatchStatement&) {}
 };
 
 #endif

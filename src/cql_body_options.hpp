@@ -19,14 +19,14 @@
 
 #include "cql_message_body.hpp"
 
-struct CqlMessageBodyOptions
+struct BodyOptions
     : public CqlMessageBody {
 
-  CqlMessageBodyOptions()
+  BodyOptions()
   {}
 
   uint8_t
-  opcode() {
+  opcode() const {
     return CQL_OPCODE_OPTIONS;
   }
 
@@ -50,8 +50,8 @@ struct CqlMessageBodyOptions
   }
 
  private:
-  CqlMessageBodyOptions(const CqlMessageBodyOptions&) {}
-  void operator=(const CqlMessageBodyOptions&) {}
+  BodyOptions(const BodyOptions&) {}
+  void operator=(const BodyOptions&) {}
 };
 
 #endif

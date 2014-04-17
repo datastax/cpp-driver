@@ -14,22 +14,22 @@
   limitations under the License.
 */
 
-#ifndef __CQL_PREPARE_HPP_INCLUDED__
-#define __CQL_PREPARE_HPP_INCLUDED__
+#ifndef __CQL_PREPARE_STATEMENT_HPP_INCLUDED__
+#define __CQL_PREPARE_STATEMENT_HPP_INCLUDED__
 
 #include <string>
 #include "cql_message_body.hpp"
 
-struct CqlPrepare
+struct CqlPrepareStatement
     : public CqlMessageBody {
 
   std::string statement;
 
-  CqlPrepare()
+  CqlPrepareStatement()
   {}
 
   uint8_t
-  opcode() {
+  opcode() const {
     return CQL_OPCODE_PREPARE;
   }
 
@@ -70,8 +70,8 @@ struct CqlPrepare
   }
 
  private:
-  CqlPrepare(const CqlPrepare&) {}
-  void operator=(const CqlPrepare&) {}
+  CqlPrepareStatement(const CqlPrepareStatement&) {}
+  void operator=(const CqlPrepareStatement&) {}
 };
 
 #endif

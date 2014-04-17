@@ -14,42 +14,118 @@
   limitations under the License.
 */
 
-#ifndef __CQL_PREPARE_HPP_INCLUDED__
-#define __CQL_PREPARE_HPP_INCLUDED__
+#ifndef __CQL_BOUND_STATEMENT_HPP_INCLUDED__
+#define __CQL_BOUND_STATEMENT_HPP_INCLUDED__
 
+#include <list>
 #include <string>
+#include <utility>
+#include <vector>
+#include "cql_statement.hpp"
 #include "cql_message_body.hpp"
 
-struct CqlPrepare
-    : public CqlMessageBody {
+#define CQL_QUERY_FLAG_VALUES             0x01
+#define CQL_QUERY_FLAG_SKIP_METADATA      0x02
+#define CQL_QUERY_FLAG_PAGE_SIZE          0x04
+#define CQL_QUERY_FLAG_PAGING_STATE       0x08
+#define CQL_QUERY_FLAG_SERIAL_CONSISTENCY 0x10
 
-  std::string statement;
+struct CqlBoundStatement
+    : public CqlMessageBody,
+      public CqlStatement {
+  typedef std::pair<const char*, size_t> Value;
+  typedef std::list<Value>               ValueCollection;
 
-  CqlPrepare()
+  std::string       id;
+  int16_t           consistency_value;
+  int               page_size;
+  std::vector<char> paging_state;
+  int16_t           serial_consistency_value;
+  ValueCollection   values;
+
+ public:
+  CqlBoundStatement() :
+      consistency_value(CQL_CONSISTENCY_ANY),
+      page_size(-1),
+      serial_consistency_value(CQL_CONSISTENCY_ANY)
   {}
 
   uint8_t
-  kind() {
-    // used for batch statements
-    return 1;
+  opcode() const {
+    return CQL_OPCODE_QUERY;
   }
 
   uint8_t
-  opcode() {
-    return CQL_OPCODE_PREPARE;
+  kind() const {
+    // used for batch statements
+    return 0;
   }
 
   void
-  prepare_string(
+  consistency(
+      int16_t consistency) {
+    consistency_value = consistency;
+  }
+
+  int16_t
+  consistency() const {
+    return consistency_value;
+  }
+
+  void
+  serial_consistency(
+      int16_t serial_consistency) {
+    serial_consistency_value = serial_consistency;
+  }
+
+  int16_t
+  serial_consistency() const {
+    return serial_consistency_value;
+  }
+
+  const char*
+  statement() const {
+    return &id[0];
+  }
+
+  size_t
+  statement_size() const {
+    return id.size();
+  }
+
+  virtual void
+  statement(
+      const std::string& statement) {
+    id.assign(statement.begin(), statement.end());
+  }
+
+  void
+  statement(
       const char* input,
       size_t      size) {
-    statement.assign(input, size);
+    id.assign(input, size);
   }
 
   void
-  prepare_string(
-      const std::string& input) {
-    statement = input;
+  add_value(
+      const char* value,
+      size_t      size) {
+    values.push_back(std::make_pair(value, size));
+  }
+
+  inline size_t
+  size() const {
+    return values.size();
+  }
+
+  inline ValueIterator
+  begin() {
+    return values.begin();
+  }
+
+  inline ValueIterator
+  end() {
+    return values.end();
   }
 
   bool
@@ -66,18 +142,79 @@ struct CqlPrepare
       size_t reserved,
       char** output,
       size_t& size) {
-    size    = reserved + sizeof(int32_t) + statement.size();
+    uint8_t  flags  = 0x00;
+    // reserved + the long string
+    size            = reserved + sizeof(int32_t) + id.size();
+    // consistency_value
+    size           += sizeof(int16_t);
+    // flags
+    size           += 1;
+
+    if (serial_consistency_value != 0) {
+      flags |= CQL_QUERY_FLAG_SERIAL_CONSISTENCY;
+      size  += sizeof(int16_t);
+    }
+
+    if (!paging_state.empty()) {
+      flags |= CQL_QUERY_FLAG_PAGING_STATE;
+      size += (sizeof(int16_t) + paging_state.size());
+    }
+
+    if (!values.empty()) {
+      size += sizeof(int16_t);
+      for (ValueCollection::const_iterator it = values.begin();
+           it != values.end();
+           ++it) {
+        size += (sizeof(int32_t) + it->second);
+      }
+      flags |= CQL_QUERY_FLAG_VALUES;
+    }
+
+    if (page_size >= 0) {
+      size += sizeof(int32_t);
+      flags |= CQL_QUERY_FLAG_PAGE_SIZE;
+    }
+
+    if (serial_consistency_value != 0) {
+      size += sizeof(int16_t);
+      flags |= CQL_QUERY_FLAG_SERIAL_CONSISTENCY;
+    }
+
     *output = new char[size];
-    encode_long_string(
+
+    char* buffer = encode_long_string(
         *output + reserved,
-        statement.c_str(),
-        statement.size());
+        id.c_str(),
+        id.size());
+
+    buffer = encode_short(buffer, consistency_value);
+    buffer = encode_byte(buffer, flags);
+
+    if (!values.empty()) {
+      buffer = encode_short(buffer, values.size());
+      for (const auto& value : values) {
+        buffer = encode_long_string(buffer, value.first, value.second);
+      }
+    }
+
+    if (page_size >= 0) {
+      buffer = encode_int(buffer, page_size);
+    }
+
+    if (!paging_state.empty()) {
+      buffer = encode_string(buffer, &paging_state[0], paging_state.size());
+    }
+
+    if (serial_consistency_value != 0) {
+      buffer = encode_short(buffer, serial_consistency_value);
+    }
+
     return true;
   }
 
  private:
-  CqlPrepare(const CqlPrepare&) {}
-  void operator=(const CqlPrepare&) {}
+  CqlBoundStatement(const CqlBoundStatement&) {}
+  void operator=(const CqlBoundStatement&) {}
 };
 
 #endif

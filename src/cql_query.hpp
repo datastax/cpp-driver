@@ -30,7 +30,7 @@
 #define CQL_QUERY_FLAG_PAGING_STATE       0x08
 #define CQL_QUERY_FLAG_SERIAL_CONSISTENCY 0x10
 
-struct CqlQuery
+struct CqlQueryStatement
     : public CqlMessageBody,
       public CqlStatement {
   typedef std::pair<const char*, size_t> Value;
@@ -44,19 +44,19 @@ struct CqlQuery
   ValueCollection   values;
 
  public:
-  CqlQuery() :
+  CqlQueryStatement() :
       consistency_value(CQL_CONSISTENCY_ANY),
       page_size(-1),
       serial_consistency_value(CQL_CONSISTENCY_ANY)
   {}
 
   uint8_t
-  opcode() {
+  opcode() const {
     return CQL_OPCODE_QUERY;
   }
 
   uint8_t
-  kind() {
+  kind() const {
     // used for batch statements
     return 0;
   }
@@ -68,7 +68,7 @@ struct CqlQuery
   }
 
   int16_t
-  consistency() {
+  consistency() const {
     return consistency_value;
   }
 
@@ -79,17 +79,17 @@ struct CqlQuery
   }
 
   int16_t
-  serial_consistency() {
+  serial_consistency() const {
     return serial_consistency_value;
   }
 
   const char*
-  statement() {
+  statement() const {
     return &query[0];
   }
 
   size_t
-  statement_size() {
+  statement_size() const {
     return query.size();
   }
 
@@ -114,7 +114,7 @@ struct CqlQuery
   }
 
   inline size_t
-  size() {
+  size() const {
     return values.size();
   }
 
@@ -125,6 +125,16 @@ struct CqlQuery
 
   inline ValueIterator
   end() {
+    return values.end();
+  }
+
+  inline ConstValueIterator
+  begin() const {
+    return values.begin();
+  }
+
+  inline ConstValueIterator
+  end() const {
     return values.end();
   }
 
@@ -213,8 +223,8 @@ struct CqlQuery
   }
 
  private:
-  CqlQuery(const CqlQuery&) {}
-  void operator=(const CqlQuery&) {}
+  CqlQueryStatement(const CqlQueryStatement&) {}
+  void operator=(const CqlQueryStatement&) {}
 };
 
 #endif

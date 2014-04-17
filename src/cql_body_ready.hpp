@@ -19,14 +19,14 @@
 
 #include "cql_message_body.hpp"
 
-struct CqlMessageBodyReady
+struct BodyReady
     : public CqlMessageBody {
 
-  CqlMessageBodyReady()
+  BodyReady()
   {}
 
   uint8_t
-  opcode() {
+  opcode() const {
     return CQL_OPCODE_READY;
   }
 
@@ -50,8 +50,8 @@ struct CqlMessageBodyReady
   }
 
  private:
-  CqlMessageBodyReady(const CqlMessageBodyReady&) {}
-  void operator=(const CqlMessageBodyReady&) {}
+  BodyReady(const BodyReady&) {}
+  void operator=(const BodyReady&) {}
 };
 
 #endif

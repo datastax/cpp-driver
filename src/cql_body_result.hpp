@@ -25,6 +25,7 @@
 
 #include "cql_message_body.hpp"
 #include "cql_iterable.hpp"
+#include "cql_serialization.hpp"
 
 #define CQL_RESULT_KIND_VOID          1
 #define CQL_RESULT_KIND_ROWS          2
@@ -38,7 +39,7 @@
 
 struct ResultIterator;
 
-struct CqlMessageBodyResult
+struct BodyResult
     : public CqlMessageBody {
 
   struct ColumnMetaData {
@@ -106,7 +107,7 @@ struct CqlMessageBodyResult
   int32_t            row_count;
   char*              rows;
 
-  CqlMessageBodyResult() :
+  BodyResult() :
       kind(0),
       more_pages(false),
       no_metadata(false),
@@ -127,7 +128,7 @@ struct CqlMessageBodyResult
   {}
 
   uint8_t
-  opcode() {
+  opcode() const {
     return CQL_OPCODE_RESULT;
   }
 
@@ -274,21 +275,21 @@ struct CqlMessageBodyResult
   }
 
  private:
-  CqlMessageBodyResult(const CqlMessageBodyResult&) {}
-  void operator=(const CqlMessageBodyResult&) {}
+  BodyResult(const BodyResult&) {}
+  void operator=(const BodyResult&) {}
 };
 
 struct ResultIterator : Iterable {
   typedef std::pair<char*, size_t> Column;
 
-  CqlMessageBodyResult*         result;
+  BodyResult*         result;
   int32_t             row_position;
   char*               position;
   char*               position_next;
   std::vector<Column> row;
 
   ResultIterator(
-      CqlMessageBodyResult* result) :
+      BodyResult* result) :
       Iterable(CQL_ITERABLE_TYPE_RESULT),
       result(result),
       row_position(0),

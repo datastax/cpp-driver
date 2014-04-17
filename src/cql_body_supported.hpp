@@ -22,16 +22,16 @@
 
 #include "cql_message_body.hpp"
 
-struct CqlMessageBodySupported
+struct BodySupported
     : public CqlMessageBody {
   std::list<std::string> compression;
   std::list<std::string> cql_versions;
 
-  CqlMessageBodySupported()
+  BodySupported()
   {}
 
   uint8_t
-  opcode() {
+  opcode() const {
     return CQL_OPCODE_SUPPORTED;
   }
 
@@ -67,8 +67,8 @@ struct CqlMessageBodySupported
   }
 
  private:
-  CqlMessageBodySupported(const CqlMessageBodySupported&) {}
-  void operator=(const CqlMessageBodySupported&) {}
+  BodySupported(const BodySupported&) {}
+  void operator=(const BodySupported&) {}
 };
 
 #endif

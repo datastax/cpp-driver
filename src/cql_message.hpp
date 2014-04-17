@@ -17,6 +17,7 @@
 #ifndef __MESSAGE_HPP_INCLUDED__
 #define __MESSAGE_HPP_INCLUDED__
 
+#include "cql_batch_statement.hpp"
 #include "cql_body_error.hpp"
 #include "cql_body_options.hpp"
 #include "cql_body_prepare.hpp"
@@ -24,28 +25,29 @@
 #include "cql_body_result.hpp"
 #include "cql_body_startup.hpp"
 #include "cql_body_supported.hpp"
+#include "cql_bound_statement.hpp"
 #include "cql_query.hpp"
 
 
 #define CQL_HEADER_SIZE 8
 
-struct Message {
-  uint8_t               version;
-  int8_t                flags;
-  int8_t                stream;
-  uint8_t               opcode;
-  int32_t               length;
-  int32_t               received;
-  bool                  header_received;
-  char                  header_buffer[CQL_HEADER_SIZE];
-  char*                 header_buffer_pos;
+struct CqlMessage {
+  uint8_t                         version;
+  int8_t                          flags;
+  int8_t                          stream;
+  uint8_t                         opcode;
+  int32_t                         length;
+  int32_t                         received;
+  bool                            header_received;
+  char                            header_buffer[CQL_HEADER_SIZE];
+  char*                           header_buffer_pos;
   std::unique_ptr<CqlMessageBody> body;
-  std::unique_ptr<char> body_buffer;
-  char*                 body_buffer_pos;
-  bool                  body_ready;
-  bool                  body_error;
+  std::unique_ptr<char>           body_buffer;
+  char*                           body_buffer_pos;
+  bool                            body_ready;
+  bool                            body_error;
 
-  Message() :
+  CqlMessage() :
       version(0x02),
       flags(0),
       stream(0),
@@ -57,7 +59,7 @@ struct Message {
       body_ready(false)
   {}
 
-  Message(
+  CqlMessage(
       uint8_t  opcode) :
       version(0x02),
       flags(0),
@@ -76,28 +78,28 @@ struct Message {
       uint8_t  opcode) {
     switch (opcode) {
       case CQL_OPCODE_RESULT:
-        return static_cast<CqlMessageBody*>(new CqlMessageBodyResult());
+        return static_cast<CqlMessageBody*>(new BodyResult());
 
       case CQL_OPCODE_PREPARE:
-        return static_cast<CqlMessageBody*>(new CqlPrepare());
+        return static_cast<CqlMessageBody*>(new CqlPrepareStatement());
 
       case CQL_OPCODE_ERROR:
-        return static_cast<CqlMessageBody*>(new CqlMessageBodyError());
+        return static_cast<CqlMessageBody*>(new BodyError());
 
       case CQL_OPCODE_OPTIONS:
-        return static_cast<CqlMessageBody*>(new CqlMessageBodyOptions());
+        return static_cast<CqlMessageBody*>(new BodyOptions());
 
       case CQL_OPCODE_STARTUP:
-        return static_cast<CqlMessageBody*>(new CqlMessageBodyStartup());
+        return static_cast<CqlMessageBody*>(new BodyStartup());
 
       case CQL_OPCODE_SUPPORTED:
-        return static_cast<CqlMessageBody*>(new CqlMessageBodySupported());
+        return static_cast<CqlMessageBody*>(new BodySupported());
 
       case CQL_OPCODE_QUERY:
-        return static_cast<CqlMessageBody*>(new CqlQuery());
+        return static_cast<CqlMessageBody*>(new CqlQueryStatement());
 
       case CQL_OPCODE_READY:
-        return static_cast<CqlMessageBody*>(new CqlMessageBodyReady());
+        return static_cast<CqlMessageBody*>(new BodyReady());
 
       default:
         assert(false);

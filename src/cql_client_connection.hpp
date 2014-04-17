@@ -80,14 +80,14 @@ struct ClientConnection {
     ClientConnection* connection;
   };
 
-  ClientConnectionState    state_;
-  uv_loop_t*               loop_;
-  std::unique_ptr<Message> incomming_;
-  StreamStorageCollection  stream_storage_;
-  ConnectionCallback       connect_callback_;
-  KeyspaceCallback         keyspace_callback_;
-  PrepareCallback          prepare_callback_;
-  LogCallback              log_callback_;
+  ClientConnectionState       state_;
+  uv_loop_t*                  loop_;
+  std::unique_ptr<CqlMessage> incomming_;
+  StreamStorageCollection     stream_storage_;
+  ConnectionCallback          connect_callback_;
+  KeyspaceCallback            keyspace_callback_;
+  PrepareCallback             prepare_callback_;
+  LogCallback                 log_callback_;
 
   // DNS and hostname stuff
   struct sockaddr_in       address_;
@@ -116,7 +116,7 @@ struct ClientConnection {
       SSLSession* ssl_session) :
       state_(CLIENT_STATE_NEW),
       loop_(loop),
-      incomming_(new Message()),
+      incomming_(new CqlMessage()),
       connect_callback_(nullptr),
       keyspace_callback_(nullptr),
       prepare_callback_(nullptr),
@@ -209,8 +209,8 @@ struct ClientConnection {
       }
 
       if (incomming_->body_ready) {
-        Message* message = incomming_.release();
-        incomming_.reset(new Message());
+        CqlMessage* message = incomming_.release();
+        incomming_.reset(new CqlMessage());
 
         char log_message[512];
         snprintf(
@@ -424,12 +424,12 @@ struct ClientConnection {
 
   void
   on_result(
-      Message* response) {
+      CqlMessage* response) {
     log(CQL_LOG_DEBUG, "on_result");
 
     CqlError*      err     = NULL;
     CallerRequest* request = NULL;
-    CqlMessageBodyResult*    result  = static_cast<CqlMessageBodyResult*>(response->body.get());
+    BodyResult*    result  = static_cast<BodyResult*>(response->body.get());
 
     switch (result->kind) {
       case CQL_RESULT_KIND_SET_KEYSPACE:
@@ -484,9 +484,9 @@ struct ClientConnection {
 
   void
   on_error(
-      Message* response) {
+      CqlMessage* response) {
     log(CQL_LOG_DEBUG, "on_error");
-    CqlMessageBodyError* error = static_cast<CqlMessageBodyError*>(response->body.get());
+    BodyError* error = static_cast<BodyError*>(response->body.get());
 
     if (state_ < CLIENT_STATE_READY) {
       notify_error(
@@ -502,7 +502,7 @@ struct ClientConnection {
 
   void
   on_ready(
-      Message* response) {
+      CqlMessage* response) {
     log(CQL_LOG_DEBUG, "on_ready");
     delete response;
     state_ = CLIENT_STATE_READY;
@@ -511,10 +511,10 @@ struct ClientConnection {
 
   void
   on_supported(
-      Message* response) {
+      CqlMessage* response) {
     log(CQL_LOG_DEBUG, "on_supported");
-    CqlMessageBodySupported* supported
-        = static_cast<CqlMessageBodySupported*>(response->body.get());
+    BodySupported* supported
+        = static_cast<BodySupported*>(response->body.get());
 
     // TODO(mstump) do something with the supported info
     (void) supported;
@@ -527,8 +527,8 @@ struct ClientConnection {
   void
   set_keyspace(
       const std::string& keyspace) {
-    Message   message(CQL_OPCODE_QUERY);
-    CqlQuery* query = static_cast<CqlQuery*>(message.body.get());
+    CqlMessage message(CQL_OPCODE_QUERY);
+    CqlQueryStatement* query = static_cast<CqlQueryStatement*>(message.body.get());
     query->statement("USE " + keyspace);
     send_message(&message, NULL);
   }
@@ -553,15 +553,15 @@ struct ClientConnection {
   void
   send_options() {
     log(CQL_LOG_DEBUG, "send_options");
-    Message message(CQL_OPCODE_OPTIONS);
+    CqlMessage message(CQL_OPCODE_OPTIONS);
     send_message(&message, NULL);
   }
 
   void
   send_startup() {
     log(CQL_LOG_DEBUG, "send_startup");
-    Message      message(CQL_OPCODE_STARTUP);
-    CqlMessageBodyStartup* startup = static_cast<CqlMessageBodyStartup*>(message.body.get());
+    CqlMessage      message(CQL_OPCODE_STARTUP);
+    BodyStartup* startup = static_cast<BodyStartup*>(message.body.get());
     startup->cql_version = cql_version_;
     send_message(&message, NULL);
   }
@@ -592,8 +592,8 @@ struct ClientConnection {
       size_t                  size,
       CallerRequest::Callback callback = NULL) {
     CallerRequest* request = new CallerRequest();
-    Message*       message = new Message(CQL_OPCODE_PREPARE);
-    CqlPrepare*   prepare = static_cast<CqlPrepare*>(message->body.get());
+    CqlMessage*       message = new CqlMessage(CQL_OPCODE_PREPARE);
+    CqlPrepareStatement*   prepare = static_cast<CqlPrepareStatement*>(message->body.get());
     prepare->prepare_string(statement, size);
 
     request->callback = callback;
@@ -609,7 +609,7 @@ struct ClientConnection {
 
   CallerRequest*
   exec(
-      Message*                message,
+      CqlMessage*                message,
       CallerRequest::Callback callback = NULL) {
     CallerRequest* request = new CallerRequest();
     request->callback = callback;
@@ -623,7 +623,7 @@ struct ClientConnection {
 
   CqlError*
   send_message(
-      Message* message,
+      CqlMessage* message,
       CallerRequest* request = NULL) {
     uv_buf_t   buf;
     CqlError*  err = stream_storage_.set_stream(request, message->stream);

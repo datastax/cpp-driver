@@ -20,7 +20,7 @@
 #include "cql_message_body.hpp"
 #include "cql_serialization.hpp"
 
-struct CqlMessageBodyError
+struct BodyError
     : public CqlMessageBody {
 
   std::unique_ptr<char> guard;
@@ -28,13 +28,13 @@ struct CqlMessageBodyError
   char*                 message;
   size_t                message_size;
 
-  CqlMessageBodyError() :
+  BodyError() :
       code(0xFFFFFFFF),
       message(NULL),
       message_size(0)
   {}
 
-  CqlMessageBodyError(
+  BodyError(
       int32_t     code,
       const char* input,
       size_t      input_size) :
@@ -46,7 +46,7 @@ struct CqlMessageBodyError
   }
 
   uint8_t
-  opcode() {
+  opcode() const {
     return CQL_OPCODE_ERROR;
   }
 
@@ -75,8 +75,8 @@ struct CqlMessageBodyError
   }
 
  private:
-  CqlMessageBodyError(const CqlMessageBodyError&) {}
-  void operator=(const CqlMessageBodyError&) {}
+  BodyError(const BodyError&) {}
+  void operator=(const BodyError&) {}
 };
 
 #endif

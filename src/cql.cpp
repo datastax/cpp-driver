@@ -115,7 +115,7 @@ cql_session_future_wait_timed(
 }
 
 CqlError*
-cql_future_get_error(
+cql_session_future_get_error(
     struct CqlSessionFuture* future) {
   return future->request->error;
 }
@@ -151,13 +151,13 @@ cql_error_code(
 
 CqlError*
 cql_session_query(
-    CqlSession* session,
-    char*       statement,
-    size_t      length,
-    size_t      consistency,
-    CqlQuery**  output) {
+    CqlSession*    session,
+    char*          statement,
+    size_t         length,
+    size_t         consistency,
+    CqlStatement** output) {
   (void) session;
-  *output = new CqlQuery();
+  *output = new CqlQueryStatement();
   (*output)->statement(statement, length);
   (*output)->consistency(consistency);
   return CQL_ERROR_NO_ERROR;
@@ -168,14 +168,30 @@ cql_session_prepare(
     CqlSession*         session,
     char*               statement,
     size_t              length,
-    CqlPrepareFuture** output) {
+    CqlPrepareFuture**  output) {
   return CQL_ERROR_NO_ERROR;
 }
 
 CqlError*
-cql_statement_add_value(
-    CqlStatement* statement,
-    char*         value,
-    size_t        size) {
+cql_session_bind(
+    CqlSession*    session,
+    CqlPrepared*   prepared,
+    CqlStatement** output) {
+  (void) session;
+  return CQL_ERROR_NO_ERROR;
+}
+
+CqlError*
+cql_session_batch(
+    CqlSession*    session,
+    size_t         consistency,
+    CqlStatement** output) {
+  return CQL_ERROR_NO_ERROR;
+}
+
+CqlError*
+cql_batch_add_statement(
+    CqlBatchStatement*     batch,
+    CqlStatement* statement) {
   return CQL_ERROR_NO_ERROR;
 }

@@ -44,13 +44,14 @@
 #define CQL_OPCODE_EXECUTE      0x0A
 #define CQL_OPCODE_REGISTER     0x0B
 #define CQL_OPCODE_EVENT        0x0C
+#define CQL_OPCODE_BATCH        0x0D
 
 #include "cql_request.hpp"
 #include "cql_error.hpp"
 #include "cql_message.hpp"
 
 typedef std::function<void(int, const char*, size_t)> LogCallback;
-typedef Request<std::string, CqlError*, Message*> CallerRequest;
+typedef Request<std::string, CqlError*, CqlMessage*> CallerRequest;
 
 uv_buf_t
 alloc_buffer(

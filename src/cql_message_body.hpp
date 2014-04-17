@@ -22,7 +22,7 @@ struct CqlMessageBody {
   {}
 
   virtual uint8_t
-  opcode() = 0;
+  opcode() const = 0;
 
   virtual bool
   consume(

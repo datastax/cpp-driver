@@ -22,19 +22,19 @@
 
 #include "cql_message_body.hpp"
 
-struct CqlMessageBodyStartup
+struct BodyStartup
     : public CqlMessageBody {
   std::unique_ptr<char> guard;
   std::string           cql_version;
   std::string           compression;
 
-  CqlMessageBodyStartup() :
+  BodyStartup() :
       cql_version("3.0.0"),
       compression("")
   {}
 
   uint8_t
-  opcode() {
+  opcode() const {
     return CQL_OPCODE_STARTUP;
   }
 
@@ -88,8 +88,8 @@ struct CqlMessageBodyStartup
  private:
   typedef std::map<std::string, std::string> OptionsCollection;
 
-  CqlMessageBodyStartup(const CqlMessageBodyStartup&) {}
-  void operator=(const CqlMessageBodyStartup&) {}
+  BodyStartup(const BodyStartup&) {}
+  void operator=(const BodyStartup&) {}
 };
 
 #endif
