@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 #include "cql_error.hpp"
-#include "cql_mpmc_queue.hpp"
+#include "cql_spsc_queue.hpp"
 #include "cql_pool.hpp"
 #include "cql_request.hpp"
 #include "cql_io_worker.hpp"
@@ -40,7 +40,7 @@ struct CqlSession {
   std::vector<IOWorker*>        io_loops;
   SSLContext*                   ssl_context;
   LogCallback                   log_callback;
-  MpmcQueue<CallerRequest*>     queue;
+  SPSCQueue<CallerRequest*>     queue;
   std::string                   keyspace;
   std::list<CqlSessionRequest*> connect_listeners;
   std::mutex                    mutex;
