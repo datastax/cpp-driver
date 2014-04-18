@@ -92,11 +92,11 @@ generate_random_string(int size)
 		int j = rand() % 3;
 
 		if(j == 0)
-			res += unsigned char( '0' + static_cast< unsigned char >( rand() % 9 ) );
+			res += unsigned char('0' + static_cast< unsigned char >(rand() % 9));
 		else if(j == 1)
-			res += unsigned char( 'a' + static_cast< unsigned char >( rand() % 23 ) );
+			res += unsigned char('a' + static_cast< unsigned char >(rand() %23));
 		else if(j == 2)
-			res += unsigned char( 'A' + static_cast< unsigned char >( rand() % 23 ) );
+			res += unsigned char('A' + static_cast< unsigned char >(rand() % 23));
 	}					
 	return res;		
 }					
@@ -240,7 +240,7 @@ make_conversion_uuid_to_string_2(std::vector<cql::cql_byte_t> const & v)
 			result += "-";	
 		
 		for(int j = 0; j < 2; ++j) {
-			result += ( b[j] < 10 ) ? ( '0' + b[j] ) : ( 'a' + b[j] - 10 );
+			result += (b[j] < 10) ? ('0' + b[j]) : ('a' + b[j] - 10);
 		}	
 	}		
 			
@@ -314,7 +314,7 @@ boost::multiprecision::cpp_int generate_random_cpp_int(int digits_number)
 {
 	boost::multiprecision::cpp_int result(rand() + 600);
 
-	for( int i = 0; i < digits_number; ++i )
+	for(int i = 0; i < digits_number; ++i)
 		result = result * boost::multiprecision::cpp_int(rand() + 600 ) + rand();
 
 	if(rand() % 2 == 0)
@@ -361,10 +361,10 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 		
 		int const integer_number_of_rows = number_of_records_inserted_to_one_table;
 		for(int i = 0; i < integer_number_of_rows; ++i) {
-			boost::multiprecision::cpp_int const t01 = generate_random_cpp_int( rand() % 100 + 1 );	
+			boost::multiprecision::cpp_int const t01 = generate_random_cpp_int(rand() % 100 + 1);	
 			m_multiprec.insert(std::make_pair(i,t01));		
 			std::string ts = t01.str();	
-			std::string query_string( boost::str(boost::format("INSERT INTO %s (t00,t01) VALUES (%d,%s);")  % table_name % i % ts ));
+			std::string query_string(boost::str(boost::format("INSERT INTO %s (t00,t01) VALUES (%d,%s);")  % table_name % i % ts));
 			std::cout << query_string << std::endl;	
 			boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));	
 			session->query(_query);			
@@ -377,7 +377,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 			++number_of_rows_selected;
 
 			cql::cql_bigint_t t_00_(0);
-			if(!result->get_bigint( 0, t_00_ ) )
+			if(!result->get_bigint(0, t_00_))
 			{
 				BOOST_FAIL("Fail in reading data from result.");
 			}
@@ -388,7 +388,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 			}	
 
 			std::map< int, boost::multiprecision::cpp_int >::const_iterator p = m_multiprec.find(t_00_);
-			if( p == m_multiprec.end() ) {
+			if(p == m_multiprec.end()) {
 				BOOST_FAIL("Fail in reading data from result.");
 			}
 
@@ -448,7 +448,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 		std::map<int,cql::cql_bigint_t> t_14_map;
 		std::map<int,std::string> t_15_map;
 			
-		for(int i = 0; i < integer_number_of_rows; ++i) {	
+		for(int i = 0; i < integer_number_of_rows; ++i) {
 			cql::cql_bigint_t t_01 = generate_random_int_64();
 			std::string t_02 = generate_random_string(rand() % 400 + 1);
 					
@@ -474,12 +474,12 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 			std::vector<cql::cql_byte_t> t_12_3;
 			convert_timestamp_to_uuid_2(t_12_2, t_12_3);
 			std::string t_12 = make_conversion_uuid_to_string_2(t_12_3);
-						
+			
 			std::string t_13 = generate_random_string(rand() % 2400 + 1);
 			cql::cql_bigint_t t_14 = generate_random_int_64();	
-					
+			
 			std::string t_15 = rand() % 2 == 0 ? generate_random_inet_v6() : generate_random_inet();
-				
+			
 			t_01_map.insert(std::make_pair(i,t_01));
 			t_02_map.insert(std::make_pair(i,t_02));;
 			t_03_map.insert(std::make_pair(i,t_03_2));;
@@ -496,12 +496,12 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 			t_14_map.insert(std::make_pair(i,t_14));;
 			t_15_map.insert(std::make_pair(i,t_15));;
 											
-			std::string query_string( boost::str(boost::format("INSERT INTO %s (t00,t01,t02,t03,t04,t05,t06,t07,t08,t09,t10,t11,t12,t13,t14,t15) VALUES (%d, %d,'%s',%s,%s,%1.22d,%1.22d,%1.22d,%d,'%s',%d,%s,%s,'%s',%d,'%s' );")  % table_name % i % t_01 % t_02 % t_03 % t_04_str % t_05 % t_06 % t_07 % t_08 % t_09 % t_10 % t_11 % t_12 % t_13 % t_14 % t_15));			
+			std::string query_string(boost::str(boost::format("INSERT INTO %s (t00,t01,t02,t03,t04,t05,t06,t07,t08,t09,t10,t11,t12,t13,t14,t15) VALUES (%d, %d,'%s',%s,%s,%1.22d,%1.22d,%1.22d,%d,'%s',%d,%s,%s,'%s',%d,'%s' );")  % table_name % i % t_01 % t_02 % t_03 % t_04_str % t_05 % t_06 % t_07 % t_08 % t_09 % t_10 % t_11 % t_12 % t_13 % t_14 % t_15));
 			boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));	
 			session->query(_query);										
 		}		
 				
-		boost::shared_ptr<cql::cql_result_t> result = test_utils::query(session,str(boost::format("SELECT t00,t01,t02,t03,t04,t05,t06,t07,t08,t09,t10,t11,t12,t13,t14,t15 FROM %s;") % table_name),consistency);		
+		boost::shared_ptr<cql::cql_result_t> result = test_utils::query(session,str(boost::format("SELECT t00,t01,t02,t03,t04,t05,t06,t07,t08,t09,t10,t11,t12,t13,t14,t15 FROM %s;") % table_name),consistency);
 				
 		int number_of_rows_selected(0);
 		while(result->next()) {					
@@ -524,7 +524,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 			cql::cql_bigint_t t_14_(0.0);						
 
 			if(!result->get_bigint(0,t_00_)) {
-				BOOST_FAIL( "Wrong value for type: bigint for primary key" );
+				BOOST_FAIL("Wrong value for type: bigint for primary key");
 			}
 
 			if(result->get_bigint(1,t_01_)) {
@@ -534,17 +534,17 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 				}	
 			}
 			else {
-				BOOST_FAIL( "Fail in reading data from result." );
+				BOOST_FAIL("Fail in reading data from result.");
 			}
 
 			if(result->get_ascii(2,t_02_)) {
 				if(t_02_map[t_00_] != t_02_) {
 					std::cout << t_02_map[t_00_] << " <> " <<  t_02_ << std::endl;
-					BOOST_FAIL( "Wrong value for type: ascii" );
+					BOOST_FAIL("Wrong value for type: ascii");
 				}
 			}
 			else {
-				BOOST_FAIL( "Fail in reading data from result." );
+				BOOST_FAIL("Fail in reading data from result.");
 			}
 
 			if(result->get_blob(3,t_03_)) {			//// get blob as copied vector.	
@@ -725,10 +725,10 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 			generate_random_blob(blob_vector, rand() % 10000 + 1);
 			std::string blob_str = convert_blob_vector_to_string(blob_vector);					
 			blob_map.insert(std::make_pair(i, blob_vector ));
-			std::string query_string(boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3) VALUES (%d,%d,%s,%d);") % table_name % i % i % blob_str % i ));	
-			boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));	
-			session->query(_query);										
-		}		
+			std::string query_string(boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3) VALUES (%d,%d,%s,%d);") % table_name % i % i % blob_str % i));
+			boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));
+			session->query(_query);
+		}	
 						
 		boost::shared_ptr<cql::cql_result_t> result = test_utils::query(session,str(boost::format("SELECT t1, t2, t3 FROM %s;") % table_name),consistency);		
 		cql::cql_bigint_t row_count(0);
@@ -745,7 +745,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 			result->get_bigint(2,t2);
 				
 			if(!result->get_blob(1,blob_1)) {			
-				BOOST_FAIL("Blob. Error receiving blob as vector." );
+				BOOST_FAIL("Blob. Error receiving blob as vector.");
 			}		
 				
 			if(!result->get_blob(1,blob_2)) {			
@@ -802,7 +802,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 			session->query(_query);										
 		}		
 						
-		boost::shared_ptr<cql::cql_result_t> result = test_utils::query(session,str(boost::format("SELECT t1, t2, t3 FROM %s;") % table_name),consistency );
+		boost::shared_ptr<cql::cql_result_t> result = test_utils::query(session,str(boost::format("SELECT t1, t2, t3 FROM %s;") % table_name),consistency);
 		cql::cql_bigint_t row_count(0);
 
 		int number_of_rows_selected(0);
@@ -822,8 +822,8 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 				}		
 												
 				if(inet_3.to_string() != p->second) {	
-					std::string a1 = inet_3.to_string();   //// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
-					std::string a2 = p->second;	
+					std::string a1 = inet_3.to_string();
+					std::string a2 = p->second;
 					if(!compare_two_inet_ipv6(a1,a2)) {
 						BOOST_FAIL("The value of inet is not correct.");
 					}
@@ -920,9 +920,9 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 				ii = i - 5;				
 										
 			int_map.insert(std::make_pair(i,ii));
-			std::string query_string( boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3) VALUES (%d,%d,%d,%d);") % test_utils::SIMPLE_TABLE % i % i % ii % i));	
+			std::string query_string(boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3) VALUES (%d,%d,%d,%d);") % test_utils::SIMPLE_TABLE % i % i % ii % i));	
 			boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));	
-			session->query(_query);										
+			session->query(_query);									
 		}			
 					
 		cql::cql_bigint_t row_count(0);										
@@ -989,8 +989,8 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 			}				
 					
 			int64_map.insert(std::make_pair(i,ii));
-			std::string query_string( boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3) VALUES (%d,%d,%d,%d);") % table_name % i % i % ii % i ));	
-			boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));	
+			std::string query_string(boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3) VALUES (%d,%d,%d,%d);") % table_name % i % i % ii % i));	
+			boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));
 			session->query(_query);										
 		}			
 											
@@ -1017,7 +1017,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 					BOOST_FAIL("The value of INT64 is not correct.");
 				}
 
-				if(result->get_decimal_is_int(1)) {		//// the value is so small that it should be able to retrieve as int32.
+				if(result->get_decimal_is_int(1)) {		//// the value is so small that it should be possible to retrieve as int32.
 					cql::cql_int_t i32(0);
 					result->get_decimal_int(1,i32);
 					
@@ -1053,16 +1053,16 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 				ii = i - 5;	
 												
 			double_map.insert(std::make_pair(i,ii));
-			std::string query_string(boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3) VALUES (%d,%d,%1.25d,%d);") % table_name % i % i % ii % i ));
-			boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));	
-			session->query(_query);								
-		}										
+			std::string query_string(boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3) VALUES (%d,%d,%1.25d,%d);") % table_name % i % i % ii % i));
+			boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));
+			session->query(_query);
+		}			
 																												
 		boost::shared_ptr<cql::cql_result_t> result = test_utils::query(session,str(boost::format("SELECT t1, t2, t3 FROM %s;") % table_name),consistency);
 										
 		int number_of_rows_selected(0);
 		while(result->next())
-		{					
+		{
 			++number_of_rows_selected;
 			cql::cql_bigint_t t1(0), t2(0);						
 			result->get_bigint(0,t1);
@@ -1117,4 +1117,4 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 					
 BOOST_AUTO_TEST_SUITE_END()	
 				
-			
+	

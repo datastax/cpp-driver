@@ -381,11 +381,11 @@ public:
 				
 	bool		
 	get_inet(int i, 
-			 /* cql_host_t::ip_address_t */ boost::asio::ip::address & output) const;			//// return inet.
+			 boost::asio::ip::address & output) const;			//// return inet.
 					
 	bool		
 	get_inet(std::string const& column,
-			 /* cql_host_t::ip_address_t */ boost::asio::ip::address & output) const;			//// return inet.
+			 boost::asio::ip::address & output) const;			//// return inet.
 
 	bool 
 	get_varint(int i,		
@@ -394,7 +394,7 @@ public:
 	bool
 	get_varint(std::string const& column, 
 			   boost::multiprecision::cpp_int & output) const;			//// return boost multiprecision cpp_int
-		
+
 private:
 
 	std::string convert_uuid_to_string( std::vector<cql::cql_byte_t> const& v ) const;	
