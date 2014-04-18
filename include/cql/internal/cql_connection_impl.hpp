@@ -400,7 +400,7 @@ public:
         }
         
         _closing = true;
-        log(CQL_LOG_INFO, "closing connection");
+        log(CQL_LOG_INFO, "closing connection (" + boost::lexical_cast<std::string>(this) + ")");
 
         const cql_error_t error
             = cql_error_t::transport_error(boost::system::errc::connection_aborted,
@@ -970,6 +970,12 @@ private:
     void
     header_read()
     {
+        boost::mutex::scoped_lock lock(_mutex);
+        if (_closing) {
+            log(CQL_LOG_INFO, "header_read: connection (" + boost::lexical_cast<std::string>(this) + ") is closing");
+            return;
+        }
+
         boost::asio::async_read(*_transport,
                                 boost::asio::buffer(_response_header.buffer()->data(), _response_header.size()),
 #if BOOST_VERSION >= 104800
@@ -1007,6 +1013,7 @@ private:
 		}
 		else if (err.value() == boost::system::errc::operation_canceled) {
 			/* do nothing */
+		    log(CQL_LOG_INFO, "header_read_handle: connection (" +  boost::lexical_cast<std::string>(this) + "), operation cancelled");
 		}
 		else if (err == boost::asio::error::eof) {
             // Endopint was closed. The connection is set to defunct state and should not throw.
@@ -1051,7 +1058,13 @@ private:
             break;
         }
 
-        boost::asio::async_read(*_transport,
+        boost::mutex::scoped_lock lock(_mutex);
+        if (_closing) {
+            log(CQL_LOG_INFO, "body_read: connection (" + boost::lexical_cast<std::string>(this) + ") is closing");
+            return;
+        }
+
+		boost::asio::async_read(*_transport,
                                 boost::asio::buffer(header.length()==0 ? 0 : _response_message->buffer()->data(), _response_message->size()),
 #if BOOST_VERSION >= 104800
                                 boost::asio::transfer_exactly(header.length()),
@@ -1123,6 +1136,10 @@ private:
                 log(CQL_LOG_ERROR, "error reading body " + err.message());
                 return;
             }
+            else if (err.value() == boost::system::errc::operation_canceled) {
+                log(CQL_LOG_INFO, "error reading body " + err.message());
+                return;
+            }
             
             log(CQL_LOG_ERROR, "error reading body " + err.message());
             check_transport_err(err);
@@ -1190,10 +1207,10 @@ private:
 
             if (!_callback_storage.has_callbacks(stream)) {
                 log(CQL_LOG_INFO, "no callback found for message " + header.str() + " " + _response_message->str());
-                
+
                 if (_connect_errback ) {
                     cql::cql_error_t e = cql::cql_error_t::cassandra_error(CQL_ERROR_PROTOCOL,
-                        "cql::cql_connection_impl_t::body_read_handle: CQL_OPCODE_ERROR, unexpected stream");
+						"cql::cql_connection_impl_t::body_read_handle: CQL_OPCODE_ERROR, unexpected stream");
                     _connect_errback(this->shared_from_this(), e);
                 }
             }
