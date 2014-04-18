@@ -141,7 +141,7 @@ cql::cql_message_execute_impl_t::push_back(const double val) {
 
 void
 cql::cql_message_execute_impl_t::push_back(const bool val) {
-    cql::cql_message_execute_impl_t::param_t p
+    cql::cql_message_execute_impl_t::param_t* p
         = new cql::cql_message_execute_impl_t::param_t;
     cql::encode_bool(*p, val);
     _params.push_back(p);
@@ -274,7 +274,7 @@ cql::cql_message_execute_impl_t::prepare(cql::cql_error_t*) {
             cql::encode_bytes(stream, *p);
         } else {
             cql::cql_int_t v = htonl(-1);
-            stream::write(reinterpret_cast<char*>(&v), sizeof(v));
+            stream.write(reinterpret_cast<char*>(&v), sizeof(v));
         }
     }
 
