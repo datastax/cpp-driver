@@ -86,6 +86,9 @@ public:
     push_back(const bool val);
 
     void
+    push_back_null();
+
+    void
     pop_back();
 
     boost::shared_ptr<cql_message_execute_impl_t>
