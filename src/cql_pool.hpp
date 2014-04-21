@@ -34,6 +34,7 @@ class Pool {
   size_t               core_connections_per_host_;
   size_t               max_connections_per_host_;
   size_t               max_simultaneous_creation_;
+  size_t               connection_request_queue_size_;
   ConnectionCollection connections_;
   ConnectionCollection connections_pending_;
 
@@ -42,14 +43,12 @@ class Pool {
       uv_loop_t*         loop,
       SSLContext*        ssl_context,
       const std::string& address,
-//      HostDistance       distance,
       size_t             core_connections_per_host,
       size_t             max_connections_per_host,
       size_t             max_simultaneous_creation = 1) :
       loop_(loop),
       ssl_context_(ssl_context),
       address_(address),
-//      distance_(distance),
       core_connections_per_host_(core_connections_per_host),
       max_connections_per_host_(max_connections_per_host),
       max_simultaneous_creation_(max_simultaneous_creation) {
@@ -62,10 +61,8 @@ class Pool {
   connect_callback(
       ClientConnection* connection,
       CqlError*         error) {
-
     (void) connection;
     (void) error;
-
   }
 
   ~Pool() {
@@ -94,6 +91,7 @@ class Pool {
   spawn_connection() {
     ClientConnection* connection = new ClientConnection(
         loop_,
+        connection_request_queue_size_,
         ssl_context_ ? ssl_context_->session_new() : NULL);
 
     connection->init(

@@ -88,6 +88,7 @@ struct ClientConnection {
   KeyspaceCallback            keyspace_callback_;
   PrepareCallback             prepare_callback_;
   LogCallback                 log_callback_;
+  SPSCQueue<CallerRequest*>   request_queue_;
 
   // DNS and hostname stuff
   struct sockaddr_in       address_;
@@ -112,7 +113,8 @@ struct ClientConnection {
 
   explicit
   ClientConnection(
-      uv_loop_t* loop,
+      uv_loop_t*  loop,
+      size_t      request_queue_size,
       SSLSession* ssl_session) :
       state_(CLIENT_STATE_NEW),
       loop_(loop),
@@ -121,6 +123,7 @@ struct ClientConnection {
       keyspace_callback_(nullptr),
       prepare_callback_(nullptr),
       log_callback_(nullptr),
+      request_queue_(request_queue_size),
       address_family_(PF_INET),         // use ipv4 by default
       hostname_("localhost"),
       port_("9042"),
@@ -710,7 +713,6 @@ struct ClientConnection {
   }
 
  private:
-  ClientConnection(const ClientConnection&) {}
   void operator=(const ClientConnection&) {}
 };
 

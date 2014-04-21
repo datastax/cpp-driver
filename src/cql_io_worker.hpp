@@ -27,12 +27,14 @@ struct IOWorker {
   typedef std::shared_ptr<Pool>  PoolPtr;
   typedef std::unordered_map<std::string, PoolPtr> PoolCollection;
 
-  uv_thread_t    thread;
-  uv_loop_t*     loop;
-  SSLContext*    ssl_context;
-  PoolCollection pools;
+  uv_thread_t               thread;
+  uv_loop_t*                loop;
+  SSLContext*               ssl_context;
+  PoolCollection            pools;
 
-  IOWorker() :
+  explicit
+  IOWorker(
+      size_t io_queue_size) :
       loop(uv_loop_new())
   {}
 

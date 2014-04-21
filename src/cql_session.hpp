@@ -22,37 +22,65 @@
 #include <string>
 #include <vector>
 #include "cql_error.hpp"
+#include "cql_mpmc_queue.hpp"
 #include "cql_spsc_queue.hpp"
 #include "cql_pool.hpp"
 #include "cql_request.hpp"
 #include "cql_io_worker.hpp"
 
 typedef Request<CqlSession*, CqlError*, CqlSession*> CqlSessionRequest;
+// typedef std::function<int(char* host, size_t host_size)> LoadBalancerDistanceCallback;
+typedef int (*LoadBalancerDistanceCallback)(char* host, size_t host_size);
 
 struct CqlSession {
   enum CqlSessionState {
     SESSION_STATE_NEW,
+    SESSION_STATE_CONNECTING,
     SESSION_STATE_READY,
     SESSION_STATE_DISCONNECTING,
     SESSION_STATE_DISCONNECTED
   };
 
+  typedef std::unordered_map<std::string, IOWorker*> WorkerIndex;
+
+  std::atomic<CqlSessionState>  state;
+  uv_thread_t                   thread;
+  uv_loop_t*                    loop;
+  uv_async_t                    async_connect;
+  uv_async_t                    async_prepare;
   std::vector<IOWorker*>        io_loops;
   SSLContext*                   ssl_context;
   LogCallback                   log_callback;
-  SPSCQueue<CallerRequest*>     queue;
   std::string                   keyspace;
-  std::list<CqlSessionRequest*> connect_listeners;
-  std::mutex                    mutex;
-  CqlSessionState               state;
+  CqlSessionRequest*            connect_session_request;
+  LoadBalancerDistanceCallback  distance_callback;
+
+
 
   CqlSession(
       size_t io_loop_count,
       size_t io_queue_size) :
-      io_loops(io_loop_count, NULL),
-      queue(io_queue_size) {
+      loop(uv_loop_new()),
+      io_loops(io_loop_count, NULL) {
+    async_connect.data = this;
+    uv_async_init(
+        loop,
+        &async_connect,
+        &CqlSession::on_connect_called);
+
     for (size_t i = 0; i < io_loops.size(); ++i) {
-      io_loops[i] = new IOWorker();
+      io_loops[i] = new IOWorker(io_queue_size);
+    }
+  }
+
+  static void
+  on_run(
+      void* data) {
+    CqlSession* session = reinterpret_cast<CqlSession*>(data);
+    uv_run(session->loop, UV_RUN_DEFAULT);
+
+    for (size_t i = 0; i < session->io_loops.size(); ++i) {
+      session->io_loops[i]->run();
     }
   }
 
@@ -65,23 +93,50 @@ struct CqlSession {
   CqlSessionRequest*
   connect(
       const std::string& ks) {
-    std::unique_lock<std::mutex> lock(mutex);
-    CqlSessionRequest* output = new CqlSessionRequest();
+    connect_session_request       = new CqlSessionRequest();
+    connect_session_request->data = this;
 
-    if (state == SESSION_STATE_NEW) {
+    CqlSessionState new_state = SESSION_STATE_NEW;
+    if (state.compare_exchange_strong(
+            new_state,
+            SESSION_STATE_CONNECTING)) {
       keyspace = ks;
-      output->data = this;
-      connect_listeners.push_back(output);
+      uv_thread_create(
+          &thread,
+          &CqlSession::on_run,
+          this);
+
+      uv_async_send(&async_connect);
     } else {
-      output->error = new CqlError(
+     connect_session_request->error = new CqlError(
           CQL_ERROR_SOURCE_LIBRARY,
           CQL_ERROR_LIB_SESSION_STATE,
-          "invalid session state",
+          "connect has already been called",
           __FILE__,
           __LINE__);
-      output->notify(NULL);
+      connect_session_request->notify(loop);
     }
-    return output;
+    return connect_session_request;
+  }
+
+  void
+  add_or_renew_pool(
+      char*  host,
+      size_t host_size,
+      bool   is_host_addition) {
+
+
+
+  }
+
+
+  static void
+  on_connect_called(
+      uv_async_t* data,
+      int         status) {
+    CqlSession* session = reinterpret_cast<CqlSession*>(data->data);
+
+
   }
 
   SSLSession*
@@ -92,7 +147,6 @@ struct CqlSession {
     return NULL;
   }
 
- public:
   CallerRequest*
   prepare() {
     return nullptr;
@@ -105,9 +159,8 @@ struct CqlSession {
 
   CqlSessionRequest*
   shutdown() {
-    std::unique_lock<std::mutex> lock(mutex);
-    CqlSessionRequest* output = new CqlSessionRequest();
-    return output;
+    CqlSessionRequest* connect_session_request = new CqlSessionRequest();
+    return connect_session_request;
   }
 
   void
