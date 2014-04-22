@@ -84,53 +84,61 @@ cql::cql_message_execute_impl_t::consistency(const cql::cql_consistency_enum con
 
 void
 cql::cql_message_execute_impl_t::push_back(const param_t& val) {
-    _params.push_back(param_t(val.begin(), val.end()));
+    boost::shared_ptr<param_t> p(new param_t(val.begin(), val.end()));
+    _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const std::string& val) {
-    _params.push_back(param_t(val.begin(), val.end()));
+    boost::shared_ptr<param_t> p(new param_t(val.begin(), val.end()));
+    _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const cql::cql_short_t val) {
-    cql::cql_message_execute_impl_t::param_t p;
-    cql::encode_short(p, val);
+    boost::shared_ptr<param_t> p(new param_t);
+    cql::encode_short(*p, val);
     _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const cql::cql_int_t val) {
-    cql::cql_message_execute_impl_t::param_t p;
-    cql::encode_int(p, val);
+    boost::shared_ptr<param_t> p(new param_t);
+    cql::encode_int(*p, val);
     _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const cql::cql_bigint_t val) {
-    cql::cql_message_execute_impl_t::param_t p;
-    cql::encode_bigint(p, val);
+    boost::shared_ptr<param_t> p(new param_t);
+    cql::encode_bigint(*p, val);
     _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const float val) {
-    cql::cql_message_execute_impl_t::param_t p;
-    cql::encode_float(p, val);
+    boost::shared_ptr<param_t> p(new param_t);
+    cql::encode_float(*p, val);
     _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const double val) {
-    cql::cql_message_execute_impl_t::param_t p;
-    cql::encode_double(p, val);
+    boost::shared_ptr<param_t> p(new param_t);
+    cql::encode_double(*p, val);
     _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const bool val) {
-    cql::cql_message_execute_impl_t::param_t p;
-    cql::encode_bool(p, val);
+    boost::shared_ptr<param_t> p(new param_t);
+    cql::encode_bool(*p, val);
+    _params.push_back(p);
+}
+
+void
+cql::cql_message_execute_impl_t::push_back_null() {
+    boost::shared_ptr<param_t> p;
     _params.push_back(p);
 }
 
@@ -186,8 +194,8 @@ cql::cql_message_execute_impl_t::consume(cql::cql_error_t*) {
     cql::decode_short(stream, count);
 
     for (int i = 0; i < count; ++i) {
-        cql::cql_message_execute_impl_t::param_t p;
-        cql::decode_bytes(stream, p);
+        boost::shared_ptr<param_t> p(new param_t);
+        cql::decode_bytes(stream, *p);
         _params.push_back(p);
     }
 
@@ -235,8 +243,12 @@ cql::cql_message_execute_impl_t::consume(cql::cql_error_t*) {
 bool
 cql::cql_message_execute_impl_t::prepare(cql::cql_error_t*) {
     size_t size = (3 * sizeof(cql_short_t)) + _query_id.size();
-    BOOST_FOREACH(const param_t& p, _params) {
-        size += p.size() + sizeof(cql_int_t);
+    BOOST_FOREACH(const boost::shared_ptr<param_t> p, _params) {
+        if (p != NULL) {
+            size += p->size() + sizeof(cql_int_t);
+        } else {
+            size += sizeof(cql_int_t);
+        }
     }
     _buffer->resize(size);
 
@@ -246,8 +258,13 @@ cql::cql_message_execute_impl_t::prepare(cql::cql_error_t*) {
     cql::encode_short_bytes(stream, _query_id);
     cql::encode_short(stream, _params.size());
 
-    BOOST_FOREACH(const param_t& p, _params) {
-        cql::encode_bytes(stream, p);
+    BOOST_FOREACH(const boost::shared_ptr<param_t> p, _params) {
+        if (p != NULL) {
+            cql::encode_bytes(stream, *p);
+        } else {
+            cql::cql_int_t v = htonl(-1);
+            stream.write(reinterpret_cast<char*>(&v), sizeof(v));
+        }
     }
 
     cql::cql_short_t consistency = 0;

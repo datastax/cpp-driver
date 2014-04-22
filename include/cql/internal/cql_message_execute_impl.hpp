@@ -84,6 +84,9 @@ public:
     push_back(const bool val);
 
     void
+    push_back_null();
+
+    void
     pop_back();
 
     cql::cql_opcode_enum
@@ -130,7 +133,7 @@ public:
     set_stream(const cql_stream_t& stream);
 
 private:
-    typedef std::list<param_t> params_container_t;
+    typedef std::list< boost::shared_ptr<param_t> > params_container_t;
 
     cql::cql_message_buffer_t    _buffer;
     std::vector<cql::cql_byte_t> _query_id;
