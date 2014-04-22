@@ -22,7 +22,7 @@
 
 struct CqlStatement {
   typedef std::pair<const char*, size_t>  Value;
-  typedef std::list<Value>                ValueCollection;
+  typedef std::vector<Value>              ValueCollection;
   typedef ValueCollection::iterator       ValueIterator;
   typedef ValueCollection::const_iterator ConstValueIterator;
 
@@ -31,6 +31,10 @@ struct CqlStatement {
 
   virtual uint8_t
   kind() const = 0;
+
+  virtual void
+  resize(
+      size_t size) = 0;
 
   virtual void
   statement(

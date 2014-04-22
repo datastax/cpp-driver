@@ -33,9 +33,6 @@
 struct CqlQueryStatement
     : public CqlMessageBody,
       public CqlStatement {
-  typedef std::pair<const char*, size_t> Value;
-  typedef std::list<Value>               ValueCollection;
-
   std::string       query;
   int16_t           consistency_value;
   int               page_size;
@@ -44,11 +41,40 @@ struct CqlQueryStatement
   ValueCollection   values;
 
  public:
+
+  CqlQueryStatement(
+      const char* statement,
+      size_t      statement_length,
+      size_t      value_count,
+      size_t      consistency) :
+      query(statement, statement_length),
+      consistency_value(consistency),
+      page_size(-1),
+      serial_consistency_value(CQL_CONSISTENCY_ANY),
+      values(value_count)
+  {}
+
+  CqlQueryStatement(
+      size_t value_count,
+      size_t consistency) :
+      consistency_value(consistency),
+      page_size(-1),
+      serial_consistency_value(CQL_CONSISTENCY_ANY),
+      values(value_count)
+  {}
+
   CqlQueryStatement() :
       consistency_value(CQL_CONSISTENCY_ANY),
       page_size(-1),
-      serial_consistency_value(CQL_CONSISTENCY_ANY)
+      serial_consistency_value(CQL_CONSISTENCY_ANY),
+      values(0)
   {}
+
+  void
+  resize(
+      size_t size) {
+    values.resize(size);
+  }
 
   uint8_t
   opcode() const {

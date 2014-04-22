@@ -39,8 +39,10 @@ struct CqlBatchStatement
   StatementCollection statements;
   int16_t             consistency;
 
-  CqlBatchStatement() :
-      consistency(CQL_CONSISTENCY_ANY)
+  explicit
+  CqlBatchStatement(
+      size_t consistency) :
+      consistency(consistency)
   {}
 
   ~CqlBatchStatement() {

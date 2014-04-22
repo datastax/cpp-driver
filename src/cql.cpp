@@ -14,6 +14,8 @@
   limitations under the License.
 */
 
+#include <string>
+
 #include "cql.h"
 #include "cql_cluster.hpp"
 #include "cql_session.hpp"
@@ -141,34 +143,27 @@ cql_error_code(
   return error->code;
 }
 
-
-/***********************************************************************************
- *
- * Functions which create ad-hoc queries, prepared statements, bound statements, and
- * allow for the composition of batch statements from queries and bound statements.
- *
- ************************************************************************************/
-
 CqlError*
 cql_session_query(
     CqlSession*    session,
     char*          statement,
-    size_t         length,
+    size_t         statement_length,
+    size_t         paramater_count,
     size_t         consistency,
     CqlStatement** output) {
   (void) session;
-  *output = new CqlQueryStatement();
-  (*output)->statement(statement, length);
-  (*output)->consistency(consistency);
+  *output = new CqlQueryStatement(paramater_count, consistency);
+  (*output)->statement(statement, statement_length);
   return CQL_ERROR_NO_ERROR;
 }
 
 CqlError*
 cql_session_prepare(
-    CqlSession*         session,
-    char*               statement,
-    size_t              length,
-    CqlPrepareFuture**  output) {
+    CqlSession*        session,
+    const char*        statement,
+    size_t             statement_length,
+    CqlPrepareFuture** output) {
+  *output = session->prepare(statement, statement_length);
   return CQL_ERROR_NO_ERROR;
 }
 
@@ -176,22 +171,26 @@ CqlError*
 cql_session_bind(
     CqlSession*    session,
     CqlPrepared*   prepared,
+    size_t         paramater_count,
+    size_t         consistency,
     CqlStatement** output) {
-  (void) session;
+  *output = new CqlBoundStatement(*prepared, consistency);
   return CQL_ERROR_NO_ERROR;
 }
 
 CqlError*
 cql_session_batch(
-    CqlSession*    session,
-    size_t         consistency,
-    CqlStatement** output) {
+    CqlSession*         session,
+    size_t              consistency,
+    CqlBatchStatement** output) {
+  *output = new CqlBatchStatement(consistency);
   return CQL_ERROR_NO_ERROR;
 }
 
 CqlError*
 cql_batch_add_statement(
-    CqlBatchStatement*     batch,
-    CqlStatement* statement) {
+    CqlBatchStatement* batch,
+    CqlStatement*      statement) {
+  batch->add_statement(statement);
   return CQL_ERROR_NO_ERROR;
 }

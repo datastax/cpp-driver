@@ -46,6 +46,7 @@ struct CqlInet {
   uint32_t port;
 };
 
+struct CqlBatchStatement;
 struct CqlCluster;
 struct CqlError;
 struct CqlPrepared;
@@ -291,9 +292,11 @@ cql_error_code(
  * Initialize an ad-hoc query statement
  *
  * @param session
- * @param statement
- * @param length
- * @param query
+ * @param statement string
+ * @param statement_length statement string length
+ * @param parameter_count number of bound paramerters
+ * @param consistency statement read/write consistency
+ * @param output
  *
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
@@ -301,15 +304,17 @@ CQL_EXPORT CqlError*
 cql_session_query(
     CqlSession*    session,
     char*          statement,
-    size_t         length,
+    size_t         statement_length,
+    size_t         paramater_count,
+    size_t         consistency,
     CqlStatement** output);
 
 /**
  * Create a prepared statement. Future must be freed by caller.
  *
  * @param session
- * @param query
- * @param length
+ * @param statement string
+ * @param statement_length statement string length
  * @param future output future, must be freed by caller, pass NULL to avoid allocation
  *
  * @return
@@ -318,7 +323,7 @@ CQL_EXPORT CqlError*
 cql_session_prepare(
     CqlSession*        session,
     char*              statement,
-    size_t             length,
+    size_t             statement_length,
     CqlPrepareFuture** output);
 
 /**
@@ -326,7 +331,9 @@ cql_session_prepare(
  * parameters
  *
  * @param session
- * @param prepared
+ * @param prepared the previously prepared statement
+ * @param parameter_count number of bound paramerters
+ * @param consistency statement read/write consistency
  * @param output
  *
  * @return NULL if successful, otherwise pointer to CqlError structure
@@ -335,6 +342,8 @@ CQL_EXPORT CqlError*
 cql_session_bind(
     CqlSession*    session,
     CqlPrepared*   prepared,
+    size_t         paramater_count,
+    size_t         consistency,
     CqlStatement** output);
 
 /**
@@ -348,9 +357,9 @@ cql_session_bind(
  */
 CQL_EXPORT CqlError*
 cql_statement_bind_short(
-    void*   statement,
-    size_t  index,
-    int16_t value);
+    CqlStatement* statement,
+    size_t        index,
+    int16_t       value);
 
 /**
  * Bind an int to a query or bound statement at the specified index
@@ -363,9 +372,9 @@ cql_statement_bind_short(
  */
 CQL_EXPORT CqlError*
 cql_statement_bind_int(
-    void*   statement,
-    size_t  index,
-    int32_t value);
+    CqlStatement* statement,
+    size_t        index,
+    int32_t       value);
 
 /**
  * Bind a bigint to a query or bound statement at the specified index
@@ -378,9 +387,9 @@ cql_statement_bind_int(
  */
 CQL_EXPORT CqlError*
 cql_statement_bind_bigint(
-    void*   statement,
-    size_t  index,
-    int64_t value);
+    CqlStatement* statement,
+    size_t        index,
+    int64_t       value);
 
 /**
  * Bind a float to a query or bound statement at the specified index
@@ -393,9 +402,9 @@ cql_statement_bind_bigint(
  */
 CQL_EXPORT CqlError*
 cql_statement_bind_float(
-    void*  statement,
-    size_t index,
-    float  value);
+    CqlStatement* statement,
+    size_t        index,
+    float         value);
 
 /**
  * Bind a double to a query or bound statement at the specified index
@@ -408,9 +417,9 @@ cql_statement_bind_float(
  */
 CQL_EXPORT CqlError*
 cql_statement_bind_double(
-    void*  statement,
-    size_t index,
-    double value);
+    CqlStatement*  statement,
+    size_t         index,
+    double         value);
 
 /**
  * Bind a bool to a query or bound statement at the specified index
@@ -423,9 +432,9 @@ cql_statement_bind_double(
  */
 CQL_EXPORT CqlError*
 cql_statement_bind_bool(
-    void*  statement,
-    size_t index,
-    float  value);
+    CqlStatement*  statement,
+    size_t         index,
+    float          value);
 
 /**
  * Bind a time stamp to a query or bound statement at the specified index
@@ -438,9 +447,9 @@ cql_statement_bind_bool(
  */
 CQL_EXPORT CqlError*
 cql_statement_bind_time(
-    void*   statement,
-    size_t  index,
-    int64_t value);
+    CqlStatement*  statement,
+    size_t         index,
+    int64_t        value);
 
 /**
  * Bind a UUID to a query or bound statement at the specified index
@@ -453,9 +462,9 @@ cql_statement_bind_time(
  */
 CQL_EXPORT CqlError*
 cql_statement_bind_uuid(
-    void*      statement,
-    size_t     index,
-    CqlUuid value);
+    CqlStatement*  statement,
+    size_t         index,
+    CqlUuid        value);
 
 /**
  * Bind a counter to a query or bound statement at the specified index
@@ -468,9 +477,9 @@ cql_statement_bind_uuid(
  */
 CQL_EXPORT CqlError*
 cql_statement_bind_counter(
-    void*   statement,
-    size_t  index,
-    int64_t value);
+    CqlStatement*  statement,
+    size_t         index,
+    int64_t        value);
 
 /**
  * Bind a string to a query or bound statement at the specified index
@@ -484,10 +493,10 @@ cql_statement_bind_counter(
  */
 CQL_EXPORT CqlError*
 cql_statement_bind_string(
-    void*   statement,
-    size_t  index,
-    char*   value,
-    size_t  length);
+    CqlStatement*  statement,
+    size_t         index,
+    char*          value,
+    size_t         length);
 
 /**
  * Bind a blob to a query or bound statement at the specified index
@@ -502,11 +511,11 @@ cql_statement_bind_string(
  */
 CQL_EXPORT CqlError*
 cql_statement_bind_blob(
-    void*    statement,
-    size_t   index,
-    uint8_t* output,
-    size_t   length,
-    size_t*  total);
+    CqlStatement*  statement,
+    size_t         index,
+    uint8_t*       output,
+    size_t         length,
+    size_t*        total);
 
 /**
  * Bind a decimal to a query or bound statement at the specified index
@@ -521,11 +530,11 @@ cql_statement_bind_blob(
  */
 CQL_EXPORT CqlError*
 cql_statement_bind_decimal(
-    void*    statement,
-    size_t   index,
-    uint32_t scale,
-    uint8_t* value,
-    size_t   length);
+    CqlStatement* statement,
+    size_t        index,
+    uint32_t      scale,
+    uint8_t*      value,
+    size_t        length);
 
 /**
  * Bind a varint to a query or bound statement at the specified index
@@ -539,30 +548,13 @@ cql_statement_bind_decimal(
  */
 CQL_EXPORT CqlError*
 cql_statement_bind_varint(
-    void*    statement,
-    size_t   index,
-    uint8_t* value,
-    size_t   length);
-
-/***********************************************************************************
- *
- * Functions dealing with batching multiple statements
- *
- ***********************************************************************************/
-
-CQL_EXPORT CqlError*
-cql_session_batch(
-    CqlSession*    session,
-    size_t         consistency,
-    CqlStatement** output);
-
-CQL_EXPORT CqlError*
-cql_batch_add_statement(
-    CqlStatement* batch,
-    CqlStatement* statement);
+    CqlStatement*  statement,
+    size_t         index,
+    uint8_t*       value,
+    size_t         length);
 
 /**
- * Execute a query, bound or batch statement and obtain a future. Future must be freed by
+ * Execute a query, bound statement and obtain a future. Future must be freed by
  * caller.
  *
  * @param session
@@ -573,9 +565,42 @@ cql_batch_add_statement(
  */
 CQL_EXPORT CqlError*
 cql_statement_exec(
-    void*  session,
-    void*  statement,
-    void** future);
+    CqlSession*   session,
+    CqlStatement* statement,
+    void**        future);
+
+/***********************************************************************************
+ *
+ * Functions dealing with batching multiple statements
+ *
+ ***********************************************************************************/
+
+CQL_EXPORT CqlError*
+cql_session_batch(
+    CqlSession*         session,
+    size_t              consistency,
+    CqlBatchStatement** output);
+
+CQL_EXPORT CqlError*
+cql_batch_add_statement(
+    CqlStatement*      batch,
+    CqlBatchStatement* statement);
+
+/**
+ * Execute a batch statement and obtain a future. Future must be freed by
+ * caller.
+ *
+ * @param session
+ * @param statement
+ * @param future output future, must be freed by caller, pass NULL to avoid allocation
+ *
+ * @return NULL if successful, otherwise pointer to CqlError structure
+ */
+CQL_EXPORT CqlError*
+cql_batch_statement_exec(
+    CqlSession*        session,
+    CqlBatchStatement* statement,
+    void**             future);
 
 
 /***********************************************************************************

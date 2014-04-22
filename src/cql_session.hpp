@@ -55,8 +55,6 @@ struct CqlSession {
   CqlSessionRequest*            connect_session_request;
   LoadBalancerDistanceCallback  distance_callback;
 
-
-
   CqlSession(
       size_t io_loop_count,
       size_t io_queue_size) :
@@ -147,8 +145,10 @@ struct CqlSession {
     return NULL;
   }
 
-  CallerRequest*
-  prepare() {
+  CqlPrepareFuture*
+  prepare(
+      const char* statement,
+      size_t      length) {
     return nullptr;
   }
 

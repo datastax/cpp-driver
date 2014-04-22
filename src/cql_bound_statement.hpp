@@ -23,6 +23,7 @@
 #include <vector>
 #include "cql_statement.hpp"
 #include "cql_message_body.hpp"
+#include "cql_prepared.hpp"
 
 #define CQL_QUERY_FLAG_VALUES             0x01
 #define CQL_QUERY_FLAG_SKIP_METADATA      0x02
@@ -33,8 +34,6 @@
 struct CqlBoundStatement
     : public CqlMessageBody,
       public CqlStatement {
-  typedef std::pair<const char*, size_t> Value;
-  typedef std::list<Value>               ValueCollection;
 
   std::string       id;
   int16_t           consistency_value;
@@ -44,8 +43,21 @@ struct CqlBoundStatement
   ValueCollection   values;
 
  public:
-  CqlBoundStatement() :
-      consistency_value(CQL_CONSISTENCY_ANY),
+
+  CqlBoundStatement(
+      const CqlPrepared& prepared,
+      size_t                     consistency) :
+      id(prepared.id),
+      consistency_value(consistency),
+      page_size(-1),
+      serial_consistency_value(CQL_CONSISTENCY_ANY)
+  {}
+
+  CqlBoundStatement(
+      const  std::string& id,
+      size_t consistency) :
+      id(id),
+      consistency_value(consistency),
       page_size(-1),
       serial_consistency_value(CQL_CONSISTENCY_ANY)
   {}
@@ -107,6 +119,12 @@ struct CqlBoundStatement
   }
 
   void
+  resize(
+      size_t size) {
+    values.resize(size);
+  }
+
+  void
   add_value(
       const char* value,
       size_t      size) {
@@ -125,6 +143,16 @@ struct CqlBoundStatement
 
   inline ValueIterator
   end() {
+    return values.end();
+  }
+
+  inline ConstValueIterator
+  begin() const {
+    return values.begin();
+  }
+
+  inline ConstValueIterator
+  end() const {
     return values.end();
   }
 
