@@ -106,4 +106,34 @@ BOOST_AUTO_TEST_CASE(prepared_insert_string)
 	assert(res == to_insert);
 }
 
+//    --run_test=prepared_statements/prepared_insert_uuid
+BOOST_AUTO_TEST_CASE(prepared_insert_uuid)					// j.kasprzak
+{
+	cql::cql_uuid_t to_insert = "e1e8e8d0-ca0d-11e3-9c1a-0800200c9a66";	
+	boost::shared_ptr<cql::cql_result_t> result = prepared_insert_test(builder->build(),cql::CQL_COLUMN_TYPE_UUID, to_insert);
+	cql::cql_uuid_t res;
+	result->get_uuid("test_val", res);
+	assert(res == to_insert);
+}
+
+//    --run_test=prepared_statements/prepared_insert_inet_v4
+BOOST_AUTO_TEST_CASE(prepared_insert_inet_v4)					// j.kasprzak
+{
+	boost::asio::ip::address to_insert = boost::asio::ip::address::from_string( "199.123.97.13" );
+	boost::shared_ptr<cql::cql_result_t> result = prepared_insert_test(builder->build(),cql::CQL_COLUMN_TYPE_INET, to_insert);
+	boost::asio::ip::address res;
+	result->get_inet("test_val", res);
+	assert(res == to_insert);
+}
+
+//    --run_test=prepared_statements/prepared_insert_inet_v6
+BOOST_AUTO_TEST_CASE(prepared_insert_inet_v6)					// j.kasprzak
+{
+	boost::asio::ip::address to_insert = boost::asio::ip::address::from_string( "20a1:0db8:0b0c:0102:3004:f00d:1529:57fb" );
+	boost::shared_ptr<cql::cql_result_t> result = prepared_insert_test(builder->build(),cql::CQL_COLUMN_TYPE_INET, to_insert);
+	boost::asio::ip::address res;
+	result->get_inet("test_val", res);
+	assert(res == to_insert);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

@@ -27,8 +27,13 @@
 #include "cql/cql_stream.hpp"
 #include "cql/internal/cql_message.hpp"
 
+#include "cql/cql_uuid.hpp"
+#include <boost/asio/ip/address.hpp>
+
 namespace cql {
 
+class cql_retry_policy_t;
+    
 class cql_message_execute_impl_t :
     boost::noncopyable,
     public cql_message_t {
@@ -41,7 +46,8 @@ public:
     cql_message_execute_impl_t(size_t size);
 
     cql_message_execute_impl_t(const std::vector<cql::cql_byte_t>& id,
-                               cql::cql_consistency_enum consistency);
+                               cql::cql_consistency_enum consistency,
+                               boost::shared_ptr<cql_retry_policy_t> retry_policy);
 
     const std::vector<cql::cql_byte_t>&
     query_id() const;
@@ -100,11 +106,33 @@ public:
     cql_message_buffer_t
     buffer();
         
+    boost::shared_ptr<cql_retry_policy_t>
+    retry_policy() const;
+        
+    void
+    set_retry_policy(
+        const boost::shared_ptr<cql_retry_policy_t>& retry_policy);
+        
+    bool
+    has_retry_policy() const;
+
+    void
+    increment_retry_counter();
+        
+    int
+    get_retry_counter() const;
+
     cql_stream_t
     stream();
 
     void
     set_stream(const cql_stream_t& stream);
+
+	void 
+	push_back(const cql_uuid_t val);
+
+	void 
+	push_back(const boost::asio::ip::address val);
 
 private:
     typedef std::list<param_t> params_container_t;
@@ -114,6 +142,9 @@ private:
     cql::cql_consistency_enum    _consistency;
     params_container_t           _params;
     cql_stream_t                 _stream;
+        
+    boost::shared_ptr<cql_retry_policy_t> _retry_policy;
+    int                                   _retry_counter;
 };
 
 } // namespace cql
