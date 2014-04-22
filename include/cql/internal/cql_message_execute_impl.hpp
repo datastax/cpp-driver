@@ -47,8 +47,6 @@ public:
                                boost::shared_ptr<cql_retry_policy_t> retry_policy,
                                bool is_traced);
 
-    ~cql_message_execute_impl_t();
-
     const std::vector<cql::cql_byte_t>&
     query_id() const;
 
@@ -135,7 +133,7 @@ public:
     set_stream(const cql_stream_t& stream);
 
 private:
-    typedef std::list<param_t*> params_container_t;
+    typedef std::list< boost::shared_ptr<param_t> > params_container_t;
 
     cql::cql_message_buffer_t    _buffer;
     std::vector<cql::cql_byte_t> _query_id;
