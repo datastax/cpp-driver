@@ -72,7 +72,7 @@ struct ClientConnection {
 
   typedef StreamStorage<
     Stream,
-    CallerRequest*,
+    CqlCallerRequest*,
     CQL_STREAM_ID_MAX> StreamStorageCollection;
 
   struct WriteRequestData {
@@ -88,7 +88,7 @@ struct ClientConnection {
   KeyspaceCallback            keyspace_callback_;
   PrepareCallback             prepare_callback_;
   LogCallback                 log_callback_;
-  SPSCQueue<CallerRequest*>   request_queue_;
+  SPSCQueue<CqlCallerRequest*>   request_queue_;
 
   // DNS and hostname stuff
   struct sockaddr_in       address_;
@@ -431,7 +431,7 @@ struct ClientConnection {
     log(CQL_LOG_DEBUG, "on_result");
 
     CqlError*      err     = NULL;
-    CallerRequest* request = NULL;
+    CqlCallerRequest* request = NULL;
     CqlResult*     result  = static_cast<CqlResult*>(response->body.get());
 
     switch (result->kind) {
@@ -464,7 +464,7 @@ struct ClientConnection {
         }
 
         if (!err) {
-          request->result = response;
+          request->result.reset(response);
           request->notify(loop_);
         } else {
           delete err;
@@ -474,7 +474,7 @@ struct ClientConnection {
       default:
         err = stream_storage_.get_stream(response->stream, request);
         if (!err) {
-          request->result = response;
+          request->result.reset(response);
           request->notify(loop_);
         } else {
           if (connect_callback_) {
@@ -589,12 +589,12 @@ struct ClientConnection {
     delete req;
   }
 
-  CallerRequest*
+  CqlCallerRequest*
   prepare(
       const char*             statement,
       size_t                  size,
-      CallerRequest::Callback callback = NULL) {
-    CallerRequest* request = new CallerRequest();
+      CqlCallerRequest::Callback callback = NULL) {
+    CqlCallerRequest* request = new CqlCallerRequest();
     CqlMessage*       message = new CqlMessage(CQL_OPCODE_PREPARE);
     CqlPrepareStatement*   prepare = static_cast<CqlPrepareStatement*>(message->body.get());
     prepare->prepare_string(statement, size);
@@ -604,21 +604,21 @@ struct ClientConnection {
 
     CqlError* err = send_message(message, request);
     if (err) {
-      request->error = err;
+      request->error.reset(err);
       request->notify(loop_);
     }
     return request;
   }
 
-  CallerRequest*
+  CqlCallerRequest*
   exec(
       CqlMessage*                message,
-      CallerRequest::Callback callback = NULL) {
-    CallerRequest* request = new CallerRequest();
+      CqlCallerRequest::Callback callback = NULL) {
+    CqlCallerRequest* request = new CqlCallerRequest();
     request->callback = callback;
     CqlError* err = send_message(message, request);
     if (err) {
-      request->error = err;
+      request->error.reset(err);
       request->notify(loop_);
     }
     return request;
@@ -627,7 +627,7 @@ struct ClientConnection {
   CqlError*
   send_message(
       CqlMessage* message,
-      CallerRequest* request = NULL) {
+      CqlCallerRequest* request = NULL) {
     uv_buf_t   buf;
     CqlError*  err = stream_storage_.set_stream(request, message->stream);
     if (err) {

@@ -301,7 +301,8 @@ cql_result_future_get_error(
     struct CqlResultFuture* future);
 
 /**
- * If the linked event was successful get the result instance
+ * If the linked event was successful get the result instance. Result
+ * instance must be freed by caller. May only be called once.
  *
  * @param future
  *
@@ -310,6 +311,80 @@ cql_result_future_get_error(
 CQL_EXPORT CqlResult*
 cql_result_future_get_result(
     struct CqlResultFuture* future);
+
+
+/***********************************************************************************
+ *
+ * Functions which deal with prepare futures
+ *
+ ***********************************************************************************/
+
+/**
+ * Free a prepare instance.
+ *
+ * @return
+ */
+CQL_EXPORT void
+cql_prepare_future_free(
+    struct CqlPrepareFuture* future);
+
+/**
+ * Is the specified future ready
+ *
+ * @param future
+ *
+ * @return true if ready
+ */
+CQL_EXPORT int
+cql_prepare_future_ready(
+    struct CqlPrepareFuture* future);
+
+/**
+ * Wait the linked event occurs or error condition is reached
+ *
+ * @param future
+ */
+CQL_EXPORT void
+cql_prepare_future_wait(
+    struct CqlPrepareFuture* future);
+
+/**
+ * Wait the linked event occurs, error condition is reached, or time has elapsed.
+ *
+ * @param future
+ * @param wait time in microseconds
+ *
+ * @return false if returned due to timeout
+ */
+CQL_EXPORT int
+cql_prepare_future_wait_timed(
+    struct CqlPrepareFuture* future,
+    size_t                   wait);
+
+/**
+ * If the linked event prepareed in an error, get that error
+ *
+ * @param future
+ *
+ * @return NULL if successful, otherwise pointer to CqlError structure
+ */
+CQL_EXPORT CqlError*
+cql_prepare_future_get_error(
+    struct CqlPrepareFuture* future);
+
+/**
+ * If the linked event was successful get the prepared
+ * instance. Prepared instance must be freed by caller. May only be
+ * called once
+ *
+ * @param future
+ *
+ * @return NULL if unsuccessful, otherwise pointer to CqlPrepare instance
+ */
+CQL_EXPORT CqlPrepared*
+cql_prepare_future_get_prepare(
+    struct CqlPrepareFuture* future);
+
 
 /***********************************************************************************
  *

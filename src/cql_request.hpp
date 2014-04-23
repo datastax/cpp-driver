@@ -38,9 +38,9 @@ struct Request {
 
   Request() :
       flag(false),
-      error(CQL_ERROR_NO_ERROR),
+      error(nullptr),
       data(NULL),
-      result(NULL),
+      result(nullptr),
       callback(NULL),
       use_local_loop(false)
   {}

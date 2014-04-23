@@ -51,7 +51,11 @@
 #include "cql_message.hpp"
 
 typedef std::function<void(int, const char*, size_t)> LogCallback;
-typedef Request<std::string, CqlError*, CqlMessage*> CallerRequest;
+
+typedef std::unique_ptr<CqlError>                        CqlErrorPtr;
+typedef std::unique_ptr<CqlMessage>                      CqlMessagePtr;
+typedef Request<std::string, CqlErrorPtr, CqlMessagePtr> CqlCallerRequest;
+typedef Request<CqlSession*, CqlErrorPtr, CqlSession*>   CqlSessionRequest;
 
 uv_buf_t
 alloc_buffer(

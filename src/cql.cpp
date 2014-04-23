@@ -29,11 +29,20 @@ struct CqlSessionFuture {
   }
 };
 
+struct CqlPrepareFuture {
+  std::unique_ptr<CqlCallerRequest> request;
+
+  CqlPrepareFuture(
+      CqlCallerRequest* request) :
+      request(request) {
+  }
+};
+
 struct CqlResultFuture {
-  std::unique_ptr<CallerRequest> request;
+  std::unique_ptr<CqlCallerRequest> request;
 
   CqlResultFuture(
-      CallerRequest* request) :
+      CqlCallerRequest* request) :
       request(request) {
   }
 };
@@ -128,7 +137,7 @@ cql_session_future_wait_timed(
 CqlError*
 cql_session_future_get_error(
     struct CqlSessionFuture* future) {
-  return future->request->error;
+  return future->request->error.release();
 }
 
 CqlSession*
@@ -167,14 +176,55 @@ cql_result_future_wait_timed(
 CqlError*
 cql_result_future_get_error(
     struct CqlResultFuture* future) {
-  return future->request->error;
+  return future->request->error.release();
 }
 
 CqlResult*
 cql_result_future_get_result(
     struct CqlResultFuture* future) {
-  return static_cast<CqlResult*>(future->request->result->body.get());
+  return static_cast<CqlResult*>(future->request->result->body.release());
 }
+
+void
+cql_prepare_future_free(
+    struct CqlPrepareFuture* future) {
+  delete future;
+}
+
+int
+cql_prepare_future_ready(
+    struct CqlPrepareFuture* future) {
+  return static_cast<int>(future->request->ready());
+}
+
+void
+cql_prepare_future_wait(
+    struct CqlPrepareFuture* future) {
+  future->request->wait();
+}
+
+int
+cql_prepare_future_wait_timed(
+    struct CqlPrepareFuture* future,
+    size_t                   wait) {
+  return static_cast<int>(
+      future->request->wait_for(
+          std::chrono::microseconds(wait)));
+}
+
+CqlError*
+cql_prepare_future_get_error(
+    struct CqlPrepareFuture* future) {
+  return future->request->error.release();
+}
+
+CqlPrepared*
+cql_prepare_future_get_prepare(
+    struct CqlPrepareFuture* future) {
+  CqlResult* result = static_cast<CqlResult*>(future->request->result->body.get());
+  return new CqlPrepared(std::string(result->prepared, result->prepared_size));
+}
+
 
 void
 cql_error_string(

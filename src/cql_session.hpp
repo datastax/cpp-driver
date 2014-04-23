@@ -28,8 +28,6 @@
 #include "cql_request.hpp"
 #include "cql_io_worker.hpp"
 
-typedef Request<CqlSession*, CqlError*, CqlSession*> CqlSessionRequest;
-// typedef std::function<int(char* host, size_t host_size)> LoadBalancerDistanceCallback;
 typedef int (*LoadBalancerDistanceCallback)(char* host, size_t host_size);
 
 struct CqlSession {
@@ -106,12 +104,12 @@ struct CqlSession {
 
       uv_async_send(&async_connect);
     } else {
-     connect_session_request->error = new CqlError(
+     connect_session_request->error.reset(new CqlError(
           CQL_ERROR_SOURCE_LIBRARY,
           CQL_ERROR_LIB_SESSION_STATE,
           "connect has already been called",
           __FILE__,
-          __LINE__);
+          __LINE__));
       connect_session_request->notify(loop);
     }
     return connect_session_request;
@@ -152,7 +150,7 @@ struct CqlSession {
     return nullptr;
   }
 
-  CallerRequest*
+  CqlCallerRequest*
   execute() {
     return nullptr;
   }
