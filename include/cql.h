@@ -505,7 +505,6 @@ cql_statement_bind_string(
  * @param index
  * @param output
  * @param length
- * @param total
  *
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
@@ -513,9 +512,8 @@ CQL_EXPORT CqlError*
 cql_statement_bind_blob(
     CqlStatement*  statement,
     size_t         index,
-    uint8_t*       output,
-    size_t         length,
-    size_t*        total);
+    uint8_t*       value,
+    size_t         length);
 
 /**
  * Bind a decimal to a query or bound statement at the specified index
@@ -1066,6 +1064,7 @@ cql_uuid_string(
 #define CQL_ERROR_SSL_READ_WAITING    1000006
 #define CQL_ERROR_SSL_WRITE_WAITING   1000007
 
+#define CQL_ERROR_LIB_BAD_PARAMS      2000001
 #define CQL_ERROR_LIB_NO_STREAMS      2000008
 #define CQL_ERROR_LIB_MAX_CONNECTIONS 2000009
 #define CQL_ERROR_LIB_SESSION_STATE   2000010

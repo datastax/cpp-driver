@@ -20,21 +20,29 @@
 #include <list>
 #include <utility>
 
+#define CQL_VALUE_CHECK_INDEX(i)                                        \
+  if (index >= size()) {                                                \
+  return new CqlError(                                                  \
+      CQL_ERROR_SOURCE_LIBRARY,                                         \
+      CQL_ERROR_LIB_BAD_PARAMS,                                         \
+      "invalid index",                                                  \
+      __FILE__,                                                         \
+      __LINE__);                                                        \
+  }                                                                     \
+
 struct CqlStatement {
-  typedef std::pair<const char*, size_t>  Value;
+  typedef std::pair<char*, size_t>        Value;
   typedef std::vector<Value>              ValueCollection;
   typedef ValueCollection::iterator       ValueIterator;
   typedef ValueCollection::const_iterator ConstValueIterator;
+
+  ValueCollection values;
 
   virtual
   ~CqlStatement() {}
 
   virtual uint8_t
   kind() const = 0;
-
-  virtual void
-  resize(
-      size_t size) = 0;
 
   virtual void
   statement(
@@ -65,25 +73,114 @@ struct CqlStatement {
   serial_consistency(
       int16_t consistency) = 0;
 
-  virtual void
-  add_value(
-      const char* value,
-      size_t      size) = 0;
+  inline void
+  resize(
+      size_t size) {
+    values.resize(size);
+  }
 
-  virtual size_t
-  size() const = 0;
+  inline size_t
+  size() const {
+    return values.size();
+  }
 
-  virtual ValueIterator
-  begin() = 0;
+  inline CqlError*
+  bind(
+      size_t  index,
+      int16_t value) {
+    CQL_VALUE_CHECK_INDEX(index);
+    Value pair = std::make_pair(new char[sizeof(int16_t)], sizeof(int16_t));
+    encode_short(pair.first, value);
+    values[index] = pair;
+    return CQL_ERROR_NO_ERROR;
+  }
 
-  virtual ValueIterator
-  end() = 0;
+  inline CqlError*
+  bind(
+      size_t  index,
+      int32_t value) {
+    CQL_VALUE_CHECK_INDEX(index);
+    Value pair = std::make_pair(new char[sizeof(int32_t)], sizeof(int32_t));
+    encode_int(pair.first, value);
+    values[index] = pair;
+    return CQL_ERROR_NO_ERROR;
+  }
 
-  virtual ConstValueIterator
-  begin() const = 0;
+  inline CqlError*
+  bind(
+      size_t  index,
+      int64_t value) {
+    CQL_VALUE_CHECK_INDEX(index);
+    Value pair = std::make_pair(new char[sizeof(int64_t)], sizeof(int64_t));
+    encode_int64(pair.first, value);
+    values[index] = pair;
+    return CQL_ERROR_NO_ERROR;
+  }
 
-  virtual ConstValueIterator
-  end() const = 0;
+  inline CqlError*
+  bind(
+      size_t index,
+      char*  input,
+      size_t input_length) {
+    CQL_VALUE_CHECK_INDEX(index);
+    Value pair = std::make_pair(new char[input_length], input_length);
+    memcpy(pair.first, input, input_length);
+    values[index] = pair;
+    return CQL_ERROR_NO_ERROR;
+  }
+
+  inline CqlError*
+  bind(
+      size_t index,
+      float  value) {
+    CQL_VALUE_CHECK_INDEX(index);
+    Value pair = std::make_pair(new char[sizeof(float)], sizeof(float));
+    encode_int(pair.first, static_cast<float>(value));
+    values[index] = pair;
+    return CQL_ERROR_NO_ERROR;
+  }
+
+  inline CqlError*
+  bind(
+      size_t index,
+      double value) {
+    CQL_VALUE_CHECK_INDEX(index);
+    Value pair = std::make_pair(new char[sizeof(double)], sizeof(double));
+    encode_int64(pair.first, static_cast<int64_t>(value));
+    values[index] = pair;
+    return CQL_ERROR_NO_ERROR;
+  }
+
+  inline CqlError*
+  bind(
+      size_t index,
+      bool   value) {
+    CQL_VALUE_CHECK_INDEX(index);
+    Value pair = std::make_pair(new uint8_t, sizeof(uint8_t));
+    encode_byte(pair.first, value ? 0x01 : 0x00);
+    values[index] = pair;
+    return CQL_ERROR_NO_ERROR;
+  }
+
+  inline ValueIterator
+  begin() {
+    return values.begin();
+  }
+
+  inline ValueIterator
+  end() {
+    return values.end();
+  }
+
+  inline ConstValueIterator
+  begin() const {
+    return values.begin();
+  }
+
+  inline ConstValueIterator
+  end() const {
+    return values.end();
+  }
 };
 
 #endif

@@ -17,9 +17,25 @@
 #ifndef __SERIALIZATION_HPP_INCLUDED__
 #define __SERIALIZATION_HPP_INCLUDED__
 
+#include <machine/endian.h>
+
 #include <list>
 #include <map>
 #include <string>
+
+
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define ntohlll(x) ((((uint128_t) ntohll(x)) << 64) | ntohll(x >> 64))
+#define htonlll(x) ntohlll(x)
+#define ntohll(x) (uint64_t) __builtin_bswap64(x)
+#define htonll(x) ntohll(x)
+#else
+#define ntohlll(x) (x)
+#define htonlll(x) (x)
+#define ntohll(x) (x)
+#define htonll(x) (x)
+#endif  // __BYTE_ORDER == __LITTLE_ENDIAN
+
 
 inline char*
 encode_byte(
@@ -59,6 +75,15 @@ encode_int(
     char*   output,
     int32_t value) {
   int32_t net_value = htonl(value);
+  memcpy(output, &net_value, sizeof(net_value));
+  return output + sizeof(int32_t);
+}
+
+inline char*
+encode_int64(
+    char*   output,
+    int64_t value) {
+  int64_t net_value = htonll(value);
   memcpy(output, &net_value, sizeof(net_value));
   return output + sizeof(int32_t);
 }

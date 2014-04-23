@@ -194,3 +194,234 @@ cql_batch_add_statement(
   batch->add_statement(statement);
   return CQL_ERROR_NO_ERROR;
 }
+
+/**
+ * Bind a short to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return
+ */
+CqlError*
+cql_statement_bind_short(
+    CqlStatement* statement,
+    size_t        index,
+    int16_t       value) {
+  return CQL_ERROR_NO_ERROR;
+}
+
+/**
+ * Bind an int to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return
+ */
+CqlError*
+cql_statement_bind_int(
+    CqlStatement* statement,
+    size_t        index,
+    int32_t       value) {
+  return CQL_ERROR_NO_ERROR;
+}
+
+/**
+ * Bind a bigint to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return
+ */
+CqlError*
+cql_statement_bind_bigint(
+    CqlStatement* statement,
+    size_t        index,
+    int64_t       value) {
+  return CQL_ERROR_NO_ERROR;
+}
+
+/**
+ * Bind a float to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return
+ */
+CqlError*
+cql_statement_bind_float(
+    CqlStatement* statement,
+    size_t        index,
+    float         value) {
+  return CQL_ERROR_NO_ERROR;
+}
+
+/**
+ * Bind a double to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return NULL if successful, otherwise pointer to CqlError structure
+ */
+CqlError*
+cql_statement_bind_double(
+    CqlStatement*  statement,
+    size_t         index,
+    double         value) {
+  return CQL_ERROR_NO_ERROR;
+}
+
+/**
+ * Bind a bool to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return NULL if successful, otherwise pointer to CqlError structure
+ */
+CqlError*
+cql_statement_bind_bool(
+    CqlStatement*  statement,
+    size_t         index,
+    float          value) {
+  return CQL_ERROR_NO_ERROR;
+}
+
+/**
+ * Bind a time stamp to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return NULL if successful, otherwise pointer to CqlError structure
+ */
+CqlError*
+cql_statement_bind_time(
+    CqlStatement*  statement,
+    size_t         index,
+    int64_t        value) {
+  return CQL_ERROR_NO_ERROR;
+}
+
+/**
+ * Bind a UUID to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return NULL if successful, otherwise pointer to CqlError structure
+ */
+CqlError*
+cql_statement_bind_uuid(
+    CqlStatement*  statement,
+    size_t         index,
+    CqlUuid        value) {
+  return CQL_ERROR_NO_ERROR;
+}
+
+/**
+ * Bind a counter to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return NULL if successful, otherwise pointer to CqlError structure
+ */
+CqlError*
+cql_statement_bind_counter(
+    CqlStatement*  statement,
+    size_t         index,
+    int64_t        value) {
+  return CQL_ERROR_NO_ERROR;
+}
+
+/**
+ * Bind a string to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ * @param length
+ *
+ * @return NULL if successful, otherwise pointer to CqlError structure
+ */
+CqlError*
+cql_statement_bind_string(
+    CqlStatement*  statement,
+    size_t         index,
+    char*          value,
+    size_t         length) {
+  return CQL_ERROR_NO_ERROR;
+}
+
+/**
+ * Bind a blob to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ * @param length
+ *
+ * @return NULL if successful, otherwise pointer to CqlError structure
+ */
+CqlError*
+cql_statement_bind_blob(
+    CqlStatement*  statement,
+    size_t         index,
+    uint8_t*       value,
+    size_t         length) {
+  return CQL_ERROR_NO_ERROR;
+}
+
+/**
+ * Bind a decimal to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param scale
+ * @param value
+ * @param length
+ *
+ * @return NULL if successful, otherwise pointer to CqlError structure
+ */
+CqlError*
+cql_statement_bind_decimal(
+    CqlStatement* statement,
+    size_t        index,
+    uint32_t      scale,
+    uint8_t*      value,
+    size_t        length) {
+  return CQL_ERROR_NO_ERROR;
+}
+
+/**
+ * Bind a varint to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ * @param length
+ *
+ * @return NULL if successful, otherwise pointer to CqlError structure
+ */
+CqlError*
+cql_statement_bind_varint(
+    CqlStatement*  statement,
+    size_t         index,
+    uint8_t*       value,
+    size_t         length) {
+  return CQL_ERROR_NO_ERROR;
+}

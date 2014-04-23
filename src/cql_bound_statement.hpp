@@ -43,7 +43,6 @@ struct CqlBoundStatement
   ValueCollection   values;
 
  public:
-
   CqlBoundStatement(
       const CqlPrepared& prepared,
       size_t                     consistency) :
@@ -116,44 +115,6 @@ struct CqlBoundStatement
       const char* input,
       size_t      size) {
     id.assign(input, size);
-  }
-
-  void
-  resize(
-      size_t size) {
-    values.resize(size);
-  }
-
-  void
-  add_value(
-      const char* value,
-      size_t      size) {
-    values.push_back(std::make_pair(value, size));
-  }
-
-  inline size_t
-  size() const {
-    return values.size();
-  }
-
-  inline ValueIterator
-  begin() {
-    return values.begin();
-  }
-
-  inline ValueIterator
-  end() {
-    return values.end();
-  }
-
-  inline ConstValueIterator
-  begin() const {
-    return values.begin();
-  }
-
-  inline ConstValueIterator
-  end() const {
-    return values.end();
   }
 
   bool

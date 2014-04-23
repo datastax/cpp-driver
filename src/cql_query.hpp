@@ -70,12 +70,6 @@ struct CqlQueryStatement
       values(0)
   {}
 
-  void
-  resize(
-      size_t size) {
-    values.resize(size);
-  }
-
   uint8_t
   opcode() const {
     return CQL_OPCODE_QUERY;
@@ -130,38 +124,6 @@ struct CqlQueryStatement
       const char* input,
       size_t      size) {
     query.assign(input, size);
-  }
-
-  void
-  add_value(
-      const char* value,
-      size_t      size) {
-    values.push_back(std::make_pair(value, size));
-  }
-
-  inline size_t
-  size() const {
-    return values.size();
-  }
-
-  inline ValueIterator
-  begin() {
-    return values.begin();
-  }
-
-  inline ValueIterator
-  end() {
-    return values.end();
-  }
-
-  inline ConstValueIterator
-  begin() const {
-    return values.begin();
-  }
-
-  inline ConstValueIterator
-  end() const {
-    return values.end();
   }
 
   bool
