@@ -39,7 +39,7 @@
 
 struct ResultIterator;
 
-struct BodyResult
+struct CqlResult
     : public CqlMessageBody {
 
   struct ColumnMetaData {
@@ -107,7 +107,7 @@ struct BodyResult
   int32_t            row_count;
   char*              rows;
 
-  BodyResult() :
+  CqlResult() :
       kind(0),
       more_pages(false),
       no_metadata(false),
@@ -275,21 +275,21 @@ struct BodyResult
   }
 
  private:
-  BodyResult(const BodyResult&) {}
-  void operator=(const BodyResult&) {}
+  CqlResult(const CqlResult&) {}
+  void operator=(const CqlResult&) {}
 };
 
 struct ResultIterator : Iterable {
   typedef std::pair<char*, size_t> Column;
 
-  BodyResult*         result;
+  CqlResult*         result;
   int32_t             row_position;
   char*               position;
   char*               position_next;
   std::vector<Column> row;
 
   ResultIterator(
-      BodyResult* result) :
+      CqlResult* result) :
       Iterable(CQL_ITERABLE_TYPE_RESULT),
       result(result),
       row_position(0),

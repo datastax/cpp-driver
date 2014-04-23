@@ -432,7 +432,7 @@ struct ClientConnection {
 
     CqlError*      err     = NULL;
     CallerRequest* request = NULL;
-    BodyResult*    result  = static_cast<BodyResult*>(response->body.get());
+    CqlResult*     result  = static_cast<CqlResult*>(response->body.get());
 
     switch (result->kind) {
       case CQL_RESULT_KIND_SET_KEYSPACE:

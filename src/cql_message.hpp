@@ -78,7 +78,7 @@ struct CqlMessage {
       uint8_t  opcode) {
     switch (opcode) {
       case CQL_OPCODE_RESULT:
-        return static_cast<CqlMessageBody*>(new BodyResult());
+        return static_cast<CqlMessageBody*>(new CqlResult());
 
       case CQL_OPCODE_PREPARE:
         return static_cast<CqlMessageBody*>(new CqlPrepareStatement());

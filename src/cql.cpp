@@ -29,6 +29,15 @@ struct CqlSessionFuture {
   }
 };
 
+struct CqlResultFuture {
+  std::unique_ptr<CallerRequest> request;
+
+  CqlResultFuture(
+      CallerRequest* request) :
+      request(request) {
+  }
+};
+
 CqlCluster*
 cql_cluster_new() {
   return new CqlCluster();
@@ -120,6 +129,51 @@ CqlError*
 cql_session_future_get_error(
     struct CqlSessionFuture* future) {
   return future->request->error;
+}
+
+CqlSession*
+cql_session_future_get_session(
+    struct CqlSessionFuture* future) {
+  return future->request->result;
+}
+
+void
+cql_result_future_free(
+    struct CqlResultFuture* future) {
+  delete future;
+}
+
+int
+cql_result_future_ready(
+    struct CqlResultFuture* future) {
+  return static_cast<int>(future->request->ready());
+}
+
+void
+cql_result_future_wait(
+    struct CqlResultFuture* future) {
+  future->request->wait();
+}
+
+int
+cql_result_future_wait_timed(
+    struct CqlResultFuture* future,
+    size_t                   wait) {
+  return static_cast<int>(
+      future->request->wait_for(
+          std::chrono::microseconds(wait)));
+}
+
+CqlError*
+cql_result_future_get_error(
+    struct CqlResultFuture* future) {
+  return future->request->error;
+}
+
+CqlResult*
+cql_result_future_get_result(
+    struct CqlResultFuture* future) {
+  return static_cast<CqlResult*>(future->request->result->body.get());
 }
 
 void

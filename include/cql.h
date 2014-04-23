@@ -51,6 +51,7 @@ struct CqlCluster;
 struct CqlError;
 struct CqlPrepared;
 struct CqlPrepareFuture;
+struct CqlResult;
 struct CqlResultFuture;
 struct CqlSession;
 struct CqlSessionFuture;
@@ -171,7 +172,7 @@ cql_session_shutdown(
 
 /***********************************************************************************
  *
- * Functions which deal with futures
+ * Functions which deal with session futures
  *
  ***********************************************************************************/
 
@@ -227,6 +228,88 @@ cql_session_future_wait_timed(
 CQL_EXPORT CqlError*
 cql_session_future_get_error(
     struct CqlSessionFuture* future);
+
+/**
+ * If the linked event was successful get the session instance
+ *
+ * @param future
+ *
+ * @return NULL if unsuccessful, otherwise pointer to CqlSession instance
+ */
+CQL_EXPORT CqlSession*
+cql_session_future_get_session(
+    struct CqlSessionFuture* future);
+
+
+/***********************************************************************************
+ *
+ * Functions which deal with result futures
+ *
+ ***********************************************************************************/
+
+/**
+ * Free a result instance.
+ *
+ * @return
+ */
+CQL_EXPORT void
+cql_result_future_free(
+    struct CqlResultFuture* future);
+
+/**
+ * Is the specified future ready
+ *
+ * @param future
+ *
+ * @return true if ready
+ */
+CQL_EXPORT int
+cql_result_future_ready(
+    struct CqlResultFuture* future);
+
+/**
+ * Wait the linked event occurs or error condition is reached
+ *
+ * @param future
+ */
+CQL_EXPORT void
+cql_result_future_wait(
+    struct CqlResultFuture* future);
+
+/**
+ * Wait the linked event occurs, error condition is reached, or time has elapsed.
+ *
+ * @param future
+ * @param wait time in microseconds
+ *
+ * @return false if returned due to timeout
+ */
+CQL_EXPORT int
+cql_result_future_wait_timed(
+    struct CqlResultFuture* future,
+    size_t                   wait);
+
+/**
+ * If the linked event resulted in an error, get that error
+ *
+ * @param future
+ *
+ * @return NULL if successful, otherwise pointer to CqlError structure
+ */
+CQL_EXPORT CqlError*
+cql_result_future_get_error(
+    struct CqlResultFuture* future);
+
+/**
+ * If the linked event was successful get the result instance
+ *
+ * @param future
+ *
+ * @return NULL if unsuccessful, otherwise pointer to CqlResult instance
+ */
+CQL_EXPORT CqlResult*
+cql_result_future_get_result(
+    struct CqlResultFuture* future);
 
 /***********************************************************************************
  *
@@ -563,9 +646,9 @@ cql_statement_bind_varint(
  */
 CQL_EXPORT CqlError*
 cql_statement_exec(
-    CqlSession*   session,
-    CqlStatement* statement,
-    void**        future);
+    CqlSession*       session,
+    CqlStatement*     statement,
+    CqlResultFuture** future);
 
 /***********************************************************************************
  *
@@ -598,7 +681,7 @@ CQL_EXPORT CqlError*
 cql_batch_statement_exec(
     CqlSession*        session,
     CqlBatchStatement* statement,
-    void**             future);
+    CqlResultFuture**  future);
 
 
 /***********************************************************************************
