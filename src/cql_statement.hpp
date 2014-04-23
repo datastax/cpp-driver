@@ -156,7 +156,7 @@ struct CqlStatement {
       size_t index,
       bool   value) {
     CQL_VALUE_CHECK_INDEX(index);
-    Value pair = std::make_pair(new uint8_t, sizeof(uint8_t));
+    Value pair = std::make_pair(new char[sizeof(uint8_t)], sizeof(uint8_t));
     encode_byte(pair.first, value ? 0x01 : 0x00);
     values[index] = pair;
     return CQL_ERROR_NO_ERROR;

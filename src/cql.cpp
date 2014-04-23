@@ -209,7 +209,7 @@ cql_statement_bind_short(
     CqlStatement* statement,
     size_t        index,
     int16_t       value) {
-  return CQL_ERROR_NO_ERROR;
+  return statement->bind(index, value);
 }
 
 /**
@@ -226,7 +226,7 @@ cql_statement_bind_int(
     CqlStatement* statement,
     size_t        index,
     int32_t       value) {
-  return CQL_ERROR_NO_ERROR;
+  return statement->bind(index, value);
 }
 
 /**
@@ -243,7 +243,7 @@ cql_statement_bind_bigint(
     CqlStatement* statement,
     size_t        index,
     int64_t       value) {
-  return CQL_ERROR_NO_ERROR;
+  return statement->bind(index, value);
 }
 
 /**
@@ -260,7 +260,7 @@ cql_statement_bind_float(
     CqlStatement* statement,
     size_t        index,
     float         value) {
-  return CQL_ERROR_NO_ERROR;
+  return statement->bind(index, value);
 }
 
 /**
@@ -277,7 +277,7 @@ cql_statement_bind_double(
     CqlStatement*  statement,
     size_t         index,
     double         value) {
-  return CQL_ERROR_NO_ERROR;
+  return statement->bind(index, value);
 }
 
 /**
@@ -294,7 +294,7 @@ cql_statement_bind_bool(
     CqlStatement*  statement,
     size_t         index,
     float          value) {
-  return CQL_ERROR_NO_ERROR;
+  return statement->bind(index, value);
 }
 
 /**
@@ -311,7 +311,7 @@ cql_statement_bind_time(
     CqlStatement*  statement,
     size_t         index,
     int64_t        value) {
-  return CQL_ERROR_NO_ERROR;
+  return statement->bind(index, value);
 }
 
 /**
@@ -328,7 +328,7 @@ cql_statement_bind_uuid(
     CqlStatement*  statement,
     size_t         index,
     CqlUuid        value) {
-  return CQL_ERROR_NO_ERROR;
+  return statement->bind(index, reinterpret_cast<char*>(value), sizeof(CqlUuid));
 }
 
 /**
@@ -345,7 +345,7 @@ cql_statement_bind_counter(
     CqlStatement*  statement,
     size_t         index,
     int64_t        value) {
-  return CQL_ERROR_NO_ERROR;
+  return statement->bind(index, value);
 }
 
 /**
@@ -364,7 +364,7 @@ cql_statement_bind_string(
     size_t         index,
     char*          value,
     size_t         length) {
-  return CQL_ERROR_NO_ERROR;
+  return statement->bind(index, value, length);
 }
 
 /**
@@ -383,7 +383,7 @@ cql_statement_bind_blob(
     size_t         index,
     uint8_t*       value,
     size_t         length) {
-  return CQL_ERROR_NO_ERROR;
+  return statement->bind(index, reinterpret_cast<char*>(value), length);
 }
 
 /**
@@ -423,5 +423,5 @@ cql_statement_bind_varint(
     size_t         index,
     uint8_t*       value,
     size_t         length) {
-  return CQL_ERROR_NO_ERROR;
+  return statement->bind(index, reinterpret_cast<char*>(value), length);
 }
