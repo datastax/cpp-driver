@@ -739,8 +739,8 @@ cql_session_batch(
 
 CQL_EXPORT CqlError*
 cql_batch_add_statement(
-    CqlStatement*      batch,
-    CqlBatchStatement* statement);
+    CqlBatchStatement* batch,
+    CqlStatement*      statement);
 
 /**
  * Execute a batch statement and obtain a future. Future must be freed by
