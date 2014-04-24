@@ -14,25 +14,20 @@
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   See the License for the specific language governing permissions and
   limitations under the License.
-*/	
-	
+*/
+
 #ifndef CQL_RESULT_H_
 #define CQL_RESULT_H_
-	
+
 #include <vector>
 #include "cql/cql.hpp"
-
-#include <boost/multiprecision/cpp_int.hpp>		
-#include <boost/asio/ip/address.hpp>
 
 namespace cql {
 
 class cql_list_t;
 class cql_map_t;
 class cql_set_t;
-class cql_host_t;	
-class cql_uuid_t;
-	
+
 class cql_result_t {
 
 public:
@@ -138,40 +133,13 @@ public:
                cql::cql_bigint_t& output) const = 0;
 
     virtual bool
-    get_counter(int i,
-                cql::cql_bigint_t& output) const = 0;
-
-    virtual bool
-    get_counter(const std::string& column,
-                cql::cql_bigint_t& output) const = 0;
-
-    virtual bool
     get_string(int i,
                std::string& output) const = 0;
 
     virtual bool
     get_string(const std::string& column,
                std::string& output) const = 0;
-		
-	virtual bool
-    get_ascii(int i,
-               std::string& output) const = 0;
-
-    virtual bool
-    get_ascii(const std::string& column,
-              std::string& output) const = 0;
-
-	virtual bool
-    get_varchar(int i,
-                std::string& output) const = 0;
-
-    virtual bool
-    get_varchar(const std::string& column,
-                std::string& output) const = 0;
-
-=======
 			
->>>>>>> datastax_cpp_driver/master
     CQL_DEPRECATED virtual bool
     get_data(int i,
              cql::cql_byte_t** output,
@@ -184,48 +152,16 @@ public:
 
 	virtual bool
     get_data(int i,
-			 std::vector<cql::cql_byte_t> & output ) const = 0;
+			 std::vector< cql::cql_byte_t > & output ) const = 0;
 			
     virtual bool
     get_data(const std::string& column,
-             std::vector<cql::cql_byte_t> & output ) const = 0;
-
-	virtual bool
-    get_uuid(int i,
-			 cql_uuid_t& output) const = 0;
-
-    virtual bool
-    get_uuid(const std::string& column,
-             cql_uuid_t& output) const = 0;
-
-	virtual bool
-    get_uuid(int i,
-			 std::string & output) const = 0;
-
-    virtual bool
-    get_uuid(const std::string& column,
-             std::string & output) const = 0;
-
-	virtual bool	
-	get_timestamp(int i,
-        cql::cql_bigint_t& output) const = 0;
-		
-	virtual bool
-	get_timestamp(const std::string& column,
-        cql::cql_bigint_t& output) const = 0;	
-
-	virtual bool	
-	get_timeuuid(int i,
-        cql::cql_bigint_t& output) const = 0;
-		
-	virtual bool
-	get_timeuuid(const std::string& column,
-        cql::cql_bigint_t& output) const = 0;	
-						
+             std::vector< cql::cql_byte_t > & output ) const = 0;
+									
     CQL_DEPRECATED virtual bool
     get_list(int i,
              cql::cql_list_t** output) const = 0;
-				
+			
     CQL_DEPRECATED virtual bool
     get_list(const std::string& column,
              cql::cql_list_t** output) const = 0;
@@ -248,120 +184,29 @@ public:
 			
 	virtual bool
     get_list(int i,
-             boost::shared_ptr<cql::cql_list_t>& output) const = 0;			
+             boost::shared_ptr< cql::cql_list_t > & output) const = 0;			
 
 	virtual bool
     get_list(const std::string& column,	
-             boost::shared_ptr<cql::cql_list_t>& output) const = 0;			
+             boost::shared_ptr< cql::cql_list_t > & output) const = 0;			
 
 	virtual bool
     get_set(int i,
-            boost::shared_ptr<cql::cql_set_t>& output) const = 0;		
+            boost::shared_ptr< cql::cql_set_t > & output) const = 0;		
 
 	virtual bool
     get_set(const std::string& column,
-            boost::shared_ptr<cql::cql_set_t>& output) const = 0;		
+            boost::shared_ptr< cql::cql_set_t > & output) const = 0;		
 
 	virtual bool
     get_map(int i,	
-            boost::shared_ptr<cql::cql_map_t>& output) const = 0;		
+            boost::shared_ptr< cql::cql_map_t > & output) const = 0;		
 
 	virtual bool
     get_map(const std::string& column,
-            boost::shared_ptr<cql::cql_map_t>& output) const = 0;				
-				
-	virtual bool 
-	get_decimal_is_int(int i) const = 0;								//// is it possible to convert the DECIMAL to int ( 32 bits ) without rounding.		
-
-	virtual bool 
-	get_decimal_is_int_64(int i) const = 0;							//// is it possible to convert the DECIMAL to int64 ( 64 bits ) without rounding.	
-
-	virtual bool 
-	get_decimal_is_double(int i) const = 0;							//// is it possible to convert the DECIMAL to double even with small roundings error.
-				
-	virtual bool 
-	get_decimal_int(int i, 
-	                cql::cql_int_t & output) const = 0;				//// convert DECIMAL to 32-int if it is possible
-
-	virtual bool 
-	get_decimal_int_64(int i, 
-	                   cql::cql_bigint_t& output) const = 0;			//// convert DECIMAL to 64-int if it is possible
-	
-	virtual bool 
-	get_decimal_double(int i, 
-	                   double & output) const = 0;					//// convert DECIMAL to double with roundings error.	
-			
-	virtual bool 
-	get_decimal_is_int(std::string const& column) const = 0;			//// is it possible to convert the DECIMAL to int ( 32 bits ) without rounding.		
-
-	virtual bool 
-	get_decimal_is_int_64(std::string const& column) const = 0;		//// is it possible to convert the DECIMAL to int64 ( 64 bits ) without rounding.	
-
-	virtual bool 
-	get_decimal_is_double(std::string const& column) const = 0;		//// is it possible to convert the DECIMAL to double even with small roundings error.
-				
-	virtual bool 
-	get_decimal_int(std::string const& column, 
-	                cql::cql_int_t& output) const = 0;				//// convert DECIMAL to 32-int if it is possible
-
-	virtual bool	
-	get_decimal_int_64(std::string const& column, 
-	                   cql::cql_bigint_t& output) const = 0;			//// convert DECIMAL to 64-int if it is possible
-
-	virtual bool 
-	get_decimal_double(std::string const& column, 
-	                   double & output) const = 0;					//// convert DECIMAL to double with roundings error.	
-
-	virtual bool 
-	get_varint(std::string const& column, 
-	           cql::cql_bigint_t& output) const = 0;			//// convert varint to int64.	
-
-	virtual bool 
-	get_varint(int i, 
-	           cql::cql_bigint_t& output) const = 0;			//// convert varint to int64.	
-		
-	virtual bool 
-	get_blob(int i, 
-	         std::vector<cql::cql_byte_t>& output) const = 0;			//// return blob as vector. Data is copied
-					
-	virtual bool	
-	get_blob(std::string const & column, 
-	         std::vector<cql::cql_byte_t>& output) const = 0;			//// return blob as vector. Data is copied
-
-	virtual bool 
-	get_blob(int i,
-		     std::pair<cql::cql_byte_t*,cql::cql_int_t>& output ) const = 0;			//// return blob as pure pointer. Data is not copied
-
-	virtual bool	
-	get_blob(std::string const & column, 
-	          std::pair<cql::cql_byte_t*,cql::cql_int_t>& output ) const = 0;			//// return blob as pure pointer. Data is not copied		
-
-	virtual bool
-    get_text(int i,
-             std::string& output) const = 0;
-
-    virtual bool
-    get_text(const std::string& column,
-             std::string& output) const = 0;
-
-	virtual bool 
-	get_inet(int i,		
-	         boost::asio::ip::address & output) const = 0;			//// return inet.
-						
-	virtual bool		
-	get_inet(std::string const& column, 
-	         boost::asio::ip::address & output) const = 0;			//// return inet.			
-	
-	virtual bool 
-	get_varint(int i,		
-			   boost::multiprecision::cpp_int & output) const = 0;			//// return boost multiprecision cpp_int
-					
-	virtual bool
-	get_varint(std::string const& column, 
-			   boost::multiprecision::cpp_int & output) const = 0;			//// return boost multiprecision cpp_int
-};
+            boost::shared_ptr< cql::cql_map_t > & output) const = 0;					
+};			
 			
 } // namespace cql
 
 #endif // CQL_RESULT_H_
-		
