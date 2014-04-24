@@ -34,6 +34,9 @@ public:
     static cql_uuid_t
     create();
     
+    static cql_uuid_t
+    from_timestamp(cql_bigint_t ts);
+    
     static size_t
     size() {
         return _size;

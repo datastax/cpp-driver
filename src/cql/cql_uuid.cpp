@@ -129,6 +129,38 @@ cql::cql_uuid_t::create() {
     return ret;
 }
 
+cql::cql_uuid_t
+cql::cql_uuid_t::from_timestamp(cql::cql_bigint_t ts) {
+    static boost::mt19937_64 mt;
+    cql_uuid_t ret;
+    
+	for(int i = 0; i < _size; ++i) {
+		ret._uuid[i] = mt() % 256;
+    }
+    
+	std::vector<cql::cql_byte_t> chars_vec;
+    
+	for (int i = 0; i < 8; ++i) {
+		cql_bigint_t t = ts & static_cast<cql::cql_bigint_t>(0xFF);
+		cql_byte_t t2 = static_cast<cql_byte_t>(t);
+		chars_vec.push_back(t2);
+		ts = ts >> 8;
+	}
+    
+	ret._uuid[3] = chars_vec[0] ;
+	ret._uuid[2] = chars_vec[1] ;
+	ret._uuid[1] = chars_vec[2] ;
+	ret._uuid[0] = chars_vec[3] ;
+	ret._uuid[5] = chars_vec[4] ;
+	ret._uuid[4] = chars_vec[5] ;
+	ret._uuid[7] = chars_vec[6] ;
+	ret._uuid[6] = chars_vec[7] & 0x0F;		//// take only half of the byte.
+	cql_byte_t t6 = 0x10;
+	ret._uuid[6] = ret._uuid[6] | t6;
+    
+    return ret;
+}
+
 cql::cql_uuid_t::cql_uuid_t() {
     for (size_t i = 0u; i < _size; ++i) {
         _uuid[i] = 0;
