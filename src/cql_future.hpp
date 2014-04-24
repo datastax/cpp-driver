@@ -22,6 +22,19 @@
 
 struct CqlFuture {
   std::unique_ptr<CqlError> error;
+
+  virtual bool
+  ready() = 0;
+
+  virtual void
+  wait() = 0;
+
+  virtual bool
+  wait_for(
+      size_t wait) = 0;
+
+  virtual
+  ~CqlFuture() {}
 };
 
 template<typename Data,
@@ -97,6 +110,12 @@ struct CqlFutureImpl
           lock,
           std::bind(&CqlFutureImpl<Data, Result>::ready, this));
     }
+  }
+
+  bool
+  wait_for(
+      size_t wait) {
+    return wait_for(std::chrono::microseconds(wait));
   }
 
   /**

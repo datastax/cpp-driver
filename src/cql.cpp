@@ -20,33 +20,6 @@
 #include "cql_cluster.hpp"
 #include "cql_session.hpp"
 
-struct CqlSessionFuture {
-  std::unique_ptr<CqlSessionFutureImpl> request;
-
-  CqlSessionFuture(
-      CqlSessionFutureImpl* request) :
-      request(request) {
-  }
-};
-
-struct CqlPrepareFuture {
-  std::unique_ptr<CqlMessageFutureImpl> request;
-
-  CqlPrepareFuture(
-      CqlMessageFutureImpl* request) :
-      request(request) {
-  }
-};
-
-struct CqlResultFuture {
-  std::unique_ptr<CqlMessageFutureImpl> request;
-
-  CqlResultFuture(
-      CqlMessageFutureImpl* request) :
-      request(request) {
-  }
-};
-
 CqlCluster*
 cql_cluster_new() {
   return new CqlCluster();
@@ -84,9 +57,9 @@ cql_session_free(
 
 CqlError*
 cql_session_connect(
-    struct CqlSession*        session,
-    struct CqlSessionFuture** future) {
-  *future = new CqlSessionFuture(session->connect(""));
+    struct CqlSession* session,
+    struct CqlFuture** future) {
+  *future = session->connect("");
   return CQL_ERROR_NO_ERROR;
 }
 
@@ -94,137 +67,72 @@ CqlError*
 cql_session_connect_keyspace(
     struct CqlSession* session,
     char*              keyspace,
-    CqlSessionFuture** future) {
-  *future = new CqlSessionFuture(session->connect(keyspace));
+    CqlFuture** future) {
+  *future = session->connect(keyspace);
   return CQL_ERROR_NO_ERROR;
 }
 
 CqlError*
 cql_session_shutdown(
     CqlSession*        session,
-    CqlSessionFuture** future) {
-  *future = new CqlSessionFuture(session->shutdown());
+    CqlFuture** future) {
+  *future = session->shutdown();
   return CQL_ERROR_NO_ERROR;
 }
 
 void
-cql_session_future_free(
-    struct CqlSessionFuture* future) {
+cql_future_free(
+    struct CqlFuture* future) {
   delete future;
 }
 
 int
-cql_session_future_ready(
-    struct CqlSessionFuture* future) {
-  return static_cast<int>(future->request->ready());
+cql_future_ready(
+    struct CqlFuture* future) {
+  return static_cast<int>(future->ready());
 }
 
 void
-cql_session_future_wait(
-    struct CqlSessionFuture* future) {
-  future->request->wait();
+cql_future_wait(
+    struct CqlFuture* future) {
+  future->wait();
 }
 
 int
-cql_session_future_wait_timed(
-    struct CqlSessionFuture* future,
-    size_t                   wait) {
+cql_future_wait_timed(
+    struct CqlFuture* future,
+    size_t            wait) {
   return static_cast<int>(
-      future->request->wait_for(
-          std::chrono::microseconds(wait)));
+      future->wait_for(wait));
 }
 
 CqlError*
-cql_session_future_get_error(
-    struct CqlSessionFuture* future) {
-  return future->request->error.release();
+cql_future_get_error(
+    struct CqlFuture* future) {
+  return future->error.release();
 }
 
 CqlSession*
-cql_session_future_get_session(
-    struct CqlSessionFuture* future) {
-  return future->request->result;
-}
-
-void
-cql_result_future_free(
-    struct CqlResultFuture* future) {
-  delete future;
-}
-
-int
-cql_result_future_ready(
-    struct CqlResultFuture* future) {
-  return static_cast<int>(future->request->ready());
-}
-
-void
-cql_result_future_wait(
-    struct CqlResultFuture* future) {
-  future->request->wait();
-}
-
-int
-cql_result_future_wait_timed(
-    struct CqlResultFuture* future,
-    size_t                   wait) {
-  return static_cast<int>(
-      future->request->wait_for(
-          std::chrono::microseconds(wait)));
-}
-
-CqlError*
-cql_result_future_get_error(
-    struct CqlResultFuture* future) {
-  return future->request->error.release();
+cql_future_get_session(
+    struct CqlFuture* future) {
+  CqlSessionFutureImpl* session_future = static_cast<CqlSessionFutureImpl*>(future);
+  return session_future->result;
 }
 
 CqlResult*
-cql_result_future_get_result(
-    struct CqlResultFuture* future) {
-  return static_cast<CqlResult*>(future->request->result->body.release());
-}
-
-void
-cql_prepare_future_free(
-    struct CqlPrepareFuture* future) {
-  delete future;
-}
-
-int
-cql_prepare_future_ready(
-    struct CqlPrepareFuture* future) {
-  return static_cast<int>(future->request->ready());
-}
-
-void
-cql_prepare_future_wait(
-    struct CqlPrepareFuture* future) {
-  future->request->wait();
-}
-
-int
-cql_prepare_future_wait_timed(
-    struct CqlPrepareFuture* future,
-    size_t                   wait) {
-  return static_cast<int>(
-      future->request->wait_for(
-          std::chrono::microseconds(wait)));
-}
-
-CqlError*
-cql_prepare_future_get_error(
-    struct CqlPrepareFuture* future) {
-  return future->request->error.release();
+cql_future_get_result(
+    struct CqlFuture* future) {
+  CqlMessageFutureImpl* message_future = static_cast<CqlMessageFutureImpl*>(future);
+  return static_cast<CqlResult*>(message_future->result->body.release());
 }
 
 CqlPrepared*
-cql_prepare_future_get_prepare(
-    struct CqlPrepareFuture* future) {
-  CqlResult* result = static_cast<CqlResult*>(future->request->result->body.get());
+cql_future_get_prepare(
+    struct CqlFuture* future) {
+  CqlMessageFutureImpl* message_future = static_cast<CqlMessageFutureImpl*>(future);
+  CqlResult*            result         = static_cast<CqlResult*>(message_future->result->body.get());
   return new CqlPrepared(std::string(result->prepared, result->prepared_size));
 }
-
 
 void
 cql_error_string(
@@ -266,8 +174,8 @@ cql_session_prepare(
     CqlSession*        session,
     const char*        statement,
     size_t             statement_length,
-    CqlPrepareFuture** output) {
-  *output = reinterpret_cast<CqlPrepareFuture*>(session->prepare(statement, statement_length));
+    CqlFuture** output) {
+  *output = reinterpret_cast<CqlFuture*>(session->prepare(statement, statement_length));
   return CQL_ERROR_NO_ERROR;
 }
 
