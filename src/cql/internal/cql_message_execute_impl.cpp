@@ -357,7 +357,7 @@ cql::cql_message_execute_impl_t::set_stream(const cql_stream_t& stream)
 void 
 cql::cql_message_execute_impl_t::push_back(const cql::cql_uuid_t val) {
 	std::vector<cql_byte_t> const val_tmp = val.get_data();
-	cql::cql_message_execute_impl_t::param_t p(val_tmp.begin(), val_tmp.end());
+    boost::shared_ptr<param_t> p(new param_t(val_tmp.begin(), val_tmp.end()));
     _params.push_back(p);
 }
 
@@ -372,7 +372,7 @@ cql::cql_message_execute_impl_t::push_back(const boost::asio::ip::address val) {
 		encode_ipv6(output, val.to_string());
 	}
 
-	cql::cql_message_execute_impl_t::param_t p(output.begin(), output.end());
+	boost::shared_ptr<param_t> p(new param_t(output.begin(), output.end()));
 	_params.push_back(p);
 }
 
@@ -380,7 +380,7 @@ void
 cql::cql_message_execute_impl_t::push_back(const cql::cql_varint_t val)
 {
 	std::vector< cql::cql_byte_t > const t = val.get_data();
-	cql::cql_message_execute_impl_t::param_t p(t.begin(), t.end());
+	boost::shared_ptr<param_t> p(new param_t(t.begin(), t.end()));
 	_params.push_back(p);
 }
 
@@ -388,6 +388,6 @@ void
 cql::cql_message_execute_impl_t::push_back(const cql::cql_decimal_t val)
 {
 	std::vector< cql::cql_byte_t > const t = val.get_data();
-	cql::cql_message_execute_impl_t::param_t p(t.begin(), t.end());
+	boost::shared_ptr<param_t> p(new param_t(t.begin(), t.end()));
 	_params.push_back(p);
 }

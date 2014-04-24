@@ -37,37 +37,7 @@ count_number_of_valid_bits_in_timestamp( cql::cql_bigint_t ts )
 		
 	return result;		
 }
-
-cql::cql_uuid_t
-convert_timestamp_to_uuid(cql::cql_bigint_t ts)
-{			
-    std::vector<cql::cql_byte_t> v_bytes(16);
-		
-	for(int i = 0; i < 16; ++i)		
-		v_bytes[i] = rand() % 256;	
-		
-	std::vector<cql::cql_byte_t> chars_vec;
-			
-	for(int i = 0; i < 8; ++i) {	
-		cql::cql_bigint_t t = ts & static_cast<cql::cql_bigint_t>(0xFF);		
-		cql::cql_byte_t t2 = static_cast<cql::cql_byte_t>(t);	
-		chars_vec.push_back(t2);					
-		ts = ts >> 8;			
-	}		
-			
-	v_bytes[3] = chars_vec[0] ;
-	v_bytes[2] = chars_vec[1] ;
-	v_bytes[1] = chars_vec[2] ;
-	v_bytes[0] = chars_vec[3] ;
-	v_bytes[5] = chars_vec[4] ;
-	v_bytes[4] = chars_vec[5] ;
-	v_bytes[7] = chars_vec[6] ;							
-	v_bytes[6] = chars_vec[7] & 0x0F;		//// take only half of the byte.
-	cql::cql_byte_t t6 = 0x10;		
-	v_bytes[6] = v_bytes[6] | t6;
-	int k = 0;	
-}				
-			
+	
 cql::cql_bigint_t 
 generate_random_time_stamp()
 {													
@@ -182,7 +152,7 @@ BOOST_AUTO_TEST_CASE(consistency_uuid_test_1) /////  --run_test=consistency_uuid
         cql::cql_uuid_t uuid2(uuid_string);
 						
 		cql::cql_bigint_t timestamp = generate_random_time_stamp();
-		cql::cql_uuid_t timeuuid = convert_timestamp_to_uuid(timestamp);
+		cql::cql_uuid_t timeuuid = cql::cql_uuid_t::from_timestamp(timestamp);
 		std::string const timeuuid_string = timeuuid.to_string();
 								
 		if (!(uuid == uuid2)) {
