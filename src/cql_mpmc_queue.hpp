@@ -95,7 +95,7 @@ class MPMCQueue {
   bool
   dequeue(
       T& data) {
-    size_t       tail_seq = tail_seq_.load(std::memory_order_relaxed);
+    size_t tail_seq = tail_seq_.load(std::memory_order_relaxed);
 
     for (;;) {
       Node*    node     = &buffer_[tail_seq & mask_];

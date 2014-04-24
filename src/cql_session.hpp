@@ -39,23 +39,11 @@ struct CqlSession {
     SESSION_STATE_DISCONNECTED
   };
 
-  struct CqlMessageRequest {
-    CqlMessageFutureImpl* future;
-    CqlMessage*           message;
-
-    CqlMessageRequest(
-        CqlMessageFutureImpl* future,
-        CqlMessage*           message) :
-        future(future),
-        message(message) {
-    }
-  };
-
   std::atomic<CqlSessionState> state;
   uv_thread_t                  thread;
   uv_loop_t*                   loop;
   uv_async_t                   async_connect;
-  uv_async_t                   async_prepare;
+  uv_async_t                   async_request;
   std::vector<IOWorker*>       io_loops;
   SSLContext*                  ssl_context;
   LogCallback                  log_callback;
@@ -71,9 +59,16 @@ struct CqlSession {
       io_loops(io_loop_count, NULL),
       request_queue(1024) {
     async_connect.data = this;
+    async_request.data = this;
+
     uv_async_init(
         loop,
         &async_connect,
+        &CqlSession::on_connect_called);
+
+    uv_async_init(
+        loop,
+        &async_request,
         &CqlSession::on_connect_called);
 
     for (size_t i = 0; i < io_loops.size(); ++i) {
@@ -166,9 +161,18 @@ struct CqlSession {
         reinterpret_cast<CqlPrepareStatement*>(node.message->body.get());
     body->prepare_string(statement, length);
 
-    // uv_async goes to on_request
-
-
+    if (request_queue.enqueue(node)) {
+      uv_async_send(&async_request);
+    } else {
+      node.future->error.reset(new CqlError(
+          CQL_ERROR_SOURCE_LIBRARY,
+          CQL_ERROR_LIB_NO_STREAMS,
+          "request queue full",
+          __FILE__,
+          __LINE__));
+      node.future->use_local_loop = true;
+      node.future->notify(NULL);
+    }
     return node.future;
   }
 
@@ -179,13 +183,15 @@ struct CqlSession {
 
   void
   on_request() {
-    // called by event loop
-    // pull item out of queue
-    // load balancing policy give me host
-    // choose pool
-    // ClientConnection* connection = nullptr;
-    // pool->borrow_connection(host, connection);
-    // connection->send_message_threadsafe(request);
+    CqlMessageRequest node;
+
+    while (request_queue.dequeue(node)) {
+      // load balancing policy give me host
+      // choose pool
+      // ClientConnection* connection = nullptr;
+      // pool->borrow_connection(host, connection);
+      // connection->send_message_threadsafe(request);
+    }
   }
 
   CqlSessionFutureImpl*
