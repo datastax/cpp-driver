@@ -794,3 +794,23 @@ cql::decode_inet(istream& input,
     cql::decode_int(input, port);
     return input;
 }
+
+void
+cql::encode_ipv4(std::vector<cql::cql_byte_t> & output,
+                 const std::string& ip) {
+    const char buffer_size = sizeof(in_addr);
+    char buffer[buffer_size];
+    if (inet_pton_ipv4(ip.c_str(), buffer)) {
+		output.assign(buffer, buffer + buffer_size);
+    }
+}
+
+void
+cql::encode_ipv6(std::vector<cql::cql_byte_t> & output,
+                 const std::string& ip) {
+    const char buffer_size = sizeof(in6_addr);
+    char buffer[buffer_size];
+    if (inet_pton_ipv6(ip.c_str(), buffer)) {
+		output.assign(buffer, buffer + buffer_size);
+    }
+}

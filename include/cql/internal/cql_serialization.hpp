@@ -257,6 +257,14 @@ decode_inet(std::istream& input,
             std::string& ip,
             cql_int_t& port);
 
+void
+encode_ipv4(std::vector<cql_byte_t> & output,
+            const std::string& ip);
+
+void
+encode_ipv6(std::vector<cql_byte_t> & output,
+            const std::string& ip);
+
 } // namespace cql
 
 #endif // CQL_SERIALIZATION_H_

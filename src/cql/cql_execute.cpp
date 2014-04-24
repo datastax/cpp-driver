@@ -149,3 +149,24 @@ cql::cql_execute_t::set_stream(const cql_stream_t& stream)
 {
     impl()->set_stream(stream);
 }
+
+void 
+cql::cql_execute_t::push_back(const cql::cql_uuid_t val) {
+    _impl->push_back(val);
+}
+
+void 
+cql::cql_execute_t::push_back(const boost::asio::ip::address val) {
+    _impl->push_back(val);
+}
+
+void 
+cql::cql_execute_t::push_back(const cql::cql_varint_t val) {
+	_impl->push_back(val);
+}
+
+void 
+cql::cql_execute_t::push_back(const cql::cql_decimal_t val) {
+	_impl->push_back(val);
+}
+

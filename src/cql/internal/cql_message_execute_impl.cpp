@@ -27,6 +27,9 @@
 
 #include "cql/internal/cql_message_execute_impl.hpp"
 
+#include "cql/internal/cql_serialization.hpp"
+#include "cql/cql_uuid.hpp"
+
 cql::cql_message_execute_impl_t::cql_message_execute_impl_t() :
     _buffer(new std::vector<cql_byte_t>()),
     _consistency(cql::CQL_CONSISTENCY_ONE),
@@ -334,3 +337,40 @@ cql::cql_message_execute_impl_t::set_stream(const cql_stream_t& stream)
     _stream = stream;
 }
 
+void 
+cql::cql_message_execute_impl_t::push_back(const cql::cql_uuid_t val) {
+	std::vector<cql_byte_t> const val_tmp = val.get_data();
+	cql::cql_message_execute_impl_t::param_t p(val_tmp.begin(), val_tmp.end());
+    _params.push_back(p);
+}
+
+void 
+cql::cql_message_execute_impl_t::push_back(const boost::asio::ip::address val) {
+	std::vector<cql::cql_byte_t> output;
+
+	if( val.is_v4() ) {
+		encode_ipv4(output, val.to_string());
+	}
+	else {
+		encode_ipv6(output, val.to_string());
+	}
+
+	cql::cql_message_execute_impl_t::param_t p(output.begin(), output.end());
+	_params.push_back(p);
+}
+
+void 
+cql::cql_message_execute_impl_t::push_back(const cql::cql_varint_t val)
+{
+	std::vector< cql::cql_byte_t > const t = val.get_data();
+	cql::cql_message_execute_impl_t::param_t p(t.begin(), t.end());
+	_params.push_back(p);
+}
+
+void 
+cql::cql_message_execute_impl_t::push_back(const cql::cql_decimal_t val)
+{
+	std::vector< cql::cql_byte_t > const t = val.get_data();
+	cql::cql_message_execute_impl_t::param_t p(t.begin(), t.end());
+	_params.push_back(p);
+}

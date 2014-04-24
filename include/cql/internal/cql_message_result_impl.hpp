@@ -162,14 +162,6 @@ public:
     get_bigint(const std::string& column,
                cql::cql_bigint_t& output) const;
 
-	bool
-    get_counter(int i,
-               cql::cql_bigint_t& output) const;
-
-    bool
-    get_counter(const std::string& column,
-               cql::cql_bigint_t& output) const;
-
     bool
     get_string(int i,
                std::string& output) const;
@@ -177,23 +169,7 @@ public:
     bool
     get_string(const std::string& column,
                std::string& output) const;
-		
-	bool
-    get_ascii(int i,
-               std::string& output) const;
-		
-    bool
-    get_ascii(const std::string& column,
-               std::string& output) const;
-		
-	bool	
-    get_varchar(int i,
-               std::string& output) const;
-
-    bool	
-    get_varchar(const std::string& column,
-               std::string& output) const;
-
+	
     CQL_DEPRECATED bool
     get_data(int i,
              cql::cql_byte_t** output,
@@ -204,46 +180,14 @@ public:
              cql::cql_byte_t** output,
              cql::cql_int_t& size) const;
 
-	bool
+	virtual bool
     get_data(int i,
 			 std::vector< cql::cql_byte_t > & output ) const;
 			
-    bool
+    virtual bool
     get_data(const std::string& column,
              std::vector< cql::cql_byte_t > & output ) const;	
-
-	bool
-    get_uuid(int i,
-			 cql_uuid_t& output) const;
-				
-    bool
-    get_uuid(const std::string& column,
-             cql_uuid_t& output) const;
-				
-	bool
-    get_uuid(int i,
-			 std::string & output) const;
-				
-    bool
-    get_uuid(const std::string& column,
-             std::string & output) const;
-		
-	bool	
-	get_timestamp( int i,
-				   cql::cql_bigint_t& output) const;
-				
-	bool
-	get_timestamp( const std::string& column,
-				   cql::cql_bigint_t& output) const;		
 			
-	bool	
-	get_timeuuid(int i,
-        cql::cql_bigint_t& output) const;
-		
-	bool
-	get_timeuuid(const std::string& column,
-        cql::cql_bigint_t& output) const;	
-		
     CQL_DEPRECATED bool
     get_list(int i,
              cql::cql_list_t** output) const;
@@ -314,55 +258,112 @@ public:
 
         return (*reinterpret_cast<cql::cql_int_t*>(_row[i]) != 0);
     }			
-	
-	//////// methods for deserializing DECIMAL:
+
+	bool
+    get_counter(int i,
+               cql::cql_bigint_t& output) const;
+
+    bool
+    get_counter(const std::string& column,
+               cql::cql_bigint_t& output) const;
+
+	bool
+    get_ascii(int i,
+			  std::string& output) const;
 		
-	bool 
-	get_decimal_is_int( int i ) const;								//// is it possible to convert the DECIMAL to int ( 32 bits ) without rounding.		
-
-	bool 
-	get_decimal_is_int_64( int i ) const;							//// is it possible to convert the DECIMAL to int64 ( 64 bits ) without rounding.	
-
-	bool 
-	get_decimal_is_double( int i ) const;							//// is it possible to convert the DECIMAL to double even with small roundings error.
-				
-	bool 
-	get_decimal_int( int i, 
-	                 cql::cql_int_t & output ) const;				//// convert DECIMAL to 32-int if it is possible
-
-	bool 
-	get_decimal_int_64( int i, 
-	                    cql::cql_bigint_t & output ) const;			//// convert DECIMAL to 64-int if it is possible
-
-	bool 
-	get_decimal_double( int i, 
-	                    double & output ) const;					//// convert DECIMAL to double with roundings error.	
-
-	bool 
-	get_decimal_is_int( std::string const & column ) const;			//// is it possible to convert the DECIMAL to int ( 32 bits ) without rounding.		
-
-	bool 
-	get_decimal_is_int_64( std::string const & column ) const;		//// is it possible to convert the DECIMAL to int64 ( 64 bits ) without rounding.	
-
-	bool 
-	get_decimal_is_double( std::string const & column ) const;		//// is it possible to convert the DECIMAL to double even with small roundings error.
-				
-	bool 
-	get_decimal_int( std::string const & column, 
-	                 cql::cql_int_t & output ) const;				//// convert DECIMAL to 32-int if it is possible
-
+    bool
+    get_ascii(const std::string& column,
+			  std::string& output) const;
+		
 	bool	
-	get_decimal_int_64( std::string const & column, 
-	                    cql::cql_bigint_t & output ) const;			//// convert DECIMAL to 64-int if it is possible
+    get_varchar(int i,
+				std::string& output) const;
 
-	bool 
-	get_decimal_double( std::string const & column, 
-	                    double & output ) const;					//// convert DECIMAL to double with roundings error.	
-							
-private:			
+    bool	
+    get_varchar(const std::string& column,
+				std::string& output) const;
+
+	bool
+    get_uuid(int i,
+			 cql_uuid_t& output) const;
+
+    bool
+    get_uuid(const std::string& column,
+             cql_uuid_t& output) const;
+
+	bool
+    get_uuid(int i,
+			 std::string& output) const;
+				
+    bool
+    get_uuid(const std::string& column,
+             std::string & output) const;
+		
+	bool
+	get_timestamp(int i,
+				  cql::cql_bigint_t& output) const;
+				
+	bool
+	get_timestamp(const std::string& column,
+				  cql::cql_bigint_t& output) const;		
+			
+	bool
+	get_timeuuid(int i,
+				 cql::cql_bigint_t& output) const;
+		
+	bool
+	get_timeuuid(const std::string& column,
+				 cql::cql_bigint_t& output) const;	
+
+	bool
+	get_blob(int i, 
+			 std::vector<cql::cql_byte_t>& output) const;
 					
-	std::string convert_uuid_to_string( std::vector< cql::cql_byte_t > const & v ) const;	
+	bool
+	get_blob(std::string const & column, 
+	         std::vector<cql::cql_byte_t>& output) const;
 
+	bool
+	get_blob(int i,
+		     std::pair<cql::cql_byte_t*,cql::cql_int_t>& output) const;
+					
+	bool
+	get_blob(std::string const& column, 
+	         std::pair<cql::cql_byte_t*,cql::cql_int_t>& output) const;
+
+	bool
+    get_text(int i,
+			 std::string& output) const;
+				
+    bool
+    get_text(const std::string& column,
+			 std::string& output) const;
+				
+	bool
+	get_inet(int i, 
+			 boost::asio::ip::address & output) const;
+					
+	bool
+	get_inet(std::string const& column,
+			 boost::asio::ip::address & output) const;
+
+	bool
+	get_decimal(std::string const & column,
+				cql::cql_decimal_t & output ) const;
+
+	bool
+	get_decimal(int i,
+				cql::cql_decimal_t & output ) const;
+
+	bool
+	get_varint(std::string const & column,
+			   cql::cql_varint_t & output ) const;
+
+	bool
+	get_varint(int i,
+			   cql::cql_varint_t & output ) const;
+				
+private:
     cql::cql_message_buffer_t     _buffer;
     cql::cql_byte_t*              _pos;
     std::vector<cql::cql_byte_t*> _row;

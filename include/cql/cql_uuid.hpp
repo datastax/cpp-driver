@@ -26,13 +26,6 @@ namespace cql {
     class cql_uuid_t;
 }
 
-/*
-namespace std {
-     template<>
-     struct hash<cql::cql_uuid_t>;
-}
-*/
-
 namespace cql {
 
 class CQL_EXPORT cql_uuid_t
@@ -47,9 +40,9 @@ public:
     }
 
     cql_uuid_t();
-    cql_uuid_t(const std::string& uuid_string);
-    cql_uuid_t(cql_byte_t* bytes);
-    cql_uuid_t(const std::vector<cql_byte_t>& bytes);
+    explicit cql_uuid_t(const std::string& uuid_string);
+    explicit cql_uuid_t(cql_byte_t* bytes);
+    explicit cql_uuid_t(const std::vector<cql_byte_t>& bytes);
 
     bool
     empty() const;
@@ -62,9 +55,7 @@ public:
     
     std::vector<cql_byte_t>
     get_data() const;
-    
-    // friend struct std::hash<cql_uuid_t>;
-    
+        
     /** The `<' operator sorts the UUIDs according to their timestamps. */
     friend bool
     operator <(const cql_uuid_t& left, const cql_uuid_t& right);
@@ -79,28 +70,5 @@ private:
 };
 
 }
-
-// namespace std {
-
-//     template<>
-//     struct hash<cql::cql_uuid_t> {
-// 	public:
-//         typedef
-//             cql::cql_uuid_t
-//             argument_type;
-
-//         typedef
-//             size_t
-//             result_type;
-
-//         size_t
-//         operator ()(const cql::cql_uuid_t& id) const {
-//             return
-//                 ((id._uuid * 3169) << 16) +
-//                 ((id._uuid * 23) << 8) +
-//                 id._uuid;
-//         }
-//     };
-// }
 
 #endif	/* CQL_UUID_HPP_ */

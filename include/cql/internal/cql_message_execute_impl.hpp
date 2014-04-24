@@ -27,6 +27,11 @@
 #include "cql/cql_stream.hpp"
 #include "cql/internal/cql_message.hpp"
 
+#include "cql/cql_uuid.hpp"
+#include <boost/asio/ip/address.hpp>
+#include "cql/cql_decimal.hpp"			
+#include "cql/cql_varint.hpp"			
+
 namespace cql {
 
 class cql_retry_policy_t;
@@ -128,6 +133,18 @@ public:
 
     void
     set_stream(const cql_stream_t& stream);
+
+	void 
+	push_back(const cql_uuid_t val);
+
+	void 
+	push_back(const boost::asio::ip::address val);
+
+	void 
+	push_back(const cql_varint_t val);
+
+	void 
+	push_back(const cql_decimal_t val);
 
 private:
     typedef std::list<param_t> params_container_t;

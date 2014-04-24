@@ -1199,6 +1199,12 @@ private:
 
             if (!_callback_storage.has_callbacks(stream)) {
                 log(CQL_LOG_INFO, "no callback found for message " + header.str() + " " + _response_message->str());
+                
+                if (_connect_errback ) {
+                    cql::cql_error_t e = cql::cql_error_t::cassandra_error(CQL_ERROR_PROTOCOL,
+                        "cql::cql_connection_impl_t::body_read_handle: CQL_OPCODE_ERROR, unexpected stream");
+                    _connect_errback(this->shared_from_this(), e);
+                }
             }
             else {
                 callback_pair_t callback_pair = _callback_storage.get_callbacks(stream);
