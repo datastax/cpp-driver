@@ -40,21 +40,19 @@
 
 typedef uint8_t CqlUuid[16];
 
-struct CqlInet {
+typedef struct {
   uint8_t  length;
   uint8_t  address[6];
   uint32_t port;
-};
+} CqlInet;
 
 struct CqlBatchStatement;
 struct CqlCluster;
 struct CqlError;
+struct CqlFuture;
 struct CqlPrepared;
-struct CqlPrepareFuture;
 struct CqlResult;
-struct CqlResultFuture;
 struct CqlSession;
-struct CqlSessionFuture;
 struct CqlStatement;
 
 /**
@@ -62,7 +60,7 @@ struct CqlStatement;
  *
  * @return
  */
-CQL_EXPORT struct CqlCluster*
+CQL_EXPORT CqlCluster*
 cql_cluster_new();
 
 /**
@@ -72,7 +70,7 @@ cql_cluster_new();
  */
 CQL_EXPORT void
 cql_cluster_free(
-    struct CqlCluster* cluster);
+    CqlCluster* cluster);
 
 /**
  * Set an option on the specified connection cluster
@@ -86,7 +84,7 @@ cql_cluster_free(
  */
 CQL_EXPORT CqlError*
 cql_cluster_setopt(
-    struct CqlCluster* cluster,
+    CqlCluster* cluster,
     int                option,
     const void*        data,
     size_t             datalen);
@@ -102,7 +100,7 @@ cql_cluster_setopt(
  */
 CQL_EXPORT CqlError*
 cql_cluster_getopt(
-    struct CqlCluster* cluster,
+    CqlCluster* cluster,
     int                option,
     void**             data,
     size_t*            datalen);
@@ -117,8 +115,8 @@ cql_cluster_getopt(
  */
 CQL_EXPORT CqlError*
 cql_session_new(
-    struct CqlCluster*  cluster,
-    struct CqlSession** session);
+    CqlCluster*  cluster,
+    CqlSession** session);
 
 /**
  * Free a session instance.
@@ -127,7 +125,7 @@ cql_session_new(
  */
 CQL_EXPORT void
 cql_session_free(
-    struct CqlSession* session);
+    CqlSession* session);
 
 /**
  * Initiate a session using the specified session. Resulting
@@ -140,8 +138,8 @@ cql_session_free(
  */
 CQL_EXPORT CqlError*
 cql_session_connect(
-    struct CqlSession*        session,
-    struct CqlSessionFuture** future);
+    CqlSession*        session,
+    CqlFuture** future);
 
 /**
  * Initiate a session using the specified session, and set the keyspace. Resulting
@@ -155,9 +153,9 @@ cql_session_connect(
  */
 CQL_EXPORT CqlError*
 cql_session_connect_keyspace(
-    struct CqlSession* session,
+    CqlSession* session,
     char*              keyspace,
-    CqlSessionFuture** future);
+    CqlFuture** future);
 
 /**
  * Shutdown the session instance, output a shutdown future which can
@@ -167,12 +165,12 @@ cql_session_connect_keyspace(
  */
 CQL_EXPORT CqlError*
 cql_session_shutdown(
-    CqlSession*        session,
-    CqlSessionFuture** future);
+    CqlSession* session,
+    CqlFuture** future);
 
 /***********************************************************************************
  *
- * Functions which deal with session futures
+ * Functions which deal with futures
  *
  ***********************************************************************************/
 
@@ -183,7 +181,7 @@ cql_session_shutdown(
  */
 CQL_EXPORT void
 cql_session_future_free(
-    struct CqlSessionFuture* future);
+    CqlFuture* future);
 
 /**
  * Is the specified future ready
@@ -194,7 +192,7 @@ cql_session_future_free(
  */
 CQL_EXPORT int
 cql_session_future_ready(
-    struct CqlSessionFuture* future);
+    CqlFuture* future);
 
 /**
  * Wait the linked event occurs or error condition is reached
@@ -203,7 +201,7 @@ cql_session_future_ready(
  */
 CQL_EXPORT void
 cql_session_future_wait(
-    struct CqlSessionFuture* future);
+    CqlFuture* future);
 
 /**
  * Wait the linked event occurs, error condition is reached, or time has elapsed.
@@ -215,8 +213,8 @@ cql_session_future_wait(
  */
 CQL_EXPORT int
 cql_session_future_wait_timed(
-    struct CqlSessionFuture* future,
-    size_t                   wait);
+    CqlFuture* future,
+    size_t     wait);
 
 /**
  * If the linked event resulted in an error, get that error
@@ -227,7 +225,7 @@ cql_session_future_wait_timed(
  */
 CQL_EXPORT CqlError*
 cql_session_future_get_error(
-    struct CqlSessionFuture* future);
+    CqlFuture* future);
 
 /**
  * If the linked event was successful get the session instance
@@ -238,67 +236,7 @@ cql_session_future_get_error(
  */
 CQL_EXPORT CqlSession*
 cql_session_future_get_session(
-    struct CqlSessionFuture* future);
-
-
-/***********************************************************************************
- *
- * Functions which deal with result futures
- *
- ***********************************************************************************/
-
-/**
- * Free a result instance.
- *
- * @return
- */
-CQL_EXPORT void
-cql_result_future_free(
-    struct CqlResultFuture* future);
-
-/**
- * Is the specified future ready
- *
- * @param future
- *
- * @return true if ready
- */
-CQL_EXPORT int
-cql_result_future_ready(
-    struct CqlResultFuture* future);
-
-/**
- * Wait the linked event occurs or error condition is reached
- *
- * @param future
- */
-CQL_EXPORT void
-cql_result_future_wait(
-    struct CqlResultFuture* future);
-
-/**
- * Wait the linked event occurs, error condition is reached, or time has elapsed.
- *
- * @param future
- * @param wait time in microseconds
- *
- * @return false if returned due to timeout
- */
-CQL_EXPORT int
-cql_result_future_wait_timed(
-    struct CqlResultFuture* future,
-    size_t                   wait);
-
-/**
- * If the linked event resulted in an error, get that error
- *
- * @param future
- *
- * @return NULL if successful, otherwise pointer to CqlError structure
- */
-CQL_EXPORT CqlError*
-cql_result_future_get_error(
-    struct CqlResultFuture* future);
+    CqlFuture* future);
 
 /**
  * If the linked event was successful get the result instance. Result
@@ -310,67 +248,7 @@ cql_result_future_get_error(
  */
 CQL_EXPORT CqlResult*
 cql_result_future_get_result(
-    struct CqlResultFuture* future);
-
-
-/***********************************************************************************
- *
- * Functions which deal with prepare futures
- *
- ***********************************************************************************/
-
-/**
- * Free a prepare instance.
- *
- * @return
- */
-CQL_EXPORT void
-cql_prepare_future_free(
-    struct CqlPrepareFuture* future);
-
-/**
- * Is the specified future ready
- *
- * @param future
- *
- * @return true if ready
- */
-CQL_EXPORT int
-cql_prepare_future_ready(
-    struct CqlPrepareFuture* future);
-
-/**
- * Wait the linked event occurs or error condition is reached
- *
- * @param future
- */
-CQL_EXPORT void
-cql_prepare_future_wait(
-    struct CqlPrepareFuture* future);
-
-/**
- * Wait the linked event occurs, error condition is reached, or time has elapsed.
- *
- * @param future
- * @param wait time in microseconds
- *
- * @return false if returned due to timeout
- */
-CQL_EXPORT int
-cql_prepare_future_wait_timed(
-    struct CqlPrepareFuture* future,
-    size_t                   wait);
-
-/**
- * If the linked event prepareed in an error, get that error
- *
- * @param future
- *
- * @return NULL if successful, otherwise pointer to CqlError structure
- */
-CQL_EXPORT CqlError*
-cql_prepare_future_get_error(
-    struct CqlPrepareFuture* future);
+    CqlFuture* future);
 
 /**
  * If the linked event was successful get the prepared
@@ -383,7 +261,7 @@ cql_prepare_future_get_error(
  */
 CQL_EXPORT CqlPrepared*
 cql_prepare_future_get_prepare(
-    struct CqlPrepareFuture* future);
+    CqlFuture* future);
 
 
 /***********************************************************************************
@@ -482,7 +360,7 @@ cql_session_prepare(
     CqlSession*        session,
     char*              statement,
     size_t             statement_length,
-    CqlPrepareFuture** output);
+    CqlFuture** output);
 
 /**
  * Initialize a bound statement from a pre-prepared statement
@@ -723,7 +601,7 @@ CQL_EXPORT CqlError*
 cql_statement_exec(
     CqlSession*       session,
     CqlStatement*     statement,
-    CqlResultFuture** future);
+    CqlFuture** future);
 
 /***********************************************************************************
  *
@@ -756,7 +634,7 @@ CQL_EXPORT CqlError*
 cql_batch_statement_exec(
     CqlSession*        session,
     CqlBatchStatement* statement,
-    CqlResultFuture**  future);
+    CqlFuture**  future);
 
 
 /***********************************************************************************
@@ -1124,7 +1002,7 @@ cql_map_get_key(
  *
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
-CQL_EXPORT CqlError*
+CQL_EXPORT int
 cql_map_get_value(
     void*  item,
     void** output);
@@ -1197,7 +1075,7 @@ cql_uuid_v4(
 CQL_EXPORT CqlError*
 cql_uuid_string(
     CqlUuid uuid,
-    char*      output);
+    char*   output);
 
 #define CQL_LOG_CRITICAL 0x00
 #define CQL_LOG_ERROR    0x01

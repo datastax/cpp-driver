@@ -46,16 +46,15 @@
 #define CQL_OPCODE_EVENT        0x0C
 #define CQL_OPCODE_BATCH        0x0D
 
-#include "cql_request.hpp"
+#include "cql_future.hpp"
 #include "cql_error.hpp"
 #include "cql_message.hpp"
 
 typedef std::function<void(int, const char*, size_t)> LogCallback;
 
-typedef std::unique_ptr<CqlError>                        CqlErrorPtr;
-typedef std::unique_ptr<CqlMessage>                      CqlMessagePtr;
-typedef Request<std::string, CqlErrorPtr, CqlMessagePtr> CqlCallerRequest;
-typedef Request<CqlSession*, CqlErrorPtr, CqlSession*>   CqlSessionRequest;
+typedef std::unique_ptr<CqlMessage>               CqlMessagePtr;
+typedef CqlFutureImpl<std::string, CqlMessagePtr> CqlMessageFutureImpl;
+typedef CqlFutureImpl<CqlSession*, CqlSession*>   CqlSessionFutureImpl;
 
 uv_buf_t
 alloc_buffer(

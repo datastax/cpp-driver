@@ -18,6 +18,7 @@
 #define __CQL_SESSION_HPP_INCLUDED__
 
 #include <uv.h>
+#include <atomic>
 #include <list>
 #include <string>
 #include <vector>
@@ -25,7 +26,6 @@
 #include "cql_mpmc_queue.hpp"
 #include "cql_spsc_queue.hpp"
 #include "cql_pool.hpp"
-#include "cql_request.hpp"
 #include "cql_io_worker.hpp"
 
 typedef int (*LoadBalancerDistanceCallback)(char* host, size_t host_size);
@@ -39,25 +39,37 @@ struct CqlSession {
     SESSION_STATE_DISCONNECTED
   };
 
-  typedef std::unordered_map<std::string, IOWorker*> WorkerIndex;
+  struct CqlMessageRequest {
+    CqlMessageFutureImpl* future;
+    CqlMessage*           message;
 
-  std::atomic<CqlSessionState>  state;
-  uv_thread_t                   thread;
-  uv_loop_t*                    loop;
-  uv_async_t                    async_connect;
-  uv_async_t                    async_prepare;
-  std::vector<IOWorker*>        io_loops;
-  SSLContext*                   ssl_context;
-  LogCallback                   log_callback;
-  std::string                   keyspace;
-  CqlSessionRequest*            connect_session_request;
-  LoadBalancerDistanceCallback  distance_callback;
+    CqlMessageRequest(
+        CqlMessageFutureImpl* future,
+        CqlMessage*           message) :
+        future(future),
+        message(message) {
+    }
+  };
+
+  std::atomic<CqlSessionState> state;
+  uv_thread_t                  thread;
+  uv_loop_t*                   loop;
+  uv_async_t                   async_connect;
+  uv_async_t                   async_prepare;
+  std::vector<IOWorker*>       io_loops;
+  SSLContext*                  ssl_context;
+  LogCallback                  log_callback;
+  std::string                  keyspace;
+  CqlSessionFutureImpl*        connect_session_request;
+  LoadBalancerDistanceCallback distance_callback;
+  MPMCQueue<CqlMessageRequest> request_queue;
 
   CqlSession(
       size_t io_loop_count,
       size_t io_queue_size) :
       loop(uv_loop_new()),
-      io_loops(io_loop_count, NULL) {
+      io_loops(io_loop_count, NULL),
+      request_queue(1024) {
     async_connect.data = this;
     uv_async_init(
         loop,
@@ -80,16 +92,16 @@ struct CqlSession {
     }
   }
 
-  CqlSessionRequest*
+  CqlSessionFutureImpl*
   connect(
       const char* ks) {
     return connect(std::string(ks));
   }
 
-  CqlSessionRequest*
+  CqlSessionFutureImpl*
   connect(
       const std::string& ks) {
-    connect_session_request       = new CqlSessionRequest();
+    connect_session_request       = new CqlSessionFutureImpl();
     connect_session_request->data = this;
 
     CqlSessionState new_state = SESSION_STATE_NEW;
@@ -121,8 +133,6 @@ struct CqlSession {
       size_t host_size,
       bool   is_host_addition) {
 
-
-
   }
 
 
@@ -131,7 +141,6 @@ struct CqlSession {
       uv_async_t* data,
       int         status) {
     CqlSession* session = reinterpret_cast<CqlSession*>(data->data);
-
 
   }
 
@@ -143,21 +152,45 @@ struct CqlSession {
     return NULL;
   }
 
-  CqlPrepareFuture*
+  CqlMessageFutureImpl*
   prepare(
       const char* statement,
       size_t      length) {
-    return nullptr;
+    CqlMessageRequest node(
+        new CqlMessageFutureImpl(),
+        new CqlMessage(CQL_OPCODE_PREPARE));
+
+    node.future->data.assign(statement, length);
+
+    CqlPrepareStatement* body =
+        reinterpret_cast<CqlPrepareStatement*>(node.message->body.get());
+    body->prepare_string(statement, length);
+
+    // uv_async goes to on_request
+
+
+    return node.future;
   }
 
-  CqlCallerRequest*
+  CqlMessageFutureImpl*
   execute() {
     return nullptr;
   }
 
-  CqlSessionRequest*
+  void
+  on_request() {
+    // called by event loop
+    // pull item out of queue
+    // load balancing policy give me host
+    // choose pool
+    // ClientConnection* connection = nullptr;
+    // pool->borrow_connection(host, connection);
+    // connection->send_message_threadsafe(request);
+  }
+
+  CqlSessionFutureImpl*
   shutdown() {
-    CqlSessionRequest* connect_session_request = new CqlSessionRequest();
+    CqlSessionFutureImpl* connect_session_request = new CqlSessionFutureImpl();
     return connect_session_request;
   }
 

@@ -21,28 +21,28 @@
 #include "cql_session.hpp"
 
 struct CqlSessionFuture {
-  std::unique_ptr<CqlSessionRequest> request;
+  std::unique_ptr<CqlSessionFutureImpl> request;
 
   CqlSessionFuture(
-      CqlSessionRequest* request) :
+      CqlSessionFutureImpl* request) :
       request(request) {
   }
 };
 
 struct CqlPrepareFuture {
-  std::unique_ptr<CqlCallerRequest> request;
+  std::unique_ptr<CqlMessageFutureImpl> request;
 
   CqlPrepareFuture(
-      CqlCallerRequest* request) :
+      CqlMessageFutureImpl* request) :
       request(request) {
   }
 };
 
 struct CqlResultFuture {
-  std::unique_ptr<CqlCallerRequest> request;
+  std::unique_ptr<CqlMessageFutureImpl> request;
 
   CqlResultFuture(
-      CqlCallerRequest* request) :
+      CqlMessageFutureImpl* request) :
       request(request) {
   }
 };
@@ -267,7 +267,7 @@ cql_session_prepare(
     const char*        statement,
     size_t             statement_length,
     CqlPrepareFuture** output) {
-  *output = session->prepare(statement, statement_length);
+  *output = reinterpret_cast<CqlPrepareFuture*>(session->prepare(statement, statement_length));
   return CQL_ERROR_NO_ERROR;
 }
 

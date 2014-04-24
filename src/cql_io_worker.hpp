@@ -21,7 +21,6 @@
 #include <string>
 #include <unordered_map>
 #include "cql_pool.hpp"
-#include "cql_request.hpp"
 
 struct IOWorker {
   typedef std::shared_ptr<Pool>  PoolPtr;

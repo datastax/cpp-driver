@@ -19,7 +19,6 @@
 
 #include "cql_common.hpp"
 #include "cql_message.hpp"
-#include "cql_request.hpp"
 #include "cql_session.hpp"
 #include "cql_ssl_context.hpp"
 #include "cql_ssl_session.hpp"
@@ -72,7 +71,7 @@ struct ClientConnection {
 
   typedef StreamStorage<
     Stream,
-    CqlCallerRequest*,
+    CqlMessageFutureImpl*,
     CQL_STREAM_ID_MAX> StreamStorageCollection;
 
   struct WriteRequestData {
@@ -80,15 +79,15 @@ struct ClientConnection {
     ClientConnection* connection;
   };
 
-  ClientConnectionState       state_;
-  uv_loop_t*                  loop_;
-  std::unique_ptr<CqlMessage> incomming_;
-  StreamStorageCollection     stream_storage_;
-  ConnectionCallback          connect_callback_;
-  KeyspaceCallback            keyspace_callback_;
-  PrepareCallback             prepare_callback_;
-  LogCallback                 log_callback_;
-  SPSCQueue<CqlCallerRequest*>   request_queue_;
+  ClientConnectionState        state_;
+  uv_loop_t*                   loop_;
+  std::unique_ptr<CqlMessage>  incomming_;
+  StreamStorageCollection      stream_storage_;
+  ConnectionCallback           connect_callback_;
+  KeyspaceCallback             keyspace_callback_;
+  PrepareCallback              prepare_callback_;
+  LogCallback                  log_callback_;
+  SPSCQueue<CqlMessageFutureImpl*> request_queue_;
 
   // DNS and hostname stuff
   struct sockaddr_in       address_;
@@ -431,7 +430,7 @@ struct ClientConnection {
     log(CQL_LOG_DEBUG, "on_result");
 
     CqlError*      err     = NULL;
-    CqlCallerRequest* request = NULL;
+    CqlMessageFutureImpl* request = NULL;
     CqlResult*     result  = static_cast<CqlResult*>(response->body.get());
 
     switch (result->kind) {
@@ -579,6 +578,7 @@ struct ClientConnection {
     ClientConnection* connection = data->connection;
     connection->log(CQL_LOG_DEBUG, "on_write");
     if (status == -1) {
+      // TODO(mstump) need to trigger failure for all pending requests and notify connection close
       fprintf(
           stderr,
           "Write error %s\n",
@@ -589,14 +589,14 @@ struct ClientConnection {
     delete req;
   }
 
-  CqlCallerRequest*
+  CqlMessageFutureImpl*
   prepare(
-      const char*             statement,
-      size_t                  size,
-      CqlCallerRequest::Callback callback = NULL) {
-    CqlCallerRequest* request = new CqlCallerRequest();
-    CqlMessage*       message = new CqlMessage(CQL_OPCODE_PREPARE);
-    CqlPrepareStatement*   prepare = static_cast<CqlPrepareStatement*>(message->body.get());
+      const char*                    statement,
+      size_t                         size,
+      CqlMessageFutureImpl::Callback callback = NULL) {
+    CqlMessageFutureImpl* request = new CqlMessageFutureImpl();
+    CqlMessage*           message = new CqlMessage(CQL_OPCODE_PREPARE);
+    CqlPrepareStatement*  prepare = static_cast<CqlPrepareStatement*>(message->body.get());
     prepare->prepare_string(statement, size);
 
     request->callback = callback;
@@ -610,11 +610,11 @@ struct ClientConnection {
     return request;
   }
 
-  CqlCallerRequest*
+  CqlMessageFutureImpl*
   exec(
       CqlMessage*                message,
-      CqlCallerRequest::Callback callback = NULL) {
-    CqlCallerRequest* request = new CqlCallerRequest();
+      CqlMessageFutureImpl::Callback callback = NULL) {
+    CqlMessageFutureImpl* request = new CqlMessageFutureImpl();
     request->callback = callback;
     CqlError* err = send_message(message, request);
     if (err) {
@@ -625,14 +625,34 @@ struct ClientConnection {
   }
 
   CqlError*
+  send_message_threadsafe(
+      CqlMessage* message,
+      CqlMessageFutureImpl* request = NULL) {
+    // enqueue message
+    // use uv_async to call on_send_message_threadsafe
+
+    return nullptr;
+  }
+
+  void
+  on_send_message_threadsafe(
+      CqlMessage* message,
+      CqlMessageFutureImpl* request = NULL) {
+    // called by event loop
+    // pull item out of queue
+    // call send_message
+  }
+
+  CqlError*
   send_message(
       CqlMessage* message,
-      CqlCallerRequest* request = NULL) {
+      CqlMessageFutureImpl* request = NULL) {
     uv_buf_t   buf;
     CqlError*  err = stream_storage_.set_stream(request, message->stream);
     if (err) {
       return err;
     }
+    // TODO(mstump) deal with possible failure from prepare
     message->prepare(&buf.base, buf.len);
 
     char log_message[512];

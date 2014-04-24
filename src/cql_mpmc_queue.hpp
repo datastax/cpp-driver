@@ -26,9 +26,9 @@
 #include <assert.h>
 
 template<typename T>
-class MpmcQueue {
+class MPMCQueue {
  public:
-  MpmcQueue(
+  MPMCQueue(
       size_t size) :
       size_(size),
       mask_(size - 1),
@@ -44,7 +44,7 @@ class MpmcQueue {
     }
   }
 
-  ~MpmcQueue() {
+  ~MPMCQueue() {
     delete[] buffer_;
   }
 
@@ -157,8 +157,8 @@ class MpmcQueue {
   std::atomic<size_t> tail_seq_;
   CachePad            pad3_;
 
-  MpmcQueue(const MpmcQueue&) {}
-  void operator=(const MpmcQueue&) {}
+  MPMCQueue(const MPMCQueue&) {}
+  void operator=(const MPMCQueue&) {}
 };
 
 #endif

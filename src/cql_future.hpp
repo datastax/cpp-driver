@@ -14,31 +14,33 @@
   limitations under the License.
 */
 
-#ifndef __REQUEST_HPP_INCLUDED__
-#define __REQUEST_HPP_INCLUDED__
+#ifndef __CQL_FUTURE_HPP_INCLUDED__
+#define __CQL_FUTURE_HPP_INCLUDED__
 
 #include <atomic>
 #include <uv.h>
 
+struct CqlFuture {
+  std::unique_ptr<CqlError> error;
+};
+
 template<typename Data,
-         typename Error,
          typename Result>
-struct Request {
-  typedef std::function<void(Request<Data, Error, Result>*)> Callback;
+struct CqlFutureImpl
+    : public CqlFuture {
+  typedef std::function<void(CqlFutureImpl<Data, Result>*)> Callback;
 
   std::atomic<bool>       flag;
   std::mutex              mutex;
   std::condition_variable condition;
-  Error                   error;
   Data                    data;
   Result                  result;
   Callback                callback;
   bool                    use_local_loop;
   uv_work_t               uv_work_req;
 
-  Request() :
+  CqlFutureImpl() :
       flag(false),
-      error(nullptr),
       data(NULL),
       result(nullptr),
       callback(NULL),
@@ -78,7 +80,7 @@ struct Request {
         uv_queue_work(
             loop,
             &uv_work_req,
-            &Request<Data, Error, Result>::callback_executor,
+            &CqlFutureImpl<Data, Result>::callback_executor,
             NULL);
       }
     }
@@ -93,7 +95,7 @@ struct Request {
       std::unique_lock<std::mutex> lock(mutex);
       condition.wait(
           lock,
-          std::bind(&Request<Data, Error, Result>::ready, this));
+          std::bind(&CqlFutureImpl<Data, Result>::ready, this));
     }
   }
 
@@ -114,7 +116,7 @@ struct Request {
       return condition.wait_for(
           lock,
           time,
-          std::bind(&Request<Data, Error, Result>::ready, this));
+          std::bind(&CqlFutureImpl<Data, Result>::ready, this));
     }
     return true;
   }
@@ -131,8 +133,8 @@ struct Request {
       uv_work_t* work) {
     (void) work;
     if (work && work->data) {
-      Request<Data, Error, Result>* request
-          = reinterpret_cast<Request<Data, Error, Result>*>(work->data);
+      CqlFutureImpl<Data, Result>* request
+          = reinterpret_cast<CqlFutureImpl<Data, Result>*>(work->data);
 
       if (request->callback) {
         request->callback(request);
@@ -141,8 +143,8 @@ struct Request {
   }
 
   // don't allow copy
-  Request(Request<Data, Error, Result>&) {}
-  void operator=(const Request&) {}
+  CqlFutureImpl(CqlFutureImpl<Data, Result>&) {}
+  void operator=(const CqlFutureImpl&) {}
 };
 
 #endif
