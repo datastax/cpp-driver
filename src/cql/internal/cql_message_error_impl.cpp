@@ -216,7 +216,7 @@ cql::cql_message_error_impl_t::get_read_timeout_data(
 
 bool 
 cql::cql_message_error_impl_t::get_unprepared_data( 
-													std::vector<cql_byte_t> & unknown_id ) const 
+    std::vector<cql_byte_t> & unknown_id) const
 {			
 	if ((cql_cassandra_error_code_enum)_code != CQL_ERROR_UNPREPARED
        || !_is_data_read) {
@@ -229,8 +229,9 @@ cql::cql_message_error_impl_t::get_unprepared_data(
 
 
 bool
-cql::cql_message_error_impl_t::get_already_exists_data( std::string & keyspace, 
-														std::string & table_name ) const
+cql::cql_message_error_impl_t::get_already_exists_data(
+    std::string & keyspace,
+    std::string & table_name) const
 {
 	if ((cql_cassandra_error_code_enum)_code != CQL_ERROR_ALREADY_EXISTS
 		|| !_is_data_read) {

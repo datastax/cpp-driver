@@ -30,6 +30,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/ptr_container/ptr_deque.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <boost/thread/mutex.hpp>
 
 #include "cql/common_type_definitions.hpp"
@@ -41,7 +42,7 @@
 #include "cql/cql_session.hpp"
 #include "cql/policies/cql_load_balancing_policy.hpp"
 
-#include "cql/internal/cql_promise.hpp"
+#include "cql/cql_promise.hpp"
 #include "cql/internal/cql_trashcan.hpp"
 
 namespace cql {
@@ -131,16 +132,19 @@ private:
 
 class cql_session_impl_t :
     public cql_session_t,
+    public boost::enable_shared_from_this<cql_session_impl_t>,
     boost::noncopyable
 {
 
 public:
-    cql_session_impl_t(
+    
+    static boost::shared_ptr<cql_session_impl_t>
+    make_instance(
         const cql_session_callback_info_t&      callbacks,
         boost::shared_ptr<cql_configuration_t>  configuration);
-
+    
     void
-    init(boost::asio::io_service& io_service);
+    init(boost::shared_ptr<boost::asio::io_service> io_service);
 
     boost::shared_ptr<cql_connection_t>
 	connect(
@@ -160,8 +164,29 @@ public:
     
     void
     set_prepare_statement(
-                          const std::vector<cql_byte_t>& query_id,
-                          const std::string& query_text);
+        const std::vector<cql_byte_t>& query_id,
+        const std::string& query_text);
+    
+    void
+    retry_callback_query(
+        const boost::shared_ptr<cql_query_t>& query,
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+        boost::shared_ptr<cql_connection_t> conn,
+        bool is_transport_error);
+
+    void
+    retry_callback_prepare(
+        const boost::shared_ptr<cql_query_t>& query,
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+        boost::shared_ptr<cql_connection_t> conn,
+        bool is_transport_error);
+
+    void
+    retry_callback_execute(
+        const boost::shared_ptr<cql_execute_t>& message,
+        boost::shared_ptr<cql_promise_t<cql_future_result_t> > promise,
+        boost::shared_ptr<cql_connection_t> conn,
+        bool is_transport_error);
 
 #ifdef _DEBUG
 	void 
@@ -170,6 +195,12 @@ public:
 
 private:
     
+    /** Private ctor. Use factory method instead.
+        Purpose: to prevent wild stack allocations of instances of cql_session_impl_t-s. */
+    cql_session_impl_t(
+        const cql_session_callback_info_t&      callbacks,
+        boost::shared_ptr<cql_configuration_t>  configuration);
+
     typedef std::map<cql_uuid_t, boost::shared_ptr<cql_connection_t> > cql_connections_collection_t;
     typedef
         std::map<std::vector<cql_byte_t>, std::string>
@@ -271,23 +302,23 @@ private:
     void
     connect_callback(
         boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
-        cql_connection_t& client);
+        boost::shared_ptr<cql_connection_t>                        client);
 
     void
     connect_errback(
         boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
-        cql_connection_t&                                          client,
+        boost::shared_ptr<cql_connection_t>                        client,
         const cql_error_t&                                         error);
 
     void
     connect_future_callback(
         boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
-        cql_connection_t&                                          client);
+        boost::shared_ptr<cql_connection_t>                        client);
 
     void
     connect_future_errback(
         boost::shared_ptr<cql_promise_t<cql_future_connection_t> > promise,
-        cql_connection_t&                                          client,
+        boost::shared_ptr<cql_connection_t>                        client,
         const cql_error_t&                                         error);
 
     boost::shared_ptr<cql_connection_t>
@@ -334,6 +365,7 @@ private:
         const boost::shared_ptr<cql_host_t>& host);
 
     friend class cql_trashcan_t;
+    
     typedef boost::ptr_map<cql_endpoint_t, cql_connections_collection_t> connection_pool_t;
 
     boost::recursive_mutex                  _mutex;

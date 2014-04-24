@@ -14,7 +14,7 @@ namespace cql {
 	public:
 		virtual cql_retry_decision_t
 		read_timeout(
-			const cql_query_t& query,
+			//const cql_query_t& query,
 			cql_consistency_enum consistency,
 			int required_responses,
 			int received_responses,
@@ -23,7 +23,7 @@ namespace cql {
 
 		virtual cql_retry_decision_t
 		write_timeout(
-			const cql_query_t& query,
+			//const cql_query_t& query,
 			cql_consistency_enum consistency,
 			const std::string& write_type,
 			int required_acks,
@@ -33,7 +33,7 @@ namespace cql {
 
 		virtual cql_retry_decision_t
 		unavailable(
-			const cql_query_t& query,
+			//const cql_query_t& query,
 			cql_consistency_enum consistency,
 			int required_replica,
 			int alive_replica,
@@ -43,8 +43,7 @@ namespace cql {
 						
 	private:		
 						
-	cql::cql_retry_decision_t	
-		cql::cql_downgrading_consistency_retry_policy_t::max_likely_to_work_cl( int knownOk );
+		cql::cql_retry_decision_t max_likely_to_work_cl( int knownOk );
 
 	};
 }

@@ -34,7 +34,6 @@ public:
         if (!*_value_set) {
             *_value_set = true;
             _promise->set_value(value);
-			(*_value_set)=true;
             return true;
         }
         return false;
@@ -48,7 +47,6 @@ public:
         if (!*_value_set) {
             *_value_set = true;
             _promise->set_exception(exception);
-			(*_value_set)=true;
             return true;
         }
 
@@ -59,6 +57,13 @@ public:
     shared_future() const
     {
         return _future;
+    }
+    
+    inline void
+    swap(
+        boost::shared_ptr<cql_promise_t<TResult> > other_promise)
+    {
+        _promise->swap(*(other_promise->_promise));
     }
 
 private:

@@ -23,6 +23,15 @@
 #include <boost/noncopyable.hpp>
 #include <cql/cql_config.hpp>
 
+#ifdef __GNUC__
+#define CQL_DEPRECATED __attribute__ ((deprecated))
+#elif defined(_MSC_VER)
+#define CQL_DEPRECATED __declspec(deprecated)
+#else
+#pragma message("CQL WARNING: deprecation messages will not be visible")
+#define CQL_DEPRECATED
+#endif
+
 namespace cql {
 
 typedef ::uint8_t   cql_byte_t;
@@ -59,6 +68,24 @@ enum cql_consistency_enum {
 	CQL_CONSISTENCY_DEFAULT = CQL_CONSISTENCY_ONE
 };
 
+enum cql_cassandra_error_code_enum {
+    CQL_ERROR_SERVER           = 0x0000,
+    CQL_ERROR_PROTOCOL         = 0x000A,
+    CQL_ERROR_BAD_CREDENTIALS  = 0x0100,
+    CQL_ERROR_UNAVAILABLE      = 0x1000,
+    CQL_ERROR_OVERLOADED       = 0x1001,
+    CQL_ERROR_IS_BOOTSTRAPPING = 0x1002,
+    CQL_ERROR_TRUNCATE         = 0x1003,
+    CQL_ERROR_WRITE_TIMEOUT    = 0x1100,
+    CQL_ERROR_READ_TIMEOUT     = 0x1200,
+    CQL_ERROR_SYNTAX           = 0x2000,
+    CQL_ERROR_UNAUTHORIZED     = 0x2100,
+    CQL_ERROR_INVALID          = 0x2200,
+    CQL_ERROR_CONFIG           = 0x2300,
+    CQL_ERROR_ALREADY_EXISTS   = 0x2400,
+    CQL_ERROR_UNPREPARED       = 0x2500
+};
+    
 enum cql_column_type_enum {
     CQL_COLUMN_TYPE_UNKNOWN   = 0xFFFF,
     CQL_COLUMN_TYPE_CUSTOM    = 0x0000,

@@ -114,7 +114,7 @@ public:
      @return true if accessed data is indeed available, false otherwise
     */
 	bool	
-	get_unprepared_data( std::vector<cql_byte_t> & unknown_id ) const;			
+	get_unprepared_data(std::vector<cql_byte_t> & unknown_id) const;
 
 	 /**
      Reads the data provided with ALREADY_EXISTS_DATA error
@@ -123,8 +123,8 @@ public:
      @return true if accessed data is indeed available, false otherwise
     */
 	bool
-	get_already_exists_data( std::string & keyspace, 
-							 std::string & table_name ) const;	
+	get_already_exists_data(std::string & keyspace,
+                            std::string & table_name) const;
 
 
 private:

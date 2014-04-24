@@ -18,8 +18,8 @@
 using namespace std;
 namespace asio = ::boost::asio;
 
-cql::cql_socket_t::cql_socket_t(asio::io_service& io_service) :
-    _socket(new asio::ip::tcp::socket(io_service)) {
+cql::cql_socket_t::cql_socket_t(boost::shared_ptr<asio::io_service> io_service) :
+    _socket(new asio::ip::tcp::socket(*io_service)) {
 }
 
 asio::io_service&

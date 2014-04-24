@@ -169,6 +169,9 @@ public:
     get_varchar(const std::string& column,
                 std::string& output) const = 0;
 
+=======
+			
+>>>>>>> datastax_cpp_driver/master
     CQL_DEPRECATED virtual bool
     get_data(int i,
              cql::cql_byte_t** output,

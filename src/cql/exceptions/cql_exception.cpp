@@ -29,12 +29,30 @@ cql::cql_exception::cql_exception(
 	size_t string_length = message.length() + 1; 
 
 	char* buffer = (char *) malloc(sizeof(char) * string_length);
-	if(buffer) {
+	if (buffer) {
 		safe_strncpy(buffer, message.c_str(), string_length);
 
 		this->_buffer = buffer;
 		this->_buffer_allocated = true;
 	}
+}
+
+cql::cql_exception::cql_exception(const cql_exception& other)
+{
+    if (other._buffer_allocated && other._buffer) {
+        size_t buffer_length = strlen(other._buffer);
+        char* buffer = (char *) malloc(sizeof(char) * buffer_length);
+        if (buffer) {
+            safe_strncpy(buffer, other._buffer, buffer_length);
+
+            this->_buffer = buffer;
+            this->_buffer_allocated = true;
+            return;
+        }
+    }
+    
+    this->_buffer = other._buffer;
+    this->_buffer_allocated = false;
 }
 
 cql::cql_exception::~cql_exception() throw()

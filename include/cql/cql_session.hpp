@@ -52,16 +52,16 @@ public:
         cql_client_callback_t;
     
     typedef 
-        boost::function<void(cql_session_t *)>             
+        boost::function<void(boost::shared_ptr<cql_session_t>)>
         cql_ready_callback_t;
     
     typedef 
-        boost::function<void(cql_session_t *)>             
+        boost::function<void(boost::shared_ptr<cql_session_t>)>
         cql_defunct_callback_t;
     
     typedef 
-        boost::function<void(cql_session_t *, 
-                             cql_connection_t&, 
+        boost::function<void(boost::shared_ptr<cql_session_t>,
+                             boost::shared_ptr<cql_connection_t>, 
                              const cql_error_t&)>                      
         cql_connection_errback_t;
     

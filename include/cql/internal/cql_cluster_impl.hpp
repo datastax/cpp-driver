@@ -24,13 +24,13 @@
 namespace cql {
     
 // This is a non-SSL client factory
-    struct client_functor_t
+struct client_functor_t
 {
 public:
 
     client_functor_t(
-        boost::asio::io_service&                  service,
-        cql::cql_connection_t::cql_log_callback_t log_callback) :
+        boost::shared_ptr<boost::asio::io_service> service,
+        cql::cql_connection_t::cql_log_callback_t  log_callback) :
         _io_service(service),
         _log_callback(log_callback)
     {}
@@ -45,18 +45,18 @@ public:
     }
 
 private:
-    boost::asio::io_service&                  _io_service;
-    cql::cql_connection_t::cql_log_callback_t _log_callback;
+    boost::shared_ptr<boost::asio::io_service> _io_service;
+    cql::cql_connection_t::cql_log_callback_t  _log_callback;
 };
 
 // This is an SSL client factory
-    struct client_ssl_functor_t
+struct client_ssl_functor_t
 {
     public:
 
-    client_ssl_functor_t(boost::asio::io_service&                  service,
-                         boost::asio::ssl::context&                context,
-                         cql::cql_connection_t::cql_log_callback_t log_callback) :
+    client_ssl_functor_t(boost::shared_ptr<boost::asio::io_service> service,
+                         boost::asio::ssl::context&                 context,
+                         cql::cql_connection_t::cql_log_callback_t  log_callback) :
         _io_service(service),
         _ssl_ctx(context),
         _log_callback(log_callback)
@@ -72,9 +72,9 @@ private:
     }
 
 private:
-    boost::asio::io_service&                  _io_service;
-    boost::asio::ssl::context&                _ssl_ctx;
-    cql::cql_connection_t::cql_log_callback_t _log_callback;
+    boost::shared_ptr<boost::asio::io_service> _io_service;
+    boost::asio::ssl::context&                 _ssl_ctx;
+    cql::cql_connection_t::cql_log_callback_t  _log_callback;
 };
 
 class cql_cluster_impl_t :
@@ -111,12 +111,8 @@ public:
 
         _metadata->add_hosts(endpoints);
 
-        _control_connection = boost::shared_ptr<cql_control_connection_t>(
-            new cql_control_connection_t(
-                *this,
-                *_io_service,
-                configuration
-                ));
+        _control_connection =
+            cql_control_connection_t::make_instance(*this, _io_service, configuration);
         _control_connection->init();
     }
 
@@ -151,12 +147,12 @@ public:
 
         if (ssl_context != 0) {
             client_factory = client_ssl_functor_t(
-				*_io_service,
+				_io_service,
 				const_cast<boost::asio::ssl::context&>(*ssl_context),
 				log_callback);
         }
         else {
-            client_factory = client_functor_t(*_io_service, log_callback);
+            client_factory = client_functor_t(_io_service, log_callback);
         }
         
         // Construct the session
@@ -164,10 +160,15 @@ public:
         session_callbacks.set_client_callback(client_factory);
         session_callbacks.set_log_callback(log_callback);
 
-        boost::shared_ptr<cql_session_impl_t> session(
-            new cql_session_impl_t(session_callbacks, _configuration));
+        boost::shared_ptr<cql_session_impl_t> session =
+            cql_session_impl_t::make_instance(session_callbacks, _configuration);
 
-        session->init(*_io_service);
+        {
+            boost::mutex::scoped_lock lock(_mutex);
+            _connected_sessions[session->id()] = session;
+        }
+        
+        session->init(_io_service);
         session->set_keyspace(keyspace);
 
         return session;
