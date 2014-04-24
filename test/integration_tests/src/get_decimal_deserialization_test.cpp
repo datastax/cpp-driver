@@ -17,12 +17,14 @@
 #include <boost/test/debug.hpp>
 #include "cql/policies/cql_round_robin_policy.hpp"
 
-	
+#include "cql/cql_decimal.hpp"	
+#include "cql/cql_varint.hpp"	
+
 struct CONSISTENCY_MY_TESTS_FOR_DIFFERENT_TYPES : test_utils::CCM_SETUP {
     CONSISTENCY_MY_TESTS_FOR_DIFFERENT_TYPES() : CCM_SETUP(1,0) {}
 };																						
 															
-BOOST_FIXTURE_TEST_SUITE( consistency_my_tests_types, CONSISTENCY_MY_TESTS_FOR_DIFFERENT_TYPES )				
+BOOST_FIXTURE_TEST_SUITE(consistency_my_tests_types, CONSISTENCY_MY_TESTS_FOR_DIFFERENT_TYPES)
 									
 void 
 generate_random_blob(std::vector<cql::cql_byte_t>& output, 
@@ -62,7 +64,7 @@ convert_vec_of_bytes_to_str(std::vector<cql::cql_byte_t> const & v)
 		b[0] = b[0] >> 4;
 		
 		for(int j = 0; j < 2; ++j) {
-			result += ( b[j] < 10 ) ? ( '0' + b[j] ) : ( 'a' + b[j] - 10 );
+			result += (b[j] < 10) ? ('0' + b[j]) : ('a' + b[j] - 10);
 		}	
 
 		result += " ";	
@@ -162,7 +164,7 @@ generate_random_inet()
 {		
 	int arr[4];
 	for(int i = 0; i < 4; ++i)
-		arr[ i ] = rand() % 256;
+		arr[i] = rand() % 256;
 		
 	std::string a1 = (boost::str(boost::format("%d.%d.%d.%d") % arr[0] % arr[1] % arr[2] % arr[3]));				
 	return a1;
@@ -182,7 +184,7 @@ generate_random_time_stamp_2()
 }		
 		
 void 
-generate_random_uuid_2(std::vector<cql::cql_byte_t>& v )
+generate_random_uuid_2(std::vector<cql::cql_byte_t>& v)
 {		
 	v.resize(16);
 	
@@ -192,8 +194,8 @@ generate_random_uuid_2(std::vector<cql::cql_byte_t>& v )
 }			
 
 void 
-convert_timestamp_to_uuid_2( cql::cql_bigint_t ts, 
-							 std::vector<cql::cql_byte_t>& v_bytes )
+convert_timestamp_to_uuid_2(cql::cql_bigint_t ts, 
+							std::vector<cql::cql_byte_t>& v_bytes)
 {			
 	v_bytes.resize(16);	
 			
@@ -248,61 +250,61 @@ make_conversion_uuid_to_string_2(std::vector<cql::cql_byte_t> const & v)
 }		
 				
 bool	
-compare_two_inet_ipv6( std::string const a1, std::string const a2 )
+compare_two_inet_ipv6(std::string const a1, std::string const a2)
 {		
-	std::vector< std::string > v1, v2;
+	std::vector<std::string> v1, v2;
 		
 	int index1 = 0;
 	int index2 = 0;
 	
 	while(true)
 	{
-		index2 = a1.find( ":", index1 );
+		index2 = a1.find(":", index1);
 
-		if( index2 < 0 )
+		if(index2 < 0)
 			break;
 
-		std::string sub = a1.substr( index1, index2 - index1 );
+		std::string sub = a1.substr(index1, index2 - index1);
 		v1.push_back( sub );
 		index1 = index2 + 1;
 	}
 
-	v1.push_back( a1.substr( index1, 4 ) );
+	v1.push_back(a1.substr( index1, 4));
 
 	index1 = 0;
 	
 	while(true)
 	{
-		index2 = a2.find( ":", index1 );
+		index2 = a2.find(":", index1);
 
-		if( index2 < 0 )
+		if(index2 < 0)
 			break;
 			
-		std::string sub = a2.substr( index1, index2 - index1 );
-		v2.push_back( sub );
+		std::string sub = a2.substr(index1, index2 - index1);
+		v2.push_back(sub);
 		index1 = index2 + 1;
 	}
 		
-	v2.push_back( a2.substr( index1, 4 ) );
+	v2.push_back(a2.substr(index1, 4));
 
-	if( v1.size() != v2.size() )
+	if(v1.size() != v2.size())
 		return false;
 
-	for( int i = 0; i < v1.size(); ++i )
+	for(int i = 0; i < v1.size(); ++i)
 	{
-		if( v1[i] == v2[i] )
+		if(v1[i] == v2[i])
 			continue;
 
-		std::string j1 = v1[ i ];
-		std::string j2 = v2[ i ];
+		std::string j1 = v1[i];
+		std::string j2 = v2[i];
 
-		while( j1.size() < 4 )
+		while(j1.size() < 4)
 			j1 = "0" + j1;
 
-		while( j2.size() < 4 )
+		while(j2.size() < 4)
 			j2 = "0" + j2;
 
-		if( j1 != j2 )
+		if(j1 != j2)
 			return false;
 	}
 
@@ -310,29 +312,29 @@ compare_two_inet_ipv6( std::string const a1, std::string const a2 )
 }		
 
 
-boost::multiprecision::cpp_int generate_random_cpp_int(int digits_number)
-{
-	boost::multiprecision::cpp_int result(rand() + 600);
-
-	for(int i = 0; i < digits_number; ++i)
-		result = result * boost::multiprecision::cpp_int(rand() + 600 ) + rand();
-
-	if(rand() % 2 == 0)
-	{
-		result = result * boost::multiprecision::cpp_int(-1);
-	}
-
-	return result;
-}
+//boost::multiprecision::cpp_int generate_random_cpp_int(int digits_number)
+//{
+//	boost::multiprecision::cpp_int result(rand() + 600);
+//
+//	for(int i = 0; i < digits_number; ++i)
+//		result = result * boost::multiprecision::cpp_int(rand() + 600 ) + rand();
+//
+//	if(rand() % 2 == 0)
+//	{
+//		result = result * boost::multiprecision::cpp_int(-1);
+//	}
+//
+//	return result;
+//}
 
 	
 	
 /////  --run_test=consistency_my_tests_types/consistency_my_tests_2
 BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 {		
-	int const number_of_records_inserted_to_one_table = 300;		// number of rows inserted to each table.	
+	int const number_of_records_inserted_to_one_table = 100;		// number of rows inserted to each table.	
 			
-	srand( (unsigned)time(NULL) );																			
+	srand((unsigned)time(NULL));
 	cql::cql_consistency_enum consistency = cql::CQL_CONSISTENCY_QUORUM;
 																																				
 // number of nodes in ccm --------------------------1 ---- 2 ---- 3 ---- 4 ---- 5 ---- 6 ----
@@ -352,58 +354,58 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 	test_utils::query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
 	session->set_keyspace(test_utils::SIMPLE_KEYSPACE);					
 					
-	{	// 1. Check deserialization of VARINT into boost::multiprecision::cpp_int
-		std::string const table_name = "table_varint_boost";
-		std::string const create_table_query = "CREATE TABLE " + table_name + " ( t00 bigint PRIMARY KEY, t01 varint );";
-		test_utils::query(session, create_table_query, consistency);
+	//{	// 1. Check deserialization of VARINT into boost::multiprecision::cpp_int
+	//	std::string const table_name = "table_varint_boost";
+	//	std::string const create_table_query = "CREATE TABLE " + table_name + " ( t00 bigint PRIMARY KEY, t01 varint );";
+	//	test_utils::query(session, create_table_query, consistency);
 
-		std::map<int,boost::multiprecision::cpp_int> m_multiprec;
-		
-		int const integer_number_of_rows = number_of_records_inserted_to_one_table;
-		for(int i = 0; i < integer_number_of_rows; ++i) {
-			boost::multiprecision::cpp_int const t01 = generate_random_cpp_int(rand() % 100 + 1);	
-			m_multiprec.insert(std::make_pair(i,t01));		
-			std::string ts = t01.str();	
-			std::string query_string(boost::str(boost::format("INSERT INTO %s (t00,t01) VALUES (%d,%s);")  % table_name % i % ts));
-			std::cout << query_string << std::endl;	
-			boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));	
-			session->query(_query);			
-		}
+	//	std::map<int,boost::multiprecision::cpp_int> m_multiprec;
+	//	
+	//	int const integer_number_of_rows = number_of_records_inserted_to_one_table;
+	//	for(int i = 0; i < integer_number_of_rows; ++i) {
+	//		boost::multiprecision::cpp_int const t01 = generate_random_cpp_int(rand() % 100 + 1);	
+	//		m_multiprec.insert(std::make_pair(i,t01));		
+	//		std::string ts = t01.str();	
+	//		std::string query_string(boost::str(boost::format("INSERT INTO %s (t00,t01) VALUES (%d,%s);")  % table_name % i % ts));
+	//		std::cout << query_string << std::endl;	
+	//		boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));	
+	//		session->query(_query);			
+	//	}
 
-		boost::shared_ptr<cql::cql_result_t> result = test_utils::query(session,str(boost::format("SELECT t00,t01 FROM %s;") % table_name),consistency);		
-				
-		int number_of_rows_selected(0);
-		while(result->next()) {					
-			++number_of_rows_selected;
+	//	boost::shared_ptr<cql::cql_result_t> result = test_utils::query(session,str(boost::format("SELECT t00,t01 FROM %s;") % table_name),consistency);		
+	//			
+	//	int number_of_rows_selected(0);
+	//	while(result->next()) {					
+	//		++number_of_rows_selected;
 
-			cql::cql_bigint_t t_00_(0);
-			if(!result->get_bigint(0, t_00_))
-			{
-				BOOST_FAIL("Fail in reading data from result.");
-			}
-			
-			boost::multiprecision::cpp_int t1(0);
-			if(!result->get_varint(1,t1)) {
-				BOOST_FAIL("Fail in reading data from result.");
-			}	
+	//		cql::cql_bigint_t t_00_(0);
+	//		if(!result->get_bigint(0, t_00_))
+	//		{
+	//			BOOST_FAIL("Fail in reading data from result.");
+	//		}
+	//		
+	//		//boost::multiprecision::cpp_int t1(0);
+	//		//if(!result->get_varint(1,t1)) {
+	//		//	BOOST_FAIL("Fail in reading data from result.");
+	//		//}	
 
-			std::map< int, boost::multiprecision::cpp_int >::const_iterator p = m_multiprec.find(t_00_);
-			if(p == m_multiprec.end()) {
-				BOOST_FAIL("Fail in reading data from result.");
-			}
+	//		std::map< int, boost::multiprecision::cpp_int >::const_iterator p = m_multiprec.find(t_00_);
+	//		if(p == m_multiprec.end()) {
+	//			BOOST_FAIL("Fail in reading data from result.");
+	//		}
 
-			if(p->second != t1) {	
-				BOOST_FAIL("Fail in reading data from result.");
-			}		
-						
-			std::cout << t_00_ << " -> " << t1 << std::endl << std::endl;
-		}	
+	//		//if(p->second != t1) {	
+	//		//	BOOST_FAIL("Fail in reading data from result.");
+	//		//}		
+	//					
+	//		// std::cout << t_00_ << " -> " << t1 << std::endl << std::endl;
+	//	}	
 
-		if(number_of_rows_selected != integer_number_of_rows) {										
-			BOOST_FAIL( "varint. The number of selected rows is wrong. " );
-		}				
+	//	if(number_of_rows_selected != integer_number_of_rows) {										
+	//		BOOST_FAIL( "varint. The number of selected rows is wrong. " );
+	//	}				
 
-	}
+	//}
 
 	{  //// 2. Check all types in one huge table 
 					
@@ -512,7 +514,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 			std::string t_02_;				
 			std::vector<cql::cql_byte_t> t_03_; 				
 			bool t_04_(false);
-			double t_05_(0.0);	
+			cql::cql_decimal_t t_05_;	
 			double t_06_(0.0);	
 			float t_07_(0.0);	
 			int t_08_(0.0);	
@@ -521,7 +523,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 			std::vector<cql::cql_byte_t> t_11_;	
 			cql::cql_bigint_t t_12_(0.0);						
 			std::string t_13_;
-			cql::cql_bigint_t t_14_(0.0);						
+			cql::cql_varint_t t_14_;						
 
 			if(!result->get_bigint(0,t_00_)) {
 				BOOST_FAIL("Wrong value for type: bigint for primary key");
@@ -582,16 +584,22 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 				BOOST_FAIL("Fail in reading data from result.");
 			}
 
-			if(result->get_decimal_double(5,t_05_)) {
-				if(t_05_map[t_00_] != t_05_) {
-					if(t_05_ != 0.0) {
-						double const diff = (t_05_map[t_00_] - t_05_)/t_05_;
-							
-						if(diff > 1.0e-015 || diff < -1.0e-015) {		
-							std::string dr1 = boost::str(boost::format("%1.25d") % t_05_map[t_00_]);
-							std::string dr2 = boost::str(boost::format("%1.25d") % t_05_);
-							BOOST_FAIL("The value of double is not correct. " + dr1 + " " + dr2);
-						}	
+			if(result->get_decimal(5,t_05_)) 
+			{
+				double t_05_b(0.0);
+				if(t_05_.is_convertible_to_double())
+				{	
+					t_05_.convert_to_double(t_05_b);
+					if(t_05_map[t_00_] != t_05_b) {
+						if(t_05_b != 0.0) {
+							double const diff = (t_05_map[t_00_] - t_05_b)/t_05_b;
+								
+							if(diff > 1.0e-015 || diff < -1.0e-015) {		
+								std::string dr1 = boost::str(boost::format("%1.25d") % t_05_map[t_00_]);
+								std::string dr2 = boost::str(boost::format("%1.25d") % t_05_b);
+								BOOST_FAIL("The value of double is not correct. " + dr1 + " " + dr2);
+							}	
+						}
 					}
 				}
 			}
@@ -681,8 +689,11 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 			}
 
 			if(result->get_varint(14,t_14_)) {
-				if(t_14_map[t_00_] != t_14_) {
-					std::cout << t_14_map[t_00_] << " <> " <<  t_14_ << std::endl;
+				cql::cql_bigint_t t_14_b;
+				t_14_.convert_to_int64(t_14_b);
+
+				if(t_14_map[t_00_] != t_14_b) {
+					std::cout << t_14_map[t_00_] << " <> " <<  t_14_b << std::endl;
 					BOOST_FAIL("Wrong value for type: varint");
 				}		
 			}			
@@ -713,11 +724,11 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 	}					
 						
 	//// 3. Check blob.		
-	{						
+	{
 		std::string const table_name = test_utils::SIMPLE_TABLE + "_blob";
 		test_utils::query(session,str(boost::format("CREATE TABLE %s(tweet_id bigint PRIMARY KEY, t1 bigint, t2 blob, t3 bigint );") % table_name),consistency);
-			
-		std::map<int,std::vector<cql::cql_byte_t> > blob_map;																							
+		
+		std::map<int,std::vector<cql::cql_byte_t> > blob_map;
 		int const integer_number_of_rows = number_of_records_inserted_to_one_table;		// when the value is 1700 the driver hangs up. 
 																	
 		for(int i = 0; i < integer_number_of_rows; ++i) {								
@@ -772,9 +783,9 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 				}	
 			}		
 		}		
-				
+		
 		if(number_of_rows_selected != integer_number_of_rows) {										
-			BOOST_FAIL( "varint. The number of selected rows is wrong. " );
+			BOOST_FAIL("varint. The number of selected rows is wrong.");
 		}					
 	}					
 					
@@ -797,7 +808,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 				inet2 = generate_random_inet_v6(); 
 					
 			inet_map.insert(std::make_pair(i,inet2));		
-			std::string query_string(boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3) VALUES (%d,%d,'%s',%d);") % table_name % i % i % inet2 % i ));	
+			std::string query_string(boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3) VALUES (%d,%d,'%s',%d);") % table_name % i % i % inet2 % i));	
 			boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));	
 			session->query(_query);										
 		}		
@@ -808,9 +819,9 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 		int number_of_rows_selected(0);
 		while(result->next()) {					
 			++number_of_rows_selected;
-					
+			
 			cql::cql_bigint_t t1(0), t2(0);
-						
+			
 			result->get_bigint(0,t1);
 			result->get_bigint(2,t2);					
 					
@@ -863,7 +874,7 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 			}					
 				
 			varint_map.insert(std::make_pair(i,ii));
-			std::string query_string( boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3) VALUES (%d,%d,%d,%d);") % table_name % i % i % ii % i ));	
+			std::string query_string(boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3) VALUES (%d,%d,%d,%d);") % table_name % i % i % ii % i));	
 			boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));	
 			session->query(_query);										
 		}				
@@ -874,23 +885,23 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 
 		int number_of_rows_selected(0);
 		while(result->next()) {					
-			++number_of_rows_selected;
-					
+			++number_of_rows_selected;				
 			cql::cql_bigint_t t1(0), t2(0);						
 			result->get_bigint(0,t1);
-			result->get_bigint(2,t2);							
-					
-			cql::cql_bigint_t varint_2(0);
-						
+			result->get_bigint(2,t2);												
+			cql::cql_varint_t varint_2;
+
 			if(result->get_varint(1,varint_2)) {					
 				std::map<int,cql::cql_bigint_t>::const_iterator p = varint_map.find(t1);
 				if(p == varint_map.end()) {					
 					BOOST_FAIL("There is no such element in varint map.");
-				}		
-						
-				std::cout << varint_2 << " " << p->second << std::endl;
-						
-				if(varint_2 != p->second) {
+				}	
+					
+				cql::cql_bigint_t varint_2_b(0);
+				varint_2.convert_to_int64(varint_2_b);						
+				std::cout << varint_2_b << " " << p->second << std::endl;
+	
+				if(varint_2_b != p->second) {
 					BOOST_FAIL("The value of INT64 is not correct. ");
 				}
 			}	
@@ -934,33 +945,42 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 			cql::cql_bigint_t t1(0), t2(0);
 						
 			result->get_bigint(0,t1);
-			result->get_bigint(2,t2);
-			
-			if(result->get_decimal_is_int(1)) {
-				cql::cql_int_t r(0);
-				result->get_decimal_int(1,r);
-						
+			result->get_bigint(2,t2);			
+			cql::cql_decimal_t r;
+
+			if(result->get_decimal(1,r)) {	
 				std::map<int,cql::cql_int_t>::const_iterator p = int_map.find(t1);
 				if(p == int_map.end()) {					
 					BOOST_FAIL("There is no such element in INT32 map.");
 				}			
-						
-				if(r != p->second) {			
-					BOOST_FAIL("The value of INT32 is not correct.");
-				}	
-					
-				{	//// retrieve it also with int64 and compare the results.						
-					cql::cql_bigint_t bi(0);
-					result->get_decimal_int_64(1,bi);
-					cql::cql_bigint_t bi2 = r;
-					if(bi2 != bi) {	
-						BOOST_FAIL("An int32 value retrieved as int64 gave a different result.");
+
+				if(r.is_convertible_to_int32()) {
+					cql::cql_int_t r2(0);
+
+					if(!r.convert_to_int32(r2)) {
+						BOOST_FAIL("Wrong conversion from decimal to INT32");
+					}
+
+					if(r2 != p->second) {
+						BOOST_FAIL("The value of INT32 is not correct.");
 					}	
-				}		
-			}			
+
+					{	//// retrieve it also with int64 and compare the results.						
+						cql::cql_bigint_t bi(0);							
+						r.convert_to_int64( bi );
+						cql::cql_bigint_t bi2 = r2;
+						if(bi2 != bi) {	
+							BOOST_FAIL("An int32 value retrieved as int64 gave a different result.");
+						}	
+					}		
+				}
+				else {
+					BOOST_FAIL("A 32-bit decimal value is consisdered as not convertible to INT32");
+				}
+			}
 			else {			
 				BOOST_FAIL("An INT32 value is consisdered as a not valid int32. ");
-			}																	
+			}	
 		}				
 							
 		if(number_of_rows_selected != integer_number_of_rows) {												
@@ -999,37 +1019,41 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 		int number_of_rows_selected(0);
 		while(result->next()) {					
 			++number_of_rows_selected;
-
 			cql::cql_bigint_t t1(0),t2(0);						
 			result->get_bigint(0,t1);
-			result->get_bigint(2,t2);
-					
-			if(result->get_decimal_is_int_64(1)) {
-				cql::cql_bigint_t r(0);
-				result->get_decimal_int_64(1,r);
-					
+			result->get_bigint(2,t2);			
+			cql::cql_decimal_t r;
+
+			if(result->get_decimal(1,r)) {
 				std::map<int,cql::cql_bigint_t>::const_iterator p = int64_map.find(t1);
 				if(p == int64_map.end()) {					
 					BOOST_FAIL("There is no such element in INT64 map.");
 				}		
 
-				if(r != p->second) {
-					BOOST_FAIL("The value of INT64 is not correct.");
-				}
+				if(r.is_convertible_to_int64()) {
+					cql::cql_bigint_t r2;
+					r.convert_to_int64( r2 );
 
-				if(result->get_decimal_is_int(1)) {		//// the value is so small that it should be possible to retrieve as int32.
-					cql::cql_int_t i32(0);
-					result->get_decimal_int(1,i32);
-					
-					cql::cql_bigint_t i64 = i32;
-					if(i64 != r) {	
-						BOOST_FAIL("A small int32 variable retrieved as int32 has wrong value.");
-					}	
-				}															
+					if(r2 != p->second) {
+						BOOST_FAIL("The value of INT64 is not correct.");
+					}
+
+					if(r.is_convertible_to_int32()) {	// the value is so small that it is possible to convert the result into INT32.
+						cql::cql_int_t i32(0);
+						r.convert_to_int32(i32);	
+						cql::cql_bigint_t i64 = i32;
+						if(i64 != r2) {	
+							BOOST_FAIL("A small int32 variable retrieved as int32 has wrong value.");
+						}	
+					}
+				}
+				else {
+					BOOST_FAIL("Error. A valid 64 bits decimal is considered as not convertible to INT64.");
+				}
 			}
 			else {			
 				BOOST_FAIL("Error. A valid int64 is reported as an invalid int64.");
-			}
+			}	
 		}				
 						
 		if(number_of_rows_selected != integer_number_of_rows) {				
@@ -1064,45 +1088,39 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 		while(result->next())
 		{
 			++number_of_rows_selected;
-			cql::cql_bigint_t t1(0), t2(0);						
+			cql::cql_bigint_t t1(0), t2(0);
 			result->get_bigint(0,t1);
-			result->get_bigint(2,t2);							
-								
-			if(result->get_decimal_is_double(1)) {		
-				double r(0);
-				result->get_decimal_double(1,r);
-					
-				std::map<int,double>::const_iterator p = double_map.find(t1);
-				if(p == double_map.end()) {					
-					BOOST_FAIL("There is no such element in double map.");
-				}		
-						
-				if(r != p->second) {							
-					if(p->second != 0.0) {			
-						double const diff = (r - p->second)/p->second;
-							
-						if(diff > 1.0e-015 || diff < -1.0e-015) {		
-							std::string dr1 = boost::str(boost::format("%1.25d") % r);
-							std::string dr2 = boost::str(boost::format("%1.25d") % p->second);
-							BOOST_FAIL("The value of double is not correct. " + dr1 + " " + dr2);
-						}	
-					}													
-				}				
-							
-				if(result->get_decimal_is_int_64(1)) {		//// this value also is reported as a valid int64. 
-					cql::cql_bigint_t bi(0);
-					result->get_decimal_int_64(1,bi);
-						
-					double bi2 = bi;						
-					if(bi2 != r)
-					{	
-						BOOST_FAIL("The value retrieved as int64 gave a different result.");
-					}	
-				}		
-			}					
+			result->get_bigint(2,t2);										
+			cql::cql_decimal_t r;
+
+			if( result->get_decimal( 1, r ) ) {
+				if( r.is_convertible_to_double() ) {
+					double r2( 0.0 );
+					r.convert_to_double( r2 );
+
+					std::map<int,double>::const_iterator p = double_map.find(t1);
+					if(p == double_map.end()) {					
+						BOOST_FAIL("There is no such element in double map.");
+					}		
+
+					if(r2 != p->second) {							
+						if(p->second != 0.0) {			
+							double const diff = (r2 - p->second)/p->second;		
+							if(diff > 1.0e-015 || diff < -1.0e-015) {
+								std::string dr1 = boost::str(boost::format("%1.25d") % r2);
+								std::string dr2 = boost::str(boost::format("%1.25d") % p->second);
+								BOOST_FAIL("The value of double is not correct. " + dr1 + " " + dr2);
+							}	
+						}													
+					}				
+				}
+				else {
+					std::cout << "Not a valid double value" << std::endl;	
+				}
+			}
 			else {
-				std::cout << "Not a valid double value" << std::endl;	
-			}			
+				BOOST_FAIL("get_decimal. Error. ");
+			}
 		}				
 						
 		if(number_of_rows_selected != integer_number_of_rows) {					

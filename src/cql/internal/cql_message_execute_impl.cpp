@@ -345,3 +345,19 @@ cql::cql_message_execute_impl_t::push_back(const boost::asio::ip::address val) {
 	cql::cql_message_execute_impl_t::param_t p(output.begin(), output.end());
 	_params.push_back(p);
 }
+
+void 
+cql::cql_message_execute_impl_t::push_back(const cql::cql_varint_t val)
+{
+	std::vector< cql::cql_byte_t > const t = val.get_data();
+	cql::cql_message_execute_impl_t::param_t p(t.begin(), t.end());
+	_params.push_back(p);
+}
+
+void 
+cql::cql_message_execute_impl_t::push_back(const cql::cql_decimal_t val)
+{
+	std::vector< cql::cql_byte_t > const t = val.get_data();
+	cql::cql_message_execute_impl_t::param_t p(t.begin(), t.end());
+	_params.push_back(p);
+}

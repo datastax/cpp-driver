@@ -28,6 +28,10 @@
 	
 #include "cql/internal/cql_message_result_impl.hpp"
 
+#include "cql/cql_uuid.hpp"
+#include "cql/cql_varint.hpp"
+#include "cql/cql_decimal.hpp"	
+
 std::string
 result_type_string(cql::cql_short_t t) {
     switch(t) {
@@ -765,336 +769,7 @@ cql::cql_message_result_impl_t::get_uuid(const std::string& column,
     output = uuid_out.to_string();
     return ret_val;
 }		
-			
-bool //// is it possible to convert the DECIMAL to int ( 32 bits ) without rounding.
-cql::cql_message_result_impl_t::get_decimal_is_int(std::string const & column) const { 
-	int i = 0;
-    if (_metadata.get_index(column, i)) {
-        return get_decimal_is_int(i);
-    }
-    return false;
-}
 
-bool //// is it possible to convert the DECIMAL to int64 ( 64 bits ) without rounding.	
-cql::cql_message_result_impl_t::get_decimal_is_int_64(std::string const & column) const { 
-	int i = 0;
-    if (_metadata.get_index(column, i)) {
-        return get_decimal_is_int_64(i);
-    }	
-    return false;
-}
-
-bool 	//// is it possible to convert the DECIMAL to double even with small roundings error.
-cql::cql_message_result_impl_t::get_decimal_is_double(std::string const & column) const {	
-	int i = 0;
-    if (_metadata.get_index(column, i)) {
-        return get_decimal_is_double(i);
-    }	
-    return false;
-}
-				
-bool 
-cql::cql_message_result_impl_t::get_decimal_int(std::string const & column, 
-												cql::cql_int_t & output) const {		//// convert DECIMAL to 32-int if it is possible
-	int i = 0;
-    if (_metadata.get_index(column, i)) {
-        return get_decimal_int(i, output);
-    }
-    return false;
-}
-
-bool 
-cql::cql_message_result_impl_t::get_decimal_int_64(std::string const & column, 
-												   cql::cql_bigint_t & output) const {		//// convert DECIMAL to 64-int if it is possible
-	int i = 0;
-    if (_metadata.get_index(column, i)) {
-        return get_decimal_int_64(i, output);
-    }
-    return false;
-}
-
-bool 
-cql::cql_message_result_impl_t::get_decimal_double(std::string const & column, 
-												   double & output) const {					//// convert DECIMAL to double with roundings error.	
-	int i = 0;
-    if (_metadata.get_index(column, i)) {
-        return get_decimal_double(i, output);
-    }
-    return false;
-}
-		
-bool		
-cql::cql_message_result_impl_t::get_decimal_is_int(int i) const {			//// is it possible to convert the DECIMAL to int ( 32 bits ) without rounding.		
-	std::vector<cql::cql_byte_t> v;
-	if(!get_data( i, v))
-		return false;
-			
-	if(v.size() < 5)
-		return false;		//// there must be at least four bytes in the vector.	
-			
-	if(v[0] != 0 || v[1] != 0 || v[2] != 0 || v[3] != 0)		//// the first four bytes must be zero. 
-		return false;		
-
-	return(v.size() <= 8);	// it will be convertible to int32 if there less than 8 bytes in the vector. 		
-}		
-					
-bool	
-cql::cql_message_result_impl_t::get_decimal_is_int_64(int i) const {		//// is it possible to convert the DECIMAL to int64 ( 64 bits ) without rounding.	
-	std::vector<cql::cql_byte_t> v;
-	if(!get_data(i, v))
-		return false;
-			
-	if(v.size() < 5)
-		return false;		//// there must be at least four bytes in the vector.	
-			
-	if(v[0] != 0 || v[1] != 0 || v[2] != 0 || v[3] != 0)		//// the first four bytes must be zero. 
-		return false;		
-
-	return(v.size() <= 12);	// it will be convertible to int32 if there less than 12 bytes in the vector. 
-}				
-								
-bool			
-cql::cql_message_result_impl_t::get_decimal_is_double(int i) const {		//// is it possible to convert the DECIMAL to double even with small roundings error.
-	std::vector<cql::cql_byte_t> v;
-	if(!get_data(i, v))
-		return false;
-			
-	if(v.size() < 5)
-		return false;		//// there must be at least four bytes in the vector.	
-			
-	if(v[0] != 0 || v[1] != 0 || v[2] != 0)		//// the first three bytes must be zero. 
-		return false;		
-
-	if(v.size() == 5 && v[4] == 0) 
-		return true;		//// the value inside is exactly zero.	
-					
-	if(v.size() > 12)		//// the data consists of more than 64 bits. It will not be convertible to double.;	
-		return false;
-
-	return true;
-}			
-						
-bool		
-cql::cql_message_result_impl_t::get_decimal_int(int i, 
-												cql::cql_int_t & output) const {				//// convert DECIMAL to 32-int if it is possible
-	std::vector<cql::cql_byte_t> v;
-	if(!get_data(i, v))
-		return false;
-			
-	if(v.size() < 5)
-		return false;		//// there must be at least four bytes in the vector.	
-			
-	if(v[0] != 0 || v[1] != 0 || v[2] != 0 || v[3] != 0)		//// the first four bytes must be zero. 
-		return false;		
-		
-	if(v.size() > 8)		//// the data consists of more than 32 bits. It will not be convertible to int32;	
-		return false;
-				
-	unsigned char const first_digit = v[4];		//// take the first digit of the data bytes.
-	unsigned char const last_byte_first_digit = first_digit & 0x80;		//// take the most meaning bit of the first byte.
-				
-	unsigned char arr[4];				//// temporary array for making conversion to int. 
-
-	unsigned char byte_for_filling(0x00);		//// the byte for filling in the more significant bytes. 
-		
-	if(last_byte_first_digit == 0x80) {	//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 
-	   byte_for_filling = 0xFF;		//// the filing will be with 0xFF value.
-	}		
-			
-	int const number_of_bytes_for_filling(8 - v.size());
-			
-	for(int i = 0; i < number_of_bytes_for_filling; ++i) {		
-		arr[i] = byte_for_filling;		
-	}			
-				
-	int const number_of_bytes_to_copy(v.size() - 4);	
-				
-	for(int i = 0; i < number_of_bytes_to_copy; ++i) {		
-		arr[i + number_of_bytes_for_filling ] = v[i + 4];	
-	}		
-			
-	int result(0);
-			
-	for(int i = 0;  i < 4; ++i) {
-		result = result << 8;	
-		result = result | static_cast< int >(arr[i]);
-	}		
-
-	output = result;									
-	return true;
-}			
-				
-bool		
-cql::cql_message_result_impl_t::get_decimal_int_64(int i, 
-												   cql::cql_bigint_t & output) const {		//// convert DECIMAL to 64-int if it is possible
-	std::vector<cql::cql_byte_t> v;
-	if(!get_data(i, v))
-		return false;
-			
-	if(v.size() < 5)
-		return false;		//// there must be at least four bytes in the vector.	
-			
-	if(v[0] != 0 || v[1] != 0 || v[2] != 0 || v[3] != 0)		//// the first four bytes must be zero. 
-		return false;		
-		
-	if(v.size() > 12)		//// the data consists of more than 64 bits. It will not be convertible to int64;	
-		return false;
-				
-	unsigned char const first_digit = v[4];		//// take the first digit of the data bytes.
-	unsigned char const last_byte_first_digit = first_digit & 0x80;		//// take the most meaning bit of the first byte.
-	
-	unsigned char arr[8];				//// temporary array for making conversion to int. 
-
-	unsigned char byte_for_filling(0x00);		//// the byte for filling in the more significant bytes. 
-
-	if(last_byte_first_digit == 0x80) {	//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 
-		byte_for_filling = 0xFF;		//// the filing will be with 0xFF value.
-	}		
-			
-	int const number_of_bytes_for_filling(12 - v.size());
-			
-	for(int i = 0; i < number_of_bytes_for_filling; ++i) {		
-		arr[i] = byte_for_filling;
-	}			
-				
-	int const number_of_bytes_to_copy(v.size() - 4);	
-					
-	for(int i = 0; i < number_of_bytes_to_copy; ++i) {		
-		arr[i + number_of_bytes_for_filling] = v[i + 4];	
-	}		
-			
-	cql::cql_bigint_t result(0);
-			
-	for(int i = 0;  i < 8; ++i) {
-		result = result << 8;	
-		result = result | static_cast< int >(arr[i]);
-	}		
-			
-	output = result;						
-	return true;
-}			
-			
-	
-bool 
-cql::cql_message_result_impl_t::get_decimal_double(int i, 
-												   double & output) const {					//// convert DECIMAL to double with roundings error.	
-	std::vector<cql::cql_byte_t> v;
-	if(!get_data(i,v))
-		return false;
-			
-	if(v.size() < 5)
-		return false;		//// there must be at least four bytes in the vector.	
-			
-	if(v[0] != 0 || v[1] != 0 || v[2] != 0)		//// the first three bytes must be zero. 
-		return false;		
-
-	if(v.size() == 5 && v[ 4 ] == 0) {
-		output = 0.0;		//// the first bytes are zero. This is ZERO. 
-		return true;		
-	}	
-			
-	if(v.size() > 12)		//// the data consists of more than 64 bits. It will not be convertible to double.;	
-		return false;
-				
-	unsigned char const first_digit = v[4];								//// take the first digit of the data bytes.
-	unsigned char const last_byte_first_digit = first_digit & 0x80;		//// take the most meaning bit of the first byte.
-	
-	unsigned char arr[8];						//// temporary array for making conversion to int64.	 
-
-	unsigned char byte_for_filling(0x00);		//// the byte for filling in the more significant bytes. 
-
-	if(last_byte_first_digit == 0x80) {	//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 
-		byte_for_filling = 0xFF;		//// the filing will be with 0xFF value.
-	}		
-			
-	int const number_of_bytes_for_filling(12 - v.size());
-			
-	for(int j = 0; j < number_of_bytes_for_filling; ++j) {		
-		arr[j] = byte_for_filling;		
-	}			
-				
-	int const number_of_bytes_to_copy(v.size() - 4);	
-					
-	for(int j = 0; j < number_of_bytes_to_copy; ++j) {		
-		arr[j + number_of_bytes_for_filling] = v[j + 4];	
-	}			
-			
-	cql::cql_bigint_t result(0);
-			
-	for(int j = 0; j < 8; ++j) {
-		result = result << 8;	
-		result = result | static_cast< int >(arr[j]);
-	}		
-
-	unsigned char const number_of_position_after_dot(v[3]);
-		
-	double const f1 = static_cast< double >(result);
-
-	if(number_of_position_after_dot == 0) {
-		output = f1;
-		return true;
-	}		
-			
-	output = f1 / pow(10.0, number_of_position_after_dot);
-	return true;			
-}			
-
-bool 
-cql::cql_message_result_impl_t::get_varint(std::string const & column, 
-										   cql::cql_bigint_t & output) const {			//// convert varint to int64.	
-	int i = 0;
-    if (_metadata.get_index(column, i)) {
-        return get_varint(i, output);
-    }
-    return false;
-}			
-			
-bool		
-cql::cql_message_result_impl_t::get_varint(int i, 
-										   cql::cql_bigint_t & output) const {					//// convert varint to int64.
-
-	std::vector<cql::cql_byte_t> v;
-	if(!get_data(i, v))
-		return false;
-
-	std::size_t const t = v.size();
-		
-	if(t < 1 || t > 8)
-		return false;		
-		
-	unsigned char const first_digit = v[0];		//// take the first digit of the data bytes.
-	unsigned char const last_byte_first_digit = first_digit & 0x80;		//// take the most meaning bit of the first byte.
-		
-	unsigned char arr[8];				//// temporary array for making conversion to int. 
-
-	unsigned char byte_for_filling(0x00);		//// the byte for filling in the more significant bytes. 
-
-	if(last_byte_first_digit == 0x80) {	//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 
-		byte_for_filling = 0xFF;		//// the filing will be with 0xFF value.
-	}		
-			
-	int const number_of_bytes_for_filling(8 - v.size());
-			
-	for(int j = 0; j < number_of_bytes_for_filling; ++j) {		
-		arr[j] = byte_for_filling;		
-	}			
-					
-	int const number_of_bytes_to_copy(v.size());	
-				
-	for(i = 0; i < number_of_bytes_to_copy; ++i) {			
-		arr[i + number_of_bytes_for_filling] = v[i];	
-	}		
-			
-	cql::cql_bigint_t result(0);
-			
-	for(int i = 0;  i < 8; ++i) {
-		result = result << 8;	
-		result = result | static_cast< int >(arr[i]);
-	}		
-			
-	output = result;		
-	return true;	
-}			
 					
 bool		
 cql::cql_message_result_impl_t::get_blob(int i, 
@@ -1188,44 +863,36 @@ cql::cql_message_result_impl_t::get_inet(int i,
 	return false;	
 }
 
-template< typename T >
-bool 
-deserialize_varint(int i, T& output, std::vector<cql::cql_byte_t> v)
+bool
+cql::cql_message_result_impl_t::get_decimal(std::string const & column,
+											cql::cql_decimal_t & output) const
 {
-	std::size_t const t = v.size();
-		
-	if(t < 1)
-		return false;		
-
-	if(t == 1 && v[0] == 0) {
-		output = 0;
-		return true;
-	}
-		
-	cql::cql_byte_t const last_byte_first_digit = v[0] & 0x80;		//// take the most meaning bit of the first byte.
-	T r(0);
-
-	if(last_byte_first_digit == 0x80) {								//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 		
-		for(std::size_t i = 0; i < v.size(); ++i)
-			v[i] = v[i] ^ 0xFF;										//// negate all bits to negate the value
-	}
-
-	for(std::size_t i = 0; i < t; ++i) {
-		r = r << 8;
-		r = r | T(v[i]);	
-	}	
-
-	if(last_byte_first_digit == 0x80) {								//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 		
-		r = (r + 1) * T(-1);				
-	}
-
-	output = r;	
-	return true;		
+	int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_decimal(i, output);
+    }
+    return false;
 }
 
 bool
-cql::cql_message_result_impl_t::get_varint(std::string const& column, 
-										   boost::multiprecision::cpp_int & output) const			//// return boost multiprecision cpp_int
+cql::cql_message_result_impl_t::get_decimal(int i,
+											cql::cql_decimal_t & output) const
+{
+	if(!is_valid(i,cql::CQL_COLUMN_TYPE_DECIMAL)) 
+		return false;
+
+	std::vector<unsigned char> v;
+	if(!get_data(i,v))
+		return false;
+
+	cql::cql_decimal_t r(v);	
+	output = r;
+	return true;
+}
+
+bool
+cql::cql_message_result_impl_t::get_varint(std::string const & column,
+										   cql::cql_varint_t & output) const
 {
 	int i = 0;
     if (_metadata.get_index(column, i)) {
@@ -1234,10 +901,10 @@ cql::cql_message_result_impl_t::get_varint(std::string const& column,
     return false;
 }
 
-bool 
-cql::cql_message_result_impl_t::get_varint(int i,		
-										   boost::multiprecision::cpp_int & output) const			//// return boost multiprecision cpp_int
-{		
+bool
+cql::cql_message_result_impl_t::get_varint(int i,
+										   cql::cql_varint_t & output) const
+{
 	if(!is_valid(i,cql::CQL_COLUMN_TYPE_VARINT)) 
 		return false;
 
@@ -1245,6 +912,10 @@ cql::cql_message_result_impl_t::get_varint(int i,
 	if(!get_data(i,v))
 		return false;
 
-	return deserialize_varint(i, output, v);
-}	
+	cql::cql_varint_t r(v);
+	output = r;
+	return true;
+}
+
+
 	

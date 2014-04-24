@@ -29,6 +29,8 @@
 
 #include "cql/cql_uuid.hpp"
 #include <boost/asio/ip/address.hpp>
+#include "cql/cql_decimal.hpp"			
+#include "cql/cql_varint.hpp"			
 
 namespace cql {
 
@@ -133,6 +135,12 @@ public:
 
 	void 
 	push_back(const boost::asio::ip::address val);
+
+	void 
+	push_back(const cql_varint_t val);
+
+	void 
+	push_back(const cql_decimal_t val);
 
 private:
     typedef std::list<param_t> params_container_t;

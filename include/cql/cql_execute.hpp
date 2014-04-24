@@ -118,6 +118,12 @@ public:
 	void 
 	push_back(const boost::asio::ip::address val);
 
+	void 
+	push_back(const cql_varint_t val);
+
+	void 
+	push_back(const cql_decimal_t val);
+
 private:
     boost::shared_ptr<cql_message_execute_impl_t> _impl;
 };

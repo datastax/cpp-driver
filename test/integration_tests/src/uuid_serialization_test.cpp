@@ -1,7 +1,7 @@
 #define BOOST_TEST_DYN_LINK
 
 #ifdef STAND_ALONE
-#define BOOST_TEST_MODULE cassandra
+#   define BOOST_TEST_MODULE cassandra
 #endif
 
 #include "cql/cql.hpp"
@@ -19,57 +19,56 @@
 														
 struct CONSISTENCY_UUID_CCM_SETUP : test_utils::CCM_SETUP {
     CONSISTENCY_UUID_CCM_SETUP() : CCM_SETUP(1,0) {}
-};
-						
-int
+};			
+							
+int	
 count_number_of_valid_bits_in_timestamp( cql::cql_bigint_t ts )
 {
 	int result(0);
-
+			
 	for(int i = 1; i < 65; ++i){
 		cql::cql_bigint_t t = ts & 0x01;		// take the least significant bit.
 
 		if(t > 0x00)
-			result = i;
+			result = i;		
 
 		ts = ts >> 1;
-	}
-
-	return result;
+	}	
+		
+	return result;		
 }
 			
-void
-convert_timestamp_to_uuid(cql::cql_bigint_t ts,
+void 
+convert_timestamp_to_uuid(cql::cql_bigint_t ts, 
 						  std::vector< cql::cql_byte_t > & v_bytes)
-{
-	v_bytes.resize(16);
-
-	for(int i = 0; i < 16; ++i)	
-		v_bytes[i] = rand() % 256;
-
-	std::vector<cql::cql_byte_t> chars_vec;
-
-	for(int i = 0; i < 8; ++i) {
-		cql::cql_bigint_t t = ts & static_cast<cql::cql_bigint_t>(0xFF);
-		cql::cql_byte_t t2 = static_cast<cql::cql_byte_t>(t);
-		chars_vec.push_back(t2);
-		ts = ts >> 8;
-	}
+{			
+	v_bytes.resize(16);	
 		
-	v_bytes[3] = chars_vec[0];
-	v_bytes[2] = chars_vec[1];
-	v_bytes[1] = chars_vec[2];
-	v_bytes[0] = chars_vec[3];
-	v_bytes[5] = chars_vec[4];
-	v_bytes[4] = chars_vec[5];
-	v_bytes[7] = chars_vec[6];							
+	for(int i = 0; i < 16; ++i)		
+		v_bytes[i] = rand() % 256;	
+		
+	std::vector<cql::cql_byte_t> chars_vec;
+			
+	for(int i = 0; i < 8; ++i) {	
+		cql::cql_bigint_t t = ts & static_cast<cql::cql_bigint_t>(0xFF);		
+		cql::cql_byte_t t2 = static_cast<cql::cql_byte_t>(t);	
+		chars_vec.push_back(t2);					
+		ts = ts >> 8;			
+	}		
+			
+	v_bytes[3] = chars_vec[0] ;
+	v_bytes[2] = chars_vec[1] ;
+	v_bytes[1] = chars_vec[2] ;
+	v_bytes[0] = chars_vec[3] ;
+	v_bytes[5] = chars_vec[4] ;
+	v_bytes[4] = chars_vec[5] ;
+	v_bytes[7] = chars_vec[6] ;							
 	v_bytes[6] = chars_vec[7] & 0x0F;		//// take only half of the byte.
 	cql::cql_byte_t t6 = 0x10;		
 	v_bytes[6] = v_bytes[6] | t6;
 	int k = 0;	
 }				
 			
-
 cql::cql_bigint_t 
 generate_random_time_stamp()
 {													
@@ -78,27 +77,26 @@ generate_random_time_stamp()
 	cql::cql_bigint_t t100 = max_rand;
 								
 	for(int i = 0; i < 4; ++i) {		
-		result = result * t100 + static_cast<cql::cql_bigint_t>( rand() % max_rand );	
-	}	
+		result = result * t100 + static_cast<cql::cql_bigint_t>(rand() % max_rand);	
+	}
 		
 	return result;
 }		
-	
-						
+							
 bool 
 make_conversion_of_uuid_from_string_to_bytes(std::string uuid_str, 
-											 std::vector<cql::cql_byte_t>& v_bytes )
+											 std::vector<cql::cql_byte_t>& v_bytes)
 {			
 	v_bytes.clear();			
-	std::vector<unsigned char> tv;
+	std::vector<cql::cql_byte_t> tv;
 			
 	for(int i = 0; i < uuid_str.length(); ++i) {		
-		unsigned char t = uuid_str[i];
+		cql::cql_byte_t t = uuid_str[i];
 			
 		if(t == '-')
 			continue;	
 			
-		unsigned char t2(0);
+		cql::cql_byte_t t2(0);
 			
 		if(t >= '0' && t <= '9')
 			t2 = t - '0';
@@ -110,10 +108,10 @@ make_conversion_of_uuid_from_string_to_bytes(std::string uuid_str,
 		tv.push_back(t2);
 
 		if(tv.size() == 2) {
-			unsigned char ta = tv[0] & 0x0F;
-			unsigned char tb = tv[1] & 0x0F;
+			cql::cql_byte_t ta = tv[0] & 0x0F;
+			cql::cql_byte_t tb = tv[1] & 0x0F;
 			ta = ta << 4;
-			unsigned char r = ta | tb;
+			cql::cql_byte_t r = ta | tb;
 			v_bytes.push_back(r);
 			tv.clear();
 		}			
@@ -121,10 +119,9 @@ make_conversion_of_uuid_from_string_to_bytes(std::string uuid_str,
 			
 	return(v_bytes.size() == 16);		
 }				
-				
-				
+					
 std::string 
-make_conversion_uuid_to_string(std::vector<cql::cql_byte_t> const& v )
+make_conversion_uuid_to_string(std::vector<cql::cql_byte_t> const& v)
 {
 	std::string result;
 
@@ -141,16 +138,15 @@ make_conversion_uuid_to_string(std::vector<cql::cql_byte_t> const& v )
 			result += "-";	
 		
 		for(int j = 0; j < 2; ++j) {
-			result += ( b[j] < 10 ) ? ( '0' + b[j] ) : ( 'a' + b[j] - 10 );
+			result += (b[j] < 10) ? ('0' + b[j]) : ('a' + b[j] - 10);
 		}	
 	}
 			
 	return result;	
 }
 			
-				
 void 
-generate_random_uuid(std::vector<cql::cql_byte_t>& v )
+generate_random_uuid(std::vector<cql::cql_byte_t>& v)
 {		
 	v.resize(16);
 		
@@ -159,12 +155,9 @@ generate_random_uuid(std::vector<cql::cql_byte_t>& v )
 	}		
 }			
 			
-						
-BOOST_FIXTURE_TEST_SUITE( consistency_uuid_tests, CONSISTENCY_UUID_CCM_SETUP )				//// --run_test=consistency_uuid_tests/consistency_uuid_test_1
+BOOST_FIXTURE_TEST_SUITE( consistency_uuid_tests, CONSISTENCY_UUID_CCM_SETUP )				
 													
-
-/////  --run_test=consistency_uuid_tests/consistency_uuid_test_1
-BOOST_AUTO_TEST_CASE(consistency_uuid_test_1)
+BOOST_AUTO_TEST_CASE(consistency_uuid_test_1) /////  --run_test=consistency_uuid_tests/consistency_uuid_test_1
 {				
 	srand((unsigned)time(NULL));	
 				
@@ -181,7 +174,7 @@ BOOST_AUTO_TEST_CASE(consistency_uuid_test_1)
 	std::map<int,cql::cql_bigint_t>	time_stamp_map;
 	std::map<int,cql::cql_bigint_t>	timeuuid_map;
 						
-	int const number_of_records_in_the_table = 1500;
+	int const number_of_records_in_the_table = 260;
 								
 	for(int i = 0; i < number_of_records_in_the_table; ++i)	{			
 		std::vector<cql::cql_byte_t> v;			
@@ -302,20 +295,20 @@ BOOST_AUTO_TEST_CASE(consistency_uuid_test_1)
 		make_conversion_of_uuid_from_string_to_bytes(p2->second,uuid_vec_bis);
 		std::string const uuid_string_bis = make_conversion_uuid_to_string(uuid_vec_bis);
 
-		if( uuid_vec_2 != uuid_vec_bis ) {
+		if(uuid_vec_2 != uuid_vec_bis) {
 			BOOST_FAIL("The two vectors of bytes do not match.");
 		}		
 				
-		if( uuid_string_bis != uuid_str_2 ) {
+		if(uuid_string_bis != uuid_str_2) {
 			BOOST_FAIL("The two strings after conversion from uuid do not match.");
 		}		
 				
-		cql::cql_bigint_t uuid_time_stamp_4( 0 );
+		cql::cql_bigint_t uuid_time_stamp_4(0);
 		if(result->get_timeuuid(3,uuid_time_stamp_4)) {				
 			cql::cql_bigint_t const uuid_time_stamp_4_bis = uuid_.get_timestamp();
 			if( uuid_time_stamp_4 != uuid_time_stamp_4_bis ) {
 				std::cout << uuid_time_stamp_4_bis << " <> " << uuid_time_stamp_4 << std::endl;	
-				BOOST_FAIL("The two timestamps taken from uuid do not match.");		// !!!!!!!!!!!!!!!!
+				BOOST_FAIL("The two timestamps taken from uuid do not match.");
 			}		
 		}		
 		else{
