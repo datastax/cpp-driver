@@ -198,7 +198,7 @@ BOOST_AUTO_TEST_CASE(consistency_uuid_test_1) /////  --run_test=consistency_uuid
 			}		
 		}			
 		else {
-			BOOST_FAIL("File in reading timeuuid from result.");
+			BOOST_FAIL("Fail in reading timeuuid from result.");
 		}
 									
 		cql::cql_bigint_t time_stamp_1(0);	
@@ -214,7 +214,7 @@ BOOST_AUTO_TEST_CASE(consistency_uuid_test_1) /////  --run_test=consistency_uuid
 			}	
 		}
 		else {
-			BOOST_FAIL("File in reading timestamp from result.");
+			BOOST_FAIL("Fail in reading timestamp from result.");
 		}
 					
 		std::string uuid_string;		// uuid written as string. 			
@@ -229,7 +229,7 @@ BOOST_AUTO_TEST_CASE(consistency_uuid_test_1) /////  --run_test=consistency_uuid
 			}		
 		}	
 		else {
-			BOOST_FAIL("File in reading timestamp from result.");
+			BOOST_FAIL("Fail in reading timestamp from result.");
 		}	
 						
 		cql::cql_uuid_t uuid_;			// the same uuid written as cql_uuid_t
