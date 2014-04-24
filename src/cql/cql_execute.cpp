@@ -98,6 +98,11 @@ cql::cql_execute_t::push_back(const bool val) {
 }
 
 void
+cql::cql_execute_t::push_back_null() {
+    _impl->push_back_null();
+}
+
+void
 cql::cql_execute_t::pop_back() {
     _impl->pop_back();
 }

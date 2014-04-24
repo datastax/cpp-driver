@@ -378,6 +378,12 @@ public:
        return stream;
     }
 
+    void
+    set_compression_type(cql_compression_enum compression)
+    {
+        _compression = compression;
+    }
+    
     bool
     defunct() const
     {
@@ -569,6 +575,7 @@ private:
         _closing(false),
         _reserved_stream(_callback_storage.acquire_stream()),
         _uuid(cql_uuid_t::create()),
+        _compression(CQL_COMPRESSION_NONE),
         _is_disposed(new boolkeeper),
         _stream_id_vs_query_string(NUMBER_OF_STREAMS, "")
     {}
@@ -1232,10 +1239,16 @@ private:
             break;
 
         case CQL_OPCODE_SUPPORTED:
+        {
             log(CQL_LOG_DEBUG, "received supported message " + _response_message->str());
-            startup_write();
-            break;
 
+            boost::shared_ptr<cql_message_supported_impl_t> m =
+                boost::dynamic_pointer_cast<cql_message_supported_impl_t>(
+                    boost::shared_ptr<cql_message_t>(_response_message.release()));
+
+            startup_write(m);
+        }
+            break;
         case CQL_OPCODE_AUTHENTICATE:
             credentials_write();
             break;
@@ -1267,12 +1280,26 @@ private:
     }
 
     void
-    startup_write()
+    startup_write(boost::shared_ptr<cql_message_supported_impl_t> supported)
     {
         boost::shared_ptr<cql_message_startup_impl_t> m =
             boost::make_shared<cql_message_startup_impl_t>();
+     
+        cql_compression_enum compression_to_use = CQL_COMPRESSION_NONE;
+        
+        if (supported) {
+            std::list<std::string> compressions = supported->compressions();
+            if (_compression != CQL_COMPRESSION_NONE &&
+                std::find(compressions.begin(),
+                          compressions.end(),
+                          to_string(_compression)) != compressions.end() )
+            {
+                compression_to_use = _compression;
+            }
+        }
         
         m->version(CQL_VERSION_IMPL);
+        m->compression(compression_to_use);
         create_request(
             m,
             boost::bind(&cql_connection_impl_t::write_handle,
@@ -1341,6 +1368,7 @@ private:
     cql_stream_t                             _reserved_stream;
     cql_uuid_t                               _uuid;
 	boost::shared_ptr<boolkeeper>            _is_disposed;
+    cql_compression_enum                     _compression;
     
     std::string                              _current_keyspace_name,
                                              _selected_keyspace_name;

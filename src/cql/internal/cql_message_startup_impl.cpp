@@ -25,13 +25,13 @@
 cql::cql_message_startup_impl_t::cql_message_startup_impl_t() :
     _buffer(new std::vector<cql_byte_t>()),
     _version(),
-    _compression()
+    _compression(CQL_COMPRESSION_NONE)
 {}
 
 cql::cql_message_startup_impl_t::cql_message_startup_impl_t(size_t size) :
     _buffer(new std::vector<cql_byte_t>(size)),
     _version(),
-    _compression()
+    _compression(CQL_COMPRESSION_NONE)
 {}
 
 cql::cql_message_buffer_t
@@ -40,11 +40,11 @@ cql::cql_message_startup_impl_t::buffer() {
 }
 
 void
-cql::cql_message_startup_impl_t::compression(const std::string& c) {
+cql::cql_message_startup_impl_t::compression(const cql_compression_enum c) {
     _compression = c;
 }
 
-const std::string&
+cql::cql_compression_enum
 cql::cql_message_startup_impl_t::compression() const {
     return _compression;
 }
@@ -89,7 +89,7 @@ cql::cql_message_startup_impl_t::consume(cql::cql_error_t*) {
     }
 
     if (startup.find(CQL_COMPRESSION) != startup.end()) {
-        _compression = startup[CQL_COMPRESSION];
+        _compression = compression_from_string(startup[CQL_COMPRESSION].c_str());
     }
 
     return true;
@@ -105,9 +105,10 @@ cql::cql_message_startup_impl_t::prepare(cql::cql_error_t*) {
         size += strlen(CQL_VERSION) + _version.size() + (2* sizeof(cql::cql_short_t));
     }
 
-    if (!_compression.empty()) {
-        startup.insert(std::pair<std::string, std::string>(CQL_COMPRESSION, _compression));
-        size += strlen(CQL_COMPRESSION) + _compression.size() + (2* sizeof(cql::cql_short_t));
+    if (_compression != CQL_COMPRESSION_NONE) {
+        std::string compression_string = to_string(_compression);
+        startup.insert(std::pair<std::string, std::string>(CQL_COMPRESSION, compression_string));
+        size += strlen(CQL_COMPRESSION) + compression_string.size() + (2* sizeof(cql::cql_short_t));
     }
 
     _buffer->resize(size);

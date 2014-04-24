@@ -89,6 +89,9 @@ public:
     push_back(const bool val);
 
     void
+    push_back_null();
+
+    void
     pop_back();
 
     cql::cql_opcode_enum
@@ -147,7 +150,7 @@ public:
 	push_back(const cql_decimal_t val);
 
 private:
-    typedef std::list<param_t> params_container_t;
+    typedef std::list< boost::shared_ptr<param_t> > params_container_t;
 
     cql::cql_message_buffer_t    _buffer;
     std::vector<cql::cql_byte_t> _query_id;
