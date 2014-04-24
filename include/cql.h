@@ -180,7 +180,7 @@ cql_session_shutdown(
  * @return
  */
 CQL_EXPORT void
-cql_session_future_free(
+cql_future_free(
     CqlFuture* future);
 
 /**
@@ -191,7 +191,7 @@ cql_session_future_free(
  * @return true if ready
  */
 CQL_EXPORT int
-cql_session_future_ready(
+cql_future_ready(
     CqlFuture* future);
 
 /**
@@ -200,7 +200,7 @@ cql_session_future_ready(
  * @param future
  */
 CQL_EXPORT void
-cql_session_future_wait(
+cql_future_wait(
     CqlFuture* future);
 
 /**
@@ -212,7 +212,7 @@ cql_session_future_wait(
  * @return false if returned due to timeout
  */
 CQL_EXPORT int
-cql_session_future_wait_timed(
+cql_future_wait_timed(
     CqlFuture* future,
     size_t     wait);
 
@@ -224,7 +224,7 @@ cql_session_future_wait_timed(
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
 CQL_EXPORT CqlError*
-cql_session_future_get_error(
+cql_future_get_error(
     CqlFuture* future);
 
 /**
@@ -235,7 +235,7 @@ cql_session_future_get_error(
  * @return NULL if unsuccessful, otherwise pointer to CqlSession instance
  */
 CQL_EXPORT CqlSession*
-cql_session_future_get_session(
+cql_future_get_session(
     CqlFuture* future);
 
 /**
@@ -247,7 +247,7 @@ cql_session_future_get_session(
  * @return NULL if unsuccessful, otherwise pointer to CqlResult instance
  */
 CQL_EXPORT CqlResult*
-cql_result_future_get_result(
+cql_future_get_result(
     CqlFuture* future);
 
 /**
@@ -260,7 +260,7 @@ cql_result_future_get_result(
  * @return NULL if unsuccessful, otherwise pointer to CqlPrepare instance
  */
 CQL_EXPORT CqlPrepared*
-cql_prepare_future_get_prepare(
+cql_future_get_prepare(
     CqlFuture* future);
 
 
