@@ -82,79 +82,7 @@ generate_random_time_stamp()
 		
 	return result;
 }		
-							
-bool 
-make_conversion_of_uuid_from_string_to_bytes(std::string uuid_str, 
-											 std::vector<cql::cql_byte_t>& v_bytes)
-{			
-	v_bytes.clear();			
-	std::vector<cql::cql_byte_t> tv;
-			
-	for(int i = 0; i < uuid_str.length(); ++i) {		
-		cql::cql_byte_t t = uuid_str[i];
-			
-		if(t == '-')
-			continue;	
-			
-		cql::cql_byte_t t2(0);
-			
-		if(t >= '0' && t <= '9')
-			t2 = t - '0';
-		else if(t >= 'a' && t <= 'f')
-			t2 = t - 'a' + 10;
-		else if(t >= 'A' && t <= 'F')
-			t2 = t - 'A' + 10;
-		
-		tv.push_back(t2);
-
-		if(tv.size() == 2) {
-			cql::cql_byte_t ta = tv[0] & 0x0F;
-			cql::cql_byte_t tb = tv[1] & 0x0F;
-			ta = ta << 4;
-			cql::cql_byte_t r = ta | tb;
-			v_bytes.push_back(r);
-			tv.clear();
-		}			
-	}		
-			
-	return(v_bytes.size() == 16);		
-}				
-					
-std::string 
-make_conversion_uuid_to_string(std::vector<cql::cql_byte_t> const& v)
-{
-	std::string result;
-
-	if(v.size() != 16)	
-		return "";			
-	
-	for(int i = 0; i < 16; ++i) {
-		cql::cql_byte_t b[2];
-		b[0] = v[i] & 0xF0;
-		b[1] = v[i] & 0x0F;
-		b[0] = b[0] >> 4;
-
-		if(i == 4 || i == 6 || i == 8 || i == 10)
-			result += "-";	
-		
-		for(int j = 0; j < 2; ++j) {
-			result += (b[j] < 10) ? ('0' + b[j]) : ('a' + b[j] - 10);
-		}	
-	}
-			
-	return result;	
-}
-			
-void 
-generate_random_uuid(std::vector<cql::cql_byte_t>& v)
-{		
-	v.resize(16);
-		
-	for(int i = 0; i < 16; ++i) {
-		v[i] = rand() % 256;	
-	}		
-}			
-			
+				
 BOOST_FIXTURE_TEST_SUITE( consistency_uuid_tests, CONSISTENCY_UUID_CCM_SETUP )				
 													
 BOOST_AUTO_TEST_CASE(consistency_uuid_test_1) /////  --run_test=consistency_uuid_tests/consistency_uuid_test_1
@@ -177,23 +105,14 @@ BOOST_AUTO_TEST_CASE(consistency_uuid_test_1) /////  --run_test=consistency_uuid
 	int const number_of_records_in_the_table = 260;
 								
 	for(int i = 0; i < number_of_records_in_the_table; ++i)	{			
-		std::vector<cql::cql_byte_t> v;			
-		generate_random_uuid(v);					
-		std::string const uuid_string = make_conversion_uuid_to_string(v);	
-				
-		std::vector<cql::cql_byte_t> v2;			
-		make_conversion_of_uuid_from_string_to_bytes(uuid_string,v2);	
-						
+		cql::cql_uuid_t u = cql::cql_uuid_t::create();
+		std::vector<cql::cql_byte_t> v = u.get_data();			
+		std::string const uuid_string = u.to_string();										
 		cql::cql_bigint_t time_uuid = generate_random_time_stamp();	
 		std::vector<cql::cql_byte_t> bytes_timeuuid;
 		convert_timestamp_to_uuid(time_uuid,bytes_timeuuid);
-		std::string const timeuuid_string = make_conversion_uuid_to_string(bytes_timeuuid);	
-								
-		if(v != v2) {		
-			BOOST_FAIL("Wrong uuid converted to string.");
-		}		
-		cql::cql_bigint_t const ts = generate_random_time_stamp();
-					
+		std::string const timeuuid_string = cql::cql_uuid_t( bytes_timeuuid ).to_string();	
+		cql::cql_bigint_t const ts = generate_random_time_stamp();					
 		uuid_map.insert(std::make_pair(i,uuid_string));		
 		uuid_map_2.insert(std::make_pair( i,v));						
 		time_stamp_map.insert(std::make_pair( i,ts));
@@ -283,25 +202,13 @@ BOOST_AUTO_TEST_CASE(consistency_uuid_test_1) /////  --run_test=consistency_uuid
 		}			
 								
 		std::string const uuid_str_2 = uuid_.to_string();    
-		std::vector<cql::cql_byte_t> const uuid_vec_2 = uuid_.get_data();
+		std::vector<cql::cql_byte_t> uuid_vec_2 = uuid_.get_data();
 		cql::cql_bigint_t const time_stamp_2 = uuid_.get_timestamp();
 		
 		std::map<int,std::string>::const_iterator p2 = uuid_map.find(cnt1);
 		if(p2 == uuid_map.end()) {
 			BOOST_FAIL("No such key in map.");
 		}
-
-		std::vector<cql::cql_byte_t> uuid_vec_bis;
-		make_conversion_of_uuid_from_string_to_bytes(p2->second,uuid_vec_bis);
-		std::string const uuid_string_bis = make_conversion_uuid_to_string(uuid_vec_bis);
-
-		if(uuid_vec_2 != uuid_vec_bis) {
-			BOOST_FAIL("The two vectors of bytes do not match.");
-		}		
-				
-		if(uuid_string_bis != uuid_str_2) {
-			BOOST_FAIL("The two strings after conversion from uuid do not match.");
-		}		
 				
 		cql::cql_bigint_t uuid_time_stamp_4(0);
 		if(result->get_timeuuid(3,uuid_time_stamp_4)) {				
@@ -316,9 +223,9 @@ BOOST_AUTO_TEST_CASE(consistency_uuid_test_1) /////  --run_test=consistency_uuid
 		}		
 				
 		// Check the constructors. There are three of them. 
-		cql::cql_uuid_t const uc1(uuid_string_bis);		
-		cql::cql_uuid_t const uc2(&uuid_vec_bis[0]);	
-		cql::cql_uuid_t const uc3(uuid_vec_bis);		
+		cql::cql_uuid_t const uc1(uuid_string);		
+		cql::cql_uuid_t const uc2(&uuid_vec_2[0]);	
+		cql::cql_uuid_t const uc3(uuid_vec_2);		
 
 		cql::cql_bigint_t const uc1_timestamp = uc1.get_timestamp();
 		std::string const uc1_string = uc1.to_string();
@@ -345,27 +252,27 @@ BOOST_AUTO_TEST_CASE(consistency_uuid_test_1) /////  --run_test=consistency_uuid
 			BOOST_FAIL("Wrong timestamp value taken from uuid.");
 		}	
 
-		if( uc1_string != uuid_string_bis ) {
+		if( uc1_string != uuid_string ) {
 			BOOST_FAIL("Wrong uuid to string conversion.");
 		}
 			
-		if( uc2_string != uuid_string_bis ) {
+		if( uc2_string != uuid_string ) {
 			BOOST_FAIL("Wrong uuid to string conversion.");
 		}
 			
-		if( uc3_string != uuid_string_bis ) {
+		if( uc3_string != uuid_string ) {
 			BOOST_FAIL("Wrong uuid to string conversion.");
 		}
 
-		if( uc1_vec != uuid_vec_bis ) {
+		if( uc1_vec != uuid_vec_2 ) {
 			BOOST_FAIL("Wrong uuid to vector of bytes conversion.");
 		}
 
-		if( uc2_vec != uuid_vec_bis ) {
+		if( uc2_vec != uuid_vec_2 ) {
 			BOOST_FAIL("Wrong uuid to vector of bytes conversion.");
 		}
 
-		if( uc3_vec != uuid_vec_bis ) {
+		if( uc3_vec != uuid_vec_2 ) {
 			BOOST_FAIL("Wrong uuid to vector of bytes conversion.");
 		}
 
