@@ -243,16 +243,8 @@ cql::cql_uuid_t::empty() const {
 }
 
 cql::cql_bigint_t
-cql::cql_uuid_t::get_timestamp() const {
-    //cql_bigint_t ret_val;
-    //cql_byte_t bytes[sizeof(cql_bigint_t)];
-    //std::copy(_uuid, _uuid+sizeof(cql_bigint_t), bytes);    
-    //// This was rewritten straight from C#:
-    //bytes[7] &= (cql_byte_t)0x0f;
-    //// decode_bigint assumes network byte order. UUIDs also do, so can be used here.
-    //decode_bigint(bytes, ret_val);
-    //return ret_val;
-
+cql::cql_uuid_t::get_timestamp() const
+{
 	cql::cql_bigint_t result(0);	
 	static int indexes[] = {6,7,4,5,0,1,2,3};		//// take bytes of the array in this order.		
 				
