@@ -24,6 +24,44 @@
 
 namespace cql {
 
+//// a template generic function to create a VARINT of any length from the cassandra byte array representation.
+//// This function can create a boost::multiprecision::int_cpp object from this array of bytes. 
+template< typename T >
+bool 
+deserialize_varint(T& output, std::vector<cql::cql_byte_t> v)
+{
+	std::size_t const t = v.size();
+		
+	if(t < 1)
+		return false;		
+
+	if(t == 1 && v[0] == 0) {
+		output = 0;
+		return true;
+	}
+		
+	cql::cql_byte_t const last_byte_first_digit = v[0] & 0x80;		//// take the most meaning bit of the first byte.
+	T r(0);
+
+	if(last_byte_first_digit == 0x80) {								//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 		
+		for(std::size_t i = 0; i < v.size(); ++i)
+			v[i] = v[i] ^ 0xFF;										//// negate all bits to negate the value
+	}
+
+	for(std::size_t i = 0; i < t; ++i) {
+		r = r << 8;
+		r = r | T(v[i]);	
+	}	
+
+	if(last_byte_first_digit == 0x80) {								//// the most meaning bit of the first byte is set to 1. It means that the value is NEGATIVE. 		
+		r = (r + 1) * T(-1);				
+	}
+
+	output = r;	
+	return true;		
+}
+
+
 class CQL_EXPORT cql_varint_t
 {
 public:
