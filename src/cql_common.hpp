@@ -56,23 +56,6 @@ typedef std::unique_ptr<CqlMessage>               CqlMessagePtr;
 typedef CqlFutureImpl<std::string, CqlMessagePtr> CqlMessageFutureImpl;
 typedef CqlFutureImpl<CqlSession*, CqlSession*>   CqlSessionFutureImpl;
 
-struct CqlMessageRequest {
-  CqlMessageFutureImpl* future;
-  CqlMessage*           message;
-
-  CqlMessageRequest() :
-      future(nullptr),
-      message(nullptr) {
-  }
-
-  CqlMessageRequest(
-      CqlMessageFutureImpl* future,
-      CqlMessage*           message) :
-      future(future),
-      message(message) {
-  }
-};
-
 uv_buf_t
 alloc_buffer(
     size_t suggested_size) {

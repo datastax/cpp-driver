@@ -22,31 +22,39 @@
 #include <unordered_map>
 #include "cql_pool.hpp"
 
-struct IOWorker {
-  typedef std::shared_ptr<Pool>  PoolPtr;
-  typedef std::unordered_map<std::string, PoolPtr> PoolCollection;
+struct CqlIOWorker {
+  typedef std::shared_ptr<CqlPool>  CqlPoolPtr;
+  typedef std::unordered_map<std::string, CqlPoolPtr> CqlPoolCollection;
 
-  uv_thread_t               thread;
-  uv_loop_t*                loop;
-  SSLContext*               ssl_context;
-  PoolCollection            pools;
+  uv_thread_t            thread;
+  uv_loop_t*             loop;
+  SSLContext*            ssl_context;
+  CqlPoolCollection      pools;
+  uv_async_t             async_execute;
+  SPSCQueue<CqlRequest*> request_queue;
 
   explicit
-  IOWorker(
-      size_t io_queue_size) :
-      loop(uv_loop_new())
-  {}
+  CqlIOWorker(
+      size_t request_queue_size) :
+      loop(uv_loop_new()),
+      request_queue(request_queue_size) {
+    async_execute.data = this;
+    uv_async_init(
+        loop,
+        &async_execute,
+        &CqlIOWorker::on_execute);
+  }
 
   void
   add_pool(
-      const std::string& host,
-      size_t             core_connections_per_host,
-      size_t             max_connections_per_host) {
+      const CqlHost& host,
+      size_t         core_connections_per_host,
+      size_t         max_connections_per_host) {
     pools.insert(
         std::make_pair(
-            host,
-            PoolPtr(
-                new Pool(
+            host.address_string,
+            CqlPoolPtr(
+                new CqlPool(
                     loop,
                     ssl_context,
                     host,
@@ -54,16 +62,46 @@ struct IOWorker {
                     max_connections_per_host))));
   }
 
+  CqlError*
+  execute(
+      CqlRequest* request) {
+    if (request_queue.enqueue(request)) {
+      uv_async_send(&async_execute);
+      return CQL_ERROR_NO_ERROR;
+    }
+    return new CqlError(
+        CQL_ERROR_SOURCE_LIBRARY,
+        CQL_ERROR_LIB_NO_STREAMS,
+        "request queue full",
+        __FILE__,
+        __LINE__);
+  }
+
+  static void
+  on_execute(
+      uv_async_t* data,
+      int         status) {
+    CqlIOWorker* worker  = reinterpret_cast<CqlIOWorker*>(data->data);
+    CqlRequest*  request = nullptr;
+
+    while (worker->request_queue.dequeue(request)) {
+      for (const std::string& host : request->hosts) {
+        CqlPoolPtr pool = CqlPoolpools.find(host);
+      }
+    }
+  }
+
+
   static void
   run(
       void* data) {
-    IOWorker* worker = reinterpret_cast<IOWorker*>(data);
+    CqlIOWorker* worker = reinterpret_cast<CqlIOWorker*>(data);
     uv_run(worker->loop, UV_RUN_DEFAULT);
   }
 
   void
   run() {
-    uv_thread_create(&thread, &IOWorker::run, this);
+    uv_thread_create(&thread, &CqlIOWorker::run, this);
   }
 
   void
@@ -76,7 +114,7 @@ struct IOWorker {
     uv_thread_join(&thread);
   }
 
-  ~IOWorker() {
+  ~CqlIOWorker() {
     uv_loop_delete(loop);
   }
 };

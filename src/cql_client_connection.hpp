@@ -18,19 +18,18 @@
 #define __CQL_CLIENT_CONNECTION_HPP_INCLUDED__
 
 #include "cql_common.hpp"
+#include "cql_host.hpp"
 #include "cql_message.hpp"
 #include "cql_session.hpp"
 #include "cql_ssl_context.hpp"
 #include "cql_ssl_session.hpp"
 #include "cql_stream_storage.hpp"
 
-#define CQL_ADDRESS_MAX_LENGTH 46
 #define CQL_STREAM_ID_MAX      127
 
-struct ClientConnection {
+struct CqlClientConnection {
   enum ClientConnectionState {
     CLIENT_STATE_NEW,
-    CLIENT_STATE_RESOLVED,
     CLIENT_STATE_CONNECTED,
     CLIENT_STATE_HANDSHAKE,
     CLIENT_STATE_SUPPORTED,
@@ -53,18 +52,18 @@ struct ClientConnection {
 
   typedef int8_t Stream;
 
-  typedef std::function<void(ClientConnection*,
+  typedef std::function<void(CqlClientConnection*,
                              CqlError*)> ConnectionCallback;
 
-  typedef std::function<void(ClientConnection*,
+  typedef std::function<void(CqlClientConnection*,
                              const char*, size_t)> KeyspaceCallback;
 
-  typedef std::function<void(ClientConnection*,
+  typedef std::function<void(CqlClientConnection*,
                              SchemaEventType,
                              const char*, size_t,
                              const char*, size_t)> SchemaCallback;
 
-  typedef std::function<void(ClientConnection*,
+  typedef std::function<void(CqlClientConnection*,
                              CqlError*,
                              const char*, size_t,
                              const char*, size_t)> PrepareCallback;
@@ -76,68 +75,49 @@ struct ClientConnection {
 
   struct WriteRequestData {
     uv_buf_t buf;
-    ClientConnection* connection;
+    CqlClientConnection* connection;
   };
 
-  ClientConnectionState        state_;
-  uv_loop_t*                   loop_;
-  std::unique_ptr<CqlMessage>  incomming_;
-  StreamStorageCollection      stream_storage_;
-  ConnectionCallback           connect_callback_;
-  KeyspaceCallback             keyspace_callback_;
-  PrepareCallback              prepare_callback_;
-  LogCallback                  log_callback_;
-  SPSCQueue<CqlMessageFutureImpl*> request_queue_;
-
+  ClientConnectionState       state_;
+  uv_loop_t*                  loop_;
+  std::unique_ptr<CqlMessage> incomming_;
+  StreamStorageCollection     stream_storage_;
+  ConnectionCallback          connect_callback_;
+  KeyspaceCallback            keyspace_callback_;
+  PrepareCallback             prepare_callback_;
+  LogCallback                 log_callback_;
   // DNS and hostname stuff
-  struct sockaddr_in       address_;
-  char*                    address_string_[CQL_ADDRESS_MAX_LENGTH];
-  int                      address_family_;
-  std::string              hostname_;
-  std::string              port_;
-  uv_getaddrinfo_t         resolver_;
-  struct addrinfo          resolver_hints_;
-
+  CqlHost                     host_;
   // the actual connection
-  uv_connect_t             connect_request_;
-  uv_tcp_t                 socket_;
+  uv_connect_t                connect_request_;
+  uv_tcp_t                    socket_;
   // ssl stuff
-  SSLSession*              ssl_;
-  bool                     ssl_handshake_done_;
-
+  SSLSession*                 ssl_;
+  bool                        ssl_handshake_done_;
   // supported stuff sent in start up message
-  std::string              compression_;
-  std::string              cql_version_;
+  std::string                 compression_;
+  std::string                 cql_version_;
 
 
   explicit
-  ClientConnection(
-      uv_loop_t*  loop,
-      size_t      request_queue_size,
-      SSLSession* ssl_session) :
+  CqlClientConnection(
+      uv_loop_t*         loop,
+      SSLSession*        ssl_session,
+      const CqlHost&     host) :
       state_(CLIENT_STATE_NEW),
       loop_(loop),
       incomming_(new CqlMessage()),
       connect_callback_(nullptr),
       keyspace_callback_(nullptr),
       prepare_callback_(nullptr),
-      log_callback_(nullptr),
-      request_queue_(request_queue_size),
-      address_family_(PF_INET),         // use ipv4 by default
-      hostname_("localhost"),
-      port_("9042"),
+      log_callback_(nullptr),         // use ipv4 by default
+      host_(host),
       ssl_(ssl_session),
       ssl_handshake_done_(false),
       cql_version_("3.0.0") {
-    resolver_.data = this;
-    connect_request_.data = this;
-    socket_.data = this;
+    connect_request_.data         = this;
+    socket_.data                  = this;
 
-    resolver_hints_.ai_family = address_family_;
-    resolver_hints_.ai_socktype = SOCK_STREAM;
-    resolver_hints_.ai_protocol = IPPROTO_TCP;
-    resolver_hints_.ai_flags = 0;
-    memset(address_string_, 0, sizeof(address_string_));
     if (ssl_) {
       ssl_->init();
       ssl_->handshake(true);
@@ -174,9 +154,6 @@ struct ClientConnection {
 
     switch (state_) {
       case CLIENT_STATE_NEW:
-        resolve();
-        break;
-      case CLIENT_STATE_RESOLVED:
         connect();
         break;
       case CLIENT_STATE_CONNECTED:
@@ -206,7 +183,7 @@ struct ClientConnection {
     while (remaining != 0) {
       int consumed = incomming_->consume(buffer, remaining);
       if (consumed < 0) {
-        // TODO(mstump)
+        // TODO(mstump) probably means connection closed/failed
         fprintf(stderr, "consume error\n");
       }
 
@@ -226,8 +203,7 @@ struct ClientConnection {
 
         log(CQL_LOG_DEBUG, log_message);
         if (message->stream < 0) {
-          // system event
-          // TODO(mstump)
+          // TODO(mstump) system events
           assert(false);
         } else {
           switch (message->opcode) {
@@ -257,8 +233,8 @@ struct ClientConnection {
   static void
   on_close(
       uv_handle_t* client) {
-    ClientConnection* connection
-        = reinterpret_cast<ClientConnection*>(client->data);
+    CqlClientConnection* connection
+        = reinterpret_cast<CqlClientConnection*>(client->data);
 
     connection->log(CQL_LOG_DEBUG, "on_close");
     connection->state_ = CLIENT_STATE_DISCONNECTED;
@@ -270,8 +246,8 @@ struct ClientConnection {
       uv_stream_t* client,
       ssize_t      nread,
       uv_buf_t     buf) {
-    ClientConnection* connection =
-        reinterpret_cast<ClientConnection*>(client->data);
+    CqlClientConnection* connection =
+        reinterpret_cast<CqlClientConnection*>(client->data);
 
     connection->log(CQL_LOG_DEBUG, "on_read");
     if (nread == -1) {
@@ -295,7 +271,7 @@ struct ClientConnection {
         char*  write_output      = NULL;
         size_t write_output_size = 0;
 
-        // TODO(mstump) error handling
+        // TODO(mstump) error handling for SSL decryption
         connection->ssl_->read_write(
             read_input,
             read_input_size,
@@ -358,7 +334,7 @@ struct ClientConnection {
         reinterpret_cast<uv_stream_t*>(&socket_),
         &buf,
         1,
-        ClientConnection::on_write);
+        CqlClientConnection::on_write);
     return CQL_ERROR_NO_ERROR;
   }
 
@@ -368,15 +344,15 @@ struct ClientConnection {
     state_ = CLIENT_STATE_DISCONNECTING;
     uv_close(
         reinterpret_cast<uv_handle_t*>(&socket_),
-        ClientConnection::on_close);
+        CqlClientConnection::on_close);
   }
 
   static void
   on_connect(
       uv_connect_t*     request,
       int               status) {
-    ClientConnection* connection
-        = reinterpret_cast<ClientConnection*>(request->data);
+    CqlClientConnection* connection
+        = reinterpret_cast<CqlClientConnection*>(request->data);
 
     connection->log(CQL_LOG_DEBUG, "on_connect");
     if (status == -1) {
@@ -405,8 +381,8 @@ struct ClientConnection {
     uv_tcp_connect(
         &connect_request_,
         &socket_,
-        address_,
-        ClientConnection::on_connect);
+        host_.address,
+        CqlClientConnection::on_connect);
   }
 
   void
@@ -532,7 +508,7 @@ struct ClientConnection {
     CqlMessage message(CQL_OPCODE_QUERY);
     CqlQueryStatement* query = static_cast<CqlQueryStatement*>(message.body.get());
     query->statement("USE " + keyspace);
-    send_message(&message, NULL);
+    execute(&message, NULL);
   }
 
   void
@@ -556,7 +532,7 @@ struct ClientConnection {
   send_options() {
     log(CQL_LOG_DEBUG, "send_options");
     CqlMessage message(CQL_OPCODE_OPTIONS);
-    send_message(&message, NULL);
+    execute(&message, NULL);
   }
 
   void
@@ -565,7 +541,7 @@ struct ClientConnection {
     CqlMessage      message(CQL_OPCODE_STARTUP);
     BodyStartup* startup = static_cast<BodyStartup*>(message.body.get());
     startup->cql_version = cql_version_;
-    send_message(&message, NULL);
+    execute(&message, NULL);
   }
 
   static void
@@ -575,7 +551,7 @@ struct ClientConnection {
     WriteRequestData* data
         = reinterpret_cast<WriteRequestData*>(req->data);
 
-    ClientConnection* connection = data->connection;
+    CqlClientConnection* connection = data->connection;
     connection->log(CQL_LOG_DEBUG, "on_write");
     if (status == -1) {
       // TODO(mstump) need to trigger failure for all pending requests and notify connection close
@@ -589,62 +565,8 @@ struct ClientConnection {
     delete req;
   }
 
-  CqlMessageFutureImpl*
-  prepare(
-      const char*                    statement,
-      size_t                         size,
-      CqlMessageFutureImpl::Callback callback = NULL) {
-    CqlMessageFutureImpl* request = new CqlMessageFutureImpl();
-    CqlMessage*           message = new CqlMessage(CQL_OPCODE_PREPARE);
-    CqlPrepareStatement*  prepare = static_cast<CqlPrepareStatement*>(message->body.get());
-    prepare->prepare_string(statement, size);
-
-    request->callback = callback;
-    request->data.assign(statement, size);
-
-    CqlError* err = send_message(message, request);
-    if (err) {
-      request->error.reset(err);
-      request->notify(loop_);
-    }
-    return request;
-  }
-
-  CqlMessageFutureImpl*
-  exec(
-      CqlMessage*                message,
-      CqlMessageFutureImpl::Callback callback = NULL) {
-    CqlMessageFutureImpl* request = new CqlMessageFutureImpl();
-    request->callback = callback;
-    CqlError* err = send_message(message, request);
-    if (err) {
-      request->error.reset(err);
-      request->notify(loop_);
-    }
-    return request;
-  }
-
   CqlError*
-  send_message_threadsafe(
-      CqlMessage* message,
-      CqlMessageFutureImpl* request = NULL) {
-    // enqueue message
-    // use uv_async to call on_send_message_threadsafe
-
-    return nullptr;
-  }
-
-  void
-  on_send_message_threadsafe(
-      CqlMessage* message,
-      CqlMessageFutureImpl* request = NULL) {
-    // called by event loop
-    // pull item out of queue
-    // call send_message
-  }
-
-  CqlError*
-  send_message(
+  execute(
       CqlMessage* message,
       CqlMessageFutureImpl* request = NULL) {
     uv_buf_t   buf;
@@ -652,8 +574,15 @@ struct ClientConnection {
     if (err) {
       return err;
     }
-    // TODO(mstump) deal with possible failure from prepare
-    message->prepare(&buf.base, buf.len);
+
+    if (!message->prepare(&buf.base, buf.len)) {
+      return new CqlError(
+          CQL_ERROR_SOURCE_LIBRARY,
+          CQL_ERROR_LIB_MESSAGE_PREPARE,
+          "error preparing message",
+          __FILE__,
+          __LINE__);
+    }
 
     char log_message[512];
     snprintf(
@@ -666,53 +595,6 @@ struct ClientConnection {
 
     log(CQL_LOG_DEBUG, log_message);
     return send_data(buf);
-  }
-
-  static void
-  on_resolve(
-      uv_getaddrinfo_t* resolver_,
-      int               status,
-      struct addrinfo*  res) {
-    ClientConnection* connection
-        = reinterpret_cast<ClientConnection*>(resolver_->data);
-
-    connection->log(CQL_LOG_DEBUG, "on_resolve");
-    if (status == -1) {
-      // TODO(mstump)
-      fprintf(
-          stderr,
-          "getaddrinfo request error %s\n",
-          uv_err_name(uv_last_error(connection->loop_)));
-      return;
-    }
-
-    // store the human readable address_
-    if (res->ai_family == AF_INET) {
-      uv_ip4_name((struct sockaddr_in*) res->ai_addr,
-                  reinterpret_cast<char*>(connection->address_string_),
-                  CQL_ADDRESS_MAX_LENGTH);
-    } else if (res->ai_family == AF_INET6) {
-      uv_ip6_name((struct sockaddr_in6*) res->ai_addr,
-                  reinterpret_cast<char*>(connection->address_string_),
-                  CQL_ADDRESS_MAX_LENGTH);
-    }
-    connection->address_ = *(struct sockaddr_in*) res->ai_addr;
-    uv_freeaddrinfo(res);
-
-    connection->state_ = CLIENT_STATE_RESOLVED;
-    connection->event_received();
-  }
-
-  void
-  resolve() {
-    log(CQL_LOG_DEBUG, "resolve");
-    uv_getaddrinfo(
-        loop_,
-        &resolver_,
-        ClientConnection::on_resolve,
-        hostname_.c_str(),
-        port_.c_str(),
-        &resolver_hints_);
   }
 
   void
@@ -732,8 +614,13 @@ struct ClientConnection {
     event_received();
   }
 
+  void
+  shutdown() {
+  }
+
  private:
-  void operator=(const ClientConnection&) {}
+  CqlClientConnection(const CqlClientConnection&) {}
+  void operator=(const CqlClientConnection&) {}
 };
 
 #endif

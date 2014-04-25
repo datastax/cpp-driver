@@ -21,37 +21,39 @@
 #include <string>
 #include <algorithm>
 
+#include "cql_bound_queue.hpp"
 #include "cql_client_connection.hpp"
 #include "cql_cluster.hpp"
+#include "cql_request.hpp"
 
-class Pool {
-  typedef std::list<ClientConnection*> ConnectionCollection;
+class CqlPool {
+  typedef std::list<CqlClientConnection*> ConnectionCollection;
 
-  uv_loop_t*           loop_;
-  SSLContext*          ssl_context_;
-  std::string          address_;
-  // HostDistance         distance_;
-  size_t               core_connections_per_host_;
-  size_t               max_connections_per_host_;
-  size_t               max_simultaneous_creation_;
-  size_t               connection_request_queue_size_;
-  ConnectionCollection connections_;
-  ConnectionCollection connections_pending_;
+  uv_loop_t*              loop_;
+  SSLContext*             ssl_context_;
+  CqlHost                 host_;
+  size_t                  core_connections_per_host_;
+  size_t                  max_connections_per_host_;
+  size_t                  max_simultaneous_creation_;
+  ConnectionCollection    connections_;
+  ConnectionCollection    connections_pending_;
+  BoundQueue<CqlRequest*> request_queue_;
 
  public:
-  Pool(
-      uv_loop_t*         loop,
-      SSLContext*        ssl_context,
-      const std::string& address,
-      size_t             core_connections_per_host,
-      size_t             max_connections_per_host,
-      size_t             max_simultaneous_creation = 1) :
+  CqlPool(
+      uv_loop_t*     loop,
+      SSLContext*    ssl_context,
+      const CqlHost& host,
+      size_t         core_connections_per_host,
+      size_t         max_connections_per_host,
+      size_t         max_simultaneous_creation = 1) :
       loop_(loop),
       ssl_context_(ssl_context),
-      address_(address),
+      host_(host),
       core_connections_per_host_(core_connections_per_host),
       max_connections_per_host_(max_connections_per_host),
-      max_simultaneous_creation_(max_simultaneous_creation) {
+      max_simultaneous_creation_(max_simultaneous_creation),
+      request_queue_(128 * max_connections_per_host) {
     for (size_t i = 0; i < core_connections_per_host_; ++i) {
       spawn_connection();
     }
@@ -59,44 +61,45 @@ class Pool {
 
   void
   connect_callback(
-      ClientConnection* connection,
-      CqlError*         error) {
-    (void) connection;
-    (void) error;
+      CqlClientConnection* connection,
+      CqlError*            error) {
+    if (error) {
+      // TODO(mstump) do something with failure to connect
+    }
+
+    // TODO(mstump) do we need notification?
+    connections_pending_.remove(connection);
+    connections_.push_back(connection);
   }
 
-  ~Pool() {
+  ~CqlPool() {
     for (auto c : connections_) {
       delete c;
     }
   }
 
   void
-  prepare() {
-  }
-
-  void
-  execute() {
-  }
-
-  void
   shutdown() {
+    for (auto c : connections_) {
+      c->shutdown();
+    }
   }
 
   void
   set_keyspace() {
+    // TODO(mstump)
   }
 
   void
   spawn_connection() {
-    ClientConnection* connection = new ClientConnection(
+    CqlClientConnection* connection = new CqlClientConnection(
         loop_,
-        connection_request_queue_size_,
-        ssl_context_ ? ssl_context_->session_new() : NULL);
+        ssl_context_ ? ssl_context_->session_new() : NULL,
+        host_);
 
     connection->init(
         std::bind(
-            &Pool::connect_callback,
+            &CqlPool::connect_callback,
             this,
             std::placeholders::_1,
             std::placeholders::_2));
@@ -120,18 +123,18 @@ class Pool {
 
   static bool
   least_busy_comp(
-      ClientConnection* a,
-      ClientConnection* b) {
+      CqlClientConnection* a,
+      CqlClientConnection* b) {
     return a->available_streams() < b->available_streams();
   }
 
-  ClientConnection*
+  CqlClientConnection*
   find_least_busy() {
     ConnectionCollection::iterator it =
         std::max_element(
             connections_.begin(),
             connections_.end(),
-            Pool::least_busy_comp);
+            CqlPool::least_busy_comp);
     if ((*it)->available_streams()) {
       return *it;
     }
@@ -140,7 +143,7 @@ class Pool {
 
   CqlError*
   borrow_connection(
-      ClientConnection** output) {
+      CqlClientConnection** output) {
     *output = find_least_busy();
     if (output) {
       return CQL_ERROR_NO_ERROR;
