@@ -381,6 +381,13 @@ public:
     void
     set_compression_type(cql_compression_enum compression)
     {
+        #ifdef CQL_NO_SNAPPY
+        if (compression == CQL_COMPRESSION_SNAPPY) {
+            throw cql_driver_internal_error_exception(
+                "Requested snappy compression, which is unavailable. Recompile with snappy support.");
+        }
+        #endif
+        
         _compression = compression;
     }
     
