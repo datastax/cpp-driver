@@ -16,7 +16,12 @@
 #include <cassert>
 #include <string>
 
+#ifndef CQL_NO_SNAPPY
+    #include <snappy.h>
+#endif
+
 #include "cql/internal/cql_util.hpp"
+#include "cql/exceptions/cql_exception.hpp"
 
 char*
 cql::safe_strncpy(char* dest, const char* src, const size_t count) {
@@ -30,21 +35,97 @@ cql::safe_strncpy(char* dest, const char* src, const size_t count) {
 }
 
 bool
-cql::to_ipaddr(const std::string& str, boost::asio::ip::address* const result)
+cql::to_ipaddr(const std::string& str, boost::asio::ip::address& result)
 {
-     boost::system::error_code err;
+    boost::system::error_code err;
 
-     boost::asio::ip::address tmp =
-            boost::asio::ip::address::from_string(str, err);
+    boost::asio::ip::address tmp =
+        boost::asio::ip::address::from_string(str, err);
 
-    if(err)
+    if (err) {
         return false;
+    }
+    
+    result = tmp;
 
-     if(result)
-        *result = tmp;
-
-     return true;
+    return true;
 }
+
+#ifndef CQL_NO_SNAPPY
+std::vector<cql::cql_byte_t>
+cql::snappy_compress(const std::vector<cql::cql_byte_t>& buffer)
+{
+    size_t input_length = buffer.size(),
+           output_length;
+    
+    std::vector<cql_byte_t> output(snappy::MaxCompressedLength(input_length));
+    snappy::RawCompress(reinterpret_cast<const char*>(&buffer[0]), input_length,
+                        reinterpret_cast<      char*>(&output[0]), &output_length);
+    
+    output.resize(output_length);
+    return output;
+}
+#endif
+
+#ifndef CQL_NO_SNAPPY
+void
+cql::snappy_compress_inplace(std::vector<cql::cql_byte_t>& buffer)
+{
+    const std::vector<cql::cql_byte_t>& out = snappy_compress(buffer);
+    buffer = out;
+}
+#endif
+
+#ifndef CQL_NO_SNAPPY
+std::vector<cql::cql_byte_t>
+cql::snappy_uncompress(const std::vector<cql::cql_byte_t>& buffer)
+{
+    size_t input_length = buffer.size(),
+           output_length;
+    
+    std::vector<cql_byte_t> output;
+    
+    bool parsing_succeeded1 = true,
+         parsing_succeeded2 = true;
+    
+    parsing_succeeded1 =
+        snappy::GetUncompressedLength(reinterpret_cast<const char*>(&buffer[0]), input_length,
+                                      &output_length);
+    
+    if (parsing_succeeded1) {
+        output.resize(output_length);
+    
+        parsing_succeeded2 =
+            snappy::RawUncompress(reinterpret_cast<const char*>(&buffer[0]), input_length,
+                                  reinterpret_cast<      char*>(&output[0]) );
+    }
+    
+    if (!parsing_succeeded1 || !parsing_succeeded2) {
+        throw cql_exception("Uncompression error"); // TODO: something more specific?
+    }
+    
+    return output;
+}
+#endif
+
+#ifndef CQL_NO_SNAPPY
+void
+cql::snappy_uncompress_inplace(std::vector<cql::cql_byte_t>& buffer)
+{
+    const std::vector<cql::cql_byte_t>& out = snappy_uncompress(buffer);
+    buffer = out;
+}
+#endif
+
+#ifndef CQL_NO_SNAPPY
+bool
+cql::is_valid_snappy_compressed_buffer(const std::vector<cql::cql_byte_t>& buffer)
+{
+    return snappy::IsValidCompressedBuffer(reinterpret_cast<const char*>(&buffer[0]),
+                                           buffer.size());
+}
+#endif
+
 
 boost::posix_time::ptime
 cql::utc_now() {
