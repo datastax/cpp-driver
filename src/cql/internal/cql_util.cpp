@@ -22,6 +22,7 @@
 
 #include "cql/internal/cql_util.hpp"
 #include "cql/exceptions/cql_exception.hpp"
+#include "cql/exceptions/cql_driver_internal_error.hpp"
 
 char*
 cql::safe_strncpy(char* dest, const char* src, const size_t count) {
@@ -51,14 +52,16 @@ cql::to_ipaddr(const std::string& str, boost::asio::ip::address& result)
     return true;
 }
 
+namespace {
+    
 #ifndef CQL_NO_SNAPPY
 std::vector<cql::cql_byte_t>
-cql::snappy_compress(const std::vector<cql::cql_byte_t>& buffer)
+snappy_compress(const std::vector<cql::cql_byte_t>& buffer)
 {
     size_t input_length = buffer.size(),
            output_length;
     
-    std::vector<cql_byte_t> output(snappy::MaxCompressedLength(input_length));
+    std::vector<cql::cql_byte_t> output(snappy::MaxCompressedLength(input_length));
     snappy::RawCompress(reinterpret_cast<const char*>(&buffer[0]), input_length,
                         reinterpret_cast<      char*>(&output[0]), &output_length);
     
@@ -69,7 +72,7 @@ cql::snappy_compress(const std::vector<cql::cql_byte_t>& buffer)
 
 #ifndef CQL_NO_SNAPPY
 void
-cql::snappy_compress_inplace(std::vector<cql::cql_byte_t>& buffer)
+snappy_compress_inplace(std::vector<cql::cql_byte_t>& buffer)
 {
     const std::vector<cql::cql_byte_t>& out = snappy_compress(buffer);
     buffer = out;
@@ -78,12 +81,12 @@ cql::snappy_compress_inplace(std::vector<cql::cql_byte_t>& buffer)
 
 #ifndef CQL_NO_SNAPPY
 std::vector<cql::cql_byte_t>
-cql::snappy_uncompress(const std::vector<cql::cql_byte_t>& buffer)
+snappy_uncompress(const std::vector<cql::cql_byte_t>& buffer)
 {
     size_t input_length = buffer.size(),
            output_length;
     
-    std::vector<cql_byte_t> output;
+    std::vector<cql::cql_byte_t> output;
     
     bool parsing_succeeded1 = true,
          parsing_succeeded2 = true;
@@ -101,7 +104,7 @@ cql::snappy_uncompress(const std::vector<cql::cql_byte_t>& buffer)
     }
     
     if (!parsing_succeeded1 || !parsing_succeeded2) {
-        throw cql_exception("Uncompression error"); // TODO: something more specific?
+        throw cql::cql_exception("Uncompression error"); // TODO: something more specific?
     }
     
     return output;
@@ -110,7 +113,7 @@ cql::snappy_uncompress(const std::vector<cql::cql_byte_t>& buffer)
 
 #ifndef CQL_NO_SNAPPY
 void
-cql::snappy_uncompress_inplace(std::vector<cql::cql_byte_t>& buffer)
+snappy_uncompress_inplace(std::vector<cql::cql_byte_t>& buffer)
 {
     const std::vector<cql::cql_byte_t>& out = snappy_uncompress(buffer);
     buffer = out;
@@ -119,13 +122,92 @@ cql::snappy_uncompress_inplace(std::vector<cql::cql_byte_t>& buffer)
 
 #ifndef CQL_NO_SNAPPY
 bool
-cql::is_valid_snappy_compressed_buffer(const std::vector<cql::cql_byte_t>& buffer)
+is_valid_snappy_compressed_buffer(const std::vector<cql::cql_byte_t>& buffer)
 {
     return snappy::IsValidCompressedBuffer(reinterpret_cast<const char*>(&buffer[0]),
                                            buffer.size());
 }
 #endif
 
+} // End of anonymous namespace
+
+//---------------------------------------------------------------------------------------------
+std::vector<cql::cql_byte_t>
+cql::compress(const std::vector<cql::cql_byte_t>& buffer, cql_compression_enum e)
+{
+    switch(e) {
+        case CQL_COMPRESSION_NONE:
+            // Do nothing.
+            return buffer;
+        case CQL_COMPRESSION_SNAPPY:
+            #ifdef CQL_NO_SNAPPY
+                throw cql_driver_internal_error_exception(
+                    "Snappy compression requested, but unavailable. Recompile with snappy support.");
+            #else
+                return snappy_compress(buffer);
+            #endif
+        default:
+            throw cql_driver_internal_error_exception("Requested an unknown compression algorithm.");
+    }
+}
+
+void
+cql::compress_inplace(std::vector<cql::cql_byte_t>& buffer, cql_compression_enum e)
+{
+    switch(e) {
+        case CQL_COMPRESSION_NONE:
+            // Do nothing.
+            return;
+        case CQL_COMPRESSION_SNAPPY:
+            #ifdef CQL_NO_SNAPPY
+                throw cql_driver_internal_error_exception(
+                    "Snappy compression requested, but unavailable. Recompile with snappy support.");
+            #else
+                return snappy_compress_inplace(buffer);
+            #endif
+        default:
+            throw cql_driver_internal_error_exception("Requested an unknown compression algorithm.");
+    }
+}
+
+std::vector<cql::cql_byte_t>
+cql::uncompress(const std::vector<cql::cql_byte_t>& buffer, cql_compression_enum e)
+{
+    switch(e) {
+        case CQL_COMPRESSION_NONE:
+            // Do nothing.
+            return buffer;
+        case CQL_COMPRESSION_SNAPPY:
+            #ifdef CQL_NO_SNAPPY
+                throw cql_driver_internal_error_exception(
+                    "Snappy uncompression requested, but unavailable. Recompile with snappy support.");
+            #else
+                return snappy_uncompress(buffer);
+            #endif
+        default:
+            throw cql_driver_internal_error_exception("Requested an unknown compression algorithm.");
+    }
+}
+
+void
+cql::uncompress_inplace(std::vector<cql::cql_byte_t>& buffer, cql_compression_enum e)
+{
+    switch(e) {
+        case CQL_COMPRESSION_NONE:
+            // Do nothing.
+            return;
+        case CQL_COMPRESSION_SNAPPY:
+            #ifdef CQL_NO_SNAPPY
+                throw cql_driver_internal_error_exception(
+                    "Snappy uncompression requested, but unavailable. Recompile with snappy support.");
+            #else
+                return snappy_uncompress_inplace(buffer);
+            #endif
+        default:
+            throw cql_driver_internal_error_exception("Requested an unknown compression algorithm.");
+    }
+}
+//---------------------------------------------------------------------------------------------
 
 boost::posix_time::ptime
 cql::utc_now() {

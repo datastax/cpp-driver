@@ -66,24 +66,18 @@ empty_when_null(const char* str) {
 bool
 to_ipaddr(const std::string& str, boost::asio::ip::address& result);
 
-#ifndef CQL_NO_SNAPPY
-    std::vector<cql_byte_t>
-    snappy_compress(const std::vector<cql_byte_t>& buffer);
+std::vector<cql_byte_t>
+compress(const std::vector<cql_byte_t>& buffer, cql_compression_enum e);
 
-    void
-    snappy_compress_inplace(std::vector<cql_byte_t>& buffer);
+void
+compress_inplace(std::vector<cql_byte_t>& buffer, cql_compression_enum e);
 
-    std::vector<cql_byte_t>
-    snappy_uncompress(const std::vector<cql_byte_t>& buffer);
+std::vector<cql_byte_t>
+uncompress(const std::vector<cql_byte_t>& buffer, cql_compression_enum e);
 
-    void
-    snappy_uncompress_inplace(std::vector<cql_byte_t>& buffer);
+void
+uncompress_inplace(std::vector<cql_byte_t>& buffer, cql_compression_enum e);
 
-    /** Checks if given buffer is a valid snappy-compressed buffer. */
-    bool
-    is_valid_snappy_compressed_buffer(const std::vector<cql_byte_t>& buffer);
-#endif
-    
 // returns current UTC time.
 // result of this functions depends on local
 // system settings which may be modified by user.
