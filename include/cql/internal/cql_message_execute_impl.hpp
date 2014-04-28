@@ -81,6 +81,9 @@ public:
 
     void
     push_back(const bool val);
+    
+    void
+    skip();
 
     void
     pop_back();

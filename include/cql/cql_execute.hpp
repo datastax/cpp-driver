@@ -83,6 +83,9 @@ public:
 
     void
     push_back(const bool val);
+    
+    void
+    skip();
 
     void
     pop_back();
@@ -111,6 +114,9 @@ public:
             
     void
     set_stream(const cql_stream_t& stream);
+     
+    std::string 
+    str() const;
 
 private:
     boost::shared_ptr<cql_message_execute_impl_t> _impl;

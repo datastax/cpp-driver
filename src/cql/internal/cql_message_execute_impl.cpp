@@ -131,6 +131,13 @@ cql::cql_message_execute_impl_t::push_back(const bool val) {
 }
 
 void
+cql::cql_message_execute_impl_t::skip() {
+    cql::cql_message_execute_impl_t::param_t p;
+    cql::encode_null_byte(p);
+    _params.push_back(p);
+}
+
+void
 cql::cql_message_execute_impl_t::pop_back() {
     _params.pop_back();
 }

@@ -97,6 +97,11 @@ cql::cql_execute_t::push_back(const bool val) {
 }
 
 void
+cql::cql_execute_t::skip() {
+    _impl->skip();
+}
+
+void
 cql::cql_execute_t::pop_back() {
     _impl->pop_back();
 }
@@ -141,6 +146,12 @@ cql::cql_stream_t
 cql::cql_execute_t::stream()
 {
     return impl()->stream();
+}
+
+std::string 
+cql::cql_execute_t::str() const
+{
+    return impl()->str();
 }
 
 void

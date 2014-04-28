@@ -362,6 +362,23 @@ cql::encode_bytes(ostream& output,
     return output;
 }
 
+ostream&
+cql::encode_null_byte(ostream& output) {
+    // As per CQL bytes representation, if len is negative, no byte
+    //  should follow and the represented value is 'null'
+    cql::cql_int_t len = -1; 
+    output.write(reinterpret_cast<char*>(&len), sizeof(len));
+    return output;
+}
+
+void
+cql::encode_null_byte(vector<cql::cql_byte_t>& output) {
+    cql::cql_byte_t l = -1;
+    output.resize(sizeof(l));
+    const cql::cql_byte_t* it = reinterpret_cast<cql::cql_byte_t*>(&l);
+    output.assign(it, it + sizeof(l));
+}
+
 istream&
 cql::decode_bytes(istream& input,
                   vector<cql::cql_byte_t>& value) {
