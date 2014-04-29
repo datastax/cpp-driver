@@ -59,9 +59,9 @@ struct CqlCluster {
         queue_size_io_);
   }
 
-  void
+  int
   option(
-      int         option,
+      CqlOption   option,
       const void* value,
       size_t      size) {
     int int_value = *(reinterpret_cast<const int*>(value));
@@ -99,7 +99,12 @@ struct CqlCluster {
       case CQL_OPTION_SCHEMA_AGREEMENT_WAIT:
         max_schema_agreement_wait_ = int_value;
         break;
+      
+      default:
+        return CQL_ERROR_LIB_INVALID_OPTION;
     }
+
+    return CQL_ERROR_NO_ERROR;
   }
 };
 

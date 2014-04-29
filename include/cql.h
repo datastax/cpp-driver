@@ -40,8 +40,8 @@
 // TODO(mpenick) handle primitive types for other compilers and platforms
 
 typedef int cql_bool;
-#define cql_true  1
 #define cql_false 0
+#define cql_true  1
 
 typedef float cql_float;
 typedef double cql_double;
@@ -85,6 +85,68 @@ typedef struct CqlPrepared CqlPrepared;
 struct CqlResult;
 typedef struct CqlResult CqlResult;
 
+typedef enum {
+  CQL_LOG_CRITICAL = 0x00,
+  CQL_LOG_ERROR    = 0x01,
+  CQL_LOG_INFO     = 0x02,
+  CQL_LOG_DEBUG    = 0x03,
+} CqlLogLevel;
+
+typedef enum {
+  CQL_CONSISTENCY_ANY          = 0x0000,
+  CQL_CONSISTENCY_ONE          = 0x0001,
+  CQL_CONSISTENCY_TWO          = 0x0002,
+  CQL_CONSISTENCY_THREE        = 0x0003,
+  CQL_CONSISTENCY_QUORUM       = 0x0004,
+  CQL_CONSISTENCY_ALL          = 0x0005,
+  CQL_CONSISTENCY_LOCAL_QUORUM = 0x0006,
+  CQL_CONSISTENCY_EACH_QUORUM  = 0x0007,
+  CQL_CONSISTENCY_SERIAL       = 0x0008,
+  CQL_CONSISTENCY_LOCAL_SERIAL = 0x0009,
+  CQL_CONSISTENCY_LOCAL_ONE    = 0x000A,
+} CqlConsistency;
+
+typedef enum {
+  CQL_COLUMN_TYPE_UNKNOWN   = 0xFFFF,
+  CQL_COLUMN_TYPE_CUSTOM    = 0x0000,
+  CQL_COLUMN_TYPE_ASCII     = 0x0001,
+  CQL_COLUMN_TYPE_BIGINT    = 0x0002,
+  CQL_COLUMN_TYPE_BLOB      = 0x0003,
+  CQL_COLUMN_TYPE_BOOLEAN   = 0x0004,
+  CQL_COLUMN_TYPE_COUNTER   = 0x0005,
+  CQL_COLUMN_TYPE_DECIMAL   = 0x0006,
+  CQL_COLUMN_TYPE_DOUBLE    = 0x0007,
+  CQL_COLUMN_TYPE_FLOAT     = 0x0008,
+  CQL_COLUMN_TYPE_INT       = 0x0009,
+  CQL_COLUMN_TYPE_TEXT      = 0x000A,
+  CQL_COLUMN_TYPE_TIMESTAMP = 0x000B,
+  CQL_COLUMN_TYPE_UUID      = 0x000C,
+  CQL_COLUMN_TYPE_VARCHAR   = 0x000D,
+  CQL_COLUMN_TYPE_VARINT    = 0x000E,
+  CQL_COLUMN_TYPE_TIMEUUID  = 0x000F,
+  CQL_COLUMN_TYPE_INET      = 0x0010,
+  CQL_COLUMN_TYPE_LIST      = 0x0020,
+  CQL_COLUMN_TYPE_MAP       = 0x0021,
+  CQL_COLUMN_TYPE_SET       = 0x0022,
+} CqlColumnType;
+
+typedef enum {
+  CQL_OPTION_THREADS_IO                 = 1,
+  CQL_OPTION_THREADS_CALLBACK           = 2,
+  CQL_OPTION_CONTACT_POINT_ADD          = 3,
+  CQL_OPTION_PORT                       = 4,
+  CQL_OPTION_CQL_VERSION                = 5,
+  CQL_OPTION_SCHEMA_AGREEMENT_WAIT      = 6,
+  CQL_OPTION_CONTROL_CONNECTION_TIMEOUT = 7,
+  CQL_OPTION_COMPRESSION                = 9,
+} CqlOption;
+
+typedef enum {
+  CQL_COMPRESSION_NONE   = 0,
+  CQL_COMPRESSION_SNAPPY = 1,
+  CQL_COMPRESSION_LZ4    = 2,
+} CqlCompression;
+
 /**
  * Initialize a new cluster. Instance must be freed by caller.
  *
@@ -115,7 +177,7 @@ cql_cluster_free(
 CQL_EXPORT int
 cql_cluster_setopt(
     CqlCluster* cluster,
-    int         option,
+    CqlOption   option,
     const void* data,
     size_t      data_len);
 
@@ -131,7 +193,7 @@ cql_cluster_setopt(
 CQL_EXPORT int
 cql_cluster_getopt(
     CqlCluster* cluster,
-    int         option,
+    CqlOption   option,
     void**      data,
     size_t*     data_len);
 
@@ -357,7 +419,7 @@ cql_session_query(
     const char*    statement,
     size_t         statement_len,
     size_t         paramater_count,
-    size_t         consistency,
+    CqlConsistency consistency,
     CqlStatement** output);
 
 /**
@@ -394,7 +456,7 @@ cql_session_bind(
     CqlSession*    session,
     CqlPrepared*   prepared,
     size_t         paramater_count,
-    size_t         consistency,
+    CqlConsistency consistency,
     CqlStatement** output);
 
 /**
@@ -627,7 +689,7 @@ cql_session_exec(
 CQL_EXPORT int 
 cql_session_batch(
     CqlSession*         session,
-    size_t              consistency,
+    CqlConsistency      consistency,
     CqlBatchStatement** output);
 
 CQL_EXPORT int
@@ -673,7 +735,7 @@ cql_session_exec_batch(
  */
 CQL_EXPORT size_t
 cql_result_rowcount(
-    void* result);
+    CqlResult* result);
 
 /**
  * Get number of columns per row for the specified result
@@ -684,7 +746,7 @@ cql_result_rowcount(
  */
 CQL_EXPORT size_t
 cql_result_colcount(
-    void* result);
+    CqlResult* result);
 
 /**
  * Get the type for the column at index for the specified result
@@ -697,9 +759,9 @@ cql_result_colcount(
  */
 CQL_EXPORT int
 cql_result_coltype(
-    void*   result,
-    size_t  index,
-    size_t* coltype);
+    CqlResult*     result,
+    size_t         index,
+    CqlColumnType* coltype);
 
 /**
  * Get an iterator for the specified result or collection. Iterator must be freed by caller.
@@ -971,7 +1033,7 @@ cql_collection_count(
 CQL_EXPORT int
 cql_collection_subtype(
     void*   collection,
-    size_t* output);
+    CqlColumnType* output);
 
 /**
  * Get the sub-type of the key for a map collection. Works only for maps.
@@ -984,7 +1046,7 @@ cql_collection_subtype(
 CQL_EXPORT int
 cql_collection_map_key_type(
     void*   collection,
-    size_t* output);
+    CqlColumnType* output);
 
 /**
  * Get the sub-type of the value for a map collection. Works only for maps.
@@ -997,7 +1059,7 @@ cql_collection_map_key_type(
 CQL_EXPORT int
 cql_collection_map_value_type(
     void*   collection,
-    size_t* output);
+    CqlColumnType* output);
 
 /**
  * Use an iterator to obtain each pair from a map. Once a pair has been obtained from
@@ -1078,11 +1140,6 @@ cql_uuid_string(
     CqlUuid uuid,
     char*   output);
 
-#define CQL_LOG_CRITICAL 0x00
-#define CQL_LOG_ERROR    0x01
-#define CQL_LOG_INFO     0x02
-#define CQL_LOG_DEBUG    0x03
-
 #define CQL_ERROR_SOURCE_OS          1
 #define CQL_ERROR_SOURCE_NETWORK     2
 #define CQL_ERROR_SOURCE_SSL         3
@@ -1102,55 +1159,9 @@ cql_uuid_string(
 #define CQL_ERROR_SSL_WRITE_WAITING   1000007
 
 #define CQL_ERROR_LIB_BAD_PARAMS      2000001
+#define CQL_ERROR_LIB_INVALID_OPTION  2000002
 #define CQL_ERROR_LIB_NO_STREAMS      2000008
 #define CQL_ERROR_LIB_MAX_CONNECTIONS 2000009
 #define CQL_ERROR_LIB_SESSION_STATE   2000010
-
-#define CQL_CONSISTENCY_ANY          0x0000
-#define CQL_CONSISTENCY_ONE          0x0001
-#define CQL_CONSISTENCY_TWO          0x0002
-#define CQL_CONSISTENCY_THREE        0x0003
-#define CQL_CONSISTENCY_QUORUM       0x0004
-#define CQL_CONSISTENCY_ALL          0x0005
-#define CQL_CONSISTENCY_LOCAL_QUORUM 0x0006
-#define CQL_CONSISTENCY_EACH_QUORUM  0x0007
-#define CQL_CONSISTENCY_SERIAL       0x0008
-#define CQL_CONSISTENCY_LOCAL_SERIAL 0x0009
-#define CQL_CONSISTENCY_LOCAL_ONE    0x000A
-
-#define CQL_COLUMN_TYPE_UNKNOWN   0xFFFF
-#define CQL_COLUMN_TYPE_CUSTOM    0x0000
-#define CQL_COLUMN_TYPE_ASCII     0x0001
-#define CQL_COLUMN_TYPE_BIGINT    0x0002
-#define CQL_COLUMN_TYPE_BLOB      0x0003
-#define CQL_COLUMN_TYPE_BOOLEAN   0x0004
-#define CQL_COLUMN_TYPE_COUNTER   0x0005
-#define CQL_COLUMN_TYPE_DECIMAL   0x0006
-#define CQL_COLUMN_TYPE_DOUBLE    0x0007
-#define CQL_COLUMN_TYPE_FLOAT     0x0008
-#define CQL_COLUMN_TYPE_INT       0x0009
-#define CQL_COLUMN_TYPE_TEXT      0x000A
-#define CQL_COLUMN_TYPE_TIMESTAMP 0x000B
-#define CQL_COLUMN_TYPE_UUID      0x000C
-#define CQL_COLUMN_TYPE_VARCHAR   0x000D
-#define CQL_COLUMN_TYPE_VARINT    0x000E
-#define CQL_COLUMN_TYPE_TIMEUUID  0x000F
-#define CQL_COLUMN_TYPE_INET      0x0010
-#define CQL_COLUMN_TYPE_LIST      0x0020
-#define CQL_COLUMN_TYPE_MAP       0x0021
-#define CQL_COLUMN_TYPE_SET       0x0022
-
-#define CQL_OPTION_THREADS_IO                 1
-#define CQL_OPTION_THREADS_CALLBACK           2
-#define CQL_OPTION_CONTACT_POINT_ADD          3
-#define CQL_OPTION_PORT                       4
-#define CQL_OPTION_CQL_VERSION                5
-#define CQL_OPTION_SCHEMA_AGREEMENT_WAIT      6
-#define CQL_OPTION_CONTROL_CONNECTION_TIMEOUT 7
-
-#define CQL_OPTION_COMPRESSION                9
-#define CQL_OPTION_COMPRESSION_NONE           0
-#define CQL_OPTION_COMPRESSION_SNAPPY         1
-#define CQL_OPTION_COMPRESSION_LZ4            2
 
 #endif // __CQL_H_INCLUDED__

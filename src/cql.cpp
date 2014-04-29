@@ -33,18 +33,17 @@ cql_cluster_free(
 
 int
 cql_cluster_setopt(
-    CqlCluster*        cluster,
-    int                option,
-    const void*        data,
-    size_t             data_len) {
-  cluster->option(option, data, data_len);
-  return CQL_ERROR_NO_ERROR;
+    CqlCluster* cluster,
+    CqlOption   option,
+    const void* data,
+    size_t      data_len) {
+  return cluster->option(option, data, data_len);
 }
 
 int
 cql_cluster_getopt(
     CqlCluster* cluster,
-    int         option,
+    CqlOption   option,
     void**      data,
     size_t*     data_len)
 {
@@ -165,7 +164,7 @@ cql_session_query(
     const char*    statement,
     size_t         statement_length,
     size_t         paramater_count,
-    size_t         consistency,
+    CqlConsistency consistency,
     CqlStatement** output) {
   (void) session;
   *output = new CqlQueryStatement(paramater_count, consistency);
@@ -188,7 +187,7 @@ cql_session_bind(
     CqlSession*    session,
     CqlPrepared*   prepared,
     size_t         paramater_count,
-    size_t         consistency,
+    CqlConsistency consistency,
     CqlStatement** output) {
   *output = new CqlBoundStatement(*prepared, consistency);
   return CQL_ERROR_NO_ERROR;
@@ -197,7 +196,7 @@ cql_session_bind(
 int
 cql_session_batch(
     CqlSession*         session,
-    size_t              consistency,
+    CqlConsistency      consistency,
     CqlBatchStatement** output) {
   *output = new CqlBatchStatement(consistency);
   return CQL_ERROR_NO_ERROR;
