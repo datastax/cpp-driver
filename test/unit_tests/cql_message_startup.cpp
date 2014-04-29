@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE(serialization_from_byte)
     m.consume(&err);
 
 	BOOST_CHECK_EQUAL(CQL_VERSION_IMPL, m.version());
-	BOOST_CHECK_EQUAL("", m.compression());
+	BOOST_CHECK_EQUAL(cql::CQL_COMPRESSION_NONE, m.compression());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

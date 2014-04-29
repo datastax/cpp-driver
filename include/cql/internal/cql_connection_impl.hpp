@@ -81,6 +81,7 @@
 #include "cql/internal/cql_session_impl.hpp"
 #include "cql/exceptions/cql_query_timeout_exception.hpp"
 #include "cql/exceptions/cql_unavailable_exception.hpp"
+#include "cql/exceptions/cql_driver_internal_error.hpp"
 
 namespace cql {
     

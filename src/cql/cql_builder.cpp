@@ -19,6 +19,7 @@
 #include "cql/cql_cluster.hpp"
 #include "cql/cql_builder.hpp"
 #include "cql/internal/cql_util.hpp"
+#include "cql/exceptions/cql_driver_internal_error.hpp"
 
 cql::cql_builder_t&
 cql::cql_builder_t::add_contact_point(
