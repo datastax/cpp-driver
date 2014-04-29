@@ -63,3 +63,10 @@ cql::cql_varint_t::convert_to_int64(cql::cql_bigint_t & output)
 	output = result;		
 	return true;	
 }		
+
+#ifdef CQL_USE_BOOST_MULTIPRECISION	
+	bool
+	cql::cql_varint_t::convert_to_boost_multiprecision(boost::multiprecision::cpp_int & output) {
+		return deserialize_varint(output, _data);
+	}
+#endif

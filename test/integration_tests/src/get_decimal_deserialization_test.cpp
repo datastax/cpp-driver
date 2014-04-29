@@ -312,27 +312,30 @@ compare_two_inet_ipv6(std::string const a1, std::string const a2)
 }		
 
 
-//boost::multiprecision::cpp_int generate_random_cpp_int(int digits_number)
-//{
-//	boost::multiprecision::cpp_int result(rand() + 600);
-//
-//	for(int i = 0; i < digits_number; ++i)
-//		result = result * boost::multiprecision::cpp_int(rand() + 600 ) + rand();
-//
-//	if(rand() % 2 == 0)
-//	{
-//		result = result * boost::multiprecision::cpp_int(-1);
-//	}
-//
-//	return result;
-//}
+#ifdef CQL_USE_BOOST_MULTIPRECISION	
 
+boost::multiprecision::cpp_int generate_random_cpp_int(int digits_number)
+{
+	boost::multiprecision::cpp_int result(rand() + 600);
+
+	for(int i = 0; i < digits_number; ++i)
+		result = result * boost::multiprecision::cpp_int(rand() + 600 ) + rand();
+
+	if(rand() % 2 == 0)
+	{
+		result = result * boost::multiprecision::cpp_int(-1);
+	}
+
+	return result;
+}
+
+#endif
 	
 	
 /////  --run_test=consistency_my_tests_types/consistency_my_tests_2
 BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 {		
-	int const number_of_records_inserted_to_one_table = 100;		// number of rows inserted to each table.	
+	int const number_of_records_inserted_to_one_table = 300;		// number of rows inserted to each table.	
 			
 	srand((unsigned)time(NULL));
 	cql::cql_consistency_enum consistency = cql::CQL_CONSISTENCY_QUORUM;
@@ -353,59 +356,65 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 														
 	test_utils::query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
 	session->set_keyspace(test_utils::SIMPLE_KEYSPACE);					
-					
-	//{	// 1. Check deserialization of VARINT into boost::multiprecision::cpp_int
-	//	std::string const table_name = "table_varint_boost";
-	//	std::string const create_table_query = "CREATE TABLE " + table_name + " ( t00 bigint PRIMARY KEY, t01 varint );";
-	//	test_utils::query(session, create_table_query, consistency);
 
-	//	std::map<int,boost::multiprecision::cpp_int> m_multiprec;
-	//	
-	//	int const integer_number_of_rows = number_of_records_inserted_to_one_table;
-	//	for(int i = 0; i < integer_number_of_rows; ++i) {
-	//		boost::multiprecision::cpp_int const t01 = generate_random_cpp_int(rand() % 100 + 1);	
-	//		m_multiprec.insert(std::make_pair(i,t01));		
-	//		std::string ts = t01.str();	
-	//		std::string query_string(boost::str(boost::format("INSERT INTO %s (t00,t01) VALUES (%d,%s);")  % table_name % i % ts));
-	//		std::cout << query_string << std::endl;	
-	//		boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));	
-	//		session->query(_query);			
-	//	}
+#ifdef CQL_USE_BOOST_MULTIPRECISION	
 
-	//	boost::shared_ptr<cql::cql_result_t> result = test_utils::query(session,str(boost::format("SELECT t00,t01 FROM %s;") % table_name),consistency);		
-	//			
-	//	int number_of_rows_selected(0);
-	//	while(result->next()) {					
-	//		++number_of_rows_selected;
+	{	// 1. Check deserialization of VARINT into boost::multiprecision::cpp_int
+		std::string const table_name = "table_varint_boost";
+		std::string const create_table_query = "CREATE TABLE " + table_name + " ( t00 bigint PRIMARY KEY, t01 varint );";
+		test_utils::query(session, create_table_query, consistency);
 
-	//		cql::cql_bigint_t t_00_(0);
-	//		if(!result->get_bigint(0, t_00_))
-	//		{
-	//			BOOST_FAIL("Fail in reading data from result.");
-	//		}
-	//		
-	//		//boost::multiprecision::cpp_int t1(0);
-	//		//if(!result->get_varint(1,t1)) {
-	//		//	BOOST_FAIL("Fail in reading data from result.");
-	//		//}	
+		std::map<int,boost::multiprecision::cpp_int> m_multiprec;
+		
+		int const integer_number_of_rows = number_of_records_inserted_to_one_table;
+		for(int i = 0; i < integer_number_of_rows; ++i) {
+			boost::multiprecision::cpp_int const t01 = generate_random_cpp_int(rand() % 100 + 1);	
+			m_multiprec.insert(std::make_pair(i,t01));		
+			std::string ts = t01.str();	
+			std::string query_string(boost::str(boost::format("INSERT INTO %s (t00,t01) VALUES (%d,%s);")  % table_name % i % ts));
+			std::cout << query_string << std::endl;	
+			boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));	
+			session->query(_query);			
+		}
 
-	//		std::map< int, boost::multiprecision::cpp_int >::const_iterator p = m_multiprec.find(t_00_);
-	//		if(p == m_multiprec.end()) {
-	//			BOOST_FAIL("Fail in reading data from result.");
-	//		}
+		boost::shared_ptr<cql::cql_result_t> result = test_utils::query(session,str(boost::format("SELECT t00,t01 FROM %s;") % table_name),consistency);		
+				
+		int number_of_rows_selected(0);
+		while(result->next()) {					
+			++number_of_rows_selected;
 
-	//		//if(p->second != t1) {	
-	//		//	BOOST_FAIL("Fail in reading data from result.");
-	//		//}		
-	//					
-	//		// std::cout << t_00_ << " -> " << t1 << std::endl << std::endl;
-	//	}	
+			cql::cql_bigint_t t_00_(0);
+			if(!result->get_bigint(0, t_00_)) {
+				BOOST_FAIL("Fail in reading data from result.");
+			}
+			
+			cql::cql_varint_t t1;
+			if( !result->get_varint( 1, t1 ) ) {
+				BOOST_FAIL("Fail in reading varint. ");
+			}
 
-	//	if(number_of_rows_selected != integer_number_of_rows) {										
-	//		BOOST_FAIL( "varint. The number of selected rows is wrong. " );
-	//	}				
+			boost::multiprecision::cpp_int t1_2;
+			t1.convert_to_boost_multiprecision( t1_2 );
 
-	//}
+			std::map< int, boost::multiprecision::cpp_int >::const_iterator p = m_multiprec.find(t_00_);
+			if(p == m_multiprec.end()) {
+				BOOST_FAIL("Fail in reading data from result.");
+			}
+
+			if(p->second != t1_2) {	
+				BOOST_FAIL("Fail in reading boost::multiprecision::int_cpp from varint.");
+			}
+			else {
+				std::cout << t_00_ << " -> " << t1_2.str() << std::endl;	
+			}
+		}	
+
+		if(number_of_rows_selected != integer_number_of_rows) {
+			BOOST_FAIL( "varint. The number of selected rows is wrong. " );
+		}	
+	}
+
+#endif
 
 	{  //// 2. Check all types in one huge table 
 					

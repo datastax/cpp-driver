@@ -19,6 +19,10 @@
 
 #include "cql/cql.hpp"
 
+#ifdef CQL_USE_BOOST_MULTIPRECISION
+	#include "boost/multiprecision/cpp_int.hpp"
+#endif
+
 #include <string>
 #include <vector>
 
@@ -78,6 +82,11 @@ public:
 
 	bool
 	convert_to_int64(cql::cql_bigint_t & output);
+
+	#ifdef CQL_USE_BOOST_MULTIPRECISION	
+		bool
+		convert_to_boost_multiprecision( boost::multiprecision::cpp_int & output );
+	#endif
 
 private:
 	std::vector<cql_byte_t> _data;

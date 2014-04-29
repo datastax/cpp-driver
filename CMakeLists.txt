@@ -49,6 +49,15 @@ else()
     add_definitions(-DCQL_NO_SNAPPY)
 endif()
 
+# boost::multiprecison
+find_package(MultiPrecision)
+if(multiprecision_FOUND)
+	add_definitions(-DCQL_USE_BOOST_MULTIPRECISION)	
+	message( STATUS "FOUND BOOST::MULTIPRECISION" )
+else()
+	message( STATUS "NOT FOUND BOOST::MULTIPRECISION" )
+endif()
+
 # Threading
 find_package(Threads REQUIRED)
 set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
