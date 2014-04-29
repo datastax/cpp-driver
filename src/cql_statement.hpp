@@ -22,13 +22,8 @@
 
 #define CQL_VALUE_CHECK_INDEX(i)                                        \
   if (index >= size()) {                                                \
-  return new CqlError(                                                  \
-      CQL_ERROR_SOURCE_LIBRARY,                                         \
-      CQL_ERROR_LIB_BAD_PARAMS,                                         \
-      "invalid index",                                                  \
-      __FILE__,                                                         \
-      __LINE__);                                                        \
-  }                                                                     \
+    return CQL_ERROR_LIB_BAD_PARAMS;                                    \
+  }
 
 struct CqlStatement {
   typedef std::pair<char*, size_t>        Value;
@@ -84,7 +79,7 @@ struct CqlStatement {
     return values.size();
   }
 
-  inline CqlError*
+  inline int
   bind(
       size_t  index,
       int16_t value) {
@@ -95,7 +90,7 @@ struct CqlStatement {
     return CQL_ERROR_NO_ERROR;
   }
 
-  inline CqlError*
+  inline int
   bind(
       size_t  index,
       int32_t value) {
@@ -106,7 +101,7 @@ struct CqlStatement {
     return CQL_ERROR_NO_ERROR;
   }
 
-  inline CqlError*
+  inline int
   bind(
       size_t  index,
       int64_t value) {
@@ -117,7 +112,7 @@ struct CqlStatement {
     return CQL_ERROR_NO_ERROR;
   }
 
-  inline CqlError*
+  inline int
   bind(
       size_t index,
       char*  input,
@@ -129,7 +124,7 @@ struct CqlStatement {
     return CQL_ERROR_NO_ERROR;
   }
 
-  inline CqlError*
+  inline int
   bind(
       size_t index,
       float  value) {
@@ -140,7 +135,7 @@ struct CqlStatement {
     return CQL_ERROR_NO_ERROR;
   }
 
-  inline CqlError*
+  inline int
   bind(
       size_t index,
       double value) {
@@ -151,7 +146,7 @@ struct CqlStatement {
     return CQL_ERROR_NO_ERROR;
   }
 
-  inline CqlError*
+  inline int
   bind(
       size_t index,
       bool   value) {

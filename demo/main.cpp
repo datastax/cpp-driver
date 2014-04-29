@@ -38,24 +38,39 @@ print_log(
   std::cout << "LOG: " << message << std::endl;
 }
 
+void print_error(const char* message, int err) {
+  printf("%s: %s (%d)\n", message, cql_error_desc(err), err);
+}
+
 int
 main() {
   CqlCluster* cluster = cql_cluster_new();
   CqlSession* session = NULL;
-  CqlError*   err     = NULL;
+  CqlFuture* session_future = NULL;
+  CqlFuture* shutdown_future = NULL;
 
-  err = cql_session_new(cluster, &session);
-  if (err) {
-    // TODO(mstump)
-    printf("Error do something\n");
+  int err;
+  err = cql_session_connect(cluster, &session_future);
+  if (err != 0) {
+    print_error("Error creating session", err);
+    goto cleanup;
   }
 
+  cql_future_wait(session_future);
+  cql_future_free(session_future);
 
+  err = cql_session_shutdown(session, &shutdown_future);
+  if(err != 0) {
+    print_error("Error on shutdown", err);
+    goto cleanup;
+  }
 
-  CqlSessionFuture* shutdown_future = NULL;
-  cql_session_shutdown(session, &shutdown_future);
-  cql_session_future_wait(shutdown_future);
-  cql_session_future_free(shutdown_future);
-  cql_session_free(session);
+  cql_future_wait(shutdown_future);
+  cql_future_free(shutdown_future);
+
+cleanup:
+  if(session_future != NULL) {
+    cql_session_free(session);
+  }
   cql_cluster_free(cluster);
 }

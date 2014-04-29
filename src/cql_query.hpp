@@ -43,10 +43,10 @@ struct CqlQueryStatement
  public:
 
   CqlQueryStatement(
-      const char* statement,
-      size_t      statement_length,
-      size_t      value_count,
-      size_t      consistency) :
+      const char*    statement,
+      size_t         statement_length,
+      size_t         value_count,
+      CqlConsistency consistency) :
       query(statement, statement_length),
       consistency_value(consistency),
       page_size(-1),
@@ -56,7 +56,7 @@ struct CqlQueryStatement
 
   CqlQueryStatement(
       size_t value_count,
-      size_t consistency) :
+      CqlConsistency consistency) :
       consistency_value(consistency),
       page_size(-1),
       serial_consistency_value(CQL_CONSISTENCY_ANY),

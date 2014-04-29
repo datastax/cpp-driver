@@ -45,7 +45,7 @@ struct CqlBoundStatement
  public:
   CqlBoundStatement(
       const CqlPrepared& prepared,
-      size_t             consistency) :
+      CqlConsistency     consistency) :
       id(prepared.id),
       consistency_value(consistency),
       page_size(-1),
@@ -54,7 +54,7 @@ struct CqlBoundStatement
 
   CqlBoundStatement(
       const  std::string& id,
-      size_t consistency) :
+      CqlConsistency consistency) :
       id(id),
       consistency_value(consistency),
       page_size(-1),

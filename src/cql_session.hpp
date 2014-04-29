@@ -138,6 +138,8 @@ struct CqlSession {
       int         status) {
     CqlSession* session = reinterpret_cast<CqlSession*>(data->data);
     // TODO(mstump)
+    static_cast<void>(session);
+
   }
 
   SSLSession*

@@ -27,54 +27,57 @@ cql_cluster_new() {
 
 void
 cql_cluster_free(
-    struct CqlCluster* cluster) {
+    CqlCluster* cluster) {
   delete cluster;
 }
 
-CqlError*
+int
 cql_cluster_setopt(
-    struct CqlCluster* cluster,
-    int                option,
-    const void*        data,
-    size_t             datalen) {
-  cluster->option(option, data, datalen);
-  return CQL_ERROR_NO_ERROR;
+    CqlCluster* cluster,
+    CqlOption   option,
+    const void* data,
+    size_t      data_len) {
+  return cluster->option(option, data, data_len);
 }
 
-CqlError*
-cql_session_new(
-    CqlCluster*  cluster,
-    CqlSession** session) {
-  *session = cluster->new_session();
+int
+cql_cluster_getopt(
+    CqlCluster* cluster,
+    CqlOption   option,
+    void**      data,
+    size_t*     data_len)
+{
   return CQL_ERROR_NO_ERROR;
 }
 
 void
 cql_session_free(
-    struct CqlSession* session) {
+   CqlSession* session) {
   delete session;
 }
 
-CqlError*
+int
 cql_session_connect(
-    struct CqlSession* session,
-    struct CqlFuture** future) {
+   CqlCluster* cluster,
+   CqlFuture** future) {
+  CqlSession* session = cluster->new_session();
   *future = session->connect("");
   return CQL_ERROR_NO_ERROR;
 }
 
-CqlError*
+int
 cql_session_connect_keyspace(
-    struct CqlSession* session,
-    char*              keyspace,
+   CqlCluster*  cluster,
+    const char* keyspace,
     CqlFuture** future) {
+  CqlSession* session = cluster->new_session();
   *future = session->connect(keyspace);
   return CQL_ERROR_NO_ERROR;
 }
 
-CqlError*
+int
 cql_session_shutdown(
-    CqlSession*        session,
+    CqlSession* session,
     CqlFuture** future) {
   *future = session->shutdown();
   return CQL_ERROR_NO_ERROR;
@@ -82,86 +85,86 @@ cql_session_shutdown(
 
 void
 cql_future_free(
-    struct CqlFuture* future) {
+   CqlFuture* future) {
   delete future;
 }
 
 int
 cql_future_ready(
-    struct CqlFuture* future) {
+   CqlFuture* future) {
   return static_cast<int>(future->ready());
 }
 
 void
 cql_future_wait(
-    struct CqlFuture* future) {
+   CqlFuture* future) {
   future->wait();
 }
 
 int
 cql_future_wait_timed(
-    struct CqlFuture* future,
+   CqlFuture* future,
     size_t            wait) {
   return static_cast<int>(
       future->wait_for(wait));
 }
 
-CqlError*
-cql_future_get_error(
-    struct CqlFuture* future) {
-  return future->error.release();
-}
-
 CqlSession*
 cql_future_get_session(
-    struct CqlFuture* future) {
+   CqlFuture* future) {
   CqlSessionFutureImpl* session_future = static_cast<CqlSessionFutureImpl*>(future);
   return session_future->result;
 }
 
 CqlResult*
 cql_future_get_result(
-    struct CqlFuture* future) {
+   CqlFuture* future) {
   CqlMessageFutureImpl* message_future = static_cast<CqlMessageFutureImpl*>(future);
   return static_cast<CqlResult*>(message_future->result->body.release());
 }
 
 CqlPrepared*
 cql_future_get_prepare(
-    struct CqlFuture* future) {
+   CqlFuture* future) {
   CqlMessageFutureImpl* message_future = static_cast<CqlMessageFutureImpl*>(future);
   CqlResult*            result         = static_cast<CqlResult*>(message_future->result->body.get());
   return new CqlPrepared(std::string(result->prepared, result->prepared_size));
 }
 
 void
-cql_error_string(
-    CqlError* error,
-    char*     output,
-    size_t    n,
-    size_t*   total) {
-  *total = error->message.copy(output, n);
+cql_future_error_string(
+    CqlFuture* future,
+    char*      output,
+    size_t     output_len,
+    size_t*    total) {
+  *total = future->error->message.copy(output, output_len);
 }
 
 int
-cql_error_source(
-    CqlError* error) {
-  return error->source;
+cql_future_error_source(
+    CqlFuture* future) {
+  return future->error->source;
 }
 
 int
-cql_error_code(
-    CqlError* error) {
-  return error->code;
+cql_future_error_code(
+    CqlFuture* future) {
+  return future->error->code;
 }
 
-CqlError*
+const char*
+cql_error_desc(
+    int code) {
+  return "";
+}
+
+int
 cql_session_query(
     CqlSession*    session,
-    char*          statement,
+    const char*    statement,
     size_t         statement_length,
     size_t         paramater_count,
-    size_t         consistency,
+    CqlConsistency consistency,
     CqlStatement** output) {
   (void) session;
   *output = new CqlQueryStatement(paramater_count, consistency);
@@ -169,37 +172,37 @@ cql_session_query(
   return CQL_ERROR_NO_ERROR;
 }
 
-CqlError*
+int
 cql_session_prepare(
-    CqlSession*        session,
-    const char*        statement,
-    size_t             statement_length,
+    CqlSession* session,
+    const char* statement,
+    size_t      statement_length,
     CqlFuture** output) {
   *output = reinterpret_cast<CqlFuture*>(session->prepare(statement, statement_length));
   return CQL_ERROR_NO_ERROR;
 }
 
-CqlError*
+int
 cql_session_bind(
     CqlSession*    session,
     CqlPrepared*   prepared,
     size_t         paramater_count,
-    size_t         consistency,
+    CqlConsistency consistency,
     CqlStatement** output) {
   *output = new CqlBoundStatement(*prepared, consistency);
   return CQL_ERROR_NO_ERROR;
 }
 
-CqlError*
+int
 cql_session_batch(
     CqlSession*         session,
-    size_t              consistency,
+    CqlConsistency      consistency,
     CqlBatchStatement** output) {
   *output = new CqlBatchStatement(consistency);
   return CQL_ERROR_NO_ERROR;
 }
 
-CqlError*
+int
 cql_batch_add_statement(
     CqlBatchStatement* batch,
     CqlStatement*      statement) {
@@ -216,7 +219,7 @@ cql_batch_add_statement(
  *
  * @return
  */
-CqlError*
+int
 cql_statement_bind_short(
     CqlStatement* statement,
     size_t        index,
@@ -233,7 +236,7 @@ cql_statement_bind_short(
  *
  * @return
  */
-CqlError*
+int
 cql_statement_bind_int(
     CqlStatement* statement,
     size_t        index,
@@ -250,7 +253,7 @@ cql_statement_bind_int(
  *
  * @return
  */
-CqlError*
+int
 cql_statement_bind_bigint(
     CqlStatement* statement,
     size_t        index,
@@ -267,7 +270,7 @@ cql_statement_bind_bigint(
  *
  * @return
  */
-CqlError*
+int
 cql_statement_bind_float(
     CqlStatement* statement,
     size_t        index,
@@ -284,7 +287,7 @@ cql_statement_bind_float(
  *
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
-CqlError*
+int
 cql_statement_bind_double(
     CqlStatement*  statement,
     size_t         index,
@@ -301,7 +304,7 @@ cql_statement_bind_double(
  *
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
-CqlError*
+int
 cql_statement_bind_bool(
     CqlStatement*  statement,
     size_t         index,
@@ -318,7 +321,7 @@ cql_statement_bind_bool(
  *
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
-CqlError*
+int
 cql_statement_bind_time(
     CqlStatement*  statement,
     size_t         index,
@@ -335,7 +338,7 @@ cql_statement_bind_time(
  *
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
-CqlError*
+int
 cql_statement_bind_uuid(
     CqlStatement*  statement,
     size_t         index,
@@ -352,7 +355,7 @@ cql_statement_bind_uuid(
  *
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
-CqlError*
+int
 cql_statement_bind_counter(
     CqlStatement*  statement,
     size_t         index,
@@ -370,7 +373,7 @@ cql_statement_bind_counter(
  *
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
-CqlError*
+int
 cql_statement_bind_string(
     CqlStatement*  statement,
     size_t         index,
@@ -389,7 +392,7 @@ cql_statement_bind_string(
  *
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
-CqlError*
+int
 cql_statement_bind_blob(
     CqlStatement*  statement,
     size_t         index,
@@ -409,7 +412,7 @@ cql_statement_bind_blob(
  *
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
-CqlError*
+int
 cql_statement_bind_decimal(
     CqlStatement* statement,
     size_t        index,
@@ -429,7 +432,7 @@ cql_statement_bind_decimal(
  *
  * @return NULL if successful, otherwise pointer to CqlError structure
  */
-CqlError*
+int
 cql_statement_bind_varint(
     CqlStatement*  statement,
     size_t         index,
