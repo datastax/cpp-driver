@@ -1141,7 +1141,85 @@ BOOST_AUTO_TEST_CASE(consistency_my_tests_2)
 		}			
 	}					
 }					
-					
+
+
+/////  --run_test=consistency_my_tests_types/varint_stress
+BOOST_AUTO_TEST_CASE(varint_stress)
+{
+	cql::cql_consistency_enum consistency = cql::CQL_CONSISTENCY_QUORUM;
+    
+	builder->with_load_balancing_policy(boost::shared_ptr<cql::cql_load_balancing_policy_t>(new cql::cql_round_robin_policy_t()));
+	boost::shared_ptr<cql::cql_cluster_t> cluster(builder->build());
+	boost::shared_ptr<cql::cql_session_t> session(cluster->connect());
+    
+	test_utils::query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
+	session->set_keyspace(test_utils::SIMPLE_KEYSPACE);
+
+    std::string const table_name = test_utils::SIMPLE_TABLE + "_var_int";
+    test_utils::query(session,str(boost::format("CREATE TABLE %s(tweet_id bigint PRIMARY KEY, t1 bigint, t2 varint, t3 bigint );") % table_name ),consistency);
+    
+    std::map<int,cql::cql_bigint_t> varint_map;
+
+    
+    int const integer_number_of_rows = 17450; // number_of_records_inserted_to_one_table;
+    
+    for(int i = 0; i < integer_number_of_rows; ++i)
+    {
+        
+        //cql::cql_bigint_t ii = generate_random_int_64();
+        //
+        //if(i < 10) {		//// check also the values from -5 to 5.
+        //	ii = i - 5;
+        //}
+        //else if(i < 70) {
+        //	ii = ii/( static_cast<cql::cql_bigint_t>(rand()) * static_cast<cql::cql_bigint_t>(rand()) * static_cast<cql::cql_bigint_t>(i) + static_cast<cql::cql_bigint_t>(10));		// use also small numbers.
+        //}
+        
+        cql::cql_bigint_t ii = i + 9;
+        
+        varint_map.insert(std::make_pair(i,ii));
+        std::string query_string(boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3) VALUES (%d,%d,%d,%d);") % table_name % i % i % ii % i));
+        boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));
+        session->query(_query);
+    }
+    
+    boost::shared_ptr<cql::cql_result_t> result = test_utils::query(session,str(boost::format("SELECT t1, t2, t3 FROM %s;") % table_name),consistency);
+    
+    cql::cql_bigint_t row_count(0);
+    
+    int number_of_rows_selected(0);
+    while(result->next()) {
+        ++number_of_rows_selected;
+        cql::cql_bigint_t t1(0), t2(0);
+        result->get_bigint(0,t1);
+        result->get_bigint(2,t2);
+        cql::cql_varint_t varint_2;
+        
+        if(result->get_varint(1,varint_2)) {
+            std::map<int,cql::cql_bigint_t>::const_iterator p = varint_map.find(t1);
+            if(p == varint_map.end()) {
+                BOOST_FAIL("There is no such element in varint map.");
+            }
+            
+            cql::cql_bigint_t varint_2_b(0);
+            varint_2.convert_to_int64(varint_2_b);
+            // std::cout << varint_2_b << " " << p->second << std::endl;
+            
+            if(varint_2_b != p->second) {
+                BOOST_FAIL("The value of INT64 is not correct. ");
+            }
+        }	
+        else {			
+            BOOST_FAIL("Error. A valid varint is reported as an invalid varint.");
+        }	
+    }		
+    
+    if(number_of_rows_selected != integer_number_of_rows) {										
+        BOOST_FAIL("varint. The number of selected rows is wrong.");
+    }											
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()	
 				
 	
