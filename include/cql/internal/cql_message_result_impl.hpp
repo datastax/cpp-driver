@@ -23,12 +23,16 @@
 
 #include "cql/cql.hpp"
 #include "cql/cql_result.hpp"
+#include "cql/cql_uuid.hpp"
+
 #include "cql/internal/cql_util.hpp"
 #include "cql/internal/cql_message.hpp"
 #include "cql/internal/cql_result_metadata.hpp"
 
 namespace cql {
 
+class cql_uuid_t;
+    
 class cql_message_result_impl_t :
     boost::noncopyable,
 public cql_message_t,
@@ -56,10 +60,16 @@ public:
 
     size_t
     row_count() const;
-
+        
     const std::vector<cql::cql_byte_t>&
     query_id() const;
 
+    void
+    set_as_traced();
+        
+    bool
+    get_tracing_id(cql_uuid_t& tracing_id_) const;
+        
     bool
     next();
 
@@ -248,6 +258,110 @@ public:
 
         return (*reinterpret_cast<cql::cql_int_t*>(_row[i]) != 0);
     }			
+
+	bool
+    get_counter(int i,
+               cql::cql_bigint_t& output) const;
+
+    bool
+    get_counter(const std::string& column,
+               cql::cql_bigint_t& output) const;
+
+	bool
+    get_ascii(int i,
+			  std::string& output) const;
+		
+    bool
+    get_ascii(const std::string& column,
+			  std::string& output) const;
+		
+	bool	
+    get_varchar(int i,
+				std::string& output) const;
+
+    bool	
+    get_varchar(const std::string& column,
+				std::string& output) const;
+
+	bool
+    get_uuid(int i,
+			 cql_uuid_t& output) const;
+
+    bool
+    get_uuid(const std::string& column,
+             cql_uuid_t& output) const;
+
+	bool
+    get_uuid(int i,
+			 std::string& output) const;
+				
+    bool
+    get_uuid(const std::string& column,
+             std::string & output) const;
+		
+	bool
+	get_timestamp(int i,
+				  cql::cql_bigint_t& output) const;
+				
+	bool
+	get_timestamp(const std::string& column,
+				  cql::cql_bigint_t& output) const;		
+			
+	bool
+	get_timeuuid(int i,
+				 cql::cql_bigint_t& output) const;
+		
+	bool
+	get_timeuuid(const std::string& column,
+				 cql::cql_bigint_t& output) const;	
+
+	bool
+	get_blob(int i, 
+			 std::vector<cql::cql_byte_t>& output) const;
+					
+	bool
+	get_blob(std::string const & column, 
+	         std::vector<cql::cql_byte_t>& output) const;
+
+	bool
+	get_blob(int i,
+		     std::pair<cql::cql_byte_t*,cql::cql_int_t>& output) const;
+					
+	bool
+	get_blob(std::string const& column, 
+	         std::pair<cql::cql_byte_t*,cql::cql_int_t>& output) const;
+
+	bool
+    get_text(int i,
+			 std::string& output) const;
+				
+    bool
+    get_text(const std::string& column,
+			 std::string& output) const;
+				
+	bool
+	get_inet(int i, 
+			 boost::asio::ip::address & output) const;
+					
+	bool
+	get_inet(std::string const& column,
+			 boost::asio::ip::address & output) const;
+
+	bool
+	get_decimal(std::string const & column,
+				cql::cql_decimal_t & output ) const;
+
+	bool
+	get_decimal(int i,
+				cql::cql_decimal_t & output ) const;
+
+	bool
+	get_varint(std::string const & column,
+			   cql::cql_varint_t & output ) const;
+
+	bool
+	get_varint(int i,
+			   cql::cql_varint_t & output ) const;
 				
 private:
     cql::cql_message_buffer_t     _buffer;
@@ -261,6 +375,8 @@ private:
     std::string                   _keyspace_name;
     std::string                   _table_name;
     cql::cql_result_metadata_t    _metadata;
+    cql_uuid_t                    _tracing_id;
+    bool                          _am_i_traced;
 };
 
 } // namespace cql

@@ -17,6 +17,7 @@
 #include <boost/shared_ptr.hpp>
 
 #include "cql/cql.hpp"
+#include "cql/exceptions/cql_exception.hpp"
 
 #define CASE_STRING_FOR_ENUM(enum_const) \
 	case enum_const: return #enum_const
@@ -46,6 +47,28 @@ cql::to_string(const cql_host_distance_enum host_distance) {
 	default:
 		return "Unknown " BOOST_PP_STRINGIZE(cql_host_distance_enum) " value";
 	}
+}
+
+const char*
+cql::to_string(const cql_compression_enum compression) {
+    switch(compression) {
+        case CQL_COMPRESSION_SNAPPY:
+            return "snappy";
+        default:
+            throw cql_exception("Requested string representation of an unknown compression type");
+    }
+}
+
+cql::cql_compression_enum
+cql::compression_from_string(const char* compression_string)
+{
+    if (strcmp(compression_string, "snappy") == 0) {
+        return CQL_COMPRESSION_SNAPPY;
+    }
+    else if (strcmp(compression_string, "") == 0) {
+        return CQL_COMPRESSION_NONE;
+    }
+    else return CQL_COMPRESSION_UNKNOWN;
 }
 
 namespace {

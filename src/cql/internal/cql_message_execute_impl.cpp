@@ -27,9 +27,13 @@
 
 #include "cql/internal/cql_message_execute_impl.hpp"
 
+#include "cql/internal/cql_serialization.hpp"
+#include "cql/cql_uuid.hpp"
+
 cql::cql_message_execute_impl_t::cql_message_execute_impl_t() :
     _buffer(new std::vector<cql_byte_t>()),
     _consistency(cql::CQL_CONSISTENCY_ONE),
+    _is_traced(false),
     _retry_policy(new cql_default_retry_policy_t()),
     _retry_counter(0)
 {}
@@ -37,6 +41,7 @@ cql::cql_message_execute_impl_t::cql_message_execute_impl_t() :
 cql::cql_message_execute_impl_t::cql_message_execute_impl_t(size_t size) :
     _buffer(new std::vector<cql_byte_t>(size)),
     _consistency(cql::CQL_CONSISTENCY_ONE),
+    _is_traced(false),
     _retry_policy(new cql_default_retry_policy_t()),
     _retry_counter(0)
 {}
@@ -44,11 +49,13 @@ cql::cql_message_execute_impl_t::cql_message_execute_impl_t(size_t size) :
 cql::cql_message_execute_impl_t::cql_message_execute_impl_t(
     const std::vector<cql::cql_byte_t>& id,
     cql::cql_consistency_enum consistency,
-    boost::shared_ptr<cql_retry_policy_t> retry_policy) :
+    boost::shared_ptr<cql_retry_policy_t> retry_policy,
+    bool is_traced) :
 
     _buffer(new std::vector<cql_byte_t>()),
     _query_id(id),
     _consistency(consistency),
+    _is_traced(is_traced),
     _retry_policy(retry_policy),
     _retry_counter(0)
 {}
@@ -80,53 +87,61 @@ cql::cql_message_execute_impl_t::consistency(const cql::cql_consistency_enum con
 
 void
 cql::cql_message_execute_impl_t::push_back(const param_t& val) {
-    _params.push_back(param_t(val.begin(), val.end()));
+    boost::shared_ptr<param_t> p(new param_t(val.begin(), val.end()));
+    _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const std::string& val) {
-    _params.push_back(param_t(val.begin(), val.end()));
+    boost::shared_ptr<param_t> p(new param_t(val.begin(), val.end()));
+    _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const cql::cql_short_t val) {
-    cql::cql_message_execute_impl_t::param_t p;
-    cql::encode_short(p, val);
+    boost::shared_ptr<param_t> p(new param_t);
+    cql::encode_short(*p, val);
     _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const cql::cql_int_t val) {
-    cql::cql_message_execute_impl_t::param_t p;
-    cql::encode_int(p, val);
+    boost::shared_ptr<param_t> p(new param_t);
+    cql::encode_int(*p, val);
     _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const cql::cql_bigint_t val) {
-    cql::cql_message_execute_impl_t::param_t p;
-    cql::encode_bigint(p, val);
+    boost::shared_ptr<param_t> p(new param_t);
+    cql::encode_bigint(*p, val);
     _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const float val) {
-    cql::cql_message_execute_impl_t::param_t p;
-    cql::encode_float(p, val);
+    boost::shared_ptr<param_t> p(new param_t);
+    cql::encode_float(*p, val);
     _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const double val) {
-    cql::cql_message_execute_impl_t::param_t p;
-    cql::encode_double(p, val);
+    boost::shared_ptr<param_t> p(new param_t);
+    cql::encode_double(*p, val);
     _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const bool val) {
-    cql::cql_message_execute_impl_t::param_t p;
-    cql::encode_bool(p, val);
+    boost::shared_ptr<param_t> p(new param_t);
+    cql::encode_bool(*p, val);
+    _params.push_back(p);
+}
+
+void
+cql::cql_message_execute_impl_t::push_back_null() {
+    boost::shared_ptr<param_t> p;
     _params.push_back(p);
 }
 
@@ -138,6 +153,15 @@ cql::cql_message_execute_impl_t::pop_back() {
 cql::cql_opcode_enum
 cql::cql_message_execute_impl_t::opcode() const {
     return CQL_OPCODE_EXECUTE;
+}
+
+cql::cql_byte_t
+cql::cql_message_execute_impl_t::flag() const {
+    cql_byte_t ret_val = static_cast<cql_byte_t>(CQL_FLAG_NOFLAG);
+    if (_is_traced) {
+        ret_val |= static_cast<cql_byte_t>(CQL_FLAG_TRACE);
+    }
+    return ret_val;
 }
 
 cql::cql_int_t
@@ -173,8 +197,8 @@ cql::cql_message_execute_impl_t::consume(cql::cql_error_t*) {
     cql::decode_short(stream, count);
 
     for (int i = 0; i < count; ++i) {
-        cql::cql_message_execute_impl_t::param_t p;
-        cql::decode_bytes(stream, p);
+        boost::shared_ptr<param_t> p(new param_t);
+        cql::decode_bytes(stream, *p);
         _params.push_back(p);
     }
 
@@ -222,8 +246,12 @@ cql::cql_message_execute_impl_t::consume(cql::cql_error_t*) {
 bool
 cql::cql_message_execute_impl_t::prepare(cql::cql_error_t*) {
     size_t size = (3 * sizeof(cql_short_t)) + _query_id.size();
-    BOOST_FOREACH(const param_t& p, _params) {
-        size += p.size() + sizeof(cql_int_t);
+    BOOST_FOREACH(const boost::shared_ptr<param_t> p, _params) {
+        if (p != NULL) {
+            size += p->size() + sizeof(cql_int_t);
+        } else {
+            size += sizeof(cql_int_t);
+        }
     }
     _buffer->resize(size);
 
@@ -233,8 +261,13 @@ cql::cql_message_execute_impl_t::prepare(cql::cql_error_t*) {
     cql::encode_short_bytes(stream, _query_id);
     cql::encode_short(stream, _params.size());
 
-    BOOST_FOREACH(const param_t& p, _params) {
-        cql::encode_bytes(stream, p);
+    BOOST_FOREACH(const boost::shared_ptr<param_t> p, _params) {
+        if (p != NULL) {
+            cql::encode_bytes(stream, *p);
+        } else {
+            cql::cql_int_t v = htonl(-1);
+            stream.write(reinterpret_cast<char*>(&v), sizeof(v));
+        }
     }
 
     cql::cql_short_t consistency = 0;
@@ -321,3 +354,40 @@ cql::cql_message_execute_impl_t::set_stream(const cql_stream_t& stream)
     _stream = stream;
 }
 
+void 
+cql::cql_message_execute_impl_t::push_back(const cql::cql_uuid_t val) {
+	std::vector<cql_byte_t> const val_tmp = val.get_data();
+    boost::shared_ptr<param_t> p(new param_t(val_tmp.begin(), val_tmp.end()));
+    _params.push_back(p);
+}
+
+void 
+cql::cql_message_execute_impl_t::push_back(const boost::asio::ip::address val) {
+	std::vector<cql::cql_byte_t> output;
+
+	if( val.is_v4() ) {
+		encode_ipv4(output, val.to_string());
+	}
+	else {
+		encode_ipv6(output, val.to_string());
+	}
+
+	boost::shared_ptr<param_t> p(new param_t(output.begin(), output.end()));
+	_params.push_back(p);
+}
+
+void 
+cql::cql_message_execute_impl_t::push_back(const cql::cql_varint_t val)
+{
+	std::vector< cql::cql_byte_t > const t = val.get_data();
+	boost::shared_ptr<param_t> p(new param_t(t.begin(), t.end()));
+	_params.push_back(p);
+}
+
+void 
+cql::cql_message_execute_impl_t::push_back(const cql::cql_decimal_t val)
+{
+	std::vector< cql::cql_byte_t > const t = val.get_data();
+	boost::shared_ptr<param_t> p(new param_t(t.begin(), t.end()));
+	_params.push_back(p);
+}

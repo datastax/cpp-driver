@@ -24,8 +24,13 @@
 #include "cql/internal/cql_list_impl.hpp"
 #include "cql/internal/cql_map_impl.hpp"
 #include "cql/internal/cql_set_impl.hpp"
-
+#include "cql/cql_uuid.hpp"
+	
 #include "cql/internal/cql_message_result_impl.hpp"
+
+#include "cql/cql_uuid.hpp"
+#include "cql/cql_varint.hpp"
+#include "cql/cql_decimal.hpp"	
 
 std::string
 result_type_string(cql::cql_short_t t) {
@@ -60,7 +65,8 @@ cql::cql_message_result_impl_t::cql_message_result_impl_t() :
     _row_count(0),
     _column_count(0),
     _query_id(0),
-    _result_type(cql::CQL_RESULT_VOID)
+    _result_type(cql::CQL_RESULT_VOID),
+    _am_i_traced(false)
 {}
 
 cql::cql_message_result_impl_t::cql_message_result_impl_t(size_t size) :
@@ -70,7 +76,8 @@ cql::cql_message_result_impl_t::cql_message_result_impl_t(size_t size) :
     _row_count(0),
     _column_count(0),
     _query_id(0),
-    _result_type(cql::CQL_RESULT_VOID)
+    _result_type(cql::CQL_RESULT_VOID),
+    _am_i_traced(false)
 {}
 
 cql::cql_message_buffer_t
@@ -121,6 +128,10 @@ cql::cql_message_result_impl_t::consume(cql::cql_error_t*) {
     _row_count = 0;
     _row_pos = 0;
     _pos = &((*_buffer)[0]);
+    
+    if (_am_i_traced) {
+        _pos = decode_uuid(_pos, _tracing_id);
+    }
 
     cql::cql_int_t result_type = 0;
     _pos = cql::decode_int(_pos, result_type);
@@ -193,6 +204,17 @@ cql::cql_message_result_impl_t::column_count() const {
     return _column_count;
 }
 
+void
+cql::cql_message_result_impl_t::set_as_traced() {
+    _am_i_traced = true;
+}
+
+bool
+cql::cql_message_result_impl_t::get_tracing_id(cql_uuid_t& tracing_id_) const {
+    tracing_id_ = _tracing_id;
+    return !(_tracing_id.empty());
+}
+
 const std::vector<cql::cql_byte_t>&
 cql::cql_message_result_impl_t::query_id() const {
     return _query_id;
@@ -207,8 +229,7 @@ bool
 cql::cql_message_result_impl_t::column_name(int i,
                                             std::string& output_keyspace,
                                             std::string& output_table,
-                                            std::string& output_column) const
-{
+                                            std::string& output_column) const {
     return _metadata.column_name(i,
                                  output_keyspace,
                                  output_table,
@@ -371,9 +392,9 @@ cql::cql_message_result_impl_t::get_double(const std::string& column,
         return get_double(i, output);
     }
     return false;
-}
+}		
 
-bool
+bool	
 cql::cql_message_result_impl_t::get_bigint(int i,
         cql::cql_bigint_t& output) const {
     if (is_valid(i, cql::CQL_COLUMN_TYPE_BIGINT)
@@ -395,6 +416,77 @@ cql::cql_message_result_impl_t::get_bigint(const std::string& column,
     return false;
 }
 
+bool	
+cql::cql_message_result_impl_t::get_timestamp(int i,
+        cql::cql_bigint_t& output) const {
+    if( is_valid(i, cql::CQL_COLUMN_TYPE_TIMESTAMP) ) {
+        cql::decode_bigint(_row[i] + sizeof(cql_int_t), output);
+        return true;
+    }
+    return false;
+}
+
+bool
+cql::cql_message_result_impl_t::get_timestamp(const std::string& column,
+        cql::cql_bigint_t& output) const {
+    int i = 0;
+    if(_metadata.get_index(column, i)) {
+        return get_timestamp(i, output);
+    }
+    return false;
+}		
+			
+bool	
+cql::cql_message_result_impl_t::get_timeuuid(int i,
+	cql::cql_bigint_t& output) const {
+	std::vector<cql::cql_byte_t> v;
+	if(!get_data(i, v))
+		return false;
+
+	if(v.size() != 16)
+		return false;
+		
+	cql::cql_bigint_t result(0);	
+				
+	static int indexes[] = {6,7,4,5,0,1,2,3};		//// take bytes of the array in this order.		
+				
+	for(int i = 0; i < 8; ++i) {		
+		result = result << 8;	
+		int const index = indexes[i];
+		cql::cql_bigint_t t1 = static_cast< cql::cql_bigint_t >(v[index]);
+			
+		if(index == 6)			//// the four most significant bits are the version. Ignore these bits.		
+			t1 = t1 & 0x0F;		//// take only half of this byte. 
+			
+		result = result | t1;			
+	}		
+			
+	output = result;
+	return true;			
+}				
+				
+bool			
+cql::cql_message_result_impl_t::get_timeuuid(const std::string& column,
+	cql::cql_bigint_t& output) const {
+    int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_timeuuid(i, output);
+    }	
+    return false;
+}		
+
+bool
+cql::cql_message_result_impl_t::get_counter(int i,
+               cql::cql_bigint_t& output) const {
+	return get_bigint(i,output);
+}
+
+bool
+cql::cql_message_result_impl_t::get_counter(const std::string& column,
+               cql::cql_bigint_t& output) const {
+	return get_bigint(column,output);
+}
+	
 bool
 cql::cql_message_result_impl_t::get_string(int i,
         std::string& output) const {
@@ -406,7 +498,7 @@ cql::cql_message_result_impl_t::get_string(int i,
     }
     return false;
 }
-
+		
 bool
 cql::cql_message_result_impl_t::get_string(const std::string& column,
         std::string& output) const {
@@ -415,8 +507,32 @@ cql::cql_message_result_impl_t::get_string(const std::string& column,
         return get_string(i, output);
     }
     return false;
+}		
+		
+bool	
+cql::cql_message_result_impl_t::get_ascii(int i,
+               std::string& output) const {
+	return get_string(i, output);
+}		
+		
+bool		
+cql::cql_message_result_impl_t::get_ascii(const std::string& column,
+               std::string& output) const {
+	return get_string(column, output);
+}
+	
+bool	
+cql::cql_message_result_impl_t::get_varchar(int i,
+               std::string& output) const {
+	return get_string(i, output);
 }
 
+bool	
+cql::cql_message_result_impl_t::get_varchar(const std::string& column,
+               std::string& output) const {
+	return get_string(column, output);
+}
+	
 bool
 cql::cql_message_result_impl_t::get_data(int i,
         cql::cql_byte_t** output,
@@ -443,47 +559,38 @@ cql::cql_message_result_impl_t::get_data(const std::string& column,
     return false;
 }			
 
-
-
-			
-bool								// j.kasprzak 
-cql::cql_message_result_impl_t::get_data( int i,
-										  std::vector< cql::cql_byte_t > & output ) const
-{
+bool						 
+cql::cql_message_result_impl_t::get_data(int i,
+										 std::vector<cql::cql_byte_t> & output) const {
 	cql::cql_byte_t* output_ptr = NULL;
 
 	bool empty = false;
     if (get_nullity(i, empty)) {
         if (!empty) {
             cql_byte_t* pos = _row[i];
-			cql::cql_int_t size( 0 );
+			cql::cql_int_t size(0);
             output_ptr = cql::decode_int(pos, size);	
 				
-			output.resize( size );
-			for( int i = 0; i < size; ++i )
-			{	
-				output[ i ] = *(output_ptr + i);	
+			output.resize(size);
+			for(int i = 0; i < size; ++i) {	
+				output[i] = *(output_ptr + i);	
 			}	
 				
             return true;
         }		
-    }			
+    }		
+	return false;	
 }				
 				
-
-
-
-bool								// j.kasprzak 
-cql::cql_message_result_impl_t::get_data( const std::string & column,
-										  std::vector< cql::cql_byte_t > & output ) const
-{
+bool								
+cql::cql_message_result_impl_t::get_data(const std::string & column,
+										 std::vector<cql::cql_byte_t> & output ) const {
 	int i = 0;
     if (_metadata.get_index(column, i)) {
-        return get_data(i, output );
+        return get_data(i, output);
     }
     return false;
 }
-			
 			
 bool
 cql::cql_message_result_impl_t::get_list(int i,
@@ -501,13 +608,13 @@ cql::cql_message_result_impl_t::get_list(int i,
 
 bool
 cql::cql_message_result_impl_t::get_list(int i,
-        boost::shared_ptr< cql::cql_list_t > & output) const {
+        boost::shared_ptr<cql::cql_list_t> & output) const {
     if (is_valid(i, cql::CQL_COLUMN_TYPE_LIST)) {
         cql::cql_column_type_enum member_type;
         std::string member_class;
         _metadata.collection_primary_type(i, member_type);
         _metadata.collection_primary_class(i, member_class);
-        output.reset( new cql::cql_list_impl_t(_row[i] + sizeof(cql_int_t), member_type, member_class) );
+        output.reset(new cql::cql_list_impl_t(_row[i] + sizeof(cql_int_t), member_type, member_class));
         return true;
     }
     return false;
@@ -555,7 +662,7 @@ cql::cql_message_result_impl_t::get_set(int i,
         std::string member_class;
         _metadata.collection_primary_type(i, member_type);
         _metadata.collection_primary_class(i, member_class);	
-        output.reset( new cql::cql_set_impl_t(_row[i] + sizeof(cql_int_t), member_type, member_class) );
+        output.reset(new cql::cql_set_impl_t(_row[i] + sizeof(cql_int_t), member_type, member_class));
         return true;
     }
     return false;
@@ -611,7 +718,7 @@ cql::cql_message_result_impl_t::get_map(int i,
         _metadata.collection_primary_class(i, key_class);
         _metadata.collection_secondary_type(i, value_type);
         _metadata.collection_secondary_class(i, value_class);
-        output.reset( new cql::cql_map_impl_t(_row[i] + sizeof(cql_int_t), key_type, value_type, key_class, value_class) );	
+        output.reset(new cql::cql_map_impl_t(_row[i] + sizeof(cql_int_t), key_type, value_type, key_class, value_class));	
         return true;
     }
     return false;
@@ -641,5 +748,191 @@ bool
 cql::cql_message_result_impl_t::get_keyspace_name(std::string& output) const {
     output = _keyspace_name;
     return true;
+}			
+			
+bool		
+cql::cql_message_result_impl_t::get_uuid(int i,
+										 cql_uuid_t& output) const
+{
+    std::vector<cql_byte_t> buffer;
+	bool ret_val = get_data(i, buffer);
+    output = cql_uuid_t(buffer);
+    return ret_val && (buffer.size() == 16);
+}
+				
+bool
+cql::cql_message_result_impl_t::get_uuid(const std::string& column,
+										 cql_uuid_t& output) const {
+    std::vector<cql_byte_t> buffer;
+	bool ret_val = get_data(column, buffer);
+    output = cql_uuid_t(buffer);
+    return ret_val && (buffer.size() == 16);
+}		
+				
+bool	
+cql::cql_message_result_impl_t::get_uuid(int i,
+										 std::string & output) const {
+	cql_uuid_t uuid_out;
+    bool ret_val = get_uuid(i, uuid_out);
+    output = uuid_out.to_string();
+    return ret_val;
+}
+				
+bool
+cql::cql_message_result_impl_t::get_uuid(const std::string& column,
+										 std::string & output) const {
+    cql_uuid_t uuid_out;
+    bool ret_val = get_uuid(column, uuid_out);
+    output = uuid_out.to_string();
+    return ret_val;
+}		
+
+					
+bool		
+cql::cql_message_result_impl_t::get_blob(int i, 
+										 std::vector< cql::cql_byte_t > & output) const {	//// return blob as vector. Data is copied
+ 	return get_data(i, output);
+}	
+					
+bool	
+cql::cql_message_result_impl_t::get_blob(std::string const & column, 
+									     std::vector< cql::cql_byte_t > & output) const {	//// return blob as vector. Data is copied
+	int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_blob(i, output);
+    }
+    return false;
 }
 
+bool 
+cql::cql_message_result_impl_t::get_blob(int i,
+										 std::pair<cql::cql_byte_t*,cql::cql_int_t> & output) const {		//// return blob as pure pointer and size. Data is not copied
+	cql::cql_byte_t* output_ptr = NULL;
+	bool empty = false;
+    if (get_nullity(i, empty)) {
+        if (!empty) {
+            cql_byte_t* pos = _row[i];
+			cql::cql_int_t size(0);
+            output_ptr = cql::decode_int(pos, size);	
+			output.first = output_ptr;
+			output.second = size;
+            return true;
+        }		
+    }			
+	return false;
+}
+					
+bool	
+cql::cql_message_result_impl_t::get_blob(std::string const & column, 
+										 std::pair<cql::cql_byte_t*,cql::cql_int_t>& output) const {		//// return blob as pure pointer and size. Data is not copied		
+	int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_blob(i, output);
+    }
+    return false;
+}		
+			
+bool
+cql::cql_message_result_impl_t::get_text(int i,
+										 std::string& output) const {
+	return get_ascii(i, output);
+}
+				
+bool
+cql::cql_message_result_impl_t::get_text(const std::string& column,
+										 std::string& output) const {
+	return get_ascii(column, output);
+}		
+			
+bool			
+cql::cql_message_result_impl_t::get_inet(std::string const& column, 
+										 boost::asio::ip::address & output) const {			//// return inet.
+	int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_inet(i, output);
+    }
+    return false;
+}
+			
+bool	
+cql::cql_message_result_impl_t::get_inet(int i, 
+										 boost::asio::ip::address & output) const {			//// return inet.
+	cql_byte_t* output_ptr(NULL);
+    bool empty = false;
+    if (get_nullity(i, empty)) {
+        if (!empty) {
+			cql::cql_int_t size(0);
+            cql_byte_t* pos = _row[i];
+            output_ptr = cql::decode_int(pos, size);
+
+			if(size == 4) {  // IPv4
+				std::string const ip_str = cql::decode_ipv4_from_bytes(output_ptr);					
+				output = boost::asio::ip::address::from_string(ip_str);
+				return true;
+			}
+			else if(size == 16) {	// IPv6		
+				std::string const ip_str = cql::decode_ipv6_from_bytes(output_ptr);
+				output = boost::asio::ip::address::from_string(ip_str);
+				return true;
+			}
+		}
+	}
+	return false;	
+}
+
+bool
+cql::cql_message_result_impl_t::get_decimal(std::string const & column,
+											cql::cql_decimal_t & output) const
+{
+	int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_decimal(i, output);
+    }
+    return false;
+}
+
+bool
+cql::cql_message_result_impl_t::get_decimal(int i,
+											cql::cql_decimal_t & output) const
+{
+	if(!is_valid(i,cql::CQL_COLUMN_TYPE_DECIMAL)) 
+		return false;
+
+	std::vector<unsigned char> v;
+	if(!get_data(i,v))
+		return false;
+
+	cql::cql_decimal_t r(v);	
+	output = r;
+	return true;
+}
+
+bool
+cql::cql_message_result_impl_t::get_varint(std::string const & column,
+										   cql::cql_varint_t & output) const
+{
+	int i = 0;
+    if (_metadata.get_index(column, i)) {
+        return get_varint(i, output);
+    }
+    return false;
+}
+
+bool
+cql::cql_message_result_impl_t::get_varint(int i,
+										   cql::cql_varint_t & output) const
+{
+	if(!is_valid(i,cql::CQL_COLUMN_TYPE_VARINT)) 
+		return false;
+
+	std::vector<cql::cql_byte_t> v;
+	if(!get_data(i,v))
+		return false;
+
+	cql::cql_varint_t r(v);
+	output = r;
+	return true;
+}
+
+
+	

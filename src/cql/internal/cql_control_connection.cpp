@@ -186,7 +186,8 @@ cql_control_connection_t::refresh_node_list_and_token_map()
 
     {// SELECT PEERS
         cql_stream_t stream = _active_connection->acquire_stream();
-        boost::shared_ptr<cql_query_t> query = boost::make_shared<cql_query_t>(                                                                               select_peers_expression());
+        boost::shared_ptr<cql_query_t> query = boost::make_shared<cql_query_t>(
+                                                select_peers_expression());
         query->set_stream(stream);
         boost::shared_future<cql_future_result_t> query_future_result =
             _active_connection->query(query)->shared_future();

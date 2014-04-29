@@ -17,6 +17,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/cstdint.hpp>
 
+#include "cql/cql_decimal.hpp"
+#include "cql/cql_varint.hpp"	
+
 struct PREPARED_CCM_SETUP : test_utils::CCM_SETUP {
 	PREPARED_CCM_SETUP() : CCM_SETUP(1,0) {}
 };
@@ -105,5 +108,75 @@ BOOST_AUTO_TEST_CASE(prepared_insert_string)
 	result->get_string("test_val", res);
 	assert(res == to_insert);
 }
+
+//    --run_test=prepared_statements/prepared_insert_uuid
+BOOST_AUTO_TEST_CASE(prepared_insert_uuid)
+{
+	cql::cql_uuid_t to_insert("e1e8e8d0-ca0d-11e3-9c1a-0800200c9a66");	
+	boost::shared_ptr<cql::cql_result_t> result = prepared_insert_test(builder->build(),cql::CQL_COLUMN_TYPE_UUID, to_insert);
+	cql::cql_uuid_t res;
+	result->get_uuid("test_val", res);
+	assert(res == to_insert);
+}
+
+//    --run_test=prepared_statements/prepared_insert_inet_v4
+BOOST_AUTO_TEST_CASE(prepared_insert_inet_v4)
+{
+	boost::asio::ip::address to_insert = boost::asio::ip::address::from_string( "199.123.97.13" );
+	boost::shared_ptr<cql::cql_result_t> result = prepared_insert_test(builder->build(),cql::CQL_COLUMN_TYPE_INET, to_insert);
+	boost::asio::ip::address res;
+	result->get_inet("test_val", res);
+	assert(res == to_insert);
+}
+
+//    --run_test=prepared_statements/prepared_insert_inet_v6
+BOOST_AUTO_TEST_CASE(prepared_insert_inet_v6)
+{
+	boost::asio::ip::address to_insert = boost::asio::ip::address::from_string( "20a1:0db8:0b0c:0102:3004:f00d:1529:57fb" );
+	boost::shared_ptr<cql::cql_result_t> result = prepared_insert_test(builder->build(),cql::CQL_COLUMN_TYPE_INET, to_insert);
+	boost::asio::ip::address res;
+	result->get_inet("test_val", res);
+	assert(res == to_insert);
+}
+
+//    --run_test=prepared_statements/prepared_insert_decimal
+BOOST_AUTO_TEST_CASE(prepared_insert_decimal)
+{
+	std::vector< unsigned char > t;
+	t.push_back( 0 );
+	t.push_back( 0 );
+	t.push_back( 0 );
+	t.push_back( 0 );
+	t.push_back( 1 );
+	t.push_back( 197 );
+	t.push_back( 157 );
+
+	cql::cql_decimal_t to_insert( t );
+	boost::shared_ptr<cql::cql_result_t> result = prepared_insert_test(builder->build(),cql::CQL_COLUMN_TYPE_DECIMAL, to_insert);		
+	cql::cql_decimal_t res;
+	result->get_decimal("test_val", res);
+	cql::cql_decimal_t res2 = res;
+	assert(res.get_data() == to_insert.get_data());
+}
+	
+//    --run_test=prepared_statements/prepared_insert_varint
+BOOST_AUTO_TEST_CASE(prepared_insert_varint)
+{
+	std::vector< unsigned char > t;
+	t.push_back( 0 );
+	t.push_back( 0 );
+	t.push_back( 0 );
+	t.push_back( 0 );
+	t.push_back( 1 );
+	t.push_back( 177 );
+	t.push_back( 137 );
+		
+	cql::cql_varint_t to_insert( t );	
+	boost::shared_ptr<cql::cql_result_t> result = prepared_insert_test(builder->build(),cql::CQL_COLUMN_TYPE_VARINT, to_insert);
+	cql::cql_varint_t res;
+	result->get_varint("test_val", res);
+	cql::cql_varint_t res2 = res;		
+	assert(res.get_data() == to_insert.get_data());
+}		
 
 BOOST_AUTO_TEST_SUITE_END()

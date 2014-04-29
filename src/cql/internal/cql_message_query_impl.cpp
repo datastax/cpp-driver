@@ -27,22 +27,25 @@
 
 #include "cql/internal/cql_message_query_impl.hpp"
 
-cql::cql_message_query_impl_t::cql_message_query_impl_t() :
-    _buffer(new std::vector<cql_byte_t>()),
-    _consistency(CQL_CONSISTENCY_ANY),
-    _query()
+cql::cql_message_query_impl_t::cql_message_query_impl_t()
+    : _buffer(new std::vector<cql_byte_t>())
+    , _consistency(CQL_CONSISTENCY_ANY)
+    , _query()
+    , _is_traced(false)
 {}
 
-cql::cql_message_query_impl_t::cql_message_query_impl_t(size_t size) :
-    _buffer(new std::vector<cql_byte_t>(size)),
-    _consistency(CQL_CONSISTENCY_ANY),
-    _query()
+cql::cql_message_query_impl_t::cql_message_query_impl_t(size_t size)
+    : _buffer(new std::vector<cql_byte_t>(size))
+    , _consistency(CQL_CONSISTENCY_ANY)
+    , _query()
+    , _is_traced(false)
 {}
 
 cql::cql_message_query_impl_t::cql_message_query_impl_t(const boost::shared_ptr<cql_query_t>& query) 
 	: _buffer(new std::vector<cql_byte_t>())
 	, _consistency(query->consistency())
 	, _query(query->query())
+    , _is_traced(query->is_traced())
 {}
 
 cql::cql_message_buffer_t
@@ -73,6 +76,15 @@ cql::cql_message_query_impl_t::set_consistency(cql::cql_consistency_enum consist
 cql::cql_opcode_enum
 cql::cql_message_query_impl_t::opcode() const {
     return CQL_OPCODE_QUERY;
+}
+
+cql::cql_byte_t
+cql::cql_message_query_impl_t::flag() const {
+    cql_byte_t ret_val = static_cast<cql_byte_t>(CQL_FLAG_NOFLAG);
+    if (_is_traced) {
+        ret_val |= static_cast<cql_byte_t>(CQL_FLAG_TRACE);
+    }
+    return ret_val;
 }
 
 cql::cql_int_t

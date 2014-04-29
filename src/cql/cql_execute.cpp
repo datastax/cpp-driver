@@ -24,8 +24,9 @@ cql::cql_execute_t::cql_execute_t() :
 
 cql::cql_execute_t::cql_execute_t(const std::vector<cql::cql_byte_t>& id,
                                   cql::cql_consistency_enum consistency,
-                                  boost::shared_ptr<cql::cql_retry_policy_t> retry_policy) :
-    _impl(new cql_message_execute_impl_t(id, consistency, retry_policy))
+                                  boost::shared_ptr<cql::cql_retry_policy_t> retry_policy,
+                                  bool is_traced) :
+    _impl(new cql_message_execute_impl_t(id, consistency, retry_policy, is_traced))
 {}
 
 cql::cql_execute_t::~cql_execute_t() {
@@ -97,6 +98,11 @@ cql::cql_execute_t::push_back(const bool val) {
 }
 
 void
+cql::cql_execute_t::push_back_null() {
+    _impl->push_back_null();
+}
+
+void
 cql::cql_execute_t::pop_back() {
     _impl->pop_back();
 }
@@ -148,3 +154,24 @@ cql::cql_execute_t::set_stream(const cql_stream_t& stream)
 {
     impl()->set_stream(stream);
 }
+
+void 
+cql::cql_execute_t::push_back(const cql::cql_uuid_t val) {
+    _impl->push_back(val);
+}
+
+void 
+cql::cql_execute_t::push_back(const boost::asio::ip::address val) {
+    _impl->push_back(val);
+}
+
+void 
+cql::cql_execute_t::push_back(const cql::cql_varint_t val) {
+	_impl->push_back(val);
+}
+
+void 
+cql::cql_execute_t::push_back(const cql::cql_decimal_t val) {
+	_impl->push_back(val);
+}
+

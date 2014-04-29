@@ -314,9 +314,9 @@ public:
 		create_request(
             messageQuery,
 			boost::bind(&cql_connection_impl_t::write_handle,
-			this->shared_from_this(),
-			boost::asio::placeholders::error,
-			boost::asio::placeholders::bytes_transferred),
+                        this->shared_from_this(),
+                        boost::asio::placeholders::error,
+                        boost::asio::placeholders::bytes_transferred),
 			stream);
 
 		return stream;
@@ -378,6 +378,12 @@ public:
        return stream;
     }
 
+    void
+    set_compression_type(cql_compression_enum compression)
+    {
+        _compression = compression;
+    }
+    
     bool
     defunct() const
     {
@@ -569,6 +575,7 @@ private:
         _closing(false),
         _reserved_stream(_callback_storage.acquire_stream()),
         _uuid(cql_uuid_t::create()),
+        _compression(CQL_COMPRESSION_NONE),
         _is_disposed(new boolkeeper),
         _stream_id_vs_query_string(NUMBER_OF_STREAMS, "")
     {}
@@ -934,7 +941,7 @@ private:
         message->prepare(&err);
 
         cql::cql_header_impl_t header(CQL_VERSION_1_REQUEST,
-                                      CQL_FLAG_NOFLAG,
+                                      message->flag(),
                                       stream,
                                       message->opcode(),
                                       message->size());
@@ -1029,9 +1036,18 @@ private:
             break;
 
         case CQL_OPCODE_RESULT:
-            _response_message.reset(new cql::cql_message_result_impl_t(header.length()));
+        {
+            cql_message_result_impl_t* new_result
+                = new cql_message_result_impl_t(header.length());
+            
+            if ((header.flags() & CQL_FLAG_TRACE) == CQL_FLAG_TRACE) {
+                // This is a response to traced query.
+                // Here we tell the _response_message to expect tracing ID at the beginning of buffer.
+                new_result->set_as_traced();
+            }
+            _response_message.reset(new_result);
             break;
-
+        }
         case CQL_OPCODE_SUPPORTED:
             _response_message.reset(new cql::cql_message_supported_impl_t(header.length()));
             break;
@@ -1154,7 +1170,7 @@ private:
 
                 boost::shared_ptr<cql_message_result_impl_t> response_message =
                     boost::dynamic_pointer_cast<cql_message_result_impl_t>(
-                        boost::shared_ptr<cql_message_t>(_response_message));
+                        boost::shared_ptr<cql_message_t>(_response_message.release()));
 
                 preprocess_result_message(response_message);
                 release_stream(stream);
@@ -1168,7 +1184,7 @@ private:
             if (_event_callback) {
                 boost::shared_ptr<cql_message_event_impl_t> event =
                     boost::dynamic_pointer_cast<cql_message_event_impl_t>(
-                        boost::shared_ptr<cql_message_t>(_response_message));
+                        boost::shared_ptr<cql_message_t>(_response_message.release()));
 
                 if ((event->topology_change() == CQL_EVENT_TOPOLOGY_REMOVE_NODE
                         || event->status_change() == CQL_EVENT_STATUS_DOWN)
@@ -1203,7 +1219,7 @@ private:
 
                 boost::shared_ptr<cql_message_error_impl_t> m =
                     boost::dynamic_pointer_cast<cql_message_error_impl_t>(
-                        boost::shared_ptr<cql_message_t>(_response_message));
+                        boost::shared_ptr<cql_message_t>(_response_message.release()));
                 
                 cql::cql_error_t cql_error =
                     cql::cql_error_t::cassandra_error(m->code(), m->message());
@@ -1223,10 +1239,16 @@ private:
             break;
 
         case CQL_OPCODE_SUPPORTED:
+        {
             log(CQL_LOG_DEBUG, "received supported message " + _response_message->str());
-            startup_write();
-            break;
 
+            boost::shared_ptr<cql_message_supported_impl_t> m =
+                boost::dynamic_pointer_cast<cql_message_supported_impl_t>(
+                    boost::shared_ptr<cql_message_t>(_response_message.release()));
+
+            startup_write(m);
+        }
+            break;
         case CQL_OPCODE_AUTHENTICATE:
             credentials_write();
             break;
@@ -1246,7 +1268,7 @@ private:
             boost::make_shared<cql_message_options_impl_t>();
 		create_request(
             messageOption,
-            (boost::function<void (const boost::system::error_code &, std::size_t)>)boost::bind(
+            boost::bind(
                 &cql_connection_impl_t::write_handle,
                 this->shared_from_this(),
                 boost::asio::placeholders::error,
@@ -1258,12 +1280,26 @@ private:
     }
 
     void
-    startup_write()
+    startup_write(boost::shared_ptr<cql_message_supported_impl_t> supported)
     {
         boost::shared_ptr<cql_message_startup_impl_t> m =
             boost::make_shared<cql_message_startup_impl_t>();
+     
+        cql_compression_enum compression_to_use = CQL_COMPRESSION_NONE;
+        
+        if (supported) {
+            std::list<std::string> compressions = supported->compressions();
+            if (_compression != CQL_COMPRESSION_NONE &&
+                std::find(compressions.begin(),
+                          compressions.end(),
+                          to_string(_compression)) != compressions.end() )
+            {
+                compression_to_use = _compression;
+            }
+        }
         
         m->version(CQL_VERSION_IMPL);
+        m->compression(compression_to_use);
         create_request(
             m,
             boost::bind(&cql_connection_impl_t::write_handle,
@@ -1332,6 +1368,7 @@ private:
     cql_stream_t                             _reserved_stream;
     cql_uuid_t                               _uuid;
 	boost::shared_ptr<boolkeeper>            _is_disposed;
+    cql_compression_enum                     _compression;
     
     std::string                              _current_keyspace_name,
                                              _selected_keyspace_name;

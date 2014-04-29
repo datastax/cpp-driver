@@ -21,6 +21,8 @@
 
 #include "cql/cql.hpp"
 
+#include <string>
+
 namespace cql {
 
 class cql_map_t {

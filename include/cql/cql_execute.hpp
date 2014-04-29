@@ -43,7 +43,8 @@ public:
 
     cql_execute_t(const std::vector<cql::cql_byte_t>& id,
                   cql::cql_consistency_enum consistency,
-                  boost::shared_ptr<cql_retry_policy_t> retry_policy = boost::shared_ptr<cql_retry_policy_t>(new cql_default_retry_policy_t()));
+                  boost::shared_ptr<cql_retry_policy_t> retry_policy = boost::shared_ptr<cql_retry_policy_t>(new cql_default_retry_policy_t()),
+                  bool is_traced = false);
 
     const std::vector<cql::cql_byte_t>&
     query_id() const;
@@ -85,6 +86,9 @@ public:
     push_back(const bool val);
 
     void
+    push_back_null();
+
+    void
     pop_back();
 
     boost::shared_ptr<cql_message_execute_impl_t>
@@ -111,6 +115,18 @@ public:
             
     void
     set_stream(const cql_stream_t& stream);
+
+	void 
+	push_back(const cql_uuid_t val);
+
+	void 
+	push_back(const boost::asio::ip::address val);
+
+	void 
+	push_back(const cql_varint_t val);
+
+	void 
+	push_back(const cql_decimal_t val);
 
 private:
     boost::shared_ptr<cql_message_execute_impl_t> _impl;

@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE( default_retry_policy )
 	boost::shared_ptr<cql::cql_session_t> session(cluster->connect());
 
 	if (!session) {
-		BOOST_FAIL("Session creation failture.");
+		BOOST_FAIL("Session creation failure.");
 	}
 
 	policy_tools::create_schema(session, 1);

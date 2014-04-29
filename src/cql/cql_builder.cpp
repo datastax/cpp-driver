@@ -108,12 +108,10 @@ cql::cql_builder_t::with_credentials(
 }				
 				
 							
-cql::cql_builder_t& cql::cql_builder_t::with_load_balancing_policy( boost::shared_ptr< cql::cql_load_balancing_policy_t > load_balancing_policy )
+cql::cql_builder_t&
+cql::cql_builder_t::with_load_balancing_policy(boost::shared_ptr<cql::cql_load_balancing_policy_t> load_balancing_policy)
 {		
-	if( load_balancing_policy == NULL )
-		return *this;
-		
-	if( load_balancing_policy == NULL )
+	if(load_balancing_policy == NULL)
 		return *this;
 
 	_load_balancing_policy = load_balancing_policy;	
@@ -122,13 +120,10 @@ cql::cql_builder_t& cql::cql_builder_t::with_load_balancing_policy( boost::share
 }		
 		
 
-cql::cql_builder_t& cql::cql_builder_t::with_reconnection_policy( boost::shared_ptr< cql::cql_reconnection_policy_t > reconnection_policy )
+cql::cql_builder_t&
+cql::cql_builder_t::with_reconnection_policy(boost::shared_ptr<cql::cql_reconnection_policy_t> reconnection_policy)
 {	
-
-	if( reconnection_policy == NULL )
-		return *this;
-		
-	if( reconnection_policy == NULL )
+	if(reconnection_policy == NULL)
 		return *this;
 
 	_reconnection_policy = reconnection_policy;	
@@ -136,16 +131,20 @@ cql::cql_builder_t& cql::cql_builder_t::with_reconnection_policy( boost::shared_
 }			
 
 
-cql::cql_builder_t& cql::cql_builder_t::with_retry_policy( boost::shared_ptr< cql::cql_retry_policy_t > retry_policy )
+cql::cql_builder_t&
+cql::cql_builder_t::with_retry_policy(boost::shared_ptr<cql::cql_retry_policy_t> retry_policy)
 {	
-	if( retry_policy == NULL )
-		return *this;
-		
-	if( retry_policy == NULL )
+	if(retry_policy == NULL)
 		return *this;
 
 	_retry_policy = retry_policy;	
 	return *this;
 }		
 
+cql::cql_builder_t&
+cql::cql_builder_t::with_compression(cql::cql_compression_enum compression)
+{
+    _compression = compression;
+	return *this;
+}
 

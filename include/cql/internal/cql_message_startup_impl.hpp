@@ -34,9 +34,9 @@ public:
     cql_message_startup_impl_t(size_t size);
 
     void
-    compression(const std::string& c);
+    compression(const cql_compression_enum c);
 
-    const std::string&
+    cql_compression_enum
     compression() const;
 
     void
@@ -66,7 +66,7 @@ public:
 private:
     cql::cql_message_buffer_t _buffer;
     std::string               _version;
-    std::string               _compression;
+    cql_compression_enum      _compression;
 };
 
 } // namespace cql

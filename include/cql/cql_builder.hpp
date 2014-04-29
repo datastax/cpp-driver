@@ -50,9 +50,11 @@ class cql_protocol_options_t
 public:
     cql_protocol_options_t(
         const std::list<cql_endpoint_t>&             contact_points,
-        boost::shared_ptr<boost::asio::ssl::context> ssl_context) :
+        boost::shared_ptr<boost::asio::ssl::context> ssl_context,
+        cql_compression_enum                         compression) :
         _contact_points(contact_points),
-        _ssl_context(ssl_context)
+        _ssl_context(ssl_context),
+        _compression(compression)
     {}
 
     const std::list<cql_endpoint_t>&
@@ -66,10 +68,17 @@ public:
     {
         return _ssl_context;
     }
+    
+    cql_compression_enum
+    compression() const
+    {
+        return _compression;
+    }
 
 private:
     const std::list<cql_endpoint_t>              _contact_points;
     boost::shared_ptr<boost::asio::ssl::context> _ssl_context;
+    cql_compression_enum                         _compression;
 };
 
 class cql_pooling_options_t
@@ -434,7 +443,8 @@ public:
     cql_builder_t() :
         _io_service(new boost::asio::io_service),
         _log_callback(0),
-		_thread_pool_size(2)
+		_thread_pool_size(2),
+        _compression(CQL_COMPRESSION_NONE)
     {}
     
     virtual ~cql_builder_t() {}
@@ -454,7 +464,8 @@ public:
 						cql_client_options_t(_log_callback,_thread_pool_size),
 						cql_protocol_options_t(
 							_contact_points,
-							_ssl_context),
+							_ssl_context,
+                            _compression),
 						cql_pooling_options_t(),														
 						cql_policies_t( _load_balancing_policy, _reconnection_policy, _retry_policy ),								
 						_credentials					
@@ -523,15 +534,18 @@ public:
 		return *this;
 	}		
 					
-	cql::cql_builder_t& 
-		with_load_balancing_policy( boost::shared_ptr< cql::cql_load_balancing_policy_t > load_balancing_policy );
+    cql::cql_builder_t&
+    with_load_balancing_policy(boost::shared_ptr< cql::cql_load_balancing_policy_t> load_balancing_policy );
 					
-	cql::cql_builder_t& 
-		with_reconnection_policy( boost::shared_ptr< cql::cql_reconnection_policy_t > reconnection_policy );
+    cql::cql_builder_t&
+    with_reconnection_policy(boost::shared_ptr< cql::cql_reconnection_policy_t > reconnection_policy );
 									
-	cql::cql_builder_t& 
-		with_retry_policy( boost::shared_ptr< cql::cql_retry_policy_t > retry_policy );
-															
+    cql::cql_builder_t&
+    with_retry_policy(boost::shared_ptr<cql::cql_retry_policy_t> retry_policy);
+    
+    cql::cql_builder_t&
+    with_compression(cql_compression_enum compression);
+				
 private:		
     boost::shared_ptr<boost::asio::io_service>   _io_service;
     std::list<cql_endpoint_t>                    _contact_points;
@@ -539,6 +553,7 @@ private:
     cql_connection_t::cql_log_callback_t         _log_callback;
     cql_credentials_t                            _credentials;
 	int											 _thread_pool_size;
+    cql_compression_enum                         _compression;
 			
 	boost::shared_ptr<cql_load_balancing_policy_t> _load_balancing_policy;		
     boost::shared_ptr<cql_reconnection_policy_t>   _reconnection_policy;			

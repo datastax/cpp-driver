@@ -48,7 +48,7 @@ public:
 
     void
     flags(cql_int_t v);
-
+     
     cql_int_t
     column_count() const;
 
