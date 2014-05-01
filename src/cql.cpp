@@ -20,6 +20,8 @@
 #include "cql_cluster.hpp"
 #include "cql_session.hpp"
 
+extern "C" {
+
 CqlCluster*
 cql_cluster_new() {
   return new CqlCluster();
@@ -308,7 +310,7 @@ int
 cql_statement_bind_bool(
     CqlStatement*  statement,
     size_t         index,
-    float          value) {
+    cql_bool       value) {
   return statement->bind(index, value);
 }
 
@@ -440,3 +442,57 @@ cql_statement_bind_varint(
     size_t         length) {
   return statement->bind(index, reinterpret_cast<char*>(value), length);
 }
+
+struct CqlLoadBalancingPolicy : public LoadBalancingPolicy {
+  void* data_;
+  std::vector<CqlHost> hosts_;
+  CqlLoadBalancingPolicyImpl* impl_;
+
+  CqlLoadBalancingPolicy(void* data, CqlLoadBalancingPolicyImpl* impl)
+    : data_(data)
+    , impl_(impl)  { }
+
+  virtual void init(const std::vector<CqlHost>& hosts) {
+    hosts_ = hosts;
+    if(impl_->init_func != NULL) {
+      impl_->init_func(this);
+    }
+  }
+
+  virtual CqlHostDistance distance(const CqlHost& host) {
+    if(impl_->host_distance_func != NULL) {
+      return impl_->host_distance_func(this, &host);
+    }
+    return CQL_HOST_DISTANCE_IGNORE;
+  }
+
+  virtual void new_query_plan(std::list<std::string>* output) {
+    if(impl_->next_host_func != NULL) {
+      CqlHost* host = impl_->next_host_func(this, 1);
+      while(host != NULL) {
+        output->push_back(host->address_string);
+        host = impl_->next_host_func(this, 0);
+      }
+    }
+  }
+};
+
+size_t cql_lb_policy_hosts_count(CqlLoadBalancingPolicy* policy) {
+  return policy->hosts_.size();
+}
+
+CqlHost* cql_lb_policy_get_host(CqlLoadBalancingPolicy* policy, size_t index) {
+  return &policy->hosts_[index];
+}
+
+void* cql_lb_policy_get_data(CqlLoadBalancingPolicy* policy) {
+  return policy->data_;
+}
+
+void cql_session_set_load_balancing_policy(CqlSession* session,
+                                           void* data,
+                                           CqlLoadBalancingPolicyImpl* impl) {
+  session->set_load_balancing_policy(new CqlLoadBalancingPolicy(data, impl));
+}
+
+} // extern "C"

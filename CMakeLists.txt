@@ -71,14 +71,16 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   # -fPIC is not used on Windows platform (all DLLs are
   # relocable), -Wall generates about 30k stupid warnings
   # that can hide useful ones.
-  set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-D_CRT_SECURE_NO_WARNINGS")
+  set(PLATFORM_DEPENDENT_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS")
+  set(PLATFORM_DEPENDENT_C_FLAGS "-D_CRT_SECURE_NO_WARNINGS")
 
   # needed for windows sockets (not verified)
   add_definitions(-D_WIN32_WINNT=0x0501)
 else()
   # GCC/Clang specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(PLATFORM_DEPENDENT_COMPILER_OPTIONS "-std=c++0x -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-c++11-narrowing -Wno-deprecated-declarations -Wno-unused-parameter")
+  set(PLATFORM_DEPENDENT_CXX_FLAGS "-std=c++0x -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-c++11-narrowing -Wno-deprecated-declarations -Wno-unused-parameter")
+  set(PLATFORM_DEPENDENT_C_FLAGS "-std=c89 -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 endif()
 
 #-------------------
@@ -120,15 +122,16 @@ set_target_properties(${PROJECT_LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION_S
 set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
 set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
 
-set(PROJECT_COMPILER_FLAGS "${CMAKE_CXX_FLAGS} ${PLATFORM_DEPENDENT_COMPILER_OPTIONS}")
+set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PLATFORM_DEPENDENT_CXX_FLAGS}")
+set(PROJECT_C_FLAGS "${CMAKE_C_FLAGS} ${PLATFORM_DEPENDENT_C_FLAGS}")
 
 set_property(
   TARGET ${PROJECT_LIB_NAME}
-  APPEND PROPERTY COMPILE_FLAGS ${PROJECT_COMPILER_FLAGS})
+  APPEND PROPERTY COMPILE_FLAGS ${PROJECT_CXX_FLAGS})
 
 set_property(
   TARGET ${PROJECT_LIB_NAME_STATIC}
-  APPEND PROPERTY COMPILE_FLAGS ${PROJECT_COMPILER_FLAGS})
+  APPEND PROPERTY COMPILE_FLAGS ${PROJECT_CXX_FLAGS})
 
 #-------------------
 # install target

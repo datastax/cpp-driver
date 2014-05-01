@@ -20,6 +20,7 @@
 #include <vector>
 #include <string>
 
+#include "cql.h"
 #include "cql_host.hpp"
 
 class LoadBalancingPolicy {

@@ -35,6 +35,7 @@ test/unit_tests/cql_test
 *~
 .#*
 #*
+.clang_complete
 
 # OSX
 .DS_Store

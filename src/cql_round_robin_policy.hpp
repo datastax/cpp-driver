@@ -1,4 +1,3 @@
-
 /*
   Copyright 2014 DataStax
 
@@ -18,6 +17,7 @@
 #ifndef __ROUND_ROBIN_POLICY_HPP_INCLUDED__
 #define __ROUND_ROBIN_POLICY_HPP_INCLUDED__
 
+#include "cql.h"
 #include "cql_load_balancing_policy.hpp"
 #include "cql_host.hpp"
 
@@ -31,7 +31,7 @@ class RoundRobinPolicy : public LoadBalancingPolicy {
     }
 
     CqlHostDistance distance(const CqlHost& host) {
-      return LOCAL;
+      return CQL_HOST_DISTANCE_LOCAL;
     }
 
     void new_query_plan(std::list<std::string>* output) {

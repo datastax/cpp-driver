@@ -37,7 +37,7 @@
 #   endif
 #endif
 
-// TODO(mpenick) handle primitive types for other compilers and platforms
+/* TODO(mpenick) handle primitive types for other compilers and platforms */
 
 typedef int cql_bool;
 #define cql_false 0
@@ -85,11 +85,17 @@ typedef struct CqlPrepared CqlPrepared;
 struct CqlResult;
 typedef struct CqlResult CqlResult;
 
+struct CqlHost;
+typedef struct CqlHost CqlHost;
+
+struct CqlLoadBalancingPolicy;
+typedef struct CqlLoadBalancingPolicy CqlLoadBalancingPolicy;
+
 typedef enum {
   CQL_LOG_CRITICAL = 0x00,
   CQL_LOG_ERROR    = 0x01,
   CQL_LOG_INFO     = 0x02,
-  CQL_LOG_DEBUG    = 0x03,
+  CQL_LOG_DEBUG    = 0x03
 } CqlLogLevel;
 
 typedef enum {
@@ -103,7 +109,7 @@ typedef enum {
   CQL_CONSISTENCY_EACH_QUORUM  = 0x0007,
   CQL_CONSISTENCY_SERIAL       = 0x0008,
   CQL_CONSISTENCY_LOCAL_SERIAL = 0x0009,
-  CQL_CONSISTENCY_LOCAL_ONE    = 0x000A,
+  CQL_CONSISTENCY_LOCAL_ONE    = 0x000A
 } CqlConsistency;
 
 typedef enum {
@@ -127,7 +133,7 @@ typedef enum {
   CQL_COLUMN_TYPE_INET      = 0x0010,
   CQL_COLUMN_TYPE_LIST      = 0x0020,
   CQL_COLUMN_TYPE_MAP       = 0x0021,
-  CQL_COLUMN_TYPE_SET       = 0x0022,
+  CQL_COLUMN_TYPE_SET       = 0x0022
 } CqlColumnType;
 
 typedef enum {
@@ -138,14 +144,36 @@ typedef enum {
   CQL_OPTION_CQL_VERSION                = 5,
   CQL_OPTION_SCHEMA_AGREEMENT_WAIT      = 6,
   CQL_OPTION_CONTROL_CONNECTION_TIMEOUT = 7,
-  CQL_OPTION_COMPRESSION                = 9,
+  CQL_OPTION_COMPRESSION                = 9
 } CqlOption;
 
 typedef enum {
   CQL_COMPRESSION_NONE   = 0,
   CQL_COMPRESSION_SNAPPY = 1,
-  CQL_COMPRESSION_LZ4    = 2,
+  CQL_COMPRESSION_LZ4    = 2
 } CqlCompression;
+
+typedef enum {
+  CQL_HOST_DISTANCE_LOCAL,
+  CQL_HOST_DISTANCE_REMOTE,
+  CQL_HOST_DISTANCE_IGNORE
+} CqlHostDistance;
+
+typedef void (*CqlLoadBalancingInitFunction)(CqlLoadBalancingPolicy* policy);
+typedef CqlHostDistance (*CqlLoadBalancingHostDistanceFunction)(CqlLoadBalancingPolicy* policy,
+                                                                const CqlHost* host);
+
+typedef CqlHost* (*CqlLoadBalancingNextHostFunction)(CqlLoadBalancingPolicy* policy, int is_initial);
+
+typedef struct {
+  CqlLoadBalancingInitFunction init_func;
+  CqlLoadBalancingHostDistanceFunction host_distance_func;
+  CqlLoadBalancingNextHostFunction next_host_func;
+} CqlLoadBalancingPolicyImpl;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * Initialize a new cluster. Instance must be freed by caller.
@@ -1089,6 +1117,25 @@ cql_map_get_value(
     void*  item,
     void** output);
 
+/***********************************************************************************
+ *
+ * Load balancing policy
+ *
+ ************************************************************************************/
+
+CQL_EXPORT size_t
+cql_lb_policy_hosts_count(CqlLoadBalancingPolicy* policy);
+
+CQL_EXPORT CqlHost*
+cql_lb_policy_get_host(CqlLoadBalancingPolicy* policy, size_t index);
+
+CQL_EXPORT void*
+cql_lb_policy_get_data(CqlLoadBalancingPolicy* policy);
+
+CQL_EXPORT void
+cql_session_set_load_balancing_policy(CqlSession* session,
+                                      void* data,
+                                      CqlLoadBalancingPolicyImpl* impl);
 
 /***********************************************************************************
  *
@@ -1140,6 +1187,10 @@ cql_uuid_string(
     CqlUuid uuid,
     char*   output);
 
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
 #define CQL_ERROR_SOURCE_OS          1
 #define CQL_ERROR_SOURCE_NETWORK     2
 #define CQL_ERROR_SOURCE_SSL         3
@@ -1166,4 +1217,4 @@ cql_uuid_string(
 #define CQL_ERROR_LIB_MESSAGE_PREPARE 2000011
 #define CQL_ERROR_LIB_HOST_RESOLUTION 2000012
 
-#endif // __CQL_H_INCLUDED__
+#endif /* __CQL_H_INCLUDED__ */
