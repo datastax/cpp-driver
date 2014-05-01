@@ -22,11 +22,15 @@
 #include <list>
 #include <string>
 #include <vector>
+#include <memory>
 #include "cql_error.hpp"
 #include "cql_mpmc_queue.hpp"
 #include "cql_spsc_queue.hpp"
 #include "cql_pool.hpp"
 #include "cql_io_worker.hpp"
+
+#include "cql_load_balancing_policy.hpp"
+#include "cql_round_robin_policy.hpp"
 
 typedef int (*LoadBalancerDistanceCallback)(char* host, size_t host_size);
 
@@ -53,13 +57,15 @@ struct CqlSession {
   MPMCQueue<CqlRequest*>       request_queue;
   std::list<std::string>       seed_list;
   std::string                  port;
+  std::unique_ptr<LoadBalancingPolicy> load_balancing_policy_;
 
   CqlSession(
       size_t io_loop_count,
       size_t io_queue_size) :
       loop(uv_loop_new()),
       io_loops(io_loop_count, NULL),
-      request_queue(1024) {
+      request_queue(1024),
+      load_balancing_policy_(new RoundRobinPolicy()) {
     async_connect.data = this;
     async_execute.data = this;
 
@@ -101,9 +107,9 @@ struct CqlSession {
     connect_session_request       = new CqlSessionFutureImpl();
     connect_session_request->data = this;
 
-    CqlSessionState new_state = SESSION_STATE_NEW;
+    CqlSessionState expected_state = SESSION_STATE_NEW;
     if (state.compare_exchange_strong(
-            new_state,
+            expected_state,
             SESSION_STATE_CONNECTING)) {
       keyspace = ks;
       uv_thread_create(
@@ -203,8 +209,9 @@ struct CqlSession {
 
     CqlRequest* request = nullptr;
     while (session->request_queue.dequeue(request)) {
+
+      session->load_balancing_policy_->new_query_plan(&request->hosts);
       // TODO(mstump)
-      // load balancing policy give me host
       // choose pool
       // ClientConnection* connection = nullptr;
       // pool->borrow_connection(host, connection);
@@ -222,6 +229,11 @@ struct CqlSession {
   void
   set_keyspace() {
     // TODO(mstump)
+  }
+
+  void
+  set_load_balancing_policy(LoadBalancingPolicy* policy) {
+    load_balancing_policy_.reset(policy);
   }
 };
 

@@ -21,6 +21,12 @@
 
 #define CQL_ADDRESS_MAX_LENGTH 46
 
+enum CqlHostDistance {
+  LOCAL,
+  REMOTE,
+  IGNORED
+};
+
 struct CqlHost {
   typedef std::function<void(CqlHost* host, CqlError* err)> ResolveCallback;
 

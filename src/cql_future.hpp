@@ -20,6 +20,8 @@
 #include <atomic>
 #include <uv.h>
 
+struct CqlError;
+
 struct CqlFuture {
   std::unique_ptr<CqlError> error;
 

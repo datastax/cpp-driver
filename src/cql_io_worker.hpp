@@ -86,7 +86,8 @@ struct CqlIOWorker {
 
     while (worker->request_queue.dequeue(request)) {
       for (const std::string& host : request->hosts) {
-        CqlPoolPtr pool = CqlPoolpools.find(host);
+        auto pool = worker->pools.find(host);
+        static_cast<void>(pool);
       }
     }
   }

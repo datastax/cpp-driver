@@ -122,10 +122,4 @@ opcode_to_string(
   return "";
 }
 
-enum HostDistance {
-  LOCAL,
-  REMOTE,
-  IGNORED
-};
-
 #endif
