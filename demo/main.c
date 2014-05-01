@@ -29,7 +29,7 @@ void print_error(const char* message, int err) {
 /* Example round-robin LB policy */
 
 CqlHostDistance rr_host_distance(CqlLoadBalancingPolicy* policy, const CqlHost* host);
-CqlHost* rr_next_host(CqlLoadBalancingPolicy* policy, int is_initial);
+const char* rr_next_host(CqlLoadBalancingPolicy* policy, int is_initial);
 
 typedef struct {
   size_t index;
@@ -50,7 +50,7 @@ CqlHostDistance rr_host_distance(CqlLoadBalancingPolicy* policy, const CqlHost* 
   return CQL_HOST_DISTANCE_LOCAL;
 }
 
-CqlHost* rr_next_host(CqlLoadBalancingPolicy* policy, int is_initial) {
+const char* rr_next_host(CqlLoadBalancingPolicy* policy, int is_initial) {
   RoundRobinPolicy* rr_policy = (RoundRobinPolicy*)cql_lb_policy_get_data(policy);
   
   size_t hosts_count = cql_lb_policy_hosts_count(policy);
@@ -61,8 +61,9 @@ CqlHost* rr_next_host(CqlLoadBalancingPolicy* policy, int is_initial) {
   }
 
   if(rr_policy->remaining != 0) {
+    CqlHost* host = cql_lb_policy_get_host(policy, rr_policy->next_host_index++ % hosts_count);
     rr_policy->remaining--;
-    return cql_lb_policy_get_host(policy, rr_policy->next_host_index++ % hosts_count);
+    return cql_host_get_address(host);
   }
 
   return NULL;

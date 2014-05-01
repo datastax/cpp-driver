@@ -468,10 +468,10 @@ struct CqlLoadBalancingPolicy : public LoadBalancingPolicy {
 
   virtual void new_query_plan(std::list<std::string>* output) {
     if(impl_->next_host_func != NULL) {
-      CqlHost* host = impl_->next_host_func(this, 1);
-      while(host != NULL) {
-        output->push_back(host->address_string);
-        host = impl_->next_host_func(this, 0);
+      const char* address = impl_->next_host_func(this, 1);
+      while(address != NULL) {
+        output->push_back(address);
+        address = impl_->next_host_func(this, 0);
       }
     }
   }
@@ -487,6 +487,10 @@ CqlHost* cql_lb_policy_get_host(CqlLoadBalancingPolicy* policy, size_t index) {
 
 void* cql_lb_policy_get_data(CqlLoadBalancingPolicy* policy) {
   return policy->data_;
+}
+
+const char* cql_host_get_address(CqlHost* host) {
+  return host->address_string.c_str();
 }
 
 void cql_session_set_load_balancing_policy(CqlSession* session,

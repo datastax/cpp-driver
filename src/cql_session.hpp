@@ -143,6 +143,8 @@ struct CqlSession {
       uv_async_t* data,
       int         status) {
     CqlSession* session = reinterpret_cast<CqlSession*>(data->data);
+
+
     // TODO(mstump)
     static_cast<void>(session);
 

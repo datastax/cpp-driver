@@ -163,7 +163,7 @@ typedef void (*CqlLoadBalancingInitFunction)(CqlLoadBalancingPolicy* policy);
 typedef CqlHostDistance (*CqlLoadBalancingHostDistanceFunction)(CqlLoadBalancingPolicy* policy,
                                                                 const CqlHost* host);
 
-typedef CqlHost* (*CqlLoadBalancingNextHostFunction)(CqlLoadBalancingPolicy* policy, int is_initial);
+typedef const char* (*CqlLoadBalancingNextHostFunction)(CqlLoadBalancingPolicy* policy, int is_initial);
 
 typedef struct {
   CqlLoadBalancingInitFunction init_func;
@@ -1131,6 +1131,9 @@ cql_lb_policy_get_host(CqlLoadBalancingPolicy* policy, size_t index);
 
 CQL_EXPORT void*
 cql_lb_policy_get_data(CqlLoadBalancingPolicy* policy);
+
+CQL_EXPORT const char*
+cql_host_get_address(CqlHost* host);
 
 CQL_EXPORT void
 cql_session_set_load_balancing_policy(CqlSession* session,
