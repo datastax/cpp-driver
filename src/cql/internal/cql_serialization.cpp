@@ -141,12 +141,11 @@ cql::encode_short(ostream& output,
 }
 
 void
-cql::encode_short(vector<cql::cql_byte_t>& output,
-                  const cql::cql_short_t value) {
+cql::encode_append_short(vector<cql::cql_byte_t>& output,
+                         const cql::cql_short_t value) {
     cql::cql_short_t s = htons(value);
-    output.resize(sizeof(s));
     const cql::cql_byte_t* it = reinterpret_cast<cql::cql_byte_t*>(&s);
-    output.assign(it, it + sizeof(s));
+    output.insert(output.end(), it, it + sizeof(s));
 }
 
 istream&
@@ -178,12 +177,41 @@ cql::encode_int(ostream& output,
 }
 
 void
-cql::encode_int(vector<cql::cql_byte_t>& output,
-                const cql::cql_int_t value) {
+cql::encode_append_int(vector<cql::cql_byte_t>& output,
+                       const cql::cql_int_t value) {
     cql::cql_int_t l = htonl(value);
-    output.resize(sizeof(l));
     const cql::cql_byte_t* it = reinterpret_cast<cql::cql_byte_t*>(&l);
-    output.assign(it, it + sizeof(l));
+    output.insert(output.end(), it, it + sizeof(l));
+}
+
+void
+cql::encode_append_string(vector<cql::cql_byte_t>& output,
+                          const std::string& value) {
+    output.insert(output.end(), value.begin(), value.end());
+}
+
+void
+cql::encode_int_list(vector<cql::cql_byte_t>& output,
+                     const vector<cql::cql_int_t>& value) {
+    size_t to_reserve = sizeof(cql::cql_short_t) +
+        value.size() * (sizeof(cql::cql_short_t) + sizeof(cql::cql_int_t));
+    output.reserve(to_reserve);
+
+    cql::encode_append_short(output, value.size());
+    for (size_t i = 0; i < value.size(); i++){
+        encode_append_short(output, sizeof(cql::cql_int_t));
+        encode_append_int(output, value[i]);
+    }
+}
+
+void
+cql::encode_string_list(vector<cql::cql_byte_t>& output,
+                        const vector<std::string>& value) {
+    cql::encode_append_short(output, value.size());
+    for (size_t i = 0; i < value.size(); i++){
+        encode_append_short(output, value[i].size());
+        encode_append_string(output, value[i]);
+    }
 }
 
 istream&
