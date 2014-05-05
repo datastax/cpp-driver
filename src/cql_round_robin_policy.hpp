@@ -34,11 +34,11 @@ class RoundRobinPolicy : public LoadBalancingPolicy {
       return CQL_HOST_DISTANCE_LOCAL;
     }
 
-    void new_query_plan(std::list<std::string>* output) {
+    void new_query_plan(std::list<CqlHost>* output) {
       size_t index = index_++;
       size_t hosts_size = hosts_.size();
       for(size_t i = 0; i < hosts_.size(); ++i) {
-        output->push_back(hosts_[index++ % hosts_size].address_string);
+        output->push_back(hosts_[index++ % hosts_size]);
       }
     }
 

@@ -43,6 +43,7 @@ struct CqlCluster {
       control_connection_timeout_(10),
       thread_count_io_(1),
       thread_count_callback_(4),
+      queue_size_io_(1024),
       log_callback_(nullptr)
   {}
 
@@ -56,7 +57,8 @@ struct CqlCluster {
   new_session() {
     return new CqlSession(
         thread_count_io_,
-        queue_size_io_);
+        queue_size_io_,
+        contact_points_);
   }
 
   int

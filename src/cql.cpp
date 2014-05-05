@@ -466,14 +466,14 @@ struct CqlLoadBalancingPolicy : public LoadBalancingPolicy {
     return CQL_HOST_DISTANCE_IGNORE;
   }
 
-  virtual void new_query_plan(std::list<std::string>* output) {
-    if(impl_->next_host_func != NULL) {
-      const char* address = impl_->next_host_func(this, 1);
-      while(address != NULL) {
-        output->push_back(address);
-        address = impl_->next_host_func(this, 0);
-      }
-    }
+  virtual void new_query_plan(std::list<CqlHost>* output) {
+    //if(impl_->next_host_func != NULL) {
+    //  const char* address = impl_->next_host_func(this, 1);
+    //  while(address != NULL) {
+    //    output->push_back(address);
+    //    address = impl_->next_host_func(this, 0);
+    //  }
+    //}
   }
 };
 
@@ -490,7 +490,7 @@ void* cql_lb_policy_get_data(CqlLoadBalancingPolicy* policy) {
 }
 
 const char* cql_host_get_address(CqlHost* host) {
-  return host->address_string.c_str();
+  return host->address.to_string().c_str();
 }
 
 void cql_session_set_load_balancing_policy(CqlSession* session,

@@ -28,6 +28,8 @@
 template<typename T>
 class MPMCQueue {
  public:
+  typedef T EntryType;
+
   MPMCQueue(
       size_t size) :
       size_(size),

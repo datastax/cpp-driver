@@ -84,10 +84,15 @@ main() {
   CqlCluster* cluster = cql_cluster_new();
   CqlSession* session = NULL;
   CqlFuture* session_future = NULL;
-  CqlFuture* shutdown_future = NULL;
-  RoundRobinPolicy* rr_policy = rr_policy_new();
-
+  /*CqlFuture* shutdown_future = NULL;*/
   int err;
+
+  const char* cp1 = "127.0.0.2";
+  const char* cp2 = "localhost";
+
+  cql_cluster_setopt(cluster, CQL_OPTION_CONTACT_POINT_ADD, cp1, strlen(cp1));
+  cql_cluster_setopt(cluster, CQL_OPTION_CONTACT_POINT_ADD, cp2, strlen(cp2));
+
   err = cql_session_connect(cluster, &session_future);
   if (err != 0) {
     print_error("Error creating session", err);
@@ -97,9 +102,8 @@ main() {
   cql_future_wait(session_future);
   cql_future_free(session_future);
 
+/*
   session = cql_future_get_session(session_future);
-
-  cql_session_set_load_balancing_policy(session, rr_policy, &rr_policy_impl);
 
   err = cql_session_shutdown(session, &shutdown_future);
   if(err != 0) {
@@ -110,10 +114,10 @@ main() {
   cql_future_wait(shutdown_future);
   cql_future_free(shutdown_future);
 
+*/
 cleanup:
   if(session_future != NULL) {
     cql_session_free(session);
   }
   cql_cluster_free(cluster);
-  rr_policy_free(rr_policy);
 }

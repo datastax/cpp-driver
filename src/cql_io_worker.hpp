@@ -21,60 +21,71 @@
 #include <string>
 #include <unordered_map>
 #include "cql_pool.hpp"
+#include "cql_async_queue.hpp"
 
 struct CqlIOWorker {
   typedef std::shared_ptr<CqlPool>  CqlPoolPtr;
-  typedef std::unordered_map<std::string, CqlPoolPtr> CqlPoolCollection;
+  typedef std::unordered_map<CqlHost, CqlPoolPtr> CqlPoolCollection;
 
   uv_thread_t            thread;
   uv_loop_t*             loop;
   SSLContext*            ssl_context;
   CqlPoolCollection      pools;
-  uv_async_t             async_execute;
-  SPSCQueue<CqlRequest*> request_queue;
+
+  const size_t POOL_QUEUE_SIZE = 256;
+
+  struct PoolAction {
+    enum Type {
+      ADD,
+      REMOVE,
+    };
+    Type type;
+    CqlHost host;
+    size_t core_connections_per_host;
+    size_t max_connections_per_host;
+  };
+
+  AsyncQueue<SPSCQueue<PoolAction>> pool_queue_;
+  AsyncQueue<SPSCQueue<CqlRequest*>> request_queue_;
 
   explicit
   CqlIOWorker(
       size_t request_queue_size) :
       loop(uv_loop_new()),
-      request_queue(request_queue_size) {
-    async_execute.data = this;
-    uv_async_init(
-        loop,
-        &async_execute,
-        &CqlIOWorker::on_execute);
+      pool_queue_(POOL_QUEUE_SIZE, loop, this, &CqlIOWorker::on_pool_action),
+      request_queue_(request_queue_size, loop, this, &CqlIOWorker::on_execute) {
   }
 
-  void
-  add_pool(
-      const CqlHost& host,
-      size_t         core_connections_per_host,
-      size_t         max_connections_per_host) {
-    pools.insert(
-        std::make_pair(
-            host.address_string,
-            CqlPoolPtr(
-                new CqlPool(
-                    loop,
-                    ssl_context,
-                    host,
-                    core_connections_per_host,
-                    max_connections_per_host))));
+
+  void add_pool(const CqlHost& host,
+      size_t core_connections_per_host,
+      size_t max_connections_per_host) {
+    PoolAction action;
+    action.type = PoolAction::ADD;
+    action.host = host;
+    action.core_connections_per_host = core_connections_per_host;
+    action.max_connections_per_host = max_connections_per_host;
+    pool_queue_.enqueue(action);
+  }
+
+  void remove_pool(const CqlHost& host) {
+    PoolAction action;
+    action.type = PoolAction::REMOVE;
+    action.host = host;
   }
 
   CqlError*
   execute(
       CqlRequest* request) {
-    if (request_queue.enqueue(request)) {
-      uv_async_send(&async_execute);
-      return CQL_ERROR_NO_ERROR;
+    if (!request_queue_.enqueue(request)) {
+      return new CqlError(
+          CQL_ERROR_SOURCE_LIBRARY,
+          CQL_ERROR_LIB_NO_STREAMS,
+          "request queue full",
+          __FILE__,
+          __LINE__);
     }
-    return new CqlError(
-        CQL_ERROR_SOURCE_LIBRARY,
-        CQL_ERROR_LIB_NO_STREAMS,
-        "request queue full",
-        __FILE__,
-        __LINE__);
+    return CQL_ERROR_NO_ERROR;
   }
 
   static void
@@ -84,10 +95,34 @@ struct CqlIOWorker {
     CqlIOWorker* worker  = reinterpret_cast<CqlIOWorker*>(data->data);
     CqlRequest*  request = nullptr;
 
-    while (worker->request_queue.dequeue(request)) {
-      for (const std::string& host : request->hosts) {
+    while (worker->request_queue_.dequeue(request)) {
+      for (const CqlHost& host : request->hosts) {
         auto pool = worker->pools.find(host);
         static_cast<void>(pool);
+      }
+    }
+  }
+
+  static void on_pool_action(uv_async_t* data, int status) {
+    CqlIOWorker* worker  = reinterpret_cast<CqlIOWorker*>(data->data);
+
+    PoolAction action;
+    while(worker->pool_queue_.dequeue(action)) {
+      if(action.type == PoolAction::ADD) {
+        if(worker->pools.count(action.host) == 0) {
+          worker->pools.insert(
+              std::make_pair(
+                  action.host,
+                  CqlPoolPtr(
+                      new CqlPool(
+                          worker->loop,
+                          worker->ssl_context,
+                          action.host,
+                          action.core_connections_per_host,
+                          action.max_connections_per_host))));
+        }
+      } else if(action.type == PoolAction::REMOVE) {
+        // TODO:(mpenick)
       }
     }
   }

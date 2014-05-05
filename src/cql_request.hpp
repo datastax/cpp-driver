@@ -20,10 +20,12 @@
 #include <list>
 #include <string>
 
+#include "cql_host.hpp"
+
 struct CqlRequest {
   CqlMessageFutureImpl*  future;
   CqlMessage*            message;
-  std::list<std::string> hosts;
+  std::list<CqlHost> hosts;
   std::list<std::string> hosts_attempted;
 
   CqlRequest() :

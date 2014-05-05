@@ -34,6 +34,8 @@
 template<typename T>
 class SPSCQueue {
  public:
+  typedef T EntryType;
+
   SPSCQueue(
       size_t size) :
       _size(size),
@@ -54,7 +56,7 @@ class SPSCQueue {
 
   bool
   enqueue(
-      T& input) {
+      const T& input) {
     const size_t head = _head.load(std::memory_order_relaxed);
 
     if (((_tail.load(std::memory_order_acquire) - (head + 1)) & _mask) >= 1) {

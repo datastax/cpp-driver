@@ -87,6 +87,14 @@ clear_buffer_deque(
   buffers.clear();
 }
 
+// From boost 1.55
+template <class T>
+inline void hash_combine(std::size_t& seed, T const& v)
+{
+  std::hash<T> hasher;
+  seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+}
+
 std::string
 opcode_to_string(
     int opcode) {

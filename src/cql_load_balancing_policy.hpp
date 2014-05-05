@@ -32,7 +32,7 @@ class LoadBalancingPolicy {
     virtual CqlHostDistance distance(const CqlHost& host) = 0;
 
     // TODO(mpenick): Figure out what parameters to pass, keyspace, consistency, etc.
-    virtual void new_query_plan(std::list<std::string>* output) = 0;
+    virtual void new_query_plan(std::list<CqlHost>* output) = 0;
 };
 
 #endif

@@ -359,8 +359,9 @@ struct CqlClientConnection {
       // TODO(mstump)
       fprintf(
           stderr,
-          "connect failed error %s\n",
-          uv_err_name(uv_last_error(connection->loop_)));
+          "connect failed error %s (%s)\n",
+          uv_err_name(uv_last_error(connection->loop_)),
+          connection->host_.address.to_string().c_str());
       return;
     }
 
@@ -378,11 +379,19 @@ struct CqlClientConnection {
     log(CQL_LOG_DEBUG, "connect");
     // connect to the resolved host
     uv_tcp_init(loop_, &socket_);
-    uv_tcp_connect(
-        &connect_request_,
-        &socket_,
-        host_.address,
-        CqlClientConnection::on_connect);
+    if(host_.address.family() == AF_INET) {
+      uv_tcp_connect(
+          &connect_request_,
+          &socket_,
+          *host_.address.addr_in(),
+          CqlClientConnection::on_connect);
+    } else {
+      uv_tcp_connect6(
+          &connect_request_,
+          &socket_,
+          *host_.address.addr_in6(),
+          CqlClientConnection::on_connect);
+    }
   }
 
   void
