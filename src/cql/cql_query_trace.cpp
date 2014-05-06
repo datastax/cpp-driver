@@ -70,8 +70,7 @@ cql::cql_query_trace_t::do_fetch_trace() {
                         result->get_bigint("duration", _duration);
                     }
                     if (result->get_nullity("coordinator", is_empty) && !is_empty) {
-                    // TODO(JS): deserialize ip addresses at last.
-                    //    result->get_ip_address("coordinator", _coordinator);
+                        result->get_inet("coordinator", _coordinator);
                     }
                     if (result->get_nullity("parameters", is_empty) && !is_empty) {
                         result->get_map("parameters", _parameters);
@@ -125,8 +124,7 @@ cql::cql_query_trace_t::do_fetch_trace() {
                         result->get_uuid("event_id", event_id);
                     }
                     if (result->get_nullity("source", is_empty) && !is_empty) {
-                        // TODO(JS) :
-                        // result->get_ip_address("source", source);
+                        result->get_inet("source", source);
                     }
                     if (result->get_nullity("source_elapsed", is_empty) && !is_empty) {
                         result->get_bigint("source_elapsed", source_elapsed);
