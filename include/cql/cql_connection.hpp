@@ -207,6 +207,13 @@ public:
     execute(const boost::shared_ptr<cql::cql_execute_t>& message) = 0;
 
     /**
+       Sets the algorithm used for compression. By default no compression is used.
+       Currently only SNAPPY is supported.
+     */
+    virtual void
+    set_compression_type(cql_compression_enum) = 0;
+            
+    /**
        If the connection errback is triggered, this function is used to determine whether the underlying transport is still valid or if a reconnect is neccessary.
      */
     virtual bool

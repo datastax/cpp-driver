@@ -962,7 +962,23 @@ private:
         buf.push_back(boost::asio::buffer(header.buffer()->data(), header.size()));
 
         if (header.length() != 0) {
-            buf.push_back(boost::asio::buffer(message->buffer()->data(), message->size()));
+            cql_message_buffer_t output_buffer;
+            size_t output_buffer_size;
+            
+            bool do_compress_message = ((message->flag() & CQL_FLAG_COMPRESSION) == CQL_FLAG_COMPRESSION);
+            if (_compression != CQL_COMPRESSION_NONE && do_compress_message) {
+                // The connection supports compression and the message wants to be compressed.
+                // Let's compress it then.
+                output_buffer = cql_message_buffer_t(new std::vector<cql_byte_t>);
+                *output_buffer = uncompress(*(message->buffer()), _compression);
+                output_buffer_size = output_buffer->size();
+            }
+            else {
+                // Send the plain (uncompressed) message.
+                output_buffer = message->buffer();
+                output_buffer_size = message->size();
+            }
+            buf.push_back(boost::asio::buffer(output_buffer->data(), output_buffer_size));
         }
 
         boost::asio::async_write(*_transport, buf, callback);
@@ -1081,7 +1097,12 @@ private:
             _response_message.reset(new cql::cql_message_result_impl_t(header.length()));
             break;
         }
-
+        
+        if ((header.flags() & CQL_FLAG_COMPRESSION) == CQL_FLAG_COMPRESSION) {
+            // The body will be compressed.
+            _response_message->enable_compression();
+        }
+        
         boost::mutex::scoped_lock lock(_mutex);
         if (_closing) {
             log(CQL_LOG_INFO, "body_read: connection (" + boost::lexical_cast<std::string>(this) + ") is closing");
@@ -1172,6 +1193,12 @@ private:
             return;
         }
 
+        if (_response_message->is_compressed()) {
+            // The body of the message was compressed. Here we decompress it.
+            log(CQL_LOG_DEBUG, "message body is compressed");
+            uncompress_inplace(*(_response_message->buffer()), _compression);
+        }
+        
         cql::cql_error_t consume_error;
         if (!_response_message->consume(&consume_error)) {
             log(CQL_LOG_ERROR, "error deserializing result message " + consume_error.message);

@@ -84,6 +84,9 @@ cql::cql_message_query_impl_t::flag() const {
     if (_is_traced) {
         ret_val |= static_cast<cql_byte_t>(CQL_FLAG_TRACE);
     }
+    if (this->is_compressed()) {
+        ret_val |= static_cast<cql_byte_t>(CQL_FLAG_COMPRESSION);
+    }
     return ret_val;
 }
 
