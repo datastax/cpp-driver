@@ -14,16 +14,14 @@
   limitations under the License.
 */
 
-#ifndef __CQL_CLUSTER_HPP_INCLUDED__
-#define __CQL_CLUSTER_HPP_INCLUDED__
+#ifndef __CQL_CONFIG_HPP_INCLUDED__
+#define __CQL_CONFIG_HPP_INCLUDED__
 
 #include <list>
 #include <string>
 
-#include "cql_session.hpp"
-
-struct CqlCluster {
-  std::string            port_;
+struct Config {
+  int                    port_;
   std::string            cql_version_;
   int                    compression_;
   size_t                 max_schema_agreement_wait_;
@@ -32,33 +30,57 @@ struct CqlCluster {
   size_t                 thread_count_io_;
   size_t                 thread_count_callback_;
   size_t                 queue_size_io_;
+  size_t                 queue_size_pool_;
+  size_t                 core_connections_per_host_;
+  size_t                 max_connections_per_host_;
   LogCallback            log_callback_;
 
  public:
-  CqlCluster() :
-      port_("9042"),
+  Config() :
+      port_(9042),
       cql_version_("3.0.0"),
       compression_(0),
       max_schema_agreement_wait_(10),
       control_connection_timeout_(10),
-      thread_count_io_(1),
+      thread_count_io_(2),
       thread_count_callback_(4),
       queue_size_io_(1024),
+      queue_size_pool_(256),
+      core_connections_per_host_(2),
+      max_connections_per_host_(4),
       log_callback_(nullptr)
   {}
 
-  void
-  log_callback(
-      LogCallback callback) {
+  void log_callback(LogCallback callback) {
     log_callback_ = callback;
   }
 
-  CqlSession*
-  new_session() {
-    return new CqlSession(
-        thread_count_io_,
-        queue_size_io_,
-        contact_points_);
+  size_t thread_count_io() const {
+    return thread_count_io_;
+  }
+
+  size_t queue_size_io() const {
+    return queue_size_io_;
+  }
+
+  size_t queue_size_pool() const {
+    return queue_size_pool_;
+  }
+
+  size_t core_connections_per_host() const {
+    return core_connections_per_host_;
+  }
+
+  size_t max_connections_per_host() const {
+    return max_connections_per_host_;
+  }
+
+  const std::list<std::string>& contact_points() const {
+    return contact_points_;
+  }
+
+  int port() const {
+    return port_;
   }
 
   int
@@ -83,7 +105,7 @@ struct CqlCluster {
         break;
 
       case CQL_OPTION_PORT:
-        port_.assign(reinterpret_cast<const char*>(value), size);
+        port_ = int_value;
         break;
 
       case CQL_OPTION_CQL_VERSION:

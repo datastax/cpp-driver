@@ -18,24 +18,23 @@
 #define __CQL_SESSION_HPP_INCLUDED__
 
 #include <uv.h>
+
 #include <atomic>
 #include <list>
 #include <string>
 #include <vector>
 #include <memory>
 #include <unordered_set>
-#include <set>
+
 #include "cql_error.hpp"
 #include "cql_mpmc_queue.hpp"
 #include "cql_spsc_queue.hpp"
 #include "cql_pool.hpp"
 #include "cql_io_worker.hpp"
-
 #include "cql_load_balancing_policy.hpp"
 #include "cql_round_robin_policy.hpp"
 #include "cql_resolver.hpp"
-
-typedef int (*LoadBalancerDistanceCallback)(char* host, size_t host_size);
+#include "cql_config.hpp"
 
 struct CqlSession {
   enum CqlSessionState {
@@ -46,53 +45,50 @@ struct CqlSession {
     SESSION_STATE_DISCONNECTED
   };
 
-  std::atomic<CqlSessionState> state;
-  uv_thread_t                  thread;
-  uv_loop_t*                   loop;
-  uv_async_t                   async_connect;
-  uv_async_t                   async_execute;
-  std::vector<CqlIOWorker*>    io_loops;
-  SSLContext*                  ssl_context;
-  LogCallback                  log_callback;
-  std::string                  keyspace;
-  CqlSessionFutureImpl*        connect_session_request;
-  LoadBalancerDistanceCallback distance_callback;
-  MPMCQueue<CqlRequest*>       request_queue;
-  std::list<std::string>       seeds;
-  uint16_t                     port;
-  size_t core_connections_per_host;
-  size_t max_connections_per_host;
+  std::atomic<CqlSessionState> state_;
+  uv_thread_t                  thread_;
+  uv_loop_t*                   loop_;
+  uv_async_t                   async_connect_;
+  std::vector<CqlIOWorker*>    io_workers_;
+  SSLContext*                  ssl_context_;
+  std::string                  keyspace_;
+  CqlSessionFutureImpl*        connect_session_request_;
+  std::unordered_set<CqlHost>  hosts_;
+  Config                       config_;
+  std::unique_ptr<AsyncQueue<MPMCQueue<CqlRequest*>>> request_queue_;
   std::unique_ptr<LoadBalancingPolicy> load_balancing_policy_;
-  std::set<CqlHost> hosts;
 
-  CqlSession(
-      size_t io_loop_count,
-      size_t io_queue_size,
-      std::list<std::string> seeds) :
-      loop(uv_loop_new()),
-      io_loops(io_loop_count, NULL),
-      request_queue(1024),
-      seeds(seeds),
-      port(4092),
-      core_connections_per_host(2),
-      max_connections_per_host(8),
-      load_balancing_policy_(new RoundRobinPolicy()) {
-    async_connect.data = this;
-    async_execute.data = this;
+  CqlSession() 
+    : loop_(uv_loop_new())
+    , load_balancing_policy_(new RoundRobinPolicy()) {
+  }
 
-    uv_async_init(
-        loop,
-        &async_connect,
-        &CqlSession::on_connect);
+  CqlSession(const CqlSession* session)
+    : loop_(uv_loop_new())
+    , config_(session->config_)
+    , load_balancing_policy_(new RoundRobinPolicy()) {
+  }
 
-    uv_async_init(
-        loop,
-        &async_execute,
-        &CqlSession::on_execute);
+  int init() {
+    async_connect_.data = this;
+    uv_async_init( loop_, &async_connect_, &CqlSession::on_connect);
 
-    for (size_t i = 0; i < io_loops.size(); ++i) {
-      io_loops[i] = new CqlIOWorker(io_queue_size);
+    request_queue_.reset(new AsyncQueue<MPMCQueue<CqlRequest*>>(config_.queue_size_io()));
+    int rc = request_queue_->init(loop_, this, &CqlSession::on_execute);
+    if(rc != 0) {
+      return rc;
     }
+
+    for (size_t i = 0; i < config_.thread_count_io(); ++i) {
+      CqlIOWorker* io_worker = new CqlIOWorker(config_);
+      int rc = io_worker->init();
+      if(rc != 0) {
+        return rc;
+      }
+      io_workers_.push_back(io_worker);
+    }
+
+    return 0;
   }
 
   static void
@@ -100,12 +96,11 @@ struct CqlSession {
       void* data) {
     CqlSession* session = reinterpret_cast<CqlSession*>(data);
 
-    for (size_t i = 0; i < session->io_loops.size(); ++i) {
-      session->io_loops[i]->run();
+    for(CqlIOWorker* io_worker : session->io_workers_) {
+      io_worker->run();
     }
-    // TODO:(mpenick) we need to wait for these to start up before doing anything else
 
-    uv_run(session->loop, UV_RUN_DEFAULT);
+    uv_run(session->loop_, UV_RUN_DEFAULT);
   }
 
   CqlSessionFutureImpl*
@@ -117,38 +112,41 @@ struct CqlSession {
   CqlSessionFutureImpl*
   connect(
       const std::string& ks) {
-    connect_session_request       = new CqlSessionFutureImpl();
-    connect_session_request->data = this;
+    connect_session_request_       = new CqlSessionFutureImpl();
+    connect_session_request_->data = this;
 
     CqlSessionState expected_state = SESSION_STATE_NEW;
-    if (state.compare_exchange_strong(
+    if (state_.compare_exchange_strong(
             expected_state,
             SESSION_STATE_CONNECTING)) {
-      keyspace = ks;
+
+      init();
+
+      keyspace_ = ks;
       uv_thread_create(
-          &thread,
+          &thread_,
           &CqlSession::on_run,
           this);
 
-      uv_async_send(&async_connect);
+      uv_async_send(&async_connect_);
     } else {
-     connect_session_request->error.reset(new CqlError(
+     connect_session_request_->error.reset(new CqlError(
           CQL_ERROR_SOURCE_LIBRARY,
           CQL_ERROR_LIB_SESSION_STATE,
           "connect has already been called",
           __FILE__,
           __LINE__));
-      connect_session_request->notify(loop);
+      connect_session_request_->notify(loop_);
     }
-    return connect_session_request;
+    return connect_session_request_;
   }
 
   void
   add_or_renew_pool(CqlHost host,
       bool is_host_addition) {
     // TODO(mstump)
-    for (CqlIOWorker* worker :  io_loops) {
-      worker->add_pool(host, core_connections_per_host, max_connections_per_host);
+    for (CqlIOWorker* io_worker :  io_workers_) {
+      io_worker->add_pool(host, config_.core_connections_per_host(), config_.max_connections_per_host());
     }
   }
 
@@ -160,16 +158,17 @@ struct CqlSession {
 
     // TODO(mstump)
 
-    for(std::string seed : session->seeds) {
+    int port = session->config_.port();
+    for(std::string seed : session->config_.contact_points()) {
       Address address;
-      if(Address::from_string(seed, session->port, &address)) {
+      if(Address::from_string(seed, port, &address)) {
         CqlHost host(address);
-        if(session->hosts.count(host) == 0) {
-          session->hosts.insert(host);
+        if(session->hosts_.count(host) == 0) {
+          session->hosts_.insert(host);
           session->add_or_renew_pool(host, false);
         }
       } else {
-        Resolver::resolve(session->loop, seed, session->port, session, on_resolve);
+        Resolver::resolve(session->loop_, seed, port, session, on_resolve);
       }
     }
   }
@@ -178,8 +177,8 @@ struct CqlSession {
     if(resolver->is_success()) {
       CqlSession* session = reinterpret_cast<CqlSession*>(resolver->data());
       CqlHost host(resolver->address());
-      if(session->hosts.count(host) == 0) {
-        session->hosts.insert(host);
+      if(session->hosts_.count(host) == 0) {
+        session->hosts_.insert(host);
         session->add_or_renew_pool(host, false);
       }
     } else {
@@ -190,8 +189,8 @@ struct CqlSession {
 
   SSLSession*
   ssl_session_new() {
-    if (ssl_context) {
-      return ssl_context->session_new();
+    if (ssl_context_) {
+      return ssl_context_->session_new();
     }
     return NULL;
   }
@@ -226,9 +225,7 @@ struct CqlSession {
   inline void
   execute(
       CqlRequest* request) {
-    if (request_queue.enqueue(request)) {
-      uv_async_send(&async_execute);
-    } else {
+    if (!request_queue_->enqueue(request)) {
       request->future->error.reset(new CqlError(
           CQL_ERROR_SOURCE_LIBRARY,
           CQL_ERROR_LIB_NO_STREAMS,
@@ -248,7 +245,7 @@ struct CqlSession {
     CqlSession* session = reinterpret_cast<CqlSession*>(data->data);
 
     CqlRequest* request = nullptr;
-    while (session->request_queue.dequeue(request)) {
+    while (session->request_queue_->dequeue(request)) {
 
       session->load_balancing_policy_->new_query_plan(&request->hosts);
       // TODO(mstump)

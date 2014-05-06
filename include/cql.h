@@ -64,9 +64,6 @@ typedef struct {
   cql_uint32_t port;
 } CqlInet;
 
-struct CqlCluster;
-typedef struct CqlCluster CqlCluster;
-
 struct CqlSession;
 typedef struct CqlSession CqlSession;
 
@@ -176,54 +173,21 @@ extern "C" {
 #endif
 
 /**
- * Initialize a new cluster. Instance must be freed by caller.
+ * Initialize a new session. Instance must be freed by caller.
  *
  * @return
  */
-CQL_EXPORT CqlCluster*
-cql_cluster_new();
+CQL_EXPORT CqlSession*
+cql_session_new();
 
 /**
- * Free a cluster instance.
+ * Initialize a new session using previous session's configuration.
+ * Instance must be freed by caller.
  *
  * @return
  */
-CQL_EXPORT void
-cql_cluster_free(
-    CqlCluster* cluster);
-
-/**
- * Set an option on the specified connection cluster
- *
- * @param cluster
- * @param option
- * @param data
- * @param data_len
- *
- * @return 0 if successful, otherwise an error occurred
- */
-CQL_EXPORT int
-cql_cluster_setopt(
-    CqlCluster* cluster,
-    CqlOption   option,
-    const void* data,
-    size_t      data_len);
-
-/**
- * Get the option value for the specified cluster
- *
- * @param option
- * @param data
- * @param data_len
- *
- * @return 0 if successful, otherwise an error occurred
- */
-CQL_EXPORT int
-cql_cluster_getopt(
-    CqlCluster* cluster,
-    CqlOption   option,
-    void**      data,
-    size_t*     data_len);
+CQL_EXPORT CqlSession*
+cql_session_clone(CqlSession* session);
 
 /**
  * Free a session instance.
@@ -233,6 +197,41 @@ cql_cluster_getopt(
 CQL_EXPORT void
 cql_session_free(
     CqlSession* session);
+
+
+/**
+ * Set an option on the specified session
+ *
+ * @param cluster
+ * @param option
+ * @param data
+ * @param data_len
+ *
+ * @return 0 if successful, otherwise an error occurred
+ */
+CQL_EXPORT int
+cql_session_setopt(
+    CqlSession* session,
+    CqlOption   option,
+    const void* data,
+    size_t      data_len);
+
+/**
+ * Get the option value for the specified session
+ *
+ * @param option
+ * @param data
+ * @param data_len
+ *
+ * @return 0 if successful, otherwise an error occurred
+ */
+CQL_EXPORT int
+cql_cluster_getopt(
+    CqlSession* session,
+    CqlOption   option,
+    void**      data,
+    size_t*     data_len);
+
 
 /**
  * Initiate a session using the specified session. Resulting
@@ -245,7 +244,7 @@ cql_session_free(
  */
 CQL_EXPORT int
 cql_session_connect(
-    CqlCluster* cluster,
+    CqlSession* session,
     CqlFuture** future);
 
 /**
@@ -260,7 +259,7 @@ cql_session_connect(
  */
 CQL_EXPORT int
 cql_session_connect_keyspace(
-    CqlCluster* cluster,
+    CqlSession* session,
     const char* keyspace,
     CqlFuture** future);
 

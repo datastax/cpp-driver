@@ -25,11 +25,6 @@ class AsyncQueue {
     AsyncQueue(size_t queue_size) 
       : queue_(queue_size) { }
 
-    AsyncQueue(size_t queue_size, uv_loop_t* loop, void* data, uv_async_cb async_cb) 
-      : queue_(queue_size) {
-        init(loop, data, async_cb);
-      }
-
     int init(uv_loop_t* loop, void* data, uv_async_cb async_cb) {
       async_.data = data;
       return uv_async_init(loop, &async_, async_cb);

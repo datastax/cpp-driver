@@ -17,39 +17,16 @@
 #include <string>
 
 #include "cql.h"
-#include "cql_cluster.hpp"
 #include "cql_session.hpp"
 
 extern "C" {
 
-CqlCluster*
-cql_cluster_new() {
-  return new CqlCluster();
+CqlSession* cql_session_new() {
+  return new CqlSession();
 }
 
-void
-cql_cluster_free(
-    CqlCluster* cluster) {
-  delete cluster;
-}
-
-int
-cql_cluster_setopt(
-    CqlCluster* cluster,
-    CqlOption   option,
-    const void* data,
-    size_t      data_len) {
-  return cluster->option(option, data, data_len);
-}
-
-int
-cql_cluster_getopt(
-    CqlCluster* cluster,
-    CqlOption   option,
-    void**      data,
-    size_t*     data_len)
-{
-  return CQL_ERROR_NO_ERROR;
+CqlSession* cql_session_clone(CqlSession* session) {
+  return new CqlSession(session);
 }
 
 void
@@ -59,20 +36,37 @@ cql_session_free(
 }
 
 int
+cql_session_setopt(
+    CqlSession* session,
+    CqlOption   option,
+    const void* data,
+    size_t      data_len) {
+  return session->config_.option(option, data, data_len);
+}
+
+int
+cql_session_getopt(
+    CqlSession* session,
+    CqlOption   option,
+    void**      data,
+    size_t*     data_len)
+{
+  return CQL_ERROR_NO_ERROR;
+}
+
+int
 cql_session_connect(
-   CqlCluster* cluster,
+   CqlSession* session,
    CqlFuture** future) {
-  CqlSession* session = cluster->new_session();
   *future = session->connect("");
   return CQL_ERROR_NO_ERROR;
 }
 
 int
 cql_session_connect_keyspace(
-   CqlCluster*  cluster,
+   CqlSession*  session,
     const char* keyspace,
     CqlFuture** future) {
-  CqlSession* session = cluster->new_session();
   *future = session->connect(keyspace);
   return CQL_ERROR_NO_ERROR;
 }

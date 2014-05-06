@@ -47,5 +47,12 @@ test/unit_tests/cql_test
 # AStyle backup
 *.orig
 
+# QT Creator 
+*.config
+*.creator
+*.creator.user
+*.files
+*.includes
+
 /extra/ccm_bridge/nbproject/private/
 /nbproject/private/

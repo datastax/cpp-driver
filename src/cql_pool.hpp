@@ -23,7 +23,6 @@
 
 #include "cql_bound_queue.hpp"
 #include "cql_client_connection.hpp"
-#include "cql_cluster.hpp"
 #include "cql_request.hpp"
 
 class CqlPool {

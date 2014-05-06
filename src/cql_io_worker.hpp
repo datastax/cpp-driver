@@ -22,17 +22,11 @@
 #include <unordered_map>
 #include "cql_pool.hpp"
 #include "cql_async_queue.hpp"
+#include "cql_config.hpp"
 
 struct CqlIOWorker {
   typedef std::shared_ptr<CqlPool>  CqlPoolPtr;
   typedef std::unordered_map<CqlHost, CqlPoolPtr> CqlPoolCollection;
-
-  uv_thread_t            thread;
-  uv_loop_t*             loop;
-  SSLContext*            ssl_context;
-  CqlPoolCollection      pools;
-
-  const size_t POOL_QUEUE_SIZE = 256;
 
   struct PoolAction {
     enum Type {
@@ -45,21 +39,34 @@ struct CqlIOWorker {
     size_t max_connections_per_host;
   };
 
-  AsyncQueue<SPSCQueue<PoolAction>> pool_queue_;
+  uv_thread_t            thread;
+  uv_loop_t*             loop;
+  SSLContext*            ssl_context;
+  CqlPoolCollection      pools;
+
+  const Config& config_;
   AsyncQueue<SPSCQueue<CqlRequest*>> request_queue_;
+  AsyncQueue<SPSCQueue<PoolAction>> pool_queue_;
 
   explicit
-  CqlIOWorker(
-      size_t request_queue_size) :
-      loop(uv_loop_new()),
-      pool_queue_(POOL_QUEUE_SIZE, loop, this, &CqlIOWorker::on_pool_action),
-      request_queue_(request_queue_size, loop, this, &CqlIOWorker::on_execute) {
+  CqlIOWorker(const Config& config)
+    : loop(uv_loop_new())
+    , config_(config)
+    , request_queue_(config.queue_size_io())
+    , pool_queue_(config.queue_size_pool()) {
   }
 
+  int init() {
+    int rc = request_queue_.init(loop, this, &CqlIOWorker::on_execute);
+    if(rc != 0) {
+      return rc;
+    }
+    return pool_queue_.init(loop, this, &CqlIOWorker::on_pool_action);
+  }
 
   void add_pool(const CqlHost& host,
-      size_t core_connections_per_host,
-      size_t max_connections_per_host) {
+                size_t core_connections_per_host,
+                size_t max_connections_per_host) {
     PoolAction action;
     action.type = PoolAction::ADD;
     action.host = host;

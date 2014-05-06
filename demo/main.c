@@ -81,8 +81,7 @@ void rr_policy_free(RoundRobinPolicy* rr_policy) {
 
 int
 main() {
-  CqlCluster* cluster = cql_cluster_new();
-  CqlSession* session = NULL;
+  CqlSession* session = cql_session_new();
   CqlFuture* session_future = NULL;
   /*CqlFuture* shutdown_future = NULL;*/
   int err;
@@ -90,10 +89,10 @@ main() {
   const char* cp1 = "127.0.0.2";
   const char* cp2 = "localhost";
 
-  cql_cluster_setopt(cluster, CQL_OPTION_CONTACT_POINT_ADD, cp1, strlen(cp1));
-  cql_cluster_setopt(cluster, CQL_OPTION_CONTACT_POINT_ADD, cp2, strlen(cp2));
+  cql_session_setopt(session, CQL_OPTION_CONTACT_POINT_ADD, cp1, strlen(cp1));
+  cql_session_setopt(session, CQL_OPTION_CONTACT_POINT_ADD, cp2, strlen(cp2));
 
-  err = cql_session_connect(cluster, &session_future);
+  err = cql_session_connect(session, &session_future);
   if (err != 0) {
     print_error("Error creating session", err);
     goto cleanup;
@@ -116,8 +115,5 @@ main() {
 
 */
 cleanup:
-  if(session_future != NULL) {
-    cql_session_free(session);
-  }
-  cql_cluster_free(cluster);
+  cql_session_free(session);
 }
