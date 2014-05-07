@@ -27,8 +27,8 @@ install_manifest.txt
 build
 Testing
 Debug
-demo/cql_demo
-test/unit_tests/cql_test
+demo/cassandra_demo
+test/unit_tests/cassandra_test
 
 # editor
 *.swp

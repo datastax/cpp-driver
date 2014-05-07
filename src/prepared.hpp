@@ -14,31 +14,22 @@
   limitations under the License.
 */
 
-#ifndef __CASS_RESULT_ITERATOR_HPP_INCLUDED__
-#define __CASS_RESULT_ITERATOR_HPP_INCLUDED__
+#ifndef __CASS_PREPARED_HPP_INCLUDED__
+#define __CASS_PREPARED_HPP_INCLUDED__
 
-#include "iterable.hpp"
-#include "body_result.hpp"
+#include <string>
 
-struct MessageBodyResult;
+namespace cass {
 
-// struct ResultIterator : Iterable {
-//   MessageBodyResult* result;
-//   int32_t     row_position;
-//   char*       position;
+struct Prepared {
+  std::string id;
 
-//   ResultIterator(
-//       MessageBodyResult* result) :
-//       Iterable(CASS_ITERABLE_TYPE_RESULT),
-//       result(result),
-//       row_position(0),
-//       position(result->rows)
-//   {}
+  Prepared(
+      const std::string& id) :
+      id(id) {
+  }
+};
 
-//   inline bool
-//   next() {
-//     return false;
-//   }
-// };
+} // namespace cass
 
 #endif

@@ -20,16 +20,16 @@
 #include <stdlib.h>
 #include <uv.h>
 
-#include "cql.h"
+#include "cassandra.h"
 
 void print_error(const char* message, int err) {
-  printf("%s: %s (%d)\n", message, cql_error_desc(err), err);
+  printf("%s: %s (%d)\n", message, cass_error_desc(err), err);
 }
 
 /* Example round-robin LB policy */
 
-CqlHostDistance rr_host_distance(CqlLoadBalancingPolicy* policy, const CqlHost* host);
-const char* rr_next_host(CqlLoadBalancingPolicy* policy, int is_initial);
+CassHostDistance rr_host_distance(CassLoadBalancingPolicy* policy, const CassHost* host);
+const char* rr_next_host(CassLoadBalancingPolicy* policy, int is_initial);
 
 typedef struct {
   size_t index;
@@ -40,20 +40,20 @@ typedef struct {
 RoundRobinPolicy* rr_policy_new();
 void rr_policy_free(RoundRobinPolicy* rr_policy);
 
-CqlLoadBalancingPolicyImpl rr_policy_impl = {
+CassLoadBalancingPolicyImpl rr_policy_impl = {
   NULL,
   &rr_host_distance,
   &rr_next_host
 };
 
-CqlHostDistance rr_host_distance(CqlLoadBalancingPolicy* policy, const CqlHost* host) {
-  return CQL_HOST_DISTANCE_LOCAL;
+CassHostDistance rr_host_distance(CassLoadBalancingPolicy* policy, const CassHost* host) {
+  return CASS_HOST_DISTANCE_LOCAL;
 }
 
-const char* rr_next_host(CqlLoadBalancingPolicy* policy, int is_initial) {
-  RoundRobinPolicy* rr_policy = (RoundRobinPolicy*)cql_lb_policy_get_data(policy);
+const char* rr_next_host(CassLoadBalancingPolicy* policy, int is_initial) {
+  RoundRobinPolicy* rr_policy = (RoundRobinPolicy*)cass_lb_policy_get_data(policy);
   
-  size_t hosts_count = cql_lb_policy_hosts_count(policy);
+  size_t hosts_count = cass_lb_policy_hosts_count(policy);
 
   if(is_initial) {
     rr_policy->remaining = hosts_count;
@@ -61,9 +61,9 @@ const char* rr_next_host(CqlLoadBalancingPolicy* policy, int is_initial) {
   }
 
   if(rr_policy->remaining != 0) {
-    CqlHost* host = cql_lb_policy_get_host(policy, rr_policy->next_host_index++ % hosts_count);
+    CassHost* host = cass_lb_policy_get_host(policy, rr_policy->next_host_index++ % hosts_count);
     rr_policy->remaining--;
-    return cql_host_get_address(host);
+    return cass_host_get_address(host);
   }
 
   return NULL;
@@ -81,39 +81,39 @@ void rr_policy_free(RoundRobinPolicy* rr_policy) {
 
 int
 main() {
-  CqlSession* session = cql_session_new();
-  CqlFuture* session_future = NULL;
-  /*CqlFuture* shutdown_future = NULL;*/
+  CassSession* session = cass_session_new();
+  CassFuture* session_future = NULL;
+  /*CassFuture* shutdown_future = NULL;*/
   int err;
 
   const char* cp1 = "127.0.0.2";
   const char* cp2 = "localhost";
 
-  cql_session_setopt(session, CQL_OPTION_CONTACT_POINT_ADD, cp1, strlen(cp1));
-  cql_session_setopt(session, CQL_OPTION_CONTACT_POINT_ADD, cp2, strlen(cp2));
+  cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, cp1, strlen(cp1));
+  cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, cp2, strlen(cp2));
 
-  err = cql_session_connect(session, &session_future);
+  err = cass_session_connect(session, &session_future);
   if (err != 0) {
     print_error("Error creating session", err);
     goto cleanup;
   }
 
-  cql_future_wait(session_future);
-  cql_future_free(session_future);
+  cass_future_wait(session_future);
+  cass_future_free(session_future);
 
 /*
-  session = cql_future_get_session(session_future);
+  session = cass_future_get_session(session_future);
 
-  err = cql_session_shutdown(session, &shutdown_future);
+  err = cass_session_shutdown(session, &shutdown_future);
   if(err != 0) {
     print_error("Error on shutdown", err);
     goto cleanup;
   }
 
-  cql_future_wait(shutdown_future);
-  cql_future_free(shutdown_future);
+  cass_future_wait(shutdown_future);
+  cass_future_free(shutdown_future);
 
 */
 cleanup:
-  cql_session_free(session);
+  cass_session_free(session);
 }

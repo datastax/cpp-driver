@@ -14,31 +14,29 @@
   limitations under the License.
 */
 
-#ifndef __CASS_RESULT_ITERATOR_HPP_INCLUDED__
-#define __CASS_RESULT_ITERATOR_HPP_INCLUDED__
+#ifndef __CASS_LOAD_BALANCING_POLICY_HPP_INCLUDED__
+#define __CASS_LOAD_BALANCING_POLICY_HPP_INCLUDED__
 
-#include "iterable.hpp"
-#include "body_result.hpp"
+#include <vector>
+#include <string>
 
-struct MessageBodyResult;
+#include "cassandra.h"
+#include "host.hpp"
 
-// struct ResultIterator : Iterable {
-//   MessageBodyResult* result;
-//   int32_t     row_position;
-//   char*       position;
+namespace cass {
 
-//   ResultIterator(
-//       MessageBodyResult* result) :
-//       Iterable(CASS_ITERABLE_TYPE_RESULT),
-//       result(result),
-//       row_position(0),
-//       position(result->rows)
-//   {}
+class LoadBalancingPolicy {
+  public:
+    virtual ~LoadBalancingPolicy() {}
 
-//   inline bool
-//   next() {
-//     return false;
-//   }
-// };
+    virtual void init(const std::vector<Host>& hosts) = 0;
+
+    virtual CassHostDistance distance(const Host& host) = 0;
+
+    // TODO(mpenick): Figure out what parameters to pass, keyspace, consistency, etc.
+    virtual void new_query_plan(std::list<Host>* output) = 0;
+};
+
+} // namespace cass
 
 #endif
