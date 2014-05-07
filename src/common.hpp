@@ -31,20 +31,20 @@
 
 #include "cassandra.h"
 
-#define CASS_OPCODE_ERROR        0x00
-#define CASS_OPCODE_STARTUP      0x01
-#define CASS_OPCODE_READY        0x02
-#define CASS_OPCODE_AUTHENTICATE 0x03
-#define CASS_OPCODE_CREDENTIALS  0x04
-#define CASS_OPCODE_OPTIONS      0x05
-#define CASS_OPCODE_SUPPORTED    0x06
-#define CASS_OPCODE_QUERY        0x07
-#define CASS_OPCODE_RESULT       0x08
-#define CASS_OPCODE_PREPARE      0x09
-#define CASS_OPCODE_EXECUTE      0x0A
-#define CASS_OPCODE_REGISTER     0x0B
-#define CASS_OPCODE_EVENT        0x0C
-#define CASS_OPCODE_BATCH        0x0D
+#define CQL_OPCODE_ERROR        0x00
+#define CQL_OPCODE_STARTUP      0x01
+#define CQL_OPCODE_READY        0x02
+#define CQL_OPCODE_AUTHENTICATE 0x03
+#define CQL_OPCODE_CREDENTIALS  0x04
+#define CQL_OPCODE_OPTIONS      0x05
+#define CQL_OPCODE_SUPPORTED    0x06
+#define CQL_OPCODE_QUERY        0x07
+#define CQL_OPCODE_RESULT       0x08
+#define CQL_OPCODE_PREPARE      0x09
+#define CQL_OPCODE_EXECUTE      0x0A
+#define CQL_OPCODE_REGISTER     0x0B
+#define CQL_OPCODE_EVENT        0x0C
+#define CQL_OPCODE_BATCH        0x0D
 
 #include "future.hpp"
 #include "error.hpp"
@@ -102,32 +102,32 @@ std::string
 opcode_to_string(
     int opcode) {
   switch (opcode) {
-    case CASS_OPCODE_ERROR:
-      return "CASS_OPCODE_ERROR";
-    case CASS_OPCODE_STARTUP:
-      return "CASS_OPCODE_STARTUP";
-    case CASS_OPCODE_READY:
-      return "CASS_OPCODE_READY";
-    case CASS_OPCODE_AUTHENTICATE:
-      return "CASS_OPCODE_AUTHENTICATE";
-    case CASS_OPCODE_CREDENTIALS:
-      return "CASS_OPCODE_CREDENTIALS";
-    case CASS_OPCODE_OPTIONS:
-      return "CASS_OPCODE_OPTIONS";
-    case CASS_OPCODE_SUPPORTED:
-      return "CASS_OPCODE_SUPPORTED";
-    case CASS_OPCODE_QUERY:
-      return "CASS_OPCODE_QUERY";
-    case CASS_OPCODE_RESULT:
-      return "CASS_OPCODE_RESULT";
-    case CASS_OPCODE_PREPARE:
-      return "CASS_OPCODE_PREPARE";
-    case CASS_OPCODE_EXECUTE:
-      return "CASS_OPCODE_EXECUTE";
-    case CASS_OPCODE_REGISTER:
-      return "CASS_OPCODE_REGISTER";
-    case CASS_OPCODE_EVENT:
-      return "CASS_OPCODE_EVENT";
+    case CQL_OPCODE_ERROR:
+      return "CQL_OPCODE_ERROR";
+    case CQL_OPCODE_STARTUP:
+      return "CQL_OPCODE_STARTUP";
+    case CQL_OPCODE_READY:
+      return "CQL_OPCODE_READY";
+    case CQL_OPCODE_AUTHENTICATE:
+      return "CQL_OPCODE_AUTHENTICATE";
+    case CQL_OPCODE_CREDENTIALS:
+      return "CQL_OPCODE_CREDENTIALS";
+    case CQL_OPCODE_OPTIONS:
+      return "CQL_OPCODE_OPTIONS";
+    case CQL_OPCODE_SUPPORTED:
+      return "CQL_OPCODE_SUPPORTED";
+    case CQL_OPCODE_QUERY:
+      return "CQL_OPCODE_QUERY";
+    case CQL_OPCODE_RESULT:
+      return "CQL_OPCODE_RESULT";
+    case CQL_OPCODE_PREPARE:
+      return "CQL_OPCODE_PREPARE";
+    case CQL_OPCODE_EXECUTE:
+      return "CQL_OPCODE_EXECUTE";
+    case CQL_OPCODE_REGISTER:
+      return "CQL_OPCODE_REGISTER";
+    case CQL_OPCODE_EVENT:
+      return "CQL_OPCODE_EVENT";
   };
   assert(false);
   return "";

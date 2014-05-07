@@ -37,7 +37,7 @@ struct BodyStartup
 
   uint8_t
   opcode() const {
-    return CASS_OPCODE_STARTUP;
+    return CQL_OPCODE_STARTUP;
   }
 
   bool
@@ -76,7 +76,7 @@ struct BodyStartup
     }
 
     if (!version.empty()) {
-      const char* key = "CASS_VERSION";
+      const char* key = "CQL_VERSION";
       size += (sizeof(int16_t) + strlen(key));
       size += (sizeof(int16_t) + version.size());
       options[key] = version;

@@ -29,7 +29,7 @@ struct BodyReady
 
   uint8_t
   opcode() const {
-    return CASS_OPCODE_READY;
+    return CQL_OPCODE_READY;
   }
 
   bool

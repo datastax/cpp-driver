@@ -79,28 +79,28 @@ struct Message {
   allocate_body(
       uint8_t  opcode) {
     switch (opcode) {
-      case CASS_OPCODE_RESULT:
+      case CQL_OPCODE_RESULT:
         return static_cast<MessageBody*>(new Result());
 
-      case CASS_OPCODE_PREPARE:
+      case CQL_OPCODE_PREPARE:
         return static_cast<MessageBody*>(new PrepareStatement());
 
-      case CASS_OPCODE_ERROR:
+      case CQL_OPCODE_ERROR:
         return static_cast<MessageBody*>(new BodyError());
 
-      case CASS_OPCODE_OPTIONS:
+      case CQL_OPCODE_OPTIONS:
         return static_cast<MessageBody*>(new BodyOptions());
 
-      case CASS_OPCODE_STARTUP:
+      case CQL_OPCODE_STARTUP:
         return static_cast<MessageBody*>(new BodyStartup());
 
-      case CASS_OPCODE_SUPPORTED:
+      case CQL_OPCODE_SUPPORTED:
         return static_cast<MessageBody*>(new BodySupported());
 
-      case CASS_OPCODE_QUERY:
+      case CQL_OPCODE_QUERY:
         return static_cast<MessageBody*>(new QueryStatement());
 
-      case CASS_OPCODE_READY:
+      case CQL_OPCODE_READY:
         return static_cast<MessageBody*>(new BodyReady());
 
       default:

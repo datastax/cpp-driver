@@ -32,7 +32,7 @@ struct PrepareStatement
 
   uint8_t
   opcode() const {
-    return CASS_OPCODE_PREPARE;
+    return CQL_OPCODE_PREPARE;
   }
 
   void

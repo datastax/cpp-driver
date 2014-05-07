@@ -203,7 +203,7 @@ struct Session {
       size_t      length) {
     Request* request = new Request(
         new MessageFutureImpl(),
-        new Message(CASS_OPCODE_PREPARE));
+        new Message(CQL_OPCODE_PREPARE));
 
     request->future->data.assign(statement, length);
 

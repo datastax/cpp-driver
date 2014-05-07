@@ -34,7 +34,7 @@ struct BodySupported
 
   uint8_t
   opcode() const {
-    return CASS_OPCODE_SUPPORTED;
+    return CQL_OPCODE_SUPPORTED;
   }
 
   bool

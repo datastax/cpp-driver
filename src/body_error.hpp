@@ -49,7 +49,7 @@ struct BodyError
 
   uint8_t
   opcode() const {
-    return CASS_OPCODE_ERROR;
+    return CQL_OPCODE_ERROR;
   }
 
   bool

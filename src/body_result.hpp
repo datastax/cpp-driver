@@ -131,7 +131,7 @@ struct Result
 
   uint8_t
   opcode() const {
-    return CASS_OPCODE_RESULT;
+    return CQL_OPCODE_RESULT;
   }
 
   bool

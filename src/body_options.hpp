@@ -29,7 +29,7 @@ struct BodyOptions
 
   uint8_t
   opcode() const {
-    return CASS_OPCODE_OPTIONS;
+    return CQL_OPCODE_OPTIONS;
   }
 
   bool

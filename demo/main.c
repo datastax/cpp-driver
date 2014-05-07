@@ -86,11 +86,16 @@ main() {
   /*CassFuture* shutdown_future = NULL;*/
   int err;
 
-  const char* cp1 = "127.0.0.2";
-  const char* cp2 = "localhost";
-
+  const char* cp1 = "127.0.0.1";
   cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, cp1, strlen(cp1));
+
+  /*
+  const char* cp2 = "127.0.0.2";
+  const char* cp3 = "127.0.0.3";
+
   cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, cp2, strlen(cp2));
+  cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, cp3, strlen(cp3));
+  */
 
   err = cass_session_connect(session, &session_future);
   if (err != 0) {

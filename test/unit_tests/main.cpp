@@ -26,11 +26,11 @@
 #include <stdio.h>
 #include <iostream>
 
-#include "../../src/cql_common.hpp"
-#include "cql_message.hpp"
-#include "cql_ssl_context.hpp"
-#include "cql_ssl_session.hpp"
-#include "cql_stream_storage.hpp"
+#include "common.hpp"
+#include "message.hpp"
+#include "ssl_context.hpp"
+#include "ssl_session.hpp"
+#include "stream_storage.hpp"
 
 char TEST_MESSAGE_ERROR[] = {
   0x81, 0x01, 0x7F, 0x00, 0x00, 0x00, 0x00, 0x0C,  // header
@@ -63,7 +63,7 @@ char TEST_MESSAGE_QUERY[] = {
 };
 
 char TEST_MESSAGE_QUERY_VALUE[] = {
-  0x02, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x27,  // header
+  0x02, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x29,  // header
   0x00, 0x00, 0x00, 0x10,                          // string length (16)
   0x53, 0x45, 0x4c, 0x45, 0x43, 0x54,              // SELECT
   0x20, 0x2a, 0x20,                                //  *
@@ -72,7 +72,7 @@ char TEST_MESSAGE_QUERY_VALUE[] = {
   0x00, 0x01,                                      // consistency
   0x01,                                            // flags
   0x00, 0x01,                                      // values size
-  0x00, 0x0c,                                      // value size 12
+  0x00, 0x00, 0x00, 0x0c,                          // value size 12
   0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x2e,        // system.
   0x70, 0x65, 0x65, 0x72, 0x73,                    // peers
 };
@@ -107,7 +107,7 @@ print_hex(
 
 bool
 test_error_consume() {
-  cql::Message message;
+  cass::Message message;
   CHECK_EQUAL(
       message.consume(TEST_MESSAGE_ERROR,
                       sizeof(TEST_MESSAGE_ERROR)),
@@ -122,12 +122,12 @@ test_error_consume() {
 
 bool
 test_error_prepare() {
-  cql::Message message;
+  cass::Message message;
   message.version = 0x81;
   message.flags   = 0x01;
   message.stream  = 0x7F;
   message.opcode  = 0x00;
-  message.body.reset(new cql::BodyError(0xFFFFFFFF, (const char*)"foobar", 6));
+  message.body.reset(new cass::BodyError(0xFFFFFFFF, (const char*)"foobar", 6));
 
   std::unique_ptr<char> buffer;
   char*                 buffer_ptr;
@@ -146,7 +146,7 @@ test_error_prepare() {
 
 bool
 test_options_prepare() {
-  cql::Message          message(CQL_OPCODE_OPTIONS);
+  cass::Message          message(CQL_OPCODE_OPTIONS);
   std::unique_ptr<char> buffer;
   char*                 buffer_ptr;
   size_t                size;
@@ -166,7 +166,7 @@ test_options_prepare() {
 
 bool
 test_startup_prepare() {
-  cql::Message          message(CQL_OPCODE_STARTUP);
+  cass::Message          message(CQL_OPCODE_STARTUP);
   std::unique_ptr<char> buffer;
   char*                 buffer_ptr;
   size_t                size;
@@ -186,15 +186,15 @@ test_startup_prepare() {
 
 bool
 test_query_query() {
-  cql::Message          message(CQL_OPCODE_QUERY);
+  cass::Message          message(CQL_OPCODE_QUERY);
   std::unique_ptr<char> buffer;
   char*                 buffer_ptr;
   size_t                size;
 
   CHECK(message.body);
-  cql::BodyQuery* query = static_cast<cql::BodyQuery*>(message.body.get());
-  query->query_string("SELECT * FROM system.peers;");
-  query->consistency(CQL_CONSISTENCY_ONE);
+  cass::QueryStatement* query = static_cast<cass::QueryStatement*>(message.body.get());
+  query->statement("SELECT * FROM system.peers;");
+  query->consistency(CASS_CONSISTENCY_ONE);
 
   CHECK(message.prepare(&buffer_ptr, size));
   buffer.reset(buffer_ptr);
@@ -209,17 +209,18 @@ test_query_query() {
 
 bool
 test_query_query_value() {
-  cql::Message          message(CQL_OPCODE_QUERY);
+  cass::Message          message(CQL_OPCODE_QUERY);
   std::unique_ptr<char> buffer;
   char*                 buffer_ptr;
   size_t                size;
   const char*           value = "system.peers";
 
   CHECK(message.body);
-  cql::BodyQuery* query = static_cast<cql::BodyQuery*>(message.body.get());
-  query->query_string("SELECT * FROM ?;");
-  query->add_value(value, strlen(value));
-  query->consistency(CQL_CONSISTENCY_ONE);
+  cass::QueryStatement* query = static_cast<cass::QueryStatement*>(message.body.get());
+  query->statement("SELECT * FROM ?;");
+  // TODO:(mpenick): Make const
+  query->values.push_back(cass::Statement::Value(const_cast<char*>(value), strlen(value)));
+  query->consistency(CASS_CONSISTENCY_ONE);
 
   CHECK(message.prepare(&buffer_ptr, size));
   buffer.reset(buffer_ptr);
@@ -241,17 +242,17 @@ test_query_query_value() {
 
 bool
 test_query_query_paging() {
-  cql::Message          message(CQL_OPCODE_QUERY);
+  cass::Message          message(CQL_OPCODE_QUERY);
   std::unique_ptr<char> buffer;
   char*                 buffer_ptr;
   size_t                size;
   const char*           paging_state = "foobar";
 
   CHECK(message.body);
-  cql::BodyQuery* query = static_cast<cql::BodyQuery*>(message.body.get());
-  query->query_string("SELECT * FROM system.peers;");
-  query->consistency(CQL_CONSISTENCY_ONE);
-  query->paging_state(paging_state, strlen(paging_state));
+  cass::QueryStatement* query = static_cast<cass::QueryStatement*>(message.body.get());
+  query->statement("SELECT * FROM system.peers;");
+  query->consistency(CASS_CONSISTENCY_ONE);
+  query->paging_state.assign(paging_state, paging_state + strlen(paging_state));
 
   CHECK(message.prepare(&buffer_ptr, size));
   buffer.reset(buffer_ptr);
@@ -267,7 +268,7 @@ test_query_query_paging() {
 
 bool
 test_stream_storage() {
-  typedef cql::StreamStorage<int, int, 127> StreamStorageCollection;
+  typedef cass::StreamStorage<int, int, 127> StreamStorageCollection;
 
   StreamStorageCollection streams;
   {
@@ -331,29 +332,29 @@ test_stream_storage() {
 
 bool
 test_ssl() {
-  cql::SSLContext ssl_client_context;
+  cass::SSLContext ssl_client_context;
   ssl_client_context.init(true, true);
 
-  cql::SSLContext ssl_server_context;
+  cass::SSLContext ssl_server_context;
   ssl_server_context.init(true, false);
 
-  RSA* rsa = cql::SSLContext::create_key(2048);
+  RSA* rsa = cass::SSLContext::create_key(2048);
   if (!rsa) {
     std::cerr << "create_key" << std::endl;
     return 1;
   }
 
   const char* pszCommonName = "test name";
-  X509* cert = cql::SSLContext::create_cert(
+  X509* cert = cass::SSLContext::create_cert(
       rsa, rsa, pszCommonName, pszCommonName, "DICE", 3 * 365 * 24 * 60 * 60);
   CHECK(cert);
   ssl_server_context.use_key(rsa);
   ssl_server_context.use_cert(cert);
 
-  std::unique_ptr<cql::SSLSession> client_session(
+  std::unique_ptr<cass::SSLSession> client_session(
       ssl_client_context.session_new());
 
-  std::unique_ptr<cql::SSLSession> server_session(
+  std::unique_ptr<cass::SSLSession> server_session(
       ssl_server_context.session_new());
 
   CHECK(client_session->init());
@@ -378,7 +379,7 @@ test_ssl() {
 
   for (;;) {
     size_t client_read = 0;
-    cql::Error* err = client_session->read_write(
+    cass::Error* err = client_session->read_write(
         server_write_output.base,
         server_write_output.len,
         client_read,

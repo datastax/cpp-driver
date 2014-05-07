@@ -82,7 +82,7 @@ struct ClientConnection {
 
   ClientConnectionState       state_;
   uv_loop_t*                  loop_;
-  std::unique_ptr<Message> incomming_;
+  std::unique_ptr<Message>    incoming_;
   StreamStorageCollection     stream_storage_;
   ConnectionCallback          connect_callback_;
   KeyspaceCallback            keyspace_callback_;
@@ -108,7 +108,7 @@ struct ClientConnection {
       const Host&     host) :
       state_(CLIENT_STATE_NEW),
       loop_(loop),
-      incomming_(new Message()),
+      incoming_(new Message()),
       connect_callback_(nullptr),
       keyspace_callback_(nullptr),
       prepare_callback_(nullptr),
@@ -183,15 +183,15 @@ struct ClientConnection {
     int   remaining = size;
 
     while (remaining != 0) {
-      int consumed = incomming_->consume(buffer, remaining);
+      int consumed = incoming_->consume(buffer, remaining);
       if (consumed < 0) {
         // TODO(mstump) probably means connection closed/failed
         fprintf(stderr, "consume error\n");
       }
 
-      if (incomming_->body_ready) {
-        Message* message = incomming_.release();
-        incomming_.reset(new Message());
+      if (incoming_->body_ready) {
+        Message* message = incoming_.release();
+        incoming_.reset(new Message());
 
         char log_message[512];
         snprintf(
@@ -209,16 +209,16 @@ struct ClientConnection {
           assert(false);
         } else {
           switch (message->opcode) {
-            case CASS_OPCODE_SUPPORTED:
+            case CQL_OPCODE_SUPPORTED:
               on_supported(message);
               break;
-            case CASS_OPCODE_ERROR:
+            case CQL_OPCODE_ERROR:
               on_error(message);
               break;
-            case CASS_OPCODE_READY:
+            case CQL_OPCODE_READY:
               on_ready(message);
               break;
-            case CASS_OPCODE_RESULT:
+            case CQL_OPCODE_RESULT:
               on_result(message);
               break;
             default:
@@ -516,7 +516,7 @@ struct ClientConnection {
   void
   set_keyspace(
       const std::string& keyspace) {
-    Message message(CASS_OPCODE_QUERY);
+    Message message(CQL_OPCODE_QUERY);
     QueryStatement* query = static_cast<QueryStatement*>(message.body.get());
     query->statement("USE " + keyspace);
     execute(&message, NULL);
@@ -542,14 +542,14 @@ struct ClientConnection {
   void
   send_options() {
     log(CASS_LOG_DEBUG, "send_options");
-    Message message(CASS_OPCODE_OPTIONS);
+    Message message(CQL_OPCODE_OPTIONS);
     execute(&message, NULL);
   }
 
   void
   send_startup() {
     log(CASS_LOG_DEBUG, "send_startup");
-    Message      message(CASS_OPCODE_STARTUP);
+    Message      message(CQL_OPCODE_STARTUP);
     BodyStartup* startup = static_cast<BodyStartup*>(message.body.get());
     startup->version = version_;
     execute(&message, NULL);

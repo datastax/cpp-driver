@@ -55,7 +55,7 @@ struct BatchStatement
 
   uint8_t
   opcode() const {
-    return CASS_OPCODE_BATCH;
+    return CQL_OPCODE_BATCH;
   }
 
   void

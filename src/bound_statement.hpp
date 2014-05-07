@@ -65,7 +65,7 @@ struct BoundStatement
 
   uint8_t
   opcode() const {
-    return CASS_OPCODE_QUERY;
+    return CQL_OPCODE_QUERY;
   }
 
   uint8_t

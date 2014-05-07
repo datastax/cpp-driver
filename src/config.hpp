@@ -44,12 +44,12 @@ struct Config {
       compression_(0),
       max_schema_agreement_wait_(10),
       control_connection_timeout_(10),
-      thread_count_io_(2),
+      thread_count_io_(1),
       thread_count_callback_(4),
       queue_size_io_(1024),
       queue_size_pool_(256),
-      core_connections_per_host_(2),
-      max_connections_per_host_(4),
+      core_connections_per_host_(1),
+      max_connections_per_host_(2),
       log_callback_(nullptr)
   {}
 
