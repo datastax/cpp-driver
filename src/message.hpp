@@ -26,7 +26,7 @@
 #include "body_startup.hpp"
 #include "body_supported.hpp"
 #include "bound_statement.hpp"
-#include "query.hpp"
+#include "query_statement.hpp"
 
 
 #define CASS_HEADER_SIZE 8
@@ -43,7 +43,7 @@ struct Message {
   bool                            header_received;
   char                            header_buffer[CASS_HEADER_SIZE];
   char*                           header_buffer_pos;
-  std::unique_ptr<MessageBody> body;
+  std::unique_ptr<MessageBody>    body;
   std::unique_ptr<char>           body_buffer;
   char*                           body_buffer_pos;
   bool                            body_ready;

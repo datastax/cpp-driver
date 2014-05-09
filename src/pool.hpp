@@ -24,12 +24,14 @@
 #include "bound_queue.hpp"
 #include "client_connection.hpp"
 #include "request.hpp"
+#include "session.hpp"
 
 namespace cass {
 
 class Pool {
   typedef std::list<ClientConnection*> ConnectionCollection;
 
+  Session* session_;
   uv_loop_t*              loop_;
   SSLContext*             ssl_context_;
   Host                 host_;
@@ -41,13 +43,14 @@ class Pool {
   BoundQueue<Request*> request_queue_;
 
  public:
-  Pool(
+  Pool(Session* session,
       uv_loop_t*     loop,
       SSLContext*    ssl_context,
       const Host& host,
       size_t         core_connections_per_host,
       size_t         max_connections_per_host,
       size_t         max_simultaneous_creation = 1) :
+      session_(session),
       loop_(loop),
       ssl_context_(ssl_context),
       host_(host),
@@ -64,6 +67,9 @@ class Pool {
   connect_callback(
       ClientConnection* connection,
       Error*            error) {
+
+    session_->notify_connect_q(host_);
+
     if (error) {
       // TODO(mstump) do something with failure to connect
     }
@@ -142,24 +148,21 @@ class Pool {
     return nullptr;
   }
 
-  Error*
+  bool
   borrow_connection(
       ClientConnection** output) {
     *output = find_least_busy();
     if (output) {
-      return CASS_ERROR_NO_ERROR;
+      return true;
     }
 
     if (connections_.size() >= max_connections_per_host_) {
-      return new Error(
-          CASS_ERROR_SOURCE_LIBRARY,
-          CASS_ERROR_LIB_MAX_CONNECTIONS,
-          "all connections busy",
-          __FILE__,
-          __LINE__);
+      return false;
     }
 
-    return CASS_ERROR_NO_ERROR;
+    // TODO(mpenick): create new connection
+
+    return false;
   }
 };
 

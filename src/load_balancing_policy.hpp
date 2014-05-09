@@ -17,7 +17,7 @@
 #ifndef __CASS_LOAD_BALANCING_POLICY_HPP_INCLUDED__
 #define __CASS_LOAD_BALANCING_POLICY_HPP_INCLUDED__
 
-#include <vector>
+#include <set>
 #include <string>
 
 #include "cassandra.h"
@@ -29,7 +29,7 @@ class LoadBalancingPolicy {
   public:
     virtual ~LoadBalancingPolicy() {}
 
-    virtual void init(const std::vector<Host>& hosts) = 0;
+    virtual void init(const std::set<Host>& hosts) = 0;
 
     virtual CassHostDistance distance(const Host& host) = 0;
 

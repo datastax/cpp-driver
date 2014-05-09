@@ -31,11 +31,11 @@ struct Host {
     : address(address) { }
 };
 
-bool operator<(const Host& a, const Host& b) {
+inline bool operator<(const Host& a, const Host& b) {
   return a.address < b.address;
 }
 
-bool operator==(const Host& a, const Host& b) {
+inline bool operator==(const Host& a, const Host& b) {
   return a.address == b.address;
 }
 

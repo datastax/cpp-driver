@@ -24,6 +24,7 @@ namespace cass {
 
 struct Error;
 
+
 struct Future {
   std::unique_ptr<Error> error;
 
@@ -58,8 +59,8 @@ struct FutureImpl
 
   FutureImpl() :
       flag(false),
-      data(NULL),
-      result(nullptr),
+      data(Data()),
+      result(Result()),
       callback(NULL),
       use_local_loop(false)
   {}
@@ -82,8 +83,7 @@ struct FutureImpl
    * @param loop the libuv event loop
    */
   void
-  notify(
-      uv_loop_t* loop) {
+  notify(uv_loop_t* loop) {
     flag.store(true, std::memory_order_release);
     condition.notify_all();
 

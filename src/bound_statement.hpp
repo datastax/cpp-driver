@@ -33,9 +33,7 @@
 
 namespace cass {
 
-struct BoundStatement
-    : public MessageBody,
-      public Statement {
+struct BoundStatement : public Statement {
 
   std::string       id;
   int16_t           consistency_value;

@@ -138,12 +138,11 @@ class Address {
     }
 };
 
-bool operator<(const Address& a, const Address& b) {
-  printf("%s %s\n", a.to_string().c_str(), b.to_string().c_str());
+inline bool operator<(const Address& a, const Address& b) {
   return a.compare(b) < 0;
 }
 
-bool operator==(const Address& a, const Address& b) {
+inline bool operator==(const Address& a, const Address& b) {
   return a.compare(b) == 0;
 }
 

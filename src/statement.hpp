@@ -20,6 +20,8 @@
 #include <list>
 #include <utility>
 
+#include "message_body.hpp"
+
 #define CASS_VALUE_CHECK_INDEX(i)                                        \
   if (index >= size()) {                                                \
     return CASS_ERROR_LIB_BAD_PARAMS;                                    \
@@ -27,7 +29,7 @@
 
 namespace cass {
 
-struct Statement {
+struct Statement : public MessageBody {
   typedef std::pair<char*, size_t>        Value;
   typedef std::vector<Value>              ValueCollection;
   typedef ValueCollection::iterator       ValueIterator;

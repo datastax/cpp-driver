@@ -364,6 +364,9 @@ struct ClientConnection {
           "connect failed error %s (%s)\n",
           uv_err_name(uv_last_error(connection->loop_)),
           connection->host_.address.to_string().c_str());
+      if (connection->connect_callback_) {
+        connection->connect_callback_(connection, NULL); // TODO: need error
+      }
       return;
     }
 

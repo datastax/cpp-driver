@@ -32,9 +32,7 @@
 
 namespace cass {
 
-struct QueryStatement
-    : public MessageBody,
-      public Statement {
+struct QueryStatement : public Statement {
   std::string       query;
   int16_t           consistency_value;
   int               page_size;

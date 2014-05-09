@@ -20,7 +20,7 @@
 #include "session.hpp"
 
 // This abstraction allows us to separate internal types from the
-// external opaque pointers that we expose in C.
+// external opaque pointers that we expose.
 template<typename In, typename Ex>
 struct External : public In {
   inline In* from() { return static_cast<In*>(this); }
@@ -32,7 +32,6 @@ extern "C" {
 
 // Internal/External type mappings
 struct CassSession : External<cass::Session, CassSession> { };
-struct CassHost : External<cass::Host, CassHost> { };
 struct CassStatement : External<cass::Statement, CassStatement> { };
 struct CassFuture : External<cass::Future, CassFuture> { };
 struct CassBatchStatement : External<cass::BatchStatement, CassBatchStatement> { };
@@ -463,60 +462,13 @@ cass_statement_bind_varint(
   return statement->bind(index, reinterpret_cast<char*>(value), length);
 }
 
-struct CassLoadBalancingPolicy : public cass::LoadBalancingPolicy {
-  void* data_;
-  std::vector<cass::Host> hosts_;
-  CassLoadBalancingPolicyImpl* impl_;
-
-  CassLoadBalancingPolicy(void* data, CassLoadBalancingPolicyImpl* impl)
-    : data_(data)
-    , impl_(impl)  { }
-
-  virtual void init(const std::vector<cass::Host>& hosts) {
-    hosts_ = hosts;
-    if(impl_->init_func != NULL) {
-      impl_->init_func(this);
-    }
-  }
-
-  virtual CassHostDistance distance(const cass::Host& host) {
-    if(impl_->host_distance_func != NULL) {
-      return impl_->host_distance_func(this, CassHost::to(&host));
-    }
-    return CASS_HOST_DISTANCE_IGNORE;
-  }
-
-  virtual void new_query_plan(std::list<cass::Host>* output) {
-    //if(impl_->next_host_func != NULL) {
-    //  const char* address = impl_->next_host_func(this, 1);
-    //  while(address != NULL) {
-    //    output->push_back(address);
-    //    address = impl_->next_host_func(this, 0);
-    //  }
-    //}
-  }
-};
-
-size_t cass_lb_policy_hosts_count(CassLoadBalancingPolicy* policy) {
-  return policy->hosts_.size();
-}
-
-CassHost* cass_lb_policy_get_host(CassLoadBalancingPolicy* policy, size_t index) {
-  return CassHost::to(&policy->hosts_[index]);
-}
-
-void* cass_lb_policy_get_data(CassLoadBalancingPolicy* policy) {
-  return policy->data_;
-}
-
-const char* cass_host_get_address(CassHost* host) {
-  return host->address.to_string().c_str();
-}
-
-void cass_session_set_load_balancing_policy(CassSession* session,
-                                           void* data,
-                                           CassLoadBalancingPolicyImpl* impl) {
-  session->set_load_balancing_policy(new CassLoadBalancingPolicy(data, impl));
+int
+cass_session_exec(
+    CassSession*   session,
+    CassStatement* statement,
+    CassFuture**   future) {
+  *future = CassFuture::to(session->execute(statement->from()));
+  return CASS_ERROR_NO_ERROR;
 }
 
 } // extern "C"

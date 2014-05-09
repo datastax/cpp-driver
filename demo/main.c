@@ -26,59 +26,6 @@ void print_error(const char* message, int err) {
   printf("%s: %s (%d)\n", message, cass_error_desc(err), err);
 }
 
-/* Example round-robin LB policy */
-
-CassHostDistance rr_host_distance(CassLoadBalancingPolicy* policy, const CassHost* host);
-const char* rr_next_host(CassLoadBalancingPolicy* policy, int is_initial);
-
-typedef struct {
-  size_t index;
-  size_t next_host_index;
-  size_t remaining;
-} RoundRobinPolicy;
-
-RoundRobinPolicy* rr_policy_new();
-void rr_policy_free(RoundRobinPolicy* rr_policy);
-
-CassLoadBalancingPolicyImpl rr_policy_impl = {
-  NULL,
-  &rr_host_distance,
-  &rr_next_host
-};
-
-CassHostDistance rr_host_distance(CassLoadBalancingPolicy* policy, const CassHost* host) {
-  return CASS_HOST_DISTANCE_LOCAL;
-}
-
-const char* rr_next_host(CassLoadBalancingPolicy* policy, int is_initial) {
-  RoundRobinPolicy* rr_policy = (RoundRobinPolicy*)cass_lb_policy_get_data(policy);
-  
-  size_t hosts_count = cass_lb_policy_hosts_count(policy);
-
-  if(is_initial) {
-    rr_policy->remaining = hosts_count;
-    rr_policy->next_host_index = rr_policy->index++;
-  }
-
-  if(rr_policy->remaining != 0) {
-    CassHost* host = cass_lb_policy_get_host(policy, rr_policy->next_host_index++ % hosts_count);
-    rr_policy->remaining--;
-    return cass_host_get_address(host);
-  }
-
-  return NULL;
-}
-
-RoundRobinPolicy* rr_policy_new() {
-  RoundRobinPolicy* rr_policy = (RoundRobinPolicy*)malloc(sizeof(RoundRobinPolicy));
-  rr_policy->index = 0;
-  return rr_policy;
-}
-
-void rr_policy_free(RoundRobinPolicy* rr_policy) {
-  free(rr_policy);
-}
-
 int
 main() {
   CassSession* session = cass_session_new();
@@ -86,13 +33,18 @@ main() {
   /*CassFuture* shutdown_future = NULL;*/
   int err;
 
+  const char* query = "SELECT * FROM system.peers";
+  CassStatement* statement = NULL;
+  CassFuture* result_future = NULL;
+  CassResult* result = NULL;
+
   const char* cp1 = "127.0.0.1";
   cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, cp1, strlen(cp1));
+
 
   /*
   const char* cp2 = "127.0.0.2";
   const char* cp3 = "127.0.0.3";
-
   cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, cp2, strlen(cp2));
   cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, cp3, strlen(cp3));
   */
@@ -105,6 +57,12 @@ main() {
 
   cass_future_wait(session_future);
   cass_future_free(session_future);
+
+  cass_session_query(session, query, strlen(query), 0, CASS_CONSISTENCY_ONE, &statement);
+  cass_session_exec(session, statement, &result_future);
+
+  cass_future_wait(result_future);
+  result = cass_future_get_result(result_future);
 
 /*
   session = cass_future_get_session(session_future);

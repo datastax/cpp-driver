@@ -28,8 +28,8 @@ class RoundRobinPolicy : public LoadBalancingPolicy {
     RoundRobinPolicy()
       : index_(0) { }
 
-    void init(const std::vector<Host>& hosts) {
-      hosts_ = hosts;
+    void init(const std::set<Host>& hosts) {
+      hosts_.assign(hosts.begin(), hosts.end());
     }
 
     CassHostDistance distance(const Host& host) {

@@ -82,9 +82,6 @@ typedef struct CassPrepared CassPrepared;
 struct CassResult;
 typedef struct CassResult CassResult;
 
-struct CassHost;
-typedef struct CassHost CassHost;
-
 struct CassLoadBalancingPolicy;
 typedef struct CassLoadBalancingPolicy CassLoadBalancingPolicy;
 
@@ -155,19 +152,6 @@ typedef enum {
   CASS_HOST_DISTANCE_REMOTE,
   CASS_HOST_DISTANCE_IGNORE
 } CassHostDistance;
-
-typedef void (*CassLoadBalancingInitFunction)(CassLoadBalancingPolicy* policy);
-typedef CassHostDistance (*CassLoadBalancingHostDistanceFunction)(CassLoadBalancingPolicy* policy,
-                                                                  const CassHost* host);
-
-typedef const char* (*CassLoadBalancingNextHostFunction)(CassLoadBalancingPolicy* policy,
-                                                         int is_initial);
-
-typedef struct {
-  CassLoadBalancingInitFunction init_func;
-  CassLoadBalancingHostDistanceFunction host_distance_func;
-  CassLoadBalancingNextHostFunction next_host_func;
-} CassLoadBalancingPolicyImpl;
 
 #ifdef __cplusplus
 extern "C" {
@@ -1116,29 +1100,6 @@ CASS_EXPORT int
 cass_map_get_value(
     void*  item,
     void** output);
-
-/***********************************************************************************
- *
- * Load balancing policy
- *
- ************************************************************************************/
-
-CASS_EXPORT size_t
-cass_lb_policy_hosts_count(CassLoadBalancingPolicy* policy);
-
-CASS_EXPORT CassHost*
-cass_lb_policy_get_host(CassLoadBalancingPolicy* policy, size_t index);
-
-CASS_EXPORT void*
-cass_lb_policy_get_data(CassLoadBalancingPolicy* policy);
-
-CASS_EXPORT const char*
-cass_host_get_address(CassHost* host);
-
-CASS_EXPORT void
-cass_session_set_load_balancing_policy(CassSession* session,
-                                      void* data,
-                                      CassLoadBalancingPolicyImpl* impl);
 
 /***********************************************************************************
  *

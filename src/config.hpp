@@ -20,6 +20,8 @@
 #include <list>
 #include <string>
 
+#include "common.hpp"
+
 namespace cass {
 
 struct Config {
@@ -32,7 +34,7 @@ struct Config {
   size_t                 thread_count_io_;
   size_t                 thread_count_callback_;
   size_t                 queue_size_io_;
-  size_t                 queue_size_pool_;
+  size_t                 queue_size_event_;
   size_t                 core_connections_per_host_;
   size_t                 max_connections_per_host_;
   LogCallback            log_callback_;
@@ -47,7 +49,7 @@ struct Config {
       thread_count_io_(1),
       thread_count_callback_(4),
       queue_size_io_(1024),
-      queue_size_pool_(256),
+      queue_size_event_(256),
       core_connections_per_host_(1),
       max_connections_per_host_(2),
       log_callback_(nullptr)
@@ -65,8 +67,8 @@ struct Config {
     return queue_size_io_;
   }
 
-  size_t queue_size_pool() const {
-    return queue_size_pool_;
+  size_t queue_size_event() const {
+    return queue_size_event_;
   }
 
   size_t core_connections_per_host() const {
