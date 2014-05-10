@@ -37,12 +37,9 @@ class StreamStorage {
       const StorageType& input,
       IdType&      output) {
     if (available_streams_index_ >= Max) {
-      return new Error(
-          CASS_ERROR_SOURCE_LIBRARY,
-          CASS_ERROR_LIB_NO_STREAMS,
-          "no available streams",
-          __FILE__,
-          __LINE__);
+      return CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
+                        CASS_ERROR_LIB_NO_STREAMS,
+                        "no available streams");
     }
 
     intptr_t index             = available_streams_index_++;
@@ -63,12 +60,9 @@ class StreamStorage {
         available_streams_[--available_streams_index_] = input;
         allocated_streams_[input] = false;
       } else {
-        return new Error(
-            CASS_ERROR_SOURCE_LIBRARY,
-            CASS_ERROR_LIB_NO_STREAMS,
-            "this stream has already been released",
-            __FILE__,
-            __LINE__);
+        return CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
+                          CASS_ERROR_LIB_NO_STREAMS,
+                          "this stream has already been released");
       }
     }
     return CASS_ERROR_NO_ERROR;

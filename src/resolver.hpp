@@ -28,6 +28,8 @@ namespace cass {
 
 class Resolver {
   public:
+    typedef std::function<void(Resolver*)> Callback;
+
     enum Status {
       RESOLVING,
       FAILED_BAD_PARAM,
@@ -45,7 +47,7 @@ class Resolver {
 
     static void resolve(uv_loop_t* loop,
                         const std::string& host, int port,
-                        void* data, std::function<void(Resolver*)> cb,
+                        void* data, Callback cb,
                         struct addrinfo* hints = nullptr) {
       Resolver* resolver = new Resolver(host, port, data, cb);
       uv_getaddrinfo_t* handle = new uv_getaddrinfo_t;
@@ -83,7 +85,7 @@ class Resolver {
 
   private:
     Resolver(const std::string& host, int port, 
-             void* data, std::function<void(Resolver*)> cb)
+             void* data, Callback cb)
         : host_(host)
         , port_(port)
         , status_(RESOLVING)
@@ -95,7 +97,7 @@ class Resolver {
     Status status_;
     Address address_;
     void* data_;
-    std::function<void(Resolver*)> cb_;
+   Callback cb_;
 };
 
 } // namespace cass

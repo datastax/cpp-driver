@@ -258,8 +258,10 @@ struct Session {
   }
 
   MessageFutureImpl* execute(Statement* statement) {
+    // TODO(mpenick): Figure out how to clean up request's and message's memory
     Message* message = new Message();
-    message->body.reset(statement);
+    message->opcode = CQL_OPCODE_QUERY;
+    message->body.reset(statement); // TODO(mpenick): We don't want this to be cleaned up by the smart pointer
     Request* request = new Request(new MessageFutureImpl(), message);
     execute(request);
     return request->future;

@@ -21,10 +21,10 @@
 #include <string>
 #include <algorithm>
 
-#include "bound_queue.hpp"
 #include "client_connection.hpp"
 #include "request.hpp"
 #include "session.hpp"
+#include "timer.hpp"
 
 namespace cass {
 
@@ -34,13 +34,15 @@ class Pool {
   Session* session_;
   uv_loop_t*              loop_;
   SSLContext*             ssl_context_;
-  Host                 host_;
+  Host                    host_;
   size_t                  core_connections_per_host_;
   size_t                  max_connections_per_host_;
   size_t                  max_simultaneous_creation_;
   ConnectionCollection    connections_;
   ConnectionCollection    connections_pending_;
-  BoundQueue<Request*> request_queue_;
+  std::list<Request*>     pending_request_queue_;
+  size_t                  max_pending_requests_;
+  uint64_t                connection_timeout_;
 
  public:
   Pool(Session* session,
@@ -57,26 +59,31 @@ class Pool {
       core_connections_per_host_(core_connections_per_host),
       max_connections_per_host_(max_connections_per_host),
       max_simultaneous_creation_(max_simultaneous_creation),
-      request_queue_(128 * max_connections_per_host) {
+      max_pending_requests_(128 * max_connections_per_host),
+      connection_timeout_(1000) {
     for (size_t i = 0; i < core_connections_per_host_; ++i) {
       spawn_connection();
     }
   }
 
-  void
-  connect_callback(
+  void connect_callback(
       ClientConnection* connection,
-      Error*            error) {
+      Error* error) {
 
     session_->notify_connect_q(host_);
+    connections_pending_.remove(connection);
 
     if (error) {
+      delete error;
       // TODO(mstump) do something with failure to connect
+    } else {
+      connections_.push_back(connection);
+      execute_pending_request(connection);
     }
+  }
 
-    // TODO(mstump) do we need notification?
-    connections_pending_.remove(connection);
-    connections_.push_back(connection);
+  void request_finished_callback(ClientConnection* connection) {
+    execute_pending_request(connection);
   }
 
   ~Pool() {
@@ -109,7 +116,8 @@ class Pool {
             &Pool::connect_callback,
             this,
             std::placeholders::_1,
-            std::placeholders::_2));
+            std::placeholders::_2),
+         std::bind(&Pool::request_finished_callback, this, std::placeholders::_1));
 
     connections_pending_.push_back(connection);
   }
@@ -151,18 +159,54 @@ class Pool {
   bool
   borrow_connection(
       ClientConnection** output) {
-    *output = find_least_busy();
-    if (output) {
-      return true;
-    }
 
-    if (connections_.size() >= max_connections_per_host_) {
+    if(connections_.empty()) {
+      for (size_t i = 0; i < core_connections_per_host_; ++i) {
+        spawn_connection();
+      }
       return false;
     }
 
-    // TODO(mpenick): create new connection
+    maybe_spawn_connection();
+
+    *output = find_least_busy();
+    if (*output) {
+      return true;
+    }
 
     return false;
+  }
+
+  void on_timeout(void* data) {
+    Request* request = static_cast<Request*>(data);
+    // TODO(mpenick): Maybe we want to move to the next host here?
+    pending_request_queue_.remove(request);
+  }
+
+  bool wait_for_connection(Request* request) {
+    if(pending_request_queue_.size() + 1 > max_pending_requests_) {
+      return false;
+    }
+    Timer* timer = Timer::start(loop_, connection_timeout_,
+                                request,
+                                std::bind(&Pool::on_timeout, this, std::placeholders::_1));
+    request->timer = timer;
+    pending_request_queue_.push_back(request);
+    return true;
+  }
+
+  void execute_pending_request(ClientConnection* connection) {
+    if(!pending_request_queue_.empty()) {
+      Request* request = pending_request_queue_.front();
+      if(request->timer) {
+        Timer::stop(request->timer);
+      }
+      Error* error = connection->execute(request->message, request->future);
+      if(error) {
+        request->future->error.reset(error);
+        request->future->notify(loop_);
+      }
+    }
   }
 };
 

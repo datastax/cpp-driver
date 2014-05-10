@@ -21,6 +21,7 @@
 #include <string>
 
 #include "host.hpp"
+#include "timer.hpp"
 
 namespace cass {
 
@@ -29,17 +30,20 @@ struct Request {
   Message*            message;
   std::list<Host> hosts;
   std::list<std::string> hosts_attempted;
+  Timer* timer;
 
   Request() :
       future(nullptr),
-      message(nullptr) {
+      message(nullptr),
+      timer(nullptr) {
   }
 
   Request(
       MessageFutureImpl* future,
       Message*           message) :
       future(future),
-      message(message) {
+      message(message),
+      timer(nullptr){
   }
 
  private:

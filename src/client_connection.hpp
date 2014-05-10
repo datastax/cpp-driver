@@ -57,6 +57,8 @@ struct ClientConnection {
   typedef std::function<void(ClientConnection*,
                              Error*)> ConnectionCallback;
 
+  typedef std::function<void(ClientConnection*)> RequestFinishedCallback;
+
   typedef std::function<void(ClientConnection*,
                              const char*, size_t)> KeyspaceCallback;
 
@@ -85,6 +87,7 @@ struct ClientConnection {
   std::unique_ptr<Message>    incoming_;
   StreamStorageCollection     stream_storage_;
   ConnectionCallback          connect_callback_;
+  RequestFinishedCallback     request_finished_callback_;
   KeyspaceCallback            keyspace_callback_;
   PrepareCallback             prepare_callback_;
   LogCallback                 log_callback_;
@@ -100,7 +103,6 @@ struct ClientConnection {
   std::string                 compression_;
   std::string                 version_;
 
-
   explicit
   ClientConnection(
       uv_loop_t*         loop,
@@ -110,6 +112,7 @@ struct ClientConnection {
       loop_(loop),
       incoming_(new Message()),
       connect_callback_(nullptr),
+      request_finished_callback_(nullptr),
       keyspace_callback_(nullptr),
       prepare_callback_(nullptr),
       log_callback_(nullptr),         // use ipv4 by default
@@ -419,8 +422,8 @@ struct ClientConnection {
       Message* response) {
     log(CASS_LOG_DEBUG, "on_result");
 
-    Error*      err     = NULL;
-    MessageFutureImpl* request = NULL;
+    Error* error = nullptr;
+    MessageFutureImpl* request = nullptr;
     Result*     result  = static_cast<Result*>(response->body.get());
 
     switch (result->kind) {
@@ -431,46 +434,35 @@ struct ClientConnection {
         break;
 
       case CASS_RESULT_KIND_PREPARED:
-        err = stream_storage_.get_stream(response->stream, request);
-        if (prepare_callback_) {
-          if (!err) {
-            prepare_callback_(
-                this,
-                NULL,
-                request->data.c_str(),
-                request->data.size(),
-                result->prepared,
-                result->prepared_size);
-          } else {
-            prepare_callback_(
-                this,
-                err,
-                request->data.c_str(),
-                request->data.size(),
-                result->prepared,
-                result->prepared_size);
-          }
-        }
-
-        if (!err) {
-          request->result.reset(response);
-          request->notify(loop_);
+        error = stream_storage_.get_stream(response->stream, request);
+        if(error) {
+          request->error.reset(error);
         } else {
-          delete err;
+          request->result.reset(response);
         }
+        request->notify(loop_);
+        prepare_callback_(
+            this,
+            error,
+            request->data.c_str(),
+            request->data.size(),
+            result->prepared,
+            result->prepared_size);
         break;
 
       default:
-        err = stream_storage_.get_stream(response->stream, request);
-        if (!err) {
-          request->result.reset(response);
-          request->notify(loop_);
+        error = stream_storage_.get_stream(response->stream, request);
+        if(error) {
+          request->error.reset(error);
         } else {
-          if (connect_callback_) {
-            connect_callback_(this, err);
-          }
+          request->result.reset(response);
         }
+        request->notify(loop_);
         break;
+    }
+
+    if(request_finished_callback_) {
+      request_finished_callback_(this);
     }
   }
 
@@ -584,18 +576,16 @@ struct ClientConnection {
       Message* message,
       MessageFutureImpl* request = NULL) {
     uv_buf_t   buf;
-    Error*  err = stream_storage_.set_stream(request, message->stream);
-    if (err) {
-      return err;
+
+    Error* error = stream_storage_.set_stream(request, message->stream);
+    if(error) {
+      return error;
     }
 
     if (!message->prepare(&buf.base, buf.len)) {
-      return new Error(
-          CASS_ERROR_SOURCE_LIBRARY,
-          CASS_ERROR_LIB_MESSAGE_PREPARE,
-          "error preparing message",
-          __FILE__,
-          __LINE__);
+      return CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
+                        CASS_ERROR_LIB_MESSAGE_PREPARE,
+                        "error preparing message");
     }
 
     char log_message[512];
@@ -613,13 +603,15 @@ struct ClientConnection {
 
   void
   init(
-      ConnectionCallback connect     = NULL,
-      KeyspaceCallback   keyspace    = NULL
-      // SchemaCallback     schema   = NULL,
-      // TopologyCallback   topology = NULL,
-      // StatusCallback     status   = NULL
+      ConnectionCallback connect     = nullptr,
+      RequestFinishedCallback request_finished = nullptr,
+      KeyspaceCallback   keyspace    = nullptr
+      // SchemaCallback     schema   = nullptr,
+      // TopologyCallback   topology = nullptr,
+      // StatusCallback     status   = nullptr
        ) {
     connect_callback_     = connect;
+    request_finished_callback_ = request_finished;
     keyspace_callback_    = keyspace;
 
     // schema_callback   = schema;

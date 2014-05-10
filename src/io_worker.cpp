@@ -23,7 +23,7 @@ void IOWorker::on_event(uv_async_t *async, int status) {
                         payload.max_connections_per_host))));
       }
     } else if(payload.type == Payload::REMOVE_POOL) {
-      // TODO:(mpenick)
+      // TODO(mpenick):
     }
   }
 }
@@ -33,14 +33,25 @@ void IOWorker::on_execute(uv_async_t* data, int status) {
   Request*  request = nullptr;
 
   while (worker->request_queue_.dequeue(request)) {
-    for (const Host& host : request->hosts) {
+    while(!request->hosts.empty()) {
+      const auto& host = request->hosts.front();
+      request->hosts.pop_front();
       auto it = worker->pools.find(host);
       if(it != worker->pools.end()) {
-        PoolPtr pool = it->second;
-
+        auto pool = it->second;
         ClientConnection* connection;
         if(pool->borrow_connection(&connection)) {
-          connection->execute(request->message, request->future);
+          Error* error = connection->execute(request->message, request->future);
+          if(error) {
+            request->future->error.reset(error);
+            request->future->notify(worker->loop);
+          }
+          break;
+        } else { // Too busy, or no connections
+          if(pool->wait_for_connection(request)) {
+            break; // We're waiting for the next available connection
+          }
+          // Move to the next host
         }
       }
     }

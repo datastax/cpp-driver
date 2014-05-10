@@ -42,6 +42,9 @@ struct Error {
   int         line;
 };
 
+#define CASS_ERROR(source, code, message) \
+  new Error(source, code, message, __FILE__, __LINE__)
+
 } // namespace cass
 
 #endif

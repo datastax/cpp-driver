@@ -23,26 +23,28 @@
 
 #include <assert.h>
 
+#include "common.hpp"
+
 namespace cass {
 
 template<typename T>
-class BoundQueue {
+class BoundedQueue {
  public:
-  BoundQueue(
+  BoundedQueue(
       size_t size) :
       _size(size),
-      _mask(size - 1),
+      _mask(_size - 1),
       _buffer(
           reinterpret_cast<T*>(
               // need one extra element for a guard
-              new SPSCQueueAlignedEntry[_size + 1])),
+              new BoundedQueueAlignedEntry[_size + 1])),
       _head(0),
       _tail(0) {
     // make sure it's a power of 2
     assert((_size != 0) && ((_size & (~_size + 1)) == _size));
   }
 
-  ~BoundQueue() {
+  ~BoundedQueue() {
     delete[] _buffer;
   }
 
@@ -72,7 +74,7 @@ class BoundQueue {
  private:
   typedef typename
   std::aligned_storage<sizeof(T),
-                       std::alignment_of<T>::value>::type SPSCQueueAlignedEntry;
+                       std::alignment_of<T>::value>::type BoundedQueueAlignedEntry;
 
   typedef char cache_line_pad_t[64];
 
@@ -85,8 +87,8 @@ class BoundQueue {
   cache_line_pad_t _pad2;
   size_t           _tail;
 
-  BoundQueue(const BoundQueue&) {}
-  void operator=(const BoundQueue&) {}
+  BoundedQueue(const BoundedQueue&) {}
+  void operator=(const BoundedQueue&) {}
 };
 
 } // namespace cass

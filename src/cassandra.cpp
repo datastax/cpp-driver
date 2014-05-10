@@ -102,6 +102,8 @@ cass_session_shutdown(
 void
 cass_future_free(
    CassFuture* future) {
+  // TODO(mpenick): We can't do this because the memory could still be in use by an internal thread
+  // This needs to be referenced counted
   delete future->from();
 }
 
