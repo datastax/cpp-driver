@@ -33,7 +33,7 @@ class AsyncQueue {
     }
 
     int stop() {
-      uv_async_stop(&async_);
+      return uv_async_stop(&async_);
     }
 
     bool enqueue(const typename Q::EntryType& data) {

@@ -46,6 +46,10 @@
 #define CQL_OPCODE_EVENT        0x0C
 #define CQL_OPCODE_BATCH        0x0D
 
+#define DISALLOW_COPY_AND_ASSIGN(TypeName)       \
+  TypeName(const TypeName&) = delete;            \
+  TypeName& operator=(const TypeName&) = delete
+
 #include "future.hpp"
 #include "error.hpp"
 #include "message.hpp"
@@ -53,11 +57,6 @@
 namespace cass {
 
 typedef std::function<void(int, const char*, size_t)> LogCallback;
-
-struct Session;
-typedef std::unique_ptr<Message>               MessagePtr;
-typedef FutureImpl<std::string, MessagePtr> MessageFutureImpl;
-typedef FutureImpl<Session*, Session*>   SessionFutureImpl;
 
 uv_buf_t alloc_buffer(size_t suggested_size);
 uv_buf_t alloc_buffer(uv_handle_t *handle, size_t suggested_size);

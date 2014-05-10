@@ -21,6 +21,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "common.hpp"
 #include "message_body.hpp"
 #include "serialization.hpp"
 #include "statement.hpp"
@@ -41,21 +43,14 @@ struct BatchStatement
   StatementCollection statements;
   int16_t             consistency;
 
-  explicit
-  BatchStatement(
-      size_t consistency) :
-      consistency(consistency)
-  {}
+  explicit BatchStatement(size_t consistency)
+    : MessageBody(CQL_OPCODE_BATCH)
+    ,  consistency(consistency) {}
 
   ~BatchStatement() {
     for (Statement* statement : statements) {
       delete statement;
     }
-  }
-
-  uint8_t
-  opcode() const {
-    return CQL_OPCODE_BATCH;
   }
 
   void
@@ -124,10 +119,6 @@ struct BatchStatement
     encode_short(buffer, consistency);
     return true;
   }
-
- private:
-  BatchStatement(const BatchStatement&) {}
-  void operator=(const BatchStatement&) {}
 };
 
 } // namespace cass

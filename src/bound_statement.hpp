@@ -43,28 +43,19 @@ struct BoundStatement : public Statement {
   ValueCollection   values;
 
  public:
-  BoundStatement(
-      const Prepared& prepared,
-      CassConsistency     consistency) :
-      id(prepared.id),
-      consistency_value(consistency),
-      page_size(-1),
-      serial_consistency_value(CASS_CONSISTENCY_ANY)
-  {}
+  BoundStatement(const Prepared& prepared, CassConsistency consistency)
+    : Statement(CQL_OPCODE_QUERY)
+    , id(prepared.id)
+    , consistency_value(consistency)
+    , page_size(-1)
+    , serial_consistency_value(CASS_CONSISTENCY_ANY) {}
 
-  BoundStatement(
-      const  std::string& id,
-      CassConsistency consistency) :
-      id(id),
-      consistency_value(consistency),
-      page_size(-1),
-      serial_consistency_value(CASS_CONSISTENCY_ANY)
-  {}
-
-  uint8_t
-  opcode() const {
-    return CQL_OPCODE_QUERY;
-  }
+  BoundStatement(const  std::string& id, CassConsistency consistency)
+    : Statement(CQL_OPCODE_QUERY)
+    , id(id)
+    , consistency_value(consistency)
+    , page_size(-1)
+    , serial_consistency_value(CASS_CONSISTENCY_ANY) {}
 
   uint8_t
   kind() const {
@@ -200,10 +191,6 @@ struct BoundStatement : public Statement {
 
     return true;
   }
-
- private:
-  BoundStatement(const BoundStatement&) {}
-  void operator=(const BoundStatement&) {}
 };
 
 } // namespace cass

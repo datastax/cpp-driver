@@ -30,12 +30,7 @@ struct BodySupported
   std::list<std::string> versions;
 
   BodySupported()
-  {}
-
-  uint8_t
-  opcode() const {
-    return CQL_OPCODE_SUPPORTED;
-  }
+    : MessageBody(CQL_OPCODE_SUPPORTED) {}
 
   bool
   consume(
@@ -67,10 +62,6 @@ struct BodySupported
     (void) size;
     return false;
   }
-
- private:
-  BodySupported(const BodySupported&) {}
-  void operator=(const BodySupported&) {}
 };
 
 } // namespace cass

@@ -18,6 +18,7 @@
 
 #include "cassandra.h"
 #include "session.hpp"
+#include "body_result.hpp"
 
 // This abstraction allows us to separate internal types from the
 // external opaque pointers that we expose.
@@ -471,6 +472,58 @@ cass_session_exec(
     CassFuture**   future) {
   *future = CassFuture::to(session->execute(statement->from()));
   return CASS_ERROR_NO_ERROR;
+}
+
+size_t
+cass_result_rowcount(
+    CassResult* result) {
+  if(result->kind == CASS_RESULT_KIND_ROWS) {
+    return result->row_count;
+  }
+  return 0;
+}
+
+size_t
+cass_result_colcount(
+    CassResult* result) {
+  if(result->kind == CASS_RESULT_KIND_ROWS) {
+    return result->column_count;
+  }
+  return 0;
+}
+
+int
+cass_result_coltype(
+    CassResult*     result,
+    size_t         index,
+    CassColumnType* coltype) {
+  if(result->kind == CASS_RESULT_KIND_ROWS) {
+    *coltype = static_cast<CassColumnType>(result->column_metadata[index].type);
+    return 0;
+  }
+  return -1; // TODO(mpenick): Figure out error codes
+}
+
+int
+cass_iterator_new(
+    void*  value,
+    void** iterator) {
+
+  return -1; // TODO(mpenick): Figure out error codes
+}
+
+int
+cass_iterator_next(
+    void* iterator) {
+  return -1; // TODO(mpenick): Figure out error codes
+}
+
+int
+cass_row_getcol(
+    void*  row,
+    size_t index,
+    void** value) {
+  return -1; // TODO(mpenick): Figure out error codes
 }
 
 } // extern "C"

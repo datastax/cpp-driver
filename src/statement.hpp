@@ -37,6 +37,9 @@ struct Statement : public MessageBody {
 
   ValueCollection values;
 
+  Statement(uint8_t opcode)
+    : MessageBody(opcode) { }
+
   virtual
   ~Statement() {}
 

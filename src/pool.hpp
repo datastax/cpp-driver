@@ -200,6 +200,7 @@ class Pool {
       Request* request = pending_request_queue_.front();
       if(request->timer) {
         Timer::stop(request->timer);
+        request->timer = nullptr;
       }
       Error* error = connection->execute(request->message, request->future);
       if(error) {

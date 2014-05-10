@@ -109,30 +109,25 @@ struct Result
   int32_t            row_count;
   char*              rows;
 
-  Result() :
-      kind(0),
-      more_pages(false),
-      no_metadata(false),
-      global_table_spec(true),
-      column_count(0),
-      page_state(NULL),
-      page_state_size(0),
-      prepared(NULL),
-      prepared_size(0),
-      change(NULL),
-      change_size(0),
-      keyspace(NULL),
-      keyspace_size(0),
-      table(NULL),
-      table_size(0),
-      row_count(0),
-      rows(NULL)
-  {}
-
-  uint8_t
-  opcode() const {
-    return CQL_OPCODE_RESULT;
-  }
+  Result()
+    : MessageBody(CQL_OPCODE_RESULT)
+    , kind(0)
+    , more_pages(false)
+    , no_metadata(false)
+    , global_table_spec(true)
+    , column_count(0)
+    , page_state(NULL)
+    , page_state_size(0)
+    , prepared(NULL)
+    , prepared_size(0)
+    , change(NULL)
+    , change_size(0)
+    , keyspace(NULL)
+    , keyspace_size(0)
+    , table(NULL)
+    , table_size(0)
+    , row_count(0)
+    , rows(NULL) {}
 
   bool
   consume(
@@ -275,10 +270,6 @@ struct Result
     (void) size;
     return false;
   }
-
- private:
-  Result(const Result&) {}
-  void operator=(const Result&) {}
 };
 
 struct ResultIterator : Iterable {

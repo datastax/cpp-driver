@@ -25,12 +25,7 @@ struct BodyReady
     : public MessageBody {
 
   BodyReady()
-  {}
-
-  uint8_t
-  opcode() const {
-    return CQL_OPCODE_READY;
-  }
+    : MessageBody(CQL_OPCODE_READY) {}
 
   bool
   consume(
@@ -50,10 +45,6 @@ struct BodyReady
     size = reserved;
     return true;
   }
-
- private:
-  BodyReady(const BodyReady&) {}
-  void operator=(const BodyReady&) {}
 };
 
 } // namespace cass

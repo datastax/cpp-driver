@@ -33,6 +33,11 @@
 
 namespace cass {
 
+struct Message;
+
+typedef std::unique_ptr<Message> MessagePtr;
+typedef FutureImpl<std::string, MessagePtr> MessageFutureImpl;
+
 struct Message {
   uint8_t                         version;
   int8_t                          flags;
@@ -44,7 +49,6 @@ struct Message {
   char                            header_buffer[CASS_HEADER_SIZE];
   char*                           header_buffer_pos;
   std::unique_ptr<MessageBody>    body;
-  std::unique_ptr<char>           body_buffer;
   char*                           body_buffer_pos;
   bool                            body_ready;
   bool                            body_error;
@@ -167,9 +171,10 @@ struct Message {
         header_buffer_pos  = header_buffer + CASS_HEADER_SIZE;
         header_received    = true;
 
-        body_buffer.reset(new char[length]);
-        body_buffer_pos = body_buffer.get();
         body.reset(allocate_body(opcode));
+        body->set_buffer(new char[length]);
+        body_buffer_pos = body->buffer();
+
         if (body == NULL) {
           return -1;
         }
@@ -192,7 +197,7 @@ struct Message {
       body_buffer_pos += needed;
       input_pos       += needed;
 
-      if (!body->consume(body_buffer.get(), length)) {
+      if (!body->consume(body->buffer(), length)) {
         body_error = true;
       }
       body_ready = true;

@@ -30,15 +30,10 @@ struct BodyStartup
   std::string           version;
   std::string           compression;
 
-  BodyStartup() :
-      version("3.0.0"),
-      compression("")
-  {}
-
-  uint8_t
-  opcode() const {
-    return CQL_OPCODE_STARTUP;
-  }
+  BodyStartup()
+    : MessageBody(CQL_OPCODE_STARTUP)
+    , version("3.0.0")
+    , compression("") {}
 
   bool
   consume(
@@ -89,9 +84,6 @@ struct BodyStartup
 
  private:
   typedef std::map<std::string, std::string> OptionsCollection;
-
-  BodyStartup(const BodyStartup&) {}
-  void operator=(const BodyStartup&) {}
 };
 
 } // namespace cass

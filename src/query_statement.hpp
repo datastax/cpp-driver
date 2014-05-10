@@ -42,38 +42,28 @@ struct QueryStatement : public Statement {
 
  public:
 
-  QueryStatement(
-      const char*    statement,
-      size_t         statement_length,
-      size_t         value_count,
-      CassConsistency consistency) :
-      query(statement, statement_length),
-      consistency_value(consistency),
-      page_size(-1),
-      serial_consistency_value(CASS_CONSISTENCY_ANY),
-      values(value_count)
-  {}
+  QueryStatement(const char* statement, size_t statement_length,
+                size_t value_count, CassConsistency consistency)
+    : Statement(CQL_OPCODE_QUERY)
+    , query(statement, statement_length)
+    , consistency_value(consistency)
+    , page_size(-1)
+    , serial_consistency_value(CASS_CONSISTENCY_ANY)
+    , values(value_count) {}
 
-  QueryStatement(
-      size_t value_count,
-      CassConsistency consistency) :
-      consistency_value(consistency),
-      page_size(-1),
-      serial_consistency_value(CASS_CONSISTENCY_ANY),
-      values(value_count)
-  {}
+  QueryStatement(size_t value_count, CassConsistency consistency)
+     : Statement(CQL_OPCODE_QUERY)
+     , consistency_value(consistency)
+     , page_size(-1)
+     , serial_consistency_value(CASS_CONSISTENCY_ANY)
+     , values(value_count) {}
 
-  QueryStatement() :
-      consistency_value(CASS_CONSISTENCY_ANY),
-      page_size(-1),
-      serial_consistency_value(CASS_CONSISTENCY_ANY),
-      values(0)
-  {}
-
-  uint8_t
-  opcode() const {
-    return CQL_OPCODE_QUERY;
-  }
+  QueryStatement()
+    : Statement(CQL_OPCODE_QUERY)
+    , consistency_value(CASS_CONSISTENCY_ANY)
+    , page_size(-1)
+    , serial_consistency_value(CASS_CONSISTENCY_ANY)
+    , values(0) {}
 
   uint8_t
   kind() const {
@@ -209,10 +199,6 @@ struct QueryStatement : public Statement {
 
     return true;
   }
-
- private:
-  QueryStatement(const QueryStatement&) {}
-  void operator=(const QueryStatement&) {}
 };
 
 } // namespace cass

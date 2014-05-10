@@ -37,6 +37,9 @@
 
 namespace cass {
 
+struct Session;
+typedef FutureImpl<Session*, Session*> SessionFutureImpl;
+
 struct Session {
   enum SessionState {
     SESSION_STATE_NEW,

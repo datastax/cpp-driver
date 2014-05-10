@@ -28,12 +28,7 @@ struct PrepareStatement
   std::string statement;
 
   PrepareStatement()
-  {}
-
-  uint8_t
-  opcode() const {
-    return CQL_OPCODE_PREPARE;
-  }
+    : MessageBody(CQL_OPCODE_PREPARE) {}
 
   void
   prepare_string(
@@ -70,10 +65,6 @@ struct PrepareStatement
         statement.size());
     return true;
   }
-
- private:
-  PrepareStatement(const PrepareStatement&) {}
-  void operator=(const PrepareStatement&) {}
 };
 
 } // namespace cass

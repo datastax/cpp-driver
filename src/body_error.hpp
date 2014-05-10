@@ -30,26 +30,19 @@ struct BodyError
   char*                 message;
   size_t                message_size;
 
-  BodyError() :
-      code(0xFFFFFFFF),
-      message(NULL),
-      message_size(0)
-  {}
+  BodyError()
+     : MessageBody(CQL_OPCODE_ERROR)
+     , code(0xFFFFFFFF)
+     , message(NULL)
+     , message_size(0) {}
 
-  BodyError(
-      int32_t     code,
-      const char* input,
-      size_t      input_size) :
-      guard(new char[input_size]),
-      code(code),
-      message(guard.get()),
-      message_size(input_size) {
+  BodyError(int32_t code, const char* input, size_t input_size)
+    : MessageBody(CQL_OPCODE_ERROR)
+    , guard(new char[input_size])
+    , code(code)
+    , message(guard.get())
+    , message_size(input_size) {
     memcpy(message, input, input_size);
-  }
-
-  uint8_t
-  opcode() const {
-    return CQL_OPCODE_ERROR;
   }
 
   bool
@@ -75,10 +68,6 @@ struct BodyError
     encode_string(buffer, message, message_size);
     return true;
   }
-
- private:
-  BodyError(const BodyError&) {}
-  void operator=(const BodyError&) {}
 };
 
 } // namespace cass

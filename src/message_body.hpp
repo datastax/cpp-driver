@@ -17,14 +17,25 @@
 #ifndef __CASS_BODY_HPP_INCLUDED__
 #define __CASS_BODY_HPP_INCLUDED__
 
+#include <memory>
+#include <atomic>
+
+#include "common.hpp"
+
 namespace cass {
 
-struct MessageBody {
-  virtual ~MessageBody()
-  {}
+class MessageBody {
+  public:
+    MessageBody(uint8_t opcode)
+      : opcode_(opcode) { }
 
-  virtual uint8_t
-  opcode() const = 0;
+  virtual ~MessageBody() = default;
+
+  DISALLOW_COPY_AND_ASSIGN(MessageBody);
+
+  uint8_t opcode() const { return opcode_; }
+  char* buffer() { return buffer_.get(); }
+  void set_buffer(char* buffer) { buffer_.reset(buffer); }
 
   virtual bool
   consume(
@@ -36,6 +47,10 @@ struct MessageBody {
       size_t  reserved,
       char**  output,
       size_t& size) = 0;
+
+  private:
+    uint8_t opcode_;
+    std::unique_ptr<char> buffer_;
 };
 
 } // namespace cass

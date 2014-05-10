@@ -25,12 +25,7 @@ struct BodyOptions
     : public MessageBody {
 
   BodyOptions()
-  {}
-
-  uint8_t
-  opcode() const {
-    return CQL_OPCODE_OPTIONS;
-  }
+    : MessageBody(CQL_OPCODE_OPTIONS) {}
 
   bool
   consume(
@@ -50,10 +45,6 @@ struct BodyOptions
     size = reserved;
     return true;
   }
-
- private:
-  BodyOptions(const BodyOptions&) {}
-  void operator=(const BodyOptions&) {}
 };
 
 } // namespace cass

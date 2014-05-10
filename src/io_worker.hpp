@@ -30,6 +30,7 @@
 namespace cass {
 
 class Pool;
+struct Session;
 
 struct IOWorker {
   typedef std::shared_ptr<Pool>  PoolPtr;
