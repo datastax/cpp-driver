@@ -61,7 +61,6 @@ typedef cass_uint8_t CassUuid[16];
 typedef struct {
   cass_uint8_t  address[16];
   cass_uint8_t  address_len;
-  cass_uint32_t port;
 } CassInet;
 
 struct CassSession;
@@ -660,7 +659,7 @@ CASS_EXPORT CassCode
 cass_statement_bind_string(
     CassStatement*  statement,
     size_t         index,
-    char*          value,
+    const char*    value,
     size_t         length);
 
 /**
@@ -684,9 +683,8 @@ CASS_EXPORT CassCode
 cass_statement_bind_inet(
     CassStatement* statement,
     size_t         index,
-    cass_uint8_t*  address,
-    cass_uint8_t   address_len,
-    cass_int32_t   port);
+    const cass_uint8_t*  address,
+    cass_uint8_t   address_len);
 
 /**
  * Bind a decimal to a query or bound statement at the specified index

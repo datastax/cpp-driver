@@ -131,6 +131,9 @@ CassSession*
 cass_future_get_session(
    CassFuture* future) {
   cass::SessionFutureImpl* session_future = static_cast<cass::SessionFutureImpl*>(future->from());
+  if(session_future->error) {
+    return nullptr;
+  }
   return CassSession::to(session_future->result);
 }
 
@@ -138,6 +141,9 @@ CassResult*
 cass_future_get_result(
    CassFuture* future) {
   cass::MessageFutureImpl* message_future = static_cast<cass::MessageFutureImpl*>(future->from());
+  if(message_future->error) {
+    return nullptr;
+  }
   cass::Result* result = static_cast<cass::Result*>(message_future->result->body.release());
   return CassResult::to(result);
 }
@@ -146,6 +152,9 @@ CassPrepared*
 cass_future_get_prepare(
    CassFuture* future) {
   cass::MessageFutureImpl* message_future = static_cast<cass::MessageFutureImpl*>(future->from());
+  if(message_future->error) {
+    return nullptr;
+  }
   cass::Result* result = static_cast<cass::Result*>(message_future->result->body.get());
   return CassPrepared::to(new cass::Prepared(std::string(result->prepared,
                                                          result->prepared_size)));
@@ -401,7 +410,7 @@ CassCode
 cass_statement_bind_string(
     CassStatement*  statement,
     size_t         index,
-    char*          value,
+    const char*    value,
     size_t         length) {
   return statement->bind(index, value, length);
 }
@@ -450,10 +459,9 @@ CassCode
 cass_statement_bind_inet(
     CassStatement* statement,
     size_t         index,
-    cass_uint8_t*   address,
-    cass_uint8_t    address_len,
-    cass_int32_t   port) {
-  return statement->bind(index, address, address_len, port);
+    const cass_uint8_t* address,
+    cass_uint8_t    address_len) {
+  return statement->bind(index, address, address_len);
 }
 
 /**

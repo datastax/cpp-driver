@@ -219,7 +219,7 @@ test_query_query_value() {
   cass::QueryStatement* query = static_cast<cass::QueryStatement*>(message.body.get());
   query->statement("SELECT * FROM ?;");
   // TODO:(mpenick): Make const
-  query->values.push_back(cass::Statement::Value(const_cast<char*>(value), strlen(value)));
+  query->values.push_back(cass::Value::create_bytes(value, strlen(value)));
   query->consistency(CASS_CONSISTENCY_ONE);
 
   CHECK(message.prepare(&buffer_ptr, size));

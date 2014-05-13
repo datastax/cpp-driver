@@ -20,6 +20,8 @@
 #include <stdlib.h>
 #include <uv.h>
 
+#include <arpa/inet.h>
+
 #include "cassandra.h"
 
 void print_error(const char* message, int err) {
@@ -33,11 +35,12 @@ main() {
   /*CassFuture* shutdown_future = NULL;*/
   int err;
 
-  const char* query = "SELECT * FROM system.peers WHERE peer > ?";
+  const char* query = "SELECT * FROM system.local WHERE key = ?";
+  const char* key = "local";
+
   CassStatement* statement = NULL;
   CassFuture* result_future = NULL;
   CassResult* result = NULL;
-  uint32_t address = 0;
 
   const char* cp1 = "127.0.0.1";
   cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, cp1, strlen(cp1));
@@ -59,7 +62,8 @@ main() {
   cass_future_free(session_future);
 
   cass_session_query(session, query, strlen(query), 1, CASS_CONSISTENCY_ONE, &statement);
-  cass_statement_bind_inet(statement, 0, (uint8_t*)&address, 4, 9042);
+  cass_statement_bind_string(statement, 0, key, strlen(key));
+  /*cass_statement_bind_inet(statement, 0, (const uint8_t*)&address, 4);*/
   cass_session_exec(session, statement, &result_future);
 
   cass_future_wait(result_future);

@@ -480,6 +480,15 @@ struct ClientConnection {
               error->message,
               __FILE__,
               __LINE__));
+    } else {
+      MessageFutureImpl* request = nullptr;
+      Error* stream_error = stream_storage_.get_stream(response->stream, request);
+      if(stream_error) {
+        request->error.reset(stream_error);
+      } else {
+        request->error.reset(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, (CassCode)error->code, error->message));
+      }
+      request->notify(loop_);
     }
     delete response;
   }

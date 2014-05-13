@@ -12,7 +12,7 @@ inline char* encode_decimal(char* output, const Decimal& value) {
 
 inline char* encode_inet(char* output, const Inet& value) {
   memcpy(output, value.address, value.address_len);
-  return encode_int(output + value.address_len, value.port);
+  return output + value.address_len;
 }
 
 char*Value::encode(char* output) const {

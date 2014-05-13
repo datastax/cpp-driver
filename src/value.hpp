@@ -39,7 +39,6 @@ struct Decimal {
 struct Inet {
   uint8_t address[16];
   uint8_t address_len;
-  int32_t port;
 };
 
 union Basic {
@@ -146,11 +145,10 @@ class Value {
     }
     const Decimal& as_decimal() const { return basic().decimal; }
 
-    static Value create_inet(const uint8_t* address, uint8_t address_len, int32_t port) {
+    static Value create_inet(const uint8_t* address, uint8_t address_len) {
       Value v(INET);
       memcpy(v.basic().inet.address, address, address_len);
       v.basic().inet.address_len = address_len;
-      v.basic().inet.port = port;
       return v;
     }
     const Inet& as_inet() const { return basic().inet; }
@@ -163,7 +161,7 @@ class Value {
         case INT32: return INT32_SIZE;
         case INT64: return INT64_SIZE;
         case UUID: return UUID_SIZE;
-        case INET: return 1 + as_inet().address_len + INT32_SIZE;
+        case INET: return as_inet().address_len;
         case BYTES: return as_bytes()->size();
         case DECIMAL: return INT32_SIZE + as_decimal().varint->size();
         case LIST: assert(false);

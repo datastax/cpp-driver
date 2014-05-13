@@ -119,9 +119,9 @@ struct Statement : public MessageBody {
     return CASS_OK;
   }
 
-  inline CassCode bind(size_t index, uint8_t* address, uint8_t address_len, uint32_t port) {
+  inline CassCode bind(size_t index, const uint8_t* address, uint8_t address_len) {
     CASS_VALUE_CHECK_INDEX(index);
-    values[index] = Value::create_inet(address, address_len, port);
+    values[index] = Value::create_inet(address, address_len);
     return CASS_OK;
   }
 
