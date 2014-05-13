@@ -52,7 +52,6 @@
 
 #include "future.hpp"
 #include "error.hpp"
-#include "message.hpp"
 
 namespace cass {
 

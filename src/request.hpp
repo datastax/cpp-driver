@@ -22,6 +22,7 @@
 
 #include "host.hpp"
 #include "timer.hpp"
+#include "message.hpp"
 
 namespace cass {
 

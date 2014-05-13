@@ -39,12 +39,12 @@
 
 /* TODO(mpenick) handle primitive types for other compilers and platforms */
 
-typedef int cass_bool;
+typedef int cass_bool_t;
 #define cass_false 0
 #define cass_true  1
 
-typedef float cass_float;
-typedef double cass_double;
+typedef float cass_float_t;
+typedef double cass_double_t;
 
 typedef char cass_int8_t;
 typedef short cass_int16_t;
@@ -59,8 +59,8 @@ typedef unsigned long long cass_uint64_t;
 typedef cass_uint8_t CassUuid[16];
 
 typedef struct {
-  cass_uint8_t  length;
-  cass_uint8_t  address[6];
+  cass_uint8_t  address[16];
+  cass_uint8_t  address_len;
   cass_uint32_t port;
 } CassInet;
 
@@ -84,6 +84,15 @@ typedef struct CassResult CassResult;
 
 struct CassLoadBalancingPolicy;
 typedef struct CassLoadBalancingPolicy CassLoadBalancingPolicy;
+
+struct CassIterator;
+typedef struct CassIterator CassIterator;
+
+struct CassRow;
+typedef struct CassRow CassRow;
+
+struct CassValue;
+typedef struct CassValue CassValue;
 
 typedef enum {
   CASS_LOG_CRITICAL = 0x00,
@@ -153,6 +162,37 @@ typedef enum {
   CASS_HOST_DISTANCE_IGNORE
 } CassHostDistance;
 
+
+typedef enum {
+  CASS_OK                        = 0,
+
+  CASS_ERROR_SSL_CERT            = 1000000,
+  CASS_ERROR_SSL_PRIVATE_KEY     = 1000001,
+  CASS_ERROR_SSL_CA_CERT         = 1000002,
+  CASS_ERROR_SSL_CRL             = 1000003,
+  CASS_ERROR_SSL_READ            = 1000004,
+  CASS_ERROR_SSL_WRITE           = 1000005,
+  CASS_ERROR_SSL_READ_WAITING    = 1000006,
+  CASS_ERROR_SSL_WRITE_WAITING   = 1000007,
+
+  CASS_ERROR_LIB_BAD_PARAMS      = 2000001,
+  CASS_ERROR_LIB_INVALID_OPTION  = 2000002,
+  CASS_ERROR_LIB_NO_STREAMS      = 2000008,
+  CASS_ERROR_LIB_MAX_CONNECTIONS = 2000009,
+  CASS_ERROR_LIB_SESSION_STATE   = 2000010,
+  CASS_ERROR_LIB_MESSAGE_PREPARE = 2000011,
+  CASS_ERROR_LIB_HOST_RESOLUTION = 2000012
+} CassCode;
+
+typedef enum  {
+  CASS_ERROR_SOURCE_OS          = 1,
+  CASS_ERROR_SOURCE_NETWORK     = 2,
+  CASS_ERROR_SOURCE_SSL         = 3,
+  CASS_ERROR_SOURCE_COMPRESSION = 4,
+  CASS_ERROR_SOURCE_SERVER      = 5,
+  CASS_ERROR_SOURCE_LIBRARY     = 6
+} CassSource;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -194,7 +234,7 @@ cass_session_free(
  *
  * @return 0 if successful, otherwise an error occurred
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_session_setopt(
     CassSession* session,
     CassOption   option,
@@ -210,7 +250,7 @@ cass_session_setopt(
  *
  * @return 0 if successful, otherwise an error occurred
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_cluster_getopt(
     CassSession* session,
     CassOption   option,
@@ -227,7 +267,7 @@ cass_cluster_getopt(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_session_connect(
     CassSession* session,
     CassFuture** future);
@@ -242,7 +282,7 @@ cass_session_connect(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_session_connect_keyspace(
     CassSession* session,
     const char* keyspace,
@@ -254,7 +294,7 @@ cass_session_connect_keyspace(
  *
  * @param session
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_session_shutdown(
     CassSession* session,
     CassFuture** future);
@@ -379,7 +419,7 @@ cass_future_error_string(
  * @return error source
  *
  */
-CASS_EXPORT int
+CASS_EXPORT CassSource
 cass_future_error_source(
     CassFuture* future);
 
@@ -391,7 +431,7 @@ cass_future_error_source(
  * @return source code
  *
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_future_error_code(
     CassFuture* future);
 
@@ -425,12 +465,12 @@ cass_error_desc(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_session_query(
     CassSession*    session,
     const char*    statement,
     size_t         statement_len,
-    size_t         paramater_count,
+    size_t         parameter_count,
     CassConsistency consistency,
     CassStatement** output);
 
@@ -444,7 +484,7 @@ cass_session_query(
  *
  * @return
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_session_prepare(
     CassSession* session,
     const char* statement,
@@ -463,7 +503,7 @@ cass_session_prepare(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_session_bind(
     CassSession*    session,
     CassPrepared*   prepared,
@@ -480,7 +520,7 @@ cass_session_bind(
  *
  * @return
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_statement_bind_short(
     CassStatement* statement,
     size_t        index,
@@ -495,7 +535,7 @@ cass_statement_bind_short(
  *
  * @return
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_statement_bind_int(
     CassStatement* statement,
     size_t        index,
@@ -510,7 +550,7 @@ cass_statement_bind_int(
  *
  * @return
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_statement_bind_bigint(
     CassStatement* statement,
     size_t        index,
@@ -525,11 +565,11 @@ cass_statement_bind_bigint(
  *
  * @return
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_statement_bind_float(
     CassStatement* statement,
     size_t        index,
-    cass_float     value);
+    cass_float_t     value);
 
 /**
  * Bind a double to a query or bound statement at the specified index
@@ -540,11 +580,11 @@ cass_statement_bind_float(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_statement_bind_double(
     CassStatement*  statement,
     size_t         index,
-    cass_double     value);
+    cass_double_t     value);
 
 /**
  * Bind a bool to a query or bound statement at the specified index
@@ -555,11 +595,11 @@ cass_statement_bind_double(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_statement_bind_bool(
     CassStatement*  statement,
     size_t         index,
-    cass_bool       value);
+    cass_bool_t    value);
 
 /**
  * Bind a time stamp to a query or bound statement at the specified index
@@ -570,8 +610,8 @@ cass_statement_bind_bool(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
-cass_statement_bind_time(
+CASS_EXPORT CassCode
+cass_statement_bind_timestamp(
     CassStatement*  statement,
     size_t         index,
     cass_int64_t    value);
@@ -585,7 +625,7 @@ cass_statement_bind_time(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_statement_bind_uuid(
     CassStatement*  statement,
     size_t         index,
@@ -600,7 +640,7 @@ cass_statement_bind_uuid(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_statement_bind_counter(
     CassStatement*  statement,
     size_t         index,
@@ -616,7 +656,7 @@ cass_statement_bind_counter(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_statement_bind_string(
     CassStatement*  statement,
     size_t         index,
@@ -633,12 +673,20 @@ cass_statement_bind_string(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_statement_bind_blob(
     CassStatement*  statement,
     size_t         index,
     cass_uint8_t*   value,
     size_t         length);
+
+CASS_EXPORT CassCode
+cass_statement_bind_inet(
+    CassStatement* statement,
+    size_t         index,
+    cass_uint8_t*  address,
+    cass_uint8_t   address_len,
+    cass_int32_t   port);
 
 /**
  * Bind a decimal to a query or bound statement at the specified index
@@ -651,7 +699,7 @@ cass_statement_bind_blob(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_statement_bind_decimal(
     CassStatement* statement,
     size_t        index,
@@ -669,7 +717,7 @@ cass_statement_bind_decimal(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_statement_bind_varint(
     CassStatement*  statement,
     size_t         index,
@@ -686,7 +734,7 @@ cass_statement_bind_varint(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_session_exec(
     CassSession*   session,
     CassStatement* statement,
@@ -698,18 +746,18 @@ cass_session_exec(
  *
  ***********************************************************************************/
 
-CASS_EXPORT int 
+CASS_EXPORT CassCode
 cass_session_batch(
     CassSession*         session,
     CassConsistency      consistency,
     CassBatchStatement** output);
 
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_batch_add_statement(
     CassBatchStatement* batch,
     CassStatement*      statement);
 
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_batch_set_timestamp(
     CassBatchStatement* batch,
     cass_int64_t        timestamp);
@@ -724,7 +772,7 @@ cass_batch_set_timestamp(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_session_exec_batch(
     CassSession*        session,
     CassBatchStatement* statement,
@@ -769,10 +817,10 @@ cass_result_colcount(
  *
  * @return
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_result_coltype(
     CassResult*     result,
-    size_t         index,
+    size_t          index,
     CassColumnType* coltype);
 
 /**
@@ -783,10 +831,15 @@ cass_result_coltype(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
-cass_iterator_new(
-    void*  value,
-    void** iterator);
+CASS_EXPORT CassCode
+cass_result_iterator_new(
+    CassResult* result,
+    CassIterator** iterator);
+
+CASS_EXPORT CassCode
+cass_result_iterator_get(
+    CassIterator* iterator,
+    CassRow** row);
 
 /**
  * Advance the iterator to the next row or collection item.
@@ -795,9 +848,17 @@ cass_iterator_new(
  *
  * @return next row, NULL if no rows remain or error
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_iterator_next(
-    void* iterator);
+    CassIterator* iterator);
+
+CASS_EXPORT CassCode
+cass_iterator_reset(
+    CassIterator* iterator);
+
+CASS_EXPORT void
+cass_iterator_free(
+    CassIterator* iterator);
 
 /**
  * Get the column value at index for the specified row.
@@ -808,11 +869,11 @@ cass_iterator_next(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_row_getcol(
-    void*  row,
+    CassRow*  row,
     size_t index,
-    void** value);
+    CassValue** value);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -823,10 +884,10 @@ cass_row_getcol(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_decode_short(
-    void*       source,
-    cass_int16_t value);
+    CassValue*   source,
+    cass_int16_t* value);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -837,10 +898,10 @@ cass_decode_short(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_decode_int(
-    void*       source,
-    cass_int32_t value);
+    CassValue*    source,
+    cass_int32_t* value);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -851,10 +912,10 @@ cass_decode_int(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_decode_bigint(
-    void*       source,
-    cass_int64_t value);
+    CassValue*       source,
+    cass_int64_t* value);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -865,10 +926,10 @@ cass_decode_bigint(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_decode_float(
-    void*  source,
-    cass_float  value);
+    CassValue*  source,
+    cass_float_t*  value);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -879,10 +940,10 @@ cass_decode_float(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_decode_double(
     void*       source,
-    cass_double  value);
+    cass_double_t  value);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -893,10 +954,10 @@ cass_decode_double(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_decode_bool(
     void*    source,
-    cass_bool value);
+    cass_bool_t value);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -907,7 +968,7 @@ cass_decode_bool(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_decode_time(
     void*       source,
     cass_int64_t value);
@@ -921,7 +982,7 @@ cass_decode_time(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_decode_uuid(
     void*   source,
     CassUuid value);
@@ -935,7 +996,7 @@ cass_decode_uuid(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_decode_counter(
     void*       source,
     cass_int64_t value);
@@ -955,7 +1016,7 @@ cass_decode_counter(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_decode_string(
     void*   source,
     char*   output,
@@ -977,7 +1038,7 @@ cass_decode_string(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_decode_blob(
     void*        source,
     cass_uint8_t* output,
@@ -993,7 +1054,7 @@ cass_decode_blob(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_decode_decimal(
     void*         source,
     cass_uint32_t* scale,
@@ -1015,7 +1076,7 @@ cass_decode_decimal(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_decode_varint(
     void*        source,
     cass_uint8_t* output,
@@ -1042,7 +1103,7 @@ cass_collection_count(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_collection_subtype(
     void*   collection,
     CassColumnType* output);
@@ -1055,7 +1116,7 @@ cass_collection_subtype(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_collection_map_key_type(
     void*   collection,
     CassColumnType* output);
@@ -1068,7 +1129,7 @@ cass_collection_map_key_type(
  *
  * @return
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_collection_map_value_type(
     void*   collection,
     CassColumnType* output);
@@ -1082,7 +1143,7 @@ cass_collection_map_value_type(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_map_get_key(
     void*  item,
     void** output);
@@ -1096,7 +1157,7 @@ cass_map_get_key(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_map_get_value(
     void*  item,
     void** output);
@@ -1146,7 +1207,7 @@ cass_uuid_v4(
  *
  * @return
  */
-CASS_EXPORT int
+CASS_EXPORT CassCode
 cass_uuid_string(
     CassUuid uuid,
     char*   output);
@@ -1155,30 +1216,7 @@ cass_uuid_string(
 } /* extern "C" */
 #endif
 
-#define CASS_ERROR_SOURCE_OS          1
-#define CASS_ERROR_SOURCE_NETWORK     2
-#define CASS_ERROR_SOURCE_SSL         3
-#define CASS_ERROR_SOURCE_COMPRESSION 4
-#define CASS_ERROR_SOURCE_SERVER      5
-#define CASS_ERROR_SOURCE_LIBRARY     6
 
-#define CASS_ERROR_NO_ERROR            0
 
-#define CASS_ERROR_SSL_CERT            1000000
-#define CASS_ERROR_SSL_PRIVATE_KEY     1000001
-#define CASS_ERROR_SSL_CA_CERT         1000002
-#define CASS_ERROR_SSL_CRL             1000003
-#define CASS_ERROR_SSL_READ            1000004
-#define CASS_ERROR_SSL_WRITE           1000005
-#define CASS_ERROR_SSL_READ_WAITING    1000006
-#define CASS_ERROR_SSL_WRITE_WAITING   1000007
-
-#define CASS_ERROR_LIB_BAD_PARAMS      2000001
-#define CASS_ERROR_LIB_INVALID_OPTION  2000002
-#define CASS_ERROR_LIB_NO_STREAMS      2000008
-#define CASS_ERROR_LIB_MAX_CONNECTIONS 2000009
-#define CASS_ERROR_LIB_SESSION_STATE   2000010
-#define CASS_ERROR_LIB_MESSAGE_PREPARE 2000011
-#define CASS_ERROR_LIB_HOST_RESOLUTION 2000012
 
 #endif /* __CASS_H_INCLUDED__ */

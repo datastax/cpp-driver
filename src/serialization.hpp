@@ -23,7 +23,6 @@
 #include <map>
 #include <string>
 
-
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #define ntohlll(x) ((((uint128_t) ntohll(x)) << 64) | ntohll(x >> 64))
 #define htonlll(x) ntohlll(x)
@@ -140,6 +139,11 @@ encode_string_map(
     buffer = encode_string(buffer, it->second.c_str(), it->second.size());
   }
   return buffer;
+}
+
+inline char* encode_uuid(char* output, const uint8_t* uuid) {
+  memcpy(output, uuid, 16);
+  return output + 16;
 }
 
 inline char*

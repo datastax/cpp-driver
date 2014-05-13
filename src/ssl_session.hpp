@@ -36,6 +36,8 @@
 
 #define BUFFER_SIZE 66560
 
+
+// TODO(mpenick): Fix this and translate error from openssl
 #define CASS_SSL_CHECK_ERROR(ssl, input) {       \
   int  err    = SSL_get_error(ssl, input);      \
   if (err    != SSL_ERROR_NONE                  \
@@ -47,7 +49,7 @@
       sizeof(message));                         \
   return new Error(                          \
       CASS_ERROR_SOURCE_SSL,                     \
-      err,                                      \
+      CASS_ERROR_SSL_READ,                      \
       std::string(message),                     \
       __FILE__,                                 \
       __LINE__);                                \

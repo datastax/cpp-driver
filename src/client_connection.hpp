@@ -340,7 +340,7 @@ struct ClientConnection {
         &buf,
         1,
         ClientConnection::on_write);
-    return CASS_ERROR_NO_ERROR;
+    return nullptr;
   }
 
   void
@@ -476,7 +476,7 @@ struct ClientConnection {
       notify_error(
           new Error(
               CASS_ERROR_SOURCE_SERVER,
-              0,
+              CASS_OK, // TODO(mpenick): Need valid error
               error->message,
               __FILE__,
               __LINE__));

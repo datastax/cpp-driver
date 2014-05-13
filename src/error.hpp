@@ -19,12 +19,14 @@
 
 #include <string>
 
+#include "cassandra.h"
+
 namespace cass {
 
 struct Error {
   Error(
-      int                source,
-      int                code,
+      CassSource         source,
+      CassCode           code,
       const std::string& message,
       const std::string& file,
       int                line) :
@@ -35,8 +37,8 @@ struct Error {
       line(line)
   {}
 
-  int         source;
-  int         code;
+  CassSource  source;
+  CassCode    code;
   std::string message;
   std::string file;
   int         line;

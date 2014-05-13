@@ -67,7 +67,7 @@ class SSLContext {
         _ssl_ctx,
         "AES256-SHA:TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!3DES:@STRENGTH");
     SSL_CTX_set_verify(_ssl_ctx, SSL_VERIFY_PEER, _verify_callback);
-    return CASS_ERROR_NO_ERROR;
+    return CASS_OK;
   }
 
   SSLSession*
@@ -92,7 +92,7 @@ class SSLContext {
     X509_STORE_add_cert(_ca_store, x509);
     SSL_CTX_add_client_CA(_ssl_ctx, x509);
     X509_free(x509);
-    return CASS_ERROR_NO_ERROR;
+    return CASS_OK;
   }
 
   int
@@ -116,7 +116,7 @@ class SSLContext {
         X509_V_FLAG_CRL_CHECK | X509_V_FLAG_CRL_CHECK_ALL);
     BIO_free_all(bio);
     X509_CRL_free(x509);
-    return CASS_ERROR_NO_ERROR;
+    return CASS_OK;
   }
 
   int
@@ -143,7 +143,7 @@ class SSLContext {
     SSL_CTX_use_PrivateKey(_ssl_ctx, key);
     EVP_PKEY_free(key);
     BIO_free_all(bio);
-    return CASS_ERROR_NO_ERROR;
+    return CASS_OK;
   }
 
   int
@@ -161,7 +161,7 @@ class SSLContext {
     if (r <= 0) {
       return CASS_ERROR_SSL_CERT;
     }
-    return CASS_ERROR_NO_ERROR;
+    return CASS_OK;
   }
 
   int
@@ -170,7 +170,7 @@ class SSLContext {
     if (SSL_CTX_use_RSAPrivateKey(_ssl_ctx, rsa) <= 0) {
       return CASS_ERROR_SSL_PRIVATE_KEY;
     }
-    return CASS_ERROR_NO_ERROR;
+    return CASS_OK;
   }
 
   int
@@ -179,7 +179,7 @@ class SSLContext {
     if (SSL_CTX_use_certificate(_ssl_ctx, cert) <= 0) {
       return CASS_ERROR_SSL_CERT;
     }
-    return CASS_ERROR_NO_ERROR;
+    return CASS_OK;
   }
 
   void

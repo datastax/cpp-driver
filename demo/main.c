@@ -33,14 +33,14 @@ main() {
   /*CassFuture* shutdown_future = NULL;*/
   int err;
 
-  const char* query = "SELECT * FROM system.peers";
+  const char* query = "SELECT * FROM system.peers WHERE peer > ?";
   CassStatement* statement = NULL;
   CassFuture* result_future = NULL;
   CassResult* result = NULL;
+  uint32_t address = 0;
 
   const char* cp1 = "127.0.0.1";
   cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, cp1, strlen(cp1));
-
 
   /*
   const char* cp2 = "127.0.0.2";
@@ -58,14 +58,22 @@ main() {
   cass_future_wait(session_future);
   cass_future_free(session_future);
 
-  cass_session_query(session, query, strlen(query), 0, CASS_CONSISTENCY_ONE, &statement);
+  cass_session_query(session, query, strlen(query), 1, CASS_CONSISTENCY_ONE, &statement);
+  cass_statement_bind_inet(statement, 0, (uint8_t*)&address, 4, 9042);
   cass_session_exec(session, statement, &result_future);
 
   cass_future_wait(result_future);
   result = cass_future_get_result(result_future);
 
-/*
-  session = cass_future_get_session(session_future);
+  /*
+  CassIterator* iterator = NULL;
+
+  cass_result_iterator_new(result, &iterator);
+
+  while(cass_iterator_next(iterator)) {
+    CassRow* row = NULL;
+    cass_result_iterator_get(iterator, &row);
+  }
 
   err = cass_session_shutdown(session, &shutdown_future);
   if(err != 0) {

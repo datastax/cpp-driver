@@ -21,6 +21,7 @@
 #include <utility>
 
 #include "message_body.hpp"
+#include "value.hpp"
 
 #define CASS_VALUE_CHECK_INDEX(i)                                        \
   if (index >= size()) {                                                \
@@ -30,7 +31,6 @@
 namespace cass {
 
 struct Statement : public MessageBody {
-  typedef std::pair<char*, size_t>        Value;
   typedef std::vector<Value>              ValueCollection;
   typedef ValueCollection::iterator       ValueIterator;
   typedef ValueCollection::const_iterator ConstValueIterator;
@@ -39,6 +39,11 @@ struct Statement : public MessageBody {
 
   Statement(uint8_t opcode)
     : MessageBody(opcode) { }
+
+  Statement(uint8_t opcode, size_t value_count)
+    : MessageBody(opcode)
+    , values(value_count) { }
+
 
   virtual
   ~Statement() {}
@@ -86,82 +91,38 @@ struct Statement : public MessageBody {
     return values.size();
   }
 
-  inline int
-  bind(
-      size_t  index,
-      int16_t value) {
-    CASS_VALUE_CHECK_INDEX(index);
-    Value pair = std::make_pair(new char[sizeof(int16_t)], sizeof(int16_t));
-    encode_short(pair.first, value);
-    values[index] = pair;
-    return CASS_ERROR_NO_ERROR;
+#define BIND_BASIC_TYPE(DeclType, Name)                  \
+  inline CassCode bind(size_t index, const DeclType& value) { \
+    CASS_VALUE_CHECK_INDEX(index);                       \
+    values[index] = Value::create_##Name(value);         \
+    return CASS_OK;                          \
   }
 
-  inline int
-  bind(
-      size_t  index,
-      int32_t value) {
+  BIND_BASIC_TYPE(int16_t, i32)
+  BIND_BASIC_TYPE(int32_t, i32)
+  BIND_BASIC_TYPE(int64_t, i64)
+  BIND_BASIC_TYPE(float, flt)
+  BIND_BASIC_TYPE(double, dbl)
+  BIND_BASIC_TYPE(bool,  bln)
+#undef BIND_BASIC_TYPE
+
+
+  inline CassCode bind(size_t index, const char* input, size_t input_length) {
     CASS_VALUE_CHECK_INDEX(index);
-    Value pair = std::make_pair(new char[sizeof(int32_t)], sizeof(int32_t));
-    encode_int(pair.first, value);
-    values[index] = pair;
-    return CASS_ERROR_NO_ERROR;
+    values[index] = Value::create_bytes(input, input_length);
+    return CASS_OK;
   }
 
-  inline int
-  bind(
-      size_t  index,
-      int64_t value) {
+  inline CassCode bind(size_t index, const uint8_t* uuid) {
     CASS_VALUE_CHECK_INDEX(index);
-    Value pair = std::make_pair(new char[sizeof(int64_t)], sizeof(int64_t));
-    encode_int64(pair.first, value);
-    values[index] = pair;
-    return CASS_ERROR_NO_ERROR;
+    values[index] = Value::create_uuid(uuid);
+    return CASS_OK;
   }
 
-  inline int
-  bind(
-      size_t index,
-      char*  input,
-      size_t input_length) {
+  inline CassCode bind(size_t index, uint8_t* address, uint8_t address_len, uint32_t port) {
     CASS_VALUE_CHECK_INDEX(index);
-    Value pair = std::make_pair(new char[input_length], input_length);
-    memcpy(pair.first, input, input_length);
-    values[index] = pair;
-    return CASS_ERROR_NO_ERROR;
-  }
-
-  inline int
-  bind(
-      size_t index,
-      float  value) {
-    CASS_VALUE_CHECK_INDEX(index);
-    Value pair = std::make_pair(new char[sizeof(float)], sizeof(float));
-    encode_int(pair.first, static_cast<float>(value));
-    values[index] = pair;
-    return CASS_ERROR_NO_ERROR;
-  }
-
-  inline int
-  bind(
-      size_t index,
-      double value) {
-    CASS_VALUE_CHECK_INDEX(index);
-    Value pair = std::make_pair(new char[sizeof(double)], sizeof(double));
-    encode_int64(pair.first, static_cast<int64_t>(value));
-    values[index] = pair;
-    return CASS_ERROR_NO_ERROR;
-  }
-
-  inline int
-  bind(
-      size_t index,
-      bool   value) {
-    CASS_VALUE_CHECK_INDEX(index);
-    Value pair = std::make_pair(new char[sizeof(uint8_t)], sizeof(uint8_t));
-    encode_byte(pair.first, value ? 0x01 : 0x00);
-    values[index] = pair;
-    return CASS_ERROR_NO_ERROR;
+    values[index] = Value::create_inet(address, address_len, port);
+    return CASS_OK;
   }
 
   inline ValueIterator

@@ -87,7 +87,7 @@ struct Config {
     return port_;
   }
 
-  int
+  CassCode
   option(
       CassOption   option,
       const void* value,
@@ -132,7 +132,7 @@ struct Config {
         return CASS_ERROR_LIB_INVALID_OPTION;
     }
 
-    return CASS_ERROR_NO_ERROR;
+    return CASS_OK;
   }
 };
 

@@ -53,7 +53,7 @@ cass_session_free(
   delete session->from();
 }
 
-int
+CassCode
 cass_session_setopt(
     CassSession* session,
     CassOption   option,
@@ -62,42 +62,42 @@ cass_session_setopt(
   return session->config_.option(option, data, data_len);
 }
 
-int
+CassCode
 cass_session_getopt(
     CassSession* session,
     CassOption   option,
     void**      data,
     size_t*     data_len)
 {
-  return CASS_ERROR_NO_ERROR;
+  return CASS_OK;
 }
 
-int
+CassCode
 cass_session_connect(
    CassSession* session,
    CassFuture** future) {
   cass::Future* session_future = session->connect("");
   *future = CassFuture::to(session_future);
-  return CASS_ERROR_NO_ERROR;
+  return CASS_OK;
 }
 
-int
+CassCode
 cass_session_connect_keyspace(
    CassSession*  session,
     const char* keyspace,
     CassFuture** future) {
   cass::Future* session_future = session->connect(keyspace);
   *future = CassFuture::to(session_future);
-  return CASS_ERROR_NO_ERROR;
+  return CASS_OK;
 }
 
-int
+CassCode
 cass_session_shutdown(
     CassSession* session,
     CassFuture** future) {
   cass::Future* shutdown_future = session->shutdown();
   *future = CassFuture::to(shutdown_future);
-  return CASS_ERROR_NO_ERROR;
+  return CASS_OK;
 }
 
 void
@@ -160,13 +160,13 @@ cass_future_error_string(
   *total = future->error->message.copy(output, output_len);
 }
 
-int
+CassSource
 cass_future_error_source(
     CassFuture* future) {
   return future->error->source;
 }
 
-int
+CassCode
 cass_future_error_code(
     CassFuture* future) {
   return future->error->code;
@@ -178,22 +178,22 @@ cass_error_desc(
   return "";
 }
 
-int
+CassCode
 cass_session_query(
     CassSession*    session,
     const char*    statement,
     size_t         statement_length,
-    size_t         paramater_count,
+    size_t         parameter_count,
     CassConsistency consistency,
     CassStatement** output) {
   (void) session;
-  cass::Statement* query_statement = new cass::QueryStatement(paramater_count, consistency);
+  cass::Statement* query_statement = new cass::QueryStatement(parameter_count, consistency);
   *output = CassStatement::to(query_statement);
   (*output)->statement(statement, statement_length);
-  return CASS_ERROR_NO_ERROR;
+  return CASS_OK;
 }
 
-int
+CassCode
 cass_session_prepare(
     CassSession* session,
     const char* statement,
@@ -201,37 +201,37 @@ cass_session_prepare(
     CassFuture** output) {
   cass::Future* future = session->prepare(statement, statement_length);
   *output = CassFuture::to(future);
-  return CASS_ERROR_NO_ERROR;
+  return CASS_OK;
 }
 
-int
+CassCode
 cass_session_bind(
     CassSession*    session,
     CassPrepared*   prepared,
-    size_t         paramater_count,
+    size_t         parameter_count,
     CassConsistency consistency,
     CassStatement** output) {
-  cass::Statement* bound_statement = new cass::BoundStatement(*prepared, consistency);
+  cass::Statement* bound_statement = new cass::BoundStatement(*prepared, parameter_count, consistency);
   *output = CassStatement::to(bound_statement);
-  return CASS_ERROR_NO_ERROR;
+  return CASS_OK;
 }
 
-int
+CassCode
 cass_session_batch(
     CassSession*         session,
     CassConsistency      consistency,
     CassBatchStatement** output) {
   cass::BatchStatement* batch_statment = new cass::BatchStatement(consistency);
   *output = CassBatchStatement::to(batch_statment);
-  return CASS_ERROR_NO_ERROR;
+  return CASS_OK;
 }
 
-int
+CassCode
 cass_batch_add_statement(
     CassBatchStatement* batch,
     CassStatement*      statement) {
   batch->add_statement(statement);
-  return CASS_ERROR_NO_ERROR;
+  return CASS_OK;
 }
 
 /**
@@ -243,7 +243,7 @@ cass_batch_add_statement(
  *
  * @return
  */
-int
+CassCode
 cass_statement_bind_short(
     CassStatement* statement,
     size_t        index,
@@ -260,7 +260,7 @@ cass_statement_bind_short(
  *
  * @return
  */
-int
+CassCode
 cass_statement_bind_int(
     CassStatement* statement,
     size_t        index,
@@ -277,7 +277,7 @@ cass_statement_bind_int(
  *
  * @return
  */
-int
+CassCode
 cass_statement_bind_bigint(
     CassStatement* statement,
     size_t        index,
@@ -294,7 +294,7 @@ cass_statement_bind_bigint(
  *
  * @return
  */
-int
+CassCode
 cass_statement_bind_float(
     CassStatement* statement,
     size_t        index,
@@ -311,7 +311,7 @@ cass_statement_bind_float(
  *
  * @return NULL if successful, otherwise pointer to CassError structure
  */
-int
+CassCode
 cass_statement_bind_double(
     CassStatement*  statement,
     size_t         index,
@@ -328,11 +328,11 @@ cass_statement_bind_double(
  *
  * @return NULL if successful, otherwise pointer to CassError structure
  */
-int
+CassCode
 cass_statement_bind_bool(
     CassStatement*  statement,
     size_t         index,
-    cass_bool       value) {
+    cass_bool_t    value) {
   return statement->bind(index, value);
 }
 
@@ -362,12 +362,12 @@ cass_statement_bind_time(
  *
  * @return NULL if successful, otherwise pointer to CassError structure
  */
-int
+CassCode
 cass_statement_bind_uuid(
     CassStatement*  statement,
     size_t         index,
     CassUuid        value) {
-  return statement->bind(index, reinterpret_cast<char*>(value), sizeof(CassUuid));
+  return statement->bind(index, value);
 }
 
 /**
@@ -379,7 +379,7 @@ cass_statement_bind_uuid(
  *
  * @return NULL if successful, otherwise pointer to CassError structure
  */
-int
+CassCode
 cass_statement_bind_counter(
     CassStatement*  statement,
     size_t         index,
@@ -397,7 +397,7 @@ cass_statement_bind_counter(
  *
  * @return NULL if successful, otherwise pointer to CassError structure
  */
-int
+CassCode
 cass_statement_bind_string(
     CassStatement*  statement,
     size_t         index,
@@ -416,7 +416,7 @@ cass_statement_bind_string(
  *
  * @return NULL if successful, otherwise pointer to CassError structure
  */
-int
+CassCode
 cass_statement_bind_blob(
     CassStatement*  statement,
     size_t         index,
@@ -436,14 +436,24 @@ cass_statement_bind_blob(
  *
  * @return NULL if successful, otherwise pointer to CassError structure
  */
-int
+CassCode
 cass_statement_bind_decimal(
     CassStatement* statement,
     size_t        index,
     uint32_t      scale,
     uint8_t*      value,
     size_t        length) {
-  return CASS_ERROR_NO_ERROR;
+  return CASS_OK;
+}
+
+CassCode
+cass_statement_bind_inet(
+    CassStatement* statement,
+    size_t         index,
+    cass_uint8_t*   address,
+    cass_uint8_t    address_len,
+    cass_int32_t   port) {
+  return statement->bind(index, address, address_len, port);
 }
 
 /**
@@ -456,7 +466,7 @@ cass_statement_bind_decimal(
  *
  * @return NULL if successful, otherwise pointer to CassError structure
  */
-int
+CassCode
 cass_statement_bind_varint(
     CassStatement*  statement,
     size_t         index,
@@ -465,13 +475,13 @@ cass_statement_bind_varint(
   return statement->bind(index, reinterpret_cast<char*>(value), length);
 }
 
-int
+CassCode
 cass_session_exec(
     CassSession*   session,
     CassStatement* statement,
     CassFuture**   future) {
   *future = CassFuture::to(session->execute(statement->from()));
-  return CASS_ERROR_NO_ERROR;
+  return CASS_OK;
 }
 
 size_t
@@ -492,38 +502,55 @@ cass_result_colcount(
   return 0;
 }
 
-int
+CassCode
 cass_result_coltype(
     CassResult*     result,
     size_t         index,
     CassColumnType* coltype) {
   if(result->kind == CASS_RESULT_KIND_ROWS) {
     *coltype = static_cast<CassColumnType>(result->column_metadata[index].type);
-    return 0;
+    return CASS_OK;
   }
-  return -1; // TODO(mpenick): Figure out error codes
+  return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
 }
 
-int
-cass_iterator_new(
-    void*  value,
-    void** iterator) {
-
-  return -1; // TODO(mpenick): Figure out error codes
+CassCode
+cass_result_iterator_new(
+    CassResult* result,
+    CassIterator** iterator) {
+  return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
 }
 
-int
+CassCode
+cass_result_iterator_get(
+    CassIterator* iterator,
+    CassRow** row) {
+  return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
+}
+
+CassCode
 cass_iterator_next(
-    void* iterator) {
-  return -1; // TODO(mpenick): Figure out error codes
+    CassIterator* iterator) {
+  return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
 }
 
-int
+CassCode
+cass_iterator_reset(
+    CassIterator* iterator) {
+  return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
+}
+
+CASS_EXPORT void
+cass_iterator_free(
+    CassIterator* iterator) {
+}
+
+CassCode
 cass_row_getcol(
-    void*  row,
+    CassRow*  row,
     size_t index,
-    void** value) {
-  return -1; // TODO(mpenick): Figure out error codes
+    CassValue** value) {
+  return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
 }
 
 } // extern "C"

@@ -38,32 +38,28 @@ struct QueryStatement : public Statement {
   int               page_size;
   std::vector<char> paging_state;
   int16_t           serial_consistency_value;
-  ValueCollection   values;
 
  public:
 
   QueryStatement(const char* statement, size_t statement_length,
                 size_t value_count, CassConsistency consistency)
-    : Statement(CQL_OPCODE_QUERY)
+    : Statement(CQL_OPCODE_QUERY, value_count)
     , query(statement, statement_length)
     , consistency_value(consistency)
     , page_size(-1)
-    , serial_consistency_value(CASS_CONSISTENCY_ANY)
-    , values(value_count) {}
+    , serial_consistency_value(CASS_CONSISTENCY_ANY) {}
 
   QueryStatement(size_t value_count, CassConsistency consistency)
-     : Statement(CQL_OPCODE_QUERY)
+     : Statement(CQL_OPCODE_QUERY, value_count)
      , consistency_value(consistency)
      , page_size(-1)
-     , serial_consistency_value(CASS_CONSISTENCY_ANY)
-     , values(value_count) {}
+     , serial_consistency_value(CASS_CONSISTENCY_ANY) { }
 
   QueryStatement()
     : Statement(CQL_OPCODE_QUERY)
     , consistency_value(CASS_CONSISTENCY_ANY)
     , page_size(-1)
-    , serial_consistency_value(CASS_CONSISTENCY_ANY)
-    , values(0) {}
+    , serial_consistency_value(CASS_CONSISTENCY_ANY) { }
 
   uint8_t
   kind() const {
@@ -150,10 +146,9 @@ struct QueryStatement : public Statement {
 
     if (!values.empty()) {
       size += sizeof(int16_t);
-      for (ValueCollection::const_iterator it = values.begin();
-           it != values.end();
-           ++it) {
-        size += (sizeof(int32_t) + it->second);
+      for (const auto& value : values) {
+        size += sizeof(int32_t);
+        size += value.get_size();
       }
       flags |= CASS_QUERY_FLAG_VALUES;
     }
@@ -181,7 +176,7 @@ struct QueryStatement : public Statement {
     if (!values.empty()) {
       buffer = encode_short(buffer, values.size());
       for (const auto& value : values) {
-        buffer = encode_long_string(buffer, value.first, value.second);
+        buffer = value.encode(buffer);
       }
     }
 

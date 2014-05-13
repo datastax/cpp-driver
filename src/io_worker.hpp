@@ -100,7 +100,7 @@ struct IOWorker {
           __FILE__,
           __LINE__);
     }
-    return CASS_ERROR_NO_ERROR;
+    return nullptr;
   }
 
   static void on_execute(uv_async_t* data, int status);

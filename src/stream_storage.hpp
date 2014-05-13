@@ -46,7 +46,7 @@ class StreamStorage {
     output                     = available_streams_[index];
     storage_[output]           = input;
     allocated_streams_[output] = true;
-    return CASS_ERROR_NO_ERROR;
+    return nullptr;
   }
 
   inline Error*
@@ -65,7 +65,7 @@ class StreamStorage {
                           "this stream has already been released");
       }
     }
-    return CASS_ERROR_NO_ERROR;
+    return nullptr;
   }
 
   inline size_t
