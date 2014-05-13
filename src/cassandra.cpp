@@ -214,8 +214,7 @@ cass_session_prepare(
 }
 
 CassCode
-cass_session_bind(
-    CassSession*    session,
+cass_prepared_bind(
     CassPrepared*   prepared,
     size_t         parameter_count,
     CassConsistency consistency,

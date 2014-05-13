@@ -503,8 +503,7 @@ cass_session_prepare(
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT CassCode
-cass_session_bind(
-    CassSession*    session,
+cass_prepared_bind(
     CassPrepared*   prepared,
     size_t         paramater_count,
     CassConsistency consistency,

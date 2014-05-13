@@ -99,7 +99,8 @@ main() {
     cass_future_wait(prepared_future);
     prepared = cass_future_get_prepared(prepared_future);
 
-    cass_session_bind(session, prepared, 6, CASS_CONSISTENCY_ONE, &statement);
+    cass_prepared_bind(prepared, 6, CASS_CONSISTENCY_ONE, &statement);
+
     cass_statement_bind_string(statement, 0, key, strlen(key));
     cass_statement_bind_bool(statement, 1, cass_true);
     cass_statement_bind_float(statement, 2, 0.1);
