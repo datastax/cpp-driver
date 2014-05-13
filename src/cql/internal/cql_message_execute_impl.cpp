@@ -50,8 +50,10 @@ cql::cql_message_execute_impl_t::cql_message_execute_impl_t(
     const std::vector<cql::cql_byte_t>& id,
     cql::cql_consistency_enum consistency,
     boost::shared_ptr<cql_retry_policy_t> retry_policy,
-    bool is_traced) :
+    bool is_traced,
+    bool is_compressed) :
 
+    cql_message_t(is_compressed),
     _buffer(new std::vector<cql_byte_t>()),
     _query_id(id),
     _consistency(consistency),

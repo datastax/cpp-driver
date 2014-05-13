@@ -24,6 +24,7 @@ public:
         _query_string(query_string),
         _consistency(CQL_CONSISTENCY_DEFAULT),
         _is_traced(false),
+        _is_compressed(false),
         _retry_policy(new cql_default_retry_policy_t()),
         _retry_counter(0)
     {}
@@ -34,6 +35,7 @@ public:
         _query_string(query_string),
         _consistency(consistency),
         _is_traced(false),
+        _is_compressed(false),
         _retry_policy(new cql_default_retry_policy_t()),
         _retry_counter(0)
     {}
@@ -41,10 +43,12 @@ public:
     cql_query_t(
         const std::string&         query_string,
         const cql_consistency_enum consistency,
-        const bool                 is_traced) :
+        const bool                 is_traced,
+        const bool                 is_compressed) :
         _query_string(query_string),
         _consistency(consistency),
         _is_traced(is_traced),
+        _is_compressed(is_compressed),
         _retry_policy(new cql_default_retry_policy_t()),
         _retry_counter(0)
     {}
@@ -53,10 +57,12 @@ public:
         const std::string&                          query_string,
         const cql_consistency_enum                  consistency,
         const bool                                  is_traced,
+        const bool                                  is_compressed,
         const boost::shared_ptr<cql_retry_policy_t> retry_policy) :
         _query_string(query_string),
         _consistency(consistency),
         _is_traced(is_traced),
+        _is_compressed(is_compressed),
         _retry_policy(retry_policy),
         _retry_counter(0)
     {}
@@ -77,6 +83,24 @@ public:
     disable_tracing()
     {
         _is_traced = false;
+    }
+    
+    inline bool
+    is_compressed() const
+    {
+        return _is_compressed;
+    }
+    
+    inline void
+    enable_compression()
+    {
+        _is_compressed = true;
+    }
+
+    inline void
+    disable_compression()
+    {
+        _is_compressed = false;
     }
 
     inline cql_consistency_enum
@@ -150,6 +174,7 @@ private:
 	std::string							  _query_string;
     cql_consistency_enum                  _consistency;
     bool                                  _is_traced;
+    bool                                  _is_compressed;
     boost::shared_ptr<cql_retry_policy_t> _retry_policy;
 	cql_stream_t						  _stream;
     int                                   _retry_counter;

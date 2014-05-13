@@ -25,8 +25,9 @@ cql::cql_execute_t::cql_execute_t() :
 cql::cql_execute_t::cql_execute_t(const std::vector<cql::cql_byte_t>& id,
                                   cql::cql_consistency_enum consistency,
                                   boost::shared_ptr<cql::cql_retry_policy_t> retry_policy,
-                                  bool is_traced) :
-    _impl(new cql_message_execute_impl_t(id, consistency, retry_policy, is_traced))
+                                  bool is_traced,
+                                  bool is_compressed) :
+    _impl(new cql_message_execute_impl_t(id, consistency, retry_policy, is_traced, is_compressed))
 {}
 
 cql::cql_execute_t::~cql_execute_t() {
@@ -110,6 +111,18 @@ cql::cql_execute_t::pop_back() {
 boost::shared_ptr<cql::cql_message_execute_impl_t>
 cql::cql_execute_t::impl() const {
     return _impl;
+}
+
+bool
+cql::cql_execute_t::is_compressed() const
+{
+    return _impl->is_compressed();
+}
+
+void
+cql::cql_execute_t::enable_compression()
+{
+    _impl->enable_compression();
 }
 
 boost::shared_ptr<cql::cql_retry_policy_t>

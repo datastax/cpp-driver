@@ -34,8 +34,8 @@ typedef
 
 class cql_message_t {
 public:
-    cql_message_t()
-        : _is_compressed(false) {}
+    cql_message_t(bool is_compressed=false)
+        : _is_compressed(is_compressed) {}
     
     // Returns message type.
     virtual cql::cql_opcode_enum
