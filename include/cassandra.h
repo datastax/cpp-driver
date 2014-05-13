@@ -379,7 +379,7 @@ cass_future_get_result(
  * @return NULL if unsuccessful, otherwise pointer to CassPrepare instance
  */
 CASS_EXPORT CassPrepared*
-cass_future_get_prepare(
+cass_future_get_prepared(
     CassFuture* future);
 
 /***********************************************************************************

@@ -441,13 +441,15 @@ struct ClientConnection {
           request->result.reset(response);
         }
         request->notify(loop_);
-        prepare_callback_(
-            this,
-            error,
-            request->data.c_str(),
-            request->data.size(),
-            result->prepared,
-            result->prepared_size);
+        if(prepare_callback_) {
+          prepare_callback_(
+                this,
+                error,
+                request->data.c_str(),
+                request->data.size(),
+                result->prepared,
+                result->prepared_size);
+        }
         break;
 
       default:

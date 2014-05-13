@@ -92,7 +92,7 @@ struct Statement : public MessageBody {
   }
 
 #define BIND_BASIC_TYPE(DeclType, Name)                  \
-  inline CassCode bind(size_t index, const DeclType& value) { \
+  inline CassCode bind_##Name(size_t index, const DeclType& value) { \
     CASS_VALUE_CHECK_INDEX(index);                       \
     values[index] = Value::create_##Name(value);         \
     return CASS_OK;                          \

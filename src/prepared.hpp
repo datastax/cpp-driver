@@ -23,11 +23,8 @@ namespace cass {
 
 struct Prepared {
   std::string id;
-
-  Prepared(
-      const std::string& id) :
-      id(id) {
-  }
+  Prepared(const std::string& id)
+        : id(id) { }
 };
 
 } // namespace cass

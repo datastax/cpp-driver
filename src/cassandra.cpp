@@ -149,7 +149,7 @@ cass_future_get_result(
 }
 
 CassPrepared*
-cass_future_get_prepare(
+cass_future_get_prepared(
    CassFuture* future) {
   cass::MessageFutureImpl* message_future = static_cast<cass::MessageFutureImpl*>(future->from());
   if(message_future->error) {
@@ -257,7 +257,7 @@ cass_statement_bind_short(
     CassStatement* statement,
     size_t        index,
     int16_t       value) {
-  return statement->bind(index, value);
+  return statement->bind_i32(index, value);
 }
 
 /**
@@ -274,7 +274,7 @@ cass_statement_bind_int(
     CassStatement* statement,
     size_t        index,
     int32_t       value) {
-  return statement->bind(index, value);
+  return statement->bind_i32(index, value);
 }
 
 /**
@@ -291,7 +291,7 @@ cass_statement_bind_bigint(
     CassStatement* statement,
     size_t        index,
     int64_t       value) {
-  return statement->bind(index, value);
+  return statement->bind_i64(index, value);
 }
 
 /**
@@ -308,7 +308,7 @@ cass_statement_bind_float(
     CassStatement* statement,
     size_t        index,
     float         value) {
-  return statement->bind(index, value);
+  return statement->bind_flt(index, value);
 }
 
 /**
@@ -325,7 +325,7 @@ cass_statement_bind_double(
     CassStatement*  statement,
     size_t         index,
     double         value) {
-  return statement->bind(index, value);
+  return statement->bind_dbl(index, value);
 }
 
 /**
@@ -342,7 +342,7 @@ cass_statement_bind_bool(
     CassStatement*  statement,
     size_t         index,
     cass_bool_t    value) {
-  return statement->bind(index, value);
+  return statement->bind_bln(index, value);
 }
 
 /**
@@ -359,7 +359,7 @@ cass_statement_bind_time(
     CassStatement*  statement,
     size_t         index,
     int64_t        value) {
-  return statement->bind(index, value);
+  return statement->bind_i64(index, value);
 }
 
 /**
@@ -393,7 +393,7 @@ cass_statement_bind_counter(
     CassStatement*  statement,
     size_t         index,
     int64_t        value) {
-  return statement->bind(index, value);
+  return statement->bind_i64(index, value);
 }
 
 /**

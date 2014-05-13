@@ -35,22 +35,9 @@ main() {
   /*CassFuture* shutdown_future = NULL;*/
   int err;
 
-  const char* query = "SELECT * FROM system.local WHERE key = ?";
-  const char* key = "local";
-
-  CassStatement* statement = NULL;
-  CassFuture* result_future = NULL;
-  CassResult* result = NULL;
 
   const char* cp1 = "127.0.0.1";
   cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, cp1, strlen(cp1));
-
-  /*
-  const char* cp2 = "127.0.0.2";
-  const char* cp3 = "127.0.0.3";
-  cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, cp2, strlen(cp2));
-  cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, cp3, strlen(cp3));
-  */
 
   err = cass_session_connect(session, &session_future);
   if (err != 0) {
@@ -61,13 +48,70 @@ main() {
   cass_future_wait(session_future);
   cass_future_free(session_future);
 
-  cass_session_query(session, query, strlen(query), 1, CASS_CONSISTENCY_ONE, &statement);
-  cass_statement_bind_string(statement, 0, key, strlen(key));
-  /*cass_statement_bind_inet(statement, 0, (const uint8_t*)&address, 4);*/
-  cass_session_exec(session, statement, &result_future);
+  {
+    const char* query = "SELECT * FROM system.local WHERE key = ?";
+    const char* key = "local";
+    CassStatement* statement = NULL;
+    CassFuture* result_future = NULL;
+    CassResult* result = NULL;
 
-  cass_future_wait(result_future);
-  result = cass_future_get_result(result_future);
+    cass_session_query(session, query, strlen(query), 1, CASS_CONSISTENCY_ONE, &statement);
+    cass_statement_bind_string(statement, 0, key, strlen(key));
+    cass_session_exec(session, statement, &result_future);
+
+    cass_future_wait(result_future);
+    result = cass_future_get_result(result_future);
+  }
+
+  {
+    CassStatement* statement = NULL;
+    CassFuture* result_future = NULL;
+    CassResult* result = NULL;
+
+    const char* query = "INSERT INTO test.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);";
+    const char* key = "abcdefghijklmnopqrstuvwxyz";
+    cass_session_query(session, query, strlen(query), 6, CASS_CONSISTENCY_ONE, &statement);
+    cass_statement_bind_string(statement, 0, key, strlen(key));
+    cass_statement_bind_bool(statement, 1, cass_true);
+    cass_statement_bind_float(statement, 2, 0.1);
+    cass_statement_bind_double(statement, 3, 99999);
+    cass_statement_bind_int(statement, 4, 1);
+    cass_statement_bind_bigint(statement, 5, 2);
+
+    cass_session_exec(session, statement, &result_future);
+
+    cass_future_wait(result_future);
+    result = cass_future_get_result(result_future);
+  }
+
+  {
+    CassStatement* statement = NULL;
+    CassFuture* result_future = NULL;
+    CassResult* result = NULL;
+    CassFuture* prepared_future;
+    CassPrepared* prepared;
+
+    const char* query = "INSERT INTO test.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);";
+    const char* key = "abcdefghijklmnopqrstuvwxyz";
+
+    cass_session_prepare(session, query, strlen(query), &prepared_future);
+
+    cass_future_wait(prepared_future);
+    prepared = cass_future_get_prepared(prepared_future);
+
+    cass_session_bind(session, prepared, 6, CASS_CONSISTENCY_ONE, &statement);
+    cass_statement_bind_string(statement, 0, key, strlen(key));
+    cass_statement_bind_bool(statement, 1, cass_true);
+    cass_statement_bind_float(statement, 2, 0.1);
+    cass_statement_bind_double(statement, 3, 99999);
+    cass_statement_bind_int(statement, 4, 1);
+    cass_statement_bind_bigint(statement, 5, 2);
+
+    cass_session_exec(session, statement, &result_future);
+
+    cass_future_wait(result_future);
+    result = cass_future_get_result(result_future);
+  }
 
   /*
   CassIterator* iterator = NULL;

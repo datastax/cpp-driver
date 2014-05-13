@@ -44,7 +44,7 @@ struct BoundStatement : public Statement {
  public:
   BoundStatement(const Prepared& prepared,
                  size_t value_count, CassConsistency consistency)
-    : Statement(CQL_OPCODE_QUERY, value_count)
+    : Statement(CQL_OPCODE_EXECUTE, value_count)
     , id(prepared.id)
     , consistency_value(consistency)
     , page_size(-1)
@@ -52,7 +52,7 @@ struct BoundStatement : public Statement {
 
   BoundStatement(const  std::string& id,
                  size_t value_count, CassConsistency consistency)
-    : Statement(CQL_OPCODE_QUERY, value_count)
+    : Statement(CQL_OPCODE_EXECUTE, value_count)
     , id(id)
     , consistency_value(consistency)
     , page_size(-1)
@@ -123,13 +123,15 @@ struct BoundStatement : public Statement {
       size_t reserved,
       char** output,
       size_t& size) {
-    uint8_t  flags  = 0x00;
+
+    uint8_t flags  = 0x00;
+
     // reserved + the long string
-    size            = reserved + sizeof(int32_t) + id.size();
+    size = reserved + sizeof(int32_t) + id.size();
     // consistency_value
-    size           += sizeof(int16_t);
+    size += sizeof(int16_t);
     // flags
-    size           += 1;
+    size += 1;
 
     if (serial_consistency_value != 0) {
       flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
@@ -162,7 +164,7 @@ struct BoundStatement : public Statement {
 
     *output = new char[size];
 
-    char* buffer = encode_long_string(
+    char* buffer = encode_string(
         *output + reserved,
         id.c_str(),
         id.size());

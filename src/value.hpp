@@ -86,25 +86,26 @@ class Value {
     static const size_t UUID_SIZE = 16;
 
     Value()
-      : type_(NONE) { }
-
-    Value(const Value& v)
-      : type_(v.type_) {
-      if(type_ == BYTES) {
-        basic().bytes = new std::string(*v.basic().bytes);
-      } else if(type_ == DECIMAL) {
-        basic().decimal.scale = v.basic().decimal.scale;
-        basic().decimal.varint = new std::string(*v.basic().decimal.varint);
-      } else {
-        data_ = v.data_;
-      }
+      : type_(NONE) {
+      basic().bytes = nullptr;
+      basic().decimal.varint = nullptr;
     }
+
+    Value(const Value& v);
+    Value& operator=(const Value& v);
+
+    Value(Value&& v);
+    Value& operator=(Value&& v);
 
     ~Value() {
       if(type_ == BYTES) {
-        delete basic().bytes ;
+        if(basic().bytes != nullptr) {
+          delete basic().bytes;
+        }
       } else if(type_ == DECIMAL) {
-        delete basic().decimal.varint;
+        if(basic().decimal.varint != nullptr) {
+          delete basic().decimal.varint;
+        }
       }
     }
 

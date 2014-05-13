@@ -76,7 +76,7 @@ encode_int(
     int32_t value) {
   int32_t net_value = htonl(value);
   memcpy(output, &net_value, sizeof(net_value));
-  return output + sizeof(int32_t);
+  return output + sizeof(net_value);
 }
 
 inline char*
@@ -85,7 +85,7 @@ encode_int64(
     int64_t value) {
   int64_t net_value = htonll(value);
   memcpy(output, &net_value, sizeof(net_value));
-  return output + sizeof(int32_t);
+  return output + sizeof(net_value);
 }
 
 inline char*
