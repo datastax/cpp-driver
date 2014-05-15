@@ -21,17 +21,18 @@
 #include <utility>
 
 #include "message_body.hpp"
-#include "value.hpp"
+#include "buffer.hpp"
+#include "builder.hpp"
 
 #define CASS_VALUE_CHECK_INDEX(i)                                        \
-  if (index >= size()) {                                                \
+  if (index >= size()) {                                                 \
     return CASS_ERROR_LIB_BAD_PARAMS;                                    \
   }
 
 namespace cass {
 
 struct Statement : public MessageBody {
-  typedef std::vector<Value>              ValueCollection;
+  typedef std::vector<Buffer>         ValueCollection;
   typedef ValueCollection::iterator       ValueIterator;
   typedef ValueCollection::const_iterator ConstValueIterator;
 
@@ -91,37 +92,45 @@ struct Statement : public MessageBody {
     return values.size();
   }
 
-#define BIND_BASIC_TYPE(DeclType, Name)                  \
+#define BIND_FIXED_TYPE(DeclType, EncodeType, Name)                  \
   inline CassCode bind_##Name(size_t index, const DeclType& value) { \
     CASS_VALUE_CHECK_INDEX(index);                       \
-    values[index] = Value::create_##Name(value);         \
+    Buffer buffer(sizeof(DeclType));                      \
+    encode_##EncodeType(buffer.data(), value);            \
+    values[index] = buffer;         \
     return CASS_OK;                          \
   }
 
-  BIND_BASIC_TYPE(int16_t, i32)
-  BIND_BASIC_TYPE(int32_t, i32)
-  BIND_BASIC_TYPE(int64_t, i64)
-  BIND_BASIC_TYPE(float, flt)
-  BIND_BASIC_TYPE(double, dbl)
-  BIND_BASIC_TYPE(bool,  bln)
-#undef BIND_BASIC_TYPE
+  BIND_FIXED_TYPE(int32_t, int, int32)
+  BIND_FIXED_TYPE(int64_t, int64,int64)
+  BIND_FIXED_TYPE(float, float, float)
+  BIND_FIXED_TYPE(double, double, double)
+  BIND_FIXED_TYPE(bool,  double, bool)
+#undef BIND_FIXED_TYPE
 
 
   inline CassCode bind(size_t index, const char* input, size_t input_length) {
     CASS_VALUE_CHECK_INDEX(index);
-    values[index] = Value::create_bytes(input, input_length);
+    values[index] = Buffer(input, input_length);
     return CASS_OK;
   }
 
   inline CassCode bind(size_t index, const uint8_t* uuid) {
     CASS_VALUE_CHECK_INDEX(index);
-    values[index] = Value::create_uuid(uuid);
+    values[index] = Buffer(reinterpret_cast<const char *>(uuid), 16);
     return CASS_OK;
   }
 
   inline CassCode bind(size_t index, const uint8_t* address, uint8_t address_len) {
     CASS_VALUE_CHECK_INDEX(index);
-    values[index] = Value::create_inet(address, address_len);
+    values[index] = Buffer(reinterpret_cast<const char *>(address), address_len);
+    return CASS_OK;
+  }
+
+  inline CassCode bind(size_t index, Builder* builder, bool is_map) {
+    CASS_VALUE_CHECK_INDEX(index);
+    // TODO(mpenick): Validate that a map is count % 2 == 0
+    values[index] = builder->build(is_map);
     return CASS_OK;
   }
 

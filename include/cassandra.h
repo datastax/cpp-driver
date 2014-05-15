@@ -56,6 +56,8 @@ typedef unsigned short cass_uint16_t;
 typedef unsigned int cass_uint32_t;
 typedef unsigned long long cass_uint64_t;
 
+typedef size_t cass_size_t;
+
 typedef cass_uint8_t CassUuid[16];
 
 typedef struct {
@@ -80,9 +82,6 @@ typedef struct CassPrepared CassPrepared;
 
 struct CassResult;
 typedef struct CassResult CassResult;
-
-struct CassLoadBalancingPolicy;
-typedef struct CassLoadBalancingPolicy CassLoadBalancingPolicy;
 
 struct CassIterator;
 typedef struct CassIterator CassIterator;
@@ -391,10 +390,10 @@ cass_future_get_prepared(
 /**
  * Obtain the message from an error structure. This function follows
  * the pattern similar to that of snprintf. The user passes in a
- * pre-allocated buffer of size n, to which the decoded value will be
- * copied. The number of bytes written had the buffer been
+ * pre-allocated builder of size n, to which the decoded value will be
+ * copied. The number of bytes written had the builder been
  * sufficiently large will be returned via the output parameter
- * 'total'. Only when total is less than n has the buffer been fully
+ * 'total'. Only when total is less than n has the builder been fully
  * consumed.
  *
  * @param source
@@ -627,7 +626,7 @@ CASS_EXPORT CassCode
 cass_statement_bind_uuid(
     CassStatement*  statement,
     size_t         index,
-    CassUuid        value);
+    CassUuid       value);
 
 /**
  * Bind a counter to a query or bound statement at the specified index
@@ -778,6 +777,65 @@ cass_session_exec_batch(
 
 /***********************************************************************************
  *
+ * Builder
+ *
+ ***********************************************************************************/
+
+struct CassBuilder;
+typedef struct CassBuilder CassBuilder;
+
+CASS_EXPORT CassBuilder*
+cass_builder_new(size_t element_count);
+
+CASS_EXPORT void
+cass_builder_free(CassBuilder* builder);
+
+CASS_EXPORT CassCode
+cass_builder_append_int32(CassBuilder* builder,
+                         cass_int32_t i32);
+
+CASS_EXPORT CassCode
+cass_builder_append_int64(CassBuilder* builder,
+                         cass_int32_t i64);
+
+CASS_EXPORT CassCode
+cass_builder_append_float(CassBuilder* builder,
+                         cass_float_t f);
+
+CASS_EXPORT CassCode
+cass_builder_append_double(CassBuilder* builder,
+                         cass_double_t d);
+
+CASS_EXPORT CassCode
+cass_builder_append_bool(CassBuilder* builder,
+                        cass_bool_t b);
+
+CASS_EXPORT CassCode
+cass_builder_append_inet(CassBuilder* builder,
+                        CassInet inet);
+
+CASS_EXPORT CassCode
+cass_builder_append_decimal(CassBuilder* builder,
+                          cass_int32_t scale,
+                          cass_uint8_t* varint, cass_size_t varint_length);
+
+CASS_EXPORT CassCode
+cass_builder_append_uuid(CassBuilder* builder,
+                        CassUuid uuid);
+
+CASS_EXPORT CassCode
+cass_builder_append_bytes(CassBuilder* builder,
+                        cass_uint8_t* bytes, cass_size_t bytes_length);
+
+CASS_EXPORT CassCode
+cass_statement_bind_collection(
+    CassStatement*  statement,
+    size_t          index,
+    CassBuilder*    builder,
+    cass_bool_t     is_map);
+
+/***********************************************************************************
+ *
  * Functions dealing with fetching data and meta information from statement results
  *
  ***********************************************************************************/
@@ -845,12 +903,8 @@ cass_result_iterator_get(
  *
  * @return next row, NULL if no rows remain or error
  */
-CASS_EXPORT CassCode
+CASS_EXPORT cass_bool_t
 cass_iterator_next(
-    CassIterator* iterator);
-
-CASS_EXPORT CassCode
-cass_iterator_reset(
     CassIterator* iterator);
 
 CASS_EXPORT void
@@ -911,7 +965,7 @@ cass_decode_int(
  */
 CASS_EXPORT CassCode
 cass_decode_bigint(
-    CassValue*       source,
+    CassValue*     source,
     cass_int64_t* value);
 
 /**
@@ -1001,10 +1055,10 @@ cass_decode_counter(
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
  * value. This function follows the pattern similar to that of snprintf. The user
- * passes in a pre-allocated buffer of size n, to which the decoded value will be
- * copied. The number of bytes written had the buffer been sufficiently large will be
+ * passes in a pre-allocated builder of size n, to which the decoded value will be
+ * copied. The number of bytes written had the builder been sufficiently large will be
  * returned via the output parameter 'total'. Only when total is less than n has
- * the buffer been fully consumed.
+ * the builder been fully consumed.
  *
  * @param source
  * @param output
@@ -1023,10 +1077,10 @@ cass_decode_string(
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
  * value. This function follows the pattern similar to that of snprintf. The user
- * passes in a pre-allocated buffer of size n, to which the decoded value will be
- * copied. The number of bytes written had the buffer been sufficiently large will be
+ * passes in a pre-allocated builder of size n, to which the decoded value will be
+ * copied. The number of bytes written had the builder been sufficiently large will be
  * returned via the output parameter 'total'. Only when total is less than n has
- * the buffer been fully consumed.
+ * the builder been fully consumed.
  *
  * @param source
  * @param output
@@ -1061,10 +1115,10 @@ cass_decode_decimal(
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
  * value. This function follows the pattern similar to that of snprintf. The user
- * passes in a pre-allocated buffer of size n, to which the decoded value will be
- * copied. The number of bytes written had the buffer been sufficiently large will be
+ * passes in a pre-allocated builder of size n, to which the decoded value will be
+ * copied. The number of bytes written had the builder been sufficiently large will be
  * returned via the output parameter 'total'. Only when total is less than n has
- * the buffer been fully consumed.
+ * the builder been fully consumed.
  *
  * @param source
  * @param output

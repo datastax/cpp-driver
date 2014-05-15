@@ -14,25 +14,27 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ITERABLE_HPP_INCLUDED__
-#define __CASS_ITERABLE_HPP_INCLUDED__
+#ifndef __CASS_ITERATOR_HPP_INCLUDED__
+#define __CASS_ITERATOR_HPP_INCLUDED__
 
 namespace cass {
 
-enum IterableType {
-  CASS_ITERABLE_TYPE_RESULT,
-  CASS_ITERABLE_TYPE_UNKNOWN
+enum IteratorType {
+  CASS_ITERATOR_TYPE_RESULT,
+  CASS_ITERATOR_TYPE_UNKNOWN,
 };
 
-struct Iterable {
-  const IterableType type;
+struct Iterator {
+  const IteratorType type;
 
-  Iterable(
-      IterableType type) :
+  Iterator(
+      IteratorType type) :
       type(type)
   {}
 
-  virtual ~Iterable() {}
+  virtual ~Iterator() {}
+
+  virtual bool next() = 0;
 };
 
 } // namespace cass

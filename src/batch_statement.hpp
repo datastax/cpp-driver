@@ -87,7 +87,7 @@ struct BatchStatement
 
       for (const auto& value : *statement) {
         size += sizeof(int32_t);
-        size += value.get_size();
+        size += value.size();
       }
     }
     size    += sizeof(int16_t);
@@ -113,7 +113,7 @@ struct BatchStatement
 
       buffer = encode_short(buffer, statement->size());
       for (const auto& value : *statement) {
-        buffer = value.encode(buffer);
+        buffer = encode_long_string(buffer, value.data(), value.size());
       }
     }
     encode_short(buffer, consistency);

@@ -24,7 +24,7 @@
 #include <vector>
 
 #include "message_body.hpp"
-#include "iterable.hpp"
+#include "iterator.hpp"
 #include "serialization.hpp"
 
 #define CASS_RESULT_KIND_VOID          1
@@ -269,52 +269,6 @@ struct Result
     (void) output;
     (void) size;
     return false;
-  }
-};
-
-struct ResultIterator : Iterable {
-  typedef std::pair<char*, size_t> Column;
-
-  Result*         result;
-  int32_t             row_position;
-  char*               position;
-  char*               position_next;
-  std::vector<Column> row;
-
-  ResultIterator(
-      Result* result) :
-      Iterable(CASS_ITERABLE_TYPE_RESULT),
-      result(result),
-      row_position(0),
-      position(result->rows),
-      row(result->column_count) {
-    position_next = parse_row(position, row);
-  }
-
-  char*
-  parse_row(
-      char* row,
-      std::vector<Column>& output) {
-    char* buffer = row;
-    output.clear();
-
-    for (int i = 0; i < result->column_count; ++i) {
-      int32_t size  = 0;
-      buffer        = decode_int(buffer, size);
-      output.push_back(std::make_pair(buffer, size));
-      buffer       += size;
-    }
-    return buffer;
-  }
-
-  bool
-  next() {
-    ++row_position;
-    if (row_position >= result->row_count) {
-      return false;
-    }
-    position_next = parse_row(position_next, row);
-    return true;
   }
 };
 

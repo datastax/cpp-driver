@@ -107,6 +107,31 @@ encode_string(
   return buffer + size;
 }
 
+inline char* encode_float(char* output, float value) {
+  assert(std::numeric_limits<float>::is_iec559);
+  assert(sizeof(float) == sizeof(int32_t));
+  return encode_int(output, *reinterpret_cast<int32_t*>(&value));
+}
+
+inline char* encode_double(char* output, double value) {
+  assert(std::numeric_limits<double>::is_iec559);
+  assert(sizeof(double) == sizeof(int64_t));
+  return encode_int64(output, *reinterpret_cast<int64_t*>(&value));
+}
+
+inline char* encode_decimal(char* output, int32_t scale,
+                            const char* varint, size_t varint_length) {
+  char* buffer = encode_int(output, scale);
+  memcpy(buffer, varint, varint_length);
+  return buffer + varint_length;
+}
+
+inline char* encode_inet(char* output, const uint8_t* address, uint8_t address_len) {
+  memcpy(output, address, address_len);
+  return output + address_len;
+}
+
+
 inline char*
 decode_long_string(
     char*   input,

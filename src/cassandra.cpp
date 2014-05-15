@@ -18,7 +18,9 @@
 
 #include "cassandra.h"
 #include "session.hpp"
+#include "builder.hpp"
 #include "body_result.hpp"
+#include "result_iterator.hpp"
 
 // This abstraction allows us to separate internal types from the
 // external opaque pointers that we expose.
@@ -38,6 +40,10 @@ struct CassFuture : External<cass::Future, CassFuture> { };
 struct CassBatchStatement : External<cass::BatchStatement, CassBatchStatement> { };
 struct CassPrepared : External<cass::Prepared, CassPrepared> { };
 struct CassResult : External<cass::Result, CassResult> { };
+struct CassBuilder : External<cass::Builder, CassBuilder> { };
+struct CassIterator : External<cass::Iterator, CassIterator> { };
+// struct CassRow;
+// struct CassValue;
 
 CassSession* cass_session_new() {
   return CassSession::to(new cass::Session());
@@ -195,7 +201,6 @@ cass_session_query(
     size_t         parameter_count,
     CassConsistency consistency,
     CassStatement** output) {
-  (void) session;
   cass::Statement* query_statement = new cass::QueryStatement(parameter_count, consistency);
   *output = CassStatement::to(query_statement);
   (*output)->statement(statement, statement_length);
@@ -256,7 +261,7 @@ cass_statement_bind_short(
     CassStatement* statement,
     size_t        index,
     int16_t       value) {
-  return statement->bind_i32(index, value);
+  return statement->bind_int32(index, value);
 }
 
 /**
@@ -273,7 +278,7 @@ cass_statement_bind_int(
     CassStatement* statement,
     size_t        index,
     int32_t       value) {
-  return statement->bind_i32(index, value);
+  return statement->bind_int32(index, value);
 }
 
 /**
@@ -290,7 +295,7 @@ cass_statement_bind_bigint(
     CassStatement* statement,
     size_t        index,
     int64_t       value) {
-  return statement->bind_i64(index, value);
+  return statement->bind_int64(index, value);
 }
 
 /**
@@ -307,7 +312,7 @@ cass_statement_bind_float(
     CassStatement* statement,
     size_t        index,
     float         value) {
-  return statement->bind_flt(index, value);
+  return statement->bind_float(index, value);
 }
 
 /**
@@ -324,7 +329,7 @@ cass_statement_bind_double(
     CassStatement*  statement,
     size_t         index,
     double         value) {
-  return statement->bind_dbl(index, value);
+  return statement->bind_double(index, value);
 }
 
 /**
@@ -341,7 +346,7 @@ cass_statement_bind_bool(
     CassStatement*  statement,
     size_t         index,
     cass_bool_t    value) {
-  return statement->bind_bln(index, value);
+  return statement->bind_bool(index, value);
 }
 
 /**
@@ -358,7 +363,7 @@ cass_statement_bind_time(
     CassStatement*  statement,
     size_t         index,
     int64_t        value) {
-  return statement->bind_i64(index, value);
+  return statement->bind_int64(index, value);
 }
 
 /**
@@ -392,7 +397,7 @@ cass_statement_bind_counter(
     CassStatement*  statement,
     size_t         index,
     int64_t        value) {
-  return statement->bind_i64(index, value);
+  return statement->bind_int64(index, value);
 }
 
 /**
@@ -491,6 +496,89 @@ cass_session_exec(
   return CASS_OK;
 }
 
+CassBuilder*
+cass_builder_new(size_t element_count) {
+  return CassBuilder::to(new cass::Builder(element_count));
+}
+
+void
+cass_builder_free(CassBuilder* builder) {
+  delete builder->from();
+}
+
+CassCode
+cass_builder_append_int32(CassBuilder* builder,
+                         cass_int32_t i32) {
+  builder->append_int32(i32);
+  return CASS_OK;
+}
+
+CassCode
+cass_builder_append_int64(CassBuilder* builder,
+                         cass_int32_t i64) {
+  builder->append_int64(i64);
+  return CASS_OK;
+}
+
+CassCode
+cass_builder_append_float(CassBuilder* builder,
+                         cass_float_t f) {
+  builder->append_float(f);
+  return CASS_OK;
+}
+
+CassCode
+cass_builder_append_double(CassBuilder* builder,
+                         cass_double_t d) {
+  builder->append_double(d);
+  return CASS_OK;
+}
+
+CassCode
+cass_builder_append_bool(CassBuilder* builder,
+                        cass_bool_t b) {
+  builder->append_bool(b);
+  return CASS_OK;
+}
+
+CassCode
+cass_builder_append_inet(CassBuilder* builder,
+                        CassInet inet) {
+  builder->append(inet.address, inet.address_len);
+  return CASS_OK;
+}
+
+CassCode
+cass_builder_append_decimal(CassBuilder* builder,
+                          cass_int32_t scale,
+                          cass_uint8_t* varint, cass_size_t varint_length) {
+  // TODO(mpenick)
+  return CASS_OK;
+}
+
+CassCode
+cass_builder_append_uuid(CassBuilder* builder,
+                        CassUuid uuid) {
+  builder->append(uuid);
+  return CASS_OK;
+}
+
+CassCode
+cass_builder_append_bytes(CassBuilder* builder,
+                        cass_uint8_t* bytes, cass_size_t bytes_length) {
+  builder->append(bytes, bytes_length);
+  return CASS_OK;
+}
+
+CassCode
+cass_statement_bind_collection(
+    CassStatement*  statement,
+    size_t          index,
+    CassBuilder*     builder,
+    cass_bool_t is_map) {
+  return statement->bind(index, builder->from(), static_cast<bool>(is_map));
+}
+
 size_t
 cass_result_rowcount(
     CassResult* result) {
@@ -525,29 +613,28 @@ CassCode
 cass_result_iterator_new(
     CassResult* result,
     CassIterator** iterator) {
-  return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
+  *iterator = CassIterator::to(new cass::ResultIterator(result->from()));
+  return CASS_OK;
 }
 
 CassCode
 cass_result_iterator_get(
     CassIterator* iterator,
     CassRow** row) {
-  return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
+  cass::Iterator* it = iterator->from();
+  if(it->type != cass::CASS_ITERATOR_TYPE_RESULT) {
+     return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
+  }
+  return CASS_OK;
 }
 
-CassCode
+cass_bool_t
 cass_iterator_next(
     CassIterator* iterator) {
   return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
 }
 
-CassCode
-cass_iterator_reset(
-    CassIterator* iterator) {
-  return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
-}
-
-CASS_EXPORT void
+void
 cass_iterator_free(
     CassIterator* iterator) {
 }
