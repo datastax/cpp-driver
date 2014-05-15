@@ -46,7 +46,7 @@ struct Result
 
   struct ColumnMetaData {
     ColumnMetaData() :
-        type(CASS_COLUMN_TYPE_UNKNOWN),
+        type(CASS_VALUE_TYPE_UNKNOWN),
         keyspace(NULL),
         keyspace_size(0),
         table(NULL),
@@ -55,15 +55,15 @@ struct Result
         name_size(0),
         class_name(NULL),
         class_name_size(0),
-        collection_primary_type(CASS_COLUMN_TYPE_UNKNOWN),
+        collection_primary_type(CASS_VALUE_TYPE_UNKNOWN),
         collection_primary_class(NULL),
         collection_primary_class_size(0),
-        collection_secondary_type(CASS_COLUMN_TYPE_UNKNOWN),
+        collection_secondary_type(CASS_VALUE_TYPE_UNKNOWN),
         collection_secondary_class(NULL),
         collection_secondary_class_size(0)
     {}
 
-    int16_t type;
+    uint16_t type;
     char*   keyspace;
     size_t  keyspace_size;
 
@@ -76,11 +76,11 @@ struct Result
     char*   class_name;
     size_t  class_name_size;
 
-    int16_t collection_primary_type;
+    uint16_t collection_primary_type;
     char*   collection_primary_class;
 
     size_t  collection_primary_class_size;
-    int16_t collection_secondary_type;
+    uint16_t collection_secondary_type;
 
     char*   collection_secondary_class;
     size_t  collection_secondary_class_size;
@@ -202,9 +202,9 @@ struct Result
             &meta.class_name,
             meta.class_name_size);
 
-        if (meta.type == CASS_COLUMN_TYPE_SET
-            || meta.type == CASS_COLUMN_TYPE_LIST
-            || meta.type == CASS_COLUMN_TYPE_MAP) {
+        if (meta.type == CASS_VALUE_TYPE_SET
+            || meta.type == CASS_VALUE_TYPE_LIST
+            || meta.type == CASS_VALUE_TYPE_MAP) {
           buffer = decode_option(
               buffer,
               meta.collection_primary_type,
@@ -212,7 +212,7 @@ struct Result
               meta.collection_primary_class_size);
         }
 
-        if (meta.type == CASS_COLUMN_TYPE_MAP) {
+        if (meta.type == CASS_VALUE_TYPE_MAP) {
           buffer = decode_option(
               buffer,
               meta.collection_secondary_type,

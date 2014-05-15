@@ -114,28 +114,28 @@ typedef enum {
 } CassConsistency;
 
 typedef enum {
-  CASS_COLUMN_TYPE_UNKNOWN   = 0xFFFF,
-  CASS_COLUMN_TYPE_CUSTOM    = 0x0000,
-  CASS_COLUMN_TYPE_ASCII     = 0x0001,
-  CASS_COLUMN_TYPE_BIGINT    = 0x0002,
-  CASS_COLUMN_TYPE_BLOB      = 0x0003,
-  CASS_COLUMN_TYPE_BOOLEAN   = 0x0004,
-  CASS_COLUMN_TYPE_COUNTER   = 0x0005,
-  CASS_COLUMN_TYPE_DECIMAL   = 0x0006,
-  CASS_COLUMN_TYPE_DOUBLE    = 0x0007,
-  CASS_COLUMN_TYPE_FLOAT     = 0x0008,
-  CASS_COLUMN_TYPE_INT       = 0x0009,
-  CASS_COLUMN_TYPE_TEXT      = 0x000A,
-  CASS_COLUMN_TYPE_TIMESTAMP = 0x000B,
-  CASS_COLUMN_TYPE_UUID      = 0x000C,
-  CASS_COLUMN_TYPE_VARCHAR   = 0x000D,
-  CASS_COLUMN_TYPE_VARINT    = 0x000E,
-  CASS_COLUMN_TYPE_TIMEUUID  = 0x000F,
-  CASS_COLUMN_TYPE_INET      = 0x0010,
-  CASS_COLUMN_TYPE_LIST      = 0x0020,
-  CASS_COLUMN_TYPE_MAP       = 0x0021,
-  CASS_COLUMN_TYPE_SET       = 0x0022
-} CassColumnType;
+  CASS_VALUE_TYPE_UNKNOWN   = 0xFFFF,
+  CASS_VALUE_TYPE_CUSTOM    = 0x0000,
+  CASS_VALUE_TYPE_ASCII     = 0x0001,
+  CASS_VALUE_TYPE_BIGINT    = 0x0002,
+  CASS_VALUE_TYPE_BLOB      = 0x0003,
+  CASS_VALUE_TYPE_BOOLEAN   = 0x0004,
+  CASS_VALUE_TYPE_COUNTER   = 0x0005,
+  CASS_VALUE_TYPE_DECIMAL   = 0x0006,
+  CASS_VALUE_TYPE_DOUBLE    = 0x0007,
+  CASS_VALUE_TYPE_FLOAT     = 0x0008,
+  CASS_VALUE_TYPE_INT       = 0x0009,
+  CASS_VALUE_TYPE_TEXT      = 0x000A,
+  CASS_VALUE_TYPE_TIMESTAMP = 0x000B,
+  CASS_VALUE_TYPE_UUID      = 0x000C,
+  CASS_VALUE_TYPE_VARCHAR   = 0x000D,
+  CASS_VALUE_TYPE_VARINT    = 0x000E,
+  CASS_VALUE_TYPE_TIMEUUID  = 0x000F,
+  CASS_VALUE_TYPE_INET      = 0x0010,
+  CASS_VALUE_TYPE_LIST      = 0x0020,
+  CASS_VALUE_TYPE_MAP       = 0x0021,
+  CASS_VALUE_TYPE_SET       = 0x0022
+} CassValueType;
 
 typedef enum {
   CASS_OPTION_THREADS_IO                 = 1,
@@ -777,61 +777,61 @@ cass_session_exec_batch(
 
 /***********************************************************************************
  *
- * Builder
+ * Collection
  *
  ***********************************************************************************/
 
-struct CassBuilder;
-typedef struct CassBuilder CassBuilder;
+struct CassCollection;
+typedef struct CassCollection CassCollection;
 
-CASS_EXPORT CassBuilder*
-cass_builder_new(size_t element_count);
+CASS_EXPORT CassCollection*
+cass_collection_new(size_t element_count);
 
 CASS_EXPORT void
-cass_builder_free(CassBuilder* builder);
+cass_collection_free(CassCollection* collection);
 
 CASS_EXPORT CassCode
-cass_builder_append_int32(CassBuilder* builder,
-                         cass_int32_t i32);
+cass_collection_append_int(CassCollection* collection,
+                         cass_int32_t i);
 
 CASS_EXPORT CassCode
-cass_builder_append_int64(CassBuilder* builder,
-                         cass_int32_t i64);
+cass_collection_append_bigint(CassCollection* collection,
+                         cass_int32_t bi);
 
 CASS_EXPORT CassCode
-cass_builder_append_float(CassBuilder* builder,
+cass_collection_append_float(CassCollection* collection,
                          cass_float_t f);
 
 CASS_EXPORT CassCode
-cass_builder_append_double(CassBuilder* builder,
+cass_collection_append_double(CassCollection* collection,
                          cass_double_t d);
 
 CASS_EXPORT CassCode
-cass_builder_append_bool(CassBuilder* builder,
+cass_collection_append_bool(CassCollection* collection,
                         cass_bool_t b);
 
 CASS_EXPORT CassCode
-cass_builder_append_inet(CassBuilder* builder,
+cass_collection_append_inet(CassCollection* collection,
                         CassInet inet);
 
 CASS_EXPORT CassCode
-cass_builder_append_decimal(CassBuilder* builder,
+cass_collection_append_decimal(CassCollection* collection,
                           cass_int32_t scale,
                           cass_uint8_t* varint, cass_size_t varint_length);
 
 CASS_EXPORT CassCode
-cass_builder_append_uuid(CassBuilder* builder,
+cass_collection_append_uuid(CassCollection* collection,
                         CassUuid uuid);
 
 CASS_EXPORT CassCode
-cass_builder_append_bytes(CassBuilder* builder,
-                        cass_uint8_t* bytes, cass_size_t bytes_length);
+cass_collection_append_blob(CassCollection* builder,
+                        cass_uint8_t* blob, cass_size_t blob_length);
 
 CASS_EXPORT CassCode
 cass_statement_bind_collection(
     CassStatement*  statement,
     size_t          index,
-    CassBuilder*    builder,
+    CassCollection*    collection,
     cass_bool_t     is_map);
 
 /***********************************************************************************
@@ -876,7 +876,7 @@ CASS_EXPORT CassCode
 cass_result_coltype(
     CassResult*     result,
     size_t          index,
-    CassColumnType* coltype);
+    CassValueType* coltype);
 
 /**
  * Get an iterator for the specified result or collection. Iterator must be freed by caller.
@@ -892,9 +892,25 @@ cass_result_iterator_new(
     CassIterator** iterator);
 
 CASS_EXPORT CassCode
-cass_result_iterator_get(
+cass_result_iterator_get_row(
     CassIterator* iterator,
     CassRow** row);
+
+CASS_EXPORT CassCode
+cass_collection_iterator_new(
+    CassValue* collection,
+    CassIterator** iterator);
+
+CASS_EXPORT CassCode
+cass_collection_iterator_get_pair(
+    CassIterator* iterator,
+    CassValue** key,
+    CassValue** value);
+
+CASS_EXPORT CassCode
+cass_collection_iterator_get_entry(
+    CassIterator* iterator,
+    CassValue* entry);
 
 /**
  * Advance the iterator to the next row or collection item.
@@ -993,7 +1009,7 @@ cass_decode_float(
  */
 CASS_EXPORT CassCode
 cass_decode_double(
-    void*       source,
+    CassValue*       source,
     cass_double_t  value);
 
 /**
@@ -1007,7 +1023,7 @@ cass_decode_double(
  */
 CASS_EXPORT CassCode
 cass_decode_bool(
-    void*    source,
+    CassValue*    source,
     cass_bool_t value);
 
 /**
@@ -1021,7 +1037,7 @@ cass_decode_bool(
  */
 CASS_EXPORT CassCode
 cass_decode_time(
-    void*       source,
+    CassValue*       source,
     cass_int64_t value);
 
 /**
@@ -1035,7 +1051,7 @@ cass_decode_time(
  */
 CASS_EXPORT CassCode
 cass_decode_uuid(
-    void*   source,
+    CassValue*   source,
     CassUuid value);
 
 /**
@@ -1049,7 +1065,7 @@ cass_decode_uuid(
  */
 CASS_EXPORT CassCode
 cass_decode_counter(
-    void*       source,
+    CassValue*       source,
     cass_int64_t value);
 
 /**
@@ -1069,7 +1085,7 @@ cass_decode_counter(
  */
 CASS_EXPORT CassCode
 cass_decode_string(
-    void*   source,
+    CassValue*   source,
     char*   output,
     size_t  output_len,
     size_t* total);
@@ -1091,7 +1107,7 @@ cass_decode_string(
  */
 CASS_EXPORT CassCode
 cass_decode_blob(
-    void*        source,
+    CassValue*        source,
     cass_uint8_t* output,
     size_t       output_len,
     size_t*      total);
@@ -1107,7 +1123,7 @@ cass_decode_blob(
  */
 CASS_EXPORT CassCode
 cass_decode_decimal(
-    void*         source,
+    CassValue*         source,
     cass_uint32_t* scale,
     cass_uint8_t** value,
     size_t*       len);
@@ -1129,7 +1145,7 @@ cass_decode_decimal(
  */
 CASS_EXPORT CassCode
 cass_decode_varint(
-    void*        source,
+    CassValue*        source,
     cass_uint8_t* output,
     size_t       output_len,
     size_t*      total);
@@ -1143,7 +1159,7 @@ cass_decode_varint(
  */
 CASS_EXPORT size_t
 cass_collection_count(
-    void*  source);
+    CassValue*  source);
 
 /**
  * Get the collection sub-type. Works for collections that have a single sub-type
@@ -1156,8 +1172,8 @@ cass_collection_count(
  */
 CASS_EXPORT CassCode
 cass_collection_subtype(
-    void*   collection,
-    CassColumnType* output);
+    CassValue*   collection,
+    CassValueType* output);
 
 /**
  * Get the sub-type of the key for a map collection. Works only for maps.
@@ -1169,8 +1185,8 @@ cass_collection_subtype(
  */
 CASS_EXPORT CassCode
 cass_collection_map_key_type(
-    void*   collection,
-    CassColumnType* output);
+    CassValue*   collection,
+    CassValueType* output);
 
 /**
  * Get the sub-type of the value for a map collection. Works only for maps.
@@ -1182,8 +1198,8 @@ cass_collection_map_key_type(
  */
 CASS_EXPORT CassCode
 cass_collection_map_value_type(
-    void*   collection,
-    CassColumnType* output);
+    CassValue*   collection,
+    CassValueType* output);
 
 /**
  * Use an iterator to obtain each pair from a map. Once a pair has been obtained from
@@ -1196,7 +1212,7 @@ cass_collection_map_value_type(
  */
 CASS_EXPORT CassCode
 cass_map_get_key(
-    void*  item,
+    CassValue*  item,
     void** output);
 
 /**

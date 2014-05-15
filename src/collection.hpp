@@ -1,14 +1,14 @@
-#ifndef __CASS_BUILDER_HPP_INCLUDED__
-#define __CASS_BUILDER_HPP_INCLUDED__
+#ifndef __CASS_COLLECTION_HPP_INCLUDED__
+#define __CASS_COLLECTION_HPP_INCLUDED__
 
 #include "buffer_list.hpp"
 #include "serialization.hpp"
 
 namespace cass {
 
-class Builder {
+class Collection {
   public:
-    Builder(size_t element_count)
+    Collection(size_t element_count)
       : buffer_list_(element_count) { }
 
 #define APPEND_FIXED_TYPE(DeclType, EncodeType, Name)                            \

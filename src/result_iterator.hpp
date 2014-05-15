@@ -25,6 +25,18 @@ namespace cass {
 
 typedef std::vector<BufferPiece> Row;
 
+struct Value {
+    Value(CassValueType type, const char* data, size_t size)
+      : type(type)
+      , buffer(data, size) { }
+
+    CassValueType type;
+    CassValueType primary_type;
+    CassValueType secondary_type;
+    uint16_t count;
+    BufferPiece buffer;
+};
+
 struct ResultIterator : Iterator {
   Result*             result;
   int32_t             row_position;
@@ -52,6 +64,21 @@ struct ResultIterator : Iterator {
     for (int i = 0; i < result->column_count; ++i) {
       int32_t size  = 0;
       buffer        = decode_int(buffer, size);
+
+      const Result::ColumnMetaData& metadata = result->column_metadata[i];
+      CassValueType type = static_cast<CassValueType>(metadata.type);
+
+      Value v(type, buffer, size);
+      if(type == CASS_VALUE_TYPE_MAP ||
+         type == CASS_VALUE_TYPE_LIST ||
+         type == CASS_VALUE_TYPE_SET) {
+        uint16_t count = 0;
+        buffer = decode_short(buffer, count);
+        v.count = count;
+        v.primary_type = static_cast<CassValueType>(metadata.collection_primary_type);
+        v.secondary_type = static_cast<CassValueType>(metadata.collection_secondary_type);
+      }
+
       output.push_back(BufferPiece(buffer, size));
       buffer       += size;
     }

@@ -22,7 +22,7 @@
 
 #include "message_body.hpp"
 #include "buffer.hpp"
-#include "builder.hpp"
+#include "collection.hpp"
 
 #define CASS_VALUE_CHECK_INDEX(i)                                        \
   if (index >= size()) {                                                 \
@@ -127,7 +127,7 @@ struct Statement : public MessageBody {
     return CASS_OK;
   }
 
-  inline CassCode bind(size_t index, Builder* builder, bool is_map) {
+  inline CassCode bind(size_t index, Collection* builder, bool is_map) {
     CASS_VALUE_CHECK_INDEX(index);
     // TODO(mpenick): Validate that a map is count % 2 == 0
     values[index] = builder->build(is_map);

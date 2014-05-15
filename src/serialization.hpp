@@ -48,18 +48,18 @@ encode_byte(
 inline char*
 decode_short(
     char*    input,
-    int16_t& output) {
-  output = ntohs(*(reinterpret_cast<int16_t*>(input)));
-  return input + sizeof(int16_t);
+    uint16_t& output) {
+  output = ntohs(*(reinterpret_cast<uint16_t*>(input)));
+  return input + sizeof(uint16_t);
 }
 
 inline char*
 encode_short(
     char*   output,
-    int16_t value) {
-  int16_t net_value = htons(value);
+    uint16_t value) {
+  uint16_t net_value = htons(value);
   memcpy(output, &net_value, sizeof(net_value));
-  return output + sizeof(int16_t);
+  return output + sizeof(uint16_t);
 }
 
 inline char*
@@ -93,7 +93,7 @@ decode_string(
     char*   input,
     char**  output,
     size_t& size) {
-  *output = decode_short(input, ((int16_t&) size));
+  *output = decode_short(input, ((uint16_t&) size));
   return *output + size;
 }
 
@@ -177,7 +177,7 @@ decode_string_map(
     std::map<std::string, std::string>& map) {
 
   map.clear();
-  int16_t len    = 0;
+  uint16_t len    = 0;
   char*   buffer = decode_short(input, len);
 
   for (int i = 0; i < len; i++) {
@@ -201,7 +201,7 @@ decode_stringlist(
     char*                   input,
     std::list<std::string>& output) {
   output.clear();
-  int16_t len    = 0;
+  uint16_t len    = 0;
   char*   buffer = decode_short(input, len);
 
   for (int i = 0; i < len; i++) {
@@ -222,7 +222,7 @@ decode_string_multimap(
     string_multimap_t& output) {
 
   output.clear();
-  int16_t len    = 0;
+  uint16_t len    = 0;
   char*   buffer = decode_short(input, len);
 
   for (int i = 0; i < len; i++) {
@@ -240,11 +240,11 @@ decode_string_multimap(
 inline char*
 decode_option(
     char*    input,
-    int16_t& type,
+    uint16_t& type,
     char**   class_name,
     size_t&  class_name_size) {
   char* buffer = decode_short(input, type);
-  if (type == CASS_COLUMN_TYPE_CUSTOM) {
+  if (type == CASS_VALUE_TYPE_CUSTOM) {
     buffer = decode_string(buffer, class_name, class_name_size);
   }
   return buffer;

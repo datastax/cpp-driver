@@ -18,7 +18,7 @@
 
 #include "cassandra.h"
 #include "session.hpp"
-#include "builder.hpp"
+#include "collection.hpp"
 #include "body_result.hpp"
 #include "result_iterator.hpp"
 
@@ -40,9 +40,11 @@ struct CassFuture : External<cass::Future, CassFuture> { };
 struct CassBatchStatement : External<cass::BatchStatement, CassBatchStatement> { };
 struct CassPrepared : External<cass::Prepared, CassPrepared> { };
 struct CassResult : External<cass::Result, CassResult> { };
-struct CassBuilder : External<cass::Builder, CassBuilder> { };
+struct CassCollection : External<cass::Collection, CassCollection> { };
 struct CassIterator : External<cass::Iterator, CassIterator> { };
-// struct CassRow;
+struct CassRow : External<cass::Row, CassRow> { };
+struct CassValue : External<cass::BufferPiece, CassValue> { };
+
 // struct CassValue;
 
 CassSession* cass_session_new() {
@@ -496,60 +498,60 @@ cass_session_exec(
   return CASS_OK;
 }
 
-CassBuilder*
-cass_builder_new(size_t element_count) {
-  return CassBuilder::to(new cass::Builder(element_count));
+CassCollection*
+cass_collection_new(size_t element_count) {
+  return CassCollection::to(new cass::Collection(element_count));
 }
 
 void
-cass_builder_free(CassBuilder* builder) {
-  delete builder->from();
+cass_collection_free(CassCollection* collection) {
+  delete collection->from();
 }
 
 CassCode
-cass_builder_append_int32(CassBuilder* builder,
+cass_collection_append_int32(CassCollection* collection,
                          cass_int32_t i32) {
-  builder->append_int32(i32);
+  collection->append_int32(i32);
   return CASS_OK;
 }
 
 CassCode
-cass_builder_append_int64(CassBuilder* builder,
+cass_collection_append_int64(CassCollection* collection,
                          cass_int32_t i64) {
-  builder->append_int64(i64);
+  collection->append_int64(i64);
   return CASS_OK;
 }
 
 CassCode
-cass_builder_append_float(CassBuilder* builder,
+cass_collection_append_float(CassCollection* collection,
                          cass_float_t f) {
-  builder->append_float(f);
+  collection->append_float(f);
   return CASS_OK;
 }
 
 CassCode
-cass_builder_append_double(CassBuilder* builder,
+cass_collection_append_double(CassCollection* collection,
                          cass_double_t d) {
-  builder->append_double(d);
+  collection->append_double(d);
   return CASS_OK;
 }
 
 CassCode
-cass_builder_append_bool(CassBuilder* builder,
+cass_collection_append_bool(CassCollection* collection,
                         cass_bool_t b) {
-  builder->append_bool(b);
+  collection->append_bool(b);
   return CASS_OK;
 }
 
 CassCode
-cass_builder_append_inet(CassBuilder* builder,
+cass_collection_append_inet(CassCollection* collection,
                         CassInet inet) {
-  builder->append(inet.address, inet.address_len);
+  collection->append(inet.address, inet.address_len);
   return CASS_OK;
 }
 
 CassCode
-cass_builder_append_decimal(CassBuilder* builder,
+cass_collection_append_decimal(CassCollection* collection,
                           cass_int32_t scale,
                           cass_uint8_t* varint, cass_size_t varint_length) {
   // TODO(mpenick)
@@ -557,16 +559,16 @@ cass_builder_append_decimal(CassBuilder* builder,
 }
 
 CassCode
-cass_builder_append_uuid(CassBuilder* builder,
+cass_collection_append_uuid(CassCollection* collection,
                         CassUuid uuid) {
-  builder->append(uuid);
+  collection->append(uuid);
   return CASS_OK;
 }
 
 CassCode
-cass_builder_append_bytes(CassBuilder* builder,
+cass_collection_append_bytes(CassCollection* collection,
                         cass_uint8_t* bytes, cass_size_t bytes_length) {
-  builder->append(bytes, bytes_length);
+  collection->append(bytes, bytes_length);
   return CASS_OK;
 }
 
@@ -574,9 +576,9 @@ CassCode
 cass_statement_bind_collection(
     CassStatement*  statement,
     size_t          index,
-    CassBuilder*     builder,
+    CassCollection*     collection,
     cass_bool_t is_map) {
-  return statement->bind(index, builder->from(), static_cast<bool>(is_map));
+  return statement->bind(index, collection->from(), static_cast<bool>(is_map));
 }
 
 size_t
@@ -601,16 +603,16 @@ CassCode
 cass_result_coltype(
     CassResult*     result,
     size_t         index,
-    CassColumnType* coltype) {
+    CassValueType* coltype) {
   if(result->kind == CASS_RESULT_KIND_ROWS) {
-    *coltype = static_cast<CassColumnType>(result->column_metadata[index].type);
+    *coltype = static_cast<CassValueType>(result->column_metadata[index].type);
     return CASS_OK;
   }
   return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
 }
 
 CassCode
-cass_result_iterator_new(
+cass_iterator_rows_new(
     CassResult* result,
     CassIterator** iterator) {
   *iterator = CassIterator::to(new cass::ResultIterator(result->from()));
@@ -618,25 +620,28 @@ cass_result_iterator_new(
 }
 
 CassCode
-cass_result_iterator_get(
+cass_iterator_get_row(
     CassIterator* iterator,
     CassRow** row) {
-  cass::Iterator* it = iterator->from();
-  if(it->type != cass::CASS_ITERATOR_TYPE_RESULT) {
+  cass::Iterator* internal_it = iterator->from();
+  if(internal_it->type != cass::CASS_ITERATOR_TYPE_RESULT) {
      return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
   }
+  cass::ResultIterator* result_it = static_cast<cass::ResultIterator*>(internal_it);
+  *row = CassRow::to(&result_it->row);
   return CASS_OK;
 }
 
 cass_bool_t
 cass_iterator_next(
     CassIterator* iterator) {
-  return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
+  return static_cast<bool>(iterator->from()->next());
 }
 
 void
 cass_iterator_free(
     CassIterator* iterator) {
+  delete iterator->from();
 }
 
 CassCode
@@ -644,7 +649,12 @@ cass_row_getcol(
     CassRow*  row,
     size_t index,
     CassValue** value) {
-  return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
+  cass::Row* internal_row = row->from();
+  if(index >= internal_row->size()) {
+    return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
+  }
+  *value = CassValue::to(&(*internal_row)[index]);
+  return CASS_OK;
 }
 
 } // extern "C"
