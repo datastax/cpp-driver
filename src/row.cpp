@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 DataStax
+  Copyright (c) 2014 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,29 +14,22 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BUFFER_PIECE_HPP_INCLUDED__
-#define __CASS_BUFFER_PIECE_HPP_INCLUDED__
+#include "cassandra.hpp"
+#include "row.hpp"
 
-namespace cass {
+extern "C" {
 
-class BufferPiece {
-  public:
-    BufferPiece()
-      : data_(nullptr)
-      , size_(0) { }
+cass_code_t
+cass_row_get_column(
+    cass_row_t* row,
+    size_t index,
+    cass_value_t** value) {
+  cass::Row* internal_row = row->from();
+  if(index >= internal_row->size()) {
+    return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
+  }
+  *value = cass_value_t::to(&(*internal_row)[index]);
+  return CASS_OK;
+}
 
-    BufferPiece(const char* data, size_t size)
-      : data_(data)
-      , size_(size) { }
-
-    const char* data() const { return data_; }
-    size_t size() const { return size_; }
-
-  private:
-    const char* data_;
-    size_t size_;
-};
-
-} // namespace cass
-
-#endif
+} // extern "C"

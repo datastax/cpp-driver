@@ -20,10 +20,13 @@
 #include <atomic>
 #include <uv.h>
 
+#include <memory>
+#include <functional>
+#include <mutex>
+
 namespace cass {
 
 struct Error;
-
 
 struct Future {
   std::unique_ptr<Error> error;

@@ -25,8 +25,8 @@ namespace cass {
 
 struct Error {
   Error(
-      CassSource         source,
-      CassCode           code,
+      cass_source_t         source,
+      cass_code_t           code,
       const std::string& message,
       const std::string& file,
       int                line) :
@@ -37,8 +37,8 @@ struct Error {
       line(line)
   {}
 
-  CassSource  source;
-  CassCode    code;
+  cass_source_t  source;
+  cass_code_t    code;
   std::string message;
   std::string file;
   int         line;

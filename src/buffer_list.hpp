@@ -14,7 +14,6 @@
   limitations under the License.
 */
 
-
 #ifndef __CASS_BUFFER_LIST_HPP_INCLUDED__
 #define __CASS_BUFFER_LIST_HPP_INCLUDED__
 

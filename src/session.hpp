@@ -253,8 +253,8 @@ struct Session {
 
     request->future->data.assign(statement, length);
 
-    PrepareStatement* body =
-        reinterpret_cast<PrepareStatement*>(request->message->body.get());
+    Prepare* body =
+        reinterpret_cast<Prepare*>(request->message->body.get());
     body->prepare_string(statement, length);
     execute(request);
     return request->future;

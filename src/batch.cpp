@@ -15,12 +15,31 @@
 */
 
 #include "cassandra.hpp"
+#include "batch.hpp"
 
 extern "C" {
 
-const char*
-cass_code_error_desc(cass_code_t code) {
-  return ""; // TODO(mpenick)
+cass_batch_t*
+cass_batch_new(cass_consistency_t consistency) {
+  return cass_batch_t::to(new cass::Batch(consistency));
+}
+
+CASS_EXPORT void
+cass_batch_free(cass_batch_t* batch) {
+  delete batch->from();
+}
+
+cass_code_t
+cass_batch_add_statement(
+    cass_batch_t* batch,
+    cass_statement_t*      statement) {
+  batch->add_statement(statement);
+  return CASS_OK;
+}
+
+CASS_EXPORT void
+cass_batch_set_timestamp(cass_batch_t* batch,
+                         cass_int64_t timestamp) {
 }
 
 

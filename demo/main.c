@@ -25,13 +25,13 @@
 #include "cassandra.h"
 
 void print_error(const char* message, int err) {
-  printf("%s: %s (%d)\n", message, cass_error_desc(err), err);
+  printf("%s: %s (%d)\n", message, cass_code_error_desc(err), err);
 }
 
 int
 main() {
-  CassSession* session = cass_session_new();
-  CassFuture* session_future = NULL;
+  cass_session_t* session = cass_session_new();
+  cass_future_t* session_future = NULL;
   /*CassFuture* shutdown_future = NULL;*/
   int err;
 
@@ -51,18 +51,39 @@ main() {
   {
     const char* query = "SELECT * FROM system.local WHERE key = ?";
     const char* key = "local";
-    CassStatement* statement = NULL;
-    CassFuture* result_future = NULL;
-    CassResult* result = NULL;
+    cass_statement_t* statement = NULL;
+    cass_future_t* result_future = NULL;
+    cass_result_t* result = NULL;
+    cass_iterator_t* iterator = NULL;
 
-    cass_session_query(session, query, strlen(query), 1, CASS_CONSISTENCY_ONE, &statement);
+    statement = cass_statement_new(query, strlen(query), 1, CASS_CONSISTENCY_ONE);
     cass_statement_bind_string(statement, 0, key, strlen(key));
     cass_session_exec(session, statement, &result_future);
 
     cass_future_wait(result_future);
     result = cass_future_get_result(result_future);
+    cass_future_free(result_future);
+
+    iterator = cass_iterator_from_result(result);
+
+    while(cass_iterator_next(iterator)) {
+      cass_row_t* row = cass_iterator_get_row(iterator);
+      cass_value_t* value = NULL;
+      size_t total;
+
+      char buffer[256];
+      cass_row_get_column(row, 0, &value);
+      cass_value_get_string(value, buffer, sizeof(buffer), &total);
+      buffer[total] = '\0';
+      printf("key: %s\n", buffer);
+    }
+
+    cass_iterator_free(iterator);
+    cass_result_free(result);
+    cass_statement_free(statement);
   }
 
+  /*
   {
     CassStatement* statement = NULL;
     CassFuture* result_future = NULL;
@@ -113,6 +134,7 @@ main() {
     cass_future_wait(result_future);
     result = cass_future_get_result(result_future);
   }
+  */
 
   /*
   CassIterator* iterator = NULL;

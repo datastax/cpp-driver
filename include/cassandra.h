@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_H_INCLUDED__
-#define __CASS_H_INCLUDED__
+#ifndef __CASSANDRA_H_INCLUDED__
+#define __CASSANDRA_H_INCLUDED__
 
 #include <stddef.h>
 
@@ -58,46 +58,30 @@ typedef unsigned long long cass_uint64_t;
 
 typedef size_t cass_size_t;
 
-typedef cass_uint8_t CassUuid[16];
+typedef cass_uint8_t cass_uuid_t[16];
 
 typedef struct {
   cass_uint8_t  address[16];
   cass_uint8_t  address_len;
-} CassInet;
+} cass_inet_t;
 
-struct CassSession;
-typedef struct CassSession CassSession;
-
-struct CassStatement;
-typedef struct CassStatement CassStatement;
-
-struct CassBatchStatement;
-typedef struct CassBatchStatement CassBatchStatement;
-
-struct CassFuture;
-typedef struct CassFuture CassFuture;
-
-struct CassPrepared;
-typedef struct CassPrepared CassPrepared;
-
-struct CassResult;
-typedef struct CassResult CassResult;
-
-struct CassIterator;
-typedef struct CassIterator CassIterator;
-
-struct CassRow;
-typedef struct CassRow CassRow;
-
-struct CassValue;
-typedef struct CassValue CassValue;
+typedef struct cass_session_s cass_session_t;
+typedef struct cass_statement_s cass_statement_t;
+typedef struct cass_batch_s cass_batch_t;
+typedef struct cass_future_s cass_future_t;
+typedef struct cass_prepared_s cass_prepared_t;
+typedef struct cass_result_s cass_result_t;
+typedef struct cass_iterator_s cass_iterator_t;
+typedef struct cass_row_s cass_row_t;
+typedef struct cass_value_s cass_value_t;
+typedef struct cass_collection_s cass_collection_t;
 
 typedef enum {
   CASS_LOG_CRITICAL = 0x00,
   CASS_LOG_ERROR    = 0x01,
   CASS_LOG_INFO     = 0x02,
   CASS_LOG_DEBUG    = 0x03
-} CassLogLevel;
+} cass_log_level_t;
 
 typedef enum {
   CASS_CONSISTENCY_ANY          = 0x0000,
@@ -111,7 +95,7 @@ typedef enum {
   CASS_CONSISTENCY_SERIAL       = 0x0008,
   CASS_CONSISTENCY_LOCAL_SERIAL = 0x0009,
   CASS_CONSISTENCY_LOCAL_ONE    = 0x000A
-} CassConsistency;
+} cass_consistency_t;
 
 typedef enum {
   CASS_VALUE_TYPE_UNKNOWN   = 0xFFFF,
@@ -135,7 +119,7 @@ typedef enum {
   CASS_VALUE_TYPE_LIST      = 0x0020,
   CASS_VALUE_TYPE_MAP       = 0x0021,
   CASS_VALUE_TYPE_SET       = 0x0022
-} CassValueType;
+} cass_value_type_t;
 
 typedef enum {
   CASS_OPTION_THREADS_IO                 = 1,
@@ -146,19 +130,19 @@ typedef enum {
   CASS_OPTION_SCHEMA_AGREEMENT_WAIT      = 6,
   CASS_OPTION_CONTROL_CONNECTION_TIMEOUT = 7,
   CASS_OPTION_COMPRESSION                = 9
-} CassOption;
+} cass_option_t;
 
 typedef enum {
   CASS_COMPRESSION_NONE   = 0,
   CASS_COMPRESSION_SNAPPY = 1,
   CASS_COMPRESSION_LZ4    = 2
-} CassCompression;
+} cass_compression_t;
 
 typedef enum {
   CASS_HOST_DISTANCE_LOCAL,
   CASS_HOST_DISTANCE_REMOTE,
   CASS_HOST_DISTANCE_IGNORE
-} CassHostDistance;
+} cass_host_distance_t;
 
 
 typedef enum {
@@ -180,7 +164,7 @@ typedef enum {
   CASS_ERROR_LIB_SESSION_STATE   = 2000010,
   CASS_ERROR_LIB_MESSAGE_PREPARE = 2000011,
   CASS_ERROR_LIB_HOST_RESOLUTION = 2000012
-} CassCode;
+} cass_code_t;
 
 typedef enum  {
   CASS_ERROR_SOURCE_OS          = 1,
@@ -189,18 +173,25 @@ typedef enum  {
   CASS_ERROR_SOURCE_COMPRESSION = 4,
   CASS_ERROR_SOURCE_SERVER      = 5,
   CASS_ERROR_SOURCE_LIBRARY     = 6
-} CassSource;
+} cass_source_t;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+/***********************************************************************************
+ *
+ * Session
+ *
+ ***********************************************************************************/
 
 /**
  * Initialize a new session. Instance must be freed by caller.
  *
  * @return
  */
-CASS_EXPORT CassSession*
+CASS_EXPORT cass_session_t*
 cass_session_new();
 
 /**
@@ -209,8 +200,8 @@ cass_session_new();
  *
  * @return
  */
-CASS_EXPORT CassSession*
-cass_session_clone(CassSession* session);
+CASS_EXPORT cass_session_t*
+cass_session_clone(cass_session_t* session);
 
 /**
  * Free a session instance.
@@ -218,9 +209,17 @@ cass_session_clone(CassSession* session);
  * @return
  */
 CASS_EXPORT void
-cass_session_free(
-    CassSession* session);
+cass_session_free(cass_session_t* session);
 
+/**
+ * Shutdown the session instance, output a shutdown future which can
+ * be used to determine when the session has been terminated
+ *
+ * @param session
+ */
+CASS_EXPORT cass_code_t
+cass_session_shutdown(cass_session_t* session,
+                      cass_future_t** future);
 
 /**
  * Set an option on the specified session
@@ -232,12 +231,10 @@ cass_session_free(
  *
  * @return 0 if successful, otherwise an error occurred
  */
-CASS_EXPORT CassCode
-cass_session_setopt(
-    CassSession* session,
-    CassOption   option,
-    const void* data,
-    size_t      data_len);
+CASS_EXPORT cass_code_t
+cass_session_setopt(cass_session_t* session,
+                    cass_option_t option,
+                    const void* data, cass_size_t data_len);
 
 /**
  * Get the option value for the specified session
@@ -248,13 +245,10 @@ cass_session_setopt(
  *
  * @return 0 if successful, otherwise an error occurred
  */
-CASS_EXPORT CassCode
-cass_cluster_getopt(
-    CassSession* session,
-    CassOption   option,
-    void**      data,
-    size_t*     data_len);
-
+CASS_EXPORT cass_code_t
+cass_session_getopt(cass_session_t* session,
+                    cass_option_t option,
+                    void** data, cass_size_t* data_len);
 
 /**
  * Initiate a session using the specified session. Resulting
@@ -265,10 +259,9 @@ cass_cluster_getopt(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_session_connect(
-    CassSession* session,
-    CassFuture** future);
+CASS_EXPORT cass_code_t
+cass_session_connect(cass_session_t* session,
+                     cass_future_t** future);
 
 /**
  * Initiate a session using the specified session, and set the keyspace. Resulting
@@ -280,197 +273,10 @@ cass_session_connect(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_session_connect_keyspace(
-    CassSession* session,
-    const char* keyspace,
-    CassFuture** future);
-
-/**
- * Shutdown the session instance, output a shutdown future which can
- * be used to determine when the session has been terminated
- *
- * @param session
- */
-CASS_EXPORT CassCode
-cass_session_shutdown(
-    CassSession* session,
-    CassFuture** future);
-
-/***********************************************************************************
- *
- * Functions which deal with futures
- *
- ***********************************************************************************/
-
-/**
- * Free a session instance.
- *
- * @return
- */
-CASS_EXPORT void
-cass_future_free(
-    CassFuture* future);
-
-/**
- * Is the specified future ready
- *
- * @param future
- *
- * @return true if ready
- */
-CASS_EXPORT int
-cass_future_ready(
-    CassFuture* future);
-
-/**
- * Wait the linked event occurs or error condition is reached
- *
- * @param future
- */
-CASS_EXPORT void
-cass_future_wait(
-    CassFuture* future);
-
-/**
- * Wait the linked event occurs, error condition is reached, or time has elapsed.
- *
- * @param future
- * @param wait time in microseconds
- *
- * @return false if returned due to timeout
- */
-CASS_EXPORT int
-cass_future_wait_timed(
-    CassFuture* future,
-    size_t     wait);
-
-/**
- * If the linked event was successful get the session instance
- *
- * @param future
- *
- * @return NULL if unsuccessful, otherwise pointer to CassSession instance
- */
-CASS_EXPORT CassSession*
-cass_future_get_session(
-    CassFuture* future);
-
-/**
- * If the linked event was successful get the result instance. Result
- * instance must be freed by caller. May only be called once.
- *
- * @param future
- *
- * @return NULL if unsuccessful, otherwise pointer to CassResult instance
- */
-CASS_EXPORT CassResult*
-cass_future_get_result(
-    CassFuture* future);
-
-/**
- * If the linked event was successful get the prepared
- * instance. Prepared instance must be freed by caller. May only be
- * called once
- *
- * @param future
- *
- * @return NULL if unsuccessful, otherwise pointer to CassPrepare instance
- */
-CASS_EXPORT CassPrepared*
-cass_future_get_prepared(
-    CassFuture* future);
-
-/***********************************************************************************
- *
- * Functions which deal with errors
- *
- ***********************************************************************************/
-
-/**
- * Obtain the message from an error structure. This function follows
- * the pattern similar to that of snprintf. The user passes in a
- * pre-allocated builder of size n, to which the decoded value will be
- * copied. The number of bytes written had the builder been
- * sufficiently large will be returned via the output parameter
- * 'total'. Only when total is less than n has the builder been fully
- * consumed.
- *
- * @param source
- * @param output
- * @param output_len
- * @param total
- *
- */
-CASS_EXPORT void
-cass_future_error_string(
-    CassFuture* future,
-    char*      output,
-    size_t     output_len,
-    size_t*    total);
-
-/**
- * Obtain the code from an error structure.
- *
- * @param error
- *
- * @return error source
- *
- */
-CASS_EXPORT CassSource
-cass_future_error_source(
-    CassFuture* future);
-
-/**
- * Obtain the source from an error structure.
- *
- * @param error
- *
- * @return source code
- *
- */
-CASS_EXPORT CassCode
-cass_future_error_code(
-    CassFuture* future);
-
-/**
- * Get description for error code
- *
- * @param code
- *
- * @return error description
- */
-CASS_EXPORT const char*
-cass_error_desc(
-    int code);
-
-/***********************************************************************************
- *
- * Functions which create ad-hoc queries, prepared statements, bound statements, and
- * allow for the composition of batch statements from queries and bound statements.
- *
- ***********************************************************************************/
-
-/**
- * Initialize an ad-hoc query statement
- *
- * @param session
- * @param statement string
- * @param statement_length statement string length
- * @param parameter_count number of bound paramerters
- * @param consistency statement read/write consistency
- * @param output
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_session_query(
-    CassSession*    session,
-    const char*    statement,
-    size_t         statement_len,
-    size_t         parameter_count,
-    CassConsistency consistency,
-    CassStatement** output);
+CASS_EXPORT cass_code_t
+cass_session_connect_keyspace(cass_session_t* session,
+                              const char* keyspace,
+                              cass_future_t** future);
 
 /**
  * Create a prepared statement. Future must be freed by caller.
@@ -482,12 +288,397 @@ cass_session_query(
  *
  * @return
  */
-CASS_EXPORT CassCode
-cass_session_prepare(
-    CassSession* session,
-    const char* statement,
-    size_t      statement_len,
-    CassFuture** output);
+CASS_EXPORT cass_code_t
+cass_session_prepare(cass_session_t* session,
+                     const char* statement, cass_size_t statement_len,
+                     cass_future_t** output);
+
+/**
+ * Execute a query, bound statement and obtain a future. Future must be freed by
+ * caller.
+ *
+ * @param session
+ * @param statement
+ * @param future output future, must be freed by caller, pass NULL to avoid allocation
+ *
+ * @return 0 if successful, otherwise error occured
+ */
+CASS_EXPORT cass_code_t
+cass_session_exec(cass_session_t* session,
+                  cass_statement_t* statement,
+                  cass_future_t** future);
+
+/**
+ * Execute a batch statement and obtain a future. Future must be freed by
+ * caller.
+ *
+ * @param session
+ * @param statement
+ * @param future output future, must be freed by caller, pass NULL to avoid allocation
+ *
+ * @return 0 if successful, otherwise error occured
+ */
+CASS_EXPORT cass_code_t
+cass_session_exec_batch(cass_session_t* session,
+                        cass_batch_t* statement,
+                        cass_future_t** future);
+
+/***********************************************************************************
+ *
+ * Future
+ *
+ ***********************************************************************************/
+
+/**
+ * Free a session instance.
+ *
+ * @return
+ */
+CASS_EXPORT void
+cass_future_free(cass_future_t* future);
+
+/**
+ * Is the specified future ready
+ *
+ * @param future
+ *
+ * @return true if ready
+ */
+CASS_EXPORT int
+cass_future_ready(cass_future_t* future);
+
+/**
+ * Wait the linked event occurs or error condition is reached
+ *
+ * @param future
+ */
+CASS_EXPORT void
+cass_future_wait(cass_future_t* future);
+
+/**
+ * Wait the linked event occurs, error condition is reached, or time has elapsed.
+ *
+ * @param future
+ * @param wait time in microseconds
+ *
+ * @return false if returned due to timeout
+ */
+CASS_EXPORT int
+cass_future_wait_timed(cass_future_t* future,
+                       cass_size_t wait);
+
+/**
+ * If the linked event was successful get the session instance
+ *
+ * @param future
+ *
+ * @return NULL if unsuccessful, otherwise pointer to CassSession instance
+ */
+CASS_EXPORT cass_session_t*
+cass_future_get_session(cass_future_t* future);
+
+/**
+ * If the linked event was successful get the result instance. Result
+ * instance must be freed by caller. May only be called once.
+ *
+ * @param future
+ *
+ * @return NULL if unsuccessful, otherwise pointer to CassResult instance
+ */
+CASS_EXPORT cass_result_t*
+cass_future_get_result(cass_future_t* future);
+
+/**
+ * If the linked event was successful get the prepared
+ * instance. Prepared instance must be freed by caller. May only be
+ * called once
+ *
+ * @param future
+ *
+ * @return NULL if unsuccessful, otherwise pointer to CassPrepare instance
+ */
+CASS_EXPORT cass_prepared_t*
+cass_future_get_prepared(cass_future_t* future);
+
+/**
+ * Obtain the message from an error structure. This function follows
+ * the pattern similar to that of snprintf. The user passes in a
+ * pre-allocated builder of size n, to which the decoded value will be
+ * copied. The number of bytes written had the builder been
+ * sufficiently large will be returned via the output parameter
+ * 'copied'. Only when copied is less than n has the builder been fully
+ * consumed.
+ *
+ * @param source
+ * @param output
+ * @param output_len
+ * @param copied
+ *
+ */
+CASS_EXPORT void
+cass_future_error_string(cass_future_t* future,
+                         char* output, cass_size_t output_len,
+                         cass_size_t* copied);
+
+/**
+ * Obtain the code from an error structure.
+ *
+ * @param error
+ *
+ * @return error source
+ *
+ */
+CASS_EXPORT cass_source_t
+cass_future_error_source(cass_future_t* future);
+
+/**
+ * Obtain the source from an error structure.
+ *
+ * @param error
+ *
+ * @return source code
+ *
+ */
+CASS_EXPORT cass_code_t
+cass_future_error_code(cass_future_t* future);
+
+
+/***********************************************************************************
+ *
+ * Code
+ *
+ ***********************************************************************************/
+
+/**
+ * Get description for error code
+ *
+ * @param code
+ *
+ * @return error description
+ */
+CASS_EXPORT const char*
+cass_code_error_desc(cass_code_t code);
+
+/***********************************************************************************
+ *
+ * Statement
+ *
+ ***********************************************************************************/
+
+/**
+ * Initialize an ad-hoc query statement
+ *
+ * @param statement string
+ * @param statement_length statement string length
+ * @param parameter_count number of bound paramerters
+ * @param consistency statement read/write consistency
+ * @param output
+ *
+ * @return 0 if successful, otherwise error occured
+ */
+CASS_EXPORT cass_statement_t*
+cass_statement_new(const char* statement, cass_size_t statement_len,
+                   cass_size_t parameter_count,
+                   cass_consistency_t consistency);
+
+
+CASS_EXPORT void
+cass_statement_free(cass_statement_t* statement);
+
+/**
+ * Bind an int to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return
+ */
+CASS_EXPORT cass_code_t
+cass_statement_bind_int(cass_statement_t* statement,
+                        cass_size_t index,
+                        cass_int32_t value);
+
+/**
+ * Bind a bigint to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return
+ */
+CASS_EXPORT cass_code_t
+cass_statement_bind_bigint(cass_statement_t* statement,
+                           cass_size_t index,
+                           cass_int64_t value);
+
+/**
+ * Bind a float to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return
+ */
+CASS_EXPORT cass_code_t
+cass_statement_bind_float(cass_statement_t* statement,
+                          cass_size_t index,
+                          cass_float_t value);
+
+/**
+ * Bind a double to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return 0 if successful, otherwise error occured
+ */
+CASS_EXPORT cass_code_t
+cass_statement_bind_double(cass_statement_t* statement,
+                           cass_size_t index,
+                           cass_double_t value);
+
+/**
+ * Bind a bool to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return 0 if successful, otherwise error occured
+ */
+CASS_EXPORT cass_code_t
+cass_statement_bind_bool(cass_statement_t* statement,
+                         cass_size_t index,
+                         cass_bool_t value);
+
+/**
+ * Bind a time stamp to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return 0 if successful, otherwise error occured
+ */
+CASS_EXPORT cass_code_t
+cass_statement_bind_timestamp(cass_statement_t*  statement,
+                              cass_size_t index,
+                              cass_int64_t value);
+
+/**
+ * Bind a UUID to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return 0 if successful, otherwise error occured
+ */
+CASS_EXPORT cass_code_t
+cass_statement_bind_uuid(cass_statement_t*  statement,
+                         cass_size_t index,
+                         cass_uuid_t value);
+
+/**
+ * Bind a counter to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ *
+ * @return 0 if successful, otherwise error occured
+ */
+CASS_EXPORT cass_code_t
+cass_statement_bind_counter(cass_statement_t*  statement,
+                            cass_size_t index,
+                            cass_int64_t value);
+
+/**
+ * Bind a string to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ * @param length
+ *
+ * @return 0 if successful, otherwise error occured
+ */
+CASS_EXPORT cass_code_t
+cass_statement_bind_string(cass_statement_t*  statement,
+                           cass_size_t index,
+                           const char* value, cass_size_t value_length);
+
+/**
+ * Bind a blob to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param output
+ * @param length
+ *
+ * @return 0 if successful, otherwise error occured
+ */
+CASS_EXPORT cass_code_t
+cass_statement_bind_blob(cass_statement_t* statement,
+                         cass_size_t index,
+                         cass_uint8_t* value, cass_size_t value_length);
+
+CASS_EXPORT cass_code_t
+cass_statement_bind_inet(cass_statement_t* statement,
+                         cass_size_t index,
+                         const cass_uint8_t* address, cass_uint8_t address_length);
+
+/**
+ * Bind a decimal to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param scale
+ * @param value
+ * @param length
+ *
+ * @return 0 if successful, otherwise error occured
+ */
+CASS_EXPORT cass_code_t
+cass_statement_bind_decimal(cass_statement_t* statement,
+                            cass_size_t index,
+                            cass_uint32_t scale,
+                            cass_uint8_t* varint, cass_size_t varint_length);
+
+/**
+ * Bind a varint to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ * @param length
+ *
+ * @return 0 if successful, otherwise error occured
+ */
+CASS_EXPORT cass_code_t
+cass_statement_bind_varint(cass_statement_t* statement,
+                           cass_size_t index,
+                           cass_uint8_t* value, cass_size_t value_length);
+
+CASS_EXPORT cass_code_t
+cass_statement_bind_collection(cass_statement_t* statement,
+                               cass_size_t index,
+                               cass_collection_t* collection,
+                               cass_bool_t is_map);
+
+
+/***********************************************************************************
+ *
+ * Prepared
+ *
+ ***********************************************************************************/
+
+CASS_EXPORT void
+cass_prepared_free(cass_prepared_t* prepared);
 
 /**
  * Initialize a bound statement from a pre-prepared statement
@@ -501,278 +692,32 @@ cass_session_prepare(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_prepared_bind(
-    CassPrepared*   prepared,
-    size_t         paramater_count,
-    CassConsistency consistency,
-    CassStatement** output);
-
-/**
- * Bind a short to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
- *
- * @return
- */
-CASS_EXPORT CassCode
-cass_statement_bind_short(
-    CassStatement* statement,
-    size_t        index,
-    cass_int16_t   value);
-
-/**
- * Bind an int to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
- *
- * @return
- */
-CASS_EXPORT CassCode
-cass_statement_bind_int(
-    CassStatement* statement,
-    size_t        index,
-    cass_int32_t   value);
-
-/**
- * Bind a bigint to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
- *
- * @return
- */
-CASS_EXPORT CassCode
-cass_statement_bind_bigint(
-    CassStatement* statement,
-    size_t        index,
-    cass_int64_t   value);
-
-/**
- * Bind a float to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
- *
- * @return
- */
-CASS_EXPORT CassCode
-cass_statement_bind_float(
-    CassStatement* statement,
-    size_t        index,
-    cass_float_t     value);
-
-/**
- * Bind a double to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_statement_bind_double(
-    CassStatement*  statement,
-    size_t         index,
-    cass_double_t     value);
-
-/**
- * Bind a bool to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_statement_bind_bool(
-    CassStatement*  statement,
-    size_t         index,
-    cass_bool_t    value);
-
-/**
- * Bind a time stamp to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_statement_bind_timestamp(
-    CassStatement*  statement,
-    size_t         index,
-    cass_int64_t    value);
-
-/**
- * Bind a UUID to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_statement_bind_uuid(
-    CassStatement*  statement,
-    size_t         index,
-    CassUuid       value);
-
-/**
- * Bind a counter to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_statement_bind_counter(
-    CassStatement*  statement,
-    size_t         index,
-    cass_int64_t    value);
-
-/**
- * Bind a string to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
- * @param length
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_statement_bind_string(
-    CassStatement*  statement,
-    size_t         index,
-    const char*    value,
-    size_t         length);
-
-/**
- * Bind a blob to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param output
- * @param length
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_statement_bind_blob(
-    CassStatement*  statement,
-    size_t         index,
-    cass_uint8_t*   value,
-    size_t         length);
-
-CASS_EXPORT CassCode
-cass_statement_bind_inet(
-    CassStatement* statement,
-    size_t         index,
-    const cass_uint8_t*  address,
-    cass_uint8_t   address_len);
-
-/**
- * Bind a decimal to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param scale
- * @param value
- * @param length
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_statement_bind_decimal(
-    CassStatement* statement,
-    size_t        index,
-    cass_uint32_t  scale,
-    cass_uint8_t*  value,
-    size_t        length);
-
-/**
- * Bind a varint to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
- * @param length
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_statement_bind_varint(
-    CassStatement*  statement,
-    size_t         index,
-    cass_uint8_t*   value,
-    size_t         length);
-
-/**
- * Execute a query, bound statement and obtain a future. Future must be freed by
- * caller.
- *
- * @param session
- * @param statement
- * @param future output future, must be freed by caller, pass NULL to avoid allocation
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_session_exec(
-    CassSession*   session,
-    CassStatement* statement,
-    CassFuture**   future);
+CASS_EXPORT cass_code_t
+cass_prepared_bind(cass_prepared_t* prepared,
+                   cass_size_t paramater_count,
+                   cass_consistency_t consistency,
+                   cass_statement_t** output);
 
 /***********************************************************************************
  *
- * Functions dealing with batching multiple statements
+ * Batch
  *
  ***********************************************************************************/
 
-CASS_EXPORT CassCode
-cass_session_batch(
-    CassSession*         session,
-    CassConsistency      consistency,
-    CassBatchStatement** output);
 
-CASS_EXPORT CassCode
-cass_batch_add_statement(
-    CassBatchStatement* batch,
-    CassStatement*      statement);
+CASS_EXPORT cass_batch_t*
+cass_batch_new(cass_consistency_t consistency);
 
-CASS_EXPORT CassCode
-cass_batch_set_timestamp(
-    CassBatchStatement* batch,
-    cass_int64_t        timestamp);
+CASS_EXPORT void
+cass_batch_free(cass_batch_t* batch);
 
-/**
- * Execute a batch statement and obtain a future. Future must be freed by
- * caller.
- *
- * @param session
- * @param statement
- * @param future output future, must be freed by caller, pass NULL to avoid allocation
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_session_exec_batch(
-    CassSession*        session,
-    CassBatchStatement* statement,
-    CassFuture**        future);
+CASS_EXPORT cass_code_t
+cass_batch_add_statement(cass_batch_t* batch,
+                         cass_statement_t* statement);
+
+CASS_EXPORT void
+cass_batch_set_timestamp(cass_batch_t* batch,
+                         cass_int64_t timestamp);
 
 
 /***********************************************************************************
@@ -781,65 +726,57 @@ cass_session_exec_batch(
  *
  ***********************************************************************************/
 
-struct CassCollection;
-typedef struct CassCollection CassCollection;
-
-CASS_EXPORT CassCollection*
-cass_collection_new(size_t element_count);
+CASS_EXPORT cass_collection_t*
+cass_collection_new(cass_size_t item_count);
 
 CASS_EXPORT void
-cass_collection_free(CassCollection* collection);
+cass_collection_free(cass_collection_t* collection);
 
-CASS_EXPORT CassCode
-cass_collection_append_int(CassCollection* collection,
+CASS_EXPORT cass_code_t
+cass_collection_append_int(cass_collection_t* collection,
                          cass_int32_t i);
 
-CASS_EXPORT CassCode
-cass_collection_append_bigint(CassCollection* collection,
+CASS_EXPORT cass_code_t
+cass_collection_append_bigint(cass_collection_t* collection,
                          cass_int32_t bi);
 
-CASS_EXPORT CassCode
-cass_collection_append_float(CassCollection* collection,
+CASS_EXPORT cass_code_t
+cass_collection_append_float(cass_collection_t* collection,
                          cass_float_t f);
 
-CASS_EXPORT CassCode
-cass_collection_append_double(CassCollection* collection,
-                         cass_double_t d);
+CASS_EXPORT cass_code_t
+cass_collection_append_double(cass_collection_t* collection,
+                              cass_double_t d);
 
-CASS_EXPORT CassCode
-cass_collection_append_bool(CassCollection* collection,
-                        cass_bool_t b);
+CASS_EXPORT cass_code_t
+cass_collection_append_bool(cass_collection_t* collection,
+                            cass_bool_t b);
 
-CASS_EXPORT CassCode
-cass_collection_append_inet(CassCollection* collection,
-                        CassInet inet);
+CASS_EXPORT cass_code_t
+cass_collection_append_inet(cass_collection_t* collection,
+                            cass_inet_t inet);
 
-CASS_EXPORT CassCode
-cass_collection_append_decimal(CassCollection* collection,
-                          cass_int32_t scale,
-                          cass_uint8_t* varint, cass_size_t varint_length);
+CASS_EXPORT cass_code_t
+cass_collection_append_decimal(cass_collection_t* collection,
+                              cass_int32_t scale,
+                              cass_uint8_t* varint, cass_size_t varint_length);
 
-CASS_EXPORT CassCode
-cass_collection_append_uuid(CassCollection* collection,
-                        CassUuid uuid);
+CASS_EXPORT cass_code_t
+cass_collection_append_uuid(cass_collection_t* collection,
+                            cass_uuid_t uuid);
 
-CASS_EXPORT CassCode
-cass_collection_append_blob(CassCollection* builder,
-                        cass_uint8_t* blob, cass_size_t blob_length);
-
-CASS_EXPORT CassCode
-cass_statement_bind_collection(
-    CassStatement*  statement,
-    size_t          index,
-    CassCollection*    collection,
-    cass_bool_t     is_map);
+CASS_EXPORT cass_code_t
+cass_collection_append_blob(cass_collection_t* builder,
+                            cass_uint8_t* blob, cass_size_t blob_length);
 
 /***********************************************************************************
  *
- * Functions dealing with fetching data and meta information from statement results
+ * Result
  *
  ***********************************************************************************/
 
+CASS_EXPORT void
+cass_result_free(cass_result_t* result);
 
 /**
  * Get number of rows for the specified result
@@ -848,9 +785,8 @@ cass_statement_bind_collection(
  *
  * @return
  */
-CASS_EXPORT size_t
-cass_result_rowcount(
-    CassResult* result);
+CASS_EXPORT cass_size_t
+cass_result_row_count(cass_result_t* result);
 
 /**
  * Get number of columns per row for the specified result
@@ -859,9 +795,8 @@ cass_result_rowcount(
  *
  * @return
  */
-CASS_EXPORT size_t
-cass_result_colcount(
-    CassResult* result);
+CASS_EXPORT cass_size_t
+cass_result_column_count(cass_result_t* result);
 
 /**
  * Get the type for the column at index for the specified result
@@ -872,45 +807,49 @@ cass_result_colcount(
  *
  * @return
  */
-CASS_EXPORT CassCode
-cass_result_coltype(
-    CassResult*     result,
-    size_t          index,
-    CassValueType* coltype);
+CASS_EXPORT cass_code_t
+cass_result_column_type(cass_result_t* result,
+                        cass_size_t index,
+                        cass_value_type_t* output);
+
+/***********************************************************************************
+ *
+ * Iterator
+ *
+ ***********************************************************************************/
 
 /**
- * Get an iterator for the specified result or collection. Iterator must be freed by caller.
+ * Create new iterator for the specified result.
  *
  * @param result
- * @param iterator
  *
- * @return 0 if successful, otherwise error occured
+ * @return
  */
-CASS_EXPORT CassCode
-cass_result_iterator_new(
-    CassResult* result,
-    CassIterator** iterator);
+CASS_EXPORT cass_iterator_t*
+cass_iterator_from_result(cass_result_t* result);
 
-CASS_EXPORT CassCode
-cass_result_iterator_get_row(
-    CassIterator* iterator,
-    CassRow** row);
+/**
+ * Create new iterator for the specified row.
+ *
+ * @param result
+ *
+ * @return
+ */
+CASS_EXPORT cass_iterator_t*
+cass_iterator_from_row(cass_row_t* row);
 
-CASS_EXPORT CassCode
-cass_collection_iterator_new(
-    CassValue* collection,
-    CassIterator** iterator);
+/**
+ * Create new iterator for the specified collection.
+ *
+ * @param result
+ *
+ * @return
+ */
+CASS_EXPORT cass_iterator_t*
+cass_iterator_from_collection(cass_value_t* collection);
 
-CASS_EXPORT CassCode
-cass_collection_iterator_get_pair(
-    CassIterator* iterator,
-    CassValue** key,
-    CassValue** value);
-
-CASS_EXPORT CassCode
-cass_collection_iterator_get_entry(
-    CassIterator* iterator,
-    CassValue* entry);
+CASS_EXPORT void
+cass_iterator_free(cass_iterator_t* iterator);
 
 /**
  * Advance the iterator to the next row or collection item.
@@ -920,12 +859,23 @@ cass_collection_iterator_get_entry(
  * @return next row, NULL if no rows remain or error
  */
 CASS_EXPORT cass_bool_t
-cass_iterator_next(
-    CassIterator* iterator);
+cass_iterator_next(cass_iterator_t* iterator);
 
-CASS_EXPORT void
-cass_iterator_free(
-    CassIterator* iterator);
+CASS_EXPORT cass_row_t*
+cass_iterator_get_row(cass_iterator_t* iterator);
+
+CASS_EXPORT cass_value_t*
+cass_iterator_get_column(cass_iterator_t *iterator);
+
+CASS_EXPORT cass_value_t*
+cass_iterator_get_value(cass_iterator_t *iterator);
+
+
+/***********************************************************************************
+ *
+ * Row
+ *
+ ***********************************************************************************/
 
 /**
  * Get the column value at index for the specified row.
@@ -936,11 +886,16 @@ cass_iterator_free(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_row_getcol(
-    CassRow*  row,
-    size_t index,
-    CassValue** value);
+CASS_EXPORT cass_code_t
+cass_row_get_column(cass_row_t*  row,
+                    cass_size_t index,
+                    cass_value_t** value);
+
+/***********************************************************************************
+ *
+ * Value
+ *
+ ***********************************************************************************/
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -951,10 +906,9 @@ cass_row_getcol(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_decode_short(
-    CassValue*   source,
-    cass_int16_t* value);
+CASS_EXPORT cass_code_t
+cass_value_get_int(cass_value_t* value,
+                   cass_int32_t* output);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -965,10 +919,9 @@ cass_decode_short(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_decode_int(
-    CassValue*    source,
-    cass_int32_t* value);
+CASS_EXPORT cass_code_t
+cass_value_get_bigint(cass_value_t* value,
+                      cass_int64_t* output);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -979,10 +932,9 @@ cass_decode_int(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_decode_bigint(
-    CassValue*     source,
-    cass_int64_t* value);
+CASS_EXPORT cass_code_t
+cass_value_get_float(cass_value_t* value,
+                     cass_float_t*  output);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -993,10 +945,9 @@ cass_decode_bigint(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_decode_float(
-    CassValue*  source,
-    cass_float_t*  value);
+CASS_EXPORT cass_code_t
+cass_value_get_double(cass_value_t* value,
+                      cass_double_t* output);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -1007,10 +958,9 @@ cass_decode_float(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_decode_double(
-    CassValue*       source,
-    cass_double_t  value);
+CASS_EXPORT cass_code_t
+cass_value_get_bool(cass_value_t* value,
+                    cass_bool_t* output);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -1021,10 +971,9 @@ cass_decode_double(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_decode_bool(
-    CassValue*    source,
-    cass_bool_t value);
+CASS_EXPORT cass_code_t
+cass_value_get_timestamp(cass_value_t* value,
+                         cass_int64_t* output);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -1035,10 +984,9 @@ cass_decode_bool(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_decode_time(
-    CassValue*       source,
-    cass_int64_t value);
+CASS_EXPORT cass_code_t
+cass_value_get_uuid(cass_value_t* value,
+                    cass_uuid_t output);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -1049,68 +997,51 @@ cass_decode_time(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_decode_uuid(
-    CassValue*   source,
-    CassUuid value);
-
-/**
- * Decode the specified value. Value may be a column, collection item, map key, or map
- * value.
- *
- * @param source
- * @param value
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_decode_counter(
-    CassValue*       source,
-    cass_int64_t value);
+CASS_EXPORT cass_code_t
+cass_value_get_counter(cass_value_t* value,
+                       cass_int64_t* output);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
  * value. This function follows the pattern similar to that of snprintf. The user
  * passes in a pre-allocated builder of size n, to which the decoded value will be
  * copied. The number of bytes written had the builder been sufficiently large will be
- * returned via the output parameter 'total'. Only when total is less than n has
+ * returned via the output parameter 'copied'. Only when copied is less than n has
  * the builder been fully consumed.
  *
  * @param source
  * @param output
  * @param output_len
- * @param total
+ * @param copied
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_decode_string(
-    CassValue*   source,
-    char*   output,
-    size_t  output_len,
-    size_t* total);
+CASS_EXPORT cass_code_t
+cass_value_get_string(cass_value_t* value,
+                      char* output,
+                      cass_size_t  output_len,
+                      cass_size_t * copied);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
  * value. This function follows the pattern similar to that of snprintf. The user
  * passes in a pre-allocated builder of size n, to which the decoded value will be
  * copied. The number of bytes written had the builder been sufficiently large will be
- * returned via the output parameter 'total'. Only when total is less than n has
+ * returned via the output parameter 'copied'. Only when copied is less than n has
  * the builder been fully consumed.
  *
  * @param source
  * @param output
  * @param output_len
- * @param total
+ * @param copied
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_decode_blob(
-    CassValue*        source,
-    cass_uint8_t* output,
-    size_t       output_len,
-    size_t*      total);
+CASS_EXPORT cass_code_t
+cass_value_get_blob(cass_value_t* value,
+                    cass_uint8_t* output,
+                    cass_size_t  output_len,
+                    cass_size_t * copied);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -1121,45 +1052,32 @@ cass_decode_blob(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_decode_decimal(
-    CassValue*         source,
-    cass_uint32_t* scale,
-    cass_uint8_t** value,
-    size_t*       len);
+CASS_EXPORT cass_code_t
+cass_value_get_decimal(cass_value_t* value,
+                       cass_uint32_t* scale,
+                       cass_uint8_t* output, cass_size_t output_length,
+                       cass_size_t * copied);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
  * value. This function follows the pattern similar to that of snprintf. The user
  * passes in a pre-allocated builder of size n, to which the decoded value will be
  * copied. The number of bytes written had the builder been sufficiently large will be
- * returned via the output parameter 'total'. Only when total is less than n has
+ * returned via the output parameter 'copied'. Only when copied is less than n has
  * the builder been fully consumed.
  *
  * @param source
  * @param output
  * @param output_len
- * @param total
+ * @param copied
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_decode_varint(
-    CassValue*        source,
-    cass_uint8_t* output,
-    size_t       output_len,
-    size_t*      total);
-
-/**
- * Get the number of items in a collection. Works for all collection types.
- *
- * @param source collection column
- *
- * @return size, 0 if error
- */
-CASS_EXPORT size_t
-cass_collection_count(
-    CassValue*  source);
+CASS_EXPORT cass_code_t
+cass_value_get_varint(cass_value_t* value,
+                      cass_uint8_t* output,
+                      cass_size_t output_len,
+                      cass_size_t* copied);
 
 /**
  * Get the collection sub-type. Works for collections that have a single sub-type
@@ -1170,71 +1088,34 @@ cass_collection_count(
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassCode
-cass_collection_subtype(
-    CassValue*   collection,
-    CassValueType* output);
+CASS_EXPORT cass_value_type_t
+cass_value_type(cass_value_t* value);
+
+CASS_EXPORT cass_bool_t
+cass_value_is_collection(cass_value_t* value);
 
 /**
- * Get the sub-type of the key for a map collection. Works only for maps.
+ * Get the number of items in a collection. Works for all collection types.
  *
- * @param collection
- * @param output
+ * @param source collection column
  *
- * @return 0 if successful, otherwise error occured
+ * @return size, 0 if error
  */
-CASS_EXPORT CassCode
-cass_collection_map_key_type(
-    CassValue*   collection,
-    CassValueType* output);
+CASS_EXPORT cass_size_t
+cass_value_item_count(cass_value_t* collection);
 
-/**
- * Get the sub-type of the value for a map collection. Works only for maps.
- *
- * @param collection
- * @param output
- *
- * @return
- */
-CASS_EXPORT CassCode
-cass_collection_map_value_type(
-    CassValue*   collection,
-    CassValueType* output);
+CASS_EXPORT cass_value_type_t
+cass_value_primary_sub_type(cass_value_t* collection);
 
-/**
- * Use an iterator to obtain each pair from a map. Once a pair has been obtained from
- * the iterator use this function to fetch the key portion of the pair
- *
- * @param item
- * @param output
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_map_get_key(
-    CassValue*  item,
-    void** output);
+CASS_EXPORT cass_value_type_t
+cass_value_secondary_sub_type(cass_value_t* collection);
 
-/**
- * Use an iterator to obtain each pair from a map. Once a pair has been obtained from
- * the iterator use this function to fetch the value portion of the pair
- *
- * @param item
- * @param output
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT CassCode
-cass_map_get_value(
-    void*  item,
-    void** output);
 
 /***********************************************************************************
  *
- * Misc
+ * UUID
  *
  ************************************************************************************/
-
 
 /**
  * Generate a new V1 (time) UUID
@@ -1242,8 +1123,7 @@ cass_map_get_value(
  * @param output
  */
 CASS_EXPORT void
-cass_uuid_v1(
-    CassUuid* output);
+cass_uuid_v1(cass_uuid_t* output);
 
 /**
  * Generate a new V1 (time) UUID for the specified time
@@ -1251,9 +1131,8 @@ cass_uuid_v1(
  * @param output
  */
 CASS_EXPORT void
-cass_uuid_v1_for_time(
-    cass_uint64_t  time,
-    CassUuid*      output);
+cass_uuid_v1_for_time(cass_uint64_t time,
+                      cass_uuid_t* output);
 
 /**
  * Generate a new V4 (random) UUID
@@ -1263,8 +1142,7 @@ cass_uuid_v1_for_time(
  * @return
  */
 CASS_EXPORT void
-cass_uuid_v4(
-    CassUuid* output);
+cass_uuid_v4(cass_uuid_t* output);
 
 /**
  * Return the corresponding null terminated string for the specified UUID.
@@ -1274,10 +1152,9 @@ cass_uuid_v4(
  *
  * @return
  */
-CASS_EXPORT CassCode
-cass_uuid_string(
-    CassUuid uuid,
-    char*   output);
+CASS_EXPORT cass_code_t
+cass_uuid_string(cass_uuid_t uuid,
+                 char* output);
 
 #ifdef __cplusplus
 } /* extern "C" */

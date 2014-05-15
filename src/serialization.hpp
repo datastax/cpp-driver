@@ -89,6 +89,14 @@ encode_int64(
 }
 
 inline char*
+decode_int64(
+    char*    input,
+    int64_t& output) {
+  output = ntohll(*(reinterpret_cast<const int64_t*>(input)));
+  return input + sizeof(int64_t);
+}
+
+inline char*
 decode_string(
     char*   input,
     char**  output,
@@ -113,10 +121,22 @@ inline char* encode_float(char* output, float value) {
   return encode_int(output, *reinterpret_cast<int32_t*>(&value));
 }
 
+inline char* decode_float(char* input, float& output) {
+  assert(std::numeric_limits<float>::is_iec559);
+  assert(sizeof(float) == sizeof(int32_t));
+  return decode_int(input, *reinterpret_cast<int32_t*>(&output));
+}
+
 inline char* encode_double(char* output, double value) {
   assert(std::numeric_limits<double>::is_iec559);
   assert(sizeof(double) == sizeof(int64_t));
   return encode_int64(output, *reinterpret_cast<int64_t*>(&value));
+}
+
+inline char* decode_double(char* input, double& output) {
+  assert(std::numeric_limits<double>::is_iec559);
+  assert(sizeof(float) == sizeof(int64_t));
+  return decode_int64(input, *reinterpret_cast<int64_t*>(&output));
 }
 
 inline char* encode_decimal(char* output, int32_t scale,

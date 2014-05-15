@@ -93,7 +93,7 @@ struct Statement : public MessageBody {
   }
 
 #define BIND_FIXED_TYPE(DeclType, EncodeType, Name)                  \
-  inline CassCode bind_##Name(size_t index, const DeclType& value) { \
+  inline cass_code_t bind_##Name(size_t index, const DeclType& value) { \
     CASS_VALUE_CHECK_INDEX(index);                       \
     Buffer buffer(sizeof(DeclType));                      \
     encode_##EncodeType(buffer.data(), value);            \
@@ -109,25 +109,25 @@ struct Statement : public MessageBody {
 #undef BIND_FIXED_TYPE
 
 
-  inline CassCode bind(size_t index, const char* input, size_t input_length) {
+  inline cass_code_t bind(size_t index, const char* input, size_t input_length) {
     CASS_VALUE_CHECK_INDEX(index);
     values[index] = Buffer(input, input_length);
     return CASS_OK;
   }
 
-  inline CassCode bind(size_t index, const uint8_t* uuid) {
+  inline cass_code_t bind(size_t index, const uint8_t* uuid) {
     CASS_VALUE_CHECK_INDEX(index);
     values[index] = Buffer(reinterpret_cast<const char *>(uuid), 16);
     return CASS_OK;
   }
 
-  inline CassCode bind(size_t index, const uint8_t* address, uint8_t address_len) {
+  inline cass_code_t bind(size_t index, const uint8_t* address, uint8_t address_len) {
     CASS_VALUE_CHECK_INDEX(index);
     values[index] = Buffer(reinterpret_cast<const char *>(address), address_len);
     return CASS_OK;
   }
 
-  inline CassCode bind(size_t index, Collection* builder, bool is_map) {
+  inline cass_code_t bind(size_t index, Collection* builder, bool is_map) {
     CASS_VALUE_CHECK_INDEX(index);
     // TODO(mpenick): Validate that a map is count % 2 == 0
     values[index] = builder->build(is_map);

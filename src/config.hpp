@@ -87,9 +87,9 @@ struct Config {
     return port_;
   }
 
-  CassCode
+  cass_code_t
   option(
-      CassOption   option,
+      cass_option_t   option,
       const void* value,
       size_t      size) {
     int int_value = *(reinterpret_cast<const int*>(value));

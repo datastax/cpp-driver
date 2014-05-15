@@ -32,7 +32,7 @@ class RoundRobinPolicy : public LoadBalancingPolicy {
       hosts_.assign(hosts.begin(), hosts.end());
     }
 
-    CassHostDistance distance(const Host& host) {
+    cass_host_distance_t distance(const Host& host) {
       return CASS_HOST_DISTANCE_LOCAL;
     }
 

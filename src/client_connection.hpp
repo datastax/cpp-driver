@@ -488,7 +488,7 @@ struct ClientConnection {
       if(stream_error) {
         request->error.reset(stream_error);
       } else {
-        request->error.reset(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, (CassCode)error->code, error->message));
+        request->error.reset(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, (cass_code_t)error->code, error->message));
       }
       request->notify(loop_);
     }
@@ -523,7 +523,7 @@ struct ClientConnection {
   set_keyspace(
       const std::string& keyspace) {
     Message message(CQL_OPCODE_QUERY);
-    QueryStatement* query = static_cast<QueryStatement*>(message.body.get());
+    Query* query = static_cast<Query*>(message.body.get());
     query->statement("USE " + keyspace);
     execute(&message, NULL);
   }

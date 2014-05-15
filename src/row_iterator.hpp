@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 DataStax
+  Copyright (c) 2014 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,29 +14,36 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BUFFER_PIECE_HPP_INCLUDED__
-#define __CASS_BUFFER_PIECE_HPP_INCLUDED__
+#ifndef __CASS_ROW_ITERATOR_HPP_INCLUDED__
+#define __CASS_ROW_ITERATOR_HPP_INCLUDED__
+
+#include "iterator.hpp"
+#include "row.hpp"
 
 namespace cass {
 
-class BufferPiece {
+class RowIterator : public Iterator {
   public:
-    BufferPiece()
-      : data_(nullptr)
-      , size_(0) { }
+    RowIterator(Row* row)
+      : Iterator(CASS_ITERATOR_TYPE_ROW)
+      , row_(row)
+      , index_(0) { }
 
-    BufferPiece(const char* data, size_t size)
-      : data_(data)
-      , size_(size) { }
+    virtual bool next() {
+      if(index_++ <= row_->size()) {
+        return false;
+      }
+      return true;
+    }
 
-    const char* data() const { return data_; }
-    size_t size() const { return size_; }
+    Value* column() { return &(*row_)[index_]; }
 
   private:
-    const char* data_;
-    size_t size_;
+    Row* row_;
+    size_t index_;
 };
 
 } // namespace cass
 
 #endif
+

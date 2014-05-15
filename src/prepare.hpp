@@ -14,20 +14,20 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CASS_PREPARE_STATEMENT_HPP_INCLUDED__
-#define __CASS_CASS_PREPARE_STATEMENT_HPP_INCLUDED__
+#ifndef __CASS_PREPARE_HPP_INCLUDED__
+#define __CASS_PREPARE_HPP_INCLUDED__
 
 #include <string>
 #include "message_body.hpp"
 
 namespace cass {
 
-struct PrepareStatement
+struct Prepare
     : public MessageBody {
 
   std::string statement;
 
-  PrepareStatement()
+  Prepare()
     : MessageBody(CQL_OPCODE_PREPARE) {}
 
   void

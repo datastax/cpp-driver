@@ -18,46 +18,29 @@
 #define __CASS_RESULT_ITERATOR_HPP_INCLUDED__
 
 #include "iterator.hpp"
-#include "body_result.hpp"
+#include "result.hpp"
+#include "row.hpp"
 #include "buffer_piece.hpp"
 
 namespace cass {
-
-typedef std::vector<BufferPiece> Row;
-
-struct Value {
-    Value(CassValueType type, const char* data, size_t size)
-      : type(type)
-      , buffer(data, size) { }
-
-    CassValueType type;
-    CassValueType primary_type;
-    CassValueType secondary_type;
-    uint16_t count;
-    BufferPiece buffer;
-};
 
 struct ResultIterator : Iterator {
   Result*             result;
   int32_t             row_position;
   char*               position;
-  char*               position_next;
   Row                 row;
 
-  ResultIterator(
-      Result* result) :
-      Iterator(CASS_ITERATOR_TYPE_RESULT),
-      result(result),
-      row_position(0),
-      position(result->rows),
-      row(result->column_count) {
-    position_next = parse_row(position, row);
-  }
+  ResultIterator(Result* result)
+    : Iterator(CASS_ITERATOR_TYPE_RESULT)
+    , result(result)
+    , row_position(0)
+    , position(result->rows)
+    , row(result->column_count) { }
 
   char*
   parse_row(
       char* row,
-      std::vector<BufferPiece>& output) {
+      std::vector<Value>& output) {
     char* buffer = row;
     output.clear();
 
@@ -66,32 +49,31 @@ struct ResultIterator : Iterator {
       buffer        = decode_int(buffer, size);
 
       const Result::ColumnMetaData& metadata = result->column_metadata[i];
-      CassValueType type = static_cast<CassValueType>(metadata.type);
+      cass_value_type_t type = static_cast<cass_value_type_t>(metadata.type);
 
-      Value v(type, buffer, size);
       if(type == CASS_VALUE_TYPE_MAP ||
          type == CASS_VALUE_TYPE_LIST ||
          type == CASS_VALUE_TYPE_SET) {
         uint16_t count = 0;
-        buffer = decode_short(buffer, count);
-        v.count = count;
-        v.primary_type = static_cast<CassValueType>(metadata.collection_primary_type);
-        v.secondary_type = static_cast<CassValueType>(metadata.collection_secondary_type);
+        Value value(type, decode_short(buffer, count), size - sizeof(uint16_t));
+        value.count = count;
+        value.primary_type = static_cast<cass_value_type_t>(metadata.collection_primary_type);
+        value.secondary_type = static_cast<cass_value_type_t>(metadata.collection_secondary_type);
+      } else {
+        output.push_back(Value(type, buffer, size));
       }
 
-      output.push_back(BufferPiece(buffer, size));
-      buffer       += size;
+      buffer += size;
     }
     return buffer;
   }
 
   virtual bool
   next() {
-    ++row_position;
-    if (row_position >= result->row_count) {
+    if (row_position++ >= result->row_count) {
       return false;
     }
-    position_next = parse_row(position_next, row);
+    position = parse_row(position, row);
     return true;
   }
 };

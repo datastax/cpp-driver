@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 DataStax
+  Copyright (c) 2014 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,29 +14,27 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BUFFER_PIECE_HPP_INCLUDED__
-#define __CASS_BUFFER_PIECE_HPP_INCLUDED__
+#include "cassandra.hpp"
+#include "prepared.hpp"
 
-namespace cass {
+extern "C" {
 
-class BufferPiece {
-  public:
-    BufferPiece()
-      : data_(nullptr)
-      , size_(0) { }
+void
+cass_prepared_free(
+    cass_prepared_t* prepared) {
+  delete prepared->from();
+}
 
-    BufferPiece(const char* data, size_t size)
-      : data_(data)
-      , size_(size) { }
+cass_code_t
+cass_prepared_bind(
+    cass_prepared_t*   prepared,
+    size_t         parameter_count,
+    cass_consistency_t consistency,
+    cass_statement_t** output) {
+  cass::Statement* bound_statement = new cass::Bound(*prepared, parameter_count, consistency);
+  *output = cass_statement_t::to(bound_statement);
+  return CASS_OK;
+}
 
-    const char* data() const { return data_; }
-    size_t size() const { return size_; }
 
-  private:
-    const char* data_;
-    size_t size_;
-};
-
-} // namespace cass
-
-#endif
+} // extern "C"

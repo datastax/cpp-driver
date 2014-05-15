@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 DataStax
+  Copyright (c) 2014 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,28 +14,14 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BUFFER_PIECE_HPP_INCLUDED__
-#define __CASS_BUFFER_PIECE_HPP_INCLUDED__
+#ifndef __CASS_ROW_HPP_INCLUDED__
+#define __CASS_ROW_HPP_INCLUDED__
+
+#include "value.hpp"
 
 namespace cass {
 
-class BufferPiece {
-  public:
-    BufferPiece()
-      : data_(nullptr)
-      , size_(0) { }
-
-    BufferPiece(const char* data, size_t size)
-      : data_(data)
-      , size_(size) { }
-
-    const char* data() const { return data_; }
-    size_t size() const { return size_; }
-
-  private:
-    const char* data_;
-    size_t size_;
-};
+typedef std::vector<Value> Row;
 
 } // namespace cass
 

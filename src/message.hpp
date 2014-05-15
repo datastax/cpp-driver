@@ -17,16 +17,16 @@
 #ifndef __CASS_MESSAGE_HPP_INCLUDED__
 #define __CASS_MESSAGE_HPP_INCLUDED__
 
-#include "batch_statement.hpp"
+#include "batch.hpp"
 #include "body_error.hpp"
 #include "body_options.hpp"
 #include "body_ready.hpp"
-#include "body_result.hpp"
+#include "result.hpp"
 #include "body_startup.hpp"
 #include "body_supported.hpp"
-#include "prepare_statement.hpp"
-#include "bound_statement.hpp"
-#include "query_statement.hpp"
+#include "prepare.hpp"
+#include "bound.hpp"
+#include "query.hpp"
 
 
 #define CASS_HEADER_SIZE 8
@@ -87,7 +87,7 @@ struct Message {
         return static_cast<MessageBody*>(new Result());
 
       case CQL_OPCODE_PREPARE:
-        return static_cast<MessageBody*>(new PrepareStatement());
+        return static_cast<MessageBody*>(new Prepare());
 
       case CQL_OPCODE_ERROR:
         return static_cast<MessageBody*>(new BodyError());
@@ -102,7 +102,7 @@ struct Message {
         return static_cast<MessageBody*>(new BodySupported());
 
       case CQL_OPCODE_QUERY:
-        return static_cast<MessageBody*>(new QueryStatement());
+        return static_cast<MessageBody*>(new Query());
 
       case CQL_OPCODE_READY:
         return static_cast<MessageBody*>(new BodyReady());
