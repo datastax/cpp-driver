@@ -946,39 +946,34 @@ private:
         cql_stream_t&       stream)
     {
         cql::cql_error_t err;
+
         message->prepare(&err);
+        
+        cql_message_buffer_t output_buffer;
+        if ((message->is_compressed()) && (_compression != CQL_COMPRESSION_NONE)) {
+            // The connection supports compression and the message wants to be compressed.
+            // Let's compress it then.
+            cql_message_buffer_t compressed_buffer = cql_message_buffer_t(new std::vector<cql_byte_t>);
+            *compressed_buffer = compress(*(message->buffer()), _compression);
+            output_buffer = compressed_buffer;
+        }
+        else {
+            output_buffer = message->buffer();
+        }
 
         cql::cql_header_impl_t header(CQL_VERSION_1_REQUEST,
                                       message->flag(),
                                       stream,
                                       message->opcode(),
-                                      message->size());
+                                      output_buffer->size());
         header.prepare(&err);
 
         log(CQL_LOG_DEBUG, "sending message: " + header.str() + " " + message->str());
 
         std::vector<boost::asio::const_buffer> buf;
-
         buf.push_back(boost::asio::buffer(header.buffer()->data(), header.size()));
-
         if (header.length() != 0) {
-            cql_message_buffer_t output_buffer;
-            size_t output_buffer_size;
-            
-            bool do_compress_message = ((message->flag() & CQL_FLAG_COMPRESSION) == CQL_FLAG_COMPRESSION);
-            if (_compression != CQL_COMPRESSION_NONE && do_compress_message) {
-                // The connection supports compression and the message wants to be compressed.
-                // Let's compress it then.
-                output_buffer = cql_message_buffer_t(new std::vector<cql_byte_t>);
-                *output_buffer = uncompress(*(message->buffer()), _compression);
-                output_buffer_size = output_buffer->size();
-            }
-            else {
-                // Send the plain (uncompressed) message.
-                output_buffer = message->buffer();
-                output_buffer_size = message->size();
-            }
-            buf.push_back(boost::asio::buffer(output_buffer->data(), output_buffer_size));
+            buf.push_back(boost::asio::buffer(output_buffer->data(), output_buffer->size()));
         }
 
         boost::asio::async_write(*_transport, buf, callback);
@@ -1164,6 +1159,13 @@ private:
 		boost::shared_ptr<boolkeeper> is_disposed,
         const boost::system::error_code& err)
     {
+        /* // A handy piece of code for tracing down transport errors.
+           // It simply counts the number of unread bytes left on the socket.
+        boost::asio::socket_base::bytes_readable command(true);
+        _transport->lowest_layer().io_control(command);
+        std::size_t bytes_readable = command.get();
+        */
+        
         {
             boost::mutex::scoped_lock lock(is_disposed->mutex);
             // if the connection was already disposed we return here immediatelly

@@ -32,7 +32,8 @@ cql::cql_message_prepare_impl_t::cql_message_prepare_impl_t(size_t size)
 
 cql::cql_message_prepare_impl_t::cql_message_prepare_impl_t(
         const boost::shared_ptr<cql_query_t>& query)
-    : _buffer(new std::vector<cql_byte_t>())
+    : cql_message_t(query->is_compressed())
+    , _buffer(new std::vector<cql_byte_t>())
     , _query(query->query())
     , _is_traced(query->is_traced()) { }
 
