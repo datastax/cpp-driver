@@ -83,6 +83,9 @@ snappy_compress_inplace(std::vector<cql::cql_byte_t>& buffer)
 std::vector<cql::cql_byte_t>
 snappy_uncompress(const std::vector<cql::cql_byte_t>& buffer)
 {
+    // Snappy crashes on empty buffers
+    if (buffer.empty()) return std::vector<cql::cql_byte_t>();
+    
     size_t input_length = buffer.size(),
            output_length;
     
