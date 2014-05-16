@@ -56,13 +56,14 @@ typedef unsigned short cass_uint16_t;
 typedef unsigned int cass_uint32_t;
 typedef unsigned long long cass_uint64_t;
 
+typedef unsigned char cass_byte_t;
 typedef size_t cass_size_t;
 
 typedef cass_uint8_t cass_uuid_t[16];
 
 typedef struct {
-  cass_uint8_t  address[16];
-  cass_uint8_t  address_len;
+  cass_uint8_t address[16];
+  cass_uint8_t address_length;
 } cass_inet_t;
 
 typedef struct cass_session_s cass_session_t;
@@ -167,6 +168,7 @@ typedef enum {
 } cass_code_t;
 
 typedef enum  {
+  CASS_ERROR_SOURCE_NONE        = 0,
   CASS_ERROR_SOURCE_OS          = 1,
   CASS_ERROR_SOURCE_NETWORK     = 2,
   CASS_ERROR_SOURCE_SSL         = 3,
@@ -227,28 +229,28 @@ cass_session_shutdown(cass_session_t* session,
  * @param cluster
  * @param option
  * @param data
- * @param data_len
+ * @param data_length
  *
  * @return 0 if successful, otherwise an error occurred
  */
 CASS_EXPORT cass_code_t
 cass_session_setopt(cass_session_t* session,
                     cass_option_t option,
-                    const void* data, cass_size_t data_len);
+                    const void* data, cass_size_t data_length);
 
 /**
  * Get the option value for the specified session
  *
  * @param option
  * @param data
- * @param data_len
+ * @param data_length
  *
  * @return 0 if successful, otherwise an error occurred
  */
 CASS_EXPORT cass_code_t
 cass_session_getopt(const cass_session_t* session,
                     cass_option_t option,
-                    void** data, cass_size_t* data_len);
+                    void** data, cass_size_t* data_length);
 
 /**
  * Initiate a session using the specified session. Resulting
@@ -283,14 +285,14 @@ cass_session_connect_keyspace(cass_session_t* session,
  *
  * @param session
  * @param statement string
- * @param statement_len statement string length
+ * @param statement_length statement string length
  * @param future output future, must be freed by caller, pass NULL to avoid allocation
  *
  * @return
  */
 CASS_EXPORT cass_code_t
 cass_session_prepare(cass_session_t* session,
-                     const char* statement, cass_size_t statement_len,
+                     const char* statement, cass_size_t statement_length,
                      cass_future_t** output);
 
 /**
@@ -411,14 +413,18 @@ cass_future_get_prepared(cass_future_t* future);
  *
  * @param source
  * @param output
- * @param output_len
+ * @param output_length
  * @param copied
  *
  */
 CASS_EXPORT void
 cass_future_error_string(const cass_future_t* future,
-                         char* output, cass_size_t output_len,
+                         char* output, cass_size_t output_length,
                          cass_size_t* copied);
+
+
+CASS_EXPORT const char*
+cass_future_error_message(const cass_future_t* future);
 
 /**
  * Obtain the code from an error structure.
@@ -477,7 +483,7 @@ cass_code_error_desc(cass_code_t code);
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_statement_t*
-cass_statement_new(const char* statement, cass_size_t statement_len,
+cass_statement_new(const char* statement, cass_size_t statement_length,
                    cass_size_t parameter_count,
                    cass_consistency_t consistency);
 
@@ -495,7 +501,7 @@ cass_statement_free(cass_statement_t* statement);
  * @return
  */
 CASS_EXPORT cass_code_t
-cass_statement_bind_int(cass_statement_t* statement,
+cass_statement_bind_int32(cass_statement_t* statement,
                         cass_size_t index,
                         cass_int32_t value);
 
@@ -509,7 +515,7 @@ cass_statement_bind_int(cass_statement_t* statement,
  * @return
  */
 CASS_EXPORT cass_code_t
-cass_statement_bind_bigint(cass_statement_t* statement,
+cass_statement_bind_int64(cass_statement_t* statement,
                            cass_size_t index,
                            cass_int64_t value);
 
@@ -556,18 +562,34 @@ cass_statement_bind_bool(cass_statement_t* statement,
                          cass_bool_t value);
 
 /**
- * Bind a time stamp to a query or bound statement at the specified index
+ * Bind bytes to a query or bound statement at the specified index
  *
  * @param statement
  * @param index
  * @param value
+ * @param length
  *
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_statement_bind_timestamp(cass_statement_t* statement,
-                              cass_size_t index,
-                              cass_int64_t value);
+cass_statement_bind_string(cass_statement_t* statement,
+                           cass_size_t index,
+                           const char* value, cass_size_t value_length);
+
+/**
+ * Bind bytes to a query or bound statement at the specified index
+ *
+ * @param statement
+ * @param index
+ * @param value
+ * @param length
+ *
+ * @return 0 if successful, otherwise error occured
+ */
+CASS_EXPORT cass_code_t
+cass_statement_bind_bytes(cass_statement_t* statement,
+                           cass_size_t index,
+                           const cass_byte_t* value, cass_size_t value_length);
 
 /**
  * Bind a UUID to a query or bound statement at the specified index
@@ -583,54 +605,11 @@ cass_statement_bind_uuid(cass_statement_t* statement,
                          cass_size_t index,
                          cass_uuid_t value);
 
-/**
- * Bind a counter to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT cass_code_t
-cass_statement_bind_counter(cass_statement_t* statement,
-                            cass_size_t index,
-                            cass_int64_t value);
-
-/**
- * Bind a string to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
- * @param length
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT cass_code_t
-cass_statement_bind_string(cass_statement_t* statement,
-                           cass_size_t index,
-                           const char* value, cass_size_t value_length);
-
-/**
- * Bind a blob to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param output
- * @param length
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT cass_code_t
-cass_statement_bind_blob(cass_statement_t* statement,
-                         cass_size_t index,
-                         const cass_uint8_t* value, cass_size_t value_length);
 
 CASS_EXPORT cass_code_t
 cass_statement_bind_inet(cass_statement_t* statement,
                          cass_size_t index,
-                         const cass_uint8_t* address, cass_uint8_t address_length);
+                         cass_inet_t value);
 
 /**
  * Bind a decimal to a query or bound statement at the specified index
@@ -647,22 +626,14 @@ CASS_EXPORT cass_code_t
 cass_statement_bind_decimal(cass_statement_t* statement,
                             cass_size_t index,
                             cass_uint32_t scale,
-                            const cass_uint8_t* varint, cass_size_t varint_length);
+                            const cass_byte_t* varint, cass_size_t varint_length);
 
-/**
- * Bind a varint to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
- * @param length
- *
- * @return 0 if successful, otherwise error occured
- */
+
 CASS_EXPORT cass_code_t
-cass_statement_bind_varint(cass_statement_t* statement,
+cass_statement_bind_custom(cass_statement_t* statement,
                            cass_size_t index,
-                           cass_uint8_t* value, cass_size_t value_length);
+                           cass_size_t size,
+                           cass_byte_t** output);
 
 CASS_EXPORT cass_code_t
 cass_statement_bind_collection(cass_statement_t* statement,
@@ -733,57 +704,45 @@ CASS_EXPORT void
 cass_collection_free(cass_collection_t* collection);
 
 CASS_EXPORT cass_code_t
-cass_collection_append_int(cass_collection_t* collection,
-                           cass_int32_t i);
+cass_collection_append_int32(cass_collection_t* collection,
+                             cass_int32_t value);
 
 CASS_EXPORT cass_code_t
-cass_collection_append_bigint(cass_collection_t* collection,
-                              cass_int64_t bi);
-
-CASS_EXPORT cass_code_t
-cass_collection_append_timestamp(cass_collection_t* collection,
-                                 cass_int64_t timestamp);
-
-CASS_EXPORT cass_code_t
-cass_collection_append_counter(cass_collection_t* collection,
-                               cass_int64_t counter);
+cass_collection_append_int64(cass_collection_t* collection,
+                              cass_int64_t value);
 
 CASS_EXPORT cass_code_t
 cass_collection_append_float(cass_collection_t* collection,
-                             cass_float_t f);
+                             cass_float_t value);
 
 CASS_EXPORT cass_code_t
 cass_collection_append_double(cass_collection_t* collection,
-                              cass_double_t d);
+                              cass_double_t value);
 
 CASS_EXPORT cass_code_t
 cass_collection_append_bool(cass_collection_t* collection,
-                            cass_bool_t b);
+                            cass_bool_t value);
+
+CASS_EXPORT cass_code_t
+cass_collection_append_string(cass_collection_t* collection,
+                              const char* value, cass_size_t value_length);
+
+CASS_EXPORT cass_code_t
+cass_collection_append_bytes(cass_collection_t* collection,
+                             const cass_byte_t* value, cass_size_t value_length);
+
+CASS_EXPORT cass_code_t
+cass_collection_append_uuid(cass_collection_t* collection,
+                            cass_uuid_t value);
 
 CASS_EXPORT cass_code_t
 cass_collection_append_inet(cass_collection_t* collection,
-                            cass_inet_t inet);
+                            cass_inet_t value);
 
 CASS_EXPORT cass_code_t
 cass_collection_append_decimal(cass_collection_t* collection,
                                cass_int32_t scale,
-                               const cass_uint8_t* varint, cass_size_t varint_length);
-
-CASS_EXPORT cass_code_t
-cass_collection_append_uuid(cass_collection_t* collection,
-                            cass_uuid_t uuid);
-
-CASS_EXPORT cass_code_t
-cass_collection_append_blob(cass_collection_t* builder,
-                            const cass_uint8_t* blob, cass_size_t blob_length);
-
-CASS_EXPORT cass_code_t
-cass_collection_append_string(cass_collection_t* builder,
-                              const char* str, cass_size_t str_length);
-
-CASS_EXPORT cass_code_t
-cass_collection_append_varint(cass_collection_t* builder,
-                              const cass_uint8_t* varint, cass_size_t varint_length);
+                               const cass_byte_t* varint, cass_size_t varint_length);
 
 /***********************************************************************************
  *
@@ -923,7 +882,7 @@ cass_row_get_column(const cass_row_t*  row,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_int(const cass_value_t* value,
+cass_value_get_int32(const cass_value_t* value,
                    cass_int32_t* output);
 
 /**
@@ -936,8 +895,8 @@ cass_value_get_int(const cass_value_t* value,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_bigint(const cass_value_t* value,
-                      cass_int64_t* output);
+cass_value_get_int64(const cass_value_t* value,
+                     cass_int64_t* output);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -988,34 +947,9 @@ cass_value_get_bool(const cass_value_t* value,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_timestamp(const cass_value_t* value,
-                         cass_int64_t* output);
-
-/**
- * Decode the specified value. Value may be a column, collection item, map key, or map
- * value.
- *
- * @param source
- * @param value
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT cass_code_t
 cass_value_get_uuid(const cass_value_t* value,
                     cass_uuid_t output);
 
-/**
- * Decode the specified value. Value may be a column, collection item, map key, or map
- * value.
- *
- * @param source
- * @param value
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT cass_code_t
-cass_value_get_counter(const cass_value_t* value,
-                       cass_int64_t* output);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -1027,7 +961,7 @@ cass_value_get_counter(const cass_value_t* value,
  *
  * @param source
  * @param output
- * @param output_len
+ * @param output_length
  * @param copied
  *
  * @return 0 if successful, otherwise error occured
@@ -1035,8 +969,8 @@ cass_value_get_counter(const cass_value_t* value,
 CASS_EXPORT cass_code_t
 cass_value_get_string(const cass_value_t* value,
                       char* output,
-                      cass_size_t  output_len,
-                      cass_size_t * copied);
+                      cass_size_t  output_length,
+                      cass_size_t* copied);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -1048,16 +982,16 @@ cass_value_get_string(const cass_value_t* value,
  *
  * @param source
  * @param output
- * @param output_len
+ * @param output_length
  * @param copied
  *
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_blob(const cass_value_t* value,
-                    cass_uint8_t* output,
-                    cass_size_t  output_len,
-                    cass_size_t * copied);
+cass_value_get_bytes(const cass_value_t* value,
+                    cass_byte_t* output,
+                    cass_size_t  output_length,
+                    cass_size_t* copied);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -1071,29 +1005,15 @@ cass_value_get_blob(const cass_value_t* value,
 CASS_EXPORT cass_code_t
 cass_value_get_decimal(const cass_value_t* value,
                        cass_uint32_t* scale,
-                       cass_uint8_t* output, cass_size_t output_length,
-                       cass_size_t * copied);
+                       cass_byte_t* varint, cass_size_t varint_length,
+                       cass_size_t* copied);
 
-/**
- * Decode the specified value. Value may be a column, collection item, map key, or map
- * value. This function follows the pattern similar to that of snprintf. The user
- * passes in a pre-allocated builder of size n, to which the decoded value will be
- * copied. The number of bytes written had the builder been sufficiently large will be
- * returned via the output parameter 'copied'. Only when copied is less than n has
- * the builder been fully consumed.
- *
- * @param source
- * @param output
- * @param output_len
- * @param copied
- *
- * @return 0 if successful, otherwise error occured
- */
-CASS_EXPORT cass_code_t
-cass_value_get_varint(const cass_value_t* value,
-                      cass_uint8_t* output,
-                      cass_size_t output_len,
-                      cass_size_t* copied);
+
+CASS_EXPORT const cass_byte_t*
+cass_value_get_data(const cass_value_t* value);
+
+CASS_EXPORT cass_size_t
+cass_value_get_size(const cass_value_t* value);
 
 /**
  * Get the collection sub-type. Works for collections that have a single sub-type
@@ -1175,8 +1095,5 @@ cass_uuid_string(cass_uuid_t uuid,
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-
-
-
 
 #endif /* __CASS_H_INCLUDED__ */

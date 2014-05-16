@@ -24,8 +24,8 @@ namespace cass {
 
 class Collection {
   public:
-    Collection(size_t element_count)
-      : buffer_list_(element_count) { }
+    Collection(size_t item_count)
+      : buffer_list_(item_count) { }
 
 #define APPEND_FIXED_TYPE(DeclType, EncodeType, Name)                            \
   inline void append_##Name(const DeclType& value) {                             \
@@ -37,18 +37,23 @@ class Collection {
   APPEND_FIXED_TYPE(int64_t, int64,int64)
   APPEND_FIXED_TYPE(float, float, float)
   APPEND_FIXED_TYPE(double, double, double)
-  APPEND_FIXED_TYPE(bool,  double, bool)
+  APPEND_FIXED_TYPE(bool, byte, bool)
 #undef BIND_FIXED_TYPE
 
 
-  inline void append(const char* input, size_t input_length) {
-    Buffer* buffer = buffer_list_.append(sizeof(uint16_t) + input_length);
-    memcpy(encode_short(buffer->data(), input_length), input, input_length);
+  inline void append(const char* value, size_t value_length) {
+    Buffer* buffer = buffer_list_.append(sizeof(uint16_t) + value_length);
+    memcpy(encode_short(buffer->data(), value_length), value, value_length);
   }
 
-  inline void append(const uint8_t* uuid) {
+  inline void append(const uint8_t* value, size_t value_length) {
+    Buffer* buffer = buffer_list_.append(sizeof(uint16_t) + value_length);
+    memcpy(encode_short(buffer->data(), value_length), value, value_length);
+  }
+
+  inline void append(const uint8_t* value) {
     Buffer* buffer = buffer_list_.append(sizeof(uint16_t) + 16);
-    memcpy(encode_short(buffer->data(), 16), uuid, 16);
+    memcpy(encode_short(buffer->data(), 16), value, 16);
   }
 
   inline void append(const uint8_t* address, uint8_t address_len) {
@@ -56,13 +61,21 @@ class Collection {
     memcpy(encode_short(buffer->data(), address_len), address, address_len);
   }
 
+  inline void append(int32_t scale, const uint8_t* varint, size_t varint_len) {
+    Buffer* buffer = buffer_list_.append(sizeof(uint16_t) + varint_len);
+    encode_decimal(encode_short(buffer->data(), sizeof(int32_t) + varint_len), scale, varint, varint_len);
+  }
+
+  size_t item_count() const { return buffer_list_.count(); }
+
   Buffer build(bool is_map) const {
-    Buffer combined(buffer_list_.size());
+    Buffer combined(sizeof(uint16_t) + buffer_list_.size());
     size_t count = buffer_list_.count();
     if(is_map) {
       count /= 2;
     }
-    buffer_list_.combine(encode_short(combined.data(), count));
+    char* buffer = encode_short(combined.data(), count);
+    buffer_list_.combine(buffer);
     return combined;
   }
 

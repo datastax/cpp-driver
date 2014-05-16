@@ -31,65 +31,72 @@ cass_collection_free(cass_collection_t* collection) {
 
 cass_code_t
 cass_collection_append_int32(cass_collection_t* collection,
-                             cass_int32_t i32) {
-  collection->append_int32(i32);
+                             cass_int32_t value) {
+  collection->append_int32(value);
   return CASS_OK;
 }
 
 cass_code_t
 cass_collection_append_int64(cass_collection_t* collection,
-                             cass_int32_t i64) {
-  collection->append_int64(i64);
+                             cass_int64_t value) {
+  collection->append_int64(value);
   return CASS_OK;
 }
 
 cass_code_t
 cass_collection_append_float(cass_collection_t* collection,
-                             cass_float_t f) {
-  collection->append_float(f);
+                             cass_float_t value) {
+  collection->append_float(value);
   return CASS_OK;
 }
 
 cass_code_t
 cass_collection_append_double(cass_collection_t* collection,
-                              cass_double_t d) {
-  collection->append_double(d);
+                              cass_double_t value) {
+  collection->append_double(value);
   return CASS_OK;
 }
 
 cass_code_t
 cass_collection_append_bool(cass_collection_t* collection,
-                            cass_bool_t b) {
-  collection->append_bool(b);
+                            cass_bool_t value) {
+  collection->append_bool(value);
+  return CASS_OK;
+}
+
+cass_code_t
+cass_collection_append_string(cass_collection_t* collection,
+                              const char* value, cass_size_t value_length) {
+  collection->append(value, value_length);
+  return CASS_OK;
+}
+
+cass_code_t
+cass_collection_append_bytes(cass_collection_t* collection,
+                             const cass_byte_t* value, cass_size_t value_length) {
+  collection->append(value, value_length);
+  return CASS_OK;
+}
+
+cass_code_t
+cass_collection_append_uuid(cass_collection_t* collection,
+                            cass_uuid_t value) {
+  collection->append(value);
   return CASS_OK;
 }
 
 cass_code_t
 cass_collection_append_inet(cass_collection_t* collection,
-                            cass_inet_t inet) {
-  collection->append(inet.address, inet.address_len);
+                            cass_inet_t value) {
+  collection->append(value.address, value.address_length);
   return CASS_OK;
 }
 
 cass_code_t
 cass_collection_append_decimal(cass_collection_t* collection,
                                cass_int32_t scale,
-                               const cass_uint8_t* varint, cass_size_t varint_length) {
-  // TODO(mpenick)
-  return CASS_OK;
-}
-
-cass_code_t
-cass_collection_append_uuid(cass_collection_t* collection,
-                            cass_uuid_t uuid) {
-  collection->append(uuid);
-  return CASS_OK;
-}
-
-cass_code_t
-cass_collection_append_blob(cass_collection_t* collection,
-                             const cass_uint8_t* blob, cass_size_t blob_length) {
-  collection->append(blob, blob_length);
+                               const cass_byte_t* varint, cass_size_t varint_length) {
+  collection->append(scale, varint, varint_length);
   return CASS_OK;
 }
 

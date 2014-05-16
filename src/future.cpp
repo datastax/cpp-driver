@@ -17,6 +17,8 @@
 #include "cassandra.hpp"
 #include "future.hpp"
 
+extern "C" {
+
 void
 cass_future_free(
    cass_future_t* future) {
@@ -78,23 +80,43 @@ cass_future_get_prepared(
 }
 
 void
-cass_future_error_string(
-    cass_future_t* future,
-    char*      output,
-    size_t     output_len,
-    size_t*    total) {
-  *total = future->error->message.copy(output, output_len);
+cass_future_error_string(const cass_future_t* future,
+                         char* output, size_t output_len,
+                         size_t* total) {
+  if(future->error) {
+    *total = future->error->message.copy(output, output_len);
+  } else {
+    *total = 0;
+  }
 }
 
+const char*
+cass_future_error_message(const cass_future_t* future) {
+  if(future->error) {
+    return future->error->message.c_str();
+  } else {
+    return "";
+  }
+}
+
+
 cass_source_t
-cass_future_error_source(
-    cass_future_t* future) {
-  return future->error->source;
+cass_future_error_source(const cass_future_t* future) {
+  if(future->error) {
+    return future->error->source;
+  } else {
+    return CASS_ERROR_SOURCE_NONE;
+  }
 }
 
 cass_code_t
-cass_future_error_code(
-    cass_future_t* future) {
-  return future->error->code;
+cass_future_error_code(const cass_future_t* future) {
+  if(future->error) {
+    return future->error->code;
+  } else {
+    return CASS_OK;
+  }
 }
+
+} // extern "C"
 

@@ -20,7 +20,7 @@
 extern "C" {
 
 cass_code_t
-cass_value_get_int(const cass_value_t* value,
+cass_value_get_int32(const cass_value_t* value,
                    cass_int32_t* output) {
   if(value->type != CASS_VALUE_TYPE_INT) {
     return CASS_ERROR_LIB_BAD_PARAMS;
@@ -30,9 +30,11 @@ cass_value_get_int(const cass_value_t* value,
 }
 
 cass_code_t
-cass_value_get_bigint(const cass_value_t* value,
+cass_value_get_int64(const cass_value_t* value,
                       cass_int64_t* output) {
-  if(value->type != CASS_VALUE_TYPE_BIGINT) {
+  if(value->type != CASS_VALUE_TYPE_BIGINT &&
+     value->type != CASS_VALUE_TYPE_COUNTER &&
+     value->type != CASS_VALUE_TYPE_TIMESTAMP) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cass::decode_int64(value->buffer.data(), *output);
@@ -62,16 +64,9 @@ cass_value_get_double(const cass_value_t* value,
 cass_code_t
 cass_value_get_bool(const cass_value_t* value,
                     cass_bool_t* output) {
-  return CASS_OK;
-}
-
-cass_code_t
-cass_value_get_timestamp(const cass_value_t* value,
-                         cass_int64_t* output) {
-  if(value->type != CASS_VALUE_TYPE_TIMESTAMP) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cass::decode_int64(value->buffer.data(), *output);
+  uint8_t byte;
+  cass::decode_byte(value->buffer.data(), byte);
+  *output = static_cast<cass_bool_t>(byte);
   return CASS_OK;
 }
 
@@ -82,16 +77,6 @@ cass_value_get_uuid(const cass_value_t* value,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   memcpy(output, value->buffer.data(), sizeof(cass_uuid_t));
-  return CASS_OK;
-}
-
-cass_code_t
-cass_value_get_counter(const cass_value_t* value,
-                       cass_int64_t* output) {
-  if(value->type != CASS_VALUE_TYPE_COUNTER) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cass::decode_int64(value->buffer.data(), *output);
   return CASS_OK;
 }
 
@@ -114,11 +99,13 @@ cass_value_get_string(const cass_value_t* value,
 }
 
 cass_code_t
-cass_value_get_blob(const cass_value_t* value,
-                    cass_uint8_t* output,
+cass_value_get_bytes(const cass_value_t* value,
+                    cass_byte_t* output,
                     cass_size_t output_len,
                     cass_size_t* copied) {
-  if(value->type != CASS_VALUE_TYPE_BLOB) {
+  if(value->type != CASS_VALUE_TYPE_BLOB &&
+     value->type != CASS_VALUE_TYPE_CUSTOM &&
+     value->type != CASS_VALUE_TYPE_VARINT) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cass_size_t size = std::min(output_len, value->buffer.size());
@@ -132,26 +119,21 @@ cass_value_get_blob(const cass_value_t* value,
 cass_code_t
 cass_value_get_decimal(const cass_value_t* value,
                        cass_uint32_t* scale,
-                       cass_uint8_t* output, cass_size_t output_length,
+                       cass_byte_t* output, cass_size_t output_length,
                        cass_size_t* copied) {
   return CASS_OK;
 }
 
-cass_code_t
-cass_value_get_varint(const cass_value_t* value,
-                      cass_uint8_t* output,
-                      cass_size_t output_len,
-                      cass_size_t* copied) {
-  if(value->type != CASS_VALUE_TYPE_VARINT) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cass_size_t size = std::min(output_len, value->buffer.size());
-  memcpy(output, value->buffer.data(), size);
-  if(copied != NULL) {
-    *copied = size;
-  }
-  return CASS_OK;
+const cass_byte_t*
+cass_value_get_data(const cass_value_t* value) {
+  return reinterpret_cast<const cass_byte_t*>(value->buffer.data());
 }
+
+cass_size_t
+cass_value_get_size(const cass_value_t* value) {
+  return value->buffer.size();
+}
+
 
 cass_value_type_t
 cass_value_type(const cass_value_t* value) {

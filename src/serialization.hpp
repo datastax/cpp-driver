@@ -46,6 +46,14 @@ encode_byte(
 }
 
 inline char*
+decode_byte(
+    char*   output,
+    uint8_t& value) {
+  value = *output;
+  return output + 1;
+}
+
+inline char*
 decode_short(
     char*    input,
     uint16_t& output) {
@@ -135,12 +143,12 @@ inline char* encode_double(char* output, double value) {
 
 inline char* decode_double(char* input, double& output) {
   assert(std::numeric_limits<double>::is_iec559);
-  assert(sizeof(float) == sizeof(int64_t));
+  assert(sizeof(double) == sizeof(int64_t));
   return decode_int64(input, *reinterpret_cast<int64_t*>(&output));
 }
 
 inline char* encode_decimal(char* output, int32_t scale,
-                            const char* varint, size_t varint_length) {
+                            const uint8_t* varint, size_t varint_length) {
   char* buffer = encode_int(output, scale);
   memcpy(buffer, varint, varint_length);
   return buffer + varint_length;

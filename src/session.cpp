@@ -38,8 +38,8 @@ cass_session_setopt(
     cass_session_t* session,
     cass_option_t   option,
     const void* data,
-    size_t      data_len) {
-  return session->config_.option(option, data, data_len);
+    size_t      data_length) {
+  return session->config_.option(option, data, data_length);
 }
 
 cass_code_t
@@ -47,7 +47,7 @@ cass_session_getopt(
     const cass_session_t* session,
     cass_option_t   option,
     void**      data,
-    size_t*     data_len)
+    size_t*     data_length)
 {
   return CASS_OK;
 }

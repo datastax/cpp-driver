@@ -35,15 +35,7 @@ cass_statement_free(cass_statement_t *statement) {
 }
 
 cass_code_t
-cass_statement_bind_short(
-    cass_statement_t* statement,
-    size_t        index,
-    int16_t       value) {
-  return statement->bind_int32(index, value);
-}
-
-cass_code_t
-cass_statement_bind_int(
+cass_statement_bind_int32(
     cass_statement_t* statement,
     size_t        index,
     int32_t       value) {
@@ -51,7 +43,7 @@ cass_statement_bind_int(
 }
 
 cass_code_t
-cass_statement_bind_bigint(
+cass_statement_bind_int64(
     cass_statement_t* statement,
     size_t        index,
     int64_t       value) {
@@ -82,12 +74,22 @@ cass_statement_bind_bool(
   return statement->bind_bool(index, value);
 }
 
-int
-cass_statement_bind_time(
+cass_code_t
+cass_statement_bind_string(
     cass_statement_t*  statement,
     size_t         index,
-    int64_t        value) {
-  return statement->bind_int64(index, value);
+    const char*    value,
+    size_t         value_length) {
+  return statement->bind(index, value, value_length);
+}
+
+cass_code_t
+cass_statement_bind_bytes(
+    cass_statement_t*  statement,
+    size_t         index,
+    const uint8_t*    value,
+    size_t         value_length) {
+  return statement->bind(index, value, value_length);
 }
 
 cass_code_t
@@ -99,57 +101,19 @@ cass_statement_bind_uuid(
 }
 
 cass_code_t
-cass_statement_bind_counter(
-    cass_statement_t*  statement,
-    size_t         index,
-    int64_t        value) {
-  return statement->bind_int64(index, value);
-}
-
-cass_code_t
-cass_statement_bind_string(
-    cass_statement_t*  statement,
-    size_t         index,
-    const char*    value,
-    size_t         length) {
-  return statement->bind(index, value, length);
-}
-
-cass_code_t
-cass_statement_bind_blob(
-    cass_statement_t*  statement,
-    size_t         index,
-    const uint8_t*       value,
-    size_t         length) {
-  return statement->bind(index, reinterpret_cast<const char*>(value), length);
-}
-
-cass_code_t
-cass_statement_bind_decimal(
-    cass_statement_t* statement,
-    size_t        index,
-    uint32_t      scale,
-    const uint8_t*      value,
-    size_t        length) {
-  return CASS_OK;
-}
-
-cass_code_t
 cass_statement_bind_inet(
     cass_statement_t* statement,
     size_t         index,
-    const cass_uint8_t* address,
-    cass_uint8_t    address_len) {
-  return statement->bind(index, address, address_len);
+    cass_inet_t value) {
+  return statement->bind(index, value.address, value.address_length);
 }
 
 cass_code_t
-cass_statement_bind_varint(
-    cass_statement_t*  statement,
-    size_t         index,
-    uint8_t*       value,
-    size_t         length) {
-  return statement->bind(index, reinterpret_cast<char*>(value), length);
+cass_statement_bind_decimal(cass_statement_t* statement,
+                            cass_size_t index,
+                            cass_uint32_t scale,
+                            const cass_byte_t* varint, cass_size_t varint_length) {
+  return statement->bind(index, scale, varint, varint_length);
 }
 
 cass_code_t
@@ -159,6 +123,14 @@ cass_statement_bind_collection(
     const cass_collection_t* collection,
     cass_bool_t is_map) {
   return statement->bind(index, collection->from(), static_cast<bool>(is_map));
+}
+
+cass_code_t
+cass_statement_bind_custom(cass_statement_t* statement,
+                           cass_size_t index,
+                           cass_size_t size,
+                           cass_byte_t** output) {
+  return statement->bind(index, size, output);
 }
 
 } // extern "C"

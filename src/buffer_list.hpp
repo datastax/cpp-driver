@@ -27,8 +27,9 @@ class BufferList
 {
   public:
     BufferList(size_t count)
-      : buffers_(count)
-      , size_(0) { }
+      : size_(0) {
+      buffers_.reserve(count);
+    }
 
     Buffer* append(size_t size) {
       buffers_.push_back(Buffer(size));

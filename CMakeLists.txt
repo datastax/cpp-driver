@@ -181,6 +181,12 @@ add_subdirectory(test/unit_tests)
 # add_subdirectory(test/integration_tests)
 
 #-------------------
+# Examples
+#-------------------
+add_subdirectory(examples/basic)
+add_subdirectory(examples/collections)
+
+#-------------------
 # the demo program
 #-------------------
 add_subdirectory(demo)
