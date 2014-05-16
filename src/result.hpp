@@ -158,16 +158,16 @@ struct Result
         return true;
         break;
       case CASS_RESULT_KIND_ROWS:
-        return parse_rows(buffer);
+        return decode_rows(buffer);
         break;
       case CASS_RESULT_KIND_SET_KEYSPACE:
-        return parse_set_keyspace(buffer);
+        return decode_set_keyspace(buffer);
         break;
       case CASS_RESULT_KIND_PREPARED:
-        return parse_prepared(buffer);
+        return decode_prepared(buffer);
         break;
       case CASS_RESULT_KIND_SCHEMA_CHANGE:
-        return parse_schema_change(buffer);
+        return decode_schema_change(buffer);
         break;
       default:
         assert(false);
@@ -176,7 +176,7 @@ struct Result
   }
 
   char*
-  parse_metadata(
+  decode_metadata(
       char* input) {
     int32_t flags  = 0;
     char*   buffer = decode_int(input, flags);
@@ -245,30 +245,30 @@ struct Result
   }
 
   bool
-  parse_rows(
+  decode_rows(
       char* input) {
-    char* buffer = parse_metadata(input);
+    char* buffer = decode_metadata(input);
     rows = decode_int(buffer, row_count);
     return true;
   }
 
   bool
-  parse_set_keyspace(
+  decode_set_keyspace(
       char* input) {
     decode_string(input, &keyspace, keyspace_size);
     return true;
   }
 
   bool
-  parse_prepared(
+  decode_prepared(
       char* input) {
     char* buffer = decode_string(input, &prepared, prepared_size);
-    parse_metadata(buffer);
+    decode_metadata(buffer);
     return true;
   }
 
   bool
-  parse_schema_change(
+  decode_schema_change(
       char* input) {
     char* buffer = decode_string(input, &change, change_size);
     buffer       = decode_string(buffer, &keyspace, keyspace_size);

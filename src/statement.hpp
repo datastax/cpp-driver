@@ -127,7 +127,7 @@ struct Statement : public MessageBody {
     return CASS_OK;
   }
 
-  inline cass_code_t bind(size_t index, Collection* builder, bool is_map) {
+  inline cass_code_t bind(size_t index, const Collection* builder, bool is_map) {
     CASS_VALUE_CHECK_INDEX(index);
     // TODO(mpenick): Validate that a map is count % 2 == 0
     values[index] = builder->build(is_map);

@@ -53,7 +53,7 @@ main() {
     const char* key = "local";
     cass_statement_t* statement = NULL;
     cass_future_t* result_future = NULL;
-    cass_result_t* result = NULL;
+    const cass_result_t* result = NULL;
     cass_iterator_t* iterator = NULL;
 
     statement = cass_statement_new(query, strlen(query), 1, CASS_CONSISTENCY_ONE);
@@ -67,15 +67,29 @@ main() {
     iterator = cass_iterator_from_result(result);
 
     while(cass_iterator_next(iterator)) {
-      cass_row_t* row = cass_iterator_get_row(iterator);
-      cass_value_t* value = NULL;
-      size_t total;
+      cass_iterator_t* tokens_iterator = NULL;
+      const cass_row_t* row = cass_iterator_get_row(iterator);
+      const cass_value_t* key_value = NULL;
+      const cass_value_t* tokens_value = NULL;
 
-      char buffer[256];
-      cass_row_get_column(row, 0, &value);
-      cass_value_get_string(value, buffer, sizeof(buffer), &total);
-      buffer[total] = '\0';
-      printf("key: %s\n", buffer);
+      cass_size_t copied;
+      char key_buffer[256];
+      cass_row_get_column(row, 0, &key_value);
+      cass_value_get_string(key_value, key_buffer, sizeof(key_buffer), &copied);
+      key_buffer[copied] = '\0';
+      printf("key: %s\n", key_buffer);
+
+      cass_row_get_column(row, 13, &tokens_value);
+      tokens_iterator = cass_iterator_from_collection(tokens_value);
+      while(cass_iterator_next(tokens_iterator)) {
+        const cass_value_t* token_value = cass_iterator_get_value(tokens_iterator);
+        cass_size_t copied;
+        char token_buffer[256];
+        cass_value_get_string(token_value, token_buffer, sizeof(token_buffer), &copied);
+        token_buffer[copied] = '\0';
+        printf("token: %s\n", token_buffer);
+      }
+      cass_iterator_free(tokens_iterator);
     }
 
     cass_iterator_free(iterator);

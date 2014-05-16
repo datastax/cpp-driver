@@ -21,13 +21,13 @@ extern "C" {
 
 void
 cass_result_free(
-    cass_result_t* result) {
+    const cass_result_t* result) {
   delete result->from();
 }
 
 size_t
 cass_result_row_count(
-    cass_result_t* result) {
+    const cass_result_t* result) {
   if(result->kind == CASS_RESULT_KIND_ROWS) {
     return result->row_count;
   }
@@ -36,7 +36,7 @@ cass_result_row_count(
 
 size_t
 cass_result_column_count(
-    cass_result_t* result) {
+    const cass_result_t* result) {
   if(result->kind == CASS_RESULT_KIND_ROWS) {
     return result->column_count;
   }
@@ -45,7 +45,7 @@ cass_result_column_count(
 
 cass_code_t
 cass_result_column_type(
-    cass_result_t*     result,
+    const cass_result_t*     result,
     size_t         index,
     cass_value_type_t* coltype) {
   if(result->kind == CASS_RESULT_KIND_ROWS) {

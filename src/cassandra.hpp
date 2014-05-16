@@ -32,6 +32,7 @@
 template<typename In, typename Ex>
 struct External : public In {
   inline In* from() { return static_cast<In*>(this); }
+  inline const In* from() const { return static_cast<const In*>(this); }
   inline static Ex* to(In* in) { return static_cast<Ex*>(in); }
   inline static const Ex* to(const In* in) { return static_cast<const Ex*>(in); }
 };

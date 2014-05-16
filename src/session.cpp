@@ -23,7 +23,7 @@ cass_session_t* cass_session_new() {
   return cass_session_t::to(new cass::Session());
 }
 
-cass_session_t* cass_session_clone(cass_session_t* session) {
+cass_session_t* cass_session_clone(const cass_session_t* session) {
   return cass_session_t::to(new cass::Session(session));
 }
 
@@ -44,7 +44,7 @@ cass_session_setopt(
 
 cass_code_t
 cass_session_getopt(
-    cass_session_t* session,
+    const cass_session_t* session,
     cass_option_t   option,
     void**      data,
     size_t*     data_len)

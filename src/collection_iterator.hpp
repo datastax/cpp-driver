@@ -17,28 +17,53 @@
 #ifndef __CASS_COLLECTION_ITERATOR_HPP_INCLUDED__
 #define __CASS_COLLECTION_ITERATOR_HPP_INCLUDED__
 
+#include "cassandra.h"
 #include "iterator.hpp"
 #include "value.hpp"
+#include "serialization.hpp"
 
 namespace cass {
 
 class CollectionIterator : public Iterator {
   public:
-    CollectionIterator(Value* collection)
+    CollectionIterator(const Value* collection)
       : Iterator(CASS_ITERATOR_COLLECTION)
       , collection_(collection)
-      , position_(collection->buffer.data()) { }
+      , position_(collection->buffer.data())
+      , index_(0) { }
+
+
+    char* decode_value(char* position) {
+      uint16_t size;
+      char* buffer = decode_short(position, size);
+
+      cass_value_type_t type;
+      if(collection_->type == CASS_VALUE_TYPE_MAP) {
+        type = (index_ % 2 == 0) ? collection_->primary_type : collection_->secondary_type;
+      } else {
+        type = collection_->primary_type;
+      }
+
+      value_ = Value(type, buffer, size);
+
+      return buffer + size;
+    }
 
     virtual bool next() {
-      // TODO(mpenick)
-      (void)collection_;
-      (void)position_;
+      if(index_++ < collection_->count) {
+        position_ = decode_value(position_);
+        return true;
+      }
       return false;
     }
 
+    const Value* value() { return &value_; }
+
   private:
-    Value* collection_;
-    const char* position_;
+    const Value* collection_;
+    char* position_;
+    Value value_;
+    size_t index_;
 };
 
 } // namespace cass

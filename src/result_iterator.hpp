@@ -25,12 +25,12 @@
 namespace cass {
 
 struct ResultIterator : Iterator {
-  Result*             result;
+  const Result*       result;
   int32_t             row_position;
   char*               position;
   Row                 row;
 
-  ResultIterator(Result* result)
+  ResultIterator(const Result* result)
     : Iterator(CASS_ITERATOR_TYPE_RESULT)
     , result(result)
     , row_position(0)
@@ -38,7 +38,7 @@ struct ResultIterator : Iterator {
     , row(result->column_count) { }
 
   char*
-  parse_row(
+  decode_row(
       char* row,
       std::vector<Value>& output) {
     char* buffer = row;
@@ -59,6 +59,7 @@ struct ResultIterator : Iterator {
         value.count = count;
         value.primary_type = static_cast<cass_value_type_t>(metadata.collection_primary_type);
         value.secondary_type = static_cast<cass_value_type_t>(metadata.collection_secondary_type);
+        output.push_back(value);
       } else {
         output.push_back(Value(type, buffer, size));
       }
@@ -73,7 +74,7 @@ struct ResultIterator : Iterator {
     if (row_position++ >= result->row_count) {
       return false;
     }
-    position = parse_row(position, row);
+    position = decode_row(position, row);
     return true;
   }
 };

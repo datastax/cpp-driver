@@ -21,13 +21,13 @@ extern "C" {
 
 void
 cass_prepared_free(
-    cass_prepared_t* prepared) {
+    const cass_prepared_t* prepared) {
   delete prepared->from();
 }
 
 cass_code_t
 cass_prepared_bind(
-    cass_prepared_t*   prepared,
+    const cass_prepared_t*   prepared,
     size_t         parameter_count,
     cass_consistency_t consistency,
     cass_statement_t** output) {

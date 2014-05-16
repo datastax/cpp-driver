@@ -54,7 +54,7 @@ cass_future_get_session(
   return cass_session_t::to(session_future->result);
 }
 
-cass_result_t*
+const cass_result_t*
 cass_future_get_result(
    cass_future_t* future) {
   cass::MessageFutureImpl* message_future = static_cast<cass::MessageFutureImpl*>(future->from());
@@ -65,7 +65,7 @@ cass_future_get_result(
   return cass_result_t::to(result);
 }
 
-cass_prepared_t*
+const cass_prepared_t*
 cass_future_get_prepared(
    cass_future_t* future) {
   cass::MessageFutureImpl* message_future = static_cast<cass::MessageFutureImpl*>(future->from());

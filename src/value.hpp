@@ -23,10 +23,16 @@ namespace cass {
 
 struct Value {
     Value()
-      : type(CASS_VALUE_TYPE_UNKNOWN) { }
+      : type(CASS_VALUE_TYPE_UNKNOWN)
+      , primary_type(CASS_VALUE_TYPE_UNKNOWN)
+      , secondary_type(CASS_VALUE_TYPE_UNKNOWN)
+      , count(0) { }
 
-    Value(cass_value_type_t type, const char* data, size_t size)
+    Value(cass_value_type_t type, char* data, size_t size)
       : type(type)
+      , primary_type(CASS_VALUE_TYPE_UNKNOWN)
+      , secondary_type(CASS_VALUE_TYPE_UNKNOWN)
+      , count(0)
       , buffer(data, size) { }
 
     cass_value_type_t type;

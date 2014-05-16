@@ -25,15 +25,15 @@ class BufferPiece {
       : data_(nullptr)
       , size_(0) { }
 
-    BufferPiece(const char* data, size_t size)
+    BufferPiece(char* data, size_t size)
       : data_(data)
       , size_(size) { }
 
-    const char* data() const { return data_; }
+    char* data() const { return data_; }
     size_t size() const { return size_; }
 
   private:
-    const char* data_;
+    char* data_;
     size_t size_;
 };
 

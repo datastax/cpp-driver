@@ -21,10 +21,10 @@ extern "C" {
 
 cass_code_t
 cass_row_get_column(
-    cass_row_t* row,
+    const cass_row_t* row,
     size_t index,
-    cass_value_t** value) {
-  cass::Row* internal_row = row->from();
+    const cass_value_t** value) {
+  const cass::Row* internal_row = row->from();
   if(index >= internal_row->size()) {
     return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
   }

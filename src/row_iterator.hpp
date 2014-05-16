@@ -24,22 +24,22 @@ namespace cass {
 
 class RowIterator : public Iterator {
   public:
-    RowIterator(Row* row)
+    RowIterator(const Row* row)
       : Iterator(CASS_ITERATOR_TYPE_ROW)
       , row_(row)
       , index_(0) { }
 
     virtual bool next() {
-      if(index_++ <= row_->size()) {
-        return false;
+      if(index_++ < row_->size()) {
+        return true;
       }
-      return true;
+      return false;
     }
 
-    Value* column() { return &(*row_)[index_]; }
+    const Value* column() { return &(*row_)[index_]; }
 
   private:
-    Row* row_;
+    const Row* row_;
     size_t index_;
 };
 

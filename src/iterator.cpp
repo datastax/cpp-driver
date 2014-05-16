@@ -24,17 +24,17 @@
 extern "C" {
 
 cass_iterator_t*
-cass_iterator_from_result(cass_result_t* result) {
+cass_iterator_from_result(const cass_result_t* result) {
   return cass_iterator_t::to(new cass::ResultIterator(result));
 }
 
 cass_iterator_t*
-cass_iterator_from_row(cass_row_t* row) {
+cass_iterator_from_row(const cass_row_t* row) {
   return cass_iterator_t::to(new cass::RowIterator(row));
 }
 
 cass_iterator_t*
-cass_iterator_from_collection(cass_value_t* collection) {
+cass_iterator_from_collection(const cass_value_t* collection) {
   return cass_iterator_t::to(new cass::CollectionIterator(collection));
 }
 
@@ -50,7 +50,7 @@ cass_iterator_next(
   return static_cast<bool>(iterator->from()->next());
 }
 
-cass_row_t*
+const cass_row_t*
 cass_iterator_get_row(
     cass_iterator_t *iterator) {
     cass::Iterator* internal_it = iterator->from();
@@ -61,7 +61,7 @@ cass_iterator_get_row(
     return cass_row_t::to(&result_it->row);
 }
 
-cass_value_t*
+const cass_value_t*
 cass_iterator_get_column(
     cass_iterator_t *iterator) {
   cass::Iterator* internal_it = iterator->from();
@@ -72,11 +72,15 @@ cass_iterator_get_column(
   return cass_value_t::to(row_it->column());
 }
 
-cass_value_t*
+const cass_value_t*
 cass_iterator_get_value(
     cass_iterator_t *iterator) {
-  // TODO(mpenick)
-  return nullptr;
+  cass::Iterator* internal_it = iterator->from();
+  if(internal_it->type != cass::CASS_ITERATOR_COLLECTION) {
+    return nullptr;
+  }
+  cass::CollectionIterator* collection_it = static_cast<cass::CollectionIterator*>(internal_it);
+  return cass_value_t::to(collection_it->value());
 }
 
 } // extern "C"

@@ -20,64 +20,63 @@
 extern "C" {
 
 cass_code_t
-cass_value_get_int(cass_value_t* value,
+cass_value_get_int(const cass_value_t* value,
                    cass_int32_t* output) {
   if(value->type != CASS_VALUE_TYPE_INT) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  // TODO(mpenick): const-correctness is a noble goal! :)
-  cass::decode_int(const_cast<char*>(value->buffer.data()), *output);
+  cass::decode_int(value->buffer.data(), *output);
   return CASS_OK;
 }
 
 cass_code_t
-cass_value_get_bigint(cass_value_t* value,
+cass_value_get_bigint(const cass_value_t* value,
                       cass_int64_t* output) {
   if(value->type != CASS_VALUE_TYPE_BIGINT) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  cass::decode_int64(const_cast<char*>(value->buffer.data()), *output);
+  cass::decode_int64(value->buffer.data(), *output);
   return CASS_OK;
 }
 
 cass_code_t
-cass_value_get_float(cass_value_t* value,
+cass_value_get_float(const cass_value_t* value,
                      cass_float_t* output) {
   if(value->type != CASS_VALUE_TYPE_FLOAT) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  cass::decode_float(const_cast<char*>(value->buffer.data()), *output);
+  cass::decode_float(value->buffer.data(), *output);
   return CASS_OK;
 }
 
 cass_code_t
-cass_value_get_double(cass_value_t* value,
+cass_value_get_double(const cass_value_t* value,
                       cass_double_t* output) {
   if(value->type != CASS_VALUE_TYPE_DOUBLE) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  cass::decode_double(const_cast<char*>(value->buffer.data()), *output);
+  cass::decode_double(value->buffer.data(), *output);
   return CASS_OK;
 }
 
 cass_code_t
-cass_value_get_bool(cass_value_t* value,
+cass_value_get_bool(const cass_value_t* value,
                     cass_bool_t* output) {
   return CASS_OK;
 }
 
 cass_code_t
-cass_value_get_timestamp(cass_value_t* value,
+cass_value_get_timestamp(const cass_value_t* value,
                          cass_int64_t* output) {
   if(value->type != CASS_VALUE_TYPE_TIMESTAMP) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  cass::decode_int64(const_cast<char*>(value->buffer.data()), *output);
+  cass::decode_int64(value->buffer.data(), *output);
   return CASS_OK;
 }
 
 cass_code_t
-cass_value_get_uuid(cass_value_t* value,
+cass_value_get_uuid(const cass_value_t* value,
                     cass_uuid_t output) {
   if(value->type != CASS_VALUE_TYPE_UUID) {
     return CASS_ERROR_LIB_BAD_PARAMS;
@@ -87,17 +86,17 @@ cass_value_get_uuid(cass_value_t* value,
 }
 
 cass_code_t
-cass_value_get_counter(cass_value_t* value,
+cass_value_get_counter(const cass_value_t* value,
                        cass_int64_t* output) {
   if(value->type != CASS_VALUE_TYPE_COUNTER) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  cass::decode_int64(const_cast<char*>(value->buffer.data()), *output);
+  cass::decode_int64(value->buffer.data(), *output);
   return CASS_OK;
 }
 
 cass_code_t
-cass_value_get_string(cass_value_t* value,
+cass_value_get_string(const cass_value_t* value,
                       char* output,
                       size_t output_len,
                       cass_size_t* copied) {
@@ -115,7 +114,7 @@ cass_value_get_string(cass_value_t* value,
 }
 
 cass_code_t
-cass_value_get_blob(cass_value_t* value,
+cass_value_get_blob(const cass_value_t* value,
                     cass_uint8_t* output,
                     cass_size_t output_len,
                     cass_size_t* copied) {
@@ -131,7 +130,7 @@ cass_value_get_blob(cass_value_t* value,
 }
 
 cass_code_t
-cass_value_get_decimal(cass_value_t* value,
+cass_value_get_decimal(const cass_value_t* value,
                        cass_uint32_t* scale,
                        cass_uint8_t* output, cass_size_t output_length,
                        cass_size_t* copied) {
@@ -139,7 +138,7 @@ cass_value_get_decimal(cass_value_t* value,
 }
 
 cass_code_t
-cass_value_get_varint(cass_value_t* value,
+cass_value_get_varint(const cass_value_t* value,
                       cass_uint8_t* output,
                       cass_size_t output_len,
                       cass_size_t* copied) {
@@ -155,12 +154,12 @@ cass_value_get_varint(cass_value_t* value,
 }
 
 cass_value_type_t
-cass_value_type(cass_value_t* value) {
+cass_value_type(const cass_value_t* value) {
   return value->type;
 }
 
 cass_bool_t
-cass_value_is_collection(cass_value_t* value) {
+cass_value_is_collection(const cass_value_t* value) {
   cass_value_type_t type = value->type;
   return type == CASS_VALUE_TYPE_LIST ||
          type == CASS_VALUE_TYPE_MAP ||
@@ -168,17 +167,17 @@ cass_value_is_collection(cass_value_t* value) {
 }
 
 cass_size_t
-cass_value_item_count(cass_value_t* collection) {
+cass_value_item_count(const cass_value_t* collection) {
   return collection->count;
 }
 
 cass_value_type_t
-cass_value_primary_sub_type(cass_value_t* collection) {
+cass_value_primary_sub_type(const cass_value_t* collection) {
   return collection->primary_type;
 }
 
 cass_value_type_t
-cass_value_secondary_sub_type(cass_value_t* collection) {
+cass_value_secondary_sub_type(const cass_value_t* collection) {
   return collection->secondary_type;
 }
 

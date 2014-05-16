@@ -56,7 +56,7 @@ class Collection {
     memcpy(encode_short(buffer->data(), address_len), address, address_len);
   }
 
-  Buffer build(bool is_map) {
+  Buffer build(bool is_map) const {
     Buffer combined(buffer_list_.size());
     size_t count = buffer_list_.count();
     if(is_map) {

@@ -201,7 +201,7 @@ cass_session_new();
  * @return
  */
 CASS_EXPORT cass_session_t*
-cass_session_clone(cass_session_t* session);
+cass_session_clone(const cass_session_t* session);
 
 /**
  * Free a session instance.
@@ -246,7 +246,7 @@ cass_session_setopt(cass_session_t* session,
  * @return 0 if successful, otherwise an error occurred
  */
 CASS_EXPORT cass_code_t
-cass_session_getopt(cass_session_t* session,
+cass_session_getopt(const cass_session_t* session,
                     cass_option_t option,
                     void** data, cass_size_t* data_len);
 
@@ -385,7 +385,7 @@ cass_future_get_session(cass_future_t* future);
  *
  * @return NULL if unsuccessful, otherwise pointer to CassResult instance
  */
-CASS_EXPORT cass_result_t*
+CASS_EXPORT const cass_result_t*
 cass_future_get_result(cass_future_t* future);
 
 /**
@@ -397,7 +397,7 @@ cass_future_get_result(cass_future_t* future);
  *
  * @return NULL if unsuccessful, otherwise pointer to CassPrepare instance
  */
-CASS_EXPORT cass_prepared_t*
+CASS_EXPORT const cass_prepared_t*
 cass_future_get_prepared(cass_future_t* future);
 
 /**
@@ -416,7 +416,7 @@ cass_future_get_prepared(cass_future_t* future);
  *
  */
 CASS_EXPORT void
-cass_future_error_string(cass_future_t* future,
+cass_future_error_string(const cass_future_t* future,
                          char* output, cass_size_t output_len,
                          cass_size_t* copied);
 
@@ -429,7 +429,7 @@ cass_future_error_string(cass_future_t* future,
  *
  */
 CASS_EXPORT cass_source_t
-cass_future_error_source(cass_future_t* future);
+cass_future_error_source(const cass_future_t* future);
 
 /**
  * Obtain the source from an error structure.
@@ -440,7 +440,7 @@ cass_future_error_source(cass_future_t* future);
  *
  */
 CASS_EXPORT cass_code_t
-cass_future_error_code(cass_future_t* future);
+cass_future_error_code(const cass_future_t* future);
 
 
 /***********************************************************************************
@@ -565,7 +565,7 @@ cass_statement_bind_bool(cass_statement_t* statement,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_statement_bind_timestamp(cass_statement_t*  statement,
+cass_statement_bind_timestamp(cass_statement_t* statement,
                               cass_size_t index,
                               cass_int64_t value);
 
@@ -579,7 +579,7 @@ cass_statement_bind_timestamp(cass_statement_t*  statement,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_statement_bind_uuid(cass_statement_t*  statement,
+cass_statement_bind_uuid(cass_statement_t* statement,
                          cass_size_t index,
                          cass_uuid_t value);
 
@@ -593,7 +593,7 @@ cass_statement_bind_uuid(cass_statement_t*  statement,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_statement_bind_counter(cass_statement_t*  statement,
+cass_statement_bind_counter(cass_statement_t* statement,
                             cass_size_t index,
                             cass_int64_t value);
 
@@ -608,7 +608,7 @@ cass_statement_bind_counter(cass_statement_t*  statement,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_statement_bind_string(cass_statement_t*  statement,
+cass_statement_bind_string(cass_statement_t* statement,
                            cass_size_t index,
                            const char* value, cass_size_t value_length);
 
@@ -625,7 +625,7 @@ cass_statement_bind_string(cass_statement_t*  statement,
 CASS_EXPORT cass_code_t
 cass_statement_bind_blob(cass_statement_t* statement,
                          cass_size_t index,
-                         cass_uint8_t* value, cass_size_t value_length);
+                         const cass_uint8_t* value, cass_size_t value_length);
 
 CASS_EXPORT cass_code_t
 cass_statement_bind_inet(cass_statement_t* statement,
@@ -647,7 +647,7 @@ CASS_EXPORT cass_code_t
 cass_statement_bind_decimal(cass_statement_t* statement,
                             cass_size_t index,
                             cass_uint32_t scale,
-                            cass_uint8_t* varint, cass_size_t varint_length);
+                            const cass_uint8_t* varint, cass_size_t varint_length);
 
 /**
  * Bind a varint to a query or bound statement at the specified index
@@ -667,7 +667,7 @@ cass_statement_bind_varint(cass_statement_t* statement,
 CASS_EXPORT cass_code_t
 cass_statement_bind_collection(cass_statement_t* statement,
                                cass_size_t index,
-                               cass_collection_t* collection,
+                               const cass_collection_t* collection,
                                cass_bool_t is_map);
 
 
@@ -678,7 +678,7 @@ cass_statement_bind_collection(cass_statement_t* statement,
  ***********************************************************************************/
 
 CASS_EXPORT void
-cass_prepared_free(cass_prepared_t* prepared);
+cass_prepared_free(const cass_prepared_t* prepared);
 
 /**
  * Initialize a bound statement from a pre-prepared statement
@@ -693,7 +693,7 @@ cass_prepared_free(cass_prepared_t* prepared);
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_prepared_bind(cass_prepared_t* prepared,
+cass_prepared_bind(const cass_prepared_t* prepared,
                    cass_size_t paramater_count,
                    cass_consistency_t consistency,
                    cass_statement_t** output);
@@ -734,15 +734,23 @@ cass_collection_free(cass_collection_t* collection);
 
 CASS_EXPORT cass_code_t
 cass_collection_append_int(cass_collection_t* collection,
-                         cass_int32_t i);
+                           cass_int32_t i);
 
 CASS_EXPORT cass_code_t
 cass_collection_append_bigint(cass_collection_t* collection,
-                         cass_int32_t bi);
+                              cass_int64_t bi);
+
+CASS_EXPORT cass_code_t
+cass_collection_append_timestamp(cass_collection_t* collection,
+                                 cass_int64_t timestamp);
+
+CASS_EXPORT cass_code_t
+cass_collection_append_counter(cass_collection_t* collection,
+                               cass_int64_t counter);
 
 CASS_EXPORT cass_code_t
 cass_collection_append_float(cass_collection_t* collection,
-                         cass_float_t f);
+                             cass_float_t f);
 
 CASS_EXPORT cass_code_t
 cass_collection_append_double(cass_collection_t* collection,
@@ -758,8 +766,8 @@ cass_collection_append_inet(cass_collection_t* collection,
 
 CASS_EXPORT cass_code_t
 cass_collection_append_decimal(cass_collection_t* collection,
-                              cass_int32_t scale,
-                              cass_uint8_t* varint, cass_size_t varint_length);
+                               cass_int32_t scale,
+                               const cass_uint8_t* varint, cass_size_t varint_length);
 
 CASS_EXPORT cass_code_t
 cass_collection_append_uuid(cass_collection_t* collection,
@@ -767,7 +775,15 @@ cass_collection_append_uuid(cass_collection_t* collection,
 
 CASS_EXPORT cass_code_t
 cass_collection_append_blob(cass_collection_t* builder,
-                            cass_uint8_t* blob, cass_size_t blob_length);
+                            const cass_uint8_t* blob, cass_size_t blob_length);
+
+CASS_EXPORT cass_code_t
+cass_collection_append_string(cass_collection_t* builder,
+                              const char* str, cass_size_t str_length);
+
+CASS_EXPORT cass_code_t
+cass_collection_append_varint(cass_collection_t* builder,
+                              const cass_uint8_t* varint, cass_size_t varint_length);
 
 /***********************************************************************************
  *
@@ -776,7 +792,7 @@ cass_collection_append_blob(cass_collection_t* builder,
  ***********************************************************************************/
 
 CASS_EXPORT void
-cass_result_free(cass_result_t* result);
+cass_result_free(const cass_result_t* result);
 
 /**
  * Get number of rows for the specified result
@@ -786,7 +802,7 @@ cass_result_free(cass_result_t* result);
  * @return
  */
 CASS_EXPORT cass_size_t
-cass_result_row_count(cass_result_t* result);
+cass_result_row_count(const cass_result_t* result);
 
 /**
  * Get number of columns per row for the specified result
@@ -796,7 +812,7 @@ cass_result_row_count(cass_result_t* result);
  * @return
  */
 CASS_EXPORT cass_size_t
-cass_result_column_count(cass_result_t* result);
+cass_result_column_count(const cass_result_t* result);
 
 /**
  * Get the type for the column at index for the specified result
@@ -808,7 +824,7 @@ cass_result_column_count(cass_result_t* result);
  * @return
  */
 CASS_EXPORT cass_code_t
-cass_result_column_type(cass_result_t* result,
+cass_result_column_type(const cass_result_t* result,
                         cass_size_t index,
                         cass_value_type_t* output);
 
@@ -826,7 +842,7 @@ cass_result_column_type(cass_result_t* result,
  * @return
  */
 CASS_EXPORT cass_iterator_t*
-cass_iterator_from_result(cass_result_t* result);
+cass_iterator_from_result(const cass_result_t* result);
 
 /**
  * Create new iterator for the specified row.
@@ -836,7 +852,7 @@ cass_iterator_from_result(cass_result_t* result);
  * @return
  */
 CASS_EXPORT cass_iterator_t*
-cass_iterator_from_row(cass_row_t* row);
+cass_iterator_from_row(const cass_row_t* row);
 
 /**
  * Create new iterator for the specified collection.
@@ -846,7 +862,7 @@ cass_iterator_from_row(cass_row_t* row);
  * @return
  */
 CASS_EXPORT cass_iterator_t*
-cass_iterator_from_collection(cass_value_t* collection);
+cass_iterator_from_collection(const cass_value_t* collection);
 
 CASS_EXPORT void
 cass_iterator_free(cass_iterator_t* iterator);
@@ -861,13 +877,13 @@ cass_iterator_free(cass_iterator_t* iterator);
 CASS_EXPORT cass_bool_t
 cass_iterator_next(cass_iterator_t* iterator);
 
-CASS_EXPORT cass_row_t*
+CASS_EXPORT const cass_row_t*
 cass_iterator_get_row(cass_iterator_t* iterator);
 
-CASS_EXPORT cass_value_t*
+CASS_EXPORT const cass_value_t*
 cass_iterator_get_column(cass_iterator_t *iterator);
 
-CASS_EXPORT cass_value_t*
+CASS_EXPORT const cass_value_t*
 cass_iterator_get_value(cass_iterator_t *iterator);
 
 
@@ -887,9 +903,9 @@ cass_iterator_get_value(cass_iterator_t *iterator);
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_row_get_column(cass_row_t*  row,
+cass_row_get_column(const cass_row_t*  row,
                     cass_size_t index,
-                    cass_value_t** value);
+                    const cass_value_t** value);
 
 /***********************************************************************************
  *
@@ -907,7 +923,7 @@ cass_row_get_column(cass_row_t*  row,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_int(cass_value_t* value,
+cass_value_get_int(const cass_value_t* value,
                    cass_int32_t* output);
 
 /**
@@ -920,7 +936,7 @@ cass_value_get_int(cass_value_t* value,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_bigint(cass_value_t* value,
+cass_value_get_bigint(const cass_value_t* value,
                       cass_int64_t* output);
 
 /**
@@ -933,7 +949,7 @@ cass_value_get_bigint(cass_value_t* value,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_float(cass_value_t* value,
+cass_value_get_float(const cass_value_t* value,
                      cass_float_t*  output);
 
 /**
@@ -946,7 +962,7 @@ cass_value_get_float(cass_value_t* value,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_double(cass_value_t* value,
+cass_value_get_double(const cass_value_t* value,
                       cass_double_t* output);
 
 /**
@@ -959,7 +975,7 @@ cass_value_get_double(cass_value_t* value,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_bool(cass_value_t* value,
+cass_value_get_bool(const cass_value_t* value,
                     cass_bool_t* output);
 
 /**
@@ -972,7 +988,7 @@ cass_value_get_bool(cass_value_t* value,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_timestamp(cass_value_t* value,
+cass_value_get_timestamp(const cass_value_t* value,
                          cass_int64_t* output);
 
 /**
@@ -985,7 +1001,7 @@ cass_value_get_timestamp(cass_value_t* value,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_uuid(cass_value_t* value,
+cass_value_get_uuid(const cass_value_t* value,
                     cass_uuid_t output);
 
 /**
@@ -998,7 +1014,7 @@ cass_value_get_uuid(cass_value_t* value,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_counter(cass_value_t* value,
+cass_value_get_counter(const cass_value_t* value,
                        cass_int64_t* output);
 
 /**
@@ -1017,7 +1033,7 @@ cass_value_get_counter(cass_value_t* value,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_string(cass_value_t* value,
+cass_value_get_string(const cass_value_t* value,
                       char* output,
                       cass_size_t  output_len,
                       cass_size_t * copied);
@@ -1038,7 +1054,7 @@ cass_value_get_string(cass_value_t* value,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_blob(cass_value_t* value,
+cass_value_get_blob(const cass_value_t* value,
                     cass_uint8_t* output,
                     cass_size_t  output_len,
                     cass_size_t * copied);
@@ -1053,7 +1069,7 @@ cass_value_get_blob(cass_value_t* value,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_decimal(cass_value_t* value,
+cass_value_get_decimal(const cass_value_t* value,
                        cass_uint32_t* scale,
                        cass_uint8_t* output, cass_size_t output_length,
                        cass_size_t * copied);
@@ -1074,7 +1090,7 @@ cass_value_get_decimal(cass_value_t* value,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_code_t
-cass_value_get_varint(cass_value_t* value,
+cass_value_get_varint(const cass_value_t* value,
                       cass_uint8_t* output,
                       cass_size_t output_len,
                       cass_size_t* copied);
@@ -1089,10 +1105,10 @@ cass_value_get_varint(cass_value_t* value,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT cass_value_type_t
-cass_value_type(cass_value_t* value);
+cass_value_type(const cass_value_t* value);
 
 CASS_EXPORT cass_bool_t
-cass_value_is_collection(cass_value_t* value);
+cass_value_is_collection(const cass_value_t* value);
 
 /**
  * Get the number of items in a collection. Works for all collection types.
@@ -1102,13 +1118,13 @@ cass_value_is_collection(cass_value_t* value);
  * @return size, 0 if error
  */
 CASS_EXPORT cass_size_t
-cass_value_item_count(cass_value_t* collection);
+cass_value_item_count(const cass_value_t* collection);
 
 CASS_EXPORT cass_value_type_t
-cass_value_primary_sub_type(cass_value_t* collection);
+cass_value_primary_sub_type(const cass_value_t* collection);
 
 CASS_EXPORT cass_value_type_t
-cass_value_secondary_sub_type(cass_value_t* collection);
+cass_value_secondary_sub_type(const cass_value_t* collection);
 
 
 /***********************************************************************************

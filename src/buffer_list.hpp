@@ -41,7 +41,7 @@ class BufferList
       size_ += size;
     }
 
-    void combine(char* output) {
+    void combine(char* output) const {
       size_t offset = 0;
       for(const auto&  buffer : buffers_) {
         memcpy(output + offset, buffer.data(), buffer.size());

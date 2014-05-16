@@ -119,9 +119,9 @@ cass_code_t
 cass_statement_bind_blob(
     cass_statement_t*  statement,
     size_t         index,
-    uint8_t*       value,
+    const uint8_t*       value,
     size_t         length) {
-  return statement->bind(index, reinterpret_cast<char*>(value), length);
+  return statement->bind(index, reinterpret_cast<const char*>(value), length);
 }
 
 cass_code_t
@@ -129,7 +129,7 @@ cass_statement_bind_decimal(
     cass_statement_t* statement,
     size_t        index,
     uint32_t      scale,
-    uint8_t*      value,
+    const uint8_t*      value,
     size_t        length) {
   return CASS_OK;
 }
@@ -156,7 +156,7 @@ cass_code_t
 cass_statement_bind_collection(
     cass_statement_t*  statement,
     size_t          index,
-    cass_collection_t*     collection,
+    const cass_collection_t* collection,
     cass_bool_t is_map) {
   return statement->bind(index, collection->from(), static_cast<bool>(is_map));
 }
