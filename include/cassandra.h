@@ -862,7 +862,7 @@ cass_iterator_from_row(const cass_row_t* row);
  * @return
  */
 CASS_EXPORT cass_iterator_t*
-cass_iterator_from_collection(const cass_value_t* collection);
+cass_iterator_from_collection(const cass_value_t* value);
 
 CASS_EXPORT void
 cass_iterator_free(cass_iterator_t* iterator);

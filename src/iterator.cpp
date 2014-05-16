@@ -34,8 +34,11 @@ cass_iterator_from_row(const cass_row_t* row) {
 }
 
 cass_iterator_t*
-cass_iterator_from_collection(const cass_value_t* collection) {
-  return cass_iterator_t::to(new cass::CollectionIterator(collection));
+cass_iterator_from_collection(const cass_value_t* value) {
+  if(cass_value_is_collection(value)) {
+    return cass_iterator_t::to(new cass::CollectionIterator(value));
+  }
+  return nullptr;
 }
 
 void
