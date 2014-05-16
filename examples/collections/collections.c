@@ -96,6 +96,8 @@ cass_code_t insert_into_collections(cass_session_t* session, const char* key, co
 
   cass_statement_bind_collection(statement, 1, collection, cass_false);
 
+  cass_collection_free(collection);
+
   cass_session_exec(session, statement, &future);
 
   cass_future_wait(future);
