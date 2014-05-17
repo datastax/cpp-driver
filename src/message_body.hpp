@@ -21,10 +21,11 @@
 #include <atomic>
 
 #include "common.hpp"
+#include "future.hpp"
 
 namespace cass {
 
-class MessageBody {
+class MessageBody : public Future::Result {
   public:
     MessageBody(uint8_t opcode)
       : opcode_(opcode) { }

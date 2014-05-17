@@ -65,7 +65,6 @@
   TypeName(const TypeName&) = delete;            \
   TypeName& operator=(const TypeName&) = delete
 
-#include "future.hpp"
 #include "error.hpp"
 
 namespace cass {

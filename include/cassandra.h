@@ -365,7 +365,7 @@ cass_future_wait(cass_future_t* future);
  *
  * @return false if returned due to timeout
  */
-CASS_EXPORT int
+CASS_EXPORT cass_bool_t
 cass_future_wait_timed(cass_future_t* future,
                        cass_size_t wait);
 
@@ -402,29 +402,9 @@ cass_future_get_result(cass_future_t* future);
 CASS_EXPORT const cass_prepared_t*
 cass_future_get_prepared(cass_future_t* future);
 
-/**
- * Obtain the message from an error structure. This function follows
- * the pattern similar to that of snprintf. The user passes in a
- * pre-allocated builder of size n, to which the decoded value will be
- * copied. The number of bytes written had the builder been
- * sufficiently large will be returned via the output parameter
- * 'copied'. Only when copied is less than n has the builder been fully
- * consumed.
- *
- * @param source
- * @param output
- * @param output_length
- * @param copied
- *
- */
-CASS_EXPORT void
-cass_future_error_string(const cass_future_t* future,
-                         char* output, cass_size_t output_length,
-                         cass_size_t* copied);
-
 
 CASS_EXPORT const char*
-cass_future_error_message(const cass_future_t* future);
+cass_future_error_string(cass_future_t* future);
 
 /**
  * Obtain the code from an error structure.
@@ -435,7 +415,7 @@ cass_future_error_message(const cass_future_t* future);
  *
  */
 CASS_EXPORT cass_source_t
-cass_future_error_source(const cass_future_t* future);
+cass_future_error_source(cass_future_t* future);
 
 /**
  * Obtain the source from an error structure.
@@ -446,7 +426,7 @@ cass_future_error_source(const cass_future_t* future);
  *
  */
 CASS_EXPORT cass_code_t
-cass_future_error_code(const cass_future_t* future);
+cass_future_error_code(cass_future_t* future);
 
 
 /***********************************************************************************

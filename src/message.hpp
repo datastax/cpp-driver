@@ -35,9 +35,6 @@ namespace cass {
 
 struct Message;
 
-typedef std::unique_ptr<Message> MessagePtr;
-typedef FutureImpl<std::string, MessagePtr> MessageFutureImpl;
-
 struct Message {
   uint8_t                         version;
   int8_t                          flags;

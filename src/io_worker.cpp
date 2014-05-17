@@ -59,8 +59,7 @@ void IOWorker::on_execute(uv_async_t* data, int status) {
         if(pool->borrow_connection(&connection)) {
           Error* error = connection->execute(request->message, request->future);
           if(error) {
-            request->future->error.reset(error);
-            request->future->notify(worker->loop);
+            request->future->set_error(error);
           }
           break;
         } else { // Too busy, or no connections

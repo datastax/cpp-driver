@@ -74,7 +74,7 @@ struct ClientConnection {
 
   typedef StreamStorage<
     Stream,
-    MessageFutureImpl*,
+    MessageFuture*,
     CASS_STREAM_ID_MAX> StreamStorageCollection;
 
   struct WriteRequestData {
@@ -423,7 +423,7 @@ struct ClientConnection {
     log(CASS_LOG_DEBUG, "on_result");
 
     Error* error = nullptr;
-    MessageFutureImpl* request = nullptr;
+    MessageFuture* request = nullptr;
     Result*     result  = static_cast<Result*>(response->body.get());
 
     switch (result->kind) {
@@ -436,17 +436,17 @@ struct ClientConnection {
       case CASS_RESULT_KIND_PREPARED:
         error = stream_storage_.get_stream(response->stream, request);
         if(error) {
-          request->error.reset(error);
+          request->set_error(error);
         } else {
-          request->result.reset(response);
+          request->set_result(response->body.release());
         }
-        request->notify(loop_);
+
         if(prepare_callback_) {
           prepare_callback_(
                 this,
                 error,
-                request->data.c_str(),
-                request->data.size(),
+                request->statement.c_str(),
+                request->statement.size(),
                 result->prepared,
                 result->prepared_size);
         }
@@ -455,17 +455,18 @@ struct ClientConnection {
       default:
         error = stream_storage_.get_stream(response->stream, request);
         if(error) {
-          request->error.reset(error);
+          request->set_error(error);
         } else {
-          request->result.reset(response);
+          request->set_result(response->body.release());
         }
-        request->notify(loop_);
         break;
     }
 
     if(request_finished_callback_) {
       request_finished_callback_(this);
     }
+
+    delete response;
   }
 
   void
@@ -483,14 +484,13 @@ struct ClientConnection {
               __FILE__,
               __LINE__));
     } else {
-      MessageFutureImpl* request = nullptr;
+      MessageFuture* request = nullptr;
       Error* stream_error = stream_storage_.get_stream(response->stream, request);
       if(stream_error) {
-        request->error.reset(stream_error);
+        request->set_error(stream_error);
       } else {
-        request->error.reset(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, (cass_code_t)error->code, error->message));
+        request->set_error(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, (cass_code_t)error->code, error->message));
       }
-      request->notify(loop_);
     }
     delete response;
   }
@@ -585,7 +585,7 @@ struct ClientConnection {
   Error*
   execute(
       Message* message,
-      MessageFutureImpl* request = NULL) {
+      MessageFuture* request = NULL) {
     uv_buf_t   buf;
 
     Error* error = stream_storage_.set_stream(request, message->stream);

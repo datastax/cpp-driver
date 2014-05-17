@@ -24,6 +24,10 @@
 namespace cass {
 
 struct Error {
+  Error(const Error& error) {
+    *this = error;
+  }
+
   Error(
       cass_source_t         source,
       cass_code_t           code,

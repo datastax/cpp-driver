@@ -204,8 +204,7 @@ class Pool {
       }
       Error* error = connection->execute(request->message, request->future);
       if(error) {
-        request->future->error.reset(error);
-        request->future->notify(loop_);
+        request->future->set_error(error);
       }
     }
   }

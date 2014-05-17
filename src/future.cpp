@@ -39,61 +39,58 @@ cass_future_wait(
   future->wait();
 }
 
-int
+cass_bool_t
 cass_future_wait_timed(
    cass_future_t* future,
     size_t     wait) {
-  return static_cast<int>(future->wait_for(wait));
+  return static_cast<cass_bool_t>(future->wait_for(wait));
 }
 
 cass_session_t*
 cass_future_get_session(
    cass_future_t* future) {
-  cass::SessionFutureImpl* session_future = static_cast<cass::SessionFutureImpl*>(future->from());
-  if(session_future->error) {
+  cass::SessionFuture* session_future = static_cast<cass::SessionFuture*>(future->from());
+  const cass::Future::ResultOrError& result_or_error = session_future->get();
+  if(result_or_error.is_error()) {
     return nullptr;
   }
-  return cass_session_t::to(session_future->result);
+  return cass_session_t::to(session_future->session);
 }
 
 const cass_result_t*
 cass_future_get_result(
    cass_future_t* future) {
-  cass::MessageFutureImpl* message_future = static_cast<cass::MessageFutureImpl*>(future->from());
-  if(message_future->error) {
+  cass::MessageFuture* message_future = static_cast<cass::MessageFuture*>(future->from());
+  cass::Future::ResultOrError& result_or_error = message_future->get();
+  if(result_or_error.is_error()) {
     return nullptr;
   }
-  cass::Result* result = static_cast<cass::Result*>(message_future->result->body.release());
-  return cass_result_t::to(result);
+  return cass_result_t::to(static_cast<cass::Result*>(result_or_error.release()));
 }
 
 const cass_prepared_t*
 cass_future_get_prepared(
    cass_future_t* future) {
-  cass::MessageFutureImpl* message_future = static_cast<cass::MessageFutureImpl*>(future->from());
-  if(message_future->error) {
+  cass::MessageFuture* message_future = static_cast<cass::MessageFuture*>(future->from());
+  cass::Future::ResultOrError& result_or_error = message_future->get();
+  if(result_or_error.is_error()) {
     return nullptr;
   }
-  cass::Result* result = static_cast<cass::Result*>(message_future->result->body.get());
-  return cass_prepared_t::to(new cass::Prepared(std::string(result->prepared,
-                                                         result->prepared_size)));
-}
-
-void
-cass_future_error_string(const cass_future_t* future,
-                         char* output, size_t output_len,
-                         size_t* total) {
-  if(future->error) {
-    *total = future->error->message.copy(output, output_len);
-  } else {
-    *total = 0;
+  cass::Result* result = static_cast<cass::Result*>(result_or_error.release());
+  if(result != nullptr) {
+    cass::Prepared* prepared = new cass::Prepared(std::string(result->prepared,
+                                                              result->prepared_size));
+    delete result;
+    return cass_prepared_t::to(prepared);
   }
+  return nullptr;
 }
 
 const char*
-cass_future_error_message(const cass_future_t* future) {
-  if(future->error) {
-    return future->error->message.c_str();
+cass_future_error_string(cass_future_t* future) {
+  cass::Future::ResultOrError& result_or_error = future->get();
+  if(result_or_error.is_error()) {
+    return result_or_error.error()->message.c_str();
   } else {
     return "";
   }
@@ -101,18 +98,20 @@ cass_future_error_message(const cass_future_t* future) {
 
 
 cass_source_t
-cass_future_error_source(const cass_future_t* future) {
-  if(future->error) {
-    return future->error->source;
+cass_future_error_source(cass_future_t* future) {
+  const cass::Future::ResultOrError& result_or_error = future->get();
+  if(result_or_error.is_error()) {
+    return result_or_error.error()->source;
   } else {
     return CASS_ERROR_SOURCE_NONE;
   }
 }
 
 cass_code_t
-cass_future_error_code(const cass_future_t* future) {
-  if(future->error) {
-    return future->error->code;
+cass_future_error_code(cass_future_t* future) {
+  const cass::Future::ResultOrError& result_or_error = future->get();
+  if(result_or_error.is_error()) {
+    return result_or_error.error()->code;
   } else {
     return CASS_OK;
   }

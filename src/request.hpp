@@ -27,8 +27,9 @@
 namespace cass {
 
 struct Request {
-  MessageFutureImpl*  future;
-  Message*            message;
+  MessageFuture* future;
+  Message* message;
+  std::string statement;
   std::list<Host> hosts;
   std::list<std::string> hosts_attempted;
   Timer* timer;
@@ -39,12 +40,11 @@ struct Request {
       timer(nullptr) {
   }
 
-  Request(
-      MessageFutureImpl* future,
-      Message*           message) :
-      future(future),
-      message(message),
-      timer(nullptr){
+  Request(MessageFuture* future,
+          Message* message)
+    : future(future)
+    ,  message(message)
+    ,  timer(nullptr) {
   }
 
  private:

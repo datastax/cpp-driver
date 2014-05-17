@@ -37,9 +37,6 @@
 
 namespace cass {
 
-struct Session;
-typedef FutureImpl<Session*, Session*> SessionFutureImpl;
-
 struct Session {
   enum SessionState {
     SESSION_STATE_NEW,
@@ -61,10 +58,10 @@ struct Session {
   uv_thread_t                  thread_;
   uv_loop_t*                   loop_;
   uv_async_t                   async_connect_;
-  std::vector<IOWorker*>    io_workers_;
+  std::vector<IOWorker*>       io_workers_;
   SSLContext*                  ssl_context_;
   std::string                  keyspace_;
-  SessionFutureImpl*        connect_session_request_;
+  SessionFuture*              connect_future_;
   std::set<Host>  hosts_;
   Config                       config_;
   std::unique_ptr<AsyncQueue<MPMCQueue<Request*>>> request_queue_;
@@ -144,8 +141,8 @@ struct Session {
   Future*
   connect(
       const std::string& ks) {
-    connect_session_request_       = new SessionFutureImpl();
-    connect_session_request_->data = this;
+    connect_future_ = new SessionFuture();
+    connect_future_->session = this;
 
     SessionState expected_state = SESSION_STATE_NEW;
     if (state_.compare_exchange_strong(
@@ -162,15 +159,14 @@ struct Session {
 
       uv_async_send(&async_connect_);
     } else {
-     connect_session_request_->error.reset(new Error(
+     connect_future_->set_error(new Error(
           CASS_ERROR_SOURCE_LIBRARY,
           CASS_ERROR_LIB_SESSION_STATE,
           "connect has already been called",
           __FILE__,
           __LINE__));
-      connect_session_request_->notify(loop_);
     }
-    return connect_session_request_;
+    return connect_future_;
   }
 
   void init_pools() {
@@ -229,7 +225,7 @@ struct Session {
       if(payload.type == Payload::ON_CONNECTED) {
         if(--session->pending_connections_count_ == 0) {
           session->load_balancing_policy_->init(session->hosts_);
-          session->connect_session_request_->notify(session->loop_);
+          session->connect_future_->set_result();
         }
       }
     }
@@ -243,15 +239,15 @@ struct Session {
     return NULL;
   }
 
-  MessageFutureImpl*
+  Future*
   prepare(
       const char* statement,
       size_t      length) {
     Request* request = new Request(
-        new MessageFutureImpl(),
+        new MessageFuture(),
         new Message(CQL_OPCODE_PREPARE));
 
-    request->future->data.assign(statement, length);
+    request->future->statement.assign(statement, length);
 
     Prepare* body =
         reinterpret_cast<Prepare*>(request->message->body.get());
@@ -260,38 +256,36 @@ struct Session {
     return request->future;
   }
 
-  MessageFutureImpl* execute(Statement* statement) {
+  Future* execute(Statement* statement) {
     // TODO(mpenick): Figure out how to clean up request's and message's memory
     Message* message = new Message();
     message->opcode = statement->opcode();
     message->body.reset(statement); // TODO(mpenick): We don't want this to be cleaned up by the smart pointer
-    Request* request = new Request(new MessageFutureImpl(), message);
+    Request* request = new Request(new MessageFuture(), message);
     execute(request);
     return request->future;
   }
 
-  MessageFutureImpl*
-  execute(
-      Message* message) {
-    Request* request = new Request(
-        new MessageFutureImpl(),
-        message);
-    execute(request);
-    return request->future;
-  }
+//  Future*
+//  execute(
+//      Message* message) {
+//    Request* request = new Request(
+//        new MessageFutureImpl(),
+//        message);
+//    execute(request);
+//    return request->future;
+//  }
 
   inline void
   execute(
       Request* request) {
     if (!request_queue_->enqueue(request)) {
-      request->future->error.reset(new Error(
+      request->future->set_error(new Error(
           CASS_ERROR_SOURCE_LIBRARY,
           CASS_ERROR_LIB_NO_STREAMS,
           "request queue full",
           __FILE__,
           __LINE__));
-      request->future->use_local_loop = true;
-      request->future->notify(NULL);
       delete request;
     }
   }
@@ -314,8 +308,9 @@ struct Session {
 
   Future*
   shutdown() {
-    SessionFutureImpl* connect_session_request = new SessionFutureImpl();
-    return connect_session_request;
+    SessionFuture* future = new SessionFuture();
+    future->session = this;
+    return future;
     // TODO(mstump)
   }
 

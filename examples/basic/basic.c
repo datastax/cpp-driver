@@ -86,7 +86,7 @@ cass_code_t execute_query(cass_session_t* session, const char* query) {
   return rc;
 }
 
-cass_code_t insert_into_collections(cass_session_t* session, const char* key, const basic_t* basic) {
+cass_code_t insert_into_basic(cass_session_t* session, const char* key, const basic_t* basic) {
   cass_code_t rc = 0;
   cass_statement_t* statement = NULL;
   cass_future_t* future = NULL;
@@ -115,7 +115,7 @@ cass_code_t insert_into_collections(cass_session_t* session, const char* key, co
   return rc;
 }
 
-cass_code_t select_from_collections(cass_session_t* session, const char* key, basic_t* basic) {
+cass_code_t select_from_basic(cass_session_t* session, const char* key, basic_t* basic) {
   cass_code_t rc = 0;
   cass_statement_t* statement = NULL;
   cass_future_t* future = NULL;
@@ -191,8 +191,8 @@ main() {
                                               PRIMARY KEY (key));");
 
 
-  insert_into_collections(session, "test", &input);
-  select_from_collections(session, "test", &output);
+  insert_into_basic(session, "test", &input);
+  select_from_basic(session, "test", &output);
 
   assert(input.bln == output.bln);
   assert(input.flt == output.flt);
