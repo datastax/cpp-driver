@@ -46,8 +46,7 @@ struct Statement : public MessageBody {
     , values(value_count) { }
 
 
-  virtual
-  ~Statement() {}
+  virtual ~Statement() = default;
 
   virtual uint8_t
   kind() const = 0;

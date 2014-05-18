@@ -60,8 +60,8 @@ cass_future_get_session(
 const cass_result_t*
 cass_future_get_result(
    cass_future_t* future) {
-  cass::MessageFuture* message_future = static_cast<cass::MessageFuture*>(future->from());
-  cass::Future::ResultOrError& result_or_error = message_future->get();
+  cass::RequestFuture* request_future = static_cast<cass::RequestFuture*>(future->from());
+  cass::Future::ResultOrError& result_or_error = request_future->get();
   if(result_or_error.is_error()) {
     return nullptr;
   }
@@ -71,8 +71,8 @@ cass_future_get_result(
 const cass_prepared_t*
 cass_future_get_prepared(
    cass_future_t* future) {
-  cass::MessageFuture* message_future = static_cast<cass::MessageFuture*>(future->from());
-  cass::Future::ResultOrError& result_or_error = message_future->get();
+  cass::RequestFuture* request_future = static_cast<cass::RequestFuture*>(future->from());
+  cass::Future::ResultOrError& result_or_error = request_future->get();
   if(result_or_error.is_error()) {
     return nullptr;
   }

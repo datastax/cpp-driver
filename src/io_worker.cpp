@@ -46,7 +46,7 @@ void IOWorker::on_event(uv_async_t *async, int status) {
 
 void IOWorker::on_execute(uv_async_t* data, int status) {
   IOWorker* worker  = reinterpret_cast<IOWorker*>(data->data);
-  Request*  request = nullptr;
+  RequestFuture*  request = nullptr;
 
   while (worker->request_queue_.dequeue(request)) {
     while(!request->hosts.empty()) {
@@ -57,9 +57,9 @@ void IOWorker::on_execute(uv_async_t* data, int status) {
         auto pool = it->second;
         ClientConnection* connection;
         if(pool->borrow_connection(&connection)) {
-          Error* error = connection->execute(request->message, request->future);
-          if(error) {
-            request->future->set_error(error);
+          Error* error = nullptr;
+          if(!connection->execute(request->message, request, &error)) {
+            request->set_error(error);
           }
           break;
         } else { // Too busy, or no connections

@@ -50,23 +50,20 @@ class Resolver {
                         void* data, Callback cb,
                         struct addrinfo* hints = nullptr) {
       Resolver* resolver = new Resolver(host, port, data, cb);
-      uv_getaddrinfo_t* handle = new uv_getaddrinfo_t;
-      handle->data = resolver;
 
-      int rc = uv_getaddrinfo(loop, handle, on_resolve, 
+      int rc = uv_getaddrinfo(loop, &resolver->req_, on_resolve,
                               host.c_str(), std::to_string(port).c_str(), hints);
 
       if(rc != 0) {
         resolver->status_ = FAILED_BAD_PARAM;
         resolver->cb_(resolver);
         delete resolver;
-        delete handle;
       }
     }
 
   private:
-    static void on_resolve(uv_getaddrinfo_t* handle, int status, struct addrinfo* res) {
-      Resolver* resolver = static_cast<Resolver*>(handle->data);
+    static void on_resolve(uv_getaddrinfo_t* req, int status, struct addrinfo* res) {
+      Resolver* resolver = static_cast<Resolver*>(req->data);
 
       if(status != 0) {
         resolver->status_ = FAILED_UNABLE_TO_RESOLVE;
@@ -79,7 +76,6 @@ class Resolver {
       resolver->cb_(resolver);
 
       delete resolver;
-      delete handle;
       uv_freeaddrinfo(res);
     }
 
@@ -90,8 +86,13 @@ class Resolver {
         , port_(port)
         , status_(RESOLVING)
         , data_(data)
-        , cb_(cb) { }
+        , cb_(cb) {
+      req_.data = this;
+    }
 
+    ~Resolver() { }
+
+    uv_getaddrinfo_t req_;
     std::string host_;
     int port_;
     Status status_;

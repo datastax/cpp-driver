@@ -76,6 +76,8 @@ class Future {
     Future()
       : future_(promise_.get_future()) { }
 
+    virtual ~Future() = default;
+
     bool ready() {
       return future_.wait_for(std::chrono::microseconds(0)) == std::future_status::ready;
     }
@@ -107,15 +109,6 @@ class Future {
      std::promise<ResultOrErrorPtr&> promise_;
      std::shared_future<ResultOrErrorPtr&> future_;
      ResultOrErrorPtr result_or_error_;
-};
-
-struct Session;
-struct SessionFuture : public Future {
-    Session* session;
-};
-
-struct MessageFuture : public Future {
-    std::string statement;
 };
 
 } // namespace cass

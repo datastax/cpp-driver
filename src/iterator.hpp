@@ -34,7 +34,7 @@ struct Iterator {
       type(type)
   {}
 
-  virtual ~Iterator() {}
+  virtual ~Iterator() = default;
 
   virtual bool next() = 0;
 };

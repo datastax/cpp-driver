@@ -26,31 +26,25 @@
 
 namespace cass {
 
-struct Request {
-  MessageFuture* future;
-  Message* message;
-  std::string statement;
-  std::list<Host> hosts;
-  std::list<std::string> hosts_attempted;
-  Timer* timer;
+//struct Request {
+//  RequestFuture* future;
+//  Message* message;
+//  std::list<Host> hosts;
+//  std::list<Host> hosts_attempted;
+//  Timer* timer;
 
-  Request() :
-      future(nullptr),
-      message(nullptr),
-      timer(nullptr) {
-  }
+//  Request()
+//    : future(nullptr)
+//    , message(nullptr)
+//    , timer(nullptr) { }
 
-  Request(MessageFuture* future,
-          Message* message)
-    : future(future)
-    ,  message(message)
-    ,  timer(nullptr) {
-  }
+//  Request(RequestFuture* future, Message* message)
+//    : future(future)
+//    , message(message)
+//    , timer(nullptr) { }
 
- private:
-  Request(const Request&) {}
-  void operator=(const Request&) {}
-};
+//  DISALLOW_COPY_AND_ASSIGN(Request);
+//};
 
 } // namespace cass
 

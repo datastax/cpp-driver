@@ -54,7 +54,7 @@ struct IOWorker {
   PoolCollection pools;
 
   const Config& config_;
-  AsyncQueue<SPSCQueue<Request*>> request_queue_;
+  AsyncQueue<SPSCQueue<RequestFuture*>> request_queue_;
   AsyncQueue<SPSCQueue<Payload>> event_queue_;
 
   explicit
@@ -91,7 +91,7 @@ struct IOWorker {
 
   Error*
   execute(
-      Request* request) {
+      RequestFuture* request) {
     if (!request_queue_.enqueue(request)) {
       return new Error(
           CASS_ERROR_SOURCE_LIBRARY,

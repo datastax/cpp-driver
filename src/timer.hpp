@@ -25,7 +25,6 @@ class Timer {
 
     static Timer* start(uv_loop_t* loop, uint64_t timeout, void* data, Callback cb) {
       Timer* timer = new Timer(data, cb);
-      timer->handle_.data = timer;
       uv_timer_init(loop, &timer->handle_);
       uv_timer_start(&timer->handle_, on_timeout, timeout, 0);
       return timer;
@@ -46,7 +45,11 @@ class Timer {
   private:
     Timer(void* data, Callback cb)
       : data_(data)
-      , cb_(cb) { }
+      , cb_(cb) {
+      handle_.data = this;
+    }
+
+    ~Timer() { }
 
     uv_timer_t handle_;
     void* data_;

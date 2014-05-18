@@ -27,13 +27,12 @@
 #include "prepare.hpp"
 #include "bound.hpp"
 #include "query.hpp"
+#include "host.hpp"
 
 
 #define CASS_HEADER_SIZE 8
 
 namespace cass {
-
-struct Message;
 
 struct Message {
   uint8_t                         version;
@@ -114,7 +113,7 @@ struct Message {
       char**  output,
       size_t& size) {
     size = 0;
-    if (body.get()) {
+    if (body) {
       body->prepare(CASS_HEADER_SIZE, output, size);
 
       if (!size) {
@@ -208,6 +207,24 @@ struct Message {
     }
     return input_pos - input;
   }
+};
+
+class Timer;
+struct RequestFuture : public Future {
+    RequestFuture(Message* message)
+      : message(message)
+      , timer(nullptr) { }
+
+    ~RequestFuture() {
+      message->body.release(); // This memory doesn't belong to us
+      delete message;
+    }
+
+    Message* message;
+    Timer* timer;
+    std::list<Host> hosts;
+    std::list<Host> hosts_attempted;
+    std::string statement;
 };
 
 } // namespace cass

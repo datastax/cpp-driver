@@ -34,8 +34,14 @@
 #include "round_robin_policy.hpp"
 #include "resolver.hpp"
 #include "config.hpp"
+#include "future.hpp"
 
 namespace cass {
+
+struct Session;
+struct SessionFuture : public Future {
+    Session* session;
+};
 
 struct Session {
   enum SessionState {
@@ -64,7 +70,7 @@ struct Session {
   SessionFuture*              connect_future_;
   std::set<Host>  hosts_;
   Config                       config_;
-  std::unique_ptr<AsyncQueue<MPMCQueue<Request*>>> request_queue_;
+  std::unique_ptr<AsyncQueue<MPMCQueue<RequestFuture*>>> request_queue_;
   std::unique_ptr<AsyncQueue<MPMCQueue<Payload>>> event_queue_;
   std::unique_ptr<LoadBalancingPolicy> load_balancing_policy_;
   int pending_resolve_count_;
@@ -89,7 +95,7 @@ struct Session {
     async_connect_.data = this;
     uv_async_init( loop_, &async_connect_, &Session::on_connect);
 
-    request_queue_.reset(new AsyncQueue<MPMCQueue<Request*>>(config_.queue_size_io()));
+    request_queue_.reset(new AsyncQueue<MPMCQueue<RequestFuture*>>(config_.queue_size_io()));
     int rc = request_queue_->init(loop_, this, &Session::on_execute);
     if(rc != 0) {
       return rc;
@@ -243,44 +249,30 @@ struct Session {
   prepare(
       const char* statement,
       size_t      length) {
-    Request* request = new Request(
-        new MessageFuture(),
-        new Message(CQL_OPCODE_PREPARE));
-
-    request->future->statement.assign(statement, length);
+    RequestFuture* request = new RequestFuture(new Message(CQL_OPCODE_PREPARE));
+    request->statement.assign(statement, length);
 
     Prepare* body =
         reinterpret_cast<Prepare*>(request->message->body.get());
     body->prepare_string(statement, length);
     execute(request);
-    return request->future;
+    return request;
   }
 
   Future* execute(Statement* statement) {
-    // TODO(mpenick): Figure out how to clean up request's and message's memory
     Message* message = new Message();
     message->opcode = statement->opcode();
     message->body.reset(statement); // TODO(mpenick): We don't want this to be cleaned up by the smart pointer
-    Request* request = new Request(new MessageFuture(), message);
+    RequestFuture* request = new RequestFuture(message);
     execute(request);
-    return request->future;
+    return request;
   }
-
-//  Future*
-//  execute(
-//      Message* message) {
-//    Request* request = new Request(
-//        new MessageFutureImpl(),
-//        message);
-//    execute(request);
-//    return request->future;
-//  }
 
   inline void
   execute(
-      Request* request) {
+      RequestFuture* request) {
     if (!request_queue_->enqueue(request)) {
-      request->future->set_error(new Error(
+      request->set_error(new Error(
           CASS_ERROR_SOURCE_LIBRARY,
           CASS_ERROR_LIB_NO_STREAMS,
           "request queue full",
@@ -296,7 +288,7 @@ struct Session {
       int         status) {
     Session* session = reinterpret_cast<Session*>(data->data);
 
-    Request* request = nullptr;
+    RequestFuture* request = nullptr;
     while (session->request_queue_->dequeue(request)) {
       session->load_balancing_policy_->new_query_plan(&request->hosts);
       // TODO(mpenick): Make this something better than RR

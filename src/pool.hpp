@@ -40,7 +40,7 @@ class Pool {
   size_t                  max_simultaneous_creation_;
   ConnectionCollection    connections_;
   ConnectionCollection    connections_pending_;
-  std::list<Request*>     pending_request_queue_;
+  std::list<RequestFuture*> pending_request_queue_;
   size_t                  max_pending_requests_;
   uint64_t                connection_timeout_;
 
@@ -178,12 +178,12 @@ class Pool {
   }
 
   void on_timeout(void* data) {
-    Request* request = static_cast<Request*>(data);
+    RequestFuture* request = static_cast<RequestFuture*>(data);
     // TODO(mpenick): Maybe we want to move to the next host here?
     pending_request_queue_.remove(request);
   }
 
-  bool wait_for_connection(Request* request) {
+  bool wait_for_connection(RequestFuture* request) {
     if(pending_request_queue_.size() + 1 > max_pending_requests_) {
       return false;
     }
@@ -197,14 +197,14 @@ class Pool {
 
   void execute_pending_request(ClientConnection* connection) {
     if(!pending_request_queue_.empty()) {
-      Request* request = pending_request_queue_.front();
+      RequestFuture* request = pending_request_queue_.front();
       if(request->timer) {
         Timer::stop(request->timer);
         request->timer = nullptr;
       }
-      Error* error = connection->execute(request->message, request->future);
-      if(error) {
-        request->future->set_error(error);
+      Error* error = nullptr;
+      if(!connection->execute(request->message, request, &error)) {
+        request->set_error(error);
       }
     }
   }

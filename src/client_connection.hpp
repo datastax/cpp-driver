@@ -23,9 +23,8 @@
 #include "session.hpp"
 #include "ssl_context.hpp"
 #include "ssl_session.hpp"
-#include "stream_storage.hpp"
-
-#define CASS_STREAM_ID_MAX      127
+#include "stream_manager.hpp"
+#include "writer.hpp"
 
 namespace cass {
 
@@ -52,8 +51,6 @@ struct ClientConnection {
     CLIENT_EVENT_SCHEMA_DROPPED
   };
 
-  typedef int8_t Stream;
-
   typedef std::function<void(ClientConnection*,
                              Error*)> ConnectionCallback;
 
@@ -72,11 +69,6 @@ struct ClientConnection {
                              const char*, size_t,
                              const char*, size_t)> PrepareCallback;
 
-  typedef StreamStorage<
-    Stream,
-    MessageFuture*,
-    CASS_STREAM_ID_MAX> StreamStorageCollection;
-
   struct WriteRequestData {
     uv_buf_t buf;
     ClientConnection* connection;
@@ -85,7 +77,7 @@ struct ClientConnection {
   ClientConnectionState       state_;
   uv_loop_t*                  loop_;
   std::unique_ptr<Message>    incoming_;
-  StreamStorageCollection     stream_storage_;
+  StreamManager<RequestFuture*> stream_manager_;
   ConnectionCallback          connect_callback_;
   RequestFinishedCallback     request_finished_callback_;
   KeyspaceCallback            keyspace_callback_;
@@ -150,7 +142,7 @@ struct ClientConnection {
 
   inline size_t
   available_streams() {
-    return stream_storage_.available_streams();
+    return stream_manager_.available_streams();
   }
 
   void
@@ -295,7 +287,7 @@ struct ClientConnection {
         }
 
         if (write_output && write_output_size) {
-          connection->send_data(write_output, write_output_size);
+          connection->write(write_output, write_output_size);
           // delete of write_output will be handled by on_write
         }
 
@@ -319,29 +311,32 @@ struct ClientConnection {
     free_buffer(buf);
   }
 
-  Error*
-  send_data(
-      char*  input,
-      size_t size) {
-    return send_data(uv_buf_init(input, size));
+  void write(char*  input, size_t size) {
+    Writer::Bufs* bufs = new Writer::Bufs({ uv_buf_init(input, size) });
+    Writer::write(reinterpret_cast<uv_stream_t*>(&socket_), bufs, this, on_write);
   }
 
-  Error*
-  send_data(
-      uv_buf_t buf) {
-    uv_write_t        *req  = new uv_write_t;
-    WriteRequestData*  data = new WriteRequestData;
-    data->buf               = buf;
-    data->connection        = this;
-    req->data               = data;
-    uv_write(
-        req,
-        reinterpret_cast<uv_stream_t*>(&socket_),
-        &buf,
-        1,
-        ClientConnection::on_write);
-    return nullptr;
+  void write(uv_buf_t buf) {
+    Writer::Bufs* bufs = new Writer::Bufs({ buf });
+    Writer::write(reinterpret_cast<uv_stream_t*>(&socket_), bufs, this, on_write);
   }
+
+//  Error*
+//  write(
+//      uv_buf_t buf) {
+//    uv_write_t        *req  = new uv_write_t;
+//    WriteRequestData*  data = new WriteRequestData;
+//    data->buf               = buf;
+//    data->connection        = this;
+//    req->data               = data;
+//    uv_write(
+//        req,
+//        reinterpret_cast<uv_stream_t*>(&socket_),
+//        &buf,
+//        1,
+//        ClientConnection::on_write);
+//    return nullptr;
+//  }
 
   void
   close() {
@@ -423,7 +418,7 @@ struct ClientConnection {
     log(CASS_LOG_DEBUG, "on_result");
 
     Error* error = nullptr;
-    MessageFuture* request = nullptr;
+    RequestFuture* request = nullptr;
     Result*     result  = static_cast<Result*>(response->body.get());
 
     switch (result->kind) {
@@ -434,11 +429,12 @@ struct ClientConnection {
         break;
 
       case CASS_RESULT_KIND_PREPARED:
-        error = stream_storage_.get_stream(response->stream, request);
-        if(error) {
-          request->set_error(error);
-        } else {
+        if(stream_manager_.get_item(response->stream, request)) {
           request->set_result(response->body.release());
+        } else {
+          request->set_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
+                                        CASS_ERROR_LIB_NO_STREAMS,
+                                        "this stream has already been released"));
         }
 
         if(prepare_callback_) {
@@ -453,11 +449,12 @@ struct ClientConnection {
         break;
 
       default:
-        error = stream_storage_.get_stream(response->stream, request);
-        if(error) {
-          request->set_error(error);
-        } else {
+        if(stream_manager_.get_item(response->stream, request)) {
           request->set_result(response->body.release());
+        } else {
+          request->set_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
+                                        CASS_ERROR_LIB_NO_STREAMS,
+                                        "this stream has already been released"));
         }
         break;
     }
@@ -465,8 +462,6 @@ struct ClientConnection {
     if(request_finished_callback_) {
       request_finished_callback_(this);
     }
-
-    delete response;
   }
 
   void
@@ -484,12 +479,13 @@ struct ClientConnection {
               __FILE__,
               __LINE__));
     } else {
-      MessageFuture* request = nullptr;
-      Error* stream_error = stream_storage_.get_stream(response->stream, request);
-      if(stream_error) {
-        request->set_error(stream_error);
-      } else {
+      RequestFuture* request = nullptr;
+      if(stream_manager_.get_item(response->stream, request)) {
         request->set_error(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, (cass_code_t)error->code, error->message));
+      } else {
+        request->set_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
+                                      CASS_ERROR_LIB_NO_STREAMS,
+                                      "this stream has already been released"));
       }
     }
     delete response;
@@ -561,42 +557,44 @@ struct ClientConnection {
     execute(&message, NULL);
   }
 
-  static void
-  on_write(
-      uv_write_t* req,
-      int         status) {
-    WriteRequestData* data
-        = reinterpret_cast<WriteRequestData*>(req->data);
-
-    ClientConnection* connection = data->connection;
+  static void on_write(Writer* writer) {
+    ClientConnection* connection = static_cast<ClientConnection*>(writer->data());
     connection->log(CASS_LOG_DEBUG, "on_write");
-    if (status == -1) {
+    if(writer->status() == Writer::FAILED) {
       // TODO(mstump) need to trigger failure for all pending requests and notify connection close
       fprintf(
-          stderr,
-          "Write error %s\n",
-          uv_err_name(uv_last_error(connection->loop_)));
+            stderr,
+            "Write error %s\n",
+            uv_err_name(uv_last_error(connection->loop_)));
     }
-    delete data->buf.base;
-    delete data;
-    delete req;
   }
 
-  Error*
+  bool
   execute(
       Message* message,
-      MessageFuture* request = NULL) {
+      RequestFuture* request = nullptr,
+      Error** error = nullptr) {
     uv_buf_t   buf;
 
-    Error* error = stream_storage_.set_stream(request, message->stream);
-    if(error) {
-      return error;
+    int8_t stream = stream_manager_.acquire_stream(request);
+    if(stream < 0) {
+      if(error != nullptr) {
+        *error = CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
+                            CASS_ERROR_LIB_NO_STREAMS,
+                            "no available streams");
+        return false;
+      }
     }
 
+    message->stream = stream;
+
     if (!message->prepare(&buf.base, buf.len)) {
-      return CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
-                        CASS_ERROR_LIB_MESSAGE_PREPARE,
-                        "error preparing message");
+      if(error != nullptr) {
+        *error = CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
+                            CASS_ERROR_LIB_MESSAGE_PREPARE,
+                            "error preparing message");
+        return false;
+      }
     }
 
     char log_message[512];
@@ -609,7 +607,9 @@ struct ClientConnection {
         buf.len);
 
     log(CASS_LOG_DEBUG, log_message);
-    return send_data(buf);
+    write(buf);
+
+    return true;
   }
 
   void
