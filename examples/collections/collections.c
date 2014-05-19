@@ -72,6 +72,7 @@ cass_code_t execute_query(cass_session_t* session, const char* query) {
   }
 
   cass_future_free(future);
+  cass_statement_free(statement);
 
   return rc;
 }
@@ -105,6 +106,7 @@ cass_code_t insert_into_collections(cass_session_t* session, const char* key, co
   }
 
   cass_future_free(future);
+  cass_statement_free(statement);
 
   return rc;
 }
@@ -153,6 +155,7 @@ cass_code_t select_from_collections(cass_session_t* session, const char* key) {
   }
 
   cass_future_free(future);
+  cass_statement_free(statement);
 
   return rc;
 }

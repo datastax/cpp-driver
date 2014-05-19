@@ -57,7 +57,7 @@ cass_code_t connect_session(const char* contact_points[], cass_session_t** outpu
     cass_future_wait(future);
     rc = cass_future_error_code(future);
     if(rc != CASS_OK) {
-      fprintf(stderr, "Error: %s\n", cass_future_error_message(future));
+      fprintf(stderr, "Error: %s\n", cass_future_error_string(future));
       cass_session_free(session);
     } else {
       *output = session;
@@ -78,10 +78,11 @@ cass_code_t execute_query(cass_session_t* session, const char* query) {
 
   rc = cass_future_error_code(future);
   if(rc != CASS_OK) {
-    fprintf(stderr, "Error: %s\n", cass_future_error_message(future));
+    fprintf(stderr, "Error: %s\n", cass_future_error_string(future));
   }
 
   cass_future_free(future);
+  cass_statement_free(statement);
 
   return rc;
 }
@@ -107,10 +108,11 @@ cass_code_t insert_into_basic(cass_session_t* session, const char* key, const ba
 
   rc = cass_future_error_code(future);
   if(rc != CASS_OK) {
-    fprintf(stderr, "Error: %s\n", cass_future_error_message(future));
+    fprintf(stderr, "Error: %s\n", cass_future_error_string(future));
   }
 
   cass_future_free(future);
+  cass_statement_free(statement);
 
   return rc;
 }
@@ -131,7 +133,7 @@ cass_code_t select_from_basic(cass_session_t* session, const char* key, basic_t*
 
   rc = cass_future_error_code(future);
   if(rc != CASS_OK) {
-    fprintf(stderr, "Error: %s\n", cass_future_error_message(future));
+    fprintf(stderr, "Error: %s\n", cass_future_error_string(future));
   } else {
     const cass_result_t* result = cass_future_get_result(future);
     cass_iterator_t* iterator = cass_iterator_from_result(result);
@@ -161,6 +163,7 @@ cass_code_t select_from_basic(cass_session_t* session, const char* key, basic_t*
   }
 
   cass_future_free(future);
+  cass_statement_free(statement);
 
   return rc;
 }

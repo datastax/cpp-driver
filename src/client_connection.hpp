@@ -24,7 +24,9 @@
 #include "ssl_context.hpp"
 #include "ssl_session.hpp"
 #include "stream_manager.hpp"
+#include "connecter.hpp"
 #include "writer.hpp"
+
 
 namespace cass {
 
@@ -86,7 +88,6 @@ struct ClientConnection {
   // DNS and hostname stuff
   Host                     host_;
   // the actual connection
-  uv_connect_t                connect_request_;
   uv_tcp_t                    socket_;
   // ssl stuff
   SSLSession*                 ssl_;
@@ -112,7 +113,6 @@ struct ClientConnection {
       ssl_(ssl_session),
       ssl_handshake_done_(false),
       version_("3.0.0") {
-    connect_request_.data         = this;
     socket_.data                  = this;
 
     if (ssl_) {
@@ -185,7 +185,7 @@ struct ClientConnection {
       }
 
       if (incoming_->body_ready) {
-        Message* message = incoming_.release();
+        std::unique_ptr<Message> message(std::move(incoming_));
         incoming_.reset(new Message());
 
         char log_message[512];
@@ -203,18 +203,25 @@ struct ClientConnection {
           // TODO(mstump) system events
           assert(false);
         } else {
+          RequestFuture* request = nullptr;
+          if(!stream_manager_.get_item(message->stream, request)) {
+            // TODO(mpenick): Handle this. We got a response for a stream that doesn't exist...
+            // This means we have no future to notify
+            assert(false);
+          }
+
           switch (message->opcode) {
             case CQL_OPCODE_SUPPORTED:
-              on_supported(message);
+              on_supported(message.get());
               break;
             case CQL_OPCODE_ERROR:
-              on_error(message);
+              on_error(message.get(), request);
               break;
             case CQL_OPCODE_READY:
-              on_ready(message);
+              on_ready(message.get());
               break;
             case CQL_OPCODE_RESULT:
-              on_result(message);
+              on_result(message.get(), request);
               break;
             default:
               assert(false);
@@ -287,7 +294,7 @@ struct ClientConnection {
         }
 
         if (write_output && write_output_size) {
-          connection->write(write_output, write_output_size);
+          connection->write(uv_buf_init(write_output, write_output_size));
           // delete of write_output will be handled by on_write
         }
 
@@ -311,32 +318,10 @@ struct ClientConnection {
     free_buffer(buf);
   }
 
-  void write(char*  input, size_t size) {
-    Writer::Bufs* bufs = new Writer::Bufs({ uv_buf_init(input, size) });
-    Writer::write(reinterpret_cast<uv_stream_t*>(&socket_), bufs, this, on_write);
-  }
-
   void write(uv_buf_t buf) {
     Writer::Bufs* bufs = new Writer::Bufs({ buf });
     Writer::write(reinterpret_cast<uv_stream_t*>(&socket_), bufs, this, on_write);
   }
-
-//  Error*
-//  write(
-//      uv_buf_t buf) {
-//    uv_write_t        *req  = new uv_write_t;
-//    WriteRequestData*  data = new WriteRequestData;
-//    data->buf               = buf;
-//    data->connection        = this;
-//    req->data               = data;
-//    uv_write(
-//        req,
-//        reinterpret_cast<uv_stream_t*>(&socket_),
-//        &buf,
-//        1,
-//        ClientConnection::on_write);
-//    return nullptr;
-//  }
 
   void
   close() {
@@ -347,15 +332,19 @@ struct ClientConnection {
         ClientConnection::on_close);
   }
 
-  static void
-  on_connect(
-      uv_connect_t*     request,
-      int               status) {
+  void connect() {
+    log(CASS_LOG_DEBUG, "connect");
+    uv_tcp_init(loop_, &socket_);
+    Connecter::connect(&socket_, host_.address, this, on_connect);
+  }
+
+  static void on_connect(Connecter* connecter) {
     ClientConnection* connection
-        = reinterpret_cast<ClientConnection*>(request->data);
+        = reinterpret_cast<ClientConnection*>(connecter->data());
 
     connection->log(CASS_LOG_DEBUG, "on_connect");
-    if (status == -1) {
+
+    if(connecter->status() == Connecter::FAILED) {
       // TODO(mstump)
       fprintf(
           stderr,
@@ -378,26 +367,6 @@ struct ClientConnection {
   }
 
   void
-  connect() {
-    log(CASS_LOG_DEBUG, "connect");
-    // connect to the resolved host
-    uv_tcp_init(loop_, &socket_);
-    if(host_.address.family() == AF_INET) {
-      uv_tcp_connect(
-          &connect_request_,
-          &socket_,
-          *host_.address.addr_in(),
-          ClientConnection::on_connect);
-    } else {
-      uv_tcp_connect6(
-          &connect_request_,
-          &socket_,
-          *host_.address.addr_in6(),
-          ClientConnection::on_connect);
-    }
-  }
-
-  void
   ssl_handshake() {
     if (ssl_) {
       // calling read on a handshaked initiated ssl_ pipe
@@ -412,14 +381,14 @@ struct ClientConnection {
     }
   }
 
-  void
-  on_result(
-      Message* response) {
+  void on_result(Message* response, RequestFuture* request) {
     log(CASS_LOG_DEBUG, "on_result");
 
-    Error* error = nullptr;
-    RequestFuture* request = nullptr;
-    Result*     result  = static_cast<Result*>(response->body.get());
+    Result* result = static_cast<Result*>(response->body.get());
+
+    if(request != nullptr) {
+      request->set_result(response->body.release());
+    }
 
     switch (result->kind) {
       case CASS_RESULT_KIND_SET_KEYSPACE:
@@ -429,33 +398,17 @@ struct ClientConnection {
         break;
 
       case CASS_RESULT_KIND_PREPARED:
-        if(stream_manager_.get_item(response->stream, request)) {
-          request->set_result(response->body.release());
-        } else {
-          request->set_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
-                                        CASS_ERROR_LIB_NO_STREAMS,
-                                        "this stream has already been released"));
-        }
-
         if(prepare_callback_) {
           prepare_callback_(
                 this,
-                error,
+                nullptr,
                 request->statement.c_str(),
                 request->statement.size(),
                 result->prepared,
                 result->prepared_size);
         }
         break;
-
       default:
-        if(stream_manager_.get_item(response->stream, request)) {
-          request->set_result(response->body.release());
-        } else {
-          request->set_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
-                                        CASS_ERROR_LIB_NO_STREAMS,
-                                        "this stream has already been released"));
-        }
         break;
     }
 
@@ -464,9 +417,7 @@ struct ClientConnection {
     }
   }
 
-  void
-  on_error(
-      Message* response) {
+  void on_error(Message* response, RequestFuture* request) {
     log(CASS_LOG_DEBUG, "on_error");
     BodyError* error = static_cast<BodyError*>(response->body.get());
 
@@ -478,24 +429,15 @@ struct ClientConnection {
               error->message,
               __FILE__,
               __LINE__));
-    } else {
-      RequestFuture* request = nullptr;
-      if(stream_manager_.get_item(response->stream, request)) {
-        request->set_error(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, (cass_code_t)error->code, error->message));
-      } else {
-        request->set_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
-                                      CASS_ERROR_LIB_NO_STREAMS,
-                                      "this stream has already been released"));
-      }
+    } else if(request != nullptr) {
+      request->set_error(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, (cass_code_t)error->code, error->message));
     }
-    delete response;
   }
 
   void
   on_ready(
       Message* response) {
     log(CASS_LOG_DEBUG, "on_ready");
-    delete response;
     state_ = CLIENT_STATE_READY;
     event_received();
   }
@@ -510,7 +452,6 @@ struct ClientConnection {
     // TODO(mstump) do something with the supported info
     (void) supported;
 
-    delete response;
     state_ = CLIENT_STATE_SUPPORTED;
     event_received();
   }

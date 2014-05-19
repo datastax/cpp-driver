@@ -41,6 +41,7 @@ class Writer {
       Writer* writer = new Writer(bufs, data, cb);
       int rc = uv_write(&writer->req_, handle, bufs->data(), bufs->size(), on_write);
       if(rc != 0) {
+        writer->status_ = FAILED;
         writer->cb_(writer);
         delete writer;
       }
