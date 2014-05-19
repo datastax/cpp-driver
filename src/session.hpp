@@ -63,9 +63,9 @@ struct Session {
   std::atomic<SessionState> state_;
   uv_thread_t                  thread_;
   uv_loop_t*                   loop_;
+  SSLContext*                  ssl_context_;
   uv_async_t                   async_connect_;
   std::vector<IOWorker*>       io_workers_;
-  SSLContext*                  ssl_context_;
   std::string                  keyspace_;
   SessionFuture*              connect_future_;
   std::set<Host>  hosts_;
@@ -78,18 +78,20 @@ struct Session {
   int current_io_worker_;
 
   Session() 
-    : loop_(uv_loop_new())
+    : state_(SESSION_STATE_NEW)
+    , loop_(uv_loop_new())
+    , ssl_context_(nullptr)
     , load_balancing_policy_(new RoundRobinPolicy())
     , pending_resolve_count_(0)
     , pending_connections_count_(0)
-    , current_io_worker_(0) {
-  }
+    , current_io_worker_(0) { }
 
   Session(const Session* session)
-    : loop_(uv_loop_new())
+    : state_(SESSION_STATE_NEW)
+    , loop_(uv_loop_new())
+    , ssl_context_(nullptr)
     , config_(session->config_)
-    , load_balancing_policy_(new RoundRobinPolicy()) {
-  }
+    , load_balancing_policy_(new RoundRobinPolicy()) { }
 
   int init() {
     async_connect_.data = this;

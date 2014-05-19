@@ -23,6 +23,7 @@
 #include <memory>
 #include <functional>
 #include <mutex>
+#include <condition_variable>
 #include <future>
 
 namespace cass {
@@ -74,41 +75,56 @@ class Future {
     };
 
     Future()
-      : future_(promise_.get_future()) { }
+      : is_set_(false) { }
 
     virtual ~Future() = default;
 
     bool ready() {
-      return future_.wait_for(std::chrono::microseconds(0)) == std::future_status::ready;
+      return wait_for(0);
     }
 
     void wait() {
-      future_.wait();
+      std::unique_lock<std::mutex> lock(mutex_);
+      while(!is_set_) {
+        cond_.wait(lock);
+      }
     }
 
     bool wait_for(size_t timeout) {
-      return future_.wait_for(std::chrono::microseconds(timeout)) == std::future_status::ready;
+      std::unique_lock<std::mutex> lock(mutex_);
+      if(!is_set_) {
+        cond_.wait_for(lock, std::chrono::microseconds(timeout));
+      }
+      return is_set_;
     }
 
-    ResultOrError& get() {
-      return *future_.get();
+    ResultOrError* get() {
+      std::unique_lock<std::mutex> lock(mutex_);
+      while(!is_set_) {
+        cond_.wait(lock);
+      }
+      return result_or_error_.get();
     }
 
     void set_error(const Error* error) {
+      std::unique_lock<std::mutex> lock(mutex_);
       result_or_error_.reset(new ResultOrError(error));
-      promise_.set_value(result_or_error_);
+      is_set_ = true;
+      cond_.notify_all();
     }
 
     void set_result(Future::Result* result = nullptr) {
+      std::unique_lock<std::mutex> lock(mutex_);
       result_or_error_.reset(new ResultOrError(result));
-      promise_.set_value(result_or_error_);
+      is_set_ = true;
+      cond_.notify_all();
     }
 
    private:
-     typedef std::unique_ptr<ResultOrError> ResultOrErrorPtr;
-     std::promise<ResultOrErrorPtr&> promise_;
-     std::shared_future<ResultOrErrorPtr&> future_;
-     ResultOrErrorPtr result_or_error_;
+     bool is_set_;
+     std::mutex mutex_;
+     std::condition_variable cond_;
+     std::unique_ptr<ResultOrError> result_or_error_;
 };
 
 } // namespace cass

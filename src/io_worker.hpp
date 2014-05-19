@@ -61,6 +61,7 @@ struct IOWorker {
   IOWorker(Session* session, const Config& config)
     : session_(session)
     , loop(uv_loop_new())
+    , ssl_context(nullptr)
     , config_(config)
     , request_queue_(config.queue_size_io())
     , event_queue_(config.queue_size_event()) {

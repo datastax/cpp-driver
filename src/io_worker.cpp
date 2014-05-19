@@ -50,7 +50,7 @@ void IOWorker::on_execute(uv_async_t* data, int status) {
 
   while (worker->request_queue_.dequeue(request)) {
     while(!request->hosts.empty()) {
-      const auto& host = request->hosts.front();
+      Host host = request->hosts.front();
       request->hosts.pop_front();
       auto it = worker->pools.find(host);
       if(it != worker->pools.end()) {
