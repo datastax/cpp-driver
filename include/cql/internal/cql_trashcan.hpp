@@ -27,7 +27,7 @@ namespace cql {
     public:
         cql_trashcan_t(
             boost::shared_ptr<boost::asio::io_service> timer_service,
-            boost::shared_ptr<cql_session_impl_t>      session) :
+            cql_session_impl_t& session) :
             _timer(*timer_service),
             _session(session)
         {}
@@ -60,7 +60,7 @@ namespace cql {
         boost::mutex                           _mutex;
         boost::asio::deadline_timer            _timer;
         connection_pool_t                      _trashcan;
-        boost::shared_ptr<cql_session_impl_t>  _session;
+        cql_session_impl_t&					  _session;
     };
 }
 
