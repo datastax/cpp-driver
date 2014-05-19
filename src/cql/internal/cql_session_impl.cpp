@@ -63,8 +63,7 @@ void
 cql::cql_session_impl_t::init(
     boost::shared_ptr<boost::asio::io_service> io_service)
 {
-    _trashcan = boost::shared_ptr<cql_trashcan_t>(
-        new cql_trashcan_t(io_service, this->shared_from_this()));
+    _trashcan.reset(new cql_trashcan_t(io_service, *this));
 
     boost::shared_ptr<cql_query_plan_t> query_plan = _configuration->policies()
         .load_balancing_policy()
@@ -689,10 +688,6 @@ cql::cql_session_impl_t::close()
         connections->clear();
 	}
     _connection_pool.clear();
-
-    if (_trashcan) {
-        _trashcan = boost::shared_ptr<cql_trashcan_t>();
-    }
 
     log(0, "size of session::_connection_poll is "
         + boost::lexical_cast<std::string>(_connection_pool.size()));
