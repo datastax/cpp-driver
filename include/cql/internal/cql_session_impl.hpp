@@ -377,7 +377,7 @@ private:
     cql_uuid_t                              _uuid;
     boost::shared_ptr<cql_configuration_t>  _configuration;
     connection_pool_t                       _connection_pool;
-    boost::shared_ptr<cql_trashcan_t>       _trashcan;
+    boost::scoped_ptr<cql_trashcan_t>       _trashcan;
     connections_counter_t                   _connection_counters;
     
     std::string                             _keyspace_name;
