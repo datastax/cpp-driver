@@ -19,7 +19,7 @@
 extern "C" {
 
 const char*
-cass_code_error_desc(cass_code_t code) {
+cass_code_error_desc(CassError code) {
   return ""; // TODO(mpenick)
 }
 

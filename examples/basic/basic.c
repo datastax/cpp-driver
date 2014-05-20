@@ -24,7 +24,7 @@
 
 #include "cassandra.h"
 
-struct basic_s {
+struct Basic_ {
   cass_bool_t bln;
   cass_float_t flt;
   cass_double_t dbl;
@@ -32,17 +32,17 @@ struct basic_s {
   cass_int64_t i64;
 };
 
-typedef struct basic_s basic_t;
+typedef struct Basic_ Basic;
 
 void print_error(const char* message, int err) {
   printf("%s: %s (%d)\n", message, cass_code_error_desc(err), err);
 }
 
-cass_code_t connect_session(const char* contact_points[], cass_session_t** output) {
-  cass_code_t rc = 0;
+CassError connect_session(const char* contact_points[], CassSession** output) {
+  CassError rc = 0;
   const char** cp = NULL;
-  cass_future_t* future = NULL;
-  cass_session_t* session = cass_session_new();
+  CassFuture* future = NULL;
+  CassSession* session = cass_session_new();
 
   *output = NULL;
 
@@ -68,10 +68,10 @@ cass_code_t connect_session(const char* contact_points[], cass_session_t** outpu
   return rc;
 }
 
-cass_code_t execute_query(cass_session_t* session, const char* query) {
-  cass_code_t rc = 0;
-  cass_future_t* future = NULL;
-  cass_statement_t* statement = cass_statement_new(query, strlen(query), 0, CASS_CONSISTENCY_ONE);
+CassError execute_query(CassSession* session, const char* query) {
+  CassError rc = 0;
+  CassFuture* future = NULL;
+  CassStatement* statement = cass_statement_new(query, strlen(query), 0, CASS_CONSISTENCY_ONE);
 
   cass_session_exec(session, statement, &future);
   cass_future_wait(future);
@@ -87,10 +87,10 @@ cass_code_t execute_query(cass_session_t* session, const char* query) {
   return rc;
 }
 
-cass_code_t insert_into_basic(cass_session_t* session, const char* key, const basic_t* basic) {
-  cass_code_t rc = 0;
-  cass_statement_t* statement = NULL;
-  cass_future_t* future = NULL;
+CassError insert_into_basic(CassSession* session, const char* key, const Basic* basic) {
+  CassError rc = 0;
+  CassStatement* statement = NULL;
+  CassFuture* future = NULL;
   const char* query = "INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);";
 
   statement = cass_statement_new(query, strlen(query), 6, CASS_CONSISTENCY_ONE);
@@ -117,10 +117,10 @@ cass_code_t insert_into_basic(cass_session_t* session, const char* key, const ba
   return rc;
 }
 
-cass_code_t select_from_basic(cass_session_t* session, const char* key, basic_t* basic) {
-  cass_code_t rc = 0;
-  cass_statement_t* statement = NULL;
-  cass_future_t* future = NULL;
+CassError select_from_basic(CassSession* session, const char* key, Basic* basic) {
+  CassError rc = 0;
+  CassStatement* statement = NULL;
+  CassFuture* future = NULL;
   const char* query = "SELECT * FROM examples.basic WHERE key = ?";
 
   statement = cass_statement_new(query, strlen(query), 1, CASS_CONSISTENCY_ONE);
@@ -135,12 +135,12 @@ cass_code_t select_from_basic(cass_session_t* session, const char* key, basic_t*
   if(rc != CASS_OK) {
     fprintf(stderr, "Error: %s\n", cass_future_error_string(future));
   } else {
-    const cass_result_t* result = cass_future_get_result(future);
-    cass_iterator_t* iterator = cass_iterator_from_result(result);
+    const CassResult* result = cass_future_get_result(future);
+    CassIterator* iterator = cass_iterator_from_result(result);
 
     if(cass_iterator_next(iterator)) {
-      const cass_value_t* value;
-      const cass_row_t* row = cass_iterator_get_row(iterator);
+      const CassValue* value;
+      const CassRow* row = cass_iterator_get_row(iterator);
 
       cass_row_get_column(row, 1, &value);
       cass_value_get_bool(value, &basic->bln);
@@ -170,11 +170,11 @@ cass_code_t select_from_basic(cass_session_t* session, const char* key, basic_t*
 
 int
 main() {
-  cass_code_t rc = 0;
-  cass_session_t* session = NULL;
-  const char* contact_points[] = { "127.0.0.1", NULL };
-  basic_t input = { cass_true, 0.001, 0.0002, 1, 2 };
-  basic_t output;
+  CassError rc = 0;
+  CassSession* session = NULL;
+  const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
+  Basic input = { cass_true, 0.001, 0.0002, 1, 2 };
+  Basic output;
 
 
   rc = connect_session(contact_points, &session);
@@ -184,7 +184,7 @@ main() {
 
   execute_query(session,
                 "CREATE KEYSPACE examples WITH replication = { \
-                           'class': 'SimpleStrategy', 'replication_factor': '1' };");
+                           'class': 'SimpleStrategy', 'replication_factor': '3' };");
 
   execute_query(session,
                 "CREATE TABLE examples.basic (key text, \
@@ -193,7 +193,7 @@ main() {
                                               i32 int, i64 bigint, \
                                               PRIMARY KEY (key));");
 
-
+/*
   insert_into_basic(session, "test", &input);
   select_from_basic(session, "test", &output);
 
@@ -202,6 +202,34 @@ main() {
   assert(input.dbl == output.dbl);
   assert(input.i32 == output.i32);
   assert(input.i64 == output.i64);
+  */
+
+{
+  int i;
+  for(i = 0; i < 10000; ++i) {
+    char key[17] = { 0 };
+    sprintf(key, "%x", i);
+    insert_into_basic(session, key, &input);
+  }
+
+  for(i = 0; i < 10000; ++i) {
+    int j;
+    printf("iteration: %d\n", i);
+    for(j = 0; j < 10000; ++j) {
+      char key[17] = { 0 };
+      sprintf(key, "%x", j);
+      if(j % 2000 == 0) {
+        printf("%s\n", key);
+      }
+      select_from_basic(session, key, &output);
+      assert(input.bln == output.bln);
+      assert(input.flt == output.flt);
+      assert(input.dbl == output.dbl);
+      assert(input.i32 == output.i32);
+      assert(input.i64 == output.i64);
+    }
+  }
+}
 
   cass_session_free(session);
 

@@ -28,11 +28,11 @@ void print_error(const char* message, int err) {
   printf("%s: %s (%d)\n", message, cass_code_error_desc(err), err);
 }
 
-cass_code_t connect_session(const char* contact_points[], cass_session_t** output) {
-  cass_code_t rc = 0;
+CassError connect_session(const char* contact_points[], CassSession** output) {
+  CassError rc = 0;
   const char** cp = NULL;
-  cass_future_t* future = NULL;
-  cass_session_t* session = cass_session_new();
+  CassFuture* future = NULL;
+  CassSession* session = cass_session_new();
 
   *output = NULL;
 
@@ -58,10 +58,10 @@ cass_code_t connect_session(const char* contact_points[], cass_session_t** outpu
   return rc;
 }
 
-cass_code_t execute_query(cass_session_t* session, const char* query) {
-  cass_code_t rc = 0;
-  cass_future_t* future = NULL;
-  cass_statement_t* statement = cass_statement_new(query, strlen(query), 0, CASS_CONSISTENCY_ONE);
+CassError execute_query(CassSession* session, const char* query) {
+  CassError rc = 0;
+  CassFuture* future = NULL;
+  CassStatement* statement = cass_statement_new(query, strlen(query), 0, CASS_CONSISTENCY_ONE);
 
   cass_session_exec(session, statement, &future);
   cass_future_wait(future);
@@ -77,11 +77,11 @@ cass_code_t execute_query(cass_session_t* session, const char* query) {
   return rc;
 }
 
-cass_code_t insert_into_collections(cass_session_t* session, const char* key, const char* items[]) {
-  cass_code_t rc = 0;
-  cass_statement_t* statement = NULL;
-  cass_future_t* future = NULL;
-  cass_collection_t* collection = NULL;
+CassError insert_into_collections(CassSession* session, const char* key, const char* items[]) {
+  CassError rc = 0;
+  CassStatement* statement = NULL;
+  CassFuture* future = NULL;
+  CassCollection* collection = NULL;
   const char** item = NULL;
   const char* query = "INSERT INTO examples.collections (key, items) VALUES (?, ?);";
 
@@ -111,10 +111,10 @@ cass_code_t insert_into_collections(cass_session_t* session, const char* key, co
   return rc;
 }
 
-cass_code_t select_from_collections(cass_session_t* session, const char* key) {
-  cass_code_t rc = 0;
-  cass_statement_t* statement = NULL;
-  cass_future_t* future = NULL;
+CassError select_from_collections(CassSession* session, const char* key) {
+  CassError rc = 0;
+  CassStatement* statement = NULL;
+  CassFuture* future = NULL;
   const char* query = "SELECT items FROM examples.collections WHERE key = ?";
 
   statement = cass_statement_new(query, strlen(query), 1, CASS_CONSISTENCY_ONE);
@@ -129,18 +129,18 @@ cass_code_t select_from_collections(cass_session_t* session, const char* key) {
   if(rc != CASS_OK) {
     fprintf(stderr, "Error: %s\n", cass_future_error_string(future));
   } else {
-    const cass_result_t* result = cass_future_get_result(future);
-    cass_iterator_t* iterator = cass_iterator_from_result(result);
+    const CassResult* result = cass_future_get_result(future);
+    CassIterator* iterator = cass_iterator_from_result(result);
 
     if(cass_iterator_next(iterator)) {
-      const cass_value_t* value = NULL;
-      const cass_row_t* row = cass_iterator_get_row(iterator);
-      cass_iterator_t* items_iterator = NULL;
+      const CassValue* value = NULL;
+      const CassRow* row = cass_iterator_get_row(iterator);
+      CassIterator* items_iterator = NULL;
 
       cass_row_get_column(row, 0, &value);
       items_iterator = cass_iterator_from_collection(value);
       while(cass_iterator_next(items_iterator)) {
-        const cass_value_t* item_value = cass_iterator_get_value(items_iterator);
+        const CassValue* item_value = cass_iterator_get_value(items_iterator);
         cass_size_t copied;
         char item_buffer[256];
         cass_value_get_string(item_value, item_buffer, sizeof(item_buffer), &copied);
@@ -162,8 +162,8 @@ cass_code_t select_from_collections(cass_session_t* session, const char* key) {
 
 int
 main() {
-  cass_code_t rc = 0;
-  cass_session_t* session = NULL;
+  CassError rc = 0;
+  CassSession* session = NULL;
   const char* contact_points[] = { "127.0.0.1", NULL };
   const char* items[] = { "apple", "orange", "banana", "mango", NULL };
 

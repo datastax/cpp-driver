@@ -49,7 +49,7 @@ struct ResultIterator : Iterator {
       buffer        = decode_int(buffer, size);
 
       const Result::ColumnMetaData& metadata = result->column_metadata[i];
-      cass_value_type_t type = static_cast<cass_value_type_t>(metadata.type);
+      CassValueType type = static_cast<CassValueType>(metadata.type);
 
       if(type == CASS_VALUE_TYPE_MAP ||
          type == CASS_VALUE_TYPE_LIST ||
@@ -57,8 +57,8 @@ struct ResultIterator : Iterator {
         uint16_t count = 0;
         Value value(type, decode_short(buffer, count), size - sizeof(uint16_t));
         value.count = count;
-        value.primary_type = static_cast<cass_value_type_t>(metadata.collection_primary_type);
-        value.secondary_type = static_cast<cass_value_type_t>(metadata.collection_secondary_type);
+        value.primary_type = static_cast<CassValueType>(metadata.collection_primary_type);
+        value.secondary_type = static_cast<CassValueType>(metadata.collection_secondary_type);
         output.push_back(value);
       } else {
         output.push_back(Value(type, buffer, size));

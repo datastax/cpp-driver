@@ -29,8 +29,8 @@ struct Error {
   }
 
   Error(
-      cass_source_t         source,
-      cass_code_t           code,
+      CassErrorSource         source,
+      CassError           code,
       const std::string& message,
       const std::string& file,
       int                line) :
@@ -41,8 +41,8 @@ struct Error {
       line(line)
   {}
 
-  cass_source_t  source;
-  cass_code_t    code;
+  CassErrorSource  source;
+  CassError    code;
   std::string message;
   std::string file;
   int         line;

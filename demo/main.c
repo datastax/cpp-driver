@@ -30,8 +30,8 @@ void print_error(const char* message, int err) {
 
 int
 main() {
-  cass_session_t* session = cass_session_new();
-  cass_future_t* session_future = NULL;
+  CassSession* session = cass_session_new();
+  CassFuture* session_future = NULL;
   /*CassFuture* shutdown_future = NULL;*/
   int err;
 
@@ -51,10 +51,10 @@ main() {
   {
     const char* query = "SELECT * FROM system.local WHERE key = ?";
     const char* key = "local";
-    cass_statement_t* statement = NULL;
-    cass_future_t* result_future = NULL;
-    const cass_result_t* result = NULL;
-    cass_iterator_t* iterator = NULL;
+    CassStatement* statement = NULL;
+    CassFuture* result_future = NULL;
+    const CassResult* result = NULL;
+    CassIterator* iterator = NULL;
 
     statement = cass_statement_new(query, strlen(query), 1, CASS_CONSISTENCY_ONE);
     cass_statement_bind_string(statement, 0, key, strlen(key));
@@ -67,10 +67,10 @@ main() {
     iterator = cass_iterator_from_result(result);
 
     while(cass_iterator_next(iterator)) {
-      cass_iterator_t* tokens_iterator = NULL;
-      const cass_row_t* row = cass_iterator_get_row(iterator);
-      const cass_value_t* key_value = NULL;
-      const cass_value_t* tokens_value = NULL;
+      CassIterator* tokens_iterator = NULL;
+      const CassRow* row = cass_iterator_get_row(iterator);
+      const CassValue* key_value = NULL;
+      const CassValue* tokens_value = NULL;
 
       cass_size_t copied;
       char key_buffer[256];
@@ -82,7 +82,7 @@ main() {
       cass_row_get_column(row, 13, &tokens_value);
       tokens_iterator = cass_iterator_from_collection(tokens_value);
       while(cass_iterator_next(tokens_iterator)) {
-        const cass_value_t* token_value = cass_iterator_get_value(tokens_iterator);
+        const CassValue* token_value = cass_iterator_get_value(tokens_iterator);
         cass_size_t copied;
         char token_buffer[256];
         cass_value_get_string(token_value, token_buffer, sizeof(token_buffer), &copied);

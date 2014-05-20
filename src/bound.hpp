@@ -43,7 +43,7 @@ struct Bound : public Statement {
 
  public:
   Bound(const Prepared& prepared,
-                 size_t value_count, cass_consistency_t consistency)
+                 size_t value_count, CassConsistency consistency)
     : Statement(CQL_OPCODE_EXECUTE, value_count)
     , id(prepared.id)
     , consistency_value(consistency)
@@ -51,7 +51,7 @@ struct Bound : public Statement {
     , serial_consistency_value(CASS_CONSISTENCY_ANY) { }
 
   Bound(const  std::string& id,
-                 size_t value_count, cass_consistency_t consistency)
+                 size_t value_count, CassConsistency consistency)
     : Statement(CQL_OPCODE_EXECUTE, value_count)
     , id(id)
     , consistency_value(consistency)

@@ -209,24 +209,6 @@ struct Message {
   }
 };
 
-class Timer;
-struct RequestFuture : public Future {
-    RequestFuture(Message* message)
-      : message(message)
-      , timer(nullptr) { }
-
-    ~RequestFuture() {
-      message->body.release(); // This memory doesn't belong to us
-      delete message;
-    }
-
-    Message* message;
-    Timer* timer;
-    std::list<Host> hosts;
-    std::list<Host> hosts_attempted;
-    std::string statement;
-};
-
 } // namespace cass
 
 #endif

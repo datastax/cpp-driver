@@ -39,16 +39,16 @@ struct External : public In {
 
 extern "C" {
 
-struct cass_session_s : public External<cass::Session, cass_session_t> { };
-struct cass_statement_s : public External<cass::Statement, cass_statement_t> { };
-struct cass_future_s : public External<cass::Future, cass_future_t> { };
-struct cass_prepared_s : public External<cass::Prepared, cass_prepared_t> { };
-struct cass_batch_s : public External<cass::Batch, cass_batch_t> { };
-struct cass_result_s : public External<cass::Result, cass_result_t> { };
-struct cass_collection_s : public External<cass::Collection, cass_collection_t> { };
-struct cass_iterator_s : public External<cass::Iterator, cass_iterator_t> { };
-struct cass_row_s : public External<cass::Row, cass_row_t> { };
-struct cass_value_s : public External<cass::Value, cass_value_t> { };
+struct CassSession_ : public External<cass::Session, CassSession> { };
+struct CassStatement_ : public External<cass::Statement, CassStatement> { };
+struct CassFuture_ : public External<cass::Future, CassFuture> { };
+struct CassPrepared_ : public External<cass::Prepared, CassPrepared> { };
+struct CassBatch_ : public External<cass::Batch, CassBatch> { };
+struct CassResult_ : public External<cass::Result, CassResult> { };
+struct CassCollection_ : public External<cass::Collection, CassCollection> { };
+struct CassIterator_ : public External<cass::Iterator, CassIterator> { };
+struct CassRow_ : public External<cass::Row, CassRow> { };
+struct CassValue_ : public External<cass::Value, CassValue> { };
 
 }
 

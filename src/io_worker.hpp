@@ -24,8 +24,8 @@
 #include "config.hpp"
 #include "host.hpp"
 #include "ssl_context.hpp"
-#include "request.hpp"
 #include "spsc_queue.hpp"
+#include "request_future.hpp"
 
 namespace cass {
 
@@ -33,96 +33,107 @@ class Pool;
 struct Session;
 
 struct IOWorker {
-  typedef std::shared_ptr<Pool>  PoolPtr;
-  typedef std::unordered_map<Host, PoolPtr> PoolCollection;
+    typedef std::shared_ptr<Pool>  PoolPtr;
+    typedef std::unordered_map<Host, PoolPtr> PoolCollection;
 
-  struct Payload {
-    enum Type {
-      ADD_POOL,
-      REMOVE_POOL,
+    struct ReconnectRequest {
+        ReconnectRequest(IOWorker* io_worker, Host host)
+          : io_worker(io_worker)
+          , host(host) { }
+
+        IOWorker* io_worker;
+        Host host;
     };
-    Type type;
-    Host host;
-    size_t core_connections_per_host;
-    size_t max_connections_per_host;
-  };
 
-  Session*session_;
-  uv_thread_t thread;
-  uv_loop_t* loop;
-  SSLContext* ssl_context;
-  PoolCollection pools;
+    struct Payload {
+        enum Type {
+          ADD_POOL,
+          REMOVE_POOL,
+        };
+        Type type;
+        Host host;
+    };
 
-  const Config& config_;
-  AsyncQueue<SPSCQueue<RequestFuture*>> request_future_queue_;
-  AsyncQueue<SPSCQueue<Payload>> event_queue_;
+    Session* session_;
+    uv_thread_t thread;
+    uv_loop_t* loop;
+    SSLContext* ssl_context;
+    PoolCollection pools;
+    bool is_shutdown_;
 
-  explicit
-  IOWorker(Session* session, const Config& config)
-    : session_(session)
-    , loop(uv_loop_new())
-    , ssl_context(nullptr)
-    , config_(config)
-    , request_future_queue_(config.queue_size_io())
-    , event_queue_(config.queue_size_event()) { }
+    const Config& config_;
+    AsyncQueue<SPSCQueue<RequestFuture*>> request_future_queue_;
+    AsyncQueue<SPSCQueue<Payload>> event_queue_;
 
-  int init() {
-    int rc = request_future_queue_.init(loop, this, &IOWorker::on_execute);
-    if(rc != 0) {
-      return rc;
+    explicit
+    IOWorker(Session* session, const Config& config)
+      : session_(session)
+      , loop(uv_loop_new())
+      , ssl_context(nullptr)
+      , is_shutdown_(false)
+      , config_(config)
+      , request_future_queue_(config.queue_size_io())
+      , event_queue_(config.queue_size_event()) { }
+
+    int init() {
+      int rc = request_future_queue_.init(loop, this, &IOWorker::on_execute);
+      if(rc != 0) {
+        return rc;
+      }
+      return event_queue_.init(loop, this, &IOWorker::on_event);
     }
-    return event_queue_.init(loop, this, &IOWorker::on_event);
-  }
 
-  void add_pool_q(const Host& host) {
-    Payload payload;
-    payload.type = Payload::ADD_POOL;
-    payload.host = host;
-    payload.core_connections_per_host = config_.core_connections_per_host();
-    payload.max_connections_per_host = config_.max_connections_per_host();
-    event_queue_.enqueue(payload);
-  }
+    void add_pool_q(const Host& host) {
+      Payload payload;
+      payload.type = Payload::ADD_POOL;
+      payload.host = host;
+      event_queue_.enqueue(payload);
+    }
 
-  void remove_pool_q(const Host& host) {
-    Payload payload;
-    payload.type = Payload::REMOVE_POOL;
-    payload.host = host;
-  }
+    void add_pool(Host host);
 
-  bool execute(RequestFuture* request_future) {
-    return request_future_queue_.enqueue(request_future);
-  }
+    void remove_pool_q(const Host& host) {
+      Payload payload;
+      payload.type = Payload::REMOVE_POOL;
+      payload.host = host;
+    }
 
-  void try_next_host(RequestFuture* request_future);
+    bool execute(RequestFuture* request_future) {
+      return request_future_queue_.enqueue(request_future);
+    }
 
-  static void on_execute(uv_async_t* data, int status);
-  static void on_event(uv_async_t* async, int status);
+    void try_next_host(RequestFuture* request_future);
 
-  static void
-  run(
-      void* data) {
-    IOWorker* worker = reinterpret_cast<IOWorker*>(data);
-    uv_run(worker->loop, UV_RUN_DEFAULT);
-  }
+    void on_close(Host host);
+    static void on_reconnect(Timer* timer);
+    static void on_execute(uv_async_t* data, int status);
+    static void on_event(uv_async_t* async, int status);
 
-  void
-  run() {
-    uv_thread_create(&thread, &IOWorker::run, this);
-  }
+    static void
+    run(
+        void* data) {
+      IOWorker* worker = reinterpret_cast<IOWorker*>(data);
+      uv_run(worker->loop, UV_RUN_DEFAULT);
+    }
 
-  void
-  stop() {
-    uv_stop(loop);
-  }
+    void
+    run() {
+      uv_thread_create(&thread, &IOWorker::run, this);
+    }
 
-  void
-  join() {
-    uv_thread_join(&thread);
-  }
+    void
+    stop() {
+      uv_stop(loop);
+    }
 
-  ~IOWorker() {
-    uv_loop_delete(loop);
-  }
+    void
+    join() {
+      uv_thread_join(&thread);
+    }
+
+    ~IOWorker() {
+      uv_loop_delete(loop);
+    }
 };
 
 } // namespace cass

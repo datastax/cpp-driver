@@ -19,8 +19,8 @@
 
 extern "C" {
 
-cass_code_t
-cass_value_get_int32(const cass_value_t* value,
+CassError
+cass_value_get_int32(const CassValue* value,
                    cass_int32_t* output) {
   if(value->type != CASS_VALUE_TYPE_INT) {
     return CASS_ERROR_LIB_BAD_PARAMS;
@@ -29,8 +29,8 @@ cass_value_get_int32(const cass_value_t* value,
   return CASS_OK;
 }
 
-cass_code_t
-cass_value_get_int64(const cass_value_t* value,
+CassError
+cass_value_get_int64(const CassValue* value,
                       cass_int64_t* output) {
   if(value->type != CASS_VALUE_TYPE_BIGINT &&
      value->type != CASS_VALUE_TYPE_COUNTER &&
@@ -41,8 +41,8 @@ cass_value_get_int64(const cass_value_t* value,
   return CASS_OK;
 }
 
-cass_code_t
-cass_value_get_float(const cass_value_t* value,
+CassError
+cass_value_get_float(const CassValue* value,
                      cass_float_t* output) {
   if(value->type != CASS_VALUE_TYPE_FLOAT) {
     return CASS_ERROR_LIB_BAD_PARAMS;
@@ -51,8 +51,8 @@ cass_value_get_float(const cass_value_t* value,
   return CASS_OK;
 }
 
-cass_code_t
-cass_value_get_double(const cass_value_t* value,
+CassError
+cass_value_get_double(const CassValue* value,
                       cass_double_t* output) {
   if(value->type != CASS_VALUE_TYPE_DOUBLE) {
     return CASS_ERROR_LIB_BAD_PARAMS;
@@ -61,8 +61,8 @@ cass_value_get_double(const cass_value_t* value,
   return CASS_OK;
 }
 
-cass_code_t
-cass_value_get_bool(const cass_value_t* value,
+CassError
+cass_value_get_bool(const CassValue* value,
                     cass_bool_t* output) {
   uint8_t byte;
   cass::decode_byte(value->buffer.data(), byte);
@@ -70,18 +70,18 @@ cass_value_get_bool(const cass_value_t* value,
   return CASS_OK;
 }
 
-cass_code_t
-cass_value_get_uuid(const cass_value_t* value,
-                    cass_uuid_t output) {
+CassError
+cass_value_get_uuid(const CassValue* value,
+                    CassUuid output) {
   if(value->type != CASS_VALUE_TYPE_UUID) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  memcpy(output, value->buffer.data(), sizeof(cass_uuid_t));
+  memcpy(output, value->buffer.data(), sizeof(CassUuid));
   return CASS_OK;
 }
 
-cass_code_t
-cass_value_get_string(const cass_value_t* value,
+CassError
+cass_value_get_string(const CassValue* value,
                       char* output,
                       size_t output_len,
                       cass_size_t* copied) {
@@ -98,8 +98,8 @@ cass_value_get_string(const cass_value_t* value,
   return CASS_OK;
 }
 
-cass_code_t
-cass_value_get_bytes(const cass_value_t* value,
+CassError
+cass_value_get_bytes(const CassValue* value,
                     cass_byte_t* output,
                     cass_size_t output_len,
                     cass_size_t* copied) {
@@ -116,8 +116,8 @@ cass_value_get_bytes(const cass_value_t* value,
   return CASS_OK;
 }
 
-cass_code_t
-cass_value_get_decimal(const cass_value_t* value,
+CassError
+cass_value_get_decimal(const CassValue* value,
                        cass_uint32_t* scale,
                        cass_byte_t* output, cass_size_t output_length,
                        cass_size_t* copied) {
@@ -125,41 +125,41 @@ cass_value_get_decimal(const cass_value_t* value,
 }
 
 const cass_byte_t*
-cass_value_get_data(const cass_value_t* value) {
+cass_value_get_data(const CassValue* value) {
   return reinterpret_cast<const cass_byte_t*>(value->buffer.data());
 }
 
 cass_size_t
-cass_value_get_size(const cass_value_t* value) {
+cass_value_get_size(const CassValue* value) {
   return value->buffer.size();
 }
 
 
-cass_value_type_t
-cass_value_type(const cass_value_t* value) {
+CassValueType
+cass_value_type(const CassValue* value) {
   return value->type;
 }
 
 cass_bool_t
-cass_value_is_collection(const cass_value_t* value) {
-  cass_value_type_t type = value->type;
+cass_value_is_collection(const CassValue* value) {
+  CassValueType type = value->type;
   return type == CASS_VALUE_TYPE_LIST ||
          type == CASS_VALUE_TYPE_MAP ||
          type == CASS_VALUE_TYPE_SET;
 }
 
 cass_size_t
-cass_value_item_count(const cass_value_t* collection) {
+cass_value_item_count(const CassValue* collection) {
   return collection->count;
 }
 
-cass_value_type_t
-cass_value_primary_sub_type(const cass_value_t* collection) {
+CassValueType
+cass_value_primary_sub_type(const CassValue* collection) {
   return collection->primary_type;
 }
 
-cass_value_type_t
-cass_value_secondary_sub_type(const cass_value_t* collection) {
+CassValueType
+cass_value_secondary_sub_type(const CassValue* collection) {
   return collection->secondary_type;
 }
 

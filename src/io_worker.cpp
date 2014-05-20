@@ -50,23 +50,52 @@ void IOWorker::try_next_host(RequestFuture* request_future) {
   }
 }
 
+void IOWorker::add_pool(Host host) {
+  if(pools.count(host) == 0) {
+    size_t core_connections_per_host = config_.core_connections_per_host();
+    size_t max_connections_per_host = config_.max_connections_per_host();
+    pools.insert(
+          std::make_pair(
+            host,
+            PoolPtr(
+              new Pool(
+                this,
+                host,
+                std::bind(&IOWorker::on_close, this, std::placeholders::_1),
+                core_connections_per_host,
+                max_connections_per_host))));
+  }
+}
+
+void IOWorker::on_close(Host host) {
+  printf("closing host %s\n", host.address.to_string().c_str());
+  pools.erase(host);
+  if(!is_shutdown_) {
+    ReconnectRequest* reconnect_request = new ReconnectRequest(this, host);
+    Timer::start(loop,
+                 config_.reconnect_wait(),
+                 reconnect_request,
+                 IOWorker::on_reconnect);
+  }
+}
+
+void IOWorker::on_reconnect(Timer* timer) {
+  ReconnectRequest* reconnect_request = static_cast<ReconnectRequest*>(timer->data());
+  IOWorker* io_worker = reconnect_request->io_worker;
+  if(!io_worker->is_shutdown_) {
+    printf("reconnecting to host %s\n", reconnect_request->host.address.to_string().c_str());
+    io_worker->add_pool(reconnect_request->host);
+  }
+  delete reconnect_request;
+}
+
 void IOWorker::on_event(uv_async_t *async, int status) {
   IOWorker* io_worker  = reinterpret_cast<IOWorker*>(async->data);
 
   Payload payload;
   while(io_worker->event_queue_.dequeue(payload)) {
     if(payload.type == Payload::ADD_POOL) {
-      if(io_worker->pools.count(payload.host) == 0) {
-        io_worker->pools.insert(
-            std::make_pair(
-                payload.host,
-                PoolPtr(
-                    new Pool(
-                        io_worker,
-                        payload.host,
-                        payload.core_connections_per_host,
-                        payload.max_connections_per_host))));
-      }
+      io_worker->add_pool(payload.host);
     } else if(payload.type == Payload::REMOVE_POOL) {
       // TODO(mpenick):
     }

@@ -20,9 +20,9 @@
 #include <list>
 #include <string>
 #include <algorithm>
+#include <functional>
 
 #include "client_connection.hpp"
-#include "request.hpp"
 #include "session.hpp"
 #include "timer.hpp"
 
@@ -30,6 +30,7 @@ namespace cass {
 
 class Pool {
   typedef std::list<ClientConnection*> ConnectionCollection;
+  typedef std::function<void(Host host)> CloseCallback;
 
   IOWorker* io_worker_;
   Host                    host_;
@@ -41,10 +42,13 @@ class Pool {
   std::list<RequestFuture*> pending_request_queue_;
   size_t                  max_pending_requests_;
   uint64_t                connection_timeout_;
+  bool is_closing_;
+  CloseCallback close_callback_;
 
  public:
   Pool(IOWorker* io_worker,
       const Host& host,
+      CloseCallback close_callback,
       size_t         core_connections_per_host,
       size_t         max_connections_per_host,
       size_t         max_simultaneous_creation = 1) :
@@ -54,35 +58,11 @@ class Pool {
       max_connections_per_host_(max_connections_per_host),
       max_simultaneous_creation_(max_simultaneous_creation),
       max_pending_requests_(128 * max_connections_per_host),
-      connection_timeout_(1000) {
+      connection_timeout_(1000),
+      is_closing_(false),
+      close_callback_(close_callback) {
     for (size_t i = 0; i < core_connections_per_host_; ++i) {
       spawn_connection();
-    }
-  }
-
-  void on_connect(
-      ClientConnection* connection,
-      Error* error) {
-
-    io_worker_->session_->notify_connect_q(host_);
-    connections_pending_.remove(connection);
-
-    if (error) {
-      delete error;
-    } else {
-      connections_.push_back(connection);
-      execute_pending_request(connection);
-    }
-  }
-
-  void on_close(ClientConnection* connection) {
-    connections_.remove(connection);
-    delete connection;
-  }
-
-  void on_request_finished(ClientConnection* connection, Message* message) {
-    if(connection->is_ready()) {
-      execute_pending_request(connection);
     }
   }
 
@@ -92,10 +72,52 @@ class Pool {
     }
   }
 
+  void on_connect(ClientConnection* connection) {
+    io_worker_->session_->notify_connect_q(host_);
+    connections_pending_.remove(connection);
+
+    if(connection->is_ready()) {
+      connections_.push_back(connection);
+      execute_pending_request(connection);
+    }
+  }
+
+  void maybe_close() {
+    if(is_closing_) {
+      for(auto c : connections_) {
+        if(!c->is_disconnecting()) {
+          c->close();
+        }
+      }
+      if(connections_.empty() &&
+         connections_pending_.empty() &&
+         pending_request_queue_.empty()) {
+        close_callback_(host_);
+      }
+    }
+  }
+
+  void on_close(ClientConnection* connection) {
+    connections_.remove(connection);
+    delete connection;
+
+    if(connection->is_defunct()) {
+      is_closing_ = true; // TODO(mpenick): Conviction policy
+    }
+
+    maybe_close();
+  }
+
+  void on_request_finished(ClientConnection* connection, Message* message) {
+    if(connection->is_ready()) {
+      execute_pending_request(connection);
+    }
+  }
+
   void
   shutdown() {
     for (auto c : connections_) {
-      c->shutdown();
+      c->close();
     }
   }
 
@@ -111,9 +133,9 @@ class Pool {
         io_worker_->ssl_context ? io_worker_->ssl_context->session_new() : NULL,
         host_,
         std::bind(&Pool::on_connect, this,
-                  std::placeholders::_1, std::placeholders::_2),
+                  std::placeholders::_1),
         std::bind(&Pool::on_close, this,
-          std::placeholders::_1));
+                  std::placeholders::_1));
 
     connection->connect();
 
@@ -155,6 +177,10 @@ class Pool {
   }
 
   ClientConnection* borrow_connection() {
+    if(is_closing_) {
+      return nullptr;
+    }
+
     if(connections_.empty()) {
       for (size_t i = 0; i < core_connections_per_host_; ++i) {
         spawn_connection();
@@ -178,10 +204,11 @@ class Pool {
     RequestFuture* request_future = static_cast<RequestFuture*>(timer->data());
     pending_request_queue_.remove(request_future);
     io_worker_->try_next_host(request_future);
+    maybe_close();
   }
 
   bool wait_for_connection(RequestFuture* request_future) {
-    if(pending_request_queue_.size() + 1 > max_pending_requests_) {
+    if(is_closing_ || pending_request_queue_.size() + 1 > max_pending_requests_) {
       return false;
     }
     request_future->timer = Timer::start(io_worker_->loop, connection_timeout_,

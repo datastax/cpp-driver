@@ -26,7 +26,7 @@
 #include "stream_manager.hpp"
 #include "connecter.hpp"
 #include "writer.hpp"
-
+#include "timer.hpp"
 
 namespace cass {
 
@@ -80,7 +80,7 @@ class ClientConnection {
         State state;
     };
 
-    typedef std::function<void(ClientConnection*, Error*)> ConnectCallback;
+    typedef std::function<void(ClientConnection*)> ConnectCallback;
     typedef std::function<void(ClientConnection*)> CloseCallback;
 
   public:
@@ -90,7 +90,6 @@ class ClientConnection {
       CLIENT_STATE_HANDSHAKE,
       CLIENT_STATE_SUPPORTED,
       CLIENT_STATE_READY,
-      CLIENT_STATE_DEFUNCT,
       CLIENT_STATE_DISCONNECTING,
       CLIENT_STATE_DISCONNECTED
     };
@@ -113,6 +112,7 @@ class ClientConnection {
                      ConnectCallback connect_callback,
                      CloseCallback close_callback)
       : state_(CLIENT_STATE_NEW)
+      , is_defunct_(false)
       , request_count_(0)
       , loop_(loop)
       , incoming_(new Message())
@@ -192,17 +192,15 @@ class ClientConnection {
     }
 
     void close() {
-      uv_read_stop(reinterpret_cast<uv_stream_t*>(&socket_));
-      uv_close(reinterpret_cast<uv_handle_t*>(&socket_), on_close);
-    }
-
-    void shutdown() {
       state_ = CLIENT_STATE_DISCONNECTING;
     }
 
     void defunct() {
-      state_ = CLIENT_STATE_DEFUNCT;
-      maybe_close();
+      if(!is_defunct_) {
+        is_defunct_ = true;
+        close();
+        maybe_close();
+      }
     }
 
     bool is_disconnecting() {
@@ -210,7 +208,7 @@ class ClientConnection {
     }
 
     bool is_defunct() {
-      return state_ == CLIENT_STATE_DEFUNCT;
+      return is_defunct_;
     }
 
     bool is_ready() {
@@ -218,8 +216,9 @@ class ClientConnection {
     }
 
     void maybe_close() {
-      if((is_disconnecting() || is_defunct()) && outstanding_request_count() == 0) {
-        close();
+      if(is_disconnecting() && outstanding_request_count() <= 0) {
+        uv_read_stop(reinterpret_cast<uv_stream_t*>(&socket_));
+        uv_close(reinterpret_cast<uv_handle_t*>(&socket_), on_close);
       }
     }
 
@@ -266,8 +265,6 @@ class ClientConnection {
           notify_ready();
           break;
         case CLIENT_STATE_DISCONNECTED:
-          break;
-        case CLIENT_STATE_DEFUNCT:
           break;
         default:
           assert(false);
@@ -356,6 +353,7 @@ class ClientConnection {
                   uv_err_name(uv_last_error(connection->loop_)));
         }
         connection->defunct();
+        free_buffer(buf);
         return;
       }
 
@@ -435,9 +433,7 @@ class ClientConnection {
         connection->state_ = CLIENT_STATE_CONNECTED;
         connection->event_received();
       } else {
-        connection->notify_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
-                                            CASS_ERROR_LIB_BAD_PARAMS,
-                                            "Unable to connect"));
+        connection->notify_error("Unable to connect");
         connection->defunct();
       }
     }
@@ -445,9 +441,7 @@ class ClientConnection {
     static void on_connect_timeout(Timer* timer) {
       ClientConnection* connection
           = reinterpret_cast<ClientConnection*>(timer->data());
-      connection->notify_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
-                                          CASS_ERROR_LIB_BAD_PARAMS,
-                                          "Connection timeout"));
+      connection->notify_error("Connection timeout");
       connection->connect_timer_ = nullptr;
       connection->defunct();
     }
@@ -494,15 +488,9 @@ class ClientConnection {
       BodyError* error = static_cast<BodyError*>(response->body.get());
 
       if (state_ < CLIENT_STATE_READY) {
-        notify_error(
-              new Error(
-                CASS_ERROR_SOURCE_SERVER,
-                CASS_OK, // TODO(mpenick): Need valid error
-                error->message,
-                __FILE__,
-                __LINE__));
+        notify_error(error->message);
       } else if(request->future != nullptr) {
-        request->future->set_error(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, (cass_code_t)error->code, error->message));
+        request->future->set_error(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, (CassError)error->code, error->message));
       }
     }
 
@@ -533,12 +521,12 @@ class ClientConnection {
 
     void notify_ready() {
       log(CASS_LOG_DEBUG, "notify_ready");
-      connect_callback_(this, nullptr);
+      connect_callback_(this);
     }
 
-    void notify_error(Error* err) {
+    void notify_error(const std::string& error) {
       log(CASS_LOG_DEBUG, "notify_error");
-      connect_callback_(this, err);
+      connect_callback_(this);
     }
 
     void send_options() {
@@ -603,9 +591,7 @@ class ClientConnection {
           assert(false);
         }
       } else {
-        connection->notify_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
-                                            CASS_ERROR_LIB_BAD_PARAMS,
-                                            "Timed out during handshake"));
+        connection->notify_error("Timed out during handshake");
         connection->defunct();
       }
 
@@ -619,6 +605,7 @@ class ClientConnection {
 
   private:
     ClientConnectionState       state_;
+    bool is_defunct_;
     int request_count_;
 
     uv_loop_t*                  loop_;

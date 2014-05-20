@@ -19,16 +19,16 @@
 
 extern "C" {
 
-cass_code_t
+CassError
 cass_row_get_column(
-    const cass_row_t* row,
-    size_t index,
-    const cass_value_t** value) {
+    const CassRow* row,
+    cass_size_t index,
+    const CassValue** value) {
   const cass::Row* internal_row = row->from();
   if(index >= internal_row->size()) {
     return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
   }
-  *value = cass_value_t::to(&(*internal_row)[index]);
+  *value = CassValue::to(&(*internal_row)[index]);
   return CASS_OK;
 }
 

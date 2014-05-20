@@ -37,7 +37,7 @@ class CollectionIterator : public Iterator {
       uint16_t size;
       char* buffer = decode_short(position, size);
 
-      cass_value_type_t type;
+      CassValueType type;
       if(collection_->type == CASS_VALUE_TYPE_MAP) {
         type = (index_ % 2 == 0) ? collection_->primary_type : collection_->secondary_type;
       } else {

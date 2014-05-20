@@ -21,13 +21,13 @@ extern "C" {
 
 void
 cass_result_free(
-    const cass_result_t* result) {
+    const CassResult* result) {
   delete result->from();
 }
 
 size_t
 cass_result_row_count(
-    const cass_result_t* result) {
+    const CassResult* result) {
   if(result->kind == CASS_RESULT_KIND_ROWS) {
     return result->row_count;
   }
@@ -36,20 +36,20 @@ cass_result_row_count(
 
 size_t
 cass_result_column_count(
-    const cass_result_t* result) {
+    const CassResult* result) {
   if(result->kind == CASS_RESULT_KIND_ROWS) {
     return result->column_count;
   }
   return 0;
 }
 
-cass_code_t
+CassError
 cass_result_column_type(
-    const cass_result_t*     result,
+    const CassResult*     result,
     size_t         index,
-    cass_value_type_t* coltype) {
+    CassValueType* coltype) {
   if(result->kind == CASS_RESULT_KIND_ROWS) {
-    *coltype = static_cast<cass_value_type_t>(result->column_metadata[index].type);
+    *coltype = static_cast<CassValueType>(result->column_metadata[index].type);
     return CASS_OK;
   }
   return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes

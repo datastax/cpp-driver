@@ -17,6 +17,8 @@
 #ifndef __CASS_VALUE_HPP_INCLUDED__
 #define __CASS_VALUE_HPP_INCLUDED__
 
+#include "cassandra.h"
+
 #include "buffer_piece.hpp"
 
 namespace cass {
@@ -28,16 +30,16 @@ struct Value {
       , secondary_type(CASS_VALUE_TYPE_UNKNOWN)
       , count(0) { }
 
-    Value(cass_value_type_t type, char* data, size_t size)
+    Value(CassValueType type, char* data, size_t size)
       : type(type)
       , primary_type(CASS_VALUE_TYPE_UNKNOWN)
       , secondary_type(CASS_VALUE_TYPE_UNKNOWN)
       , count(0)
       , buffer(data, size) { }
 
-    cass_value_type_t type;
-    cass_value_type_t primary_type;
-    cass_value_type_t secondary_type;
+    CassValueType type;
+    CassValueType primary_type;
+    CassValueType secondary_type;
     uint16_t count;
     BufferPiece buffer;
 };

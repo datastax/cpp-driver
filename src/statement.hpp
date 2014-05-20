@@ -92,7 +92,7 @@ struct Statement : public MessageBody {
   }
 
 #define BIND_FIXED_TYPE(DeclType, EncodeType, Name)                  \
-  inline cass_code_t bind_##Name(size_t index, const DeclType& value) { \
+  inline CassError bind_##Name(size_t index, const DeclType& value) { \
     CASS_VALUE_CHECK_INDEX(index);                       \
     Buffer buffer(sizeof(DeclType));                      \
     encode_##EncodeType(buffer.data(), value);            \
@@ -108,31 +108,31 @@ struct Statement : public MessageBody {
 #undef BIND_FIXED_TYPE
 
 
-  inline cass_code_t bind(size_t index, const char* value, size_t value_length) {
+  inline CassError bind(size_t index, const char* value, size_t value_length) {
     CASS_VALUE_CHECK_INDEX(index);
     values[index] = Buffer(value, value_length);
     return CASS_OK;
   }
 
-  inline cass_code_t bind(size_t index, const uint8_t* value, size_t value_length) {
+  inline CassError bind(size_t index, const uint8_t* value, size_t value_length) {
     CASS_VALUE_CHECK_INDEX(index);
     values[index] = Buffer(reinterpret_cast<const char*>(value), value_length);
     return CASS_OK;
   }
 
-  inline cass_code_t bind(size_t index, const uint8_t* value) {
+  inline CassError bind(size_t index, const uint8_t* value) {
     CASS_VALUE_CHECK_INDEX(index);
     values[index] = Buffer(reinterpret_cast<const char *>(value), 16);
     return CASS_OK;
   }
 
-  inline cass_code_t bind(size_t index, const uint8_t* address, uint8_t address_len) {
+  inline CassError bind(size_t index, const uint8_t* address, uint8_t address_len) {
     CASS_VALUE_CHECK_INDEX(index);
     values[index] = Buffer(reinterpret_cast<const char *>(address), address_len);
     return CASS_OK;
   }
 
-  inline cass_code_t bind(size_t index, int32_t scale, const uint8_t* varint, size_t varint_length) {
+  inline CassError bind(size_t index, int32_t scale, const uint8_t* varint, size_t varint_length) {
     CASS_VALUE_CHECK_INDEX(index);
     Buffer buffer(sizeof(int32_t) + varint_length);
     encode_decimal(buffer.data(), scale, varint, varint_length);
@@ -140,7 +140,7 @@ struct Statement : public MessageBody {
     return CASS_OK;
   }
 
-  inline cass_code_t bind(size_t index, const Collection* collection, bool is_map) {
+  inline CassError bind(size_t index, const Collection* collection, bool is_map) {
     CASS_VALUE_CHECK_INDEX(index);
     if(is_map && collection->item_count() % 2 != 0) {
       return CASS_ERROR_LIB_BAD_PARAMS;
@@ -149,7 +149,7 @@ struct Statement : public MessageBody {
     return CASS_OK;
   }
 
-  inline cass_code_t bind(size_t index, size_t output_size, uint8_t** output) {
+  inline CassError bind(size_t index, size_t output_size, uint8_t** output) {
     CASS_VALUE_CHECK_INDEX(index);
     values[index] = Buffer(output_size);
     *output = reinterpret_cast<uint8_t *>(values[index].data());

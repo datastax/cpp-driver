@@ -37,6 +37,7 @@ struct Config {
   size_t                 queue_size_event_;
   size_t                 core_connections_per_host_;
   size_t                 max_connections_per_host_;
+  size_t                 reconnect_wait_;
   LogCallback            log_callback_;
 
  public:
@@ -52,6 +53,7 @@ struct Config {
       queue_size_event_(256),
       core_connections_per_host_(1),
       max_connections_per_host_(2),
+      reconnect_wait_(2000),
       log_callback_(nullptr)
   {}
 
@@ -79,6 +81,10 @@ struct Config {
     return max_connections_per_host_;
   }
 
+  size_t reconnect_wait() const {
+    return reconnect_wait_;
+  }
+
   const std::list<std::string>& contact_points() const {
     return contact_points_;
   }
@@ -87,9 +93,9 @@ struct Config {
     return port_;
   }
 
-  cass_code_t
+  CassError
   option(
-      cass_option_t   option,
+      CassOption   option,
       const void* value,
       size_t      size) {
     int int_value = *(reinterpret_cast<const int*>(value));

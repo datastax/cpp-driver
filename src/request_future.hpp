@@ -14,27 +14,30 @@
   limitations under the License.
 */
 
-#ifndef __CASS_LOAD_BALANCING_POLICY_HPP_INCLUDED__
-#define __CASS_LOAD_BALANCING_POLICY_HPP_INCLUDED__
+#ifndef __CASS_REQUEST_FUTURE_HPP_INCLUDED__
+#define __CASS_REQUEST_FUTURE_HPP_INCLUDED__
 
-#include <set>
-#include <string>
-
-#include "cassandra.h"
-#include "host.hpp"
+#include "message.hpp"
 
 namespace cass {
 
-class LoadBalancingPolicy {
-  public:
-    virtual ~LoadBalancingPolicy() {}
+class Timer;
 
-    virtual void init(const std::set<Host>& hosts) = 0;
+struct RequestFuture : public Future {
+    RequestFuture(Message* message)
+      : message(message)
+      , timer(nullptr) { }
 
-    virtual CassHostDistance distance(const Host& host) = 0;
+    ~RequestFuture() {
+      message->body.release(); // This memory doesn't belong to us
+      delete message;
+    }
 
-    // TODO(mpenick): Figure out what parameters to pass, keyspace, consistency, etc.
-    virtual void new_query_plan(std::list<Host>* output) = 0;
+    Message* message;
+    Timer* timer;
+    std::list<Host> hosts;
+    std::list<Host> hosts_attempted;
+    std::string statement;
 };
 
 } // namespace cass

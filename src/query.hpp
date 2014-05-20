@@ -42,14 +42,14 @@ struct Query : public Statement {
  public:
 
   Query(const char* statement, size_t statement_length,
-                size_t value_count, cass_consistency_t consistency)
+                size_t value_count, CassConsistency consistency)
     : Statement(CQL_OPCODE_QUERY, value_count)
     , query(statement, statement_length)
     , consistency_value(consistency)
     , page_size(-1)
     , serial_consistency_value(CASS_CONSISTENCY_ANY) {}
 
-  Query(size_t value_count, cass_consistency_t consistency)
+  Query(size_t value_count, CassConsistency consistency)
      : Statement(CQL_OPCODE_QUERY, value_count)
      , consistency_value(consistency)
      , page_size(-1)
