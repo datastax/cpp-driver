@@ -19,84 +19,72 @@
 
 extern "C" {
 
-CassCollection*
-cass_collection_new(size_t element_count) {
+CassCollection* cass_collection_new(size_t element_count) {
   return CassCollection::to(new cass::Collection(element_count));
 }
 
-void
-cass_collection_free(CassCollection* collection) {
+void cass_collection_free(CassCollection* collection) {
   delete collection->from();
 }
 
-CassError
-cass_collection_append_int32(CassCollection* collection,
-                             cass_int32_t value) {
+CassError cass_collection_append_int32(CassCollection* collection,
+                                       cass_int32_t value) {
   collection->append_int32(value);
   return CASS_OK;
 }
 
-CassError
-cass_collection_append_int64(CassCollection* collection,
-                             cass_int64_t value) {
+CassError cass_collection_append_int64(CassCollection* collection,
+                                       cass_int64_t value) {
   collection->append_int64(value);
   return CASS_OK;
 }
 
-CassError
-cass_collection_append_float(CassCollection* collection,
-                             cass_float_t value) {
+CassError cass_collection_append_float(CassCollection* collection,
+                                       cass_float_t value) {
   collection->append_float(value);
   return CASS_OK;
 }
 
-CassError
-cass_collection_append_double(CassCollection* collection,
-                              cass_double_t value) {
+CassError cass_collection_append_double(CassCollection* collection,
+                                        cass_double_t value) {
   collection->append_double(value);
   return CASS_OK;
 }
 
-CassError
-cass_collection_append_bool(CassCollection* collection,
-                            cass_bool_t value) {
+CassError cass_collection_append_bool(CassCollection* collection,
+                                      cass_bool_t value) {
   collection->append_bool(value);
   return CASS_OK;
 }
 
-CassError
-cass_collection_append_string(CassCollection* collection,
-                              const char* value, cass_size_t value_length) {
-  collection->append(value, value_length);
+CassError cass_collection_append_string(CassCollection* collection,
+                                        CassString value) {
+  collection->append(value.data, value.length);
   return CASS_OK;
 }
 
-CassError
-cass_collection_append_bytes(CassCollection* collection,
-                             const cass_byte_t* value, cass_size_t value_length) {
-  collection->append(value, value_length);
+CassError cass_collection_append_bytes(CassCollection* collection,
+                                       CassBytes value) {
+  collection->append(value.data, value.size);
   return CASS_OK;
 }
 
-CassError
-cass_collection_append_uuid(CassCollection* collection,
-                            CassUuid value) {
+CassError cass_collection_append_uuid(CassCollection* collection,
+                                      CassUuid value) {
   collection->append(value);
   return CASS_OK;
 }
 
-CassError
-cass_collection_append_inet(CassCollection* collection,
-                            CassInet value) {
+CassError cass_collection_append_inet(CassCollection* collection,
+                                      CassInet value) {
   collection->append(value.address, value.address_length);
   return CASS_OK;
 }
 
-CassError
-cass_collection_append_decimal(CassCollection* collection,
-                               cass_int32_t scale,
-                               const cass_byte_t* varint, cass_size_t varint_length) {
-  collection->append(scale, varint, varint_length);
+CassError cass_collection_append_decimal(CassCollection* collection,
+                                         cass_int32_t scale,
+                                         CassBytes varint) {
+  collection->append(scale, varint.data, varint.size);
   return CASS_OK;
 }
 

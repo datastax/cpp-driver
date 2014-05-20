@@ -115,10 +115,12 @@ class Pool {
   }
 
   void
-  shutdown() {
+  close() {
+    is_closing_ = true;
     for (auto c : connections_) {
       c->close();
     }
+    maybe_close();
   }
 
   void

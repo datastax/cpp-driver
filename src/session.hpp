@@ -34,16 +34,13 @@
 #include "round_robin_policy.hpp"
 #include "resolver.hpp"
 #include "config.hpp"
-#include "future.hpp"
+#include "session_future.hpp"
 
 namespace cass {
 
-struct Session;
-struct SessionFuture : public Future {
-    Session* session;
-};
-
 struct Session {
+  typedef std::shared_ptr<IOWorker> IOWorkerPtr;
+  typedef std::vector<IOWorkerPtr> IOWorkerCollection;
   enum SessionState {
     SESSION_STATE_NEW,
     SESSION_STATE_CONNECTING,
@@ -55,6 +52,7 @@ struct Session {
   struct Payload {
     enum Type {
       ON_CONNECTED,
+      ON_SHUTDOWN,
     };
     Type type;
     Host host;
@@ -65,10 +63,11 @@ struct Session {
   uv_loop_t*                   loop_;
   SSLContext*                  ssl_context_;
   uv_async_t                   async_connect_;
-  std::vector<IOWorker*>       io_workers_;
+  IOWorkerCollection           io_workers_;
   std::string                  keyspace_;
-  SessionFuture*              connect_future_;
-  std::set<Host>  hosts_;
+  SessionFuture*               connect_future_;
+  SessionFuture*               shutdown_future_;
+  std::set<Host>               hosts_;
   Config                       config_;
   std::unique_ptr<AsyncQueue<MPMCQueue<RequestFuture*>>> request_future_queue_;
   std::unique_ptr<AsyncQueue<MPMCQueue<Payload>>> event_queue_;
@@ -81,6 +80,8 @@ struct Session {
     : state_(SESSION_STATE_NEW)
     , loop_(uv_loop_new())
     , ssl_context_(nullptr)
+    , connect_future_(nullptr)
+    , shutdown_future_(nullptr)
     , load_balancing_policy_(new RoundRobinPolicy())
     , pending_resolve_count_(0)
     , pending_connections_count_(0)
@@ -90,8 +91,13 @@ struct Session {
     : state_(SESSION_STATE_NEW)
     , loop_(uv_loop_new())
     , ssl_context_(nullptr)
+    , connect_future_(nullptr)
+    , shutdown_future_(nullptr)
     , config_(session->config_)
     , load_balancing_policy_(new RoundRobinPolicy()) { }
+
+  ~Session() {
+  }
 
   int init() {
     async_connect_.data = this;
@@ -110,7 +116,7 @@ struct Session {
     }
 
     for (size_t i = 0; i < config_.thread_count_io(); ++i) {
-      IOWorker* io_worker = new IOWorker(this, config_);
+      IOWorkerPtr io_worker(new IOWorker(this, config_));
       int rc = io_worker->init();
       if(rc != 0) {
         return rc;
@@ -121,10 +127,22 @@ struct Session {
     return 0;
   }
 
+  void join() {
+    if(state_ != SESSION_STATE_NEW) {
+      uv_thread_join(&thread_);
+    }
+  }
+
   void notify_connect_q(const Host& host) {
     Payload payload;
     payload.type = Payload::ON_CONNECTED;
     payload.host = host;
+    event_queue_->enqueue(payload);
+  }
+
+  void notify_shutdown_q() {
+    Payload payload;
+    payload.type = Payload::ON_SHUTDOWN;
     event_queue_->enqueue(payload);
   }
 
@@ -133,7 +151,7 @@ struct Session {
       void* data) {
     Session* session = reinterpret_cast<Session*>(data);
 
-    for(IOWorker* io_worker : session->io_workers_) {
+    for(auto io_worker : session->io_workers_) {
       io_worker->run();
     }
 
@@ -173,6 +191,7 @@ struct Session {
           "connect has already been called",
           __FILE__,
           __LINE__));
+     connect_future_ = nullptr;
     }
     return connect_future_;
   }
@@ -181,10 +200,32 @@ struct Session {
     int num_pools =  hosts_.size() * io_workers_.size();
     pending_connections_count_ = num_pools * config_.core_connections_per_host();
     for(auto& host : hosts_) {
-      for(auto* io_worker : io_workers_) {
+      for(auto io_worker : io_workers_) {
         io_worker->add_pool_q(host);
       }
     }
+  }
+
+  Future* shutdown() {
+    shutdown_future_ = new ShutdownSessionFuture();
+    shutdown_future_->session = this;
+
+    SessionState expected_state_ready = SESSION_STATE_READY;
+    SessionState expected_state_connecting = SESSION_STATE_CONNECTING;
+    if (state_.compare_exchange_strong(expected_state_ready, SESSION_STATE_DISCONNECTING) ||
+        state_.compare_exchange_strong(expected_state_connecting, SESSION_STATE_DISCONNECTING)) {
+      for(auto io_worker : io_workers_) {
+        io_worker->shutdown_q();
+      }
+    } else {
+      shutdown_future_->set_error(CASS_ERROR(
+           CASS_ERROR_SOURCE_LIBRARY,
+           CASS_ERROR_LIB_SESSION_STATE,
+           "Session not connected"));
+      shutdown_future_ = nullptr;
+    }
+
+    return shutdown_future_;
   }
 
   static void
@@ -233,7 +274,23 @@ struct Session {
       if(payload.type == Payload::ON_CONNECTED) {
         if(--session->pending_connections_count_ == 0) {
           session->load_balancing_policy_->init(session->hosts_);
+          session->state_ = SESSION_STATE_READY;
           session->connect_future_->set_result();
+          session->connect_future_ = nullptr;
+        }
+      } else if(payload.type == Payload::ON_SHUTDOWN) {
+        size_t done_worker_count = 0;
+        for(auto io_worker : session->io_workers_) {
+          if(io_worker->is_shutdown_done_) {
+            done_worker_count++;
+            io_worker->join();
+          }
+        }
+        if(done_worker_count == session->io_workers_.size()) {
+          session->shutdown_future_->set_result();
+          session->shutdown_future_ = nullptr;
+          session->state_ = SESSION_STATE_DISCONNECTED;
+          uv_stop(session->loop_);
         }
       }
     }
@@ -298,7 +355,7 @@ struct Session {
       size_t remaining = session->io_workers_.size();
       while(remaining != 0) {
         // TODO(mpenick): Make this something better than RR
-        IOWorker* io_worker = session->io_workers_[start];
+        auto io_worker = session->io_workers_[start];
         if(io_worker->execute(request_future)) {
           session->current_io_worker_ = (start + 1) % session->io_workers_.size();
           break;
@@ -313,14 +370,6 @@ struct Session {
                                       "All workers are busy"));
       }
     }
-  }
-
-  Future*
-  shutdown() {
-    SessionFuture* request_future = new SessionFuture();
-    request_future->session = this;
-    return request_future;
-    // TODO(mstump)
   }
 
   void

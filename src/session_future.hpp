@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2014 DataStax
+  Copyright 2014 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,18 +14,28 @@
   limitations under the License.
 */
 
-#include "cassandra.hpp"
-#include "row.hpp"
+#ifndef __CASS_SESSION_FUTURE_HPP_INCLUDED__
+#define __CASS_SESSION_FUTURE_HPP_INCLUDED__
 
-extern "C" {
+#include "future.hpp"
 
-const CassValue* cass_row_get_column(const CassRow* row,
-                                     cass_size_t index) {
-  const cass::Row* internal_row = row->from();
-  if(index >= internal_row->size()) {
-    return nullptr;
-  }
-  return CassValue::to(&(*internal_row)[index]);
-}
+namespace cass {
 
-} // extern "C"
+struct Session;
+struct SessionFuture : public Future {
+    SessionFuture()
+      : Future(CASS_FUTURE_TYPE_SESSION) { }
+    Session* session;
+};
+
+
+
+struct ShutdownSessionFuture : public SessionFuture {
+    virtual void wait();
+
+    virtual bool wait_for(size_t timeout);
+};
+
+} // namespace cass
+
+#endif

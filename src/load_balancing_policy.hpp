@@ -20,7 +20,7 @@
 #include <set>
 #include <string>
 
-#include "cassandra.h"
+#include "common.hpp"
 #include "host.hpp"
 
 namespace cass {

@@ -19,26 +19,20 @@
 
 extern "C" {
 
-CassBatch*
-cass_batch_new(CassConsistency consistency) {
+CassBatch* cass_batch_new(CassConsistency consistency) {
   return CassBatch::to(new cass::Batch(consistency));
 }
 
-CASS_EXPORT void
-cass_batch_free(CassBatch* batch) {
+void cass_batch_free(CassBatch* batch) {
   delete batch->from();
 }
 
-CassError
-cass_batch_add_statement(
-    CassBatch* batch,
-    CassStatement*      statement) {
+CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
   batch->add_statement(statement);
   return CASS_OK;
 }
 
-CASS_EXPORT void
-cass_batch_set_timestamp(CassBatch* batch,
+void cass_batch_set_timestamp(CassBatch* batch,
                          cass_int64_t timestamp) {
 }
 

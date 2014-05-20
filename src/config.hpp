@@ -47,7 +47,7 @@ struct Config {
       compression_(0),
       max_schema_agreement_wait_(10),
       control_connection_timeout_(10),
-      thread_count_io_(1),
+      thread_count_io_(4),
       thread_count_callback_(4),
       queue_size_io_(1024),
       queue_size_event_(256),

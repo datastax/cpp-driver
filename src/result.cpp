@@ -19,40 +19,31 @@
 
 extern "C" {
 
-void
-cass_result_free(
-    const CassResult* result) {
+void cass_result_free(const CassResult* result) {
   delete result->from();
 }
 
-size_t
-cass_result_row_count(
-    const CassResult* result) {
+size_t cass_result_row_count(const CassResult* result) {
   if(result->kind == CASS_RESULT_KIND_ROWS) {
     return result->row_count;
   }
   return 0;
 }
 
-size_t
-cass_result_column_count(
-    const CassResult* result) {
+size_t cass_result_column_count(const CassResult* result) {
   if(result->kind == CASS_RESULT_KIND_ROWS) {
     return result->column_count;
   }
   return 0;
 }
 
-CassError
-cass_result_column_type(
-    const CassResult*     result,
-    size_t         index,
-    CassValueType* coltype) {
-  if(result->kind == CASS_RESULT_KIND_ROWS) {
-    *coltype = static_cast<CassValueType>(result->column_metadata[index].type);
-    return CASS_OK;
+CassValueType cass_result_column_type(const CassResult* result,
+                        size_t index) {
+  if(result->kind == CASS_RESULT_KIND_ROWS &&
+     index < result->column_metadata.size()) {
+    return static_cast<CassValueType>(result->column_metadata[index].type);
   }
-  return CASS_ERROR_LIB_BAD_PARAMS; // TODO(mpenick): Figure out error codes
+  return CASS_VALUE_TYPE_UNKNOWN;
 }
 
 }

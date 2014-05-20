@@ -49,6 +49,7 @@ struct IOWorker {
         enum Type {
           ADD_POOL,
           REMOVE_POOL,
+          SHUTDOWN,
         };
         Type type;
         Host host;
@@ -59,7 +60,9 @@ struct IOWorker {
     uv_loop_t* loop;
     SSLContext* ssl_context;
     PoolCollection pools;
+    std::atomic<bool> is_stopped_;
     bool is_shutdown_;
+    std::atomic<bool> is_shutdown_done_;
 
     const Config& config_;
     AsyncQueue<SPSCQueue<RequestFuture*>> request_future_queue_;
@@ -70,7 +73,9 @@ struct IOWorker {
       : session_(session)
       , loop(uv_loop_new())
       , ssl_context(nullptr)
+      , is_stopped_(false)
       , is_shutdown_(false)
+      , is_shutdown_done_(false)
       , config_(config)
       , request_future_queue_(config.queue_size_io())
       , event_queue_(config.queue_size_event()) { }
@@ -83,20 +88,27 @@ struct IOWorker {
       return event_queue_.init(loop, this, &IOWorker::on_event);
     }
 
-    void add_pool_q(const Host& host) {
+    bool add_pool_q(const Host& host) {
       Payload payload;
       payload.type = Payload::ADD_POOL;
       payload.host = host;
-      event_queue_.enqueue(payload);
+      return event_queue_.enqueue(payload);
     }
 
-    void add_pool(Host host);
-
-    void remove_pool_q(const Host& host) {
+    bool remove_pool_q(const Host& host) {
       Payload payload;
       payload.type = Payload::REMOVE_POOL;
       payload.host = host;
+      return event_queue_.enqueue(payload);
     }
+
+    bool shutdown_q() {
+      Payload payload;
+      payload.type = Payload::SHUTDOWN;
+      return event_queue_.enqueue(payload);
+    }
+
+    void add_pool(Host host);
 
     bool execute(RequestFuture* request_future) {
       return request_future_queue_.enqueue(request_future);
@@ -112,8 +124,9 @@ struct IOWorker {
     static void
     run(
         void* data) {
-      IOWorker* worker = reinterpret_cast<IOWorker*>(data);
-      uv_run(worker->loop, UV_RUN_DEFAULT);
+      IOWorker* io_worker = reinterpret_cast<IOWorker*>(data);
+      io_worker->is_stopped_ = false;
+      uv_run(io_worker->loop, UV_RUN_DEFAULT);
     }
 
     void
@@ -122,13 +135,11 @@ struct IOWorker {
     }
 
     void
-    stop() {
-      uv_stop(loop);
-    }
-
-    void
     join() {
-      uv_thread_join(&thread);
+      if(!is_stopped_) {
+        uv_thread_join(&thread);
+        is_stopped_ = true;
+      }
     }
 
     ~IOWorker() {

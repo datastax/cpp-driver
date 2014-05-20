@@ -68,9 +68,14 @@ void IOWorker::add_pool(Host host) {
 }
 
 void IOWorker::on_close(Host host) {
-  printf("closing host %s\n", host.address.to_string().c_str());
   pools.erase(host);
-  if(!is_shutdown_) {
+  if(is_shutdown_) {
+    if(pools.empty()) {
+      is_shutdown_done_ = true;
+      uv_stop(loop);
+      session_->notify_shutdown_q();
+    }
+  } else {
     ReconnectRequest* reconnect_request = new ReconnectRequest(this, host);
     Timer::start(loop,
                  config_.reconnect_wait(),
@@ -83,7 +88,6 @@ void IOWorker::on_reconnect(Timer* timer) {
   ReconnectRequest* reconnect_request = static_cast<ReconnectRequest*>(timer->data());
   IOWorker* io_worker = reconnect_request->io_worker;
   if(!io_worker->is_shutdown_) {
-    printf("reconnecting to host %s\n", reconnect_request->host.address.to_string().c_str());
     io_worker->add_pool(reconnect_request->host);
   }
   delete reconnect_request;
@@ -98,6 +102,11 @@ void IOWorker::on_event(uv_async_t *async, int status) {
       io_worker->add_pool(payload.host);
     } else if(payload.type == Payload::REMOVE_POOL) {
       // TODO(mpenick):
+    } else if(payload.type == Payload::SHUTDOWN) {
+      io_worker->is_shutdown_ = true;
+      for(auto entry : io_worker->pools) {
+        entry.second->close();
+      }
     }
   }
 }

@@ -61,6 +61,19 @@
 #define CQL_OPCODE_EVENT        0x0C
 #define CQL_OPCODE_BATCH        0x0D
 
+typedef enum CassLogLevel_ {
+  CASS_LOG_CRITICAL = 0x00,
+  CASS_LOG_ERROR    = 0x01,
+  CASS_LOG_INFO     = 0x02,
+  CASS_LOG_DEBUG    = 0x03
+} CassLogLevel;
+
+typedef enum CassHostDistance_ {
+  CASS_HOST_DISTANCE_LOCAL,
+  CASS_HOST_DISTANCE_REMOTE,
+  CASS_HOST_DISTANCE_IGNORE
+} CassHostDistance;
+
 #define DISALLOW_COPY_AND_ASSIGN(TypeName)       \
   TypeName(const TypeName&) = delete;            \
   TypeName& operator=(const TypeName&) = delete

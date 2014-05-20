@@ -20,20 +20,15 @@
 extern "C" {
 
 void
-cass_prepared_free(
-    const CassPrepared* prepared) {
+cass_prepared_free(const CassPrepared* prepared) {
   delete prepared->from();
 }
 
-CassError
-cass_prepared_bind(
-    const CassPrepared*   prepared,
-    size_t         parameter_count,
-    CassConsistency consistency,
-    CassStatement** output) {
-  cass::Statement* bound_statement = new cass::Bound(*prepared, parameter_count, consistency);
-  *output = CassStatement::to(bound_statement);
-  return CASS_OK;
+CassStatement*
+cass_prepared_bind(const CassPrepared* prepared,
+                   size_t parameter_count,
+                   CassConsistency consistency) {
+  return CassStatement::to(new cass::Bound(*prepared, parameter_count, consistency));
 }
 
 

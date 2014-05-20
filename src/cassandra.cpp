@@ -23,5 +23,26 @@ cass_code_error_desc(CassError code) {
   return ""; // TODO(mpenick)
 }
 
+CassString cass_string_init(const char* null_terminated) {
+  CassString str;
+  str.data = null_terminated;
+  str.length = strlen(null_terminated);
+  return str;
+}
+
+CassString cass_string_init2(const char* data, cass_size_t length) {
+  CassString str;
+  str.data = data;
+  str.length = length;
+  return str;
+}
+
+CassBytes cass_bytes_init(cass_byte_t* data, cass_size_t size) {
+  CassBytes bytes;
+  bytes.data = data;
+  bytes.size = size;
+  return bytes;
+}
+
 
 } // extern "C"

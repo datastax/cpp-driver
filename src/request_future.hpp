@@ -25,7 +25,8 @@ class Timer;
 
 struct RequestFuture : public Future {
     RequestFuture(Message* message)
-      : message(message)
+      : Future(CASS_FUTURE_TYPE_REQUEST)
+      , message(message)
       , timer(nullptr) { }
 
     ~RequestFuture() {

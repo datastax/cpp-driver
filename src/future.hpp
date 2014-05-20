@@ -30,6 +30,11 @@ namespace cass {
 
 struct Error;
 
+enum FutureType {
+  CASS_FUTURE_TYPE_SESSION,
+  CASS_FUTURE_TYPE_REQUEST,
+};
+
 class Future {
   public:
     struct Result {
@@ -74,23 +79,26 @@ class Future {
         std::unique_ptr<const Error> error_;
     };
 
-    Future()
-      : is_set_(false) { }
+    Future(FutureType type)
+      : type_(type)
+      , is_set_(false) { }
 
     virtual ~Future() = default;
+
+    FutureType type() const { return type_; }
 
     bool ready() {
       return wait_for(0);
     }
 
-    void wait() {
+    virtual void wait() {
       std::unique_lock<std::mutex> lock(mutex_);
       while(!is_set_) {
         cond_.wait(lock);
       }
     }
 
-    bool wait_for(size_t timeout) {
+    virtual bool wait_for(size_t timeout) {
       std::unique_lock<std::mutex> lock(mutex_);
       if(!is_set_) {
         cond_.wait_for(lock, std::chrono::microseconds(timeout));
@@ -121,6 +129,7 @@ class Future {
     }
 
    private:
+     FutureType type_;
      bool is_set_;
      std::mutex mutex_;
      std::condition_variable cond_;

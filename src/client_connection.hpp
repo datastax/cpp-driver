@@ -17,6 +17,8 @@
 #ifndef __CASS_CLIENT_CONNECTION_HPP_INCLUDED__
 #define __CASS_CLIENT_CONNECTION_HPP_INCLUDED__
 
+#include <uv.h>
+
 #include "common.hpp"
 #include "host.hpp"
 #include "message.hpp"
@@ -192,7 +194,12 @@ class ClientConnection {
     }
 
     void close() {
-      state_ = CLIENT_STATE_DISCONNECTING;
+      if(state_ != CLIENT_STATE_NEW &&
+         state_ != CLIENT_STATE_DISCONNECTING &&
+         state_ != CLIENT_STATE_DISCONNECTED) {
+        state_ = CLIENT_STATE_DISCONNECTING;
+        maybe_close();
+      }
     }
 
     void defunct() {

@@ -58,7 +58,8 @@ typedef unsigned long long cass_uint64_t;
 typedef size_t cass_size_t;
 
 typedef cass_uint8_t CassUuid[16];
-typedef struct {
+
+typedef struct CassInet_ {
   cass_uint8_t address[16];
   cass_uint8_t address_length;
 } CassInet;
@@ -74,14 +75,17 @@ typedef struct CassRow_ CassRow;
 typedef struct CassValue_ CassValue;
 typedef struct CassCollection_ CassCollection;
 
-typedef enum {
-  CASS_LOG_CRITICAL = 0x00,
-  CASS_LOG_ERROR    = 0x01,
-  CASS_LOG_INFO     = 0x02,
-  CASS_LOG_DEBUG    = 0x03
-} CassLogLevel;
+typedef struct CassBytes_ {
+    const cass_byte_t* data;
+    cass_size_t size;
+} CassBytes;
 
-typedef enum {
+typedef struct CassString_ {
+    const char* data;
+    cass_size_t length;
+} CassString;
+
+typedef enum CassConsistency_ {
   CASS_CONSISTENCY_ANY          = 0x0000,
   CASS_CONSISTENCY_ONE          = 0x0001,
   CASS_CONSISTENCY_TWO          = 0x0002,
@@ -95,7 +99,7 @@ typedef enum {
   CASS_CONSISTENCY_LOCAL_ONE    = 0x000A
 } CassConsistency;
 
-typedef enum {
+typedef enum CassValueType_ {
   CASS_VALUE_TYPE_UNKNOWN   = 0xFFFF,
   CASS_VALUE_TYPE_CUSTOM    = 0x0000,
   CASS_VALUE_TYPE_ASCII     = 0x0001,
@@ -119,7 +123,7 @@ typedef enum {
   CASS_VALUE_TYPE_SET       = 0x0022
 } CassValueType;
 
-typedef enum {
+typedef enum CassOption_ {
   CASS_OPTION_THREADS_IO                 = 1,
   CASS_OPTION_THREADS_CALLBACK           = 2,
   CASS_OPTION_CONTACT_POINT_ADD          = 3,
@@ -130,18 +134,11 @@ typedef enum {
   CASS_OPTION_COMPRESSION                = 9
 } CassOption;
 
-typedef enum {
+typedef enum CassCompression_ {
   CASS_COMPRESSION_NONE   = 0,
   CASS_COMPRESSION_SNAPPY = 1,
   CASS_COMPRESSION_LZ4    = 2
 } CassCompression;
-
-typedef enum {
-  CASS_HOST_DISTANCE_LOCAL,
-  CASS_HOST_DISTANCE_REMOTE,
-  CASS_HOST_DISTANCE_IGNORE
-} CassHostDistance;
-
 
 typedef enum {
   CASS_OK                        = 0,
@@ -211,16 +208,6 @@ CASS_EXPORT void
 cass_session_free(CassSession* session);
 
 /**
- * Shutdown the session instance, output a shutdown future which can
- * be used to determine when the session has been terminated
- *
- * @param session
- */
-CASS_EXPORT CassError
-cass_session_shutdown(CassSession* session,
-                      CassFuture** future);
-
-/**
  * Set an option on the specified session
  *
  * @param cluster
@@ -250,6 +237,15 @@ cass_session_getopt(const CassSession* session,
                     void** data, cass_size_t* data_length);
 
 /**
+ * Shutdown the session instance, output a shutdown future which can
+ * be used to determine when the session has been terminated
+ *
+ * @param session
+ */
+CASS_EXPORT CassFuture*
+cass_session_shutdown(CassSession* session);
+
+/**
  * Initiate a session using the specified session. Resulting
  * future must be freed by caller.
  *
@@ -258,9 +254,8 @@ cass_session_getopt(const CassSession* session,
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassError
-cass_session_connect(CassSession* session,
-                     CassFuture** future);
+CASS_EXPORT CassFuture*
+cass_session_connect(CassSession* session);
 
 /**
  * Initiate a session using the specified session, and set the keyspace. Resulting
@@ -272,10 +267,9 @@ cass_session_connect(CassSession* session,
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassError
+CASS_EXPORT CassFuture*
 cass_session_connect_keyspace(CassSession* session,
-                              const char* keyspace,
-                              CassFuture** future);
+                              const char* keyspace);
 
 /**
  * Create a prepared statement. Future must be freed by caller.
@@ -287,10 +281,9 @@ cass_session_connect_keyspace(CassSession* session,
  *
  * @return
  */
-CASS_EXPORT CassError
+CASS_EXPORT CassFuture*
 cass_session_prepare(CassSession* session,
-                     const char* statement, cass_size_t statement_length,
-                     CassFuture** output);
+                     CassString statement);
 
 /**
  * Execute a query, bound statement and obtain a future. Future must be freed by
@@ -302,10 +295,9 @@ cass_session_prepare(CassSession* session,
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassError
+CASS_EXPORT CassFuture*
 cass_session_exec(CassSession* session,
-                  CassStatement* statement,
-                  CassFuture** future);
+                  CassStatement* statement);
 
 /**
  * Execute a batch statement and obtain a future. Future must be freed by
@@ -317,10 +309,9 @@ cass_session_exec(CassSession* session,
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassError
+CASS_EXPORT CassFuture*
 cass_session_exec_batch(CassSession* session,
-                        CassBatch* batch,
-                        CassFuture** future);
+                        CassBatch* batch);
 
 /***********************************************************************************
  *
@@ -400,8 +391,8 @@ CASS_EXPORT const CassPrepared*
 cass_future_get_prepared(CassFuture* future);
 
 
-CASS_EXPORT const char*
-cass_future_error_string(CassFuture* future);
+CASS_EXPORT CassString
+cass_future_error_message(CassFuture* future);
 
 /**
  * Obtain the code from an error structure.
@@ -425,23 +416,6 @@ cass_future_error_source(CassFuture* future);
 CASS_EXPORT CassError
 cass_future_error_code(CassFuture* future);
 
-
-/***********************************************************************************
- *
- * Code
- *
- ***********************************************************************************/
-
-/**
- * Get description for error code
- *
- * @param code
- *
- * @return error description
- */
-CASS_EXPORT const char*
-cass_code_error_desc(CassError code);
-
 /***********************************************************************************
  *
  * Statement
@@ -460,7 +434,7 @@ cass_code_error_desc(CassError code);
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT CassStatement*
-cass_statement_new(const char* statement, cass_size_t statement_length,
+cass_statement_new(CassString statement,
                    cass_size_t parameter_count,
                    CassConsistency consistency);
 
@@ -479,8 +453,8 @@ cass_statement_free(CassStatement* statement);
  */
 CASS_EXPORT CassError
 cass_statement_bind_int32(CassStatement* statement,
-                        cass_size_t index,
-                        cass_int32_t value);
+                          cass_size_t index,
+                          cass_int32_t value);
 
 /**
  * Bind a bigint to a query or bound statement at the specified index
@@ -493,8 +467,8 @@ cass_statement_bind_int32(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_bind_int64(CassStatement* statement,
-                           cass_size_t index,
-                           cass_int64_t value);
+                          cass_size_t index,
+                          cass_int64_t value);
 
 /**
  * Bind a float to a query or bound statement at the specified index
@@ -551,7 +525,7 @@ cass_statement_bind_bool(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_bind_string(CassStatement* statement,
                            cass_size_t index,
-                           const char* value, cass_size_t value_length);
+                           CassString value);
 
 /**
  * Bind bytes to a query or bound statement at the specified index
@@ -566,7 +540,7 @@ cass_statement_bind_string(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_bind_bytes(CassStatement* statement,
                            cass_size_t index,
-                           const cass_byte_t* value, cass_size_t value_length);
+                           CassBytes value);
 
 /**
  * Bind a UUID to a query or bound statement at the specified index
@@ -603,7 +577,7 @@ CASS_EXPORT CassError
 cass_statement_bind_decimal(CassStatement* statement,
                             cass_size_t index,
                             cass_uint32_t scale,
-                            const cass_byte_t* varint, cass_size_t varint_length);
+                            CassBytes varint);
 
 
 CASS_EXPORT CassError
@@ -640,11 +614,10 @@ cass_prepared_free(const CassPrepared* prepared);
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassError
+CASS_EXPORT CassStatement*
 cass_prepared_bind(const CassPrepared* prepared,
                    cass_size_t paramater_count,
-                   CassConsistency consistency,
-                   CassStatement** output);
+                   CassConsistency consistency);
 
 /***********************************************************************************
  *
@@ -702,11 +675,11 @@ cass_collection_append_bool(CassCollection* collection,
 
 CASS_EXPORT CassError
 cass_collection_append_string(CassCollection* collection,
-                              const char* value, cass_size_t value_length);
+                              CassString value);
 
 CASS_EXPORT CassError
 cass_collection_append_bytes(CassCollection* collection,
-                             const cass_byte_t* value, cass_size_t value_length);
+                             CassBytes value);
 
 CASS_EXPORT CassError
 cass_collection_append_uuid(CassCollection* collection,
@@ -719,7 +692,7 @@ cass_collection_append_inet(CassCollection* collection,
 CASS_EXPORT CassError
 cass_collection_append_decimal(CassCollection* collection,
                                cass_int32_t scale,
-                               const cass_byte_t* varint, cass_size_t varint_length);
+                               CassBytes varint);
 
 /***********************************************************************************
  *
@@ -759,10 +732,9 @@ cass_result_column_count(const CassResult* result);
  *
  * @return
  */
-CASS_EXPORT CassError
+CASS_EXPORT CassValueType
 cass_result_column_type(const CassResult* result,
-                        cass_size_t index,
-                        CassValueType* output);
+                        cass_size_t index);
 
 /***********************************************************************************
  *
@@ -838,10 +810,9 @@ cass_iterator_get_value(CassIterator *iterator);
  *
  * @return 0 if successful, otherwise error occured
  */
-CASS_EXPORT CassError
+CASS_EXPORT const CassValue*
 cass_row_get_column(const CassRow*  row,
-                    cass_size_t index,
-                    const CassValue** value);
+                    cass_size_t index);
 
 /***********************************************************************************
  *
@@ -860,7 +831,7 @@ cass_row_get_column(const CassRow*  row,
  */
 CASS_EXPORT CassError
 cass_value_get_int32(const CassValue* value,
-                   cass_int32_t* output);
+                     cass_int32_t* output);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -901,74 +872,22 @@ CASS_EXPORT CassError
 cass_value_get_double(const CassValue* value,
                       cass_double_t* output);
 
-/**
- * Decode the specified value. Value may be a column, collection item, map key, or map
- * value.
- *
- * @param source
- * @param value
- *
- * @return 0 if successful, otherwise error occured
- */
 CASS_EXPORT CassError
 cass_value_get_bool(const CassValue* value,
                     cass_bool_t* output);
 
-/**
- * Decode the specified value. Value may be a column, collection item, map key, or map
- * value.
- *
- * @param source
- * @param value
- *
- * @return 0 if successful, otherwise error occured
- */
 CASS_EXPORT CassError
 cass_value_get_uuid(const CassValue* value,
                     CassUuid output);
 
 
-/**
- * Decode the specified value. Value may be a column, collection item, map key, or map
- * value. This function follows the pattern similar to that of snprintf. The user
- * passes in a pre-allocated builder of size n, to which the decoded value will be
- * copied. The number of bytes written had the builder been sufficiently large will be
- * returned via the output parameter 'copied'. Only when copied is less than n has
- * the builder been fully consumed.
- *
- * @param source
- * @param output
- * @param output_length
- * @param copied
- *
- * @return 0 if successful, otherwise error occured
- */
 CASS_EXPORT CassError
 cass_value_get_string(const CassValue* value,
-                      char* output,
-                      cass_size_t  output_length,
-                      cass_size_t* copied);
+                      CassString* output);
 
-/**
- * Decode the specified value. Value may be a column, collection item, map key, or map
- * value. This function follows the pattern similar to that of snprintf. The user
- * passes in a pre-allocated builder of size n, to which the decoded value will be
- * copied. The number of bytes written had the builder been sufficiently large will be
- * returned via the output parameter 'copied'. Only when copied is less than n has
- * the builder been fully consumed.
- *
- * @param source
- * @param output
- * @param output_length
- * @param copied
- *
- * @return 0 if successful, otherwise error occured
- */
 CASS_EXPORT CassError
 cass_value_get_bytes(const CassValue* value,
-                    cass_byte_t* output,
-                    cass_size_t  output_length,
-                    cass_size_t* copied);
+                     CassBytes* output);
 
 /**
  * Decode the specified value. Value may be a column, collection item, map key, or map
@@ -981,16 +900,8 @@ cass_value_get_bytes(const CassValue* value,
  */
 CASS_EXPORT CassError
 cass_value_get_decimal(const CassValue* value,
-                       cass_uint32_t* scale,
-                       cass_byte_t* varint, cass_size_t varint_length,
-                       cass_size_t* copied);
-
-
-CASS_EXPORT const cass_byte_t*
-cass_value_get_data(const CassValue* value);
-
-CASS_EXPORT cass_size_t
-cass_value_get_size(const CassValue* value);
+                       cass_uint32_t* output_scale,
+                       CassBytes* output_varint);
 
 /**
  * Get the collection sub-type. Works for collections that have a single sub-type
@@ -1068,6 +979,37 @@ cass_uuid_v4(CassUuid* output);
 CASS_EXPORT CassError
 cass_uuid_string(CassUuid uuid,
                  char* output);
+
+/***********************************************************************************
+ *
+ * Code
+ *
+ ***********************************************************************************/
+
+/**
+ * Get description for error code
+ *
+ * @param code
+ *
+ * @return error description
+ */
+CASS_EXPORT const char*
+cass_code_error_desc(CassError code);
+
+/***********************************************************************************
+ *
+ * Bytes/String
+ *
+ ************************************************************************************/
+
+CASS_EXPORT CassBytes
+cass_bytes_init(cass_byte_t* data, cass_size_t size);
+
+CASS_EXPORT CassString
+cass_string_init(const char* null_terminated);
+
+CASS_EXPORT CassString
+cass_string_init2(const char* data, cass_size_t length);
 
 #ifdef __cplusplus
 } /* extern "C" */

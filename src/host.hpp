@@ -17,7 +17,6 @@
 #ifndef __CASS_HOST_HPP_INCLUDED__
 #define __CASS_HOST_HPP_INCLUDED__
 
-#include "common.hpp"
 #include "address.hpp"
 
 namespace cass {

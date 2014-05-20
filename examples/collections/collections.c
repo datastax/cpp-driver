@@ -24,8 +24,9 @@
 
 #include "cassandra.h"
 
-void print_error(const char* message, int err) {
-  printf("%s: %s (%d)\n", message, cass_code_error_desc(err), err);
+void print_error(CassFuture* future) {
+  CassString message = cass_future_error_message(future);
+  fprintf(stderr, "Error: %s\n", message.data);
 }
 
 CassError connect_session(const char* contact_points[], CassSession** output) {
@@ -40,20 +41,16 @@ CassError connect_session(const char* contact_points[], CassSession** output) {
     cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, *cp, strlen(*cp));
   }
 
-  rc = cass_session_connect(session, &future);
+  future = cass_session_connect(session);
+  cass_future_wait(future);
+  rc = cass_future_error_code(future);
   if(rc != CASS_OK) {
+    print_error(future);
     cass_session_free(session);
   } else {
-    cass_future_wait(future);
-    rc = cass_future_error_code(future);
-    if(rc != CASS_OK) {
-      fprintf(stderr, "Error: %s\n", cass_future_error_string(future));
-      cass_session_free(session);
-    } else {
-      *output = session;
-    }
-    cass_future_free(future);
+    *output = session;
   }
+  cass_future_free(future);
 
   return rc;
 }
@@ -61,14 +58,14 @@ CassError connect_session(const char* contact_points[], CassSession** output) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = 0;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(query, strlen(query), 0, CASS_CONSISTENCY_ONE);
+  CassStatement* statement = cass_statement_new(cass_string_init(query), 0, CASS_CONSISTENCY_ONE);
 
-  cass_session_exec(session, statement, &future);
+  future = cass_session_exec(session, statement);
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
   if(rc != CASS_OK) {
-    fprintf(stderr, "Error: %s\n", cass_future_error_string(future));
+    print_error(future);
   }
 
   cass_future_free(future);
@@ -83,26 +80,26 @@ CassError insert_into_collections(CassSession* session, const char* key, const c
   CassFuture* future = NULL;
   CassCollection* collection = NULL;
   const char** item = NULL;
-  const char* query = "INSERT INTO examples.collections (key, items) VALUES (?, ?);";
+  CassString query = cass_string_init("INSERT INTO examples.collections (key, items) VALUES (?, ?);");
 
-  statement = cass_statement_new(query, strlen(query), 2, CASS_CONSISTENCY_ONE);
+  statement = cass_statement_new(query, 2, CASS_CONSISTENCY_ONE);
 
-  cass_statement_bind_string(statement, 0, key, strlen(key));
+  cass_statement_bind_string(statement, 0, cass_string_init(key));
 
   collection = cass_collection_new(2);
   for(item = items; *item; item++) {
-    cass_collection_append_string(collection, *item, strlen(*item));
+    cass_collection_append_string(collection, cass_string_init(*item));
   }
   cass_statement_bind_collection(statement, 1, collection, cass_false);
   cass_collection_free(collection);
 
-  cass_session_exec(session, statement, &future);
+  future = cass_session_exec(session, statement);
 
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
   if(rc != CASS_OK) {
-    fprintf(stderr, "Error: %s\n", cass_future_error_string(future));
+    print_error(future);
   }
 
   cass_future_free(future);
@@ -115,19 +112,19 @@ CassError select_from_collections(CassSession* session, const char* key) {
   CassError rc = 0;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
-  const char* query = "SELECT items FROM examples.collections WHERE key = ?";
+  CassString query = cass_string_init("SELECT items FROM examples.collections WHERE key = ?");
 
-  statement = cass_statement_new(query, strlen(query), 1, CASS_CONSISTENCY_ONE);
+  statement = cass_statement_new(query, 1, CASS_CONSISTENCY_ONE);
 
-  cass_statement_bind_string(statement, 0, key, strlen(key));
+  cass_statement_bind_string(statement, 0, cass_string_init(key));
 
-  cass_session_exec(session, statement, &future);
+  future = cass_session_exec(session, statement);
 
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
   if(rc != CASS_OK) {
-    fprintf(stderr, "Error: %s\n", cass_future_error_string(future));
+    print_error(future);
   } else {
     const CassResult* result = cass_future_get_result(future);
     CassIterator* iterator = cass_iterator_from_result(result);
@@ -137,15 +134,12 @@ CassError select_from_collections(CassSession* session, const char* key) {
       const CassRow* row = cass_iterator_get_row(iterator);
       CassIterator* items_iterator = NULL;
 
-      cass_row_get_column(row, 0, &value);
+      value = cass_row_get_column(row, 0);
       items_iterator = cass_iterator_from_collection(value);
       while(cass_iterator_next(items_iterator)) {
-        const CassValue* item_value = cass_iterator_get_value(items_iterator);
-        cass_size_t copied;
-        char item_buffer[256];
-        cass_value_get_string(item_value, item_buffer, sizeof(item_buffer), &copied);
-        item_buffer[copied] = '\0';
-        printf("item: %s\n", item_buffer);
+        CassString item_string;
+        cass_value_get_string(cass_iterator_get_value(items_iterator), &item_string);
+        printf("item: %.*s\n", (int)item_string.length, item_string.data);
       }
       cass_iterator_free(items_iterator);
     }
@@ -164,7 +158,8 @@ int
 main() {
   CassError rc = 0;
   CassSession* session = NULL;
-  const char* contact_points[] = { "127.0.0.1", NULL };
+  CassFuture* shutdown_future = NULL;
+  const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
   const char* items[] = { "apple", "orange", "banana", "mango", NULL };
 
   rc = connect_session(contact_points, &session);
@@ -185,7 +180,8 @@ main() {
   insert_into_collections(session, "test", items);
   select_from_collections(session, "test");
 
-
+  shutdown_future = cass_session_shutdown(session);
+  cass_future_wait(shutdown_future);
   cass_session_free(session);
 
   return 0;

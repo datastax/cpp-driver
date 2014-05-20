@@ -20,116 +20,90 @@
 
 extern "C" {
 
-CassStatement*
-cass_statement_new(const char* statement, size_t statement_length,
+CassStatement* cass_statement_new(CassString statement,
                    size_t parameter_count,
                    CassConsistency consistency) {
   cass::Statement* query_statement = new cass::Query(parameter_count, consistency);
-  query_statement->statement(statement, statement_length);
+  query_statement->statement(statement.data, statement.length);
   return CassStatement::to(query_statement);
 }
 
-void
-cass_statement_free(CassStatement *statement) {
+void cass_statement_free(CassStatement *statement) {
   delete statement->from();
 }
 
-CassError
-cass_statement_bind_int32(
-    CassStatement* statement,
-    size_t        index,
-    int32_t       value) {
+CassError cass_statement_bind_int32(CassStatement* statement,
+                                    size_t index,
+                                    int32_t value) {
   return statement->bind_int32(index, value);
 }
 
-CassError
-cass_statement_bind_int64(
-    CassStatement* statement,
-    size_t        index,
-    int64_t       value) {
+CassError cass_statement_bind_int64(CassStatement* statement,
+                                    size_t index,
+                                    int64_t value) {
   return statement->bind_int64(index, value);
 }
 
-CassError
-cass_statement_bind_float(
-    CassStatement* statement,
-    size_t        index,
-    float         value) {
+CassError cass_statement_bind_float(CassStatement* statement,
+                                    size_t index,
+                                    float value) {
   return statement->bind_float(index, value);
 }
 
-CassError
-cass_statement_bind_double(
-    CassStatement*  statement,
-    size_t         index,
-    double         value) {
+CassError cass_statement_bind_double(CassStatement* statement,
+                                     size_t index,
+                                     double value) {
   return statement->bind_double(index, value);
 }
 
-CassError
-cass_statement_bind_bool(
-    CassStatement*  statement,
-    size_t         index,
-    cass_bool_t    value) {
+CassError cass_statement_bind_bool(CassStatement* statement,
+                                   size_t index,
+                                   cass_bool_t value) {
   return statement->bind_bool(index, value);
 }
 
-CassError
-cass_statement_bind_string(
-    CassStatement*  statement,
-    size_t         index,
-    const char*    value,
-    size_t         value_length) {
-  return statement->bind(index, value, value_length);
+CassError cass_statement_bind_string(CassStatement* statement,
+                                     size_t index,
+                                     CassString value) {
+  return statement->bind(index, value.data, value.length);
 }
 
-CassError
-cass_statement_bind_bytes(
-    CassStatement*  statement,
-    size_t         index,
-    const uint8_t*    value,
-    size_t         value_length) {
-  return statement->bind(index, value, value_length);
+CassError cass_statement_bind_bytes(CassStatement* statement,
+                                    size_t index,
+                                    CassBytes value) {
+  return statement->bind(index, value.data, value.size);
 }
 
-CassError
-cass_statement_bind_uuid(
-    CassStatement*  statement,
-    size_t         index,
-    CassUuid        value) {
+CassError cass_statement_bind_uuid(CassStatement* statement,
+                                   size_t index,
+                                   CassUuid value) {
   return statement->bind(index, value);
 }
 
-CassError
-cass_statement_bind_inet(
-    CassStatement* statement,
-    size_t         index,
-    CassInet value) {
+CassError cass_statement_bind_inet( CassStatement* statement,
+                                    size_t index,
+                                    CassInet value) {
   return statement->bind(index, value.address, value.address_length);
 }
 
-CassError
-cass_statement_bind_decimal(CassStatement* statement,
-                            cass_size_t index,
-                            cass_uint32_t scale,
-                            const cass_byte_t* varint, cass_size_t varint_length) {
-  return statement->bind(index, scale, varint, varint_length);
+CassError cass_statement_bind_decimal(CassStatement* statement,
+                                      cass_size_t index,
+                                      cass_uint32_t scale,
+                                      CassBytes varint) {
+  return statement->bind(index, scale, varint.data, varint.size);
 }
 
-CassError
-cass_statement_bind_collection(
-    CassStatement*  statement,
-    size_t          index,
-    const CassCollection* collection,
-    cass_bool_t is_map) {
+CassError cass_statement_bind_collection( CassStatement* statement,
+                                          size_t index,
+                                          const CassCollection* collection,
+                                          cass_bool_t is_map) {
   return statement->bind(index, collection->from(), static_cast<bool>(is_map));
 }
 
-CassError
-cass_statement_bind_custom(CassStatement* statement,
-                           cass_size_t index,
-                           cass_size_t size,
-                           cass_byte_t** output) {
+CassError cass_statement_bind_custom(CassStatement* statement,
+                                     cass_size_t index,
+                                     cass_size_t size,
+                                     cass_byte_t** output) {
   return statement->bind(index, size, output);
 }
 
