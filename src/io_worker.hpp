@@ -54,7 +54,7 @@ struct IOWorker {
   PoolCollection pools;
 
   const Config& config_;
-  AsyncQueue<SPSCQueue<RequestFuture*>> request_queue_;
+  AsyncQueue<SPSCQueue<RequestFuture*>> request_future_queue_;
   AsyncQueue<SPSCQueue<Payload>> event_queue_;
 
   explicit
@@ -63,12 +63,11 @@ struct IOWorker {
     , loop(uv_loop_new())
     , ssl_context(nullptr)
     , config_(config)
-    , request_queue_(config.queue_size_io())
-    , event_queue_(config.queue_size_event()) {
-  }
+    , request_future_queue_(config.queue_size_io())
+    , event_queue_(config.queue_size_event()) { }
 
   int init() {
-    int rc = request_queue_.init(loop, this, &IOWorker::on_execute);
+    int rc = request_future_queue_.init(loop, this, &IOWorker::on_execute);
     if(rc != 0) {
       return rc;
     }
@@ -90,19 +89,11 @@ struct IOWorker {
     payload.host = host;
   }
 
-  Error*
-  execute(
-      RequestFuture* request) {
-    if (!request_queue_.enqueue(request)) {
-      return new Error(
-          CASS_ERROR_SOURCE_LIBRARY,
-          CASS_ERROR_LIB_NO_STREAMS,
-          "request queue full",
-          __FILE__,
-          __LINE__);
-    }
-    return nullptr;
+  bool execute(RequestFuture* request_future) {
+    return request_future_queue_.enqueue(request_future);
   }
+
+  void try_next_host(RequestFuture* request_future);
 
   static void on_execute(uv_async_t* data, int status);
   static void on_event(uv_async_t* async, int status);

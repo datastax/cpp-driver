@@ -70,7 +70,7 @@ struct Session {
   SessionFuture*              connect_future_;
   std::set<Host>  hosts_;
   Config                       config_;
-  std::unique_ptr<AsyncQueue<MPMCQueue<RequestFuture*>>> request_queue_;
+  std::unique_ptr<AsyncQueue<MPMCQueue<RequestFuture*>>> request_future_queue_;
   std::unique_ptr<AsyncQueue<MPMCQueue<Payload>>> event_queue_;
   std::unique_ptr<LoadBalancingPolicy> load_balancing_policy_;
   int pending_resolve_count_;
@@ -97,8 +97,8 @@ struct Session {
     async_connect_.data = this;
     uv_async_init( loop_, &async_connect_, &Session::on_connect);
 
-    request_queue_.reset(new AsyncQueue<MPMCQueue<RequestFuture*>>(config_.queue_size_io()));
-    int rc = request_queue_->init(loop_, this, &Session::on_execute);
+    request_future_queue_.reset(new AsyncQueue<MPMCQueue<RequestFuture*>>(config_.queue_size_io()));
+    int rc = request_future_queue_->init(loop_, this, &Session::on_execute);
     if(rc != 0) {
       return rc;
     }
@@ -251,36 +251,36 @@ struct Session {
   prepare(
       const char* statement,
       size_t      length) {
-    RequestFuture* request = new RequestFuture(new Message(CQL_OPCODE_PREPARE));
-    request->statement.assign(statement, length);
+    RequestFuture* request_future = new RequestFuture(new Message(CQL_OPCODE_PREPARE));
+    request_future->statement.assign(statement, length);
 
     Prepare* body =
-        reinterpret_cast<Prepare*>(request->message->body.get());
+        reinterpret_cast<Prepare*>(request_future->message->body.get());
     body->prepare_string(statement, length);
-    execute(request);
-    return request;
+    execute(request_future);
+    return request_future;
   }
 
   Future* execute(Statement* statement) {
     Message* message = new Message();
     message->opcode = statement->opcode();
     message->body.reset(statement); // TODO(mpenick): We don't want this to be cleaned up by the smart pointer
-    RequestFuture* request = new RequestFuture(message);
-    execute(request);
-    return request;
+    RequestFuture* request_future = new RequestFuture(message);
+    execute(request_future);
+    return request_future;
   }
 
   inline void
   execute(
-      RequestFuture* request) {
-    if (!request_queue_->enqueue(request)) {
-      request->set_error(new Error(
+      RequestFuture* request_future) {
+    if (!request_future_queue_->enqueue(request_future)) {
+      request_future->set_error(new Error(
           CASS_ERROR_SOURCE_LIBRARY,
           CASS_ERROR_LIB_NO_STREAMS,
           "request queue full",
           __FILE__,
           __LINE__));
-      delete request;
+      delete request_future;
     }
   }
 
@@ -290,21 +290,36 @@ struct Session {
       int         status) {
     Session* session = reinterpret_cast<Session*>(data->data);
 
-    RequestFuture* request = nullptr;
-    while (session->request_queue_->dequeue(request)) {
-      session->load_balancing_policy_->new_query_plan(&request->hosts);
-      // TODO(mpenick): Make this something better than RR
-      IOWorker* io_worker = session->io_workers_[session->current_io_worker_];
-      session->current_io_worker_ = (session->current_io_worker_ + 1) % session->io_workers_.size();
-      io_worker->execute(request);
+    RequestFuture* request_future = nullptr;
+    while (session->request_future_queue_->dequeue(request_future)) {
+      session->load_balancing_policy_->new_query_plan(&request_future->hosts);
+
+      size_t start = session->current_io_worker_;
+      size_t remaining = session->io_workers_.size();
+      while(remaining != 0) {
+        // TODO(mpenick): Make this something better than RR
+        IOWorker* io_worker = session->io_workers_[start];
+        if(io_worker->execute(request_future)) {
+          session->current_io_worker_ = (start + 1) % session->io_workers_.size();
+          break;
+        }
+        start++;
+        remaining--;
+      }
+
+      if(remaining == 0) {
+        request_future->set_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
+                                      CASS_ERROR_LIB_BAD_PARAMS,
+                                      "All workers are busy"));
+      }
     }
   }
 
   Future*
   shutdown() {
-    SessionFuture* future = new SessionFuture();
-    future->session = this;
-    return future;
+    SessionFuture* request_future = new SessionFuture();
+    request_future->session = this;
+    return request_future;
     // TODO(mstump)
   }
 

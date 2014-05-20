@@ -31,9 +31,7 @@ namespace cass {
 class Pool {
   typedef std::list<ClientConnection*> ConnectionCollection;
 
-  Session* session_;
-  uv_loop_t*              loop_;
-  SSLContext*             ssl_context_;
+  IOWorker* io_worker_;
   Host                    host_;
   size_t                  core_connections_per_host_;
   size_t                  max_connections_per_host_;
@@ -45,16 +43,12 @@ class Pool {
   uint64_t                connection_timeout_;
 
  public:
-  Pool(Session* session,
-      uv_loop_t*     loop,
-      SSLContext*    ssl_context,
+  Pool(IOWorker* io_worker,
       const Host& host,
       size_t         core_connections_per_host,
       size_t         max_connections_per_host,
       size_t         max_simultaneous_creation = 1) :
-      session_(session),
-      loop_(loop),
-      ssl_context_(ssl_context),
+      io_worker_(io_worker),
       host_(host),
       core_connections_per_host_(core_connections_per_host),
       max_connections_per_host_(max_connections_per_host),
@@ -66,24 +60,30 @@ class Pool {
     }
   }
 
-  void connect_callback(
+  void on_connect(
       ClientConnection* connection,
       Error* error) {
 
-    session_->notify_connect_q(host_);
+    io_worker_->session_->notify_connect_q(host_);
     connections_pending_.remove(connection);
 
     if (error) {
       delete error;
-      // TODO(mstump) do something with failure to connect
     } else {
       connections_.push_back(connection);
       execute_pending_request(connection);
     }
   }
 
-  void request_finished_callback(ClientConnection* connection) {
-    execute_pending_request(connection);
+  void on_close(ClientConnection* connection) {
+    connections_.remove(connection);
+    delete connection;
+  }
+
+  void on_request_finished(ClientConnection* connection, Message* message) {
+    if(connection->is_ready()) {
+      execute_pending_request(connection);
+    }
   }
 
   ~Pool() {
@@ -107,17 +107,15 @@ class Pool {
   void
   spawn_connection() {
     ClientConnection* connection = new ClientConnection(
-        loop_,
-        ssl_context_ ? ssl_context_->session_new() : NULL,
-        host_);
+        io_worker_->loop,
+        io_worker_->ssl_context ? io_worker_->ssl_context->session_new() : NULL,
+        host_,
+        std::bind(&Pool::on_connect, this,
+                  std::placeholders::_1, std::placeholders::_2),
+        std::bind(&Pool::on_close, this,
+          std::placeholders::_1));
 
-    connection->init(
-        std::bind(
-            &Pool::connect_callback,
-            this,
-            std::placeholders::_1,
-            std::placeholders::_2),
-         std::bind(&Pool::request_finished_callback, this, std::placeholders::_1));
+    connection->connect();
 
     connections_pending_.push_back(connection);
   }
@@ -150,61 +148,59 @@ class Pool {
             connections_.begin(),
             connections_.end(),
             Pool::least_busy_comp);
-    if ((*it)->available_streams()) {
+    if ((*it)->is_ready() && (*it)->available_streams()) {
       return *it;
     }
     return nullptr;
   }
 
-  bool
-  borrow_connection(
-      ClientConnection** output) {
-
+  ClientConnection* borrow_connection() {
     if(connections_.empty()) {
       for (size_t i = 0; i < core_connections_per_host_; ++i) {
         spawn_connection();
       }
-      return false;
+      return nullptr;
     }
 
     maybe_spawn_connection();
 
-    *output = find_least_busy();
-    if (*output) {
-      return true;
-    }
-
-    return false;
+    return find_least_busy();
   }
 
-  void on_timeout(void* data) {
-    RequestFuture* request = static_cast<RequestFuture*>(data);
-    // TODO(mpenick): Maybe we want to move to the next host here?
-    pending_request_queue_.remove(request);
+  bool execute(ClientConnection* connection, RequestFuture* request_future) {
+    return connection->execute(request_future->message,
+                               request_future,
+                               std::bind(&Pool::on_request_finished, this,
+                                         std::placeholders::_1, std::placeholders::_2));
   }
 
-  bool wait_for_connection(RequestFuture* request) {
+  void on_timeout(Timer* timer) {
+    RequestFuture* request_future = static_cast<RequestFuture*>(timer->data());
+    pending_request_queue_.remove(request_future);
+    io_worker_->try_next_host(request_future);
+  }
+
+  bool wait_for_connection(RequestFuture* request_future) {
     if(pending_request_queue_.size() + 1 > max_pending_requests_) {
       return false;
     }
-    Timer* timer = Timer::start(loop_, connection_timeout_,
-                                request,
+    request_future->timer = Timer::start(io_worker_->loop, connection_timeout_,
+                                request_future,
                                 std::bind(&Pool::on_timeout, this, std::placeholders::_1));
-    request->timer = timer;
-    pending_request_queue_.push_back(request);
+    pending_request_queue_.push_back(request_future);
     return true;
   }
 
   void execute_pending_request(ClientConnection* connection) {
     if(!pending_request_queue_.empty()) {
-      RequestFuture* request = pending_request_queue_.front();
-      if(request->timer) {
-        Timer::stop(request->timer);
-        request->timer = nullptr;
+      RequestFuture* request_future = pending_request_queue_.front();
+      pending_request_queue_.pop_front();
+      if(request_future->timer) {
+        Timer::stop(request_future->timer);
+        request_future->timer = nullptr;
       }
-      Error* error = nullptr;
-      if(!connection->execute(request->message, request, &error)) {
-        request->set_error(error);
+      if(!execute(connection, request_future)) {
+        io_worker_->try_next_host(request_future);
       }
     }
   }
