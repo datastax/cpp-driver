@@ -938,27 +938,45 @@ private:
         write_callback_t    callback,
         cql_stream_t&       stream)
     {
-        cql::cql_error_t err;
-        message->prepare(&err);
+        boost::shared_ptr<cql::cql_error_t> err(new cql::cql_error_t());
+        message->prepare(err.get());
 
-        cql::cql_header_impl_t header(CQL_VERSION_1_REQUEST,
+        boost::shared_ptr<cql::cql_header_impl_t> header(new cql::cql_header_impl_t(CQL_VERSION_1_REQUEST,
                                       CQL_FLAG_NOFLAG,
                                       stream,
                                       message->opcode(),
-                                      message->size());
-        header.prepare(&err);
+                                      message->size()));
+        header->prepare(err.get());
 
-        log(CQL_LOG_DEBUG, "sending message: " + header.str() + " " + message->str());
+        log(CQL_LOG_DEBUG, "sending message: " + header->str() + " " + message->str());
 
         std::vector<boost::asio::const_buffer> buf;
 
-        buf.push_back(boost::asio::buffer(header.buffer()->data(), header.size()));
+        buf.push_back(boost::asio::buffer(header->buffer()->data(), header->size()));
 
-        if (header.length() != 0) {
+        if (header->length() != 0) {
             buf.push_back(boost::asio::buffer(message->buffer()->data(), message->size()));
         }
 
-        boost::asio::async_write(*_transport, buf, callback);
+        struct holder {
+        	holder(	boost::shared_ptr<cql::cql_header_impl_t> header,
+                    boost::shared_ptr<cql::cql_message_t>     message,
+                    boost::shared_ptr<cql::cql_error_t>       error,
+                    write_callback_t callback)
+        	            : _header(header), _message(message), _error(error), _callback(callback) {}
+
+            void operator() (const boost::system::error_code& err_code, std::size_t size) {
+                _callback(err_code, size);
+            }
+
+        private:
+            boost::shared_ptr<cql::cql_header_impl_t>   _header;
+            boost::shared_ptr<cql::cql_message_t>       _message;
+            boost::shared_ptr<cql::cql_error_t>         _error;
+            write_callback_t                            _callback;
+        };
+
+        boost::asio::async_write(*_transport, buf, holder(header, message, err, callback));
     }
 
     void
