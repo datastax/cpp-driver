@@ -53,6 +53,7 @@ CassFuture* cass_session_connect_keyspace(CassSession* session,
 }
 
 CassFuture* cass_session_shutdown(CassSession* session) {
+  // TODO(mpenick): Make sure this handles shutdown during the middle of startup
   return CassFuture::to(session->shutdown());
 }
 

@@ -106,7 +106,7 @@ class Future {
       return is_set_;
     }
 
-    ResultOrError* get() {
+    virtual ResultOrError* get() {
       std::unique_lock<std::mutex> lock(mutex_);
       while(!is_set_) {
         cond_.wait(lock);

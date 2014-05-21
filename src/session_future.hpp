@@ -31,8 +31,8 @@ struct SessionFuture : public Future {
 
 
 struct ShutdownSessionFuture : public SessionFuture {
+    virtual ResultOrError* get();
     virtual void wait();
-
     virtual bool wait_for(size_t timeout);
 };
 

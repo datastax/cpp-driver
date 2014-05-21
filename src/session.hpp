@@ -74,6 +74,7 @@ struct Session {
   std::unique_ptr<LoadBalancingPolicy> load_balancing_policy_;
   int pending_resolve_count_;
   int pending_connections_count_;
+  int pending_workers_count_;
   int current_io_worker_;
 
   Session() 
@@ -85,6 +86,7 @@ struct Session {
     , load_balancing_policy_(new RoundRobinPolicy())
     , pending_resolve_count_(0)
     , pending_connections_count_(0)
+    , pending_workers_count_(0)
     , current_io_worker_(0) { }
 
   Session(const Session* session)
@@ -94,7 +96,11 @@ struct Session {
     , connect_future_(nullptr)
     , shutdown_future_(nullptr)
     , config_(session->config_)
-    , load_balancing_policy_(new RoundRobinPolicy()) { }
+    , load_balancing_policy_(new RoundRobinPolicy())
+    , pending_resolve_count_(0)
+    , pending_connections_count_(0)
+    , pending_workers_count_(0)
+    , current_io_worker_(0) { }
 
   ~Session() {
   }
@@ -128,9 +134,7 @@ struct Session {
   }
 
   void join() {
-    if(state_ != SESSION_STATE_NEW) {
-      uv_thread_join(&thread_);
-    }
+    uv_thread_join(&thread_);
   }
 
   void notify_connect_q(const Host& host) {
@@ -191,7 +195,6 @@ struct Session {
           "connect has already been called",
           __FILE__,
           __LINE__));
-     connect_future_ = nullptr;
     }
     return connect_future_;
   }
@@ -214,6 +217,7 @@ struct Session {
     SessionState expected_state_connecting = SESSION_STATE_CONNECTING;
     if (state_.compare_exchange_strong(expected_state_ready, SESSION_STATE_DISCONNECTING) ||
         state_.compare_exchange_strong(expected_state_connecting, SESSION_STATE_DISCONNECTING)) {
+      pending_workers_count_ = io_workers_.size();
       for(auto io_worker : io_workers_) {
         io_worker->shutdown_q();
       }
@@ -222,7 +226,6 @@ struct Session {
            CASS_ERROR_SOURCE_LIBRARY,
            CASS_ERROR_LIB_SESSION_STATE,
            "Session not connected"));
-      shutdown_future_ = nullptr;
     }
 
     return shutdown_future_;
@@ -233,8 +236,6 @@ struct Session {
       uv_async_t* data,
       int         status) {
     Session* session = reinterpret_cast<Session*>(data->data);
-
-    // TODO(mstump)
 
     int port = session->config_.port();
     for(std::string seed : session->config_.contact_points()) {
@@ -279,14 +280,12 @@ struct Session {
           session->connect_future_ = nullptr;
         }
       } else if(payload.type == Payload::ON_SHUTDOWN) {
-        size_t done_worker_count = 0;
         for(auto io_worker : session->io_workers_) {
           if(io_worker->is_shutdown_done_) {
-            done_worker_count++;
             io_worker->join();
           }
         }
-        if(done_worker_count == session->io_workers_.size()) {
+        if(--session->pending_workers_count_ == 0) {
           session->shutdown_future_->set_result();
           session->shutdown_future_ = nullptr;
           session->state_ = SESSION_STATE_DISCONNECTED;

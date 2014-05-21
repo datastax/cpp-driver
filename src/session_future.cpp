@@ -4,6 +4,12 @@
 
 namespace cass {
 
+Future::ResultOrError* ShutdownSessionFuture::get() {
+  Future::ResultOrError* result_or_error = Future::get();
+  session->join();
+  return result_or_error;
+}
+
 void ShutdownSessionFuture::wait() {
   Future::wait();
   session->join();

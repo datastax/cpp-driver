@@ -194,19 +194,14 @@ class ClientConnection {
     }
 
     void close() {
-      if(state_ != CLIENT_STATE_NEW &&
-         state_ != CLIENT_STATE_DISCONNECTING &&
-         state_ != CLIENT_STATE_DISCONNECTED) {
-        state_ = CLIENT_STATE_DISCONNECTING;
-        maybe_close();
-      }
+      state_ = CLIENT_STATE_DISCONNECTING;
+      maybe_close();
     }
 
     void defunct() {
       if(!is_defunct_) {
         is_defunct_ = true;
         close();
-        maybe_close();
       }
     }
 
@@ -429,6 +424,7 @@ class ClientConnection {
         return;
       }
 
+
       Timer::stop(connection->connect_timer_);
       connection->connect_timer_ = nullptr;
 
@@ -495,6 +491,7 @@ class ClientConnection {
       BodyError* error = static_cast<BodyError*>(response->body.get());
 
       if (state_ < CLIENT_STATE_READY) {
+        printf("error %s\n", error->message);
         notify_error(error->message);
       } else if(request->future != nullptr) {
         request->future->set_error(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, (CassError)error->code, error->message));
@@ -532,6 +529,7 @@ class ClientConnection {
     }
 
     void notify_error(const std::string& error) {
+      fprintf(stderr, "Failed to connection: %s\n", error.c_str());
       log(CASS_LOG_DEBUG, "notify_error");
       connect_callback_(this);
     }

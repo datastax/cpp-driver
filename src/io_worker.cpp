@@ -51,7 +51,7 @@ void IOWorker::try_next_host(RequestFuture* request_future) {
 }
 
 void IOWorker::add_pool(Host host) {
-  if(pools.count(host) == 0) {
+  if(!is_shutdown_ && pools.count(host) == 0) {
     size_t core_connections_per_host = config_.core_connections_per_host();
     size_t max_connections_per_host = config_.max_connections_per_host();
     pools.insert(
@@ -67,14 +67,18 @@ void IOWorker::add_pool(Host host) {
   }
 }
 
+void IOWorker::maybe_shutdown() {
+  if(pools.empty()) {
+    is_shutdown_done_ = true;
+    uv_stop(loop);
+    session_->notify_shutdown_q();
+  }
+}
+
 void IOWorker::on_close(Host host) {
   pools.erase(host);
   if(is_shutdown_) {
-    if(pools.empty()) {
-      is_shutdown_done_ = true;
-      uv_stop(loop);
-      session_->notify_shutdown_q();
-    }
+    maybe_shutdown();
   } else {
     ReconnectRequest* reconnect_request = new ReconnectRequest(this, host);
     Timer::start(loop,
@@ -107,6 +111,7 @@ void IOWorker::on_event(uv_async_t *async, int status) {
       for(auto entry : io_worker->pools) {
         entry.second->close();
       }
+      io_worker->maybe_shutdown();
     }
   }
 }

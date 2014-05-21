@@ -115,6 +115,7 @@ struct IOWorker {
     }
 
     void try_next_host(RequestFuture* request_future);
+    void maybe_shutdown();
 
     void on_close(Host host);
     static void on_reconnect(Timer* timer);

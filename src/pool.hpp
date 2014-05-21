@@ -76,9 +76,11 @@ class Pool {
     io_worker_->session_->notify_connect_q(host_);
     connections_pending_.remove(connection);
 
-    if(connection->is_ready()) {
-      connections_.push_back(connection);
-      execute_pending_request(connection);
+    if(is_closing_) {
+      connection->close();
+    } else if(connection->is_ready()) {
+        connections_.push_back(connection);
+        execute_pending_request(connection);
     }
   }
 
@@ -130,6 +132,10 @@ class Pool {
 
   void
   spawn_connection() {
+    if(is_closing_) {
+      return;
+    }
+
     ClientConnection* connection = new ClientConnection(
         io_worker_->loop,
         io_worker_->ssl_context ? io_worker_->ssl_context->session_new() : NULL,
@@ -140,7 +146,6 @@ class Pool {
                   std::placeholders::_1));
 
     connection->connect();
-
     connections_pending_.push_back(connection);
   }
 

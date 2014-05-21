@@ -185,7 +185,6 @@ main() {
                                               i32 int, i64 bigint, \
                                               PRIMARY KEY (key));");
 
-/*
   insert_into_basic(session, "test", &input);
   select_from_basic(session, "test", &output);
 
@@ -194,8 +193,8 @@ main() {
   assert(input.dbl == output.dbl);
   assert(input.i32 == output.i32);
   assert(input.i64 == output.i64);
-  */
 
+  /*
 {
   int i;
   for(i = 0; i < 10; ++i) {
@@ -222,6 +221,7 @@ main() {
     }
   }
 }
+*/
 
   shutdown_future = cass_session_shutdown(session);
   cass_future_wait(shutdown_future);
