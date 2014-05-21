@@ -37,6 +37,13 @@
 #   endif
 #endif
 
+/**
+ * @file include/cassandra.h
+ *
+ * TBD.
+ */
+
+
 /* TODO(mpenick) handle primitive types for other compilers and platforms */
 
 #define cass_false 0
@@ -208,9 +215,9 @@ CASS_EXPORT void
 cass_session_free(CassSession* session);
 
 /**
- * Set an option on the specified session
+ * Set an option on the specified session.
  *
- * @param cluster
+ * @param session
  * @param option
  * @param data
  * @param data_length
@@ -220,11 +227,13 @@ cass_session_free(CassSession* session);
 CASS_EXPORT CassError
 cass_session_setopt(CassSession* session,
                     CassOption option,
-                    const void* data, cass_size_t data_length);
+                    const void* data, 
+                    cass_size_t data_length);
 
 /**
- * Get the option value for the specified session
+ * Get the option value for the specified session.
  *
+ * @param session
  * @param option
  * @param data
  * @param data_length
@@ -234,11 +243,12 @@ cass_session_setopt(CassSession* session,
 CASS_EXPORT CassError
 cass_session_getopt(const CassSession* session,
                     CassOption option,
-                    void** data, cass_size_t* data_length);
+                    void** data, 
+                    cass_size_t* data_length);
 
 /**
  * Shutdown the session instance, output a shutdown future which can
- * be used to determine when the session has been terminated
+ * be used to determine when the session has been terminated.
  *
  * @param session
  */
@@ -249,8 +259,7 @@ cass_session_shutdown(CassSession* session);
  * Initiate a session using the specified session. Resulting
  * future must be freed by caller.
  *
- * @param cluster
- * @param future output future, must be freed by caller, pass NULL to avoid allocation
+ * @param session
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -263,7 +272,6 @@ cass_session_connect(CassSession* session);
  *
  * @param session
  * @param keyspace
- * @param future output future, must be freed by caller, pass NULL to avoid allocation
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -276,8 +284,6 @@ cass_session_connect_keyspace(CassSession* session,
  *
  * @param session
  * @param statement string
- * @param statement_length statement string length
- * @param future output future, must be freed by caller, pass NULL to avoid allocation
  *
  * @return
  */
@@ -291,7 +297,6 @@ cass_session_prepare(CassSession* session,
  *
  * @param session
  * @param statement
- * @param future output future, must be freed by caller, pass NULL to avoid allocation
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -304,8 +309,7 @@ cass_session_exec(CassSession* session,
  * caller.
  *
  * @param session
- * @param statement
- * @param future output future, must be freed by caller, pass NULL to avoid allocation
+ * @param batch
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -397,7 +401,7 @@ cass_future_error_message(CassFuture* future);
 /**
  * Obtain the code from an error structure.
  *
- * @param error
+ * @param future
  *
  * @return error source
  *
@@ -408,7 +412,7 @@ cass_future_error_source(CassFuture* future);
 /**
  * Obtain the source from an error structure.
  *
- * @param error
+ * @param future
  *
  * @return source code
  *
@@ -426,10 +430,8 @@ cass_future_error_code(CassFuture* future);
  * Initialize an ad-hoc query statement
  *
  * @param statement string
- * @param statement_length statement string length
  * @param parameter_count number of bound paramerters
  * @param consistency statement read/write consistency
- * @param output
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -518,7 +520,6 @@ cass_statement_bind_bool(CassStatement* statement,
  * @param statement
  * @param index
  * @param value
- * @param length
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -533,7 +534,6 @@ cass_statement_bind_string(CassStatement* statement,
  * @param statement
  * @param index
  * @param value
- * @param length
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -568,8 +568,7 @@ cass_statement_bind_inet(CassStatement* statement,
  * @param statement
  * @param index
  * @param scale
- * @param value
- * @param length
+ * @param varint
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -606,17 +605,15 @@ cass_prepared_free(const CassPrepared* prepared);
  * Initialize a bound statement from a pre-prepared statement
  * parameters
  *
- * @param session
  * @param prepared the previously prepared statement
  * @param parameter_count number of bound paramerters
  * @param consistency statement read/write consistency
- * @param output
  *
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT CassStatement*
 cass_prepared_bind(const CassPrepared* prepared,
-                   cass_size_t paramater_count,
+                   cass_size_t parameter_count,
                    CassConsistency consistency);
 
 /***********************************************************************************
@@ -728,7 +725,6 @@ cass_result_column_count(const CassResult* result);
  *
  * @param result
  * @param index
- * @param coltype output
  *
  * @return
  */
@@ -755,7 +751,7 @@ cass_iterator_from_result(const CassResult* result);
 /**
  * Create new iterator for the specified row.
  *
- * @param result
+ * @param row
  *
  * @return
  */
@@ -765,7 +761,7 @@ cass_iterator_from_row(const CassRow* row);
 /**
  * Create new iterator for the specified collection.
  *
- * @param result
+ * @param value
  *
  * @return
  */
@@ -806,7 +802,6 @@ cass_iterator_get_value(CassIterator *iterator);
  *
  * @param row
  * @param index
- * @param value
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -824,8 +819,8 @@ cass_row_get_column(const CassRow*  row,
  * Decode the specified value. Value may be a column, collection item, map key, or map
  * value.
  *
- * @param source
  * @param value
+ * @param output
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -837,8 +832,8 @@ cass_value_get_int32(const CassValue* value,
  * Decode the specified value. Value may be a column, collection item, map key, or map
  * value.
  *
- * @param source
  * @param value
+ * @param output
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -850,8 +845,8 @@ cass_value_get_int64(const CassValue* value,
  * Decode the specified value. Value may be a column, collection item, map key, or map
  * value.
  *
- * @param source
  * @param value
+ * @param output
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -863,8 +858,8 @@ cass_value_get_float(const CassValue* value,
  * Decode the specified value. Value may be a column, collection item, map key, or map
  * value.
  *
- * @param source
  * @param value
+ * @param output
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -893,8 +888,9 @@ cass_value_get_bytes(const CassValue* value,
  * Decode the specified value. Value may be a column, collection item, map key, or map
  * value.
  *
- * @param source
  * @param value
+ * @param output_scale
+ * @param output_varint
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -907,8 +903,7 @@ cass_value_get_decimal(const CassValue* value,
  * Get the collection sub-type. Works for collections that have a single sub-type
  * (lists and sets).
  *
- * @param collection
- * @param output
+ * @param value
  *
  * @return 0 if successful, otherwise error occured
  */
@@ -921,7 +916,7 @@ cass_value_is_collection(const CassValue* value);
 /**
  * Get the number of items in a collection. Works for all collection types.
  *
- * @param source collection column
+ * @param collection column
  *
  * @return size, 0 if error
  */
@@ -952,6 +947,7 @@ cass_uuid_v1(CassUuid* output);
 /**
  * Generate a new V1 (time) UUID for the specified time
  *
+ * @param time
  * @param output
  */
 CASS_EXPORT void
