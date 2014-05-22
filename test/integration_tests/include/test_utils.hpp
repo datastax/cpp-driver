@@ -91,7 +91,8 @@ namespace test_utils {
 	extern const std::string INSERT_FORMAT;
 	extern const std::string SELECT_ALL_FORMAT;
 	extern const std::string SELECT_WHERE_FORMAT;
-
+    extern const std::string lorem_ipsum;
+    
 /** The following class cannot be used as a kernel of test fixture because of
     parametrized ctor. Derive from it to use it in your tests.
  */

@@ -37,6 +37,27 @@ set(LIBS ${LIBS} ${OPENSSL_LIBRARIES})
 find_package(ZLIB REQUIRED)
 set(LIBS ${LIBS} ${ZLIB_LIBRARIES})
 
+# snappy
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
+find_package(snappy)
+if(snappy_FOUND)
+    message(STATUS "Snappy found.")
+    set(INCLUDES ${INCLUDES} ${snappy_INCLUDE_DIRS} )
+    set(LIBS ${LIBS} ${snappy_LIBRARIES} )
+else()
+    message(STATUS "Snappy was not found. Compression will not be available.")
+    add_definitions(-DCQL_NO_SNAPPY)
+endif()
+
+# boost::multiprecison
+find_package(MultiPrecision)
+if(multiprecision_FOUND)
+	add_definitions(-DCQL_USE_BOOST_MULTIPRECISION)	
+	message( STATUS "FOUND BOOST::MULTIPRECISION" )
+else()
+	message( STATUS "NOT FOUND BOOST::MULTIPRECISION" )
+endif()
+
 # Threading
 find_package(Threads REQUIRED)
 set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})

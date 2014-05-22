@@ -15,6 +15,7 @@
 
 # cmake output
 *.cmake
+!/cmake_modules/*.cmake
 *.build
 *.xcodeproj
 CMakeFiles

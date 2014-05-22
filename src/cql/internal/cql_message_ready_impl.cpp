@@ -36,7 +36,7 @@ cql::cql_message_ready_impl_t::opcode() const {
 
 cql::cql_int_t
 cql::cql_message_ready_impl_t::size() const {
-    return 0;
+    return _buffer->size();
 }
 
 std::string

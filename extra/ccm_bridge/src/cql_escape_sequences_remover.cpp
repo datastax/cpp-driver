@@ -1,5 +1,5 @@
 #include <cctype>
-#include <cstring>
+#include <string>
 #include "cql_escape_sequences_remover.hpp"
 
 using namespace std;

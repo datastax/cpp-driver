@@ -51,6 +51,9 @@ public:
     cql::cql_opcode_enum
     opcode() const;
 
+    cql_byte_t
+    flag() const;
+
     cql_int_t
     size() const;
 
@@ -70,6 +73,7 @@ private:
     cql::cql_message_buffer_t _buffer;
     cql::cql_consistency_enum _consistency;
     std::string               _query;
+    bool                      _is_traced;
 };
 
 } // namespace cql

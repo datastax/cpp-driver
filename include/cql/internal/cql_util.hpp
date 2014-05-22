@@ -64,8 +64,19 @@ empty_when_null(const char* str) {
 // return false when conversion fails, return true otherwise.
 // if this returns true then result will contain valid ip address.
 bool
-to_ipaddr(const std::string& str, boost::asio::ip::address* result);
+to_ipaddr(const std::string& str, boost::asio::ip::address& result);
 
+std::vector<cql_byte_t>
+compress(const std::vector<cql_byte_t>& buffer, cql_compression_enum e);
+
+void
+compress_inplace(std::vector<cql_byte_t>& buffer, cql_compression_enum e);
+
+std::vector<cql_byte_t>
+uncompress(const std::vector<cql_byte_t>& buffer, cql_compression_enum e);
+
+void
+uncompress_inplace(std::vector<cql_byte_t>& buffer, cql_compression_enum e);
 
 // returns current UTC time.
 // result of this functions depends on local

@@ -150,4 +150,61 @@ BOOST_AUTO_TEST_CASE(simple_timestamp_test)
     BOOST_REQUIRE(::abs(timestamp2-timestamp1-break_length) < 100000); // Tolerance
 }
 
+
+
+/////  --run_test=basics/rows_in_rows_out
+BOOST_AUTO_TEST_CASE(rows_in_rows_out)
+{
+    srand( (unsigned)time(NULL) );
+    
+    cql::cql_consistency_enum consistency = cql::CQL_CONSISTENCY_ONE;
+    
+    builder->with_load_balancing_policy( boost::shared_ptr< cql::cql_load_balancing_policy_t >( new cql::cql_round_robin_policy_t() ) );
+    boost::shared_ptr<cql::cql_cluster_t> cluster(builder->build());
+    boost::shared_ptr<cql::cql_session_t> session(cluster->connect());
+    
+    test_utils::query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
+    session->set_keyspace(test_utils::SIMPLE_KEYSPACE);
+    
+    { //// 1. Check the 32-int.
+        test_utils::query(session, str(boost::format("CREATE TABLE %s(tweet_id bigint PRIMARY KEY, t1 bigint, t2 bigint, t3 bigint );") % test_utils::SIMPLE_TABLE ),consistency);
+        
+        std::map< int, cql::cql_int_t > int_map;
+        
+        int const integer_number_of_rows = 100000;
+        
+        for( int i = 0; i < integer_number_of_rows; ++i )
+        {
+            //// int_map.insert( std::make_pair( i, ii ) );
+            std::string query_string( boost::str(boost::format("INSERT INTO %s (tweet_id,t1,t2,t3) VALUES (%d,%d,%d,%d);") % test_utils::SIMPLE_TABLE % i % i % i % i ) );
+            boost::shared_ptr<cql::cql_query_t> _query(new cql::cql_query_t(query_string,consistency));
+            session->query(_query);
+        }
+        
+        cql::cql_bigint_t row_count( 0 );
+        
+        boost::shared_ptr<cql::cql_result_t> result = test_utils::query(session, str(boost::format("SELECT t1, t2, t3 FROM %s;") % test_utils::SIMPLE_TABLE ), consistency );
+        
+        int number_of_rows_selected( 0 );
+        while (result->next())
+        {
+            ++number_of_rows_selected;
+            cql::cql_bigint_t t1( 0 ), t2( 0 ), t3( 0 ), t4( 0 );
+            
+            result->get_bigint( 0, t1 );
+            result->get_bigint( 1, t2 );
+            result->get_bigint( 2, t3 );
+        }
+        
+        if( number_of_rows_selected != integer_number_of_rows )
+        {
+            std::cout << "Wrong number of records. It should be: " << integer_number_of_rows << std::endl;
+        }
+        else
+        {
+            std::cout << "The number of rows is OK. " << std::endl;
+        }
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()

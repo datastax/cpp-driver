@@ -27,6 +27,11 @@
 #include "cql/cql_stream.hpp"
 #include "cql/internal/cql_message.hpp"
 
+#include "cql/cql_uuid.hpp"
+#include <boost/asio/ip/address.hpp>
+#include "cql/cql_decimal.hpp"			
+#include "cql/cql_varint.hpp"			
+
 namespace cql {
 
 class cql_retry_policy_t;
@@ -44,7 +49,9 @@ public:
 
     cql_message_execute_impl_t(const std::vector<cql::cql_byte_t>& id,
                                cql::cql_consistency_enum consistency,
-                               boost::shared_ptr<cql_retry_policy_t> retry_policy);
+                               boost::shared_ptr<cql_retry_policy_t> retry_policy,
+                               bool is_traced,
+                               bool is_compressed);
 
     const std::vector<cql::cql_byte_t>&
     query_id() const;
@@ -83,10 +90,16 @@ public:
     push_back(const bool val);
 
     void
+    push_back_null();
+
+    void
     pop_back();
 
     cql::cql_opcode_enum
     opcode() const;
+
+    cql_byte_t
+    flag() const;
 
     cql_int_t
     size() const;
@@ -125,14 +138,28 @@ public:
     void
     set_stream(const cql_stream_t& stream);
 
+	void 
+	push_back(const cql_uuid_t val);
+
+	void 
+	push_back(const boost::asio::ip::address val);
+
+	void 
+	push_back(const cql_varint_t val);
+
+	void 
+	push_back(const cql_decimal_t val);
+
 private:
-    typedef std::list<param_t> params_container_t;
+    typedef std::list< boost::shared_ptr<param_t> > params_container_t;
 
     cql::cql_message_buffer_t    _buffer;
     std::vector<cql::cql_byte_t> _query_id;
     cql::cql_consistency_enum    _consistency;
     params_container_t           _params;
     cql_stream_t                 _stream;
+    bool                         _is_traced;
+    bool                         _is_compressed;
         
     boost::shared_ptr<cql_retry_policy_t> _retry_policy;
     int                                   _retry_counter;

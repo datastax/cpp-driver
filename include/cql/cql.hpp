@@ -56,6 +56,12 @@ enum cql_opcode_enum {
     CQL_OPCODE_EVENT        = 0x0C
 };
 
+enum cql_header_flag_enum {
+    CQL_FLAG_NOFLAG      = 0x00,
+    CQL_FLAG_COMPRESSION = 0x01,
+    CQL_FLAG_TRACE       = 0x02
+};
+    
 enum cql_consistency_enum {
     CQL_CONSISTENCY_ANY          = 0x0000,
     CQL_CONSISTENCY_ONE          = 0x0001,
@@ -150,6 +156,12 @@ enum cql_event_topology_enum {
     CQL_EVENT_TOPOLOGY_ADD_NODE    = 0x01,
     CQL_EVENT_TOPOLOGY_REMOVE_NODE = 0x02
 };
+    
+enum cql_compression_enum {
+    CQL_COMPRESSION_NONE,
+    CQL_COMPRESSION_SNAPPY,
+    CQL_COMPRESSION_UNKNOWN = -1
+};
 
 //  The distance to a Cassandra node as assigned by a
 //  com.datastax.driver.core.policies.LoadBalancingPolicy (through
@@ -177,6 +189,12 @@ to_string(const cql_host_distance_enum);
 
 const char*
 to_string(const cql_consistency_enum);
+
+const char*
+to_string(const cql_compression_enum compression);
+
+cql_compression_enum
+compression_from_string(const char* compression_string);
 
 // Initializes cql library, must be called before any interaction
 // with library.

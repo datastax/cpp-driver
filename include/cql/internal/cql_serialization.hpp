@@ -30,6 +30,8 @@
 
 namespace cql {
 
+class cql_uuid_t;
+    
 std::ostream&
 encode_bool(std::ostream& output,
             bool value);
@@ -168,6 +170,10 @@ std::istream&
 decode_bytes(std::istream& input,
              std::vector<cql::cql_byte_t>& value);
 
+cql::cql_byte_t*
+decode_uuid(cql::cql_byte_t* input,
+            cql_uuid_t&      value);
+    
 std::ostream&
 encode_short_bytes(std::ostream& output,
                    const std::vector<cql::cql_byte_t>& value);
@@ -250,6 +256,14 @@ std::istream&
 decode_inet(std::istream& input,
             std::string& ip,
             cql_int_t& port);
+
+void
+encode_ipv4(std::vector<cql_byte_t> & output,
+            const std::string& ip);
+
+void
+encode_ipv6(std::vector<cql_byte_t> & output,
+            const std::string& ip);
 
 } // namespace cql
 

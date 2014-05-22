@@ -81,6 +81,7 @@
 #include "cql/internal/cql_session_impl.hpp"
 #include "cql/exceptions/cql_query_timeout_exception.hpp"
 #include "cql/exceptions/cql_unavailable_exception.hpp"
+#include "cql/exceptions/cql_driver_internal_error.hpp"
 
 namespace cql {
     
@@ -314,9 +315,9 @@ public:
 		create_request(
             messageQuery,
 			boost::bind(&cql_connection_impl_t::write_handle,
-			this->shared_from_this(),
-			boost::asio::placeholders::error,
-			boost::asio::placeholders::bytes_transferred),
+                        this->shared_from_this(),
+                        boost::asio::placeholders::error,
+                        boost::asio::placeholders::bytes_transferred),
 			stream);
 
 		return stream;
@@ -378,6 +379,19 @@ public:
        return stream;
     }
 
+    void
+    set_compression_type(cql_compression_enum compression)
+    {
+        #ifdef CQL_NO_SNAPPY
+        if (compression == CQL_COMPRESSION_SNAPPY) {
+            throw cql_driver_internal_error_exception(
+                "Requested snappy compression, which is unavailable. Recompile with snappy support.");
+        }
+        #endif
+        
+        _compression = compression;
+    }
+    
     bool
     defunct() const
     {
@@ -434,7 +448,7 @@ public:
         _connect_callback = 0;
         _connect_errback = 0;
         _event_callback = 0;
-        _session_ptr = 0;
+        _session_ptr = boost::shared_ptr<cql_session_impl_t>();
     }
 
     virtual const cql_endpoint_t&
@@ -577,6 +591,7 @@ private:
         _closing(false),
         _reserved_stream(_callback_storage.acquire_stream()),
         _uuid(cql_uuid_t::create()),
+        _compression(CQL_COMPRESSION_NONE),
         _is_disposed(new boolkeeper),
         _stream_id_vs_query_string(NUMBER_OF_STREAMS, "")
     {}
@@ -932,6 +947,24 @@ private:
         return (NUMBER_OF_USER_STREAMS == _number_of_free_stream_ids);
     }
 
+    struct holder {
+        holder(	boost::shared_ptr<cql::cql_header_impl_t> header,
+               boost::shared_ptr<cql::cql_message_t>     message,
+               boost::shared_ptr<cql::cql_error_t>       error,
+               write_callback_t callback)
+        : _header(header), _message(message), _error(error), _callback(callback) {}
+        
+        void operator() (const boost::system::error_code& err_code, std::size_t size) {
+            _callback(err_code, size);
+        }
+        
+    private:
+        boost::shared_ptr<cql::cql_header_impl_t>   _header;
+        boost::shared_ptr<cql::cql_message_t>       _message;
+        boost::shared_ptr<cql::cql_error_t>         _error;
+        write_callback_t                            _callback;
+    };
+
     void
     create_request(
         boost::shared_ptr<cql::cql_message_t> message,
@@ -939,42 +972,36 @@ private:
         cql_stream_t&       stream)
     {
         boost::shared_ptr<cql::cql_error_t> err(new cql::cql_error_t());
-        message->prepare(err.get());
 
-        boost::shared_ptr<cql::cql_header_impl_t> header(new cql::cql_header_impl_t(CQL_VERSION_1_REQUEST,
-                                      CQL_FLAG_NOFLAG,
-                                      stream,
-                                      message->opcode(),
-                                      message->size()));
+        message->prepare(err.get());
+        
+        cql_message_buffer_t output_buffer;
+        if ((message->is_compressed()) && (_compression != CQL_COMPRESSION_NONE)) {
+            // The connection supports compression and the message wants to be compressed.
+            // Let's compress it then.
+            cql_message_buffer_t compressed_buffer = cql_message_buffer_t(new std::vector<cql_byte_t>);
+            *compressed_buffer = compress(*(message->buffer()), _compression);
+            output_buffer = compressed_buffer;
+        }
+        else {
+            output_buffer = message->buffer();
+        }
+
+        boost::shared_ptr<cql::cql_header_impl_t> header(
+            new cql::cql_header_impl_t(CQL_VERSION_1_REQUEST,
+                                       message->flag(),
+                                       stream,
+                                       message->opcode(),
+                                       output_buffer->size()));
         header->prepare(err.get());
 
         log(CQL_LOG_DEBUG, "sending message: " + header->str() + " " + message->str());
 
         std::vector<boost::asio::const_buffer> buf;
-
         buf.push_back(boost::asio::buffer(header->buffer()->data(), header->size()));
-
         if (header->length() != 0) {
-            buf.push_back(boost::asio::buffer(message->buffer()->data(), message->size()));
+            buf.push_back(boost::asio::buffer(output_buffer->data(), output_buffer->size()));
         }
-
-        struct holder {
-        	holder(	boost::shared_ptr<cql::cql_header_impl_t> header,
-                    boost::shared_ptr<cql::cql_message_t>     message,
-                    boost::shared_ptr<cql::cql_error_t>       error,
-                    write_callback_t callback)
-        	            : _header(header), _message(message), _error(error), _callback(callback) {}
-
-            void operator() (const boost::system::error_code& err_code, std::size_t size) {
-                _callback(err_code, size);
-            }
-
-        private:
-            boost::shared_ptr<cql::cql_header_impl_t>   _header;
-            boost::shared_ptr<cql::cql_message_t>       _message;
-            boost::shared_ptr<cql::cql_error_t>         _error;
-            write_callback_t                            _callback;
-        };
 
         boost::asio::async_write(*_transport, buf, holder(header, message, err, callback));
     }
@@ -1062,9 +1089,18 @@ private:
             break;
 
         case CQL_OPCODE_RESULT:
-            _response_message.reset(new cql::cql_message_result_impl_t(header.length()));
+        {
+            cql_message_result_impl_t* new_result
+                = new cql_message_result_impl_t(header.length());
+            
+            if ((header.flags() & CQL_FLAG_TRACE) == CQL_FLAG_TRACE) {
+                // This is a response to traced query.
+                // Here we tell the _response_message to expect tracing ID at the beginning of buffer.
+                new_result->set_as_traced();
+            }
+            _response_message.reset(new_result);
             break;
-
+        }
         case CQL_OPCODE_SUPPORTED:
             _response_message.reset(new cql::cql_message_supported_impl_t(header.length()));
             break;
@@ -1083,7 +1119,12 @@ private:
             _response_message.reset(new cql::cql_message_result_impl_t(header.length()));
             break;
         }
-
+        
+        if ((header.flags() & CQL_FLAG_COMPRESSION) == CQL_FLAG_COMPRESSION) {
+            // The body will be compressed.
+            _response_message->enable_compression();
+        }
+        
         boost::mutex::scoped_lock lock(_mutex);
         if (_closing) {
             log(CQL_LOG_INFO, "body_read: connection (" + boost::lexical_cast<std::string>(this) + ") is closing");
@@ -1145,6 +1186,13 @@ private:
 		boost::shared_ptr<boolkeeper> is_disposed,
         const boost::system::error_code& err)
     {
+        /* // A handy piece of code for tracing down transport errors.
+           // It simply counts the number of unread bytes left on the socket.
+        boost::asio::socket_base::bytes_readable command(true);
+        _transport->lowest_layer().io_control(command);
+        std::size_t bytes_readable = command.get();
+        */
+        
         {
             boost::mutex::scoped_lock lock(is_disposed->mutex);
             // if the connection was already disposed we return here immediatelly
@@ -1174,6 +1222,12 @@ private:
             return;
         }
 
+        if (_response_message->is_compressed()) {
+            // The body of the message was compressed. Here we decompress it.
+            log(CQL_LOG_DEBUG, "message body is compressed");
+            uncompress_inplace(*(_response_message->buffer()), _compression);
+        }
+        
         cql::cql_error_t consume_error;
         if (!_response_message->consume(&consume_error)) {
             log(CQL_LOG_ERROR, "error deserializing result message " + consume_error.message);
@@ -1197,7 +1251,7 @@ private:
 
                 boost::shared_ptr<cql_message_result_impl_t> response_message =
                     boost::dynamic_pointer_cast<cql_message_result_impl_t>(
-                        boost::shared_ptr<cql_message_t>(_response_message));
+                        boost::shared_ptr<cql_message_t>(_response_message.release()));
 
                 preprocess_result_message(response_message);
                 release_stream(stream);
@@ -1211,7 +1265,7 @@ private:
             if (_event_callback) {
                 boost::shared_ptr<cql_message_event_impl_t> event =
                     boost::dynamic_pointer_cast<cql_message_event_impl_t>(
-                        boost::shared_ptr<cql_message_t>(_response_message));
+                        boost::shared_ptr<cql_message_t>(_response_message.release()));
 
                 if ((event->topology_change() == CQL_EVENT_TOPOLOGY_REMOVE_NODE
                         || event->status_change() == CQL_EVENT_STATUS_DOWN)
@@ -1246,7 +1300,7 @@ private:
 
                 boost::shared_ptr<cql_message_error_impl_t> m =
                     boost::dynamic_pointer_cast<cql_message_error_impl_t>(
-                        boost::shared_ptr<cql_message_t>(_response_message));
+                        boost::shared_ptr<cql_message_t>(_response_message.release()));
                 
                 cql::cql_error_t cql_error =
                     cql::cql_error_t::cassandra_error(m->code(), m->message());
@@ -1266,10 +1320,16 @@ private:
             break;
 
         case CQL_OPCODE_SUPPORTED:
+        {
             log(CQL_LOG_DEBUG, "received supported message " + _response_message->str());
-            startup_write();
-            break;
 
+            boost::shared_ptr<cql_message_supported_impl_t> m =
+                boost::dynamic_pointer_cast<cql_message_supported_impl_t>(
+                    boost::shared_ptr<cql_message_t>(_response_message.release()));
+
+            startup_write(m);
+        }
+            break;
         case CQL_OPCODE_AUTHENTICATE:
             credentials_write();
             break;
@@ -1289,7 +1349,7 @@ private:
             boost::make_shared<cql_message_options_impl_t>();
 		create_request(
             messageOption,
-            (boost::function<void (const boost::system::error_code &, std::size_t)>)boost::bind(
+            boost::bind(
                 &cql_connection_impl_t::write_handle,
                 this->shared_from_this(),
                 boost::asio::placeholders::error,
@@ -1301,12 +1361,26 @@ private:
     }
 
     void
-    startup_write()
+    startup_write(boost::shared_ptr<cql_message_supported_impl_t> supported)
     {
         boost::shared_ptr<cql_message_startup_impl_t> m =
             boost::make_shared<cql_message_startup_impl_t>();
+     
+        cql_compression_enum compression_to_use = CQL_COMPRESSION_NONE;
+        
+        if (supported) {
+            std::list<std::string> compressions = supported->compressions();
+            if (_compression != CQL_COMPRESSION_NONE &&
+                std::find(compressions.begin(),
+                          compressions.end(),
+                          to_string(_compression)) != compressions.end() )
+            {
+                compression_to_use = _compression;
+            }
+        }
         
         m->version(CQL_VERSION_IMPL);
+        m->compression(compression_to_use);
         create_request(
             m,
             boost::bind(&cql_connection_impl_t::write_handle,
@@ -1375,6 +1449,7 @@ private:
     cql_stream_t                             _reserved_stream;
     cql_uuid_t                               _uuid;
 	boost::shared_ptr<boolkeeper>            _is_disposed;
+    cql_compression_enum                     _compression;
     
     std::string                              _current_keyspace_name,
                                              _selected_keyspace_name;

@@ -418,7 +418,7 @@ BOOST_AUTO_TEST_CASE(deserialize_data_14)
 
     BOOST_CHECK_EQUAL(true, m.get_data(14, data ));
     BOOST_CHECK_EQUAL(16, data.size() );	
-    BOOST_CHECK(memcmp(test_str, reinterpret_cast<const char*>( &data[0]), sizeof(test_str)) == 0);
+    BOOST_CHECK(memcmp(test_str, reinterpret_cast<const char*>( &data[0]), sizeof(test_str)-1) == 0);
 }
 
 BOOST_AUTO_TEST_CASE(deserialize_list)

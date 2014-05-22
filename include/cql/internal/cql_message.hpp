@@ -34,17 +34,40 @@ typedef
 
 class cql_message_t {
 public:
-
+    cql_message_t(bool is_compressed=false)
+        : _is_compressed(is_compressed) {}
+    
     // Returns message type.
     virtual cql::cql_opcode_enum
     opcode() const = 0;
-
+    
+    /** Returns the flag (i.e. compression/tracing flag) if applicable.
+     If not applicable, returns cql_header_flag_enum::CQL_FLAG_NOFLAG */
+    virtual cql_byte_t
+    flag() const {
+        cql_byte_t ret_flag = static_cast<cql_byte_t>(CQL_FLAG_NOFLAG);
+        if (_is_compressed) {
+            ret_flag |= static_cast<cql_byte_t>(CQL_FLAG_COMPRESSION);
+        }
+        return ret_flag;
+    }
+    
+    void
+    enable_compression() {
+        _is_compressed = true;
+    }
+    
+    bool
+    is_compressed() const {
+        return _is_compressed;
+    }
+    
     virtual cql_int_t
     size() const = 0;
 
     virtual std::string
     str() const = 0;
-
+    
     // Parsers binary message.
     virtual bool
     consume(cql::cql_error_t* err) = 0;
@@ -60,6 +83,9 @@ public:
 
     virtual
     ~cql_message_t() { };
+    
+private:
+    bool _is_compressed;
 };
 
 } // namespace cql

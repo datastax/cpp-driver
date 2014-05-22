@@ -20,18 +20,22 @@
 
 #include "cql/internal/cql_message_prepare_impl.hpp"
 
-cql::cql_message_prepare_impl_t::cql_message_prepare_impl_t() :
-    _buffer(new std::vector<cql_byte_t>())
+cql::cql_message_prepare_impl_t::cql_message_prepare_impl_t()
+    : _buffer(new std::vector<cql_byte_t>())
+    , _is_traced(false)
 {}
 
-cql::cql_message_prepare_impl_t::cql_message_prepare_impl_t(size_t size) :
-    _buffer(new std::vector<cql_byte_t>(size))
+cql::cql_message_prepare_impl_t::cql_message_prepare_impl_t(size_t size)
+    : _buffer(new std::vector<cql_byte_t>(size))
+    , _is_traced(false)
 {}
 
 cql::cql_message_prepare_impl_t::cql_message_prepare_impl_t(
         const boost::shared_ptr<cql_query_t>& query)
-    : _buffer(new std::vector<cql_byte_t>())
-    , _query(query->query())  { }
+    : cql_message_t(query->is_compressed())
+    , _buffer(new std::vector<cql_byte_t>())
+    , _query(query->query())
+    , _is_traced(query->is_traced()) { }
 
 cql::cql_message_buffer_t
 cql::cql_message_prepare_impl_t::buffer() {
@@ -51,6 +55,18 @@ cql::cql_message_prepare_impl_t::set_query(const std::string& q) {
 cql::cql_opcode_enum
 cql::cql_message_prepare_impl_t::opcode() const {
     return CQL_OPCODE_PREPARE;
+}
+
+cql::cql_byte_t
+cql::cql_message_prepare_impl_t::flag() const {
+    cql_byte_t ret_val = static_cast<cql_byte_t>(CQL_FLAG_NOFLAG);
+    if (_is_traced) {
+        ret_val |= static_cast<cql_byte_t>(CQL_FLAG_TRACE);
+    }
+    if (this->is_compressed()) {
+        ret_val |= static_cast<cql_byte_t>(CQL_FLAG_COMPRESSION);
+    }
+    return ret_val;
 }
 
 cql::cql_int_t

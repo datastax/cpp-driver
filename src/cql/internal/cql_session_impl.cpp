@@ -304,7 +304,8 @@ cql::cql_session_impl_t::allocate_connection(
         new cql_promise_t<cql_future_connection_t>());
 
     boost::shared_ptr<cql_connection_t> connection(_client_callback());
-
+    
+    connection->set_compression_type(_configuration->protocol_options().compression());
     connection->set_credentials(_configuration->credentials());
     connection->connect(host->endpoint(),
                         boost::bind(&cql_session_impl_t::connect_callback, this->shared_from_this(), promise, ::_1),
