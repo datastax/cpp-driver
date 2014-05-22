@@ -55,7 +55,7 @@ main() {
     statement = cass_statement_new(query, 1, CASS_CONSISTENCY_ONE);
     cass_statement_bind_string(statement, 0, key);
 
-    result_future = cass_session_exec(session, statement);
+    result_future = cass_session_execute(session, statement);
 
     cass_future_wait(result_future);
     result = cass_future_get_result(result_future);

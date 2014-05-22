@@ -38,6 +38,11 @@ struct Config {
   size_t                 core_connections_per_host_;
   size_t                 max_connections_per_host_;
   size_t                 reconnect_wait_;
+  size_t                 max_simultaneous_creation_;
+  size_t                 max_pending_requests_;
+  size_t                 connect_timeout_;
+  size_t                 write_timeout_;
+  size_t                 read_timeout_;
   LogCallback            log_callback_;
 
  public:
@@ -47,13 +52,18 @@ struct Config {
       compression_(0),
       max_schema_agreement_wait_(10),
       control_connection_timeout_(10),
-      thread_count_io_(4),
+      thread_count_io_(1),
       thread_count_callback_(4),
       queue_size_io_(1024),
       queue_size_event_(256),
-      core_connections_per_host_(1),
-      max_connections_per_host_(2),
-      reconnect_wait_(2000),
+      core_connections_per_host_(2),
+      max_connections_per_host_(4),
+      reconnect_wait_(10000),
+      max_simultaneous_creation_(1),
+      max_pending_requests_(128 * max_connections_per_host_),
+      connect_timeout_(1000),
+      write_timeout_(1000),
+      read_timeout_(1000),
       log_callback_(nullptr)
   {}
 
@@ -83,6 +93,26 @@ struct Config {
 
   size_t reconnect_wait() const {
     return reconnect_wait_;
+  }
+
+  size_t max_simultaneous_creation() const {
+    return max_simultaneous_creation_;
+  }
+
+  size_t max_pending_requests() const {
+    return max_pending_requests_;
+  }
+
+  size_t connect_timeout() const {
+    return connect_timeout_;
+  }
+
+  size_t write_timeout() const {
+    return write_timeout_;
+  }
+
+  size_t read_timeout() const {
+    return read_timeout_;
   }
 
   const std::list<std::string>& contact_points() const {
@@ -141,6 +171,8 @@ struct Config {
     return CASS_OK;
   }
 };
+
+
 
 } // namespace cass
 

@@ -35,6 +35,7 @@
 #include "resolver.hpp"
 #include "config.hpp"
 #include "session_future.hpp"
+#include "request_handler.hpp"
 
 namespace cass {
 
@@ -69,7 +70,7 @@ struct Session {
   SessionFuture*               shutdown_future_;
   std::set<Host>               hosts_;
   Config                       config_;
-  std::unique_ptr<AsyncQueue<MPMCQueue<RequestFuture*>>> request_future_queue_;
+  std::unique_ptr<AsyncQueue<MPMCQueue<RequestHandler*>>> request_queue_;
   std::unique_ptr<AsyncQueue<MPMCQueue<Payload>>> event_queue_;
   std::unique_ptr<LoadBalancingPolicy> load_balancing_policy_;
   int pending_resolve_count_;
@@ -103,34 +104,26 @@ struct Session {
     , current_io_worker_(0) { }
 
   ~Session() {
+    uv_loop_delete(loop_);
   }
 
   int init() {
     async_connect_.data = this;
     uv_async_init( loop_, &async_connect_, &Session::on_connect);
 
-    request_future_queue_.reset(new AsyncQueue<MPMCQueue<RequestFuture*>>(config_.queue_size_io()));
-    int rc = request_future_queue_->init(loop_, this, &Session::on_execute);
-    if(rc != 0) {
-      return rc;
-    }
-
+    request_queue_.reset(new AsyncQueue<MPMCQueue<RequestHandler*>>(config_.queue_size_io()));
+    int rc = request_queue_->init(loop_, this, &Session::on_execute);
+    if(rc != 0) return rc;
     event_queue_.reset(new AsyncQueue<MPMCQueue<Payload>>(config_.queue_size_event()));
     rc = event_queue_->init(loop_, this, &Session::on_event);
-    if(rc != 0) {
-      return rc;
-    }
-
+    if(rc != 0) return rc;
     for (size_t i = 0; i < config_.thread_count_io(); ++i) {
       IOWorkerPtr io_worker(new IOWorker(this, config_));
       int rc = io_worker->init();
-      if(rc != 0) {
-        return rc;
-      }
+      if(rc != 0) return rc;
       io_workers_.push_back(io_worker);
     }
-
-    return 0;
+    return rc;
   }
 
   void join() {
@@ -189,12 +182,7 @@ struct Session {
 
       uv_async_send(&async_connect_);
     } else {
-     connect_future_->set_error(new Error(
-          CASS_ERROR_SOURCE_LIBRARY,
-          CASS_ERROR_LIB_SESSION_STATE,
-          "connect has already been called",
-          __FILE__,
-          __LINE__));
+     connect_future_->set_error(CASS_ERROR_LIB_ALREADY_CONNECTED, "Connect has already been called");
     }
     return connect_future_;
   }
@@ -222,10 +210,7 @@ struct Session {
         io_worker->shutdown_q();
       }
     } else {
-      shutdown_future_->set_error(CASS_ERROR(
-           CASS_ERROR_SOURCE_LIBRARY,
-           CASS_ERROR_LIB_SESSION_STATE,
-           "Session not connected"));
+      shutdown_future_->set_error(CASS_ERROR_LIB_NOT_CONNECTED, "The session is not connected");
     }
 
     return shutdown_future_;
@@ -303,40 +288,32 @@ struct Session {
     return NULL;
   }
 
-  Future*
-  prepare(
-      const char* statement,
-      size_t      length) {
-    RequestFuture* request_future = new RequestFuture(new Message(CQL_OPCODE_PREPARE));
-    request_future->statement.assign(statement, length);
-
-    Prepare* body =
-        reinterpret_cast<Prepare*>(request_future->message->body.get());
-    body->prepare_string(statement, length);
-    execute(request_future);
-    return request_future;
+  Future* prepare(const char* statement, size_t length) {
+    Message* request = new Message();
+    request->opcode = CQL_OPCODE_PREPARE;
+    Prepare* prepare = new Prepare();
+    prepare->prepare_string(statement, length);
+    request->body.reset(prepare);
+    RequestHandler* request_handler
+        = new RequestHandler(request, std::string(statement, length));
+    request_handler->statement.assign(statement, length);
+    execute(request_handler);
+    return request_handler->future();
   }
 
   Future* execute(Statement* statement) {
-    Message* message = new Message();
-    message->opcode = statement->opcode();
-    message->body.reset(statement); // TODO(mpenick): We don't want this to be cleaned up by the smart pointer
-    RequestFuture* request_future = new RequestFuture(message);
-    execute(request_future);
-    return request_future;
+    Message* request = new Message();
+    request->opcode = statement->opcode();
+    request->body.reset(statement);
+    RequestHandler* request_handler = new RequestHandler(request, "");
+    execute(request_handler);
+    return request_handler->future();
   }
 
-  inline void
-  execute(
-      RequestFuture* request_future) {
-    if (!request_future_queue_->enqueue(request_future)) {
-      request_future->set_error(new Error(
-          CASS_ERROR_SOURCE_LIBRARY,
-          CASS_ERROR_LIB_NO_STREAMS,
-          "request queue full",
-          __FILE__,
-          __LINE__));
-      delete request_future;
+  inline void execute(RequestHandler* request_handler) {
+    if (!request_queue_->enqueue(request_handler)) {
+      request_handler->on_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL, "The request queue has reached capacity");
+      delete request_handler;
     }
   }
 
@@ -346,16 +323,16 @@ struct Session {
       int         status) {
     Session* session = reinterpret_cast<Session*>(data->data);
 
-    RequestFuture* request_future = nullptr;
-    while (session->request_future_queue_->dequeue(request_future)) {
-      session->load_balancing_policy_->new_query_plan(&request_future->hosts);
+    RequestHandler* request_handler = nullptr;
+    while (session->request_queue_->dequeue(request_handler)) {
+      session->load_balancing_policy_->new_query_plan(&request_handler->hosts);
 
       size_t start = session->current_io_worker_;
       size_t remaining = session->io_workers_.size();
       while(remaining != 0) {
         // TODO(mpenick): Make this something better than RR
         auto io_worker = session->io_workers_[start];
-        if(io_worker->execute(request_future)) {
+        if(io_worker->execute(request_handler)) {
           session->current_io_worker_ = (start + 1) % session->io_workers_.size();
           break;
         }
@@ -364,9 +341,7 @@ struct Session {
       }
 
       if(remaining == 0) {
-        request_future->set_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
-                                      CASS_ERROR_LIB_BAD_PARAMS,
-                                      "All workers are busy"));
+        request_handler->on_error(CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD, "All workers are busy");
       }
     }
   }

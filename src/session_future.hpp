@@ -28,8 +28,6 @@ struct SessionFuture : public Future {
     Session* session;
 };
 
-
-
 struct ShutdownSessionFuture : public SessionFuture {
     virtual ResultOrError* get();
     virtual void wait();

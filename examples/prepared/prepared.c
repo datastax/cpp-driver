@@ -24,6 +24,16 @@
 
 #include "cassandra.h"
 
+struct Basic_ {
+  cass_bool_t bln;
+  cass_float_t flt;
+  cass_double_t dbl;
+  cass_int32_t i32;
+  cass_int64_t i64;
+};
+
+typedef struct Basic_ Basic;
+
 void print_error(CassFuture* future) {
   CassString message = cass_future_error_message(future);
   fprintf(stderr, "Error: %s\n", message.data);
@@ -74,24 +84,20 @@ CassError execute_query(CassSession* session, const char* query) {
   return rc;
 }
 
-CassError insert_into_collections(CassSession* session, const char* key, const char* items[]) {
+CassError insert_into_basic(CassSession* session, const char* key, const Basic* basic) {
   CassError rc = 0;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
-  CassCollection* collection = NULL;
-  const char** item = NULL;
-  CassString query = cass_string_init("INSERT INTO examples.collections (key, items) VALUES (?, ?);");
+  CassString query = cass_string_init("INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);");
 
-  statement = cass_statement_new(query, 2, CASS_CONSISTENCY_ONE);
+  statement = cass_statement_new(query, 6, CASS_CONSISTENCY_ONE);
 
   cass_statement_bind_string(statement, 0, cass_string_init(key));
-
-  collection = cass_collection_new(2);
-  for(item = items; *item; item++) {
-    cass_collection_append_string(collection, cass_string_init(*item));
-  }
-  cass_statement_bind_collection(statement, 1, collection, cass_false);
-  cass_collection_free(collection);
+  cass_statement_bind_bool(statement, 1, basic->bln);
+  cass_statement_bind_float(statement, 2, basic->flt);
+  cass_statement_bind_double(statement, 3, basic->dbl);
+  cass_statement_bind_int32(statement, 4, basic->i32);
+  cass_statement_bind_int64(statement, 5, basic->i64);
 
   future = cass_session_execute(session, statement);
 
@@ -108,13 +114,32 @@ CassError insert_into_collections(CassSession* session, const char* key, const c
   return rc;
 }
 
-CassError select_from_collections(CassSession* session, const char* key) {
+CassError prepare_select_from_basic(CassSession* session, const CassPrepared** prepared) {
+  CassError rc = 0;
+  CassFuture* future = NULL;
+  CassString query = cass_string_init("SELECT * FROM examples.basic WHERE key = ?");
+
+  future = cass_session_prepare(session, query);
+  cass_future_wait(future);
+
+  rc = cass_future_error_code(future);
+  if(rc != CASS_OK) {
+    print_error(future);
+  } else {
+    *prepared = cass_future_get_prepared(future);
+  }
+
+  cass_future_free(future);
+
+  return rc;
+}
+
+CassError select_from_basic(CassSession* session, const CassPrepared * prepared, const char* key, Basic* basic) {
   CassError rc = 0;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
-  CassString query = cass_string_init("SELECT items FROM examples.collections WHERE key = ?");
 
-  statement = cass_statement_new(query, 1, CASS_CONSISTENCY_ONE);
+  statement = cass_prepared_bind(prepared, 1, CASS_CONSISTENCY_ONE);
 
   cass_statement_bind_string(statement, 0, cass_string_init(key));
 
@@ -130,18 +155,13 @@ CassError select_from_collections(CassSession* session, const char* key) {
     CassIterator* iterator = cass_iterator_from_result(result);
 
     if(cass_iterator_next(iterator)) {
-      const CassValue* value = NULL;
       const CassRow* row = cass_iterator_get_row(iterator);
-      CassIterator* items_iterator = NULL;
 
-      value = cass_row_get_column(row, 0);
-      items_iterator = cass_iterator_from_collection(value);
-      while(cass_iterator_next(items_iterator)) {
-        CassString item_string;
-        cass_value_get_string(cass_iterator_get_value(items_iterator), &item_string);
-        printf("item: %.*s\n", (int)item_string.length, item_string.data);
-      }
-      cass_iterator_free(items_iterator);
+      cass_value_get_bool(cass_row_get_column(row, 1), &basic->bln);
+      cass_value_get_double(cass_row_get_column(row, 2), &basic->dbl);
+      cass_value_get_float(cass_row_get_column(row, 3), &basic->flt);
+      cass_value_get_int32(cass_row_get_column(row, 4), &basic->i32);
+      cass_value_get_int64(cass_row_get_column(row, 5), &basic->i64);
     }
 
     cass_result_free(result);
@@ -159,26 +179,71 @@ main() {
   CassError rc = 0;
   CassSession* session = NULL;
   CassFuture* shutdown_future = NULL;
-  const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
-  const char* items[] = { "apple", "orange", "banana", "mango", NULL };
+const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
+  Basic input = { cass_true, 0.001, 0.0002, 1, 2 };
+  Basic output;
+  const CassPrepared* prepared = NULL;
 
   rc = connect_session(contact_points, &session);
   if(rc != CASS_OK) {
     return -1;
   }
 
+  /*
   execute_query(session,
                 "CREATE KEYSPACE examples WITH replication = { \
-                           'class': 'SimpleStrategy', 'replication_factor': '1' };");
+                           'class': 'SimpleStrategy', 'replication_factor': '3' };");
+
 
   execute_query(session,
-                "CREATE TABLE examples.collections (key text, \
-                                                    items set<text>, \
-                                                    PRIMARY KEY (key))");
+                "CREATE TABLE examples.basic (key text, \
+                                              bln boolean, \
+                                              flt float, dbl double,\
+                                              i32 int, i64 bigint, \
+                                              PRIMARY KEY (key));");
 
 
-  insert_into_collections(session, "test", items);
-  select_from_collections(session, "test");
+  insert_into_basic(session, "test", &input);
+  */
+
+  prepare_select_from_basic(session, &prepared);
+  select_from_basic(session, prepared, "prepared_test", &output);
+
+  assert(input.bln == output.bln);
+  assert(input.flt == output.flt);
+  assert(input.dbl == output.dbl);
+  assert(input.i32 == output.i32);
+  assert(input.i64 == output.i64);
+
+
+  /*
+{
+  int i;
+  for(i = 0; i < 10; ++i) {
+    char key[17] = { 0 };
+    sprintf(key, "%x", i);
+    insert_into_basic(session, key, &input);
+  }
+
+  for(i = 0; i < 10000; ++i) {
+    int j;
+    printf("iteration: %d\n", i);
+    for(j = 0; j < 10000; ++j) {
+      char key[17] = { 0 };
+      sprintf(key, "%x", j);
+      if(j % 2000 == 0) {
+        printf("%s\n", key);
+      }
+      select_from_basic(session, key, &output);
+      assert(input.bln == output.bln);
+      assert(input.flt == output.flt);
+      assert(input.dbl == output.dbl);
+      assert(input.i32 == output.i32);
+      assert(input.i64 == output.i64);
+    }
+  }
+}
+*/
 
   shutdown_future = cass_session_shutdown(session);
   cass_future_wait(shutdown_future);

@@ -26,7 +26,7 @@
 
 #define CASS_VALUE_CHECK_INDEX(i)                                        \
   if (index >= size()) {                                                 \
-    return CASS_ERROR_LIB_BAD_PARAMS;                                    \
+    return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;                           \
   }
 
 namespace cass {
@@ -143,7 +143,7 @@ struct Statement : public MessageBody {
   inline CassError bind(size_t index, const Collection* collection, bool is_map) {
     CASS_VALUE_CHECK_INDEX(index);
     if(is_map && collection->item_count() % 2 != 0) {
-      return CASS_ERROR_LIB_BAD_PARAMS;
+      return CASS_ERROR_LIB_INVALID_ITEM_COUNT;
     }
     values[index] = collection->build(is_map);
     return CASS_OK;

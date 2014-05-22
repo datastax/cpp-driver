@@ -32,51 +32,127 @@
 
 namespace cass {
 
+enum RequestStatus {
+  REQUEST_STATUS_SUCCESS,
+  REQUEST_STATUS_ERROR,
+  REQUEST_STATUS_WRITE_ERROR,
+  REQUEST_STATUS_WRITE_TIMEOUT,
+  REQUEST_STATUS_READ_TIMEOUT
+};
+
 class ClientConnection {
-  private:
+  public:
+    class StartupHandler : public ResponseCallback {
+      public:
+        StartupHandler(ClientConnection* connection, Message* request)
+          : connection_(connection)
+          , request_(request) { }
 
-//    typedef std::function<void(ClientConnection*,
-//                               const char*, size_t)> KeyspaceCallback;
+        virtual Message* request() const {
+          return request_.get();
+        }
 
-//    typedef std::function<void(ClientConnection*,
-//                               SchemaEventType,
-//                               const char*, size_t,
-//                               const char*, size_t)> SchemaCallback;
+        virtual void on_set(Message* response) {
+          switch(response->opcode) {
+            case CQL_OPCODE_SUPPORTED:
+              connection_->on_supported(response);
+              break;
+            case CQL_OPCODE_ERROR:
+              connection_->notify_error("Error during startup"); // TODO(mpenick): Better error
+              connection_->defunct();
+              break;
+            case CQL_OPCODE_READY:
+              connection_->on_ready();
+              break;
+            default:
+              connection_->notify_error("Invalid opcode during startup");
+              connection_->defunct();
+              break;
+          }
+        }
 
-//    typedef std::function<void(ClientConnection*,
-//                               Error*,
-//                               const char*, size_t,
-//                               const char*, size_t)> PrepareCallback;
+        virtual void on_error(CassError code, const std::string& message) {
+          connection_->notify_error("Error during startup");
+          connection_->defunct();
+        }
 
-    typedef std::function<void(ClientConnection*, Message* message)> RequestCallback;
+        virtual void on_timeout() {
+          connection_->notify_error("Timed out during startup");
+          connection_->defunct();
+        }
+      private:
+        ClientConnection* connection_;
+        std::unique_ptr<Message> request_;
+    };
+
     struct Request {
         enum State {
+          REQUEST_STATE_NEW,
           REQUEST_STATE_WRITING,
           REQUEST_STATE_READING,
           REQUEST_STATE_TIMED_OUT,
         };
 
         Request(ClientConnection* connection,
-                RequestCallback cb)
+                ResponseCallback* response_callback)
           : connection(connection)
-          , cb(cb)
-          , future(nullptr)
-          , message(nullptr)
+          , response_callback(response_callback)
           , stream(0)
           , timer(nullptr)
-          , state(REQUEST_STATE_WRITING) { }
+          , state(REQUEST_STATE_NEW) { }
 
-        void stop_timer() {
-          if(timer) {
+        void on_set(Message* response) {
+          maybe_stop_timer();
+          response_callback->on_set(response);
+          connection->request_count_--;
+          connection->maybe_close();
+        }
+
+        void on_error(CassError code, const std::string& message) {
+          maybe_stop_timer();
+          connection->stream_manager_.release_stream(stream);
+          response_callback->on_error(code, message);
+          connection->request_count_--;
+          connection->maybe_close();
+        }
+
+        void on_timeout() {
+          timer = nullptr;
+          state = REQUEST_STATE_TIMED_OUT;
+          response_callback->on_timeout();
+          connection->timed_out_requests_.push_back(this);
+          connection->maybe_close();
+        }
+
+        void start_write() {
+          state = REQUEST_STATE_WRITING;
+          connection->request_count_++;
+          timer = Timer::start(connection->loop_, connection->write_timeout_, this, on_request_timeout);
+        }
+
+        void start_read() {
+          state = REQUEST_STATE_READING;
+          timer = Timer::start(connection->loop_, connection->read_timeout_, this, on_request_timeout);
+        }
+
+        bool maybe_stop_timer() {
+          if(state == REQUEST_STATE_TIMED_OUT) {
+            connection->timed_out_requests_.remove(this);
+            return false;
+          } else if(timer) {
             Timer::stop(timer);
             timer = nullptr;
           }
+          return true;
+        }
+
+        static void on_request_timeout(Timer* timer) {
+          Request *request = static_cast<Request*>(timer->data());
+          request->on_timeout();
         }
 
         ClientConnection* connection;
-        RequestCallback cb;
-        RequestFuture* future;
-        Message* message;
+        std::unique_ptr<ResponseCallback> response_callback;
         int8_t stream;
         Timer* timer;
         State state;
@@ -92,8 +168,8 @@ class ClientConnection {
       CLIENT_STATE_HANDSHAKE,
       CLIENT_STATE_SUPPORTED,
       CLIENT_STATE_READY,
-      CLIENT_STATE_DISCONNECTING,
-      CLIENT_STATE_DISCONNECTED
+      CLIENT_STATE_CLOSING,
+      CLIENT_STATE_CLOSED
     };
 
     enum Compression {
@@ -151,14 +227,11 @@ class ClientConnection {
       }
     }
 
-    bool execute(Message* message,
-                 RequestFuture* request_future = nullptr,
-                 RequestCallback request_callback = nullptr) {
-      std::unique_ptr<Request> request(new Request(this, request_callback));
-      request->future = request_future;
-      if(request_future == nullptr) {
-        request->message = message;
-      }
+    bool execute(ResponseCallback* response_callback) {
+      std::unique_ptr<Request> request(new Request(this, response_callback));
+
+      Message* message = response_callback->request();
+
       int8_t stream = stream_manager_.acquire_stream(request.get());
       if(request->stream < 0) {
         return false;
@@ -169,9 +242,7 @@ class ClientConnection {
 
       uv_buf_t buf;
       if (!message->prepare(&buf.base, buf.len)) {
-        request_future->set_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
-                                     CASS_ERROR_LIB_MESSAGE_PREPARE,
-                                     "error preparing message"));
+        request->on_error(CASS_ERROR_LIB_MESSAGE_PREPARE, "Unable to build request");
         return true;
       }
 
@@ -186,15 +257,14 @@ class ClientConnection {
 
       log(CASS_LOG_DEBUG, log_message);
 
-      request_count_++;
-      request->timer = Timer::start(loop_, write_timeout_, request.get(), on_timeout);
+      request->start_write();
       write(buf, request.release());
 
       return true;
     }
 
     void close() {
-      state_ = CLIENT_STATE_DISCONNECTING;
+      state_ = CLIENT_STATE_CLOSING;
       maybe_close();
     }
 
@@ -205,8 +275,8 @@ class ClientConnection {
       }
     }
 
-    bool is_disconnecting() {
-      return state_ == CLIENT_STATE_DISCONNECTING;
+    bool is_closing() {
+      return state_ == CLIENT_STATE_CLOSING;
     }
 
     bool is_defunct() {
@@ -218,7 +288,9 @@ class ClientConnection {
     }
 
     void maybe_close() {
-      if(is_disconnecting() && outstanding_request_count() <= 0) {
+      if(!uv_is_closing(reinterpret_cast<uv_handle_t*>(&socket_))
+         && is_closing()
+         && outstanding_request_count() <= 0) {
         uv_read_stop(reinterpret_cast<uv_stream_t*>(&socket_));
         uv_close(reinterpret_cast<uv_handle_t*>(&socket_), on_close);
       }
@@ -266,7 +338,7 @@ class ClientConnection {
         case CLIENT_STATE_READY:
           notify_ready();
           break;
-        case CLIENT_STATE_DISCONNECTED:
+        case CLIENT_STATE_CLOSED:
           break;
         default:
           assert(false);
@@ -285,7 +357,7 @@ class ClientConnection {
         }
 
         if (incoming_->body_ready) {
-          std::unique_ptr<Message> message(std::move(incoming_));
+          std::unique_ptr<Message> response(std::move(incoming_));
           incoming_.reset(new Message());
 
           char log_message[512];
@@ -293,45 +365,20 @@ class ClientConnection {
                 log_message,
                 sizeof(log_message),
                 "consumed message type %s with stream %d, input %zd, remaining %d",
-                opcode_to_string(message->opcode).c_str(),
-                message->stream,
+                opcode_to_string(response->opcode).c_str(),
+                response->stream,
                 size,
                 remaining);
 
           log(CASS_LOG_DEBUG, log_message);
-          if (message->stream < 0) {
+          if (response->stream < 0) {
             // TODO(mstump) system events
             assert(false);
           } else {
             Request* request = nullptr;
-            if(stream_manager_.get_item(message->stream, request)) {
-              if(request->state == Request::REQUEST_STATE_TIMED_OUT) {
-                timed_out_requests_.remove(request);
-              } else {
-                request->stop_timer();
-
-                switch (message->opcode) {
-                  case CQL_OPCODE_SUPPORTED:
-                    on_supported(message.get());
-                    break;
-                  case CQL_OPCODE_ERROR:
-                    on_error(message.get(), request);
-                    break;
-                  case CQL_OPCODE_READY:
-                    on_ready(message.get());
-                    break;
-                  case CQL_OPCODE_RESULT:
-                    on_result(message.get(), request);
-                    break;
-                  default:
-                    // TODO(mpenick): Log this
-                    defunct();
-                    break;
-                }
-              }
-              request_count_--;
+            if(stream_manager_.get_item(response->stream, request)) {
+              request->on_set(response.get());
               delete request;
-              maybe_close();
             } else {
               // TODO(mpenick): Log this
               defunct();
@@ -371,16 +418,17 @@ class ClientConnection {
           size_t write_output_size = 0;
 
           // TODO(mstump) error handling for SSL decryption
-          connection->ssl_->read_write(
-                read_input,
-                read_input_size,
-                read_size,
-                &read_output,
-                read_output_size,
-                nullptr,
-                0,
-                &write_output,
-                write_output_size);
+          std::string error;
+          connection->ssl_->read_write(read_input,
+                                       read_input_size,
+                                       read_size,
+                                       &read_output,
+                                       read_output_size,
+                                       nullptr,
+                                       0,
+                                       &write_output,
+                                       write_output_size,
+                                       &error);
 
           if (read_output && read_output_size) {
             // TODO(mstump) error handling
@@ -424,7 +472,6 @@ class ClientConnection {
         return;
       }
 
-
       Timer::stop(connection->connect_timer_);
       connection->connect_timer_ = nullptr;
 
@@ -454,10 +501,12 @@ class ClientConnection {
           = reinterpret_cast<ClientConnection*>(handle->data);
 
       connection->log(CASS_LOG_DEBUG, "on_close");
-      connection->state_ = CLIENT_STATE_DISCONNECTED;
+      connection->state_ = CLIENT_STATE_CLOSED;
       connection->event_received();
 
       connection->close_callback_(connection);
+
+      delete connection;
     }
 
     void ssl_handshake() {
@@ -474,31 +523,7 @@ class ClientConnection {
       }
     }
 
-    void on_result(Message* response, Request* request) {
-      log(CASS_LOG_DEBUG, "on_result");
-
-      if(request->cb) {
-        request->cb(this, response);
-      }
-
-      if(request->future != nullptr) {
-        request->future->set_result(response->body.release());
-      }
-    }
-
-    void on_error(Message* response, Request* request) {
-      log(CASS_LOG_DEBUG, "on_error");
-      BodyError* error = static_cast<BodyError*>(response->body.get());
-
-      if (state_ < CLIENT_STATE_READY) {
-        printf("error %s\n", error->message);
-        notify_error(error->message);
-      } else if(request->future != nullptr) {
-        request->future->set_error(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, (CassError)error->code, error->message));
-      }
-    }
-
-    void on_ready(Message* response) {
+    void on_ready() {
       log(CASS_LOG_DEBUG, "on_ready");
       state_ = CLIENT_STATE_READY;
       event_received();
@@ -516,12 +541,13 @@ class ClientConnection {
       event_received();
     }
 
-    void set_keyspace(const std::string& keyspace) {
-      Message message(CQL_OPCODE_QUERY);
-      Query* query = static_cast<Query*>(message.body.get());
-      query->statement("USE " + keyspace);
-      execute(&message, nullptr);
-    }
+// TODO(mpenick):
+//    void set_keyspace(const std::string& keyspace) {
+//      Message message(CQL_OPCODE_QUERY);
+//      Query* query = static_cast<Query*>(message.body.get());
+//      query->statement("USE " + keyspace);
+//      execute(&message, nullptr);
+//    }
 
     void notify_ready() {
       log(CASS_LOG_DEBUG, "notify_ready");
@@ -529,23 +555,21 @@ class ClientConnection {
     }
 
     void notify_error(const std::string& error) {
-      fprintf(stderr, "Failed to connection: %s\n", error.c_str());
       log(CASS_LOG_DEBUG, "notify_error");
       connect_callback_(this);
     }
 
     void send_options() {
       log(CASS_LOG_DEBUG, "send_options");
-      Message message(CQL_OPCODE_OPTIONS);
-      execute(&message, nullptr);
+      execute(new StartupHandler(this, new Message(CQL_OPCODE_OPTIONS)));
     }
 
     void send_startup() {
       log(CASS_LOG_DEBUG, "send_startup");
-      Message      message(CQL_OPCODE_STARTUP);
-      BodyStartup* startup = static_cast<BodyStartup*>(message.body.get());
+      Message* message = new Message(CQL_OPCODE_STARTUP);
+      BodyStartup* startup = static_cast<BodyStartup*>(message->body.get());
       startup->version = version_;
-      execute(&message, nullptr);
+      execute(new StartupHandler(this, message));
     }
 
     static void on_write(Writer* writer) {
@@ -554,58 +578,20 @@ class ClientConnection {
 
       connection->log(CASS_LOG_DEBUG, "on_write");
 
-      if(request->state == Request::REQUEST_STATE_TIMED_OUT) {
-        return;
+      if(!request->maybe_stop_timer()) {
+        return; // Timed out
       }
 
-      request->stop_timer();
-
       if(writer->status() == Writer::SUCCESS) {
-        request->state = Request::REQUEST_STATE_READING;
-        request->timer = Timer::start(connection->loop_, connection->read_timeout_, request, on_timeout);
+        request->start_read();
       } else {
         connection->defunct();
-        connection->stream_manager_.release_stream(request->stream);
-        if(request->future) {
-          request->future->set_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
-                                                CASS_ERROR_LIB_BAD_PARAMS, // TODO(mpenick): valid error
-                                                "Write failed"));
-        }
-        connection->request_count_--;
+        request->on_error(CASS_ERROR_LIB_WRITE_ERROR, "Unable to write to socket");
         delete request;
         fprintf(stderr,
                 "Write error %s\n",
                 uv_err_name(uv_last_error(connection->loop_)));
       }
-    }
-
-    static void on_timeout(Timer* timer) {
-      Request* request = static_cast<Request*>(timer->data());
-      ClientConnection* connection = request->connection;
-
-      if(request->future) {
-        if(request->state == Request::REQUEST_STATE_WRITING) {
-        request->future->set_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
-                                              CASS_ERROR_LIB_BAD_PARAMS, // TODO(mpenick): valid error
-                                              "Write timeout"));
-        } else if(request->state == Request::REQUEST_STATE_READING) {
-          request->future->set_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
-                                                CASS_ERROR_LIB_BAD_PARAMS, // TODO(mpenick): valid error
-                                                "Read timeout"));
-        } else {
-          assert(false);
-        }
-      } else {
-        connection->notify_error("Timed out during handshake");
-        connection->defunct();
-      }
-
-      request->state = Request::REQUEST_STATE_TIMED_OUT;
-      request->timer = nullptr;
-
-      // The request can't be deleted here because it could come back
-      connection->timed_out_requests_.push_back(request);
-      connection->maybe_close();
     }
 
   private:

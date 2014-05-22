@@ -35,28 +35,28 @@ namespace cass {
 
 struct Bound : public Statement {
 
-  std::string       id;
+  const Prepared*   prepared;
   int16_t           consistency_value;
   int               page_size;
   std::vector<char> paging_state;
   int16_t           serial_consistency_value;
 
- public:
-  Bound(const Prepared& prepared,
-                 size_t value_count, CassConsistency consistency)
+  public:
+  Bound(const Prepared* prepared,
+        size_t value_count, CassConsistency consistency)
     : Statement(CQL_OPCODE_EXECUTE, value_count)
-    , id(prepared.id)
+    , prepared(prepared)
     , consistency_value(consistency)
     , page_size(-1)
     , serial_consistency_value(CASS_CONSISTENCY_ANY) { }
 
-  Bound(const  std::string& id,
-                 size_t value_count, CassConsistency consistency)
-    : Statement(CQL_OPCODE_EXECUTE, value_count)
-    , id(id)
-    , consistency_value(consistency)
-    , page_size(-1)
-    , serial_consistency_value(CASS_CONSISTENCY_ANY) { }
+//  Bound(const std::string& id,
+//        size_t value_count, CassConsistency consistency)
+//    : Statement(CQL_OPCODE_EXECUTE, value_count)
+//    , id(id)
+//    , consistency_value(consistency)
+//    , page_size(-1)
+//    , serial_consistency_value(CASS_CONSISTENCY_ANY) { }
 
   uint8_t
   kind() const {
@@ -88,25 +88,25 @@ struct Bound : public Statement {
 
   const char*
   statement() const {
-    return &id[0];
+    return prepared->id().data();
   }
 
   size_t
   statement_size() const {
-    return id.size();
+    return prepared->id().size();
   }
 
   virtual void
   statement(
       const std::string& statement) {
-    id.assign(statement.begin(), statement.end());
+    //prepared->id().assign(statement.begin(), statement.end());
   }
 
   void
   statement(
       const char* input,
       size_t      size) {
-    id.assign(input, size);
+    //prepared->id().assign(input, size);
   }
 
   bool
@@ -123,6 +123,8 @@ struct Bound : public Statement {
       size_t reserved,
       char** output,
       size_t& size) {
+
+    const std::string& id = prepared->id();
 
     uint8_t flags  = 0x00;
 

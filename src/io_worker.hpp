@@ -20,12 +20,14 @@
 #include <uv.h>
 #include <string>
 #include <unordered_map>
+#include <vector>
+
 #include "async_queue.hpp"
 #include "config.hpp"
 #include "host.hpp"
 #include "ssl_context.hpp"
 #include "spsc_queue.hpp"
-#include "request_future.hpp"
+#include "request_handler.hpp"
 
 namespace cass {
 
@@ -33,8 +35,7 @@ class Pool;
 struct Session;
 
 struct IOWorker {
-    typedef std::shared_ptr<Pool>  PoolPtr;
-    typedef std::unordered_map<Host, PoolPtr> PoolCollection;
+    typedef std::unordered_map<Host, Pool*> PoolCollection;
 
     struct ReconnectRequest {
         ReconnectRequest(IOWorker* io_worker, Host host)
@@ -56,36 +57,49 @@ struct IOWorker {
     };
 
     Session* session_;
-    uv_thread_t thread;
-    uv_loop_t* loop;
-    SSLContext* ssl_context;
+    uv_thread_t thread_;
+    uv_loop_t* loop_;
+    uv_prepare_t prepare_;
+    SSLContext* ssl_context_;
     PoolCollection pools;
+    std::vector<Pool*> pending_delete_;
     std::atomic<bool> is_stopped_;
     bool is_shutdown_;
     std::atomic<bool> is_shutdown_done_;
 
     const Config& config_;
-    AsyncQueue<SPSCQueue<RequestFuture*>> request_future_queue_;
+    AsyncQueue<SPSCQueue<RequestHandler*>> request_queue_;
     AsyncQueue<SPSCQueue<Payload>> event_queue_;
 
     explicit
     IOWorker(Session* session, const Config& config)
       : session_(session)
-      , loop(uv_loop_new())
-      , ssl_context(nullptr)
+      , loop_(uv_loop_new())
+      , ssl_context_(nullptr)
       , is_stopped_(false)
       , is_shutdown_(false)
       , is_shutdown_done_(false)
       , config_(config)
-      , request_future_queue_(config.queue_size_io())
-      , event_queue_(config.queue_size_event()) { }
+      , request_queue_(config.queue_size_io())
+      , event_queue_(config.queue_size_event()) {
+      prepare_.data = this;
+    }
+
+
+    ~IOWorker() {
+      uv_loop_delete(loop_);
+      cleanup();
+    }
 
     int init() {
-      int rc = request_future_queue_.init(loop, this, &IOWorker::on_execute);
-      if(rc != 0) {
-        return rc;
-      }
-      return event_queue_.init(loop, this, &IOWorker::on_event);
+      int rc = request_queue_.init(loop_, this, &IOWorker::on_execute);
+      if(rc != 0) return rc;
+      rc = event_queue_.init(loop_, this, &IOWorker::on_event);
+      if(rc != 0) return rc;
+      rc = uv_prepare_init(loop_, &prepare_);
+      if(rc != 0) return rc;
+      rc = uv_prepare_start(&prepare_, on_prepare);
+      return rc;
     }
 
     bool add_pool_q(const Host& host) {
@@ -110,41 +124,41 @@ struct IOWorker {
 
     void add_pool(Host host);
 
-    bool execute(RequestFuture* request_future) {
-      return request_future_queue_.enqueue(request_future);
+    bool execute(RequestHandler* request_handler) {
+      return request_queue_.enqueue(request_handler);
     }
 
-    void try_next_host(RequestFuture* request_future);
+    void retry(RequestHandler* request_handler, RetryType retry_type);
     void maybe_shutdown();
+    void cleanup();
 
-    void on_close(Host host);
-    static void on_reconnect(Timer* timer);
+    void on_connect(Host host);
+    void on_pool_close(Host host);
+    static void on_pool_reconnect(Timer* timer);
+
     static void on_execute(uv_async_t* data, int status);
     static void on_event(uv_async_t* async, int status);
+    static void on_prepare(uv_prepare_t* prepare, int status);
 
     static void
     run(
         void* data) {
       IOWorker* io_worker = reinterpret_cast<IOWorker*>(data);
       io_worker->is_stopped_ = false;
-      uv_run(io_worker->loop, UV_RUN_DEFAULT);
+      uv_run(io_worker->loop_, UV_RUN_DEFAULT);
     }
 
     void
     run() {
-      uv_thread_create(&thread, &IOWorker::run, this);
+      uv_thread_create(&thread_, &IOWorker::run, this);
     }
 
     void
     join() {
       if(!is_stopped_) {
-        uv_thread_join(&thread);
+        uv_thread_join(&thread_);
         is_stopped_ = true;
       }
-    }
-
-    ~IOWorker() {
-      uv_loop_delete(loop);
     }
 };
 

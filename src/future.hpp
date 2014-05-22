@@ -26,6 +26,9 @@
 #include <condition_variable>
 #include <future>
 
+#include "cassandra.h"
+#include "error.hpp"
+
 namespace cass {
 
 struct Error;
@@ -41,11 +44,21 @@ class Future {
         virtual ~Result() { }
     };
 
+    struct Error {
+        Error(CassError code,
+              const std::string& message)
+          : code(code)
+          , message(message) { }
+
+        CassError code;
+        std::string message;
+    };
+
     class ResultOrError {
       public:
-        ResultOrError(const Error* error)
+        ResultOrError(CassError code, const std::string& message)
           : result_(nullptr)
-          , error_(error) { }
+          , error_(new Error(code, message)) { }
 
         ResultOrError(Result* result)
           : result_(result)
@@ -114,9 +127,9 @@ class Future {
       return result_or_error_.get();
     }
 
-    void set_error(const Error* error) {
+    void set_error(CassError code, const std::string& message) {
       std::unique_lock<std::mutex> lock(mutex_);
-      result_or_error_.reset(new ResultOrError(error));
+      result_or_error_.reset(new ResultOrError(code, message));
       is_set_ = true;
       cond_.notify_all();
     }

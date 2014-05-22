@@ -23,33 +23,18 @@
 
 namespace cass {
 
-struct Error {
-  Error(const Error& error) {
-    *this = error;
-  }
+//struct Error {
+//    Error(CassErrorSource source,
+//          CassError code,
+//          const std::string& message)
+//      : source(source),
+//        code(code),
+//        message(message) { }
 
-  Error(
-      CassErrorSource         source,
-      CassError           code,
-      const std::string& message,
-      const std::string& file,
-      int                line) :
-      source(source),
-      code(code),
-      message(message),
-      file(file),
-      line(line)
-  {}
-
-  CassErrorSource  source;
-  CassError    code;
-  std::string message;
-  std::string file;
-  int         line;
-};
-
-#define CASS_ERROR(source, code, message) \
-  new Error(source, code, message, __FILE__, __LINE__)
+//    CassErrorSource source;
+//    CassError code;
+//    std::string message;
+//};
 
 } // namespace cass
 

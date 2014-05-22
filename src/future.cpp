@@ -72,14 +72,23 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
   if(result_or_error->is_error()) {
     return nullptr;
   }
-  cass::Result* result = static_cast<cass::Result*>(result_or_error->release());
-  if(result != nullptr && result->kind == CASS_RESULT_KIND_PREPARED) {
-    cass::Prepared* prepared = new cass::Prepared(std::string(result->prepared,
-                                                              result->prepared_size));
-    delete result;
+  std::unique_ptr<cass::Result> result(static_cast<cass::Result*>(result_or_error->release()));
+  if(result && result->kind == CASS_RESULT_KIND_PREPARED) {
+    cass::Prepared* prepared
+        = new cass::Prepared(std::string(result->prepared, result->prepared_size),
+                             request_future->statement());
     return CassPrepared::to(prepared);
   }
   return nullptr;
+}
+
+CassError cass_future_error_code(CassFuture* future) {
+  const cass::Future::ResultOrError* result_or_error = future->get();
+  if(result_or_error->is_error()) {
+    return result_or_error->error()->code;
+  } else {
+    return CASS_OK;
+  }
 }
 
 CassString cass_future_error_message(CassFuture* future) {
@@ -94,25 +103,6 @@ CassString cass_future_error_message(CassFuture* future) {
     str.length = 0;
   }
   return str;
-}
-
-
-CassErrorSource cass_future_error_source(CassFuture* future) {
-  const cass::Future::ResultOrError* result_or_error = future->get();
-  if(result_or_error->is_error()) {
-    return result_or_error->error()->source;
-  } else {
-    return CASS_ERROR_SOURCE_NONE;
-  }
-}
-
-CassError cass_future_error_code(CassFuture* future) {
-  const cass::Future::ResultOrError* result_or_error = future->get();
-  if(result_or_error->is_error()) {
-    return result_or_error->error()->code;
-  } else {
-    return CASS_OK;
-  }
 }
 
 } // extern "C"

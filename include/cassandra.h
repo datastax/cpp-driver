@@ -37,7 +37,6 @@
 #   endif
 #endif
 
-/* TODO(mpenick) handle primitive types for other compilers and platforms */
 
 #define cass_false 0
 #define cass_true  1
@@ -123,53 +122,75 @@ typedef enum CassValueType_ {
   CASS_VALUE_TYPE_SET       = 0x0022
 } CassValueType;
 
-typedef enum CassOption_ {
-  CASS_OPTION_THREADS_IO                 = 1,
-  CASS_OPTION_THREADS_CALLBACK           = 2,
-  CASS_OPTION_CONTACT_POINT_ADD          = 3,
-  CASS_OPTION_PORT                       = 4,
-  CASS_OPTION_CQL_VERSION                = 5,
-  CASS_OPTION_SCHEMA_AGREEMENT_WAIT      = 6,
-  CASS_OPTION_CONTROL_CONNECTION_TIMEOUT = 7,
-  CASS_OPTION_COMPRESSION                = 9
-} CassOption;
-
 typedef enum CassCompression_ {
   CASS_COMPRESSION_NONE   = 0,
   CASS_COMPRESSION_SNAPPY = 1,
   CASS_COMPRESSION_LZ4    = 2
 } CassCompression;
 
-typedef enum {
-  CASS_OK                        = 0,
+typedef enum CassOption_ {
+  CASS_OPTION_THREADS_IO,
+  CASS_OPTION_THREADS_CALLBACK,
+  CASS_OPTION_CONTACT_POINT_ADD,
+  CASS_OPTION_PORT,
+  CASS_OPTION_CQL_VERSION,
+  CASS_OPTION_SCHEMA_AGREEMENT_WAIT,
+  CASS_OPTION_CONTROL_CONNECTION_TIMEOUT,
+  CASS_OPTION_COMPRESSION
+} CassOption;
 
-  CASS_ERROR_SSL_CERT            = 1000000,
-  CASS_ERROR_SSL_PRIVATE_KEY     = 1000001,
-  CASS_ERROR_SSL_CA_CERT         = 1000002,
-  CASS_ERROR_SSL_CRL             = 1000003,
-  CASS_ERROR_SSL_READ            = 1000004,
-  CASS_ERROR_SSL_WRITE           = 1000005,
-  CASS_ERROR_SSL_READ_WAITING    = 1000006,
-  CASS_ERROR_SSL_WRITE_WAITING   = 1000007,
-
-  CASS_ERROR_LIB_BAD_PARAMS      = 2000001,
-  CASS_ERROR_LIB_INVALID_OPTION  = 2000002,
-  CASS_ERROR_LIB_NO_STREAMS      = 2000008,
-  CASS_ERROR_LIB_MAX_CONNECTIONS = 2000009,
-  CASS_ERROR_LIB_SESSION_STATE   = 2000010,
-  CASS_ERROR_LIB_MESSAGE_PREPARE = 2000011,
-  CASS_ERROR_LIB_HOST_RESOLUTION = 2000012
-} CassError;
-
-typedef enum  {
-  CASS_ERROR_SOURCE_NONE        = 0,
-  CASS_ERROR_SOURCE_OS          = 1,
-  CASS_ERROR_SOURCE_NETWORK     = 2,
-  CASS_ERROR_SOURCE_SSL         = 3,
-  CASS_ERROR_SOURCE_COMPRESSION = 4,
-  CASS_ERROR_SOURCE_SERVER      = 5,
-  CASS_ERROR_SOURCE_LIBRARY     = 6
+typedef enum  CassErrorSource_ {
+  CASS_ERROR_SOURCE_NONE,
+  CASS_ERROR_SOURCE_LIB,
+  CASS_ERROR_SOURCE_SERVER,
+  CASS_ERROR_SOURCE_SSL,
+  CASS_ERROR_SOURCE_COMPRESSION
 } CassErrorSource;
+
+#define CASS_ERROR_MAP(XX) \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_BAD_PARAMS, 1, "Bad parameters") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_OPTION, 2, "Invalid option") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_STREAMS, 3, "No streams available") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_ALREADY_CONNECTED, 4, "Already connected") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NOT_CONNECTED, 5, "Not connected") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_MESSAGE_PREPARE, 6, "Unable to prepare message") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_HOST_RESOLUTION, 7, "Unable to reslove host") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNEXPECTED_RESPONSE, 8, "Unexpected reponse from server") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_QUEUE_FULL, 9, "The request queue is full") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD, 10, "No available IO threads") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_WRITE_ERROR, 11, "Write error") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, 12, "No hosts available") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS, 13, "Index out of bounds") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_ITEM_COUNT, 14, "Invalid item count") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_VALUE_TYPE, 15, "Invalid value type") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_UNAVAILABLE, 0x1000, "Unavailable") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_OVERLOADED, 0x1001, "Overloaded") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_IS_BOOTSTRAPPING, 0x1002, "Is bootstrapping") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_TRUNCATE_ERROR, 0x1003, "Truncate error") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_WRITE_TIMEOUT, 0x1100, "Write timeout") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_READ_TIMEOUT, 0x1200, "Read timeout") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SYNTAX_ERROR, 0x2000, "Sytax error") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_UNAUTHORIZED, 0x2100, "Unauthorized") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_INVALID_QUERY, 0x2200, "Invalid query") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_CONFIG_ERROR, 0x2300, "Configuration error") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_ALREADY_EXISTS, 0x2500, "Already exists") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_UNPREPARED, 0x2500, "Unprepared") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_TIMEOUT, 8, "Request timed out") \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_CERT, 1, "Unable to load certificate") \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_CA_CERT, 2, "Unable to load CA certificate") \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_PRIVATE_KEY, 3, "Unable to load private key") \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_CRL, 4, "Unable to load certificate revocation list")
+
+typedef enum CassError_ {
+  CASS_OK = 0,
+#define XX(source, name, code, _) name = (code | (source << 24)),
+  CASS_ERROR_MAP(XX)
+#undef XX
+  CASS_ERROR_LAST
+} CassError;
 
 #ifdef __cplusplus
 extern "C" {
@@ -296,8 +317,8 @@ cass_session_prepare(CassSession* session,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT CassFuture*
-cass_session_exec(CassSession* session,
-                  CassStatement* statement);
+cass_session_execute(CassSession* session,
+                     CassStatement* statement);
 
 /**
  * Execute a batch statement and obtain a future. Future must be freed by
@@ -310,8 +331,8 @@ cass_session_exec(CassSession* session,
  * @return 0 if successful, otherwise error occured
  */
 CASS_EXPORT CassFuture*
-cass_session_exec_batch(CassSession* session,
-                        CassBatch* batch);
+cass_session_execute_batch(CassSession* session,
+                           CassBatch* batch);
 
 /***********************************************************************************
  *
@@ -397,20 +418,9 @@ cass_future_error_message(CassFuture* future);
 /**
  * Obtain the code from an error structure.
  *
- * @param error
+ * @param future
  *
- * @return error source
- *
- */
-CASS_EXPORT CassErrorSource
-cass_future_error_source(CassFuture* future);
-
-/**
- * Obtain the source from an error structure.
- *
- * @param error
- *
- * @return source code
+ * @return code
  *
  */
 CASS_EXPORT CassError

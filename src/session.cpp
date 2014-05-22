@@ -63,8 +63,8 @@ CassFuture* cass_session_prepare(CassSession* session,
   return CassFuture::to(session->prepare(statement.data, statement.length));
 }
 
-CassFuture* cass_session_exec(CassSession* session,
-                              CassStatement* statement) {
+CassFuture* cass_session_execute(CassSession* session,
+                                 CassStatement* statement) {
   return CassFuture::to(session->execute(statement->from()));
 }
 

@@ -14,25 +14,26 @@
   limitations under the License.
 */
 
-#ifndef __CASS_REQUEST_FUTURE_HPP_INCLUDED__
-#define __CASS_REQUEST_FUTURE_HPP_INCLUDED__
-
-#include "message.hpp"
+#ifndef __CASS_RESPONSE_CALLBACK_HPP_INCLUDED__
+#define __CASS_RESPONSE_CALLBACK_HPP_INCLUDED__
 
 namespace cass {
 
-class Timer;
+struct Message;
+struct Error;
 
-class RequestFuture : public Future {
+class ResponseCallback {
   public:
-    RequestFuture(const std::string& statement)
-      : Future(CASS_FUTURE_TYPE_REQUEST)
-      , statement_(statement) { }
+    enum ErrorCode {
+      UNABLE_TO_PREPARE,
+      UNABLE_TO_WRITE,
+    };
 
-    const std::string& statement() const { return statement_; }
-
-  private:
-    std::string statement_;
+    virtual ~ResponseCallback() = default;
+    virtual Message* request() const = 0;
+    virtual void on_set(Message* response) = 0;
+    virtual void on_error(CassError code, const std::string& message) = 0;
+    virtual void on_timeout() = 0;
 };
 
 } // namespace cass

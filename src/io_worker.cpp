@@ -19,79 +19,94 @@
 
 namespace cass {
 
-void IOWorker::try_next_host(RequestFuture* request_future) {
-  if(request_future->hosts.empty()) {
-    request_future->set_error(CASS_ERROR(CASS_ERROR_SOURCE_LIBRARY,
-                                 CASS_ERROR_LIB_BAD_PARAMS,
-                                 "No available hosts"));
-    return;
+void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
+  Host host;
+
+  if(retry_type == RETRY_WITH_NEXT_HOST) {
+    request_handler->next_host();
   }
 
-  Host host = request_future->hosts.front();
-
-  request_future->hosts.pop_front();
-  request_future->hosts_attempted.push_back(host);
+  if(!request_handler->get_current_host(&host)) {
+    request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, "No hosts available");
+    return;
+  }
 
   auto it = pools.find(host);
   if(it != pools.end()) {
     auto pool = it->second;
     ClientConnection* connection =  pool->borrow_connection();
     if(connection != nullptr) {
-      if(!pool->execute(connection, request_future)) {
-        try_next_host(request_future);
+      if(!pool->execute(connection, request_handler)) {
+        retry(request_handler, RETRY_WITH_NEXT_HOST);
       }
     } else { // Too busy, or no connections
-      if(!pool->wait_for_connection(request_future)) {
-        try_next_host(request_future);
+      if(!pool->wait_for_connection(request_handler)) {
+        retry(request_handler, RETRY_WITH_NEXT_HOST);
       }
     }
   } else {
-    try_next_host(request_future);
+    retry(request_handler, RETRY_WITH_NEXT_HOST);
   }
 }
 
 void IOWorker::add_pool(Host host) {
   if(!is_shutdown_ && pools.count(host) == 0) {
-    size_t core_connections_per_host = config_.core_connections_per_host();
-    size_t max_connections_per_host = config_.max_connections_per_host();
-    pools.insert(
-          std::make_pair(
-            host,
-            PoolPtr(
-              new Pool(
-                this,
-                host,
-                std::bind(&IOWorker::on_close, this, std::placeholders::_1),
-                core_connections_per_host,
-                max_connections_per_host))));
+    pools[host] = new Pool(host,
+                           loop_,
+                           ssl_context_,
+                           config_,
+                           std::bind(&IOWorker::on_connect, this, std::placeholders::_1),
+                           std::bind(&IOWorker::on_pool_close, this, std::placeholders::_1),
+                           std::bind(&IOWorker::retry, this, std::placeholders::_1, std::placeholders::_2));
   }
 }
 
 void IOWorker::maybe_shutdown() {
   if(pools.empty()) {
     is_shutdown_done_ = true;
-    uv_stop(loop);
+    uv_stop(loop_);
     session_->notify_shutdown_q();
   }
 }
 
-void IOWorker::on_close(Host host) {
-  pools.erase(host);
+void IOWorker::cleanup()
+{
+  if(!pending_delete_.empty()) {
+    for(auto pool : pending_delete_) {
+      delete pool;
+    }
+    pending_delete_.clear();
+  }
+}
+
+
+void IOWorker::on_connect(Host host) {
+  session_->notify_connect_q(host);
+}
+
+void IOWorker::on_pool_close(Host host) {
+  auto it = pools.find(host);
+  if(it != pools.end()) {
+    pending_delete_.push_back(it->second);
+    pools.erase(it);
+  }
+  printf("%s closed\n", host.address.to_string().data());
   if(is_shutdown_) {
     maybe_shutdown();
   } else {
     ReconnectRequest* reconnect_request = new ReconnectRequest(this, host);
-    Timer::start(loop,
+    Timer::start(loop_,
                  config_.reconnect_wait(),
                  reconnect_request,
-                 IOWorker::on_reconnect);
+                 IOWorker::on_pool_reconnect);
   }
 }
 
-void IOWorker::on_reconnect(Timer* timer) {
+void IOWorker::on_pool_reconnect(Timer* timer) {
   ReconnectRequest* reconnect_request = static_cast<ReconnectRequest*>(timer->data());
   IOWorker* io_worker = reconnect_request->io_worker;
   if(!io_worker->is_shutdown_) {
+    printf("%s reconnect attempt\n", reconnect_request->host.address.to_string().data());
     io_worker->add_pool(reconnect_request->host);
   }
   delete reconnect_request;
@@ -116,12 +131,17 @@ void IOWorker::on_event(uv_async_t *async, int status) {
   }
 }
 
-void IOWorker::on_execute(uv_async_t* data, int status) {
-  IOWorker* io_worker  = reinterpret_cast<IOWorker*>(data->data);
-  RequestFuture*  request_future = nullptr;
-  while (io_worker->request_future_queue_.dequeue(request_future)) {
-    io_worker->try_next_host(request_future);
+void IOWorker::on_execute(uv_async_t* async, int status) {
+  IOWorker* io_worker  = reinterpret_cast<IOWorker*>(async->data);
+  RequestHandler* request_handler = nullptr;
+  while (io_worker->request_queue_.dequeue(request_handler)) {
+    io_worker->retry(request_handler, RETRY_WITH_CURRENT_HOST);
   }
+}
+
+void IOWorker::on_prepare(uv_prepare_t* prepare, int status) {
+  IOWorker* io_worker  = reinterpret_cast<IOWorker*>(prepare->data);
+  io_worker->cleanup();
 }
 
 } // namespace cass

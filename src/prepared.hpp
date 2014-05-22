@@ -21,10 +21,18 @@
 
 namespace cass {
 
-struct Prepared {
-  std::string id;
-  Prepared(const std::string& id)
-        : id(id) { }
+class Prepared {
+  public:
+    Prepared(const std::string& id, const std::string& statement)
+      : id_(id)
+      , statement_(statement) { }
+
+    const std::string& id() const { return id_; }
+    const std::string& statement() const { return statement_; }
+
+  private:
+    std::string id_;
+    std::string statement_;
 };
 
 } // namespace cass
