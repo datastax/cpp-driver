@@ -30,6 +30,10 @@ Debug
 demo/cassandra_demo
 test/unit_tests/cassandra_test
 
+# API docs files
+docs
+Doxyfile
+
 # editor
 *.swp
 *~
