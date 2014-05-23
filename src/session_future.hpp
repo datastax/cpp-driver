@@ -21,8 +21,9 @@
 
 namespace cass {
 
-struct Session;
-struct SessionFuture : public Future {
+class Session;
+class SessionFuture : public Future {
+  public:
     SessionFuture()
       : Future(CASS_FUTURE_TYPE_SESSION) { }
     Session* session;

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CLIENT_CONNECTION_HPP_INCLUDED__
-#define __CASS_CLIENT_CONNECTION_HPP_INCLUDED__
+#ifndef __CASS_CONNECTION_HPP_INCLUDED__
+#define __CASS_CONNECTION_HPP_INCLUDED__
 
 #include <uv.h>
 
@@ -32,19 +32,11 @@
 
 namespace cass {
 
-enum RequestStatus {
-  REQUEST_STATUS_SUCCESS,
-  REQUEST_STATUS_ERROR,
-  REQUEST_STATUS_WRITE_ERROR,
-  REQUEST_STATUS_WRITE_TIMEOUT,
-  REQUEST_STATUS_READ_TIMEOUT
-};
-
-class ClientConnection {
+class Connection {
   public:
     class StartupHandler : public ResponseCallback {
       public:
-        StartupHandler(ClientConnection* connection, Message* request)
+        StartupHandler(Connection* connection, Message* request)
           : connection_(connection)
           , request_(request) { }
 
@@ -81,7 +73,7 @@ class ClientConnection {
           connection_->defunct();
         }
       private:
-        ClientConnection* connection_;
+        Connection* connection_;
         std::unique_ptr<Message> request_;
     };
 
@@ -93,7 +85,7 @@ class ClientConnection {
           REQUEST_STATE_TIMED_OUT,
         };
 
-        Request(ClientConnection* connection,
+        Request(Connection* connection,
                 ResponseCallback* response_callback)
           : connection(connection)
           , response_callback(response_callback)
@@ -153,15 +145,15 @@ class ClientConnection {
           request->on_timeout();
         }
 
-        ClientConnection* connection;
+        Connection* connection;
         std::unique_ptr<ResponseCallback> response_callback;
         int8_t stream;
         Timer* timer;
         State state;
     };
 
-    typedef std::function<void(ClientConnection*)> ConnectCallback;
-    typedef std::function<void(ClientConnection*)> CloseCallback;
+    typedef std::function<void(Connection*)> ConnectCallback;
+    typedef std::function<void(Connection*)> CloseCallback;
 
   public:
     enum ClientConnectionState {
@@ -186,7 +178,7 @@ class ClientConnection {
       CLIENT_EVENT_SCHEMA_DROPPED
     };
 
-    ClientConnection(uv_loop_t* loop,
+    Connection(uv_loop_t* loop,
                      SSLSession* ssl_session,
                      const Host& host,
                      const Config& config,
@@ -214,7 +206,7 @@ class ClientConnection {
       }
     }
 
-    ~ClientConnection() {
+    ~Connection() {
       for(auto request : timed_out_requests_) {
         delete request;
       }
@@ -392,8 +384,8 @@ class ClientConnection {
     }
 
     static void on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
-      ClientConnection* connection =
-          reinterpret_cast<ClientConnection*>(client->data);
+      Connection* connection =
+          reinterpret_cast<Connection*>(client->data);
 
       connection->log(CASS_LOG_DEBUG, "on_read");
       if (nread == -1) {
@@ -464,8 +456,8 @@ class ClientConnection {
     }
 
     static void on_connect(Connecter* connecter) {
-      ClientConnection* connection
-          = reinterpret_cast<ClientConnection*>(connecter->data());
+      Connection* connection
+          = reinterpret_cast<Connection*>(connecter->data());
 
       connection->log(CASS_LOG_DEBUG, "on_connect");
 
@@ -490,16 +482,16 @@ class ClientConnection {
     }
 
     static void on_connect_timeout(Timer* timer) {
-      ClientConnection* connection
-          = reinterpret_cast<ClientConnection*>(timer->data());
+      Connection* connection
+          = reinterpret_cast<Connection*>(timer->data());
       connection->notify_error("Connection timeout");
       connection->connect_timer_ = nullptr;
       connection->defunct();
     }
 
     static void on_close(uv_handle_t *handle) {
-      ClientConnection* connection
-          = reinterpret_cast<ClientConnection*>(handle->data);
+      Connection* connection
+          = reinterpret_cast<Connection*>(handle->data);
 
       connection->log(CASS_LOG_DEBUG, "on_close");
       connection->state_ = CLIENT_STATE_CLOSED;
@@ -575,7 +567,7 @@ class ClientConnection {
 
     static void on_write(Writer* writer) {
       Request* request = static_cast<Request*>(writer->data());
-      ClientConnection* connection = request->connection;
+      Connection* connection = request->connection;
 
       connection->log(CASS_LOG_DEBUG, "on_write");
 
@@ -622,7 +614,7 @@ class ClientConnection {
     const Config& config_;
     Timer* connect_timer_;
 
-    DISALLOW_COPY_AND_ASSIGN(ClientConnection);
+    DISALLOW_COPY_AND_ASSIGN(Connection);
 };
 
 } // namespace cass

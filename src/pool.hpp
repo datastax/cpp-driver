@@ -22,7 +22,7 @@
 #include <algorithm>
 #include <functional>
 
-#include "client_connection.hpp"
+#include "connection.hpp"
 #include "session.hpp"
 #include "timer.hpp"
 #include "prepare_handler.hpp"
@@ -30,7 +30,7 @@
 namespace cass {
 
 class Pool {
-  typedef std::list<ClientConnection*> ConnectionCollection;
+  typedef std::list<Connection*> ConnectionCollection;
   typedef std::function<void(Host host)> ConnectCallback;
   typedef std::function<void(Host host)> CloseCallback;
 
@@ -50,7 +50,7 @@ class Pool {
   class PoolHandler : public ResponseCallback {
     public:
       PoolHandler(Pool* pool,
-                  ClientConnection* connection,
+                  Connection* connection,
                   RequestHandler* request_handler)
         : pool_(pool)
         , connection_(connection)
@@ -119,7 +119,7 @@ class Pool {
       }
 
       Pool* pool_;
-      ClientConnection* connection_;
+      Connection* connection_;
       std::unique_ptr<RequestHandler> request_handler_;
   };
 
@@ -143,7 +143,7 @@ class Pool {
     }
   }
 
-  void on_connection_connect(ClientConnection* connection) {
+  void on_connection_connect(Connection* connection) {
     connect_callback_(host_);
     connections_pending_.remove(connection);
 
@@ -155,7 +155,7 @@ class Pool {
     }
   }
 
-  void on_connection_close(ClientConnection* connection) {
+  void on_connection_close(Connection* connection) {
     connections_.remove(connection);
 
     if(connection->is_defunct()) {
@@ -197,8 +197,8 @@ class Pool {
       return;
     }
 
-    ClientConnection* connection
-        = new ClientConnection(loop_,
+    Connection* connection
+        = new Connection(loop_,
                                ssl_context_ ? ssl_context_->session_new() : nullptr,
                                host_,
                                config_,
@@ -225,12 +225,12 @@ class Pool {
   }
 
   static bool least_busy_comp(
-      ClientConnection* a,
-      ClientConnection* b) {
+      Connection* a,
+      Connection* b) {
     return a->available_streams() < b->available_streams();
   }
 
-  ClientConnection* find_least_busy() {
+  Connection* find_least_busy() {
     ConnectionCollection::iterator it =
         std::max_element(
           connections_.begin(),
@@ -242,7 +242,7 @@ class Pool {
     return nullptr;
   }
 
-  ClientConnection* borrow_connection() {
+  Connection* borrow_connection() {
     if(is_closing_) {
       return nullptr;
     }
@@ -259,7 +259,7 @@ class Pool {
     return find_least_busy();
   }
 
-  bool execute(ClientConnection* connection, RequestHandler* request_handler) {
+  bool execute(Connection* connection, RequestHandler* request_handler) {
     return connection->execute(new PoolHandler(this, connection, request_handler));
   }
 
@@ -281,7 +281,7 @@ class Pool {
     return true;
   }
 
-  void execute_pending_request(ClientConnection* connection) {
+  void execute_pending_request(Connection* connection) {
     if(!pending_request_queue_.empty()) {
       RequestHandler* request_handler = pending_request_queue_.front();
       pending_request_queue_.pop_front();
