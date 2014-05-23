@@ -20,10 +20,9 @@
 extern "C" {
 
 void cass_future_free(CassFuture* future) {
-  // TODO(mpenick): We can't do this because the memory could still be in use by an internal thread
-  // You shouldn't have to wait for a future to delete it
-  // This needs to be referenced counted
-  delete future->from();
+  // Futures can be deleted without being waited on
+  // because they'll be cleaned up by the notifying thread
+  future->release();
 }
 
 int cass_future_ready(CassFuture* future) {

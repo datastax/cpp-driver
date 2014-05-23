@@ -17,9 +17,10 @@
 #ifndef __CASS_FUTURE_HPP_INCLUDED__
 #define __CASS_FUTURE_HPP_INCLUDED__
 
-#include <atomic>
 #include <uv.h>
+#include <assert.h>
 
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <condition_variable>
@@ -31,12 +32,32 @@ namespace cass {
 
 struct Error;
 
+template<class T>
+class RefCounted {
+  public:
+    RefCounted(int inital_count)
+      : ref_count_(inital_count) { }
+
+    void retain() { ref_count_++; }
+
+    void release() {
+      int new_ref_count = --ref_count_;
+      assert(new_ref_count >= 0);
+      if(new_ref_count == 0) {
+        delete static_cast<T*>(this);
+      }
+    }
+
+  private:
+      std::atomic<int> ref_count_;
+};
+
 enum FutureType {
   CASS_FUTURE_TYPE_SESSION,
   CASS_FUTURE_TYPE_REQUEST,
 };
 
-class Future {
+class Future : public RefCounted<Future> {
   public:
     struct Result {
         virtual ~Result() { }
@@ -91,7 +112,8 @@ class Future {
     };
 
     Future(FutureType type)
-      : type_(type)
+      : RefCounted(2) // waiting + notifying thread
+      , type_(type)
       , is_set_(false) { }
 
     virtual ~Future() = default;
@@ -130,6 +152,8 @@ class Future {
       result_or_error_.reset(new ResultOrError(code, message));
       is_set_ = true;
       cond_.notify_all();
+      lock.unlock();
+      release();
     }
 
     void set_result(Future::Result* result = nullptr) {
@@ -137,6 +161,8 @@ class Future {
       result_or_error_.reset(new ResultOrError(result));
       is_set_ = true;
       cond_.notify_all();
+      lock.unlock();
+      release();
     }
 
    private:
