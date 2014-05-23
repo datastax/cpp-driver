@@ -54,7 +54,7 @@ class RequestHandler : public ResponseCallback {
           future_->set_result(response->body.release());
           break;
         case CQL_OPCODE_ERROR: {
-          BodyError* error = static_cast<BodyError*>(response->body.get());
+          ErrorResponse* error = static_cast<ErrorResponse*>(response->body.get());
           future_->set_error(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error->code),
                              error->message);
         }

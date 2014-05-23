@@ -18,19 +18,19 @@
 #define __CASS_RESULT_ITERATOR_HPP_INCLUDED__
 
 #include "iterator.hpp"
-#include "result.hpp"
+#include "result_response.hpp"
 #include "row.hpp"
 #include "buffer_piece.hpp"
 
 namespace cass {
 
 struct ResultIterator : Iterator {
-  const Result*       result;
+  const ResultResponse*       result;
   int32_t             row_position;
   char*               position;
   Row                 row;
 
-  ResultIterator(const Result* result)
+  ResultIterator(const ResultResponse* result)
     : Iterator(CASS_ITERATOR_TYPE_RESULT)
     , result(result)
     , row_position(0)
@@ -48,7 +48,7 @@ struct ResultIterator : Iterator {
       int32_t size  = 0;
       buffer        = decode_int(buffer, size);
 
-      const Result::ColumnMetaData& metadata = result->column_metadata[i];
+      const ResultResponse::ColumnMetaData& metadata = result->column_metadata[i];
       CassValueType type = static_cast<CassValueType>(metadata.type);
 
       if(type == CASS_VALUE_TYPE_MAP ||

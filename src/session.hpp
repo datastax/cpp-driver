@@ -26,7 +26,6 @@
 #include <memory>
 #include <set>
 
-#include "error.hpp"
 #include "mpmc_queue.hpp"
 #include "spsc_queue.hpp"
 #include "io_worker.hpp"
@@ -291,7 +290,7 @@ struct Session {
   Future* prepare(const char* statement, size_t length) {
     Message* request = new Message();
     request->opcode = CQL_OPCODE_PREPARE;
-    Prepare* prepare = new Prepare();
+    PrepareRequest* prepare = new PrepareRequest();
     prepare->prepare_string(statement, length);
     request->body.reset(prepare);
     RequestHandler* request_handler

@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_QUERY_HPP_INCLUDED__
-#define __CASS_QUERY_HPP_INCLUDED__
+#ifndef __CASS_QUERY_REQUEST_HPP_INCLUDED__
+#define __CASS_QUERY_REQUEST_HPP_INCLUDED__
 
 #include <list>
 #include <string>
@@ -32,7 +32,7 @@
 
 namespace cass {
 
-struct Query : public Statement {
+struct QueryRequest : public Statement {
   std::string       query;
   int16_t           consistency_value;
   int               page_size;
@@ -41,7 +41,7 @@ struct Query : public Statement {
 
  public:
 
-  Query(const char* statement, size_t statement_length,
+  QueryRequest(const char* statement, size_t statement_length,
                 size_t value_count, CassConsistency consistency)
     : Statement(CQL_OPCODE_QUERY, value_count)
     , query(statement, statement_length)
@@ -49,13 +49,13 @@ struct Query : public Statement {
     , page_size(-1)
     , serial_consistency_value(CASS_CONSISTENCY_ANY) {}
 
-  Query(size_t value_count, CassConsistency consistency)
+  QueryRequest(size_t value_count, CassConsistency consistency)
      : Statement(CQL_OPCODE_QUERY, value_count)
      , consistency_value(consistency)
      , page_size(-1)
      , serial_consistency_value(CASS_CONSISTENCY_ANY) { }
 
-  Query()
+  QueryRequest()
     : Statement(CQL_OPCODE_QUERY)
     , consistency_value(CASS_CONSISTENCY_ANY)
     , page_size(-1)

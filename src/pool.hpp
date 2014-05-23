@@ -99,7 +99,7 @@ class Pool {
       }
 
       void on_error_response(Message* response) {
-        BodyError* error = static_cast<BodyError*>(response->body.get());
+        ErrorResponse* error = static_cast<ErrorResponse*>(response->body.get());
         switch(error->code) {
           case CQL_ERROR_UNPREPARED: {
             std::unique_ptr<PrepareHandler> prepare_handler(

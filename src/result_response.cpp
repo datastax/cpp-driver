@@ -15,7 +15,7 @@
 */
 
 #include "cassandra.hpp"
-#include "result.hpp"
+#include "result_response.hpp"
 
 extern "C" {
 

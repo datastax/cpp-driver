@@ -80,8 +80,6 @@ typedef enum CassHostDistance_ {
   TypeName(const TypeName&) = delete;            \
   TypeName& operator=(const TypeName&) = delete
 
-#include "error.hpp"
-
 namespace cass {
 
 typedef std::function<void(int, const char*, size_t)> LogCallback;

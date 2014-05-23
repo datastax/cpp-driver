@@ -15,12 +15,11 @@
 */
 
 #include "cassandra.hpp"
-#include "batch.hpp"
 
 extern "C" {
 
 CassBatch* cass_batch_new(CassConsistency consistency) {
-  return CassBatch::to(new cass::Batch(consistency));
+  return CassBatch::to(new cass::BatchRequest(consistency));
 }
 
 void cass_batch_free(CassBatch* batch) {

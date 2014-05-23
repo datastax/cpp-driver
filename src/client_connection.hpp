@@ -532,8 +532,8 @@ class ClientConnection {
 
     void on_supported(Message* response) {
       log(CASS_LOG_DEBUG, "on_supported");
-      BodySupported* supported
-          = static_cast<BodySupported*>(response->body.get());
+      SupportedResponse* supported
+          = static_cast<SupportedResponse*>(response->body.get());
 
       // TODO(mstump) do something with the supported info
       (void) supported;
@@ -568,7 +568,7 @@ class ClientConnection {
     void send_startup() {
       log(CASS_LOG_DEBUG, "send_startup");
       Message* message = new Message(CQL_OPCODE_STARTUP);
-      BodyStartup* startup = static_cast<BodyStartup*>(message->body.get());
+      StartupRequest* startup = static_cast<StartupRequest*>(message->body.get());
       startup->version = version_;
       execute(new StartupHandler(this, message));
     }

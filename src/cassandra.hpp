@@ -22,8 +22,8 @@
 #include "statement.hpp"
 #include "future.hpp"
 #include "prepared.hpp"
-#include "batch.hpp"
-#include "result.hpp"
+#include "batch_request.hpp"
+#include "result_response.hpp"
 #include "row.hpp"
 #include "value.hpp"
 
@@ -43,8 +43,8 @@ struct CassSession_ : public External<cass::Session, CassSession> { };
 struct CassStatement_ : public External<cass::Statement, CassStatement> { };
 struct CassFuture_ : public External<cass::Future, CassFuture> { };
 struct CassPrepared_ : public External<cass::Prepared, CassPrepared> { };
-struct CassBatch_ : public External<cass::Batch, CassBatch> { };
-struct CassResult_ : public External<cass::Result, CassResult> { };
+struct CassBatch_ : public External<cass::BatchRequest, CassBatch> { };
+struct CassResult_ : public External<cass::ResultResponse, CassResult> { };
 struct CassCollection_ : public External<cass::Collection, CassCollection> { };
 struct CassIterator_ : public External<cass::Iterator, CassIterator> { };
 struct CassRow_ : public External<cass::Row, CassRow> { };

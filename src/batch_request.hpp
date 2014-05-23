@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BATCH_HPP_INCLUDED__
-#define __CASS_BATCH_HPP_INCLUDED__
+#ifndef __CASS_BATCH_REQUEST_HPP_INCLUDED__
+#define __CASS_BATCH_REQUEST_HPP_INCLUDED__
 
 #include <list>
 #include <string>
@@ -51,19 +51,18 @@
 
 namespace cass {
 
-struct Batch
-    : public MessageBody {
+struct BatchRequest : public MessageBody {
   typedef std::list<Statement*> StatementCollection;
 
   uint8_t             type;
   StatementCollection statements;
   int16_t             consistency;
 
-  explicit Batch(size_t consistency)
+  explicit BatchRequest(size_t consistency)
     : MessageBody(CQL_OPCODE_BATCH)
     ,  consistency(consistency) {}
 
-  ~Batch() {
+  ~BatchRequest() {
     for (Statement* statement : statements) {
       delete statement;
     }

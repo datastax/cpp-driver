@@ -14,29 +14,27 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BODY_ERROR_HPP_INCLUDED__
-#define __CASS_BODY_ERROR_HPP_INCLUDED__
+#ifndef __CASS_ERROR_RESPONSE_HPP_INCLUDED__
+#define __CASS_ERROR_RESPONSE_HPP_INCLUDED__
 
 #include "message_body.hpp"
 #include "serialization.hpp"
 
 namespace cass {
 
-struct BodyError
-    : public MessageBody {
-
+struct ErrorResponse : public MessageBody {
   std::unique_ptr<char> guard;
   int32_t               code;
   char*                 message;
   size_t                message_size;
 
-  BodyError()
+  ErrorResponse()
      : MessageBody(CQL_OPCODE_ERROR)
      , code(0xFFFFFFFF)
      , message(NULL)
      , message_size(0) {}
 
-  BodyError(int32_t code, const char* input, size_t input_size)
+  ErrorResponse(int32_t code, const char* input, size_t input_size)
     : MessageBody(CQL_OPCODE_ERROR)
     , guard(new char[input_size])
     , code(code)

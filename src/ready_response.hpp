@@ -14,17 +14,15 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BODY_READY_HPP_INCLUDED__
-#define __CASS_BODY_READY_HPP_INCLUDED__
+#ifndef __CASS_READY_RESPONSE_HPP_INCLUDED__
+#define __CASS_READY_RESPONSE_HPP_INCLUDED__
 
 #include "message_body.hpp"
 
 namespace cass {
 
-struct BodyReady
-    : public MessageBody {
-
-  BodyReady()
+struct ReadyResponse : public MessageBody {
+  ReadyResponse()
     : MessageBody(CQL_OPCODE_READY) {}
 
   bool

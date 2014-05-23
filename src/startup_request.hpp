@@ -14,23 +14,23 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BODY_STARTUP_HPP_INCLUDED__
-#define __CASS_BODY_STARTUP_HPP_INCLUDED__
+#ifndef __CASS_STARTUP_REQUEST_HPP_INCLUDED__
+#define __CASS_STARTUP_REQUEST_HPP_INCLUDED__
 
 #include <map>
 #include <string>
 
 #include "message_body.hpp"
+#include "serialization.hpp"
 
 namespace cass {
 
-struct BodyStartup
-    : public MessageBody {
+struct StartupRequest : public MessageBody {
   std::unique_ptr<char> guard;
   std::string           version;
   std::string           compression;
 
-  BodyStartup()
+  StartupRequest()
     : MessageBody(CQL_OPCODE_STARTUP)
     , version("3.0.0")
     , compression("") {}

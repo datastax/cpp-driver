@@ -14,27 +14,36 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ERROR_HPP_INCLUDED__
-#define __CASS_ERROR_HPP_INCLUDED__
+#ifndef __CASS_OPTIONS_REQUEST_HPP_INCLUDED__
+#define __CASS_OPTIONS_REQUEST_HPP_INCLUDED__
 
-#include <string>
-
-#include "cassandra.h"
+#include "message_body.hpp"
 
 namespace cass {
 
-//struct Error {
-//    Error(CassErrorSource source,
-//          CassError code,
-//          const std::string& message)
-//      : source(source),
-//        code(code),
-//        message(message) { }
+struct OptionsRequest : public MessageBody {
+  OptionsRequest()
+    : MessageBody(CQL_OPCODE_OPTIONS) {}
 
-//    CassErrorSource source;
-//    CassError code;
-//    std::string message;
-//};
+  bool
+  consume(
+      char*  buffer,
+      size_t size) {
+    (void) buffer;
+    (void) size;
+    return true;
+  }
+
+  bool
+  prepare(
+      size_t  reserved,
+      char**  output,
+      size_t& size) {
+    *output = new char[size];
+    size = reserved;
+    return true;
+  }
+};
 
 } // namespace cass
 

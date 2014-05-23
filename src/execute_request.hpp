@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BOUND_HPP_INCLUDED__
-#define __CASS_BOUND_HPP_INCLUDED__
+#ifndef __CASS_EXECUTE_REQUEST_HPP_INCLUDED__
+#define __CASS_EXECUTE_REQUEST_HPP_INCLUDED__
 
 #include <list>
 #include <string>
@@ -33,8 +33,7 @@
 
 namespace cass {
 
-struct Bound : public Statement {
-
+struct ExecuteRequest : public Statement {
     std::string       prepared_id;
     std::string       prepared_statement;
     int16_t           consistency_value;
@@ -43,7 +42,7 @@ struct Bound : public Statement {
     int16_t           serial_consistency_value;
 
   public:
-    Bound(const Prepared* prepared,
+    ExecuteRequest(const Prepared* prepared,
           size_t value_count, CassConsistency consistency)
       : Statement(CQL_OPCODE_EXECUTE, value_count)
       , prepared_id(prepared->id())

@@ -60,7 +60,7 @@ const CassResult* cass_future_get_result(CassFuture* future) {
   if(result_or_error->is_error()) {
     return nullptr;
   }
-  return CassResult::to(static_cast<cass::Result*>(result_or_error->release()));
+  return CassResult::to(static_cast<cass::ResultResponse*>(result_or_error->release()));
 }
 
 const CassPrepared* cass_future_get_prepared(CassFuture* future) {
@@ -72,7 +72,7 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
   if(result_or_error->is_error()) {
     return nullptr;
   }
-  std::unique_ptr<cass::Result> result(static_cast<cass::Result*>(result_or_error->release()));
+  std::unique_ptr<cass::ResultResponse> result(static_cast<cass::ResultResponse*>(result_or_error->release()));
   if(result && result->kind == CASS_RESULT_KIND_PREPARED) {
     cass::Prepared* prepared
         = new cass::Prepared(std::string(result->prepared, result->prepared_size),

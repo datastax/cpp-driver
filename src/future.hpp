@@ -21,13 +21,11 @@
 #include <uv.h>
 
 #include <memory>
-#include <functional>
 #include <mutex>
 #include <condition_variable>
-#include <future>
+#include <string>
 
 #include "cassandra.h"
-#include "error.hpp"
 
 namespace cass {
 

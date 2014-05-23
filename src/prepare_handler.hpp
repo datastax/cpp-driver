@@ -20,7 +20,7 @@
 #include "response_callback.hpp"
 #include "request_handler.hpp"
 #include "message.hpp"
-#include "prepare.hpp"
+#include "prepare_request.hpp"
 #include "io_worker.hpp"
 
 namespace cass {
@@ -34,12 +34,12 @@ class PrepareHandler : public ResponseCallback {
       , request_handler_(request_handler) { }
 
     bool init() {
-      Prepare* prepare = new Prepare();
+      PrepareRequest* prepare = new PrepareRequest();
       request_->opcode = prepare->opcode();
       request_->body.reset(prepare);
       if(request_handler_->request()->opcode == CQL_OPCODE_EXECUTE) {
-        Bound* bound = static_cast<Bound*>(request_handler_->request()->body.get());
-        prepare->prepare_string(bound->prepared_statement);
+        ExecuteRequest* execute = static_cast<ExecuteRequest*>(request_handler_->request()->body.get());
+        prepare->prepare_string(execute->prepared_statement);
         return true;
       }
       return false; // Invalid request type
@@ -52,7 +52,7 @@ class PrepareHandler : public ResponseCallback {
     virtual void on_set(Message* response) {
       switch(response->opcode) {
         case CQL_OPCODE_RESULT: {
-          Result* result = static_cast<Result*>(response->body.get());
+          ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
           if(result->kind == CASS_RESULT_KIND_PREPARED) {
             retry_callback_(request_handler_.release(), RETRY_WITH_CURRENT_HOST);
           } else {

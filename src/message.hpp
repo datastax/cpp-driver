@@ -17,18 +17,19 @@
 #ifndef __CASS_MESSAGE_HPP_INCLUDED__
 #define __CASS_MESSAGE_HPP_INCLUDED__
 
-#include "batch.hpp"
-#include "body_error.hpp"
-#include "body_options.hpp"
-#include "body_ready.hpp"
-#include "result.hpp"
-#include "body_startup.hpp"
-#include "body_supported.hpp"
-#include "prepare.hpp"
-#include "bound.hpp"
-#include "query.hpp"
-#include "host.hpp"
+#include "options_request.hpp"
+#include "startup_request.hpp"
+#include "batch_request.hpp"
+#include "query_request.hpp"
+#include "prepare_request.hpp"
+#include "execute_request.hpp"
 
+#include "error_response.hpp"
+#include "ready_response.hpp"
+#include "supported_response.hpp"
+#include "result_response.hpp"
+
+#include "host.hpp"
 
 #define CASS_HEADER_SIZE 8
 
@@ -80,28 +81,28 @@ struct Message {
       uint8_t  opcode) {
     switch (opcode) {
       case CQL_OPCODE_RESULT:
-        return static_cast<MessageBody*>(new Result());
+        return static_cast<MessageBody*>(new ResultResponse());
 
       case CQL_OPCODE_PREPARE:
-        return static_cast<MessageBody*>(new Prepare());
+        return static_cast<MessageBody*>(new PrepareRequest());
 
       case CQL_OPCODE_ERROR:
-        return static_cast<MessageBody*>(new BodyError());
+        return static_cast<MessageBody*>(new ErrorResponse());
 
       case CQL_OPCODE_OPTIONS:
-        return static_cast<MessageBody*>(new BodyOptions());
+        return static_cast<MessageBody*>(new OptionsRequest());
 
       case CQL_OPCODE_STARTUP:
-        return static_cast<MessageBody*>(new BodyStartup());
+        return static_cast<MessageBody*>(new StartupRequest());
 
       case CQL_OPCODE_SUPPORTED:
-        return static_cast<MessageBody*>(new BodySupported());
+        return static_cast<MessageBody*>(new SupportedResponse());
 
       case CQL_OPCODE_QUERY:
-        return static_cast<MessageBody*>(new Query());
+        return static_cast<MessageBody*>(new QueryRequest());
 
       case CQL_OPCODE_READY:
-        return static_cast<MessageBody*>(new BodyReady());
+        return static_cast<MessageBody*>(new ReadyResponse());
 
       default:
         assert(false);

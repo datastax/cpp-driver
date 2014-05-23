@@ -14,56 +14,52 @@
   limitations under the License.
 */
 
-#ifndef __CASS_PREPARE_HPP_INCLUDED__
-#define __CASS_PREPARE_HPP_INCLUDED__
+#ifndef __CASS_SUPPORTED_RESPONSE_HPP_INCLUDED__
+#define __CASS_SUPPORTED_RESPONSE_HPP_INCLUDED__
 
+#include <list>
 #include <string>
+
 #include "message_body.hpp"
 
 namespace cass {
 
-struct Prepare
-    : public MessageBody {
+struct SupportedResponse : public MessageBody {
+  std::list<std::string> compression;
+  std::list<std::string> versions;
 
-  std::string statement;
-
-  Prepare()
-    : MessageBody(CQL_OPCODE_PREPARE) {}
-
-  void
-  prepare_string(
-      const char* input,
-      size_t      size) {
-    statement.assign(input, size);
-  }
-
-  void
-  prepare_string(
-      const std::string& input) {
-    statement = input;
-  }
+  SupportedResponse()
+    : MessageBody(CQL_OPCODE_SUPPORTED) {}
 
   bool
   consume(
       char*  buffer,
       size_t size) {
-    (void) buffer;
     (void) size;
+    string_multimap_t supported;
+
+    decode_string_multimap(buffer, supported);
+    string_multimap_t::const_iterator it = supported.find("COMPRESSION");
+    if (it != supported.end()) {
+      compression = it->second;
+    }
+
+    it = supported.find("CASS_VERSION");
+    if (it != supported.end()) {
+      versions = it->second;
+    }
     return true;
   }
 
   bool
   prepare(
-      size_t reserved,
-      char** output,
+      size_t  reserved,
+      char**  output,
       size_t& size) {
-    size    = reserved + sizeof(int32_t) + statement.size();
-    *output = new char[size];
-    encode_long_string(
-        *output + reserved,
-        statement.c_str(),
-        statement.size());
-    return true;
+    (void) reserved;
+    (void) output;
+    (void) size;
+    return false;
   }
 };
 

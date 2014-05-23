@@ -32,7 +32,6 @@
 #include <string>
 
 #include "common.hpp"
-#include "error.hpp"
 
 #define BUFFER_SIZE 66560
 
