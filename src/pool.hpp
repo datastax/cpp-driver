@@ -102,7 +102,14 @@ class Pool {
         BodyError* error = static_cast<BodyError*>(response->body.get());
         switch(error->code) {
           case CQL_ERROR_UNPREPARED: {
-            connection_->execute(new PrepareHandler(pool_->retry_callback_, request_handler_.release()));
+            std::unique_ptr<PrepareHandler> prepare_handler(
+                  new PrepareHandler(pool_->retry_callback_, request_handler_.release()));
+            if(prepare_handler->init()) {
+              connection_->execute(prepare_handler.release());
+            } else {
+              request_handler_->on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
+                                         "Received unprepared error for invalid request type");
+            }
             break;
           }
           default:
@@ -194,6 +201,7 @@ class Pool {
         = new ClientConnection(loop_,
                                ssl_context_ ? ssl_context_->session_new() : nullptr,
                                host_,
+                               config_,
                                std::bind(&Pool::on_connection_connect, this,
                                          std::placeholders::_1),
                                std::bind(&Pool::on_connection_close, this,

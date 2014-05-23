@@ -179,7 +179,6 @@ const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
                                               i32 int, i64 bigint, \
                                               PRIMARY KEY (key));");
 
-  /*
   insert_into_basic(session, "test", &input);
   select_from_basic(session, "test", &output);
 
@@ -188,34 +187,6 @@ const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
   assert(input.dbl == output.dbl);
   assert(input.i32 == output.i32);
   assert(input.i64 == output.i64);
-  */
-
-{
-  int i;
-  for(i = 0; i < 10; ++i) {
-    char key[17] = { 0 };
-    sprintf(key, "%x", i);
-    insert_into_basic(session, key, &input);
-  }
-
-  for(i = 0; i < 10000; ++i) {
-    int j;
-    printf("iteration: %d\n", i);
-    for(j = 0; j < 10000; ++j) {
-      char key[17] = { 0 };
-      sprintf(key, "%x", j);
-      if(j % 2000 == 0) {
-        printf("%s\n", key);
-      }
-      select_from_basic(session, key, &output);
-      assert(input.bln == output.bln);
-      assert(input.flt == output.flt);
-      assert(input.dbl == output.dbl);
-      assert(input.i32 == output.i32);
-      assert(input.i64 == output.i64);
-    }
-  }
-}
 
   shutdown_future = cass_session_shutdown(session);
   cass_future_wait(shutdown_future);

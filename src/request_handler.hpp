@@ -34,10 +34,10 @@ typedef std::function<void(RequestHandler* request_handler,
 
 class RequestHandler : public ResponseCallback {
   public:
-    RequestHandler(Message* request, const std::string& statement)
+    RequestHandler(Message* request)
       : timer(nullptr)
       , request_(request)
-      , future_(new RequestFuture(statement)) { }
+      , future_(new RequestFuture()) { }
 
     ~RequestHandler() {
       // We don't own this memory (external statments)
@@ -95,7 +95,6 @@ class RequestHandler : public ResponseCallback {
 
   public:
     Timer* timer;
-    std::string statement;
     std::list<Host> hosts;
 
   private:

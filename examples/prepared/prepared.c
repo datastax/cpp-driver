@@ -179,7 +179,7 @@ main() {
   CassError rc = 0;
   CassSession* session = NULL;
   CassFuture* shutdown_future = NULL;
-const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
+  const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
   Basic input = { cass_true, 0.001, 0.0002, 1, 2 };
   Basic output;
   const CassPrepared* prepared = NULL;
@@ -189,7 +189,6 @@ const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
     return -1;
   }
 
-  /*
   execute_query(session,
                 "CREATE KEYSPACE examples WITH replication = { \
                            'class': 'SimpleStrategy', 'replication_factor': '3' };");
@@ -202,10 +201,7 @@ const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
                                               i32 int, i64 bigint, \
                                               PRIMARY KEY (key));");
 
-
-  insert_into_basic(session, "test", &input);
-  */
-
+  insert_into_basic(session, "prepared_test", &input);
   prepare_select_from_basic(session, &prepared);
   select_from_basic(session, prepared, "prepared_test", &output);
 
@@ -215,36 +211,7 @@ const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
   assert(input.i32 == output.i32);
   assert(input.i64 == output.i64);
 
-
-  /*
-{
-  int i;
-  for(i = 0; i < 10; ++i) {
-    char key[17] = { 0 };
-    sprintf(key, "%x", i);
-    insert_into_basic(session, key, &input);
-  }
-
-  for(i = 0; i < 10000; ++i) {
-    int j;
-    printf("iteration: %d\n", i);
-    for(j = 0; j < 10000; ++j) {
-      char key[17] = { 0 };
-      sprintf(key, "%x", j);
-      if(j % 2000 == 0) {
-        printf("%s\n", key);
-      }
-      select_from_basic(session, key, &output);
-      assert(input.bln == output.bln);
-      assert(input.flt == output.flt);
-      assert(input.dbl == output.dbl);
-      assert(input.i32 == output.i32);
-      assert(input.i64 == output.i64);
-    }
-  }
-}
-*/
-
+  cass_prepared_free(prepared);
   shutdown_future = cass_session_shutdown(session);
   cass_future_wait(shutdown_future);
   cass_session_free(session);

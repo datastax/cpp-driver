@@ -90,7 +90,6 @@ void IOWorker::on_pool_close(Host host) {
     pending_delete_.push_back(it->second);
     pools.erase(it);
   }
-  printf("%s closed\n", host.address.to_string().data());
   if(is_shutdown_) {
     maybe_shutdown();
   } else {
@@ -106,7 +105,6 @@ void IOWorker::on_pool_reconnect(Timer* timer) {
   ReconnectRequest* reconnect_request = static_cast<ReconnectRequest*>(timer->data());
   IOWorker* io_worker = reconnect_request->io_worker;
   if(!io_worker->is_shutdown_) {
-    printf("%s reconnect attempt\n", reconnect_request->host.address.to_string().data());
     io_worker->add_pool(reconnect_request->host);
   }
   delete reconnect_request;

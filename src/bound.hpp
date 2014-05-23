@@ -35,166 +35,158 @@ namespace cass {
 
 struct Bound : public Statement {
 
-  const Prepared*   prepared;
-  int16_t           consistency_value;
-  int               page_size;
-  std::vector<char> paging_state;
-  int16_t           serial_consistency_value;
+    std::string       prepared_id;
+    std::string       prepared_statement;
+    int16_t           consistency_value;
+    int               page_size;
+    std::vector<char> paging_state;
+    int16_t           serial_consistency_value;
 
   public:
-  Bound(const Prepared* prepared,
-        size_t value_count, CassConsistency consistency)
-    : Statement(CQL_OPCODE_EXECUTE, value_count)
-    , prepared(prepared)
-    , consistency_value(consistency)
-    , page_size(-1)
-    , serial_consistency_value(CASS_CONSISTENCY_ANY) { }
+    Bound(const Prepared* prepared,
+          size_t value_count, CassConsistency consistency)
+      : Statement(CQL_OPCODE_EXECUTE, value_count)
+      , prepared_id(prepared->id())
+      , prepared_statement(prepared->statement())
+      , consistency_value(consistency)
+      , page_size(-1)
+      , serial_consistency_value(CASS_CONSISTENCY_ANY) { }
 
-//  Bound(const std::string& id,
-//        size_t value_count, CassConsistency consistency)
-//    : Statement(CQL_OPCODE_EXECUTE, value_count)
-//    , id(id)
-//    , consistency_value(consistency)
-//    , page_size(-1)
-//    , serial_consistency_value(CASS_CONSISTENCY_ANY) { }
-
-  uint8_t
-  kind() const {
-    // used for batch statements
-    return 0;
-  }
-
-  void
-  consistency(
-      int16_t consistency) {
-    consistency_value = consistency;
-  }
-
-  int16_t
-  consistency() const {
-    return consistency_value;
-  }
-
-  void
-  serial_consistency(
-      int16_t serial_consistency) {
-    serial_consistency_value = serial_consistency;
-  }
-
-  int16_t
-  serial_consistency() const {
-    return serial_consistency_value;
-  }
-
-  const char*
-  statement() const {
-    return prepared->id().data();
-  }
-
-  size_t
-  statement_size() const {
-    return prepared->id().size();
-  }
-
-  virtual void
-  statement(
-      const std::string& statement) {
-    //prepared->id().assign(statement.begin(), statement.end());
-  }
-
-  void
-  statement(
-      const char* input,
-      size_t      size) {
-    //prepared->id().assign(input, size);
-  }
-
-  bool
-  consume(
-      char*  buffer,
-      size_t size) {
-    (void) buffer;
-    (void) size;
-    return true;
-  }
-
-  bool
-  prepare(
-      size_t reserved,
-      char** output,
-      size_t& size) {
-
-    const std::string& id = prepared->id();
-
-    uint8_t flags  = 0x00;
-
-    // reserved + the long string
-    size = reserved + sizeof(int32_t) + id.size();
-    // consistency_value
-    size += sizeof(int16_t);
-    // flags
-    size += 1;
-
-    if (serial_consistency_value != 0) {
-      flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
-      size  += sizeof(int16_t);
+    uint8_t
+    kind() const {
+      // used for batch statements
+      return 0;
     }
 
-    if (!paging_state.empty()) {
-      flags |= CASS_QUERY_FLAG_PAGING_STATE;
-      size += (sizeof(int16_t) + paging_state.size());
+    void
+    consistency(
+        int16_t consistency) {
+      consistency_value = consistency;
     }
 
-    if (!values.empty()) {
+    int16_t
+    consistency() const {
+      return consistency_value;
+    }
+
+    void
+    serial_consistency(
+        int16_t serial_consistency) {
+      serial_consistency_value = serial_consistency;
+    }
+
+    int16_t
+    serial_consistency() const {
+      return serial_consistency_value;
+    }
+
+    const char*
+    statement() const {
+      return prepared_id.data();
+    }
+
+    size_t
+    statement_size() const {
+      return prepared_id.size();
+    }
+
+    virtual void
+    statement(
+        const std::string& statement) {
+      prepared_id.assign(statement.begin(), statement.end());
+    }
+
+    void
+    statement(
+        const char* input,
+        size_t      size) {
+      prepared_id.assign(input, size);
+    }
+
+    bool
+    consume(
+        char*  buffer,
+        size_t size) {
+      (void) buffer;
+      (void) size;
+      return true;
+    }
+
+    bool
+    prepare(
+        size_t reserved,
+        char** output,
+        size_t& size) {
+
+      uint8_t flags  = 0x00;
+
+      // reserved + the long string
+      size = reserved + sizeof(int32_t) + prepared_id.size();
+      // consistency_value
       size += sizeof(int16_t);
-      for (const auto& value : values) {
+      // flags
+      size += 1;
+
+      if (serial_consistency_value != 0) {
+        flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
+        size  += sizeof(int16_t);
+      }
+
+      if (!paging_state.empty()) {
+        flags |= CASS_QUERY_FLAG_PAGING_STATE;
+        size += (sizeof(int16_t) + paging_state.size());
+      }
+
+      if (!values.empty()) {
+        size += sizeof(int16_t);
+        for (const auto& value : values) {
+          size += sizeof(int32_t);
+          size += value.size();
+        }
+        flags |= CASS_QUERY_FLAG_VALUES;
+      }
+
+      if (page_size >= 0) {
         size += sizeof(int32_t);
-        size += value.size();
+        flags |= CASS_QUERY_FLAG_PAGE_SIZE;
       }
-      flags |= CASS_QUERY_FLAG_VALUES;
-    }
 
-    if (page_size >= 0) {
-      size += sizeof(int32_t);
-      flags |= CASS_QUERY_FLAG_PAGE_SIZE;
-    }
-
-    if (serial_consistency_value != 0) {
-      size += sizeof(int16_t);
-      flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
-    }
-
-    *output = new char[size];
-
-    char* buffer = encode_string(
-        *output + reserved,
-        id.c_str(),
-        id.size());
-
-    buffer = encode_short(buffer, consistency_value);
-    buffer = encode_byte(buffer, flags);
-
-    if (!values.empty()) {
-      buffer = encode_short(buffer, values.size());
-      for (const auto& value : values) {
-        buffer = encode_long_string(buffer, value.data(), value.size());
+      if (serial_consistency_value != 0) {
+        size += sizeof(int16_t);
+        flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
       }
-    }
 
-    if (page_size >= 0) {
-      buffer = encode_int(buffer, page_size);
-    }
+      *output = new char[size];
 
-    if (!paging_state.empty()) {
-      buffer = encode_string(buffer, &paging_state[0], paging_state.size());
-    }
+      char* buffer = encode_string(
+                       *output + reserved,
+                       prepared_id.c_str(),
+                       prepared_id.size());
 
-    if (serial_consistency_value != 0) {
-      buffer = encode_short(buffer, serial_consistency_value);
-    }
+      buffer = encode_short(buffer, consistency_value);
+      buffer = encode_byte(buffer, flags);
 
-    return true;
-  }
+      if (!values.empty()) {
+        buffer = encode_short(buffer, values.size());
+        for (const auto& value : values) {
+          buffer = encode_long_string(buffer, value.data(), value.size());
+        }
+      }
+
+      if (page_size >= 0) {
+        buffer = encode_int(buffer, page_size);
+      }
+
+      if (!paging_state.empty()) {
+        buffer = encode_string(buffer, &paging_state[0], paging_state.size());
+      }
+
+      if (serial_consistency_value != 0) {
+        buffer = encode_short(buffer, serial_consistency_value);
+      }
+
+      return true;
+    }
 };
 
 } // namespace cass

@@ -61,9 +61,9 @@ struct Config {
       reconnect_wait_(10000),
       max_simultaneous_creation_(1),
       max_pending_requests_(128 * max_connections_per_host_),
-      connect_timeout_(1000),
-      write_timeout_(1000),
-      read_timeout_(1000),
+      connect_timeout_(10000),
+      write_timeout_(10000),
+      read_timeout_(10000),
       log_callback_(nullptr)
   {}
 

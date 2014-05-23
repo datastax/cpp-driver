@@ -31,10 +31,18 @@ class PrepareHandler : public ResponseCallback {
                    RequestHandler* request_handler)
       : retry_callback_(retry_callback)
       , request_(new Message())
-      , request_handler_(request_handler) {
+      , request_handler_(request_handler) { }
+
+    bool init() {
       Prepare* prepare = new Prepare();
       request_->opcode = prepare->opcode();
-      prepare->prepare_string(request_handler->statement);
+      request_->body.reset(prepare);
+      if(request_handler_->request()->opcode == CQL_OPCODE_EXECUTE) {
+        Bound* bound = static_cast<Bound*>(request_handler_->request()->body.get());
+        prepare->prepare_string(bound->prepared_statement);
+        return true;
+      }
+      return false; // Invalid request type
     }
 
     virtual Message* request() const {

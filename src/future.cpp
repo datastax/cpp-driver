@@ -76,7 +76,7 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
   if(result && result->kind == CASS_RESULT_KIND_PREPARED) {
     cass::Prepared* prepared
         = new cass::Prepared(std::string(result->prepared, result->prepared_size),
-                             request_future->statement());
+                             request_future->statement);
     return CassPrepared::to(prepared);
   }
   return nullptr;

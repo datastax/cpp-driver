@@ -25,14 +25,10 @@ class Timer;
 
 class RequestFuture : public Future {
   public:
-    RequestFuture(const std::string& statement)
-      : Future(CASS_FUTURE_TYPE_REQUEST)
-      , statement_(statement) { }
+    RequestFuture()
+      : Future(CASS_FUTURE_TYPE_REQUEST) { }
 
-    const std::string& statement() const { return statement_; }
-
-  private:
-    std::string statement_;
+    std::string statement;
 };
 
 } // namespace cass

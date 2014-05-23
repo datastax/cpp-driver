@@ -102,16 +102,18 @@ class ClientConnection {
           , state(REQUEST_STATE_NEW) { }
 
         void on_set(Message* response) {
-          maybe_stop_timer();
-          response_callback->on_set(response);
+          if(maybe_stop_timer()) {
+            response_callback->on_set(response);
+          }
           connection->request_count_--;
           connection->maybe_close();
         }
 
         void on_error(CassError code, const std::string& message) {
-          maybe_stop_timer();
+          if(maybe_stop_timer()) {
+            response_callback->on_error(code, message);
+          }
           connection->stream_manager_.release_stream(stream);
-          response_callback->on_error(code, message);
           connection->request_count_--;
           connection->maybe_close();
         }
@@ -127,23 +129,23 @@ class ClientConnection {
         void start_write() {
           state = REQUEST_STATE_WRITING;
           connection->request_count_++;
-          timer = Timer::start(connection->loop_, connection->write_timeout_, this, on_request_timeout);
+          timer = Timer::start(connection->loop_, connection->config_.write_timeout(), this, on_request_timeout);
         }
 
         void start_read() {
           state = REQUEST_STATE_READING;
-          timer = Timer::start(connection->loop_, connection->read_timeout_, this, on_request_timeout);
+          timer = Timer::start(connection->loop_, connection->config_.read_timeout(), this, on_request_timeout);
         }
 
         bool maybe_stop_timer() {
           if(state == REQUEST_STATE_TIMED_OUT) {
             connection->timed_out_requests_.remove(this);
-            return false;
+            return false; // We timed out, end of the request
           } else if(timer) {
             Timer::stop(timer);
             timer = nullptr;
           }
-          return true;
+          return true; // We stoppped the timer, continue on
         }
 
         static void on_request_timeout(Timer* timer) {
@@ -187,6 +189,7 @@ class ClientConnection {
     ClientConnection(uv_loop_t* loop,
                      SSLSession* ssl_session,
                      const Host& host,
+                     const Config& config,
                      ConnectCallback connect_callback,
                      CloseCallback close_callback)
       : state_(CLIENT_STATE_NEW)
@@ -201,9 +204,7 @@ class ClientConnection {
       , ssl_(ssl_session)
       , ssl_handshake_done_(false)
       , version_("3.0.0")
-      , connect_timeout_(1000)
-      , write_timeout_(1000)
-      , read_timeout_(1000)
+      , config_(config)
       , connect_timer_(nullptr) {
       socket_.data = this;
       uv_tcp_init(loop_, &socket_);
@@ -222,7 +223,7 @@ class ClientConnection {
     void connect() {
       if(state_ == CLIENT_STATE_NEW) {
         log(CASS_LOG_DEBUG, "connect");
-        connect_timer_ = Timer::start(loop_, connect_timeout_, this, on_connect_timeout);
+        connect_timer_ = Timer::start(loop_, config_.connect_timeout(), this, on_connect_timeout);
         Connecter::connect(&socket_, host_.address, this, on_connect);
       }
     }
@@ -618,11 +619,7 @@ class ClientConnection {
 
 
     std::list<Request*> timed_out_requests_;
-
-
-    uint64_t connect_timeout_;
-    uint64_t write_timeout_;
-    uint64_t read_timeout_;
+    const Config& config_;
     Timer* connect_timer_;
 
     DISALLOW_COPY_AND_ASSIGN(ClientConnection);

@@ -295,8 +295,8 @@ struct Session {
     prepare->prepare_string(statement, length);
     request->body.reset(prepare);
     RequestHandler* request_handler
-        = new RequestHandler(request, std::string(statement, length));
-    request_handler->statement.assign(statement, length);
+        = new RequestHandler(request);
+    request_handler->future()->statement.assign(statement, length);
     execute(request_handler);
     return request_handler->future();
   }
@@ -305,7 +305,7 @@ struct Session {
     Message* request = new Message();
     request->opcode = statement->opcode();
     request->body.reset(statement);
-    RequestHandler* request_handler = new RequestHandler(request, "");
+    RequestHandler* request_handler = new RequestHandler(request);
     execute(request_handler);
     return request_handler->future();
   }
