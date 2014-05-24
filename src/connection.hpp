@@ -83,6 +83,7 @@ class Connection {
           REQUEST_STATE_WRITING,
           REQUEST_STATE_READING,
           REQUEST_STATE_TIMED_OUT,
+          REQUEST_STATE_DONE,
         };
 
         Request(Connection* connection,
@@ -111,6 +112,8 @@ class Connection {
         }
 
         void on_timeout() {
+          connection->logger_->info("Request timed out to '%s'",
+                                    connection->host_string_.c_str());
           timer = nullptr;
           state = REQUEST_STATE_TIMED_OUT;
           response_callback->on_timeout();
@@ -179,11 +182,12 @@ class Connection {
     };
 
     Connection(uv_loop_t* loop,
-                     SSLSession* ssl_session,
-                     const Host& host,
-                     const Config& config,
-                     ConnectCallback connect_callback,
-                     CloseCallback close_callback)
+               SSLSession* ssl_session,
+               const Host& host,
+               Logger* logger,
+               const Config& config,
+               ConnectCallback connect_callback,
+               CloseCallback close_callback)
       : state_(CLIENT_STATE_NEW)
       , is_defunct_(false)
       , request_count_(0)
@@ -193,9 +197,11 @@ class Connection {
       , close_callback_(close_callback)
       , log_callback_(nullptr)
       , host_(host)
+      , host_string_(host.address.to_string())
       , ssl_(ssl_session)
       , ssl_handshake_done_(false)
       , version_("3.0.0")
+      , logger_(logger)
       , config_(config)
       , connect_timer_(nullptr) {
       socket_.data = this;
@@ -214,7 +220,6 @@ class Connection {
 
     void connect() {
       if(state_ == CLIENT_STATE_NEW) {
-        log(CASS_LOG_DEBUG, "connect");
         connect_timer_ = Timer::start(loop_, config_.connect_timeout(), this, on_connect_timeout);
         Connecter::connect(&socket_, host_.address, this, on_connect);
       }
@@ -239,16 +244,8 @@ class Connection {
         return true;
       }
 
-      char log_message[512];
-      snprintf(
-            log_message,
-            sizeof(log_message),
-            "sending message type %s with stream %d, size %zd",
-            opcode_to_string(message->opcode).c_str(),
-            message->stream,
-            buf.len);
-
-      log(CASS_LOG_DEBUG, log_message);
+      logger_->debug("Sending message type %s with %d, size %zd",
+                     opcode_to_string(message->opcode).c_str(), message->stream, buf.len);
 
       request->start_write();
       write(buf, request.release());
@@ -281,11 +278,9 @@ class Connection {
     }
 
     void maybe_close() {
-      if(!uv_is_closing(reinterpret_cast<uv_handle_t*>(&socket_))
-         && is_closing()
+      if(is_closing()
          && outstanding_request_count() <= 0) {
-        uv_read_stop(reinterpret_cast<uv_stream_t*>(&socket_));
-        uv_close(reinterpret_cast<uv_handle_t*>(&socket_), on_close);
+        actually_close();
       }
     }
 
@@ -298,15 +293,11 @@ class Connection {
     }
 
   private:
-    inline void log(int level, const char* message, size_t size) {
-      if (log_callback_) {
-        log_callback_(level, message, size);
-      }
-    }
-
-    inline void log(int level, const char* message) {
-      if (log_callback_) {
-        log_callback_(level, message, strlen(message));
+    void actually_close() {
+      if(!uv_is_closing(reinterpret_cast<uv_handle_t*>(&socket_))) {
+        state_ = CLIENT_STATE_CLOSING;
+        uv_read_stop(reinterpret_cast<uv_stream_t*>(&socket_));
+        uv_close(reinterpret_cast<uv_handle_t*>(&socket_), on_close);
       }
     }
 
@@ -316,8 +307,6 @@ class Connection {
     }
 
     void event_received() {
-      log(CASS_LOG_DEBUG, "event received");
-
       switch (state_) {
         case CLIENT_STATE_CONNECTED:
           ssl_handshake();
@@ -346,24 +335,19 @@ class Connection {
         int consumed = incoming_->consume(buffer, remaining);
         if (consumed < 0) {
           // TODO(mstump) probably means connection closed/failed
-          fprintf(stderr, "consume error\n");
+          // Can this even happen right now?
+          logger_->error("Error consuming message on '%s'",
+                         host_string_.c_str());
         }
 
         if (incoming_->body_ready) {
           std::unique_ptr<Message> response(std::move(incoming_));
           incoming_.reset(new Message());
 
-          char log_message[512];
-          snprintf(
-                log_message,
-                sizeof(log_message),
-                "consumed message type %s with stream %d, input %zd, remaining %d",
-                opcode_to_string(response->opcode).c_str(),
-                response->stream,
-                size,
-                remaining);
+          logger_->debug("Consumed message type %s with stream %d, input %zd, remaining %d on '%s'",
+                         opcode_to_string(response->opcode).c_str(), response->stream,
+                         size, remaining, host_string_.c_str());
 
-          log(CASS_LOG_DEBUG, log_message);
           if (response->stream < 0) {
             // TODO(mstump) system events
             assert(false);
@@ -371,9 +355,15 @@ class Connection {
             Request* request = nullptr;
             if(stream_manager_.get_item(response->stream, request)) {
               request->on_set(response.get());
-              delete request;
+              if(request->state == Request::REQUEST_STATE_READING) {
+                delete request;
+              } else {
+                // The read came before the write came back
+                request->state = Request::REQUEST_STATE_DONE;
+              }
             } else {
-              // TODO(mpenick): Log this
+              logger_->error("Invalid stream returnd from server on '%s'",
+                             host_string_.c_str());
               defunct();
             }
           }
@@ -387,14 +377,13 @@ class Connection {
       Connection* connection =
           reinterpret_cast<Connection*>(client->data);
 
-      connection->log(CASS_LOG_DEBUG, "on_read");
       if (nread == -1) {
         if (uv_last_error(connection->loop_).code != UV_EOF) {
-          fprintf(stderr,
-                  "Read error %s\n",
-                  uv_err_name(uv_last_error(connection->loop_)));
+          connection->logger_->info("Read error '%s' on '%s'",
+                                    connection->host_string_.c_str(),
+                                    uv_err_name(uv_last_error(connection->loop_)));
         }
-        connection->defunct();
+        connection->actually_close();
         free_buffer(buf);
         return;
       }
@@ -459,8 +448,6 @@ class Connection {
       Connection* connection
           = reinterpret_cast<Connection*>(connecter->data());
 
-      connection->log(CASS_LOG_DEBUG, "on_connect");
-
       if(connection->is_defunct()) { // Timed out
         return;
       }
@@ -469,10 +456,11 @@ class Connection {
       connection->connect_timer_ = nullptr;
 
       if(connecter->status() == Connecter::SUCCESS) {
+        connection->logger_->debug("Connected to '%s'",
+                                   connection->host_string_.c_str());
         uv_read_start(reinterpret_cast<uv_stream_t*>(&connection->socket_),
                       alloc_buffer,
                       on_read);
-
         connection->state_ = CLIENT_STATE_CONNECTED;
         connection->event_received();
       } else {
@@ -493,13 +481,14 @@ class Connection {
       Connection* connection
           = reinterpret_cast<Connection*>(handle->data);
 
-      connection->log(CASS_LOG_DEBUG, "on_close");
+      connection->logger_->debug("Connection to '%s' closed",
+                                 connection->host_string_.c_str());
       connection->state_ = CLIENT_STATE_CLOSED;
       connection->event_received();
 
       connection->close_callback_(connection);
 
-      delete connection;
+      // TODO(mpenick): Delete the connection
     }
 
     void ssl_handshake() {
@@ -517,13 +506,11 @@ class Connection {
     }
 
     void on_ready() {
-      log(CASS_LOG_DEBUG, "on_ready");
       state_ = CLIENT_STATE_READY;
       event_received();
     }
 
     void on_supported(Message* response) {
-      log(CASS_LOG_DEBUG, "on_supported");
       SupportedResponse* supported
           = static_cast<SupportedResponse*>(response->body.get());
 
@@ -543,22 +530,21 @@ class Connection {
 //    }
 
     void notify_ready() {
-      log(CASS_LOG_DEBUG, "notify_ready");
       connect_callback_(this);
     }
 
     void notify_error(const std::string& error) {
-      log(CASS_LOG_DEBUG, "notify_error");
+      logger_->error("'%s' error on startup for '%s'",
+                     error.c_str(),
+                     host_string_.c_str());
       connect_callback_(this);
     }
 
     void send_options() {
-      log(CASS_LOG_DEBUG, "send_options");
       execute(new StartupHandler(this, new Message(CQL_OPCODE_OPTIONS)));
     }
 
     void send_startup() {
-      log(CASS_LOG_DEBUG, "send_startup");
       Message* message = new Message(CQL_OPCODE_STARTUP);
       StartupRequest* startup = static_cast<StartupRequest*>(message->body.get());
       startup->version = version_;
@@ -569,10 +555,14 @@ class Connection {
       Request* request = static_cast<Request*>(writer->data());
       Connection* connection = request->connection;
 
-      connection->log(CASS_LOG_DEBUG, "on_write");
-
       if(!request->maybe_stop_timer()) {
         return; // Timed out
+      }
+
+      if(request->state == Request::REQUEST_STATE_DONE) {
+        // The read came before the write came back
+        delete request;
+        return;
       }
 
       if(writer->status() == Writer::SUCCESS) {
@@ -581,9 +571,9 @@ class Connection {
         connection->defunct();
         request->on_error(CASS_ERROR_LIB_WRITE_ERROR, "Unable to write to socket");
         delete request;
-        fprintf(stderr,
-                "Write error %s\n",
-                uv_err_name(uv_last_error(connection->loop_)));
+        connection->logger_->info("Write error '%s' on '%s'",
+                                  connection->host_string_.c_str(),
+                                  uv_err_name(uv_last_error(connection->loop_)));
       }
     }
 
@@ -600,6 +590,7 @@ class Connection {
     LogCallback                 log_callback_;
     // DNS and hostname stuff
     Host                        host_;
+    std::string                 host_string_;
     // the actual connection
     uv_tcp_t                    socket_;
     // ssl stuff
@@ -611,6 +602,7 @@ class Connection {
 
 
     std::list<Request*> timed_out_requests_;
+    Logger* logger_;
     const Config& config_;
     Timer* connect_timer_;
 

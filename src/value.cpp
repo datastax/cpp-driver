@@ -76,11 +76,6 @@ CassError cass_value_get_uuid(const CassValue* value,
 
 CassError cass_value_get_string(const CassValue* value,
                                 CassString* output) {
-  if(value->type != CASS_VALUE_TYPE_ASCII &&
-     value->type != CASS_VALUE_TYPE_VARCHAR &&
-     value->type != CASS_VALUE_TYPE_TEXT) {
-    return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
-  }
   output->data = value->buffer.data();
   output->length = value->buffer.size();
   return CASS_OK;

@@ -22,20 +22,6 @@
 
 namespace cass {
 
-std::string format(const char* format, ...) {
-  std::string str;
-  str.reserve(2 * strlen(format) + 1);
-  va_list args;
-  va_start (args, format);
-  int n = vsnprintf(&str[0], str.capacity(), format, args);
-  if(n > 0 && static_cast<size_t>(n) > str.capacity()) {
-    str.reserve(n + 1);
-    vsnprintf(&str[0], str.capacity(), format, args);
-  }
-  va_end(args);
-  return str;
-}
-
 uv_buf_t alloc_buffer(size_t suggested_size) {
   return uv_buf_init(new char[suggested_size], suggested_size);
 }

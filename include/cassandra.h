@@ -37,6 +37,9 @@
 #   endif
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define cass_false 0
 #define cass_true  1
@@ -139,6 +142,21 @@ typedef enum CassOption_ {
   CASS_OPTION_COMPRESSION
 } CassOption;
 
+#define CASS_LOG_LEVEL_MAP(XX) \
+  XX(CASS_LOG_DISABLED, "") \
+  XX(CASS_LOG_CRITICAL, "CRITICAL") \
+  XX(CASS_LOG_ERROR, "ERROR") \
+  XX(CASS_LOG_WARN, "WARN") \
+  XX(CASS_LOG_INFO, "INFO") \
+  XX(CASS_LOG_DEBUG, "DEBUG")
+
+typedef enum CassLogLevel_ {
+#define XX(log_level, _) log_level,
+  CASS_LOG_LEVEL_MAP(XX)
+#undef XX
+  CASS_LOG_LAST_ENTRY
+} CassLogLevel;
+
 typedef enum  CassErrorSource_ {
   CASS_ERROR_SOURCE_NONE,
   CASS_ERROR_SOURCE_LIB,
@@ -189,13 +207,13 @@ typedef enum CassError_ {
 #define XX(source, name, code, _) name = (code | (source << 24)),
   CASS_ERROR_MAP(XX)
 #undef XX
-  CASS_ERROR_LAST
+  CASS_ERROR_LAST_ENTRY
 } CassError;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+typedef void (*CassLogCallback)(void* data,
+                                cass_uint64_t time,
+                                CassLogLevel severity,
+                                CassString message);
 
 /***********************************************************************************
  *
@@ -210,15 +228,6 @@ extern "C" {
  */
 CASS_EXPORT CassSession*
 cass_session_new();
-
-/**
- * Initialize a new session using previous session's configuration.
- * Instance must be freed by caller.
- *
- * @return
- */
-CASS_EXPORT CassSession*
-cass_session_clone(const CassSession* session);
 
 /**
  * Free a session instance.
@@ -895,6 +904,7 @@ CASS_EXPORT CassError
 cass_value_get_string(const CassValue* value,
                       CassString* output);
 
+
 CASS_EXPORT CassError
 cass_value_get_bytes(const CassValue* value,
                      CassBytes* output);
@@ -1005,6 +1015,15 @@ cass_uuid_string(CassUuid uuid,
  */
 CASS_EXPORT const char*
 cass_code_error_desc(CassError code);
+
+/***********************************************************************************
+ *
+ * Log level
+ *
+ ***********************************************************************************/
+
+CASS_EXPORT const char*
+cass_log_level_desc(CassLogLevel log_level);
 
 /***********************************************************************************
  *

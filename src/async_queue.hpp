@@ -25,15 +25,17 @@ template <typename Q>
 class AsyncQueue {
   public:
     AsyncQueue(size_t queue_size) 
-      : queue_(queue_size) { }
+      : queue_(queue_size) {
+      async_.data = this;
+    }
 
     int init(uv_loop_t* loop, void* data, uv_async_cb async_cb) {
       async_.data = data;
       return uv_async_init(loop, &async_, async_cb);
     }
 
-    int stop() {
-      return uv_async_stop(&async_);
+    void close() {
+      uv_close(reinterpret_cast<uv_handle_t*>(&async_), nullptr);
     }
 
     bool enqueue(const typename Q::EntryType& data) {

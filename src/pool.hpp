@@ -26,6 +26,7 @@
 #include "session.hpp"
 #include "timer.hpp"
 #include "prepare_handler.hpp"
+#include "logger.hpp"
 
 namespace cass {
 
@@ -37,6 +38,7 @@ class Pool {
   Host host_;
   uv_loop_t* loop_;
   SSLContext* ssl_context_;
+  Logger* logger_;
   const Config& config_;
   ConnectionCollection connections_;
   ConnectionCollection connections_pending_;
@@ -126,6 +128,7 @@ class Pool {
   Pool(const Host& host,
        uv_loop_t* loop,
        SSLContext* ssl_context,
+       Logger* logger,
        const Config& config,
        ConnectCallback connect_callback,
        CloseCallback close_callback,
@@ -133,6 +136,7 @@ class Pool {
     : host_(host)
     , loop_(loop)
     , ssl_context_(ssl_context)
+    , logger_(logger)
     , config_(config)
     , is_closing_(false)
     , connect_callback_(connect_callback)
@@ -199,13 +203,14 @@ class Pool {
 
     Connection* connection
         = new Connection(loop_,
-                               ssl_context_ ? ssl_context_->session_new() : nullptr,
-                               host_,
-                               config_,
-                               std::bind(&Pool::on_connection_connect, this,
-                                         std::placeholders::_1),
-                               std::bind(&Pool::on_connection_close, this,
-                                         std::placeholders::_1));
+                         ssl_context_ ? ssl_context_->session_new() : nullptr,
+                         host_,
+                         logger_,
+                         config_,
+                         std::bind(&Pool::on_connection_connect, this,
+                                   std::placeholders::_1),
+                         std::bind(&Pool::on_connection_close, this,
+                                   std::placeholders::_1));
 
     connection->connect();
     connections_pending_.push_back(connection);

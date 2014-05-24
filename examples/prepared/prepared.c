@@ -202,16 +202,18 @@ main() {
                                               PRIMARY KEY (key));");
 
   insert_into_basic(session, "prepared_test", &input);
-  prepare_select_from_basic(session, &prepared);
-  select_from_basic(session, prepared, "prepared_test", &output);
 
-  assert(input.bln == output.bln);
-  assert(input.flt == output.flt);
-  assert(input.dbl == output.dbl);
-  assert(input.i32 == output.i32);
-  assert(input.i64 == output.i64);
+  if(prepare_select_from_basic(session, &prepared) == CASS_OK) {
+    select_from_basic(session, prepared, "prepared_test", &output);
 
-  cass_prepared_free(prepared);
+    assert(input.bln == output.bln);
+    assert(input.flt == output.flt);
+    assert(input.dbl == output.dbl);
+    assert(input.i32 == output.i32);
+    assert(input.i64 == output.i64);
+    cass_prepared_free(prepared);
+  }
+
   shutdown_future = cass_session_shutdown(session);
   cass_future_wait(shutdown_future);
   cass_session_free(session);

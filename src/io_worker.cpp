@@ -19,71 +19,60 @@
 
 namespace cass {
 
-IOWorker::IOWorker(Session* session, const Config& config)
+IOWorker::IOWorker(Session* session,
+                   Logger* logger,
+                   const Config& config)
   : session_(session)
-  , loop_(uv_loop_new())
+  , logger_(logger)
   , ssl_context_(nullptr)
-  , is_stopped_(false)
   , is_shutting_down_(false)
   , is_shutdown_(false)
   , config_(config)
-  , request_queue_(config.queue_size_io())
-  , event_queue_(config.queue_size_event()) {
+  , request_queue_(config.queue_size_io()) {
   prepare_.data = this;
 }
 
 IOWorker::~IOWorker() {
-  uv_loop_delete(loop_);
   cleanup();
 }
 
 int IOWorker::init() {
-  int rc = request_queue_.init(loop_, this, &IOWorker::on_execute);
+  int rc = EventThread::init(config_.queue_size_event());
   if(rc != 0) return rc;
-  rc = event_queue_.init(loop_, this, &IOWorker::on_event);
+  rc = request_queue_.init(loop(), this, &IOWorker::on_execute);
   if(rc != 0) return rc;
-  rc = uv_prepare_init(loop_, &prepare_);
+  rc = uv_prepare_init(loop(), &prepare_);
   if(rc != 0) return rc;
   rc = uv_prepare_start(&prepare_, on_prepare);
   return rc;
 }
 
-void IOWorker::run() {
-  uv_thread_create(&thread_, &IOWorker::on_run, this);
+bool IOWorker::add_pool_async(Host host) {
+  IOWorkerEvent event;
+  event.type = IOWorkerEvent::ADD_POOL;
+  event.host = host;
+  return send_event_async(event);
 }
 
-void IOWorker::join() {
-  if(!is_stopped_) {
-    uv_thread_join(&thread_);
-    is_stopped_ = true;
-  }
+bool IOWorker::remove_pool_async(Host host) {
+  IOWorkerEvent event;
+  event.type = IOWorkerEvent::REMOVE_POOL;
+  event.host = host;
+  return send_event_async(event);
 }
 
-bool IOWorker::add_pool_q(const Host& host) {
-  Payload payload;
-  payload.type = Payload::ADD_POOL;
-  payload.host = host;
-  return event_queue_.enqueue(payload);
-}
-
-bool IOWorker::remove_pool_q(const Host& host) {
-  Payload payload;
-  payload.type = Payload::REMOVE_POOL;
-  payload.host = host;
-  return event_queue_.enqueue(payload);
-}
-
-bool IOWorker::shutdown_q() {
-  Payload payload;
-  payload.type = Payload::SHUTDOWN;
-  return event_queue_.enqueue(payload);
+bool IOWorker::shutdown_async() {
+  IOWorkerEvent event;
+  event.type = IOWorkerEvent::SHUTDOWN;
+  return send_event_async(event);
 }
 
 void IOWorker::add_pool(Host host) {
   if(!is_shutting_down_ && pools.count(host) == 0) {
     pools[host] = new Pool(host,
-                           loop_,
+                           loop(),
                            ssl_context_,
+                           logger_,
                            config_,
                            std::bind(&IOWorker::on_connect, this, std::placeholders::_1),
                            std::bind(&IOWorker::on_pool_close, this, std::placeholders::_1),
@@ -128,8 +117,8 @@ void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
 void IOWorker::maybe_shutdown() {
   if(pools.empty()) {
     is_shutdown_ = true;
-    uv_stop(loop_);
-    session_->notify_shutdown_q();
+    session_->notify_shutdown_async();
+    close();
   }
 }
 
@@ -143,25 +132,46 @@ void IOWorker::cleanup()
   }
 }
 
+void IOWorker::close() {
+  EventThread::close();
+  request_queue_.close();
+  uv_prepare_stop(&prepare_);
+  logger_->debug("IO worker active handles %d", loop()->active_handles);
+}
 
 void IOWorker::on_connect(Host host) {
-  session_->notify_connect_q(host);
+  session_->notify_connect_async(host);
 }
 
 void IOWorker::on_pool_close(Host host) {
   auto it = pools.find(host);
   if(it != pools.end()) {
+    logger_->info("Pool for '%s' closed", host.address.to_string().c_str());
     pending_delete_.push_back(it->second);
     pools.erase(it);
+    if(is_shutting_down_) {
+      maybe_shutdown();
+    } else {
+      ReconnectRequest* reconnect_request = new ReconnectRequest(this, host);
+      Timer::start(loop(),
+                   config_.reconnect_wait(),
+                   reconnect_request,
+                   IOWorker::on_pool_reconnect);
+    }
   }
-  if(is_shutting_down_) {
+}
+
+void IOWorker::on_event(const IOWorkerEvent& event) {
+  if(event.type == IOWorkerEvent::ADD_POOL) {
+    add_pool(event.host);
+  } else if(event.type == IOWorkerEvent::REMOVE_POOL) {
+    // TODO(mpenick):
+  } else if(event.type == IOWorkerEvent::SHUTDOWN) {
+    is_shutting_down_ = true;
+    for(auto entry : pools) {
+      entry.second->close();
+    }
     maybe_shutdown();
-  } else {
-    ReconnectRequest* reconnect_request = new ReconnectRequest(this, host);
-    Timer::start(loop_,
-                 config_.reconnect_wait(),
-                 reconnect_request,
-                 IOWorker::on_pool_reconnect);
   }
 }
 
@@ -169,34 +179,10 @@ void IOWorker::on_pool_reconnect(Timer* timer) {
   ReconnectRequest* reconnect_request = static_cast<ReconnectRequest*>(timer->data());
   IOWorker* io_worker = reconnect_request->io_worker;
   if(!io_worker->is_shutting_down_) {
+    io_worker->logger_->info("Attempting to reconnect to '%s'", reconnect_request->host.address.to_string().c_str());
     io_worker->add_pool(reconnect_request->host);
   }
   delete reconnect_request;
-}
-
-void IOWorker::on_run(void* data) {
-  IOWorker* io_worker = reinterpret_cast<IOWorker*>(data);
-  io_worker->is_stopped_ = false;
-  uv_run(io_worker->loop_, UV_RUN_DEFAULT);
-}
-
-void IOWorker::on_event(uv_async_t *async, int status) {
-  IOWorker* io_worker  = reinterpret_cast<IOWorker*>(async->data);
-
-  Payload payload;
-  while(io_worker->event_queue_.dequeue(payload)) {
-    if(payload.type == Payload::ADD_POOL) {
-      io_worker->add_pool(payload.host);
-    } else if(payload.type == Payload::REMOVE_POOL) {
-      // TODO(mpenick):
-    } else if(payload.type == Payload::SHUTDOWN) {
-      io_worker->is_shutting_down_ = true;
-      for(auto entry : io_worker->pools) {
-        entry.second->close();
-      }
-      io_worker->maybe_shutdown();
-    }
-  }
 }
 
 void IOWorker::on_execute(uv_async_t* async, int status) {

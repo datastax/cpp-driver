@@ -63,13 +63,6 @@
 #define CQL_ERROR_ALREADY_EXISTS    0x2400
 #define CQL_ERROR_UNPREPARED        0x2500
 
-typedef enum CassLogLevel_ {
-  CASS_LOG_CRITICAL = 0x00,
-  CASS_LOG_ERROR    = 0x01,
-  CASS_LOG_INFO     = 0x02,
-  CASS_LOG_DEBUG    = 0x03
-} CassLogLevel;
-
 typedef enum CassHostDistance_ {
   CASS_HOST_DISTANCE_LOCAL,
   CASS_HOST_DISTANCE_REMOTE,
@@ -85,8 +78,6 @@ namespace cass {
 typedef std::function<void(int, const char*, size_t)> LogCallback;
 
 #define CASS_ERROR(source, code) static_cast<CassError>((code) | ((source) << 24))
-
-std::string format(const char* format, ...);
 
 uv_buf_t alloc_buffer(size_t suggested_size);
 uv_buf_t alloc_buffer(uv_handle_t *handle, size_t suggested_size);

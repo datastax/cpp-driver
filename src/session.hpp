@@ -26,6 +26,7 @@
 #include <memory>
 #include <set>
 
+#include "event_thread.hpp"
 #include "mpmc_queue.hpp"
 #include "spsc_queue.hpp"
 #include "io_worker.hpp"
@@ -35,15 +36,23 @@
 #include "config.hpp"
 #include "session_future.hpp"
 #include "request_handler.hpp"
+#include "logger.hpp"
 
 namespace cass {
 
-class Session {
+struct SessionEvent {
+    enum Type {
+      CONNECT,
+      NOTIFY_CONNECTED,
+      NOTIFY_SHUTDOWN,
+    };
+    Type type;
+    Host host;
+};
+
+class Session : public EventThread<SessionEvent> {
   public:
     Session();
-    Session(const Session* session);
-
-    ~Session();
 
     int init();
     void join();
@@ -58,8 +67,8 @@ class Session {
 
     Config& config() { return config_; }
 
-    void notify_connect_q(const Host& host);
-    void notify_shutdown_q();
+    bool notify_connect_async(const Host& host);
+    bool notify_shutdown_async();
 
     Future* connect(const std::string& ks);
     Future* shutdown();
@@ -67,6 +76,9 @@ class Session {
     Future* execute(Statement* statement);
 
   private:
+    bool connect_async();
+    void close();
+
     void init_pools();
     SSLSession* ssl_session_new();
 
@@ -77,10 +89,10 @@ class Session {
       }
     }
 
-    static void on_run(void* data);
-    static void on_connect(uv_async_t* data, int status);
+    virtual void on_run();
+    virtual void on_event(const SessionEvent& event);
+
     static void on_resolve(Resolver* resolver);
-    static void on_event(uv_async_t* async, int status);
     static void on_execute(uv_async_t* data, int status);
 
   private:
@@ -95,29 +107,17 @@ class Session {
       SESSION_STATE_DISCONNECTED
     };
 
-    struct Payload {
-        enum Type {
-          ON_CONNECTED,
-          ON_SHUTDOWN,
-        };
-        Type type;
-        Host host;
-    };
-
   private:
     std::atomic<SessionState> state_;
-    uv_thread_t thread_;
-    uv_loop_t* loop_;
     SSLContext* ssl_context_;
-    uv_async_t async_connect_;
     IOWorkerCollection io_workers_;
+    std::unique_ptr<Logger> logger_;
     std::string keyspace_;
     SessionFuture* connect_future_;
     SessionFuture* shutdown_future_;
     std::set<Host> hosts_;
     Config config_;
     std::unique_ptr<AsyncQueue<MPMCQueue<RequestHandler*>>> request_queue_;
-    std::unique_ptr<AsyncQueue<MPMCQueue<Payload>>> event_queue_;
     std::unique_ptr<LoadBalancingPolicy> load_balancing_policy_;
     int pending_resolve_count_;
     int pending_connections_count_;

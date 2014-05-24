@@ -22,33 +22,45 @@
 #include <unordered_map>
 #include <vector>
 
+#include "event_thread.hpp"
 #include "async_queue.hpp"
 #include "config.hpp"
 #include "host.hpp"
 #include "ssl_context.hpp"
 #include "spsc_queue.hpp"
 #include "request_handler.hpp"
+#include "logger.hpp"
 
 namespace cass {
 
 class Pool;
 class Session;
 
-class IOWorker {
+struct IOWorkerEvent {
+    enum Type {
+      ADD_POOL,
+      REMOVE_POOL,
+      SHUTDOWN,
+    };
+    Type type;
+    Host host;
+};
+
+
+class IOWorker : public EventThread<IOWorkerEvent> {
   public:
-    IOWorker(Session* session, const Config& config);
+    IOWorker(Session* session,
+             Logger* logger,
+             const Config& config);
     ~IOWorker();
 
     int init();
 
-    bool add_pool_q(const Host& host);
-    bool remove_pool_q(const Host& host);
-    bool shutdown_q();
+    bool add_pool_async(Host host);
+    bool remove_pool_async(Host host);
+    bool shutdown_async();
 
     bool is_shutdown() const { return is_shutdown_; }
-
-    void run();
-    void join();
 
     bool execute(RequestHandler* request_handler);
 
@@ -57,13 +69,13 @@ class IOWorker {
     void retry(RequestHandler* request_handler, RetryType retry_type);
     void maybe_shutdown();
     void cleanup();
+    void close();
 
     void on_connect(Host host);
     void on_pool_close(Host host);
     static void on_pool_reconnect(Timer* timer);
+    virtual void on_event(const IOWorkerEvent& event);
 
-    static void on_run(void* data);
-    static void on_event(uv_async_t* async, int status);
     static void on_execute(uv_async_t* data, int status);
     static void on_prepare(uv_prepare_t* prepare, int status);
 
@@ -79,31 +91,18 @@ class IOWorker {
         Host host;
     };
 
-    struct Payload {
-        enum Type {
-          ADD_POOL,
-          REMOVE_POOL,
-          SHUTDOWN,
-        };
-        Type type;
-        Host host;
-    };
-
   private:
     Session* session_;
-    uv_thread_t thread_;
-    uv_loop_t* loop_;
+    Logger* logger_;
     uv_prepare_t prepare_;
     SSLContext* ssl_context_;
     PoolCollection pools;
     std::vector<Pool*> pending_delete_;
-    std::atomic<bool> is_stopped_;
     bool is_shutting_down_;
     std::atomic<bool> is_shutdown_;
 
     const Config& config_;
     AsyncQueue<SPSCQueue<RequestHandler*>> request_queue_;
-    AsyncQueue<SPSCQueue<Payload>> event_queue_;
 
 };
 

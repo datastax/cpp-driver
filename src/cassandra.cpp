@@ -18,9 +18,18 @@
 
 extern "C" {
 
-const char*
-cass_code_error_desc(CassError code) {
+const char* cass_code_error_desc(CassError code) {
   return ""; // TODO(mpenick)
+}
+
+const char* cass_log_level_desc(CassLogLevel log_level) {
+  switch(log_level) {
+#define XX(log_level, desc) case log_level: return desc;
+    CASS_LOG_LEVEL_MAP(XX)
+#undef XX
+    default:
+      return "";
+  }
 }
 
 CassString cass_string_init(const char* null_terminated) {
