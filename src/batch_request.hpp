@@ -42,6 +42,7 @@
 #include "message_body.hpp"
 #include "serialization.hpp"
 #include "statement.hpp"
+#include "execute_request.hpp"
 
 #define CASS_QUERY_FLAG_VALUES             0x01
 #define CASS_QUERY_FLAG_SKIP_METADATA      0x02
@@ -53,14 +54,17 @@ namespace cass {
 
 struct BatchRequest : public MessageBody {
   typedef std::list<Statement*> StatementCollection;
+  typedef std::map<std::string, ExecuteRequest*> PreparedCollection;
 
   uint8_t             type;
   StatementCollection statements;
+  PreparedCollection prepared_statements;
   int16_t             consistency;
 
   explicit BatchRequest(size_t consistency)
     : MessageBody(CQL_OPCODE_BATCH)
-    ,  consistency(consistency) {}
+    , type(0)
+    , consistency(consistency) {}
 
   ~BatchRequest() {
     for (Statement* statement : statements) {
@@ -71,7 +75,20 @@ struct BatchRequest : public MessageBody {
   void
   add_statement(
       Statement* statement) {
+    if(statement->kind() == 1) {
+      ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(statement);
+      prepared_statements[execute_request->prepared_id] = execute_request;
+    }
     statements.push_back(statement);
+  }
+
+  bool prepared_statement(const std::string& id, std::string* statement) {
+    auto it = prepared_statements.find(id);
+    if(it != prepared_statements.end()) {
+      *statement = it->second->prepared_statement;
+      return true;
+    }
+    return false;
   }
 
   bool
@@ -96,16 +113,17 @@ struct BatchRequest : public MessageBody {
       if (statement->kind() == 0) {
         size += sizeof(int32_t);
       } else {
-        size += sizeof(int16_t);
+        size += sizeof(uint16_t);
       }
       size += statement->statement_size();
 
+      size += sizeof(uint16_t);
       for (const auto& value : *statement) {
         size += sizeof(int32_t);
         size += value.size();
       }
     }
-    size    += sizeof(int16_t);
+    size    += sizeof(uint16_t);
     *output  = new char[size];
 
     char* buffer = encode_byte(*output + reserved, type);
@@ -126,7 +144,7 @@ struct BatchRequest : public MessageBody {
             statement->statement_size());
       }
 
-      buffer = encode_short(buffer, statement->size());
+      buffer = encode_short(buffer, statement->values.size());
       for (const auto& value : *statement) {
         buffer = encode_long_string(buffer, value.data(), value.size());
       }

@@ -73,7 +73,7 @@ class Session : public EventThread<SessionEvent> {
     Future* connect(const std::string& ks);
     Future* shutdown();
     Future* prepare(const char* statement, size_t length);
-    Future* execute(Statement* statement);
+    Future* execute(MessageBody* statement);
 
   private:
     bool connect_async();

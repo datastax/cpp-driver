@@ -15,6 +15,7 @@
 */
 
 #include "cassandra.hpp"
+#include "batch_request.hpp"
 
 extern "C" {
 
@@ -30,10 +31,5 @@ CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
   batch->add_statement(statement);
   return CASS_OK;
 }
-
-void cass_batch_set_timestamp(CassBatch* batch,
-                         cass_int64_t timestamp) {
-}
-
 
 } // extern "C"

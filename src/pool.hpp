@@ -105,13 +105,15 @@ class Pool {
         ErrorResponse* error = static_cast<ErrorResponse*>(response->body.get());
         switch(error->code) {
           case CQL_ERROR_UNPREPARED: {
+            RequestHandler* request_handler = request_handler_.release();
             std::unique_ptr<PrepareHandler> prepare_handler(
-                  new PrepareHandler(pool_->retry_callback_, request_handler_.release()));
-            if(prepare_handler->init()) {
+                  new PrepareHandler(pool_->retry_callback_, request_handler));
+            std::string prepared_id(error->prepared_id, error->prepared_id_size);
+            if(prepare_handler->init(prepared_id)) {
               connection_->execute(prepare_handler.release());
             } else {
-              request_handler_->on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
-                                         "Received unprepared error for invalid request type");
+              request_handler->on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
+                                         "Received unprepared error for invalid request type or invalid prepared id");
             }
             break;
           }

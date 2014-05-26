@@ -33,7 +33,7 @@ class PrepareHandler : public ResponseCallback {
       , request_(new Message())
       , request_handler_(request_handler) { }
 
-    bool init() {
+    bool init(const std::string& prepared_id) {
       PrepareRequest* prepare = new PrepareRequest();
       request_->opcode = prepare->opcode();
       request_->body.reset(prepare);
@@ -41,6 +41,13 @@ class PrepareHandler : public ResponseCallback {
         ExecuteRequest* execute = static_cast<ExecuteRequest*>(request_handler_->request()->body.get());
         prepare->prepare_string(execute->prepared_statement);
         return true;
+      } else if(request_handler_->request()->opcode == CQL_OPCODE_BATCH) {
+        BatchRequest* batch = static_cast<BatchRequest*>(request_handler_->request()->body.get());
+        std::string prepared_statement;
+        if(batch->prepared_statement(prepared_id, &prepared_statement)) {
+          prepare->prepare_string(prepared_statement);
+          return true;
+        }
       }
       return false; // Invalid request type
     }

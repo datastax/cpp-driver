@@ -54,7 +54,7 @@ struct ExecuteRequest : public Statement {
     uint8_t
     kind() const {
       // used for batch statements
-      return 0;
+      return 1;
     }
 
     void

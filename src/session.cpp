@@ -64,6 +64,11 @@ CassFuture* cass_session_execute(CassSession* session,
   return CassFuture::to(session->execute(statement->from()));
 }
 
+CassFuture* cass_session_execute_batch(CassSession* session,
+                                       CassBatch* batch) {
+  return CassFuture::to(session->execute(batch->from()));
+}
+
 } // extern "C"
 
 namespace cass {
@@ -238,14 +243,14 @@ void Session::on_resolve(Resolver* resolver) {
   }
 }
 
-SSLSession*Session::ssl_session_new() {
+SSLSession* Session::ssl_session_new() {
   if (ssl_context_) {
     return ssl_context_->session_new();
   }
   return NULL;
 }
 
-Future*Session::prepare(const char* statement, size_t length) {
+Future* Session::prepare(const char* statement, size_t length) {
   Message* request = new Message();
   request->opcode = CQL_OPCODE_PREPARE;
   PrepareRequest* prepare = new PrepareRequest();
@@ -258,7 +263,7 @@ Future*Session::prepare(const char* statement, size_t length) {
   return request_handler->future();
 }
 
-Future*Session::execute(Statement* statement) {
+Future* Session::execute(MessageBody* statement) {
   Message* request = new Message();
   request->opcode = statement->opcode();
   request->body.reset(statement);

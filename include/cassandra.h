@@ -655,10 +655,6 @@ CASS_EXPORT CassError
 cass_batch_add_statement(CassBatch* batch,
                          CassStatement* statement);
 
-CASS_EXPORT void
-cass_batch_set_timestamp(CassBatch* batch,
-                         cass_int64_t timestamp);
-
 
 /***********************************************************************************
  *

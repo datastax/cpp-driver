@@ -72,6 +72,8 @@ std::string opcode_to_string(int opcode) {
       return "CQL_OPCODE_REGISTER";
     case CQL_OPCODE_EVENT:
       return "CQL_OPCODE_EVENT";
+    case CQL_OPCODE_BATCH:
+      return "CQL_OPCODE_BATCH";
   };
   assert(false);
   return "";

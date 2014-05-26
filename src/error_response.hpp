@@ -27,12 +27,16 @@ struct ErrorResponse : public MessageBody {
   int32_t               code;
   char*                 message;
   size_t                message_size;
+  char*                 prepared_id;
+  size_t                prepared_id_size;
 
   ErrorResponse()
      : MessageBody(CQL_OPCODE_ERROR)
      , code(0xFFFFFFFF)
-     , message(NULL)
-     , message_size(0) {}
+     , message(nullptr)
+     , message_size(0)
+     , prepared_id(nullptr)
+     , prepared_id_size(0) { }
 
   ErrorResponse(int32_t code, const char* input, size_t input_size)
     : MessageBody(CQL_OPCODE_ERROR)
@@ -49,7 +53,12 @@ struct ErrorResponse : public MessageBody {
       size_t size) {
     (void) size;
     buffer = decode_int(buffer, code);
-    decode_string(buffer, &message, message_size);
+    buffer = decode_string(buffer, &message, message_size);
+    switch(code) {
+      case CQL_ERROR_UNPREPARED:
+        decode_string(buffer, &prepared_id, prepared_id_size);
+        break;
+    }
     return true;
   }
 
