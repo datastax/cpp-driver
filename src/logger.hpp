@@ -89,15 +89,9 @@ class Logger : public LoopThread {
     }
 
     std::string format_message(const char* format, va_list args) {
-      std::string message;
-      message.resize(2 * strlen(format) + 1);
-      int n = vsnprintf(&message[0], message.size(), format, args);
-      if(n > 0 && static_cast<size_t>(n) > message.size()) {
-        message.resize(n + 1);
-        n = vsnprintf(&message[0], message.size(), format, args);
-      }
-      message.resize(n);
-      return message;
+      char buffer[1024];
+      int n = vsnprintf(buffer, sizeof(buffer), format, args);
+      return std::string(buffer, n);
     }
 
     void log(CassLogLevel severity, const char* format, va_list args) {

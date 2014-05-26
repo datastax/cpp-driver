@@ -31,7 +31,8 @@
 namespace cass {
 
 class Pool {
-  typedef std::list<Connection*> ConnectionCollection;
+  typedef std::set<Connection*> ConnectionSet;
+  typedef std::vector<Connection*> ConnectionCollection;
   typedef std::function<void(Host host)> ConnectCallback;
   typedef std::function<void(Host host)> CloseCallback;
 
@@ -41,12 +42,13 @@ class Pool {
   Logger* logger_;
   const Config& config_;
   ConnectionCollection connections_;
-  ConnectionCollection connections_pending_;
+  ConnectionSet connections_pending_;
   std::list<RequestHandler*> pending_request_queue_;
   bool is_closing_;
   ConnectCallback connect_callback_;
   CloseCallback close_callback_;
   RetryCallback retry_callback_;
+//  std::list<Connection*> pending_delete_;
 
  public:
   class PoolHandler : public ResponseCallback {
@@ -81,7 +83,6 @@ class Pool {
       virtual void on_error(CassError code, const std::string& message) {
         if(code == CASS_ERROR_LIB_WRITE_ERROR) {
           pool_->retry_callback_(request_handler_.get(), RETRY_WITH_NEXT_HOST);
-          //pool_->io_worker_->retry(request_handler_.get());
         } else {
           request_handler_->on_error(code, message);
         }
@@ -147,20 +148,39 @@ class Pool {
     }
   }
 
-  void on_connection_connect(Connection* connection) {
-    connect_callback_(host_);
-    connections_pending_.remove(connection);
+  ~Pool() {
+    for(auto request_handler : pending_request_queue_) {
+      if(request_handler->timer) {
+        Timer::stop(request_handler->timer);
+        request_handler->timer = nullptr;
+        retry_callback_(request_handler, RETRY_WITH_NEXT_HOST);
+      }
+    }
+    pending_request_queue_.clear();
+  }
 
-    if(is_closing_) {
-      connection->close();
-    } else if(connection->is_ready()) {
+  void on_connection_connect(Connection* connection) {
+    auto it = connections_pending_.find(connection);
+    if(it != connections_pending_.end()) {
+      connect_callback_(host_);
+
+      connections_pending_.erase(it);
+
+      if(is_closing_) {
+        connection->close();
+      } else if(connection->is_ready()) {
         connections_.push_back(connection);
         execute_pending_request(connection);
+      }
     }
   }
 
   void on_connection_close(Connection* connection) {
-    connections_.remove(connection);
+    auto it = std::find(connections_.begin(), connections_.end(), connection);
+    if(it != connections_.end()) {
+      connections_.erase(it);
+    }
+    connections_pending_.erase(connection);
 
     if(connection->is_defunct()) {
       is_closing_ = true; // TODO(mpenick): Conviction policy
@@ -176,9 +196,7 @@ class Pool {
           c->close();
         }
       }
-      if(connections_.empty() &&
-         connections_pending_.empty() &&
-         pending_request_queue_.empty()) {
+      if(connections_.empty() && connections_pending_.empty()) {
         close_callback_(host_);
       }
     }
@@ -213,7 +231,7 @@ class Pool {
                                    std::placeholders::_1));
 
     connection->connect();
-    connections_pending_.push_back(connection);
+    connections_pending_.insert(connection);
   }
 
   void maybe_spawn_connection() {

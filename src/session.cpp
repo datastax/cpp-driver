@@ -226,16 +226,15 @@ void Session::on_event(const SessionEvent& event) {
 }
 
 void Session::on_resolve(Resolver* resolver) {
+  Session* session = reinterpret_cast<Session*>(resolver->data());
   if(resolver->is_success()) {
-    Session* session = reinterpret_cast<Session*>(resolver->data());
     Host host(resolver->address());
     session->hosts_.insert(host);
     if(--session->pending_resolve_count_ == 0) {
       session->init_pools();
     }
   } else {
-    // TODO:(mpenick) log or handle
-    fprintf(stderr, "Unable to resolve %s:%d\n", resolver->host().c_str(), resolver->port());
+    session->logger_->error("Unable to resolve %s:%d\n", resolver->host().c_str(), resolver->port());
   }
 }
 

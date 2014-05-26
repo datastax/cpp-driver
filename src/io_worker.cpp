@@ -122,13 +122,11 @@ void IOWorker::maybe_shutdown() {
   }
 }
 
-void IOWorker::cleanup()
-{
-  if(!pending_delete_.empty()) {
-    for(auto pool : pending_delete_) {
-      delete pool;
-    }
-    pending_delete_.clear();
+void IOWorker::cleanup() {
+  auto it = pending_delete_.begin();
+  while(it != pending_delete_.end()) {
+    delete *it;
+    it = pending_delete_.erase(it);
   }
 }
 

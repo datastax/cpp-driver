@@ -19,7 +19,12 @@
 extern "C" {
 
 const char* cass_code_error_desc(CassError code) {
-  return ""; // TODO(mpenick)
+  switch(code) {
+#define XX(source, _, code, desc) case ((source << 24) | code): return desc;
+  CASS_ERROR_MAP(XX)
+#undef XX
+    default: return "";
+  }
 }
 
 const char* cass_log_level_desc(CassLogLevel log_level) {
@@ -27,8 +32,7 @@ const char* cass_log_level_desc(CassLogLevel log_level) {
 #define XX(log_level, desc) case log_level: return desc;
     CASS_LOG_LEVEL_MAP(XX)
 #undef XX
-    default:
-      return "";
+    default: return "";
   }
 }
 

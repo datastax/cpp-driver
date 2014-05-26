@@ -29,6 +29,7 @@
 #include "connecter.hpp"
 #include "writer.hpp"
 #include "timer.hpp"
+#include "list.hpp"
 
 namespace cass {
 
@@ -77,82 +78,149 @@ class Connection {
         std::unique_ptr<Message> request_;
     };
 
-    struct Request {
+    struct Request : public List<Request>::Node {
         enum State {
           REQUEST_STATE_NEW,
           REQUEST_STATE_WRITING,
           REQUEST_STATE_READING,
-          REQUEST_STATE_TIMED_OUT,
+          REQUEST_STATE_WRITE_TIMEOUT,
+          REQUEST_STATE_READ_TIMEOUT,
+          REQUEST_STATE_READ_BEFORE_WRITE,
+          REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ,
           REQUEST_STATE_DONE,
         };
 
         Request(Connection* connection,
                 ResponseCallback* response_callback)
           : connection(connection)
-          , response_callback(response_callback)
           , stream(0)
-          , timer(nullptr)
-          , state(REQUEST_STATE_NEW) { }
+          , response_callback_(response_callback)
+          , timer_(nullptr)
+          , state_(REQUEST_STATE_NEW) { }
 
         void on_set(Message* response) {
-          if(maybe_stop_timer()) {
-            response_callback->on_set(response);
-          }
-          connection->request_count_--;
-          connection->maybe_close();
+          response_callback_->on_set(response);
         }
 
         void on_error(CassError code, const std::string& message) {
-          if(maybe_stop_timer()) {
-            response_callback->on_error(code, message);
-          }
+          response_callback_->on_error(code, message);
           connection->stream_manager_.release_stream(stream);
-          connection->request_count_--;
-          connection->maybe_close();
         }
 
         void on_timeout() {
-          connection->logger_->info("Request timed out to '%s'",
-                                    connection->host_string_.c_str());
-          timer = nullptr;
-          state = REQUEST_STATE_TIMED_OUT;
-          response_callback->on_timeout();
-          connection->timed_out_requests_.push_back(this);
-          connection->maybe_close();
+          response_callback_->on_timeout();
         }
 
-        void start_write() {
-          state = REQUEST_STATE_WRITING;
-          connection->request_count_++;
-          timer = Timer::start(connection->loop_, connection->config_.write_timeout(), this, on_request_timeout);
-        }
+        State state() const { return state_; }
 
-        void start_read() {
-          state = REQUEST_STATE_READING;
-          timer = Timer::start(connection->loop_, connection->config_.read_timeout(), this, on_request_timeout);
-        }
+        void change_state(State next_state) {
+          switch(state_) {
+            case REQUEST_STATE_NEW:
+              assert(next_state == REQUEST_STATE_WRITING && "Invalid request state after new");
+              state_ = REQUEST_STATE_WRITING;
+              timer_ = Timer::start(connection->loop_, connection->config_.write_timeout(), this, on_request_timeout);
+              break;
 
-        bool maybe_stop_timer() {
-          if(state == REQUEST_STATE_TIMED_OUT) {
-            connection->timed_out_requests_.remove(this);
-            return false; // We timed out, end of the request
-          } else if(timer) {
-            Timer::stop(timer);
-            timer = nullptr;
+            case REQUEST_STATE_WRITING:
+              if(next_state == REQUEST_STATE_READING) { // Success
+                stop_timer();
+                state_ = next_state;
+                timer_ = Timer::start(connection->loop_, connection->config_.read_timeout(), this, on_request_timeout);
+              } else if(next_state == REQUEST_STATE_READ_BEFORE_WRITE) {
+                stop_timer();
+                state_ = next_state;
+              } else if(next_state == REQUEST_STATE_WRITE_TIMEOUT) {
+                connection->timed_out_request_count_++;
+                state_ = next_state;
+              } else {
+                assert(false && "Invalid request state after writing");
+              }
+              break;
+
+            case REQUEST_STATE_READING:
+              if(next_state == REQUEST_STATE_DONE) { // Success
+                stop_timer();
+                state_ = next_state;
+                cleanup();
+              } else if(next_state == REQUEST_STATE_READ_TIMEOUT) {
+               connection-> timed_out_request_count_++;
+                state_ = next_state;
+              } else {
+                assert(false && "Invalid request state after reading");
+              }
+              break;
+
+            case REQUEST_STATE_WRITE_TIMEOUT:
+              assert((next_state == REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ || next_state == REQUEST_STATE_READ_BEFORE_WRITE)
+                     && "Invalid request state after write timeout");
+              state_ = next_state;
+              break;
+
+            case REQUEST_STATE_READ_TIMEOUT:
+              assert(next_state == REQUEST_STATE_DONE && "Invalid request state after read timeout");
+              connection->timed_out_request_count_--;
+              state_ = next_state;
+              cleanup();
+              break;
+
+            case REQUEST_STATE_READ_BEFORE_WRITE:
+              assert(next_state == REQUEST_STATE_DONE && "Invalid request state after read before write");
+              state_ = next_state;
+              cleanup();
+              break;
+
+            case REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ:
+              assert(next_state == REQUEST_STATE_DONE && "Invalid request state after write timeout before read");
+              connection->timed_out_request_count_--;
+              state_ = next_state;
+              cleanup();
+              break;
+
+            case REQUEST_STATE_DONE:
+              assert(false && "Invalid request state after done");
+              break;
+
+            default:
+              assert(false && "Invalid request state");
+              break;
           }
-          return true; // We stoppped the timer, continue on
+        }
+
+        void stop_timer() {
+          assert(timer_ != nullptr);
+          Timer::stop(timer_);
+          timer_ = nullptr;
+        }
+
+        Connection* connection;
+        int8_t stream;
+
+      private:
+        void cleanup() {
+          connection->pending_requests_.remove(this);
+          connection->maybe_close();
+          delete this;
         }
 
         static void on_request_timeout(Timer* timer) {
           Request *request = static_cast<Request*>(timer->data());
+          request->connection->logger_->info("Request timed out to '%s'",
+                                             request->connection->host_string_.c_str());
+          request->timer_ = nullptr;
+          if(request->state_ == REQUEST_STATE_READING) {
+            request->change_state(REQUEST_STATE_READ_TIMEOUT);
+          } else if(request->state_ == REQUEST_STATE_WRITING) {
+            request->change_state(REQUEST_STATE_WRITE_TIMEOUT);
+          } else {
+            assert(false && "Invalid request state for timeout");
+          }
           request->on_timeout();
         }
 
-        Connection* connection;
-        std::unique_ptr<ResponseCallback> response_callback;
-        int8_t stream;
-        Timer* timer;
-        State state;
+      private:
+        std::unique_ptr<ResponseCallback> response_callback_;
+        Timer* timer_;
+        State state_;
     };
 
     typedef std::function<void(Connection*)> ConnectCallback;
@@ -190,7 +258,7 @@ class Connection {
                CloseCallback close_callback)
       : state_(CLIENT_STATE_NEW)
       , is_defunct_(false)
-      , request_count_(0)
+      , timed_out_request_count_(0)
       , loop_(loop)
       , incoming_(new Message())
       , connect_callback_(connect_callback)
@@ -213,9 +281,6 @@ class Connection {
     }
 
     ~Connection() {
-      for(auto request : timed_out_requests_) {
-        delete request;
-      }
     }
 
     void connect() {
@@ -247,7 +312,9 @@ class Connection {
       logger_->debug("Sending message type %s with %d, size %zd",
                      opcode_to_string(message->opcode).c_str(), message->stream, buf.len);
 
-      request->start_write();
+      pending_requests_.add_to_back(request.get());
+
+      request->change_state(Request::REQUEST_STATE_WRITING);
       write(buf, request.release());
 
       return true;
@@ -258,45 +325,47 @@ class Connection {
       maybe_close();
     }
 
-    void defunct() {
-      if(!is_defunct_) {
-        is_defunct_ = true;
-        close();
-      }
-    }
-
-    bool is_closing() {
+    bool is_closing() const {
       return state_ == CLIENT_STATE_CLOSING;
     }
 
-    bool is_defunct() {
+    void maybe_close() {
+      if(state_ == CLIENT_STATE_CLOSING && !has_requests_pending()) {
+        actually_close();
+      }
+    }
+
+    void defunct() {
+      if(!is_defunct_) {
+        is_defunct_ = true;
+        actually_close();
+      }
+    }
+
+    bool is_defunct() const {
       return is_defunct_;
     }
 
+
     bool is_ready() {
       return state_ == CLIENT_STATE_READY;
-    }
-
-    void maybe_close() {
-      if(is_closing()
-         && outstanding_request_count() <= 0) {
-        actually_close();
-      }
     }
 
     inline size_t available_streams() {
       return stream_manager_.available_streams();
     }
 
-    inline int outstanding_request_count() {
-      return request_count_ - timed_out_requests_.size();
+    inline bool has_requests_pending() {
+      return pending_requests_.size() - timed_out_request_count_ > 0;
     }
 
   private:
     void actually_close() {
       if(!uv_is_closing(reinterpret_cast<uv_handle_t*>(&socket_))) {
+        if(state_ >= CLIENT_STATE_CONNECTED) {
+          uv_read_stop(reinterpret_cast<uv_stream_t*>(&socket_));
+        }
         state_ = CLIENT_STATE_CLOSING;
-        uv_read_stop(reinterpret_cast<uv_stream_t*>(&socket_));
         uv_close(reinterpret_cast<uv_handle_t*>(&socket_), on_close);
       }
     }
@@ -354,12 +423,32 @@ class Connection {
           } else {
             Request* request = nullptr;
             if(stream_manager_.get_item(response->stream, request)) {
-              request->on_set(response.get());
-              if(request->state == Request::REQUEST_STATE_READING) {
-                delete request;
-              } else {
-                // The read came before the write came back
-                request->state = Request::REQUEST_STATE_DONE;
+              switch(request->state()) {
+                case Request::REQUEST_STATE_READING:
+                  request->on_set(response.get());
+                  request->change_state(Request::REQUEST_STATE_DONE);
+                  break;
+
+                case Request::REQUEST_STATE_WRITING:
+                  request->on_set(response.get());
+                  request->change_state(Request::REQUEST_STATE_READ_BEFORE_WRITE);
+                  break;
+
+                case Request::REQUEST_STATE_WRITE_TIMEOUT:
+                  request->change_state(Request::REQUEST_STATE_READ_BEFORE_WRITE);
+                  break;
+
+                case Request::REQUEST_STATE_READ_TIMEOUT:
+                  request->change_state(Request::REQUEST_STATE_DONE);
+                  break;
+
+                case Request::REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ:
+                  request->change_state(Request::REQUEST_STATE_DONE);
+                  break;
+
+                default:
+                  assert(false && "Invalid request state after receiving response");
+                  break;
               }
             } else {
               logger_->error("Invalid stream returnd from server on '%s'",
@@ -383,7 +472,7 @@ class Connection {
                                     connection->host_string_.c_str(),
                                     uv_err_name(uv_last_error(connection->loop_)));
         }
-        connection->actually_close();
+        connection->defunct();
         free_buffer(buf);
         return;
       }
@@ -448,12 +537,17 @@ class Connection {
       Connection* connection
           = reinterpret_cast<Connection*>(connecter->data());
 
-      if(connection->is_defunct()) { // Timed out
-        return;
+      if(connection->is_defunct()) {
+        return; // Timed out
       }
 
       Timer::stop(connection->connect_timer_);
       connection->connect_timer_ = nullptr;
+
+      if(connection->is_closing()) {
+        connection->notify_error("Closing");
+        return;
+      }
 
       if(connecter->status() == Connecter::SUCCESS) {
         connection->logger_->debug("Connected to '%s'",
@@ -464,16 +558,19 @@ class Connection {
         connection->state_ = CLIENT_STATE_CONNECTED;
         connection->event_received();
       } else {
-        connection->notify_error("Unable to connect");
+        connection->logger_->info("Connect error '%s' on '%s'",
+                                  connection->host_string_.c_str(),
+                                  uv_err_name(uv_last_error(connection->loop_)));
         connection->defunct();
+        connection->notify_error("Unable to connect");
       }
     }
 
     static void on_connect_timeout(Timer* timer) {
       Connection* connection
           = reinterpret_cast<Connection*>(timer->data());
-      connection->notify_error("Connection timeout");
       connection->connect_timer_ = nullptr;
+      connection->notify_error("Connection timeout");
       connection->defunct();
     }
 
@@ -483,12 +580,24 @@ class Connection {
 
       connection->logger_->debug("Connection to '%s' closed",
                                  connection->host_string_.c_str());
+
       connection->state_ = CLIENT_STATE_CLOSED;
       connection->event_received();
 
-      connection->close_callback_(connection);
+      while(!connection->pending_requests_.is_empty()) {
+        Request* request = connection->pending_requests_.front();
+        if(request->state() == Request::REQUEST_STATE_WRITING
+           || request->state() == Request::REQUEST_STATE_READING) {
+          request->on_timeout();
+          request->stop_timer();
+        }
+        connection->pending_requests_.remove(request);
+        delete request;
+      }
 
-      // TODO(mpenick): Delete the connection
+    connection->close_callback_(connection);
+
+      delete connection;
     }
 
     void ssl_handshake() {
@@ -555,32 +664,42 @@ class Connection {
       Request* request = static_cast<Request*>(writer->data());
       Connection* connection = request->connection;
 
-      if(!request->maybe_stop_timer()) {
-        return; // Timed out
-      }
+      switch(request->state()) {
+        case Request::REQUEST_STATE_WRITING:
+          if(writer->status() == Writer::SUCCESS) {
+            request->change_state(Request::REQUEST_STATE_READING);
+          } else {
+            if(!connection->is_closing()) {
+              connection->logger_->info("Write error '%s' on '%s'",
+                                        connection->host_string_.c_str(),
+                                        uv_err_name(uv_last_error(connection->loop_)));
+              connection->defunct();
+            }
+            request->on_error(CASS_ERROR_LIB_WRITE_ERROR, "Unable to write to socket");
+            request->change_state(Request::REQUEST_STATE_DONE);
+          }
+          break;
 
-      if(request->state == Request::REQUEST_STATE_DONE) {
-        // The read came before the write came back
-        delete request;
-        return;
-      }
+        case Request::REQUEST_STATE_WRITE_TIMEOUT:
+          request->change_state(Request::REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ);
+          break;
 
-      if(writer->status() == Writer::SUCCESS) {
-        request->start_read();
-      } else {
-        connection->defunct();
-        request->on_error(CASS_ERROR_LIB_WRITE_ERROR, "Unable to write to socket");
-        delete request;
-        connection->logger_->info("Write error '%s' on '%s'",
-                                  connection->host_string_.c_str(),
-                                  uv_err_name(uv_last_error(connection->loop_)));
+        case Request::REQUEST_STATE_READ_BEFORE_WRITE:
+          request->change_state(Request::REQUEST_STATE_DONE);
+          break;
+
+        default:
+          assert(false && "Invalid request state after write finished");
+          break;
       }
     }
 
   private:
     ClientConnectionState       state_;
     bool is_defunct_;
-    int request_count_;
+
+    List<Request> pending_requests_;
+    int timed_out_request_count_;
 
     uv_loop_t*                  loop_;
     std::unique_ptr<Message>    incoming_;
@@ -601,7 +720,7 @@ class Connection {
     std::string                 version_;
 
 
-    std::list<Request*> timed_out_requests_;
+    //std::list<Request*> timed_out_requests_;
     Logger* logger_;
     const Config& config_;
     Timer* connect_timer_;

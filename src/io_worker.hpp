@@ -97,7 +97,7 @@ class IOWorker : public EventThread<IOWorkerEvent> {
     uv_prepare_t prepare_;
     SSLContext* ssl_context_;
     PoolCollection pools;
-    std::vector<Pool*> pending_delete_;
+    std::list<Pool*> pending_delete_;
     bool is_shutting_down_;
     std::atomic<bool> is_shutdown_;
 

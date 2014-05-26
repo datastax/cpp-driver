@@ -89,9 +89,14 @@ CassError cass_value_get_bytes(const CassValue* value,
 }
 
 CassError cass_value_get_decimal(const CassValue* value,
-                                 cass_uint32_t* output_scale,
+                                 cass_int32_t* output_scale,
                                  CassBytes* output_varint) {
-  // TODO(mpenick)
+  if(value->type != CASS_VALUE_TYPE_DECIMAL) {
+    return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
+  }
+  const char* buffer = cass::decode_int(value->buffer.data(), *output_scale);
+  output_varint->data = reinterpret_cast<const cass_byte_t*>(buffer);
+  output_varint->size = value->buffer.size() - sizeof(int32_t);
   return CASS_OK;
 }
 
