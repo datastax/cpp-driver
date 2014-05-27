@@ -101,7 +101,6 @@ void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
     auto pool = it->second;
     Connection* connection =  pool->borrow_connection();
     if(connection != nullptr) {
-      printf("Trying host %s\n", host.address.to_string().c_str());
       if(!pool->execute(connection, request_handler)) {
         retry(request_handler, RETRY_WITH_NEXT_HOST);
       }

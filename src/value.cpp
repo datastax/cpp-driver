@@ -30,9 +30,9 @@ CassError cass_value_get_int32(const CassValue* value,
 
 CassError cass_value_get_int64(const CassValue* value,
                                cass_int64_t* output) {
-  if(value->type != CASS_VALUE_TYPE_BIGINT &&
-     value->type != CASS_VALUE_TYPE_COUNTER &&
-     value->type != CASS_VALUE_TYPE_TIMESTAMP) {
+  if(value->type != CASS_VALUE_TYPE_BIGINT
+     && value->type != CASS_VALUE_TYPE_COUNTER
+     && value->type != CASS_VALUE_TYPE_TIMESTAMP) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
   cass::decode_int64(value->buffer.data(), *output);
@@ -67,7 +67,8 @@ CassError cass_value_get_bool(const CassValue* value,
 
 CassError cass_value_get_uuid(const CassValue* value,
                               CassUuid output) {
-  if(value->type != CASS_VALUE_TYPE_UUID) {
+  if(value->type != CASS_VALUE_TYPE_UUID
+     && value->type != CASS_VALUE_TYPE_TIMEUUID) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
   memcpy(output, value->buffer.data(), sizeof(CassUuid));
@@ -106,9 +107,9 @@ CassValueType cass_value_type(const CassValue* value) {
 
 cass_bool_t cass_value_is_collection(const CassValue* value) {
   CassValueType type = value->type;
-  return type == CASS_VALUE_TYPE_LIST ||
-      type == CASS_VALUE_TYPE_MAP ||
-      type == CASS_VALUE_TYPE_SET;
+  return type == CASS_VALUE_TYPE_LIST
+      || type == CASS_VALUE_TYPE_MAP
+      || type == CASS_VALUE_TYPE_SET;
 }
 
 cass_size_t cass_value_item_count(const CassValue* collection) {

@@ -41,6 +41,8 @@
 extern "C" {
 #endif
 
+#define CASS_UUID_STRING_LENGTH 37
+
 #define cass_false 0
 #define cass_true  1
 
@@ -963,7 +965,7 @@ cass_value_secondary_sub_type(const CassValue* collection);
  * @param output
  */
 CASS_EXPORT void
-cass_uuid_v1(CassUuid* output);
+cass_uuid_generate_time(CassUuid output);
 
 /**
  * Generate a new V1 (time) UUID for the specified time
@@ -971,8 +973,20 @@ cass_uuid_v1(CassUuid* output);
  * @param output
  */
 CASS_EXPORT void
-cass_uuid_v1_for_time(cass_uint64_t time,
-                      CassUuid* output);
+cass_uuid_from_time(cass_uint64_t time,
+                    CassUuid output);
+
+CASS_EXPORT void
+cass_uuid_min_from_time(cass_uint64_t time,
+                        CassUuid output);
+
+CASS_EXPORT void
+cass_uuid_max_from_time(cass_uint64_t time,
+                        CassUuid output);
+
+
+CASS_EXPORT cass_uint64_t
+cass_uuid_get_time(CassUuid uuid);
 
 /**
  * Generate a new V4 (random) UUID
@@ -982,7 +996,11 @@ cass_uuid_v1_for_time(cass_uint64_t time,
  * @return
  */
 CASS_EXPORT void
-cass_uuid_v4(CassUuid* output);
+cass_uuid_generate_random(CassUuid output);
+
+
+CASS_EXPORT cass_uint8_t
+cass_uuid_get_version(CassUuid uuid);
 
 /**
  * Return the corresponding null terminated string for the specified UUID.
@@ -992,7 +1010,7 @@ cass_uuid_v4(CassUuid* output);
  *
  * @return
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_uuid_string(CassUuid uuid,
                  char* output);
 
