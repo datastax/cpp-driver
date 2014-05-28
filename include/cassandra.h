@@ -314,7 +314,7 @@ cass_session_connect_keyspace(CassSession* session,
  * @param[in] statement
  * @return A future that must be freed.
  *
- *  * @see cass_future_get_prepared()
+ * @see cass_future_get_prepared()
  */
 CASS_EXPORT CassFuture*
 cass_session_prepare(CassSession* session,
@@ -341,7 +341,7 @@ cass_session_execute(CassSession* session,
  * @param[in] statement
  * @param[out] future A future that must be freed by caller, pass NULL to avoid return.
  *
- *  * @see cass_future_get_result()
+ * @see cass_future_get_result()
  */
 CASS_EXPORT void
 cass_session_execute_batch(CassSession* session,
