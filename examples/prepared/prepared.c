@@ -70,7 +70,7 @@ CassError execute_query(CassSession* session, const char* query) {
   CassFuture* future = NULL;
   CassStatement* statement = cass_statement_new(cass_string_init(query), 0, CASS_CONSISTENCY_ONE);
 
-  future = cass_session_execute(session, statement);
+  cass_session_execute(session, statement, &future);
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
@@ -99,7 +99,7 @@ CassError insert_into_basic(CassSession* session, const char* key, const Basic* 
   cass_statement_bind_int32(statement, 4, basic->i32);
   cass_statement_bind_int64(statement, 5, basic->i64);
 
-  future = cass_session_execute(session, statement);
+  cass_session_execute(session, statement, &future);
 
   cass_future_wait(future);
 
@@ -143,7 +143,7 @@ CassError select_from_basic(CassSession* session, const CassPrepared * prepared,
 
   cass_statement_bind_string(statement, 0, cass_string_init(key));
 
-  future = cass_session_execute(session, statement);
+  cass_session_execute(session, statement, &future);
 
   cass_future_wait(future);
 

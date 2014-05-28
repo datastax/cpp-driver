@@ -224,30 +224,32 @@ typedef void (*CassLogCallback)(void* data,
  ***********************************************************************************/
 
 /**
- * Initialize a new session. Instance must be freed by caller.
+ * Creates a new session.
  *
- * @return
+ * @return Returns a session that must be freed
+ *
+ * @see cass_session_free()
  */
 CASS_EXPORT CassSession*
 cass_session_new();
 
 /**
- * Free a session instance.
+ * Free a session instance. A session must be shutdown before it can be freed.
  *
- * @return
+ * @param[in] session
  */
 CASS_EXPORT void
 cass_session_free(CassSession* session);
 
 /**
- * Set an option on the specified session
+ * Set an option on the specified session. A session must be configured
+ * before connect is called. This call has no effect after connected.
  *
- * @param cluster
- * @param option
- * @param data
- * @param data_length
- *
- * @return 0 if successful, otherwise an error occurred
+ * @param[in] session
+ * @param[in] option
+ * @param[in] data
+ * @param[in] data_length
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_session_setopt(CassSession* session,
@@ -257,11 +259,11 @@ cass_session_setopt(CassSession* session,
 /**
  * Get the option value for the specified session
  *
- * @param option
- * @param data
- * @param data_length
- *
- * @return 0 if successful, otherwise an error occurred
+ * @param[in] session
+ * @param[in] option
+ * @param[out] data
+ * @param[out] data_length
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_session_getopt(const CassSession* session,
@@ -269,81 +271,82 @@ cass_session_getopt(const CassSession* session,
                     void** data, cass_size_t* data_length);
 
 /**
- * Shutdown the session instance, output a shutdown future which can
- * be used to determine when the session has been terminated
+ * Shutdowns the session instance, output a shutdown future which can
+ * be used to determine when the session has been terminated. This allows
+ * in-flight requests to finish.
  *
- * @param session
+ * @param[in] session
+ * @return A future that must be freed.
+ *
+ * @see cass_future_get_session()
  */
 CASS_EXPORT CassFuture*
 cass_session_shutdown(CassSession* session);
 
 /**
- * Initiate a session using the specified session. Resulting
- * future must be freed by caller.
+ * Connnects a session to the cluster.
  *
- * @param cluster
- * @param future output future, must be freed by caller, pass NULL to avoid allocation
+ * @param[in] session
+ * @return A future that must be freed.
  *
- * @return 0 if successful, otherwise error occured
+ * @see cass_future_get_session()
  */
 CASS_EXPORT CassFuture*
 cass_session_connect(CassSession* session);
 
 /**
- * Initiate a session using the specified session, and set the keyspace. Resulting
- * future must be freed by caller.
+ * Connnects a session to the cluster and sets the keyspace.
  *
- * @param session
- * @param keyspace
- * @param future output future, must be freed by caller, pass NULL to avoid allocation
+ * @param[in] session
+ * @param[in] keyspace
+ * @return A future that must be freed.
  *
- * @return 0 if successful, otherwise error occured
+ * @see cass_future_get_session()
  */
 CASS_EXPORT CassFuture*
 cass_session_connect_keyspace(CassSession* session,
                               const char* keyspace);
 
 /**
- * Create a prepared statement. Future must be freed by caller.
+ * Create a prepared statement.
  *
- * @param session
- * @param statement string
- * @param statement_length statement string length
- * @param future output future, must be freed by caller, pass NULL to avoid allocation
+ * @param[in] session
+ * @param[in] statement
+ * @return A future that must be freed.
  *
- * @return
+ *  * @see cass_future_get_prepared()
  */
 CASS_EXPORT CassFuture*
 cass_session_prepare(CassSession* session,
                      CassString statement);
 
 /**
- * Execute a query, bound statement and obtain a future. Future must be freed by
- * caller.
+ * Execute a query or bound statement.
  *
- * @param session
- * @param statement
- * @param future output future, must be freed by caller, pass NULL to avoid allocation
+ * @param[in] session
+ * @param[in] statement
+ * @param[output] future A future that must be freed by caller, pass NULL to avoid return.
  *
- * @return 0 if successful, otherwise error occured
+ * @see cass_future_get_result()
  */
-CASS_EXPORT CassFuture*
+CASS_EXPORT void
 cass_session_execute(CassSession* session,
-                     CassStatement* statement);
+                     CassStatement* statement,
+                     CassFuture** output);
 
 /**
- * Execute a batch statement and obtain a future. Future must be freed by
- * caller.
+ * Execute a batch statement.
  *
  * @param session
  * @param statement
- * @param future output future, must be freed by caller, pass NULL to avoid allocation
+ * @param[output] future A future that must be freed by caller, pass NULL to avoid return.
  *
- * @return 0 if successful, otherwise error occured
+ *  * @see cass_future_get_result()
  */
-CASS_EXPORT CassFuture*
+CASS_EXPORT void
 cass_session_execute_batch(CassSession* session,
-                           CassBatch* batch);
+                           CassBatch* batch,
+                           CassFuture** output);
 
 /***********************************************************************************
  *
@@ -352,25 +355,24 @@ cass_session_execute_batch(CassSession* session,
  ***********************************************************************************/
 
 /**
- * Free a session instance.
+ * Free a future instance. A future can be freed anytime. A future does not need
+ * to be ready to be freed.
  *
- * @return
  */
 CASS_EXPORT void
 cass_future_free(CassFuture* future);
 
 /**
- * Is the specified future ready
+ * Gets the set status of the future.
  *
  * @param future
- *
- * @return true if ready
+ * @return true if set
  */
-CASS_EXPORT int
+CASS_EXPORT cass_bool_t
 cass_future_ready(CassFuture* future);
 
 /**
- * Wait the linked event occurs or error condition is reached
+ * Wait for the future to be set.
  *
  * @param future
  */

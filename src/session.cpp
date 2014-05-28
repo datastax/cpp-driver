@@ -59,14 +59,26 @@ CassFuture* cass_session_prepare(CassSession* session,
   return CassFuture::to(session->prepare(statement.data, statement.length));
 }
 
-CassFuture* cass_session_execute(CassSession* session,
-                                 CassStatement* statement) {
-  return CassFuture::to(session->execute(statement->from()));
+void cass_session_execute(CassSession* session,
+                          CassStatement* statement,
+                          CassFuture** output) {
+  cass::Future* future = session->execute(statement->from());
+  if(output == nullptr) {
+    future->release();
+  } else {
+    *output = CassFuture::to(future);
+  }
 }
 
-CassFuture* cass_session_execute_batch(CassSession* session,
-                                       CassBatch* batch) {
-  return CassFuture::to(session->execute(batch->from()));
+void cass_session_execute_batch(CassSession* session,
+                                CassBatch* batch,
+                                CassFuture** output) {
+  cass::Future* future = session->execute(batch->from());
+  if(output == nullptr) {
+    future->release();
+  } else {
+    *output = CassFuture::to(future);
+  }
 }
 
 } // extern "C"

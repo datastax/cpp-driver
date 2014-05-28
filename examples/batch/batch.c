@@ -67,7 +67,7 @@ CassError execute_query(CassSession* session, const char* query) {
   CassFuture* future = NULL;
   CassStatement* statement = cass_statement_new(cass_string_init(query), 0, CASS_CONSISTENCY_ONE);
 
-  future = cass_session_execute(session, statement);
+  cass_session_execute(session, statement, &future);
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
@@ -128,7 +128,7 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
     cass_batch_add_statement(batch, statement);
   }
 
-  future = cass_session_execute_batch(session, batch);
+  cass_session_execute_batch(session, batch, &future);
 
   cass_future_wait(future);
 
