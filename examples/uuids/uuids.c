@@ -36,7 +36,7 @@ typedef struct Basic_ Basic;
 
 void print_error(CassFuture* future) {
   CassString message = cass_future_error_message(future);
-  fprintf(stderr, "Error: %s\n", message.data);
+  fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
 }
 
 CassError connect_session(const char* contact_points[], CassSession** output) {
@@ -159,8 +159,7 @@ CassError select_from_log(CassSession* session, const char* key) {
   return rc;
 }
 
-int
-main() {
+int main() {
   CassError rc = 0;
   CassSession* session = NULL;
   CassFuture* shutdown_future = NULL;

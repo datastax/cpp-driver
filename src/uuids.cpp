@@ -26,7 +26,7 @@ cass_uuid_max_from_time(cass_uint64_t time,
 }
 
 cass_uint64_t
-cass_uuid_get_time(CassUuid uuid) {
+cass_uuid_timestamp(CassUuid uuid) {
   return cass::Uuids::get_unix_timestamp(uuid);
 }
 
@@ -34,7 +34,7 @@ void cass_uuid_generate_random(CassUuid output) {
   cass::Uuids::generate_v4(output);
 }
 
-cass_uint8_t cass_uuid_get_version(CassUuid uuid) {
+cass_uint8_t cass_uuid_version(CassUuid uuid) {
   return cass::Uuids::get_version(uuid);
 }
 

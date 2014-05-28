@@ -1,52 +1,20 @@
-DataStax C/C++ Driver for Apache Cassandra (Beta)
-===============================================
+/*
+  Copyright (c) 2014 DataStax
 
-A C/C++ driver for Apache Cassandra. This driver works exclusively with
-the Cassandra Query Language version 3 (CQL3) and Cassandra's native protocol (version 2).
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
 
-- JIRA: https://datastax-oss.atlassian.net/browse/CPP
-- MAILING LIST: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
-- IRC: #datastax-drivers on `irc.freenode.net <http://freenode.net>`_
+  http://www.apache.org/licenses/LICENSE-2.0
 
-### Current Functionality and Design
-- Completely asynchronous
-- An emphasis on avoiding copying of memory when possible
-- Exception safe
-- Ad-hoc queries
-- Prepared statements
-- Batch statements
-- Connection pool with auto-reconnect
-- Cassandra collections
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
 
-### TODO
-- Compression
-- SSL support
-- Authentication
-- More docs
-- Packaging for Redhat/Centos and OSX
-- Integration tests
-- Query tracing
-- Event registration and notification
-- Compatibility with native protcol version 1
 
-## Building
-The library known to work on OSX 10.9.2 with Clang/libc++. The build-chain currently uses CMake, so it should be fairly straightforward to get cassandra to build on other systems, but no attempt has been made to do so. Please refer to particular build instructions in separate files in this folder.
-
-The library has two dependencies [libuv](https://github.com/joyent/libuv) and [OpenSSL](http://www.openssl.org/).
-
-```
-git clone https://github.com/datastax/cpp-driver.git
-cd cpp-driver
-cmake . && make
-```
-
-Running ```make help``` will give you a list of available make targets
-
-## Examples
-There are several examples provided here: [examples](https://github.com/datastax/cpp-driver/tree/1.0/examples).
-
-### A Simple Example - a simple query against system.schema_keyspaces.
-```c
 #include <stdio.h>
 #include <string.h>
 #include <cassandra.h>
@@ -120,19 +88,3 @@ int main() {
 
   return 0;
 }
-```
-
-## License
-Copyright (c) 2014 DataStax
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.

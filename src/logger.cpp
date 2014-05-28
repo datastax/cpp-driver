@@ -7,7 +7,7 @@ void default_log_callback(void* data,
                           CassLogLevel severity,
                           CassString message) {
   // TODO(mpenick): Format time
-  fprintf(stderr, "[%s]: %.*s\n", cass_log_level_desc(severity), static_cast<int>(message.length), message.data);
+  fprintf(stderr, "[%s]: %.*s\n", cass_log_level_string(severity), static_cast<int>(message.length), message.data);
 }
 
 }
