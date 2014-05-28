@@ -325,7 +325,7 @@ cass_session_prepare(CassSession* session,
  *
  * @param[in] session
  * @param[in] statement
- * @param[out] future A future that must be freed by caller, pass NULL to avoid return.
+ * @param[out] output A future that must be freed by caller, pass NULL to avoid return.
  *
  * @see cass_future_get_result()
  */
@@ -338,8 +338,8 @@ cass_session_execute(CassSession* session,
  * Execute a batch statement.
  *
  * @param[in] session
- * @param[in] statement
- * @param[out] future A future that must be freed by caller, pass NULL to avoid return.
+ * @param[in] batch
+ * @param[out] output A future that must be freed by caller, pass NULL to avoid return.
  *
  * @see cass_future_get_result()
  */
@@ -666,7 +666,6 @@ cass_prepared_free(const CassPrepared* prepared);
 /**
  * Creates a bound statement from a pre-prepared statement.
  *
- * @param[in] session
  * @param[in] prepared A previously prepared statement.
  * @param[in] parameter_count The number of bound parameters.
  * @param[in] consistency The statement's read/write consistency.
@@ -676,7 +675,7 @@ cass_prepared_free(const CassPrepared* prepared);
  */
 CASS_EXPORT CassStatement*
 cass_prepared_bind(const CassPrepared* prepared,
-                   cass_size_t paramater_count,
+                   cass_size_t parameter_count,
                    CassConsistency consistency);
 
 /***********************************************************************************
@@ -1175,7 +1174,8 @@ cass_uuid_generate_time(CassUuid output);
 
 /**
  * Generates a V1 (time) UUID for the specified time.
- *
+ * 
+ * @param[in] time
  * @param[out] output A V1 UUID for the specified time.
  */
 CASS_EXPORT void
@@ -1185,6 +1185,7 @@ cass_uuid_from_time(cass_uint64_t time,
 /**
  * Generates a minimum V1 (time) UUID for the specified time.
  *
+ * @param[in] time
  * @param[out] output A minimum V1 UUID for the specified time.
  */
 CASS_EXPORT void
@@ -1194,6 +1195,7 @@ cass_uuid_min_from_time(cass_uint64_t time,
 /**
  * Generates a maximum V1 (time) UUID for the specified time.
  *
+ * @param[in] time
  * @param[out] output A maximum V1 UUID for the specified time.
  */
 CASS_EXPORT void
