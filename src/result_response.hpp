@@ -27,16 +27,6 @@
 #include "iterator.hpp"
 #include "serialization.hpp"
 
-#define CASS_RESULT_KIND_VOID          1
-#define CASS_RESULT_KIND_ROWS          2
-#define CASS_RESULT_KIND_SET_KEYSPACE  3
-#define CASS_RESULT_KIND_PREPARED      4
-#define CASS_RESULT_KIND_SCHEMA_CHANGE 5
-
-#define CASS_RESULT_FLAG_GLOBAL_TABLESPEC 1
-#define CASS_RESULT_FLAG_HAS_MORE_PAGES   2
-#define CASS_RESULT_FLAG_NO_METADATA      4
-
 namespace cass {
 
 struct ResultIterator;

@@ -39,13 +39,8 @@ class RequestHandler : public ResponseCallback {
       , request_(request)
       , future_(new RequestFuture()) { }
 
-    ~RequestHandler() {
-      // We don't own this memory (external statments)
-      request_->body.release();
-    }
-
     virtual Message* request() const {
-      return request_.get();
+      return request_;
     }
 
     virtual void on_set(Message* response) {
@@ -96,12 +91,12 @@ class RequestHandler : public ResponseCallback {
   public:
     Timer* timer;
     std::list<Host> hosts;
+    std::shared_ptr<std::string> keyspace;
 
   private:
     std::list<Host> hosts_attempted_;
-    std::unique_ptr<Message> request_;
+    Message* request_;
     RequestFuture* future_;
-
 };
 
 }

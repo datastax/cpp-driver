@@ -24,11 +24,6 @@ struct Error;
 
 class ResponseCallback {
   public:
-    enum ErrorCode {
-      UNABLE_TO_PREPARE,
-      UNABLE_TO_WRITE,
-    };
-
     virtual ~ResponseCallback() = default;
     virtual Message* request() const = 0;
     virtual void on_set(Message* response) = 0;

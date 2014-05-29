@@ -132,7 +132,7 @@ bool Session::notify_shutdown_async() {
   return send_event_async(event);
 }
 
-Future* Session::connect(const std::string& ks) {
+Future* Session::connect(const std::string& keyspace) {
   connect_future_ = new SessionFuture();
   connect_future_->session = this;
 
@@ -145,10 +145,8 @@ Future* Session::connect(const std::string& ks) {
     logger_->init();
 
     init();
-
-    keyspace_ = ks;
+    set_keyspace(keyspace);
     run();
-
     connect_async();
   } else {
     connect_future_->set_error(CASS_ERROR_LIB_ALREADY_CONNECTED, "Connect has already been called");
@@ -289,6 +287,7 @@ void Session::on_execute(uv_async_t* data, int status) {
 
   RequestHandler* request_handler = nullptr;
   while (session->request_queue_->dequeue(request_handler)) {
+    request_handler->keyspace = session->keyspace();
     session->load_balancing_policy_->new_query_plan(&request_handler->hosts);
 
     size_t start = session->current_io_worker_;

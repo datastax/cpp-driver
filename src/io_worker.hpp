@@ -67,6 +67,7 @@ class IOWorker : public EventThread<IOWorkerEvent> {
   private:
     void add_pool(Host host);
     void retry(RequestHandler* request_handler, RetryType retry_type);
+    void set_keyspace(const std::string& keyspace);
     void maybe_shutdown();
     void cleanup();
     void close();

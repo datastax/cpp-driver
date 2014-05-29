@@ -69,14 +69,17 @@ bool IOWorker::shutdown_async() {
 
 void IOWorker::add_pool(Host host) {
   if(!is_shutting_down_ && pools.count(host) == 0) {
+    std::shared_ptr<std::string> keyspace = session_->keyspace();
     pools[host] = new Pool(host,
                            loop(),
                            ssl_context_,
                            logger_,
                            config_,
+                           keyspace ? *keyspace : "",
                            std::bind(&IOWorker::on_connect, this, std::placeholders::_1),
                            std::bind(&IOWorker::on_pool_close, this, std::placeholders::_1),
-                           std::bind(&IOWorker::retry, this, std::placeholders::_1, std::placeholders::_2));
+                           std::bind(&IOWorker::retry, this, std::placeholders::_1, std::placeholders::_2),
+                           std::bind(&IOWorker::set_keyspace, this, std::placeholders::_1));
   }
 }
 
@@ -86,6 +89,7 @@ bool IOWorker::execute(RequestHandler* request_handler) {
 
 void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
   Host host;
+  std::shared_ptr<std::string> keyspace = request_handler->keyspace;
 
   if(retry_type == RETRY_WITH_NEXT_HOST) {
     request_handler->next_host();
@@ -99,7 +103,7 @@ void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
   auto it = pools.find(host);
   if(it != pools.end()) {
     auto pool = it->second;
-    Connection* connection =  pool->borrow_connection();
+    Connection* connection =  pool->borrow_connection(keyspace ? *keyspace : "");
     if(connection != nullptr) {
       if(!pool->execute(connection, request_handler)) {
         retry(request_handler, RETRY_WITH_NEXT_HOST);
@@ -112,6 +116,10 @@ void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
   } else {
     retry(request_handler, RETRY_WITH_NEXT_HOST);
   }
+}
+
+void IOWorker::set_keyspace(const std::string& keyspace) {
+  session_->set_keyspace(keyspace);
 }
 
 void IOWorker::maybe_shutdown() {

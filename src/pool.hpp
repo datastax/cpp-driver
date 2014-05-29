@@ -27,6 +27,7 @@
 #include "timer.hpp"
 #include "prepare_handler.hpp"
 #include "logger.hpp"
+#include "set_keyspace_handler.hpp"
 
 namespace cass {
 
@@ -48,7 +49,8 @@ class Pool {
   ConnectCallback connect_callback_;
   CloseCallback close_callback_;
   RetryCallback retry_callback_;
-//  std::list<Connection*> pending_delete_;
+  SetKeyspaceCallback set_keyspace_callback_;
+
 
  public:
   class PoolHandler : public ResponseCallback {
@@ -73,16 +75,16 @@ class Pool {
             on_error_response(response);
             break;
           default:
-            request_handler_->on_set(response);
             // TODO(mpenick): Log this
+            request_handler_->on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE, "Unexpected response");
             connection_->defunct();
         }
         finish_request();
       }
 
       virtual void on_error(CassError code, const std::string& message) {
-        if(code == CASS_ERROR_LIB_WRITE_ERROR) {
-          pool_->retry_callback_(request_handler_.get(), RETRY_WITH_NEXT_HOST);
+        if(code == CASS_ERROR_LIB_WRITE_ERROR || code == CASS_ERROR_UNABLE_TO_SET_KEYSPACE) {
+          pool_->retry_callback_(request_handler_.release(), RETRY_WITH_NEXT_HOST);
         } else {
           request_handler_->on_error(code, message);
         }
@@ -133,9 +135,11 @@ class Pool {
        SSLContext* ssl_context,
        Logger* logger,
        const Config& config,
+       const std::string& keyspace,
        ConnectCallback connect_callback,
        CloseCallback close_callback,
-       RetryCallback retry_callback)
+       RetryCallback retry_callback,
+       SetKeyspaceCallback set_keyspace_callback)
     : host_(host)
     , loop_(loop)
     , ssl_context_(ssl_context)
@@ -144,9 +148,10 @@ class Pool {
     , is_closing_(false)
     , connect_callback_(connect_callback)
     , close_callback_(close_callback)
-    , retry_callback_(retry_callback) {
+    , retry_callback_(retry_callback)
+    , set_keyspace_callback_(set_keyspace_callback) {
     for (size_t i = 0; i < config.core_connections_per_host(); ++i) {
-      spawn_connection();
+      spawn_connection(keyspace);
     }
   }
 
@@ -212,11 +217,7 @@ class Pool {
     maybe_close();
   }
 
-  void set_keyspace() {
-    // TODO(mstump)
-  }
-
-  void spawn_connection() {
+  void spawn_connection(const std::string& keyspace) {
     if(is_closing_) {
       return;
     }
@@ -227,16 +228,16 @@ class Pool {
                          host_,
                          logger_,
                          config_,
-                         std::bind(&Pool::on_connection_connect, this,
-                                   std::placeholders::_1),
-                         std::bind(&Pool::on_connection_close, this,
-                                   std::placeholders::_1));
+                         keyspace,
+                         std::bind(&Pool::on_connection_connect, this, std::placeholders::_1),
+                         std::bind(&Pool::on_connection_close, this, std::placeholders::_1),
+                         set_keyspace_callback_);
 
     connection->connect();
     connections_pending_.insert(connection);
   }
 
-  void maybe_spawn_connection() {
+  void maybe_spawn_connection(const std::string& keyspace) {
     if (connections_pending_.size() >= config_.max_simultaneous_creation()) {
       return;
     }
@@ -246,7 +247,7 @@ class Pool {
       return;
     }
 
-    spawn_connection();
+    spawn_connection(keyspace);
   }
 
   static bool least_busy_comp(
@@ -267,25 +268,31 @@ class Pool {
     return nullptr;
   }
 
-  Connection* borrow_connection() {
+  Connection* borrow_connection(const std::string& keyspace) {
     if(is_closing_) {
       return nullptr;
     }
 
     if(connections_.empty()) {
       for (size_t i = 0; i < config_.core_connections_per_host(); ++i) {
-        spawn_connection();
+        spawn_connection(keyspace);
       }
       return nullptr;
     }
 
-    maybe_spawn_connection();
+    maybe_spawn_connection(keyspace);
 
     return find_least_busy();
   }
 
   bool execute(Connection* connection, RequestHandler* request_handler) {
-    return connection->execute(new PoolHandler(this, connection, request_handler));
+    PoolHandler* pool_handler = new PoolHandler(this, connection, request_handler);
+    std::shared_ptr<std::string> keyspace = request_handler->keyspace;
+    if(!keyspace || *keyspace == connection->keyspace()) {
+      return connection->execute(pool_handler);
+    } else {
+      return connection->execute(new SetKeyspaceHandler(*keyspace, connection, retry_callback_, pool_handler));
+    }
   }
 
   void on_timeout(Timer* timer) {

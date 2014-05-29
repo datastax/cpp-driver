@@ -33,6 +33,8 @@
 
 namespace cass {
 
+typedef std::function<void(const std::string& keyspace)> SetKeyspaceCallback;
+
 class Connection {
   public:
     class StartupHandler : public ResponseCallback {
@@ -57,6 +59,9 @@ class Connection {
             case CQL_OPCODE_READY:
               connection_->on_ready();
               break;
+            case CQL_OPCODE_RESULT:
+              on_result_response(response);
+              break;
             default:
               connection_->notify_error("Invalid opcode during startup");
               connection_->defunct();
@@ -73,7 +78,21 @@ class Connection {
           connection_->notify_error("Timed out during startup");
           connection_->defunct();
         }
+
       private:
+        void on_result_response(Message* response) {
+          ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
+          switch(result->kind) {
+            case CASS_RESULT_KIND_SET_KEYSPACE:
+              connection_->on_set_keyspace();
+              break;
+            default:
+              connection_->notify_error("Invalid result during startup. Expected set keyspace.");
+              connection_->defunct();
+              break;
+          }
+        }
+
         Connection* connection_;
         std::unique_ptr<Message> request_;
     };
@@ -99,6 +118,11 @@ class Connection {
           , state_(REQUEST_STATE_NEW) { }
 
         void on_set(Message* response) {
+          switch(response->opcode) {
+            case CQL_OPCODE_RESULT:
+              on_result_response(response);
+              break;
+          }
           response_callback_->on_set(response);
         }
 
@@ -202,6 +226,16 @@ class Connection {
           delete this;
         }
 
+        void on_result_response(Message* response) {
+          ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
+          switch(result->kind) {
+            case CASS_RESULT_KIND_SET_KEYSPACE:
+              connection->keyspace_.assign(result->keyspace, result->keyspace_size);
+              connection->set_keyspace_callback_(connection->keyspace_);
+              break;
+          }
+        }
+
         static void on_request_timeout(Timer* timer) {
           Request *request = static_cast<Request*>(timer->data());
           request->connection->logger_->info("Request timed out to '%s'",
@@ -232,6 +266,7 @@ class Connection {
       CLIENT_STATE_CONNECTED,
       CLIENT_STATE_HANDSHAKE,
       CLIENT_STATE_SUPPORTED,
+      CLIENT_STATE_SET_KEYSPACE,
       CLIENT_STATE_READY,
       CLIENT_STATE_CLOSING,
       CLIENT_STATE_CLOSED
@@ -254,8 +289,10 @@ class Connection {
                const Host& host,
                Logger* logger,
                const Config& config,
+               const std::string& keyspace,
                ConnectCallback connect_callback,
-               CloseCallback close_callback)
+               CloseCallback close_callback,
+               SetKeyspaceCallback set_keyspace_callback)
       : state_(CLIENT_STATE_NEW)
       , is_defunct_(false)
       , timed_out_request_count_(0)
@@ -263,7 +300,7 @@ class Connection {
       , incoming_(new Message())
       , connect_callback_(connect_callback)
       , close_callback_(close_callback)
-      , log_callback_(nullptr)
+      , set_keyspace_callback_(set_keyspace_callback)
       , host_(host)
       , host_string_(host.address.to_string())
       , ssl_(ssl_session)
@@ -271,6 +308,7 @@ class Connection {
       , version_("3.0.0")
       , logger_(logger)
       , config_(config)
+      , keyspace_(keyspace)
       , connect_timer_(nullptr) {
       socket_.data = this;
       uv_tcp_init(loop_, &socket_);
@@ -318,6 +356,10 @@ class Connection {
       write(buf, request.release());
 
       return true;
+    }
+
+    const std::string& keyspace() {
+      return keyspace_;
     }
 
     void close() {
@@ -388,6 +430,9 @@ class Connection {
           break;
         case CLIENT_STATE_READY:
           notify_ready();
+          break;
+        case CLIENT_STATE_SET_KEYSPACE:
+          send_use_keyspace();
           break;
         case CLIENT_STATE_CLOSED:
           break;
@@ -615,6 +660,15 @@ class Connection {
     }
 
     void on_ready() {
+      if(keyspace_.empty()) {
+        state_ = CLIENT_STATE_READY;
+      } else {
+        state_ = CLIENT_STATE_SET_KEYSPACE;
+      }
+      event_received();
+    }
+
+    void on_set_keyspace() {
       state_ = CLIENT_STATE_READY;
       event_received();
     }
@@ -629,14 +683,6 @@ class Connection {
       state_ = CLIENT_STATE_SUPPORTED;
       event_received();
     }
-
-// TODO(mpenick):
-//    void set_keyspace(const std::string& keyspace) {
-//      Message message(CQL_OPCODE_QUERY);
-//      Query* query = static_cast<Query*>(message.body.get());
-//      query->statement("USE " + keyspace);
-//      execute(&message, nullptr);
-//    }
 
     void notify_ready() {
       connect_callback_(this);
@@ -657,6 +703,14 @@ class Connection {
       Message* message = new Message(CQL_OPCODE_STARTUP);
       StartupRequest* startup = static_cast<StartupRequest*>(message->body.get());
       startup->version = version_;
+      execute(new StartupHandler(this, message));
+    }
+
+    void send_use_keyspace() {
+      Message* message = new Message(CQL_OPCODE_QUERY);
+      QueryRequest* query = static_cast<QueryRequest*>(message->body.get());
+      query->statement("use \"" + keyspace_ + "\"");
+      query->consistency(CASS_CONSISTENCY_ONE);
       execute(new StartupHandler(this, message));
     }
 
@@ -706,7 +760,7 @@ class Connection {
     StreamManager<Request*>     stream_manager_;
     ConnectCallback             connect_callback_;
     CloseCallback               close_callback_;
-    LogCallback                 log_callback_;
+    SetKeyspaceCallback         set_keyspace_callback_;
     // DNS and hostname stuff
     Host                        host_;
     std::string                 host_string_;
@@ -719,10 +773,9 @@ class Connection {
     std::string                 compression_;
     std::string                 version_;
 
-
-    //std::list<Request*> timed_out_requests_;
     Logger* logger_;
     const Config& config_;
+    std::string keyspace_;
     Timer* connect_timer_;
 
     DISALLOW_COPY_AND_ASSIGN(Connection);
