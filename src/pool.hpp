@@ -230,8 +230,7 @@ class Pool {
                          config_,
                          keyspace,
                          std::bind(&Pool::on_connection_connect, this, std::placeholders::_1),
-                         std::bind(&Pool::on_connection_close, this, std::placeholders::_1),
-                         set_keyspace_callback_);
+                         std::bind(&Pool::on_connection_close, this, std::placeholders::_1));
 
     connection->connect();
     connections_pending_.insert(connection);
@@ -291,7 +290,10 @@ class Pool {
     if(!keyspace || *keyspace == connection->keyspace()) {
       return connection->execute(pool_handler);
     } else {
-      return connection->execute(new SetKeyspaceHandler(*keyspace, connection, retry_callback_, pool_handler));
+      return connection->execute(new SetKeyspaceHandler(*keyspace,
+                                                        connection,
+                                                        set_keyspace_callback_,
+                                                        pool_handler));
     }
   }
 

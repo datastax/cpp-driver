@@ -18,6 +18,7 @@
 #define __CASS_CASSANDRA_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "cluster.hpp"
 #include "session.hpp"
 #include "statement.hpp"
 #include "future.hpp"
@@ -39,6 +40,7 @@ struct External : public In {
 
 extern "C" {
 
+struct CassCluster_ : public External<cass::Cluster, CassCluster> { };
 struct CassSession_ : public External<cass::Session, CassSession> { };
 struct CassStatement_ : public External<cass::Statement, CassStatement> { };
 struct CassFuture_ : public External<cass::Future, CassFuture> { };

@@ -36,19 +36,23 @@ void print_error(CassFuture* future) {
   fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
 }
 
-CassError connect_session(const char* contact_points[], CassSession** output) {
+CassCluster* create_cluster() {
+  const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
+  CassCluster* cluster = cass_cluster_new();
+  const char** contact_point = NULL;
+  for(contact_point = contact_points; *contact_point; contact_point++) {
+    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINT_ADD, *contact_point, strlen(*contact_point));
+  }
+  return cluster;
+}
+
+CassError connect_session(CassCluster* cluster, CassSession** output) {
   CassError rc = 0;
-  const char** cp = NULL;
   CassFuture* future = NULL;
-  CassSession* session = cass_session_new();
+  CassSession* session = cass_cluster_connect(cluster, &future);
 
   *output = NULL;
 
-  for(cp = contact_points; *cp; cp++) {
-    cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, *cp, strlen(*cp));
-  }
-
-  future = cass_session_connect(session);
   cass_future_wait(future);
   rc = cass_future_error_code(future);
   if(rc != CASS_OK) {
@@ -67,7 +71,7 @@ CassError execute_query(CassSession* session, const char* query) {
   CassFuture* future = NULL;
   CassStatement* statement = cass_statement_new(cass_string_init(query), 0, CASS_CONSISTENCY_ONE);
 
-  cass_session_execute(session, statement, &future);
+  future = cass_session_execute(session, statement);
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
@@ -128,8 +132,7 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
     cass_batch_add_statement(batch, statement);
   }
 
-  cass_session_execute_batch(session, batch, &future);
-
+  future = cass_session_execute_batch(session, batch);
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
@@ -146,14 +149,14 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
 
 int main() {
   CassError rc = 0;
+  CassCluster* cluster = create_cluster();
   CassSession* session = NULL;
   CassFuture* shutdown_future = NULL;
   const CassPrepared* prepared = NULL;
-  const char* contact_points[] = { "127.0.0.1", "127.0.0.3", "127.0.0.2", NULL };
+
   Pair pairs[] = { {"a", "1"}, {"b", "2"}, { NULL, NULL} };
 
-
-  rc = connect_session(contact_points, &session);
+  rc = connect_session(cluster, &session);
   if(rc != CASS_OK) {
     return -1;
   }
@@ -175,6 +178,7 @@ int main() {
   shutdown_future = cass_session_shutdown(session);
   cass_future_wait(shutdown_future);
   cass_session_free(session);
+  cass_cluster_free(cluster);
 
   return 0;
 }

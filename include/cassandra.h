@@ -68,6 +68,7 @@ typedef struct CassInet_ {
   cass_uint8_t address_length;
 } CassInet;
 
+typedef struct CassCluster_ CassCluster;
 typedef struct CassSession_ CassSession;
 typedef struct CassStatement_ CassStatement;
 typedef struct CassBatch_ CassBatch;
@@ -220,19 +221,84 @@ typedef void (*CassLogCallback)(void* data,
 
 /***********************************************************************************
  *
- * Session
+ * Cluster
  *
  ***********************************************************************************/
 
 /**
- * Creates a new session.
+ * Creates a new cluster.
  *
- * @return Returns a session that must be freed.
+ * @return Returns a cluster that must be freed.
  *
- * @see cass_session_free()
+ * @see cass_cluster_free()
+ */
+CASS_EXPORT CassCluster*
+cass_cluster_new();
+
+/**
+ * Set an option on the specified cluster.
+ *
+ * @param[in] cluster
+ * @param[in] option
+ * @param[in] data
+ * @param[in] data_length
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_setopt(CassCluster* cluster,
+                    CassOption option,
+                    const void* data, cass_size_t data_length);
+
+/**
+ * Get the option value for the specified cluster
+ *
+ * @param[in] cluster
+ * @param[in] option
+ * @param[out] data
+ * @param[out] data_length
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_getopt(const CassCluster* cluster,
+                    CassOption option,
+                    void** data, cass_size_t* data_length);
+
+/**
+ * Connnects a session to the cluster.
+ *
+ * @param[in] cluster
+ * @param[out] future A future that must be freed.
+ * @return A session that must be freed.
  */
 CASS_EXPORT CassSession*
-cass_session_new();
+cass_cluster_connect(CassCluster* cluster, CassFuture** future);
+
+/**
+ * Connnects a session to the cluster and sets the keyspace.
+ *
+ * @param[in] cluster
+ * @param[in] keyspace
+ * @param[out] future A future that must be freed.
+ * @return A session that must be freed.
+ */
+CASS_EXPORT CassSession*
+cass_cluster_connect_keyspace(CassCluster* cluster,
+                              const char* keyspace,
+                              CassFuture** future);
+
+/**
+ * Frees a cluster instance.
+ *
+ * @param[in] cluster
+ */
+CASS_EXPORT void
+cass_cluster_free(CassCluster* cluster);
+
+/***********************************************************************************
+ *
+ * Session
+ *
+ ***********************************************************************************/
 
 /**
  * Frees a session instance. A session must be shutdown before it can be freed.
@@ -241,35 +307,6 @@ cass_session_new();
  */
 CASS_EXPORT void
 cass_session_free(CassSession* session);
-
-/**
- * Set an option on the specified session. A session must be configured
- * before connect is called. This call has no effect after connected.
- *
- * @param[in] session
- * @param[in] option
- * @param[in] data
- * @param[in] data_length
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_session_setopt(CassSession* session,
-                    CassOption option,
-                    const void* data, cass_size_t data_length);
-
-/**
- * Get the option value for the specified session
- *
- * @param[in] session
- * @param[in] option
- * @param[out] data
- * @param[out] data_length
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_session_getopt(const CassSession* session,
-                    CassOption option,
-                    void** data, cass_size_t* data_length);
 
 /**
  * Shutdowns the session instance, output a shutdown future which can
@@ -284,29 +321,6 @@ cass_session_getopt(const CassSession* session,
 CASS_EXPORT CassFuture*
 cass_session_shutdown(CassSession* session);
 
-/**
- * Connnects a session to the cluster.
- *
- * @param[in] session
- * @return A future that must be freed.
- *
- * @see cass_future_get_session()
- */
-CASS_EXPORT CassFuture*
-cass_session_connect(CassSession* session);
-
-/**
- * Connnects a session to the cluster and sets the keyspace.
- *
- * @param[in] session
- * @param[in] keyspace
- * @return A future that must be freed.
- *
- * @see cass_future_get_session()
- */
-CASS_EXPORT CassFuture*
-cass_session_connect_keyspace(CassSession* session,
-                              const char* keyspace);
 
 /**
  * Create a prepared statement.
@@ -326,28 +340,26 @@ cass_session_prepare(CassSession* session,
  *
  * @param[in] session
  * @param[in] statement
- * @param[out] output A future that must be freed by caller, pass NULL to avoid return.
+ * @return A future that must be freed.
  *
  * @see cass_future_get_result()
  */
-CASS_EXPORT void
+CASS_EXPORT CassFuture*
 cass_session_execute(CassSession* session,
-                     CassStatement* statement,
-                     CassFuture** output);
+                     CassStatement* statement);
 
 /**
  * Execute a batch statement.
  *
  * @param[in] session
  * @param[in] batch
- * @param[out] output A future that must be freed by caller, pass NULL to avoid return.
+ * @return A future that must be freed.
  *
  * @see cass_future_get_result()
  */
-CASS_EXPORT void
+CASS_EXPORT CassFuture*
 cass_session_execute_batch(CassSession* session,
-                           CassBatch* batch,
-                           CassFuture** output);
+                           CassBatch* batch);
 
 /***********************************************************************************
  *
@@ -388,19 +400,6 @@ cass_future_wait(CassFuture* future);
 CASS_EXPORT cass_bool_t
 cass_future_wait_timed(CassFuture* future,
                        cass_duration_t timeout);
-
-/**
- * Gets the result of a successful future. If the future is not ready this method will
- * wait for the future to be set. The first successful call consumes the future, all
- * subsequent calls will return NULL.
- *
- * @param[in] future
- * @return CassSession instance if successful, otherwise NULL for error
- *
- * @see cass_session_connect(), cass_session_connect_keyspace(), and cass_session_shutdown()
- */
-CASS_EXPORT CassSession*
-cass_future_get_session(CassFuture* future);
 
 /**
  * Gets the result of a successful future. If the future is not ready this method will

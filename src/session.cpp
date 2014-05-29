@@ -19,33 +19,8 @@
 
 extern "C" {
 
-CassSession* cass_session_new() {
-  return CassSession::to(new cass::Session());
-}
-
 void cass_session_free(CassSession* session) {
   delete session->from();
-}
-
-CassError cass_session_setopt(CassSession* session,
-                              CassOption option,
-                              const void* data, size_t data_length) {
-  return session->config().option(option, data, data_length);
-}
-
-CassError cass_session_getopt( const CassSession* session,
-                               CassOption option,
-                               void** data, size_t* data_length) {
-  return CASS_OK;
-}
-
-CassFuture* cass_session_connect(CassSession* session) {
-  return CassFuture::to(session->connect(""));
-}
-
-CassFuture* cass_session_connect_keyspace(CassSession* session,
-                                          const char* keyspace) {
-  return CassFuture::to(session->connect(keyspace));
 }
 
 CassFuture* cass_session_shutdown(CassSession* session) {
@@ -59,37 +34,26 @@ CassFuture* cass_session_prepare(CassSession* session,
   return CassFuture::to(session->prepare(statement.data, statement.length));
 }
 
-void cass_session_execute(CassSession* session,
-                          CassStatement* statement,
-                          CassFuture** output) {
-  cass::Future* future = session->execute(statement->from());
-  if(output == nullptr) {
-    future->release();
-  } else {
-    *output = CassFuture::to(future);
-  }
+CassFuture* cass_session_execute(CassSession* session,
+                                 CassStatement* statement) {
+  return CassFuture::to(session->execute(statement->from()));
 }
 
-void cass_session_execute_batch(CassSession* session,
-                                CassBatch* batch,
-                                CassFuture** output) {
-  cass::Future* future = session->execute(batch->from());
-  if(output == nullptr) {
-    future->release();
-  } else {
-    *output = CassFuture::to(future);
-  }
+CassFuture* cass_session_execute_batch(CassSession* session,
+                                       CassBatch* batch) {
+  return CassFuture::to(session->execute(batch->from()));
 }
 
 } // extern "C"
 
 namespace cass {
 
-Session::Session()
+Session::Session(const Config& config)
   : state_(SESSION_STATE_NEW)
   , ssl_context_(nullptr)
   , connect_future_(nullptr)
   , shutdown_future_(nullptr)
+  , config_(config)
   , load_balancing_policy_(new RoundRobinPolicy())
   , pending_resolve_count_(0)
   , pending_connections_count_(0)
@@ -134,7 +98,6 @@ bool Session::notify_shutdown_async() {
 
 Future* Session::connect(const std::string& keyspace) {
   connect_future_ = new SessionFuture();
-  connect_future_->session = this;
 
   SessionState expected_state = SESSION_STATE_NEW;
   if (state_.compare_exchange_strong(
@@ -145,12 +108,15 @@ Future* Session::connect(const std::string& keyspace) {
     logger_->init();
 
     init();
-    set_keyspace(keyspace);
+    if(!keyspace.empty()) {
+      set_keyspace(keyspace);
+    }
     run();
     connect_async();
   } else {
     connect_future_->set_error(CASS_ERROR_LIB_ALREADY_CONNECTED, "Connect has already been called");
   }
+
   return connect_future_;
 }
 
@@ -176,9 +142,8 @@ void Session::close() {
   request_queue_->close();
 }
 
-Future*Session::shutdown() {
-  shutdown_future_ = new ShutdownSessionFuture();
-  shutdown_future_->session = this;
+Future* Session::shutdown() {
+  shutdown_future_ = new ShutdownSessionFuture(this);
 
   SessionState expected_state_ready = SESSION_STATE_READY;
   SessionState expected_state_connecting = SESSION_STATE_CONNECTING;

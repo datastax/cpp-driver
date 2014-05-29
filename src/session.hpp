@@ -52,7 +52,7 @@ struct SessionEvent {
 
 class Session : public EventThread<SessionEvent> {
   public:
-    Session();
+    Session(const Config& config);
 
     int init();
     void join();
@@ -66,9 +66,6 @@ class Session : public EventThread<SessionEvent> {
     void set_load_balancing_policy(LoadBalancingPolicy* policy) {
       load_balancing_policy_.reset(policy);
     }
-
-    Config& config() { return config_; }
-
 
     bool notify_connect_async(const Host& host);
     bool notify_shutdown_async();

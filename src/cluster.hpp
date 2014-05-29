@@ -14,31 +14,20 @@
   limitations under the License.
 */
 
-#ifndef __CASS_SESSION_FUTURE_HPP_INCLUDED__
-#define __CASS_SESSION_FUTURE_HPP_INCLUDED__
+#ifndef __CASS_CLUSTER_HPP_INCLUDED__
+#define __CASS_CLUSTER_HPP_INCLUDED__
 
-#include "future.hpp"
+#include "config.hpp"
 
 namespace cass {
 
-class Session;
-class SessionFuture : public Future {
+class Cluster
+{
   public:
-    SessionFuture()
-      : Future(CASS_FUTURE_TYPE_SESSION) { }
-};
-
-class ShutdownSessionFuture : public SessionFuture {
-  public:
-    ShutdownSessionFuture(Session* session)
-      : session_(session) { }
-
-    virtual ResultOrError* get();
-    virtual void wait();
-    virtual bool wait_for(size_t timeout);
+    Config& config() { return config_; }
 
   private:
-    Session* session_;
+    Config config_;
 };
 
 } // namespace cass

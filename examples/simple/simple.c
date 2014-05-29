@@ -21,16 +21,17 @@
 
 int main() {
   CassError rc = 0;
-  CassSession* session = cass_session_new();
+  CassCluster* cluster = cass_cluster_new();
+  CassSession* session = NULL;
   CassFuture* session_future = NULL;
   const char* contact_points[] = { "127.0.0.1",  NULL };
   const char** contact_point = NULL;
 
   for(contact_point = contact_points; *contact_point; contact_point++) {
-    cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, *contact_point, strlen(*contact_point));
+    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINT_ADD, *contact_point, strlen(*contact_point));
   }
 
-  session_future = cass_session_connect(session);
+  session = cass_cluster_connect(cluster, &session_future);
   cass_future_wait(session_future);
   rc = cass_future_error_code(session_future);
 
@@ -40,7 +41,7 @@ int main() {
     CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces;");
     CassStatement* statement = cass_statement_new(query, 0, CASS_CONSISTENCY_ONE);
 
-    cass_session_execute(session, statement, &result_future);
+    result_future = cass_session_execute(session, statement);
     cass_future_wait(result_future);
 
     rc = cass_future_error_code(result_future);
@@ -85,6 +86,7 @@ int main() {
 
   cass_future_free(session_future);
   cass_session_free(session);
+  cass_cluster_free(cluster);
 
   return 0;
 }

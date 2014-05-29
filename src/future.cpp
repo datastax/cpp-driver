@@ -38,18 +38,6 @@ cass_bool_t cass_future_wait_timed(CassFuture* future,
   return static_cast<cass_bool_t>(future->wait_for(wait));
 }
 
-CassSession* cass_future_get_session(CassFuture* future) {
-  if(future->type() != cass::CASS_FUTURE_TYPE_SESSION) {
-    return nullptr;
-  }
-  cass::SessionFuture* session_future = static_cast<cass::SessionFuture*>(future->from());
-  const cass::Future::ResultOrError* result_or_error = session_future->get();
-  if(result_or_error->is_error()) {
-    return nullptr;
-  }
-  return CassSession::to(session_future->session);
-}
-
 const CassResult* cass_future_get_result(CassFuture* future) {
   if(future->type() != cass::CASS_FUTURE_TYPE_REQUEST) {
     return nullptr;

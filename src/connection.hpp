@@ -33,8 +33,6 @@
 
 namespace cass {
 
-typedef std::function<void(const std::string& keyspace)> SetKeyspaceCallback;
-
 class Connection {
   public:
     class StartupHandler : public ResponseCallback {
@@ -231,7 +229,6 @@ class Connection {
           switch(result->kind) {
             case CASS_RESULT_KIND_SET_KEYSPACE:
               connection->keyspace_.assign(result->keyspace, result->keyspace_size);
-              connection->set_keyspace_callback_(connection->keyspace_);
               break;
           }
         }
@@ -291,8 +288,7 @@ class Connection {
                const Config& config,
                const std::string& keyspace,
                ConnectCallback connect_callback,
-               CloseCallback close_callback,
-               SetKeyspaceCallback set_keyspace_callback)
+               CloseCallback close_callback)
       : state_(CLIENT_STATE_NEW)
       , is_defunct_(false)
       , timed_out_request_count_(0)
@@ -300,7 +296,6 @@ class Connection {
       , incoming_(new Message())
       , connect_callback_(connect_callback)
       , close_callback_(close_callback)
-      , set_keyspace_callback_(set_keyspace_callback)
       , host_(host)
       , host_string_(host.address.to_string())
       , ssl_(ssl_session)
@@ -760,7 +755,6 @@ class Connection {
     StreamManager<Request*>     stream_manager_;
     ConnectCallback             connect_callback_;
     CloseCallback               close_callback_;
-    SetKeyspaceCallback         set_keyspace_callback_;
     // DNS and hostname stuff
     Host                        host_;
     std::string                 host_string_;
