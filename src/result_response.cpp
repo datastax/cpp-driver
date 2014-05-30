@@ -46,4 +46,12 @@ CassValueType cass_result_column_type(const CassResult* result,
   return CASS_VALUE_TYPE_UNKNOWN;
 }
 
+const CassRow* cass_result_first_row(const CassResult* result) {
+  if(result->kind == CASS_RESULT_KIND_ROWS
+     && result->row_count > 0) {
+    return CassRow::to(&result->first_row);
+  }
+  return nullptr;
+}
+
 }

@@ -24,59 +24,39 @@
 
 namespace cass {
 
-struct ResultIterator : Iterator {
-  const ResultResponse*       result;
-  int32_t             row_position;
-  char*               position;
-  Row                 row;
+class ResultIterator : public Iterator {
+  public:
+    ResultIterator(const ResultResponse* result)
+      : Iterator(CASS_ITERATOR_TYPE_RESULT)
+      , result_(result)
+      , row_position_(0)
+      , position_(result->rows) {
+      row_.reserve(result->column_count);
+    }
 
-  ResultIterator(const ResultResponse* result)
-    : Iterator(CASS_ITERATOR_TYPE_RESULT)
-    , result(result)
-    , row_position(0)
-    , position(result->rows)
-    , row(result->column_count) { }
-
-  char*
-  decode_row(
-      char* row,
-      std::vector<Value>& output) {
-    char* buffer = row;
-    output.clear();
-
-    for (int i = 0; i < result->column_count; ++i) {
-      int32_t size  = 0;
-      buffer        = decode_int(buffer, size);
-
-      const ResultResponse::ColumnMetaData& metadata = result->column_metadata[i];
-      CassValueType type = static_cast<CassValueType>(metadata.type);
-
-      if(type == CASS_VALUE_TYPE_MAP ||
-         type == CASS_VALUE_TYPE_LIST ||
-         type == CASS_VALUE_TYPE_SET) {
-        uint16_t count = 0;
-        Value value(type, decode_short(buffer, count), size - sizeof(uint16_t));
-        value.count = count;
-        value.primary_type = static_cast<CassValueType>(metadata.collection_primary_type);
-        value.secondary_type = static_cast<CassValueType>(metadata.collection_secondary_type);
-        output.push_back(value);
-      } else {
-        output.push_back(Value(type, buffer, size));
+    virtual bool next() {
+      if (row_position_++ >= result_->row_count) {
+        return false;
       }
-
-      buffer += size;
+      if(row_position_ > 1) {
+        position_ = decode_row(position_, result_, row_);
+      }
+      return true;
     }
-    return buffer;
-  }
 
-  virtual bool
-  next() {
-    if (row_position++ >= result->row_count) {
-      return false;
+    const Row& row() const {
+      if(row_position_ > 1) {
+        return row_;
+      } else {
+        return result_->first_row;
+      }
     }
-    position = decode_row(position, row);
-    return true;
-  }
+
+  private:
+    const ResultResponse* result_;
+    int32_t row_position_;
+    char* position_;
+    Row row_;
 };
 
 } // namespace cass

@@ -50,7 +50,7 @@ cass_iterator_free(
 cass_bool_t
 cass_iterator_next(
     CassIterator* iterator) {
-  return static_cast<bool>(iterator->from()->next());
+  return static_cast<cass_bool_t>(iterator->from()->next());
 }
 
 const CassRow*
@@ -61,7 +61,7 @@ cass_iterator_get_row(
       return nullptr;
     }
     cass::ResultIterator* result_it = static_cast<cass::ResultIterator*>(internal_it);
-    return CassRow::to(&result_it->row);
+    return CassRow::to(&result_it->row());
 }
 
 const CassValue*

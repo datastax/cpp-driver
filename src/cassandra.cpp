@@ -50,7 +50,7 @@ CassString cass_string_init2(const char* data, cass_size_t length) {
   return str;
 }
 
-CassBytes cass_bytes_init(cass_byte_t* data, cass_size_t size) {
+CassBytes cass_bytes_init(const cass_byte_t* data, cass_size_t size) {
   CassBytes bytes;
   bytes.data = data;
   bytes.size = size;

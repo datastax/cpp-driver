@@ -26,10 +26,11 @@
 #include "message_body.hpp"
 #include "iterator.hpp"
 #include "serialization.hpp"
+#include "row.hpp"
 
 namespace cass {
 
-struct ResultIterator;
+class ResultIterator;
 
 struct ResultResponse : public MessageBody {
 
@@ -97,6 +98,11 @@ struct ResultResponse : public MessageBody {
   size_t             table_size;
   int32_t            row_count;
   char*              rows;
+  Row                first_row;
+
+
+  char* first;
+  char* last;
 
   ResultResponse()
     : MessageBody(CQL_OPCODE_RESULT)
@@ -123,6 +129,8 @@ struct ResultResponse : public MessageBody {
       char* input,
       size_t size) {
     (void) size;
+    first = input;
+    last = input + size;
 
     char* buffer = decode_int(input, kind);
 
@@ -222,6 +230,10 @@ struct ResultResponse : public MessageBody {
       char* input) {
     char* buffer = decode_metadata(input);
     rows = decode_int(buffer, row_count);
+    if(row_count > 0) {
+      first_row.reserve(column_count);
+      rows = decode_row(rows, this, first_row);
+    }
     return true;
   }
 

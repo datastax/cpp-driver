@@ -88,9 +88,8 @@ CassError cass_statement_bind_inet( CassStatement* statement,
 
 CassError cass_statement_bind_decimal(CassStatement* statement,
                                       cass_size_t index,
-                                      cass_uint32_t scale,
-                                      CassBytes varint) {
-  return statement->bind(index, scale, varint.data, varint.size);
+                                      CassDecimal value) {
+  return statement->bind(index, value.scale, value.varint.data, value.varint.size);
 }
 
 CassError cass_statement_bind_collection( CassStatement* statement,

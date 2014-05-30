@@ -178,9 +178,9 @@ add_subdirectory(test/unit_tests)
 #-------------------
 # integration tests
 #-------------------
-#
-# add_subdirectory(extra/ccm_bridge)
-# add_subdirectory(test/integration_tests)
+
+add_subdirectory(test/ccm_bridge)
+add_subdirectory(test/integration_tests)
 
 #-------------------
 # examples

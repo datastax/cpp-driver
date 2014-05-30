@@ -43,10 +43,7 @@ extern "C" {
 
 #define CASS_UUID_STRING_LENGTH 37
 
-#define cass_false 0
-#define cass_true  1
-
-typedef int cass_bool_t;
+typedef enum { cass_false = 0, cass_true = 1 } cass_bool_t;
 typedef float cass_float_t;
 typedef double cass_double_t;
 typedef unsigned char cass_byte_t;
@@ -61,12 +58,27 @@ typedef unsigned int cass_uint32_t;
 typedef unsigned long long cass_uint64_t;
 typedef size_t cass_size_t;
 
-typedef cass_uint8_t CassUuid[16];
+typedef struct CassBytes_ {
+    const cass_byte_t* data;
+    cass_size_t size;
+} CassBytes;
+
+typedef struct CassString_ {
+    const char* data;
+    cass_size_t length;
+} CassString;
 
 typedef struct CassInet_ {
   cass_uint8_t address[16];
   cass_uint8_t address_length;
 } CassInet;
+
+typedef struct CassDecimal_ {
+  cass_int32_t scale;
+  CassBytes varint;
+} CassDecimal;
+
+typedef cass_uint8_t CassUuid[16];
 
 typedef struct CassCluster_ CassCluster;
 typedef struct CassSession_ CassSession;
@@ -79,16 +91,6 @@ typedef struct CassIterator_ CassIterator;
 typedef struct CassRow_ CassRow;
 typedef struct CassValue_ CassValue;
 typedef struct CassCollection_ CassCollection;
-
-typedef struct CassBytes_ {
-    const cass_byte_t* data;
-    cass_size_t size;
-} CassBytes;
-
-typedef struct CassString_ {
-    const char* data;
-    cass_size_t length;
-} CassString;
 
 typedef enum CassConsistency_ {
   CASS_CONSISTENCY_ANY          = 0x0000,
@@ -612,8 +614,7 @@ cass_statement_bind_inet(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_bind_decimal(CassStatement* statement,
                             cass_size_t index,
-                            cass_uint32_t scale,
-                            CassBytes varint);
+                            CassDecimal value);
 
 /**
  * Binds any type to a query or bound statement at the specified index. A value
@@ -849,8 +850,7 @@ cass_collection_append_inet(CassCollection* collection,
  */
 CASS_EXPORT CassError
 cass_collection_append_decimal(CassCollection* collection,
-                               cass_int32_t scale,
-                               CassBytes varint);
+                               CassDecimal value);
 
 /***********************************************************************************
  *
@@ -895,6 +895,15 @@ cass_result_column_count(const CassResult* result);
 CASS_EXPORT CassValueType
 cass_result_column_type(const CassResult* result,
                         cass_size_t index);
+
+/**
+ * Gets the first row of the result.
+ *
+ * @param[in] result
+ * @return The first row of the result. NULL if there are no rows.
+ */
+CASS_EXPORT const CassRow*
+cass_result_first_row(const CassResult* result);
 
 /***********************************************************************************
  *
@@ -1074,6 +1083,17 @@ cass_value_get_uuid(const CassValue* value,
                     CassUuid output);
 
 /**
+ * Gets an INET for the specified value
+ *
+ * @param[in] value
+ * @param[out] output
+ * @return CASS_OK if successful, otherwise error occured
+ */
+CASS_EXPORT CassError
+cass_value_get_inet(const CassValue* value,
+                    CassInet* output);
+
+/**
  * Gets a string for the specified value
  *
  * @param[in] value
@@ -1105,8 +1125,7 @@ cass_value_get_bytes(const CassValue* value,
  */
 CASS_EXPORT CassError
 cass_value_get_decimal(const CassValue* value,
-                       cass_int32_t* output_scale,
-                       CassBytes* output_varint);
+                       CassDecimal* output);
 
 /**
  * Gets the type of the specified value.
@@ -1286,7 +1305,7 @@ cass_log_level_string(CassLogLevel log_level);
  * @return A bytes object.
  */
 CASS_EXPORT CassBytes
-cass_bytes_init(cass_byte_t* data, cass_size_t size);
+cass_bytes_init(const cass_byte_t* data, cass_size_t size);
 
 /**
  * Constructs a string object from a null-terminated string.

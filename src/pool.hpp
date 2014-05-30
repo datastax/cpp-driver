@@ -69,7 +69,7 @@ class Pool {
       virtual void on_set(Message* response) {
         switch(response->opcode) {
           case CQL_OPCODE_RESULT:
-            request_handler_->on_set(response);
+            on_result_response(response);
             break;
           case CQL_OPCODE_ERROR:
             on_error_response(response);
@@ -101,6 +101,16 @@ class Pool {
         if(connection_->is_ready()) {
           pool_->execute_pending_request(connection_);
         }
+      }
+
+      void on_result_response(Message* response) {
+        ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
+        switch(result->kind) {
+          case CASS_RESULT_KIND_SET_KEYSPACE:
+            pool_->set_keyspace_callback_(std::string(result->keyspace, result->keyspace_size));
+            break;
+        }
+        request_handler_->on_set(response);
       }
 
       void on_error_response(Message* response) {

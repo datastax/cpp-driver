@@ -82,9 +82,8 @@ CassError cass_collection_append_inet(CassCollection* collection,
 }
 
 CassError cass_collection_append_decimal(CassCollection* collection,
-                                         cass_int32_t scale,
-                                         CassBytes varint) {
-  collection->append(scale, varint.data, varint.size);
+                                         CassDecimal value) {
+  collection->append(value.scale, value.varint.data, value.varint.size);
   return CASS_OK;
 }
 

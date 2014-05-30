@@ -26,7 +26,7 @@ void cass_future_free(CassFuture* future) {
 }
 
 cass_bool_t cass_future_ready(CassFuture* future) {
-  return static_cast<int>(future->ready());
+  return static_cast<cass_bool_t>(future->ready());
 }
 
 void cass_future_wait(CassFuture* future) {

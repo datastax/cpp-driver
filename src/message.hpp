@@ -41,7 +41,7 @@ struct Message {
   int8_t                          stream;
   uint8_t                         opcode;
   int32_t                         length;
-  int32_t                         received;
+  size_t                          received;
   bool                            header_received;
   char                            header_buffer[CASS_HEADER_SIZE];
   char*                           header_buffer_pos;
@@ -142,70 +142,73 @@ struct Message {
    *
    * @return how many bytes copied
    */
-  int
-  consume(
-      char*  input,
-      size_t size) {
-    char* input_pos  = input;
-    received        += size;
+  ssize_t consume(char*  input, size_t size) {
+    char* input_pos = input;
+
+    received += size;
 
     if (!header_received) {
       if (received >= CASS_HEADER_SIZE) {
-        // we've received more data then we need, just copy what we need
+        // We may have received more data then we need, only copy what we need
         size_t overage = received - CASS_HEADER_SIZE;
         size_t needed  = size - overage;
-        memcpy(header_buffer_pos, input_pos, needed);
 
-        char* buffer       = header_buffer;
-        version            = *(buffer++);
-        flags              = *(buffer++);
-        stream             = *(buffer++);
-        opcode             = *(buffer++);
+        memcpy(header_buffer_pos, input_pos, needed);
+        header_buffer_pos += needed;
+        input_pos         += needed;
+        assert(header_buffer_pos == header_buffer + CASS_HEADER_SIZE);
+
+        char* buffer = header_buffer;
+        version      = *(buffer++);
+        flags        = *(buffer++);
+        stream       = *(buffer++);
+        opcode       = *(buffer++);
+
         memcpy(&length, buffer, sizeof(int32_t));
         length = ntohl(length);
 
-        input_pos         += needed;
-        header_buffer_pos  = header_buffer + CASS_HEADER_SIZE;
-        header_received    = true;
+        header_received = true;
 
         body.reset(allocate_body(opcode));
         body->set_buffer(new char[length]);
         body_buffer_pos = body->buffer();
 
-        if (body == NULL) {
+        if (!body) {
+          // Unhandled opcode
           return -1;
         }
       } else {
-        // we haven't received all the data yet
-        // copy the entire input to our buffer
+        // We haven't received all the data for the header. We consume the entire buffer.
         memcpy(header_buffer_pos, input_pos, size);
         header_buffer_pos += size;
-        input_pos += size;
         return size;
       }
     }
 
-    if (received - CASS_HEADER_SIZE >= length) {
-      // we've received more data then we need, just copy what we need
-      size_t overage = received - length - CASS_HEADER_SIZE;
-      size_t needed = (size - (input_pos - input)) - overage;
+    const size_t remaining = size - (input_pos - input);
+    const size_t frame_size = CASS_HEADER_SIZE + length;
+
+    if (received >= frame_size) {
+      // We may have received more data then we need, only copy what we need
+      size_t overage = received - frame_size;
+      size_t needed = remaining - overage;
 
       memcpy(body_buffer_pos, input_pos, needed);
       body_buffer_pos += needed;
       input_pos       += needed;
+      assert(body_buffer_pos == body->buffer() + length);
 
       if (!body->consume(body->buffer(), length)) {
         body_error = true;
       }
       body_ready = true;
     } else {
-      // we haven't received all the data yet
-      // copy the entire input to our buffer
-      memcpy(body_buffer_pos, input_pos, size - (input_pos - input));
-      input_pos       += size;
-      body_buffer_pos += size;
+      // We haven't received all the data for the frame. We consume the entire buffer.
+      memcpy(body_buffer_pos, input_pos, remaining);
+      body_buffer_pos += remaining;
       return size;
     }
+
     return input_pos - input;
   }
 };

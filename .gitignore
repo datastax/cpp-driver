@@ -58,5 +58,4 @@ Doxyfile
 *.files
 *.includes
 
-/extra/ccm_bridge/nbproject/private/
-/nbproject/private/
+config.txt
