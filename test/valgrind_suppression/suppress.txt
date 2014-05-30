@@ -1,0 +1,59 @@
+{
+   BOOST_LOG__cond
+   Memcheck:Cond
+   ...
+   fun:_ZN5boost3log11v2_*
+}
+{
+   BOOST_LOG__memleak
+   Memcheck:Leak
+   ...
+   fun:*_ZN5boost3log11v2_*
+}
+{
+   BOOST_LOG__writecall
+   Memcheck:Param
+   write(buf)
+   ...
+   fun:*_ZN5boost3log11v2_*
+}
+
+
+
+{
+   CCM_bridge__cond
+   Memcheck:Cond
+   ...
+   fun:*cql_ccm_bridge_t*
+}
+{
+   CCM_bridge__value8
+   Memcheck:Value8
+   ...
+   fun:*cql_ccm_bridge_t*
+}
+
+
+
+{
+   LIBSSH2__sendto
+   Memcheck:Param
+   socketcall.sendto(msg)
+   ...
+   fun:libssh2_*
+}
+{
+   LIBSSH2__recvfrom
+   Memcheck:Param
+   recvfrom(buf)
+   ...
+   fun:libssh2_*
+}
+{
+   LIBSSH2__recvfrom
+   Memcheck:Param
+   recvfrom(len)
+   ...
+   fun:libssh2_*
+}
+
