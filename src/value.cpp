@@ -80,8 +80,8 @@ CassError cass_value_get_inet(const CassValue* value,
   if(value->type != CASS_VALUE_TYPE_INET) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  const char* buffer = cass::decode_byte(value->buffer.data(), output->address_length);
-  memcpy(output->address, buffer, output->address_length);
+  output->address_length = value->buffer.size();
+  memcpy(output->address, value->buffer.data(), value->buffer.size());
   return CASS_OK;
 }
 

@@ -227,7 +227,7 @@ struct Value<CassInet> {
     }
 
     static bool compare(CassInet a, CassInet b) {
-      if(a.address_length != a.address_length) {
+      if(a.address_length != b.address_length) {
         return false;
       }
       return memcmp(a.address, b.address, a.address_length) == 0;
@@ -248,6 +248,28 @@ struct Value<CassUuid> {
       return memcmp(a, b, sizeof(CassUuid)) == 0;
     }
 };
+
+template<>
+struct Value<CassDecimal> {
+    static CassError bind(CassStatement* statement, cass_size_t index, CassDecimal value) {
+      return cass_statement_bind_decimal(statement, index, value);
+    }
+
+    static CassError get(const CassValue* value, CassDecimal* output) {
+      return cass_value_get_decimal(value, output);
+    }
+
+    static bool compare(CassDecimal a, CassDecimal b) {
+      if(a.scale != b.scale) {
+        return false;
+      }
+      if(a.varint.size != b.varint.size) {
+        return false;
+      }
+      return memcmp(a.varint.data, b.varint.data, a.varint.size) == 0;
+    }
+};
+
 
 
 /** The following class cannot be used as a kernel of test fixture because of

@@ -94,10 +94,10 @@ BOOST_AUTO_TEST_CASE(simple_insert_blob)
 
 BOOST_AUTO_TEST_CASE(simple_insert_inet)
 {
-  cass_uint32_t inet = 2130706433; // 127.0.0.1
+  cass_uint32_t address = 16777343; // 127.0.0.1
   CassInet value;
-  value.address_length = 4;
-  memcpy(value.address, &inet, sizeof(cass_uint32_t));
+  value.address_length = sizeof(cass_uint32_t);
+  memcpy(value.address, &address, sizeof(cass_uint32_t));
   simple_insert_test<CassInet>(cluster, CASS_VALUE_TYPE_INET, value);
 }
 
@@ -113,6 +113,19 @@ BOOST_AUTO_TEST_CASE(simple_insert_timeuuid)
   CassUuid value;
   cass_uuid_generate_time(value);
   simple_insert_test<CassUuid>(cluster, CASS_VALUE_TYPE_TIMEUUID, value);
+}
+
+BOOST_AUTO_TEST_CASE(simple_insert_decimal)
+{
+  // Pi to a 100 digits
+  const cass_int32_t scale = 100;
+  const cass_uint8_t varint[] = { 57, 115, 235, 135, 229, 215, 8, 125, 13, 43, 1, 25, 32, 135, 129, 180,
+                                  112, 176, 158, 120, 246, 235, 29, 145, 238, 50, 108, 239, 219, 100, 250,
+                                  84, 6, 186, 148, 76, 230, 46, 181, 89, 239, 247 };
+  CassDecimal value;
+  value.scale = scale;
+  value.varint = cass_bytes_init(varint, sizeof(varint));
+  simple_insert_test<CassDecimal>(cluster, CASS_VALUE_TYPE_DECIMAL, value);
 }
 
 BOOST_AUTO_TEST_CASE(simple_timestamp_test)
