@@ -60,6 +60,12 @@ struct StackPtrFree<CassIterator> {
     }
 };
 
+template<>
+struct StackPtrFree<CassCollection> {
+    static void free(CassCollection* ptr) {
+      cass_collection_free(ptr);
+    }
+};
 
 template<class T>
 class StackPtr {
@@ -101,7 +107,6 @@ class StackPtr {
     T* ptr_;
 };
 
-
 template<class T>
 struct Value;
 
@@ -109,6 +114,10 @@ template<>
 struct Value<cass_int32_t> {
     static CassError bind(CassStatement* statement, cass_size_t index, cass_int32_t value) {
       return cass_statement_bind_int32(statement, index, value);
+    }
+
+    static CassError append(CassCollection* collection, cass_int32_t value) {
+      return cass_collection_append_int32(collection, value);
     }
 
     static CassError get(const CassValue* value, cass_int32_t* output) {
@@ -126,6 +135,10 @@ struct Value<cass_int64_t> {
       return cass_statement_bind_int64(statement, index, value);
     }
 
+    static CassError append(CassCollection* collection, cass_int64_t value) {
+      return cass_collection_append_int64(collection, value);
+    }
+
     static CassError get(const CassValue* value, cass_int64_t* output) {
       return cass_value_get_int64(value, output);
     }
@@ -139,6 +152,10 @@ template<>
 struct Value<cass_float_t> {
     static CassError bind(CassStatement* statement, cass_size_t index, cass_float_t value) {
       return cass_statement_bind_float(statement, index, value);
+    }
+
+    static CassError append(CassCollection* collection, cass_float_t value) {
+      return cass_collection_append_float(collection, value);
     }
 
     static CassError get(const CassValue* value, cass_float_t* output) {
@@ -156,6 +173,10 @@ struct Value<cass_double_t> {
       return cass_statement_bind_double(statement, index, value);
     }
 
+    static CassError append(CassCollection* collection, cass_double_t value) {
+      return cass_collection_append_double(collection, value);
+    }
+
     static CassError get(const CassValue* value, cass_double_t* output) {
       return cass_value_get_double(value, output);
     }
@@ -171,6 +192,10 @@ struct Value<cass_bool_t> {
       return cass_statement_bind_bool(statement, index, value);
     }
 
+    static CassError append(CassCollection* collection, cass_bool_t value) {
+      return cass_collection_append_bool(collection, value);
+    }
+
     static CassError get(const CassValue* value, cass_bool_t* output) {
       return cass_value_get_bool(value, output);
     }
@@ -184,6 +209,10 @@ template<>
 struct Value<CassString> {
     static CassError bind(CassStatement* statement, cass_size_t index, CassString value) {
       return cass_statement_bind_string(statement, index, value);
+    }
+
+    static CassError append(CassCollection* collection, CassString value) {
+      return cass_collection_append_string(collection, value);
     }
 
     static CassError get(const CassValue* value, CassString* output) {
@@ -204,6 +233,10 @@ struct Value<CassBytes> {
       return cass_statement_bind_bytes(statement, index, value);
     }
 
+    static CassError append(CassCollection* collection, CassBytes value) {
+      return cass_collection_append_bytes(collection, value);
+    }
+
     static CassError get(const CassValue* value, CassBytes* output) {
       return cass_value_get_bytes(value, output);
     }
@@ -220,6 +253,10 @@ template<>
 struct Value<CassInet> {
     static CassError bind(CassStatement* statement, cass_size_t index, CassInet value) {
       return cass_statement_bind_inet(statement, index, value);
+    }
+
+    static CassError append(CassCollection* collection, CassInet value) {
+      return cass_collection_append_inet(collection, value);
     }
 
     static CassError get(const CassValue* value, CassInet* output) {
@@ -240,6 +277,10 @@ struct Value<CassUuid> {
       return cass_statement_bind_uuid(statement, index, value);
     }
 
+    static CassError append(CassCollection* collection, CassUuid value) {
+      return cass_collection_append_uuid(collection, value);
+    }
+
     static CassError get(const CassValue* value, CassUuid* output) {
       return cass_value_get_uuid(value, *output);
     }
@@ -253,6 +294,10 @@ template<>
 struct Value<CassDecimal> {
     static CassError bind(CassStatement* statement, cass_size_t index, CassDecimal value) {
       return cass_statement_bind_decimal(statement, index, value);
+    }
+
+    static CassError append(CassCollection* collection, CassDecimal value) {
+      return cass_collection_append_decimal(collection, value);
     }
 
     static CassError get(const CassValue* value, CassDecimal* output) {
@@ -270,7 +315,30 @@ struct Value<CassDecimal> {
     }
 };
 
+// Simple wrapper to allow CassUuid to be added to STL containers
+struct Uuid {
+    CassUuid uuid;
+    operator cass_uint8_t*() { return uuid; }
+};
 
+template<>
+struct Value<Uuid> {
+    static CassError bind(CassStatement* statement, cass_size_t index, Uuid value) {
+      return cass_statement_bind_uuid(statement, index, value.uuid);
+    }
+
+    static CassError append(CassCollection* collection, Uuid value) {
+      return cass_collection_append_uuid(collection, value.uuid);
+    }
+
+    static CassError get(const CassValue* value, Uuid* output) {
+      return cass_value_get_uuid(value, output->uuid);
+    }
+
+    static bool compare(Uuid a, Uuid b) {
+      return memcmp(a.uuid, b.uuid, sizeof(CassUuid)) == 0;
+    }
+};
 
 /** The following class cannot be used as a kernel of test fixture because of
     parametrized ctor. Derive from it to use it in your tests.
@@ -294,6 +362,17 @@ void execute_query(CassSession* session,
                    CassConsistency consistency = CASS_CONSISTENCY_ONE);
 
 void wait_and_check_error(CassFuture* future, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
+
+inline CassBytes bytes_from_string(const char* str) {
+  return cass_bytes_init(reinterpret_cast<const cass_uint8_t*>(str), strlen(str));
+}
+
+inline CassInet inet_v4_from_int(int32_t address) {
+  CassInet inet;
+  memcpy(inet.address, &address, sizeof(int32_t));
+  inet.address_length = sizeof(int32_t);
+  return inet;
+}
 
 extern const std::string CREATE_KEYSPACE_SIMPLE_FORMAT;
 extern const std::string CREATE_KEYSPACE_GENERIC_FORMAT;

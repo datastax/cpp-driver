@@ -1,4 +1,7 @@
 #define BOOST_TEST_DYN_LINK
+#ifdef STAND_ALONE
+#   define BOOST_TEST_MODULE cassandra
+#endif
 
 #include "cassandra.h"
 #include "test_utils.hpp"
@@ -20,7 +23,6 @@ template <class T>
 void simple_insert_test(CassCluster* cluster, CassValueType type, T value) {
   test_utils::StackPtr<CassFuture> session_future;
   test_utils::StackPtr<CassSession> session(cass_cluster_connect(cluster, session_future.address_of()));
-
   test_utils::wait_and_check_error(session_future.get());
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
@@ -28,10 +30,10 @@ void simple_insert_test(CassCluster* cluster, CassValueType type, T value) {
 
   test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
-  test_utils::execute_query(session.get(), str(boost::format("CREATE TABLE %s(tweet_id int PRIMARY KEY, test_val %s);")
+  test_utils::execute_query(session.get(), str(boost::format("CREATE TABLE %s (tweet_id int PRIMARY KEY, test_val %s);")
                                          % test_utils::SIMPLE_TABLE % test_utils::get_value_type(type)));
 
-  std::string query = str(boost::format("INSERT INTO %s(tweet_id, test_val) VALUES(0, ?);") % test_utils::SIMPLE_TABLE);
+  std::string query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(0, ?);") % test_utils::SIMPLE_TABLE);
 
   test_utils::StackPtr<CassStatement> statement(cass_statement_new(cass_string_init(query.c_str()), 1, CASS_CONSISTENCY_ONE));
 
@@ -87,17 +89,13 @@ BOOST_AUTO_TEST_CASE(simple_insert_string)
 
 BOOST_AUTO_TEST_CASE(simple_insert_blob)
 {
-  const char* blob = "012345678900123456789001234567890012345678900123456789001234567890";
-  CassBytes value = cass_bytes_init(reinterpret_cast<const cass_byte_t*>(blob), strlen(blob));
+  CassBytes value = test_utils::bytes_from_string("012345678900123456789001234567890012345678900123456789001234567890");
   simple_insert_test<CassBytes>(cluster, CASS_VALUE_TYPE_BLOB, value);
 }
 
 BOOST_AUTO_TEST_CASE(simple_insert_inet)
 {
-  cass_uint32_t address = 16777343; // 127.0.0.1
-  CassInet value;
-  value.address_length = sizeof(cass_uint32_t);
-  memcpy(value.address, &address, sizeof(cass_uint32_t));
+  CassInet value = test_utils::inet_v4_from_int(16777343); // 127.0.0.1
   simple_insert_test<CassInet>(cluster, CASS_VALUE_TYPE_INET, value);
 }
 
@@ -132,7 +130,6 @@ BOOST_AUTO_TEST_CASE(simple_timestamp_test)
 {
   test_utils::StackPtr<CassFuture> session_future;
   test_utils::StackPtr<CassSession> session(cass_cluster_connect(cluster, session_future.address_of()));
-
   test_utils::wait_and_check_error(session_future.get());
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
@@ -174,7 +171,6 @@ BOOST_AUTO_TEST_CASE(rows_in_rows_out)
 
   test_utils::StackPtr<CassFuture> session_future;
   test_utils::StackPtr<CassSession> session(cass_cluster_connect(cluster, session_future.address_of()));
-
   test_utils::wait_and_check_error(session_future.get());
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
