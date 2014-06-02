@@ -121,7 +121,7 @@ void test_simple_insert_collection_all_types(CassCluster* cluster, CassValueType
     std::vector<CassDecimal> values;
     for(int i = 0; i < 3; ++i) {
       CassDecimal value;
-      value.scale = i;
+      value.scale = 100 + i;
       value.varint = cass_bytes_init(varint, sizeof(varint));
       values.push_back(value);
     }
@@ -131,6 +131,7 @@ void test_simple_insert_collection_all_types(CassCluster* cluster, CassValueType
 
 BOOST_AUTO_TEST_CASE(simple_insert_set)
 {
+  // TODO(mpenick): Need to handle out of order results
   test_simple_insert_collection_all_types(cluster, CASS_VALUE_TYPE_SET);
 }
 

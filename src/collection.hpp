@@ -62,7 +62,7 @@ class Collection {
   }
 
   inline void append(int32_t scale, const uint8_t* varint, size_t varint_len) {
-    Buffer* buffer = buffer_list_.append(sizeof(uint16_t) + varint_len);
+    Buffer* buffer = buffer_list_.append(sizeof(uint16_t) + sizeof(int32_t) + varint_len);
     encode_decimal(encode_short(buffer->data(), sizeof(int32_t) + varint_len), scale, varint, varint_len);
   }
 
