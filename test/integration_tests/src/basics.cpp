@@ -53,7 +53,7 @@ void simple_insert_test(CassCluster* cluster, CassValueType type, T value) {
   const CassValue* column = cass_row_get_column(cass_iterator_get_row(iterator.get()), 1);
   T result_value;
   BOOST_REQUIRE(test_utils::Value<T>::get(column, &result_value) == CASS_OK);
-  BOOST_REQUIRE(test_utils::Value<T>::compare(value, result_value));
+  BOOST_REQUIRE(test_utils::Value<T>::equal(value, result_value));
 }
 
 BOOST_AUTO_TEST_CASE(simple_insert_int32)

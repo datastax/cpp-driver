@@ -124,7 +124,7 @@ struct Value<cass_int32_t> {
       return cass_value_get_int32(value, output);
     }
 
-    static bool compare(cass_int32_t a, cass_int32_t b) {
+    static bool equal(cass_int32_t a, cass_int32_t b) {
       return a == b;
     }
 };
@@ -143,7 +143,7 @@ struct Value<cass_int64_t> {
       return cass_value_get_int64(value, output);
     }
 
-    static bool compare(cass_int64_t a, cass_int64_t b) {
+    static bool equal(cass_int64_t a, cass_int64_t b) {
       return a == b;
     }
 };
@@ -162,7 +162,7 @@ struct Value<cass_float_t> {
       return cass_value_get_float(value, output);
     }
 
-    static bool compare(cass_float_t a, cass_float_t b) {
+    static bool equal(cass_float_t a, cass_float_t b) {
       return a == b;
     }
 };
@@ -181,7 +181,7 @@ struct Value<cass_double_t> {
       return cass_value_get_double(value, output);
     }
 
-    static bool compare(cass_double_t a, cass_double_t b) {
+    static bool equal(cass_double_t a, cass_double_t b) {
       return a == b;
     }
 };
@@ -200,7 +200,7 @@ struct Value<cass_bool_t> {
       return cass_value_get_bool(value, output);
     }
 
-    static bool compare(cass_bool_t a, cass_bool_t b) {
+    static bool equal(cass_bool_t a, cass_bool_t b) {
       return a == b;
     }
 };
@@ -219,7 +219,7 @@ struct Value<CassString> {
       return cass_value_get_string(value, output);
     }
 
-    static bool compare(CassString a, CassString b) {
+    static bool equal(CassString a, CassString b) {
       if(a.length != b.length) {
         return false;
       }
@@ -241,7 +241,7 @@ struct Value<CassBytes> {
       return cass_value_get_bytes(value, output);
     }
 
-    static bool compare(CassBytes a, CassBytes b) {
+    static bool equal(CassBytes a, CassBytes b) {
       if(a.size != b.size) {
         return false;
       }
@@ -263,7 +263,7 @@ struct Value<CassInet> {
       return cass_value_get_inet(value, output);
     }
 
-    static bool compare(CassInet a, CassInet b) {
+    static bool equal(CassInet a, CassInet b) {
       if(a.address_length != b.address_length) {
         return false;
       }
@@ -285,7 +285,7 @@ struct Value<CassUuid> {
       return cass_value_get_uuid(value, *output);
     }
 
-    static bool compare(CassUuid a, CassUuid b) {
+    static bool equal(CassUuid a, CassUuid b) {
       return memcmp(a, b, sizeof(CassUuid)) == 0;
     }
 };
@@ -304,7 +304,7 @@ struct Value<CassDecimal> {
       return cass_value_get_decimal(value, output);
     }
 
-    static bool compare(CassDecimal a, CassDecimal b) {
+    static bool equal(CassDecimal a, CassDecimal b) {
       if(a.scale != b.scale) {
         return false;
       }
@@ -335,10 +335,19 @@ struct Value<Uuid> {
       return cass_value_get_uuid(value, output->uuid);
     }
 
-    static bool compare(Uuid a, Uuid b) {
+    static bool equal(Uuid a, Uuid b) {
       return memcmp(a.uuid, b.uuid, sizeof(CassUuid)) == 0;
     }
 };
+
+inline bool operator==(Uuid a, Uuid b) {
+  return test_utils::Value<Uuid>::equal(a, b);
+}
+
+inline bool operator<(Uuid a, Uuid b) {
+  return memcmp(a.uuid, b.uuid, sizeof(CassUuid)) < 0;
+}
+
 
 /** The following class cannot be used as a kernel of test fixture because of
     parametrized ctor. Derive from it to use it in your tests.
@@ -374,6 +383,25 @@ inline CassInet inet_v4_from_int(int32_t address) {
   return inet;
 }
 
+inline CassDecimal decimal_from_scale_and_bytes(cass_int32_t scale, CassBytes bytes) {
+  CassDecimal decimal;
+  decimal.scale = scale;
+  decimal.varint = bytes;
+  return decimal;
+}
+
+inline Uuid uuid_generate_time() {
+  Uuid uuid;
+  cass_uuid_generate_time(uuid.uuid);
+  return uuid;
+}
+
+inline Uuid uuid_generate_random() {
+  Uuid uuid;
+  cass_uuid_generate_random(uuid.uuid);
+  return uuid;
+}
+
 extern const std::string CREATE_KEYSPACE_SIMPLE_FORMAT;
 extern const std::string CREATE_KEYSPACE_GENERIC_FORMAT;
 extern const std::string SIMPLE_KEYSPACE;
@@ -384,5 +412,63 @@ extern const std::string SELECT_ALL_FORMAT;
 extern const std::string SELECT_WHERE_FORMAT;
 extern const std::string lorem_ipsum;
 
-
 } // End of namespace test_utils
+
+inline bool operator==(CassString a, CassString b) {
+  return test_utils::Value<CassString>::equal(a, b);
+}
+
+inline bool operator<(CassString a, CassString b) {
+  if(a.length > b.length) {
+    return false;
+  } else if(a.length < b.length) {
+    return true;
+  }
+  return strncmp(a.data, b.data, a.length) < 0;
+}
+
+inline bool operator==(CassBytes a, CassBytes b) {
+  return test_utils::Value<CassBytes>::equal(a, b);
+}
+
+inline bool operator<(CassBytes a, CassBytes b) {
+  if(a.size > b.size) {
+    return false;
+  } else if(a.size < b.size) {
+    return true;
+  }
+  return memcmp(a.data, b.data, a.size) < 0;
+}
+
+inline bool operator==(CassInet a, CassInet b) {
+  return test_utils::Value<CassInet>::equal(a, b);
+}
+
+inline bool operator<(CassInet a, CassInet b) {
+  if(a.address_length > b.address_length) {
+    return false;
+  } else if(a.address_length < b.address_length) {
+    return true;
+  }
+  return memcmp(a.address, b.address, a.address_length) < 0;
+}
+
+inline bool operator==(CassDecimal a, CassDecimal b) {
+  return test_utils::Value<CassDecimal>::equal(a, b);
+}
+
+inline bool operator<(CassDecimal a, CassDecimal b) {
+  // TODO: This might not be exactly correct, but should work
+  // for testing
+  if(a.scale > b.scale) {
+    return false;
+  } else if(a.scale < b.scale) {
+    return true;
+  }
+  if(a.varint.size > b.varint.size) {
+    return false;
+  } else if(a.varint.size < b.varint.size) {
+    return true;
+  }
+  return memcmp(a.varint.data, b.varint.data, a.varint.size) < 0;
+}
