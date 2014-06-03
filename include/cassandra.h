@@ -41,8 +41,6 @@
 extern "C" {
 #endif
 
-#define CASS_UUID_STRING_LENGTH 37
-
 typedef enum { cass_false = 0, cass_true = 1 } cass_bool_t;
 typedef float cass_float_t;
 typedef double cass_double_t;
@@ -77,6 +75,8 @@ typedef struct CassDecimal_ {
   cass_int32_t scale;
   CassBytes varint;
 } CassDecimal;
+
+#define CASS_UUID_STRING_LENGTH 37
 
 typedef cass_uint8_t CassUuid[16];
 
@@ -483,6 +483,19 @@ cass_statement_new(CassString statement,
 CASS_EXPORT void
 cass_statement_free(CassStatement* statement);
 
+
+/**
+ * Binds null to a query or bound statement at the specified index.
+ * This cannot be used for counters, custom, or collections
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_null(CassStatement* statement,
+                         cass_size_t index);
+
 /**
  * Binds an "int" to a query or bound statement at the specified index.
  *
@@ -639,7 +652,7 @@ cass_statement_bind_custom(CassStatement* statement,
  *
  * @param[in] statement
  * @param[in] index
- * @param[in] collection
+ * @param[in] collection Pass NULL for an empty collection
  * @param[in] is_map This must be set to true if the collection represents a map.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
@@ -1135,6 +1148,15 @@ cass_value_get_decimal(const CassValue* value,
  */
 CASS_EXPORT CassValueType
 cass_value_type(const CassValue* value);
+
+/**
+ * Returns true if a specified value is null.
+ *
+ * @param[in] value
+ * @return true if the value is null, otherwise false.
+ */
+CASS_EXPORT cass_bool_t
+cass_value_is_null(const CassValue* value);
 
 /**
  * Returns true if a specified value is a collection.

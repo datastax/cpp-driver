@@ -24,10 +24,10 @@ BOOST_FIXTURE_TEST_SUITE(collections, COLLECTIONS_CCM_SETUP)
 template<class T>
 void insert_collection_value(CassSession* session, CassValueType type, CassValueType primary_type, const std::vector<T>& values) {
   std::string table_name = str(boost::format("%s_%s") % test_utils::SIMPLE_TABLE % test_utils::get_value_type(primary_type));
-  std::string test_value_type = str(boost::format("%s<%s>") % test_utils::get_value_type(type) % test_utils::get_value_type(primary_type));
+  std::string type_name = str(boost::format("%s<%s>") % test_utils::get_value_type(type) % test_utils::get_value_type(primary_type));
 
   test_utils::execute_query(session, str(boost::format("CREATE TABLE %s (tweet_id int PRIMARY KEY, test_val %s);")
-                                         % table_name % test_value_type));
+                                         % table_name % type_name));
 
   test_utils::StackPtr<CassCollection> input(cass_collection_new(values.size()));
 
@@ -147,12 +147,12 @@ void insert_map_value(CassSession* session, CassValueType primary_type, CassValu
   std::string table_name = str(boost::format("%s_%s_%s") % test_utils::SIMPLE_TABLE
                                                          % test_utils::get_value_type(primary_type)
                                                          % test_utils::get_value_type(secondary_type));
-  std::string test_value_type = str(boost::format("%s<%s, %s>") % test_utils::get_value_type(CASS_VALUE_TYPE_MAP)
+  std::string type_name = str(boost::format("%s<%s, %s>") % test_utils::get_value_type(CASS_VALUE_TYPE_MAP)
                                                                 % test_utils::get_value_type(primary_type)
                                                                 % test_utils::get_value_type(secondary_type));
 
   test_utils::execute_query(session, str(boost::format("CREATE TABLE %s (tweet_id int PRIMARY KEY, test_val %s);")
-                                         % table_name % test_value_type));
+                                         % table_name % type_name));
 
   test_utils::StackPtr<CassCollection> input(cass_collection_new(values.size()));
 
@@ -280,6 +280,43 @@ void insert_map_all_types(CassCluster* cluster) {
   }
 }
 
+void insert_null_collection(CassSession* session, CassValueType type) {
+  std::string table_name = str(boost::format("%s_%s") % test_utils::SIMPLE_TABLE % test_utils::get_value_type(type));
+  std::string type_name;
+
+  if(type == CASS_VALUE_TYPE_LIST || type == CASS_VALUE_TYPE_SET) {
+    type_name = str(boost::format("%s<%s>") % test_utils::get_value_type(type)
+                                            % test_utils::get_value_type(CASS_VALUE_TYPE_TEXT));
+  } else if(type == CASS_VALUE_TYPE_MAP) {
+    type_name = str(boost::format("%s<%s, %s>") % test_utils::get_value_type(type)
+                                                % test_utils::get_value_type(CASS_VALUE_TYPE_TEXT)
+                                                % test_utils::get_value_type(CASS_VALUE_TYPE_TEXT));
+  } else {
+    BOOST_FAIL("Invalid collection type");
+  }
+
+  test_utils::execute_query(session, str(boost::format("CREATE TABLE %s (tweet_id int PRIMARY KEY, test_val %s);")
+                                         % table_name % type_name));
+
+  std::string query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(0, ?);") % table_name);
+
+  test_utils::StackPtr<CassStatement> statement(cass_statement_new(cass_string_init(query.c_str()), 1, CASS_CONSISTENCY_ONE));
+
+  BOOST_REQUIRE(cass_statement_bind_collection(statement.get(), 0, NULL, type == CASS_VALUE_TYPE_MAP ? cass_true : cass_false) == CASS_OK);
+
+  test_utils::StackPtr<CassFuture> result_future(cass_session_execute(session, statement.get()));
+  test_utils::wait_and_check_error(result_future.get());
+
+  test_utils::StackPtr<const CassResult> result;
+  test_utils::execute_query(session, str(boost::format("SELECT * FROM %s WHERE tweet_id = 0;") % table_name), &result);
+  BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
+  BOOST_REQUIRE(cass_result_column_count(result.get()) > 0);
+
+  const CassValue* output = cass_row_get_column(cass_result_first_row(result.get()), 1);
+  BOOST_REQUIRE(cass_value_type(output) == type);
+  BOOST_REQUIRE(cass_value_is_null(output));
+}
+
 BOOST_AUTO_TEST_CASE(test_set)
 {
   insert_collection_all_types(cluster, CASS_VALUE_TYPE_SET);
@@ -293,6 +330,22 @@ BOOST_AUTO_TEST_CASE(test_list)
 BOOST_AUTO_TEST_CASE(test_map)
 {
   insert_map_all_types(cluster);
+}
+
+BOOST_AUTO_TEST_CASE(test_null)
+{
+  test_utils::StackPtr<CassFuture> session_future;
+  test_utils::StackPtr<CassSession> session(cass_cluster_connect(cluster, session_future.address_of()));
+  test_utils::wait_and_check_error(session_future.get());
+
+  test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
+                                               % test_utils::SIMPLE_KEYSPACE % "1"));
+
+  test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+
+  insert_null_collection(session.get(), CASS_VALUE_TYPE_LIST);
+  insert_null_collection(session.get(), CASS_VALUE_TYPE_MAP);
+  insert_null_collection(session.get(), CASS_VALUE_TYPE_SET);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

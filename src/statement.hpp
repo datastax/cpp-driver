@@ -107,6 +107,11 @@ struct Statement : public MessageBody {
   BIND_FIXED_TYPE(bool, byte, bool)
 #undef BIND_FIXED_TYPE
 
+  inline CassError bind_null(size_t index) {
+    CASS_VALUE_CHECK_INDEX(index);
+    values[index] = Buffer();
+    return CASS_OK;
+  }
 
   inline CassError bind(size_t index, const char* value, size_t value_length) {
     CASS_VALUE_CHECK_INDEX(index);
@@ -142,10 +147,16 @@ struct Statement : public MessageBody {
 
   inline CassError bind(size_t index, const Collection* collection, bool is_map) {
     CASS_VALUE_CHECK_INDEX(index);
-    if(is_map && collection->item_count() % 2 != 0) {
-      return CASS_ERROR_LIB_INVALID_ITEM_COUNT;
+    if(collection != nullptr) {
+      if(is_map && collection->item_count() % 2 != 0) {
+        return CASS_ERROR_LIB_INVALID_ITEM_COUNT;
+      }
+      values[index] = collection->build(is_map);
+    } else {
+      Buffer buffer(sizeof(uint16_t));
+      encode_short(buffer.data(), 0);
+      values[index] = buffer;
     }
-    values[index] = collection->build(is_map);
     return CASS_OK;
   }
 

@@ -114,6 +114,14 @@ CassValueType cass_value_type(const CassValue* value) {
   return value->type;
 }
 
+cass_bool_t cass_value_is_null(const CassValue* value) {
+  if(cass_value_is_collection(value)) {
+    return static_cast<cass_bool_t>(value->count == 0);
+  } else {
+    return static_cast<cass_bool_t>(value->buffer.size() == 0);
+  }
+}
+
 cass_bool_t cass_value_is_collection(const CassValue* value) {
   CassValueType type = value->type;
   return static_cast<cass_bool_t>(type == CASS_VALUE_TYPE_LIST

@@ -135,6 +135,14 @@ struct Value<cass_int32_t> {
     static bool equal(cass_int32_t a, cass_int32_t b) {
       return a == b;
     }
+
+    static cass_int32_t min_value() {
+      return std::numeric_limits<cass_int32_t>::min();
+    }
+
+    static cass_int32_t max_value() {
+      return std::numeric_limits<cass_int32_t>::max();
+    }
 };
 
 template<>
@@ -153,6 +161,14 @@ struct Value<cass_int64_t> {
 
     static bool equal(cass_int64_t a, cass_int64_t b) {
       return a == b;
+    }
+
+    static cass_int64_t min_value() {
+      return std::numeric_limits<cass_int64_t>::min();
+    }
+
+    static cass_int64_t max_value() {
+      return std::numeric_limits<cass_int64_t>::max();
     }
 };
 
@@ -173,6 +189,14 @@ struct Value<cass_float_t> {
     static bool equal(cass_float_t a, cass_float_t b) {
       return a == b;
     }
+
+    static cass_float_t min_value() {
+      return std::numeric_limits<cass_float_t>::min();
+    }
+
+    static cass_float_t max_value() {
+      return std::numeric_limits<cass_float_t>::max();
+    }
 };
 
 template<>
@@ -191,6 +215,14 @@ struct Value<cass_double_t> {
 
     static bool equal(cass_double_t a, cass_double_t b) {
       return a == b;
+    }
+
+    static cass_double_t min_value() {
+      return std::numeric_limits<cass_double_t>::min();
+    }
+
+    static cass_double_t max_value() {
+      return std::numeric_limits<cass_double_t>::max();
     }
 };
 
@@ -277,6 +309,20 @@ struct Value<CassInet> {
       }
       return memcmp(a.address, b.address, a.address_length) == 0;
     }
+
+    static CassInet min_value() {
+      CassInet value;
+      value.address_length = 16;
+      memset(value.address, 0x0, sizeof(value.address));
+      return value;
+    }
+
+    static CassInet max_value() {
+      CassInet value;
+      value.address_length = 16;
+      memset(value.address, 0xF, sizeof(value.address));
+      return value;
+    }
 };
 
 template<>
@@ -345,6 +391,18 @@ struct Value<Uuid> {
 
     static bool equal(Uuid a, Uuid b) {
       return memcmp(a.uuid, b.uuid, sizeof(CassUuid)) == 0;
+    }
+
+    static Uuid min_value() {
+      Uuid value;
+      memset(value.uuid, 0x0, sizeof(value.uuid));
+      return value;
+    }
+
+    static Uuid max_value() {
+      Uuid value;
+      memset(value.uuid, 0xF, sizeof(value.uuid));
+      return value;
     }
 };
 

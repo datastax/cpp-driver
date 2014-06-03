@@ -32,6 +32,11 @@ void cass_statement_free(CassStatement *statement) {
   delete statement->from();
 }
 
+CassError cass_statement_bind_null(CassStatement* statement,
+                                   cass_size_t index) {
+  return statement->bind_null(index);
+}
+
 CassError cass_statement_bind_int32(CassStatement* statement,
                                     size_t index,
                                     int32_t value) {
