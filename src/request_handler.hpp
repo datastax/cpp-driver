@@ -67,7 +67,7 @@ class RequestHandler : public ResponseCallback {
 
     virtual void on_timeout() {
       // TODO(mpenick): Get the host for errors
-      future_->set_error(CASS_ERROR_LIB_REQUEST_TIMEOUT, "Request timed out");
+      future_->set_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT, "Request timed out");
     }
 
     RequestFuture* future() { return future_; }

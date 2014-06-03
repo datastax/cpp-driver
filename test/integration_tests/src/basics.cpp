@@ -183,7 +183,7 @@ BOOST_AUTO_TEST_CASE(rows_in_rows_out)
   {
     test_utils::execute_query(session.get(),
                               str(boost::format("CREATE TABLE %s (tweet_id bigint PRIMARY KEY, t1 bigint, t2 bigint, t3 bigint);") % test_utils::SIMPLE_TABLE),
-                              nullptr, 0, consistency);
+                              nullptr, consistency);
 
     constexpr int num_rows = 100000;
 
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE(rows_in_rows_out)
 
     std::string select_query(str(boost::format("SELECT tweet_id, t1, t2, t3 FROM %s LIMIT %d;") % test_utils::SIMPLE_TABLE % num_rows));
     test_utils::StackPtr<const CassResult> result;
-    test_utils::execute_query(session.get(), select_query, &result, 0, consistency);
+    test_utils::execute_query(session.get(), select_query, &result, consistency);
     BOOST_REQUIRE(cass_result_row_count(result.get()) == num_rows);
     BOOST_REQUIRE(cass_result_column_count(result.get()) == 4);
 

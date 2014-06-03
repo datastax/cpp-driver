@@ -79,9 +79,8 @@ CCM_SETUP::~CCM_SETUP() {
 void execute_query(CassSession* session,
                    const std::string& query,
                    StackPtr<const CassResult>* result,
-                   cass_size_t parameter_count,
                    CassConsistency consistency) {
-  StackPtr<CassStatement> statement(cass_statement_new(cass_string_init(query.c_str()), parameter_count, consistency));
+  StackPtr<CassStatement> statement(cass_statement_new(cass_string_init(query.c_str()), 0, consistency));
   StackPtr<CassFuture> future(cass_session_execute(session, statement.get()));
   wait_and_check_error(future.get());
   if(result != nullptr) {
@@ -96,8 +95,15 @@ void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
   CassError code = cass_future_error_code(future);
   if(code != CASS_OK) {
     CassString message = cass_future_error_message(future);
-    BOOST_FAIL("Error occured during operation " << std::string(message.data, message.length) << " (" << code << ")");
+    BOOST_FAIL("Error occured during query '" << std::string(message.data, message.length) << "' (" << code << ")");
   }
+}
+
+std::string string_from_time_point(std::chrono::system_clock::time_point time) {
+  std::time_t t = std::chrono::system_clock::to_time_t(time);
+  char buffer[26];
+  ctime_r(&t, buffer);
+  return std::string(buffer, 24);
 }
 
 //-----------------------------------------------------------------------------------

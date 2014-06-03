@@ -2,6 +2,7 @@
 
 #include <boost/asio/ip/address.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/algorithm/string/replace.hpp>
 
 #include "cassandra.h"
 
@@ -64,6 +65,13 @@ template<>
 struct StackPtrFree<CassCollection> {
     static void free(CassCollection* ptr) {
       cass_collection_free(ptr);
+    }
+};
+
+template<>
+struct StackPtrFree<const CassPrepared> {
+    static void free(const CassPrepared* ptr) {
+      cass_prepared_free(ptr);
     }
 };
 
@@ -367,7 +375,6 @@ const char* get_value_type(CassValueType type);
 void execute_query(CassSession* session,
                    const std::string& query,
                    StackPtr<const CassResult>* result = nullptr,
-                   cass_size_t parameter_count = 0,
                    CassConsistency consistency = CASS_CONSISTENCY_ONE);
 
 void wait_and_check_error(CassFuture* future, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
@@ -390,17 +397,43 @@ inline CassDecimal decimal_from_scale_and_bytes(cass_int32_t scale, CassBytes by
   return decimal;
 }
 
-inline Uuid uuid_generate_time() {
+inline Uuid generate_time_uuid() {
   Uuid uuid;
   cass_uuid_generate_time(uuid.uuid);
   return uuid;
 }
 
-inline Uuid uuid_generate_random() {
+inline Uuid generate_random_uuid() {
   Uuid uuid;
   cass_uuid_generate_random(uuid.uuid);
   return uuid;
 }
+
+inline std::string generate_unique_str() {
+  Uuid uuid;
+  cass_uuid_generate_time(uuid.uuid);
+  char buffer[CASS_UUID_STRING_LENGTH];
+  cass_uuid_string(uuid, buffer);
+  return boost::replace_all_copy(std::string(buffer), "-", "");
+}
+
+std::string string_from_time_point(std::chrono::system_clock::time_point time);
+
+constexpr const char* CREATE_TABLE_TIME_SERIES =
+    "create table %s ("
+    "id uuid,"
+    "event_time timestamp,"
+    "text_sample text,"
+    "int_sample int,"
+    "bigint_sample bigint,"
+    "float_sample float,"
+    "double_sample double,"
+    "decimal_sample decimal,"
+    "blob_sample blob,"
+    "boolean_sample boolean,"
+    "timestamp_sample timestamp,"
+    "inet_sample inet,"
+    "PRIMARY KEY(id, event_time));";
 
 extern const std::string CREATE_KEYSPACE_SIMPLE_FORMAT;
 extern const std::string CREATE_KEYSPACE_GENERIC_FORMAT;

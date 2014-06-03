@@ -123,7 +123,7 @@ void test_simple_insert_collection_all_types(CassCluster* cluster, CassValueType
   {
     std::vector<test_utils::Uuid> values;
     for(int i = 0; i < 3; ++i) {
-      values.push_back(test_utils::uuid_generate_time());
+      values.push_back(test_utils::generate_time_uuid());
     }
     test_simple_insert_collection<test_utils::Uuid>(session.get(), type, CASS_VALUE_TYPE_UUID,  values);
   }
@@ -248,9 +248,9 @@ void test_simple_insert_map_all_types(CassCluster* cluster) {
     test_simple_insert_map<CassInet, CassInet>(session.get(), CASS_VALUE_TYPE_INET, CASS_VALUE_TYPE_INET, values);
   }
   {
-    std::map<test_utils::Uuid, test_utils::Uuid> values = { { test_utils::uuid_generate_time(), test_utils::uuid_generate_random() },
-                                                            { test_utils::uuid_generate_time(), test_utils::uuid_generate_random() },
-                                                            { test_utils::uuid_generate_time(), test_utils::uuid_generate_random() } };
+    std::map<test_utils::Uuid, test_utils::Uuid> values = { { test_utils::generate_time_uuid(), test_utils::generate_random_uuid() },
+                                                            { test_utils::generate_time_uuid(), test_utils::generate_random_uuid() },
+                                                            { test_utils::generate_time_uuid(), test_utils::generate_random_uuid() } };
     test_simple_insert_map<test_utils::Uuid, test_utils::Uuid>(session.get(), CASS_VALUE_TYPE_UUID, CASS_VALUE_TYPE_UUID, values);
   }
   {
@@ -273,9 +273,9 @@ void test_simple_insert_map_all_types(CassCluster* cluster) {
     test_simple_insert_map<CassString, cass_int32_t>(session.get(), CASS_VALUE_TYPE_VARCHAR, CASS_VALUE_TYPE_INT, values);
   }
   {
-    std::map<test_utils::Uuid, CassString> values = { { test_utils::uuid_generate_time(), cass_string_init("123") },
-                                                      { test_utils::uuid_generate_time(), cass_string_init("456") },
-                                                      { test_utils::uuid_generate_time(), cass_string_init("789") } };
+    std::map<test_utils::Uuid, CassString> values = { { test_utils::generate_time_uuid(), cass_string_init("123") },
+                                                      { test_utils::generate_time_uuid(), cass_string_init("456") },
+                                                      { test_utils::generate_time_uuid(), cass_string_init("789") } };
     test_simple_insert_map<test_utils::Uuid, CassString>(session.get(), CASS_VALUE_TYPE_UUID, CASS_VALUE_TYPE_VARCHAR, values);
   }
 }
