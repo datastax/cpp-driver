@@ -20,7 +20,7 @@ struct BASICS_CCM_SETUP : test_utils::CCM_SETUP {
 BOOST_FIXTURE_TEST_SUITE(basics, BASICS_CCM_SETUP)
 
 template <class T>
-void simple_insert_test(CassCluster* cluster, CassValueType type, T value) {
+void insert_single_value(CassCluster* cluster, CassValueType type, T value) {
   test_utils::StackPtr<CassFuture> session_future;
   test_utils::StackPtr<CassSession> session(cass_cluster_connect(cluster, session_future.address_of()));
   test_utils::wait_and_check_error(session_future.get());
@@ -56,64 +56,64 @@ void simple_insert_test(CassCluster* cluster, CassValueType type, T value) {
   BOOST_REQUIRE(test_utils::Value<T>::equal(value, result_value));
 }
 
-BOOST_AUTO_TEST_CASE(simple_insert_int32)
+BOOST_AUTO_TEST_CASE(test_int32)
 {
-  simple_insert_test<cass_int32_t>(cluster, CASS_VALUE_TYPE_INT, INT32_MAX);
+  insert_single_value<cass_int32_t>(cluster, CASS_VALUE_TYPE_INT, INT32_MAX);
 }
 
-BOOST_AUTO_TEST_CASE(simple_insert_int64)
+BOOST_AUTO_TEST_CASE(test_int64)
 {
-  simple_insert_test<cass_int64_t>(cluster, CASS_VALUE_TYPE_BIGINT, INT64_MAX);
+  insert_single_value<cass_int64_t>(cluster, CASS_VALUE_TYPE_BIGINT, INT64_MAX);
 }
 
-BOOST_AUTO_TEST_CASE(simple_insert_boolean)
+BOOST_AUTO_TEST_CASE(test_boolean)
 {
-  simple_insert_test<cass_bool_t>(cluster, CASS_VALUE_TYPE_BOOLEAN, cass_true);
+  insert_single_value<cass_bool_t>(cluster, CASS_VALUE_TYPE_BOOLEAN, cass_true);
 }
 
-BOOST_AUTO_TEST_CASE(simple_insert_float)
+BOOST_AUTO_TEST_CASE(test_float)
 {
-  simple_insert_test<cass_float_t>(cluster, CASS_VALUE_TYPE_FLOAT, 3.1415926f);
+  insert_single_value<cass_float_t>(cluster, CASS_VALUE_TYPE_FLOAT, 3.1415926f);
 }
 
-BOOST_AUTO_TEST_CASE(simple_insert_double)
+BOOST_AUTO_TEST_CASE(test_double)
 {
-  simple_insert_test<cass_double_t>(cluster, CASS_VALUE_TYPE_DOUBLE, 3.141592653589793);
+  insert_single_value<cass_double_t>(cluster, CASS_VALUE_TYPE_DOUBLE, 3.141592653589793);
 }
 
-BOOST_AUTO_TEST_CASE(simple_insert_string)
+BOOST_AUTO_TEST_CASE(test_string)
 {
   CassString value = cass_string_init("Test Value.");
-  simple_insert_test<CassString>(cluster, CASS_VALUE_TYPE_TEXT, value);
+  insert_single_value<CassString>(cluster, CASS_VALUE_TYPE_TEXT, value);
 }
 
-BOOST_AUTO_TEST_CASE(simple_insert_blob)
+BOOST_AUTO_TEST_CASE(test_blob)
 {
   CassBytes value = test_utils::bytes_from_string("012345678900123456789001234567890012345678900123456789001234567890");
-  simple_insert_test<CassBytes>(cluster, CASS_VALUE_TYPE_BLOB, value);
+  insert_single_value<CassBytes>(cluster, CASS_VALUE_TYPE_BLOB, value);
 }
 
-BOOST_AUTO_TEST_CASE(simple_insert_inet)
+BOOST_AUTO_TEST_CASE(test_inet)
 {
   CassInet value = test_utils::inet_v4_from_int(16777343); // 127.0.0.1
-  simple_insert_test<CassInet>(cluster, CASS_VALUE_TYPE_INET, value);
+  insert_single_value<CassInet>(cluster, CASS_VALUE_TYPE_INET, value);
 }
 
-BOOST_AUTO_TEST_CASE(simple_insert_uuid)
+BOOST_AUTO_TEST_CASE(test_uuid)
 {
   CassUuid value;
   cass_uuid_generate_random(value);
-  simple_insert_test<CassUuid>(cluster, CASS_VALUE_TYPE_UUID, value);
+  insert_single_value<CassUuid>(cluster, CASS_VALUE_TYPE_UUID, value);
 }
 
-BOOST_AUTO_TEST_CASE(simple_insert_timeuuid)
+BOOST_AUTO_TEST_CASE(test_timeuuid)
 {
   CassUuid value;
   cass_uuid_generate_time(value);
-  simple_insert_test<CassUuid>(cluster, CASS_VALUE_TYPE_TIMEUUID, value);
+  insert_single_value<CassUuid>(cluster, CASS_VALUE_TYPE_TIMEUUID, value);
 }
 
-BOOST_AUTO_TEST_CASE(simple_insert_decimal)
+BOOST_AUTO_TEST_CASE(test_decimal)
 {
   // Pi to a 100 digits
   const cass_int32_t scale = 100;
@@ -123,10 +123,10 @@ BOOST_AUTO_TEST_CASE(simple_insert_decimal)
   CassDecimal value;
   value.scale = scale;
   value.varint = cass_bytes_init(varint, sizeof(varint));
-  simple_insert_test<CassDecimal>(cluster, CASS_VALUE_TYPE_DECIMAL, value);
+  insert_single_value<CassDecimal>(cluster, CASS_VALUE_TYPE_DECIMAL, value);
 }
 
-BOOST_AUTO_TEST_CASE(simple_timestamp_test)
+BOOST_AUTO_TEST_CASE(test_timestamp)
 {
   test_utils::StackPtr<CassFuture> session_future;
   test_utils::StackPtr<CassSession> session(cass_cluster_connect(cluster, session_future.address_of()));
@@ -164,8 +164,43 @@ BOOST_AUTO_TEST_CASE(simple_timestamp_test)
   BOOST_REQUIRE(::abs(timestamp2 - timestamp1 - pause_duration) < 100000); // Tolerance
 }
 
-/////  --run_test="basics/rows_in_rows_out"
-BOOST_AUTO_TEST_CASE(rows_in_rows_out)
+BOOST_AUTO_TEST_CASE(test_counters)
+{
+  test_utils::StackPtr<CassFuture> session_future;
+  test_utils::StackPtr<CassSession> session(cass_cluster_connect(cluster, session_future.address_of()));
+  test_utils::wait_and_check_error(session_future.get());
+
+  test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
+                                         % test_utils::SIMPLE_KEYSPACE % "1"));
+
+  test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+
+  test_utils::execute_query(session.get(), "CREATE TABLE test(tweet_id int PRIMARY KEY, incdec counter);");
+
+  int tweet_id = 0;
+  for(int i = 0; i < 100; ++i) {
+    std::string update_query = str(boost::format("UPDATE %s SET incdec = incdec %s %d WHERE tweet_id = %d;")
+                                   % test_utils::SIMPLE_TABLE % ((i % 2) == 0 ? "-" : "+") % i % tweet_id);
+
+    test_utils::StackPtr<CassStatement> statement(cass_statement_new(cass_string_init(update_query.c_str()), 0, CASS_CONSISTENCY_ONE));
+
+    test_utils::StackPtr<CassFuture> result_future(cass_session_execute(session.get(), statement.get()));
+    test_utils::wait_and_check_error(result_future.get());
+  }
+
+  std::string select_query = str(boost::format("SELECT * FROM %s;") % test_utils::SIMPLE_TABLE);
+  test_utils::StackPtr<const CassResult> result;
+  test_utils::execute_query(session.get(), select_query,  &result);
+  BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
+  BOOST_REQUIRE(cass_result_column_count(result.get()) > 0);
+
+  cass_int64_t counter_value;
+  BOOST_REQUIRE(cass_value_get_int64(cass_row_get_column(cass_result_first_row(result.get()), 1), &counter_value) == CASS_OK);
+  BOOST_REQUIRE(counter_value == 50);
+}
+
+/////  --run_test="basics/test_rows_in_rows_out"
+BOOST_AUTO_TEST_CASE(test_rows_in_rows_out)
 {
   CassConsistency consistency = CASS_CONSISTENCY_ONE;
 

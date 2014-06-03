@@ -22,7 +22,7 @@ struct COLLECTIONS_CCM_SETUP : test_utils::CCM_SETUP {
 BOOST_FIXTURE_TEST_SUITE(collections, COLLECTIONS_CCM_SETUP)
 
 template<class T>
-void test_simple_insert_collection(CassSession* session, CassValueType type, CassValueType primary_type, const std::vector<T>& values) {
+void insert_collection_value(CassSession* session, CassValueType type, CassValueType primary_type, const std::vector<T>& values) {
   std::string table_name = str(boost::format("%s_%s") % test_utils::SIMPLE_TABLE % test_utils::get_value_type(primary_type));
   std::string test_value_type = str(boost::format("%s<%s>") % test_utils::get_value_type(type) % test_utils::get_value_type(primary_type));
 
@@ -78,7 +78,7 @@ void test_simple_insert_collection(CassSession* session, CassValueType type, Cas
   }
 }
 
-void test_simple_insert_collection_all_types(CassCluster* cluster, CassValueType type) {
+void insert_collection_all_types(CassCluster* cluster, CassValueType type) {
   test_utils::StackPtr<CassFuture> session_future;
   test_utils::StackPtr<CassSession> session(cass_cluster_connect(cluster, session_future.address_of()));
   test_utils::wait_and_check_error(session_future.get());
@@ -90,42 +90,42 @@ void test_simple_insert_collection_all_types(CassCluster* cluster, CassValueType
 
   {
     std::vector<cass_int32_t> values = { 1, 2, 3 };
-    test_simple_insert_collection<cass_int32_t>(session.get(), type, CASS_VALUE_TYPE_INT, values);
+    insert_collection_value<cass_int32_t>(session.get(), type, CASS_VALUE_TYPE_INT, values);
   }
   {
     std::vector<cass_int64_t> values = { 1LL, 2LL, 3LL };
-    test_simple_insert_collection<cass_int64_t>(session.get(), type, CASS_VALUE_TYPE_BIGINT, values);
+    insert_collection_value<cass_int64_t>(session.get(), type, CASS_VALUE_TYPE_BIGINT, values);
   }
   {
     std::vector<cass_float_t> values = { 0.1f, 0.2f, 0.3f };
-    test_simple_insert_collection<cass_float_t>(session.get(), type, CASS_VALUE_TYPE_FLOAT, values);
+    insert_collection_value<cass_float_t>(session.get(), type, CASS_VALUE_TYPE_FLOAT, values);
   }
   {
     std::vector<cass_double_t> values = { 0.000000000001, 0.000000000002, 0.000000000003 };
-    test_simple_insert_collection<cass_double_t>(session.get(), type, CASS_VALUE_TYPE_DOUBLE, values);
+    insert_collection_value<cass_double_t>(session.get(), type, CASS_VALUE_TYPE_DOUBLE, values);
   }
   {
     std::vector<CassString> values = { cass_string_init("abc"), cass_string_init("def"), cass_string_init("ghi") };
-    test_simple_insert_collection<CassString>(session.get(), type, CASS_VALUE_TYPE_TEXT,  values);
+    insert_collection_value<CassString>(session.get(), type, CASS_VALUE_TYPE_TEXT,  values);
   }
   {
     std::vector<CassBytes> values = { test_utils::bytes_from_string("123"),
                                       test_utils::bytes_from_string("456"),
                                       test_utils::bytes_from_string("789") };
-    test_simple_insert_collection<CassBytes>(session.get(), type, CASS_VALUE_TYPE_BLOB,  values);
+    insert_collection_value<CassBytes>(session.get(), type, CASS_VALUE_TYPE_BLOB,  values);
   }
   {
     std::vector<CassInet> values = { test_utils::inet_v4_from_int(16777343),
                                      test_utils::inet_v4_from_int(16777344),
                                      test_utils::inet_v4_from_int(16777345) };
-    test_simple_insert_collection<CassInet>(session.get(), type, CASS_VALUE_TYPE_INET,  values);
+    insert_collection_value<CassInet>(session.get(), type, CASS_VALUE_TYPE_INET,  values);
   }
   {
     std::vector<test_utils::Uuid> values;
     for(int i = 0; i < 3; ++i) {
       values.push_back(test_utils::generate_time_uuid());
     }
-    test_simple_insert_collection<test_utils::Uuid>(session.get(), type, CASS_VALUE_TYPE_UUID,  values);
+    insert_collection_value<test_utils::Uuid>(session.get(), type, CASS_VALUE_TYPE_UUID,  values);
   }
   {
     const cass_uint8_t varint[] = { 57, 115, 235, 135, 229, 215, 8, 125, 13, 43, 1, 25, 32, 135, 129, 180,
@@ -138,12 +138,12 @@ void test_simple_insert_collection_all_types(CassCluster* cluster, CassValueType
       value.varint = cass_bytes_init(varint, sizeof(varint));
       values.push_back(value);
     }
-    test_simple_insert_collection<CassDecimal>(session.get(), type, CASS_VALUE_TYPE_DECIMAL,  values);
+    insert_collection_value<CassDecimal>(session.get(), type, CASS_VALUE_TYPE_DECIMAL,  values);
   }
 }
 
 template<class K, class V>
-void test_simple_insert_map(CassSession* session, CassValueType primary_type, CassValueType secondary_type, const std::map<K, V>& values) {
+void insert_map_value(CassSession* session, CassValueType primary_type, CassValueType secondary_type, const std::map<K, V>& values) {
   std::string table_name = str(boost::format("%s_%s_%s") % test_utils::SIMPLE_TABLE
                                                          % test_utils::get_value_type(primary_type)
                                                          % test_utils::get_value_type(secondary_type));
@@ -203,7 +203,7 @@ void test_simple_insert_map(CassSession* session, CassValueType primary_type, Ca
   BOOST_REQUIRE(i == values.size());
 }
 
-void test_simple_insert_map_all_types(CassCluster* cluster) {
+void insert_map_all_types(CassCluster* cluster) {
   test_utils::StackPtr<CassFuture> session_future;
   test_utils::StackPtr<CassSession> session(cass_cluster_connect(cluster, session_future.address_of()));
   test_utils::wait_and_check_error(session_future.get());
@@ -215,43 +215,43 @@ void test_simple_insert_map_all_types(CassCluster* cluster) {
 
   {
     std::map<cass_int32_t, cass_int32_t> values = { { 1, 2 }, { 3, 4 }, { 5, 6 } };
-    test_simple_insert_map<cass_int32_t, cass_int32_t>(session.get(), CASS_VALUE_TYPE_INT, CASS_VALUE_TYPE_INT, values);
+    insert_map_value<cass_int32_t, cass_int32_t>(session.get(), CASS_VALUE_TYPE_INT, CASS_VALUE_TYPE_INT, values);
   }
   {
     std::map<cass_int64_t, cass_int64_t> values = { { 1LL, 2LL }, { 3LL, 4LL }, { 5LL, 6LL } };
-    test_simple_insert_map<cass_int64_t, cass_int64_t>(session.get(), CASS_VALUE_TYPE_BIGINT, CASS_VALUE_TYPE_BIGINT, values);
+    insert_map_value<cass_int64_t, cass_int64_t>(session.get(), CASS_VALUE_TYPE_BIGINT, CASS_VALUE_TYPE_BIGINT, values);
   }
   {
     std::map<cass_float_t, cass_float_t> values = { { 0.1f, 0.2f }, { 0.3f, 0.4f }, { 0.5f, 0.6f } };
-    test_simple_insert_map<cass_float_t, cass_float_t>(session.get(), CASS_VALUE_TYPE_FLOAT, CASS_VALUE_TYPE_FLOAT, values);
+    insert_map_value<cass_float_t, cass_float_t>(session.get(), CASS_VALUE_TYPE_FLOAT, CASS_VALUE_TYPE_FLOAT, values);
   }
   {
     std::map<cass_double_t, cass_double_t> values = { { 0.000000000001, 0.000000000002 }, { 0.000000000003, 0.000000000004 }, { 0.000000000005, 0.000000000006 } };
-    test_simple_insert_map<cass_double_t, cass_double_t>(session.get(), CASS_VALUE_TYPE_DOUBLE, CASS_VALUE_TYPE_DOUBLE, values);
+    insert_map_value<cass_double_t, cass_double_t>(session.get(), CASS_VALUE_TYPE_DOUBLE, CASS_VALUE_TYPE_DOUBLE, values);
   }
   {
     std::map<CassString, CassString> values = { { cass_string_init("abc"), cass_string_init("123") },
                                                 { cass_string_init("def"), cass_string_init("456") },
                                                 { cass_string_init("ghi"), cass_string_init("789") } };
-    test_simple_insert_map<CassString, CassString>(session.get(), CASS_VALUE_TYPE_VARCHAR, CASS_VALUE_TYPE_VARCHAR, values);
+    insert_map_value<CassString, CassString>(session.get(), CASS_VALUE_TYPE_VARCHAR, CASS_VALUE_TYPE_VARCHAR, values);
   }
   {
     std::map<CassBytes, CassBytes> values = { { test_utils::bytes_from_string("abc"), test_utils::bytes_from_string("123") },
                                               { test_utils::bytes_from_string("def"), test_utils::bytes_from_string("456") },
                                               { test_utils::bytes_from_string("ghi"), test_utils::bytes_from_string("789") } };
-    test_simple_insert_map<CassBytes, CassBytes>(session.get(), CASS_VALUE_TYPE_BLOB, CASS_VALUE_TYPE_BLOB, values);
+    insert_map_value<CassBytes, CassBytes>(session.get(), CASS_VALUE_TYPE_BLOB, CASS_VALUE_TYPE_BLOB, values);
   }
   {
     std::map<CassInet, CassInet> values = { { test_utils::inet_v4_from_int(16777343), test_utils::inet_v4_from_int(16777344) },
                                             { test_utils::inet_v4_from_int(16777345), test_utils::inet_v4_from_int(16777346) },
                                             { test_utils::inet_v4_from_int(16777347), test_utils::inet_v4_from_int(16777348) } };
-    test_simple_insert_map<CassInet, CassInet>(session.get(), CASS_VALUE_TYPE_INET, CASS_VALUE_TYPE_INET, values);
+    insert_map_value<CassInet, CassInet>(session.get(), CASS_VALUE_TYPE_INET, CASS_VALUE_TYPE_INET, values);
   }
   {
     std::map<test_utils::Uuid, test_utils::Uuid> values = { { test_utils::generate_time_uuid(), test_utils::generate_random_uuid() },
                                                             { test_utils::generate_time_uuid(), test_utils::generate_random_uuid() },
                                                             { test_utils::generate_time_uuid(), test_utils::generate_random_uuid() } };
-    test_simple_insert_map<test_utils::Uuid, test_utils::Uuid>(session.get(), CASS_VALUE_TYPE_UUID, CASS_VALUE_TYPE_UUID, values);
+    insert_map_value<test_utils::Uuid, test_utils::Uuid>(session.get(), CASS_VALUE_TYPE_UUID, CASS_VALUE_TYPE_UUID, values);
   }
   {
     const cass_uint8_t varint1[] = { 57, 115, 235, 135, 229, 215, 8, 125, 13, 43, 1, 25, 32, 135, 129, 180 };
@@ -264,35 +264,35 @@ void test_simple_insert_map_all_types(CassCluster* cluster) {
                                                     test_utils::decimal_from_scale_and_bytes(3, cass_bytes_init(varint2, sizeof(varint2))) },
                                                   { test_utils::decimal_from_scale_and_bytes(4, cass_bytes_init(varint3, sizeof(varint3))),
                                                     test_utils::decimal_from_scale_and_bytes(5, cass_bytes_init(varint3, sizeof(varint3))) } };
-    test_simple_insert_map<CassDecimal, CassDecimal>(session.get(), CASS_VALUE_TYPE_DECIMAL, CASS_VALUE_TYPE_DECIMAL, values);
+    insert_map_value<CassDecimal, CassDecimal>(session.get(), CASS_VALUE_TYPE_DECIMAL, CASS_VALUE_TYPE_DECIMAL, values);
   }
   {
     std::map<CassString, cass_int32_t> values = { { cass_string_init("a"), 1 },
                                                   { cass_string_init("b"), 2 },
                                                   { cass_string_init("c"), 3 } };
-    test_simple_insert_map<CassString, cass_int32_t>(session.get(), CASS_VALUE_TYPE_VARCHAR, CASS_VALUE_TYPE_INT, values);
+    insert_map_value<CassString, cass_int32_t>(session.get(), CASS_VALUE_TYPE_VARCHAR, CASS_VALUE_TYPE_INT, values);
   }
   {
     std::map<test_utils::Uuid, CassString> values = { { test_utils::generate_time_uuid(), cass_string_init("123") },
                                                       { test_utils::generate_time_uuid(), cass_string_init("456") },
                                                       { test_utils::generate_time_uuid(), cass_string_init("789") } };
-    test_simple_insert_map<test_utils::Uuid, CassString>(session.get(), CASS_VALUE_TYPE_UUID, CASS_VALUE_TYPE_VARCHAR, values);
+    insert_map_value<test_utils::Uuid, CassString>(session.get(), CASS_VALUE_TYPE_UUID, CASS_VALUE_TYPE_VARCHAR, values);
   }
 }
 
-BOOST_AUTO_TEST_CASE(simple_insert_set)
+BOOST_AUTO_TEST_CASE(test_set)
 {
-  test_simple_insert_collection_all_types(cluster, CASS_VALUE_TYPE_SET);
+  insert_collection_all_types(cluster, CASS_VALUE_TYPE_SET);
 }
 
-BOOST_AUTO_TEST_CASE(simple_insert_list)
+BOOST_AUTO_TEST_CASE(test_list)
 {
-  test_simple_insert_collection_all_types(cluster, CASS_VALUE_TYPE_LIST);
+  insert_collection_all_types(cluster, CASS_VALUE_TYPE_LIST);
 }
 
-BOOST_AUTO_TEST_CASE(simple_insert_map)
+BOOST_AUTO_TEST_CASE(test_map)
 {
-  test_simple_insert_map_all_types(cluster);
+  insert_map_all_types(cluster);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
