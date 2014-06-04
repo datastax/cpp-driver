@@ -26,7 +26,7 @@ struct StackPtrFree;
 template<>
 struct StackPtrFree<CassSession> {
     static void free(CassSession* ptr) {
-      CassFuture* future = cass_session_shutdown(ptr);
+      CassFuture* future = cass_session_close(ptr);
       cass_future_wait(future);
       cass_session_free(ptr);
       cass_future_free(future);
@@ -418,14 +418,20 @@ inline bool operator<(Uuid a, Uuid b) {
 /** The following class cannot be used as a kernel of test fixture because of
     parametrized ctor. Derive from it to use it in your tests.
  */
-struct CCM_SETUP {
-    CCM_SETUP(int numberOfNodesDC1, int numberOfNodesDC2);
-    virtual ~CCM_SETUP();
+struct MultipleNodesTest {
+    MultipleNodesTest(int numberOfNodesDC1, int numberOfNodesDC2);
+    virtual ~MultipleNodesTest();
 
     boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
     const cql::cql_ccm_bridge_configuration_t& conf;
-
     CassCluster* cluster;
+};
+
+struct SingleSessionTest : MultipleNodesTest {
+  SingleSessionTest(int numberOfNodesDC1, int numberOfNodesDC2);
+  virtual ~SingleSessionTest();
+
+  CassSession* session;
 };
 
 const char* get_value_type(CassValueType type);

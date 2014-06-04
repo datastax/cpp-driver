@@ -167,7 +167,7 @@ int main() {
   CassError rc = 0;
   CassCluster* cluster = create_cluster();
   CassSession* session = NULL;
-  CassFuture* shutdown_future = NULL;
+  CassFuture* close_future = NULL;
   CassUuid uuid;
 
   rc = connect_session(cluster, &session);
@@ -199,8 +199,8 @@ int main() {
 
   select_from_log(session, "test");
 
-  shutdown_future = cass_session_shutdown(session);
-  cass_future_wait(shutdown_future);
+  close_future = cass_session_close(session);
+  cass_future_wait(close_future);
   cass_session_free(session);
   cass_cluster_free(cluster);
 

@@ -161,7 +161,7 @@ int main() {
   CassError rc = 0;
   CassCluster* cluster = create_cluster();
   CassSession* session = NULL;
-  CassFuture* shutdown_future = NULL;
+  CassFuture* close_future = NULL;
 
   Basic input = { cass_true, 0.001, 0.0002, 1, 2 };
   Basic output;
@@ -192,8 +192,8 @@ int main() {
   assert(input.i32 == output.i32);
   assert(input.i64 == output.i64);
 
-  shutdown_future = cass_session_shutdown(session);
-  cass_future_wait(shutdown_future);
+  close_future = cass_session_close(session);
+  cass_future_wait(close_future);
   cass_session_free(session);
   cass_cluster_free(cluster);
 

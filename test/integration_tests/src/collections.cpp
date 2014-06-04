@@ -15,11 +15,11 @@
 #include <boost/format.hpp>
 #include <boost/thread.hpp>
 
-struct COLLECTIONS_CCM_SETUP : test_utils::CCM_SETUP {
-    COLLECTIONS_CCM_SETUP() : CCM_SETUP(1,0) {}
+struct CollectionsTests : test_utils::MultipleNodesTest {
+    CollectionsTests() : MultipleNodesTest(1, 0) {}
 };
 
-BOOST_FIXTURE_TEST_SUITE(collections, COLLECTIONS_CCM_SETUP)
+BOOST_FIXTURE_TEST_SUITE(collections, CollectionsTests)
 
 template<class T>
 void insert_collection_value(CassSession* session, CassValueType type, CassValueType primary_type, const std::vector<T>& values) {

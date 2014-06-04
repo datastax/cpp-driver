@@ -37,7 +37,7 @@ int main() {
 
   if(rc == CASS_OK) {
     CassFuture* result_future = NULL;
-    CassFuture* shutdown_future = NULL;
+    CassFuture* close_future = NULL;
     CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces;");
     CassStatement* statement = cass_statement_new(query, 0, CASS_CONSISTENCY_ONE);
 
@@ -76,9 +76,9 @@ int main() {
     }
 
     cass_future_free(result_future);
-    shutdown_future = cass_session_shutdown(session);
-    cass_future_wait(shutdown_future);
-    cass_future_free(shutdown_future);
+    close_future = cass_session_close(session);
+    cass_future_wait(close_future);
+    cass_future_free(close_future);
   } else {
     CassString message = cass_future_error_message(session_future);
     fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);

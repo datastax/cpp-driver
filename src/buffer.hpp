@@ -30,19 +30,17 @@ class Buffer {
 
     Buffer(const char* data, size_t size)
       : size_(size) {
-      if(size > 0) {
-        if(size > FIXED_BUFFER_SIZE) {
-          data_.alloced = new char[size];
-          memcpy(data_.alloced, data, size);
-        } else {
-          memcpy(data_.fixed, data, size);
-        }
+      if(size > FIXED_BUFFER_SIZE) {
+        data_.alloced = new char[size];
+        memcpy(data_.alloced, data, size);
+      } else if(size > 0) {
+        memcpy(data_.fixed, data, size);
       }
     }
 
     Buffer(int32_t size)
       : size_(size) {
-      if(size > 0 && size > FIXED_BUFFER_SIZE) {
+      if(size > FIXED_BUFFER_SIZE) {
         data_.alloced = new char[size];
       }
     }
