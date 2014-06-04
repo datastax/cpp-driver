@@ -36,6 +36,27 @@ const char* cass_log_level_string(CassLogLevel log_level) {
   }
 }
 
+CassInet cass_inet_init_v4(const cass_uint8_t* address) {
+  CassInet inet;
+  inet.address_length = CASS_INET_V4_LENGTH;
+  memcpy(inet.address, address, CASS_INET_V4_LENGTH);
+  return inet;
+}
+
+CassInet cass_inet_init_v6(const cass_uint8_t* address) {
+  CassInet inet;
+  inet.address_length = CASS_INET_V6_LENGTH;
+  memcpy(inet.address, address, CASS_INET_V6_LENGTH);
+  return inet;
+}
+
+CassDecimal cass_decimal_init(cass_int32_t scale, CassBytes varint) {
+  CassDecimal decimal;
+  decimal.scale = scale;
+  decimal.varint = varint;
+  return decimal;
+}
+
 CassString cass_string_init(const char* null_terminated) {
   CassString str;
   str.data = null_terminated;

@@ -3,15 +3,18 @@
 #   define BOOST_TEST_MODULE cassandra
 #endif
 
-#include "cassandra.h"
-#include "test_utils.hpp"
+#include <chrono>
+#include <algorithm>
+#include <future>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/format.hpp>
-#include <boost/thread.hpp>
+
+#include "cassandra.h"
+#include "test_utils.hpp"
 
 struct BasicTests : test_utils::MultipleNodesTest {
     BasicTests() : MultipleNodesTest(1, 0) { }
@@ -297,7 +300,7 @@ BOOST_AUTO_TEST_CASE(test_timestamp)
   BOOST_REQUIRE(cass_result_column_count(timestamp_result1.get()) == 1);
 
   int pause_duration = 5 * test_utils::ONE_SECOND_IN_MICROS;
-  boost::this_thread::sleep(boost::posix_time::microseconds(pause_duration));
+  std::this_thread::sleep_for(std::chrono::microseconds(pause_duration));
 
   test_utils::execute_query(session.get(), "INSERT INTO test(tweet_id, test_val) VALUES(0, 43);");
   test_utils::StackPtr<const CassResult> timestamp_result2;

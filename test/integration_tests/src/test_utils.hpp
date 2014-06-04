@@ -482,9 +482,24 @@ inline std::string generate_unique_str() {
 }
 
 std::string string_from_time_point(std::chrono::system_clock::time_point time);
+std::string string_from_uuid(CassUuid uuid);
+
+constexpr const char* CREATE_TABLE_ALL_TYPES =
+    "CREATE TABLE %s ("
+    "id uuid PRIMARY KEY,"
+    "text_sample text,"
+    "int_sample int,"
+    "bigint_sample bigint,"
+    "float_sample float,"
+    "double_sample double,"
+    "decimal_sample decimal,"
+    "blob_sample blob,"
+    "boolean_sample boolean,"
+    "timestamp_sample timestamp,"
+    "inet_sample inet);";
 
 constexpr const char* CREATE_TABLE_TIME_SERIES =
-    "create table %s ("
+    "CREATE TABLE %s ("
     "id uuid,"
     "event_time timestamp,"
     "text_sample text,"

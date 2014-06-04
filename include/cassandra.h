@@ -66,8 +66,11 @@ typedef struct CassString_ {
     cass_size_t length;
 } CassString;
 
+#define CASS_INET_V4_LENGTH 4
+#define CASS_INET_V6_LENGTH 16
+
 typedef struct CassInet_ {
-  cass_uint8_t address[16];
+  cass_uint8_t address[CASS_INET_V6_LENGTH];
   cass_uint8_t address_length;
 } CassInet;
 
@@ -596,7 +599,7 @@ cass_statement_bind_bytes(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_bind_uuid(CassStatement* statement,
                          cass_size_t index,
-                         CassUuid value);
+                         const CassUuid value);
 
 /**
  * Binds an "inet" to a query or bound statement at the specified index.
@@ -1308,6 +1311,46 @@ cass_error_desc(CassError error);
  */
 CASS_EXPORT const char*
 cass_log_level_string(CassLogLevel log_level);
+
+/***********************************************************************************
+ *
+ * Inet
+ *
+ ************************************************************************************/
+
+/**
+ * Constructs an inet v4 object.
+ *
+ * @param[in] address An address of size CASS_INET_V4_LENGTH
+ * @return An inet object.
+ */
+CASS_EXPORT CassInet
+cass_inet_init_v4(const cass_uint8_t* address);
+
+/**
+ * Constructs an inet v6 object.
+ *
+ * @param[in] address An address of size CASS_INET_V6_LENGTH
+ * @return An inet object.
+ */
+CASS_EXPORT CassInet
+cass_inet_init_v6(const cass_uint8_t* address);
+
+/***********************************************************************************
+ *
+ * Decimal
+ *
+ ************************************************************************************/
+
+/**
+ * Constructs a decimal object.
+ *
+ * @param[in] scale
+ * @param[in] varint
+ * @return A decimal object.
+ */
+CASS_EXPORT CassDecimal
+cass_decimal_init(cass_int32_t scale, CassBytes varint);
 
 /***********************************************************************************
  *

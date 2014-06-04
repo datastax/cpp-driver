@@ -81,7 +81,7 @@ CassError cass_statement_bind_bytes(CassStatement* statement,
 
 CassError cass_statement_bind_uuid(CassStatement* statement,
                                    size_t index,
-                                   CassUuid value) {
+                                   const CassUuid value) {
   return statement->bind(index, value);
 }
 

@@ -119,5 +119,11 @@ std::string string_from_time_point(std::chrono::system_clock::time_point time) {
   return std::string(buffer, 24);
 }
 
+std::string string_from_uuid(CassUuid uuid) {
+  char buffer[CASS_UUID_STRING_LENGTH];
+  cass_uuid_string(uuid, buffer);
+  return std::string(buffer);
+}
+
 //-----------------------------------------------------------------------------------
 } // End of namespace test_utils
