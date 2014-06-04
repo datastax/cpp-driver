@@ -78,26 +78,27 @@ MultipleNodesTest::~MultipleNodesTest() {
 
 SingleSessionTest::SingleSessionTest(int numberOfNodesDC1, int numberOfNodesDC2)
   : MultipleNodesTest(numberOfNodesDC1, numberOfNodesDC2) {
-  test_utils::StackPtr<CassFuture> connect_future;
-  session = cass_cluster_connect(cluster, connect_future.address_of());
+  CassFuture* temp_future;
+  session = cass_cluster_connect(cluster, &temp_future);
+  test_utils::CassFuturePtr connect_future(temp_future);
   test_utils::wait_and_check_error(connect_future.get());
 }
 
 SingleSessionTest::~SingleSessionTest() {
-   test_utils::StackPtr<CassFuture> close_future(cass_session_close(session));
+   CassFuturePtr close_future(cass_session_close(session));
    cass_future_wait(close_future.get());
    cass_session_free(session);
 }
 
 void execute_query(CassSession* session,
                    const std::string& query,
-                   StackPtr<const CassResult>* result,
+                   CassResultPtr* result,
                    CassConsistency consistency) {
-  StackPtr<CassStatement> statement(cass_statement_new(cass_string_init(query.c_str()), 0, consistency));
-  StackPtr<CassFuture> future(cass_session_execute(session, statement.get()));
+  CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0, consistency));
+  CassFuturePtr future(cass_session_execute(session, statement.get()));
   wait_and_check_error(future.get());
   if(result != nullptr) {
-    result->assign(cass_future_get_result(future.get()));
+    result->reset(cass_future_get_result(future.get()));
   }
 }
 

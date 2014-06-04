@@ -35,7 +35,7 @@ void bind_and_execute_insert(CassSession* session, CassStatement* statement) {
   BOOST_REQUIRE(cass_statement_bind_string(statement, 2,
                                            cass_string_init2(text_sample.data(), text_sample.size())) == CASS_OK);
 
-  test_utils::StackPtr<CassFuture> future(cass_session_execute(session, statement));
+  test_utils::CassFuturePtr future(cass_session_execute(session, statement));
   cass_future_wait(future.get());
   CassError code = cass_future_error_code(future.get());
   if(code != CASS_OK && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT) { // Timeout is okay
@@ -46,22 +46,22 @@ void bind_and_execute_insert(CassSession* session, CassStatement* statement) {
 
 void insert_task(CassSession* session, const std::string& query, CassConsistency consistency, int rows_per_id) {
   for(int i = 0; i < rows_per_id; ++i) {
-    test_utils::StackPtr<CassStatement> statement(cass_statement_new(cass_string_init(query.c_str()), 3, consistency));
+    test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 3, consistency));
     bind_and_execute_insert(session, statement.get());
   }
 }
 
 void insert_prepared_task(CassSession* session, const CassPrepared* prepared, CassConsistency consistency, int rows_per_id) {
   for(int i = 0; i < rows_per_id; ++i) {
-    test_utils::StackPtr<CassStatement> statement(cass_prepared_bind(prepared, 3, consistency));
+    test_utils::CassStatementPtr statement(cass_prepared_bind(prepared, 3, consistency));
     bind_and_execute_insert(session, statement.get());
   }
 }
 
 void select_task(CassSession* session, const std::string& query, CassConsistency consistency, int num_iterations) {
-  test_utils::StackPtr<CassStatement> statement(cass_statement_new(cass_string_init(query.c_str()), 0, consistency));
+  test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0, consistency));
   for(int i = 0; i < num_iterations; ++i) {
-    test_utils::StackPtr<CassFuture> future(cass_session_execute(session, statement.get()));
+    test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     cass_future_wait(future.get());
 
     CassError code = cass_future_error_code(future.get());
@@ -73,7 +73,7 @@ void select_task(CassSession* session, const std::string& query, CassConsistency
     }
 
     if(code == CASS_OK) {
-      test_utils::StackPtr<const CassResult> result(cass_future_get_result(future.get()));
+      test_utils::CassResultPtr result(cass_future_get_result(future.get()));
       BOOST_REQUIRE(cass_result_row_count(result.get()) > 0);
     }
   }
@@ -81,8 +81,9 @@ void select_task(CassSession* session, const std::string& query, CassConsistency
 
 BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
 {
-  test_utils::StackPtr<CassFuture> session_future;
-  test_utils::StackPtr<CassSession> session(cass_cluster_connect(cluster, session_future.address_of()));
+  CassFuture* temp_future;
+  test_utils::CassSessionPtr session(cass_cluster_connect(cluster, &temp_future));
+  test_utils::CassFuturePtr session_future(temp_future);
   test_utils::wait_and_check_error(session_future.get());
 
   test_utils::execute_query(session.get(), "CREATE KEYSPACE tester WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 3};");
@@ -95,11 +96,11 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
   std::string insert_query = str(boost::format("INSERT INTO %s (id, event_time, text_sample) VALUES (?, ?, ?)") % table_name);
   std::string select_query = str(boost::format("SELECT * FROM %s LIMIT 10000") % table_name);
 
-  test_utils::StackPtr<CassFuture> prepared_future(cass_session_prepare(session.get(),
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session.get(),
                                                                         cass_string_init2(insert_query.data(), insert_query.size())));
 
   test_utils::wait_and_check_error(prepared_future.get());
-  test_utils::StackPtr<const CassPrepared> prepared(cass_future_get_prepared(prepared_future.get()));
+  test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
   int rows_per_id = 100;
   int num_iterations = 10;
@@ -127,8 +128,9 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
 
 BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
 {
-  test_utils::StackPtr<CassFuture> session_future;
-  test_utils::StackPtr<CassSession> session(cass_cluster_connect(cluster, session_future.address_of()));
+  CassFuture* temp_future;
+  test_utils::CassSessionPtr session(cass_cluster_connect(cluster, &temp_future));
+  test_utils::CassFuturePtr session_future(temp_future);
   test_utils::wait_and_check_error(session_future.get());
 
   test_utils::execute_query(session.get(), "CREATE KEYSPACE tester WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 3};");
@@ -141,11 +143,11 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
   std::string insert_query = str(boost::format("INSERT INTO %s (id, event_time, text_sample) VALUES (?, ?, ?)") % table_name);
   std::string select_query = str(boost::format("SELECT * FROM %s LIMIT 10000") % table_name);
 
-  test_utils::StackPtr<CassFuture> prepared_future(cass_session_prepare(session.get(),
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session.get(),
                                                                         cass_string_init2(insert_query.data(), insert_query.size())));
 
   test_utils::wait_and_check_error(prepared_future.get());
-  test_utils::StackPtr<const CassPrepared> prepared(cass_future_get_prepared(prepared_future.get()));
+  test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
   int rows_per_id = 100;
   int num_iterations = 10;
