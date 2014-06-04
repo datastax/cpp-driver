@@ -303,7 +303,7 @@ cass_cluster_free(CassCluster* cluster);
  ***********************************************************************************/
 
 /**
- * Frees a session instance. A session must be shutdown before it can be freed.
+ * Frees a session instance. A session must be closed before it can be freed.
  *
  * @param[in] session
  */
@@ -311,18 +311,15 @@ CASS_EXPORT void
 cass_session_free(CassSession* session);
 
 /**
- * Shutdowns the session instance, output a shutdown future which can
+ * Closes the session instance, outputs a close future which can
  * be used to determine when the session has been terminated. This allows
  * in-flight requests to finish.
  *
  * @param[in] session
  * @return A future that must be freed.
- *
- * @see cass_future_get_session()
  */
 CASS_EXPORT CassFuture*
-cass_session_shutdown(CassSession* session);
-
+cass_session_close(CassSession* session);
 
 /**
  * Create a prepared statement.

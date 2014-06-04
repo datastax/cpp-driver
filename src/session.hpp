@@ -115,7 +115,7 @@ class Session : public EventThread<SessionEvent> {
     std::unique_ptr<Logger> logger_;
     std::shared_ptr<std::string> keyspace_;
     SessionFuture* connect_future_;
-    SessionFuture* shutdown_future_;
+    SessionFuture* close_future_;
     std::set<Host> hosts_;
     Config config_;
     std::unique_ptr<AsyncQueue<MPMCQueue<RequestHandler*>>> request_queue_;

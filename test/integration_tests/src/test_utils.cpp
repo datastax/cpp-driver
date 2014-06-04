@@ -57,7 +57,7 @@ const std::string lorem_ipsum = "Lorem ipsum dolor sit amet, consectetur adipisc
 
 //-----------------------------------------------------------------------------------
 
-CCM_SETUP::CCM_SETUP(int numberOfNodesDC1, int numberOfNodesDC2) : conf(cql::get_ccm_bridge_configuration()) {
+MultipleNodesTest::MultipleNodesTest(int numberOfNodesDC1, int numberOfNodesDC2) : conf(cql::get_ccm_bridge_configuration()) {
   boost::debug::detect_memory_leaks(true);
   ccm = cql::cql_ccm_bridge_t::create(conf, "test", numberOfNodesDC1, numberOfNodesDC2);
 
@@ -72,8 +72,21 @@ CCM_SETUP::CCM_SETUP(int numberOfNodesDC1, int numberOfNodesDC2) : conf(cql::get
   }
 }
 
-CCM_SETUP::~CCM_SETUP() {
+MultipleNodesTest::~MultipleNodesTest() {
   cass_cluster_free(cluster);
+}
+
+SingleSessionTest::SingleSessionTest(int numberOfNodesDC1, int numberOfNodesDC2)
+  : MultipleNodesTest(numberOfNodesDC1, numberOfNodesDC2) {
+  test_utils::StackPtr<CassFuture> connect_future;
+  session = cass_cluster_connect(cluster, connect_future.address_of());
+  test_utils::wait_and_check_error(connect_future.get());
+}
+
+SingleSessionTest::~SingleSessionTest() {
+   test_utils::StackPtr<CassFuture> close_future(cass_session_close(session));
+   cass_future_wait(close_future.get());
+   cass_session_free(session);
 }
 
 void execute_query(CassSession* session,

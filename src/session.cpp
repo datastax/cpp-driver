@@ -23,7 +23,7 @@ void cass_session_free(CassSession* session) {
   delete session->from();
 }
 
-CassFuture* cass_session_shutdown(CassSession* session) {
+CassFuture* cass_session_close(CassSession* session) {
   // TODO(mpenick): Make sure this handles shutdown during the middle of startup
   return CassFuture::to(session->shutdown());
 }
@@ -52,7 +52,7 @@ Session::Session(const Config& config)
   : state_(SESSION_STATE_NEW)
   , ssl_context_(nullptr)
   , connect_future_(nullptr)
-  , shutdown_future_(nullptr)
+  , close_future_(nullptr)
   , config_(config)
   , load_balancing_policy_(new RoundRobinPolicy())
   , pending_resolve_count_(0)
@@ -143,7 +143,7 @@ void Session::close() {
 }
 
 Future* Session::shutdown() {
-  shutdown_future_ = new ShutdownSessionFuture(this);
+  close_future_ = new ShutdownSessionFuture(this);
 
   SessionState expected_state_ready = SESSION_STATE_READY;
   SessionState expected_state_connecting = SESSION_STATE_CONNECTING;
@@ -154,10 +154,10 @@ Future* Session::shutdown() {
       io_worker->shutdown_async();
     }
   } else {
-    shutdown_future_->set_error(CASS_ERROR_LIB_NOT_CONNECTED, "The session is not connected");
+    close_future_->set_error(CASS_ERROR_LIB_NOT_CONNECTED, "The session is not connected");
   }
 
-  return shutdown_future_;
+  return close_future_;
 }
 
 void Session::on_run() {
@@ -196,8 +196,8 @@ void Session::on_event(const SessionEvent& event) {
     logger_->debug("Session pending connection count %d", pending_connections_count_);
   } else if(event.type == SessionEvent::NOTIFY_SHUTDOWN) {
     if(--pending_workers_count_ == 0) {
-      shutdown_future_->set_result();
-      shutdown_future_ = nullptr;
+      close_future_->set_result();
+      close_future_ = nullptr;
       state_ = SESSION_STATE_DISCONNECTED;
       logger_->shutdown_async();
       close();

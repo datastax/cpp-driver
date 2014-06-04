@@ -13,11 +13,11 @@
 #include <boost/format.hpp>
 #include <boost/thread.hpp>
 
-struct BASICS_CCM_SETUP : test_utils::CCM_SETUP {
-    BASICS_CCM_SETUP() : CCM_SETUP(1,0) { }
+struct BasicTests : test_utils::MultipleNodesTest {
+    BasicTests() : MultipleNodesTest(1, 0) { }
 };
 
-BOOST_FIXTURE_TEST_SUITE(basics, BASICS_CCM_SETUP)
+BOOST_FIXTURE_TEST_SUITE(basics, BasicTests)
 
 template <class T>
 void insert_single_value(CassSession* session, CassValueType type, T value) {

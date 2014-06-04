@@ -151,7 +151,7 @@ int main() {
   CassError rc = 0;
   CassCluster* cluster = create_cluster();
   CassSession* session = NULL;
-  CassFuture* shutdown_future = NULL;
+  CassFuture* close_future = NULL;
   const CassPrepared* prepared = NULL;
 
   Pair pairs[] = { {"a", "1"}, {"b", "2"}, { NULL, NULL} };
@@ -175,8 +175,8 @@ int main() {
     insert_into_batch_with_prepared(session, prepared, pairs);
   }
 
-  shutdown_future = cass_session_shutdown(session);
-  cass_future_wait(shutdown_future);
+  close_future = cass_session_close(session);
+  cass_future_wait(close_future);
   cass_session_free(session);
   cass_cluster_free(cluster);
 

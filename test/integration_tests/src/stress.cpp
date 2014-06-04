@@ -17,11 +17,11 @@
 #include "test_utils.hpp"
 #include "cql_ccm_bridge.hpp"
 
-struct STRESS_CCM_SETUP : test_utils::CCM_SETUP {
-    STRESS_CCM_SETUP() : CCM_SETUP(3, 0) {}
+struct StressTests : test_utils::MultipleNodesTest {
+    StressTests() : MultipleNodesTest(3, 0) {}
 };
 
-BOOST_FIXTURE_TEST_SUITE(stress, STRESS_CCM_SETUP)
+BOOST_FIXTURE_TEST_SUITE(stress, StressTests)
 
 void bind_and_execute_insert(CassSession* session, CassStatement* statement) {
   std::chrono::system_clock::time_point now(std::chrono::system_clock::now());
