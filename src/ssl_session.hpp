@@ -136,7 +136,7 @@ class SSLSession {
     ciphers(
         char* output,
         size_t size) {
-      SSL_CIPHER* sc = SSL_get_current_cipher(ssl);
+      const SSL_CIPHER* sc = SSL_get_current_cipher(ssl);
       return SSL_CIPHER_description(sc, output, size);
     }
 
