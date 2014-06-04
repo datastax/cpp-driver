@@ -66,4 +66,8 @@ BOOST_AUTO_TEST_CASE(test_simple)
 }
 
 BOOST_AUTO_TEST_CASE(test_mixed)
+{
+
+}
+
 BOOST_AUTO_TEST_SUITE_END()
