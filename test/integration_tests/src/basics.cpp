@@ -48,6 +48,7 @@ void insert_single_value(CassSession* session, CassValueType type, T value) {
 
   const CassValue* column = cass_row_get_column(cass_result_first_row(result.get()), 1);
   T result_value;
+  BOOST_REQUIRE(cass_value_type(column) == type);
   BOOST_REQUIRE(test_utils::Value<T>::get(column, &result_value) == CASS_OK);
   BOOST_REQUIRE(test_utils::Value<T>::equal(result_value, value));
 }
@@ -92,6 +93,12 @@ void insert_min_max_value(CassSession* session, CassValueType type) {
 void insert_null_value(CassSession* session, CassValueType type) {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   std::string type_name = test_utils::get_value_type(type);
+
+  if(type == CASS_VALUE_TYPE_LIST || type == CASS_VALUE_TYPE_SET) {
+    type_name.append("<text>");
+  } else if(type == CASS_VALUE_TYPE_MAP) {
+    type_name.append("<text, text>");
+  }
 
   test_utils::execute_query(session, str(boost::format("CREATE TABLE %s (tweet_id uuid PRIMARY KEY, test_val %s);")
                                          % table_name % type_name));
@@ -145,7 +152,6 @@ BOOST_AUTO_TEST_CASE(test_basic_types)
     CassString value = cass_string_init("Test Value.");
     insert_single_value<CassString>(session.get(), CASS_VALUE_TYPE_ASCII, value);
     insert_single_value<CassString>(session.get(), CASS_VALUE_TYPE_VARCHAR, value);
-    insert_single_value<CassString>(session.get(), CASS_VALUE_TYPE_TEXT, value);
   }
 
   {
@@ -230,7 +236,6 @@ BOOST_AUTO_TEST_CASE(test_min_max)
   {
     CassString value = cass_string_init2(nullptr, 0);
     insert_single_value<CassString>(session.get(), CASS_VALUE_TYPE_ASCII, value);
-    insert_single_value<CassString>(session.get(), CASS_VALUE_TYPE_TEXT, value);
     insert_single_value<CassString>(session.get(), CASS_VALUE_TYPE_VARCHAR, value);
   }
 
@@ -267,6 +272,9 @@ BOOST_AUTO_TEST_CASE(test_null)
   insert_null_value(session.get(), CASS_VALUE_TYPE_VARINT);
   insert_null_value(session.get(), CASS_VALUE_TYPE_TIMEUUID);
   insert_null_value(session.get(), CASS_VALUE_TYPE_INET);
+  insert_null_value(session.get(), CASS_VALUE_TYPE_LIST);
+  insert_null_value(session.get(), CASS_VALUE_TYPE_MAP);
+  insert_null_value(session.get(), CASS_VALUE_TYPE_SET);
 }
 
 BOOST_AUTO_TEST_CASE(test_timestamp)

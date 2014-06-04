@@ -486,7 +486,6 @@ cass_statement_free(CassStatement* statement);
 
 /**
  * Binds null to a query or bound statement at the specified index.
- * This cannot be used for counters, custom, or collections
  *
  * @param[in] statement
  * @param[in] index
@@ -652,7 +651,7 @@ cass_statement_bind_custom(CassStatement* statement,
  *
  * @param[in] statement
  * @param[in] index
- * @param[in] collection Pass NULL for an empty collection
+ * @param[in] collection
  * @param[in] is_map This must be set to true if the collection represents a map.
  * @return CASS_OK if successful, otherwise an error occurred.
  */

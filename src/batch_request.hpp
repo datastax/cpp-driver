@@ -120,7 +120,10 @@ struct BatchRequest : public MessageBody {
       size += sizeof(uint16_t);
       for (const auto& value : *statement) {
         size += sizeof(int32_t);
-        size += value.size();
+        int32_t value_size = value.size();
+        if(value_size > 0) {
+          size += value_size;
+        }
       }
     }
     size    += sizeof(uint16_t);
@@ -146,7 +149,7 @@ struct BatchRequest : public MessageBody {
 
       buffer = encode_short(buffer, statement->values.size());
       for (const auto& value : *statement) {
-        buffer = encode_long_string(buffer, value.data(), value.size());
+        buffer = encode_bytes(buffer, value.data(), value.size());
       }
     }
     encode_short(buffer, consistency);

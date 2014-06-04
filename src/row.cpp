@@ -44,20 +44,23 @@ char* decode_row(char* rows, const ResultResponse* result, Row& output) {
     const ResultResponse::ColumnMetaData& metadata = result->column_metadata[i];
     CassValueType type = static_cast<CassValueType>(metadata.type);
 
-    if(type == CASS_VALUE_TYPE_MAP ||
-       type == CASS_VALUE_TYPE_LIST ||
-       type == CASS_VALUE_TYPE_SET) {
-      uint16_t count = 0;
-      Value value(type, decode_short(buffer, count), size - sizeof(uint16_t));
-      value.count = count;
-      value.primary_type = static_cast<CassValueType>(metadata.collection_primary_type);
-      value.secondary_type = static_cast<CassValueType>(metadata.collection_secondary_type);
-      output.push_back(value);
-    } else {
-      output.push_back(Value(type, buffer, size));
+    if(size >= 0) {
+      if(type == CASS_VALUE_TYPE_MAP ||
+         type == CASS_VALUE_TYPE_LIST ||
+         type == CASS_VALUE_TYPE_SET) {
+        uint16_t count = 0;
+        Value value(type, decode_short(buffer, count), size - sizeof(uint16_t));
+        value.count = count;
+        value.primary_type = static_cast<CassValueType>(metadata.collection_primary_type);
+        value.secondary_type = static_cast<CassValueType>(metadata.collection_secondary_type);
+        output.push_back(value);
+      } else {
+        output.push_back(Value(type, buffer, size));
+      }
+      buffer += size;
+    } else { // null value
+      output.push_back(Value());
     }
-
-    buffer += size;
   }
   return buffer;
 }

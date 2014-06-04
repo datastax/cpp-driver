@@ -17,28 +17,32 @@
 #ifndef __CASS_BUFFER_HPP_INCLUDED__
 #define __CASS_BUFFER_HPP_INCLUDED__
 
+#include <stdint.h>
+
 namespace cass {
 
 class Buffer {
   public:
-    static const size_t FIXED_BUFFER_SIZE = 32;
+    static const int32_t FIXED_BUFFER_SIZE = 32;
 
     Buffer()
-      : size_(0) { }
+      : size_(-1) { }
 
     Buffer(const char* data, size_t size)
       : size_(size) {
-      if(size > FIXED_BUFFER_SIZE) {
-        data_.alloced = new char[size];
-        memcpy(data_.alloced, data, size);
-      } else {
-        memcpy(data_.fixed, data, size);
+      if(size > 0) {
+        if(size > FIXED_BUFFER_SIZE) {
+          data_.alloced = new char[size];
+          memcpy(data_.alloced, data, size);
+        } else {
+          memcpy(data_.fixed, data, size);
+        }
       }
     }
 
-    Buffer(size_t size)
+    Buffer(int32_t size)
       : size_(size) {
-      if(size > FIXED_BUFFER_SIZE) {
+      if(size > 0 && size > FIXED_BUFFER_SIZE) {
         data_.alloced = new char[size];
       }
     }
@@ -49,25 +53,25 @@ class Buffer {
       }
     }
 
-    Buffer(const Buffer& buffer) {
-      copy(buffer);
+    Buffer(const Buffer& Buffer) {
+      copy(Buffer);
     }
 
-    Buffer& operator=(const Buffer& buffer) {
-      copy(buffer);
+    Buffer& operator=(const Buffer& Buffer) {
+      copy(Buffer);
       return *this;
     }
 
-    Buffer(Buffer&& buffer) {
-      move(std::move(buffer));
+    Buffer(Buffer&& Buffer) {
+      move(std::move(Buffer));
     }
 
-    Buffer& operator=(Buffer&& buffer) {
-      move(std::move(buffer));
+    Buffer& operator=(Buffer&& Buffer) {
+      move(std::move(Buffer));
       return *this;
     }
 
-    void copy(const char* source, size_t size) {
+    void copy(const char* source, int32_t size) {
       memcpy(data(), source, size);
     }
 
@@ -79,28 +83,32 @@ class Buffer {
       return size_ > FIXED_BUFFER_SIZE ? data_.alloced : data_.fixed;
     }
 
-    size_t size() const {
+    int32_t size() const {
       return size_;
     }
 
   private:
-    void move(Buffer&& buffer) {
-      size_ = buffer.size_;
-      if(size_ > FIXED_BUFFER_SIZE) {
-        data_.alloced = buffer.data_.alloced;
-        buffer.data_.alloced = nullptr;
-      } else {
-        memcpy(data_.fixed, buffer.data_.fixed, size_);
+    void move(Buffer&& Buffer) {
+      size_ = Buffer.size_;
+      if(size_ > 0) {
+        if(size_ > FIXED_BUFFER_SIZE) {
+          data_.alloced = Buffer.data_.alloced;
+          Buffer.data_.alloced = nullptr;
+        } else {
+          memcpy(data_.fixed, Buffer.data_.fixed, size_);
+        }
       }
     }
 
-    void copy(const Buffer& buffer) {
-      size_ = buffer.size_;
-      if(size_ > FIXED_BUFFER_SIZE) {
-        data_.alloced = new char[size_];
-        memcpy(data_.alloced, buffer.data_.alloced, size_);
-      } else {
-        memcpy(data_.fixed, buffer.data_.fixed, size_);
+    void copy(const Buffer& Buffer) {
+      size_ = Buffer.size_;
+      if(size_ > 0) {
+        if(size_ > FIXED_BUFFER_SIZE) {
+          data_.alloced = new char[size_];
+          memcpy(data_.alloced, Buffer.data_.alloced, size_);
+        } else {
+          memcpy(data_.fixed, Buffer.data_.fixed, size_);
+        }
       }
     }
 
@@ -108,7 +116,7 @@ class Buffer {
         char fixed[FIXED_BUFFER_SIZE];
         char* alloced;
     } data_;
-    size_t size_;
+    int32_t size_;
 };
 
 } // namespace cass

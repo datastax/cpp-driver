@@ -148,7 +148,10 @@ struct QueryRequest : public Statement {
       size += sizeof(int16_t);
       for (const auto& value : values) {
         size += sizeof(int32_t);
-        size += value.size();
+        int32_t value_size = value.size();
+        if(value_size > 0) {
+          size += value_size;
+        }
       }
       flags |= CASS_QUERY_FLAG_VALUES;
     }
@@ -176,7 +179,7 @@ struct QueryRequest : public Statement {
     if (!values.empty()) {
       buffer = encode_short(buffer, values.size());
       for (const auto& value : values) {
-        buffer = encode_long_string(buffer, value.data(), value.size());
+        buffer = encode_bytes(buffer, value.data(), value.size());
       }
     }
 

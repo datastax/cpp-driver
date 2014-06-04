@@ -179,6 +179,16 @@ encode_long_string(
   return buffer + size;
 }
 
+
+inline char* encode_bytes(char* output, const char* input, int32_t size) {
+  char* buffer = encode_int(output, size);
+  if(size > 0) {
+    memcpy(buffer, input, size);
+    return buffer + size;
+  }
+  return buffer;
+}
+
 inline char*
 encode_string_map(
     char*                                     output,
