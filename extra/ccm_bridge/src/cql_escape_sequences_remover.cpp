@@ -1,5 +1,6 @@
 #include <cctype>
 #include <string>
+#include <cstring>
 #include "cql_escape_sequences_remover.hpp"
 
 using namespace std;
@@ -7,7 +8,7 @@ using namespace std;
 namespace cql {
 	const int cql_escape_sequences_remover_t::ESCAPE = 0x1B;
 	const int cql_escape_sequences_remover_t::CSI = 0x9B;
-	
+
 	void cql_escape_sequences_remover_t::push_character(const char c) {
 		switch (_state)
 		{
@@ -66,10 +67,10 @@ namespace cql {
 	}
 
 	bool cql_escape_sequences_remover_t::is_control_character(const char c) {
-		const char CONTROL_CHARACTERS[] = 
+		const char CONTROL_CHARACTERS[] =
 			"\x00\x0b\x0c"
 			"\x0e\x0f\x18\x1a\x1b\x7f";
-			
+
 		const char* begin = CONTROL_CHARACTERS;
 		const char* end = begin + sizeof(CONTROL_CHARACTERS);
 
@@ -99,7 +100,7 @@ namespace cql {
 	bool cql_escape_sequences_remover_t::ends_with_character(const char c) {
 		if(!data_available())
 			return false;
-	
+
 		deque<char>::reverse_iterator it = _buffer.rbegin();
 		for(; it != _buffer.rend(); ++it) {
 			if(isspace(*it))

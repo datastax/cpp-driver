@@ -15,6 +15,7 @@
  */
 #include <boost/preprocessor.hpp>
 #include <boost/shared_ptr.hpp>
+#include <cstring>
 
 #include "cql/cql.hpp"
 #include "cql/exceptions/cql_exception.hpp"
@@ -62,10 +63,10 @@ cql::to_string(const cql_compression_enum compression) {
 cql::cql_compression_enum
 cql::compression_from_string(const char* compression_string)
 {
-    if (strcmp(compression_string, "snappy") == 0) {
+    if (std::strcmp(compression_string, "snappy") == 0) {
         return CQL_COMPRESSION_SNAPPY;
     }
-    else if (strcmp(compression_string, "") == 0) {
+    else if (std::strcmp(compression_string, "") == 0) {
         return CQL_COMPRESSION_NONE;
     }
     else return CQL_COMPRESSION_UNKNOWN;
