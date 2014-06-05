@@ -60,6 +60,7 @@ void validate_results(CassSession* session,
   std::string select_query = str(boost::format("SELECT * FROM %s;") % table_name);
   test_utils::CassResultPtr result;
   test_utils::execute_query(session, select_query, &result);
+  printf("table name: %s, row count: %zu, num concurrent requests, %zu\n", table_name.c_str(), cass_result_row_count(result.get()), num_concurrent_requests);
   BOOST_REQUIRE(cass_result_row_count(result.get()) == num_concurrent_requests);
 
   test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
@@ -84,8 +85,6 @@ BOOST_AUTO_TEST_CASE(test_async)
     test_utils::wait_and_check_error(future.get());
   }
 
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-
   validate_results(session, table_name, num_concurrent_requests, ids);
 }
 
@@ -94,10 +93,9 @@ BOOST_AUTO_TEST_CASE(test_async_shutdown)
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   const size_t num_concurrent_requests = 4096;
 
-  CassFuture* temp_future;
-  test_utils::CassSessionPtr temp_session(cass_cluster_connect(cluster, &temp_future));
-  test_utils::CassFuturePtr session_future(temp_future);
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
+  test_utils::CassSessionPtr temp_session(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(temp_session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
@@ -105,8 +103,6 @@ BOOST_AUTO_TEST_CASE(test_async_shutdown)
   std::vector<test_utils::Uuid> ids = insert_async(session, table_name, num_concurrent_requests, &futures);
 
   temp_session.reset(); // shutdown session
-
-  std::this_thread::sleep_for(std::chrono::seconds(1));
 
   validate_results(session, table_name, num_concurrent_requests, ids);
 }

@@ -85,7 +85,7 @@ class Logger : public LoopThread {
     };
 
     void close() {
-      log_queue_.close();
+      log_queue_.close_handles();
     }
 
     std::string format_message(const char* format, va_list args) {

@@ -34,7 +34,6 @@
 #include "round_robin_policy.hpp"
 #include "resolver.hpp"
 #include "config.hpp"
-#include "session_future.hpp"
 #include "request_handler.hpp"
 #include "logger.hpp"
 
@@ -53,9 +52,9 @@ struct SessionEvent {
 class Session : public EventThread<SessionEvent> {
   public:
     Session(const Config& config);
+    ~Session();
 
     int init();
-    void join();
 
     std::shared_ptr<std::string> keyspace() const {
       return std::atomic_load(&keyspace_);
@@ -71,14 +70,15 @@ class Session : public EventThread<SessionEvent> {
     bool notify_shutdown_async();
     bool notify_set_keyspace_async(const std::string& keyspace);
 
-    Future* connect(const std::string& keyspace);
-    Future* shutdown();
+    bool connect(const std::string& keyspace, Future* future);
+    void close(Future* future);
+
     Future* prepare(const char* statement, size_t length);
     Future* execute(MessageBody* statement);
 
   private:
     bool connect_async();
-    void close();
+    void close_handles();
 
     void init_pools();
     SSLSession* ssl_session_new();
@@ -91,6 +91,7 @@ class Session : public EventThread<SessionEvent> {
     }
 
     virtual void on_run();
+    virtual void on_after_run();
     virtual void on_event(const SessionEvent& event);
 
     static void on_resolve(Resolver* resolver);
@@ -100,22 +101,13 @@ class Session : public EventThread<SessionEvent> {
     typedef std::shared_ptr<IOWorker> IOWorkerPtr;
     typedef std::vector<IOWorkerPtr> IOWorkerCollection;
 
-    enum SessionState {
-      SESSION_STATE_NEW,
-      SESSION_STATE_CONNECTING,
-      SESSION_STATE_READY,
-      SESSION_STATE_DISCONNECTING,
-      SESSION_STATE_DISCONNECTED
-    };
-
   private:
-    std::atomic<SessionState> state_;
     SSLContext* ssl_context_;
     IOWorkerCollection io_workers_;
     std::unique_ptr<Logger> logger_;
     std::shared_ptr<std::string> keyspace_;
-    SessionFuture* connect_future_;
-    SessionFuture* close_future_;
+    Future* connect_future_;
+    Future* close_future_;
     std::set<Host> hosts_;
     Config config_;
     std::unique_ptr<AsyncQueue<MPMCQueue<RequestHandler*>>> request_queue_;
@@ -124,6 +116,26 @@ class Session : public EventThread<SessionEvent> {
     int pending_connections_count_;
     int pending_workers_count_;
     int current_io_worker_;
+};
+
+class SessionCloseFuture : public Future {
+  public:
+    SessionCloseFuture()
+      : Future(CASS_FUTURE_TYPE_SESSION_CLOSE) { }
+};
+
+class SessionConnectFuture : public ResultFuture<Session> {
+  public:
+    SessionConnectFuture(Session* session)
+      : ResultFuture(CASS_FUTURE_TYPE_SESSION_CONNECT, session) { }
+
+    ~SessionConnectFuture() {
+      Session* session = release_result();
+      if(session != nullptr) {
+        // The future was deleted before obtaining the session
+        session->close(nullptr);
+      }
+    }
 };
 
 } // namespace cass

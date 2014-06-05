@@ -130,10 +130,9 @@ void insert_null_value(CassSession* session, CassValueType type) {
 
 BOOST_AUTO_TEST_CASE(test_basic_types)
 {
-  CassFuture* temp_future;
-  test_utils::CassSessionPtr session(cass_cluster_connect(cluster, &temp_future));
-  test_utils::CassFuturePtr session_future(temp_future);
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                          % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -196,10 +195,9 @@ BOOST_AUTO_TEST_CASE(test_basic_types)
 
 BOOST_AUTO_TEST_CASE(test_min_max)
 {
-  CassFuture* temp_future;
-  test_utils::CassSessionPtr session(cass_cluster_connect(cluster, &temp_future));
-  test_utils::CassFuturePtr session_future(temp_future);
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                                % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -253,10 +251,9 @@ BOOST_AUTO_TEST_CASE(test_min_max)
 
 BOOST_AUTO_TEST_CASE(test_null)
 {
-  CassFuture* temp_future;
-  test_utils::CassSessionPtr session(cass_cluster_connect(cluster, &temp_future));
-  test_utils::CassFuturePtr session_future(temp_future);
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                                % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -285,10 +282,9 @@ BOOST_AUTO_TEST_CASE(test_null)
 
 BOOST_AUTO_TEST_CASE(test_timestamp)
 {
-  CassFuture* temp_future;
-  test_utils::CassSessionPtr session(cass_cluster_connect(cluster, &temp_future));
-  test_utils::CassFuturePtr session_future(temp_future);
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                          % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -324,10 +320,9 @@ BOOST_AUTO_TEST_CASE(test_timestamp)
 
 BOOST_AUTO_TEST_CASE(test_counters)
 {
-  CassFuture* temp_future;
-  test_utils::CassSessionPtr session(cass_cluster_connect(cluster, &temp_future));
-  test_utils::CassFuturePtr session_future(temp_future);
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                          % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -366,10 +361,9 @@ BOOST_AUTO_TEST_CASE(test_rows_in_rows_out)
 {
   CassConsistency consistency = CASS_CONSISTENCY_ONE;
 
-  CassFuture* temp_future;
-  test_utils::CassSessionPtr session(cass_cluster_connect(cluster, &temp_future));
-  test_utils::CassFuturePtr session_future(temp_future);
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                          % test_utils::SIMPLE_KEYSPACE % "1"));

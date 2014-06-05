@@ -34,7 +34,7 @@ class AsyncQueue {
       return uv_async_init(loop, &async_, async_cb);
     }
 
-    void close() {
+    void close_handles() {
       uv_close(reinterpret_cast<uv_handle_t*>(&async_), nullptr);
     }
 

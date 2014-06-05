@@ -37,8 +37,8 @@ class EventThread : public LoopThread
       return event_queue_->init(loop(), this, on_event_internal);
     }
 
-    void close() {
-      event_queue_->close();
+    void close_handles() {
+      event_queue_->close_handles();
     }
 
     bool send_event_async(const E& event) {

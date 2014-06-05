@@ -35,16 +35,20 @@ CassError cass_cluster_getopt(const CassCluster* cluster,
   return CASS_OK;
 }
 
-CassSession* cass_cluster_connect(CassCluster* cluster, CassFuture** future) {
-  cass::Session* session = new cass::Session(cluster->config());
-  *future = CassFuture::to(session->connect(std::string()));
-  return CassSession::to(session);
+CassFuture* cass_cluster_connect(CassCluster* cluster) {
+  return cass_cluster_connect_keyspace(cluster, "");
 }
 
-CassSession* cass_cluster_connect_keyspace(CassCluster* cluster, const char* keyspace, CassFuture** future) {
+CassFuture* cass_cluster_connect_keyspace(CassCluster* cluster, const char* keyspace) {
   cass::Session* session = new cass::Session(cluster->config());
-  *future = CassFuture::to(session->connect(keyspace));
-  return CassSession::to(session);
+  cass::SessionConnectFuture* connect_future = new cass::SessionConnectFuture(session);
+
+  if(!session->connect(std::string(), connect_future)) {
+    connect_future->set_error(CASS_ERROR_LIB_ALREADY_CONNECTED, "Error initializing session");
+    delete session;
+  }
+
+  return CassFuture::to(connect_future);
 }
 
 void cass_cluster_free(CassCluster* cluster) {

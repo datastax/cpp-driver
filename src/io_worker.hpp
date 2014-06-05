@@ -70,7 +70,7 @@ class IOWorker : public EventThread<IOWorkerEvent> {
     void set_keyspace(const std::string& keyspace);
     void maybe_shutdown();
     void cleanup();
-    void close();
+    void close_handles();
 
     void on_connect(Host host);
     void on_pool_close(Host host);

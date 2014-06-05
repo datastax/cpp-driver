@@ -78,16 +78,14 @@ MultipleNodesTest::~MultipleNodesTest() {
 
 SingleSessionTest::SingleSessionTest(int numberOfNodesDC1, int numberOfNodesDC2)
   : MultipleNodesTest(numberOfNodesDC1, numberOfNodesDC2) {
-  CassFuture* temp_future;
-  session = cass_cluster_connect(cluster, &temp_future);
-  test_utils::CassFuturePtr connect_future(temp_future);
+  test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(connect_future.get());
+  session = cass_future_get_session(connect_future.get());
 }
 
 SingleSessionTest::~SingleSessionTest() {
    CassFuturePtr close_future(cass_session_close(session));
    cass_future_wait(close_future.get());
-   cass_session_free(session);
 }
 
 void execute_query(CassSession* session,

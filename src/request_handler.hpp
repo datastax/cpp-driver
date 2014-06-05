@@ -18,10 +18,20 @@
 #define __CASS_REQUEST_HANDLER_HPP_INCLUDED__
 
 #include "response_callback.hpp"
-#include "request_future.hpp"
+#include "future.hpp"
+#include "message.hpp"
+#include "timer.hpp"
 
 
 namespace cass {
+
+class ResponseFuture : public ResultFuture<MessageBody> {
+  public:
+    ResponseFuture()
+      : ResultFuture(CASS_FUTURE_TYPE_RESPONSE) { }
+
+    std::string statement;
+};
 
 enum RetryType {
   RETRY_WITH_CURRENT_HOST,
@@ -37,7 +47,8 @@ class RequestHandler : public ResponseCallback {
     RequestHandler(Message* request)
       : timer(nullptr)
       , request_(request)
-      , future_(new RequestFuture()) {
+      , future_(new ResponseFuture()) {
+      future_->retain();
       request->body->retain();
     }
 
@@ -77,7 +88,7 @@ class RequestHandler : public ResponseCallback {
       future_->set_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT, "Request timed out");
     }
 
-    RequestFuture* future() { return future_; }
+    ResponseFuture* future() { return future_; }
 
     bool get_current_host(Host* host) {
       if(hosts.empty()) {
@@ -103,7 +114,7 @@ class RequestHandler : public ResponseCallback {
   private:
     std::list<Host> hosts_attempted_;
     Message* request_;
-    RequestFuture* future_;
+    ResponseFuture* future_;
 };
 
 }
