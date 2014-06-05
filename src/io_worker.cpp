@@ -25,8 +25,7 @@ IOWorker::IOWorker(Session* session,
   : session_(session)
   , logger_(logger)
   , ssl_context_(nullptr)
-  , is_shutting_down_(false)
-  , is_shutdown_(false)
+  , is_closing_(false)
   , config_(config)
   , request_queue_(config.queue_size_io()) {
   prepare_.data = this;
@@ -61,14 +60,14 @@ bool IOWorker::remove_pool_async(Host host) {
   return send_event_async(event);
 }
 
-bool IOWorker::shutdown_async() {
+bool IOWorker::close_async() {
   IOWorkerEvent event;
-  event.type = IOWorkerEvent::SHUTDOWN;
+  event.type = IOWorkerEvent::CLOSE;
   return send_event_async(event);
 }
 
 void IOWorker::add_pool(Host host) {
-  if(!is_shutting_down_ && pools.count(host) == 0) {
+  if(!is_closing_ && pools.count(host) == 0) {
     std::shared_ptr<std::string> keyspace = session_->keyspace();
     pools[host] = new Pool(host,
                            loop(),
@@ -122,10 +121,9 @@ void IOWorker::set_keyspace(const std::string& keyspace) {
   session_->set_keyspace(keyspace);
 }
 
-void IOWorker::maybe_shutdown() {
+void IOWorker::maybe_close() {
   if(pools.empty()) {
-    is_shutdown_ = true;
-    session_->notify_shutdown_async();
+    session_->notify_closed_async();
     close_handles();
   }
 }
@@ -155,8 +153,8 @@ void IOWorker::on_pool_close(Host host) {
     logger_->info("Pool for '%s' closed", host.address.to_string().c_str());
     pending_delete_.push_back(it->second);
     pools.erase(it);
-    if(is_shutting_down_) {
-      maybe_shutdown();
+    if(is_closing_) {
+      maybe_close();
     } else {
       ReconnectRequest* reconnect_request = new ReconnectRequest(this, host);
       Timer::start(loop(),
@@ -172,19 +170,19 @@ void IOWorker::on_event(const IOWorkerEvent& event) {
     add_pool(event.host);
   } else if(event.type == IOWorkerEvent::REMOVE_POOL) {
     // TODO(mpenick):
-  } else if(event.type == IOWorkerEvent::SHUTDOWN) {
-    is_shutting_down_ = true;
+  } else if(event.type == IOWorkerEvent::CLOSE) {
+    is_closing_ = true;
     for(auto entry : pools) {
       entry.second->close();
     }
-    maybe_shutdown();
+    maybe_close();
   }
 }
 
 void IOWorker::on_pool_reconnect(Timer* timer) {
   ReconnectRequest* reconnect_request = static_cast<ReconnectRequest*>(timer->data());
   IOWorker* io_worker = reconnect_request->io_worker;
-  if(!io_worker->is_shutting_down_) {
+  if(!io_worker->is_closing_) {
     io_worker->logger_->info("Attempting to reconnect to '%s'", reconnect_request->host.address.to_string().c_str());
     io_worker->add_pool(reconnect_request->host);
   }

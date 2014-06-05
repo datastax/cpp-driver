@@ -34,17 +34,17 @@ class Logger : public LoopThread {
       , cb_(config.log_callback())
       , log_level_(config.log_level())
       , log_queue_(config.queue_size_log())
-      , is_shutting_down_(false) { }
+      , is_closing_(false) { }
 
     int init() {
       return log_queue_.init(loop(), this, on_log);
     }
 
-    bool shutdown_async() {
-      is_shutting_down_ = true;
-      LogMessage* shutdown_message = new LogMessage();
-      shutdown_message->severity = CASS_LOG_DISABLED;
-      return log_queue_.enqueue(shutdown_message);
+    bool close_async() {
+      is_closing_ = true;
+      LogMessage* close_message = new LogMessage();
+      close_message->severity = CASS_LOG_DISABLED;
+      return log_queue_.enqueue(close_message);
     }
 
 #define LOG_MESSAGE(severity)    \
@@ -95,7 +95,7 @@ class Logger : public LoopThread {
     }
 
     void log(CassLogLevel severity, const char* format, va_list args) {
-      if(is_shutting_down_) return;
+      if(is_closing_) return;
       LogMessage* log_message = new LogMessage;
       log_message->severity = severity;
       log_message->message = format_message(format, args);
@@ -113,7 +113,7 @@ class Logger : public LoopThread {
         }
         delete log_message;
       }
-      if(logger->is_shutting_down_) {
+      if(logger->is_closing_) {
         logger->close();
       }
     }
@@ -122,7 +122,7 @@ class Logger : public LoopThread {
     CassLogCallback cb_;
     CassLogLevel log_level_;
     AsyncQueue<MPMCQueue<LogMessage*>> log_queue_;
-    std::atomic<bool> is_shutting_down_;
+    std::atomic<bool> is_closing_;
 };
 
 } // namespace cass

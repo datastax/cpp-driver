@@ -20,7 +20,7 @@ extern "C" {
 
 const char* cass_error_desc(CassError error) {
   switch(error) {
-#define XX(source, _, code, desc) case ((source << 24) | code): return desc;
+#define XX(source, _, code, desc) case CASS_ERROR(source, code): return desc;
   CASS_ERROR_MAP(XX)
 #undef XX
     default: return "";

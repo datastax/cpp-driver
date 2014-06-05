@@ -43,7 +43,7 @@ struct SessionEvent {
     enum Type {
       CONNECT,
       NOTIFY_CONNECTED,
-      NOTIFY_SHUTDOWN,
+      NOTIFY_CLOSED,
     };
     Type type;
     Host host;
@@ -67,7 +67,7 @@ class Session : public EventThread<SessionEvent> {
     }
 
     bool notify_connect_async(const Host& host);
-    bool notify_shutdown_async();
+    bool notify_closed_async();
     bool notify_set_keyspace_async(const std::string& keyspace);
 
     bool connect(const std::string& keyspace, Future* future);

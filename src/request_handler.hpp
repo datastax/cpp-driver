@@ -68,7 +68,7 @@ class RequestHandler : public ResponseCallback {
           break;
         case CQL_OPCODE_ERROR: {
           ErrorResponse* error = static_cast<ErrorResponse*>(response->body.get());
-          future_->set_error(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error->code),
+          future_->set_error(static_cast<CassError>(CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error->code)),
                              error->message);
         }
           break;

@@ -24,7 +24,7 @@ void cass_session_free(CassSession* session) {
 }
 
 CassFuture* cass_session_close(CassSession* session) {
-  // TODO(mpenick): Make sure this handles shutdown during the middle of startup
+  // TODO(mpenick): Make sure this handles close during the middle of a connect
   cass::SessionCloseFuture* close_future = new cass::SessionCloseFuture();
   session->close(close_future);
   return CassFuture::to(close_future);
@@ -90,9 +90,9 @@ bool Session::notify_connect_async(const Host& host) {
   return send_event_async(event);
 }
 
-bool Session::notify_shutdown_async() {
+bool Session::notify_closed_async() {
   SessionEvent event;
-  event.type = SessionEvent::NOTIFY_SHUTDOWN;
+  event.type = SessionEvent::NOTIFY_CLOSED;
   return send_event_async(event);
 }
 
@@ -124,7 +124,7 @@ void Session::close(Future* future) {
 
   pending_workers_count_ = io_workers_.size();
   for(auto io_worker : io_workers_) {
-    io_worker->shutdown_async();
+    io_worker->close_async();
   }
 }
 
@@ -197,9 +197,9 @@ void Session::on_event(const SessionEvent& event) {
       connect_future_ = nullptr;
     }
     logger_->debug("Session pending connection count %d", pending_connections_count_);
-  } else if(event.type == SessionEvent::NOTIFY_SHUTDOWN) {
+  } else if(event.type == SessionEvent::NOTIFY_CLOSED) {
     if(--pending_workers_count_ == 0) {
-      logger_->shutdown_async();
+      logger_->close_async();
       close_handles();
     }
   }

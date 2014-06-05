@@ -40,7 +40,7 @@ struct IOWorkerEvent {
     enum Type {
       ADD_POOL,
       REMOVE_POOL,
-      SHUTDOWN,
+      CLOSE,
     };
     Type type;
     Host host;
@@ -58,9 +58,7 @@ class IOWorker : public EventThread<IOWorkerEvent> {
 
     bool add_pool_async(Host host);
     bool remove_pool_async(Host host);
-    bool shutdown_async();
-
-    bool is_shutdown() const { return is_shutdown_; }
+    bool close_async();
 
     bool execute(RequestHandler* request_handler);
 
@@ -68,7 +66,7 @@ class IOWorker : public EventThread<IOWorkerEvent> {
     void add_pool(Host host);
     void retry(RequestHandler* request_handler, RetryType retry_type);
     void set_keyspace(const std::string& keyspace);
-    void maybe_shutdown();
+    void maybe_close();
     void cleanup();
     void close_handles();
 
@@ -99,8 +97,7 @@ class IOWorker : public EventThread<IOWorkerEvent> {
     SSLContext* ssl_context_;
     PoolCollection pools;
     std::list<Pool*> pending_delete_;
-    bool is_shutting_down_;
-    std::atomic<bool> is_shutdown_;
+    bool is_closing_;
 
     const Config& config_;
     AsyncQueue<SPSCQueue<RequestHandler*>> request_queue_;

@@ -4,6 +4,7 @@
 #include <boost/test/debug.hpp>
 #include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/format.hpp>
 
 #include "cassandra.h"
 #include "cql_ccm_bridge.hpp"
@@ -107,7 +108,7 @@ void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
   CassError code = cass_future_error_code(future);
   if(code != CASS_OK) {
     CassString message = cass_future_error_message(future);
-    BOOST_FAIL("Error occured during query '" << std::string(message.data, message.length) << "' (" << code << ")");
+    BOOST_FAIL("Error occured during query '" << std::string(message.data, message.length) << "' (" << boost::format("0x%08x") % code << ")");
   }
 }
 

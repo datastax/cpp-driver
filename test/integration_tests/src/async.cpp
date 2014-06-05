@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(test_async)
   validate_results(session, table_name, num_concurrent_requests, ids);
 }
 
-BOOST_AUTO_TEST_CASE(test_async_shutdown)
+BOOST_AUTO_TEST_CASE(test_async_closed)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   const size_t num_concurrent_requests = 4096;
@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE(test_async_shutdown)
   std::vector<test_utils::CassFuturePtr> futures;
   std::vector<test_utils::Uuid> ids = insert_async(session, table_name, num_concurrent_requests, &futures);
 
-  temp_session.reset(); // shutdown session
+  temp_session.reset(); // close session
 
   validate_results(session, table_name, num_concurrent_requests, ids);
 }
