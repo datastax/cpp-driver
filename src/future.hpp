@@ -35,7 +35,7 @@ struct Error;
 template<class T>
 class RefCounted {
   public:
-    RefCounted(int inital_count)
+      RefCounted(int inital_count = 1)
       : ref_count_(inital_count) { }
 
     void retain() { ref_count_++; }
@@ -59,8 +59,8 @@ enum FutureType {
 
 class Future : public RefCounted<Future> {
   public:
-    struct Result {
-        virtual ~Result() { }
+    struct Result : public RefCounted<Future> {
+        virtual ~Result() = default;
     };
 
     struct Error {

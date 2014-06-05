@@ -186,6 +186,7 @@ add_subdirectory(test/integration_tests)
 # examples
 #-------------------
 
+add_subdirectory(examples/async)
 add_subdirectory(examples/basic)
 add_subdirectory(examples/collections)
 add_subdirectory(examples/prepared)

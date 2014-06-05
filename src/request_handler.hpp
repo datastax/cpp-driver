@@ -37,7 +37,14 @@ class RequestHandler : public ResponseCallback {
     RequestHandler(Message* request)
       : timer(nullptr)
       , request_(request)
-      , future_(new RequestFuture()) { }
+      , future_(new RequestFuture()) {
+      request->body->retain();
+    }
+
+    ~RequestHandler() {
+      MessageBody* body = request_->body.release();
+      body->release();
+    }
 
     virtual Message* request() const {
       return request_;

@@ -29,7 +29,7 @@ CassStatement* cass_statement_new(CassString statement,
 }
 
 void cass_statement_free(CassStatement *statement) {
-  delete statement->from();
+  statement->release();
 }
 
 CassError cass_statement_bind_null(CassStatement* statement,
