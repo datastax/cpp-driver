@@ -48,12 +48,14 @@ class LoopThread
     uv_loop_t* loop() { return loop_; }
 
     virtual void on_run() { }
+    virtual void on_after_run() { }
 
   private:
     void static on_run_internal(void* data) {
       LoopThread* thread = static_cast<LoopThread*>(data);
       thread->on_run();
       uv_run(thread->loop_, UV_RUN_DEFAULT);
+      thread->on_after_run();
     }
 
     uv_loop_t* loop_;

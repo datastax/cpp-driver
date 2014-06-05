@@ -81,10 +81,9 @@ void select_task(CassSession* session, const std::string& query, CassConsistency
 
 BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
 {
-  CassFuture* temp_future;
-  test_utils::CassSessionPtr session(cass_cluster_connect(cluster, &temp_future));
-  test_utils::CassFuturePtr session_future(temp_future);
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), "CREATE KEYSPACE tester WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 3};");
   test_utils::execute_query(session.get(), "USE tester;");
@@ -128,10 +127,9 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
 
 BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
 {
-  CassFuture* temp_future;
-  test_utils::CassSessionPtr session(cass_cluster_connect(cluster, &temp_future));
-  test_utils::CassFuturePtr session_future(temp_future);
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), "CREATE KEYSPACE tester WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 3};");
   test_utils::execute_query(session.get(), "USE tester;");

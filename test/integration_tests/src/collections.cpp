@@ -79,10 +79,9 @@ void insert_collection_value(CassSession* session, CassValueType type, CassValue
 }
 
 void insert_collection_all_types(CassCluster* cluster, CassValueType type) {
-  CassFuture* temp_future;
-  test_utils::CassSessionPtr session(cass_cluster_connect(cluster, &temp_future));
-  test_utils::CassFuturePtr session_future(temp_future);
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                                % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -205,10 +204,9 @@ void insert_map_value(CassSession* session, CassValueType primary_type, CassValu
 }
 
 void insert_map_all_types(CassCluster* cluster) {
-  CassFuture* temp_future;
-  test_utils::CassSessionPtr session(cass_cluster_connect(cluster, &temp_future));
-  test_utils::CassFuturePtr session_future(temp_future);
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                                % test_utils::SIMPLE_KEYSPACE % "1"));

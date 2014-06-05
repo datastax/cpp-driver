@@ -126,7 +126,7 @@ void IOWorker::maybe_shutdown() {
   if(pools.empty()) {
     is_shutdown_ = true;
     session_->notify_shutdown_async();
-    close();
+    close_handles();
   }
 }
 
@@ -138,9 +138,9 @@ void IOWorker::cleanup() {
   }
 }
 
-void IOWorker::close() {
-  EventThread::close();
-  request_queue_.close();
+void IOWorker::close_handles() {
+  EventThread::close_handles();
+  request_queue_.close_handles();
   uv_prepare_stop(&prepare_);
   logger_->debug("IO worker active handles %d", loop()->active_handles);
 }

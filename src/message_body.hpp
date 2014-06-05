@@ -25,7 +25,7 @@
 
 namespace cass {
 
-class MessageBody : public Future::Result {
+class MessageBody : public RefCounted<MessageBody> {
   public:
     MessageBody(uint8_t opcode)
       : opcode_(opcode) { }

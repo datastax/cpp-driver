@@ -275,8 +275,8 @@ cass_cluster_getopt(const CassCluster* cluster,
  * @param[out] future A future that must be freed.
  * @return A session that must be freed.
  */
-CASS_EXPORT CassSession*
-cass_cluster_connect(CassCluster* cluster, CassFuture** future);
+CASS_EXPORT CassFuture*
+cass_cluster_connect(CassCluster* cluster);
 
 /**
  * Connnects a session to the cluster and sets the keyspace.
@@ -286,10 +286,9 @@ cass_cluster_connect(CassCluster* cluster, CassFuture** future);
  * @param[out] future A future that must be freed.
  * @return A session that must be freed.
  */
-CASS_EXPORT CassSession*
+CASS_EXPORT CassFuture*
 cass_cluster_connect_keyspace(CassCluster* cluster,
-                              const char* keyspace,
-                              CassFuture** future);
+                              const char* keyspace);
 
 /**
  * Frees a cluster instance.
@@ -306,17 +305,10 @@ cass_cluster_free(CassCluster* cluster);
  ***********************************************************************************/
 
 /**
- * Frees a session instance. A session must be closed before it can be freed.
- *
- * @param[in] session
- */
-CASS_EXPORT void
-cass_session_free(CassSession* session);
-
-/**
  * Closes the session instance, outputs a close future which can
  * be used to determine when the session has been terminated. This allows
- * in-flight requests to finish.
+ * in-flight requests to finish. It is an error to call this method twices
+ * with the same session.
  *
  * @param[in] session
  * @return A future that must be freed.
@@ -409,8 +401,22 @@ cass_future_wait_timed(CassFuture* future,
  * subsequent calls will return NULL.
  *
  * @param[in] future
+ * @return CassSession instance if successful, otherwise NULL for error. The return instance
+ * must be closed using cass_session_close().
+ *
+ * @see cass_session_execute() and cass_session_execute_batch()
+ */
+CASS_EXPORT CassSession*
+cass_future_get_session(CassFuture* future);
+
+/**
+ * Gets the result of a successful future. If the future is not ready this method will
+ * wait for the future to be set. The first successful call consumes the future, all
+ * subsequent calls will return NULL.
+ *
+ * @param[in] future
  * @return CassResult instance if successful, otherwise NULL for error. The return instance
- * must be freed using cass_result_free();
+ * must be freed using cass_result_free().
  *
  * @see cass_session_execute() and cass_session_execute_batch()
  */
@@ -424,7 +430,7 @@ cass_future_get_result(CassFuture* future);
  *
  * @param[in] future
  * @return CassPrepared instance if successful, otherwise NULL for error. The return instance
- * must be freed using cass_prepared_free();
+ * must be freed using cass_prepared_free().
  *
  * @see cass_session_prepare()
  */

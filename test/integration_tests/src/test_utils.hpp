@@ -24,7 +24,6 @@ struct CassSessionDeleter {
     void operator()(CassSession* ptr) {
       CassFuture* future = cass_session_close(ptr);
       cass_future_wait(future);
-      cass_session_free(ptr);
       cass_future_free(future);
     }
 };

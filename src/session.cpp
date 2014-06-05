@@ -25,7 +25,9 @@ void cass_session_free(CassSession* session) {
 
 CassFuture* cass_session_close(CassSession* session) {
   // TODO(mpenick): Make sure this handles shutdown during the middle of startup
-  return CassFuture::to(session->shutdown());
+  cass::SessionCloseFuture* close_future = new cass::SessionCloseFuture();
+  session->close(close_future);
+  return CassFuture::to(close_future);
 }
 
 
@@ -49,8 +51,7 @@ CassFuture* cass_session_execute_batch(CassSession* session,
 namespace cass {
 
 Session::Session(const Config& config)
-  : state_(SESSION_STATE_NEW)
-  , ssl_context_(nullptr)
+  : ssl_context_(nullptr)
   , connect_future_(nullptr)
   , close_future_(nullptr)
   , config_(config)
@@ -59,6 +60,13 @@ Session::Session(const Config& config)
   , pending_connections_count_(0)
   , pending_workers_count_(0)
   , current_io_worker_(0) { }
+
+
+Session::~Session() {
+  if(connect_future_ != nullptr) {
+    connect_future_->release();
+  }
+}
 
 int Session::init() {
   int rc = EventThread::init(config_.queue_size_event());
@@ -75,14 +83,6 @@ int Session::init() {
   return rc;
 }
 
-void Session::join() {
-  for(auto io_worker : io_workers_) {
-    io_worker->join();
-  }
-  logger_->join();
-  EventThread::join();
-}
-
 bool Session::notify_connect_async(const Host& host) {
   SessionEvent event;
   event.type = SessionEvent::NOTIFY_CONNECTED;
@@ -96,30 +96,37 @@ bool Session::notify_shutdown_async() {
   return send_event_async(event);
 }
 
-Future* Session::connect(const std::string& keyspace) {
-  connect_future_ = new SessionFuture();
-
-  SessionState expected_state = SESSION_STATE_NEW;
-  if (state_.compare_exchange_strong(
-        expected_state,
-        SESSION_STATE_CONNECTING)) {
-
-    logger_.reset(new Logger(config_));
-    logger_->init();
-
-    init();
-    if(!keyspace.empty()) {
-      set_keyspace(keyspace);
-    }
-    run();
-    connect_async();
-  } else {
-    connect_future_->set_error(CASS_ERROR_LIB_ALREADY_CONNECTED, "Connect has already been called");
+bool Session::connect(const std::string& keyspace, Future* future) {
+  logger_.reset(new Logger(config_));
+  if(logger_->init() != 0 || init() != 0) {
+    return false;
   }
 
-  return connect_future_;
+  if(!connect_async()) {
+    return false;
+  }
+
+  if(!keyspace.empty()) {
+    set_keyspace(keyspace);
+  }
+
+  connect_future_ = future;
+  connect_future_->retain();
+
+  run();
+
+  return true;
 }
 
+void Session::close(Future* future) {
+  close_future_ = future;
+  close_future_->retain();
+
+  pending_workers_count_ = io_workers_.size();
+  for(auto io_worker : io_workers_) {
+    io_worker->shutdown_async();
+  }
+}
 
 bool Session::connect_async() {
   SessionEvent event;
@@ -137,27 +144,9 @@ void Session::init_pools() {
   }
 }
 
-void Session::close() {
-  EventThread::close();
-  request_queue_->close();
-}
-
-Future* Session::shutdown() {
-  close_future_ = new ShutdownSessionFuture(this);
-
-  SessionState expected_state_ready = SESSION_STATE_READY;
-  SessionState expected_state_connecting = SESSION_STATE_CONNECTING;
-  if (state_.compare_exchange_strong(expected_state_ready, SESSION_STATE_DISCONNECTING) ||
-      state_.compare_exchange_strong(expected_state_connecting, SESSION_STATE_DISCONNECTING)) {
-    pending_workers_count_ = io_workers_.size();
-    for(auto io_worker : io_workers_) {
-      io_worker->shutdown_async();
-    }
-  } else {
-    close_future_->set_error(CASS_ERROR_LIB_NOT_CONNECTED, "The session is not connected");
-  }
-
-  return close_future_;
+void Session::close_handles() {
+  EventThread::close_handles();
+  request_queue_->close_handles();
 }
 
 void Session::on_run() {
@@ -167,6 +156,21 @@ void Session::on_run() {
   for(auto io_worker : io_workers_) {
     io_worker->run();
   }
+}
+
+void Session::on_after_run() {
+  for(auto io_worker : io_workers_) {
+    io_worker->join();
+  }
+  logger_->join();
+
+  if(close_future_) {
+    close_future_->set();
+  }
+
+  // Let the session thread handle the final cleanup of the session. At this
+  // point we know that no other code is using this object.
+  delete this;
 }
 
 void Session::on_event(const SessionEvent& event) {
@@ -189,18 +193,14 @@ void Session::on_event(const SessionEvent& event) {
     if(--pending_connections_count_ == 0) {
       logger_->debug("Session is connected");
       load_balancing_policy_->init(hosts_);
-      state_ = SESSION_STATE_READY;
-      connect_future_->set_result();
+      connect_future_->set();
       connect_future_ = nullptr;
     }
     logger_->debug("Session pending connection count %d", pending_connections_count_);
   } else if(event.type == SessionEvent::NOTIFY_SHUTDOWN) {
     if(--pending_workers_count_ == 0) {
-      close_future_->set_result();
-      close_future_ = nullptr;
-      state_ = SESSION_STATE_DISCONNECTED;
       logger_->shutdown_async();
-      close();
+      close_handles();
     }
   }
 }
