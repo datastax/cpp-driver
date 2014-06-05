@@ -472,6 +472,11 @@ constexpr const char* CREATE_TABLE_TIME_SERIES =
     "inet_sample inet,"
     "PRIMARY KEY(id, event_time));";
 
+constexpr const char* CREATE_TABLE_SIMPLE =
+        "CREATE TABLE %s ("
+        "id int PRIMARY KEY,"
+        "test_val text);";
+
 extern const std::string CREATE_KEYSPACE_SIMPLE_FORMAT;
 extern const std::string CREATE_KEYSPACE_GENERIC_FORMAT;
 extern const std::string SIMPLE_KEYSPACE;
