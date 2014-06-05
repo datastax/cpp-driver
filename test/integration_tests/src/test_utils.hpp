@@ -20,12 +20,8 @@ namespace test_utils {
 constexpr cass_duration_t ONE_MILLISECOND_IN_MICROS = 1000; // in microseconds
 constexpr cass_duration_t ONE_SECOND_IN_MICROS = 1000 * ONE_MILLISECOND_IN_MICROS;
 
-template<class T>
-struct StackPtrFree;
-
-template<>
-struct StackPtrFree<CassSession> {
-    static void free(CassSession* ptr) {
+struct CassSessionDeleter {
+    void operator()(CassSession* ptr) {
       CassFuture* future = cass_session_close(ptr);
       cass_future_wait(future);
       cass_session_free(ptr);
@@ -33,87 +29,49 @@ struct StackPtrFree<CassSession> {
     }
 };
 
-template<>
-struct StackPtrFree<CassFuture> {
-    static void free(CassFuture* ptr) {
-      cass_future_free(ptr);
-    }
+struct CassFutureDeleter {
+  void operator()(CassFuture* ptr) {
+    cass_future_free(ptr);
+  }
 };
 
-template<>
-struct StackPtrFree<CassStatement> {
-    static void free(CassStatement* ptr) {
+struct CassStatementDeleter {
+    void operator()(CassStatement* ptr) {
       cass_statement_free(ptr);
     }
 };
 
-template<>
-struct StackPtrFree<const CassResult> {
-    static void free(const CassResult* ptr) {
+struct CassResultDeleter {
+    void operator()(const CassResult* ptr) {
       cass_result_free(ptr);
     }
 };
 
-template<>
-struct StackPtrFree<CassIterator> {
-    static void free(CassIterator* ptr) {
+struct CassIteratorDeleter {
+    void operator()(CassIterator* ptr) {
       cass_iterator_free(ptr);
     }
 };
 
-template<>
-struct StackPtrFree<CassCollection> {
-    static void free(CassCollection* ptr) {
+struct CassCollectionDeleter {
+    void operator()(CassCollection* ptr) {
       cass_collection_free(ptr);
     }
 };
 
-template<>
-struct StackPtrFree<const CassPrepared> {
-    static void free(const CassPrepared* ptr) {
+struct CassPreparedDeleter {
+    void operator()(const CassPrepared* ptr) {
       cass_prepared_free(ptr);
     }
 };
 
-template<class T>
-class StackPtr {
-  public:
-    StackPtr() : ptr_(nullptr) { }
-    StackPtr(T* ptr) : ptr_(ptr) { }
-
-    StackPtr(const StackPtr&) = delete;
-    StackPtr& operator=(const StackPtr&) = delete;
-    StackPtr& operator=(T*) = delete;
-
-    ~StackPtr() {
-      if(ptr_ != nullptr) {
-        StackPtrFree<T>::free(ptr_);
-      }
-    }
-
-    T* get() const {
-      return ptr_;
-    }
-
-    T* release() {
-      T* temp = ptr_;
-      ptr_ = nullptr;
-      return temp;
-    }
-
-    void assign(T* ptr) {
-      assert(ptr_ == nullptr);
-      ptr_ = ptr;
-    }
-
-    T** address_of() {
-      assert(ptr_ == nullptr);
-      return &ptr_;
-    }
-
-  private:
-    T* ptr_;
-};
+typedef std::unique_ptr<CassSession, CassSessionDeleter> CassSessionPtr;
+typedef std::unique_ptr<CassFuture, CassFutureDeleter> CassFuturePtr;
+typedef std::unique_ptr<CassStatement, CassStatementDeleter> CassStatementPtr;
+typedef std::unique_ptr<const CassResult, CassResultDeleter> CassResultPtr;
+typedef std::unique_ptr<CassIterator, CassIteratorDeleter> CassIteratorPtr;
+typedef std::unique_ptr<CassCollection, CassCollectionDeleter> CassCollectionPtr;
+typedef std::unique_ptr<const CassPrepared, CassPreparedDeleter> CassPreparedPtr;
 
 template<class T>
 struct Value;
@@ -438,7 +396,7 @@ const char* get_value_type(CassValueType type);
 
 void execute_query(CassSession* session,
                    const std::string& query,
-                   StackPtr<const CassResult>* result = nullptr,
+                   CassResultPtr* result = nullptr,
                    CassConsistency consistency = CASS_CONSISTENCY_ONE);
 
 void wait_and_check_error(CassFuture* future, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);

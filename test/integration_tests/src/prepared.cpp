@@ -45,7 +45,7 @@ const char* PreparedTests::ALL_TYPE_TABLE_NAME = "all_types_table_prepared";
 BOOST_FIXTURE_TEST_SUITE(prepared, PreparedTests)
 
 void insert_all_types(CassSession* session, const CassPrepared* prepared, const AllTypes& all_types) {
-  test_utils::StackPtr<CassStatement> statement(cass_prepared_bind(prepared, 11, CASS_CONSISTENCY_ONE));
+  test_utils::CassStatementPtr statement(cass_prepared_bind(prepared, 11, CASS_CONSISTENCY_ONE));
 
   cass_statement_bind_uuid(statement.get(), 0, all_types.id.uuid);
   cass_statement_bind_string(statement.get(), 1, all_types.text_sample);
@@ -59,7 +59,7 @@ void insert_all_types(CassSession* session, const CassPrepared* prepared, const 
   cass_statement_bind_int64(statement.get(), 9, all_types.timestamp_sample);
   cass_statement_bind_inet(statement.get(), 10, all_types.inet_sample);
 
-  test_utils::StackPtr<CassFuture> future(cass_session_execute(session, statement.get()));
+  test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
 
   test_utils::wait_and_check_error(future.get());
 }
@@ -104,10 +104,10 @@ BOOST_AUTO_TEST_CASE(test_bound_all_types_different_values)
                                                "blob_sample, boolean_sample, timestamp_sample, inet_sample) "
                                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)") % ALL_TYPE_TABLE_NAME);
 
-  test_utils::StackPtr<CassFuture> prepared_future(cass_session_prepare(session,
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
                                                                         cass_string_init2(insert_query.data(), insert_query.size())));
   test_utils::wait_and_check_error(prepared_future.get());
-  test_utils::StackPtr<const CassPrepared> prepared(cass_future_get_prepared(prepared_future.get()));
+  test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
   uint8_t varint1[] = { 1, 2, 3 };
   uint8_t varint2[] = { 0, 0, 0 };
@@ -147,12 +147,12 @@ BOOST_AUTO_TEST_CASE(test_bound_all_types_different_values)
                                  % test_utils::string_from_uuid(all_types[1].id)
                                  % test_utils::string_from_uuid(all_types[2].id));
 
-  test_utils::StackPtr<const CassResult> result;
+  test_utils::CassResultPtr result;
   test_utils::execute_query(session, select_query, &result);
   BOOST_REQUIRE(cass_result_row_count(result.get()) == all_types_count);
   BOOST_REQUIRE(cass_result_column_count(result.get()) == 11);
 
-  test_utils::StackPtr<CassIterator> iterator(cass_iterator_from_result(result.get()));
+  test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
 
   while(cass_iterator_next(iterator.get())) {
     const CassRow* row = cass_iterator_get_row(iterator.get());
@@ -173,12 +173,12 @@ BOOST_AUTO_TEST_CASE(test_bound_all_types_null_values)
                                                "blob_sample, boolean_sample, timestamp_sample, inet_sample) "
                                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)") % ALL_TYPE_TABLE_NAME);
 
-  test_utils::StackPtr<CassFuture> prepared_future(cass_session_prepare(session,
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
                                                                         cass_string_init2(insert_query.data(), insert_query.size())));
   test_utils::wait_and_check_error(prepared_future.get());
-  test_utils::StackPtr<const CassPrepared> prepared(cass_future_get_prepared(prepared_future.get()));
+  test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
-  test_utils::StackPtr<CassStatement> statement(cass_prepared_bind(prepared.get(), 11, CASS_CONSISTENCY_ONE));
+  test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get(), 11, CASS_CONSISTENCY_ONE));
 
   test_utils::Uuid id = test_utils::generate_time_uuid();
 
@@ -194,7 +194,7 @@ BOOST_AUTO_TEST_CASE(test_bound_all_types_null_values)
   cass_statement_bind_null(statement.get(), 9);
   cass_statement_bind_null(statement.get(), 10);
 
-  test_utils::StackPtr<CassFuture> future(cass_session_execute(session, statement.get()));
+  test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
 
   test_utils::wait_and_check_error(future.get());
 
@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(test_bound_all_types_null_values)
                                  % ALL_TYPE_TABLE_NAME
                                  % test_utils::string_from_uuid(id));
 
-  test_utils::StackPtr<const CassResult> result;
+  test_utils::CassResultPtr result;
   test_utils::execute_query(session, select_query, &result);
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
   BOOST_REQUIRE(cass_result_column_count(result.get()) == 11);
@@ -233,19 +233,19 @@ BOOST_AUTO_TEST_CASE(test_select_one)
 
   std::string select_query = str(boost::format("SELECT * FROM %s WHERE tweet_id = ?;") % table_name);
 
-  test_utils::StackPtr<CassFuture> prepared_future(cass_session_prepare(session,
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
                                                                         cass_string_init2(select_query.data(), select_query.size())));
   test_utils::wait_and_check_error(prepared_future.get());
-  test_utils::StackPtr<const CassPrepared> prepared(cass_future_get_prepared(prepared_future.get()));
+  test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
   int tweet_id = 5;
-  test_utils::StackPtr<CassStatement> statement(cass_prepared_bind(prepared.get(), 1, CASS_CONSISTENCY_ONE));
+  test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get(), 1, CASS_CONSISTENCY_ONE));
   BOOST_REQUIRE(cass_statement_bind_int32(statement.get(), 0, tweet_id) == CASS_OK);
 
-  test_utils::StackPtr<CassFuture> future(cass_session_execute(session, statement.get()));
+  test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
   test_utils::wait_and_check_error(future.get());
 
-  test_utils::StackPtr<const CassResult> result(cass_future_get_result(future.get()));
+  test_utils::CassResultPtr result(cass_future_get_result(future.get()));
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
   BOOST_REQUIRE(cass_result_column_count(result.get()) == 3);
 
@@ -259,17 +259,17 @@ BOOST_AUTO_TEST_CASE(test_select_one)
 }
 
 const CassPrepared* prepare_statement(CassSession* session, std::string query) {
-  test_utils::StackPtr<CassFuture> prepared_future(cass_session_prepare(session,
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
                                                                         cass_string_init2(query.data(), query.size())));
   test_utils::wait_and_check_error(prepared_future.get());
   return cass_future_get_prepared(prepared_future.get());
 }
 
 void execute_statement(CassSession* session, const CassPrepared* prepared, int value) {
-  test_utils::StackPtr<CassStatement> statement(cass_prepared_bind(prepared, 2, CASS_CONSISTENCY_ONE));
+  test_utils::CassStatementPtr statement(cass_prepared_bind(prepared, 2, CASS_CONSISTENCY_ONE));
   BOOST_REQUIRE(cass_statement_bind_double(statement.get(), 0, static_cast<double>(value)) == CASS_OK);
   BOOST_REQUIRE(cass_statement_bind_int32(statement.get(), 1, value) == CASS_OK);
-  test_utils::StackPtr<CassFuture> future(cass_session_execute(session, statement.get()));
+  test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
   test_utils::wait_and_check_error(future.get());
 }
 
@@ -290,28 +290,24 @@ BOOST_AUTO_TEST_CASE(test_massive_number_of_prepares)
     tweet_ids.push_back(tweet_id);
   }
 
-  std::vector<const CassPrepared*> prepares;
+  std::vector<test_utils::CassPreparedPtr> prepares;
   std::vector<std::future<void>> execute_tasks;
   for(size_t i = 0; i < number_of_prepares; ++i) {
-    const CassPrepared* prepared = prepare_tasks[i].get();
-    execute_tasks.push_back(std::async(std::launch::async, execute_statement, session, prepared, i));
-    prepares.push_back(prepared);
+    test_utils::CassPreparedPtr prepared(prepare_tasks[i].get());
+    execute_tasks.push_back(std::async(std::launch::async, execute_statement, session, prepared.get(), i));
+    prepares.emplace_back(std::move(prepared));
   }
 
   for(auto& task : execute_tasks) {
     task.wait();
   }
 
-  for(auto prepared : prepares) {
-    cass_prepared_free(prepared);
-  }
-
   std::string select_query = str(boost::format("SELECT * FROM %s;") % table_name);
-  test_utils::StackPtr<const CassResult> result;
+  test_utils::CassResultPtr result;
   test_utils::execute_query(session, select_query, &result);
   BOOST_REQUIRE(cass_result_row_count(result.get()) == number_of_prepares);
 
-  test_utils::StackPtr<CassIterator> iterator(cass_iterator_from_result(result.get()));
+  test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
 
   while(cass_iterator_next(iterator.get())) {
     const CassRow* row = cass_iterator_get_row(iterator.get());
