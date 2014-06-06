@@ -108,7 +108,7 @@ void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
   CassError code = cass_future_error_code(future);
   if(code != CASS_OK) {
     CassString message = cass_future_error_message(future);
-    BOOST_FAIL("Error occured during query '" << std::string(message.data, message.length) << "' (" << boost::format("0x%08x") % code << ")");
+    BOOST_FAIL("Error occured during query '" << std::string(message.data, message.length) << "' (" << boost::format("0x%08X") % code << ")");
   }
 }
 

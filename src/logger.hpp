@@ -40,11 +40,11 @@ class Logger : public LoopThread {
       return log_queue_.init(loop(), this, on_log);
     }
 
-    bool close_async() {
+    void close_async() {
       is_closing_ = true;
-      LogMessage* close_message = new LogMessage();
-      close_message->severity = CASS_LOG_DISABLED;
-      return log_queue_.enqueue(close_message);
+      while(!log_queue_.enqueue(nullptr)) {
+        // Keep trying
+      }
     }
 
 #define LOG_MESSAGE(severity)    \
@@ -95,7 +95,9 @@ class Logger : public LoopThread {
     }
 
     void log(CassLogLevel severity, const char* format, va_list args) {
-      if(is_closing_) return;
+      if(is_closing_) {
+        return;
+      }
       LogMessage* log_message = new LogMessage;
       log_message->severity = severity;
       log_message->message = format_message(format, args);
@@ -104,15 +106,19 @@ class Logger : public LoopThread {
 
     static void on_log(uv_async_t* async, int status) {
       Logger* logger = static_cast<Logger*>(async->data);
+
       LogMessage* log_message;
       while(logger->log_queue_.dequeue(log_message)) {
-        if(log_message->severity != CASS_LOG_DISABLED) {
-          CassString message = cass_string_init2(log_message->message.data(),
-                                                 log_message->message.size());
-          logger->cb_(logger->data_, log_message->time, log_message->severity, message);
+        if(log_message != nullptr) {
+          if(log_message->severity != CASS_LOG_DISABLED) {
+            CassString message = cass_string_init2(log_message->message.data(),
+                                                   log_message->message.size());
+            logger->cb_(logger->data_, log_message->time, log_message->severity, message);
+          }
+          delete log_message;
         }
-        delete log_message;
       }
+
       if(logger->is_closing_) {
         logger->close();
       }

@@ -26,7 +26,7 @@ void cass_session_free(CassSession* session) {
 CassFuture* cass_session_close(CassSession* session) {
   // TODO(mpenick): Make sure this handles close during the middle of a connect
   cass::SessionCloseFuture* close_future = new cass::SessionCloseFuture();
-  session->close(close_future);
+  session->close_async(close_future);
   return CassFuture::to(close_future);
 }
 
@@ -57,10 +57,10 @@ Session::Session(const Config& config)
   , config_(config)
   , load_balancing_policy_(new RoundRobinPolicy())
   , pending_resolve_count_(0)
-  , pending_connections_count_(0)
+  , pending_pool_count_(0)
   , pending_workers_count_(0)
-  , current_io_worker_(0) { }
-
+  , current_io_worker_(0)
+  , is_closing_(false) { }
 
 Session::~Session() {
   if(connect_future_ != nullptr) {
@@ -83,10 +83,9 @@ int Session::init() {
   return rc;
 }
 
-bool Session::notify_connect_async(const Host& host) {
+bool Session::notify_ready_async() {
   SessionEvent event;
-  event.type = SessionEvent::NOTIFY_CONNECTED;
-  event.host = host;
+  event.type = SessionEvent::NOTIFY_READY;
   return send_event_async(event);
 }
 
@@ -96,13 +95,15 @@ bool Session::notify_closed_async() {
   return send_event_async(event);
 }
 
-bool Session::connect(const std::string& keyspace, Future* future) {
+bool Session::connect_async(const std::string& keyspace, Future* future) {
   logger_.reset(new Logger(config_));
   if(logger_->init() != 0 || init() != 0) {
     return false;
   }
 
-  if(!connect_async()) {
+  SessionEvent event;
+  event.type = SessionEvent::CONNECT;
+  if(!send_event_async(event)) {
     return false;
   }
 
@@ -118,25 +119,18 @@ bool Session::connect(const std::string& keyspace, Future* future) {
   return true;
 }
 
-void Session::close(Future* future) {
+void Session::close_async(Future* future) {
   close_future_ = future;
   close_future_->retain();
 
-  pending_workers_count_ = io_workers_.size();
-  for(auto io_worker : io_workers_) {
-    io_worker->close_async();
+  is_closing_ = true;
+  while(!request_queue_->enqueue(nullptr)) {
+    // Keep trying
   }
 }
 
-bool Session::connect_async() {
-  SessionEvent event;
-  event.type = SessionEvent::CONNECT;
-  return send_event_async(event);
-}
-
 void Session::init_pools() {
-  int num_pools =  hosts_.size() * io_workers_.size();
-  pending_connections_count_ = num_pools * config_.core_connections_per_host();
+  pending_pool_count_ = hosts_.size() * io_workers_.size();
   for(auto& host : hosts_) {
     for(auto io_worker : io_workers_) {
       io_worker->add_pool_async(host);
@@ -164,13 +158,15 @@ void Session::on_after_run() {
   }
   logger_->join();
 
-  if(close_future_) {
-    close_future_->set();
-  }
+  Future* close_future = close_future_;
 
   // Let the session thread handle the final cleanup of the session. At this
   // point we know that no other code is using this object.
   delete this;
+
+  if(close_future) {
+    close_future->set();
+  }
 }
 
 void Session::on_event(const SessionEvent& event) {
@@ -189,14 +185,14 @@ void Session::on_event(const SessionEvent& event) {
     if(pending_resolve_count_ == 0) {
       init_pools();
     }
-  } else if(event.type == SessionEvent::NOTIFY_CONNECTED) {
-    if(--pending_connections_count_ == 0) {
+  } else if(event.type == SessionEvent::NOTIFY_READY) {
+    if(--pending_pool_count_ == 0) {
       logger_->debug("Session is connected");
       load_balancing_policy_->init(hosts_);
       connect_future_->set();
       connect_future_ = nullptr;
     }
-    logger_->debug("Session pending connection count %d", pending_connections_count_);
+    logger_->debug("Session pending pool count %d", pending_pool_count_);
   } else if(event.type == SessionEvent::NOTIFY_CLOSED) {
     if(--pending_workers_count_ == 0) {
       logger_->close_async();
@@ -252,24 +248,34 @@ void Session::on_execute(uv_async_t* data, int status) {
 
   RequestHandler* request_handler = nullptr;
   while (session->request_queue_->dequeue(request_handler)) {
-    request_handler->keyspace = session->keyspace();
-    session->load_balancing_policy_->new_query_plan(&request_handler->hosts);
+    if(request_handler != nullptr) {
+      request_handler->keyspace = session->keyspace();
+      session->load_balancing_policy_->new_query_plan(&request_handler->hosts);
 
-    size_t start = session->current_io_worker_;
-    size_t remaining = session->io_workers_.size();
-    while(remaining != 0) {
-      // TODO(mpenick): Make this something better than RR
-      auto io_worker = session->io_workers_[start];
-      if(io_worker->execute(request_handler)) {
-        session->current_io_worker_ = (start + 1) % session->io_workers_.size();
-        break;
+      size_t start = session->current_io_worker_;
+      size_t remaining = session->io_workers_.size();
+      const size_t size = session->io_workers_.size();
+      while(remaining != 0) {
+        // TODO(mpenick): Make this something better than RR
+        auto io_worker = session->io_workers_[start % size];
+        if(io_worker->execute(request_handler)) {
+          session->current_io_worker_ = (start + 1) % size;
+          break;
+        }
+        start++;
+        remaining--;
       }
-      start++;
-      remaining--;
-    }
 
-    if(remaining == 0) {
-      request_handler->on_error(CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD, "All workers are busy");
+      if(remaining == 0) {
+        request_handler->on_error(CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD, "All workers are busy");
+      }
+    }
+  }
+
+  if(session->is_closing_) {
+    session->pending_workers_count_ = session->io_workers_.size();
+    for(auto io_worker : session->io_workers_) {
+      io_worker->close_async();
     }
   }
 }

@@ -59,8 +59,7 @@ void validate_results(CassSession* session,
 {
   std::string select_query = str(boost::format("SELECT * FROM %s;") % table_name);
   test_utils::CassResultPtr result;
-  test_utils::execute_query(session, select_query, &result);
-  printf("table name: %s, row count: %zu, num concurrent requests, %zu\n", table_name.c_str(), cass_result_row_count(result.get()), num_concurrent_requests);
+  test_utils::execute_query(session, select_query, &result, CASS_CONSISTENCY_QUORUM);
   BOOST_REQUIRE(cass_result_row_count(result.get()) == num_concurrent_requests);
 
   test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
@@ -88,7 +87,7 @@ BOOST_AUTO_TEST_CASE(test_async)
   validate_results(session, table_name, num_concurrent_requests, ids);
 }
 
-BOOST_AUTO_TEST_CASE(test_async_closed)
+BOOST_AUTO_TEST_CASE(test_async_close)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   const size_t num_concurrent_requests = 4096;
@@ -100,7 +99,7 @@ BOOST_AUTO_TEST_CASE(test_async_closed)
   test_utils::execute_query(temp_session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
   std::vector<test_utils::CassFuturePtr> futures;
-  std::vector<test_utils::Uuid> ids = insert_async(session, table_name, num_concurrent_requests, &futures);
+  std::vector<test_utils::Uuid> ids = insert_async(temp_session.get(), table_name, num_concurrent_requests, &futures);
 
   temp_session.reset(); // close session
 

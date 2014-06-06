@@ -19,16 +19,15 @@
 #include "test_utils.hpp"
 
 
-struct PreparedNodeOutageTests : test_utils::SingleSessionTest {
-    PreparedNodeOutageTests() : SingleSessionTest(2, 0) {
+struct PreparedOutageTests : test_utils::SingleSessionTest {
+    PreparedOutageTests() : SingleSessionTest(2, 0) {
       test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                                    % test_utils::SIMPLE_KEYSPACE % "1"));
       test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
     }
 };
 
-
-BOOST_FIXTURE_TEST_SUITE(prepared_node_outage, PreparedNodeOutageTests)
+BOOST_FIXTURE_TEST_SUITE(prepared_outage, PreparedOutageTests)
 
 BOOST_AUTO_TEST_CASE(test_reprepared_on_new_node)
 {

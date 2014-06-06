@@ -38,12 +38,11 @@ enum RetryType {
   RETRY_WITH_NEXT_HOST
 };
 
-class RequestHandler;
-typedef std::function<void(RequestHandler* request_handler,
-                           RetryType type)> RetryCallback;
-
 class RequestHandler : public ResponseCallback {
   public:
+    typedef std::function<void(RequestHandler*)> Callback;
+    typedef std::function<void(RequestHandler*, RetryType)> RetryCallback;
+
     RequestHandler(Message* request)
       : timer(nullptr)
       , request_(request)
@@ -58,7 +57,7 @@ class RequestHandler : public ResponseCallback {
     }
 
     virtual Message* request() const {
-      return request_;
+      return request_.get();
     }
 
     virtual void on_set(Message* response) {
@@ -77,15 +76,32 @@ class RequestHandler : public ResponseCallback {
           future_->set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE, "Unexpected response");
           break;
       }
+      notify_finished();;
     }
 
     virtual void on_error(CassError code, const std::string& message) {
       future_->set_error(code, message);
+      notify_finished();
     }
 
     virtual void on_timeout() {
       // TODO(mpenick): Get the host for errors
       future_->set_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT, "Request timed out");
+      notify_finished();
+    }
+
+    void set_retry_callback(RetryCallback callback) {
+      retry_callback_ = callback;
+    }
+
+    void retry(RetryType type) {
+      if(retry_callback_) {
+        retry_callback_(this, type);
+      }
+    }
+
+    void set_finished_callback(Callback callback) {
+      finished_callback_ = callback;
     }
 
     ResponseFuture* future() { return future_; }
@@ -112,9 +128,17 @@ class RequestHandler : public ResponseCallback {
     std::shared_ptr<std::string> keyspace;
 
   private:
+    void notify_finished() {
+      if(finished_callback_) {
+        finished_callback_(this);
+      }
+    }
+
     std::list<Host> hosts_attempted_;
-    Message* request_;
+    std::unique_ptr<Message> request_;
     ResponseFuture* future_;
+    RetryCallback retry_callback_;
+    Callback finished_callback_;
 };
 
 }

@@ -19,7 +19,7 @@
 
 #include <uv.h>
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <vector>
 
 #include "event_thread.hpp"
@@ -40,12 +40,10 @@ struct IOWorkerEvent {
     enum Type {
       ADD_POOL,
       REMOVE_POOL,
-      CLOSE,
     };
     Type type;
     Host host;
 };
-
 
 class IOWorker : public EventThread<IOWorkerEvent> {
   public:
@@ -58,28 +56,31 @@ class IOWorker : public EventThread<IOWorkerEvent> {
 
     bool add_pool_async(Host host);
     bool remove_pool_async(Host host);
-    bool close_async();
+    void close_async();
 
     bool execute(RequestHandler* request_handler);
 
   private:
     void add_pool(Host host);
-    void retry(RequestHandler* request_handler, RetryType retry_type);
-    void set_keyspace(const std::string& keyspace);
     void maybe_close();
+    void maybe_notify_closed();
     void cleanup();
     void close_handles();
 
-    void on_connect(Host host);
-    void on_pool_close(Host host);
-    static void on_pool_reconnect(Timer* timer);
+    void on_pool_ready(Pool* pool);
+    void on_pool_closed(Pool* pool);
+    void on_set_keyspace(const std::string& keyspace);
+
+    void on_retry(RequestHandler* request_handler, RetryType retry_type);
+    void on_request_finished(RequestHandler* request_handler);
     virtual void on_event(const IOWorkerEvent& event);
 
+    static void on_pool_reconnect(Timer* timer);
     static void on_execute(uv_async_t* data, int status);
     static void on_prepare(uv_prepare_t* prepare, int status);
 
   private:
-    typedef std::unordered_map<Host, Pool*> PoolCollection;
+    typedef std::map<Host, Pool*> PoolCollection;
 
     struct ReconnectRequest {
         ReconnectRequest(IOWorker* io_worker, Host host)
@@ -97,7 +98,8 @@ class IOWorker : public EventThread<IOWorkerEvent> {
     SSLContext* ssl_context_;
     PoolCollection pools;
     std::list<Pool*> pending_delete_;
-    bool is_closing_;
+    std::atomic<bool> is_closing_;
+    int pending_request_count_;
 
     const Config& config_;
     AsyncQueue<SPSCQueue<RequestHandler*>> request_queue_;

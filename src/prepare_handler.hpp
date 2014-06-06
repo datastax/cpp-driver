@@ -27,10 +27,8 @@ namespace cass {
 
 class PrepareHandler : public ResponseCallback {
   public:
-    PrepareHandler(RetryCallback retry_callback,
-                   RequestHandler* request_handler)
-      : retry_callback_(retry_callback)
-      , request_(new Message())
+    PrepareHandler(RequestHandler* request_handler)
+      : request_(new Message())
       , request_handler_(request_handler) { }
 
     bool init(const std::string& prepared_id) {
@@ -61,14 +59,14 @@ class PrepareHandler : public ResponseCallback {
         case CQL_OPCODE_RESULT: {
           ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
           if(result->kind == CASS_RESULT_KIND_PREPARED) {
-            retry_callback_(request_handler_.release(), RETRY_WITH_CURRENT_HOST);
+            request_handler_.release()->retry(RETRY_WITH_CURRENT_HOST);
           } else {
-            retry_callback_(request_handler_.release(), RETRY_WITH_NEXT_HOST);
+            request_handler_.release()->retry(RETRY_WITH_NEXT_HOST);
           }
         }
           break;
         case CQL_OPCODE_ERROR:
-          retry_callback_(request_handler_.release(), RETRY_WITH_NEXT_HOST);
+          request_handler_.release()->retry(RETRY_WITH_NEXT_HOST);
           break;
         default:
           break;
@@ -76,15 +74,14 @@ class PrepareHandler : public ResponseCallback {
     }
 
     virtual void on_error(CassError code, const std::string& message) {
-      retry_callback_(request_handler_.release(), RETRY_WITH_NEXT_HOST);
+      request_handler_.release()->retry(RETRY_WITH_NEXT_HOST);
     }
 
     virtual void on_timeout() {
-      retry_callback_(request_handler_.release(), RETRY_WITH_NEXT_HOST);
+      request_handler_.release()->retry(RETRY_WITH_NEXT_HOST);
     }
 
   private:
-    RetryCallback retry_callback_;
     std::unique_ptr<Message> request_;
     std::unique_ptr<RequestHandler> request_handler_;
 };

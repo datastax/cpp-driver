@@ -42,11 +42,10 @@ namespace cass {
 struct SessionEvent {
     enum Type {
       CONNECT,
-      NOTIFY_CONNECTED,
+      NOTIFY_READY,
       NOTIFY_CLOSED,
     };
     Type type;
-    Host host;
 };
 
 class Session : public EventThread<SessionEvent> {
@@ -66,18 +65,17 @@ class Session : public EventThread<SessionEvent> {
       load_balancing_policy_.reset(policy);
     }
 
-    bool notify_connect_async(const Host& host);
+    bool notify_ready_async();
     bool notify_closed_async();
     bool notify_set_keyspace_async(const std::string& keyspace);
 
-    bool connect(const std::string& keyspace, Future* future);
-    void close(Future* future);
+    bool connect_async(const std::string& keyspace, Future* future);
+    void close_async(Future* future);
 
     Future* prepare(const char* statement, size_t length);
     Future* execute(MessageBody* statement);
 
   private:
-    bool connect_async();
     void close_handles();
 
     void init_pools();
@@ -113,9 +111,10 @@ class Session : public EventThread<SessionEvent> {
     std::unique_ptr<AsyncQueue<MPMCQueue<RequestHandler*>>> request_queue_;
     std::unique_ptr<LoadBalancingPolicy> load_balancing_policy_;
     int pending_resolve_count_;
-    int pending_connections_count_;
+    int pending_pool_count_;
     int pending_workers_count_;
     int current_io_worker_;
+    std::atomic<bool> is_closing_;
 };
 
 class SessionCloseFuture : public Future {
@@ -133,7 +132,7 @@ class SessionConnectFuture : public ResultFuture<Session> {
       Session* session = release_result();
       if(session != nullptr) {
         // The future was deleted before obtaining the session
-        session->close(nullptr);
+        session->close_async(nullptr);
       }
     }
 };

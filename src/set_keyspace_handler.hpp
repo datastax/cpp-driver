@@ -26,17 +26,13 @@
 
 namespace cass {
 
-typedef std::function<void(const std::string& keyspace)> SetKeyspaceCallback;
-
 class SetKeyspaceHandler : public ResponseCallback {
   public:
     SetKeyspaceHandler(const std::string& keyspace,
                Connection* connection,
-               SetKeyspaceCallback set_keyspace_callback,
                ResponseCallback* response_callback)
       : connection_(connection)
       , request_(new Message(CQL_OPCODE_QUERY))
-      , set_keyspace_callback_(set_keyspace_callback)
       , response_callback_(response_callback) {
       QueryRequest* query = static_cast<QueryRequest*>(request_->body.get());
       query->statement("use \"" + keyspace + "\"");
@@ -76,7 +72,6 @@ class SetKeyspaceHandler : public ResponseCallback {
       ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
       if(result->kind == CASS_RESULT_KIND_SET_KEYSPACE) {
         connection_->execute(response_callback_.release());
-        set_keyspace_callback_(std::string(result->keyspace, result->keyspace_size));
       } else {
         connection_->defunct();
         response_callback_->on_error(CASS_ERROR_UNABLE_TO_SET_KEYSPACE, "Unable to set keyspsace");
@@ -86,7 +81,6 @@ class SetKeyspaceHandler : public ResponseCallback {
   private:
     Connection* connection_;
     std::unique_ptr<Message> request_;
-    SetKeyspaceCallback set_keyspace_callback_;
     std::unique_ptr<ResponseCallback> response_callback_;
 };
 

@@ -26,6 +26,7 @@ IOWorker::IOWorker(Session* session,
   , logger_(logger)
   , ssl_context_(nullptr)
   , is_closing_(false)
+  , pending_request_count_(0)
   , config_(config)
   , request_queue_(config.queue_size_io()) {
   prepare_.data = this;
@@ -60,68 +61,50 @@ bool IOWorker::remove_pool_async(Host host) {
   return send_event_async(event);
 }
 
-bool IOWorker::close_async() {
-  IOWorkerEvent event;
-  event.type = IOWorkerEvent::CLOSE;
-  return send_event_async(event);
+void IOWorker::close_async() {
+  is_closing_ = true;
+  while(!request_queue_.enqueue(nullptr)) {
+    // Keep trying
+  }
 }
 
 void IOWorker::add_pool(Host host) {
   if(!is_closing_ && pools.count(host) == 0) {
+    Pool* pool = new Pool(host, loop(), ssl_context_, logger_, config_);
+
+    pool->set_ready_callback(std::bind(&IOWorker::on_pool_ready, this, std::placeholders::_1));
+    pool->set_closed_callback(std::bind(&IOWorker::on_pool_closed, this, std::placeholders::_1));
+    pool->set_keyspace_callback(std::bind(&IOWorker::on_set_keyspace, this, std::placeholders::_1));
+
     std::shared_ptr<std::string> keyspace = session_->keyspace();
-    pools[host] = new Pool(host,
-                           loop(),
-                           ssl_context_,
-                           logger_,
-                           config_,
-                           keyspace ? *keyspace : "",
-                           std::bind(&IOWorker::on_connect, this, std::placeholders::_1),
-                           std::bind(&IOWorker::on_pool_close, this, std::placeholders::_1),
-                           std::bind(&IOWorker::retry, this, std::placeholders::_1, std::placeholders::_2),
-                           std::bind(&IOWorker::set_keyspace, this, std::placeholders::_1));
+    pool->connect(keyspace ? *keyspace : "");
+
+    pools[host] = pool;
   }
 }
 
 bool IOWorker::execute(RequestHandler* request_handler) {
+  if(is_closing_) {
+    return false;
+  }
   return request_queue_.enqueue(request_handler);
 }
 
-void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
-  Host host;
-  std::shared_ptr<std::string> keyspace = request_handler->keyspace;
-
-  if(retry_type == RETRY_WITH_NEXT_HOST) {
-    request_handler->next_host();
-  }
-
-  if(!request_handler->get_current_host(&host)) {
-    request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, "No hosts available");
-    return;
-  }
-
-  auto it = pools.find(host);
-  if(it != pools.end()) {
-    auto pool = it->second;
-    Connection* connection =  pool->borrow_connection(keyspace ? *keyspace : "");
-    if(connection != nullptr) {
-      if(!pool->execute(connection, request_handler)) {
-        retry(request_handler, RETRY_WITH_NEXT_HOST);
-      }
-    } else { // Too busy, or no connections
-      if(!pool->wait_for_connection(request_handler)) {
-        retry(request_handler, RETRY_WITH_NEXT_HOST);
-      }
-    }
-  } else {
-    retry(request_handler, RETRY_WITH_NEXT_HOST);
-  }
-}
-
-void IOWorker::set_keyspace(const std::string& keyspace) {
+void IOWorker::on_set_keyspace(const std::string& keyspace) {
   session_->set_keyspace(keyspace);
 }
 
 void IOWorker::maybe_close() {
+  if(is_closing_ && pending_request_count_ <= 0) {
+    for(auto& entry : pools) {
+      entry.second->close();
+    }
+    maybe_notify_closed();
+  }
+}
+
+void IOWorker::maybe_notify_closed() {
+  //printf("pending request count: %d\n", pending_request_count_);
   if(pools.empty()) {
     session_->notify_closed_async();
     close_handles();
@@ -143,26 +126,61 @@ void IOWorker::close_handles() {
   logger_->debug("IO worker active handles %d", loop()->active_handles);
 }
 
-void IOWorker::on_connect(Host host) {
-  session_->notify_connect_async(host);
+void IOWorker::on_pool_ready(Pool* pool) {
+  session_->notify_ready_async();
 }
 
-void IOWorker::on_pool_close(Host host) {
+void IOWorker::on_pool_closed(Pool* pool) {
+  Host host = pool->host();
+  logger_->info("Pool for '%s' closed", host.address.to_string().c_str());
+  pending_delete_.push_back(pool);
+  pools.erase(host);
+  if(is_closing_) {
+    maybe_notify_closed();
+  } else {
+    ReconnectRequest* reconnect_request = new ReconnectRequest(this, host);
+    Timer::start(loop(),
+                 config_.reconnect_wait(),
+                 reconnect_request,
+                 IOWorker::on_pool_reconnect);
+  }
+}
+
+void IOWorker::on_retry(RequestHandler* request_handler, RetryType retry_type) {
+  Host host;
+  std::shared_ptr<std::string> keyspace = request_handler->keyspace;
+
+  if(retry_type == RETRY_WITH_NEXT_HOST) {
+    request_handler->next_host();
+  }
+
+  if(!request_handler->get_current_host(&host)) {
+    printf("no hosts available\n");
+    request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, "No hosts available");
+    return;
+  }
+
   auto it = pools.find(host);
   if(it != pools.end()) {
-    logger_->info("Pool for '%s' closed", host.address.to_string().c_str());
-    pending_delete_.push_back(it->second);
-    pools.erase(it);
-    if(is_closing_) {
-      maybe_close();
-    } else {
-      ReconnectRequest* reconnect_request = new ReconnectRequest(this, host);
-      Timer::start(loop(),
-                   config_.reconnect_wait(),
-                   reconnect_request,
-                   IOWorker::on_pool_reconnect);
+    auto pool = it->second;
+    Connection* connection =  pool->borrow_connection(keyspace ? *keyspace : "");
+    if(connection != nullptr) {
+      if(!pool->execute(connection, request_handler)) {
+        on_retry(request_handler, RETRY_WITH_NEXT_HOST);
+      }
+    } else { // Too busy, or no connections
+      if(!pool->wait_for_connection(request_handler)) {
+        on_retry(request_handler, RETRY_WITH_NEXT_HOST);
+      }
     }
+  } else {
+    on_retry(request_handler, RETRY_WITH_NEXT_HOST);
   }
+}
+
+void IOWorker::on_request_finished(RequestHandler* request_handler) {
+  pending_request_count_--;
+  maybe_close();
 }
 
 void IOWorker::on_event(const IOWorkerEvent& event) {
@@ -170,12 +188,6 @@ void IOWorker::on_event(const IOWorkerEvent& event) {
     add_pool(event.host);
   } else if(event.type == IOWorkerEvent::REMOVE_POOL) {
     // TODO(mpenick):
-  } else if(event.type == IOWorkerEvent::CLOSE) {
-    is_closing_ = true;
-    for(auto entry : pools) {
-      entry.second->close();
-    }
-    maybe_close();
   }
 }
 
@@ -190,17 +202,23 @@ void IOWorker::on_pool_reconnect(Timer* timer) {
 }
 
 void IOWorker::on_execute(uv_async_t* async, int status) {
-  IOWorker* io_worker  = reinterpret_cast<IOWorker*>(async->data);
+  IOWorker* io_worker = reinterpret_cast<IOWorker*>(async->data);
+
   RequestHandler* request_handler = nullptr;
   while (io_worker->request_queue_.dequeue(request_handler)) {
-    io_worker->retry(request_handler, RETRY_WITH_CURRENT_HOST);
+    if(request_handler != nullptr) {
+      io_worker->pending_request_count_++;
+      request_handler->set_retry_callback(std::bind(&IOWorker::on_retry, io_worker, std::placeholders::_1, std::placeholders::_2));
+      request_handler->set_finished_callback(std::bind(&IOWorker::on_request_finished, io_worker, std::placeholders::_1));
+      request_handler->retry(RETRY_WITH_CURRENT_HOST);
+    }
   }
+  io_worker->maybe_close();
 }
 
 void IOWorker::on_prepare(uv_prepare_t* prepare, int status) {
   IOWorker* io_worker  = reinterpret_cast<IOWorker*>(prepare->data);
   io_worker->cleanup();
 }
-
 
 } // namespace cass
