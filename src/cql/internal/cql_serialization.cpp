@@ -42,13 +42,25 @@
 
 using namespace std;
 
+inline uint32_t
+bswap_uint32(uint32_t source) {
+    uint32_t Byte0 = source & 0x000000FF;
+    uint32_t Byte1 = source & 0x0000FF00;
+    uint32_t Byte2 = source & 0x00FF0000;
+    uint32_t Byte3 = source & 0xFF000000;
+    return (Byte0 << 24) | (Byte1 << 8) | (Byte2 >> 8) | (Byte3 >> 24);
+}
+
+inline uint64_t
+bswap_uint64(uint64_t source) {
+    uint64_t Hi = bswap_uint32((uint32_t)(source));
+    uint32_t Lo = bswap_uint32((uint32_t)(source >> 32));
+    return (Hi << 32) | Lo;
+}
+
 inline double
 swap_double(double source) {
-#ifdef _WIN32
-    uint64_t bytes = *reinterpret_cast<uint64_t*>(&source);
-    uint64_t swapped = _byteswap_uint64(bytes);
-    return *reinterpret_cast<double*>(&swapped);
-#else
+#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
     union {
         uint64_t bytes;
         double src;
@@ -56,16 +68,20 @@ swap_double(double source) {
     q.src = source;
     q.bytes = __builtin_bswap64(q.bytes);
     return q.src;
+#else
+    uint64_t bytes = *reinterpret_cast<uint64_t*>(&source);
+#if _WIN32
+    uint64_t swapped = _byteswap_uint64(bytes);
+#else
+    uint64_t swapped = bswap_uint64(bytes);
+#endif
+    return *reinterpret_cast<double*>(&swapped);
 #endif
 }
 
 inline float
 swap_float(float source) {
-#ifdef _WIN32
-    uint32_t bytes = *reinterpret_cast<uint32_t*>(&source);
-    uint32_t swapped = _byteswap_ulong(bytes);
-    return *reinterpret_cast<float*>(&swapped);
-#else
+#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
     union {
         uint32_t bytes;
         float src;
@@ -73,6 +89,14 @@ swap_float(float source) {
     q.src = source;
     q.bytes = __builtin_bswap32(q.bytes);
     return q.src;
+#else
+    uint32_t bytes = *reinterpret_cast<uint32_t*>(&source);
+#if _WIN32
+    uint32_t swapped = _byteswap_ulong(bytes);
+#else
+    uint32_t swapped = bswap_uint32(bytes);
+#endif
+    return *reinterpret_cast<float*>(&swapped);
 #endif
 }
 
