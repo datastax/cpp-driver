@@ -164,8 +164,7 @@ struct Message {
         stream       = *(buffer++);
         opcode       = *(buffer++);
 
-        memcpy(&length, buffer, sizeof(int32_t));
-        length = ntohl(length);
+        decode_int(buffer, length);
 
         header_received = true;
 

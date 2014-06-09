@@ -20,8 +20,6 @@
 #include <stdlib.h>
 #include <uv.h>
 
-#include <arpa/inet.h>
-
 #include "cassandra.h"
 
 #define NUM_CONCURRENT_REQUESTS 4096

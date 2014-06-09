@@ -8,7 +8,7 @@ set(CASS_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
 project(${PROJECT_NAME_STR} C CXX)
 
 #-------------------
-# The version number
+# Version
 #-------------------
 set(PROJECT_VERSION_MAJOR 0)
 set(PROJECT_VERSION_MINOR 7)
@@ -18,37 +18,63 @@ set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${P
 # TODO(mstump) add version header
 
 #-------------------
-# setup deps
+# Dependencies
 #-------------------
-find_package(OpenSSL REQUIRED)
-set(LIBS ${LIBS} ${OPENSSL_LIBRARIES})
-
-find_package(ZLIB REQUIRED)
-set(LIBS ${LIBS} ${ZLIB_LIBRARIES})
 
 # libuv
-set(LIBUV_INCLUDE_NAMES uv.h)
-set(LIBUV_LIBRARY_NAMES libuv.dylib)
+set(_LIBUV_ROOT_HINTS ${LIBUV_ROOT_DIR} ENV LIBUV_ROOT_DIR)
 
-find_path(LIBUV_INCLUDE_DIRS NAMES ${LIBUV_INCLUDE_NAMES} HINTS /usr/include /usr/local/include)
-find_library(LIBUV_LIBRARIES NAMES ${LIBUV_LIBRARY_NAMES} HINTS /usr/include /usr/local/include)
+if(WIN32)
+  set(_LIBUV_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/libuv/")
+  set(_LIBUV_ROOT_HINTS_AND_PATHS HINTS ${_LIBUV_ROOT_HINTS} PATHS ${_LIBUV_ROOT_PATHS})
+else()
+  set(_LIBUV_ROOT_PATHS "/usr/" "/usr/local/")
+  set(_LIBUV_ROOT_HINTS_AND_PATHS HINTS ${_LIBUV_ROOT_HINTS} PATHS ${_LIBUV_ROOT_PATHS})
+endif()
 
-if(LIBUV_INCLUDE_DIRS AND LIBUV_LIBRARIES)
-  set(LIBUV_FOUND TRUE)
-  set(INCLUDES ${INCLUDES} ${LIBUV_INCLUDE_DIRS} )
-  set(LIBS ${LIBS} ${LIBUV_LIBRARIES} )
-  message(STATUS "Found LIBUV: ${LIBUV_LIBRARIES}")
-else(LIBUV_INCLUDE_DIRS AND LIBUV_LIBRARIES)
-  message(FATAL_ERROR "Could not find LIBUV library.")
-endif(LIBUV_INCLUDE_DIRS AND LIBUV_LIBRARIES)
+find_path(LIBUV_INCLUDE_DIR
+  NAMES uv.h 
+  HINTS ${_LIBUV_INCLUDEDIR} ${_LIBUV_ROOT_HINTS_AND_PATHS}
+  PATH_SUFFIXES include)
+
+find_library(LIBUV_LIBRARY
+  NAMES uv libuv
+  HINTS ${_LIBUV_LIBDIR} ${_LIBUV_ROOT_HINTS_AND_PATHS}
+  PATH_SUFFIXES lib)
+
+set(LIBUV_LIBRARIES ${LIBUV_LIBRARY})
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(Libuv "Could NOT find libuv, try to set the path to the libuv root folder in the system variable LIBUV_ROOT_DIR"
+  LIBUV_LIBRARIES
+  LIBUV_INCLUDE_DIR)
+
+set(INCLUDES ${INCLUDES} ${LIBUV_INCLUDE_DIR} )
+set(LIBS ${LIBS} ${LIBUV_LIBRARIES} )
+
+# openssl
+if(WIN32)
+  set(_OPENSSL_VERSION "1.0.1h")
+  set(OPENSSL_ROOT_DIR "${PROJECT_SOURCE_DIR}/lib/openssl/")
+  #set(ZLIB_NAMES zlibwapi)
+  #set(ZLIB_ROOT "${PROJECT_SOURCE_DIR}/lib/zlib/")
+endif()
+
+find_package(OpenSSL REQUIRED)
+set(LIBS ${LIBS} ${OPENSSL_LIBRARIES})
+set(INCLUDES ${INCLUDES} ${OPENSSL_INCLUDE_DIR} )
+
+#find_package(ZLIB REQUIRED)
+#set(LIBS ${LIBS} ${ZLIB_LIBRARIES})
+#set(INCLUDES ${INCLUDES} ${ZLIB_INCLUDE_DIR} )
 
 # Build up the include path's
-set(INCLUDES ${INCLUDES} ${OPENSSL_INCLUDE_DIR} )
-set(INCLUDES ${INCLUDES} ${ZLIB_INCLUDE_DIR} )
-set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS} )
-
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
+
+#-------------------
+# Compiler flags
+#-------------------
 
 set(MULTICORE_CORES_NUMBER "3" CACHE STRING "Number of cores (for multicore compilation)")
 option(MULTICORE_COMPILATION "Enable multicore compilation" OFF)
@@ -66,7 +92,7 @@ if(MULTICORE_COMPILATION)
   # ~/.pam_environment file (in any case check man).
 endif()
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+if(MSVC)
   # On Visual C++ -pedantic flag is not used,
   # -fPIC is not used on Windows platform (all DLLs are
   # relocable), -Wall generates about 30k stupid warnings
@@ -91,8 +117,6 @@ include_directories(${INCLUDES})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-
-message(STATUS "info CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
 
 # we must add header files as dependencies (if header
 # changes project must be recompiled, right).
@@ -134,7 +158,7 @@ set_property(
   APPEND PROPERTY COMPILE_FLAGS ${PROJECT_CXX_FLAGS})
 
 #-------------------
-# install target
+# Install target
 #-------------------
 
 # Where to put headers
@@ -158,7 +182,7 @@ install(TARGETS ${PROJECT_LIB_NAME_STATIC}
   ARCHIVE DESTINATION ${INSTALL_LIB_DIR}) # for static library
 
 #-------------------
-# uninstall target
+# Uninstall target
 #-------------------
 
 configure_file(
@@ -170,20 +194,20 @@ add_custom_target(UNINSTALL
   COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
 #-------------------
-# unit tests
+# Unit tests
 #-------------------
 
 add_subdirectory(test/unit_tests)
 
 #-------------------
-# integration tests
+# Integration tests
 #-------------------
 
 add_subdirectory(test/ccm_bridge)
 add_subdirectory(test/integration_tests)
 
 #-------------------
-# examples
+# Examples
 #-------------------
 
 add_subdirectory(examples/async)
@@ -195,7 +219,7 @@ add_subdirectory(examples/uuids)
 add_subdirectory(examples/simple)
 
 #-----------------------------------
-# generating API docs with Doxygen
+# Generating API docs with Doxygen
 #-----------------------------------
 
 find_package(Doxygen)
@@ -206,3 +230,4 @@ if(DOXYGEN_FOUND)
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "Generating API documentation with Doxygen" VERBATIM)
 endif(DOXYGEN_FOUND)
+
