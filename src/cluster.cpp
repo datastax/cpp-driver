@@ -19,26 +19,31 @@
 
 extern "C" {
 
+CASS_EXPORT
 CassCluster* cass_cluster_new() {
   return CassCluster::to(new cass::Cluster());
 }
 
+CASS_EXPORT
 CassError cass_cluster_setopt(CassCluster* cluster,
                               CassOption option,
                               const void* data, cass_size_t data_length) {
   return cluster->config().option(option, data, data_length);
 }
 
+CASS_EXPORT
 CassError cass_cluster_getopt(const CassCluster* cluster,
                               CassOption option,
                               void** data, cass_size_t* data_length) {
   return CASS_OK;
 }
 
+CASS_EXPORT
 CassFuture* cass_cluster_connect(CassCluster* cluster) {
   return cass_cluster_connect_keyspace(cluster, "");
 }
 
+CASS_EXPORT
 CassFuture* cass_cluster_connect_keyspace(CassCluster* cluster, const char* keyspace) {
   cass::Session* session = new cass::Session(cluster->config());
   cass::SessionConnectFuture* connect_future = new cass::SessionConnectFuture(session);
@@ -51,6 +56,7 @@ CassFuture* cass_cluster_connect_keyspace(CassCluster* cluster, const char* keys
   return CassFuture::to(connect_future);
 }
 
+CASS_EXPORT
 void cass_cluster_free(CassCluster* cluster) {
   delete cluster->from();
 }

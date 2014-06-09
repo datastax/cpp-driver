@@ -19,25 +19,30 @@
 
 extern "C" {
 
+CASS_EXPORT
 void cass_future_free(CassFuture* future) {
   // Futures can be deleted without being waited on
   // because they'll be cleaned up by the notifying thread
   future->release();
 }
 
+CASS_EXPORT
 cass_bool_t cass_future_ready(CassFuture* future) {
   return static_cast<cass_bool_t>(future->ready());
 }
 
+CASS_EXPORT
 void cass_future_wait(CassFuture* future) {
   future->wait();
 }
 
+CASS_EXPORT
 cass_bool_t cass_future_wait_timed(CassFuture* future,
                                    cass_duration_t wait) {
   return static_cast<cass_bool_t>(future->wait_for(wait));
 }
 
+CASS_EXPORT
 CassSession* cass_future_get_session(CassFuture* future) {
   if(future->type() != cass::CASS_FUTURE_TYPE_SESSION_CONNECT) {
     return nullptr;
@@ -49,6 +54,7 @@ CassSession* cass_future_get_session(CassFuture* future) {
   return CassSession::to(connect_future->release_result());
 }
 
+CASS_EXPORT
 const CassResult* cass_future_get_result(CassFuture* future) {
   if(future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
     return nullptr;
@@ -60,6 +66,7 @@ const CassResult* cass_future_get_result(CassFuture* future) {
   return CassResult::to(static_cast<cass::ResultResponse*>(response_future->release_result()));
 }
 
+CASS_EXPORT
 const CassPrepared* cass_future_get_prepared(CassFuture* future) {
   if(future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
     return nullptr;
@@ -78,6 +85,7 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
   return nullptr;
 }
 
+CASS_EXPORT
 CassError cass_future_error_code(CassFuture* future) {
   const cass::Future::Error *error = future->get_error();
   if(error != nullptr) {
@@ -87,6 +95,7 @@ CassError cass_future_error_code(CassFuture* future) {
   }
 }
 
+CASS_EXPORT
 CassString cass_future_error_message(CassFuture* future) {
   CassString str;
   const cass::Future::Error *error = future->get_error();

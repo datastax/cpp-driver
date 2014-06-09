@@ -18,6 +18,7 @@
 
 extern "C" {
 
+CASS_EXPORT
 const char* cass_error_desc(CassError error) {
   switch(error) {
 #define XX(source, _, code, desc) case CASS_ERROR(source, code): return desc;
@@ -27,6 +28,7 @@ const char* cass_error_desc(CassError error) {
   }
 }
 
+CASS_EXPORT
 const char* cass_log_level_string(CassLogLevel log_level) {
   switch(log_level) {
 #define XX(log_level, desc) case log_level: return desc;
@@ -36,6 +38,7 @@ const char* cass_log_level_string(CassLogLevel log_level) {
   }
 }
 
+CASS_EXPORT
 CassInet cass_inet_init_v4(const cass_uint8_t* address) {
   CassInet inet;
   inet.address_length = CASS_INET_V4_LENGTH;
@@ -43,6 +46,7 @@ CassInet cass_inet_init_v4(const cass_uint8_t* address) {
   return inet;
 }
 
+CASS_EXPORT
 CassInet cass_inet_init_v6(const cass_uint8_t* address) {
   CassInet inet;
   inet.address_length = CASS_INET_V6_LENGTH;
@@ -50,6 +54,7 @@ CassInet cass_inet_init_v6(const cass_uint8_t* address) {
   return inet;
 }
 
+CASS_EXPORT
 CassDecimal cass_decimal_init(cass_int32_t scale, CassBytes varint) {
   CassDecimal decimal;
   decimal.scale = scale;
@@ -57,6 +62,7 @@ CassDecimal cass_decimal_init(cass_int32_t scale, CassBytes varint) {
   return decimal;
 }
 
+CASS_EXPORT
 CassString cass_string_init(const char* null_terminated) {
   CassString str;
   str.data = null_terminated;
@@ -64,6 +70,7 @@ CassString cass_string_init(const char* null_terminated) {
   return str;
 }
 
+CASS_EXPORT
 CassString cass_string_init2(const char* data, cass_size_t length) {
   CassString str;
   str.data = data;
@@ -71,12 +78,12 @@ CassString cass_string_init2(const char* data, cass_size_t length) {
   return str;
 }
 
+CASS_EXPORT
 CassBytes cass_bytes_init(const cass_byte_t* data, cass_size_t size) {
   CassBytes bytes;
   bytes.data = data;
   bytes.size = size;
   return bytes;
 }
-
 
 } // extern "C"

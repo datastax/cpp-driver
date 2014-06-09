@@ -19,10 +19,12 @@
 
 extern "C" {
 
+CASS_EXPORT
 void cass_result_free(const CassResult* result) {
   delete result->from();
 }
 
+CASS_EXPORT
 size_t cass_result_row_count(const CassResult* result) {
   if(result->kind == CASS_RESULT_KIND_ROWS) {
     return result->row_count;
@@ -30,6 +32,7 @@ size_t cass_result_row_count(const CassResult* result) {
   return 0;
 }
 
+CASS_EXPORT
 size_t cass_result_column_count(const CassResult* result) {
   if(result->kind == CASS_RESULT_KIND_ROWS) {
     return result->column_count;
@@ -37,6 +40,7 @@ size_t cass_result_column_count(const CassResult* result) {
   return 0;
 }
 
+CASS_EXPORT
 CassValueType cass_result_column_type(const CassResult* result,
                         size_t index) {
   if(result->kind == CASS_RESULT_KIND_ROWS &&
@@ -46,6 +50,7 @@ CassValueType cass_result_column_type(const CassResult* result,
   return CASS_VALUE_TYPE_UNKNOWN;
 }
 
+CASS_EXPORT
 const CassRow* cass_result_first_row(const CassResult* result) {
   if(result->kind == CASS_RESULT_KIND_ROWS
      && result->row_count > 0) {

@@ -4,40 +4,45 @@
 
 extern "C" {
 
+CASS_EXPORT
 void cass_uuid_generate_time(CassUuid output) {
   cass::Uuids::generate_v1(output);
 }
 
+CASS_EXPORT
 void cass_uuid_from_time(cass_uint64_t time,
                          CassUuid output) {
   cass::Uuids::generate_v1(time, output);
 }
 
-void
-cass_uuid_min_from_time(cass_uint64_t time,
+CASS_EXPORT
+void cass_uuid_min_from_time(cass_uint64_t time,
                         CassUuid output) {
   cass::Uuids::min_v1(time, output);
 }
 
-void
-cass_uuid_max_from_time(cass_uint64_t time,
+CASS_EXPORT
+void cass_uuid_max_from_time(cass_uint64_t time,
                         CassUuid output) {
   cass::Uuids::max_v1(time, output);
 }
 
-cass_uint64_t
-cass_uuid_timestamp(CassUuid uuid) {
+CASS_EXPORT
+cass_uint64_t cass_uuid_timestamp(CassUuid uuid) {
   return cass::Uuids::get_unix_timestamp(uuid);
 }
 
+CASS_EXPORT
 void cass_uuid_generate_random(CassUuid output) {
   cass::Uuids::generate_v4(output);
 }
 
+CASS_EXPORT
 cass_uint8_t cass_uuid_version(CassUuid uuid) {
   return cass::Uuids::get_version(uuid);
 }
 
+CASS_EXPORT
 void cass_uuid_string(CassUuid uuid,
                       char* output) {
   cass::Uuids::to_string(uuid, output);
