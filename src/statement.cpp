@@ -64,7 +64,7 @@ CassError cass_statement_bind_double(CassStatement* statement,
 CassError cass_statement_bind_bool(CassStatement* statement,
                                    size_t index,
                                    cass_bool_t value) {
-  return statement->bind_bool(index, value);
+  return statement->bind_bool(index, value == cass_true);
 }
 
 CassError cass_statement_bind_string(CassStatement* statement,
@@ -101,7 +101,7 @@ CassError cass_statement_bind_collection( CassStatement* statement,
                                           size_t index,
                                           const CassCollection* collection,
                                           cass_bool_t is_map) {
-  return statement->bind(index, collection->from(), static_cast<bool>(is_map));
+  return statement->bind(index, collection->from(), is_map == cass_true);
 }
 
 CassError cass_statement_bind_custom(CassStatement* statement,

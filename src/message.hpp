@@ -106,6 +106,7 @@ struct Message {
 
       default:
         assert(false);
+        return nullptr;
     }
   }
 

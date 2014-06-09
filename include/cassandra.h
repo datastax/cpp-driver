@@ -19,22 +19,21 @@
 
 #include <stddef.h>
 
-#if defined _WIN32
-#   if defined CASS_STATIC
-#       define CASS_EXPORT
-#   elif defined DLL_EXPORT
-#       define CASS_EXPORT __declspec(dllexport)
-#   else
-#       define CASS_EXPORT __declspec(dllimport)
-#   endif
+
+#if !defined(CASS_STATIC)
+#  if (defined(WIN32) || defined(_WIN32))
+#    if defined CASS_BUILDING
+#      define CASS_EXPORT __declspec(dllexport)
+#    else
+#      define CASS_EXPORT __declspec(dllexport)
+#    endif
+#  elif (defined __SUNPRO_C  || defined __SUNPRO_CC) && !defined(CASS_STATIC)
+#    define CASS_EXPORT __global
+#  elif (defined __GNUC__ && __GNUC__ >= 4) || defined __INTEL_COMPILER
+#    define CASS_EXPORT __attribute__ ((visibility("default")))
+#  endif
 #else
-#   if defined __SUNPRO_C  || defined __SUNPRO_CC
-#       define CASS_EXPORT __global
-#   elif (defined __GNUC__ && __GNUC__ >= 4) || defined __INTEL_COMPILER
-#       define CASS_EXPORT __attribute__ ((visibility("default")))
-#   else
-#       define CASS_EXPORT
-#   endif
+#define CASS_EXPORT
 #endif
 
 #ifdef __cplusplus

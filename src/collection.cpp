@@ -53,7 +53,7 @@ CassError cass_collection_append_double(CassCollection* collection,
 
 CassError cass_collection_append_bool(CassCollection* collection,
                                       cass_bool_t value) {
-  collection->append_bool(value);
+  collection->append_bool(value == cass_true);
   return CASS_OK;
 }
 

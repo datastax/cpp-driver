@@ -22,6 +22,10 @@
 
 #include "cassandra.h"
 
+#ifdef WIN32
+#define snprintf _snprintf
+#endif
+
 #define NUM_CONCURRENT_REQUESTS 4096
 
 void print_error(CassFuture* future) {
@@ -94,8 +98,8 @@ void insert_into_async(CassSession* session, const char* key) {
     cass_statement_bind_bool(statement, 1, i % 2 == 0 ? cass_true : cass_false);
     cass_statement_bind_float(statement, 2, i / 2.0f);
     cass_statement_bind_double(statement, 3, i / 200.0);
-    cass_statement_bind_int32(statement, 4, i * 10);
-    cass_statement_bind_int64(statement, 5, i * 100);
+    cass_statement_bind_int32(statement, 4, (cass_int32_t)(i * 10));
+    cass_statement_bind_int64(statement, 5, (cass_int64_t)(i * 100));
 
     futures[i] = cass_session_execute(session, statement);
 

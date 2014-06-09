@@ -105,8 +105,9 @@ if(MSVC)
   # -fPIC is not used on Windows platform (all DLLs are
   # relocable), -Wall generates about 30k stupid warnings
   # that can hide useful ones.
-  set(PLATFORM_DEPENDENT_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS")
-  set(PLATFORM_DEPENDENT_C_FLAGS "-D_CRT_SECURE_NO_WARNINGS")
+
+  # TODO(mpenick): Fix these "possible loss of data" warnings
+  set(PLATFORM_DEPENDENT_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS /wd4244 /wd4267")
 
   # needed for windows sockets (not verified)
   add_definitions(-D_WIN32_WINNT=0x0501)
@@ -114,7 +115,6 @@ else()
   # GCC/Clang specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
   set(PLATFORM_DEPENDENT_CXX_FLAGS "-std=c++0x -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-c++11-narrowing -Wno-deprecated-declarations -Wno-unused-parameter")
-  set(PLATFORM_DEPENDENT_C_FLAGS "-std=c89 -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 endif()
 
 #-------------------
@@ -154,16 +154,15 @@ set_target_properties(${PROJECT_LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION_S
 set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
 set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
 
-set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PLATFORM_DEPENDENT_CXX_FLAGS}")
-set(PROJECT_C_FLAGS "${CMAKE_C_FLAGS} ${PLATFORM_DEPENDENT_C_FLAGS}")
+set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 set_property(
   TARGET ${PROJECT_LIB_NAME}
-  APPEND PROPERTY COMPILE_FLAGS ${PROJECT_CXX_FLAGS})
+  APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} ${PLATFORM_DEPENDENT_CXX_FLAGS} -DCASS_BUILDING")
 
 set_property(
   TARGET ${PROJECT_LIB_NAME_STATIC}
-  APPEND PROPERTY COMPILE_FLAGS ${PROJECT_CXX_FLAGS})
+  APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} ${PLATFORM_DEPENDENT_CXX_FLAGS} -DCASS_STATIC")
 
 #-------------------
 # Install target
@@ -211,12 +210,25 @@ add_subdirectory(test/unit_tests)
 # Integration tests
 #-------------------
 
-#add_subdirectory(test/ccm_bridge)
-#add_subdirectory(test/integration_tests)
+find_package(Boost 1.41.0 COMPONENTS system thread unit_test_framework date_time program_options)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/test/ccm_bridge/cmake/Modules/")
+find_package(LIBSSH2)
+
+if((Boost_FOUND) AND (LIBSSH2_FOUND))
+  add_subdirectory(test/ccm_bridge)
+  add_subdirectory(test/integration_tests)
+endif()
 
 #-------------------
 # Examples
 #-------------------
+
+if(MSVC)
+  set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
+else()
+  set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
+endif()
 
 add_subdirectory(examples/async)
 add_subdirectory(examples/basic)
@@ -230,12 +242,13 @@ add_subdirectory(examples/simple)
 # Generating API docs with Doxygen
 #-----------------------------------
 
-#find_package(Doxygen)
-#if(DOXYGEN_FOUND)
-#    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
-#    add_custom_target(doc
-#        ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-#        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-#        COMMENT "Generating API documentation with Doxygen" VERBATIM)
-#endif(DOXYGEN_FOUND)
+find_package(Doxygen)
+
+if(DOXYGEN_FOUND)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+  add_custom_target(doc
+    ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Generating API documentation with Doxygen" VERBATIM)
+endif(DOXYGEN_FOUND)
 

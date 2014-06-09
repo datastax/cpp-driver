@@ -28,7 +28,7 @@ class Buffer {
     Buffer()
       : size_(-1) { }
 
-    Buffer(const char* data, size_t size)
+    Buffer(const char* data, int32_t size)
       : size_(size) {
       if(size > FIXED_BUFFER_SIZE) {
         data_.alloced = new char[size];

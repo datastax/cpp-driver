@@ -159,7 +159,7 @@ int main() {
   CassSession* session = NULL;
   CassFuture* close_future = NULL;
 
-  Basic input = { cass_true, 0.001, 0.0002, 1, 2 };
+  Basic input = { cass_true, 0.001f, 0.0002, 1, 2 };
   Basic output;
 
   rc = connect_session(cluster, &session);

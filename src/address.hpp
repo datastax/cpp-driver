@@ -108,6 +108,7 @@ class Address {
         return htons(addr_in6()->sin6_port);
       } else {
         assert(false);
+        return -1;
       }
     }
 
@@ -138,6 +139,7 @@ class Address {
             sizeof(addr_in6()->sin6_addr));
       } else {
         assert(false);
+        return -1;
       }
     }
 };
