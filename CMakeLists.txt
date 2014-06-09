@@ -69,7 +69,7 @@ set(INCLUDES ${INCLUDES} ${OPENSSL_INCLUDE_DIR} )
 #set(INCLUDES ${INCLUDES} ${ZLIB_INCLUDE_DIR} )
 
 if(WIN32)
-  set(LIBS ${LIBS} wsock32 ws2_32)
+  set(LIBS ${LIBS} iphlpapi psapi wsock32 ws2_32)
 endif()
 
 # Build up the include path's
@@ -97,6 +97,10 @@ if(MULTICORE_COMPILATION)
 endif()
 
 if(MSVC)
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+  set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:LIBCMT")
+ 
   # On Visual C++ -pedantic flag is not used,
   # -fPIC is not used on Windows platform (all DLLs are
   # relocable), -Wall generates about 30k stupid warnings
