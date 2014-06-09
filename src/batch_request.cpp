@@ -19,17 +19,14 @@
 
 extern "C" {
 
-CASS_EXPORT
 CassBatch* cass_batch_new(CassConsistency consistency) {
   return CassBatch::to(new cass::BatchRequest(consistency));
 }
 
-CASS_EXPORT
 void cass_batch_free(CassBatch* batch) {
   delete batch->from();
 }
 
-CASS_EXPORT
 CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
   batch->add_statement(statement);
   return CASS_OK;

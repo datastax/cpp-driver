@@ -19,7 +19,10 @@
 
 extern "C" {
 
-CASS_EXPORT
+void cass_session_free(CassSession* session) {
+  delete session->from();
+}
+
 CassFuture* cass_session_close(CassSession* session) {
   // TODO(mpenick): Make sure this handles close during the middle of a connect
   cass::SessionCloseFuture* close_future = new cass::SessionCloseFuture();
@@ -27,19 +30,17 @@ CassFuture* cass_session_close(CassSession* session) {
   return CassFuture::to(close_future);
 }
 
-CASS_EXPORT
+
 CassFuture* cass_session_prepare(CassSession* session,
                                  CassString statement) {
   return CassFuture::to(session->prepare(statement.data, statement.length));
 }
 
-CASS_EXPORT
 CassFuture* cass_session_execute(CassSession* session,
                                  CassStatement* statement) {
   return CassFuture::to(session->execute(statement->from()));
 }
 
-CASS_EXPORT
 CassFuture* cass_session_execute_batch(CassSession* session,
                                        CassBatch* batch) {
   return CassFuture::to(session->execute(batch->from()));

@@ -19,7 +19,6 @@
 
 extern "C" {
 
-CASS_EXPORT
 CassError cass_value_get_int32(const CassValue* value,
                                cass_int32_t* output) {
   if(value->type != CASS_VALUE_TYPE_INT) {
@@ -29,7 +28,6 @@ CassError cass_value_get_int32(const CassValue* value,
   return CASS_OK;
 }
 
-CASS_EXPORT
 CassError cass_value_get_int64(const CassValue* value,
                                cass_int64_t* output) {
   if(value->type != CASS_VALUE_TYPE_BIGINT
@@ -41,7 +39,6 @@ CassError cass_value_get_int64(const CassValue* value,
   return CASS_OK;
 }
 
-CASS_EXPORT
 CassError cass_value_get_float(const CassValue* value,
                                cass_float_t* output) {
   if(value->type != CASS_VALUE_TYPE_FLOAT) {
@@ -51,7 +48,6 @@ CassError cass_value_get_float(const CassValue* value,
   return CASS_OK;
 }
 
-CASS_EXPORT
 CassError cass_value_get_double(const CassValue* value,
                                 cass_double_t* output) {
   if(value->type != CASS_VALUE_TYPE_DOUBLE) {
@@ -61,7 +57,6 @@ CassError cass_value_get_double(const CassValue* value,
   return CASS_OK;
 }
 
-CASS_EXPORT
 CassError cass_value_get_bool(const CassValue* value,
                               cass_bool_t* output) {
   uint8_t byte;
@@ -70,7 +65,6 @@ CassError cass_value_get_bool(const CassValue* value,
   return CASS_OK;
 }
 
-CASS_EXPORT
 CassError cass_value_get_uuid(const CassValue* value,
                               CassUuid output) {
   if(value->type != CASS_VALUE_TYPE_UUID
@@ -81,7 +75,6 @@ CassError cass_value_get_uuid(const CassValue* value,
   return CASS_OK;
 }
 
-CASS_EXPORT
 CassError cass_value_get_inet(const CassValue* value,
                               CassInet* output) {
   if(value->type != CASS_VALUE_TYPE_INET) {
@@ -92,7 +85,6 @@ CassError cass_value_get_inet(const CassValue* value,
   return CASS_OK;
 }
 
-CASS_EXPORT
 CassError cass_value_get_string(const CassValue* value,
                                 CassString* output) {
   output->data = value->buffer.data();
@@ -100,7 +92,6 @@ CassError cass_value_get_string(const CassValue* value,
   return CASS_OK;
 }
 
-CASS_EXPORT
 CassError cass_value_get_bytes(const CassValue* value,
                                CassBytes* output) {
   output->data = reinterpret_cast<cass_byte_t*>(value->buffer.data());
@@ -108,7 +99,6 @@ CassError cass_value_get_bytes(const CassValue* value,
   return CASS_OK;
 }
 
-CASS_EXPORT
 CassError cass_value_get_decimal(const CassValue* value,
                                  CassDecimal* output) {
   if(value->type != CASS_VALUE_TYPE_DECIMAL) {
@@ -120,17 +110,14 @@ CassError cass_value_get_decimal(const CassValue* value,
   return CASS_OK;
 }
 
-CASS_EXPORT
 CassValueType cass_value_type(const CassValue* value) {
   return value->type;
 }
 
-CASS_EXPORT
 cass_bool_t cass_value_is_null(const CassValue* value) {
   return static_cast<cass_bool_t>(value->buffer.size() < 0);
 }
 
-CASS_EXPORT
 cass_bool_t cass_value_is_collection(const CassValue* value) {
   CassValueType type = value->type;
   return static_cast<cass_bool_t>(type == CASS_VALUE_TYPE_LIST
@@ -138,17 +125,14 @@ cass_bool_t cass_value_is_collection(const CassValue* value) {
                                   || type == CASS_VALUE_TYPE_SET);
 }
 
-CASS_EXPORT
 cass_size_t cass_value_item_count(const CassValue* collection) {
   return collection->count;
 }
 
-CASS_EXPORT
 CassValueType cass_value_primary_sub_type(const CassValue* collection) {
   return collection->primary_type;
 }
 
-CASS_EXPORT
 CassValueType cass_value_secondary_sub_type(const CassValue* collection) {
   return collection->secondary_type;
 }

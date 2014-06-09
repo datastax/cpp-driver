@@ -20,7 +20,6 @@
 
 extern "C" {
 
-CASS_EXPORT
 const CassValue* cass_row_get_column(const CassRow* row,
                                      cass_size_t index) {
   const cass::Row* internal_row = row->from();
