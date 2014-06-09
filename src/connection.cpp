@@ -221,19 +221,20 @@ bool Connection::execute(ResponseCallback* response_callback) {
   request->stream = stream;
   message->stream = stream;
 
-  uv_buf_t buf;
-  if (!message->prepare(&buf.base, buf.len)) {
+  char* buf_data;
+  size_t buf_length;
+  if (!message->prepare(&buf_data, buf_length)) {
     request->on_error(CASS_ERROR_LIB_MESSAGE_PREPARE, "Unable to build request");
     return true;
   }
 
   logger_->debug("Sending message type %s with %d, size %zd",
-                 opcode_to_string(message->opcode).c_str(), message->stream, buf.len);
+                 opcode_to_string(message->opcode).c_str(), message->stream, buf_length);
 
   pending_requests_.add_to_back(request.get());
 
   request->change_state(Request::REQUEST_STATE_WRITING);
-  write(buf, request.release());
+  write(uv_buf_init(buf_data, buf_length), request.release());
 
   return true;
 }

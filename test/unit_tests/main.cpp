@@ -30,7 +30,7 @@
 #include "message.hpp"
 #include "ssl_context.hpp"
 #include "ssl_session.hpp"
-#include "stream_storage.hpp"
+#include "stream_manager.hpp"
 
 char TEST_MESSAGE_ERROR[] = {
   0x81, 0x01, 0x7F, 0x00, 0x00, 0x00, 0x00, 0x0C,  // header

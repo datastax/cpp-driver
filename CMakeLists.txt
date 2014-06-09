@@ -49,8 +49,8 @@ find_package_handle_standard_args(Libuv "Could NOT find libuv, try to set the pa
   LIBUV_LIBRARIES
   LIBUV_INCLUDE_DIR)
 
-set(INCLUDES ${INCLUDES} ${LIBUV_INCLUDE_DIR} )
-set(LIBS ${LIBS} ${LIBUV_LIBRARIES} )
+set(INCLUDES ${INCLUDES} ${LIBUV_INCLUDE_DIR})
+set(LIBS ${LIBS} ${LIBUV_LIBRARIES})
 
 # openssl
 if(WIN32)
@@ -67,6 +67,10 @@ set(INCLUDES ${INCLUDES} ${OPENSSL_INCLUDE_DIR} )
 #find_package(ZLIB REQUIRED)
 #set(LIBS ${LIBS} ${ZLIB_LIBRARIES})
 #set(INCLUDES ${INCLUDES} ${ZLIB_INCLUDE_DIR} )
+
+if(WIN32)
+  set(LIBS ${LIBS} wsock32 ws2_32)
+endif()
 
 # Build up the include path's
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
@@ -203,8 +207,8 @@ add_subdirectory(test/unit_tests)
 # Integration tests
 #-------------------
 
-add_subdirectory(test/ccm_bridge)
-add_subdirectory(test/integration_tests)
+#add_subdirectory(test/ccm_bridge)
+#add_subdirectory(test/integration_tests)
 
 #-------------------
 # Examples
@@ -222,12 +226,12 @@ add_subdirectory(examples/simple)
 # Generating API docs with Doxygen
 #-----------------------------------
 
-find_package(Doxygen)
-if(DOXYGEN_FOUND)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
-    add_custom_target(doc
-        ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMENT "Generating API documentation with Doxygen" VERBATIM)
-endif(DOXYGEN_FOUND)
+#find_package(Doxygen)
+#if(DOXYGEN_FOUND)
+#    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+#    add_custom_target(doc
+#        ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+#        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+#        COMMENT "Generating API documentation with Doxygen" VERBATIM)
+#endif(DOXYGEN_FOUND)
 

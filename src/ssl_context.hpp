@@ -298,7 +298,7 @@ class SSLContext {
     CHECK_CERT(
         !ASN1_INTEGER_set(
             X509_get_serialNumber(x509),
-            (int64_t) start_time));
+            (long)start_time));
 
     X509_NAME* name = X509_NAME_new();
     CHECK_CERT(!name);

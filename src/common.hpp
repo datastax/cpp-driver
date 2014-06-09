@@ -28,6 +28,7 @@
 #include <list>
 #include <map>
 #include <string>
+#include <functional>
 
 #include "cassandra.h"
 

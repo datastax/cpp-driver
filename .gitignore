@@ -59,4 +59,13 @@ Doxyfile
 *.files
 *.includes
 
+# MSVC
+*.vcxproj
+*.vcxproj.filters
+*.sdf
+*.sln
+*.suo
+*.opensdf
+
+
 config.txt

@@ -59,8 +59,8 @@ class Uuids {
 
   private:
     static uint64_t CLOCK_SEQ_AND_NODE; // Calculated
-    static constexpr uint64_t MIN_CLOCK_SEQ_AND_NODE = 0x8080808080808080L;
-    static constexpr uint64_t MAX_CLOCK_SEQ_AND_NODE = 0x7f7f7f7f7f7f7f7fL;
+    static const uint64_t MIN_CLOCK_SEQ_AND_NODE = 0x8080808080808080L;
+    static const uint64_t MAX_CLOCK_SEQ_AND_NODE = 0x7f7f7f7f7f7f7f7fL;
 
     static inline uint64_t to_milliseconds(uint64_t timestamp) {
       return timestamp / 10000L;
