@@ -26,12 +26,12 @@ CassCluster* cass_cluster_new() {
 CassError cass_cluster_setopt(CassCluster* cluster,
                               CassOption option,
                               const void* data, cass_size_t data_length) {
-  return cluster->config().option(option, data, data_length);
+  return cluster->config().set_option(option, data, data_length);
 }
 
 CassError cass_cluster_getopt(const CassCluster* cluster,
                               CassOption option,
-                              void** data, cass_size_t* data_length) {
+                              void* data, cass_size_t* data_length) {
   return CASS_OK;
 }
 

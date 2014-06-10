@@ -41,7 +41,7 @@ CassCluster* create_cluster() {
   CassCluster* cluster = cass_cluster_new();
   const char** contact_point = NULL;
   for(contact_point = contact_points; *contact_point; contact_point++) {
-    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINT_ADD, *contact_point, strlen(*contact_point));
+    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINTS, *contact_point, strlen(*contact_point));
   }
   return cluster;
 }

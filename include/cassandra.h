@@ -176,14 +176,22 @@ typedef enum CassCompression_ {
 } CassCompression;
 
 typedef enum CassOption_ {
-  CASS_OPTION_THREADS_IO,
-  CASS_OPTION_THREADS_CALLBACK,
-  CASS_OPTION_CONTACT_POINT_ADD,
   CASS_OPTION_PORT,
   CASS_OPTION_CQL_VERSION,
-  CASS_OPTION_SCHEMA_AGREEMENT_WAIT,
-  CASS_OPTION_CONTROL_CONNECTION_TIMEOUT,
-  CASS_OPTION_COMPRESSION
+  CASS_OPTION_NUM_THREADS_IO,
+  CASS_OPTION_QUEUE_SIZE_IO,
+  CASS_OPTION_QUEUE_SIZE_EVENTS,
+  CASS_OPTION_CONTACT_POINTS,
+  CASS_OPTION_CORE_CONNECTIONS_PER_HOST,
+  CASS_OPTION_MAX_CONNECTIONS_PER_HOST,
+  CASS_OPTION_MAX_SIMULTANEOUS_CREATION,
+  CASS_RECONNECT_WAIT_TIME,
+  CASS_OPTION_CONNECT_TIMEOUT,
+  CASS_OPTION_WRITE_TIMEOUT,
+  CASS_OPTION_READ_TIMEOUT,
+  CASS_OPTION_LOG_LEVEL,
+  CASS_OPTION_LOG_DATA,
+  CASS_OPTION_LOG_CALLBACK
 } CassOption;
 
 #define CASS_LOG_LEVEL_MAP(XX) \
@@ -212,20 +220,21 @@ typedef enum  CassErrorSource_ {
 #define CASS_ERROR_MAP(XX) \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_BAD_PARAMS, 1, "Bad parameters") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_OPTION, 2, "Invalid option") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_STREAMS, 3, "No streams available") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_INIT, 4, "Unable to initialize session") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_MESSAGE_PREPARE, 5, "Unable to prepare message") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_HOST_RESOLUTION, 6, "Unable to reslove host") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNEXPECTED_RESPONSE, 7, "Unexpected reponse from server") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_QUEUE_FULL, 8, "The request queue is full") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD, 9, "No available IO threads") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_WRITE_ERROR, 10, "Write error") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, 11, "No hosts available") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS, 12, "Index out of bounds") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_ITEM_COUNT, 13, "Invalid item count") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_VALUE_TYPE, 14, "Invalid value type") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_TIMED_OUT, 15, "Request timed out") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_UNABLE_TO_SET_KEYSPACE, 16, "Unable to set keyspace") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_OPTION_SIZE, 3, "Invalid option size") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_STREAMS, 4, "No streams available") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_INIT, 5, "Unable to initialize session") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_MESSAGE_PREPARE, 6, "Unable to prepare message") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_HOST_RESOLUTION, 7, "Unable to reslove host") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNEXPECTED_RESPONSE, 8, "Unexpected reponse from server") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_QUEUE_FULL, 9, "The request queue is full") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD, 10, "No available IO threads") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_WRITE_ERROR, 11, "Write error") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, 12, "No hosts available") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS, 13, "Index out of bounds") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_ITEM_COUNT, 14, "Invalid item count") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_VALUE_TYPE, 15, "Invalid value type") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_TIMED_OUT, 16, "Request timed out") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_UNABLE_TO_SET_KEYSPACE, 17, "Unable to set keyspace") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -297,13 +306,13 @@ cass_cluster_setopt(CassCluster* cluster,
  * @param[in] cluster
  * @param[in] option
  * @param[out] data
- * @param[out] data_length
+ * @param[in, out] data_length
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_cluster_getopt(const CassCluster* cluster,
                     CassOption option,
-                    void** data, cass_size_t* data_length);
+                    void* data, cass_size_t* data_length);
 
 /**
  * Connnects a session to the cluster.

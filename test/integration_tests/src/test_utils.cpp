@@ -107,7 +107,7 @@ MultipleNodesTest::MultipleNodesTest(int numberOfNodesDC1, int numberOfNodesDC2)
   cluster = cass_cluster_new();
   for(int i = 0; i < numberOfNodesDC1; ++i) {
     std::string contact_point(conf.ip_prefix() + boost::lexical_cast<std::string>(i + 1));
-    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINT_ADD, contact_point.data(), contact_point.size());
+    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINTS, contact_point.data(), contact_point.size());
   }
 
   if(conf.use_logger())	{
