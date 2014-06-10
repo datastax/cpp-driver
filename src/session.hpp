@@ -55,12 +55,16 @@ class Session : public EventThread<SessionEvent> {
 
     int init();
 
-    std::shared_ptr<std::string> keyspace() const {
-      return std::atomic_load(&keyspace_);
+    std::string keyspace() {
+      std::unique_lock<std::mutex> lock(keyspace_mutex_);
+      return keyspace_;
     }
+
     void set_keyspace(const std::string& keyspace) {
-      std::atomic_store(&keyspace_, std::shared_ptr<std::string>(new std::string(keyspace)));
+      std::unique_lock<std::mutex> lock(keyspace_mutex_);
+      keyspace_ = keyspace;
     }
+
     void set_load_balancing_policy(LoadBalancingPolicy* policy) {
       load_balancing_policy_.reset(policy);
     }
@@ -103,7 +107,8 @@ class Session : public EventThread<SessionEvent> {
     SSLContext* ssl_context_;
     IOWorkerCollection io_workers_;
     std::unique_ptr<Logger> logger_;
-    std::shared_ptr<std::string> keyspace_;
+    std::string keyspace_;
+    std::mutex keyspace_mutex_;
     Future* connect_future_;
     Future* close_future_;
     std::set<Host> hosts_;

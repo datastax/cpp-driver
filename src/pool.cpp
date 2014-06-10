@@ -143,11 +143,10 @@ Connection* Pool::borrow_connection(const std::string& keyspace) {
 
 bool Pool::execute(Connection* connection, RequestHandler* request_handler) {
   PoolHandler* pool_handler = new PoolHandler(this, connection, request_handler);
-  std::shared_ptr<std::string> keyspace = request_handler->keyspace;
-  if(!keyspace || *keyspace == connection->keyspace()) {
+  if(request_handler->keyspace == connection->keyspace()) {
     return connection->execute(pool_handler);
   } else {
-    return connection->execute(new SetKeyspaceHandler(*keyspace, connection, pool_handler));
+    return connection->execute(new SetKeyspaceHandler(request_handler->keyspace, connection, pool_handler));
   }
 }
 
