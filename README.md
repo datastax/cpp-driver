@@ -83,7 +83,7 @@ cmake -G "Visual Studio 12 Win64"
 msbuild cassandra.vcxproj /p:Configuration=Release /t:Clean,Build
 ```
 
-### Ubuntu
+### Linux
 The driver was built and tested using both GCC and Clang on Ubuntu 14.04.
 
 To obtain dependencies (GCC):
