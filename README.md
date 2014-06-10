@@ -88,7 +88,7 @@ The driver was built and tested using both GCC and Clang on Ubuntu 14.04.
 
 To obtain dependencies (GCC):
 ```
-sudo apt-get install gcc make cmake libuv-dev libssl-dev
+sudo apt-get install g++ make cmake libuv-dev libssl-dev
 ```
 
 To obtain dependencies (Clang):
