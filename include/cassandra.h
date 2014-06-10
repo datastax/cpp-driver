@@ -19,7 +19,6 @@
 
 #include <stddef.h>
 
-
 #if !defined(CASS_STATIC)
 #  if (defined(WIN32) || defined(_WIN32))
 #    if defined(CASS_BUILDING)
@@ -45,34 +44,51 @@ typedef enum { cass_false = 0, cass_true = 1 } cass_bool_t;
 typedef float cass_float_t;
 typedef double cass_double_t;
 
-typedef size_t cass_size_t;
-
-#if defined(__GNUC__) || defined(__INTEL_COMPILER)
+#if defined(__INT8_TYPE__) && defined(__UINT8_TYPE__)
 typedef __INT8_TYPE__ cass_int8_t;
 typedef __UINT8_TYPE__ cass_uint8_t;
-
-typedef __INT16_TYPE__ cass_int16_t;
-typedef __UINT16_TYPE__ cass_uint16_t;
-
-typedef __INT32_TYPE__ cass_int32_t;
-typedef __UINT32_TYPE__ cass_uint32_t;
-
-typedef __INT64_TYPE__ cass_int64_t;
-typedef __UINT64_TYPE__ cass_uint64_t;
+#elif defined(__INT8_TYPE__)
+typedef __INT8_TYPE__ cass_int8_t;
+typedef unsigned __INT8_TYPE__ cass_uint8_t;
 #else
 typedef char cass_int8_t;
 typedef unsigned char cass_uint8_t;
+#endif
 
+#if defined(__INT16_TYPE__) && defined(__UINT16_TYPE__)
+typedef __INT16_TYPE__ cass_int16_t;
+typedef __UINT16_TYPE__ cass_uint16_t;
+#elif defined(__INT16_TYPE__)
+typedef __INT16_TYPE__ cass_int16_t;
+typedef unsigned __INT16_TYPE__ cass_uint16_t;
+#else
 typedef short cass_int16_t;
 typedef unsigned short cass_uint16_t;
+#endif
 
+#if defined(__INT32_TYPE__) && defined(__UINT32_TYPE__)
+typedef __INT32_TYPE__ cass_int32_t;
+typedef __UINT32_TYPE__ cass_uint32_t;
+#elif defined(__INT32_TYPE__)
+typedef __INT32_TYPE__ cass_int32_t;
+typedef unsigned __INT32_TYPE__ cass_uint32_t;
+#else
 typedef int cass_int32_t;
 typedef unsigned int cass_uint32_t;
+#endif
 
+#if defined(__INT64_TYPE__) && defined(__UINT64_TYPE__)
+typedef __INT64_TYPE__ cass_int64_t;
+typedef __UINT64_TYPE__ cass_uint64_t;
+#elif defined(__INT64_TYPE__)
+typedef __INT64_TYPE__ cass_int64_t;
+typedef unsigned __INT64_TYPE__ cass_uint64_t;
+#else
 typedef long long cass_int64_t;
 typedef unsigned long long cass_uint64_t;
 #endif
 
+typedef size_t cass_size_t;
 typedef cass_uint8_t cass_byte_t;
 typedef cass_uint64_t cass_duration_t;
 
