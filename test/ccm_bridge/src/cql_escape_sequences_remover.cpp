@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include <cctype>
 #include <string>
 #include "cql_escape_sequences_remover.hpp"

@@ -93,14 +93,6 @@ class Address {
       return addr()->sa_family;
     }
 
-    socklen_t length() const {
-#ifdef WIN32
-      addr()->sa_family == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
-#else
-      return addr()->sa_len;
-#endif
-    }
-
     int port() const {
       if(addr()->sa_family == AF_INET) {
         return htons(addr_in()->sin_port);
