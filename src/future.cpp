@@ -20,14 +20,13 @@
 extern "C" {
 
 void cass_future_free(CassFuture* future) {
-  // TODO(mpenick): We can't do this because the memory could still be in use by an internal thread
-  // You shouldn't have to wait for a future to delete it
-  // This needs to be referenced counted
-  delete future->from();
+  // Futures can be deleted without being waited on
+  // because they'll be cleaned up by the notifying thread
+  future->release();
 }
 
-int cass_future_ready(CassFuture* future) {
-  return static_cast<int>(future->ready());
+cass_bool_t cass_future_ready(CassFuture* future) {
+  return static_cast<cass_bool_t>(future->ready());
 }
 
 void cass_future_wait(CassFuture* future) {
@@ -40,79 +39,66 @@ cass_bool_t cass_future_wait_timed(CassFuture* future,
 }
 
 CassSession* cass_future_get_session(CassFuture* future) {
-  if(future->type() != cass::CASS_FUTURE_TYPE_SESSION) {
+  if(future->type() != cass::CASS_FUTURE_TYPE_SESSION_CONNECT) {
     return nullptr;
   }
-  cass::SessionFuture* session_future = static_cast<cass::SessionFuture*>(future->from());
-  const cass::Future::ResultOrError* result_or_error = session_future->get();
-  if(result_or_error->is_error()) {
+  cass::SessionConnectFuture* connect_future = static_cast<cass::SessionConnectFuture*>(future->from());
+  if(connect_future->is_error()) {
     return nullptr;
   }
-  return CassSession::to(session_future->session);
+  return CassSession::to(connect_future->release_result());
 }
 
 const CassResult* cass_future_get_result(CassFuture* future) {
-  if(future->type() != cass::CASS_FUTURE_TYPE_REQUEST) {
+  if(future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
     return nullptr;
   }
-  cass::RequestFuture* request_future = static_cast<cass::RequestFuture*>(future->from());
-  cass::Future::ResultOrError* result_or_error = request_future->get();
-  if(result_or_error->is_error()) {
+  cass::ResponseFuture* response_future = static_cast<cass::ResponseFuture*>(future->from());
+  if(response_future->is_error()) {
     return nullptr;
   }
-  return CassResult::to(static_cast<cass::Result*>(result_or_error->release()));
+  return CassResult::to(static_cast<cass::ResultResponse*>(response_future->release_result()));
 }
 
 const CassPrepared* cass_future_get_prepared(CassFuture* future) {
-  if(future->type() != cass::CASS_FUTURE_TYPE_REQUEST) {
+  if(future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
     return nullptr;
   }
-  cass::RequestFuture* request_future = static_cast<cass::RequestFuture*>(future->from());
-  cass::Future::ResultOrError* result_or_error = request_future->get();
-  if(result_or_error->is_error()) {
+  cass::ResponseFuture* response_future = static_cast<cass::ResponseFuture*>(future->from());
+  if(response_future->is_error()) {
     return nullptr;
   }
-  cass::Result* result = static_cast<cass::Result*>(result_or_error->release());
-  if(result != nullptr && result->kind == CASS_RESULT_KIND_PREPARED) {
-    cass::Prepared* prepared = new cass::Prepared(std::string(result->prepared,
-                                                              result->prepared_size));
-    delete result;
+  std::unique_ptr<cass::ResultResponse> result(static_cast<cass::ResultResponse*>(response_future->release_result()));
+  if(result && result->kind == CASS_RESULT_KIND_PREPARED) {
+    cass::Prepared* prepared
+        = new cass::Prepared(std::string(result->prepared, result->prepared_size),
+                             response_future->statement);
     return CassPrepared::to(prepared);
   }
   return nullptr;
 }
 
+CassError cass_future_error_code(CassFuture* future) {
+  const cass::Future::Error *error = future->get_error();
+  if(error != nullptr) {
+    return error->code;
+  } else {
+    return CASS_OK;
+  }
+}
+
 CassString cass_future_error_message(CassFuture* future) {
   CassString str;
-  const cass::Future::ResultOrError* result_or_error = future->get();
-  if(result_or_error->is_error()) {
-    const std::string& message = result_or_error->error()->message;
-    str.data = message.c_str();
+  const cass::Future::Error *error = future->get_error();
+  if(error != nullptr) {
+    const std::string& message = error->message;
+    str.data = message.data();
     str.length = message.size();
   } else {
     str.data = "";
     str.length = 0;
   }
   return str;
-}
-
-
-CassErrorSource cass_future_error_source(CassFuture* future) {
-  const cass::Future::ResultOrError* result_or_error = future->get();
-  if(result_or_error->is_error()) {
-    return result_or_error->error()->source;
-  } else {
-    return CASS_ERROR_SOURCE_NONE;
-  }
-}
-
-CassError cass_future_error_code(CassFuture* future) {
-  const cass::Future::ResultOrError* result_or_error = future->get();
-  if(result_or_error->is_error()) {
-    return result_or_error->error()->code;
-  } else {
-    return CASS_OK;
-  }
 }
 
 } // extern "C"

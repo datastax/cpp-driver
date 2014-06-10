@@ -20,35 +20,35 @@
 #include <stdlib.h>
 #include <uv.h>
 
-#include <arpa/inet.h>
-
 #include "cassandra.h"
 
 void print_error(CassFuture* future) {
   CassString message = cass_future_error_message(future);
-  fprintf(stderr, "Error: %s\n", message.data);
+  fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
 }
 
-CassError connect_session(const char* contact_points[], CassSession** output) {
+CassCluster* create_cluster() {
+  const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
+  CassCluster* cluster = cass_cluster_new();
+  const char** contact_point = NULL;
+  for(contact_point = contact_points; *contact_point; contact_point++) {
+    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINT_ADD, *contact_point, strlen(*contact_point));
+  }
+  return cluster;
+}
+
+CassError connect_session(CassCluster* cluster, CassSession** output) {
   CassError rc = 0;
-  const char** cp = NULL;
-  CassFuture* future = NULL;
-  CassSession* session = cass_session_new();
+  CassFuture* future = cass_cluster_connect(cluster);
 
   *output = NULL;
 
-  for(cp = contact_points; *cp; cp++) {
-    cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, *cp, strlen(*cp));
-  }
-
-  future = cass_session_connect(session);
   cass_future_wait(future);
   rc = cass_future_error_code(future);
   if(rc != CASS_OK) {
     print_error(future);
-    cass_session_free(session);
   } else {
-    *output = session;
+    *output = cass_future_get_session(future);
   }
   cass_future_free(future);
 
@@ -60,7 +60,7 @@ CassError execute_query(CassSession* session, const char* query) {
   CassFuture* future = NULL;
   CassStatement* statement = cass_statement_new(cass_string_init(query), 0, CASS_CONSISTENCY_ONE);
 
-  future = cass_session_exec(session, statement);
+  future = cass_session_execute(session, statement);
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
@@ -93,8 +93,7 @@ CassError insert_into_collections(CassSession* session, const char* key, const c
   cass_statement_bind_collection(statement, 1, collection, cass_false);
   cass_collection_free(collection);
 
-  future = cass_session_exec(session, statement);
-
+  future = cass_session_execute(session, statement);
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
@@ -118,8 +117,7 @@ CassError select_from_collections(CassSession* session, const char* key) {
 
   cass_statement_bind_string(statement, 0, cass_string_init(key));
 
-  future = cass_session_exec(session, statement);
-
+  future = cass_session_execute(session, statement);
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
@@ -154,15 +152,15 @@ CassError select_from_collections(CassSession* session, const char* key) {
   return rc;
 }
 
-int
-main() {
+int main() {
   CassError rc = 0;
+  CassCluster* cluster = create_cluster();
   CassSession* session = NULL;
-  CassFuture* shutdown_future = NULL;
-  const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
+  CassFuture* close_future = NULL;
+
   const char* items[] = { "apple", "orange", "banana", "mango", NULL };
 
-  rc = connect_session(contact_points, &session);
+  rc = connect_session(cluster, &session);
   if(rc != CASS_OK) {
     return -1;
   }
@@ -180,9 +178,9 @@ main() {
   insert_into_collections(session, "test", items);
   select_from_collections(session, "test");
 
-  shutdown_future = cass_session_shutdown(session);
-  cass_future_wait(shutdown_future);
-  cass_session_free(session);
+  close_future = cass_session_close(session);
+  cass_future_wait(close_future);
+  cass_cluster_free(cluster);
 
   return 0;
 }

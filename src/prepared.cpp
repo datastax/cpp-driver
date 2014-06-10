@@ -28,7 +28,7 @@ CassStatement*
 cass_prepared_bind(const CassPrepared* prepared,
                    size_t parameter_count,
                    CassConsistency consistency) {
-  return CassStatement::to(new cass::Bound(*prepared, parameter_count, consistency));
+  return CassStatement::to(new cass::ExecuteRequest(prepared, parameter_count, consistency));
 }
 
 

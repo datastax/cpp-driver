@@ -20,8 +20,6 @@
 #include <stdlib.h>
 #include <uv.h>
 
-#include <arpa/inet.h>
-
 #include "cassandra.h"
 
 struct Basic_ {
@@ -36,29 +34,32 @@ typedef struct Basic_ Basic;
 
 void print_error(CassFuture* future) {
   CassString message = cass_future_error_message(future);
-  fprintf(stderr, "Error: %s\n", message.data);
+  fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
 }
 
-CassError connect_session(const char* contact_points[], CassSession** output) {
+
+CassCluster* create_cluster() {
+  const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
+  CassCluster* cluster = cass_cluster_new();
+  const char** contact_point = NULL;
+  for(contact_point = contact_points; *contact_point; contact_point++) {
+    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINT_ADD, *contact_point, strlen(*contact_point));
+  }
+  return cluster;
+}
+
+CassError connect_session(CassCluster* cluster, CassSession** output) {
   CassError rc = 0;
-  const char** cp = NULL;
-  CassFuture* future = NULL;
-  CassSession* session = cass_session_new();
+  CassFuture* future = cass_cluster_connect(cluster);
 
   *output = NULL;
 
-  for(cp = contact_points; *cp; cp++) {
-    cass_session_setopt(session, CASS_OPTION_CONTACT_POINT_ADD, *cp, strlen(*cp));
-  }
-
-  future = cass_session_connect(session);
   cass_future_wait(future);
   rc = cass_future_error_code(future);
   if(rc != CASS_OK) {
     print_error(future);
-    cass_session_free(session);
   } else {
-    *output = session;
+    *output = cass_future_get_session(future);
   }
   cass_future_free(future);
 
@@ -70,7 +71,7 @@ CassError execute_query(CassSession* session, const char* query) {
   CassFuture* future = NULL;
   CassStatement* statement = cass_statement_new(cass_string_init(query), 0, CASS_CONSISTENCY_ONE);
 
-  future = cass_session_exec(session, statement);
+  future = cass_session_execute(session, statement);
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
@@ -99,8 +100,7 @@ CassError insert_into_basic(CassSession* session, const char* key, const Basic* 
   cass_statement_bind_int32(statement, 4, basic->i32);
   cass_statement_bind_int64(statement, 5, basic->i64);
 
-  future = cass_session_exec(session, statement);
-
+  future = cass_session_execute(session, statement);
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
@@ -124,8 +124,7 @@ CassError select_from_basic(CassSession* session, const char* key, Basic* basic)
 
   cass_statement_bind_string(statement, 0, cass_string_init(key));
 
-  future = cass_session_exec(session, statement);
-
+  future = cass_session_execute(session, statement);
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
@@ -137,15 +136,10 @@ CassError select_from_basic(CassSession* session, const char* key, Basic* basic)
 
     if(cass_iterator_next(iterator)) {
       const CassRow* row = cass_iterator_get_row(iterator);
-
       cass_value_get_bool(cass_row_get_column(row, 1), &basic->bln);
-
       cass_value_get_double(cass_row_get_column(row, 2), &basic->dbl);
-
       cass_value_get_float(cass_row_get_column(row, 3), &basic->flt);
-
       cass_value_get_int32(cass_row_get_column(row, 4), &basic->i32);
-
       cass_value_get_int64(cass_row_get_column(row, 5), &basic->i64);
     }
 
@@ -159,17 +153,16 @@ CassError select_from_basic(CassSession* session, const char* key, Basic* basic)
   return rc;
 }
 
-int
-main() {
+int main() {
   CassError rc = 0;
+  CassCluster* cluster = create_cluster();
   CassSession* session = NULL;
-  CassFuture* shutdown_future = NULL;
-  const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
-  Basic input = { cass_true, 0.001, 0.0002, 1, 2 };
+  CassFuture* close_future = NULL;
+
+  Basic input = { cass_true, 0.001f, 0.0002, 1, 2 };
   Basic output;
 
-
-  rc = connect_session(contact_points, &session);
+  rc = connect_session(cluster, &session);
   if(rc != CASS_OK) {
     return -1;
   }
@@ -177,6 +170,7 @@ main() {
   execute_query(session,
                 "CREATE KEYSPACE examples WITH replication = { \
                            'class': 'SimpleStrategy', 'replication_factor': '3' };");
+
 
   execute_query(session,
                 "CREATE TABLE examples.basic (key text, \
@@ -194,38 +188,9 @@ main() {
   assert(input.i32 == output.i32);
   assert(input.i64 == output.i64);
 
-  /*
-{
-  int i;
-  for(i = 0; i < 10; ++i) {
-    char key[17] = { 0 };
-    sprintf(key, "%x", i);
-    insert_into_basic(session, key, &input);
-  }
-
-  for(i = 0; i < 10; ++i) {
-    int j;
-    printf("iteration: %d\n", i);
-    for(j = 0; j < 10; ++j) {
-      char key[17] = { 0 };
-      sprintf(key, "%x", j);
-      if(j % 2000 == 0) {
-        printf("%s\n", key);
-      }
-      select_from_basic(session, key, &output);
-      assert(input.bln == output.bln);
-      assert(input.flt == output.flt);
-      assert(input.dbl == output.dbl);
-      assert(input.i32 == output.i32);
-      assert(input.i64 == output.i64);
-    }
-  }
-}
-*/
-
-  shutdown_future = cass_session_shutdown(session);
-  cass_future_wait(shutdown_future);
-  cass_session_free(session);
+  close_future = cass_session_close(session);
+  cass_future_wait(close_future);
+  cass_cluster_free(cluster);
 
   return 0;
 }

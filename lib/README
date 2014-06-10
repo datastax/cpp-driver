@@ -1,0 +1,1 @@
+This is where CMake looks for manually built dependencies when building on Windows.

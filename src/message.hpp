@@ -17,18 +17,19 @@
 #ifndef __CASS_MESSAGE_HPP_INCLUDED__
 #define __CASS_MESSAGE_HPP_INCLUDED__
 
-#include "batch.hpp"
-#include "body_error.hpp"
-#include "body_options.hpp"
-#include "body_ready.hpp"
-#include "result.hpp"
-#include "body_startup.hpp"
-#include "body_supported.hpp"
-#include "prepare.hpp"
-#include "bound.hpp"
-#include "query.hpp"
-#include "host.hpp"
+#include "options_request.hpp"
+#include "startup_request.hpp"
+#include "batch_request.hpp"
+#include "query_request.hpp"
+#include "prepare_request.hpp"
+#include "execute_request.hpp"
 
+#include "error_response.hpp"
+#include "ready_response.hpp"
+#include "supported_response.hpp"
+#include "result_response.hpp"
+
+#include "host.hpp"
 
 #define CASS_HEADER_SIZE 8
 
@@ -40,7 +41,7 @@ struct Message {
   int8_t                          stream;
   uint8_t                         opcode;
   int32_t                         length;
-  int32_t                         received;
+  size_t                          received;
   bool                            header_received;
   char                            header_buffer[CASS_HEADER_SIZE];
   char*                           header_buffer_pos;
@@ -80,31 +81,32 @@ struct Message {
       uint8_t  opcode) {
     switch (opcode) {
       case CQL_OPCODE_RESULT:
-        return static_cast<MessageBody*>(new Result());
+        return static_cast<MessageBody*>(new ResultResponse());
 
       case CQL_OPCODE_PREPARE:
-        return static_cast<MessageBody*>(new Prepare());
+        return static_cast<MessageBody*>(new PrepareRequest());
 
       case CQL_OPCODE_ERROR:
-        return static_cast<MessageBody*>(new BodyError());
+        return static_cast<MessageBody*>(new ErrorResponse());
 
       case CQL_OPCODE_OPTIONS:
-        return static_cast<MessageBody*>(new BodyOptions());
+        return static_cast<MessageBody*>(new OptionsRequest());
 
       case CQL_OPCODE_STARTUP:
-        return static_cast<MessageBody*>(new BodyStartup());
+        return static_cast<MessageBody*>(new StartupRequest());
 
       case CQL_OPCODE_SUPPORTED:
-        return static_cast<MessageBody*>(new BodySupported());
+        return static_cast<MessageBody*>(new SupportedResponse());
 
       case CQL_OPCODE_QUERY:
-        return static_cast<MessageBody*>(new Query());
+        return static_cast<MessageBody*>(new QueryRequest());
 
       case CQL_OPCODE_READY:
-        return static_cast<MessageBody*>(new BodyReady());
+        return static_cast<MessageBody*>(new ReadyResponse());
 
       default:
         assert(false);
+        return nullptr;
     }
   }
 
@@ -141,70 +143,72 @@ struct Message {
    *
    * @return how many bytes copied
    */
-  int
-  consume(
-      char*  input,
-      size_t size) {
-    char* input_pos  = input;
-    received        += size;
+  ssize_t consume(char*  input, size_t size) {
+    char* input_pos = input;
+
+    received += size;
 
     if (!header_received) {
       if (received >= CASS_HEADER_SIZE) {
-        // we've received more data then we need, just copy what we need
+        // We may have received more data then we need, only copy what we need
         size_t overage = received - CASS_HEADER_SIZE;
         size_t needed  = size - overage;
+
         memcpy(header_buffer_pos, input_pos, needed);
-
-        char* buffer       = header_buffer;
-        version            = *(buffer++);
-        flags              = *(buffer++);
-        stream             = *(buffer++);
-        opcode             = *(buffer++);
-        memcpy(&length, buffer, sizeof(int32_t));
-        length = ntohl(length);
-
+        header_buffer_pos += needed;
         input_pos         += needed;
-        header_buffer_pos  = header_buffer + CASS_HEADER_SIZE;
-        header_received    = true;
+        assert(header_buffer_pos == header_buffer + CASS_HEADER_SIZE);
+
+        char* buffer = header_buffer;
+        version      = *(buffer++);
+        flags        = *(buffer++);
+        stream       = *(buffer++);
+        opcode       = *(buffer++);
+
+        decode_int(buffer, length);
+
+        header_received = true;
 
         body.reset(allocate_body(opcode));
         body->set_buffer(new char[length]);
         body_buffer_pos = body->buffer();
 
-        if (body == NULL) {
+        if (!body) {
+          // Unhandled opcode
           return -1;
         }
       } else {
-        // we haven't received all the data yet
-        // copy the entire input to our buffer
+        // We haven't received all the data for the header. We consume the entire buffer.
         memcpy(header_buffer_pos, input_pos, size);
         header_buffer_pos += size;
-        input_pos += size;
         return size;
       }
     }
 
-    if (received - CASS_HEADER_SIZE >= length) {
-      // we've received more data then we need, just copy what we need
-      size_t overage = received - length - CASS_HEADER_SIZE;
-      size_t needed = (size - (input_pos - input)) - overage;
+    const size_t remaining = size - (input_pos - input);
+    const size_t frame_size = CASS_HEADER_SIZE + length;
+
+    if (received >= frame_size) {
+      // We may have received more data then we need, only copy what we need
+      size_t overage = received - frame_size;
+      size_t needed = remaining - overage;
 
       memcpy(body_buffer_pos, input_pos, needed);
       body_buffer_pos += needed;
       input_pos       += needed;
+      assert(body_buffer_pos == body->buffer() + length);
 
       if (!body->consume(body->buffer(), length)) {
         body_error = true;
       }
       body_ready = true;
     } else {
-      // we haven't received all the data yet
-      // copy the entire input to our buffer
-      memcpy(body_buffer_pos, input_pos, size - (input_pos - input));
-      input_pos       += size;
-      body_buffer_pos += size;
+      // We haven't received all the data for the frame. We consume the entire buffer.
+      memcpy(body_buffer_pos, input_pos, remaining);
+      body_buffer_pos += remaining;
       return size;
     }
+
     return input_pos - input;
   }
 };

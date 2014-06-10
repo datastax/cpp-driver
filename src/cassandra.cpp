@@ -18,9 +18,43 @@
 
 extern "C" {
 
-const char*
-cass_code_error_desc(CassError code) {
-  return ""; // TODO(mpenick)
+const char* cass_error_desc(CassError error) {
+  switch(error) {
+#define XX(source, _, code, desc) case CASS_ERROR(source, code): return desc;
+  CASS_ERROR_MAP(XX)
+#undef XX
+    default: return "";
+  }
+}
+
+const char* cass_log_level_string(CassLogLevel log_level) {
+  switch(log_level) {
+#define XX(log_level, desc) case log_level: return desc;
+    CASS_LOG_LEVEL_MAP(XX)
+#undef XX
+    default: return "";
+  }
+}
+
+CassInet cass_inet_init_v4(const cass_uint8_t* address) {
+  CassInet inet;
+  inet.address_length = CASS_INET_V4_LENGTH;
+  memcpy(inet.address, address, CASS_INET_V4_LENGTH);
+  return inet;
+}
+
+CassInet cass_inet_init_v6(const cass_uint8_t* address) {
+  CassInet inet;
+  inet.address_length = CASS_INET_V6_LENGTH;
+  memcpy(inet.address, address, CASS_INET_V6_LENGTH);
+  return inet;
+}
+
+CassDecimal cass_decimal_init(cass_int32_t scale, CassBytes varint) {
+  CassDecimal decimal;
+  decimal.scale = scale;
+  decimal.varint = varint;
+  return decimal;
 }
 
 CassString cass_string_init(const char* null_terminated) {
@@ -37,7 +71,7 @@ CassString cass_string_init2(const char* data, cass_size_t length) {
   return str;
 }
 
-CassBytes cass_bytes_init(cass_byte_t* data, cass_size_t size) {
+CassBytes cass_bytes_init(const cass_byte_t* data, cass_size_t size) {
   CassBytes bytes;
   bytes.data = data;
   bytes.size = size;

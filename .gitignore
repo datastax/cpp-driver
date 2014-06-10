@@ -15,6 +15,7 @@
 
 # cmake output
 *.cmake
+!Find*.cmake
 *.build
 *.xcodeproj
 CMakeFiles
@@ -58,5 +59,13 @@ Doxyfile
 *.files
 *.includes
 
-/extra/ccm_bridge/nbproject/private/
-/nbproject/private/
+# MSVC
+*.vcxproj
+*.vcxproj.filters
+*.sdf
+*.sln
+*.suo
+*.opensdf
+
+
+config.txt

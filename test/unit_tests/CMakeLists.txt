@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 2.6.4)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ".")
-set(PROJECT_TEST_NAME ${PROJECT_NAME_STR}_test)
+set(PROJECT_TEST_NAME ${PROJECT_NAME_STR}_unit_tests)
 
 set(TEST ${PROJECT_TEST_NAME})
 include_directories(${INCLUDES} ${PROJECT_SOURCE_DIR}/src/)

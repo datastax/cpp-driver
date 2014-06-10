@@ -23,13 +23,18 @@ extern "C" {
 CassStatement* cass_statement_new(CassString statement,
                    size_t parameter_count,
                    CassConsistency consistency) {
-  cass::Statement* query_statement = new cass::Query(parameter_count, consistency);
-  query_statement->statement(statement.data, statement.length);
-  return CassStatement::to(query_statement);
+  cass::Statement* query = new cass::QueryRequest(parameter_count, consistency);
+  query->statement(statement.data, statement.length);
+  return CassStatement::to(query);
 }
 
 void cass_statement_free(CassStatement *statement) {
-  delete statement->from();
+  statement->release();
+}
+
+CassError cass_statement_bind_null(CassStatement* statement,
+                                   cass_size_t index) {
+  return statement->bind_null(index);
 }
 
 CassError cass_statement_bind_int32(CassStatement* statement,
@@ -59,7 +64,7 @@ CassError cass_statement_bind_double(CassStatement* statement,
 CassError cass_statement_bind_bool(CassStatement* statement,
                                    size_t index,
                                    cass_bool_t value) {
-  return statement->bind_bool(index, value);
+  return statement->bind_bool(index, value == cass_true);
 }
 
 CassError cass_statement_bind_string(CassStatement* statement,
@@ -76,7 +81,7 @@ CassError cass_statement_bind_bytes(CassStatement* statement,
 
 CassError cass_statement_bind_uuid(CassStatement* statement,
                                    size_t index,
-                                   CassUuid value) {
+                                   const CassUuid value) {
   return statement->bind(index, value);
 }
 
@@ -88,16 +93,15 @@ CassError cass_statement_bind_inet( CassStatement* statement,
 
 CassError cass_statement_bind_decimal(CassStatement* statement,
                                       cass_size_t index,
-                                      cass_uint32_t scale,
-                                      CassBytes varint) {
-  return statement->bind(index, scale, varint.data, varint.size);
+                                      CassDecimal value) {
+  return statement->bind(index, value.scale, value.varint.data, value.varint.size);
 }
 
 CassError cass_statement_bind_collection( CassStatement* statement,
                                           size_t index,
                                           const CassCollection* collection,
                                           cass_bool_t is_map) {
-  return statement->bind(index, collection->from(), static_cast<bool>(is_map));
+  return statement->bind(index, collection->from(), is_map == cass_true);
 }
 
 CassError cass_statement_bind_custom(CassStatement* statement,

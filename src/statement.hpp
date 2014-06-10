@@ -26,13 +26,13 @@
 
 #define CASS_VALUE_CHECK_INDEX(i)                                        \
   if (index >= size()) {                                                 \
-    return CASS_ERROR_LIB_BAD_PARAMS;                                    \
+    return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;                           \
   }
 
 namespace cass {
 
 struct Statement : public MessageBody {
-  typedef std::vector<Buffer>         ValueCollection;
+  typedef std::vector<Buffer>        ValueCollection;
   typedef ValueCollection::iterator       ValueIterator;
   typedef ValueCollection::const_iterator ConstValueIterator;
 
@@ -91,13 +91,13 @@ struct Statement : public MessageBody {
     return values.size();
   }
 
-#define BIND_FIXED_TYPE(DeclType, EncodeType, Name)                  \
+#define BIND_FIXED_TYPE(DeclType, EncodeType, Name)                   \
   inline CassError bind_##Name(size_t index, const DeclType& value) { \
-    CASS_VALUE_CHECK_INDEX(index);                       \
-    Buffer buffer(sizeof(DeclType));                      \
-    encode_##EncodeType(buffer.data(), value);            \
-    values[index] = buffer;         \
-    return CASS_OK;                          \
+    CASS_VALUE_CHECK_INDEX(index);                                    \
+    Buffer buffer(sizeof(DeclType));                                  \
+    encode_##EncodeType(buffer.data(), value);                        \
+    values[index] = buffer;                                           \
+    return CASS_OK;                                                   \
   }
 
   BIND_FIXED_TYPE(int32_t, int, int32)
@@ -107,6 +107,11 @@ struct Statement : public MessageBody {
   BIND_FIXED_TYPE(bool, byte, bool)
 #undef BIND_FIXED_TYPE
 
+  inline CassError bind_null(size_t index) {
+    CASS_VALUE_CHECK_INDEX(index);
+    values[index] = Buffer();
+    return CASS_OK;
+  }
 
   inline CassError bind(size_t index, const char* value, size_t value_length) {
     CASS_VALUE_CHECK_INDEX(index);
@@ -143,7 +148,7 @@ struct Statement : public MessageBody {
   inline CassError bind(size_t index, const Collection* collection, bool is_map) {
     CASS_VALUE_CHECK_INDEX(index);
     if(is_map && collection->item_count() % 2 != 0) {
-      return CASS_ERROR_LIB_BAD_PARAMS;
+      return CASS_ERROR_LIB_INVALID_ITEM_COUNT;
     }
     values[index] = collection->build(is_map);
     return CASS_OK;

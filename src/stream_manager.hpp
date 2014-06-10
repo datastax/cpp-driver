@@ -43,13 +43,13 @@ class StreamManager {
   }
 
   void release_stream(int8_t stream) {
-    assert(stream > 0 && stream < MAX_STREAM && allocated_streams_[stream]);
+    assert(stream > 0 && stream <= MAX_STREAM && allocated_streams_[stream]);
     available_streams_[--available_stream_index_] = stream;
     allocated_streams_[stream] = false;
   }
 
   bool get_item(int8_t stream, T& output, bool release = true) {
-    assert(stream > 0 && stream < MAX_STREAM);
+    assert(stream > 0 && stream <= MAX_STREAM);
     if(allocated_streams_[stream]) {
       output = items_[stream];
       if(release) {

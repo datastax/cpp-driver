@@ -20,9 +20,15 @@
 #include <list>
 #include <string>
 
-#include "common.hpp"
+#include "cassandra.h"
 
 namespace cass {
+
+void default_log_callback(void* data,
+                          cass_uint64_t time,
+                          CassLogLevel severity,
+                          CassString message);
+
 
 struct Config {
   int                    port_;
@@ -35,10 +41,18 @@ struct Config {
   size_t                 thread_count_callback_;
   size_t                 queue_size_io_;
   size_t                 queue_size_event_;
+  size_t                 queue_size_log_;
   size_t                 core_connections_per_host_;
   size_t                 max_connections_per_host_;
   size_t                 reconnect_wait_;
-  LogCallback            log_callback_;
+  size_t                 max_simultaneous_creation_;
+  size_t                 max_pending_requests_;
+  size_t                 connect_timeout_;
+  size_t                 write_timeout_;
+  size_t                 read_timeout_;
+  CassLogLevel           log_level_;
+  void*                  log_data_;
+  CassLogCallback        log_callback_;
 
  public:
   Config() :
@@ -47,17 +61,26 @@ struct Config {
       compression_(0),
       max_schema_agreement_wait_(10),
       control_connection_timeout_(10),
-      thread_count_io_(4),
+      thread_count_io_(2),
       thread_count_callback_(4),
-      queue_size_io_(1024),
-      queue_size_event_(256),
-      core_connections_per_host_(1),
-      max_connections_per_host_(2),
+      queue_size_io_(4096),
+      queue_size_event_(4096),
+      queue_size_log_(4096),
+      core_connections_per_host_(2),
+      max_connections_per_host_(4),
       reconnect_wait_(2000),
-      log_callback_(nullptr)
+      max_simultaneous_creation_(1),
+      max_pending_requests_(128 * max_connections_per_host_),
+      // TODO(mpenick): Determine good timeout durations
+      connect_timeout_(1000),
+      write_timeout_(1000),
+      read_timeout_(1000),
+      log_level_(CASS_LOG_INFO),
+      log_data_(nullptr),
+      log_callback_(default_log_callback)
   {}
 
-  void log_callback(LogCallback callback) {
+  void log_callback(CassLogCallback callback) {
     log_callback_ = callback;
   }
 
@@ -73,6 +96,10 @@ struct Config {
     return queue_size_event_;
   }
 
+  size_t queue_size_log() const {
+    return queue_size_log_;
+  }
+
   size_t core_connections_per_host() const {
     return core_connections_per_host_;
   }
@@ -85,12 +112,44 @@ struct Config {
     return reconnect_wait_;
   }
 
+  size_t max_simultaneous_creation() const {
+    return max_simultaneous_creation_;
+  }
+
+  size_t max_pending_requests() const {
+    return max_pending_requests_;
+  }
+
+  size_t connect_timeout() const {
+    return connect_timeout_;
+  }
+
+  size_t write_timeout() const {
+    return write_timeout_;
+  }
+
+  size_t read_timeout() const {
+    return read_timeout_;
+  }
+
   const std::list<std::string>& contact_points() const {
     return contact_points_;
   }
 
   int port() const {
     return port_;
+  }
+
+  CassLogLevel log_level() const {
+    return log_level_;
+  }
+
+  void* log_data() const {
+    return log_data_;
+  }
+
+  CassLogCallback log_callback() const {
+    return log_callback_;
   }
 
   CassError
@@ -141,6 +200,8 @@ struct Config {
     return CASS_OK;
   }
 };
+
+
 
 } // namespace cass
 

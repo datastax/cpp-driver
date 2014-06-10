@@ -17,227 +17,124 @@
 #ifndef __CASS_POOL_HPP_INCLUDED__
 #define __CASS_POOL_HPP_INCLUDED__
 
-#include <list>
+#include <vector>
+#include <set>
 #include <string>
 #include <algorithm>
 #include <functional>
 
-#include "client_connection.hpp"
-#include "session.hpp"
-#include "timer.hpp"
+#include "cassandra.h"
+#include "connection.hpp"
+#include "request_handler.hpp"
 
 namespace cass {
 
-class Pool {
-  typedef std::list<ClientConnection*> ConnectionCollection;
-  typedef std::function<void(Host host)> CloseCallback;
+class Connection;
+class SSLContext;
+class Logger;
 
-  IOWorker* io_worker_;
-  Host                    host_;
-  size_t                  core_connections_per_host_;
-  size_t                  max_connections_per_host_;
-  size_t                  max_simultaneous_creation_;
-  ConnectionCollection    connections_;
-  ConnectionCollection    connections_pending_;
-  std::list<RequestFuture*> pending_request_queue_;
-  size_t                  max_pending_requests_;
-  uint64_t                connection_timeout_;
-  bool is_closing_;
-  CloseCallback close_callback_;
+class Pool {    
+  public:
+    typedef std::set<Connection*> ConnectionSet;
+    typedef std::vector<Connection*> ConnectionCollection;
 
- public:
-  Pool(IOWorker* io_worker,
-      const Host& host,
-      CloseCallback close_callback,
-      size_t         core_connections_per_host,
-      size_t         max_connections_per_host,
-      size_t         max_simultaneous_creation = 1) :
-      io_worker_(io_worker),
-      host_(host),
-      core_connections_per_host_(core_connections_per_host),
-      max_connections_per_host_(max_connections_per_host),
-      max_simultaneous_creation_(max_simultaneous_creation),
-      max_pending_requests_(128 * max_connections_per_host),
-      connection_timeout_(1000),
-      is_closing_(false),
-      close_callback_(close_callback) {
-    for (size_t i = 0; i < core_connections_per_host_; ++i) {
-      spawn_connection();
-    }
-  }
+    typedef std::function<void(Pool*)> Callback;
+    typedef std::function<void(const std::string& keyspace)> KeyspaceCallback;
 
-  ~Pool() {
-    for (auto c : connections_) {
-      delete c;
-    }
-  }
+    class PoolHandler : public ResponseCallback {
+      public:
+        PoolHandler(Pool* pool,
+                    Connection* connection,
+                    RequestHandler* request_handler);
 
-  void on_connect(ClientConnection* connection) {
-    io_worker_->session_->notify_connect_q(host_);
-    connections_pending_.remove(connection);
-
-    if(is_closing_) {
-      connection->close();
-    } else if(connection->is_ready()) {
-        connections_.push_back(connection);
-        execute_pending_request(connection);
-    }
-  }
-
-  void maybe_close() {
-    if(is_closing_) {
-      for(auto c : connections_) {
-        if(!c->is_disconnecting()) {
-          c->close();
+        virtual Message* request() const {
+          return request_handler_->request();
         }
-      }
-      if(connections_.empty() &&
-         connections_pending_.empty() &&
-         pending_request_queue_.empty()) {
-        close_callback_(host_);
-      }
-    }
-  }
 
-  void on_close(ClientConnection* connection) {
-    connections_.remove(connection);
-    delete connection;
+        virtual void on_set(Message* response);
+        virtual void on_error(CassError code, const std::string& message);
+        virtual void on_timeout();
 
-    if(connection->is_defunct()) {
-      is_closing_ = true; // TODO(mpenick): Conviction policy
-    }
+      private:
+        void finish_request();
 
-    maybe_close();
-  }
+        void on_result_response(Message* response);
+        void on_error_response(Message* response);
 
-  void on_request_finished(ClientConnection* connection, Message* message) {
-    if(connection->is_ready()) {
-      execute_pending_request(connection);
-    }
-  }
+        Pool* pool_;
+        Connection* connection_;
+        std::unique_ptr<RequestHandler> request_handler_;
+    };
 
-  void
-  close() {
-    is_closing_ = true;
-    for (auto c : connections_) {
-      c->close();
-    }
-    maybe_close();
-  }
+    enum PoolState {
+      POOL_STATE_NEW,
+      POOL_STATE_CONNECTING,
+      POOL_STATE_READY,
+      POOL_STATE_CLOSING,
+      POOL_STATE_CLOSED,
+    };
 
-  void
-  set_keyspace() {
-    // TODO(mstump)
-  }
+    Pool(const Host& host,
+         uv_loop_t* loop,
+         SSLContext* ssl_context,
+         Logger* logger,
+         const Config& config);
 
-  void
-  spawn_connection() {
-    if(is_closing_) {
-      return;
-    }
+    ~Pool();
 
-    ClientConnection* connection = new ClientConnection(
-        io_worker_->loop,
-        io_worker_->ssl_context ? io_worker_->ssl_context->session_new() : NULL,
-        host_,
-        std::bind(&Pool::on_connect, this,
-                  std::placeholders::_1),
-        std::bind(&Pool::on_close, this,
-                  std::placeholders::_1));
 
-    connection->connect();
-    connections_pending_.push_back(connection);
-  }
+    void connect(const std::string& keyspace);
+    void close();
 
-  void
-  maybe_spawn_connection() {
-    if (connections_pending_.size() >= max_simultaneous_creation_) {
-      return;
+    bool execute(Connection* connection, RequestHandler* request_handler);
+    bool wait_for_connection(RequestHandler* request_handler);
+    Connection* borrow_connection(const std::string& keyspace);
+
+    Host host() const { return host_; }
+    bool is_defunct() { return is_defunct_; }
+
+    void set_ready_callback(Callback callback) {
+      ready_callback_ = callback;
     }
 
-    if (connections_.size() + connections_pending_.size()
-        >= max_connections_per_host_) {
-      return;
+    void set_closed_callback(Callback callback) {
+      closed_callback_ = callback;
     }
 
-    spawn_connection();
-  }
-
-  static bool
-  least_busy_comp(
-      ClientConnection* a,
-      ClientConnection* b) {
-    return a->available_streams() < b->available_streams();
-  }
-
-  ClientConnection*
-  find_least_busy() {
-    ConnectionCollection::iterator it =
-        std::max_element(
-            connections_.begin(),
-            connections_.end(),
-            Pool::least_busy_comp);
-    if ((*it)->is_ready() && (*it)->available_streams()) {
-      return *it;
-    }
-    return nullptr;
-  }
-
-  ClientConnection* borrow_connection() {
-    if(is_closing_) {
-      return nullptr;
+    void set_keyspace_callback(KeyspaceCallback callback) {
+      keyspace_callback_ = callback;
     }
 
-    if(connections_.empty()) {
-      for (size_t i = 0; i < core_connections_per_host_; ++i) {
-        spawn_connection();
-      }
-      return nullptr;
-    }
+  private:
+    void defunct();
+    void maybe_notify_ready(Connection* connection);
+    void maybe_close();
+    void spawn_connection(const std::string& keyspace);
+    void maybe_spawn_connection(const std::string& keyspace);
 
-    maybe_spawn_connection();
+    void on_connection_ready(Connection* connection);
+    void on_connection_closed(Connection* connection);
+    void on_timeout(Timer* timer);
 
-    return find_least_busy();
-  }
+    Connection* find_least_busy();
 
-  bool execute(ClientConnection* connection, RequestFuture* request_future) {
-    return connection->execute(request_future->message,
-                               request_future,
-                               std::bind(&Pool::on_request_finished, this,
-                                         std::placeholders::_1, std::placeholders::_2));
-  }
+    void execute_pending_request(Connection* connection);
 
-  void on_timeout(Timer* timer) {
-    RequestFuture* request_future = static_cast<RequestFuture*>(timer->data());
-    pending_request_queue_.remove(request_future);
-    io_worker_->try_next_host(request_future);
-    maybe_close();
-  }
+  private:
+    PoolState state_;
+    Host host_;
+    uv_loop_t* loop_;
+    SSLContext* ssl_context_;
+    Logger* logger_;
+    const Config& config_;
+    ConnectionCollection connections_;
+    ConnectionSet connections_pending_;
+    std::list<RequestHandler*> pending_request_queue_;
+    bool is_defunct_;
 
-  bool wait_for_connection(RequestFuture* request_future) {
-    if(is_closing_ || pending_request_queue_.size() + 1 > max_pending_requests_) {
-      return false;
-    }
-    request_future->timer = Timer::start(io_worker_->loop, connection_timeout_,
-                                request_future,
-                                std::bind(&Pool::on_timeout, this, std::placeholders::_1));
-    pending_request_queue_.push_back(request_future);
-    return true;
-  }
-
-  void execute_pending_request(ClientConnection* connection) {
-    if(!pending_request_queue_.empty()) {
-      RequestFuture* request_future = pending_request_queue_.front();
-      pending_request_queue_.pop_front();
-      if(request_future->timer) {
-        Timer::stop(request_future->timer);
-        request_future->timer = nullptr;
-      }
-      if(!execute(connection, request_future)) {
-        io_worker_->try_next_host(request_future);
-      }
-    }
-  }
+    Callback ready_callback_;
+    Callback closed_callback_;
+    KeyspaceCallback keyspace_callback_;
 };
 
 } // namespace cass

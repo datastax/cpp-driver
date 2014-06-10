@@ -17,24 +17,26 @@
 #ifndef __CASS_BUFFER_PIECE_HPP_INCLUDED__
 #define __CASS_BUFFER_PIECE_HPP_INCLUDED__
 
+#include <stdint.h>
+
 namespace cass {
 
 class BufferPiece {
   public:
     BufferPiece()
       : data_(nullptr)
-      , size_(0) { }
+      , size_(-1) { }
 
     BufferPiece(char* data, size_t size)
       : data_(data)
       , size_(size) { }
 
     char* data() const { return data_; }
-    size_t size() const { return size_; }
+    int32_t size() const { return size_; }
 
   private:
     char* data_;
-    size_t size_;
+    int32_t size_;
 };
 
 } // namespace cass

@@ -31,19 +31,19 @@ class BufferList
       buffers_.reserve(count);
     }
 
-    Buffer* append(size_t size) {
+    Buffer* append(int32_t size) {
       buffers_.push_back(Buffer(size));
       size_ += size;
       return &buffers_.back();
     }
 
-    void append(const char* data, size_t size) {
+    void append(const char* data, int32_t size) {
       buffers_.push_back(Buffer(data, size));
       size_ += size;
     }
 
     void combine(char* output) const {
-      size_t offset = 0;
+      int32_t offset = 0;
       for(const auto&  buffer : buffers_) {
         memcpy(output + offset, buffer.data(), buffer.size());
         offset += buffer.size();
@@ -51,11 +51,11 @@ class BufferList
     }
 
     size_t count() const { return buffers_.size(); }
-    size_t size() const { return size_; }
+    int32_t size() const { return size_; }
 
   private:
     std::vector<Buffer> buffers_;
-    size_t size_;
+    int32_t size_;
 };
 
 }
