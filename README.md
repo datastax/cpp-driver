@@ -61,12 +61,12 @@ The driver has been built and tested using [Microsoft Visual Studio Express 2013
 To obtain dependencies:
 * Download and install CMake for Windows. Make sure to select the option "Add CMake to the system PATH for all users" or "Add CMake to the system PATH for current user".
 * Download and build the latest release of libuv 0.10 from https://github.com/joyent/libuv/releases. 
-..1. Follow the instructions [here](https://github.com/joyent/libuv#windows). 
-..2. Open up the generated Visual Studio solution "uv.sln".
-..3. If you want a 64-bit build you will need to create a "x64" solution platform in the "Configuration Manager".
-..4. Open "Properties" on the "libuv" project. Set "Multi-threaded DLL (/MD)" for the "Configuration Properties -> C/C++ -> Code Generation -> Runtime Library" option.
-..5. Build the "libuv" project
-..6. Copy the files in "libuv/include" to "cpp-driver/lib/libuv/include" and "libuv/Release/lib" to "cpp-driver/lib/libuv/lib".
+  1. Follow the instructions [here](https://github.com/joyent/libuv#windows). 
+  2. Open up the generated Visual Studio solution "uv.sln".
+  3. If you want a 64-bit build you will need to create a "x64" solution platform in the "Configuration Manager".
+  4. Open "Properties" on the "libuv" project. Set "Multi-threaded DLL (/MD)" for the "Configuration Properties -> C/C++ -> Code Generation -> Runtime Library" option.
+  5. Build the "libuv" project
+  6. Copy the files in "libuv/include" to "cpp-driver/lib/libuv/include" and "libuv/Release/lib" to "cpp-driver/lib/libuv/lib".
 * Download and install either the 32-bit or 64-bit version of OpenSSL from http://slproweb.com/products/Win32OpenSSL.html. You may also need to install the "Visual C++ 2008 Redistributables".
 
 To build 32-bit (using "VS2013 x86 Native Tools Command Prompt"):
