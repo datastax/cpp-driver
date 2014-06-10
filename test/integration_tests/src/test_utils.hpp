@@ -67,6 +67,12 @@ struct CassPreparedDeleter {
     }
 };
 
+struct CassBatchDeleter {
+    void operator()(CassBatch* ptr) {
+      cass_batch_free(ptr);
+    }
+};
+
 typedef std::unique_ptr<CassSession, CassSessionDeleter> CassSessionPtr;
 typedef std::unique_ptr<CassFuture, CassFutureDeleter> CassFuturePtr;
 typedef std::unique_ptr<CassStatement, CassStatementDeleter> CassStatementPtr;
@@ -74,6 +80,7 @@ typedef std::unique_ptr<const CassResult, CassResultDeleter> CassResultPtr;
 typedef std::unique_ptr<CassIterator, CassIteratorDeleter> CassIteratorPtr;
 typedef std::unique_ptr<CassCollection, CassCollectionDeleter> CassCollectionPtr;
 typedef std::unique_ptr<const CassPrepared, CassPreparedDeleter> CassPreparedPtr;
+typedef std::unique_ptr<CassBatch, CassBatchDeleter> CassBatchPtr;
 
 template<class T>
 struct Value;

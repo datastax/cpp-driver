@@ -68,7 +68,7 @@ struct BatchRequest : public MessageBody {
 
   ~BatchRequest() {
     for (Statement* statement : statements) {
-      delete statement;
+      statement->release();
     }
   }
 
@@ -79,6 +79,7 @@ struct BatchRequest : public MessageBody {
       ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(statement);
       prepared_statements[execute_request->prepared_id] = execute_request;
     }
+    statement->retain();
     statements.push_back(statement);
   }
 
