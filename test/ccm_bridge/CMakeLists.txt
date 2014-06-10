@@ -49,13 +49,12 @@ set(LIBRARIES ${LIBRARIES} ${OPENSSL_LIBRARIES})
 set(INCLUDES ${INCLUDES} ${OPENSSL_INCLUDE_DIR})
 	
 # -------------------------------------------------------------
-
 # Find ZLIB library
 # -------------------------------------------------------------
-find_package(ZLIB REQUIRED)
+#find_package(ZLIB REQUIRED)
+#set(LIBRARIES ${LIBRARIES} ${ZLIB_LIBRARIES})
+#set(INCLUDES ${INCLUDES} ${ZLIB_INCLUDE_DIR})
 
-set(LIBRARIES ${LIBRARIES} ${ZLIB_LIBRARIES})
-set(INCLUDES ${INCLUDES} ${ZLIB_INCLUDE_DIR})
 # -------------------------------------------------------------
 
 # Set platform conditional compilation flags.

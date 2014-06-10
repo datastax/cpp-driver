@@ -16,7 +16,7 @@ include(FindPackageHandleStandardArgs)
 
 find_path(LIBSSH2_INCLUDE_DIRS
 			NAMES libssh2.h
-			PATHS ENV LIBSSH2_ROOT
+			PATHS ${LIBSSH2_ROOT} ENV LIBSSH2_ROOT
 			PATH_SUFFIXES include
 			DOC "LIBSSH include directory")
 			
@@ -24,13 +24,13 @@ if(WIN32 AND MSVC)
 	# In Visual Studio we must link to proper version of library
 	find_library(LIBSSH2_LIBRARY_RELEASE
 			NAMES libssh2
-			PATHS ENV LIBSSH2_ROOT
+			PATHS ${LIBSSH2_ROOT} ENV LIBSSH2_ROOT
 			PATH_SUFFIXES lib
 			DOC "LIBSSH library directory")
 	
 	find_library(LIBSSH2_LIBRARY_DEBUG
 			NAMES libssh2d
-			PATHS ENV LIBSSH2_ROOT
+			PATHS ${LIBSSH2_ROOT} ENV LIBSSH2_ROOT
 			PATH_SUFFIXES lib
 			DOC "LIBSSH library directory")
 	
@@ -42,11 +42,12 @@ if(WIN32 AND MSVC)
 else()
 	find_library(LIBSSH2_LIBRARIES
 			NAMES libssh2 ssh2
-			PATHS ENV LIBSSH2_ROOT
+			PATHS ${LIBSSH2_ROOT} ENV LIBSSH2_ROOT
 			PATH_SUFFIXES lib
 			DOC "LIBSSH library directory")
 endif()
 
+message("Includes: ${LIBSSH2_ROOT} ${LIBSSH2_INCLUDE_DIRS}")
 			
 find_package_handle_standard_args(LIBSSH2 DEFAULT_MSG LIBSSH2_LIBRARIES LIBSSH2_INCLUDE_DIRS)
 mark_as_advanced(LIBSSH2_INCLUDE_DIRS LIBSSH2_LIBRARIES)

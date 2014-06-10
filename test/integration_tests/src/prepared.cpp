@@ -119,7 +119,7 @@ BOOST_AUTO_TEST_CASE(test_bound_all_types_different_values)
   uint8_t address2[CASS_INET_V4_LENGTH] = { 0, 0, 0, 0 };
   uint8_t address3[CASS_INET_V6_LENGTH] = { 255, 128, 12, 1, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255 };
 
-  constexpr size_t all_types_count = 3;
+  const size_t all_types_count = 3;
   AllTypes all_types[all_types_count];
 
   all_types[0] = { test_utils::generate_time_uuid(), cass_string_init("first"), 10, INT64_MAX - 1, 1.999f, 32.002,

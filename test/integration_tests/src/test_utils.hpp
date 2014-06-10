@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <chrono>
+
 #include <boost/asio/ip/address.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -17,8 +20,8 @@ class cql_ccm_bridge_t;
 /** Random, reusable tools for testing. */
 namespace test_utils {
 
-constexpr cass_duration_t ONE_MILLISECOND_IN_MICROS = 1000; // in microseconds
-constexpr cass_duration_t ONE_SECOND_IN_MICROS = 1000 * ONE_MILLISECOND_IN_MICROS;
+extern const cass_duration_t ONE_MILLISECOND_IN_MICROS;
+extern const cass_duration_t ONE_SECOND_IN_MICROS;
 
 struct CassSessionDeleter {
     void operator()(CassSession* ptr) {
@@ -441,40 +444,9 @@ inline std::string generate_unique_str() {
 std::string string_from_time_point(std::chrono::system_clock::time_point time);
 std::string string_from_uuid(CassUuid uuid);
 
-constexpr const char* CREATE_TABLE_ALL_TYPES =
-    "CREATE TABLE %s ("
-    "id uuid PRIMARY KEY,"
-    "text_sample text,"
-    "int_sample int,"
-    "bigint_sample bigint,"
-    "float_sample float,"
-    "double_sample double,"
-    "decimal_sample decimal,"
-    "blob_sample blob,"
-    "boolean_sample boolean,"
-    "timestamp_sample timestamp,"
-    "inet_sample inet);";
-
-constexpr const char* CREATE_TABLE_TIME_SERIES =
-    "CREATE TABLE %s ("
-    "id uuid,"
-    "event_time timestamp,"
-    "text_sample text,"
-    "int_sample int,"
-    "bigint_sample bigint,"
-    "float_sample float,"
-    "double_sample double,"
-    "decimal_sample decimal,"
-    "blob_sample blob,"
-    "boolean_sample boolean,"
-    "timestamp_sample timestamp,"
-    "inet_sample inet,"
-    "PRIMARY KEY(id, event_time));";
-
-constexpr const char* CREATE_TABLE_SIMPLE =
-        "CREATE TABLE %s ("
-        "id int PRIMARY KEY,"
-        "test_val text);";
+extern const char* CREATE_TABLE_ALL_TYPES;
+extern const char* CREATE_TABLE_TIME_SERIES;
+extern const char* CREATE_TABLE_SIMPLE;
 
 extern const std::string CREATE_KEYSPACE_SIMPLE_FORMAT;
 extern const std::string CREATE_KEYSPACE_GENERIC_FORMAT;

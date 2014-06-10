@@ -97,8 +97,8 @@ if(MULTICORE_COMPILATION)
 endif()
 
 if(MSVC)
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
   set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:LIBCMT")
  
   # On Visual C++ -pedantic flag is not used,
@@ -209,6 +209,11 @@ add_subdirectory(test/unit_tests)
 #-------------------
 # Integration tests
 #-------------------
+
+if(WIN32)
+  set(BOOST_ROOT "${PROJECT_SOURCE_DIR}/lib/boost/")
+  set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/")
+endif()
 
 find_package(Boost 1.41.0 COMPONENTS system thread unit_test_framework date_time program_options)
 

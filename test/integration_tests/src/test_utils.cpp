@@ -1,6 +1,8 @@
+#define BOOST_TEST_DYN_LINK
+
 #include <assert.h>
 
-#include <boost/test/unit_test.hpp>
+#include <boost/test/test_tools.hpp>
 #include <boost/test/debug.hpp>
 #include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
@@ -12,6 +14,44 @@
 
 namespace test_utils {
 //-----------------------------------------------------------------------------------
+
+const cass_duration_t ONE_MILLISECOND_IN_MICROS = 1000;
+const cass_duration_t ONE_SECOND_IN_MICROS = 1000 * ONE_MILLISECOND_IN_MICROS;
+
+const char* CREATE_TABLE_ALL_TYPES =
+  "CREATE TABLE %s ("
+  "id uuid PRIMARY KEY,"
+  "text_sample text,"
+  "int_sample int,"
+  "bigint_sample bigint,"
+  "float_sample float,"
+  "double_sample double,"
+  "decimal_sample decimal,"
+  "blob_sample blob,"
+  "boolean_sample boolean,"
+  "timestamp_sample timestamp,"
+  "inet_sample inet);";
+
+const char* CREATE_TABLE_TIME_SERIES =
+  "CREATE TABLE %s ("
+  "id uuid,"
+  "event_time timestamp,"
+  "text_sample text,"
+  "int_sample int,"
+  "bigint_sample bigint,"
+  "float_sample float,"
+  "double_sample double,"
+  "decimal_sample decimal,"
+  "blob_sample blob,"
+  "boolean_sample boolean,"
+  "timestamp_sample timestamp,"
+  "inet_sample inet,"
+  "PRIMARY KEY(id, event_time));";
+
+const char* CREATE_TABLE_SIMPLE =
+  "CREATE TABLE %s ("
+  "id int PRIMARY KEY,"
+  "test_val text);";
 
 const char* get_value_type(CassValueType type) {
   switch(type) {
@@ -35,7 +75,9 @@ const char* get_value_type(CassValueType type) {
     case CASS_VALUE_TYPE_LIST: return "list";
     case CASS_VALUE_TYPE_MAP: return "map";
     case CASS_VALUE_TYPE_SET: return "set";
-    default: assert(false && "Invalid value type");
+    default: 
+      assert(false && "Invalid value type");
+      return "";
   }
 }
 
@@ -115,7 +157,11 @@ void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
 std::string string_from_time_point(std::chrono::system_clock::time_point time) {
   std::time_t t = std::chrono::system_clock::to_time_t(time);
   char buffer[26];
+#ifdef WIN32
+  ctime_s(buffer, sizeof(buffer), &t);
+#else
   ctime_r(&t, buffer);
+#endif
   return std::string(buffer, 24);
 }
 
