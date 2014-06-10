@@ -18,13 +18,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <uv.h>
 
 #include "cassandra.h"
-
-#ifdef WIN32
-#define snprintf _snprintf
-#endif
 
 #define NUM_CONCURRENT_REQUESTS 4096
 
@@ -93,7 +88,7 @@ void insert_into_async(CassSession* session, const char* key) {
      char key_buffer[64];
     statement = cass_statement_new(query, 6, CASS_CONSISTENCY_ONE);
 
-    snprintf(key_buffer, sizeof(key_buffer), "%s%zu", key, i);
+    sprintf(key_buffer, "%s%u", key, (unsigned int)i);
     cass_statement_bind_string(statement, 0, cass_string_init(key_buffer));
     cass_statement_bind_bool(statement, 1, i % 2 == 0 ? cass_true : cass_false);
     cass_statement_bind_float(statement, 2, i / 2.0f);

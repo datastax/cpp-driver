@@ -22,14 +22,14 @@
 
 #if !defined(CASS_STATIC)
 #  if (defined(WIN32) || defined(_WIN32))
-#    if defined CASS_BUILDING
+#    if defined(CASS_BUILDING)
 #      define CASS_EXPORT __declspec(dllexport)
 #    else
 #      define CASS_EXPORT __declspec(dllexport)
 #    endif
-#  elif (defined __SUNPRO_C  || defined __SUNPRO_CC) && !defined(CASS_STATIC)
+#  elif (defined(__SUNPRO_C)  || defined(__SUNPRO_CC)) && !defined(CASS_STATIC)
 #    define CASS_EXPORT __global
-#  elif (defined __GNUC__ && __GNUC__ >= 4) || defined __INTEL_COMPILER
+#  elif (defined(__GNUC__) && __GNUC__ >= 4) || defined(__INTEL_COMPILER)
 #    define CASS_EXPORT __attribute__ ((visibility("default")))
 #  endif
 #else
@@ -41,19 +41,40 @@ extern "C" {
 #endif
 
 typedef enum { cass_false = 0, cass_true = 1 } cass_bool_t;
+
 typedef float cass_float_t;
 typedef double cass_double_t;
-typedef unsigned char cass_byte_t;
-typedef unsigned int cass_duration_t;
-typedef char cass_int8_t;
-typedef short cass_int16_t;
-typedef int cass_int32_t;
-typedef long long cass_int64_t;
-typedef unsigned char cass_uint8_t;
-typedef unsigned short cass_uint16_t;
-typedef unsigned int cass_uint32_t;
-typedef unsigned long long cass_uint64_t;
+
 typedef size_t cass_size_t;
+
+#if defined(__GNUC__) || defined(__INTEL_COMPILER)
+typedef __INT8_TYPE__ cass_int8_t;
+typedef __UINT8_TYPE__ cass_uint8_t;
+
+typedef __INT16_TYPE__ cass_int16_t;
+typedef __UINT16_TYPE__ cass_uint16_t;
+
+typedef __INT32_TYPE__ cass_int32_t;
+typedef __UINT32_TYPE__ cass_uint32_t;
+
+typedef __INT64_TYPE__ cass_int64_t;
+typedef __UINT64_TYPE__ cass_uint64_t;
+#else
+typedef char cass_int8_t;
+typedef unsigned char cass_uint8_t;
+
+typedef short cass_int16_t;
+typedef unsigned short cass_uint16_t;
+
+typedef int cass_int32_t;
+typedef unsigned int cass_uint32_t;
+
+typedef long long cass_int64_t;
+typedef unsigned long long cass_uint64_t;
+#endif
+
+typedef cass_uint8_t cass_byte_t;
+typedef cass_uint64_t cass_duration_t;
 
 typedef struct CassBytes_ {
     const cass_byte_t* data;
