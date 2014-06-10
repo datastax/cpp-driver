@@ -6,7 +6,7 @@ namespace cass {
 
 CassError Config::set_option(CassOption option, const void* value, size_t size) {
 #define CHECK_SIZE_AND_COPY(dst, dst_size) do {  \
-    if(dst_size != size) {                       \
+    if(dst_size < size) {                        \
       return CASS_ERROR_LIB_INVALID_OPTION_SIZE; \
     }                                            \
     memcpy(dst, value, dst_size);                \
@@ -37,6 +37,7 @@ CassError Config::set_option(CassOption option, const void* value, size_t size) 
         std::getline(stream, contact_point, ',');
         while(!contact_point.empty()) {
             contact_points_.push_back(contact_point);
+            contact_point.clear();
             std::getline(stream, contact_point, ',');
         }
       }
@@ -80,7 +81,7 @@ CassError Config::set_option(CassOption option, const void* value, size_t size) 
   return CASS_OK;
 }
 
-CassError Config::option(CassOption option, void* value, size_t* size) {
+CassError Config::option(CassOption option, void* value, size_t* size) const {
   if(size == nullptr) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
@@ -90,8 +91,8 @@ CassError Config::option(CassOption option, void* value, size_t* size) {
       *size = src_size;                           \
       return CASS_ERROR_LIB_INVALID_OPTION_SIZE;  \
     }                                             \
-    memcpy(value, src, src_size);                 \
     *size = src_size;                             \
+    memcpy(value, src, src_size);                 \
   } while(0)
 
   switch (option) {
@@ -124,10 +125,13 @@ CassError Config::option(CassOption option, void* value, size_t* size) {
         for(auto& contact_point : contact_points_) {
           total_size += contact_point.size() + 1; // space for ',' or '\0'
         }
-        *size = total_size;
+
         if(*size < total_size) {
+          *size = total_size;
           return CASS_ERROR_LIB_INVALID_OPTION_SIZE;
         }
+        *size = total_size;
+
         size_t pos = 0;
         char* output = reinterpret_cast<char*>(value);
         for(auto& contact_point : contact_points_) {

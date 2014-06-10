@@ -32,7 +32,7 @@ CassError cass_cluster_setopt(CassCluster* cluster,
 CassError cass_cluster_getopt(const CassCluster* cluster,
                               CassOption option,
                               void* data, cass_size_t* data_length) {
-  return CASS_OK;
+  return cluster->config().option(option, data, data_length);
 }
 
 CassFuture* cass_cluster_connect(CassCluster* cluster) {

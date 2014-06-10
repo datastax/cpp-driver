@@ -125,7 +125,7 @@ class Config {
     }
 
     CassError set_option(CassOption option, const void* value, size_t size);
-    CassError option(CassOption option, void* value, size_t* size);
+    CassError option(CassOption option, void* value, size_t* size) const;
 
   private:
     int                    port_;
