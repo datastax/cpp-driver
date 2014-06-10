@@ -1,16 +1,15 @@
 DataStax C/C++ Driver for Apache Cassandra (Beta)
 ===============================================
 
-A C/C++ driver for Apache Cassandra. This driver works exclusively with
-the Cassandra Query Language version 3 (CQL3) and Cassandra's native protocol (version 2).
+A C/C++ client driver for Apache Cassandra. This driver works exclusively with
+the Cassandra Query Language version 3 (CQL3) and Cassandra's Native Protocol (version 2).
 
 - JIRA: https://datastax-oss.atlassian.net/browse/CPP
 - MAILING LIST: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
-- IRC: #datastax-drivers on `irc.freenode.net <http://freenode.net>`_
+- IRC: #datastax-drivers on `irc.freenode.net <http://freenode.net>`
 
 ### Current Functionality and Design
 - Completely asynchronous
-- An emphasis on avoiding copying of memory when possible
 - Exception safe
 - Ad-hoc queries
 - Prepared statements
@@ -31,32 +30,35 @@ the Cassandra Query Language version 3 (CQL3) and Cassandra's native protocol (v
 - Binary releases for Windows and Linux
 
 ## Building
-The driver is known to work on OS X 10.9, Windows 7, and Ubuntu 14.04. The driver itself currently only has two dependencies [libuv 0.10](https://github.com/joyent/libuv) and [OpenSSL](http://www.openssl.org/). To test the driver you will also need [boost 1.41+](http://www.boost.org),  [libssh2](http://www.libssh2.org) and [ccm](https://github.com/pcmanus/ccm).
-
-To build the driver you will also need to install [CMake](http://www.cmake.org). 
+The driver is known to work on OS X 10.9, Windows 7, and Ubuntu 14.04. The driver itself currently has two dependencies: [libuv 0.10](https://github.com/joyent/libuv) and [OpenSSL](http://www.openssl.org/). To build the driver you will need [CMake](http://www.cmake.org). To test the driver you will also need to install [boost 1.41+](http://www.boost.org),  [libssh2](http://www.libssh2.org) and [ccm](https://github.com/pcmanus/ccm).
 
 ### OS X
 The driver has been built and tested using the Clang compiler provided by XCode 5.1. The dependencies were obtained using [Homebrew](http://brew.sh).
 
-To obtain the dependencies:
+To obtain dependencies:
 ```
 brew install libuv cmake
 ```
 
 Note: We currently use the OpenSSL library included with XCode.
 
+To obtain test dependencies (This is not required):
+```
+brew install boost libssh2
+```
+
 To build:
 ```
 git clone https://github.com/datastax/cpp-driver.git
 cd cpp-driver
-cmake . && make
+cmake .
+make
 ```
 
 ### Windows
-The driver has been built and tested using [Microsoft Visual Studio Express 2013 for Windows Desktop](http://www.microsoft.com/en-us/download/details.aspx?id=40787). The dependencies need to be manually built or obtained.
+The driver has been built and tested using [Microsoft Visual Studio Express 2013 for Windows Desktop](http://www.microsoft.com/en-us/download/details.aspx?id=40787) on Windows 7 SP1. The dependencies need to be manually built or obtained.
 
-To obtain the dependencies:
-- Download or clone the driver
+To obtain dependencies:
 - Download and install CMake for Windows. Make sure to select the option "Add CMake to the system PATH for all users" or "Add CMake to the system PATH for current user".
 - Download and build the latest release of libuv 0.10 from https://github.com/joyent/libuv/releases. 
 -- Follow the instructions [here](https://github.com/joyent/libuv#windows). 
@@ -82,15 +84,35 @@ msbuild cassandra.vcxproj /p:Configuration=Release /t:Clean,Build
 ```
 
 ### Ubuntu
+The driver was built and tested using both GCC and Clang on Ubuntu 14.04.
 
+To obtain dependencies (GCC):
 ```
-sudo apt-get install g++ gcc clang make cmake libuv-dev libssl-dev
+sudo apt-get install gcc make cmake libuv-dev libssl-dev
+```
+
+To obtain dependencies (Clang):
+```
+sudo apt-get install clang make cmake libuv-dev libssl-dev
+```
+
+To obtain test dependencies (This is not required):
+```
+sudo apt-get install libboost-chrono-dev libboost-date-time-dev libboost-log-dev libboost-program-options-dev libboost-system-dev libboost-thread-dev libboost-test-dev libssh2-1-dev
+```
+
+To build:
+```
+git clone https://github.com/datastax/cpp-driver.git
+cd cpp-driver
+cmake .
+make
 ```
 
 ## Examples
 There are several examples provided here: [examples](https://github.com/datastax/cpp-driver/tree/1.0/examples).
 
-### A Simple Example - a simple query against system.schema_keyspaces.
+### A Simple Example
 ```c
 #include <stdio.h>
 #include <string.h>
@@ -99,7 +121,6 @@ There are several examples provided here: [examples](https://github.com/datastax
 int main() {
   CassError rc = 0;
   CassCluster* cluster = cass_cluster_new();
-  CassSession* session = NULL;
   CassFuture* session_future = NULL;
   const char* contact_points[] = { "127.0.0.1",  NULL };
   const char** contact_point = NULL;
@@ -108,13 +129,14 @@ int main() {
     cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINT_ADD, *contact_point, strlen(*contact_point));
   }
 
-  session = cass_cluster_connect(cluster, &session_future);
+  session_future = cass_cluster_connect(cluster);
   cass_future_wait(session_future);
   rc = cass_future_error_code(session_future);
 
   if(rc == CASS_OK) {
+    CassSession* session = cass_future_get_session(session_future);
     CassFuture* result_future = NULL;
-    CassFuture* shutdown_future = NULL;
+    CassFuture* close_future = NULL;
     CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces;");
     CassStatement* statement = cass_statement_new(query, 0, CASS_CONSISTENCY_ONE);
 
@@ -153,16 +175,14 @@ int main() {
     }
 
     cass_future_free(result_future);
-    shutdown_future = cass_session_shutdown(session);
-    cass_future_wait(shutdown_future);
-    cass_future_free(shutdown_future);
+    close_future = cass_session_close(session);
+    cass_future_wait(close_future);
   } else {
     CassString message = cass_future_error_message(session_future);
     fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
   }
 
   cass_future_free(session_future);
-  cass_session_free(session);
   cass_cluster_free(cluster);
 
   return 0;
