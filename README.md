@@ -28,19 +28,64 @@ the Cassandra Query Language version 3 (CQL3) and Cassandra's native protocol (v
 - Query tracing
 - Event registration and notification
 - Compatibility with native protcol version 1
+- Binary releases for Windows and Linux
 
 ## Building
-The library known to work on OSX 10.9.2 with Clang/libc++. The build-chain currently uses CMake, so it should be fairly straightforward to get cassandra to build on other systems, but no attempt has been made to do so. Please refer to particular build instructions in separate files in this folder.
+The driver is known to work on OS X 10.9, Windows 7, and Ubuntu 14.04. The driver itself currently only has two dependencies [libuv 0.10](https://github.com/joyent/libuv) and [OpenSSL](http://www.openssl.org/). To test the driver you will also need [boost 1.41+](http://www.boost.org),  [libssh2](http://www.libssh2.org) and [ccm](https://github.com/pcmanus/ccm).
 
-The library has two dependencies [libuv](https://github.com/joyent/libuv) and [OpenSSL](http://www.openssl.org/).
+To build the driver you will also need to install [CMake](http://www.cmake.org). 
 
+### OS X
+The driver has been built and tested using the Clang compiler provided by XCode 5.1. The dependencies were obtained using [Homebrew](http://brew.sh).
+
+To obtain the dependencies:
+```
+brew install libuv cmake
+```
+
+Note: We currently use the OpenSSL library included with XCode.
+
+To build:
 ```
 git clone https://github.com/datastax/cpp-driver.git
 cd cpp-driver
 cmake . && make
 ```
 
-Running ```make help``` will give you a list of available make targets
+### Windows
+The driver has been built and tested using [Microsoft Visual Studio Express 2013 for Windows Desktop](http://www.microsoft.com/en-us/download/details.aspx?id=40787). The dependencies need to be manually built or obtained.
+
+To obtain the dependencies:
+- Download or clone the driver
+- Download and install CMake for Windows. Make sure to select the option "Add CMake to the system PATH for all users" or "Add CMake to the system PATH for current user".
+- Download and build the latest release of libuv 0.10 from https://github.com/joyent/libuv/releases. 
+-- Follow the instructions [here](https://github.com/joyent/libuv#windows). 
+-- Open up the generated Visual Studio solution "uv.sln".
+-- If you want a 64-bit build you will need to create a "x64" solution platform in the "Configuration Manager".
+-- Open "Properties" on the "libuv" project. Set "Multi-threaded DLL (/MD)" for the "Configuration Properties -> C/C++ -> Code Generation -> Runtime Library" option.
+-- Build the "libuv" project
+-- Copy the files in "libuv/include" to "cpp-driver/lib/libuv/include" and "libuv/Release/lib" to "cpp-driver/lib/libuv/lib".
+- Download and install either the 32-bit or 64-bit version of OpenSSL from http://slproweb.com/products/Win32OpenSSL.html. You may also need to install the "Visual C++ 2008 Redistributables".
+
+To build 32-bit (using "VS2013 x86 Native Tools Command Prompt"):
+```
+cd <path to driver>/cpp-driver
+cmake -G "Visual Studio 12"
+msbuild cassandra.vcxproj /p:Configuration=Release /t:Clean,Build
+```
+
+To build 64-bit (using "VS2013 x64 Cross Tools Command Prompt"):
+```
+cd <path to driver>/cpp-driver
+cmake -G "Visual Studio 12 Win64"
+msbuild cassandra.vcxproj /p:Configuration=Release /t:Clean,Build
+```
+
+### Ubuntu
+
+```
+sudo apt-get install g++ gcc clang make cmake libuv-dev libssl-dev
+```
 
 ## Examples
 There are several examples provided here: [examples](https://github.com/datastax/cpp-driver/tree/1.0/examples).
