@@ -7,7 +7,7 @@ namespace cass {
 
 CassError Config::set_option(CassOption option, const void* value, size_t size) {
 #define CHECK_SIZE_AND_COPY(dst, dst_size) do {  \
-    if(dst_size < size) {                        \
+    if(size < dst_size) {                        \
       return CASS_ERROR_LIB_INVALID_OPTION_SIZE; \
     }                                            \
     memcpy(dst, value, dst_size);                \
