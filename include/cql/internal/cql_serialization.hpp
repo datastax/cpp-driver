@@ -52,8 +52,8 @@ encode_short(std::ostream& output,
              cql::cql_short_t value);
 
 void
-encode_short(std::vector<cql::cql_byte_t>& output,
-             const cql::cql_short_t value);
+encode_append_short(std::vector<cql::cql_byte_t>& output,
+                    const cql::cql_short_t value);
 
 std::istream&
 decode_short(std::istream& input,
@@ -71,8 +71,20 @@ encode_int(std::ostream& output,
            const cql::cql_int_t value);
 
 void
-encode_int(std::vector<cql::cql_byte_t>& output,
-           const cql::cql_int_t value);
+encode_append_int(std::vector<cql::cql_byte_t>& output,
+                  const cql::cql_int_t value);
+
+void
+encode_append_string(std::vector<cql::cql_byte_t>& output,
+                     const std::string& value);
+
+void
+encode_int_list(std::vector<cql::cql_byte_t>& output,
+                const std::vector<cql::cql_int_t>& value);
+
+void
+encode_string_list(std::vector<cql::cql_byte_t>& output,
+                   const std::vector<std::string>& value);
 
 std::istream&
 decode_int(std::istream& input,

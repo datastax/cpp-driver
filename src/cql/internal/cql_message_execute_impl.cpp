@@ -102,14 +102,14 @@ cql::cql_message_execute_impl_t::push_back(const std::string& val) {
 void
 cql::cql_message_execute_impl_t::push_back(const cql::cql_short_t val) {
     boost::shared_ptr<param_t> p(new param_t);
-    cql::encode_short(*p, val);
+    cql::encode_append_short(*p, val);
     _params.push_back(p);
 }
 
 void
 cql::cql_message_execute_impl_t::push_back(const cql::cql_int_t val) {
     boost::shared_ptr<param_t> p(new param_t);
-    cql::encode_int(*p, val);
+    cql::encode_append_int(*p, val);
     _params.push_back(p);
 }
 
@@ -138,6 +138,20 @@ void
 cql::cql_message_execute_impl_t::push_back(const bool val) {
     boost::shared_ptr<param_t> p(new param_t);
     cql::encode_bool(*p, val);
+    _params.push_back(p);
+}
+
+void
+cql::cql_message_execute_impl_t::push_back_list(const std::vector<cql::cql_int_t>& val) {
+    boost::shared_ptr<param_t> p(new param_t);
+    cql::encode_int_list(*p, val);
+    _params.push_back(p);
+}
+
+void
+cql::cql_message_execute_impl_t::push_back_list(const std::vector<std::string>& val) {
+    boost::shared_ptr<param_t> p(new param_t);
+    cql::encode_string_list(*p, val);
     _params.push_back(p);
 }
 

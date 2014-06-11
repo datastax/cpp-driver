@@ -99,6 +99,16 @@ cql::cql_execute_t::push_back(const bool val) {
 }
 
 void
+cql::cql_execute_t::push_back_list(const std::vector<cql::cql_int_t>& val) {
+    _impl->push_back_list(val);
+}
+
+void
+cql::cql_execute_t::push_back_list(const std::vector<std::string>& val) {
+    _impl->push_back_list(val);
+}
+
+void
 cql::cql_execute_t::push_back_null() {
     _impl->push_back_null();
 }

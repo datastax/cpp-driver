@@ -90,6 +90,12 @@ public:
     push_back(const bool val);
 
     void
+    push_back_list(const std::vector<cql_int_t>& val);
+
+    void
+    push_back_list(const std::vector<std::string>& val);
+
+    void
     push_back_null();
 
     void
