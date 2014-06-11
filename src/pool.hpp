@@ -71,7 +71,7 @@ class Pool {
       POOL_STATE_CONNECTING,
       POOL_STATE_READY,
       POOL_STATE_CLOSING,
-      POOL_STATE_CLOSED,
+      POOL_STATE_CLOSED
     };
 
     Pool(const Host& host,

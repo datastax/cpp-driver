@@ -30,7 +30,7 @@ class MessageBody : public RefCounted<MessageBody> {
     MessageBody(uint8_t opcode)
       : opcode_(opcode) { }
 
-  virtual ~MessageBody() = default;
+  virtual ~MessageBody() { };
 
   DISALLOW_COPY_AND_ASSIGN(MessageBody);
 

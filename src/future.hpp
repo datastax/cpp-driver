@@ -55,7 +55,7 @@ class RefCounted {
 enum FutureType {
   CASS_FUTURE_TYPE_SESSION_CONNECT,
   CASS_FUTURE_TYPE_SESSION_CLOSE,
-  CASS_FUTURE_TYPE_RESPONSE,
+  CASS_FUTURE_TYPE_RESPONSE
 };
 
 class Future : public RefCounted<Future> {
@@ -74,7 +74,7 @@ class Future : public RefCounted<Future> {
       : is_set_(false)
       , type_(type) { }
 
-    virtual ~Future() = default;
+    virtual ~Future() { };
 
     FutureType type() const { return type_; }
 

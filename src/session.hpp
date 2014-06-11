@@ -43,7 +43,7 @@ struct SessionEvent {
     enum Type {
       CONNECT,
       NOTIFY_READY,
-      NOTIFY_CLOSED,
+      NOTIFY_CLOSED
     };
     Type type;
 };
