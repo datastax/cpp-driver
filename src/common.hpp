@@ -95,6 +95,8 @@ void clear_buffer_deque(std::deque<uv_buf_t>& buffers);
 
 std::string opcode_to_string(int opcode);
 
+std::string& trim(std::string& str);
+
 } // namespace cass
 
 #endif

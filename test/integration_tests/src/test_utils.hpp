@@ -23,6 +23,12 @@ namespace test_utils {
 extern const cass_duration_t ONE_MILLISECOND_IN_MICROS;
 extern const cass_duration_t ONE_SECOND_IN_MICROS;
 
+struct CassClusterDeleter {
+    void operator()(CassCluster* ptr) {
+      cass_cluster_free(ptr);
+    }
+};
+
 struct CassSessionDeleter {
     void operator()(CassSession* ptr) {
       CassFuture* future = cass_session_close(ptr);
@@ -73,6 +79,7 @@ struct CassBatchDeleter {
     }
 };
 
+typedef std::unique_ptr<CassCluster, CassClusterDeleter> CassClusterPtr;
 typedef std::unique_ptr<CassSession, CassSessionDeleter> CassSessionPtr;
 typedef std::unique_ptr<CassFuture, CassFutureDeleter> CassFuturePtr;
 typedef std::unique_ptr<CassStatement, CassStatementDeleter> CassStatementPtr;

@@ -79,4 +79,12 @@ std::string opcode_to_string(int opcode) {
   return "";
 }
 
+std::string& trim(std::string& str) {
+  // Trim front
+  str.erase(str.begin(), std::find_if(str.begin(), str.end(), std::not1(std::ptr_fun(std::isspace))));
+  // Trim back
+  str.erase(std::find_if(str.rbegin(), str.rend(), std::not1(std::ptr_fun(std::isspace))).base(), str.end());
+  return str;
+}
+
 } // namespace cass

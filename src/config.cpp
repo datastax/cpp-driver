@@ -1,4 +1,5 @@
 #include "config.hpp"
+#include "common.hpp"
 
 #include <sstream>
 
@@ -33,12 +34,12 @@ CassError Config::set_option(CassOption option, const void* value, size_t size) 
         contact_points_.clear();
       } else {
         std::istringstream stream(std::string(reinterpret_cast<const char*>(value), size));
-        std::string contact_point;
-        std::getline(stream, contact_point, ',');
-        while(!contact_point.empty()) {
-            contact_points_.push_back(contact_point);
-            contact_point.clear();
+        while(!stream.eof()) {
+            std::string contact_point;
             std::getline(stream, contact_point, ',');
+            if(!trim(contact_point).empty()) {
+              contact_points_.push_back(contact_point);
+            }
         }
       }
       break;
