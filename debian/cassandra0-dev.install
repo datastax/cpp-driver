@@ -1,3 +1,2 @@
 usr/include
-usr/lib/cassandra.a
-usr/lib/cassandra.so
+usr/lib/libcql.so
