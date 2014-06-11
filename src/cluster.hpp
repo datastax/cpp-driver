@@ -25,6 +25,7 @@ class Cluster
 {
   public:
     Config& config() { return config_; }
+    const Config& config() const { return config_; }
 
   private:
     Config config_;

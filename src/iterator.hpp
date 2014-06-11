@@ -23,7 +23,7 @@ enum IteratorType {
   CASS_ITERATOR_TYPE_RESULT,
   CASS_ITERATOR_TYPE_ROW,
   CASS_ITERATOR_COLLECTION,
-  CASS_ITERATOR_TYPE_UNKNOWN,
+  CASS_ITERATOR_TYPE_UNKNOWN
 };
 
 struct Iterator {
@@ -34,7 +34,7 @@ struct Iterator {
       type(type)
   {}
 
-  virtual ~Iterator() = default;
+  virtual ~Iterator() { };
 
   virtual bool next() = 0;
 };

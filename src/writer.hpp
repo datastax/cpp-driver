@@ -31,7 +31,7 @@ class Writer {
     enum Status {
       WRITING,
       FAILED,
-      SUCCESS,
+      SUCCESS
     };
 
     Status status() { return status_; }

@@ -19,17 +19,16 @@
 
 #include <stddef.h>
 
-
 #if !defined(CASS_STATIC)
 #  if (defined(WIN32) || defined(_WIN32))
-#    if defined CASS_BUILDING
+#    if defined(CASS_BUILDING)
 #      define CASS_EXPORT __declspec(dllexport)
 #    else
 #      define CASS_EXPORT __declspec(dllexport)
 #    endif
-#  elif (defined __SUNPRO_C  || defined __SUNPRO_CC) && !defined(CASS_STATIC)
+#  elif (defined(__SUNPRO_C)  || defined(__SUNPRO_CC)) && !defined(CASS_STATIC)
 #    define CASS_EXPORT __global
-#  elif (defined __GNUC__ && __GNUC__ >= 4) || defined __INTEL_COMPILER
+#  elif (defined(__GNUC__) && __GNUC__ >= 4) || defined(__INTEL_COMPILER)
 #    define CASS_EXPORT __attribute__ ((visibility("default")))
 #  endif
 #else
@@ -47,19 +46,57 @@ extern "C" {
 #endif
 
 typedef enum { cass_false = 0, cass_true = 1 } cass_bool_t;
+
 typedef float cass_float_t;
 typedef double cass_double_t;
-typedef unsigned char cass_byte_t;
-typedef unsigned int cass_duration_t;
+
+#if defined(__INT8_TYPE__) && defined(__UINT8_TYPE__)
+typedef __INT8_TYPE__ cass_int8_t;
+typedef __UINT8_TYPE__ cass_uint8_t;
+#elif defined(__INT8_TYPE__)
+typedef __INT8_TYPE__ cass_int8_t;
+typedef unsigned __INT8_TYPE__ cass_uint8_t;
+#else
 typedef char cass_int8_t;
-typedef short cass_int16_t;
-typedef int cass_int32_t;
-typedef long long cass_int64_t;
 typedef unsigned char cass_uint8_t;
+#endif
+
+#if defined(__INT16_TYPE__) && defined(__UINT16_TYPE__)
+typedef __INT16_TYPE__ cass_int16_t;
+typedef __UINT16_TYPE__ cass_uint16_t;
+#elif defined(__INT16_TYPE__)
+typedef __INT16_TYPE__ cass_int16_t;
+typedef unsigned __INT16_TYPE__ cass_uint16_t;
+#else
+typedef short cass_int16_t;
 typedef unsigned short cass_uint16_t;
+#endif
+
+#if defined(__INT32_TYPE__) && defined(__UINT32_TYPE__)
+typedef __INT32_TYPE__ cass_int32_t;
+typedef __UINT32_TYPE__ cass_uint32_t;
+#elif defined(__INT32_TYPE__)
+typedef __INT32_TYPE__ cass_int32_t;
+typedef unsigned __INT32_TYPE__ cass_uint32_t;
+#else
+typedef int cass_int32_t;
 typedef unsigned int cass_uint32_t;
+#endif
+
+#if defined(__INT64_TYPE__) && defined(__UINT64_TYPE__)
+typedef __INT64_TYPE__ cass_int64_t;
+typedef __UINT64_TYPE__ cass_uint64_t;
+#elif defined(__INT64_TYPE__)
+typedef __INT64_TYPE__ cass_int64_t;
+typedef unsigned __INT64_TYPE__ cass_uint64_t;
+#else
+typedef long long cass_int64_t;
 typedef unsigned long long cass_uint64_t;
+#endif
+
 typedef size_t cass_size_t;
+typedef cass_uint8_t cass_byte_t;
+typedef cass_uint64_t cass_duration_t;
 
 typedef struct CassBytes_ {
     const cass_byte_t* data;
@@ -145,14 +182,22 @@ typedef enum CassCompression_ {
 } CassCompression;
 
 typedef enum CassOption_ {
-  CASS_OPTION_THREADS_IO,
-  CASS_OPTION_THREADS_CALLBACK,
-  CASS_OPTION_CONTACT_POINT_ADD,
   CASS_OPTION_PORT,
   CASS_OPTION_CQL_VERSION,
-  CASS_OPTION_SCHEMA_AGREEMENT_WAIT,
-  CASS_OPTION_CONTROL_CONNECTION_TIMEOUT,
-  CASS_OPTION_COMPRESSION
+  CASS_OPTION_NUM_THREADS_IO,
+  CASS_OPTION_QUEUE_SIZE_IO,
+  CASS_OPTION_QUEUE_SIZE_EVENTS,
+  CASS_OPTION_CONTACT_POINTS,
+  CASS_OPTION_CORE_CONNECTIONS_PER_HOST,
+  CASS_OPTION_MAX_CONNECTIONS_PER_HOST,
+  CASS_OPTION_MAX_SIMULTANEOUS_CREATION,
+  CASS_RECONNECT_WAIT_TIME,
+  CASS_OPTION_CONNECT_TIMEOUT,
+  CASS_OPTION_WRITE_TIMEOUT,
+  CASS_OPTION_READ_TIMEOUT,
+  CASS_OPTION_LOG_LEVEL,
+  CASS_OPTION_LOG_DATA,
+  CASS_OPTION_LOG_CALLBACK
 } CassOption;
 
 #define CASS_LOG_LEVEL_MAP(XX) \
@@ -181,20 +226,21 @@ typedef enum  CassErrorSource_ {
 #define CASS_ERROR_MAP(XX) \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_BAD_PARAMS, 1, "Bad parameters") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_OPTION, 2, "Invalid option") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_STREAMS, 3, "No streams available") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_INIT, 4, "Unable to initialize session") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_MESSAGE_PREPARE, 5, "Unable to prepare message") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_HOST_RESOLUTION, 6, "Unable to reslove host") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNEXPECTED_RESPONSE, 7, "Unexpected reponse from server") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_QUEUE_FULL, 8, "The request queue is full") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD, 9, "No available IO threads") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_WRITE_ERROR, 10, "Write error") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, 11, "No hosts available") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS, 12, "Index out of bounds") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_ITEM_COUNT, 13, "Invalid item count") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_VALUE_TYPE, 14, "Invalid value type") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_TIMED_OUT, 15, "Request timed out") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_UNABLE_TO_SET_KEYSPACE, 16, "Unable to set keyspace") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_OPTION_SIZE, 3, "Invalid option size") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_STREAMS, 4, "No streams available") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_INIT, 5, "Unable to initialize session") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_MESSAGE_PREPARE, 6, "Unable to prepare message") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_HOST_RESOLUTION, 7, "Unable to reslove host") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNEXPECTED_RESPONSE, 8, "Unexpected reponse from server") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_QUEUE_FULL, 9, "The request queue is full") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD, 10, "No available IO threads") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_WRITE_ERROR, 11, "Write error") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, 12, "No hosts available") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS, 13, "Index out of bounds") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_ITEM_COUNT, 14, "Invalid item count") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_VALUE_TYPE, 15, "Invalid value type") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_TIMED_OUT, 16, "Request timed out") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_UNABLE_TO_SET_KEYSPACE, 17, "Unable to set keyspace") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -247,16 +293,7 @@ CASS_EXPORT CassCluster*
 cass_cluster_new();
 
 /**
-<<<<<<< HEAD
- * Set an option on the specified session.
- *
- * @param session
- * @param option
- * @param data
- * @param data_length
-=======
  * Set an option on the specified cluster.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @param[in] cluster
  * @param[in] option
@@ -271,38 +308,21 @@ cass_cluster_setopt(CassCluster* cluster,
                     cass_size_t data_length);
 
 /**
-<<<<<<< HEAD
- * Get the option value for the specified session.
- *
- * @param session
- * @param option
- * @param data
- * @param data_length
- *
- * @return 0 if successful, otherwise an error occurred
-=======
  * Get the option value for the specified cluster
  *
  * @param[in] cluster
  * @param[in] option
  * @param[out] data
- * @param[out] data_length
+ * @param[in, out] data_length
  * @return CASS_OK if successful, otherwise an error occurred.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  */
 CASS_EXPORT CassError
 cass_cluster_getopt(const CassCluster* cluster,
                     CassOption option,
-                    void** data, 
-                    cass_size_t* data_length);
+                    void* data, cass_size_t* data_length);
 
 /**
-<<<<<<< HEAD
- * Shutdown the session instance, output a shutdown future which can
- * be used to determine when the session has been terminated.
-=======
  * Connnects a session to the cluster.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @param[in] cluster
  * @param[out] future A future that must be freed.
@@ -312,14 +332,7 @@ CASS_EXPORT CassFuture*
 cass_cluster_connect(CassCluster* cluster);
 
 /**
-<<<<<<< HEAD
- * Initiate a session using the specified session. Resulting
- * future must be freed by caller.
- *
- * @param session
-=======
  * Connnects a session to the cluster and sets the keyspace.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @param[in] cluster
  * @param[in] keyspace
@@ -333,17 +346,12 @@ cass_cluster_connect_keyspace(CassCluster* cluster,
 /**
  * Frees a cluster instance.
  *
-<<<<<<< HEAD
- * @param session
- * @param keyspace
-=======
  * @param[in] cluster
  */
 CASS_EXPORT void
 cass_cluster_free(CassCluster* cluster);
 
 /***********************************************************************************
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * Session
  *
@@ -364,14 +372,9 @@ cass_session_close(CassSession* session);
 /**
  * Create a prepared statement.
  *
-<<<<<<< HEAD
- * @param session
- * @param statement string
-=======
  * @param[in] session
  * @param[in] statement
  * @return A future that must be freed.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @see cass_future_get_prepared()
  */
@@ -382,14 +385,9 @@ cass_session_prepare(CassSession* session,
 /**
  * Execute a query or bound statement.
  *
-<<<<<<< HEAD
- * @param session
- * @param statement
-=======
  * @param[in] session
  * @param[in] statement
  * @return A future that must be freed.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @see cass_future_get_result()
  */
@@ -400,14 +398,9 @@ cass_session_execute(CassSession* session,
 /**
  * Execute a batch statement.
  *
-<<<<<<< HEAD
- * @param session
- * @param batch
-=======
  * @param[in] session
  * @param[in] batch
  * @return A future that must be freed.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @see cass_future_get_result()
  */
@@ -501,14 +494,8 @@ cass_future_get_prepared(CassFuture* future);
  * Gets the error code from future. If the future is not ready this method will
  * wait for the future to be set.
  *
-<<<<<<< HEAD
- * @param future
- *
- * @return error source
-=======
  * @param[in] future
  * @return CASS_OK if successful, otherwise an error occurred.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @see cass_error_desc()
  */
@@ -516,16 +503,8 @@ CASS_EXPORT CassError
 cass_future_error_code(CassFuture* future);
 
 /**
-<<<<<<< HEAD
- * Obtain the source from an error structure.
- *
- * @param future
- *
- * @return source code
-=======
  * Gets the error messsage from future. If the future is not ready this method will
  * wait for the future to be set.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @param[in] future
  * @return Empty string returned if successful, otherwise a message describing the
@@ -543,16 +522,10 @@ cass_future_error_message(CassFuture* future);
 /**
  * Creates a new query statement.
  *
-<<<<<<< HEAD
- * @param statement string
- * @param parameter_count number of bound paramerters
- * @param consistency statement read/write consistency
-=======
  * @param[in] statement The statement string.
  * @param[in] parameter_count The number of bound paramerters.
  * @param[in] consistency The statement's read/write consistency.
  * @return Returns a statement that must be freed.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @see cass_statement_free()
  */
@@ -651,18 +624,10 @@ cass_statement_bind_bool(CassStatement* statement,
  * Binds a "ascii", "text" or "varchar" to a query or bound statement
  * at the specified index.
  *
-<<<<<<< HEAD
- * @param statement
- * @param index
- * @param value
- *
- * @return 0 if successful, otherwise error occured
-=======
  * @param[in] statement
  * @param[in] index
  * @param[in] value
  * @return CASS_OK if successful, otherwise an error occurred.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  */
 CASS_EXPORT CassError
 cass_statement_bind_string(CassStatement* statement,
@@ -670,15 +635,7 @@ cass_statement_bind_string(CassStatement* statement,
                            CassString value);
 
 /**
-<<<<<<< HEAD
- * Bind bytes to a query or bound statement at the specified index
- *
- * @param statement
- * @param index
- * @param value
-=======
  * Binds a "blob" or "varint" to a query or bound statement at the specified index.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @param[in] statement
  * @param[in] index
@@ -720,19 +677,11 @@ cass_statement_bind_inet(CassStatement* statement,
  * Bind a "decimal" to a query or bound statement at the specified index.
  *
 <<<<<<< HEAD
- * @param statement
- * @param index
- * @param scale
- * @param varint
- *
- * @return 0 if successful, otherwise error occured
-=======
  * @param[in] statement
  * @param[in] index
  * @param[in] scale
  * @param[in] varint
  * @return CASS_OK if successful, otherwise an error occurred.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  */
 CASS_EXPORT CassError
 cass_statement_bind_decimal(CassStatement* statement,
@@ -790,16 +739,10 @@ cass_prepared_free(const CassPrepared* prepared);
 /**
  * Creates a bound statement from a pre-prepared statement.
  *
-<<<<<<< HEAD
- * @param prepared the previously prepared statement
- * @param parameter_count number of bound paramerters
- * @param consistency statement read/write consistency
-=======
  * @param[in] prepared A previously prepared statement.
  * @param[in] parameter_count The number of bound parameters.
  * @param[in] consistency The statement's read/write consistency.
  * @return Returns a bound statement that must be freed.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @see cass_statement_free()
  */
@@ -1014,14 +957,7 @@ CASS_EXPORT cass_size_t
 cass_result_column_count(const CassResult* result);
 
 /**
-<<<<<<< HEAD
- * Get the type for the column at index for the specified result
- *
- * @param result
- * @param index
-=======
  * Gets the column type at index for the specified result.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @param[in] result
  * @param[in] index
@@ -1063,12 +999,8 @@ cass_iterator_from_result(const CassResult* result);
  * Creates a new iterator for the specified row. This can be
  * used to iterate over columns in a row.
  *
-<<<<<<< HEAD
- * @param row
-=======
  * @param[in] row
  * @return A new iterator that must be freed.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @see cass_iterator_free()
  */
@@ -1079,12 +1011,8 @@ cass_iterator_from_row(const CassRow* row);
  * Creates a new iterator for the specified collection. This can be
  * used to iterate over values in a collection.
  *
-<<<<<<< HEAD
- * @param value
-=======
  * @param[in] value
  * @return A new iterator that must be freed.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @see cass_iterator_free()
  */
@@ -1145,17 +1073,10 @@ cass_iterator_get_value(CassIterator* iterator);
 /**
  * Get the column value at index for the specified row.
  *
-<<<<<<< HEAD
- * @param row
- * @param index
- *
- * @return 0 if successful, otherwise error occured
-=======
  * @param[in] row
  * @param[in] index
  * @return The column value at the specified index. NULL is
  * returned if the index is out of bounds.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  */
 CASS_EXPORT const CassValue*
 cass_row_get_column(const CassRow* row,
@@ -1168,15 +1089,7 @@ cass_row_get_column(const CassRow* row,
  ***********************************************************************************/
 
 /**
-<<<<<<< HEAD
- * Decode the specified value. Value may be a column, collection item, map key, or map
- * value.
- *
- * @param value
- * @param output
-=======
  * Gets an int32 for the specified value
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @param[in] value
  * @param[out] output
@@ -1187,15 +1100,7 @@ cass_value_get_int32(const CassValue* value,
                      cass_int32_t* output);
 
 /**
-<<<<<<< HEAD
- * Decode the specified value. Value may be a column, collection item, map key, or map
- * value.
- *
- * @param value
- * @param output
-=======
  * Gets an int64 for the specified value
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @param[in] value
  * @param[out] output
@@ -1208,31 +1113,16 @@ cass_value_get_int64(const CassValue* value,
 /**
  * Gets a float for the specified value
  *
-<<<<<<< HEAD
- * @param value
- * @param output
- *
- * @return 0 if successful, otherwise error occured
-=======
  * @param[in] value
  * @param[out] output
  * @return CASS_OK if successful, otherwise error occured
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  */
 CASS_EXPORT CassError
 cass_value_get_float(const CassValue* value,
                      cass_float_t* output);
 
 /**
-<<<<<<< HEAD
- * Decode the specified value. Value may be a column, collection item, map key, or map
- * value.
- *
- * @param value
- * @param output
-=======
  * Gets a double for the specified value
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @param[in] value
  * @param[out] output
@@ -1298,16 +1188,7 @@ cass_value_get_bytes(const CassValue* value,
                      CassBytes* output);
 
 /**
-<<<<<<< HEAD
- * Decode the specified value. Value may be a column, collection item, map key, or map
- * value.
- *
- * @param value
- * @param output_scale
- * @param output_varint
-=======
  * Gets a decimal for the specified value
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  *
  * @param[in] value
  * @param[out] output_scale
@@ -1321,14 +1202,8 @@ cass_value_get_decimal(const CassValue* value,
 /**
  * Gets the type of the specified value.
  *
-<<<<<<< HEAD
- * @param value
- *
- * @return 0 if successful, otherwise error occured
-=======
  * @param[in] value
  * @return The type of the specified value.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  */
 CASS_EXPORT CassValueType
 cass_value_type(const CassValue* value);
@@ -1354,14 +1229,8 @@ cass_value_is_collection(const CassValue* value);
 /**
  * Get the number of items in a collection. Works for all collection types.
  *
-<<<<<<< HEAD
- * @param collection column
- *
- * @return size, 0 if error
-=======
  * @param[in] collection
  * @return Count of items in a collection. 0 if not a collection.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  */
 CASS_EXPORT cass_size_t
 cass_value_item_count(const CassValue* collection);
@@ -1416,13 +1285,8 @@ cass_uuid_from_time(cass_uint64_t time,
 /**
  * Generates a minimum V1 (time) UUID for the specified time.
  *
-<<<<<<< HEAD
- * @param time
- * @param output
-=======
  * @param[in] time
  * @param[out] output A minimum V1 UUID for the specified time.
->>>>>>> f5481c90c84c9edd41cd22c3d5aef552c80e3182
  */
 CASS_EXPORT void
 cass_uuid_min_from_time(cass_uint64_t time,

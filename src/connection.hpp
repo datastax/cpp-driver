@@ -60,7 +60,7 @@ class Connection {
           REQUEST_STATE_READ_TIMEOUT,
           REQUEST_STATE_READ_BEFORE_WRITE,
           REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ,
-          REQUEST_STATE_DONE,
+          REQUEST_STATE_DONE
         };
 
         Request(Connection* connection,

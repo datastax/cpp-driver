@@ -30,7 +30,7 @@ class Connecter {
     enum Status {
       CONNECTING,
       FAILED,
-      SUCCESS,
+      SUCCESS
     };
 
     const Address& address() { return address_; }

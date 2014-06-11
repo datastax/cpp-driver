@@ -183,7 +183,12 @@ void Session::on_event(const SessionEvent& event) {
       }
     }
     if(pending_resolve_count_ == 0) {
-      init_pools();
+      if(hosts_.empty()) {
+        connect_future_->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, "No hosts provided or no hosts resolved");
+        connect_future_ = nullptr;
+      } else {
+        init_pools();
+      }
     }
   } else if(event.type == SessionEvent::NOTIFY_READY) {
     if(--pending_pool_count_ == 0) {

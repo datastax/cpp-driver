@@ -107,8 +107,17 @@ MultipleNodesTest::MultipleNodesTest(int numberOfNodesDC1, int numberOfNodesDC2)
   cluster = cass_cluster_new();
   for(int i = 0; i < numberOfNodesDC1; ++i) {
     std::string contact_point(conf.ip_prefix() + boost::lexical_cast<std::string>(i + 1));
-    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINT_ADD, contact_point.data(), contact_point.size());
+    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINTS, contact_point.data(), contact_point.size());
   }
+
+  cass_size_t connect_timeout = 10000;
+  cass_cluster_setopt(cluster, CASS_OPTION_CONNECT_TIMEOUT, &connect_timeout, sizeof(connect_timeout));
+
+  cass_size_t write_timeout = 10000;
+  cass_cluster_setopt(cluster, CASS_OPTION_WRITE_TIMEOUT, &write_timeout, sizeof(write_timeout));
+
+  cass_size_t read_timeout = 10000;
+  cass_cluster_setopt(cluster, CASS_OPTION_READ_TIMEOUT, &read_timeout, sizeof(read_timeout));
 
   if(conf.use_logger())	{
     // TODO(mpenick): Add logging

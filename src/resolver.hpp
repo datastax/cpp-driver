@@ -35,7 +35,7 @@ class Resolver {
       FAILED_BAD_PARAM,
       FAILED_UNSUPPORTED_ADDRESS_FAMILY,
       FAILED_UNABLE_TO_RESOLVE,
-      SUCCESS,
+      SUCCESS
     };
 
     const std::string& host() { return host_; }

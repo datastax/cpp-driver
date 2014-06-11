@@ -17,6 +17,8 @@
 #ifndef __CASS_LOGGER_HPP_INCLUDED__
 #define __CASS_LOGGER_HPP_INCLUDED__
 
+#include <stdarg.h>
+
 #include <string>
 
 #include "event_thread.hpp"

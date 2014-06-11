@@ -39,7 +39,7 @@ class Session;
 struct IOWorkerEvent {
     enum Type {
       ADD_POOL,
-      REMOVE_POOL,
+      REMOVE_POOL
     };
     Type type;
     Host host;

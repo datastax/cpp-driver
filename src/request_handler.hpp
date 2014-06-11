@@ -125,7 +125,7 @@ class RequestHandler : public ResponseCallback {
   public:
     Timer* timer;
     std::list<Host> hosts;
-    std::shared_ptr<std::string> keyspace;
+    std::string keyspace;
 
   private:
     void notify_finished() {
