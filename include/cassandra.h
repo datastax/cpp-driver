@@ -325,7 +325,6 @@ cass_cluster_getopt(const CassCluster* cluster,
  * Connnects a session to the cluster.
  *
  * @param[in] cluster
- * @param[out] future A future that must be freed.
  * @return A session that must be freed.
  */
 CASS_EXPORT CassFuture*
@@ -336,7 +335,6 @@ cass_cluster_connect(CassCluster* cluster);
  *
  * @param[in] cluster
  * @param[in] keyspace
- * @param[out] future A future that must be freed.
  * @return A session that must be freed.
  */
 CASS_EXPORT CassFuture*
@@ -676,11 +674,9 @@ cass_statement_bind_inet(CassStatement* statement,
 /**
  * Bind a "decimal" to a query or bound statement at the specified index.
  *
-<<<<<<< HEAD
  * @param[in] statement
  * @param[in] index
- * @param[in] scale
- * @param[in] varint
+ * @param[in] value
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -916,8 +912,7 @@ cass_collection_append_inet(CassCollection* collection,
  * Appends a "decimal" to the collection.
  *
  * @param[in] collection
- * @param[in] scale
- * @param[in] varint
+ * @param[in] value
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -1089,7 +1084,7 @@ cass_row_get_column(const CassRow* row,
  ***********************************************************************************/
 
 /**
- * Gets an int32 for the specified value
+ * Gets an int32 for the specified value.
  *
  * @param[in] value
  * @param[out] output
@@ -1100,7 +1095,7 @@ cass_value_get_int32(const CassValue* value,
                      cass_int32_t* output);
 
 /**
- * Gets an int64 for the specified value
+ * Gets an int64 for the specified value.
  *
  * @param[in] value
  * @param[out] output
@@ -1111,7 +1106,7 @@ cass_value_get_int64(const CassValue* value,
                      cass_int64_t* output);
 
 /**
- * Gets a float for the specified value
+ * Gets a float for the specified value.
  *
  * @param[in] value
  * @param[out] output
@@ -1122,7 +1117,7 @@ cass_value_get_float(const CassValue* value,
                      cass_float_t* output);
 
 /**
- * Gets a double for the specified value
+ * Gets a double for the specified value.
  *
  * @param[in] value
  * @param[out] output
@@ -1133,7 +1128,7 @@ cass_value_get_double(const CassValue* value,
                       cass_double_t* output);
 
 /**
- * Gets a bool for the specified value
+ * Gets a bool for the specified value.
  *
  * @param[in] value
  * @param[out] output
@@ -1144,7 +1139,7 @@ cass_value_get_bool(const CassValue* value,
                     cass_bool_t* output);
 
 /**
- * Gets a UUID for the specified value
+ * Gets a UUID for the specified value.
  *
  * @param[in] value
  * @param[out] output
@@ -1155,7 +1150,7 @@ cass_value_get_uuid(const CassValue* value,
                     CassUuid output);
 
 /**
- * Gets an INET for the specified value
+ * Gets an INET for the specified value.
  *
  * @param[in] value
  * @param[out] output
@@ -1166,7 +1161,7 @@ cass_value_get_inet(const CassValue* value,
                     CassInet* output);
 
 /**
- * Gets a string for the specified value
+ * Gets a string for the specified value.
  *
  * @param[in] value
  * @param[out] output
@@ -1177,7 +1172,7 @@ cass_value_get_string(const CassValue* value,
                       CassString* output);
 
 /**
- * Gets the bytes of the specified value
+ * Gets the bytes of the specified value.
  *
  * @param[in] value
  * @param[out] output
@@ -1188,11 +1183,10 @@ cass_value_get_bytes(const CassValue* value,
                      CassBytes* output);
 
 /**
- * Gets a decimal for the specified value
+ * Gets a decimal for the specified value.
  *
  * @param[in] value
- * @param[out] output_scale
- * @param[out] output_varint
+ * @param[out] output
  * @return CASS_OK if successful, otherwise error occured
  */
 CASS_EXPORT CassError
