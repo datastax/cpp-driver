@@ -118,7 +118,7 @@ struct Message {
     if (body) {
       body->prepare(CASS_HEADER_SIZE, output, size);
 
-      if (!size) {
+      if (size == 0) {
         *output = new char[CASS_HEADER_SIZE];
         size = CASS_HEADER_SIZE;
       } else {

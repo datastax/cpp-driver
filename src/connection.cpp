@@ -103,7 +103,6 @@ void Connection::Request::change_state(Connection::Request::State next_state) {
       if(next_state == REQUEST_STATE_DONE) { // Success
         stop_timer();
         state_ = next_state;
-        cleanup();
       } else if(next_state == REQUEST_STATE_READ_TIMEOUT) {
         connection-> timed_out_request_count_++;
         state_ = next_state;
@@ -122,20 +121,17 @@ void Connection::Request::change_state(Connection::Request::State next_state) {
       assert(next_state == REQUEST_STATE_DONE && "Invalid request state after read timeout");
       connection->timed_out_request_count_--;
       state_ = next_state;
-      cleanup();
       break;
 
     case REQUEST_STATE_READ_BEFORE_WRITE:
       assert(next_state == REQUEST_STATE_DONE && "Invalid request state after read before write");
       state_ = next_state;
-      cleanup();
       break;
 
     case REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ:
       assert(next_state == REQUEST_STATE_DONE && "Invalid request state after write timeout before read");
       connection->timed_out_request_count_--;
       state_ = next_state;
-      cleanup();
       break;
 
     case REQUEST_STATE_DONE:
@@ -146,11 +142,6 @@ void Connection::Request::change_state(Connection::Request::State next_state) {
       assert(false && "Invalid request state");
       break;
   }
-}
-
-void Connection::Request::cleanup() {
-  connection->pending_requests_.remove(this);
-  delete this;
 }
 
 void Connection::Request::on_result_response(Message* response) {
@@ -214,7 +205,7 @@ bool Connection::execute(ResponseCallback* response_callback) {
   Message* message = response_callback->request();
 
   int8_t stream = stream_manager_.acquire_stream(request.get());
-  if(request->stream < 0) {
+  if(stream < 0) {
     return false;
   }
 
@@ -338,6 +329,11 @@ void Connection::consume(char* input, size_t size) {
             default:
               assert(false && "Invalid request state after receiving response");
               break;
+          }
+
+          if(request->state() == Request::REQUEST_STATE_DONE) {
+             pending_requests_.remove(request);
+             delete request;
           }
         } else {
           logger_->error("Invalid stream returnd from server on '%s'",
@@ -515,6 +511,11 @@ void Connection::on_write(Writer* writer) {
     default:
       assert(false && "Invalid request state after write finished");
       break;
+  }
+
+  if(request->state() == Request::REQUEST_STATE_DONE) {
+    connection->pending_requests_.remove(request);
+    delete request;
   }
 }
 

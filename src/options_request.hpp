@@ -39,8 +39,6 @@ struct OptionsRequest : public MessageBody {
       size_t  reserved,
       char**  output,
       size_t& size) {
-    *output = new char[size];
-    size = reserved;
     return true;
   }
 };

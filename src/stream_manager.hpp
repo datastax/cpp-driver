@@ -22,18 +22,18 @@ namespace cass {
 template <class T>
 class StreamManager {
  public:
-    static const int MAX_STREAM = 127;
+    static const int MAX_STREAMS = 128;
 
   StreamManager()
     : available_stream_index_(0) {
-    for (int i = 1; i <= MAX_STREAM; ++i) {
-      available_streams_[i - 1] = i;
-      allocated_streams_[i - 1] = false;
+    for (int i = 0; i < MAX_STREAMS; ++i) {
+      available_streams_[i] = i;
+      allocated_streams_[i] = false;
     }
   }
 
   int8_t acquire_stream(const T& item) {
-    if (available_stream_index_ >= MAX_STREAM) {
+    if (available_stream_index_ >= MAX_STREAMS) {
       return -1;
     }
     int8_t stream = available_streams_[available_stream_index_++];
@@ -59,15 +59,15 @@ class StreamManager {
     return false;
   }
 
-  inline size_t available_streams() {
-    return MAX_STREAM - available_stream_index_;
+  size_t available_streams() {
+    return MAX_STREAMS - available_stream_index_;
   }
 
  private:
   int available_stream_index_;
-  int8_t available_streams_[MAX_STREAM];
-  bool allocated_streams_[MAX_STREAM];
-  T items_[MAX_STREAM];
+  int8_t available_streams_[MAX_STREAMS];
+  bool allocated_streams_[MAX_STREAMS];
+  T items_[MAX_STREAMS];
 };
 
 } // namespace cass

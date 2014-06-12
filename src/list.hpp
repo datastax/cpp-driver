@@ -107,6 +107,8 @@ void List<T>::remove(T* node) {
   size_--;
   node->prev_->next_ = node->next_;
   node->next_->prev_ = node->prev_;
+  node->next_ = nullptr;
+  node->prev_ = nullptr;
 }
 
 template<class T>
