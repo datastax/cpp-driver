@@ -194,7 +194,13 @@ typedef enum CassOption_ {
   CASS_OPTION_LOG_CALLBACK
 } CassOption;
 
-#define CASS_LOG_LEVEL_MAP(XX) \
+typedef enum CassBatchType_ {
+  CASS_BATCH_TYPE_LOGGED,
+  CASS_BATCH_TYPE_UNLOGGED,
+  CASS_BATCH_TYPE_COUNTER
+} CassBatchType;
+
+#define CASS_LOG_LEVEL_MAP(XX)                  \
   XX(CASS_LOG_DISABLED, "") \
   XX(CASS_LOG_CRITICAL, "CRITICAL") \
   XX(CASS_LOG_ERROR, "ERROR") \
@@ -759,6 +765,18 @@ cass_prepared_bind(const CassPrepared* prepared,
  */
 CASS_EXPORT CassBatch*
 cass_batch_new(CassConsistency consistency);
+
+/**
+ * Creates a new batch statement with batch type.
+ *
+ * @param[in] consistency The statement's read/write consistency.
+ * @param[in] type The batch type.
+ * @return Returns a batch statement that must be freed.
+ *
+ * @see cass_batch_free()
+ */
+CASS_EXPORT CassBatch*
+cass_batch_new2(CassConsistency consistency, CassBatchType type);
 
 /**
  * Frees a batch instance.
