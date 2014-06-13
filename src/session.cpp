@@ -244,8 +244,9 @@ Future* Session::execute(MessageBody* statement) {
   request->opcode = statement->opcode();
   request->body.reset(statement);
   RequestHandler* request_handler = new RequestHandler(request);
+  Future* future = request_handler->future();
   execute(request_handler);
-  return request_handler->future();
+  return future;
 }
 
 void Session::on_execute(uv_async_t* data, int status) {
