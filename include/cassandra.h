@@ -206,7 +206,7 @@ typedef enum CassBatchType_ {
   CASS_BATCH_TYPE_COUNTER
 } CassBatchType;
 
-#define CASS_LOG_LEVEL_MAP(XX)                  \
+#define CASS_LOG_LEVEL_MAP(XX) \
   XX(CASS_LOG_DISABLED, "") \
   XX(CASS_LOG_CRITICAL, "CRITICAL") \
   XX(CASS_LOG_ERROR, "ERROR") \
