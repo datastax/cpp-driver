@@ -64,7 +64,7 @@ public:
             static_cast<ErrorResponse*>(response->body.get());
         future_->set_error(static_cast<CassError>(CASS_ERROR(
                                CASS_ERROR_SOURCE_SERVER, error->code)),
-                           error->message);
+                           std::string(error->message, error->message_size));
       } break;
       default:
         // TODO(mpenick): Get the host for errors

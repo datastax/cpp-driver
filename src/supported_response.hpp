@@ -32,7 +32,6 @@ struct SupportedResponse : public MessageBody {
       : MessageBody(CQL_OPCODE_SUPPORTED) {}
 
   bool consume(char* buffer, size_t size) {
-    (void)size;
     string_multimap_t supported;
 
     decode_string_multimap(buffer, supported);
@@ -46,13 +45,6 @@ struct SupportedResponse : public MessageBody {
       versions = it->second;
     }
     return true;
-  }
-
-  bool prepare(size_t reserved, char** output, size_t& size) {
-    (void)reserved;
-    (void)output;
-    (void)size;
-    return false;
   }
 };
 

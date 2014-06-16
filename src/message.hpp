@@ -107,15 +107,9 @@ struct Message {
 
   bool prepare(char** output, size_t& size) {
     size = 0;
-    if (body) {
-      body->prepare(CASS_HEADER_SIZE, output, size);
 
-      if (size == 0) {
-        *output = new char[CASS_HEADER_SIZE];
-        size = CASS_HEADER_SIZE;
-      } else {
-        length = size - CASS_HEADER_SIZE;
-      }
+    if (body && body->prepare(CASS_HEADER_SIZE, output, size)) {
+      length = size - CASS_HEADER_SIZE;
 
       uint8_t* buffer = reinterpret_cast<uint8_t*>(*output);
       buffer[0] = version;
@@ -125,6 +119,7 @@ struct Message {
       encode_int(reinterpret_cast<char*>(buffer + 4), length);
       return true;
     }
+
     return false;
   }
 

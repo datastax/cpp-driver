@@ -25,17 +25,7 @@ struct ReadyResponse : public MessageBody {
   ReadyResponse()
       : MessageBody(CQL_OPCODE_READY) {}
 
-  bool consume(char* buffer, size_t size) {
-    (void)buffer;
-    (void)size;
-    return true;
-  }
-
-  bool prepare(size_t reserved, char** output, size_t& size) {
-    *output = new char[size];
-    size = reserved;
-    return true;
-  }
+  bool consume(char* buffer, size_t size) { return true; }
 };
 
 } // namespace cass

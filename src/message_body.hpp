@@ -30,7 +30,7 @@ public:
   MessageBody(uint8_t opcode)
       : opcode_(opcode) {}
 
-  virtual ~MessageBody(){};
+  virtual ~MessageBody() {}
 
   DISALLOW_COPY_AND_ASSIGN(MessageBody);
 
@@ -38,9 +38,11 @@ public:
   char* buffer() { return buffer_.get(); }
   void set_buffer(char* buffer) { buffer_.reset(buffer); }
 
-  virtual bool consume(char* buffer, size_t size) = 0;
+  virtual bool consume(char* buffer, size_t size) { return false; }
 
-  virtual bool prepare(size_t reserved, char** output, size_t& size) = 0;
+  virtual bool prepare(size_t reserved, char** output, size_t& size) {
+    return false;
+  }
 
 private:
   uint8_t opcode_;
