@@ -35,7 +35,7 @@ uv_buf_t alloc_buffer(uv_handle_t *handle, size_t suggested_size) {
 }
 
 void free_buffer(uv_buf_t buf) {
-  delete buf.base;
+  delete[] buf.base;
 }
 
 void clear_buffer_deque(std::deque<uv_buf_t>& buffers) {

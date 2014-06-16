@@ -21,7 +21,7 @@
 
 #include "cassandra.h"
 
-#define NUM_CONCURRENT_REQUESTS 4096
+#define NUM_CONCURRENT_REQUESTS 1000
 
 void print_error(CassFuture* future) {
   CassString message = cass_future_error_message(future);
@@ -144,6 +144,7 @@ int main() {
 
   close_future = cass_session_close(session);
   cass_future_wait(close_future);
+  cass_future_free(close_future);
   cass_cluster_free(cluster);
 
   return 0;

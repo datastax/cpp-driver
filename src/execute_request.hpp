@@ -119,8 +119,8 @@ struct ExecuteRequest : public Statement {
 
       uint8_t flags  = 0x00;
 
-      // reserved + the long string
-      size = reserved + sizeof(int32_t) + prepared_id.size();
+      // reserved + the short bytes
+      size = reserved + sizeof(int16_t) + prepared_id.size();
       // consistency_value
       size += sizeof(int16_t);
       // flags

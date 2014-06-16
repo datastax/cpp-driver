@@ -119,6 +119,9 @@ MultipleNodesTest::MultipleNodesTest(int numberOfNodesDC1, int numberOfNodesDC2)
   cass_size_t read_timeout = 10000;
   cass_cluster_setopt(cluster, CASS_OPTION_READ_TIMEOUT, &read_timeout, sizeof(read_timeout));
 
+  cass_size_t num_threads_io = 2;
+  cass_cluster_setopt(cluster, CASS_OPTION_NUM_THREADS_IO, &num_threads_io, sizeof(num_threads_io));
+
   if(conf.use_logger())	{
     // TODO(mpenick): Add logging
   }

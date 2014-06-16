@@ -103,7 +103,6 @@ void IOWorker::maybe_close() {
 }
 
 void IOWorker::maybe_notify_closed() {
-  //printf("pending request count: %d\n", pending_request_count_);
   if(pools.empty()) {
     session_->notify_closed_async();
     close_handles();
@@ -153,8 +152,8 @@ void IOWorker::on_retry(RequestHandler* request_handler, RetryType retry_type) {
   }
 
   if(!request_handler->get_current_host(&host)) {
-    printf("no hosts available\n");
     request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, "No hosts available");
+    delete request_handler;
     return;
   }
 

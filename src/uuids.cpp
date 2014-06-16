@@ -224,7 +224,8 @@ uint64_t Uuids::make_clock_seq_and_node() {
   }
 
   uint8_t hash[16];
-  EVP_DigestFinal(mdctx, hash, nullptr);
+  EVP_DigestFinal_ex(mdctx, hash, nullptr);
+  EVP_MD_CTX_destroy(mdctx);
 
   uint64_t node = 0L;
   for(int i = 0; i < 6; ++i) {

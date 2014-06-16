@@ -51,7 +51,7 @@ class MessageBody : public RefCounted<MessageBody> {
 
   private:
     uint8_t opcode_;
-    std::unique_ptr<char> buffer_;
+    std::unique_ptr<char[]> buffer_;
 };
 
 } // namespace cass

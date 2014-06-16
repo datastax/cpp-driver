@@ -70,7 +70,7 @@ class Writer {
 
     ~Writer() {
       for(uv_buf_t buf : *bufs_) {
-        delete buf.base;
+        delete[] buf.base;
       }
       delete bufs_;
     }

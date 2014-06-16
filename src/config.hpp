@@ -34,7 +34,7 @@ class Config {
     Config() :
       port_(9042),
       version_("3.0.0"),
-      thread_count_io_(2),
+      thread_count_io_(1),
       queue_size_io_(4096),
       queue_size_event_(4096),
       queue_size_log_(4096),
@@ -47,7 +47,7 @@ class Config {
       connect_timeout_(1000),
       write_timeout_(1000),
       read_timeout_(1000),
-      log_level_(CASS_LOG_INFO),
+      log_level_(CASS_LOG_ERROR),
       log_data_(nullptr),
       log_callback_(default_log_callback)
     {}
