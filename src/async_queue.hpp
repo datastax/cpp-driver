@@ -23,36 +23,34 @@ namespace cass {
 
 template <typename Q>
 class AsyncQueue {
-  public:
-    AsyncQueue(size_t queue_size) 
+public:
+  AsyncQueue(size_t queue_size)
       : queue_(queue_size) {
-      async_.data = this;
-    }
+    async_.data = this;
+  }
 
-    int init(uv_loop_t* loop, void* data, uv_async_cb async_cb) {
-      async_.data = data;
-      return uv_async_init(loop, &async_, async_cb);
-    }
+  int init(uv_loop_t* loop, void* data, uv_async_cb async_cb) {
+    async_.data = data;
+    return uv_async_init(loop, &async_, async_cb);
+  }
 
-    void close_handles() {
-      uv_close(reinterpret_cast<uv_handle_t*>(&async_), nullptr);
-    }
+  void close_handles() {
+    uv_close(reinterpret_cast<uv_handle_t*>(&async_), nullptr);
+  }
 
-    bool enqueue(const typename Q::EntryType& data) {
-      if(queue_.enqueue(data)) {
-        uv_async_send(&async_);
-        return true;
-      }
-      return false;
+  bool enqueue(const typename Q::EntryType& data) {
+    if (queue_.enqueue(data)) {
+      uv_async_send(&async_);
+      return true;
     }
+    return false;
+  }
 
-    bool dequeue(typename Q::EntryType& data) {
-      return queue_.dequeue(data);
-    }
+  bool dequeue(typename Q::EntryType& data) { return queue_.dequeue(data); }
 
-  private:
-    uv_async_t async_;
-    Q queue_;
+private:
+  uv_async_t async_;
+  Q queue_;
 };
 
 } // namespace cass

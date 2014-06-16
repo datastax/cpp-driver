@@ -37,73 +37,67 @@ class Pool;
 class Session;
 
 struct IOWorkerEvent {
-    enum Type {
-      ADD_POOL,
-      REMOVE_POOL
-    };
-    Type type;
-    Host host;
+  enum Type { ADD_POOL, REMOVE_POOL };
+  Type type;
+  Host host;
 };
 
 class IOWorker : public EventThread<IOWorkerEvent> {
-  public:
-    IOWorker(Session* session,
-             Logger* logger,
-             const Config& config);
-    ~IOWorker();
+public:
+  IOWorker(Session* session, Logger* logger, const Config& config);
+  ~IOWorker();
 
-    int init();
+  int init();
 
-    bool add_pool_async(Host host);
-    bool remove_pool_async(Host host);
-    void close_async();
+  bool add_pool_async(Host host);
+  bool remove_pool_async(Host host);
+  void close_async();
 
-    bool execute(RequestHandler* request_handler);
+  bool execute(RequestHandler* request_handler);
 
-  private:
-    void add_pool(Host host);
-    void maybe_close();
-    void maybe_notify_closed();
-    void cleanup();
-    void close_handles();
+private:
+  void add_pool(Host host);
+  void maybe_close();
+  void maybe_notify_closed();
+  void cleanup();
+  void close_handles();
 
-    void on_pool_ready(Pool* pool);
-    void on_pool_closed(Pool* pool);
-    void on_set_keyspace(const std::string& keyspace);
+  void on_pool_ready(Pool* pool);
+  void on_pool_closed(Pool* pool);
+  void on_set_keyspace(const std::string& keyspace);
 
-    void on_retry(RequestHandler* request_handler, RetryType retry_type);
-    void on_request_finished(RequestHandler* request_handler);
-    virtual void on_event(const IOWorkerEvent& event);
+  void on_retry(RequestHandler* request_handler, RetryType retry_type);
+  void on_request_finished(RequestHandler* request_handler);
+  virtual void on_event(const IOWorkerEvent& event);
 
-    static void on_pool_reconnect(Timer* timer);
-    static void on_execute(uv_async_t* data, int status);
-    static void on_prepare(uv_prepare_t* prepare, int status);
+  static void on_pool_reconnect(Timer* timer);
+  static void on_execute(uv_async_t* data, int status);
+  static void on_prepare(uv_prepare_t* prepare, int status);
 
-  private:
-    typedef std::map<Host, Pool*> PoolCollection;
+private:
+  typedef std::map<Host, Pool*> PoolCollection;
 
-    struct ReconnectRequest {
-        ReconnectRequest(IOWorker* io_worker, Host host)
-          : io_worker(io_worker)
-          , host(host) { }
+  struct ReconnectRequest {
+    ReconnectRequest(IOWorker* io_worker, Host host)
+        : io_worker(io_worker)
+        , host(host) {}
 
-        IOWorker* io_worker;
-        Host host;
-    };
+    IOWorker* io_worker;
+    Host host;
+  };
 
-  private:
-    Session* session_;
-    Logger* logger_;
-    uv_prepare_t prepare_;
-    SSLContext* ssl_context_;
-    PoolCollection pools;
-    std::list<Pool*> pending_delete_;
-    std::atomic<bool> is_closing_;
-    int pending_request_count_;
+private:
+  Session* session_;
+  Logger* logger_;
+  uv_prepare_t prepare_;
+  SSLContext* ssl_context_;
+  PoolCollection pools;
+  std::list<Pool*> pending_delete_;
+  std::atomic<bool> is_closing_;
+  int pending_request_count_;
 
-    const Config& config_;
-    AsyncQueue<SPSCQueue<RequestHandler*>> request_queue_;
-
+  const Config& config_;
+  AsyncQueue<SPSCQueue<RequestHandler*>> request_queue_;
 };
 
 } // namespace cass

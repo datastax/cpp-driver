@@ -21,11 +21,11 @@ namespace cass {
 
 template <class T>
 class StreamManager {
- public:
-    static const int MAX_STREAMS = 128;
+public:
+  static const int MAX_STREAMS = 128;
 
   StreamManager()
-    : available_stream_index_(0) {
+      : available_stream_index_(0) {
     for (int i = 0; i < MAX_STREAMS; ++i) {
       available_streams_[i] = i;
       allocated_streams_[i] = false;
@@ -49,9 +49,9 @@ class StreamManager {
   }
 
   bool get_item(int8_t stream, T& output, bool release = true) {
-    if(allocated_streams_[stream]) {
+    if (allocated_streams_[stream]) {
       output = items_[stream];
-      if(release) {
+      if (release) {
         release_stream(stream);
       }
       return true;
@@ -59,11 +59,9 @@ class StreamManager {
     return false;
   }
 
-  size_t available_streams() {
-    return MAX_STREAMS - available_stream_index_;
-  }
+  size_t available_streams() { return MAX_STREAMS - available_stream_index_; }
 
- private:
+private:
   int available_stream_index_;
   int8_t available_streams_[MAX_STREAMS];
   bool allocated_streams_[MAX_STREAMS];

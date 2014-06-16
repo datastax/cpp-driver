@@ -27,78 +27,77 @@
 namespace cass {
 
 class Resolver {
-  public:
-    typedef std::function<void(Resolver*)> Callback;
+public:
+  typedef std::function<void(Resolver*)> Callback;
 
-    enum Status {
-      RESOLVING,
-      FAILED_BAD_PARAM,
-      FAILED_UNSUPPORTED_ADDRESS_FAMILY,
-      FAILED_UNABLE_TO_RESOLVE,
-      SUCCESS
-    };
+  enum Status {
+    RESOLVING,
+    FAILED_BAD_PARAM,
+    FAILED_UNSUPPORTED_ADDRESS_FAMILY,
+    FAILED_UNABLE_TO_RESOLVE,
+    SUCCESS
+  };
 
-    const std::string& host() { return host_; }
-    int port() { return port_; }
-    bool is_success() { return status_ == SUCCESS; }
-    Status status() { return status_; }
-    Address& address() { return address_; }
-    void* data() { return data_; }
+  const std::string& host() { return host_; }
+  int port() { return port_; }
+  bool is_success() { return status_ == SUCCESS; }
+  Status status() { return status_; }
+  Address& address() { return address_; }
+  void* data() { return data_; }
 
-    static void resolve(uv_loop_t* loop,
-                        const std::string& host, int port,
-                        void* data, Callback cb,
-                        struct addrinfo* hints = nullptr) {
-      Resolver* resolver = new Resolver(host, port, data, cb);
+  static void resolve(uv_loop_t* loop, const std::string& host, int port,
+                      void* data, Callback cb,
+                      struct addrinfo* hints = nullptr) {
+    Resolver* resolver = new Resolver(host, port, data, cb);
 
-      int rc = uv_getaddrinfo(loop, &resolver->req_, on_resolve,
-                              host.c_str(), std::to_string(port).c_str(), hints);
+    int rc = uv_getaddrinfo(loop, &resolver->req_, on_resolve, host.c_str(),
+                            std::to_string(port).c_str(), hints);
 
-      if(rc != 0) {
-        resolver->status_ = FAILED_BAD_PARAM;
-        resolver->cb_(resolver);
-        delete resolver;
-      }
-    }
-
-  private:
-    static void on_resolve(uv_getaddrinfo_t* req, int status, struct addrinfo* res) {
-      Resolver* resolver = static_cast<Resolver*>(req->data);
-
-      if(status != 0) {
-        resolver->status_ = FAILED_UNABLE_TO_RESOLVE;
-      } else if(!resolver->address_.init(res->ai_addr)) {
-        resolver->status_ = FAILED_UNSUPPORTED_ADDRESS_FAMILY;
-      } else {
-        resolver->status_ = SUCCESS;
-      }
-
+    if (rc != 0) {
+      resolver->status_ = FAILED_BAD_PARAM;
       resolver->cb_(resolver);
-
       delete resolver;
-      uv_freeaddrinfo(res);
+    }
+  }
+
+private:
+  static void on_resolve(uv_getaddrinfo_t* req, int status,
+                         struct addrinfo* res) {
+    Resolver* resolver = static_cast<Resolver*>(req->data);
+
+    if (status != 0) {
+      resolver->status_ = FAILED_UNABLE_TO_RESOLVE;
+    } else if (!resolver->address_.init(res->ai_addr)) {
+      resolver->status_ = FAILED_UNSUPPORTED_ADDRESS_FAMILY;
+    } else {
+      resolver->status_ = SUCCESS;
     }
 
-  private:
-    Resolver(const std::string& host, int port, 
-             void* data, Callback cb)
-        : host_(host)
-        , port_(port)
-        , status_(RESOLVING)
-        , data_(data)
-        , cb_(cb) {
-      req_.data = this;
-    }
+    resolver->cb_(resolver);
 
-    ~Resolver() { }
+    delete resolver;
+    uv_freeaddrinfo(res);
+  }
 
-    uv_getaddrinfo_t req_;
-    std::string host_;
-    int port_;
-    Status status_;
-    Address address_;
-    void* data_;
-   Callback cb_;
+private:
+  Resolver(const std::string& host, int port, void* data, Callback cb)
+      : host_(host)
+      , port_(port)
+      , status_(RESOLVING)
+      , data_(data)
+      , cb_(cb) {
+    req_.data = this;
+  }
+
+  ~Resolver() {}
+
+  uv_getaddrinfo_t req_;
+  std::string host_;
+  int port_;
+  Status status_;
+  Address address_;
+  void* data_;
+  Callback cb_;
 };
 
 } // namespace cass

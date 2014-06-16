@@ -29,8 +29,8 @@ uv_buf_t alloc_buffer(size_t suggested_size) {
   return uv_buf_init(new char[suggested_size], suggested_size);
 }
 
-uv_buf_t alloc_buffer(uv_handle_t *handle, size_t suggested_size) {
-  (void) handle;
+uv_buf_t alloc_buffer(uv_handle_t* handle, size_t suggested_size) {
+  (void)handle;
   return alloc_buffer(suggested_size);
 }
 
@@ -39,8 +39,7 @@ void free_buffer(uv_buf_t buf) {
 }
 
 void clear_buffer_deque(std::deque<uv_buf_t>& buffers) {
-  for (std::deque<uv_buf_t>::iterator it = buffers.begin();
-       it != buffers.end();
+  for (std::deque<uv_buf_t>::iterator it = buffers.begin(); it != buffers.end();
        ++it) {
     free_buffer(*it);
   }
@@ -84,9 +83,14 @@ std::string opcode_to_string(int opcode) {
 
 std::string& trim(std::string& str) {
   // Trim front
-  str.erase(str.begin(), std::find_if(str.begin(), str.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+  str.erase(str.begin(),
+            std::find_if(str.begin(), str.end(),
+                         std::not1(std::ptr_fun<int, int>(std::isspace))));
   // Trim back
-  str.erase(std::find_if(str.rbegin(), str.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), str.end());
+  str.erase(
+      std::find_if(str.rbegin(), str.rend(),
+                   std::not1(std::ptr_fun<int, int>(std::isspace))).base(),
+      str.end());
   return str;
 }
 

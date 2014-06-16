@@ -30,28 +30,29 @@
 
 // This abstraction allows us to separate internal types from the
 // external opaque pointers that we expose.
-template<typename In, typename Ex>
+template <typename In, typename Ex>
 struct External : public In {
-  inline In* from() { return static_cast<In*>(this); }
-  inline const In* from() const { return static_cast<const In*>(this); }
-  inline static Ex* to(In* in) { return static_cast<Ex*>(in); }
-  inline static const Ex* to(const In* in) { return static_cast<const Ex*>(in); }
+  In* from() { return static_cast<In*>(this); }
+  const In* from() const { return static_cast<const In*>(this); }
+  static Ex* to(In* in) { return static_cast<Ex*>(in); }
+  static const Ex* to(const In* in) {
+    return static_cast<const Ex*>(in);
+  }
 };
 
 extern "C" {
 
-struct CassCluster_ : public External<cass::Cluster, CassCluster> { };
-struct CassSession_ : public External<cass::Session, CassSession> { };
-struct CassStatement_ : public External<cass::Statement, CassStatement> { };
-struct CassFuture_ : public External<cass::Future, CassFuture> { };
-struct CassPrepared_ : public External<cass::Prepared, CassPrepared> { };
-struct CassBatch_ : public External<cass::BatchRequest, CassBatch> { };
-struct CassResult_ : public External<cass::ResultResponse, CassResult> { };
-struct CassCollection_ : public External<cass::Collection, CassCollection> { };
-struct CassIterator_ : public External<cass::Iterator, CassIterator> { };
-struct CassRow_ : public External<cass::Row, CassRow> { };
-struct CassValue_ : public External<cass::Value, CassValue> { };
-
+struct CassCluster_ : public External<cass::Cluster, CassCluster> {};
+struct CassSession_ : public External<cass::Session, CassSession> {};
+struct CassStatement_ : public External<cass::Statement, CassStatement> {};
+struct CassFuture_ : public External<cass::Future, CassFuture> {};
+struct CassPrepared_ : public External<cass::Prepared, CassPrepared> {};
+struct CassBatch_ : public External<cass::BatchRequest, CassBatch> {};
+struct CassResult_ : public External<cass::ResultResponse, CassResult> {};
+struct CassCollection_ : public External<cass::Collection, CassCollection> {};
+struct CassIterator_ : public External<cass::Iterator, CassIterator> {};
+struct CassRow_ : public External<cass::Row, CassRow> {};
+struct CassValue_ : public External<cass::Value, CassValue> {};
 }
 
 #endif

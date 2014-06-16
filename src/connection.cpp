@@ -2,21 +2,24 @@
 
 namespace cass {
 
-Connection::StartupHandler::StartupHandler(Connection* connection, Message* request)
-  : connection_(connection)
-  , request_(request) { }
+Connection::StartupHandler::StartupHandler(Connection* connection,
+                                           Message* request)
+    : connection_(connection)
+    , request_(request) {
+}
 
-Message*Connection::StartupHandler::request() const {
+Message* Connection::StartupHandler::request() const {
   return request_.get();
 }
 
 void Connection::StartupHandler::on_set(Message* response) {
-  switch(response->opcode) {
+  switch (response->opcode) {
     case CQL_OPCODE_SUPPORTED:
       connection_->on_supported(response);
       break;
     case CQL_OPCODE_ERROR:
-      connection_->notify_error("Error during startup"); // TODO(mpenick): Better error
+      connection_->notify_error(
+          "Error during startup"); // TODO(mpenick): Better error
       break;
     case CQL_OPCODE_READY:
       connection_->on_ready();
@@ -30,7 +33,8 @@ void Connection::StartupHandler::on_set(Message* response) {
   }
 }
 
-void Connection::StartupHandler::on_error(CassError code, const std::string& message) {
+void Connection::StartupHandler::on_error(CassError code,
+                                          const std::string& message) {
   connection_->notify_error("Error during startup");
 }
 
@@ -40,25 +44,28 @@ void Connection::StartupHandler::on_timeout() {
 
 void Connection::StartupHandler::on_result_response(Message* response) {
   ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
-  switch(result->kind) {
+  switch (result->kind) {
     case CASS_RESULT_KIND_SET_KEYSPACE:
       connection_->on_set_keyspace();
       break;
     default:
-      connection_->notify_error("Invalid result during startup. Expected set keyspace.");
+      connection_->notify_error(
+          "Invalid result during startup. Expected set keyspace.");
       break;
   }
 }
 
-Connection::Request::Request(Connection* connection, ResponseCallback* response_callback)
-  : connection(connection)
-  , stream(0)
-  , response_callback_(response_callback)
-  , timer_(nullptr)
-  , state_(REQUEST_STATE_NEW) { }
+Connection::Request::Request(Connection* connection,
+                             ResponseCallback* response_callback)
+    : connection(connection)
+    , stream(0)
+    , response_callback_(response_callback)
+    , timer_(nullptr)
+    , state_(REQUEST_STATE_NEW) {
+}
 
 void Connection::Request::on_set(Message* response) {
-  switch(response->opcode) {
+  switch (response->opcode) {
     case CQL_OPCODE_RESULT:
       on_result_response(response);
       break;
@@ -76,22 +83,27 @@ void Connection::Request::on_timeout() {
 }
 
 void Connection::Request::change_state(Connection::Request::State next_state) {
-  switch(state_) {
+  switch (state_) {
     case REQUEST_STATE_NEW:
-      assert(next_state == REQUEST_STATE_WRITING && "Invalid request state after new");
+      assert(next_state == REQUEST_STATE_WRITING &&
+             "Invalid request state after new");
       state_ = REQUEST_STATE_WRITING;
-      timer_ = Timer::start(connection->loop_, connection->config_.write_timeout(), this, on_request_timeout);
+      timer_ =
+          Timer::start(connection->loop_, connection->config_.write_timeout(),
+                       this, on_request_timeout);
       break;
 
     case REQUEST_STATE_WRITING:
-      if(next_state == REQUEST_STATE_READING) { // Success
+      if (next_state == REQUEST_STATE_READING) { // Success
         stop_timer();
         state_ = next_state;
-        timer_ = Timer::start(connection->loop_, connection->config_.read_timeout(), this, on_request_timeout);
-      } else if(next_state == REQUEST_STATE_READ_BEFORE_WRITE) {
+        timer_ =
+            Timer::start(connection->loop_, connection->config_.read_timeout(),
+                         this, on_request_timeout);
+      } else if (next_state == REQUEST_STATE_READ_BEFORE_WRITE) {
         stop_timer();
         state_ = next_state;
-      } else if(next_state == REQUEST_STATE_WRITE_TIMEOUT) {
+      } else if (next_state == REQUEST_STATE_WRITE_TIMEOUT) {
         connection->timed_out_request_count_++;
         state_ = next_state;
       } else {
@@ -100,11 +112,11 @@ void Connection::Request::change_state(Connection::Request::State next_state) {
       break;
 
     case REQUEST_STATE_READING:
-      if(next_state == REQUEST_STATE_DONE) { // Success
+      if (next_state == REQUEST_STATE_DONE) { // Success
         stop_timer();
         state_ = next_state;
-      } else if(next_state == REQUEST_STATE_READ_TIMEOUT) {
-        connection-> timed_out_request_count_++;
+      } else if (next_state == REQUEST_STATE_READ_TIMEOUT) {
+        connection->timed_out_request_count_++;
         state_ = next_state;
       } else {
         assert(false && "Invalid request state after reading");
@@ -112,24 +124,28 @@ void Connection::Request::change_state(Connection::Request::State next_state) {
       break;
 
     case REQUEST_STATE_WRITE_TIMEOUT:
-      assert((next_state == REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ || next_state == REQUEST_STATE_READ_BEFORE_WRITE)
-             && "Invalid request state after write timeout");
+      assert((next_state == REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ ||
+              next_state == REQUEST_STATE_READ_BEFORE_WRITE) &&
+             "Invalid request state after write timeout");
       state_ = next_state;
       break;
 
     case REQUEST_STATE_READ_TIMEOUT:
-      assert(next_state == REQUEST_STATE_DONE && "Invalid request state after read timeout");
+      assert(next_state == REQUEST_STATE_DONE &&
+             "Invalid request state after read timeout");
       connection->timed_out_request_count_--;
       state_ = next_state;
       break;
 
     case REQUEST_STATE_READ_BEFORE_WRITE:
-      assert(next_state == REQUEST_STATE_DONE && "Invalid request state after read before write");
+      assert(next_state == REQUEST_STATE_DONE &&
+             "Invalid request state after read before write");
       state_ = next_state;
       break;
 
     case REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ:
-      assert(next_state == REQUEST_STATE_DONE && "Invalid request state after write timeout before read");
+      assert(next_state == REQUEST_STATE_DONE &&
+             "Invalid request state after write timeout before read");
       connection->timed_out_request_count_--;
       state_ = next_state;
       break;
@@ -146,7 +162,7 @@ void Connection::Request::change_state(Connection::Request::State next_state) {
 
 void Connection::Request::on_result_response(Message* response) {
   ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
-  switch(result->kind) {
+  switch (result->kind) {
     case CASS_RESULT_KIND_SET_KEYSPACE:
       connection->keyspace_.assign(result->keyspace, result->keyspace_size);
       break;
@@ -154,13 +170,13 @@ void Connection::Request::on_result_response(Message* response) {
 }
 
 void Connection::Request::on_request_timeout(Timer* timer) {
-  Request *request = static_cast<Request*>(timer->data());
+  Request* request = static_cast<Request*>(timer->data());
   request->connection->logger_->info("Request timed out to '%s'",
                                      request->connection->host_string_.c_str());
   request->timer_ = nullptr;
-  if(request->state_ == REQUEST_STATE_READING) {
+  if (request->state_ == REQUEST_STATE_READING) {
     request->change_state(REQUEST_STATE_READ_TIMEOUT);
-  } else if(request->state_ == REQUEST_STATE_WRITING) {
+  } else if (request->state_ == REQUEST_STATE_WRITING) {
     request->change_state(REQUEST_STATE_WRITE_TIMEOUT);
   } else {
     assert(false && "Invalid request state for timeout");
@@ -168,7 +184,9 @@ void Connection::Request::on_request_timeout(Timer* timer) {
   request->on_timeout();
 }
 
-Connection::Connection(uv_loop_t* loop, SSLSession* ssl_session, const Host& host, Logger* logger, const Config& config, const std::string& keyspace)
+Connection::Connection(uv_loop_t* loop, SSLSession* ssl_session,
+                       const Host& host, Logger* logger, const Config& config,
+                       const std::string& keyspace)
     : state_(CLIENT_STATE_NEW)
     , is_defunct_(false)
     , timed_out_request_count_(0)
@@ -192,9 +210,10 @@ Connection::Connection(uv_loop_t* loop, SSLSession* ssl_session, const Host& hos
 }
 
 void Connection::connect() {
-  if(state_ == CLIENT_STATE_NEW) {
+  if (state_ == CLIENT_STATE_NEW) {
     state_ = CLIENT_STATE_CONNECTING;
-    connect_timer_ = Timer::start(loop_, config_.connect_timeout(), this, on_connect_timeout);
+    connect_timer_ = Timer::start(loop_, config_.connect_timeout(), this,
+                                  on_connect_timeout);
     Connecter::connect(&socket_, host_.address, this, on_connect);
   }
 }
@@ -205,7 +224,7 @@ bool Connection::execute(ResponseCallback* response_callback) {
   Message* message = response_callback->request();
 
   int8_t stream = stream_manager_.acquire_stream(request.get());
-  if(stream < 0) {
+  if (stream < 0) {
     return false;
   }
 
@@ -215,12 +234,14 @@ bool Connection::execute(ResponseCallback* response_callback) {
   char* buf_data;
   size_t buf_length;
   if (!message->prepare(&buf_data, buf_length)) {
-    request->on_error(CASS_ERROR_LIB_MESSAGE_PREPARE, "Unable to build request");
+    request->on_error(CASS_ERROR_LIB_MESSAGE_PREPARE,
+                      "Unable to build request");
     return true;
   }
 
   logger_->debug("Sending message type %s with %d, size %zd",
-                 opcode_to_string(message->opcode).c_str(), message->stream, buf_length);
+                 opcode_to_string(message->opcode).c_str(), message->stream,
+                 buf_length);
 
   pending_requests_.add_to_back(request.get());
 
@@ -231,9 +252,9 @@ bool Connection::execute(ResponseCallback* response_callback) {
 }
 
 void Connection::close() {
-  if(state_ != CLIENT_STATE_CLOSING && state_ != CLIENT_STATE_CLOSED) {
-    if(!uv_is_closing(reinterpret_cast<uv_handle_t*>(&socket_))) {
-      if(state_ >= CLIENT_STATE_CONNECTED) {
+  if (state_ != CLIENT_STATE_CLOSING && state_ != CLIENT_STATE_CLOSED) {
+    if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&socket_))) {
+      if (state_ >= CLIENT_STATE_CONNECTED) {
         uv_read_stop(reinterpret_cast<uv_stream_t*>(&socket_));
       }
       state_ = CLIENT_STATE_CLOSING;
@@ -248,8 +269,9 @@ void Connection::defunct() {
 }
 
 void Connection::write(uv_buf_t buf, Connection::Request* request) {
-  Writer::Bufs* bufs = new Writer::Bufs({ buf });
-  Writer::write(reinterpret_cast<uv_stream_t*>(&socket_), bufs, request, on_write);
+  Writer::Bufs* bufs = new Writer::Bufs({buf});
+  Writer::write(reinterpret_cast<uv_stream_t*>(&socket_), bufs, request,
+                on_write);
 }
 
 void Connection::event_received() {
@@ -277,33 +299,34 @@ void Connection::event_received() {
 }
 
 void Connection::consume(char* input, size_t size) {
-  char* buffer    = input;
-  int   remaining = size;
+  char* buffer = input;
+  int remaining = size;
 
   while (remaining != 0) {
     int consumed = incoming_->consume(buffer, remaining);
     if (consumed < 0) {
       // TODO(mstump) probably means connection closed/failed
       // Can this even happen right now?
-      logger_->error("Error consuming message on '%s'",
-                     host_string_.c_str());
+      logger_->error("Error consuming message on '%s'", host_string_.c_str());
     }
 
     if (incoming_->body_ready) {
       std::unique_ptr<Message> response(std::move(incoming_));
       incoming_.reset(new Message());
 
-      logger_->debug("Consumed message type %s with stream %d, input %zd, remaining %d on '%s'",
-                     opcode_to_string(response->opcode).c_str(), response->stream,
-                     size, remaining, host_string_.c_str());
+      logger_->debug(
+          "Consumed message type %s with stream %d, input %zd, remaining %d on "
+          "'%s'",
+          opcode_to_string(response->opcode).c_str(), response->stream, size,
+          remaining, host_string_.c_str());
 
       if (response->stream < 0) {
         // TODO(mstump) system events
         assert(false);
       } else {
         Request* request = nullptr;
-        if(stream_manager_.get_item(response->stream, request)) {
-          switch(request->state()) {
+        if (stream_manager_.get_item(response->stream, request)) {
+          switch (request->state()) {
             case Request::REQUEST_STATE_READING:
               request->on_set(response.get());
               request->change_state(Request::REQUEST_STATE_DONE);
@@ -331,9 +354,9 @@ void Connection::consume(char* input, size_t size) {
               break;
           }
 
-          if(request->state() == Request::REQUEST_STATE_DONE) {
-             pending_requests_.remove(request);
-             delete request;
+          if (request->state() == Request::REQUEST_STATE_DONE) {
+            pending_requests_.remove(request);
+            delete request;
           }
         } else {
           logger_->error("Invalid stream returnd from server on '%s'",
@@ -343,27 +366,25 @@ void Connection::consume(char* input, size_t size) {
       }
     }
     remaining -= consumed;
-    buffer    += consumed;
+    buffer += consumed;
   }
 }
 
 void Connection::on_connect(Connecter* connecter) {
-  Connection* connection
-      = reinterpret_cast<Connection*>(connecter->data());
+  Connection* connection = reinterpret_cast<Connection*>(connecter->data());
 
-  if(connection->is_defunct()) {
+  if (connection->is_defunct()) {
     return; // Timed out
   }
 
   Timer::stop(connection->connect_timer_);
   connection->connect_timer_ = nullptr;
 
-  if(connecter->status() == Connecter::SUCCESS) {
+  if (connecter->status() == Connecter::SUCCESS) {
     connection->logger_->debug("Connected to '%s'",
                                connection->host_string_.c_str());
     uv_read_start(reinterpret_cast<uv_stream_t*>(&connection->socket_),
-                  alloc_buffer,
-                  on_read);
+                  alloc_buffer, on_read);
     connection->state_ = CLIENT_STATE_CONNECTED;
     connection->event_received();
   } else {
@@ -375,15 +396,13 @@ void Connection::on_connect(Connecter* connecter) {
 }
 
 void Connection::on_connect_timeout(Timer* timer) {
-  Connection* connection
-      = reinterpret_cast<Connection*>(timer->data());
+  Connection* connection = reinterpret_cast<Connection*>(timer->data());
   connection->connect_timer_ = nullptr;
   connection->notify_error("Connection timeout");
 }
 
 void Connection::on_close(uv_handle_t* handle) {
-  Connection* connection
-      = reinterpret_cast<Connection*>(handle->data);
+  Connection* connection = reinterpret_cast<Connection*>(handle->data);
 
   connection->logger_->debug("Connection to '%s' closed",
                              connection->host_string_.c_str());
@@ -391,10 +410,10 @@ void Connection::on_close(uv_handle_t* handle) {
   connection->state_ = CLIENT_STATE_CLOSED;
   connection->event_received();
 
-  while(!connection->pending_requests_.is_empty()) {
+  while (!connection->pending_requests_.is_empty()) {
     Request* request = connection->pending_requests_.front();
-    if(request->state() == Request::REQUEST_STATE_WRITING
-       || request->state() == Request::REQUEST_STATE_READING) {
+    if (request->state() == Request::REQUEST_STATE_WRITING ||
+        request->state() == Request::REQUEST_STATE_READING) {
       request->on_timeout();
       request->stop_timer();
     }
@@ -402,7 +421,7 @@ void Connection::on_close(uv_handle_t* handle) {
     delete request;
   }
 
-  if(connection->closed_callback_) {
+  if (connection->closed_callback_) {
     connection->closed_callback_(connection);
   }
 
@@ -410,8 +429,7 @@ void Connection::on_close(uv_handle_t* handle) {
 }
 
 void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
-  Connection* connection =
-      reinterpret_cast<Connection*>(client->data);
+  Connection* connection = reinterpret_cast<Connection*>(client->data);
 
   if (nread == -1) {
     if (uv_last_error(connection->loop_).code != UV_EOF) {
@@ -425,28 +443,21 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
   }
 
   if (connection->ssl_) {
-    char*  read_input        = buf.base;
-    size_t read_input_size   = nread;
+    char* read_input = buf.base;
+    size_t read_input_size = nread;
 
     for (;;) {
-      size_t read_size         = 0;
-      char*  read_output       = nullptr;
-      size_t read_output_size  = 0;
-      char*  write_output      = nullptr;
+      size_t read_size = 0;
+      char* read_output = nullptr;
+      size_t read_output_size = 0;
+      char* write_output = nullptr;
       size_t write_output_size = 0;
 
       // TODO(mstump) error handling for SSL decryption
       std::string error;
-      connection->ssl_->read_write(read_input,
-                                   read_input_size,
-                                   read_size,
-                                   &read_output,
-                                   read_output_size,
-                                   nullptr,
-                                   0,
-                                   &write_output,
-                                   write_output_size,
-                                   &error);
+      connection->ssl_->read_write(read_input, read_input_size, read_size,
+                                   &read_output, read_output_size, nullptr, 0,
+                                   &write_output, write_output_size, &error);
 
       if (read_output && read_output_size) {
         // TODO(mstump) error handling
@@ -456,7 +467,8 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
 
       if (write_output && write_output_size) {
         Request* request = new Request(connection, nullptr);
-        connection->write(uv_buf_init(write_output, write_output_size), request);
+        connection->write(uv_buf_init(write_output, write_output_size),
+                          request);
         // delete of write_output will be handled by on_write
       }
 
@@ -484,18 +496,19 @@ void Connection::on_write(Writer* writer) {
   Request* request = static_cast<Request*>(writer->data());
   Connection* connection = request->connection;
 
-  switch(request->state()) {
+  switch (request->state()) {
     case Request::REQUEST_STATE_WRITING:
-      if(writer->status() == Writer::SUCCESS) {
+      if (writer->status() == Writer::SUCCESS) {
         request->change_state(Request::REQUEST_STATE_READING);
       } else {
-        if(!connection->is_closing()) {
-          connection->logger_->info("Write error '%s' on '%s'",
-                                    connection->host_string_.c_str(),
-                                    uv_err_name(uv_last_error(connection->loop_)));
+        if (!connection->is_closing()) {
+          connection->logger_->info(
+              "Write error '%s' on '%s'", connection->host_string_.c_str(),
+              uv_err_name(uv_last_error(connection->loop_)));
           connection->defunct();
         }
-        request->on_error(CASS_ERROR_LIB_WRITE_ERROR, "Unable to write to socket");
+        request->on_error(CASS_ERROR_LIB_WRITE_ERROR,
+                          "Unable to write to socket");
         request->change_state(Request::REQUEST_STATE_DONE);
       }
       break;
@@ -513,7 +526,7 @@ void Connection::on_write(Writer* writer) {
       break;
   }
 
-  if(request->state() == Request::REQUEST_STATE_DONE) {
+  if (request->state() == Request::REQUEST_STATE_DONE) {
     connection->pending_requests_.remove(request);
     delete request;
   }
@@ -523,10 +536,7 @@ void Connection::ssl_handshake() {
   if (ssl_) {
     // calling read on a handshaked initiated ssl_ pipe
     // will gives us the first message to send to the server
-    on_read(
-          reinterpret_cast<uv_stream_t*>(&socket_),
-          0,
-          alloc_buffer(0));
+    on_read(reinterpret_cast<uv_stream_t*>(&socket_), 0, alloc_buffer(0));
   } else {
     state_ = CLIENT_STATE_HANDSHAKE;
     event_received();
@@ -534,7 +544,7 @@ void Connection::ssl_handshake() {
 }
 
 void Connection::on_ready() {
-  if(keyspace_.empty()) {
+  if (keyspace_.empty()) {
     state_ = CLIENT_STATE_READY;
   } else {
     state_ = CLIENT_STATE_SET_KEYSPACE;
@@ -548,25 +558,24 @@ void Connection::on_set_keyspace() {
 }
 
 void Connection::on_supported(Message* response) {
-  SupportedResponse* supported
-      = static_cast<SupportedResponse*>(response->body.get());
+  SupportedResponse* supported =
+      static_cast<SupportedResponse*>(response->body.get());
 
   // TODO(mstump) do something with the supported info
-  (void) supported;
+  (void)supported;
 
   state_ = CLIENT_STATE_SUPPORTED;
   event_received();
 }
 
 void Connection::notify_ready() {
-  if(ready_callback_) {
+  if (ready_callback_) {
     ready_callback_(this);
   }
 }
 
 void Connection::notify_error(const std::string& error) {
-  logger_->error("'%s' error on startup for '%s'",
-                 error.c_str(),
+  logger_->error("'%s' error on startup for '%s'", error.c_str(),
                  host_string_.c_str());
   defunct();
 }

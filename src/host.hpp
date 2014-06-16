@@ -24,10 +24,10 @@ namespace cass {
 struct Host {
   Address address;
 
-  Host() { }
+  Host() {}
 
   Host(const Address& address)
-    : address(address) { }
+      : address(address) {}
 };
 
 inline bool operator<(const Host& a, const Host& b) {
@@ -42,7 +42,7 @@ inline bool operator==(const Host& a, const Host& b) {
 
 namespace std {
 
-template<>
+template <>
 struct hash<cass::Host> {
   typedef cass::Host argument_type;
   typedef size_t result_type;
@@ -53,6 +53,5 @@ struct hash<cass::Host> {
 };
 
 } // namespace std
-
 
 #endif

@@ -24,34 +24,31 @@ void cass_result_free(const CassResult* result) {
 }
 
 size_t cass_result_row_count(const CassResult* result) {
-  if(result->kind == CASS_RESULT_KIND_ROWS) {
+  if (result->kind == CASS_RESULT_KIND_ROWS) {
     return result->row_count;
   }
   return 0;
 }
 
 size_t cass_result_column_count(const CassResult* result) {
-  if(result->kind == CASS_RESULT_KIND_ROWS) {
+  if (result->kind == CASS_RESULT_KIND_ROWS) {
     return result->column_count;
   }
   return 0;
 }
 
-CassValueType cass_result_column_type(const CassResult* result,
-                        size_t index) {
-  if(result->kind == CASS_RESULT_KIND_ROWS &&
-     index < result->column_metadata.size()) {
+CassValueType cass_result_column_type(const CassResult* result, size_t index) {
+  if (result->kind == CASS_RESULT_KIND_ROWS &&
+      index < result->column_metadata.size()) {
     return static_cast<CassValueType>(result->column_metadata[index].type);
   }
   return CASS_VALUE_TYPE_UNKNOWN;
 }
 
 const CassRow* cass_result_first_row(const CassResult* result) {
-  if(result->kind == CASS_RESULT_KIND_ROWS
-     && result->row_count > 0) {
+  if (result->kind == CASS_RESULT_KIND_ROWS && result->row_count > 0) {
     return CassRow::to(&result->first_row);
   }
   return nullptr;
 }
-
 }

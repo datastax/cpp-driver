@@ -24,75 +24,53 @@
 #include "buffer.hpp"
 #include "collection.hpp"
 
-#define CASS_VALUE_CHECK_INDEX(i)                                        \
-  if (index >= size()) {                                                 \
-    return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;                           \
+#define CASS_VALUE_CHECK_INDEX(i)              \
+  if (index >= size()) {                       \
+    return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS; \
   }
 
 namespace cass {
 
 struct Statement : public MessageBody {
-  typedef std::vector<Buffer>        ValueCollection;
-  typedef ValueCollection::iterator       ValueIterator;
+  typedef std::vector<Buffer> ValueCollection;
+  typedef ValueCollection::iterator ValueIterator;
   typedef ValueCollection::const_iterator ConstValueIterator;
 
   ValueCollection values;
 
   Statement(uint8_t opcode)
-    : MessageBody(opcode) { }
+      : MessageBody(opcode) {}
 
   Statement(uint8_t opcode, size_t value_count)
-    : MessageBody(opcode)
-    , values(value_count) { }
+      : MessageBody(opcode)
+      , values(value_count) {}
 
+  virtual ~Statement(){};
 
-  virtual ~Statement() { };
+  virtual uint8_t kind() const = 0;
 
-  virtual uint8_t
-  kind() const = 0;
+  virtual void statement(const std::string& statement) = 0;
 
-  virtual void
-  statement(
-      const std::string& statement) = 0;
+  virtual void statement(const char* statement, size_t size) = 0;
 
-  virtual void
-  statement(
-      const char* statement,
-      size_t      size) = 0;
+  virtual const char* statement() const = 0;
 
-  virtual const char*
-  statement() const = 0;
+  virtual size_t statement_size() const = 0;
 
-  virtual size_t
-  statement_size() const = 0;
+  virtual void consistency(int16_t consistency) = 0;
 
-  virtual void
-  consistency(
-      int16_t consistency) = 0;
+  virtual int16_t consistency() const = 0;
 
-  virtual int16_t
-  consistency() const = 0;
+  virtual int16_t serial_consistency() const = 0;
 
-  virtual int16_t
-  serial_consistency() const = 0;
+  virtual void serial_consistency(int16_t consistency) = 0;
 
-  virtual void
-  serial_consistency(
-      int16_t consistency) = 0;
+  void resize(size_t size) { values.resize(size); }
 
-  inline void
-  resize(
-      size_t size) {
-    values.resize(size);
-  }
-
-  inline size_t
-  size() const {
-    return values.size();
-  }
+  size_t size() const { return values.size(); }
 
 #define BIND_FIXED_TYPE(DeclType, EncodeType, Name)                   \
-  inline CassError bind_##Name(size_t index, const DeclType& value) { \
+  CassError bind_##Name(size_t index, const DeclType& value) {        \
     CASS_VALUE_CHECK_INDEX(index);                                    \
     Buffer buffer(sizeof(DeclType));                                  \
     encode_##EncodeType(buffer.data(), value);                        \
@@ -101,43 +79,46 @@ struct Statement : public MessageBody {
   }
 
   BIND_FIXED_TYPE(int32_t, int, int32)
-  BIND_FIXED_TYPE(int64_t, int64,int64)
+  BIND_FIXED_TYPE(int64_t, int64, int64)
   BIND_FIXED_TYPE(float, float, float)
   BIND_FIXED_TYPE(double, double, double)
   BIND_FIXED_TYPE(bool, byte, bool)
 #undef BIND_FIXED_TYPE
 
-  inline CassError bind_null(size_t index) {
+  CassError bind_null(size_t index) {
     CASS_VALUE_CHECK_INDEX(index);
     values[index] = Buffer();
     return CASS_OK;
   }
 
-  inline CassError bind(size_t index, const char* value, size_t value_length) {
+  CassError bind(size_t index, const char* value, size_t value_length) {
     CASS_VALUE_CHECK_INDEX(index);
     values[index] = Buffer(value, value_length);
     return CASS_OK;
   }
 
-  inline CassError bind(size_t index, const uint8_t* value, size_t value_length) {
+  CassError bind(size_t index, const uint8_t* value,
+                        size_t value_length) {
     CASS_VALUE_CHECK_INDEX(index);
     values[index] = Buffer(reinterpret_cast<const char*>(value), value_length);
     return CASS_OK;
   }
 
-  inline CassError bind(size_t index, const uint8_t* value) {
+  CassError bind(size_t index, const uint8_t* value) {
     CASS_VALUE_CHECK_INDEX(index);
-    values[index] = Buffer(reinterpret_cast<const char *>(value), 16);
+    values[index] = Buffer(reinterpret_cast<const char*>(value), 16);
     return CASS_OK;
   }
 
-  inline CassError bind(size_t index, const uint8_t* address, uint8_t address_len) {
+  CassError bind(size_t index, const uint8_t* address,
+                        uint8_t address_len) {
     CASS_VALUE_CHECK_INDEX(index);
-    values[index] = Buffer(reinterpret_cast<const char *>(address), address_len);
+    values[index] = Buffer(reinterpret_cast<const char*>(address), address_len);
     return CASS_OK;
   }
 
-  inline CassError bind(size_t index, int32_t scale, const uint8_t* varint, size_t varint_length) {
+  CassError bind(size_t index, int32_t scale, const uint8_t* varint,
+                        size_t varint_length) {
     CASS_VALUE_CHECK_INDEX(index);
     Buffer buffer(sizeof(int32_t) + varint_length);
     encode_decimal(buffer.data(), scale, varint, varint_length);
@@ -145,41 +126,30 @@ struct Statement : public MessageBody {
     return CASS_OK;
   }
 
-  inline CassError bind(size_t index, const Collection* collection, bool is_map) {
+  CassError bind(size_t index, const Collection* collection,
+                        bool is_map) {
     CASS_VALUE_CHECK_INDEX(index);
-    if(is_map && collection->item_count() % 2 != 0) {
+    if (is_map && collection->item_count() % 2 != 0) {
       return CASS_ERROR_LIB_INVALID_ITEM_COUNT;
     }
     values[index] = collection->build(is_map);
     return CASS_OK;
   }
 
-  inline CassError bind(size_t index, size_t output_size, uint8_t** output) {
+  CassError bind(size_t index, size_t output_size, uint8_t** output) {
     CASS_VALUE_CHECK_INDEX(index);
     values[index] = Buffer(output_size);
-    *output = reinterpret_cast<uint8_t *>(values[index].data());
+    *output = reinterpret_cast<uint8_t*>(values[index].data());
     return CASS_OK;
   }
 
-  inline ValueIterator
-  begin() {
-    return values.begin();
-  }
+  ValueIterator begin() { return values.begin(); }
 
-  inline ValueIterator
-  end() {
-    return values.end();
-  }
+  ValueIterator end() { return values.end(); }
 
-  inline ConstValueIterator
-  begin() const {
-    return values.begin();
-  }
+  ConstValueIterator begin() const { return values.begin(); }
 
-  inline ConstValueIterator
-  end() const {
-    return values.end();
-  }
+  ConstValueIterator end() const { return values.end(); }
 };
 
 } // namespace cass

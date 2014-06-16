@@ -22,51 +22,52 @@
 namespace cass {
 
 class Timer {
-  public:
-    typedef std::function<void(Timer*)> Callback;
+public:
+  typedef std::function<void(Timer*)> Callback;
 
-    void* data() { return data_; }
+  void* data() { return data_; }
 
-    static Timer* start(uv_loop_t* loop, uint64_t timeout, void* data, Callback cb) {
-      Timer* timer = new Timer(data, cb);
-      uv_timer_init(loop, &timer->handle_);
-      uv_timer_start(&timer->handle_, on_timeout, timeout, 0);
-      return timer;
-    }
+  static Timer* start(uv_loop_t* loop, uint64_t timeout, void* data,
+                      Callback cb) {
+    Timer* timer = new Timer(data, cb);
+    uv_timer_init(loop, &timer->handle_);
+    uv_timer_start(&timer->handle_, on_timeout, timeout, 0);
+    return timer;
+  }
 
-    static void stop(Timer* timer) {
-      uv_timer_stop(&timer->handle_);
-      close(timer);
-    }
+  static void stop(Timer* timer) {
+    uv_timer_stop(&timer->handle_);
+    close(timer);
+  }
 
-  private:
-    static void close(Timer* timer) {
-      uv_close(reinterpret_cast<uv_handle_t*>(&timer->handle_), on_close);
-    }
+private:
+  static void close(Timer* timer) {
+    uv_close(reinterpret_cast<uv_handle_t*>(&timer->handle_), on_close);
+  }
 
-    static void on_timeout(uv_timer_t* handle, int status) {
-      Timer* timer = static_cast<Timer*>(handle->data);
-      timer->cb_(timer);
-      close(timer);
-    }
+  static void on_timeout(uv_timer_t* handle, int status) {
+    Timer* timer = static_cast<Timer*>(handle->data);
+    timer->cb_(timer);
+    close(timer);
+  }
 
-    static void on_close(uv_handle_t* handle) {
-      Timer* timer = static_cast<Timer*>(handle->data);
-      delete timer;
-    }
+  static void on_close(uv_handle_t* handle) {
+    Timer* timer = static_cast<Timer*>(handle->data);
+    delete timer;
+  }
 
-  private:
-    Timer(void* data, Callback cb)
+private:
+  Timer(void* data, Callback cb)
       : data_(data)
       , cb_(cb) {
-      handle_.data = this;
-    }
+    handle_.data = this;
+  }
 
-    ~Timer() { }
+  ~Timer() {}
 
-    uv_timer_t handle_;
-    void* data_;
-    Callback cb_;
+  uv_timer_t handle_;
+  void* data_;
+  Callback cb_;
 };
 
 } // namespace cass

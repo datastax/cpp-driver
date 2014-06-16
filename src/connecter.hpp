@@ -24,65 +24,63 @@
 namespace cass {
 
 class Connecter {
-  public:
-    typedef std::function<void(Connecter*)> Callback;
+public:
+  typedef std::function<void(Connecter*)> Callback;
 
-    enum Status {
-      CONNECTING,
-      FAILED,
-      SUCCESS
-    };
+  enum Status { CONNECTING, FAILED, SUCCESS };
 
-    const Address& address() { return address_; }
-    Status status() { return status_; }
-    void* data() { return data_; }
+  const Address& address() { return address_; }
+  Status status() { return status_; }
+  void* data() { return data_; }
 
-    static void connect(uv_tcp_t* handle, const Address& address, void* data, Callback cb) {
-      Connecter* connecter = new Connecter(address, data, cb);
+  static void connect(uv_tcp_t* handle, const Address& address, void* data,
+                      Callback cb) {
+    Connecter* connecter = new Connecter(address, data, cb);
 
-      int rc = 0;
-      if(address.family() == AF_INET) {
-        rc = uv_tcp_connect(&connecter->req_, handle, *address.addr_in(), on_connect);
-      } else {
-        rc = uv_tcp_connect6(&connecter->req_, handle, *address.addr_in6(), on_connect);
-      }
-
-      if(rc != 0) {
-        connecter->status_ = FAILED;
-        connecter->cb_(connecter);
-        delete connecter;
-      }
+    int rc = 0;
+    if (address.family() == AF_INET) {
+      rc = uv_tcp_connect(&connecter->req_, handle, *address.addr_in(),
+                          on_connect);
+    } else {
+      rc = uv_tcp_connect6(&connecter->req_, handle, *address.addr_in6(),
+                           on_connect);
     }
 
-  private:
-    static void on_connect(uv_connect_t* req, int status) {
-      Connecter* connecter = static_cast<Connecter*>(req->data);
-      if(status != 0) {
-        connecter->status_ = FAILED;
-      } else {
-        connecter->status_ = SUCCESS;
-      }
+    if (rc != 0) {
+      connecter->status_ = FAILED;
       connecter->cb_(connecter);
       delete connecter;
     }
+  }
 
-  private:
-    Connecter(const Address& address, void* data, Callback cb)
+private:
+  static void on_connect(uv_connect_t* req, int status) {
+    Connecter* connecter = static_cast<Connecter*>(req->data);
+    if (status != 0) {
+      connecter->status_ = FAILED;
+    } else {
+      connecter->status_ = SUCCESS;
+    }
+    connecter->cb_(connecter);
+    delete connecter;
+  }
+
+private:
+  Connecter(const Address& address, void* data, Callback cb)
       : address_(address)
       , data_(data)
       , cb_(cb)
       , status_(CONNECTING) {
-      req_.data = this;
-    }
+    req_.data = this;
+  }
 
-    ~Connecter() { }
+  ~Connecter() {}
 
-    uv_connect_t req_;
-    Address address_;
-    void* data_;
-    Callback cb_;
-    Status status_;
+  uv_connect_t req_;
+  Address address_;
+  void* data_;
+  Callback cb_;
+  Status status_;
 };
-
 }
 #endif

@@ -22,99 +22,91 @@
 namespace cass {
 
 class Buffer {
-  public:
-    static const int32_t FIXED_BUFFER_SIZE = 32;
+public:
+  static const int32_t FIXED_BUFFER_SIZE = 32;
 
-    Buffer()
-      : size_(-1) { }
+  Buffer()
+      : size_(-1) {}
 
-    Buffer(const char* data, int32_t size)
+  Buffer(const char* data, int32_t size)
       : size_(size) {
-      if(size > FIXED_BUFFER_SIZE) {
-        data_.alloced = new char[size];
-        memcpy(data_.alloced, data, size);
-      } else if(size > 0) {
-        memcpy(data_.fixed, data, size);
-      }
+    if (size > FIXED_BUFFER_SIZE) {
+      data_.alloced = new char[size];
+      memcpy(data_.alloced, data, size);
+    } else if (size > 0) {
+      memcpy(data_.fixed, data, size);
     }
+  }
 
-    Buffer(int32_t size)
+  Buffer(int32_t size)
       : size_(size) {
-      if(size > FIXED_BUFFER_SIZE) {
-        data_.alloced = new char[size];
+    if (size > FIXED_BUFFER_SIZE) {
+      data_.alloced = new char[size];
+    }
+  }
+
+  ~Buffer() {
+    if (size_ > FIXED_BUFFER_SIZE && data_.alloced != nullptr) {
+      delete data_.alloced;
+    }
+  }
+
+  Buffer(const Buffer& Buffer) { copy(Buffer); }
+
+  Buffer& operator=(const Buffer& Buffer) {
+    copy(Buffer);
+    return *this;
+  }
+
+  Buffer(Buffer&& Buffer) { move(std::move(Buffer)); }
+
+  Buffer& operator=(Buffer&& Buffer) {
+    move(std::move(Buffer));
+    return *this;
+  }
+
+  void copy(const char* source, int32_t size) { memcpy(data(), source, size); }
+
+  char* data() {
+    return size_ > FIXED_BUFFER_SIZE ? data_.alloced : data_.fixed;
+  }
+
+  const char* data() const {
+    return size_ > FIXED_BUFFER_SIZE ? data_.alloced : data_.fixed;
+  }
+
+  int32_t size() const { return size_; }
+
+private:
+  void move(Buffer&& Buffer) {
+    size_ = Buffer.size_;
+    if (size_ > 0) {
+      if (size_ > FIXED_BUFFER_SIZE) {
+        data_.alloced = Buffer.data_.alloced;
+        Buffer.data_.alloced = nullptr;
+      } else {
+        memcpy(data_.fixed, Buffer.data_.fixed, size_);
       }
     }
+  }
 
-    ~Buffer() {
-      if(size_ > FIXED_BUFFER_SIZE && data_.alloced != nullptr) {
-        delete data_.alloced;
+  void copy(const Buffer& Buffer) {
+    size_ = Buffer.size_;
+    if (size_ > 0) {
+      if (size_ > FIXED_BUFFER_SIZE) {
+        data_.alloced = new char[size_];
+        memcpy(data_.alloced, Buffer.data_.alloced, size_);
+      } else {
+        memcpy(data_.fixed, Buffer.data_.fixed, size_);
       }
     }
+  }
 
-    Buffer(const Buffer& Buffer) {
-      copy(Buffer);
-    }
-
-    Buffer& operator=(const Buffer& Buffer) {
-      copy(Buffer);
-      return *this;
-    }
-
-    Buffer(Buffer&& Buffer) {
-      move(std::move(Buffer));
-    }
-
-    Buffer& operator=(Buffer&& Buffer) {
-      move(std::move(Buffer));
-      return *this;
-    }
-
-    void copy(const char* source, int32_t size) {
-      memcpy(data(), source, size);
-    }
-
-    char* data() {
-      return size_ > FIXED_BUFFER_SIZE ? data_.alloced : data_.fixed;
-    }
-
-    const char* data() const {
-      return size_ > FIXED_BUFFER_SIZE ? data_.alloced : data_.fixed;
-    }
-
-    int32_t size() const {
-      return size_;
-    }
-
-  private:
-    void move(Buffer&& Buffer) {
-      size_ = Buffer.size_;
-      if(size_ > 0) {
-        if(size_ > FIXED_BUFFER_SIZE) {
-          data_.alloced = Buffer.data_.alloced;
-          Buffer.data_.alloced = nullptr;
-        } else {
-          memcpy(data_.fixed, Buffer.data_.fixed, size_);
-        }
-      }
-    }
-
-    void copy(const Buffer& Buffer) {
-      size_ = Buffer.size_;
-      if(size_ > 0) {
-        if(size_ > FIXED_BUFFER_SIZE) {
-          data_.alloced = new char[size_];
-          memcpy(data_.alloced, Buffer.data_.alloced, size_);
-        } else {
-          memcpy(data_.fixed, Buffer.data_.fixed, size_);
-        }
-      }
-    }
-
-    union {
-        char fixed[FIXED_BUFFER_SIZE];
-        char* alloced;
-    } data_;
-    int32_t size_;
+  union {
+    char fixed[FIXED_BUFFER_SIZE];
+    char* alloced;
+  } data_;
+  int32_t size_;
 };
 
 } // namespace cass

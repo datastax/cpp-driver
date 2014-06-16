@@ -27,8 +27,8 @@ namespace cass {
 // This frees us from having to deal with endian stuff on every platform.
 // If it's not fast enough then we can go back to using the bytes swaps.
 
-
-// TODO(mpenick): Change all these char* to uint8_t* and use output pointers instead of references
+// TODO(mpenick): Change all these char* to uint8_t* and use output pointers
+// instead of references
 // "decode_byte(input, &value)" is clearer than "decode_byte(input, value)"
 
 inline char* encode_byte(char* output, uint8_t value) {
@@ -48,8 +48,8 @@ inline char* encode_short(char* output, uint16_t value) {
 }
 
 inline char* decode_short(char* input, uint16_t& output) {
-  output = (static_cast<uint16_t>(static_cast<uint8_t>(input[1])) << 0)
-         | (static_cast<uint16_t>(static_cast<uint8_t>(input[0])) << 8);
+  output = (static_cast<uint16_t>(static_cast<uint8_t>(input[1])) << 0) |
+           (static_cast<uint16_t>(static_cast<uint8_t>(input[0])) << 8);
   return input + sizeof(uint16_t);
 }
 
@@ -62,10 +62,10 @@ inline char* encode_int(char* output, int32_t value) {
 }
 
 inline char* decode_int(char* input, int32_t& output) {
-  output = (static_cast<int32_t>(static_cast<uint8_t>(input[3])) << 0)
-         | (static_cast<int32_t>(static_cast<uint8_t>(input[2])) << 8)
-         | (static_cast<int32_t>(static_cast<uint8_t>(input[1])) << 16)
-         | (static_cast<int32_t>(static_cast<uint8_t>(input[0])) << 24);
+  output = (static_cast<int32_t>(static_cast<uint8_t>(input[3])) << 0) |
+           (static_cast<int32_t>(static_cast<uint8_t>(input[2])) << 8) |
+           (static_cast<int32_t>(static_cast<uint8_t>(input[1])) << 16) |
+           (static_cast<int32_t>(static_cast<uint8_t>(input[0])) << 24);
   return input + sizeof(int32_t);
 }
 
@@ -82,14 +82,14 @@ inline char* encode_int64(char* output, int64_t value) {
 }
 
 inline char* decode_int64(char* input, int64_t& output) {
-  output = (static_cast<int64_t>(static_cast<uint8_t>(input[7])) << 0)
-         | (static_cast<int64_t>(static_cast<uint8_t>(input[6])) << 8)
-         | (static_cast<int64_t>(static_cast<uint8_t>(input[5])) << 16)
-         | (static_cast<int64_t>(static_cast<uint8_t>(input[4])) << 24)
-         | (static_cast<int64_t>(static_cast<uint8_t>(input[3])) << 32)
-         | (static_cast<int64_t>(static_cast<uint8_t>(input[2])) << 40)
-         | (static_cast<int64_t>(static_cast<uint8_t>(input[1])) << 48)
-         | (static_cast<int64_t>(static_cast<uint8_t>(input[0])) << 56);
+  output = (static_cast<int64_t>(static_cast<uint8_t>(input[7])) << 0) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[6])) << 8) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[5])) << 16) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[4])) << 24) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[3])) << 32) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[2])) << 40) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[1])) << 48) |
+           (static_cast<int64_t>(static_cast<uint8_t>(input[0])) << 56);
   return input + sizeof(int64_t);
 }
 
@@ -123,25 +123,26 @@ inline char* encode_string(char* output, const char* input, size_t size) {
   return buffer + size;
 }
 
-inline char* decode_string(char* input, char**  output, size_t& size) {
-  *output = decode_short(input, ((uint16_t&) size));
+inline char* decode_string(char* input, char** output, size_t& size) {
+  *output = decode_short(input, ((uint16_t&)size));
   return *output + size;
 }
 
-inline char* encode_decimal(char* output, int32_t scale,
-                            const uint8_t* varint, size_t varint_length) {
+inline char* encode_decimal(char* output, int32_t scale, const uint8_t* varint,
+                            size_t varint_length) {
   char* buffer = encode_int(output, scale);
   memcpy(buffer, varint, varint_length);
   return buffer + varint_length;
 }
 
-inline char* encode_inet(char* output, const uint8_t* address, uint8_t address_len) {
+inline char* encode_inet(char* output, const uint8_t* address,
+                         uint8_t address_len) {
   memcpy(output, address, address_len);
   return output + address_len;
 }
 
-inline char* decode_long_string( char*   input, char**  output, size_t& size) {
-  *output = decode_int(input, ((int32_t&) size));
+inline char* decode_long_string(char* input, char** output, size_t& size) {
+  *output = decode_int(input, ((int32_t&)size));
   return *output + size;
 }
 
@@ -153,19 +154,19 @@ inline char* encode_long_string(char* output, const char* input, size_t size) {
 
 inline char* encode_bytes(char* output, const char* input, int32_t size) {
   char* buffer = encode_int(output, size);
-  if(size > 0) {
+  if (size > 0) {
     memcpy(buffer, input, size);
     return buffer + size;
   }
   return buffer;
 }
 
-inline char* encode_string_map(char* output, const std::map<std::string, std::string>& map) {
+inline char* encode_string_map(char* output,
+                               const std::map<std::string, std::string>& map) {
 
   char* buffer = encode_short(output, map.size());
   for (std::map<std::string, std::string>::const_iterator it = map.begin();
-       it != map.end();
-       ++it) {
+       it != map.end(); ++it) {
     buffer = encode_string(buffer, it->first.c_str(), it->first.size());
     buffer = encode_string(buffer, it->second.c_str(), it->second.size());
   }
@@ -177,36 +178,34 @@ inline char* encode_uuid(char* output, const uint8_t* uuid) {
   return output + 16;
 }
 
-inline char*
-decode_string_map(char* input, std::map<std::string, std::string>& map) {
+inline char* decode_string_map(char* input,
+                               std::map<std::string, std::string>& map) {
 
   map.clear();
-  uint16_t len    = 0;
-  char*   buffer = decode_short(input, len);
+  uint16_t len = 0;
+  char* buffer = decode_short(input, len);
 
   for (int i = 0; i < len; i++) {
-    char*  key        = 0;
-    size_t key_size   = 0;
-    char*  value      = 0;
+    char* key = 0;
+    size_t key_size = 0;
+    char* value = 0;
     size_t value_size = 0;
 
     buffer = decode_string(buffer, &key, key_size);
     buffer = decode_string(buffer, &value, value_size);
-    map.insert(
-        std::make_pair(
-            std::string(key, key_size),
-            std::string(value, value_size)));
+    map.insert(std::make_pair(std::string(key, key_size),
+                              std::string(value, value_size)));
   }
   return buffer;
 }
 
 inline char* decode_stringlist(char* input, std::list<std::string>& output) {
   output.clear();
-  uint16_t len    = 0;
-  char*   buffer = decode_short(input, len);
+  uint16_t len = 0;
+  char* buffer = decode_short(input, len);
 
   for (int i = 0; i < len; i++) {
-    char*  s      = NULL;
+    char* s = NULL;
     size_t s_size = 0;
 
     buffer = decode_string(buffer, &s, s_size);
@@ -219,12 +218,12 @@ typedef std::map<std::string, std::list<std::string> > string_multimap_t;
 
 inline char* decode_string_multimap(char* input, string_multimap_t& output) {
   output.clear();
-  uint16_t len    = 0;
-  char*   buffer = decode_short(input, len);
+  uint16_t len = 0;
+  char* buffer = decode_short(input, len);
 
   for (int i = 0; i < len; i++) {
-    char*                  key        = 0;
-    size_t                 key_size   = 0;
+    char* key = 0;
+    size_t key_size = 0;
     std::list<std::string> value;
 
     buffer = decode_string(buffer, &key, key_size);
@@ -234,7 +233,8 @@ inline char* decode_string_multimap(char* input, string_multimap_t& output) {
   return buffer;
 }
 
-inline char* decode_option(char* input, uint16_t& type, char** class_name, size_t&  class_name_size) {
+inline char* decode_option(char* input, uint16_t& type, char** class_name,
+                           size_t& class_name_size) {
   char* buffer = decode_short(input, type);
   if (type == CASS_VALUE_TYPE_CUSTOM) {
     buffer = decode_string(buffer, class_name, class_name_size);

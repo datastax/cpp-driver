@@ -28,35 +28,30 @@
 
 namespace cass {
 
-template<class E>
-class EventThread : public LoopThread
-{
-  public:
-    int init(size_t queue_size) {
-      event_queue_.reset(new AsyncQueue<MPMCQueue<E>>(queue_size));
-      return event_queue_->init(loop(), this, on_event_internal);
+template <class E>
+class EventThread : public LoopThread {
+public:
+  int init(size_t queue_size) {
+    event_queue_.reset(new AsyncQueue<MPMCQueue<E>>(queue_size));
+    return event_queue_->init(loop(), this, on_event_internal);
+  }
+
+  void close_handles() { event_queue_->close_handles(); }
+
+  bool send_event_async(const E& event) { return event_queue_->enqueue(event); }
+
+  virtual void on_event(const E& event) = 0;
+
+private:
+  void static on_event_internal(uv_async_t* async, int status) {
+    EventThread* thread = static_cast<EventThread*>(async->data);
+    E event;
+    while (thread->event_queue_->dequeue(event)) {
+      thread->on_event(event);
     }
+  }
 
-    void close_handles() {
-      event_queue_->close_handles();
-    }
-
-    bool send_event_async(const E& event) {
-      return event_queue_->enqueue(event);
-    }
-
-    virtual void on_event(const E& event) = 0;
-
-  private:
-    void static on_event_internal(uv_async_t* async, int status) {
-      EventThread* thread = static_cast<EventThread*>(async->data);
-      E event;
-      while(thread->event_queue_->dequeue(event)) {
-        thread->on_event(event);
-      }
-    }
-
-    std::unique_ptr<AsyncQueue<MPMCQueue<E>>> event_queue_;
+  std::unique_ptr<AsyncQueue<MPMCQueue<E>>> event_queue_;
 };
 
 } // namespace cass

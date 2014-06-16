@@ -44,10 +44,10 @@
 #include "statement.hpp"
 #include "execute_request.hpp"
 
-#define CASS_QUERY_FLAG_VALUES             0x01
-#define CASS_QUERY_FLAG_SKIP_METADATA      0x02
-#define CASS_QUERY_FLAG_PAGE_SIZE          0x04
-#define CASS_QUERY_FLAG_PAGING_STATE       0x08
+#define CASS_QUERY_FLAG_VALUES 0x01
+#define CASS_QUERY_FLAG_SKIP_METADATA 0x02
+#define CASS_QUERY_FLAG_PAGE_SIZE 0x04
+#define CASS_QUERY_FLAG_PAGING_STATE 0x08
 #define CASS_QUERY_FLAG_SERIAL_CONSISTENCY 0x10
 
 namespace cass {
@@ -56,15 +56,15 @@ struct BatchRequest : public MessageBody {
   typedef std::list<Statement*> StatementCollection;
   typedef std::map<std::string, ExecuteRequest*> PreparedCollection;
 
-  uint8_t             type;
+  uint8_t type;
   StatementCollection statements;
   PreparedCollection prepared_statements;
-  int16_t             consistency;
+  int16_t consistency;
 
   explicit BatchRequest(size_t consistency)
-    : MessageBody(CQL_OPCODE_BATCH)
-    , type(0)
-    , consistency(consistency) {}
+      : MessageBody(CQL_OPCODE_BATCH)
+      , type(0)
+      , consistency(consistency) {}
 
   ~BatchRequest() {
     for (Statement* statement : statements) {
@@ -72,10 +72,8 @@ struct BatchRequest : public MessageBody {
     }
   }
 
-  void
-  add_statement(
-      Statement* statement) {
-    if(statement->kind() == 1) {
+  void add_statement(Statement* statement) {
+    if (statement->kind() == 1) {
       ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(statement);
       prepared_statements[execute_request->prepared_id] = execute_request;
     }
@@ -85,27 +83,20 @@ struct BatchRequest : public MessageBody {
 
   bool prepared_statement(const std::string& id, std::string* statement) {
     auto it = prepared_statements.find(id);
-    if(it != prepared_statements.end()) {
+    if (it != prepared_statements.end()) {
       *statement = it->second->prepared_statement;
       return true;
     }
     return false;
   }
 
-  bool
-  consume(
-      char*  buffer,
-      size_t size) {
-    (void) buffer;
-    (void) size;
+  bool consume(char* buffer, size_t size) {
+    (void)buffer;
+    (void)size;
     return true;
   }
 
-  bool
-  prepare(
-      size_t reserved,
-      char** output,
-      size_t& size) {
+  bool prepare(size_t reserved, char** output, size_t& size) {
     // reserved + type + length
     size = reserved + sizeof(uint8_t) + sizeof(uint16_t);
 
@@ -122,13 +113,13 @@ struct BatchRequest : public MessageBody {
       for (const auto& value : *statement) {
         size += sizeof(int32_t);
         int32_t value_size = value.size();
-        if(value_size > 0) {
+        if (value_size > 0) {
           size += value_size;
         }
       }
     }
-    size    += sizeof(uint16_t);
-    *output  = new char[size];
+    size += sizeof(uint16_t);
+    *output = new char[size];
 
     char* buffer = encode_byte(*output + reserved, type);
     buffer = encode_short(buffer, statements.size());
@@ -137,15 +128,11 @@ struct BatchRequest : public MessageBody {
       buffer = encode_byte(buffer, statement->kind());
 
       if (statement->kind() == 0) {
-        buffer = encode_long_string(
-            buffer,
-            statement->statement(),
-            statement->statement_size());
+        buffer = encode_long_string(buffer, statement->statement(),
+                                    statement->statement_size());
       } else {
-        buffer = encode_string(
-            buffer,
-            statement->statement(),
-            statement->statement_size());
+        buffer = encode_string(buffer, statement->statement(),
+                               statement->statement_size());
       }
 
       buffer = encode_short(buffer, statement->values.size());

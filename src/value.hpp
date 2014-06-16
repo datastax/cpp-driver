@@ -24,24 +24,24 @@
 namespace cass {
 
 struct Value {
-    Value()
+  Value()
       : type(CASS_VALUE_TYPE_UNKNOWN)
       , primary_type(CASS_VALUE_TYPE_UNKNOWN)
       , secondary_type(CASS_VALUE_TYPE_UNKNOWN)
-      , count(0) { }
+      , count(0) {}
 
-    Value(CassValueType type, char* data, size_t size)
+  Value(CassValueType type, char* data, size_t size)
       : type(type)
       , primary_type(CASS_VALUE_TYPE_UNKNOWN)
       , secondary_type(CASS_VALUE_TYPE_UNKNOWN)
       , count(0)
-      , buffer(data, size) { }
+      , buffer(data, size) {}
 
-    CassValueType type;
-    CassValueType primary_type;
-    CassValueType secondary_type;
-    uint16_t count;
-    BufferPiece buffer;
+  CassValueType type;
+  CassValueType primary_type;
+  CassValueType secondary_type;
+  uint16_t count;
+  BufferPiece buffer;
 };
 
 } // namespace cass

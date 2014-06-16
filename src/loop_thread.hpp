@@ -21,49 +21,45 @@
 
 namespace cass {
 
-class LoopThread
-{
-  public:
-    LoopThread()
+class LoopThread {
+public:
+  LoopThread()
       : loop_(uv_loop_new())
-      , is_running_(false) { }
+      , is_running_(false) {}
 
-    virtual ~LoopThread() {
-      uv_loop_delete(loop_);
+  virtual ~LoopThread() { uv_loop_delete(loop_); }
+
+  void run() {
+    is_running_ = true;
+    uv_thread_create(&thread_, on_run_internal, this);
+  }
+
+  void join() {
+    if (is_running_) {
+      uv_thread_join(&thread_);
+      is_running_ = false;
     }
+  }
 
-    void run() {
-      is_running_ = true;
-      uv_thread_create(&thread_, on_run_internal, this);
-    }
+protected:
+  uv_loop_t* loop() { return loop_; }
 
-    void join() {
-      if(is_running_) {
-        uv_thread_join(&thread_);
-        is_running_ = false;
-      }
-    }
+  virtual void on_run() {}
+  virtual void on_after_run() {}
 
-  protected:
-    uv_loop_t* loop() { return loop_; }
+private:
+  void static on_run_internal(void* data) {
+    LoopThread* thread = static_cast<LoopThread*>(data);
+    thread->on_run();
+    uv_run(thread->loop_, UV_RUN_DEFAULT);
+    thread->on_after_run();
+  }
 
-    virtual void on_run() { }
-    virtual void on_after_run() { }
-
-  private:
-    void static on_run_internal(void* data) {
-      LoopThread* thread = static_cast<LoopThread*>(data);
-      thread->on_run();
-      uv_run(thread->loop_, UV_RUN_DEFAULT);
-      thread->on_after_run();
-    }
-
-    uv_loop_t* loop_;
-    uv_thread_t thread_;
-    std::atomic<bool> is_running_;
+  uv_loop_t* loop_;
+  uv_thread_t thread_;
+  std::atomic<bool> is_running_;
 };
 
 } // namespace cass
-
 
 #endif

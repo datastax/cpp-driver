@@ -26,11 +26,11 @@
 namespace cass {
 
 class MessageBody : public RefCounted<MessageBody> {
-  public:
-    MessageBody(uint8_t opcode)
-      : opcode_(opcode) { }
+public:
+  MessageBody(uint8_t opcode)
+      : opcode_(opcode) {}
 
-  virtual ~MessageBody() { };
+  virtual ~MessageBody(){};
 
   DISALLOW_COPY_AND_ASSIGN(MessageBody);
 
@@ -38,20 +38,13 @@ class MessageBody : public RefCounted<MessageBody> {
   char* buffer() { return buffer_.get(); }
   void set_buffer(char* buffer) { buffer_.reset(buffer); }
 
-  virtual bool
-  consume(
-      char*  buffer,
-      size_t size) = 0;
+  virtual bool consume(char* buffer, size_t size) = 0;
 
-  virtual bool
-  prepare(
-      size_t  reserved,
-      char**  output,
-      size_t& size) = 0;
+  virtual bool prepare(size_t reserved, char** output, size_t& size) = 0;
 
-  private:
-    uint8_t opcode_;
-    std::unique_ptr<char[]> buffer_;
+private:
+  uint8_t opcode_;
+  std::unique_ptr<char[]> buffer_;
 };
 
 } // namespace cass

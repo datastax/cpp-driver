@@ -22,17 +22,17 @@
 namespace cass {
 
 class Prepared {
-  public:
-    Prepared(const std::string& id, const std::string& statement)
+public:
+  Prepared(const std::string& id, const std::string& statement)
       : id_(id)
-      , statement_(statement) { }
+      , statement_(statement) {}
 
-    const std::string& id() const { return id_; }
-    const std::string& statement() const { return statement_; }
+  const std::string& id() const { return id_; }
+  const std::string& statement() const { return statement_; }
 
-  private:
-    std::string id_;
-    std::string statement_;
+private:
+  std::string id_;
+  std::string statement_;
 };
 
 } // namespace cass

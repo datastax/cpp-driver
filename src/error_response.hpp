@@ -24,37 +24,34 @@ namespace cass {
 
 struct ErrorResponse : public MessageBody {
   std::unique_ptr<char> guard;
-  int32_t               code;
-  char*                 message;
-  size_t                message_size;
-  char*                 prepared_id;
-  size_t                prepared_id_size;
+  int32_t code;
+  char* message;
+  size_t message_size;
+  char* prepared_id;
+  size_t prepared_id_size;
 
   ErrorResponse()
-     : MessageBody(CQL_OPCODE_ERROR)
-     , code(0xFFFFFFFF)
-     , message(nullptr)
-     , message_size(0)
-     , prepared_id(nullptr)
-     , prepared_id_size(0) { }
+      : MessageBody(CQL_OPCODE_ERROR)
+      , code(0xFFFFFFFF)
+      , message(nullptr)
+      , message_size(0)
+      , prepared_id(nullptr)
+      , prepared_id_size(0) {}
 
   ErrorResponse(int32_t code, const char* input, size_t input_size)
-    : MessageBody(CQL_OPCODE_ERROR)
-    , guard(new char[input_size])
-    , code(code)
-    , message(guard.get())
-    , message_size(input_size) {
+      : MessageBody(CQL_OPCODE_ERROR)
+      , guard(new char[input_size])
+      , code(code)
+      , message(guard.get())
+      , message_size(input_size) {
     memcpy(message, input, input_size);
   }
 
-  bool
-  consume(
-      char*  buffer,
-      size_t size) {
-    (void) size;
+  bool consume(char* buffer, size_t size) {
+    (void)size;
     buffer = decode_int(buffer, code);
     buffer = decode_string(buffer, &message, message_size);
-    switch(code) {
+    switch (code) {
       case CQL_ERROR_UNPREPARED:
         decode_string(buffer, &prepared_id, prepared_id_size);
         break;
@@ -62,16 +59,12 @@ struct ErrorResponse : public MessageBody {
     return true;
   }
 
-  bool
-  prepare(
-      size_t  reserved,
-      char**  output,
-      size_t& size) {
+  bool prepare(size_t reserved, char** output, size_t& size) {
     size = reserved + sizeof(int32_t) + sizeof(int16_t) + message_size;
     *output = new char[size];
 
     char* buffer = *output + reserved;
-    buffer       = encode_int(buffer, code);
+    buffer = encode_int(buffer, code);
     encode_string(buffer, message, message_size);
     return true;
   }

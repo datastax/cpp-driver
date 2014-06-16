@@ -8,25 +8,19 @@ void cass_uuid_generate_time(CassUuid output) {
   cass::Uuids::generate_v1(output);
 }
 
-void cass_uuid_from_time(cass_uint64_t time,
-                         CassUuid output) {
+void cass_uuid_from_time(cass_uint64_t time, CassUuid output) {
   cass::Uuids::generate_v1(time, output);
 }
 
-void
-cass_uuid_min_from_time(cass_uint64_t time,
-                        CassUuid output) {
+void cass_uuid_min_from_time(cass_uint64_t time, CassUuid output) {
   cass::Uuids::min_v1(time, output);
 }
 
-void
-cass_uuid_max_from_time(cass_uint64_t time,
-                        CassUuid output) {
+void cass_uuid_max_from_time(cass_uint64_t time, CassUuid output) {
   cass::Uuids::max_v1(time, output);
 }
 
-cass_uint64_t
-cass_uuid_timestamp(CassUuid uuid) {
+cass_uint64_t cass_uuid_timestamp(CassUuid uuid) {
   return cass::Uuids::get_unix_timestamp(uuid);
 }
 
@@ -38,8 +32,7 @@ cass_uint8_t cass_uuid_version(CassUuid uuid) {
   return cass::Uuids::get_version(uuid);
 }
 
-void cass_uuid_string(CassUuid uuid,
-                      char* output) {
+void cass_uuid_string(CassUuid uuid, char* output) {
   cass::Uuids::to_string(uuid, output);
 }
 
@@ -56,7 +49,7 @@ std::mt19937_64 Uuids::ng_;
 
 void Uuids::initialize() {
   lock();
-  if(!is_initialized_) {
+  if (!is_initialized_) {
     std::random_device rd;
     ng_.seed(rd());
     CLOCK_SEQ_AND_NODE = make_clock_seq_and_node();
@@ -65,13 +58,12 @@ void Uuids::initialize() {
   unlock();
 }
 
-
 void Uuids::generate_v1(Uuid uuid) {
   generate_v1(uuid_timestamp(), uuid);
 }
 
 void Uuids::generate_v1(uint64_t timestamp, Uuid uuid) {
-  if(!is_initialized_) {
+  if (!is_initialized_) {
     initialize();
   }
 
@@ -80,7 +72,7 @@ void Uuids::generate_v1(uint64_t timestamp, Uuid uuid) {
 }
 
 void Uuids::generate_v4(Uuid uuid) {
-  if(!is_initialized_) {
+  if (!is_initialized_) {
     initialize();
   }
 
@@ -108,7 +100,7 @@ void Uuids::max_v1(uint64_t timestamp, Uuid uuid) {
 uint64_t Uuids::get_unix_timestamp(Uuid uuid) {
   uint64_t timestamp = 0;
 
-  if(get_version(uuid) != 1) {
+  if (get_version(uuid) != 1) {
     return 0;
   }
 
@@ -130,10 +122,10 @@ uint64_t Uuids::get_unix_timestamp(Uuid uuid) {
 
 void Uuids::to_string(Uuid uuid, char* output) {
   size_t pos = 0;
-  for(int i = 0; i < 16; ++i) {
-    char buf[3] = { '\0' };
+  for (int i = 0; i < 16; ++i) {
+    char buf[3] = {'\0'};
     sprintf(buf, "%02x", uuid[i]);
-    if(i == 4 || i == 6 || i == 8 || i == 10) {
+    if (i == 4 || i == 6 || i == 8 || i == 10) {
       output[pos++] = '-';
     }
     output[pos++] = buf[0];
@@ -162,23 +154,22 @@ void Uuids::copy_timestamp(uint64_t timestamp, uint8_t version, Uuid uuid) {
   uuid[6] = (timestamp & 0x000000000000000FL) | (version << 4);
 }
 
-
 uint64_t Uuids::uuid_timestamp() {
-  while(true) {
+  while (true) {
     uint64_t now = from_unix_timestamp(unix_timestamp());
     uint64_t last = last_timestamp_.load();
-    if(now > last) {
-      if(last_timestamp_.compare_exchange_strong(last, now)) {
+    if (now > last) {
+      if (last_timestamp_.compare_exchange_strong(last, now)) {
         return now;
       }
     } else {
       uint64_t last_ms = to_milliseconds(last);
-      if(to_milliseconds(now) < last_ms) {
+      if (to_milliseconds(now) < last_ms) {
         return last_timestamp_.fetch_add(1L);
       }
       uint64_t candidate = last + 1;
-      if(to_milliseconds(candidate) == last_ms
-          && last_timestamp_.compare_exchange_strong(last, candidate)) {
+      if (to_milliseconds(candidate) == last_ms &&
+          last_timestamp_.compare_exchange_strong(last, candidate)) {
         return candidate;
       }
     }
@@ -193,16 +184,16 @@ uint64_t Uuids::make_clock_seq_and_node() {
 
   uv_interface_address_t* addresses;
   int address_count;
-  if(uv_interface_addresses(&addresses, &address_count).code == 0) {
-    for(int i = 0; i < address_count; ++i) {
+  if (uv_interface_addresses(&addresses, &address_count).code == 0) {
+    for (int i = 0; i < address_count; ++i) {
       char buf[256];
       uv_interface_address_t address = addresses[i];
       EVP_DigestUpdate(mdctx, address.name, strlen(address.name));
-      if(address.address.address4.sin_family == AF_INET) {
+      if (address.address.address4.sin_family == AF_INET) {
         uv_ip4_name(&address.address.address4, buf, sizeof(buf));
         EVP_DigestUpdate(mdctx, buf, strlen(buf));
         count++;
-      } else if(address.address.address4.sin_family == AF_INET6) {
+      } else if (address.address.address4.sin_family == AF_INET6) {
         uv_ip6_name(&address.address.address6, buf, sizeof(buf));
         EVP_DigestUpdate(mdctx, buf, strlen(buf));
         count++;
@@ -215,8 +206,8 @@ uint64_t Uuids::make_clock_seq_and_node() {
 
   uv_cpu_info_t* cpu_infos;
   int cpu_count;
-  if(uv_cpu_info(&cpu_infos, &cpu_count).code == 0) {
-    for(int i = 0; i < cpu_count; ++i) {
+  if (uv_cpu_info(&cpu_infos, &cpu_count).code == 0) {
+    for (int i = 0; i < cpu_count; ++i) {
       uv_cpu_info_t cpu_info = cpu_infos[i];
       EVP_DigestUpdate(mdctx, cpu_info.model, strlen(cpu_info.model));
     }
@@ -228,7 +219,7 @@ uint64_t Uuids::make_clock_seq_and_node() {
   EVP_MD_CTX_destroy(mdctx);
 
   uint64_t node = 0L;
-  for(int i = 0; i < 6; ++i) {
+  for (int i = 0; i < 6; ++i) {
     node |= (0x00000000000000FFL & (long)hash[i]) << (i * 8);
   }
   node |= 0x0000010000000000L; // Multicast bit

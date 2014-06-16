@@ -21,88 +21,88 @@
 
 namespace cass {
 
-template<class T>
+template <class T>
 class List {
+public:
+  class Node {
   public:
-    class Node {
-      public:
-        Node()
-          : next_(nullptr)
-          , prev_(nullptr) { }
-
-      private:
-        friend class List;
-        Node* next_;
-        Node* prev_;
-    };
-
-    template<class S>
-    class Iterator {
-      public:
-        bool has_next() { return curr_ != end_; }
-
-        S* next() {
-          Node* temp = curr_;
-          curr_ = curr_->next_;
-          return static_cast<T*>(temp);
-        }
-
-      private:
-        friend class List;
-        Iterator(Node* begin, Node* end)
-          : curr_(begin)
-          , end_(end) { }
-
-        Node* curr_;
-        Node* end_;
-    };
-
-  public:
-    List()
-      : size_(0) {
-      data_.next_ = &data_;
-      data_.prev_ = &data_;
-    }
-
-    void add_to_front(T* node);
-    void add_to_back(T* node);
-    void remove(T* node);
-
-    T* front() {
-      if(is_empty()) return nullptr;
-      return static_cast<T*>(data_.next_);
-    }
-
-    T* back() {
-      if(is_empty()) return nullptr;
-      return static_cast<T*>(data_.prev_);
-    }
-
-    int size() const { return size_; }
-    bool is_empty() { return data_.next_ == &data_; }
-    Iterator<T> iterator() { return Iterator<T>(data_.next_, &data_); }
+    Node()
+        : next_(nullptr)
+        , prev_(nullptr) {}
 
   private:
-    DISALLOW_COPY_AND_ASSIGN(List);
+    friend class List;
+    Node* next_;
+    Node* prev_;
+  };
 
-    void insert_before(Node* pos, Node* node);
-    void insert_after(Node* pos, Node* node);
+  template <class S>
+  class Iterator {
+  public:
+    bool has_next() { return curr_ != end_; }
 
-    Node data_;
-    int size_;
+    S* next() {
+      Node* temp = curr_;
+      curr_ = curr_->next_;
+      return static_cast<T*>(temp);
+    }
+
+  private:
+    friend class List;
+    Iterator(Node* begin, Node* end)
+        : curr_(begin)
+        , end_(end) {}
+
+    Node* curr_;
+    Node* end_;
+  };
+
+public:
+  List()
+      : size_(0) {
+    data_.next_ = &data_;
+    data_.prev_ = &data_;
+  }
+
+  void add_to_front(T* node);
+  void add_to_back(T* node);
+  void remove(T* node);
+
+  T* front() {
+    if (is_empty()) return nullptr;
+    return static_cast<T*>(data_.next_);
+  }
+
+  T* back() {
+    if (is_empty()) return nullptr;
+    return static_cast<T*>(data_.prev_);
+  }
+
+  int size() const { return size_; }
+  bool is_empty() { return data_.next_ == &data_; }
+  Iterator<T> iterator() { return Iterator<T>(data_.next_, &data_); }
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(List);
+
+  void insert_before(Node* pos, Node* node);
+  void insert_after(Node* pos, Node* node);
+
+  Node data_;
+  int size_;
 };
 
-template<class T>
+template <class T>
 void List<T>::add_to_front(T* node) {
   insert_after(&data_, node);
 }
 
-template<class T>
+template <class T>
 void List<T>::add_to_back(T* node) {
   insert_before(&data_, node);
 }
 
-template<class T>
+template <class T>
 void List<T>::remove(T* node) {
   size_--;
   node->prev_->next_ = node->next_;
@@ -111,7 +111,7 @@ void List<T>::remove(T* node) {
   node->prev_ = nullptr;
 }
 
-template<class T>
+template <class T>
 void List<T>::insert_after(Node* pos, Node* node) {
   size_++;
   pos->next_->prev_ = node;
@@ -120,7 +120,7 @@ void List<T>::insert_after(Node* pos, Node* node) {
   pos->next_ = node;
 }
 
-template<class T>
+template <class T>
 void List<T>::insert_before(Node* pos, Node* node) {
   size_++;
   pos->prev_->next_ = node;

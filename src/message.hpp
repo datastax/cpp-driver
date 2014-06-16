@@ -36,49 +36,44 @@
 namespace cass {
 
 struct Message {
-  uint8_t                         version;
-  int8_t                          flags;
-  int8_t                          stream;
-  uint8_t                         opcode;
-  int32_t                         length;
-  size_t                          received;
-  bool                            header_received;
-  char                            header_buffer[CASS_HEADER_SIZE];
-  char*                           header_buffer_pos;
-  std::unique_ptr<MessageBody>    body;
-  char*                           body_buffer_pos;
-  bool                            body_ready;
-  bool                            body_error;
+  uint8_t version;
+  int8_t flags;
+  int8_t stream;
+  uint8_t opcode;
+  int32_t length;
+  size_t received;
+  bool header_received;
+  char header_buffer[CASS_HEADER_SIZE];
+  char* header_buffer_pos;
+  std::unique_ptr<MessageBody> body;
+  char* body_buffer_pos;
+  bool body_ready;
+  bool body_error;
 
-  Message() :
-      version(0x02),
-      flags(0),
-      stream(0),
-      opcode(0),
-      length(0),
-      received(0),
-      header_received(false),
-      header_buffer_pos(header_buffer),
-      body_ready(false)
-  {}
+  Message()
+      : version(0x02)
+      , flags(0)
+      , stream(0)
+      , opcode(0)
+      , length(0)
+      , received(0)
+      , header_received(false)
+      , header_buffer_pos(header_buffer)
+      , body_ready(false) {}
 
-  Message(
-      uint8_t  opcode) :
-      version(0x02),
-      flags(0),
-      stream(0),
-      opcode(opcode),
-      length(0),
-      received(0),
-      header_received(false),
-      header_buffer_pos(header_buffer),
-      body(allocate_body(opcode)),
-      body_ready(false)
-  {}
+  Message(uint8_t opcode)
+      : version(0x02)
+      , flags(0)
+      , stream(0)
+      , opcode(opcode)
+      , length(0)
+      , received(0)
+      , header_received(false)
+      , header_buffer_pos(header_buffer)
+      , body(allocate_body(opcode))
+      , body_ready(false) {}
 
-  inline static MessageBody*
-  allocate_body(
-      uint8_t  opcode) {
+  static MessageBody* allocate_body(uint8_t opcode) {
     switch (opcode) {
       case CQL_OPCODE_RESULT:
         return static_cast<MessageBody*>(new ResultResponse());
@@ -110,10 +105,7 @@ struct Message {
     }
   }
 
-  bool
-  prepare(
-      char**  output,
-      size_t& size) {
+  bool prepare(char** output, size_t& size) {
     size = 0;
     if (body) {
       body->prepare(CASS_HEADER_SIZE, output, size);
@@ -126,10 +118,10 @@ struct Message {
       }
 
       uint8_t* buffer = reinterpret_cast<uint8_t*>(*output);
-      buffer[0]       = version;
-      buffer[1]       = flags;
-      buffer[2]       = stream;
-      buffer[3]       = opcode;
+      buffer[0] = version;
+      buffer[1] = flags;
+      buffer[2] = stream;
+      buffer[3] = opcode;
       encode_int(reinterpret_cast<char*>(buffer + 4), length);
       return true;
     }
@@ -143,7 +135,7 @@ struct Message {
    *
    * @return how many bytes copied
    */
-  ssize_t consume(char*  input, size_t size) {
+  ssize_t consume(char* input, size_t size) {
     char* input_pos = input;
 
     received += size;
@@ -152,18 +144,18 @@ struct Message {
       if (received >= CASS_HEADER_SIZE) {
         // We may have received more data then we need, only copy what we need
         size_t overage = received - CASS_HEADER_SIZE;
-        size_t needed  = size - overage;
+        size_t needed = size - overage;
 
         memcpy(header_buffer_pos, input_pos, needed);
         header_buffer_pos += needed;
-        input_pos         += needed;
+        input_pos += needed;
         assert(header_buffer_pos == header_buffer + CASS_HEADER_SIZE);
 
         char* buffer = header_buffer;
-        version      = *(buffer++);
-        flags        = *(buffer++);
-        stream       = *(buffer++);
-        opcode       = *(buffer++);
+        version = *(buffer++);
+        flags = *(buffer++);
+        stream = *(buffer++);
+        opcode = *(buffer++);
 
         decode_int(buffer, length);
 
@@ -178,7 +170,8 @@ struct Message {
           return -1;
         }
       } else {
-        // We haven't received all the data for the header. We consume the entire buffer.
+        // We haven't received all the data for the header. We consume the
+        // entire buffer.
         memcpy(header_buffer_pos, input_pos, size);
         header_buffer_pos += size;
         return size;
@@ -195,7 +188,7 @@ struct Message {
 
       memcpy(body_buffer_pos, input_pos, needed);
       body_buffer_pos += needed;
-      input_pos       += needed;
+      input_pos += needed;
       assert(body_buffer_pos == body->buffer() + length);
 
       if (!body->consume(body->buffer(), length)) {
@@ -203,7 +196,8 @@ struct Message {
       }
       body_ready = true;
     } else {
-      // We haven't received all the data for the frame. We consume the entire buffer.
+      // We haven't received all the data for the frame. We consume the entire
+      // buffer.
       memcpy(body_buffer_pos, input_pos, remaining);
       body_buffer_pos += remaining;
       return size;

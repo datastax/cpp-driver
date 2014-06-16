@@ -25,38 +25,38 @@
 namespace cass {
 
 class ResultIterator : public Iterator {
-  public:
-    ResultIterator(const ResultResponse* result)
+public:
+  ResultIterator(const ResultResponse* result)
       : Iterator(CASS_ITERATOR_TYPE_RESULT)
       , result_(result)
       , row_position_(0)
       , position_(result->rows) {
-      row_.reserve(result->column_count);
-    }
+    row_.reserve(result->column_count);
+  }
 
-    virtual bool next() {
-      if (row_position_++ >= result_->row_count) {
-        return false;
-      }
-      if(row_position_ > 1) {
-        position_ = decode_row(position_, result_, row_);
-      }
-      return true;
+  virtual bool next() {
+    if (row_position_++ >= result_->row_count) {
+      return false;
     }
-
-    const Row& row() const {
-      if(row_position_ > 1) {
-        return row_;
-      } else {
-        return result_->first_row;
-      }
+    if (row_position_ > 1) {
+      position_ = decode_row(position_, result_, row_);
     }
+    return true;
+  }
 
-  private:
-    const ResultResponse* result_;
-    int32_t row_position_;
-    char* position_;
-    Row row_;
+  const Row& row() const {
+    if (row_position_ > 1) {
+      return row_;
+    } else {
+      return result_->first_row;
+    }
+  }
+
+private:
+  const ResultResponse* result_;
+  int32_t row_position_;
+  char* position_;
+  Row row_;
 };
 
 } // namespace cass

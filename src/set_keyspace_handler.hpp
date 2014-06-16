@@ -27,61 +27,61 @@
 namespace cass {
 
 class SetKeyspaceHandler : public ResponseCallback {
-  public:
-    SetKeyspaceHandler(const std::string& keyspace,
-               Connection* connection,
-               ResponseCallback* response_callback)
+public:
+  SetKeyspaceHandler(const std::string& keyspace, Connection* connection,
+                     ResponseCallback* response_callback)
       : connection_(connection)
       , request_(new Message(CQL_OPCODE_QUERY))
       , response_callback_(response_callback) {
-      QueryRequest* query = static_cast<QueryRequest*>(request_->body.get());
-      query->statement("use \"" + keyspace + "\"");
-      query->consistency(CASS_CONSISTENCY_ONE);
-    }
+    QueryRequest* query = static_cast<QueryRequest*>(request_->body.get());
+    query->statement("use \"" + keyspace + "\"");
+    query->consistency(CASS_CONSISTENCY_ONE);
+  }
 
-    virtual Message* request() const {
-      return request_.get();
-    }
+  virtual Message* request() const { return request_.get(); }
 
-    virtual void on_set(Message* response) {
-      switch(response->opcode) {
-        case CQL_OPCODE_RESULT:
-          on_result_response(response);
-          break;
-        case CQL_OPCODE_ERROR:
-          connection_->defunct();
-          response_callback_->on_error(CASS_ERROR_UNABLE_TO_SET_KEYSPACE, "Unable to set keyspsace");
-          break;
-        default:
-          break;
-      }
-    }
-
-    virtual void on_error(CassError code, const std::string& message) {
-      connection_->defunct();
-      response_callback_->on_error(CASS_ERROR_UNABLE_TO_SET_KEYSPACE, "Unable to set keyspsace");
-    }
-
-    virtual void on_timeout() {
-      // TODO(mpenick): What to do here?
-      response_callback_->on_timeout();
-    }
-
-  private:
-    void on_result_response(Message* response) {
-      ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
-      if(result->kind == CASS_RESULT_KIND_SET_KEYSPACE) {
-        connection_->execute(response_callback_.release());
-      } else {
+  virtual void on_set(Message* response) {
+    switch (response->opcode) {
+      case CQL_OPCODE_RESULT:
+        on_result_response(response);
+        break;
+      case CQL_OPCODE_ERROR:
         connection_->defunct();
-        response_callback_->on_error(CASS_ERROR_UNABLE_TO_SET_KEYSPACE, "Unable to set keyspsace");
-      }
+        response_callback_->on_error(CASS_ERROR_UNABLE_TO_SET_KEYSPACE,
+                                     "Unable to set keyspsace");
+        break;
+      default:
+        break;
     }
+  }
 
-  private:
-    Connection* connection_;
-    std::unique_ptr<Message> request_;
-    std::unique_ptr<ResponseCallback> response_callback_;
+  virtual void on_error(CassError code, const std::string& message) {
+    connection_->defunct();
+    response_callback_->on_error(CASS_ERROR_UNABLE_TO_SET_KEYSPACE,
+                                 "Unable to set keyspsace");
+  }
+
+  virtual void on_timeout() {
+    // TODO(mpenick): What to do here?
+    response_callback_->on_timeout();
+  }
+
+private:
+  void on_result_response(Message* response) {
+    ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
+    if (result->kind == CASS_RESULT_KIND_SET_KEYSPACE) {
+      connection_->execute(response_callback_.release());
+    } else {
+      connection_->defunct();
+      response_callback_->on_error(CASS_ERROR_UNABLE_TO_SET_KEYSPACE,
+                                   "Unable to set keyspsace");
+    }
+  }
+
+private:
+  Connection* connection_;
+  std::unique_ptr<Message> request_;
+  std::unique_ptr<ResponseCallback> response_callback_;
 };
 
 } // namespace cass

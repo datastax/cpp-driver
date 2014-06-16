@@ -33,20 +33,16 @@
 namespace cass {
 
 class SSLContext {
- public:
-  typedef int (*pem_callback_t)(char *, int, int, void *);
+public:
+  typedef int (*pem_callback_t)(char*, int, int, void*);
   typedef int (*verify_callback_t)(int, X509_STORE_CTX*);
 
-  SSLContext() :
-      _pem_callback(NULL),
-      _verify_callback(&SSLContext::default_verify_callback),
-      _ssl_ctx(NULL)
-  {}
+  SSLContext()
+      : _pem_callback(NULL)
+      , _verify_callback(&SSLContext::default_verify_callback)
+      , _ssl_ctx(NULL) {}
 
-  int
-  init(
-      bool debug,
-      bool client) {
+  int init(bool debug, bool client) {
     if (debug) {
       CRYPTO_malloc_debug_init();
       CRYPTO_dbg_set_options(V_CRYPTO_MDEBUG_ALL);
@@ -64,21 +60,14 @@ class SSLContext {
     }
 
     SSL_CTX_set_cipher_list(
-        _ssl_ctx,
-        "AES256-SHA:TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!3DES:@STRENGTH");
+        _ssl_ctx, "AES256-SHA:TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!3DES:@STRENGTH");
     SSL_CTX_set_verify(_ssl_ctx, SSL_VERIFY_PEER, _verify_callback);
     return CASS_OK;
   }
 
-  SSLSession*
-  session_new() {
-    return new SSLSession(_ssl_ctx);
-  }
+  SSLSession* session_new() { return new SSLSession(_ssl_ctx); }
 
-  int
-  add_ca(
-      const char* input,
-      size_t      size) {
+  int add_ca(const char* input, size_t size) {
     if (!_ca_store) {
       _ca_store = X509_STORE_new();
       SSL_CTX_set_cert_store(_ssl_ctx, _ca_store);
@@ -95,10 +84,7 @@ class SSLContext {
     return CASS_OK;
   }
 
-  int
-  add_crl(
-      const char* input,
-      size_t      size) {
+  int add_crl(const char* input, size_t size) {
     BIO* bio = load_bio(input, size);
     if (!bio) {
       return CASS_ERROR_SSL_CRL;
@@ -111,28 +97,21 @@ class SSLContext {
     }
 
     X509_STORE_add_crl(_ca_store, x509);
-    X509_STORE_set_flags(
-        _ca_store,
-        X509_V_FLAG_CRL_CHECK | X509_V_FLAG_CRL_CHECK_ALL);
+    X509_STORE_set_flags(_ca_store,
+                         X509_V_FLAG_CRL_CHECK | X509_V_FLAG_CRL_CHECK_ALL);
     BIO_free_all(bio);
     X509_CRL_free(x509);
     return CASS_OK;
   }
 
-  int
-  use_key(
-      const char* input,
-      size_t      input_size,
-      const char* passphrase) {
+  int use_key(const char* input, size_t input_size, const char* passphrase) {
     BIO* bio = load_bio(input, input_size);
     if (!bio) {
       return CASS_ERROR_SSL_PRIVATE_KEY;
     }
 
     EVP_PKEY* key = PEM_read_bio_PrivateKey(
-        bio,
-        NULL,
-        _pem_callback,
+        bio, NULL, _pem_callback,
         reinterpret_cast<void*>(const_cast<char*>(passphrase)));
 
     if (!key) {
@@ -146,10 +125,7 @@ class SSLContext {
     return CASS_OK;
   }
 
-  int
-  use_cert(
-      const char* input,
-      size_t      size) {
+  int use_cert(const char* input, size_t size) {
     X509* x509 = load_pem_cert(input, size, _pem_callback);
     if (!x509) {
       return CASS_ERROR_SSL_CA_CERT;
@@ -164,39 +140,27 @@ class SSLContext {
     return CASS_OK;
   }
 
-  int
-  use_key(
-      RSA* rsa) {
+  int use_key(RSA* rsa) {
     if (SSL_CTX_use_RSAPrivateKey(_ssl_ctx, rsa) <= 0) {
       return CASS_ERROR_SSL_PRIVATE_KEY;
     }
     return CASS_OK;
   }
 
-  int
-  use_cert(
-      X509* cert) {
+  int use_cert(X509* cert) {
     if (SSL_CTX_use_certificate(_ssl_ctx, cert) <= 0) {
       return CASS_ERROR_SSL_CERT;
     }
     return CASS_OK;
   }
 
-  void
-  ciphers(
-      const char* ciphers) {
+  void ciphers(const char* ciphers) {
     SSL_CTX_set_cipher_list(_ssl_ctx, ciphers);
   }
 
-  void
-  pem_callback(
-      pem_callback_t callback) {
-    _pem_callback = callback;
-  }
+  void pem_callback(pem_callback_t callback) { _pem_callback = callback; }
 
-  void
-  verify_callback(
-      verify_callback_t callback) {
+  void verify_callback(verify_callback_t callback) {
     _verify_callback = callback;
     SSL_CTX_set_verify(_ssl_ctx, SSL_VERIFY_PEER, callback);
   }
@@ -209,30 +173,21 @@ class SSLContext {
    *
    * @return 1 if ok 0 otherwise
    */
-  static int
-  default_verify_callback(
-      int             preverify_ok,
-      X509_STORE_CTX* ctx) {
-    (void) preverify_ok;
-    (void) ctx;
+  static int default_verify_callback(int preverify_ok, X509_STORE_CTX* ctx) {
+    (void)preverify_ok;
+    (void)ctx;
     return 1;
   }
 
-  static BIO*
-  load_bio(
-      const char* input,
-      size_t      size) {
+  static BIO* load_bio(const char* input, size_t size) {
     BIO* bio = BIO_new(BIO_s_mem());
     int r = BIO_write(bio, input, size);
     return r <= 0 ? NULL : bio;
   }
 
-  static X509*
-  load_pem_cert(
-      const char*    input,
-      size_t         size,
-      pem_callback_t callback) {
-    BIO *bio = load_bio(input, size);
+  static X509* load_pem_cert(const char* input, size_t size,
+                             pem_callback_t callback) {
+    BIO* bio = load_bio(input, size);
     if (!bio) {
       return NULL;
     }
@@ -242,11 +197,9 @@ class SSLContext {
     return x509;
   }
 
-  static RSA*
-  create_key(
-      size_t size) {
-    RSA*    pair = RSA_new();
-    BIGNUM* e    = BN_new();
+  static RSA* create_key(size_t size) {
+    RSA* pair = RSA_new();
+    BIGNUM* e = BN_new();
     BN_set_word(e, 65537);
 
     if (!RSA_generate_key_ex(pair, size, e, NULL)) {
@@ -256,13 +209,14 @@ class SSLContext {
     return pair;
   }
 
-  static EVP_PKEY*
-  get_evp_pkey(
-      RSA* rsa,
-      int  priv)
-  {
-#define CHECK_KEY(x) if (x) { if (pkey) EVP_PKEY_free(pkey); if (key) RSA_free(key); return NULL; }
-    RSA* key = (priv ? RSAPrivateKey_dup(rsa): RSAPublicKey_dup(rsa));
+  static EVP_PKEY* get_evp_pkey(RSA* rsa, int priv) {
+#define CHECK_KEY(x)               \
+  if (x) {                         \
+    if (pkey) EVP_PKEY_free(pkey); \
+    if (key) RSA_free(key);        \
+    return NULL;                   \
+  }
+    RSA* key = (priv ? RSAPrivateKey_dup(rsa) : RSAPublicKey_dup(rsa));
     EVP_PKEY* pkey = EVP_PKEY_new();
 
     CHECK_KEY(!key);
@@ -272,19 +226,17 @@ class SSLContext {
 #undef CHECK_KEY
   }
 
-  static X509*
-  create_cert(
-      RSA*         rsa,
-      RSA*         rsaSign,
-      const char*  cname,
-      const char*  cnameSign,
-      const char*  pszOrgName,
-      unsigned int certLifetime)
-  {
+  static X509* create_cert(RSA* rsa, RSA* rsaSign, const char* cname,
+                           const char* cnameSign, const char* pszOrgName,
+                           unsigned int certLifetime) {
     time_t start_time = time(NULL);
     time_t end_time = start_time + certLifetime;
 
-#define CHECK_CERT(x) if (x) { X509_free(x509); return NULL; }
+#define CHECK_CERT(x) \
+  if (x) {            \
+    X509_free(x509);  \
+    return NULL;      \
+  }
     X509* x509 = X509_new();
     CHECK_CERT(!x509);
 
@@ -296,35 +248,20 @@ class SSLContext {
 
     CHECK_CERT(!X509_set_version(x509, 2));
     CHECK_CERT(
-        !ASN1_INTEGER_set(
-            X509_get_serialNumber(x509),
-            (long)start_time));
+        !ASN1_INTEGER_set(X509_get_serialNumber(x509), (long)start_time));
 
     X509_NAME* name = X509_NAME_new();
     CHECK_CERT(!name);
 
     int nid = OBJ_txt2nid("organizationName");
     CHECK_CERT(nid == NID_undef);
-    CHECK_CERT(
-        !X509_NAME_add_entry_by_NID(
-            name,
-            nid,
-            MBSTRING_ASC,
-            (unsigned char*) pszOrgName,
-            -1,
-            -1,
-            0));
+    CHECK_CERT(!X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
+                                           (unsigned char*)pszOrgName, -1, -1,
+                                           0));
 
     CHECK_CERT((nid = OBJ_txt2nid("commonName")) == NID_undef);
-    CHECK_CERT(
-        !X509_NAME_add_entry_by_NID(
-            name,
-            nid,
-            MBSTRING_ASC,
-            (unsigned char*) cname,
-            -1,
-            -1,
-            0));
+    CHECK_CERT(!X509_NAME_add_entry_by_NID(name, nid, MBSTRING_ASC,
+                                           (unsigned char*)cname, -1, -1, 0));
 
     CHECK_CERT(!X509_set_subject_name(x509, name))
 
@@ -332,26 +269,14 @@ class SSLContext {
     CHECK_CERT(!name_issuer);
     CHECK_CERT((nid = OBJ_txt2nid("organizationName")) == NID_undef);
 
-    CHECK_CERT(
-        !X509_NAME_add_entry_by_NID(
-            name_issuer,
-            nid,
-            MBSTRING_ASC,
-            (unsigned char*) pszOrgName,
-            -1,
-            -1,
-            0));
+    CHECK_CERT(!X509_NAME_add_entry_by_NID(name_issuer, nid, MBSTRING_ASC,
+                                           (unsigned char*)pszOrgName, -1, -1,
+                                           0));
 
     CHECK_CERT((nid = OBJ_txt2nid("commonName")) == NID_undef);
-    CHECK_CERT(
-        !X509_NAME_add_entry_by_NID(
-            name_issuer,
-            nid,
-            MBSTRING_ASC,
-            (unsigned char*) cnameSign,
-            -1,
-            -1,
-            0));
+    CHECK_CERT(!X509_NAME_add_entry_by_NID(name_issuer, nid, MBSTRING_ASC,
+                                           (unsigned char*)cnameSign, -1, -1,
+                                           0));
 
     CHECK_CERT(!(X509_set_issuer_name(x509, name_issuer)));
     CHECK_CERT(!X509_time_adj(X509_get_notBefore(x509), 0, &start_time));
@@ -375,14 +300,14 @@ class SSLContext {
     return x509;
   }
 
- private:
+private:
   SSLContext(const SSLContext&) {}
   void operator=(const SSLContext&) {}
 
-  pem_callback_t    _pem_callback;
+  pem_callback_t _pem_callback;
   verify_callback_t _verify_callback;
-  SSL_CTX*          _ssl_ctx;
-  X509_STORE*       _ca_store;
+  SSL_CTX* _ssl_ctx;
+  X509_STORE* _ca_store;
 };
 
 } // namespace cass

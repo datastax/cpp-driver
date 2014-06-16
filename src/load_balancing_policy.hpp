@@ -26,15 +26,16 @@
 namespace cass {
 
 class LoadBalancingPolicy {
-  public:
-    virtual ~LoadBalancingPolicy() {}
+public:
+  virtual ~LoadBalancingPolicy() {}
 
-    virtual void init(const std::set<Host>& hosts) = 0;
+  virtual void init(const std::set<Host>& hosts) = 0;
 
-    virtual CassHostDistance distance(const Host& host) = 0;
+  virtual CassHostDistance distance(const Host& host) = 0;
 
-    // TODO(mpenick): Figure out what parameters to pass, keyspace, consistency, etc.
-    virtual void new_query_plan(std::list<Host>* output) = 0;
+  // TODO(mpenick): Figure out what parameters to pass, keyspace, consistency,
+  // etc.
+  virtual void new_query_plan(std::list<Host>* output) = 0;
 };
 
 } // namespace cass

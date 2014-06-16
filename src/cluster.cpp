@@ -23,14 +23,12 @@ CassCluster* cass_cluster_new() {
   return CassCluster::to(new cass::Cluster());
 }
 
-CassError cass_cluster_setopt(CassCluster* cluster,
-                              CassOption option,
+CassError cass_cluster_setopt(CassCluster* cluster, CassOption option,
                               const void* data, cass_size_t data_length) {
   return cluster->config().set_option(option, data, data_length);
 }
 
-CassError cass_cluster_getopt(const CassCluster* cluster,
-                              CassOption option,
+CassError cass_cluster_getopt(const CassCluster* cluster, CassOption option,
                               void* data, cass_size_t* data_length) {
   return cluster->config().option(option, data, data_length);
 }
@@ -39,12 +37,15 @@ CassFuture* cass_cluster_connect(CassCluster* cluster) {
   return cass_cluster_connect_keyspace(cluster, "");
 }
 
-CassFuture* cass_cluster_connect_keyspace(CassCluster* cluster, const char* keyspace) {
+CassFuture* cass_cluster_connect_keyspace(CassCluster* cluster,
+                                          const char* keyspace) {
   cass::Session* session = new cass::Session(cluster->config());
-  cass::SessionConnectFuture* connect_future = new cass::SessionConnectFuture(session);
+  cass::SessionConnectFuture* connect_future =
+      new cass::SessionConnectFuture(session);
 
-  if(!session->connect_async(std::string(), connect_future)) {
-    connect_future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT, "Error initializing session");
+  if (!session->connect_async(std::string(), connect_future)) {
+    connect_future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT,
+                              "Error initializing session");
     delete session;
   }
 
@@ -57,7 +58,4 @@ void cass_cluster_free(CassCluster* cluster) {
 
 } // extern "C"
 
-namespace cass {
-
-
-} // namespace cass
+namespace cass {} // namespace cass

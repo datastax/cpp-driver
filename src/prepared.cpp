@@ -19,17 +19,15 @@
 
 extern "C" {
 
-void
-cass_prepared_free(const CassPrepared* prepared) {
+void cass_prepared_free(const CassPrepared* prepared) {
   delete prepared->from();
 }
 
-CassStatement*
-cass_prepared_bind(const CassPrepared* prepared,
-                   size_t parameter_count,
-                   CassConsistency consistency) {
-  return CassStatement::to(new cass::ExecuteRequest(prepared, parameter_count, consistency));
+CassStatement* cass_prepared_bind(const CassPrepared* prepared,
+                                  size_t parameter_count,
+                                  CassConsistency consistency) {
+  return CassStatement::to(
+      new cass::ExecuteRequest(prepared, parameter_count, consistency));
 }
-
 
 } // extern "C"

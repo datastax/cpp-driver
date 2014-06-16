@@ -19,20 +19,26 @@
 extern "C" {
 
 const char* cass_error_desc(CassError error) {
-  switch(error) {
-#define XX(source, _, code, desc) case CASS_ERROR(source, code): return desc;
-  CASS_ERROR_MAP(XX)
+  switch (error) {
+#define XX(source, _, code, desc) \
+  case CASS_ERROR(source, code):  \
+    return desc;
+    CASS_ERROR_MAP(XX)
 #undef XX
-    default: return "";
+    default:
+      return "";
   }
 }
 
 const char* cass_log_level_string(CassLogLevel log_level) {
-  switch(log_level) {
-#define XX(log_level, desc) case log_level: return desc;
+  switch (log_level) {
+#define XX(log_level, desc) \
+  case log_level:           \
+    return desc;
     CASS_LOG_LEVEL_MAP(XX)
 #undef XX
-    default: return "";
+    default:
+      return "";
   }
 }
 
@@ -77,6 +83,5 @@ CassBytes cass_bytes_init(const cass_byte_t* data, cass_size_t size) {
   bytes.size = size;
   return bytes;
 }
-
 
 } // extern "C"

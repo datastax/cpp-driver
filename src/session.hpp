@@ -40,106 +40,103 @@
 namespace cass {
 
 struct SessionEvent {
-    enum Type {
-      CONNECT,
-      NOTIFY_READY,
-      NOTIFY_CLOSED
-    };
-    Type type;
+  enum Type { CONNECT, NOTIFY_READY, NOTIFY_CLOSED };
+  Type type;
 };
 
 class Session : public EventThread<SessionEvent> {
-  public:
-    Session(const Config& config);
-    ~Session();
+public:
+  Session(const Config& config);
+  ~Session();
 
-    int init();
+  int init();
 
-    std::string keyspace() {
-      std::unique_lock<std::mutex> lock(keyspace_mutex_);
-      return keyspace_;
+  std::string keyspace() {
+    std::unique_lock<std::mutex> lock(keyspace_mutex_);
+    return keyspace_;
+  }
+
+  void set_keyspace(const std::string& keyspace) {
+    std::unique_lock<std::mutex> lock(keyspace_mutex_);
+    keyspace_ = keyspace;
+  }
+
+  void set_load_balancing_policy(LoadBalancingPolicy* policy) {
+    load_balancing_policy_.reset(policy);
+  }
+
+  bool notify_ready_async();
+  bool notify_closed_async();
+  bool notify_set_keyspace_async(const std::string& keyspace);
+
+  bool connect_async(const std::string& keyspace, Future* future);
+  void close_async(Future* future);
+
+  Future* prepare(const char* statement, size_t length);
+  Future* execute(MessageBody* statement);
+
+private:
+  void close_handles();
+
+  void init_pools();
+  SSLSession* ssl_session_new();
+
+  void execute(RequestHandler* request_handler) {
+    if (!request_queue_->enqueue(request_handler)) {
+      request_handler->on_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
+                                "The request queue has reached capacity");
+      delete request_handler;
     }
+  }
 
-    void set_keyspace(const std::string& keyspace) {
-      std::unique_lock<std::mutex> lock(keyspace_mutex_);
-      keyspace_ = keyspace;
-    }
+  virtual void on_run();
+  virtual void on_after_run();
+  virtual void on_event(const SessionEvent& event);
 
-    void set_load_balancing_policy(LoadBalancingPolicy* policy) {
-      load_balancing_policy_.reset(policy);
-    }
+  static void on_resolve(Resolver* resolver);
+  static void on_execute(uv_async_t* data, int status);
 
-    bool notify_ready_async();
-    bool notify_closed_async();
-    bool notify_set_keyspace_async(const std::string& keyspace);
+private:
+  typedef std::shared_ptr<IOWorker> IOWorkerPtr;
+  typedef std::vector<IOWorkerPtr> IOWorkerCollection;
 
-    bool connect_async(const std::string& keyspace, Future* future);
-    void close_async(Future* future);
-
-    Future* prepare(const char* statement, size_t length);
-    Future* execute(MessageBody* statement);
-
-  private:
-    void close_handles();
-
-    void init_pools();
-    SSLSession* ssl_session_new();
-
-    inline void execute(RequestHandler* request_handler) {
-      if (!request_queue_->enqueue(request_handler)) {
-        request_handler->on_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL, "The request queue has reached capacity");
-        delete request_handler;
-      }
-    }
-
-    virtual void on_run();
-    virtual void on_after_run();
-    virtual void on_event(const SessionEvent& event);
-
-    static void on_resolve(Resolver* resolver);
-    static void on_execute(uv_async_t* data, int status);
-
-  private:
-    typedef std::shared_ptr<IOWorker> IOWorkerPtr;
-    typedef std::vector<IOWorkerPtr> IOWorkerCollection;
-
-  private:
-    SSLContext* ssl_context_;
-    IOWorkerCollection io_workers_;
-    std::unique_ptr<Logger> logger_;
-    std::string keyspace_;
-    std::mutex keyspace_mutex_;
-    Future* connect_future_;
-    Future* close_future_;
-    std::set<Host> hosts_;
-    Config config_;
-    std::unique_ptr<AsyncQueue<MPMCQueue<RequestHandler*>>> request_queue_;
-    std::unique_ptr<LoadBalancingPolicy> load_balancing_policy_;
-    int pending_resolve_count_;
-    int pending_pool_count_;
-    int pending_workers_count_;
-    int current_io_worker_;
-    std::atomic<bool> is_closing_;
+private:
+  SSLContext* ssl_context_;
+  IOWorkerCollection io_workers_;
+  std::unique_ptr<Logger> logger_;
+  std::string keyspace_;
+  std::mutex keyspace_mutex_;
+  Future* connect_future_;
+  Future* close_future_;
+  std::set<Host> hosts_;
+  Config config_;
+  std::unique_ptr<AsyncQueue<MPMCQueue<RequestHandler*>>> request_queue_;
+  std::unique_ptr<LoadBalancingPolicy> load_balancing_policy_;
+  int pending_resolve_count_;
+  int pending_pool_count_;
+  int pending_workers_count_;
+  int current_io_worker_;
+  std::atomic<bool> is_closing_;
 };
 
 class SessionCloseFuture : public Future {
-  public:
-    SessionCloseFuture()
-      : Future(CASS_FUTURE_TYPE_SESSION_CLOSE) { }
+public:
+  SessionCloseFuture()
+      : Future(CASS_FUTURE_TYPE_SESSION_CLOSE) {}
 };
 
 class SessionConnectFuture : public ResultFuture<Session> {
-  public:
-    SessionConnectFuture(Session* session)
-      : ResultFuture(CASS_FUTURE_TYPE_SESSION_CONNECT, session) { }
+public:
+  SessionConnectFuture(Session* session)
+      : ResultFuture(CASS_FUTURE_TYPE_SESSION_CONNECT, session) {}
 
-    ~SessionConnectFuture() {
-      Session* session = release_result();
-      if(session != nullptr) {
-        // The future was deleted before obtaining the session
-        session->close_async(nullptr);
-      }
+  ~SessionConnectFuture() {
+    Session* session = release_result();
+    if (session != nullptr) {
+      // The future was deleted before obtaining the session
+      session->close_async(nullptr);
     }
+  }
 };
 
 } // namespace cass

@@ -23,41 +23,39 @@
 
 namespace cass {
 
-class BufferList
-{
-  public:
-    BufferList(size_t count)
+class BufferList {
+public:
+  BufferList(size_t count)
       : size_(0) {
-      buffers_.reserve(count);
+    buffers_.reserve(count);
+  }
+
+  Buffer* append(int32_t size) {
+    buffers_.push_back(Buffer(size));
+    size_ += size;
+    return &buffers_.back();
+  }
+
+  void append(const char* data, int32_t size) {
+    buffers_.push_back(Buffer(data, size));
+    size_ += size;
+  }
+
+  void combine(char* output) const {
+    int32_t offset = 0;
+    for (const auto& buffer : buffers_) {
+      memcpy(output + offset, buffer.data(), buffer.size());
+      offset += buffer.size();
     }
+  }
 
-    Buffer* append(int32_t size) {
-      buffers_.push_back(Buffer(size));
-      size_ += size;
-      return &buffers_.back();
-    }
+  size_t count() const { return buffers_.size(); }
+  int32_t size() const { return size_; }
 
-    void append(const char* data, int32_t size) {
-      buffers_.push_back(Buffer(data, size));
-      size_ += size;
-    }
-
-    void combine(char* output) const {
-      int32_t offset = 0;
-      for(const auto&  buffer : buffers_) {
-        memcpy(output + offset, buffer.data(), buffer.size());
-        offset += buffer.size();
-      }
-    }
-
-    size_t count() const { return buffers_.size(); }
-    int32_t size() const { return size_; }
-
-  private:
-    std::vector<Buffer> buffers_;
-    int32_t size_;
+private:
+  std::vector<Buffer> buffers_;
+  int32_t size_;
 };
-
 }
 
 #endif

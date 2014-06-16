@@ -29,12 +29,10 @@ enum IteratorType {
 struct Iterator {
   const IteratorType type;
 
-  Iterator(
-      IteratorType type) :
-      type(type)
-  {}
+  Iterator(IteratorType type)
+      : type(type) {}
 
-  virtual ~Iterator() { };
+  virtual ~Iterator(){};
 
   virtual bool next() = 0;
 };

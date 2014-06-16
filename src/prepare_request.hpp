@@ -26,41 +26,24 @@ struct PrepareRequest : public MessageBody {
   std::string statement;
 
   PrepareRequest()
-    : MessageBody(CQL_OPCODE_PREPARE) {}
+      : MessageBody(CQL_OPCODE_PREPARE) {}
 
-  void
-  prepare_string(
-      const char* input,
-      size_t      size) {
+  void prepare_string(const char* input, size_t size) {
     statement.assign(input, size);
   }
 
-  void
-  prepare_string(
-      const std::string& input) {
-    statement = input;
-  }
+  void prepare_string(const std::string& input) { statement = input; }
 
-  bool
-  consume(
-      char*  buffer,
-      size_t size) {
-    (void) buffer;
-    (void) size;
+  bool consume(char* buffer, size_t size) {
+    (void)buffer;
+    (void)size;
     return true;
   }
 
-  bool
-  prepare(
-      size_t reserved,
-      char** output,
-      size_t& size) {
-    size    = reserved + sizeof(int32_t) + statement.size();
+  bool prepare(size_t reserved, char** output, size_t& size) {
+    size = reserved + sizeof(int32_t) + statement.size();
     *output = new char[size];
-    encode_long_string(
-        *output + reserved,
-        statement.c_str(),
-        statement.size());
+    encode_long_string(*output + reserved, statement.c_str(), statement.size());
     return true;
   }
 };

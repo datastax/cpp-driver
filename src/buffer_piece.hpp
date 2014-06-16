@@ -22,21 +22,21 @@
 namespace cass {
 
 class BufferPiece {
-  public:
-    BufferPiece()
+public:
+  BufferPiece()
       : data_(nullptr)
-      , size_(-1) { }
+      , size_(-1) {}
 
-    BufferPiece(char* data, size_t size)
+  BufferPiece(char* data, size_t size)
       : data_(data)
-      , size_(size) { }
+      , size_(size) {}
 
-    char* data() const { return data_; }
-    int32_t size() const { return size_; }
+  char* data() const { return data_; }
+  int32_t size() const { return size_; }
 
-  private:
-    char* data_;
-    int32_t size_;
+private:
+  char* data_;
+  int32_t size_;
 };
 
 } // namespace cass
