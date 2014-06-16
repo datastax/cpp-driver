@@ -19,8 +19,8 @@
 
 extern "C" {
 
-CassBatch* cass_batch_new(CassConsistency consistency) {
-  return CassBatch::to(new cass::BatchRequest(consistency));
+CassBatch* cass_batch_new(CassConsistency consistency, CassBatchType type) {
+  return CassBatch::to(new cass::BatchRequest(consistency, type));
 }
 
 void cass_batch_free(CassBatch* batch) {

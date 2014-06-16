@@ -103,7 +103,7 @@ CassError prepare_insert_into_batch(CassSession* session, const CassPrepared** p
 CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepared* prepared, const Pair* pairs) {
   CassError rc = 0;
   CassFuture* future = NULL;
-  CassBatch* batch = cass_batch_new(CASS_CONSISTENCY_ONE);
+  CassBatch* batch = cass_batch_new(CASS_CONSISTENCY_ONE, CASS_BATCH_TYPE_LOGGED);
 
   const Pair* pair;
   for(pair = pairs; pair->key != NULL; pair++) {
