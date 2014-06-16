@@ -38,6 +38,8 @@ class RefCounted {
     RefCounted()
       : ref_count_(1) { }
 
+    virtual ~RefCounted() {}
+
     void retain() { ref_count_++; }
 
     void release() {

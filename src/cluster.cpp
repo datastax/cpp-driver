@@ -43,7 +43,7 @@ CassFuture* cass_cluster_connect_keyspace(CassCluster* cluster, const char* keys
   cass::Session* session = new cass::Session(cluster->config());
   cass::SessionConnectFuture* connect_future = new cass::SessionConnectFuture(session);
 
-  if(!session->connect_async(std::string(), connect_future)) {
+  if(!session->connect_async(std::string(keyspace), connect_future)) {
     connect_future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT, "Error initializing session");
     delete session;
   }

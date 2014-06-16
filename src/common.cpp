@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <cctype>
 
 namespace cass {
 
