@@ -234,9 +234,10 @@ Future* Session::prepare(const char* statement, size_t length) {
   prepare->prepare_string(statement, length);
   request->body.reset(prepare);
   RequestHandler* request_handler = new RequestHandler(request);
-  request_handler->future()->statement.assign(statement, length);
+  ResponseFuture* future = request_handler->future();
+  future->statement.assign(statement, length);
   execute(request_handler);
-  return request_handler->future();
+  return future;
 }
 
 Future* Session::execute(MessageBody* statement) {
@@ -244,8 +245,9 @@ Future* Session::execute(MessageBody* statement) {
   request->opcode = statement->opcode();
   request->body.reset(statement);
   RequestHandler* request_handler = new RequestHandler(request);
+  Future* future = request_handler->future();
   execute(request_handler);
-  return request_handler->future();
+  return future;
 }
 
 void Session::on_execute(uv_async_t* data, int status) {

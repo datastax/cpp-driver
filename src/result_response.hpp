@@ -238,13 +238,6 @@ struct ResultResponse : public MessageBody {
     buffer = decode_string(buffer, &table, table_size);
     return true;
   }
-
-  bool prepare(size_t reserved, char** output, size_t& size) {
-    (void)reserved;
-    (void)output;
-    (void)size;
-    return false;
-  }
 };
 
 } // namespace cass

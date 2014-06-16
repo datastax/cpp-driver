@@ -58,16 +58,6 @@ struct ErrorResponse : public MessageBody {
     }
     return true;
   }
-
-  bool prepare(size_t reserved, char** output, size_t& size) {
-    size = reserved + sizeof(int32_t) + sizeof(int16_t) + message_size;
-    *output = new char[size];
-
-    char* buffer = *output + reserved;
-    buffer = encode_int(buffer, code);
-    encode_string(buffer, message, message_size);
-    return true;
-  }
 };
 
 } // namespace cass

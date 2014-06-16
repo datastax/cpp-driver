@@ -90,12 +90,6 @@ struct BatchRequest : public MessageBody {
     return false;
   }
 
-  bool consume(char* buffer, size_t size) {
-    (void)buffer;
-    (void)size;
-    return true;
-  }
-
   bool prepare(size_t reserved, char** output, size_t& size) {
     // reserved + type + length
     size = reserved + sizeof(uint8_t) + sizeof(uint16_t);
