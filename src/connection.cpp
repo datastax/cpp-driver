@@ -219,7 +219,7 @@ bool Connection::execute(ResponseCallback* response_callback) {
     return true;
   }
 
-  logger_->debug("Sending message type %s with %d, size %zd",
+  logger_->debug("Sending message type %s with %d, size %lu",
                  opcode_to_string(message->opcode).c_str(), message->stream, buf_length);
 
   pending_requests_.add_to_back(request.get());
@@ -293,7 +293,7 @@ void Connection::consume(char* input, size_t size) {
       std::unique_ptr<Message> response(std::move(incoming_));
       incoming_.reset(new Message());
 
-      logger_->debug("Consumed message type %s with stream %d, input %zd, remaining %d on '%s'",
+      logger_->debug("Consumed message type %s with stream %d, input %lu, remaining %d on '%s'",
                      opcode_to_string(response->opcode).c_str(), response->stream,
                      size, remaining, host_string_.c_str());
 

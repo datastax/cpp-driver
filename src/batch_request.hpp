@@ -61,7 +61,7 @@ struct BatchRequest : public MessageBody {
   PreparedCollection prepared_statements;
   int16_t             consistency;
 
-  explicit BatchRequest(size_t consistency, uint8_t type_)
+  BatchRequest(size_t consistency, uint8_t type_)
     : MessageBody(CQL_OPCODE_BATCH)
     , type(type_)
     , consistency(consistency) {}
