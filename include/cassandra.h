@@ -539,7 +539,8 @@ cass_statement_new(CassString statement,
                    CassConsistency consistency);
 
 /**
- * Frees a statement instance.
+ * Frees a statement instance. Statements can be immediately freed after
+ * begin prepared, executed or added to batch statement.
  *
  * @param[in] statement
  */
@@ -773,7 +774,8 @@ cass_batch_new(CassConsistency consistency,
                CassBatchType type);
 
 /**
- * Frees a batch instance.
+ * Frees a batch instance. Batches can be immediately freed after being
+ * executed.
  *
  * @param[in] batch
  */
