@@ -24,7 +24,7 @@ CassBatch* cass_batch_new(CassConsistency consistency, CassBatchType type) {
 }
 
 void cass_batch_free(CassBatch* batch) {
-  delete batch->from();
+  batch->release();
 }
 
 CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
