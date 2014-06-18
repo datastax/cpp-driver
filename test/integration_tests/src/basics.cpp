@@ -377,10 +377,10 @@ BOOST_AUTO_TEST_CASE(test_rows_in_rows_out)
                               str(boost::format("CREATE TABLE %s (tweet_id bigint PRIMARY KEY, t1 bigint, t2 bigint, t3 bigint);") % test_utils::SIMPLE_TABLE),
                               nullptr, consistency);
 
-    const int num_rows = 100000;
+    const size_t num_rows = 100000;
 
     std::string insert_query(boost::str(boost::format("INSERT INTO %s (tweet_id, t1, t2, t3) VALUES (?, ?, ?, ?);") % test_utils::SIMPLE_TABLE));
-    for(int i = 0; i < num_rows; ++i) {
+    for(size_t i = 0; i < num_rows; ++i) {
       test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(insert_query.c_str()), 4, consistency));
       BOOST_REQUIRE(test_utils::Value<cass_int64_t>::bind(statement.get(), 0, i) == CASS_OK);
       BOOST_REQUIRE(test_utils::Value<cass_int64_t>::bind(statement.get(), 1, i + 1) == CASS_OK);
@@ -398,7 +398,7 @@ BOOST_AUTO_TEST_CASE(test_rows_in_rows_out)
     BOOST_REQUIRE(cass_result_column_count(result.get()) == 4);
 
     test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
-    int row_count = 0;
+    size_t row_count = 0;
     while(cass_iterator_next(iterator.get())) {
       cass_int64_t tweet_id = 0;
       cass_int64_t t1 = 0, t2 = 0, t3 = 0;
