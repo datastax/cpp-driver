@@ -540,7 +540,7 @@ cass_statement_new(CassString statement,
 
 /**
  * Frees a statement instance. Statements can be immediately freed after
- * begin prepared, executed or added to batch statement.
+ * being prepared, executed or added to a batch.
  *
  * @param[in] statement
  */
