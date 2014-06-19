@@ -37,6 +37,20 @@ size_t cass_result_column_count(const CassResult* result) {
   return 0;
 }
 
+CassString cass_result_column_name(const CassResult* result, size_t index) {
+    CassString str;
+    if (result->kind == CASS_RESULT_KIND_ROWS &&
+        index < result->column_metadata.size()) {
+        str.data = result->column_metadata[index].name;
+        str.length = result->column_metadata[index].name_size;
+    }
+    else {
+        str.data = "";
+        str.length = 0;
+    }
+    return str;
+}
+
 CassValueType cass_result_column_type(const CassResult* result, size_t index) {
   if (result->kind == CASS_RESULT_KIND_ROWS &&
       index < result->column_metadata.size()) {
