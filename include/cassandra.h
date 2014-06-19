@@ -962,6 +962,17 @@ CASS_EXPORT cass_size_t
 cass_result_column_count(const CassResult* result);
 
 /**
+* Gets the column name at index for the specified result.
+*
+* @param[in] result
+* @param[in] index
+* @return The column name at the specified index. Empty string
+* is returned if the index is out of bounds.
+*/
+CASS_EXPORT CassString
+cass_result_column_name(const CassResult* result, size_t index);
+    
+/**
  * Gets the column type at index for the specified result.
  *
  * @param[in] result
