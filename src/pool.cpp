@@ -6,6 +6,8 @@
 #include "logger.hpp"
 #include "set_keyspace_handler.hpp"
 
+#include "third_party/boost/boost/bind.hpp"
+
 namespace cass {
 
 static bool least_busy_comp(Connection* a, Connection* b) {
@@ -205,9 +207,9 @@ void Pool::spawn_connection(const std::string& keyspace) {
         logger_, config_, keyspace);
 
     connection->set_ready_callback(
-        std::bind(&Pool::on_connection_ready, this, std::placeholders::_1));
+        boost::bind(&Pool::on_connection_ready, this, _1));
     connection->set_close_callback(
-        std::bind(&Pool::on_connection_closed, this, std::placeholders::_1));
+        boost::bind(&Pool::on_connection_closed, this, _1));
     connection->connect();
 
     connections_pending_.insert(connection);
@@ -264,7 +266,7 @@ void Pool::on_connection_closed(Connection* connection) {
 
   maybe_notify_ready(connection);
 
-  auto it = std::find(connections_.begin(), connections_.end(), connection);
+  ConnectionVec::iterator it = std::find(connections_.begin(), connections_.end(), connection);
   if (it != connections_.end()) {
     connections_.erase(it);
   }
@@ -291,7 +293,7 @@ bool Pool::wait_for_connection(RequestHandler* request_handler) {
 
   request_handler->timer =
       Timer::start(loop_, config_.connect_timeout(), request_handler,
-                   std::bind(&Pool::on_timeout, this, std::placeholders::_1));
+                   boost::bind(&Pool::on_timeout, this, _1));
   pending_request_queue_.push_back(request_handler);
   return true;
 }

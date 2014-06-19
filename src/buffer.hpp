@@ -17,7 +17,7 @@
 #ifndef __CASS_BUFFER_HPP_INCLUDED__
 #define __CASS_BUFFER_HPP_INCLUDED__
 
-#include <stdint.h>
+#include "third_party/boost/boost/cstdint.hpp"
 
 namespace cass {
 
@@ -58,13 +58,6 @@ public:
     return *this;
   }
 
-  Buffer(Buffer&& Buffer) { move(std::move(Buffer)); }
-
-  Buffer& operator=(Buffer&& Buffer) {
-    move(std::move(Buffer));
-    return *this;
-  }
-
   void copy(const char* source, int32_t size) { memcpy(data(), source, size); }
 
   char* data() {
@@ -78,18 +71,6 @@ public:
   int32_t size() const { return size_; }
 
 private:
-  void move(Buffer&& Buffer) {
-    size_ = Buffer.size_;
-    if (size_ > 0) {
-      if (size_ > FIXED_BUFFER_SIZE) {
-        data_.alloced = Buffer.data_.alloced;
-        Buffer.data_.alloced = NULL;
-      } else {
-        memcpy(data_.fixed, Buffer.data_.fixed, size_);
-      }
-    }
-  }
-
   void copy(const Buffer& Buffer) {
     size_ = Buffer.size_;
     if (size_ > 0) {

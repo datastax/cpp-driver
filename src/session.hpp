@@ -19,7 +19,6 @@
 
 #include <uv.h>
 
-#include <atomic>
 #include <list>
 #include <string>
 #include <vector>
@@ -112,7 +111,7 @@ private:
   Future* close_future_;
   HostSet hosts_;
   Config config_;
-  ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*>>> request_queue_;
+  ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*> > > request_queue_;
   ScopedPtr<LoadBalancingPolicy> load_balancing_policy_;
   int pending_resolve_count_;
   int pending_pool_count_;

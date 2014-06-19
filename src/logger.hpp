@@ -117,7 +117,7 @@ private:
   void* data_;
   CassLogCallback cb_;
   CassLogLevel log_level_;
-  AsyncQueue<MPMCQueue<LogMessage*>> log_queue_;
+  AsyncQueue<MPMCQueue<LogMessage*> > log_queue_;
 };
 
 } // namespace cass

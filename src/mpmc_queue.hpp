@@ -22,8 +22,11 @@
 #ifndef __CASS_MPMC_QUEUE_INCLUDED__
 #define __CASS_MPMC_QUEUE_INCLUDED__
 
-#include <atomic>
 #include <assert.h>
+
+#include "third_party/boost/boost/atomic.hpp"
+#include "third_party/boost/boost/type_traits/alignment_of.hpp"
+#include "third_party/boost/boost/aligned_storage.hpp"
 
 namespace cass {
 
@@ -43,7 +46,7 @@ public:
 
     // populate the sequence initial values
     for (size_t i = 0; i < size_; ++i) {
-      buffer_[i].seq.store(i, std::memory_order_relaxed);
+      buffer_[i].seq.store(i, boost::memory_order_relaxed);
     }
   }
 
@@ -54,11 +57,11 @@ public:
     // convert the sequence to an array index this is why the ring
     // buffer must be a size which is a power of 2. this also allows
     // the sequence to double as a ticket/lock.
-    size_t head_seq = head_seq_.load(std::memory_order_relaxed);
+    size_t head_seq = head_seq_.load(boost::memory_order_relaxed);
 
     for (;;) {
       Node* node = &buffer_[head_seq & mask_];
-      size_t node_seq = node->seq.load(std::memory_order_acquire);
+      size_t node_seq = node->seq.load(boost::memory_order_acquire);
       intptr_t dif = (intptr_t)node_seq - (intptr_t)head_seq;
 
       // if seq and head_seq are the same then it means this slot is empty
@@ -68,11 +71,11 @@ public:
         // weak compare is faster, but can return spurious results
         // which in this instance is OK, because it's in the loop
         if (head_seq_.compare_exchange_weak(head_seq, head_seq + 1,
-                                            std::memory_order_relaxed)) {
+                                            boost::memory_order_relaxed)) {
           // set the data
           node->data = data;
           // increment the sequence so that the tail knows it's accessible
-          node->seq.store(head_seq + 1, std::memory_order_release);
+          node->seq.store(head_seq + 1, boost::memory_order_release);
           return true;
         }
       } else if (dif < 0) {
@@ -81,7 +84,7 @@ public:
         return false;
       } else {
         // under normal circumstances this branch should never be taken
-        head_seq = head_seq_.load(std::memory_order_relaxed);
+        head_seq = head_seq_.load(boost::memory_order_relaxed);
       }
     }
 
@@ -90,11 +93,11 @@ public:
   }
 
   bool dequeue(T& data) {
-    size_t tail_seq = tail_seq_.load(std::memory_order_relaxed);
+    size_t tail_seq = tail_seq_.load(boost::memory_order_relaxed);
 
     for (;;) {
       Node* node = &buffer_[tail_seq & mask_];
-      size_t node_seq = node->seq.load(std::memory_order_acquire);
+      size_t node_seq = node->seq.load(boost::memory_order_acquire);
       intptr_t dif = (intptr_t)node_seq - (intptr_t)(tail_seq + 1);
 
       // if seq and head_seq are the same then it means this slot is empty
@@ -104,12 +107,12 @@ public:
         // weak compare is faster, but can return spurious results
         // which in this instance is OK, because it's in the loop
         if (tail_seq_.compare_exchange_weak(tail_seq, tail_seq + 1,
-                                            std::memory_order_relaxed)) {
+                                            boost::memory_order_relaxed)) {
           // set the output
           data = node->data;
           // set the sequence to what the head sequence should be next
           // time around
-          node->seq.store(tail_seq + mask_ + 1, std::memory_order_release);
+          node->seq.store(tail_seq + mask_ + 1, boost::memory_order_release);
           return true;
         }
       } else if (dif < 0) {
@@ -118,7 +121,7 @@ public:
         return false;
       } else {
         // under normal circumstances this branch should never be taken
-        tail_seq = tail_seq_.load(std::memory_order_relaxed);
+        tail_seq = tail_seq_.load(boost::memory_order_relaxed);
       }
     }
 
@@ -129,11 +132,11 @@ public:
 private:
   struct Node {
     T data;
-    std::atomic<size_t> seq;
+    boost::atomic<size_t> seq;
   };
 
-  typedef typename std::aligned_storage<
-      sizeof(Node), std::alignment_of<Node>::value>::type AlignedNode;
+  typedef typename boost::aligned_storage<
+      sizeof(Node), boost::alignment_of<Node>::value>::type AlignedNode;
 
   // it's either 32 or 64 so 64 is good enough
   typedef char CachePad[64];
@@ -143,9 +146,9 @@ private:
   const size_t mask_;
   Node* const buffer_;
   CachePad pad1_;
-  std::atomic<size_t> head_seq_;
+  boost::atomic<size_t> head_seq_;
   CachePad pad2_;
-  std::atomic<size_t> tail_seq_;
+  boost::atomic<size_t> tail_seq_;
   CachePad pad3_;
 
   MPMCQueue(const MPMCQueue&) {}

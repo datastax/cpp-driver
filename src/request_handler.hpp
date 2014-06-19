@@ -21,8 +21,9 @@
 #include "future.hpp"
 #include "message.hpp"
 #include "timer.hpp"
-
 #include "scoped_ptr.hpp"
+
+#include "third_party/boost/boost/function.hpp"
 
 namespace cass {
 
@@ -38,8 +39,8 @@ enum RetryType { RETRY_WITH_CURRENT_HOST, RETRY_WITH_NEXT_HOST };
 
 class RequestHandler : public ResponseCallback {
 public:
-  typedef std::function<void(RequestHandler*)> Callback;
-  typedef std::function<void(RequestHandler*, RetryType)> RetryCallback;
+  typedef boost::function1<void, RequestHandler*> Callback;
+  typedef boost::function2<void, RequestHandler*, RetryType> RetryCallback;
 
   RequestHandler(Message* request)
       : timer(NULL)

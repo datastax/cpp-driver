@@ -81,8 +81,8 @@ typedef enum CassHostDistance_ {
 } CassHostDistance;
 
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
-  TypeName(const TypeName&) = delete;      \
-  TypeName& operator=(const TypeName&) = delete
+  TypeName(const TypeName&);               \
+  TypeName& operator=(const TypeName&)
 
 namespace cass {
 

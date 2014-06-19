@@ -17,6 +17,8 @@
 #include "io_worker.hpp"
 #include "pool.hpp"
 
+#include "third_party/boost/boost/bind.hpp"
+
 namespace cass {
 
 IOWorker::IOWorker(Session* session, Logger* logger, const Config& config)
@@ -70,11 +72,11 @@ void IOWorker::add_pool(Host host) {
     Pool* pool = new Pool(host, loop(), ssl_context_, logger_, config_);
 
     pool->set_ready_callback(
-        std::bind(&IOWorker::on_pool_ready, this, std::placeholders::_1));
+        boost::bind(&IOWorker::on_pool_ready, this, _1));
     pool->set_closed_callback(
-        std::bind(&IOWorker::on_pool_closed, this, std::placeholders::_1));
+        boost::bind(&IOWorker::on_pool_closed, this, _1));
     pool->set_keyspace_callback(
-        std::bind(&IOWorker::on_set_keyspace, this, std::placeholders::_1));
+        boost::bind(&IOWorker::on_set_keyspace, this, _1));
 
     pool->connect(session_->keyspace());
 
@@ -108,7 +110,7 @@ void IOWorker::maybe_notify_closed() {
 }
 
 void IOWorker::cleanup() {
-  auto it = pending_delete_.begin();
+  PoolList::iterator it = pending_delete_.begin();
   while (it != pending_delete_.end()) {
     delete *it;
     it = pending_delete_.erase(it);
@@ -154,9 +156,9 @@ void IOWorker::on_retry(RequestHandler* request_handler, RetryType retry_type) {
     return;
   }
 
-  auto it = pools.find(host);
+  PoolMap::iterator it = pools.find(host);
   if (it != pools.end()) {
-    auto pool = it->second;
+    Pool* pool = it->second;
     Connection* connection = pool->borrow_connection(request_handler->keyspace);
     if (connection != NULL) {
       if (!pool->execute(connection, request_handler)) {
@@ -206,10 +208,9 @@ void IOWorker::on_execute(uv_async_t* async, int status) {
     if (request_handler != NULL) {
       io_worker->pending_request_count_++;
       request_handler->set_retry_callback(
-          std::bind(&IOWorker::on_retry, io_worker, std::placeholders::_1,
-                    std::placeholders::_2));
-      request_handler->set_finished_callback(std::bind(
-          &IOWorker::on_request_finished, io_worker, std::placeholders::_1));
+          boost::bind(&IOWorker::on_retry, io_worker, _1, _2));
+      request_handler->set_finished_callback(boost::bind(
+          &IOWorker::on_request_finished, io_worker, _1));
       request_handler->retry(RETRY_WITH_CURRENT_HOST);
     } else {
       io_worker->is_closing_ = true;

@@ -19,9 +19,6 @@
 
 #include <uv.h>
 
-#include <atomic>
-#include <memory>
-
 #include "loop_thread.hpp"
 #include "async_queue.hpp"
 #include "mpmc_queue.hpp"
@@ -34,7 +31,7 @@ template <class E>
 class EventThread : public LoopThread {
 public:
   int init(size_t queue_size) {
-    event_queue_.reset(new AsyncQueue<MPMCQueue<E>>(queue_size));
+    event_queue_.reset(new AsyncQueue<MPMCQueue<E> >(queue_size));
     return event_queue_->init(loop(), this, on_event_internal);
   }
 
@@ -53,7 +50,7 @@ private:
     }
   }
 
-  ScopedPtr<AsyncQueue<MPMCQueue<E>>> event_queue_;
+  ScopedPtr<AsyncQueue<MPMCQueue<E> > > event_queue_;
 };
 
 } // namespace cass

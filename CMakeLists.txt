@@ -75,6 +75,7 @@ endif()
 # Build up the include path's
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
+set(INCLUDES ${INCLUDES} "${PROJECT_SOURCE_DIR}/src/third_party/boost")
 
 #-------------------
 # Compiler flags
@@ -114,7 +115,7 @@ if(MSVC)
 else()
   # GCC/Clang specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(PLATFORM_DEPENDENT_CXX_FLAGS "-std=c++0x -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-c++11-narrowing -Wno-deprecated-declarations -Wno-unused-parameter")
+  set(PLATFORM_DEPENDENT_CXX_FLAGS "-std=c++98 -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 endif()
 
 #-------------------
@@ -132,6 +133,10 @@ file(GLOB INC_FILES
   ${PROJECT_SOURCE_DIR}/include/*.h )
 
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp) 
+
+set(SRC_FILES ${SRC_FILES}
+  "${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/atomic/src/lockpool.cpp" 
+  "${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/random/src/random_device.cpp")
 
 source_group("Source Files" FILES ${SRC_FILES})
 source_group("Header Files" FILES ${INC_FILES})
@@ -212,7 +217,7 @@ if(WIN32)
   set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/")
   set(INTEGRATION_TEST_CXX_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
 else()
-  set(INTEGRATION_TEST_CXX_FLAGS "-std=c++0x -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-c++11-narrowing -Wno-deprecated-declarations -Wno-unused-parameter")
+  set(INTEGRATION_TEST_CXX_FLAGS "-std=c++0x -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 endif()
 
 find_package(Boost 1.41.0 COMPONENTS system thread unit_test_framework date_time program_options)

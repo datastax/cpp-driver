@@ -87,17 +87,19 @@ private:
   };
 
 private:
+  typedef std::list<Pool*> PoolList;
+
   Session* session_;
   Logger* logger_;
   uv_prepare_t prepare_;
   SSLContext* ssl_context_;
   PoolMap pools;
-  std::list<Pool*> pending_delete_;
+  PoolList pending_delete_;
   bool is_closing_;
   int pending_request_count_;
 
   const Config& config_;
-  AsyncQueue<SPSCQueue<RequestHandler*>> request_queue_;
+  AsyncQueue<SPSCQueue<RequestHandler*> > request_queue_;
 };
 
 } // namespace cass

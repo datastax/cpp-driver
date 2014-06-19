@@ -271,7 +271,8 @@ void Connection::defunct() {
 }
 
 void Connection::write(uv_buf_t buf, Connection::Request* request) {
-  Writer::Bufs* bufs = new Writer::Bufs({buf});
+  Writer::Bufs* bufs = new Writer::Bufs();
+  bufs->push_back(buf);
   Writer::write(reinterpret_cast<uv_stream_t*>(&socket_), bufs, request,
                 on_write);
 }

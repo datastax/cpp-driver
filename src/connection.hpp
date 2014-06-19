@@ -32,6 +32,8 @@
 #include "list.hpp"
 #include "scoped_ptr.hpp"
 
+#include "third_party/boost/boost/function.hpp"
+
 namespace cass {
 
 class Connection {
@@ -94,7 +96,7 @@ public:
     State state_;
   };
 
-  typedef std::function<void(Connection*)> Callback;
+  typedef boost::function1<void, Connection*> Callback;
 
 public:
   enum ConnectionState {

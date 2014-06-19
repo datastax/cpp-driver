@@ -23,9 +23,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include <atomic>
-#include <random>
-#include <chrono>
+#include "third_party/boost/boost/atomic.hpp"
+#include "third_party/boost/boost/random/mersenne_twister.hpp"
 
 #define TIME_OFFSET_BETWEEN_UTC_AND_EPOCH 0x01B21DD213814000L // Nanoseconds
 
@@ -47,16 +46,7 @@ public:
 
   static uint64_t get_unix_timestamp(Uuid uuid);
   static uint8_t get_version(Uuid uuid) { return (uuid[6] >> 4) & 0x0F; }
-
   static void to_string(Uuid uuid, char* output);
-
-  static uint64_t unix_timestamp() {
-    std::chrono::system_clock::time_point now(std::chrono::system_clock::now());
-    std::chrono::milliseconds ms(
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            now.time_since_epoch()));
-    return ms.count();
-  }
 
 private:
   static uint64_t CLOCK_SEQ_AND_NODE; // Calculated
@@ -85,8 +75,8 @@ private:
 
 private:
   static uv_mutex_t mutex_;
-  static std::atomic<uint64_t> last_timestamp_;
-  static std::mt19937_64 ng_;
+  static boost::atomic<uint64_t> last_timestamp_;
+  static boost::mt19937_64 ng_;
 };
 
 } // namespace cass

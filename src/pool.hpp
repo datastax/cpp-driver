@@ -26,8 +26,9 @@
 #include "cassandra.h"
 #include "connection.hpp"
 #include "request_handler.hpp"
-
 #include "scoped_ptr.hpp"
+
+#include "third_party/boost/boost/function.hpp"
 
 namespace cass {
 
@@ -37,8 +38,8 @@ class Logger;
 
 class Pool {
 public:
-  typedef std::function<void(Pool*)> Callback;
-  typedef std::function<void(const std::string& keyspace)> KeyspaceCallback;
+  typedef boost::function1<void, Pool*> Callback;
+  typedef boost::function1<void, const std::string&> KeyspaceCallback;
 
   class PoolHandler : public ResponseCallback {
   public:

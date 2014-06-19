@@ -17,7 +17,7 @@
 #ifndef __CASS_REF_COUNTED_HPP_INCLUDED__
 #define __CASS_REF_COUNTED_HPP_INCLUDED__
 
-#include "third_party/atomic_count.hpp"
+#include "third_party/boost/boost/atomic.hpp"
 #include "scoped_ptr.hpp"
 
 namespace cass {
@@ -39,7 +39,7 @@ public:
   }
 
 private:
-  third_party::atomic_count ref_count_;
+  boost::atomic<int> ref_count_;
   DISALLOW_COPY_AND_ASSIGN(RefCounted);
 };
 

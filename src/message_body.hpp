@@ -17,9 +17,6 @@
 #ifndef __CASS_BODY_HPP_INCLUDED__
 #define __CASS_BODY_HPP_INCLUDED__
 
-#include <memory>
-#include <atomic>
-
 #include "common.hpp"
 #include "future.hpp"
 #include "scoped_ptr.hpp"

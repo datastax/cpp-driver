@@ -1,7 +1,10 @@
+#include "third_party/boost/boost/random/random_device.hpp"
+
 #include "cassandra.h"
 
 #include "uuids.hpp"
 #include "scoped_mutex.hpp"
+#include "get_time.hpp"
 
 extern "C" {
 
@@ -54,17 +57,17 @@ UuidsInitializer uuids_intitalizer_;
 
 namespace cass {
 
-std::mt19937_64 Uuids::ng_;
+boost::mt19937_64 Uuids::ng_;
 uv_mutex_t Uuids::mutex_;
-std::atomic<uint64_t> Uuids::last_timestamp_;
+boost::atomic<uint64_t> Uuids::last_timestamp_;
 uint64_t Uuids::CLOCK_SEQ_AND_NODE;
 
 void Uuids::initialize_() {
-  std::random_device rd;
+  boost::random_device rd;
   ng_.seed(rd());
 
   uv_mutex_init(&mutex_);
-  last_timestamp_ = ATOMIC_VAR_INIT(0L);
+  last_timestamp_ = 0L;
   CLOCK_SEQ_AND_NODE = make_clock_seq_and_node();
 }
 
@@ -159,7 +162,7 @@ void Uuids::copy_timestamp(uint64_t timestamp, uint8_t version, Uuid uuid) {
 
 uint64_t Uuids::uuid_timestamp() {
   while (true) {
-    uint64_t now = from_unix_timestamp(unix_timestamp());
+    uint64_t now = from_unix_timestamp(get_time_since_epoch());
     uint64_t last = last_timestamp_.load();
     if (now > last) {
       if (last_timestamp_.compare_exchange_strong(last, now)) {

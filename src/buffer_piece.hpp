@@ -17,7 +17,7 @@
 #ifndef __CASS_BUFFER_PIECE_HPP_INCLUDED__
 #define __CASS_BUFFER_PIECE_HPP_INCLUDED__
 
-#include <stdint.h>
+#include "third_party/boost/boost/cstdint.hpp"
 
 namespace cass {
 

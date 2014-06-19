@@ -20,7 +20,6 @@
 #include <uv.h>
 #include <assert.h>
 
-#include <atomic>
 #include <string>
 
 #include "cassandra.h"

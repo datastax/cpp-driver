@@ -22,11 +22,13 @@
 #include <vector>
 #include <functional>
 
+#include "third_party/boost/boost/function.hpp"
+
 namespace cass {
 
 class Writer {
 public:
-  typedef std::function<void(Writer*)> Callback;
+  typedef boost::function1<void, Writer*> Callback;
   typedef std::vector<uv_buf_t> Bufs;
 
   enum Status { WRITING, FAILED, SUCCESS };
