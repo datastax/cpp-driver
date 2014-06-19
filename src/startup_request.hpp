@@ -22,16 +22,17 @@
 
 #include "message_body.hpp"
 #include "serialization.hpp"
+#include "scoped_ptr.hpp"
 
 namespace cass {
 
-struct StartupRequest : public MessageBody {
-  std::unique_ptr<char> guard;
+struct StartupRequest : public Request {
+ ScopedPtr<char[]> guard;
   std::string version;
   std::string compression;
 
   StartupRequest()
-      : MessageBody(CQL_OPCODE_STARTUP)
+      : Request(CQL_OPCODE_STARTUP)
       , version("3.0.0")
       , compression("") {}
 
@@ -59,7 +60,7 @@ struct StartupRequest : public MessageBody {
   }
 
 private:
-  typedef std::map<std::string, std::string> OptionsCollection;
+  typedef std::map<std::string, std::string> OptionsMap;
 };
 
 } // namespace cass

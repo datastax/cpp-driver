@@ -32,7 +32,7 @@ namespace cass {
 
 class ResultIterator;
 
-struct ResultResponse : public MessageBody {
+struct ResultResponse : public Response {
 
   struct ColumnMetaData {
     ColumnMetaData()
@@ -75,7 +75,7 @@ struct ResultResponse : public MessageBody {
     size_t collection_secondary_class_size;
   };
 
-  typedef std::vector<ColumnMetaData> MetaDataCollection;
+  typedef std::vector<ColumnMetaData> MetaDataVec;
   typedef std::unordered_map<std::string, size_t> MetaDataIndex;
 
   int32_t kind;
@@ -83,7 +83,7 @@ struct ResultResponse : public MessageBody {
   bool no_metadata;
   bool global_table_spec;
   int32_t column_count;
-  MetaDataCollection column_metadata;
+  MetaDataVec column_metadata;
   MetaDataIndex column_index;
   char* page_state; // row paging
   size_t page_state_size;
@@ -103,7 +103,7 @@ struct ResultResponse : public MessageBody {
   char* last;
 
   ResultResponse()
-      : MessageBody(CQL_OPCODE_RESULT)
+      : Response(CQL_OPCODE_RESULT)
       , kind(0)
       , more_pages(false)
       , no_metadata(false)

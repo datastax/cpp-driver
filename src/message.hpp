@@ -30,6 +30,8 @@
 #include "result_response.hpp"
 
 #include "host.hpp"
+#include "scoped_ptr.hpp"
+#include "ref_counted.h"
 
 #define CASS_HEADER_SIZE 8
 
@@ -45,7 +47,8 @@ struct Message {
   bool header_received;
   char header_buffer[CASS_HEADER_SIZE];
   char* header_buffer_pos;
-  std::unique_ptr<MessageBody> body;
+  ScopedRefPtr<Request> request_body;
+  ScopedPtr<Response> response_body;
   char* body_buffer_pos;
   bool body_ready;
   bool body_error;
@@ -59,7 +62,10 @@ struct Message {
       , received(0)
       , header_received(false)
       , header_buffer_pos(header_buffer)
-      , body_ready(false) {}
+      , request_body(NULL)
+      , body_buffer_pos(NULL)
+      , body_ready(false)
+      , body_error(false) {}
 
   Message(uint8_t opcode)
       : version(0x02)
@@ -70,45 +76,58 @@ struct Message {
       , received(0)
       , header_received(false)
       , header_buffer_pos(header_buffer)
-      , body(allocate_body(opcode))
-      , body_ready(false) {}
+      , request_body(NULL)
+      , body_buffer_pos(NULL)
+      , body_ready(false)
+      , body_error(false) {
+    assert(allocate_body(opcode));
+  }
 
-  static MessageBody* allocate_body(uint8_t opcode) {
+  bool allocate_body(int8_t opcode) {
+    request_body.reset();
+    response_body.reset();
     switch (opcode) {
       case CQL_OPCODE_RESULT:
-        return static_cast<MessageBody*>(new ResultResponse());
+        response_body.reset(new ReadyResponse());
+        return true;
 
       case CQL_OPCODE_PREPARE:
-        return static_cast<MessageBody*>(new PrepareRequest());
+        request_body.reset(new PrepareRequest());
+        return true;
 
       case CQL_OPCODE_ERROR:
-        return static_cast<MessageBody*>(new ErrorResponse());
+        response_body.reset(new ErrorResponse());
+        return true;
 
       case CQL_OPCODE_OPTIONS:
-        return static_cast<MessageBody*>(new OptionsRequest());
+        request_body.reset(new OptionsRequest());
+        return true;
 
       case CQL_OPCODE_STARTUP:
-        return static_cast<MessageBody*>(new StartupRequest());
+        request_body.reset(new StartupRequest());
+        return true;
 
       case CQL_OPCODE_SUPPORTED:
-        return static_cast<MessageBody*>(new SupportedResponse());
+        response_body.reset(new SupportedResponse());
+        return true;
 
       case CQL_OPCODE_QUERY:
-        return static_cast<MessageBody*>(new QueryRequest());
+        request_body.reset(new QueryRequest());
+        return true;
 
       case CQL_OPCODE_READY:
-        return static_cast<MessageBody*>(new ReadyResponse());
+        response_body.reset(new ReadyResponse());
+        return true;
 
       default:
-        assert(false);
-        return nullptr;
+        return false;
     }
   }
 
   bool prepare(char** output, size_t& size) {
     size = 0;
 
-    if (body && body->prepare(CASS_HEADER_SIZE, output, size)) {
+    if (request_body && request_body->prepare(CASS_HEADER_SIZE, output, size)) {
       length = size - CASS_HEADER_SIZE;
 
       uint8_t* buffer = reinterpret_cast<uint8_t*>(*output);
@@ -156,14 +175,12 @@ struct Message {
 
         header_received = true;
 
-        body.reset(allocate_body(opcode));
-        body->set_buffer(new char[length]);
-        body_buffer_pos = body->buffer();
-
-        if (!body) {
-          // Unhandled opcode
+        if(!allocate_body(opcode) || !response_body) {
           return -1;
         }
+
+        response_body->set_buffer(new char[length]);
+        body_buffer_pos = response_body->buffer();
       } else {
         // We haven't received all the data for the header. We consume the
         // entire buffer.
@@ -184,9 +201,9 @@ struct Message {
       memcpy(body_buffer_pos, input_pos, needed);
       body_buffer_pos += needed;
       input_pos += needed;
-      assert(body_buffer_pos == body->buffer() + length);
+      assert(body_buffer_pos == response_body->buffer() + length);
 
-      if (!body->consume(body->buffer(), length)) {
+      if (!response_body->consume(response_body->buffer(), length)) {
         body_error = true;
       }
       body_ready = true;

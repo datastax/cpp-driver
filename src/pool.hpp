@@ -27,6 +27,8 @@
 #include "connection.hpp"
 #include "request_handler.hpp"
 
+#include "scoped_ptr.hpp"
+
 namespace cass {
 
 class Connection;
@@ -35,9 +37,6 @@ class Logger;
 
 class Pool {
 public:
-  typedef std::set<Connection*> ConnectionSet;
-  typedef std::vector<Connection*> ConnectionCollection;
-
   typedef std::function<void(Pool*)> Callback;
   typedef std::function<void(const std::string& keyspace)> KeyspaceCallback;
 
@@ -60,7 +59,7 @@ public:
 
     Pool* pool_;
     Connection* connection_;
-    std::unique_ptr<RequestHandler> request_handler_;
+    ScopedPtr<RequestHandler> request_handler_;
   };
 
   enum PoolState {
@@ -110,15 +109,19 @@ private:
   void execute_pending_request(Connection* connection);
 
 private:
+  typedef std::set<Connection*> ConnectionSet;
+  typedef std::vector<Connection*> ConnectionVec;
+  typedef std::list<RequestHandler*> RequestHandlerList;
+
   PoolState state_;
   Host host_;
   uv_loop_t* loop_;
   SSLContext* ssl_context_;
   Logger* logger_;
   const Config& config_;
-  ConnectionCollection connections_;
+  ConnectionVec connections_;
   ConnectionSet connections_pending_;
-  std::list<RequestHandler*> pending_request_queue_;
+  RequestHandlerList pending_request_queue_;
   bool is_defunct_;
 
   Callback ready_callback_;

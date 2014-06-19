@@ -23,26 +23,27 @@
 #include "prepare_request.hpp"
 #include "io_worker.hpp"
 
+#include "scoped_ptr.hpp"
+
 namespace cass {
 
 class PrepareHandler : public ResponseCallback {
 public:
   PrepareHandler(RequestHandler* request_handler)
-      : request_(new Message())
-      , request_handler_(request_handler) {}
+      : request_handler_(request_handler) {}
 
   bool init(const std::string& prepared_id) {
-    PrepareRequest* prepare = new PrepareRequest();
-    request_->opcode = prepare->opcode();
-    request_->body.reset(prepare);
+    request_.reset(new Message(CQL_OPCODE_PREPARE));
+    PrepareRequest* prepare
+        = static_cast<PrepareRequest*>(request_->request_body.get());
     if (request_handler_->request()->opcode == CQL_OPCODE_EXECUTE) {
       ExecuteRequest* execute =
-          static_cast<ExecuteRequest*>(request_handler_->request()->body.get());
+          static_cast<ExecuteRequest*>(request_handler_->request()->request_body.get());
       prepare->prepare_string(execute->prepared_statement);
       return true;
     } else if (request_handler_->request()->opcode == CQL_OPCODE_BATCH) {
       BatchRequest* batch =
-          static_cast<BatchRequest*>(request_handler_->request()->body.get());
+          static_cast<BatchRequest*>(request_handler_->request()->request_body.get());
       std::string prepared_statement;
       if (batch->prepared_statement(prepared_id, &prepared_statement)) {
         prepare->prepare_string(prepared_statement);
@@ -58,7 +59,7 @@ public:
     switch (response->opcode) {
       case CQL_OPCODE_RESULT: {
         ResultResponse* result =
-            static_cast<ResultResponse*>(response->body.get());
+            static_cast<ResultResponse*>(response->response_body.get());
         if (result->kind == CASS_RESULT_KIND_PREPARED) {
           request_handler_.release()->retry(RETRY_WITH_CURRENT_HOST);
         } else {
@@ -82,8 +83,8 @@ public:
   }
 
 private:
-  std::unique_ptr<Message> request_;
-  std::unique_ptr<RequestHandler> request_handler_;
+  ScopedPtr<Message> request_;
+  ScopedPtr<RequestHandler> request_handler_;
 };
 
 } // namespace cass

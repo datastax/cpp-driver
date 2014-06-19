@@ -19,22 +19,6 @@
 
 #include <list>
 #include <string>
-/*
-  Copyright (c) 2014 DataStax
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-  http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-*/
-
 #include <utility>
 #include <vector>
 
@@ -52,23 +36,24 @@
 
 namespace cass {
 
-struct BatchRequest : public MessageBody {
-  typedef std::list<Statement*> StatementCollection;
-  typedef std::map<std::string, ExecuteRequest*> PreparedCollection;
+struct BatchRequest : public Request {
+  typedef std::list<Statement*> StatementList;
+  typedef std::map<std::string, ExecuteRequest*> PreparedMap;
 
   uint8_t type;
-  StatementCollection statements;
-  PreparedCollection prepared_statements;
+  StatementList statements;
+  PreparedMap prepared_statements;
   int16_t consistency;
 
   BatchRequest(size_t consistency, uint8_t type_)
-      : MessageBody(CQL_OPCODE_BATCH)
+      : Request(CQL_OPCODE_BATCH)
       , type(type_)
       , consistency(consistency) {}
 
   ~BatchRequest() {
-    for (Statement* statement : statements) {
-      statement->release();
+    for (StatementList::iterator it = statements.begin(),
+         end = statements.end(); it != end; ++it) {
+      (*it)->release();
     }
   }
 
@@ -82,7 +67,7 @@ struct BatchRequest : public MessageBody {
   }
 
   bool prepared_statement(const std::string& id, std::string* statement) {
-    auto it = prepared_statements.find(id);
+    PreparedMap::iterator it = prepared_statements.find(id);
     if (it != prepared_statements.end()) {
       *statement = it->second->prepared_statement;
       return true;
@@ -94,7 +79,11 @@ struct BatchRequest : public MessageBody {
     // reserved + type + length
     size = reserved + sizeof(uint8_t) + sizeof(uint16_t);
 
-    for (const Statement* statement : statements) {
+    for (StatementList::const_iterator it = statements.begin(),
+         end = statements.end();
+         it != end; ++it) {
+      const Statement* statement = *it;
+
       size += sizeof(uint8_t);
       if (statement->kind() == 0) {
         size += sizeof(int32_t);
@@ -102,23 +91,20 @@ struct BatchRequest : public MessageBody {
         size += sizeof(uint16_t);
       }
       size += statement->statement_size();
-
-      size += sizeof(uint16_t);
-      for (const auto& value : *statement) {
-        size += sizeof(int32_t);
-        int32_t value_size = value.size();
-        if (value_size > 0) {
-          size += value_size;
-        }
-      }
+      size += statement->values_size();
     }
+
     size += sizeof(uint16_t);
     *output = new char[size];
 
     char* buffer = encode_byte(*output + reserved, type);
     buffer = encode_short(buffer, statements.size());
 
-    for (const Statement* statement : statements) {
+    for (StatementList::const_iterator it = statements.begin(),
+         end = statements.end();
+         it != end; ++it) {
+      const Statement* statement = *it;
+
       buffer = encode_byte(buffer, statement->kind());
 
       if (statement->kind() == 0) {
@@ -129,12 +115,11 @@ struct BatchRequest : public MessageBody {
                                statement->statement_size());
       }
 
-      buffer = encode_short(buffer, statement->values.size());
-      for (const auto& value : *statement) {
-        buffer = encode_bytes(buffer, value.data(), value.size());
-      }
+      buffer = statement->encode_values(buffer);
     }
+
     encode_short(buffer, consistency);
+
     return true;
   }
 };

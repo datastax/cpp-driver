@@ -23,6 +23,7 @@
 #include "prepare_request.hpp"
 #include "io_worker.hpp"
 #include "connection.hpp"
+#include "scoped_ptr.hpp"
 
 namespace cass {
 
@@ -33,7 +34,7 @@ public:
       : connection_(connection)
       , request_(new Message(CQL_OPCODE_QUERY))
       , response_callback_(response_callback) {
-    QueryRequest* query = static_cast<QueryRequest*>(request_->body.get());
+    QueryRequest* query = static_cast<QueryRequest*>(request_->request_body.get());
     query->statement("use \"" + keyspace + "\"");
     query->consistency(CASS_CONSISTENCY_ONE);
   }
@@ -68,7 +69,7 @@ public:
 
 private:
   void on_result_response(Message* response) {
-    ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
+    ResultResponse* result = static_cast<ResultResponse*>(response->response_body.get());
     if (result->kind == CASS_RESULT_KIND_SET_KEYSPACE) {
       connection_->execute(response_callback_.release());
     } else {
@@ -80,8 +81,8 @@ private:
 
 private:
   Connection* connection_;
-  std::unique_ptr<Message> request_;
-  std::unique_ptr<ResponseCallback> response_callback_;
+  ScopedPtr<Message> request_;
+  ScopedPtr<ResponseCallback> response_callback_;
 };
 
 } // namespace cass

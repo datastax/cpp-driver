@@ -21,9 +21,9 @@
 
 namespace cass {
 
-struct OptionsRequest : public MessageBody {
+struct OptionsRequest : public Request {
   OptionsRequest()
-      : MessageBody(CQL_OPCODE_OPTIONS) {}
+      : Request(CQL_OPCODE_OPTIONS) {}
 
   bool prepare(size_t reserved, char** output, size_t& size) {
     size = reserved;

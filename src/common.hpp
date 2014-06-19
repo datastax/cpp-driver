@@ -86,8 +86,6 @@ typedef enum CassHostDistance_ {
 
 namespace cass {
 
-typedef std::function<void(int, const char*, size_t)> LogCallback;
-
 uv_buf_t alloc_buffer(size_t suggested_size);
 uv_buf_t alloc_buffer(uv_handle_t* handle, size_t suggested_size);
 void free_buffer(uv_buf_t buf);

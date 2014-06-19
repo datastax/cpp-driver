@@ -19,11 +19,12 @@
 
 #include "message_body.hpp"
 #include "serialization.hpp"
+#include "scoped_ptr.hpp"
 
 namespace cass {
 
-struct ErrorResponse : public MessageBody {
-  std::unique_ptr<char> guard;
+struct ErrorResponse : public Response {
+  ScopedPtr<char> guard;
   int32_t code;
   char* message;
   size_t message_size;
@@ -31,15 +32,15 @@ struct ErrorResponse : public MessageBody {
   size_t prepared_id_size;
 
   ErrorResponse()
-      : MessageBody(CQL_OPCODE_ERROR)
+      : Response(CQL_OPCODE_ERROR)
       , code(0xFFFFFFFF)
-      , message(nullptr)
+      , message(NULL)
       , message_size(0)
-      , prepared_id(nullptr)
+      , prepared_id(NULL)
       , prepared_id_size(0) {}
 
   ErrorResponse(int32_t code, const char* input, size_t input_size)
-      : MessageBody(CQL_OPCODE_ERROR)
+      : Response(CQL_OPCODE_ERROR)
       , guard(new char[input_size])
       , code(code)
       , message(guard.get())

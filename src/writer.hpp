@@ -20,6 +20,7 @@
 #include <uv.h>
 
 #include <vector>
+#include <functional>
 
 namespace cass {
 
@@ -66,8 +67,9 @@ private:
   }
 
   ~Writer() {
-    for (uv_buf_t buf : *bufs_) {
-      delete[] buf.base;
+    for (Bufs::iterator it = bufs_->begin(),
+         end = bufs_->end(); it != end; ++it) {
+      delete[] it->base;
     }
     delete bufs_;
   }

@@ -46,7 +46,7 @@ public:
   }
 
   ~Buffer() {
-    if (size_ > FIXED_BUFFER_SIZE && data_.alloced != nullptr) {
+    if (size_ > FIXED_BUFFER_SIZE && data_.alloced != NULL) {
       delete data_.alloced;
     }
   }
@@ -83,7 +83,7 @@ private:
     if (size_ > 0) {
       if (size_ > FIXED_BUFFER_SIZE) {
         data_.alloced = Buffer.data_.alloced;
-        Buffer.data_.alloced = nullptr;
+        Buffer.data_.alloced = NULL;
       } else {
         memcpy(data_.fixed, Buffer.data_.fixed, size_);
       }

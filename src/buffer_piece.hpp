@@ -24,7 +24,7 @@ namespace cass {
 class BufferPiece {
 public:
   BufferPiece()
-      : data_(nullptr)
+      : data_(NULL)
       , size_(-1) {}
 
   BufferPiece(char* data, size_t size)

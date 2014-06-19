@@ -22,7 +22,7 @@ namespace cass {
 IOWorker::IOWorker(Session* session, Logger* logger, const Config& config)
     : session_(session)
     , logger_(logger)
-    , ssl_context_(nullptr)
+    , ssl_context_(NULL)
     , is_closing_(false)
     , pending_request_count_(0)
     , config_(config)
@@ -60,8 +60,7 @@ bool IOWorker::remove_pool_async(Host host) {
 }
 
 void IOWorker::close_async() {
-  is_closing_ = true;
-  while (!request_queue_.enqueue(nullptr)) {
+  while (!request_queue_.enqueue(NULL)) {
     // Keep trying
   }
 }
@@ -84,9 +83,6 @@ void IOWorker::add_pool(Host host) {
 }
 
 bool IOWorker::execute(RequestHandler* request_handler) {
-  if (is_closing_) {
-    return false;
-  }
   return request_queue_.enqueue(request_handler);
 }
 
@@ -96,8 +92,9 @@ void IOWorker::on_set_keyspace(const std::string& keyspace) {
 
 void IOWorker::maybe_close() {
   if (is_closing_ && pending_request_count_ <= 0) {
-    for (auto& entry : pools) {
-      entry.second->close();
+    for (PoolMap::iterator it = pools.begin(),
+         end = pools.end(); it != end; ++it) {
+      it->second->close();
     }
     maybe_notify_closed();
   }
@@ -161,7 +158,7 @@ void IOWorker::on_retry(RequestHandler* request_handler, RetryType retry_type) {
   if (it != pools.end()) {
     auto pool = it->second;
     Connection* connection = pool->borrow_connection(request_handler->keyspace);
-    if (connection != nullptr) {
+    if (connection != NULL) {
       if (!pool->execute(connection, request_handler)) {
         on_retry(request_handler, RETRY_WITH_NEXT_HOST);
       }
@@ -204,9 +201,9 @@ void IOWorker::on_pool_reconnect(Timer* timer) {
 void IOWorker::on_execute(uv_async_t* async, int status) {
   IOWorker* io_worker = reinterpret_cast<IOWorker*>(async->data);
 
-  RequestHandler* request_handler = nullptr;
+  RequestHandler* request_handler = NULL;
   while (io_worker->request_queue_.dequeue(request_handler)) {
-    if (request_handler != nullptr) {
+    if (request_handler != NULL) {
       io_worker->pending_request_count_++;
       request_handler->set_retry_callback(
           std::bind(&IOWorker::on_retry, io_worker, std::placeholders::_1,
@@ -214,6 +211,8 @@ void IOWorker::on_execute(uv_async_t* async, int status) {
       request_handler->set_finished_callback(std::bind(
           &IOWorker::on_request_finished, io_worker, std::placeholders::_1));
       request_handler->retry(RETRY_WITH_CURRENT_HOST);
+    } else {
+      io_worker->is_closing_ = true;
     }
   }
   io_worker->maybe_close();

@@ -32,7 +32,7 @@ struct Iterator {
   Iterator(IteratorType type)
       : type(type) {}
 
-  virtual ~Iterator(){};
+  virtual ~Iterator() {}
 
   virtual bool next() = 0;
 };

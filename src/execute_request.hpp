@@ -99,14 +99,7 @@ public:
     }
 
     if (!values.empty()) {
-      size += sizeof(int16_t);
-      for (const auto& value : values) {
-        size += sizeof(int32_t);
-        int32_t value_size = value.size();
-        if (value_size > 0) {
-          size += value_size;
-        }
-      }
+      size += values_size();
       flags |= CASS_QUERY_FLAG_VALUES;
     }
 
@@ -129,10 +122,7 @@ public:
     buffer = encode_byte(buffer, flags);
 
     if (!values.empty()) {
-      buffer = encode_short(buffer, values.size());
-      for (const auto& value : values) {
-        buffer = encode_bytes(buffer, value.data(), value.size());
-      }
+      buffer = encode_values(buffer);
     }
 
     if (page_size >= 0) {

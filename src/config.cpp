@@ -89,7 +89,7 @@ CassError Config::set_option(CassOption option, const void* value,
 }
 
 CassError Config::option(CassOption option, void* value, size_t* size) const {
-  if (size == nullptr) {
+  if (size == NULL) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
 
@@ -130,8 +130,9 @@ CassError Config::option(CassOption option, void* value, size_t* size) const {
         *size = 0;
       } else {
         size_t total_size = 0;
-        for (auto& contact_point : contact_points_) {
-          total_size += contact_point.size() + 1; // space for ',' or '\0'
+        for(ContactPointList::const_iterator it = contact_points().begin(),
+            end = contact_points().end(); it != end; ++it) {
+          total_size += it->size() + 1; // space for ',' or '\0'
         }
 
         if (*size < total_size) {
@@ -142,12 +143,14 @@ CassError Config::option(CassOption option, void* value, size_t* size) const {
 
         size_t pos = 0;
         char* output = reinterpret_cast<char*>(value);
-        for (auto& contact_point : contact_points_) {
+        for(ContactPointList::const_iterator it = contact_points().begin(),
+            end = contact_points().end(); it != end; ++it) {
           if (pos > 0) {
             output[pos++] = ',';
           }
-          contact_point.copy(output + pos, contact_point.size());
-          pos += contact_point.size();
+          size_t contact_point_size = it->size();
+          it->copy(output + pos, contact_point_size);
+          pos += contact_point_size;
         }
         output[pos] = '\0';
       }

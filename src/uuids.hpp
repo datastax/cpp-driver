@@ -37,7 +37,8 @@ typedef unsigned char Uuid[16];
 
 class Uuids {
 public:
-  static void initialize();
+  static void initialize_(); // Do not call this
+
   static void generate_v1(Uuid uuid);
   static void generate_v1(uint64_t timestamp, Uuid uuid);
   static void generate_v4(Uuid uuid);
@@ -70,13 +71,6 @@ private:
     return (timestamp * 10000L) + TIME_OFFSET_BETWEEN_UTC_AND_EPOCH;
   }
 
-  static void lock() {
-    while (lock_.test_and_set(std::memory_order_acquire)) {
-    }
-  }
-
-  static void unlock() { lock_.clear(std::memory_order_release); }
-
   static void copy_timestamp(uint64_t timestamp, uint8_t version, Uuid uuid);
 
   static void copy_clock_seq_and_node(uint64_t lsb, Uuid uuid) {
@@ -90,8 +84,7 @@ private:
   static uint64_t make_clock_seq_and_node();
 
 private:
-  static std::atomic_flag lock_; // Spinlock
-  static std::atomic<bool> is_initialized_;
+  static uv_mutex_t mutex_;
   static std::atomic<uint64_t> last_timestamp_;
   static std::mt19937_64 ng_;
 };

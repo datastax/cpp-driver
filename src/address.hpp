@@ -34,16 +34,16 @@ public:
   Address() { memset(&addr_, 0, sizeof(addr_)); }
 
   static bool from_string(const std::string& ip, int port,
-                          Address* output = nullptr) {
+                          Address* output = NULL) {
     char buf[sizeof(struct in6_addr)];
     if (uv_inet_pton(AF_INET, ip.c_str(), &buf).code == UV_OK) {
-      if (output != nullptr) {
+      if (output != NULL) {
         struct sockaddr_in addr = uv_ip4_addr(ip.c_str(), port);
         output->init(reinterpret_cast<const struct sockaddr*>(&addr));
       }
       return true;
     } else if (uv_inet_pton(AF_INET6, ip.c_str(), &buf).code == UV_OK) {
-      if (output != nullptr) {
+      if (output != NULL) {
         struct sockaddr_in6 addr = uv_ip6_addr(ip.c_str(), port);
         output->init(reinterpret_cast<const struct sockaddr*>(&addr));
       }
@@ -161,6 +161,7 @@ struct hash<cass::Address> {
                       sizeof(a.addr_in6()->sin6_addr)));
     } else {
       assert(false);
+      return 0;
     }
   }
 };

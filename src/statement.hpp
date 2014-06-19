@@ -31,21 +31,19 @@
 
 namespace cass {
 
-struct Statement : public MessageBody {
-  typedef std::vector<Buffer> ValueCollection;
-  typedef ValueCollection::iterator ValueIterator;
-  typedef ValueCollection::const_iterator ConstValueIterator;
+struct Statement : public Request {
+  typedef std::vector<Buffer> ValueVec;
 
-  ValueCollection values;
+  ValueVec values;
 
   Statement(uint8_t opcode)
-      : MessageBody(opcode) {}
+      : Request(opcode) {}
 
   Statement(uint8_t opcode, size_t value_count)
-      : MessageBody(opcode)
+      : Request(opcode)
       , values(value_count) {}
 
-  virtual ~Statement(){};
+  virtual ~Statement() {}
 
   virtual uint8_t kind() const = 0;
 
@@ -143,13 +141,27 @@ struct Statement : public MessageBody {
     return CASS_OK;
   }
 
-  ValueIterator begin() { return values.begin(); }
+  size_t values_size() const {
+    size_t total_size = sizeof(uint16_t);
+    for(ValueVec::const_iterator it = values.begin(),
+        end = values.end(); it != end; ++it) {
+      total_size += sizeof(int32_t);
+      int32_t value_size = it->size();
+      if (value_size > 0) {
+        total_size += value_size;
+      }
+    }
+    return total_size;
+  }
 
-  ValueIterator end() { return values.end(); }
-
-  ConstValueIterator begin() const { return values.begin(); }
-
-  ConstValueIterator end() const { return values.end(); }
+  char* encode_values(char* buffer) const {
+    buffer = encode_short(buffer, values.size());
+    for(ValueVec::const_iterator it = values.begin(),
+        end = values.end(); it != end; ++it) {
+      buffer = encode_bytes(buffer, it->data(), it->size());
+    }
+    return buffer;
+  }
 };
 
 } // namespace cass

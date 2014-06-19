@@ -1,5 +1,7 @@
 #include "connection.hpp"
 
+#include "scoped_ptr.hpp"
+
 namespace cass {
 
 Connection::StartupHandler::StartupHandler(Connection* connection,
@@ -43,7 +45,7 @@ void Connection::StartupHandler::on_timeout() {
 }
 
 void Connection::StartupHandler::on_result_response(Message* response) {
-  ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
+  ResultResponse* result = static_cast<ResultResponse*>(response->response_body.get());
   switch (result->kind) {
     case CASS_RESULT_KIND_SET_KEYSPACE:
       connection_->on_set_keyspace();
@@ -60,7 +62,7 @@ Connection::Request::Request(Connection* connection,
     : connection(connection)
     , stream(0)
     , response_callback_(response_callback)
-    , timer_(nullptr)
+    , timer_(NULL)
     , state_(REQUEST_STATE_NEW) {
 }
 
@@ -161,7 +163,7 @@ void Connection::Request::change_state(Connection::Request::State next_state) {
 }
 
 void Connection::Request::on_result_response(Message* response) {
-  ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
+  ResultResponse* result = static_cast<ResultResponse*>(response->response_body.get());
   switch (result->kind) {
     case CASS_RESULT_KIND_SET_KEYSPACE:
       connection->keyspace_.assign(result->keyspace, result->keyspace_size);
@@ -173,7 +175,7 @@ void Connection::Request::on_request_timeout(Timer* timer) {
   Request* request = static_cast<Request*>(timer->data());
   request->connection->logger_->info("Request timed out to '%s'",
                                      request->connection->host_string_.c_str());
-  request->timer_ = nullptr;
+  request->timer_ = NULL;
   if (request->state_ == REQUEST_STATE_READING) {
     request->change_state(REQUEST_STATE_READ_TIMEOUT);
   } else if (request->state_ == REQUEST_STATE_WRITING) {
@@ -200,7 +202,7 @@ Connection::Connection(uv_loop_t* loop, SSLSession* ssl_session,
     , logger_(logger)
     , config_(config)
     , keyspace_(keyspace)
-    , connect_timer_(nullptr) {
+    , connect_timer_(NULL) {
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
   if (ssl_) {
@@ -219,7 +221,7 @@ void Connection::connect() {
 }
 
 bool Connection::execute(ResponseCallback* response_callback) {
-  std::unique_ptr<Request> request(new Request(this, response_callback));
+  ScopedPtr<Request> request(new Request(this, response_callback));
 
   Message* message = response_callback->request();
 
@@ -311,7 +313,7 @@ void Connection::consume(char* input, size_t size) {
     }
 
     if (incoming_->body_ready) {
-      std::unique_ptr<Message> response(std::move(incoming_));
+      ScopedPtr<Message> response(incoming_.release());
       incoming_.reset(new Message());
 
       logger_->debug(
@@ -324,7 +326,7 @@ void Connection::consume(char* input, size_t size) {
         // TODO(mstump) system events
         assert(false);
       } else {
-        Request* request = nullptr;
+        Request* request = NULL;
         if (stream_manager_.get_item(response->stream, request)) {
           switch (request->state()) {
             case Request::REQUEST_STATE_READING:
@@ -378,7 +380,7 @@ void Connection::on_connect(Connecter* connecter) {
   }
 
   Timer::stop(connection->connect_timer_);
-  connection->connect_timer_ = nullptr;
+  connection->connect_timer_ = NULL;
 
   if (connecter->status() == Connecter::SUCCESS) {
     connection->logger_->debug("Connected to '%s'",
@@ -397,7 +399,7 @@ void Connection::on_connect(Connecter* connecter) {
 
 void Connection::on_connect_timeout(Timer* timer) {
   Connection* connection = reinterpret_cast<Connection*>(timer->data());
-  connection->connect_timer_ = nullptr;
+  connection->connect_timer_ = NULL;
   connection->notify_error("Connection timeout");
 }
 
@@ -448,15 +450,15 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
 
     for (;;) {
       size_t read_size = 0;
-      char* read_output = nullptr;
+      char* read_output = NULL;
       size_t read_output_size = 0;
-      char* write_output = nullptr;
+      char* write_output = NULL;
       size_t write_output_size = 0;
 
       // TODO(mstump) error handling for SSL decryption
       std::string error;
       connection->ssl_->read_write(read_input, read_input_size, read_size,
-                                   &read_output, read_output_size, nullptr, 0,
+                                   &read_output, read_output_size, NULL, 0,
                                    &write_output, write_output_size, &error);
 
       if (read_output && read_output_size) {
@@ -466,7 +468,7 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
       }
 
       if (write_output && write_output_size) {
-        Request* request = new Request(connection, nullptr);
+        Request* request = new Request(connection, NULL);
         connection->write(uv_buf_init(write_output, write_output_size),
                           request);
         // delete of write_output will be handled by on_write
@@ -559,7 +561,7 @@ void Connection::on_set_keyspace() {
 
 void Connection::on_supported(Message* response) {
   SupportedResponse* supported =
-      static_cast<SupportedResponse*>(response->body.get());
+      static_cast<SupportedResponse*>(response->response_body.get());
 
   // TODO(mstump) do something with the supported info
   (void)supported;
@@ -586,14 +588,14 @@ void Connection::send_options() {
 
 void Connection::send_startup() {
   Message* message = new Message(CQL_OPCODE_STARTUP);
-  StartupRequest* startup = static_cast<StartupRequest*>(message->body.get());
+  StartupRequest* startup = static_cast<StartupRequest*>(message->request_body.get());
   startup->version = version_;
   execute(new StartupHandler(this, message));
 }
 
 void Connection::send_use_keyspace() {
   Message* message = new Message(CQL_OPCODE_QUERY);
-  QueryRequest* query = static_cast<QueryRequest*>(message->body.get());
+  QueryRequest* query = static_cast<QueryRequest*>(message->request_body.get());
   query->statement("use \"" + keyspace_ + "\"");
   query->consistency(CASS_CONSISTENCY_ONE);
   execute(new StartupHandler(this, message));

@@ -36,6 +36,8 @@
 #include "config.hpp"
 #include "request_handler.hpp"
 #include "logger.hpp"
+#include "scoped_mutex.hpp"
+#include "scoped_ptr.hpp"
 
 namespace cass {
 
@@ -52,12 +54,12 @@ public:
   int init();
 
   std::string keyspace() {
-    std::unique_lock<std::mutex> lock(keyspace_mutex_);
+    ScopedMutex lock(&keyspace_mutex_);
     return keyspace_;
   }
 
   void set_keyspace(const std::string& keyspace) {
-    std::unique_lock<std::mutex> lock(keyspace_mutex_);
+    ScopedMutex lock(&keyspace_mutex_);
     keyspace_ = keyspace;
   }
 
@@ -73,7 +75,7 @@ public:
   void close_async(Future* future);
 
   Future* prepare(const char* statement, size_t length);
-  Future* execute(MessageBody* statement);
+  Future* execute(Request* statement);
 
 private:
   void close_handles();
@@ -98,25 +100,24 @@ private:
 
 private:
   typedef std::shared_ptr<IOWorker> IOWorkerPtr;
-  typedef std::vector<IOWorkerPtr> IOWorkerCollection;
+  typedef std::vector<IOWorkerPtr> IOWorkerVec;
+  typedef std::set<Host> HostSet;
 
-private:
   SSLContext* ssl_context_;
-  IOWorkerCollection io_workers_;
-  std::unique_ptr<Logger> logger_;
+  IOWorkerVec io_workers_;
+  ScopedPtr<Logger> logger_;
   std::string keyspace_;
-  std::mutex keyspace_mutex_;
+  uv_mutex_t keyspace_mutex_;
   Future* connect_future_;
   Future* close_future_;
-  std::set<Host> hosts_;
+  HostSet hosts_;
   Config config_;
-  std::unique_ptr<AsyncQueue<MPMCQueue<RequestHandler*>>> request_queue_;
-  std::unique_ptr<LoadBalancingPolicy> load_balancing_policy_;
+  ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*>>> request_queue_;
+  ScopedPtr<LoadBalancingPolicy> load_balancing_policy_;
   int pending_resolve_count_;
   int pending_pool_count_;
   int pending_workers_count_;
   int current_io_worker_;
-  std::atomic<bool> is_closing_;
 };
 
 class SessionCloseFuture : public Future {
@@ -132,9 +133,9 @@ public:
 
   ~SessionConnectFuture() {
     Session* session = release_result();
-    if (session != nullptr) {
+    if (session != NULL) {
       // The future was deleted before obtaining the session
-      session->close_async(nullptr);
+      session->close_async(NULL);
     }
   }
 };

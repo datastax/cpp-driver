@@ -75,7 +75,7 @@ private:
   static void on_prepare(uv_prepare_t* prepare, int status);
 
 private:
-  typedef std::map<Host, Pool*> PoolCollection;
+  typedef std::map<Host, Pool*> PoolMap;
 
   struct ReconnectRequest {
     ReconnectRequest(IOWorker* io_worker, Host host)
@@ -91,9 +91,9 @@ private:
   Logger* logger_;
   uv_prepare_t prepare_;
   SSLContext* ssl_context_;
-  PoolCollection pools;
+  PoolMap pools;
   std::list<Pool*> pending_delete_;
-  std::atomic<bool> is_closing_;
+  bool is_closing_;
   int pending_request_count_;
 
   const Config& config_;

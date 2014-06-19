@@ -30,6 +30,7 @@
 #include "writer.hpp"
 #include "timer.hpp"
 #include "list.hpp"
+#include "scoped_ptr.hpp"
 
 namespace cass {
 
@@ -48,7 +49,7 @@ public:
     void on_result_response(Message* response);
 
     Connection* connection_;
-    std::unique_ptr<Message> request_;
+    ScopedPtr<Message> request_;
   };
 
   struct Request : public List<Request>::Node {
@@ -74,9 +75,9 @@ public:
     void change_state(State next_state);
 
     void stop_timer() {
-      assert(timer_ != nullptr);
+      assert(timer_ != NULL);
       Timer::stop(timer_);
-      timer_ = nullptr;
+      timer_ = NULL;
     }
 
     Connection* connection;
@@ -88,7 +89,7 @@ public:
     static void on_request_timeout(Timer* timer);
 
   private:
-    std::unique_ptr<ResponseCallback> response_callback_;
+    ScopedPtr<ResponseCallback> response_callback_;
     Timer* timer_;
     State state_;
   };
@@ -183,7 +184,7 @@ private:
   int timed_out_request_count_;
 
   uv_loop_t* loop_;
-  std::unique_ptr<Message> incoming_;
+  ScopedPtr<Message> incoming_;
   StreamManager<Request*> stream_manager_;
 
   Callback ready_callback_;
@@ -206,6 +207,7 @@ private:
   std::string keyspace_;
   Timer* connect_timer_;
 
+private:
   DISALLOW_COPY_AND_ASSIGN(Connection);
 };
 

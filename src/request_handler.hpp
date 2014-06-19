@@ -22,9 +22,11 @@
 #include "message.hpp"
 #include "timer.hpp"
 
+#include "scoped_ptr.hpp"
+
 namespace cass {
 
-class ResponseFuture : public ResultFuture<MessageBody> {
+class ResponseFuture : public ResultFuture<Response> {
 public:
   ResponseFuture()
       : ResultFuture(CASS_FUTURE_TYPE_RESPONSE) {}
@@ -40,16 +42,15 @@ public:
   typedef std::function<void(RequestHandler*, RetryType)> RetryCallback;
 
   RequestHandler(Message* request)
-      : timer(nullptr)
+      : timer(NULL)
       , request_(request)
       , future_(new ResponseFuture()) {
     future_->retain();
-    request->body->retain();
+    request_->request_body->retain();
   }
 
   ~RequestHandler() {
-    MessageBody* body = request_->body.release();
-    body->release();
+    request_->request_body->release();
   }
 
   virtual Message* request() const { return request_.get(); }
@@ -57,11 +58,11 @@ public:
   virtual void on_set(Message* response) {
     switch (response->opcode) {
       case CQL_OPCODE_RESULT:
-        future_->set_result(response->body.release());
+        future_->set_result(response->response_body.release());
         break;
       case CQL_OPCODE_ERROR: {
         ErrorResponse* error =
-            static_cast<ErrorResponse*>(response->body.get());
+            static_cast<ErrorResponse*>(response->response_body.get());
         future_->set_error(static_cast<CassError>(CASS_ERROR(
                                CASS_ERROR_SOURCE_SERVER, error->code)),
                            std::string(error->message, error->message_size));
@@ -132,7 +133,7 @@ private:
   }
 
   std::list<Host> hosts_attempted_;
-  std::unique_ptr<Message> request_;
+  ScopedPtr<Message> request_;
   ResponseFuture* future_;
   RetryCallback retry_callback_;
   Callback finished_callback_;

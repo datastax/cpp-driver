@@ -22,31 +22,48 @@
 
 #include "common.hpp"
 #include "future.hpp"
+#include "scoped_ptr.hpp"
+#include "ref_counted.h"
 
 namespace cass {
 
-class MessageBody : public RefCounted<MessageBody> {
+class Request : public RefCounted<Request> {
 public:
-  MessageBody(uint8_t opcode)
+  Request(uint8_t opcode)
       : opcode_(opcode) {}
 
-  virtual ~MessageBody() {}
+  virtual ~Request() {}
 
-  DISALLOW_COPY_AND_ASSIGN(MessageBody);
+  uint8_t opcode() const { return opcode_; }
+
+  virtual bool prepare(size_t reserved, char** output, size_t& size) = 0;
+
+private:
+   uint8_t opcode_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(Request);
+};
+
+class Response {
+public:
+  Response(uint8_t opcode)
+      : opcode_(opcode) {}
+
+  virtual ~Response() {}
 
   uint8_t opcode() const { return opcode_; }
   char* buffer() { return buffer_.get(); }
   void set_buffer(char* buffer) { buffer_.reset(buffer); }
 
-  virtual bool consume(char* buffer, size_t size) { return false; }
-
-  virtual bool prepare(size_t reserved, char** output, size_t& size) {
-    return false;
-  }
+  virtual bool consume(char* buffer, size_t size) = 0;
 
 private:
   uint8_t opcode_;
-  std::unique_ptr<char[]> buffer_;
+  ScopedPtr<char[]> buffer_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(Response);
 };
 
 } // namespace cass

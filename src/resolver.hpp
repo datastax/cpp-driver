@@ -47,7 +47,7 @@ public:
 
   static void resolve(uv_loop_t* loop, const std::string& host, int port,
                       void* data, Callback cb,
-                      struct addrinfo* hints = nullptr) {
+                      struct addrinfo* hints = NULL) {
     Resolver* resolver = new Resolver(host, port, data, cb);
 
     int rc = uv_getaddrinfo(loop, &resolver->req_, on_resolve, host.c_str(),

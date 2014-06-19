@@ -1,6 +1,7 @@
 #include "cassandra.h"
 
 #include "uuids.hpp"
+#include "scoped_mutex.hpp"
 
 extern "C" {
 
@@ -38,24 +39,33 @@ void cass_uuid_string(CassUuid uuid, char* output) {
 
 } // extern "C"
 
+namespace {
+
+class UuidsInitializer {
+public:
+  UuidsInitializer() {
+    cass::Uuids::initialize_();
+  }
+};
+
+UuidsInitializer uuids_intitalizer_;
+
+}
+
 namespace cass {
 
-uint64_t Uuids::CLOCK_SEQ_AND_NODE = 0L;
-
-std::atomic_flag Uuids::lock_ = ATOMIC_FLAG_INIT;
-std::atomic<bool> Uuids::is_initialized_ = ATOMIC_VAR_INIT(false);
-std::atomic<uint64_t> Uuids::last_timestamp_ = ATOMIC_VAR_INIT(0L);
 std::mt19937_64 Uuids::ng_;
+uv_mutex_t Uuids::mutex_;
+std::atomic<uint64_t> Uuids::last_timestamp_;
+uint64_t Uuids::CLOCK_SEQ_AND_NODE;
 
-void Uuids::initialize() {
-  lock();
-  if (!is_initialized_) {
-    std::random_device rd;
-    ng_.seed(rd());
-    CLOCK_SEQ_AND_NODE = make_clock_seq_and_node();
-    is_initialized_ = true;
-  }
-  unlock();
+void Uuids::initialize_() {
+  std::random_device rd;
+  ng_.seed(rd());
+
+  uv_mutex_init(&mutex_);
+  last_timestamp_ = ATOMIC_VAR_INIT(0L);
+  CLOCK_SEQ_AND_NODE = make_clock_seq_and_node();
 }
 
 void Uuids::generate_v1(Uuid uuid) {
@@ -63,23 +73,16 @@ void Uuids::generate_v1(Uuid uuid) {
 }
 
 void Uuids::generate_v1(uint64_t timestamp, Uuid uuid) {
-  if (!is_initialized_) {
-    initialize();
-  }
-
   copy_timestamp(timestamp, 1, uuid);
   copy_clock_seq_and_node(CLOCK_SEQ_AND_NODE, uuid);
 }
 
 void Uuids::generate_v4(Uuid uuid) {
-  if (!is_initialized_) {
-    initialize();
-  }
-
-  lock();
+  ScopedMutex lock(&mutex_);
   uint64_t msb = ng_();
   uint64_t lsb = ng_();
-  unlock();
+  lock.unlock();
+
 
   copy_timestamp(msb, 4, uuid);
 
@@ -215,7 +218,7 @@ uint64_t Uuids::make_clock_seq_and_node() {
   }
 
   uint8_t hash[16];
-  EVP_DigestFinal_ex(mdctx, hash, nullptr);
+  EVP_DigestFinal_ex(mdctx, hash, NULL);
   EVP_MD_CTX_destroy(mdctx);
 
   uint64_t node = 0L;

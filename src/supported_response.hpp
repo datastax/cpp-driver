@@ -24,12 +24,12 @@
 
 namespace cass {
 
-struct SupportedResponse : public MessageBody {
+struct SupportedResponse : public Response {
   std::list<std::string> compression;
   std::list<std::string> versions;
 
   SupportedResponse()
-      : MessageBody(CQL_OPCODE_SUPPORTED) {}
+      : Response(CQL_OPCODE_SUPPORTED) {}
 
   bool consume(char* buffer, size_t size) {
     string_multimap_t supported;

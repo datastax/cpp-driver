@@ -26,6 +26,8 @@
 #include "async_queue.hpp"
 #include "mpmc_queue.hpp"
 
+#include "scoped_ptr.hpp"
+
 namespace cass {
 
 template <class E>
@@ -51,7 +53,7 @@ private:
     }
   }
 
-  std::unique_ptr<AsyncQueue<MPMCQueue<E>>> event_queue_;
+  ScopedPtr<AsyncQueue<MPMCQueue<E>>> event_queue_;
 };
 
 } // namespace cass

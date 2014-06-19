@@ -131,15 +131,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 file(GLOB INC_FILES
   ${PROJECT_SOURCE_DIR}/include/*.h )
 
-file(GLOB SRC_FILES
-  ${PROJECT_SOURCE_DIR}/src/*.cpp)
+file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp) 
 
 source_group("Source Files" FILES ${SRC_FILES})
 source_group("Header Files" FILES ${INC_FILES})
 
-set(ALL_SOURCE_FILES
-  ${SRC_FILES}
-  ${INC_FILES})
+set(ALL_SOURCE_FILES ${SRC_FILES} ${INC_FILES})
 
 # build dynamic and static version of library
 add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})

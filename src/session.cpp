@@ -48,20 +48,21 @@ CassFuture* cass_session_execute_batch(CassSession* session, CassBatch* batch) {
 namespace cass {
 
 Session::Session(const Config& config)
-    : ssl_context_(nullptr)
-    , connect_future_(nullptr)
-    , close_future_(nullptr)
+    : ssl_context_(NULL)
+    , connect_future_(NULL)
+    , close_future_(NULL)
     , config_(config)
     , load_balancing_policy_(new RoundRobinPolicy())
     , pending_resolve_count_(0)
     , pending_pool_count_(0)
     , pending_workers_count_(0)
-    , current_io_worker_(0)
-    , is_closing_(false) {
+    , current_io_worker_(0) {
+  uv_mutex_init(&keyspace_mutex_);
 }
 
 Session::~Session() {
-  if (connect_future_ != nullptr) {
+  uv_mutex_destroy(&keyspace_mutex_);
+  if (connect_future_ != NULL) {
     connect_future_->release();
   }
 }
@@ -121,18 +122,18 @@ bool Session::connect_async(const std::string& keyspace, Future* future) {
 void Session::close_async(Future* future) {
   close_future_ = future;
   close_future_->retain();
-
-  is_closing_ = true;
-  while (!request_queue_->enqueue(nullptr)) {
+  while (!request_queue_->enqueue(NULL)) {
     // Keep trying
   }
 }
 
 void Session::init_pools() {
   pending_pool_count_ = hosts_.size() * io_workers_.size();
-  for (auto& host : hosts_) {
-    for (auto io_worker : io_workers_) {
-      io_worker->add_pool_async(host);
+  for (HostSet::iterator hosts_it = hosts_.begin(),
+       hosts_end = hosts_.end(); hosts_it != hosts_end; ++hosts_it) {
+    for (IOWorkerVec::iterator it = io_workers_.begin(),
+         end = io_workers_.end(); it != end; ++it) {
+      (*it)->add_pool_async(*hosts_it);
     }
   }
 }
@@ -146,14 +147,16 @@ void Session::on_run() {
   if (config_.log_level() != CASS_LOG_DISABLED) {
     logger_->run();
   }
-  for (auto io_worker : io_workers_) {
-    io_worker->run();
+  for (IOWorkerVec::iterator it = io_workers_.begin(),
+       end = io_workers_.end(); it != end; ++it) {
+    (*it)->run();
   }
 }
 
 void Session::on_after_run() {
-  for (auto io_worker : io_workers_) {
-    io_worker->join();
+  for (IOWorkerVec::iterator it = io_workers_.begin(),
+       end = io_workers_.end(); it != end; ++it) {
+    (*it)->join();
   }
   logger_->join();
 
@@ -171,7 +174,11 @@ void Session::on_after_run() {
 void Session::on_event(const SessionEvent& event) {
   if (event.type == SessionEvent::CONNECT) {
     int port = config_.port();
-    for (std::string seed : config_.contact_points()) {
+
+    const Config::ContactPointList& contact_points = config_.contact_points();
+    for (Config::ContactPointList::const_iterator it = contact_points.begin(),
+         end = contact_points.end(); it != end; ++it) {
+      const std::string& seed = *it;
       Address address;
       if (Address::from_string(seed, port, &address)) {
         Host host(address);
@@ -181,11 +188,12 @@ void Session::on_event(const SessionEvent& event) {
         Resolver::resolve(loop(), seed, port, this, on_resolve);
       }
     }
+
     if (pending_resolve_count_ == 0) {
       if (hosts_.empty()) {
         connect_future_->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                                    "No hosts provided or no hosts resolved");
-        connect_future_ = nullptr;
+        connect_future_ = NULL;
       } else {
         init_pools();
       }
@@ -195,7 +203,7 @@ void Session::on_event(const SessionEvent& event) {
       logger_->debug("Session is connected");
       load_balancing_policy_->init(hosts_);
       connect_future_->set();
-      connect_future_ = nullptr;
+      connect_future_ = NULL;
     }
     logger_->debug("Session pending pool count %d", pending_pool_count_);
   } else if (event.type == SessionEvent::NOTIFY_CLOSED) {
@@ -228,11 +236,10 @@ SSLSession* Session::ssl_session_new() {
 }
 
 Future* Session::prepare(const char* statement, size_t length) {
-  Message* request = new Message();
-  request->opcode = CQL_OPCODE_PREPARE;
-  PrepareRequest* prepare = new PrepareRequest();
+  Message* request = new Message(CQL_OPCODE_PREPARE);
+  PrepareRequest* prepare
+      = static_cast<PrepareRequest*>(request->request_body.get());
   prepare->prepare_string(statement, length);
-  request->body.reset(prepare);
   RequestHandler* request_handler = new RequestHandler(request);
   ResponseFuture* future = request_handler->future();
   future->statement.assign(statement, length);
@@ -240,10 +247,10 @@ Future* Session::prepare(const char* statement, size_t length) {
   return future;
 }
 
-Future* Session::execute(MessageBody* statement) {
+Future* Session::execute(Request* statement) {
   Message* request = new Message();
   request->opcode = statement->opcode();
-  request->body.reset(statement);
+  request->request_body.reset(statement);
   RequestHandler* request_handler = new RequestHandler(request);
   Future* future = request_handler->future();
   execute(request_handler);
@@ -253,9 +260,11 @@ Future* Session::execute(MessageBody* statement) {
 void Session::on_execute(uv_async_t* data, int status) {
   Session* session = reinterpret_cast<Session*>(data->data);
 
-  RequestHandler* request_handler = nullptr;
+  bool is_closing = false;
+
+  RequestHandler* request_handler = NULL;
   while (session->request_queue_->dequeue(request_handler)) {
-    if (request_handler != nullptr) {
+    if (request_handler != NULL) {
       request_handler->keyspace = session->keyspace();
       session->load_balancing_policy_->new_query_plan(&request_handler->hosts);
 
@@ -277,13 +286,16 @@ void Session::on_execute(uv_async_t* data, int status) {
         request_handler->on_error(CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD,
                                   "All workers are busy");
       }
+    } else {
+      is_closing = true;
     }
   }
 
-  if (session->is_closing_) {
+  if (is_closing) {
     session->pending_workers_count_ = session->io_workers_.size();
-    for (auto io_worker : session->io_workers_) {
-      io_worker->close_async();
+    for (IOWorkerVec::iterator it = session->io_workers_.begin(),
+         end = session->io_workers_.end(); it != end; ++it) {
+      (*it)->close_async();
     }
   }
 }

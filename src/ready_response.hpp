@@ -21,9 +21,9 @@
 
 namespace cass {
 
-struct ReadyResponse : public MessageBody {
+struct ReadyResponse : public Response {
   ReadyResponse()
-      : MessageBody(CQL_OPCODE_READY) {}
+      : Response(CQL_OPCODE_READY) {}
 
   bool consume(char* buffer, size_t size) { return true; }
 };

@@ -22,11 +22,11 @@
 
 namespace cass {
 
-struct PrepareRequest : public MessageBody {
+struct PrepareRequest : public Request {
   std::string statement;
 
   PrepareRequest()
-      : MessageBody(CQL_OPCODE_PREPARE) {}
+      : Request(CQL_OPCODE_PREPARE) {}
 
   void prepare_string(const char* input, size_t size) {
     statement.assign(input, size);

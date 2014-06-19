@@ -43,9 +43,11 @@ public:
 
   void combine(char* output) const {
     int32_t offset = 0;
-    for (const auto& buffer : buffers_) {
-      memcpy(output + offset, buffer.data(), buffer.size());
-      offset += buffer.size();
+    for (std::vector<Buffer>::const_iterator it = buffers_.begin(),
+         end = buffers_.end(); it != end; ++it) {
+      size_t buffer_size = it->size();
+      memcpy(output + offset, it->data(), buffer_size);
+      offset += buffer_size;
     }
   }
 

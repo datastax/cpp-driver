@@ -35,7 +35,7 @@ CassIterator* cass_iterator_from_collection(const CassValue* value) {
   if (cass_value_is_collection(value)) {
     return CassIterator::to(new cass::CollectionIterator(value));
   }
-  return nullptr;
+  return NULL;
 }
 
 void cass_iterator_free(CassIterator* iterator) {
@@ -49,7 +49,7 @@ cass_bool_t cass_iterator_next(CassIterator* iterator) {
 const CassRow* cass_iterator_get_row(CassIterator* iterator) {
   cass::Iterator* internal_it = iterator->from();
   if (internal_it->type != cass::CASS_ITERATOR_TYPE_RESULT) {
-    return nullptr;
+    return NULL;
   }
   cass::ResultIterator* result_it =
       static_cast<cass::ResultIterator*>(internal_it);
@@ -59,7 +59,7 @@ const CassRow* cass_iterator_get_row(CassIterator* iterator) {
 const CassValue* cass_iterator_get_column(CassIterator* iterator) {
   cass::Iterator* internal_it = iterator->from();
   if (internal_it->type != cass::CASS_ITERATOR_TYPE_ROW) {
-    return nullptr;
+    return NULL;
   }
   cass::RowIterator* row_it = static_cast<cass::RowIterator*>(internal_it);
   return CassValue::to(row_it->column());
@@ -68,7 +68,7 @@ const CassValue* cass_iterator_get_column(CassIterator* iterator) {
 const CassValue* cass_iterator_get_value(CassIterator* iterator) {
   cass::Iterator* internal_it = iterator->from();
   if (internal_it->type != cass::CASS_ITERATOR_COLLECTION) {
-    return nullptr;
+    return NULL;
   }
   cass::CollectionIterator* collection_it =
       static_cast<cass::CollectionIterator*>(internal_it);

@@ -29,6 +29,8 @@ void default_log_callback(void* data, cass_uint64_t time, CassLogLevel severity,
 
 class Config {
 public:
+  typedef std::list<std::string> ContactPointList;
+
   Config()
       : port_(9042)
       , version_("3.0.0")
@@ -47,7 +49,7 @@ public:
       , write_timeout_(1000)
       , read_timeout_(1000)
       , log_level_(CASS_LOG_ERROR)
-      , log_data_(nullptr)
+      , log_data_(NULL)
       , log_callback_(default_log_callback) {}
 
   void log_callback(CassLogCallback callback) { log_callback_ = callback; }
@@ -98,7 +100,7 @@ public:
 private:
   int port_;
   std::string version_;
-  std::list<std::string> contact_points_;
+  ContactPointList contact_points_;
   size_t thread_count_io_;
   size_t queue_size_io_;
   size_t queue_size_event_;

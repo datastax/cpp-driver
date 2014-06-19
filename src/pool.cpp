@@ -58,7 +58,7 @@ void Pool::PoolHandler::finish_request() {
 }
 
 void Pool::PoolHandler::on_result_response(Message* response) {
-  ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
+  ResultResponse* result = static_cast<ResultResponse*>(response->response_body.get());
   switch (result->kind) {
     case CASS_RESULT_KIND_SET_KEYSPACE:
       if (pool_->keyspace_callback_) {
@@ -71,11 +71,11 @@ void Pool::PoolHandler::on_result_response(Message* response) {
 }
 
 void Pool::PoolHandler::on_error_response(Message* response) {
-  ErrorResponse* error = static_cast<ErrorResponse*>(response->body.get());
+  ErrorResponse* error = static_cast<ErrorResponse*>(response->response_body.get());
   switch (error->code) {
     case CQL_ERROR_UNPREPARED: {
       RequestHandler* request_handler = request_handler_.release();
-      std::unique_ptr<PrepareHandler> prepare_handler(
+      ScopedPtr<PrepareHandler> prepare_handler(
           new PrepareHandler(request_handler));
       std::string prepared_id(error->prepared_id, error->prepared_id_size);
       if (prepare_handler->init(prepared_id)) {
@@ -105,10 +105,12 @@ Pool::Pool(const Host& host, uv_loop_t* loop, SSLContext* ssl_context,
 }
 
 Pool::~Pool() {
-  for (auto request_handler : pending_request_queue_) {
+  for (RequestHandlerList::iterator it = pending_request_queue_.begin(),
+       end = pending_request_queue_.end(); it != end; ++it) {
+    RequestHandler* request_handler = *it;
     if (request_handler->timer) {
       Timer::stop(request_handler->timer);
-      request_handler->timer = nullptr;
+      request_handler->timer = NULL;
       request_handler->retry(RETRY_WITH_NEXT_HOST);
     }
   }
@@ -134,11 +136,13 @@ void Pool::close() {
       }
     }
     state_ = POOL_STATE_CLOSING;
-    for (auto connection : connections_) {
-      connection->close();
+    for (ConnectionVec::iterator it = connections_.begin(),
+         end = connections_.end(); it != end; ++it) {
+      (*it)->close();
     }
-    for (auto connection : connections_pending_) {
-      connection->close();
+    for (ConnectionSet::iterator it = connections_pending_.begin(),
+         end = connections_pending_.end(); it != end; ++it) {
+      (*it)->close();
     }
     maybe_close();
   }
@@ -149,7 +153,7 @@ Connection* Pool::borrow_connection(const std::string& keyspace) {
     for (size_t i = 0; i < config_.core_connections_per_host(); ++i) {
       spawn_connection(keyspace);
     }
-    return nullptr;
+    return NULL;
   }
 
   maybe_spawn_connection(keyspace);
@@ -197,7 +201,7 @@ void Pool::maybe_close() {
 void Pool::spawn_connection(const std::string& keyspace) {
   if (state_ == POOL_STATE_NEW || state_ == POOL_STATE_READY) {
     Connection* connection = new Connection(
-        loop_, ssl_context_ ? ssl_context_->session_new() : nullptr, host_,
+        loop_, ssl_context_ ? ssl_context_->session_new() : NULL, host_,
         logger_, config_, keyspace);
 
     connection->set_ready_callback(
@@ -224,12 +228,12 @@ void Pool::maybe_spawn_connection(const std::string& keyspace) {
 }
 
 Connection* Pool::find_least_busy() {
-  ConnectionCollection::iterator it = std::max_element(
+  ConnectionVec::iterator it = std::max_element(
       connections_.begin(), connections_.end(), least_busy_comp);
   if ((*it)->is_ready() && (*it)->available_streams()) {
     return *it;
   }
-  return nullptr;
+  return NULL;
 }
 
 void Pool::execute_pending_request(Connection* connection) {
@@ -238,7 +242,7 @@ void Pool::execute_pending_request(Connection* connection) {
     pending_request_queue_.pop_front();
     if (request_handler->timer) {
       Timer::stop(request_handler->timer);
-      request_handler->timer = nullptr;
+      request_handler->timer = NULL;
     }
     if (!execute(connection, request_handler)) {
       request_handler->retry(RETRY_WITH_NEXT_HOST);

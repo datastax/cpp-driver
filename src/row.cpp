@@ -23,7 +23,7 @@ extern "C" {
 const CassValue* cass_row_get_column(const CassRow* row, cass_size_t index) {
   const cass::Row* internal_row = row->from();
   if (index >= internal_row->size()) {
-    return nullptr;
+    return NULL;
   }
   return CassValue::to(&(*internal_row)[index]);
 }

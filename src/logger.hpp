@@ -35,14 +35,12 @@ public:
       : data_(config.log_data())
       , cb_(config.log_callback())
       , log_level_(config.log_level())
-      , log_queue_(config.queue_size_log())
-      , is_closing_(false) {}
+      , log_queue_(config.queue_size_log()) {}
 
   int init() { return log_queue_.init(loop(), this, on_log); }
 
   void close_async() {
-    is_closing_ = true;
-    while (!log_queue_.enqueue(nullptr)) {
+    while (!log_queue_.enqueue(NULL)) {
       // Keep trying
     }
   }
@@ -85,9 +83,6 @@ private:
   }
 
   void log(CassLogLevel severity, const char* format, va_list args) {
-    if (is_closing_) {
-      return;
-    }
     LogMessage* log_message = new LogMessage;
     log_message->severity = severity;
     log_message->message = format_message(format, args);
@@ -97,9 +92,11 @@ private:
   static void on_log(uv_async_t* async, int status) {
     Logger* logger = static_cast<Logger*>(async->data);
 
+    bool is_closing = false;
+
     LogMessage* log_message;
     while (logger->log_queue_.dequeue(log_message)) {
-      if (log_message != nullptr) {
+      if (log_message != NULL) {
         if (log_message->severity != CASS_LOG_DISABLED) {
           CassString message = cass_string_init2(log_message->message.data(),
                                                  log_message->message.size());
@@ -107,10 +104,12 @@ private:
                       message);
         }
         delete log_message;
+      } else {
+        is_closing = true;
       }
     }
 
-    if (logger->is_closing_) {
+    if (is_closing) {
       logger->close();
     }
   }
@@ -119,7 +118,6 @@ private:
   CassLogCallback cb_;
   CassLogLevel log_level_;
   AsyncQueue<MPMCQueue<LogMessage*>> log_queue_;
-  std::atomic<bool> is_closing_;
 };
 
 } // namespace cass
