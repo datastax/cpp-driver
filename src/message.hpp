@@ -88,7 +88,7 @@ struct Message {
     response_body.reset();
     switch (opcode) {
       case CQL_OPCODE_RESULT:
-        response_body.reset(new ReadyResponse());
+        response_body.reset(new ResultResponse());
         return true;
 
       case CQL_OPCODE_PREPARE:

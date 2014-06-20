@@ -27,7 +27,8 @@ namespace cass {
 class ScopedMutex {
 public:
   ScopedMutex(uv_mutex_t* mutex, bool acquire_lock = true)
-      : mutex_(mutex) {
+      : mutex_(mutex)
+      , is_locked_(false) {
     if(acquire_lock) {
       lock();
     }

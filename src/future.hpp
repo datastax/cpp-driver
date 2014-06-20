@@ -76,7 +76,7 @@ public:
   virtual bool wait_for(uint64_t timeout) {
     ScopedMutex lock(&mutex_);
     if (!is_set_) {
-      uv_cond_timedwait(&cond_, lock.get(), timeout);
+      uv_cond_timedwait(&cond_, lock.get(), timeout * 1000); // Expects nanos
     }
     return is_set_;
   }

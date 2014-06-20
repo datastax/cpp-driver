@@ -121,7 +121,9 @@ bool Session::connect_async(const std::string& keyspace, Future* future) {
 
 void Session::close_async(Future* future) {
   close_future_ = future;
-  close_future_->retain();
+  if(close_future_ != NULL) {
+    close_future_->retain();
+  }
   while (!request_queue_->enqueue(NULL)) {
     // Keep trying
   }
@@ -166,7 +168,7 @@ void Session::on_after_run() {
   // point we know that no other code is using this object.
   delete this;
 
-  if (close_future) {
+  if (close_future != NULL) {
     close_future->set();
   }
 }
