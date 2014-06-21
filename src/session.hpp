@@ -98,8 +98,7 @@ private:
   static void on_execute(uv_async_t* data, int status);
 
 private:
-  typedef std::shared_ptr<IOWorker> IOWorkerPtr;
-  typedef std::vector<IOWorkerPtr> IOWorkerVec;
+  typedef std::vector<IOWorker*> IOWorkerVec;
   typedef std::set<Host> HostSet;
 
   SSLContext* ssl_context_;
@@ -128,7 +127,7 @@ public:
 class SessionConnectFuture : public ResultFuture<Session> {
 public:
   SessionConnectFuture(Session* session)
-      : ResultFuture(CASS_FUTURE_TYPE_SESSION_CONNECT, session) {}
+      : ResultFuture<Session>(CASS_FUTURE_TYPE_SESSION_CONNECT, session) {}
 
   ~SessionConnectFuture() {
     Session* session = release_result();

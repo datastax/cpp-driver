@@ -37,7 +37,7 @@ IOWorker::~IOWorker() {
 }
 
 int IOWorker::init() {
-  int rc = EventThread::init(config_.queue_size_event());
+  int rc = EventThread<IOWorkerEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
   rc = request_queue_.init(loop(), this, &IOWorker::on_execute);
   if (rc != 0) return rc;
@@ -118,7 +118,7 @@ void IOWorker::cleanup() {
 }
 
 void IOWorker::close_handles() {
-  EventThread::close_handles();
+  EventThread<IOWorkerEvent>::close_handles();
   request_queue_.close_handles();
   uv_prepare_stop(&prepare_);
   logger_->debug("IO worker active handles %d", loop()->active_handles);

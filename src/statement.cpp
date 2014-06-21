@@ -17,6 +17,8 @@
 #include "cassandra.hpp"
 #include "statement.hpp"
 
+#include "third_party/boost/boost/cstdint.hpp"
+
 extern "C" {
 
 CassStatement* cass_statement_new(CassString statement, size_t parameter_count,

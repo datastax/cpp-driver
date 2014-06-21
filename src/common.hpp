@@ -23,7 +23,6 @@
 #include <string.h>
 #include <uv.h>
 
-#include <thread>
 #include <deque>
 #include <list>
 #include <map>

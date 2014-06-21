@@ -6,7 +6,7 @@
 #include <mach/mach.h>
 #include <mach/clock.h>
 #else
-#error Not implemented yet!
+#include <time.h>
 #endif
 
 namespace cass {
@@ -30,6 +30,9 @@ uint64_t get_time_since_epoch() {
 #else
 
 uint64_t get_time_since_epoch() {
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
 #endif

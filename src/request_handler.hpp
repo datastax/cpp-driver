@@ -30,7 +30,7 @@ namespace cass {
 class ResponseFuture : public ResultFuture<Response> {
 public:
   ResponseFuture()
-      : ResultFuture(CASS_FUTURE_TYPE_RESPONSE) {}
+      : ResultFuture<Response>(CASS_FUTURE_TYPE_RESPONSE) {}
 
   std::string statement;
 };

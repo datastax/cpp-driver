@@ -21,6 +21,7 @@
 
 #include <functional>
 #include <string>
+#include <sstream>
 
 #include "address.hpp"
 
@@ -52,8 +53,11 @@ public:
                       struct addrinfo* hints = NULL) {
     Resolver* resolver = new Resolver(host, port, data, cb);
 
+    std::ostringstream ss;
+    ss << port;
+
     int rc = uv_getaddrinfo(loop, &resolver->req_, on_resolve, host.c_str(),
-                            std::to_string(port).c_str(), hints);
+                            ss.str().c_str(), hints);
 
     if (rc != 0) {
       resolver->status_ = FAILED_BAD_PARAM;

@@ -21,6 +21,8 @@
 #include <map>
 #include <string>
 
+#include "third_party/boost/boost/limits.hpp"
+
 namespace cass {
 
 // http://commandcenter.blogspot.com/2012/04/byte-order-fallacy.html

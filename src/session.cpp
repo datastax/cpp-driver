@@ -65,20 +65,24 @@ Session::~Session() {
   if (connect_future_ != NULL) {
     connect_future_->release();
   }
+  for (IOWorkerVec::iterator it = io_workers_.begin(),
+       end = io_workers_.end(); it != end; ++it) {
+    delete (*it);
+  }
 }
 
 int Session::init() {
-  int rc = EventThread::init(config_.queue_size_event());
+  int rc = EventThread<SessionEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
   request_queue_.reset(
       new AsyncQueue<MPMCQueue<RequestHandler*> >(config_.queue_size_io()));
   rc = request_queue_->init(loop(), this, &Session::on_execute);
   if (rc != 0) return rc;
   for (size_t i = 0; i < config_.thread_count_io(); ++i) {
-    IOWorkerPtr io_worker(new IOWorker(this, logger_.get(), config_));
+    ScopedPtr<IOWorker> io_worker(new IOWorker(this, logger_.get(), config_));
     int rc = io_worker->init();
     if (rc != 0) return rc;
-    io_workers_.push_back(io_worker);
+    io_workers_.push_back(io_worker.release());
   }
   return rc;
 }
@@ -141,7 +145,7 @@ void Session::init_pools() {
 }
 
 void Session::close_handles() {
-  EventThread::close_handles();
+  EventThread<SessionEvent>::close_handles();
   request_queue_->close_handles();
 }
 
@@ -275,7 +279,7 @@ void Session::on_execute(uv_async_t* data, int status) {
       const size_t size = session->io_workers_.size();
       while (remaining != 0) {
         // TODO(mpenick): Make this something better than RR
-        std::shared_ptr<IOWorker> io_worker = session->io_workers_[start % size];
+        IOWorker* io_worker = session->io_workers_[start % size];
         if (io_worker->execute(request_handler)) {
           session->current_io_worker_ = (start + 1) % size;
           break;

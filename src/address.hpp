@@ -144,28 +144,4 @@ inline bool operator==(const Address& a, const Address& b) {
 
 } // namespace cass
 
-namespace std {
-
-template <>
-struct hash<cass::Address> {
-  typedef cass::Address argument_type;
-  typedef size_t result_type;
-  size_t operator()(const cass::Address& a) const {
-    if (a.family() == AF_INET) {
-      return static_cast<size_t>(a.addr_in()->sin_addr.s_addr);
-    } else if (a.family() == AF_INET6) {
-      // TODO:(mpenick) fix this. maybe not ideal
-      std::hash<std::string> hash_func;
-      return hash_func(
-          std::string(reinterpret_cast<const char*>(&(a.addr_in6()->sin6_addr)),
-                      sizeof(a.addr_in6()->sin6_addr)));
-    } else {
-      assert(false);
-      return 0;
-    }
-  }
-};
-
-} // namespace std
-
 #endif

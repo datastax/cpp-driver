@@ -17,7 +17,7 @@ BOOST_FIXTURE_TEST_SUITE(config, ConfigTests)
 
 BOOST_AUTO_TEST_CASE(test_options)
 {
-  test_utils::CassClusterPtr cluster(cass_cluster_new());
+  test_utils::CassClusterPtr cluster = test_utils::make_shared(cass_cluster_new());
 
   {
     cass_size_t data_length;
@@ -43,7 +43,7 @@ BOOST_AUTO_TEST_CASE(test_options)
 
 BOOST_AUTO_TEST_CASE(test_invalid)
 {
-  test_utils::CassClusterPtr cluster(cass_cluster_new());
+  test_utils::CassClusterPtr cluster = test_utils::make_shared(cass_cluster_new());
 
   cass_size_t temp = 0;
   BOOST_REQUIRE(cass_cluster_setopt(cluster.get(), CASS_OPTION_CONNECT_TIMEOUT, &temp, sizeof(temp) - 1) == CASS_ERROR_LIB_INVALID_OPTION_SIZE);
@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(test_contact_points)
 {
   char buffer[1024];
   cass_size_t buffer_size;
-  test_utils::CassClusterPtr cluster(cass_cluster_new());
+  test_utils::CassClusterPtr cluster = test_utils::make_shared(cass_cluster_new());
 
   // Simple
   const char* contact_points1 = "127.0.0.1,127.0.0.2,127.0.0.3";

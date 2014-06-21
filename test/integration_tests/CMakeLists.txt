@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6.4)
 
-find_package(Boost 1.41.0 COMPONENTS system thread unit_test_framework date_time program_options REQUIRED)
+find_package(Boost 1.41.0 COMPONENTS system chrono thread unit_test_framework date_time program_options REQUIRED)
 set(LIBS ${LIBS} ${Boost_LIBRARIES})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ".")

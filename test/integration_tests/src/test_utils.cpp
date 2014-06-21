@@ -133,13 +133,13 @@ MultipleNodesTest::~MultipleNodesTest() {
 
 SingleSessionTest::SingleSessionTest(int numberOfNodesDC1, int numberOfNodesDC2)
   : MultipleNodesTest(numberOfNodesDC1, numberOfNodesDC2) {
-  test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
+  test_utils::CassFuturePtr connect_future = make_shared<CassFuture>(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(connect_future.get());
   session = cass_future_get_session(connect_future.get());
 }
 
 SingleSessionTest::~SingleSessionTest() {
-   CassFuturePtr close_future(cass_session_close(session));
+   CassFuturePtr close_future = make_shared<CassFuture>(cass_session_close(session));
    cass_future_wait(close_future.get());
 }
 
@@ -147,11 +147,11 @@ void execute_query(CassSession* session,
                    const std::string& query,
                    CassResultPtr* result,
                    CassConsistency consistency) {
-  CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0, consistency));
-  CassFuturePtr future(cass_session_execute(session, statement.get()));
+  CassStatementPtr statement = make_shared(cass_statement_new(cass_string_init(query.c_str()), 0, consistency));
+  CassFuturePtr future = make_shared(cass_session_execute(session, statement.get()));
   wait_and_check_error(future.get());
-  if(result != nullptr) {
-    result->reset(cass_future_get_result(future.get()));
+  if(result != NULL) {
+    *result = make_shared<const CassResult>(cass_future_get_result(future.get()));
   }
 }
 
@@ -166,8 +166,8 @@ void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
   }
 }
 
-std::string string_from_time_point(std::chrono::system_clock::time_point time) {
-  std::time_t t = std::chrono::system_clock::to_time_t(time);
+std::string string_from_time_point(boost::chrono::system_clock::time_point time) {
+  std::time_t t = boost::chrono::system_clock::to_time_t(time);
   char buffer[26];
 #ifdef WIN32
   ctime_s(buffer, sizeof(buffer), &t);

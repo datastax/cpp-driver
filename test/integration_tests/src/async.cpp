@@ -3,10 +3,6 @@
 #   define BOOST_TEST_MODULE cassandra
 #endif
 
-#include <memory>
-#include <future>
-#include <chrono>
-
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
 #include <boost/lexical_cast.hpp>
@@ -40,12 +36,12 @@ std::vector<test_utils::Uuid> insert_async(CassSession* session,
   std::vector<test_utils::Uuid> ids;
   for(size_t i = 0; i < num_concurrent_requests; ++i) {
     test_utils::Uuid id = test_utils::generate_time_uuid();
-    test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init2(insert_query.data(), insert_query.size()), 3, CASS_CONSISTENCY_QUORUM));
+    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init2(insert_query.data(), insert_query.size()), 3, CASS_CONSISTENCY_QUORUM));
     BOOST_REQUIRE(cass_statement_bind_uuid(statement.get(), 0, id) == CASS_OK);
     BOOST_REQUIRE(cass_statement_bind_int32(statement.get(), 1, i) == CASS_OK);
     std::string str_value = str(boost::format("row%d") % i);
     BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 2, cass_string_init2(str_value.data(), str_value.size())) == CASS_OK);
-    futures->emplace_back(test_utils::CassFuturePtr(cass_session_execute(session, statement.get())));
+    futures->push_back(test_utils::make_shared(cass_session_execute(session, statement.get())));
     ids.push_back(id);
   }
 
@@ -62,7 +58,7 @@ void validate_results(CassSession* session,
   test_utils::execute_query(session, select_query, &result, CASS_CONSISTENCY_QUORUM);
   BOOST_REQUIRE(cass_result_row_count(result.get()) == num_concurrent_requests);
 
-  test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
+  test_utils::CassIteratorPtr iterator = test_utils::make_shared(cass_iterator_from_result(result.get()));
 
   while(cass_iterator_next(iterator.get())) {
     const CassRow* row = cass_iterator_get_row(iterator.get());
@@ -80,8 +76,9 @@ BOOST_AUTO_TEST_CASE(test_async)
   std::vector<test_utils::CassFuturePtr> futures;
   std::vector<test_utils::Uuid> ids = insert_async(session, table_name, num_concurrent_requests, &futures);
 
-  for(auto& future : futures) {
-    test_utils::wait_and_check_error(future.get());
+  for(std::vector<test_utils::CassFuturePtr>::iterator it = futures.begin(),
+      end = futures.end(); it != end; ++it) {
+    test_utils::wait_and_check_error(it->get());
   }
 
   validate_results(session, table_name, num_concurrent_requests, ids);
@@ -92,9 +89,9 @@ BOOST_AUTO_TEST_CASE(test_async_close)
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   const size_t num_concurrent_requests = 4096;
 
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
+  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr temp_session(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr temp_session = test_utils::make_shared(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(temp_session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 

@@ -3,15 +3,15 @@
 #   define BOOST_TEST_MODULE cassandra
 #endif
 
-#include <chrono>
 #include <algorithm>
-#include <future>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/format.hpp>
+#include <boost/thread.hpp>
+#include <boost/chrono.hpp>
 
 #include "cassandra.h"
 #include "test_utils.hpp"
@@ -33,19 +33,19 @@ void insert_single_value(CassSession* session, CassValueType type, T value) {
   test_utils::Uuid tweet_id = test_utils::generate_random_uuid();
 
   std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(?, ?);") % table_name);
-  test_utils::CassStatementPtr insert_statement(cass_statement_new(cass_string_init(insert_query.c_str()), 2, CASS_CONSISTENCY_ONE));
+  test_utils::CassStatementPtr insert_statement = test_utils::make_shared(cass_statement_new(cass_string_init(insert_query.c_str()), 2, CASS_CONSISTENCY_ONE));
   BOOST_REQUIRE(cass_statement_bind_uuid(insert_statement.get(), 0, tweet_id.uuid) == CASS_OK);
   BOOST_REQUIRE(test_utils::Value<T>::bind(insert_statement.get(), 1, value) == CASS_OK);
-  test_utils::CassFuturePtr insert_future(cass_session_execute(session, insert_statement.get()));
+  test_utils::CassFuturePtr insert_future = test_utils::make_shared(cass_session_execute(session, insert_statement.get()));
   test_utils::wait_and_check_error(insert_future.get());
 
   std::string select_query = str(boost::format("SELECT * FROM %s WHERE tweet_id = ?;") % table_name);
-  test_utils::CassStatementPtr select_statement(cass_statement_new(cass_string_init(select_query.c_str()), 1, CASS_CONSISTENCY_ONE));
+  test_utils::CassStatementPtr select_statement = test_utils::make_shared(cass_statement_new(cass_string_init(select_query.c_str()), 1, CASS_CONSISTENCY_ONE));
   BOOST_REQUIRE(cass_statement_bind_uuid(select_statement.get(), 0, tweet_id.uuid) == CASS_OK);
-  test_utils::CassFuturePtr select_future(cass_session_execute(session, select_statement.get()));
+  test_utils::CassFuturePtr select_future = test_utils::make_shared(cass_session_execute(session, select_statement.get()));
   test_utils::wait_and_check_error(select_future.get());
 
-  test_utils::CassResultPtr result(cass_future_get_result(select_future.get()));
+  test_utils::CassResultPtr result = test_utils::make_shared(cass_future_get_result(select_future.get()));
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
   BOOST_REQUIRE(cass_result_column_count(result.get()) == 2);
 
@@ -67,20 +67,20 @@ void insert_min_max_value(CassSession* session, CassValueType type) {
   test_utils::Uuid tweet_id = test_utils::generate_random_uuid();
 
   std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, min_val, max_val) VALUES(?, ?, ?);") % table_name);
-  test_utils::CassStatementPtr insert_statement(cass_statement_new(cass_string_init(insert_query.c_str()), 3, CASS_CONSISTENCY_ONE));
+  test_utils::CassStatementPtr insert_statement = test_utils::make_shared(cass_statement_new(cass_string_init(insert_query.c_str()), 3, CASS_CONSISTENCY_ONE));
   BOOST_REQUIRE(cass_statement_bind_uuid(insert_statement.get(), 0, tweet_id.uuid) == CASS_OK);
   BOOST_REQUIRE(test_utils::Value<T>::bind(insert_statement.get(), 1, test_utils::Value<T>::min_value()) == CASS_OK);
   BOOST_REQUIRE(test_utils::Value<T>::bind(insert_statement.get(), 2, test_utils::Value<T>::max_value()) == CASS_OK);
-  test_utils::CassFuturePtr result_future(cass_session_execute(session, insert_statement.get()));
+  test_utils::CassFuturePtr result_future = test_utils::make_shared(cass_session_execute(session, insert_statement.get()));
   test_utils::wait_and_check_error(result_future.get());
 
   std::string select_query = str(boost::format("SELECT * FROM %s WHERE tweet_id = ?;") % table_name);
-  test_utils::CassStatementPtr select_statement(cass_statement_new(cass_string_init(select_query.c_str()), 1, CASS_CONSISTENCY_ONE));
+  test_utils::CassStatementPtr select_statement = test_utils::make_shared(cass_statement_new(cass_string_init(select_query.c_str()), 1, CASS_CONSISTENCY_ONE));
   BOOST_REQUIRE(cass_statement_bind_uuid(select_statement.get(), 0, tweet_id.uuid) == CASS_OK);
-  test_utils::CassFuturePtr select_future(cass_session_execute(session, select_statement.get()));
+  test_utils::CassFuturePtr select_future = test_utils::make_shared(cass_session_execute(session, select_statement.get()));
   test_utils::wait_and_check_error(select_future.get());
 
-  test_utils::CassResultPtr result(cass_future_get_result(select_future.get()));
+  test_utils::CassResultPtr result = test_utils::make_shared(cass_future_get_result(select_future.get()));
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
   BOOST_REQUIRE(cass_result_column_count(result.get()) == 3);
 
@@ -109,19 +109,19 @@ void insert_null_value(CassSession* session, CassValueType type) {
   test_utils::Uuid tweet_id = test_utils::generate_random_uuid();
 
   std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(?, ?);") % table_name);
-  test_utils::CassStatementPtr insert_statement(cass_statement_new(cass_string_init(insert_query.c_str()), 2, CASS_CONSISTENCY_ONE));
+  test_utils::CassStatementPtr insert_statement = test_utils::make_shared(cass_statement_new(cass_string_init(insert_query.c_str()), 2, CASS_CONSISTENCY_ONE));
   BOOST_REQUIRE(cass_statement_bind_uuid(insert_statement.get(), 0, tweet_id.uuid) == CASS_OK);
   BOOST_REQUIRE(cass_statement_bind_null(insert_statement.get(), 1) == CASS_OK);
-  test_utils::CassFuturePtr insert_future(cass_session_execute(session, insert_statement.get()));
+  test_utils::CassFuturePtr insert_future = test_utils::make_shared(cass_session_execute(session, insert_statement.get()));
   test_utils::wait_and_check_error(insert_future.get());
 
   std::string select_query = str(boost::format("SELECT * FROM %s WHERE tweet_id = ?;") % table_name);
-  test_utils::CassStatementPtr select_statement(cass_statement_new(cass_string_init(select_query.c_str()), 1, CASS_CONSISTENCY_ONE));
+  test_utils::CassStatementPtr select_statement = test_utils::make_shared(cass_statement_new(cass_string_init(select_query.c_str()), 1, CASS_CONSISTENCY_ONE));
   BOOST_REQUIRE(cass_statement_bind_uuid(select_statement.get(), 0, tweet_id.uuid) == CASS_OK);
-  test_utils::CassFuturePtr select_future(cass_session_execute(session, select_statement.get()));
+  test_utils::CassFuturePtr select_future = test_utils::make_shared(cass_session_execute(session, select_statement.get()));
   test_utils::wait_and_check_error(select_future.get());
 
-  test_utils::CassResultPtr result(cass_future_get_result(select_future.get()));
+  test_utils::CassResultPtr result = test_utils::make_shared(cass_future_get_result(select_future.get()));
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
   BOOST_REQUIRE(cass_result_column_count(result.get()) == 2);
 
@@ -130,9 +130,9 @@ void insert_null_value(CassSession* session, CassValueType type) {
 
 BOOST_AUTO_TEST_CASE(test_basic_types)
 {
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
+  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                          % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -195,9 +195,9 @@ BOOST_AUTO_TEST_CASE(test_basic_types)
 
 BOOST_AUTO_TEST_CASE(test_min_max)
 {
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
+  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                                % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -232,18 +232,18 @@ BOOST_AUTO_TEST_CASE(test_min_max)
   {
     CassDecimal value;
     value.scale = 0;
-    value.varint = cass_bytes_init(nullptr, 0);
+    value.varint = cass_bytes_init(NULL, 0);
     insert_single_value<CassDecimal>(session.get(), CASS_VALUE_TYPE_DECIMAL, value);
   }
 
   {
-    CassString value = cass_string_init2(nullptr, 0);
+    CassString value = cass_string_init2(NULL, 0);
     insert_single_value<CassString>(session.get(), CASS_VALUE_TYPE_ASCII, value);
     insert_single_value<CassString>(session.get(), CASS_VALUE_TYPE_VARCHAR, value);
   }
 
   {
-    CassBytes value = cass_bytes_init(nullptr, 0);
+    CassBytes value = cass_bytes_init(NULL, 0);
     insert_single_value<CassBytes>(session.get(), CASS_VALUE_TYPE_BLOB, value);
     insert_single_value<CassBytes>(session.get(), CASS_VALUE_TYPE_VARINT, value);
   }
@@ -251,9 +251,9 @@ BOOST_AUTO_TEST_CASE(test_min_max)
 
 BOOST_AUTO_TEST_CASE(test_null)
 {
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
+  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                                % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -282,9 +282,9 @@ BOOST_AUTO_TEST_CASE(test_null)
 
 BOOST_AUTO_TEST_CASE(test_timestamp)
 {
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
+  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                          % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -300,7 +300,7 @@ BOOST_AUTO_TEST_CASE(test_timestamp)
   BOOST_REQUIRE(cass_result_column_count(timestamp_result1.get()) == 1);
 
   int pause_duration = 5 * test_utils::ONE_SECOND_IN_MICROS;
-  std::this_thread::sleep_for(std::chrono::microseconds(pause_duration));
+  boost::this_thread::sleep_for(boost::chrono::microseconds(pause_duration));
 
   test_utils::execute_query(session.get(), "INSERT INTO test(tweet_id, test_val) VALUES(0, 43);");
   test_utils::CassResultPtr timestamp_result2;
@@ -320,9 +320,9 @@ BOOST_AUTO_TEST_CASE(test_timestamp)
 
 BOOST_AUTO_TEST_CASE(test_counters)
 {
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
+  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                          % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -337,11 +337,11 @@ BOOST_AUTO_TEST_CASE(test_counters)
     std::string update_query = str(boost::format("UPDATE %s SET incdec = incdec %s ? WHERE tweet_id = %d;")
                                    % test_utils::SIMPLE_TABLE % ((i % 2) == 0 ? "-" : "+") % tweet_id);
 
-    test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(update_query.c_str()), 1, CASS_CONSISTENCY_ONE));
+    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(update_query.c_str()), 1, CASS_CONSISTENCY_ONE));
 
     BOOST_REQUIRE(cass_statement_bind_int64(statement.get(), 0, i) == CASS_OK);
 
-    test_utils::CassFuturePtr result_future(cass_session_execute(session.get(), statement.get()));
+    test_utils::CassFuturePtr result_future = test_utils::make_shared(cass_session_execute(session.get(), statement.get()));
     test_utils::wait_and_check_error(result_future.get());
   }
 
@@ -361,9 +361,9 @@ BOOST_AUTO_TEST_CASE(test_rows_in_rows_out)
 {
   CassConsistency consistency = CASS_CONSISTENCY_ONE;
 
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
+  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                          % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -375,18 +375,18 @@ BOOST_AUTO_TEST_CASE(test_rows_in_rows_out)
   {
     test_utils::execute_query(session.get(),
                               str(boost::format("CREATE TABLE %s (tweet_id bigint PRIMARY KEY, t1 bigint, t2 bigint, t3 bigint);") % test_utils::SIMPLE_TABLE),
-                              nullptr, consistency);
+                              NULL, consistency);
 
-    const int num_rows = 100000;
+    const size_t num_rows = 100000;
 
     std::string insert_query(boost::str(boost::format("INSERT INTO %s (tweet_id, t1, t2, t3) VALUES (?, ?, ?, ?);") % test_utils::SIMPLE_TABLE));
-    for(int i = 0; i < num_rows; ++i) {
-      test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(insert_query.c_str()), 4, consistency));
+    for(size_t i = 0; i < num_rows; ++i) {
+      test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(insert_query.c_str()), 4, consistency));
       BOOST_REQUIRE(test_utils::Value<cass_int64_t>::bind(statement.get(), 0, i) == CASS_OK);
       BOOST_REQUIRE(test_utils::Value<cass_int64_t>::bind(statement.get(), 1, i + 1) == CASS_OK);
       BOOST_REQUIRE(test_utils::Value<cass_int64_t>::bind(statement.get(), 2, i + 2) == CASS_OK);
       BOOST_REQUIRE(test_utils::Value<cass_int64_t>::bind(statement.get(), 3, i + 3) == CASS_OK);
-      test_utils::CassFuturePtr result_future(cass_session_execute(session.get(), statement.get()));
+      test_utils::CassFuturePtr result_future = test_utils::make_shared(cass_session_execute(session.get(), statement.get()));
       test_utils::wait_and_check_error(result_future.get(), 30 * test_utils::ONE_SECOND_IN_MICROS);
     }
 
@@ -397,8 +397,8 @@ BOOST_AUTO_TEST_CASE(test_rows_in_rows_out)
     BOOST_REQUIRE(cass_result_row_count(result.get()) == num_rows);
     BOOST_REQUIRE(cass_result_column_count(result.get()) == 4);
 
-    test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
-    int row_count = 0;
+    test_utils::CassIteratorPtr iterator = test_utils::make_shared(cass_iterator_from_result(result.get()));
+    size_t row_count = 0;
     while(cass_iterator_next(iterator.get())) {
       cass_int64_t tweet_id = 0;
       cass_int64_t t1 = 0, t2 = 0, t3 = 0;

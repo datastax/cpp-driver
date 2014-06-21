@@ -18,8 +18,8 @@
 #define __CASS_RESULT_RESPONSE_HPP_INCLUDED__
 
 #include <list>
+#include <map>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -76,7 +76,7 @@ struct ResultResponse : public Response {
   };
 
   typedef std::vector<ColumnMetaData> MetaDataVec;
-  typedef std::unordered_map<std::string, size_t> MetaDataIndex;
+  typedef std::map<std::string, size_t> MetaDataIndex;
 
   int32_t kind;
   bool more_pages; // row data

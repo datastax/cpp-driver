@@ -115,7 +115,7 @@ if(MSVC)
 else()
   # GCC/Clang specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(PLATFORM_DEPENDENT_CXX_FLAGS "-std=c++98 -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
+  set(PLATFORM_DEPENDENT_CXX_FLAGS "-std=c++98 -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-local-typedefs")
 endif()
 
 #-------------------
@@ -220,7 +220,7 @@ else()
   set(INTEGRATION_TEST_CXX_FLAGS "-std=c++0x -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 endif()
 
-find_package(Boost 1.41.0 COMPONENTS system thread unit_test_framework date_time program_options)
+find_package(Boost 1.41.0 COMPONENTS system chrono thread unit_test_framework date_time program_options)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/test/ccm_bridge/cmake/Modules/")
 find_package(LIBSSH2)
