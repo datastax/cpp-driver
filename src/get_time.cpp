@@ -1,7 +1,7 @@
 #include "get_time.hpp"
 
 #if defined(WIN32) || defined(_WIN32)
-#error Not implemented yet!
+#include <Windows.h>
 #elif defined(__APPLE__) && defined(__MACH__)
 #include <mach/mach.h>
 #include <mach/clock.h>
@@ -14,6 +14,11 @@ namespace cass {
 #if defined(WIN32) || defined(_WIN32)
 
 uint64_t get_time_since_epoch() {
+  _FILETIME ft;
+  GetSystemTimeAsFileTime(&ft);
+  uint64_t ns100 = (static_cast<uint64_t>(ft.dwHighDateTime) << 32 | static_cast<uint64_t>(ft.dwHighDateTime))
+    - 116444736000000000LL; // 100 nanosecond increments between Jan. 1, 1601 - Jan. 1, 1970
+  return ns100 / 10000; // 100 nanoseconds to milliseconds
 }
 
 #elif defined(__APPLE__) && defined(__MACH__)

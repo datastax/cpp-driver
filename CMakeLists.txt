@@ -108,7 +108,7 @@ if(MSVC)
   # that can hide useful ones.
 
   # TODO(mpenick): Fix these "possible loss of data" warnings
-  set(PLATFORM_DEPENDENT_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS /wd4244 /wd4267")
+  set(PLATFORM_DEPENDENT_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS -DBOOST_ALL_NO_LIB /wd4244 /wd4267")
 
   # needed for windows sockets (not verified)
   add_definitions(-D_WIN32_WINNT=0x0501)
@@ -215,7 +215,7 @@ add_subdirectory(test/unit_tests)
 if(WIN32)
   set(BOOST_ROOT "${PROJECT_SOURCE_DIR}/lib/boost/")
   set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/")
-  set(INTEGRATION_TEST_CXX_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
+  set(INTEGRATION_TEST_CXX_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS -DBOOST_ALL_NO_LIB")
 else()
   set(INTEGRATION_TEST_CXX_FLAGS "-std=c++0x -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 endif()

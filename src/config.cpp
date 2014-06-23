@@ -3,6 +3,8 @@
 
 #include <sstream>
 
+#pragma warning(disable: 4996) // Disable checked iterators warnings for std::string copy() 
+
 namespace cass {
 
 CassError Config::set_option(CassOption option, const void* value,

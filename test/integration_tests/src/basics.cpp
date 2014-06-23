@@ -299,7 +299,7 @@ BOOST_AUTO_TEST_CASE(test_timestamp)
   BOOST_REQUIRE(cass_result_row_count(timestamp_result1.get()) == 1);
   BOOST_REQUIRE(cass_result_column_count(timestamp_result1.get()) == 1);
 
-  int pause_duration = 5 * test_utils::ONE_SECOND_IN_MICROS;
+  cass_int64_t pause_duration = 5 * test_utils::ONE_SECOND_IN_MICROS;
   boost::this_thread::sleep_for(boost::chrono::microseconds(pause_duration));
 
   test_utils::execute_query(session.get(), "INSERT INTO test(tweet_id, test_val) VALUES(0, 43);");

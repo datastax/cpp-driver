@@ -47,7 +47,5 @@ else()
 			DOC "LIBSSH library directory")
 endif()
 
-message("Includes: ${LIBSSH2_ROOT} ${LIBSSH2_INCLUDE_DIRS}")
-			
 find_package_handle_standard_args(LIBSSH2 DEFAULT_MSG LIBSSH2_LIBRARIES LIBSSH2_INCLUDE_DIRS)
 mark_as_advanced(LIBSSH2_INCLUDE_DIRS LIBSSH2_LIBRARIES)

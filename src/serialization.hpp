@@ -17,11 +17,14 @@
 #ifndef __CASS_SERIALIZATION_HPP_INCLUDED__
 #define __CASS_SERIALIZATION_HPP_INCLUDED__
 
+#include <assert.h>
+
 #include <list>
 #include <map>
 #include <string>
 
 #include "third_party/boost/boost/limits.hpp"
+#include "third_party/boost/boost/cstdint.hpp"
 
 namespace cass {
 
