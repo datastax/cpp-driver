@@ -24,6 +24,7 @@ extern "C" {
 CassStatement* cass_statement_new(CassString statement, size_t parameter_count,
                                   CassConsistency consistency) {
   cass::Statement* query = new cass::QueryRequest(parameter_count, consistency);
+  query->retain();
   query->statement(statement.data, statement.length);
   return CassStatement::to(query);
 }

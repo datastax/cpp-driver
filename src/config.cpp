@@ -3,7 +3,9 @@
 
 #include <sstream>
 
+#if defined(_MSC_VER)
 #pragma warning(disable: 4996) // Disable checked iterators warnings for std::string copy() 
+#endif
 
 namespace cass {
 

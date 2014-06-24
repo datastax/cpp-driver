@@ -47,7 +47,7 @@ public:
 
   ~Buffer() {
     if (size_ > FIXED_BUFFER_SIZE && data_.alloced != NULL) {
-      delete data_.alloced;
+      delete[] data_.alloced;
     }
   }
 

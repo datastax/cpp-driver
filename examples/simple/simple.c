@@ -78,6 +78,7 @@ int main() {
     cass_future_free(result_future);
     close_future = cass_session_close(session);
     cass_future_wait(close_future);
+    cass_future_free(close_future);
   } else {
     CassString message = cass_future_error_message(session_future);
     fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);

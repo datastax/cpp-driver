@@ -25,8 +25,8 @@ namespace cass {
 template <class T>
 class RefCounted {
 public:
-  RefCounted()
-      : ref_count_(1) {}
+  explicit RefCounted(int init_count = 0)
+      : ref_count_(init_count) {}
 
   void retain() { ++ref_count_; }
 

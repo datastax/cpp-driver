@@ -172,6 +172,7 @@ int main() {
 
   close_future = cass_session_close(session);
   cass_future_wait(close_future);
+  cass_future_free(close_future);
   cass_cluster_free(cluster);
 
   return 0;
