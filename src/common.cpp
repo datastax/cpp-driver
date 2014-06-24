@@ -15,12 +15,13 @@
 */
 
 #include "common.hpp"
+#include "constants.hpp"
 
+#include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-
 #include <algorithm>
 #include <functional>
 
@@ -37,14 +38,6 @@ uv_buf_t alloc_buffer(uv_handle_t* handle, size_t suggested_size) {
 
 void free_buffer(uv_buf_t buf) {
   delete[] buf.base;
-}
-
-void clear_buffer_deque(std::deque<uv_buf_t>& buffers) {
-  for (std::deque<uv_buf_t>::iterator it = buffers.begin(); it != buffers.end();
-       ++it) {
-    free_buffer(*it);
-  }
-  buffers.clear();
 }
 
 std::string opcode_to_string(int opcode) {
@@ -88,10 +81,9 @@ std::string& trim(std::string& str) {
             std::find_if(str.begin(), str.end(),
                          std::not1(std::ptr_fun<int, int>(::isspace))));
   // Trim back
-  str.erase(
-      std::find_if(str.rbegin(), str.rend(),
-                   std::not1(std::ptr_fun<int, int>(::isspace))).base(),
-      str.end());
+  str.erase(std::find_if(str.rbegin(), str.rend(),
+                         std::not1(std::ptr_fun<int, int>(::isspace))).base(),
+            str.end());
   return str;
 }
 

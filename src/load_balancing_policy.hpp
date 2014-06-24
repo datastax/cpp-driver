@@ -17,11 +17,12 @@
 #ifndef __CASS_LOAD_BALANCING_POLICY_HPP_INCLUDED__
 #define __CASS_LOAD_BALANCING_POLICY_HPP_INCLUDED__
 
+#include <list>
 #include <set>
 #include <string>
 
-#include "common.hpp"
 #include "host.hpp"
+#include "constants.hpp"
 
 namespace cass {
 

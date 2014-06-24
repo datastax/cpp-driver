@@ -36,11 +36,12 @@ char* decode_row(char* rows, const ResultResponse* result, Row& output) {
   char* buffer = rows;
   output.clear();
 
-  for (int i = 0; i < result->column_count; ++i) {
+  for (int i = 0; i < result->column_count(); ++i) {
     int32_t size = 0;
     buffer = decode_int(buffer, size);
 
-    const ResultResponse::ColumnMetaData& metadata = result->column_metadata[i];
+    const ResultResponse::ColumnMetaData& metadata =
+        result->column_metadata()[i];
     CassValueType type = static_cast<CassValueType>(metadata.type);
 
     if (size >= 0) {

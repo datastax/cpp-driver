@@ -14,31 +14,35 @@
   limitations under the License.
 */
 
-#ifndef __CASS_PREPARE_REQUEST_HPP_INCLUDED__
-#define __CASS_PREPARE_REQUEST_HPP_INCLUDED__
+#ifndef __CASS_RESPONSE_HPP_INCLUDED__
+#define __CASS_RESPONSE_HPP_INCLUDED__
 
-#include "request.hpp"
-#include "constants.hpp"
+#include "macros.hpp"
+#include "scoped_ptr.hpp"
 
-#include <string>
+#include "third_party/boost/boost/cstdint.hpp"
 
 namespace cass {
 
-class PrepareRequest : public Request {
+class Response {
 public:
-  PrepareRequest()
-      : Request(CQL_OPCODE_PREPARE) {}
+  Response(uint8_t opcode)
+      : opcode_(opcode) {}
 
-  void prepare_string(const char* input, size_t size) {
-    statement_.assign(input, size);
-  }
+  virtual ~Response() {}
 
-  void prepare_string(const std::string& input) { statement_ = input; }
+  uint8_t opcode() const { return opcode_; }
+  char* buffer() { return buffer_.get(); }
+  void set_buffer(char* buffer) { buffer_.reset(buffer); }
 
-  bool prepare(size_t reserved, char** output, size_t& size);
+  virtual bool consume(char* buffer, size_t size) = 0;
 
 private:
-  std::string statement_;
+  uint8_t opcode_;
+  ScopedPtr<char[]> buffer_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(Response);
 };
 
 } // namespace cass

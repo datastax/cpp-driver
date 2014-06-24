@@ -16,8 +16,8 @@
 
 #include "cassandra.hpp"
 #include "future.hpp"
-
 #include "scoped_ptr.hpp"
+#include "request_handler.hpp"
 
 extern "C" {
 
@@ -75,10 +75,9 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
   }
   cass::ScopedPtr<cass::ResultResponse> result(
       static_cast<cass::ResultResponse*>(response_future->release_result()));
-  if (result && result->kind == CASS_RESULT_KIND_PREPARED) {
+  if (result && result->kind() == CASS_RESULT_KIND_PREPARED) {
     cass::Prepared* prepared =
-        new cass::Prepared(std::string(result->prepared, result->prepared_size),
-                           response_future->statement);
+        new cass::Prepared(result->prepared(), response_future->statement);
     return CassPrepared::to(prepared);
   }
   return NULL;

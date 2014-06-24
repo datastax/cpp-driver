@@ -17,12 +17,11 @@
 #ifndef __CASS_WRITER_HPP_INCLUDED__
 #define __CASS_WRITER_HPP_INCLUDED__
 
-#include <uv.h>
+#include "third_party/boost/boost/function.hpp"
 
+#include <uv.h>
 #include <vector>
 #include <functional>
-
-#include "third_party/boost/boost/function.hpp"
 
 namespace cass {
 
@@ -69,8 +68,8 @@ private:
   }
 
   ~Writer() {
-    for (Bufs::iterator it = bufs_->begin(),
-         end = bufs_->end(); it != end; ++it) {
+    for (Bufs::iterator it = bufs_->begin(), end = bufs_->end(); it != end;
+         ++it) {
       delete[] it->base;
     }
     delete bufs_;

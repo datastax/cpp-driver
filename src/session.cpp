@@ -14,8 +14,16 @@
   limitations under the License.
 */
 
-#include "cassandra.hpp"
 #include "session.hpp"
+#include "cassandra.hpp"
+#include "config.hpp"
+#include "request_handler.hpp"
+#include "logger.hpp"
+#include "round_robin_policy.hpp"
+#include "resolver.hpp"
+#include "io_worker.hpp"
+#include "ssl_context.hpp"
+#include "prepare_request.hpp"
 
 extern "C" {
 
@@ -65,8 +73,8 @@ Session::~Session() {
   if (connect_future_ != NULL) {
     connect_future_->release();
   }
-  for (IOWorkerVec::iterator it = io_workers_.begin(),
-       end = io_workers_.end(); it != end; ++it) {
+  for (IOWorkerVec::iterator it = io_workers_.begin(), end = io_workers_.end();
+       it != end; ++it) {
     delete (*it);
   }
 }
@@ -125,7 +133,7 @@ bool Session::connect_async(const std::string& keyspace, Future* future) {
 
 void Session::close_async(Future* future) {
   close_future_ = future;
-  if(close_future_ != NULL) {
+  if (close_future_ != NULL) {
     close_future_->retain();
   }
   while (!request_queue_->enqueue(NULL)) {
@@ -135,10 +143,11 @@ void Session::close_async(Future* future) {
 
 void Session::init_pools() {
   pending_pool_count_ = hosts_.size() * io_workers_.size();
-  for (HostSet::iterator hosts_it = hosts_.begin(),
-       hosts_end = hosts_.end(); hosts_it != hosts_end; ++hosts_it) {
+  for (HostSet::iterator hosts_it = hosts_.begin(), hosts_end = hosts_.end();
+       hosts_it != hosts_end; ++hosts_it) {
     for (IOWorkerVec::iterator it = io_workers_.begin(),
-         end = io_workers_.end(); it != end; ++it) {
+                               end = io_workers_.end();
+         it != end; ++it) {
       (*it)->add_pool_async(*hosts_it);
     }
   }
@@ -153,15 +162,15 @@ void Session::on_run() {
   if (config_.log_level() != CASS_LOG_DISABLED) {
     logger_->run();
   }
-  for (IOWorkerVec::iterator it = io_workers_.begin(),
-       end = io_workers_.end(); it != end; ++it) {
+  for (IOWorkerVec::iterator it = io_workers_.begin(), end = io_workers_.end();
+       it != end; ++it) {
     (*it)->run();
   }
 }
 
 void Session::on_after_run() {
-  for (IOWorkerVec::iterator it = io_workers_.begin(),
-       end = io_workers_.end(); it != end; ++it) {
+  for (IOWorkerVec::iterator it = io_workers_.begin(), end = io_workers_.end();
+       it != end; ++it) {
     (*it)->join();
   }
   logger_->join();
@@ -183,7 +192,8 @@ void Session::on_event(const SessionEvent& event) {
 
     const Config::ContactPointList& contact_points = config_.contact_points();
     for (Config::ContactPointList::const_iterator it = contact_points.begin(),
-         end = contact_points.end(); it != end; ++it) {
+                                                  end = contact_points.end();
+         it != end; ++it) {
       const std::string& seed = *it;
       Address address;
       if (Address::from_string(seed, port, &address)) {
@@ -241,10 +251,18 @@ SSLSession* Session::ssl_session_new() {
   return NULL;
 }
 
+void Session::execute(RequestHandler* request_handler) {
+  if (!request_queue_->enqueue(request_handler)) {
+    request_handler->on_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
+                              "The request queue has reached capacity");
+    delete request_handler;
+  }
+}
+
 Future* Session::prepare(const char* statement, size_t length) {
   Message* request = new Message(CQL_OPCODE_PREPARE);
-  PrepareRequest* prepare
-      = static_cast<PrepareRequest*>(request->request_body.get());
+  PrepareRequest* prepare =
+      static_cast<PrepareRequest*>(request->request_body().get());
   prepare->prepare_string(statement, length);
   RequestHandler* request_handler = new RequestHandler(request);
   ResponseFuture* future = request_handler->future();
@@ -255,8 +273,8 @@ Future* Session::prepare(const char* statement, size_t length) {
 
 Future* Session::execute(Request* statement) {
   Message* request = new Message();
-  request->opcode = statement->opcode();
-  request->request_body.reset(statement);
+  request->set_opcode(statement->opcode());
+  request->request_body().reset(statement);
   RequestHandler* request_handler = new RequestHandler(request);
   Future* future = request_handler->future();
   execute(request_handler);
@@ -300,7 +318,8 @@ void Session::on_execute(uv_async_t* data, int status) {
   if (is_closing) {
     session->pending_workers_count_ = session->io_workers_.size();
     for (IOWorkerVec::iterator it = session->io_workers_.begin(),
-         end = session->io_workers_.end(); it != end; ++it) {
+                               end = session->io_workers_.end();
+         it != end; ++it) {
       (*it)->close_async();
     }
   }

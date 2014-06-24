@@ -15,7 +15,13 @@
 */
 
 #include "io_worker.hpp"
+#include "config.hpp"
 #include "pool.hpp"
+#include "ssl_context.hpp"
+#include "request_handler.hpp"
+#include "logger.hpp"
+#include "session.hpp"
+#include "timer.hpp"
 
 #include "third_party/boost/boost/bind.hpp"
 
@@ -71,10 +77,8 @@ void IOWorker::add_pool(Host host) {
   if (!is_closing_ && pools.count(host) == 0) {
     Pool* pool = new Pool(host, loop(), ssl_context_, logger_, config_);
 
-    pool->set_ready_callback(
-        boost::bind(&IOWorker::on_pool_ready, this, _1));
-    pool->set_closed_callback(
-        boost::bind(&IOWorker::on_pool_closed, this, _1));
+    pool->set_ready_callback(boost::bind(&IOWorker::on_pool_ready, this, _1));
+    pool->set_closed_callback(boost::bind(&IOWorker::on_pool_closed, this, _1));
     pool->set_keyspace_callback(
         boost::bind(&IOWorker::on_set_keyspace, this, _1));
 
@@ -94,8 +98,8 @@ void IOWorker::on_set_keyspace(const std::string& keyspace) {
 
 void IOWorker::maybe_close() {
   if (is_closing_ && pending_request_count_ <= 0) {
-    for (PoolMap::iterator it = pools.begin(),
-         end = pools.end(); it != end; ++it) {
+    for (PoolMap::iterator it = pools.begin(), end = pools.end(); it != end;
+         ++it) {
       it->second->close();
     }
     maybe_notify_closed();
@@ -209,8 +213,8 @@ void IOWorker::on_execute(uv_async_t* async, int status) {
       io_worker->pending_request_count_++;
       request_handler->set_retry_callback(
           boost::bind(&IOWorker::on_retry, io_worker, _1, _2));
-      request_handler->set_finished_callback(boost::bind(
-          &IOWorker::on_request_finished, io_worker, _1));
+      request_handler->set_finished_callback(
+          boost::bind(&IOWorker::on_request_finished, io_worker, _1));
       request_handler->retry(RETRY_WITH_CURRENT_HOST);
     } else {
       io_worker->is_closing_ = true;

@@ -17,23 +17,20 @@
 #ifndef __CASS_RESULT_RESPONSE_HPP_INCLUDED__
 #define __CASS_RESULT_RESPONSE_HPP_INCLUDED__
 
-#include <list>
+#include "response.hpp"
+#include "constants.hpp"
+#include "row.hpp"
+
 #include <map>
 #include <string>
-#include <utility>
 #include <vector>
-
-#include "message_body.hpp"
-#include "iterator.hpp"
-#include "serialization.hpp"
-#include "row.hpp"
 
 namespace cass {
 
 class ResultIterator;
 
-struct ResultResponse : public Response {
-
+class ResultResponse : public Response {
+public:
   struct ColumnMetaData {
     ColumnMetaData()
         : type(CASS_VALUE_TYPE_UNKNOWN)
@@ -78,166 +75,79 @@ struct ResultResponse : public Response {
   typedef std::vector<ColumnMetaData> MetaDataVec;
   typedef std::map<std::string, size_t> MetaDataIndex;
 
-  int32_t kind;
-  bool more_pages; // row data
-  bool no_metadata;
-  bool global_table_spec;
-  int32_t column_count;
-  MetaDataVec column_metadata;
-  MetaDataIndex column_index;
-  char* page_state; // row paging
-  size_t page_state_size;
-  char* prepared; // prepared result
-  size_t prepared_size;
-  char* change; // schema change
-  size_t change_size;
-  char* keyspace; // rows, set keyspace, and schema change
-  size_t keyspace_size;
-  char* table; // rows, and schema change
-  size_t table_size;
-  int32_t row_count;
-  char* rows;
-  Row first_row;
-
-  char* first;
-  char* last;
-
   ResultResponse()
       : Response(CQL_OPCODE_RESULT)
-      , kind(0)
-      , more_pages(false)
-      , no_metadata(false)
-      , global_table_spec(true)
-      , column_count(0)
-      , page_state(NULL)
-      , page_state_size(0)
-      , prepared(NULL)
-      , prepared_size(0)
-      , change(NULL)
-      , change_size(0)
-      , keyspace(NULL)
-      , keyspace_size(0)
-      , table(NULL)
-      , table_size(0)
-      , row_count(0)
-      , rows(NULL) {}
+      , kind_(0)
+      , more_pages_(false)
+      , no_metadata_(false)
+      , global_table_spec_(true)
+      , column_count_(0)
+      , page_state_(NULL)
+      , page_state_size_(0)
+      , prepared_(NULL)
+      , prepared_size_(0)
+      , change_(NULL)
+      , change_size_(0)
+      , keyspace_(NULL)
+      , keyspace_size_(0)
+      , table_(NULL)
+      , table_size_(0)
+      , row_count_(0)
+      , rows_(NULL) {}
 
-  bool consume(char* input, size_t size) {
-    (void)size;
-    first = input;
-    last = input + size;
+  int32_t kind() const { return kind_; }
 
-    char* buffer = decode_int(input, kind);
+  int32_t column_count() const { return column_count_; }
 
-    switch (kind) {
-      case CASS_RESULT_KIND_VOID:
-        return true;
-        break;
-      case CASS_RESULT_KIND_ROWS:
-        return decode_rows(buffer);
-        break;
-      case CASS_RESULT_KIND_SET_KEYSPACE:
-        return decode_set_keyspace(buffer);
-        break;
-      case CASS_RESULT_KIND_PREPARED:
-        return decode_prepared(buffer);
-        break;
-      case CASS_RESULT_KIND_SCHEMA_CHANGE:
-        return decode_schema_change(buffer);
-        break;
-      default:
-        assert(false);
-    }
-    return false;
+  const MetaDataVec& column_metadata() const { return column_metadata_; }
+
+  std::string prepared() const {
+    return std::string(prepared_, prepared_size_);
   }
 
-  char* decode_metadata(char* input) {
-    int32_t flags = 0;
-    char* buffer = decode_int(input, flags);
-    buffer = decode_int(buffer, column_count);
-
-    if (flags & CASS_RESULT_FLAG_HAS_MORE_PAGES) {
-      more_pages = true;
-      buffer = decode_long_string(buffer, &page_state, page_state_size);
-    } else {
-      more_pages = false;
-    }
-
-    if (flags & CASS_RESULT_FLAG_GLOBAL_TABLESPEC) {
-      global_table_spec = true;
-      buffer = decode_string(buffer, &keyspace, keyspace_size);
-      buffer = decode_string(buffer, &table, table_size);
-    } else {
-      global_table_spec = false;
-    }
-
-    if (flags & CASS_RESULT_FLAG_NO_METADATA) {
-      no_metadata = true;
-    } else {
-      no_metadata = false;
-      column_metadata.reserve(column_count);
-
-      for (int i = 0; i < column_count; ++i) {
-        ColumnMetaData meta;
-
-        if (!global_table_spec) {
-          buffer = decode_string(buffer, &meta.keyspace, meta.keyspace_size);
-          buffer = decode_string(buffer, &meta.table, meta.table_size);
-        }
-
-        buffer = decode_string(buffer, &meta.name, meta.name_size);
-        buffer = decode_option(buffer, meta.type, &meta.class_name,
-                               meta.class_name_size);
-
-        if (meta.type == CASS_VALUE_TYPE_SET ||
-            meta.type == CASS_VALUE_TYPE_LIST ||
-            meta.type == CASS_VALUE_TYPE_MAP) {
-          buffer = decode_option(buffer, meta.collection_primary_type,
-                                 &meta.collection_primary_class,
-                                 meta.collection_primary_class_size);
-        }
-
-        if (meta.type == CASS_VALUE_TYPE_MAP) {
-          buffer = decode_option(buffer, meta.collection_secondary_type,
-                                 &meta.collection_secondary_class,
-                                 meta.collection_secondary_class_size);
-        }
-
-        column_metadata.push_back(meta);
-        column_index.insert(
-            std::make_pair(std::string(meta.name, meta.name_size), i));
-      }
-    }
-    return buffer;
+  std::string keyspace() const {
+    return std::string(keyspace_, keyspace_size_);
   }
 
-  bool decode_rows(char* input) {
-    char* buffer = decode_metadata(input);
-    rows = decode_int(buffer, row_count);
-    if (row_count > 0) {
-      first_row.reserve(column_count);
-      rows = decode_row(rows, this, first_row);
-    }
-    return true;
-  }
+  char* rows() const { return rows_; }
 
-  bool decode_set_keyspace(char* input) {
-    decode_string(input, &keyspace, keyspace_size);
-    return true;
-  }
+  int32_t row_count() const { return row_count_; }
 
-  bool decode_prepared(char* input) {
-    char* buffer = decode_string(input, &prepared, prepared_size);
-    decode_metadata(buffer);
-    return true;
-  }
+  const Row& first_row() const { return first_row_; }
 
-  bool decode_schema_change(char* input) {
-    char* buffer = decode_string(input, &change, change_size);
-    buffer = decode_string(buffer, &keyspace, keyspace_size);
-    buffer = decode_string(buffer, &table, table_size);
-    return true;
-  }
+  bool consume(char* input, size_t size);
+
+  char* decode_metadata(char* input);
+
+  bool decode_rows(char* input);
+
+  bool decode_set_keyspace(char* input);
+
+  bool decode_prepared(char* input);
+
+  bool decode_schema_change(char* input);
+
+private:
+  int32_t kind_;
+  bool more_pages_; // row data
+  bool no_metadata_;
+  bool global_table_spec_;
+  int32_t column_count_;
+  MetaDataVec column_metadata_;
+  MetaDataIndex column_index_;
+  char* page_state_; // row paging
+  size_t page_state_size_;
+  char* prepared_; // prepared result
+  size_t prepared_size_;
+  char* change_; // schema change
+  size_t change_size_;
+  char* keyspace_; // rows, set keyspace, and schema change
+  size_t keyspace_size_;
+  char* table_; // rows, and schema change
+  size_t table_size_;
+  int32_t row_count_;
+  char* rows_;
+  Row first_row_;
 };
 
 } // namespace cass

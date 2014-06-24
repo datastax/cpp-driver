@@ -17,10 +17,10 @@
 #ifndef __CASS_CONFIG_HPP_INCLUDED__
 #define __CASS_CONFIG_HPP_INCLUDED__
 
+#include "cassandra.h"
+
 #include <list>
 #include <string>
-
-#include "cassandra.h"
 
 namespace cass {
 

@@ -17,13 +17,12 @@
 #ifndef __CASS_EVENT_THREAD_HPP_INCLUDED__
 #define __CASS_EVENT_THREAD_HPP_INCLUDED__
 
-#include <uv.h>
-
 #include "loop_thread.hpp"
 #include "async_queue.hpp"
 #include "mpmc_queue.hpp"
-
 #include "scoped_ptr.hpp"
+
+#include <uv.h>
 
 namespace cass {
 

@@ -17,11 +17,13 @@
 #ifndef __CASS_OPTIONS_REQUEST_HPP_INCLUDED__
 #define __CASS_OPTIONS_REQUEST_HPP_INCLUDED__
 
-#include "message_body.hpp"
+#include "request.hpp"
+#include "constants.hpp"
 
 namespace cass {
 
-struct OptionsRequest : public Request {
+class OptionsRequest : public Request {
+public:
   OptionsRequest()
       : Request(CQL_OPCODE_OPTIONS) {}
 

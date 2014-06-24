@@ -14,33 +14,16 @@
   limitations under the License.
 */
 
-#ifndef __CASS_PREPARE_REQUEST_HPP_INCLUDED__
-#define __CASS_PREPARE_REQUEST_HPP_INCLUDED__
-
-#include "request.hpp"
-#include "constants.hpp"
-
-#include <string>
+#include "prepare_request.hpp"
+#include "serialization.hpp"
 
 namespace cass {
 
-class PrepareRequest : public Request {
-public:
-  PrepareRequest()
-      : Request(CQL_OPCODE_PREPARE) {}
+bool PrepareRequest::prepare(size_t reserved, char** output, size_t& size) {
+  size = reserved + sizeof(int32_t) + statement_.size();
+  *output = new char[size];
+  encode_long_string(*output + reserved, statement_.c_str(), statement_.size());
+  return true;
+}
 
-  void prepare_string(const char* input, size_t size) {
-    statement_.assign(input, size);
-  }
-
-  void prepare_string(const std::string& input) { statement_ = input; }
-
-  bool prepare(size_t reserved, char** output, size_t& size);
-
-private:
-  std::string statement_;
-};
-
-} // namespace cass
-
-#endif
+} // namespace cas

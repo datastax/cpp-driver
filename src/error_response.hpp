@@ -17,48 +17,50 @@
 #ifndef __CASS_ERROR_RESPONSE_HPP_INCLUDED__
 #define __CASS_ERROR_RESPONSE_HPP_INCLUDED__
 
-#include "message_body.hpp"
-#include "serialization.hpp"
+#include "response.hpp"
+#include "constants.hpp"
 #include "scoped_ptr.hpp"
+
+#include <string>
 
 namespace cass {
 
-struct ErrorResponse : public Response {
-  ScopedPtr<char> guard;
-  int32_t code;
-  char* message;
-  size_t message_size;
-  char* prepared_id;
-  size_t prepared_id_size;
-
+class ErrorResponse : public Response {
+public:
   ErrorResponse()
       : Response(CQL_OPCODE_ERROR)
-      , code(0xFFFFFFFF)
-      , message(NULL)
-      , message_size(0)
-      , prepared_id(NULL)
-      , prepared_id_size(0) {}
+      , code_(0xFFFFFFFF)
+      , message_(NULL)
+      , message_size_(0)
+      , prepared_id_(NULL)
+      , prepared_id_size_(0) {}
 
   ErrorResponse(int32_t code, const char* input, size_t input_size)
       : Response(CQL_OPCODE_ERROR)
       , guard(new char[input_size])
-      , code(code)
-      , message(guard.get())
-      , message_size(input_size) {
-    memcpy(message, input, input_size);
+      , code_(code)
+      , message_(guard.get())
+      , message_size_(input_size) {
+    memcpy(message_, input, input_size);
   }
 
-  bool consume(char* buffer, size_t size) {
-    (void)size;
-    buffer = decode_int(buffer, code);
-    buffer = decode_string(buffer, &message, message_size);
-    switch (code) {
-      case CQL_ERROR_UNPREPARED:
-        decode_string(buffer, &prepared_id, prepared_id_size);
-        break;
-    }
-    return true;
+  int32_t code() const { return code_; }
+
+  std::string prepared_id() const {
+    return std::string(prepared_id_, prepared_id_size_);
   }
+
+  std::string message() const { return std::string(message_, message_size_); }
+
+  bool consume(char* buffer, size_t size);
+
+private:
+  ScopedPtr<char> guard;
+  int32_t code_;
+  char* message_;
+  size_t message_size_;
+  char* prepared_id_;
+  size_t prepared_id_size_;
 };
 
 } // namespace cass

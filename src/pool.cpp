@@ -1,10 +1,14 @@
 #include "pool.hpp"
-
 #include "session.hpp"
 #include "timer.hpp"
 #include "prepare_handler.hpp"
 #include "logger.hpp"
 #include "set_keyspace_handler.hpp"
+#include "request_handler.hpp"
+#include "connection.hpp"
+#include "ssl_context.hpp"
+#include "result_response.hpp"
+#include "error_response.hpp"
 
 #include "third_party/boost/boost/bind.hpp"
 
@@ -22,7 +26,7 @@ Pool::PoolHandler::PoolHandler(Pool* pool, Connection* connection,
 }
 
 void Pool::PoolHandler::on_set(Message* response) {
-  switch (response->opcode) {
+  switch (response->opcode()) {
     case CQL_OPCODE_RESULT:
       on_result_response(response);
       break;
@@ -60,12 +64,12 @@ void Pool::PoolHandler::finish_request() {
 }
 
 void Pool::PoolHandler::on_result_response(Message* response) {
-  ResultResponse* result = static_cast<ResultResponse*>(response->response_body.get());
-  switch (result->kind) {
+  ResultResponse* result =
+      static_cast<ResultResponse*>(response->response_body().get());
+  switch (result->kind()) {
     case CASS_RESULT_KIND_SET_KEYSPACE:
       if (pool_->keyspace_callback_) {
-        pool_->keyspace_callback_(
-            std::string(result->keyspace, result->keyspace_size));
+        pool_->keyspace_callback_(result->keyspace());
       }
       break;
   }
@@ -73,14 +77,14 @@ void Pool::PoolHandler::on_result_response(Message* response) {
 }
 
 void Pool::PoolHandler::on_error_response(Message* response) {
-  ErrorResponse* error = static_cast<ErrorResponse*>(response->response_body.get());
-  switch (error->code) {
+  ErrorResponse* error =
+      static_cast<ErrorResponse*>(response->response_body().get());
+  switch (error->code()) {
     case CQL_ERROR_UNPREPARED: {
       RequestHandler* request_handler = request_handler_.release();
       ScopedPtr<PrepareHandler> prepare_handler(
           new PrepareHandler(request_handler));
-      std::string prepared_id(error->prepared_id, error->prepared_id_size);
-      if (prepare_handler->init(prepared_id)) {
+      if (prepare_handler->init(error->prepared_id())) {
         connection_->execute(prepare_handler.release());
       } else {
         request_handler->on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
@@ -108,7 +112,8 @@ Pool::Pool(const Host& host, uv_loop_t* loop, SSLContext* ssl_context,
 
 Pool::~Pool() {
   for (RequestHandlerList::iterator it = pending_request_queue_.begin(),
-       end = pending_request_queue_.end(); it != end; ++it) {
+                                    end = pending_request_queue_.end();
+       it != end; ++it) {
     RequestHandler* request_handler = *it;
     if (request_handler->timer) {
       Timer::stop(request_handler->timer);
@@ -139,11 +144,13 @@ void Pool::close() {
     }
     state_ = POOL_STATE_CLOSING;
     for (ConnectionVec::iterator it = connections_.begin(),
-         end = connections_.end(); it != end; ++it) {
+                                 end = connections_.end();
+         it != end; ++it) {
       (*it)->close();
     }
     for (ConnectionSet::iterator it = connections_pending_.begin(),
-         end = connections_pending_.end(); it != end; ++it) {
+                                 end = connections_pending_.end();
+         it != end; ++it) {
       (*it)->close();
     }
     maybe_close();
@@ -202,9 +209,9 @@ void Pool::maybe_close() {
 
 void Pool::spawn_connection(const std::string& keyspace) {
   if (state_ == POOL_STATE_NEW || state_ == POOL_STATE_READY) {
-    Connection* connection = new Connection(
-        loop_, ssl_context_ ? ssl_context_->session_new() : NULL, host_,
-        logger_, config_, keyspace);
+    Connection* connection =
+        new Connection(loop_, ssl_context_ ? ssl_context_->session_new() : NULL,
+                       host_, logger_, config_, keyspace);
 
     connection->set_ready_callback(
         boost::bind(&Pool::on_connection_ready, this, _1));
@@ -266,7 +273,8 @@ void Pool::on_connection_closed(Connection* connection) {
 
   maybe_notify_ready(connection);
 
-  ConnectionVec::iterator it = std::find(connections_.begin(), connections_.end(), connection);
+  ConnectionVec::iterator it =
+      std::find(connections_.begin(), connections_.end(), connection);
   if (it != connections_.end()) {
     connections_.erase(it);
   }

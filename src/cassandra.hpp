@@ -27,6 +27,7 @@
 #include "result_response.hpp"
 #include "row.hpp"
 #include "value.hpp"
+#include "iterator.hpp"
 
 // This abstraction allows us to separate internal types from the
 // external opaque pointers that we expose.
@@ -35,9 +36,7 @@ struct External : public In {
   In* from() { return static_cast<In*>(this); }
   const In* from() const { return static_cast<const In*>(this); }
   static Ex* to(In* in) { return static_cast<Ex*>(in); }
-  static const Ex* to(const In* in) {
-    return static_cast<const Ex*>(in);
-  }
+  static const Ex* to(const In* in) { return static_cast<const Ex*>(in); }
 };
 
 extern "C" {

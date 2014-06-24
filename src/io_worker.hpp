@@ -17,24 +17,26 @@
 #ifndef __CASS_IO_WORKER_HPP_INCLUDED__
 #define __CASS_IO_WORKER_HPP_INCLUDED__
 
+#include "constants.hpp"
+#include "event_thread.hpp"
+#include "async_queue.hpp"
+#include "host.hpp"
+#include "spsc_queue.hpp"
+
 #include <uv.h>
 #include <string>
 #include <map>
-#include <vector>
-
-#include "event_thread.hpp"
-#include "async_queue.hpp"
-#include "config.hpp"
-#include "host.hpp"
-#include "ssl_context.hpp"
-#include "spsc_queue.hpp"
-#include "request_handler.hpp"
-#include "logger.hpp"
+#include <list>
 
 namespace cass {
 
 class Pool;
 class Session;
+class Config;
+class SSLContext;
+class RequestHandler;
+class Logger;
+class Timer;
 
 struct IOWorkerEvent {
   enum Type { ADD_POOL, REMOVE_POOL };

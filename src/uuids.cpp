@@ -1,10 +1,9 @@
-#include "third_party/boost/boost/random/random_device.hpp"
-
 #include "cassandra.h"
-
 #include "uuids.hpp"
 #include "scoped_mutex.hpp"
 #include "get_time.hpp"
+
+#include "third_party/boost/boost/random/random_device.hpp"
 
 extern "C" {
 
@@ -46,13 +45,10 @@ namespace {
 
 class UuidsInitializer {
 public:
-  UuidsInitializer() {
-    cass::Uuids::initialize_();
-  }
+  UuidsInitializer() { cass::Uuids::initialize_(); }
 };
 
 UuidsInitializer uuids_intitalizer_;
-
 }
 
 namespace cass {
@@ -85,7 +81,6 @@ void Uuids::generate_v4(Uuid uuid) {
   uint64_t msb = ng_();
   uint64_t lsb = ng_();
   lock.unlock();
-
 
   copy_timestamp(msb, 4, uuid);
 

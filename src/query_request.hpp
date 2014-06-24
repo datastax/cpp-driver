@@ -17,12 +17,11 @@
 #ifndef __CASS_QUERY_REQUEST_HPP_INCLUDED__
 #define __CASS_QUERY_REQUEST_HPP_INCLUDED__
 
-#include <list>
-#include <string>
-#include <utility>
-#include <vector>
 #include "statement.hpp"
-#include "message_body.hpp"
+#include "constants.hpp"
+
+#include <string>
+#include <vector>
 
 #define CASS_QUERY_FLAG_VALUES 0x01
 #define CASS_QUERY_FLAG_SKIP_METADATA 0x02
@@ -32,119 +31,61 @@
 
 namespace cass {
 
-struct QueryRequest : public Statement {
-  std::string query;
-  int16_t consistency_value;
-  int page_size;
-  std::vector<char> paging_state;
-  int16_t serial_consistency_value;
-
+class QueryRequest : public Statement {
 public:
   QueryRequest(const char* statement, size_t statement_length,
                size_t value_count, CassConsistency consistency)
       : Statement(CQL_OPCODE_QUERY, value_count)
-      , query(statement, statement_length)
-      , consistency_value(consistency)
-      , page_size(-1)
-      , serial_consistency_value(CASS_CONSISTENCY_ANY) {}
+      , query_(statement, statement_length)
+      , consistency_(consistency)
+      , page_size_(-1)
+      , serial_consistency_(CASS_CONSISTENCY_ANY) {}
 
   QueryRequest(size_t value_count, CassConsistency consistency)
       : Statement(CQL_OPCODE_QUERY, value_count)
-      , consistency_value(consistency)
-      , page_size(-1)
-      , serial_consistency_value(CASS_CONSISTENCY_ANY) {}
+      , consistency_(consistency)
+      , page_size_(-1)
+      , serial_consistency_(CASS_CONSISTENCY_ANY) {}
 
   QueryRequest()
       : Statement(CQL_OPCODE_QUERY)
-      , consistency_value(CASS_CONSISTENCY_ANY)
-      , page_size(-1)
-      , serial_consistency_value(CASS_CONSISTENCY_ANY) {}
+      , consistency_(CASS_CONSISTENCY_ANY)
+      , page_size_(-1)
+      , serial_consistency_(CASS_CONSISTENCY_ANY) {}
 
   uint8_t kind() const {
     // used for batch statements
     return 0;
   }
 
-  void consistency(int16_t consistency) { consistency_value = consistency; }
+  void consistency(int16_t consistency) { consistency_ = consistency; }
 
-  int16_t consistency() const { return consistency_value; }
+  int16_t consistency() const { return consistency_; }
 
   void serial_consistency(int16_t serial_consistency) {
-    serial_consistency_value = serial_consistency;
+    serial_consistency_ = serial_consistency;
   }
 
-  int16_t serial_consistency() const { return serial_consistency_value; }
+  int16_t serial_consistency() const { return serial_consistency_; }
 
-  const char* statement() const { return &query[0]; }
+  const char* statement() const { return &query_[0]; }
 
-  size_t statement_size() const { return query.size(); }
+  size_t statement_size() const { return query_.size(); }
 
   virtual void statement(const std::string& statement) {
-    query.assign(statement.begin(), statement.end());
+    query_.assign(statement.begin(), statement.end());
   }
 
-  void statement(const char* input, size_t size) { query.assign(input, size); }
+  void statement(const char* input, size_t size) { query_.assign(input, size); }
 
-  bool prepare(size_t reserved, char** output, size_t& size) {
-    uint8_t flags = 0x00;
-    // reserved + the long string
-    size = reserved + sizeof(int32_t) + query.size();
-    // consistency_value
-    size += sizeof(int16_t);
-    // flags
-    size += 1;
+  bool prepare(size_t reserved, char** output, size_t& size);
 
-    if (serial_consistency_value != 0) {
-      flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
-      size += sizeof(int16_t);
-    }
-
-    if (!paging_state.empty()) {
-      flags |= CASS_QUERY_FLAG_PAGING_STATE;
-      size += (sizeof(int16_t) + paging_state.size());
-    }
-
-    if (!values.empty()) {
-      size += values_size();
-      flags |= CASS_QUERY_FLAG_VALUES;
-    }
-
-    if (page_size >= 0) {
-      size += sizeof(int32_t);
-      flags |= CASS_QUERY_FLAG_PAGE_SIZE;
-    }
-
-    if (serial_consistency_value != 0) {
-      size += sizeof(int16_t);
-      flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
-    }
-
-    *output = new char[size];
-
-    char* buffer =
-        encode_long_string(*output + reserved, query.c_str(), query.size());
-
-    buffer = encode_short(buffer, consistency_value);
-    buffer = encode_byte(buffer, flags);
-
-    if (!values.empty()) {
-      buffer = encode_values(buffer);
-    }
-
-    if (page_size >= 0) {
-      buffer = encode_int(buffer, page_size);
-    }
-
-    if (!paging_state.empty()) {
-      buffer = encode_string(buffer, &paging_state[0], paging_state.size());
-    }
-
-    if (serial_consistency_value != 0) {
-      buffer = encode_short(buffer, serial_consistency_value);
-    }
-
-    return true;
-  }
+private:
+  std::string query_;
+  int16_t consistency_;
+  int page_size_;
+  std::vector<char> paging_state_;
+  int16_t serial_consistency_;
 };
 
 } // namespace cass

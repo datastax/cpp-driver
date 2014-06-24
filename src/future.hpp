@@ -17,16 +17,15 @@
 #ifndef __CASS_FUTURE_HPP_INCLUDED__
 #define __CASS_FUTURE_HPP_INCLUDED__
 
-#include <uv.h>
-#include <assert.h>
-
-#include <string>
-
 #include "cassandra.h"
-#include "common.hpp"
+#include "macros.hpp"
 #include "scoped_mutex.hpp"
 #include "scoped_ptr.hpp"
 #include "ref_counted.h"
+
+#include <uv.h>
+#include <assert.h>
+#include <string>
 
 namespace cass {
 

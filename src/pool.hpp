@@ -17,24 +17,26 @@
 #ifndef __CASS_POOL_HPP_INCLUDED__
 #define __CASS_POOL_HPP_INCLUDED__
 
+#include "cassandra.h"
+#include "response_callback.hpp"
+#include "scoped_ptr.hpp"
+#include "request_handler.hpp"
+
+#include "third_party/boost/boost/function.hpp"
+
 #include <vector>
 #include <set>
 #include <string>
 #include <algorithm>
 #include <functional>
 
-#include "cassandra.h"
-#include "connection.hpp"
-#include "request_handler.hpp"
-#include "scoped_ptr.hpp"
-
-#include "third_party/boost/boost/function.hpp"
-
 namespace cass {
 
 class Connection;
 class SSLContext;
 class Logger;
+class RequestHandler;
+class Config;
 
 class Pool {
 public:

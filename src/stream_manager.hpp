@@ -17,6 +17,8 @@
 #ifndef __CASS_STREAM_MANAGER_HPP_INCLUDED__
 #define __CASS_STREAM_MANAGER_HPP_INCLUDED__
 
+#include <assert.h>
+
 namespace cass {
 
 template <class T>

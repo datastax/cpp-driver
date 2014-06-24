@@ -14,35 +14,33 @@
   limitations under the License.
 */
 
-#ifndef __CASS_VALUE_HPP_INCLUDED__
-#define __CASS_VALUE_HPP_INCLUDED__
-
-#include "cassandra.h"
-#include "buffer_piece.hpp"
+#include "collection_iterator.hpp"
 
 namespace cass {
 
-struct Value {
-  Value()
-      : type(CASS_VALUE_TYPE_UNKNOWN)
-      , primary_type(CASS_VALUE_TYPE_UNKNOWN)
-      , secondary_type(CASS_VALUE_TYPE_UNKNOWN)
-      , count(0) {}
-
-  Value(CassValueType type, char* data, size_t size)
-      : type(type)
-      , primary_type(CASS_VALUE_TYPE_UNKNOWN)
-      , secondary_type(CASS_VALUE_TYPE_UNKNOWN)
-      , count(0)
-      , buffer(data, size) {}
+char* CollectionIterator::decode_value(char* position) {
+  uint16_t size;
+  char* buffer = decode_short(position, size);
 
   CassValueType type;
-  CassValueType primary_type;
-  CassValueType secondary_type;
-  uint16_t count;
-  BufferPiece buffer;
-};
+  if (collection_->type == CASS_VALUE_TYPE_MAP) {
+    type = ((index_ - 1) % 2 == 0) ? collection_->primary_type
+                                   : collection_->secondary_type;
+  } else {
+    type = collection_->primary_type;
+  }
+
+  value_ = Value(type, buffer, size);
+
+  return buffer + size;
+}
+
+bool CollectionIterator::next() {
+  if (index_++ < count_) {
+    position_ = decode_value(position_);
+    return true;
+  }
+  return false;
+}
 
 } // namespace cass
-
-#endif

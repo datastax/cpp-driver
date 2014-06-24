@@ -17,9 +17,9 @@
 #ifndef __CASS_BUFFER_LIST_HPP_INCLUDED__
 #define __CASS_BUFFER_LIST_HPP_INCLUDED__
 
-#include <vector>
-
 #include "buffer.hpp"
+
+#include <vector>
 
 namespace cass {
 
@@ -44,7 +44,8 @@ public:
   void combine(char* output) const {
     int32_t offset = 0;
     for (std::vector<Buffer>::const_iterator it = buffers_.begin(),
-         end = buffers_.end(); it != end; ++it) {
+                                             end = buffers_.end();
+         it != end; ++it) {
       size_t buffer_size = it->size();
       memcpy(output + offset, it->data(), buffer_size);
       offset += buffer_size;

@@ -20,6 +20,8 @@
 #include "third_party/boost/boost/atomic.hpp"
 #include "scoped_ptr.hpp"
 
+#include <assert.h>
+
 namespace cass {
 
 template <class T>

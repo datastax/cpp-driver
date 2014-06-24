@@ -17,7 +17,7 @@
 #ifndef __CASS_SCOPED_MUTEX_HPP_INCLUDED__
 #define __CASS_SCOPED_MUTEX_HPP_INCLUDED__
 
-#include "common.hpp"
+#include "macros.hpp"
 
 #include <uv.h>
 #include <assert.h>
@@ -29,20 +29,18 @@ public:
   ScopedMutex(uv_mutex_t* mutex, bool acquire_lock = true)
       : mutex_(mutex)
       , is_locked_(false) {
-    if(acquire_lock) {
+    if (acquire_lock) {
       lock();
     }
   }
 
   ~ScopedMutex() {
-    if(is_locked_) {
+    if (is_locked_) {
       unlock();
     }
   }
 
-  uv_mutex_t* get() const {
-    return mutex_;
-  }
+  uv_mutex_t* get() const { return mutex_; }
 
   void lock() {
     assert(!is_locked_);

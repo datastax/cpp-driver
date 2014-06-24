@@ -14,33 +14,25 @@
   limitations under the License.
 */
 
-#ifndef __CASS_PREPARE_REQUEST_HPP_INCLUDED__
-#define __CASS_PREPARE_REQUEST_HPP_INCLUDED__
-
-#include "request.hpp"
-#include "constants.hpp"
-
-#include <string>
+#include "supported_response.hpp"
+#include "serialization.hpp"
 
 namespace cass {
 
-class PrepareRequest : public Request {
-public:
-  PrepareRequest()
-      : Request(CQL_OPCODE_PREPARE) {}
+bool SupportedResponse::consume(char* buffer, size_t size) {
+  string_multimap_t supported;
 
-  void prepare_string(const char* input, size_t size) {
-    statement_.assign(input, size);
+  decode_string_multimap(buffer, supported);
+  string_multimap_t::const_iterator it = supported.find("COMPRESSION");
+  if (it != supported.end()) {
+    compression_ = it->second;
   }
 
-  void prepare_string(const std::string& input) { statement_ = input; }
-
-  bool prepare(size_t reserved, char** output, size_t& size);
-
-private:
-  std::string statement_;
-};
+  it = supported.find("CASS_VERSION");
+  if (it != supported.end()) {
+    versions_ = it->second;
+  }
+  return true;
+}
 
 } // namespace cass
-
-#endif

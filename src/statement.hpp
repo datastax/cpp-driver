@@ -17,12 +17,12 @@
 #ifndef __CASS_STATEMENT_HPP_INCLUDED__
 #define __CASS_STATEMENT_HPP_INCLUDED__
 
-#include <list>
-#include <utility>
-
-#include "message_body.hpp"
+#include "request.hpp"
 #include "buffer.hpp"
 #include "collection.hpp"
+
+#include <list>
+#include <utility>
 
 #define CASS_VALUE_CHECK_INDEX(i)              \
   if (index >= size()) {                       \
@@ -31,17 +31,14 @@
 
 namespace cass {
 
-struct Statement : public Request {
-  typedef std::vector<Buffer> ValueVec;
-
-  ValueVec values;
-
+class Statement : public Request {
+public:
   Statement(uint8_t opcode)
       : Request(opcode) {}
 
   Statement(uint8_t opcode, size_t value_count)
       : Request(opcode)
-      , values(value_count) {}
+      , values_(value_count) {}
 
   virtual ~Statement() {}
 
@@ -63,17 +60,19 @@ struct Statement : public Request {
 
   virtual void serial_consistency(int16_t consistency) = 0;
 
-  void resize(size_t size) { values.resize(size); }
+  void resize(size_t size) { values_.resize(size); }
 
-  size_t size() const { return values.size(); }
+  size_t size() const { return values_.size(); }
 
-#define BIND_FIXED_TYPE(DeclType, EncodeType, Name)                   \
-  CassError bind_##Name(size_t index, const DeclType& value) {        \
-    CASS_VALUE_CHECK_INDEX(index);                                    \
-    Buffer buffer(sizeof(DeclType));                                  \
-    encode_##EncodeType(buffer.data(), value);                        \
-    values[index] = buffer;                                           \
-    return CASS_OK;                                                   \
+  bool is_empty() const { return values_.empty(); }
+
+#define BIND_FIXED_TYPE(DeclType, EncodeType, Name)            \
+  CassError bind_##Name(size_t index, const DeclType& value) { \
+    CASS_VALUE_CHECK_INDEX(index);                             \
+    Buffer buffer(sizeof(DeclType));                           \
+    encode_##EncodeType(buffer.data(), value);                 \
+    values_[index] = buffer;                                   \
+    return CASS_OK;                                            \
   }
 
   BIND_FIXED_TYPE(int32_t, int, int32)
@@ -85,83 +84,68 @@ struct Statement : public Request {
 
   CassError bind_null(size_t index) {
     CASS_VALUE_CHECK_INDEX(index);
-    values[index] = Buffer();
+    values_[index] = Buffer();
     return CASS_OK;
   }
 
   CassError bind(size_t index, const char* value, size_t value_length) {
     CASS_VALUE_CHECK_INDEX(index);
-    values[index] = Buffer(value, value_length);
+    values_[index] = Buffer(value, value_length);
     return CASS_OK;
   }
 
-  CassError bind(size_t index, const uint8_t* value,
-                        size_t value_length) {
+  CassError bind(size_t index, const uint8_t* value, size_t value_length) {
     CASS_VALUE_CHECK_INDEX(index);
-    values[index] = Buffer(reinterpret_cast<const char*>(value), value_length);
+    values_[index] = Buffer(reinterpret_cast<const char*>(value), value_length);
     return CASS_OK;
   }
 
   CassError bind(size_t index, const uint8_t* value) {
     CASS_VALUE_CHECK_INDEX(index);
-    values[index] = Buffer(reinterpret_cast<const char*>(value), 16);
+    values_[index] = Buffer(reinterpret_cast<const char*>(value), 16);
     return CASS_OK;
   }
 
-  CassError bind(size_t index, const uint8_t* address,
-                        uint8_t address_len) {
+  CassError bind(size_t index, const uint8_t* address, uint8_t address_len) {
     CASS_VALUE_CHECK_INDEX(index);
-    values[index] = Buffer(reinterpret_cast<const char*>(address), address_len);
+    values_[index] =
+        Buffer(reinterpret_cast<const char*>(address), address_len);
     return CASS_OK;
   }
 
   CassError bind(size_t index, int32_t scale, const uint8_t* varint,
-                        size_t varint_length) {
+                 size_t varint_length) {
     CASS_VALUE_CHECK_INDEX(index);
     Buffer buffer(sizeof(int32_t) + varint_length);
     encode_decimal(buffer.data(), scale, varint, varint_length);
-    values[index] = buffer;
+    values_[index] = buffer;
     return CASS_OK;
   }
 
-  CassError bind(size_t index, const Collection* collection,
-                        bool is_map) {
+  CassError bind(size_t index, const Collection* collection, bool is_map) {
     CASS_VALUE_CHECK_INDEX(index);
     if (is_map && collection->item_count() % 2 != 0) {
       return CASS_ERROR_LIB_INVALID_ITEM_COUNT;
     }
-    values[index] = collection->build(is_map);
+    values_[index] = collection->build(is_map);
     return CASS_OK;
   }
 
   CassError bind(size_t index, size_t output_size, uint8_t** output) {
     CASS_VALUE_CHECK_INDEX(index);
-    values[index] = Buffer(output_size);
-    *output = reinterpret_cast<uint8_t*>(values[index].data());
+    values_[index] = Buffer(output_size);
+    *output = reinterpret_cast<uint8_t*>(values_[index].data());
     return CASS_OK;
   }
 
-  size_t values_size() const {
-    size_t total_size = sizeof(uint16_t);
-    for(ValueVec::const_iterator it = values.begin(),
-        end = values.end(); it != end; ++it) {
-      total_size += sizeof(int32_t);
-      int32_t value_size = it->size();
-      if (value_size > 0) {
-        total_size += value_size;
-      }
-    }
-    return total_size;
-  }
+  size_t encoded_size() const;
 
-  char* encode_values(char* buffer) const {
-    buffer = encode_short(buffer, values.size());
-    for(ValueVec::const_iterator it = values.begin(),
-        end = values.end(); it != end; ++it) {
-      buffer = encode_bytes(buffer, it->data(), it->size());
-    }
-    return buffer;
-  }
+  char* encode(char* buffer) const;
+
+private:
+  typedef std::vector<Buffer> ValueVec;
+
+  ValueVec values_;
 };
 
 } // namespace cass

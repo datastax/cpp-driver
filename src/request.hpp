@@ -14,12 +14,10 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BODY_HPP_INCLUDED__
-#define __CASS_BODY_HPP_INCLUDED__
+#ifndef __CASS_REQUEST_HPP_INCLUDED__
+#define __CASS_REQUEST_HPP_INCLUDED__
 
-#include "common.hpp"
-#include "future.hpp"
-#include "scoped_ptr.hpp"
+#include "macros.hpp"
 #include "ref_counted.h"
 
 namespace cass {
@@ -36,31 +34,10 @@ public:
   virtual bool prepare(size_t reserved, char** output, size_t& size) = 0;
 
 private:
-   uint8_t opcode_;
+  uint8_t opcode_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Request);
-};
-
-class Response {
-public:
-  Response(uint8_t opcode)
-      : opcode_(opcode) {}
-
-  virtual ~Response() {}
-
-  uint8_t opcode() const { return opcode_; }
-  char* buffer() { return buffer_.get(); }
-  void set_buffer(char* buffer) { buffer_.reset(buffer); }
-
-  virtual bool consume(char* buffer, size_t size) = 0;
-
-private:
-  uint8_t opcode_;
-  ScopedPtr<char[]> buffer_;
-
-private:
-  DISALLOW_COPY_AND_ASSIGN(Response);
 };
 
 } // namespace cass

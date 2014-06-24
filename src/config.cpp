@@ -4,7 +4,8 @@
 #include <sstream>
 
 #if defined(_MSC_VER)
-#pragma warning(disable: 4996) // Disable checked iterators warnings for std::string copy() 
+#pragma warning(disable : 4996) // Disable checked iterators warnings for
+                                // std::string copy()
 #endif
 
 namespace cass {
@@ -134,8 +135,9 @@ CassError Config::option(CassOption option, void* value, size_t* size) const {
         *size = 0;
       } else {
         size_t total_size = 0;
-        for(ContactPointList::const_iterator it = contact_points().begin(),
-            end = contact_points().end(); it != end; ++it) {
+        for (ContactPointList::const_iterator it = contact_points().begin(),
+                                              end = contact_points().end();
+             it != end; ++it) {
           total_size += it->size() + 1; // space for ',' or '\0'
         }
 
@@ -147,8 +149,9 @@ CassError Config::option(CassOption option, void* value, size_t* size) const {
 
         size_t pos = 0;
         char* output = reinterpret_cast<char*>(value);
-        for(ContactPointList::const_iterator it = contact_points().begin(),
-            end = contact_points().end(); it != end; ++it) {
+        for (ContactPointList::const_iterator it = contact_points().begin(),
+                                              end = contact_points().end();
+             it != end; ++it) {
           if (pos > 0) {
             output[pos++] = ',';
           }

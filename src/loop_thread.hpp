@@ -24,17 +24,13 @@ namespace cass {
 class LoopThread {
 public:
   LoopThread()
-      : loop_(uv_loop_new()) { }
+      : loop_(uv_loop_new()) {}
 
   virtual ~LoopThread() { uv_loop_delete(loop_); }
 
-  void run() {
-    uv_thread_create(&thread_, on_run_internal, this);
-  }
+  void run() { uv_thread_create(&thread_, on_run_internal, this); }
 
-  void join() {
-    uv_thread_join(&thread_);
-  }
+  void join() { uv_thread_join(&thread_); }
 
 protected:
   uv_loop_t* loop() { return loop_; }

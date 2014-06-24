@@ -17,14 +17,13 @@
 #ifndef __CASS_UUIDS_HPP_INCLUDED__
 #define __CASS_UUIDS_HPP_INCLUDED__
 
-#include <uv.h>
-#include <openssl/evp.h>
-
-#include <assert.h>
-#include <string.h>
-
 #include "third_party/boost/boost/atomic.hpp"
 #include "third_party/boost/boost/random/mersenne_twister.hpp"
+
+#include <uv.h>
+#include <openssl/evp.h>
+#include <assert.h>
+#include <string.h>
 
 #define TIME_OFFSET_BETWEEN_UTC_AND_EPOCH 0x01B21DD213814000L // Nanoseconds
 

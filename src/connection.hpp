@@ -17,24 +17,28 @@
 #ifndef __CASS_CONNECTION_HPP_INCLUDED__
 #define __CASS_CONNECTION_HPP_INCLUDED__
 
-#include <uv.h>
-
-#include "common.hpp"
+#include "cassandra.h"
+#include "response_callback.hpp"
+#include "macros.hpp"
 #include "host.hpp"
-#include "message.hpp"
-#include "session.hpp"
-#include "ssl_context.hpp"
-#include "ssl_session.hpp"
 #include "stream_manager.hpp"
-#include "connecter.hpp"
-#include "writer.hpp"
-#include "timer.hpp"
 #include "list.hpp"
 #include "scoped_ptr.hpp"
 
 #include "third_party/boost/boost/function.hpp"
 
+#include <uv.h>
+
 namespace cass {
+
+class Message;
+class SSLContext;
+class SSLSession;
+class Connecter;
+class Timer;
+class Writer;
+class Config;
+class Logger;
 
 class Connection {
 public:
@@ -76,11 +80,7 @@ public:
 
     void change_state(State next_state);
 
-    void stop_timer() {
-      assert(timer_ != NULL);
-      Timer::stop(timer_);
-      timer_ = NULL;
-    }
+    void stop_timer();
 
     Connection* connection;
     int8_t stream;
@@ -145,9 +145,7 @@ public:
 
   void set_close_callback(Callback callback) { closed_callback_ = callback; }
 
-  size_t available_streams() {
-    return stream_manager_.available_streams();
-  }
+  size_t available_streams() { return stream_manager_.available_streams(); }
 
   bool has_requests_pending() {
     return pending_requests_.size() - timed_out_request_count_ > 0;

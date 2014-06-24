@@ -35,30 +35,9 @@ public:
                    ? (2 * collection_->count)
                    : collection->count) {}
 
-  char* decode_value(char* position) {
-    uint16_t size;
-    char* buffer = decode_short(position, size);
+  char* decode_value(char* position);
 
-    CassValueType type;
-    if (collection_->type == CASS_VALUE_TYPE_MAP) {
-      type = ((index_ - 1) % 2 == 0) ? collection_->primary_type
-                                     : collection_->secondary_type;
-    } else {
-      type = collection_->primary_type;
-    }
-
-    value_ = Value(type, buffer, size);
-
-    return buffer + size;
-  }
-
-  virtual bool next() {
-    if (index_++ < count_) {
-      position_ = decode_value(position_);
-      return true;
-    }
-    return false;
-  }
+  virtual bool next();
 
   const Value* value() { return &value_; }
 

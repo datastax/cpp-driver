@@ -17,37 +17,35 @@
 #ifndef __CASS_ScopedPtr_HPP_INCLUDED__
 #define __CASS_ScopedPtr_HPP_INCLUDED__
 
-#include "common.hpp"
+#include "macros.hpp"
+
+#include <stddef.h>
 
 namespace cass {
 
-template<class T>
+template <class T>
 struct DefaultDeleter {
-  void operator()(T* ptr) const {
-    delete ptr;
-  }
+  void operator()(T* ptr) const { delete ptr; }
 };
 
-template<class T>
+template <class T>
 struct DefaultDeleter<T[]> {
-  void operator()(T* ptr) const {
-    delete[] ptr;
-  }
+  void operator()(T* ptr) const { delete[] ptr; }
 };
 
-template<class T, class D = DefaultDeleter<T> >
+template <class T, class D = DefaultDeleter<T> >
 class ScopedPtr {
 public:
   typedef T type;
   typedef D deleter;
 
   explicit ScopedPtr(type* ptr = NULL)
-       : ptr_(ptr) {}
+      : ptr_(ptr) {}
 
   ~ScopedPtr() { deleter()(ptr_); }
 
   void reset(type* ptr = NULL) {
-    if(ptr_ != NULL) {
+    if (ptr_ != NULL) {
       deleter()(ptr_);
     }
     ptr_ = ptr;
@@ -61,7 +59,7 @@ public:
 
   type* get() const { return ptr_; }
   type& operator*() const { return *ptr_; }
-  type* operator->() const { return ptr_; }
+  type * operator->() const { return ptr_; }
   operator bool() const { return ptr_ != NULL; }
 
 private:
@@ -71,7 +69,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ScopedPtr);
 };
 
-template<class T, class D>
+template <class T, class D>
 class ScopedPtr<T[], D> {
 public:
 public:
@@ -79,12 +77,12 @@ public:
   typedef D deleter;
 
   explicit ScopedPtr(type* ptr = NULL)
-       : ptr_(ptr) {}
+      : ptr_(ptr) {}
 
   ~ScopedPtr() { deleter()(ptr_); }
 
   void reset(type* ptr = NULL) {
-    if(ptr_ != NULL) {
+    if (ptr_ != NULL) {
       deleter()(ptr_);
     }
     ptr_ = ptr;
@@ -98,7 +96,7 @@ public:
 
   type* get() const { return ptr_; }
   type& operator*() const { return *ptr_; }
-  type* operator->() const { return ptr_; }
+  type * operator->() const { return ptr_; }
   operator bool() const { return ptr_ != NULL; }
 
 private:

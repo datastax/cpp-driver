@@ -30,12 +30,12 @@ public:
       : Iterator(CASS_ITERATOR_TYPE_RESULT)
       , result_(result)
       , row_position_(0)
-      , position_(result->rows) {
-    row_.reserve(result->column_count);
+      , position_(result->rows()) {
+    row_.reserve(result->column_count());
   }
 
   virtual bool next() {
-    if (row_position_++ >= result_->row_count) {
+    if (row_position_++ >= result_->row_count()) {
       return false;
     }
     if (row_position_ > 1) {
@@ -48,7 +48,7 @@ public:
     if (row_position_ > 1) {
       return row_;
     } else {
-      return result_->first_row;
+      return result_->first_row();
     }
   }
 

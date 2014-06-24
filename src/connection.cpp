@@ -1,6 +1,17 @@
 #include "connection.hpp"
-
-#include "scoped_ptr.hpp"
+#include "constants.hpp"
+#include "message.hpp"
+#include "ssl_context.hpp"
+#include "ssl_session.hpp"
+#include "connecter.hpp"
+#include "writer.hpp"
+#include "timer.hpp"
+#include "config.hpp"
+#include "result_response.hpp"
+#include "supported_response.hpp"
+#include "startup_request.hpp"
+#include "query_request.hpp"
+#include "logger.hpp"
 
 namespace cass {
 
@@ -15,7 +26,7 @@ Message* Connection::StartupHandler::request() const {
 }
 
 void Connection::StartupHandler::on_set(Message* response) {
-  switch (response->opcode) {
+  switch (response->opcode()) {
     case CQL_OPCODE_SUPPORTED:
       connection_->on_supported(response);
       break;
@@ -45,8 +56,9 @@ void Connection::StartupHandler::on_timeout() {
 }
 
 void Connection::StartupHandler::on_result_response(Message* response) {
-  ResultResponse* result = static_cast<ResultResponse*>(response->response_body.get());
-  switch (result->kind) {
+  ResultResponse* result =
+      static_cast<ResultResponse*>(response->response_body().get());
+  switch (result->kind()) {
     case CASS_RESULT_KIND_SET_KEYSPACE:
       connection_->on_set_keyspace();
       break;
@@ -67,7 +79,7 @@ Connection::Request::Request(Connection* connection,
 }
 
 void Connection::Request::on_set(Message* response) {
-  switch (response->opcode) {
+  switch (response->opcode()) {
     case CQL_OPCODE_RESULT:
       on_result_response(response);
       break;
@@ -162,11 +174,18 @@ void Connection::Request::change_state(Connection::Request::State next_state) {
   }
 }
 
+void Connection::Request::stop_timer() {
+  assert(timer_ != NULL);
+  Timer::stop(timer_);
+  timer_ = NULL;
+}
+
 void Connection::Request::on_result_response(Message* response) {
-  ResultResponse* result = static_cast<ResultResponse*>(response->response_body.get());
-  switch (result->kind) {
+  ResultResponse* result =
+      static_cast<ResultResponse*>(response->response_body().get());
+  switch (result->kind()) {
     case CASS_RESULT_KIND_SET_KEYSPACE:
-      connection->keyspace_.assign(result->keyspace, result->keyspace_size);
+      connection->keyspace_ = result->keyspace();
       break;
   }
 }
@@ -231,7 +250,7 @@ bool Connection::execute(ResponseCallback* response_callback) {
   }
 
   request->stream = stream;
-  message->stream = stream;
+  message->set_stream(stream);
 
   char* buf_data;
   size_t buf_length;
@@ -242,7 +261,7 @@ bool Connection::execute(ResponseCallback* response_callback) {
   }
 
   logger_->debug("Sending message type %s with %d, size %zd",
-                 opcode_to_string(message->opcode).c_str(), message->stream,
+                 opcode_to_string(message->opcode()).c_str(), message->stream(),
                  buf_length);
 
   pending_requests_.add_to_back(request.get());
@@ -313,22 +332,22 @@ void Connection::consume(char* input, size_t size) {
       logger_->error("Error consuming message on '%s'", host_string_.c_str());
     }
 
-    if (incoming_->body_ready) {
+    if (incoming_->body_ready()) {
       ScopedPtr<Message> response(incoming_.release());
       incoming_.reset(new Message());
 
       logger_->debug(
           "Consumed message type %s with stream %d, input %zd, remaining %d on "
           "'%s'",
-          opcode_to_string(response->opcode).c_str(), response->stream, size,
-          remaining, host_string_.c_str());
+          opcode_to_string(response->opcode()).c_str(), response->stream(),
+          size, remaining, host_string_.c_str());
 
-      if (response->stream < 0) {
+      if (response->stream() < 0) {
         // TODO(mstump) system events
         assert(false);
       } else {
         Request* request = NULL;
-        if (stream_manager_.get_item(response->stream, request)) {
+        if (stream_manager_.get_item(response->stream(), request)) {
           switch (request->state()) {
             case Request::REQUEST_STATE_READING:
               request->on_set(response.get());
@@ -562,7 +581,7 @@ void Connection::on_set_keyspace() {
 
 void Connection::on_supported(Message* response) {
   SupportedResponse* supported =
-      static_cast<SupportedResponse*>(response->response_body.get());
+      static_cast<SupportedResponse*>(response->response_body().get());
 
   // TODO(mstump) do something with the supported info
   (void)supported;
@@ -589,14 +608,16 @@ void Connection::send_options() {
 
 void Connection::send_startup() {
   Message* message = new Message(CQL_OPCODE_STARTUP);
-  StartupRequest* startup = static_cast<StartupRequest*>(message->request_body.get());
-  startup->version = version_;
+  StartupRequest* startup =
+      static_cast<StartupRequest*>(message->request_body().get());
+  startup->set_version(version_);
   execute(new StartupHandler(this, message));
 }
 
 void Connection::send_use_keyspace() {
   Message* message = new Message(CQL_OPCODE_QUERY);
-  QueryRequest* query = static_cast<QueryRequest*>(message->request_body.get());
+  QueryRequest* query =
+      static_cast<QueryRequest*>(message->request_body().get());
   query->statement("use \"" + keyspace_ + "\"");
   query->consistency(CASS_CONSISTENCY_ONE);
   execute(new StartupHandler(this, message));

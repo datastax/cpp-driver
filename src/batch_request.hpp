@@ -17,16 +17,12 @@
 #ifndef __CASS_BATCH_REQUEST_HPP_INCLUDED__
 #define __CASS_BATCH_REQUEST_HPP_INCLUDED__
 
-#include <list>
-#include <string>
-#include <utility>
-#include <vector>
+#include "request.hpp"
+#include "constants.hpp"
 
-#include "common.hpp"
-#include "message_body.hpp"
-#include "serialization.hpp"
-#include "statement.hpp"
-#include "execute_request.hpp"
+#include <list>
+#include <map>
+#include <string>
 
 #define CASS_QUERY_FLAG_VALUES 0x01
 #define CASS_QUERY_FLAG_SKIP_METADATA 0x02
@@ -36,92 +32,32 @@
 
 namespace cass {
 
-struct BatchRequest : public Request {
+class Statement;
+class ExecuteRequest;
+
+class BatchRequest : public Request {
+public:
+  BatchRequest(size_t consistency, uint8_t type_)
+      : Request(CQL_OPCODE_BATCH)
+      , type_(type_)
+      , consistency_(consistency) {}
+
+  ~BatchRequest();
+
+  void add_statement(Statement* statement);
+
+  bool prepared_statement(const std::string& id, std::string* statement);
+
+  bool prepare(size_t reserved, char** output, size_t& size);
+
+private:
   typedef std::list<Statement*> StatementList;
   typedef std::map<std::string, ExecuteRequest*> PreparedMap;
 
-  uint8_t type;
-  StatementList statements;
-  PreparedMap prepared_statements;
-  int16_t consistency;
-
-  BatchRequest(size_t consistency, uint8_t type_)
-      : Request(CQL_OPCODE_BATCH)
-      , type(type_)
-      , consistency(consistency) {}
-
-  ~BatchRequest() {
-    for (StatementList::iterator it = statements.begin(),
-         end = statements.end(); it != end; ++it) {
-      (*it)->release();
-    }
-  }
-
-  void add_statement(Statement* statement) {
-    if (statement->kind() == 1) {
-      ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(statement);
-      prepared_statements[execute_request->prepared_id] = execute_request;
-    }
-    statement->retain();
-    statements.push_back(statement);
-  }
-
-  bool prepared_statement(const std::string& id, std::string* statement) {
-    PreparedMap::iterator it = prepared_statements.find(id);
-    if (it != prepared_statements.end()) {
-      *statement = it->second->prepared_statement;
-      return true;
-    }
-    return false;
-  }
-
-  bool prepare(size_t reserved, char** output, size_t& size) {
-    // reserved + type + length
-    size = reserved + sizeof(uint8_t) + sizeof(uint16_t);
-
-    for (StatementList::const_iterator it = statements.begin(),
-         end = statements.end();
-         it != end; ++it) {
-      const Statement* statement = *it;
-
-      size += sizeof(uint8_t);
-      if (statement->kind() == 0) {
-        size += sizeof(int32_t);
-      } else {
-        size += sizeof(uint16_t);
-      }
-      size += statement->statement_size();
-      size += statement->values_size();
-    }
-
-    size += sizeof(uint16_t);
-    *output = new char[size];
-
-    char* buffer = encode_byte(*output + reserved, type);
-    buffer = encode_short(buffer, statements.size());
-
-    for (StatementList::const_iterator it = statements.begin(),
-         end = statements.end();
-         it != end; ++it) {
-      const Statement* statement = *it;
-
-      buffer = encode_byte(buffer, statement->kind());
-
-      if (statement->kind() == 0) {
-        buffer = encode_long_string(buffer, statement->statement(),
-                                    statement->statement_size());
-      } else {
-        buffer = encode_string(buffer, statement->statement(),
-                               statement->statement_size());
-      }
-
-      buffer = statement->encode_values(buffer);
-    }
-
-    encode_short(buffer, consistency);
-
-    return true;
-  }
+  uint8_t type_;
+  StatementList statements_;
+  PreparedMap prepared_statements_;
+  int16_t consistency_;
 };
 
 } // namespace cass

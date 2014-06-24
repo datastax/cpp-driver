@@ -17,28 +17,33 @@
 #ifndef __CASS_SESSION_HPP_INCLUDED__
 #define __CASS_SESSION_HPP_INCLUDED__
 
-#include <uv.h>
+#include "event_thread.hpp"
+#include "mpmc_queue.hpp"
+#include "spsc_queue.hpp"
+#include "scoped_mutex.hpp"
+#include "scoped_ptr.hpp"
+#include "host.hpp"
+#include "future.hpp"
+#include "load_balancing_policy.hpp"
+#include "config.hpp"
 
+#include <uv.h>
 #include <list>
 #include <string>
 #include <vector>
 #include <memory>
 #include <set>
 
-#include "event_thread.hpp"
-#include "mpmc_queue.hpp"
-#include "spsc_queue.hpp"
-#include "io_worker.hpp"
-#include "load_balancing_policy.hpp"
-#include "round_robin_policy.hpp"
-#include "resolver.hpp"
-#include "config.hpp"
-#include "request_handler.hpp"
-#include "logger.hpp"
-#include "scoped_mutex.hpp"
-#include "scoped_ptr.hpp"
-
 namespace cass {
+
+class Logger;
+class RequestHandler;
+class Future;
+class IOWorker;
+class Resolver;
+class Request;
+class SSLSession;
+class SSLContext;
 
 struct SessionEvent {
   enum Type { CONNECT, NOTIFY_READY, NOTIFY_CLOSED };
@@ -82,13 +87,7 @@ private:
   void init_pools();
   SSLSession* ssl_session_new();
 
-  void execute(RequestHandler* request_handler) {
-    if (!request_queue_->enqueue(request_handler)) {
-      request_handler->on_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
-                                "The request queue has reached capacity");
-      delete request_handler;
-    }
-  }
+  void execute(RequestHandler* request_handler);
 
   virtual void on_run();
   virtual void on_after_run();

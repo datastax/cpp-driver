@@ -49,8 +49,7 @@ public:
   void* data() { return data_; }
 
   static void resolve(uv_loop_t* loop, const std::string& host, int port,
-                      void* data, Callback cb,
-                      struct addrinfo* hints = NULL) {
+                      void* data, Callback cb, struct addrinfo* hints = NULL) {
     Resolver* resolver = new Resolver(host, port, data, cb);
 
     std::ostringstream ss;

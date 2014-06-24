@@ -16,6 +16,7 @@
 
 #include "cassandra.hpp"
 #include "statement.hpp"
+#include "query_request.hpp"
 
 #include "third_party/boost/boost/cstdint.hpp"
 
@@ -102,3 +103,29 @@ CassError cass_statement_bind_custom(CassStatement* statement,
 }
 
 } // extern "C"
+
+namespace cass {
+
+size_t Statement::encoded_size() const {
+  size_t total_size = sizeof(uint16_t);
+  for (ValueVec::const_iterator it = values_.begin(), end = values_.end();
+       it != end; ++it) {
+    total_size += sizeof(int32_t);
+    int32_t value_size = it->size();
+    if (value_size > 0) {
+      total_size += value_size;
+    }
+  }
+  return total_size;
+}
+
+char* Statement::encode(char* buffer) const {
+  buffer = encode_short(buffer, values_.size());
+  for (ValueVec::const_iterator it = values_.begin(), end = values_.end();
+       it != end; ++it) {
+    buffer = encode_bytes(buffer, it->data(), it->size());
+  }
+  return buffer;
+}
+
+} // namespace  cass

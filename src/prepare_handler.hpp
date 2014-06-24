@@ -18,69 +18,27 @@
 #define __CASS_PREPARE_HANDLER_HPP_INCLUDED__
 
 #include "response_callback.hpp"
-#include "request_handler.hpp"
-#include "message.hpp"
-#include "prepare_request.hpp"
-#include "io_worker.hpp"
-
 #include "scoped_ptr.hpp"
 
 namespace cass {
+
+class RequestHandler;
+class Message;
 
 class PrepareHandler : public ResponseCallback {
 public:
   PrepareHandler(RequestHandler* request_handler)
       : request_handler_(request_handler) {}
 
-  bool init(const std::string& prepared_id) {
-    request_.reset(new Message(CQL_OPCODE_PREPARE));
-    PrepareRequest* prepare
-        = static_cast<PrepareRequest*>(request_->request_body.get());
-    if (request_handler_->request()->opcode == CQL_OPCODE_EXECUTE) {
-      ExecuteRequest* execute =
-          static_cast<ExecuteRequest*>(request_handler_->request()->request_body.get());
-      prepare->prepare_string(execute->prepared_statement);
-      return true;
-    } else if (request_handler_->request()->opcode == CQL_OPCODE_BATCH) {
-      BatchRequest* batch =
-          static_cast<BatchRequest*>(request_handler_->request()->request_body.get());
-      std::string prepared_statement;
-      if (batch->prepared_statement(prepared_id, &prepared_statement)) {
-        prepare->prepare_string(prepared_statement);
-        return true;
-      }
-    }
-    return false; // Invalid request type
-  }
+  bool init(const std::string& prepared_id);
 
   virtual Message* request() const { return request_.get(); }
 
-  virtual void on_set(Message* response) {
-    switch (response->opcode) {
-      case CQL_OPCODE_RESULT: {
-        ResultResponse* result =
-            static_cast<ResultResponse*>(response->response_body.get());
-        if (result->kind == CASS_RESULT_KIND_PREPARED) {
-          request_handler_.release()->retry(RETRY_WITH_CURRENT_HOST);
-        } else {
-          request_handler_.release()->retry(RETRY_WITH_NEXT_HOST);
-        }
-      } break;
-      case CQL_OPCODE_ERROR:
-        request_handler_.release()->retry(RETRY_WITH_NEXT_HOST);
-        break;
-      default:
-        break;
-    }
-  }
+  virtual void on_set(Message* response);
 
-  virtual void on_error(CassError code, const std::string& message) {
-    request_handler_.release()->retry(RETRY_WITH_NEXT_HOST);
-  }
+  virtual void on_error(CassError code, const std::string& message);
 
-  virtual void on_timeout() {
-    request_handler_.release()->retry(RETRY_WITH_NEXT_HOST);
-  }
+  virtual void on_timeout();
 
 private:
   ScopedPtr<Message> request_;

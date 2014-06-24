@@ -17,35 +17,24 @@
 #ifndef __CASS_SUPPORTED_RESPONSE_HPP_INCLUDED__
 #define __CASS_SUPPORTED_RESPONSE_HPP_INCLUDED__
 
+#include "response.hpp"
+#include "constants.hpp"
+
 #include <list>
 #include <string>
 
-#include "message_body.hpp"
-
 namespace cass {
 
-struct SupportedResponse : public Response {
-  std::list<std::string> compression;
-  std::list<std::string> versions;
-
+class SupportedResponse : public Response {
+public:
   SupportedResponse()
       : Response(CQL_OPCODE_SUPPORTED) {}
 
-  bool consume(char* buffer, size_t size) {
-    string_multimap_t supported;
+  bool consume(char* buffer, size_t size);
 
-    decode_string_multimap(buffer, supported);
-    string_multimap_t::const_iterator it = supported.find("COMPRESSION");
-    if (it != supported.end()) {
-      compression = it->second;
-    }
-
-    it = supported.find("CASS_VERSION");
-    if (it != supported.end()) {
-      versions = it->second;
-    }
-    return true;
-  }
+private:
+  std::list<std::string> compression_;
+  std::list<std::string> versions_;
 };
 
 } // namespace cass

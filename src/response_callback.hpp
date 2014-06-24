@@ -17,9 +17,12 @@
 #ifndef __CASS_RESPONSE_CALLBACK_HPP_INCLUDED__
 #define __CASS_RESPONSE_CALLBACK_HPP_INCLUDED__
 
+#include "cassandra.h"
+#include <string>
+
 namespace cass {
 
-struct Message;
+class Message;
 struct Error;
 
 class ResponseCallback {

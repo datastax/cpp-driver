@@ -17,15 +17,14 @@
 #ifndef __CASS_LOGGER_HPP_INCLUDED__
 #define __CASS_LOGGER_HPP_INCLUDED__
 
-#include <stdarg.h>
-
-#include <string>
-
-#include "event_thread.hpp"
 #include "cassandra.h"
+#include "loop_thread.hpp"
 #include "async_queue.hpp"
 #include "mpmc_queue.hpp"
 #include "config.hpp"
+
+#include <stdarg.h>
+#include <string>
 
 namespace cass {
 
@@ -53,9 +52,7 @@ public:
     va_end(args);                \
   }
 
-  void critical(const char* format, ...) {
-    LOG_MESSAGE(CASS_LOG_CRITICAL);
-  }
+  void critical(const char* format, ...) { LOG_MESSAGE(CASS_LOG_CRITICAL); }
 
   void error(const char* format, ...) { LOG_MESSAGE(CASS_LOG_ERROR); }
 
