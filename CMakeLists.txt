@@ -97,7 +97,7 @@ if(MULTICORE_COMPILATION)
   # ~/.pam_environment file (in any case check man).
 endif()
 
-if(MSVC)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
   set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:LIBCMT")
@@ -112,10 +112,14 @@ if(MSVC)
 
   # needed for windows sockets (not verified)
   add_definitions(-D_WIN32_WINNT=0x0501)
-else()
-  # GCC/Clang specific compiler options
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  # GCC specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(PLATFORM_DEPENDENT_CXX_FLAGS "-std=c++98 -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-local-typedefs")
+  set(PLATFORM_DEPENDENT_CXX_FLAGS "-fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-local-typedefs")
+else()
+  # Clang/Intel specific compiler options
+  # I disabled long-long warning because boost generates about 50 such warnings
+  set(PLATFORM_DEPENDENT_CXX_FLAGS "-fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 endif()
 
 #-------------------
