@@ -24,6 +24,7 @@
 #include "config.hpp"
 
 #include <stdarg.h>
+#include <stdio.h>
 #include <string>
 
 namespace cass {

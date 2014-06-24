@@ -23,6 +23,7 @@
 #include "third_party/boost/boost/cstdint.hpp"
 
 #include <assert.h>
+#include <string.h>
 #include <list>
 #include <map>
 #include <string>
