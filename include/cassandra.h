@@ -542,7 +542,8 @@ cass_statement_new(CassString statement,
                    CassConsistency consistency);
 
 /**
- * Frees a statement instance.
+ * Frees a statement instance. Statements can be immediately freed after
+ * being prepared, executed or added to a batch.
  *
  * @param[in] statement
  */
@@ -776,7 +777,8 @@ cass_batch_new(CassConsistency consistency,
                CassBatchType type);
 
 /**
- * Frees a batch instance.
+ * Frees a batch instance. Batches can be immediately freed after being
+ * executed.
  *
  * @param[in] batch
  */
@@ -961,6 +963,18 @@ cass_result_row_count(const CassResult* result);
  */
 CASS_EXPORT cass_size_t
 cass_result_column_count(const CassResult* result);
+
+/**
+* Gets the column name at index for the specified result.
+*
+* @param[in] result
+* @param[in] index
+* @return The column name at the specified index. Empty string
+* is returned if the index is out of bounds.
+*/
+CASS_EXPORT CassString
+cass_result_column_name(const CassResult *result, 
+                        cass_size_t index);
 
 /**
  * Gets the column type at index for the specified result.
