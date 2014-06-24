@@ -970,8 +970,9 @@ cass_result_column_count(const CassResult* result);
 * is returned if the index is out of bounds.
 */
 CASS_EXPORT CassString
-cass_result_column_name(const CassResult* result, size_t index);
-    
+cass_result_column_name(const CassResult *result, 
+                        cass_size_t index);
+
 /**
  * Gets the column type at index for the specified result.
  *
