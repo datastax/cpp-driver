@@ -21,6 +21,7 @@
 #include "constants.hpp"
 #include "scoped_ptr.hpp"
 
+#include <string.h>
 #include <string>
 
 namespace cass {

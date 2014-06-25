@@ -1,6 +1,7 @@
 #include "config.hpp"
 #include "common.hpp"
 
+#include <string.h>
 #include <sstream>
 
 #if defined(_MSC_VER)
