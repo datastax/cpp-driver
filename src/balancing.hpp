@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_LOAD_BALANCING_POLICY_HPP_INCLUDED__
-#define __CASS_LOAD_BALANCING_POLICY_HPP_INCLUDED__
+#ifndef __CASS_BALANCING_HPP_INCLUDED__
+#define __CASS_BALANCING_HPP_INCLUDED__
 
 #include <list>
 #include <set>
@@ -23,6 +23,7 @@
 
 #include "host.hpp"
 #include "constants.hpp"
+#include "cassandra.h"
 
 namespace cass {
 
@@ -39,6 +40,19 @@ public:
   virtual void new_query_plan(std::list<Host>* output) = 0;
 };
 
+class Balancing {
+public:
+  void* session_data() { return session_data_; }
+
+  void set_session_data(void* session_data) {
+    session_data_ = session_data;
+  }
+
+private:
+  void* session_data_;
+};
+
 } // namespace cass
 
 #endif
+

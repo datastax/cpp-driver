@@ -28,6 +28,7 @@
 #include "row.hpp"
 #include "value.hpp"
 #include "iterator.hpp"
+#include "balancing.hpp"
 
 // This abstraction allows us to separate internal types from the
 // external opaque pointers that we expose.
@@ -52,6 +53,8 @@ struct CassCollection_ : public External<cass::Collection, CassCollection> {};
 struct CassIterator_ : public External<cass::Iterator, CassIterator> {};
 struct CassRow_ : public External<cass::Row, CassRow> {};
 struct CassValue_ : public External<cass::Value, CassValue> {};
+struct CassBalancing_ : public External<cass::Balancing, CassBalancing> {};
+
 }
 
 #endif

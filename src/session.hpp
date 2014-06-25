@@ -24,7 +24,7 @@
 #include "scoped_ptr.hpp"
 #include "host.hpp"
 #include "future.hpp"
-#include "load_balancing_policy.hpp"
+#include "balancing.hpp"
 #include "config.hpp"
 
 #include <uv.h>

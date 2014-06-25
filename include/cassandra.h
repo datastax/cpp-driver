@@ -124,6 +124,13 @@ typedef struct CassDecimal_ {
   CassBytes varint;
 } CassDecimal;
 
+typedef struct CassHost_ {
+  CassInet address;
+  CassString rack;
+  CassString datacenter;
+  CassString version;
+} CassHost;
+
 #define CASS_UUID_STRING_LENGTH 37
 
 typedef cass_uint8_t CassUuid[16];
@@ -139,6 +146,24 @@ typedef struct CassIterator_ CassIterator;
 typedef struct CassRow_ CassRow;
 typedef struct CassValue_ CassValue;
 typedef struct CassCollection_ CassCollection;
+typedef struct CassBalancing_ CassBalancing;
+
+typedef enum CassBalancingState_ {
+  CASS_BALANCING_INIT,
+  CASS_BALANCING_CLEANUP,
+  CASS_BALANCING_ON_UP,
+  CASS_BALANCING_ON_DOWN,
+  CASS_BALANCING_ON_ADD,
+  CASS_BALANCING_ON_REMOVE,
+  CASS_BALANCING_DISTANCE,
+  CASS_BALANCING_NEW_QUERY_PLAN
+} CassBalancingState;
+
+typedef enum CassHostDistance_ {
+  CASS_HOST_DISTANCE_LOCAL,
+  CASS_HOST_DISTANCE_REMOTE,
+  CASS_HOST_DISTANCE_IGNORE
+} CassHostDistance;
 
 typedef enum CassConsistency_ {
   CASS_CONSISTENCY_ANY          = 0x0000,
@@ -279,11 +304,6 @@ typedef enum CassError_ {
 #undef XX
   CASS_ERROR_LAST_ENTRY
 } CassError;
-
-typedef void (*CassLogCallback)(void* data,
-                                cass_uint64_t time,
-                                CassLogLevel severity,
-                                CassString message);
 
 /***********************************************************************************
  *
@@ -1465,6 +1485,51 @@ cass_string_init(const char* null_terminated);
  */
 CASS_EXPORT CassString
 cass_string_init2(const char* data, cass_size_t length);
+
+
+/***********************************************************************************
+ *
+ * Logging
+ *
+ ***********************************************************************************/
+
+typedef void (*CassLogCallback)(void* data,
+                                cass_uint64_t time,
+                                CassLogLevel severity,
+                                CassString message);
+
+/***********************************************************************************
+ *
+ * Balancing
+ *
+ ***********************************************************************************/
+
+typedef void (*CassBalancingCallback)(void* data,
+                                      CassBalancingState state,
+                                      CassBalancing* balancing);
+
+void
+cass_balancing_set_session_data(CassBalancing* balancing,
+                                void* session_data);
+
+void*
+cass_balancing_session_data(CassBalancing* balancing);
+
+cass_size_t
+cass_balancing_hosts_count(CassBalancing* balancing);
+
+CassHost
+cass_balancing_host(CassBalancing* balancing,
+                    cass_size_t index);
+
+void
+cass_balancing_set_host_distance(CassBalancing* balancing,
+                                 cass_size_t index,
+                                 CassHostDistance distance);
+
+void
+cass_balancing_add_host_to_query(CassBalancing* balancing,
+                                 CassInet host);
 
 #ifdef __cplusplus
 } /* extern "C" */
