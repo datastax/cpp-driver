@@ -36,7 +36,8 @@ std::vector<test_utils::Uuid> insert_async(CassSession* session,
   std::vector<test_utils::Uuid> ids;
   for(size_t i = 0; i < num_concurrent_requests; ++i) {
     test_utils::Uuid id = test_utils::generate_time_uuid();
-    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init2(insert_query.data(), insert_query.size()), 3, CASS_CONSISTENCY_QUORUM));
+    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init2(insert_query.data(), insert_query.size()), 3));
+    cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_QUORUM);
     BOOST_REQUIRE(cass_statement_bind_uuid(statement.get(), 0, id) == CASS_OK);
     BOOST_REQUIRE(cass_statement_bind_int32(statement.get(), 1, i) == CASS_OK);
     std::string str_value = str(boost::format("row%d") % i);

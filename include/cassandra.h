@@ -526,15 +526,13 @@ cass_future_error_message(CassFuture* future);
  *
  * @param[in] statement The statement string.
  * @param[in] parameter_count The number of bound paramerters.
- * @param[in] consistency The statement's read/write consistency.
  * @return Returns a statement that must be freed.
  *
  * @see cass_statement_free()
  */
 CASS_EXPORT CassStatement*
 cass_statement_new(CassString statement,
-                   cass_size_t parameter_count,
-                   CassConsistency consistency);
+                   cass_size_t parameter_count);
 
 /**
  * Frees a statement instance. Statements can be immediately freed after
@@ -545,6 +543,25 @@ cass_statement_new(CassString statement,
 CASS_EXPORT void
 cass_statement_free(CassStatement* statement);
 
+/**
+ * Sets the statement's consistency level
+ *
+ * @param[in] statement
+ * @param[in] consistency The statement's read/write consistency.
+ */
+CASS_EXPORT void
+cass_statement_set_consistency(CassStatement* statement,
+                               CassConsistency consistency);
+
+/**
+ * Sets the statement's serial consistency level
+ *
+ * @param[in] statement
+ * @param[in] consistency The statement's read/write serial consistency.
+ */
+CASS_EXPORT void
+cass_statement_set_serial_consistency(CassStatement* statement,
+                                      CassConsistency serial_consistency);
 
 /**
  * Binds null to a query or bound statement at the specified index.
@@ -742,15 +759,13 @@ cass_prepared_free(const CassPrepared* prepared);
  *
  * @param[in] prepared A previously prepared statement.
  * @param[in] parameter_count The number of bound parameters.
- * @param[in] consistency The statement's read/write consistency.
  * @return Returns a bound statement that must be freed.
  *
  * @see cass_statement_free()
  */
 CASS_EXPORT CassStatement*
 cass_prepared_bind(const CassPrepared* prepared,
-                   cass_size_t parameter_count,
-                   CassConsistency consistency);
+                   cass_size_t parameter_count);
 
 /***********************************************************************************
  *
@@ -762,14 +777,12 @@ cass_prepared_bind(const CassPrepared* prepared,
  * Creates a new batch statement with batch type.
  *
  * @param[in] consistency The statement's read/write consistency.
- * @param[in] type The batch type.
  * @return Returns a batch statement that must be freed.
  *
  * @see cass_batch_free()
  */
 CASS_EXPORT CassBatch*
-cass_batch_new(CassConsistency consistency,
-               CassBatchType type);
+cass_batch_new(CassBatchType type);
 
 /**
  * Frees a batch instance. Batches can be immediately freed after being
@@ -779,6 +792,16 @@ cass_batch_new(CassConsistency consistency,
  */
 CASS_EXPORT void
 cass_batch_free(CassBatch* batch);
+
+/**
+ * Sets the batch's consistency level
+ *
+ * @param[in] batch
+ * @param[in] consistency The batch's read/write consistency.
+ */
+CASS_EXPORT void
+cass_batch_set_consistency(CassBatch* batch,
+                           CassConsistency consistency);
 
 /**
  * Adds a statement to a batch.

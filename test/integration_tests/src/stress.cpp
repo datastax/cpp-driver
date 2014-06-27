@@ -49,20 +49,23 @@ void bind_and_execute_insert(CassSession* session, CassStatement* statement) {
 
 void insert_task(CassSession* session, const std::string& query, CassConsistency consistency, int rows_per_id) {
   for(int i = 0; i < rows_per_id; ++i) {
-    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 3, consistency));
+    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 3));
+    cass_statement_set_consistency(statement.get(), consistency);
     bind_and_execute_insert(session, statement.get());
   }
 }
 
 void insert_prepared_task(CassSession* session, const CassPrepared* prepared, CassConsistency consistency, int rows_per_id) {
   for(int i = 0; i < rows_per_id; ++i) {
-    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared, 3, consistency));
+    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared, 3));
+    cass_statement_set_consistency(statement.get(), consistency);
     bind_and_execute_insert(session, statement.get());
   }
 }
 
 void select_task(CassSession* session, const std::string& query, CassConsistency consistency, int num_iterations) {
-  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 0, consistency));
+  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 0));
+  cass_statement_set_consistency(statement.get(), consistency);
   for(int i = 0; i < num_iterations; ++i) {
     test_utils::CassFuturePtr future = test_utils::make_shared(cass_session_execute(session, statement.get()));
     cass_future_wait(future.get());

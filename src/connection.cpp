@@ -619,7 +619,7 @@ void Connection::send_use_keyspace() {
   QueryRequest* query =
       static_cast<QueryRequest*>(message->request_body().get());
   query->statement("use \"" + keyspace_ + "\"");
-  query->consistency(CASS_CONSISTENCY_ONE);
+  query->set_consistency(CASS_CONSISTENCY_ONE);
   execute(new StartupHandler(this, message));
 }
 

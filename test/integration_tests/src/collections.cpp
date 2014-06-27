@@ -38,7 +38,7 @@ void insert_collection_value(CassSession* session, CassValueType type, CassValue
 
   std::string query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(0, ?);") % table_name);
 
-  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 1, CASS_CONSISTENCY_ONE));
+  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 1));
 
   BOOST_REQUIRE(cass_statement_bind_collection(statement.get(), 0, input.get(), cass_false) == CASS_OK);
 
@@ -178,7 +178,7 @@ void insert_map_value(CassSession* session, CassValueType primary_type, CassValu
 
   std::string query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(0, ?);") % table_name);
 
-  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 1, CASS_CONSISTENCY_ONE));
+  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 1));
 
   BOOST_REQUIRE(cass_statement_bind_collection(statement.get(), 0, input.get(), cass_true) == CASS_OK);
 

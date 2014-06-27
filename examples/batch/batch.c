@@ -64,7 +64,7 @@ CassError connect_session(CassCluster* cluster, CassSession** output) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = 0;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(cass_string_init(query), 0, CASS_CONSISTENCY_ONE);
+  CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -103,11 +103,11 @@ CassError prepare_insert_into_batch(CassSession* session, const CassPrepared** p
 CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepared* prepared, const Pair* pairs) {
   CassError rc = 0;
   CassFuture* future = NULL;
-  CassBatch* batch = cass_batch_new(CASS_CONSISTENCY_ONE, CASS_BATCH_TYPE_LOGGED);
+  CassBatch* batch = cass_batch_new(CASS_BATCH_TYPE_LOGGED);
 
   const Pair* pair;
   for(pair = pairs; pair->key != NULL; pair++) {
-    CassStatement* statement = cass_prepared_bind(prepared, 2, CASS_CONSISTENCY_ONE);
+    CassStatement* statement = cass_prepared_bind(prepared, 2);
     cass_statement_bind_string(statement, 0, cass_string_init(pair->key));
     cass_statement_bind_string(statement, 1, cass_string_init(pair->value));
     cass_batch_add_statement(batch, statement);
@@ -115,13 +115,11 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
 
   cass_batch_add_statement(batch,
                            cass_statement_new(cass_string_init("INSERT INTO examples.pairs (key, value) VALUES ('c', '3')"),
-                                              0,
-                                              CASS_CONSISTENCY_ONE));
+                                              0));
 
   {
     CassStatement* statement = cass_statement_new(cass_string_init("INSERT INTO examples.pairs (key, value) VALUES (?, ?)"),
-                                                  2,
-                                                  CASS_CONSISTENCY_ONE);
+                                                  2);
     cass_statement_bind_string(statement, 0, cass_string_init("d"));
     cass_statement_bind_string(statement, 1, cass_string_init("4"));
     cass_batch_add_statement(batch, statement);

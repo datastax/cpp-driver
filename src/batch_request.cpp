@@ -22,14 +22,19 @@
 
 extern "C" {
 
-CassBatch* cass_batch_new(CassConsistency consistency, CassBatchType type) {
-  cass::BatchRequest* batch = new cass::BatchRequest(consistency, type);
+CassBatch* cass_batch_new(CassBatchType type) {
+  cass::BatchRequest* batch = new cass::BatchRequest(type);
   batch->retain();
   return CassBatch::to(batch);
 }
 
 void cass_batch_free(CassBatch* batch) {
   batch->release();
+}
+
+void cass_batch_set_consistency(CassBatch* batch,
+                                CassConsistency consistency) {
+  batch->set_consistency(consistency);
 }
 
 CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {

@@ -17,6 +17,7 @@
 #ifndef __CASS_BATCH_REQUEST_HPP_INCLUDED__
 #define __CASS_BATCH_REQUEST_HPP_INCLUDED__
 
+#include "cassandra.h"
 #include "request.hpp"
 #include "constants.hpp"
 
@@ -37,12 +38,15 @@ class ExecuteRequest;
 
 class BatchRequest : public Request {
 public:
-  BatchRequest(size_t consistency, uint8_t type_)
+  BatchRequest(uint8_t type_)
       : Request(CQL_OPCODE_BATCH)
       , type_(type_)
-      , consistency_(consistency) {}
+      , consistency_(CASS_CONSISTENCY_ONE) {}
 
   ~BatchRequest();
+
+  int16_t consistency() { return consistency_; }
+  void set_consistency(int16_t consistency) { consistency_ = consistency; }
 
   void add_statement(Statement* statement);
 

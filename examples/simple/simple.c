@@ -39,7 +39,7 @@ int main() {
     CassFuture* result_future = NULL;
     CassFuture* close_future = NULL;
     CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces;");
-    CassStatement* statement = cass_statement_new(query, 0, CASS_CONSISTENCY_ONE);
+    CassStatement* statement = cass_statement_new(query, 0);
 
     result_future = cass_session_execute(session, statement);
     cass_future_wait(result_future);

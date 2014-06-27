@@ -24,39 +24,19 @@
 #include "constants.hpp"
 #include "prepared.hpp"
 
-#define CASS_QUERY_FLAG_VALUES 0x01
-#define CASS_QUERY_FLAG_SKIP_METADATA 0x02
-#define CASS_QUERY_FLAG_PAGE_SIZE 0x04
-#define CASS_QUERY_FLAG_PAGING_STATE 0x08
-#define CASS_QUERY_FLAG_SERIAL_CONSISTENCY 0x10
-
 namespace cass {
 
 class ExecuteRequest : public Statement {
 public:
-  ExecuteRequest(const Prepared* prepared, size_t value_count,
-                 CassConsistency consistency)
+  ExecuteRequest(const Prepared* prepared, size_t value_count)
       : Statement(CQL_OPCODE_EXECUTE, value_count)
       , prepared_id_(prepared->id())
-      , prepared_statement_(prepared->statement())
-      , consistency_(consistency)
-      , page_size_(-1)
-      , serial_consistency_(CASS_CONSISTENCY_ANY) {}
+      , prepared_statement_(prepared->statement()) {}
 
   uint8_t kind() const {
     // used for batch statements
     return 1;
   }
-
-  void consistency(int16_t consistency) { consistency_ = consistency; }
-
-  int16_t consistency() const { return consistency_; }
-
-  void serial_consistency(int16_t serial_consistency) {
-    serial_consistency_ = serial_consistency;
-  }
-
-  int16_t serial_consistency() const { return serial_consistency_; }
 
   const char* statement() const { return prepared_id_.data(); }
 
@@ -78,10 +58,6 @@ public:
 private:
   std::string prepared_id_;
   std::string prepared_statement_;
-  int16_t consistency_;
-  int page_size_;
-  std::vector<char> paging_state_;
-  int16_t serial_consistency_;
 };
 
 } // namespace cass

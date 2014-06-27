@@ -22,9 +22,8 @@
 
 extern "C" {
 
-CassStatement* cass_statement_new(CassString statement, size_t parameter_count,
-                                  CassConsistency consistency) {
-  cass::Statement* query = new cass::QueryRequest(parameter_count, consistency);
+CassStatement* cass_statement_new(CassString statement, size_t parameter_count) {
+  cass::Statement* query = new cass::QueryRequest(parameter_count);
   query->retain();
   query->statement(statement.data, statement.length);
   return CassStatement::to(query);
@@ -32,6 +31,16 @@ CassStatement* cass_statement_new(CassString statement, size_t parameter_count,
 
 void cass_statement_free(CassStatement* statement) {
   statement->release();
+}
+
+void cass_statement_set_consistency(CassStatement* statement,
+                                    CassConsistency consistency) {
+  statement->set_consistency(consistency);
+}
+
+void cass_statement_set_serial_consistency(CassStatement* statement,
+                                      CassConsistency serial_consistency) {
+  statement->set_serial_consistency(serial_consistency);
 }
 
 CassError cass_statement_bind_null(CassStatement* statement,

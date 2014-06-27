@@ -28,14 +28,14 @@ bool QueryRequest::prepare(size_t reserved, char** output, size_t& size) {
   // flags
   size += 1;
 
-  if (serial_consistency_ != 0) {
+  if (serial_consistency() != 0) {
     flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
     size += sizeof(int16_t);
   }
 
-  if (!paging_state_.empty()) {
+  if (!paging_state().empty()) {
     flags |= CASS_QUERY_FLAG_PAGING_STATE;
-    size += (sizeof(int16_t) + paging_state_.size());
+    size += (sizeof(int16_t) + paging_state().size());
   }
 
   if (!is_empty()) {
@@ -43,12 +43,12 @@ bool QueryRequest::prepare(size_t reserved, char** output, size_t& size) {
     flags |= CASS_QUERY_FLAG_VALUES;
   }
 
-  if (page_size_ >= 0) {
+  if (page_size() >= 0) {
     size += sizeof(int32_t);
     flags |= CASS_QUERY_FLAG_PAGE_SIZE;
   }
 
-  if (serial_consistency_ != 0) {
+  if (serial_consistency() != 0) {
     size += sizeof(int16_t);
     flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
   }
@@ -58,23 +58,23 @@ bool QueryRequest::prepare(size_t reserved, char** output, size_t& size) {
   char* buffer =
       encode_long_string(*output + reserved, query_.c_str(), query_.size());
 
-  buffer = encode_short(buffer, consistency_);
+  buffer = encode_short(buffer, consistency());
   buffer = encode_byte(buffer, flags);
 
   if (!is_empty()) {
     buffer = encode(buffer);
   }
 
-  if (page_size_ >= 0) {
-    buffer = encode_int(buffer, page_size_);
+  if (page_size() >= 0) {
+    buffer = encode_int(buffer, page_size());
   }
 
-  if (!paging_state_.empty()) {
-    buffer = encode_string(buffer, &paging_state_[0], paging_state_.size());
+  if (!paging_state().empty()) {
+    buffer = encode_string(buffer, &paging_state()[0], paging_state().size());
   }
 
-  if (serial_consistency_ != 0) {
-    buffer = encode_short(buffer, serial_consistency_);
+  if (serial_consistency() != 0) {
+    buffer = encode_short(buffer, serial_consistency());
   }
 
   return true;

@@ -21,8 +21,8 @@
 #include "buffer.hpp"
 #include "collection.hpp"
 
-#include <list>
-#include <utility>
+#include <vector>
+#include <string>
 
 #define CASS_VALUE_CHECK_INDEX(i)              \
   if (index >= size()) {                       \
@@ -34,13 +34,33 @@ namespace cass {
 class Statement : public Request {
 public:
   Statement(uint8_t opcode)
-      : Request(opcode) {}
+      : Request(opcode)
+      , consistency_(CASS_CONSISTENCY_ONE)
+      , serial_consistency_(CASS_CONSISTENCY_ANY)
+      , page_size_(-1) {}
 
   Statement(uint8_t opcode, size_t value_count)
       : Request(opcode)
-      , values_(value_count) {}
+      , values_(value_count)
+      , consistency_(CASS_CONSISTENCY_ONE)
+      , serial_consistency_(CASS_CONSISTENCY_ANY)
+      , page_size_(-1) {}
 
   virtual ~Statement() {}
+
+  int16_t consistency() const { return consistency_; }
+
+  void set_consistency(int16_t consistency) { consistency_ = consistency; }
+
+  int16_t serial_consistency() const { return serial_consistency_; }
+
+  void set_serial_consistency(int16_t serial_consistency) {
+    serial_consistency_ = serial_consistency;
+  }
+
+  int page_size() const { return page_size_; }
+
+  const std::string paging_state() const { return paging_state_; }
 
   virtual uint8_t kind() const = 0;
 
@@ -51,14 +71,6 @@ public:
   virtual const char* statement() const = 0;
 
   virtual size_t statement_size() const = 0;
-
-  virtual void consistency(int16_t consistency) = 0;
-
-  virtual int16_t consistency() const = 0;
-
-  virtual int16_t serial_consistency() const = 0;
-
-  virtual void serial_consistency(int16_t consistency) = 0;
 
   void resize(size_t size) { values_.resize(size); }
 
@@ -146,6 +158,10 @@ private:
   typedef std::vector<Buffer> ValueVec;
 
   ValueVec values_;
+  int16_t consistency_;
+  int16_t serial_consistency_;
+  int page_size_;
+  std::string paging_state_;
 };
 
 } // namespace cass

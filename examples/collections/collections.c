@@ -57,7 +57,7 @@ CassError connect_session(CassCluster* cluster, CassSession** output) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = 0;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(cass_string_init(query), 0, CASS_CONSISTENCY_ONE);
+  CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -81,7 +81,7 @@ CassError insert_into_collections(CassSession* session, const char* key, const c
   const char** item = NULL;
   CassString query = cass_string_init("INSERT INTO examples.collections (key, items) VALUES (?, ?);");
 
-  statement = cass_statement_new(query, 2, CASS_CONSISTENCY_ONE);
+  statement = cass_statement_new(query, 2);
 
   cass_statement_bind_string(statement, 0, cass_string_init(key));
 
@@ -112,7 +112,7 @@ CassError select_from_collections(CassSession* session, const char* key) {
   CassFuture* future = NULL;
   CassString query = cass_string_init("SELECT items FROM examples.collections WHERE key = ?");
 
-  statement = cass_statement_new(query, 1, CASS_CONSISTENCY_ONE);
+  statement = cass_statement_new(query, 1);
 
   cass_statement_bind_string(statement, 0, cass_string_init(key));
 

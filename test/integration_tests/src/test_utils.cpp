@@ -147,7 +147,8 @@ void execute_query(CassSession* session,
                    const std::string& query,
                    CassResultPtr* result,
                    CassConsistency consistency) {
-  CassStatementPtr statement = make_shared(cass_statement_new(cass_string_init(query.c_str()), 0, consistency));
+  CassStatementPtr statement = make_shared(cass_statement_new(cass_string_init(query.c_str()), 0));
+  cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future = make_shared(cass_session_execute(session, statement.get()));
   wait_and_check_error(future.get());
   if(result != NULL) {

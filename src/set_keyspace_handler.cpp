@@ -34,7 +34,7 @@ SetKeyspaceHandler::SetKeyspaceHandler(const std::string& keyspace,
   QueryRequest* query =
       static_cast<QueryRequest*>(request_->request_body().get());
   query->statement("use \"" + keyspace + "\"");
-  query->consistency(CASS_CONSISTENCY_ONE);
+  query->set_consistency(CASS_CONSISTENCY_ONE);
 }
 
 void SetKeyspaceHandler::on_set(Message* response) {

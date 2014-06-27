@@ -33,40 +33,21 @@ namespace cass {
 
 class QueryRequest : public Statement {
 public:
-  QueryRequest(const char* statement, size_t statement_length,
-               size_t value_count, CassConsistency consistency)
-      : Statement(CQL_OPCODE_QUERY, value_count)
-      , query_(statement, statement_length)
-      , consistency_(consistency)
-      , page_size_(-1)
-      , serial_consistency_(CASS_CONSISTENCY_ANY) {}
-
-  QueryRequest(size_t value_count, CassConsistency consistency)
-      : Statement(CQL_OPCODE_QUERY, value_count)
-      , consistency_(consistency)
-      , page_size_(-1)
-      , serial_consistency_(CASS_CONSISTENCY_ANY) {}
-
   QueryRequest()
-      : Statement(CQL_OPCODE_QUERY)
-      , consistency_(CASS_CONSISTENCY_ANY)
-      , page_size_(-1)
-      , serial_consistency_(CASS_CONSISTENCY_ANY) {}
+    : Statement(CQL_OPCODE_QUERY) {}
+
+  QueryRequest(size_t value_count)
+    : Statement(CQL_OPCODE_QUERY, value_count) {}
+
+  QueryRequest(const char* statement, size_t statement_length,
+               size_t value_count)
+      : Statement(CQL_OPCODE_QUERY, value_count)
+      , query_(statement, statement_length) {}
 
   uint8_t kind() const {
     // used for batch statements
     return 0;
   }
-
-  void consistency(int16_t consistency) { consistency_ = consistency; }
-
-  int16_t consistency() const { return consistency_; }
-
-  void serial_consistency(int16_t serial_consistency) {
-    serial_consistency_ = serial_consistency;
-  }
-
-  int16_t serial_consistency() const { return serial_consistency_; }
 
   const char* statement() const { return &query_[0]; }
 
@@ -82,10 +63,6 @@ public:
 
 private:
   std::string query_;
-  int16_t consistency_;
-  int page_size_;
-  std::vector<char> paging_state_;
-  int16_t serial_consistency_;
 };
 
 } // namespace cass
