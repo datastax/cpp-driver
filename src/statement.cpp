@@ -115,7 +115,7 @@ CassError cass_statement_bind_custom(CassStatement* statement,
 
 namespace cass {
 
-size_t Statement::encoded_size() const {
+size_t Statement::encoded_values_size() const {
   size_t total_size = sizeof(uint16_t);
   for (ValueVec::const_iterator it = values_.begin(), end = values_.end();
        it != end; ++it) {
@@ -128,13 +128,17 @@ size_t Statement::encoded_size() const {
   return total_size;
 }
 
-char* Statement::encode(char* buffer) const {
+char* Statement::encode_values(char* buffer) const {
   buffer = encode_short(buffer, values_.size());
   for (ValueVec::const_iterator it = values_.begin(), end = values_.end();
        it != end; ++it) {
     buffer = encode_bytes(buffer, it->data(), it->size());
   }
   return buffer;
+}
+
+void encode_values(BufferVec* bufs) const {
+
 }
 
 } // namespace  cass

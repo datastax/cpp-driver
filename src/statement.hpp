@@ -76,7 +76,7 @@ public:
 
   size_t size() const { return values_.size(); }
 
-  bool is_empty() const { return values_.empty(); }
+  bool has_values() const { return !values_.empty(); }
 
 #define BIND_FIXED_TYPE(DeclType, EncodeType, Name)            \
   CassError bind_##Name(size_t index, const DeclType& value) { \
@@ -150,9 +150,11 @@ public:
     return CASS_OK;
   }
 
-  size_t encoded_size() const;
+  size_t encoded_values_size() const;
 
-  char* encode(char* buffer) const;
+  char* encode_values(char* buffer) const;
+
+  void encode_values(BufferVec* bufs) const;
 
 private:
   typedef std::vector<Buffer> ValueVec;

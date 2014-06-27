@@ -19,6 +19,8 @@
 
 #include "response_callback.hpp"
 #include "scoped_ptr.hpp"
+#include "ref_counted.h"
+#include "query_request.hpp"
 
 namespace cass {
 
@@ -30,7 +32,7 @@ public:
   SetKeyspaceHandler(const std::string& keyspace, Connection* connection,
                      ResponseCallback* response_callback);
 
-  virtual Message* request() const { return request_.get(); }
+  virtual Request* request() const { return request_.get(); }
 
   virtual void on_set(Message* response);
 
@@ -43,7 +45,7 @@ private:
 
 private:
   Connection* connection_;
-  ScopedPtr<Message> request_;
+  ScopedRefPtr<QueryRequest> request_;
   ScopedPtr<ResponseCallback> response_callback_;
 };
 

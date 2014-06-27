@@ -17,7 +17,11 @@
 #ifndef __CASS_BUFFER_HPP_INCLUDED__
 #define __CASS_BUFFER_HPP_INCLUDED__
 
+#include "ref_counted.h"
+
 #include "third_party/boost/boost/cstdint.hpp"
+
+#include <vector>
 
 namespace cass {
 
@@ -31,8 +35,8 @@ public:
   Buffer(const char* data, int32_t size)
       : size_(size) {
     if (size > FIXED_BUFFER_SIZE) {
-      data_.alloced = new char[size];
-      memcpy(data_.alloced, data, size);
+      data_.alloced = new RefBuffer(size);
+      memcpy(data_.alloced->data(), data, size);
     } else if (size > 0) {
       memcpy(data_.fixed, data, size);
     }
@@ -41,13 +45,13 @@ public:
   Buffer(int32_t size)
       : size_(size) {
     if (size > FIXED_BUFFER_SIZE) {
-      data_.alloced = new char[size];
+      data_.alloced = new RefBuffer(size);
     }
   }
 
   ~Buffer() {
-    if (size_ > FIXED_BUFFER_SIZE && data_.alloced != NULL) {
-      delete[] data_.alloced;
+    if (size_ > FIXED_BUFFER_SIZE) {
+      data_.alloced->release();
     }
   }
 
@@ -61,34 +65,55 @@ public:
   void copy(const char* source, int32_t size) { memcpy(data(), source, size); }
 
   char* data() {
-    return size_ > FIXED_BUFFER_SIZE ? data_.alloced : data_.fixed;
+    return size_ > FIXED_BUFFER_SIZE ? data_.alloced->data() : data_.fixed;
   }
 
   const char* data() const {
-    return size_ > FIXED_BUFFER_SIZE ? data_.alloced : data_.fixed;
+    return size_ > FIXED_BUFFER_SIZE ? data_.alloced->data() : data_.fixed;
   }
 
   int32_t size() const { return size_; }
 
 private:
-  void copy(const Buffer& Buffer) {
-    size_ = Buffer.size_;
+  void copy(const Buffer& buffer) {
+    size_ = buffer.size_;
     if (size_ > 0) {
       if (size_ > FIXED_BUFFER_SIZE) {
-        data_.alloced = new char[size_];
-        memcpy(data_.alloced, Buffer.data_.alloced, size_);
+        buffer.data_.alloced->retain();
+        RefBuffer* temp = data_.alloced;
+        data_.alloced = buffer.data_.alloced;
+        temp->release();
       } else {
-        memcpy(data_.fixed, Buffer.data_.fixed, size_);
+        memcpy(data_.fixed, buffer.data_.fixed, size_);
       }
     }
   }
 
+  class RefBuffer : public RefCounted<RefBuffer> {
+  public:
+    RefBuffer(size_t size)
+      : RefCounted<RefBuffer>(1)
+      , data_(new char[size]) {}
+
+    ~RefBuffer() {
+      delete[] data_;
+    }
+
+    const char* data() const { return data_; }
+    char* data() { return data_; }
+
+  private:
+    char* data_;
+  };
+
   union {
     char fixed[FIXED_BUFFER_SIZE];
-    char* alloced;
+    RefBuffer* alloced;
   } data_;
   int32_t size_;
 };
+
+typedef std::vector<Buffer> BufferVec;
 
 } // namespace cass
 

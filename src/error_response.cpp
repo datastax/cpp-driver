@@ -19,7 +19,7 @@
 
 namespace cass {
 
-bool ErrorResponse::consume(char* buffer, size_t size) {
+bool ErrorResponse::decode(char* buffer, size_t size) {
   buffer = decode_int(buffer, code_);
   buffer = decode_string(buffer, &message_, message_size_);
   switch (code_) {

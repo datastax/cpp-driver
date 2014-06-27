@@ -22,10 +22,15 @@
 #include "response.hpp"
 #include "scoped_ptr.hpp"
 #include "ref_counted.h"
+#include "writer.hpp"
 
 #define CASS_HEADER_SIZE 8
 
 namespace cass {
+
+class RequestMessage {
+
+};
 
 class Message {
 public:
@@ -71,11 +76,11 @@ public:
 
   bool body_ready() const { return body_ready_; }
 
-  bool allocate_body(int8_t opcode_);
+  bool allocate_body(int8_t opcode);
 
-  bool prepare(char** output, size_t& size);
+  bool encode(char** output, size_t& size);
 
-  ssize_t consume(char* input, size_t size);
+  ssize_t decode(char* input, size_t size);
 
 private:
   uint8_t version_;

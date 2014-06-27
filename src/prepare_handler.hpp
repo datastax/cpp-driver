@@ -19,11 +19,13 @@
 
 #include "response_callback.hpp"
 #include "scoped_ptr.hpp"
+#include "ref_counted.h"
 
 namespace cass {
 
-class RequestHandler;
 class Message;
+class Request;
+class RequestHandler;
 
 class PrepareHandler : public ResponseCallback {
 public:
@@ -32,7 +34,7 @@ public:
 
   bool init(const std::string& prepared_id);
 
-  virtual Message* request() const { return request_.get(); }
+  virtual Request* request() const { return request_.get(); }
 
   virtual void on_set(Message* response);
 
@@ -41,7 +43,7 @@ public:
   virtual void on_timeout();
 
 private:
-  ScopedPtr<Message> request_;
+  ScopedRefPtr<Request> request_;
   ScopedPtr<RequestHandler> request_handler_;
 };
 

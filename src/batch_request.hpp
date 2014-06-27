@@ -25,12 +25,6 @@
 #include <map>
 #include <string>
 
-#define CASS_QUERY_FLAG_VALUES 0x01
-#define CASS_QUERY_FLAG_SKIP_METADATA 0x02
-#define CASS_QUERY_FLAG_PAGE_SIZE 0x04
-#define CASS_QUERY_FLAG_PAGING_STATE 0x08
-#define CASS_QUERY_FLAG_SERIAL_CONSISTENCY 0x10
-
 namespace cass {
 
 class Statement;
@@ -46,13 +40,14 @@ public:
   ~BatchRequest();
 
   int16_t consistency() { return consistency_; }
+
   void set_consistency(int16_t consistency) { consistency_ = consistency; }
 
   void add_statement(Statement* statement);
 
   bool prepared_statement(const std::string& id, std::string* statement);
 
-  bool prepare(size_t reserved, char** output, size_t& size);
+  bool encode(size_t reserved, char** output, size_t& size);
 
 private:
   typedef std::list<Statement*> StatementList;

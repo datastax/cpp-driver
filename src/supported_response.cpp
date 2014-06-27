@@ -19,7 +19,7 @@
 
 namespace cass {
 
-bool SupportedResponse::consume(char* buffer, size_t size) {
+bool SupportedResponse::decode(char* buffer, size_t size) {
   string_multimap_t supported;
 
   decode_string_multimap(buffer, supported);

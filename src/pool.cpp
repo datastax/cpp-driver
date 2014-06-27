@@ -126,7 +126,7 @@ Pool::~Pool() {
 
 void Pool::connect(const std::string& keyspace) {
   if (state_ == POOL_STATE_NEW) {
-    for (size_t i = 0; i < config_.core_connections_per_host(); ++i) {
+    for (unsigned i = 0; i < config_.core_connections_per_host(); ++i) {
       spawn_connection(keyspace);
     }
     state_ = POOL_STATE_CONNECTING;
@@ -159,7 +159,7 @@ void Pool::close() {
 
 Connection* Pool::borrow_connection(const std::string& keyspace) {
   if (connections_.empty()) {
-    for (size_t i = 0; i < config_.core_connections_per_host(); ++i) {
+    for (unsigned i = 0; i < config_.core_connections_per_host(); ++i) {
       spawn_connection(keyspace);
     }
     return NULL;

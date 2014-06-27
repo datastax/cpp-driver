@@ -86,7 +86,7 @@ int Session::init() {
       new AsyncQueue<MPMCQueue<RequestHandler*> >(config_.queue_size_io()));
   rc = request_queue_->init(loop(), this, &Session::on_execute);
   if (rc != 0) return rc;
-  for (size_t i = 0; i < config_.thread_count_io(); ++i) {
+  for (unsigned i = 0; i < config_.thread_count_io(); ++i) {
     ScopedPtr<IOWorker> io_worker(new IOWorker(this, logger_.get(), config_));
     int rc = io_worker->init();
     if (rc != 0) return rc;
@@ -260,11 +260,9 @@ void Session::execute(RequestHandler* request_handler) {
 }
 
 Future* Session::prepare(const char* statement, size_t length) {
-  Message* request = new Message(CQL_OPCODE_PREPARE);
-  PrepareRequest* prepare =
-      static_cast<PrepareRequest*>(request->request_body().get());
+  PrepareRequest* prepare = new PrepareRequest();
   prepare->prepare_string(statement, length);
-  RequestHandler* request_handler = new RequestHandler(request);
+  RequestHandler* request_handler = new RequestHandler(prepare);
   ResponseFuture* future = request_handler->future();
   future->statement.assign(statement, length);
   execute(request_handler);
@@ -272,10 +270,7 @@ Future* Session::prepare(const char* statement, size_t length) {
 }
 
 Future* Session::execute(Request* statement) {
-  Message* request = new Message();
-  request->set_opcode(statement->opcode());
-  request->request_body().reset(statement);
-  RequestHandler* request_handler = new RequestHandler(request);
+  RequestHandler* request_handler = new RequestHandler(statement);
   Future* future = request_handler->future();
   execute(request_handler);
   return future;

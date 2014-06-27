@@ -14,16 +14,38 @@
   limitations under the License.
 */
 
-#include "prepare_request.hpp"
+#include "request.hpp"
 #include "serialization.hpp"
+
+#define CASS_HEADER_SIZE_V1_AND_V2 8
+#define CASS_HEADER_SIZE_V3 9
 
 namespace cass {
 
-bool PrepareRequest::encode(size_t reserved, char** output, size_t& size) {
-  size = reserved + sizeof(int32_t) + statement_.size();
-  *output = new char[size];
-  encode_long_string(*output + reserved, statement_.c_str(), statement_.size());
+bool Request::encode(int version, int flags, int stream, BufferVec* bufs) {
+  if(version == 1 || version == 2) {
+    Buffer header_buf(CASS_HEADER_SIZE_V1_AND_V2);
+
+    char* data = header_buf.data();
+
+    data[0] = version;
+    data[1] = flags;
+    data[2] = stream;
+    data[3] = opcode_;
+
+    bufs->push_back(header_buf);
+
+    int32_t length = encode(bufs);
+    if(length < 0) {
+      return false;
+    }
+
+    encode_int(data + 4, length);
+  } else {
+    return false;
+  }
+
   return true;
 }
 
-} // namespace cas
+} // namespace cass

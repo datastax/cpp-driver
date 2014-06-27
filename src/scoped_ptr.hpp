@@ -99,6 +99,10 @@ public:
   type * operator->() const { return ptr_; }
   operator bool() const { return ptr_ != NULL; }
 
+  type& operator[](size_t index) {
+    return ptr_[index];
+  }
+
 private:
   type* ptr_;
 

@@ -19,6 +19,7 @@
 
 #include "macros.hpp"
 #include "ref_counted.h"
+#include "buffer.hpp"
 
 namespace cass {
 
@@ -31,7 +32,11 @@ public:
 
   uint8_t opcode() const { return opcode_; }
 
-  virtual bool prepare(size_t reserved, char** output, size_t& size) = 0;
+  bool encode(int version, int flags, int stream, BufferVec* bufs);
+
+  virtual int32_t encode(int version, BufferVec* bufs) { return -1; }
+
+  virtual bool encode(size_t reserved, char** output, size_t& size) = 0;
 
 private:
   uint8_t opcode_;

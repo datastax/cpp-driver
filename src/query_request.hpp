@@ -59,7 +59,10 @@ public:
 
   void statement(const char* input, size_t size) { query_.assign(input, size); }
 
-  bool prepare(size_t reserved, char** output, size_t& size);
+
+  int32_t encode(int version, BufferVec* bufs);
+
+  bool encode(size_t reserved, char** output, size_t& size);
 
 private:
   std::string query_;

@@ -73,7 +73,7 @@ bool BatchRequest::prepared_statement(const std::string& id,
   return false;
 }
 
-bool BatchRequest::prepare(size_t reserved, char** output, size_t& size) {
+bool BatchRequest::encode(size_t reserved, char** output, size_t& size) {
   // reserved + type + length
   size = reserved + sizeof(uint8_t) + sizeof(uint16_t);
 
@@ -89,7 +89,7 @@ bool BatchRequest::prepare(size_t reserved, char** output, size_t& size) {
       size += sizeof(uint16_t);
     }
     size += statement->statement_size();
-    size += statement->encoded_size();
+    size += statement->encoded_values_size();
   }
 
   size += sizeof(uint16_t);
@@ -113,7 +113,7 @@ bool BatchRequest::prepare(size_t reserved, char** output, size_t& size) {
                              statement->statement_size());
     }
 
-    buffer = statement->encode(buffer);
+    buffer = statement->encode_values(buffer);
   }
 
   encode_short(buffer, consistency_);

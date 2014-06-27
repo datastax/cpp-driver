@@ -19,7 +19,7 @@
 
 namespace cass {
 
-bool StartupRequest::prepare(size_t reserved, char** output, size_t& size) {
+bool StartupRequest::encode(size_t reserved, char** output, size_t& size) {
   size = reserved + sizeof(int16_t);
 
   std::map<std::string, std::string> options;

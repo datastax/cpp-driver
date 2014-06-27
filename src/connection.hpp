@@ -24,6 +24,8 @@
 #include "stream_manager.hpp"
 #include "list.hpp"
 #include "scoped_ptr.hpp"
+#include "ref_counted.h"
+#include "buffer.hpp"
 
 #include "third_party/boost/boost/function.hpp"
 
@@ -36,17 +38,18 @@ class SSLContext;
 class SSLSession;
 class Connecter;
 class Timer;
-class Writer;
 class Config;
 class Logger;
+class Request;
+class Writer;
 
 class Connection {
 public:
   class StartupHandler : public ResponseCallback {
   public:
-    StartupHandler(Connection* connection, Message* request);
+    StartupHandler(Connection* connection, cass::Request* request);
 
-    virtual Message* request() const;
+    virtual Request* request() const;
     virtual void on_set(Message* response);
     virtual void on_error(CassError code, const std::string& message);
     virtual void on_timeout();
@@ -55,7 +58,7 @@ public:
     void on_result_response(Message* response);
 
     Connection* connection_;
-    ScopedPtr<Message> request_;
+    ScopedRefPtr<Request> request_;
   };
 
   struct Request : public List<Request>::Node {
@@ -153,7 +156,7 @@ public:
 
 private:
   void actually_close();
-  void write(uv_buf_t buf, Request* request);
+  void write(BufferVec* bufs, Request* request);
   void event_received();
   void consume(char* input, size_t size);
 

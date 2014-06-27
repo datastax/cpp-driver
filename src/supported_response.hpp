@@ -30,7 +30,7 @@ public:
   SupportedResponse()
       : Response(CQL_OPCODE_SUPPORTED) {}
 
-  bool consume(char* buffer, size_t size);
+  bool decode(char* buffer, size_t size);
 
 private:
   std::list<std::string> compression_;

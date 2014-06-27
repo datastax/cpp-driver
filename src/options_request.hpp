@@ -27,7 +27,7 @@ public:
   OptionsRequest()
       : Request(CQL_OPCODE_OPTIONS) {}
 
-  bool prepare(size_t reserved, char** output, size_t& size) {
+  bool encode(size_t reserved, char** output, size_t& size) {
     size = reserved;
     *output = new char[size];
     return true;

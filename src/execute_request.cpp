@@ -18,7 +18,7 @@
 
 namespace cass {
 
-bool ExecuteRequest::prepare(size_t reserved, char** output, size_t& size) {
+bool ExecuteRequest::encode(size_t reserved, char** output, size_t& size) {
   uint8_t flags = 0x00;
 
   // reserved + the short bytes
@@ -38,8 +38,8 @@ bool ExecuteRequest::prepare(size_t reserved, char** output, size_t& size) {
     size += (sizeof(int16_t) + paging_state().size());
   }
 
-  if (!is_empty()) {
-    size += encoded_size();
+  if (has_values()) {
+    size += encoded_values_size();
     flags |= CASS_QUERY_FLAG_VALUES;
   }
 
@@ -61,8 +61,8 @@ bool ExecuteRequest::prepare(size_t reserved, char** output, size_t& size) {
   buffer = encode_short(buffer, consistency());
   buffer = encode_byte(buffer, flags);
 
-  if (!is_empty()) {
-    buffer = encode(buffer);
+  if (has_values()) {
+    buffer = encode_values(buffer);
   }
 
   if (page_size() >= 0) {

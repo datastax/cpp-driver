@@ -32,7 +32,7 @@ public:
       , version_("3.0.0")
       , compression_("") {}
 
-  bool prepare(size_t reserved, char** output, size_t& size);
+  bool encode(size_t reserved, char** output, size_t& size);
 
   const std::string version() const { return version_; }
   void set_version(const std::string& version) { version_ = version; }

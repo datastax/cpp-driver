@@ -35,7 +35,7 @@ public:
   char* buffer() { return buffer_.get(); }
   void set_buffer(char* buffer) { buffer_.reset(buffer); }
 
-  virtual bool consume(char* buffer, size_t size) = 0;
+  virtual bool decode(char* buffer, size_t size) = 0;
 
 private:
   uint8_t opcode_;

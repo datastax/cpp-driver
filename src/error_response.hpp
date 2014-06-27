@@ -53,7 +53,7 @@ public:
 
   std::string message() const { return std::string(message_, message_size_); }
 
-  bool consume(char* buffer, size_t size);
+  bool decode(char* buffer, size_t size);
 
 private:
   ScopedPtr<char> guard;

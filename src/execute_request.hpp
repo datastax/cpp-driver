@@ -53,7 +53,7 @@ public:
   const std::string prepared_id() const { return prepared_id_; }
   const std::string prepared_statement() const { return prepared_statement_; }
 
-  bool prepare(size_t reserved, char** output, size_t& size);
+  bool encode(size_t reserved, char** output, size_t& size);
 
 private:
   std::string prepared_id_;

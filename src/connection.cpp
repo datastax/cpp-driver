@@ -4,24 +4,25 @@
 #include "ssl_context.hpp"
 #include "ssl_session.hpp"
 #include "connecter.hpp"
-#include "writer.hpp"
 #include "timer.hpp"
 #include "config.hpp"
 #include "result_response.hpp"
 #include "supported_response.hpp"
 #include "startup_request.hpp"
 #include "query_request.hpp"
+#include "options_request.hpp"
 #include "logger.hpp"
+#include "writer.hpp"
 
 namespace cass {
 
 Connection::StartupHandler::StartupHandler(Connection* connection,
-                                           Message* request)
+                                           cass::Request* request)
     : connection_(connection)
     , request_(request) {
 }
 
-Message* Connection::StartupHandler::request() const {
+Request* Connection::StartupHandler::request() const {
   return request_.get();
 }
 
@@ -242,7 +243,7 @@ void Connection::connect() {
 bool Connection::execute(ResponseCallback* response_callback) {
   ScopedPtr<Request> request(new Request(this, response_callback));
 
-  Message* message = response_callback->request();
+  cass::Request* message = response_callback->request();
 
   int8_t stream = stream_manager_.acquire_stream(request.get());
   if (stream < 0) {
@@ -250,24 +251,21 @@ bool Connection::execute(ResponseCallback* response_callback) {
   }
 
   request->stream = stream;
-  message->set_stream(stream);
 
-  char* buf_data;
-  size_t buf_length;
-  if (!message->prepare(&buf_data, buf_length)) {
+  ScopedPtr<BufferVec> bufs(new BufferVec());
+  if(message->encode(0x02, 0x00, stream, bufs.get())) {
     request->on_error(CASS_ERROR_LIB_MESSAGE_PREPARE,
                       "Unable to build request");
     return true;
   }
 
-  logger_->debug("Sending message type %s with %d, size %zd",
-                 opcode_to_string(message->opcode()).c_str(), message->stream(),
-                 buf_length);
+  logger_->debug("Sending message type %s with %d",
+                 opcode_to_string(message->opcode()).c_str(), stream);
 
   pending_requests_.add_to_back(request.get());
 
   request->change_state(Request::REQUEST_STATE_WRITING);
-  write(uv_buf_init(buf_data, buf_length), request.release());
+  write(bufs.release(), request.release());
 
   return true;
 }
@@ -289,11 +287,9 @@ void Connection::defunct() {
   close();
 }
 
-void Connection::write(uv_buf_t buf, Connection::Request* request) {
-  Writer::Bufs* bufs = new Writer::Bufs();
-  bufs->push_back(buf);
-  Writer::write(reinterpret_cast<uv_stream_t*>(&socket_), bufs, request,
-                on_write);
+void Connection::write(BufferVec* bufs, Connection::Request* request) {
+  uv_stream_t* stream = reinterpret_cast<uv_stream_t*>(&socket_);
+  Writer::write(stream, bufs, request, on_write);
 }
 
 void Connection::event_received() {
@@ -325,7 +321,7 @@ void Connection::consume(char* input, size_t size) {
   int remaining = size;
 
   while (remaining != 0) {
-    int consumed = incoming_->consume(buffer, remaining);
+    int consumed = incoming_->decode(buffer, remaining);
     if (consumed < 0) {
       // TODO(mstump) probably means connection closed/failed
       // Can this even happen right now?
@@ -465,49 +461,49 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
   }
 
   if (connection->ssl_) {
-    char* read_input = buf.base;
-    size_t read_input_size = nread;
+//    char* read_input = buf.base;
+//    size_t read_input_size = nread;
 
-    for (;;) {
-      size_t read_size = 0;
-      char* read_output = NULL;
-      size_t read_output_size = 0;
-      char* write_output = NULL;
-      size_t write_output_size = 0;
+//    for (;;) {
+//      size_t read_size = 0;
+//      char* read_output = NULL;
+//      size_t read_output_size = 0;
+//      char* write_output = NULL;
+//      size_t write_output_size = 0;
 
-      // TODO(mstump) error handling for SSL decryption
-      std::string error;
-      connection->ssl_->read_write(read_input, read_input_size, read_size,
-                                   &read_output, read_output_size, NULL, 0,
-                                   &write_output, write_output_size, &error);
+//      // TODO(mstump) error handling for SSL decryption
+//      std::string error;
+//      connection->ssl_->read_write(read_input, read_input_size, read_size,
+//                                   &read_output, read_output_size, NULL, 0,
+//                                   &write_output, write_output_size, &error);
 
-      if (read_output && read_output_size) {
-        // TODO(mstump) error handling
-        connection->consume(read_output, read_output_size);
-        delete read_output;
-      }
+//      if (read_output && read_output_size) {
+//        // TODO(mstump) error handling
+//        connection->consume(read_output, read_output_size);
+//        delete read_output;
+//      }
 
-      if (write_output && write_output_size) {
-        Request* request = new Request(connection, NULL);
-        connection->write(uv_buf_init(write_output, write_output_size),
-                          request);
-        // delete of write_output will be handled by on_write
-      }
+//      if (write_output && write_output_size) {
+//        Request* request = new Request(connection, NULL);
+//        connection->write(uv_buf_init(write_output, write_output_size),
+//                          request);
+//        // delete of write_output will be handled by on_write
+//      }
 
-      if (read_size < read_input_size) {
-        read_input += read_size;
-        read_input_size -= read_size;
-      } else {
-        break;
-      }
+//      if (read_size < read_input_size) {
+//        read_input += read_size;
+//        read_input_size -= read_size;
+//      } else {
+//        break;
+//      }
 
-      if (!connection->ssl_handshake_done_) {
-        if (connection->ssl_->handshake_done()) {
-          connection->state_ = CLIENT_STATE_HANDSHAKE;
-          connection->event_received();
-        }
-      }
-    }
+//      if (!connection->ssl_handshake_done_) {
+//        if (connection->ssl_->handshake_done()) {
+//          connection->state_ = CLIENT_STATE_HANDSHAKE;
+//          connection->event_received();
+//        }
+//      }
+//    }
   } else {
     connection->consume(buf.base, nread);
   }
@@ -603,24 +599,20 @@ void Connection::notify_error(const std::string& error) {
 }
 
 void Connection::send_options() {
-  execute(new StartupHandler(this, new Message(CQL_OPCODE_OPTIONS)));
+  execute(new StartupHandler(this, new OptionsRequest()));
 }
 
 void Connection::send_startup() {
-  Message* message = new Message(CQL_OPCODE_STARTUP);
-  StartupRequest* startup =
-      static_cast<StartupRequest*>(message->request_body().get());
+  StartupRequest* startup = new StartupRequest();
   startup->set_version(version_);
-  execute(new StartupHandler(this, message));
+  execute(new StartupHandler(this, startup));
 }
 
 void Connection::send_use_keyspace() {
-  Message* message = new Message(CQL_OPCODE_QUERY);
-  QueryRequest* query =
-      static_cast<QueryRequest*>(message->request_body().get());
+  QueryRequest* query = new QueryRequest();
   query->statement("use \"" + keyspace_ + "\"");
   query->set_consistency(CASS_CONSISTENCY_ONE);
-  execute(new StartupHandler(this, message));
+  execute(new StartupHandler(this, query));
 }
 
 } // namespace cass

@@ -70,10 +70,10 @@ bool Message::allocate_body(int8_t opcode) {
   }
 }
 
-bool Message::prepare(char** output, size_t& size) {
+bool Message::encode(char** output, size_t& size) {
   size = 0;
 
-  if (request_body_ && request_body_->prepare(CASS_HEADER_SIZE, output, size)) {
+  if (request_body_ && request_body_->encode(CASS_HEADER_SIZE, output, size)) {
     length_ = size - CASS_HEADER_SIZE;
 
     uint8_t* buffer = reinterpret_cast<uint8_t*>(*output);
@@ -88,7 +88,7 @@ bool Message::prepare(char** output, size_t& size) {
   return false;
 }
 
-ssize_t Message::consume(char* input, size_t size) {
+ssize_t Message::decode(char* input, size_t size) {
   char* input_pos = input;
 
   received_ += size;
@@ -142,7 +142,7 @@ ssize_t Message::consume(char* input, size_t size) {
     input_pos += needed;
     assert(body_buffer_pos_ == response_body_->buffer() + length_);
 
-    if (!response_body_->consume(response_body_->buffer(), length_)) {
+    if (!response_body_->decode(response_body_->buffer(), length_)) {
       body_error_ = true;
     }
     body_ready_ = true;

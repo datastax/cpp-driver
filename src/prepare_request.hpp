@@ -35,7 +35,7 @@ public:
 
   void prepare_string(const std::string& input) { statement_ = input; }
 
-  bool prepare(size_t reserved, char** output, size_t& size);
+  bool encode(size_t reserved, char** output, size_t& size);
 
 private:
   std::string statement_;
