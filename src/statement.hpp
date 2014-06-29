@@ -154,7 +154,7 @@ public:
 
   char* encode_values(char* buffer) const;
 
-  void encode_values(BufferVec* bufs) const;
+  int32_t encode_values(BufferVec* bufs) const;
 
 private:
   typedef std::vector<Buffer> ValueVec;

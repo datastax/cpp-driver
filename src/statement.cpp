@@ -137,8 +137,14 @@ char* Statement::encode_values(char* buffer) const {
   return buffer;
 }
 
-void encode_values(BufferVec* bufs) const {
-
+int32_t Statement::encode_values(BufferVec* bufs) const {
+  int32_t values_size = 0;
+  for (ValueVec::const_iterator it = values_.begin(), end = values_.end();
+       it != end; ++it) {
+    bufs->push_back(*it);
+    values_size += it->size();
+  }
+  return values_size;
 }
 
 } // namespace  cass

@@ -30,18 +30,18 @@ public:
   explicit RefCounted(int init_count = 0)
       : ref_count_(init_count) {}
 
-  void retain() { ++ref_count_; }
+  void retain() const { ++ref_count_; }
 
-  void release() {
+  void release() const {
     int new_ref_count = --ref_count_;
     assert(new_ref_count >= 0);
     if (new_ref_count == 0) {
-       delete static_cast<T*>(this);
+       delete static_cast<const T*>(this);
     }
   }
 
 private:
-  boost::atomic<int> ref_count_;
+  mutable boost::atomic<int> ref_count_;
   DISALLOW_COPY_AND_ASSIGN(RefCounted);
 };
 

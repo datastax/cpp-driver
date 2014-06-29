@@ -35,7 +35,7 @@ bool Request::encode(int version, int flags, int stream, BufferVec* bufs) {
 
     bufs->push_back(header_buf);
 
-    int32_t length = encode(bufs);
+    int32_t length = encode(version, bufs);
     if(length < 0) {
       return false;
     }
