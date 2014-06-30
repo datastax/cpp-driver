@@ -18,14 +18,18 @@ void Connection::StartupHandler::on_set(Message* response) {
       connection_->on_supported(response);
       break;
     case CQL_OPCODE_ERROR:
-      connection_->notify_error(
-          "Error during startup"); // TODO(mpenick): Better error
+      connection_->on_error(response);
+      connection_->notify_error("Error during startup");
       break;
     case CQL_OPCODE_READY:
+    case CQL_OPCODE_AUTH_SUCCESS:
       connection_->on_ready();
       break;
     case CQL_OPCODE_RESULT:
       on_result_response(response);
+      break;
+    case CQL_OPCODE_AUTHENTICATE:
+      connection_->on_authenticate(response);
       break;
     default:
       connection_->notify_error("Invalid opcode during startup");
@@ -186,7 +190,8 @@ void Connection::Request::on_request_timeout(Timer* timer) {
 
 Connection::Connection(uv_loop_t* loop, SSLSession* ssl_session,
                        const Host& host, Logger* logger, const Config& config,
-                       const std::string& keyspace)
+                       const std::string& keyspace, const std::string& username,
+                       const std::string& password)
     : state_(CLIENT_STATE_NEW)
     , is_defunct_(false)
     , timed_out_request_count_(0)
@@ -200,6 +205,8 @@ Connection::Connection(uv_loop_t* loop, SSLSession* ssl_session,
     , logger_(logger)
     , config_(config)
     , keyspace_(keyspace)
+    , username_(username)
+    , password_(password)
     , connect_timer_(nullptr) {
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
@@ -207,6 +214,7 @@ Connection::Connection(uv_loop_t* loop, SSLSession* ssl_session,
     ssl_->init();
     ssl_->handshake(true);
   }
+  logger_->debug("logging in as user = [%s]", username_.c_str());
 }
 
 void Connection::connect() {
@@ -292,6 +300,9 @@ void Connection::event_received() {
       send_use_keyspace();
       break;
     case CLIENT_STATE_CLOSED:
+      break;
+    case CLIENT_STATE_AUTHENTICATE:
+      send_credentials();
       break;
     default:
       assert(false);
@@ -552,6 +563,16 @@ void Connection::on_ready() {
   event_received();
 }
 
+void Connection::on_error(Message* response) {
+  ErrorResponse* error = static_cast<ErrorResponse*>(response->body.get());
+  logger_->error("Error received [%s]", error->message);
+}
+
+void Connection::on_authenticate(Message* response) {
+    state_ = CLIENT_STATE_AUTHENTICATE;
+    event_received();
+}
+
 void Connection::on_set_keyspace() {
   state_ = CLIENT_STATE_READY;
   event_received();
@@ -599,4 +620,12 @@ void Connection::send_use_keyspace() {
   execute(new StartupHandler(this, message));
 }
 
+void Connection::send_credentials() {
+  Message* message = new Message(CQL_OPCODE_AUTH_RESPONSE);
+  AuthResponseMessage* auth = static_cast<AuthResponseMessage*>(message->body.get());
+  auth->username_ = username_.c_str();
+  auth->password_ = password_.c_str();
+
+  execute(new StartupHandler(this, message));
+}
 } // namespace cass

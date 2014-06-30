@@ -79,6 +79,12 @@ CassError Config::set_option(CassOption option, const void* value,
     case CASS_OPTION_LOG_CALLBACK:
       CHECK_SIZE_AND_COPY(&log_callback_, sizeof(log_callback_));
       break;
+    case CASS_OPTION_USERNAME:
+      username_ = std::string(reinterpret_cast<const char*>(value), size);
+      break;
+    case CASS_OPTION_PASSWORD:
+      password_ = std::string(reinterpret_cast<const char*>(value), size);
+      break;
     default:
       return CASS_ERROR_LIB_INVALID_OPTION;
   }
@@ -114,6 +120,24 @@ CassError Config::option(CassOption option, void* value, size_t* size) const {
       }
       char* output = reinterpret_cast<char*>(value);
       version_.copy(output, *size);
+      output[*size] = '\0';
+    } break;
+    case CASS_OPTION_USERNAME: {
+      if (*size <= username_.size()) {
+        *size = username_.size() + 1;
+        return CASS_ERROR_LIB_INVALID_OPTION_SIZE;
+      }
+      char* output = reinterpret_cast<char*>(value);
+      username_.copy(output, *size);
+      output[*size] = '\0';
+    } break;
+    case CASS_OPTION_PASSWORD: {
+      if (*size <= password_.size()) {
+        *size = password_.size() + 1;
+        return CASS_ERROR_LIB_INVALID_OPTION_SIZE;
+      }
+      char* output = reinterpret_cast<char*>(value);
+      password_.copy(output, *size);
       output[*size] = '\0';
     } break;
     case CASS_OPTION_NUM_THREADS_IO:

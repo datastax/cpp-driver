@@ -25,10 +25,15 @@ int main() {
   CassFuture* session_future = NULL;
   const char* contact_points[] = { "127.0.0.1",  NULL };
   const char** contact_point = NULL;
+  const char* username = "cassandra";
+  const char* password = "cassandra";
 
   for(contact_point = contact_points; *contact_point; contact_point++) {
     cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINTS, *contact_point, strlen(*contact_point));
   }
+
+  cass_cluster_setopt(cluster, CASS_OPTION_USERNAME, username, strlen(username));
+  cass_cluster_setopt(cluster, CASS_OPTION_PASSWORD, password, strlen(password));
 
   session_future = cass_cluster_connect(cluster);
   cass_future_wait(session_future);

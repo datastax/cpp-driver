@@ -28,6 +28,9 @@
 #include "ready_response.hpp"
 #include "supported_response.hpp"
 #include "result_response.hpp"
+#include "auth_response_message.hpp"
+#include "authenticate_message.hpp"
+#include "auth_success_message.hpp"
 
 #include "host.hpp"
 
@@ -98,6 +101,15 @@ struct Message {
 
       case CQL_OPCODE_READY:
         return static_cast<MessageBody*>(new ReadyResponse());
+
+      case CQL_OPCODE_AUTH_RESPONSE:
+        return static_cast<MessageBody*>(new AuthResponseMessage());
+
+      case CQL_OPCODE_AUTHENTICATE:
+        return static_cast<MessageBody*>(new AuthenticateMessage());
+
+      case CQL_OPCODE_AUTH_SUCCESS:
+        return static_cast<MessageBody*>(new AuthSuccessMessage());
 
       default:
         assert(false);

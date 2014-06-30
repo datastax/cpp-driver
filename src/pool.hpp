@@ -76,12 +76,17 @@ public:
 
   ~Pool();
 
-  void connect(const std::string& keyspace);
+  void connect(const std::string& keyspace,
+               const std::string& username,
+               const std::string& password);
+
   void close();
 
   bool execute(Connection* connection, RequestHandler* request_handler);
   bool wait_for_connection(RequestHandler* request_handler);
-  Connection* borrow_connection(const std::string& keyspace);
+  Connection* borrow_connection(const std::string& keyspace,
+                                const std::string& username,
+                                const std::string& password);
 
   Host host() const { return host_; }
   bool is_defunct() { return is_defunct_; }
@@ -98,8 +103,12 @@ private:
   void defunct();
   void maybe_notify_ready(Connection* connection);
   void maybe_close();
-  void spawn_connection(const std::string& keyspace);
-  void maybe_spawn_connection(const std::string& keyspace);
+  void spawn_connection(const std::string& keyspace,
+                        const std::string& username,
+                        const std::string& password);
+  void maybe_spawn_connection(const std::string& keyspace,
+                              const std::string& username,
+                              const std::string& password);
 
   void on_connection_ready(Connection* connection);
   void on_connection_closed(Connection* connection);

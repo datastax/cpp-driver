@@ -161,6 +161,28 @@ inline char* encode_bytes(char* output, const char* input, int32_t size) {
   return buffer;
 }
 
+inline char* encode_credential(char* output, const char* input, int32_t size) {
+  char* buffer = output;
+  if (size > 0) {
+    memcpy(buffer, input, size);
+    return buffer + size;
+  }
+  return buffer;
+}
+
+inline char* encode_credentials(char* output, const char* username, const char* password)
+{
+  char* buffer = output;
+  int32_t size = strlen(username) + strlen(password) + 2;
+  buffer = encode_int(buffer, size);
+  buffer = encode_byte(buffer, 0);
+  buffer = encode_credential(buffer, username, strlen(username));
+  buffer = encode_byte(buffer, 0);
+  buffer = encode_credential(buffer, password, strlen(password));
+
+  return buffer;
+}
+
 inline char* encode_string_map(char* output,
                                const std::map<std::string, std::string>& map) {
 

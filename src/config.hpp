@@ -48,7 +48,9 @@ public:
       , read_timeout_(1000)
       , log_level_(CASS_LOG_ERROR)
       , log_data_(nullptr)
-      , log_callback_(default_log_callback) {}
+      , log_callback_(default_log_callback)
+      , username_("")
+      , password_("") {}
 
   void log_callback(CassLogCallback callback) { log_callback_ = callback; }
 
@@ -95,6 +97,9 @@ public:
   CassError set_option(CassOption option, const void* value, size_t size);
   CassError option(CassOption option, void* value, size_t* size) const;
 
+  std::string Username() const { return username_; }
+  std::string Password() const { return password_; }
+
 private:
   int port_;
   std::string version_;
@@ -114,6 +119,8 @@ private:
   CassLogLevel log_level_;
   void* log_data_;
   CassLogCallback log_callback_;
+  std::string username_;
+  std::string password_;
 };
 
 } // namespace cass
