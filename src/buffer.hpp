@@ -26,54 +26,46 @@
 namespace cass {
 
 class Collection;
-class RefCollectionBuffer;
 
-class RefBuffer : public RefCounted<RefBuffer> {
+class Ref : public RefCounted<Ref> {
 public:
-  RefBuffer()
-    : RefCounted<RefBuffer>(1)
-    , data_(NULL) {}
+  Ref() : RefCounted<Ref>(1) {}
+  virtual ~Ref() {}
+private:
+  DISALLOW_COPY_AND_ASSIGN(Ref);
+};
 
-  RefBuffer(size_t size)
-    : RefCounted<RefBuffer>(1)
-    , data_(new char[size]) {}
+class RefArray : public Ref {
+public:
+  RefArray(size_t size)
+    : data_(new char[size]) {}
 
-  virtual ~RefBuffer() {
+  virtual ~RefArray() {
     delete[] data_;
   }
 
   const char* data() const { return data_; }
   char* data() { return data_; }
 
-protected:
-  char* data_;
-
 private:
-  DISALLOW_COPY_AND_ASSIGN(RefBuffer);
+  char* data_;
 };
 
 class Buffer {
 public:
-  static const int32_t FIXED_BUFFER_SIZE = 32;
-
   Buffer()
-      : size_(-1) {}
+      : size_(IS_NULL) {}
 
   Buffer(const char* data, int32_t size);
 
   explicit
   Buffer(int32_t size);
 
-  explicit
   Buffer(const Collection* collection);
 
-  ~Buffer() {
-    if (size_ > FIXED_BUFFER_SIZE || size_ == -2) {
-      data_.ref->release();
-    }
-  }
+  Buffer(const Buffer& Buffer);
 
-  Buffer(const Buffer& Buffer) { copy(Buffer); }
+  ~Buffer();
 
   Buffer& operator=(const Buffer& Buffer) {
     copy(Buffer);
@@ -84,28 +76,38 @@ public:
 
   char* data() {
     assert(is_value());
-    return size_ > FIXED_BUFFER_SIZE ? data_.ref->data() : data_.fixed;
+    return size_ > FIXED_BUFFER_SIZE ? static_cast<RefArray*>(data_.ref)->data() : data_.fixed;
   }
 
   const char* data() const {
     assert(is_value());
-    return size_ > FIXED_BUFFER_SIZE ? data_.ref->data() : data_.fixed;
+    return size_ > FIXED_BUFFER_SIZE ? static_cast<RefArray*>(data_.ref)->data() : data_.fixed;
   }
-
-  int32_t encode_collection(int version, Buffer* buffer) const;
 
   int32_t size() const { return size_; }
 
   bool is_value() const { return size_ >= 0; }
-  bool is_null() const { return size_ == -1; }
-  bool is_collection() const { return size_ == -2; }
+
+  bool is_null() const { return size_ == IS_NULL; }
+
+  bool is_collection() const { return size_ == IS_COLLECTION; }
+
+  const Collection* collection() const;
+
+private:
+  enum {
+    IS_NULL = -1,
+    IS_COLLECTION = -2
+  };
+
+  static const int32_t FIXED_BUFFER_SIZE = 32;
 
 private:
   void copy(const Buffer& buffer);
 
   union {
     char fixed[FIXED_BUFFER_SIZE];
-    RefBuffer* ref;
+    Ref* ref;
   } data_;
   int32_t size_;
 };

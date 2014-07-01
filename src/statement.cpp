@@ -120,7 +120,7 @@ int32_t Statement::encode_values(int version, BufferVec* collection_bufs, Writer
        it != end; ++it) {
     if(it->is_collection()) {
       collection_bufs->push_back(Buffer());
-      values_size = it->encode_collection(version, &collection_bufs->back());
+      values_size = it->collection()->encode(version, &collection_bufs->back());
     } else {
       bufs->push_back(uv_buf_init(const_cast<char*>(it->data()), it->size()));
       values_size += it->size();

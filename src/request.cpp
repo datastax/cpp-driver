@@ -64,7 +64,7 @@ bool RequestMessage::encode(int version, int flags, int stream, Writer::Bufs* bu
     data[0] = version;
     data[1] = flags;
     data[2] = stream;
-    data[3] = opcode_;
+    data[3] = opcode();
 
     bufs->push_back(uv_buf_init(header_buf_.data(), header_buf_.size()));
 

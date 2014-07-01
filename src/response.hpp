@@ -45,6 +45,14 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Response);
 };
 
+class ResponseMessage {
+public:
+  int32_t decode(char* data, int32_t size);
+
+private:
+  ScopedPtr<Response> response_body_;
+};
+
 } // namespace cass
 
 #endif

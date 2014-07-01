@@ -66,7 +66,6 @@ protected:
 
 private:
   ScopedRefPtr<const Request> request_;
-  uint8_t opcode_;
   Buffer header_buf_;
 
 private:

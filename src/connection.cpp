@@ -252,7 +252,7 @@ bool Connection::execute(ResponseCallback* response_callback) {
   internal_request->stream = stream;
 
   ScopedPtr<Writer::Bufs> bufs(new Writer::Bufs());
-  if(request->encode(0x02, 0x00, stream, bufs.get())) {
+  if(request->encode(0x02, 0x00, stream, bufs.get()) < 0) {
     internal_request->on_error(CASS_ERROR_LIB_MESSAGE_PREPARE,
                       "Unable to build request");
     return true;
