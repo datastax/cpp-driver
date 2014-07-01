@@ -85,11 +85,11 @@ CassError insert_into_collections(CassSession* session, const char* key, const c
 
   cass_statement_bind_string(statement, 0, cass_string_init(key));
 
-  collection = cass_collection_new(2);
+  collection = cass_collection_new(CASS_COLLECTION_TYPE_SET, 2);
   for(item = items; *item; item++) {
     cass_collection_append_string(collection, cass_string_init(*item));
   }
-  cass_statement_bind_collection(statement, 1, collection, cass_false);
+  cass_statement_bind_collection(statement, 1, collection);
   cass_collection_free(collection);
 
   future = cass_session_execute(session, statement);

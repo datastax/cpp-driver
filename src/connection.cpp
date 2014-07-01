@@ -12,17 +12,16 @@
 #include "query_request.hpp"
 #include "options_request.hpp"
 #include "logger.hpp"
-#include "writer.hpp"
 
 namespace cass {
 
 Connection::StartupHandler::StartupHandler(Connection* connection,
-                                           cass::Request* request)
+                                           RequestMessage* request)
     : connection_(connection)
     , request_(request) {
 }
 
-Request* Connection::StartupHandler::request() const {
+RequestMessage* Connection::StartupHandler::request_message() const {
   return request_.get();
 }
 
@@ -70,7 +69,7 @@ void Connection::StartupHandler::on_result_response(Message* response) {
   }
 }
 
-Connection::Request::Request(Connection* connection,
+Connection::InternalRequest::InternalRequest(Connection* connection,
                              ResponseCallback* response_callback)
     : connection(connection)
     , stream(0)
@@ -79,7 +78,7 @@ Connection::Request::Request(Connection* connection,
     , state_(REQUEST_STATE_NEW) {
 }
 
-void Connection::Request::on_set(Message* response) {
+void Connection::InternalRequest::on_set(Message* response) {
   switch (response->opcode()) {
     case CQL_OPCODE_RESULT:
       on_result_response(response);
@@ -88,16 +87,16 @@ void Connection::Request::on_set(Message* response) {
   response_callback_->on_set(response);
 }
 
-void Connection::Request::on_error(CassError code, const std::string& message) {
+void Connection::InternalRequest::on_error(CassError code, const std::string& message) {
   response_callback_->on_error(code, message);
   connection->stream_manager_.release_stream(stream);
 }
 
-void Connection::Request::on_timeout() {
+void Connection::InternalRequest::on_timeout() {
   response_callback_->on_timeout();
 }
 
-void Connection::Request::change_state(Connection::Request::State next_state) {
+void Connection::InternalRequest::change_state(Connection::InternalRequest::State next_state) {
   switch (state_) {
     case REQUEST_STATE_NEW:
       assert(next_state == REQUEST_STATE_WRITING &&
@@ -175,13 +174,13 @@ void Connection::Request::change_state(Connection::Request::State next_state) {
   }
 }
 
-void Connection::Request::stop_timer() {
+void Connection::InternalRequest::stop_timer() {
   assert(timer_ != NULL);
   Timer::stop(timer_);
   timer_ = NULL;
 }
 
-void Connection::Request::on_result_response(Message* response) {
+void Connection::InternalRequest::on_result_response(Message* response) {
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
   switch (result->kind()) {
@@ -191,8 +190,8 @@ void Connection::Request::on_result_response(Message* response) {
   }
 }
 
-void Connection::Request::on_request_timeout(Timer* timer) {
-  Request* request = static_cast<Request*>(timer->data());
+void Connection::InternalRequest::on_request_timeout(Timer* timer) {
+  InternalRequest* request = static_cast<InternalRequest*>(timer->data());
   request->connection->logger_->info("Request timed out to '%s'",
                                      request->connection->host_string_.c_str());
   request->timer_ = NULL;
@@ -241,31 +240,31 @@ void Connection::connect() {
 }
 
 bool Connection::execute(ResponseCallback* response_callback) {
-  ScopedPtr<Request> request(new Request(this, response_callback));
+  ScopedPtr<InternalRequest> internal_request(new InternalRequest(this, response_callback));
 
-  cass::Request* message = response_callback->request();
+  RequestMessage* request = response_callback->request_message();
 
-  int8_t stream = stream_manager_.acquire_stream(request.get());
+  int8_t stream = stream_manager_.acquire_stream(internal_request.get());
   if (stream < 0) {
     return false;
   }
 
-  request->stream = stream;
+  internal_request->stream = stream;
 
-  ScopedPtr<BufferVec> bufs(new BufferVec());
-  if(message->encode(0x02, 0x00, stream, bufs.get())) {
-    request->on_error(CASS_ERROR_LIB_MESSAGE_PREPARE,
+  ScopedPtr<Writer::Bufs> bufs(new Writer::Bufs());
+  if(request->encode(0x02, 0x00, stream, bufs.get())) {
+    internal_request->on_error(CASS_ERROR_LIB_MESSAGE_PREPARE,
                       "Unable to build request");
     return true;
   }
 
   logger_->debug("Sending message type %s with %d",
-                 opcode_to_string(message->opcode()).c_str(), stream);
+                 opcode_to_string(request->opcode()).c_str(), stream);
 
-  pending_requests_.add_to_back(request.get());
+  pending_requests_.add_to_back(internal_request.get());
 
-  request->change_state(Request::REQUEST_STATE_WRITING);
-  write(bufs.release(), request.release());
+  internal_request->change_state(InternalRequest::REQUEST_STATE_WRITING);
+  write(bufs.release(), internal_request.release());
 
   return true;
 }
@@ -287,7 +286,7 @@ void Connection::defunct() {
   close();
 }
 
-void Connection::write(BufferVec* bufs, Connection::Request* request) {
+void Connection::write(Writer::Bufs* bufs, Connection::InternalRequest* request) {
   uv_stream_t* stream = reinterpret_cast<uv_stream_t*>(&socket_);
   Writer::write(stream, bufs, request, on_write);
 }
@@ -342,29 +341,29 @@ void Connection::consume(char* input, size_t size) {
         // TODO(mstump) system events
         assert(false);
       } else {
-        Request* request = NULL;
+        InternalRequest* request = NULL;
         if (stream_manager_.get_item(response->stream(), request)) {
           switch (request->state()) {
-            case Request::REQUEST_STATE_READING:
+            case InternalRequest::REQUEST_STATE_READING:
               request->on_set(response.get());
-              request->change_state(Request::REQUEST_STATE_DONE);
+              request->change_state(InternalRequest::REQUEST_STATE_DONE);
               break;
 
-            case Request::REQUEST_STATE_WRITING:
+            case InternalRequest::REQUEST_STATE_WRITING:
               request->on_set(response.get());
-              request->change_state(Request::REQUEST_STATE_READ_BEFORE_WRITE);
+              request->change_state(InternalRequest::REQUEST_STATE_READ_BEFORE_WRITE);
               break;
 
-            case Request::REQUEST_STATE_WRITE_TIMEOUT:
-              request->change_state(Request::REQUEST_STATE_READ_BEFORE_WRITE);
+            case InternalRequest::REQUEST_STATE_WRITE_TIMEOUT:
+              request->change_state(InternalRequest::REQUEST_STATE_READ_BEFORE_WRITE);
               break;
 
-            case Request::REQUEST_STATE_READ_TIMEOUT:
-              request->change_state(Request::REQUEST_STATE_DONE);
+            case InternalRequest::REQUEST_STATE_READ_TIMEOUT:
+              request->change_state(InternalRequest::REQUEST_STATE_DONE);
               break;
 
-            case Request::REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ:
-              request->change_state(Request::REQUEST_STATE_DONE);
+            case InternalRequest::REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ:
+              request->change_state(InternalRequest::REQUEST_STATE_DONE);
               break;
 
             default:
@@ -372,7 +371,7 @@ void Connection::consume(char* input, size_t size) {
               break;
           }
 
-          if (request->state() == Request::REQUEST_STATE_DONE) {
+          if (request->state() == InternalRequest::REQUEST_STATE_DONE) {
             pending_requests_.remove(request);
             delete request;
           }
@@ -429,9 +428,9 @@ void Connection::on_close(uv_handle_t* handle) {
   connection->event_received();
 
   while (!connection->pending_requests_.is_empty()) {
-    Request* request = connection->pending_requests_.front();
-    if (request->state() == Request::REQUEST_STATE_WRITING ||
-        request->state() == Request::REQUEST_STATE_READING) {
+    InternalRequest* request = connection->pending_requests_.front();
+    if (request->state() == InternalRequest::REQUEST_STATE_WRITING ||
+        request->state() == InternalRequest::REQUEST_STATE_READING) {
       request->on_timeout();
       request->stop_timer();
     }
@@ -511,13 +510,13 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
 }
 
 void Connection::on_write(Writer* writer) {
-  Request* request = static_cast<Request*>(writer->data());
+  InternalRequest* request = static_cast<InternalRequest*>(writer->data());
   Connection* connection = request->connection;
 
   switch (request->state()) {
-    case Request::REQUEST_STATE_WRITING:
+    case InternalRequest::REQUEST_STATE_WRITING:
       if (writer->status() == Writer::SUCCESS) {
-        request->change_state(Request::REQUEST_STATE_READING);
+        request->change_state(InternalRequest::REQUEST_STATE_READING);
       } else {
         if (!connection->is_closing()) {
           connection->logger_->info(
@@ -527,16 +526,16 @@ void Connection::on_write(Writer* writer) {
         }
         request->on_error(CASS_ERROR_LIB_WRITE_ERROR,
                           "Unable to write to socket");
-        request->change_state(Request::REQUEST_STATE_DONE);
+        request->change_state(InternalRequest::REQUEST_STATE_DONE);
       }
       break;
 
-    case Request::REQUEST_STATE_WRITE_TIMEOUT:
-      request->change_state(Request::REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ);
+    case InternalRequest::REQUEST_STATE_WRITE_TIMEOUT:
+      request->change_state(InternalRequest::REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ);
       break;
 
-    case Request::REQUEST_STATE_READ_BEFORE_WRITE:
-      request->change_state(Request::REQUEST_STATE_DONE);
+    case InternalRequest::REQUEST_STATE_READ_BEFORE_WRITE:
+      request->change_state(InternalRequest::REQUEST_STATE_DONE);
       break;
 
     default:
@@ -544,7 +543,7 @@ void Connection::on_write(Writer* writer) {
       break;
   }
 
-  if (request->state() == Request::REQUEST_STATE_DONE) {
+  if (request->state() == InternalRequest::REQUEST_STATE_DONE) {
     connection->pending_requests_.remove(request);
     delete request;
   }
@@ -599,20 +598,20 @@ void Connection::notify_error(const std::string& error) {
 }
 
 void Connection::send_options() {
-  execute(new StartupHandler(this, new OptionsRequest()));
+  execute(new StartupHandler(this, RequestMessage::create(new OptionsRequest())));
 }
 
 void Connection::send_startup() {
   StartupRequest* startup = new StartupRequest();
   startup->set_version(version_);
-  execute(new StartupHandler(this, startup));
+  execute(new StartupHandler(this, RequestMessage::create(startup)));
 }
 
 void Connection::send_use_keyspace() {
   QueryRequest* query = new QueryRequest();
-  query->statement("use \"" + keyspace_ + "\"");
+  query->set_query("use \"" + keyspace_ + "\"");
   query->set_consistency(CASS_CONSISTENCY_ONE);
-  execute(new StartupHandler(this, query));
+  execute(new StartupHandler(this, RequestMessage::create(query)));
 }
 
 } // namespace cass

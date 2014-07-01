@@ -25,6 +25,33 @@
 
 namespace cass {
 
+class Collection;
+class RefCollectionBuffer;
+
+class RefBuffer : public RefCounted<RefBuffer> {
+public:
+  RefBuffer()
+    : RefCounted<RefBuffer>(1)
+    , data_(NULL) {}
+
+  RefBuffer(size_t size)
+    : RefCounted<RefBuffer>(1)
+    , data_(new char[size]) {}
+
+  virtual ~RefBuffer() {
+    delete[] data_;
+  }
+
+  const char* data() const { return data_; }
+  char* data() { return data_; }
+
+protected:
+  char* data_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(RefBuffer);
+};
+
 class Buffer {
 public:
   static const int32_t FIXED_BUFFER_SIZE = 32;
@@ -32,26 +59,17 @@ public:
   Buffer()
       : size_(-1) {}
 
-  Buffer(const char* data, int32_t size)
-      : size_(size) {
-    if (size > FIXED_BUFFER_SIZE) {
-      data_.alloced = new RefBuffer(size);
-      memcpy(data_.alloced->data(), data, size);
-    } else if (size > 0) {
-      memcpy(data_.fixed, data, size);
-    }
-  }
+  Buffer(const char* data, int32_t size);
 
-  Buffer(int32_t size)
-      : size_(size) {
-    if (size > FIXED_BUFFER_SIZE) {
-      data_.alloced = new RefBuffer(size);
-    }
-  }
+  explicit
+  Buffer(int32_t size);
+
+  explicit
+  Buffer(const Collection* collection);
 
   ~Buffer() {
-    if (size_ > FIXED_BUFFER_SIZE) {
-      data_.alloced->release();
+    if (size_ > FIXED_BUFFER_SIZE || size_ == -2) {
+      data_.ref->release();
     }
   }
 
@@ -65,50 +83,29 @@ public:
   void copy(const char* source, int32_t size) { memcpy(data(), source, size); }
 
   char* data() {
-    return size_ > FIXED_BUFFER_SIZE ? data_.alloced->data() : data_.fixed;
+    assert(is_value());
+    return size_ > FIXED_BUFFER_SIZE ? data_.ref->data() : data_.fixed;
   }
 
   const char* data() const {
-    return size_ > FIXED_BUFFER_SIZE ? data_.alloced->data() : data_.fixed;
+    assert(is_value());
+    return size_ > FIXED_BUFFER_SIZE ? data_.ref->data() : data_.fixed;
   }
+
+  int32_t encode_collection(int version, Buffer* buffer) const;
 
   int32_t size() const { return size_; }
 
+  bool is_value() const { return size_ >= 0; }
+  bool is_null() const { return size_ == -1; }
+  bool is_collection() const { return size_ == -2; }
+
 private:
-  void copy(const Buffer& buffer) {
-    size_ = buffer.size_;
-    if (size_ > 0) {
-      if (size_ > FIXED_BUFFER_SIZE) {
-        buffer.data_.alloced->retain();
-        RefBuffer* temp = data_.alloced;
-        data_.alloced = buffer.data_.alloced;
-        temp->release();
-      } else {
-        memcpy(data_.fixed, buffer.data_.fixed, size_);
-      }
-    }
-  }
-
-  class RefBuffer : public RefCounted<RefBuffer> {
-  public:
-    RefBuffer(size_t size)
-      : RefCounted<RefBuffer>(1)
-      , data_(new char[size]) {}
-
-    ~RefBuffer() {
-      delete[] data_;
-    }
-
-    const char* data() const { return data_; }
-    char* data() { return data_; }
-
-  private:
-    char* data_;
-  };
+  void copy(const Buffer& buffer);
 
   union {
     char fixed[FIXED_BUFFER_SIZE];
-    RefBuffer* alloced;
+    RefBuffer* ref;
   } data_;
   int32_t size_;
 };

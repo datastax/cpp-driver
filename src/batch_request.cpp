@@ -46,6 +46,84 @@ CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
 
 namespace cass {
 
+
+int32_t BatchRequestMessage::encode(int version, Writer::Bufs* bufs) {
+  assert(version == 2);
+
+  int32_t length = 0;
+
+  const BatchRequest* batch = static_cast<const BatchRequest*>(request());
+
+  {
+    // <type> [byte] + <n> [short]
+    int32_t buf_size = 1 + 2;
+
+    body_head_buf_ = Buffer(buf_size);
+
+    length += buf_size;
+
+    bufs->push_back(uv_buf_init(body_head_buf_.data(), body_head_buf_.size()));
+
+    char* pos = encode_byte(body_head_buf_.data(), batch->type());
+    pos = encode_short(pos, batch->statements().size());
+  }
+
+  for (BatchRequest::StatementList::const_iterator
+       it = batch->statements().begin(),
+       end = batch->statements().end();
+       it != end; ++it) {
+    const Statement* statement = *it;
+
+    // <kind> [byte]
+    int32_t buf_size = 1;
+
+    // <string_or_id> [long string] | [short bytes]
+    buf_size += (statement->kind() == CASS_BATCH_KIND_QUERY) ? 4 : 2;
+    buf_size += statement->query().size();
+
+    // <n><value_1>...<value_n>
+    buf_size += 2; // <n> [short]
+
+    statement_bufs_.push_back(Buffer(buf_size));
+
+    Buffer* buf = &statement_bufs_.back();
+
+    length += buf_size;
+
+    bufs->push_back(uv_buf_init(buf->data(), buf->size()));
+
+    char* pos = encode_byte(buf->data(), statement->kind());
+
+    if(statement->kind() == CASS_BATCH_KIND_QUERY) {
+      pos = encode_long_string(pos, statement->query().data(),
+                               statement->query().size());
+    } else {
+      pos = encode_string(pos, statement->query().data(),
+                          statement->query().size());
+    }
+
+    if(statement->has_values()) {
+      encode_short(pos, statement->values_count());
+      length += statement->encode_values(version, &body_collection_bufs_, bufs);
+    }
+  }
+
+  {
+    // <consistency> [short]
+    int32_t buf_size = 2;
+
+    body_tail_buf_ = Buffer(buf_size);
+
+    length += buf_size;
+
+    bufs->push_back(uv_buf_init(body_tail_buf_.data(), body_tail_buf_.size()));
+
+    encode_short(body_tail_buf_.data(), batch->consistency());
+  }
+
+  return length;
+}
+
 BatchRequest::~BatchRequest() {
   for (StatementList::iterator it = statements_.begin(),
                                end = statements_.end();
@@ -64,61 +142,13 @@ void BatchRequest::add_statement(Statement* statement) {
 }
 
 bool BatchRequest::prepared_statement(const std::string& id,
-                                      std::string* statement) {
-  PreparedMap::iterator it = prepared_statements_.find(id);
+                                      std::string* statement) const {
+  PreparedMap::const_iterator it = prepared_statements_.find(id);
   if (it != prepared_statements_.end()) {
     *statement = it->second->prepared_statement();
     return true;
   }
   return false;
-}
-
-bool BatchRequest::encode(size_t reserved, char** output, size_t& size) {
-  // reserved + type + length
-  size = reserved + sizeof(uint8_t) + sizeof(uint16_t);
-
-  for (StatementList::const_iterator it = statements_.begin(),
-                                     end = statements_.end();
-       it != end; ++it) {
-    const Statement* statement = *it;
-
-    size += sizeof(uint8_t);
-    if (statement->kind() == 0) {
-      size += sizeof(int32_t);
-    } else {
-      size += sizeof(uint16_t);
-    }
-    size += statement->statement_size();
-    size += statement->encoded_values_size();
-  }
-
-  size += sizeof(uint16_t);
-  *output = new char[size];
-
-  char* buffer = encode_byte(*output + reserved, type_);
-  buffer = encode_short(buffer, statements_.size());
-
-  for (StatementList::const_iterator it = statements_.begin(),
-                                     end = statements_.end();
-       it != end; ++it) {
-    const Statement* statement = *it;
-
-    buffer = encode_byte(buffer, statement->kind());
-
-    if (statement->kind() == 0) {
-      buffer = encode_long_string(buffer, statement->statement(),
-                                  statement->statement_size());
-    } else {
-      buffer = encode_string(buffer, statement->statement(),
-                             statement->statement_size());
-    }
-
-    buffer = statement->encode_values(buffer);
-  }
-
-  encode_short(buffer, consistency_);
-
-  return true;
 }
 
 } // namespace cass

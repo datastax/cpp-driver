@@ -25,7 +25,7 @@ extern "C" {
 CassStatement* cass_statement_new(CassString statement, size_t parameter_count) {
   cass::Statement* query = new cass::QueryRequest(parameter_count);
   query->retain();
-  query->statement(statement.data, statement.length);
+  query->set_query(statement.data, statement.length);
   return CassStatement::to(query);
 }
 
@@ -100,9 +100,8 @@ CassError cass_statement_bind_decimal(CassStatement* statement,
 }
 
 CassError cass_statement_bind_collection(CassStatement* statement, size_t index,
-                                         const CassCollection* collection,
-                                         cass_bool_t is_map) {
-  return statement->bind(index, collection->from(), is_map == cass_true);
+                                         const CassCollection* collection) {
+  return statement->bind(index, collection->from());
 }
 
 CassError cass_statement_bind_custom(CassStatement* statement,
@@ -115,34 +114,17 @@ CassError cass_statement_bind_custom(CassStatement* statement,
 
 namespace cass {
 
-size_t Statement::encoded_values_size() const {
-  size_t total_size = sizeof(uint16_t);
-  for (ValueVec::const_iterator it = values_.begin(), end = values_.end();
-       it != end; ++it) {
-    total_size += sizeof(int32_t);
-    int32_t value_size = it->size();
-    if (value_size > 0) {
-      total_size += value_size;
-    }
-  }
-  return total_size;
-}
-
-char* Statement::encode_values(char* buffer) const {
-  buffer = encode_short(buffer, values_.size());
-  for (ValueVec::const_iterator it = values_.begin(), end = values_.end();
-       it != end; ++it) {
-    buffer = encode_bytes(buffer, it->data(), it->size());
-  }
-  return buffer;
-}
-
-int32_t Statement::encode_values(BufferVec* bufs) const {
+int32_t Statement::encode_values(int version, BufferVec* collection_bufs, Writer::Bufs* bufs) const {
   int32_t values_size = 0;
   for (ValueVec::const_iterator it = values_.begin(), end = values_.end();
        it != end; ++it) {
-    bufs->push_back(*it);
-    values_size += it->size();
+    if(it->is_collection()) {
+      collection_bufs->push_back(Buffer());
+      values_size = it->encode_collection(version, &collection_bufs->back());
+    } else {
+      bufs->push_back(uv_buf_init(const_cast<char*>(it->data()), it->size()));
+      values_size += it->size();
+    }
   }
   return values_size;
 }

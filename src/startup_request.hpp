@@ -37,12 +37,22 @@ public:
   const std::string version() const { return version_; }
   void set_version(const std::string& version) { version_ = version; }
 
+  const std::string compression() const { return compression_; }
+
 private:
   typedef std::map<std::string, std::string> OptionsMap;
 
   ScopedPtr<char[]> guard_;
   std::string version_;
   std::string compression_;
+};
+
+class StartupRequestMessage : public RequestMessage {
+public:
+  StartupRequestMessage(const Request* request)
+    : RequestMessage(request) {}
+
+  int32_t encode(int version, Writer::Bufs* bufs);
 };
 
 } // namespace cass

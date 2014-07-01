@@ -45,14 +45,14 @@ public:
   typedef boost::function1<void, RequestHandler*> Callback;
   typedef boost::function2<void, RequestHandler*, RetryType> RetryCallback;
 
-  RequestHandler(Request* request)
+  RequestHandler(RequestMessage* request)
       : timer(NULL)
-      , request_(request)
+      , request_message_(request)
       , future_(new ResponseFuture()) {
     future_->retain();
   }
 
-  virtual Request* request() const { return request_.get(); }
+  virtual RequestMessage* request_message() const { return request_message_.get(); }
 
   virtual void on_set(Message* response);
 
@@ -105,7 +105,7 @@ private:
   }
 
   std::list<Host> hosts_attempted_;
-  ScopedRefPtr<Request> request_;
+  ScopedPtr<RequestMessage> request_message_;
   ResponseFuture* future_;
   RetryCallback retry_callback_;
   Callback finished_callback_;

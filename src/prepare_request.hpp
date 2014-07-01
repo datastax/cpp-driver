@@ -29,16 +29,27 @@ public:
   PrepareRequest()
       : Request(CQL_OPCODE_PREPARE) {}
 
-  void prepare_string(const char* input, size_t size) {
-    statement_.assign(input, size);
+  const std::string& query() const { return query_; }
+
+  void set_query(const char* input, size_t size) {
+    query_.assign(input, size);
   }
 
-  void prepare_string(const std::string& input) { statement_ = input; }
+  void set_query(const std::string& query) { query_ = query; }
 
-  bool encode(size_t reserved, char** output, size_t& size);
+protected:
+  int32_t encode(int version, BufferVec* bufs) const;
 
 private:
-  std::string statement_;
+  std::string query_;
+};
+
+class PrepareRequestMessage : public RequestMessage {
+public:
+  PrepareRequestMessage(const Request* request)
+    : RequestMessage(request) {}
+
+  int32_t encode(int version, Writer::Bufs* bufs);
 };
 
 } // namespace cass

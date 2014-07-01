@@ -32,7 +32,7 @@ public:
   SetKeyspaceHandler(const std::string& keyspace, Connection* connection,
                      ResponseCallback* response_callback);
 
-  virtual Request* request() const { return request_.get(); }
+  virtual RequestMessage* request_message() const { return request_message_.get(); }
 
   virtual void on_set(Message* response);
 
@@ -45,7 +45,7 @@ private:
 
 private:
   Connection* connection_;
-  ScopedRefPtr<QueryRequest> request_;
+  ScopedPtr<RequestMessage> request_message_;
   ScopedPtr<ResponseCallback> response_callback_;
 };
 

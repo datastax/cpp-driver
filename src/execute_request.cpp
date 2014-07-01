@@ -18,66 +18,77 @@
 
 namespace cass {
 
-bool ExecuteRequest::encode(size_t reserved, char** output, size_t& size) {
-  uint8_t flags = 0x00;
+int32_t ExecuteRequestMessage::encode(int version, Writer::Bufs* bufs) {
+  assert(version == 2);
 
-  // reserved + the short bytes
-  size = reserved + sizeof(int16_t) + prepared_id_.size();
-  // consistency_value
-  size += sizeof(int16_t);
-  // flags
-  size += 1;
+  uint8_t flags = 0;
+  int32_t length = 0;
 
-  if (serial_consistency() != 0) {
-    flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
-    size += sizeof(int16_t);
+  const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request());
+
+  {
+    // <id> [short bytes] + <consistency> [short] + <flags> [byte]
+    int32_t buf_size = 2 + execute->prepared_id().size() + 2 + 1;
+
+    if (execute->has_values()) { // <values> = <n><value_1>...<value_n>
+      buf_size += 2; // <n> [short]
+    }
+
+    body_head_buf_ = Buffer(buf_size);
+
+    length += buf_size;
+
+    bufs->push_back(uv_buf_init(body_head_buf_.data(), body_head_buf_.size()));
+
+    char* pos = encode_string(body_head_buf_.data(),
+                              execute->prepared_id().data(),
+                              execute->prepared_id().size());
+    pos = encode_short(pos, execute->consistency());
+    pos = encode_byte(pos, flags);
+
+    if (execute->has_values()) {
+      encode_short(pos, execute->values_count());
+      length += execute->encode_values(version, &body_collection_bufs_, bufs);
+    }
   }
 
-  if (!paging_state().empty()) {
-    flags |= CASS_QUERY_FLAG_PAGING_STATE;
-    size += (sizeof(int16_t) + paging_state().size());
+  {
+    int32_t buf_size = 0;
+
+    if (execute->page_size() >= 0) {
+      buf_size += 4; // [int]
+    }
+
+    if (!execute->paging_state().empty()) {
+      buf_size += execute->paging_state().size(); // [bytes]
+    }
+
+    if (execute->serial_consistency() != 0) {
+      buf_size += 2; // [short]
+    }
+
+    body_tail_buf_ = Buffer(buf_size);
+
+    length += buf_size;
+
+    bufs->push_back(uv_buf_init(body_tail_buf_.data(), body_tail_buf_.size()));
+
+    char* pos = body_tail_buf_.data();
+
+    if (execute->page_size() >= 0) {
+      pos = encode_int(pos, execute->page_size());
+    }
+
+    if (!execute->paging_state().empty()) {
+      pos = encode_string(pos, execute->paging_state().data(), execute->paging_state().size());
+    }
+
+    if (execute->serial_consistency() != 0) {
+      pos = encode_short(pos, execute->serial_consistency());
+    }
   }
 
-  if (has_values()) {
-    size += encoded_values_size();
-    flags |= CASS_QUERY_FLAG_VALUES;
-  }
-
-  if (page_size() >= 0) {
-    size += sizeof(int32_t);
-    flags |= CASS_QUERY_FLAG_PAGE_SIZE;
-  }
-
-  if (serial_consistency() != 0) {
-    size += sizeof(int16_t);
-    flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
-  }
-
-  *output = new char[size];
-
-  char* buffer = encode_string(*output + reserved, prepared_id_.c_str(),
-                               prepared_id_.size());
-
-  buffer = encode_short(buffer, consistency());
-  buffer = encode_byte(buffer, flags);
-
-  if (has_values()) {
-    buffer = encode_values(buffer);
-  }
-
-  if (page_size() >= 0) {
-    buffer = encode_int(buffer, page_size());
-  }
-
-  if (!paging_state().empty()) {
-    buffer = encode_string(buffer, paging_state().data(), paging_state().size());
-  }
-
-  if (serial_consistency() != 0) {
-    buffer = encode_short(buffer, serial_consistency());
-  }
-
-  return true;
+  return length;
 }
 
 } // namespace cass

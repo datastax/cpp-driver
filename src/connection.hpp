@@ -26,6 +26,7 @@
 #include "scoped_ptr.hpp"
 #include "ref_counted.h"
 #include "buffer.hpp"
+#include "writer.hpp"
 
 #include "third_party/boost/boost/function.hpp"
 
@@ -41,15 +42,14 @@ class Timer;
 class Config;
 class Logger;
 class Request;
-class Writer;
 
 class Connection {
 public:
   class StartupHandler : public ResponseCallback {
   public:
-    StartupHandler(Connection* connection, cass::Request* request);
+    StartupHandler(Connection* connection, RequestMessage* request_message);
 
-    virtual Request* request() const;
+    virtual RequestMessage* request_message() const;
     virtual void on_set(Message* response);
     virtual void on_error(CassError code, const std::string& message);
     virtual void on_timeout();
@@ -58,10 +58,10 @@ public:
     void on_result_response(Message* response);
 
     Connection* connection_;
-    ScopedRefPtr<Request> request_;
+    ScopedPtr<RequestMessage> request_;
   };
 
-  struct Request : public List<Request>::Node {
+  struct InternalRequest : public List<InternalRequest>::Node {
     enum State {
       REQUEST_STATE_NEW,
       REQUEST_STATE_WRITING,
@@ -73,7 +73,7 @@ public:
       REQUEST_STATE_DONE
     };
 
-    Request(Connection* connection, ResponseCallback* response_callback);
+    InternalRequest(Connection* connection, ResponseCallback* response_callback);
 
     void on_set(Message* response);
     void on_error(CassError code, const std::string& message);
@@ -156,7 +156,7 @@ public:
 
 private:
   void actually_close();
-  void write(BufferVec* bufs, Request* request);
+  void write(Writer::Bufs* bufs, InternalRequest* request);
   void event_received();
   void consume(char* input, size_t size);
 
@@ -183,12 +183,12 @@ private:
   ConnectionState state_;
   bool is_defunct_;
 
-  List<Request> pending_requests_;
+  List<InternalRequest> pending_requests_;
   int timed_out_request_count_;
 
   uv_loop_t* loop_;
   ScopedPtr<Message> incoming_;
-  StreamManager<Request*> stream_manager_;
+  StreamManager<InternalRequest*> stream_manager_;
 
   Callback ready_callback_;
   Callback closed_callback_;

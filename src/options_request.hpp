@@ -27,11 +27,14 @@ public:
   OptionsRequest()
       : Request(CQL_OPCODE_OPTIONS) {}
 
-  bool encode(size_t reserved, char** output, size_t& size) {
-    size = reserved;
-    *output = new char[size];
-    return true;
-  }
+};
+
+class OptionsRequestMessage : public RequestMessage {
+public:
+  OptionsRequestMessage(const Request* request)
+    : RequestMessage(request) {}
+
+  int32_t encode(int version, Writer::Bufs* bufs) { return 0; }
 };
 
 } // namespace cass

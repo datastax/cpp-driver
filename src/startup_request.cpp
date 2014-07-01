@@ -19,27 +19,31 @@
 
 namespace cass {
 
-bool StartupRequest::encode(size_t reserved, char** output, size_t& size) {
-  size = reserved + sizeof(int16_t);
+int32_t StartupRequestMessage::encode(int version, Writer::Bufs* bufs) {
+  assert(version == 2);
 
+  int32_t length = 2;
   std::map<std::string, std::string> options;
-  if (!compression_.empty()) {
+
+  const StartupRequest* startup = static_cast<const StartupRequest*>(request());
+
+  if (!startup->compression().empty()) {
     const char* key = "COMPRESSION";
-    size += (sizeof(int16_t) + strlen(key));
-    size += (sizeof(int16_t) + compression_.size());
-    options[key] = compression_;
+    length += 2 + strlen(key);
+    length += 2 + startup->compression().size();
   }
 
-  if (!version_.empty()) {
+  if(!startup->version().empty()) {
     const char* key = "CQL_VERSION";
-    size += (sizeof(int16_t) + strlen(key));
-    size += (sizeof(int16_t) + version_.size());
-    options[key] = version_;
+    length += 2 + strlen(key);
+    length += 2 + startup->version().size();
   }
 
-  *output = new char[size];
-  encode_string_map(*output + reserved, options);
-  return true;
+  body_head_buf_ = Buffer(length);
+  encode_string_map(body_head_buf_.data(), options);
+  bufs->push_back(uv_buf_init(body_head_buf_.data(), body_head_buf_.size()));
+
+  return length;
 }
 
 } // namespace cass

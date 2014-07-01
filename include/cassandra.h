@@ -178,6 +178,12 @@ typedef enum CassValueType_ {
   CASS_VALUE_TYPE_SET       = 0x0022
 } CassValueType;
 
+typedef enum CassCollectionType_ {
+  CASS_COLLECTION_TYPE_LIST = CASS_VALUE_TYPE_LIST,
+  CASS_COLLECTION_TYPE_MAP = CASS_VALUE_TYPE_MAP,
+  CASS_COLLECTION_TYPE_SET = CASS_VALUE_TYPE_SET
+} CassCollectionType;
+
 typedef enum CassBatchType_ {
   CASS_BATCH_TYPE_LOGGED    = 0,
   CASS_BATCH_TYPE_UNLOGGED  = 1,
@@ -730,14 +736,12 @@ cass_statement_bind_custom(CassStatement* statement,
  * @param[in] statement
  * @param[in] index
  * @param[in] collection
- * @param[in] is_map This must be set to true if the collection represents a map.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_statement_bind_collection(CassStatement* statement,
                                cass_size_t index,
-                               const CassCollection* collection,
-                               cass_bool_t is_map);
+                               const CassCollection* collection);
 
 
 /***********************************************************************************
@@ -824,13 +828,14 @@ cass_batch_add_statement(CassBatch* batch,
 /**
  * Creates a new collection.
  *
+ * @param[in] type
  * @param[in] item_count The approximate number of items in the collection.
  * @return Returns a collection that must be freed.
  *
  * @see cass_collection_free()
  */
 CASS_EXPORT CassCollection*
-cass_collection_new(cass_size_t item_count);
+cass_collection_new(CassCollectionType type, cass_size_t item_count);
 
 /**
  * Frees a collection instance.

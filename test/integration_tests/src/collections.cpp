@@ -29,7 +29,7 @@ void insert_collection_value(CassSession* session, CassValueType type, CassValue
   test_utils::execute_query(session, str(boost::format("CREATE TABLE %s (tweet_id int PRIMARY KEY, test_val %s);")
                                          % table_name % type_name));
 
-  test_utils::CassCollectionPtr input = test_utils::make_shared(cass_collection_new(values.size()));
+  test_utils::CassCollectionPtr input = test_utils::make_shared(cass_collection_new(static_cast<CassCollectionType>(type), values.size()));
 
   for(typename std::vector<T>::const_iterator it = values.begin(),
       end = values.end(); it != end; ++it) {
@@ -40,7 +40,7 @@ void insert_collection_value(CassSession* session, CassValueType type, CassValue
 
   test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 1));
 
-  BOOST_REQUIRE(cass_statement_bind_collection(statement.get(), 0, input.get(), cass_false) == CASS_OK);
+  BOOST_REQUIRE(cass_statement_bind_collection(statement.get(), 0, input.get()) == CASS_OK);
 
   test_utils::CassFuturePtr result_future = test_utils::make_shared(cass_session_execute(session, statement.get()));
   test_utils::wait_and_check_error(result_future.get());
@@ -168,7 +168,7 @@ void insert_map_value(CassSession* session, CassValueType primary_type, CassValu
   test_utils::execute_query(session, str(boost::format("CREATE TABLE %s (tweet_id int PRIMARY KEY, test_val %s);")
                                          % table_name % type_name));
 
-  test_utils::CassCollectionPtr input = test_utils::make_shared(cass_collection_new(values.size()));
+  test_utils::CassCollectionPtr input = test_utils::make_shared(cass_collection_new(CASS_COLLECTION_TYPE_MAP, values.size()));
 
   for(typename std::map<K, V>::const_iterator it = values.begin(),
       end = values.end(); it != end; ++it) {
@@ -180,7 +180,7 @@ void insert_map_value(CassSession* session, CassValueType primary_type, CassValu
 
   test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 1));
 
-  BOOST_REQUIRE(cass_statement_bind_collection(statement.get(), 0, input.get(), cass_true) == CASS_OK);
+  BOOST_REQUIRE(cass_statement_bind_collection(statement.get(), 0, input.get()) == CASS_OK);
 
   test_utils::CassFuturePtr result_future = test_utils::make_shared(cass_session_execute(session, statement.get()));
   test_utils::wait_and_check_error(result_future.get());

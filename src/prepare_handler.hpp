@@ -34,7 +34,7 @@ public:
 
   bool init(const std::string& prepared_id);
 
-  virtual Request* request() const { return request_.get(); }
+  virtual RequestMessage* request_message() const { return request_message_.get(); }
 
   virtual void on_set(Message* response);
 
@@ -43,7 +43,7 @@ public:
   virtual void on_timeout();
 
 private:
-  ScopedRefPtr<Request> request_;
+  ScopedPtr<RequestMessage> request_message_;
   ScopedPtr<RequestHandler> request_handler_;
 };
 

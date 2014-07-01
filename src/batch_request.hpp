@@ -32,6 +32,8 @@ class ExecuteRequest;
 
 class BatchRequest : public Request {
 public:
+  typedef std::list<Statement*> StatementList;
+
   BatchRequest(uint8_t type_)
       : Request(CQL_OPCODE_BATCH)
       , type_(type_)
@@ -39,24 +41,36 @@ public:
 
   ~BatchRequest();
 
-  int16_t consistency() { return consistency_; }
+  uint8_t type() const { return type_; }
+
+  const StatementList& statements() const { return statements_; }
+
+  int16_t consistency() const { return consistency_; }
 
   void set_consistency(int16_t consistency) { consistency_ = consistency; }
 
   void add_statement(Statement* statement);
 
-  bool prepared_statement(const std::string& id, std::string* statement);
-
-  bool encode(size_t reserved, char** output, size_t& size);
+  bool prepared_statement(const std::string& id, std::string* statement) const;
 
 private:
-  typedef std::list<Statement*> StatementList;
   typedef std::map<std::string, ExecuteRequest*> PreparedMap;
 
   uint8_t type_;
   StatementList statements_;
   PreparedMap prepared_statements_;
   int16_t consistency_;
+};
+
+class BatchRequestMessage : public RequestMessage {
+public:
+  BatchRequestMessage(const Request* request)
+    : RequestMessage(request) {}
+
+  int32_t encode(int version, Writer::Bufs* bufs);
+
+private:
+  BufferVec statement_bufs_;
 };
 
 } // namespace cass

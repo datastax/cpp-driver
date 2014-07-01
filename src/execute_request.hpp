@@ -29,36 +29,25 @@ namespace cass {
 class ExecuteRequest : public Statement {
 public:
   ExecuteRequest(const Prepared* prepared, size_t value_count)
-      : Statement(CQL_OPCODE_EXECUTE, value_count)
-      , prepared_id_(prepared->id())
-      , prepared_statement_(prepared->statement()) {}
-
-  uint8_t kind() const {
-    // used for batch statements
-    return 1;
+      : Statement(CQL_OPCODE_EXECUTE, CASS_BATCH_KIND_PREPARED, value_count)
+      , prepared_statement_(prepared->statement()) {
+    set_prepared_id(prepared->id());
   }
 
-  const char* statement() const { return prepared_id_.data(); }
-
-  size_t statement_size() const { return prepared_id_.size(); }
-
-  virtual void statement(const std::string& statement) {
-    prepared_id_.assign(statement.begin(), statement.end());
-  }
-
-  void statement(const char* input, size_t size) {
-    prepared_id_.assign(input, size);
-  }
-
-  const std::string prepared_id() const { return prepared_id_; }
   const std::string prepared_statement() const { return prepared_statement_; }
 
-  bool encode(size_t reserved, char** output, size_t& size);
-
 private:
-  std::string prepared_id_;
   std::string prepared_statement_;
 };
+
+class ExecuteRequestMessage : public RequestMessage {
+public:
+  ExecuteRequestMessage(const Request* request)
+    : RequestMessage(request) {}
+
+  int32_t encode(int version, Writer::Bufs* bufs);
+};
+
 
 } // namespace cass
 

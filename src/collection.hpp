@@ -17,21 +17,26 @@
 #ifndef __CASS_COLLECTION_HPP_INCLUDED__
 #define __CASS_COLLECTION_HPP_INCLUDED__
 
-#include "buffer_list.hpp"
+#include "buffer.hpp"
 #include "serialization.hpp"
+#include "ref_counted.h"
 
 namespace cass {
 
-class Collection {
+class Collection : public RefCounted<Collection> {
 public:
-  Collection(size_t item_count)
-      : buffer_list_(item_count) {}
+  explicit
+  Collection(bool is_map, size_t item_count)
+      : RefCounted<Collection>(1)
+      , is_map_(is_map) {
+    bufs_.reserve(item_count);
+  }
 
-#define APPEND_FIXED_TYPE(DeclType, EncodeType, Name)                          \
-  void append_##Name(const DeclType& value) {                                  \
-    Buffer* buffer = buffer_list_.append(sizeof(uint16_t) + sizeof(DeclType)); \
-    encode_##EncodeType(encode_short(buffer->data(), sizeof(DeclType)),        \
-                        value);                                                \
+#define APPEND_FIXED_TYPE(DeclType, EncodeType, Name) \
+  void append_##Name(const DeclType& value) {         \
+    Buffer buf(sizeof(DeclType));                     \
+    encode_##EncodeType(buf.data(), value);           \
+    bufs_.push_back(buf);                             \
   }
 
   APPEND_FIXED_TYPE(int32_t, int, int32)
@@ -42,47 +47,44 @@ public:
 #undef BIND_FIXED_TYPE
 
   void append(const char* value, size_t value_length) {
-    Buffer* buffer = buffer_list_.append(sizeof(uint16_t) + value_length);
-    memcpy(encode_short(buffer->data(), value_length), value, value_length);
+    Buffer buf(value_length);
+    memcpy(buf.data(), value, value_length);
+    bufs_.push_back(buf);
   }
 
   void append(const uint8_t* value, size_t value_length) {
-    Buffer* buffer = buffer_list_.append(sizeof(uint16_t) + value_length);
-    memcpy(encode_short(buffer->data(), value_length), value, value_length);
+    Buffer buf(value_length);
+    memcpy(buf.data(), value, value_length);
+    bufs_.push_back(buf);
   }
 
-  void append(const uint8_t* value) {
-    Buffer* buffer = buffer_list_.append(sizeof(uint16_t) + 16);
-    memcpy(encode_short(buffer->data(), 16), value, 16);
+  void append(CassUuid value) {
+    Buffer buf(sizeof(CassUuid));
+    memcpy(buf.data(), value, sizeof(CassUuid));
+    bufs_.push_back(buf);
   }
 
   void append(const uint8_t* address, uint8_t address_len) {
-    Buffer* buffer = buffer_list_.append(sizeof(uint16_t) + address_len);
-    memcpy(encode_short(buffer->data(), address_len), address, address_len);
+    Buffer buf(address_len);
+    memcpy(buf.data(), address, address_len);
+    bufs_.push_back(buf);
   }
 
   void append(int32_t scale, const uint8_t* varint, size_t varint_len) {
-    Buffer* buffer =
-        buffer_list_.append(sizeof(uint16_t) + sizeof(int32_t) + varint_len);
-    encode_decimal(encode_short(buffer->data(), sizeof(int32_t) + varint_len),
-                   scale, varint, varint_len);
+    Buffer buf(sizeof(int32_t) + varint_len);
+    encode_decimal(buf.data(), scale, varint, varint_len);
+    bufs_.push_back(buf);
   }
 
-  size_t item_count() const { return buffer_list_.count(); }
+  bool is_map() const { return is_map_; }
 
-  Buffer build(bool is_map) const {
-    Buffer combined(sizeof(uint16_t) + buffer_list_.size());
-    size_t count = buffer_list_.count();
-    if (is_map) {
-      count /= 2;
-    }
-    char* buffer = encode_short(combined.data(), count);
-    buffer_list_.combine(buffer);
-    return combined;
-  }
+  size_t item_count() const { return bufs_.size(); }
+
+  int32_t encode(int version, Buffer* buffer) const;
 
 private:
-  BufferList buffer_list_;
+  BufferVec bufs_;
+  bool is_map_;
 };
 
 } // namespace cass

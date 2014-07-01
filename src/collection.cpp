@@ -19,12 +19,13 @@
 
 extern "C" {
 
-CassCollection* cass_collection_new(size_t element_count) {
-  return CassCollection::to(new cass::Collection(element_count));
+CassCollection* cass_collection_new(CassCollectionType type, size_t element_count) {
+  return CassCollection::to(new cass::Collection(type == CASS_COLLECTION_TYPE_MAP,
+                                                 element_count));
 }
 
 void cass_collection_free(CassCollection* collection) {
-  delete collection->from();
+  collection->release();
 }
 
 CassError cass_collection_append_int32(CassCollection* collection,
@@ -88,3 +89,30 @@ CassError cass_collection_append_decimal(CassCollection* collection,
 }
 
 } // extern "C"
+
+namespace cass {
+
+int32_t Collection::encode(int version, Buffer* buffer) const {
+  if(version != 1 || version != 2) return -1;
+
+  int32_t buf_size = 2;
+
+  for(BufferVec::const_iterator it = bufs_.begin(),
+      end = bufs_.end(); it != end; ++it) {
+    buf_size += 2;
+    buf_size += it->size();
+  }
+
+  *buffer = Buffer(buf_size);
+
+  char* pos = encode_short(buffer->data(), is_map_ ? bufs_.size() / 2 : bufs_.size());
+  for(BufferVec::const_iterator it = bufs_.begin(),
+      end = bufs_.end(); it != end; ++it) {
+    pos = encode_short(pos, it->size());
+    pos = encode_bytes(pos, it->data(), it->size());
+  }
+
+  return buf_size;
+}
+
+}

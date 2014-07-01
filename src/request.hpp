@@ -20,8 +20,11 @@
 #include "macros.hpp"
 #include "ref_counted.h"
 #include "buffer.hpp"
+#include "writer.hpp"
 
 namespace cass {
+
+class RequestMessage;
 
 class Request : public RefCounted<Request> {
 public:
@@ -32,17 +35,42 @@ public:
 
   uint8_t opcode() const { return opcode_; }
 
-  bool encode(int version, int flags, int stream, BufferVec* bufs);
-
-  virtual int32_t encode(int version, BufferVec* bufs) { return -1; }
-
-  virtual bool encode(size_t reserved, char** output, size_t& size) = 0;
-
 private:
   uint8_t opcode_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Request);
+};
+
+class RequestMessage {
+public:
+  virtual ~RequestMessage() {}
+
+  const Request* request() const { return request_.get(); }
+
+  uint8_t opcode() const { return request_->opcode(); }
+
+  static RequestMessage* create(Request* request);
+
+  bool encode(int version, int flags, int stream, Writer::Bufs* bufs);
+
+protected:
+  RequestMessage(const Request* request)
+    : request_(request) {}
+
+  virtual int32_t encode(int version, Writer::Bufs* bufs) = 0;
+
+  Buffer body_head_buf_;
+  BufferVec body_collection_bufs_;
+  Buffer body_tail_buf_;
+
+private:
+  ScopedRefPtr<const Request> request_;
+  uint8_t opcode_;
+  Buffer header_buf_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(RequestMessage);
 };
 
 } // namespace cass

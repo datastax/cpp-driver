@@ -16,24 +16,57 @@
 
 #include "request.hpp"
 #include "serialization.hpp"
+#include "writer.hpp"
+#include "batch_request.hpp"
+#include "query_request.hpp"
+#include "execute_request.hpp"
+#include "prepare_request.hpp"
+#include "options_request.hpp"
+#include "startup_request.hpp"
 
 #define CASS_HEADER_SIZE_V1_AND_V2 8
 #define CASS_HEADER_SIZE_V3 9
 
 namespace cass {
 
-bool Request::encode(int version, int flags, int stream, BufferVec* bufs) {
-  if(version == 1 || version == 2) {
-    Buffer header_buf(CASS_HEADER_SIZE_V1_AND_V2);
+RequestMessage* RequestMessage::create(Request* request) {
+  switch(request->opcode()) {
+    case CQL_OPCODE_PREPARE:
+      return new PrepareRequestMessage(request);
 
-    char* data = header_buf.data();
+    case CQL_OPCODE_OPTIONS:
+      return new OptionsRequestMessage(request);
+
+    case CQL_OPCODE_STARTUP:
+      return new StartupRequestMessage(request);
+
+    case CQL_OPCODE_QUERY:
+      return new QueryRequestMessage(request);
+
+    case CQL_OPCODE_EXECUTE:
+      return new ExecuteRequestMessage(request);
+
+    case CQL_OPCODE_BATCH:
+      return new BatchRequestMessage(request);
+
+    default:
+      assert(false && "Invalid request type");
+      return NULL;
+  }
+}
+
+bool RequestMessage::encode(int version, int flags, int stream, Writer::Bufs* bufs) {
+  if(version == 1 || version == 2) {
+    header_buf_ = Buffer(CASS_HEADER_SIZE_V1_AND_V2);
+
+    char* data = header_buf_.data();
 
     data[0] = version;
     data[1] = flags;
     data[2] = stream;
     data[3] = opcode_;
 
-    bufs->push_back(header_buf);
+    bufs->push_back(uv_buf_init(header_buf_.data(), header_buf_.size()));
 
     int32_t length = encode(version, bufs);
     if(length < 0) {

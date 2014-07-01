@@ -19,11 +19,14 @@
 
 namespace cass {
 
-bool PrepareRequest::encode(size_t reserved, char** output, size_t& size) {
-  size = reserved + sizeof(int32_t) + statement_.size();
-  *output = new char[size];
-  encode_long_string(*output + reserved, statement_.c_str(), statement_.size());
-  return true;
+int32_t PrepareRequestMessage::encode(int version, Writer::Bufs* bufs) {
+  assert(version == 4);
+  const PrepareRequest* prepare = static_cast<const PrepareRequest*>(request());
+  int32_t length = 4 +  prepare->query().size();
+  body_head_buf_ = Buffer(length);
+  encode_long_string(body_head_buf_.data(), prepare->query().data(), prepare->query().size());
+  bufs->push_back(uv_buf_init(body_head_buf_.data(), body_head_buf_.size()));
+  return length;
 }
 
 } // namespace cas

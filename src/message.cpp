@@ -70,24 +70,6 @@ bool Message::allocate_body(int8_t opcode) {
   }
 }
 
-bool Message::encode(char** output, size_t& size) {
-  size = 0;
-
-  if (request_body_ && request_body_->encode(CASS_HEADER_SIZE, output, size)) {
-    length_ = size - CASS_HEADER_SIZE;
-
-    uint8_t* buffer = reinterpret_cast<uint8_t*>(*output);
-    buffer[0] = version_;
-    buffer[1] = flags_;
-    buffer[2] = stream_;
-    buffer[3] = opcode_;
-    encode_int(reinterpret_cast<char*>(buffer + 4), length_);
-    return true;
-  }
-
-  return false;
-}
-
 ssize_t Message::decode(char* input, size_t size) {
   char* input_pos = input;
 

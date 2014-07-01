@@ -22,13 +22,13 @@
 
 namespace cass {
 
-class Request;
+class RequestMessage;
 class Message;
 
 class ResponseCallback {
 public:
   virtual ~ResponseCallback() {}
-  virtual Request* request() const = 0;
+  virtual RequestMessage* request_message() const = 0;
   virtual void on_set(Message* response) = 0;
   virtual void on_error(CassError code, const std::string& message) = 0;
   virtual void on_timeout() = 0;
