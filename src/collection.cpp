@@ -54,7 +54,7 @@ CassError cass_collection_append_double(CassCollection* collection,
 
 CassError cass_collection_append_bool(CassCollection* collection,
                                       cass_bool_t value) {
-  collection->append_bool(value == cass_true);
+  collection->append_byte(value == cass_true);
   return CASS_OK;
 }
 
@@ -92,25 +92,31 @@ CassError cass_collection_append_decimal(CassCollection* collection,
 
 namespace cass {
 
-int32_t Collection::encode(int version, Buffer* buffer) const {
-  if(version != 1 || version != 2) return -1;
+ssize_t Collection::encode(int version, BufferVec* bufs) const {
+  if(version != 1 && version != 2) return -1;
 
-  int32_t buf_size = 2;
+  ssize_t value_size = sizeof(uint16_t);
 
   for(BufferVec::const_iterator it = bufs_.begin(),
       end = bufs_.end(); it != end; ++it) {
-    buf_size += 2;
-    buf_size += it->size();
+    value_size += sizeof(uint16_t);
+    value_size += it->size();
   }
 
-  *buffer = Buffer(buf_size);
+  ssize_t buf_size = sizeof(int32_t) + value_size;
 
-  char* pos = encode_short(buffer->data(), is_map_ ? bufs_.size() / 2 : bufs_.size());
+  Buffer buf(buf_size);
+
+  size_t pos = buf.encode_int32(0, value_size);
+
+  pos = buf.encode_uint16(pos, is_map_ ? bufs_.size() / 2 : bufs_.size());
   for(BufferVec::const_iterator it = bufs_.begin(),
       end = bufs_.end(); it != end; ++it) {
-    pos = encode_short(pos, it->size());
-    pos = encode_bytes(pos, it->data(), it->size());
+    pos = buf.encode_uint16(pos, it->size());
+    pos = buf.copy(pos, it->data(), it->size());
   }
+
+  bufs->push_back(buf);
 
   return buf_size;
 }

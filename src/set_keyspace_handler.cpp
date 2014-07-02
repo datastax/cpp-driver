@@ -29,11 +29,10 @@ SetKeyspaceHandler::SetKeyspaceHandler(const std::string& keyspace,
                                        Connection* connection,
                                        ResponseCallback* response_callback)
     : connection_(connection)
+    , request_(new QueryRequest())
     , response_callback_(response_callback) {
-  QueryRequest* query = new QueryRequest();
-  query->set_query("use \"" + keyspace + "\"");
-  query->set_consistency(CASS_CONSISTENCY_ONE);
-  request_message_.reset(RequestMessage::create(query));
+  request_->set_query("use \"" + keyspace + "\"");
+  request_->set_consistency(CASS_CONSISTENCY_ONE);
 }
 
 void SetKeyspaceHandler::on_set(Message* response) {

@@ -19,13 +19,12 @@
 
 namespace cass {
 
-int32_t PrepareRequestMessage::encode(int version, Writer::Bufs* bufs) {
-  assert(version == 4);
-  const PrepareRequest* prepare = static_cast<const PrepareRequest*>(request());
-  int32_t length = 4 +  prepare->query().size();
-  body_head_buf_ = Buffer(length);
-  encode_long_string(body_head_buf_.data(), prepare->query().data(), prepare->query().size());
-  bufs->push_back(uv_buf_init(body_head_buf_.data(), body_head_buf_.size()));
+int32_t PrepareRequest::encode(int version, BufferVec* bufs) const {
+  assert(version == 2);
+  // <query> [long string]
+  int32_t length = sizeof(int32_t) +  query_.size();
+  bufs->push_back(Buffer(length));
+  bufs->back().encode_long_string(0, query_.data(), query().size());
   return length;
 }
 

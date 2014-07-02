@@ -92,7 +92,7 @@ ssize_t Message::decode(char* input, size_t size) {
       stream_ = *(buffer++);
       opcode_ = *(buffer++);
 
-      decode_int(buffer, length_);
+      decode_int32(buffer, length_);
 
       header_received_ = true;
 

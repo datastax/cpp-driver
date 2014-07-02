@@ -38,14 +38,9 @@ public:
       : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY, value_count) {
     set_query(query, query_length);
   }
-};
 
-class QueryRequestMessage : public RequestMessage {
-public:
-  QueryRequestMessage(const Request* request)
-    : RequestMessage(request) {}
-
-  int32_t encode(int version, Writer::Bufs* bufs);
+private:
+  int32_t encode(int version, BufferVec* bufs) const;
 };
 
 } // namespace cass

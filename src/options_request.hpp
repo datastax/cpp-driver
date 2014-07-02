@@ -27,14 +27,8 @@ public:
   OptionsRequest()
       : Request(CQL_OPCODE_OPTIONS) {}
 
-};
-
-class OptionsRequestMessage : public RequestMessage {
-public:
-  OptionsRequestMessage(const Request* request)
-    : RequestMessage(request) {}
-
-  int32_t encode(int version, Writer::Bufs* bufs) { return 0; }
+private:
+  int32_t encode(int version, BufferVec* bufs) const { return 0; }
 };
 
 } // namespace cass

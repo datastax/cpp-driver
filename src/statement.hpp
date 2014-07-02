@@ -84,63 +84,49 @@ public:
 
   size_t values_count() const { return values_.size(); }
 
-  bool has_values() const { return !values_.empty(); }
-
-#define BIND_FIXED_TYPE(DeclType, EncodeType, Name, Size)      \
-  CassError bind_##Name(size_t index, const DeclType& value) { \
+#define BIND_FIXED_TYPE(DeclType, EncodeType, Size)            \
+  CassError bind_##EncodeType(size_t index, const DeclType& value) { \
     CASS_VALUE_CHECK_INDEX(index);                             \
-    Buffer buffer(4 + sizeof(DeclType));                       \
-    char* pos = encode_int(buffer.data(), Size);               \
-    encode_##EncodeType(pos, value);                           \
-    values_[index] = buffer;                                   \
+    Buffer buf(sizeof(int32_t) + sizeof(DeclType));            \
+    size_t pos = buf.encode_int32(0, sizeof(DeclType));        \
+    buf.encode_##EncodeType(pos, value);                       \
+    values_[index] = buf;                                      \
     return CASS_OK;                                            \
   }
 
-  BIND_FIXED_TYPE(int32_t, int, int32, 4)
-  BIND_FIXED_TYPE(int64_t, int64, int64, 8)
-  BIND_FIXED_TYPE(float, float, float, 4)
-  BIND_FIXED_TYPE(double, double, double, 8)
-  BIND_FIXED_TYPE(bool, byte, bool, 1)
+  BIND_FIXED_TYPE(int32_t, int32, 4)
+  BIND_FIXED_TYPE(int64_t, int64, 8)
+  BIND_FIXED_TYPE(float, float, 4)
+  BIND_FIXED_TYPE(double, double, 8)
+  BIND_FIXED_TYPE(bool, byte, 1)
 #undef BIND_FIXED_TYPE
 
   CassError bind_null(size_t index) {
     CASS_VALUE_CHECK_INDEX(index);
-    values_[index] = Buffer();
+    Buffer buf(sizeof(int32_t));
+    buf.encode_int32(0, -1);
+    values_[index] = buf;
     return CASS_OK;
   }
 
   CassError bind(size_t index, const char* value, size_t value_length) {
     CASS_VALUE_CHECK_INDEX(index);
-    Buffer buf(4 + value_length);
-    char* pos = encode_int(buf.data(), value_length);
-    memcpy(pos, value, value_length);
+    Buffer buf(sizeof(int32_t) + value_length);
+    size_t pos = buf.encode_int32(0, value_length);
+    buf.copy(pos, value, value_length);
     values_[index] = buf;
     return CASS_OK;
   }
 
   CassError bind(size_t index, const uint8_t* value, size_t value_length) {
-    CASS_VALUE_CHECK_INDEX(index);
-    Buffer buf(4 + value_length);
-    char* pos = encode_int(buf.data(), value_length);
-    memcpy(pos, value, value_length);
-    values_[index] = buf;
-    return CASS_OK;
+    return bind(index, reinterpret_cast<const char*>(value), value_length);
   }
 
   CassError bind(size_t index, const CassUuid value) {
     CASS_VALUE_CHECK_INDEX(index);
-    Buffer buf(4 + sizeof(CassUuid));
-    char* pos = encode_int(buf.data(), sizeof(CassUuid));
-    memcpy(pos, value, sizeof(CassUuid));
-    values_[index] = buf;
-    return CASS_OK;
-  }
-
-  CassError bind(size_t index, const uint8_t* address, uint8_t address_len) {
-    CASS_VALUE_CHECK_INDEX(index);
-    Buffer buf(4 + address_len);
-    char* pos = encode_int(buf.data(), address_len);
-    memcpy(pos, address, address_len);
+    Buffer buf(sizeof(int32_t) + sizeof(CassUuid));
+    size_t pos = buf.encode_int32(0, sizeof(CassUuid));
+    buf.copy(pos, value, sizeof(CassUuid));
     values_[index] = buf;
     return CASS_OK;
   }
@@ -148,9 +134,10 @@ public:
   CassError bind(size_t index, int32_t scale, const uint8_t* varint,
                  size_t varint_length) {
     CASS_VALUE_CHECK_INDEX(index);
-    Buffer buf(4 + 4 + varint_length);
-    char* pos = encode_int(buf.data(), varint_length);
-    encode_decimal(pos, scale, varint, varint_length);
+    Buffer buf(sizeof(int32_t) + sizeof(int32_t) + varint_length);
+    size_t pos = buf.encode_int32(0, sizeof(int32_t) + varint_length);
+    pos = buf.encode_int32(pos, scale);
+    buf.copy(pos, varint, varint_length);
     values_[index] = buf;
     return CASS_OK;
   }
@@ -167,12 +154,13 @@ public:
   CassError bind(size_t index, size_t output_size, uint8_t** output) {
     CASS_VALUE_CHECK_INDEX(index);
     Buffer buf(4 + output_size);
-    *output = reinterpret_cast<uint8_t*>(encode_int(buf.data(), output_size));
+    size_t pos = buf.encode_int32(0, output_size);
+    *output = reinterpret_cast<uint8_t*>(const_cast<char*>(buf.data() + pos));
     values_[index] = buf;
     return CASS_OK;
   }
 
-  int32_t encode_values(int version, BufferVec* collection_bufs, Writer::Bufs* bufs) const;
+  int32_t encode_values(int version, BufferVec*  bufs) const;
 
 private:
   typedef std::vector<Buffer> ValueVec;

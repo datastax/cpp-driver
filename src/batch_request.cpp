@@ -46,79 +46,70 @@ CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
 
 namespace cass {
 
-
-int32_t BatchRequestMessage::encode(int version, Writer::Bufs* bufs) {
+int32_t BatchRequest::encode(int version, BufferVec* bufs) const {
   assert(version == 2);
 
   int32_t length = 0;
 
-  const BatchRequest* batch = static_cast<const BatchRequest*>(request());
-
   {
     // <type> [byte] + <n> [short]
-    int32_t buf_size = 1 + 2;
+    int32_t buf_size = sizeof(uint8_t) + sizeof(uint16_t);
 
-    body_head_buf_ = Buffer(buf_size);
+    Buffer buf(buf_size);
+    size_t pos = buf.encode_byte(0, type_);
+    buf.encode_uint16(pos, statements().size());
 
+    bufs->push_back(buf);
     length += buf_size;
-
-    bufs->push_back(uv_buf_init(body_head_buf_.data(), body_head_buf_.size()));
-
-    char* pos = encode_byte(body_head_buf_.data(), batch->type());
-    pos = encode_short(pos, batch->statements().size());
   }
 
   for (BatchRequest::StatementList::const_iterator
-       it = batch->statements().begin(),
-       end = batch->statements().end();
+       it = statements_.begin(),
+       end = statements_.end();
        it != end; ++it) {
     const Statement* statement = *it;
 
     // <kind> [byte]
-    int32_t buf_size = 1;
+    int32_t buf_size = sizeof(uint8_t);
 
     // <string_or_id> [long string] | [short bytes]
-    buf_size += (statement->kind() == CASS_BATCH_KIND_QUERY) ? 4 : 2;
+    buf_size += (statement->kind() == CASS_BATCH_KIND_QUERY) ? sizeof(int32_t) : sizeof(uint16_t);
     buf_size += statement->query().size();
 
     // <n><value_1>...<value_n>
-    buf_size += 2; // <n> [short]
+    buf_size += sizeof(uint16_t); // <n> [short]
 
-    statement_bufs_.push_back(Buffer(buf_size));
-
-    Buffer* buf = &statement_bufs_.back();
-
+    bufs->push_back(Buffer(buf_size));
     length += buf_size;
 
-    bufs->push_back(uv_buf_init(buf->data(), buf->size()));
-
-    char* pos = encode_byte(buf->data(), statement->kind());
+    Buffer& buf = bufs->back();
+    size_t pos = buf.encode_byte(0, statement->kind());
 
     if(statement->kind() == CASS_BATCH_KIND_QUERY) {
-      pos = encode_long_string(pos, statement->query().data(),
-                               statement->query().size());
+      pos = buf.encode_long_string(pos,
+                                 statement->query().data(),
+                                 statement->query().size());
     } else {
-      pos = encode_string(pos, statement->query().data(),
-                          statement->query().size());
+      pos = buf.encode_string(pos,
+                              statement->query().data(),
+                              statement->query().size());
     }
 
-    if(statement->has_values()) {
-      encode_short(pos, statement->values_count());
-      length += statement->encode_values(version, &body_collection_bufs_, bufs);
+    buf.encode_uint16(pos, statement->values_count());
+    if(statement->values_count() > 0) {
+      length += statement->encode_values(version, bufs);
     }
   }
 
   {
     // <consistency> [short]
-    int32_t buf_size = 2;
+    int32_t buf_size = sizeof(uint16_t);
 
-    body_tail_buf_ = Buffer(buf_size);
+    Buffer buf(buf_size);
+    buf.encode_uint16(0, consistency_);
 
+    bufs->push_back(buf);
     length += buf_size;
-
-    bufs->push_back(uv_buf_init(body_tail_buf_.data(), body_tail_buf_.size()));
-
-    encode_short(body_tail_buf_.data(), batch->consistency());
   }
 
   return length;

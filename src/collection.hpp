@@ -32,47 +32,40 @@ public:
     bufs_.reserve(item_count);
   }
 
-#define APPEND_FIXED_TYPE(DeclType, EncodeType, Name) \
-  void append_##Name(const DeclType& value) {         \
-    Buffer buf(sizeof(DeclType));                     \
-    encode_##EncodeType(buf.data(), value);           \
-    bufs_.push_back(buf);                             \
+#define APPEND_FIXED_TYPE(DeclType, EncodeType) \
+  void append_##EncodeType(const DeclType& value) {   \
+    Buffer buf(sizeof(DeclType));               \
+    buf.encode_##EncodeType(0, value);          \
+    bufs_.push_back(buf);                       \
   }
 
-  APPEND_FIXED_TYPE(int32_t, int, int32)
-  APPEND_FIXED_TYPE(int64_t, int64, int64)
-  APPEND_FIXED_TYPE(float, float, float)
-  APPEND_FIXED_TYPE(double, double, double)
-  APPEND_FIXED_TYPE(bool, byte, bool)
+  APPEND_FIXED_TYPE(int32_t, int32)
+  APPEND_FIXED_TYPE(int64_t, int64)
+  APPEND_FIXED_TYPE(float, float)
+  APPEND_FIXED_TYPE(double, double)
+  APPEND_FIXED_TYPE(bool, byte)
 #undef BIND_FIXED_TYPE
 
   void append(const char* value, size_t value_length) {
     Buffer buf(value_length);
-    memcpy(buf.data(), value, value_length);
+    buf.copy(0, value, value_length);
     bufs_.push_back(buf);
   }
 
   void append(const uint8_t* value, size_t value_length) {
-    Buffer buf(value_length);
-    memcpy(buf.data(), value, value_length);
-    bufs_.push_back(buf);
+    append(reinterpret_cast<const char*>(value), value_length);
   }
 
   void append(CassUuid value) {
     Buffer buf(sizeof(CassUuid));
-    memcpy(buf.data(), value, sizeof(CassUuid));
-    bufs_.push_back(buf);
-  }
-
-  void append(const uint8_t* address, uint8_t address_len) {
-    Buffer buf(address_len);
-    memcpy(buf.data(), address, address_len);
+    buf.copy(0, value, sizeof(CassUuid));
     bufs_.push_back(buf);
   }
 
   void append(int32_t scale, const uint8_t* varint, size_t varint_len) {
     Buffer buf(sizeof(int32_t) + varint_len);
-    encode_decimal(buf.data(), scale, varint, varint_len);
+    size_t pos = buf.encode_int32(0, scale);
+    buf.copy(pos, varint, varint_len);
     bufs_.push_back(buf);
   }
 
@@ -80,7 +73,7 @@ public:
 
   size_t item_count() const { return bufs_.size(); }
 
-  int32_t encode(int version, Buffer* buffer) const;
+  ssize_t encode(int version, BufferVec* bufs) const;
 
 private:
   BufferVec bufs_;

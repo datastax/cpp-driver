@@ -37,19 +37,11 @@ public:
 
   void set_query(const std::string& query) { query_ = query; }
 
-protected:
+private:
   int32_t encode(int version, BufferVec* bufs) const;
 
 private:
   std::string query_;
-};
-
-class PrepareRequestMessage : public RequestMessage {
-public:
-  PrepareRequestMessage(const Request* request)
-    : RequestMessage(request) {}
-
-  int32_t encode(int version, Writer::Bufs* bufs);
 };
 
 } // namespace cass

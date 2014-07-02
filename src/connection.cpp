@@ -11,17 +11,22 @@
 #include "startup_request.hpp"
 #include "query_request.hpp"
 #include "options_request.hpp"
+#include "error_response.hpp"
 #include "logger.hpp"
+#include "cassandra.h"
+
+#include <sstream>
+#include <iomanip>
 
 namespace cass {
 
 Connection::StartupHandler::StartupHandler(Connection* connection,
-                                           RequestMessage* request)
+                                           Request* request)
     : connection_(connection)
     , request_(request) {
 }
 
-RequestMessage* Connection::StartupHandler::request_message() const {
+Request* Connection::StartupHandler::request() const {
   return request_.get();
 }
 
@@ -30,9 +35,14 @@ void Connection::StartupHandler::on_set(Message* response) {
     case CQL_OPCODE_SUPPORTED:
       connection_->on_supported(response);
       break;
-    case CQL_OPCODE_ERROR:
-      connection_->notify_error(
-          "Error during startup"); // TODO(mpenick): Better error
+    case CQL_OPCODE_ERROR: {
+      std::ostringstream ss;
+      ErrorResponse* error = static_cast<ErrorResponse*>(response->response_body().get());
+      ss << "Error response during startup: '" << error->message()
+         << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+         << CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error->code()) << ")";
+      connection_->notify_error(ss.str());
+    }
       break;
     case CQL_OPCODE_READY:
       connection_->on_ready();
@@ -48,7 +58,10 @@ void Connection::StartupHandler::on_set(Message* response) {
 
 void Connection::StartupHandler::on_error(CassError code,
                                           const std::string& message) {
-  connection_->notify_error("Error during startup");
+  std::ostringstream ss;
+  ss << "Error during startup: '" << message
+     << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
+  connection_->notify_error(ss.str());
 }
 
 void Connection::StartupHandler::on_timeout() {
@@ -242,7 +255,7 @@ void Connection::connect() {
 bool Connection::execute(ResponseCallback* response_callback) {
   ScopedPtr<InternalRequest> internal_request(new InternalRequest(this, response_callback));
 
-  RequestMessage* request = response_callback->request_message();
+  Request* request = response_callback->request();
 
   int8_t stream = stream_manager_.acquire_stream(internal_request.get());
   if (stream < 0) {
@@ -251,8 +264,8 @@ bool Connection::execute(ResponseCallback* response_callback) {
 
   internal_request->stream = stream;
 
-  ScopedPtr<Writer::Bufs> bufs(new Writer::Bufs());
-  if(request->encode(0x02, 0x00, stream, bufs.get()) < 0) {
+  ScopedPtr<BufferVec> bufs(request->encode(0x02, 0x00, stream));
+  if(!bufs) {
     internal_request->on_error(CASS_ERROR_LIB_MESSAGE_PREPARE,
                       "Unable to build request");
     return true;
@@ -286,7 +299,7 @@ void Connection::defunct() {
   close();
 }
 
-void Connection::write(Writer::Bufs* bufs, Connection::InternalRequest* request) {
+void Connection::write(BufferVec* bufs, Connection::InternalRequest* request) {
   uv_stream_t* stream = reinterpret_cast<uv_stream_t*>(&socket_);
   Writer::write(stream, bufs, request, on_write);
 }
@@ -598,20 +611,20 @@ void Connection::notify_error(const std::string& error) {
 }
 
 void Connection::send_options() {
-  execute(new StartupHandler(this, RequestMessage::create(new OptionsRequest())));
+  execute(new StartupHandler(this, new OptionsRequest()));
 }
 
 void Connection::send_startup() {
   StartupRequest* startup = new StartupRequest();
-  startup->set_version(version_);
-  execute(new StartupHandler(this, RequestMessage::create(startup)));
+  startup->set_version("3.0.0");
+  execute(new StartupHandler(this, startup));
 }
 
 void Connection::send_use_keyspace() {
   QueryRequest* query = new QueryRequest();
   query->set_query("use \"" + keyspace_ + "\"");
   query->set_consistency(CASS_CONSISTENCY_ONE);
-  execute(new StartupHandler(this, RequestMessage::create(query)));
+  execute(new StartupHandler(this, query));
 }
 
 } // namespace cass

@@ -20,7 +20,7 @@ namespace cass {
 
 char* CollectionIterator::decode_value(char* position) {
   uint16_t size;
-  char* buffer = decode_short(position, size);
+  char* buffer = decode_uint16(position, size);
 
   CassValueType type;
   if (collection_->type == CASS_VALUE_TYPE_MAP) {

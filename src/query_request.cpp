@@ -19,71 +19,69 @@
 
 namespace cass {
 
-int32_t QueryRequestMessage::encode(int version, Writer::Bufs* bufs) {
+int32_t QueryRequest::encode(int version, BufferVec* bufs) const {
   assert(version == 2);
 
   uint8_t flags = 0;
   int32_t length = 0;
 
-  const QueryRequest* query = static_cast<const QueryRequest*>(request());
-
-  {
     // <query> [long string] + <consistency> [short] + <flags> [byte]
-    int32_t buf_size = 4 + query->query().size() + 2 + 1;
+  int32_t query_buf_size = sizeof(int32_t) + query().size() +
+                           sizeof(uint16_t) + sizeof(uint8_t);
+  int32_t paging_buf_size = 0;
 
-    if (query->has_values()) { // <values> = <n><value_1>...<value_n>
-      buf_size += 2; // <n> [short]
-    }
+  if (values_count() > 0) { // <values> = <n><value_1>...<value_n>
+    query_buf_size += sizeof(uint16_t); // <n> [short]
+    flags |= CASS_QUERY_FLAG_VALUES;
+  }
 
-    body_head_buf_ = Buffer(buf_size);
+  if (page_size() >= 0) {
+    paging_buf_size += sizeof(int32_t); // [int]
+    flags |= CASS_QUERY_FLAG_PAGE_SIZE;
+  }
 
-    length += buf_size;
+  if (!paging_state().empty()) {
+    paging_buf_size += sizeof(int32_t) + paging_state().size(); // [bytes]
+    flags |= CASS_QUERY_FLAG_PAGING_STATE;
+  }
 
-    bufs->push_back(uv_buf_init(body_head_buf_.data(), body_head_buf_.size()));
-
-    char* pos = encode_long_string(body_head_buf_.data(), query->query().data(), query->query().size());
-    pos = encode_short(pos, query->consistency());
-    pos = encode_byte(pos, flags);
-
-    if (query->has_values()) {
-      encode_short(pos, query->values_count());      
-      length += query->encode_values(version, &body_collection_bufs_, bufs);
-    }
+  if (serial_consistency() != 0) {
+    paging_buf_size += sizeof(uint16_t); // [short]
+    flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
   }
 
   {
-    int32_t buf_size = 0;
+    bufs->push_back(Buffer(query_buf_size));
+    length += query_buf_size;
 
-    if (query->page_size() >= 0) {
-      buf_size += 4; // [int]
+    Buffer& buf = bufs->back();
+    size_t pos = buf.encode_long_string(0, query().data(), query().size());
+    pos = buf.encode_uint16(pos, consistency());
+    pos = buf.encode_byte(pos, flags);
+
+    if (values_count() > 0) {
+      buf.encode_uint16(pos, values_count());
+      length += encode_values(version, bufs);
+    }
+  }
+
+  if (paging_buf_size > 0) {
+    bufs->push_back(Buffer(paging_buf_size));
+    length += paging_buf_size;
+
+    Buffer& buf = bufs->back();
+    size_t pos = 0;
+
+    if (page_size() >= 0) {
+      pos = buf.encode_int32(pos, page_size());
     }
 
-    if (!query->paging_state().empty()) {
-      buf_size += query->paging_state().size(); // [bytes]
+    if (!paging_state().empty()) {
+      pos = buf.encode_bytes(pos, paging_state().data(), paging_state().size());
     }
 
-    if (query->serial_consistency() != 0) {
-      buf_size += 2; // [short]
-    }
-
-    body_tail_buf_ = Buffer(buf_size);
-
-    length += buf_size;
-
-    bufs->push_back(uv_buf_init(body_tail_buf_.data(), body_tail_buf_.size()));
-
-    char* pos = body_tail_buf_.data();
-
-    if (query->page_size() >= 0) {
-      pos = encode_int(pos, query->page_size());
-    }
-
-    if (!query->paging_state().empty()) {
-      pos = encode_string(pos, query->paging_state().data(), query->paging_state().size());
-    }
-
-    if (query->serial_consistency() != 0) {
-      pos = encode_short(pos, query->serial_consistency());
+    if (serial_consistency() != 0) {
+      pos = buf.encode_uint16(pos, serial_consistency());
     }
   }
 

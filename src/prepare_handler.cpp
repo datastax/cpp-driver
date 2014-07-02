@@ -29,15 +29,15 @@ namespace cass {
 bool PrepareHandler::init(const std::string& prepared_id) {
   PrepareRequest* prepare =
       static_cast<PrepareRequest*>(new PrepareRequest());
-  request_message_.reset(RequestMessage::create(prepare));
-  if (request_handler_->request_message()->opcode() == CQL_OPCODE_EXECUTE) {
+  request_.reset(prepare);
+  if (request_handler_->request()->opcode() == CQL_OPCODE_EXECUTE) {
     const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(
-        request_handler_->request_message()->request());
+        request_handler_->request());
     prepare->set_query(execute->prepared_statement());
     return true;
-  } else if (request_handler_->request_message()->opcode() == CQL_OPCODE_BATCH) {
+  } else if (request_handler_->request()->opcode() == CQL_OPCODE_BATCH) {
     const BatchRequest* batch = static_cast<const BatchRequest*>(
-        request_handler_->request_message()->request());
+        request_handler_->request());
     std::string prepared_statement;
     if (batch->prepared_statement(prepared_id, &prepared_statement)) {
       prepare->set_query(prepared_statement);

@@ -54,23 +54,15 @@ public:
   bool prepared_statement(const std::string& id, std::string* statement) const;
 
 private:
+  int32_t encode(int version, BufferVec* bufs) const;
+
+private:
   typedef std::map<std::string, ExecuteRequest*> PreparedMap;
 
   uint8_t type_;
   StatementList statements_;
-  PreparedMap prepared_statements_;
   int16_t consistency_;
-};
-
-class BatchRequestMessage : public RequestMessage {
-public:
-  BatchRequestMessage(const Request* request)
-    : RequestMessage(request) {}
-
-  int32_t encode(int version, Writer::Bufs* bufs);
-
-private:
-  BufferVec statement_bufs_;
+  PreparedMap prepared_statements_;
 };
 
 } // namespace cass

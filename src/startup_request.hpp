@@ -40,19 +40,14 @@ public:
   const std::string compression() const { return compression_; }
 
 private:
+  int32_t encode(int version, BufferVec* bufs) const;
+
+private:
   typedef std::map<std::string, std::string> OptionsMap;
 
   ScopedPtr<char[]> guard_;
   std::string version_;
   std::string compression_;
-};
-
-class StartupRequestMessage : public RequestMessage {
-public:
-  StartupRequestMessage(const Request* request)
-    : RequestMessage(request) {}
-
-  int32_t encode(int version, Writer::Bufs* bufs);
 };
 
 } // namespace cass

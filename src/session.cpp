@@ -262,7 +262,7 @@ void Session::execute(RequestHandler* request_handler) {
 Future* Session::prepare(const char* statement, size_t length) {
   PrepareRequest* prepare = new PrepareRequest();
   prepare->set_query(statement, length);
-  RequestHandler* request_handler = new RequestHandler(RequestMessage::create(prepare));
+  RequestHandler* request_handler = new RequestHandler(prepare);
   ResponseFuture* future = request_handler->future();
   future->statement.assign(statement, length);
   execute(request_handler);
@@ -270,7 +270,7 @@ Future* Session::prepare(const char* statement, size_t length) {
 }
 
 Future* Session::execute(Request* statement) {
-  RequestHandler* request_handler = new RequestHandler(RequestMessage::create(statement));
+  RequestHandler* request_handler = new RequestHandler(statement);
   Future* future = request_handler->future();
   execute(request_handler);
   return future;

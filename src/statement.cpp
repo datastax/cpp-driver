@@ -70,7 +70,7 @@ CassError cass_statement_bind_double(CassStatement* statement, size_t index,
 
 CassError cass_statement_bind_bool(CassStatement* statement, size_t index,
                                    cass_bool_t value) {
-  return statement->bind_bool(index, value == cass_true);
+  return statement->bind_byte(index, value == cass_true);
 }
 
 CassError cass_statement_bind_string(CassStatement* statement, size_t index,
@@ -114,15 +114,14 @@ CassError cass_statement_bind_custom(CassStatement* statement,
 
 namespace cass {
 
-int32_t Statement::encode_values(int version, BufferVec* collection_bufs, Writer::Bufs* bufs) const {
+int32_t Statement::encode_values(int version, BufferVec* bufs) const {
   int32_t values_size = 0;
   for (ValueVec::const_iterator it = values_.begin(), end = values_.end();
        it != end; ++it) {
     if(it->is_collection()) {
-      collection_bufs->push_back(Buffer());
-      values_size = it->collection()->encode(version, &collection_bufs->back());
+      values_size += it->collection()->encode(version, bufs);
     } else {
-      bufs->push_back(uv_buf_init(const_cast<char*>(it->data()), it->size()));
+      bufs->push_back(*it);
       values_size += it->size();
     }
   }

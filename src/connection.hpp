@@ -47,9 +47,9 @@ class Connection {
 public:
   class StartupHandler : public ResponseCallback {
   public:
-    StartupHandler(Connection* connection, RequestMessage* request_message);
+    StartupHandler(Connection* connection, Request* request);
 
-    virtual RequestMessage* request_message() const;
+    virtual Request* request() const;
     virtual void on_set(Message* response);
     virtual void on_error(CassError code, const std::string& message);
     virtual void on_timeout();
@@ -58,7 +58,7 @@ public:
     void on_result_response(Message* response);
 
     Connection* connection_;
-    ScopedPtr<RequestMessage> request_;
+    ScopedRefPtr<Request> request_;
   };
 
   struct InternalRequest : public List<InternalRequest>::Node {
@@ -156,7 +156,7 @@ public:
 
 private:
   void actually_close();
-  void write(Writer::Bufs* bufs, InternalRequest* request);
+  void write(BufferVec* bufs, InternalRequest* request);
   void event_received();
   void consume(char* input, size_t size);
 

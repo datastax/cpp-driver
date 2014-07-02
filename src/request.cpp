@@ -29,56 +29,30 @@
 
 namespace cass {
 
-RequestMessage* RequestMessage::create(Request* request) {
-  switch(request->opcode()) {
-    case CQL_OPCODE_PREPARE:
-      return new PrepareRequestMessage(request);
+BufferVec* Request::encode(int version, int flags, int stream) const {
+  ScopedPtr<BufferVec> bufs(new BufferVec());
 
-    case CQL_OPCODE_OPTIONS:
-      return new OptionsRequestMessage(request);
-
-    case CQL_OPCODE_STARTUP:
-      return new StartupRequestMessage(request);
-
-    case CQL_OPCODE_QUERY:
-      return new QueryRequestMessage(request);
-
-    case CQL_OPCODE_EXECUTE:
-      return new ExecuteRequestMessage(request);
-
-    case CQL_OPCODE_BATCH:
-      return new BatchRequestMessage(request);
-
-    default:
-      assert(false && "Invalid request type");
-      return NULL;
-  }
-}
-
-bool RequestMessage::encode(int version, int flags, int stream, Writer::Bufs* bufs) {
   if(version == 1 || version == 2) {
-    header_buf_ = Buffer(CASS_HEADER_SIZE_V1_AND_V2);
+    bufs->push_back(Buffer()); // Placeholder
 
-    char* data = header_buf_.data();
-
-    data[0] = version;
-    data[1] = flags;
-    data[2] = stream;
-    data[3] = opcode();
-
-    bufs->push_back(uv_buf_init(header_buf_.data(), header_buf_.size()));
-
-    int32_t length = encode(version, bufs);
+    int32_t length = encode(version, bufs.get());
     if(length < 0) {
-      return false;
+      return NULL;
     }
 
-    encode_int(data + 4, length);
+    Buffer buf(CASS_HEADER_SIZE_V1_AND_V2);
+    size_t pos = 0;
+    pos = buf.encode_byte(pos, version);
+    pos = buf.encode_byte(pos, flags);
+    pos = buf.encode_byte(pos, stream);
+    pos = buf.encode_byte(pos, opcode());
+    buf.encode_int32(pos, length);
+    (*bufs)[0] = buf;
   } else {
-    return false;
+    return NULL;
   }
 
-  return true;
+  return bufs.release();
 }
 
 } // namespace cass

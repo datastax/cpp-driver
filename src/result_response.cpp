@@ -71,7 +71,7 @@ const CassRow* cass_result_first_row(const CassResult* result) {
 namespace cass {
 
 bool ResultResponse::decode(char* input, size_t size) {
-  char* buffer = decode_int(input, kind_);
+  char* buffer = decode_int32(input, kind_);
 
   switch (kind_) {
     case CASS_RESULT_KIND_VOID:
@@ -97,8 +97,8 @@ bool ResultResponse::decode(char* input, size_t size) {
 
 char* ResultResponse::decode_metadata(char* input) {
   int32_t flags = 0;
-  char* buffer = decode_int(input, flags);
-  buffer = decode_int(buffer, column_count_);
+  char* buffer = decode_int32(input, flags);
+  buffer = decode_int32(buffer, column_count_);
 
   if (flags & CASS_RESULT_FLAG_HAS_MORE_PAGES) {
     more_pages_ = true;
@@ -157,7 +157,7 @@ char* ResultResponse::decode_metadata(char* input) {
 
 bool ResultResponse::decode_rows(char* input) {
   char* buffer = decode_metadata(input);
-  rows_ = decode_int(buffer, row_count_);
+  rows_ = decode_int32(buffer, row_count_);
   if (row_count_ > 0) {
     first_row_.reserve(column_count_);
     rows_ = decode_row(rows_, this, first_row_);

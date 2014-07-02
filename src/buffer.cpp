@@ -14,7 +14,7 @@ private:
   ScopedRefPtr<const Collection> collection_;
 };
 
-Buffer::Buffer(const char* data, int32_t size)
+Buffer::Buffer(const char* data, ssize_t size)
   : size_(size) {
   if (size > FIXED_BUFFER_SIZE) {
     RefArray* array = new RefArray(size);
@@ -25,7 +25,7 @@ Buffer::Buffer(const char* data, int32_t size)
   }
 }
 
-Buffer::Buffer(int32_t size)
+Buffer::Buffer(ssize_t size)
   : size_(size) {
   if (size > FIXED_BUFFER_SIZE) {
     data_.ref = new RefArray(size);
@@ -37,7 +37,8 @@ Buffer::Buffer(const Collection* collection)
   data_.ref = new RefCollection(collection);
 }
 
-Buffer::Buffer(const Buffer& Buffer) {
+Buffer::Buffer(const Buffer& Buffer)
+  : size_(IS_NULL) {
   copy(Buffer);
 }
 
@@ -53,17 +54,17 @@ const Collection* Buffer::collection() const {
 }
 
 void Buffer::copy(const Buffer& buffer) {
-  size_ = buffer.size_;
-  if (size_ > 0) {
-    if (size_ > FIXED_BUFFER_SIZE || size_ == IS_COLLECTION) {
-      buffer.data_.ref->retain();
-      Ref* temp = data_.ref;
-      data_.ref = buffer.data_.ref;
-      temp->release();
-    } else {
-      memcpy(data_.fixed, buffer.data_.fixed, size_);
-    }
+  Ref* temp = data_.ref;
+  if (buffer.size_  > FIXED_BUFFER_SIZE || buffer.size_ == IS_COLLECTION) {
+    buffer.data_.ref->retain();
+    data_.ref = buffer.data_.ref;
+  } else if(buffer.size_ > 0) {
+    memcpy(data_.fixed, buffer.data_.fixed, buffer.size_);
   }
+  if (size_ > FIXED_BUFFER_SIZE || size_ == IS_COLLECTION) {
+    temp->release();
+  }
+  size_ = buffer.size_;
 }
 
 }
