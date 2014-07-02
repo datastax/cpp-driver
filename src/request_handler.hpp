@@ -19,8 +19,10 @@
 
 #include "constants.hpp"
 #include "future.hpp"
+#include "host.hpp"
 #include "scoped_ptr.hpp"
-#include "message.hpp"
+#include "request.hpp"
+#include "response.hpp"
 #include "response_callback.hpp"
 
 #include "third_party/boost/boost/function.hpp"
@@ -54,7 +56,7 @@ public:
 
   virtual Request* request() const { return request_.get(); }
 
-  virtual void on_set(Message* response);
+  virtual void on_set(ResponseMessage* response);
 
   virtual void on_error(CassError code, const std::string& message);
 

@@ -25,7 +25,7 @@ Pool::PoolHandler::PoolHandler(Pool* pool, Connection* connection,
     , request_handler_(request_handler) {
 }
 
-void Pool::PoolHandler::on_set(Message* response) {
+void Pool::PoolHandler::on_set(ResponseMessage* response) {
   switch (response->opcode()) {
     case CQL_OPCODE_RESULT:
       on_result_response(response);
@@ -63,7 +63,7 @@ void Pool::PoolHandler::finish_request() {
   }
 }
 
-void Pool::PoolHandler::on_result_response(Message* response) {
+void Pool::PoolHandler::on_result_response(ResponseMessage* response) {
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
   switch (result->kind()) {
@@ -76,7 +76,7 @@ void Pool::PoolHandler::on_result_response(Message* response) {
   request_handler_->on_set(response);
 }
 
-void Pool::PoolHandler::on_error_response(Message* response) {
+void Pool::PoolHandler::on_error_response(ResponseMessage* response) {
   ErrorResponse* error =
       static_cast<ErrorResponse*>(response->response_body().get());
   switch (error->code()) {
@@ -107,6 +107,7 @@ Pool::Pool(const Host& host, uv_loop_t* loop, SSLContext* ssl_context,
     , ssl_context_(ssl_context)
     , logger_(logger)
     , config_(config)
+    , protocol_version_(config.protocol_version())
     , is_defunct_(false) {
 }
 
@@ -189,10 +190,15 @@ void Pool::defunct() {
 void Pool::maybe_notify_ready(Connection* connection) {
   // Currently, this will notify ready even if all the connections fail.
   // This might use some improvement.
-  if (state_ == POOL_STATE_CONNECTING && connections_pending_.empty()) {
-    state_ = POOL_STATE_READY;
-    if (ready_callback_) {
-      ready_callback_(this);
+
+  // We won't notify until we've tried all valid protocol versions
+  if (!connection->is_invalid_protocol() ||
+      connection->protocol_version() <= 1) {
+    if (state_ == POOL_STATE_CONNECTING && connections_pending_.empty()) {
+      state_ = POOL_STATE_READY;
+      if (ready_callback_) {
+        ready_callback_(this);
+      }
     }
   }
 }
@@ -208,10 +214,10 @@ void Pool::maybe_close() {
 }
 
 void Pool::spawn_connection(const std::string& keyspace) {
-  if (state_ == POOL_STATE_NEW || state_ == POOL_STATE_READY) {
+  if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
     Connection* connection =
         new Connection(loop_, ssl_context_ ? ssl_context_->session_new() : NULL,
-                       host_, logger_, config_, keyspace);
+                       host_, logger_, config_, keyspace, protocol_version_);
 
     connection->set_ready_callback(
         boost::bind(&Pool::on_connection_ready, this, _1));
@@ -261,7 +267,6 @@ void Pool::execute_pending_request(Connection* connection) {
 
 void Pool::on_connection_ready(Connection* connection) {
   connections_pending_.erase(connection);
-
   maybe_notify_ready(connection);
 
   connections_.push_back(connection);
@@ -270,7 +275,6 @@ void Pool::on_connection_ready(Connection* connection) {
 
 void Pool::on_connection_closed(Connection* connection) {
   connections_pending_.erase(connection);
-
   maybe_notify_ready(connection);
 
   ConnectionVec::iterator it =
@@ -279,7 +283,11 @@ void Pool::on_connection_closed(Connection* connection) {
     connections_.erase(it);
   }
 
-  if (connection->is_defunct()) {
+  if (connection->is_invalid_protocol() &&
+      connection->protocol_version() > 1) {
+    protocol_version_ = connection->protocol_version() - 1;
+    spawn_connection(connection->keyspace());
+  } else if(connection->is_defunct()) {
     // TODO(mpenick): Conviction policy
     defunct();
   }

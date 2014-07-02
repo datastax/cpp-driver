@@ -19,6 +19,8 @@
 
 #include "value.hpp"
 
+#include <vector>
+
 namespace cass {
 
 class ResultResponse;

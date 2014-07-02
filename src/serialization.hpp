@@ -34,8 +34,7 @@ namespace cass {
 // This frees us from having to deal with endian stuff on every platform.
 // If it's not fast enough then we can go back to using the bytes swaps.
 
-// TODO(mpenick): Change all these char* to uint8_t* and use output pointers
-// instead of references
+// TODO(mpenick): Use output pointers instead of references and make input const
 // "decode_byte(input, &value)" is clearer than "decode_byte(input, value)"
 
 inline char* encode_byte(char* output, uint8_t value) {
@@ -121,26 +120,9 @@ inline char* decode_double(char* input, double& output) {
   return decode_int64(input, *reinterpret_cast<int64_t*>(&output));
 }
 
-inline void encode_string(char* output, const char* input, size_t size) {
-  encode_uint16(output, size);
-  memcpy(output + sizeof(uint16_t), input, size);
-}
-
 inline char* decode_string(char* input, char** output, size_t& size) {
   *output = decode_uint16(input, ((uint16_t&)size));
   return *output + size;
-}
-
-inline void encode_decimal(char* output, int32_t scale, const uint8_t* varint,
-                            size_t varint_length) {
-  encode_int32(output, scale);
-  memcpy(output + sizeof(int32_t), varint, varint_length);
-}
-
-inline char* encode_inet(char* output, const uint8_t* address,
-                         uint8_t address_len) {
-  memcpy(output, address, address_len);
-  return output + address_len;
 }
 
 inline char* decode_long_string(char* input, char** output, size_t& size) {
@@ -184,9 +166,9 @@ inline char* decode_stringlist(char* input, std::list<std::string>& output) {
   return buffer;
 }
 
-typedef std::map<std::string, std::list<std::string> > string_multimap_t;
+typedef std::map<std::string, std::list<std::string> > StringMultimap;
 
-inline char* decode_string_multimap(char* input, string_multimap_t& output) {
+inline char* decode_string_multimap(char* input, StringMultimap& output) {
   output.clear();
   uint16_t len = 0;
   char* buffer = decode_uint16(input, len);

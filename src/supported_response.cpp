@@ -19,11 +19,11 @@
 
 namespace cass {
 
-bool SupportedResponse::decode(char* buffer, size_t size) {
-  string_multimap_t supported;
+bool SupportedResponse::decode(int version, char* buffer, size_t size) {
+  StringMultimap supported;
 
   decode_string_multimap(buffer, supported);
-  string_multimap_t::const_iterator it = supported.find("COMPRESSION");
+  StringMultimap::const_iterator it = supported.find("COMPRESSION");
   if (it != supported.end()) {
     compression_ = it->second;
   }

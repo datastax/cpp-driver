@@ -50,15 +50,15 @@ public:
 
     virtual Request* request() const { return request_handler_->request(); }
 
-    virtual void on_set(Message* response);
+    virtual void on_set(ResponseMessage* response);
     virtual void on_error(CassError code, const std::string& message);
     virtual void on_timeout();
 
   private:
     void finish_request();
 
-    void on_result_response(Message* response);
-    void on_error_response(Message* response);
+    void on_result_response(ResponseMessage* response);
+    void on_error_response(ResponseMessage* response);
 
     Pool* pool_;
     Connection* connection_;
@@ -122,6 +122,7 @@ private:
   SSLContext* ssl_context_;
   Logger* logger_;
   const Config& config_;
+  int protocol_version_;
   ConnectionVec connections_;
   ConnectionSet connections_pending_;
   RequestHandlerList pending_request_queue_;

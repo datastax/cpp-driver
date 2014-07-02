@@ -27,6 +27,10 @@ class RequestMessage;
 
 class Request : public RefCounted<Request> {
 public:
+  enum {
+    ENCODE_ERROR_UNSUPPORTED_PROTOCOL = -1
+  };
+
   Request(uint8_t opcode)
       : opcode_(opcode) {}
 
@@ -37,7 +41,7 @@ public:
   BufferValueVec* encode(int version, int flags, int stream) const;
 
 protected:
-  virtual int32_t encode(int version, BufferValueVec* bufs) const = 0;
+  virtual ssize_t encode(int version, BufferValueVec* bufs) const = 0;
 
 private:
   uint8_t opcode_;

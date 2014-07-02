@@ -19,11 +19,9 @@
 
 namespace cass {
 
-int32_t StartupRequest::encode(int version, BufferValueVec* bufs) const {
-  assert(version == 2);
-
+ssize_t StartupRequest::encode(int version, BufferValueVec* bufs) const {
   // <options> [string map]
-  int32_t length = sizeof(uint16_t);
+  size_t length = sizeof(uint16_t);
 
   std::map<std::string, std::string> options;
   if (!compression_.empty()) {

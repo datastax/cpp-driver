@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include "constants.hpp"
 #include "request.hpp"
 #include "serialization.hpp"
 #include "writer.hpp"
@@ -23,9 +24,6 @@
 #include "prepare_request.hpp"
 #include "options_request.hpp"
 #include "startup_request.hpp"
-
-#define CASS_HEADER_SIZE_V1_AND_V2 8
-#define CASS_HEADER_SIZE_V3 9
 
 namespace cass {
 

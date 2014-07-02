@@ -16,7 +16,7 @@
 
 #include "prepare_handler.hpp"
 #include "constants.hpp"
-#include "message.hpp"
+#include "response.hpp"
 #include "prepare_request.hpp"
 #include "error_response.hpp"
 #include "execute_request.hpp"
@@ -47,7 +47,7 @@ bool PrepareHandler::init(const std::string& prepared_id) {
   return false; // Invalid request type
 }
 
-void PrepareHandler::on_set(Message* response) {
+void PrepareHandler::on_set(ResponseMessage* response) {
   switch (response->opcode()) {
     case CQL_OPCODE_RESULT: {
       ResultResponse* result =

@@ -14,13 +14,14 @@
   limitations under the License.
 */
 
-#include "request_handler.hpp"
-#include "message.hpp"
 #include "error_response.hpp"
+#include "request_handler.hpp"
+#include "response.hpp"
+
 
 namespace cass {
 
-void RequestHandler::on_set(Message* response) {
+void RequestHandler::on_set(ResponseMessage* response) {
   switch (response->opcode()) {
     case CQL_OPCODE_RESULT:
       future_->set_result(response->response_body().release());

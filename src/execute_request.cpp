@@ -18,19 +18,64 @@
 
 namespace cass {
 
-int32_t ExecuteRequest::encode(int version, BufferValueVec* bufs) const {
-  assert(version == 2);
+ssize_t ExecuteRequest::encode(int version, BufferValueVec* bufs) const {
+  if(version == 1) {
+    return encode_v1(bufs);
+  } else if(version == 2) {
+    return encode_v2(bufs);
+  } else {
+    return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
+  }
+}
+
+ssize_t ExecuteRequest::encode_v1(BufferValueVec* bufs) const {
+  const int version = 1;
+
+  size_t length = 0;
+
+    // <id> [short bytes] + <n> [short]
+  size_t prepared_buf_size = sizeof(uint16_t) + prepared_id().size() +
+                             sizeof(uint16_t);
+
+  {
+    bufs->push_back(BufferValue(prepared_buf_size));
+    length += prepared_buf_size;
+
+    BufferValue& buf = bufs->back();
+    size_t pos = buf.encode_string(0,
+                                 prepared_id().data(),
+                                 prepared_id().size());
+    buf.encode_uint16(pos, values_count());
+    // <value_1>...<value_n>
+    length += encode_values(version, bufs);
+  }
+
+  {
+    // <consistency> [short]
+    size_t buf_size = sizeof(uint16_t);
+
+    BufferValue buf(buf_size);
+    buf.encode_uint16(0, consistency());
+    bufs->push_back(buf);
+    length += buf_size;
+  }
+
+  return length;
+}
+
+ssize_t ExecuteRequest::encode_v2(BufferValueVec* bufs) const {
+  const int version = 2;
 
   uint8_t flags = 0;
-  int32_t length = 0;
+  size_t length = 0;
 
     // <id> [short bytes] + <consistency> [short] + <flags> [byte]
-  int32_t query_buf_size = sizeof(uint16_t) + prepared_id().size() +
-                           sizeof(uint16_t) + sizeof(uint8_t);
-  int32_t paging_buf_size = 0;
+  size_t prepared_buf_size = sizeof(uint16_t) + prepared_id().size() +
+                          sizeof(uint16_t) + sizeof(uint8_t);
+  size_t paging_buf_size = 0;
 
   if (values_count() > 0) { // <values> = <n><value_1>...<value_n>
-    query_buf_size += sizeof(uint16_t); // <n> [short]
+    prepared_buf_size += sizeof(uint16_t); // <n> [short]
     flags |= CASS_QUERY_FLAG_VALUES;
   }
 
@@ -50,8 +95,8 @@ int32_t ExecuteRequest::encode(int version, BufferValueVec* bufs) const {
   }
 
   {
-    bufs->push_back(BufferValue(query_buf_size));
-    length += query_buf_size;
+    bufs->push_back(BufferValue(prepared_buf_size));
+    length += prepared_buf_size;
 
     BufferValue& buf = bufs->back();
     size_t pos = buf.encode_string(0,

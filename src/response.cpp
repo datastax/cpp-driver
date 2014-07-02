@@ -14,51 +14,28 @@
   limitations under the License.
 */
 
-#include "message.hpp"
-#include "options_request.hpp"
-#include "startup_request.hpp"
-#include "batch_request.hpp"
-#include "query_request.hpp"
-#include "prepare_request.hpp"
-#include "execute_request.hpp"
-
+#include "response.hpp"
 #include "error_response.hpp"
 #include "ready_response.hpp"
-#include "supported_response.hpp"
 #include "result_response.hpp"
+#include "supported_response.hpp"
+#include "serialization.hpp"
 
 namespace cass {
 
-bool Message::allocate_body(int8_t opcode) {
-  request_body_.reset();
+bool ResponseMessage::allocate_body(int8_t opcode) {
   response_body_.reset();
   switch (opcode) {
     case CQL_OPCODE_RESULT:
       response_body_.reset(new ResultResponse());
       return true;
 
-    case CQL_OPCODE_PREPARE:
-      request_body_.reset(new PrepareRequest());
-      return true;
-
     case CQL_OPCODE_ERROR:
       response_body_.reset(new ErrorResponse());
       return true;
 
-    case CQL_OPCODE_OPTIONS:
-      request_body_.reset(new OptionsRequest());
-      return true;
-
-    case CQL_OPCODE_STARTUP:
-      request_body_.reset(new StartupRequest());
-      return true;
-
     case CQL_OPCODE_SUPPORTED:
       response_body_.reset(new SupportedResponse());
-      return true;
-
-    case CQL_OPCODE_QUERY:
-      request_body_.reset(new QueryRequest());
       return true;
 
     case CQL_OPCODE_READY:
@@ -70,21 +47,21 @@ bool Message::allocate_body(int8_t opcode) {
   }
 }
 
-ssize_t Message::decode(char* input, size_t size) {
+ssize_t ResponseMessage::decode(int version, char* input, size_t size) {
   char* input_pos = input;
 
   received_ += size;
 
-  if (!header_received_) {
-    if (received_ >= CASS_HEADER_SIZE) {
+  if (!is_header_received_) {
+    if (received_ >= CASS_HEADER_SIZE_V1_AND_V2) {
       // We may have received more data then we need, only copy what we need
-      size_t overage = received_ - CASS_HEADER_SIZE;
+      size_t overage = received_ - CASS_HEADER_SIZE_V1_AND_V2;
       size_t needed = size - overage;
 
       memcpy(header_buffer_pos_, input_pos, needed);
       header_buffer_pos_ += needed;
       input_pos += needed;
-      assert(header_buffer_pos_ == header_buffer_ + CASS_HEADER_SIZE);
+      assert(header_buffer_pos_ == header_buffer_ + CASS_HEADER_SIZE_V1_AND_V2);
 
       char* buffer = header_buffer_;
       version_ = *(buffer++);
@@ -94,7 +71,7 @@ ssize_t Message::decode(char* input, size_t size) {
 
       decode_int32(buffer, length_);
 
-      header_received_ = true;
+      is_header_received_ = true;
 
       if (!allocate_body(opcode_) || !response_body_) {
         return -1;
@@ -112,7 +89,7 @@ ssize_t Message::decode(char* input, size_t size) {
   }
 
   const size_t remaining = size - (input_pos - input);
-  const size_t frame_size = CASS_HEADER_SIZE + length_;
+  const size_t frame_size = CASS_HEADER_SIZE_V1_AND_V2 + length_;
 
   if (received_ >= frame_size) {
     // We may have received more data then we need, only copy what we need
@@ -124,10 +101,10 @@ ssize_t Message::decode(char* input, size_t size) {
     input_pos += needed;
     assert(body_buffer_pos_ == response_body_->buffer() + length_);
 
-    if (!response_body_->decode(response_body_->buffer(), length_)) {
-      body_error_ = true;
+    if (!response_body_->decode(version, response_body_->buffer(), length_)) {
+      is_body_error_ = true;
     }
-    body_ready_ = true;
+    is_body_ready_ = true;
   } else {
     // We haven't received all the data for the frame. We consume the entire
     // buffer.
@@ -140,3 +117,4 @@ ssize_t Message::decode(char* input, size_t size) {
 }
 
 } // namespace cass
+

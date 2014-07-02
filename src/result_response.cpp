@@ -70,7 +70,7 @@ const CassRow* cass_result_first_row(const CassResult* result) {
 
 namespace cass {
 
-bool ResultResponse::decode(char* input, size_t size) {
+bool ResultResponse::decode(int version, char* input, size_t size) {
   char* buffer = decode_int32(input, kind_);
 
   switch (kind_) {

@@ -34,7 +34,7 @@
 
 namespace cass {
 
-class Message;
+class ResponseMessage;
 class SSLContext;
 class SSLSession;
 class Connecter;
@@ -50,12 +50,12 @@ public:
     StartupHandler(Connection* connection, Request* request);
 
     virtual Request* request() const;
-    virtual void on_set(Message* response);
+    virtual void on_set(ResponseMessage* response);
     virtual void on_error(CassError code, const std::string& message);
     virtual void on_timeout();
 
   private:
-    void on_result_response(Message* response);
+    void on_result_response(ResponseMessage* response);
 
     Connection* connection_;
     ScopedRefPtr<Request> request_;
@@ -75,7 +75,7 @@ public:
 
     InternalRequest(Connection* connection, ResponseCallback* response_callback);
 
-    void on_set(Message* response);
+    void on_set(ResponseMessage* response);
     void on_error(CassError code, const std::string& message);
     void on_timeout();
 
@@ -90,7 +90,7 @@ public:
 
   private:
     void cleanup();
-    void on_result_response(Message* response);
+    void on_result_response(ResponseMessage* response);
     static void on_request_timeout(Timer* timer);
 
   private:
@@ -127,7 +127,8 @@ public:
   };
 
   Connection(uv_loop_t* loop, SSLSession* ssl_session, const Host& host,
-             Logger* logger, const Config& config, const std::string& keyspace);
+             Logger* logger, const Config& config, const std::string& keyspace,
+             int protocol_version);
 
   void connect();
 
@@ -142,7 +143,11 @@ public:
 
   bool is_defunct() const { return is_defunct_; }
 
+  bool is_invalid_protocol() const { return is_invalid_protocol_; }
+
   bool is_ready() { return state_ == CLIENT_STATE_READY; }
+
+  int protocol_version() const { return protocol_version_; }
 
   void set_ready_callback(Callback callback) { ready_callback_ = callback; }
 
@@ -170,7 +175,7 @@ private:
 
   void on_ready();
   void on_set_keyspace();
-  void on_supported(Message* response);
+  void on_supported(ResponseMessage* response);
 
   void notify_ready();
   void notify_error(const std::string& error);
@@ -182,12 +187,13 @@ private:
 private:
   ConnectionState state_;
   bool is_defunct_;
+  bool is_invalid_protocol_;
 
   List<InternalRequest> pending_requests_;
   int timed_out_request_count_;
 
   uv_loop_t* loop_;
-  ScopedPtr<Message> incoming_;
+  ScopedPtr<ResponseMessage> response_;
   StreamManager<InternalRequest*> stream_manager_;
 
   Callback ready_callback_;
@@ -204,6 +210,7 @@ private:
   // supported stuff sent in start up message
   std::string compression_;
   std::string version_;
+  const int protocol_version_;
 
   Logger* logger_;
   const Config& config_;

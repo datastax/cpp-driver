@@ -19,10 +19,9 @@
 
 namespace cass {
 
-int32_t PrepareRequest::encode(int version, BufferValueVec* bufs) const {
-  assert(version == 2);
+ssize_t PrepareRequest::encode(int version, BufferValueVec* bufs) const {
   // <query> [long string]
-  int32_t length = sizeof(int32_t) +  query_.size();
+  size_t length = sizeof(int32_t) +  query_.size();
   bufs->push_back(BufferValue(length));
   bufs->back().encode_long_string(0, query_.data(), query().size());
   return length;

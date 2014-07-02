@@ -24,7 +24,7 @@
 
 namespace cass {
 
-class Message;
+class ResponseMessage;
 class Connection;
 
 class SetKeyspaceHandler : public ResponseCallback {
@@ -34,14 +34,14 @@ public:
 
   virtual Request* request() const { return request_.get(); }
 
-  virtual void on_set(Message* response);
+  virtual void on_set(ResponseMessage* response);
 
   virtual void on_error(CassError code, const std::string& message);
 
   virtual void on_timeout();
 
 private:
-  void on_result_response(Message* response);
+  void on_result_response(ResponseMessage* response);
 
 private:
   Connection* connection_;

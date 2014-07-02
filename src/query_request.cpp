@@ -19,16 +19,38 @@
 
 namespace cass {
 
-int32_t QueryRequest::encode(int version, BufferValueVec* bufs) const {
-  assert(version == 2);
+ssize_t QueryRequest::encode(int version, BufferValueVec* bufs) const {
+  if(version == 1) {
+    return encode_v1(bufs);
+  } else if(version == 2) {
+    return encode_v2(bufs);
+  } else {
+    return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
+  }
+}
+
+ssize_t QueryRequest::encode_v1(BufferValueVec* bufs) const {
+  // <query> [long string] + <consistency> [short]
+  size_t length = sizeof(int32_t) + query().size() + sizeof(uint16_t);
+
+  BufferValue buf(length);
+  size_t pos = buf.encode_long_string(0, query().data(), query().size());
+  buf.encode_uint16(pos, consistency());
+  bufs->push_back(buf);
+
+  return length;
+}
+
+ssize_t QueryRequest::encode_v2(BufferValueVec* bufs) const {
+  const int version = 2;
 
   uint8_t flags = 0;
-  int32_t length = 0;
+  size_t length = 0;
 
     // <query> [long string] + <consistency> [short] + <flags> [byte]
-  int32_t query_buf_size = sizeof(int32_t) + query().size() +
-                           sizeof(uint16_t) + sizeof(uint8_t);
-  int32_t paging_buf_size = 0;
+  size_t query_buf_size = sizeof(int32_t) + query().size() +
+                          sizeof(uint16_t) + sizeof(uint8_t);
+  size_t paging_buf_size = 0;
 
   if (values_count() > 0) { // <values> = <n><value_1>...<value_n>
     query_buf_size += sizeof(uint16_t); // <n> [short]

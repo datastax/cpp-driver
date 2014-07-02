@@ -16,7 +16,7 @@
 
 #include "set_keyspace_handler.hpp"
 #include "request_handler.hpp"
-#include "message.hpp"
+#include "response.hpp"
 #include "io_worker.hpp"
 #include "connection.hpp"
 #include "prepare_request.hpp"
@@ -35,7 +35,7 @@ SetKeyspaceHandler::SetKeyspaceHandler(const std::string& keyspace,
   request_->set_consistency(CASS_CONSISTENCY_ONE);
 }
 
-void SetKeyspaceHandler::on_set(Message* response) {
+void SetKeyspaceHandler::on_set(ResponseMessage* response) {
   switch (response->opcode()) {
     case CQL_OPCODE_RESULT:
       on_result_response(response);
@@ -61,7 +61,7 @@ void SetKeyspaceHandler::on_timeout() {
   response_callback_->on_timeout();
 }
 
-void SetKeyspaceHandler::on_result_response(Message* response) {
+void SetKeyspaceHandler::on_result_response(ResponseMessage* response) {
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
   if (result->kind() == CASS_RESULT_KIND_SET_KEYSPACE) {

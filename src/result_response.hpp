@@ -115,7 +115,7 @@ public:
 
   const Row& first_row() const { return first_row_; }
 
-  bool decode(char* input, size_t size);
+  bool decode(int version, char* input, size_t size);
 
   char* decode_metadata(char* input);
 

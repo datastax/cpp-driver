@@ -1,6 +1,6 @@
 #include "connection.hpp"
 #include "constants.hpp"
-#include "message.hpp"
+#include "response.hpp"
 #include "ssl_context.hpp"
 #include "ssl_session.hpp"
 #include "connecter.hpp"
@@ -18,6 +18,8 @@
 #include <sstream>
 #include <iomanip>
 
+#define INVALID_PROTOCOL_MSG
+
 namespace cass {
 
 Connection::StartupHandler::StartupHandler(Connection* connection,
@@ -30,18 +32,27 @@ Request* Connection::StartupHandler::request() const {
   return request_.get();
 }
 
-void Connection::StartupHandler::on_set(Message* response) {
+void Connection::StartupHandler::on_set(ResponseMessage* response) {
   switch (response->opcode()) {
     case CQL_OPCODE_SUPPORTED:
       connection_->on_supported(response);
       break;
     case CQL_OPCODE_ERROR: {
-      std::ostringstream ss;
-      ErrorResponse* error = static_cast<ErrorResponse*>(response->response_body().get());
-      ss << "Error response during startup: '" << error->message()
-         << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
-         << CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error->code()) << ")";
-      connection_->notify_error(ss.str());
+      ErrorResponse* error
+          = static_cast<ErrorResponse*>(response->response_body().get());
+      if (error->code() == CQL_ERROR_PROTOCOL_ERROR &&
+          error->message().find("Invalid or unsupported protocol version") != std::string::npos) {
+        connection_->is_invalid_protocol_ = true;
+        connection_->logger_->warn(
+              "Protocol version %d unsupported. Trying protocol version %d...",
+              connection_->protocol_version_, connection_->protocol_version_ - 1);
+      } else {
+        std::ostringstream ss;
+        ss << "Error response during startup: '" << error->message()
+           << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+           << CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error->code()) << ")";
+        connection_->notify_error(ss.str());
+      }
     }
       break;
     case CQL_OPCODE_READY:
@@ -68,7 +79,7 @@ void Connection::StartupHandler::on_timeout() {
   connection_->notify_error("Timed out during startup");
 }
 
-void Connection::StartupHandler::on_result_response(Message* response) {
+void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
   switch (result->kind()) {
@@ -91,7 +102,7 @@ Connection::InternalRequest::InternalRequest(Connection* connection,
     , state_(REQUEST_STATE_NEW) {
 }
 
-void Connection::InternalRequest::on_set(Message* response) {
+void Connection::InternalRequest::on_set(ResponseMessage* response) {
   switch (response->opcode()) {
     case CQL_OPCODE_RESULT:
       on_result_response(response);
@@ -194,7 +205,7 @@ void Connection::InternalRequest::stop_timer() {
   timer_ = NULL;
 }
 
-void Connection::InternalRequest::on_result_response(Message* response) {
+void Connection::InternalRequest::on_result_response(ResponseMessage* response) {
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
   switch (result->kind()) {
@@ -221,17 +232,19 @@ void Connection::InternalRequest::on_request_timeout(Timer* timer) {
 
 Connection::Connection(uv_loop_t* loop, SSLSession* ssl_session,
                        const Host& host, Logger* logger, const Config& config,
-                       const std::string& keyspace)
+                       const std::string& keyspace, int protocol_version)
     : state_(CLIENT_STATE_NEW)
     , is_defunct_(false)
+    , is_invalid_protocol_(false)
     , timed_out_request_count_(0)
     , loop_(loop)
-    , incoming_(new Message())
+    , response_(new ResponseMessage())
     , host_(host)
     , host_string_(host.address.to_string())
     , ssl_(ssl_session)
     , ssl_handshake_done_(false)
     , version_("3.0.0")
+    , protocol_version_(protocol_version)
     , logger_(logger)
     , config_(config)
     , keyspace_(keyspace)
@@ -265,11 +278,11 @@ bool Connection::execute(ResponseCallback* response_callback) {
 
   internal_request->stream = stream;
 
-  ScopedPtr<BufferValueVec> bufs(request->encode(0x02, 0x00, stream));
+  ScopedPtr<BufferValueVec> bufs(request->encode(protocol_version_, 0x00, stream));
   if(!bufs) {
-    internal_request->on_error(CASS_ERROR_LIB_MESSAGE_PREPARE,
-                      "Unable to build request");
-    return true;
+    internal_request->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
+                               "Operation unsupported by this protocol version");
+    return true; // Don't retry
   }
 
   logger_->debug("Sending message type %s with %d",
@@ -334,16 +347,16 @@ void Connection::consume(char* input, size_t size) {
   int remaining = size;
 
   while (remaining != 0) {
-    int consumed = incoming_->decode(buffer, remaining);
+    int consumed = response_->decode(protocol_version_, buffer, remaining);
     if (consumed < 0) {
       // TODO(mstump) probably means connection closed/failed
       // Can this even happen right now?
       logger_->error("Error consuming message on '%s'", host_string_.c_str());
     }
 
-    if (incoming_->body_ready()) {
-      ScopedPtr<Message> response(incoming_.release());
-      incoming_.reset(new Message());
+    if (response_->is_body_ready()) {
+      ScopedPtr<ResponseMessage> response(response_.release());
+      response_.reset(new ResponseMessage());
 
       logger_->debug(
           "Consumed message type %s with stream %d, input %zd, remaining %d on "
@@ -588,7 +601,7 @@ void Connection::on_set_keyspace() {
   event_received();
 }
 
-void Connection::on_supported(Message* response) {
+void Connection::on_supported(ResponseMessage* response) {
   SupportedResponse* supported =
       static_cast<SupportedResponse*>(response->response_body().get());
 

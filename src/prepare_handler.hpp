@@ -23,7 +23,7 @@
 
 namespace cass {
 
-class Message;
+class ResponseMessage;
 class Request;
 class RequestHandler;
 
@@ -36,7 +36,7 @@ public:
 
   virtual Request* request() const { return request_.get(); }
 
-  virtual void on_set(Message* response);
+  virtual void on_set(ResponseMessage* response);
 
   virtual void on_error(CassError code, const std::string& message);
 

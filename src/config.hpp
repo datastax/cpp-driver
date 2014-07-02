@@ -33,7 +33,7 @@ public:
 
   Config()
       : port_(9042)
-      , protocol_version_(-1)
+      , protocol_version_(2)
       , version_("3.0.0")
       , thread_count_io_(1)
       , queue_size_io_(4096)
@@ -48,7 +48,7 @@ public:
       , connect_timeout_(1000)
       , write_timeout_(1000)
       , read_timeout_(1000)
-      , log_level_(CASS_LOG_ERROR)
+      , log_level_(CASS_LOG_WARN)
       , log_data_(NULL)
       , log_callback_(default_log_callback) {}
 
