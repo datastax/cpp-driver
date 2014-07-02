@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BUFFER_HPP_INCLUDED__
-#define __CASS_BUFFER_HPP_INCLUDED__
+#ifndef __CASS_BUFFER_VALUE_HPP_INCLUDED__
+#define __CASS_BUFFER_VALUE_HPP_INCLUDED__
 
 #include "ref_counted.h"
 #include "serialization.hpp"
@@ -26,22 +26,13 @@
 
 namespace cass {
 
-class Collection;
-
-class Ref : public RefCounted<Ref> {
+class BufferArray : public RefCounted<BufferArray> {
 public:
-  Ref() : RefCounted<Ref>(1) {}
-  virtual ~Ref() {}
-private:
-  DISALLOW_COPY_AND_ASSIGN(Ref);
-};
+  BufferArray(size_t size)
+    : RefCounted<BufferArray>(1)
+    , data_(new char[size]) {}
 
-class RefArray : public Ref {
-public:
-  RefArray(size_t size)
-    : data_(new char[size]) {}
-
-  virtual ~RefArray() {
+  virtual ~BufferArray() {
     delete[] data_;
   }
 
@@ -52,26 +43,45 @@ private:
   char* data_;
 };
 
-class Buffer {
-public:
-  Buffer()
-      : size_(IS_NULL) {}
+class BufferCollection;
 
-  Buffer(const char* data, ssize_t size);
+class BufferValue {
+public:
+  BufferValue()
+      : size_(IS_EMPTY) {}
+
+  BufferValue(const char* data, size_t size)
+    : size_(size) {
+    if (size > FIXED_BUFFER_SIZE) {
+      BufferArray* array = new BufferArray(size);
+      memcpy(array->data(), data, size);
+      data_.ref.array = array;
+    } else {
+      memcpy(data_.fixed, data, size);
+    }
+  }
 
   explicit
-  Buffer(ssize_t size);
+  BufferValue(size_t size)
+    : size_(size) {
+    if (size > FIXED_BUFFER_SIZE) {
+      data_.ref.array = new BufferArray(size);
+    }
+  }
 
-  Buffer(const Collection* collection);
+  BufferValue(const BufferCollection* collection);
 
-  Buffer(const Buffer& Buffer);
+  BufferValue(const BufferValue& buf)
+    : size_(IS_EMPTY) {
+    copy(buf);
+  }
 
-  ~Buffer();
-
-  Buffer& operator=(const Buffer& buffer) {
-    copy(buffer);
+  BufferValue& operator=(const BufferValue& buf) {
+    copy(buf);
     return *this;
   }
+
+  ~BufferValue();
 
   size_t encode_byte(size_t offset, uint8_t value) {
     assert(is_buffer() && offset + sizeof(uint8_t) <= static_cast<size_t>(size_));
@@ -149,43 +159,48 @@ public:
 
   const char* data() const {
     assert(is_buffer());
-    return size_ > FIXED_BUFFER_SIZE ? static_cast<RefArray*>(data_.ref)->data() : data_.fixed;
+    return size_ > FIXED_BUFFER_SIZE ? static_cast<BufferArray*>(data_.ref.array)->data() : data_.fixed;
   }
 
   ssize_t size() const { return size_; }
 
   bool is_buffer() const { return size_ >= 0; }
 
-  bool is_null() const { return size_ == IS_NULL; }
+  bool is_empty() const { return size_ == IS_EMPTY; }
 
   bool is_collection() const { return size_ == IS_COLLECTION; }
 
-  const Collection* collection() const;
+  const BufferCollection* collection() const;
 
 private:
   enum {
-    IS_NULL = -1,
+    IS_EMPTY = -1,
     IS_COLLECTION = -2
   };
 
   char* buffer() {
     assert(is_buffer());
-    return size_ > FIXED_BUFFER_SIZE ? static_cast<RefArray*>(data_.ref)->data() : data_.fixed;
+    return size_ > FIXED_BUFFER_SIZE ? static_cast<BufferArray*>(data_.ref.array)->data() : data_.fixed;
   }
 
   static const ssize_t FIXED_BUFFER_SIZE = 32;
 
 private:
-  void copy(const Buffer& buffer);
+  void copy(const BufferValue& buffer);
+
+  union BufferRef {
+    BufferArray* array;
+    const BufferCollection* collection;
+  };
 
   union {
     char fixed[FIXED_BUFFER_SIZE];
-    Ref* ref;
+    BufferRef ref;
   } data_;
   ssize_t size_;
 };
 
-typedef std::vector<Buffer> BufferVec;
+typedef std::vector<BufferValue> BufferValueVec;
 
 } // namespace cass
 

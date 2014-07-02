@@ -18,7 +18,7 @@
 
 namespace cass {
 
-int32_t ExecuteRequest::encode(int version, BufferVec* bufs) const {
+int32_t ExecuteRequest::encode(int version, BufferValueVec* bufs) const {
   assert(version == 2);
 
   uint8_t flags = 0;
@@ -50,10 +50,10 @@ int32_t ExecuteRequest::encode(int version, BufferVec* bufs) const {
   }
 
   {
-    bufs->push_back(Buffer(query_buf_size));
+    bufs->push_back(BufferValue(query_buf_size));
     length += query_buf_size;
 
-    Buffer& buf = bufs->back();
+    BufferValue& buf = bufs->back();
     size_t pos = buf.encode_string(0,
                                  prepared_id().data(),
                                  prepared_id().size());
@@ -67,10 +67,10 @@ int32_t ExecuteRequest::encode(int version, BufferVec* bufs) const {
   }
 
   if (paging_buf_size > 0) {
-    bufs->push_back(Buffer(paging_buf_size));
+    bufs->push_back(BufferValue(paging_buf_size));
     length += paging_buf_size;
 
-    Buffer& buf = bufs->back();
+    BufferValue& buf = bufs->back();
     size_t pos = 0;
 
     if (page_size() >= 0) {

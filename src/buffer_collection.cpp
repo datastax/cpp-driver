@@ -14,14 +14,15 @@
   limitations under the License.
 */
 
+#include "buffer_collection.hpp"
 #include "cassandra.hpp"
-#include "collection.hpp"
+
 
 extern "C" {
 
 CassCollection* cass_collection_new(CassCollectionType type, size_t element_count) {
-  return CassCollection::to(new cass::Collection(type == CASS_COLLECTION_TYPE_MAP,
-                                                 element_count));
+  return CassCollection::to(new cass::BufferCollection(type == CASS_COLLECTION_TYPE_MAP,
+                                                       element_count));
 }
 
 void cass_collection_free(CassCollection* collection) {
@@ -92,12 +93,12 @@ CassError cass_collection_append_decimal(CassCollection* collection,
 
 namespace cass {
 
-ssize_t Collection::encode(int version, BufferVec* bufs) const {
+ssize_t BufferCollection::encode(int version, BufferValueVec* bufs) const {
   if(version != 1 && version != 2) return -1;
 
   ssize_t value_size = sizeof(uint16_t);
 
-  for(BufferVec::const_iterator it = bufs_.begin(),
+  for(BufferValueVec::const_iterator it = bufs_.begin(),
       end = bufs_.end(); it != end; ++it) {
     value_size += sizeof(uint16_t);
     value_size += it->size();
@@ -105,12 +106,12 @@ ssize_t Collection::encode(int version, BufferVec* bufs) const {
 
   ssize_t buf_size = sizeof(int32_t) + value_size;
 
-  Buffer buf(buf_size);
+  BufferValue buf(buf_size);
 
   size_t pos = buf.encode_int32(0, value_size);
 
   pos = buf.encode_uint16(pos, is_map_ ? bufs_.size() / 2 : bufs_.size());
-  for(BufferVec::const_iterator it = bufs_.begin(),
+  for(BufferValueVec::const_iterator it = bufs_.begin(),
       end = bufs_.end(); it != end; ++it) {
     pos = buf.encode_uint16(pos, it->size());
     pos = buf.copy(pos, it->data(), it->size());

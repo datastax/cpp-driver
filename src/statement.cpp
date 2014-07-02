@@ -114,7 +114,7 @@ CassError cass_statement_bind_custom(CassStatement* statement,
 
 namespace cass {
 
-int32_t Statement::encode_values(int version, BufferVec* bufs) const {
+int32_t Statement::encode_values(int version, BufferValueVec* bufs) const {
   int32_t values_size = 0;
   for (ValueVec::const_iterator it = values_.begin(), end = values_.end();
        it != end; ++it) {

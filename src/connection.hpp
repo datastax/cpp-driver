@@ -18,6 +18,7 @@
 #define __CASS_CONNECTION_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "buffer_value.hpp"
 #include "response_callback.hpp"
 #include "macros.hpp"
 #include "host.hpp"
@@ -25,7 +26,6 @@
 #include "list.hpp"
 #include "scoped_ptr.hpp"
 #include "ref_counted.h"
-#include "buffer.hpp"
 #include "writer.hpp"
 
 #include "third_party/boost/boost/function.hpp"
@@ -156,7 +156,7 @@ public:
 
 private:
   void actually_close();
-  void write(BufferVec* bufs, InternalRequest* request);
+  void write(BufferValueVec* bufs, InternalRequest* request);
   void event_received();
   void consume(char* input, size_t size);
 

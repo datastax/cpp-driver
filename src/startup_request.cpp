@@ -19,7 +19,7 @@
 
 namespace cass {
 
-int32_t StartupRequest::encode(int version, BufferVec* bufs) const {
+int32_t StartupRequest::encode(int version, BufferValueVec* bufs) const {
   assert(version == 2);
 
   // <options> [string map]
@@ -40,7 +40,7 @@ int32_t StartupRequest::encode(int version, BufferVec* bufs) const {
     options[key] = version_;
   }
 
-  bufs->push_back(Buffer(length));
+  bufs->push_back(BufferValue(length));
   bufs->back().encode_string_map(0, options);
 
   return length;

@@ -40,7 +40,7 @@ public:
   }
 
 private:
-  int32_t encode(int version, BufferVec* bufs) const;
+  int32_t encode(int version, BufferValueVec* bufs) const;
 };
 
 } // namespace cass

@@ -49,7 +49,7 @@ struct CassFuture_ : public External<cass::Future, CassFuture> {};
 struct CassPrepared_ : public External<cass::Prepared, CassPrepared> {};
 struct CassBatch_ : public External<cass::BatchRequest, CassBatch> {};
 struct CassResult_ : public External<cass::ResultResponse, CassResult> {};
-struct CassCollection_ : public External<cass::Collection, CassCollection> {};
+struct CassCollection_ : public External<cass::BufferCollection, CassCollection> {};
 struct CassIterator_ : public External<cass::Iterator, CassIterator> {};
 struct CassRow_ : public External<cass::Row, CassRow> {};
 struct CassValue_ : public External<cass::Value, CassValue> {};

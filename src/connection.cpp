@@ -127,7 +127,8 @@ void Connection::InternalRequest::change_state(Connection::InternalRequest::Stat
         timer_ =
             Timer::start(connection->loop_, connection->config_.read_timeout(),
                          this, on_request_timeout);
-      } else if (next_state == REQUEST_STATE_READ_BEFORE_WRITE) {
+      } else if (next_state == REQUEST_STATE_READ_BEFORE_WRITE ||
+                 next_state == REQUEST_STATE_DONE) {
         stop_timer();
         state_ = next_state;
       } else if (next_state == REQUEST_STATE_WRITE_TIMEOUT) {
@@ -264,7 +265,7 @@ bool Connection::execute(ResponseCallback* response_callback) {
 
   internal_request->stream = stream;
 
-  ScopedPtr<BufferVec> bufs(request->encode(0x02, 0x00, stream));
+  ScopedPtr<BufferValueVec> bufs(request->encode(0x02, 0x00, stream));
   if(!bufs) {
     internal_request->on_error(CASS_ERROR_LIB_MESSAGE_PREPARE,
                       "Unable to build request");
@@ -299,7 +300,7 @@ void Connection::defunct() {
   close();
 }
 
-void Connection::write(BufferVec* bufs, Connection::InternalRequest* request) {
+void Connection::write(BufferValueVec* bufs, Connection::InternalRequest* request) {
   uv_stream_t* stream = reinterpret_cast<uv_stream_t*>(&socket_);
   Writer::write(stream, bufs, request, on_write);
 }

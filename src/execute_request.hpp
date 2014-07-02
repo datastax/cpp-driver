@@ -37,7 +37,7 @@ public:
   const std::string prepared_statement() const { return prepared_statement_; }
 
 private:
-  int32_t encode(int version, BufferVec* bufs) const;
+  int32_t encode(int version, BufferValueVec* bufs) const;
 
 private:
   std::string prepared_statement_;

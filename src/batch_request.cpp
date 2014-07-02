@@ -46,7 +46,7 @@ CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
 
 namespace cass {
 
-int32_t BatchRequest::encode(int version, BufferVec* bufs) const {
+int32_t BatchRequest::encode(int version, BufferValueVec* bufs) const {
   assert(version == 2);
 
   int32_t length = 0;
@@ -55,7 +55,7 @@ int32_t BatchRequest::encode(int version, BufferVec* bufs) const {
     // <type> [byte] + <n> [short]
     int32_t buf_size = sizeof(uint8_t) + sizeof(uint16_t);
 
-    Buffer buf(buf_size);
+    BufferValue buf(buf_size);
     size_t pos = buf.encode_byte(0, type_);
     buf.encode_uint16(pos, statements().size());
 
@@ -79,10 +79,10 @@ int32_t BatchRequest::encode(int version, BufferVec* bufs) const {
     // <n><value_1>...<value_n>
     buf_size += sizeof(uint16_t); // <n> [short]
 
-    bufs->push_back(Buffer(buf_size));
+    bufs->push_back(BufferValue(buf_size));
     length += buf_size;
 
-    Buffer& buf = bufs->back();
+    BufferValue& buf = bufs->back();
     size_t pos = buf.encode_byte(0, statement->kind());
 
     if(statement->kind() == CASS_BATCH_KIND_QUERY) {
@@ -105,7 +105,7 @@ int32_t BatchRequest::encode(int version, BufferVec* bufs) const {
     // <consistency> [short]
     int32_t buf_size = sizeof(uint16_t);
 
-    Buffer buf(buf_size);
+    BufferValue buf(buf_size);
     buf.encode_uint16(0, consistency_);
 
     bufs->push_back(buf);
