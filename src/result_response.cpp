@@ -66,6 +66,13 @@ const CassRow* cass_result_first_row(const CassResult* result) {
   return NULL;
 }
 
+const CassPagingState* cass_result_paging_state(const CassResult* result) {
+  if(result->has_more_pages()) {
+    return CassPagingState::to(new std::string(result->paging_state()));
+  }
+  return NULL;
+}
+
 } // extern "C"
 
 namespace cass {
@@ -101,10 +108,10 @@ char* ResultResponse::decode_metadata(char* input) {
   buffer = decode_int32(buffer, column_count_);
 
   if (flags & CASS_RESULT_FLAG_HAS_MORE_PAGES) {
-    more_pages_ = true;
-    buffer = decode_long_string(buffer, &page_state_, page_state_size_);
+    has_more_pages_ = true;
+    buffer = decode_long_string(buffer, &paging_state_, paging_state_size_);
   } else {
-    more_pages_ = false;
+    has_more_pages_ = false;
   }
 
   if (flags & CASS_RESULT_FLAG_GLOBAL_TABLESPEC) {

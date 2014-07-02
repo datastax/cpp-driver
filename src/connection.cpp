@@ -28,7 +28,7 @@ Connection::StartupHandler::StartupHandler(Connection* connection,
     , request_(request) {
 }
 
-Request* Connection::StartupHandler::request() const {
+const Request* Connection::StartupHandler::request() const {
   return request_.get();
 }
 
@@ -269,7 +269,7 @@ void Connection::connect() {
 bool Connection::execute(ResponseCallback* response_callback) {
   ScopedPtr<InternalRequest> internal_request(new InternalRequest(this, response_callback));
 
-  Request* request = response_callback->request();
+  const Request* request = response_callback->request();
 
   int8_t stream = stream_manager_.acquire_stream(internal_request.get());
   if (stream < 0) {

@@ -79,7 +79,7 @@ public:
   void close_async(Future* future);
 
   Future* prepare(const char* statement, size_t length);
-  Future* execute(Request* statement);
+  Future* execute(const Request* statement);
 
 private:
   void close_handles();

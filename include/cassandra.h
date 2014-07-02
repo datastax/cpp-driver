@@ -139,6 +139,7 @@ typedef struct CassIterator_ CassIterator;
 typedef struct CassRow_ CassRow;
 typedef struct CassValue_ CassValue;
 typedef struct CassCollection_ CassCollection;
+typedef struct CassPagingState_ CassPagingState;
 
 typedef enum CassConsistency_ {
   CASS_CONSISTENCY_ANY          = 0x0000,
@@ -381,14 +382,14 @@ cass_session_close(CassSession* session);
  * Create a prepared statement.
  *
  * @param[in] session
- * @param[in] statement
+ * @param[in] query
  * @return A future that must be freed.
  *
  * @see cass_future_get_prepared()
  */
 CASS_EXPORT CassFuture*
 cass_session_prepare(CassSession* session,
-                     CassString statement);
+                     CassString query);
 
 /**
  * Execute a query or bound statement.
@@ -401,7 +402,7 @@ cass_session_prepare(CassSession* session,
  */
 CASS_EXPORT CassFuture*
 cass_session_execute(CassSession* session,
-                     CassStatement* statement);
+                     const CassStatement* statement);
 
 /**
  * Execute a batch statement.
@@ -414,7 +415,7 @@ cass_session_execute(CassSession* session,
  */
 CASS_EXPORT CassFuture*
 cass_session_execute_batch(CassSession* session,
-                           CassBatch* batch);
+                           const CassBatch* batch);
 
 /***********************************************************************************
  *
@@ -530,14 +531,14 @@ cass_future_error_message(CassFuture* future);
 /**
  * Creates a new query statement.
  *
- * @param[in] statement The statement string.
+ * @param[in] query
  * @param[in] parameter_count The number of bound paramerters.
  * @return Returns a statement that must be freed.
  *
  * @see cass_statement_free()
  */
 CASS_EXPORT CassStatement*
-cass_statement_new(CassString statement,
+cass_statement_new(CassString query,
                    cass_size_t parameter_count);
 
 /**
@@ -550,24 +551,54 @@ CASS_EXPORT void
 cass_statement_free(CassStatement* statement);
 
 /**
- * Sets the statement's consistency level
+ * Sets the statement's consistency level.
  *
  * @param[in] statement
- * @param[in] consistency The statement's read/write consistency.
+ * @param[in] consistency
  */
 CASS_EXPORT void
 cass_statement_set_consistency(CassStatement* statement,
                                CassConsistency consistency);
 
 /**
- * Sets the statement's serial consistency level
+ * Sets the statement's serial consistency level.
  *
  * @param[in] statement
- * @param[in] consistency The statement's read/write serial consistency.
+ * @param[in] serial_consistency
  */
 CASS_EXPORT void
 cass_statement_set_serial_consistency(CassStatement* statement,
                                       CassConsistency serial_consistency);
+
+/**
+ * Sets the statement's page size.
+ *
+ * @param[in] statement
+ * @param[in] page_size
+ */
+CASS_EXPORT void
+cass_statement_set_paging_size(CassStatement* statement,
+                               cass_int32_t page_size);
+
+/**
+ * Sets the statement's paging state.
+ *
+ * @param[in] statement
+ * @param[in] paging_state
+ */
+CASS_EXPORT void
+cass_statement_set_paging_state(CassStatement* statement,
+                                const CassPagingState* paging_state);
+
+/**
+ * Sets the statement's paging state.
+ *
+ * @param[in] statement
+ * @param[in] paging_state
+ */
+CASS_EXPORT void
+cass_statement_set_paging_state(CassStatement* statement,
+                                const CassPagingState* paging_state);
 
 /**
  * Binds null to a query or bound statement at the specified index.
@@ -1019,6 +1050,34 @@ cass_result_column_type(const CassResult* result,
  */
 CASS_EXPORT const CassRow*
 cass_result_first_row(const CassResult* result);
+
+
+/**
+ * Gets the paging state of the result.
+ *
+ * @param[in] result
+ * @return The paging state. NULL if there are no more results
+ * or not supported.
+ *
+ * @see cass_session_fetch_page() and cass_paging_state_free()
+ */
+CASS_EXPORT const CassPagingState*
+cass_result_paging_state(const CassResult* result);
+
+/***********************************************************************************
+ *
+ * Paging state
+ *
+ ***********************************************************************************/
+
+/**
+ * Frees an paging state instance.
+ *
+ * @param[in] paging_state
+ */
+CASS_EXPORT void
+cass_paging_state_free(const CassPagingState* paging_state);
+
 
 /***********************************************************************************
  *

@@ -48,7 +48,7 @@ public:
     PoolHandler(Pool* pool, Connection* connection,
                 RequestHandler* request_handler);
 
-    virtual Request* request() const { return request_handler_->request(); }
+    virtual const Request* request() const { return request_handler_->request(); }
 
     virtual void on_set(ResponseMessage* response);
     virtual void on_error(CassError code, const std::string& message);

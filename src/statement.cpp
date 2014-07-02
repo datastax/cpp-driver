@@ -43,6 +43,16 @@ void cass_statement_set_serial_consistency(CassStatement* statement,
   statement->set_serial_consistency(serial_consistency);
 }
 
+void cass_statement_set_paging_size(CassStatement* statement,
+                                    cass_int32_t page_size) {
+  statement->set_page_size(page_size);
+}
+
+void cass_statement_set_paging_state(CassStatement* statement,
+                                     const CassPagingState* paging_state) {
+  statement->set_paging_state(*paging_state);
+}
+
 CassError cass_statement_bind_null(CassStatement* statement,
                                    cass_size_t index) {
   return statement->bind_null(index);

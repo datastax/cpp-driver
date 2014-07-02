@@ -20,10 +20,10 @@
 #include "constants.hpp"
 #include "future.hpp"
 #include "host.hpp"
-#include "scoped_ptr.hpp"
 #include "request.hpp"
 #include "response.hpp"
 #include "response_callback.hpp"
+#include "scoped_ptr.hpp"
 
 #include "third_party/boost/boost/function.hpp"
 
@@ -47,14 +47,14 @@ public:
   typedef boost::function1<void, RequestHandler*> Callback;
   typedef boost::function2<void, RequestHandler*, RetryType> RetryCallback;
 
-  RequestHandler(Request* request)
+  RequestHandler(const Request* request)
       : timer(NULL)
       , request_(request)
       , future_(new ResponseFuture()) {
     future_->retain();
   }
 
-  virtual Request* request() const { return request_.get(); }
+  virtual const Request* request() const { return request_.get(); }
 
   virtual void on_set(ResponseMessage* response);
 
@@ -107,7 +107,7 @@ private:
   }
 
   std::list<Host> hosts_attempted_;
-  ScopedRefPtr<Request> request_;
+  ScopedRefPtr<const Request> request_;
   ResponseFuture* future_;
   RetryCallback retry_callback_;
   Callback finished_callback_;

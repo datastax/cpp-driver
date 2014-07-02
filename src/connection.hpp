@@ -49,7 +49,7 @@ public:
   public:
     StartupHandler(Connection* connection, Request* request);
 
-    virtual Request* request() const;
+    virtual const Request* request() const;
     virtual void on_set(ResponseMessage* response);
     virtual void on_error(CassError code, const std::string& message);
     virtual void on_timeout();

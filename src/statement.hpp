@@ -60,9 +60,15 @@ public:
     serial_consistency_ = serial_consistency;
   }
 
-  int page_size() const { return page_size_; }
+  int32_t page_size() const { return page_size_; }
+
+  void set_page_size(int32_t page_size) { page_size_ = page_size; }
 
   const std::string paging_state() const { return paging_state_; }
+
+  void set_paging_state(const std::string& paging_state) {
+    paging_state_ = paging_state;
+  }
 
   uint8_t kind() const { return kind_; }
 
@@ -168,7 +174,7 @@ private:
   ValueVec values_;
   int16_t consistency_;
   int16_t serial_consistency_;
-  int page_size_;
+  int32_t page_size_;
   std::string paging_state_;
   uint8_t kind_;
   std::string query_or_prepared_id_;

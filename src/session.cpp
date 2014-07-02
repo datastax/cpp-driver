@@ -43,11 +43,11 @@ CassFuture* cass_session_prepare(CassSession* session, CassString statement) {
 }
 
 CassFuture* cass_session_execute(CassSession* session,
-                                 CassStatement* statement) {
+                                 const CassStatement* statement) {
   return CassFuture::to(session->execute(statement->from()));
 }
 
-CassFuture* cass_session_execute_batch(CassSession* session, CassBatch* batch) {
+CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* batch) {
   return CassFuture::to(session->execute(batch->from()));
 }
 
@@ -269,7 +269,7 @@ Future* Session::prepare(const char* statement, size_t length) {
   return future;
 }
 
-Future* Session::execute(Request* statement) {
+Future* Session::execute(const Request* statement) {
   RequestHandler* request_handler = new RequestHandler(statement);
   Future* future = request_handler->future();
   execute(request_handler);

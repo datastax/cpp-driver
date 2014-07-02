@@ -78,12 +78,12 @@ public:
   ResultResponse()
       : Response(CQL_OPCODE_RESULT)
       , kind_(0)
-      , more_pages_(false)
+      , has_more_pages_(false)
       , no_metadata_(false)
       , global_table_spec_(true)
       , column_count_(0)
-      , page_state_(NULL)
-      , page_state_size_(0)
+      , paging_state_(NULL)
+      , paging_state_size_(0)
       , prepared_(NULL)
       , prepared_size_(0)
       , change_(NULL)
@@ -97,9 +97,16 @@ public:
 
   int32_t kind() const { return kind_; }
 
+  bool has_more_pages() const { return has_more_pages_; }
+
+
   int32_t column_count() const { return column_count_; }
 
   const MetaDataVec& column_metadata() const { return column_metadata_; }
+
+  std::string paging_state() const {
+    return std::string(paging_state_, paging_state_size_);
+  }
 
   std::string prepared() const {
     return std::string(prepared_, prepared_size_);
@@ -129,14 +136,14 @@ public:
 
 private:
   int32_t kind_;
-  bool more_pages_; // row data
+  bool has_more_pages_; // row data
   bool no_metadata_;
   bool global_table_spec_;
   int32_t column_count_;
   MetaDataVec column_metadata_;
   MetaDataIndex column_index_;
-  char* page_state_; // row paging
-  size_t page_state_size_;
+  char* paging_state_; // row paging
+  size_t paging_state_size_;
   char* prepared_; // prepared result
   size_t prepared_size_;
   char* change_; // schema change

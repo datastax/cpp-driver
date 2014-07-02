@@ -40,7 +40,6 @@ void RequestHandler::on_set(ResponseMessage* response) {
       break;
   }
   notify_finished();
-  ;
 }
 
 void RequestHandler::on_error(CassError code, const std::string& message) {

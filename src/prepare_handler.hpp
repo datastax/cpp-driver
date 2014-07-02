@@ -34,7 +34,7 @@ public:
 
   bool init(const std::string& prepared_id);
 
-  virtual Request* request() const { return request_.get(); }
+  virtual const Request* request() const { return request_.get(); }
 
   virtual void on_set(ResponseMessage* response);
 
