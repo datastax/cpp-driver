@@ -162,7 +162,7 @@ public:
     return size_ > FIXED_BUFFER_SIZE ? static_cast<BufferArray*>(data_.ref.array)->data() : data_.fixed;
   }
 
-  ssize_t size() const { return size_; }
+  int size() const { return size_; }
 
   bool is_buffer() const { return size_ >= 0; }
 
@@ -183,7 +183,7 @@ private:
     return size_ > FIXED_BUFFER_SIZE ? static_cast<BufferArray*>(data_.ref.array)->data() : data_.fixed;
   }
 
-  static const ssize_t FIXED_BUFFER_SIZE = 32;
+  static const int FIXED_BUFFER_SIZE = 32;
 
 private:
   void copy(const Buffer& buffer);
@@ -197,7 +197,7 @@ private:
     char fixed[FIXED_BUFFER_SIZE];
     BufferRef ref;
   } data_;
-  ssize_t size_;
+  int size_;
 };
 
 typedef std::vector<Buffer> BufferVec;

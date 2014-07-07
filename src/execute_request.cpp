@@ -18,7 +18,7 @@
 
 namespace cass {
 
-ssize_t ExecuteRequest::encode(int version, BufferVec* bufs) const {
+int ExecuteRequest::encode(int version, BufferVec* bufs) const {
   if(version == 1) {
     return encode_v1(bufs);
   } else if(version == 2) {
@@ -28,7 +28,7 @@ ssize_t ExecuteRequest::encode(int version, BufferVec* bufs) const {
   }
 }
 
-ssize_t ExecuteRequest::encode_v1(BufferVec* bufs) const {
+int ExecuteRequest::encode_v1(BufferVec* bufs) const {
   const int version = 1;
 
   size_t length = 0;
@@ -63,7 +63,7 @@ ssize_t ExecuteRequest::encode_v1(BufferVec* bufs) const {
   return length;
 }
 
-ssize_t ExecuteRequest::encode_v2(BufferVec* bufs) const {
+int ExecuteRequest::encode_v2(BufferVec* bufs) const {
   const int version = 2;
 
   uint8_t flags = 0;

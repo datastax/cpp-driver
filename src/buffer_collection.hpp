@@ -72,7 +72,7 @@ public:
 
   size_t item_count() const { return bufs_.size(); }
 
-  ssize_t encode(int version, BufferVec* bufs) const;
+  int encode(int version, BufferVec* bufs) const;
 
 private:
   BufferVec bufs_;

@@ -41,7 +41,7 @@ public:
   BufferVec* encode(int version, int flags, int stream) const;
 
 protected:
-  virtual ssize_t encode(int version, BufferVec* bufs) const = 0;
+  virtual int encode(int version, BufferVec* bufs) const = 0;
 
 private:
   uint8_t opcode_;

@@ -19,7 +19,7 @@
 
 namespace cass {
 
-ssize_t QueryRequest::encode(int version, BufferVec* bufs) const {
+int QueryRequest::encode(int version, BufferVec* bufs) const {
   if(version == 1) {
     return encode_v1(bufs);
   } else if(version == 2) {
@@ -29,7 +29,7 @@ ssize_t QueryRequest::encode(int version, BufferVec* bufs) const {
   }
 }
 
-ssize_t QueryRequest::encode_v1(BufferVec* bufs) const {
+int QueryRequest::encode_v1(BufferVec* bufs) const {
   // <query> [long string] + <consistency> [short]
   size_t length = sizeof(int32_t) + query().size() + sizeof(uint16_t);
 
@@ -41,7 +41,7 @@ ssize_t QueryRequest::encode_v1(BufferVec* bufs) const {
   return length;
 }
 
-ssize_t QueryRequest::encode_v2(BufferVec* bufs) const {
+int QueryRequest::encode_v2(BufferVec* bufs) const {
   const int version = 2;
 
   uint8_t flags = 0;

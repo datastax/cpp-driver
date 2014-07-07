@@ -93,10 +93,10 @@ CassError cass_collection_append_decimal(CassCollection* collection,
 
 namespace cass {
 
-ssize_t BufferCollection::encode(int version, BufferVec* bufs) const {
+int BufferCollection::encode(int version, BufferVec* bufs) const {
   if(version != 1 && version != 2) return -1;
 
-  ssize_t value_size = sizeof(uint16_t);
+  int value_size = sizeof(uint16_t);
 
   for(BufferVec::const_iterator it = bufs_.begin(),
       end = bufs_.end(); it != end; ++it) {
@@ -104,7 +104,7 @@ ssize_t BufferCollection::encode(int version, BufferVec* bufs) const {
     value_size += it->size();
   }
 
-  ssize_t buf_size = sizeof(int32_t) + value_size;
+  int buf_size = sizeof(int32_t) + value_size;
 
   Buffer buf(buf_size);
 

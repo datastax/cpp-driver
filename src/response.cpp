@@ -47,7 +47,7 @@ bool ResponseMessage::allocate_body(int8_t opcode) {
   }
 }
 
-ssize_t ResponseMessage::decode(int version, char* input, size_t size) {
+int ResponseMessage::decode(int version, char* input, size_t size) {
   char* input_pos = input;
 
   received_ += size;

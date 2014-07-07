@@ -70,7 +70,7 @@ public:
 
   bool is_body_ready() const { return is_body_ready_; }
 
-  ssize_t decode(int version, char* input, size_t size);
+  int decode(int version, char* input, size_t size);
 
 private:
   bool allocate_body(int8_t opcode);

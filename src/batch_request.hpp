@@ -54,8 +54,8 @@ public:
   bool prepared_statement(const std::string& id, std::string* statement) const;
 
 private:
-  ssize_t encode(int version, BufferVec* bufs) const;
-  ssize_t encode_v2(BufferVec* bufs) const;
+  int encode(int version, BufferVec* bufs) const;
+  int encode_v2(BufferVec* bufs) const;
 
 private:
   typedef std::map<std::string, ExecuteRequest*> PreparedMap;

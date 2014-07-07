@@ -37,9 +37,9 @@ public:
   const std::string prepared_statement() const { return prepared_statement_; }
 
 private:
-  ssize_t encode(int version, BufferVec* bufs) const;
-  ssize_t encode_v1(BufferVec* bufs) const;
-  ssize_t encode_v2(BufferVec* bufs) const;
+  int encode(int version, BufferVec* bufs) const;
+  int encode_v1(BufferVec* bufs) const;
+  int encode_v2(BufferVec* bufs) const;
 
 private:
   std::string prepared_statement_;
