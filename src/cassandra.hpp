@@ -53,7 +53,6 @@ struct CassCollection_ : public External<cass::BufferCollection, CassCollection>
 struct CassIterator_ : public External<cass::Iterator, CassIterator> {};
 struct CassRow_ : public External<cass::Row, CassRow> {};
 struct CassValue_ : public External<cass::Value, CassValue> {};
-struct CassPagingState_ : public External<std::string, CassPagingState> {};
 struct CassBalancing_ : public External<cass::Balancing, CassBalancing> {};
 
 }

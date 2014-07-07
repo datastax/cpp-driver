@@ -278,7 +278,7 @@ bool Connection::execute(ResponseCallback* response_callback) {
 
   internal_request->stream = stream;
 
-  ScopedPtr<BufferValueVec> bufs(request->encode(protocol_version_, 0x00, stream));
+  ScopedPtr<BufferVec> bufs(request->encode(protocol_version_, 0x00, stream));
   if(!bufs) {
     internal_request->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
                                "Operation unsupported by this protocol version");
@@ -313,7 +313,7 @@ void Connection::defunct() {
   close();
 }
 
-void Connection::write(BufferValueVec* bufs, Connection::InternalRequest* request) {
+void Connection::write(BufferVec* bufs, Connection::InternalRequest* request) {
   uv_stream_t* stream = reinterpret_cast<uv_stream_t*>(&socket_);
   Writer::write(stream, bufs, request, on_write);
 }

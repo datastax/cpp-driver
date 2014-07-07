@@ -49,8 +49,8 @@ void cass_statement_set_paging_size(CassStatement* statement,
 }
 
 void cass_statement_set_paging_state(CassStatement* statement,
-                                     const CassPagingState* paging_state) {
-  statement->set_paging_state(*paging_state);
+                                     const CassResult* result) {
+  statement->set_paging_state(result->paging_state());
 }
 
 CassError cass_statement_bind_null(CassStatement* statement,
@@ -124,11 +124,16 @@ CassError cass_statement_bind_custom(CassStatement* statement,
 
 namespace cass {
 
-int32_t Statement::encode_values(int version, BufferValueVec* bufs) const {
+int32_t Statement::encode_values(int version, BufferVec* bufs) const {
   int32_t values_size = 0;
   for (ValueVec::const_iterator it = values_.begin(), end = values_.end();
        it != end; ++it) {
-    if(it->is_collection()) {
+    if(it->is_empty()) {
+      Buffer buf(sizeof(int32_t));
+      buf.encode_int32(0, -1); // [bytes] "null"
+      bufs->push_back(buf);
+      values_size += sizeof(int32_t);
+    } else if(it->is_collection()) {
       values_size += it->collection()->encode(version, bufs);
     } else {
       bufs->push_back(*it);

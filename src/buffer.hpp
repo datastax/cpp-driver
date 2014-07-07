@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BUFFER_VALUE_HPP_INCLUDED__
-#define __CASS_BUFFER_VALUE_HPP_INCLUDED__
+#ifndef __CASS_BUFFER_HPP_INCLUDED__
+#define __CASS_BUFFER_HPP_INCLUDED__
 
 #include "ref_counted.h"
 #include "serialization.hpp"
@@ -45,12 +45,12 @@ private:
 
 class BufferCollection;
 
-class BufferValue {
+class Buffer {
 public:
-  BufferValue()
+  Buffer()
       : size_(IS_EMPTY) {}
 
-  BufferValue(const char* data, size_t size)
+  Buffer(const char* data, size_t size)
     : size_(size) {
     if (size > FIXED_BUFFER_SIZE) {
       BufferArray* array = new BufferArray(size);
@@ -62,26 +62,26 @@ public:
   }
 
   explicit
-  BufferValue(size_t size)
+  Buffer(size_t size)
     : size_(size) {
     if (size > FIXED_BUFFER_SIZE) {
       data_.ref.array = new BufferArray(size);
     }
   }
 
-  BufferValue(const BufferCollection* collection);
+  Buffer(const BufferCollection* collection);
 
-  BufferValue(const BufferValue& buf)
+  Buffer(const Buffer& buf)
     : size_(IS_EMPTY) {
     copy(buf);
   }
 
-  BufferValue& operator=(const BufferValue& buf) {
+  Buffer& operator=(const Buffer& buf) {
     copy(buf);
     return *this;
   }
 
-  ~BufferValue();
+  ~Buffer();
 
   size_t encode_byte(size_t offset, uint8_t value) {
     assert(is_buffer() && offset + sizeof(uint8_t) <= static_cast<size_t>(size_));
@@ -186,7 +186,7 @@ private:
   static const ssize_t FIXED_BUFFER_SIZE = 32;
 
 private:
-  void copy(const BufferValue& buffer);
+  void copy(const Buffer& buffer);
 
   union BufferRef {
     BufferArray* array;
@@ -200,7 +200,7 @@ private:
   ssize_t size_;
 };
 
-typedef std::vector<BufferValue> BufferValueVec;
+typedef std::vector<Buffer> BufferVec;
 
 } // namespace cass
 

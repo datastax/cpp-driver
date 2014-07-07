@@ -18,7 +18,7 @@
 #define __CASS_STATEMENT_HPP_INCLUDED__
 
 #include "request.hpp"
-#include "buffer_value.hpp"
+#include "buffer.hpp"
 #include "buffer_collection.hpp"
 
 #include <vector>
@@ -90,34 +90,34 @@ public:
 
   size_t values_count() const { return values_.size(); }
 
-#define BIND_FIXED_TYPE(DeclType, EncodeType, Size)            \
+#define BIND_FIXED_TYPE(DeclType, EncodeType, Size)                  \
   CassError bind_##EncodeType(size_t index, const DeclType& value) { \
-    CASS_VALUE_CHECK_INDEX(index);                             \
-    BufferValue buf(sizeof(int32_t) + sizeof(DeclType));       \
-    size_t pos = buf.encode_int32(0, sizeof(DeclType));        \
-    buf.encode_##EncodeType(pos, value);                       \
-    values_[index] = buf;                                      \
-    return CASS_OK;                                            \
+    CASS_VALUE_CHECK_INDEX(index);                                   \
+    Buffer buf(sizeof(int32_t) + sizeof(DeclType));                  \
+    size_t pos = buf.encode_int32(0, sizeof(DeclType));              \
+    buf.encode_##EncodeType(pos, value);                             \
+    values_[index] = buf;                                            \
+    return CASS_OK;                                                  \
   }
 
-  BIND_FIXED_TYPE(int32_t, int32, 4)
-  BIND_FIXED_TYPE(int64_t, int64, 8)
-  BIND_FIXED_TYPE(float, float, 4)
-  BIND_FIXED_TYPE(double, double, 8)
-  BIND_FIXED_TYPE(bool, byte, 1)
+  BIND_FIXED_TYPE(int32_t, int32, sizeof(int32_t))
+  BIND_FIXED_TYPE(int64_t, int64, sizeof(int64_t))
+  BIND_FIXED_TYPE(float, float, sizeof(float))
+  BIND_FIXED_TYPE(double, double, sizeof(double))
+  BIND_FIXED_TYPE(uint8_t, byte, 1)
 #undef BIND_FIXED_TYPE
 
   CassError bind_null(size_t index) {
     CASS_VALUE_CHECK_INDEX(index);
-    BufferValue buf(sizeof(int32_t));
-    buf.encode_int32(0, -1);
+    Buffer buf(sizeof(int32_t));
+    buf.encode_int32(0, -1); // [bytes] "null"
     values_[index] = buf;
     return CASS_OK;
   }
 
   CassError bind(size_t index, const char* value, size_t value_length) {
     CASS_VALUE_CHECK_INDEX(index);
-    BufferValue buf(sizeof(int32_t) + value_length);
+    Buffer buf(sizeof(int32_t) + value_length);
     size_t pos = buf.encode_int32(0, value_length);
     buf.copy(pos, value, value_length);
     values_[index] = buf;
@@ -130,7 +130,7 @@ public:
 
   CassError bind(size_t index, const CassUuid value) {
     CASS_VALUE_CHECK_INDEX(index);
-    BufferValue buf(sizeof(int32_t) + sizeof(CassUuid));
+    Buffer buf(sizeof(int32_t) + sizeof(CassUuid));
     size_t pos = buf.encode_int32(0, sizeof(CassUuid));
     buf.copy(pos, value, sizeof(CassUuid));
     values_[index] = buf;
@@ -140,7 +140,7 @@ public:
   CassError bind(size_t index, int32_t scale, const uint8_t* varint,
                  size_t varint_length) {
     CASS_VALUE_CHECK_INDEX(index);
-    BufferValue buf(sizeof(int32_t) + sizeof(int32_t) + varint_length);
+    Buffer buf(sizeof(int32_t) + sizeof(int32_t) + varint_length);
     size_t pos = buf.encode_int32(0, sizeof(int32_t) + varint_length);
     pos = buf.encode_int32(pos, scale);
     buf.copy(pos, varint, varint_length);
@@ -153,23 +153,23 @@ public:
     if (collection->is_map() && collection->item_count() % 2 != 0) {
       return CASS_ERROR_LIB_INVALID_ITEM_COUNT;
     }
-    values_[index] = BufferValue(collection);
+    values_[index] = Buffer(collection);
     return CASS_OK;
   }
 
   CassError bind(size_t index, size_t output_size, uint8_t** output) {
     CASS_VALUE_CHECK_INDEX(index);
-    BufferValue buf(4 + output_size);
+    Buffer buf(4 + output_size);
     size_t pos = buf.encode_int32(0, output_size);
     *output = reinterpret_cast<uint8_t*>(const_cast<char*>(buf.data() + pos));
     values_[index] = buf;
     return CASS_OK;
   }
 
-  int32_t encode_values(int version, BufferValueVec*  bufs) const;
+  int32_t encode_values(int version, BufferVec*  bufs) const;
 
 private:
-  typedef std::vector<BufferValue> ValueVec;
+  typedef std::vector<Buffer> ValueVec;
 
   ValueVec values_;
   int16_t consistency_;

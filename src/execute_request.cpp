@@ -18,7 +18,7 @@
 
 namespace cass {
 
-ssize_t ExecuteRequest::encode(int version, BufferValueVec* bufs) const {
+ssize_t ExecuteRequest::encode(int version, BufferVec* bufs) const {
   if(version == 1) {
     return encode_v1(bufs);
   } else if(version == 2) {
@@ -28,7 +28,7 @@ ssize_t ExecuteRequest::encode(int version, BufferValueVec* bufs) const {
   }
 }
 
-ssize_t ExecuteRequest::encode_v1(BufferValueVec* bufs) const {
+ssize_t ExecuteRequest::encode_v1(BufferVec* bufs) const {
   const int version = 1;
 
   size_t length = 0;
@@ -38,10 +38,10 @@ ssize_t ExecuteRequest::encode_v1(BufferValueVec* bufs) const {
                              sizeof(uint16_t);
 
   {
-    bufs->push_back(BufferValue(prepared_buf_size));
+    bufs->push_back(Buffer(prepared_buf_size));
     length += prepared_buf_size;
 
-    BufferValue& buf = bufs->back();
+    Buffer& buf = bufs->back();
     size_t pos = buf.encode_string(0,
                                  prepared_id().data(),
                                  prepared_id().size());
@@ -54,7 +54,7 @@ ssize_t ExecuteRequest::encode_v1(BufferValueVec* bufs) const {
     // <consistency> [short]
     size_t buf_size = sizeof(uint16_t);
 
-    BufferValue buf(buf_size);
+    Buffer buf(buf_size);
     buf.encode_uint16(0, consistency());
     bufs->push_back(buf);
     length += buf_size;
@@ -63,7 +63,7 @@ ssize_t ExecuteRequest::encode_v1(BufferValueVec* bufs) const {
   return length;
 }
 
-ssize_t ExecuteRequest::encode_v2(BufferValueVec* bufs) const {
+ssize_t ExecuteRequest::encode_v2(BufferVec* bufs) const {
   const int version = 2;
 
   uint8_t flags = 0;
@@ -95,10 +95,10 @@ ssize_t ExecuteRequest::encode_v2(BufferValueVec* bufs) const {
   }
 
   {
-    bufs->push_back(BufferValue(prepared_buf_size));
+    bufs->push_back(Buffer(prepared_buf_size));
     length += prepared_buf_size;
 
-    BufferValue& buf = bufs->back();
+    Buffer& buf = bufs->back();
     size_t pos = buf.encode_string(0,
                                  prepared_id().data(),
                                  prepared_id().size());
@@ -112,10 +112,10 @@ ssize_t ExecuteRequest::encode_v2(BufferValueVec* bufs) const {
   }
 
   if (paging_buf_size > 0) {
-    bufs->push_back(BufferValue(paging_buf_size));
+    bufs->push_back(Buffer(paging_buf_size));
     length += paging_buf_size;
 
-    BufferValue& buf = bufs->back();
+    Buffer& buf = bufs->back();
     size_t pos = 0;
 
     if (page_size() >= 0) {

@@ -139,7 +139,6 @@ typedef struct CassIterator_ CassIterator;
 typedef struct CassRow_ CassRow;
 typedef struct CassValue_ CassValue;
 typedef struct CassCollection_ CassCollection;
-typedef struct CassPagingState_ CassPagingState;
 
 typedef enum CassConsistency_ {
   CASS_CONSISTENCY_ANY          = 0x0000,
@@ -584,21 +583,11 @@ cass_statement_set_paging_size(CassStatement* statement,
  * Sets the statement's paging state.
  *
  * @param[in] statement
- * @param[in] paging_state
+ * @param[in] result
  */
 CASS_EXPORT void
 cass_statement_set_paging_state(CassStatement* statement,
-                                const CassPagingState* paging_state);
-
-/**
- * Sets the statement's paging state.
- *
- * @param[in] statement
- * @param[in] paging_state
- */
-CASS_EXPORT void
-cass_statement_set_paging_state(CassStatement* statement,
-                                const CassPagingState* paging_state);
+                                const CassResult* result);
 
 /**
  * Binds null to a query or bound statement at the specified index.
@@ -1051,33 +1040,14 @@ cass_result_column_type(const CassResult* result,
 CASS_EXPORT const CassRow*
 cass_result_first_row(const CassResult* result);
 
-
 /**
- * Gets the paging state of the result.
+ * Returns true if there are more pages.
  *
  * @param[in] result
- * @return The paging state. NULL if there are no more results
- * or not supported.
- *
- * @see cass_session_fetch_page() and cass_paging_state_free()
+ * @return cass_true if there are more pages
  */
-CASS_EXPORT const CassPagingState*
-cass_result_paging_state(const CassResult* result);
-
-/***********************************************************************************
- *
- * Paging state
- *
- ***********************************************************************************/
-
-/**
- * Frees an paging state instance.
- *
- * @param[in] paging_state
- */
-CASS_EXPORT void
-cass_paging_state_free(const CassPagingState* paging_state);
-
+CASS_EXPORT cass_bool_t
+cass_result_has_more_pages(const CassResult* result);
 
 /***********************************************************************************
  *

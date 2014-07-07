@@ -19,7 +19,7 @@
 
 namespace cass {
 
-ssize_t QueryRequest::encode(int version, BufferValueVec* bufs) const {
+ssize_t QueryRequest::encode(int version, BufferVec* bufs) const {
   if(version == 1) {
     return encode_v1(bufs);
   } else if(version == 2) {
@@ -29,11 +29,11 @@ ssize_t QueryRequest::encode(int version, BufferValueVec* bufs) const {
   }
 }
 
-ssize_t QueryRequest::encode_v1(BufferValueVec* bufs) const {
+ssize_t QueryRequest::encode_v1(BufferVec* bufs) const {
   // <query> [long string] + <consistency> [short]
   size_t length = sizeof(int32_t) + query().size() + sizeof(uint16_t);
 
-  BufferValue buf(length);
+  Buffer buf(length);
   size_t pos = buf.encode_long_string(0, query().data(), query().size());
   buf.encode_uint16(pos, consistency());
   bufs->push_back(buf);
@@ -41,7 +41,7 @@ ssize_t QueryRequest::encode_v1(BufferValueVec* bufs) const {
   return length;
 }
 
-ssize_t QueryRequest::encode_v2(BufferValueVec* bufs) const {
+ssize_t QueryRequest::encode_v2(BufferVec* bufs) const {
   const int version = 2;
 
   uint8_t flags = 0;
@@ -73,10 +73,10 @@ ssize_t QueryRequest::encode_v2(BufferValueVec* bufs) const {
   }
 
   {
-    bufs->push_back(BufferValue(query_buf_size));
+    bufs->push_back(Buffer(query_buf_size));
     length += query_buf_size;
 
-    BufferValue& buf = bufs->back();
+    Buffer& buf = bufs->back();
     size_t pos = buf.encode_long_string(0, query().data(), query().size());
     pos = buf.encode_uint16(pos, consistency());
     pos = buf.encode_byte(pos, flags);
@@ -88,10 +88,10 @@ ssize_t QueryRequest::encode_v2(BufferValueVec* bufs) const {
   }
 
   if (paging_buf_size > 0) {
-    bufs->push_back(BufferValue(paging_buf_size));
+    bufs->push_back(Buffer(paging_buf_size));
     length += paging_buf_size;
 
-    BufferValue& buf = bufs->back();
+    Buffer& buf = bufs->back();
     size_t pos = 0;
 
     if (page_size() >= 0) {

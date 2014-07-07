@@ -66,11 +66,8 @@ const CassRow* cass_result_first_row(const CassResult* result) {
   return NULL;
 }
 
-const CassPagingState* cass_result_paging_state(const CassResult* result) {
-  if(result->has_more_pages()) {
-    return CassPagingState::to(new std::string(result->paging_state()));
-  }
-  return NULL;
+cass_bool_t cass_result_has_more_pages(const CassResult* result) {
+  return static_cast<cass_bool_t>(result->has_more_pages());
 }
 
 } // extern "C"

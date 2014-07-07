@@ -38,7 +38,7 @@ public:
   void set_query(const std::string& query) { query_ = query; }
 
 private:
-  ssize_t encode(int version, BufferValueVec* bufs) const;
+  ssize_t encode(int version, BufferVec* bufs) const;
 
 private:
   std::string query_;

@@ -251,6 +251,7 @@ add_subdirectory(examples/prepared)
 add_subdirectory(examples/batch)
 add_subdirectory(examples/uuids)
 add_subdirectory(examples/simple)
+add_subdirectory(examples/paging)
 
 #-----------------------------------
 # Generating API docs with Doxygen

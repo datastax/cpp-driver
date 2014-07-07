@@ -142,6 +142,13 @@ void Session::close_async(Future* future) {
 }
 
 void Session::init_pools() {
+  if (hosts_.empty()) {
+    connect_future_->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                               "No hosts provided or no hosts resolved");
+    connect_future_ = NULL;
+    return;
+  }
+
   pending_pool_count_ = hosts_.size() * io_workers_.size();
   for (HostSet::iterator hosts_it = hosts_.begin(), hosts_end = hosts_.end();
        hosts_it != hosts_end; ++hosts_it) {
@@ -206,13 +213,7 @@ void Session::on_event(const SessionEvent& event) {
     }
 
     if (pending_resolve_count_ == 0) {
-      if (hosts_.empty()) {
-        connect_future_->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                                   "No hosts provided or no hosts resolved");
-        connect_future_ = NULL;
-      } else {
-        init_pools();
-      }
+      init_pools();
     }
   } else if (event.type == SessionEvent::NOTIFY_READY) {
     if (--pending_pool_count_ == 0) {
@@ -235,12 +236,12 @@ void Session::on_resolve(Resolver* resolver) {
   if (resolver->is_success()) {
     Host host(resolver->address());
     session->hosts_.insert(host);
-    if (--session->pending_resolve_count_ == 0) {
-      session->init_pools();
-    }
   } else {
     session->logger_->error("Unable to resolve %s:%d\n",
                             resolver->host().c_str(), resolver->port());
+  }
+  if (--session->pending_resolve_count_ == 0) {
+    session->init_pools();
   }
 }
 

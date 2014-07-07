@@ -17,7 +17,7 @@
 #ifndef __CASS_REQUEST_HPP_INCLUDED__
 #define __CASS_REQUEST_HPP_INCLUDED__
 
-#include "buffer_value.hpp"
+#include "buffer.hpp"
 #include "macros.hpp"
 #include "ref_counted.h"
 
@@ -38,10 +38,10 @@ public:
 
   uint8_t opcode() const { return opcode_; }
 
-  BufferValueVec* encode(int version, int flags, int stream) const;
+  BufferVec* encode(int version, int flags, int stream) const;
 
 protected:
-  virtual ssize_t encode(int version, BufferValueVec* bufs) const = 0;
+  virtual ssize_t encode(int version, BufferVec* bufs) const = 0;
 
 private:
   uint8_t opcode_;

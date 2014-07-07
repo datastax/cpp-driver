@@ -1,15 +1,15 @@
-#include "buffer_value.hpp"
+#include "buffer.hpp"
 #include "buffer_collection.hpp"
 
 namespace cass {
 
-BufferValue::BufferValue(const BufferCollection* collection)
+Buffer::Buffer(const BufferCollection* collection)
   : size_(IS_COLLECTION) {
   collection->retain();
   data_.ref.collection = collection;
 }
 
-BufferValue::~BufferValue() {
+Buffer::~Buffer() {
   if (size_ > FIXED_BUFFER_SIZE) {
     data_.ref.array->release();
   } else if(size_ == IS_COLLECTION) {
@@ -17,12 +17,12 @@ BufferValue::~BufferValue() {
   }
 }
 
-const BufferCollection* BufferValue::collection() const {
+const BufferCollection* Buffer::collection() const {
   assert(is_collection());
   return static_cast<const BufferCollection*>(data_.ref.collection);
 }
 
-void BufferValue::copy(const BufferValue& buffer) {
+void Buffer::copy(const Buffer& buffer) {
   BufferRef temp = data_.ref;
 
   if (buffer.size_ > FIXED_BUFFER_SIZE) {

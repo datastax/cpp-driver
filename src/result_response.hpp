@@ -99,13 +99,15 @@ public:
 
   bool has_more_pages() const { return has_more_pages_; }
 
-
   int32_t column_count() const { return column_count_; }
 
   const MetaDataVec& column_metadata() const { return column_metadata_; }
 
   std::string paging_state() const {
-    return std::string(paging_state_, paging_state_size_);
+    if(paging_state_ != NULL) {
+      return std::string(paging_state_, paging_state_size_);
+    }
+    return std::string();
   }
 
   std::string prepared() const {

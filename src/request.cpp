@@ -27,18 +27,18 @@
 
 namespace cass {
 
-BufferValueVec* Request::encode(int version, int flags, int stream) const {
-  ScopedPtr<BufferValueVec> bufs(new BufferValueVec());
+BufferVec* Request::encode(int version, int flags, int stream) const {
+  ScopedPtr<BufferVec> bufs(new BufferVec());
 
   if(version == 1 || version == 2) {
-    bufs->push_back(BufferValue()); // Placeholder
+    bufs->push_back(Buffer()); // Placeholder
 
     int32_t length = encode(version, bufs.get());
     if(length < 0) {
       return NULL;
     }
 
-    BufferValue buf(CASS_HEADER_SIZE_V1_AND_V2);
+    Buffer buf(CASS_HEADER_SIZE_V1_AND_V2);
     size_t pos = 0;
     pos = buf.encode_byte(pos, version);
     pos = buf.encode_byte(pos, flags);

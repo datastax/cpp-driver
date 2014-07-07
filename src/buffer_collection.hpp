@@ -17,7 +17,7 @@
 #ifndef __CASS_BUFFER_COLLECTION_HPP_INCLUDED__
 #define __CASS_BUFFER_COLLECTION_HPP_INCLUDED__
 
-#include "buffer_value.hpp"
+#include "buffer.hpp"
 #include "ref_counted.h"
 
 namespace cass {
@@ -31,22 +31,22 @@ public:
     bufs_.reserve(item_count);
   }
 
-#define APPEND_FIXED_TYPE(DeclType, EncodeType) \
-  void append_##EncodeType(const DeclType& value) {   \
-    BufferValue buf(sizeof(DeclType));          \
-    buf.encode_##EncodeType(0, value);          \
-    bufs_.push_back(buf);                       \
+#define APPEND_FIXED_TYPE(DeclType, EncodeType)     \
+  void append_##EncodeType(const DeclType& value) { \
+    Buffer buf(sizeof(DeclType));                   \
+    buf.encode_##EncodeType(0, value);              \
+    bufs_.push_back(buf);                           \
   }
 
   APPEND_FIXED_TYPE(int32_t, int32)
   APPEND_FIXED_TYPE(int64_t, int64)
   APPEND_FIXED_TYPE(float, float)
   APPEND_FIXED_TYPE(double, double)
-  APPEND_FIXED_TYPE(bool, byte)
+  APPEND_FIXED_TYPE(uint8_t, byte)
 #undef BIND_FIXED_TYPE
 
   void append(const char* value, size_t value_length) {
-    BufferValue buf(value_length);
+    Buffer buf(value_length);
     buf.copy(0, value, value_length);
     bufs_.push_back(buf);
   }
@@ -56,13 +56,13 @@ public:
   }
 
   void append(CassUuid value) {
-    BufferValue buf(sizeof(CassUuid));
+    Buffer buf(sizeof(CassUuid));
     buf.copy(0, value, sizeof(CassUuid));
     bufs_.push_back(buf);
   }
 
   void append(int32_t scale, const uint8_t* varint, size_t varint_len) {
-    BufferValue buf(sizeof(int32_t) + varint_len);
+    Buffer buf(sizeof(int32_t) + varint_len);
     size_t pos = buf.encode_int32(0, scale);
     buf.copy(pos, varint, varint_len);
     bufs_.push_back(buf);
@@ -72,10 +72,10 @@ public:
 
   size_t item_count() const { return bufs_.size(); }
 
-  ssize_t encode(int version, BufferValueVec* bufs) const;
+  ssize_t encode(int version, BufferVec* bufs) const;
 
 private:
-  BufferValueVec bufs_;
+  BufferVec bufs_;
   bool is_map_;
 };
 
