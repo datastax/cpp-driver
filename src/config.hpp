@@ -44,6 +44,7 @@ public:
       , reconnect_wait_time_(2000)
       , max_simultaneous_creation_(1)
       , max_pending_requests_(128 * max_connections_per_host_)
+      , max_simultaneous_requests_threshold_(100)
       // TODO(mpenick): Determine good timeout durations
       , connect_timeout_(1000)
       , write_timeout_(1000)
@@ -52,52 +53,124 @@ public:
       , log_data_(NULL)
       , log_callback_(default_log_callback) {}
 
-  void log_callback(CassLogCallback callback) { log_callback_ = callback; }
-
   unsigned thread_count_io() const { return thread_count_io_; }
+
+  void set_thread_count_io(unsigned num_threads) {
+    thread_count_io_ = num_threads;
+  }
 
   unsigned queue_size_io() const { return queue_size_io_; }
 
+  void set_queue_size_io(unsigned queue_size) {
+    queue_size_io_ = queue_size;
+  }
+
   unsigned queue_size_event() const { return queue_size_event_; }
 
+  void set_queue_size_event(unsigned queue_size) {
+    queue_size_event_ = queue_size;
+  }
+
   unsigned queue_size_log() const { return queue_size_log_; }
+
+  void set_queue_size_log(unsigned queue_size) {
+    queue_size_log_ = queue_size;
+  }
 
   unsigned core_connections_per_host() const {
     return core_connections_per_host_;
   }
 
+  void set_core_connections_per_host(unsigned num_connections) {
+    core_connections_per_host_ = num_connections;
+  }
+
   unsigned max_connections_per_host() const { return max_connections_per_host_; }
 
-  unsigned reconnect_wait() const { return reconnect_wait_time_; }
+  void set_max_connections_per_host(unsigned num_connections) {
+    max_connections_per_host_ = num_connections;
+  }
 
   unsigned max_simultaneous_creation() const {
     return max_simultaneous_creation_;
   }
 
+  void set_max_simultaneous_creation(unsigned num_connections) {
+    max_simultaneous_creation_ = num_connections;
+  }
+
+  unsigned reconnect_wait() const { return reconnect_wait_time_; }
+
+  void set_reconnected_wait(unsigned wait_time) {
+    reconnect_wait_time_ = wait_time;
+  }
+
   unsigned max_pending_requests() const { return max_pending_requests_; }
+
+  void set_max_pending_requests(unsigned num_requests) {
+    max_pending_requests_ = num_requests;
+  }
+
+  unsigned max_simultaneous_requests_threshold() const {
+    return max_simultaneous_requests_threshold_;
+  }
+
+  void set_max_simultaneous_requests_threshold(unsigned num_requests) {
+    max_simultaneous_requests_threshold_ = num_requests;
+  }
 
   unsigned connect_timeout() const { return connect_timeout_; }
 
+  void set_connect_timeout(unsigned timeout) {
+    connect_timeout_ = timeout;
+  }
+
   unsigned write_timeout() const { return write_timeout_; }
+
+  void set_write_timeout(unsigned timeout) {
+    write_timeout_ = timeout;
+  }
 
   unsigned read_timeout() const { return read_timeout_; }
 
-  const std::list<std::string>& contact_points() const {
+  void set_read_timeout(unsigned timeout) {
+    read_timeout_ = timeout;
+  }
+
+  const ContactPointList& contact_points() const {
+    return contact_points_;
+  }
+
+  ContactPointList& contact_points() {
     return contact_points_;
   }
 
   int port() const { return port_; }
 
+  void set_port(int port) {
+    port_ = port;
+  }
+
   int protocol_version() const { return protocol_version_; }
 
+  void set_protocol_version(int protocol_version) {
+    protocol_version_ = protocol_version;
+  }
+
   CassLogLevel log_level() const { return log_level_; }
+
+  void set_log_level(CassLogLevel log_level) {
+    log_level_ = log_level;
+  }
 
   void* log_data() const { return log_data_; }
 
   CassLogCallback log_callback() const { return log_callback_; }
 
-  CassError set_option(CassOption option, const void* value, size_t size);
-  CassError option(CassOption option, void* value, size_t* size) const;
+  void set_log_callback(void* data, CassLogCallback callback) {
+    log_data_ = data;
+    log_callback_ = callback;
+  }
 
 private:
   int port_;
@@ -113,6 +186,7 @@ private:
   unsigned reconnect_wait_time_;
   unsigned max_simultaneous_creation_;
   unsigned max_pending_requests_;
+  unsigned max_simultaneous_requests_threshold_;
   unsigned connect_timeout_;
   unsigned write_timeout_;
   unsigned read_timeout_;

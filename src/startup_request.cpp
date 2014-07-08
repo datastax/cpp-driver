@@ -31,7 +31,7 @@ int StartupRequest::encode(int version, BufferVec* bufs) const {
     options[key] = compression_;
   }
 
-  if(!version_.empty()) {
+  if (!version_.empty()) {
     const char* key = "CQL_VERSION";
     length += 2 + strlen(key);
     length += 2 + version_.size();

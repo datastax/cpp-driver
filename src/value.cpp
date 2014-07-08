@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "cassandra.hpp"
+#include "types.hpp"
 #include "value.hpp"
 
 extern "C" {

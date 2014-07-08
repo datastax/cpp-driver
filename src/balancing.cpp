@@ -15,7 +15,7 @@
 */
 
 #include "balancing.hpp"
-#include "cassandra.hpp"
+#include "types.hpp"
 
 extern "C" {
 

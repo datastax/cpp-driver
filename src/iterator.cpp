@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "cassandra.hpp"
+#include "types.hpp"
 
 #include "iterator.hpp"
 #include "result_iterator.hpp"

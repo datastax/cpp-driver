@@ -52,24 +52,24 @@ public:
 
   explicit ScopedRefPtr(type* ptr = NULL)
        : ptr_(ptr) {
-    if(ptr_ != NULL) {
+    if (ptr_ != NULL) {
       ptr_->retain();
     }
   }
 
   ~ScopedRefPtr() {
-    if(ptr_ != NULL) {
+    if (ptr_ != NULL) {
       ptr_->release();
     }
   }
 
   void reset(type* ptr = NULL) {
-    if(ptr != NULL) {
+    if (ptr != NULL) {
       ptr->retain();
     }
     type* temp = ptr_;
     ptr_ = ptr;
-    if(temp != NULL) {
+    if (temp != NULL) {
       temp->release();
     }
   }

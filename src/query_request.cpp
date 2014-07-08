@@ -20,9 +20,9 @@
 namespace cass {
 
 int QueryRequest::encode(int version, BufferVec* bufs) const {
-  if(version == 1) {
+  if (version == 1) {
     return encode_v1(bufs);
-  } else if(version == 2) {
+  } else if (version == 2) {
     return encode_v2(bufs);
   } else {
     return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;

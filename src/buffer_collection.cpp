@@ -15,7 +15,7 @@
 */
 
 #include "buffer_collection.hpp"
-#include "cassandra.hpp"
+#include "types.hpp"
 
 
 extern "C" {
@@ -94,11 +94,11 @@ CassError cass_collection_append_decimal(CassCollection* collection,
 namespace cass {
 
 int BufferCollection::encode(int version, BufferVec* bufs) const {
-  if(version != 1 && version != 2) return -1;
+  if (version != 1 && version != 2) return -1;
 
   int value_size = sizeof(uint16_t);
 
-  for(BufferVec::const_iterator it = bufs_.begin(),
+  for (BufferVec::const_iterator it = bufs_.begin(),
       end = bufs_.end(); it != end; ++it) {
     value_size += sizeof(uint16_t);
     value_size += it->size();
@@ -111,7 +111,7 @@ int BufferCollection::encode(int version, BufferVec* bufs) const {
   size_t pos = buf.encode_int32(0, value_size);
 
   pos = buf.encode_uint16(pos, is_map_ ? bufs_.size() / 2 : bufs_.size());
-  for(BufferVec::const_iterator it = bufs_.begin(),
+  for (BufferVec::const_iterator it = bufs_.begin(),
       end = bufs_.end(); it != end; ++it) {
     pos = buf.encode_uint16(pos, it->size());
     pos = buf.copy(pos, it->data(), it->size());

@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "cassandra.hpp"
+#include "types.hpp"
 #include "statement.hpp"
 #include "query_request.hpp"
 
@@ -128,12 +128,12 @@ int32_t Statement::encode_values(int version, BufferVec* bufs) const {
   int32_t values_size = 0;
   for (ValueVec::const_iterator it = values_.begin(), end = values_.end();
        it != end; ++it) {
-    if(it->is_empty()) {
+    if (it->is_empty()) {
       Buffer buf(sizeof(int32_t));
       buf.encode_int32(0, -1); // [bytes] "null"
       bufs->push_back(buf);
       values_size += sizeof(int32_t);
-    } else if(it->is_collection()) {
+    } else if (it->is_collection()) {
       values_size += it->collection()->encode(version, bufs);
     } else {
       bufs->push_back(*it);

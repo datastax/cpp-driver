@@ -104,7 +104,7 @@ public:
   const MetaDataVec& column_metadata() const { return column_metadata_; }
 
   std::string paging_state() const {
-    if(paging_state_ != NULL) {
+    if (paging_state_ != NULL) {
       return std::string(paging_state_, paging_state_size_);
     }
     return std::string();

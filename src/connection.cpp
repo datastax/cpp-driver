@@ -76,7 +76,9 @@ void Connection::StartupHandler::on_error(CassError code,
 }
 
 void Connection::StartupHandler::on_timeout() {
-  connection_->notify_error("Timed out during startup");
+  if (!connection_->is_closing()) {
+    connection_->notify_error("Timed out during startup");
+  }
 }
 
 void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
@@ -279,7 +281,7 @@ bool Connection::execute(ResponseCallback* response_callback) {
   internal_request->stream = stream;
 
   ScopedPtr<BufferVec> bufs(request->encode(protocol_version_, 0x00, stream));
-  if(!bufs) {
+  if (!bufs) {
     internal_request->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
                                "Operation unsupported by this protocol version");
     return true; // Don't retry
@@ -451,9 +453,6 @@ void Connection::on_close(uv_handle_t* handle) {
   connection->logger_->debug("Connection to '%s' closed",
                              connection->host_string_.c_str());
 
-  connection->state_ = CLIENT_STATE_CLOSED;
-  connection->event_received();
-
   while (!connection->pending_requests_.is_empty()) {
     InternalRequest* request = connection->pending_requests_.front();
     if (request->state() == InternalRequest::REQUEST_STATE_WRITING ||
@@ -464,6 +463,9 @@ void Connection::on_close(uv_handle_t* handle) {
     connection->pending_requests_.remove(request);
     delete request;
   }
+
+  connection->state_ = CLIENT_STATE_CLOSED;
+  connection->event_received();
 
   if (connection->closed_callback_) {
     connection->closed_callback_(connection);

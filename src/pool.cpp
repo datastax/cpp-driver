@@ -15,7 +15,7 @@
 namespace cass {
 
 static bool least_busy_comp(Connection* a, Connection* b) {
-  return a->available_streams() < b->available_streams();
+  return a->pending_request_count() < b->pending_request_count();
 }
 
 Pool::PoolHandler::PoolHandler(Pool* pool, Connection* connection,
@@ -166,9 +166,15 @@ Connection* Pool::borrow_connection(const std::string& keyspace) {
     return NULL;
   }
 
-  maybe_spawn_connection(keyspace);
+  Connection* connection = find_least_busy();
 
-  return find_least_busy();
+  if (connection == NULL ||
+      connection->pending_request_count() >=
+        config_.max_simultaneous_requests_threshold()) {
+      maybe_spawn_connection(keyspace);
+  }
+
+  return connection;
 }
 
 bool Pool::execute(Connection* connection, RequestHandler* request_handler) {
@@ -243,9 +249,9 @@ void Pool::maybe_spawn_connection(const std::string& keyspace) {
 }
 
 Connection* Pool::find_least_busy() {
-  ConnectionVec::iterator it = std::max_element(
+  ConnectionVec::iterator it = std::min_element(
       connections_.begin(), connections_.end(), least_busy_comp);
-  if ((*it)->is_ready() && (*it)->available_streams()) {
+  if ((*it)->is_ready() && (*it)->available_streams() > 0) {
     return *it;
   }
   return NULL;
@@ -287,7 +293,7 @@ void Pool::on_connection_closed(Connection* connection) {
       connection->protocol_version() > 1) {
     protocol_version_ = connection->protocol_version() - 1;
     spawn_connection(connection->keyspace());
-  } else if(connection->is_defunct()) {
+  } else if (connection->is_defunct()) {
     // TODO(mpenick): Conviction policy
     defunct();
   }

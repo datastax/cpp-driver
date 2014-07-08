@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "cassandra.hpp"
+#include "types.hpp"
 #include "future.hpp"
 #include "scoped_ptr.hpp"
 #include "request_handler.hpp"

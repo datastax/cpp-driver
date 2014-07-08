@@ -15,7 +15,7 @@
 */
 
 #include "session.hpp"
-#include "cassandra.hpp"
+#include "types.hpp"
 #include "config.hpp"
 #include "request_handler.hpp"
 #include "logger.hpp"

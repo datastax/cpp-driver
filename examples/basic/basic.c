@@ -38,12 +38,9 @@ void print_error(CassFuture* future) {
 
 
 CassCluster* create_cluster() {
-  const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
   CassCluster* cluster = cass_cluster_new();
-  const char** contact_point = NULL;
-  for(contact_point = contact_points; *contact_point; contact_point++) {
-    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINTS, *contact_point, strlen(*contact_point));
-  }
+  CassString contact_points = cass_string_init("127.0.0.1,127.0.0.2,127.0.0.3");
+  cass_cluster_set_contact_points(cluster, contact_points);
   return cluster;
 }
 

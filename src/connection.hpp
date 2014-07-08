@@ -155,6 +155,8 @@ public:
 
   size_t available_streams() { return stream_manager_.available_streams(); }
 
+  size_t pending_request_count() { return pending_requests_.size(); }
+
   bool has_requests_pending() {
     return pending_requests_.size() - timed_out_request_count_ > 0;
   }

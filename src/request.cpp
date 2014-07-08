@@ -30,11 +30,11 @@ namespace cass {
 BufferVec* Request::encode(int version, int flags, int stream) const {
   ScopedPtr<BufferVec> bufs(new BufferVec());
 
-  if(version == 1 || version == 2) {
+  if (version == 1 || version == 2) {
     bufs->push_back(Buffer()); // Placeholder
 
     int32_t length = encode(version, bufs.get());
-    if(length < 0) {
+    if (length < 0) {
       return NULL;
     }
 

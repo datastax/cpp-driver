@@ -12,7 +12,7 @@ Buffer::Buffer(const BufferCollection* collection)
 Buffer::~Buffer() {
   if (size_ > FIXED_BUFFER_SIZE) {
     data_.ref.array->release();
-  } else if(size_ == IS_COLLECTION) {
+  } else if (size_ == IS_COLLECTION) {
     data_.ref.collection->release();
   }
 }
@@ -28,16 +28,16 @@ void Buffer::copy(const Buffer& buffer) {
   if (buffer.size_ > FIXED_BUFFER_SIZE) {
     buffer.data_.ref.array->retain();
     data_.ref.array = buffer.data_.ref.array;
-  } else if(buffer.size_ == IS_COLLECTION) {
+  } else if (buffer.size_ == IS_COLLECTION) {
     buffer.data_.ref.collection->retain();
     data_.ref.collection = buffer.data_.ref.collection;
-  } else if(buffer.size_ > 0) {
+  } else if (buffer.size_ > 0) {
     memcpy(data_.fixed, buffer.data_.fixed, buffer.size_);
   }
 
   if (size_ > FIXED_BUFFER_SIZE) {
     temp.array->release();
-  } else if(size_ == IS_COLLECTION) {
+  } else if (size_ == IS_COLLECTION) {
     temp.collection->release();
   }
 

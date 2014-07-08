@@ -15,7 +15,7 @@
 */
 
 #include "batch_request.hpp"
-#include "cassandra.hpp"
+#include "types.hpp"
 #include "serialization.hpp"
 #include "statement.hpp"
 #include "execute_request.hpp"
@@ -47,7 +47,7 @@ CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
 namespace cass {
 
 int BatchRequest::encode(int version, BufferVec* bufs) const {
-  if(version != 2) {
+  if (version != 2) {
     return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
   }
   return encode_v2(bufs);
@@ -92,7 +92,7 @@ int BatchRequest::encode_v2(BufferVec* bufs) const {
     Buffer& buf = bufs->back();
     size_t pos = buf.encode_byte(0, statement->kind());
 
-    if(statement->kind() == CASS_BATCH_KIND_QUERY) {
+    if (statement->kind() == CASS_BATCH_KIND_QUERY) {
       pos = buf.encode_long_string(pos,
                                  statement->query().data(),
                                  statement->query().size());
@@ -103,7 +103,7 @@ int BatchRequest::encode_v2(BufferVec* bufs) const {
     }
 
     buf.encode_uint16(pos, statement->values_count());
-    if(statement->values_count() > 0) {
+    if (statement->values_count() > 0) {
       length += statement->encode_values(version, bufs);
     }
   }
