@@ -26,44 +26,54 @@ struct StressTests : test_utils::MultipleNodesTest {
 
 BOOST_FIXTURE_TEST_SUITE(stress, StressTests)
 
-void bind_and_execute_insert(CassSession* session, CassStatement* statement) {
+bool bind_and_execute_insert(CassSession* session, CassStatement* statement) {
   boost::chrono::system_clock::time_point now(boost::chrono::system_clock::now());
   boost::chrono::milliseconds event_time(boost::chrono::duration_cast<boost::chrono::milliseconds>(now.time_since_epoch()));
   std::string text_sample(test_utils::string_from_time_point(now));
 
-  BOOST_REQUIRE(cass_statement_bind_uuid(statement, 0,
-                                         test_utils::generate_time_uuid().uuid) == CASS_OK);
-  BOOST_REQUIRE(cass_statement_bind_int64(statement, 1,
-                                          event_time.count()) == CASS_OK);
-  BOOST_REQUIRE(cass_statement_bind_string(statement, 2,
-                                           cass_string_init2(text_sample.data(), text_sample.size())) == CASS_OK);
+  cass_statement_bind_uuid(statement, 0, test_utils::generate_time_uuid().uuid);
+  cass_statement_bind_int64(statement, 1, event_time.count());
+  cass_statement_bind_string(statement, 2, cass_string_init2(text_sample.data(), text_sample.size()));
 
   test_utils::CassFuturePtr future = test_utils::make_shared(cass_session_execute(session, statement));
   cass_future_wait(future.get());
   CassError code = cass_future_error_code(future.get());
   if(code != CASS_OK && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT) { // Timeout is okay
     CassString message = cass_future_error_message(future.get());
-    BOOST_FAIL("Error occured during insert '" << std::string(message.data, message.length) << "' (" << code << ")");
+    fprintf(stderr, "Error occured during insert '%.*s'\n", static_cast<int>(message.length), message.data);
+    return false;
   }
+
+  return true;
 }
 
-void insert_task(CassSession* session, const std::string& query, CassConsistency consistency, int rows_per_id) {
+bool insert_task(CassSession* session, const std::string& query, CassConsistency consistency, int rows_per_id) {
+  bool result = true;
   for(int i = 0; i < rows_per_id; ++i) {
     test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 3));
     cass_statement_set_consistency(statement.get(), consistency);
-    bind_and_execute_insert(session, statement.get());
+    if(!bind_and_execute_insert(session, statement.get())) {
+      result = false;
+    }
   }
+  return result;
 }
 
-void insert_prepared_task(CassSession* session, const CassPrepared* prepared, CassConsistency consistency, int rows_per_id) {
+bool insert_prepared_task(CassSession* session, const CassPrepared* prepared, CassConsistency consistency, int rows_per_id) {
+  bool result = true;
   for(int i = 0; i < rows_per_id; ++i) {
     test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared, 3));
     cass_statement_set_consistency(statement.get(), consistency);
-    bind_and_execute_insert(session, statement.get());
+    if(!bind_and_execute_insert(session, statement.get())) {
+      result = false;
+    }
   }
+  return result;
 }
 
-void select_task(CassSession* session, const std::string& query, CassConsistency consistency, int num_iterations) {
+bool select_task(CassSession* session, const std::string& query, CassConsistency consistency, int num_iterations) {
+  bool result = true;
+
   test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 0));
   cass_statement_set_consistency(statement.get(), consistency);
   for(int i = 0; i < num_iterations; ++i) {
@@ -75,19 +85,30 @@ void select_task(CassSession* session, const std::string& query, CassConsistency
        && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT
        && code != CASS_ERROR_SERVER_READ_TIMEOUT) { // Timeout is okay
       CassString message = cass_future_error_message(future.get());
-      BOOST_FAIL("Error occured during select '" << std::string(message.data, message.length) << "' (" << code << ")");
+      fprintf(stderr, "Error occured during select '%.*s'\n", static_cast<int>(message.length), message.data);
+      result = false;
     }
 
     if(code == CASS_OK) {
       test_utils::CassResultPtr result = test_utils::make_shared(cass_future_get_result(future.get()));
-      BOOST_REQUIRE(cass_result_row_count(result.get()) > 0);
+      if(cass_result_row_count(result.get()) == 0) {
+        fprintf(stderr, "No rows returned from query\n");
+        result = false;
+      }
     }
   }
+
+  return result;
 }
 
-void kill_task(boost::shared_ptr<cql::cql_ccm_bridge_t> ccm) {
+bool kill_task(boost::shared_ptr<cql::cql_ccm_bridge_t> ccm) {
   boost::this_thread::sleep_for(boost::chrono::milliseconds(300));
   ccm->kill(2);
+  return true;
+}
+
+bool is_failed(boost::shared_future<bool> future) {
+  return future.get() == false;
 }
 
 BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
@@ -118,7 +139,7 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
   insert_task(session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id);
   select_task(session.get(), select_query, CASS_CONSISTENCY_QUORUM, num_iterations);
 
-  std::vector<boost::shared_future<void> > futures;
+  std::vector<boost::shared_future<bool> > futures;
 
   for(int i = 0; i < 10; ++i) {
     futures.push_back(boost::async(boost::launch::async, boost::bind(insert_task, session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)));
@@ -136,6 +157,7 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
   }
 
   boost::wait_for_all(futures.begin(), futures.end());
+  BOOST_REQUIRE(std::none_of(futures.begin(), futures.end(), is_failed));
 }
 
 BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
@@ -166,7 +188,7 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
   insert_task(session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id);
   select_task(session.get(), select_query, CASS_CONSISTENCY_QUORUM, num_iterations);
 
-  std::vector<boost::shared_future<void> > futures;
+  std::vector<boost::shared_future<bool> > futures;
 
   for(int i = 0; i < 10; ++i) {
     futures.push_back(boost::async(boost::launch::async, boost::bind(insert_task, session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)));
@@ -186,6 +208,7 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
   futures.insert(futures.begin() + 8, boost::async(boost::launch::async, boost::bind(kill_task, ccm)));
 
   boost::wait_for_all(futures.begin(), futures.end());
+  BOOST_REQUIRE(std::none_of(futures.begin(), futures.end(), is_failed));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

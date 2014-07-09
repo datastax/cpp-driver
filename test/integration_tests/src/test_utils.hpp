@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <limits>
 
 #include <boost/asio/ip/address.hpp>
 #include <boost/shared_ptr.hpp>
@@ -10,6 +11,14 @@
 #include "cassandra.h"
 
 #include "cql_ccm_bridge_configuration.hpp"
+
+#ifdef min
+#undef min
+#endif
+
+#ifdef max
+#undef max
+#endif
 
 namespace cql {
 

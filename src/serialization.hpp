@@ -48,8 +48,8 @@ inline char* decode_byte(char* input, uint8_t& output) {
 }
 
 inline void encode_uint16(char* output, uint16_t value) {
-  output[0] = value >> 8;
-  output[1] = value >> 0;
+  output[0] = static_cast<char>(value >> 8);
+  output[1] = static_cast<char>(value >> 0);
 }
 
 inline char* decode_uint16(char* input, uint16_t& output) {
@@ -59,10 +59,10 @@ inline char* decode_uint16(char* input, uint16_t& output) {
 }
 
 inline void encode_int32(char* output, int32_t value) {
-  output[0] = value >> 24;
-  output[1] = value >> 16;
-  output[2] = value >> 8;
-  output[3] = value >> 0;
+  output[0] = static_cast<char>(value >> 24);
+  output[1] = static_cast<char>(value >> 16);
+  output[2] = static_cast<char>(value >> 8);
+  output[3] = static_cast<char>(value >> 0);
 }
 
 inline char* decode_int32(char* input, int32_t& output) {
@@ -74,14 +74,14 @@ inline char* decode_int32(char* input, int32_t& output) {
 }
 
 inline void encode_int64(char* output, int64_t value) {
-  output[0] = value >> 56;
-  output[1] = value >> 48;
-  output[2] = value >> 40;
-  output[3] = value >> 32;
-  output[4] = value >> 24;
-  output[5] = value >> 16;
-  output[6] = value >> 8;
-  output[7] = value >> 0;
+  output[0] = static_cast<char>(value >> 56);
+  output[1] = static_cast<char>(value >> 48);
+  output[2] = static_cast<char>(value >> 40);
+  output[3] = static_cast<char>(value >> 32);
+  output[4] = static_cast<char>(value >> 24);
+  output[5] = static_cast<char>(value >> 16);
+  output[6] = static_cast<char>(value >> 8);
+  output[7] = static_cast<char>(value >> 0);
 }
 
 inline char* decode_int64(char* input, int64_t& output) {
