@@ -52,7 +52,7 @@ public:
 
   Buffer(const char* data, size_t size)
     : size_(size) {
-    if (size > FIXED_BUFFER_SIZE) {
+    if (size > static_cast<size_t>(FIXED_BUFFER_SIZE)) {
       BufferArray* array = new BufferArray(size);
       memcpy(array->data(), data, size);
       data_.ref.array = array;
@@ -64,7 +64,7 @@ public:
   explicit
   Buffer(size_t size)
     : size_(size) {
-    if (size > FIXED_BUFFER_SIZE) {
+    if (size > static_cast<size_t>(FIXED_BUFFER_SIZE)) {
       data_.ref.array = new BufferArray(size);
     }
   }
