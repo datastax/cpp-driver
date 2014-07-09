@@ -286,7 +286,6 @@ typedef void (*CassLogCallback)(void* data,
 CASS_EXPORT CassCluster*
 cass_cluster_new();
 
-
 /**
  * Sets/Appends contact points. This *MUST* be set. The first call sets
  * the contact points and any subsequent calls appends additional contact
@@ -329,8 +328,9 @@ cass_cluster_set_port(CassCluster* cluster,
  * @param[in] protocol_version
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CassError cass_cluster_set_protocol_version(CassCluster* cluster,
-                                            int protocol_version);
+CASS_EXPORT CassError
+cass_cluster_set_protocol_version(CassCluster* cluster,
+                                  int protocol_version);
 
 /**
  * Sets the number of IO threads. This is the number of threads
@@ -342,8 +342,9 @@ CassError cass_cluster_set_protocol_version(CassCluster* cluster,
  * @param[in] num_threads
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CassError cass_cluster_set_num_threads_io(CassCluster* cluster,
-                                          unsigned num_threads);
+CASS_EXPORT CassError
+cass_cluster_set_num_threads_io(CassCluster* cluster,
+                                unsigned num_threads);
 
 /**
  * Sets the size of the the fixed size queue that stores
@@ -355,8 +356,9 @@ CassError cass_cluster_set_num_threads_io(CassCluster* cluster,
  * @param[in] queue_size
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CassError cass_cluster_set_queue_size_io(CassCluster* cluster,
-                                         unsigned queue_size);
+CASS_EXPORT CassError
+cass_cluster_set_queue_size_io(CassCluster* cluster,
+                               unsigned queue_size);
 
 /**
  * Sets the number of connections made to each server in each
@@ -368,8 +370,9 @@ CassError cass_cluster_set_queue_size_io(CassCluster* cluster,
  * @param[in] num_connections
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CassError cass_cluster_set_core_connections_per_host(CassCluster* cluster,
-                                                     unsigned num_connections);
+CASS_EXPORT CassError
+cass_cluster_set_core_connections_per_host(CassCluster* cluster,
+                                           unsigned num_connections);
 
 /**
  * Sets the maximum number of connections made to each server in each
@@ -381,8 +384,9 @@ CassError cass_cluster_set_core_connections_per_host(CassCluster* cluster,
  * @param[in] num_connections
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CassError cass_cluster_set_max_connections_per_host(CassCluster* cluster,
-                                                    unsigned num_connections);
+CASS_EXPORT CassError
+cass_cluster_set_max_connections_per_host(CassCluster* cluster,
+                                          unsigned num_connections);
 
 /**
  * Sets the maximum number of connections that will be simultaneously created.
@@ -395,8 +399,9 @@ CassError cass_cluster_set_max_connections_per_host(CassCluster* cluster,
  * @param[in] num_connections
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CassError cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
-                                                     unsigned num_connections);
+CASS_EXPORT CassError
+cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
+                                           unsigned num_connections);
 
 /**
  * Sets the timeout for connecting to a server.
@@ -407,8 +412,9 @@ CassError cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
  * @param[in] timeout Connect timeout in milliseconds
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CassError cass_cluster_set_connect_timeout(CassCluster* cluster,
-                                              unsigned timeout);
+CASS_EXPORT CassError
+cass_cluster_set_connect_timeout(CassCluster* cluster,
+                                 unsigned timeout);
 /**
  * Sets the timeout for sending a request to a server.
  *
@@ -418,8 +424,9 @@ CassError cass_cluster_set_connect_timeout(CassCluster* cluster,
  * @param[in] timeout Write timeout in milliseconds
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CassError cass_cluster_set_write_timeout(CassCluster* cluster,
-                                         unsigned timeout);
+CASS_EXPORT CassError
+cass_cluster_set_write_timeout(CassCluster* cluster,
+                               unsigned timeout);
 /**
  * Sets the timeout for waiting for a response from a server.
  *
@@ -429,8 +436,9 @@ CassError cass_cluster_set_write_timeout(CassCluster* cluster,
  * @param[in] timeout Read timeout in milliseconds
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CassError cass_cluster_set_read_timeout(CassCluster* cluster,
-                                        unsigned timeout);
+CASS_EXPORT CassError
+cass_cluster_set_read_timeout(CassCluster* cluster,
+                              unsigned timeout);
 
 /**
  * Sets the log level.
@@ -441,8 +449,9 @@ CassError cass_cluster_set_read_timeout(CassCluster* cluster,
  * @param[in] log_level
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CassError cass_cluster_set_log_level(CassCluster* cluster,
-                                     CassLogLevel level);
+CASS_EXPORT CassError
+cass_cluster_set_log_level(CassCluster* cluster,
+                           CassLogLevel level);
 
 /**
  * Sets a callback for handling logging events.
@@ -454,9 +463,10 @@ CassError cass_cluster_set_log_level(CassCluster* cluster,
  * @param[in] callback A callback that handles logging events. This is
  * called in a separate thread so access to shared data must by synchronized.
  */
-CassError cass_cluster_set_log_callback(CassCluster* cluster,
-                                        void* data,
-                                        CassLogCallback callback);
+CASS_EXPORT CassError
+cass_cluster_set_log_callback(CassCluster* cluster,
+                              void* data,
+                              CassLogCallback callback);
 
 /**
  * Connnects a session to the cluster.
