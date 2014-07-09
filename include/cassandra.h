@@ -302,8 +302,9 @@ cass_cluster_new();
  *
  * @return CASS_OK if successful, otherwise an error occurred.
  */
-CassError cass_cluster_set_contact_points(CassCluster* cluster,
-                                          CassString contact_points);
+CASS_EXPORT CassError
+cass_cluster_set_contact_points(CassCluster* cluster,
+                                CassString contact_points);
 
 /**
  * Sets the port.
