@@ -106,6 +106,9 @@ void Connection::Request::change_state(Connection::Request::State next_state) {
       } else if (next_state == REQUEST_STATE_WRITE_TIMEOUT) {
         connection->timed_out_request_count_++;
         state_ = next_state;
+      } else if (next_state == REQUEST_STATE_DONE) {
+        stop_timer();
+        state_ = next_state;
       } else {
         assert(false && "Invalid request state after writing");
       }
