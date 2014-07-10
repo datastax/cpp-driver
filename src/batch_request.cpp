@@ -32,9 +32,10 @@ void cass_batch_free(CassBatch* batch) {
   batch->release();
 }
 
-void cass_batch_set_consistency(CassBatch* batch,
+CassError cass_batch_set_consistency(CassBatch* batch,
                                 CassConsistency consistency) {
   batch->set_consistency(consistency);
+  return CASS_OK;
 }
 
 CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {

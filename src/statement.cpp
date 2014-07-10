@@ -33,24 +33,28 @@ void cass_statement_free(CassStatement* statement) {
   statement->release();
 }
 
-void cass_statement_set_consistency(CassStatement* statement,
-                                    CassConsistency consistency) {
+CassError cass_statement_set_consistency(CassStatement* statement,
+                                         CassConsistency consistency) {
   statement->set_consistency(consistency);
+  return CASS_OK;
 }
 
-void cass_statement_set_serial_consistency(CassStatement* statement,
-                                      CassConsistency serial_consistency) {
+CassError cass_statement_set_serial_consistency(CassStatement* statement,
+                                                CassConsistency serial_consistency) {
   statement->set_serial_consistency(serial_consistency);
+  return CASS_OK;
 }
 
-void cass_statement_set_paging_size(CassStatement* statement,
-                                    cass_int32_t page_size) {
+CassError cass_statement_set_paging_size(CassStatement* statement,
+                                         cass_int32_t page_size) {
   statement->set_page_size(page_size);
+  return CASS_OK;
 }
 
-void cass_statement_set_paging_state(CassStatement* statement,
-                                     const CassResult* result) {
+CassError cass_statement_set_paging_state(CassStatement* statement,
+                                          const CassResult* result) {
   statement->set_paging_state(result->paging_state());
+  return CASS_OK;
 }
 
 CassError cass_statement_bind_null(CassStatement* statement,

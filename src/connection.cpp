@@ -95,11 +95,9 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
   }
 }
 
-Connection::InternalRequest::InternalRequest(Connection* connection,
-                             ResponseCallback* response_callback)
+Connection::InternalRequest::InternalRequest(Connection* connection)
     : connection(connection)
-    , stream(0)
-    , response_callback_(response_callback)
+    , stream_(0)
     , timer_(NULL)
     , state_(REQUEST_STATE_NEW) {
 }
@@ -115,7 +113,7 @@ void Connection::InternalRequest::on_set(ResponseMessage* response) {
 
 void Connection::InternalRequest::on_error(CassError code, const std::string& message) {
   response_callback_->on_error(code, message);
-  connection->stream_manager_.release_stream(stream);
+  connection->stream_manager_.release_stream(stream_);
 }
 
 void Connection::InternalRequest::on_timeout() {
@@ -269,7 +267,7 @@ void Connection::connect() {
 }
 
 bool Connection::execute(ResponseCallback* response_callback) {
-  ScopedPtr<InternalRequest> internal_request(new InternalRequest(this, response_callback));
+  ScopedPtr<InternalRequest> internal_request(new InternalRequest(this));
 
   const Request* request = response_callback->request();
 
@@ -278,7 +276,8 @@ bool Connection::execute(ResponseCallback* response_callback) {
     return false;
   }
 
-  internal_request->stream = stream;
+  internal_request->set_stream(stream);
+  internal_request->set_response_callback(response_callback);
 
   ScopedPtr<BufferVec> bufs(request->encode(protocol_version_, 0x00, stream));
   if (!bufs) {

@@ -45,10 +45,9 @@ public:
       , max_simultaneous_creation_(1)
       , max_pending_requests_(128 * max_connections_per_host_)
       , max_simultaneous_requests_threshold_(100)
-      // TODO(mpenick): Determine good timeout durations
-      , connect_timeout_(1000)
+      , connect_timeout_(5000)
       , write_timeout_(1000)
-      , read_timeout_(1000)
+      , read_timeout_(12000)
       , log_level_(CASS_LOG_WARN)
       , log_data_(NULL)
       , log_callback_(default_log_callback) {}
@@ -89,6 +88,7 @@ public:
 
   void set_max_connections_per_host(unsigned num_connections) {
     max_connections_per_host_ = num_connections;
+    max_pending_requests_ = 128 * max_connections_per_host_;
   }
 
   unsigned max_simultaneous_creation() const {

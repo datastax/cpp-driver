@@ -299,7 +299,6 @@ cass_cluster_new();
  * names. An empty string will clear the contact points.
  * The string is copied into the statement object; the memory pointed
  * to by this parameter can be freed after this call.
- *
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -404,10 +403,40 @@ CASS_EXPORT CassError
 cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
                                            unsigned num_connections);
 
+
 /**
- * Sets the timeout for connecting to a server.
+ * Sets the maximum number of requests that will wait for a connection to become
+ * available.
  *
- * Default: 1000 milliseconds
+ * Default: 128 * max_connections_per_host
+ *
+ * @param[in] cluster
+ * @param[in] num_requests
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_max_pending_request(CassCluster* cluster,
+                                     unsigned num_requests);
+
+/**
+ * Sets the threshold for the maximum number of simultaneous requests inflight
+ * on a connection before creating a new connection. The number of new connections
+ * created will not exceed max_connections_per_host.
+ *
+ * Default: 100
+ *
+ * @param[in] cluster
+ * @param[in] num_requests
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_max_simultaneous_requests_threshold(CassCluster* cluster,
+                                                     unsigned num_requests);
+
+/**
+ * Sets the timeout for connecting to a node.
+ *
+ * Default: 5000 milliseconds
  *
  * @param[in] cluster
  * @param[in] timeout Connect timeout in milliseconds
@@ -417,7 +446,7 @@ CASS_EXPORT CassError
 cass_cluster_set_connect_timeout(CassCluster* cluster,
                                  unsigned timeout);
 /**
- * Sets the timeout for sending a request to a server.
+ * Sets the timeout for sending a request to a  node.
  *
  * Default: 1000 milliseconds
  *
@@ -429,9 +458,9 @@ CASS_EXPORT CassError
 cass_cluster_set_write_timeout(CassCluster* cluster,
                                unsigned timeout);
 /**
- * Sets the timeout for waiting for a response from a server.
+ * Sets the timeout for waiting for a response from a node.
  *
- * Default: 1000 milliseconds
+ * Default: 12000 milliseconds
  *
  * @param[in] cluster
  * @param[in] timeout Read timeout in milliseconds
@@ -692,30 +721,39 @@ cass_statement_free(CassStatement* statement);
 /**
  * Sets the statement's consistency level.
  *
+ * Default: CASS_CONSISTENCY_ONE
+ *
  * @param[in] statement
  * @param[in] consistency
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT void
+CASS_EXPORT CassError
 cass_statement_set_consistency(CassStatement* statement,
                                CassConsistency consistency);
 
 /**
  * Sets the statement's serial consistency level.
  *
+ * Default: Not set
+ *
  * @param[in] statement
  * @param[in] serial_consistency
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT void
+CASS_EXPORT CassError
 cass_statement_set_serial_consistency(CassStatement* statement,
                                       CassConsistency serial_consistency);
 
 /**
  * Sets the statement's page size.
  *
+ * Default: -1 (Disabled)
+ *
  * @param[in] statement
  * @param[in] page_size
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT void
+CASS_EXPORT CassError
 cass_statement_set_paging_size(CassStatement* statement,
                                cass_int32_t page_size);
 
@@ -724,8 +762,9 @@ cass_statement_set_paging_size(CassStatement* statement,
  *
  * @param[in] statement
  * @param[in] result
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT void
+CASS_EXPORT CassError
 cass_statement_set_paging_state(CassStatement* statement,
                                 const CassResult* result);
 
@@ -965,8 +1004,9 @@ cass_batch_free(CassBatch* batch);
  *
  * @param[in] batch
  * @param[in] consistency The batch's read/write consistency.
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT void
+CASS_EXPORT CassError
 cass_batch_set_consistency(CassBatch* batch,
                            CassConsistency consistency);
 

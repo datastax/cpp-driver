@@ -73,7 +73,15 @@ public:
       REQUEST_STATE_DONE
     };
 
-    InternalRequest(Connection* connection, ResponseCallback* response_callback);
+    InternalRequest(Connection* connection);
+
+    void set_stream(int8_t stream) {
+      stream_ = stream;
+    }
+
+    void set_response_callback(ResponseCallback* response_callback) {
+      response_callback_.reset(response_callback);
+    }
 
     void on_set(ResponseMessage* response);
     void on_error(CassError code, const std::string& message);
@@ -86,7 +94,6 @@ public:
     void stop_timer();
 
     Connection* connection;
-    int8_t stream;
 
   private:
     void cleanup();
@@ -94,6 +101,7 @@ public:
     static void on_request_timeout(Timer* timer);
 
   private:
+    int8_t stream_;
     ScopedPtr<ResponseCallback> response_callback_;
     Timer* timer_;
     State state_;
