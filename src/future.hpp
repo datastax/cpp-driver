@@ -21,7 +21,7 @@
 #include "macros.hpp"
 #include "scoped_mutex.hpp"
 #include "scoped_ptr.hpp"
-#include "ref_counted.h"
+#include "ref_counted.hpp"
 
 #include <uv.h>
 #include <assert.h>

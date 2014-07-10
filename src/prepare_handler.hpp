@@ -19,7 +19,7 @@
 
 #include "response_callback.hpp"
 #include "scoped_ptr.hpp"
-#include "ref_counted.h"
+#include "ref_counted.hpp"
 
 namespace cass {
 

@@ -25,7 +25,7 @@
 #include "stream_manager.hpp"
 #include "list.hpp"
 #include "scoped_ptr.hpp"
-#include "ref_counted.h"
+#include "ref_counted.hpp"
 #include "writer.hpp"
 
 #include "third_party/boost/boost/function.hpp"

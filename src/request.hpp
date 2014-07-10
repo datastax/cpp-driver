@@ -19,7 +19,7 @@
 
 #include "buffer.hpp"
 #include "macros.hpp"
-#include "ref_counted.h"
+#include "ref_counted.hpp"
 
 namespace cass {
 

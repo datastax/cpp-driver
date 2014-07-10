@@ -18,7 +18,7 @@
 #define __CASS_BUFFER_COLLECTION_HPP_INCLUDED__
 
 #include "buffer.hpp"
-#include "ref_counted.h"
+#include "ref_counted.hpp"
 
 namespace cass {
 

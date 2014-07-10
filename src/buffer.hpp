@@ -17,7 +17,7 @@
 #ifndef __CASS_BUFFER_HPP_INCLUDED__
 #define __CASS_BUFFER_HPP_INCLUDED__
 
-#include "ref_counted.h"
+#include "ref_counted.hpp"
 #include "serialization.hpp"
 
 #include "third_party/boost/boost/cstdint.hpp"
