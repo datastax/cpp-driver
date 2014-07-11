@@ -48,31 +48,31 @@ bool bind_and_execute_insert(CassSession* session, CassStatement* statement) {
 }
 
 bool insert_task(CassSession* session, const std::string& query, CassConsistency consistency, int rows_per_id) {
-  bool result = true;
+  bool is_successful = true;
   for(int i = 0; i < rows_per_id; ++i) {
     test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 3));
     cass_statement_set_consistency(statement.get(), consistency);
     if(!bind_and_execute_insert(session, statement.get())) {
-      result = false;
+      is_successful = false;
     }
   }
-  return result;
+  return is_successful;
 }
 
 bool insert_prepared_task(CassSession* session, const CassPrepared* prepared, CassConsistency consistency, int rows_per_id) {
-  bool result = true;
+  bool is_successful = true;
   for(int i = 0; i < rows_per_id; ++i) {
     test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared, 3));
     cass_statement_set_consistency(statement.get(), consistency);
     if(!bind_and_execute_insert(session, statement.get())) {
-      result = false;
+      is_successful = false;
     }
   }
-  return result;
+  return is_successful;
 }
 
 bool select_task(CassSession* session, const std::string& query, CassConsistency consistency, int num_iterations) {
-  bool result = true;
+  bool is_successful = true;
 
   test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 0));
   cass_statement_set_consistency(statement.get(), consistency);
@@ -86,19 +86,19 @@ bool select_task(CassSession* session, const std::string& query, CassConsistency
        && code != CASS_ERROR_SERVER_READ_TIMEOUT) { // Timeout is okay
       CassString message = cass_future_error_message(future.get());
       fprintf(stderr, "Error occured during select '%.*s'\n", static_cast<int>(message.length), message.data);
-      result = false;
+      is_successful = false;
     }
 
     if(code == CASS_OK) {
       test_utils::CassResultPtr result = test_utils::make_shared(cass_future_get_result(future.get()));
       if(cass_result_row_count(result.get()) == 0) {
         fprintf(stderr, "No rows returned from query\n");
-        result = false;
+        is_successful = false;
       }
     }
   }
 
-  return result;
+  return is_successful;
 }
 
 bool kill_task(boost::shared_ptr<cql::cql_ccm_bridge_t> ccm) {

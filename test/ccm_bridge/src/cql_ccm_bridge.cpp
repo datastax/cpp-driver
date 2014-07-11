@@ -366,8 +366,9 @@ namespace cql {
 	{
 		boost::shared_ptr<cql_ccm_bridge_t> bridge(new cql_ccm_bridge_t(settings));
 
+    bridge->execute_ccm_command(boost::str(boost::format("remove %1%") % name));
 		bridge->execute_ccm_command(boost::str(
-			boost::format("Create %1% -b -i %2% -v %3%")
+      boost::format("create %1% -b -i %2% -v %3%")
 				% name
 				% settings.ip_prefix()
 				% settings.cassandara_version()));
@@ -382,8 +383,9 @@ namespace cql {
 	{
 		boost::shared_ptr<cql_ccm_bridge_t> bridge(new cql_ccm_bridge_t(settings));
 
+    bridge->execute_ccm_command(boost::str(boost::format("remove %1%") % name));
 		bridge->execute_ccm_command(boost::str(
-			boost::format("Create %1% -n %2% -s -i %3% -b -v %4%")
+      boost::format("create %1% -n %2% -s -i %3% -b -v %4%")
 				% name
 				% nodes_count
 				% settings.ip_prefix()
@@ -400,8 +402,9 @@ namespace cql {
 	{
 		boost::shared_ptr<cql_ccm_bridge_t> bridge(new cql_ccm_bridge_t(settings));
 
+    bridge->execute_ccm_command(boost::str(boost::format("remove %1%") % name));
 		bridge->execute_ccm_command(boost::str(
-			boost::format("Create %1% -n %2%:%3% -s -i %4% -b -v %5%")
+      boost::format("create %1% -n %2%:%3% -s -i %4% -b -v %5%")
 				% name
 				% nodes_count_dc1
 				% nodes_count_dc2

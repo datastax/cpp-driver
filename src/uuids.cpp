@@ -49,6 +49,7 @@ public:
 };
 
 UuidsInitializer uuids_intitalizer_;
+
 }
 
 namespace cass {
@@ -83,7 +84,6 @@ void Uuids::generate_v4(Uuid uuid) {
   lock.unlock();
 
   copy_timestamp(msb, 4, uuid);
-
   lsb = (lsb & 0x3FFFFFFFFFFFFFFFL) | 0x8000000000000000L; // RFC4122 variant
   copy_clock_seq_and_node(lsb, uuid);
 }

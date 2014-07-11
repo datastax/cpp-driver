@@ -489,7 +489,7 @@ cass_cluster_set_log_level(CassCluster* cluster,
  * Default: An internal callback that prints to stdout
  *
  * @param[in] cluster
- * @param[in] data An opaque data object passed to the callback
+ * @param[in] data An opaque data object passed to the callback.
  * @param[in] callback A callback that handles logging events. This is
  * called in a separate thread so access to shared data must by synchronized.
  */
@@ -535,7 +535,7 @@ cass_cluster_free(CassCluster* cluster);
 /**
  * Closes the session instance, outputs a close future which can
  * be used to determine when the session has been terminated. This allows
- * in-flight requests to finish. It is an error to call this method twices
+ * in-flight requests to finish. It is an error to call this method twice
  * with the same session.
  *
  * @param[in] session

@@ -36,11 +36,12 @@ char* CollectionIterator::decode_value(char* position) {
 }
 
 bool CollectionIterator::next() {
-  if (index_++ < count_) {
-    position_ = decode_value(position_);
-    return true;
+  if (index_ + 1 >= count_) {
+    return false;
   }
-  return false;
+  ++index_;
+  position_ = decode_value(position_);
+  return true;
 }
 
 } // namespace cass

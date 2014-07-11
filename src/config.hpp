@@ -88,7 +88,10 @@ public:
 
   void set_max_connections_per_host(unsigned num_connections) {
     max_connections_per_host_ = num_connections;
-    max_pending_requests_ = 128 * max_connections_per_host_;
+    unsigned temp = 128 * max_connections_per_host_;
+    if (temp > max_pending_requests_) {
+      max_pending_requests_ = temp;
+    }
   }
 
   unsigned max_simultaneous_creation() const {

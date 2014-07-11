@@ -31,14 +31,14 @@ void print_error(CassFuture* future) {
 
 CassCluster* create_cluster() {
   CassCluster* cluster = cass_cluster_new();
-  CassString contact_points = cass_string_init("127.0.0.1,127.0.0.2,127.0.0.3");
+  CassString contact_points = cass_string_init("127.0.0.1,127.0.0.2");
   cass_cluster_set_contact_points(cluster, contact_points);
+  cass_cluster_set_log_level(cluster, CASS_LOG_WARN);
   cass_cluster_set_queue_size_io(cluster, 16384);
   cass_cluster_set_num_threads_io(cluster, 2);
-#if 1
+  cass_cluster_set_max_pending_request(cluster, 10000);
   cass_cluster_set_core_connections_per_host(cluster, 2);
   cass_cluster_set_max_connections_per_host(cluster, 4);
-#endif
   return cluster;
 }
 
@@ -79,10 +79,8 @@ CassError execute_query(CassSession* session, const char* query) {
   return rc;
 }
 
-void insert_into_perf(CassSession* session, const char* key) {
-  CassError rc = 0;
+void insert_into_perf(CassSession* session) {
   size_t i;
-  CassStatement* statement = NULL;
   CassString query = cass_string_init("INSERT INTO songs (id, title, album, artist, tags) VALUES (?, ?, ?, ?, ?);");
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
 
@@ -96,8 +94,7 @@ void insert_into_perf(CassSession* session, const char* key) {
 
   for(i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
     CassUuid id;
-
-    statement = cass_statement_new(query, 5);
+    CassStatement* statement = cass_statement_new(query, 5);
 
     cass_uuid_generate_time(id);
     cass_statement_bind_uuid(statement, 0, id);
@@ -107,20 +104,40 @@ void insert_into_perf(CassSession* session, const char* key) {
     cass_statement_bind_collection(statement, 4, collection);
 
     futures[i] = cass_session_execute(session, statement);
-
     cass_statement_free(statement);
   }
 
   for(i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
     CassFuture* future = futures[i];
-
-    cass_future_wait(future);
-
-    rc = cass_future_error_code(future);
+    CassError rc = cass_future_error_code(future);
     if(rc != CASS_OK) {
       print_error(future);
     }
+    cass_future_free(future);
+  }
+}
 
+void select_from_perf(CassSession* session) {
+  int i;
+  CassString query = cass_string_init("SELECT * FROM songs LIMIT 3;");
+  CassFuture* futures[NUM_CONCURRENT_REQUESTS];
+
+  for(i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
+    CassStatement* statement = cass_statement_new(query, 0);
+    futures[i] = cass_session_execute(session, statement);
+    cass_statement_free(statement);
+  }
+
+  for(i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
+    CassFuture* future = futures[i];
+    CassError rc = cass_future_error_code(future);
+    if(rc != CASS_OK) {
+      print_error(future);
+    } else {
+      const CassResult* result = cass_future_get_result(future);
+      assert(cass_result_row_count(result) == 3);
+      cass_result_free(result);
+    }
     cass_future_free(future);
   }
 }
@@ -139,7 +156,8 @@ int main() {
   execute_query(session, "CREATE TABLE songs (id uuid PRIMARY KEY, title text, "
                          "album text, artist text, tags set<text>, data blob);");
 
-  insert_into_perf(session, "test");
+  insert_into_perf(session);
+  select_from_perf(session);
 
   close_future = cass_session_close(session);
   cass_future_wait(close_future);

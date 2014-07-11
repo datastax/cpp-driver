@@ -310,6 +310,9 @@ void Pool::on_timeout(Timer* timer) {
 
 bool Pool::wait_for_connection(RequestHandler* request_handler) {
   if (pending_request_queue_.size() + 1 > config_.max_pending_requests()) {
+    logger_->warn("Exceeded the max pending requests setting of %u on '%s'",
+                  config_.max_pending_requests(),
+                  host_.address.to_string().c_str());
     return false;
   }
 

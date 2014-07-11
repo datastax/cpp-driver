@@ -100,12 +100,13 @@ const std::string lorem_ipsum = "Lorem ipsum dolor sit amet, consectetur adipisc
 
 //-----------------------------------------------------------------------------------
 
-MultipleNodesTest::MultipleNodesTest(int numberOfNodesDC1, int numberOfNodesDC2) : conf(cql::get_ccm_bridge_configuration()) {
+MultipleNodesTest::MultipleNodesTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version)
+  : conf(cql::get_ccm_bridge_configuration()) {
   boost::debug::detect_memory_leaks(true);
-  ccm = cql::cql_ccm_bridge_t::create(conf, "test", numberOfNodesDC1, numberOfNodesDC2);
+  ccm = cql::cql_ccm_bridge_t::create(conf, "test", num_nodes_dc1, num_nodes_dc2);
 
   cluster = cass_cluster_new();
-  for(int i = 0; i < numberOfNodesDC1; ++i) {
+  for(int i = 0; i < num_nodes_dc1; ++i) {
     std::string contact_point(conf.ip_prefix() + boost::lexical_cast<std::string>(i + 1));
     cass_cluster_set_contact_points(cluster, cass_string_init2(contact_point.data(), contact_point.size()));
   }
@@ -114,6 +115,7 @@ MultipleNodesTest::MultipleNodesTest(int numberOfNodesDC1, int numberOfNodesDC2)
   cass_cluster_set_write_timeout(cluster, 10000);
   cass_cluster_set_read_timeout(cluster, 10000);
   cass_cluster_set_num_threads_io(cluster, 2);
+  cass_cluster_set_protocol_version(cluster, protocol_version);
 
   if(conf.use_logger())	{
     // TODO(mpenick): Add logging
@@ -124,8 +126,8 @@ MultipleNodesTest::~MultipleNodesTest() {
   cass_cluster_free(cluster);
 }
 
-SingleSessionTest::SingleSessionTest(int numberOfNodesDC1, int numberOfNodesDC2)
-  : MultipleNodesTest(numberOfNodesDC1, numberOfNodesDC2) {
+SingleSessionTest::SingleSessionTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version)
+  : MultipleNodesTest(num_nodes_dc1, num_nodes_dc2, protocol_version) {
   test_utils::CassFuturePtr connect_future = make_shared<CassFuture>(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(connect_future.get());
   session = cass_future_get_session(connect_future.get());

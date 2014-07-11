@@ -419,7 +419,7 @@ inline bool operator<(Uuid a, Uuid b) {
     parametrized ctor. Derive from it to use it in your tests.
  */
 struct MultipleNodesTest {
-    MultipleNodesTest(int numberOfNodesDC1, int numberOfNodesDC2);
+    MultipleNodesTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version = 2);
     virtual ~MultipleNodesTest();
 
     boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
@@ -428,7 +428,7 @@ struct MultipleNodesTest {
 };
 
 struct SingleSessionTest : MultipleNodesTest {
-  SingleSessionTest(int numberOfNodesDC1, int numberOfNodesDC2);
+  SingleSessionTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version = 2);
   virtual ~SingleSessionTest();
 
   CassSession* session;

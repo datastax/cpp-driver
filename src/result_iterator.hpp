@@ -29,32 +29,37 @@ public:
   ResultIterator(const ResultResponse* result)
       : Iterator(CASS_ITERATOR_TYPE_RESULT)
       , result_(result)
-      , row_position_(0)
+      , index_(-1)
       , position_(result->rows()) {
     row_.reserve(result->column_count());
   }
 
   virtual bool next() {
-    if (row_position_++ >= result_->row_count()) {
+    if (index_ + 1 >= result_->row_count()) {
       return false;
     }
-    if (row_position_ > 1) {
+
+    ++index_;
+
+    if (index_ > 0) {
       position_ = decode_row(position_, result_, row_);
     }
+
     return true;
   }
 
-  const Row& row() const {
-    if (row_position_ > 1) {
-      return row_;
+  const Row* row() const {
+    assert(index_ >= 0 && index_ < result_->row_count());
+    if (index_ > 0) {
+      return &row_;
     } else {
-      return result_->first_row();
+      return &result_->first_row();
     }
   }
 
 private:
   const ResultResponse* result_;
-  int32_t row_position_;
+  int32_t index_;
   char* position_;
   Row row_;
 };

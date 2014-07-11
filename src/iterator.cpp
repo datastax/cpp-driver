@@ -53,7 +53,7 @@ const CassRow* cass_iterator_get_row(CassIterator* iterator) {
   }
   cass::ResultIterator* result_it =
       static_cast<cass::ResultIterator*>(internal_it);
-  return CassRow::to(&result_it->row());
+  return CassRow::to(result_it->row());
 }
 
 const CassValue* cass_iterator_get_column(CassIterator* iterator) {

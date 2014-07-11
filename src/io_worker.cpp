@@ -126,6 +126,7 @@ void IOWorker::close_handles() {
   request_queue_.close_handles();
   uv_prepare_stop(&prepare_);
   logger_->debug("IO worker active handles %d", loop()->active_handles);
+  stop();
 }
 
 void IOWorker::on_pool_ready(Pool* pool) {

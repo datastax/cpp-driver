@@ -27,20 +27,24 @@ public:
   RowIterator(const Row* row)
       : Iterator(CASS_ITERATOR_TYPE_ROW)
       , row_(row)
-      , index_(0) {}
+      , index_(-1) {}
 
   virtual bool next() {
-    if (index_++ < row_->size()) {
-      return true;
+    if (static_cast<size_t>(index_ + 1) >= row_->size()) {
+      return false;
     }
-    return false;
+    ++index_;
+    return true;
   }
 
-  const Value* column() { return &(*row_)[index_]; }
+  const Value* column() {
+    assert(index_ >= 0 && static_cast<size_t>(index_) < row_->size());
+    return &(*row_)[index_];
+  }
 
 private:
   const Row* row_;
-  size_t index_;
+  int32_t index_;
 };
 
 } // namespace cass
