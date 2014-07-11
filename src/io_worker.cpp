@@ -77,7 +77,8 @@ void IOWorker::add_pool(Host host) {
     pool->set_keyspace_callback(
         std::bind(&IOWorker::on_set_keyspace, this, std::placeholders::_1));
 
-    pool->connect(session_->keyspace());
+    pool->connect(session_->keyspace(),
+                  config_.Username(), config_.Password());
 
     pools[host] = pool;
   }
@@ -160,7 +161,9 @@ void IOWorker::on_retry(RequestHandler* request_handler, RetryType retry_type) {
   auto it = pools.find(host);
   if (it != pools.end()) {
     auto pool = it->second;
-    Connection* connection = pool->borrow_connection(request_handler->keyspace);
+    Connection* connection = pool->borrow_connection(request_handler->keyspace,
+                                                     config_.Username(),
+                                                     config_.Password());
     if (connection != nullptr) {
       if (!pool->execute(connection, request_handler)) {
         on_retry(request_handler, RETRY_WITH_NEXT_HOST);

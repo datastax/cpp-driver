@@ -115,10 +115,12 @@ Pool::~Pool() {
   pending_request_queue_.clear();
 }
 
-void Pool::connect(const std::string& keyspace) {
+void Pool::connect(const std::string& keyspace,
+                   const std::string& username,
+                   const std::string& password) {
   if (state_ == POOL_STATE_NEW) {
     for (size_t i = 0; i < config_.core_connections_per_host(); ++i) {
-      spawn_connection(keyspace);
+      spawn_connection(keyspace, username, password);
     }
     state_ = POOL_STATE_CONNECTING;
   }
@@ -144,15 +146,17 @@ void Pool::close() {
   }
 }
 
-Connection* Pool::borrow_connection(const std::string& keyspace) {
+Connection* Pool::borrow_connection(const std::string& keyspace,
+                                    const std::string& username,
+                                    const std::string& password) {
   if (connections_.empty()) {
     for (size_t i = 0; i < config_.core_connections_per_host(); ++i) {
-      spawn_connection(keyspace);
+      spawn_connection(keyspace, username, password);
     }
     return nullptr;
   }
 
-  maybe_spawn_connection(keyspace);
+  maybe_spawn_connection(keyspace, username, password);
 
   return find_least_busy();
 }
@@ -194,11 +198,13 @@ void Pool::maybe_close() {
   }
 }
 
-void Pool::spawn_connection(const std::string& keyspace) {
+void Pool::spawn_connection(const std::string& keyspace,
+                            const std::string& username,
+                            const std::string& password) {
   if (state_ == POOL_STATE_NEW || state_ == POOL_STATE_READY) {
     Connection* connection = new Connection(
         loop_, ssl_context_ ? ssl_context_->session_new() : nullptr, host_,
-        logger_, config_, keyspace);
+        logger_, config_, keyspace, username.c_str(), password.c_str());
 
     connection->set_ready_callback(
         std::bind(&Pool::on_connection_ready, this, std::placeholders::_1));
@@ -210,7 +216,9 @@ void Pool::spawn_connection(const std::string& keyspace) {
   }
 }
 
-void Pool::maybe_spawn_connection(const std::string& keyspace) {
+void Pool::maybe_spawn_connection(const std::string& keyspace,
+                                  const std::string& username,
+                                  const std::string& password) {
   if (connections_pending_.size() >= config_.max_simultaneous_creation()) {
     return;
   }
@@ -220,7 +228,7 @@ void Pool::maybe_spawn_connection(const std::string& keyspace) {
     return;
   }
 
-  spawn_connection(keyspace);
+  spawn_connection(keyspace, username, password);
 }
 
 Connection* Pool::find_least_busy() {

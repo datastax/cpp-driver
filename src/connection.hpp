@@ -98,6 +98,7 @@ public:
 public:
   enum ConnectionState {
     CLIENT_STATE_NEW,
+    CLIENT_STATE_AUTHENTICATE,
     CLIENT_STATE_CONNECTING,
     CLIENT_STATE_CONNECTED,
     CLIENT_STATE_HANDSHAKE,
@@ -121,7 +122,8 @@ public:
   };
 
   Connection(uv_loop_t* loop, SSLSession* ssl_session, const Host& host,
-             Logger* logger, const Config& config, const std::string& keyspace);
+             Logger* logger, const Config& config, const std::string& keyspace,
+             const std::string& username, const std::string& password);
 
   void connect();
 
@@ -166,6 +168,8 @@ private:
 
   void on_ready();
   void on_set_keyspace();
+  void on_error(Message* response);
+  void on_authenticate(Message* response);
   void on_supported(Message* response);
 
   void notify_ready();
@@ -174,6 +178,7 @@ private:
   void send_options();
   void send_startup();
   void send_use_keyspace();
+  void send_credentials();
 
 private:
   ConnectionState state_;
@@ -204,6 +209,8 @@ private:
   Logger* logger_;
   const Config& config_;
   std::string keyspace_;
+  std::string username_;
+  std::string password_;
   Timer* connect_timer_;
 
   DISALLOW_COPY_AND_ASSIGN(Connection);
