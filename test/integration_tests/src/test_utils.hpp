@@ -414,7 +414,6 @@ inline bool operator<(Uuid a, Uuid b) {
   return memcmp(a.uuid, b.uuid, sizeof(CassUuid)) < 0;
 }
 
-
 /** The following class cannot be used as a kernel of test fixture because of
     parametrized ctor. Derive from it to use it in your tests.
  */

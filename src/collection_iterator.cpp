@@ -24,8 +24,8 @@ char* CollectionIterator::decode_value(char* position) {
 
   CassValueType type;
   if (collection_->type == CASS_VALUE_TYPE_MAP) {
-    type = ((index_ - 1) % 2 == 0) ? collection_->primary_type
-                                   : collection_->secondary_type;
+    type = (index_ % 2 == 0) ? collection_->primary_type
+                             : collection_->secondary_type;
   } else {
     type = collection_->primary_type;
   }

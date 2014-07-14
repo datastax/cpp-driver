@@ -755,7 +755,7 @@ cass_statement_set_serial_consistency(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_set_paging_size(CassStatement* statement,
-                               cass_int32_t page_size);
+                               int page_size);
 
 /**
  * Sets the statement's paging state.

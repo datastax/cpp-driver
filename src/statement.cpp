@@ -46,7 +46,7 @@ CassError cass_statement_set_serial_consistency(CassStatement* statement,
 }
 
 CassError cass_statement_set_paging_size(CassStatement* statement,
-                                         cass_int32_t page_size) {
+                                         int page_size) {
   statement->set_page_size(page_size);
   return CASS_OK;
 }

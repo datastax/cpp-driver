@@ -16,8 +16,13 @@
 #include "cassandra.h"
 #include "test_utils.hpp"
 
-struct BasicTests : test_utils::MultipleNodesTest {
-    BasicTests() : MultipleNodesTest(1, 0) { }
+struct BasicTests : test_utils::SingleSessionTest {
+    BasicTests() : SingleSessionTest(1, 0) {
+      test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
+                                             % test_utils::SIMPLE_KEYSPACE % "1"));
+
+      test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+    }
 };
 
 BOOST_FIXTURE_TEST_SUITE(basics, BasicTests)
@@ -130,54 +135,45 @@ void insert_null_value(CassSession* session, CassValueType type) {
 
 BOOST_AUTO_TEST_CASE(test_basic_types)
 {
-  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
-  test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
+  insert_single_value<cass_int32_t>(session, CASS_VALUE_TYPE_INT, 123);
 
-  test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                         % test_utils::SIMPLE_KEYSPACE % "1"));
+  insert_single_value<cass_int64_t>(session, CASS_VALUE_TYPE_BIGINT, 1234567890);
+  insert_single_value<cass_int64_t>(session, CASS_VALUE_TYPE_TIMESTAMP, 1234567890);
 
-  test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+  insert_single_value<cass_bool_t>(session, CASS_VALUE_TYPE_BOOLEAN, cass_true);
+  insert_single_value<cass_bool_t>(session, CASS_VALUE_TYPE_BOOLEAN, cass_false);
 
-  insert_single_value<cass_int32_t>(session.get(), CASS_VALUE_TYPE_INT, 123);
+  insert_single_value<cass_float_t>(session, CASS_VALUE_TYPE_FLOAT, 3.1415926f);
 
-  insert_single_value<cass_int64_t>(session.get(), CASS_VALUE_TYPE_BIGINT, 1234567890);
-  insert_single_value<cass_int64_t>(session.get(), CASS_VALUE_TYPE_TIMESTAMP, 1234567890);
-
-  insert_single_value<cass_bool_t>(session.get(), CASS_VALUE_TYPE_BOOLEAN, cass_true);
-  insert_single_value<cass_bool_t>(session.get(), CASS_VALUE_TYPE_BOOLEAN, cass_false);
-
-  insert_single_value<cass_float_t>(session.get(), CASS_VALUE_TYPE_FLOAT, 3.1415926f);
-
-  insert_single_value<cass_double_t>(session.get(), CASS_VALUE_TYPE_DOUBLE, 3.141592653589793);
+  insert_single_value<cass_double_t>(session, CASS_VALUE_TYPE_DOUBLE, 3.141592653589793);
 
   {
     CassString value = cass_string_init("Test Value.");
-    insert_single_value<CassString>(session.get(), CASS_VALUE_TYPE_ASCII, value);
-    insert_single_value<CassString>(session.get(), CASS_VALUE_TYPE_VARCHAR, value);
+    insert_single_value<CassString>(session, CASS_VALUE_TYPE_ASCII, value);
+    insert_single_value<CassString>(session, CASS_VALUE_TYPE_VARCHAR, value);
   }
 
   {
     CassBytes value = test_utils::bytes_from_string("012345678900123456789001234567890012345678900123456789001234567890");
-    insert_single_value<CassBytes>(session.get(), CASS_VALUE_TYPE_BLOB, value);
-    insert_single_value<CassBytes>(session.get(), CASS_VALUE_TYPE_VARINT, value);
+    insert_single_value<CassBytes>(session, CASS_VALUE_TYPE_BLOB, value);
+    insert_single_value<CassBytes>(session, CASS_VALUE_TYPE_VARINT, value);
   }
 
   {
     CassInet value = test_utils::inet_v4_from_int(16777343); // 127.0.0.1
-    insert_single_value<CassInet>(session.get(), CASS_VALUE_TYPE_INET, value);
+    insert_single_value<CassInet>(session, CASS_VALUE_TYPE_INET, value);
   }
 
   {
     CassUuid value;
     cass_uuid_generate_random(value);
-    insert_single_value<CassUuid>(session.get(), CASS_VALUE_TYPE_UUID, value);
+    insert_single_value<CassUuid>(session, CASS_VALUE_TYPE_UUID, value);
   }
 
   {
     CassUuid value;
     cass_uuid_generate_time(value);
-    insert_single_value<CassUuid>(session.get(), CASS_VALUE_TYPE_TIMEUUID, value);
+    insert_single_value<CassUuid>(session, CASS_VALUE_TYPE_TIMEUUID, value);
   }
 
   {
@@ -189,122 +185,95 @@ BOOST_AUTO_TEST_CASE(test_basic_types)
     CassDecimal value;
     value.scale = scale;
     value.varint = cass_bytes_init(varint, sizeof(varint));
-    insert_single_value<CassDecimal>(session.get(), CASS_VALUE_TYPE_DECIMAL, value);
+    insert_single_value<CassDecimal>(session, CASS_VALUE_TYPE_DECIMAL, value);
   }
 }
 
 BOOST_AUTO_TEST_CASE(test_min_max)
 {
-  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
-  test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
+  insert_min_max_value<cass_int32_t>(session, CASS_VALUE_TYPE_INT);
 
-  test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                               % test_utils::SIMPLE_KEYSPACE % "1"));
+  insert_min_max_value<cass_int64_t>(session, CASS_VALUE_TYPE_BIGINT);
+  insert_min_max_value<cass_int64_t>(session, CASS_VALUE_TYPE_TIMESTAMP);
 
-  test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+  insert_min_max_value<cass_float_t>(session, CASS_VALUE_TYPE_FLOAT);
 
-  insert_min_max_value<cass_int32_t>(session.get(), CASS_VALUE_TYPE_INT);
+  insert_min_max_value<cass_double_t>(session, CASS_VALUE_TYPE_DOUBLE);
 
-  insert_min_max_value<cass_int64_t>(session.get(), CASS_VALUE_TYPE_BIGINT);
-  insert_min_max_value<cass_int64_t>(session.get(), CASS_VALUE_TYPE_TIMESTAMP);
+  insert_min_max_value<CassInet>(session, CASS_VALUE_TYPE_INET);
 
-  insert_min_max_value<cass_float_t>(session.get(), CASS_VALUE_TYPE_FLOAT);
-
-  insert_min_max_value<cass_double_t>(session.get(), CASS_VALUE_TYPE_DOUBLE);
-
-  insert_min_max_value<CassInet>(session.get(), CASS_VALUE_TYPE_INET);
-
-  insert_min_max_value<test_utils::Uuid>(session.get(), CASS_VALUE_TYPE_UUID);
+  insert_min_max_value<test_utils::Uuid>(session, CASS_VALUE_TYPE_UUID);
 
   {
     CassUuid value;
     cass_uuid_min_from_time(0, value);
-    insert_single_value<CassUuid>(session.get(), CASS_VALUE_TYPE_TIMEUUID, value);
+    insert_single_value<CassUuid>(session, CASS_VALUE_TYPE_TIMEUUID, value);
   }
 
   {
     CassUuid value;
     cass_uuid_max_from_time(std::numeric_limits<uint64_t>::max(), value);
-    insert_single_value<CassUuid>(session.get(), CASS_VALUE_TYPE_TIMEUUID, value);
+    insert_single_value<CassUuid>(session, CASS_VALUE_TYPE_TIMEUUID, value);
   }
 
   {
     CassDecimal value;
     value.scale = 0;
     value.varint = cass_bytes_init(NULL, 0);
-    insert_single_value<CassDecimal>(session.get(), CASS_VALUE_TYPE_DECIMAL, value);
+    insert_single_value<CassDecimal>(session, CASS_VALUE_TYPE_DECIMAL, value);
   }
 
   {
     CassString value = cass_string_init2(NULL, 0);
-    insert_single_value<CassString>(session.get(), CASS_VALUE_TYPE_ASCII, value);
-    insert_single_value<CassString>(session.get(), CASS_VALUE_TYPE_VARCHAR, value);
+    insert_single_value<CassString>(session, CASS_VALUE_TYPE_ASCII, value);
+    insert_single_value<CassString>(session, CASS_VALUE_TYPE_VARCHAR, value);
   }
 
   {
     CassBytes value = cass_bytes_init(NULL, 0);
-    insert_single_value<CassBytes>(session.get(), CASS_VALUE_TYPE_BLOB, value);
-    insert_single_value<CassBytes>(session.get(), CASS_VALUE_TYPE_VARINT, value);
+    insert_single_value<CassBytes>(session, CASS_VALUE_TYPE_BLOB, value);
+    insert_single_value<CassBytes>(session, CASS_VALUE_TYPE_VARINT, value);
   }
 }
 
 BOOST_AUTO_TEST_CASE(test_null)
 {
-  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
-  test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
-
-  test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                               % test_utils::SIMPLE_KEYSPACE % "1"));
-
-  test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
-
-  insert_null_value(session.get(), CASS_VALUE_TYPE_ASCII);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_BIGINT);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_BLOB);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_BOOLEAN);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_DECIMAL);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_DOUBLE);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_FLOAT);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_INT);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_TEXT);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_TIMESTAMP);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_UUID);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_VARCHAR);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_VARINT);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_TIMEUUID);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_INET);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_LIST);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_MAP);
-  insert_null_value(session.get(), CASS_VALUE_TYPE_SET);
+  insert_null_value(session, CASS_VALUE_TYPE_ASCII);
+  insert_null_value(session, CASS_VALUE_TYPE_BIGINT);
+  insert_null_value(session, CASS_VALUE_TYPE_BLOB);
+  insert_null_value(session, CASS_VALUE_TYPE_BOOLEAN);
+  insert_null_value(session, CASS_VALUE_TYPE_DECIMAL);
+  insert_null_value(session, CASS_VALUE_TYPE_DOUBLE);
+  insert_null_value(session, CASS_VALUE_TYPE_FLOAT);
+  insert_null_value(session, CASS_VALUE_TYPE_INT);
+  insert_null_value(session, CASS_VALUE_TYPE_TEXT);
+  insert_null_value(session, CASS_VALUE_TYPE_TIMESTAMP);
+  insert_null_value(session, CASS_VALUE_TYPE_UUID);
+  insert_null_value(session, CASS_VALUE_TYPE_VARCHAR);
+  insert_null_value(session, CASS_VALUE_TYPE_VARINT);
+  insert_null_value(session, CASS_VALUE_TYPE_TIMEUUID);
+  insert_null_value(session, CASS_VALUE_TYPE_INET);
+  insert_null_value(session, CASS_VALUE_TYPE_LIST);
+  insert_null_value(session, CASS_VALUE_TYPE_MAP);
+  insert_null_value(session, CASS_VALUE_TYPE_SET);
 }
 
 BOOST_AUTO_TEST_CASE(test_timestamp)
 {
-  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
-  test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
+  test_utils::execute_query(session, "CREATE TABLE test(tweet_id int PRIMARY KEY, test_val int);");
 
-  test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                         % test_utils::SIMPLE_KEYSPACE % "1"));
-
-  test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
-
-  test_utils::execute_query(session.get(), "CREATE TABLE test(tweet_id int PRIMARY KEY, test_val int);");
-
-  test_utils::execute_query(session.get(), "INSERT INTO test(tweet_id, test_val) VALUES(0, 42);");
+  test_utils::execute_query(session, "INSERT INTO test(tweet_id, test_val) VALUES(0, 42);");
   test_utils::CassResultPtr timestamp_result1;
-  test_utils::execute_query(session.get(), "SELECT WRITETIME (test_val) FROM test;", &timestamp_result1);
+  test_utils::execute_query(session, "SELECT WRITETIME (test_val) FROM test;", &timestamp_result1);
   BOOST_REQUIRE(cass_result_row_count(timestamp_result1.get()) == 1);
   BOOST_REQUIRE(cass_result_column_count(timestamp_result1.get()) == 1);
 
   cass_int64_t pause_duration = 5 * test_utils::ONE_SECOND_IN_MICROS;
   boost::this_thread::sleep_for(boost::chrono::microseconds(pause_duration));
 
-  test_utils::execute_query(session.get(), "INSERT INTO test(tweet_id, test_val) VALUES(0, 43);");
+  test_utils::execute_query(session, "INSERT INTO test(tweet_id, test_val) VALUES(0, 43);");
   test_utils::CassResultPtr timestamp_result2;
-  test_utils::execute_query(session.get(), "SELECT WRITETIME (test_val) FROM test;", &timestamp_result2);
+  test_utils::execute_query(session, "SELECT WRITETIME (test_val) FROM test;", &timestamp_result2);
   BOOST_REQUIRE(cass_result_row_count(timestamp_result2.get()) == 1);
   BOOST_REQUIRE(cass_result_column_count(timestamp_result2.get()) == 1);
 
@@ -320,16 +289,7 @@ BOOST_AUTO_TEST_CASE(test_timestamp)
 
 BOOST_AUTO_TEST_CASE(test_counters)
 {
-  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
-  test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
-
-  test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                         % test_utils::SIMPLE_KEYSPACE % "1"));
-
-  test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
-
-  test_utils::execute_query(session.get(), "CREATE TABLE test(tweet_id int PRIMARY KEY, incdec counter);");
+  test_utils::execute_query(session, "CREATE TABLE test(tweet_id int PRIMARY KEY, incdec counter);");
 
   int tweet_id = 0;
 
@@ -341,13 +301,13 @@ BOOST_AUTO_TEST_CASE(test_counters)
 
     BOOST_REQUIRE(cass_statement_bind_int64(statement.get(), 0, i) == CASS_OK);
 
-    test_utils::CassFuturePtr result_future = test_utils::make_shared(cass_session_execute(session.get(), statement.get()));
+    test_utils::CassFuturePtr result_future = test_utils::make_shared(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(result_future.get());
   }
 
   std::string select_query = str(boost::format("SELECT * FROM %s;") % test_utils::SIMPLE_TABLE);
   test_utils::CassResultPtr result;
-  test_utils::execute_query(session.get(), select_query,  &result);
+  test_utils::execute_query(session, select_query,  &result);
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
   BOOST_REQUIRE(cass_result_column_count(result.get()) > 0);
 
@@ -356,24 +316,14 @@ BOOST_AUTO_TEST_CASE(test_counters)
   BOOST_REQUIRE(counter_value == 50);
 }
 
-/////  --run_test="basics/test_rows_in_rows_out"
 BOOST_AUTO_TEST_CASE(test_rows_in_rows_out)
 {
   CassConsistency consistency = CASS_CONSISTENCY_ONE;
 
-  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
-  test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
-
-  test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                         % test_utils::SIMPLE_KEYSPACE % "1"));
-
-  test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
-
   // TODO(mpenick): In "master" were there more tests planned here?
 
   {
-    test_utils::execute_query(session.get(),
+    test_utils::execute_query(session,
                               str(boost::format("CREATE TABLE %s (tweet_id bigint PRIMARY KEY, t1 bigint, t2 bigint, t3 bigint);") % test_utils::SIMPLE_TABLE),
                               NULL, consistency);
 
@@ -387,14 +337,14 @@ BOOST_AUTO_TEST_CASE(test_rows_in_rows_out)
       BOOST_REQUIRE(test_utils::Value<cass_int64_t>::bind(statement.get(), 1, i + 1) == CASS_OK);
       BOOST_REQUIRE(test_utils::Value<cass_int64_t>::bind(statement.get(), 2, i + 2) == CASS_OK);
       BOOST_REQUIRE(test_utils::Value<cass_int64_t>::bind(statement.get(), 3, i + 3) == CASS_OK);
-      test_utils::CassFuturePtr result_future = test_utils::make_shared(cass_session_execute(session.get(), statement.get()));
+      test_utils::CassFuturePtr result_future = test_utils::make_shared(cass_session_execute(session, statement.get()));
       test_utils::wait_and_check_error(result_future.get(), 30 * test_utils::ONE_SECOND_IN_MICROS);
     }
 
 
     std::string select_query(str(boost::format("SELECT tweet_id, t1, t2, t3 FROM %s LIMIT %d;") % test_utils::SIMPLE_TABLE % num_rows));
     test_utils::CassResultPtr result;
-    test_utils::execute_query(session.get(), select_query, &result, consistency);
+    test_utils::execute_query(session, select_query, &result, consistency);
     BOOST_REQUIRE(cass_result_row_count(result.get()) == num_rows);
     BOOST_REQUIRE(cass_result_column_count(result.get()) == 4);
 
@@ -413,6 +363,29 @@ BOOST_AUTO_TEST_CASE(test_rows_in_rows_out)
 
     BOOST_REQUIRE(row_count == num_rows);
   }
+}
+
+BOOST_AUTO_TEST_CASE(test_column_name)
+{
+  test_utils::execute_query(session, "CREATE TABLE test (key int PRIMARY KEY, v1 text, v2 int, v3 bigint, v4 float);");
+  test_utils::execute_query(session, "INSERT INTO test (key, v1, v2, v3, v4) VALUES (0, 'abc', 123, 456, 0.123456);");
+
+  test_utils::CassResultPtr result;
+  test_utils::execute_query(session, "SELECT * FROM test;", &result);
+
+  BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
+
+  CassString key = cass_result_column_name(result.get(), 0);
+  CassString v1 = cass_result_column_name(result.get(), 1);
+  CassString v2 = cass_result_column_name(result.get(), 2);
+  CassString v3 = cass_result_column_name(result.get(), 3);
+  CassString v4 = cass_result_column_name(result.get(), 4);
+
+  BOOST_REQUIRE(strncmp(key.data, "key", key.length) == 0);
+  BOOST_REQUIRE(strncmp(v1.data, "v1", v1.length) == 0);
+  BOOST_REQUIRE(strncmp(v2.data, "v2", v2.length) == 0);
+  BOOST_REQUIRE(strncmp(v3.data, "v3", v3.length) == 0);
+  BOOST_REQUIRE(strncmp(v4.data, "v4", v4.length) == 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
