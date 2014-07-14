@@ -18,8 +18,6 @@
 #include <sstream>
 #include <iomanip>
 
-#define INVALID_PROTOCOL_MSG
-
 namespace cass {
 
 Connection::StartupHandler::StartupHandler(Connection* connection,
