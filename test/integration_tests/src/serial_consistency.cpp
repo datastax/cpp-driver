@@ -25,19 +25,37 @@ struct SerialConsistencyTests : public test_utils::SingleSessionTest {
 
 BOOST_FIXTURE_TEST_SUITE(serial_consistency, SerialConsistencyTests)
 
-BOOST_AUTO_TEST_CASE(test_invalid)
-{
+test_utils::CassFuturePtr insert_row(CassSession* session, const std::string& key, int value, CassConsistency serial_consistency) {
   CassString insert_query = cass_string_init("INSERT INTO test (key, value) VALUES (?, ?) IF NOT EXISTS;");
 
   test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(insert_query, 2));
-  cass_statement_bind_string(statement.get(), 0, cass_string_init("abc"));
-  cass_statement_bind_int32(statement.get(), 1, 99);
+  cass_statement_bind_string(statement.get(), 0, cass_string_init2(key.data(), key.size()));
+  cass_statement_bind_int32(statement.get(), 1, value);
 
-  cass_statement_set_serial_consistency(statement.get(), CASS_CONSISTENCY_ONE); // Invalid
-  test_utils::CassFuturePtr future = test_utils::make_shared(cass_session_execute(session, statement.get()));
+  cass_statement_set_serial_consistency(statement.get(), serial_consistency);
+  return test_utils::make_shared(cass_session_execute(session, statement.get()));
+}
+
+BOOST_AUTO_TEST_CASE(test_simple)
+{
+  for (int i = 0; i < 2; ++i) {
+    test_utils::CassFuturePtr future = insert_row(session, "abc", 99, CASS_CONSISTENCY_SERIAL);
+    BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
+    test_utils::CassResultPtr result = test_utils::make_shared(cass_future_get_result(future.get()));
+    BOOST_REQUIRE(cass_result_row_count(result.get()) > 0);
+    const CassValue* value = cass_row_get_column(cass_result_first_row(result.get()), 0);
+    cass_bool_t applied;
+    cass_value_get_bool(value, &applied);
+    BOOST_REQUIRE_EQUAL(applied, i == 0 ? cass_true : cass_false);
+  }
+}
+
+BOOST_AUTO_TEST_CASE(test_invalid)
+{
+  test_utils::CassFuturePtr future = insert_row(session, "abc", 99, CASS_CONSISTENCY_ONE); // Invalid
 
   CassError code = cass_future_error_code(future.get());
-  BOOST_REQUIRE(code == CASS_ERROR_SERVER_INVALID_QUERY);
+  BOOST_REQUIRE_EQUAL(code, CASS_ERROR_SERVER_INVALID_QUERY);
 
   CassString message = cass_future_error_message(future.get());
   BOOST_REQUIRE(strncmp(message.data, "Invalid consistency for conditional update. Must be one of SERIAL or LOCAL_SERIAL", message.length) == 0);
