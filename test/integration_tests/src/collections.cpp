@@ -15,7 +15,7 @@
 #include <boost/format.hpp>
 #include <boost/thread.hpp>
 
-struct CollectionsTests : test_utils::MultipleNodesTest {
+struct CollectionsTests : public test_utils::MultipleNodesTest {
     CollectionsTests() : MultipleNodesTest(1, 0) {}
 };
 

@@ -20,7 +20,7 @@
 #include "test_utils.hpp"
 #include "cql_ccm_bridge.hpp"
 
-struct StressTests : test_utils::MultipleNodesTest {
+struct StressTests : public test_utils::MultipleNodesTest {
     StressTests() : MultipleNodesTest(3, 0) {}
 };
 

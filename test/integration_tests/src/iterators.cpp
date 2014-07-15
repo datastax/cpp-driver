@@ -16,7 +16,7 @@
 #include "cassandra.h"
 #include "test_utils.hpp"
 
-struct IteratorTests : test_utils::SingleSessionTest {
+struct IteratorTests : public test_utils::SingleSessionTest {
     IteratorTests() : SingleSessionTest(1, 0) {
       test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                              % test_utils::SIMPLE_KEYSPACE % "1"));

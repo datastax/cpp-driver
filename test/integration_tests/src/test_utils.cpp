@@ -106,20 +106,13 @@ MultipleNodesTest::MultipleNodesTest(int num_nodes_dc1, int num_nodes_dc2, int p
   ccm = cql::cql_ccm_bridge_t::create(conf, "test", num_nodes_dc1, num_nodes_dc2);
 
   cluster = cass_cluster_new();
-  for(int i = 0; i < num_nodes_dc1; ++i) {
-    std::string contact_point(conf.ip_prefix() + boost::lexical_cast<std::string>(i + 1));
-    cass_cluster_set_contact_points(cluster, cass_string_init2(contact_point.data(), contact_point.size()));
-  }
+  initialize_contact_points(cluster, conf.ip_prefix(), num_nodes_dc1, num_nodes_dc2);
 
   cass_cluster_set_connect_timeout(cluster, 10000);
   cass_cluster_set_write_timeout(cluster, 10000);
   cass_cluster_set_read_timeout(cluster, 10000);
   cass_cluster_set_num_threads_io(cluster, 2);
   cass_cluster_set_protocol_version(cluster, protocol_version);
-
-  if(conf.use_logger())	{
-    // TODO(mpenick): Add logging
-  }
 }
 
 MultipleNodesTest::~MultipleNodesTest() {
@@ -136,6 +129,13 @@ SingleSessionTest::SingleSessionTest(int num_nodes_dc1, int num_nodes_dc2, int p
 SingleSessionTest::~SingleSessionTest() {
    CassFuturePtr close_future = make_shared<CassFuture>(cass_session_close(session));
    cass_future_wait(close_future.get());
+}
+
+void initialize_contact_points(CassCluster* cluster, std::string prefix, int num_nodes_dc1, int num_nodes_dc2) {
+  for(int i = 0; i < num_nodes_dc1; ++i) {
+    std::string contact_point(prefix + boost::lexical_cast<std::string>(i + 1));
+    cass_cluster_set_contact_points(cluster, cass_string_init2(contact_point.data(), contact_point.size()));
+  }
 }
 
 void execute_query(CassSession* session,

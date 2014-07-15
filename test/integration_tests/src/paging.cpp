@@ -16,7 +16,7 @@
 #include "cassandra.h"
 #include "test_utils.hpp"
 
-struct PagingTests : test_utils::SingleSessionTest {
+struct PagingTests : public test_utils::SingleSessionTest {
     PagingTests() : SingleSessionTest(1, 0) {
       test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                              % test_utils::SIMPLE_KEYSPACE % "1"));

@@ -17,7 +17,7 @@
 #include "cassandra.h"
 #include "test_utils.hpp"
 
-struct PreparedOutageTests : test_utils::SingleSessionTest {
+struct PreparedOutageTests : public test_utils::SingleSessionTest {
     PreparedOutageTests() : SingleSessionTest(2, 0) {
       test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                                    % test_utils::SIMPLE_KEYSPACE % "1"));

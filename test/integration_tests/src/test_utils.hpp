@@ -433,6 +433,8 @@ struct SingleSessionTest : MultipleNodesTest {
   CassSession* session;
 };
 
+void initialize_contact_points(CassCluster* cluster, std::string prefix, int num_nodes_dc1, int num_nodes_dc2);
+
 const char* get_value_type(CassValueType type);
 
 void execute_query(CassSession* session,

@@ -31,7 +31,7 @@ void check_log_callback(void* data,
   log_data->log_count++;
 }
 
-struct LoggingTests : test_utils::MultipleNodesTest {
+struct LoggingTests : public test_utils::MultipleNodesTest {
     LoggingTests() : MultipleNodesTest(1, 0) {}
 };
 

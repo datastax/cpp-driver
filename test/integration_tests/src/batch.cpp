@@ -13,7 +13,7 @@
 #include <boost/format.hpp>
 #include <boost/thread.hpp>
 
-struct BatchTests : test_utils::SingleSessionTest {
+struct BatchTests : public test_utils::SingleSessionTest {
     static const char* SIMPLE_TABLE_NAME;
     static const char* COUNTER_TABLE_NAME;
 
