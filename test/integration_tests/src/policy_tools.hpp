@@ -25,7 +25,7 @@ struct PolicyTool {
 
   void add_coordinator(cass::Address address);
 
-  void assertQueried(cass::Address address, int n);
+  void assert_queried(cass::Address address, int n);
 
   void assertQueriedAtLeast(cass::Address address, int n);
 

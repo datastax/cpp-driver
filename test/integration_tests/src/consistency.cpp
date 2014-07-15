@@ -19,7 +19,7 @@ struct ConsistencyTests {
 
 BOOST_FIXTURE_TEST_SUITE(consistency, ConsistencyTests)
 
-BOOST_AUTO_TEST_CASE(simple_two_nodes)
+BOOST_AUTO_TEST_CASE(test_simple_two_nodes)
 {
   test_utils::CassClusterPtr cluster = test_utils::make_shared(cass_cluster_new());
 
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(simple_two_nodes)
   }
 }
 
-BOOST_AUTO_TEST_CASE(one_node_down)
+BOOST_AUTO_TEST_CASE(test_one_node_down)
 {
   test_utils::CassClusterPtr cluster = test_utils::make_shared(cass_cluster_new());
 
@@ -120,7 +120,7 @@ BOOST_AUTO_TEST_CASE(one_node_down)
   }
 }
 
-BOOST_AUTO_TEST_CASE(two_nodes_down)
+BOOST_AUTO_TEST_CASE(test_two_nodes_down)
 {
   test_utils::CassClusterPtr cluster = test_utils::make_shared(cass_cluster_new());
 

@@ -85,7 +85,7 @@ void PolicyTool::add_coordinator(cass::Address address)
         coordinators[address] += 1;
 }
 
-void PolicyTool::assertQueried(cass::Address address, int n)
+void PolicyTool::assert_queried(cass::Address address, int n)
 {
     if(coordinators.count(address) != 0) {
       int c = coordinators[address];

@@ -43,9 +43,9 @@ BOOST_AUTO_TEST_CASE(test_round_robin)
   cass::Address host3;
   BOOST_REQUIRE(cass::Address::from_string(conf.ip_prefix() + "3", 9042, &host3));
 
-  policy_tool.assertQueried(host1, 4);
-  policy_tool.assertQueried(host2, 4);
-  policy_tool.assertQueried(host3, 4);
+  policy_tool.assert_queried(host1, 4);
+  policy_tool.assert_queried(host2, 4);
+  policy_tool.assert_queried(host3, 4);
 
   policy_tool.reset_coordinators();
   ccm->decommission(1);
@@ -54,8 +54,8 @@ BOOST_AUTO_TEST_CASE(test_round_robin)
 
   // TODO(mpenick): This currently wrong, because we don't have a state listener interface
   // and control connection to remove the host from the load balancing policy
-  policy_tool.assertQueried(host2, 8);
-  policy_tool.assertQueried(host3, 4);
+  policy_tool.assert_queried(host2, 8);
+  policy_tool.assert_queried(host3, 4);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
