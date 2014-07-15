@@ -437,11 +437,17 @@ void initialize_contact_points(CassCluster* cluster, std::string prefix, int num
 
 const char* get_value_type(CassValueType type);
 
+CassError execute_query_with_error(CassSession* session,
+                                  const std::string& query,
+                                  CassResultPtr* result,
+                                  CassConsistency consistency);
+
 void execute_query(CassSession* session,
                    const std::string& query,
                    CassResultPtr* result = NULL,
                    CassConsistency consistency = CASS_CONSISTENCY_ONE);
 
+CassError wait_and_return_error(CassFuture* future, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
 void wait_and_check_error(CassFuture* future, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
 
 inline CassBytes bytes_from_string(const char* str) {

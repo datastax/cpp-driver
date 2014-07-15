@@ -151,11 +151,29 @@ void execute_query(CassSession* session,
   }
 }
 
-void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
+CassError execute_query_with_error(CassSession* session,
+                                  const std::string& query,
+                                  CassResultPtr* result,
+                                  CassConsistency consistency) {
+  CassStatementPtr statement = make_shared(cass_statement_new(cass_string_init(query.c_str()), 0));
+  cass_statement_set_consistency(statement.get(), consistency);
+  CassFuturePtr future = make_shared(cass_session_execute(session, statement.get()));
+  CassError code = wait_and_return_error(future.get());
+  if(result != NULL) {
+    *result = make_shared<const CassResult>(cass_future_get_result(future.get()));
+  }
+  return code;
+}
+
+CassError wait_and_return_error(CassFuture* future, cass_duration_t timeout) {
   if(!cass_future_wait_timed(future, timeout)) {
     BOOST_FAIL("Timed out waiting for result");
   }
-  CassError code = cass_future_error_code(future);
+  return cass_future_error_code(future);
+}
+
+void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
+  CassError code = wait_and_return_error(future, timeout);
   if(code != CASS_OK) {
     CassString message = cass_future_error_message(future);
     BOOST_FAIL("Error occured during query '" << std::string(message.data, message.length) << "' (" << boost::format("0x%08X") % code << ")");

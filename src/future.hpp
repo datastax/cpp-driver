@@ -18,6 +18,7 @@
 #define __CASS_FUTURE_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "host.hpp"
 #include "macros.hpp"
 #include "scoped_mutex.hpp"
 #include "scoped_ptr.hpp"
@@ -96,8 +97,7 @@ public:
 
   void set_error(CassError code, const std::string& message) {
     ScopedMutex lock(&mutex_);
-    error_.reset(new Error(code, message));
-    internal_set(lock);
+    internal_set_error(code, message, lock);
   }
 
 protected:
@@ -113,6 +113,11 @@ protected:
     uv_cond_broadcast(&cond_);
     lock.unlock();
     release();
+  }
+
+  void internal_set_error(CassError code, const std::string& message, ScopedMutex& lock) {
+    error_.reset(new Error(code, message));
+    internal_set(lock);
   }
 
   uv_mutex_t mutex_;
@@ -137,8 +142,9 @@ public:
       : Future(type)
       , result_(result) {}
 
-  void set_result(T* result) {
+  void set_result(Host host, T* result) {
     ScopedMutex lock(&mutex_);
+    host_ = host;
     result_.reset(result);
     internal_set(lock);
   }
@@ -149,7 +155,20 @@ public:
     return result_.release();
   }
 
+  void set_error_with_host(Host host, CassError code, const std::string& message) {
+    ScopedMutex lock(&mutex_);
+    host_ = host;
+    internal_set_error(code, message, lock);
+  }
+
+  Host get_host() {
+    ScopedMutex lock(&mutex_);
+    internal_wait(lock);
+    return host_;
+  }
+
 private:
+  Host host_;
   ScopedPtr<T> result_;
 };
 
