@@ -89,9 +89,12 @@ typedef __UINT64_TYPE__ cass_uint64_t;
 #elif defined(__INT64_TYPE__)
 typedef __INT64_TYPE__ cass_int64_t;
 typedef unsigned __INT64_TYPE__ cass_uint64_t;
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) && defined(__x86_64__)
 typedef long int cass_int64_t;
 typedef unsigned long int cass_uint64_t;
+#elif defined(__GNUC__)
+typedef long long int cass_int64_t;
+typedef unsigned long long int cass_uint64_t;
 #else
 typedef long long cass_int64_t;
 typedef unsigned long long cass_uint64_t;

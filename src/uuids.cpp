@@ -84,7 +84,7 @@ void Uuids::generate_v4(Uuid uuid) {
   lock.unlock();
 
   copy_timestamp(msb, 4, uuid);
-  lsb = (lsb & 0x3FFFFFFFFFFFFFFFL) | 0x8000000000000000L; // RFC4122 variant
+  lsb = (lsb & 0x3FFFFFFFFFFFFFFFLL) | 0x8000000000000000LL; // RFC4122 variant
   copy_clock_seq_and_node(lsb, uuid);
 }
 
@@ -116,7 +116,7 @@ uint64_t Uuids::get_unix_timestamp(Uuid uuid) {
   timestamp |= static_cast<uint64_t>(uuid[7]) << 48;
   timestamp |= static_cast<uint64_t>(uuid[6]) << 56;
 
-  timestamp &= 0x0FFFFFFFFFFFFFFFL; // Clear version
+  timestamp &= 0x0FFFFFFFFFFFFFFFLL; // Clear version
 
   return to_milliseconds(timestamp - TIME_OFFSET_BETWEEN_UTC_AND_EPOCH);
 }
@@ -221,14 +221,14 @@ uint64_t Uuids::make_clock_seq_and_node() {
 
   uint64_t node = 0L;
   for (int i = 0; i < 6; ++i) {
-    node |= (0x00000000000000FFL & (long)hash[i]) << (i * 8);
+    node |= (0x00000000000000FFLL & (long)hash[i]) << (i * 8);
   }
-  node |= 0x0000010000000000L; // Multicast bit
+  node |= 0x0000010000000000LL; // Multicast bit
 
   uint64_t clock = ng_();
   uint64_t clock_seq_and_node = 0;
-  clock_seq_and_node |= (clock & 0x0000000000003FFFL) << 48;
-  clock_seq_and_node |= 0x8000000000000000L; // RFC4122 variant
+  clock_seq_and_node |= (clock & 0x0000000000003FFFLL) << 48;
+  clock_seq_and_node |= 0x8000000000000000LL; // RFC4122 variant
   clock_seq_and_node |= node;
 
   return clock_seq_and_node;

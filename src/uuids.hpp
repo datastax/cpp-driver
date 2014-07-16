@@ -19,13 +19,14 @@
 
 #include "third_party/boost/boost/atomic.hpp"
 #include "third_party/boost/boost/random/mersenne_twister.hpp"
+#include "third_party/boost/boost/cstdint.hpp"
 
 #include <uv.h>
 #include <openssl/evp.h>
 #include <assert.h>
 #include <string.h>
 
-#define TIME_OFFSET_BETWEEN_UTC_AND_EPOCH 0x01B21DD213814000L // Nanoseconds
+#define TIME_OFFSET_BETWEEN_UTC_AND_EPOCH 0x01B21DD213814000LL // Nanoseconds
 
 namespace cass {
 
@@ -49,8 +50,8 @@ public:
 
 private:
   static uint64_t CLOCK_SEQ_AND_NODE; // Calculated
-  static const uint64_t MIN_CLOCK_SEQ_AND_NODE = 0x8080808080808080L;
-  static const uint64_t MAX_CLOCK_SEQ_AND_NODE = 0x7f7f7f7f7f7f7f7fL;
+  static const uint64_t MIN_CLOCK_SEQ_AND_NODE = 0x8080808080808080LL;
+  static const uint64_t MAX_CLOCK_SEQ_AND_NODE = 0x7f7f7f7f7f7f7f7fLL;
 
   static uint64_t to_milliseconds(uint64_t timestamp) {
     return timestamp / 10000L;
