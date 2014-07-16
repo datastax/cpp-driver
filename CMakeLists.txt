@@ -10,10 +10,10 @@ project(${PROJECT_NAME_STR} C CXX)
 #-------------------
 # Version
 #-------------------
-set(PROJECT_VERSION_MAJOR 0)
-set(PROJECT_VERSION_MINOR 7)
+set(PROJECT_VERSION_MAJOR 1)
+set(PROJECT_VERSION_MINOR 0)
 set(PROJECT_VERSION_PATCH 0)
-set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
+set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}.beta2)
 
 # TODO(mstump) add version header
 
@@ -116,7 +116,11 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # GCC specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(PLATFORM_DEPENDENT_CXX_FLAGS "-fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-local-typedefs")
+  set(PLATFORM_DEPENDENT_CXX_FLAGS "-fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.8" OR
+     CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.8")
+    set(PLATFORM_DEPENDENT_CXX_FLAGS "${PLATFORM_DEPENDENT_CXX_FLAGS} -Wno-unused-local-typedefs")
+  endif()
 else()
   # Clang/Intel specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings

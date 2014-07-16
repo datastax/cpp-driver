@@ -114,7 +114,7 @@ public:
   bool handshake_done() { return SSL_is_init_finished(ssl); }
 
   char* ciphers(char* output, size_t size) {
-    const SSL_CIPHER* sc = SSL_get_current_cipher(ssl);
+    SSL_CIPHER* sc = SSL_get_current_cipher(ssl);
     return SSL_CIPHER_description(sc, output, size);
   }
 
