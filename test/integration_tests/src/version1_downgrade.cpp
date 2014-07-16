@@ -12,6 +12,7 @@
 #include <boost/format.hpp>
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
+#include <boost/atomic.hpp>
 
 #include "cassandra.h"
 #include "test_utils.hpp"

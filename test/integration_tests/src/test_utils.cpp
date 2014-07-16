@@ -102,7 +102,7 @@ const std::string lorem_ipsum = "Lorem ipsum dolor sit amet, consectetur adipisc
 
 MultipleNodesTest::MultipleNodesTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version)
   : conf(cql::get_ccm_bridge_configuration()) {
-  boost::debug::detect_memory_leaks(true);
+  boost::debug::detect_memory_leaks(false);
   ccm = cql::cql_ccm_bridge_t::create(conf, "test", num_nodes_dc1, num_nodes_dc2);
 
   cluster = cass_cluster_new();

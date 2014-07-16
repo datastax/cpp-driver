@@ -358,9 +358,9 @@ void Connection::consume(char* input, size_t size) {
       response_.reset(new ResponseMessage());
 
       logger_->debug(
-          "Consumed message type %s with stream %d, input %zd, remaining %d on "
+          "Consumed message type %s with stream %d, input %lu, remaining %d on "
           "'%s'",
-          opcode_to_string(response->opcode()).c_str(), response->stream(),
+          opcode_to_string(response->opcode()).c_str(), static_cast<int>(response->stream()),
           size, remaining, host_string_.c_str());
 
       if (response->stream() < 0) {
