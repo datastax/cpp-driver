@@ -17,11 +17,13 @@
 #ifndef __CASS_IO_WORKER_HPP_INCLUDED__
 #define __CASS_IO_WORKER_HPP_INCLUDED__
 
+#include "async_queue.hpp"
 #include "constants.hpp"
 #include "event_thread.hpp"
-#include "async_queue.hpp"
 #include "host.hpp"
+#include "list.hpp"
 #include "spsc_queue.hpp"
+
 
 #include <uv.h>
 #include <string>
@@ -79,12 +81,15 @@ private:
 private:
   typedef std::map<Host, Pool*> PoolMap;
 
-  struct ReconnectRequest {
+  struct ReconnectRequest : public List<ReconnectRequest>::Node {
     ReconnectRequest(IOWorker* io_worker, Host host)
         : io_worker(io_worker)
         , host(host) {}
 
+    void stop_timer();
+
     IOWorker* io_worker;
+    Timer* timer;
     Host host;
   };
 
@@ -99,6 +104,7 @@ private:
   PoolList pending_delete_;
   bool is_closing_;
   int pending_request_count_;
+  List<ReconnectRequest> pending_reconnects_;
 
   const Config& config_;
   AsyncQueue<SPSCQueue<RequestHandler*> > request_queue_;

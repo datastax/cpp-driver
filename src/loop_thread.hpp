@@ -35,8 +35,6 @@ public:
 protected:
   uv_loop_t* loop() { return loop_; }
 
-  void stop() { uv_stop(loop_); }
-
   virtual void on_run() {}
   virtual void on_after_run() {}
 

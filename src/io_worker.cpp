@@ -125,8 +125,14 @@ void IOWorker::close_handles() {
   EventThread<IOWorkerEvent>::close_handles();
   request_queue_.close_handles();
   uv_prepare_stop(&prepare_);
+  uv_close(reinterpret_cast<uv_handle_t*>(&prepare_), NULL);
+  while (!pending_reconnects_.is_empty()) {
+    ReconnectRequest* reconnect_request = pending_reconnects_.front();
+    reconnect_request->stop_timer();
+    pending_reconnects_.remove(reconnect_request);
+    delete reconnect_request;
+  }
   logger_->debug("IO worker active handles %d", loop()->active_handles);
-  stop();
 }
 
 void IOWorker::on_pool_ready(Pool* pool) {
@@ -142,8 +148,11 @@ void IOWorker::on_pool_closed(Pool* pool) {
     maybe_notify_closed();
   } else {
     ReconnectRequest* reconnect_request = new ReconnectRequest(this, host);
-    Timer::start(loop(), config_.reconnect_wait(), reconnect_request,
-                 IOWorker::on_pool_reconnect);
+    pending_reconnects_.add_to_back(reconnect_request);
+    reconnect_request->timer = Timer::start(loop(),
+                                            config_.reconnect_wait(),
+                                            reconnect_request,
+                                            IOWorker::on_pool_reconnect);
   }
 }
 
@@ -202,6 +211,7 @@ void IOWorker::on_pool_reconnect(Timer* timer) {
         reconnect_request->host.address.to_string().c_str());
     io_worker->add_pool(reconnect_request->host);
   }
+  io_worker->pending_reconnects_.remove(reconnect_request);
   delete reconnect_request;
 }
 
@@ -227,6 +237,12 @@ void IOWorker::on_execute(uv_async_t* async, int status) {
 void IOWorker::on_prepare(uv_prepare_t* prepare, int status) {
   IOWorker* io_worker = reinterpret_cast<IOWorker*>(prepare->data);
   io_worker->cleanup();
+}
+
+void IOWorker::ReconnectRequest::stop_timer() {
+  assert(timer != NULL);
+  Timer::stop(timer);
+  timer = NULL;
 }
 
 } // namespace cass
