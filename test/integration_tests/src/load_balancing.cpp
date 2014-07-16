@@ -3,10 +3,6 @@
 #   define BOOST_TEST_MODULE cassandra
 #endif
 
-#include <chrono>
-#include <algorithm>
-#include <future>
-
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
 #include <boost/lexical_cast.hpp>

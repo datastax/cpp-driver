@@ -132,7 +132,9 @@ public:
     Session* session = release_result();
     if (session != NULL) {
       // The future was deleted before obtaining the session
-      session->close_async(NULL);
+      ScopedPtr<cass::SessionCloseFuture> close_future(new cass::SessionCloseFuture());
+      session->close_async(close_future.get());
+      close_future->wait();
     }
   }
 };

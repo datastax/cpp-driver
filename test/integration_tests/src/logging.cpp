@@ -18,10 +18,14 @@
 #include "test_utils.hpp"
 
 
+namespace {
+
 struct LogData {
   LogData() : log_count(0) {}
   boost::atomic<int> log_count;
 };
+
+} // namespace
 
 void check_log_callback(void* data,
                         cass_uint64_t time,
@@ -41,14 +45,16 @@ BOOST_AUTO_TEST_CASE(test_logging_callback)
 {
   boost::shared_ptr<LogData> log_data(new LogData());
 
-  cass_cluster_set_log_level(cluster, CASS_LOG_DEBUG);
-  cass_cluster_set_log_callback(cluster, log_data.get(), check_log_callback);
+  {
+    cass_cluster_set_log_level(cluster, CASS_LOG_DEBUG);
+    cass_cluster_set_log_callback(cluster, log_data.get(), check_log_callback);
 
-  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
-  test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr temp_session = test_utils::make_shared(cass_future_get_session(session_future.get()));
+    test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
+    test_utils::wait_and_check_error(session_future.get());
+    test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
+  }
 
-  BOOST_REQUIRE(log_data->log_count > 0);
+  BOOST_CHECK(log_data->log_count > 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
