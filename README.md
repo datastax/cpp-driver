@@ -16,6 +16,7 @@ the Cassandra Query Language version 3 (CQL3) and Cassandra's Native Protocol (v
 - Batch statements
 - Connection pool with auto-reconnect
 - Cassandra collections
+- Compatibility with native protcol version 1
 
 ### TODO
 - Compression
@@ -26,11 +27,12 @@ the Cassandra Query Language version 3 (CQL3) and Cassandra's Native Protocol (v
 - Integration tests
 - Query tracing
 - Event registration and notification
-- Compatibility with native protcol version 1
 - Binary releases for Windows and Linux
 
 ## Building
 The driver is known to work on OS X 10.9, Windows 7, and Ubuntu 14.04. The driver itself currently has two dependencies: [libuv 0.10](https://github.com/joyent/libuv) and [OpenSSL](http://www.openssl.org/). To build the driver you will need [CMake](http://www.cmake.org). To test the driver you will also need to install [boost 1.41+](http://www.boost.org),  [libssh2](http://www.libssh2.org) and [ccm](https://github.com/pcmanus/ccm).
+
+It has been built using GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2013.
 
 ### OS X
 The driver has been built and tested using the Clang compiler provided by XCode 5.1. The dependencies were obtained using [Homebrew](http://brew.sh).
@@ -56,7 +58,7 @@ make
 ```
 
 ### Windows
-The driver has been built and tested using [Microsoft Visual Studio Express 2013 for Windows Desktop](http://www.microsoft.com/en-us/download/details.aspx?id=40787) on Windows 7 SP1. The dependencies need to be manually built or obtained.
+The driver has been built and tested using Microsoft Visual Studio 2010 and 2013 (using the "Express" versions) on Windows 7 SP1. The dependencies need to be manually built or obtained.
 
 To obtain dependencies:
 * Download and install CMake for Windows. Make sure to select the option "Add CMake to the system PATH for all users" or "Add CMake to the system PATH for current user".
@@ -82,6 +84,8 @@ cd <path to driver>/cpp-driver
 cmake -G "Visual Studio 12 Win64"
 msbuild cassandra.vcxproj /p:Configuration=Release /t:Clean,Build
 ```
+
+Note: Use "cmake -G "Visual Studio 10" for Visual Studio 2010
 
 ### Linux
 The driver was built and tested using both GCC and Clang on Ubuntu 14.04.
@@ -119,15 +123,12 @@ There are several examples provided here: [examples](https://github.com/datastax
 #include <cassandra.h>
 
 int main() {
-  CassError rc = CASS_OK;
+  CassError rc = 0;
   CassCluster* cluster = cass_cluster_new();
   CassFuture* session_future = NULL;
-  const char* contact_points[] = { "127.0.0.1",  NULL };
-  const char** contact_point = NULL;
+  CassString contact_points = cass_string_init("127.0.0.1,127.0.0.2,127.0.0.3");
 
-  for(contact_point = contact_points; *contact_point; contact_point++) {
-    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINT_ADD, *contact_point, strlen(*contact_point));
-  }
+  cass_cluster_set_contact_points(cluster, contact_points);
 
   session_future = cass_cluster_connect(cluster);
   cass_future_wait(session_future);
@@ -138,7 +139,7 @@ int main() {
     CassFuture* result_future = NULL;
     CassFuture* close_future = NULL;
     CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces;");
-    CassStatement* statement = cass_statement_new(query, 0, CASS_CONSISTENCY_ONE);
+    CassStatement* statement = cass_statement_new(query, 0);
 
     result_future = cass_session_execute(session, statement);
     cass_future_wait(result_future);
@@ -177,6 +178,7 @@ int main() {
     cass_future_free(result_future);
     close_future = cass_session_close(session);
     cass_future_wait(close_future);
+    cass_future_free(close_future);
   } else {
     CassString message = cass_future_error_message(session_future);
     fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
