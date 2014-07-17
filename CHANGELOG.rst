@@ -11,16 +11,17 @@ Features
 * Added batch type to batches
 * Removed the `setopt` method added set methods for all options
 * Removed the `getopt` method
-* Exposed options `cass_cluster_set_max_pending_requests()` and 
-  `cass_cluster_set_max_simultaneous_creation()`
+* Exposed options `cass_cluster_set_max_pending_requests()`,
+  `cass_cluster_set_max_simultaneous_creation()`, and
+  `cass_cluster_set_max_simultaneous_requests_threshold()`
 
 Bug Fixes
 ---------
 * Fixed `StreamManager` so it no longer causes stack corruption
 * Fixed issue where connections would log "'Timed out during startup' error on startup for ..."
-  when a Session was closed while a connection was during it's startup process
-* Fixed Row and collections iterator so they return the first and last item
-* Improved logic for creating new connections
+  when a Session was closed while a connection was during its startup process
+* Fixed Row and collections iterator so they return the first and last item properly
+* Improved logic for creating new connections so it's based request throughput
 
 1.0.0-beta1
 ===========
