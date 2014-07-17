@@ -985,7 +985,7 @@ cass_prepared_bind(const CassPrepared* prepared,
 /**
  * Creates a new batch statement with batch type.
  *
- * @param[in] consistency The statement's read/write consistency.
+ * @param[in] type
  * @return Returns a batch statement that must be freed.
  *
  * @see cass_batch_free()
@@ -1006,7 +1006,7 @@ cass_batch_free(CassBatch* batch);
  * Sets the batch's consistency level
  *
  * @param[in] batch
- * @param[in] consistency The batch's read/write consistency.
+ * @param[in] consistency The batch's write consistency.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
