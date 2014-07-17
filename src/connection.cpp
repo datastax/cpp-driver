@@ -1,8 +1,6 @@
 #include "connection.hpp"
 #include "constants.hpp"
 #include "response.hpp"
-#include "ssl_context.hpp"
-#include "ssl_session.hpp"
 #include "connecter.hpp"
 #include "timer.hpp"
 #include "config.hpp"
@@ -228,7 +226,7 @@ void Connection::InternalRequest::on_request_timeout(Timer* timer) {
   request->on_timeout();
 }
 
-Connection::Connection(uv_loop_t* loop, SSLSession* ssl_session,
+Connection::Connection(uv_loop_t* loop,
                        const Host& host, Logger* logger, const Config& config,
                        const std::string& keyspace, int protocol_version)
     : state_(CLIENT_STATE_NEW)
@@ -239,7 +237,6 @@ Connection::Connection(uv_loop_t* loop, SSLSession* ssl_session,
     , response_(new ResponseMessage())
     , host_(host)
     , host_string_(host.address.to_string())
-    , ssl_(ssl_session)
     , ssl_handshake_done_(false)
     , version_("3.0.0")
     , protocol_version_(protocol_version)
@@ -249,10 +246,6 @@ Connection::Connection(uv_loop_t* loop, SSLSession* ssl_session,
     , connect_timer_(NULL) {
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
-  if (ssl_) {
-    ssl_->init();
-    ssl_->handshake(true);
-  }
 }
 
 void Connection::connect() {
@@ -484,54 +477,7 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
     free_buffer(buf);
     return;
   }
-
-  if (connection->ssl_) {
-//    char* read_input = buf.base;
-//    size_t read_input_size = nread;
-
-//    for (;;) {
-//      size_t read_size = 0;
-//      char* read_output = NULL;
-//      size_t read_output_size = 0;
-//      char* write_output = NULL;
-//      size_t write_output_size = 0;
-
-//      // TODO(mstump) error handling for SSL decryption
-//      std::string error;
-//      connection->ssl_->read_write(read_input, read_input_size, read_size,
-//                                   &read_output, read_output_size, NULL, 0,
-//                                   &write_output, write_output_size, &error);
-
-//      if (read_output && read_output_size) {
-//        // TODO(mstump) error handling
-//        connection->consume(read_output, read_output_size);
-//        delete read_output;
-//      }
-
-//      if (write_output && write_output_size) {
-//        Request* request = new Request(connection, NULL);
-//        connection->write(uv_buf_init(write_output, write_output_size),
-//                          request);
-//        // delete of write_output will be handled by on_write
-//      }
-
-//      if (read_size < read_input_size) {
-//        read_input += read_size;
-//        read_input_size -= read_size;
-//      } else {
-//        break;
-//      }
-
-//      if (!connection->ssl_handshake_done_) {
-//        if (connection->ssl_->handshake_done()) {
-//          connection->state_ = CLIENT_STATE_HANDSHAKE;
-//          connection->event_received();
-//        }
-//      }
-//    }
-  } else {
-    connection->consume(buf.base, nread);
-  }
+  connection->consume(buf.base, nread);
   free_buffer(buf);
 }
 
@@ -576,14 +522,8 @@ void Connection::on_write(Writer* writer) {
 }
 
 void Connection::ssl_handshake() {
-  if (ssl_) {
-    // calling read on a handshaked initiated ssl_ pipe
-    // will gives us the first message to send to the server
-    on_read(reinterpret_cast<uv_stream_t*>(&socket_), 0, alloc_buffer(0));
-  } else {
-    state_ = CLIENT_STATE_HANDSHAKE;
-    event_received();
-  }
+  state_ = CLIENT_STATE_HANDSHAKE;
+  event_received();
 }
 
 void Connection::on_ready() {

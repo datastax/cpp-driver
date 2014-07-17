@@ -22,7 +22,6 @@
 #include "round_robin_policy.hpp"
 #include "resolver.hpp"
 #include "io_worker.hpp"
-#include "ssl_context.hpp"
 #include "prepare_request.hpp"
 
 extern "C" {
@@ -56,8 +55,7 @@ CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* ba
 namespace cass {
 
 Session::Session(const Config& config)
-    : ssl_context_(NULL)
-    , connect_future_(NULL)
+    : connect_future_(NULL)
     , close_future_(NULL)
     , config_(config)
     , load_balancing_policy_(new RoundRobinPolicy())
@@ -243,13 +241,6 @@ void Session::on_resolve(Resolver* resolver) {
   if (--session->pending_resolve_count_ == 0) {
     session->init_pools();
   }
-}
-
-SSLSession* Session::ssl_session_new() {
-  if (ssl_context_) {
-    return ssl_context_->session_new();
-  }
-  return NULL;
 }
 
 void Session::execute(RequestHandler* request_handler) {

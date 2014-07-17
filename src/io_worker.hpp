@@ -99,7 +99,6 @@ private:
   Session* session_;
   Logger* logger_;
   uv_prepare_t prepare_;
-  SSLContext* ssl_context_;
   PoolMap pools;
   PoolList pending_delete_;
   bool is_closing_;

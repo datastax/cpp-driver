@@ -33,7 +33,6 @@
 namespace cass {
 
 class Connection;
-class SSLContext;
 class Logger;
 class RequestHandler;
 class Config;
@@ -73,7 +72,7 @@ public:
     POOL_STATE_CLOSED
   };
 
-  Pool(const Host& host, uv_loop_t* loop, SSLContext* ssl_context,
+  Pool(const Host& host, uv_loop_t* loop,
        Logger* logger, const Config& config);
 
   ~Pool();
@@ -119,7 +118,6 @@ private:
   PoolState state_;
   Host host_;
   uv_loop_t* loop_;
-  SSLContext* ssl_context_;
   Logger* logger_;
   const Config& config_;
   int protocol_version_;

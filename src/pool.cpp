@@ -6,7 +6,6 @@
 #include "set_keyspace_handler.hpp"
 #include "request_handler.hpp"
 #include "connection.hpp"
-#include "ssl_context.hpp"
 #include "result_response.hpp"
 #include "error_response.hpp"
 
@@ -99,12 +98,11 @@ void Pool::PoolHandler::on_error_response(ResponseMessage* response) {
   }
 }
 
-Pool::Pool(const Host& host, uv_loop_t* loop, SSLContext* ssl_context,
+Pool::Pool(const Host& host, uv_loop_t* loop,
            Logger* logger, const Config& config)
     : state_(POOL_STATE_NEW)
     , host_(host)
     , loop_(loop)
-    , ssl_context_(ssl_context)
     , logger_(logger)
     , config_(config)
     , protocol_version_(config.protocol_version())
@@ -222,8 +220,8 @@ void Pool::maybe_close() {
 void Pool::spawn_connection(const std::string& keyspace) {
   if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
     Connection* connection =
-        new Connection(loop_, ssl_context_ ? ssl_context_->session_new() : NULL,
-                       host_, logger_, config_, keyspace, protocol_version_);
+        new Connection(loop_, host_, logger_, config_,
+                       keyspace, protocol_version_);
 
     connection->set_ready_callback(
         boost::bind(&Pool::on_connection_ready, this, _1));

@@ -17,7 +17,6 @@
 #include "io_worker.hpp"
 #include "config.hpp"
 #include "pool.hpp"
-#include "ssl_context.hpp"
 #include "request_handler.hpp"
 #include "logger.hpp"
 #include "session.hpp"
@@ -30,7 +29,6 @@ namespace cass {
 IOWorker::IOWorker(Session* session, Logger* logger, const Config& config)
     : session_(session)
     , logger_(logger)
-    , ssl_context_(NULL)
     , is_closing_(false)
     , pending_request_count_(0)
     , config_(config)
@@ -75,7 +73,7 @@ void IOWorker::close_async() {
 
 void IOWorker::add_pool(Host host) {
   if (!is_closing_ && pools.count(host) == 0) {
-    Pool* pool = new Pool(host, loop(), ssl_context_, logger_, config_);
+    Pool* pool = new Pool(host, loop(), logger_, config_);
 
     pool->set_ready_callback(boost::bind(&IOWorker::on_pool_ready, this, _1));
     pool->set_closed_callback(boost::bind(&IOWorker::on_pool_closed, this, _1));

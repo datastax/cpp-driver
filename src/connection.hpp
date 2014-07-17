@@ -35,8 +35,6 @@
 namespace cass {
 
 class ResponseMessage;
-class SSLContext;
-class SSLSession;
 class Connecter;
 class Timer;
 class Config;
@@ -134,7 +132,7 @@ public:
     CLIENT_EVENT_SCHEMA_DROPPED
   };
 
-  Connection(uv_loop_t* loop, SSLSession* ssl_session, const Host& host,
+  Connection(uv_loop_t* loop, const Host& host,
              Logger* logger, const Config& config, const std::string& keyspace,
              int protocol_version);
 
@@ -215,7 +213,6 @@ private:
   // the actual connection
   uv_tcp_t socket_;
   // ssl stuff
-  SSLSession* ssl_;
   bool ssl_handshake_done_;
   // supported stuff sent in start up message
   std::string compression_;
