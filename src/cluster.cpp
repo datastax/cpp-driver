@@ -107,7 +107,7 @@ CassError cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
   return CASS_OK;
 }
 
-CassError cass_cluster_set_max_pending_request(CassCluster* cluster,
+CassError cass_cluster_set_max_pending_requests(CassCluster* cluster,
                                                unsigned num_requests) {
   if (num_requests == 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;

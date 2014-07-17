@@ -36,7 +36,7 @@ CassCluster* create_cluster() {
   cass_cluster_set_log_level(cluster, CASS_LOG_WARN);
   cass_cluster_set_queue_size_io(cluster, 16384);
   cass_cluster_set_num_threads_io(cluster, 2);
-  cass_cluster_set_max_pending_request(cluster, 10000);
+  cass_cluster_set_max_pending_requests(cluster, 10000);
   cass_cluster_set_core_connections_per_host(cluster, 2);
   cass_cluster_set_max_connections_per_host(cluster, 4);
   return cluster;

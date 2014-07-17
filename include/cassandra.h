@@ -418,7 +418,7 @@ cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_max_pending_request(CassCluster* cluster,
+cass_cluster_set_max_pending_requests(CassCluster* cluster,
                                      unsigned num_requests);
 
 /**
