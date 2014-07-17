@@ -17,15 +17,16 @@
 #ifndef __CASS_READY_RESPONSE_HPP_INCLUDED__
 #define __CASS_READY_RESPONSE_HPP_INCLUDED__
 
-#include "message_body.hpp"
+#include "response.hpp"
 
 namespace cass {
 
-struct ReadyResponse : public MessageBody {
+class ReadyResponse : public Response {
+public:
   ReadyResponse()
-      : MessageBody(CQL_OPCODE_READY) {}
+      : Response(CQL_OPCODE_READY) {}
 
-  bool consume(char* buffer, size_t size) { return true; }
+  bool decode(int version, char* buffer, size_t size) { return true; }
 };
 
 } // namespace cass

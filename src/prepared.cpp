@@ -14,8 +14,9 @@
   limitations under the License.
 */
 
-#include "cassandra.hpp"
+#include "types.hpp"
 #include "prepared.hpp"
+#include "execute_request.hpp"
 
 extern "C" {
 
@@ -24,10 +25,11 @@ void cass_prepared_free(const CassPrepared* prepared) {
 }
 
 CassStatement* cass_prepared_bind(const CassPrepared* prepared,
-                                  size_t parameter_count,
-                                  CassConsistency consistency) {
-  return CassStatement::to(
-      new cass::ExecuteRequest(prepared, parameter_count, consistency));
+                                  size_t parameter_count) {
+  cass::ExecuteRequest* execute
+      = new cass::ExecuteRequest(prepared, parameter_count);
+  execute->retain();
+  return CassStatement::to(execute);
 }
 
 } // extern "C"

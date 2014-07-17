@@ -17,26 +17,34 @@
 #ifndef __CASS_WRITER_HPP_INCLUDED__
 #define __CASS_WRITER_HPP_INCLUDED__
 
-#include <uv.h>
+#include "buffer.hpp"
+#include "macros.hpp"
 
+#include "third_party/boost/boost/function.hpp"
+
+#include <uv.h>
 #include <vector>
+#include <functional>
 
 namespace cass {
 
 class Writer {
 public:
-  typedef std::function<void(Writer*)> Callback;
-  typedef std::vector<uv_buf_t> Bufs;
+  typedef boost::function1<void, Writer*> Callback;
 
   enum Status { WRITING, FAILED, SUCCESS };
 
   Status status() { return status_; }
   void* data() { return data_; }
 
-  static void write(uv_stream_t* handle, Bufs* bufs, void* data, Callback cb) {
+  static void write(uv_stream_t* handle, const BufferVec* bufs, void* data, Callback cb) {
     Writer* writer = new Writer(bufs, data, cb);
-    int rc =
-        uv_write(&writer->req_, handle, bufs->data(), bufs->size(), on_write);
+
+    int rc = uv_write(&writer->req_,
+                      handle,
+                      writer->uv_bufs_.data(),
+                      writer->uv_bufs_.size(), on_write);
+
     if (rc != 0) {
       writer->status_ = FAILED;
       writer->cb_(writer);
@@ -57,23 +65,28 @@ private:
   }
 
 private:
-  Writer(Bufs* bufs, void* data, Callback cb)
+  typedef std::vector<uv_buf_t> UvBufs;
+
+  Writer(const BufferVec* bufs, void* data, Callback cb)
       : bufs_(bufs)
       , data_(data)
       , cb_(cb)
       , status_(WRITING) {
     req_.data = this;
+    uv_bufs_.reserve(bufs->size());
+    for (BufferVec::const_iterator it = bufs->begin(), end = bufs->end();
+        it != end; ++it) {
+      uv_bufs_.push_back(uv_buf_init(const_cast<char*>(it->data()), it->size()));
+    }
   }
 
   ~Writer() {
-    for (uv_buf_t buf : *bufs_) {
-      delete[] buf.base;
-    }
     delete bufs_;
   }
 
   uv_write_t req_;
-  Bufs* bufs_;
+  const BufferVec* bufs_;
+  UvBufs uv_bufs_;
   void* data_;
   Callback cb_;
   Status status_;

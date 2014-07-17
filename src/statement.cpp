@@ -14,20 +14,47 @@
   limitations under the License.
 */
 
-#include "cassandra.hpp"
+#include "types.hpp"
 #include "statement.hpp"
+#include "query_request.hpp"
+
+#include "third_party/boost/boost/cstdint.hpp"
 
 extern "C" {
 
-CassStatement* cass_statement_new(CassString statement, size_t parameter_count,
-                                  CassConsistency consistency) {
-  cass::Statement* query = new cass::QueryRequest(parameter_count, consistency);
-  query->statement(statement.data, statement.length);
+CassStatement* cass_statement_new(CassString statement, size_t parameter_count) {
+  cass::Statement* query = new cass::QueryRequest(parameter_count);
+  query->retain();
+  query->set_query(statement.data, statement.length);
   return CassStatement::to(query);
 }
 
 void cass_statement_free(CassStatement* statement) {
   statement->release();
+}
+
+CassError cass_statement_set_consistency(CassStatement* statement,
+                                         CassConsistency consistency) {
+  statement->set_consistency(consistency);
+  return CASS_OK;
+}
+
+CassError cass_statement_set_serial_consistency(CassStatement* statement,
+                                                CassConsistency serial_consistency) {
+  statement->set_serial_consistency(serial_consistency);
+  return CASS_OK;
+}
+
+CassError cass_statement_set_paging_size(CassStatement* statement,
+                                         int page_size) {
+  statement->set_page_size(page_size);
+  return CASS_OK;
+}
+
+CassError cass_statement_set_paging_state(CassStatement* statement,
+                                          const CassResult* result) {
+  statement->set_paging_state(result->paging_state());
+  return CASS_OK;
 }
 
 CassError cass_statement_bind_null(CassStatement* statement,
@@ -57,7 +84,7 @@ CassError cass_statement_bind_double(CassStatement* statement, size_t index,
 
 CassError cass_statement_bind_bool(CassStatement* statement, size_t index,
                                    cass_bool_t value) {
-  return statement->bind_bool(index, value == cass_true);
+  return statement->bind_byte(index, value == cass_true);
 }
 
 CassError cass_statement_bind_string(CassStatement* statement, size_t index,
@@ -87,9 +114,8 @@ CassError cass_statement_bind_decimal(CassStatement* statement,
 }
 
 CassError cass_statement_bind_collection(CassStatement* statement, size_t index,
-                                         const CassCollection* collection,
-                                         cass_bool_t is_map) {
-  return statement->bind(index, collection->from(), is_map == cass_true);
+                                         const CassCollection* collection) {
+  return statement->bind(index, collection->from());
 }
 
 CassError cass_statement_bind_custom(CassStatement* statement,
@@ -99,3 +125,26 @@ CassError cass_statement_bind_custom(CassStatement* statement,
 }
 
 } // extern "C"
+
+namespace cass {
+
+int32_t Statement::encode_values(int version, BufferVec* bufs) const {
+  int32_t values_size = 0;
+  for (ValueVec::const_iterator it = values_.begin(), end = values_.end();
+       it != end; ++it) {
+    if (it->is_empty()) {
+      Buffer buf(sizeof(int32_t));
+      buf.encode_int32(0, -1); // [bytes] "null"
+      bufs->push_back(buf);
+      values_size += sizeof(int32_t);
+    } else if (it->is_collection()) {
+      values_size += it->collection()->encode(version, bufs);
+    } else {
+      bufs->push_back(*it);
+      values_size += it->size();
+    }
+  }
+  return values_size;
+}
+
+} // namespace  cass

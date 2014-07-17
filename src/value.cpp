@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "cassandra.hpp"
+#include "types.hpp"
 #include "value.hpp"
 
 extern "C" {
@@ -23,7 +23,7 @@ CassError cass_value_get_int32(const CassValue* value, cass_int32_t* output) {
   if (value->type != CASS_VALUE_TYPE_INT) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  cass::decode_int(value->buffer.data(), *output);
+  cass::decode_int32(value->buffer.data(), *output);
   return CASS_OK;
 }
 
@@ -94,7 +94,7 @@ CassError cass_value_get_decimal(const CassValue* value, CassDecimal* output) {
   if (value->type != CASS_VALUE_TYPE_DECIMAL) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  const char* buffer = cass::decode_int(value->buffer.data(), output->scale);
+  const char* buffer = cass::decode_int32(value->buffer.data(), output->scale);
   output->varint.data = reinterpret_cast<const cass_byte_t*>(buffer);
   output->varint.size = value->buffer.size() - sizeof(int32_t);
   return CASS_OK;

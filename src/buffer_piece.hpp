@@ -17,14 +17,14 @@
 #ifndef __CASS_BUFFER_PIECE_HPP_INCLUDED__
 #define __CASS_BUFFER_PIECE_HPP_INCLUDED__
 
-#include <stdint.h>
+#include "third_party/boost/boost/cstdint.hpp"
 
 namespace cass {
 
 class BufferPiece {
 public:
   BufferPiece()
-      : data_(nullptr)
+      : data_(NULL)
       , size_(-1) {}
 
   BufferPiece(char* data, size_t size)

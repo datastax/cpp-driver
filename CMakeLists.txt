@@ -10,10 +10,10 @@ project(${PROJECT_NAME_STR} C CXX)
 #-------------------
 # Version
 #-------------------
-set(PROJECT_VERSION_MAJOR 0)
-set(PROJECT_VERSION_MINOR 7)
+set(PROJECT_VERSION_MAJOR 1)
+set(PROJECT_VERSION_MINOR 0)
 set(PROJECT_VERSION_PATCH 0)
-set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
+set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}.beta2)
 
 # TODO(mstump) add version header
 
@@ -75,6 +75,7 @@ endif()
 # Build up the include path's
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
+set(INCLUDES ${INCLUDES} "${PROJECT_SOURCE_DIR}/src/third_party/boost")
 
 #-------------------
 # Compiler flags
@@ -96,10 +97,11 @@ if(MULTICORE_COMPILATION)
   # ~/.pam_environment file (in any case check man).
 endif()
 
-if(MSVC)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
   set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:LIBCMT")
+  set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /NODEFAULTLIB:LIBCMT")
  
   # On Visual C++ -pedantic flag is not used,
   # -fPIC is not used on Windows platform (all DLLs are
@@ -107,14 +109,22 @@ if(MSVC)
   # that can hide useful ones.
 
   # TODO(mpenick): Fix these "possible loss of data" warnings
-  set(PLATFORM_DEPENDENT_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS /wd4244 /wd4267")
+  set(PLATFORM_DEPENDENT_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS -DBOOST_ALL_NO_LIB /wd4244 /wd4267")
 
   # needed for windows sockets (not verified)
   add_definitions(-D_WIN32_WINNT=0x0501)
-else()
-  # GCC/Clang specific compiler options
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  # GCC specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(PLATFORM_DEPENDENT_CXX_FLAGS "-std=c++0x -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-c++11-narrowing -Wno-deprecated-declarations -Wno-unused-parameter")
+  set(PLATFORM_DEPENDENT_CXX_FLAGS "-fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.8" OR
+     CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.8")
+    set(PLATFORM_DEPENDENT_CXX_FLAGS "${PLATFORM_DEPENDENT_CXX_FLAGS} -Wno-unused-local-typedefs")
+  endif()
+else()
+  # Clang/Intel specific compiler options
+  # I disabled long-long warning because boost generates about 50 such warnings
+  set(PLATFORM_DEPENDENT_CXX_FLAGS "-fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 endif()
 
 #-------------------
@@ -131,15 +141,16 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 file(GLOB INC_FILES
   ${PROJECT_SOURCE_DIR}/include/*.h )
 
-file(GLOB SRC_FILES
-  ${PROJECT_SOURCE_DIR}/src/*.cpp)
+file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp) 
+
+set(SRC_FILES ${SRC_FILES}
+  "${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/atomic/src/lockpool.cpp" 
+  "${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/random/src/random_device.cpp")
 
 source_group("Source Files" FILES ${SRC_FILES})
 source_group("Header Files" FILES ${INC_FILES})
 
-set(ALL_SOURCE_FILES
-  ${SRC_FILES}
-  ${INC_FILES})
+set(ALL_SOURCE_FILES ${SRC_FILES} ${INC_FILES})
 
 # build dynamic and static version of library
 add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})
@@ -213,12 +224,12 @@ add_subdirectory(test/unit_tests)
 if(WIN32)
   set(BOOST_ROOT "${PROJECT_SOURCE_DIR}/lib/boost/")
   set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/")
-  set(INTEGRATION_TEST_CXX_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
+  set(INTEGRATION_TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS -DBOOST_ALL_NO_LIB")
 else()
-  set(INTEGRATION_TEST_CXX_FLAGS "-std=c++0x -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-c++11-narrowing -Wno-deprecated-declarations -Wno-unused-parameter")
+  set(INTEGRATION_TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 endif()
 
-find_package(Boost 1.41.0 COMPONENTS system thread unit_test_framework date_time program_options)
+find_package(Boost 1.41.0 COMPONENTS system chrono thread unit_test_framework date_time program_options)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/test/ccm_bridge/cmake/Modules/")
 find_package(LIBSSH2)
@@ -245,6 +256,8 @@ add_subdirectory(examples/prepared)
 add_subdirectory(examples/batch)
 add_subdirectory(examples/uuids)
 add_subdirectory(examples/simple)
+add_subdirectory(examples/paging)
+add_subdirectory(examples/perf)
 
 #-----------------------------------
 # Generating API docs with Doxygen

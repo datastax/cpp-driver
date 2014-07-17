@@ -27,8 +27,11 @@
 #ifndef __CASS_SPSC_QUEUE_HPP_INCLUDED__
 #define __CASS_SPSC_QUEUE_HPP_INCLUDED__
 
-#include <atomic>
 #include <assert.h>
+
+#include "third_party/boost/boost/atomic.hpp"
+#include "third_party/boost/boost/type_traits/alignment_of.hpp"
+#include "third_party/boost/boost/aligned_storage.hpp"
 
 namespace cass {
 
@@ -52,30 +55,30 @@ public:
   ~SPSCQueue() { delete[] _buffer; }
 
   bool enqueue(const T& input) {
-    const size_t head = _head.load(std::memory_order_relaxed);
+    const size_t head = _head.load(boost::memory_order_relaxed);
 
-    if (((_tail.load(std::memory_order_acquire) - (head + 1)) & _mask) >= 1) {
+    if (((_tail.load(boost::memory_order_acquire) - (head + 1)) & _mask) >= 1) {
       _buffer[head & _mask] = input;
-      _head.store(head + 1, std::memory_order_release);
+      _head.store(head + 1, boost::memory_order_release);
       return true;
     }
     return false;
   }
 
   bool dequeue(T& output) {
-    const size_t tail = _tail.load(std::memory_order_relaxed);
+    const size_t tail = _tail.load(boost::memory_order_relaxed);
 
-    if (((_head.load(std::memory_order_acquire) - tail) & _mask) >= 1) {
+    if (((_head.load(boost::memory_order_acquire) - tail) & _mask) >= 1) {
       output = _buffer[_tail & _mask];
-      _tail.store(tail + 1, std::memory_order_release);
+      _tail.store(tail + 1, boost::memory_order_release);
       return true;
     }
     return false;
   }
 
 private:
-  typedef typename std::aligned_storage<
-      sizeof(T), std::alignment_of<T>::value>::type SPSCQueueAlignedEntry;
+  typedef typename boost::aligned_storage<
+      sizeof(T), boost::alignment_of<T>::value>::type SPSCQueueAlignedEntry;
 
   typedef char cache_line_pad_t[64];
 
@@ -85,10 +88,10 @@ private:
   T* const _buffer;
 
   cache_line_pad_t _pad1;
-  std::atomic<size_t> _head;
+  boost::atomic<size_t> _head;
 
   cache_line_pad_t _pad2;
-  std::atomic<size_t> _tail;
+  boost::atomic<size_t> _tail;
 
   SPSCQueue(const SPSCQueue&) {}
   void operator=(const SPSCQueue&) {}

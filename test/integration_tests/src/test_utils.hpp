@@ -1,15 +1,24 @@
 #pragma once
 
 #include <string>
-#include <chrono>
+#include <limits>
 
 #include <boost/asio/ip/address.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/chrono.hpp>
 
 #include "cassandra.h"
 
 #include "cql_ccm_bridge_configuration.hpp"
+
+#ifdef min
+#undef min
+#endif
+
+#ifdef max
+#undef max
+#endif
 
 namespace cql {
 
@@ -23,13 +32,18 @@ namespace test_utils {
 extern const cass_duration_t ONE_MILLISECOND_IN_MICROS;
 extern const cass_duration_t ONE_SECOND_IN_MICROS;
 
-struct CassClusterDeleter {
+template<class T>
+struct Deleter;
+
+template<>
+struct Deleter<CassCluster> {
     void operator()(CassCluster* ptr) {
       cass_cluster_free(ptr);
     }
 };
 
-struct CassSessionDeleter {
+template<>
+struct Deleter<CassSession> {
     void operator()(CassSession* ptr) {
       CassFuture* future = cass_session_close(ptr);
       cass_future_wait(future);
@@ -37,57 +51,69 @@ struct CassSessionDeleter {
     }
 };
 
-struct CassFutureDeleter {
+template<>
+struct Deleter<CassFuture> {
   void operator()(CassFuture* ptr) {
     cass_future_free(ptr);
   }
 };
 
-struct CassStatementDeleter {
+template<>
+struct Deleter<CassStatement> {
     void operator()(CassStatement* ptr) {
       cass_statement_free(ptr);
     }
 };
 
-struct CassResultDeleter {
+template<>
+struct Deleter<const CassResult> {
     void operator()(const CassResult* ptr) {
       cass_result_free(ptr);
     }
 };
 
-struct CassIteratorDeleter {
+template<>
+struct Deleter<CassIterator> {
     void operator()(CassIterator* ptr) {
       cass_iterator_free(ptr);
     }
 };
 
-struct CassCollectionDeleter {
+template<>
+struct Deleter<CassCollection> {
     void operator()(CassCollection* ptr) {
       cass_collection_free(ptr);
     }
 };
 
-struct CassPreparedDeleter {
+template<>
+struct Deleter<const CassPrepared> {
     void operator()(const CassPrepared* ptr) {
       cass_prepared_free(ptr);
     }
 };
 
-struct CassBatchDeleter {
+template<>
+struct Deleter<CassBatch> {
     void operator()(CassBatch* ptr) {
       cass_batch_free(ptr);
     }
 };
 
-typedef std::unique_ptr<CassCluster, CassClusterDeleter> CassClusterPtr;
-typedef std::unique_ptr<CassSession, CassSessionDeleter> CassSessionPtr;
-typedef std::unique_ptr<CassFuture, CassFutureDeleter> CassFuturePtr;
-typedef std::unique_ptr<CassStatement, CassStatementDeleter> CassStatementPtr;
-typedef std::unique_ptr<const CassResult, CassResultDeleter> CassResultPtr;
-typedef std::unique_ptr<CassIterator, CassIteratorDeleter> CassIteratorPtr;
-typedef std::unique_ptr<CassCollection, CassCollectionDeleter> CassCollectionPtr;
-typedef std::unique_ptr<const CassPrepared, CassPreparedDeleter> CassPreparedPtr;
-typedef std::unique_ptr<CassBatch, CassBatchDeleter> CassBatchPtr;
+typedef boost::shared_ptr<CassCluster> CassClusterPtr;
+typedef boost::shared_ptr<CassSession> CassSessionPtr;
+typedef boost::shared_ptr<CassFuture> CassFuturePtr;
+typedef boost::shared_ptr<CassStatement> CassStatementPtr;
+typedef boost::shared_ptr<const CassResult> CassResultPtr;
+typedef boost::shared_ptr<CassIterator> CassIteratorPtr;
+typedef boost::shared_ptr<CassCollection> CassCollectionPtr;
+typedef boost::shared_ptr<const CassPrepared> CassPreparedPtr;
+typedef boost::shared_ptr<CassBatch> CassBatchPtr;
+
+template<class T>
+boost::shared_ptr<T> make_shared(T* ptr) {
+  return boost::shared_ptr<T>(ptr, Deleter<T>());
+}
 
 template<class T>
 struct Value;
@@ -388,12 +414,11 @@ inline bool operator<(Uuid a, Uuid b) {
   return memcmp(a.uuid, b.uuid, sizeof(CassUuid)) < 0;
 }
 
-
 /** The following class cannot be used as a kernel of test fixture because of
     parametrized ctor. Derive from it to use it in your tests.
  */
 struct MultipleNodesTest {
-    MultipleNodesTest(int numberOfNodesDC1, int numberOfNodesDC2);
+    MultipleNodesTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version = 2);
     virtual ~MultipleNodesTest();
 
     boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
@@ -402,19 +427,27 @@ struct MultipleNodesTest {
 };
 
 struct SingleSessionTest : MultipleNodesTest {
-  SingleSessionTest(int numberOfNodesDC1, int numberOfNodesDC2);
+  SingleSessionTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version = 2);
   virtual ~SingleSessionTest();
 
   CassSession* session;
 };
 
+void initialize_contact_points(CassCluster* cluster, std::string prefix, int num_nodes_dc1, int num_nodes_dc2);
+
 const char* get_value_type(CassValueType type);
+
+CassError execute_query_with_error(CassSession* session,
+                                  const std::string& query,
+                                  CassResultPtr* result,
+                                  CassConsistency consistency);
 
 void execute_query(CassSession* session,
                    const std::string& query,
-                   CassResultPtr* result = nullptr,
+                   CassResultPtr* result = NULL,
                    CassConsistency consistency = CASS_CONSISTENCY_ONE);
 
+CassError wait_and_return_error(CassFuture* future, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
 void wait_and_check_error(CassFuture* future, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
 
 inline CassBytes bytes_from_string(const char* str) {
@@ -455,7 +488,7 @@ inline std::string generate_unique_str() {
   return boost::replace_all_copy(std::string(buffer), "-", "");
 }
 
-std::string string_from_time_point(std::chrono::system_clock::time_point time);
+std::string string_from_time_point(boost::chrono::system_clock::time_point time);
 std::string string_from_uuid(CassUuid uuid);
 
 extern const char* CREATE_TABLE_ALL_TYPES;

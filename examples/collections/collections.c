@@ -27,12 +27,9 @@ void print_error(CassFuture* future) {
 }
 
 CassCluster* create_cluster() {
-  const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
   CassCluster* cluster = cass_cluster_new();
-  const char** contact_point = NULL;
-  for(contact_point = contact_points; *contact_point; contact_point++) {
-    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINTS, *contact_point, strlen(*contact_point));
-  }
+  CassString contact_points = cass_string_init("127.0.0.1,127.0.0.2,127.0.0.3");
+  cass_cluster_set_contact_points(cluster, contact_points);
   return cluster;
 }
 
@@ -57,7 +54,7 @@ CassError connect_session(CassCluster* cluster, CassSession** output) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = 0;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(cass_string_init(query), 0, CASS_CONSISTENCY_ONE);
+  CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -81,15 +78,15 @@ CassError insert_into_collections(CassSession* session, const char* key, const c
   const char** item = NULL;
   CassString query = cass_string_init("INSERT INTO examples.collections (key, items) VALUES (?, ?);");
 
-  statement = cass_statement_new(query, 2, CASS_CONSISTENCY_ONE);
+  statement = cass_statement_new(query, 2);
 
   cass_statement_bind_string(statement, 0, cass_string_init(key));
 
-  collection = cass_collection_new(2);
+  collection = cass_collection_new(CASS_COLLECTION_TYPE_SET, 2);
   for(item = items; *item; item++) {
     cass_collection_append_string(collection, cass_string_init(*item));
   }
-  cass_statement_bind_collection(statement, 1, collection, cass_false);
+  cass_statement_bind_collection(statement, 1, collection);
   cass_collection_free(collection);
 
   future = cass_session_execute(session, statement);
@@ -112,7 +109,7 @@ CassError select_from_collections(CassSession* session, const char* key) {
   CassFuture* future = NULL;
   CassString query = cass_string_init("SELECT items FROM examples.collections WHERE key = ?");
 
-  statement = cass_statement_new(query, 1, CASS_CONSISTENCY_ONE);
+  statement = cass_statement_new(query, 1);
 
   cass_statement_bind_string(statement, 0, cass_string_init(key));
 
@@ -179,6 +176,7 @@ int main() {
 
   close_future = cass_session_close(session);
   cass_future_wait(close_future);
+  cass_future_free(close_future);
   cass_cluster_free(cluster);
 
   return 0;

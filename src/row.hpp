@@ -19,9 +19,11 @@
 
 #include "value.hpp"
 
+#include <vector>
+
 namespace cass {
 
-struct ResultResponse;
+class ResultResponse;
 
 typedef std::vector<Value> Row;
 char* decode_row(char* row, const ResultResponse* result, Row& output);

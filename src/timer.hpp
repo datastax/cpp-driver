@@ -19,11 +19,13 @@
 
 #include <uv.h>
 
+#include "third_party/boost/boost/function.hpp"
+
 namespace cass {
 
 class Timer {
 public:
-  typedef std::function<void(Timer*)> Callback;
+  typedef boost::function1<void, Timer*> Callback;
 
   void* data() { return data_; }
 

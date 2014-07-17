@@ -21,14 +21,17 @@
 
 #include <functional>
 #include <string>
+#include <sstream>
 
 #include "address.hpp"
+
+#include "third_party/boost/boost/function.hpp"
 
 namespace cass {
 
 class Resolver {
 public:
-  typedef std::function<void(Resolver*)> Callback;
+  typedef boost::function1<void, Resolver*> Callback;
 
   enum Status {
     RESOLVING,
@@ -46,12 +49,14 @@ public:
   void* data() { return data_; }
 
   static void resolve(uv_loop_t* loop, const std::string& host, int port,
-                      void* data, Callback cb,
-                      struct addrinfo* hints = nullptr) {
+                      void* data, Callback cb, struct addrinfo* hints = NULL) {
     Resolver* resolver = new Resolver(host, port, data, cb);
 
+    std::ostringstream ss;
+    ss << port;
+
     int rc = uv_getaddrinfo(loop, &resolver->req_, on_resolve, host.c_str(),
-                            std::to_string(port).c_str(), hints);
+                            ss.str().c_str(), hints);
 
     if (rc != 0) {
       resolver->status_ = FAILED_BAD_PARAM;

@@ -1,6 +1,9 @@
 #include "cassandra.h"
-
 #include "uuids.hpp"
+#include "scoped_mutex.hpp"
+#include "get_time.hpp"
+
+#include "third_party/boost/boost/random/random_device.hpp"
 
 extern "C" {
 
@@ -38,24 +41,31 @@ void cass_uuid_string(CassUuid uuid, char* output) {
 
 } // extern "C"
 
+namespace {
+
+class UuidsInitializer {
+public:
+  UuidsInitializer() { cass::Uuids::initialize_(); }
+};
+
+UuidsInitializer uuids_intitalizer_;
+
+}
+
 namespace cass {
 
-uint64_t Uuids::CLOCK_SEQ_AND_NODE = 0L;
+boost::mt19937_64 Uuids::ng_;
+uv_mutex_t Uuids::mutex_;
+boost::atomic<uint64_t> Uuids::last_timestamp_;
+uint64_t Uuids::CLOCK_SEQ_AND_NODE;
 
-std::atomic_flag Uuids::lock_ = ATOMIC_FLAG_INIT;
-std::atomic<bool> Uuids::is_initialized_ = ATOMIC_VAR_INIT(false);
-std::atomic<uint64_t> Uuids::last_timestamp_ = ATOMIC_VAR_INIT(0L);
-std::mt19937_64 Uuids::ng_;
+void Uuids::initialize_() {
+  boost::random_device rd;
+  ng_.seed(rd());
 
-void Uuids::initialize() {
-  lock();
-  if (!is_initialized_) {
-    std::random_device rd;
-    ng_.seed(rd());
-    CLOCK_SEQ_AND_NODE = make_clock_seq_and_node();
-    is_initialized_ = true;
-  }
-  unlock();
+  uv_mutex_init(&mutex_);
+  last_timestamp_ = 0L;
+  CLOCK_SEQ_AND_NODE = make_clock_seq_and_node();
 }
 
 void Uuids::generate_v1(Uuid uuid) {
@@ -63,27 +73,18 @@ void Uuids::generate_v1(Uuid uuid) {
 }
 
 void Uuids::generate_v1(uint64_t timestamp, Uuid uuid) {
-  if (!is_initialized_) {
-    initialize();
-  }
-
   copy_timestamp(timestamp, 1, uuid);
   copy_clock_seq_and_node(CLOCK_SEQ_AND_NODE, uuid);
 }
 
 void Uuids::generate_v4(Uuid uuid) {
-  if (!is_initialized_) {
-    initialize();
-  }
-
-  lock();
+  ScopedMutex lock(&mutex_);
   uint64_t msb = ng_();
   uint64_t lsb = ng_();
-  unlock();
+  lock.unlock();
 
   copy_timestamp(msb, 4, uuid);
-
-  lsb = (lsb & 0x3FFFFFFFFFFFFFFFL) | 0x8000000000000000L; // RFC4122 variant
+  lsb = (lsb & 0x3FFFFFFFFFFFFFFFLL) | 0x8000000000000000LL; // RFC4122 variant
   copy_clock_seq_and_node(lsb, uuid);
 }
 
@@ -115,7 +116,7 @@ uint64_t Uuids::get_unix_timestamp(Uuid uuid) {
   timestamp |= static_cast<uint64_t>(uuid[7]) << 48;
   timestamp |= static_cast<uint64_t>(uuid[6]) << 56;
 
-  timestamp &= 0x0FFFFFFFFFFFFFFFL; // Clear version
+  timestamp &= 0x0FFFFFFFFFFFFFFFLL; // Clear version
 
   return to_milliseconds(timestamp - TIME_OFFSET_BETWEEN_UTC_AND_EPOCH);
 }
@@ -156,7 +157,7 @@ void Uuids::copy_timestamp(uint64_t timestamp, uint8_t version, Uuid uuid) {
 
 uint64_t Uuids::uuid_timestamp() {
   while (true) {
-    uint64_t now = from_unix_timestamp(unix_timestamp());
+    uint64_t now = from_unix_timestamp(get_time_since_epoch());
     uint64_t last = last_timestamp_.load();
     if (now > last) {
       if (last_timestamp_.compare_exchange_strong(last, now)) {
@@ -215,19 +216,19 @@ uint64_t Uuids::make_clock_seq_and_node() {
   }
 
   uint8_t hash[16];
-  EVP_DigestFinal_ex(mdctx, hash, nullptr);
+  EVP_DigestFinal_ex(mdctx, hash, NULL);
   EVP_MD_CTX_destroy(mdctx);
 
   uint64_t node = 0L;
   for (int i = 0; i < 6; ++i) {
-    node |= (0x00000000000000FFL & (long)hash[i]) << (i * 8);
+    node |= (0x00000000000000FFLL & (long)hash[i]) << (i * 8);
   }
-  node |= 0x0000010000000000L; // Multicast bit
+  node |= 0x0000010000000000LL; // Multicast bit
 
   uint64_t clock = ng_();
   uint64_t clock_seq_and_node = 0;
-  clock_seq_and_node |= (clock & 0x0000000000003FFFL) << 48;
-  clock_seq_and_node |= 0x8000000000000000L; // RFC4122 variant
+  clock_seq_and_node |= (clock & 0x0000000000003FFFLL) << 48;
+  clock_seq_and_node |= 0x8000000000000000LL; // RFC4122 variant
   clock_seq_and_node |= node;
 
   return clock_seq_and_node;

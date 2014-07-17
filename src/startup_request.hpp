@@ -17,49 +17,37 @@
 #ifndef __CASS_STARTUP_REQUEST_HPP_INCLUDED__
 #define __CASS_STARTUP_REQUEST_HPP_INCLUDED__
 
+#include "request.hpp"
+#include "constants.hpp"
+
 #include <map>
 #include <string>
 
-#include "message_body.hpp"
-#include "serialization.hpp"
-
 namespace cass {
 
-struct StartupRequest : public MessageBody {
-  std::unique_ptr<char> guard;
-  std::string version;
-  std::string compression;
-
+class StartupRequest : public Request {
+public:
   StartupRequest()
-      : MessageBody(CQL_OPCODE_STARTUP)
-      , version("3.0.0")
-      , compression("") {}
+      : Request(CQL_OPCODE_STARTUP)
+      , version_("3.0.0")
+      , compression_("") {}
 
-  bool prepare(size_t reserved, char** output, size_t& size) {
-    size = reserved + sizeof(int16_t);
+  bool encode(size_t reserved, char** output, size_t& size);
 
-    std::map<std::string, std::string> options;
-    if (!compression.empty()) {
-      const char* key = "COMPRESSION";
-      size += (sizeof(int16_t) + strlen(key));
-      size += (sizeof(int16_t) + compression.size());
-      options[key] = compression;
-    }
+  const std::string version() const { return version_; }
+  void set_version(const std::string& version) { version_ = version; }
 
-    if (!version.empty()) {
-      const char* key = "CQL_VERSION";
-      size += (sizeof(int16_t) + strlen(key));
-      size += (sizeof(int16_t) + version.size());
-      options[key] = version;
-    }
-
-    *output = new char[size];
-    encode_string_map(*output + reserved, options);
-    return true;
-  }
+  const std::string compression() const { return compression_; }
 
 private:
-  typedef std::map<std::string, std::string> OptionsCollection;
+  int encode(int version, BufferVec* bufs) const;
+
+private:
+  typedef std::map<std::string, std::string> OptionsMap;
+
+  ScopedPtr<char[]> guard_;
+  std::string version_;
+  std::string compression_;
 };
 
 } // namespace cass

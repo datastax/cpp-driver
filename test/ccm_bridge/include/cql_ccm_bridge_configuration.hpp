@@ -8,7 +8,7 @@
 #include <boost/noncopyable.hpp>
 
 namespace cql {
-	class cql_ccm_bridge_configuration_t: public boost::noncopyable {
+  class cql_ccm_bridge_configuration_t: public boost::noncopyable {
 	public:
 		const std::string& ip_prefix() const;
 		const std::string& cassandara_version() const;
@@ -55,14 +55,14 @@ namespace cql {
 		bool _use_logger;
 		bool _use_compression;
         
-        friend const cql_ccm_bridge_configuration_t& get_ccm_bridge_configuration();
+    friend const cql_ccm_bridge_configuration_t& get_ccm_bridge_configuration(const std::string&);
 	};
 
 
 
 	// Returns current tests configuration.
 	// Configuration is readed from config.txt file.
-	const cql_ccm_bridge_configuration_t& get_ccm_bridge_configuration();
+  const cql_ccm_bridge_configuration_t& get_ccm_bridge_configuration(const std::string& filename = "config.txt");
 }
 
 #endif // CQL_CCM_BRIDGE_CONFIGURATION_H_

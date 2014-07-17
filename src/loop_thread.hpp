@@ -24,22 +24,13 @@ namespace cass {
 class LoopThread {
 public:
   LoopThread()
-      : loop_(uv_loop_new())
-      , is_running_(false) {}
+      : loop_(uv_loop_new()) {}
 
   virtual ~LoopThread() { uv_loop_delete(loop_); }
 
-  void run() {
-    is_running_ = true;
-    uv_thread_create(&thread_, on_run_internal, this);
-  }
+  void run() { uv_thread_create(&thread_, on_run_internal, this); }
 
-  void join() {
-    if (is_running_) {
-      uv_thread_join(&thread_);
-      is_running_ = false;
-    }
-  }
+  void join() { uv_thread_join(&thread_); }
 
 protected:
   uv_loop_t* loop() { return loop_; }
@@ -57,7 +48,6 @@ private:
 
   uv_loop_t* loop_;
   uv_thread_t thread_;
-  std::atomic<bool> is_running_;
 };
 
 } // namespace cass

@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "cassandra.hpp"
+#include "types.hpp"
 #include "row.hpp"
 #include "result_response.hpp"
 
@@ -23,7 +23,7 @@ extern "C" {
 const CassValue* cass_row_get_column(const CassRow* row, cass_size_t index) {
   const cass::Row* internal_row = row->from();
   if (index >= internal_row->size()) {
-    return nullptr;
+    return NULL;
   }
   return CassValue::to(&(*internal_row)[index]);
 }
@@ -36,18 +36,19 @@ char* decode_row(char* rows, const ResultResponse* result, Row& output) {
   char* buffer = rows;
   output.clear();
 
-  for (int i = 0; i < result->column_count; ++i) {
+  for (int i = 0; i < result->column_count(); ++i) {
     int32_t size = 0;
-    buffer = decode_int(buffer, size);
+    buffer = decode_int32(buffer, size);
 
-    const ResultResponse::ColumnMetaData& metadata = result->column_metadata[i];
+    const ResultResponse::ColumnMetaData& metadata =
+        result->column_metadata()[i];
     CassValueType type = static_cast<CassValueType>(metadata.type);
 
     if (size >= 0) {
       if (type == CASS_VALUE_TYPE_MAP || type == CASS_VALUE_TYPE_LIST ||
           type == CASS_VALUE_TYPE_SET) {
         uint16_t count = 0;
-        Value value(type, decode_short(buffer, count), size - sizeof(uint16_t));
+        Value value(type, decode_uint16(buffer, count), size - sizeof(uint16_t));
         value.count = count;
         value.primary_type =
             static_cast<CassValueType>(metadata.collection_primary_type);

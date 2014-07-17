@@ -1,15 +1,20 @@
 #include "pool.hpp"
-
 #include "session.hpp"
 #include "timer.hpp"
 #include "prepare_handler.hpp"
 #include "logger.hpp"
 #include "set_keyspace_handler.hpp"
+#include "request_handler.hpp"
+#include "connection.hpp"
+#include "result_response.hpp"
+#include "error_response.hpp"
+
+#include "third_party/boost/boost/bind.hpp"
 
 namespace cass {
 
 static bool least_busy_comp(Connection* a, Connection* b) {
-  return a->available_streams() < b->available_streams();
+  return a->pending_request_count() < b->pending_request_count();
 }
 
 Pool::PoolHandler::PoolHandler(Pool* pool, Connection* connection,
@@ -19,8 +24,8 @@ Pool::PoolHandler::PoolHandler(Pool* pool, Connection* connection,
     , request_handler_(request_handler) {
 }
 
-void Pool::PoolHandler::on_set(Message* response) {
-  switch (response->opcode) {
+void Pool::PoolHandler::on_set(ResponseMessage* response) {
+  switch (response->opcode()) {
     case CQL_OPCODE_RESULT:
       on_result_response(response);
       break;
@@ -57,28 +62,28 @@ void Pool::PoolHandler::finish_request() {
   }
 }
 
-void Pool::PoolHandler::on_result_response(Message* response) {
-  ResultResponse* result = static_cast<ResultResponse*>(response->body.get());
-  switch (result->kind) {
+void Pool::PoolHandler::on_result_response(ResponseMessage* response) {
+  ResultResponse* result =
+      static_cast<ResultResponse*>(response->response_body().get());
+  switch (result->kind()) {
     case CASS_RESULT_KIND_SET_KEYSPACE:
       if (pool_->keyspace_callback_) {
-        pool_->keyspace_callback_(
-            std::string(result->keyspace, result->keyspace_size));
+        pool_->keyspace_callback_(result->keyspace());
       }
       break;
   }
   request_handler_->on_set(response);
 }
 
-void Pool::PoolHandler::on_error_response(Message* response) {
-  ErrorResponse* error = static_cast<ErrorResponse*>(response->body.get());
-  switch (error->code) {
+void Pool::PoolHandler::on_error_response(ResponseMessage* response) {
+  ErrorResponse* error =
+      static_cast<ErrorResponse*>(response->response_body().get());
+  switch (error->code()) {
     case CQL_ERROR_UNPREPARED: {
       RequestHandler* request_handler = request_handler_.release();
-      std::unique_ptr<PrepareHandler> prepare_handler(
+      ScopedPtr<PrepareHandler> prepare_handler(
           new PrepareHandler(request_handler));
-      std::string prepared_id(error->prepared_id, error->prepared_id_size);
-      if (prepare_handler->init(prepared_id)) {
+      if (prepare_handler->init(error->prepared_id())) {
         connection_->execute(prepare_handler.release());
       } else {
         request_handler->on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
@@ -93,22 +98,25 @@ void Pool::PoolHandler::on_error_response(Message* response) {
   }
 }
 
-Pool::Pool(const Host& host, uv_loop_t* loop, SSLContext* ssl_context,
+Pool::Pool(const Host& host, uv_loop_t* loop,
            Logger* logger, const Config& config)
     : state_(POOL_STATE_NEW)
     , host_(host)
     , loop_(loop)
-    , ssl_context_(ssl_context)
     , logger_(logger)
     , config_(config)
+    , protocol_version_(config.protocol_version())
     , is_defunct_(false) {
 }
 
 Pool::~Pool() {
-  for (auto request_handler : pending_request_queue_) {
+  for (RequestHandlerList::iterator it = pending_request_queue_.begin(),
+                                    end = pending_request_queue_.end();
+       it != end; ++it) {
+    RequestHandler* request_handler = *it;
     if (request_handler->timer) {
       Timer::stop(request_handler->timer);
-      request_handler->timer = nullptr;
+      request_handler->timer = NULL;
       request_handler->retry(RETRY_WITH_NEXT_HOST);
     }
   }
@@ -117,7 +125,7 @@ Pool::~Pool() {
 
 void Pool::connect(const std::string& keyspace) {
   if (state_ == POOL_STATE_NEW) {
-    for (size_t i = 0; i < config_.core_connections_per_host(); ++i) {
+    for (unsigned i = 0; i < config_.core_connections_per_host(); ++i) {
       spawn_connection(keyspace);
     }
     state_ = POOL_STATE_CONNECTING;
@@ -134,11 +142,15 @@ void Pool::close() {
       }
     }
     state_ = POOL_STATE_CLOSING;
-    for (auto connection : connections_) {
-      connection->close();
+    for (ConnectionVec::iterator it = connections_.begin(),
+                                 end = connections_.end();
+         it != end; ++it) {
+      (*it)->close();
     }
-    for (auto connection : connections_pending_) {
-      connection->close();
+    for (ConnectionSet::iterator it = connections_pending_.begin(),
+                                 end = connections_pending_.end();
+         it != end; ++it) {
+      (*it)->close();
     }
     maybe_close();
   }
@@ -146,15 +158,21 @@ void Pool::close() {
 
 Connection* Pool::borrow_connection(const std::string& keyspace) {
   if (connections_.empty()) {
-    for (size_t i = 0; i < config_.core_connections_per_host(); ++i) {
+    for (unsigned i = 0; i < config_.core_connections_per_host(); ++i) {
       spawn_connection(keyspace);
     }
-    return nullptr;
+    return NULL;
   }
 
-  maybe_spawn_connection(keyspace);
+  Connection* connection = find_least_busy();
 
-  return find_least_busy();
+  if (connection == NULL ||
+      connection->pending_request_count() >=
+        config_.max_simultaneous_requests_threshold()) {
+      maybe_spawn_connection(keyspace);
+  }
+
+  return connection;
 }
 
 bool Pool::execute(Connection* connection, RequestHandler* request_handler) {
@@ -176,10 +194,15 @@ void Pool::defunct() {
 void Pool::maybe_notify_ready(Connection* connection) {
   // Currently, this will notify ready even if all the connections fail.
   // This might use some improvement.
-  if (state_ == POOL_STATE_CONNECTING && connections_pending_.empty()) {
-    state_ = POOL_STATE_READY;
-    if (ready_callback_) {
-      ready_callback_(this);
+
+  // We won't notify until we've tried all valid protocol versions
+  if (!connection->is_invalid_protocol() ||
+      connection->protocol_version() <= 1) {
+    if (state_ == POOL_STATE_CONNECTING && connections_pending_.empty()) {
+      state_ = POOL_STATE_READY;
+      if (ready_callback_) {
+        ready_callback_(this);
+      }
     }
   }
 }
@@ -195,15 +218,15 @@ void Pool::maybe_close() {
 }
 
 void Pool::spawn_connection(const std::string& keyspace) {
-  if (state_ == POOL_STATE_NEW || state_ == POOL_STATE_READY) {
-    Connection* connection = new Connection(
-        loop_, ssl_context_ ? ssl_context_->session_new() : nullptr, host_,
-        logger_, config_, keyspace);
+  if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
+    Connection* connection =
+        new Connection(loop_, host_, logger_, config_,
+                       keyspace, protocol_version_);
 
     connection->set_ready_callback(
-        std::bind(&Pool::on_connection_ready, this, std::placeholders::_1));
+        boost::bind(&Pool::on_connection_ready, this, _1));
     connection->set_close_callback(
-        std::bind(&Pool::on_connection_closed, this, std::placeholders::_1));
+        boost::bind(&Pool::on_connection_closed, this, _1));
     connection->connect();
 
     connections_pending_.insert(connection);
@@ -224,12 +247,12 @@ void Pool::maybe_spawn_connection(const std::string& keyspace) {
 }
 
 Connection* Pool::find_least_busy() {
-  ConnectionCollection::iterator it = std::max_element(
+  ConnectionVec::iterator it = std::min_element(
       connections_.begin(), connections_.end(), least_busy_comp);
-  if ((*it)->is_ready() && (*it)->available_streams()) {
+  if ((*it)->is_ready() && (*it)->available_streams() > 0) {
     return *it;
   }
-  return nullptr;
+  return NULL;
 }
 
 void Pool::execute_pending_request(Connection* connection) {
@@ -238,7 +261,7 @@ void Pool::execute_pending_request(Connection* connection) {
     pending_request_queue_.pop_front();
     if (request_handler->timer) {
       Timer::stop(request_handler->timer);
-      request_handler->timer = nullptr;
+      request_handler->timer = NULL;
     }
     if (!execute(connection, request_handler)) {
       request_handler->retry(RETRY_WITH_NEXT_HOST);
@@ -248,7 +271,6 @@ void Pool::execute_pending_request(Connection* connection) {
 
 void Pool::on_connection_ready(Connection* connection) {
   connections_pending_.erase(connection);
-
   maybe_notify_ready(connection);
 
   connections_.push_back(connection);
@@ -257,15 +279,19 @@ void Pool::on_connection_ready(Connection* connection) {
 
 void Pool::on_connection_closed(Connection* connection) {
   connections_pending_.erase(connection);
-
   maybe_notify_ready(connection);
 
-  auto it = std::find(connections_.begin(), connections_.end(), connection);
+  ConnectionVec::iterator it =
+      std::find(connections_.begin(), connections_.end(), connection);
   if (it != connections_.end()) {
     connections_.erase(it);
   }
 
-  if (connection->is_defunct()) {
+  if (connection->is_invalid_protocol() &&
+      connection->protocol_version() > 1) {
+    protocol_version_ = connection->protocol_version() - 1;
+    spawn_connection(connection->keyspace());
+  } else if (connection->is_defunct()) {
     // TODO(mpenick): Conviction policy
     defunct();
   }
@@ -282,12 +308,15 @@ void Pool::on_timeout(Timer* timer) {
 
 bool Pool::wait_for_connection(RequestHandler* request_handler) {
   if (pending_request_queue_.size() + 1 > config_.max_pending_requests()) {
+    logger_->warn("Exceeded the max pending requests setting of %u on '%s'",
+                  config_.max_pending_requests(),
+                  host_.address.to_string().c_str());
     return false;
   }
 
   request_handler->timer =
       Timer::start(loop_, config_.connect_timeout(), request_handler,
-                   std::bind(&Pool::on_timeout, this, std::placeholders::_1));
+                   boost::bind(&Pool::on_timeout, this, _1));
   pending_request_queue_.push_back(request_handler);
   return true;
 }

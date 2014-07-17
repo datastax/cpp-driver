@@ -21,11 +21,13 @@
 
 #include "address.hpp"
 
+#include "third_party/boost/boost/function.hpp"
+
 namespace cass {
 
 class Connecter {
 public:
-  typedef std::function<void(Connecter*)> Callback;
+  typedef boost::function1<void, Connecter*> Callback;
 
   enum Status { CONNECTING, FAILED, SUCCESS };
 

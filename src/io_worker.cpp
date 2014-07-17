@@ -15,14 +15,20 @@
 */
 
 #include "io_worker.hpp"
+#include "config.hpp"
 #include "pool.hpp"
+#include "request_handler.hpp"
+#include "logger.hpp"
+#include "session.hpp"
+#include "timer.hpp"
+
+#include "third_party/boost/boost/bind.hpp"
 
 namespace cass {
 
 IOWorker::IOWorker(Session* session, Logger* logger, const Config& config)
     : session_(session)
     , logger_(logger)
-    , ssl_context_(nullptr)
     , is_closing_(false)
     , pending_request_count_(0)
     , config_(config)
@@ -35,7 +41,7 @@ IOWorker::~IOWorker() {
 }
 
 int IOWorker::init() {
-  int rc = EventThread::init(config_.queue_size_event());
+  int rc = EventThread<IOWorkerEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
   rc = request_queue_.init(loop(), this, &IOWorker::on_execute);
   if (rc != 0) return rc;
@@ -60,22 +66,19 @@ bool IOWorker::remove_pool_async(Host host) {
 }
 
 void IOWorker::close_async() {
-  is_closing_ = true;
-  while (!request_queue_.enqueue(nullptr)) {
+  while (!request_queue_.enqueue(NULL)) {
     // Keep trying
   }
 }
 
 void IOWorker::add_pool(Host host) {
   if (!is_closing_ && pools.count(host) == 0) {
-    Pool* pool = new Pool(host, loop(), ssl_context_, logger_, config_);
+    Pool* pool = new Pool(host, loop(), logger_, config_);
 
-    pool->set_ready_callback(
-        std::bind(&IOWorker::on_pool_ready, this, std::placeholders::_1));
-    pool->set_closed_callback(
-        std::bind(&IOWorker::on_pool_closed, this, std::placeholders::_1));
+    pool->set_ready_callback(boost::bind(&IOWorker::on_pool_ready, this, _1));
+    pool->set_closed_callback(boost::bind(&IOWorker::on_pool_closed, this, _1));
     pool->set_keyspace_callback(
-        std::bind(&IOWorker::on_set_keyspace, this, std::placeholders::_1));
+        boost::bind(&IOWorker::on_set_keyspace, this, _1));
 
     pool->connect(session_->keyspace());
 
@@ -84,9 +87,6 @@ void IOWorker::add_pool(Host host) {
 }
 
 bool IOWorker::execute(RequestHandler* request_handler) {
-  if (is_closing_) {
-    return false;
-  }
   return request_queue_.enqueue(request_handler);
 }
 
@@ -96,8 +96,9 @@ void IOWorker::on_set_keyspace(const std::string& keyspace) {
 
 void IOWorker::maybe_close() {
   if (is_closing_ && pending_request_count_ <= 0) {
-    for (auto& entry : pools) {
-      entry.second->close();
+    for (PoolMap::iterator it = pools.begin(), end = pools.end(); it != end;
+         ++it) {
+      it->second->close();
     }
     maybe_notify_closed();
   }
@@ -111,7 +112,7 @@ void IOWorker::maybe_notify_closed() {
 }
 
 void IOWorker::cleanup() {
-  auto it = pending_delete_.begin();
+  PoolList::iterator it = pending_delete_.begin();
   while (it != pending_delete_.end()) {
     delete *it;
     it = pending_delete_.erase(it);
@@ -119,9 +120,16 @@ void IOWorker::cleanup() {
 }
 
 void IOWorker::close_handles() {
-  EventThread::close_handles();
+  EventThread<IOWorkerEvent>::close_handles();
   request_queue_.close_handles();
   uv_prepare_stop(&prepare_);
+  uv_close(reinterpret_cast<uv_handle_t*>(&prepare_), NULL);
+  while (!pending_reconnects_.is_empty()) {
+    ReconnectRequest* reconnect_request = pending_reconnects_.front();
+    reconnect_request->stop_timer();
+    pending_reconnects_.remove(reconnect_request);
+    delete reconnect_request;
+  }
   logger_->debug("IO worker active handles %d", loop()->active_handles);
 }
 
@@ -138,8 +146,11 @@ void IOWorker::on_pool_closed(Pool* pool) {
     maybe_notify_closed();
   } else {
     ReconnectRequest* reconnect_request = new ReconnectRequest(this, host);
-    Timer::start(loop(), config_.reconnect_wait(), reconnect_request,
-                 IOWorker::on_pool_reconnect);
+    pending_reconnects_.add_to_back(reconnect_request);
+    reconnect_request->timer = Timer::start(loop(),
+                                            config_.reconnect_wait(),
+                                            reconnect_request,
+                                            IOWorker::on_pool_reconnect);
   }
 }
 
@@ -157,11 +168,11 @@ void IOWorker::on_retry(RequestHandler* request_handler, RetryType retry_type) {
     return;
   }
 
-  auto it = pools.find(host);
+  PoolMap::iterator it = pools.find(host);
   if (it != pools.end()) {
-    auto pool = it->second;
+    Pool* pool = it->second;
     Connection* connection = pool->borrow_connection(request_handler->keyspace);
-    if (connection != nullptr) {
+    if (connection != NULL) {
       if (!pool->execute(connection, request_handler)) {
         on_retry(request_handler, RETRY_WITH_NEXT_HOST);
       }
@@ -198,22 +209,24 @@ void IOWorker::on_pool_reconnect(Timer* timer) {
         reconnect_request->host.address.to_string().c_str());
     io_worker->add_pool(reconnect_request->host);
   }
+  io_worker->pending_reconnects_.remove(reconnect_request);
   delete reconnect_request;
 }
 
 void IOWorker::on_execute(uv_async_t* async, int status) {
   IOWorker* io_worker = reinterpret_cast<IOWorker*>(async->data);
 
-  RequestHandler* request_handler = nullptr;
+  RequestHandler* request_handler = NULL;
   while (io_worker->request_queue_.dequeue(request_handler)) {
-    if (request_handler != nullptr) {
+    if (request_handler != NULL) {
       io_worker->pending_request_count_++;
       request_handler->set_retry_callback(
-          std::bind(&IOWorker::on_retry, io_worker, std::placeholders::_1,
-                    std::placeholders::_2));
-      request_handler->set_finished_callback(std::bind(
-          &IOWorker::on_request_finished, io_worker, std::placeholders::_1));
+          boost::bind(&IOWorker::on_retry, io_worker, _1, _2));
+      request_handler->set_finished_callback(
+          boost::bind(&IOWorker::on_request_finished, io_worker, _1));
       request_handler->retry(RETRY_WITH_CURRENT_HOST);
+    } else {
+      io_worker->is_closing_ = true;
     }
   }
   io_worker->maybe_close();
@@ -222,6 +235,12 @@ void IOWorker::on_execute(uv_async_t* async, int status) {
 void IOWorker::on_prepare(uv_prepare_t* prepare, int status) {
   IOWorker* io_worker = reinterpret_cast<IOWorker*>(prepare->data);
   io_worker->cleanup();
+}
+
+void IOWorker::ReconnectRequest::stop_timer() {
+  assert(timer != NULL);
+  Timer::stop(timer);
+  timer = NULL;
 }
 
 } // namespace cass

@@ -89,6 +89,12 @@ typedef __UINT64_TYPE__ cass_uint64_t;
 #elif defined(__INT64_TYPE__)
 typedef __INT64_TYPE__ cass_int64_t;
 typedef unsigned __INT64_TYPE__ cass_uint64_t;
+#elif defined(__GNUC__) && defined(__x86_64__)
+typedef long int cass_int64_t;
+typedef unsigned long int cass_uint64_t;
+#elif defined(__GNUC__)
+typedef long long int cass_int64_t;
+typedef unsigned long long int cass_uint64_t;
 #else
 typedef long long cass_int64_t;
 typedef unsigned long long cass_uint64_t;
@@ -175,6 +181,12 @@ typedef enum CassValueType_ {
   CASS_VALUE_TYPE_SET       = 0x0022
 } CassValueType;
 
+typedef enum CassCollectionType_ {
+  CASS_COLLECTION_TYPE_LIST = CASS_VALUE_TYPE_LIST,
+  CASS_COLLECTION_TYPE_MAP = CASS_VALUE_TYPE_MAP,
+  CASS_COLLECTION_TYPE_SET = CASS_VALUE_TYPE_SET
+} CassCollectionType;
+
 typedef enum CassBatchType_ {
   CASS_BATCH_TYPE_LOGGED    = 0,
   CASS_BATCH_TYPE_UNLOGGED  = 1,
@@ -186,25 +198,6 @@ typedef enum CassCompression_ {
   CASS_COMPRESSION_SNAPPY = 1,
   CASS_COMPRESSION_LZ4    = 2
 } CassCompression;
-
-typedef enum CassOption_ {
-  CASS_OPTION_PORT,
-  CASS_OPTION_CQL_VERSION,
-  CASS_OPTION_NUM_THREADS_IO,
-  CASS_OPTION_QUEUE_SIZE_IO,
-  CASS_OPTION_QUEUE_SIZE_EVENTS,
-  CASS_OPTION_CONTACT_POINTS,
-  CASS_OPTION_CORE_CONNECTIONS_PER_HOST,
-  CASS_OPTION_MAX_CONNECTIONS_PER_HOST,
-  CASS_OPTION_MAX_SIMULTANEOUS_CREATION,
-  CASS_RECONNECT_WAIT_TIME,
-  CASS_OPTION_CONNECT_TIMEOUT,
-  CASS_OPTION_WRITE_TIMEOUT,
-  CASS_OPTION_READ_TIMEOUT,
-  CASS_OPTION_LOG_LEVEL,
-  CASS_OPTION_LOG_DATA,
-  CASS_OPTION_LOG_CALLBACK
-} CassOption;
 
 #define CASS_LOG_LEVEL_MAP(XX) \
   XX(CASS_LOG_DISABLED, "") \
@@ -231,22 +224,20 @@ typedef enum  CassErrorSource_ {
 
 #define CASS_ERROR_MAP(XX) \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_BAD_PARAMS, 1, "Bad parameters") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_OPTION, 2, "Invalid option") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_OPTION_SIZE, 3, "Invalid option size") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_STREAMS, 4, "No streams available") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_INIT, 5, "Unable to initialize session") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_MESSAGE_PREPARE, 6, "Unable to prepare message") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_HOST_RESOLUTION, 7, "Unable to reslove host") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNEXPECTED_RESPONSE, 8, "Unexpected reponse from server") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_QUEUE_FULL, 9, "The request queue is full") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD, 10, "No available IO threads") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_WRITE_ERROR, 11, "Write error") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, 12, "No hosts available") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS, 13, "Index out of bounds") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_ITEM_COUNT, 14, "Invalid item count") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_VALUE_TYPE, 15, "Invalid value type") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_TIMED_OUT, 16, "Request timed out") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_UNABLE_TO_SET_KEYSPACE, 17, "Unable to set keyspace") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_STREAMS, 2, "No streams available") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_INIT, 3, "Unable to initialize session") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_MESSAGE_ENCODE, 4, "Unable to encode message") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_HOST_RESOLUTION, 5, "Unable to reslove host") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNEXPECTED_RESPONSE, 6, "Unexpected reponse from server") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_QUEUE_FULL, 7, "The request queue is full") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD, 8, "No available IO threads") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_WRITE_ERROR, 9, "Write error") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, 10, "No hosts available") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS, 11, "Index out of bounds") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_ITEM_COUNT, 12, "Invalid item count") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_VALUE_TYPE, 13, "Invalid value type") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_TIMED_OUT, 14, "Request timed out") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_UNABLE_TO_SET_KEYSPACE, 15, "Unable to set keyspace") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -299,33 +290,216 @@ CASS_EXPORT CassCluster*
 cass_cluster_new();
 
 /**
- * Set an option on the specified cluster.
+ * Sets/Appends contact points. This *MUST* be set. The first call sets
+ * the contact points and any subsequent calls appends additional contact
+ * points. Passing an empty string will clear the contact points. Whitespace
+ * is striped from the contact points.
+ *
+ * Examples: "127.0.0.1" "127.0.0.1,127.0.0.2", "server1.domain.com"
  *
  * @param[in] cluster
- * @param[in] option
- * @param[in] data
- * @param[in] data_length
+ * @param[in] contact_points A comma delimited list of addresses or
+ * names. An empty string will clear the contact points.
+ * The string is copied into the statement object; the memory pointed
+ * to by this parameter can be freed after this call.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_setopt(CassCluster* cluster,
-                    CassOption option,
-                    const void* data, 
-                    cass_size_t data_length);
+cass_cluster_set_contact_points(CassCluster* cluster,
+                                CassString contact_points);
 
 /**
- * Get the option value for the specified cluster
+ * Sets the port.
+ *
+ * Default: 9042
  *
  * @param[in] cluster
- * @param[in] option
- * @param[out] data
- * @param[in, out] data_length
+ * @param[in] port
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_getopt(const CassCluster* cluster,
-                    CassOption option,
-                    void* data, cass_size_t* data_length);
+cass_cluster_set_port(CassCluster* cluster,
+                      int port);
+
+/**
+ * Sets the protocol version. This will automatically downgrade if to
+ * protocol version 1.
+ *
+ * Default: 2
+ *
+ * @param[in] cluster
+ * @param[in] protocol_version
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_protocol_version(CassCluster* cluster,
+                                  int protocol_version);
+
+/**
+ * Sets the number of IO threads. This is the number of threads
+ * that will handle query requests.
+ *
+ * Default: 2
+ *
+ * @param[in] cluster
+ * @param[in] num_threads
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_num_threads_io(CassCluster* cluster,
+                                unsigned num_threads);
+
+/**
+ * Sets the size of the the fixed size queue that stores
+ * pending requests.
+ *
+ * Default: 4096
+ *
+ * @param[in] cluster
+ * @param[in] queue_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_queue_size_io(CassCluster* cluster,
+                               unsigned queue_size);
+
+/**
+ * Sets the number of connections made to each server in each
+ * IO thread.
+ *
+ * Default: 2
+ *
+ * @param[in] cluster
+ * @param[in] num_connections
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_core_connections_per_host(CassCluster* cluster,
+                                           unsigned num_connections);
+
+/**
+ * Sets the maximum number of connections made to each server in each
+ * IO thread.
+ *
+ * Default: 4
+ *
+ * @param[in] cluster
+ * @param[in] num_connections
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_max_connections_per_host(CassCluster* cluster,
+                                          unsigned num_connections);
+
+/**
+ * Sets the maximum number of connections that will be simultaneously created.
+ * Connections are created when the current connections are unable to keep up with
+ * request throughput.
+ *
+ * Default: 1
+ *
+ * @param[in] cluster
+ * @param[in] num_connections
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
+                                           unsigned num_connections);
+
+
+/**
+ * Sets the maximum number of requests that will wait for a connection to become
+ * available.
+ *
+ * Default: 128 * max_connections_per_host
+ *
+ * @param[in] cluster
+ * @param[in] num_requests
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_max_pending_request(CassCluster* cluster,
+                                     unsigned num_requests);
+
+/**
+ * Sets the threshold for the maximum number of simultaneous requests inflight
+ * on a connection before creating a new connection. The number of new connections
+ * created will not exceed max_connections_per_host.
+ *
+ * Default: 100
+ *
+ * @param[in] cluster
+ * @param[in] num_requests
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_max_simultaneous_requests_threshold(CassCluster* cluster,
+                                                     unsigned num_requests);
+
+/**
+ * Sets the timeout for connecting to a node.
+ *
+ * Default: 5000 milliseconds
+ *
+ * @param[in] cluster
+ * @param[in] timeout Connect timeout in milliseconds
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_connect_timeout(CassCluster* cluster,
+                                 unsigned timeout);
+/**
+ * Sets the timeout for sending a request to a  node.
+ *
+ * Default: 1000 milliseconds
+ *
+ * @param[in] cluster
+ * @param[in] timeout Write timeout in milliseconds
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_write_timeout(CassCluster* cluster,
+                               unsigned timeout);
+/**
+ * Sets the timeout for waiting for a response from a node.
+ *
+ * Default: 12000 milliseconds
+ *
+ * @param[in] cluster
+ * @param[in] timeout Read timeout in milliseconds
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_read_timeout(CassCluster* cluster,
+                              unsigned timeout);
+
+/**
+ * Sets the log level.
+ *
+ * Default: CASS_LOG_WARN
+ *
+ * @param[in] cluster
+ * @param[in] log_level
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_log_level(CassCluster* cluster,
+                           CassLogLevel level);
+
+/**
+ * Sets a callback for handling logging events.
+ *
+ * Default: An internal callback that prints to stdout
+ *
+ * @param[in] cluster
+ * @param[in] data An opaque data object passed to the callback.
+ * @param[in] callback A callback that handles logging events. This is
+ * called in a separate thread so access to shared data must by synchronized.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_log_callback(CassCluster* cluster,
+                              void* data,
+                              CassLogCallback callback);
 
 /**
  * Connnects a session to the cluster.
@@ -364,7 +538,7 @@ cass_cluster_free(CassCluster* cluster);
 /**
  * Closes the session instance, outputs a close future which can
  * be used to determine when the session has been terminated. This allows
- * in-flight requests to finish. It is an error to call this method twices
+ * in-flight requests to finish. It is an error to call this method twice
  * with the same session.
  *
  * @param[in] session
@@ -377,14 +551,15 @@ cass_session_close(CassSession* session);
  * Create a prepared statement.
  *
  * @param[in] session
- * @param[in] statement
+ * @param[in] query The query is copied into the statement object; the
+ * memory pointed to by this parameter can be freed after this call.
  * @return A future that must be freed.
  *
  * @see cass_future_get_prepared()
  */
 CASS_EXPORT CassFuture*
 cass_session_prepare(CassSession* session,
-                     CassString statement);
+                     CassString query);
 
 /**
  * Execute a query or bound statement.
@@ -397,7 +572,7 @@ cass_session_prepare(CassSession* session,
  */
 CASS_EXPORT CassFuture*
 cass_session_execute(CassSession* session,
-                     CassStatement* statement);
+                     const CassStatement* statement);
 
 /**
  * Execute a batch statement.
@@ -410,7 +585,7 @@ cass_session_execute(CassSession* session,
  */
 CASS_EXPORT CassFuture*
 cass_session_execute_batch(CassSession* session,
-                           CassBatch* batch);
+                           const CassBatch* batch);
 
 /***********************************************************************************
  *
@@ -526,17 +701,16 @@ cass_future_error_message(CassFuture* future);
 /**
  * Creates a new query statement.
  *
- * @param[in] statement The statement string.
+ * @param[in] query The query is copied into the statement object; the
+ * memory pointed to by this parameter can be freed after this call.
  * @param[in] parameter_count The number of bound paramerters.
- * @param[in] consistency The statement's read/write consistency.
  * @return Returns a statement that must be freed.
  *
  * @see cass_statement_free()
  */
 CASS_EXPORT CassStatement*
-cass_statement_new(CassString statement,
-                   cass_size_t parameter_count,
-                   CassConsistency consistency);
+cass_statement_new(CassString query,
+                   cass_size_t parameter_count);
 
 /**
  * Frees a statement instance. Statements can be immediately freed after
@@ -547,6 +721,55 @@ cass_statement_new(CassString statement,
 CASS_EXPORT void
 cass_statement_free(CassStatement* statement);
 
+/**
+ * Sets the statement's consistency level.
+ *
+ * Default: CASS_CONSISTENCY_ONE
+ *
+ * @param[in] statement
+ * @param[in] consistency
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_consistency(CassStatement* statement,
+                               CassConsistency consistency);
+
+/**
+ * Sets the statement's serial consistency level.
+ *
+ * Default: Not set
+ *
+ * @param[in] statement
+ * @param[in] serial_consistency
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_serial_consistency(CassStatement* statement,
+                                      CassConsistency serial_consistency);
+
+/**
+ * Sets the statement's page size.
+ *
+ * Default: -1 (Disabled)
+ *
+ * @param[in] statement
+ * @param[in] page_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_paging_size(CassStatement* statement,
+                               int page_size);
+
+/**
+ * Sets the statement's paging state.
+ *
+ * @param[in] statement
+ * @param[in] result
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_paging_state(CassStatement* statement,
+                                const CassResult* result);
 
 /**
  * Binds null to a query or bound statement at the specified index.
@@ -631,7 +854,8 @@ cass_statement_bind_bool(CassStatement* statement,
  *
  * @param[in] statement
  * @param[in] index
- * @param[in] value
+ * @param[in] value The value is copied into the statement object; the
+ * memory pointed to by this parameter can be freed after this call.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -644,7 +868,8 @@ cass_statement_bind_string(CassStatement* statement,
  *
  * @param[in] statement
  * @param[in] index
- * @param[in] value
+ * @param[in] value The value is copied into the statement object; the
+ * memory pointed to by this parameter can be freed after this call.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -683,7 +908,8 @@ cass_statement_bind_inet(CassStatement* statement,
  *
  * @param[in] statement
  * @param[in] index
- * @param[in] value
+ * @param[in] value The value is copied into the statement object; the
+ * memory pointed to by this parameter can be freed after this call.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -714,15 +940,13 @@ cass_statement_bind_custom(CassStatement* statement,
  *
  * @param[in] statement
  * @param[in] index
- * @param[in] collection
- * @param[in] is_map This must be set to true if the collection represents a map.
+ * @param[in] collection The colleciton can be freed after this call.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_statement_bind_collection(CassStatement* statement,
                                cass_size_t index,
-                               const CassCollection* collection,
-                               cass_bool_t is_map);
+                               const CassCollection* collection);
 
 
 /***********************************************************************************
@@ -744,15 +968,13 @@ cass_prepared_free(const CassPrepared* prepared);
  *
  * @param[in] prepared A previously prepared statement.
  * @param[in] parameter_count The number of bound parameters.
- * @param[in] consistency The statement's read/write consistency.
  * @return Returns a bound statement that must be freed.
  *
  * @see cass_statement_free()
  */
 CASS_EXPORT CassStatement*
 cass_prepared_bind(const CassPrepared* prepared,
-                   cass_size_t parameter_count,
-                   CassConsistency consistency);
+                   cass_size_t parameter_count);
 
 /***********************************************************************************
  *
@@ -763,15 +985,13 @@ cass_prepared_bind(const CassPrepared* prepared,
 /**
  * Creates a new batch statement with batch type.
  *
- * @param[in] consistency The statement's read/write consistency.
- * @param[in] type The batch type.
+ * @param[in] type
  * @return Returns a batch statement that must be freed.
  *
  * @see cass_batch_free()
  */
 CASS_EXPORT CassBatch*
-cass_batch_new(CassConsistency consistency,
-               CassBatchType type);
+cass_batch_new(CassBatchType type);
 
 /**
  * Frees a batch instance. Batches can be immediately freed after being
@@ -781,6 +1001,17 @@ cass_batch_new(CassConsistency consistency,
  */
 CASS_EXPORT void
 cass_batch_free(CassBatch* batch);
+
+/**
+ * Sets the batch's consistency level
+ *
+ * @param[in] batch
+ * @param[in] consistency The batch's write consistency.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_batch_set_consistency(CassBatch* batch,
+                           CassConsistency consistency);
 
 /**
  * Adds a statement to a batch.
@@ -803,13 +1034,14 @@ cass_batch_add_statement(CassBatch* batch,
 /**
  * Creates a new collection.
  *
+ * @param[in] type
  * @param[in] item_count The approximate number of items in the collection.
  * @return Returns a collection that must be freed.
  *
  * @see cass_collection_free()
  */
 CASS_EXPORT CassCollection*
-cass_collection_new(cass_size_t item_count);
+cass_collection_new(CassCollectionType type, cass_size_t item_count);
 
 /**
  * Frees a collection instance.
@@ -878,7 +1110,8 @@ cass_collection_append_bool(CassCollection* collection,
  * Appends a "ascii", "text" or "varchar" to the collection.
  *
  * @param[in] collection
- * @param[in] value
+ * @param[in] value The value is copied into the collection object; the
+ * memory pointed to by this parameter can be freed after this call.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -889,7 +1122,8 @@ cass_collection_append_string(CassCollection* collection,
  * Appends a "blob" or "varint" to the collection.
  *
  * @param[in] collection
- * @param[in] value
+ * @param[in] value The value is copied into the collection object; the
+ * memory pointed to by this parameter can be freed after this call.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -922,7 +1156,8 @@ cass_collection_append_inet(CassCollection* collection,
  * Appends a "decimal" to the collection.
  *
  * @param[in] collection
- * @param[in] value
+ * @param[in] value The value is copied into the collection object; the
+ * memory pointed to by this parameter can be freed after this call.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -993,6 +1228,15 @@ cass_result_column_type(const CassResult* result,
  */
 CASS_EXPORT const CassRow*
 cass_result_first_row(const CassResult* result);
+
+/**
+ * Returns true if there are more pages.
+ *
+ * @param[in] result
+ * @return cass_true if there are more pages
+ */
+CASS_EXPORT cass_bool_t
+cass_result_has_more_pages(const CassResult* result);
 
 /***********************************************************************************
  *
@@ -1421,6 +1665,9 @@ cass_inet_init_v6(const cass_uint8_t* address);
 /**
  * Constructs a decimal object.
  *
+ * Note: This does not allocate memory. The object wraps the pointer
+ * passed into this function.
+ *
  * @param[in] scale
  * @param[in] varint
  * @return A decimal object.
@@ -1437,6 +1684,9 @@ cass_decimal_init(cass_int32_t scale, CassBytes varint);
 /**
  * Constructs a bytes object.
  *
+ * Note: This does not allocate memory. The object wraps the pointer
+ * passed into this function.
+ *
  * @param[in] data
  * @param[in] size
  * @return A bytes object.
@@ -1447,6 +1697,9 @@ cass_bytes_init(const cass_byte_t* data, cass_size_t size);
 /**
  * Constructs a string object from a null-terminated string.
  *
+ * Note: This does not allocate memory. The object wraps the pointer
+ * passed into this function.
+ *
  * @param[in] null_terminated
  * @return A string object.
  */
@@ -1455,6 +1708,9 @@ cass_string_init(const char* null_terminated);
 
 /**
  * Constructs a string object.
+ *
+ * Note: This does not allocate memory. The object wraps the pointer
+ * passed into this function.
  *
  * @param[in] data
  * @param[in] length

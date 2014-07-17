@@ -17,50 +17,51 @@
 #ifndef __CASS_POOL_HPP_INCLUDED__
 #define __CASS_POOL_HPP_INCLUDED__
 
+#include "cassandra.h"
+#include "response_callback.hpp"
+#include "scoped_ptr.hpp"
+#include "request_handler.hpp"
+
+#include "third_party/boost/boost/function.hpp"
+
 #include <vector>
 #include <set>
 #include <string>
 #include <algorithm>
 #include <functional>
 
-#include "cassandra.h"
-#include "connection.hpp"
-#include "request_handler.hpp"
-
 namespace cass {
 
 class Connection;
-class SSLContext;
 class Logger;
+class RequestHandler;
+class Config;
 
 class Pool {
 public:
-  typedef std::set<Connection*> ConnectionSet;
-  typedef std::vector<Connection*> ConnectionCollection;
-
-  typedef std::function<void(Pool*)> Callback;
-  typedef std::function<void(const std::string& keyspace)> KeyspaceCallback;
+  typedef boost::function1<void, Pool*> Callback;
+  typedef boost::function1<void, const std::string&> KeyspaceCallback;
 
   class PoolHandler : public ResponseCallback {
   public:
     PoolHandler(Pool* pool, Connection* connection,
                 RequestHandler* request_handler);
 
-    virtual Message* request() const { return request_handler_->request(); }
+    virtual const Request* request() const { return request_handler_->request(); }
 
-    virtual void on_set(Message* response);
+    virtual void on_set(ResponseMessage* response);
     virtual void on_error(CassError code, const std::string& message);
     virtual void on_timeout();
 
   private:
     void finish_request();
 
-    void on_result_response(Message* response);
-    void on_error_response(Message* response);
+    void on_result_response(ResponseMessage* response);
+    void on_error_response(ResponseMessage* response);
 
     Pool* pool_;
     Connection* connection_;
-    std::unique_ptr<RequestHandler> request_handler_;
+    ScopedPtr<RequestHandler> request_handler_;
   };
 
   enum PoolState {
@@ -71,7 +72,7 @@ public:
     POOL_STATE_CLOSED
   };
 
-  Pool(const Host& host, uv_loop_t* loop, SSLContext* ssl_context,
+  Pool(const Host& host, uv_loop_t* loop,
        Logger* logger, const Config& config);
 
   ~Pool();
@@ -110,15 +111,19 @@ private:
   void execute_pending_request(Connection* connection);
 
 private:
+  typedef std::set<Connection*> ConnectionSet;
+  typedef std::vector<Connection*> ConnectionVec;
+  typedef std::list<RequestHandler*> RequestHandlerList;
+
   PoolState state_;
   Host host_;
   uv_loop_t* loop_;
-  SSLContext* ssl_context_;
   Logger* logger_;
   const Config& config_;
-  ConnectionCollection connections_;
+  int protocol_version_;
+  ConnectionVec connections_;
   ConnectionSet connections_pending_;
-  std::list<RequestHandler*> pending_request_queue_;
+  RequestHandlerList pending_request_queue_;
   bool is_defunct_;
 
   Callback ready_callback_;

@@ -17,10 +17,10 @@
 #ifndef __CASS_CONFIG_HPP_INCLUDED__
 #define __CASS_CONFIG_HPP_INCLUDED__
 
+#include "cassandra.h"
+
 #include <list>
 #include <string>
-
-#include "cassandra.h"
 
 namespace cass {
 
@@ -29,8 +29,11 @@ void default_log_callback(void* data, cass_uint64_t time, CassLogLevel severity,
 
 class Config {
 public:
+  typedef std::list<std::string> ContactPointList;
+
   Config()
       : port_(9042)
+      , protocol_version_(2)
       , version_("3.0.0")
       , thread_count_io_(1)
       , queue_size_io_(4096)
@@ -41,76 +44,155 @@ public:
       , reconnect_wait_time_(2000)
       , max_simultaneous_creation_(1)
       , max_pending_requests_(128 * max_connections_per_host_)
-      ,
-      // TODO(mpenick): Determine good timeout durations
-      connect_timeout_(1000)
+      , max_simultaneous_requests_threshold_(100)
+      , connect_timeout_(5000)
       , write_timeout_(1000)
-      , read_timeout_(1000)
-      , log_level_(CASS_LOG_ERROR)
-      , log_data_(nullptr)
+      , read_timeout_(12000)
+      , log_level_(CASS_LOG_WARN)
+      , log_data_(NULL)
       , log_callback_(default_log_callback) {}
 
-  void log_callback(CassLogCallback callback) { log_callback_ = callback; }
+  unsigned thread_count_io() const { return thread_count_io_; }
 
-  size_t thread_count_io() const { return thread_count_io_; }
+  void set_thread_count_io(unsigned num_threads) {
+    thread_count_io_ = num_threads;
+  }
 
-  size_t queue_size_io() const { return queue_size_io_; }
+  unsigned queue_size_io() const { return queue_size_io_; }
 
-  size_t queue_size_event() const { return queue_size_event_; }
+  void set_queue_size_io(unsigned queue_size) {
+    queue_size_io_ = queue_size;
+  }
 
-  size_t queue_size_log() const { return queue_size_log_; }
+  unsigned queue_size_event() const { return queue_size_event_; }
 
-  size_t core_connections_per_host() const {
+  void set_queue_size_event(unsigned queue_size) {
+    queue_size_event_ = queue_size;
+  }
+
+  unsigned queue_size_log() const { return queue_size_log_; }
+
+  void set_queue_size_log(unsigned queue_size) {
+    queue_size_log_ = queue_size;
+  }
+
+  unsigned core_connections_per_host() const {
     return core_connections_per_host_;
   }
 
-  size_t max_connections_per_host() const { return max_connections_per_host_; }
+  void set_core_connections_per_host(unsigned num_connections) {
+    core_connections_per_host_ = num_connections;
+  }
 
-  size_t reconnect_wait() const { return reconnect_wait_time_; }
+  unsigned max_connections_per_host() const { return max_connections_per_host_; }
 
-  size_t max_simultaneous_creation() const {
+  void set_max_connections_per_host(unsigned num_connections) {
+    max_connections_per_host_ = num_connections;
+    unsigned temp = 128 * max_connections_per_host_;
+    if (temp > max_pending_requests_) {
+      max_pending_requests_ = temp;
+    }
+  }
+
+  unsigned max_simultaneous_creation() const {
     return max_simultaneous_creation_;
   }
 
-  size_t max_pending_requests() const { return max_pending_requests_; }
+  void set_max_simultaneous_creation(unsigned num_connections) {
+    max_simultaneous_creation_ = num_connections;
+  }
 
-  size_t connect_timeout() const { return connect_timeout_; }
+  unsigned reconnect_wait() const { return reconnect_wait_time_; }
 
-  size_t write_timeout() const { return write_timeout_; }
+  void set_reconnected_wait(unsigned wait_time) {
+    reconnect_wait_time_ = wait_time;
+  }
 
-  size_t read_timeout() const { return read_timeout_; }
+  unsigned max_pending_requests() const { return max_pending_requests_; }
 
-  const std::list<std::string>& contact_points() const {
+  void set_max_pending_requests(unsigned num_requests) {
+    max_pending_requests_ = num_requests;
+  }
+
+  unsigned max_simultaneous_requests_threshold() const {
+    return max_simultaneous_requests_threshold_;
+  }
+
+  void set_max_simultaneous_requests_threshold(unsigned num_requests) {
+    max_simultaneous_requests_threshold_ = num_requests;
+  }
+
+  unsigned connect_timeout() const { return connect_timeout_; }
+
+  void set_connect_timeout(unsigned timeout) {
+    connect_timeout_ = timeout;
+  }
+
+  unsigned write_timeout() const { return write_timeout_; }
+
+  void set_write_timeout(unsigned timeout) {
+    write_timeout_ = timeout;
+  }
+
+  unsigned read_timeout() const { return read_timeout_; }
+
+  void set_read_timeout(unsigned timeout) {
+    read_timeout_ = timeout;
+  }
+
+  const ContactPointList& contact_points() const {
+    return contact_points_;
+  }
+
+  ContactPointList& contact_points() {
     return contact_points_;
   }
 
   int port() const { return port_; }
 
+  void set_port(int port) {
+    port_ = port;
+  }
+
+  int protocol_version() const { return protocol_version_; }
+
+  void set_protocol_version(int protocol_version) {
+    protocol_version_ = protocol_version;
+  }
+
   CassLogLevel log_level() const { return log_level_; }
+
+  void set_log_level(CassLogLevel log_level) {
+    log_level_ = log_level;
+  }
 
   void* log_data() const { return log_data_; }
 
   CassLogCallback log_callback() const { return log_callback_; }
 
-  CassError set_option(CassOption option, const void* value, size_t size);
-  CassError option(CassOption option, void* value, size_t* size) const;
+  void set_log_callback(void* data, CassLogCallback callback) {
+    log_data_ = data;
+    log_callback_ = callback;
+  }
 
 private:
   int port_;
+  int protocol_version_;
   std::string version_;
-  std::list<std::string> contact_points_;
-  size_t thread_count_io_;
-  size_t queue_size_io_;
-  size_t queue_size_event_;
-  size_t queue_size_log_;
-  size_t core_connections_per_host_;
-  size_t max_connections_per_host_;
-  size_t reconnect_wait_time_;
-  size_t max_simultaneous_creation_;
-  size_t max_pending_requests_;
-  size_t connect_timeout_;
-  size_t write_timeout_;
-  size_t read_timeout_;
+  ContactPointList contact_points_;
+  unsigned thread_count_io_;
+  unsigned queue_size_io_;
+  unsigned queue_size_event_;
+  unsigned queue_size_log_;
+  unsigned core_connections_per_host_;
+  unsigned max_connections_per_host_;
+  unsigned reconnect_wait_time_;
+  unsigned max_simultaneous_creation_;
+  unsigned max_pending_requests_;
+  unsigned max_simultaneous_requests_threshold_;
+  unsigned connect_timeout_;
+  unsigned write_timeout_;
+  unsigned read_timeout_;
   CassLogLevel log_level_;
   void* log_data_;
   CassLogCallback log_callback_;

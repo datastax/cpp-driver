@@ -17,24 +17,28 @@
 #ifndef __CASS_IO_WORKER_HPP_INCLUDED__
 #define __CASS_IO_WORKER_HPP_INCLUDED__
 
+#include "async_queue.hpp"
+#include "constants.hpp"
+#include "event_thread.hpp"
+#include "host.hpp"
+#include "list.hpp"
+#include "spsc_queue.hpp"
+
+
 #include <uv.h>
 #include <string>
 #include <map>
-#include <vector>
-
-#include "event_thread.hpp"
-#include "async_queue.hpp"
-#include "config.hpp"
-#include "host.hpp"
-#include "ssl_context.hpp"
-#include "spsc_queue.hpp"
-#include "request_handler.hpp"
-#include "logger.hpp"
+#include <list>
 
 namespace cass {
 
 class Pool;
 class Session;
+class Config;
+class SSLContext;
+class RequestHandler;
+class Logger;
+class Timer;
 
 struct IOWorkerEvent {
   enum Type { ADD_POOL, REMOVE_POOL };
@@ -75,29 +79,34 @@ private:
   static void on_prepare(uv_prepare_t* prepare, int status);
 
 private:
-  typedef std::map<Host, Pool*> PoolCollection;
+  typedef std::map<Host, Pool*> PoolMap;
 
-  struct ReconnectRequest {
+  struct ReconnectRequest : public List<ReconnectRequest>::Node {
     ReconnectRequest(IOWorker* io_worker, Host host)
         : io_worker(io_worker)
         , host(host) {}
 
+    void stop_timer();
+
     IOWorker* io_worker;
+    Timer* timer;
     Host host;
   };
 
 private:
+  typedef std::list<Pool*> PoolList;
+
   Session* session_;
   Logger* logger_;
   uv_prepare_t prepare_;
-  SSLContext* ssl_context_;
-  PoolCollection pools;
-  std::list<Pool*> pending_delete_;
-  std::atomic<bool> is_closing_;
+  PoolMap pools;
+  PoolList pending_delete_;
+  bool is_closing_;
   int pending_request_count_;
+  List<ReconnectRequest> pending_reconnects_;
 
   const Config& config_;
-  AsyncQueue<SPSCQueue<RequestHandler*>> request_queue_;
+  AsyncQueue<SPSCQueue<RequestHandler*> > request_queue_;
 };
 
 } // namespace cass

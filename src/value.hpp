@@ -18,7 +18,6 @@
 #define __CASS_VALUE_HPP_INCLUDED__
 
 #include "cassandra.h"
-
 #include "buffer_piece.hpp"
 
 namespace cass {

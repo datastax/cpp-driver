@@ -181,14 +181,12 @@ namespace cql {
 	}
 
 	// Singleton implementation by static variable
-	const cql_ccm_bridge_configuration_t& get_ccm_bridge_configuration() {
+  const cql_ccm_bridge_configuration_t& get_ccm_bridge_configuration(const std::string& filename) {
 		static cql_ccm_bridge_configuration_t config;
 		static bool initialized = false;
 
 		if(!initialized) {
-			const std::string CONFIG_FILE_NAME = "config.txt";
-			config.read_configuration(CONFIG_FILE_NAME);
-
+      config.read_configuration(filename);
 			initialized = true;
 		}
 

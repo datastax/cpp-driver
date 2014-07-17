@@ -37,12 +37,9 @@ void print_error(CassFuture* future) {
 }
 
 CassCluster* create_cluster() {
-  const char* contact_points[] = { "127.0.0.1", "127.0.0.2", "127.0.0.3", NULL };
   CassCluster* cluster = cass_cluster_new();
-  const char** contact_point = NULL;
-  for(contact_point = contact_points; *contact_point; contact_point++) {
-    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINTS, *contact_point, strlen(*contact_point));
-  }
+  CassString contact_points = cass_string_init("127.0.0.1,127.0.0.2,127.0.0.3");
+  cass_cluster_set_contact_points(cluster, contact_points);
   return cluster;
 }
 
@@ -67,7 +64,7 @@ CassError connect_session(CassCluster* cluster, CassSession** output) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = 0;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(cass_string_init(query), 0, CASS_CONSISTENCY_ONE);
+  CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -89,7 +86,7 @@ CassError insert_into_log(CassSession* session, const char* key, CassUuid time, 
   CassFuture* future = NULL;
   CassString query = cass_string_init("INSERT INTO examples.log (key, time, entry) VALUES (?, ?, ?);");
 
-  statement = cass_statement_new(query, 3, CASS_CONSISTENCY_ONE);
+  statement = cass_statement_new(query, 3);
 
   cass_statement_bind_string(statement, 0, cass_string_init(key));
   cass_statement_bind_uuid(statement, 1, time);
@@ -116,7 +113,7 @@ CassError select_from_log(CassSession* session, const char* key) {
   CassFuture* future = NULL;
   CassString query = cass_string_init("SELECT * FROM examples.log WHERE key = ?");
 
-  statement = cass_statement_new(query, 1, CASS_CONSISTENCY_ONE);
+  statement = cass_statement_new(query, 1);
 
   cass_statement_bind_string(statement, 0, cass_string_init(key));
 

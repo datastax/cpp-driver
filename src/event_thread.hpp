@@ -17,14 +17,12 @@
 #ifndef __CASS_EVENT_THREAD_HPP_INCLUDED__
 #define __CASS_EVENT_THREAD_HPP_INCLUDED__
 
-#include <uv.h>
-
-#include <atomic>
-#include <memory>
-
 #include "loop_thread.hpp"
 #include "async_queue.hpp"
 #include "mpmc_queue.hpp"
+#include "scoped_ptr.hpp"
+
+#include <uv.h>
 
 namespace cass {
 
@@ -32,7 +30,7 @@ template <class E>
 class EventThread : public LoopThread {
 public:
   int init(size_t queue_size) {
-    event_queue_.reset(new AsyncQueue<MPMCQueue<E>>(queue_size));
+    event_queue_.reset(new AsyncQueue<MPMCQueue<E> >(queue_size));
     return event_queue_->init(loop(), this, on_event_internal);
   }
 
@@ -51,7 +49,7 @@ private:
     }
   }
 
-  std::unique_ptr<AsyncQueue<MPMCQueue<E>>> event_queue_;
+  ScopedPtr<AsyncQueue<MPMCQueue<E> > > event_queue_;
 };
 
 } // namespace cass

@@ -17,41 +17,49 @@
 #ifndef __CASS_CONNECTION_HPP_INCLUDED__
 #define __CASS_CONNECTION_HPP_INCLUDED__
 
+#include "cassandra.h"
+#include "buffer.hpp"
+#include "response_callback.hpp"
+#include "macros.hpp"
+#include "host.hpp"
+#include "stream_manager.hpp"
+#include "list.hpp"
+#include "scoped_ptr.hpp"
+#include "ref_counted.hpp"
+#include "writer.hpp"
+
+#include "third_party/boost/boost/function.hpp"
+
 #include <uv.h>
 
-#include "common.hpp"
-#include "host.hpp"
-#include "message.hpp"
-#include "session.hpp"
-#include "ssl_context.hpp"
-#include "ssl_session.hpp"
-#include "stream_manager.hpp"
-#include "connecter.hpp"
-#include "writer.hpp"
-#include "timer.hpp"
-#include "list.hpp"
-
 namespace cass {
+
+class ResponseMessage;
+class Connecter;
+class Timer;
+class Config;
+class Logger;
+class Request;
 
 class Connection {
 public:
   class StartupHandler : public ResponseCallback {
   public:
-    StartupHandler(Connection* connection, Message* request);
+    StartupHandler(Connection* connection, Request* request);
 
-    virtual Message* request() const;
-    virtual void on_set(Message* response);
+    virtual const Request* request() const;
+    virtual void on_set(ResponseMessage* response);
     virtual void on_error(CassError code, const std::string& message);
     virtual void on_timeout();
 
   private:
-    void on_result_response(Message* response);
+    void on_result_response(ResponseMessage* response);
 
     Connection* connection_;
-    std::unique_ptr<Message> request_;
+    ScopedRefPtr<Request> request_;
   };
 
-  struct Request : public List<Request>::Node {
+  struct InternalRequest : public List<InternalRequest>::Node {
     enum State {
       REQUEST_STATE_NEW,
       REQUEST_STATE_WRITING,
@@ -63,9 +71,17 @@ public:
       REQUEST_STATE_DONE
     };
 
-    Request(Connection* connection, ResponseCallback* response_callback);
+    InternalRequest(Connection* connection);
 
-    void on_set(Message* response);
+    void set_stream(int8_t stream) {
+      stream_ = stream;
+    }
+
+    void set_response_callback(ResponseCallback* response_callback) {
+      response_callback_.reset(response_callback);
+    }
+
+    void on_set(ResponseMessage* response);
     void on_error(CassError code, const std::string& message);
     void on_timeout();
 
@@ -73,27 +89,23 @@ public:
 
     void change_state(State next_state);
 
-    void stop_timer() {
-      assert(timer_ != nullptr);
-      Timer::stop(timer_);
-      timer_ = nullptr;
-    }
+    void stop_timer();
 
     Connection* connection;
-    int8_t stream;
 
   private:
     void cleanup();
-    void on_result_response(Message* response);
+    void on_result_response(ResponseMessage* response);
     static void on_request_timeout(Timer* timer);
 
   private:
-    std::unique_ptr<ResponseCallback> response_callback_;
+    int8_t stream_;
+    ScopedPtr<ResponseCallback> response_callback_;
     Timer* timer_;
     State state_;
   };
 
-  typedef std::function<void(Connection*)> Callback;
+  typedef boost::function1<void, Connection*> Callback;
 
 public:
   enum ConnectionState {
@@ -120,8 +132,9 @@ public:
     CLIENT_EVENT_SCHEMA_DROPPED
   };
 
-  Connection(uv_loop_t* loop, SSLSession* ssl_session, const Host& host,
-             Logger* logger, const Config& config, const std::string& keyspace);
+  Connection(uv_loop_t* loop, const Host& host,
+             Logger* logger, const Config& config, const std::string& keyspace,
+             int protocol_version);
 
   void connect();
 
@@ -136,15 +149,19 @@ public:
 
   bool is_defunct() const { return is_defunct_; }
 
+  bool is_invalid_protocol() const { return is_invalid_protocol_; }
+
   bool is_ready() { return state_ == CLIENT_STATE_READY; }
+
+  int protocol_version() const { return protocol_version_; }
 
   void set_ready_callback(Callback callback) { ready_callback_ = callback; }
 
   void set_close_callback(Callback callback) { closed_callback_ = callback; }
 
-  size_t available_streams() {
-    return stream_manager_.available_streams();
-  }
+  size_t available_streams() { return stream_manager_.available_streams(); }
+
+  size_t pending_request_count() { return pending_requests_.size(); }
 
   bool has_requests_pending() {
     return pending_requests_.size() - timed_out_request_count_ > 0;
@@ -152,7 +169,7 @@ public:
 
 private:
   void actually_close();
-  void write(uv_buf_t buf, Request* request);
+  void write(BufferVec* bufs, InternalRequest* request);
   void event_received();
   void consume(char* input, size_t size);
 
@@ -166,7 +183,7 @@ private:
 
   void on_ready();
   void on_set_keyspace();
-  void on_supported(Message* response);
+  void on_supported(ResponseMessage* response);
 
   void notify_ready();
   void notify_error(const std::string& error);
@@ -178,13 +195,14 @@ private:
 private:
   ConnectionState state_;
   bool is_defunct_;
+  bool is_invalid_protocol_;
 
-  List<Request> pending_requests_;
+  List<InternalRequest> pending_requests_;
   int timed_out_request_count_;
 
   uv_loop_t* loop_;
-  std::unique_ptr<Message> incoming_;
-  StreamManager<Request*> stream_manager_;
+  ScopedPtr<ResponseMessage> response_;
+  StreamManager<InternalRequest*> stream_manager_;
 
   Callback ready_callback_;
   Callback closed_callback_;
@@ -195,17 +213,18 @@ private:
   // the actual connection
   uv_tcp_t socket_;
   // ssl stuff
-  SSLSession* ssl_;
   bool ssl_handshake_done_;
   // supported stuff sent in start up message
   std::string compression_;
   std::string version_;
+  const int protocol_version_;
 
   Logger* logger_;
   const Config& config_;
   std::string keyspace_;
   Timer* connect_timer_;
 
+private:
   DISALLOW_COPY_AND_ASSIGN(Connection);
 };
 

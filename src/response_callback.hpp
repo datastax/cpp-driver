@@ -17,16 +17,19 @@
 #ifndef __CASS_RESPONSE_CALLBACK_HPP_INCLUDED__
 #define __CASS_RESPONSE_CALLBACK_HPP_INCLUDED__
 
+#include "cassandra.h"
+#include <string>
+
 namespace cass {
 
-struct Message;
-struct Error;
+class Request;
+class ResponseMessage;
 
 class ResponseCallback {
 public:
-  virtual ~ResponseCallback(){};
-  virtual Message* request() const = 0;
-  virtual void on_set(Message* response) = 0;
+  virtual ~ResponseCallback() {}
+  virtual const Request* request() const = 0;
+  virtual void on_set(ResponseMessage* response) = 0;
   virtual void on_error(CassError code, const std::string& message) = 0;
   virtual void on_timeout() = 0;
 };

@@ -27,8 +27,8 @@ public:
   class Node {
   public:
     Node()
-        : next_(nullptr)
-        , prev_(nullptr) {}
+        : next_(NULL)
+        , prev_(NULL) {}
 
   private:
     friend class List;
@@ -69,12 +69,12 @@ public:
   void remove(T* node);
 
   T* front() {
-    if (is_empty()) return nullptr;
+    if (is_empty()) return NULL;
     return static_cast<T*>(data_.next_);
   }
 
   T* back() {
-    if (is_empty()) return nullptr;
+    if (is_empty()) return NULL;
     return static_cast<T*>(data_.prev_);
   }
 
@@ -83,13 +83,14 @@ public:
   Iterator<T> iterator() { return Iterator<T>(data_.next_, &data_); }
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(List);
-
   void insert_before(Node* pos, Node* node);
   void insert_after(Node* pos, Node* node);
 
   Node data_;
   int size_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(List);
 };
 
 template <class T>
@@ -107,8 +108,8 @@ void List<T>::remove(T* node) {
   size_--;
   node->prev_->next_ = node->next_;
   node->next_->prev_ = node->prev_;
-  node->next_ = nullptr;
-  node->prev_ = nullptr;
+  node->next_ = NULL;
+  node->prev_ = NULL;
 }
 
 template <class T>

@@ -35,7 +35,7 @@ public:
   }
 
   void close_handles() {
-    uv_close(reinterpret_cast<uv_handle_t*>(&async_), nullptr);
+    uv_close(reinterpret_cast<uv_handle_t*>(&async_), NULL);
   }
 
   bool enqueue(const typename Q::EntryType& data) {

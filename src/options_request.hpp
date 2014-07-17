@@ -17,19 +17,18 @@
 #ifndef __CASS_OPTIONS_REQUEST_HPP_INCLUDED__
 #define __CASS_OPTIONS_REQUEST_HPP_INCLUDED__
 
-#include "message_body.hpp"
+#include "request.hpp"
+#include "constants.hpp"
 
 namespace cass {
 
-struct OptionsRequest : public MessageBody {
+class OptionsRequest : public Request {
+public:
   OptionsRequest()
-      : MessageBody(CQL_OPCODE_OPTIONS) {}
+      : Request(CQL_OPCODE_OPTIONS) {}
 
-  bool prepare(size_t reserved, char** output, size_t& size) {
-    size = reserved;
-    *output = new char[size];
-    return true;
-  }
+private:
+  int encode(int version, BufferVec* bufs) const { return 0; }
 };
 
 } // namespace cass

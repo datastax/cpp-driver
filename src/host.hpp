@@ -40,18 +40,4 @@ inline bool operator==(const Host& a, const Host& b) {
 
 } // namespace cass
 
-namespace std {
-
-template <>
-struct hash<cass::Host> {
-  typedef cass::Host argument_type;
-  typedef size_t result_type;
-  size_t operator()(const cass::Host& h) const {
-    std::hash<cass::Address> hash_func;
-    return hash_func(h.address);
-  }
-};
-
-} // namespace std
-
 #endif

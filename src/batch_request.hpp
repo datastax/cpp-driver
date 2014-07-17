@@ -17,126 +17,53 @@
 #ifndef __CASS_BATCH_REQUEST_HPP_INCLUDED__
 #define __CASS_BATCH_REQUEST_HPP_INCLUDED__
 
+#include "cassandra.h"
+#include "request.hpp"
+#include "constants.hpp"
+
 #include <list>
+#include <map>
 #include <string>
-/*
-  Copyright (c) 2014 DataStax
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-  http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
-*/
-
-#include <utility>
-#include <vector>
-
-#include "common.hpp"
-#include "message_body.hpp"
-#include "serialization.hpp"
-#include "statement.hpp"
-#include "execute_request.hpp"
-
-#define CASS_QUERY_FLAG_VALUES 0x01
-#define CASS_QUERY_FLAG_SKIP_METADATA 0x02
-#define CASS_QUERY_FLAG_PAGE_SIZE 0x04
-#define CASS_QUERY_FLAG_PAGING_STATE 0x08
-#define CASS_QUERY_FLAG_SERIAL_CONSISTENCY 0x10
 
 namespace cass {
 
-struct BatchRequest : public MessageBody {
-  typedef std::list<Statement*> StatementCollection;
-  typedef std::map<std::string, ExecuteRequest*> PreparedCollection;
+class Statement;
+class ExecuteRequest;
 
-  uint8_t type;
-  StatementCollection statements;
-  PreparedCollection prepared_statements;
-  int16_t consistency;
+class BatchRequest : public Request {
+public:
+  typedef std::list<Statement*> StatementList;
 
-  BatchRequest(size_t consistency, uint8_t type_)
-      : MessageBody(CQL_OPCODE_BATCH)
-      , type(type_)
-      , consistency(consistency) {}
+  BatchRequest(uint8_t type_)
+      : Request(CQL_OPCODE_BATCH)
+      , type_(type_)
+      , consistency_(CASS_CONSISTENCY_ONE) {}
 
-  ~BatchRequest() {
-    for (Statement* statement : statements) {
-      statement->release();
-    }
-  }
+  ~BatchRequest();
 
-  void add_statement(Statement* statement) {
-    if (statement->kind() == 1) {
-      ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(statement);
-      prepared_statements[execute_request->prepared_id] = execute_request;
-    }
-    statement->retain();
-    statements.push_back(statement);
-  }
+  uint8_t type() const { return type_; }
 
-  bool prepared_statement(const std::string& id, std::string* statement) {
-    auto it = prepared_statements.find(id);
-    if (it != prepared_statements.end()) {
-      *statement = it->second->prepared_statement;
-      return true;
-    }
-    return false;
-  }
+  const StatementList& statements() const { return statements_; }
 
-  bool prepare(size_t reserved, char** output, size_t& size) {
-    // reserved + type + length
-    size = reserved + sizeof(uint8_t) + sizeof(uint16_t);
+  int16_t consistency() const { return consistency_; }
 
-    for (const Statement* statement : statements) {
-      size += sizeof(uint8_t);
-      if (statement->kind() == 0) {
-        size += sizeof(int32_t);
-      } else {
-        size += sizeof(uint16_t);
-      }
-      size += statement->statement_size();
+  void set_consistency(int16_t consistency) { consistency_ = consistency; }
 
-      size += sizeof(uint16_t);
-      for (const auto& value : *statement) {
-        size += sizeof(int32_t);
-        int32_t value_size = value.size();
-        if (value_size > 0) {
-          size += value_size;
-        }
-      }
-    }
-    size += sizeof(uint16_t);
-    *output = new char[size];
+  void add_statement(Statement* statement);
 
-    char* buffer = encode_byte(*output + reserved, type);
-    buffer = encode_short(buffer, statements.size());
+  bool prepared_statement(const std::string& id, std::string* statement) const;
 
-    for (const Statement* statement : statements) {
-      buffer = encode_byte(buffer, statement->kind());
+private:
+  int encode(int version, BufferVec* bufs) const;
+  int encode_v2(BufferVec* bufs) const;
 
-      if (statement->kind() == 0) {
-        buffer = encode_long_string(buffer, statement->statement(),
-                                    statement->statement_size());
-      } else {
-        buffer = encode_string(buffer, statement->statement(),
-                               statement->statement_size());
-      }
+private:
+  typedef std::map<std::string, ExecuteRequest*> PreparedMap;
 
-      buffer = encode_short(buffer, statement->values.size());
-      for (const auto& value : *statement) {
-        buffer = encode_bytes(buffer, value.data(), value.size());
-      }
-    }
-    encode_short(buffer, consistency);
-    return true;
-  }
+  uint8_t type_;
+  StatementList statements_;
+  int16_t consistency_;
+  PreparedMap prepared_statements_;
 };
 
 } // namespace cass

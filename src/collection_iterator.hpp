@@ -30,44 +30,26 @@ public:
       : Iterator(CASS_ITERATOR_COLLECTION)
       , collection_(collection)
       , position_(collection->buffer.data())
-      , index_(0)
+      , index_(-1)
       , count_(collection_->type == CASS_VALUE_TYPE_MAP
                    ? (2 * collection_->count)
                    : collection->count) {}
 
-  char* decode_value(char* position) {
-    uint16_t size;
-    char* buffer = decode_short(position, size);
+  char* decode_value(char* position);
 
-    CassValueType type;
-    if (collection_->type == CASS_VALUE_TYPE_MAP) {
-      type = ((index_ - 1) % 2 == 0) ? collection_->primary_type
-                                     : collection_->secondary_type;
-    } else {
-      type = collection_->primary_type;
-    }
+  virtual bool next();
 
-    value_ = Value(type, buffer, size);
-
-    return buffer + size;
+  const Value* value() {
+    assert(index_ >= 0 && index_ < count_);
+    return &value_;
   }
-
-  virtual bool next() {
-    if (index_++ < count_) {
-      position_ = decode_value(position_);
-      return true;
-    }
-    return false;
-  }
-
-  const Value* value() { return &value_; }
 
 private:
   const Value* collection_;
   char* position_;
   Value value_;
-  size_t index_;
-  const size_t count_;
+  int32_t index_;
+  const int32_t count_;
 };
 
 } // namespace cass

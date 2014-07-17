@@ -18,7 +18,7 @@
 #define __CASS_ROUND_ROBIN_POLICY_HPP_INCLUDED__
 
 #include "cassandra.h"
-#include "load_balancing_policy.hpp"
+#include "balancing.hpp"
 #include "host.hpp"
 
 namespace cass {

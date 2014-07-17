@@ -17,75 +17,50 @@
 #ifndef __CASS_REQUEST_HANDLER_HPP_INCLUDED__
 #define __CASS_REQUEST_HANDLER_HPP_INCLUDED__
 
-#include "response_callback.hpp"
+#include "constants.hpp"
 #include "future.hpp"
-#include "message.hpp"
-#include "timer.hpp"
+#include "host.hpp"
+#include "request.hpp"
+#include "response.hpp"
+#include "response_callback.hpp"
+#include "scoped_ptr.hpp"
+
+#include "third_party/boost/boost/function.hpp"
+
+#include <list>
+#include <string>
 
 namespace cass {
 
-class ResponseFuture : public ResultFuture<MessageBody> {
+class Timer;
+
+class ResponseFuture : public ResultFuture<Response> {
 public:
   ResponseFuture()
-      : ResultFuture(CASS_FUTURE_TYPE_RESPONSE) {}
+      : ResultFuture<Response>(CASS_FUTURE_TYPE_RESPONSE) {}
 
   std::string statement;
 };
 
-enum RetryType { RETRY_WITH_CURRENT_HOST, RETRY_WITH_NEXT_HOST };
-
 class RequestHandler : public ResponseCallback {
 public:
-  typedef std::function<void(RequestHandler*)> Callback;
-  typedef std::function<void(RequestHandler*, RetryType)> RetryCallback;
+  typedef boost::function1<void, RequestHandler*> Callback;
+  typedef boost::function2<void, RequestHandler*, RetryType> RetryCallback;
 
-  RequestHandler(Message* request)
-      : timer(nullptr)
+  RequestHandler(const Request* request)
+      : timer(NULL)
       , request_(request)
       , future_(new ResponseFuture()) {
     future_->retain();
-    request->body->retain();
   }
 
-  ~RequestHandler() {
-    MessageBody* body = request_->body.release();
-    body->release();
-  }
+  virtual const Request* request() const { return request_.get(); }
 
-  virtual Message* request() const { return request_.get(); }
+  virtual void on_set(ResponseMessage* response);
 
-  virtual void on_set(Message* response) {
-    switch (response->opcode) {
-      case CQL_OPCODE_RESULT:
-        future_->set_result(response->body.release());
-        break;
-      case CQL_OPCODE_ERROR: {
-        ErrorResponse* error =
-            static_cast<ErrorResponse*>(response->body.get());
-        future_->set_error(static_cast<CassError>(CASS_ERROR(
-                               CASS_ERROR_SOURCE_SERVER, error->code)),
-                           std::string(error->message, error->message_size));
-      } break;
-      default:
-        // TODO(mpenick): Get the host for errors
-        future_->set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
-                           "Unexpected response");
-        break;
-    }
-    notify_finished();
-    ;
-  }
+  virtual void on_error(CassError code, const std::string& message);
 
-  virtual void on_error(CassError code, const std::string& message) {
-    future_->set_error(code, message);
-    notify_finished();
-  }
-
-  virtual void on_timeout() {
-    // TODO(mpenick): Get the host for errors
-    future_->set_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT, "Request timed out");
-    notify_finished();
-  }
+  virtual void on_timeout();
 
   void set_retry_callback(RetryCallback callback) {
     retry_callback_ = callback;
@@ -132,7 +107,7 @@ private:
   }
 
   std::list<Host> hosts_attempted_;
-  std::unique_ptr<Message> request_;
+  ScopedRefPtr<const Request> request_;
   ResponseFuture* future_;
   RetryCallback retry_callback_;
   Callback finished_callback_;

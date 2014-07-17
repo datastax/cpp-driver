@@ -100,74 +100,88 @@ const std::string lorem_ipsum = "Lorem ipsum dolor sit amet, consectetur adipisc
 
 //-----------------------------------------------------------------------------------
 
-MultipleNodesTest::MultipleNodesTest(int numberOfNodesDC1, int numberOfNodesDC2) : conf(cql::get_ccm_bridge_configuration()) {
-  boost::debug::detect_memory_leaks(true);
-  ccm = cql::cql_ccm_bridge_t::create(conf, "test", numberOfNodesDC1, numberOfNodesDC2);
+MultipleNodesTest::MultipleNodesTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version)
+  : conf(cql::get_ccm_bridge_configuration()) {
+  boost::debug::detect_memory_leaks(false);
+  ccm = cql::cql_ccm_bridge_t::create(conf, "test", num_nodes_dc1, num_nodes_dc2);
 
   cluster = cass_cluster_new();
-  for(int i = 0; i < numberOfNodesDC1; ++i) {
-    std::string contact_point(conf.ip_prefix() + boost::lexical_cast<std::string>(i + 1));
-    cass_cluster_setopt(cluster, CASS_OPTION_CONTACT_POINTS, contact_point.data(), contact_point.size());
-  }
+  initialize_contact_points(cluster, conf.ip_prefix(), num_nodes_dc1, num_nodes_dc2);
 
-  cass_size_t connect_timeout = 10000;
-  cass_cluster_setopt(cluster, CASS_OPTION_CONNECT_TIMEOUT, &connect_timeout, sizeof(connect_timeout));
-
-  cass_size_t write_timeout = 10000;
-  cass_cluster_setopt(cluster, CASS_OPTION_WRITE_TIMEOUT, &write_timeout, sizeof(write_timeout));
-
-  cass_size_t read_timeout = 10000;
-  cass_cluster_setopt(cluster, CASS_OPTION_READ_TIMEOUT, &read_timeout, sizeof(read_timeout));
-
-  cass_size_t num_threads_io = 2;
-  cass_cluster_setopt(cluster, CASS_OPTION_NUM_THREADS_IO, &num_threads_io, sizeof(num_threads_io));
-
-  if(conf.use_logger())	{
-    // TODO(mpenick): Add logging
-  }
+  cass_cluster_set_connect_timeout(cluster, 10000);
+  cass_cluster_set_write_timeout(cluster, 10000);
+  cass_cluster_set_read_timeout(cluster, 10000);
+  cass_cluster_set_num_threads_io(cluster, 2);
+  cass_cluster_set_protocol_version(cluster, protocol_version);
 }
 
 MultipleNodesTest::~MultipleNodesTest() {
   cass_cluster_free(cluster);
 }
 
-SingleSessionTest::SingleSessionTest(int numberOfNodesDC1, int numberOfNodesDC2)
-  : MultipleNodesTest(numberOfNodesDC1, numberOfNodesDC2) {
-  test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
+SingleSessionTest::SingleSessionTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version)
+  : MultipleNodesTest(num_nodes_dc1, num_nodes_dc2, protocol_version) {
+  test_utils::CassFuturePtr connect_future = make_shared<CassFuture>(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(connect_future.get());
   session = cass_future_get_session(connect_future.get());
 }
 
 SingleSessionTest::~SingleSessionTest() {
-   CassFuturePtr close_future(cass_session_close(session));
+   CassFuturePtr close_future = make_shared<CassFuture>(cass_session_close(session));
    cass_future_wait(close_future.get());
+}
+
+void initialize_contact_points(CassCluster* cluster, std::string prefix, int num_nodes_dc1, int num_nodes_dc2) {
+  for(int i = 0; i < num_nodes_dc1; ++i) {
+    std::string contact_point(prefix + boost::lexical_cast<std::string>(i + 1));
+    cass_cluster_set_contact_points(cluster, cass_string_init2(contact_point.data(), contact_point.size()));
+  }
 }
 
 void execute_query(CassSession* session,
                    const std::string& query,
                    CassResultPtr* result,
                    CassConsistency consistency) {
-  CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0, consistency));
-  CassFuturePtr future(cass_session_execute(session, statement.get()));
+  CassStatementPtr statement = make_shared(cass_statement_new(cass_string_init(query.c_str()), 0));
+  cass_statement_set_consistency(statement.get(), consistency);
+  CassFuturePtr future = make_shared(cass_session_execute(session, statement.get()));
   wait_and_check_error(future.get());
-  if(result != nullptr) {
-    result->reset(cass_future_get_result(future.get()));
+  if(result != NULL) {
+    *result = make_shared<const CassResult>(cass_future_get_result(future.get()));
   }
 }
 
-void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
+CassError execute_query_with_error(CassSession* session,
+                                  const std::string& query,
+                                  CassResultPtr* result,
+                                  CassConsistency consistency) {
+  CassStatementPtr statement = make_shared(cass_statement_new(cass_string_init(query.c_str()), 0));
+  cass_statement_set_consistency(statement.get(), consistency);
+  CassFuturePtr future = make_shared(cass_session_execute(session, statement.get()));
+  CassError code = wait_and_return_error(future.get());
+  if(result != NULL) {
+    *result = make_shared<const CassResult>(cass_future_get_result(future.get()));
+  }
+  return code;
+}
+
+CassError wait_and_return_error(CassFuture* future, cass_duration_t timeout) {
   if(!cass_future_wait_timed(future, timeout)) {
     BOOST_FAIL("Timed out waiting for result");
   }
-  CassError code = cass_future_error_code(future);
+  return cass_future_error_code(future);
+}
+
+void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
+  CassError code = wait_and_return_error(future, timeout);
   if(code != CASS_OK) {
     CassString message = cass_future_error_message(future);
     BOOST_FAIL("Error occured during query '" << std::string(message.data, message.length) << "' (" << boost::format("0x%08X") % code << ")");
   }
 }
 
-std::string string_from_time_point(std::chrono::system_clock::time_point time) {
-  std::time_t t = std::chrono::system_clock::to_time_t(time);
+std::string string_from_time_point(boost::chrono::system_clock::time_point time) {
+  std::time_t t = boost::chrono::system_clock::to_time_t(time);
   char buffer[26];
 #ifdef WIN32
   ctime_s(buffer, sizeof(buffer), &t);
