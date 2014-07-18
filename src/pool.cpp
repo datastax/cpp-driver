@@ -21,8 +21,7 @@ Pool::PoolHandler::PoolHandler(Pool* pool, Connection* connection,
                                RequestHandler* request_handler)
     : pool_(pool)
     , connection_(connection)
-    , request_handler_(request_handler) {
-}
+    , request_handler_(request_handler) {}
 
 void Pool::PoolHandler::on_set(ResponseMessage* response) {
   switch (response->opcode()) {
@@ -114,7 +113,7 @@ Pool::~Pool() {
                                     end = pending_request_queue_.end();
        it != end; ++it) {
     RequestHandler* request_handler = *it;
-    if (request_handler->timer) {
+    if (request_handler->timer != NULL) {
       Timer::stop(request_handler->timer);
       request_handler->timer = NULL;
       request_handler->retry(RETRY_WITH_NEXT_HOST);
@@ -259,7 +258,7 @@ void Pool::execute_pending_request(Connection* connection) {
   if (!pending_request_queue_.empty()) {
     RequestHandler* request_handler = pending_request_queue_.front();
     pending_request_queue_.pop_front();
-    if (request_handler->timer) {
+    if (request_handler->timer != NULL) {
       Timer::stop(request_handler->timer);
       request_handler->timer = NULL;
     }

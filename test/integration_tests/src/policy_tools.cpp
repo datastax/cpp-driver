@@ -31,22 +31,20 @@ void PolicyTool::create_schema(CassSession* session, int replicationFactor)
 
 void PolicyTool::init(CassSession* session, int n, CassConsistency cl, bool batch)
 {
-    std::string query_string = str(boost::format("INSERT INTO %s(k, i) VALUES (0, 0)") % test_utils::SIMPLE_TABLE);
+    std::string query = str(boost::format("INSERT INTO %s (k, i) VALUES (0, 0)") % test_utils::SIMPLE_TABLE);
 
-    if(batch)
-    {
+    if (batch) {
         std::string bth;
         bth.append("BEGIN BATCH ");
-        bth.append(str(boost::format("INSERT INTO %s(k, i) VALUES (0, 0)") % test_utils::SIMPLE_TABLE));
+        bth.append(str(boost::format("INSERT INTO %s (k, i) VALUES (0, 0)") % test_utils::SIMPLE_TABLE));
         bth.append(" APPLY BATCH");
-        query_string = bth;
+        query = bth;
     }
 
-    for (int i = 0; i < n; ++i)
-    {
+    for (int i = 0; i < n; ++i) {
         test_utils::CassResultPtr result;
         test_utils::execute_query(session,
-                                  query_string,
+                                  query,
                                   &result,
                                   cl);
     }
@@ -54,20 +52,20 @@ void PolicyTool::init(CassSession* session, int n, CassConsistency cl, bool batc
 
 CassError PolicyTool::init_return_error(CassSession* session, int n, CassConsistency cl, bool batch)
 {
-    std::string query_string = str(boost::format("INSERT INTO %s(k, i) VALUES (0, 0)") % test_utils::SIMPLE_TABLE);
+    std::string query = str(boost::format("INSERT INTO %s (k, i) VALUES (0, 0)") % test_utils::SIMPLE_TABLE);
 
     if(batch) {
-        std::string bth;
-        bth.append("BEGIN BATCH ");
-        bth.append(str(boost::format("INSERT INTO %s(k, i) VALUES (0, 0)") % test_utils::SIMPLE_TABLE));
-        bth.append(" APPLY BATCH");
-        query_string = bth;
+        std::string batch_query;
+        batch_query.append("BEGIN BATCH ");
+        batch_query.append(str(boost::format("INSERT INTO %s (k, i) VALUES (0, 0)") % test_utils::SIMPLE_TABLE));
+        batch_query.append(" APPLY BATCH");
+        query = batch_query;
     }
 
     for (int i = 0; i < n; ++i) {
         test_utils::CassResultPtr result;
         CassError rc = test_utils::execute_query_with_error(session,
-                                                            query_string,
+                                                            query,
                                                             &result,
                                                             cl);
         if (rc != CASS_OK) {
@@ -79,10 +77,11 @@ CassError PolicyTool::init_return_error(CassSession* session, int n, CassConsist
 
 void PolicyTool::add_coordinator(cass::Address address)
 {
-    if(coordinators.count(address) == 0)
+    if(coordinators.count(address) == 0) {
         coordinators.insert(std::make_pair(address, 1));
-    else
+    } else {
         coordinators[address] += 1;
+    }
 }
 
 void PolicyTool::assert_queried(cass::Address address, int n)
@@ -103,9 +102,10 @@ void PolicyTool::assertQueriedAtLeast(cass::Address address, int n)
 
 void PolicyTool::query(CassSession* session, int n, CassConsistency cl)
 {
+    std::string select_query = str(boost::format("SELECT * FROM %s WHERE k = 0") % test_utils::SIMPLE_TABLE);
     for (int i = 0; i < n; ++i) {
         test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(
-                                                      cass_string_init(str(boost::format("SELECT * FROM %s WHERE k = 0") % test_utils::SIMPLE_TABLE).c_str()),
+                                                      cass_string_init2(select_query.data(), select_query.size()),
                                                       0));
         cass_statement_set_consistency(statement.get(), cl);
         test_utils::CassFuturePtr future = test_utils::make_shared(cass_session_execute(session, statement.get()));
@@ -116,10 +116,10 @@ void PolicyTool::query(CassSession* session, int n, CassConsistency cl)
 
 CassError PolicyTool::query_return_error(CassSession* session, int n, CassConsistency cl)
 {
+    std::string select_query = str(boost::format("SELECT * FROM %s WHERE k = 0") % test_utils::SIMPLE_TABLE);
     for (int i = 0; i < n; ++i) {
-        test_utils::CassStatementPtr statement(cass_statement_new(
-                                                                  cass_string_init(str(boost::format("SELECT * FROM %s WHERE k = 0") % test_utils::SIMPLE_TABLE).c_str()),
-                                                                  0));
+        test_utils::CassStatementPtr statement
+            = test_utils::make_shared(cass_statement_new(cass_string_init2(select_query.data(), select_query.size()), 0));
         cass_statement_set_consistency(statement.get(), cl);
         test_utils::CassFuturePtr future = test_utils::make_shared(cass_session_execute(session, statement.get()));
         CassError rc = test_utils::wait_and_return_error(future.get());
