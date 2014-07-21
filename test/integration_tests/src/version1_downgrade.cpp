@@ -35,10 +35,10 @@ struct Version1DowngradeTests {
     Version1DowngradeTests() {}
 };
 
-void check_error_log_callback(void* data,
-                              cass_uint64_t time,
+void check_error_log_callback(cass_uint64_t time,
                               CassLogLevel severity,
-                              CassString message) {
+                              CassString message,
+                              void* data) {
   LogData* log_data = reinterpret_cast<LogData*>(data);
   std::string str(message.data, message.length);
   if (str.find(log_data->error) != std::string::npos) {
@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(test_query_after_downgrade)
 
     cass_cluster_set_protocol_version(cluster.get(), 2);
 
-    cass_cluster_set_log_callback(cluster.get(), log_data.get(), check_error_log_callback);
+    cass_cluster_set_log_callback(cluster.get(), check_error_log_callback, log_data.get());
 
     test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster.get()));
     test_utils::wait_and_check_error(session_future.get());

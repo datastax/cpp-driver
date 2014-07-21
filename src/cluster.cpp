@@ -150,9 +150,9 @@ CassError cass_cluster_set_log_level(CassCluster* cluster,
 }
 
 CassError cass_cluster_set_log_callback(CassCluster* cluster,
-                                        void* data,
-                                        CassLogCallback callback) {
-  cluster->config().set_log_callback(data, callback);
+                                        CassLogCallback callback,
+                                        void* data) {
+  cluster->config().set_log_callback(callback, data);
   return CASS_OK;
 }
 

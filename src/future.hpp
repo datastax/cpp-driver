@@ -24,6 +24,8 @@
 #include "scoped_ptr.hpp"
 #include "ref_counted.hpp"
 
+#include "third_party/boost/boost/function.hpp"
+
 #include <uv.h>
 #include <assert.h>
 #include <string>
@@ -40,6 +42,8 @@ enum FutureType {
 
 class Future : public RefCounted<Future> {
 public:
+  typedef boost::function2<void, CassFuture*, void*> Callback;
+
   struct Error {
     Error(CassError code, const std::string& message)
         : code(code)
@@ -52,7 +56,8 @@ public:
   Future(FutureType type)
       : RefCounted<Future>(1) // For the external reference
       , is_set_(false)
-      , type_(type) {
+      , type_(type)
+      , loop_(NULL) {
     uv_mutex_init(&mutex_);
     uv_cond_init(&cond_);
   }
@@ -100,6 +105,12 @@ public:
     internal_set_error(code, message, lock);
   }
 
+  void set_loop(uv_loop_t* loop) {
+    loop_ = loop;
+  }
+
+  bool set_callback(Callback callback, void* data);
+
 protected:
   void internal_wait(ScopedMutex& lock) {
     while (!is_set_) {
@@ -108,12 +119,7 @@ protected:
   }
 
   // This *MUST* be the final call. The object could be deleted.
-  void internal_set(ScopedMutex& lock) {
-    is_set_ = true;
-    uv_cond_broadcast(&cond_);
-    lock.unlock();
-    release();
-  }
+  void internal_set(ScopedMutex& lock);
 
   void internal_set_error(CassError code, const std::string& message, ScopedMutex& lock) {
     error_.reset(new Error(code, message));
@@ -123,10 +129,18 @@ protected:
   uv_mutex_t mutex_;
 
 private:
+  void run_callback_on_work_thread();
+  static void on_work(uv_work_t* work);
+
+private:
   bool is_set_;
   uv_cond_t cond_;
   FutureType type_;
   ScopedPtr<Error> error_;
+  boost::atomic<uv_loop_t*> loop_;
+  uv_work_t work_;
+  Callback callback_;
+  void* data_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Future);

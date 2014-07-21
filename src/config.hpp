@@ -24,8 +24,8 @@
 
 namespace cass {
 
-void default_log_callback(void* data, cass_uint64_t time, CassLogLevel severity,
-                          CassString message);
+void default_log_callback(cass_uint64_t time, CassLogLevel severity,
+                          CassString message, void* data);
 
 class Config {
 public:
@@ -49,8 +49,8 @@ public:
       , write_timeout_(1000)
       , read_timeout_(12000)
       , log_level_(CASS_LOG_WARN)
-      , log_data_(NULL)
-      , log_callback_(default_log_callback) {}
+      , log_callback_(default_log_callback)
+      , log_data_(NULL) {}
 
   unsigned thread_count_io() const { return thread_count_io_; }
 
@@ -170,9 +170,9 @@ public:
 
   CassLogCallback log_callback() const { return log_callback_; }
 
-  void set_log_callback(void* data, CassLogCallback callback) {
-    log_data_ = data;
+  void set_log_callback(CassLogCallback callback, void* data) {
     log_callback_ = callback;
+    log_data_ = data;
   }
 
 private:
@@ -194,8 +194,8 @@ private:
   unsigned write_timeout_;
   unsigned read_timeout_;
   CassLogLevel log_level_;
-  void* log_data_;
   CassLogCallback log_callback_;
+  void* log_data_;
 };
 
 } // namespace cass

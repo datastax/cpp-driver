@@ -257,6 +257,7 @@ Future* Session::prepare(const char* statement, size_t length) {
   RequestHandler* request_handler = new RequestHandler(prepare);
   ResponseFuture* future = request_handler->future();
   future->statement.assign(statement, length);
+  future->set_loop(loop());
   execute(request_handler);
   return future;
 }
@@ -264,6 +265,7 @@ Future* Session::prepare(const char* statement, size_t length) {
 Future* Session::execute(const Request* statement) {
   RequestHandler* request_handler = new RequestHandler(statement);
   Future* future = request_handler->future();
+  future->set_loop(loop());
   execute(request_handler);
   return future;
 }

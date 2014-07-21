@@ -18,6 +18,7 @@
 #include "future.hpp"
 #include "scoped_ptr.hpp"
 #include "request_handler.hpp"
+#include "types.hpp"
 
 extern "C" {
 
@@ -25,6 +26,15 @@ void cass_future_free(CassFuture* future) {
   // Futures can be deleted without being waited on
   // because they'll be cleaned up by the notifying thread
   future->release();
+}
+
+CassError cass_future_set_callback(CassFuture* future,
+                                   CassFutureCallback callback,
+                                   void* data) {
+  if (!future->set_callback(callback, data)) {
+    return CASS_ERROR_LIB_CALLBACK_ALREADY_SET;
+  }
+  return CASS_OK;
 }
 
 cass_bool_t cass_future_ready(CassFuture* future) {
@@ -107,3 +117,61 @@ CassString cass_future_error_message(CassFuture* future) {
 }
 
 } // extern "C"
+
+namespace cass {
+
+bool Future::set_callback(Future::Callback callback, void* data) {
+  ScopedMutex lock(&mutex_);
+  if (callback_) {
+    return false; // Callback is already set
+  }
+  callback_ = callback;
+  data_ = data;
+  if (is_set_) {
+    // Run the callback if the future is already set
+    lock.unlock();
+    if (loop_ == NULL) {
+      callback(CassFuture::to(this), data);
+    } else if(callback_) {
+      run_callback_on_work_thread();
+    }
+  }
+  return true;
+}
+
+void Future::internal_set(ScopedMutex& lock) {
+  is_set_ = true;
+  uv_cond_broadcast(&cond_);
+  if (loop_ == NULL) {
+    Callback callback = callback_;
+    void* data = data_;
+    lock.unlock();
+    callback(CassFuture::to(this), data);
+  } else if(callback_) {
+    lock.unlock();
+    run_callback_on_work_thread();
+  }
+  release();
+}
+
+void Future::run_callback_on_work_thread() {
+  retain(); // Keep the future alive for the callback
+  work_.data = this;
+  uv_queue_work(loop_, &work_, on_work, NULL);
+}
+
+void Future::on_work(uv_work_t* work) {
+  Future* future = reinterpret_cast<Future*>(work->data);
+
+  ScopedMutex lock(&future->mutex_);
+  Callback callback = future->callback_;
+  void* data = future->data_;
+  lock.unlock();
+
+  callback(CassFuture::to(future), data);
+  future->release();
+}
+
+} // namespace cass
+
+

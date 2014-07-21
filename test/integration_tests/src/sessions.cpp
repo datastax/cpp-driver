@@ -37,10 +37,10 @@ struct SessionTests {
 
 BOOST_FIXTURE_TEST_SUITE(sessions, SessionTests)
 
-void check_error_log_callback(void* data,
-                              cass_uint64_t time,
+void check_error_log_callback(cass_uint64_t time,
                               CassLogLevel severity,
-                              CassString message) {
+                              CassString message,
+                              void* data) {
   LogData* log_data = reinterpret_cast<LogData*>(data);
   std::string str(message.data, message.length);
   if (str.find(log_data->error) != std::string::npos) {
@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(test_connect_invalid_ip)
     test_utils::CassClusterPtr cluster = test_utils::make_shared(cass_cluster_new());
     cass_cluster_set_contact_points(cluster.get(), cass_string_init("1.1.1.1"));
 
-    cass_cluster_set_log_callback(cluster.get(), log_data.get(), check_error_log_callback);
+    cass_cluster_set_log_callback(cluster.get(), check_error_log_callback, log_data.get());
 
     test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster.get()));
     test_utils::wait_and_check_error(session_future.get());
@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(test_connect_invalid_name)
     test_utils::CassClusterPtr cluster = test_utils::make_shared(cass_cluster_new());
     cass_cluster_set_contact_points(cluster.get(), cass_string_init("node.domain-does-not-exist.dne"));
 
-    cass_cluster_set_log_callback(cluster.get(), log_data.get(), check_error_log_callback);
+    cass_cluster_set_log_callback(cluster.get(), check_error_log_callback, log_data.get());
 
     test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster.get()));
     code = cass_future_error_code(session_future.get());
@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE(test_connect_invalid_keyspace)
 
     test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
-    cass_cluster_set_log_callback(cluster.get(), log_data.get(), check_error_log_callback);
+    cass_cluster_set_log_callback(cluster.get(), check_error_log_callback, log_data.get());
 
     test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect_keyspace(cluster.get(), "invalid"));
     test_utils::wait_and_check_error(session_future.get());
@@ -144,7 +144,7 @@ BOOST_AUTO_TEST_CASE(test_close_timeout_error)
 
     test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
-    cass_cluster_set_log_callback(cluster.get(), log_data.get(), check_error_log_callback);
+    cass_cluster_set_log_callback(cluster.get(), check_error_log_callback, log_data.get());
 
     // Create new connections after 1 pending request
     cass_cluster_set_max_simultaneous_requests_threshold(cluster.get(), 1);
