@@ -98,8 +98,8 @@ private:
         if (log_message->severity != CASS_LOG_DISABLED) {
           CassString message = cass_string_init2(log_message->message.data(),
                                                  log_message->message.size());
-          logger->cb_(logger->data_, log_message->time, log_message->severity,
-                      message);
+          logger->cb_(log_message->time, log_message->severity,
+                      message, logger->data_);
         }
         delete log_message;
       } else {

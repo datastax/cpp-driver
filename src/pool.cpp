@@ -42,7 +42,7 @@ void Pool::PoolHandler::on_set(ResponseMessage* response) {
 
 void Pool::PoolHandler::on_error(CassError code, const std::string& message) {
   if (code == CASS_ERROR_LIB_WRITE_ERROR ||
-      code == CASS_ERROR_UNABLE_TO_SET_KEYSPACE) {
+      code == CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE) {
     request_handler_.release()->retry(RETRY_WITH_NEXT_HOST);
   } else {
     request_handler_->on_error(code, message);

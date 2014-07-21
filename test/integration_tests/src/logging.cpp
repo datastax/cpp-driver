@@ -27,10 +27,10 @@ struct LogData {
 
 } // namespace
 
-void check_log_callback(void* data,
-                        cass_uint64_t time,
+void check_log_callback(cass_uint64_t time,
                         CassLogLevel severity,
-                        CassString message) {
+                        CassString message,
+                        void* data) {
   LogData* log_data = reinterpret_cast<LogData*>(data);
   log_data->log_count++;
 }
@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(test_logging_callback)
 
   {
     cass_cluster_set_log_level(cluster, CASS_LOG_DEBUG);
-    cass_cluster_set_log_callback(cluster, log_data.get(), check_log_callback);
+    cass_cluster_set_log_callback(cluster, check_log_callback, log_data.get());
 
     test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
     test_utils::wait_and_check_error(session_future.get());

@@ -237,7 +237,8 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_ITEM_COUNT, 12, "Invalid item count") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_VALUE_TYPE, 13, "Invalid value type") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_TIMED_OUT, 14, "Request timed out") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_UNABLE_TO_SET_KEYSPACE, 15, "Unable to set keyspace") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE, 15, "Unable to set keyspace") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_CALLBACK_ALREADY_SET, 16, "Callback already set") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -268,10 +269,13 @@ typedef enum CassError_ {
   CASS_ERROR_LAST_ENTRY
 } CassError;
 
-typedef void (*CassLogCallback)(void* data,
-                                cass_uint64_t time,
+typedef void (*CassFutureCallback)(CassFuture* future,
+                                   void* data);
+
+typedef void (*CassLogCallback)(cass_uint64_t time,
                                 CassLogLevel severity,
-                                CassString message);
+                                CassString message,
+                                void* data);
 
 /***********************************************************************************
  *
@@ -498,8 +502,8 @@ cass_cluster_set_log_level(CassCluster* cluster,
  */
 CASS_EXPORT CassError
 cass_cluster_set_log_callback(CassCluster* cluster,
-                              void* data,
-                              CassLogCallback callback);
+                              CassLogCallback callback,
+                              void* data);
 
 /**
  * Connnects a session to the cluster.
@@ -598,6 +602,19 @@ cass_session_execute_batch(CassSession* session,
  */
 CASS_EXPORT void
 cass_future_free(CassFuture* future);
+
+
+/**
+ * Sets a callback that is called when a future is set
+ *
+ * @param[in] future
+ * @param[in] callback
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_future_set_callback(CassFuture* future,
+                         CassFutureCallback callback,
+                         void* data);
 
 /**
  * Gets the set status of the future.

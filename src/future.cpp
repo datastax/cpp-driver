@@ -18,6 +18,7 @@
 #include "future.hpp"
 #include "scoped_ptr.hpp"
 #include "request_handler.hpp"
+#include "types.hpp"
 
 extern "C" {
 
@@ -25,6 +26,15 @@ void cass_future_free(CassFuture* future) {
   // Futures can be deleted without being waited on
   // because they'll be cleaned up by the notifying thread
   future->release();
+}
+
+CassError cass_future_set_callback(CassFuture* future,
+                                   CassFutureCallback callback,
+                                   void* data) {
+  if (!future->set_callback(callback, data)) {
+    return CASS_ERROR_LIB_CALLBACK_ALREADY_SET;
+  }
+  return CASS_OK;
 }
 
 cass_bool_t cass_future_ready(CassFuture* future) {
@@ -107,3 +117,51 @@ CassString cass_future_error_message(CassFuture* future) {
 }
 
 } // extern "C"
+
+namespace cass {
+
+bool Future::set_callback(Future::Callback callback, void* data) {
+  ScopedMutex lock(&mutex_);
+  if (callback_) {
+    return false; // Callback is already set
+  }
+  callback_ = callback;
+  data_ = data;
+  if (is_set_) {
+    // Run the callback if the future is already set
+    run_callback(lock);
+  }
+  return true;
+}
+
+void Future::internal_set(ScopedMutex& lock) {
+  is_set_ = true;
+  run_callback(lock);
+  uv_cond_broadcast(&cond_);
+  lock.unlock();
+  release();
+}
+
+void Future::run_callback(ScopedMutex& lock) {
+  if (!callback_) return;
+
+  if (loop_ == NULL) {
+    lock.unlock();
+    callback_(CassFuture::to(this), data_);
+    lock.lock();
+  } else {
+    retain(); // Keep the future alive for the callback
+    work_.data = this;
+    uv_queue_work(loop_, &work_, on_work, NULL);
+  }
+}
+
+void Future::on_work(uv_work_t* work) {
+  Future* future = reinterpret_cast<Future*>(work->data);
+  future->callback_(CassFuture::to(future), future->data_);
+  future->release();
+}
+
+} // namespace cass
+
+
