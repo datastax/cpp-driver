@@ -1,4 +1,7 @@
 #include "connection.hpp"
+#include "auth.hpp"
+#include "auth_requests.hpp"
+#include "auth_responses.hpp"
 #include "constants.hpp"
 #include "response.hpp"
 #include "connecter.hpp"
@@ -33,6 +36,7 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
     case CQL_OPCODE_SUPPORTED:
       connection_->on_supported(response);
       break;
+
     case CQL_OPCODE_ERROR: {
       ErrorResponse* error
           = static_cast<ErrorResponse*>(response->response_body().get());
@@ -51,12 +55,31 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
       }
     }
       break;
+
+    case CQL_OPCODE_AUTHENTICATE:
+      connection_->on_authenticate();
+      break;
+
+    case CQL_OPCODE_AUTH_CHALLENGE:
+      connection_->on_auth_challenge(
+            static_cast<AuthResponseRequest*>(request_.get()),
+            static_cast<AuthChallengeResponse*>(response->response_body().get())->token());
+      break;
+
+    case CQL_OPCODE_AUTH_SUCCESS:
+      connection_->on_auth_success(
+            static_cast<AuthResponseRequest*>(request_.get()),
+            static_cast<AuthSuccessResponse*>(response->response_body().get())->token());
+      break;
+
     case CQL_OPCODE_READY:
       connection_->on_ready();
       break;
+
     case CQL_OPCODE_RESULT:
       on_result_response(response);
       break;
+
     default:
       connection_->notify_error("Invalid opcode during startup");
       break;
@@ -229,7 +252,7 @@ void Connection::InternalRequest::on_request_timeout(Timer* timer) {
 Connection::Connection(uv_loop_t* loop,
                        const Host& host, Logger* logger, const Config& config,
                        const std::string& keyspace, int protocol_version)
-    : state_(CLIENT_STATE_NEW)
+    : state_(CONNECTION_STATE_NEW)
     , is_defunct_(false)
     , is_invalid_protocol_(false)
     , timed_out_request_count_(0)
@@ -249,8 +272,8 @@ Connection::Connection(uv_loop_t* loop,
 }
 
 void Connection::connect() {
-  if (state_ == CLIENT_STATE_NEW) {
-    state_ = CLIENT_STATE_CONNECTING;
+  if (state_ == CONNECTION_STATE_NEW) {
+    state_ = CONNECTION_STATE_CONNECTING;
     connect_timer_ = Timer::start(loop_, config_.connect_timeout(), this,
                                   on_connect_timeout);
     Connecter::connect(&socket_, host_.address, this, on_connect);
@@ -289,12 +312,13 @@ bool Connection::execute(ResponseCallback* response_callback) {
 }
 
 void Connection::close() {
-  if (state_ != CLIENT_STATE_CLOSING && state_ != CLIENT_STATE_CLOSED) {
+  if (state_ != CONNECTION_STATE_CLOSING) {
     if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&socket_))) {
-      if (state_ >= CLIENT_STATE_CONNECTED) {
+      if (state_ == CONNECTION_STATE_CONNECTED ||
+          state_ == CONNECTION_STATE_READY) {
         uv_read_stop(reinterpret_cast<uv_stream_t*>(&socket_));
       }
-      state_ = CLIENT_STATE_CLOSING;
+      state_ = CONNECTION_STATE_CLOSING;
       uv_close(reinterpret_cast<uv_handle_t*>(&socket_), on_close);
     }
   }
@@ -308,30 +332,6 @@ void Connection::defunct() {
 void Connection::write(BufferVec* bufs, Connection::InternalRequest* request) {
   uv_stream_t* stream = reinterpret_cast<uv_stream_t*>(&socket_);
   Writer::write(stream, bufs, request, on_write);
-}
-
-void Connection::event_received() {
-  switch (state_) {
-    case CLIENT_STATE_CONNECTED:
-      ssl_handshake();
-      break;
-    case CLIENT_STATE_HANDSHAKE:
-      send_options();
-      break;
-    case CLIENT_STATE_SUPPORTED:
-      send_startup();
-      break;
-    case CLIENT_STATE_READY:
-      notify_ready();
-      break;
-    case CLIENT_STATE_SET_KEYSPACE:
-      send_use_keyspace();
-      break;
-    case CLIENT_STATE_CLOSED:
-      break;
-    default:
-      assert(false);
-  }
 }
 
 void Connection::consume(char* input, size_t size) {
@@ -420,8 +420,8 @@ void Connection::on_connect(Connecter* connecter) {
                                connection->host_string_.c_str());
     uv_read_start(reinterpret_cast<uv_stream_t*>(&connection->socket_),
                   alloc_buffer, on_read);
-    connection->state_ = CLIENT_STATE_CONNECTED;
-    connection->event_received();
+    connection->state_ = CONNECTION_STATE_CONNECTED;
+    connection->on_connected();
   } else {
     connection->logger_->info("Connect error '%s' on '%s'",
                               connection->host_string_.c_str(),
@@ -452,9 +452,6 @@ void Connection::on_close(uv_handle_t* handle) {
     connection->pending_requests_.remove(request);
     delete request;
   }
-
-  connection->state_ = CLIENT_STATE_CLOSED;
-  connection->event_received();
 
   if (connection->closed_callback_) {
     connection->closed_callback_(connection);
@@ -520,23 +517,42 @@ void Connection::on_write(Writer* writer) {
   }
 }
 
-void Connection::ssl_handshake() {
-  state_ = CLIENT_STATE_HANDSHAKE;
-  event_received();
+void Connection::on_connected() {
+  // TODO (mpenick): Implement SSL
+  execute(new StartupHandler(this, new OptionsRequest()));
+}
+
+void Connection::on_authenticate() {
+  if (protocol_version_ == 1) {
+    send_credentials();
+  } else {
+    send_initial_auth_response();
+  }
+}
+
+void Connection::on_auth_challenge(AuthResponseRequest* request, const std::string& token) {
+  AuthResponseRequest* auth_response
+      = new AuthResponseRequest(request->auth()->evaluate_challenge(token),
+                                request->auth().release());
+  execute(new StartupHandler(this, auth_response));
+}
+
+void Connection::on_auth_success(AuthResponseRequest* request, const std::string& token) {
+  request->auth()->on_authenticate_success(token);
 }
 
 void Connection::on_ready() {
   if (keyspace_.empty()) {
-    state_ = CLIENT_STATE_READY;
+    notify_ready();
   } else {
-    state_ = CLIENT_STATE_SET_KEYSPACE;
+    QueryRequest* query = new QueryRequest();
+    query->set_query("use \"" + keyspace_ + "\"");
+    execute(new StartupHandler(this, query));
   }
-  event_received();
 }
 
 void Connection::on_set_keyspace() {
-  state_ = CLIENT_STATE_READY;
-  event_received();
+  notify_ready();
 }
 
 void Connection::on_supported(ResponseMessage* response) {
@@ -546,11 +562,11 @@ void Connection::on_supported(ResponseMessage* response) {
   // TODO(mstump) do something with the supported info
   (void)supported;
 
-  state_ = CLIENT_STATE_SUPPORTED;
-  event_received();
+  execute(new StartupHandler(this, new StartupRequest()));
 }
 
 void Connection::notify_ready() {
+  state_ = CONNECTION_STATE_READY;
   if (ready_callback_) {
     ready_callback_(this);
   }
@@ -562,21 +578,26 @@ void Connection::notify_error(const std::string& error) {
   defunct();
 }
 
-void Connection::send_options() {
-  execute(new StartupHandler(this, new OptionsRequest()));
+void Connection::send_credentials() {
+  ScopedPtr<V1Autenticator> v1_auth(auth_provider->new_authenticator_v1(host_.address));
+  if (v1_auth) {
+    V1Autenticator::Credentials credentials;
+    v1_auth->get_credentials(&credentials);
+    execute(new StartupHandler(this, new CredentialsRequest(credentials)));
+  } else {
+    send_initial_auth_response();
+  }
 }
 
-void Connection::send_startup() {
-  StartupRequest* startup = new StartupRequest();
-  startup->set_version("3.0.0");
-  execute(new StartupHandler(this, startup));
-}
-
-void Connection::send_use_keyspace() {
-  QueryRequest* query = new QueryRequest();
-  query->set_query("use \"" + keyspace_ + "\"");
-  query->set_consistency(CASS_CONSISTENCY_ONE);
-  execute(new StartupHandler(this, query));
+void Connection::send_initial_auth_response() {
+  Authenticator* auth = auth_provider->new_authenticator(host_.address);
+  if (auth == NULL) {
+    notify_error("Authenticaion required but no auth provider given");
+  } else {
+    AuthResponseRequest* auth_response
+        = new AuthResponseRequest(auth->initial_response(), auth);
+    execute(new StartupHandler(this, auth_response));
+  }
 }
 
 } // namespace cass

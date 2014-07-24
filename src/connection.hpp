@@ -34,6 +34,8 @@
 
 namespace cass {
 
+class AuthProvider;
+class AuthResponseRequest;
 class ResponseMessage;
 class Connecter;
 class Timer;
@@ -109,15 +111,12 @@ public:
 
 public:
   enum ConnectionState {
-    CLIENT_STATE_NEW,
-    CLIENT_STATE_CONNECTING,
-    CLIENT_STATE_CONNECTED,
-    CLIENT_STATE_HANDSHAKE,
-    CLIENT_STATE_SUPPORTED,
-    CLIENT_STATE_SET_KEYSPACE,
-    CLIENT_STATE_READY,
-    CLIENT_STATE_CLOSING,
-    CLIENT_STATE_CLOSED
+    CONNECTION_STATE_NEW,
+    CONNECTION_STATE_CONNECTING,
+    CONNECTION_STATE_CONNECTED,
+    CONNECTION_STATE_READY,
+    CONNECTION_STATE_CLOSING,
+    CONNECTION_STATE_CLOSED
   };
 
   enum Compression {
@@ -145,13 +144,13 @@ public:
   void close();
   void defunct();
 
-  bool is_closing() const { return state_ == CLIENT_STATE_CLOSING; }
+  bool is_closing() const { return state_ == CONNECTION_STATE_CLOSING; }
 
   bool is_defunct() const { return is_defunct_; }
 
   bool is_invalid_protocol() const { return is_invalid_protocol_; }
 
-  bool is_ready() { return state_ == CLIENT_STATE_READY; }
+  bool is_ready() { return state_ == CONNECTION_STATE_READY; }
 
   int protocol_version() const { return protocol_version_; }
 
@@ -170,7 +169,6 @@ public:
 private:
   void actually_close();
   void write(BufferVec* bufs, InternalRequest* request);
-  void event_received();
   void consume(char* input, size_t size);
 
   static void on_connect(Connecter* connecter);
@@ -179,8 +177,10 @@ private:
   static void on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf);
   static void on_write(Writer* writer);
 
-  void ssl_handshake();
-
+  void on_connected();
+  void on_authenticate();
+  void on_auth_challenge(AuthResponseRequest* auth_response, const std::string& token);
+  void on_auth_success(AuthResponseRequest* auth_response, const std::string& token);
   void on_ready();
   void on_set_keyspace();
   void on_supported(ResponseMessage* response);
@@ -188,9 +188,8 @@ private:
   void notify_ready();
   void notify_error(const std::string& error);
 
-  void send_options();
-  void send_startup();
-  void send_use_keyspace();
+  void send_credentials();
+  void send_initial_auth_response();
 
 private:
   ConnectionState state_;
@@ -223,6 +222,8 @@ private:
   const Config& config_;
   std::string keyspace_;
   Timer* connect_timer_;
+
+  AuthProvider* auth_provider;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Connection);

@@ -34,7 +34,6 @@ public:
   Config()
       : port_(9042)
       , protocol_version_(2)
-      , version_("3.0.0")
       , thread_count_io_(1)
       , queue_size_io_(4096)
       , queue_size_event_(4096)
@@ -160,6 +159,18 @@ public:
     protocol_version_ = protocol_version;
   }
 
+  const std::string& username() const { return username_; }
+
+  void set_username(const std::string& username) {
+    username_ = username;
+  }
+
+  const std::string& password() const { return password_; }
+
+  void set_password(const std::string& password) {
+    password_ = password;
+  }
+
   CassLogLevel log_level() const { return log_level_; }
 
   void set_log_level(CassLogLevel log_level) {
@@ -178,8 +189,9 @@ public:
 private:
   int port_;
   int protocol_version_;
-  std::string version_;
   ContactPointList contact_points_;
+  std::string username_;
+  std::string password_;
   unsigned thread_count_io_;
   unsigned queue_size_io_;
   unsigned queue_size_event_;

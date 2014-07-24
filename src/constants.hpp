@@ -31,6 +31,9 @@
 #define CQL_OPCODE_REGISTER 0x0B
 #define CQL_OPCODE_EVENT 0x0C
 #define CQL_OPCODE_BATCH 0x0D
+#define CQL_OPCODE_AUTH_CHALLENGE 0x0E
+#define CQL_OPCODE_AUTH_RESPONSE 0x0F
+#define CQL_OPCODE_AUTH_SUCCESS 0x10
 
 // TODO(mpenick): We need to expose these (not as "CQL")
 #define CQL_ERROR_SERVER_ERROR 0x0000

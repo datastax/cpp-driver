@@ -35,8 +35,6 @@ public:
   bool encode(size_t reserved, char** output, size_t& size);
 
   const std::string version() const { return version_; }
-  void set_version(const std::string& version) { version_ = version; }
-
   const std::string compression() const { return compression_; }
 
 private:
