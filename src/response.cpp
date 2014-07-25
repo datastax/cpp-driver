@@ -15,6 +15,7 @@
 */
 
 #include "response.hpp"
+#include "auth_responses.hpp"
 #include "error_response.hpp"
 #include "ready_response.hpp"
 #include "result_response.hpp"
@@ -26,6 +27,7 @@ namespace cass {
 bool ResponseMessage::allocate_body(int8_t opcode) {
   response_body_.reset();
   switch (opcode) {
+
     case CQL_OPCODE_RESULT:
       response_body_.reset(new ResultResponse());
       return true;
@@ -40,6 +42,18 @@ bool ResponseMessage::allocate_body(int8_t opcode) {
 
     case CQL_OPCODE_READY:
       response_body_.reset(new ReadyResponse());
+      return true;
+
+   case CQL_OPCODE_AUTHENTICATE:
+      response_body_.reset(new AuthenticateResponse());
+      return true;
+
+   case CQL_OPCODE_AUTH_CHALLENGE:
+      response_body_.reset(new AuthChallengeResponse());
+      return true;
+
+   case CQL_OPCODE_AUTH_SUCCESS:
+      response_body_.reset(new AuthSuccessResponse());
       return true;
 
     default:

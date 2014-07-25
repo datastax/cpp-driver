@@ -137,7 +137,7 @@ public:
     return copy(pos, value, size);
   }
 
-  size_t encode_string_map(size_t offset, std::map<std::string, std::string>& value) {
+  size_t encode_string_map(size_t offset, const std::map<std::string, std::string>& value) {
     size_t pos = encode_uint16(offset, value.size());
     for (std::map<std::string, std::string>::const_iterator it = value.begin();
          it != value.end(); ++it) {

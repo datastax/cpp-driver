@@ -46,6 +46,69 @@ private:
 };
 
 template<class T>
+class SharedRefPtr {
+public:
+  explicit SharedRefPtr(T* ptr = NULL)
+       : ptr_(ptr) {
+    if (ptr_ != NULL) {
+      ptr_->retain();
+    }
+  }
+
+  SharedRefPtr(const SharedRefPtr<T>& ref)
+    : ptr_(NULL) {
+    copy<T>(ref.ptr_);
+  }
+
+  template<class S>
+  SharedRefPtr(const SharedRefPtr<S>& ref)
+    : ptr_(NULL) {
+    copy<S>(ref.ptr_);
+  }
+
+  T& operator=(const SharedRefPtr<T>& ref) {
+    copy<T>(ref.ptr_);
+    return *this;
+  }
+
+  template<class S>
+  T& operator=(const SharedRefPtr<S>& ref) {
+    copy<S>(ref.ptr_);
+    return *this;
+  }
+
+  ~SharedRefPtr() {
+    if (ptr_ != NULL) {
+      ptr_->release();
+    }
+  }
+
+  void reset(T* ptr = NULL) {
+    copy<T>(ptr);
+  }
+
+  T* get() const { return ptr_; }
+  T& operator*() const { return *ptr_; }
+  T* operator->() const { return ptr_; }
+  operator bool() const { return ptr_ != NULL; }
+
+private:
+  template<class S>
+  void copy(S* ptr) {
+    if (ptr != NULL) {
+      ptr->retain();
+    }
+    T* temp = ptr_;
+    ptr_ = static_cast<S*>(ptr);
+    if (temp != NULL) {
+      temp->release();
+    }
+  }
+
+  T* ptr_;
+};
+
+template<class T>
 class ScopedRefPtr {
 public:
   typedef T type;

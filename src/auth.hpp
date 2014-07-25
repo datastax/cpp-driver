@@ -20,29 +20,33 @@
 #include "macros.hpp"
 #include "address.hpp"
 #include "buffer.hpp"
+#include "ref_counted.hpp"
 
 #include <map>
 #include <string>
 
 namespace cass {
 
-class V1Autenticator {
+class V1Authenticator {
 public:
-  virtual ~V1Autenticator() {}
+  V1Authenticator() {}
+  virtual ~V1Authenticator() {}
 
   typedef std::map<std::string, std::string> Credentials;
   virtual void get_credentials(Credentials* credentials) = 0;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(V1Autenticator);
+  DISALLOW_COPY_AND_ASSIGN(V1Authenticator);
 };
-
 
 class Authenticator {
 public:
+  Authenticator() {}
   virtual ~Authenticator() {}
 
   virtual std::string initial_response() = 0;
+  // TODO(mpenick): Do these need to know the difference bewteen a
+  // NULL token and an empty token?
   virtual std::string evaluate_challenge(const std::string& challenge) = 0;
   virtual void on_authenticate_success(const std::string& token) = 0;
 
@@ -50,10 +54,56 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Authenticator);
 };
 
-class AuthProvider {
+class PlainTextAuthenticator : public V1Authenticator, public Authenticator {
 public:
-  virtual V1Autenticator* new_authenticator_v1(Address host) { return NULL; }
-  virtual Authenticator* new_authenticator(Address host) = 0;
+  PlainTextAuthenticator(const std::string& username,
+                         const std::string& password)
+      : username_(username)
+      , password_(password) {}
+
+  virtual void get_credentials(Credentials* credentials);
+
+  virtual std::string initial_response();
+  virtual std::string evaluate_challenge(const std::string& challenge);
+  virtual void on_authenticate_success(const std::string& token);
+
+private:
+  const std::string& username_;
+  const std::string& password_;
+};
+
+class AuthProvider : public RefCounted<AuthProvider> {
+public:
+  AuthProvider()
+    : RefCounted<AuthProvider>() {}
+
+  virtual ~AuthProvider() {}
+
+  virtual V1Authenticator* new_authenticator_v1(Address host) const { return NULL; }
+  virtual Authenticator* new_authenticator(Address host) const { return NULL; }
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(AuthProvider);
+};
+
+class PlainTextAuthProvider : public AuthProvider {
+public:
+  PlainTextAuthProvider(const std::string& username,
+                         const std::string& password)
+      : username_(username)
+      , password_(password) {}
+
+  virtual V1Authenticator* new_authenticator_v1(Address host) const {
+    return new PlainTextAuthenticator(username_, password_);
+  }
+
+  virtual Authenticator* new_authenticator(Address host) const {
+    return new PlainTextAuthenticator(username_, password_);
+  }
+
+private:
+  std::string username_;
+  std::string password_;
 };
 
 } // namespace cass

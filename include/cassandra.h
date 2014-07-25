@@ -499,11 +499,26 @@ cass_cluster_set_log_level(CassCluster* cluster,
  * @param[in] data An opaque data object passed to the callback.
  * @param[in] callback A callback that handles logging events. This is
  * called in a separate thread so access to shared data must by synchronized.
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_cluster_set_log_callback(CassCluster* cluster,
                               CassLogCallback callback,
                               void* data);
+
+
+/**
+ * Sets credentials for plain text authentication.
+ *
+ * @param[in] cluster
+ * @param[in] username
+ * @param[in] password
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_credentials(CassCluster* cluster,
+                             const char* username,
+                             const char* password);
 
 /**
  * Connnects a session to the cluster.

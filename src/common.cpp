@@ -70,6 +70,12 @@ std::string opcode_to_string(int opcode) {
       return "CQL_OPCODE_EVENT";
     case CQL_OPCODE_BATCH:
       return "CQL_OPCODE_BATCH";
+    case CQL_OPCODE_AUTH_CHALLENGE:
+      return "CQL_OPCODE_AUTH_CHALLENGE";
+    case CQL_OPCODE_AUTH_RESPONSE:
+      return "CQL_OPCODE_AUTH_RESPONSE";
+    case CQL_OPCODE_AUTH_SUCCESS:
+      return "CQL_OPCODE_AUTH_SUCCESS";
   };
   assert(false);
   return "";

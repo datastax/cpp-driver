@@ -106,7 +106,7 @@ char* ResultResponse::decode_metadata(char* input) {
 
   if (flags & CASS_RESULT_FLAG_HAS_MORE_PAGES) {
     has_more_pages_ = true;
-    buffer = decode_long_string(buffer, &paging_state_, paging_state_size_);
+    buffer = decode_bytes(buffer, &paging_state_, paging_state_size_);
   } else {
     has_more_pages_ = false;
   }

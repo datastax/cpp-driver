@@ -142,14 +142,16 @@ bool Future::set_callback(Future::Callback callback, void* data) {
 void Future::internal_set(ScopedMutex& lock) {
   is_set_ = true;
   uv_cond_broadcast(&cond_);
-  if (loop_ == NULL) {
-    Callback callback = callback_;
-    void* data = data_;
-    lock.unlock();
-    callback(CassFuture::to(this), data);
-  } else if(callback_) {
-    lock.unlock();
-    run_callback_on_work_thread();
+  if (callback_) {
+    if (loop_ == NULL) {
+      Callback callback = callback_;
+      void* data = data_;
+      lock.unlock();
+      callback(CassFuture::to(this), data);
+    } else {
+      lock.unlock();
+      run_callback_on_work_thread();
+    }
   }
   release();
 }

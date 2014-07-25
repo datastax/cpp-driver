@@ -539,6 +539,7 @@ void Connection::on_auth_challenge(AuthResponseRequest* request, const std::stri
 
 void Connection::on_auth_success(AuthResponseRequest* request, const std::string& token) {
   request->auth()->on_authenticate_success(token);
+  on_ready();
 }
 
 void Connection::on_ready() {
@@ -579,9 +580,9 @@ void Connection::notify_error(const std::string& error) {
 }
 
 void Connection::send_credentials() {
-  ScopedPtr<V1Autenticator> v1_auth(auth_provider->new_authenticator_v1(host_.address));
+  ScopedPtr<V1Authenticator> v1_auth(config_.auth_provider()->new_authenticator_v1(host_.address));
   if (v1_auth) {
-    V1Autenticator::Credentials credentials;
+    V1Authenticator::Credentials credentials;
     v1_auth->get_credentials(&credentials);
     execute(new StartupHandler(this, new CredentialsRequest(credentials)));
   } else {
@@ -590,7 +591,7 @@ void Connection::send_credentials() {
 }
 
 void Connection::send_initial_auth_response() {
-  Authenticator* auth = auth_provider->new_authenticator(host_.address);
+  Authenticator* auth = config_.auth_provider()->new_authenticator(host_.address);
   if (auth == NULL) {
     notify_error("Authenticaion required but no auth provider given");
   } else {

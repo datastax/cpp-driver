@@ -126,8 +126,24 @@ inline char* decode_string(char* input, char** output, size_t& size) {
 }
 
 inline char* decode_long_string(char* input, char** output, size_t& size) {
-  *output = decode_int32(input, ((int32_t&)size));
+  int32_t string_size;
+  *output = decode_int32(input, string_size);
+  size = string_size;
   return *output + size;
+}
+
+inline char* decode_bytes(char* input, char** output, size_t& size) {
+  int32_t bytes_size;
+  char* pos = decode_int32(input, bytes_size);
+  if (bytes_size < 0) {
+    *output = NULL;
+    size = 0;
+    return pos;
+  } else {
+    *output = pos;
+    size = bytes_size;
+    return pos + size;
+  }
 }
 
 inline char* decode_string_map(char* input,

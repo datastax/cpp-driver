@@ -17,6 +17,7 @@
 #ifndef __CASS_CONFIG_HPP_INCLUDED__
 #define __CASS_CONFIG_HPP_INCLUDED__
 
+#include "auth.hpp"
 #include "cassandra.h"
 
 #include <list>
@@ -49,7 +50,8 @@ public:
       , read_timeout_(12000)
       , log_level_(CASS_LOG_WARN)
       , log_callback_(default_log_callback)
-      , log_data_(NULL) {}
+      , log_data_(NULL)
+      , auth_provider_(new AuthProvider()) {}
 
   unsigned thread_count_io() const { return thread_count_io_; }
 
@@ -186,6 +188,17 @@ public:
     log_data_ = data;
   }
 
+  const SharedRefPtr<AuthProvider>& auth_provider() const { return auth_provider_; }
+
+  void set_auth_provider(AuthProvider* auth_provider) {
+    if (auth_provider == NULL) return;
+    auth_provider_.reset(auth_provider);
+  }
+
+  void set_credentials(const std::string& username, const std::string& password) {
+    auth_provider_.reset(new PlainTextAuthProvider(username, password));
+  }
+
 private:
   int port_;
   int protocol_version_;
@@ -208,6 +221,7 @@ private:
   CassLogLevel log_level_;
   CassLogCallback log_callback_;
   void* log_data_;
+  SharedRefPtr<AuthProvider> auth_provider_;
 };
 
 } // namespace cass

@@ -145,23 +145,17 @@ public:
   void defunct();
 
   bool is_closing() const { return state_ == CONNECTION_STATE_CLOSING; }
-
+  bool is_ready() const { return state_ == CONNECTION_STATE_READY; }
   bool is_defunct() const { return is_defunct_; }
-
   bool is_invalid_protocol() const { return is_invalid_protocol_; }
-
-  bool is_ready() { return state_ == CONNECTION_STATE_READY; }
 
   int protocol_version() const { return protocol_version_; }
 
   void set_ready_callback(Callback callback) { ready_callback_ = callback; }
-
   void set_close_callback(Callback callback) { closed_callback_ = callback; }
 
   size_t available_streams() { return stream_manager_.available_streams(); }
-
   size_t pending_request_count() { return pending_requests_.size(); }
-
   bool has_requests_pending() {
     return pending_requests_.size() - timed_out_request_count_ > 0;
   }
@@ -222,8 +216,6 @@ private:
   const Config& config_;
   std::string keyspace_;
   Timer* connect_timer_;
-
-  AuthProvider* auth_provider;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Connection);

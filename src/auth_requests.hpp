@@ -25,7 +25,7 @@ namespace cass {
 
 class CredentialsRequest : public Request {
 public:
-  CredentialsRequest(const V1Autenticator::Credentials& credentials)
+  CredentialsRequest(const V1Authenticator::Credentials& credentials)
     : Request(CQL_OPCODE_CREDENTIALS)
     , credentials_(credentials) {}
 
@@ -33,7 +33,7 @@ private:
   int encode(int version, BufferVec* bufs) const;
 
 private:
-  V1Autenticator::Credentials credentials_;
+  V1Authenticator::Credentials credentials_;
 };
 
 class AuthResponseRequest : public Request {

@@ -156,6 +156,13 @@ CassError cass_cluster_set_log_callback(CassCluster* cluster,
   return CASS_OK;
 }
 
+CassError cass_cluster_set_credentials(CassCluster* cluster,
+                                       const char* username,
+                                       const char* password) {
+  cluster->config().set_credentials(username, password);
+  return CASS_OK;
+}
+
 CassFuture* cass_cluster_connect(CassCluster* cluster) {
   return cass_cluster_connect_keyspace(cluster, "");
 }
