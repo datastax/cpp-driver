@@ -251,6 +251,7 @@ endif()
 
 add_subdirectory(examples/async)
 add_subdirectory(examples/basic)
+add_subdirectory(examples/bind_by_name)
 add_subdirectory(examples/callbacks)
 add_subdirectory(examples/collections)
 add_subdirectory(examples/prepared)

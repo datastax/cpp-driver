@@ -53,40 +53,40 @@ BOOST_AUTO_TEST_CASE(test_contact_points)
 
   // Simple
   const char* contact_points1 = "127.0.0.1,127.0.0.2,127.0.0.3";
-  cass_cluster_set_contact_points(cluster.get(), cass_string_init(contact_points1));
+  cass_cluster_set_contact_points(cluster.get(), contact_points1);
   BOOST_REQUIRE(make_contact_point_string(cluster->config().contact_points()).compare(contact_points1) == 0);
 
   // Clear
-  cass_cluster_set_contact_points(cluster.get(), cass_string_init(""));
+  cass_cluster_set_contact_points(cluster.get(), "");
   BOOST_REQUIRE(cluster->config().contact_points().empty());
 
   // Extra commas
   const char* contact_points1_commas = ",,,,127.0.0.1,,,,127.0.0.2,127.0.0.3,,,,";
-  cass_cluster_set_contact_points(cluster.get(), cass_string_init(contact_points1_commas));
+  cass_cluster_set_contact_points(cluster.get(), contact_points1_commas);
   BOOST_REQUIRE(make_contact_point_string(cluster->config().contact_points()).compare(contact_points1) == 0);
 
   // Clear
-  cass_cluster_set_contact_points(cluster.get(), cass_string_init(""));
+  cass_cluster_set_contact_points(cluster.get(), "");
   BOOST_REQUIRE(cluster->config().contact_points().empty());
 
   // Extra whitespace
   const char* contact_points1_ws = "   ,\r\n,  ,   ,  127.0.0.1 ,,,  ,\t127.0.0.2,127.0.0.3,  \t\n, ,,   ";
-  cass_cluster_set_contact_points(cluster.get(), cass_string_init(contact_points1_ws));
+  cass_cluster_set_contact_points(cluster.get(), contact_points1_ws);
   BOOST_REQUIRE(make_contact_point_string(cluster->config().contact_points()).compare(contact_points1) == 0);
 
   // Clear
-  cass_cluster_set_contact_points(cluster.get(), cass_string_init(""));
+  cass_cluster_set_contact_points(cluster.get(), "");
   BOOST_REQUIRE(cluster->config().contact_points().empty());
 
   // Append
   const char* contact_point1 = "127.0.0.1";
-  cass_cluster_set_contact_points(cluster.get(), cass_string_init(contact_point1));
+  cass_cluster_set_contact_points(cluster.get(), contact_point1);
 
   const char* contact_point2 = "127.0.0.2";
-  cass_cluster_set_contact_points(cluster.get(), cass_string_init(contact_point2));
+  cass_cluster_set_contact_points(cluster.get(), contact_point2);
 
   const char* contact_point3 = "127.0.0.3";
-  cass_cluster_set_contact_points(cluster.get(), cass_string_init(contact_point3));
+  cass_cluster_set_contact_points(cluster.get(), contact_point3);
 
   BOOST_REQUIRE(make_contact_point_string(cluster->config().contact_points()).compare(contact_points1) == 0);
 }

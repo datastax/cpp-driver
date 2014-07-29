@@ -14,19 +14,170 @@
   limitations under the License.
 */
 
-#include "types.hpp"
-#include "statement.hpp"
+#include "execute_request.hpp"
+#include "prepared.hpp"
 #include "query_request.hpp"
+#include "scoped_ptr.hpp"
+#include "statement.hpp"
+#include "types.hpp"
 
 #include "third_party/boost/boost/cstdint.hpp"
 
+#define FIXED_INDICES_SIZE 64
+
+namespace {
+
+  template<class T>
+  struct IsValidValueType;
+
+  template<>
+  struct IsValidValueType<CassNull> {
+    bool operator()(uint16_t type) const {
+      return true;
+    }
+  };
+
+  template<>
+  struct IsValidValueType<cass_int32_t> {
+    bool operator()(uint16_t type) const {
+      return type == CASS_VALUE_TYPE_INT;
+    }
+  };
+
+  template<>
+  struct IsValidValueType<cass_int64_t> {
+    bool operator()(uint16_t type) const {
+      return type == CASS_VALUE_TYPE_BIGINT ||
+          type == CASS_VALUE_TYPE_COUNTER ||
+          type == CASS_VALUE_TYPE_TIMESTAMP;
+    }
+  };
+
+  template<>
+  struct IsValidValueType<cass_float_t> {
+    bool operator()(uint16_t type) const {
+      return type == CASS_VALUE_TYPE_FLOAT;
+    }
+  };
+
+  template<>
+  struct IsValidValueType<cass_double_t> {
+    bool operator()(uint16_t type) const {
+      return type == CASS_VALUE_TYPE_DOUBLE;
+    }
+  };
+
+  template<>
+  struct IsValidValueType<bool> {
+    bool operator()(uint16_t type) const {
+      return type == CASS_VALUE_TYPE_BOOLEAN;
+    }
+  };
+
+  template<>
+  struct IsValidValueType<CassString> {
+    bool operator()(uint16_t type) const {
+      return type == CASS_VALUE_TYPE_ASCII ||
+          type == CASS_VALUE_TYPE_TEXT ||
+          type == CASS_VALUE_TYPE_VARCHAR;
+    }
+  };
+
+  template<>
+  struct IsValidValueType<CassBytes> {
+    bool operator()(uint16_t type) const {
+      return type == CASS_VALUE_TYPE_BLOB;
+    }
+  };
+
+  template<>
+  struct IsValidValueType<const CassUuid> {
+    bool operator()(uint16_t type) const {
+      return type == CASS_VALUE_TYPE_TIMEUUID ||
+          type == CASS_VALUE_TYPE_UUID;
+    }
+  };
+
+  template<>
+  struct IsValidValueType<CassInet> {
+    bool operator()(uint16_t type) const {
+      return type == CASS_VALUE_TYPE_INET;
+    }
+  };
+
+  template<>
+  struct IsValidValueType<CassDecimal> {
+    bool operator()(uint16_t type) const {
+      return type == CASS_VALUE_TYPE_DECIMAL;
+    }
+  };
+
+  template<>
+  struct IsValidValueType<const CassCollection*> {
+    bool operator()(uint16_t type) const {
+      // TODO(mpenick): Check acutal type against collection
+      return type == CASS_VALUE_TYPE_LIST ||
+          type == CASS_VALUE_TYPE_MAP ||
+          type == CASS_VALUE_TYPE_SET;
+    }
+  };
+
+  template<>
+  struct IsValidValueType<CassCustom> {
+    bool operator()(uint16_t type) const {
+      return true;
+    }
+  };
+
+  template<class T>
+  CassError bind_by_name(cass::Statement* statement,
+                         const char* name,
+                         T value) {
+    if (statement->opcode() != CQL_OPCODE_EXECUTE) {
+      return CASS_ERROR_INVALID_STATEMENT_TYPE;
+    }
+
+    const cass::ResultResponse* result
+        = static_cast<cass::ExecuteRequest*>(statement)->prepared()->result().get();
+
+    size_t fixed_indices[FIXED_INDICES_SIZE];
+    size_t num_matches
+        = result->find_column_indices(name, fixed_indices, FIXED_INDICES_SIZE);
+    IsValidValueType<T> is_valid_type;
+
+    if (num_matches <= FIXED_INDICES_SIZE) {
+      for (size_t i = 0; i < num_matches; ++i) {
+        size_t index = fixed_indices[i];
+        if (!is_valid_type(result->column_metadata()[index].type)) {
+          return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
+        }
+        statement->bind(index, value);
+      }
+    } else {
+      // Unlikely case where we exceed our fixed buffer
+      cass::ScopedPtr<size_t[]> indices(new size_t[num_matches]);
+      result->find_column_indices(name, indices.get(), num_matches);
+      for (size_t i = 0; i < num_matches; ++i) {
+        size_t index = indices[i];
+        if (!is_valid_type(result->column_metadata()[index].type)) {
+          return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
+        }
+        statement->bind(index, value);
+      }
+    }
+
+    return CASS_OK;
+  }
+
+} // namespace
+
 extern "C" {
 
-CassStatement* cass_statement_new(CassString statement, size_t parameter_count) {
-  cass::Statement* query = new cass::QueryRequest(parameter_count);
-  query->retain();
-  query->set_query(statement.data, statement.length);
-  return CassStatement::to(query);
+CassStatement* cass_statement_new(CassString query, size_t parameter_count) {
+  cass::QueryRequest* query_request = new cass::QueryRequest(parameter_count);
+  query_request->retain();
+  query_request->set_query(query.data, query.length);
+  return CassStatement::to(query_request);
 }
 
 void cass_statement_free(CassStatement* statement) {
@@ -59,42 +210,42 @@ CassError cass_statement_set_paging_state(CassStatement* statement,
 
 CassError cass_statement_bind_null(CassStatement* statement,
                                    cass_size_t index) {
-  return statement->bind_null(index);
+  return statement->bind(index, CassNull());
 }
 
 CassError cass_statement_bind_int32(CassStatement* statement, size_t index,
                                     int32_t value) {
-  return statement->bind_int32(index, value);
+  return statement->bind(index, value);
 }
 
 CassError cass_statement_bind_int64(CassStatement* statement, size_t index,
                                     int64_t value) {
-  return statement->bind_int64(index, value);
+  return statement->bind(index, value);
 }
 
 CassError cass_statement_bind_float(CassStatement* statement, size_t index,
                                     float value) {
-  return statement->bind_float(index, value);
+  return statement->bind(index, value);
 }
 
 CassError cass_statement_bind_double(CassStatement* statement, size_t index,
                                      double value) {
-  return statement->bind_double(index, value);
+  return statement->bind(index, value);
 }
 
 CassError cass_statement_bind_bool(CassStatement* statement, size_t index,
                                    cass_bool_t value) {
-  return statement->bind_byte(index, value == cass_true);
+  return statement->bind(index, value == cass_true);
 }
 
 CassError cass_statement_bind_string(CassStatement* statement, size_t index,
                                      CassString value) {
-  return statement->bind(index, value.data, value.length);
+  return statement->bind(index, value);
 }
 
 CassError cass_statement_bind_bytes(CassStatement* statement, size_t index,
                                     CassBytes value) {
-  return statement->bind(index, value.data, value.size);
+  return statement->bind(index, value);
 }
 
 CassError cass_statement_bind_uuid(CassStatement* statement, size_t index,
@@ -104,13 +255,12 @@ CassError cass_statement_bind_uuid(CassStatement* statement, size_t index,
 
 CassError cass_statement_bind_inet(CassStatement* statement, size_t index,
                                    CassInet value) {
-  return statement->bind(index, value.address, value.address_length);
+  return statement->bind(index, value);
 }
 
 CassError cass_statement_bind_decimal(CassStatement* statement,
                                       cass_size_t index, CassDecimal value) {
-  return statement->bind(index, value.scale, value.varint.data,
-                         value.varint.size);
+  return statement->bind(index, value);
 }
 
 CassError cass_statement_bind_collection(CassStatement* statement, size_t index,
@@ -121,7 +271,91 @@ CassError cass_statement_bind_collection(CassStatement* statement, size_t index,
 CassError cass_statement_bind_custom(CassStatement* statement,
                                      cass_size_t index, cass_size_t size,
                                      cass_byte_t** output) {
-  return statement->bind(index, size, output);
+  CassCustom custom;
+  custom.output = output;
+  custom.output_size = size;
+  return statement->bind(index, custom);
+}
+
+CassError cass_statement_bind_null_by_name(CassStatement* statement,
+                                           const char* name) {
+  return bind_by_name<CassNull>(statement, name, CassNull());
+}
+
+CassError cass_statement_bind_int32_by_name(CassStatement* statement,
+                                            const char* name,
+                                            cass_int32_t value) {
+  return bind_by_name<cass_int32_t>(statement, name, value);
+}
+
+CassError cass_statement_bind_int64_by_name(CassStatement* statement,
+                                            const char* name,
+                                            cass_int64_t value) {
+  return bind_by_name<cass_int64_t>(statement, name, value);
+}
+
+CassError cass_statement_bind_float_by_name(CassStatement* statement,
+                                            const char* name,
+                                            cass_float_t value) {
+  return bind_by_name<cass_float_t>(statement, name, value);
+}
+
+CassError cass_statement_bind_double_by_name(CassStatement* statement,
+                                             const char* name,
+                                             cass_double_t value) {
+  return bind_by_name<cass_double_t>(statement, name, value);
+}
+
+CassError cass_statement_bind_bool_by_name(CassStatement* statement,
+                                           const char* name,
+                                           cass_bool_t value) {
+  return bind_by_name<bool>(statement, name, value == cass_true);
+}
+
+CassError cass_statement_bind_string_by_name(CassStatement* statement,
+                                             const char* name,
+                                             CassString value) {
+  return bind_by_name<CassString>(statement, name, value);
+}
+
+CassError cass_statement_bind_bytes_by_name(CassStatement* statement,
+                                            const char* name,
+                                            CassBytes value) {
+  return bind_by_name<CassBytes>(statement, name, value);
+}
+
+CassError cass_statement_bind_uuid_by_name(CassStatement* statement,
+                                           const char* name,
+                                           const CassUuid value) {
+  return bind_by_name<const CassUuid>(statement, name, value);
+}
+
+CassError cass_statement_bind_inet_by_name(CassStatement* statement,
+                                           const char* name,
+                                           CassInet value) {
+  return bind_by_name<CassInet>(statement, name, value);
+}
+
+CassError cass_statement_bind_decimal_by_name(CassStatement* statement,
+                                              const char* name,
+                                              CassDecimal value) {
+  return bind_by_name<CassDecimal>(statement, name, value);
+}
+
+CassError cass_statement_bind_custom_by_name(CassStatement* statement,
+                                             const char* name,
+                                             cass_size_t size,
+                                             cass_byte_t** output) {
+  CassCustom custom;
+  custom.output = output;
+  custom.output_size = size;
+  return bind_by_name<CassCustom>(statement, name, custom);
+}
+
+CassError cass_statement_bind_collection_by_name(CassStatement* statement,
+                                                 const char* name,
+                                                 const CassCollection* collection) {
+  return bind_by_name<const CassCollection*>(statement, name, collection);
 }
 
 } // extern "C"

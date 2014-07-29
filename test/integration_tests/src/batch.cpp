@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(test_prepared)
 
   for(int x = 0; x < 4; x++)
   {
-    test_utils::CassStatementPtr insert_statement = test_utils::make_shared(cass_prepared_bind(prepared.get(), 2));
+    test_utils::CassStatementPtr insert_statement = test_utils::make_shared(cass_prepared_bind(prepared.get()));
     BOOST_REQUIRE(cass_statement_bind_int32(insert_statement.get(), 0, x) == CASS_OK);
     BOOST_REQUIRE(cass_statement_bind_string(insert_statement.get(), 1, cass_string_init(str(boost::format("test data %s") % x).c_str())) == CASS_OK);
     cass_batch_add_statement(batch.get(), insert_statement.get());
@@ -108,7 +108,7 @@ BOOST_AUTO_TEST_CASE(test_mixed)
   {
     test_utils::CassStatementPtr insert_statement;
     if(x % 2 == 0) {
-      insert_statement = test_utils::make_shared(cass_prepared_bind(prepared.get(), 2));
+      insert_statement = test_utils::make_shared(cass_prepared_bind(prepared.get()));
     } else {
       insert_statement = test_utils::make_shared(cass_statement_new(cass_string_init(insert_query.c_str()), 2));
     }
@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE(test_counter_mixed)
   {
     test_utils::CassStatementPtr update_statement;
     if(x % 2 == 0) {
-      update_statement = test_utils::make_shared(cass_prepared_bind(prepared.get(), 2));
+      update_statement = test_utils::make_shared(cass_prepared_bind(prepared.get()));
     } else {
       update_statement = test_utils::make_shared(cass_statement_new(cass_string_init(update_query.c_str()), 2));
     }

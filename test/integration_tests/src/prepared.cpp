@@ -50,7 +50,7 @@ const char* PreparedTests::ALL_TYPE_TABLE_NAME = "all_types_table_prepared";
 BOOST_FIXTURE_TEST_SUITE(prepared, PreparedTests)
 
 void insert_all_types(CassSession* session, const CassPrepared* prepared, const AllTypes& all_types) {
-  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared, 11));
+  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared));
 
   cass_statement_bind_uuid(statement.get(), 0, all_types.id.uuid);
   cass_statement_bind_string(statement.get(), 1, all_types.text_sample);
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(test_bound_all_types_null_values)
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared = test_utils::make_shared(cass_future_get_prepared(prepared_future.get()));
 
-  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared.get(), 11));
+  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared.get()));
 
   test_utils::Uuid id = test_utils::generate_time_uuid();
 
@@ -268,7 +268,7 @@ BOOST_AUTO_TEST_CASE(test_select_one)
   test_utils::CassPreparedPtr prepared = test_utils::make_shared(cass_future_get_prepared(prepared_future.get()));
 
   int tweet_id = 5;
-  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared.get(), 1));
+  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared.get()));
   BOOST_REQUIRE(cass_statement_bind_int32(statement.get(), 0, tweet_id) == CASS_OK);
 
   test_utils::CassFuturePtr future = test_utils::make_shared(cass_session_execute(session, statement.get()));
@@ -295,7 +295,7 @@ const CassPrepared* prepare_statement(CassSession* session, std::string query) {
 }
 
 void execute_statement(CassSession* session, const CassPrepared* prepared, int value) {
-  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared, 2));
+  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared));
   BOOST_REQUIRE(cass_statement_bind_double(statement.get(), 0, static_cast<double>(value)) == CASS_OK);
   BOOST_REQUIRE(cass_statement_bind_int32(statement.get(), 1, value) == CASS_OK);
   test_utils::CassFuturePtr future = test_utils::make_shared(cass_session_execute(session, statement.get()));

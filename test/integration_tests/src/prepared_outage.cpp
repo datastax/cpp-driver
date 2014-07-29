@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(test_reprepared_on_new_node)
   test_utils::CassPreparedPtr prepared = test_utils::make_shared(cass_future_get_prepared(prepared_future.get()));
 
   {
-    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared.get(), 1));
+    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared.get()));
     BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 0, cass_string_init("123")) == CASS_OK);
     test_utils::CassFuturePtr future = test_utils::make_shared(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());
@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(test_reprepared_on_new_node)
   boost::this_thread::sleep_for(boost::chrono::seconds(10));
 
   for(int i = 0; i < 10; ++i){
-    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared.get(), 1));
+    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared.get()));
     BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 0, cass_string_init("456")) == CASS_OK);
     test_utils::CassFuturePtr future = test_utils::make_shared(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());

@@ -33,8 +33,10 @@ int ExecuteRequest::encode_v1(BufferVec* bufs) const {
 
   size_t length = 0;
 
+  const std::string& prepared_id = prepared_->id();
+
     // <id> [short bytes] + <n> [short]
-  size_t prepared_buf_size = sizeof(uint16_t) + prepared_id().size() +
+  size_t prepared_buf_size = sizeof(uint16_t) + prepared_id.size() +
                              sizeof(uint16_t);
 
   {
@@ -43,8 +45,8 @@ int ExecuteRequest::encode_v1(BufferVec* bufs) const {
 
     Buffer& buf = bufs->back();
     size_t pos = buf.encode_string(0,
-                                 prepared_id().data(),
-                                 prepared_id().size());
+                                 prepared_id.data(),
+                                 prepared_id.size());
     buf.encode_uint16(pos, values_count());
     // <value_1>...<value_n>
     length += encode_values(version, bufs);
@@ -69,8 +71,10 @@ int ExecuteRequest::encode_v2(BufferVec* bufs) const {
   uint8_t flags = 0;
   size_t length = 0;
 
+  const std::string& prepared_id = prepared_->id();
+
     // <id> [short bytes] + <consistency> [short] + <flags> [byte]
-  size_t prepared_buf_size = sizeof(uint16_t) + prepared_id().size() +
+  size_t prepared_buf_size = sizeof(uint16_t) + prepared_id.size() +
                           sizeof(uint16_t) + sizeof(uint8_t);
   size_t paging_buf_size = 0;
 
@@ -100,8 +104,8 @@ int ExecuteRequest::encode_v2(BufferVec* bufs) const {
 
     Buffer& buf = bufs->back();
     size_t pos = buf.encode_string(0,
-                                 prepared_id().data(),
-                                 prepared_id().size());
+                                 prepared_id.data(),
+                                 prepared_id.size());
     pos = buf.encode_uint16(pos, consistency());
     pos = buf.encode_byte(pos, flags);
 

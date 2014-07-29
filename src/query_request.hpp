@@ -30,19 +30,31 @@ public:
   QueryRequest()
     : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY) {}
 
-  QueryRequest(size_t value_count)
+  explicit QueryRequest(size_t value_count)
     : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY, value_count) {}
 
   QueryRequest(const char* query, size_t query_length,
                size_t value_count)
-      : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY, value_count) {
-    set_query(query, query_length);
+      : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY, value_count)
+      , query_(query, query_length) {}
+
+  const std::string& query() const { return query_; }
+
+  void set_query(const std::string& query) {
+    query_ = query;
+  }
+
+  void set_query(const char* query, size_t query_length) {
+    query_.assign(query, query_length);
   }
 
 private:
   int encode(int version, BufferVec* bufs) const;
   int encode_v1(BufferVec* bufs) const;
   int encode_v2(BufferVec* bufs) const;
+
+private:
+  std::string query_;
 };
 
 } // namespace cass

@@ -119,6 +119,10 @@ public:
     return offset + sizeof(double);
   }
 
+  size_t encode_bool(size_t offset, bool value) {
+    return encode_byte(offset, value);
+  }
+
   size_t encode_long_string(size_t offset, const char* value, int32_t size) {
     size_t pos = encode_int32(offset, size);
     return copy(pos, value, size);

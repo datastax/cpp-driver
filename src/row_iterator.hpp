@@ -30,7 +30,7 @@ public:
       , index_(-1) {}
 
   virtual bool next() {
-    if (static_cast<size_t>(index_ + 1) >= row_->size()) {
+    if (static_cast<size_t>(index_ + 1) >= row_->values.size()) {
       return false;
     }
     ++index_;
@@ -38,8 +38,8 @@ public:
   }
 
   const Value* column() {
-    assert(index_ >= 0 && static_cast<size_t>(index_) < row_->size());
-    return &(*row_)[index_];
+    assert(index_ >= 0 && static_cast<size_t>(index_) < row_->values.size());
+    return &row_->values[index_];
   }
 
 private:

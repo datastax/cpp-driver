@@ -29,11 +29,11 @@ public:
   CollectionIterator(const Value* collection)
       : Iterator(CASS_ITERATOR_COLLECTION)
       , collection_(collection)
-      , position_(collection->buffer.data())
+      , position_(collection->buffer().data())
       , index_(-1)
-      , count_(collection_->type == CASS_VALUE_TYPE_MAP
-                   ? (2 * collection_->count)
-                   : collection->count) {}
+      , count_(collection_->type() == CASS_VALUE_TYPE_MAP
+                   ? (2 * collection_->count())
+                   : collection->count()) {}
 
   char* decode_value(char* position);
 

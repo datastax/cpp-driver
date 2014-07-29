@@ -134,7 +134,7 @@ SingleSessionTest::~SingleSessionTest() {
 void initialize_contact_points(CassCluster* cluster, std::string prefix, int num_nodes_dc1, int num_nodes_dc2) {
   for(int i = 0; i < num_nodes_dc1; ++i) {
     std::string contact_point(prefix + boost::lexical_cast<std::string>(i + 1));
-    cass_cluster_set_contact_points(cluster, cass_string_init2(contact_point.data(), contact_point.size()));
+    cass_cluster_set_contact_points(cluster, contact_point.c_str());
   }
 }
 

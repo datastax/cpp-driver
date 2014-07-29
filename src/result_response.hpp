@@ -17,8 +17,9 @@
 #ifndef __CASS_RESULT_RESPONSE_HPP_INCLUDED__
 #define __CASS_RESULT_RESPONSE_HPP_INCLUDED__
 
-#include "response.hpp"
 #include "constants.hpp"
+#include "column_metadata.hpp"
+#include "response.hpp"
 #include "row.hpp"
 
 #include <map>
@@ -31,50 +32,6 @@ class ResultIterator;
 
 class ResultResponse : public Response {
 public:
-  struct ColumnMetaData {
-    ColumnMetaData()
-        : type(CASS_VALUE_TYPE_UNKNOWN)
-        , keyspace(NULL)
-        , keyspace_size(0)
-        , table(NULL)
-        , table_size(0)
-        , name(NULL)
-        , name_size(0)
-        , class_name(NULL)
-        , class_name_size(0)
-        , collection_primary_type(CASS_VALUE_TYPE_UNKNOWN)
-        , collection_primary_class(NULL)
-        , collection_primary_class_size(0)
-        , collection_secondary_type(CASS_VALUE_TYPE_UNKNOWN)
-        , collection_secondary_class(NULL)
-        , collection_secondary_class_size(0) {}
-
-    uint16_t type;
-    char* keyspace;
-    size_t keyspace_size;
-
-    char* table;
-    size_t table_size;
-
-    char* name;
-    size_t name_size;
-
-    char* class_name;
-    size_t class_name_size;
-
-    uint16_t collection_primary_type;
-    char* collection_primary_class;
-
-    size_t collection_primary_class_size;
-    uint16_t collection_secondary_type;
-
-    char* collection_secondary_class;
-    size_t collection_secondary_class_size;
-  };
-
-  typedef std::vector<ColumnMetaData> MetaDataVec;
-  typedef std::map<std::string, size_t> MetaDataIndex;
-
   ResultResponse()
       : Response(CQL_OPCODE_RESULT)
       , kind_(0)
@@ -93,7 +50,8 @@ public:
       , table_(NULL)
       , table_size_(0)
       , row_count_(0)
-      , rows_(NULL) {}
+      , rows_(NULL)
+      , first_row_(this) {}
 
   int32_t kind() const { return kind_; }
 
@@ -101,7 +59,7 @@ public:
 
   int32_t column_count() const { return column_count_; }
 
-  const MetaDataVec& column_metadata() const { return column_metadata_; }
+  const ColumnMetadataVec& column_metadata() const { return column_metadata_; }
 
   std::string paging_state() const {
     return std::string(paging_state_, paging_state_size_);
@@ -121,8 +79,13 @@ public:
 
   const Row& first_row() const { return first_row_; }
 
+  size_t find_column_indices(const std::string& name,
+                             size_t* result,
+                             size_t result_size) const;
+
   bool decode(int version, char* input, size_t size);
 
+private:
   char* decode_metadata(char* input);
 
   bool decode_rows(char* input);
@@ -139,8 +102,8 @@ private:
   bool no_metadata_;
   bool global_table_spec_;
   int32_t column_count_;
-  MetaDataVec column_metadata_;
-  MetaDataIndex column_index_;
+  ColumnMetadataVec column_metadata_;
+  ColumnMetadataIndex column_metadata_index_;
   char* paging_state_; // row paging
   size_t paging_state_size_;
   char* prepared_; // prepared result

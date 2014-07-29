@@ -74,6 +74,43 @@ cass_bool_t cass_result_has_more_pages(const CassResult* result) {
 
 namespace cass {
 
+size_t ResultResponse::find_column_indices(const std::string& name,
+                                           size_t* result,
+                                           size_t result_size) const {
+  bool is_case_sensitive = false;
+  ColumnMetadataIndex::const_iterator index_it;
+
+  if (name.size() > 0 && name.front() == '"' && name.back() == '"') {
+    is_case_sensitive = true;
+    std::string sub = name.substr(1, name.size() - 2);
+    index_it = column_metadata_index_.find(sub);
+  } else {
+    index_it = column_metadata_index_.find(name);
+  }
+
+  const ColumnIndexVec& indices = index_it->second;
+  if (!is_case_sensitive || index_it == column_metadata_index_.end()) {
+    std::copy_n(indices.begin(), std::min(indices.size(), result_size), result);
+    return index_it->second.size();
+  }
+
+  size_t num_matches = 0;
+  const size_t name_size = name.size() - 2;
+
+  for (ColumnIndexVec::const_iterator it = indices.begin(),
+       end = indices.end(); it != end; ++it) {
+    const ColumnMetadata& cm = column_metadata_[*it];
+    if (name.compare(1, name_size, cm.name, cm.class_name_size)) {
+      if (num_matches < result_size) {
+        result[num_matches] = *it;
+      }
+      num_matches++;
+    }
+  }
+
+  return num_matches;
+}
+
 bool ResultResponse::decode(int version, char* input, size_t size) {
   char* buffer = decode_int32(input, kind_);
 
@@ -126,7 +163,7 @@ char* ResultResponse::decode_metadata(char* input) {
     column_metadata_.reserve(column_count_);
 
     for (int i = 0; i < column_count_; ++i) {
-      ColumnMetaData meta;
+      ColumnMetadata meta;
 
       if (!global_table_spec_) {
         buffer = decode_string(buffer, &meta.keyspace, meta.keyspace_size);
@@ -152,8 +189,13 @@ char* ResultResponse::decode_metadata(char* input) {
       }
 
       column_metadata_.push_back(meta);
-      column_index_.insert(
-          std::make_pair(std::string(meta.name, meta.name_size), i));
+    }
+
+    // Build index by column name
+    for (size_t i = 0; i < column_metadata_.size(); ++i) {
+      ColumnMetadata& metadata = column_metadata_[i];
+      std::string name(metadata.name, metadata.name_size);
+      column_metadata_index_[name].push_back(i);
     }
   }
   return buffer;
@@ -163,8 +205,8 @@ bool ResultResponse::decode_rows(char* input) {
   char* buffer = decode_metadata(input);
   rows_ = decode_int32(buffer, row_count_);
   if (row_count_ > 0) {
-    first_row_.reserve(column_count_);
-    rows_ = decode_row(rows_, this, first_row_);
+    first_row_.values.reserve(column_count_);
+    rows_ = decode_row(rows_, this, first_row_.values);
   }
   return true;
 }

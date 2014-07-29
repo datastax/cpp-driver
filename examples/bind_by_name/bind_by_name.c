@@ -39,6 +39,7 @@ void print_error(CassFuture* future) {
 CassCluster* create_cluster() {
   CassCluster* cluster = cass_cluster_new();
   cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
+  cass_cluster_set_credentials(cluster, "cassandra", "cassandra");
   return cluster;
 }
 
@@ -78,40 +79,9 @@ CassError execute_query(CassSession* session, const char* query) {
   return rc;
 }
 
-CassError insert_into_basic(CassSession* session, const char* key, const Basic* basic) {
-  CassError rc = 0;
-  CassStatement* statement = NULL;
-  CassFuture* future = NULL;
-  CassString query = cass_string_init("INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);");
-
-  statement = cass_statement_new(query, 6);
-
-  cass_statement_bind_string(statement, 0, cass_string_init(key));
-  cass_statement_bind_bool(statement, 1, basic->bln);
-  cass_statement_bind_float(statement, 2, basic->flt);
-  cass_statement_bind_double(statement, 3, basic->dbl);
-  cass_statement_bind_int32(statement, 4, basic->i32);
-  cass_statement_bind_int64(statement, 5, basic->i64);
-
-  future = cass_session_execute(session, statement);
-
-  cass_future_wait(future);
-
-  rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
-    print_error(future);
-  }
-
-  cass_future_free(future);
-  cass_statement_free(statement);
-
-  return rc;
-}
-
-CassError prepare_select_from_basic(CassSession* session, const CassPrepared** prepared) {
+CassError prepare_query(CassSession* session, CassString query, const CassPrepared** prepared) {
   CassError rc = 0;
   CassFuture* future = NULL;
-  CassString query = cass_string_init("SELECT * FROM examples.basic WHERE key = ?");
 
   future = cass_session_prepare(session, query);
   cass_future_wait(future);
@@ -128,6 +98,35 @@ CassError prepare_select_from_basic(CassSession* session, const CassPrepared** p
   return rc;
 }
 
+CassError insert_into_basic(CassSession* session, const CassPrepared* prepared, const char* key, const Basic* basic) {
+  CassError rc = 0;
+  CassStatement* statement = NULL;
+  CassFuture* future = NULL;
+
+  statement = cass_prepared_bind(prepared);
+
+  cass_statement_bind_string_by_name(statement, "key", cass_string_init(key));
+  cass_statement_bind_bool_by_name(statement, "BLN", basic->bln);
+  cass_statement_bind_float_by_name(statement, "FLT", basic->flt);
+  cass_statement_bind_double_by_name(statement, "\"dbl\"", basic->dbl);
+  cass_statement_bind_int32_by_name(statement, "i32", basic->i32);
+  cass_statement_bind_int64_by_name(statement, "I64", basic->i64);
+
+  future = cass_session_execute(session, statement);
+
+  cass_future_wait(future);
+
+  rc = cass_future_error_code(future);
+  if(rc != CASS_OK) {
+    print_error(future);
+  }
+
+  cass_future_free(future);
+  cass_statement_free(statement);
+
+  return rc;
+}
+
 CassError select_from_basic(CassSession* session, const CassPrepared * prepared, const char* key, Basic* basic) {
   CassError rc = 0;
   CassStatement* statement = NULL;
@@ -135,7 +134,7 @@ CassError select_from_basic(CassSession* session, const CassPrepared * prepared,
 
   statement = cass_prepared_bind(prepared);
 
-  cass_statement_bind_string(statement, 0, cass_string_init(key));
+  cass_statement_bind_string_by_name(statement, "key", cass_string_init(key));
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -150,11 +149,11 @@ CassError select_from_basic(CassSession* session, const CassPrepared * prepared,
     if(cass_iterator_next(iterator)) {
       const CassRow* row = cass_iterator_get_row(iterator);
 
-      cass_value_get_bool(cass_row_get_column(row, 1), &basic->bln);
-      cass_value_get_double(cass_row_get_column(row, 2), &basic->dbl);
-      cass_value_get_float(cass_row_get_column(row, 3), &basic->flt);
-      cass_value_get_int32(cass_row_get_column(row, 4), &basic->i32);
-      cass_value_get_int64(cass_row_get_column(row, 5), &basic->i64);
+      cass_value_get_bool(cass_row_get_column_by_name(row, "BLN"), &basic->bln);
+      cass_value_get_double(cass_row_get_column_by_name(row, "dbl"), &basic->dbl);
+      cass_value_get_float(cass_row_get_column_by_name(row, "flt"), &basic->flt);
+      cass_value_get_int32(cass_row_get_column_by_name(row, "\"i32\""), &basic->i32);
+      cass_value_get_int64(cass_row_get_column_by_name(row, "i64"), &basic->i64);
     }
 
     cass_result_free(result);
@@ -174,7 +173,13 @@ int main() {
   CassFuture* close_future = NULL;
   Basic input = { cass_true, 0.001f, 0.0002, 1, 2 };
   Basic output;
-  const CassPrepared* prepared = NULL;
+  const CassPrepared* insert_prepared = NULL;
+  const CassPrepared* select_prepared = NULL;
+
+  CassString insery_query
+    = cass_string_init("INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);");
+  CassString select_query
+    = cass_string_init("SELECT * FROM examples.basic WHERE key = ?");
 
   rc = connect_session(cluster, &session);
   if(rc != CASS_OK) {
@@ -193,17 +198,21 @@ int main() {
                                               i32 int, i64 bigint, \
                                               PRIMARY KEY (key));");
 
-  insert_into_basic(session, "prepared_test", &input);
 
-  if(prepare_select_from_basic(session, &prepared) == CASS_OK) {
-    select_from_basic(session, prepared, "prepared_test", &output);
+  if (prepare_query(session, insery_query, &insert_prepared) == CASS_OK) {
+    insert_into_basic(session, insert_prepared, "prepared_test", &input);
+    cass_prepared_free(insert_prepared);
+  }
+
+  if (prepare_query(session, select_query,  &select_prepared) == CASS_OK) {
+    select_from_basic(session, select_prepared, "prepared_test", &output);
 
     assert(input.bln == output.bln);
     assert(input.flt == output.flt);
     assert(input.dbl == output.dbl);
     assert(input.i32 == output.i32);
     assert(input.i64 == output.i64);
-    cass_prepared_free(prepared);
+    cass_prepared_free(select_prepared);
   }
 
   close_future = cass_session_close(session);

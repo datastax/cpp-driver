@@ -31,11 +31,12 @@ public:
 
   const std::string& query() const { return query_; }
 
-  void set_query(const char* input, size_t size) {
-    query_.assign(input, size);
-  }
 
   void set_query(const std::string& query) { query_ = query; }
+
+  void set_query(const char* query, size_t query_length) {
+    query_.assign(query, query_length);
+  }
 
 private:
   int encode(int version, BufferVec* bufs) const;

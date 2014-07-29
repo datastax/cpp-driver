@@ -23,11 +23,11 @@ char* CollectionIterator::decode_value(char* position) {
   char* buffer = decode_uint16(position, size);
 
   CassValueType type;
-  if (collection_->type == CASS_VALUE_TYPE_MAP) {
-    type = (index_ % 2 == 0) ? collection_->primary_type
-                             : collection_->secondary_type;
+  if (collection_->type() == CASS_VALUE_TYPE_MAP) {
+    type = (index_ % 2 == 0) ? collection_->primary_type()
+                             : collection_->secondary_type();
   } else {
-    type = collection_->primary_type;
+    type = collection_->primary_type();
   }
 
   value_ = Value(type, buffer, size);

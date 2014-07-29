@@ -21,18 +21,26 @@
 extern "C" {
 
 const CassValue* cass_row_get_column(const CassRow* row, cass_size_t index) {
-  const cass::Row* internal_row = row->from();
-  if (index >= internal_row->size()) {
+  if (index >= row->values.size()) {
     return NULL;
   }
-  return CassValue::to(&(*internal_row)[index]);
+  return CassValue::to(&row->values[index]);
+}
+
+const CassValue* cass_row_get_column_by_name(const CassRow* row,
+                                             const char* name) {
+  size_t indices[1]; // We only require the first matching column
+  if (row->result()->find_column_indices(name, indices, 1) == 0) {
+    return NULL;
+  }
+  return CassValue::to(&row->values[indices[0]]);
 }
 
 } // extern "C"
 
 namespace cass {
 
-char* decode_row(char* rows, const ResultResponse* result, Row& output) {
+char* decode_row(char* rows, const ResultResponse* result, ValueVec& output) {
   char* buffer = rows;
   output.clear();
 
@@ -40,21 +48,15 @@ char* decode_row(char* rows, const ResultResponse* result, Row& output) {
     int32_t size = 0;
     buffer = decode_int32(buffer, size);
 
-    const ResultResponse::ColumnMetaData& metadata =
-        result->column_metadata()[i];
-    CassValueType type = static_cast<CassValueType>(metadata.type);
+    const ColumnMetadata* metadata = &result->column_metadata()[i];
+    CassValueType type = static_cast<CassValueType>(metadata->type);
 
     if (size >= 0) {
       if (type == CASS_VALUE_TYPE_MAP || type == CASS_VALUE_TYPE_LIST ||
           type == CASS_VALUE_TYPE_SET) {
         uint16_t count = 0;
-        Value value(type, decode_uint16(buffer, count), size - sizeof(uint16_t));
-        value.count = count;
-        value.primary_type =
-            static_cast<CassValueType>(metadata.collection_primary_type);
-        value.secondary_type =
-            static_cast<CassValueType>(metadata.collection_secondary_type);
-        output.push_back(value);
+        char* data = decode_uint16(buffer, count);
+        output.push_back(Value(metadata, count, data, size - sizeof(uint16_t)));
       } else {
         output.push_back(Value(type, buffer, size));
       }

@@ -239,6 +239,7 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_TIMED_OUT, 14, "Request timed out") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE, 15, "Unable to set keyspace") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_CALLBACK_ALREADY_SET, 16, "Callback already set") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_INVALID_STATEMENT_TYPE, 17, "Invalid statement type") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -310,7 +311,7 @@ cass_cluster_new();
  */
 CASS_EXPORT CassError
 cass_cluster_set_contact_points(CassCluster* cluster,
-                                CassString contact_points);
+                                const char* contact_points);
 
 /**
  * Sets the port.
@@ -981,6 +982,175 @@ cass_statement_bind_collection(CassStatement* statement,
                                const CassCollection* collection);
 
 
+/**
+ * Binds an "int" to all the values with the specified name.
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_int32_by_name(CassStatement* statement,
+                                  const char* name,
+                                  cass_int32_t value);
+
+/**
+ * Binds a "bigint", "counter" or "timestamp" to all values
+ * with the specified name.
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_int64_by_name(CassStatement* statement,
+                                  const char* name,
+                                  cass_int64_t value);
+
+/**
+ * Binds a "float" to all the values with the specified name.
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_float_by_name(CassStatement* statement,
+                                  const char* name,
+                                  cass_float_t value);
+
+/**
+ * Binds a "double" to all the values with the specified name.
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_double_by_name(CassStatement* statement,
+                                   const char* name,
+                                   cass_double_t value);
+
+/**
+ * Binds a "boolean" to all the values with the specified name.
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_bool_by_name(CassStatement* statement,
+                                 const char* name,
+                                 cass_bool_t value);
+
+/**
+ * Binds a "ascii", "text" or "varchar" to all the values
+ * with the specified name.
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value The value is copied into the statement object; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_string_by_name(CassStatement* statement,
+                                   const char* name,
+                                   CassString value);
+
+/**
+ * Binds a "blob" or "varint" to all the values with the
+ * specified name.
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value The value is copied into the statement object; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_bytes_by_name(CassStatement* statement,
+                                  const char* name,
+                                  CassBytes value);
+
+/**
+ * Binds a "uuid" or "timeuuid" to all the values
+ * with the specified name.
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_uuid_by_name(CassStatement* statement,
+                                 const char* name,
+                                 const CassUuid value);
+
+/**
+ * Binds an "inet" to all the values with the specified name.
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_inet_by_name(CassStatement* statement,
+                                 const char* name,
+                                 CassInet value);
+
+/**
+ * Binds a "decimal" to all the values with the specified name.
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value The value is copied into the statement object; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_decimal_by_name(CassStatement* statement,
+                                    const char* name,
+                                    CassDecimal value);
+
+/**
+ * Binds any type to all the values with the specified name. A value
+ * can be copied into the resulting output buffer. This is normally reserved for
+ * large values to avoid extra memory copies.
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] size
+ * @param[out] output
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_custom_by_name(CassStatement* statement,
+                                   const char* name,
+                                   cass_size_t size,
+                                   cass_byte_t** output);
+
+/**
+ * Bind a "list", "map", or "set" to all the values with the
+ * specified name.
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] collection The colleciton can be freed after this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_collection_by_name(CassStatement* statement,
+                                       const char* name,
+                                       const CassCollection* collection);
+
+
 /***********************************************************************************
  *
  * Prepared
@@ -999,14 +1169,12 @@ cass_prepared_free(const CassPrepared* prepared);
  * Creates a bound statement from a pre-prepared statement.
  *
  * @param[in] prepared A previously prepared statement.
- * @param[in] parameter_count The number of bound parameters.
  * @return Returns a bound statement that must be freed.
  *
  * @see cass_statement_free()
  */
 CASS_EXPORT CassStatement*
-cass_prepared_bind(const CassPrepared* prepared,
-                   cass_size_t parameter_count);
+cass_prepared_bind(const CassPrepared* prepared);
 
 /***********************************************************************************
  *
@@ -1374,6 +1542,19 @@ cass_iterator_get_value(CassIterator* iterator);
 CASS_EXPORT const CassValue*
 cass_row_get_column(const CassRow* row,
                     cass_size_t index);
+
+
+/**
+ * Get the column value by name for the specified row.
+ *
+ * @param[in] row
+ * @param[in] name
+ * @return The column value for the specified name. NULL is
+ * returned if the column does not exist.
+ */
+CASS_EXPORT const CassValue*
+cass_row_get_column_by_name(const CassRow* row,
+                            const char* name);
 
 /***********************************************************************************
  *

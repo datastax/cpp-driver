@@ -33,7 +33,7 @@ bool PrepareHandler::init(const std::string& prepared_id) {
   if (request_handler_->request()->opcode() == CQL_OPCODE_EXECUTE) {
     const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(
         request_handler_->request());
-    prepare->set_query(execute->prepared_statement());
+    prepare->set_query(execute->prepared()->statement());
     return true;
   } else if (request_handler_->request()->opcode() == CQL_OPCODE_BATCH) {
     const BatchRequest* batch = static_cast<const BatchRequest*>(

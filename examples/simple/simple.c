@@ -23,9 +23,8 @@ int main() {
   CassError rc = 0;
   CassCluster* cluster = cass_cluster_new();
   CassFuture* session_future = NULL;
-  CassString contact_points = cass_string_init("127.0.0.1,127.0.0.2,127.0.0.3");
 
-  cass_cluster_set_contact_points(cluster, contact_points);
+  cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
 
   session_future = cass_cluster_connect(cluster);
   cass_future_wait(session_future);

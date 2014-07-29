@@ -37,8 +37,8 @@ CassFuture* cass_session_close(CassSession* session) {
   return CassFuture::to(close_future);
 }
 
-CassFuture* cass_session_prepare(CassSession* session, CassString statement) {
-  return CassFuture::to(session->prepare(statement.data, statement.length));
+CassFuture* cass_session_prepare(CassSession* session, CassString query) {
+  return CassFuture::to(session->prepare(query.data, query.length));
 }
 
 CassFuture* cass_session_execute(CassSession* session,

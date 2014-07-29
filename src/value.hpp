@@ -19,29 +19,67 @@
 
 #include "cassandra.h"
 #include "buffer_piece.hpp"
+#include "column_metadata.hpp"
 
 namespace cass {
 
-struct Value {
+class Value {
+public:
   Value()
-      : type(CASS_VALUE_TYPE_UNKNOWN)
-      , primary_type(CASS_VALUE_TYPE_UNKNOWN)
-      , secondary_type(CASS_VALUE_TYPE_UNKNOWN)
-      , count(0) {}
+      : type_(CASS_VALUE_TYPE_UNKNOWN)
+      , metadata_(NULL)
+      , count_(0) {}
 
   Value(CassValueType type, char* data, size_t size)
-      : type(type)
-      , primary_type(CASS_VALUE_TYPE_UNKNOWN)
-      , secondary_type(CASS_VALUE_TYPE_UNKNOWN)
-      , count(0)
-      , buffer(data, size) {}
+      : type_(type)
+      , metadata_(NULL)
+      , count_(0)
+      , buffer_(data, size) {}
 
-  CassValueType type;
-  CassValueType primary_type;
-  CassValueType secondary_type;
-  uint16_t count;
-  BufferPiece buffer;
+  Value(const ColumnMetadata* metadata, int32_t count, char* data, size_t size)
+    : type_(static_cast<CassValueType>(metadata->type))
+    , metadata_(metadata)
+    , count_(count)
+    , buffer_(data, size) {}
+
+  CassValueType type() const { return type_; }
+
+  CassValueType primary_type() const {
+    if (metadata_ == NULL) {
+      return CASS_VALUE_TYPE_UNKNOWN;
+    }
+    return static_cast<CassValueType>(metadata_->collection_primary_type);
+  }
+
+  CassValueType secondary_type() const {
+    if (metadata_ == NULL) {
+      return CASS_VALUE_TYPE_UNKNOWN;
+    }
+    return static_cast<CassValueType>(metadata_->collection_secondary_type);
+  }
+
+  bool is_collection() const {
+    return type_ == CASS_VALUE_TYPE_LIST ||
+           type_ == CASS_VALUE_TYPE_MAP  ||
+           type_ == CASS_VALUE_TYPE_SET;
+  }
+
+  int32_t count() const {
+    return count_;
+  }
+
+  const BufferPiece& buffer() const {
+    return buffer_;
+  }
+
+private:
+  CassValueType type_;
+  const ColumnMetadata* metadata_;
+  int32_t count_;
+  BufferPiece buffer_;
 };
+
+typedef std::vector<Value> ValueVec;
 
 } // namespace cass
 

@@ -62,7 +62,7 @@ bool insert_task(CassSession* session, const std::string& query, CassConsistency
 bool insert_prepared_task(CassSession* session, const CassPrepared* prepared, CassConsistency consistency, int rows_per_id) {
   bool is_successful = true;
   for(int i = 0; i < rows_per_id; ++i) {
-    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared, 3));
+    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared));
     cass_statement_set_consistency(statement.get(), consistency);
     if(!bind_and_execute_insert(session, statement.get())) {
       is_successful = false;

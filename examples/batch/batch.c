@@ -35,8 +35,7 @@ void print_error(CassFuture* future) {
 
 CassCluster* create_cluster() {
   CassCluster* cluster = cass_cluster_new();
-  CassString contact_points = cass_string_init("127.0.0.1,127.0.0.2,127.0.0.3");
-  cass_cluster_set_contact_points(cluster, contact_points);
+  cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
   return cluster;
 }
 
@@ -104,7 +103,7 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
 
   const Pair* pair;
   for(pair = pairs; pair->key != NULL; pair++) {
-    CassStatement* statement = cass_prepared_bind(prepared, 2);
+    CassStatement* statement = cass_prepared_bind(prepared);
     cass_statement_bind_string(statement, 0, cass_string_init(pair->key));
     cass_statement_bind_string(statement, 1, cass_string_init(pair->value));
     cass_batch_add_statement(batch, statement);

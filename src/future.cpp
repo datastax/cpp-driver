@@ -87,7 +87,7 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
       static_cast<cass::ResultResponse*>(response_future->release_result()));
   if (result && result->kind() == CASS_RESULT_KIND_PREPARED) {
     cass::Prepared* prepared =
-        new cass::Prepared(result->prepared(), response_future->statement);
+        new cass::Prepared(result.release(), response_future->statement);
     return CassPrepared::to(prepared);
   }
   return NULL;

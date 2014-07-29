@@ -29,6 +29,13 @@
     return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS; \
   }
 
+struct CassCustom {
+  uint8_t** output;
+  size_t output_size;
+};
+
+struct CassNull {};
+
 namespace cass {
 
 class Statement : public Request {
@@ -72,26 +79,12 @@ public:
 
   uint8_t kind() const { return kind_; }
 
-  void set_query(const std::string& query) {
-    query_or_prepared_id_ = query;
-  }
-
-  void set_query(const char* query, size_t size) {
-    query_or_prepared_id_.assign(query, size);
-  }
-
-  const std::string& query() const { return query_or_prepared_id_; }
-
-  void set_prepared_id(const std::string& prepared_id) {
-    query_or_prepared_id_ = prepared_id;
-  }
-
-  const std::string& prepared_id() const { return query_or_prepared_id_; }
+  virtual const std::string& query() const = 0;
 
   size_t values_count() const { return values_.size(); }
 
 #define BIND_FIXED_TYPE(DeclType, EncodeType, Size)                  \
-  CassError bind_##EncodeType(size_t index, const DeclType& value) { \
+  CassError bind(size_t index, const DeclType& value) { \
     CASS_VALUE_CHECK_INDEX(index);                                   \
     Buffer buf(sizeof(int32_t) + sizeof(DeclType));                  \
     size_t pos = buf.encode_int32(0, sizeof(DeclType));              \
@@ -104,10 +97,10 @@ public:
   BIND_FIXED_TYPE(int64_t, int64, sizeof(int64_t))
   BIND_FIXED_TYPE(float, float, sizeof(float))
   BIND_FIXED_TYPE(double, double, sizeof(double))
-  BIND_FIXED_TYPE(uint8_t, byte, 1)
+  BIND_FIXED_TYPE(bool, bool, sizeof(uint8_t))
 #undef BIND_FIXED_TYPE
 
-  CassError bind_null(size_t index) {
+  CassError bind(size_t index, CassNull) {
     CASS_VALUE_CHECK_INDEX(index);
     Buffer buf(sizeof(int32_t));
     buf.encode_int32(0, -1); // [bytes] "null"
@@ -115,17 +108,12 @@ public:
     return CASS_OK;
   }
 
-  CassError bind(size_t index, const char* value, size_t value_length) {
-    CASS_VALUE_CHECK_INDEX(index);
-    Buffer buf(sizeof(int32_t) + value_length);
-    size_t pos = buf.encode_int32(0, value_length);
-    buf.copy(pos, value, value_length);
-    values_[index] = buf;
-    return CASS_OK;
+  CassError bind(size_t index, CassString value) {
+    return bind(index, value.data, value.length);
   }
 
-  CassError bind(size_t index, const uint8_t* value, size_t value_length) {
-    return bind(index, reinterpret_cast<const char*>(value), value_length);
+  CassError bind(size_t index, CassBytes value) {
+    return bind(index, value.data, value.size);
   }
 
   CassError bind(size_t index, const CassUuid value) {
@@ -137,13 +125,16 @@ public:
     return CASS_OK;
   }
 
-  CassError bind(size_t index, int32_t scale, const uint8_t* varint,
-                 size_t varint_length) {
+  CassError bind(size_t index, CassInet value) {
+    return bind(index, value.address, value.address_length);
+  }
+
+  CassError bind(size_t index, CassDecimal value) {
     CASS_VALUE_CHECK_INDEX(index);
-    Buffer buf(sizeof(int32_t) + sizeof(int32_t) + varint_length);
-    size_t pos = buf.encode_int32(0, sizeof(int32_t) + varint_length);
-    pos = buf.encode_int32(pos, scale);
-    buf.copy(pos, varint, varint_length);
+    Buffer buf(sizeof(int32_t) + sizeof(int32_t) + value.varint.size);
+    size_t pos = buf.encode_int32(0, sizeof(int32_t) + value.varint.size);
+    pos = buf.encode_int32(pos, value.scale);
+    buf.copy(pos, value.varint.data, value.varint.size);
     values_[index] = buf;
     return CASS_OK;
   }
@@ -157,16 +148,30 @@ public:
     return CASS_OK;
   }
 
-  CassError bind(size_t index, size_t output_size, uint8_t** output) {
+  CassError bind(size_t index, CassCustom custom) {
     CASS_VALUE_CHECK_INDEX(index);
-    Buffer buf(4 + output_size);
-    size_t pos = buf.encode_int32(0, output_size);
-    *output = reinterpret_cast<uint8_t*>(const_cast<char*>(buf.data() + pos));
+    Buffer buf(4 + custom.output_size);
+    size_t pos = buf.encode_int32(0, custom.output_size);
+    *(custom.output) = reinterpret_cast<uint8_t*>(const_cast<char*>(buf.data() + pos));
     values_[index] = buf;
     return CASS_OK;
   }
 
   int32_t encode_values(int version, BufferVec*  bufs) const;
+
+private:
+  CassError bind(size_t index, const char* value, size_t value_length) {
+    CASS_VALUE_CHECK_INDEX(index);
+    Buffer buf(sizeof(int32_t) + value_length);
+    size_t pos = buf.encode_int32(0, value_length);
+    buf.copy(pos, value, value_length);
+    values_[index] = buf;
+    return CASS_OK;
+  }
+
+  CassError bind(size_t index, const uint8_t* value, size_t value_length) {
+    return bind(index, reinterpret_cast<const char*>(value), value_length);
+  }
 
 private:
   typedef std::vector<Buffer> ValueVec;
@@ -177,7 +182,6 @@ private:
   int32_t page_size_;
   std::string paging_state_;
   uint8_t kind_;
-  std::string query_or_prepared_id_;
 };
 
 } // namespace cass

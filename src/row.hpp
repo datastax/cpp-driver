@@ -25,8 +25,20 @@ namespace cass {
 
 class ResultResponse;
 
-typedef std::vector<Value> Row;
-char* decode_row(char* row, const ResultResponse* result, Row& output);
+struct Row {
+public:
+  Row(const ResultResponse* result)
+    : result_(result) {}
+
+  ValueVec values;
+
+  const ResultResponse* result() const { return result_; }
+
+private:
+  const ResultResponse* result_;
+};
+
+char* decode_row(char* row, const ResultResponse* result, ValueVec& output);
 
 } // namespace cass
 

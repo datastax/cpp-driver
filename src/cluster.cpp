@@ -63,12 +63,13 @@ CassError cass_cluster_set_queue_size_io(CassCluster* cluster,
 }
 
 CassError cass_cluster_set_contact_points(CassCluster* cluster,
-                                          CassString contact_points) {
-  if (contact_points.length == 0) {
+                                          const char* contact_points) {
+  size_t length = strlen(contact_points);
+  if (length == 0) {
     cluster->config().contact_points().clear();
   } else {
     std::istringstream stream(
-        std::string(contact_points.data, contact_points.length));
+        std::string(contact_points, length));
     while (!stream.eof()) {
       std::string contact_point;
       std::getline(stream, contact_point, ',');

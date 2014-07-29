@@ -593,7 +593,7 @@ void Connection::send_credentials() {
 void Connection::send_initial_auth_response() {
   Authenticator* auth = config_.auth_provider()->new_authenticator(host_.address);
   if (auth == NULL) {
-    notify_error("Authenticaion required but no auth provider given");
+    notify_error("Authenticaion required but no auth provider set");
   } else {
     AuthResponseRequest* auth_response
         = new AuthResponseRequest(auth->initial_response(), auth);

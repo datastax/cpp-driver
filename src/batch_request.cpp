@@ -133,7 +133,7 @@ BatchRequest::~BatchRequest() {
 void BatchRequest::add_statement(Statement* statement) {
   if (statement->kind() == 1) {
     ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(statement);
-    prepared_statements_[execute_request->prepared_id()] = execute_request;
+    prepared_statements_[execute_request->query()] = execute_request;
   }
   statement->retain();
   statements_.push_back(statement);
@@ -143,7 +143,7 @@ bool BatchRequest::prepared_statement(const std::string& id,
                                       std::string* statement) const {
   PreparedMap::const_iterator it = prepared_statements_.find(id);
   if (it != prepared_statements_.end()) {
-    *statement = it->second->prepared_statement();
+    *statement = it->second->prepared()->statement();
     return true;
   }
   return false;

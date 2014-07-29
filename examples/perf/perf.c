@@ -31,8 +31,7 @@ void print_error(CassFuture* future) {
 
 CassCluster* create_cluster() {
   CassCluster* cluster = cass_cluster_new();
-  CassString contact_points = cass_string_init("127.0.0.1,127.0.0.2");
-  cass_cluster_set_contact_points(cluster, contact_points);
+  cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2");
   cass_cluster_set_log_level(cluster, CASS_LOG_WARN);
   cass_cluster_set_queue_size_io(cluster, 16384);
   cass_cluster_set_num_threads_io(cluster, 2);

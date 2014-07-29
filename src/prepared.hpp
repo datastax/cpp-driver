@@ -17,20 +17,28 @@
 #ifndef __CASS_PREPARED_HPP_INCLUDED__
 #define __CASS_PREPARED_HPP_INCLUDED__
 
+#include "ref_counted.hpp"
+#include "result_response.hpp"
+#include "scoped_ptr.hpp"
+
 #include <string>
 
 namespace cass {
 
-class Prepared {
+class Prepared : public RefCounted<Prepared> {
 public:
-  Prepared(const std::string& id, const std::string& statement)
-      : id_(id)
+  Prepared(const ResultResponse* result, const std::string& statement)
+      : RefCounted<Prepared>(1)
+      , result_(result)
+      , id_(result->prepared())
       , statement_(statement) {}
 
+  const ScopedPtr<const ResultResponse>& result() const { return result_; }
   const std::string& id() const { return id_; }
   const std::string& statement() const { return statement_; }
 
 private:
+  ScopedPtr<const ResultResponse> result_;
   std::string id_;
   std::string statement_;
 };

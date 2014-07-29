@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(test_connect_invalid_ip)
 
   {
     test_utils::CassClusterPtr cluster = test_utils::make_shared(cass_cluster_new());
-    cass_cluster_set_contact_points(cluster.get(), cass_string_init("1.1.1.1"));
+    cass_cluster_set_contact_points(cluster.get(), "1.1.1.1");
 
     cass_cluster_set_log_callback(cluster.get(), check_error_log_callback, log_data.get());
 
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(test_connect_invalid_name)
 
   {
     test_utils::CassClusterPtr cluster = test_utils::make_shared(cass_cluster_new());
-    cass_cluster_set_contact_points(cluster.get(), cass_string_init("node.domain-does-not-exist.dne"));
+    cass_cluster_set_contact_points(cluster.get(), "node.domain-does-not-exist.dne");
 
     cass_cluster_set_log_callback(cluster.get(), check_error_log_callback, log_data.get());
 

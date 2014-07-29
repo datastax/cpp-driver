@@ -23,18 +23,19 @@
 #include "statement.hpp"
 #include "constants.hpp"
 #include "prepared.hpp"
+#include "ref_counted.hpp"
 
 namespace cass {
 
 class ExecuteRequest : public Statement {
 public:
-  ExecuteRequest(const Prepared* prepared, size_t value_count)
-      : Statement(CQL_OPCODE_EXECUTE, CASS_BATCH_KIND_PREPARED, value_count)
-      , prepared_statement_(prepared->statement()) {
-    set_prepared_id(prepared->id());
-  }
+  ExecuteRequest(const Prepared* prepared)
+      : Statement(CQL_OPCODE_EXECUTE, CASS_BATCH_KIND_PREPARED,
+                  prepared->result()->column_count())
+      , prepared_(prepared) {}
 
-  const std::string prepared_statement() const { return prepared_statement_; }
+  const std::string& query() const { return prepared_->id(); }
+  const SharedRefPtr<const Prepared>& prepared() const { return prepared_; }
 
 private:
   int encode(int version, BufferVec* bufs) const;
@@ -42,7 +43,7 @@ private:
   int encode_v2(BufferVec* bufs) const;
 
 private:
-  std::string prepared_statement_;
+  SharedRefPtr<const Prepared> prepared_;
 };
 
 } // namespace cass

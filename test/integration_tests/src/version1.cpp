@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(test_prepared)
       = test_utils::make_shared(
           prepare_statement(session, "INSERT INTO test (key, v1, v2, v3, v4) VALUES (?, ?, ?, ?, ?)"));
 
-  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared.get(), 5));
+  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared.get()));
 
   cass_statement_bind_int32(statement.get(), 0, 0);
   cass_statement_bind_int32(statement.get(), 1, 99);
