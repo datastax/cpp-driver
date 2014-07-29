@@ -145,6 +145,10 @@ namespace {
         = result->find_column_indices(name, fixed_indices, FIXED_INDICES_SIZE);
     IsValidValueType<T> is_valid_type;
 
+    if (num_matches == 0) {
+      return CASS_ERROR_NAME_DOES_NOT_EXIST;
+    }
+
     if (num_matches <= FIXED_INDICES_SIZE) {
       for (size_t i = 0; i < num_matches; ++i) {
         size_t index = fixed_indices[i];
