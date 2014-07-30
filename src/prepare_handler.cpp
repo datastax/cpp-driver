@@ -15,13 +15,14 @@
 */
 
 #include "prepare_handler.hpp"
+
+#include "batch_request.hpp"
 #include "constants.hpp"
-#include "response.hpp"
-#include "prepare_request.hpp"
 #include "error_response.hpp"
 #include "execute_request.hpp"
+#include "prepare_request.hpp"
 #include "request_handler.hpp"
-#include "batch_request.hpp"
+#include "response.hpp"
 #include "result_response.hpp"
 
 namespace cass {
@@ -53,13 +54,13 @@ void PrepareHandler::on_set(ResponseMessage* response) {
       ResultResponse* result =
           static_cast<ResultResponse*>(response->response_body().get());
       if (result->kind() == CASS_RESULT_KIND_PREPARED) {
-        request_handler_.release()->retry(RETRY_WITH_CURRENT_HOST);
+        request_handler_->retry(RETRY_WITH_CURRENT_HOST);
       } else {
-        request_handler_.release()->retry(RETRY_WITH_NEXT_HOST);
+        request_handler_->retry(RETRY_WITH_NEXT_HOST);
       }
     } break;
     case CQL_OPCODE_ERROR:
-      request_handler_.release()->retry(RETRY_WITH_NEXT_HOST);
+      request_handler_->retry(RETRY_WITH_NEXT_HOST);
       break;
     default:
       break;
@@ -67,11 +68,11 @@ void PrepareHandler::on_set(ResponseMessage* response) {
 }
 
 void PrepareHandler::on_error(CassError code, const std::string& message) {
-  request_handler_.release()->retry(RETRY_WITH_NEXT_HOST);
+  request_handler_->retry(RETRY_WITH_NEXT_HOST);
 }
 
 void PrepareHandler::on_timeout() {
-  request_handler_.release()->retry(RETRY_WITH_NEXT_HOST);
+  request_handler_->retry(RETRY_WITH_NEXT_HOST);
 }
 
 } // namespace cass

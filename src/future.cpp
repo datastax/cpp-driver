@@ -14,10 +14,10 @@
   limitations under the License.
 */
 
-#include "types.hpp"
 #include "future.hpp"
-#include "scoped_ptr.hpp"
+
 #include "request_handler.hpp"
+#include "scoped_ptr.hpp"
 #include "types.hpp"
 
 extern "C" {
@@ -70,8 +70,15 @@ const CassResult* cass_future_get_result(CassFuture* future) {
   if (response_future->is_error()) {
     return NULL;
   }
-  return CassResult::to(
-      static_cast<cass::ResultResponse*>(response_future->release_result()));
+
+  cass::ResultResponse* result
+      = static_cast<cass::ResultResponse*>(response_future->release_result());
+
+  if (result != NULL) {
+    result->decode_first_row();
+  }
+
+  return CassResult::to(result);
 }
 
 const CassPrepared* cass_future_get_prepared(CassFuture* future) {
@@ -88,6 +95,7 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
   if (result && result->kind() == CASS_RESULT_KIND_PREPARED) {
     cass::Prepared* prepared =
         new cass::Prepared(result.release(), response_future->statement);
+    prepared->inc_ref();
     return CassPrepared::to(prepared);
   }
   return NULL;
@@ -153,7 +161,6 @@ void Future::internal_set(ScopedMutex& lock) {
       run_callback_on_work_thread();
     }
   }
-  dec_ref();
 }
 
 void Future::run_callback_on_work_thread() {

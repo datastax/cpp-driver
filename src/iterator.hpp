@@ -23,18 +23,23 @@ enum IteratorType {
   CASS_ITERATOR_TYPE_RESULT,
   CASS_ITERATOR_TYPE_ROW,
   CASS_ITERATOR_COLLECTION,
+  CASS_ITERATOR_MAP,
   CASS_ITERATOR_TYPE_UNKNOWN
 };
 
-struct Iterator {
-  const IteratorType type;
-
+class Iterator {
+public:
   Iterator(IteratorType type)
-      : type(type) {}
+      : type_(type) {}
 
   virtual ~Iterator() {}
 
+  IteratorType type() const { return type_; }
+
   virtual bool next() = 0;
+
+private:
+  const IteratorType type_;
 };
 
 } // namespace cass

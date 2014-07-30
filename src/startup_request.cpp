@@ -15,6 +15,7 @@
 */
 
 #include "startup_request.hpp"
+
 #include "serialization.hpp"
 
 namespace cass {

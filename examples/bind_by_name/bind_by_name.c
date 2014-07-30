@@ -39,7 +39,6 @@ void print_error(CassFuture* future) {
 CassCluster* create_cluster() {
   CassCluster* cluster = cass_cluster_new();
   cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
-  cass_cluster_set_credentials(cluster, "cassandra", "cassandra");
   return cluster;
 }
 

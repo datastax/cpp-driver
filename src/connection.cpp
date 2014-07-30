@@ -1,9 +1,10 @@
 #include "connection.hpp"
+
 #include "auth.hpp"
 #include "auth_requests.hpp"
 #include "auth_responses.hpp"
+#include "common.hpp"
 #include "constants.hpp"
-#include "response.hpp"
 #include "connecter.hpp"
 #include "timer.hpp"
 #include "config.hpp"
@@ -16,20 +17,12 @@
 #include "logger.hpp"
 #include "cassandra.h"
 
+#include "third_party/boost/boost/bind.hpp"
+
 #include <sstream>
 #include <iomanip>
 
 namespace cass {
-
-Connection::StartupHandler::StartupHandler(Connection* connection,
-                                           Request* request)
-    : connection_(connection)
-    , request_(request) {
-}
-
-const Request* Connection::StartupHandler::request() const {
-  return request_.get();
-}
 
 void Connection::StartupHandler::on_set(ResponseMessage* response) {
   switch (response->opcode()) {
@@ -114,148 +107,12 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
   }
 }
 
-Connection::InternalRequest::InternalRequest(Connection* connection)
-    : connection(connection)
-    , stream_(0)
-    , timer_(NULL)
-    , state_(REQUEST_STATE_NEW) {
-}
-
-void Connection::InternalRequest::on_set(ResponseMessage* response) {
-  switch (response->opcode()) {
-    case CQL_OPCODE_RESULT:
-      on_result_response(response);
-      break;
-  }
-  response_callback_->on_set(response);
-}
-
-void Connection::InternalRequest::on_error(CassError code, const std::string& message) {
-  response_callback_->on_error(code, message);
-  connection->stream_manager_.release_stream(stream_);
-}
-
-void Connection::InternalRequest::on_timeout() {
-  response_callback_->on_timeout();
-}
-
-void Connection::InternalRequest::change_state(Connection::InternalRequest::State next_state) {
-  switch (state_) {
-    case REQUEST_STATE_NEW:
-      assert(next_state == REQUEST_STATE_WRITING &&
-             "Invalid request state after new");
-      state_ = REQUEST_STATE_WRITING;
-      timer_ =
-          Timer::start(connection->loop_, connection->config_.write_timeout(),
-                       this, on_request_timeout);
-      break;
-
-    case REQUEST_STATE_WRITING:
-      if (next_state == REQUEST_STATE_READING) { // Success
-        stop_timer();
-        state_ = next_state;
-        timer_ =
-            Timer::start(connection->loop_, connection->config_.read_timeout(),
-                         this, on_request_timeout);
-      } else if (next_state == REQUEST_STATE_READ_BEFORE_WRITE ||
-                 next_state == REQUEST_STATE_DONE) {
-        stop_timer();
-        state_ = next_state;
-      } else if (next_state == REQUEST_STATE_WRITE_TIMEOUT) {
-        connection->timed_out_request_count_++;
-        state_ = next_state;
-      } else {
-        assert(false && "Invalid request state after writing");
-      }
-      break;
-
-    case REQUEST_STATE_READING:
-      if (next_state == REQUEST_STATE_DONE) { // Success
-        stop_timer();
-        state_ = next_state;
-      } else if (next_state == REQUEST_STATE_READ_TIMEOUT) {
-        connection->timed_out_request_count_++;
-        state_ = next_state;
-      } else {
-        assert(false && "Invalid request state after reading");
-      }
-      break;
-
-    case REQUEST_STATE_WRITE_TIMEOUT:
-      assert((next_state == REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ ||
-              next_state == REQUEST_STATE_READ_BEFORE_WRITE) &&
-             "Invalid request state after write timeout");
-      state_ = next_state;
-      break;
-
-    case REQUEST_STATE_READ_TIMEOUT:
-      assert(next_state == REQUEST_STATE_DONE &&
-             "Invalid request state after read timeout");
-      connection->timed_out_request_count_--;
-      state_ = next_state;
-      break;
-
-    case REQUEST_STATE_READ_BEFORE_WRITE:
-      assert(next_state == REQUEST_STATE_DONE &&
-             "Invalid request state after read before write");
-      state_ = next_state;
-      break;
-
-    case REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ:
-      assert(next_state == REQUEST_STATE_DONE &&
-             "Invalid request state after write timeout before read");
-      connection->timed_out_request_count_--;
-      state_ = next_state;
-      break;
-
-    case REQUEST_STATE_DONE:
-      assert(false && "Invalid request state after done");
-      break;
-
-    default:
-      assert(false && "Invalid request state");
-      break;
-  }
-}
-
-void Connection::InternalRequest::stop_timer() {
-  assert(timer_ != NULL);
-  Timer::stop(timer_);
-  timer_ = NULL;
-}
-
-void Connection::InternalRequest::on_result_response(ResponseMessage* response) {
-  ResultResponse* result =
-      static_cast<ResultResponse*>(response->response_body().get());
-  switch (result->kind()) {
-    case CASS_RESULT_KIND_SET_KEYSPACE:
-      connection->keyspace_ = result->keyspace();
-      break;
-  }
-}
-
-void Connection::InternalRequest::on_request_timeout(Timer* timer) {
-  InternalRequest* request = static_cast<InternalRequest*>(timer->data());
-  request->connection->logger_->info("Request timed out to '%s'",
-                                     request->connection->host_string_.c_str());
-  request->timer_ = NULL;
-  if (request->state_ == REQUEST_STATE_READING) {
-    request->change_state(REQUEST_STATE_READ_TIMEOUT);
-  } else if (request->state_ == REQUEST_STATE_WRITING) {
-    request->change_state(REQUEST_STATE_WRITE_TIMEOUT);
-  } else {
-    assert(false && "Invalid request state for timeout");
-  }
-  request->on_timeout();
-}
-
 Connection::Connection(uv_loop_t* loop,
                        const Host& host, Logger* logger, const Config& config,
                        const std::string& keyspace, int protocol_version)
     : state_(CONNECTION_STATE_NEW)
     , is_defunct_(false)
     , is_invalid_protocol_(false)
-    , timed_out_request_count_(0)
     , loop_(loop)
     , response_(new ResponseMessage())
     , host_(host)
@@ -280,33 +137,35 @@ void Connection::connect() {
   }
 }
 
-bool Connection::execute(ResponseCallback* response_callback) {
-  ScopedPtr<InternalRequest> internal_request(new InternalRequest(this));
+bool Connection::execute(Handler* handler) {
+  handler->inc_ref(); // Connection reference
 
-  const Request* request = response_callback->request();
-
-  int8_t stream = stream_manager_.acquire_stream(internal_request.get());
+  int8_t stream = stream_manager_.acquire_stream(handler);
   if (stream < 0) {
     return false;
   }
+  handler->set_stream(stream);
 
-  internal_request->set_stream(stream);
-  internal_request->set_response_callback(response_callback);
-
-  ScopedPtr<BufferVec> bufs(request->encode(protocol_version_, 0x00, stream));
-  if (!bufs) {
-    internal_request->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
-                               "Operation unsupported by this protocol version");
+  if (!handler->encode(protocol_version_, 0x00)) {
+    stream_manager_.release_stream(handler->stream());
+    handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
+                      "Operation unsupported by this protocol version");
+    handler->dec_ref();
     return true; // Don't retry
   }
 
   logger_->debug("Sending message type %s with %d",
-                 opcode_to_string(request->opcode()).c_str(), stream);
+                 opcode_to_string(handler->request()->opcode()).c_str(), stream);
 
-  pending_requests_.add_to_back(internal_request.get());
+  pending_requests_.add_to_back(handler);
 
-  internal_request->change_state(InternalRequest::REQUEST_STATE_WRITING);
-  write(bufs.release(), internal_request.release());
+  uv_stream_t* sock_stream = reinterpret_cast<uv_stream_t*>(&socket_);
+
+  handler->set_state(Handler::REQUEST_STATE_WRITING);
+  handler->start_timer(loop_, config_.request_timeout(), handler,
+                       boost::bind(&Connection::on_timeout, this, _1));
+  handler->write(sock_stream, handler,
+                 boost::bind(&Connection::on_write, this, _1));
 
   return true;
 }
@@ -327,11 +186,6 @@ void Connection::close() {
 void Connection::defunct() {
   is_defunct_ = true;
   close();
-}
-
-void Connection::write(BufferVec* bufs, Connection::InternalRequest* request) {
-  uv_stream_t* stream = reinterpret_cast<uv_stream_t*>(&socket_);
-  Writer::write(stream, bufs, request, on_write);
 }
 
 void Connection::consume(char* input, size_t size) {
@@ -359,39 +213,36 @@ void Connection::consume(char* input, size_t size) {
         // TODO(mstump) system events
         assert(false);
       } else {
-        InternalRequest* request = NULL;
-        if (stream_manager_.get_item(response->stream(), request)) {
-          switch (request->state()) {
-            case InternalRequest::REQUEST_STATE_READING:
-              request->on_set(response.get());
-              request->change_state(InternalRequest::REQUEST_STATE_DONE);
+        Handler* handler = NULL;
+        if (stream_manager_.get_item(response->stream(), handler)) {
+          switch (handler->state()) {
+            case Handler::REQUEST_STATE_READING:
+              maybe_set_keyspace(response.get());
+              pending_requests_.remove(handler);
+              handler->stop_timer();
+              handler->set_state(Handler::REQUEST_STATE_DONE);
+              handler->on_set(response.get());
+              handler->dec_ref();
               break;
 
-            case InternalRequest::REQUEST_STATE_WRITING:
-              request->on_set(response.get());
-              request->change_state(InternalRequest::REQUEST_STATE_READ_BEFORE_WRITE);
+            case Handler::REQUEST_STATE_WRITING:
+              // There are cases when the read callback will happen
+              // before the write callback. If this happens we have
+              // to allow the write callback to cleanup.
+              maybe_set_keyspace(response.get());
+              handler->set_state(Handler::REQUEST_STATE_READ_BEFORE_WRITE);
+              handler->on_set(response.get());
               break;
 
-            case InternalRequest::REQUEST_STATE_WRITE_TIMEOUT:
-              request->change_state(InternalRequest::REQUEST_STATE_READ_BEFORE_WRITE);
-              break;
-
-            case InternalRequest::REQUEST_STATE_READ_TIMEOUT:
-              request->change_state(InternalRequest::REQUEST_STATE_DONE);
-              break;
-
-            case InternalRequest::REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ:
-              request->change_state(InternalRequest::REQUEST_STATE_DONE);
+            case Handler::REQUEST_STATE_TIMEOUT:
+              pending_requests_.remove(handler);
+              handler->set_state(Handler::REQUEST_STATE_DONE);
+              handler->dec_ref();
               break;
 
             default:
               assert(false && "Invalid request state after receiving response");
               break;
-          }
-
-          if (request->state() == InternalRequest::REQUEST_STATE_DONE) {
-            pending_requests_.remove(request);
-            delete request;
           }
         } else {
           logger_->error("Invalid stream returnd from server on '%s'",
@@ -402,6 +253,16 @@ void Connection::consume(char* input, size_t size) {
     }
     remaining -= consumed;
     buffer += consumed;
+  }
+}
+
+void Connection::maybe_set_keyspace(ResponseMessage* response) {
+  if (response->opcode() == CQL_OPCODE_RESULT) {
+    ResultResponse* result =
+        static_cast<ResultResponse*>(response->response_body().get());
+    if (result->kind() == CASS_RESULT_KIND_SET_KEYSPACE) {
+      keyspace_ = result->keyspace();
+    }
   }
 }
 
@@ -443,14 +304,14 @@ void Connection::on_close(uv_handle_t* handle) {
                              connection->host_string_.c_str());
 
   while (!connection->pending_requests_.is_empty()) {
-    InternalRequest* request = connection->pending_requests_.front();
-    if (request->state() == InternalRequest::REQUEST_STATE_WRITING ||
-        request->state() == InternalRequest::REQUEST_STATE_READING) {
-      request->on_timeout();
-      request->stop_timer();
+    Handler* handler = connection->pending_requests_.front();
+    connection->pending_requests_.remove(handler);
+    if (handler->state() == Handler::REQUEST_STATE_WRITING ||
+        handler->state() == Handler::REQUEST_STATE_READING) {
+      handler->on_timeout();
+      handler->stop_timer();
     }
-    connection->pending_requests_.remove(request);
-    delete request;
+    handler->dec_ref();
   }
 
   if (connection->closed_callback_) {
@@ -477,44 +338,58 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
   free_buffer(buf);
 }
 
-void Connection::on_write(Writer* writer) {
-  InternalRequest* request = static_cast<InternalRequest*>(writer->data());
-  Connection* connection = request->connection;
+void Connection::on_write(RequestWriter* writer) {
+  Handler* handler = static_cast<Handler*>(writer->data());
 
-  switch (request->state()) {
-    case InternalRequest::REQUEST_STATE_WRITING:
-      if (writer->status() == Writer::SUCCESS) {
-        request->change_state(InternalRequest::REQUEST_STATE_READING);
+  switch (handler->state()) {
+    case Handler::REQUEST_STATE_WRITING:
+      if (writer->status() == RequestWriter::SUCCESS) {
+        handler->set_state(Handler::REQUEST_STATE_READING);
       } else {
-        if (!connection->is_closing()) {
-          connection->logger_->info(
-              "Write error '%s' on '%s'", connection->host_string_.c_str(),
-              uv_err_name(uv_last_error(connection->loop_)));
-          connection->defunct();
+        if (!is_closing()) {
+          logger_->info("Write error '%s' on '%s'",
+                        host_string_.c_str(),
+                        uv_err_name(uv_last_error(loop_)));
+          defunct();
         }
-        request->on_error(CASS_ERROR_LIB_WRITE_ERROR,
+
+        stream_manager_.release_stream(handler->stream());
+        pending_requests_.remove(handler);
+        handler->stop_timer();
+        handler->set_state(Handler::REQUEST_STATE_DONE);
+        handler->on_error(CASS_ERROR_LIB_WRITE_ERROR,
                           "Unable to write to socket");
-        request->change_state(InternalRequest::REQUEST_STATE_DONE);
+        handler->dec_ref();
       }
       break;
 
-    case InternalRequest::REQUEST_STATE_WRITE_TIMEOUT:
-      request->change_state(InternalRequest::REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ);
+    case Handler::REQUEST_STATE_TIMEOUT:
+      // The read may still come back, handle cleanup there
       break;
 
-    case InternalRequest::REQUEST_STATE_READ_BEFORE_WRITE:
-      request->change_state(InternalRequest::REQUEST_STATE_DONE);
+    case Handler::REQUEST_STATE_READ_BEFORE_WRITE:
+      // The read callback happened before the write callback
+      // returned. This is now responsible for cleanup.
+      pending_requests_.remove(handler);
+      handler->stop_timer();
+      handler->set_state(Handler::REQUEST_STATE_DONE);
+      handler->dec_ref();
       break;
 
     default:
       assert(false && "Invalid request state after write finished");
       break;
   }
+}
 
-  if (request->state() == InternalRequest::REQUEST_STATE_DONE) {
-    connection->pending_requests_.remove(request);
-    delete request;
-  }
+void Connection::on_timeout(RequestTimer* timer) {
+  Handler* handler = static_cast<Handler*>(timer->data());
+  logger_->info("Request timed out to '%s'", host_string_.c_str());
+  // TODO (mpenick): We need to handle the case where we have too many
+  // timeout requests and we run out of stream ids. The java-driver
+  // uses a threshold to defunct the connneciton.
+  handler->set_state(Handler::REQUEST_STATE_TIMEOUT);
+  handler->on_timeout();
 }
 
 void Connection::on_connected() {

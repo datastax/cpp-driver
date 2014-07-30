@@ -40,21 +40,29 @@ struct External : public In {
   static const Ex* to(const In* in) { return static_cast<const Ex*>(in); }
 };
 
+#define EXTERNAL_TYPE(InternalType, ExternalType)                        \
+  struct ExternalType##_ : public External<InternalType, ExternalType> { \
+    private:                                                             \
+      ~ExternalType##_() { }                                             \
+  }
+
 extern "C" {
 
-struct CassCluster_ : public External<cass::Cluster, CassCluster> {};
-struct CassSession_ : public External<cass::Session, CassSession> {};
-struct CassStatement_ : public External<cass::Statement, CassStatement> {};
-struct CassFuture_ : public External<cass::Future, CassFuture> {};
-struct CassPrepared_ : public External<cass::Prepared, CassPrepared> {};
-struct CassBatch_ : public External<cass::BatchRequest, CassBatch> {};
-struct CassResult_ : public External<cass::ResultResponse, CassResult> {};
-struct CassCollection_ : public External<cass::BufferCollection, CassCollection> {};
-struct CassIterator_ : public External<cass::Iterator, CassIterator> {};
-struct CassRow_ : public External<cass::Row, CassRow> {};
-struct CassValue_ : public External<cass::Value, CassValue> {};
-struct CassBalancing_ : public External<cass::Balancing, CassBalancing> {};
+EXTERNAL_TYPE(cass::Cluster, CassCluster);
+EXTERNAL_TYPE(cass::Session, CassSession);
+EXTERNAL_TYPE(cass::Statement, CassStatement);
+EXTERNAL_TYPE(cass::Future, CassFuture);
+EXTERNAL_TYPE(cass::Prepared, CassPrepared);
+EXTERNAL_TYPE(cass::BatchRequest, CassBatch);
+EXTERNAL_TYPE(cass::ResultResponse, CassResult);
+EXTERNAL_TYPE(cass::BufferCollection, CassCollection);
+EXTERNAL_TYPE(cass::Iterator, CassIterator);
+EXTERNAL_TYPE(cass::Row, CassRow);
+EXTERNAL_TYPE(cass::Value, CassValue);
+EXTERNAL_TYPE(cass::Balancing, CassBalancing);
 
 }
+
+#undef EXTERNAL_TYPE
 
 #endif

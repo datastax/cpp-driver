@@ -15,14 +15,14 @@
 */
 
 #include "session.hpp"
-#include "types.hpp"
+
 #include "config.hpp"
-#include "request_handler.hpp"
-#include "logger.hpp"
-#include "round_robin_policy.hpp"
-#include "resolver.hpp"
 #include "io_worker.hpp"
 #include "prepare_request.hpp"
+#include "request_handler.hpp"
+#include "resolver.hpp"
+#include "round_robin_policy.hpp"
+#include "types.hpp"
 
 extern "C" {
 
@@ -34,6 +34,7 @@ CassFuture* cass_session_close(CassSession* session) {
   // TODO(mpenick): Make sure this handles close during the middle of a connect
   cass::SessionCloseFuture* close_future = new cass::SessionCloseFuture();
   session->close_async(close_future);
+  close_future->inc_ref();
   return CassFuture::to(close_future);
 }
 
@@ -188,6 +189,8 @@ void Session::on_after_run() {
 
   if (close_future != NULL) {
     close_future->set();
+    close_future->dec_ref();
+    close_future = NULL;
   }
 }
 
@@ -218,6 +221,7 @@ void Session::on_event(const SessionEvent& event) {
       logger_->debug("Session is connected");
       load_balancing_policy_->init(hosts_);
       connect_future_->set();
+      connect_future_->dec_ref();
       connect_future_ = NULL;
     }
     logger_->debug("Session pending pool count %d", pending_pool_count_);
@@ -247,26 +251,37 @@ void Session::execute(RequestHandler* request_handler) {
   if (!request_queue_->enqueue(request_handler)) {
     request_handler->on_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
                               "The request queue has reached capacity");
-    delete request_handler;
+    request_handler->dec_ref();
   }
 }
 
 Future* Session::prepare(const char* statement, size_t length) {
   PrepareRequest* prepare = new PrepareRequest();
   prepare->set_query(statement, length);
-  RequestHandler* request_handler = new RequestHandler(prepare);
-  ResponseFuture* future = request_handler->future();
-  future->statement.assign(statement, length);
+
+  ResponseFuture* future = new ResponseFuture();
+  future->inc_ref(); // External reference
   future->set_loop(loop());
+  future->statement.assign(statement, length);
+
+  RequestHandler* request_handler = new RequestHandler(prepare, future);
+  request_handler->inc_ref(); // IOWorker reference
+
   execute(request_handler);
+
   return future;
 }
 
 Future* Session::execute(const Request* statement) {
-  RequestHandler* request_handler = new RequestHandler(statement);
-  Future* future = request_handler->future();
+  ResponseFuture* future = new ResponseFuture();
+  future->inc_ref(); // External reference
   future->set_loop(loop());
+
+  RequestHandler* request_handler = new RequestHandler(statement, future);
+  request_handler->inc_ref(); // IOWorker reference
+
   execute(request_handler);
+
   return future;
 }
 

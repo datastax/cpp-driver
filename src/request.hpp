@@ -38,7 +38,7 @@ public:
 
   uint8_t opcode() const { return opcode_; }
 
-  BufferVec* encode(int version, int flags, int stream) const;
+  bool encode(int version, int flags, int stream, BufferVec* bufs) const;
 
 protected:
   virtual int encode(int version, BufferVec* bufs) const = 0;

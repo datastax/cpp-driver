@@ -1,4 +1,5 @@
 #include "auth_responses.hpp"
+
 #include "serialization.hpp"
 
 namespace cass {

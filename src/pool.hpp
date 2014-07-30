@@ -18,7 +18,7 @@
 #define __CASS_POOL_HPP_INCLUDED__
 
 #include "cassandra.h"
-#include "response_callback.hpp"
+#include "request.hpp"
 #include "scoped_ptr.hpp"
 #include "request_handler.hpp"
 
@@ -41,28 +41,6 @@ class Pool {
 public:
   typedef boost::function1<void, Pool*> Callback;
   typedef boost::function1<void, const std::string&> KeyspaceCallback;
-
-  class PoolHandler : public ResponseCallback {
-  public:
-    PoolHandler(Pool* pool, Connection* connection,
-                RequestHandler* request_handler);
-
-    virtual const Request* request() const { return request_handler_->request(); }
-
-    virtual void on_set(ResponseMessage* response);
-    virtual void on_error(CassError code, const std::string& message);
-    virtual void on_timeout();
-
-  private:
-    void finish_request();
-
-    void on_result_response(ResponseMessage* response);
-    void on_error_response(ResponseMessage* response);
-
-    Pool* pool_;
-    Connection* connection_;
-    ScopedPtr<RequestHandler> request_handler_;
-  };
 
   enum PoolState {
     POOL_STATE_NEW,
@@ -96,6 +74,8 @@ public:
   }
 
 private:
+  friend class RequestHandler;
+
   void defunct();
   void maybe_notify_ready(Connection* connection);
   void maybe_close();
@@ -104,11 +84,11 @@ private:
 
   void on_connection_ready(Connection* connection);
   void on_connection_closed(Connection* connection);
-  void on_timeout(Timer* timer);
+  void on_timeout(void* data);
 
   Connection* find_least_busy();
 
-  void execute_pending_request(Connection* connection);
+  void return_connection(Connection* connection);
 
 private:
   typedef std::set<Connection*> ConnectionSet;

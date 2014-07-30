@@ -46,8 +46,7 @@ public:
       , max_pending_requests_(128 * max_connections_per_host_)
       , max_simultaneous_requests_threshold_(100)
       , connect_timeout_(5000)
-      , write_timeout_(1000)
-      , read_timeout_(12000)
+      , request_timeout_(12000)
       , log_level_(CASS_LOG_WARN)
       , log_callback_(default_log_callback)
       , log_data_(NULL)
@@ -129,16 +128,10 @@ public:
     connect_timeout_ = timeout;
   }
 
-  unsigned write_timeout() const { return write_timeout_; }
+  unsigned request_timeout() const { return request_timeout_; }
 
-  void set_write_timeout(unsigned timeout) {
-    write_timeout_ = timeout;
-  }
-
-  unsigned read_timeout() const { return read_timeout_; }
-
-  void set_read_timeout(unsigned timeout) {
-    read_timeout_ = timeout;
+  void set_request_timeout(unsigned timeout) {
+    request_timeout_ = timeout;
   }
 
   const ContactPointList& contact_points() const {
@@ -216,8 +209,7 @@ private:
   unsigned max_pending_requests_;
   unsigned max_simultaneous_requests_threshold_;
   unsigned connect_timeout_;
-  unsigned write_timeout_;
-  unsigned read_timeout_;
+  unsigned request_timeout_;
   CassLogLevel log_level_;
   CassLogCallback log_callback_;
   void* log_data_;

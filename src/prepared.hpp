@@ -28,8 +28,7 @@ namespace cass {
 class Prepared : public RefCounted<Prepared> {
 public:
   Prepared(const ResultResponse* result, const std::string& statement)
-      : RefCounted<Prepared>(1)
-      , result_(result)
+      : result_(result)
       , id_(result->prepared())
       , statement_(statement) {}
 

@@ -15,6 +15,7 @@
 */
 
 #include "common.hpp"
+
 #include "constants.hpp"
 
 #include <assert.h>

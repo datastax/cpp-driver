@@ -14,28 +14,22 @@
   limitations under the License.
 */
 
-#include "constants.hpp"
 #include "request.hpp"
+
+#include "constants.hpp"
 #include "serialization.hpp"
-#include "writer.hpp"
-#include "batch_request.hpp"
-#include "query_request.hpp"
-#include "execute_request.hpp"
-#include "prepare_request.hpp"
-#include "options_request.hpp"
-#include "startup_request.hpp"
 
 namespace cass {
 
-BufferVec* Request::encode(int version, int flags, int stream) const {
-  ScopedPtr<BufferVec> bufs(new BufferVec());
+bool Request::encode( int version, int flags, int stream, BufferVec* bufs) const {
+  bufs->clear();
 
   if (version == 1 || version == 2) {
     bufs->push_back(Buffer()); // Placeholder
 
-    int32_t length = encode(version, bufs.get());
+    int32_t length = encode(version, bufs);
     if (length < 0) {
-      return NULL;
+      return false;
     }
 
     Buffer buf(CASS_HEADER_SIZE_V1_AND_V2);
@@ -47,10 +41,10 @@ BufferVec* Request::encode(int version, int flags, int stream) const {
     buf.encode_int32(pos, length);
     (*bufs)[0] = buf;
   } else {
-    return NULL;
+    return false;
   }
 
-  return bufs.release();
+  return true;
 }
 
 } // namespace cass

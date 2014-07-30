@@ -32,7 +32,13 @@ public:
   ExecuteRequest(const Prepared* prepared)
       : Statement(CQL_OPCODE_EXECUTE, CASS_BATCH_KIND_PREPARED,
                   prepared->result()->column_count())
-      , prepared_(prepared) {}
+      , prepared_(prepared) {
+      // If the prepared statment has result metadata then there is no
+      // need to get the metadata with this request too.
+      if (prepared->result()->result_metadata()) {
+        set_skip_metadata(true);
+      }
+  }
 
   const std::string& query() const { return prepared_->id(); }
   const SharedRefPtr<const Prepared>& prepared() const { return prepared_; }

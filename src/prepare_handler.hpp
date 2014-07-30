@@ -17,17 +17,17 @@
 #ifndef __CASS_PREPARE_HANDLER_HPP_INCLUDED__
 #define __CASS_PREPARE_HANDLER_HPP_INCLUDED__
 
-#include "response_callback.hpp"
+#include "handler.hpp"
 #include "scoped_ptr.hpp"
 #include "ref_counted.hpp"
+#include "request_handler.hpp"
 
 namespace cass {
 
 class ResponseMessage;
 class Request;
-class RequestHandler;
 
-class PrepareHandler : public ResponseCallback {
+class PrepareHandler : public Handler {
 public:
   PrepareHandler(RequestHandler* request_handler)
       : request_handler_(request_handler) {}
@@ -44,7 +44,7 @@ public:
 
 private:
   ScopedRefPtr<Request> request_;
-  ScopedPtr<RequestHandler> request_handler_;
+  ScopedRefPtr<RequestHandler> request_handler_;
 };
 
 } // namespace cass

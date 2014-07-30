@@ -1,13 +1,14 @@
 #include "pool.hpp"
-#include "session.hpp"
-#include "timer.hpp"
-#include "prepare_handler.hpp"
+
+#include "connection.hpp"
+#include "error_response.hpp"
 #include "logger.hpp"
+#include "prepare_handler.hpp"
+#include "session.hpp"
 #include "set_keyspace_handler.hpp"
 #include "request_handler.hpp"
-#include "connection.hpp"
 #include "result_response.hpp"
-#include "error_response.hpp"
+#include "timer.hpp"
 
 #include "third_party/boost/boost/bind.hpp"
 
@@ -15,86 +16,6 @@ namespace cass {
 
 static bool least_busy_comp(Connection* a, Connection* b) {
   return a->pending_request_count() < b->pending_request_count();
-}
-
-Pool::PoolHandler::PoolHandler(Pool* pool, Connection* connection,
-                               RequestHandler* request_handler)
-    : pool_(pool)
-    , connection_(connection)
-    , request_handler_(request_handler) {}
-
-void Pool::PoolHandler::on_set(ResponseMessage* response) {
-  switch (response->opcode()) {
-    case CQL_OPCODE_RESULT:
-      on_result_response(response);
-      break;
-    case CQL_OPCODE_ERROR:
-      on_error_response(response);
-      break;
-    default:
-      // TODO(mpenick): Log this
-      request_handler_->on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
-                                 "Unexpected response");
-      connection_->defunct();
-  }
-  finish_request();
-}
-
-void Pool::PoolHandler::on_error(CassError code, const std::string& message) {
-  if (code == CASS_ERROR_LIB_WRITE_ERROR ||
-      code == CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE) {
-    request_handler_.release()->retry(RETRY_WITH_NEXT_HOST);
-  } else {
-    request_handler_->on_error(code, message);
-  }
-  finish_request();
-}
-
-void Pool::PoolHandler::on_timeout() {
-  request_handler_->on_timeout();
-  finish_request();
-}
-
-void Pool::PoolHandler::finish_request() {
-  if (connection_->is_ready()) {
-    pool_->execute_pending_request(connection_);
-  }
-}
-
-void Pool::PoolHandler::on_result_response(ResponseMessage* response) {
-  ResultResponse* result =
-      static_cast<ResultResponse*>(response->response_body().get());
-  switch (result->kind()) {
-    case CASS_RESULT_KIND_SET_KEYSPACE:
-      if (pool_->keyspace_callback_) {
-        pool_->keyspace_callback_(result->keyspace());
-      }
-      break;
-  }
-  request_handler_->on_set(response);
-}
-
-void Pool::PoolHandler::on_error_response(ResponseMessage* response) {
-  ErrorResponse* error =
-      static_cast<ErrorResponse*>(response->response_body().get());
-  switch (error->code()) {
-    case CQL_ERROR_UNPREPARED: {
-      RequestHandler* request_handler = request_handler_.release();
-      ScopedPtr<PrepareHandler> prepare_handler(
-          new PrepareHandler(request_handler));
-      if (prepare_handler->init(error->prepared_id())) {
-        connection_->execute(prepare_handler.release());
-      } else {
-        request_handler->on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
-                                  "Received unprepared error for invalid "
-                                  "request type or invalid prepared id");
-      }
-      break;
-    }
-    default:
-      request_handler_->on_set(response);
-      break;
-  }
 }
 
 Pool::Pool(const Host& host, uv_loop_t* loop,
@@ -105,19 +26,15 @@ Pool::Pool(const Host& host, uv_loop_t* loop,
     , logger_(logger)
     , config_(config)
     , protocol_version_(config.protocol_version())
-    , is_defunct_(false) {
-}
+    , is_defunct_(false) {}
 
 Pool::~Pool() {
   for (RequestHandlerList::iterator it = pending_request_queue_.begin(),
                                     end = pending_request_queue_.end();
        it != end; ++it) {
     RequestHandler* request_handler = *it;
-    if (request_handler->timer != NULL) {
-      Timer::stop(request_handler->timer);
-      request_handler->timer = NULL;
-      request_handler->retry(RETRY_WITH_NEXT_HOST);
-    }
+    request_handler->stop_timer();
+    request_handler->retry(RETRY_WITH_NEXT_HOST);
   }
   pending_request_queue_.clear();
 }
@@ -158,7 +75,7 @@ void Pool::close() {
 Connection* Pool::borrow_connection(const std::string& keyspace) {
   if (connections_.empty()) {
     for (unsigned i = 0; i < config_.core_connections_per_host(); ++i) {
-      spawn_connection(keyspace);
+      maybe_spawn_connection(keyspace);
     }
     return NULL;
   }
@@ -175,13 +92,12 @@ Connection* Pool::borrow_connection(const std::string& keyspace) {
 }
 
 bool Pool::execute(Connection* connection, RequestHandler* request_handler) {
-  PoolHandler* pool_handler =
-      new PoolHandler(this, connection, request_handler);
+  request_handler->initialize(connection, this);
   if (request_handler->keyspace == connection->keyspace()) {
-    return connection->execute(pool_handler);
+    return connection->execute(request_handler);
   } else {
     return connection->execute(new SetKeyspaceHandler(
-        request_handler->keyspace, connection, pool_handler));
+        connection, request_handler->keyspace, request_handler));
   }
 }
 
@@ -222,10 +138,11 @@ void Pool::spawn_connection(const std::string& keyspace) {
         new Connection(loop_, host_, logger_, config_,
                        keyspace, protocol_version_);
 
+    logger_->info("Spawning new conneciton to %s", host_.address.to_string().c_str());
     connection->set_ready_callback(
-        boost::bind(&Pool::on_connection_ready, this, _1));
+          boost::bind(&Pool::on_connection_ready, this, _1));
     connection->set_close_callback(
-        boost::bind(&Pool::on_connection_closed, this, _1));
+          boost::bind(&Pool::on_connection_closed, this, _1));
     connection->connect();
 
     connections_pending_.insert(connection);
@@ -242,6 +159,10 @@ void Pool::maybe_spawn_connection(const std::string& keyspace) {
     return;
   }
 
+  if (state_ != POOL_STATE_READY) {
+    return;
+  }
+
   spawn_connection(keyspace);
 }
 
@@ -254,14 +175,11 @@ Connection* Pool::find_least_busy() {
   return NULL;
 }
 
-void Pool::execute_pending_request(Connection* connection) {
-  if (!pending_request_queue_.empty()) {
+void Pool::return_connection(Connection* connection) {
+  if (connection->is_ready() && !pending_request_queue_.empty()) {
     RequestHandler* request_handler = pending_request_queue_.front();
     pending_request_queue_.pop_front();
-    if (request_handler->timer != NULL) {
-      Timer::stop(request_handler->timer);
-      request_handler->timer = NULL;
-    }
+    request_handler->stop_timer();
     if (!execute(connection, request_handler)) {
       request_handler->retry(RETRY_WITH_NEXT_HOST);
     }
@@ -273,7 +191,7 @@ void Pool::on_connection_ready(Connection* connection) {
   maybe_notify_ready(connection);
 
   connections_.push_back(connection);
-  execute_pending_request(connection);
+  return_connection(connection);
 }
 
 void Pool::on_connection_closed(Connection* connection) {
@@ -298,8 +216,8 @@ void Pool::on_connection_closed(Connection* connection) {
   maybe_close();
 }
 
-void Pool::on_timeout(Timer* timer) {
-  RequestHandler* request_handler = static_cast<RequestHandler*>(timer->data());
+void Pool::on_timeout(void* data) {
+  RequestHandler* request_handler = static_cast<RequestHandler*>(data);
   pending_request_queue_.remove(request_handler);
   request_handler->retry(RETRY_WITH_NEXT_HOST);
   maybe_close();
@@ -313,9 +231,8 @@ bool Pool::wait_for_connection(RequestHandler* request_handler) {
     return false;
   }
 
-  request_handler->timer =
-      Timer::start(loop_, config_.connect_timeout(), request_handler,
-                   boost::bind(&Pool::on_timeout, this, _1));
+  request_handler->start_timer(loop_, config_.connect_timeout(), request_handler,
+                               boost::bind(&Pool::on_timeout, this, _1));
   pending_request_queue_.push_back(request_handler);
   return true;
 }

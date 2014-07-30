@@ -19,10 +19,10 @@
 
 #include "constants.hpp"
 #include "future.hpp"
+#include "handler.hpp"
 #include "host.hpp"
 #include "request.hpp"
 #include "response.hpp"
-#include "response_callback.hpp"
 #include "scoped_ptr.hpp"
 
 #include "third_party/boost/boost/function.hpp"
@@ -33,6 +33,8 @@
 namespace cass {
 
 class Timer;
+class Connection;
+class Pool;
 
 class ResponseFuture : public ResultFuture<Response> {
 public:
@@ -42,16 +44,20 @@ public:
   std::string statement;
 };
 
-class RequestHandler : public ResponseCallback {
+class RequestHandler : public Handler {
 public:
   typedef boost::function1<void, RequestHandler*> Callback;
   typedef boost::function2<void, RequestHandler*, RetryType> RetryCallback;
 
-  RequestHandler(const Request* request)
-      : timer(NULL)
-      , request_(request)
-      , future_(new ResponseFuture()) {
-    future_->inc_ref();
+  RequestHandler(const Request* request, ResponseFuture* future)
+      : request_(request)
+      , future_(future)
+      , connection_(NULL)
+      , pool_(NULL) {}
+
+  void initialize(Connection* connection, Pool* pool) {
+    connection_ = connection;
+    pool_ = pool;
   }
 
   virtual const Request* request() const { return request_.get(); }
@@ -67,6 +73,10 @@ public:
   }
 
   void retry(RetryType type) {
+    // Reset the original request so it can be executed again
+    set_state(REQUEST_STATE_NEW);
+    pool_ = NULL;
+
     if (retry_callback_) {
       retry_callback_(this, type);
     }
@@ -76,7 +86,7 @@ public:
     finished_callback_ = callback;
   }
 
-  ResponseFuture* future() { return future_; }
+  ResponseFuture* future() { return future_.get(); }
 
   bool get_current_host(Host* host) {
     if (hosts.empty()) {
@@ -95,23 +105,31 @@ public:
   }
 
 public:
-  Timer* timer;
   std::list<Host> hosts;
   std::string keyspace;
 
 private:
+  void set_error(CassError code, const std::string& message);
+  void return_connection();
+
   void notify_finished() {
     if (finished_callback_) {
       finished_callback_(this);
     }
   }
 
+  void on_result_response(ResponseMessage* response);
+  void on_error_response(ResponseMessage* response);
+
   std::list<Host> hosts_attempted_;
   ScopedRefPtr<const Request> request_;
-  ResponseFuture* future_;
+  ScopedRefPtr<ResponseFuture> future_;
+  Connection* connection_;
+  Pool* pool_;
   RetryCallback retry_callback_;
   Callback finished_callback_;
 };
-}
+
+} // namespace cass
 
 #endif

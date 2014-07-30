@@ -1,5 +1,6 @@
-#include "cassandra.h"
 #include "uuids.hpp"
+
+#include "cassandra.h"
 #include "scoped_mutex.hpp"
 #include "get_time.hpp"
 
@@ -124,7 +125,7 @@ uint64_t Uuids::get_unix_timestamp(Uuid uuid) {
 void Uuids::to_string(Uuid uuid, char* output) {
   size_t pos = 0;
   for (int i = 0; i < 16; ++i) {
-    char buf[3] = {'\0'};
+    char buf[3] = { '\0' };
     sprintf(buf, "%02x", uuid[i]);
     if (i == 4 || i == 6 || i == 8 || i == 10) {
       output[pos++] = '-';

@@ -1,4 +1,5 @@
 #include "buffer.hpp"
+
 #include "buffer_collection.hpp"
 
 namespace cass {

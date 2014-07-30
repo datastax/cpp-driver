@@ -297,14 +297,22 @@ namespace cql {
 		else {
 			CQL_LOG(info) << "CCM RESULT: " << result;
 		}
-	}
+  }
+
+  void cql_ccm_bridge_t::update_config(const std::string& name, const std::string& value) {
+    execute_ccm_command(boost::str(boost::format("updateconf %1%:%2%") % name % value));
+  }
 
 	void cql_ccm_bridge_t::start() {
 		execute_ccm_command("start");
 	}
 
-	void cql_ccm_bridge_t::start(int node) {
-		execute_ccm_command(boost::str(boost::format("node%1% start") % node));
+  void cql_ccm_bridge_t::start(int node) {
+    execute_ccm_command(boost::str(boost::format("node%1% start") % node));
+  }
+
+  void cql_ccm_bridge_t::start(int node, const std::string& option) {
+    execute_ccm_command(boost::str(boost::format("node%1% start --jvm_arg=%2%") % node % option));
 	}
 
 	void cql_ccm_bridge_t::stop() {
@@ -321,7 +329,7 @@ namespace cql {
 
 	void cql_ccm_bridge_t::kill(int node) {
 		execute_ccm_command(boost::str(boost::format("node%1% stop --not-gently") % node));
-	}
+  }
 
 	void cql_ccm_bridge_t::remove() {
 		stop();
@@ -332,29 +340,34 @@ namespace cql {
 		execute_ccm_command(boost::str(boost::format("node%1% ring") % node));
 	}
 
-	void cql_ccm_bridge_t::bootstrap(int node, const std::string& dc) {
+  void cql_ccm_bridge_t::populate(int node) {
+    execute_ccm_command(boost::str(
+      boost::format("add node%1% -i %2%%3% -j %4% -b")
+       % node
+       % _ip_prefix
+       % node
+       % (7000 + 100 * node)));
+  }
 
-	   if (dc.empty()) {
-		   execute_ccm_command(boost::str(
-			   boost::format("add node%1% -i %2%%3% -j %4% -b") 
-					% node
-					% _ip_prefix
-					% node
-					% (7000 + 100 * node)));
-	   }
-       else {
-		   execute_ccm_command(boost::str(
-			   boost::format("add node%1% -i %2%%3% -j %4% -b -d %5%") 
-					% node
-					% _ip_prefix
-					% node
-					% (7000 + 100 * node)
-					% dc));
+  void cql_ccm_bridge_t::populate(int node, const std::string& dc) {
+    execute_ccm_command(boost::str(
+      boost::format("add node%1% -i %2%%3% -j %4% -b -d %5%")
+       % node
+       % _ip_prefix
+       % node
+       % (7000 + 100 * node)
+       % dc));
+  }
 
-	   }
-
+  void cql_ccm_bridge_t::bootstrap(int node) {
+     populate(node);
 	   start(node);
 	}
+
+  void cql_ccm_bridge_t::bootstrap(int node, const std::string& dc) {
+     populate(node, dc);
+     start(node);
+  }
 
 	void cql_ccm_bridge_t::decommission(int node) {
 		execute_ccm_command(boost::str(boost::format("node%1% decommission") % node));

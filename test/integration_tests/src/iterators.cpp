@@ -36,7 +36,6 @@ BOOST_AUTO_TEST_CASE(test_result_iterator)
 
   std::string part =  test_utils::string_from_uuid(test_utils::generate_time_uuid().uuid);
 
-
   int num_rows = 10;
 
   for (cass_int32_t i = 0; i < num_rows; ++i) {
@@ -98,7 +97,7 @@ BOOST_AUTO_TEST_CASE(test_row_iterator)
   BOOST_REQUIRE(cass_result_column_count(result.get()) == static_cast<size_t>(count));
 }
 
-BOOST_AUTO_TEST_CASE(test_list_iterator)
+BOOST_AUTO_TEST_CASE(test_collection_list_iterator)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value list<int>);")
@@ -130,7 +129,7 @@ BOOST_AUTO_TEST_CASE(test_list_iterator)
   BOOST_REQUIRE(count == 4);
 }
 
-BOOST_AUTO_TEST_CASE(test_set_iterator)
+BOOST_AUTO_TEST_CASE(test_collection_set_iterator)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value set<int>);")
@@ -163,7 +162,7 @@ BOOST_AUTO_TEST_CASE(test_set_iterator)
   BOOST_REQUIRE(count == 4);
 }
 
-BOOST_AUTO_TEST_CASE(test_map_iterator)
+BOOST_AUTO_TEST_CASE(test_collection_map_iterator)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value map<text, int>);")
@@ -203,6 +202,45 @@ BOOST_AUTO_TEST_CASE(test_map_iterator)
   BOOST_REQUIRE(count == 4);
 }
 
+BOOST_AUTO_TEST_CASE(test_map_iterator)
+{
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
+  std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value map<text, int>);")
+                                       % table_name);
+
+  test_utils::execute_query(session, create_table_query);
+
+  std::string insert_query = str(boost::format("INSERT INTO %s (key, value) VALUES (0, { 'a': 0, 'b': 1, 'c': 2, 'd': 3 })")
+                                 % table_name);
+  test_utils::execute_query(session, insert_query);
+
+  test_utils::CassResultPtr result;
+  test_utils::execute_query(session, str(boost::format("SELECT * FROM %s")
+                                         % table_name),
+                            &result);
+  BOOST_REQUIRE(cass_result_row_count(result.get()) > 0);
+  BOOST_REQUIRE(cass_result_column_count(result.get()) == 2);
+
+  const CassRow* row = cass_result_first_row(result.get());
+  const CassValue* map = cass_row_get_column(row, 1);
+
+  test_utils::CassIteratorPtr iterator = test_utils::make_shared(cass_iterator_from_map(map));
+
+  cass_int32_t count = 0;
+  while (cass_iterator_next(iterator.get())) {
+    CassString key;
+    BOOST_REQUIRE(cass_value_type(cass_iterator_get_map_key(iterator.get())) == CASS_VALUE_TYPE_VARCHAR);
+    BOOST_REQUIRE(cass_value_get_string(cass_iterator_get_map_key(iterator.get()), &key) == CASS_OK);
+    BOOST_REQUIRE(key.length == 1 && key.data[0] == 'a' + count);
+
+    cass_int32_t value;
+    BOOST_REQUIRE(cass_value_type(cass_iterator_get_map_value(iterator.get())) == CASS_VALUE_TYPE_INT);
+    BOOST_REQUIRE(cass_value_get_int32(cass_iterator_get_map_value(iterator.get()), &value) == CASS_OK);
+    BOOST_REQUIRE(value == count++);
+  }
+  BOOST_REQUIRE(count == 4);
+}
+
 BOOST_AUTO_TEST_CASE(test_empty)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
@@ -221,6 +259,34 @@ BOOST_AUTO_TEST_CASE(test_empty)
 
   test_utils::CassIteratorPtr iterator = test_utils::make_shared(cass_iterator_from_result(result.get()));
   BOOST_REQUIRE(cass_iterator_next(iterator.get()) == cass_false);
+}
+
+BOOST_AUTO_TEST_CASE(test_invalid_value_types)
+{
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
+  std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value list<int>);")
+                                       % table_name);
+
+  test_utils::execute_query(session, create_table_query);
+
+  std::string insert_query = str(boost::format("INSERT INTO %s (key, value) VALUES (0, [ 0, 1, 2, 3 ])")
+                                 % table_name);
+  test_utils::execute_query(session, insert_query);
+
+  test_utils::CassResultPtr result;
+  test_utils::execute_query(session, str(boost::format("SELECT * FROM %s")
+                                         % table_name),
+                            &result);
+  BOOST_REQUIRE(cass_result_row_count(result.get()) > 0);
+  BOOST_REQUIRE(cass_result_column_count(result.get()) == 2);
+
+  const CassRow* row = cass_result_first_row(result.get());
+  const CassValue* key = cass_row_get_column(row, 0);
+  const CassValue* value = cass_row_get_column(row, 1);
+
+  BOOST_CHECK(cass_iterator_from_map(key) == NULL);
+  BOOST_CHECK(cass_iterator_from_map(value) == NULL);
+  BOOST_CHECK(cass_iterator_from_collection(key) == NULL);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

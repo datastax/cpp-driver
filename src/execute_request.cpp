@@ -83,6 +83,10 @@ int ExecuteRequest::encode_v2(BufferVec* bufs) const {
     flags |= CASS_QUERY_FLAG_VALUES;
   }
 
+  if (skip_metadata()) {
+    flags |= CASS_QUERY_FLAG_SKIP_METADATA;
+  }
+
   if (page_size() >= 0) {
     paging_buf_size += sizeof(int32_t); // [int]
     flags |= CASS_QUERY_FLAG_PAGE_SIZE;

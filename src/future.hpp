@@ -54,8 +54,7 @@ public:
   };
 
   Future(FutureType type)
-      : RefCounted<Future>(1) // For the external reference
-      , is_set_(false)
+      : is_set_(false)
       , type_(type)
       , loop_(NULL) {
     uv_mutex_init(&mutex_);

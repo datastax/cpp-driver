@@ -26,6 +26,7 @@
 #include "future.hpp"
 #include "balancing.hpp"
 #include "config.hpp"
+#include "logger.hpp"
 
 #include <uv.h>
 #include <list>
@@ -132,7 +133,7 @@ public:
     Session* session = release_result();
     if (session != NULL) {
       // The future was deleted before obtaining the session
-      ScopedPtr<cass::SessionCloseFuture> close_future(new cass::SessionCloseFuture());
+      ScopedRefPtr<cass::SessionCloseFuture> close_future(new cass::SessionCloseFuture());
       session->close_async(close_future.get());
       close_future->wait();
     }

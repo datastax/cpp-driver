@@ -14,9 +14,11 @@
   limitations under the License.
 */
 
-#include "types.hpp"
 #include "row.hpp"
+
+#include "metadata.hpp"
 #include "result_response.hpp"
+#include "types.hpp"
 
 extern "C" {
 
@@ -29,8 +31,9 @@ const CassValue* cass_row_get_column(const CassRow* row, cass_size_t index) {
 
 const CassValue* cass_row_get_column_by_name(const CassRow* row,
                                              const char* name) {
-  size_t indices[1]; // We only require the first matching column
-  if (row->result()->find_column_indices(name, indices, 1) == 0) {
+
+  cass::Metadata::IndexVec indices;
+  if (row->result()->find_column_indices(name, &indices) == 0) {
     return NULL;
   }
   return CassValue::to(&row->values[indices[0]]);
@@ -48,15 +51,15 @@ char* decode_row(char* rows, const ResultResponse* result, ValueVec& output) {
     int32_t size = 0;
     buffer = decode_int32(buffer, size);
 
-    const ColumnMetadata* metadata = &result->column_metadata()[i];
-    CassValueType type = static_cast<CassValueType>(metadata->type);
+    const ColumnDefinition& def = result->metadata()->get(i);
+    CassValueType type = static_cast<CassValueType>(def.type);
 
     if (size >= 0) {
       if (type == CASS_VALUE_TYPE_MAP || type == CASS_VALUE_TYPE_LIST ||
           type == CASS_VALUE_TYPE_SET) {
         uint16_t count = 0;
         char* data = decode_uint16(buffer, count);
-        output.push_back(Value(metadata, count, data, size - sizeof(uint16_t)));
+        output.push_back(Value(&def, count, data, size - sizeof(uint16_t)));
       } else {
         output.push_back(Value(type, buffer, size));
       }

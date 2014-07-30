@@ -19,7 +19,7 @@
 
 #include "cassandra.h"
 #include "buffer_piece.hpp"
-#include "column_metadata.hpp"
+#include "metadata.hpp"
 
 namespace cass {
 
@@ -27,35 +27,35 @@ class Value {
 public:
   Value()
       : type_(CASS_VALUE_TYPE_UNKNOWN)
-      , metadata_(NULL)
+      , def_(NULL)
       , count_(0) {}
 
   Value(CassValueType type, char* data, size_t size)
       : type_(type)
-      , metadata_(NULL)
+      , def_(NULL)
       , count_(0)
       , buffer_(data, size) {}
 
-  Value(const ColumnMetadata* metadata, int32_t count, char* data, size_t size)
-    : type_(static_cast<CassValueType>(metadata->type))
-    , metadata_(metadata)
+  Value(const ColumnDefinition* definition, int32_t count, char* data, size_t size)
+    : type_(static_cast<CassValueType>(definition->type))
+    , def_(definition)
     , count_(count)
     , buffer_(data, size) {}
 
   CassValueType type() const { return type_; }
 
   CassValueType primary_type() const {
-    if (metadata_ == NULL) {
+    if (def_ == NULL) {
       return CASS_VALUE_TYPE_UNKNOWN;
     }
-    return static_cast<CassValueType>(metadata_->collection_primary_type);
+    return static_cast<CassValueType>(def_->collection_primary_type);
   }
 
   CassValueType secondary_type() const {
-    if (metadata_ == NULL) {
+    if (def_ == NULL) {
       return CASS_VALUE_TYPE_UNKNOWN;
     }
-    return static_cast<CassValueType>(metadata_->collection_secondary_type);
+    return static_cast<CassValueType>(def_->collection_secondary_type);
   }
 
   bool is_collection() const {
@@ -74,7 +74,7 @@ public:
 
 private:
   CassValueType type_;
-  const ColumnMetadata* metadata_;
+  const ColumnDefinition* def_;
   int32_t count_;
   BufferPiece buffer_;
 };

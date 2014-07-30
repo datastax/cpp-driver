@@ -14,10 +14,14 @@
   limitations under the License.
 */
 
-#ifndef __CASS_ScopedPtr_HPP_INCLUDED__
-#define __CASS_ScopedPtr_HPP_INCLUDED__
+#ifndef __CASS_SCOPED_PTR_HPP_INCLUDED__
+#define __CASS_SCOPED_PTR_HPP_INCLUDED__
 
 #include "macros.hpp"
+#include "ref_counted.hpp"
+
+#include "third_party/boost/boost/static_assert.hpp"
+#include "third_party/boost/boost/type_traits/is_base_and_derived.hpp"
 
 #include <stddef.h>
 
@@ -38,6 +42,9 @@ class ScopedPtr {
 public:
   typedef T type;
   typedef D deleter;
+
+  // Prevent RefCounted<> objects from using ScopedPtr<>, that would be bad
+  BOOST_STATIC_ASSERT(!boost::is_base_and_derived<RefCountedBase, T>::value);
 
   explicit ScopedPtr(type* ptr = NULL)
       : ptr_(ptr) {}

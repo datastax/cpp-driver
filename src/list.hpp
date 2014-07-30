@@ -17,7 +17,7 @@
 #ifndef __CASS_LIST_HPP_INCLUDED__
 #define __CASS_LIST_HPP_INCLUDED__
 
-#include "common.hpp"
+#include "macros.hpp"
 
 namespace cass {
 

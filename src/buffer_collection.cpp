@@ -15,14 +15,17 @@
 */
 
 #include "buffer_collection.hpp"
+
 #include "types.hpp"
 
 
 extern "C" {
 
 CassCollection* cass_collection_new(CassCollectionType type, size_t element_count) {
-  return CassCollection::to(new cass::BufferCollection(type == CASS_COLLECTION_TYPE_MAP,
-                                                       element_count));
+  cass::BufferCollection* collection = new cass::BufferCollection(type == CASS_COLLECTION_TYPE_MAP,
+                                                                 element_count);
+  collection->inc_ref();
+  return CassCollection::to(collection);
 }
 
 void cass_collection_free(CassCollection* collection) {

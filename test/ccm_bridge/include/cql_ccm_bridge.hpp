@@ -21,8 +21,11 @@ namespace cql {
 		// shell prompth.
 		std::string execute_command(const std::string& command);
 
-		void start();
-		void start(int node);
+    void update_config(const std::string& name, const std::string& value);
+
+    void start();
+    void start(int node);
+    void start(int node, const std::string& option);
 		void stop();
 		void stop(int node);
 		void kill();
@@ -31,7 +34,10 @@ namespace cql {
 		void remove();
 		void ring(int node);
 
-		void bootstrap(int node, const std::string& dc = "");
+    void populate(int node);
+    void populate(int node, const std::string& dc);
+    void bootstrap(int node);
+    void bootstrap(int node, const std::string& dc);
 
 		void decommission(int node);
 

@@ -15,6 +15,7 @@
 */
 
 #include "response.hpp"
+
 #include "auth_responses.hpp"
 #include "error_response.hpp"
 #include "ready_response.hpp"

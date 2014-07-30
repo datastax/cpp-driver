@@ -14,12 +14,16 @@
   limitations under the License.
 */
 
-#ifndef __CASS_COLUMN_METADATA_HPP_INCLUDED__
-#define __CASS_COLUMN_METADATA_HPP_INCLUDED__
+#ifndef __CASS_METADATA_HPP_INCLUDED__
+#define __CASS_METADATA_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "list.hpp"
+#include "fixed_vector.hpp"
+#include "ref_counted.hpp"
 
 #include "third_party/boost/boost/cstdint.hpp"
+#include "third_party/boost/boost/utility/string_ref.hpp"
 
 #include <algorithm>
 #include <map>
@@ -28,9 +32,11 @@
 
 namespace cass {
 
-struct ColumnMetadata {
-  ColumnMetadata()
-      : type(CASS_VALUE_TYPE_UNKNOWN)
+struct ColumnDefinition {
+  ColumnDefinition()
+      : index(0)
+      , next(NULL)
+      , type(CASS_VALUE_TYPE_UNKNOWN)
       , keyspace(NULL)
       , keyspace_size(0)
       , table(NULL)
@@ -45,6 +51,9 @@ struct ColumnMetadata {
       , collection_secondary_type(CASS_VALUE_TYPE_UNKNOWN)
       , collection_secondary_class(NULL)
       , collection_secondary_class_size(0) {}
+
+  size_t index;
+  ColumnDefinition* next;
 
   uint16_t type;
   char* keyspace;
@@ -69,22 +78,30 @@ struct ColumnMetadata {
   size_t collection_secondary_class_size;
 };
 
-struct CaseInsensitiveLessThan {
-  struct CaseInsensitiveCharLessThan {
-    bool operator() (int c1, int c2) {
-      return tolower(c1) < tolower(c2);
-    }
-  };
-  bool operator() (const std::string& s1, const std::string& s2) const {
-    return std::lexicographical_compare(s1.begin(), s1.end(),
-                                        s2.begin(), s2.end(),
-                                        CaseInsensitiveCharLessThan());
-  }
-};
+class Metadata : public RefCounted<Metadata> {
+public:
+  typedef FixedVector<size_t, 16> IndexVec;
 
-typedef std::vector<ColumnMetadata> ColumnMetadataVec;
-typedef std::vector<size_t> ColumnIndexVec;
-typedef std::map<std::string, ColumnIndexVec, CaseInsensitiveLessThan> ColumnMetadataIndex;
+  Metadata(size_t column_count);
+
+  const ColumnDefinition& get(size_t index) const { return defs_[index]; }
+
+  size_t get(boost::string_ref name, IndexVec* result) const;
+
+  size_t column_count() const { return defs_.size(); }
+
+  void insert(ColumnDefinition& meta);
+
+private:
+  static const size_t FIXED_COLUMN_META_SIZE = 16;
+
+  FixedVector<ColumnDefinition, FIXED_COLUMN_META_SIZE> defs_;
+  FixedVector<ColumnDefinition*, 2 * FIXED_COLUMN_META_SIZE> index_;
+  size_t index_mask_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(Metadata);
+};
 
 } // namespace cass
 

@@ -14,12 +14,13 @@
   limitations under the License.
 */
 
-#include "types.hpp"
-
 #include "iterator.hpp"
-#include "result_iterator.hpp"
+
 #include "collection_iterator.hpp"
+#include "map_iterator.hpp"
+#include "result_iterator.hpp"
 #include "row_iterator.hpp"
+#include "types.hpp"
 
 extern "C" {
 
@@ -32,10 +33,17 @@ CassIterator* cass_iterator_from_row(const CassRow* row) {
 }
 
 CassIterator* cass_iterator_from_collection(const CassValue* value) {
-  if (cass_value_is_collection(value)) {
-    return CassIterator::to(new cass::CollectionIterator(value));
+  if (!cass_value_is_collection(value)) {
+    return NULL;
   }
-  return NULL;
+  return CassIterator::to(new cass::CollectionIterator(value));
+}
+
+CassIterator* cass_iterator_from_map(const CassValue* value) {
+  if (value->type() != CASS_VALUE_TYPE_MAP) {
+    return NULL;
+  }
+  return CassIterator::to(new cass::MapIterator(value));
 }
 
 void cass_iterator_free(CassIterator* iterator) {
@@ -47,32 +55,48 @@ cass_bool_t cass_iterator_next(CassIterator* iterator) {
 }
 
 const CassRow* cass_iterator_get_row(CassIterator* iterator) {
-  cass::Iterator* internal_it = iterator->from();
-  if (internal_it->type != cass::CASS_ITERATOR_TYPE_RESULT) {
+  if (iterator->type() != cass::CASS_ITERATOR_TYPE_RESULT) {
     return NULL;
   }
-  cass::ResultIterator* result_it =
-      static_cast<cass::ResultIterator*>(internal_it);
-  return CassRow::to(result_it->row());
+  return CassRow::to(
+        static_cast<cass::ResultIterator*>(
+                       iterator->from())->row());
 }
 
 const CassValue* cass_iterator_get_column(CassIterator* iterator) {
-  cass::Iterator* internal_it = iterator->from();
-  if (internal_it->type != cass::CASS_ITERATOR_TYPE_ROW) {
+  if (iterator->type() != cass::CASS_ITERATOR_TYPE_ROW) {
     return NULL;
   }
-  cass::RowIterator* row_it = static_cast<cass::RowIterator*>(internal_it);
-  return CassValue::to(row_it->column());
+  return CassValue::to(
+        static_cast<cass::RowIterator*>(
+          iterator->from())->column());
 }
 
 const CassValue* cass_iterator_get_value(CassIterator* iterator) {
-  cass::Iterator* internal_it = iterator->from();
-  if (internal_it->type != cass::CASS_ITERATOR_COLLECTION) {
+  if (iterator->type() != cass::CASS_ITERATOR_COLLECTION) {
     return NULL;
   }
-  cass::CollectionIterator* collection_it =
-      static_cast<cass::CollectionIterator*>(internal_it);
-  return CassValue::to(collection_it->value());
+  return CassValue::to(
+        static_cast<cass::CollectionIterator*>(
+          iterator->from())->value());
+}
+
+const CassValue* cass_iterator_get_map_key(CassIterator* iterator) {
+  if (iterator->type() != cass::CASS_ITERATOR_MAP) {
+    return NULL;
+  }
+  return CassValue::to(
+        static_cast<cass::MapIterator*>(
+          iterator->from())->key());
+}
+
+const CassValue* cass_iterator_get_map_value(CassIterator* iterator) {
+  if (iterator->type() != cass::CASS_ITERATOR_MAP) {
+    return NULL;
+  }
+  return CassValue::to(
+        static_cast<cass::MapIterator*>(
+          iterator->from())->value());
 }
 
 } // extern "C"

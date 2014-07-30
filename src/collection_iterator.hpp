@@ -35,14 +35,15 @@ public:
                    ? (2 * collection_->count())
                    : collection->count()) {}
 
-  char* decode_value(char* position);
-
   virtual bool next();
 
   const Value* value() {
     assert(index_ >= 0 && index_ < count_);
     return &value_;
   }
+
+private:
+  char* decode_value(char* position);
 
 private:
   const Value* collection_;

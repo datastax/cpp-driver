@@ -17,6 +17,7 @@
 #ifndef __CASS_BUFFER_HPP_INCLUDED__
 #define __CASS_BUFFER_HPP_INCLUDED__
 
+#include "fixed_vector.hpp"
 #include "ref_counted.hpp"
 #include "serialization.hpp"
 
@@ -29,8 +30,7 @@ namespace cass {
 class BufferArray : public RefCounted<BufferArray> {
 public:
   BufferArray(size_t size)
-    : RefCounted<BufferArray>(1)
-    , data_(new char[size]) {}
+    : data_(new char[size]) {}
 
   virtual ~BufferArray() {
     delete[] data_;
@@ -54,6 +54,7 @@ public:
     : size_(size) {
     if (size > static_cast<size_t>(FIXED_BUFFER_SIZE)) {
       BufferArray* array = new BufferArray(size);
+      array->inc_ref();
       memcpy(array->data(), data, size);
       data_.ref.array = array;
     } else {
@@ -65,7 +66,9 @@ public:
   Buffer(size_t size)
     : size_(size) {
     if (size > static_cast<size_t>(FIXED_BUFFER_SIZE)) {
-      data_.ref.array = new BufferArray(size);
+      BufferArray* array = new BufferArray(size);
+      array->inc_ref();
+      data_.ref.array = array;
     }
   }
 
@@ -184,10 +187,13 @@ private:
 
   char* buffer() {
     assert(is_buffer());
-    return size_ > FIXED_BUFFER_SIZE ? static_cast<BufferArray*>(data_.ref.array)->data() : data_.fixed;
+    return size_ > FIXED_BUFFER_SIZE
+        ? static_cast<BufferArray*>(data_.ref.array)->data()
+        : data_.fixed;
   }
 
-  static const int FIXED_BUFFER_SIZE = 32;
+  // Enough space to avoid extra allocations for most of the basic types
+  static const int FIXED_BUFFER_SIZE = 16;
 
 private:
   void copy(const Buffer& buffer);
@@ -204,7 +210,7 @@ private:
   int size_;
 };
 
-typedef std::vector<Buffer> BufferVec;
+typedef FixedVector<Buffer, 8> BufferVec;
 
 } // namespace cass
 

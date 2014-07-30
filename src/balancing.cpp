@@ -15,6 +15,7 @@
 */
 
 #include "balancing.hpp"
+
 #include "types.hpp"
 
 extern "C" {

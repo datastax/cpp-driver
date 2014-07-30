@@ -14,9 +14,11 @@
   limitations under the License.
 */
 
+#include "cluster.hpp"
+
 #include "common.hpp"
 #include "types.hpp"
-#include "cluster.hpp"
+
 
 #include <sstream>
 
@@ -132,15 +134,9 @@ CassError cass_cluster_set_connect_timeout(CassCluster* cluster,
   return CASS_OK;
 }
 
-CassError cass_cluster_set_write_timeout(CassCluster* cluster,
-                                         unsigned timeout) {
-  cluster->config().set_write_timeout(timeout);
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_read_timeout(CassCluster* cluster,
+CassError cass_cluster_set_request_timeout(CassCluster* cluster,
                                         unsigned timeout) {
-  cluster->config().set_read_timeout(timeout);
+  cluster->config().set_request_timeout(timeout);
   return CASS_OK;
 }
 
@@ -171,8 +167,10 @@ CassFuture* cass_cluster_connect(CassCluster* cluster) {
 CassFuture* cass_cluster_connect_keyspace(CassCluster* cluster,
                                           const char* keyspace) {
   cass::Session* session = new cass::Session(cluster->config());
+
   cass::SessionConnectFuture* connect_future =
       new cass::SessionConnectFuture(session);
+  connect_future->inc_ref();
 
   if (!session->connect_async(std::string(keyspace), connect_future)) {
     connect_future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT,

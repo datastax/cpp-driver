@@ -15,6 +15,7 @@
 */
 
 #include "query_request.hpp"
+
 #include "serialization.hpp"
 
 namespace cass {
@@ -55,6 +56,10 @@ int QueryRequest::encode_v2(BufferVec* bufs) const {
   if (values_count() > 0) { // <values> = <n><value_1>...<value_n>
     query_buf_size += sizeof(uint16_t); // <n> [short]
     flags |= CASS_QUERY_FLAG_VALUES;
+  }
+
+  if (skip_metadata()) {
+    flags |= CASS_QUERY_FLAG_SKIP_METADATA;
   }
 
   if (page_size() > 0) {

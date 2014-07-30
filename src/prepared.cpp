@@ -14,9 +14,10 @@
   limitations under the License.
 */
 
-#include "types.hpp"
 #include "prepared.hpp"
+
 #include "execute_request.hpp"
+#include "types.hpp"
 
 extern "C" {
 

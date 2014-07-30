@@ -26,8 +26,7 @@ class BufferCollection : public RefCounted<BufferCollection> {
 public:
   explicit
   BufferCollection(bool is_map, size_t item_count)
-      : RefCounted<BufferCollection>(1)
-      , is_map_(is_map) {
+      : is_map_(is_map) {
     bufs_.reserve(item_count);
   }
 

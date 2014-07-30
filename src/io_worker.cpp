@@ -15,10 +15,11 @@
 */
 
 #include "io_worker.hpp"
+
 #include "config.hpp"
+#include "logger.hpp"
 #include "pool.hpp"
 #include "request_handler.hpp"
-#include "logger.hpp"
 #include "session.hpp"
 #include "timer.hpp"
 
@@ -164,7 +165,6 @@ void IOWorker::on_retry(RequestHandler* request_handler, RetryType retry_type) {
   if (!request_handler->get_current_host(&host)) {
     request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                               "No hosts available");
-    delete request_handler;
     return;
   }
 
@@ -187,6 +187,7 @@ void IOWorker::on_retry(RequestHandler* request_handler, RetryType retry_type) {
 }
 
 void IOWorker::on_request_finished(RequestHandler* request_handler) {
+  request_handler->dec_ref();
   pending_request_count_--;
   maybe_close();
 }

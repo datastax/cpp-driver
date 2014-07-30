@@ -15,24 +15,24 @@
 */
 
 #include "set_keyspace_handler.hpp"
-#include "request_handler.hpp"
-#include "response.hpp"
-#include "io_worker.hpp"
+
 #include "connection.hpp"
+#include "io_worker.hpp"
 #include "prepare_request.hpp"
 #include "query_request.hpp"
+#include "request_handler.hpp"
+#include "response.hpp"
 #include "result_response.hpp"
 
 namespace cass {
 
-SetKeyspaceHandler::SetKeyspaceHandler(const std::string& keyspace,
-                                       Connection* connection,
-                                       ResponseCallback* response_callback)
+SetKeyspaceHandler::SetKeyspaceHandler(Connection* connection,
+                                       const std::string& keyspace,
+                                       Handler* handler)
     : connection_(connection)
     , request_(new QueryRequest())
-    , response_callback_(response_callback) {
+    , handler_(handler) {
   request_->set_query("use \"" + keyspace + "\"");
-  request_->set_consistency(CASS_CONSISTENCY_ONE);
 }
 
 void SetKeyspaceHandler::on_set(ResponseMessage* response) {
@@ -42,8 +42,8 @@ void SetKeyspaceHandler::on_set(ResponseMessage* response) {
       break;
     case CQL_OPCODE_ERROR:
       connection_->defunct();
-      response_callback_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                                   "Unable to set keyspsace");
+      handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
+                         "Unable to set keyspsace");
       break;
     default:
       break;
@@ -52,24 +52,24 @@ void SetKeyspaceHandler::on_set(ResponseMessage* response) {
 
 void SetKeyspaceHandler::on_error(CassError code, const std::string& message) {
   connection_->defunct();
-  response_callback_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                               "Unable to set keyspsace");
+  handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
+                     "Unable to set keyspsace");
 }
 
 void SetKeyspaceHandler::on_timeout() {
   // TODO(mpenick): What to do here?
-  response_callback_->on_timeout();
+  handler_->on_timeout();
 }
 
 void SetKeyspaceHandler::on_result_response(ResponseMessage* response) {
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
   if (result->kind() == CASS_RESULT_KIND_SET_KEYSPACE) {
-    connection_->execute(response_callback_.release());
+    connection_->execute(handler_.get());
   } else {
     connection_->defunct();
-    response_callback_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                                 "Unable to set keyspsace");
+    handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
+                       "Unable to set keyspsace");
   }
 }
 

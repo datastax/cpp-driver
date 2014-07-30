@@ -20,6 +20,7 @@
 #include "auth.hpp"
 #include "constants.hpp"
 #include "request.hpp"
+#include "scoped_ptr.hpp"
 
 namespace cass {
 

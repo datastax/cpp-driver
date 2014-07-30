@@ -17,9 +17,10 @@
 #ifndef __CASS_STATEMENT_HPP_INCLUDED__
 #define __CASS_STATEMENT_HPP_INCLUDED__
 
-#include "request.hpp"
 #include "buffer.hpp"
 #include "buffer_collection.hpp"
+#include "macros.hpp"
+#include "request.hpp"
 
 #include <vector>
 #include <string>
@@ -44,6 +45,7 @@ public:
       : Request(opcode)
       , consistency_(CASS_CONSISTENCY_ONE)
       , serial_consistency_(CASS_CONSISTENCY_ANY)
+      , skip_metadata_(false)
       , page_size_(-1)
       , kind_(kind) {}
 
@@ -52,6 +54,7 @@ public:
       , values_(value_count)
       , consistency_(CASS_CONSISTENCY_ONE)
       , serial_consistency_(CASS_CONSISTENCY_ANY)
+      , skip_metadata_(false)
       , page_size_(-1)
       , kind_(kind) {}
 
@@ -65,6 +68,14 @@ public:
 
   void set_serial_consistency(int16_t serial_consistency) {
     serial_consistency_ = serial_consistency;
+  }
+
+  void set_skip_metadata(bool skip_metadata) {
+    skip_metadata_ = skip_metadata;
+  }
+
+  bool skip_metadata() const {
+    return skip_metadata_;
   }
 
   int32_t page_size() const { return page_size_; }
@@ -179,9 +190,13 @@ private:
   ValueVec values_;
   int16_t consistency_;
   int16_t serial_consistency_;
+  bool skip_metadata_;
   int32_t page_size_;
   std::string paging_state_;
   uint8_t kind_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(Statement);
 };
 
 } // namespace cass

@@ -15,6 +15,7 @@
 */
 
 #include "error_response.hpp"
+
 #include "serialization.hpp"
 
 namespace cass {

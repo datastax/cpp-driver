@@ -19,6 +19,7 @@
 
 #include "request.hpp"
 #include "constants.hpp"
+#include "scoped_ptr.hpp"
 
 #include <map>
 #include <string>

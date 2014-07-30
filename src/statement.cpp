@@ -14,16 +14,16 @@
   limitations under the License.
 */
 
+#include "statement.hpp"
+
 #include "execute_request.hpp"
+#include "metadata.hpp"
 #include "prepared.hpp"
 #include "query_request.hpp"
 #include "scoped_ptr.hpp"
-#include "statement.hpp"
 #include "types.hpp"
 
 #include "third_party/boost/boost/cstdint.hpp"
-
-#define FIXED_INDICES_SIZE 64
 
 namespace {
 
@@ -140,34 +140,21 @@ namespace {
     const cass::ResultResponse* result
         = static_cast<cass::ExecuteRequest*>(statement)->prepared()->result().get();
 
-    size_t fixed_indices[FIXED_INDICES_SIZE];
-    size_t num_matches
-        = result->find_column_indices(name, fixed_indices, FIXED_INDICES_SIZE);
+    cass::Metadata::IndexVec indices;
+    result->find_column_indices(name, &indices);
     IsValidValueType<T> is_valid_type;
 
-    if (num_matches == 0) {
+    if (indices.empty()) {
       return CASS_ERROR_NAME_DOES_NOT_EXIST;
     }
 
-    if (num_matches <= FIXED_INDICES_SIZE) {
-      for (size_t i = 0; i < num_matches; ++i) {
-        size_t index = fixed_indices[i];
-        if (!is_valid_type(result->column_metadata()[index].type)) {
-          return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
-        }
-        statement->bind(index, value);
+    for (cass::Metadata::IndexVec::const_iterator it = indices.begin(),
+         end = indices.end(); it != end; ++it) {
+      size_t index = *it;
+      if (!is_valid_type(result->metadata()->get(index).type)) {
+        return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
       }
-    } else {
-      // Unlikely case where we exceed our fixed buffer
-      cass::ScopedPtr<size_t[]> indices(new size_t[num_matches]);
-      result->find_column_indices(name, indices.get(), num_matches);
-      for (size_t i = 0; i < num_matches; ++i) {
-        size_t index = indices[i];
-        if (!is_valid_type(result->column_metadata()[index].type)) {
-          return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
-        }
-        statement->bind(index, value);
-      }
+      statement->bind(index, value);
     }
 
     return CASS_OK;

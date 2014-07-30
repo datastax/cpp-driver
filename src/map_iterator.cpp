@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 DataStax
+  Copyright (c) 2014 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,26 +14,29 @@
   limitations under the License.
 */
 
-#ifndef __CASS_RESPONSE_CALLBACK_HPP_INCLUDED__
-#define __CASS_RESPONSE_CALLBACK_HPP_INCLUDED__
-
-#include "cassandra.h"
-#include <string>
+#include "map_iterator.hpp"
 
 namespace cass {
 
-class Request;
-class ResponseMessage;
+char* MapIterator::decode_pair(char* position) {
+  uint16_t size;
 
-class ResponseCallback {
-public:
-  virtual ~ResponseCallback() {}
-  virtual const Request* request() const = 0;
-  virtual void on_set(ResponseMessage* response) = 0;
-  virtual void on_error(CassError code, const std::string& message) = 0;
-  virtual void on_timeout() = 0;
-};
+  position = decode_uint16(position, size);
+  key_ = Value(map_->primary_type(), position, size);
+
+  position = decode_uint16(position + size, size);
+  value_ = Value(map_->secondary_type(), position, size);
+
+  return position + size;
+}
+
+bool MapIterator::next() {
+  if (index_ + 1 >= count_) {
+    return false;
+  }
+  ++index_;
+  position_ = decode_pair(position_);
+  return true;
+}
 
 } // namespace cass
-
-#endif

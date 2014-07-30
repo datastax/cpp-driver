@@ -14,9 +14,12 @@
   limitations under the License.
 */
 
-#include "types.hpp"
 #include "result_response.hpp"
+
+#include "metadata.hpp"
 #include "serialization.hpp"
+#include "types.hpp"
+
 
 extern "C" {
 
@@ -41,9 +44,10 @@ size_t cass_result_column_count(const CassResult* result) {
 CassString cass_result_column_name(const CassResult* result, size_t index) {
   CassString str;
   if (result->kind() == CASS_RESULT_KIND_ROWS &&
-      index < result->column_metadata().size()) {
-    str.data = result->column_metadata()[index].name;
-    str.length = result->column_metadata()[index].name_size;
+      index < result->metadata()->column_count()) {
+    const cass::ColumnDefinition def = result->metadata()->get(index);
+    str.data = def.name;
+    str.length = def.name_size;
   } else {
     str.data = "";
     str.length = 0;
@@ -53,8 +57,8 @@ CassString cass_result_column_name(const CassResult* result, size_t index) {
 
 CassValueType cass_result_column_type(const CassResult* result, size_t index) {
   if (result->kind() == CASS_RESULT_KIND_ROWS &&
-      index < result->column_metadata().size()) {
-    return static_cast<CassValueType>(result->column_metadata()[index].type);
+      index < result->metadata()->column_count()) {
+    return static_cast<CassValueType>(result->metadata()->get(index).type);
   }
   return CASS_VALUE_TYPE_UNKNOWN;
 }
@@ -74,41 +78,9 @@ cass_bool_t cass_result_has_more_pages(const CassResult* result) {
 
 namespace cass {
 
-size_t ResultResponse::find_column_indices(const std::string& name,
-                                           size_t* result,
-                                           size_t result_size) const {
-  bool is_case_sensitive = false;
-  ColumnMetadataIndex::const_iterator index_it;
-
-  if (name.size() > 0 && name.front() == '"' && name.back() == '"') {
-    is_case_sensitive = true;
-    std::string sub = name.substr(1, name.size() - 2);
-    index_it = column_metadata_index_.find(sub);
-  } else {
-    index_it = column_metadata_index_.find(name);
-  }
-
-  const ColumnIndexVec& indices = index_it->second;
-  if (!is_case_sensitive || index_it == column_metadata_index_.end()) {
-    std::copy_n(indices.begin(), std::min(indices.size(), result_size), result);
-    return index_it->second.size();
-  }
-
-  size_t num_matches = 0;
-  const size_t name_size = name.size() - 2;
-
-  for (ColumnIndexVec::const_iterator it = indices.begin(),
-       end = indices.end(); it != end; ++it) {
-    const ColumnMetadata& cm = column_metadata_[*it];
-    if (name.compare(1, name_size, cm.name, cm.class_name_size)) {
-      if (num_matches < result_size) {
-        result[num_matches] = *it;
-      }
-      num_matches++;
-    }
-  }
-
-  return num_matches;
+size_t ResultResponse::find_column_indices(boost::string_ref name,
+                                           Metadata::IndexVec* result) const {
+  return metadata_->get(name, result);
 }
 
 bool ResultResponse::decode(int version, char* input, size_t size) {
@@ -125,7 +97,7 @@ bool ResultResponse::decode(int version, char* input, size_t size) {
       return decode_set_keyspace(buffer);
       break;
     case CASS_RESULT_KIND_PREPARED:
-      return decode_prepared(buffer);
+      return decode_prepared(version, buffer);
       break;
     case CASS_RESULT_KIND_SCHEMA_CHANGE:
       return decode_schema_change(buffer);
@@ -136,10 +108,12 @@ bool ResultResponse::decode(int version, char* input, size_t size) {
   return false;
 }
 
-char* ResultResponse::decode_metadata(char* input) {
+char* ResultResponse::decode_metadata(char* input, ScopedRefPtr<Metadata>* metadata) {
   int32_t flags = 0;
   char* buffer = decode_int32(input, flags);
-  buffer = decode_int32(buffer, column_count_);
+
+  int32_t column_count = 0;
+  buffer = decode_int32(buffer, column_count);
 
   if (flags & CASS_RESULT_FLAG_HAS_MORE_PAGES) {
     has_more_pages_ = true;
@@ -148,66 +122,60 @@ char* ResultResponse::decode_metadata(char* input) {
     has_more_pages_ = false;
   }
 
-  if (flags & CASS_RESULT_FLAG_GLOBAL_TABLESPEC) {
-    global_table_spec_ = true;
-    buffer = decode_string(buffer, &keyspace_, keyspace_size_);
-    buffer = decode_string(buffer, &table_, table_size_);
-  } else {
-    global_table_spec_ = false;
-  }
+  if (!(flags & CASS_RESULT_FLAG_NO_METADATA)) {
+    bool global_table_spec = flags & CASS_RESULT_FLAG_GLOBAL_TABLESPEC;
 
-  if (flags & CASS_RESULT_FLAG_NO_METADATA) {
-    no_metadata_ = true;
-  } else {
-    no_metadata_ = false;
-    column_metadata_.reserve(column_count_);
-
-    for (int i = 0; i < column_count_; ++i) {
-      ColumnMetadata meta;
-
-      if (!global_table_spec_) {
-        buffer = decode_string(buffer, &meta.keyspace, meta.keyspace_size);
-        buffer = decode_string(buffer, &meta.table, meta.table_size);
-      }
-
-      buffer = decode_string(buffer, &meta.name, meta.name_size);
-      buffer = decode_option(buffer, meta.type, &meta.class_name,
-                             meta.class_name_size);
-
-      if (meta.type == CASS_VALUE_TYPE_SET ||
-          meta.type == CASS_VALUE_TYPE_LIST ||
-          meta.type == CASS_VALUE_TYPE_MAP) {
-        buffer = decode_option(buffer, meta.collection_primary_type,
-                               &meta.collection_primary_class,
-                               meta.collection_primary_class_size);
-      }
-
-      if (meta.type == CASS_VALUE_TYPE_MAP) {
-        buffer = decode_option(buffer, meta.collection_secondary_type,
-                               &meta.collection_secondary_class,
-                               meta.collection_secondary_class_size);
-      }
-
-      column_metadata_.push_back(meta);
+    if (global_table_spec) {
+      buffer = decode_string(buffer, &keyspace_, keyspace_size_);
+      buffer = decode_string(buffer, &table_, table_size_);
     }
 
-    // Build index by column name
-    for (size_t i = 0; i < column_metadata_.size(); ++i) {
-      ColumnMetadata& metadata = column_metadata_[i];
-      std::string name(metadata.name, metadata.name_size);
-      column_metadata_index_[name].push_back(i);
+    metadata->reset(new Metadata(column_count));
+
+    for (int i = 0; i < column_count; ++i) {
+      ColumnDefinition def;
+
+      def.index = i;
+
+      if (!global_table_spec) {
+        buffer = decode_string(buffer, &def.keyspace, def.keyspace_size);
+        buffer = decode_string(buffer, &def.table, def.table_size);
+      }
+
+      buffer = decode_string(buffer, &def.name, def.name_size);
+      buffer = decode_option(buffer, def.type, &def.class_name,
+                             def.class_name_size);
+
+      if (def.type == CASS_VALUE_TYPE_SET ||
+          def.type == CASS_VALUE_TYPE_LIST ||
+          def.type == CASS_VALUE_TYPE_MAP) {
+        buffer = decode_option(buffer, def.collection_primary_type,
+                               &def.collection_primary_class,
+                               def.collection_primary_class_size);
+      }
+
+      if (def.type == CASS_VALUE_TYPE_MAP) {
+        buffer = decode_option(buffer, def.collection_secondary_type,
+                               &def.collection_secondary_class,
+                               def.collection_secondary_class_size);
+      }
+
+      (*metadata)->insert(def);
     }
   }
   return buffer;
 }
 
-bool ResultResponse::decode_rows(char* input) {
-  char* buffer = decode_metadata(input);
-  rows_ = decode_int32(buffer, row_count_);
+void ResultResponse::decode_first_row() {
   if (row_count_ > 0) {
-    first_row_.values.reserve(column_count_);
+    first_row_.values.reserve(column_count());
     rows_ = decode_row(rows_, this, first_row_.values);
   }
+}
+
+bool ResultResponse::decode_rows(char* input) {
+  char* buffer = decode_metadata(input, &metadata_);
+  rows_ = decode_int32(buffer, row_count_);
   return true;
 }
 
@@ -216,9 +184,12 @@ bool ResultResponse::decode_set_keyspace(char* input) {
   return true;
 }
 
-bool ResultResponse::decode_prepared(char* input) {
+bool ResultResponse::decode_prepared(int version, char* input) {
   char* buffer = decode_string(input, &prepared_, prepared_size_);
-  decode_metadata(buffer);
+  buffer = decode_metadata(buffer, &metadata_);
+  if (version > 1) {
+    decode_metadata(buffer, &result_metadata_);
+  }
   return true;
 }
 

@@ -18,9 +18,12 @@
 #define __CASS_RESULT_RESPONSE_HPP_INCLUDED__
 
 #include "constants.hpp"
-#include "column_metadata.hpp"
+#include "macros.hpp"
+#include "metadata.hpp"
 #include "response.hpp"
 #include "row.hpp"
+
+#include "third_party/boost/boost/utility/string_ref.hpp"
 
 #include <map>
 #include <string>
@@ -36,9 +39,6 @@ public:
       : Response(CQL_OPCODE_RESULT)
       , kind_(0)
       , has_more_pages_(false)
-      , no_metadata_(false)
-      , global_table_spec_(true)
-      , column_count_(0)
       , paging_state_(NULL)
       , paging_state_size_(0)
       , prepared_(NULL)
@@ -57,9 +57,17 @@ public:
 
   bool has_more_pages() const { return has_more_pages_; }
 
-  int32_t column_count() const { return column_count_; }
+  int32_t column_count() const { return metadata_->column_count(); }
 
-  const ColumnMetadataVec& column_metadata() const { return column_metadata_; }
+  bool no_metadata() const { return !metadata_; }
+
+  const ScopedRefPtr<Metadata>& metadata() const { return metadata_; }
+
+  void set_metadata(Metadata* metadata) {
+    metadata_.reset(metadata);
+  }
+
+  const ScopedRefPtr<Metadata>& result_metadata() const { return result_metadata_; }
 
   std::string paging_state() const {
     return std::string(paging_state_, paging_state_size_);
@@ -79,31 +87,29 @@ public:
 
   const Row& first_row() const { return first_row_; }
 
-  size_t find_column_indices(const std::string& name,
-                             size_t* result,
-                             size_t result_size) const;
+  size_t find_column_indices(boost::string_ref name,
+                             Metadata::IndexVec* result) const;
 
   bool decode(int version, char* input, size_t size);
 
+  void decode_first_row();
+
 private:
-  char* decode_metadata(char* input);
+  char* decode_metadata(char* input, ScopedRefPtr<Metadata>* metadata);
 
   bool decode_rows(char* input);
 
   bool decode_set_keyspace(char* input);
 
-  bool decode_prepared(char* input);
+  bool decode_prepared(int version, char* input);
 
   bool decode_schema_change(char* input);
 
 private:
   int32_t kind_;
   bool has_more_pages_; // row data
-  bool no_metadata_;
-  bool global_table_spec_;
-  int32_t column_count_;
-  ColumnMetadataVec column_metadata_;
-  ColumnMetadataIndex column_metadata_index_;
+  ScopedRefPtr<Metadata> metadata_;
+  ScopedRefPtr<Metadata> result_metadata_;
   char* paging_state_; // row paging
   size_t paging_state_size_;
   char* prepared_; // prepared result
@@ -117,6 +123,9 @@ private:
   int32_t row_count_;
   char* rows_;
   Row first_row_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(ResultResponse);
 };
 
 } // namespace cass

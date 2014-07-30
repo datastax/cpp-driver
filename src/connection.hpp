@@ -19,14 +19,14 @@
 
 #include "cassandra.h"
 #include "buffer.hpp"
-#include "response_callback.hpp"
+#include "handler.hpp"
 #include "macros.hpp"
 #include "host.hpp"
 #include "stream_manager.hpp"
 #include "list.hpp"
 #include "scoped_ptr.hpp"
 #include "ref_counted.hpp"
-#include "writer.hpp"
+#include "response.hpp"
 
 #include "third_party/boost/boost/function.hpp"
 
@@ -36,7 +36,6 @@ namespace cass {
 
 class AuthProvider;
 class AuthResponseRequest;
-class ResponseMessage;
 class Connecter;
 class Timer;
 class Config;
@@ -45,11 +44,16 @@ class Request;
 
 class Connection {
 public:
-  class StartupHandler : public ResponseCallback {
+  class StartupHandler : public Handler {
   public:
-    StartupHandler(Connection* connection, Request* request);
+    StartupHandler(Connection* connection, Request* request)
+        : connection_(connection)
+        , request_(request) {}
 
-    virtual const Request* request() const;
+    const Request* request() const {
+      return request_.get();
+    }
+
     virtual void on_set(ResponseMessage* response);
     virtual void on_error(CassError code, const std::string& message);
     virtual void on_timeout();
@@ -59,52 +63,6 @@ public:
 
     Connection* connection_;
     ScopedRefPtr<Request> request_;
-  };
-
-  struct InternalRequest : public List<InternalRequest>::Node {
-    enum State {
-      REQUEST_STATE_NEW,
-      REQUEST_STATE_WRITING,
-      REQUEST_STATE_READING,
-      REQUEST_STATE_WRITE_TIMEOUT,
-      REQUEST_STATE_READ_TIMEOUT,
-      REQUEST_STATE_READ_BEFORE_WRITE,
-      REQUEST_STATE_WRITE_TIMEOUT_BEFORE_READ,
-      REQUEST_STATE_DONE
-    };
-
-    InternalRequest(Connection* connection);
-
-    void set_stream(int8_t stream) {
-      stream_ = stream;
-    }
-
-    void set_response_callback(ResponseCallback* response_callback) {
-      response_callback_.reset(response_callback);
-    }
-
-    void on_set(ResponseMessage* response);
-    void on_error(CassError code, const std::string& message);
-    void on_timeout();
-
-    State state() const { return state_; }
-
-    void change_state(State next_state);
-
-    void stop_timer();
-
-    Connection* connection;
-
-  private:
-    void cleanup();
-    void on_result_response(ResponseMessage* response);
-    static void on_request_timeout(Timer* timer);
-
-  private:
-    int8_t stream_;
-    ScopedPtr<ResponseCallback> response_callback_;
-    Timer* timer_;
-    State state_;
   };
 
   typedef boost::function1<void, Connection*> Callback;
@@ -137,7 +95,9 @@ public:
 
   void connect();
 
-  bool execute(ResponseCallback* response_callback);
+  bool execute(Handler* request);
+
+  const Config& config() const { return config_; }
 
   const std::string& keyspace() { return keyspace_; }
 
@@ -156,20 +116,19 @@ public:
 
   size_t available_streams() { return stream_manager_.available_streams(); }
   size_t pending_request_count() { return pending_requests_.size(); }
-  bool has_requests_pending() {
-    return pending_requests_.size() - timed_out_request_count_ > 0;
-  }
+
+  void on_write(RequestWriter* writer);
+  void on_timeout(RequestTimer* timer);
 
 private:
   void actually_close();
-  void write(BufferVec* bufs, InternalRequest* request);
   void consume(char* input, size_t size);
+  void maybe_set_keyspace(ResponseMessage* response);
 
   static void on_connect(Connecter* connecter);
   static void on_connect_timeout(Timer* timer);
   static void on_close(uv_handle_t* handle);
   static void on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf);
-  static void on_write(Writer* writer);
 
   void on_connected();
   void on_authenticate();
@@ -190,12 +149,11 @@ private:
   bool is_defunct_;
   bool is_invalid_protocol_;
 
-  List<InternalRequest> pending_requests_;
-  int timed_out_request_count_;
+  List<Handler> pending_requests_;
 
   uv_loop_t* loop_;
   ScopedPtr<ResponseMessage> response_;
-  StreamManager<InternalRequest*> stream_manager_;
+  StreamManager<Handler*> stream_manager_;
 
   Callback ready_callback_;
   Callback closed_callback_;

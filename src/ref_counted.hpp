@@ -17,18 +17,21 @@
 #ifndef __CASS_REF_COUNTED_HPP_INCLUDED__
 #define __CASS_REF_COUNTED_HPP_INCLUDED__
 
+#include "macros.hpp"
+
 #include "third_party/boost/boost/atomic.hpp"
-#include "scoped_ptr.hpp"
 
 #include <assert.h>
 
 namespace cass {
 
+struct RefCountedBase {};
+
 template <class T>
-class RefCounted {
+class RefCounted : public RefCountedBase {
 public:
-  explicit RefCounted(int init_count = 0)
-      : ref_count_(init_count) {}
+  explicit RefCounted()
+      : ref_count_(0) {}
 
   void inc_ref() const { ++ref_count_; }
 

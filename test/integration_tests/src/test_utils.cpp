@@ -53,6 +53,18 @@ const char* CREATE_TABLE_SIMPLE =
   "id int PRIMARY KEY,"
   "test_val text);";
 
+void count_message_log_callback(cass_uint64_t time,
+                              CassLogLevel severity,
+                              CassString message,
+                              void* data) {
+  LogData* log_data = reinterpret_cast<LogData*>(data);
+  std::string str(message.data, message.length);
+  fprintf(stderr, "Log message: %s\n", str.c_str());
+  if (str.find(log_data->message) != std::string::npos) {
+    log_data->message_count++;
+  }
+}
+
 const char* get_value_type(CassValueType type) {
   switch(type) {
     case CASS_VALUE_TYPE_CUSTOM: return "custom";
@@ -109,8 +121,7 @@ MultipleNodesTest::MultipleNodesTest(int num_nodes_dc1, int num_nodes_dc2, int p
   initialize_contact_points(cluster, conf.ip_prefix(), num_nodes_dc1, num_nodes_dc2);
 
   cass_cluster_set_connect_timeout(cluster, 10000);
-  cass_cluster_set_write_timeout(cluster, 10000);
-  cass_cluster_set_read_timeout(cluster, 10000);
+  cass_cluster_set_request_timeout(cluster, 10000);
   cass_cluster_set_num_threads_io(cluster, 2);
   cass_cluster_set_protocol_version(cluster, protocol_version);
 }

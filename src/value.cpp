@@ -14,8 +14,9 @@
   limitations under the License.
 */
 
-#include "types.hpp"
 #include "value.hpp"
+
+#include "types.hpp"
 
 extern "C" {
 

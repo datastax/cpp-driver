@@ -454,30 +454,19 @@ cass_cluster_set_max_simultaneous_requests_threshold(CassCluster* cluster,
 CASS_EXPORT CassError
 cass_cluster_set_connect_timeout(CassCluster* cluster,
                                  unsigned timeout);
-/**
- * Sets the timeout for sending a request to a  node.
- *
- * Default: 1000 milliseconds
- *
- * @param[in] cluster
- * @param[in] timeout Write timeout in milliseconds
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_cluster_set_write_timeout(CassCluster* cluster,
-                               unsigned timeout);
+
 /**
  * Sets the timeout for waiting for a response from a node.
  *
  * Default: 12000 milliseconds
  *
  * @param[in] cluster
- * @param[in] timeout Read timeout in milliseconds
+ * @param[in] timeout Request timeout in milliseconds
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_read_timeout(CassCluster* cluster,
-                              unsigned timeout);
+cass_cluster_set_request_timeout(CassCluster* cluster,
+                                 unsigned timeout);
 
 /**
  * Sets the log level.
@@ -1513,12 +1502,26 @@ cass_iterator_from_row(const CassRow* row);
  * used to iterate over values in a collection.
  *
  * @param[in] value
- * @return A new iterator that must be freed.
+ * @return A new iterator that must be freed. NULL returned if the
+ * value is not a collection.
  *
  * @see cass_iterator_free()
  */
 CASS_EXPORT CassIterator*
 cass_iterator_from_collection(const CassValue* value);
+
+/**
+ * Creates a new iterator for the specified map. This can be
+ * used to iterate over key/value pairs in a map.
+ *
+ * @param[in] value
+ * @return A new iterator that must be freed. NULL returned if the
+ * value is not a map.
+ *
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_from_map(const CassValue* value);
 
 /**
  * Frees an iterator instance.
@@ -1553,13 +1556,25 @@ cass_iterator_get_row(CassIterator* iterator);
  * Gets the column value at the row iterator's current position.
  *
  * Calling cass_iterator_next() will invalidate the previous
- * value returned by this method.
+ * column returned by this method.
  *
  * @param[in] iterator
  * @return A value
  */
 CASS_EXPORT const CassValue*
 cass_iterator_get_column(CassIterator* iterator);
+
+/**
+ * Gets the value at the collection iterator's current position.
+ *
+ * Calling cass_iterator_next() will invalidate the previous
+ * key returned by this method.
+ *
+ * @param[in] iterator
+ * @return A value
+ */
+CASS_EXPORT const CassValue*
+cass_iterator_get_value(CassIterator* iterator);
 
 /**
  * Gets the value at the collection iterator's current position.
@@ -1572,6 +1587,31 @@ cass_iterator_get_column(CassIterator* iterator);
  */
 CASS_EXPORT const CassValue*
 cass_iterator_get_value(CassIterator* iterator);
+
+/**
+ * Gets the key at the map iterator's current position.
+ *
+ * Calling cass_iterator_next() will invalidate the previous
+ * value returned by this method.
+ *
+ * @param[in] iterator
+ * @return A value
+ */
+CASS_EXPORT const CassValue*
+cass_iterator_get_map_key(CassIterator* iterator);
+
+
+/**
+ * Gets the value at the map iterator's current position.
+ *
+ * Calling cass_iterator_next() will invalidate the previous
+ * value returned by this method.
+ *
+ * @param[in] iterator
+ * @return A value
+ */
+CASS_EXPORT const CassValue*
+cass_iterator_get_map_value(CassIterator* iterator);
 
 
 /***********************************************************************************

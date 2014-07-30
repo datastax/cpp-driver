@@ -15,10 +15,12 @@
 */
 
 #include "batch_request.hpp"
-#include "types.hpp"
+
+#include "execute_request.hpp"
 #include "serialization.hpp"
 #include "statement.hpp"
-#include "execute_request.hpp"
+#include "types.hpp"
+
 
 extern "C" {
 

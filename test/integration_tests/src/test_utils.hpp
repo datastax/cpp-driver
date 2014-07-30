@@ -7,6 +7,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/chrono.hpp>
+#include <boost/atomic.hpp>
 
 #include "cassandra.h"
 
@@ -31,6 +32,20 @@ namespace test_utils {
 
 extern const cass_duration_t ONE_MILLISECOND_IN_MICROS;
 extern const cass_duration_t ONE_SECOND_IN_MICROS;
+
+struct LogData {
+  LogData(const std::string& message)
+    : message(message)
+    , message_count(0) {}
+
+  const std::string message;
+  boost::atomic<int> message_count;
+};
+
+void count_message_log_callback(cass_uint64_t time,
+                              CassLogLevel severity,
+                              CassString message,
+                              void* data);
 
 template<class T>
 struct Deleter;
@@ -439,8 +454,8 @@ const char* get_value_type(CassValueType type);
 
 CassError execute_query_with_error(CassSession* session,
                                   const std::string& query,
-                                  CassResultPtr* result,
-                                  CassConsistency consistency);
+                                  CassResultPtr* result = NULL,
+                                  CassConsistency consistency = CASS_CONSISTENCY_ONE);
 
 void execute_query(CassSession* session,
                    const std::string& query,
