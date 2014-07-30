@@ -51,7 +51,7 @@ public:
       : timer(NULL)
       , request_(request)
       , future_(new ResponseFuture()) {
-    future_->retain();
+    future_->inc_ref();
   }
 
   virtual const Request* request() const { return request_.get(); }

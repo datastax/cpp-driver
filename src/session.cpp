@@ -69,7 +69,7 @@ Session::Session(const Config& config)
 Session::~Session() {
   uv_mutex_destroy(&keyspace_mutex_);
   if (connect_future_ != NULL) {
-    connect_future_->release();
+    connect_future_->dec_ref();
   }
   for (IOWorkerVec::iterator it = io_workers_.begin(), end = io_workers_.end();
        it != end; ++it) {
@@ -122,7 +122,7 @@ bool Session::connect_async(const std::string& keyspace, Future* future) {
   }
 
   connect_future_ = future;
-  connect_future_->retain();
+  connect_future_->inc_ref();
 
   run();
 
@@ -132,7 +132,7 @@ bool Session::connect_async(const std::string& keyspace, Future* future) {
 void Session::close_async(Future* future) {
   close_future_ = future;
   if (close_future_ != NULL) {
-    close_future_->retain();
+    close_future_->inc_ref();
   }
   while (!request_queue_->enqueue(NULL)) {
     // Keep trying

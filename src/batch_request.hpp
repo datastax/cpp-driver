@@ -18,8 +18,9 @@
 #define __CASS_BATCH_REQUEST_HPP_INCLUDED__
 
 #include "cassandra.h"
-#include "request.hpp"
 #include "constants.hpp"
+#include "request.hpp"
+#include "ref_counted.hpp"
 
 #include <list>
 #include <map>
@@ -32,14 +33,12 @@ class ExecuteRequest;
 
 class BatchRequest : public Request {
 public:
-  typedef std::list<Statement*> StatementList;
+  typedef std::list<SharedRefPtr<Statement> > StatementList;
 
   BatchRequest(uint8_t type_)
       : Request(CQL_OPCODE_BATCH)
       , type_(type_)
       , consistency_(CASS_CONSISTENCY_ONE) {}
-
-  ~BatchRequest();
 
   uint8_t type() const { return type_; }
 

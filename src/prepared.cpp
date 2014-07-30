@@ -21,13 +21,13 @@
 extern "C" {
 
 void cass_prepared_free(const CassPrepared* prepared) {
-  prepared->release();
+  prepared->dec_ref();
 }
 
 CassStatement* cass_prepared_bind(const CassPrepared* prepared) {
   cass::ExecuteRequest* execute
       = new cass::ExecuteRequest(prepared);
-  execute->retain();
+  execute->inc_ref();
   return CassStatement::to(execute);
 }
 

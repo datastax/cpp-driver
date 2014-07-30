@@ -25,7 +25,7 @@ extern "C" {
 void cass_future_free(CassFuture* future) {
   // Futures can be deleted without being waited on
   // because they'll be cleaned up by the notifying thread
-  future->release();
+  future->dec_ref();
 }
 
 CassError cass_future_set_callback(CassFuture* future,
@@ -153,11 +153,11 @@ void Future::internal_set(ScopedMutex& lock) {
       run_callback_on_work_thread();
     }
   }
-  release();
+  dec_ref();
 }
 
 void Future::run_callback_on_work_thread() {
-  retain(); // Keep the future alive for the callback
+  inc_ref(); // Keep the future alive for the callback
   work_.data = this;
   uv_queue_work(loop_, &work_, on_work, NULL);
 }
@@ -171,7 +171,7 @@ void Future::on_work(uv_work_t* work) {
   lock.unlock();
 
   callback(CassFuture::to(future), data);
-  future->release();
+  future->dec_ref();
 }
 
 } // namespace cass

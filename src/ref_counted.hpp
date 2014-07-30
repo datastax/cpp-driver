@@ -30,9 +30,9 @@ public:
   explicit RefCounted(int init_count = 0)
       : ref_count_(init_count) {}
 
-  void retain() const { ++ref_count_; }
+  void inc_ref() const { ++ref_count_; }
 
-  void release() const {
+  void dec_ref() const {
     int new_ref_count = --ref_count_;
     assert(new_ref_count >= 0);
     if (new_ref_count == 0) {
@@ -51,7 +51,7 @@ public:
   explicit SharedRefPtr(T* ptr = NULL)
        : ptr_(ptr) {
     if (ptr_ != NULL) {
-      ptr_->retain();
+      ptr_->inc_ref();
     }
   }
 
@@ -79,7 +79,7 @@ public:
 
   ~SharedRefPtr() {
     if (ptr_ != NULL) {
-      ptr_->release();
+      ptr_->dec_ref();
     }
   }
 
@@ -96,12 +96,12 @@ private:
   template<class S>
   void copy(S* ptr) {
     if (ptr != NULL) {
-      ptr->retain();
+      ptr->inc_ref();
     }
     T* temp = ptr_;
     ptr_ = static_cast<S*>(ptr);
     if (temp != NULL) {
-      temp->release();
+      temp->dec_ref();
     }
   }
 
@@ -116,24 +116,24 @@ public:
   explicit ScopedRefPtr(type* ptr = NULL)
        : ptr_(ptr) {
     if (ptr_ != NULL) {
-      ptr_->retain();
+      ptr_->inc_ref();
     }
   }
 
   ~ScopedRefPtr() {
     if (ptr_ != NULL) {
-      ptr_->release();
+      ptr_->dec_ref();
     }
   }
 
   void reset(type* ptr = NULL) {
     if (ptr != NULL) {
-      ptr->retain();
+      ptr->inc_ref();
     }
     type* temp = ptr_;
     ptr_ = ptr;
     if (temp != NULL) {
-      temp->release();
+      temp->dec_ref();
     }
   }
 

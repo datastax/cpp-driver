@@ -24,12 +24,12 @@ extern "C" {
 
 CassBatch* cass_batch_new(CassBatchType type) {
   cass::BatchRequest* batch = new cass::BatchRequest(type);
-  batch->retain();
+  batch->inc_ref();
   return CassBatch::to(batch);
 }
 
 void cass_batch_free(CassBatch* batch) {
-  batch->release();
+  batch->dec_ref();
 }
 
 CassError cass_batch_set_consistency(CassBatch* batch,
@@ -75,7 +75,7 @@ int BatchRequest::encode_v2(BufferVec* bufs) const {
        it = statements_.begin(),
        end = statements_.end();
        it != end; ++it) {
-    const Statement* statement = *it;
+    const SharedRefPtr<Statement>& statement = *it;
 
     // <kind> [byte]
     int buf_size = sizeof(uint8_t);
@@ -122,21 +122,12 @@ int BatchRequest::encode_v2(BufferVec* bufs) const {
   return length;
 }
 
-BatchRequest::~BatchRequest() {
-  for (StatementList::iterator it = statements_.begin(),
-                               end = statements_.end();
-       it != end; ++it) {
-    (*it)->release();
-  }
-}
-
 void BatchRequest::add_statement(Statement* statement) {
   if (statement->kind() == 1) {
     ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(statement);
     prepared_statements_[execute_request->query()] = execute_request;
   }
-  statement->retain();
-  statements_.push_back(statement);
+  statements_.push_back(SharedRefPtr<Statement>(statement));
 }
 
 bool BatchRequest::prepared_statement(const std::string& id,

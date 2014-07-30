@@ -986,6 +986,9 @@ cass_statement_bind_collection(CassStatement* statement,
 /**
  * Binds an "int" to all the values with the specified name.
  *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
+ *
  * @param[in] statement
  * @param[in] name
  * @param[in] value
@@ -1000,6 +1003,9 @@ cass_statement_bind_int32_by_name(CassStatement* statement,
  * Binds a "bigint", "counter" or "timestamp" to all values
  * with the specified name.
  *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
+ *
  * @param[in] statement
  * @param[in] name
  * @param[in] value
@@ -1012,6 +1018,9 @@ cass_statement_bind_int64_by_name(CassStatement* statement,
 
 /**
  * Binds a "float" to all the values with the specified name.
+ *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
  *
  * @param[in] statement
  * @param[in] name
@@ -1026,6 +1035,9 @@ cass_statement_bind_float_by_name(CassStatement* statement,
 /**
  * Binds a "double" to all the values with the specified name.
  *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
+ *
  * @param[in] statement
  * @param[in] name
  * @param[in] value
@@ -1038,6 +1050,9 @@ cass_statement_bind_double_by_name(CassStatement* statement,
 
 /**
  * Binds a "boolean" to all the values with the specified name.
+ *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
  *
  * @param[in] statement
  * @param[in] name
@@ -1052,6 +1067,9 @@ cass_statement_bind_bool_by_name(CassStatement* statement,
 /**
  * Binds a "ascii", "text" or "varchar" to all the values
  * with the specified name.
+ *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
  *
  * @param[in] statement
  * @param[in] name
@@ -1068,6 +1086,9 @@ cass_statement_bind_string_by_name(CassStatement* statement,
  * Binds a "blob" or "varint" to all the values with the
  * specified name.
  *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
+ *
  * @param[in] statement
  * @param[in] name
  * @param[in] value The value is copied into the statement object; the
@@ -1083,6 +1104,9 @@ cass_statement_bind_bytes_by_name(CassStatement* statement,
  * Binds a "uuid" or "timeuuid" to all the values
  * with the specified name.
  *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
+ *
  * @param[in] statement
  * @param[in] name
  * @param[in] value
@@ -1096,6 +1120,9 @@ cass_statement_bind_uuid_by_name(CassStatement* statement,
 /**
  * Binds an "inet" to all the values with the specified name.
  *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
+ *
  * @param[in] statement
  * @param[in] name
  * @param[in] value
@@ -1108,6 +1135,9 @@ cass_statement_bind_inet_by_name(CassStatement* statement,
 
 /**
  * Binds a "decimal" to all the values with the specified name.
+ *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
  *
  * @param[in] statement
  * @param[in] name
@@ -1125,6 +1155,9 @@ cass_statement_bind_decimal_by_name(CassStatement* statement,
  * can be copied into the resulting output buffer. This is normally reserved for
  * large values to avoid extra memory copies.
  *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
+ *
  * @param[in] statement
  * @param[in] name
  * @param[in] size
@@ -1140,6 +1173,9 @@ cass_statement_bind_custom_by_name(CassStatement* statement,
 /**
  * Bind a "list", "map", or "set" to all the values with the
  * specified name.
+ *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
  *
  * @param[in] statement
  * @param[in] name
@@ -1374,6 +1410,9 @@ cass_collection_append_decimal(CassCollection* collection,
 /**
  * Frees a result instance.
  *
+ * This method invalidates all values, rows, and
+ * iterators that were dervied from this result.
+ *
  * @param[in] result
  */
 CASS_EXPORT void
@@ -1501,6 +1540,9 @@ cass_iterator_next(CassIterator* iterator);
 /**
  * Gets the row at the result iterator's current position.
  *
+ * Calling cass_iterator_next() will invalidate the previous
+ * row returned by this method.
+ *
  * @param[in] iterator
  * @return A row
  */
@@ -1510,6 +1552,9 @@ cass_iterator_get_row(CassIterator* iterator);
 /**
  * Gets the column value at the row iterator's current position.
  *
+ * Calling cass_iterator_next() will invalidate the previous
+ * value returned by this method.
+ *
  * @param[in] iterator
  * @return A value
  */
@@ -1518,6 +1563,9 @@ cass_iterator_get_column(CassIterator* iterator);
 
 /**
  * Gets the value at the collection iterator's current position.
+ *
+ * Calling cass_iterator_next() will invalidate the previous
+ * value returned by this method.
  *
  * @param[in] iterator
  * @return A value

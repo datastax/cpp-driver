@@ -179,13 +179,13 @@ extern "C" {
 
 CassStatement* cass_statement_new(CassString query, size_t parameter_count) {
   cass::QueryRequest* query_request = new cass::QueryRequest(parameter_count);
-  query_request->retain();
+  query_request->inc_ref();
   query_request->set_query(query.data, query.length);
   return CassStatement::to(query_request);
 }
 
 void cass_statement_free(CassStatement* statement) {
-  statement->release();
+  statement->dec_ref();
 }
 
 CassError cass_statement_set_consistency(CassStatement* statement,

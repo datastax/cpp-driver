@@ -26,7 +26,7 @@ CassCollection* cass_collection_new(CassCollectionType type, size_t element_coun
 }
 
 void cass_collection_free(CassCollection* collection) {
-  collection->release();
+  collection->dec_ref();
 }
 
 CassError cass_collection_append_int32(CassCollection* collection,
