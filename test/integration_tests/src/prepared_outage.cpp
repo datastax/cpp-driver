@@ -18,11 +18,11 @@
 #include "test_utils.hpp"
 
 struct PreparedOutageTests : public test_utils::SingleSessionTest {
-    PreparedOutageTests() : SingleSessionTest(2, 0) {
-      test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                                   % test_utils::SIMPLE_KEYSPACE % "1"));
-      test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
-    }
+  PreparedOutageTests() : SingleSessionTest(2, 0) {
+    test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
+                                           % test_utils::SIMPLE_KEYSPACE % "1"));
+    test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+  }
 };
 
 BOOST_FIXTURE_TEST_SUITE(prepared_outage, PreparedOutageTests)
@@ -39,17 +39,17 @@ BOOST_AUTO_TEST_CASE(test_reprepared_on_new_node)
 
 
   std::string select_query = str(boost::format("SELECT * FROM %s WHERE key = ?;") % table_name);
-  test_utils::CassFuturePtr prepared_future = test_utils::make_shared(cass_session_prepare(session,
-                                                                                           cass_string_init2(select_query.data(), select_query.size())));
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
+                                                                 cass_string_init2(select_query.data(), select_query.size())));
   test_utils::wait_and_check_error(prepared_future.get());
-  test_utils::CassPreparedPtr prepared = test_utils::make_shared(cass_future_get_prepared(prepared_future.get()));
+  test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
   {
-    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared.get()));
+    test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
     BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 0, cass_string_init("123")) == CASS_OK);
-    test_utils::CassFuturePtr future = test_utils::make_shared(cass_session_execute(session, statement.get()));
+    test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());
-    test_utils::CassResultPtr result = test_utils::make_shared(cass_future_get_result(future.get()));
+    test_utils::CassResultPtr result(cass_future_get_result(future.get()));
     BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
     BOOST_REQUIRE(cass_result_column_count(result.get()) == 2);
 
@@ -66,11 +66,11 @@ BOOST_AUTO_TEST_CASE(test_reprepared_on_new_node)
   boost::this_thread::sleep_for(boost::chrono::seconds(10));
 
   for(int i = 0; i < 10; ++i){
-    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_prepared_bind(prepared.get()));
+    test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
     BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 0, cass_string_init("456")) == CASS_OK);
-    test_utils::CassFuturePtr future = test_utils::make_shared(cass_session_execute(session, statement.get()));
+    test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());
-    test_utils::CassResultPtr result = test_utils::make_shared(cass_future_get_result(future.get()));
+    test_utils::CassResultPtr result(cass_future_get_result(future.get()));
     BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
     BOOST_REQUIRE(cass_result_column_count(result.get()) == 2);
 

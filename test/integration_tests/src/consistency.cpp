@@ -21,16 +21,16 @@ BOOST_FIXTURE_TEST_SUITE(consistency, ConsistencyTests)
 
 BOOST_AUTO_TEST_CASE(test_simple_two_nodes)
 {
-  test_utils::CassClusterPtr cluster = test_utils::make_shared(cass_cluster_new());
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 2, 0);
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 2, 0);
 
-  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster.get()));
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
   test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   PolicyTool policy_tool;
   policy_tool.create_schema(session.get(), 1); // replication_factor = 1
@@ -69,16 +69,16 @@ BOOST_AUTO_TEST_CASE(test_simple_two_nodes)
 
 BOOST_AUTO_TEST_CASE(test_one_node_down)
 {
-  test_utils::CassClusterPtr cluster = test_utils::make_shared(cass_cluster_new());
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 3, 0);
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 3, 0);
 
-  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster.get()));
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
   test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   PolicyTool policy_tool;
   policy_tool.create_schema(session.get(), 3); // replication_factor = 3
@@ -122,16 +122,16 @@ BOOST_AUTO_TEST_CASE(test_one_node_down)
 
 BOOST_AUTO_TEST_CASE(test_two_nodes_down)
 {
-  test_utils::CassClusterPtr cluster = test_utils::make_shared(cass_cluster_new());
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 3, 0);
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 3, 0);
 
-  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster.get()));
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
   test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   PolicyTool policy_tool;
   policy_tool.create_schema(session.get(), 3); // replication_factor = 3

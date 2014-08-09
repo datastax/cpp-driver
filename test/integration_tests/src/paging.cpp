@@ -17,12 +17,12 @@
 #include "test_utils.hpp"
 
 struct PagingTests : public test_utils::SingleSessionTest {
-    PagingTests() : SingleSessionTest(1, 0) {
-      test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                             % test_utils::SIMPLE_KEYSPACE % "1"));
-      test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
-      test_utils::execute_query(session, "CREATE TABLE test (part int, key timeuuid, value int, PRIMARY KEY(part, key));");
-    }
+  PagingTests() : SingleSessionTest(1, 0) {
+    test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
+                                           % test_utils::SIMPLE_KEYSPACE % "1"));
+    test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+    test_utils::execute_query(session, "CREATE TABLE test (part int, key timeuuid, value int, PRIMARY KEY(part, key));");
+  }
 };
 
 BOOST_FIXTURE_TEST_SUITE(paging, PagingTests)
@@ -37,27 +37,27 @@ BOOST_AUTO_TEST_CASE(test_paging_simple)
   const cass_int32_t part_key = 0;
 
   for (int i = 0; i < num_rows; ++i) {
-    test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(insert_query, 3));
+    test_utils::CassStatementPtr statement(cass_statement_new(insert_query, 3));
     cass_statement_bind_int32(statement.get(), 0, part_key);
     cass_statement_bind_uuid(statement.get(), 1, test_utils::generate_time_uuid().uuid);
     cass_statement_bind_int32(statement.get(), 2, i);
-    test_utils::CassFuturePtr future = test_utils::make_shared(cass_session_execute(session, statement.get()));
+    test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
   }
 
   CassString select_query = cass_string_init("SELECT value FROM test");
 
   test_utils::CassResultPtr result;
-  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(select_query, 0));
+  test_utils::CassStatementPtr statement(cass_statement_new(select_query, 0));
   cass_statement_set_paging_size(statement.get(), page_size);
 
   cass_int32_t count = 0;
   do {
-    test_utils::CassFuturePtr future = test_utils::make_shared(cass_session_execute(session, statement.get()));
+    test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
-    result = test_utils::make_shared(cass_future_get_result(future.get()));
+    result = test_utils::CassResultPtr(cass_future_get_result(future.get()));
 
-    test_utils::CassIteratorPtr iterator = test_utils::make_shared(cass_iterator_from_result(result.get()));
+    test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
 
     while (cass_iterator_next(iterator.get())) {
       const CassRow* row = cass_iterator_get_row(iterator.get());
@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(test_paging_simple)
     if (cass_result_has_more_pages(result.get())) {
       cass_statement_set_paging_state(statement.get(), result.get());
     }
-   } while (cass_result_has_more_pages(result.get()));
+  } while (cass_result_has_more_pages(result.get()));
 }
 
 BOOST_AUTO_TEST_CASE(test_paging_empty)
@@ -78,12 +78,12 @@ BOOST_AUTO_TEST_CASE(test_paging_empty)
 
   CassString select_query = cass_string_init("SELECT value FROM test");
 
-  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(select_query, 0));
+  test_utils::CassStatementPtr statement(cass_statement_new(select_query, 0));
   cass_statement_set_paging_size(statement.get(), page_size);
 
-  test_utils::CassFuturePtr future = test_utils::make_shared(cass_session_execute(session, statement.get()));
+  test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
   BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
-  test_utils::CassResultPtr result = test_utils::make_shared(cass_future_get_result(future.get()));
+  test_utils::CassResultPtr result(cass_future_get_result(future.get()));
   BOOST_REQUIRE(cass_result_has_more_pages(result.get()) == cass_false);
 }
 

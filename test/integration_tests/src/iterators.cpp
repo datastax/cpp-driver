@@ -17,11 +17,11 @@
 #include "test_utils.hpp"
 
 struct IteratorTests : public test_utils::SingleSessionTest {
-    IteratorTests() : SingleSessionTest(1, 0) {
-      test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                             % test_utils::SIMPLE_KEYSPACE % "1"));
-      test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
-    }
+  IteratorTests() : SingleSessionTest(1, 0) {
+    test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
+                                           % test_utils::SIMPLE_KEYSPACE % "1"));
+    test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+  }
 };
 
 BOOST_FIXTURE_TEST_SUITE(iterators, IteratorTests)
@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(test_result_iterator)
 
   BOOST_REQUIRE(cass_result_row_count(result.get()) == static_cast<cass_size_t>(num_rows));
 
-  test_utils::CassIteratorPtr iterator = test_utils::make_shared(cass_iterator_from_result(result.get()));
+  test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
 
   cass_int32_t count = 0;
   while (cass_iterator_next(iterator.get())) {
@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(test_row_iterator)
 
   const CassRow* row = cass_result_first_row(result.get());
 
-  test_utils::CassIteratorPtr iterator = test_utils::make_shared(cass_iterator_from_row(row));
+  test_utils::CassIteratorPtr iterator(cass_iterator_from_row(row));
 
   cass_int32_t count = 0;
   while (cass_iterator_next(iterator.get())) {
@@ -119,7 +119,7 @@ BOOST_AUTO_TEST_CASE(test_collection_list_iterator)
   const CassRow* row = cass_result_first_row(result.get());
   const CassValue* collection = cass_row_get_column(row, 1);
 
-  test_utils::CassIteratorPtr iterator = test_utils::make_shared(cass_iterator_from_collection(collection));
+  test_utils::CassIteratorPtr iterator(cass_iterator_from_collection(collection));
   cass_int32_t count = 0;
   while (cass_iterator_next(iterator.get())) {
     cass_int32_t value;
@@ -151,7 +151,7 @@ BOOST_AUTO_TEST_CASE(test_collection_set_iterator)
   const CassRow* row = cass_result_first_row(result.get());
   const CassValue* collection = cass_row_get_column(row, 1);
 
-  test_utils::CassIteratorPtr iterator = test_utils::make_shared(cass_iterator_from_collection(collection));
+  test_utils::CassIteratorPtr iterator(cass_iterator_from_collection(collection));
 
   cass_int32_t count = 0;
   while (cass_iterator_next(iterator.get())) {
@@ -184,7 +184,7 @@ BOOST_AUTO_TEST_CASE(test_collection_map_iterator)
   const CassRow* row = cass_result_first_row(result.get());
   const CassValue* collection = cass_row_get_column(row, 1);
 
-  test_utils::CassIteratorPtr iterator = test_utils::make_shared(cass_iterator_from_collection(collection));
+  test_utils::CassIteratorPtr iterator(cass_iterator_from_collection(collection));
 
   cass_int32_t count = 0;
   while (cass_iterator_next(iterator.get())) {
@@ -224,7 +224,7 @@ BOOST_AUTO_TEST_CASE(test_map_iterator)
   const CassRow* row = cass_result_first_row(result.get());
   const CassValue* map = cass_row_get_column(row, 1);
 
-  test_utils::CassIteratorPtr iterator = test_utils::make_shared(cass_iterator_from_map(map));
+  test_utils::CassIteratorPtr iterator(cass_iterator_from_map(map));
 
   cass_int32_t count = 0;
   while (cass_iterator_next(iterator.get())) {
@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_CASE(test_empty)
 
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 0);
 
-  test_utils::CassIteratorPtr iterator = test_utils::make_shared(cass_iterator_from_result(result.get()));
+  test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
   BOOST_REQUIRE(cass_iterator_next(iterator.get()) == cass_false);
 }
 

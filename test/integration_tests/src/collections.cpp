@@ -16,7 +16,7 @@
 #include <boost/thread.hpp>
 
 struct CollectionsTests : public test_utils::MultipleNodesTest {
-    CollectionsTests() : MultipleNodesTest(1, 0) {}
+  CollectionsTests() : MultipleNodesTest(1, 0) {}
 };
 
 BOOST_FIXTURE_TEST_SUITE(collections, CollectionsTests)
@@ -29,7 +29,7 @@ void insert_collection_value(CassSession* session, CassValueType type, CassValue
   test_utils::execute_query(session, str(boost::format("CREATE TABLE %s (tweet_id int PRIMARY KEY, test_val %s);")
                                          % table_name % type_name));
 
-  test_utils::CassCollectionPtr input = test_utils::make_shared(cass_collection_new(static_cast<CassCollectionType>(type), values.size()));
+  test_utils::CassCollectionPtr input(cass_collection_new(static_cast<CassCollectionType>(type), values.size()));
 
   for(typename std::vector<T>::const_iterator it = values.begin(),
       end = values.end(); it != end; ++it) {
@@ -38,11 +38,11 @@ void insert_collection_value(CassSession* session, CassValueType type, CassValue
 
   std::string query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(0, ?);") % table_name);
 
-  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 1));
+  test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 1));
 
   BOOST_REQUIRE(cass_statement_bind_collection(statement.get(), 0, input.get()) == CASS_OK);
 
-  test_utils::CassFuturePtr result_future = test_utils::make_shared(cass_session_execute(session, statement.get()));
+  test_utils::CassFuturePtr result_future(cass_session_execute(session, statement.get()));
   test_utils::wait_and_check_error(result_future.get());
 
   test_utils::CassResultPtr result;
@@ -56,7 +56,7 @@ void insert_collection_value(CassSession* session, CassValueType type, CassValue
   BOOST_REQUIRE(cass_value_type(output) == type);
   BOOST_REQUIRE(cass_value_primary_sub_type(output) == primary_type);
 
-  test_utils::CassIteratorPtr iterator = test_utils::make_shared(cass_iterator_from_collection(output));
+  test_utils::CassIteratorPtr iterator(cass_iterator_from_collection(output));
 
   if(type == CASS_VALUE_TYPE_LIST) {
     size_t i = 0;
@@ -80,9 +80,9 @@ void insert_collection_value(CassSession* session, CassValueType type, CassValue
 }
 
 void insert_collection_all_types(CassCluster* cluster, CassValueType type) {
-  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                                % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -159,16 +159,16 @@ void insert_collection_all_types(CassCluster* cluster, CassValueType type) {
 template<class K, class V>
 void insert_map_value(CassSession* session, CassValueType primary_type, CassValueType secondary_type, const std::map<K, V>& values) {
   std::string table_name = str(boost::format("%s_%s_%s") % test_utils::SIMPLE_TABLE
-                                                         % test_utils::get_value_type(primary_type)
-                                                         % test_utils::get_value_type(secondary_type));
+                               % test_utils::get_value_type(primary_type)
+                               % test_utils::get_value_type(secondary_type));
   std::string type_name = str(boost::format("%s<%s, %s>") % test_utils::get_value_type(CASS_VALUE_TYPE_MAP)
-                                                                % test_utils::get_value_type(primary_type)
-                                                                % test_utils::get_value_type(secondary_type));
+                              % test_utils::get_value_type(primary_type)
+                              % test_utils::get_value_type(secondary_type));
 
   test_utils::execute_query(session, str(boost::format("CREATE TABLE %s (tweet_id int PRIMARY KEY, test_val %s);")
                                          % table_name % type_name));
 
-  test_utils::CassCollectionPtr input = test_utils::make_shared(cass_collection_new(CASS_COLLECTION_TYPE_MAP, values.size()));
+  test_utils::CassCollectionPtr input(cass_collection_new(CASS_COLLECTION_TYPE_MAP, values.size()));
 
   for(typename std::map<K, V>::const_iterator it = values.begin(),
       end = values.end(); it != end; ++it) {
@@ -178,11 +178,11 @@ void insert_map_value(CassSession* session, CassValueType primary_type, CassValu
 
   std::string query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(0, ?);") % table_name);
 
-  test_utils::CassStatementPtr statement = test_utils::make_shared(cass_statement_new(cass_string_init(query.c_str()), 1));
+  test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 1));
 
   BOOST_REQUIRE(cass_statement_bind_collection(statement.get(), 0, input.get()) == CASS_OK);
 
-  test_utils::CassFuturePtr result_future = test_utils::make_shared(cass_session_execute(session, statement.get()));
+  test_utils::CassFuturePtr result_future(cass_session_execute(session, statement.get()));
   test_utils::wait_and_check_error(result_future.get());
 
   test_utils::CassResultPtr result;
@@ -196,7 +196,7 @@ void insert_map_value(CassSession* session, CassValueType primary_type, CassValu
   BOOST_REQUIRE(cass_value_primary_sub_type(output) == primary_type);
   BOOST_REQUIRE(cass_value_secondary_sub_type(output) == secondary_type);
 
-  test_utils::CassIteratorPtr iterator = test_utils::make_shared(cass_iterator_from_collection(output));
+  test_utils::CassIteratorPtr iterator(cass_iterator_from_collection(output));
 
   size_t i = 0;
   while(cass_iterator_next(iterator.get())) {
@@ -219,9 +219,9 @@ void insert_map_value(CassSession* session, CassValueType primary_type, CassValu
 }
 
 void insert_map_all_types(CassCluster* cluster) {
-  test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster));
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                                % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -299,11 +299,11 @@ void insert_map_all_types(CassCluster* cluster) {
 
     std::map<CassDecimal, CassDecimal> values;
     values[test_utils::decimal_from_scale_and_bytes(0, cass_bytes_init(varint1, sizeof(varint1)))]
-      = test_utils::decimal_from_scale_and_bytes(1, cass_bytes_init(varint1, sizeof(varint1)));
+        = test_utils::decimal_from_scale_and_bytes(1, cass_bytes_init(varint1, sizeof(varint1)));
     values[test_utils::decimal_from_scale_and_bytes(2, cass_bytes_init(varint2, sizeof(varint2)))]
-      = test_utils::decimal_from_scale_and_bytes(3, cass_bytes_init(varint2, sizeof(varint2)));
+        = test_utils::decimal_from_scale_and_bytes(3, cass_bytes_init(varint2, sizeof(varint2)));
     values[test_utils::decimal_from_scale_and_bytes(4, cass_bytes_init(varint3, sizeof(varint3)))]
-      = test_utils::decimal_from_scale_and_bytes(5, cass_bytes_init(varint3, sizeof(varint3)));
+        = test_utils::decimal_from_scale_and_bytes(5, cass_bytes_init(varint3, sizeof(varint3)));
     insert_map_value<CassDecimal, CassDecimal>(session.get(), CASS_VALUE_TYPE_DECIMAL, CASS_VALUE_TYPE_DECIMAL, values);
   }
 
@@ -317,9 +317,9 @@ void insert_map_all_types(CassCluster* cluster) {
 
   {
     std::map<test_utils::Uuid, CassString> values;
-    values[test_utils::generate_time_uuid()] = cass_string_init("123"); 
-    values[test_utils::generate_time_uuid()] = cass_string_init("456"); 
-    values[test_utils::generate_time_uuid()] = cass_string_init("789"); 
+    values[test_utils::generate_time_uuid()] = cass_string_init("123");
+    values[test_utils::generate_time_uuid()] = cass_string_init("456");
+    values[test_utils::generate_time_uuid()] = cass_string_init("789");
     insert_map_value<test_utils::Uuid, CassString>(session.get(), CASS_VALUE_TYPE_UUID, CASS_VALUE_TYPE_VARCHAR, values);
   }
 }

@@ -19,44 +19,44 @@ const cass_duration_t ONE_MILLISECOND_IN_MICROS = 1000;
 const cass_duration_t ONE_SECOND_IN_MICROS = 1000 * ONE_MILLISECOND_IN_MICROS;
 
 const char* CREATE_TABLE_ALL_TYPES =
-  "CREATE TABLE %s ("
-  "id uuid PRIMARY KEY,"
-  "text_sample text,"
-  "int_sample int,"
-  "bigint_sample bigint,"
-  "float_sample float,"
-  "double_sample double,"
-  "decimal_sample decimal,"
-  "blob_sample blob,"
-  "boolean_sample boolean,"
-  "timestamp_sample timestamp,"
-  "inet_sample inet);";
+    "CREATE TABLE %s ("
+    "id uuid PRIMARY KEY,"
+    "text_sample text,"
+    "int_sample int,"
+    "bigint_sample bigint,"
+    "float_sample float,"
+    "double_sample double,"
+    "decimal_sample decimal,"
+    "blob_sample blob,"
+    "boolean_sample boolean,"
+    "timestamp_sample timestamp,"
+    "inet_sample inet);";
 
 const char* CREATE_TABLE_TIME_SERIES =
-  "CREATE TABLE %s ("
-  "id uuid,"
-  "event_time timestamp,"
-  "text_sample text,"
-  "int_sample int,"
-  "bigint_sample bigint,"
-  "float_sample float,"
-  "double_sample double,"
-  "decimal_sample decimal,"
-  "blob_sample blob,"
-  "boolean_sample boolean,"
-  "timestamp_sample timestamp,"
-  "inet_sample inet,"
-  "PRIMARY KEY(id, event_time));";
+    "CREATE TABLE %s ("
+    "id uuid,"
+    "event_time timestamp,"
+    "text_sample text,"
+    "int_sample int,"
+    "bigint_sample bigint,"
+    "float_sample float,"
+    "double_sample double,"
+    "decimal_sample decimal,"
+    "blob_sample blob,"
+    "boolean_sample boolean,"
+    "timestamp_sample timestamp,"
+    "inet_sample inet,"
+    "PRIMARY KEY(id, event_time));";
 
 const char* CREATE_TABLE_SIMPLE =
-  "CREATE TABLE %s ("
-  "id int PRIMARY KEY,"
-  "test_val text);";
+    "CREATE TABLE %s ("
+    "id int PRIMARY KEY,"
+    "test_val text);";
 
 void count_message_log_callback(cass_uint64_t time,
-                              CassLogLevel severity,
-                              CassString message,
-                              void* data) {
+                                CassLogLevel severity,
+                                CassString message,
+                                void* data) {
   LogData* log_data = reinterpret_cast<LogData*>(data);
   std::string str(message.data, message.length);
   fprintf(stderr, "Log message: %s\n", str.c_str());
@@ -87,7 +87,7 @@ const char* get_value_type(CassValueType type) {
     case CASS_VALUE_TYPE_LIST: return "list";
     case CASS_VALUE_TYPE_MAP: return "map";
     case CASS_VALUE_TYPE_SET: return "set";
-    default: 
+    default:
       assert(false && "Invalid value type");
       return "";
   }
@@ -104,11 +104,11 @@ const std::string SELECT_ALL_FORMAT = "SELECT * FROM {0}";
 const std::string SELECT_WHERE_FORMAT = "SELECT * FROM {0} WHERE {1}";
 
 const std::string lorem_ipsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla porta turpis vel dui venenatis, quis viverra magna"
-"suscipit. Praesent pharetra facilisis turpis, et fermentum leo sollicitudin sit amet. In hac habitasse platea dictumst. Donec mattis facilisis"
-"diam, nec pulvinar ligula. Sed eget faucibus magna. Donec vitae fermentum augue. Ut nec accumsan ligula. Sed a viverra leo, sed semper augue."
-"Pellentesque auctor nisl varius, imperdiet est non, porttitor risus. Donec aliquam elementum sollicitudin. Maecenas ultrices mattis mauris,"
-"fringilla congue nunc sodales sed. Fusce ac neque quis erat hendrerit porta at nec massa. Maecenas blandit ut felis sed ultrices. Sed fermentum"
-"pharetra lacus sodales cursus.";
+                                "suscipit. Praesent pharetra facilisis turpis, et fermentum leo sollicitudin sit amet. In hac habitasse platea dictumst. Donec mattis facilisis"
+                                "diam, nec pulvinar ligula. Sed eget faucibus magna. Donec vitae fermentum augue. Ut nec accumsan ligula. Sed a viverra leo, sed semper augue."
+                                "Pellentesque auctor nisl varius, imperdiet est non, porttitor risus. Donec aliquam elementum sollicitudin. Maecenas ultrices mattis mauris,"
+                                "fringilla congue nunc sodales sed. Fusce ac neque quis erat hendrerit porta at nec massa. Maecenas blandit ut felis sed ultrices. Sed fermentum"
+                                "pharetra lacus sodales cursus.";
 
 //-----------------------------------------------------------------------------------
 
@@ -132,14 +132,14 @@ MultipleNodesTest::~MultipleNodesTest() {
 
 SingleSessionTest::SingleSessionTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version)
   : MultipleNodesTest(num_nodes_dc1, num_nodes_dc2, protocol_version) {
-  test_utils::CassFuturePtr connect_future = make_shared<CassFuture>(cass_cluster_connect(cluster));
+  test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(connect_future.get());
   session = cass_future_get_session(connect_future.get());
 }
 
 SingleSessionTest::~SingleSessionTest() {
-   CassFuturePtr close_future = make_shared<CassFuture>(cass_session_close(session));
-   cass_future_wait(close_future.get());
+  CassFuturePtr close_future(cass_session_close(session));
+  cass_future_wait(close_future.get());
 }
 
 void initialize_contact_points(CassCluster* cluster, std::string prefix, int num_nodes_dc1, int num_nodes_dc2) {
@@ -153,25 +153,25 @@ void execute_query(CassSession* session,
                    const std::string& query,
                    CassResultPtr* result,
                    CassConsistency consistency) {
-  CassStatementPtr statement = make_shared(cass_statement_new(cass_string_init(query.c_str()), 0));
+  CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0));
   cass_statement_set_consistency(statement.get(), consistency);
-  CassFuturePtr future = make_shared(cass_session_execute(session, statement.get()));
+  CassFuturePtr future(cass_session_execute(session, statement.get()));
   wait_and_check_error(future.get());
   if(result != NULL) {
-    *result = make_shared<const CassResult>(cass_future_get_result(future.get()));
+    *result = CassResultPtr(cass_future_get_result(future.get()));
   }
 }
 
 CassError execute_query_with_error(CassSession* session,
-                                  const std::string& query,
-                                  CassResultPtr* result,
-                                  CassConsistency consistency) {
-  CassStatementPtr statement = make_shared(cass_statement_new(cass_string_init(query.c_str()), 0));
+                                   const std::string& query,
+                                   CassResultPtr* result,
+                                   CassConsistency consistency) {
+  CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0));
   cass_statement_set_consistency(statement.get(), consistency);
-  CassFuturePtr future = make_shared(cass_session_execute(session, statement.get()));
+  CassFuturePtr future(cass_session_execute(session, statement.get()));
   CassError code = wait_and_return_error(future.get());
   if(result != NULL) {
-    *result = make_shared<const CassResult>(cass_future_get_result(future.get()));
+    *result = CassResultPtr(cass_future_get_result(future.get()));
   }
   return code;
 }

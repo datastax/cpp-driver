@@ -13,26 +13,27 @@
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
 #include <boost/atomic.hpp>
+#include <boost/scoped_ptr.hpp>
 
 #include "cassandra.h"
 #include "test_utils.hpp"
 #include "cql_ccm_bridge.hpp"
 
 struct Version1DowngradeTests {
-    Version1DowngradeTests() {}
+  Version1DowngradeTests() {}
 };
 
 BOOST_FIXTURE_TEST_SUITE(version1_downgrade, Version1DowngradeTests)
 
 BOOST_AUTO_TEST_CASE(test_query_after_downgrade)
 {
-  boost::shared_ptr<test_utils::LogData> log_data(
+  boost::scoped_ptr<test_utils::LogData> log_data(
         new test_utils::LogData("Protocol version 2 unsupported. Trying protocol version 1.."));
 
   cass_size_t row_count;
 
   {
-    test_utils::CassClusterPtr cluster = test_utils::make_shared(cass_cluster_new());
+    test_utils::CassClusterPtr cluster(cass_cluster_new());
 
     const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration("config_v1.txt");
 
@@ -44,13 +45,13 @@ BOOST_AUTO_TEST_CASE(test_query_after_downgrade)
 
     cass_cluster_set_log_callback(cluster.get(), test_utils::count_message_log_callback, log_data.get());
 
-    test_utils::CassFuturePtr session_future = test_utils::make_shared(cass_cluster_connect(cluster.get()));
+    test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
     test_utils::wait_and_check_error(session_future.get());
-    test_utils::CassSessionPtr session = test_utils::make_shared(cass_future_get_session(session_future.get()));
+    test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
 
     test_utils::CassResultPtr result;
     test_utils::execute_query(session.get(), "SELECT * FROM system.schema_keyspaces", &result);
-  
+
     row_count = cass_result_row_count(result.get());
   }
 

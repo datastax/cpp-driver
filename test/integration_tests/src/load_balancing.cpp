@@ -17,7 +17,7 @@
 #include "cql_ccm_bridge.hpp"
 
 struct LoadBalancingTests : test_utils::SingleSessionTest {
-    LoadBalancingTests() : SingleSessionTest(3, 0) {}
+  LoadBalancingTests() : SingleSessionTest(3, 0) {}
 };
 
 BOOST_FIXTURE_TEST_SUITE(load_balancing, LoadBalancingTests)

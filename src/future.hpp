@@ -117,7 +117,6 @@ protected:
     }
   }
 
-  // This *MUST* be the final call. The object could be deleted.
   void internal_set(ScopedMutex& lock);
 
   void internal_set_error(CassError code, const std::string& message, ScopedMutex& lock) {
