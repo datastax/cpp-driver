@@ -145,7 +145,7 @@ void on_select(CassFuture* future, void* data) {
       cass_uuid_string(key, key_buf);
       cass_value_get_int64(cass_row_get_column(row, 1), (cass_int64_t*)&value);
 
-      printf("%s, %llu\n", key_buf, value);
+      printf("%s, %llu\n", key_buf, (unsigned long long)value);
     }
   }
 

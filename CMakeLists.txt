@@ -81,23 +81,18 @@ set(INCLUDES ${INCLUDES} "${PROJECT_SOURCE_DIR}/src/third_party/boost")
 # Compiler flags
 #-------------------
 
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
+endif()
+
 set(MULTICORE_CORES_NUMBER "3" CACHE STRING "Number of cores (for multicore compilation)")
 option(MULTICORE_COMPILATION "Enable multicore compilation" OFF)
 
-if(MULTICORE_COMPILATION)
-  # MULTICORE BUILD
-  # by default we use 3 cores
-  if(MSVC)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  if(MULTICORE_COMPILATION)
     add_definitions("/MP${MULTICORE_CORES_NUMBER}")
   endif()
-  # on linux platform this parameter is named -j e.g. -j 5
-  # but should be passed to MAKE program not to compiler!
-  # You can do this by settings MAKEFLAGS env variable to
-  # -j 5. On ubuntu box this can be done by editing
-  # ~/.pam_environment file (in any case check man).
-endif()
 
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
   set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:LIBCMT")
@@ -109,22 +104,39 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # that can hide useful ones.
 
   # TODO(mpenick): Fix these "possible loss of data" warnings
-  set(PLATFORM_DEPENDENT_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS -DBOOST_ALL_NO_LIB /wd4244 /wd4267")
+
+  set(WARNING_COMPILER_FLAGS "/wd4244 /wd4267")
+
+  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+  set(INTEGRATION_TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+  set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
 
   # needed for windows sockets (not verified)
   add_definitions(-D_WIN32_WINNT=0x0501)
+
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  add_definitions(-DBOOST_ALL_NO_LIB)
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # GCC specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(PLATFORM_DEPENDENT_CXX_FLAGS "-fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
+  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
+
   if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.8" OR
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.8")
-    set(PLATFORM_DEPENDENT_CXX_FLAGS "${PLATFORM_DEPENDENT_CXX_FLAGS} -Wno-unused-local-typedefs")
+    set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedefs")
   endif()
+
+  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS}")
+  set(INTEGRATION_TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x ${WARNING_COMPILER_FLAGS}")
+  set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
 else()
   # Clang/Intel specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(PLATFORM_DEPENDENT_CXX_FLAGS "-fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
+  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-local-typedefs")
+
+  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS}")
+  set(INTEGRATION_TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x ${WARNING_COMPILER_FLAGS}")
+  set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 ${WARNING_COMPILER_FLAGS}")
 endif()
 
 #-------------------
@@ -165,15 +177,13 @@ set_target_properties(${PROJECT_LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION_S
 set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
 set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
 
-set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-
 set_property(
   TARGET ${PROJECT_LIB_NAME}
-  APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} ${PLATFORM_DEPENDENT_CXX_FLAGS} -DCASS_BUILDING")
+  APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DCASS_BUILDING")
 
 set_property(
   TARGET ${PROJECT_LIB_NAME_STATIC}
-  APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} ${PLATFORM_DEPENDENT_CXX_FLAGS} -DCASS_STATIC")
+  APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DCASS_STATIC")
 
 #-------------------
 # Install target
@@ -224,9 +234,6 @@ add_subdirectory(test/unit_tests)
 if(WIN32)
   set(BOOST_ROOT "${PROJECT_SOURCE_DIR}/lib/boost/")
   set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/")
-  set(INTEGRATION_TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS -DBOOST_ALL_NO_LIB")
-else()
-  set(INTEGRATION_TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 endif()
 
 find_package(Boost 1.41.0 COMPONENTS system chrono thread unit_test_framework date_time program_options)
@@ -242,12 +249,6 @@ endif()
 #-------------------
 # Examples
 #-------------------
-
-if(MSVC)
-  set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
-else()
-  set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 -fPIC -Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
-endif()
 
 add_subdirectory(examples/async)
 add_subdirectory(examples/basic)

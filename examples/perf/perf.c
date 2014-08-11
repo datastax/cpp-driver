@@ -154,7 +154,7 @@ void select_from_perf(CassSession* session, CassString query, const CassPrepared
   thread_stats->total_averages += num_requests /  ((double)elapsed / 1000000000.0);
   thread_stats->total_average_count++;
 
-  printf("%ld: average %lf selects/sec (%lu)\n", thread_id, thread_stats->total_averages / thread_stats->total_average_count, num_requests);
+  printf("%ld: average %f selects/sec (%lu)\n", thread_id, thread_stats->total_averages / thread_stats->total_average_count, num_requests);
 }
 
 void run_select_queries(void* data) {
