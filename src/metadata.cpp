@@ -64,7 +64,7 @@ namespace cass {
 Metadata::Metadata(size_t column_count) {
   defs_.reserve(column_count);
 
-  size_t index_size = next_pow_2((column_count / LOAD_FACTOR) + 1);
+  size_t index_size = next_pow_2(static_cast<size_t>(column_count / LOAD_FACTOR) + 1);
   index_.resize(index_size, NULL);
   index_mask_ = index_size - 1;
 }
