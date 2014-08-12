@@ -44,7 +44,7 @@ CassCluster* create_cluster() {
 }
 
 CassError connect_session(CassCluster* cluster, CassSession** output) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassFuture* future = cass_cluster_connect(cluster);
 
   *output = NULL;
@@ -62,7 +62,7 @@ CassError connect_session(CassCluster* cluster, CassSession** output) {
 }
 
 CassError execute_query(CassSession* session, const char* query) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
   CassFuture* future = cass_session_execute(session, statement);
 
@@ -80,7 +80,7 @@ CassError execute_query(CassSession* session, const char* query) {
 }
 
 CassError insert_into_basic(CassSession* session, const char* key, const Basic* basic) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
   CassString query = cass_string_init("INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);");
@@ -110,7 +110,7 @@ CassError insert_into_basic(CassSession* session, const char* key, const Basic* 
 }
 
 CassError prepare_select_from_basic(CassSession* session, const CassPrepared** prepared) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassFuture* future = NULL;
   CassString query = cass_string_init("SELECT * FROM examples.basic WHERE key = ?");
 
@@ -130,7 +130,7 @@ CassError prepare_select_from_basic(CassSession* session, const CassPrepared** p
 }
 
 CassError select_from_basic(CassSession* session, const CassPrepared * prepared, const char* key, Basic* basic) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
 
@@ -169,7 +169,7 @@ CassError select_from_basic(CassSession* session, const CassPrepared * prepared,
 }
 
 int main() {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassCluster* cluster = create_cluster();
   CassSession* session = NULL;
   CassFuture* close_future = NULL;

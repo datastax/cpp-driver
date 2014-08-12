@@ -62,8 +62,8 @@ The driver has been built and tested using Microsoft Visual Studio 2010 and 2013
 
 To obtain dependencies:
 * Download and install CMake for Windows. Make sure to select the option "Add CMake to the system PATH for all users" or "Add CMake to the system PATH for current user".
-* Download and build the latest release of libuv 0.10 from https://github.com/joyent/libuv/releases. 
-  1. Follow the instructions [here](https://github.com/joyent/libuv#windows). 
+* Download and build the latest release of libuv 0.10 from https://github.com/joyent/libuv/releases.
+  1. Follow the instructions [here](https://github.com/joyent/libuv#windows).
   2. Open up the generated Visual Studio solution "uv.sln".
   3. If you want a 64-bit build you will need to create a "x64" solution platform in the "Configuration Manager".
   4. Open "Properties" on the "libuv" project. Set "Multi-threaded DLL (/MD)" for the "Configuration Properties -> C/C++ -> Code Generation -> Runtime Library" option.
@@ -123,7 +123,7 @@ There are several examples provided here: [examples](https://github.com/datastax
 #include <cassandra.h>
 
 int main() {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassCluster* cluster = cass_cluster_new();
   CassFuture* session_future = NULL;
   CassString contact_points = cass_string_init("127.0.0.1,127.0.0.2,127.0.0.3");
