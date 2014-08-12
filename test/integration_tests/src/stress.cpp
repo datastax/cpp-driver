@@ -5,6 +5,10 @@
 
 #include <algorithm>
 
+#if !defined(WIN32) && !defined(_WIN32)
+#include <signal.h>
+#endif
+
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
 #include <boost/lexical_cast.hpp>
@@ -15,13 +19,17 @@
 #include <boost/bind.hpp>
 #include <boost/chrono.hpp>
 
-
 #include "cassandra.h"
 #include "test_utils.hpp"
 #include "cql_ccm_bridge.hpp"
 
 struct StressTests : public test_utils::MultipleNodesTest {
-  StressTests() : MultipleNodesTest(3, 0) {}
+  StressTests() : MultipleNodesTest(3, 0) {
+// TODO(mpenick): This is a stopgap. To be fixed in CPP-140
+#if !defined(WIN32) && !defined(_WIN32)
+    signal(SIGPIPE, SIG_IGN);
+#endif
+  }
 };
 
 BOOST_FIXTURE_TEST_SUITE(stress, StressTests)

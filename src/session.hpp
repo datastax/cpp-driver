@@ -106,7 +106,7 @@ private:
   ScopedPtr<Logger> logger_;
   std::string keyspace_;
   uv_mutex_t keyspace_mutex_;
-  Future* connect_future_;
+  ScopedRefPtr<Future> connect_future_;
   Future* close_future_;
   HostSet hosts_;
   Config config_;

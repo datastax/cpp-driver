@@ -53,65 +53,83 @@ struct Deleter;
 template<>
 struct Deleter<CassCluster> {
   void operator()(CassCluster* ptr) {
-    cass_cluster_free(ptr);
+    if (ptr != NULL) {
+      cass_cluster_free(ptr);
+    }
   }
 };
 
 template<>
 struct Deleter<CassSession> {
   void operator()(CassSession* ptr) {
-    CassFuture* future = cass_session_close(ptr);
-    cass_future_wait(future);
-    cass_future_free(future);
+    if (ptr != NULL) {
+      CassFuture* future = cass_session_close(ptr);
+      cass_future_wait(future);
+      cass_future_free(future);
+    }
   }
 };
 
 template<>
 struct Deleter<CassFuture> {
   void operator()(CassFuture* ptr) {
-    cass_future_free(ptr);
+    if (ptr != NULL) {
+      cass_future_free(ptr);
+    }
   }
 };
 
 template<>
 struct Deleter<CassStatement> {
   void operator()(CassStatement* ptr) {
-    cass_statement_free(ptr);
+    if (ptr != NULL) {
+      cass_statement_free(ptr);
+    }
   }
 };
 
 template<>
 struct Deleter<const CassResult> {
   void operator()(const CassResult* ptr) {
-    cass_result_free(ptr);
+    if (ptr != NULL) {
+      cass_result_free(ptr);
+    }
   }
 };
 
 template<>
 struct Deleter<CassIterator> {
   void operator()(CassIterator* ptr) {
-    cass_iterator_free(ptr);
+    if (ptr != NULL) {
+      cass_iterator_free(ptr);
+    }
   }
 };
 
 template<>
 struct Deleter<CassCollection> {
   void operator()(CassCollection* ptr) {
-    cass_collection_free(ptr);
+    if (ptr != NULL) {
+      cass_collection_free(ptr);
+    }
   }
 };
 
 template<>
 struct Deleter<const CassPrepared> {
   void operator()(const CassPrepared* ptr) {
-    cass_prepared_free(ptr);
+    if (ptr != NULL) {
+      cass_prepared_free(ptr);
+    }
   }
 };
 
 template<>
 struct Deleter<CassBatch> {
   void operator()(CassBatch* ptr) {
-    cass_batch_free(ptr);
+    if (ptr != NULL) {
+      cass_batch_free(ptr);
+    }
   }
 };
 

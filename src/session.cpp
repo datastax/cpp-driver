@@ -56,8 +56,7 @@ CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* ba
 namespace cass {
 
 Session::Session(const Config& config)
-    : connect_future_(NULL)
-    , close_future_(NULL)
+    : close_future_(NULL)
     , config_(config)
     , load_balancing_policy_(new RoundRobinPolicy())
     , pending_resolve_count_(0)
@@ -69,9 +68,6 @@ Session::Session(const Config& config)
 
 Session::~Session() {
   uv_mutex_destroy(&keyspace_mutex_);
-  if (connect_future_ != NULL) {
-    connect_future_->dec_ref();
-  }
   for (IOWorkerVec::iterator it = io_workers_.begin(), end = io_workers_.end();
        it != end; ++it) {
     delete (*it);
@@ -122,8 +118,7 @@ bool Session::connect_async(const std::string& keyspace, Future* future) {
     set_keyspace(keyspace);
   }
 
-  connect_future_ = future;
-  connect_future_->inc_ref();
+  connect_future_.reset(future);
 
   run();
 
@@ -144,7 +139,7 @@ void Session::init_pools() {
   if (hosts_.empty()) {
     connect_future_->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                                "No hosts provided or no hosts resolved");
-    connect_future_ = NULL;
+    connect_future_.reset();
     return;
   }
 
@@ -190,7 +185,6 @@ void Session::on_after_run() {
   if (close_future != NULL) {
     close_future->set();
     close_future->dec_ref();
-    close_future = NULL;
   }
 }
 
@@ -221,8 +215,7 @@ void Session::on_event(const SessionEvent& event) {
       logger_->debug("Session is connected");
       load_balancing_policy_->init(hosts_);
       connect_future_->set();
-      connect_future_->dec_ref();
-      connect_future_ = NULL;
+      connect_future_.reset();
     }
     logger_->debug("Session pending pool count %d", pending_pool_count_);
   } else if (event.type == SessionEvent::NOTIFY_CLOSED) {

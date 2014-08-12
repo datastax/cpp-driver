@@ -34,8 +34,10 @@ namespace cql {
 		void remove();
 		void ring(int node);
 
-    void populate(int node);
-    void populate(int node, const std::string& dc);
+    void populate(int n);
+
+    void add_node(int node);
+    void add_node(int node, const std::string& dc);
     void bootstrap(int node);
     void bootstrap(int node, const std::string& dc);
 

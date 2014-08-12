@@ -129,6 +129,7 @@ protected:
 private:
   void run_callback_on_work_thread();
   static void on_work(uv_work_t* work);
+  static void on_after_work(uv_work_t* work, int status);
 
 private:
   bool is_set_;

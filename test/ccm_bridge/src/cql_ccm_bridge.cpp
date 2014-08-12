@@ -340,7 +340,15 @@ namespace cql {
 		execute_ccm_command(boost::str(boost::format("node%1% ring") % node));
 	}
 
-  void cql_ccm_bridge_t::populate(int node) {
+  void cql_ccm_bridge_t::populate(int n) {
+    execute_ccm_command(boost::str(
+      boost::format("populate -n %1% -i %2%")
+       % n
+       % _ip_prefix
+       ));
+  }
+
+  void cql_ccm_bridge_t::add_node(int node) {
     execute_ccm_command(boost::str(
       boost::format("add node%1% -i %2%%3% -j %4% -b")
        % node
@@ -349,7 +357,7 @@ namespace cql {
        % (7000 + 100 * node)));
   }
 
-  void cql_ccm_bridge_t::populate(int node, const std::string& dc) {
+  void cql_ccm_bridge_t::add_node(int node, const std::string& dc) {
     execute_ccm_command(boost::str(
       boost::format("add node%1% -i %2%%3% -j %4% -b -d %5%")
        % node
@@ -360,12 +368,12 @@ namespace cql {
   }
 
   void cql_ccm_bridge_t::bootstrap(int node) {
-     populate(node);
+     add_node(node);
 	   start(node);
 	}
 
   void cql_ccm_bridge_t::bootstrap(int node, const std::string& dc) {
-     populate(node, dc);
+     add_node(node, dc);
      start(node);
   }
 

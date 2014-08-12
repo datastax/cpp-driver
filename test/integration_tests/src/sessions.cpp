@@ -71,6 +71,8 @@ BOOST_AUTO_TEST_CASE(test_connect_invalid_name)
 
     test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
     code = cass_future_error_code(session_future.get());
+
+    test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
   }
 
   BOOST_CHECK(log_data->message_count > 0);

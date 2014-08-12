@@ -157,7 +157,6 @@ void Future::internal_set(ScopedMutex& lock) {
       lock.unlock();
       callback(CassFuture::to(this), data);
     } else {
-      lock.unlock();
       run_callback_on_work_thread();
     }
   }
@@ -166,7 +165,7 @@ void Future::internal_set(ScopedMutex& lock) {
 void Future::run_callback_on_work_thread() {
   inc_ref(); // Keep the future alive for the callback
   work_.data = this;
-  uv_queue_work(loop_, &work_, on_work, NULL);
+  uv_queue_work(loop_, &work_, on_work, on_after_work);
 }
 
 void Future::on_work(uv_work_t* work) {
@@ -178,6 +177,10 @@ void Future::on_work(uv_work_t* work) {
   lock.unlock();
 
   callback(CassFuture::to(future), data);
+}
+
+void Future::on_after_work(uv_work_t* work, int status) {
+  Future* future = reinterpret_cast<Future*>(work->data);
   future->dec_ref();
 }
 
