@@ -72,6 +72,7 @@ Metadata::Metadata(size_t column_count) {
 
 size_t Metadata::get(boost::string_ref name,
                      Metadata::IndexVec* result) const{
+  result->clear();
   bool is_case_sensitive = false;
 
   if (name.size() > 0 && name.front() == '"' && name.back() == '"') {
