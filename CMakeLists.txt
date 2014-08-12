@@ -17,6 +17,11 @@ set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${P
 
 # TODO(mstump) add version header
 
+# Build up the include paths
+set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
+set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
+set(INCLUDES ${INCLUDES} "${PROJECT_SOURCE_DIR}/src/third_party/boost")
+
 #-------------------
 # Dependencies
 #-------------------
@@ -71,11 +76,6 @@ set(INCLUDES ${INCLUDES} ${OPENSSL_INCLUDE_DIR} )
 if(WIN32)
   set(LIBS ${LIBS} iphlpapi psapi wsock32 ws2_32)
 endif()
-
-# Build up the include path's
-set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
-set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
-set(INCLUDES ${INCLUDES} "${PROJECT_SOURCE_DIR}/src/third_party/boost")
 
 #-------------------
 # Compiler flags
