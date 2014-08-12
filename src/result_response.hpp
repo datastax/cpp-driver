@@ -50,8 +50,9 @@ public:
       , table_(NULL)
       , table_size_(0)
       , row_count_(0)
-      , rows_(NULL)
-      , first_row_(this) {}
+      , rows_(NULL) {
+    first_row_.set_result(this);
+  }
 
   int32_t kind() const { return kind_; }
 

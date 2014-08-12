@@ -27,12 +27,17 @@ class ResultResponse;
 
 struct Row {
 public:
+  Row()
+    : result_(NULL) {}
+
   Row(const ResultResponse* result)
     : result_(result) {}
 
   ValueVec values;
 
   const ResultResponse* result() const { return result_; }
+
+  void set_result(ResultResponse* result) { result_ = result; }
 
 private:
   const ResultResponse* result_;

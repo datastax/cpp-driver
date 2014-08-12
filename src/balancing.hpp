@@ -53,6 +53,8 @@ typedef enum CassHostDistance_ {
   CASS_HOST_DISTANCE_IGNORE
 } CassHostDistance;
 
+#if 0
+
 /***********************************************************************************
  *
  * Balancing
@@ -85,6 +87,8 @@ cass_balancing_set_host_distance(CassBalancing* balancing,
 void
 cass_balancing_add_host_to_query(CassBalancing* balancing,
                                  CassInet host);
+
+#endif
 
 } // extern "C"
 

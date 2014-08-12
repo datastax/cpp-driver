@@ -20,6 +20,7 @@
 
 extern "C" {
 
+#if 0
 void cass_balancing_set_session_data(CassBalancing* balancing,
                                      void* session_data) {
   balancing->set_session_data(session_data);
@@ -47,6 +48,7 @@ void cass_balancing_set_host_distance(CassBalancing* balancing,
 void cass_balancing_add_host_to_query(CassBalancing* balancing,
                                       CassInet host) {
 }
+#endif
 
 } // extern "C"
 

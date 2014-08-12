@@ -39,8 +39,12 @@ public:
     : fixed_(buffer) {}
 
   FixedAllocator(const FixedAllocator<T, N>& allocator)
-    : std::allocator<T>(allocator)
+    : std::allocator<T>()
     , fixed_(allocator.fixed_) {}
+
+  FixedAllocator(const std::allocator<T>& allocator)
+    : std::allocator<T>(allocator)
+    , fixed_(NULL) {}
 
   pointer allocate(size_type n, const_pointer hint = 0) {
     if(fixed_ != NULL && !fixed_->is_used && n <= N) {
