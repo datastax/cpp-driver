@@ -108,7 +108,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   set(WARNING_COMPILER_FLAGS "/wd4244 /wd4267")
 
   set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
-  set(INTEGRATION_TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+  set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
 
   # needed for windows sockets (not verified)
@@ -127,15 +127,15 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   endif()
 
   set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS}")
-  set(INTEGRATION_TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x ${WARNING_COMPILER_FLAGS}")
+  set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x ${WARNING_COMPILER_FLAGS}")
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
 else()
   # Clang/Intel specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-unused-local-typedefs")
+  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 
   set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS}")
-  set(INTEGRATION_TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x ${WARNING_COMPILER_FLAGS}")
+  set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x ${WARNING_COMPILER_FLAGS}")
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 ${WARNING_COMPILER_FLAGS}")
 endif()
 
