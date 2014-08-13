@@ -19,6 +19,8 @@
 
 #include <assert.h>
 
+#include "third_party/boost/boost/cstdint.hpp"
+
 namespace cass {
 
 template <class T>

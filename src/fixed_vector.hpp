@@ -84,6 +84,8 @@ public:
     this->resize(inital_size);
   }
 
+  const typename FixedAllocator<T, N>::Fixed& fixed() const { return fixed_; }
+
 private:
   typename FixedAllocator<T, N>::Fixed fixed_;
 
