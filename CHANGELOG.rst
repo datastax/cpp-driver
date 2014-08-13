@@ -6,6 +6,8 @@ Features
 --------
 * Added callbacks to futures, `cass_future_set_callback()` 
 * Added plaintext authentication support, `cass_cluster_set_credentials()`
+* Added map iterator, `cass_iterator_from_map()`, key and value pairs can be 
+  retreived using `cass_iterator_get_map_key()` and `cass_iterator_get_map_value()`
 * Values can be bound by name (statements created from prepared statments only)
 * Values can be retreived by name from result sets
 
