@@ -2,7 +2,7 @@ DataStax C/C++ Driver for Apache Cassandra (Beta)
 ===============================================
 
 A C/C++ client driver for Apache Cassandra. This driver works exclusively with
-the Cassandra Query Language version 3 (CQL3) and Cassandra's Native Protocol (version 2).
+the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol (version 1 and 2).
 
 - JIRA: https://datastax-oss.atlassian.net/browse/CPP
 - MAILING LIST: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
@@ -16,21 +16,23 @@ the Cassandra Query Language version 3 (CQL3) and Cassandra's Native Protocol (v
 - Batch statements
 - Connection pool with auto-reconnect
 - Cassandra collections
-- Compatibility with native protcol version 1
+- Compatibility with binary protcol version 1 and 2
+- Authentication (via credentials using SASL PLAIN)
 
 ### TODO
 - Compression
 - SSL support
-- Authentication
-- More docs
-- Packaging for Redhat/Centos and OSX
 - Integration tests
 - Query tracing
 - Event registration and notification
+- Callback intefaces for load balancing, authenticaiton, reconnection and retry
+- Packaging for Debian-based Linux, RHEL-based Linux and OS X
 - Binary releases for Windows and Linux
+- Getting started guide
+- Improved documentation
 
 ## Building
-The driver is known to work on OS X 10.9, Windows 7, and Ubuntu 14.04. The driver itself currently has two dependencies: [libuv 0.10](https://github.com/joyent/libuv) and [OpenSSL](http://www.openssl.org/). To build the driver you will need [CMake](http://www.cmake.org). To test the driver you will also need to install [boost 1.41+](http://www.boost.org),  [libssh2](http://www.libssh2.org) and [ccm](https://github.com/pcmanus/ccm).
+The driver is known to work on OS X 10.9, Windows 7, RHEL 5.10, and Ubuntu 14.04. The driver itself currently has two dependencies: [libuv 0.10](https://github.com/joyent/libuv) and [OpenSSL](http://www.openssl.org/). To build the driver you will need [CMake](http://www.cmake.org). To test the driver you will also need to install [boost 1.41+](http://www.boost.org),  [libssh2](http://www.libssh2.org) and [ccm](https://github.com/pcmanus/ccm).
 
 It has been built using GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2013.
 
@@ -123,7 +125,7 @@ There are several examples provided here: [examples](https://github.com/datastax
 #include <cassandra.h>
 
 int main() {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassCluster* cluster = cass_cluster_new();
   CassFuture* session_future = NULL;
   CassString contact_points = cass_string_init("127.0.0.1,127.0.0.2,127.0.0.3");
