@@ -40,7 +40,7 @@ CassCluster* create_cluster() {
 }
 
 CassError connect_session(CassCluster* cluster, CassSession** output) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassFuture* future = cass_cluster_connect(cluster);
 
   *output = NULL;
@@ -58,7 +58,7 @@ CassError connect_session(CassCluster* cluster, CassSession** output) {
 }
 
 CassError execute_query(CassSession* session, const char* query) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassFuture* future = NULL;
   CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
 
@@ -77,7 +77,7 @@ CassError execute_query(CassSession* session, const char* query) {
 }
 
 CassError prepare_insert_into_batch(CassSession* session, const CassPrepared** prepared) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassFuture* future = NULL;
   CassString query = cass_string_init("INSERT INTO examples.pairs (key, value) VALUES (?, ?)");
 
@@ -97,7 +97,7 @@ CassError prepare_insert_into_batch(CassSession* session, const CassPrepared** p
 }
 
 CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepared* prepared, const Pair* pairs) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassFuture* future = NULL;
   CassBatch* batch = cass_batch_new(CASS_BATCH_TYPE_LOGGED);
 
@@ -137,7 +137,7 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
 
 
 int main() {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassCluster* cluster = create_cluster();
   CassSession* session = NULL;
   CassFuture* close_future = NULL;

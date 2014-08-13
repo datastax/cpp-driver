@@ -55,7 +55,7 @@ CassCluster* create_cluster() {
 }
 
 CassError connect_session(CassCluster* cluster, CassSession** output) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassFuture* future = cass_cluster_connect_keyspace(cluster, "examples");
 
   *output = NULL;
@@ -73,7 +73,7 @@ CassError connect_session(CassCluster* cluster, CassSession** output) {
 }
 
 CassError execute_query(CassSession* session, const char* query) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassFuture* future = NULL;
   CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
 
@@ -92,7 +92,7 @@ CassError execute_query(CassSession* session, const char* query) {
 }
 
 CassError prepare_query(CassSession* session, CassString query, const CassPrepared** prepared) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassFuture* future = NULL;
 
   future = cass_session_prepare(session, query);
@@ -184,7 +184,7 @@ void run_select_queries(void* data) {
 int main() {
   int i;
   uv_thread_t threads[NUM_THREADS];
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassCluster* cluster = create_cluster();
   CassSession* session = NULL;
   CassFuture* close_future = NULL;

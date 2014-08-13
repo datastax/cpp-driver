@@ -20,7 +20,7 @@
 #include <cassandra.h>
 
 int main() {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassCluster* cluster = cass_cluster_new();
   CassFuture* session_future = NULL;
 
