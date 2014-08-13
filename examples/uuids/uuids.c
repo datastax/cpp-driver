@@ -43,7 +43,7 @@ CassCluster* create_cluster() {
 }
 
 CassError connect_session(CassCluster* cluster, CassSession** output) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassFuture* future = cass_cluster_connect(cluster);
 
   *output = NULL;
@@ -61,7 +61,7 @@ CassError connect_session(CassCluster* cluster, CassSession** output) {
 }
 
 CassError execute_query(CassSession* session, const char* query) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassFuture* future = NULL;
   CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
 
@@ -80,7 +80,7 @@ CassError execute_query(CassSession* session, const char* query) {
 }
 
 CassError insert_into_log(CassSession* session, const char* key, CassUuid time, const char* entry) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
   CassString query = cass_string_init("INSERT INTO examples.log (key, time, entry) VALUES (?, ?, ?);");
@@ -107,7 +107,7 @@ CassError insert_into_log(CassSession* session, const char* key, CassUuid time, 
 }
 
 CassError select_from_log(CassSession* session, const char* key) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
   CassString query = cass_string_init("SELECT * FROM examples.log WHERE key = ?");
@@ -155,7 +155,7 @@ CassError select_from_log(CassSession* session, const char* key) {
 }
 
 int main() {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassCluster* cluster = create_cluster();
   CassSession* session = NULL;
   CassFuture* close_future = NULL;

@@ -38,7 +38,7 @@ CassCluster* create_cluster() {
 }
 
 CassError connect_session(CassCluster* cluster, CassSession** output) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassFuture* future = cass_cluster_connect(cluster);
 
   *output = NULL;
@@ -56,7 +56,7 @@ CassError connect_session(CassCluster* cluster, CassSession** output) {
 }
 
 CassError execute_query(CassSession* session, const char* query) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassFuture* future = NULL;
   CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
 
@@ -75,7 +75,7 @@ CassError execute_query(CassSession* session, const char* query) {
 }
 
 CassError insert_into_maps(CassSession* session, const char* key, const Pair items[]) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
   CassCollection* collection = NULL;
@@ -109,7 +109,7 @@ CassError insert_into_maps(CassSession* session, const char* key, const Pair ite
 }
 
 CassError select_from_maps(CassSession* session, const char* key) {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
   CassString query = cass_string_init("SELECT items FROM examples.maps WHERE key = ?");
@@ -154,7 +154,7 @@ CassError select_from_maps(CassSession* session, const char* key) {
 }
 
 int main() {
-  CassError rc = 0;
+  CassError rc = CASS_OK;
   CassCluster* cluster = create_cluster();
   CassSession* session = NULL;
   CassFuture* close_future = NULL;
