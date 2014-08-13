@@ -1,3 +1,19 @@
+1.0.0-beta3
+===========
+Aug 13, 2014
+
+Features
+--------
+* Added callbacks to futures, `cass_future_set_callback()` 
+* Added plaintext authentication support, `cass_cluster_set_credentials()`
+* Values can be bound by name (statements created from prepared statments only)
+* Values can be retreived by name from result sets
+
+Other
+---------
+* Reduced overhead of prepared statements
+* Small performance improvement for all queries via reduced allocations
+
 1.0.0-beta2
 ===========
 Jul 17, 2014
