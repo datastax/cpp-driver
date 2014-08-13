@@ -25,6 +25,20 @@
 
 uv_mutex_t mutex;
 uv_cond_t cond;
+int exit_flag = 0;
+
+void wait_exit() {
+  uv_mutex_lock(&mutex);
+  while (!exit_flag) uv_cond_wait(&cond, &mutex);
+  uv_mutex_unlock(&mutex);
+}
+
+void signal_exit() {
+    uv_mutex_lock(&mutex);
+    exit_flag = 1;
+    uv_cond_signal(&cond);
+    uv_mutex_unlock(&mutex);
+}
 
 void on_create_keyspace(CassFuture* future, void* data);
 void on_create_table(CassFuture* future, void* data);
@@ -65,6 +79,23 @@ void execute_query(CassSession* session, const char* query,
   cass_future_set_callback(future, callback, session);
   cass_future_free(future);
   cass_statement_free(statement);
+}
+
+void on_session_connect(CassFuture* future, void* data) {
+  CassSession* session = NULL;
+  CassError code = cass_future_error_code(future);
+
+  if (code != CASS_OK) {
+    print_error(future);
+    uv_cond_signal(&cond);
+    return;
+  }
+
+  session = cass_future_get_session(future);
+  execute_query(session,
+                "CREATE KEYSPACE examples WITH replication = { "
+                "'class': 'SimpleStrategy', 'replication_factor': '3' };",
+                on_create_keyspace);
 }
 
 void on_create_keyspace(CassFuture* future, void* data) {
@@ -152,25 +183,8 @@ void on_select(CassFuture* future, void* data) {
   close_session((CassSession*)data);
 }
 
-void on_session_connect(CassFuture* future, void* data) {
-  CassSession* session = NULL;
-  CassError code = cass_future_error_code(future);
-
-  if (code != CASS_OK) {
-    print_error(future);
-    uv_cond_signal(&cond);
-    return;
-  }
-
-  session = cass_future_get_session(future);
-  execute_query(session,
-                "CREATE KEYSPACE examples WITH replication = { "
-                "'class': 'SimpleStrategy', 'replication_factor': '3' };",
-                on_create_keyspace);
-}
-
 void on_session_close(CassFuture *future, void *data) {
-  uv_cond_signal(&cond);
+  signal_exit();
 }
 
 int main() {
@@ -183,9 +197,7 @@ int main() {
 
   /* Code running in parallel with queries */
 
-  uv_mutex_lock(&mutex);
-  uv_cond_wait(&cond, &mutex);
-  uv_mutex_unlock(&mutex);
+  wait_exit();
 
   uv_cond_destroy(&cond);
   uv_mutex_destroy(&mutex);
