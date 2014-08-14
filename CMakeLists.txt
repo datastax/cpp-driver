@@ -222,13 +222,7 @@ add_custom_target(UNINSTALL
   COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
 #-------------------
-# Unit tests
-#-------------------
-
-add_subdirectory(test/unit_tests)
-
-#-------------------
-# Integration tests
+# Integration and unit tests
 #-------------------
 
 if(WIN32)
@@ -240,6 +234,10 @@ find_package(Boost 1.41.0 COMPONENTS system chrono thread unit_test_framework da
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/test/ccm_bridge/cmake/Modules/")
 find_package(LIBSSH2)
+
+if(Boost_FOUND)
+  add_subdirectory(test/unit_tests)
+endif()
 
 if((Boost_FOUND) AND (LIBSSH2_FOUND))
   add_subdirectory(test/ccm_bridge)
