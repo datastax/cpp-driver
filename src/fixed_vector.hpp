@@ -49,7 +49,7 @@ public:
   pointer allocate(size_type n, const_pointer hint = 0) {
     if(fixed_ != NULL && !fixed_->is_used && n <= N) {
       fixed_->is_used = true; // Don't reuse the buffer
-      return reinterpret_cast<T*>(fixed_->data.address());
+      return static_cast<T*>(fixed_->data.address());
     } else {
       return std::allocator<T>::allocate(n, hint);
     }

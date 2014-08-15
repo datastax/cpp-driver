@@ -17,6 +17,8 @@
 #ifndef __CASS_ASYNC_QUEUE_HPP_INCLUDED__
 #define __CASS_ASYNC_QUEUE_HPP_INCLUDED__
 
+#include "common.hpp"
+
 #include <uv.h>
 
 namespace cass {
@@ -35,7 +37,7 @@ public:
   }
 
   void close_handles() {
-    uv_close(reinterpret_cast<uv_handle_t*>(&async_), NULL);
+    uv_close(copy_cast<uv_async_t*, uv_handle_t*>(&async_), NULL);
   }
 
   bool enqueue(const typename Q::EntryType& data) {

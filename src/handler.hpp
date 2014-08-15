@@ -19,6 +19,7 @@
 
 #include "buffer.hpp"
 #include "cassandra.h"
+#include "common.hpp"
 #include "list.hpp"
 #include "scoped_ptr.hpp"
 
@@ -43,7 +44,7 @@ struct RequestTimer {
 
   ~RequestTimer() {
     if (handle_ != NULL) {
-      uv_close(reinterpret_cast<uv_handle_t*>(handle_), on_close);
+      uv_close(copy_cast<uv_timer_t*, uv_handle_t*>(handle_), on_close);
     }
   }
 
@@ -73,7 +74,7 @@ struct RequestTimer {
   }
 
   static void on_close(uv_handle_t* handle) {
-    delete reinterpret_cast<uv_timer_t*>(handle);
+    delete copy_cast<uv_handle_t*, uv_timer_t*>(handle);
   }
 
 private:

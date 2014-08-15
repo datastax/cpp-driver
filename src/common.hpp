@@ -19,12 +19,30 @@
 
 #include "cassandra.h"
 
-#include <uv.h>
+#include "third_party/boost/boost/static_assert.hpp"
 
+#include <uv.h>
 #include <string>
 
 namespace cass {
 
+// copy_cast<> prevents incorrect code from being generated when two unrelated 
+// types reference the same memory location and strict aliasing is enabled.
+// The type "char*" is an exception and is allowed to alias any other 
+// pointer type. This allows memcpy() to copy bytes from one type to the other
+// without violating strict aliasing and usually optimizes away on a modern
+// compiler (GCC, Clang, and MSVC).
+
+template<typename From, typename To>
+inline To copy_cast(const From& from)
+{
+  BOOST_STATIC_ASSERT(sizeof(From) == sizeof(To));
+
+  To to;
+  memcpy(&to, &from, sizeof(from));
+  return to;
+}
+ 
 uv_buf_t alloc_buffer(size_t suggested_size);
 uv_buf_t alloc_buffer(uv_handle_t* handle, size_t suggested_size);
 void free_buffer(uv_buf_t buf);

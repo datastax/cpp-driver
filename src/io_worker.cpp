@@ -124,7 +124,7 @@ void IOWorker::close_handles() {
   EventThread<IOWorkerEvent>::close_handles();
   request_queue_.close_handles();
   uv_prepare_stop(&prepare_);
-  uv_close(reinterpret_cast<uv_handle_t*>(&prepare_), NULL);
+  uv_close(copy_cast<uv_prepare_t*, uv_handle_t*>(&prepare_), NULL);
   while (!pending_reconnects_.is_empty()) {
     ReconnectRequest* reconnect_request = pending_reconnects_.front();
     reconnect_request->stop_timer();
@@ -215,7 +215,7 @@ void IOWorker::on_pool_reconnect(Timer* timer) {
 }
 
 void IOWorker::on_execute(uv_async_t* async, int status) {
-  IOWorker* io_worker = reinterpret_cast<IOWorker*>(async->data);
+  IOWorker* io_worker = static_cast<IOWorker*>(async->data);
 
   RequestHandler* request_handler = NULL;
   while (io_worker->request_queue_.dequeue(request_handler)) {
@@ -234,7 +234,7 @@ void IOWorker::on_execute(uv_async_t* async, int status) {
 }
 
 void IOWorker::on_prepare(uv_prepare_t* prepare, int status) {
-  IOWorker* io_worker = reinterpret_cast<IOWorker*>(prepare->data);
+  IOWorker* io_worker = static_cast<IOWorker*>(prepare->data);
   io_worker->cleanup();
 }
 

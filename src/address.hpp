@@ -17,6 +17,8 @@
 #ifndef __CASS_ADDRESS_HPP_INCLUDED__
 #define __CASS_ADDRESS_HPP_INCLUDED__
 
+#include "common.hpp"
+
 #include <uv.h>
 #include <string.h>
 #include <string>
@@ -33,27 +35,27 @@ public:
   bool init(const struct sockaddr* addr);
 
   struct sockaddr* addr() {
-    return reinterpret_cast<struct sockaddr*>(&addr_);
+    return copy_cast<struct sockaddr_storage*, struct sockaddr*>(&addr_);
   }
 
   const struct sockaddr* addr() const {
-    return reinterpret_cast<const struct sockaddr*>(&addr_);
+    return copy_cast<const struct sockaddr_storage*, const struct sockaddr*>(&addr_);
   }
 
   struct sockaddr_in* addr_in() {
-    return reinterpret_cast<sockaddr_in*>(&addr_);
+    return copy_cast<struct sockaddr_storage*, struct sockaddr_in*>(&addr_);
   }
 
   const struct sockaddr_in* addr_in() const {
-    return reinterpret_cast<const sockaddr_in*>(&addr_);
+    return copy_cast<const struct sockaddr_storage*, const sockaddr_in*>(&addr_);
   }
 
   struct sockaddr_in6* addr_in6() {
-    return reinterpret_cast<sockaddr_in6*>(&addr_);
+    return copy_cast<struct sockaddr_storage*, sockaddr_in6*>(&addr_);
   }
 
   const struct sockaddr_in6* addr_in6() const {
-    return reinterpret_cast<const sockaddr_in6*>(&addr_);
+    return copy_cast<const struct sockaddr_storage*, const sockaddr_in6*>(&addr_);
   }
 
   int family() const { return addr()->sa_family; }

@@ -17,6 +17,8 @@
 #ifndef __CASS_TIMER_HPP_INCLUDED__
 #define __CASS_TIMER_HPP_INCLUDED__
 
+#include "common.hpp"
+
 #include <uv.h>
 
 #include "third_party/boost/boost/function.hpp"
@@ -44,7 +46,7 @@ public:
 
 private:
   static void close(Timer* timer) {
-    uv_close(reinterpret_cast<uv_handle_t*>(&timer->handle_), on_close);
+    uv_close(copy_cast<uv_timer_t*, uv_handle_t*>(&timer->handle_), on_close);
   }
 
   static void on_timeout(uv_timer_t* handle, int status) {

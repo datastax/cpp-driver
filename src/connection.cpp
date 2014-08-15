@@ -159,7 +159,7 @@ bool Connection::execute(Handler* handler) {
 
   pending_requests_.add_to_back(handler);
 
-  uv_stream_t* sock_stream = reinterpret_cast<uv_stream_t*>(&socket_);
+  uv_stream_t* sock_stream = copy_cast<uv_tcp_t*, uv_stream_t*>(&socket_);
 
   handler->set_state(Handler::REQUEST_STATE_WRITING);
   handler->start_timer(loop_, config_.request_timeout(), handler,
@@ -172,13 +172,14 @@ bool Connection::execute(Handler* handler) {
 
 void Connection::close() {
   if (state_ != CONNECTION_STATE_CLOSING) {
-    if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&socket_))) {
+    uv_handle_t* handle = copy_cast<uv_tcp_t*, uv_handle_t*>(&socket_);
+    if (!uv_is_closing(handle)) {
       if (state_ == CONNECTION_STATE_CONNECTED ||
           state_ == CONNECTION_STATE_READY) {
-        uv_read_stop(reinterpret_cast<uv_stream_t*>(&socket_));
+        uv_read_stop(copy_cast<uv_tcp_t*, uv_stream_t*>(&socket_));
       }
       state_ = CONNECTION_STATE_CLOSING;
-      uv_close(reinterpret_cast<uv_handle_t*>(&socket_), on_close);
+      uv_close(handle, on_close);
     }
   }
 }
@@ -267,7 +268,7 @@ void Connection::maybe_set_keyspace(ResponseMessage* response) {
 }
 
 void Connection::on_connect(Connecter* connecter) {
-  Connection* connection = reinterpret_cast<Connection*>(connecter->data());
+  Connection* connection = static_cast<Connection*>(connecter->data());
 
   if (connection->is_defunct()) {
     return; // Timed out
@@ -279,7 +280,7 @@ void Connection::on_connect(Connecter* connecter) {
   if (connecter->status() == Connecter::SUCCESS) {
     connection->logger_->debug("Connected to '%s'",
                                connection->host_string_.c_str());
-    uv_read_start(reinterpret_cast<uv_stream_t*>(&connection->socket_),
+    uv_read_start(copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_),
                   alloc_buffer, on_read);
     connection->state_ = CONNECTION_STATE_CONNECTED;
     connection->on_connected();
@@ -292,13 +293,13 @@ void Connection::on_connect(Connecter* connecter) {
 }
 
 void Connection::on_connect_timeout(Timer* timer) {
-  Connection* connection = reinterpret_cast<Connection*>(timer->data());
+  Connection* connection = static_cast<Connection*>(timer->data());
   connection->connect_timer_ = NULL;
   connection->notify_error("Connection timeout");
 }
 
 void Connection::on_close(uv_handle_t* handle) {
-  Connection* connection = reinterpret_cast<Connection*>(handle->data);
+  Connection* connection = static_cast<Connection*>(handle->data);
 
   connection->logger_->debug("Connection to '%s' closed",
                              connection->host_string_.c_str());
@@ -322,7 +323,7 @@ void Connection::on_close(uv_handle_t* handle) {
 }
 
 void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
-  Connection* connection = reinterpret_cast<Connection*>(client->data);
+  Connection* connection = static_cast<Connection*>(client->data);
 
   if (nread == -1) {
     if (uv_last_error(connection->loop_).code != UV_EOF) {
