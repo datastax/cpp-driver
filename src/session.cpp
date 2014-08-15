@@ -32,7 +32,7 @@ void cass_session_free(CassSession* session) {
 
 CassFuture* cass_session_close(CassSession* session) {
   // TODO(mpenick): Make sure this handles close during the middle of a connect
-  cass::SessionCloseFuture* close_future = new cass::SessionCloseFuture();
+  cass::SessionCloseFuture* close_future = new cass::SessionCloseFuture(session);
   close_future->inc_ref();
   session->close_async(close_future);
   return CassFuture::to(close_future);
@@ -176,15 +176,13 @@ void Session::on_after_run() {
   }
   logger_->join();
 
-  Future* close_future = close_future_;
-
-  // Let the session thread handle the final cleanup of the session. At this
-  // point we know that no other code is using this object.
-  delete this;
-
-  if (close_future != NULL) {
-    close_future->set();
-    close_future->dec_ref();
+  if (close_future_ == NULL) {
+    // If no future, 'this' is the last pointer
+    delete this;
+  } else {
+    // 'this' will be cleaned up by the waiting thread
+    close_future_->set();
+    close_future_->dec_ref();
   }
 }
 

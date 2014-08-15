@@ -120,8 +120,18 @@ private:
 
 class SessionCloseFuture : public Future {
 public:
-  SessionCloseFuture()
-      : Future(CASS_FUTURE_TYPE_SESSION_CLOSE) {}
+  SessionCloseFuture(Session* session)
+      : Future(CASS_FUTURE_TYPE_SESSION_CLOSE),
+        session_(session) {}
+
+  void wait() {
+    Future::wait();
+    session_->join();
+    delete session_;
+  }
+
+private:
+    Session* session_;
 };
 
 class SessionConnectFuture : public ResultFuture<Session> {
@@ -133,7 +143,7 @@ public:
     Session* session = release_result();
     if (session != NULL) {
       // The future was deleted before obtaining the session
-      ScopedRefPtr<cass::SessionCloseFuture> close_future(new cass::SessionCloseFuture());
+      ScopedRefPtr<cass::SessionCloseFuture> close_future(new cass::SessionCloseFuture(session));
       session->close_async(close_future.get());
       close_future->wait();
     }
