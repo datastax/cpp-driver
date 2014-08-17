@@ -225,6 +225,7 @@ void IOWorker::on_execute(uv_async_t* async, int status) {
           boost::bind(&IOWorker::on_retry, io_worker, _1, _2));
       request_handler->set_finished_callback(
           boost::bind(&IOWorker::on_request_finished, io_worker, _1));
+      request_handler->set_loop(io_worker->loop());
       request_handler->retry(RETRY_WITH_CURRENT_HOST);
     } else {
       io_worker->is_closing_ = true;

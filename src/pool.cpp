@@ -92,7 +92,7 @@ Connection* Pool::borrow_connection(const std::string& keyspace) {
 }
 
 bool Pool::execute(Connection* connection, RequestHandler* request_handler) {
-  request_handler->initialize(connection, this);
+  request_handler->set_connection_and_pool(connection, this);
   if (request_handler->keyspace == connection->keyspace()) {
     return connection->execute(request_handler);
   } else {
