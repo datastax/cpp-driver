@@ -126,10 +126,9 @@ bool Session::connect_async(const std::string& keyspace, Future* future) {
 }
 
 void Session::close_async(Future* future) {
+  assert(future != NULL);
   close_future_ = future;
-  if (close_future_ != NULL) {
-    close_future_->inc_ref();
-  }
+  close_future_->inc_ref();
   while (!request_queue_->enqueue(NULL)) {
     // Keep trying
   }
@@ -176,14 +175,9 @@ void Session::on_after_run() {
   }
   logger_->join();
 
-  if (close_future_ == NULL) {
-    // If no future, 'this' is the last pointer
-    delete this;
-  } else {
-    // 'this' will be cleaned up by the waiting thread
-    close_future_->set();
-    close_future_->dec_ref();
-  }
+  // 'this' will be cleaned up by the waiting thread
+  close_future_->set();
+  close_future_->dec_ref();
 }
 
 void Session::on_event(const SessionEvent& event) {

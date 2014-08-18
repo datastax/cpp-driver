@@ -124,10 +124,33 @@ public:
       : Future(CASS_FUTURE_TYPE_SESSION_CLOSE),
         session_(session) {}
 
+  ~SessionCloseFuture() {
+    wait();
+  }
+
   void wait() {
-    Future::wait();
-    session_->join();
-    delete session_;
+    ScopedMutex lock(&mutex_);
+
+    internal_wait(lock);
+
+    if (session_ != NULL) {
+      session_->join();
+      delete session_;
+      session_ = NULL;
+    }
+  }
+
+  bool wait_for(uint64_t timeout) {
+    ScopedMutex lock(&mutex_);
+    if (internal_wait_for(lock, timeout)) {
+      if (session_ != NULL) {
+        session_->join();
+        delete session_;
+        session_ = NULL;
+      }
+      return true;
+    }
+    return false;
   }
 
 private:
