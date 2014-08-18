@@ -127,7 +127,13 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   endif()
 
   set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS}")
-  set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x ${WARNING_COMPILER_FLAGS}")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.3" OR
+     CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.3")
+    set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x ${WARNING_COMPILER_FLAGS}")
+  else()
+    # TODO(mpenick): stress.cpp might not compile on older compilers because of boost::unique_future<>
+    set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+  endif()
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
 else()
   # Clang/Intel specific compiler options
