@@ -205,22 +205,22 @@ CassError cass_statement_bind_null(CassStatement* statement,
 }
 
 CassError cass_statement_bind_int32(CassStatement* statement, size_t index,
-                                    int32_t value) {
+                                    cass_int32_t value) {
   return statement->bind(index, value);
 }
 
 CassError cass_statement_bind_int64(CassStatement* statement, size_t index,
-                                    int64_t value) {
+                                    cass_int64_t value) {
   return statement->bind(index, value);
 }
 
 CassError cass_statement_bind_float(CassStatement* statement, size_t index,
-                                    float value) {
+                                    cass_float_t value) {
   return statement->bind(index, value);
 }
 
 CassError cass_statement_bind_double(CassStatement* statement, size_t index,
-                                     double value) {
+                                     cass_double_t value) {
   return statement->bind(index, value);
 }
 
