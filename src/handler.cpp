@@ -37,6 +37,8 @@ void Handler::set_state(Handler::State next_state) {
                  next_state == REQUEST_STATE_DONE) {
         stop_timer();
         state_ = next_state;
+      } else if (next_state == REQUEST_STATE_TIMEOUT) {
+        state_ = next_state;
       } else {
         assert(false && "Invalid request state after writing");
       }

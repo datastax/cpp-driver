@@ -18,9 +18,11 @@
 #define __CASS_SERIALIZATION_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "common.hpp"
 
-#include "third_party/boost/boost/limits.hpp"
 #include "third_party/boost/boost/cstdint.hpp"
+#include "third_party/boost/boost/limits.hpp"
+#include "third_party/boost/boost/static_assert.hpp"
 
 #include <assert.h>
 #include <string.h>
@@ -97,39 +99,42 @@ inline char* decode_int64(char* input, int64_t& output) {
 }
 
 inline void encode_float(char* output, float value) {
-  assert(std::numeric_limits<float>::is_iec559);
-  assert(sizeof(float) == sizeof(int32_t));
-  encode_int32(output, *reinterpret_cast<int32_t*>(&value));
+  BOOST_STATIC_ASSERT(std::numeric_limits<float>::is_iec559);
+  encode_int32(output, *copy_cast<float*, int32_t*>(&value));
 }
 
 inline char* decode_float(char* input, float& output) {
-  assert(std::numeric_limits<float>::is_iec559);
-  assert(sizeof(float) == sizeof(int32_t));
-  return decode_int32(input, *reinterpret_cast<int32_t*>(&output));
+  BOOST_STATIC_ASSERT(std::numeric_limits<float>::is_iec559);
+  return decode_int32(input, *copy_cast<float*, int32_t*>(&output));
 }
 
 inline void encode_double(char* output, double value) {
-  assert(std::numeric_limits<double>::is_iec559);
-  assert(sizeof(double) == sizeof(int64_t));
-  encode_int64(output, *reinterpret_cast<int64_t*>(&value));
+  BOOST_STATIC_ASSERT(std::numeric_limits<double>::is_iec559);
+  encode_int64(output, *copy_cast<double*, int64_t*>(&value));
 }
 
 inline char* decode_double(char* input, double& output) {
-  assert(std::numeric_limits<double>::is_iec559);
-  assert(sizeof(double) == sizeof(int64_t));
-  return decode_int64(input, *reinterpret_cast<int64_t*>(&output));
+  BOOST_STATIC_ASSERT(std::numeric_limits<double>::is_iec559);
+  return decode_int64(input, *copy_cast<double*, int64_t*>(&output));
 }
 
+// TODO(mpenick): Maybe this shouldn't take a "size_t"
 inline char* decode_string(char* input, char** output, size_t& size) {
-  *output = decode_uint16(input, ((uint16_t&)size));
-  return *output + size;
+  uint16_t string_size;
+  char* pos = decode_uint16(input, string_size);
+  size = string_size;
+  *output = pos;
+  return pos + string_size;
 }
 
+// TODO(mpenick): Maybe this shouldn't take a "size_t"
 inline char* decode_long_string(char* input, char** output, size_t& size) {
   int32_t string_size;
-  *output = decode_int32(input, string_size);
+  char* pos = decode_int32(input, string_size);
+  assert(string_size >= 0);
   size = string_size;
-  return *output + size;
+  *output = pos;
+  return pos + string_size;
 }
 
 inline char* decode_bytes(char* input, char** output, size_t& size) {

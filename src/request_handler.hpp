@@ -29,6 +29,7 @@
 
 #include <list>
 #include <string>
+#include <uv.h>
 
 namespace cass {
 
@@ -54,11 +55,6 @@ public:
       , future_(future)
       , connection_(NULL)
       , pool_(NULL) {}
-
-  void initialize(Connection* connection, Pool* pool) {
-    connection_ = connection;
-    pool_ = pool;
-  }
 
   virtual const Request* request() const { return request_.get(); }
 
@@ -86,7 +82,17 @@ public:
     finished_callback_ = callback;
   }
 
-  ResponseFuture* future() { return future_.get(); }
+  // It's important to use a loop with the same thread as where on_set(),
+  // on_error(), or on_timeout() are going to be called because
+  // uv_queue_work() is NOT threadsafe.
+  void set_loop(uv_loop_t* loop) {
+    future_->set_loop(loop);
+  }
+
+  void set_connection_and_pool(Connection* connection, Pool* pool) {
+    connection_ = connection;
+    pool_ = pool;
+  }
 
   bool get_current_host(Host* host) {
     if (hosts.empty()) {

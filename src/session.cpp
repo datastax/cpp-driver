@@ -227,7 +227,7 @@ void Session::on_event(const SessionEvent& event) {
 }
 
 void Session::on_resolve(Resolver* resolver) {
-  Session* session = reinterpret_cast<Session*>(resolver->data());
+  Session* session = static_cast<Session*>(resolver->data());
   if (resolver->is_success()) {
     Host host(resolver->address());
     session->hosts_.insert(host);
@@ -254,7 +254,6 @@ Future* Session::prepare(const char* statement, size_t length) {
 
   ResponseFuture* future = new ResponseFuture();
   future->inc_ref(); // External reference
-  future->set_loop(loop());
   future->statement.assign(statement, length);
 
   RequestHandler* request_handler = new RequestHandler(prepare, future);
@@ -268,7 +267,6 @@ Future* Session::prepare(const char* statement, size_t length) {
 Future* Session::execute(const Request* statement) {
   ResponseFuture* future = new ResponseFuture();
   future->inc_ref(); // External reference
-  future->set_loop(loop());
 
   RequestHandler* request_handler = new RequestHandler(statement, future);
   request_handler->inc_ref(); // IOWorker reference
@@ -279,7 +277,7 @@ Future* Session::execute(const Request* statement) {
 }
 
 void Session::on_execute(uv_async_t* data, int status) {
-  Session* session = reinterpret_cast<Session*>(data->data);
+  Session* session = static_cast<Session*>(data->data);
 
   bool is_closing = false;
 

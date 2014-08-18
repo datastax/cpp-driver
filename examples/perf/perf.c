@@ -112,9 +112,9 @@ CassError prepare_query(CassSession* session, CassString query, const CassPrepar
 
 void select_from_perf(CassSession* session, CassString query, const CassPrepared* prepared,
                       ThreadStats* thread_stats) {
-  size_t i;
+  int i;
   uint64_t start, elapsed;
-  size_t num_requests = 0;
+  int num_requests = 0;
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
 
   unsigned long thread_id = uv_thread_self();
@@ -154,7 +154,7 @@ void select_from_perf(CassSession* session, CassString query, const CassPrepared
   thread_stats->total_averages += num_requests /  ((double)elapsed / 1000000000.0);
   thread_stats->total_average_count++;
 
-  printf("%ld: average %f selects/sec (%lu)\n", thread_id, thread_stats->total_averages / thread_stats->total_average_count, num_requests);
+  printf("%ld: average %f selects/sec (%d)\n", thread_id, thread_stats->total_averages / thread_stats->total_average_count, num_requests);
 }
 
 void run_select_queries(void* data) {

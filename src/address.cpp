@@ -26,13 +26,13 @@ bool Address::from_string(const std::string& ip, int port, Address* output) {
   if (uv_inet_pton(AF_INET, ip.c_str(), &buf).code == UV_OK) {
     if (output != NULL) {
       struct sockaddr_in addr = uv_ip4_addr(ip.c_str(), port);
-      output->init(reinterpret_cast<const struct sockaddr*>(&addr));
+      output->init(copy_cast<struct sockaddr_in*, struct sockaddr*>(&addr));
     }
     return true;
   } else if (uv_inet_pton(AF_INET6, ip.c_str(), &buf).code == UV_OK) {
     if (output != NULL) {
       struct sockaddr_in6 addr = uv_ip6_addr(ip.c_str(), port);
-      output->init(reinterpret_cast<const struct sockaddr*>(&addr));
+      output->init(copy_cast<struct sockaddr_in6*, struct sockaddr*>(&addr));
     }
     return true;
   } else {

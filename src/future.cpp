@@ -169,7 +169,7 @@ void Future::run_callback_on_work_thread() {
 }
 
 void Future::on_work(uv_work_t* work) {
-  Future* future = reinterpret_cast<Future*>(work->data);
+  Future* future = static_cast<Future*>(work->data);
 
   ScopedMutex lock(&future->mutex_);
   Callback callback = future->callback_;
@@ -180,7 +180,7 @@ void Future::on_work(uv_work_t* work) {
 }
 
 void Future::on_after_work(uv_work_t* work, int status) {
-  Future* future = reinterpret_cast<Future*>(work->data);
+  Future* future = static_cast<Future*>(work->data);
   future->dec_ref();
 }
 
