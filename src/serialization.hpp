@@ -75,7 +75,8 @@ inline char* decode_int32(char* input, int32_t& output) {
   return input + sizeof(int32_t);
 }
 
-inline void encode_int64(char* output, int64_t value) {
+inline void encode_int64(char* output, cass_int64_t value) {
+  BOOST_STATIC_ASSERT(sizeof(cass_int64_t) == 8);
   output[0] = static_cast<char>(value >> 56);
   output[1] = static_cast<char>(value >> 48);
   output[2] = static_cast<char>(value >> 40);
@@ -86,16 +87,17 @@ inline void encode_int64(char* output, int64_t value) {
   output[7] = static_cast<char>(value >> 0);
 }
 
-inline char* decode_int64(char* input, int64_t& output) {
-  output = (static_cast<int64_t>(static_cast<uint8_t>(input[7])) << 0) |
-           (static_cast<int64_t>(static_cast<uint8_t>(input[6])) << 8) |
-           (static_cast<int64_t>(static_cast<uint8_t>(input[5])) << 16) |
-           (static_cast<int64_t>(static_cast<uint8_t>(input[4])) << 24) |
-           (static_cast<int64_t>(static_cast<uint8_t>(input[3])) << 32) |
-           (static_cast<int64_t>(static_cast<uint8_t>(input[2])) << 40) |
-           (static_cast<int64_t>(static_cast<uint8_t>(input[1])) << 48) |
-           (static_cast<int64_t>(static_cast<uint8_t>(input[0])) << 56);
-  return input + sizeof(int64_t);
+inline char* decode_int64(char* input, cass_int64_t& output) {
+  BOOST_STATIC_ASSERT(sizeof(cass_int64_t) == 8);
+  output = (static_cast<cass_int64_t>(static_cast<uint8_t>(input[7])) << 0) |
+           (static_cast<cass_int64_t>(static_cast<uint8_t>(input[6])) << 8) |
+           (static_cast<cass_int64_t>(static_cast<uint8_t>(input[5])) << 16) |
+           (static_cast<cass_int64_t>(static_cast<uint8_t>(input[4])) << 24) |
+           (static_cast<cass_int64_t>(static_cast<uint8_t>(input[3])) << 32) |
+           (static_cast<cass_int64_t>(static_cast<uint8_t>(input[2])) << 40) |
+           (static_cast<cass_int64_t>(static_cast<uint8_t>(input[1])) << 48) |
+           (static_cast<cass_int64_t>(static_cast<uint8_t>(input[0])) << 56);
+  return input + sizeof(cass_int64_t);
 }
 
 inline void encode_float(char* output, float value) {
@@ -110,12 +112,12 @@ inline char* decode_float(char* input, float& output) {
 
 inline void encode_double(char* output, double value) {
   BOOST_STATIC_ASSERT(std::numeric_limits<double>::is_iec559);
-  encode_int64(output, *copy_cast<double*, int64_t*>(&value));
+  encode_int64(output, *copy_cast<double*, cass_int64_t*>(&value));
 }
 
 inline char* decode_double(char* input, double& output) {
   BOOST_STATIC_ASSERT(std::numeric_limits<double>::is_iec559);
-  return decode_int64(input, *copy_cast<double*, int64_t*>(&output));
+  return decode_int64(input, *copy_cast<double*, cass_int64_t*>(&output));
 }
 
 // TODO(mpenick): Maybe this shouldn't take a "size_t"

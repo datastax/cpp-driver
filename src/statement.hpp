@@ -105,7 +105,7 @@ public:
   }
 
   BIND_FIXED_TYPE(int32_t, int32, sizeof(int32_t))
-  BIND_FIXED_TYPE(int64_t, int64, sizeof(int64_t))
+  BIND_FIXED_TYPE(cass_int64_t, int64, sizeof(cass_int64_t))
   BIND_FIXED_TYPE(float, float, sizeof(float))
   BIND_FIXED_TYPE(double, double, sizeof(double))
   BIND_FIXED_TYPE(bool, bool, sizeof(uint8_t))
