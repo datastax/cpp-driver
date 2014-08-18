@@ -116,7 +116,9 @@ protected:
 
   bool internal_wait_for(ScopedMutex& lock, uint64_t timeout) {
     if (!is_set_) {
-      uv_cond_timedwait(&cond_, lock.get(), timeout * 1000); // Expects nanos
+      if (uv_cond_timedwait(&cond_, lock.get(), timeout * 1000) != 0) { // Expects nanos
+        return false;
+      }
     }
     return is_set_;
   }
