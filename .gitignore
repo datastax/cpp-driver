@@ -5,7 +5,7 @@
 *.0
 
 # Compiled Dynamic libraries
-*.so
+libcassandra.so*
 *.dylib
 
 # Compiled Static libraries
