@@ -128,7 +128,6 @@ bool Session::connect_async(const std::string& keyspace, Future* future) {
 void Session::close_async(Future* future) {
   assert(future != NULL);
   close_future_ = future;
-  close_future_->inc_ref();
   while (!request_queue_->enqueue(NULL)) {
     // Keep trying
   }
@@ -177,7 +176,6 @@ void Session::on_after_run() {
 
   // 'this' will be cleaned up by the waiting thread
   close_future_->set();
-  close_future_->dec_ref();
 }
 
 void Session::on_event(const SessionEvent& event) {
