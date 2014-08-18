@@ -120,8 +120,41 @@ private:
 
 class SessionCloseFuture : public Future {
 public:
-  SessionCloseFuture()
-      : Future(CASS_FUTURE_TYPE_SESSION_CLOSE) {}
+  SessionCloseFuture(Session* session)
+      : Future(CASS_FUTURE_TYPE_SESSION_CLOSE),
+        session_(session) {}
+
+  ~SessionCloseFuture() {
+    wait();
+  }
+
+  void wait() {
+    ScopedMutex lock(&mutex_);
+
+    internal_wait(lock);
+
+    if (session_ != NULL) {
+      session_->join();
+      delete session_;
+      session_ = NULL;
+    }
+  }
+
+  bool wait_for(uint64_t timeout) {
+    ScopedMutex lock(&mutex_);
+    if (internal_wait_for(lock, timeout)) {
+      if (session_ != NULL) {
+        session_->join();
+        delete session_;
+        session_ = NULL;
+      }
+      return true;
+    }
+    return false;
+  }
+
+private:
+    Session* session_;
 };
 
 class SessionConnectFuture : public ResultFuture<Session> {
@@ -133,7 +166,7 @@ public:
     Session* session = release_result();
     if (session != NULL) {
       // The future was deleted before obtaining the session
-      ScopedRefPtr<cass::SessionCloseFuture> close_future(new cass::SessionCloseFuture());
+      ScopedRefPtr<cass::SessionCloseFuture> close_future(new cass::SessionCloseFuture(session));
       session->close_async(close_future.get());
       close_future->wait();
     }
