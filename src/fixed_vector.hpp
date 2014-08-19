@@ -1,5 +1,5 @@
-#ifndef FIXED_ALLOCATOR_HPP
-#define FIXED_ALLOCATOR_HPP
+#ifndef __CASS_FIXED_ALLOCATOR_HPP_INCLUDED__
+#define __CASS_FIXED_ALLOCATOR_HPP_INCLUDED__
 
 #include "macros.hpp"
 
@@ -49,7 +49,7 @@ public:
     : fixed_(allocator.fixed_) {}
 
   template<class U, size_t M>
-  FixedAllocator(const FixedAllocator<U, N>& allocator)
+  FixedAllocator(const FixedAllocator<U, M>& allocator)
     : fixed_(NULL) {}
 
   FixedAllocator(const std::allocator<T>& allocator)

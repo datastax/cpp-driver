@@ -116,6 +116,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-DBOOST_ALL_NO_LIB)
+  add_definitions(-DNOMINMAX)
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # GCC specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
