@@ -1,5 +1,5 @@
-#ifndef FIXED_ALLOCATOR_HPP
-#define FIXED_ALLOCATOR_HPP
+#ifndef __CASS_FIXED_ALLOCATOR_HPP_INCLUDED__
+#define __CASS_FIXED_ALLOCATOR_HPP_INCLUDED__
 
 #include "macros.hpp"
 
