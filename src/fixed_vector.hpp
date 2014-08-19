@@ -1,10 +1,11 @@
-#ifndef FIXED_ALLOCATOR_HPP
-#define FIXED_ALLOCATOR_HPP
+#ifndef __CASS_FIXED_ALLOCATOR_HPP_INCLUDED__
+#define __CASS_FIXED_ALLOCATOR_HPP_INCLUDED__
 
 #include "macros.hpp"
 
 #include "third_party/boost/boost/aligned_storage.hpp"
 
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -15,11 +16,17 @@ namespace cass {
 // copied so the vector itself needs to hold on to the fixed buffer.
 
 template <class T, size_t N>
-class FixedAllocator : public std::allocator<T> {
+class FixedAllocator {
 public:
-  typedef typename std::allocator<T>::pointer pointer;
-  typedef typename std::allocator<T>::const_pointer const_pointer;
-  typedef typename std::allocator<T>::size_type size_type;
+  typedef size_t size_type;
+  typedef ptrdiff_t difference_type;
+  typedef T value_type;
+  typedef T* pointer;
+  typedef const T* const_pointer;
+  typedef T& reference;
+  typedef const T& const_reference;
+
+  template <class U> struct rebind { typedef FixedAllocator<U, N> other; };
 
   struct Fixed {
     Fixed()
@@ -35,23 +42,33 @@ public:
   FixedAllocator()
     : fixed_(NULL) {}
 
-  FixedAllocator(Fixed* buffer)
-    : fixed_(buffer) {}
+  FixedAllocator(Fixed* fixed)
+    : fixed_(fixed) {}
 
   FixedAllocator(const FixedAllocator<T, N>& allocator)
-    : std::allocator<T>()
-    , fixed_(allocator.fixed_) {}
+    : fixed_(allocator.fixed_) {}
+
+  template<class U, size_t M>
+  FixedAllocator(const FixedAllocator<U, M>& allocator)
+    : fixed_(NULL) {}
 
   FixedAllocator(const std::allocator<T>& allocator)
-    : std::allocator<T>(allocator)
-    , fixed_(NULL) {}
+    : fixed_(NULL) {}
 
-  pointer allocate(size_type n, const_pointer hint = 0) {
+  pointer address(reference x) const {
+    return &x;
+  }
+
+  const_pointer address(const_reference x) const {
+    return &x;
+  }
+
+  pointer allocate(size_type n, const_pointer hint = NULL) {
     if(fixed_ != NULL && !fixed_->is_used && n <= N) {
       fixed_->is_used = true; // Don't reuse the buffer
       return static_cast<T*>(fixed_->data.address());
     } else {
-      return std::allocator<T>::allocate(n, hint);
+      return static_cast<T*>(::operator new(sizeof(T) * n));
     }
   }
 
@@ -59,8 +76,20 @@ public:
     if(fixed_ != NULL && fixed_->data.address() == p) {
       fixed_->is_used = false; // It's safe to reuse the buffer
     } else {
-      std::allocator<T>::deallocate(p, n);
+      ::operator delete(p);
     }
+  }
+
+  void construct(pointer p, const_reference x) {
+    new (p) value_type(x);
+  }
+
+  void destroy(pointer p) {
+    p->~value_type();
+  }
+
+  size_type max_size() const throw() {
+    return std::numeric_limits<size_type>::max();
   }
 
 private:
