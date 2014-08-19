@@ -18,7 +18,7 @@
 #define __CASS_ROUND_ROBIN_POLICY_HPP_INCLUDED__
 
 #include "cassandra.h"
-#include "balancing.hpp"
+#include "load_balancing.hpp"
 #include "host.hpp"
 
 namespace cass {
@@ -36,16 +36,36 @@ public:
     return CASS_HOST_DISTANCE_LOCAL;
   }
 
-  void new_query_plan(std::list<Host>* output) {
-    size_t index = index_++;
-    size_t hosts_size = hosts_.size();
-    for (size_t i = 0; i < hosts_.size(); ++i) {
-      output->push_back(hosts_[index++ % hosts_size]);
-    }
+  QueryPlan* new_query_plan() {
+    return new RoundRobinQueryPlan(hosts_, index_++);
   }
 
 private:
-  std::vector<Host> hosts_;
+  class RoundRobinQueryPlan : public QueryPlan {
+  public:
+    RoundRobinQueryPlan(const HostVec& hosts, size_t start_index)
+      : hosts_(hosts)
+      , index_(start_index)
+      , remaining_(hosts.size()) {}
+
+    bool compute_next(Host* host)  {
+      if (remaining_ == 0) {
+        return false;
+      }
+
+      remaining_--;
+      *host = hosts_[index_++ % hosts_.size()];
+      return true;
+    }
+
+  private:
+    // TODO(mpenick): This can eventually use a ref counted COW container
+    HostVec hosts_;
+    size_t index_;
+    size_t remaining_;
+  };
+
+  HostVec hosts_;
   size_t index_;
 };
 

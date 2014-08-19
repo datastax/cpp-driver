@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BALANCING_HPP_INCLUDED__
-#define __CASS_BALANCING_HPP_INCLUDED__
+#ifndef __CASS_LOAD_BALANCING_HPP_INCLUDED__
+#define __CASS_LOAD_BALANCING_HPP_INCLUDED__
 
 #include <list>
 #include <set>
@@ -26,8 +26,6 @@
 #include "cassandra.h"
 
 extern "C" {
-
-typedef struct CassBalancing_ CassBalancing;
 
 typedef struct CassHost_ {
   CassInet address;
@@ -53,46 +51,15 @@ typedef enum CassHostDistance_ {
   CASS_HOST_DISTANCE_IGNORE
 } CassHostDistance;
 
-#if 0
-
-/***********************************************************************************
- *
- * Balancing
- *
- ***********************************************************************************/
-
-typedef void (*CassBalancingCallback)(void* data,
-                                      CassBalancingState state,
-                                      CassBalancing* balancing);
-
-void
-cass_balancing_set_session_data(CassBalancing* balancing,
-                                void* session_data);
-
-void*
-cass_balancing_session_data(CassBalancing* balancing);
-
-cass_size_t
-cass_balancing_hosts_count(CassBalancing* balancing);
-
-CassHost
-cass_balancing_host(CassBalancing* balancing,
-                    cass_size_t index);
-
-void
-cass_balancing_set_host_distance(CassBalancing* balancing,
-                                 cass_size_t index,
-                                 CassHostDistance distance);
-
-void
-cass_balancing_add_host_to_query(CassBalancing* balancing,
-                                 CassInet host);
-
-#endif
-
 } // extern "C"
 
 namespace cass {
+
+class QueryPlan {
+public:
+  virtual ~QueryPlan() {}
+  virtual bool compute_next(Host* host) = 0;
+};
 
 class LoadBalancingPolicy {
 public:
@@ -104,20 +71,7 @@ public:
 
   // TODO(mpenick): Figure out what parameters to pass, keyspace, consistency,
   // etc.
-  virtual void new_query_plan(std::list<Host>* output) = 0;
-};
-
-
-class Balancing {
-public:
-  void* session_data() { return session_data_; }
-
-  void set_session_data(void* session_data) {
-    session_data_ = session_data;
-  }
-
-private:
-  void* session_data_;
+  virtual QueryPlan* new_query_plan() = 0;
 };
 
 } // namespace cass

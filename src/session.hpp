@@ -17,6 +17,7 @@
 #ifndef __CASS_SESSION_HPP_INCLUDED__
 #define __CASS_SESSION_HPP_INCLUDED__
 
+#include "control_connection.hpp"
 #include "event_thread.hpp"
 #include "mpmc_queue.hpp"
 #include "spsc_queue.hpp"
@@ -24,7 +25,7 @@
 #include "scoped_ptr.hpp"
 #include "host.hpp"
 #include "future.hpp"
-#include "balancing.hpp"
+#include "load_balancing.hpp"
 #include "config.hpp"
 #include "logger.hpp"
 
@@ -43,8 +44,6 @@ class Future;
 class IOWorker;
 class Resolver;
 class Request;
-class SSLSession;
-class SSLContext;
 
 struct SessionEvent {
   enum Type { CONNECT, NOTIFY_READY, NOTIFY_CLOSED };
@@ -57,6 +56,18 @@ public:
   ~Session();
 
   int init();
+
+  const Config& config() const {
+    return config_;
+  }
+
+  LoadBalancingPolicy* load_balancing_policy() const {
+    return load_balancing_policy_.get();
+  }
+
+  Logger* logger() const {
+    return logger_.get();
+  }
 
   std::string keyspace() {
     ScopedMutex lock(&keyspace_mutex_);
@@ -85,10 +96,12 @@ public:
 private:
   void close_handles();
 
-  void init_pools();
-  SSLSession* ssl_session_new();
+  void internal_connect();
 
   void execute(RequestHandler* request_handler);
+
+  void on_control_connection_ready(ControlConnection* control_connection);
+  void on_control_conneciton_error(CassError code, const std::string& message);
 
   virtual void on_run();
   virtual void on_after_run();
@@ -101,7 +114,7 @@ private:
   typedef std::vector<IOWorker*> IOWorkerVec;
   typedef std::set<Host> HostSet;
 
-  SSLContext* ssl_context_;
+  ControlConnection control_connection_;
   IOWorkerVec io_workers_;
   ScopedPtr<Logger> logger_;
   std::string keyspace_;

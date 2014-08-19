@@ -28,13 +28,13 @@ public:
 
   virtual ~LoopThread() { uv_loop_delete(loop_); }
 
+  uv_loop_t* loop() { return loop_; }
+
   void run() { uv_thread_create(&thread_, on_run_internal, this); }
 
   void join() { uv_thread_join(&thread_); }
 
 protected:
-  uv_loop_t* loop() { return loop_; }
-
   virtual void on_run() {}
   virtual void on_after_run() {}
 

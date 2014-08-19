@@ -27,6 +27,7 @@
 #include "scoped_ptr.hpp"
 #include "ref_counted.hpp"
 #include "response.hpp"
+#include "request.hpp"
 
 #include "third_party/boost/boost/function.hpp"
 
