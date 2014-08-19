@@ -14,73 +14,66 @@
   limitations under the License.
 */
 
-
 #include <stdio.h>
-#include <string.h>
 #include <cassandra.h>
 
 int main() {
-  CassError rc = CASS_OK;
+  /* Setup and connect to cluster */
+  CassFuture* connect_future = NULL;
   CassCluster* cluster = cass_cluster_new();
-  CassFuture* session_future = NULL;
-
   cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
 
-  session_future = cass_cluster_connect(cluster);
-  cass_future_wait(session_future);
-  rc = cass_future_error_code(session_future);
+  connect_future = cass_cluster_connect(cluster);
 
-  if(rc == CASS_OK) {
-    CassSession* session = cass_future_get_session(session_future);
-    CassFuture* result_future = NULL;
+  if (cass_future_error_code(connect_future) == CASS_OK) {
     CassFuture* close_future = NULL;
-    CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces;");
+    CassSession* session = cass_future_get_session(connect_future);
+
+    /* Build statement and execute query */
+    CassString query = cass_string_init("SELECT keyspace_name "
+                                        "FROM system.schema_keyspaces;");
     CassStatement* statement = cass_statement_new(query, 0);
 
-    result_future = cass_session_execute(session, statement);
-    cass_future_wait(result_future);
+    CassFuture* result_future = cass_session_execute(session, statement);
 
-    rc = cass_future_error_code(result_future);
-    if(rc == CASS_OK) {
+    if(cass_future_error_code(result_future) == CASS_OK) {
+      /* Retrieve result set and iterator over the rows */
       const CassResult* result = cass_future_get_result(result_future);
       CassIterator* rows = cass_iterator_from_result(result);
 
       while(cass_iterator_next(rows)) {
         const CassRow* row = cass_iterator_get_row(rows);
+        const CassValue* value = cass_row_get_column_by_name(row, "keyspace_name");
+
         CassString keyspace_name;
-        cass_bool_t durable_writes;
-        CassString strategy_class;
-        CassString strategy_options;
-
-        cass_value_get_string(cass_row_get_column(row, 0), &keyspace_name);
-        cass_value_get_bool(cass_row_get_column(row, 1), &durable_writes);
-        cass_value_get_string(cass_row_get_column(row, 2), &strategy_class);
-        cass_value_get_string(cass_row_get_column(row, 3), &strategy_options);
-
-        printf("keyspace_name: '%.*s', durable_writes: %s, strategy_class: '%.*s', strategy_options: %.*s\n",
-               (int)keyspace_name.length, keyspace_name.data,
-               durable_writes ? "true" : "false",
-               (int)strategy_class.length, strategy_class.data,
-               (int)strategy_options.length, strategy_options.data);
+        cass_value_get_string(value, &keyspace_name);
+        printf("keyspace_name: '%.*s'\n", (int)keyspace_name.length,
+                                               keyspace_name.data);
       }
 
       cass_result_free(result);
       cass_iterator_free(rows);
     } else {
+      /* Handle error */
       CassString message = cass_future_error_message(result_future);
-      fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
-    }
+      fprintf(stderr, "Unable to run query: '%.*s'\n", (int)message.length,
+                                                            message.data);
+    } 
 
     cass_future_free(result_future);
+
+    /* Close the session */
     close_future = cass_session_close(session);
     cass_future_wait(close_future);
     cass_future_free(close_future);
   } else {
-    CassString message = cass_future_error_message(session_future);
-    fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
+      /* Handle error */
+      CassString message = cass_future_error_message(connect_future);
+      fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message.length, 
+                                                          message.data);
   }
 
-  cass_future_free(session_future);
+  cass_future_free(connect_future);
   cass_cluster_free(cluster);
 
   return 0;
