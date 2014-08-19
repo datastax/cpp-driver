@@ -49,7 +49,7 @@ public:
     : fixed_(allocator.fixed_) {}
 
   template<class U, size_t M>
-  FixedAllocator(const FixedAllocator<U, N>& allocator)
+  FixedAllocator(const FixedAllocator<U, M>& allocator)
     : fixed_(NULL) {}
 
   FixedAllocator(const std::allocator<T>& allocator)
