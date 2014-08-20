@@ -45,9 +45,6 @@ class Request;
 
 class Connection {
 public:
-  typedef boost::function1<void, Connection*> Callback;
-
-public:
   enum ConnectionState {
     CONNECTION_STATE_NEW,
     CONNECTION_STATE_CONNECTING,
@@ -57,23 +54,15 @@ public:
     CONNECTION_STATE_CLOSED
   };
 
-  enum Compression {
-    CLIENT_COMPRESSION_NONE,
-    CLIENT_COMPRESSION_SNAPPY,
-    CLIENT_COMPRESSION_LZ4
-  };
-
-  enum SchemaEventType {
-    CLIENT_EVENT_SCHEMA_CREATED,
-    CLIENT_EVENT_SCHEMA_UPDATED,
-    CLIENT_EVENT_SCHEMA_DROPPED
-  };
+  typedef boost::function2<void, int, ResponseMessage*> EventCallback;
+  typedef boost::function1<void, Connection*> Callback;
 
   Connection(uv_loop_t* loop, const Host& host,
              Logger* logger, const Config& config, const std::string& keyspace,
              int protocol_version);
 
   void connect();
+
 
   bool execute(Handler* request);
 
@@ -93,6 +82,11 @@ public:
 
   void set_ready_callback(Callback callback) { ready_callback_ = callback; }
   void set_close_callback(Callback callback) { closed_callback_ = callback; }
+
+  void set_event_callback(int types, EventCallback callback) {
+    event_types_ = types;
+    event_callback_ = callback;
+  }
 
   size_t available_streams() { return stream_manager_.available_streams(); }
   size_t pending_request_count() { return pending_requests_.size(); }
@@ -158,6 +152,7 @@ private:
 
   Callback ready_callback_;
   Callback closed_callback_;
+  EventCallback event_callback_;
 
   // DNS and hostname stuff
   Host host_;
@@ -170,6 +165,7 @@ private:
   std::string compression_;
   std::string version_;
   const int protocol_version_;
+  int event_types_;
 
   Logger* logger_;
   const Config& config_;

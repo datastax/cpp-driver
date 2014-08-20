@@ -13,6 +13,7 @@
 #include "startup_request.hpp"
 #include "query_request.hpp"
 #include "options_request.hpp"
+#include "register_request.hpp"
 #include "error_response.hpp"
 #include "logger.hpp"
 #include "cassandra.h"
@@ -120,6 +121,7 @@ Connection::Connection(uv_loop_t* loop,
     , ssl_handshake_done_(false)
     , version_("3.0.0")
     , protocol_version_(protocol_version)
+    , event_types_(0)
     , logger_(logger)
     , config_(config)
     , keyspace_(keyspace)
@@ -429,7 +431,11 @@ void Connection::on_ready() {
 }
 
 void Connection::on_set_keyspace() {
-  notify_ready();
+  if (event_types_ != 0) {
+    execute(new StartupHandler(this, new RegisterRequest(event_types_)));
+  } else {
+    notify_ready();
+  }
 }
 
 void Connection::on_supported(ResponseMessage* response) {
