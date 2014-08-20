@@ -18,6 +18,7 @@
 #define __CASS_ROUND_ROBIN_POLICY_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "copy_on_write_ptr.hpp"
 #include "load_balancing.hpp"
 #include "host.hpp"
 
@@ -26,10 +27,11 @@ namespace cass {
 class RoundRobinPolicy : public LoadBalancingPolicy {
 public:
   RoundRobinPolicy()
-      : index_(0) {}
+      : hosts_(new HostVec)
+      , index_(0) {}
 
   void init(const std::set<Host>& hosts) {
-    hosts_.assign(hosts.begin(), hosts.end());
+    hosts_->assign(hosts.begin(), hosts.end());
   }
 
   CassHostDistance distance(const Host& host) {
@@ -43,10 +45,10 @@ public:
 private:
   class RoundRobinQueryPlan : public QueryPlan {
   public:
-    RoundRobinQueryPlan(const HostVec& hosts, size_t start_index)
+    RoundRobinQueryPlan(const CopyOnWritePtr<HostVec>& hosts, size_t start_index)
       : hosts_(hosts)
       , index_(start_index)
-      , remaining_(hosts.size()) {}
+      , remaining_(hosts->size()) {}
 
     bool compute_next(Host* host)  {
       if (remaining_ == 0) {
@@ -54,18 +56,17 @@ private:
       }
 
       remaining_--;
-      *host = hosts_[index_++ % hosts_.size()];
+      *host = (*hosts_)[index_++ % hosts_->size()];
       return true;
     }
 
   private:
-    // TODO(mpenick): This can eventually use a ref counted COW container
-    HostVec hosts_;
+    const CopyOnWritePtr<HostVec> hosts_;
     size_t index_;
     size_t remaining_;
   };
 
-  HostVec hosts_;
+  CopyOnWritePtr<HostVec> hosts_;
   size_t index_;
 };
 

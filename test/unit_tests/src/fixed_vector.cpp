@@ -9,7 +9,7 @@
 
 BOOST_AUTO_TEST_SUITE(fixed_vector)
 
-BOOST_AUTO_TEST_CASE(test_using_fixed)
+BOOST_AUTO_TEST_CASE(simple)
 {
   cass::FixedVector<int, 5> vec;
   BOOST_CHECK(vec.fixed().data.address() == vec.data());

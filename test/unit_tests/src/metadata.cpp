@@ -26,7 +26,7 @@ cass::SharedRefPtr<cass::Metadata> create_metadata(const char* column_names[]) {
 
 BOOST_AUTO_TEST_SUITE(metadata)
 
-BOOST_AUTO_TEST_CASE(test_simple)
+BOOST_AUTO_TEST_CASE(simple)
 {
   const char* column_names[] = { "abc", "def", "xyz", NULL };
   cass::SharedRefPtr<cass::Metadata> metadata(create_metadata(column_names));
@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(test_simple)
   }
 }
 
-BOOST_AUTO_TEST_CASE(test_case_sensitive)
+BOOST_AUTO_TEST_CASE(case_sensitive)
 {
   const char* column_names[] = { "a", "A", "abc", "Abc", "ABc", "ABC", "aBc", "aBC", "abC", NULL };
   cass::SharedRefPtr<cass::Metadata> metadata(create_metadata(column_names));
