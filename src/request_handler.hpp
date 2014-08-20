@@ -21,6 +21,7 @@
 #include "future.hpp"
 #include "handler.hpp"
 #include "host.hpp"
+#include "load_balancing.hpp"
 #include "request.hpp"
 #include "response.hpp"
 #include "scoped_ptr.hpp"
@@ -53,6 +54,7 @@ public:
   RequestHandler(const Request* request, ResponseFuture* future)
       : request_(request)
       , future_(future)
+      , is_query_plan_exhauted_(false)
       , connection_(NULL)
       , pool_(NULL) {}
 
@@ -63,6 +65,11 @@ public:
   virtual void on_error(CassError code, const std::string& message);
 
   virtual void on_timeout();
+
+  void set_query_plan(QueryPlan* query_plan) {
+    query_plan_.reset(query_plan);
+    next_host();
+  }
 
   void set_retry_callback(RetryCallback callback) {
     retry_callback_ = callback;
@@ -95,23 +102,18 @@ public:
   }
 
   bool get_current_host(Host* host) {
-    if (hosts.empty()) {
+    if (is_query_plan_exhauted_) {
       return false;
     }
-    *host = hosts.front();
+    *host = current_host_;
     return true;
   }
 
   void next_host() {
-    if (hosts.empty()) {
-      return;
-    }
-    hosts_attempted_.push_back(hosts.front());
-    hosts.pop_front();
+    is_query_plan_exhauted_ = !query_plan_->compute_next(&current_host_);
   }
 
 public:
-  std::list<Host> hosts;
   std::string keyspace;
 
 private:
@@ -127,9 +129,11 @@ private:
   void on_result_response(ResponseMessage* response);
   void on_error_response(ResponseMessage* response);
 
-  std::list<Host> hosts_attempted_;
   ScopedRefPtr<const Request> request_;
   ScopedRefPtr<ResponseFuture> future_;
+  bool is_query_plan_exhauted_;
+  Host current_host_;
+  ScopedPtr<QueryPlan> query_plan_;
   Connection* connection_;
   Pool* pool_;
   RetryCallback retry_callback_;

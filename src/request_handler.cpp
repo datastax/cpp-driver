@@ -28,7 +28,7 @@ namespace cass {
 
 void RequestHandler::on_set(ResponseMessage* response) {
   assert(connection_ != NULL);
-  assert(!hosts.empty() && "Tried to set on a non-existent host");
+  assert(!is_query_plan_exhauted_ && "Tried to set on a non-existent host");
   switch (response->opcode()) {
     case CQL_OPCODE_RESULT:
       on_result_response(response);
@@ -54,15 +54,15 @@ void RequestHandler::on_error(CassError code, const std::string& message) {
 }
 
 void RequestHandler::on_timeout() {
-  assert(!hosts.empty() && "Tried to timeout on a non-existent host");
+  assert(!is_query_plan_exhauted_ && "Tried to timeout on a non-existent host");
   set_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT, "Request timed out");
 }
 
 void RequestHandler::set_error(CassError code, const std::string& message) {
-  if (hosts.empty()) {
+  if (is_query_plan_exhauted_) {
     future_->set_error(code, message);
   } else {
-    future_->set_error_with_host(hosts.front(), code, message);
+    future_->set_error_with_host(current_host_, code, message);
   }
   return_connection();
   notify_finished();
@@ -94,7 +94,7 @@ void RequestHandler::on_result_response(ResponseMessage* response) {
       break;
   }
 
-  future_->set_result(hosts.front(), response->response_body().release());
+  future_->set_result(current_host_, response->response_body().release());
   return_connection();
   notify_finished();
 }

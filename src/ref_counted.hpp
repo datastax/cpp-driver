@@ -30,16 +30,23 @@ struct RefCountedBase {};
 template <class T>
 class RefCounted : public RefCountedBase {
 public:
-  explicit RefCounted()
+  RefCounted()
       : ref_count_(0) {}
 
-  void inc_ref() const { ++ref_count_; }
+  int ref_count() const {
+    return ref_count_.load(boost::memory_order_acquire);
+  }
+
+  void inc_ref() const {
+    ref_count_.fetch_add(1, boost::memory_order_relaxed);
+  }
 
   void dec_ref() const {
-    int new_ref_count = --ref_count_;
-    assert(new_ref_count >= 0);
-    if (new_ref_count == 0) {
-       delete static_cast<const T*>(this);
+    int new_ref_count = ref_count_.fetch_sub(1, boost::memory_order_release);
+    assert(new_ref_count >= 1);
+    if (new_ref_count == 1) {
+      boost::atomic_thread_fence(boost::memory_order_acquire);
+      delete static_cast<const T*>(this);
     }
   }
 
@@ -69,13 +76,13 @@ public:
     copy<S>(ref.ptr_);
   }
 
-  T& operator=(const SharedRefPtr<T>& ref) {
+  SharedRefPtr<T>& operator=(const SharedRefPtr<T>& ref) {
     copy<T>(ref.ptr_);
     return *this;
   }
 
   template<class S>
-  T& operator=(const SharedRefPtr<S>& ref) {
+  SharedRefPtr<S>& operator=(const SharedRefPtr<S>& ref) {
     copy<S>(ref.ptr_);
     return *this;
   }

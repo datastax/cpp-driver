@@ -27,6 +27,7 @@
 #include "scoped_ptr.hpp"
 #include "ref_counted.hpp"
 #include "response.hpp"
+#include "request.hpp"
 
 #include "third_party/boost/boost/function.hpp"
 
@@ -44,27 +45,6 @@ class Request;
 
 class Connection {
 public:
-  class StartupHandler : public Handler {
-  public:
-    StartupHandler(Connection* connection, Request* request)
-        : connection_(connection)
-        , request_(request) {}
-
-    const Request* request() const {
-      return request_.get();
-    }
-
-    virtual void on_set(ResponseMessage* response);
-    virtual void on_error(CassError code, const std::string& message);
-    virtual void on_timeout();
-
-  private:
-    void on_result_response(ResponseMessage* response);
-
-    Connection* connection_;
-    ScopedRefPtr<Request> request_;
-  };
-
   typedef boost::function1<void, Connection*> Callback;
 
 public:
@@ -121,6 +101,27 @@ public:
   void on_timeout(RequestTimer* timer);
 
 private:
+  class StartupHandler : public Handler {
+  public:
+    StartupHandler(Connection* connection, Request* request)
+        : connection_(connection)
+        , request_(request) {}
+
+    const Request* request() const {
+      return request_.get();
+    }
+
+    virtual void on_set(ResponseMessage* response);
+    virtual void on_error(CassError code, const std::string& message);
+    virtual void on_timeout();
+
+  private:
+    void on_result_response(ResponseMessage* response);
+
+    Connection* connection_;
+    ScopedRefPtr<Request> request_;
+  };
+
   void actually_close();
   void consume(char* input, size_t size);
   void maybe_set_keyspace(ResponseMessage* response);

@@ -19,6 +19,8 @@
 
 #include "address.hpp"
 
+#include <vector>
+
 namespace cass {
 
 struct Host {
@@ -29,6 +31,8 @@ struct Host {
   Host(const Address& address)
       : address(address) {}
 };
+
+typedef std::vector<Host> HostVec;
 
 inline bool operator<(const Host& a, const Host& b) {
   return a.address < b.address;

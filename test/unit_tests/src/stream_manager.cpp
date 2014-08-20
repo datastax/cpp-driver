@@ -10,7 +10,7 @@
 
 BOOST_AUTO_TEST_SUITE(streams)
 
-BOOST_AUTO_TEST_CASE(test_simple)
+BOOST_AUTO_TEST_CASE(simple)
 {
   cass::StreamManager<int> streams;
 
@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE(test_simple)
   BOOST_CHECK(stream == 127);
 }
 
-BOOST_AUTO_TEST_CASE(test_alloc)
+BOOST_AUTO_TEST_CASE(alloc)
 {
   cass::StreamManager<int> streams;
 
