@@ -238,7 +238,7 @@ void Session::execute(RequestHandler* request_handler) {
 }
 
 void Session::on_control_connection_ready(ControlConnection* control_connection) {
-  // TODO (mpenick): Use hosts returned from the control connection
+  // TODO (mpenick): Use hosts returned from the control connection (CPP-145)
   pending_pool_count_ = hosts_.size() * io_workers_.size();
   for (HostSet::iterator hosts_it = hosts_.begin(), hosts_end = hosts_.end();
        hosts_it != hosts_end; ++hosts_it) {

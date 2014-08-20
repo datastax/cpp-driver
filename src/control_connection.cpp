@@ -59,11 +59,15 @@ void ControlConnection::reconnect() {
 
   if (!query_plan_->compute_next(&host)) {
     if (state_ == CONTROL_STATE_CONNECTED) {
-      schedule_reconnect(1000); // TODO: Configurable?
+      schedule_reconnect(1000); // TODO(mpenick): Configurable?
     } else if (error_callback_) {
       error_callback_(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, "No hosts available");
     }
     return;
+  }
+
+  if (connection_ != NULL) {
+    connection_->close();
   }
 
   connection_ = new Connection(session_->loop(),
@@ -81,20 +85,42 @@ void ControlConnection::reconnect() {
 }
 
 void ControlConnection::on_connection_ready(Connection* connection) {
-  // TODO:(mpenick): Query system.local and system.peers
-  state_ = CONTROL_STATE_CONNECTED;
-  if (ready_callback_) {
-    ready_callback_(this);
+  // TODO:(mpenick): Query system.local and system.peers (CPP-145)
+
+  if (state_== CONTROL_STATE_NEW) {
+    state_ = CONTROL_STATE_CONNECTED;
+    if (ready_callback_) {
+      ready_callback_(this);
+    }
   }
 }
 
 void ControlConnection::on_connection_closed(Connection* connection) {
+  // This pointer to the connection is no longer valid once it's
+  // closed
+  connection_ = NULL;
+
   reconnect();
 }
 
 void ControlConnection::on_reconnect(Timer* timer) {
   schedule_reconnect();
   reconnect_timer_ = NULL;
+}
+
+void ControlConnection::ControlHandler::on_set(ResponseMessage* response) {
+  response_callback_(response);
+}
+
+void ControlConnection::ControlHandler::on_error(CassError code, const std::string& message) {
+  // TODO(mpenick): This is a placeholder and might not be the right action for
+  // all error scenarios
+  control_connection_->schedule_reconnect();
+}
+
+void ControlConnection::ControlHandler::on_timeout() {
+  // TODO(mpenick): Is this the best way to handle a timeout?
+  control_connection_->schedule_reconnect();
 }
 
 } // namespace cass

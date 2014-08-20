@@ -15,6 +15,7 @@
 */
 
 #include "connection.hpp"
+#include "handler.hpp"
 #include "load_balancing.hpp"
 #include "macros.hpp"
 #include "scoped_ptr.hpp"
@@ -24,6 +25,8 @@
 
 namespace cass {
 
+class Request;
+class ResponseMessage;
 class Session;
 class Timer;
 
@@ -60,6 +63,31 @@ public:
   void close();
 
 private:
+  class ControlHandler : public Handler {
+  public:
+    typedef boost::function1<void, ResponseMessage*> ResponseCallback;
+
+    ControlHandler(ControlConnection* control_connection,
+                   Request* request,
+                   ResponseCallback response_callback)
+        : control_connection_(control_connection)
+        , request_(request)
+        , response_callback_(response_callback) {}
+
+    const Request* request() const {
+      return request_.get();
+    }
+
+    virtual void on_set(ResponseMessage* response);
+    virtual void on_error(CassError code, const std::string& message);
+    virtual void on_timeout();
+
+  private:
+    ControlConnection* control_connection_;
+    ScopedRefPtr<Request> request_;
+    ResponseCallback response_callback_;
+  };
+
   void schedule_reconnect(uint64_t ms = 0);
   void reconnect();
 
