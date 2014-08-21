@@ -32,6 +32,9 @@ public:
   static bool from_string(const std::string& ip, int port,
                           Address* output = NULL);
 
+  static void from_inet(const char* data, size_t size, int port,
+                              Address* output = NULL);
+
   bool init(const struct sockaddr* addr);
 
   struct sockaddr* addr() {
