@@ -213,8 +213,11 @@ void Connection::consume(char* input, size_t size) {
           size, remaining, host_string_.c_str());
 
       if (response->stream() < 0) {
-        // TODO(mstump) system events
-        assert(false);
+        if (response_->opcode() == CQL_OPCODE_EVENT) {
+
+        } else {
+          // TODO(mpenick): Log this
+        }
       } else {
         Handler* handler = NULL;
         if (stream_manager_.get_item(response->stream(), handler)) {
