@@ -245,7 +245,7 @@ void Session::on_control_connection_ready(ControlConnection* control_connection)
     for (IOWorkerVec::iterator it = io_workers_.begin(),
                                end = io_workers_.end();
          it != end; ++it) {
-      (*it)->add_pool_async(*hosts_it);
+      (*it)->add_pool_async(hosts_it->address);
     }
   }
 }

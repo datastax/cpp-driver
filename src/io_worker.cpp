@@ -52,17 +52,17 @@ int IOWorker::init() {
   return rc;
 }
 
-bool IOWorker::add_pool_async(Host host) {
+bool IOWorker::add_pool_async(const Address& address) {
   IOWorkerEvent event;
   event.type = IOWorkerEvent::ADD_POOL;
-  event.host = host;
+  event.address = address;
   return send_event_async(event);
 }
 
-bool IOWorker::remove_pool_async(Host host) {
+bool IOWorker::remove_pool_async(const Address& address) {
   IOWorkerEvent event;
   event.type = IOWorkerEvent::REMOVE_POOL;
-  event.host = host;
+  event.address = address;
   return send_event_async(event);
 }
 
@@ -72,9 +72,9 @@ void IOWorker::close_async() {
   }
 }
 
-void IOWorker::add_pool(Host host) {
-  if (!is_closing_ && pools.count(host) == 0) {
-    Pool* pool = new Pool(host, loop(), logger_, config_);
+void IOWorker::add_pool(const Address& address) {
+  if (!is_closing_ && pools.count(address) == 0) {
+    Pool* pool = new Pool(address, loop(), logger_, config_);
 
     pool->set_ready_callback(boost::bind(&IOWorker::on_pool_ready, this, _1));
     pool->set_closed_callback(boost::bind(&IOWorker::on_pool_closed, this, _1));
@@ -83,7 +83,7 @@ void IOWorker::add_pool(Host host) {
 
     pool->connect(session_->keyspace());
 
-    pools[host] = pool;
+    pools[address] = pool;
   }
 }
 
@@ -139,14 +139,14 @@ void IOWorker::on_pool_ready(Pool* pool) {
 }
 
 void IOWorker::on_pool_closed(Pool* pool) {
-  Host host = pool->host();
-  logger_->info("Pool for '%s' closed", host.address.to_string().c_str());
+  const Address& address = pool->address();
+  logger_->info("Pool for '%s' closed", address.to_string().c_str());
   pending_delete_.push_back(pool);
-  pools.erase(host);
+  pools.erase(address);
   if (is_closing_) {
     maybe_notify_closed();
   } else {
-    ReconnectRequest* reconnect_request = new ReconnectRequest(this, host);
+    ReconnectRequest* reconnect_request = new ReconnectRequest(this, address);
     pending_reconnects_.add_to_back(reconnect_request);
     reconnect_request->timer = Timer::start(loop(),
                                             config_.reconnect_wait(),
@@ -156,19 +156,19 @@ void IOWorker::on_pool_closed(Pool* pool) {
 }
 
 void IOWorker::on_retry(RequestHandler* request_handler, RetryType retry_type) {
-  Host host;
 
   if (retry_type == RETRY_WITH_NEXT_HOST) {
     request_handler->next_host();
   }
 
-  if (!request_handler->get_current_host(&host)) {
+  Address address;
+  if (!request_handler->get_current_host_address(&address)) {
     request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                               "No hosts available");
     return;
   }
 
-  PoolMap::iterator it = pools.find(host);
+  PoolMap::iterator it = pools.find(address);
   if (it != pools.end()) {
     Pool* pool = it->second;
     Connection* connection = pool->borrow_connection(request_handler->keyspace);
@@ -194,7 +194,7 @@ void IOWorker::on_request_finished(RequestHandler* request_handler) {
 
 void IOWorker::on_event(const IOWorkerEvent& event) {
   if (event.type == IOWorkerEvent::ADD_POOL) {
-    add_pool(event.host);
+    add_pool(event.address);
   } else if (event.type == IOWorkerEvent::REMOVE_POOL) {
     // TODO(mpenick):
   }
@@ -207,8 +207,8 @@ void IOWorker::on_pool_reconnect(Timer* timer) {
   if (!io_worker->is_closing_) {
     io_worker->logger_->info(
         "Attempting to reconnect to '%s'",
-        reconnect_request->host.address.to_string().c_str());
-    io_worker->add_pool(reconnect_request->host);
+        reconnect_request->address.to_string().c_str());
+    io_worker->add_pool(reconnect_request->address);
   }
   io_worker->pending_reconnects_.remove(reconnect_request);
   delete reconnect_request;

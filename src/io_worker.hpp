@@ -20,7 +20,7 @@
 #include "async_queue.hpp"
 #include "constants.hpp"
 #include "event_thread.hpp"
-#include "host.hpp"
+#include "address.hpp"
 #include "list.hpp"
 #include "spsc_queue.hpp"
 
@@ -43,7 +43,7 @@ class Timer;
 struct IOWorkerEvent {
   enum Type { ADD_POOL, REMOVE_POOL };
   Type type;
-  Host host;
+  Address address;
 };
 
 class IOWorker : public EventThread<IOWorkerEvent> {
@@ -53,14 +53,14 @@ public:
 
   int init();
 
-  bool add_pool_async(Host host);
-  bool remove_pool_async(Host host);
+  bool add_pool_async(const Address& address);
+  bool remove_pool_async(const Address& address);
   void close_async();
 
   bool execute(RequestHandler* request_handler);
 
 private:
-  void add_pool(Host host);
+  void add_pool(const Address& address);
   void maybe_close();
   void maybe_notify_closed();
   void cleanup();
@@ -79,18 +79,18 @@ private:
   static void on_prepare(uv_prepare_t* prepare, int status);
 
 private:
-  typedef std::map<Host, Pool*> PoolMap;
+  typedef std::map<Address, Pool*> PoolMap;
 
   struct ReconnectRequest : public List<ReconnectRequest>::Node {
-    ReconnectRequest(IOWorker* io_worker, Host host)
+    ReconnectRequest(IOWorker* io_worker, Address address)
         : io_worker(io_worker)
-        , host(host) {}
+        , address(address) {}
 
     void stop_timer();
 
     IOWorker* io_worker;
     Timer* timer;
-    Host host;
+    Address address;
   };
 
 private:
