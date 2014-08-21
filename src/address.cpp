@@ -40,6 +40,26 @@ bool Address::from_string(const std::string& ip, int port, Address* output) {
   }
 }
 
+void Address::from_inet(const char* data, size_t size, int port, Address* output) {
+
+  assert(size == 4 || size == 16);
+  if (size == 4) {
+    char buf[INET_ADDRSTRLEN];
+    uv_inet_ntop(AF_INET, data, buf, sizeof(buf));
+    if (output != NULL) {
+      struct sockaddr_in addr = uv_ip4_addr(buf, port);
+      output->init(copy_cast<struct sockaddr_in*, struct sockaddr*>(&addr));
+    }
+  } else {
+    char buf[INET6_ADDRSTRLEN];
+    uv_inet_ntop(AF_INET6, data, buf, sizeof(buf));
+    if (output != NULL) {
+      struct sockaddr_in6 addr = uv_ip6_addr(buf, port);
+      output->init(copy_cast<struct sockaddr_in6*, struct sockaddr*>(&addr));
+    }
+  }
+}
+
 bool Address::init(const sockaddr* addr) {
   if (addr->sa_family == AF_INET) {
     memcpy(&addr_, addr, sizeof(struct sockaddr_in));
