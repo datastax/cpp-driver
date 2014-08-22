@@ -71,7 +71,7 @@ void ControlConnection::reconnect() {
   }
 
   connection_ = new Connection(session_->loop(),
-                               host,
+                               host.address,
                                session_->logger(),
                                session_->config(),
                                "",
