@@ -57,18 +57,6 @@ public:
 
   int init();
 
-  const Config& config() const {
-    return config_;
-  }
-
-  LoadBalancingPolicy* load_balancing_policy() const {
-    return load_balancing_policy_.get();
-  }
-
-  Logger* logger() const {
-    return logger_.get();
-  }
-
   std::string keyspace() {
     ScopedMutex lock(&keyspace_mutex_);
     return keyspace_;
@@ -100,9 +88,6 @@ private:
 
   void execute(RequestHandler* request_handler);
 
-  void on_control_connection_ready(ControlConnection* control_connection);
-  void on_control_conneciton_error(CassError code, const std::string& message);
-
   virtual void on_run();
   virtual void on_after_run();
   virtual void on_event(const SessionEvent& event);
@@ -111,8 +96,13 @@ private:
   static void on_execute(uv_async_t* data, int status);
 
 private:
+  friend class ControlConnection;
+
+  void on_control_connection_ready();
+  void on_control_conneciton_error(CassError code, const std::string& message);
+
+private:
   typedef std::vector<IOWorker*> IOWorkerVec;
-  typedef std::set<Host> HostSet;
 
   ControlConnection control_connection_;
   IOWorkerVec io_workers_;

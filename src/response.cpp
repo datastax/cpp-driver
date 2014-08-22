@@ -18,6 +18,7 @@
 
 #include "auth_responses.hpp"
 #include "error_response.hpp"
+#include "event_repsonse.hpp"
 #include "ready_response.hpp"
 #include "result_response.hpp"
 #include "supported_response.hpp"
@@ -29,31 +30,35 @@ bool ResponseMessage::allocate_body(int8_t opcode) {
   response_body_.reset();
   switch (opcode) {
 
-    case CQL_OPCODE_RESULT:
-      response_body_.reset(new ResultResponse());
-      return true;
-
     case CQL_OPCODE_ERROR:
       response_body_.reset(new ErrorResponse());
-      return true;
-
-    case CQL_OPCODE_SUPPORTED:
-      response_body_.reset(new SupportedResponse());
       return true;
 
     case CQL_OPCODE_READY:
       response_body_.reset(new ReadyResponse());
       return true;
 
-   case CQL_OPCODE_AUTHENTICATE:
+    case CQL_OPCODE_AUTHENTICATE:
       response_body_.reset(new AuthenticateResponse());
       return true;
 
-   case CQL_OPCODE_AUTH_CHALLENGE:
+    case CQL_OPCODE_SUPPORTED:
+      response_body_.reset(new SupportedResponse());
+      return true;
+
+    case CQL_OPCODE_RESULT:
+      response_body_.reset(new ResultResponse());
+      return true;
+
+    case CQL_OPCODE_EVENT:
+      response_body_.reset(new EventResponse());
+      return true;
+
+    case CQL_OPCODE_AUTH_CHALLENGE:
       response_body_.reset(new AuthChallengeResponse());
       return true;
 
-   case CQL_OPCODE_AUTH_SUCCESS:
+    case CQL_OPCODE_AUTH_SUCCESS:
       response_body_.reset(new AuthSuccessResponse());
       return true;
 
@@ -118,7 +123,9 @@ int ResponseMessage::decode(int version, char* input, size_t size) {
 
     if (!response_body_->decode(version, response_body_->buffer(), length_)) {
       is_body_error_ = true;
+      return -1;
     }
+
     is_body_ready_ = true;
   } else {
     // We haven't received all the data for the frame. We consume the entire

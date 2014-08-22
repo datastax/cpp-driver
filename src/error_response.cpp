@@ -21,11 +21,11 @@
 namespace cass {
 
 bool ErrorResponse::decode(int version, char* buffer, size_t size) {
-  buffer = decode_int32(buffer, code_);
-  buffer = decode_string(buffer, &message_, message_size_);
+  char* pos = decode_int32(buffer, code_);
+  pos = decode_string(pos, &message_, message_size_);
   switch (code_) {
     case CQL_ERROR_UNPREPARED:
-      decode_string(buffer, &prepared_id_, prepared_id_size_);
+      decode_string(pos, &prepared_id_, prepared_id_size_);
       break;
   }
   return true;

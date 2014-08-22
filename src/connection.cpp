@@ -15,6 +15,7 @@
 #include "options_request.hpp"
 #include "register_request.hpp"
 #include "error_response.hpp"
+#include "event_repsonse.hpp"
 #include "logger.hpp"
 #include "cassandra.h"
 
@@ -114,10 +115,11 @@ Connection::Connection(uv_loop_t* loop,
     : state_(CONNECTION_STATE_NEW)
     , is_defunct_(false)
     , is_invalid_protocol_(false)
+    , is_registered_for_events_(false)
     , loop_(loop)
     , response_(new ResponseMessage())
     , host_(host)
-    , host_string_(host.address.to_string())
+    , host_string_(host.address().to_string())
     , ssl_handshake_done_(false)
     , version_("3.0.0")
     , protocol_version_(protocol_version)
@@ -135,7 +137,7 @@ void Connection::connect() {
     state_ = CONNECTION_STATE_CONNECTING;
     connect_timer_ = Timer::start(loop_, config_.connect_timeout(), this,
                                   on_connect_timeout);
-    Connecter::connect(&socket_, host_.address, this, on_connect);
+    Connecter::connect(&socket_, host_.address(), this, on_connect);
   }
 }
 
@@ -197,10 +199,11 @@ void Connection::consume(char* input, size_t size) {
 
   while (remaining != 0) {
     int consumed = response_->decode(protocol_version_, buffer, remaining);
-    if (consumed < 0) {
-      // TODO(mstump) probably means connection closed/failed
-      // Can this even happen right now?
+    if (consumed <= 0) {
       logger_->error("Error consuming message on '%s'", host_string_.c_str());
+      remaining = 0;
+      defunct();
+      continue;
     }
 
     if (response_->is_body_ready()) {
@@ -213,10 +216,14 @@ void Connection::consume(char* input, size_t size) {
           size, remaining, host_string_.c_str());
 
       if (response->stream() < 0) {
-        if (response_->opcode() == CQL_OPCODE_EVENT) {
-
+        if (response->opcode() == CQL_OPCODE_EVENT) {
+          if (event_callback_) {
+            event_callback_(static_cast<EventResponse*>(response->response_body().get()));
+          }
         } else {
-          // TODO(mpenick): Log this
+          logger_->error("Invalid response with opcode of %d returned on event stream",
+                         response->opcode());
+          defunct();
         }
       } else {
         Handler* handler = NULL;
@@ -424,6 +431,12 @@ void Connection::on_auth_success(AuthResponseRequest* request, const std::string
 }
 
 void Connection::on_ready() {
+  if (!is_registered_for_events_ && event_types_ != 0) {
+    is_registered_for_events_ = true;
+    execute(new StartupHandler(this, new RegisterRequest(event_types_)));
+    return;
+  }
+
   if (keyspace_.empty()) {
     notify_ready();
   } else {
@@ -434,11 +447,7 @@ void Connection::on_ready() {
 }
 
 void Connection::on_set_keyspace() {
-  if (event_types_ != 0) {
-    execute(new StartupHandler(this, new RegisterRequest(event_types_)));
-  } else {
-    notify_ready();
-  }
+  notify_ready();
 }
 
 void Connection::on_supported(ResponseMessage* response) {
@@ -465,7 +474,7 @@ void Connection::notify_error(const std::string& error) {
 }
 
 void Connection::send_credentials() {
-  ScopedPtr<V1Authenticator> v1_auth(config_.auth_provider()->new_authenticator_v1(host_.address));
+  ScopedPtr<V1Authenticator> v1_auth(config_.auth_provider()->new_authenticator_v1(host_.address()));
   if (v1_auth) {
     V1Authenticator::Credentials credentials;
     v1_auth->get_credentials(&credentials);
@@ -476,7 +485,7 @@ void Connection::send_credentials() {
 }
 
 void Connection::send_initial_auth_response() {
-  Authenticator* auth = config_.auth_provider()->new_authenticator(host_.address);
+  Authenticator* auth = config_.auth_provider()->new_authenticator(host_.address());
   if (auth == NULL) {
     notify_error("Authenticaion required but no auth provider set");
   } else {

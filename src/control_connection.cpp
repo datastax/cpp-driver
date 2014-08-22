@@ -16,6 +16,8 @@
 
 #include "control_connection.hpp"
 
+#include "constants.hpp"
+#include "event_repsonse.hpp"
 #include "session.hpp"
 #include "timer.hpp"
 
@@ -40,7 +42,7 @@ void ControlConnection::close() {
 
 void ControlConnection::schedule_reconnect(uint64_t ms) {
   if (ms == 0) {
-    query_plan_.reset(session_->load_balancing_policy()->new_query_plan());
+    query_plan_.reset(session_->load_balancing_policy_->new_query_plan());
     reconnect();
   } else {
     reconnect_timer_= Timer::start(session_->loop(),
@@ -60,8 +62,8 @@ void ControlConnection::reconnect() {
   if (!query_plan_->compute_next(&host)) {
     if (state_ == CONTROL_STATE_CONNECTED) {
       schedule_reconnect(1000); // TODO(mpenick): Configurable?
-    } else if (error_callback_) {
-      error_callback_(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, "No hosts available");
+    } else {
+      session_->on_control_conneciton_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, "No hosts available");
     }
     return;
   }
@@ -72,15 +74,18 @@ void ControlConnection::reconnect() {
 
   connection_ = new Connection(session_->loop(),
                                host,
-                               session_->logger(),
-                               session_->config(),
+                               session_->logger_.get(),
+                               session_->config_,
                                "",
-                               session_->config().protocol_version());
+                               session_->config_.protocol_version());
 
   connection_->set_ready_callback(
         boost::bind(&ControlConnection::on_connection_ready, this, _1));
   connection_->set_close_callback(
         boost::bind(&ControlConnection::on_connection_closed, this, _1));
+  connection_->set_event_callback(
+        CASS_EVENT_TOPOLOGY_CHANGE | CASS_EVENT_STATUS_CHANGE,
+        boost::bind(&ControlConnection::on_connection_event, this, _1));
   connection_->connect();
 }
 
@@ -89,9 +94,7 @@ void ControlConnection::on_connection_ready(Connection* connection) {
 
   if (state_== CONTROL_STATE_NEW) {
     state_ = CONTROL_STATE_CONNECTED;
-    if (ready_callback_) {
-      ready_callback_(this);
-    }
+    session_->on_control_connection_ready();
   }
 }
 
@@ -100,7 +103,61 @@ void ControlConnection::on_connection_closed(Connection* connection) {
   // closed
   connection_ = NULL;
 
+  // TODO(mpenick): Handle protocol version error
+
   reconnect();
+}
+
+void ControlConnection::on_connection_event(EventResponse* response) {
+
+  std::string address_str = response->affected_node().to_string();
+
+  switch (response->event_type()) {
+    case CASS_EVENT_TOPOLOGY_CHANGE:
+      switch (response->topology_change()) {
+        case EventResponse::NEW_NODE:
+          session_->logger_->info("ControlConnection: New node '%s' added", address_str.c_str());
+          break;
+
+        case EventResponse::REMOVE_NODE:
+          session_->logger_->info("ControlConnection: Node '%s' removed", address_str.c_str());
+          break;
+
+        case EventResponse::MOVED_NODE:
+          session_->logger_->info("ControlConnection: Node'%s' moved", address_str.c_str());
+          break;
+      }
+      break;
+
+    case CASS_EVENT_STATUS_CHANGE:
+      switch (response->status_change()) {
+        case EventResponse::UP:
+          session_->logger_->info("ControlConnection: Node'%s' is up", address_str.c_str());
+          break;
+
+        case EventResponse::DOWN:
+          session_->logger_->info("ControlConnection: Node'%s' is down", address_str.c_str());
+          break;
+      }
+      break;
+
+    case CASS_EVENT_SCHEMA_CHANGE:
+      switch (response->schema_change()) {
+        case EventResponse::CREATED:
+          break;
+
+        case EventResponse::UPDATED:
+          break;
+
+        case EventResponse::DROPPED:
+          break;
+      }
+      break;
+
+    default:
+      assert(false);
+      break;
+  }
 }
 
 void ControlConnection::on_reconnect(Timer* timer) {

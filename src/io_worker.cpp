@@ -140,7 +140,7 @@ void IOWorker::on_pool_ready(Pool* pool) {
 
 void IOWorker::on_pool_closed(Pool* pool) {
   Host host = pool->host();
-  logger_->info("Pool for '%s' closed", host.address.to_string().c_str());
+  logger_->info("Pool for '%s' closed", host.address().to_string().c_str());
   pending_delete_.push_back(pool);
   pools.erase(host);
   if (is_closing_) {
@@ -207,7 +207,7 @@ void IOWorker::on_pool_reconnect(Timer* timer) {
   if (!io_worker->is_closing_) {
     io_worker->logger_->info(
         "Attempting to reconnect to '%s'",
-        reconnect_request->host.address.to_string().c_str());
+        reconnect_request->host.address().to_string().c_str());
     io_worker->add_pool(reconnect_request->host);
   }
   io_worker->pending_reconnects_.remove(reconnect_request);

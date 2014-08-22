@@ -66,10 +66,6 @@ Session::Session(const Config& config)
     , pending_workers_count_(0)
     , current_io_worker_(0) {
   control_connection_.set_session(this);
-  control_connection_.set_ready_callback(
-        boost::bind(&Session::on_control_connection_ready, this, _1));
-  control_connection_.set_error_callback(
-        boost::bind(&Session::on_control_conneciton_error, this, _1, _2));
   uv_mutex_init(&keyspace_mutex_);
 }
 
@@ -237,7 +233,7 @@ void Session::execute(RequestHandler* request_handler) {
   }
 }
 
-void Session::on_control_connection_ready(ControlConnection* control_connection) {
+void Session::on_control_connection_ready() {
   // TODO (mpenick): Use hosts returned from the control connection (CPP-145)
   pending_pool_count_ = hosts_.size() * io_workers_.size();
   for (HostSet::iterator hosts_it = hosts_.begin(), hosts_end = hosts_.end();

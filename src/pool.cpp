@@ -138,7 +138,7 @@ void Pool::spawn_connection(const std::string& keyspace) {
         new Connection(loop_, host_, logger_, config_,
                        keyspace, protocol_version_);
 
-    logger_->info("Spawning new conneciton to %s", host_.address.to_string().c_str());
+    logger_->info("Spawning new conneciton to %s", host_.address().to_string().c_str());
     connection->set_ready_callback(
           boost::bind(&Pool::on_connection_ready, this, _1));
     connection->set_close_callback(
@@ -227,7 +227,7 @@ bool Pool::wait_for_connection(RequestHandler* request_handler) {
   if (pending_request_queue_.size() + 1 > config_.max_pending_requests()) {
     logger_->warn("Exceeded the max pending requests setting of %u on '%s'",
                   config_.max_pending_requests(),
-                  host_.address.to_string().c_str());
+                  host_.address().to_string().c_str());
     return false;
   }
 

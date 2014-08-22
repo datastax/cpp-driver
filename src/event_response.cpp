@@ -20,32 +20,30 @@
 
 namespace cass {
 
-char* decode_string_ref(char* buffer, boost::string_ref* output) {
-  char* str;
-  size_t str_size;
-  buffer = decode_string(buffer, &str, str_size);
-  *output = boost::string_ref(str, str_size);
-  return buffer;
-}
-
 bool EventResponse::decode(int version, char* buffer, size_t size) {
   boost::string_ref event_type;
-  buffer = decode_string_ref(buffer, &event_type);
+  char* pos = decode_string_ref(buffer, &event_type);
 
   if (event_type == "TOPOLOGY_CHANGE") {
+    event_type_ = CASS_EVENT_TOPOLOGY_CHANGE;
+
     boost::string_ref topology_change;
-    buffer = decode_string_ref(buffer, &topology_change);
+    pos = decode_string_ref(pos, &topology_change);
     if (topology_change == "NEW_NODE") {
       topology_change_ = NEW_NODE;
     } else if(topology_change == "REMOVE_NODE") {
       topology_change_ = REMOVE_NODE;
+    } else if(topology_change == "MOVED_NODE") {
+      topology_change_ = MOVED_NODE;
     } else {
       return false;
     }
-    // Get the inet
+    decode_inet(pos, &affected_node_);
   } else if(event_type == "STATUS_CHANGE") {
+    event_type_ = CASS_EVENT_STATUS_CHANGE;
+
     boost::string_ref status_change;
-    buffer = decode_string_ref(buffer, &status_change);
+    pos = decode_string_ref(pos, &status_change);
     if (status_change == "UP") {
       status_change_ = UP;
     } else if(status_change == "DOWN") {
@@ -53,10 +51,12 @@ bool EventResponse::decode(int version, char* buffer, size_t size) {
     } else {
       return false;
     }
-    // Get the inet
+    decode_inet(pos, &affected_node_);
   } else if(event_type == "SCHEMA_CHANGE") {
+    event_type_ = CASS_EVENT_SCHEMA_CHANGE;
+
     boost::string_ref schema_change;
-    buffer = decode_string_ref(buffer, &schema_change);
+    pos = decode_string_ref(pos, &schema_change);
     if (schema_change == "CREATED") {
       schema_change_ = CREATED;
     } else if(schema_change == "UPDATED") {
@@ -66,8 +66,8 @@ bool EventResponse::decode(int version, char* buffer, size_t size) {
     } else {
       return false;
     }
-    buffer = decode_string(buffer, &keyspace_, keyspace_size_);
-    buffer = decode_string(buffer, &table_, table_size_);
+    pos = decode_string(pos, &keyspace_, keyspace_size_);
+    decode_string(pos, &table_, table_size_);
   } else {
     return false;
   }

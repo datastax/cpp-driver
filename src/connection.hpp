@@ -37,11 +37,12 @@ namespace cass {
 
 class AuthProvider;
 class AuthResponseRequest;
-class Connecter;
-class Timer;
 class Config;
+class Connecter;
+class EventResponse;
 class Logger;
 class Request;
+class Timer;
 
 class Connection {
 public:
@@ -54,7 +55,7 @@ public:
     CONNECTION_STATE_CLOSED
   };
 
-  typedef boost::function2<void, int, ResponseMessage*> EventCallback;
+  typedef boost::function1<void, EventResponse*> EventCallback;
   typedef boost::function1<void, Connection*> Callback;
 
   Connection(uv_loop_t* loop, const Host& host,
@@ -143,6 +144,7 @@ private:
   ConnectionState state_;
   bool is_defunct_;
   bool is_invalid_protocol_;
+  bool is_registered_for_events_;
 
   List<Handler> pending_requests_;
 

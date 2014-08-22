@@ -27,16 +27,19 @@ int RegisterRequest::encode(int version, BufferVec* bufs) const {
 
   if (event_types_ & CASS_EVENT_TOPOLOGY_CHANGE) {
     events.push_back("TOPOLOGY_CHANGE");
+    length += sizeof(uint16_t);
     length += events.back().size();
   }
 
   if (event_types_ & CASS_EVENT_STATUS_CHANGE) {
     events.push_back("STATUS_CHANGE");
+    length += sizeof(uint16_t);
     length += events.back().size();
   }
 
   if (event_types_ & CASS_EVENT_SCHEMA_CHANGE) {
     events.push_back("SCHEMA_CHANGE");
+    length += sizeof(uint16_t);
     length += events.back().size();
   }
 

@@ -25,6 +25,7 @@
 
 namespace cass {
 
+class EventResponse;
 class Request;
 class ResponseMessage;
 class Session;
@@ -32,9 +33,6 @@ class Timer;
 
 class ControlConnection {
 public:
-  typedef boost::function1<void, ControlConnection*> Callback;
-  typedef boost::function2<void, CassError, const std::string&> ErrorCallback;
-
   enum ControlState {
     CONTROL_STATE_NEW,
     CONTROL_STATE_CONNECTED,
@@ -49,14 +47,6 @@ public:
 
   void set_session(Session* session) {
     session_ = session;
-  }
-
-  void set_ready_callback(Callback callback) {
-    ready_callback_ = callback;
-  }
-
-  void set_error_callback(ErrorCallback callback) {
-    error_callback_ = callback;
   }
 
   void connect();
@@ -93,6 +83,7 @@ private:
 
   void on_connection_ready(Connection* connection);
   void on_connection_closed(Connection* connection);
+  void on_connection_event(EventResponse* response);
   void on_reconnect(Timer* timer);
 
 private:
@@ -100,8 +91,6 @@ private:
   ControlState state_;
   Connection* connection_;
   ScopedPtr<QueryPlan> query_plan_;
-  Callback ready_callback_;
-  ErrorCallback error_callback_;
   Timer* reconnect_timer_;
 
 private:
