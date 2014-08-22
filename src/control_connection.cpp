@@ -122,13 +122,13 @@ void ControlConnection::on_peer_query(ResponseMessage *response) {
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
   result->decode_first_row();
-  ResultIterator* rows = new ResultIterator(result);
-  while(rows->next()) {
+  ResultIterator rows(result);
+  while(rows.next()) {
     Address addr;
-    if (resolve_peer(rows->row()->values[0], rows->row()->values[3], &addr)) {
-      const Value* v = &rows->row()->values[1];
+    if (resolve_peer(rows.row()->values[0], rows.row()->values[3], &addr)) {
+      const Value* v = &rows.row()->values[1];
       std::string dc(v->buffer().data(), v->buffer().size());
-      v = &rows->row()->values[2];
+      v = &rows.row()->values[2];
       std::string rack(v->buffer().data(), v->buffer().size());
       session_->add_host(Host(addr, rack, dc));
     }
