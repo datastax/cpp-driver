@@ -97,6 +97,11 @@ int Session::init() {
   return rc;
 }
 
+void Session::add_host(const Host &host) {
+  logger_->debug("Adding new host: %s", host.to_string().c_str());
+  hosts_.insert(host);
+}
+
 bool Session::notify_ready_async() {
   SessionEvent event;
   event.type = SessionEvent::NOTIFY_READY;
@@ -148,6 +153,7 @@ void Session::internal_connect() {
     return;
   }
   load_balancing_policy_->init(hosts_);
+  hosts_.clear();
   control_connection_.connect();
 }
 
@@ -240,7 +246,7 @@ void Session::execute(RequestHandler* request_handler) {
 }
 
 void Session::on_control_connection_ready(ControlConnection* control_connection) {
-  // TODO (mpenick): Use hosts returned from the control connection (CPP-145)
+  load_balancing_policy_->init(hosts_);
   pending_pool_count_ = hosts_.size() * io_workers_.size();
   for (HostSet::iterator hosts_it = hosts_.begin(), hosts_end = hosts_.end();
        hosts_it != hosts_end; ++hosts_it) {

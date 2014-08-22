@@ -141,7 +141,7 @@ void IOWorker::on_pool_ready(Pool* pool) {
 
 void IOWorker::on_pool_closed(Pool* pool) {
   const Address& address = pool->address();
-  logger_->info("Pool for '%s' closed", address.to_string().c_str());
+  logger_->info("IOWorker: Pool for '%s' closed", address.to_string().c_str());
   pending_delete_.push_back(pool);
   pools.erase(address);
   if (is_closing_) {
@@ -207,8 +207,8 @@ void IOWorker::on_pool_reconnect(Timer* timer) {
   IOWorker* io_worker = reconnect_request->io_worker;
   if (!io_worker->is_closing_) {
     io_worker->logger_->info(
-        "Attempting to reconnect to '%s'",
-        reconnect_request->address.to_string().c_str());
+        "IOWorker: Attempting to reconnect to '%s'",
+        reconnect_request->address.to_string(true).c_str());
     io_worker->add_pool(reconnect_request->address, true);
   }
   io_worker->pending_reconnects_.remove(reconnect_request);

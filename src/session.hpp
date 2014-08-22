@@ -83,6 +83,8 @@ public:
     load_balancing_policy_.reset(policy);
   }
 
+  void add_host(const Host& host);
+
   bool notify_ready_async();
   bool notify_closed_async();
   bool notify_set_keyspace_async(const std::string& keyspace);

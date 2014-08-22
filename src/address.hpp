@@ -27,7 +27,10 @@ namespace cass {
 
 class Address {
 public:
-  Address() { memset(&addr_, 0, sizeof(addr_)); }
+  Address();
+
+  Address(const std::string& ip, int port);
+
 
   static bool from_string(const std::string& ip, int port,
                           Address* output = NULL);
@@ -65,11 +68,13 @@ public:
 
   int port() const;
 
-  std::string to_string() const;
+  std::string to_string(bool with_port = false) const;
 
   int compare(const Address& a) const;
 
 private:
+  void init() { memset(&addr_, 0, sizeof(addr_)); }
+
   struct sockaddr_storage addr_;
 };
 

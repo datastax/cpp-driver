@@ -107,8 +107,9 @@ void Pool::defunct() {
 }
 
 void Pool::maybe_notify_ready(Connection* connection) {
-  // Currently, this will notify ready even if all the connections fail.
-  // This might use some improvement.
+  // This will notify ready even if all the connections fail.
+  // It is up to the holder to inspect state and/or detach the
+  // ready_callback_
 
   // We won't notify until we've tried all valid protocol versions
   if (!connection->is_invalid_protocol() ||
@@ -138,7 +139,7 @@ void Pool::spawn_connection(const std::string& keyspace) {
         new Connection(loop_, address_, logger_, config_,
                        keyspace, protocol_version_);
 
-    logger_->info("Spawning new conneciton to %s", address_.to_string().c_str());
+    logger_->info("Pool: Spawning new conneciton to %s", address_.to_string(true).c_str());
     connection->set_ready_callback(
           boost::bind(&Pool::on_connection_ready, this, _1));
     connection->set_close_callback(
