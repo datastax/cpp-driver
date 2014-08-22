@@ -18,11 +18,15 @@
 
 #include "query_request.hpp"
 #include "result_iterator.hpp"
+#include "error_response.hpp"
 #include "result_response.hpp"
 #include "session.hpp"
 #include "timer.hpp"
 
 #include "third_party/boost/boost/bind.hpp"
+
+#include <sstream>
+#include <iomanip>
 
 namespace cass {
 
@@ -89,14 +93,15 @@ void ControlConnection::reconnect() {
 }
 
 void ControlConnection::on_connection_ready(Connection* connection) {
-
   logger_->debug("ControlConnection: connection ready on %s", connection->address_string().c_str());
   if (state_== CONTROL_STATE_NEW) {
     logger_->debug("ControlConnection: New connection -- initiating node discovery");
     state_ = CONTROL_STATE_NODE_REFRESH_1;
     QueryRequest* local_request = new QueryRequest();
+    // NOTE: queried values affect indexing in on_local_query
     local_request->set_query("SELECT data_center, rack FROM system.local WHERE key='local'");
     QueryRequest* peer_request = new QueryRequest();
+    // NOTE: queried valeus affect indexing in on_peer_query
     peer_request->set_query("SELECT peer, data_center, rack, rpc_address FROM system.peers");
 
     connection_->execute(new ControlHandler(this, local_request,
@@ -107,6 +112,11 @@ void ControlConnection::on_connection_ready(Connection* connection) {
 }
 
 void ControlConnection::on_local_query(ResponseMessage *response) {
+  if (response->opcode() != CQL_OPCODE_RESULT) {
+    fail_startup_connect(response);
+    return;
+  }
+
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
   result->decode_first_row();
@@ -119,11 +129,16 @@ void ControlConnection::on_local_query(ResponseMessage *response) {
 }
 
 void ControlConnection::on_peer_query(ResponseMessage *response) {
+  if (response->opcode() != CQL_OPCODE_RESULT) {
+    fail_startup_connect(response);
+    return;
+  }
+
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
   result->decode_first_row();
   ResultIterator rows(result);
-  while(rows.next()) {
+  while (rows.next()) {
     Address addr;
     if (resolve_peer(rows.row()->values[0], rows.row()->values[3], &addr)) {
       const Value* v = &rows.row()->values[1];
@@ -181,6 +196,23 @@ void ControlConnection::maybe_notify_ready() {
       ready_callback_(this);
     }
   }
+}
+
+void ControlConnection::fail_startup_connect(ResponseMessage* response) {
+  std::ostringstream ss;
+  if (response->opcode() == CQL_OPCODE_ERROR) {
+    ErrorResponse* error
+        = static_cast<ErrorResponse*>(response->response_body().get());
+    ss << "Error while querying system tables: '" << error->message()
+       << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+       << CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error->code()) << ")";
+    logger_->error(ss.str().c_str());
+  } else {
+    ss << "Unexpected opcode while querying system tables: " << opcode_to_string(response->opcode());
+    logger_->error(ss.str().c_str());
+  }
+  state_ = CONTROL_STATE_NEW;
+  connection_->defunct();
 }
 
 void ControlConnection::on_connection_closed(Connection* connection) {

@@ -102,6 +102,7 @@ private:
   void on_connection_closed(Connection* connection);
   void on_reconnect(Timer* timer);
   void maybe_notify_ready();
+  void fail_startup_connect(ResponseMessage* response);
 
 private:
   Session* session_;
