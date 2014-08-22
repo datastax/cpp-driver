@@ -72,11 +72,12 @@ void IOWorker::close_async() {
   }
 }
 
-void IOWorker::add_pool(const Address& address) {
+void IOWorker::add_pool(const Address& address, bool is_reconnect) {
   if (!is_closing_ && pools.count(address) == 0) {
     Pool* pool = new Pool(address, loop(), logger_, config_);
-
-    pool->set_ready_callback(boost::bind(&IOWorker::on_pool_ready, this, _1));
+    if (!is_reconnect) {
+      pool->set_ready_callback(boost::bind(&IOWorker::on_pool_ready, this, _1));
+    }
     pool->set_closed_callback(boost::bind(&IOWorker::on_pool_closed, this, _1));
     pool->set_keyspace_callback(
         boost::bind(&IOWorker::on_set_keyspace, this, _1));
@@ -208,7 +209,7 @@ void IOWorker::on_pool_reconnect(Timer* timer) {
     io_worker->logger_->info(
         "Attempting to reconnect to '%s'",
         reconnect_request->address.to_string().c_str());
-    io_worker->add_pool(reconnect_request->address);
+    io_worker->add_pool(reconnect_request->address, true);
   }
   io_worker->pending_reconnects_.remove(reconnect_request);
   delete reconnect_request;

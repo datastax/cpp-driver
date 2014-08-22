@@ -60,7 +60,7 @@ public:
   bool execute(RequestHandler* request_handler);
 
 private:
-  void add_pool(const Address& address);
+  void add_pool(const Address& address, bool is_reconnect = false);
   void maybe_close();
   void maybe_notify_closed();
   void cleanup();

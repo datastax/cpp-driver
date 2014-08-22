@@ -200,12 +200,14 @@ void Session::on_event(const SessionEvent& event) {
       internal_connect();
     }
   } else if (event.type == SessionEvent::NOTIFY_READY) {
-    if (--pending_pool_count_ == 0) {
-      logger_->debug("Session is connected");
-      connect_future_->set();
-      connect_future_.reset();
+    if (pending_pool_count_ > 0) {
+      if (--pending_pool_count_ == 0) {
+        logger_->debug("Session is connected");
+        connect_future_->set();
+        connect_future_.reset();
+      }
+      logger_->debug("Session pending pool count %d", pending_pool_count_);
     }
-    logger_->debug("Session pending pool count %d", pending_pool_count_);
   } else if (event.type == SessionEvent::NOTIFY_CLOSED) {
     if (--pending_workers_count_ == 0) {
       logger_->close_async();
