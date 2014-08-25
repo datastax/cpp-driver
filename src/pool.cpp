@@ -1,3 +1,19 @@
+/*
+  Copyright (c) 2014 DataStax
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
 #include "pool.hpp"
 
 #include "connection.hpp"
@@ -18,10 +34,10 @@ static bool least_busy_comp(Connection* a, Connection* b) {
   return a->pending_request_count() < b->pending_request_count();
 }
 
-Pool::Pool(const Host& host, uv_loop_t* loop,
+Pool::Pool(const Address& address, uv_loop_t* loop,
            Logger* logger, const Config& config)
     : state_(POOL_STATE_NEW)
-    , host_(host)
+    , address_(address)
     , loop_(loop)
     , logger_(logger)
     , config_(config)
@@ -107,8 +123,9 @@ void Pool::defunct() {
 }
 
 void Pool::maybe_notify_ready(Connection* connection) {
-  // Currently, this will notify ready even if all the connections fail.
-  // This might use some improvement.
+  // This will notify ready even if all the connections fail.
+  // It is up to the holder to inspect state and/or detach the
+  // ready_callback_
 
   // We won't notify until we've tried all valid protocol versions
   if (!connection->is_invalid_protocol() ||
@@ -135,10 +152,10 @@ void Pool::maybe_close() {
 void Pool::spawn_connection(const std::string& keyspace) {
   if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
     Connection* connection =
-        new Connection(loop_, host_, logger_, config_,
+        new Connection(loop_, address_, logger_, config_,
                        keyspace, protocol_version_);
 
-    logger_->info("Spawning new conneciton to %s", host_.address().to_string().c_str());
+    logger_->info("Pool: Spawning new conneciton to %s", address_.to_string(true).c_str());
     connection->set_ready_callback(
           boost::bind(&Pool::on_connection_ready, this, _1));
     connection->set_close_callback(
@@ -227,7 +244,7 @@ bool Pool::wait_for_connection(RequestHandler* request_handler) {
   if (pending_request_queue_.size() + 1 > config_.max_pending_requests()) {
     logger_->warn("Exceeded the max pending requests setting of %u on '%s'",
                   config_.max_pending_requests(),
-                  host_.address().to_string().c_str());
+                  address_.to_string().c_str());
     return false;
   }
 

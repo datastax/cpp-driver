@@ -107,11 +107,14 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
     cass_statement_bind_string(statement, 0, cass_string_init(pair->key));
     cass_statement_bind_string(statement, 1, cass_string_init(pair->value));
     cass_batch_add_statement(batch, statement);
+    cass_statement_free(statement);
   }
 
-  cass_batch_add_statement(batch,
-                           cass_statement_new(cass_string_init("INSERT INTO examples.pairs (key, value) VALUES ('c', '3')"),
-                                              0));
+  {
+    CassStatement* statement = cass_statement_new(cass_string_init("INSERT INTO examples.pairs (key, value) VALUES ('c', '3')"), 0);
+    cass_batch_add_statement(batch, statement);
+    cass_statement_free(statement);
+  }
 
   {
     CassStatement* statement = cass_statement_new(cass_string_init("INSERT INTO examples.pairs (key, value) VALUES (?, ?)"),
@@ -119,6 +122,7 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
     cass_statement_bind_string(statement, 0, cass_string_init("d"));
     cass_statement_bind_string(statement, 1, cass_string_init("4"));
     cass_batch_add_statement(batch, statement);
+    cass_statement_free(statement);
   }
 
   future = cass_session_execute_batch(session, batch);
@@ -163,6 +167,8 @@ int main() {
   if(prepare_insert_into_batch(session, &prepared) == CASS_OK) {
     insert_into_batch_with_prepared(session, prepared, pairs);
   }
+
+  cass_prepared_free(prepared);
 
   close_future = cass_session_close(session);
   cass_future_wait(close_future);

@@ -20,6 +20,7 @@
 #include "address.hpp"
 
 #include <set>
+#include <sstream>
 #include <vector>
 
 namespace cass {
@@ -36,9 +37,13 @@ public:
 
   Host() {}
 
-  Host(const Address& address)
+  Host(const Address& address,
+       const std::string& rack = "",
+       const std::string& dc = "")
       : address_(address)
-      , is_up_(false) {}
+      , is_up_(false)
+      , rack_(rack)
+      , dc_(dc) {}
 
   const Address& address() const { return address_; }
 
@@ -47,9 +52,20 @@ public:
   void set_up() { is_up_= true; }
   void set_down() { is_up_ = false; }
 
+  std::string to_string() const {
+    std::ostringstream ss;
+    ss << address.to_string();
+    if (!rack.empty() || !dc.empty()) {
+      ss << " [" << rack << ':' << dc << "]";
+    }
+    return ss.str();
+  }
+
 private:
   Address address_;
   bool is_up_;
+  std::string rack_;
+  std::string dc_;
 };
 
 typedef std::vector<Host> HostVec;

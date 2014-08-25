@@ -21,6 +21,15 @@
 
 namespace cass {
 
+Address::Address() {
+  init();
+}
+
+Address::Address(const std::string& ip, int port) {
+  init();
+  from_string(ip, port, this);
+}
+
 bool Address::from_string(const std::string& ip, int port, Address* output) {
   char buf[sizeof(struct in6_addr)];
   if (uv_inet_pton(AF_INET, ip.c_str(), &buf).code == UV_OK) {
@@ -82,17 +91,20 @@ int Address::port() const {
   }
 }
 
-std::string Address::to_string() const {
+std::string Address::to_string(bool with_port) const {
   std::stringstream ss;
   char host[INET6_ADDRSTRLEN + 1] = {'\0'};
   if (addr()->sa_family == AF_INET) {
     uv_ip4_name(const_cast<struct sockaddr_in*>(addr_in()), host,
                 INET_ADDRSTRLEN);
-    ss << host << ":" << port();
+    ss << host;
+    if (with_port) ss << ":" << port();
   } else if (addr()->sa_family == AF_INET6) {
     uv_ip6_name(const_cast<struct sockaddr_in6*>(addr_in6()), host,
                 INET6_ADDRSTRLEN);
-    ss << "[" << host << "]:" << port();
+    if (with_port) ss << "[";
+    ss << host;
+    if (with_port) ss << "]:" << port();
   } else {
     assert(false);
   }

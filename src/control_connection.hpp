@@ -14,6 +14,7 @@
   limitations under the License.
 */
 
+#include "address.hpp"
 #include "connection.hpp"
 #include "handler.hpp"
 #include "load_balancing.hpp"
@@ -30,12 +31,15 @@ class Request;
 class ResponseMessage;
 class Session;
 class Timer;
+class Value;
 
 class ControlConnection {
 public:
   enum ControlState {
     CONTROL_STATE_NEW,
-    CONTROL_STATE_CONNECTED,
+    CONTROL_STATE_NODE_REFRESH_1,
+    CONTROL_STATE_NODE_REFRESH_2,
+    CONTROL_STATE_READY,
     CONTROL_STATE_CLOSED
   };
 
@@ -82,9 +86,14 @@ private:
   void reconnect();
 
   void on_connection_ready(Connection* connection);
+  void on_local_query(ResponseMessage* response);
+  void on_peer_query(ResponseMessage* response);
+  bool resolve_peer(const Value& peer_value, const Value& rpc_value, Address* output);
   void on_connection_closed(Connection* connection);
   void on_connection_event(EventResponse* response);
   void on_reconnect(Timer* timer);
+  void maybe_notify_ready();
+  void fail_startup_connect(ResponseMessage* response);
 
 private:
   Session* session_;
@@ -92,6 +101,10 @@ private:
   Connection* connection_;
   ScopedPtr<QueryPlan> query_plan_;
   Timer* reconnect_timer_;
+  Logger* logger_;
+
+  static Address bind_any_ipv4_;
+  static Address bind_any_ipv6_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(ControlConnection);
