@@ -56,6 +56,9 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
               "Connection: Protocol version %d unsupported. Trying protocol version %d...",
               connection_->protocol_version_, connection_->protocol_version_ - 1);
       } else {
+        if (error->code() == CQL_ERROR_BAD_CREDENTIALS) {
+          connection_->auth_error_ = error->message();
+        }
         std::ostringstream ss;
         ss << "Error response during startup: '" << error->message()
            << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
@@ -485,7 +488,8 @@ void Connection::send_credentials() {
 void Connection::send_initial_auth_response() {
   Authenticator* auth = config_.auth_provider()->new_authenticator(address_);
   if (auth == NULL) {
-    notify_error("Authenticaion required but no auth provider set");
+    auth_error_ = "Authenticaion required but no auth provider set";
+    notify_error(auth_error_);
   } else {
     AuthResponseRequest* auth_response
         = new AuthResponseRequest(auth->initial_response(), auth);
