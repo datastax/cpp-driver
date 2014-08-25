@@ -50,7 +50,7 @@ public:
     POOL_STATE_CLOSED
   };
 
-  Pool(const Host& host, uv_loop_t* loop,
+  Pool(const Address& address, uv_loop_t* loop,
        Logger* logger, const Config& config);
 
   ~Pool();
@@ -62,7 +62,7 @@ public:
   bool wait_for_connection(RequestHandler* request_handler);
   Connection* borrow_connection(const std::string& keyspace);
 
-  Host host() const { return host_; }
+  const Address& address() const { return address_; }
   bool is_defunct() { return is_defunct_; }
 
   void set_ready_callback(Callback callback) { ready_callback_ = callback; }
@@ -96,7 +96,7 @@ private:
   typedef std::list<RequestHandler*> RequestHandlerList;
 
   PoolState state_;
-  Host host_;
+  Address address_;
   uv_loop_t* loop_;
   Logger* logger_;
   const Config& config_;

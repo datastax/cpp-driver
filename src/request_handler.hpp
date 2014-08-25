@@ -101,11 +101,11 @@ public:
     pool_ = pool;
   }
 
-  bool get_current_host(Host* host) {
+  bool get_current_host_address(Address* address) {
     if (is_query_plan_exhauted_) {
       return false;
     }
-    *host = current_host_;
+    *address = current_host_.address;
     return true;
   }
 

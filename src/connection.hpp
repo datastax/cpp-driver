@@ -21,7 +21,7 @@
 #include "buffer.hpp"
 #include "handler.hpp"
 #include "macros.hpp"
-#include "host.hpp"
+#include "address.hpp"
 #include "stream_manager.hpp"
 #include "list.hpp"
 #include "scoped_ptr.hpp"
@@ -69,7 +69,7 @@ public:
     CLIENT_EVENT_SCHEMA_DROPPED
   };
 
-  Connection(uv_loop_t* loop, const Host& host,
+  Connection(uv_loop_t* loop, const Address& address,
              Logger* logger, const Config& config, const std::string& keyspace,
              int protocol_version);
 
@@ -78,6 +78,10 @@ public:
   bool execute(Handler* request);
 
   const Config& config() const { return config_; }
+
+  const Address& address() { return address_; }
+
+  const std::string& address_string() { return addr_string_; }
 
   const std::string& keyspace() { return keyspace_; }
 
@@ -159,9 +163,8 @@ private:
   Callback ready_callback_;
   Callback closed_callback_;
 
-  // DNS and hostname stuff
-  Host host_;
-  std::string host_string_;
+  Address address_;
+  std::string addr_string_;
   // the actual connection
   uv_tcp_t socket_;
   // ssl stuff

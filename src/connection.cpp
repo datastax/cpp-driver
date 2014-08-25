@@ -53,7 +53,7 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
           error->message().find("Invalid or unsupported protocol version") != std::string::npos) {
         connection_->is_invalid_protocol_ = true;
         connection_->logger_->warn(
-              "Protocol version %d unsupported. Trying protocol version %d...",
+              "Connection: Protocol version %d unsupported. Trying protocol version %d...",
               connection_->protocol_version_, connection_->protocol_version_ - 1);
       } else {
         std::ostringstream ss;
@@ -124,15 +124,15 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
 }
 
 Connection::Connection(uv_loop_t* loop,
-                       const Host& host, Logger* logger, const Config& config,
+                       const Address& address, Logger* logger, const Config& config,
                        const std::string& keyspace, int protocol_version)
     : state_(CONNECTION_STATE_NEW)
     , is_defunct_(false)
     , is_invalid_protocol_(false)
     , loop_(loop)
     , response_(new ResponseMessage())
-    , host_(host)
-    , host_string_(host.address.to_string())
+    , address_(address)
+    , addr_string_(address.to_string())
     , ssl_handshake_done_(false)
     , version_("3.0.0")
     , protocol_version_(protocol_version)
@@ -149,7 +149,7 @@ void Connection::connect() {
     state_ = CONNECTION_STATE_CONNECTING;
     connect_timer_ = Timer::start(loop_, config_.connect_timeout(), this,
                                   on_connect_timeout);
-    Connecter::connect(&socket_, host_.address, this, on_connect);
+    Connecter::connect(&socket_, address_, this, on_connect);
   }
 }
 
@@ -170,7 +170,7 @@ bool Connection::execute(Handler* handler) {
     return true; // Don't retry
   }
 
-  logger_->debug("Sending message type %s with %d",
+  logger_->debug("Connection: Sending message type %s with %d",
                  opcode_to_string(handler->request()->opcode()).c_str(), stream);
 
   pending_requests_.add_to_back(handler);
@@ -214,7 +214,7 @@ void Connection::consume(char* input, size_t size) {
     if (consumed < 0) {
       // TODO(mstump) probably means connection closed/failed
       // Can this even happen right now?
-      logger_->error("Error consuming message on '%s'", host_string_.c_str());
+      logger_->error("Connection: Error consuming message on '%s'", addr_string_.c_str());
     }
 
     if (response_->is_body_ready()) {
@@ -222,9 +222,9 @@ void Connection::consume(char* input, size_t size) {
       response_.reset(new ResponseMessage());
 
       logger_->debug(
-          "Consumed message type %s with stream %d, input %lu, remaining %d on '%s'",
+          "Connection: Consumed message type %s with stream %d, input %lu, remaining %d on '%s'",
           opcode_to_string(response->opcode()).c_str(), static_cast<int>(response->stream()),
-          size, remaining, host_string_.c_str());
+          size, remaining, addr_string_.c_str());
 
       if (response->stream() < 0) {
         // TODO(mstump) system events
@@ -262,8 +262,8 @@ void Connection::consume(char* input, size_t size) {
               break;
           }
         } else {
-          logger_->error("Invalid stream returnd from server on '%s'",
-                         host_string_.c_str());
+          logger_->error("Connection: Invalid stream returnd from server on '%s'",
+                         addr_string_.c_str());
           defunct();
         }
       }
@@ -294,15 +294,15 @@ void Connection::on_connect(Connecter* connecter) {
   connection->connect_timer_ = NULL;
 
   if (connecter->status() == Connecter::SUCCESS) {
-    connection->logger_->debug("Connected to '%s'",
-                               connection->host_string_.c_str());
+    connection->logger_->debug("Connection: Connected to '%s'",
+                               connection->addr_string_.c_str());
     uv_read_start(copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_),
                   alloc_buffer, on_read);
     connection->state_ = CONNECTION_STATE_CONNECTED;
     connection->on_connected();
   } else {
-    connection->logger_->info("Connect error '%s' on '%s'",
-                              connection->host_string_.c_str(),
+    connection->logger_->info("Connection: Connect error '%s' on '%s'",
+                              connection->addr_string_.c_str(),
                               uv_err_name(uv_last_error(connection->loop_)));
     connection->notify_error("Unable to connect");
   }
@@ -318,7 +318,7 @@ void Connection::on_close(uv_handle_t* handle) {
   Connection* connection = static_cast<Connection*>(handle->data);
 
   connection->logger_->debug("Connection to '%s' closed",
-                             connection->host_string_.c_str());
+                             connection->addr_string_.c_str());
 
   while (!connection->pending_requests_.is_empty()) {
     Handler* handler = connection->pending_requests_.front();
@@ -343,8 +343,8 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
 
   if (nread == -1) {
     if (uv_last_error(connection->loop_).code != UV_EOF) {
-      connection->logger_->info("Read error '%s' on '%s'",
-                                connection->host_string_.c_str(),
+      connection->logger_->info("Connection: Read error '%s' on '%s'",
+                                connection->addr_string_.c_str(),
                                 uv_err_name(uv_last_error(connection->loop_)));
     }
     connection->defunct();
@@ -364,8 +364,8 @@ void Connection::on_write(RequestWriter* writer) {
         handler->set_state(Handler::REQUEST_STATE_READING);
       } else {
         if (!is_closing()) {
-          logger_->info("Write error '%s' on '%s'",
-                        host_string_.c_str(),
+          logger_->info("Connection: Write error '%s' on '%s'",
+                        addr_string_.c_str(),
                         uv_err_name(uv_last_error(loop_)));
           defunct();
         }
@@ -401,7 +401,7 @@ void Connection::on_write(RequestWriter* writer) {
 
 void Connection::on_timeout(RequestTimer* timer) {
   Handler* handler = static_cast<Handler*>(timer->data());
-  logger_->info("Request timed out to '%s'", host_string_.c_str());
+  logger_->info("Connection: Request timed out to '%s'", addr_string_.c_str());
   // TODO (mpenick): We need to handle the case where we have too many
   // timeout requests and we run out of stream ids. The java-driver
   // uses a threshold to defunct the connneciton.
@@ -466,13 +466,13 @@ void Connection::notify_ready() {
 }
 
 void Connection::notify_error(const std::string& error) {
-  logger_->error("'%s' error on startup for '%s'", error.c_str(),
-                 host_string_.c_str());
+  logger_->error("'Connection: %s' error on startup for '%s'", error.c_str(),
+                 addr_string_.c_str());
   defunct();
 }
 
 void Connection::send_credentials() {
-  ScopedPtr<V1Authenticator> v1_auth(config_.auth_provider()->new_authenticator_v1(host_.address));
+  ScopedPtr<V1Authenticator> v1_auth(config_.auth_provider()->new_authenticator_v1(address_));
   if (v1_auth) {
     V1Authenticator::Credentials credentials;
     v1_auth->get_credentials(&credentials);
@@ -483,7 +483,7 @@ void Connection::send_credentials() {
 }
 
 void Connection::send_initial_auth_response() {
-  Authenticator* auth = config_.auth_provider()->new_authenticator(host_.address);
+  Authenticator* auth = config_.auth_provider()->new_authenticator(address_);
   if (auth == NULL) {
     notify_error("Authenticaion required but no auth provider set");
   } else {
