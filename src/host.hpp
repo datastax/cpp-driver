@@ -54,9 +54,9 @@ public:
 
   std::string to_string() const {
     std::ostringstream ss;
-    ss << address.to_string();
-    if (!rack.empty() || !dc.empty()) {
-      ss << " [" << rack << ':' << dc << "]";
+    ss << address_.to_string();
+    if (!rack_.empty() || !dc_.empty()) {
+      ss << " [" << rack_ << ':' << dc_ << "]";
     }
     return ss.str();
   }

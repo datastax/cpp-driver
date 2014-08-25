@@ -49,11 +49,7 @@ public:
     , connection_(NULL)
     , reconnect_timer_(NULL) {}
 
-  void set_session(Session* session) {
-    session_ = session;
-  }
-
-  void connect();
+  void connect(Session* session);
   void close();
 
 private:

@@ -102,10 +102,10 @@ public:
   }
 
   bool get_current_host_address(Address* address) {
-    if (is_query_plan_exhauted_) {
+    if (is_query_plan_exhausted_) {
       return false;
     }
-    *address = current_host_.address;
+    *address = current_host_.address();
     return true;
   }
 

@@ -216,7 +216,7 @@ void Connection::consume(char* input, size_t size) {
   while (remaining != 0) {
     int consumed = response_->decode(protocol_version_, buffer, remaining);
     if (consumed <= 0) {
-      logger_->error("Connection: Error consuming message on '%s'", host_string_.c_str());
+      logger_->error("Connection: Error consuming message on '%s'", addr_string_.c_str());
       remaining = 0;
       defunct();
       continue;

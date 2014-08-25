@@ -32,8 +32,9 @@
 
 namespace cass {
 
-void ControlConnection::connect() {
-  logger_ = session_->logger();
+void ControlConnection::connect(Session* session) {
+  session_ = session;
+  logger_ = session_->logger_.get();
   schedule_reconnect();
 }
 
@@ -197,9 +198,7 @@ void ControlConnection::maybe_notify_ready() {
     state_ = CONTROL_STATE_NODE_REFRESH_2;
   } else if (state_ == CONTROL_STATE_NODE_REFRESH_2) {
     state_ = CONTROL_STATE_READY;
-    if (ready_callback_) {
-      ready_callback_(this);
-    }
+    session_->on_control_connection_ready();
   }
 }
 

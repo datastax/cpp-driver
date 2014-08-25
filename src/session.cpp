@@ -65,7 +65,6 @@ Session::Session(const Config& config)
     , pending_pool_count_(0)
     , pending_workers_count_(0)
     , current_io_worker_(0) {
-  control_connection_.set_session(this);
   uv_mutex_init(&keyspace_mutex_);
 }
 
@@ -150,7 +149,7 @@ void Session::internal_connect() {
   }
   load_balancing_policy_->init(hosts_);
   hosts_.clear();
-  control_connection_.connect();
+  control_connection_.connect(this);
 }
 
 void Session::close_handles() {
@@ -249,7 +248,7 @@ void Session::on_control_connection_ready() {
     for (IOWorkerVec::iterator it = io_workers_.begin(),
                                end = io_workers_.end();
          it != end; ++it) {
-      (*it)->add_pool_async(hosts_it->address);
+      (*it)->add_pool_async(hosts_it->address());
     }
   }
 }
