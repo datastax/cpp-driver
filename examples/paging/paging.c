@@ -126,6 +126,7 @@ void select_from_paging(CassSession* session) {
 
     result = cass_future_get_result(future);
     iterator = cass_iterator_from_result(result);
+    cass_future_free(future);
 
     while (cass_iterator_next(iterator)) {
       CassUuid key;
@@ -154,6 +155,7 @@ void select_from_paging(CassSession* session) {
     cass_result_free(result);
 
   } while (has_more_pages);
+  cass_statement_free(statement);
 }
 
 int main() {

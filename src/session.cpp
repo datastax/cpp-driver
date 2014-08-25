@@ -24,6 +24,8 @@
 #include "round_robin_policy.hpp"
 #include "types.hpp"
 
+#include "third_party/boost/boost/bind.hpp"
+
 extern "C" {
 
 void cass_session_free(CassSession* session) {
@@ -63,6 +65,11 @@ Session::Session(const Config& config)
     , pending_pool_count_(0)
     , pending_workers_count_(0)
     , current_io_worker_(0) {
+  control_connection_.set_session(this);
+  control_connection_.set_ready_callback(
+        boost::bind(&Session::on_control_connection_ready, this, _1));
+  control_connection_.set_error_callback(
+        boost::bind(&Session::on_control_conneciton_error, this, _1, _2));
   uv_mutex_init(&keyspace_mutex_);
 }
 
@@ -88,6 +95,11 @@ int Session::init() {
     io_workers_.push_back(io_worker.release());
   }
   return rc;
+}
+
+void Session::add_host(const Host &host) {
+  logger_->debug("Adding new host: %s", host.to_string().c_str());
+  hosts_.insert(host);
 }
 
 bool Session::notify_ready_async() {
@@ -133,23 +145,16 @@ void Session::close_async(Future* future) {
   }
 }
 
-void Session::init_pools() {
+void Session::internal_connect() {
   if (hosts_.empty()) {
     connect_future_->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                                "No hosts provided or no hosts resolved");
     connect_future_.reset();
     return;
   }
-
-  pending_pool_count_ = hosts_.size() * io_workers_.size();
-  for (HostSet::iterator hosts_it = hosts_.begin(), hosts_end = hosts_.end();
-       hosts_it != hosts_end; ++hosts_it) {
-    for (IOWorkerVec::iterator it = io_workers_.begin(),
-                               end = io_workers_.end();
-         it != end; ++it) {
-      (*it)->add_pool_async(*hosts_it);
-    }
-  }
+  load_balancing_policy_->init(hosts_);
+  hosts_.clear();
+  control_connection_.connect();
 }
 
 void Session::close_handles() {
@@ -198,19 +203,21 @@ void Session::on_event(const SessionEvent& event) {
     }
 
     if (pending_resolve_count_ == 0) {
-      init_pools();
+      internal_connect();
     }
   } else if (event.type == SessionEvent::NOTIFY_READY) {
-    if (--pending_pool_count_ == 0) {
-      logger_->debug("Session is connected");
-      load_balancing_policy_->init(hosts_);
-      connect_future_->set();
-      connect_future_.reset();
+    if (pending_pool_count_ > 0) {
+      if (--pending_pool_count_ == 0) {
+        logger_->debug("Session is connected");
+        connect_future_->set();
+        connect_future_.reset();
+      }
+      logger_->debug("Session pending pool count %d", pending_pool_count_);
     }
-    logger_->debug("Session pending pool count %d", pending_pool_count_);
   } else if (event.type == SessionEvent::NOTIFY_CLOSED) {
     if (--pending_workers_count_ == 0) {
       logger_->close_async();
+      control_connection_.close();
       close_handles();
     }
   }
@@ -226,7 +233,7 @@ void Session::on_resolve(Resolver* resolver) {
                             resolver->host().c_str(), resolver->port());
   }
   if (--session->pending_resolve_count_ == 0) {
-    session->init_pools();
+    session->internal_connect();
   }
 }
 
@@ -236,6 +243,24 @@ void Session::execute(RequestHandler* request_handler) {
                               "The request queue has reached capacity");
     request_handler->dec_ref();
   }
+}
+
+void Session::on_control_connection_ready(ControlConnection* control_connection) {
+  load_balancing_policy_->init(hosts_);
+  pending_pool_count_ = hosts_.size() * io_workers_.size();
+  for (HostSet::iterator hosts_it = hosts_.begin(), hosts_end = hosts_.end();
+       hosts_it != hosts_end; ++hosts_it) {
+    for (IOWorkerVec::iterator it = io_workers_.begin(),
+                               end = io_workers_.end();
+         it != end; ++it) {
+      (*it)->add_pool_async(hosts_it->address);
+    }
+  }
+}
+
+void Session::on_control_conneciton_error(CassError code, const std::string& message) {
+  connect_future_->set_error(code, message);
+  connect_future_.reset();
 }
 
 Future* Session::prepare(const char* statement, size_t length) {
@@ -275,7 +300,7 @@ void Session::on_execute(uv_async_t* data, int status) {
   while (session->request_queue_->dequeue(request_handler)) {
     if (request_handler != NULL) {
       request_handler->keyspace = session->keyspace();
-      session->load_balancing_policy_->new_query_plan(&request_handler->hosts);
+      request_handler->set_query_plan(session->load_balancing_policy_->new_query_plan());
 
       size_t start = session->current_io_worker_;
       size_t remaining = session->io_workers_.size();

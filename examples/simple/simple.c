@@ -60,6 +60,7 @@ int main() {
                                                             message.data);
     } 
 
+    cass_statement_free(statement);
     cass_future_free(result_future);
 
     /* Close the session */

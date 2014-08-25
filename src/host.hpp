@@ -19,16 +19,36 @@
 
 #include "address.hpp"
 
+#include <sstream>
+#include <vector>
+
 namespace cass {
 
 struct Host {
   Address address;
+  std::string rack;
+  std::string dc;
 
   Host() {}
 
-  Host(const Address& address)
-      : address(address) {}
+  Host(const Address& address,
+       const std::string& rack = "",
+       const std::string& dc = "")
+      : address(address),
+        rack(rack),
+        dc(dc) {}
+
+  std::string to_string() const {
+    std::ostringstream ss;
+    ss << address.to_string();
+    if (!rack.empty() || !dc.empty()) {
+      ss << " [" << rack << ':' << dc << "]";
+    }
+    return ss.str();
+  }
 };
+
+typedef std::vector<Host> HostVec;
 
 inline bool operator<(const Host& a, const Host& b) {
   return a.address < b.address;
