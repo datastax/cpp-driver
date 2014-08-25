@@ -83,6 +83,8 @@ public:
 
   const std::string& address_string() { return addr_string_; }
 
+  const std::string& auth_error() { return auth_error_; }
+
   const std::string& keyspace() { return keyspace_; }
 
   void close();
@@ -153,6 +155,7 @@ private:
   ConnectionState state_;
   bool is_defunct_;
   bool is_invalid_protocol_;
+  std::string auth_error_;
 
   List<Handler> pending_requests_;
 

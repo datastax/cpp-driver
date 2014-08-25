@@ -220,6 +220,15 @@ void ControlConnection::on_connection_closed(Connection* connection) {
   // closed
   connection_ = NULL;
 
+  if (state_ == CONTROL_STATE_NEW) {
+    if (!connection->auth_error().empty()) {
+      if (error_callback_) {
+        error_callback_(CASS_ERROR_SERVER_BAD_CREDENTIALS, connection->auth_error());
+        return;
+      }
+    }
+  }
+
   reconnect();
 }
 
