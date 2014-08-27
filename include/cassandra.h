@@ -546,7 +546,7 @@ cass_cluster_free(CassCluster* cluster);
  * Closes the session instance, outputs a close future which can
  * be used to determine when the session has been terminated. This allows
  * in-flight requests to finish. It is an error to call this method twice
- * with the same session.
+ * with the same session as it is freed after it terminates.
  *
  * @param[in] session
  * @return A future that must be freed.
@@ -1431,7 +1431,7 @@ cass_result_column_count(const CassResult* result);
 * is returned if the index is out of bounds.
 */
 CASS_EXPORT CassString
-cass_result_column_name(const CassResult *result, 
+cass_result_column_name(const CassResult *result,
                         cass_size_t index);
 
 /**
@@ -1833,7 +1833,7 @@ cass_uuid_generate_time(CassUuid output);
 
 /**
  * Generates a V1 (time) UUID for the specified time.
- * 
+ *
  * @param[in] time
  * @param[out] output A V1 UUID for the specified time.
  */
