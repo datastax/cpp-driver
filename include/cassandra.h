@@ -594,6 +594,15 @@ CASS_EXPORT CassFuture*
 cass_session_execute_batch(CassSession* session,
                            const CassBatch* batch);
 
+/**
+ * Frees a session instance.
+ *
+ * @param[in] session
+ */
+CASS_EXPORT void
+cass_session_free(CassSession* session);
+
+
 /***********************************************************************************
  *
  * Future
@@ -1431,7 +1440,7 @@ cass_result_column_count(const CassResult* result);
 * is returned if the index is out of bounds.
 */
 CASS_EXPORT CassString
-cass_result_column_name(const CassResult *result, 
+cass_result_column_name(const CassResult *result,
                         cass_size_t index);
 
 /**
@@ -1833,7 +1842,7 @@ cass_uuid_generate_time(CassUuid output);
 
 /**
  * Generates a V1 (time) UUID for the specified time.
- * 
+ *
  * @param[in] time
  * @param[out] output A V1 UUID for the specified time.
  */
