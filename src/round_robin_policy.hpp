@@ -30,16 +30,36 @@ public:
       : hosts_(new HostVec)
       , index_(0) {}
 
-  void init(const std::set<Host>& hosts) {
-    hosts_->assign(hosts.begin(), hosts.end());
+  virtual void init(const HostMap& hosts) {
+    hosts_->reserve(hosts.size());
+    for (HostMap::const_iterator it = hosts.begin(),
+         end = hosts.end(); it != end; ++it) {
+      hosts_->push_back(it->second);
+    }
   }
 
-  CassHostDistance distance(const Host& host) {
+  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) {
     return CASS_HOST_DISTANCE_LOCAL;
   }
 
-  QueryPlan* new_query_plan() {
+  virtual QueryPlan* new_query_plan() {
     return new RoundRobinQueryPlan(hosts_, index_++);
+  }
+
+  virtual void on_add(SharedRefPtr<Host> host) {
+
+  }
+
+  virtual void on_remove(SharedRefPtr<Host> host) {
+
+  }
+
+  virtual void on_up(SharedRefPtr<Host> host) {
+
+  }
+
+  virtual void on_down(SharedRefPtr<Host> host) {
+
   }
 
 private:
@@ -50,13 +70,13 @@ private:
       , index_(start_index)
       , remaining_(hosts->size()) {}
 
-    bool compute_next(Host* host)  {
+    bool compute_next(Address* address)  {
       if (remaining_ == 0) {
         return false;
       }
 
       remaining_--;
-      *host = (*hosts_)[index_++ % hosts_->size()];
+      *address = (*hosts_)[index_++ % hosts_->size()]->address();
       return true;
     }
 

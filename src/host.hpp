@@ -18,39 +18,58 @@
 #define __CASS_HOST_HPP_INCLUDED__
 
 #include "address.hpp"
+#include "ref_counted.hpp"
 
+#include <map>
 #include <set>
 #include <sstream>
 #include <vector>
 
 namespace cass {
 
-class Host {
+class Host : public RefCounted<Host> {
 public:
   class StateListener {
   public:
-    virtual void on_add(const Host& host) = 0;
-    virtual void on_remove(const Host& host) = 0;
-    virtual void on_up(const Host& host) = 0;
-    virtual void on_down(const Host& host) = 0;
+    virtual void on_add(SharedRefPtr<Host> host) = 0;
+    virtual void on_remove(SharedRefPtr<Host> host) = 0;
+    virtual void on_up(SharedRefPtr<Host> host) = 0;
+    virtual void on_down(SharedRefPtr<Host> host) = 0;
   };
 
-  Host() {}
+  enum HostState {
+    ADDED,
+    UP,
+    DOWN
+  };
 
-  Host(const Address& address,
-       const std::string& rack = "",
-       const std::string& dc = "")
+  Host(const Address& address, bool mark)
       : address_(address)
-      , is_up_(false)
-      , rack_(rack)
-      , dc_(dc) {}
+      , mark_(mark)
+      , state_(ADDED) {}
 
   const Address& address() const { return address_; }
 
-  bool is_up() const { return is_up_; }
+  bool mark() const { return mark_; }
+  void set_mark(bool mark) { mark_ = mark; }
 
-  void set_up() { is_up_= true; }
-  void set_down() { is_up_ = false; }
+  const std::string& rack() const { return rack_; }
+  const std::string& dc() const { return dc_; } 
+  void set_rack_and_dc(const std::string& rack, const std::string& dc) {
+    rack_ = rack;
+    dc_ = dc;
+  }
+
+  const std::string& listen_address() const { return listen_address_; }
+  void set_listen_address(const std::string& listen_address) {
+    listen_address_ = listen_address;
+  }
+
+  bool was_just_added() const { return (state_ == ADDED); }
+
+  bool is_up() const { return (state_ == UP); }
+  void set_up() { state_ = UP; }
+  void set_down() { state_ = DOWN; }
 
   std::string to_string() const {
     std::ostringstream ss;
@@ -63,21 +82,15 @@ public:
 
 private:
   Address address_;
-  bool is_up_;
+  bool mark_;
+  HostState state_;
+  std::string listen_address_;
   std::string rack_;
   std::string dc_;
 };
 
-typedef std::vector<Host> HostVec;
-typedef std::set<Host> HostSet;
-
-inline bool operator<(const Host& a, const Host& b) {
-  return a.address() < b.address();
-}
-
-inline bool operator==(const Host& a, const Host& b) {
-  return a.address() == b.address();
-}
+typedef std::vector<SharedRefPtr<Host> > HostVec;
+typedef std::map<Address, SharedRefPtr<Host> > HostMap;
 
 } // namespace cass
 

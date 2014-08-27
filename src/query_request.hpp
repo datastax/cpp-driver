@@ -27,11 +27,13 @@ namespace cass {
 
 class QueryRequest : public Statement {
 public:
-  QueryRequest()
-    : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY) {}
-
-  explicit QueryRequest(size_t value_count)
+  explicit QueryRequest(size_t value_count = 0)
     : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY, value_count) {}
+
+
+  QueryRequest(const std::string& query, size_t value_count = 0)
+    : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY, value_count)
+    , query_(query) {}
 
   QueryRequest(const char* query, size_t query_length,
                size_t value_count)

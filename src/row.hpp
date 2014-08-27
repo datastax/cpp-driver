@@ -19,13 +19,15 @@
 
 #include "value.hpp"
 
+#include "third_party/boost/boost/utility/string_ref.hpp"
+
 #include <vector>
 
 namespace cass {
 
 class ResultResponse;
 
-struct Row {
+class Row {
 public:
   Row()
     : result_(NULL) {}
@@ -34,6 +36,8 @@ public:
     : result_(result) {}
 
   ValueVec values;
+
+  const Value* get_by_name(const boost::string_ref& name) const;
 
   const ResultResponse* result() const { return result_; }
 

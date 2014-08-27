@@ -71,7 +71,10 @@ public:
     load_balancing_policy_.reset(policy);
   }
 
-  void add_host(const Host& host);
+
+  SharedRefPtr<Host> get_host(const Address& address, bool should_mark = false);
+  SharedRefPtr<Host> add_host(const Address& address, bool should_mark = false);
+  void purge_hosts(bool is_initial_connection);
 
   bool notify_ready_async();
   bool notify_closed_async();
@@ -103,6 +106,11 @@ private:
   void on_control_connection_ready();
   void on_control_conneciton_error(CassError code, const std::string& message);
 
+  void on_add(SharedRefPtr<Host> host);
+  void on_remove(SharedRefPtr<Host> host);
+  void on_up(SharedRefPtr<Host> host);
+  void on_down(SharedRefPtr<Host> host);
+
 private:
   typedef std::vector<IOWorker*> IOWorkerVec;
 
@@ -113,7 +121,8 @@ private:
   uv_mutex_t keyspace_mutex_;
   ScopedRefPtr<Future> connect_future_;
   Future* close_future_;
-  HostSet hosts_;
+  HostMap hosts_;
+  bool current_host_mark_;
   Config config_;
   ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*> > > request_queue_;
   ScopedPtr<LoadBalancingPolicy> load_balancing_policy_;

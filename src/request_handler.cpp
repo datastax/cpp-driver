@@ -62,7 +62,7 @@ void RequestHandler::set_error(CassError code, const std::string& message) {
   if (is_query_plan_exhausted_) {
     future_->set_error(code, message);
   } else {
-    future_->set_error_with_host(current_host_, code, message);
+    future_->set_error_with_host_address(current_address_, code, message);
   }
   return_connection();
   notify_finished();
@@ -94,7 +94,7 @@ void RequestHandler::on_result_response(ResponseMessage* response) {
       break;
   }
 
-  future_->set_result(current_host_, response->response_body().release());
+  future_->set_result(current_address_, response->response_body().release());
   return_connection();
   notify_finished();
 }
