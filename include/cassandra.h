@@ -594,6 +594,15 @@ CASS_EXPORT CassFuture*
 cass_session_execute_batch(CassSession* session,
                            const CassBatch* batch);
 
+/**
+ * Frees a session instance.
+ *
+ * @param[in] session
+ */
+CASS_EXPORT void
+cass_session_free(CassSession* session);
+
+
 /***********************************************************************************
  *
  * Future
