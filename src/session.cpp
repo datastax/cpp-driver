@@ -26,10 +26,6 @@
 
 extern "C" {
 
-void cass_session_free(CassSession* session) {
-  delete session->from();
-}
-
 CassFuture* cass_session_close(CassSession* session) {
   // TODO(mpenick): Make sure this handles close during the middle of a connect
   cass::SessionCloseFuture* close_future = new cass::SessionCloseFuture(session);
