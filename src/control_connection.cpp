@@ -18,6 +18,7 @@
 
 #include "constants.hpp"
 #include "event_repsonse.hpp"
+#include "load_balancing.hpp"
 #include "query_request.hpp"
 #include "result_iterator.hpp"
 #include "error_response.hpp"
@@ -36,10 +37,33 @@
 
 namespace cass {
 
+class ControlStartupQueryPlan : public QueryPlan {
+public:
+  ControlStartupQueryPlan(const HostMap& hosts) {
+    for (HostMap::const_iterator it = hosts.begin(),
+         end = hosts.end(); it != end; ++it) {
+      host_addresses_.push_back(it->second->address());
+    }
+    it_ = host_addresses_.begin();
+  }
+
+  virtual bool compute_next(Address* address) {
+    if (it_ == host_addresses_.end()) return false;
+    *address = *it_;
+    it_++;
+    return true;
+  }
+
+private:
+  AddressVec host_addresses_;
+  AddressVec::iterator it_;
+};
+
 void ControlConnection::connect(Session* session) {
   session_ = session;
   logger_ = session_->logger_.get();
-  schedule_reconnect();
+  query_plan_.reset(new ControlStartupQueryPlan(session_->hosts_));
+  reconnect();
 }
 
 void ControlConnection::close() {
@@ -54,15 +78,10 @@ void ControlConnection::close() {
 }
 
 void ControlConnection::schedule_reconnect(uint64_t ms) {
-  if (ms == 0) {
-    query_plan_.reset(session_->load_balancing_policy_->new_query_plan());
-    reconnect();
-  } else {
-    reconnect_timer_= Timer::start(session_->loop(),
-                                   ms,
-                                   NULL,
-                                   boost::bind(&ControlConnection::on_reconnect, this, _1));
-  }
+  reconnect_timer_= Timer::start(session_->loop(),
+                                 ms,
+                                 NULL,
+                                 boost::bind(&ControlConnection::on_reconnect, this, _1));
 }
 
 void ControlConnection::reconnect() {
@@ -103,6 +122,9 @@ void ControlConnection::reconnect() {
 
 void ControlConnection::on_connection_ready(Connection* connection) {
   logger_->debug("ControlConnection: connection ready on %s", connection->address_string().c_str());
+
+  // The control connection has to refresh the node list anytime there's a reconnect because
+  // several events could have been missed while not connected.
   refresh_node_list();
 }
 
@@ -161,7 +183,7 @@ void ControlConnection::on_node_refresh(const MultipleRequestHandler::ResponseVe
 }
 
 void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
-                                          NodeRefreshCallback callback) {
+                                          RefreshNodeCallback callback) {
   bool is_connected_host = host->address().compare(connection_->address()) == 0;
 
   std::string query;
@@ -351,7 +373,7 @@ void ControlConnection::on_connection_event(EventResponse* response) {
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
           if (!host) {
             host = session_->add_host(response->affected_node());
-            refresh_node_info(host, boost::bind(&Session::on_add, session_, _1));
+            refresh_node_info(host, boost::bind(&Session::on_add, session_, _1, false));
           }
           break;
         }
@@ -359,7 +381,7 @@ void ControlConnection::on_connection_event(EventResponse* response) {
         case EventResponse::REMOVE_NODE: {
           session_->logger_->info("ControlConnection: Node '%s' removed", address_str.c_str());
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
-          if (!host) {
+          if (host) {
             session_->on_remove(host);
           } else {
             logger_->debug("Session: Tried to remove host '%s' that doesn't exist", address_str.c_str());
@@ -377,24 +399,13 @@ void ControlConnection::on_connection_event(EventResponse* response) {
       switch (response->status_change()) {
         case EventResponse::UP: {
           session_->logger_->info("ControlConnection: Node'%s' is up", address_str.c_str());
-          SharedRefPtr<Host> host = session_->get_host(response->affected_node());
-          if (host) {
-            refresh_node_info(host, boost::bind(&Session::on_up, session_, _1));
-          } else {
-            host = session_->add_host(response->affected_node());
-            refresh_node_info(host, boost::bind(&Session::on_add, session_, _1));
-          }
+          on_up(response->affected_node());
           break;
         }
 
         case EventResponse::DOWN: {
           session_->logger_->info("ControlConnection: Node'%s' is down", address_str.c_str());
-          SharedRefPtr<Host> host = session_->get_host(response->affected_node());
-          if (!host) {
-            session_->on_down(host);
-          } else {
-            logger_->debug("Session: Tried to down host '%s' that doesn't exist", address_str.c_str());
-          }
+          on_down(response->affected_node());
           break;
         }
       }
@@ -419,8 +430,28 @@ void ControlConnection::on_connection_event(EventResponse* response) {
   }
 }
 
+void ControlConnection::on_up(const Address& address) {
+  SharedRefPtr<Host> host = session_->get_host(address);
+  if (host) {
+    refresh_node_info(host, boost::bind(&Session::on_up, session_, _1));
+  } else {
+    host = session_->add_host(address);
+    refresh_node_info(host, boost::bind(&Session::on_add, session_, _1, false));
+  }
+}
+
+void ControlConnection::on_down(const Address& address) {
+  SharedRefPtr<Host> host = session_->get_host(address);
+  if (host) {
+    session_->on_down(host);
+  } else {
+    logger_->debug("ControlConnection: Tried to down host '%s' that doesn't exist", address.to_string().c_str());
+  }
+}
+
 void ControlConnection::on_reconnect(Timer* timer) {
-  schedule_reconnect();
+  query_plan_.reset(session_->load_balancing_policy_->new_query_plan());
+  reconnect();
   reconnect_timer_ = NULL;
 }
 

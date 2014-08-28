@@ -22,6 +22,7 @@
 #include "request_handler.hpp"
 #include "resolver.hpp"
 #include "round_robin_policy.hpp"
+#include "timer.hpp"
 #include "types.hpp"
 
 #include "third_party/boost/boost/bind.hpp"
@@ -148,6 +149,20 @@ bool Session::notify_closed_async() {
   return send_event_async(event);
 }
 
+bool Session::notify_up_async(const Address& address) {
+  SessionEvent event;
+  event.type = SessionEvent::NOTIFY_UP;
+  event.address = address;
+  return send_event_async(event);
+}
+
+bool Session::notify_down_async(const Address& address) {
+  SessionEvent event;
+  event.type = SessionEvent::NOTIFY_DOWN;
+  event.address = address;
+  return send_event_async(event);
+}
+
 bool Session::connect_async(const std::string& keyspace, Future* future) {
   logger_.reset(new Logger(config_));
   if (logger_->init() != 0 || init() != 0) {
@@ -186,7 +201,6 @@ void Session::internal_connect() {
     connect_future_.reset();
     return;
   }
-  load_balancing_policy_->init(hosts_);
   control_connection_.connect(this);
 }
 
@@ -217,41 +231,58 @@ void Session::on_after_run() {
 }
 
 void Session::on_event(const SessionEvent& event) {
-  if (event.type == SessionEvent::CONNECT) {
-    int port = config_.port();
 
-    const Config::ContactPointList& contact_points = config_.contact_points();
-    for (Config::ContactPointList::const_iterator it = contact_points.begin(),
-                                                  end = contact_points.end();
-         it != end; ++it) {
-      const std::string& seed = *it;
-      Address address;
-      if (Address::from_string(seed, port, &address)) {
-        hosts_[address] = SharedRefPtr<Host>(new Host(address, !current_host_mark_));
-      } else {
-        pending_resolve_count_++;
-        Resolver::resolve(loop(), seed, port, this, on_resolve);
+  switch (event.type) {
+    case SessionEvent::CONNECT: {
+      int port = config_.port();
+
+      const Config::ContactPointList& contact_points = config_.contact_points();
+      for (Config::ContactPointList::const_iterator it = contact_points.begin(),
+                                                    end = contact_points.end();
+           it != end; ++it) {
+        const std::string& seed = *it;
+        Address address;
+        if (Address::from_string(seed, port, &address)) {
+          hosts_[address] = SharedRefPtr<Host>(new Host(address, !current_host_mark_));
+        } else {
+          pending_resolve_count_++;
+          Resolver::resolve(loop(), seed, port, this, on_resolve);
+        }
       }
+
+      if (pending_resolve_count_ == 0) {
+        internal_connect();
+      }
+
+      break;
     }
 
-    if (pending_resolve_count_ == 0) {
-      internal_connect();
-    }
-  } else if (event.type == SessionEvent::NOTIFY_READY) {
-    if (pending_pool_count_ > 0) {
-      if (--pending_pool_count_ == 0) {
-        logger_->debug("Session is connected");
-        connect_future_->set();
-        connect_future_.reset();
+    case SessionEvent::NOTIFY_READY:
+      if (pending_pool_count_ > 0) {
+        if (--pending_pool_count_ == 0) {
+          logger_->debug("Session is connected");
+          connect_future_->set();
+          connect_future_.reset();
+        }
+        logger_->debug("Session pending pool count %d", pending_pool_count_);
       }
-      logger_->debug("Session pending pool count %d", pending_pool_count_);
-    }
-  } else if (event.type == SessionEvent::NOTIFY_CLOSED) {
-    if (--pending_workers_count_ == 0) {
-      logger_->close_async();
-      control_connection_.close();
-      close_handles();
-    }
+      break;
+
+    case SessionEvent::NOTIFY_CLOSED:
+      if (--pending_workers_count_ == 0) {
+        logger_->close_async();
+        control_connection_.close();
+        close_handles();
+      }
+      break;
+
+    case SessionEvent::NOTIFY_UP:
+      control_connection_.on_up(event.address);
+      break;
+
+    case SessionEvent::NOTIFY_DOWN:
+      control_connection_.on_down(event.address);
+      break;
   }
 }
 
@@ -283,7 +314,7 @@ void Session::on_control_connection_ready() {
   pending_pool_count_ = hosts_.size() * io_workers_.size();
   for (HostMap::iterator it = hosts_.begin(), hosts_end = hosts_.end();
        it != hosts_end; ++it) {
-    on_add(it->second);
+    on_add(it->second, true);
   }
 }
 
@@ -308,7 +339,7 @@ Future* Session::prepare(const char* statement, size_t length) {
   return future;
 }
 
-void Session::on_add(SharedRefPtr<Host> host) {
+void Session::on_add(SharedRefPtr<Host> host, bool is_initial_connection) {
   host->set_up();
   load_balancing_policy_->on_add(host);
 
@@ -318,11 +349,13 @@ void Session::on_add(SharedRefPtr<Host> host) {
 
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
-    (*it)->add_pool_async(host->address());
+    (*it)->add_pool_async(host->address(), is_initial_connection);
   }
 }
 
 void Session::on_remove(SharedRefPtr<Host> host) {
+  load_balancing_policy_->on_remove(host);
+
   hosts_.erase(host->address());
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
@@ -340,14 +373,14 @@ void Session::on_up(SharedRefPtr<Host> host) {
 
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
-    (*it)->add_pool_async(host->address());
+    (*it)->add_pool_async(host->address(), false);
   }
 }
 
 void Session::on_down(SharedRefPtr<Host> host) {
   // See if reconnect exists and exit if it does
-
   host->set_down();
+  load_balancing_policy_->on_down(host);
 
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
@@ -358,7 +391,10 @@ void Session::on_down(SharedRefPtr<Host> host) {
     return;
   }
 
-  // Schedule reconnect
+  for (IOWorkerVec::iterator it = io_workers_.begin(),
+       end = io_workers_.end(); it != end; ++it) {
+    (*it)->schedule_reconnect_async(host->address(), config_.reconnect_wait());
+  }
 }
 
 Future* Session::execute(const Request* statement) {

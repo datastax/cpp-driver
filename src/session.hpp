@@ -46,8 +46,14 @@ class Resolver;
 class Request;
 
 struct SessionEvent {
-  enum Type { CONNECT, NOTIFY_READY, NOTIFY_CLOSED };
+  enum Type {
+              CONNECT,
+              NOTIFY_READY,
+              NOTIFY_CLOSED,
+              NOTIFY_UP,
+              NOTIFY_DOWN };
   Type type;
+  Address address;
 };
 
 class Session : public EventThread<SessionEvent> {
@@ -78,6 +84,8 @@ public:
 
   bool notify_ready_async();
   bool notify_closed_async();
+  bool notify_up_async(const Address& address);
+  bool notify_down_async(const Address& address);
   bool notify_set_keyspace_async(const std::string& keyspace);
 
   bool connect_async(const std::string& keyspace, Future* future);
@@ -100,13 +108,15 @@ private:
   static void on_resolve(Resolver* resolver);
   static void on_execute(uv_async_t* data, int status);
 
+  void on_reconnect(Timer* timer);
+
 private:
   friend class ControlConnection;
 
   void on_control_connection_ready();
   void on_control_conneciton_error(CassError code, const std::string& message);
 
-  void on_add(SharedRefPtr<Host> host);
+  void on_add(SharedRefPtr<Host> host, bool is_initial_connection);
   void on_remove(SharedRefPtr<Host> host);
   void on_up(SharedRefPtr<Host> host);
   void on_down(SharedRefPtr<Host> host);

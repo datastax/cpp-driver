@@ -41,9 +41,11 @@ class Logger;
 class Timer;
 
 struct IOWorkerEvent {
-  enum Type { ADD_POOL, REMOVE_POOL };
+  enum Type { ADD_POOL, REMOVE_POOL, SCHEDULE_RECONNECT };
   Type type;
   Address address;
+  uint64_t reconnect_wait;
+  bool is_initial_connection;
 };
 
 class IOWorker : public EventThread<IOWorkerEvent> {
@@ -53,45 +55,47 @@ public:
 
   int init();
 
-  bool add_pool_async(const Address& address);
+  bool add_pool_async(const Address& address, bool is_initial_connection);
   bool remove_pool_async(const Address& address);
+  bool schedule_reconnect_async(const Address& address, uint64_t wait);
   void close_async();
 
   bool execute(RequestHandler* request_handler);
 
 private:
-  void add_pool(const Address& address, bool is_reconnect = false);
+  void add_pool(const Address& address, bool is_initial_connection);
   void maybe_close();
   void maybe_notify_closed();
   void cleanup();
   void close_handles();
 
-  void on_pool_ready(Pool* pool);
+  void on_pool_ready(Pool* pool, bool is_initial_connection);
   void on_pool_closed(Pool* pool);
+  void on_pool_reconnect(Timer* timer);
   void on_set_keyspace(const std::string& keyspace);
 
   void on_retry(RequestHandler* request_handler, RetryType retry_type);
   void on_request_finished(RequestHandler* request_handler);
   virtual void on_event(const IOWorkerEvent& event);
 
-  static void on_pool_reconnect(Timer* timer);
   static void on_execute(uv_async_t* data, int status);
   static void on_prepare(uv_prepare_t* prepare, int status);
 
 private:
   typedef std::map<Address, Pool*> PoolMap;
 
-  struct ReconnectRequest : public List<ReconnectRequest>::Node {
-    ReconnectRequest(IOWorker* io_worker, Address address)
-        : io_worker(io_worker)
-        , address(address) {}
+  struct PendingReconnect : RefCounted<PendingReconnect> {
+    PendingReconnect(Address address)
+        : address(address)
+        , timer(NULL) {}
 
     void stop_timer();
 
-    IOWorker* io_worker;
-    Timer* timer;
     Address address;
+    Timer* timer;
   };
+
+  typedef std::map<Address, SharedRefPtr<PendingReconnect> > PendingReconnectMap;
 
 private:
   typedef std::list<Pool*> PoolList;
@@ -103,7 +107,7 @@ private:
   PoolList pending_delete_;
   bool is_closing_;
   int pending_request_count_;
-  List<ReconnectRequest> pending_reconnects_;
+  PendingReconnectMap pending_reconnects_;
 
   const Config& config_;
   AsyncQueue<SPSCQueue<RequestHandler*> > request_queue_;

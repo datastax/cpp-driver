@@ -53,6 +53,9 @@ public:
   void connect(Session* session);
   void close();
 
+  void on_up(const Address& address);
+  void on_down(const Address& address);
+
 private:
   class ControlMultipleRequestHandler : public MultipleRequestHandler {
   public:
@@ -120,15 +123,15 @@ private:
     T data_;
   };
 
-  typedef boost::function1<void, SharedRefPtr<Host> > NodeRefreshCallback;
+  typedef boost::function1<void, SharedRefPtr<Host> > RefreshNodeCallback;
 
   struct RefreshNodeInfoData {
     RefreshNodeInfoData(const SharedRefPtr<Host>& host,
-                    NodeRefreshCallback callback)
+                    RefreshNodeCallback callback)
       : host(host)
       , callback(callback) {}
     SharedRefPtr<Host> host;
-    NodeRefreshCallback callback;
+    RefreshNodeCallback callback;
   };
 
   void schedule_reconnect(uint64_t ms = 0);
@@ -151,7 +154,7 @@ private:
 
   void refresh_node_list();
   void update_host_info(SharedRefPtr<Host> host, const Row* row);
-  void refresh_node_info(SharedRefPtr<Host> host, NodeRefreshCallback callback);
+  void refresh_node_info(SharedRefPtr<Host> host, RefreshNodeCallback callback);
 
 private:
   Session* session_;

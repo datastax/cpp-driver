@@ -52,10 +52,11 @@ int IOWorker::init() {
   return rc;
 }
 
-bool IOWorker::add_pool_async(const Address& address) {
+bool IOWorker::add_pool_async(const Address& address, bool is_initial_connection) {
   IOWorkerEvent event;
   event.type = IOWorkerEvent::ADD_POOL;
   event.address = address;
+  event.is_initial_connection = is_initial_connection;
   return send_event_async(event);
 }
 
@@ -66,24 +67,27 @@ bool IOWorker::remove_pool_async(const Address& address) {
   return send_event_async(event);
 }
 
+bool IOWorker::schedule_reconnect_async(const Address& address, uint64_t wait) {
+  IOWorkerEvent event;
+  event.type = IOWorkerEvent::SCHEDULE_RECONNECT;
+  event.address = address;
+  event.reconnect_wait = wait;
+  return send_event_async(event);
+}
+
 void IOWorker::close_async() {
   while (!request_queue_.enqueue(NULL)) {
     // Keep trying
   }
 }
 
-void IOWorker::add_pool(const Address& address, bool is_reconnect) {
+void IOWorker::add_pool(const Address& address, bool is_initial_connection) {
   if (!is_closing_ && pools.count(address) == 0) {
     Pool* pool = new Pool(address, loop(), logger_, config_);
-    if (!is_reconnect) {
-      pool->set_ready_callback(boost::bind(&IOWorker::on_pool_ready, this, _1));
-    }
+    pool->set_ready_callback(boost::bind(&IOWorker::on_pool_ready, this, _1, is_initial_connection));
     pool->set_closed_callback(boost::bind(&IOWorker::on_pool_closed, this, _1));
-    pool->set_keyspace_callback(
-        boost::bind(&IOWorker::on_set_keyspace, this, _1));
-
+    pool->set_keyspace_callback( boost::bind(&IOWorker::on_set_keyspace, this, _1));
     pool->connect(session_->keyspace());
-
     pools[address] = pool;
   }
 }
@@ -126,17 +130,21 @@ void IOWorker::close_handles() {
   request_queue_.close_handles();
   uv_prepare_stop(&prepare_);
   uv_close(copy_cast<uv_prepare_t*, uv_handle_t*>(&prepare_), NULL);
-  while (!pending_reconnects_.is_empty()) {
-    ReconnectRequest* reconnect_request = pending_reconnects_.front();
-    reconnect_request->stop_timer();
-    pending_reconnects_.remove(reconnect_request);
-    delete reconnect_request;
+  for (PendingReconnectMap::iterator it = pending_reconnects_.begin(),
+       end = pending_reconnects_.end(); it != end; ++it) {
+    it->second->stop_timer();
   }
   logger_->debug("IO worker active handles %d", loop()->active_handles);
 }
 
-void IOWorker::on_pool_ready(Pool* pool) {
-  session_->notify_ready_async();
+void IOWorker::on_pool_ready(Pool* pool, bool is_initial_connection) {
+  if (is_initial_connection) {
+    session_->notify_ready_async();
+  } else if (!pool->is_defunct()) {
+    session_->notify_up_async(pool->address());
+  } else {
+    session_->notify_down_async(pool->address());
+  }
 }
 
 void IOWorker::on_pool_closed(Pool* pool) {
@@ -147,13 +155,24 @@ void IOWorker::on_pool_closed(Pool* pool) {
   if (is_closing_) {
     maybe_notify_closed();
   } else {
-    ReconnectRequest* reconnect_request = new ReconnectRequest(this, address);
-    pending_reconnects_.add_to_back(reconnect_request);
-    reconnect_request->timer = Timer::start(loop(),
-                                            config_.reconnect_wait(),
-                                            reconnect_request,
-                                            IOWorker::on_pool_reconnect);
+    session_->notify_down_async(address);
   }
+}
+
+void IOWorker::on_pool_reconnect(Timer* timer) {
+  SharedRefPtr<PendingReconnect> pending_reconnect(
+        static_cast<PendingReconnect*>(timer->data()));
+
+  const Address& address = pending_reconnect->address;
+
+  if (!is_closing_) {
+    logger_->info(
+            "IOWorker: Attempting to reconnect to '%s'",
+            address.to_string(true).c_str());
+    add_pool(address, false);
+  }
+
+  pending_reconnects_.erase(address);
 }
 
 void IOWorker::on_retry(RequestHandler* request_handler, RetryType retry_type) {
@@ -195,24 +214,30 @@ void IOWorker::on_request_finished(RequestHandler* request_handler) {
 
 void IOWorker::on_event(const IOWorkerEvent& event) {
   if (event.type == IOWorkerEvent::ADD_POOL) {
-    add_pool(event.address);
+    // Stop any attempts to reconnect because add_pool() is going to attempt
+    // reconnection right away.
+    PendingReconnectMap::iterator it = pending_reconnects_.find(event.address);
+    if (it != pending_reconnects_.end()) {
+      it->second->stop_timer();
+      pending_reconnects_.erase(it);
+    }
+
+    add_pool(event.address, event.is_initial_connection);
   } else if (event.type == IOWorkerEvent::REMOVE_POOL) {
     // TODO(mpenick):
-  }
-}
+  } else if (event.type == IOWorkerEvent::SCHEDULE_RECONNECT) {
+    if (is_closing_ || pending_reconnects_.count(event.address) > 0) {
+      return;
+    }
 
-void IOWorker::on_pool_reconnect(Timer* timer) {
-  ReconnectRequest* reconnect_request =
-      static_cast<ReconnectRequest*>(timer->data());
-  IOWorker* io_worker = reconnect_request->io_worker;
-  if (!io_worker->is_closing_) {
-    io_worker->logger_->info(
-        "IOWorker: Attempting to reconnect to '%s'",
-        reconnect_request->address.to_string(true).c_str());
-    io_worker->add_pool(reconnect_request->address, true);
+    SharedRefPtr<PendingReconnect> pending_reconnect(new PendingReconnect(event.address));
+    pending_reconnects_[event.address] = pending_reconnect;
+
+    pending_reconnect->timer = Timer::start(loop(),
+                                            event.reconnect_wait,
+                                            pending_reconnect.get(),
+                                            boost::bind(&IOWorker::on_pool_reconnect, this, _1));
   }
-  io_worker->pending_reconnects_.remove(reconnect_request);
-  delete reconnect_request;
 }
 
 void IOWorker::on_execute(uv_async_t* async, int status) {
@@ -240,10 +265,11 @@ void IOWorker::on_prepare(uv_prepare_t* prepare, int status) {
   io_worker->cleanup();
 }
 
-void IOWorker::ReconnectRequest::stop_timer() {
-  assert(timer != NULL);
-  Timer::stop(timer);
-  timer = NULL;
+void IOWorker::PendingReconnect::stop_timer() {
+  if (timer != NULL) {
+    Timer::stop(timer);
+    timer = NULL;
+  }
 }
 
 } // namespace cass

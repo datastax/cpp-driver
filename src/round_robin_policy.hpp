@@ -22,19 +22,21 @@
 #include "load_balancing.hpp"
 #include "host.hpp"
 
+#include <algorithm>
+
 namespace cass {
 
 class RoundRobinPolicy : public LoadBalancingPolicy {
 public:
   RoundRobinPolicy()
-      : hosts_(new HostVec)
-      , index_(0) {}
+    : live_host_addresses_(new AddressVec)
+    , index_(0) {}
 
   virtual void init(const HostMap& hosts) {
-    hosts_->reserve(hosts.size());
+    live_host_addresses_->reserve(hosts.size());
     for (HostMap::const_iterator it = hosts.begin(),
          end = hosts.end(); it != end; ++it) {
-      hosts_->push_back(it->second);
+      live_host_addresses_->push_back(it->second->address());
     }
   }
 
@@ -43,30 +45,38 @@ public:
   }
 
   virtual QueryPlan* new_query_plan() {
-    return new RoundRobinQueryPlan(hosts_, index_++);
+    return new RoundRobinQueryPlan(live_host_addresses_, index_++);
   }
 
   virtual void on_add(SharedRefPtr<Host> host) {
-
+    on_up(host);
   }
 
   virtual void on_remove(SharedRefPtr<Host> host) {
-
+    on_down(host);
   }
 
   virtual void on_up(SharedRefPtr<Host> host) {
-
+    AddressVec::iterator it
+        = std::find(live_host_addresses_->begin(), live_host_addresses_->end(), host->address());
+    if (it == live_host_addresses_->end()) {
+      live_host_addresses_->push_back(host->address());
+    }
   }
 
   virtual void on_down(SharedRefPtr<Host> host) {
-
+    AddressVec::iterator it
+        = std::find(live_host_addresses_->begin(), live_host_addresses_->end(), host->address());
+    if (it != live_host_addresses_->end()) {
+      live_host_addresses_->erase(it);
+    }
   }
 
 private:
   class RoundRobinQueryPlan : public QueryPlan {
   public:
-    RoundRobinQueryPlan(const CopyOnWritePtr<HostVec>& hosts, size_t start_index)
-      : hosts_(hosts)
+    RoundRobinQueryPlan(const CopyOnWritePtr<AddressVec>& hosts, size_t start_index)
+      : host_addresses_(hosts)
       , index_(start_index)
       , remaining_(hosts->size()) {}
 
@@ -76,17 +86,17 @@ private:
       }
 
       remaining_--;
-      *address = (*hosts_)[index_++ % hosts_->size()]->address();
+      *address = (*host_addresses_)[index_++ % host_addresses_->size()];
       return true;
     }
 
   private:
-    const CopyOnWritePtr<HostVec> hosts_;
+    const CopyOnWritePtr<AddressVec> host_addresses_;
     size_t index_;
     size_t remaining_;
   };
 
-  CopyOnWritePtr<HostVec> hosts_;
+  CopyOnWritePtr<AddressVec> live_host_addresses_;
   size_t index_;
 };
 
