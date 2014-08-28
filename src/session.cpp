@@ -127,6 +127,7 @@ void Session::purge_hosts(bool is_initial_connection) {
       } else {
         logger_->info("Session: Host '%s' removed",
                       address_str.c_str());
+        on_remove(it->second);
       }
 
       hosts_.erase(to_remove_it);
@@ -231,7 +232,6 @@ void Session::on_after_run() {
 }
 
 void Session::on_event(const SessionEvent& event) {
-
   switch (event.type) {
     case SessionEvent::CONNECT: {
       int port = config_.port();

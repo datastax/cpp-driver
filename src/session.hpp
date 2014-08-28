@@ -47,11 +47,12 @@ class Request;
 
 struct SessionEvent {
   enum Type {
-              CONNECT,
-              NOTIFY_READY,
-              NOTIFY_CLOSED,
-              NOTIFY_UP,
-              NOTIFY_DOWN };
+    CONNECT,
+    NOTIFY_READY,
+    NOTIFY_CLOSED,
+    NOTIFY_UP,
+    NOTIFY_DOWN };
+
   Type type;
   Address address;
 };

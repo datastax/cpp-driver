@@ -125,8 +125,8 @@ private:
 
   typedef boost::function1<void, SharedRefPtr<Host> > RefreshNodeCallback;
 
-  struct RefreshNodeInfoData {
-    RefreshNodeInfoData(const SharedRefPtr<Host>& host,
+  struct RefreshNodeData {
+    RefreshNodeData(const SharedRefPtr<Host>& host,
                     RefreshNodeCallback callback)
       : host(host)
       , callback(callback) {}
@@ -139,8 +139,8 @@ private:
 
   void on_connection_ready(Connection* connection);
   void on_node_refresh(const MultipleRequestHandler::ResponseVec& responses);
-  void on_refresh_node_info(RefreshNodeInfoData data, Response* response);
-  void on_refresh_node_info_all(RefreshNodeInfoData data, Response* response);
+  void on_refresh_node_info(RefreshNodeData data, Response* response);
+  void on_refresh_node_info_all(RefreshNodeData data, Response* response);
   void on_local_query(ResponseMessage* response);
   void on_peer_query(ResponseMessage* response);
   bool determine_address_for_peer_host(const Value* peer_value, const Value* rpc_value, Address* output);
@@ -153,8 +153,8 @@ private:
   void handle_query_timeout();
 
   void refresh_node_list();
-  void update_host_info(SharedRefPtr<Host> host, const Row* row);
   void refresh_node_info(SharedRefPtr<Host> host, RefreshNodeCallback callback);
+  void update_node_info(SharedRefPtr<Host> host, const Row* row);
 
 private:
   Session* session_;

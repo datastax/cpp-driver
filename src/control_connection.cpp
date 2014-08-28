@@ -136,6 +136,7 @@ void ControlConnection::refresh_node_list() {
 }
 
 void ControlConnection::on_node_refresh(const MultipleRequestHandler::ResponseVec& responses) {
+  bool is_initial_connection = (state_ == CONTROL_STATE_NEW);
 
   {
     SharedRefPtr<Host> host = session_->get_host(connection_->address(), true);
@@ -145,7 +146,7 @@ void ControlConnection::on_node_refresh(const MultipleRequestHandler::ResponseVe
           static_cast<ResultResponse*>(responses[0]);
 
       result->decode_first_row();
-      update_host_info(host, &result->first_row());
+      update_node_info(host, &result->first_row());
     } else {
       logger_->debug("Host '%s' in local system table not found", connection_->address().to_string().c_str());
     }
@@ -166,17 +167,21 @@ void ControlConnection::on_node_refresh(const MultipleRequestHandler::ResponseVe
       }
 
       SharedRefPtr<Host> host = session_->get_host(address, true);
+      bool is_new = false;
       if (!host) {
+        is_new = true;
         host = session_->add_host(address, true);
       }
-
-      update_host_info(host, rows.row());
+      update_node_info(host, rows.row());
+      if (is_new && !is_initial_connection) {
+        session_->on_add(host, false);
+      }
     }
   }
 
-  session_->purge_hosts(state_ == CONTROL_STATE_NEW);
+  session_->purge_hosts(is_initial_connection);
 
-  if (state_ == CONTROL_STATE_NEW) {
+  if (is_initial_connection) {
     state_ = CONTROL_STATE_READY;
     session_->on_control_connection_ready();
   }
@@ -187,7 +192,7 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
   bool is_connected_host = host->address().compare(connection_->address()) == 0;
 
   std::string query;
-  ControlHandler<RefreshNodeInfoData>::ResponseCallback response_callback;
+  ControlHandler<RefreshNodeData>::ResponseCallback response_callback;
 
   if (is_connected_host || !host->listen_address().empty()) {
     if (is_connected_host) {
@@ -204,43 +209,23 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
     response_callback = boost::bind(&ControlConnection::on_refresh_node_info_all, this, _1, _2);
   }
 
-  RefreshNodeInfoData data(host, callback);
+  RefreshNodeData data(host, callback);
   connection_->execute(
-        new ControlHandler<RefreshNodeInfoData>(new QueryRequest(query),
+        new ControlHandler<RefreshNodeData>(new QueryRequest(query),
                                                 this,
                                                 response_callback,
                                                 data));
 }
 
-void ControlConnection::on_refresh_node_info(RefreshNodeInfoData data, Response* response) {
+void ControlConnection::on_refresh_node_info(RefreshNodeData data, Response* response) {
   ResultResponse* result =
       static_cast<ResultResponse*>(response);
   result->decode_first_row();
-  update_host_info(data.host, &result->first_row());
+  update_node_info(data.host, &result->first_row());
   data.callback(data.host);
 }
 
-void ControlConnection::on_refresh_node_info_all(RefreshNodeInfoData data, Response* response) {
-  ResultResponse* result =
-      static_cast<ResultResponse*>(response);
-  result->decode_first_row();
-  ResultIterator rows(result);
-  while (rows.next()) {
-    const Row* row = rows.row();
-    Address address;
-    bool is_valid_address
-        = determine_address_for_peer_host(row->get_by_name("peer"),
-                                          row->get_by_name("rpc_address"),
-                                          &address);
-    if (is_valid_address && data.host->address().compare(address) == 0) {
-      update_host_info(data.host, row);
-      data.callback(data.host);
-      break;
-    }
-  }
-}
-
-void ControlConnection::update_host_info(SharedRefPtr<Host> host, const Row* row) {
+void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row) {
   const Value* v;
 
   std::string rack;
@@ -272,6 +257,26 @@ void ControlConnection::update_host_info(SharedRefPtr<Host> host, const Row* row
     host->set_rack_and_dc(rack, dc);
     if (!host->was_just_added()) {
       session_->load_balancing_policy_->on_add(host);
+    }
+  }
+}
+
+void ControlConnection::on_refresh_node_info_all(RefreshNodeData data, Response* response) {
+  ResultResponse* result =
+      static_cast<ResultResponse*>(response);
+  result->decode_first_row();
+  ResultIterator rows(result);
+  while (rows.next()) {
+    const Row* row = rows.row();
+    Address address;
+    bool is_valid_address
+        = determine_address_for_peer_host(row->get_by_name("peer"),
+                                          row->get_by_name("rpc_address"),
+                                          &address);
+    if (is_valid_address && data.host->address().compare(address) == 0) {
+      update_node_info(data.host, row);
+      data.callback(data.host);
+      break;
     }
   }
 }
