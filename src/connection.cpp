@@ -54,18 +54,16 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
       if (error->code() == CQL_ERROR_PROTOCOL_ERROR &&
           error->message().find("Invalid or unsupported protocol version") != std::string::npos) {
         connection_->is_invalid_protocol_ = true;
-        connection_->logger_->warn(
-              "Connection: Protocol version %d unsupported. Trying protocol version %d...",
-              connection_->protocol_version_, connection_->protocol_version_ - 1);
-      } else {
-        std::ostringstream ss;
-        ss << "Error response during startup: '" << error->message()
-           << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
-           << CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error->code()) << ")";
-        connection_->notify_error(ss.str());
+      } else if (error->code() == CQL_ERROR_BAD_CREDENTIALS) {
+        connection_->auth_error_ = error->message();
       }
-    }
+      std::ostringstream ss;
+      ss << "Error response: '" << error->message()
+         << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+         << CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error->code()) << ")";
+      connection_->notify_error(ss.str());
       break;
+    }
 
     case CQL_OPCODE_AUTHENTICATE:
       connection_->on_authenticate();
@@ -92,7 +90,7 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
       break;
 
     default:
-      connection_->notify_error("Invalid opcode during startup");
+      connection_->notify_error("Invalid opcode");
       break;
   }
 }
@@ -100,14 +98,14 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
 void Connection::StartupHandler::on_error(CassError code,
                                           const std::string& message) {
   std::ostringstream ss;
-  ss << "Error during startup: '" << message
+  ss << "Error: '" << message
      << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
   connection_->notify_error(ss.str());
 }
 
 void Connection::StartupHandler::on_timeout() {
   if (!connection_->is_closing()) {
-    connection_->notify_error("Timed out during startup");
+    connection_->notify_error("Timed out");
   }
 }
 
@@ -120,7 +118,7 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
       break;
     default:
       connection_->notify_error(
-          "Invalid result during startup. Expected set keyspace.");
+          "Invalid result. Expected set keyspace.");
       break;
   }
 }
@@ -484,8 +482,8 @@ void Connection::notify_ready() {
 }
 
 void Connection::notify_error(const std::string& error) {
-  logger_->error("'Connection: %s' error on startup for '%s'", error.c_str(),
-                 addr_string_.c_str());
+  logger_->error("Connection: Host '%s' had the following error on startup for '%s'",
+                 addr_string_.c_str(), error.c_str() );
   defunct();
 }
 

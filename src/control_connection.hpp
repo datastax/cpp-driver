@@ -54,7 +54,7 @@ public:
   void close();
 
   void on_up(const Address& address);
-  void on_down(const Address& address);
+  void on_down(const Address& address, bool is_critical_failure);
 
 private:
   class ControlMultipleRequestHandler : public MultipleRequestHandler {
@@ -135,7 +135,7 @@ private:
   };
 
   void schedule_reconnect(uint64_t ms = 0);
-  void reconnect();
+  void reconnect(bool retry_current_host);
 
   void on_connection_ready(Connection* connection);
   void on_node_refresh(const MultipleRequestHandler::ResponseVec& responses);
@@ -161,8 +161,11 @@ private:
   ControlState state_;
   Connection* connection_;
   ScopedPtr<QueryPlan> query_plan_;
+  Address current_host_address_;
+  int protocol_version_;
   Timer* reconnect_timer_;
   Logger* logger_;
+  std::string last_connection_error_;
 
   static Address bind_any_ipv4_;
   static Address bind_any_ipv6_;

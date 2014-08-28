@@ -64,15 +64,11 @@ public:
 
   void connect();
 
-
   bool execute(Handler* request);
 
   const Config& config() const { return config_; }
-
   const Address& address() { return address_; }
-
   const std::string& address_string() { return addr_string_; }
-
   const std::string& keyspace() { return keyspace_; }
 
   void close();
@@ -82,6 +78,9 @@ public:
   bool is_ready() const { return state_ == CONNECTION_STATE_READY; }
   bool is_defunct() const { return is_defunct_; }
   bool is_invalid_protocol() const { return is_invalid_protocol_; }
+  bool is_critical_failure() const { return is_invalid_protocol_ || !auth_error_.empty(); }
+
+  const std::string& auth_error() { return auth_error_; }
 
   int protocol_version() const { return protocol_version_; }
 
@@ -148,6 +147,7 @@ private:
   ConnectionState state_;
   bool is_defunct_;
   bool is_invalid_protocol_;
+  std::string auth_error_;
   bool is_registered_for_events_;
 
   List<Handler> pending_requests_;

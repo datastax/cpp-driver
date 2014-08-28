@@ -63,12 +63,12 @@ public:
   Connection* borrow_connection(const std::string& keyspace);
 
   const Address& address() const { return address_; }
-  bool is_defunct() { return is_defunct_; }
+
+  bool is_defunct() const { return is_defunct_; }
+  bool is_critical_failure() const { return is_critical_failure_; }
 
   void set_ready_callback(Callback callback) { ready_callback_ = callback; }
-
   void set_closed_callback(Callback callback) { closed_callback_ = callback; }
-
   void set_keyspace_callback(KeyspaceCallback callback) {
     keyspace_callback_ = callback;
   }
@@ -105,6 +105,7 @@ private:
   ConnectionSet connections_pending_;
   RequestHandlerList pending_request_queue_;
   bool is_defunct_;
+  bool is_critical_failure_;
 
   Callback ready_callback_;
   Callback closed_callback_;
