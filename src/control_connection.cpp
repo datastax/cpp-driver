@@ -141,17 +141,22 @@ void ControlConnection::on_connection_closed(Connection* connection) {
   // This pointer to the connection is no longer valid once it's closed
   connection_ = NULL;
 
-  if (connection->is_invalid_protocol()) {
-    if (protocol_version_ <= 1) {
-      session_->on_control_conneciton_error(CASS_ERROR_UNABLE_TO_DETERMINE_PROTOCOL,
-                                            "Not even version 1 is supported");
+  if (state_ == CONTROL_STATE_NEW) {
+    if (connection->is_invalid_protocol()) {
+      if (protocol_version_ <= 1) {
+        logger_->error("ControlConnection: Host '%s' does not support any valid protocol version",
+                       connection->address().to_string().c_str());
+        session_->on_control_conneciton_error(CASS_ERROR_UNABLE_TO_DETERMINE_PROTOCOL,
+                                              "Not even protocol version 1 is supported");
+        return;
+      }
+      protocol_version_--;
+      retry_current_host = true;
+    } else if(!connection->auth_error().empty()) {
+      session_->on_control_conneciton_error(CASS_ERROR_SERVER_BAD_CREDENTIALS,
+                                            connection->auth_error());
       return;
     }
-    protocol_version_--;
-    retry_current_host = true;
-  } else if(!connection->auth_error().empty()) {
-    session_->on_control_conneciton_error(CASS_ERROR_SERVER_BAD_CREDENTIALS, connection->auth_error());
-    return;
   }
 
   reconnect(retry_current_host);
