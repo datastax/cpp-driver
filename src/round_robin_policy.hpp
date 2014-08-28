@@ -72,6 +72,8 @@ public:
     }
   }
 
+  virtual LoadBalancingPolicy* new_instance() { return new RoundRobinPolicy(); }
+
 private:
   class RoundRobinQueryPlan : public QueryPlan {
   public:
@@ -98,6 +100,9 @@ private:
 
   CopyOnWritePtr<AddressVec> live_host_addresses_;
   size_t index_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(RoundRobinPolicy);
 };
 
 } // namespace cass

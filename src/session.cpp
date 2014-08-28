@@ -62,7 +62,7 @@ Session::Session(const Config& config)
     : close_future_(NULL)
     , current_host_mark_(true)
     , config_(config)
-    , load_balancing_policy_(new RoundRobinPolicy())
+    , load_balancing_policy_(config.load_balancing_policy())
     , pending_resolve_count_(0)
     , pending_pool_count_(0)
     , pending_workers_count_(0)
@@ -226,8 +226,6 @@ void Session::on_after_run() {
     (*it)->join();
   }
   logger_->join();
-
-  // 'this' will be cleaned up by the waiting thread
   close_future_->set();
 }
 

@@ -89,8 +89,8 @@ private:
   std::string dc_;
 };
 
-typedef std::vector<SharedRefPtr<Host> > HostVec;
 typedef std::map<Address, SharedRefPtr<Host> > HostMap;
+typedef std::vector<SharedRefPtr<Host> > HostVec;
 
 } // namespace cass
 

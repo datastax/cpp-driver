@@ -14,6 +14,9 @@
   limitations under the License.
 */
 
+#ifndef __CASS_CONTROL_CONNECTION_HPP_INCLUDED__
+#define __CASS_CONTROL_CONNECTION_HPP_INCLUDED__
+
 #include "address.hpp"
 #include "connection.hpp"
 #include "handler.hpp"
@@ -23,9 +26,6 @@
 #include "multiple_request_handler.hpp"
 #include "response.hpp"
 #include "scoped_ptr.hpp"
-
-#ifndef __CASS_CONTROL_CONNECTION_HPP_INCLUDED__
-#define __CASS_CONTROL_CONNECTION_HPP_INCLUDED__
 
 namespace cass {
 
