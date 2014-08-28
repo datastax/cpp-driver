@@ -42,7 +42,8 @@ Pool::Pool(const Address& address, uv_loop_t* loop,
     , logger_(logger)
     , config_(config)
     , protocol_version_(config.protocol_version())
-    , is_defunct_(false) {}
+    , is_defunct_(false)
+    , is_critical_failure_(false) {}
 
 Pool::~Pool() {
   for (RequestHandlerList::iterator it = pending_request_queue_.begin(),
@@ -123,18 +124,14 @@ void Pool::defunct() {
 }
 
 void Pool::maybe_notify_ready(Connection* connection) {
-  // This will notify ready even if all the connections fail.
-  // It is up to the holder to inspect state and/or detach the
+  // this will notify ready even if all the connections fail.
+  // it is up to the holder to inspect state and/or detach the
   // ready_callback_
 
-  // We won't notify until we've tried all valid protocol versions
-  if (!connection->is_invalid_protocol() ||
-      connection->protocol_version() <= 1) {
-    if (state_ == POOL_STATE_CONNECTING && connections_pending_.empty()) {
-      state_ = POOL_STATE_READY;
-      if (ready_callback_) {
-        ready_callback_(this);
-      }
+  if (state_ == POOL_STATE_CONNECTING && connections_pending_.empty()) {
+    state_ = POOL_STATE_READY;
+    if (ready_callback_) {
+      ready_callback_(this);
     }
   }
 }
@@ -213,7 +210,6 @@ void Pool::on_connection_ready(Connection* connection) {
 
 void Pool::on_connection_closed(Connection* connection) {
   connections_pending_.erase(connection);
-  maybe_notify_ready(connection);
 
   ConnectionVec::iterator it =
       std::find(connections_.begin(), connections_.end(), connection);
@@ -221,15 +217,16 @@ void Pool::on_connection_closed(Connection* connection) {
     connections_.erase(it);
   }
 
-  if (connection->is_invalid_protocol() &&
-      connection->protocol_version() > 1) {
-    protocol_version_ = connection->protocol_version() - 1;
-    spawn_connection(connection->keyspace());
-  } else if (connection->is_defunct()) {
-    // TODO(mpenick): Conviction policy
+  if (connection->is_defunct()) {
+    // If at least one connection has a critical failure then don't try to
+    // reconnect automatically.
+    if (connection->is_critical_failure()) {
+      is_critical_failure_ = true;
+    }
     defunct();
   }
 
+  maybe_notify_ready(connection);
   maybe_close();
 }
 

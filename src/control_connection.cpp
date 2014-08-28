@@ -32,6 +32,8 @@
 #include <sstream>
 #include <vector>
 
+#define HIGHEST_SUPPORTED_PROTOCOL_VERSION 2
+
 #define SELECT_LOCAL "SELECT data_center, rack FROM system.local WHERE key='local'"
 #define SELECT_PEERS "SELECT peer, data_center, rack, rpc_address FROM system.peers"
 
@@ -63,7 +65,11 @@ void ControlConnection::connect(Session* session) {
   session_ = session;
   logger_ = session_->logger_.get();
   query_plan_.reset(new ControlStartupQueryPlan(session_->hosts_));
-  reconnect();
+  protocol_version_ = session->config_.protocol_version();
+  if (protocol_version_ < 0) {
+    protocol_version_ = HIGHEST_SUPPORTED_PROTOCOL_VERSION;
+  }
+  reconnect(false);
 }
 
 void ControlConnection::close() {
@@ -84,19 +90,20 @@ void ControlConnection::schedule_reconnect(uint64_t ms) {
                                  boost::bind(&ControlConnection::on_reconnect, this, _1));
 }
 
-void ControlConnection::reconnect() {
+void ControlConnection::reconnect(bool retry_current_host) {
   if (state_ == CONTROL_STATE_CLOSED) {
     return;
   }
 
-  Address address;
-  if (!query_plan_->compute_next(&address)) {
-    if (state_ == CONTROL_STATE_READY) {
-      schedule_reconnect(1000); // TODO(mpenick): Configurable?
-    } else {
-      session_->on_control_conneciton_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, "No hosts available");
+  if (!retry_current_host) {
+    if (!query_plan_->compute_next(&current_host_address_)) {
+      if (state_ == CONTROL_STATE_READY) {
+        schedule_reconnect(1000); // TODO(mpenick): Configurable?
+      } else {
+        session_->on_control_conneciton_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, "No hosts available");
+      }
+      return;
     }
-    return;
   }
 
   if (connection_ != NULL) {
@@ -104,11 +111,11 @@ void ControlConnection::reconnect() {
   }
 
   connection_ = new Connection(session_->loop(),
-                               address,
+                               current_host_address_,
                                session_->logger_.get(),
                                session_->config_,
                                "",
-                               session_->config_.protocol_version());
+                               protocol_version_);
 
   connection_->set_ready_callback(
         boost::bind(&ControlConnection::on_connection_ready, this, _1));
@@ -126,6 +133,28 @@ void ControlConnection::on_connection_ready(Connection* connection) {
   // The control connection has to refresh the node list anytime there's a reconnect because
   // several events could have been missed while not connected.
   refresh_node_list();
+}
+
+void ControlConnection::on_connection_closed(Connection* connection) {
+  bool retry_current_host = false;
+
+  // This pointer to the connection is no longer valid once it's closed
+  connection_ = NULL;
+
+  if (connection->is_invalid_protocol()) {
+    if (protocol_version_ <= 1) {
+      session_->on_control_conneciton_error(CASS_ERROR_UNABLE_TO_DETERMINE_PROTOCOL,
+                                            "Not even version 1 is supported");
+      return;
+    }
+    protocol_version_--;
+    retry_current_host = true;
+  } else if(!connection->auth_error().empty()) {
+    session_->on_control_conneciton_error(CASS_ERROR_SERVER_BAD_CREDENTIALS, connection->auth_error());
+    return;
+  }
+
+  reconnect(retry_current_host);
 }
 
 void ControlConnection::refresh_node_list() {
@@ -357,16 +386,6 @@ void ControlConnection::handle_query_timeout() {
   }
 }
 
-void ControlConnection::on_connection_closed(Connection* connection) {
-  // This pointer to the connection is no longer valid once it's
-  // closed
-  connection_ = NULL;
-
-  // TODO(mpenick): Handle protocol version error
-
-  reconnect();
-}
-
 void ControlConnection::on_connection_event(EventResponse* response) {
   std::string address_str = response->affected_node().to_string();
 
@@ -410,7 +429,7 @@ void ControlConnection::on_connection_event(EventResponse* response) {
 
         case EventResponse::DOWN: {
           session_->logger_->info("ControlConnection: Node'%s' is down", address_str.c_str());
-          on_down(response->affected_node());
+          on_down(response->affected_node(), false);
           break;
         }
       }
@@ -445,10 +464,10 @@ void ControlConnection::on_up(const Address& address) {
   }
 }
 
-void ControlConnection::on_down(const Address& address) {
+void ControlConnection::on_down(const Address& address, bool is_critical_failure) {
   SharedRefPtr<Host> host = session_->get_host(address);
   if (host) {
-    session_->on_down(host);
+    session_->on_down(host, is_critical_failure);
   } else {
     logger_->debug("ControlConnection: Tried to down host '%s' that doesn't exist", address.to_string().c_str());
   }
@@ -456,7 +475,7 @@ void ControlConnection::on_down(const Address& address) {
 
 void ControlConnection::on_reconnect(Timer* timer) {
   query_plan_.reset(session_->load_balancing_policy_->new_query_plan());
-  reconnect();
+  reconnect(false);
   reconnect_timer_ = NULL;
 }
 

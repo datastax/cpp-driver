@@ -140,10 +140,8 @@ void IOWorker::close_handles() {
 void IOWorker::on_pool_ready(Pool* pool, bool is_initial_connection) {
   if (is_initial_connection) {
     session_->notify_ready_async();
-  } else if (!pool->is_defunct()) {
+  } else if (!is_closing_ && !pool->is_defunct()){
     session_->notify_up_async(pool->address());
-  } else {
-    session_->notify_down_async(pool->address());
   }
 }
 
@@ -155,7 +153,7 @@ void IOWorker::on_pool_closed(Pool* pool) {
   if (is_closing_) {
     maybe_notify_closed();
   } else {
-    session_->notify_down_async(address);
+    session_->notify_down_async(pool->address(), pool->is_critical_failure());
   }
 }
 

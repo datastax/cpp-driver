@@ -157,10 +157,11 @@ bool Session::notify_up_async(const Address& address) {
   return send_event_async(event);
 }
 
-bool Session::notify_down_async(const Address& address) {
+bool Session::notify_down_async(const Address& address, bool is_critical_failure) {
   SessionEvent event;
   event.type = SessionEvent::NOTIFY_DOWN;
   event.address = address;
+  event.is_critical_failure = is_critical_failure;
   return send_event_async(event);
 }
 
@@ -281,7 +282,7 @@ void Session::on_event(const SessionEvent& event) {
       break;
 
     case SessionEvent::NOTIFY_DOWN:
-      control_connection_.on_down(event.address);
+      control_connection_.on_down(event.address, event.is_critical_failure);
       break;
   }
 }
@@ -377,8 +378,7 @@ void Session::on_up(SharedRefPtr<Host> host) {
   }
 }
 
-void Session::on_down(SharedRefPtr<Host> host) {
-  // See if reconnect exists and exit if it does
+void Session::on_down(SharedRefPtr<Host> host, bool is_critical_failure) {
   host->set_down();
   load_balancing_policy_->on_down(host);
 
@@ -387,7 +387,8 @@ void Session::on_down(SharedRefPtr<Host> host) {
     (*it)->remove_pool_async(host->address());
   }
 
-  if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
+  if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE ||
+      is_critical_failure) {
     return;
   }
 
