@@ -115,8 +115,8 @@ SharedRefPtr<Host> Session::add_host(const Address& address, bool should_mark) {
 }
 
 void Session::purge_hosts(bool is_initial_connection) {
-  HostMap::iterator it = hosts_.begin(), end = hosts_.end();
-  while (it != end) {
+  HostMap::iterator it = hosts_.begin();
+  while (it != hosts_.end()) {
     if (it->second->mark() != current_host_mark_) {
       HostMap::iterator to_remove_it = it++;
 
@@ -124,13 +124,12 @@ void Session::purge_hosts(bool is_initial_connection) {
       if (is_initial_connection) {
         logger_->warn("Session: Unable to reach contact point '%s'",
                       address_str.c_str());
+        hosts_.erase(to_remove_it);
       } else {
         logger_->info("Session: Host '%s' removed",
                       address_str.c_str());
-        on_remove(it->second);
+        on_remove(to_remove_it->second);
       }
-
-      hosts_.erase(to_remove_it);
     } else {
       ++it;
     }
