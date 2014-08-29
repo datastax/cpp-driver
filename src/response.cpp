@@ -18,7 +18,7 @@
 
 #include "auth_responses.hpp"
 #include "error_response.hpp"
-#include "event_repsonse.hpp"
+#include "event_response.hpp"
 #include "ready_response.hpp"
 #include "result_response.hpp"
 #include "supported_response.hpp"

@@ -17,7 +17,7 @@
 #include "control_connection.hpp"
 
 #include "constants.hpp"
-#include "event_repsonse.hpp"
+#include "event_response.hpp"
 #include "load_balancing.hpp"
 #include "query_request.hpp"
 #include "result_iterator.hpp"
@@ -407,7 +407,7 @@ void ControlConnection::on_connection_event(EventResponse* response) {
           break;
         }
 
-        case EventResponse::REMOVE_NODE: {
+        case EventResponse::REMOVED_NODE: {
           session_->logger_->info("ControlConnection: Node '%s' removed", address_str.c_str());
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
           if (host) {

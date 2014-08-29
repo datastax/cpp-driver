@@ -30,7 +30,7 @@ class EventResponse : public Response {
 public:
   enum TopologyChange {
     NEW_NODE,
-    REMOVE_NODE,
+    REMOVED_NODE,
     MOVED_NODE
   };
 
