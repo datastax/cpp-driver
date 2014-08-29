@@ -22,6 +22,7 @@
 #include <uv.h>
 #include <string.h>
 #include <string>
+#include <vector>
 
 namespace cass {
 
@@ -77,6 +78,8 @@ private:
 
   struct sockaddr_storage addr_;
 };
+
+typedef std::vector<Address> AddressVec;
 
 inline bool operator<(const Address& a, const Address& b) {
   return a.compare(b) < 0;

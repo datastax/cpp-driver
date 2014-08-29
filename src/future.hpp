@@ -161,9 +161,9 @@ public:
       : Future(type)
       , result_(result) {}
 
-  void set_result(Host host, T* result) {
+  void set_result(Address address, T* result) {
     ScopedMutex lock(&mutex_);
-    host_ = host;
+    address_ = address;
     result_.reset(result);
     internal_set(lock);
   }
@@ -174,20 +174,20 @@ public:
     return result_.release();
   }
 
-  void set_error_with_host(Host host, CassError code, const std::string& message) {
+  void set_error_with_host_address(Address address, CassError code, const std::string& message) {
     ScopedMutex lock(&mutex_);
-    host_ = host;
+    address_ = address;
     internal_set_error(code, message, lock);
   }
 
-  Host get_host() {
+  Address get_host_address() {
     ScopedMutex lock(&mutex_);
     internal_wait(lock);
-    return host_;
+    return address_;
   }
 
 private:
-  Host host_;
+  Address address_;
   ScopedPtr<T> result_;
 };
 

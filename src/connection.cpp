@@ -29,7 +29,9 @@
 #include "startup_request.hpp"
 #include "query_request.hpp"
 #include "options_request.hpp"
+#include "register_request.hpp"
 #include "error_response.hpp"
+#include "event_response.hpp"
 #include "logger.hpp"
 #include "cassandra.h"
 
@@ -52,21 +54,16 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
       if (error->code() == CQL_ERROR_PROTOCOL_ERROR &&
           error->message().find("Invalid or unsupported protocol version") != std::string::npos) {
         connection_->is_invalid_protocol_ = true;
-        connection_->logger_->warn(
-              "Connection: Protocol version %d unsupported. Trying protocol version %d...",
-              connection_->protocol_version_, connection_->protocol_version_ - 1);
-      } else {
-        if (error->code() == CQL_ERROR_BAD_CREDENTIALS) {
-          connection_->auth_error_ = error->message();
-        }
-        std::ostringstream ss;
-        ss << "Error response during startup: '" << error->message()
-           << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
-           << CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error->code()) << ")";
-        connection_->notify_error(ss.str());
+      } else if (error->code() == CQL_ERROR_BAD_CREDENTIALS) {
+        connection_->auth_error_ = error->message();
       }
-    }
+      std::ostringstream ss;
+      ss << "Error response: '" << error->message()
+         << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+         << CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error->code()) << ")";
+      connection_->notify_error(ss.str());
       break;
+    }
 
     case CQL_OPCODE_AUTHENTICATE:
       connection_->on_authenticate();
@@ -93,7 +90,7 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
       break;
 
     default:
-      connection_->notify_error("Invalid opcode during startup");
+      connection_->notify_error("Invalid opcode");
       break;
   }
 }
@@ -101,14 +98,14 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
 void Connection::StartupHandler::on_error(CassError code,
                                           const std::string& message) {
   std::ostringstream ss;
-  ss << "Error during startup: '" << message
+  ss << "Error: '" << message
      << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
   connection_->notify_error(ss.str());
 }
 
 void Connection::StartupHandler::on_timeout() {
   if (!connection_->is_closing()) {
-    connection_->notify_error("Timed out during startup");
+    connection_->notify_error("Timed out");
   }
 }
 
@@ -121,7 +118,7 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
       break;
     default:
       connection_->notify_error(
-          "Invalid result during startup. Expected set keyspace.");
+          "Invalid result. Expected set keyspace.");
       break;
   }
 }
@@ -132,6 +129,7 @@ Connection::Connection(uv_loop_t* loop,
     : state_(CONNECTION_STATE_NEW)
     , is_defunct_(false)
     , is_invalid_protocol_(false)
+    , is_registered_for_events_(false)
     , loop_(loop)
     , response_(new ResponseMessage())
     , address_(address)
@@ -139,6 +137,7 @@ Connection::Connection(uv_loop_t* loop,
     , ssl_handshake_done_(false)
     , version_("3.0.0")
     , protocol_version_(protocol_version)
+    , event_types_(0)
     , logger_(logger)
     , config_(config)
     , keyspace_(keyspace)
@@ -214,10 +213,11 @@ void Connection::consume(char* input, size_t size) {
 
   while (remaining != 0) {
     int consumed = response_->decode(protocol_version_, buffer, remaining);
-    if (consumed < 0) {
-      // TODO(mstump) probably means connection closed/failed
-      // Can this even happen right now?
+    if (consumed <= 0) {
       logger_->error("Connection: Error consuming message on '%s'", addr_string_.c_str());
+      remaining = 0;
+      defunct();
+      continue;
     }
 
     if (response_->is_body_ready()) {
@@ -230,8 +230,15 @@ void Connection::consume(char* input, size_t size) {
           size, remaining, addr_string_.c_str());
 
       if (response->stream() < 0) {
-        // TODO(mstump) system events
-        assert(false);
+        if (response->opcode() == CQL_OPCODE_EVENT) {
+          if (event_callback_) {
+            event_callback_(static_cast<EventResponse*>(response->response_body().get()));
+          }
+        } else {
+          logger_->error("Connnection: Invalid response with opcode of %d returned on event stream",
+                         response->opcode());
+          defunct();
+        }
       } else {
         Handler* handler = NULL;
         if (stream_manager_.get_item(response->stream(), handler)) {
@@ -438,6 +445,12 @@ void Connection::on_auth_success(AuthResponseRequest* request, const std::string
 }
 
 void Connection::on_ready() {
+  if (!is_registered_for_events_ && event_types_ != 0) {
+    is_registered_for_events_ = true;
+    execute(new StartupHandler(this, new RegisterRequest(event_types_)));
+    return;
+  }
+
   if (keyspace_.empty()) {
     notify_ready();
   } else {
@@ -469,8 +482,8 @@ void Connection::notify_ready() {
 }
 
 void Connection::notify_error(const std::string& error) {
-  logger_->error("'Connection: %s' error on startup for '%s'", error.c_str(),
-                 addr_string_.c_str());
+  logger_->error("Connection: Host '%s' had the following error on startup for '%s'",
+                 addr_string_.c_str(), error.c_str() );
   defunct();
 }
 

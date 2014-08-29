@@ -37,16 +37,14 @@ namespace cass {
 
 class AuthProvider;
 class AuthResponseRequest;
-class Connecter;
-class Timer;
 class Config;
+class Connecter;
+class EventResponse;
 class Logger;
 class Request;
+class Timer;
 
 class Connection {
-public:
-  typedef boost::function1<void, Connection*> Callback;
-
 public:
   enum ConnectionState {
     CONNECTION_STATE_NEW,
@@ -57,17 +55,8 @@ public:
     CONNECTION_STATE_CLOSED
   };
 
-  enum Compression {
-    CLIENT_COMPRESSION_NONE,
-    CLIENT_COMPRESSION_SNAPPY,
-    CLIENT_COMPRESSION_LZ4
-  };
-
-  enum SchemaEventType {
-    CLIENT_EVENT_SCHEMA_CREATED,
-    CLIENT_EVENT_SCHEMA_UPDATED,
-    CLIENT_EVENT_SCHEMA_DROPPED
-  };
+  typedef boost::function1<void, EventResponse*> EventCallback;
+  typedef boost::function1<void, Connection*> Callback;
 
   Connection(uv_loop_t* loop, const Address& address,
              Logger* logger, const Config& config, const std::string& keyspace,
@@ -78,13 +67,8 @@ public:
   bool execute(Handler* request);
 
   const Config& config() const { return config_; }
-
   const Address& address() { return address_; }
-
   const std::string& address_string() { return addr_string_; }
-
-  const std::string& auth_error() { return auth_error_; }
-
   const std::string& keyspace() { return keyspace_; }
 
   void close();
@@ -94,11 +78,19 @@ public:
   bool is_ready() const { return state_ == CONNECTION_STATE_READY; }
   bool is_defunct() const { return is_defunct_; }
   bool is_invalid_protocol() const { return is_invalid_protocol_; }
+  bool is_critical_failure() const { return is_invalid_protocol_ || !auth_error_.empty(); }
+
+  const std::string& auth_error() { return auth_error_; }
 
   int protocol_version() const { return protocol_version_; }
 
   void set_ready_callback(Callback callback) { ready_callback_ = callback; }
   void set_close_callback(Callback callback) { closed_callback_ = callback; }
+
+  void set_event_callback(int types, EventCallback callback) {
+    event_types_ = types;
+    event_callback_ = callback;
+  }
 
   size_t available_streams() { return stream_manager_.available_streams(); }
   size_t pending_request_count() { return pending_requests_.size(); }
@@ -156,6 +148,7 @@ private:
   bool is_defunct_;
   bool is_invalid_protocol_;
   std::string auth_error_;
+  bool is_registered_for_events_;
 
   List<Handler> pending_requests_;
 
@@ -165,6 +158,7 @@ private:
 
   Callback ready_callback_;
   Callback closed_callback_;
+  EventCallback event_callback_;
 
   Address address_;
   std::string addr_string_;
@@ -176,6 +170,7 @@ private:
   std::string compression_;
   std::string version_;
   const int protocol_version_;
+  int event_types_;
 
   Logger* logger_;
   const Config& config_;

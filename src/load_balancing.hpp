@@ -58,16 +58,16 @@ namespace cass {
 class QueryPlan {
 public:
   virtual ~QueryPlan() {}
-  virtual bool compute_next(Host* host) = 0;
+  virtual bool compute_next(Address* address) = 0;
 };
 
-class LoadBalancingPolicy {
+class LoadBalancingPolicy : public Host::StateListener {
 public:
   virtual ~LoadBalancingPolicy() {}
 
-  virtual void init(const std::set<Host>& hosts) = 0;
+  virtual void init(const HostMap& hosts) = 0;
 
-  virtual CassHostDistance distance(const Host& host) = 0;
+  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) = 0;
 
   // TODO(mpenick): Figure out what parameters to pass, keyspace, consistency,
   // etc.

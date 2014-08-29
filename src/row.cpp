@@ -32,11 +32,7 @@ const CassValue* cass_row_get_column(const CassRow* row, cass_size_t index) {
 const CassValue* cass_row_get_column_by_name(const CassRow* row,
                                              const char* name) {
 
-  cass::Metadata::IndexVec indices;
-  if (row->result()->find_column_indices(name, &indices) == 0) {
-    return NULL;
-  }
-  return CassValue::to(&row->values[indices[0]]);
+  return CassValue::to(row->get_by_name(name));
 }
 
 } // extern "C"
@@ -70,4 +66,13 @@ char* decode_row(char* rows, const ResultResponse* result, ValueVec& output) {
   }
   return buffer;
 }
+
+const Value* Row::get_by_name(const boost::string_ref& name) const {
+  cass::Metadata::IndexVec indices;
+  if (result_->find_column_indices(name, &indices) == 0) {
+    return NULL;
+  }
+  return &values[indices[0]];
+}
+
 }

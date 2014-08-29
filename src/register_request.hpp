@@ -14,21 +14,29 @@
   limitations under the License.
 */
 
-#include "error_response.hpp"
+#ifndef __CASS_REGISTER_REQUEST_HPP_INCLUDED__
+#define __CASS_REGISTER_REQUEST_HPP_INCLUDED__
 
-#include "serialization.hpp"
+#include "request.hpp"
+#include "constants.hpp"
 
 namespace cass {
 
-bool ErrorResponse::decode(int version, char* buffer, size_t size) {
-  char* pos = decode_int32(buffer, code_);
-  pos = decode_string(pos, &message_, message_size_);
-  switch (code_) {
-    case CQL_ERROR_UNPREPARED:
-      decode_string(pos, &prepared_id_, prepared_id_size_);
-      break;
-  }
-  return true;
-}
+class RegisterRequest : public Request {
+public:
+  enum EventType {
+
+  };
+
+  RegisterRequest(int event_types)
+      : Request(CQL_OPCODE_REGISTER)
+      , event_types_(event_types) {}
+
+private:
+  int encode(int version, BufferVec* bufs) const;
+
+  int event_types_;
+};
 
 } // namespace cass
+#endif

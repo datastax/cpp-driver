@@ -46,8 +46,16 @@ class Resolver;
 class Request;
 
 struct SessionEvent {
-  enum Type { CONNECT, NOTIFY_READY, NOTIFY_CLOSED };
+  enum Type {
+    CONNECT,
+    NOTIFY_READY,
+    NOTIFY_CLOSED,
+    NOTIFY_UP,
+    NOTIFY_DOWN };
+
   Type type;
+  Address address;
+  bool is_critical_failure;
 };
 
 class Session : public EventThread<SessionEvent> {
@@ -56,18 +64,6 @@ public:
   ~Session();
 
   int init();
-
-  const Config& config() const {
-    return config_;
-  }
-
-  LoadBalancingPolicy* load_balancing_policy() const {
-    return load_balancing_policy_.get();
-  }
-
-  Logger* logger() const {
-    return logger_.get();
-  }
 
   std::string keyspace() {
     ScopedMutex lock(&keyspace_mutex_);
@@ -83,10 +79,15 @@ public:
     load_balancing_policy_.reset(policy);
   }
 
-  void add_host(const Host& host);
+
+  SharedRefPtr<Host> get_host(const Address& address, bool should_mark = false);
+  SharedRefPtr<Host> add_host(const Address& address, bool should_mark = false);
+  void purge_hosts(bool is_initial_connection);
 
   bool notify_ready_async();
   bool notify_closed_async();
+  bool notify_up_async(const Address& address);
+  bool notify_down_async(const Address& address, bool is_critical_failure);
   bool notify_set_keyspace_async(const std::string& keyspace);
 
   bool connect_async(const std::string& keyspace, Future* future);
@@ -102,9 +103,6 @@ private:
 
   void execute(RequestHandler* request_handler);
 
-  void on_control_connection_ready(ControlConnection* control_connection);
-  void on_control_conneciton_error(CassError code, const std::string& message);
-
   virtual void on_run();
   virtual void on_after_run();
   virtual void on_event(const SessionEvent& event);
@@ -112,9 +110,21 @@ private:
   static void on_resolve(Resolver* resolver);
   static void on_execute(uv_async_t* data, int status);
 
+  void on_reconnect(Timer* timer);
+
+private:
+  friend class ControlConnection;
+
+  void on_control_connection_ready();
+  void on_control_conneciton_error(CassError code, const std::string& message);
+
+  void on_add(SharedRefPtr<Host> host, bool is_initial_connection);
+  void on_remove(SharedRefPtr<Host> host);
+  void on_up(SharedRefPtr<Host> host);
+  void on_down(SharedRefPtr<Host> host, bool is_critical_failure);
+
 private:
   typedef std::vector<IOWorker*> IOWorkerVec;
-  typedef std::set<Host> HostSet;
 
   ControlConnection control_connection_;
   IOWorkerVec io_workers_;
@@ -123,7 +133,8 @@ private:
   uv_mutex_t keyspace_mutex_;
   ScopedRefPtr<Future> connect_future_;
   Future* close_future_;
-  HostSet hosts_;
+  HostMap hosts_;
+  bool current_host_mark_;
   Config config_;
   ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*> > > request_queue_;
   ScopedPtr<LoadBalancingPolicy> load_balancing_policy_;

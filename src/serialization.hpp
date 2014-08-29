@@ -17,12 +17,14 @@
 #ifndef __CASS_SERIALIZATION_HPP_INCLUDED__
 #define __CASS_SERIALIZATION_HPP_INCLUDED__
 
+#include "address.hpp"
 #include "cassandra.h"
 #include "common.hpp"
 
 #include "third_party/boost/boost/cstdint.hpp"
 #include "third_party/boost/boost/limits.hpp"
 #include "third_party/boost/boost/static_assert.hpp"
+#include "third_party/boost/boost/utility/string_ref.hpp"
 
 #include <assert.h>
 #include <string.h>
@@ -120,7 +122,6 @@ inline char* decode_double(char* input, double& output) {
   return decode_int64(input, *copy_cast<double*, cass_int64_t*>(&output));
 }
 
-// TODO(mpenick): Maybe this shouldn't take a "size_t"
 inline char* decode_string(char* input, char** output, size_t& size) {
   uint16_t string_size;
   char* pos = decode_uint16(input, string_size);
@@ -129,7 +130,14 @@ inline char* decode_string(char* input, char** output, size_t& size) {
   return pos + string_size;
 }
 
-// TODO(mpenick): Maybe this shouldn't take a "size_t"
+inline char* decode_string_ref(char* buffer, boost::string_ref* output) {
+  char* str;
+  size_t str_size;
+  buffer = decode_string(buffer, &str, str_size);
+  *output = boost::string_ref(str, str_size);
+  return buffer;
+}
+
 inline char* decode_long_string(char* input, char** output, size_t& size) {
   int32_t string_size;
   char* pos = decode_int32(input, string_size);
@@ -151,6 +159,24 @@ inline char* decode_bytes(char* input, char** output, size_t& size) {
     size = bytes_size;
     return pos + size;
   }
+}
+
+inline char* decode_inet(char* input, Address* output) {
+  uint8_t address_len;
+  char address[16];
+  int32_t port;
+
+  char* pos = decode_byte(input, address_len);
+
+  assert(address_len <= 16);
+  memcpy(address, pos, address_len);
+  pos += address_len;
+
+  pos = decode_int32(pos, port);
+
+  Address::from_inet(address, address_len, port, output);
+
+  return pos;
 }
 
 inline char* decode_string_map(char* input,

@@ -54,7 +54,7 @@ public:
   RequestHandler(const Request* request, ResponseFuture* future)
       : request_(request)
       , future_(future)
-      , is_query_plan_exhauted_(false)
+      , is_query_plan_exhausted_(false)
       , connection_(NULL)
       , pool_(NULL) {}
 
@@ -102,15 +102,15 @@ public:
   }
 
   bool get_current_host_address(Address* address) {
-    if (is_query_plan_exhauted_) {
+    if (is_query_plan_exhausted_) {
       return false;
     }
-    *address = current_host_.address;
+    *address = current_address_;
     return true;
   }
 
   void next_host() {
-    is_query_plan_exhauted_ = !query_plan_->compute_next(&current_host_);
+    is_query_plan_exhausted_ = !query_plan_->compute_next(&current_address_);
   }
 
 public:
@@ -131,8 +131,8 @@ private:
 
   ScopedRefPtr<const Request> request_;
   ScopedRefPtr<ResponseFuture> future_;
-  bool is_query_plan_exhauted_;
-  Host current_host_;
+  bool is_query_plan_exhausted_;
+  Address current_address_;
   ScopedPtr<QueryPlan> query_plan_;
   Connection* connection_;
   Pool* pool_;
