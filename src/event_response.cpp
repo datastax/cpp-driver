@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "event_repsonse.hpp"
+#include "event_response.hpp"
 
 #include "serialization.hpp"
 
@@ -31,8 +31,8 @@ bool EventResponse::decode(int version, char* buffer, size_t size) {
     pos = decode_string_ref(pos, &topology_change);
     if (topology_change == "NEW_NODE") {
       topology_change_ = NEW_NODE;
-    } else if(topology_change == "REMOVE_NODE") {
-      topology_change_ = REMOVE_NODE;
+    } else if(topology_change == "REMOVED_NODE") {
+      topology_change_ = REMOVED_NODE;
     } else if(topology_change == "MOVED_NODE") {
       topology_change_ = MOVED_NODE;
     } else {

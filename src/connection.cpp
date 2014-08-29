@@ -31,7 +31,7 @@
 #include "options_request.hpp"
 #include "register_request.hpp"
 #include "error_response.hpp"
-#include "event_repsonse.hpp"
+#include "event_response.hpp"
 #include "logger.hpp"
 #include "cassandra.h"
 
