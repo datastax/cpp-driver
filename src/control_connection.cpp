@@ -223,6 +223,10 @@ void ControlConnection::on_node_refresh(const MultipleRequestHandler::ResponseVe
 
 void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
                                           RefreshNodeCallback callback) {
+  if (connection_ == NULL) {
+    return;
+  }
+
   bool is_connected_host = host->address().compare(connection_->address()) == 0;
 
   std::string query;
@@ -246,9 +250,9 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
   RefreshNodeData data(host, callback);
   connection_->execute(
         new ControlHandler<RefreshNodeData>(new QueryRequest(query),
-                                                this,
-                                                response_callback,
-                                                data));
+                                            this,
+                                            response_callback,
+                                            data));
 }
 
 void ControlConnection::on_refresh_node_info(RefreshNodeData data, Response* response) {
