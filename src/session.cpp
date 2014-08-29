@@ -339,7 +339,9 @@ Future* Session::prepare(const char* statement, size_t length) {
 
 void Session::on_add(SharedRefPtr<Host> host, bool is_initial_connection) {
   host->set_up();
-  load_balancing_policy_->on_add(host);
+  if (!is_initial_connection) {
+    load_balancing_policy_->on_add(host);
+  }
 
   if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
     return;
