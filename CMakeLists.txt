@@ -31,7 +31,6 @@ set(INCLUDES ${INCLUDES} "${PROJECT_SOURCE_DIR}/src/third_party/boost")
 #-------------------
 
 # libuv
-message("libuv root is ${LIBUV_ROOT_DIR}")
 set(_LIBUV_ROOT_HINTS ${LIBUV_ROOT_DIR} ENV LIBUV_ROOT_DIR)
 
 if(WIN32)
