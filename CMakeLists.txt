@@ -7,6 +7,10 @@ set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
 set(CASS_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
 project(${PROJECT_NAME_STR} C CXX)
 
+option(CASS_INSTALL_HEADER "Install header file" ON)
+option(CASS_BUILD_STATIC "Build static library" ON)
+option(CASS_BUILD_EXAMPLES "Build examples" ON)
+
 #-------------------
 # Version
 #-------------------
@@ -151,9 +155,9 @@ endif()
 #-------------------
 include_directories(${INCLUDES})
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 # we must add header files as dependencies (if header
 # changes project must be recompiled, right).
@@ -173,32 +177,42 @@ set(ALL_SOURCE_FILES ${SRC_FILES} ${INC_FILES})
 
 # build dynamic and static version of library
 add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})
-add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${ALL_SOURCE_FILES})
+if(CASS_BUILD_STATIC)
+  add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${ALL_SOURCE_FILES})
+endif()
 
 target_link_libraries(${PROJECT_LIB_NAME} ${LIBS})
-target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${LIBS})
+if(CASS_BUILD_STATIC)
+  target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${LIBS})
+endif()
 
 set_target_properties(${PROJECT_LIB_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME})
 set_target_properties(${PROJECT_LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
 
-set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
-set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
+if(CASS_BUILD_STATIC)
+  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
+  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
+endif()
 
 set_property(
   TARGET ${PROJECT_LIB_NAME}
   APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DCASS_BUILDING")
 
-set_property(
-  TARGET ${PROJECT_LIB_NAME_STATIC}
-  APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DCASS_STATIC")
+if(CASS_BUILD_STATIC)
+  set_property(
+    TARGET ${PROJECT_LIB_NAME_STATIC}
+    APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DCASS_STATIC")
+endif()
 
 #-------------------
 # Install target
 #-------------------
 
-# Where to put headers
-set(INSTALL_HEADERS_DIR "${CMAKE_INSTALL_PREFIX}/include/")
-install(FILES ${INC_FILES} DESTINATION "${INSTALL_HEADERS_DIR}")
+if(CASS_INSTALL_HEADER)
+  # Where to put headers
+  set(INSTALL_HEADERS_DIR "${CMAKE_INSTALL_PREFIX}/include/")
+  install(FILES ${INC_FILES} DESTINATION "${INSTALL_HEADERS_DIR}")
+endif()
 
 # Where to put libraries
 set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib")
@@ -211,10 +225,12 @@ install(TARGETS ${PROJECT_LIB_NAME}
   LIBRARY DESTINATION ${INSTALL_LIB_DIR}  # for shared library
   ARCHIVE DESTINATION ${INSTALL_LIB_DIR}) # for static library
 
-install(TARGETS ${PROJECT_LIB_NAME_STATIC}
-  RUNTIME DESTINATION ${INSTALL_DLL_DIR}  # for dll files
-  LIBRARY DESTINATION ${INSTALL_LIB_DIR}  # for shared library
-  ARCHIVE DESTINATION ${INSTALL_LIB_DIR}) # for static library
+if(CASS_BUILD_STATIC)
+  install(TARGETS ${PROJECT_LIB_NAME_STATIC}
+    RUNTIME DESTINATION ${INSTALL_DLL_DIR}  # for dll files
+    LIBRARY DESTINATION ${INSTALL_LIB_DIR}  # for shared library
+    ARCHIVE DESTINATION ${INSTALL_LIB_DIR}) # for static library
+endif()
 
 #-------------------
 # Uninstall target
@@ -254,19 +270,20 @@ endif()
 #-------------------
 # Examples
 #-------------------
-
-add_subdirectory(examples/async)
-add_subdirectory(examples/basic)
-add_subdirectory(examples/batch)
-add_subdirectory(examples/bind_by_name)
-add_subdirectory(examples/callbacks)
-add_subdirectory(examples/collections)
-add_subdirectory(examples/maps)
-add_subdirectory(examples/prepared)
-add_subdirectory(examples/uuids)
-add_subdirectory(examples/simple)
-add_subdirectory(examples/paging)
-add_subdirectory(examples/perf)
+if(CASS_BUILD_EXAMPLES)
+  add_subdirectory(examples/async)
+  add_subdirectory(examples/basic)
+  add_subdirectory(examples/batch)
+  add_subdirectory(examples/bind_by_name)
+  add_subdirectory(examples/callbacks)
+  add_subdirectory(examples/collections)
+  add_subdirectory(examples/maps)
+  add_subdirectory(examples/prepared)
+  add_subdirectory(examples/uuids)
+  add_subdirectory(examples/simple)
+  add_subdirectory(examples/paging)
+  add_subdirectory(examples/perf)
+endif()
 
 #-----------------------------------
 # Generating API docs with Doxygen
