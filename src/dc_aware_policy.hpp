@@ -53,19 +53,19 @@ public:
                                 remote_rr_policy_.new_query_plan());
   }
 
-  virtual void on_add(SharedRefPtr<Host> host) {
+  virtual void on_add(const SharedRefPtr<Host>& host) {
     plan_for_host(host).on_add(host);
   }
 
-  virtual void on_remove(SharedRefPtr<Host> host) {
+  virtual void on_remove(const SharedRefPtr<Host>& host) {
     plan_for_host(host).on_remove(host);
   }
 
-  virtual void on_up(SharedRefPtr<Host> host) {
+  virtual void on_up(const SharedRefPtr<Host>& host) {
     plan_for_host(host).on_up(host);
   }
 
-  virtual void on_down(SharedRefPtr<Host> host) {
+  virtual void on_down(const SharedRefPtr<Host>& host) {
     plan_for_host(host).on_down(host);
   }
 

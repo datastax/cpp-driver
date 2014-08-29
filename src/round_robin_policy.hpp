@@ -48,7 +48,7 @@ public:
     return new RoundRobinQueryPlan(hosts_, index_++);
   }
 
-  virtual void on_add(SharedRefPtr<Host> host) {
+  virtual void on_add(const SharedRefPtr<Host>& host) {
     HostVec::iterator it;
     for (it = hosts_->begin(); it != hosts_->end(); ++it) {
       if ((*it)->address() == host->address()) {
@@ -61,7 +61,7 @@ public:
     }
   }
 
-  virtual void on_remove(SharedRefPtr<Host> host) {
+  virtual void on_remove(const SharedRefPtr<Host>& host) {
     for (HostVec::iterator it = hosts_->begin(); it != hosts_->end(); ++it) {
       if ((*it)->address() == host->address()) {
         hosts_->erase(it);
@@ -70,10 +70,20 @@ public:
     }
   }
 
-  // up/down Host state managed through session
-  virtual void on_up(SharedRefPtr<Host> host) {}
+  virtual void on_up(const SharedRefPtr<Host>& host) {
+    on_add(host);
+    down_addresses_.erase(host->address());
+  }
 
-  virtual void on_down(SharedRefPtr<Host> host) {}
+  virtual void on_down(const SharedRefPtr<Host>& host) {
+    // Note: at some point it may make more sense to guard repetitious calls
+    // in Session::on_down. For now, leaving here since this is the only place the
+    // logic exists, and letting events flow freely at a higher level can
+    // promote self-rectifying state.
+    if (down_addresses_.insert(host->address()).second) {
+      on_remove(host);
+    }
+  }
 
   virtual LoadBalancingPolicy* new_instance() { return new RoundRobinPolicy(); }
 
@@ -93,10 +103,6 @@ private:
           *address = host->address();
           return true;
         }
-        if (!observed_down_.insert(host->address()).second) {
-          ++remaining_;// don't count same host against this plan
-        }
-        index_ += rand()%remaining_;// hot-spot mitigation for small clusters
       }
       return false;
     }
@@ -105,11 +111,11 @@ private:
     const CopyOnWritePtr<HostVec> hosts_;
     size_t index_;
     size_t remaining_;
-    std::set<Address> observed_down_;
   };
 
   CopyOnWritePtr<HostVec> hosts_;
   size_t index_;
+  std::set<Address> down_addresses_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(RoundRobinPolicy);

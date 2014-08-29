@@ -31,10 +31,10 @@ class Host : public RefCounted<Host> {
 public:
   class StateListener {
   public:
-    virtual void on_add(SharedRefPtr<Host> host) = 0;
-    virtual void on_remove(SharedRefPtr<Host> host) = 0;
-    virtual void on_up(SharedRefPtr<Host> host) = 0;
-    virtual void on_down(SharedRefPtr<Host> host) = 0;
+    virtual void on_add(const SharedRefPtr<Host>& host) = 0;
+    virtual void on_remove(const SharedRefPtr<Host>& host) = 0;
+    virtual void on_up(const SharedRefPtr<Host>& host) = 0;
+    virtual void on_down(const SharedRefPtr<Host>& host) = 0;
   };
 
   enum HostState {
