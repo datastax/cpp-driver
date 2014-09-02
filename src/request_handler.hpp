@@ -26,16 +26,14 @@
 #include "response.hpp"
 #include "scoped_ptr.hpp"
 
-#include "third_party/boost/boost/function.hpp"
-
-#include <list>
 #include <string>
 #include <uv.h>
 
 namespace cass {
 
-class Timer;
 class Connection;
+class IOWorker;
+class Timer;
 class Pool;
 
 class ResponseFuture : public ResultFuture<Response> {
@@ -48,22 +46,18 @@ public:
 
 class RequestHandler : public Handler {
 public:
-  typedef boost::function1<void, RequestHandler*> Callback;
-  typedef boost::function2<void, RequestHandler*, RetryType> RetryCallback;
-
   RequestHandler(const Request* request, ResponseFuture* future)
       : request_(request)
       , future_(future)
       , is_query_plan_exhausted_(false)
+      , io_worker_(NULL)
       , connection_(NULL)
       , pool_(NULL) {}
 
   virtual const Request* request() const { return request_.get(); }
 
   virtual void on_set(ResponseMessage* response);
-
   virtual void on_error(CassError code, const std::string& message);
-
   virtual void on_timeout();
 
   void set_query_plan(QueryPlan* query_plan) {
@@ -71,60 +65,25 @@ public:
     next_host();
   }
 
-  void set_retry_callback(RetryCallback callback) {
-    retry_callback_ = callback;
-  }
-
-  void retry(RetryType type) {
-    // Reset the original request so it can be executed again
-    set_state(REQUEST_STATE_NEW);
-    pool_ = NULL;
-
-    if (retry_callback_) {
-      retry_callback_(this, type);
-    }
-  }
-
-  void set_finished_callback(Callback callback) {
-    finished_callback_ = callback;
-  }
-
-  // It's important to use a loop with the same thread as where on_set(),
-  // on_error(), or on_timeout() are going to be called because
-  // uv_queue_work() is NOT threadsafe.
-  void set_loop(uv_loop_t* loop) {
-    future_->set_loop(loop);
-  }
+  void set_io_worker(IOWorker* io_worker);
 
   void set_connection_and_pool(Connection* connection, Pool* pool) {
     connection_ = connection;
     pool_ = pool;
   }
 
-  bool get_current_host_address(Address* address) {
-    if (is_query_plan_exhausted_) {
-      return false;
-    }
-    *address = current_address_;
-    return true;
-  }
+  void retry(RetryType type);
+  bool get_current_host_address(Address* address);
+  void next_host();
 
-  void next_host() {
-    is_query_plan_exhausted_ = !query_plan_->compute_next(&current_address_);
-  }
+  bool is_host_up(const Address& address) const;
 
-public:
-  std::string keyspace;
+  void set_response(Response* response);
 
 private:
   void set_error(CassError code, const std::string& message);
   void return_connection();
-
-  void notify_finished() {
-    if (finished_callback_) {
-      finished_callback_(this);
-    }
-  }
+  void return_connection_and_finish();
 
   void on_result_response(ResponseMessage* response);
   void on_error_response(ResponseMessage* response);
@@ -134,10 +93,9 @@ private:
   bool is_query_plan_exhausted_;
   Address current_address_;
   ScopedPtr<QueryPlan> query_plan_;
+  IOWorker* io_worker_;
   Connection* connection_;
   Pool* pool_;
-  RetryCallback retry_callback_;
-  Callback finished_callback_;
 };
 
 } // namespace cass

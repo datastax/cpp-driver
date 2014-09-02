@@ -18,6 +18,7 @@
 
 #include "connection.hpp"
 #include "error_response.hpp"
+#include "io_worker.hpp"
 #include "logger.hpp"
 #include "prepare_handler.hpp"
 #include "session.hpp"
@@ -34,32 +35,32 @@ static bool least_busy_comp(Connection* a, Connection* b) {
   return a->pending_request_count() < b->pending_request_count();
 }
 
-Pool::Pool(const Address& address, uv_loop_t* loop,
-           Logger* logger, const Config& config)
-    : state_(POOL_STATE_NEW)
+Pool::Pool(IOWorker* io_worker, const Address& address,
+           bool is_initial_connection)
+    : io_worker_(io_worker)
     , address_(address)
-    , loop_(loop)
-    , logger_(logger)
-    , config_(config)
-    , protocol_version_(config.protocol_version())
+    , loop_(io_worker->loop())
+    , logger_(io_worker->logger())
+    , config_(io_worker->config())
+    , state_(POOL_STATE_NEW)
+    , is_initial_connection_(is_initial_connection)
     , is_defunct_(false)
     , is_critical_failure_(false) {}
 
 Pool::~Pool() {
-  for (RequestHandlerList::iterator it = pending_request_queue_.begin(),
-                                    end = pending_request_queue_.end();
-       it != end; ++it) {
-    RequestHandler* request_handler = *it;
+  while (!pending_requests_.is_empty()) {
+    RequestHandler* request_handler
+        = static_cast<RequestHandler*>(pending_requests_.front());
+    pending_requests_.remove(request_handler);
     request_handler->stop_timer();
     request_handler->retry(RETRY_WITH_NEXT_HOST);
   }
-  pending_request_queue_.clear();
 }
 
-void Pool::connect(const std::string& keyspace) {
+void Pool::connect() {
   if (state_ == POOL_STATE_NEW) {
     for (unsigned i = 0; i < config_.core_connections_per_host(); ++i) {
-      spawn_connection(keyspace);
+      spawn_connection();
     }
     state_ = POOL_STATE_CONNECTING;
   }
@@ -70,11 +71,12 @@ void Pool::close() {
     // We're closing before we've connected (likely beause of an error), we need
     // to notify we're "ready"
     if (state_ == POOL_STATE_CONNECTING) {
-      if (ready_callback_) {
-        ready_callback_(this);
-      }
+      state_ = POOL_STATE_CLOSING;
+      io_worker_->notify_pool_ready(this);
+    } else {
+      state_ = POOL_STATE_CLOSING;
     }
-    state_ = POOL_STATE_CLOSING;
+
     for (ConnectionVec::iterator it = connections_.begin(),
                                  end = connections_.end();
          it != end; ++it) {
@@ -89,10 +91,10 @@ void Pool::close() {
   }
 }
 
-Connection* Pool::borrow_connection(const std::string& keyspace) {
+Connection* Pool::borrow_connection() {
   if (connections_.empty()) {
     for (unsigned i = 0; i < config_.core_connections_per_host(); ++i) {
-      maybe_spawn_connection(keyspace);
+      maybe_spawn_connection();
     }
     return NULL;
   }
@@ -102,19 +104,31 @@ Connection* Pool::borrow_connection(const std::string& keyspace) {
   if (connection == NULL ||
       connection->pending_request_count() >=
         config_.max_simultaneous_requests_threshold()) {
-      maybe_spawn_connection(keyspace);
+      maybe_spawn_connection();
   }
 
   return connection;
 }
 
+void Pool::return_connection(Connection* connection) {
+  if (connection->is_ready() && !pending_requests_.is_empty()) {
+    RequestHandler* request_handler
+        = static_cast<RequestHandler*>(pending_requests_.front());
+    pending_requests_.remove(request_handler);
+    request_handler->stop_timer();
+    if (!execute(connection, request_handler)) {
+      request_handler->retry(RETRY_WITH_NEXT_HOST);
+    }
+  }
+}
+
 bool Pool::execute(Connection* connection, RequestHandler* request_handler) {
   request_handler->set_connection_and_pool(connection, this);
-  if (request_handler->keyspace == connection->keyspace()) {
+  if (io_worker_->is_current_keyspace(connection->keyspace())) {
     return connection->execute(request_handler);
   } else {
     return connection->execute(new SetKeyspaceHandler(
-        connection, request_handler->keyspace, request_handler));
+        connection, io_worker_->keyspace(), request_handler));
   }
 }
 
@@ -124,15 +138,11 @@ void Pool::defunct() {
 }
 
 void Pool::maybe_notify_ready(Connection* connection) {
-  // this will notify ready even if all the connections fail.
-  // it is up to the holder to inspect state and/or detach the
-  // ready_callback_
-
+  // This will notify ready even if all the connections fail.
+  // it is up to the holder to inspect state
   if (state_ == POOL_STATE_CONNECTING && connections_pending_.empty()) {
     state_ = POOL_STATE_READY;
-    if (ready_callback_) {
-      ready_callback_(this);
-    }
+    io_worker_->notify_pool_ready(this);
   }
 }
 
@@ -140,19 +150,19 @@ void Pool::maybe_close() {
   if (state_ == POOL_STATE_CLOSING && connections_.empty() &&
       connections_pending_.empty()) {
     state_ = POOL_STATE_CLOSED;
-    if (closed_callback_) {
-      closed_callback_(this);
-    }
+    io_worker_->notify_pool_closed(this);
   }
 }
 
-void Pool::spawn_connection(const std::string& keyspace) {
+void Pool::spawn_connection() {
   if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
     Connection* connection =
-        new Connection(loop_, address_, logger_, config_,
-                       keyspace, protocol_version_);
+        new Connection(loop_, logger_, config_,
+                       address_,
+                       io_worker_->keyspace(),
+                       io_worker_->protocol_version());
 
-    logger_->info("Pool: Spawning new conneciton to %s", address_.to_string(true).c_str());
+    logger_->info("Pool: Spawning new conneciton to host %s", address_.to_string(true).c_str());
     connection->set_ready_callback(
           boost::bind(&Pool::on_connection_ready, this, _1));
     connection->set_close_callback(
@@ -163,7 +173,7 @@ void Pool::spawn_connection(const std::string& keyspace) {
   }
 }
 
-void Pool::maybe_spawn_connection(const std::string& keyspace) {
+void Pool::maybe_spawn_connection() {
   if (connections_pending_.size() >= config_.max_simultaneous_creation()) {
     return;
   }
@@ -177,7 +187,7 @@ void Pool::maybe_spawn_connection(const std::string& keyspace) {
     return;
   }
 
-  spawn_connection(keyspace);
+  spawn_connection();
 }
 
 Connection* Pool::find_least_busy() {
@@ -187,17 +197,6 @@ Connection* Pool::find_least_busy() {
     return *it;
   }
   return NULL;
-}
-
-void Pool::return_connection(Connection* connection) {
-  if (connection->is_ready() && !pending_request_queue_.empty()) {
-    RequestHandler* request_handler = pending_request_queue_.front();
-    pending_request_queue_.pop_front();
-    request_handler->stop_timer();
-    if (!execute(connection, request_handler)) {
-      request_handler->retry(RETRY_WITH_NEXT_HOST);
-    }
-  }
 }
 
 void Pool::on_connection_ready(Connection* connection) {
@@ -230,24 +229,24 @@ void Pool::on_connection_closed(Connection* connection) {
   maybe_close();
 }
 
-void Pool::on_timeout(void* data) {
+void Pool::on_pending_request_timeout(void* data) {
   RequestHandler* request_handler = static_cast<RequestHandler*>(data);
-  pending_request_queue_.remove(request_handler);
+  pending_requests_.remove(request_handler);
   request_handler->retry(RETRY_WITH_NEXT_HOST);
   maybe_close();
 }
 
 bool Pool::wait_for_connection(RequestHandler* request_handler) {
-  if (pending_request_queue_.size() + 1 > config_.max_pending_requests()) {
-    logger_->warn("Exceeded the max pending requests setting of %u on '%s'",
+  if (pending_requests_.size() + 1 > config_.max_pending_requests()) {
+    logger_->warn("Exceeded the max pending requests setting of %u on host %s",
                   config_.max_pending_requests(),
                   address_.to_string().c_str());
     return false;
   }
 
   request_handler->start_timer(loop_, config_.connect_timeout(), request_handler,
-                               boost::bind(&Pool::on_timeout, this, _1));
-  pending_request_queue_.push_back(request_handler);
+                               boost::bind(&Pool::on_pending_request_timeout, this, _1));
+  pending_requests_.add_to_back(request_handler);
   return true;
 }
 

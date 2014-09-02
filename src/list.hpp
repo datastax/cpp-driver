@@ -19,6 +19,8 @@
 
 #include "macros.hpp"
 
+#include <stddef.h>
+
 namespace cass {
 
 template <class T>
@@ -78,7 +80,7 @@ public:
     return static_cast<T*>(data_.prev_);
   }
 
-  int size() const { return size_; }
+  size_t size() const { return size_; }
   bool is_empty() { return data_.next_ == &data_; }
   Iterator<T> iterator() { return Iterator<T>(data_.next_, &data_); }
 
@@ -87,7 +89,7 @@ private:
   void insert_after(Node* pos, Node* node);
 
   Node data_;
-  int size_;
+  size_t size_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(List);

@@ -19,10 +19,13 @@
 #include "connection.hpp"
 #include "error_response.hpp"
 #include "execute_request.hpp"
+#include "io_worker.hpp"
 #include "pool.hpp"
 #include "prepare_handler.hpp"
 #include "result_response.hpp"
-#include "response.hpp"
+#include "row.hpp"
+#include "schema_change_handler.hpp"
+#include "session.hpp"
 
 namespace cass {
 
@@ -58,20 +61,58 @@ void RequestHandler::on_timeout() {
   set_error(CASS_ERROR_LIB_REQUEST_TIMED_OUT, "Request timed out");
 }
 
+void RequestHandler::set_io_worker(IOWorker* io_worker) {
+  future_->set_loop(io_worker->loop());
+  io_worker_ = io_worker;
+}
+
+void RequestHandler::retry(RetryType type) {
+  // Reset the request so it can be executed again
+  set_state(REQUEST_STATE_NEW);
+  pool_ = NULL;
+
+  io_worker_->retry(this, type);
+}
+
+bool RequestHandler::get_current_host_address(Address* address) {
+  if (is_query_plan_exhausted_) {
+    return false;
+  }
+  *address = current_address_;
+  return true;
+}
+
+void RequestHandler::next_host() {
+  is_query_plan_exhausted_ = !query_plan_->compute_next(&current_address_);
+}
+
+bool RequestHandler::is_host_up(const Address& address) const {
+  return io_worker_->is_host_up(address);
+}
+
+void RequestHandler::set_response(Response* response) {
+  future_->set_result(current_address_, response);
+  return_connection_and_finish();
+}
+
 void RequestHandler::set_error(CassError code, const std::string& message) {
   if (is_query_plan_exhausted_) {
     future_->set_error(code, message);
   } else {
     future_->set_error_with_host_address(current_address_, code, message);
   }
-  return_connection();
-  notify_finished();
+  return_connection_and_finish();
 }
 
 void RequestHandler::return_connection() {
   if (pool_ != NULL && connection_ != NULL) {
       pool_->return_connection(connection_);
   }
+}
+
+void RequestHandler::return_connection_and_finish() {
+  return_connection();
+  io_worker_->request_finished(this);
 }
 
 void RequestHandler::on_result_response(ResponseMessage* response) {
@@ -85,18 +126,27 @@ void RequestHandler::on_result_response(ResponseMessage* response) {
         const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request_.get());
         result->set_metadata(execute->prepared()->result()->result_metadata().get());
       }
+      set_response(response->response_body().release());
       break;
+
+    case CASS_RESULT_KIND_SCHEMA_CHANGE: {
+      SharedRefPtr<SchemaChangeHandler> schema_change_handler(
+            new SchemaChangeHandler(connection_,
+                                    this,
+                                    response->response_body().release()));
+      schema_change_handler->execute();
+      break;
+    }
 
     case CASS_RESULT_KIND_SET_KEYSPACE:
-      if (pool_->keyspace_callback_) {
-        pool_->keyspace_callback_(result->keyspace());
-      }
+      io_worker_->broadcast_keyspace_change(result->keyspace());
+      set_response(response->response_body().release());
+      break;
+
+    default:
+      set_response(response->response_body().release());
       break;
   }
-
-  future_->set_result(current_address_, response->response_body().release());
-  return_connection();
-  notify_finished();
 }
 
 void RequestHandler::on_error_response(ResponseMessage* response) {

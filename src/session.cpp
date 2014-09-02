@@ -17,7 +17,6 @@
 #include "session.hpp"
 
 #include "config.hpp"
-#include "io_worker.hpp"
 #include "prepare_request.hpp"
 #include "request_handler.hpp"
 #include "resolver.hpp"
@@ -28,10 +27,6 @@
 #include "third_party/boost/boost/bind.hpp"
 
 extern "C" {
-
-void cass_session_free(CassSession* session) {
-  delete session->from();
-}
 
 CassFuture* cass_session_close(CassSession* session) {
   // TODO(mpenick): Make sure this handles close during the middle of a connect
@@ -66,17 +61,7 @@ Session::Session(const Config& config)
     , pending_resolve_count_(0)
     , pending_pool_count_(0)
     , pending_workers_count_(0)
-    , current_io_worker_(0) {
-  uv_mutex_init(&keyspace_mutex_);
-}
-
-Session::~Session() {
-  uv_mutex_destroy(&keyspace_mutex_);
-  for (IOWorkerVec::iterator it = io_workers_.begin(), end = io_workers_.end();
-       it != end; ++it) {
-    delete (*it);
-  }
-}
+    , current_io_worker_(0) {}
 
 int Session::init() {
   int rc = EventThread<SessionEvent>::init(config_.queue_size_event());
@@ -86,12 +71,24 @@ int Session::init() {
   rc = request_queue_->init(loop(), this, &Session::on_execute);
   if (rc != 0) return rc;
   for (unsigned i = 0; i < config_.thread_count_io(); ++i) {
-    ScopedPtr<IOWorker> io_worker(new IOWorker(this, logger_.get(), config_));
+    SharedRefPtr<IOWorker> io_worker(new IOWorker(this));
     int rc = io_worker->init();
     if (rc != 0) return rc;
-    io_workers_.push_back(io_worker.release());
+    io_workers_.push_back(io_worker);
   }
   return rc;
+}
+
+void Session::broadcast_keyspace_change(const std::string& keyspace,
+                                        const IOWorker* calling_io_worker) {
+  // This can run on an IO worker thread. This is thread-safe because the IO workers
+  // vector never changes after initialization and IOWorker::set_keyspace() uses a mutex.
+  // This also means that calling "USE <keyspace>" frequently is an anti-pattern.
+  for (IOWorkerVec::iterator it = io_workers_.begin(),
+       end = io_workers_.end(); it != end; ++it) {
+    if (*it == calling_io_worker) continue;
+      (*it)->set_keyspace(keyspace);
+  }
 }
 
 SharedRefPtr<Host> Session::get_host(const Address& address, bool should_mark) {
@@ -122,11 +119,11 @@ void Session::purge_hosts(bool is_initial_connection) {
 
       std::string address_str = to_remove_it->first.to_string();
       if (is_initial_connection) {
-        logger_->warn("Session: Unable to reach contact point '%s'",
+        logger_->warn("Session: Unable to reach contact point %s",
                       address_str.c_str());
         hosts_.erase(to_remove_it);
       } else {
-        logger_->info("Session: Host '%s' removed",
+        logger_->info("Session: Host %s removed",
                       address_str.c_str());
         on_remove(to_remove_it->second);
       }
@@ -177,7 +174,7 @@ bool Session::connect_async(const std::string& keyspace, Future* future) {
   }
 
   if (!keyspace.empty()) {
-    set_keyspace(keyspace);
+    broadcast_keyspace_change(keyspace, NULL);
   }
 
   connect_future_.reset(future);
@@ -291,7 +288,7 @@ void Session::on_resolve(Resolver* resolver) {
     session->hosts_[address]
         = SharedRefPtr<Host>(new Host(address, !session->current_host_mark_));
   } else {
-    session->logger_->error("Unable to resolve %s:%d\n",
+    session->logger_->error("Unable to resolve host %s:%d\n",
                             resolver->host().c_str(), resolver->port());
   }
   if (--session->pending_resolve_count_ == 0) {
@@ -309,6 +306,10 @@ void Session::execute(RequestHandler* request_handler) {
 
 void Session::on_control_connection_ready() {
   load_balancing_policy_->init(hosts_);
+  for (IOWorkerVec::iterator it = io_workers_.begin(),
+       end = io_workers_.end(); it != end; ++it) {
+    (*it)->set_protocol_version(control_connection_.protocol_version());
+  }
   pending_pool_count_ = hosts_.size() * io_workers_.size();
   for (HostMap::iterator it = hosts_.begin(), hosts_end = hosts_.end();
        it != hosts_end; ++it) {
@@ -417,7 +418,6 @@ void Session::on_execute(uv_async_t* data, int status) {
   RequestHandler* request_handler = NULL;
   while (session->request_queue_->dequeue(request_handler)) {
     if (request_handler != NULL) {
-      request_handler->keyspace = session->keyspace();
       request_handler->set_query_plan(session->load_balancing_policy_->new_query_plan());
 
       size_t start = session->current_io_worker_;
@@ -425,7 +425,7 @@ void Session::on_execute(uv_async_t* data, int status) {
       const size_t size = session->io_workers_.size();
       while (remaining != 0) {
         // TODO(mpenick): Make this something better than RR
-        IOWorker* io_worker = session->io_workers_[start % size];
+        const SharedRefPtr<IOWorker>& io_worker = session->io_workers_[start % size];
         if (io_worker->execute(request_handler)) {
           session->current_io_worker_ = (start + 1) % size;
           break;

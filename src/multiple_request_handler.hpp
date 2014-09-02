@@ -40,11 +40,16 @@ public:
 
   virtual ~MultipleRequestHandler();
 
-  void add_query(const std::string& query);
+  void execute_query(const std::string& query);
 
   virtual void on_set(const ResponseVec& responses) = 0;
   virtual void on_error(CassError code, const std::string& message) = 0;
   virtual void on_timeout() = 0;
+
+protected:
+  Connection* connection() {
+    return connection_;
+  }
 
 private:
   class InternalHandler : public Handler {

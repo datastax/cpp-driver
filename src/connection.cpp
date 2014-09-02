@@ -37,8 +37,8 @@
 
 #include "third_party/boost/boost/bind.hpp"
 
-#include <sstream>
 #include <iomanip>
+#include <sstream>
 
 namespace cass {
 
@@ -123,24 +123,24 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
   }
 }
 
-Connection::Connection(uv_loop_t* loop,
-                       const Address& address, Logger* logger, const Config& config,
-                       const std::string& keyspace, int protocol_version)
+Connection::Connection(uv_loop_t* loop, Logger* logger, const Config& config,
+                       const Address& address,  const std::string& keyspace,
+                       int protocol_version)
     : state_(CONNECTION_STATE_NEW)
     , is_defunct_(false)
     , is_invalid_protocol_(false)
     , is_registered_for_events_(false)
     , loop_(loop)
-    , response_(new ResponseMessage())
-    , address_(address)
-    , addr_string_(address.to_string())
-    , ssl_handshake_done_(false)
-    , version_("3.0.0")
-    , protocol_version_(protocol_version)
-    , event_types_(0)
     , logger_(logger)
     , config_(config)
+    , address_(address)
+    , addr_string_(address.to_string())
     , keyspace_(keyspace)
+    , protocol_version_(protocol_version)
+    , response_(new ResponseMessage())
+    , ssl_handshake_done_(false)
+    , version_("3.0.0")
+    , event_types_(0)
     , connect_timer_(NULL) {
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
@@ -156,12 +156,12 @@ void Connection::connect() {
 }
 
 bool Connection::execute(Handler* handler) {
-  handler->inc_ref(); // Connection reference
-
   int8_t stream = stream_manager_.acquire_stream(handler);
   if (stream < 0) {
     return false;
   }
+
+  handler->inc_ref(); // Connection reference
   handler->set_stream(stream);
 
   if (!handler->encode(protocol_version_, 0x00)) {
@@ -186,6 +186,16 @@ bool Connection::execute(Handler* handler) {
                  boost::bind(&Connection::on_write, this, _1));
 
   return true;
+}
+
+void Connection::schedule_schema_agreement(const SharedRefPtr<SchemaChangeHandler>& handler, uint64_t wait) {
+  PendingSchemaAgreement* pending_schema_agreement = new PendingSchemaAgreement(handler);
+  pending_schema_aggreements_.add_to_back(pending_schema_agreement);
+  pending_schema_agreement->timer
+      = Timer::start(loop_,
+                     wait,
+                     pending_schema_agreement,
+                     boost::bind(&Connection::on_pending_schema_agreement, this, _1));
 }
 
 void Connection::close() {
@@ -214,7 +224,7 @@ void Connection::consume(char* input, size_t size) {
   while (remaining != 0) {
     int consumed = response_->decode(protocol_version_, buffer, remaining);
     if (consumed <= 0) {
-      logger_->error("Connection: Error consuming message on '%s'", addr_string_.c_str());
+      logger_->error("Connection: Error consuming message on host %s", addr_string_.c_str());
       remaining = 0;
       defunct();
       continue;
@@ -225,7 +235,7 @@ void Connection::consume(char* input, size_t size) {
       response_.reset(new ResponseMessage());
 
       logger_->debug(
-          "Connection: Consumed message type %s with stream %d, input %lu, remaining %d on '%s'",
+          "Connection: Consumed message type %s with stream %d, input %lu, remaining %d on host %s",
           opcode_to_string(response->opcode()).c_str(), static_cast<int>(response->stream()),
           size, remaining, addr_string_.c_str());
 
@@ -235,7 +245,7 @@ void Connection::consume(char* input, size_t size) {
             event_callback_(static_cast<EventResponse*>(response->response_body().get()));
           }
         } else {
-          logger_->error("Connnection: Invalid response with opcode of %d returned on event stream",
+          logger_->error("Connection: Invalid response with opcode of %d returned on event stream",
                          response->opcode());
           defunct();
         }
@@ -272,7 +282,7 @@ void Connection::consume(char* input, size_t size) {
               break;
           }
         } else {
-          logger_->error("Connection: Invalid stream returnd from server on '%s'",
+          logger_->error("Connection: Invalid stream returned from host %s",
                          addr_string_.c_str());
           defunct();
         }
@@ -304,16 +314,16 @@ void Connection::on_connect(Connecter* connecter) {
   connection->connect_timer_ = NULL;
 
   if (connecter->status() == Connecter::SUCCESS) {
-    connection->logger_->debug("Connection: Connected to '%s'",
+    connection->logger_->debug("Connection: Connected to host %s",
                                connection->addr_string_.c_str());
     uv_read_start(copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_),
                   alloc_buffer, on_read);
     connection->state_ = CONNECTION_STATE_CONNECTED;
     connection->on_connected();
   } else {
-    connection->logger_->info("Connection: Connect error '%s' on '%s'",
-                              connection->addr_string_.c_str(),
-                              uv_err_name(uv_last_error(connection->loop_)));
+    connection->logger_->info("Connection: Connect error '%s' on host %s",
+                              uv_err_name(uv_last_error(connection->loop_)),
+                              connection->addr_string_.c_str() );
     connection->notify_error("Unable to connect");
   }
 }
@@ -327,7 +337,7 @@ void Connection::on_connect_timeout(Timer* timer) {
 void Connection::on_close(uv_handle_t* handle) {
   Connection* connection = static_cast<Connection*>(handle->data);
 
-  connection->logger_->debug("Connection to '%s' closed",
+  connection->logger_->debug("Connection to host %s closed",
                              connection->addr_string_.c_str());
 
   while (!connection->pending_requests_.is_empty()) {
@@ -339,6 +349,15 @@ void Connection::on_close(uv_handle_t* handle) {
       handler->stop_timer();
     }
     handler->dec_ref();
+  }
+
+  while (!connection->pending_schema_aggreements_.is_empty()) {
+    PendingSchemaAgreement* pending_schema_aggreement
+        = connection->pending_schema_aggreements_.front();
+    connection->pending_schema_aggreements_.remove(pending_schema_aggreement);
+    pending_schema_aggreement->stop_timer();
+    pending_schema_aggreement->handler->on_closing();
+    delete pending_schema_aggreement;
   }
 
   if (connection->closed_callback_) {
@@ -353,9 +372,9 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
 
   if (nread == -1) {
     if (uv_last_error(connection->loop_).code != UV_EOF) {
-      connection->logger_->info("Connection: Read error '%s' on '%s'",
-                                connection->addr_string_.c_str(),
-                                uv_err_name(uv_last_error(connection->loop_)));
+      connection->logger_->info("Connection: Read error '%s' on host %s",
+                                uv_err_name(uv_last_error(connection->loop_)),
+                                connection->addr_string_.c_str());
     }
     connection->defunct();
     free_buffer(buf);
@@ -374,9 +393,9 @@ void Connection::on_write(RequestWriter* writer) {
         handler->set_state(Handler::REQUEST_STATE_READING);
       } else {
         if (!is_closing()) {
-          logger_->info("Connection: Write error '%s' on '%s'",
-                        addr_string_.c_str(),
-                        uv_err_name(uv_last_error(loop_)));
+          logger_->info("Connection: Write error '%s' on host %s",
+                        uv_err_name(uv_last_error(loop_)),
+                        addr_string_.c_str());
           defunct();
         }
 
@@ -411,7 +430,7 @@ void Connection::on_write(RequestWriter* writer) {
 
 void Connection::on_timeout(RequestTimer* timer) {
   Handler* handler = static_cast<Handler*>(timer->data());
-  logger_->info("Connection: Request timed out to '%s'", addr_string_.c_str());
+  logger_->info("Connection: Request timed out to host %s", addr_string_.c_str());
   // TODO (mpenick): We need to handle the case where we have too many
   // timeout requests and we run out of stream ids. The java-driver
   // uses a threshold to defunct the connneciton.
@@ -474,6 +493,14 @@ void Connection::on_supported(ResponseMessage* response) {
   execute(new StartupHandler(this, new StartupRequest()));
 }
 
+void Connection::on_pending_schema_agreement(Timer* timer) {
+  PendingSchemaAgreement* pending_schema_agreement
+      = static_cast<PendingSchemaAgreement*>(timer->data());
+  pending_schema_aggreements_.remove(pending_schema_agreement);
+  pending_schema_agreement->handler->execute();
+  delete pending_schema_agreement;
+}
+
 void Connection::notify_ready() {
   state_ = CONNECTION_STATE_READY;
   if (ready_callback_) {
@@ -482,8 +509,8 @@ void Connection::notify_ready() {
 }
 
 void Connection::notify_error(const std::string& error) {
-  logger_->error("Connection: Host '%s' had the following error on startup for '%s'",
-                 addr_string_.c_str(), error.c_str() );
+  logger_->error("Connection: Host %s had the following error on startup '%s'",
+                 addr_string_.c_str(), error.c_str());
   defunct();
 }
 
@@ -507,6 +534,13 @@ void Connection::send_initial_auth_response() {
     AuthResponseRequest* auth_response
         = new AuthResponseRequest(auth->initial_response(), auth);
     execute(new StartupHandler(this, auth_response));
+  }
+}
+
+void Connection::PendingSchemaAgreement::stop_timer() {
+  if (timer != NULL) {
+    Timer::stop(timer);
+    timer = NULL;
   }
 }
 

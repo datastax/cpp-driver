@@ -17,18 +17,20 @@
 #ifndef __CASS_CONNECTION_HPP_INCLUDED__
 #define __CASS_CONNECTION_HPP_INCLUDED__
 
-#include "cassandra.h"
-#include "buffer.hpp"
-#include "handler.hpp"
-#include "macros.hpp"
 #include "address.hpp"
-#include "stream_manager.hpp"
+#include "buffer.hpp"
+#include "cassandra.h"
+#include "handler.hpp"
 #include "list.hpp"
-#include "scoped_ptr.hpp"
+#include "macros.hpp"
 #include "ref_counted.hpp"
-#include "response.hpp"
 #include "request.hpp"
+#include "response.hpp"
+#include "schema_change_handler.hpp"
+#include "scoped_ptr.hpp"
+#include "stream_manager.hpp"
 
+#include "third_party/boost/boost/cstdint.hpp"
 #include "third_party/boost/boost/function.hpp"
 
 #include <uv.h>
@@ -58,14 +60,16 @@ public:
   typedef boost::function1<void, EventResponse*> EventCallback;
   typedef boost::function1<void, Connection*> Callback;
 
-  Connection(uv_loop_t* loop, const Address& address,
-             Logger* logger, const Config& config, const std::string& keyspace,
+  Connection(uv_loop_t* loop, Logger* logger, const Config& config,
+             const Address& address, const std::string& keyspace,
              int protocol_version);
 
   void connect();
 
   bool execute(Handler* request);
+  void schedule_schema_agreement(const SharedRefPtr<SchemaChangeHandler>& handler, uint64_t wait);
 
+  Logger* logger() const { return logger_; }
   const Config& config() const { return config_; }
   const Address& address() { return address_; }
   const std::string& address_string() { return addr_string_; }
@@ -120,6 +124,18 @@ private:
     ScopedRefPtr<Request> request_;
   };
 
+  struct PendingSchemaAgreement
+      : public List<PendingSchemaAgreement>::Node {
+    PendingSchemaAgreement(const SharedRefPtr<SchemaChangeHandler>& handler)
+        : handler(handler)
+        , timer(NULL) {}
+
+    void stop_timer();
+
+    SharedRefPtr<SchemaChangeHandler> handler;
+    Timer* timer;
+  };
+
   void actually_close();
   void consume(char* input, size_t size);
   void maybe_set_keyspace(ResponseMessage* response);
@@ -136,6 +152,7 @@ private:
   void on_ready();
   void on_set_keyspace();
   void on_supported(ResponseMessage* response);
+  void on_pending_schema_agreement(Timer* timer);
 
   void notify_ready();
   void notify_error(const std::string& error);
@@ -151,8 +168,16 @@ private:
   bool is_registered_for_events_;
 
   List<Handler> pending_requests_;
+  List<PendingSchemaAgreement> pending_schema_aggreements_;
 
   uv_loop_t* loop_;
+  Logger* logger_;
+  const Config& config_;
+  Address address_;
+  std::string addr_string_;
+  std::string keyspace_;
+  const int protocol_version_;
+
   ScopedPtr<ResponseMessage> response_;
   StreamManager<Handler*> stream_manager_;
 
@@ -160,8 +185,6 @@ private:
   Callback closed_callback_;
   EventCallback event_callback_;
 
-  Address address_;
-  std::string addr_string_;
   // the actual connection
   uv_tcp_t socket_;
   // ssl stuff
@@ -169,12 +192,8 @@ private:
   // supported stuff sent in start up message
   std::string compression_;
   std::string version_;
-  const int protocol_version_;
   int event_types_;
 
-  Logger* logger_;
-  const Config& config_;
-  std::string keyspace_;
   Timer* connect_timer_;
 
 private:

@@ -30,6 +30,7 @@
 namespace cass {
 
 class EventResponse;
+class Logger;
 class Request;
 class Row;
 class Session;
@@ -38,6 +39,12 @@ class Value;
 
 class ControlConnection {
 public:
+  static bool determine_address_for_peer_host(Logger* logger,
+                                              const Address& connected_address,
+                                              const Value* peer_value,
+                                              const Value* rpc_value,
+                                              Address* output);
+
   enum ControlState {
     CONTROL_STATE_NEW,
     CONTROL_STATE_READY,
@@ -49,6 +56,11 @@ public:
     , state_(CONTROL_STATE_NEW)
     , connection_(NULL)
     , reconnect_timer_(NULL) {}
+
+
+  int protocol_version() const {
+    return protocol_version_;
+  }
 
   void connect(Session* session);
   void close();
@@ -143,7 +155,6 @@ private:
   void on_refresh_node_info_all(RefreshNodeData data, Response* response);
   void on_local_query(ResponseMessage* response);
   void on_peer_query(ResponseMessage* response);
-  bool determine_address_for_peer_host(const Value* peer_value, const Value* rpc_value, Address* output);
   void on_connection_closed(Connection* connection);
   void on_connection_event(EventResponse* response);
   void on_reconnect(Timer* timer);

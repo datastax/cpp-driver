@@ -20,6 +20,8 @@
 #include "address.hpp"
 #include "ref_counted.hpp"
 
+#include "third_party/boost/boost/atomic.hpp"
+
 #include <map>
 #include <set>
 #include <sstream>
@@ -65,11 +67,11 @@ public:
     listen_address_ = listen_address;
   }
 
-  bool was_just_added() const { return (state_ == ADDED); }
+  bool was_just_added() const { return state() == ADDED; }
 
-  bool is_up() const { return (state_ == UP); }
-  void set_up() { state_ = UP; }
-  void set_down() { state_ = DOWN; }
+  bool is_up() const { return state() == UP; }
+  void set_up() { set_state(UP); }
+  void set_down() { set_state(DOWN); }
 
   std::string to_string() const {
     std::ostringstream ss;
@@ -81,9 +83,17 @@ public:
   }
 
 private:
+  HostState state() const {
+    return state_.load(boost::memory_order_acquire);
+  }
+
+  void set_state(HostState state) {
+    state_.store(state, boost::memory_order_release);
+  }
+
   Address address_;
   bool mark_;
-  HostState state_;
+  boost::atomic<HostState> state_;
   std::string listen_address_;
   std::string rack_;
   std::string dc_;
