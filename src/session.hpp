@@ -111,7 +111,7 @@ private:
   friend class ControlConnection;
 
   void on_control_connection_ready();
-  void on_control_conneciton_error(CassError code, const std::string& message);
+  void on_control_connection_error(CassError code, const std::string& message);
 
   void on_add(SharedRefPtr<Host> host, bool is_initial_connection);
   void on_remove(SharedRefPtr<Host> host);
