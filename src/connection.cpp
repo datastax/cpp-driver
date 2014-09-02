@@ -37,8 +37,8 @@
 
 #include "third_party/boost/boost/bind.hpp"
 
-#include <sstream>
 #include <iomanip>
+#include <sstream>
 
 namespace cass {
 
@@ -123,24 +123,24 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
   }
 }
 
-Connection::Connection(uv_loop_t* loop,
-                       const Address& address, Logger* logger, const Config& config,
-                       const std::string& keyspace, int protocol_version)
+Connection::Connection(uv_loop_t* loop, Logger* logger, const Config& config,
+                       const Address& address,  const std::string& keyspace,
+                       int protocol_version)
     : state_(CONNECTION_STATE_NEW)
     , is_defunct_(false)
     , is_invalid_protocol_(false)
     , is_registered_for_events_(false)
     , loop_(loop)
-    , response_(new ResponseMessage())
-    , address_(address)
-    , addr_string_(address.to_string())
-    , ssl_handshake_done_(false)
-    , version_("3.0.0")
-    , protocol_version_(protocol_version)
-    , event_types_(0)
     , logger_(logger)
     , config_(config)
+    , address_(address)
+    , addr_string_(address.to_string())
     , keyspace_(keyspace)
+    , protocol_version_(protocol_version)
+    , response_(new ResponseMessage())
+    , ssl_handshake_done_(false)
+    , version_("3.0.0")
+    , event_types_(0)
     , connect_timer_(NULL) {
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
@@ -156,12 +156,12 @@ void Connection::connect() {
 }
 
 bool Connection::execute(Handler* handler) {
-  handler->inc_ref(); // Connection reference
-
   int8_t stream = stream_manager_.acquire_stream(handler);
   if (stream < 0) {
     return false;
   }
+
+  handler->inc_ref(); // Connection reference
   handler->set_stream(stream);
 
   if (!handler->encode(protocol_version_, 0x00)) {
@@ -186,6 +186,16 @@ bool Connection::execute(Handler* handler) {
                  boost::bind(&Connection::on_write, this, _1));
 
   return true;
+}
+
+void Connection::schedule_schema_agreement(const SharedRefPtr<SchemaChangeHandler>& handler, uint64_t wait) {
+  PendingSchemaAgreement* pending_schema_agreement = new PendingSchemaAgreement(handler);
+  pending_schema_aggreements_.add_to_back(pending_schema_agreement);
+  pending_schema_agreement->timer
+      = Timer::start(loop_,
+                     wait,
+                     pending_schema_agreement,
+                     boost::bind(&Connection::on_pending_schema_agreement, this, _1));
 }
 
 void Connection::close() {
@@ -235,7 +245,7 @@ void Connection::consume(char* input, size_t size) {
             event_callback_(static_cast<EventResponse*>(response->response_body().get()));
           }
         } else {
-          logger_->error("Connnection: Invalid response with opcode of %d returned on event stream",
+          logger_->error("Connection: Invalid response with opcode of %d returned on event stream",
                          response->opcode());
           defunct();
         }
@@ -339,6 +349,15 @@ void Connection::on_close(uv_handle_t* handle) {
       handler->stop_timer();
     }
     handler->dec_ref();
+  }
+
+  while (!connection->pending_schema_aggreements_.is_empty()) {
+    PendingSchemaAgreement* pending_schema_aggreement
+        = connection->pending_schema_aggreements_.front();
+    connection->pending_schema_aggreements_.remove(pending_schema_aggreement);
+    pending_schema_aggreement->stop_timer();
+    pending_schema_aggreement->handler->on_closing();
+    delete pending_schema_aggreement;
   }
 
   if (connection->closed_callback_) {
@@ -474,6 +493,14 @@ void Connection::on_supported(ResponseMessage* response) {
   execute(new StartupHandler(this, new StartupRequest()));
 }
 
+void Connection::on_pending_schema_agreement(Timer* timer) {
+  PendingSchemaAgreement* pending_schema_agreement
+      = static_cast<PendingSchemaAgreement*>(timer->data());
+  pending_schema_aggreements_.remove(pending_schema_agreement);
+  pending_schema_agreement->handler->execute();
+  delete pending_schema_agreement;
+}
+
 void Connection::notify_ready() {
   state_ = CONNECTION_STATE_READY;
   if (ready_callback_) {
@@ -507,6 +534,13 @@ void Connection::send_initial_auth_response() {
     AuthResponseRequest* auth_response
         = new AuthResponseRequest(auth->initial_response(), auth);
     execute(new StartupHandler(this, auth_response));
+  }
+}
+
+void Connection::PendingSchemaAgreement::stop_timer() {
+  if (timer != NULL) {
+    Timer::stop(timer);
+    timer = NULL;
   }
 }
 

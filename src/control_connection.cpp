@@ -19,6 +19,7 @@
 #include "constants.hpp"
 #include "event_response.hpp"
 #include "load_balancing.hpp"
+#include "logger.hpp"
 #include "query_request.hpp"
 #include "result_iterator.hpp"
 #include "error_response.hpp"
@@ -60,6 +61,40 @@ private:
   AddressVec host_addresses_;
   AddressVec::iterator it_;
 };
+
+bool ControlConnection::determine_address_for_peer_host(Logger* logger,
+                                                        const Address& connected_address,
+                                                        const Value* peer_value,
+                                                        const Value* rpc_value,
+                                                        Address* output) {
+  Address peer_address;
+  Address::from_inet(peer_value->buffer().data(), peer_value->buffer().size(),
+                     connected_address.port(), &peer_address);
+  if (rpc_value->buffer().size() > 0) {
+    Address::from_inet(rpc_value->buffer().data(), rpc_value->buffer().size(),
+                       connected_address.port(), output);
+    if (connected_address.compare(*output) == 0 ||
+        connected_address.compare(peer_address) == 0) {
+      logger->debug("system.peers on %s contains a line with rpc_address for itself. "
+                    "This is not normal, but is a known problem for some versions of DSE. "
+                    "Ignoring this entry.", connected_address.to_string(false).c_str());
+      return false;
+    }
+    if (bind_any_ipv4_.compare(*output) == 0 ||
+        bind_any_ipv6_.compare(*output) == 0) {
+      logger->warn("Found host with 'bind any' for rpc_address; using listen_address (%s) to contact instead. "
+                   "If this is incorrect you should configure a specific interface for rpc_address on the server.",
+                   peer_address.to_string(false).c_str());
+      *output = peer_address;
+    }
+  } else {
+    logger->warn("No rpc_address for host %s in system.peers on %s. "
+                 "Ignoring this entry.", peer_address.to_string(false).c_str(),
+                  connected_address.to_string(false).c_str());
+    return false;
+  }
+  return true;
+}
 
 void ControlConnection::connect(Session* session) {
   session_ = session;
@@ -111,9 +146,9 @@ void ControlConnection::reconnect(bool retry_current_host) {
   }
 
   connection_ = new Connection(session_->loop(),
-                               current_host_address_,
                                session_->logger_.get(),
                                session_->config_,
+                               current_host_address_,
                                "",
                                protocol_version_);
 
@@ -165,8 +200,8 @@ void ControlConnection::on_connection_closed(Connection* connection) {
 void ControlConnection::refresh_node_list() {
   ScopedRefPtr<ControlMultipleRequestHandler> handler(
         new ControlMultipleRequestHandler(this, boost::bind(&ControlConnection::on_node_refresh, this, _1)));
-  handler->add_query(SELECT_LOCAL);
-  handler->add_query(SELECT_PEERS);
+  handler->execute_query(SELECT_LOCAL);
+  handler->execute_query(SELECT_PEERS);
 }
 
 void ControlConnection::on_node_refresh(const MultipleRequestHandler::ResponseVec& responses) {
@@ -194,7 +229,9 @@ void ControlConnection::on_node_refresh(const MultipleRequestHandler::ResponseVe
     while (rows.next()) {
       Address address;
       const Row* row = rows.row();
-      if (!determine_address_for_peer_host(row->get_by_name("peer"),
+      if (!determine_address_for_peer_host(logger_,
+                                           connection_->address(),
+                                           row->get_by_name("peer"),
                                            row->get_by_name("rpc_address"),
                                            &address)) {
         continue;
@@ -268,16 +305,17 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
 
   std::string rack;
   v = row->get_by_name("rack");
-  if (v->buffer().size() > 0) {
+  if (!v->is_null()) {
     rack.assign(v->buffer().data(), v->buffer().size());
   }
 
   std::string dc;
   v = row->get_by_name("data_center");
-  if (v->buffer().size() > 0) {
+  if (!v->is_null()) {
     dc.assign(v->buffer().data(), v->buffer().size());
   }
 
+  // This value is not present in the "system.local" query
   v = row->get_by_name("peer");
   if (v != NULL) {
     Address listen_address;
@@ -308,7 +346,9 @@ void ControlConnection::on_refresh_node_info_all(RefreshNodeData data, Response*
     const Row* row = rows.row();
     Address address;
     bool is_valid_address
-        = determine_address_for_peer_host(row->get_by_name("peer"),
+        = determine_address_for_peer_host(logger_,
+                                          connection_->address(),
+                                          row->get_by_name("peer"),
                                           row->get_by_name("rpc_address"),
                                           &address);
     if (is_valid_address && data.host->address().compare(address) == 0) {
@@ -317,37 +357,6 @@ void ControlConnection::on_refresh_node_info_all(RefreshNodeData data, Response*
       break;
     }
   }
-}
-
-bool ControlConnection::determine_address_for_peer_host(const Value* peer_value, const Value* rpc_value, Address* output) {
-  const Address& connected_address = connection_->address();
-  Address peer_address;
-  Address::from_inet(peer_value->buffer().data(), peer_value->buffer().size(),
-                     connection_->address().port(), &peer_address);
-  if (rpc_value->buffer().size() > 0) {
-    Address::from_inet(rpc_value->buffer().data(), rpc_value->buffer().size(),
-                       connection_->address().port(), output);
-    if (connected_address.compare(*output) == 0 ||
-        connected_address.compare(peer_address) == 0) {
-      logger_->debug("system.peers on %s contains a line with rpc_address for itself. "
-                     "This is not normal, but is a known problem for some versions of DSE. "
-                     "Ignoring this entry.", connected_address.to_string(false).c_str());
-      return false;
-    }
-    if (bind_any_ipv4_.compare(*output) == 0 ||
-        bind_any_ipv6_.compare(*output) == 0) {
-      logger_->warn("Found host with 'bind any' for rpc_address; using listen_address (%s) to contact instead. "
-                    "If this is incorrect you should configure a specific interface for rpc_address on the server.",
-                    peer_address.to_string(false).c_str());
-      *output = peer_address;
-    }
-  } else {
-    logger_->warn("No rpc_address for host %s in system.peers on %s. "
-                  "Ignoring this entry.", peer_address.to_string(false).c_str(),
-                   connected_address.to_string(false).c_str());
-    return false;
-  }
-  return true;
 }
 
 bool ControlConnection::handle_query_invalid_response(Response* response) {

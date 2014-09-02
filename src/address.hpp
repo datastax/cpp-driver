@@ -20,6 +20,7 @@
 #include "common.hpp"
 
 #include <uv.h>
+#include <set>
 #include <string.h>
 #include <string>
 #include <vector>
@@ -80,6 +81,7 @@ private:
 };
 
 typedef std::vector<Address> AddressVec;
+typedef std::set<Address> AddressSet;
 
 inline bool operator<(const Address& a, const Address& b) {
   return a.compare(b) < 0;

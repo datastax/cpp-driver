@@ -58,6 +58,10 @@ public:
     return static_cast<CassValueType>(def_->collection_secondary_type);
   }
 
+  bool is_null() const {
+    return buffer().size() < 0;
+  }
+
   bool is_collection() const {
     return type_ == CASS_VALUE_TYPE_LIST ||
            type_ == CASS_VALUE_TYPE_MAP  ||

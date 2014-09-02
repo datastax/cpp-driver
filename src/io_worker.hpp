@@ -17,22 +17,24 @@
 #ifndef __CASS_IO_WORKER_HPP_INCLUDED__
 #define __CASS_IO_WORKER_HPP_INCLUDED__
 
+#include "address.hpp"
 #include "async_queue.hpp"
 #include "constants.hpp"
 #include "event_thread.hpp"
-#include "address.hpp"
 #include "list.hpp"
+#include "pool.hpp"
+#include "ref_counted.hpp"
 #include "spsc_queue.hpp"
 
+#include "third_party/boost/boost/atomic.hpp"
 
-#include <uv.h>
-#include <string>
 #include <map>
 #include <list>
+#include <string>
+#include <uv.h>
 
 namespace cass {
 
-class Pool;
 class Session;
 class Config;
 class SSLContext;
@@ -48,12 +50,32 @@ struct IOWorkerEvent {
   bool is_initial_connection;
 };
 
-class IOWorker : public EventThread<IOWorkerEvent> {
+class IOWorker
+    : public EventThread<IOWorkerEvent>
+    , public RefCounted<IOWorker> {
 public:
-  IOWorker(Session* session, Logger* logger, const Config& config);
+  IOWorker(Session* session);
   ~IOWorker();
 
   int init();
+
+  Logger* logger() const { return logger_; }
+  const Config& config() const { return config_; }
+
+  int protocol_version() const {
+    return protocol_version_;
+  }
+  void set_protocol_version(int protocol_version) {
+    protocol_version_ = protocol_version;
+  }
+
+  std::string keyspace();
+  void set_keyspace(const std::string& keyspace);
+
+  bool is_current_keyspace(const std::string& keyspace);
+  void broadcast_keyspace_change(const std::string& keyspace);
+
+  bool is_host_up(const Address& address) const;
 
   bool add_pool_async(const Address& address, bool is_initial_connection);
   bool remove_pool_async(const Address& address);
@@ -62,29 +84,28 @@ public:
 
   bool execute(RequestHandler* request_handler);
 
+  void retry(RequestHandler* request_handler, RetryType retry_type);
+  void request_finished(RequestHandler* request_handler);
+
+  void notify_pool_ready(Pool* pool);
+  void notify_pool_closed(Pool* pool);
+
 private:
   void add_pool(const Address& address, bool is_initial_connection);
   void maybe_close();
   void maybe_notify_closed();
-  void cleanup();
   void close_handles();
 
-  void on_pool_ready(Pool* pool, bool is_initial_connection);
-  void on_pool_closed(Pool* pool);
-  void on_pool_reconnect(Timer* timer);
-  void on_set_keyspace(const std::string& keyspace);
+  void on_pending_pool_reconnect(Timer* timer);
 
-  void on_retry(RequestHandler* request_handler, RetryType retry_type);
-  void on_request_finished(RequestHandler* request_handler);
   virtual void on_event(const IOWorkerEvent& event);
 
   static void on_execute(uv_async_t* data, int status);
-  static void on_prepare(uv_prepare_t* prepare, int status);
 
 private:
-  typedef std::map<Address, Pool*> PoolMap;
+  typedef std::map<Address, SharedRefPtr<Pool> > PoolMap;
 
-  struct PendingReconnect : RefCounted<PendingReconnect> {
+  struct PendingReconnect : public RefCounted<PendingReconnect> {
     PendingReconnect(Address address)
         : address(address)
         , timer(NULL) {}
@@ -98,18 +119,18 @@ private:
   typedef std::map<Address, SharedRefPtr<PendingReconnect> > PendingReconnectMap;
 
 private:
-  typedef std::list<Pool*> PoolList;
-
   Session* session_;
   Logger* logger_;
-  uv_prepare_t prepare_;
-  PoolMap pools;
-  PoolList pending_delete_;
+  const Config& config_;
+  boost::atomic<int> protocol_version_;
+  std::string keyspace_;
+  uv_mutex_t keyspace_mutex_;
+
+  PoolMap pools_;
   bool is_closing_;
   int pending_request_count_;
   PendingReconnectMap pending_reconnects_;
 
-  const Config& config_;
   AsyncQueue<SPSCQueue<RequestHandler*> > request_queue_;
 };
 

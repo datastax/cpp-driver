@@ -93,6 +93,14 @@ public:
     }
   }
 
+  bool operator==(const T* ptr) {
+    return ptr_ == ptr;
+  }
+
+  bool operator==(const SharedRefPtr<T>& ref) {
+    return ptr_ == ref.ptr_;
+  }
+
   void reset(T* ptr = NULL) {
     copy<T>(ptr);
   }

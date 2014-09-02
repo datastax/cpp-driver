@@ -17,24 +17,26 @@
 #ifndef __CASS_SESSION_HPP_INCLUDED__
 #define __CASS_SESSION_HPP_INCLUDED__
 
+#include "config.hpp"
 #include "control_connection.hpp"
 #include "event_thread.hpp"
+#include "future.hpp"
+#include "host.hpp"
+#include "io_worker.hpp"
+#include "load_balancing.hpp"
+#include "logger.hpp"
 #include "mpmc_queue.hpp"
-#include "spsc_queue.hpp"
+#include "ref_counted.hpp"
 #include "scoped_mutex.hpp"
 #include "scoped_ptr.hpp"
-#include "host.hpp"
-#include "future.hpp"
-#include "load_balancing.hpp"
-#include "config.hpp"
-#include "logger.hpp"
+#include "spsc_queue.hpp"
 
-#include <uv.h>
 #include <list>
-#include <string>
-#include <vector>
 #include <memory>
 #include <set>
+#include <string>
+#include <uv.h>
+#include <vector>
 
 namespace cass {
 
@@ -61,24 +63,18 @@ struct SessionEvent {
 class Session : public EventThread<SessionEvent> {
 public:
   Session(const Config& config);
-  ~Session();
 
   int init();
 
-  std::string keyspace() {
-    ScopedMutex lock(&keyspace_mutex_);
-    return keyspace_;
-  }
-
-  void set_keyspace(const std::string& keyspace) {
-    ScopedMutex lock(&keyspace_mutex_);
-    keyspace_ = keyspace;
-  }
+  Logger* logger() const { return logger_.get(); }
+  const Config& config() const { return config_; }
 
   void set_load_balancing_policy(LoadBalancingPolicy* policy) {
     load_balancing_policy_.reset(policy);
   }
 
+  void broadcast_keyspace_change(const std::string& keyspace,
+                                 const IOWorker* calling_io_worker);
 
   SharedRefPtr<Host> get_host(const Address& address, bool should_mark = false);
   SharedRefPtr<Host> add_host(const Address& address, bool should_mark = false);
@@ -88,7 +84,6 @@ public:
   bool notify_closed_async();
   bool notify_up_async(const Address& address);
   bool notify_down_async(const Address& address, bool is_critical_failure);
-  bool notify_set_keyspace_async(const std::string& keyspace);
 
   bool connect_async(const std::string& keyspace, Future* future);
   void close_async(Future* future);
@@ -124,13 +119,11 @@ private:
   void on_down(SharedRefPtr<Host> host, bool is_critical_failure);
 
 private:
-  typedef std::vector<IOWorker*> IOWorkerVec;
+  typedef std::vector<SharedRefPtr<IOWorker> > IOWorkerVec;
 
   ControlConnection control_connection_;
   IOWorkerVec io_workers_;
   ScopedPtr<Logger> logger_;
-  std::string keyspace_;
-  uv_mutex_t keyspace_mutex_;
   ScopedRefPtr<Future> connect_future_;
   Future* close_future_;
   HostMap hosts_;

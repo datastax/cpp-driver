@@ -28,9 +28,13 @@ MultipleRequestHandler::~MultipleRequestHandler() {
   }
 }
 
-void MultipleRequestHandler::add_query(const std::string& query) {
+void MultipleRequestHandler::execute_query(const std::string& query) {
+  if (has_errors_or_timeouts_) return;
   responses_.push_back(NULL);
-  connection_->execute(new InternalHandler(this, new QueryRequest(query), remaining_++));
+  SharedRefPtr<InternalHandler> handler(new InternalHandler(this, new QueryRequest(query), remaining_++));
+  if (!connection_->execute(handler.get())) {
+    on_error(CASS_ERROR_LIB_NO_STREAMS, "No more streams available");
+  }
 }
 
 void MultipleRequestHandler::InternalHandler::on_set(ResponseMessage* response) {
@@ -41,13 +45,17 @@ void MultipleRequestHandler::InternalHandler::on_set(ResponseMessage* response) 
 }
 
 void MultipleRequestHandler::InternalHandler::on_error(CassError code, const std::string& message) {
+  if (!parent_->has_errors_or_timeouts_) {
+    parent_->on_error(code, message);
+  }
   parent_->has_errors_or_timeouts_ = true;
-  parent_->on_error(code, message);
 }
 
 void MultipleRequestHandler::InternalHandler::on_timeout() {
+  if (!parent_->has_errors_or_timeouts_) {
+    parent_->on_timeout();
+  }
   parent_->has_errors_or_timeouts_ = true;
-  parent_->on_timeout();
 }
 
 } // namespace cass
