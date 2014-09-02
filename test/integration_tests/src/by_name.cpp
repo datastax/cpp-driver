@@ -48,7 +48,7 @@ struct ByNameTests : public test_utils::SingleSessionTest {
   test_utils::CassResultPtr select_all_from_by_name() {
     test_utils::CassResultPtr result;
     test_utils::execute_query(session, "SELECT * FROM by_name", &result);
-    BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 7);
+    BOOST_REQUIRE(cass_result_column_count(result.get()) ==  7);
     BOOST_REQUIRE(cass_result_row_count(result.get()) > 0);
     return result;
   }
