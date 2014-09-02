@@ -29,14 +29,14 @@ namespace cass {
 class RoundRobinPolicy : public LoadBalancingPolicy {
 public:
   RoundRobinPolicy()
-    : live_host_addresses_(new AddressVec)
+    : hosts_(new HostVec)
     , index_(0) {}
 
   virtual void init(const HostMap& hosts) {
-    live_host_addresses_->reserve(hosts.size());
+    hosts_->reserve(hosts.size());
     for (HostMap::const_iterator it = hosts.begin(),
          end = hosts.end(); it != end; ++it) {
-      live_host_addresses_->push_back(it->second->address());
+      hosts_->push_back(it->second);
     }
   }
 
@@ -45,59 +45,80 @@ public:
   }
 
   virtual QueryPlan* new_query_plan() {
-    return new RoundRobinQueryPlan(live_host_addresses_, index_++);
+    return new RoundRobinQueryPlan(hosts_, index_++);
   }
 
-  virtual void on_add(SharedRefPtr<Host> host) {
-    on_up(host);
-  }
-
-  virtual void on_remove(SharedRefPtr<Host> host) {
-    on_down(host);
-  }
-
-  virtual void on_up(SharedRefPtr<Host> host) {
-    AddressVec::iterator it
-        = std::find(live_host_addresses_->begin(), live_host_addresses_->end(), host->address());
-    if (it == live_host_addresses_->end()) {
-      live_host_addresses_->push_back(host->address());
+  virtual void on_add(const SharedRefPtr<Host>& host) {
+    HostVec::iterator it;
+    for (it = hosts_->begin(); it != hosts_->end(); ++it) {
+      if ((*it)->address() == host->address()) {
+        (*it) = host;
+        break;
+      }
+    }
+    if (it == hosts_->end()) {
+      hosts_->push_back(host);
     }
   }
 
-  virtual void on_down(SharedRefPtr<Host> host) {
-    AddressVec::iterator it
-        = std::find(live_host_addresses_->begin(), live_host_addresses_->end(), host->address());
-    if (it != live_host_addresses_->end()) {
-      live_host_addresses_->erase(it);
+  virtual void on_remove(const SharedRefPtr<Host>& host) {
+    for (HostVec::iterator it = hosts_->begin(); it != hosts_->end(); ++it) {
+      if ((*it)->address() == host->address()) {
+        hosts_->erase(it);
+        break;
+      }
     }
   }
+
+  virtual void on_up(const SharedRefPtr<Host>& host) {
+    on_add(host);
+    down_addresses_.erase(host->address());
+  }
+
+  virtual void on_down(const SharedRefPtr<Host>& host) {
+    // Note: at some point it may make more sense to guard repetitious calls
+    // in Session::on_down. For now, leaving here since this is the only place the
+    // logic exists, and letting events flow freely at a higher level can
+    // promote self-rectifying state.
+    if (down_addresses_.insert(host->address()).second) {
+      on_remove(host);
+    }
+  }
+
+  virtual LoadBalancingPolicy* new_instance() { return new RoundRobinPolicy(); }
 
 private:
   class RoundRobinQueryPlan : public QueryPlan {
   public:
-    RoundRobinQueryPlan(const CopyOnWritePtr<AddressVec>& hosts, size_t start_index)
-      : host_addresses_(hosts)
+    RoundRobinQueryPlan(const CopyOnWritePtr<HostVec>& hosts, size_t start_index)
+      : hosts_(hosts)
       , index_(start_index)
       , remaining_(hosts->size()) {}
 
     bool compute_next(Address* address)  {
-      if (remaining_ == 0) {
-        return false;
+      while (remaining_ > 0) {
+        --remaining_;
+        const SharedRefPtr<Host>& host((*hosts_)[index_++ % hosts_->size()]);
+        if (host->is_up()) {
+          *address = host->address();
+          return true;
+        }
       }
-
-      remaining_--;
-      *address = (*host_addresses_)[index_++ % host_addresses_->size()];
-      return true;
+      return false;
     }
 
   private:
-    const CopyOnWritePtr<AddressVec> host_addresses_;
+    const CopyOnWritePtr<HostVec> hosts_;
     size_t index_;
     size_t remaining_;
   };
 
-  CopyOnWritePtr<AddressVec> live_host_addresses_;
+  CopyOnWritePtr<HostVec> hosts_;
   size_t index_;
+  std::set<Address> down_addresses_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(RoundRobinPolicy);
 };
 
 } // namespace cass

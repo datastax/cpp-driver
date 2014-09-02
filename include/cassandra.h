@@ -304,7 +304,7 @@ cass_cluster_new();
  * @param[in] cluster
  * @param[in] contact_points A comma delimited list of addresses or
  * names. An empty string will clear the contact points.
- * The string is copied into the statement object; the memory pointed
+ * The string is copied into the cluster configuration; the memory pointed
  * to by this parameter can be freed after this call.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
@@ -508,6 +508,33 @@ CASS_EXPORT CassError
 cass_cluster_set_credentials(CassCluster* cluster,
                              const char* username,
                              const char* password);
+
+/**
+ * Configures the cluster to use round-robin load balancing.
+ * This is the default, and does not need to be called unless
+ * switching an existing from another policy.
+ *
+ * The driver discovers all nodes in a cluster and cycles through
+ * them per request.
+ *
+ * @param[in] cluster
+ * @return CASS_OK
+ */
+CASS_EXPORT CassError
+cass_cluster_set_load_balance_round_robin(CassCluster* cluster);
+
+/**
+ * Configures the cluster to use DC-aware load balancing.
+ * For each query, all live nodes in a primary DC are tried first,
+ * followed by any node from other DCs.
+ *
+ * @param[in] cluster
+ * @param[in] local_dc The primary datacenter to try first
+ * @return CASS_OK
+ */
+CASS_EXPORT CassError
+cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
+                                       const char* local_dc);
 
 /**
  * Connnects a session to the cluster.

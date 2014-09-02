@@ -137,7 +137,7 @@ private:
   bool current_host_mark_;
   Config config_;
   ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*> > > request_queue_;
-  ScopedPtr<LoadBalancingPolicy> load_balancing_policy_;
+  ScopedRefPtr<LoadBalancingPolicy> load_balancing_policy_;
   int pending_resolve_count_;
   int pending_pool_count_;
   int pending_workers_count_;

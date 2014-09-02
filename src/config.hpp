@@ -19,6 +19,7 @@
 
 #include "auth.hpp"
 #include "cassandra.h"
+#include "round_robin_policy.hpp"
 
 #include <list>
 #include <string>
@@ -50,7 +51,8 @@ public:
       , log_level_(CASS_LOG_WARN)
       , log_callback_(default_log_callback)
       , log_data_(NULL)
-      , auth_provider_(new AuthProvider()) {}
+      , auth_provider_(new AuthProvider())
+      , load_balancing_policy_(new RoundRobinPolicy()) {}
 
   unsigned thread_count_io() const { return thread_count_io_; }
 
@@ -192,6 +194,13 @@ public:
     auth_provider_.reset(new PlainTextAuthProvider(username, password));
   }
 
+  LoadBalancingPolicy* load_balancing_policy() const { return load_balancing_policy_->new_instance(); }
+
+  void set_load_balancing_policy(LoadBalancingPolicy* lbp) {
+    if (lbp == NULL) return;
+    load_balancing_policy_.reset(lbp);
+  }
+
 private:
   int port_;
   int protocol_version_;
@@ -214,6 +223,7 @@ private:
   CassLogCallback log_callback_;
   void* log_data_;
   SharedRefPtr<AuthProvider> auth_provider_;
+  SharedRefPtr<LoadBalancingPolicy> load_balancing_policy_;
 };
 
 } // namespace cass

@@ -17,13 +17,13 @@
 #ifndef __CASS_LOAD_BALANCING_HPP_INCLUDED__
 #define __CASS_LOAD_BALANCING_HPP_INCLUDED__
 
+#include "cassandra.h"
+#include "constants.hpp"
+#include "host.hpp"
+
 #include <list>
 #include <set>
 #include <string>
-
-#include "host.hpp"
-#include "constants.hpp"
-#include "cassandra.h"
 
 extern "C" {
 
@@ -61,17 +61,20 @@ public:
   virtual bool compute_next(Address* address) = 0;
 };
 
-class LoadBalancingPolicy : public Host::StateListener {
+class LoadBalancingPolicy : public Host::StateListener, public RefCounted<LoadBalancingPolicy> {
 public:
+  LoadBalancingPolicy()
+    : RefCounted<LoadBalancingPolicy>() {}
+
   virtual ~LoadBalancingPolicy() {}
 
   virtual void init(const HostMap& hosts) = 0;
 
   virtual CassHostDistance distance(const SharedRefPtr<Host>& host) = 0;
 
-  // TODO(mpenick): Figure out what parameters to pass, keyspace, consistency,
-  // etc.
   virtual QueryPlan* new_query_plan() = 0;
+
+  virtual LoadBalancingPolicy* new_instance() = 0;
 };
 
 } // namespace cass

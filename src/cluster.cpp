@@ -17,6 +17,8 @@
 #include "cluster.hpp"
 
 #include "common.hpp"
+#include "dc_aware_policy.hpp"
+#include "round_robin_policy.hpp"
 #include "types.hpp"
 
 
@@ -157,6 +159,17 @@ CassError cass_cluster_set_credentials(CassCluster* cluster,
                                        const char* username,
                                        const char* password) {
   cluster->config().set_credentials(username, password);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_load_balance_round_robin(CassCluster* cluster) {
+  cluster->config().set_load_balancing_policy(new cass::RoundRobinPolicy());
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
+                                                 const char* local_dc) {
+  cluster->config().set_load_balancing_policy(new cass::DCAwarePolicy(local_dc));
   return CASS_OK;
 }
 
