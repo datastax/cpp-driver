@@ -320,37 +320,32 @@ void ControlConnection::on_refresh_node_info_all(RefreshNodeData data, Response*
 }
 
 bool ControlConnection::determine_address_for_peer_host(const Value* peer_value, const Value* rpc_value, Address* output) {
-  Address::from_inet(peer_value->buffer().data(), peer_value->buffer().size(),
-                     connection_->address().port(), output);
   const Address& connected_address = connection_->address();
-  if (connected_address.compare(*output) == 0) {
-    logger_->debug("system.peers on %s contains a line with peer address for itself. "
-                   "This is not normal but is a known problem for some versions of DSE. "
-                   "Ignoring this entry.", connected_address.to_string(false).c_str());
-    return false;
-  }
+  Address peer_address;
+  Address::from_inet(peer_value->buffer().data(), peer_value->buffer().size(),
+                     connection_->address().port(), &peer_address);
   if (rpc_value->buffer().size() > 0) {
-    Address rpc_address;
     Address::from_inet(rpc_value->buffer().data(), rpc_value->buffer().size(),
-                       connection_->address().port(), &rpc_address);
-    if (connected_address.compare(rpc_address) == 0) {
+                       connection_->address().port(), output);
+    if (connected_address.compare(*output) == 0 ||
+        connected_address.compare(peer_address) == 0) {
       logger_->debug("system.peers on %s contains a line with rpc_address for itself. "
                      "This is not normal, but is a known problem for some versions of DSE. "
                      "Ignoring this entry.", connected_address.to_string(false).c_str());
       return false;
     }
-    if (rpc_address.compare(bind_any_ipv4_) != 0 &&
-        rpc_address.compare(bind_any_ipv6_) != 0) {
-      *output = rpc_address;
-    } else {
+    if (bind_any_ipv4_.compare(*output) == 0 ||
+        bind_any_ipv6_.compare(*output) == 0) {
       logger_->warn("Found host with 'bind any' for rpc_address; using listen_address (%s) to contact instead. "
-                    "If this is incorrect you should use a specific interface for rpc_address on the server.",
-                    output->to_string(false).c_str());
+                    "If this is incorrect you should configure a specific interface for rpc_address on the server.",
+                    peer_address.to_string(false).c_str());
+      *output = peer_address;
     }
   } else {
     logger_->warn("No rpc_address for host %s in system.peers on %s. "
-                   "Using listen_address instead.", output->to_string(false).c_str(),
+                  "Ignoring this entry.", peer_address.to_string(false).c_str(),
                    connected_address.to_string(false).c_str());
+    return false;
   }
   return true;
 }
