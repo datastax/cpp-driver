@@ -316,7 +316,7 @@ void Session::on_control_connection_ready() {
   }
 }
 
-void Session::on_control_conneciton_error(CassError code, const std::string& message) {
+void Session::on_control_connection_error(CassError code, const std::string& message) {
   connect_future_->set_error(code, message);
   connect_future_.reset();
 }
