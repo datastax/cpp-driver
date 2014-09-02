@@ -66,6 +66,9 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
     if (!v->is_null()) {
       current_version = boost::string_ref(v->buffer().data(), v->buffer().size());
     }
+  } else {
+    logger_->debug("No row found in %s's local system table",
+                   connection()->address_string().c_str());
   }
 
   ResultResponse* peers_result =

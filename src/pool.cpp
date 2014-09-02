@@ -162,7 +162,7 @@ void Pool::spawn_connection() {
                        io_worker_->keyspace(),
                        io_worker_->protocol_version());
 
-    logger_->info("Pool: Spawning new conneciton to %s", address_.to_string(true).c_str());
+    logger_->info("Pool: Spawning new conneciton to host %s", address_.to_string(true).c_str());
     connection->set_ready_callback(
           boost::bind(&Pool::on_connection_ready, this, _1));
     connection->set_close_callback(
@@ -238,7 +238,7 @@ void Pool::on_pending_request_timeout(void* data) {
 
 bool Pool::wait_for_connection(RequestHandler* request_handler) {
   if (pending_requests_.size() + 1 > config_.max_pending_requests()) {
-    logger_->warn("Exceeded the max pending requests setting of %u on '%s'",
+    logger_->warn("Exceeded the max pending requests setting of %u on host %s",
                   config_.max_pending_requests(),
                   address_.to_string().c_str());
     return false;

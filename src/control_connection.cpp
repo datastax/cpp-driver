@@ -163,10 +163,11 @@ void ControlConnection::reconnect(bool retry_current_host) {
 }
 
 void ControlConnection::on_connection_ready(Connection* connection) {
-  logger_->debug("ControlConnection: connection ready on %s", connection->address_string().c_str());
+  logger_->debug("ControlConnection: Connection ready on host %s",
+                 connection->address().to_string().c_str());
 
-  // The control connection has to refresh the node list anytime there's a reconnect because
-  // several events could have been missed while not connected.
+  // The control connection has to refresh the node list anytime
+  // there's a reconnect because several events could have been missed while not connected.
   refresh_node_list();
 }
 
@@ -179,8 +180,8 @@ void ControlConnection::on_connection_closed(Connection* connection) {
   if (state_ == CONTROL_STATE_NEW) {
     if (connection->is_invalid_protocol()) {
       if (protocol_version_ <= 1) {
-        logger_->error("ControlConnection: Host '%s' does not support any valid protocol version",
-                       connection->address().to_string().c_str());
+        logger_->error("ControlConnection: Host %s does not support any valid protocol version",
+                       connection->address_string().c_str());
         session_->on_control_conneciton_error(CASS_ERROR_UNABLE_TO_DETERMINE_PROTOCOL,
                                               "Not even protocol version 1 is supported");
         return;
@@ -205,27 +206,36 @@ void ControlConnection::refresh_node_list() {
 }
 
 void ControlConnection::on_node_refresh(const MultipleRequestHandler::ResponseVec& responses) {
+  if (connection_ == NULL) {
+    return;
+  }
+
   bool is_initial_connection = (state_ == CONTROL_STATE_NEW);
 
   {
     SharedRefPtr<Host> host = session_->get_host(connection_->address(), true);
-
     if (host) {
-      ResultResponse* result =
+      ResultResponse* local_result =
           static_cast<ResultResponse*>(responses[0]);
 
-      result->decode_first_row();
-      update_node_info(host, &result->first_row());
+      if (local_result->row_count() > 0) {
+        local_result->decode_first_row();
+        update_node_info(host, &local_result->first_row());
+      } else {
+        logger_->debug("No row found in %s's local system table",
+                       connection_->address_string().c_str());
+      }
     } else {
-      logger_->debug("Host '%s' in local system table not found", connection_->address().to_string().c_str());
+      logger_->debug("Host %s from local system table not found",
+                     connection_->address_string().c_str());
     }
   }
 
   {
-    ResultResponse* result =
+    ResultResponse* peers_result =
         static_cast<ResultResponse*>(responses[1]);
-    result->decode_first_row();
-    ResultIterator rows(result);
+    peers_result->decode_first_row();
+    ResultIterator rows(peers_result);
     while (rows.next()) {
       Address address;
       const Row* row = rows.row();
@@ -293,12 +303,64 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
 }
 
 void ControlConnection::on_refresh_node_info(RefreshNodeData data, Response* response) {
+  if (connection_ == NULL) {
+    return;
+  }
+
   ResultResponse* result =
       static_cast<ResultResponse*>(response);
+
+  if (result->row_count() == 0) {
+    std::string host_address_str = data.host->address().to_string();
+    logger_->error("ControlConnection: No row found for host %s in %s's local/peers system table. "
+                   "%s will be ignored.",
+                   host_address_str.c_str(),
+                   connection_->address_string().c_str(),
+                   host_address_str.c_str());
+    return;
+  }
   result->decode_first_row();
   update_node_info(data.host, &result->first_row());
   data.callback(data.host);
 }
+
+void ControlConnection::on_refresh_node_info_all(RefreshNodeData data, Response* response) {
+  if (connection_ == NULL) {
+    return;
+  }
+
+  ResultResponse* result =
+      static_cast<ResultResponse*>(response);
+
+  if (result->row_count() == 0) {
+    std::string host_address_str = data.host->address().to_string();
+    logger_->error("ControlConnection: No row found for host %s in %s's peers system table. "
+                   "%s will be ignored.",
+                   host_address_str.c_str(),
+                   connection_->address_string().c_str(),
+                   host_address_str.c_str());
+    return;
+  }
+
+  result->decode_first_row();
+  ResultIterator rows(result);
+  while (rows.next()) {
+    const Row* row = rows.row();
+    Address address;
+    bool is_valid_address
+        = determine_address_for_peer_host(logger_,
+                                          connection_->address(),
+                                          row->get_by_name("peer"),
+                                          row->get_by_name("rpc_address"),
+                                          &address);
+    if (is_valid_address && data.host->address().compare(address) == 0) {
+      update_node_info(data.host, row);
+      data.callback(data.host);
+      break;
+    }
+  }
+}
+
 
 void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row) {
   const Value* v;
@@ -333,28 +395,6 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
     host->set_rack_and_dc(rack, dc);
     if (!host->was_just_added()) {
       session_->load_balancing_policy_->on_add(host);
-    }
-  }
-}
-
-void ControlConnection::on_refresh_node_info_all(RefreshNodeData data, Response* response) {
-  ResultResponse* result =
-      static_cast<ResultResponse*>(response);
-  result->decode_first_row();
-  ResultIterator rows(result);
-  while (rows.next()) {
-    const Row* row = rows.row();
-    Address address;
-    bool is_valid_address
-        = determine_address_for_peer_host(logger_,
-                                          connection_->address(),
-                                          row->get_by_name("peer"),
-                                          row->get_by_name("rpc_address"),
-                                          &address);
-    if (is_valid_address && data.host->address().compare(address) == 0) {
-      update_node_info(data.host, row);
-      data.callback(data.host);
-      break;
     }
   }
 }
@@ -406,7 +446,7 @@ void ControlConnection::on_connection_event(EventResponse* response) {
     case CASS_EVENT_TOPOLOGY_CHANGE:
       switch (response->topology_change()) {
         case EventResponse::NEW_NODE: {
-          session_->logger_->info("ControlConnection: New node '%s' added", address_str.c_str());
+          session_->logger_->info("ControlConnection: New node %s added", address_str.c_str());
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
           if (!host) {
             host = session_->add_host(response->affected_node());
@@ -416,18 +456,18 @@ void ControlConnection::on_connection_event(EventResponse* response) {
         }
 
         case EventResponse::REMOVED_NODE: {
-          session_->logger_->info("ControlConnection: Node '%s' removed", address_str.c_str());
+          session_->logger_->info("ControlConnection: Node %s removed", address_str.c_str());
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
           if (host) {
             session_->on_remove(host);
           } else {
-            logger_->debug("Session: Tried to remove host '%s' that doesn't exist", address_str.c_str());
+            logger_->debug("Session: Tried to remove host %s that doesn't exist", address_str.c_str());
           }
           break;
         }
 
         case EventResponse::MOVED_NODE:
-          session_->logger_->info("ControlConnection: Node'%s' moved", address_str.c_str());
+          session_->logger_->info("ControlConnection: Node %s moved", address_str.c_str());
           break;
       }
       break;
@@ -435,13 +475,13 @@ void ControlConnection::on_connection_event(EventResponse* response) {
     case CASS_EVENT_STATUS_CHANGE:
       switch (response->status_change()) {
         case EventResponse::UP: {
-          session_->logger_->info("ControlConnection: Node'%s' is up", address_str.c_str());
+          session_->logger_->info("ControlConnection: Node %s is up", address_str.c_str());
           on_up(response->affected_node());
           break;
         }
 
         case EventResponse::DOWN: {
-          session_->logger_->info("ControlConnection: Node'%s' is down", address_str.c_str());
+          session_->logger_->info("ControlConnection: Node %s is down", address_str.c_str());
           on_down(response->affected_node(), false);
           break;
         }
@@ -482,7 +522,7 @@ void ControlConnection::on_down(const Address& address, bool is_critical_failure
   if (host) {
     session_->on_down(host, is_critical_failure);
   } else {
-    logger_->debug("ControlConnection: Tried to down host '%s' that doesn't exist", address.to_string().c_str());
+    logger_->debug("ControlConnection: Tried to down host %s that doesn't exist", address.to_string().c_str());
   }
 }
 

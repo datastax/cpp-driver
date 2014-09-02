@@ -171,7 +171,7 @@ void IOWorker::notify_pool_closed(Pool* pool) {
   Address address = pool->address(); // Not a reference on purpose
   bool is_critical_failure = pool->is_critical_failure();
 
-  logger_->info("IOWorker: Pool for '%s' closed",
+  logger_->info("IOWorker: Pool for host %s closed",
                 address.to_string().c_str());
 
   // All non-shared pointers to this pool are invalid after this call
@@ -220,7 +220,7 @@ void IOWorker::on_pending_pool_reconnect(Timer* timer) {
 
   if (!is_closing_) {
     logger_->info(
-            "IOWorker: Attempting to reconnect to '%s'",
+            "IOWorker: Attempting to reconnect to host %s",
             address.to_string(true).c_str());
     add_pool(address, false);
   }

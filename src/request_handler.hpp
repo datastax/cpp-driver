@@ -35,7 +35,6 @@ class Connection;
 class IOWorker;
 class Timer;
 class Pool;
-class SchemaChangeHandler;
 
 class ResponseFuture : public ResultFuture<Response> {
 public:

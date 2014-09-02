@@ -224,7 +224,7 @@ void Connection::consume(char* input, size_t size) {
   while (remaining != 0) {
     int consumed = response_->decode(protocol_version_, buffer, remaining);
     if (consumed <= 0) {
-      logger_->error("Connection: Error consuming message on '%s'", addr_string_.c_str());
+      logger_->error("Connection: Error consuming message on host %s", addr_string_.c_str());
       remaining = 0;
       defunct();
       continue;
@@ -235,7 +235,7 @@ void Connection::consume(char* input, size_t size) {
       response_.reset(new ResponseMessage());
 
       logger_->debug(
-          "Connection: Consumed message type %s with stream %d, input %lu, remaining %d on '%s'",
+          "Connection: Consumed message type %s with stream %d, input %lu, remaining %d on host %s",
           opcode_to_string(response->opcode()).c_str(), static_cast<int>(response->stream()),
           size, remaining, addr_string_.c_str());
 
@@ -282,7 +282,7 @@ void Connection::consume(char* input, size_t size) {
               break;
           }
         } else {
-          logger_->error("Connection: Invalid stream returnd from server on '%s'",
+          logger_->error("Connection: Invalid stream returned from host %s",
                          addr_string_.c_str());
           defunct();
         }
@@ -314,16 +314,16 @@ void Connection::on_connect(Connecter* connecter) {
   connection->connect_timer_ = NULL;
 
   if (connecter->status() == Connecter::SUCCESS) {
-    connection->logger_->debug("Connection: Connected to '%s'",
+    connection->logger_->debug("Connection: Connected to host %s",
                                connection->addr_string_.c_str());
     uv_read_start(copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_),
                   alloc_buffer, on_read);
     connection->state_ = CONNECTION_STATE_CONNECTED;
     connection->on_connected();
   } else {
-    connection->logger_->info("Connection: Connect error '%s' on '%s'",
-                              connection->addr_string_.c_str(),
-                              uv_err_name(uv_last_error(connection->loop_)));
+    connection->logger_->info("Connection: Connect error '%s' on host %s",
+                              uv_err_name(uv_last_error(connection->loop_)),
+                              connection->addr_string_.c_str() );
     connection->notify_error("Unable to connect");
   }
 }
@@ -337,7 +337,7 @@ void Connection::on_connect_timeout(Timer* timer) {
 void Connection::on_close(uv_handle_t* handle) {
   Connection* connection = static_cast<Connection*>(handle->data);
 
-  connection->logger_->debug("Connection to '%s' closed",
+  connection->logger_->debug("Connection to host %s closed",
                              connection->addr_string_.c_str());
 
   while (!connection->pending_requests_.is_empty()) {
@@ -372,9 +372,9 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
 
   if (nread == -1) {
     if (uv_last_error(connection->loop_).code != UV_EOF) {
-      connection->logger_->info("Connection: Read error '%s' on '%s'",
-                                connection->addr_string_.c_str(),
-                                uv_err_name(uv_last_error(connection->loop_)));
+      connection->logger_->info("Connection: Read error '%s' on host %s",
+                                uv_err_name(uv_last_error(connection->loop_)),
+                                connection->addr_string_.c_str());
     }
     connection->defunct();
     free_buffer(buf);
@@ -393,9 +393,9 @@ void Connection::on_write(RequestWriter* writer) {
         handler->set_state(Handler::REQUEST_STATE_READING);
       } else {
         if (!is_closing()) {
-          logger_->info("Connection: Write error '%s' on '%s'",
-                        addr_string_.c_str(),
-                        uv_err_name(uv_last_error(loop_)));
+          logger_->info("Connection: Write error '%s' on host %s",
+                        uv_err_name(uv_last_error(loop_)),
+                        addr_string_.c_str());
           defunct();
         }
 
@@ -430,7 +430,7 @@ void Connection::on_write(RequestWriter* writer) {
 
 void Connection::on_timeout(RequestTimer* timer) {
   Handler* handler = static_cast<Handler*>(timer->data());
-  logger_->info("Connection: Request timed out to '%s'", addr_string_.c_str());
+  logger_->info("Connection: Request timed out to host %s", addr_string_.c_str());
   // TODO (mpenick): We need to handle the case where we have too many
   // timeout requests and we run out of stream ids. The java-driver
   // uses a threshold to defunct the connneciton.
@@ -509,8 +509,8 @@ void Connection::notify_ready() {
 }
 
 void Connection::notify_error(const std::string& error) {
-  logger_->error("Connection: Host '%s' had the following error on startup for '%s'",
-                 addr_string_.c_str(), error.c_str() );
+  logger_->error("Connection: Host %s had the following error on startup '%s'",
+                 addr_string_.c_str(), error.c_str());
   defunct();
 }
 

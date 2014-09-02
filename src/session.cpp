@@ -123,11 +123,11 @@ void Session::purge_hosts(bool is_initial_connection) {
 
       std::string address_str = to_remove_it->first.to_string();
       if (is_initial_connection) {
-        logger_->warn("Session: Unable to reach contact point '%s'",
+        logger_->warn("Session: Unable to reach contact point %s",
                       address_str.c_str());
         hosts_.erase(to_remove_it);
       } else {
-        logger_->info("Session: Host '%s' removed",
+        logger_->info("Session: Host %s removed",
                       address_str.c_str());
         on_remove(to_remove_it->second);
       }
@@ -292,7 +292,7 @@ void Session::on_resolve(Resolver* resolver) {
     session->hosts_[address]
         = SharedRefPtr<Host>(new Host(address, !session->current_host_mark_));
   } else {
-    session->logger_->error("Unable to resolve %s:%d\n",
+    session->logger_->error("Unable to resolve host %s:%d\n",
                             resolver->host().c_str(), resolver->port());
   }
   if (--session->pending_resolve_count_ == 0) {
