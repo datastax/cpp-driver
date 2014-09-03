@@ -25,19 +25,23 @@
 
 uv_mutex_t mutex;
 uv_cond_t cond;
-int exit_flag = 0;
+CassFuture* close_future = NULL;
 
 void wait_exit() {
   uv_mutex_lock(&mutex);
-  while (!exit_flag) uv_cond_wait(&cond, &mutex);
+  while (close_future == NULL) {
+    uv_cond_wait(&cond, &mutex);
+  }
   uv_mutex_unlock(&mutex);
+  cass_future_wait(close_future);
+  cass_future_free(close_future);
 }
 
-void signal_exit() {
-    uv_mutex_lock(&mutex);
-    exit_flag = 1;
-    uv_cond_signal(&cond);
-    uv_mutex_unlock(&mutex);
+void signal_exit(CassSession* session) {
+  uv_mutex_lock(&mutex);
+  close_future = cass_session_close(session);
+  uv_cond_signal(&cond);
+  uv_mutex_unlock(&mutex);
 }
 
 void on_create_keyspace(CassFuture* future, void* data);
@@ -63,12 +67,6 @@ CassCluster* create_cluster() {
 void connect_session(CassCluster* cluster, CassFutureCallback callback) {
   CassFuture* future = cass_cluster_connect_keyspace(cluster, "examples");
   cass_future_set_callback(future, callback, NULL);
-  cass_future_free(future);
-}
-
-void close_session(CassSession* session) {
-  CassFuture* future = cass_session_close(session);
-  cass_future_set_callback(future, on_session_close, NULL);
   cass_future_free(future);
 }
 
@@ -142,7 +140,7 @@ void on_insert(CassFuture* future, void* data) {
   CassError code = cass_future_error_code(future);
   if (code != CASS_OK) {
     print_error(future);
-    close_session((CassSession*)data);
+    signal_exit((CassSession*)data);
   } else {
     CassString select_query
         = cass_string_init("SELECT * FROM callbacks");
@@ -165,7 +163,6 @@ void on_select(CassFuture* future, void* data) {
   } else {
     const CassResult* result = cass_future_get_result(future);
     CassIterator* iterator = cass_iterator_from_result(result);
-
     while (cass_iterator_next(iterator)) {
       CassUuid key;
       char key_buf[CASS_UUID_STRING_LENGTH];
@@ -173,18 +170,17 @@ void on_select(CassFuture* future, void* data) {
       const CassRow* row = cass_iterator_get_row(iterator);
 
       cass_value_get_uuid(cass_row_get_column(row, 0), key);
+
       cass_uuid_string(key, key_buf);
       cass_value_get_int64(cass_row_get_column(row, 1), (cass_int64_t*)&value);
 
       printf("%s, %llu\n", key_buf, (unsigned long long)value);
     }
+    cass_iterator_free(iterator);
+    cass_result_free(result);
   }
 
-  close_session((CassSession*)data);
-}
-
-void on_session_close(CassFuture *future, void *data) {
-  signal_exit();
+  signal_exit((CassSession*)data);
 }
 
 int main() {
