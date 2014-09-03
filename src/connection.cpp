@@ -509,7 +509,7 @@ void Connection::notify_ready() {
 }
 
 void Connection::notify_error(const std::string& error) {
-  logger_->error("Connection: Host %s had the following error on startup '%s'",
+  logger_->error("Connection: Host %s had the following error on startup: '%s'",
                  addr_string_.c_str(), error.c_str());
   defunct();
 }

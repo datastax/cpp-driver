@@ -59,23 +59,19 @@ struct AthenticationTests {
     BOOST_CHECK(cass_result_row_count(result.get()) > 0);
   }
 
-  void invalid_credentials(int protocol_version, const char* username, const char* password, const char* expected_error) {
+  void invalid_credentials(int protocol_version, const char* username, 
+                           const char* password, const char* expected_error,
+                           CassError expected_code) {
     boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData(expected_error));
 
+    cass_cluster_set_log_callback(cluster.get(), test_utils::count_message_log_callback, log_data.get());
+    cass_cluster_set_protocol_version(cluster.get(), protocol_version);
+    cass_cluster_set_credentials(cluster.get(), username, password);
     {
-      cass_cluster_set_log_callback(cluster.get(), test_utils::count_message_log_callback, log_data.get());
-      cass_cluster_set_protocol_version(cluster.get(), protocol_version);
-      cass_cluster_set_credentials(cluster.get(), username, password);
-
       test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-
-      test_utils::wait_and_check_error(session_future.get());
-      test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
-
-      CassError code = test_utils::execute_query_with_error(session.get(), "SELECT * FROM system.schema_keyspaces");
-      BOOST_CHECK_EQUAL(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, code);
+      CassError code = test_utils::wait_and_return_error(session_future.get());
+      BOOST_CHECK_EQUAL(expected_code, code);
     }
-
     BOOST_CHECK(log_data->message_count > 0);
   }
 
@@ -94,18 +90,21 @@ BOOST_AUTO_TEST_CASE(test_auth)
 
 BOOST_AUTO_TEST_CASE(test_empty_credentials)
 {
+  // This is a case that could be guarded in the API entry point, or errored in connection. However,
+  // auth is subject to major changes and this is just a simple form.
+  // This test serves to characterize what is there presently.
   const char* expected_error
       = "java.lang.AssertionError: org.apache.cassandra.exceptions.InvalidRequestException: Key may not be empty";
-  invalid_credentials(1, "", "", expected_error);
-  invalid_credentials(2, "", "", expected_error);
+  invalid_credentials(1, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+  invalid_credentials(2, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
 
 BOOST_AUTO_TEST_CASE(test_invalid_credentials)
 {
   const char* expected_error
-      = "Error response during startup: 'Username and/or password are incorrect";
-  invalid_credentials(1, "invalid", "invalid", expected_error);
-  invalid_credentials(2, "invalid", "invalid", expected_error);
+      = "'Username and/or password are incorrect'";
+  invalid_credentials(1, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
+  invalid_credentials(2, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

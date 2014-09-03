@@ -41,38 +41,9 @@ struct SessionTests {
 
 BOOST_FIXTURE_TEST_SUITE(sessions, SessionTests)
 
-BOOST_AUTO_TEST_CASE(test_connect_invalid_ip)
-{
-  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("'Connection timeout' error on startup for '1.1.1.1:9042'"));
-
-  CassError code;
-
-  {
-    test_utils::CassClusterPtr cluster(cass_cluster_new());
-    cass_cluster_set_contact_points(cluster.get(), "1.1.1.1");
-
-    cass_cluster_set_log_callback(cluster.get(), test_utils::count_message_log_callback, log_data.get());
-
-    test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-    test_utils::wait_and_check_error(session_future.get());
-
-    test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
-
-    CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
-    test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
-
-    test_utils::CassFuturePtr future =  test_utils::CassFuturePtr(cass_session_execute(session.get(), statement.get()));
-
-    code = cass_future_error_code(future.get());
-  }
-
-  BOOST_CHECK(log_data->message_count > 0);
-  BOOST_CHECK_EQUAL(code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
-}
-
 BOOST_AUTO_TEST_CASE(test_connect_invalid_name)
 {
-  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("Unable to resolve node.domain-does-not-exist.dne:9042"));
+  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("Unable to resolve host node.domain-does-not-exist.dne:9042"));
 
   CassError code;
 
@@ -95,34 +66,9 @@ BOOST_AUTO_TEST_CASE(test_connect_invalid_name)
   BOOST_CHECK_EQUAL(code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
 
-BOOST_AUTO_TEST_CASE(test_connect_invalid_port)
-{
-  test_utils::CassClusterPtr cluster(cass_cluster_new());
-
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 1, 0);
-
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
-
-  cass_cluster_set_port(cluster.get(), 9999); // Invalid port
-
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-  test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
-
-  CassString query = cass_string_init("SELECT * FROM table");
-  test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
-
-  test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
-
-  CassError code = cass_future_error_code(future.get());
-
-  BOOST_CHECK_EQUAL(code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
-}
-
 BOOST_AUTO_TEST_CASE(test_connect_invalid_keyspace)
 {
-  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("'Error response during startup: 'Keyspace 'invalid' does not exist' (0x02002200)' error on startup"));
+  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("Error response: 'Keyspace 'invalid' does not exist"));
 
   CassError code;
 
