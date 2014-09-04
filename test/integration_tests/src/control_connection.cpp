@@ -27,6 +27,7 @@
 #include "test_utils.hpp"
 
 #include <boost/test/unit_test.hpp>
+#include <sstream>
 
 struct ControlConnectionTests {
   ControlConnectionTests() {}
@@ -79,9 +80,7 @@ BOOST_AUTO_TEST_CASE(test_node_discovery)
   // Only add a single IP
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-  test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
   cass::AddressSet addresses;
   for (int i = 0; i < 3; ++i) {
@@ -116,9 +115,7 @@ BOOST_AUTO_TEST_CASE(test_node_discovery_invalid_ips)
     // Only add a single valid IP
     test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
-    test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-    test_utils::wait_and_check_error(session_future.get());
-    test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
     cass::AddressSet addresses;
     for (int i = 0; i < 4; ++i) {
@@ -133,5 +130,79 @@ BOOST_AUTO_TEST_CASE(test_node_discovery_invalid_ips)
 
   BOOST_CHECK_EQUAL(log_data->message_count, 3);
 }
+
+BOOST_AUTO_TEST_CASE(test_node_discovery_no_local_rows)
+{
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+
+  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 3, 0);
+
+  // Ensure RR policy
+  cass_cluster_set_load_balance_round_robin(cluster.get());;
+
+  // Only add a single valid IP
+  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+
+  {
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+    test_utils::execute_query(session.get(), "DELETE FROM system.local WHERE key = 'local'");
+  }
+
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+
+  cass::AddressSet addresses;
+  for (int i = 0; i < 3; ++i) {
+    CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
+    test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
+    test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
+    addresses.insert(static_cast<cass::ResponseFuture*>(future->from())->get_host_address());
+  }
+
+  BOOST_CHECK(addresses.size() == 3);
+}
+
+BOOST_AUTO_TEST_CASE(test_node_discovery_no_rpc_addresss)
+{
+  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("No rpc_address for host 127.0.0.2 in system.peers on 127.0.0.1. Ignoring this entry."));
+
+  {
+    test_utils::CassClusterPtr cluster(cass_cluster_new());
+
+    const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 3, 0);
+
+    cass_cluster_set_log_callback(cluster.get(), test_utils::count_message_log_callback, log_data.get());
+
+    // Ensure RR policy
+    cass_cluster_set_load_balance_round_robin(cluster.get());;
+
+    // Only add a single valid IP
+    test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+
+    {
+      test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+      std::ostringstream ss;
+      ss << "UPDATE system.peers SET rpc_address = null WHERE peer = '" << conf.ip_prefix() << "2'";
+      test_utils::execute_query(session.get(), ss.str());
+    }
+
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+
+    cass::AddressSet addresses;
+    for (int i = 0; i < 3; ++i) {
+      CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
+      test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
+      test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
+      addresses.insert(static_cast<cass::ResponseFuture*>(future->from())->get_host_address());
+    }
+
+    // This should only contain 2 address because one pee is ignored
+    BOOST_CHECK(addresses.size() == 2);
+  }
+
+  BOOST_CHECK(log_data->message_count > 0);
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()

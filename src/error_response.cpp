@@ -16,7 +16,11 @@
 
 #include "error_response.hpp"
 
+#include "logger.hpp"
 #include "serialization.hpp"
+
+#include <iomanip>
+#include <sstream>
 
 namespace cass {
 
@@ -28,6 +32,33 @@ bool ErrorResponse::decode(int version, char* buffer, size_t size) {
       decode_string(pos, &prepared_id_, prepared_id_size_);
       break;
   }
+  return true;
+}
+
+std::string error_response_message(const std::string& prefix, ErrorResponse* error) {
+  std::ostringstream ss;
+  ss << prefix << ": '" << error->message()
+     << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+     << CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error->code()) << ")";
+  return ss.str();
+}
+
+bool check_error_or_invalid_response(const std::string& prefix, uint8_t expected_opcode,
+                                     Response* response, Logger* logger) {
+  if (response->opcode() == expected_opcode) {
+    return false;
+  }
+
+  if (response->opcode() == CQL_OPCODE_ERROR) {
+    std::ostringstream ss;
+    ss << prefix << ": Error response";
+    logger->error(error_response_message(ss.str(), static_cast<ErrorResponse*>(response)).c_str());
+  } else {
+    std::ostringstream ss;
+    ss << prefix << ": Unexpected opcode " << opcode_to_string(response->opcode());
+    logger->error(ss.str().c_str());
+  }
+
   return true;
 }
 

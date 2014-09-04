@@ -75,7 +75,9 @@ void count_message_log_callback(cass_uint64_t time,
                                 void* data) {
   LogData* log_data = reinterpret_cast<LogData*>(data);
   std::string str(message.data, message.length);
-  fprintf(stderr, "Log message: %s\n", str.c_str());
+  if (log_data->output_messages) {
+    fprintf(stderr, "Log: %s\n", str.c_str());
+  }
   if (str.find(log_data->message) != std::string::npos) {
     log_data->message_count++;
   }
@@ -163,6 +165,12 @@ void initialize_contact_points(CassCluster* cluster, std::string prefix, int num
     std::string contact_point(prefix + boost::lexical_cast<std::string>(i + 1));
     cass_cluster_set_contact_points(cluster, contact_point.c_str());
   }
+}
+
+CassSessionPtr create_session(CassClusterPtr cluster) {
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
+  test_utils::wait_and_check_error(session_future.get());
+  return test_utils::CassSessionPtr(cass_future_get_session(session_future.get()));
 }
 
 void execute_query(CassSession* session,

@@ -50,12 +50,14 @@ extern const cass_duration_t ONE_MILLISECOND_IN_MICROS;
 extern const cass_duration_t ONE_SECOND_IN_MICROS;
 
 struct LogData {
-  LogData(const std::string& message)
+  LogData(const std::string& message, bool output_messages = false)
     : message(message)
-    , message_count(0) {}
+    , message_count(0)
+    , output_messages(output_messages) {}
 
   const std::string message;
   boost::atomic<int> message_count;
+  bool output_messages;
 };
 
 void count_message_log_callback(cass_uint64_t time,
@@ -487,6 +489,8 @@ struct SingleSessionTest : MultipleNodesTest {
 void initialize_contact_points(CassCluster* cluster, std::string prefix, int num_nodes_dc1, int num_nodes_dc2);
 
 const char* get_value_type(CassValueType type);
+
+CassSessionPtr create_session(CassClusterPtr cluster);
 
 CassError execute_query_with_error(CassSession* session,
                                    const std::string& query,

@@ -21,10 +21,14 @@
 #include "constants.hpp"
 #include "scoped_ptr.hpp"
 
+#include "third_party/boost/boost/cstdint.hpp"
+
 #include <string.h>
 #include <string>
 
 namespace cass {
+
+class Logger;
 
 class ErrorResponse : public Response {
 public:
@@ -63,6 +67,10 @@ private:
   char* prepared_id_;
   size_t prepared_id_size_;
 };
+
+std::string error_response_message(const std::string& prefix, ErrorResponse* error);
+bool check_error_or_invalid_response(const std::string& prefix, uint8_t expected_opcode,
+                                     Response* response, Logger* logger);
 
 } // namespace cass
 

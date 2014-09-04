@@ -222,11 +222,11 @@ void ControlConnection::on_node_refresh(const MultipleRequestHandler::ResponseVe
         local_result->decode_first_row();
         update_node_info(host, &local_result->first_row());
       } else {
-        logger_->debug("No row found in %s's local system table",
+        logger_->debug("ControlConnection: No row found in %s's local system table",
                        connection_->address_string().c_str());
       }
     } else {
-      logger_->debug("Host %s from local system table not found",
+      logger_->debug("ControlConnection: Host %s from local system table not found",
                      connection_->address_string().c_str());
     }
   }
@@ -400,29 +400,16 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
 }
 
 bool ControlConnection::handle_query_invalid_response(Response* response) {
- if (response->opcode() == CQL_OPCODE_RESULT) {
-   return false;
- }
-
-  std::ostringstream ss;
-  if (response->opcode() == CQL_OPCODE_ERROR) {
-    ErrorResponse* error
-        = static_cast<ErrorResponse*>(response);
-    ss << "Error while querying system tables: '" << error->message()
-       << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
-       << CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error->code()) << ")";
-    logger_->error(ss.str().c_str());
-  } else {
-    ss << "Unexpected opcode while querying system tables: " << opcode_to_string(response->opcode());
-    logger_->error(ss.str().c_str());
+  if (check_error_or_invalid_response("ControlConnection", CQL_OPCODE_RESULT,
+                                      response, logger_)) {
+    if (connection_ != NULL) {
+      connection_->defunct();
+    }
+    return true;
   }
-
-  if (connection_ != NULL) {
-    connection_->defunct();
-  }
-
-  return true;
+  return false;
 }
+
 
 void ControlConnection::handle_query_failure(CassError code, const std::string& message) {
   // TODO(mpenick): This is a placeholder and might not be the right action for
@@ -461,7 +448,7 @@ void ControlConnection::on_connection_event(EventResponse* response) {
           if (host) {
             session_->on_remove(host);
           } else {
-            logger_->debug("Session: Tried to remove host %s that doesn't exist", address_str.c_str());
+            logger_->debug("ControlConnection: Tried to remove host %s that doesn't exist", address_str.c_str());
           }
           break;
         }

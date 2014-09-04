@@ -19,6 +19,7 @@
 #include "address.hpp"
 #include "connection.hpp"
 #include "control_connection.hpp"
+#include "error_response.hpp"
 #include "get_time.hpp"
 #include "logger.hpp"
 #include "result_iterator.hpp"
@@ -31,7 +32,6 @@
 
 #define MAX_SCHEMA_AGREEMENT_WAIT_MS 10000
 #define RETRY_SCHEMA_AGREEMENT_WAIT_MS 200
-
 
 namespace cass {
 
@@ -67,7 +67,7 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
       current_version = boost::string_ref(v->buffer().data(), v->buffer().size());
     }
   } else {
-    logger_->debug("No row found in %s's local system table",
+    logger_->debug("SchemaChangeHandler: No row found in %s's local system table",
                    connection()->address_string().c_str());
   }
 
@@ -104,19 +104,29 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
 void SchemaChangeHandler::on_set(const ResponseVec& responses) {
   elaspsed_ += get_time_since_epoch() - start_;
 
+  bool has_error = false;
+  for (MultipleRequestHandler::ResponseVec::const_iterator it = responses.begin(),
+       end = responses.end(); it != end; ++it) {
+    if (check_error_or_invalid_response("SchemaChangeHandler", CQL_OPCODE_RESULT,
+                                        *it, logger_)) {
+      has_error = true;
+    }
+  }
+  if (has_error) return;
+
   if (has_schema_agreement(responses)) {
-    logger_->debug("Found schema agreement in %llu ms", elaspsed_);
+    logger_->debug("SchemaChangeHandler: Found schema agreement in %llu ms", elaspsed_);
     request_handler_->set_response(request_response_);
     return;
   } else if (elaspsed_ >= MAX_SCHEMA_AGREEMENT_WAIT_MS) {
-    logger_->warn("No schema aggreement on live nodes after %llu ms. "
+    logger_->warn("SchemaChangeHandler: No schema aggreement on live nodes after %llu ms. "
                   "Schema may not be up-to-date on some nodes.",
                   elaspsed_);
     request_handler_->set_response(request_response_);
     return;
   }
 
-  logger_->debug("Schema still not up-to-date on some live nodes. "
+  logger_->debug("SchemaChangeHandler: Schema still not up-to-date on some live nodes. "
                  "Trying again in %d ms", RETRY_SCHEMA_AGREEMENT_WAIT_MS);
 
   // Try again
@@ -131,20 +141,19 @@ void SchemaChangeHandler::on_set(const ResponseVec& responses) {
 
 void SchemaChangeHandler::on_error(CassError code, const std::string& message) {
   std::ostringstream ss;
-  ss << "An error occured waiting for schema agreement: '" << message
-     << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
-     << CASS_ERROR(CASS_ERROR_SOURCE_SERVER, code) << ")";
+  ss << "SchemaChangeHandler: An error occured waiting for schema agreement: '" << message
+     << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
   logger_->error(ss.str().c_str());
   request_handler_->set_response(request_response_);
 }
 
 void SchemaChangeHandler::on_timeout() {
-  logger_->error("A timeout occured waiting for schema agreement");
+  logger_->error("SchemaChangeHandler: A timeout occured waiting for schema agreement");
   request_handler_->set_response(request_response_);
 }
 
 void SchemaChangeHandler::on_closing() {
-  logger_->warn("Connection closed while waiting for schema agreement");
+  logger_->warn("SchemaChangeHandler: Connection closed while waiting for schema agreement");
   request_handler_->set_response(request_response_);
 }
 

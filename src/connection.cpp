@@ -57,11 +57,7 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
       } else if (error->code() == CQL_ERROR_BAD_CREDENTIALS) {
         connection_->auth_error_ = error->message();
       }
-      std::ostringstream ss;
-      ss << "Error response: '" << error->message()
-         << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
-         << CASS_ERROR(CASS_ERROR_SOURCE_SERVER, error->code()) << ")";
-      connection_->notify_error(ss.str());
+      connection_->notify_error(error_response_message("Error response", error));
       break;
     }
 
