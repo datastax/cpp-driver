@@ -19,6 +19,7 @@
 
 #include "load_balancing.hpp"
 #include "host.hpp"
+#include "round_robin_policy.hpp"
 #include "scoped_ptr.hpp"
 
 namespace cass {

@@ -91,6 +91,10 @@ inline bool operator==(const Address& a, const Address& b) {
   return a.compare(b) == 0;
 }
 
+inline std::ostream& operator<<(std::ostream& os, const Address& addr) {
+  return os << addr.to_string();
+}
+
 } // namespace cass
 
 #endif
