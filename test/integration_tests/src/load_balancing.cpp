@@ -32,42 +32,80 @@
 
 #include "cql_ccm_bridge.hpp"
 
-struct LoadBalancingTests : test_utils::SingleSessionTest {
-  LoadBalancingTests() : SingleSessionTest(3, 0) {}
+struct LoadBalancingTests {
 };
 
 BOOST_FIXTURE_TEST_SUITE(load_balancing, LoadBalancingTests)
 
 BOOST_AUTO_TEST_CASE(test_round_robin)
 {
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+
+  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 3, 0);
+
+  cass_cluster_set_load_balance_round_robin(cluster.get());;
+
+  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+
   PolicyTool policy_tool;
-  policy_tool.create_schema(session, 1);
+  policy_tool.create_schema(session.get(), 1);
 
-  policy_tool.init(session, 12, CASS_CONSISTENCY_ONE);
-  policy_tool.query(session, 12, CASS_CONSISTENCY_ONE);
+  policy_tool.init(session.get(), 12, CASS_CONSISTENCY_ONE);
+  policy_tool.query(session.get(), 12, CASS_CONSISTENCY_ONE);
 
-  cass::Address host1;
-  BOOST_REQUIRE(cass::Address::from_string(conf.ip_prefix() + "1", 9042, &host1));
-
-  cass::Address host2;
-  BOOST_REQUIRE(cass::Address::from_string(conf.ip_prefix() + "2", 9042, &host2));
-
-  cass::Address host3;
-  BOOST_REQUIRE(cass::Address::from_string(conf.ip_prefix() + "3", 9042, &host3));
+  std::string host1(conf.ip_prefix() + "1");
+  std::string host2(conf.ip_prefix() + "2");
+  std::string host3(conf.ip_prefix() + "3");
 
   policy_tool.assert_queried(host1, 4);
   policy_tool.assert_queried(host2, 4);
   policy_tool.assert_queried(host3, 4);
 
   policy_tool.reset_coordinators();
-  ccm->decommission(1);
+  ccm->stop(1);
 
-  policy_tool.query(session, 12, CASS_CONSISTENCY_ONE);
+  policy_tool.query(session.get(), 12, CASS_CONSISTENCY_ONE);
 
-  // TODO(mpenick): This currently wrong, because we don't have a state listener interface
-  // and control connection to remove the host from the load balancing policy
-  policy_tool.assert_queried(host2, 8);
-  policy_tool.assert_queried(host3, 4);
+  policy_tool.assert_queried(host2, 6);
+  policy_tool.assert_queried(host3, 6);
+}
+
+BOOST_AUTO_TEST_CASE(test_dc_aware)
+{
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+
+  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 2, 1);
+
+  cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1");
+
+  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+
+  PolicyTool policy_tool;
+  policy_tool.create_schema(session.get(), 2, 1);
+
+  policy_tool.init(session.get(), 12, CASS_CONSISTENCY_EACH_QUORUM);
+  policy_tool.query(session.get(), 12, CASS_CONSISTENCY_ONE);
+
+  std::string host1(conf.ip_prefix() + "1");
+  std::string host2(conf.ip_prefix() + "2");
+  std::string host3(conf.ip_prefix() + "3");
+
+  policy_tool.assert_queried(host1, 6);
+  policy_tool.assert_queried(host2, 6);
+
+  policy_tool.reset_coordinators();
+  ccm->stop(1);
+  ccm->stop(2);
+
+  policy_tool.query(session.get(), 12, CASS_CONSISTENCY_ONE);
+
+  policy_tool.assert_queried(host3, 12);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

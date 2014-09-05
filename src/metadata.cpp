@@ -16,6 +16,8 @@
 
 #include "metadata.hpp"
 
+#include "common.hpp"
+
 #include "third_party/boost/boost/functional/hash.hpp"
 #include "third_party/boost/boost/algorithm/string.hpp"
 
@@ -26,15 +28,6 @@
 #define LOAD_FACTOR 0.75
 
 namespace {
-
-size_t next_pow_2(size_t num) {
-  size_t next = 2;
-  size_t i = 0;
-  while (next < num) {
-    next = 1 << i++;
-  }
-  return next;
-}
 
 struct ToLowerIterator {
 public:

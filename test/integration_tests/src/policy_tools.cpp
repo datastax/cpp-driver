@@ -19,15 +19,13 @@
 #include <boost/thread.hpp>
 #include <boost/format.hpp>
 
+#include "testing.hpp"
 #include "policy_tools.hpp"
-#include "future.hpp"
-#include "types.hpp"
-#include "request_handler.hpp"
 
 void PolicyTool::show_coordinators()	// show what queries went to what nodes IP.
 {
-  for(std::map<cass::Address, int>::const_iterator p = coordinators.begin(); p != coordinators.end(); ++p) {
-    std::cout << p->first.to_string() << " : " << p->second << std::endl;
+  for(std::map<std::string, int>::const_iterator p = coordinators.begin(); p != coordinators.end(); ++p) {
+    std::cout << p->first << " : " << p->second << std::endl;
   }
 }
 
@@ -40,6 +38,15 @@ void PolicyTool::create_schema(CassSession* session, int replicationFactor)
 {
   test_utils::execute_query(session,
                             str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % replicationFactor));
+  test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+  test_utils::execute_query(session,
+                            str(boost::format("CREATE TABLE %s (k int PRIMARY KEY, i int)") % test_utils::SIMPLE_TABLE));
+}
+
+void PolicyTool::create_schema(CassSession* session, int dc1, int dc2)
+{
+  test_utils::execute_query(session,
+                            str(boost::format(test_utils::CREATE_KEYSPACE_NETWORK_FORMAT) % test_utils::SIMPLE_KEYSPACE % dc1 % dc2));
   test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
   test_utils::execute_query(session,
                             str(boost::format("CREATE TABLE %s (k int PRIMARY KEY, i int)") % test_utils::SIMPLE_TABLE));
@@ -91,7 +98,7 @@ CassError PolicyTool::init_return_error(CassSession* session, int n, CassConsist
   return CASS_OK;
 }
 
-void PolicyTool::add_coordinator(cass::Address address)
+void PolicyTool::add_coordinator(std::string address)
 {
   if(coordinators.count(address) == 0) {
     coordinators.insert(std::make_pair(address, 1));
@@ -100,7 +107,7 @@ void PolicyTool::add_coordinator(cass::Address address)
   }
 }
 
-void PolicyTool::assert_queried(cass::Address address, int n)
+void PolicyTool::assert_queried(std::string address, int n)
 {
   if(coordinators.count(address) != 0) {
     int c = coordinators[address];
@@ -110,7 +117,7 @@ void PolicyTool::assert_queried(cass::Address address, int n)
   }
 }
 
-void PolicyTool::assertQueriedAtLeast(cass::Address address, int n)
+void PolicyTool::assertQueriedAtLeast(std::string address, int n)
 {
   int queried = coordinators[address];
   BOOST_REQUIRE(queried >= n);
@@ -126,7 +133,7 @@ void PolicyTool::query(CassSession* session, int n, CassConsistency cl)
     cass_statement_set_consistency(statement.get(), cl);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());
-    add_coordinator(static_cast<cass::ResponseFuture*>(future->from())->get_host_address());
+    add_coordinator(cass::get_host_from_future(future.get()));
   }
 }
 
@@ -143,7 +150,7 @@ CassError PolicyTool::query_return_error(CassSession* session, int n, CassConsis
     if (rc != CASS_OK) {
       return rc;
     }
-    add_coordinator(static_cast<cass::ResponseFuture*>(future->from())->get_host_address());
+    add_coordinator(cass::get_host_from_future(future.get()));
   }
   return CASS_OK;
 }

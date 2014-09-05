@@ -17,7 +17,7 @@ set(Boost_USE_MULTITHREADED ON)
 # needed by boost to link dynamically
 add_definitions(-DBOOST_ALL_DYN_LINK)
 
-find_package(Boost 1.41.0 COMPONENTS system date_time REQUIRED)
+find_package(Boost 1.55.0 COMPONENTS system date_time REQUIRED)
 set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
 set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
 

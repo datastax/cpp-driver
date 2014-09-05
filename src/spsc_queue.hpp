@@ -29,6 +29,8 @@
 
 #include <assert.h>
 
+#include "common.hpp"
+
 #include "third_party/boost/boost/atomic.hpp"
 #include "third_party/boost/boost/type_traits/alignment_of.hpp"
 #include "third_party/boost/boost/aligned_storage.hpp"
@@ -41,16 +43,13 @@ public:
   typedef T EntryType;
 
   SPSCQueue(size_t size)
-      : _size(size)
+      : _size(next_pow_2(size))
       , _mask(size - 1)
       , _buffer(reinterpret_cast<T*>(
             // need one extra element for a guard
             new SPSCQueueAlignedEntry[_size + 1]))
       , _head(0)
-      , _tail(0) {
-    // make sure it's a power of 2
-    assert((_size != 0) && ((_size & (~_size + 1)) == _size));
-  }
+      , _tail(0) {}
 
   ~SPSCQueue() { delete[] _buffer; }
 

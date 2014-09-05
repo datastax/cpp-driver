@@ -551,6 +551,7 @@ extern const char* CREATE_TABLE_TIME_SERIES;
 extern const char* CREATE_TABLE_SIMPLE;
 
 extern const std::string CREATE_KEYSPACE_SIMPLE_FORMAT;
+extern const std::string CREATE_KEYSPACE_NETWORK_FORMAT;
 extern const std::string CREATE_KEYSPACE_GENERIC_FORMAT;
 extern const std::string SIMPLE_KEYSPACE;
 extern const std::string SIMPLE_TABLE;

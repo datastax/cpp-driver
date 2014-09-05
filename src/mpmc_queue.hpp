@@ -24,6 +24,8 @@
 
 #include <assert.h>
 
+#include "common.hpp"
+
 #include "third_party/boost/boost/atomic.hpp"
 #include "third_party/boost/boost/type_traits/alignment_of.hpp"
 #include "third_party/boost/boost/aligned_storage.hpp"
@@ -36,14 +38,11 @@ public:
   typedef T EntryType;
 
   MPMCQueue(size_t size)
-      : size_(size)
+      : size_(next_pow_2(size))
       , mask_(size - 1)
       , buffer_(reinterpret_cast<Node*>(new AlignedNode[size_]))
       , head_seq_(0)
       , tail_seq_(0) {
-    // make sure it's a power of 2
-    assert((size_ != 0) && ((size_ & (~size_ + 1)) == size_));
-
     // populate the sequence initial values
     for (size_t i = 0; i < size_; ++i) {
       buffer_[i].seq.store(i, boost::memory_order_relaxed);

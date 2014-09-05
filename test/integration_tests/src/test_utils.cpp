@@ -113,6 +113,7 @@ const char* get_value_type(CassValueType type) {
 
 //-----------------------------------------------------------------------------------
 const std::string CREATE_KEYSPACE_SIMPLE_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %s }";
+const std::string CREATE_KEYSPACE_NETWORK_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'NetworkTopologyStrategy',  'dc1' : %d, 'dc2' : %d }";
 const std::string CREATE_KEYSPACE_GENERIC_FORMAT = "CREATE KEYSPACE {0} WITH replication = { 'class' : '{1}', {2} }";
 const std::string SIMPLE_KEYSPACE = "ks";
 const std::string SIMPLE_TABLE = "test";

@@ -43,6 +43,15 @@ inline To copy_cast(const From& from)
   memcpy(&to, &from, sizeof(from));
   return to;
 }
+
+inline size_t next_pow_2(size_t num) {
+  size_t next = 2;
+  size_t i = 0;
+  while (next < num) {
+    next = 1 << i++;
+  }
+  return next;
+}
  
 uv_buf_t alloc_buffer(size_t suggested_size);
 uv_buf_t alloc_buffer(uv_handle_t* handle, size_t suggested_size);

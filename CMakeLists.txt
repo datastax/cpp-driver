@@ -253,7 +253,7 @@ if(WIN32)
   set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/")
 endif()
 
-find_package(Boost 1.41.0 COMPONENTS system chrono thread unit_test_framework date_time program_options)
+find_package(Boost 1.55.0 COMPONENTS system chrono thread unit_test_framework date_time program_options)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/test/ccm_bridge/cmake/Modules/")
 find_package(LIBSSH2)

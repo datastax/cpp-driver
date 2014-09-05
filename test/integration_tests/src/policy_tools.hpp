@@ -16,12 +16,11 @@
 
 #pragma once
 
-#include "address.hpp"
 #include "test_utils.hpp"
 
 struct PolicyTool {
 
-  std::map<cass::Address, int> coordinators;
+  std::map<std::string, int> coordinators;
 
   void show_coordinators();	// show what queries went to what node IP.
   void reset_coordinators();
@@ -39,11 +38,14 @@ struct PolicyTool {
   void create_schema(CassSession* session,
                      int replicationFactor);
 
-  void add_coordinator(cass::Address address);
+  void create_schema(CassSession* session,
+                     int dc1, int dc2);
 
-  void assert_queried(cass::Address address, int n);
+  void add_coordinator(std::string address);
 
-  void assertQueriedAtLeast(cass::Address address, int n);
+  void assert_queried(std::string address, int n);
+
+  void assertQueriedAtLeast(std::string address, int n);
 
   void query(CassSession* session, int n, CassConsistency cl);
 
