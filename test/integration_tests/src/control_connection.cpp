@@ -27,12 +27,47 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <set>
 #include <sstream>
+#include <stdarg.h>
 
 struct ControlConnectionTests {
   ControlConnectionTests() {}
+
+  void check_for_live_hosts(test_utils::CassSessionPtr session,
+                            const std::set<std::string>& should_be_present) {
+    std::set<std::string> hosts;
+
+    for (size_t i = 0; i < should_be_present.size() + 1; ++i) {
+      CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
+      test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
+      test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
+      BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
+      hosts.insert(cass::get_host_from_future(future.get()));
+    }
+
+    BOOST_CHECK(hosts.size() == should_be_present.size());
+    for (std::set<std::string>::const_iterator it = should_be_present.begin();
+         it != should_be_present.end(); ++it) {
+      BOOST_CHECK(hosts.count(*it) > 0);
+    }
+  }
+
+  std::set<std::string> build_single_ip(const std::string& ip_prefix, int n) {
+    std::set<std::string> range;
+    range.insert(ip_prefix + boost::lexical_cast<std::string>(n));
+    return range;
+  }
+
+  std::set<std::string> build_ip_range(const std::string& ip_prefix, int start, int end) {
+    std::set<std::string> range;
+    for (int i = start; i <= end; ++i) {
+      range.insert(ip_prefix + boost::lexical_cast<std::string>(i));
+    }
+    return range;
+  }
 };
 
 BOOST_FIXTURE_TEST_SUITE(control_connection, ControlConnectionTests)
@@ -81,7 +116,7 @@ BOOST_AUTO_TEST_CASE(test_reconnection)
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
-  test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
   // Stop the node of the current control connection
   ccm->stop(1);
@@ -93,17 +128,66 @@ BOOST_AUTO_TEST_CASE(test_reconnection)
   // Stop the other node
   ccm->stop(2);
 
-  std::set<std::string> hosts;
-  for (int i = 0; i < 2; ++i) {
-    CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
-    test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
-    test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
-    BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
-    hosts.insert(cass::get_host_from_future(future.get()));
-  }
+  check_for_live_hosts(session, build_single_ip(conf.ip_prefix(), 3));
+}
 
-  BOOST_CHECK(hosts.size() == 1);
-  BOOST_CHECK(hosts.count("127.0.0.3") > 0);
+BOOST_AUTO_TEST_CASE(test_topology_change)
+{
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+
+  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 1, 0);
+
+  // Ensure RR policy
+  cass_cluster_set_load_balance_round_robin(cluster.get());;
+
+  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+
+  // Adding a new node will trigger a "NEW_NODE" event
+  ccm->bootstrap(2);
+  boost::this_thread::sleep_for(boost::chrono::seconds(10));
+
+  std::set<std::string> should_be_present = build_ip_range(conf.ip_prefix(), 1, 2);
+  check_for_live_hosts(session, should_be_present);
+
+  // Decommissioning a node will trigger a "REMOVED_NODE" event
+  ccm->decommission(2);
+
+  should_be_present.erase(conf.ip_prefix() + "2");
+  check_for_live_hosts(session, should_be_present);
+}
+
+BOOST_AUTO_TEST_CASE(test_status_change)
+{
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+
+  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 2, 0);
+
+  // Ensure RR policy
+  cass_cluster_set_load_balance_round_robin(cluster.get());;
+
+  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+
+  std::set<std::string> should_be_present = build_ip_range(conf.ip_prefix(), 1, 2);
+  check_for_live_hosts(session, should_be_present);
+
+  // Stopping a node will trigger a "DOWN" event
+  ccm->stop(2);
+
+  should_be_present.erase(conf.ip_prefix() + "2");
+  check_for_live_hosts(session, should_be_present);
+
+  // Starting a node will trigger an "UP" event
+  ccm->start(2);
+  boost::this_thread::sleep_for(boost::chrono::seconds(10));
+
+  should_be_present.insert(conf.ip_prefix() + "2");
+  check_for_live_hosts(session, should_be_present);
 }
 
 BOOST_AUTO_TEST_CASE(test_node_discovery)
@@ -119,17 +203,9 @@ BOOST_AUTO_TEST_CASE(test_node_discovery)
   // Only add a single IP
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
-  test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
-  std::set<std::string> hosts;
-  for (int i = 0; i < 3; ++i) {
-    CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
-    test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
-    test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
-    hosts.insert(cass::get_host_from_future(future.get()));
-  }
-
-  BOOST_CHECK(hosts.size() == 3);
+  check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 3));
 }
 
 BOOST_AUTO_TEST_CASE(test_node_discovery_invalid_ips)
@@ -154,17 +230,9 @@ BOOST_AUTO_TEST_CASE(test_node_discovery_invalid_ips)
     // Only add a single valid IP
     test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
-    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
-    std::set<std::string> hosts;
-    for (int i = 0; i < 4; ++i) {
-      CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
-      test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
-      test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
-      hosts.insert(cass::get_host_from_future(future.get()));
-    }
-
-    BOOST_CHECK(hosts.size() == 3);
+    check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 3));
   }
 
   BOOST_CHECK_EQUAL(log_data->message_count, 3);
@@ -184,21 +252,13 @@ BOOST_AUTO_TEST_CASE(test_node_discovery_no_local_rows)
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
   {
-    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
     test_utils::execute_query(session.get(), "DELETE FROM system.local WHERE key = 'local'");
   }
 
-  test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
-  std::set<std::string> hosts;
-  for (int i = 0; i < 3; ++i) {
-    CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
-    test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
-    test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
-    hosts.insert(cass::get_host_from_future(future.get()));
-  }
-
-  BOOST_CHECK(hosts.size() == 3);
+  check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 3));
 }
 
 BOOST_AUTO_TEST_CASE(test_node_discovery_no_rpc_addresss)
@@ -220,24 +280,16 @@ BOOST_AUTO_TEST_CASE(test_node_discovery_no_rpc_addresss)
     test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
     {
-      test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+      test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
       std::ostringstream ss;
-      ss << "UPDATE system.peers SET rpc_address = null WHERE peer = '" << conf.ip_prefix() << "2'";
+      ss << "UPDATE system.peers SET rpc_address = null WHERE peer = '" << conf.ip_prefix() << "3'";
       test_utils::execute_query(session.get(), ss.str());
     }
 
-    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
-    std::set<std::string> hosts;
-    for (int i = 0; i < 3; ++i) {
-      CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
-      test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
-      test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
-      hosts.insert(cass::get_host_from_future(future.get()));
-    }
-
-    // This should only contain 2 address because one pee is ignored
-    BOOST_CHECK(hosts.size() == 2);
+    // This should only contain 2 address because one peer is ignored
+    check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 2, 3));
   }
 
   BOOST_CHECK(log_data->message_count > 0);

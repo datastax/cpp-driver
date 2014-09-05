@@ -167,8 +167,8 @@ void initialize_contact_points(CassCluster* cluster, std::string prefix, int num
   }
 }
 
-CassSessionPtr create_session(CassClusterPtr cluster) {
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
+CassSessionPtr create_session(CassCluster* cluster) {
+  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(session_future.get());
   return test_utils::CassSessionPtr(cass_future_get_session(session_future.get()));
 }

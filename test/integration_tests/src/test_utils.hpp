@@ -490,7 +490,7 @@ void initialize_contact_points(CassCluster* cluster, std::string prefix, int num
 
 const char* get_value_type(CassValueType type);
 
-CassSessionPtr create_session(CassClusterPtr cluster);
+CassSessionPtr create_session(CassCluster* cluster);
 
 CassError execute_query_with_error(CassSession* session,
                                    const std::string& query,
