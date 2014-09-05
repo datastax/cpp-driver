@@ -19,14 +19,16 @@
 #   define BOOST_TEST_MODULE cassandra
 #endif
 
-#include "address.hpp"
-#include "cassandra.h"
-#include "types.hpp"
+#include "testing.hpp"
 
 #include "cql_ccm_bridge.hpp"
 #include "test_utils.hpp"
 
 #include <boost/test/unit_test.hpp>
+#include <boost/thread.hpp>
+#include <boost/chrono.hpp>
+
+#include <set>
 #include <sstream>
 
 struct ControlConnectionTests {
@@ -67,6 +69,43 @@ BOOST_AUTO_TEST_CASE(test_connect_invalid_port)
   BOOST_CHECK_EQUAL(code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
 
+BOOST_AUTO_TEST_CASE(test_reconnection)
+{
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+
+  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 2, 0);
+
+  // Ensure RR policy
+  cass_cluster_set_load_balance_round_robin(cluster.get());;
+
+  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+
+  // Stop the node of the current control connection
+  ccm->stop(1);
+
+  // Add a new node to make sure the node gets added on the new control connection to node 2
+  ccm->bootstrap(3);
+  boost::this_thread::sleep_for(boost::chrono::seconds(10));
+
+  // Stop the other node
+  ccm->stop(2);
+
+  std::set<std::string> hosts;
+  for (int i = 0; i < 2; ++i) {
+    CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
+    test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
+    test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
+    BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
+    hosts.insert(cass::get_host_from_future(future.get()));
+  }
+
+  BOOST_CHECK(hosts.size() == 1);
+  BOOST_CHECK(hosts.count("127.0.0.3") > 0);
+}
+
 BOOST_AUTO_TEST_CASE(test_node_discovery)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
@@ -82,15 +121,15 @@ BOOST_AUTO_TEST_CASE(test_node_discovery)
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
-  cass::AddressSet addresses;
+  std::set<std::string> hosts;
   for (int i = 0; i < 3; ++i) {
     CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
     test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
     test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
-    addresses.insert(static_cast<cass::ResponseFuture*>(future->from())->get_host_address());
+    hosts.insert(cass::get_host_from_future(future.get()));
   }
 
-  BOOST_CHECK(addresses.size() == 3);
+  BOOST_CHECK(hosts.size() == 3);
 }
 
 BOOST_AUTO_TEST_CASE(test_node_discovery_invalid_ips)
@@ -117,15 +156,15 @@ BOOST_AUTO_TEST_CASE(test_node_discovery_invalid_ips)
 
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
-    cass::AddressSet addresses;
+    std::set<std::string> hosts;
     for (int i = 0; i < 4; ++i) {
       CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
       test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
       test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
-      addresses.insert(static_cast<cass::ResponseFuture*>(future->from())->get_host_address());
+      hosts.insert(cass::get_host_from_future(future.get()));
     }
 
-    BOOST_CHECK(addresses.size() == 3);
+    BOOST_CHECK(hosts.size() == 3);
   }
 
   BOOST_CHECK_EQUAL(log_data->message_count, 3);
@@ -151,15 +190,15 @@ BOOST_AUTO_TEST_CASE(test_node_discovery_no_local_rows)
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
-  cass::AddressSet addresses;
+  std::set<std::string> hosts;
   for (int i = 0; i < 3; ++i) {
     CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
     test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
     test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
-    addresses.insert(static_cast<cass::ResponseFuture*>(future->from())->get_host_address());
+    hosts.insert(cass::get_host_from_future(future.get()));
   }
 
-  BOOST_CHECK(addresses.size() == 3);
+  BOOST_CHECK(hosts.size() == 3);
 }
 
 BOOST_AUTO_TEST_CASE(test_node_discovery_no_rpc_addresss)
@@ -189,16 +228,16 @@ BOOST_AUTO_TEST_CASE(test_node_discovery_no_rpc_addresss)
 
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
-    cass::AddressSet addresses;
+    std::set<std::string> hosts;
     for (int i = 0; i < 3; ++i) {
       CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
       test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
       test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
-      addresses.insert(static_cast<cass::ResponseFuture*>(future->from())->get_host_address());
+      hosts.insert(cass::get_host_from_future(future.get()));
     }
 
     // This should only contain 2 address because one pee is ignored
-    BOOST_CHECK(addresses.size() == 2);
+    BOOST_CHECK(hosts.size() == 2);
   }
 
   BOOST_CHECK(log_data->message_count > 0);
