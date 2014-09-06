@@ -92,6 +92,8 @@ endif()
 set(MULTICORE_CORES_NUMBER "3" CACHE STRING "Number of cores (for multicore compilation)")
 option(MULTICORE_COMPILATION "Enable multicore compilation" OFF)
 
+set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_THREAD_USES_MOVE")
+
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   if(MULTICORE_COMPILATION)
     add_definitions("/MP${MULTICORE_CORES_NUMBER}")
@@ -112,7 +114,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   set(WARNING_COMPILER_FLAGS "/wd4244 /wd4267")
 
   set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
-  set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+  set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
 
   # needed for windows sockets (not verified)
@@ -134,7 +136,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS}")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.3" OR
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.3")
-    set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x ${WARNING_COMPILER_FLAGS}")
+    set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   else()
     # TODO(mpenick): stress.cpp might not compile on older compilers because of boost::unique_future<>
     set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
@@ -146,7 +148,7 @@ else()
   set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 
   set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS}")
-  set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x ${WARNING_COMPILER_FLAGS}")
+  set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 ${WARNING_COMPILER_FLAGS}")
 endif()
 

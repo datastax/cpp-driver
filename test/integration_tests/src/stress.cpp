@@ -166,18 +166,18 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
   std::vector<boost::shared_future<bool> > futures;
 
   for(int i = 0; i < 10; ++i) {
-    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_task, session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)));
-    futures.push_back(boost::async(boost::launch::async, boost::bind(select_task, session.get(), select_query, CASS_CONSISTENCY_QUORUM, num_iterations)));
-    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)));
+    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_task, session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
+    futures.push_back(boost::async(boost::launch::async, boost::bind(select_task, session.get(), select_query, CASS_CONSISTENCY_QUORUM, num_iterations)).share());
+    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
 
-    futures.push_back(boost::async(boost::launch::async, boost::bind(select_task, session.get(), select_query, CASS_CONSISTENCY_QUORUM, num_iterations)));
-    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_task, session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)));
-    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)));
-    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_task, session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)));
+    futures.push_back(boost::async(boost::launch::async, boost::bind(select_task, session.get(), select_query, CASS_CONSISTENCY_QUORUM, num_iterations)).share());
+    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_task, session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
+    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
+    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_task, session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
 
-    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)));
-    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)));
-    futures.push_back(boost::async(boost::launch::async, boost::bind(select_task, session.get(), select_query, CASS_CONSISTENCY_QUORUM, num_iterations)));
+    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
+    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
+    futures.push_back(boost::async(boost::launch::async, boost::bind(select_task, session.get(), select_query, CASS_CONSISTENCY_QUORUM, num_iterations)).share());
   }
 
   boost::wait_for_all(futures.begin(), futures.end());
@@ -215,21 +215,21 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
   std::vector<boost::shared_future<bool> > futures;
 
   for(int i = 0; i < 10; ++i) {
-    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_task, session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)));
-    futures.push_back(boost::async(boost::launch::async, boost::bind(select_task, session.get(), select_query, CASS_CONSISTENCY_QUORUM, num_iterations)));
-    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)));
+    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_task, session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
+    futures.push_back(boost::async(boost::launch::async, boost::bind(select_task, session.get(), select_query, CASS_CONSISTENCY_QUORUM, num_iterations)).share());
+    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
 
-    futures.push_back(boost::async(boost::launch::async, boost::bind(select_task, session.get(), select_query, CASS_CONSISTENCY_QUORUM, num_iterations)));
-    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_task, session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)));
-    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)));
-    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_task, session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)));
+    futures.push_back(boost::async(boost::launch::async, boost::bind(select_task, session.get(), select_query, CASS_CONSISTENCY_QUORUM, num_iterations)).share());
+    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_task, session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
+    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
+    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_task, session.get(), insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
 
-    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)));
-    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)));
-    futures.push_back(boost::async(boost::launch::async, boost::bind(select_task, session.get(), select_query, CASS_CONSISTENCY_QUORUM, num_iterations)));
+    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
+    futures.push_back(boost::async(boost::launch::async, boost::bind(insert_prepared_task, session.get(), prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
+    futures.push_back(boost::async(boost::launch::async, boost::bind(select_task, session.get(), select_query, CASS_CONSISTENCY_QUORUM, num_iterations)).share());
   }
 
-  futures.insert(futures.begin() + 8, boost::async(boost::launch::async, boost::bind(kill_task, ccm)));
+  futures.insert(futures.begin() + 8, boost::async(boost::launch::async, boost::bind(kill_task, ccm)).share());
 
   boost::wait_for_all(futures.begin(), futures.end());
   BOOST_REQUIRE(std::none_of(futures.begin(), futures.end(), is_failed));

@@ -43,21 +43,23 @@
 #include "test_utils.hpp"
 #include "cql_ccm_bridge.hpp"
 
+#define TEST_DURATION_SECS 300 // 5 minutes
+#define NUM_NODES 3
+
 bool execute_insert(CassSession* session, const std::string& table_name);
 
 struct OutageTests : public test_utils::MultipleNodesTest {
   enum NodeState {
     UP,
     DOWN,
-    REMOVED,
+    REMOVED
   };
-
-  static const int NUM_NODES = 3;
 
   OutageTests()
     : test_utils::MultipleNodesTest(NUM_NODES, 0)
     , is_done(false)
     , timer(io_service) {
+    printf("Warning! This test is going to take %d minutes\n", TEST_DURATION_SECS / 60);
     std::fill(nodes_states, nodes_states + NUM_NODES, UP);
     // TODO(mpenick): This is a stopgap. To be fixed in CPP-140
 #if !defined(WIN32) && !defined(_WIN32)
@@ -80,7 +82,7 @@ struct OutageTests : public test_utils::MultipleNodesTest {
     test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0));
     cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_ONE);
 
-    while ((boost::posix_time::second_clock::universal_time() - start).total_seconds() < 600) {
+    while ((boost::posix_time::second_clock::universal_time() - start).total_seconds() < TEST_DURATION_SECS) {
       test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
       cass_future_wait(future.get());
 
@@ -198,13 +200,13 @@ BOOST_AUTO_TEST_CASE(test)
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_TABLE_TIME_SERIES) % table_name));
 
-  boost::shared_future<bool> client_future
+  boost::unique_future<bool> client_future
       = boost::async(boost::launch::async, boost::bind(&OutageTests::client_thread, this, session.get(), table_name));
 
   timer.expires_from_now(boost::posix_time::seconds(2));
   timer.async_wait(boost::bind(&OutageTests::handle_timeout, this, _1));
 
-  boost::shared_future<void> outage_future
+  boost::unique_future<void> outage_future
       = boost::async(boost::launch::async, boost::bind(&OutageTests::outage_thread, this));
 
   BOOST_CHECK(client_future.get());

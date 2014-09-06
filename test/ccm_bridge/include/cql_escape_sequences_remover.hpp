@@ -100,3 +100,4 @@ namespace cql {
 }
 
 #endif // CQL_ESCAPE_SEQUENCES_REMOVER_H_
+

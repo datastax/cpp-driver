@@ -19,9 +19,6 @@
 #   define BOOST_TEST_MODULE cassandra
 #endif
 
-#define BOOST_THREAD_VERSION 2 
-//#define BOOST_NO_CXX11_RVALUE_REFERENCES 1
-
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
 #include <boost/lexical_cast.hpp>
@@ -32,6 +29,8 @@
 #include <boost/thread/future.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/move/move.hpp>
+#include <boost/container/vector.hpp>
 
 #include "cassandra.h"
 #include "test_utils.hpp"
@@ -48,6 +47,41 @@ struct AllTypes {
   cass_bool_t boolean_sample;
   cass_int64_t timestamp_sample;
   CassInet inet_sample;
+};
+
+// Move emulation wrapper for CassPrepared. This has to be used
+// with boost::container's because they have boost move emulation support.
+class CassPreparedMovable {
+public:
+  CassPreparedMovable(const CassPrepared* prepared = NULL)
+    : prepared_(prepared) {}
+
+  CassPreparedMovable(BOOST_RV_REF(CassPreparedMovable) r)
+    : prepared_(r.prepared_) {
+    r.prepared_ = NULL;
+  }
+
+  CassPreparedMovable& operator=(BOOST_RV_REF(CassPreparedMovable) r) {
+    if (prepared_ != NULL) {
+      cass_prepared_free(prepared_);
+    }
+    prepared_ = r.prepared_;
+    r.prepared_ = NULL;
+    return *this;
+  }
+
+  ~CassPreparedMovable() {
+    if (prepared_ != NULL) {
+      cass_prepared_free(prepared_);
+    }
+  }
+
+  const CassPrepared* get() const { return prepared_; }
+
+private:
+  BOOST_MOVABLE_BUT_NOT_COPYABLE(CassPreparedMovable)
+
+  const CassPrepared* prepared_;
 };
 
 struct PreparedTests : public test_utils::SingleSessionTest {
@@ -303,11 +337,11 @@ BOOST_AUTO_TEST_CASE(test_select_one)
   BOOST_REQUIRE(test_utils::Value<CassString>::equal(cass_string_init("row5"), result_label));
 }
 
-const CassPrepared* prepare_statement(CassSession* session, std::string query) {
+CassPreparedMovable prepare_statement(CassSession* session, std::string query) {
   test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
                                                                  cass_string_init2(query.data(), query.size())));
   test_utils::wait_and_check_error(prepared_future.get());
-  return cass_future_get_prepared(prepared_future.get());
+  return CassPreparedMovable(cass_future_get_prepared(prepared_future.get()));
 }
 
 void execute_statement(CassSession* session, const CassPrepared* prepared, int value) {
@@ -326,23 +360,22 @@ BOOST_AUTO_TEST_CASE(test_massive_number_of_prepares)
 
   test_utils::execute_query(session, create_table_query);
 
-  std::vector<boost::shared_future<const CassPrepared*> > prepare_futures;
+  boost::container::vector<boost::unique_future<CassPreparedMovable> > prepare_futures;
+
   std::vector<test_utils::Uuid> tweet_ids;
   for(size_t i = 0; i < number_of_prepares; ++i) {
     test_utils::Uuid tweet_id = test_utils::generate_time_uuid();
     std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, numb1, numb2) VALUES (%s, ?, ?);") % table_name % test_utils::string_from_uuid(tweet_id));
-    boost::shared_future<const CassPrepared*> future(boost::async(boost::launch::async, boost::bind(prepare_statement, session, insert_query)));
-    prepare_futures.push_back(future);
+    prepare_futures.push_back(boost::async(boost::launch::async, boost::bind(prepare_statement, session, insert_query)));
     tweet_ids.push_back(tweet_id);
   }
 
   std::vector<boost::shared_future<void> > execute_futures;
-  std::vector<test_utils::CassPreparedPtr> prepares;
+  boost::container::vector<CassPreparedMovable> prepares;
   for(size_t i = 0; i < prepare_futures.size(); ++i) {
-    test_utils::CassPreparedPtr prepared(prepare_futures[i].get());
-    boost::shared_future<void> future(boost::async(boost::launch::async, boost::bind(execute_statement, session, prepared.get(), i)));
-    execute_futures.push_back(future);
-    prepares.push_back(prepared);
+    CassPreparedMovable prepared = prepare_futures[i].get();
+    execute_futures.push_back(boost::async(boost::launch::async, boost::bind(execute_statement, session, prepared.get(), i)).share());
+    prepares.push_back(boost::move(prepared));
   }
 
   boost::wait_for_all(execute_futures.begin(), execute_futures.end());
