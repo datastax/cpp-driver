@@ -328,7 +328,7 @@ namespace cql {
   }
 
   void cql_ccm_bridge_t::start(int node, const std::string& option) {
-    execute_ccm_command(boost::str(boost::format("node%1% start--wait-for-binary-proto --jvm_arg=%2%") % node % option));
+    execute_ccm_command(boost::str(boost::format("node%1% start --wait-for-binary-proto --jvm_arg=%2%") % node % option));
 	}
 
 	void cql_ccm_bridge_t::stop() {
