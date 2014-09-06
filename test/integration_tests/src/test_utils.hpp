@@ -19,11 +19,13 @@
 #include <string>
 #include <limits>
 
-#include <boost/asio/ip/address.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/asio/ip/address.hpp>
 #include <boost/chrono.hpp>
-#include <boost/atomic.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/lockable_adapter.hpp>
+#include <boost/thread/lock_guard.hpp>
 
 #include "cassandra.h"
 
@@ -49,15 +51,23 @@ namespace test_utils {
 extern const cass_duration_t ONE_MILLISECOND_IN_MICROS;
 extern const cass_duration_t ONE_SECOND_IN_MICROS;
 
-struct LogData {
+struct LogData : public boost::basic_lockable_adapter<boost::mutex> {
   LogData(const std::string& message, bool output_messages = false)
     : message(message)
     , message_count(0)
     , output_messages(output_messages) {}
 
-  const std::string message;
-  boost::atomic<int> message_count;
+  void reset(const std::string& msg) {
+    boost::lock_guard<LogData> l(*this);
+    message = msg;
+    message_count = 0;
+  }
+
+  boost::mutex m;
+  std::string message;
+  size_t message_count;
   bool output_messages;
+
 };
 
 void count_message_log_callback(cass_uint64_t time,

@@ -78,6 +78,8 @@ void count_message_log_callback(cass_uint64_t time,
   if (log_data->output_messages) {
     fprintf(stderr, "Log: %s\n", str.c_str());
   }
+  boost::lock_guard<LogData> l(*log_data);
+  if (log_data->message.empty()) return;
   if (str.find(log_data->message) != std::string::npos) {
     log_data->message_count++;
   }
@@ -143,6 +145,7 @@ MultipleNodesTest::MultipleNodesTest(int num_nodes_dc1, int num_nodes_dc2, int p
   cass_cluster_set_request_timeout(cluster, 10000);
   cass_cluster_set_num_threads_io(cluster, 2);
   cass_cluster_set_protocol_version(cluster, protocol_version);
+  cass_cluster_set_log_level(cluster, CASS_LOG_DEBUG);
 }
 
 MultipleNodesTest::~MultipleNodesTest() {
