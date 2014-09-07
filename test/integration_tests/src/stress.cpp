@@ -181,7 +181,7 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
   }
 
   boost::wait_for_all(futures.begin(), futures.end());
-  BOOST_REQUIRE(std::none_of(futures.begin(), futures.end(), is_failed));
+  BOOST_REQUIRE(std::find_if(futures.begin(), futures.end(), is_failed) == futures.end());
 }
 
 BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
@@ -232,7 +232,7 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
   futures.insert(futures.begin() + 8, boost::async(boost::launch::async, boost::bind(kill_task, ccm)).share());
 
   boost::wait_for_all(futures.begin(), futures.end());
-  BOOST_REQUIRE(std::none_of(futures.begin(), futures.end(), is_failed));
+  BOOST_REQUIRE(std::find_if(futures.begin(), futures.end(), is_failed) == futures.end());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
