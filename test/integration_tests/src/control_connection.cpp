@@ -263,7 +263,7 @@ BOOST_AUTO_TEST_CASE(test_node_discovery_no_local_rows)
 
 BOOST_AUTO_TEST_CASE(test_node_discovery_no_rpc_addresss)
 {
-  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("No rpc_address for host 127.0.0.2 in system.peers on 127.0.0.1. Ignoring this entry."));
+  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("No rpc_address for host 127.0.0.3 in system.peers on 127.0.0.1. Ignoring this entry."));
 
   {
     test_utils::CassClusterPtr cluster(cass_cluster_new());
@@ -289,7 +289,7 @@ BOOST_AUTO_TEST_CASE(test_node_discovery_no_rpc_addresss)
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
     // This should only contain 2 address because one peer is ignored
-    check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 2, 3));
+    check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 2));
   }
 
   BOOST_CHECK(log_data->message_count > 0);
