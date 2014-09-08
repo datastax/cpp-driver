@@ -20,6 +20,7 @@
 #include "scoped_mutex.hpp"
 #include "get_time.hpp"
 
+#include "third_party/boost/boost/random/mersenne_twister.hpp"
 #include "third_party/boost/boost/random/random_device.hpp"
 
 extern "C" {
@@ -60,6 +61,9 @@ void cass_uuid_string(CassUuid uuid, char* output) {
 
 namespace {
 
+  boost::random_device rd;
+  boost::mt19937_64 ng_(rd());
+
 class UuidsInitializer {
 public:
   UuidsInitializer() { cass::Uuids::initialize_(); }
@@ -71,15 +75,11 @@ UuidsInitializer uuids_intitalizer_;
 
 namespace cass {
 
-boost::mt19937_64 Uuids::ng_;
 uv_mutex_t Uuids::mutex_;
 boost::atomic<uint64_t> Uuids::last_timestamp_;
 uint64_t Uuids::CLOCK_SEQ_AND_NODE;
 
 void Uuids::initialize_() {
-  boost::random_device rd;
-  ng_.seed(rd());
-
   uv_mutex_init(&mutex_);
   last_timestamp_ = 0L;
   CLOCK_SEQ_AND_NODE = make_clock_seq_and_node();
