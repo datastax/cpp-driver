@@ -48,7 +48,7 @@ inline size_t next_pow_2(size_t num) {
   size_t next = 2;
   size_t i = 0;
   while (next < num) {
-    next = 1 << i++;
+    next = static_cast<size_t>(1) << i++;
   }
   return next;
 }

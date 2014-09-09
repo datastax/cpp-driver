@@ -14,6 +14,7 @@ option(CASS_BUILD_EXAMPLES "Build examples" ON)
 #-------------------
 # Version
 #-------------------
+
 set(PROJECT_VERSION_MAJOR 1)
 set(PROJECT_VERSION_MINOR 0)
 set(PROJECT_VERSION_PATCH 0)
@@ -154,6 +155,7 @@ endif()
 #-------------------
 # Cassandra static and shared
 #-------------------
+
 include_directories(${INCLUDES})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
@@ -274,6 +276,7 @@ endif()
 #-------------------
 # Examples
 #-------------------
+
 if(CASS_BUILD_EXAMPLES)
   add_subdirectory(examples/async)
   add_subdirectory(examples/basic)
