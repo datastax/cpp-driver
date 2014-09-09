@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6.4)
+cmake_minimum_required(VERSION 2.8.11)
 
 find_package(Boost 1.55.0 COMPONENTS system chrono thread unit_test_framework date_time program_options REQUIRED)
 
