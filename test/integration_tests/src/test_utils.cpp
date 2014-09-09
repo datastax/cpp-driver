@@ -145,7 +145,6 @@ MultipleNodesTest::MultipleNodesTest(int num_nodes_dc1, int num_nodes_dc2, int p
   cass_cluster_set_request_timeout(cluster, 10000);
   cass_cluster_set_num_threads_io(cluster, 2);
   cass_cluster_set_protocol_version(cluster, protocol_version);
-  cass_cluster_set_log_level(cluster, CASS_LOG_DEBUG);
 }
 
 MultipleNodesTest::~MultipleNodesTest() {
