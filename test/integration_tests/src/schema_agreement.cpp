@@ -30,35 +30,23 @@
 
 #include <algorithm>
 
-test_utils::MultipleNodesTest* inst;
 struct ClusterInit {
-  ClusterInit() {
-    inst = new test_utils::MultipleNodesTest(3, 0);
-    cass_cluster_set_log_level(inst->cluster, CASS_LOG_DEBUG);
-  }
-
-  ~ClusterInit() {
-    delete inst;
-  }
-};
-
-BOOST_GLOBAL_FIXTURE(ClusterInit)
-
-struct SessionInit {
-  SessionInit()
-    : session(NULL),
-      log_counter("", true) {
-    cass_cluster_set_log_callback(inst->cluster, test_utils::count_message_log_callback, &log_counter);
+  ClusterInit()
+    : inst(3, 0),
+      log_counter("", true),
+      session(NULL) {
+    cass_cluster_set_log_level(inst.cluster, CASS_LOG_DEBUG);
+    cass_cluster_set_log_callback(inst.cluster, test_utils::count_message_log_callback, &log_counter);
     new_session();
   }
 
-  ~SessionInit() {
+  ~ClusterInit() {
     close_session();
   }
 
   void new_session() {
     close_session();
-    test_utils::CassFuturePtr connect_future(cass_cluster_connect(inst->cluster));
+    test_utils::CassFuturePtr connect_future(cass_cluster_connect(inst.cluster));
     test_utils::wait_and_check_error(connect_future.get());
     session = cass_future_get_session(connect_future.get());
   }
@@ -71,11 +59,12 @@ struct SessionInit {
     }
   }
 
-  CassSession* session;
+  test_utils::MultipleNodesTest inst;
   test_utils::LogData log_counter;
+  CassSession* session;
 };
 
-BOOST_FIXTURE_TEST_SUITE(schema_agreement, SessionInit)
+BOOST_FIXTURE_TEST_SUITE(schema_agreement, ClusterInit)
 
 // only doing a keyspace for now since there is no difference for types or tables
 BOOST_AUTO_TEST_CASE(keyspace_add_drop)
@@ -102,7 +91,7 @@ BOOST_AUTO_TEST_CASE(keyspace_add_drop)
 BOOST_AUTO_TEST_CASE(agreement_node_down) {
   log_counter.reset("ControlConnection: Node 127.0.0.3 is down");
 
-  inst->ccm->stop(3);
+  inst.ccm->stop(3);
 
   size_t t = 0;
   size_t max_tries = 15;
@@ -128,7 +117,7 @@ BOOST_AUTO_TEST_CASE(agreement_node_down) {
 
   BOOST_CHECK_EQUAL(log_counter.message_count, 2);
 
-  inst->ccm->start(3);
+  inst.ccm->start(3);
 }
 
 #define MAX_SCHEMA_AGREEMENT_WAIT_MS 10000
