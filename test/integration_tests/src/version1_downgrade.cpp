@@ -44,7 +44,7 @@ BOOST_FIXTURE_TEST_SUITE(version1_downgrade, Version1DowngradeTests)
 BOOST_AUTO_TEST_CASE(test_query_after_downgrade)
 {
   boost::scoped_ptr<test_utils::LogData> log_data(
-        new test_utils::LogData("Protocol version 2 unsupported. Trying protocol version 1.."));
+        new test_utils::LogData("Error response: 'Invalid or unsupported protocol version: 2"));
 
   cass_size_t row_count;
 
