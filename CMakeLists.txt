@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 2.6.4)
 
 set(PROJECT_NAME_STR cassandra)
 set(PROJECT_LIB_NAME ${PROJECT_NAME_STR})
@@ -25,6 +25,7 @@ set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${P
 # Build up the include paths
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
+set(INCLUDES ${INCLUDES} ${PROJECT_SOURCE_DIR}/src/third_party/boost)
 
 #-------------------
 # Dependencies
@@ -183,9 +184,6 @@ add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})
 if(CASS_BUILD_STATIC)
   add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${ALL_SOURCE_FILES})
 endif()
-
-target_include_directories(${PROJECT_LIB_NAME} PUBLIC "${PROJECT_SOURCE_DIR}/src/third_party/boost")
-target_include_directories(${PROJECT_LIB_NAME_STATIC} PUBLIC "${PROJECT_SOURCE_DIR}/src/third_party/boost")
 
 target_link_libraries(${PROJECT_LIB_NAME} ${LIBS})
 if(CASS_BUILD_STATIC)

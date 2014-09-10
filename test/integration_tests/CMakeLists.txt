@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 2.6.4)
+
+# Clear INCLUDE_DIRECTORIES to not include project-level includes
+set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
 
 find_package(Boost 1.55.0 COMPONENTS system chrono thread unit_test_framework date_time program_options REQUIRED)
 
@@ -21,10 +24,10 @@ set(PROJECT_INTTESTS_NAME ${PROJECT_NAME_STR}_integration_tests)
 
 set(CCM_BRIDGE_INCLUDES "${PROJECT_SOURCE_DIR}/test/ccm_bridge/include")
 
-set(PROJECT_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/test/integration_tests/src")
 file(GLOB INTTESTS_INC_FILES ${PROJECT_SOURCE_DIR}/test/integration_tests/src/*.hpp)
 file(GLOB INTTESTS_SRC_FILES ${PROJECT_SOURCE_DIR}/test/integration_tests/src/*.cpp)
-set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
+
+set(INCLUDES ${PROJECT_INCLUDE_DIR})
 set(INCLUDES ${INCLUDES} "${PROJECT_SOURCE_DIR}/src")
 set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
 

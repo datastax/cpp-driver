@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 2.6.4)
+
+# Clear INCLUDE_DIRECTORIES to not include project-level includes
+set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
 
 project(CCMBridge C CXX)
 
