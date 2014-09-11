@@ -25,6 +25,13 @@ namespace cass {
 
 std::string get_host_from_future(CassFuture* future);
 
+unsigned get_connect_timeout_from_cluster(CassCluster* cluster);
+
+int get_port_from_cluster(CassCluster* cluster);
+
+std::string get_contact_points_from_cluster(CassCluster* cluster);
+
+
 } // namespace cass
 
 #endif

@@ -31,4 +31,30 @@ std::string get_host_from_future(CassFuture* future) {
   return response_future->get_host_address().to_string();
 }
 
+unsigned get_connect_timeout_from_cluster(CassCluster* cluster) {
+  return cluster->config().connect_timeout();
+}
+
+int get_port_from_cluster(CassCluster* cluster) {
+  return cluster->config().port();
+}
+
+std::string get_contact_points_from_cluster(CassCluster* cluster) {
+  std::string str;
+
+  const cass::Config::ContactPointList& contact_points
+      = cluster->config().contact_points();
+
+  for (cass::Config::ContactPointList::const_iterator it = contact_points.begin(),
+       end = contact_points.end();
+       it != end; ++it) {
+    if (str.size() > 0) {
+      str.push_back(',');
+    }
+    str.append(*it);
+  }
+
+  return str;
+}
+
 } // namespace cass

@@ -33,6 +33,7 @@ class Host : public RefCounted<Host> {
 public:
   class StateListener {
   public:
+    virtual ~StateListener() {}
     virtual void on_add(const SharedRefPtr<Host>& host) = 0;
     virtual void on_remove(const SharedRefPtr<Host>& host) = 0;
     virtual void on_up(const SharedRefPtr<Host>& host) = 0;
