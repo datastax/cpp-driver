@@ -34,6 +34,8 @@ the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol (v
 ## Building
 The driver is known to work on OS X 10.9, Windows 7, RHEL 5.10, and Ubuntu 14.04. The driver itself currently has two dependencies: [libuv 0.10](https://github.com/joyent/libuv) and [OpenSSL](http://www.openssl.org/). To build the driver you will need [CMake](http://www.cmake.org). To test the driver you will also need to install [boost 1.41+](http://www.boost.org),  [libssh2](http://www.libssh2.org) and [ccm](https://github.com/pcmanus/ccm).
 
+Note: The driver doesn't work with libuv 0.11
+
 It has been built using GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2013.
 
 ### OS X

@@ -1,3 +1,20 @@
+1.0.0-beta4
+===========
+Sep 11, 2014
+
+Features
+--------
+* Added node discovery and now handle topology/status change events
+* Queries that modify schema wait for cluster schema agreement
+* Added DC aware load balancing policy. The default policy is set to
+  round robin.
+* Added new methods to configure the load balancing policy, 
+  `cass_cluster_set_load_balance_round_robin()` and
+  `cass_cluster_set_load_balance_dc_aware()`
+* It is now possible for a session future to return an error when
+  connecting to a cluster. This can occur when the driver is unable to connect
+  to any contact points or the provided authentication credentials are invalid.
+
 1.0.0-beta3
 ===========
 Aug 13, 2014
