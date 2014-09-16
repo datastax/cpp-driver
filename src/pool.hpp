@@ -68,14 +68,14 @@ public:
 
 private:
   void defunct();
-  void maybe_notify_ready(Connection* connection);
+  void maybe_notify_ready();
   void maybe_close();
   void spawn_connection();
   void maybe_spawn_connection();
 
   void on_connection_ready(Connection* connection);
   void on_connection_closed(Connection* connection);
-  void on_pending_request_timeout(void* data);
+  void on_pending_request_timeout(RequestTimer* data);
 
   Connection* find_least_busy();
 

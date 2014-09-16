@@ -63,6 +63,7 @@ void Pool::connect() {
       spawn_connection();
     }
     state_ = POOL_STATE_CONNECTING;
+    maybe_notify_ready();
   }
 }
 
@@ -137,7 +138,7 @@ void Pool::defunct() {
   close();
 }
 
-void Pool::maybe_notify_ready(Connection* connection) {
+void Pool::maybe_notify_ready() {
   // This will notify ready even if all the connections fail.
   // it is up to the holder to inspect state
   if (state_ == POOL_STATE_CONNECTING && connections_pending_.empty()) {
@@ -201,7 +202,7 @@ Connection* Pool::find_least_busy() {
 
 void Pool::on_connection_ready(Connection* connection) {
   connections_pending_.erase(connection);
-  maybe_notify_ready(connection);
+  maybe_notify_ready();
 
   connections_.push_back(connection);
   return_connection(connection);
@@ -225,12 +226,12 @@ void Pool::on_connection_closed(Connection* connection) {
     defunct();
   }
 
-  maybe_notify_ready(connection);
+  maybe_notify_ready();
   maybe_close();
 }
 
-void Pool::on_pending_request_timeout(void* data) {
-  RequestHandler* request_handler = static_cast<RequestHandler*>(data);
+void Pool::on_pending_request_timeout(RequestTimer* timer) {
+  RequestHandler* request_handler = static_cast<RequestHandler*>(timer->data());
   pending_requests_.remove(request_handler);
   request_handler->retry(RETRY_WITH_NEXT_HOST);
   maybe_close();
