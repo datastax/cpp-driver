@@ -24,7 +24,8 @@ namespace cass {
 class LoopThread {
 public:
   LoopThread()
-      : loop_(uv_loop_new()) {}
+      : loop_(uv_loop_new()),
+        thread_id_(0) {}
 
   virtual ~LoopThread() { uv_loop_delete(loop_); }
 
@@ -34,6 +35,8 @@ public:
 
   void join() { uv_thread_join(&thread_); }
 
+  unsigned long thread_id() { return thread_id_; }
+
 protected:
   virtual void on_run() {}
   virtual void on_after_run() {}
@@ -41,6 +44,7 @@ protected:
 private:
   void static on_run_internal(void* data) {
     LoopThread* thread = static_cast<LoopThread*>(data);
+    thread->thread_id_ = uv_thread_self();
     thread->on_run();
     uv_run(thread->loop_, UV_RUN_DEFAULT);
     thread->on_after_run();
@@ -48,6 +52,7 @@ private:
 
   uv_loop_t* loop_;
   uv_thread_t thread_;
+  unsigned long thread_id_;
 };
 
 } // namespace cass
