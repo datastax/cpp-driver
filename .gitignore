@@ -67,5 +67,12 @@ Doxyfile
 *.suo
 *.opensdf
 
+# Travis Build Dependencies
+libuv-v*
+lib/libuv/include/**
+!lib/libuv/include/README
+lib/libuv/lib/**
+!lib/libuv/lib/README
+
 
 config*.txt
