@@ -17,7 +17,7 @@
 #include "statement.hpp"
 
 #include "execute_request.hpp"
-#include "metadata.hpp"
+#include "result_metadata.hpp"
 #include "prepared.hpp"
 #include "query_request.hpp"
 #include "scoped_ptr.hpp"
@@ -140,7 +140,7 @@ namespace {
     const cass::ResultResponse* result
         = static_cast<cass::ExecuteRequest*>(statement)->prepared()->result().get();
 
-    cass::Metadata::IndexVec indices;
+    cass::ResultMetadata::IndexVec indices;
     result->find_column_indices(name, &indices);
     IsValidValueType<T> is_valid_type;
 
@@ -148,7 +148,7 @@ namespace {
       return CASS_ERROR_NAME_DOES_NOT_EXIST;
     }
 
-    for (cass::Metadata::IndexVec::const_iterator it = indices.begin(),
+    for (cass::ResultMetadata::IndexVec::const_iterator it = indices.begin(),
          end = indices.end(); it != end; ++it) {
       size_t index = *it;
       if (!is_valid_type(result->metadata()->get(index).type)) {

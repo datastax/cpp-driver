@@ -19,7 +19,7 @@
 
 #include "cassandra.h"
 #include "buffer_piece.hpp"
-#include "metadata.hpp"
+#include "result_metadata.hpp"
 
 namespace cass {
 

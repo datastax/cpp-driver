@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "metadata.hpp"
+#include "result_metadata.hpp"
 
 #include "common.hpp"
 
@@ -54,7 +54,7 @@ private:
 
 namespace cass {
 
-Metadata::Metadata(size_t column_count) {
+ResultMetadata::ResultMetadata(size_t column_count) {
   defs_.reserve(column_count);
 
   size_t index_size = next_pow_2(static_cast<size_t>(column_count / LOAD_FACTOR) + 1);
@@ -63,8 +63,8 @@ Metadata::Metadata(size_t column_count) {
 }
 
 
-size_t Metadata::get(boost::string_ref name,
-                     Metadata::IndexVec* result) const{
+size_t ResultMetadata::get(boost::string_ref name,
+                     ResultMetadata::IndexVec* result) const{
   result->clear();
   bool is_case_sensitive = false;
 
@@ -109,7 +109,7 @@ size_t Metadata::get(boost::string_ref name,
   return result->size();
 }
 
-void Metadata::insert(ColumnDefinition& def) {
+void ResultMetadata::insert(ColumnDefinition& def) {
   defs_.push_back(def);
 
   boost::string_ref name(def.name, def.name_size);
