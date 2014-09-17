@@ -24,8 +24,8 @@ namespace cass {
 class LoopThread {
 public:
   LoopThread()
-      : loop_(uv_loop_new()),
-        thread_id_(0) {}
+      : loop_(uv_loop_new())
+      , thread_id_(0) {}
 
   virtual ~LoopThread() { uv_loop_delete(loop_); }
 

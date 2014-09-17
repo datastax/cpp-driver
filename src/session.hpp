@@ -140,8 +140,8 @@ private:
 class SessionCloseFuture : public Future {
 public:
   SessionCloseFuture(Session* session)
-      : Future(CASS_FUTURE_TYPE_SESSION_CLOSE),
-        session_(session) {
+      : Future(CASS_FUTURE_TYPE_SESSION_CLOSE)
+      , session_(session) {
     session_thread_guard();
   }
 
