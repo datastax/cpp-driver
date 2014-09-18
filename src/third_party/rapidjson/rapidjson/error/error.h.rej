@@ -1,0 +1,17 @@
+***************
+*** 85,91 ****
+      kParseErrorNumberMissExponent,              //!< Miss exponent in number.
+  
+      kParseErrorTermination,                     //!< Parsing was terminated.
+-     kParseErrorUnspecificSyntaxError,           //!< Unspecific syntax error.
+  };
+  
+  //! Result of parsing (wraps ParseErrorCode)
+--- 85,91 ----
+      kParseErrorNumberMissExponent,              //!< Miss exponent in number.
+  
+      kParseErrorTermination,                     //!< Parsing was terminated.
++     kParseErrorUnspecificSyntaxError            //!< Unspecific syntax error.
+  };
+  
+  //! Result of parsing (wraps ParseErrorCode)

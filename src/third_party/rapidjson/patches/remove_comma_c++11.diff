@@ -1,0 +1,12 @@
+diff -rup /tmp/rapidjson/include/rapidjson/error/error.h rapidjson/error/error.h
+--- /tmp/rapidjson/include/rapidjson/error/error.h	2014-09-18 13:29:59.000000000 -0500
++++ rapidjson/error/error.h	2014-09-18 14:04:17.000000000 -0500
+@@ -85,7 +85,7 @@ enum ParseErrorCode {
+     kParseErrorNumberMissExponent,              //!< Miss exponent in number.
+ 
+     kParseErrorTermination,                     //!< Parsing was terminated.
+-    kParseErrorUnspecificSyntaxError,           //!< Unspecific syntax error.
++    kParseErrorUnspecificSyntaxError            //!< Unspecific syntax error.
+ };
+ 
+ //! Result of parsing (wraps ParseErrorCode)
