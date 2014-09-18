@@ -73,6 +73,7 @@ lib/libuv/include/**
 !lib/libuv/include/README
 lib/libuv/lib/**
 !lib/libuv/lib/README
+boost_1_*
 
 
 config*.txt
