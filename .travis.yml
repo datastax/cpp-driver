@@ -7,9 +7,9 @@ before_install:
   - wget -q http://sourceforge.net/projects/boost/files/boost/1.55.0/boost_1_55_0.tar.gz/download -O boost_1_55_0.tar.gz
 install:
   - tar xzf libuv-v0.10.28.tar.gz 
-  - cd libuv-v0.10.28 && make && cd - && cp -r libuv-v0.10.28/libuv.a libuv-v0.10.28/libuv.so lib/libuv/lib && ln -s lib/libuv/lib/libuv.so lib/libuv/lib/libuv.so.0.10 && cp -r libuv-v0.10.28/include/* lib/libuv/include
+  - cd libuv-v0.10.28 && make -s && cd - 2&> /dev/null && cp -r libuv-v0.10.28/libuv.a libuv-v0.10.28/libuv.so lib/libuv/lib && cd lib/libuv/lib && ln -sf libuv.so libuv.so.0.10 && cd - 2&> /dev/null && cp -r libuv-v0.10.28/include/* lib/libuv/include
   - tar xzf boost_1_55_0.tar.gz
-  - cd boost_1_55_0 && ./bootstrap.sh --with-libraries=chrono,date_time,log,program_options,system,thread,test && sudo ./b2 install --prefix=/usr && cd -
+  - cd boost_1_55_0 && ./bootstrap.sh --with-libraries=chrono,date_time,log,program_options,system,thread,test && sudo ./b2 install --prefix=/usr -d0 && cd -
 before_script: cmake -DLIBUV_ROOT_DIR=lib/libuv/ .
 script:
   - make
