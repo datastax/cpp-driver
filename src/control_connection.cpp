@@ -24,6 +24,7 @@
 #include "result_iterator.hpp"
 #include "error_response.hpp"
 #include "result_response.hpp"
+#include "schema_metadata.hpp"
 #include "session.hpp"
 #include "timer.hpp"
 
@@ -37,6 +38,11 @@
 
 #define SELECT_LOCAL "SELECT data_center, rack FROM system.local WHERE key='local'"
 #define SELECT_PEERS "SELECT peer, data_center, rack, rpc_address FROM system.peers"
+
+#define SELECT_KEYSPACES "SELECT * FROM system.schema_keyspaces"
+#define SELECT_COLUMN_FAMILIES "SELECT * FROM system.schema_columnfamilies"
+#define SELECT_COLUMNS "SELECT * FROM system.schema_columns"
+
 
 namespace cass {
 
@@ -166,9 +172,9 @@ void ControlConnection::on_connection_ready(Connection* connection) {
   logger_->debug("ControlConnection: Connection ready on host %s",
                  connection->address().to_string().c_str());
 
-  // The control connection has to refresh the node list anytime
-  // there's a reconnect because several events could have been missed while not connected.
-  refresh_node_list();
+  // The control connection has to refresh meta when there's a reconnect because
+  // events could have been missed while not connected.
+  query_meta_all();
 }
 
 void ControlConnection::on_connection_closed(Connection* connection) {
@@ -200,14 +206,17 @@ void ControlConnection::on_connection_closed(Connection* connection) {
   reconnect(retry_current_host);
 }
 
-void ControlConnection::refresh_node_list() {
+void ControlConnection::query_meta_all() {
   ScopedRefPtr<ControlMultipleRequestHandler> handler(
-        new ControlMultipleRequestHandler(this, boost::bind(&ControlConnection::on_node_refresh, this, _1)));
+        new ControlMultipleRequestHandler(this, boost::bind(&ControlConnection::on_query_meta_all, this, _1)));
   handler->execute_query(SELECT_LOCAL);
   handler->execute_query(SELECT_PEERS);
+  handler->execute_query(SELECT_KEYSPACES);
+  handler->execute_query(SELECT_COLUMN_FAMILIES);
+  handler->execute_query(SELECT_COLUMNS);
 }
 
-void ControlConnection::on_node_refresh(const MultipleRequestHandler::ResponseVec& responses) {
+void ControlConnection::on_query_meta_all(const MultipleRequestHandler::ResponseVec& responses) {
   if (connection_ == NULL) {
     return;
   }
@@ -263,6 +272,37 @@ void ControlConnection::on_node_refresh(const MultipleRequestHandler::ResponseVe
   }
 
   session_->purge_hosts(is_initial_connection);
+
+  {
+    ResultResponse* keyspaces_result =
+        static_cast<ResultResponse*>(responses[2]);
+    keyspaces_result->decode_first_row();
+    ResultIterator rows(keyspaces_result);
+    while (rows.next()) {
+      KeyspaceMetadata* ksm = KeyspaceMetadata::from_schema_row(rows.row());
+      delete ksm;
+    }
+  }
+  {
+    ResultResponse* col_fam_result =
+        static_cast<ResultResponse*>(responses[3]);
+    col_fam_result->decode_first_row();
+    ResultIterator rows(col_fam_result);
+    while (rows.next()) {
+      ColumnFamilyMetadata* cfm = ColumnFamilyMetadata::from_schema_row(rows.row());
+      delete cfm;
+    }
+  }
+  {
+    ResultResponse* col_result =
+        static_cast<ResultResponse*>(responses[4]);
+    col_result->decode_first_row();
+    ResultIterator rows(col_result);
+    while (rows.next()) {
+      ColumnMetadata* cm = ColumnMetadata::from_schema_row(rows.row());
+      delete cm;
+    }
+  }
 
   if (is_initial_connection) {
     state_ = CONTROL_STATE_READY;
