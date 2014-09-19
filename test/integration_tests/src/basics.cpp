@@ -146,7 +146,44 @@ void insert_null_value(CassSession* session, CassValueType type) {
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
   BOOST_REQUIRE(cass_result_column_count(result.get()) == 2);
 
-  BOOST_REQUIRE(cass_value_is_null(cass_row_get_column(cass_result_first_row(result.get()), 1)));
+  //Get the test value column from the first row of the result
+  const CassValue *testValue = cass_row_get_column(cass_result_first_row(result.get()), 1);
+
+  //Ensure the test value is NULL
+  BOOST_REQUIRE(cass_value_is_null(testValue));
+
+  //Verify cass_value_get function returns CASS_ERROR_LIB_NULL_VALUE
+  if (type == CASS_VALUE_TYPE_INT) {
+    cass_int32_t value = 0;
+    BOOST_REQUIRE_EQUAL(cass_value_get_int32(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
+  } else if (type == CASS_VALUE_TYPE_BIGINT || type == CASS_VALUE_TYPE_TIMESTAMP) {
+    cass_int64_t value = 0;
+    BOOST_REQUIRE_EQUAL(cass_value_get_int64(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
+  } else if (type == CASS_VALUE_TYPE_FLOAT) {
+    cass_float_t value = 0;
+    BOOST_REQUIRE_EQUAL(cass_value_get_float(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
+  } else if (type == CASS_VALUE_TYPE_DOUBLE) {
+    cass_double_t value = 0;
+    BOOST_REQUIRE_EQUAL(cass_value_get_double(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
+  } else if (type == CASS_VALUE_TYPE_BOOLEAN) {
+    cass_bool_t value = cass_false;
+    BOOST_REQUIRE_EQUAL(cass_value_get_bool(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
+  } else if (type == CASS_VALUE_TYPE_UUID || type == CASS_VALUE_TYPE_TIMEUUID) {
+    test_utils::Uuid value;
+    BOOST_REQUIRE_EQUAL(cass_value_get_uuid(testValue, value), CASS_ERROR_LIB_NULL_VALUE);
+  } else if (type == CASS_VALUE_TYPE_INET) {
+    CassInet value;
+    BOOST_REQUIRE_EQUAL(cass_value_get_inet(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
+  } else if(type == CASS_VALUE_TYPE_ASCII || type == CASS_VALUE_TYPE_TEXT || type == CASS_VALUE_TYPE_VARCHAR) {
+    CassString value = cass_string_init("");
+    BOOST_REQUIRE_EQUAL(cass_value_get_string(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
+  } else if (type == CASS_VALUE_TYPE_BLOB || type == CASS_VALUE_TYPE_VARINT || type == CASS_VALUE_TYPE_LIST || type == CASS_VALUE_TYPE_MAP || type == CASS_VALUE_TYPE_SET) {
+    CassBytes value;
+    BOOST_REQUIRE_EQUAL(cass_value_get_bytes(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
+  } else if (type == CASS_VALUE_TYPE_DECIMAL) {
+    CassDecimal value;
+    BOOST_REQUIRE_EQUAL(cass_value_get_decimal(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
+  } 
 }
 
 BOOST_AUTO_TEST_CASE(test_basic_types)
