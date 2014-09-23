@@ -140,14 +140,17 @@ private:
 class SessionCloseFuture : public Future {
 public:
   SessionCloseFuture(Session* session)
-      : Future(CASS_FUTURE_TYPE_SESSION_CLOSE),
-        session_(session) {}
+      : Future(CASS_FUTURE_TYPE_SESSION_CLOSE)
+      , session_(session) {
+    session_thread_guard();
+  }
 
   ~SessionCloseFuture() {
     wait();
   }
 
   void wait() {
+    session_thread_guard();
     ScopedMutex lock(&mutex_);
 
     internal_wait(lock);
@@ -160,6 +163,7 @@ public:
   }
 
   bool wait_for(uint64_t timeout) {
+    session_thread_guard();
     ScopedMutex lock(&mutex_);
     if (internal_wait_for(lock, timeout)) {
       if (session_ != NULL) {
@@ -173,7 +177,15 @@ public:
   }
 
 private:
-    Session* session_;
+  void session_thread_guard() {
+    if (session_ != NULL && uv_thread_self() == session_->thread_id()) {
+      fprintf(stderr, "Attempted to close session with session thread (possibly from close callback). Aborting.\n");
+      abort();
+    }
+  }
+
+private:
+  Session* session_;
 };
 
 class SessionConnectFuture : public ResultFuture<Session> {
