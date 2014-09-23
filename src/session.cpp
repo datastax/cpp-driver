@@ -310,10 +310,17 @@ void Session::on_control_connection_ready() {
        end = io_workers_.end(); it != end; ++it) {
     (*it)->set_protocol_version(control_connection_.protocol_version());
   }
-  pending_pool_count_ = hosts_.size() * io_workers_.size();
   for (HostMap::iterator it = hosts_.begin(), hosts_end = hosts_.end();
        it != hosts_end; ++it) {
     on_add(it->second, true);
+  }
+  if (config().core_connections_per_host() > 0) {
+    pending_pool_count_ = hosts_.size() * io_workers_.size();
+  } else {
+    // Special case for internal testing. Not allowed by API
+    logger_->debug("Session connected with no core IO connections");
+    connect_future_->set();
+    connect_future_.reset();
   }
 }
 
