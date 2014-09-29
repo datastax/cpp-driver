@@ -26,7 +26,7 @@
 
 namespace cass {
 
-void default_log_callback(cass_uint64_t time, CassLogLevel severity,
+void default_log_callback(cass_uint64_t time_ms, CassLogLevel severity,
                           CassString message, void* data);
 
 class Config {
