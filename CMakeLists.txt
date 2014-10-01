@@ -218,8 +218,16 @@ if(CASS_INSTALL_HEADER)
   install(FILES ${INC_FILES} DESTINATION "${INSTALL_HEADERS_DIR}")
 endif()
 
-# Where to put libraries
-set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib")
+# Where to put libraries - either lib or lib64.
+get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
+
+if ("${LIB64}" STREQUAL "TRUE")
+    set(LIBSUFFIX 64)
+else()
+    set(LIBSUFFIX "")
+endif()
+
+set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib${LIBSUFFIX}")
 
 # For windows only
 set(INSTALL_DLL_DIR "${CMAKE_INSTALL_PREFIX}/bin")
