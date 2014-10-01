@@ -49,7 +49,7 @@ else()
 endif()
 
 find_path(LIBUV_INCLUDE_DIR
-  NAMES uv.h 
+  NAMES uv.h
   HINTS ${_LIBUV_INCLUDEDIR} ${_LIBUV_ROOT_HINTS_AND_PATHS}
   PATH_SUFFIXES include)
 
@@ -120,7 +120,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /NODEFAULTLIB:LIBCMT")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:LIBCMT")
- 
+
   # On Visual C++ -pedantic flag is not used,
   # -fPIC is not used on Windows platform (all DLLs are
   # relocable), -Wall generates about 30k stupid warnings
@@ -343,3 +343,23 @@ if(DOXYGEN_FOUND)
     COMMENT "Generating API documentation with Doxygen" VERBATIM)
 endif(DOXYGEN_FOUND)
 
+#-----------------------------------
+# Build an RPM.
+#-----------------------------------
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION_STRING})
+set(CPACK_GENERATOR "RPM")
+set(CPACK_PACKAGE_NAME "cpp-cassandra-driver")
+set(CPACK_PACKAGE_RELEASE 1)
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "C++ driver for Cassandra")
+set(CPACK_PACKAGE_CONTACT "Michael Penick")
+set(CPACK_PACKAGE_VENDOR "Datastax")
+set(CPACK_PACKAGING_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+set(CPACK_RPM_PACKAGE_ARCHITECTURE x86_64)
+if(32BIT)
+  set(CPACK_RPM_PACKAGE_ARCHITECTURE i686)
+else()
+  set(CPACK_RPM_PACKAGE_ARCHITECTURE x86_64)
+endif()
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CPACK_RPM_PACKAGE_ARCHITECTURE}")
+set(CPACK_RPM_PACKAGE_REQUIRES "libuv")
+include(CPack)
