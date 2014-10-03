@@ -115,21 +115,13 @@ private:
   typedef std::map<Address, SharedRefPtr<Pool> > PoolMap;
 
   struct PendingReconnect : public RefCounted<PendingReconnect> {
-    PendingReconnect(Address address, Logger* logger)
+    PendingReconnect(Address address)
         : address(address)
-        , logger(logger)
-        , timer(NULL) {
-      logger->debug("PendingReconnect: %p ctor timer(%p)", this, timer);
-    }
-
-    ~PendingReconnect() {
-      logger->debug("PendingReconnect: %p dtor timer(%p)", this, timer);
-    }
+        , timer(NULL) {}
 
     void stop_timer();
 
     Address address;
-    Logger* logger;
     Timer* timer;
   };
 

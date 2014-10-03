@@ -126,14 +126,4 @@ int Address::compare(const Address& a) const {
   }
 }
 
-bool Address::is_valid_family() const {
-  switch(family()) {
-    case AF_INET:
-    case AF_INET6:
-      return true;
-    default:
-      return false;
-  }
-}
-
 }
