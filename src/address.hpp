@@ -74,6 +74,8 @@ public:
 
   int compare(const Address& a) const;
 
+  bool is_valid_family() const;
+
 private:
   void init() { memset(&addr_, 0, sizeof(addr_)); }
 

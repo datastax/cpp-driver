@@ -49,11 +49,16 @@ class Request;
 
 struct SessionEvent {
   enum Type {
+    INVALID,
     CONNECT,
     NOTIFY_READY,
     NOTIFY_CLOSED,
     NOTIFY_UP,
-    NOTIFY_DOWN };
+    NOTIFY_DOWN
+  };
+
+  SessionEvent()
+    : type(INVALID) {}
 
   Type type;
   Address address;

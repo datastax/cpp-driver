@@ -173,6 +173,8 @@ bool Session::connect_async(const std::string& keyspace, Future* future) {
     return false;
   }
 
+  logger_->debug("Session: issued connect event");
+
   if (!keyspace.empty()) {
     broadcast_keyspace_change(keyspace, NULL);
   }
@@ -190,6 +192,7 @@ void Session::close_async(Future* future) {
   while (!request_queue_->enqueue(NULL)) {
     // Keep trying
   }
+  logger_->debug("Session: issued shutdown");
 }
 
 void Session::internal_connect() {
@@ -277,6 +280,10 @@ void Session::on_event(const SessionEvent& event) {
 
     case SessionEvent::NOTIFY_DOWN:
       control_connection_.on_down(event.address, event.is_critical_failure);
+      break;
+
+    default:
+      assert(false);
       break;
   }
 }

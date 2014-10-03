@@ -168,7 +168,7 @@ bool Connection::execute(Handler* handler) {
     return true; // Don't retry
   }
 
-  logger_->debug("Connection: Sending message type %s with %d",
+  logger_->trace("Connection: Sending message type %s with %d",
                  opcode_to_string(handler->request()->opcode()).c_str(), stream);
 
   pending_requests_.add_to_back(handler);
@@ -230,7 +230,7 @@ void Connection::consume(char* input, size_t size) {
       ScopedPtr<ResponseMessage> response(response_.release());
       response_.reset(new ResponseMessage());
 
-      logger_->debug(
+      logger_->trace(
           "Connection: Consumed message type %s with stream %d, input %lu, remaining %d on host %s",
           opcode_to_string(response->opcode()).c_str(), static_cast<int>(response->stream()),
           size, remaining, addr_string_.c_str());
@@ -302,7 +302,7 @@ void Connection::maybe_set_keyspace(ResponseMessage* response) {
 void Connection::on_connect(Connecter* connecter) {
   Connection* connection = static_cast<Connection*>(connecter->data());
 
-  if (connection->is_defunct()) {
+  if (connection->connect_timer_ == NULL) {
     return; // Timed out
   }
 

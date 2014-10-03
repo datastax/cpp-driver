@@ -22,6 +22,7 @@
 #include "constants.hpp"
 #include "event_thread.hpp"
 #include "list.hpp"
+#include "logger.hpp"
 #include "pool.hpp"
 #include "ref_counted.hpp"
 #include "spsc_queue.hpp"
@@ -39,11 +40,19 @@ class Session;
 class Config;
 class SSLContext;
 class RequestHandler;
-class Logger;
 class Timer;
 
 struct IOWorkerEvent {
-  enum Type { ADD_POOL, REMOVE_POOL, SCHEDULE_RECONNECT };
+  enum Type {
+    INVALID,
+    ADD_POOL,
+    REMOVE_POOL,
+    SCHEDULE_RECONNECT
+  };
+
+  IOWorkerEvent()
+    : type(INVALID) {}
+
   Type type;
   Address address;
   uint64_t reconnect_wait;
@@ -106,13 +115,21 @@ private:
   typedef std::map<Address, SharedRefPtr<Pool> > PoolMap;
 
   struct PendingReconnect : public RefCounted<PendingReconnect> {
-    PendingReconnect(Address address)
+    PendingReconnect(Address address, Logger* logger)
         : address(address)
-        , timer(NULL) {}
+        , logger(logger)
+        , timer(NULL) {
+      logger->debug("PendingReconnect: %p ctor timer(%p)", this, timer);
+    }
+
+    ~PendingReconnect() {
+      logger->debug("PendingReconnect: %p dtor timer(%p)", this, timer);
+    }
 
     void stop_timer();
 
     Address address;
+    Logger* logger;
     Timer* timer;
   };
 

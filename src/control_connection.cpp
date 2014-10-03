@@ -174,6 +174,8 @@ void ControlConnection::on_connection_ready(Connection* connection) {
 void ControlConnection::on_connection_closed(Connection* connection) {
   bool retry_current_host = false;
 
+  logger_->warn("ControlConnection: Lost connection on host %s", connection->address_string().c_str());
+
   // This pointer to the connection is no longer valid once it's closed
   connection_ = NULL;
 
@@ -293,6 +295,8 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
     query.assign(SELECT_PEERS);
     response_callback = boost::bind(&ControlConnection::on_refresh_node_info_all, this, _1, _2);
   }
+
+  logger_->debug("ControlConnection: refresh_node_info: %s", query.c_str());
 
   RefreshNodeData data(host, callback);
   connection_->execute(
