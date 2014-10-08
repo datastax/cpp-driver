@@ -42,7 +42,7 @@ public:
       , queue_size_log_(4096)
       , core_connections_per_host_(2)
       , max_connections_per_host_(4)
-      , reconnect_wait_time_(20)
+      , reconnect_wait_time_(2000)
       , max_simultaneous_creation_(1)
       , max_pending_requests_(128 * max_connections_per_host_)
       , max_simultaneous_requests_threshold_(100)
