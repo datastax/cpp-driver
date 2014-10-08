@@ -48,6 +48,7 @@ Pool::Pool(IOWorker* io_worker, const Address& address,
     , is_critical_failure_(false) {}
 
 Pool::~Pool() {
+  logger_->debug("Pool: dtor with %u pending requests pool(%p)", pending_requests_.size(), this);
   while (!pending_requests_.is_empty()) {
     RequestHandler* request_handler
         = static_cast<RequestHandler*>(pending_requests_.front());
@@ -58,6 +59,7 @@ Pool::~Pool() {
 }
 
 void Pool::connect() {
+  logger_->debug("Pool: connect %s pool(%p)", address_.to_string().c_str(), this);
   if (state_ == POOL_STATE_NEW) {
     for (unsigned i = 0; i < config_.core_connections_per_host(); ++i) {
       spawn_connection();
@@ -69,6 +71,7 @@ void Pool::connect() {
 
 void Pool::close() {
   if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
+    logger_->debug("Pool: closing pool(%p)", this);
     // We're closing before we've connected (likely beause of an error), we need
     // to notify we're "ready"
     if (state_ == POOL_STATE_CONNECTING) {
@@ -128,6 +131,7 @@ bool Pool::execute(Connection* connection, RequestHandler* request_handler) {
   if (io_worker_->is_current_keyspace(connection->keyspace())) {
     return connection->execute(request_handler);
   } else {
+    logger_->debug("Pool: setting keyspace %s on connection(%p) pool(%p)", io_worker_->keyspace().c_str(), connection, this);
     return connection->execute(new SetKeyspaceHandler(
         connection, io_worker_->keyspace(), request_handler));
   }
@@ -234,15 +238,27 @@ void Pool::on_pending_request_timeout(RequestTimer* timer) {
   RequestHandler* request_handler = static_cast<RequestHandler*>(timer->data());
   pending_requests_.remove(request_handler);
   request_handler->retry(RETRY_WITH_NEXT_HOST);
+  logger_->debug("Pool: timeout waiting for connection to %s pool(%p)",
+                 address_.to_string().c_str(),
+                 this);
   maybe_close();
 }
 
 bool Pool::wait_for_connection(RequestHandler* request_handler) {
   if (pending_requests_.size() + 1 > config_.max_pending_requests()) {
-    logger_->warn("Exceeded the max pending requests setting of %u on host %s",
+    logger_->warn("Exceeded the max pending requests setting of %u on host %s pool(%p)",
                   config_.max_pending_requests(),
-                  address_.to_string().c_str());
+                  address_.to_string().c_str(),
+                  this);
     return false;
+  }
+
+  if (pending_requests_.size() % 10 == 0) {
+    logger_->debug("Pool: %u request%s pending on %s pool(%p)",
+                   pending_requests_.size()+1,
+                   pending_requests_.size() > 0 ? "s":"",
+                   address_.to_string().c_str(),
+                   this);
   }
 
   request_handler->start_timer(loop_, config_.connect_timeout(), request_handler,

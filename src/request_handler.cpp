@@ -112,7 +112,9 @@ void RequestHandler::return_connection() {
 
 void RequestHandler::return_connection_and_finish() {
   return_connection();
-  io_worker_->request_finished(this);
+  if (io_worker_ != NULL) {
+     io_worker_->request_finished(this);
+  }
 }
 
 void RequestHandler::on_result_response(ResponseMessage* response) {

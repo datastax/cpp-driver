@@ -19,31 +19,37 @@
 
 #include "address.hpp"
 #include "async_queue.hpp"
-#include "constants.hpp"
 #include "event_thread.hpp"
-#include "list.hpp"
-#include "pool.hpp"
-#include "ref_counted.hpp"
+#include "logger.hpp"
 #include "spsc_queue.hpp"
+#include "timer.hpp"
 
 #include "third_party/boost/boost/atomic.hpp"
 
 #include <map>
-#include <list>
 #include <string>
 #include <uv.h>
 
 namespace cass {
 
-class Session;
 class Config;
-class SSLContext;
+class Pool;
 class RequestHandler;
-class Logger;
+class Session;
+class SSLContext;
 class Timer;
 
 struct IOWorkerEvent {
-  enum Type { ADD_POOL, REMOVE_POOL, SCHEDULE_RECONNECT };
+  enum Type {
+    INVALID,
+    ADD_POOL,
+    REMOVE_POOL,
+    SCHEDULE_RECONNECT
+  };
+
+  IOWorkerEvent()
+    : type(INVALID) {}
+
   Type type;
   Address address;
   uint64_t reconnect_wait;
@@ -105,10 +111,7 @@ private:
 private:
   typedef std::map<Address, SharedRefPtr<Pool> > PoolMap;
 
-  struct PendingReconnect : public RefCounted<PendingReconnect> {
-    PendingReconnect(Address address)
-        : address(address)
-        , timer(NULL) {}
+  struct PendingReconnect {
 
     void stop_timer();
 
@@ -116,7 +119,7 @@ private:
     Timer* timer;
   };
 
-  typedef std::map<Address, SharedRefPtr<PendingReconnect> > PendingReconnectMap;
+  typedef std::map<Address, PendingReconnect> PendingReconnectMap;
 
 private:
   Session* session_;
