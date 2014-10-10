@@ -146,13 +146,13 @@ void insert_null_value(CassSession* session, CassValueType type) {
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
   BOOST_REQUIRE(cass_result_column_count(result.get()) == 2);
 
-  //Get the test value column from the first row of the result
+  // Get the test value column from the first row of the result
   const CassValue *testValue = cass_row_get_column(cass_result_first_row(result.get()), 1);
 
-  //Ensure the test value is NULL
+  // Ensure the test value is NULL
   BOOST_REQUIRE(cass_value_is_null(testValue));
 
-  //Verify cass_value_get function returns CASS_ERROR_LIB_NULL_VALUE
+  // Verify cass_value_get function returns CASS_ERROR_LIB_NULL_VALUE
   if (type == CASS_VALUE_TYPE_INT) {
     cass_int32_t value = 0;
     BOOST_REQUIRE_EQUAL(cass_value_get_int32(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
