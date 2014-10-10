@@ -41,7 +41,7 @@ public:
   virtual void on_event(const E& event) = 0;
 
 private:
-  void static on_event_internal(uv_async_t* async, int status) {
+  static void on_event_internal(uv_async_t* async, int status) {
     EventThread* thread = static_cast<EventThread*>(async->data);
     E event;
     while (thread->event_queue_->dequeue(event)) {

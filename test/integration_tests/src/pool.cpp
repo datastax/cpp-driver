@@ -35,7 +35,8 @@ BOOST_AUTO_TEST_CASE(pending_request_timeout)
   test_utils::MultipleNodesTest inst(1, 0);
   cass_cluster_set_log_level(inst.cluster, CASS_LOG_DEBUG);
   cass_cluster_set_connect_timeout(inst.cluster, CONNECT_TIMEOUT_MS);
-  cass_cluster_set_max_pending_requests(inst.cluster, 1);
+  cass_cluster_set_pending_requests_high_water_mark(inst.cluster, 1);
+  cass_cluster_set_pending_requests_low_water_mark(inst.cluster, 1);
   cass_cluster_set_num_threads_io(inst.cluster, 1);
   reinterpret_cast<cass::Cluster*>(inst.cluster)->config().set_core_connections_per_host(0);
 

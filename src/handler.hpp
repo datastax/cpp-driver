@@ -35,6 +35,8 @@ class Connection;
 class Request;
 class ResponseMessage;
 
+typedef std::vector<uv_buf_t> UvBufVec;
+
 struct RequestTimer {
   typedef boost::function1<void, RequestTimer*> Callback;
 
@@ -83,68 +85,14 @@ private:
   Callback cb_;
 };
 
-class RequestWriter {
-public:
-  typedef boost::function1<void, RequestWriter*> Callback;
-
-  RequestWriter()
-      : data_(NULL)
-      , cb_(NULL)
-      , status_(WRITING) {
-    req_.data = this;
-  }
-
-  enum Status { WRITING, FAILED, SUCCESS };
-
-  Status status() { return status_; }
-  void* data() { return data_; }
-  BufferVec& bufs() { return bufs_; }
-
-  void write(uv_stream_t* stream, void* data, Callback cb) {
-    size_t bufs_size = bufs_.size();
-    ScopedPtr<uv_buf_t[]> uv_bufs(new uv_buf_t[bufs_size]);
-
-    for (size_t i = 0; i < bufs_size; ++i) {
-      Buffer& buf = bufs_[i];
-      uv_bufs[i] = uv_buf_init(const_cast<char*>(buf.data()), buf.size());
-    }
-
-    data_ = data;
-    cb_ = cb;
-
-    int rc = uv_write(&req_, stream, uv_bufs.get(), bufs_size, on_write);
-    if (rc != 0) {
-      status_ = FAILED;
-      cb_(this);
-    }
-  }
-
-private:
-  static void on_write(uv_write_t* req, int status) {
-    RequestWriter* writer = static_cast<RequestWriter*>(req->data);
-    if (status != 0) {
-      writer->status_ = FAILED;
-    } else {
-      writer->status_ = SUCCESS;
-    }
-    writer->cb_(writer);
-  }
-
-private:
-  uv_write_t req_;
-  BufferVec bufs_;
-  void* data_;
-  Callback cb_;
-  Status status_;
-};
-
 class Handler : public RefCounted<Handler>, public List<Handler>::Node {
 public:
   enum State {
     REQUEST_STATE_NEW,
     REQUEST_STATE_WRITING,
     REQUEST_STATE_READING,
-    REQUEST_STATE_TIMEOUT,
+    REQUEST_STATE_WRITE_TIMEOUT,
+    REQUEST_STATE_READ_TIMEOUT,
     REQUEST_STATE_READ_BEFORE_WRITE,
     REQUEST_STATE_DONE
   };
@@ -157,8 +105,7 @@ public:
 
   virtual const Request* request() const = 0;
 
-  bool encode(int version, int flags);
-  void write(uv_stream_t* stream, void* data, RequestWriter::Callback cb);
+  int32_t encode(int version, int flags, BufferVec* bufs) const;
 
   virtual void on_set(ResponseMessage* response) = 0;
   virtual void on_error(CassError code, const std::string& message) = 0;
@@ -185,7 +132,6 @@ public:
 
 private:
   RequestTimer timer_;
-  RequestWriter writer_;
   int8_t stream_;
   State state_;
 

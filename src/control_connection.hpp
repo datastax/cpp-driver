@@ -64,6 +64,7 @@ public:
 
   void connect(Session* session);
   void close();
+  void flush();
 
   void on_up(const Address& address);
   void on_down(const Address& address, bool is_critical_failure);

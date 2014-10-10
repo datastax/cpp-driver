@@ -40,6 +40,10 @@ public:
     uv_close(copy_cast<uv_async_t*, uv_handle_t*>(&async_), NULL);
   }
 
+  void send() {
+    uv_async_send(&async_);
+  }
+
   bool enqueue(const typename Q::EntryType& data) {
     if (queue_.enqueue(data)) {
       uv_async_send(&async_);

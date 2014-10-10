@@ -34,7 +34,9 @@ IOWorker::IOWorker(Session* session)
     , is_closing_(false)
     , pending_request_count_(0)
     , request_queue_(config_.queue_size_io()) {
+  prepare_.data = this;
   uv_mutex_init(&keyspace_mutex_);
+  uv_mutex_init(&unavailable_addresses_mutex_);
 }
 
 IOWorker::~IOWorker() {
@@ -46,6 +48,9 @@ int IOWorker::init() {
   if (rc != 0) return rc;
   rc = request_queue_.init(loop(), this, &IOWorker::on_execute);
   if (rc != 0) return rc;
+  rc = uv_prepare_init(loop(), &prepare_);
+  if (rc != 0) return rc;
+  rc = uv_prepare_start(&prepare_, on_prepare);
   return rc;
 }
 
@@ -81,6 +86,20 @@ bool IOWorker::is_host_up(const Address& address) const {
   return it != pools_.end() && it->second->is_ready();
 }
 
+void IOWorker::set_host_is_available(const Address& address, bool is_available) {
+  ScopedMutex lock(&unavailable_addresses_mutex_);
+  if (is_available) {
+    unavailable_addresses_.erase(address);
+  } else {
+    unavailable_addresses_.insert(address);
+  }
+}
+
+bool IOWorker::is_host_available(const Address& address) {
+  ScopedMutex lock(&unavailable_addresses_mutex_);
+  return unavailable_addresses_.count(address) == 0;
+}
+
 bool IOWorker::add_pool_async(const Address& address, bool is_initial_connection) {
   IOWorkerEvent event;
   event.type = IOWorkerEvent::ADD_POOL;
@@ -112,6 +131,8 @@ void IOWorker::close_async() {
 
 void IOWorker::add_pool(const Address& address, bool is_initial_connection) {
   if (!is_closing_ && pools_.count(address) == 0) {
+    set_host_is_available(address, false);
+
     SharedRefPtr<Pool> pool(new Pool(this, address, is_initial_connection));
     pools_[address] = pool;
     pool->connect();
@@ -123,7 +144,6 @@ bool IOWorker::execute(RequestHandler* request_handler) {
 }
 
 void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
-
   if (retry_type == RETRY_WITH_NEXT_HOST) {
     request_handler->next_host();
   }
@@ -136,17 +156,15 @@ void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
   }
 
   PoolMap::iterator it = pools_.find(address);
-  if (it != pools_.end()) {
+  if (it != pools_.end() && it->second->is_ready()) {
     const SharedRefPtr<Pool>& pool = it->second;
     Connection* connection = pool->borrow_connection();
     if (connection != NULL) {
-      if (!pool->execute(connection, request_handler)) {
+      if (!pool->write(connection, request_handler)) {
         retry(request_handler, RETRY_WITH_NEXT_HOST);
       }
     } else { // Too busy, or no connections
-      if (!pool->wait_for_connection(request_handler)) {
-        retry(request_handler, RETRY_WITH_NEXT_HOST);
-      }
+      pool->wait_for_connection(request_handler);
     }
   } else {
     retry(request_handler, RETRY_WITH_NEXT_HOST);
@@ -154,9 +172,9 @@ void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
 }
 
 void IOWorker::request_finished(RequestHandler* request_handler) {
-  request_handler->dec_ref();
   pending_request_count_--;
   maybe_close();
+  request_queue_.send();
 }
 
 void IOWorker::notify_pool_ready(Pool* pool) {
@@ -185,11 +203,14 @@ void IOWorker::notify_pool_closed(Pool* pool) {
   }
 }
 
+void IOWorker::add_pending_flush(Pool* pool) {
+  pools_pending_flush_.push_back(SharedRefPtr<Pool>(pool));
+}
+
 void IOWorker::maybe_close() {
   if (is_closing_ && pending_request_count_ <= 0) {
     if (config_.core_connections_per_host() > 0) {
       for (PoolMap::iterator it = pools_.begin(); it != pools_.end(); ++it) {
-        fprintf(stderr, "pools %s\n", it->first.to_string().c_str());
         it->second->close();
       }
       maybe_notify_closed();
@@ -213,6 +234,8 @@ void IOWorker::maybe_notify_closed() {
 void IOWorker::close_handles() {
   EventThread<IOWorkerEvent>::close_handles();
   request_queue_.close_handles();
+  uv_prepare_stop(&prepare_);
+  uv_close(copy_cast<uv_prepare_t*, uv_handle_t*>(&prepare_), NULL);
   for (PendingReconnectMap::iterator it = pending_reconnects_.begin(),
        end = pending_reconnects_.end(); it != end; ++it) {
     it->second->stop_timer();
@@ -245,7 +268,6 @@ void IOWorker::on_event(const IOWorkerEvent& event) {
       it->second->stop_timer();
       pending_reconnects_.erase(it);
     }
-
     add_pool(event.address, event.is_initial_connection);
   } else if (event.type == IOWorkerEvent::REMOVE_POOL) {
     PoolMap::iterator it = pools_.find(event.address);
@@ -269,7 +291,8 @@ void IOWorker::on_execute(uv_async_t* async, int status) {
   IOWorker* io_worker = static_cast<IOWorker*>(async->data);
 
   RequestHandler* request_handler = NULL;
-  while (io_worker->request_queue_.dequeue(request_handler)) {
+  size_t remaining = io_worker->config().max_requests_per_flush();
+  while (remaining != 0 && io_worker->request_queue_.dequeue(request_handler)) {
     if (request_handler != NULL) {
       io_worker->pending_request_count_++;
       request_handler->set_io_worker(io_worker);
@@ -277,9 +300,22 @@ void IOWorker::on_execute(uv_async_t* async, int status) {
     } else {
       io_worker->is_closing_ = true;
     }
+    remaining--;
   }
+
   io_worker->maybe_close();
 }
+
+void IOWorker::on_prepare(uv_prepare_t* prepare, int status) {
+  IOWorker* io_worker = static_cast<IOWorker*>(prepare->data);
+
+  for (PoolVec::iterator it = io_worker->pools_pending_flush_.begin(),
+       end = io_worker->pools_pending_flush_.end(); it != end; ++it) {
+    (*it)->flush();
+  }
+  io_worker->pools_pending_flush_.clear();
+}
+
 
 void IOWorker::PendingReconnect::stop_timer() {
   if (timer != NULL) {

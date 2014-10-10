@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.6.4)
 
+include(FindPackageHandleStandardArgs)
+
 set(PROJECT_NAME_STR cassandra)
 set(PROJECT_LIB_NAME ${PROJECT_NAME_STR})
 set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
@@ -8,8 +10,10 @@ set(CASS_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
 project(${PROJECT_NAME_STR} C CXX)
 
 option(CASS_INSTALL_HEADER "Install header file" ON)
-option(CASS_BUILD_STATIC "Build static library" ON)
+option(CASS_BUILD_STATIC "Build static library" OFF)
 option(CASS_BUILD_EXAMPLES "Build examples" ON)
+option(CASS_BUILD_TESTS "Build tests" OFF)
+option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
 
 #-------------------
 # Version
@@ -54,13 +58,27 @@ find_library(LIBUV_LIBRARY
 
 set(LIBUV_LIBRARIES ${LIBUV_LIBRARY})
 
-include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Libuv "Could NOT find libuv, try to set the path to the libuv root folder in the system variable LIBUV_ROOT_DIR"
   LIBUV_LIBRARIES
   LIBUV_INCLUDE_DIR)
 
 set(INCLUDES ${INCLUDES} ${LIBUV_INCLUDE_DIR})
 set(LIBS ${LIBS} ${LIBUV_LIBRARIES})
+
+# tcmalloc
+
+if(CASS_USE_TCMALLOC)
+  find_library(GPERFTOOLS_TCMALLOC
+      NAMES tcmalloc
+      HINTS ${Gperftools_ROOT_DIR}/lib)
+
+  set(GPERFTOOLS_LIBRARIES ${GPERFTOOLS_TCMALLOC})
+
+  find_package_handle_standard_args(Gperftools "Could NOT find gperftools, try to set the path to the gperftools root folder in the system variable Gperftools_ROOT_DIR"
+    GPERFTOOLS_LIBRARIES)
+
+  set(LIBS ${LIBS} ${GPERFTOOLS_LIBRARIES})
+endif()
 
 # openssl
 if(WIN32)
@@ -181,28 +199,18 @@ set(ALL_SOURCE_FILES ${SRC_FILES} ${INC_FILES})
 
 # build dynamic and static version of library
 add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})
-if(CASS_BUILD_STATIC)
-  add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${ALL_SOURCE_FILES})
-endif()
-
 target_link_libraries(${PROJECT_LIB_NAME} ${LIBS})
-if(CASS_BUILD_STATIC)
-  target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${LIBS})
-endif()
-
 set_target_properties(${PROJECT_LIB_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME})
 set_target_properties(${PROJECT_LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
-
-if(CASS_BUILD_STATIC)
-  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
-  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
-endif()
-
 set_property(
   TARGET ${PROJECT_LIB_NAME}
   APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DCASS_BUILDING")
 
 if(CASS_BUILD_STATIC)
+  add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${ALL_SOURCE_FILES})
+  target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${LIBS})
+  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
+  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
   set_property(
     TARGET ${PROJECT_LIB_NAME_STATIC}
     APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DCASS_STATIC")
@@ -252,23 +260,25 @@ add_custom_target(UNINSTALL
 # Integration and unit tests
 #-------------------
 
-if(WIN32)
-  set(BOOST_ROOT "${PROJECT_SOURCE_DIR}/lib/boost/")
-  set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/")
-endif()
+if(CASS_BUILD_TESTS)
+  if(WIN32)
+    set(BOOST_ROOT "${PROJECT_SOURCE_DIR}/lib/boost/")
+    set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/")
+  endif()
 
-find_package(Boost 1.55.0 COMPONENTS system chrono thread unit_test_framework date_time program_options)
+  find_package(Boost 1.55.0 COMPONENTS system chrono thread unit_test_framework date_time program_options)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/test/ccm_bridge/cmake/Modules/")
-find_package(LIBSSH2)
+  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/test/ccm_bridge/cmake/Modules/")
+  find_package(LIBSSH2)
 
-if(Boost_FOUND)
-  add_subdirectory(test/unit_tests)
-endif()
+  if(Boost_FOUND)
+    add_subdirectory(test/unit_tests)
+  endif()
 
-if((Boost_FOUND) AND (LIBSSH2_FOUND))
-  add_subdirectory(test/ccm_bridge)
-  add_subdirectory(test/integration_tests)
+  if((Boost_FOUND) AND (LIBSSH2_FOUND))
+    add_subdirectory(test/ccm_bridge)
+    add_subdirectory(test/integration_tests)
+  endif()
 endif()
 
 #-------------------

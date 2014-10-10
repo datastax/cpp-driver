@@ -17,7 +17,6 @@
 #ifndef __CASS_BUFFER_HPP_INCLUDED__
 #define __CASS_BUFFER_HPP_INCLUDED__
 
-#include "fixed_vector.hpp"
 #include "ref_counted.hpp"
 #include "serialization.hpp"
 
@@ -219,7 +218,7 @@ private:
   int size_;
 };
 
-typedef FixedVector<Buffer, 8> BufferVec;
+typedef std::vector<Buffer> BufferVec;
 
 } // namespace cass
 

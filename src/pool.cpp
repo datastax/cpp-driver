@@ -43,9 +43,12 @@ Pool::Pool(IOWorker* io_worker, const Address& address,
     , logger_(io_worker->logger())
     , config_(io_worker->config())
     , state_(POOL_STATE_NEW)
+    , available_connection_count_(0)
+    , is_available_(false)
     , is_initial_connection_(is_initial_connection)
     , is_defunct_(false)
-    , is_critical_failure_(false) {}
+    , is_critical_failure_(false)
+    , is_pending_flush_(false) {}
 
 Pool::~Pool() {
   while (!pending_requests_.is_empty()) {
@@ -77,6 +80,8 @@ void Pool::close() {
     } else {
       state_ = POOL_STATE_CLOSING;
     }
+
+    set_is_available(false);
 
     for (ConnectionVec::iterator it = connections_.begin(),
                                  end = connections_.end();
@@ -112,24 +117,69 @@ Connection* Pool::borrow_connection() {
 }
 
 void Pool::return_connection(Connection* connection) {
-  if (connection->is_ready() && !pending_requests_.is_empty()) {
-    RequestHandler* request_handler
-        = static_cast<RequestHandler*>(pending_requests_.front());
-    pending_requests_.remove(request_handler);
-    request_handler->stop_timer();
-    if (!execute(connection, request_handler)) {
-      request_handler->retry(RETRY_WITH_NEXT_HOST);
+  if (!connection->is_ready() || pending_requests_.is_empty()) return;
+  RequestHandler* request_handler
+      = static_cast<RequestHandler*>(pending_requests_.front());
+  remove_pending_request(request_handler);
+  request_handler->stop_timer();
+  if (!write(connection, request_handler)) {
+    request_handler->retry(RETRY_WITH_NEXT_HOST);
+  }
+}
+
+void Pool::add_pending_request(RequestHandler* request_handler) {
+  pending_requests_.add_to_back(request_handler);
+  if (pending_requests_.size() > config_.pending_requests_high_water_mark()) {
+    set_is_available(false);
+  }
+}
+
+void Pool::remove_pending_request(RequestHandler* request_handler) {
+  pending_requests_.remove(request_handler);
+  set_is_available(true);
+}
+
+void Pool::set_is_available(bool is_available) {
+  if (is_available) {
+    if (!is_available_ &&
+        available_connection_count_ > 0 &&
+        pending_requests_.size() < config_.pending_requests_low_water_mark()) {
+      io_worker_->set_host_is_available(address_, true);
+      is_available_ = true;
+    }
+  } else {
+    if(is_available_) {
+      io_worker_->set_host_is_available(address_, false);
+      is_available_ = false;
     }
   }
 }
 
-bool Pool::execute(Connection* connection, RequestHandler* request_handler) {
+bool Pool::write(Connection* connection, RequestHandler* request_handler) {
   request_handler->set_connection_and_pool(connection, this);
   if (io_worker_->is_current_keyspace(connection->keyspace())) {
-    return connection->execute(request_handler);
+    if (!connection->write(request_handler, false)) {
+      return false;
+    }
   } else {
-    return connection->execute(new SetKeyspaceHandler(
-        connection, io_worker_->keyspace(), request_handler));
+    if(!connection->write(new SetKeyspaceHandler(connection, io_worker_->keyspace(),
+                                                 request_handler), false)) {
+      return false;
+    }
+  }
+  if (!is_pending_flush_) {
+    io_worker_->add_pending_flush(this);
+  }
+  is_pending_flush_ = true;
+  return true;
+}
+
+void Pool::flush() {
+  is_pending_flush_ = false;
+  //if (is_defunct()) return;
+  for (ConnectionVec::iterator it = connections_.begin(),
+       end = connections_.end(); it != end; ++it) {
+    (*it)->flush();
   }
 }
 
@@ -168,6 +218,8 @@ void Pool::spawn_connection() {
           boost::bind(&Pool::on_connection_ready, this, _1));
     connection->set_close_callback(
           boost::bind(&Pool::on_connection_closed, this, _1));
+    connection->set_availability_changed_callback(
+          boost::bind(&Pool::on_connection_availability_changed, this, _1));
     connection->connect();
 
     connections_pending_.insert(connection);
@@ -230,25 +282,30 @@ void Pool::on_connection_closed(Connection* connection) {
   maybe_close();
 }
 
+void Pool::on_connection_availability_changed(Connection* connection) {
+  if (connection->is_available()) {
+    ++available_connection_count_;
+    set_is_available(true);
+  } else {
+    --available_connection_count_;
+    assert(available_connection_count_ >= 0);
+    if(available_connection_count_ == 0) {
+      set_is_available(false);
+    }
+  }
+}
+
 void Pool::on_pending_request_timeout(RequestTimer* timer) {
   RequestHandler* request_handler = static_cast<RequestHandler*>(timer->data());
-  pending_requests_.remove(request_handler);
+  remove_pending_request(request_handler);
   request_handler->retry(RETRY_WITH_NEXT_HOST);
   maybe_close();
 }
 
-bool Pool::wait_for_connection(RequestHandler* request_handler) {
-  if (pending_requests_.size() + 1 > config_.max_pending_requests()) {
-    logger_->warn("Exceeded the max pending requests setting of %u on host %s",
-                  config_.max_pending_requests(),
-                  address_.to_string().c_str());
-    return false;
-  }
-
+void Pool::wait_for_connection(RequestHandler* request_handler) {
   request_handler->start_timer(loop_, config_.connect_timeout(), request_handler,
                                boost::bind(&Pool::on_pending_request_timeout, this, _1));
-  pending_requests_.add_to_back(request_handler);
-  return true;
+  add_pending_request(request_handler);
 }
 
 } // namespace cass

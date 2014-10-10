@@ -38,9 +38,6 @@ public:
 
   uint8_t opcode() const { return opcode_; }
 
-  bool encode(int version, int flags, int stream, BufferVec* bufs) const;
-
-protected:
   virtual int encode(int version, BufferVec* bufs) const = 0;
 
 private:

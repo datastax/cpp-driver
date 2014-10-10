@@ -344,7 +344,7 @@ cass_cluster_set_protocol_version(CassCluster* cluster,
  * Sets the number of IO threads. This is the number of threads
  * that will handle query requests.
  *
- * Default: 2
+ * Default: 0 (creates a thread per core)
  *
  * @param[in] cluster
  * @param[in] num_threads
@@ -367,6 +367,34 @@ cass_cluster_set_num_threads_io(CassCluster* cluster,
 CASS_EXPORT CassError
 cass_cluster_set_queue_size_io(CassCluster* cluster,
                                unsigned queue_size);
+
+/**
+ * Sets the size of the the fixed size queue that stores
+ * events.
+ *
+ * Default: 4096
+ *
+ * @param[in] cluster
+ * @param[in] queue_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_queue_size_event(CassCluster* cluster,
+                                  unsigned queue_size);
+
+/**
+ * Sets the size of the the fixed size queue that stores
+ * log messsages.
+ *
+ * Default: 4096
+ *
+ * @param[in] cluster
+ * @param[in] queue_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_queue_size_log(CassCluster* cluster,
+                                unsigned queue_size);
 
 /**
  * Sets the number of connections made to each server in each
@@ -397,6 +425,19 @@ cass_cluster_set_max_connections_per_host(CassCluster* cluster,
                                           unsigned num_connections);
 
 /**
+ * Sets the amount of time to wait before attempting reconnection.
+ *
+ * Default: 2000 milliseconds
+ *
+ * @param[in] cluster
+ * @param[in] wait_time
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
+                                     unsigned wait_time);
+
+/**
  * Sets the maximum number of connections that will be simultaneously created.
  * Connections are created when the current connections are unable to keep up with
  * request throughput.
@@ -410,21 +451,6 @@ cass_cluster_set_max_connections_per_host(CassCluster* cluster,
 CASS_EXPORT CassError
 cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
                                            unsigned num_connections);
-
-
-/**
- * Sets the maximum number of requests that will wait for a connection to become
- * available.
- *
- * Default: 128 * max_connections_per_host
- *
- * @param[in] cluster
- * @param[in] num_requests
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_cluster_set_max_pending_requests(CassCluster* cluster,
-                                     unsigned num_requests);
 
 /**
  * Sets the threshold for the maximum number of simultaneous requests inflight
@@ -440,6 +466,82 @@ cass_cluster_set_max_pending_requests(CassCluster* cluster,
 CASS_EXPORT CassError
 cass_cluster_set_max_simultaneous_requests_threshold(CassCluster* cluster,
                                                      unsigned num_requests);
+
+/**
+ * Sets the maximum number of requests processed by an IO worker
+ * per flush.
+ *
+ * Default: 128
+ *
+ * @param[in] cluster
+ * @param[in] num_requests
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
+                                        unsigned num_requests);
+
+/**
+ * Sets the high water mark for the number of bytes outstanding
+ * on a connection. Disables writes to this conneciton if the number
+ * of bytes queued exceed this value.
+ *
+ * Default: 64 KB
+ *
+ * @param[in] cluster
+ * @param[in] num_bytes
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
+                                             unsigned num_bytes);
+
+/**
+ * Sets the low water mark for number of bytes outstanding on a
+ * connection. After exceeding high water mark bytes, writes will
+ * only resume once the number of bytes fall below this value.
+ *
+ * Default: 32 KB
+ *
+ * @param[in] cluster
+ * @param[in] num_bytes
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
+                                            unsigned num_bytes);
+
+/**
+ * Sets the high water mark for the number of requests queued waiting
+ * for a connection in a conneciton pool. Disables writes to a
+ * host on an IO worker if the number of requests queued exceed this
+ * value.
+ *
+ * Default: 128 * max_connections_per_host
+ *
+ * @param[in] cluster
+ * @param[in] num_requests
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
+                                                  unsigned num_requests);
+
+/**
+ * Sets the low water mark for the number of requests queued waiting
+ * for a connection in a conneciton pool. After exceeding high water mark
+ * requests, writes to a host will only resume once the number of requests
+ * fall below this value.
+ *
+ * Default: 64 * max_connections_per_host
+ *
+ * @param[in] cluster
+ * @param[in] num_requests
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
+                                                 unsigned num_requests);
 
 /**
  * Sets the timeout for connecting to a node.

@@ -66,7 +66,9 @@ public:
 
   void connect();
 
-  bool execute(Handler* request);
+  bool write(Handler* request, bool flush_immediately = true);
+  void flush();
+
   void schedule_schema_agreement(const SharedRefPtr<SchemaChangeHandler>& handler, uint64_t wait);
 
   Logger* logger() const { return logger_; }
@@ -80,6 +82,7 @@ public:
 
   bool is_closing() const { return state_ == CONNECTION_STATE_CLOSING; }
   bool is_ready() const { return state_ == CONNECTION_STATE_READY; }
+  bool is_available() const { return is_available_; }
   bool is_defunct() const { return is_defunct_; }
   bool is_invalid_protocol() const { return is_invalid_protocol_; }
   bool is_critical_failure() const { return is_invalid_protocol_ || !auth_error_.empty(); }
@@ -90,16 +93,18 @@ public:
 
   void set_ready_callback(Callback callback) { ready_callback_ = callback; }
   void set_close_callback(Callback callback) { closed_callback_ = callback; }
+  void set_availability_changed_callback(Callback callback) {
+    availability_changed_callback_ = callback;
+  }
 
   void set_event_callback(int types, EventCallback callback) {
     event_types_ = types;
     event_callback_ = callback;
   }
 
-  size_t available_streams() { return stream_manager_.available_streams(); }
-  size_t pending_request_count() { return pending_requests_.size(); }
+  size_t available_streams() const { return stream_manager_.available_streams(); }
+  size_t pending_request_count() const { return stream_manager_.pending_streams(); }
 
-  void on_write(RequestWriter* writer);
   void on_timeout(RequestTimer* timer);
 
 private:
@@ -124,6 +129,40 @@ private:
     ScopedRefPtr<Request> request_;
   };
 
+  class PendingWriteBuffer : public List<PendingWriteBuffer>::Node {
+  public:
+    PendingWriteBuffer(Connection* connection)
+       : connection_(connection)
+       , is_flushed_(false)
+       , size_(0) {
+      req_.data = this;
+    }
+
+    ~PendingWriteBuffer();
+
+    bool is_flushed() const {
+      return is_flushed_;
+    }
+
+    size_t size() const {
+      return size_;
+    }
+
+    int32_t write(Handler* handler);
+    void flush();
+
+  private:
+    static void on_write(uv_write_t* req, int status);
+
+    Connection* connection_;
+    uv_write_t req_;
+    bool is_flushed_;
+    size_t size_;
+    BufferVec buffers_;
+    UvBufVec uv_bufs_;
+    List<Handler> handlers_;
+  };
+
   struct PendingSchemaAgreement
       : public List<PendingSchemaAgreement>::Node {
     PendingSchemaAgreement(const SharedRefPtr<SchemaChangeHandler>& handler)
@@ -136,9 +175,12 @@ private:
     Timer* timer;
   };
 
+  void set_is_available(bool is_available);
   void actually_close();
   void consume(char* input, size_t size);
   void maybe_set_keyspace(ResponseMessage* response);
+  void maybe_write_buffers();
+
 
   static void on_connect(Connecter* connecter);
   static void on_connect_timeout(Timer* timer);
@@ -166,8 +208,11 @@ private:
   bool is_invalid_protocol_;
   std::string auth_error_;
   bool is_registered_for_events_;
+  bool is_available_;
 
-  List<Handler> pending_requests_;
+  size_t pending_writes_size_;
+  List<PendingWriteBuffer> pending_writes_;
+  List<Handler> pending_reads_;
   List<PendingSchemaAgreement> pending_schema_aggreements_;
 
   uv_loop_t* loop_;
@@ -183,6 +228,7 @@ private:
 
   Callback ready_callback_;
   Callback closed_callback_;
+  Callback availability_changed_callback_;
   EventCallback event_callback_;
 
   // the actual connection

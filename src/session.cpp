@@ -70,7 +70,19 @@ int Session::init() {
       new AsyncQueue<MPMCQueue<RequestHandler*> >(config_.queue_size_io()));
   rc = request_queue_->init(loop(), this, &Session::on_execute);
   if (rc != 0) return rc;
-  for (unsigned i = 0; i < config_.thread_count_io(); ++i) {
+
+  unsigned num_threads = config_.thread_count_io();
+  if(num_threads == 0) {
+    num_threads = 1; // Default if we can't determine the number of cores
+    uv_cpu_info_t* cpu_infos;
+    int cpu_count;
+    if (uv_cpu_info(&cpu_infos, &cpu_count).code == 0 && cpu_count > 0) {
+      num_threads = cpu_count;
+      uv_free_cpu_info(cpu_infos, cpu_count);
+    }
+  }
+
+  for (unsigned i = 0; i < num_threads; ++i) {
     SharedRefPtr<IOWorker> io_worker(new IOWorker(this));
     int rc = io_worker->init();
     if (rc != 0) return rc;
@@ -300,7 +312,6 @@ void Session::execute(RequestHandler* request_handler) {
   if (!request_queue_->enqueue(request_handler)) {
     request_handler->on_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
                               "The request queue has reached capacity");
-    request_handler->dec_ref();
   }
 }
 
@@ -401,7 +412,7 @@ void Session::on_down(SharedRefPtr<Host> host, bool is_critical_failure) {
 
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
-    (*it)->schedule_reconnect_async(host->address(), config_.reconnect_wait());
+    (*it)->schedule_reconnect_async(host->address(), config_.reconnect_wait_time());
   }
 }
 
@@ -427,23 +438,28 @@ void Session::on_execute(uv_async_t* data, int status) {
     if (request_handler != NULL) {
       request_handler->set_query_plan(session->load_balancing_policy_->new_query_plan());
 
-      size_t start = session->current_io_worker_;
-      size_t remaining = session->io_workers_.size();
-      const size_t size = session->io_workers_.size();
-      while (remaining != 0) {
-        // TODO(mpenick): Make this something better than RR
-        const SharedRefPtr<IOWorker>& io_worker = session->io_workers_[start % size];
-        if (io_worker->execute(request_handler)) {
-          session->current_io_worker_ = (start + 1) % size;
+      bool is_done = false;
+      while(!is_done) {
+        request_handler->next_host();
+
+        Address address;
+        if(!request_handler->get_current_host_address(&address)) {
+          request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                                    "No hosts available");
           break;
         }
-        start++;
-        remaining--;
-      }
 
-      if (remaining == 0) {
-        request_handler->on_error(CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD,
-                                  "All workers are busy");
+        size_t start = session->current_io_worker_;
+        for (size_t i = 0, size = session->io_workers_.size(); i < size; ++i) {
+          const SharedRefPtr<IOWorker>& io_worker = session->io_workers_[start % size];
+          if (io_worker->is_host_available(address) &&
+              io_worker->execute(request_handler)) {
+            session->current_io_worker_ = (start + 1) % size;
+            is_done = true;
+            break;
+          }
+          start++;
+        }
       }
     } else {
       is_closing = true;

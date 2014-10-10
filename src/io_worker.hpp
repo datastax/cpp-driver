@@ -75,6 +75,9 @@ public:
   bool is_current_keyspace(const std::string& keyspace);
   void broadcast_keyspace_change(const std::string& keyspace);
 
+  void set_host_is_available(const Address& address, bool is_available);
+  bool is_host_available(const Address& address);
+
   bool is_host_up(const Address& address) const;
 
   bool add_pool_async(const Address& address, bool is_initial_connection);
@@ -90,6 +93,8 @@ public:
   void notify_pool_ready(Pool* pool);
   void notify_pool_closed(Pool* pool);
 
+  void add_pending_flush(Pool* pool);
+
 private:
   void add_pool(const Address& address, bool is_initial_connection);
   void maybe_close();
@@ -100,10 +105,12 @@ private:
 
   virtual void on_event(const IOWorkerEvent& event);
 
-  static void on_execute(uv_async_t* data, int status);
+  static void on_execute(uv_async_t* async, int status);
+  static void on_prepare(uv_prepare_t *prepare, int status);
 
 private:
   typedef std::map<Address, SharedRefPtr<Pool> > PoolMap;
+  typedef std::vector<SharedRefPtr<Pool> > PoolVec;
 
   struct PendingReconnect : public RefCounted<PendingReconnect> {
     PendingReconnect(Address address)
@@ -123,10 +130,16 @@ private:
   Logger* logger_;
   const Config& config_;
   boost::atomic<int> protocol_version_;
+  uv_prepare_t prepare_;
+
   std::string keyspace_;
   uv_mutex_t keyspace_mutex_;
 
+  AddressSet unavailable_addresses_;
+  uv_mutex_t unavailable_addresses_mutex_;
+
   PoolMap pools_;
+  PoolVec pools_pending_flush_;
   bool is_closing_;
   int pending_request_count_;
   PendingReconnectMap pending_reconnects_;

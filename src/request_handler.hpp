@@ -49,7 +49,7 @@ public:
   RequestHandler(const Request* request, ResponseFuture* future)
       : request_(request)
       , future_(future)
-      , is_query_plan_exhausted_(false)
+      , is_query_plan_exhausted_(true)
       , io_worker_(NULL)
       , connection_(NULL)
       , pool_(NULL) {}
@@ -62,7 +62,6 @@ public:
 
   void set_query_plan(QueryPlan* query_plan) {
     query_plan_.reset(query_plan);
-    next_host();
   }
 
   void set_io_worker(IOWorker* io_worker);

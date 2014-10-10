@@ -118,6 +118,10 @@ void ControlConnection::close() {
   }
 }
 
+void ControlConnection::flush() {
+  if (connection_ != NULL) connection_->flush();
+}
+
 void ControlConnection::schedule_reconnect(uint64_t ms) {
   reconnect_timer_= Timer::start(session_->loop(),
                                  ms,
@@ -295,7 +299,7 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
   }
 
   RefreshNodeData data(host, callback);
-  connection_->execute(
+  connection_->write(
         new ControlHandler<RefreshNodeData>(new QueryRequest(query),
                                             this,
                                             response_callback,

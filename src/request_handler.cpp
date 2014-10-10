@@ -112,7 +112,10 @@ void RequestHandler::return_connection() {
 
 void RequestHandler::return_connection_and_finish() {
   return_connection();
-  io_worker_->request_finished(this);
+  if (io_worker_ != NULL) {
+    io_worker_->request_finished(this);
+  }
+  dec_ref();
 }
 
 void RequestHandler::on_result_response(ResponseMessage* response) {
@@ -157,7 +160,7 @@ void RequestHandler::on_error_response(ResponseMessage* response) {
     ScopedRefPtr<PrepareHandler> prepare_handler(new PrepareHandler(this));
 
     if (prepare_handler->init(error->prepared_id())) {
-      connection_->execute(prepare_handler.get());
+      connection_->write(prepare_handler.get());
     } else {
       connection_->defunct();
       set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
