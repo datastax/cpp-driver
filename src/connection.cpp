@@ -247,19 +247,10 @@ void Connection::defunct() {
 
 void Connection::set_is_available(bool is_available) {
   // The callback is only called once per actual state change
-  if (is_available) {
-    if (!is_available_) {
-      is_available_ = true;
-      if (availability_changed_callback_) {
-        availability_changed_callback_(this);
-      }
-    }
-  } else {
-    if (is_available_) {
-      is_available_ = false;
-      if (availability_changed_callback_) {
-        availability_changed_callback_(this);
-      }
+  if (is_available_ != is_available) {
+    is_available_ = is_available;
+    if (availability_changed_callback_) {
+      availability_changed_callback_(this);
     }
   }
 }

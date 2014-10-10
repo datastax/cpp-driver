@@ -179,8 +179,6 @@ private:
   void actually_close();
   void consume(char* input, size_t size);
   void maybe_set_keyspace(ResponseMessage* response);
-  void maybe_write_buffers();
-
 
   static void on_connect(Connecter* connecter);
   static void on_connect_timeout(Timer* timer);

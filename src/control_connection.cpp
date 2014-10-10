@@ -118,10 +118,6 @@ void ControlConnection::close() {
   }
 }
 
-void ControlConnection::flush() {
-  if (connection_ != NULL) connection_->flush();
-}
-
 void ControlConnection::schedule_reconnect(uint64_t ms) {
   reconnect_timer_= Timer::start(session_->loop(),
                                  ms,

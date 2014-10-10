@@ -65,7 +65,6 @@ public:
   bool is_ready() const { return state_ == POOL_STATE_READY; }
   bool is_defunct() const { return is_defunct_; }
   bool is_critical_failure() const { return is_critical_failure_; }
-  bool is_pending_flush() const { return is_pending_flush_; }
 
   void return_connection(Connection* connection);
 

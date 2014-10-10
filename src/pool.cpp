@@ -189,7 +189,6 @@ bool Pool::write(Connection* connection, RequestHandler* request_handler) {
 
 void Pool::flush() {
   is_pending_flush_ = false;
-  //if (is_defunct()) return;
   for (ConnectionVec::iterator it = connections_.begin(),
        end = connections_.end(); it != end; ++it) {
     (*it)->flush();

@@ -484,7 +484,7 @@ cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
 
 /**
  * Sets the high water mark for the number of bytes outstanding
- * on a connection. Disables writes to this conneciton if the number
+ * on a connection. Disables writes to a connection if the number
  * of bytes queued exceed this value.
  *
  * Default: 64 KB
@@ -514,7 +514,7 @@ cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
 
 /**
  * Sets the high water mark for the number of requests queued waiting
- * for a connection in a conneciton pool. Disables writes to a
+ * for a connection in a connection pool. Disables writes to a
  * host on an IO worker if the number of requests queued exceed this
  * value.
  *
@@ -530,7 +530,7 @@ cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
 
 /**
  * Sets the low water mark for the number of requests queued waiting
- * for a connection in a conneciton pool. After exceeding high water mark
+ * for a connection in a connection pool. After exceeding high water mark
  * requests, writes to a host will only resume once the number of requests
  * fall below this value.
  *
