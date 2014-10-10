@@ -195,7 +195,7 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
     set_is_available(false);
   }
 
-  logger_->debug("Connection: Sending message type %s with %d",
+  logger_->trace("Connection: Sending message type %s with %d",
                  opcode_to_string(handler->request()->opcode()).c_str(), stream);
 
   handler->set_state(Handler::REQUEST_STATE_WRITING);
@@ -281,7 +281,7 @@ void Connection::consume(char* input, size_t size) {
       ScopedPtr<ResponseMessage> response(response_.release());
       response_.reset(new ResponseMessage());
 
-      logger_->debug(
+      logger_->trace(
           "Connection: Consumed message type %s with stream %d, input %lu, remaining %d on host %s",
           opcode_to_string(response->opcode()).c_str(), static_cast<int>(response->stream()),
           size, remaining, addr_string_.c_str());

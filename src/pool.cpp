@@ -51,6 +51,7 @@ Pool::Pool(IOWorker* io_worker, const Address& address,
     , is_pending_flush_(false) {}
 
 Pool::~Pool() {
+  logger_->debug("Pool: dtor with %u pending requests pool(%p)", pending_requests_.size(), this);
   while (!pending_requests_.is_empty()) {
     RequestHandler* request_handler
         = static_cast<RequestHandler*>(pending_requests_.front());
@@ -61,6 +62,7 @@ Pool::~Pool() {
 }
 
 void Pool::connect() {
+  logger_->debug("Pool: connect %s pool(%p)", address_.to_string().c_str(), this);
   if (state_ == POOL_STATE_NEW) {
     for (unsigned i = 0; i < config_.core_connections_per_host(); ++i) {
       spawn_connection();
@@ -72,6 +74,7 @@ void Pool::connect() {
 
 void Pool::close() {
   if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
+    logger_->debug("Pool: closing pool(%p)", this);
     // We're closing before we've connected (likely beause of an error), we need
     // to notify we're "ready"
     if (state_ == POOL_STATE_CONNECTING) {
@@ -129,6 +132,15 @@ void Pool::return_connection(Connection* connection) {
 
 void Pool::add_pending_request(RequestHandler* request_handler) {
   pending_requests_.add_to_back(request_handler);
+
+  if (pending_requests_.size() % 10 == 0) {
+    logger_->debug("Pool: %u request%s pending on %s pool(%p)",
+                   pending_requests_.size()+1,
+                   pending_requests_.size() > 0 ? "s":"",
+                   address_.to_string().c_str(),
+                   this);
+  }
+
   if (pending_requests_.size() > config_.pending_requests_high_water_mark()) {
     set_is_available(false);
   }
@@ -162,6 +174,7 @@ bool Pool::write(Connection* connection, RequestHandler* request_handler) {
       return false;
     }
   } else {
+    logger_->debug("Pool: setting keyspace %s on connection(%p) pool(%p)", io_worker_->keyspace().c_str(), connection, this);
     if(!connection->write(new SetKeyspaceHandler(connection, io_worker_->keyspace(),
                                                  request_handler), false)) {
       return false;
@@ -299,6 +312,9 @@ void Pool::on_pending_request_timeout(RequestTimer* timer) {
   RequestHandler* request_handler = static_cast<RequestHandler*>(timer->data());
   remove_pending_request(request_handler);
   request_handler->retry(RETRY_WITH_NEXT_HOST);
+  logger_->debug("Pool: timeout waiting for connection to %s pool(%p)",
+                 address_.to_string().c_str(),
+                 this);
   maybe_close();
 }
 

@@ -18,6 +18,7 @@
 
 #include "config.hpp"
 #include "logger.hpp"
+#include "pool.hpp"
 #include "request_handler.hpp"
 #include "session.hpp"
 #include "scoped_mutex.hpp"
@@ -131,6 +132,9 @@ void IOWorker::close_async() {
 
 void IOWorker::add_pool(const Address& address, bool is_initial_connection) {
   if (!is_closing_ && pools_.count(address) == 0) {
+    logger_->info("IOWorker: add_pool for host %s io_worker(%p)",
+                  address.to_string(true).c_str(), this);
+
     set_host_is_available(address, false);
 
     SharedRefPtr<Pool> pool(new Pool(this, address, is_initial_connection));
@@ -180,7 +184,7 @@ void IOWorker::request_finished(RequestHandler* request_handler) {
 void IOWorker::notify_pool_ready(Pool* pool) {
   if (pool->is_initial_connection()) {
     session_->notify_ready_async();
-  } else if (!is_closing_ && !pool->is_defunct()){
+  } else if (!is_closing_ && pool->is_ready()){
     session_->notify_up_async(pool->address());
   }
 }
@@ -189,8 +193,10 @@ void IOWorker::notify_pool_closed(Pool* pool) {
   Address address = pool->address(); // Not a reference on purpose
   bool is_critical_failure = pool->is_critical_failure();
 
-  logger_->info("IOWorker: Pool for host %s closed",
-                address.to_string().c_str());
+  logger_->info("IOWorker: Pool for host %s closed: pool(%p) io_worker(%p)",
+                address.to_string().c_str(),
+                pool,
+                this);
 
   // All non-shared pointers to this pool are invalid after this call
   // and it must be done before maybe_notify_closed().
@@ -238,52 +244,70 @@ void IOWorker::close_handles() {
   uv_close(copy_cast<uv_prepare_t*, uv_handle_t*>(&prepare_), NULL);
   for (PendingReconnectMap::iterator it = pending_reconnects_.begin(),
        end = pending_reconnects_.end(); it != end; ++it) {
-    it->second->stop_timer();
+    logger_->debug("IOWorker: close_handles stopping reconnect(%p timer(%p)) io_worker(%p)",
+                   &it->second,
+                   it->second.timer, this);
+    it->second.stop_timer();
   }
-  logger_->debug("IO worker active handles %d", loop()->active_handles);
+  logger_->debug("IOWorker: active handles following close: %d", loop()->active_handles);
 }
 
 void IOWorker::on_pending_pool_reconnect(Timer* timer) {
-  SharedRefPtr<PendingReconnect> pending_reconnect(
-        static_cast<PendingReconnect*>(timer->data()));
+  PendingReconnect* pending_reconnect =
+      static_cast<PendingReconnect*>(timer->data());
+
+  logger_->debug("IOWorker: on_pending_pool_connect reconnect(%p timer(%p)) io_worker(%p)", pending_reconnect, timer, this);
 
   const Address& address = pending_reconnect->address;
-
-  if (!is_closing_) {
-    logger_->info(
-            "IOWorker: Attempting to reconnect to host %s",
-            address.to_string(true).c_str());
-    add_pool(address, false);
-  }
-
+  add_pool(address, false);
   pending_reconnects_.erase(address);
 }
 
 void IOWorker::on_event(const IOWorkerEvent& event) {
-  if (event.type == IOWorkerEvent::ADD_POOL) {
-    // Stop any attempts to reconnect because add_pool() is going to attempt
-    // reconnection right away.
-    PendingReconnectMap::iterator it = pending_reconnects_.find(event.address);
-    if (it != pending_reconnects_.end()) {
-      it->second->stop_timer();
-      pending_reconnects_.erase(it);
+  switch(event.type) {
+    case IOWorkerEvent::ADD_POOL: {
+      // Stop any attempts to reconnect because add_pool() is going to attempt
+      // reconnection right away.
+      PendingReconnectMap::iterator it = pending_reconnects_.find(event.address);
+      if (it != pending_reconnects_.end()) {
+        logger_->debug("IOWorker: ADD_POOL for %s canceling reconnect(%p timer(%p)) io_worker(%p)",
+                       event.address.to_string().c_str(),
+                       &it->second,
+                       it->second.timer, this);
+        it->second.stop_timer();
+        pending_reconnects_.erase(it);
+      }
+      add_pool(event.address, event.is_initial_connection);
+      break;
     }
-    add_pool(event.address, event.is_initial_connection);
-  } else if (event.type == IOWorkerEvent::REMOVE_POOL) {
-    PoolMap::iterator it = pools_.find(event.address);
-    if (it != pools_.end()) it->second->close();
-  } else if (event.type == IOWorkerEvent::SCHEDULE_RECONNECT) {
-    if (is_closing_ || pending_reconnects_.count(event.address) > 0) {
-      return;
+    case IOWorkerEvent::REMOVE_POOL: {
+      PoolMap::iterator it = pools_.find(event.address);
+      if (it != pools_.end()) {
+        logger_->debug("IOWorker: REMOVE_POOL for %s closing pool(%p) io_worker(%p)", event.address.to_string().c_str(), it->second.get(), this);
+        it->second->close();
+      }
+      break;
+    }
+    case IOWorkerEvent::SCHEDULE_RECONNECT: {
+      if (is_closing_ || pending_reconnects_.count(event.address) > 0) {
+        logger_->debug("IOWorker: SCHEDULE_RECONNECT already pending for %s io_worker(%p)", event.address.to_string().c_str(), this);
+        return;
+      }
+
+      PendingReconnect& pr = pending_reconnects_[event.address];
+      pr.address = event.address;
+      pr.timer = Timer::start(loop(),
+                              event.reconnect_wait,
+                              &pr,
+                              boost::bind(&IOWorker::on_pending_pool_reconnect, this, _1));
+      logger_->debug("IOWorker: SCHEDULE_RECONNECT for %s reconnect(%p timer(%p)) io_worker(%p)",
+                     event.address.to_string().c_str(), &pr, pr.timer, this);
+      break;
     }
 
-    SharedRefPtr<PendingReconnect> pending_reconnect(new PendingReconnect(event.address));
-    pending_reconnects_[event.address] = pending_reconnect;
-
-    pending_reconnect->timer = Timer::start(loop(),
-                                            event.reconnect_wait,
-                                            pending_reconnect.get(),
-                                            boost::bind(&IOWorker::on_pending_pool_reconnect, this, _1));
+    default:
+      assert(false);
+      break;
   }
 }
 

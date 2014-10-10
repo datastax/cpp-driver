@@ -202,7 +202,8 @@ typedef enum CassCompression_ {
   XX(CASS_LOG_ERROR, "ERROR") \
   XX(CASS_LOG_WARN, "WARN") \
   XX(CASS_LOG_INFO, "INFO") \
-  XX(CASS_LOG_DEBUG, "DEBUG")
+  XX(CASS_LOG_DEBUG, "DEBUG") \
+  XX(CASS_LOG_TRACE, "TRACE")
 
 typedef enum CassLogLevel_ {
 #define XX(log_level, _) log_level,
