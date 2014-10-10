@@ -5,13 +5,14 @@ The only point of this repository is its rpmbuild branch, which uses CPack to ad
 This process has been tested on 64-bit CentOS 6.5 only:
 
 ```
+cmake28 -DCMAKE_BUILD_TYPE=RELEASE .
 make package
 ```
 
 To build a 32-bit package:
 
 ```
-cmake -D32BIT=ON .
+cmake -DCMAKE_BUILD_TYPE=RELEASE -D32BIT=ON .
 setarch i686 make package
 ```
 
