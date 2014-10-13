@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(test_close_timeout_error)
     cass_cluster_set_log_callback(cluster.get(), test_utils::count_message_log_callback, log_data.get());
 
     // Create new connections after 1 pending request
-    cass_cluster_set_max_simultaneous_requests_threshold(cluster.get(), 1);
+    cass_cluster_set_max_concurrent_requests_threshold(cluster.get(), 1);
     cass_cluster_set_max_connections_per_host(cluster.get(), 10);
 
     for (int i = 0; i < 100; ++i) {

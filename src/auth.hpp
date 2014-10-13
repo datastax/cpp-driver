@@ -45,7 +45,7 @@ public:
   virtual ~Authenticator() {}
 
   virtual std::string initial_response() = 0;
-  // TODO(mpenick): Do these need to know the difference bewteen a
+  // TODO(mpenick): Do these need to know the difference between a
   // NULL token and an empty token?
   virtual std::string evaluate_challenge(const std::string& challenge) = 0;
   virtual void on_authenticate_success(const std::string& token) = 0;

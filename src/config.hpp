@@ -43,9 +43,9 @@ public:
       , core_connections_per_host_(2)
       , max_connections_per_host_(8)
       , reconnect_wait_time_ms_(2000)
-      , max_simultaneous_creation_(1)
+      , max_concurrent_creation_(1)
       , max_requests_per_flush_(128)
-      , max_simultaneous_requests_threshold_(100)
+      , max_concurrent_requests_threshold_(100)
       , write_bytes_high_water_mark_(64 * 1024)
       , write_bytes_low_water_mark_(32 * 1024)
       , pending_requests_high_water_mark_(128 * max_connections_per_host_)
@@ -96,12 +96,12 @@ public:
     max_connections_per_host_ = num_connections;
   }
 
-  unsigned max_simultaneous_creation() const {
-    return max_simultaneous_creation_;
+  unsigned max_concurrent_creation() const {
+    return max_concurrent_creation_;
   }
 
-  void set_max_simultaneous_creation(unsigned num_connections) {
-    max_simultaneous_creation_ = num_connections;
+  void set_max_concurrent_creation(unsigned num_connections) {
+    max_concurrent_creation_ = num_connections;
   }
 
   unsigned write_bytes_high_water_mark() const {
@@ -148,12 +148,12 @@ public:
     max_requests_per_flush_ = num_requests;
   }
 
-  unsigned max_simultaneous_requests_threshold() const {
-    return max_simultaneous_requests_threshold_;
+  unsigned max_concurrent_requests_threshold() const {
+    return max_concurrent_requests_threshold_;
   }
 
-  void set_max_simultaneous_requests_threshold(unsigned num_requests) {
-    max_simultaneous_requests_threshold_ = num_requests;
+  void set_max_concurrent_requests_threshold(unsigned num_requests) {
+    max_concurrent_requests_threshold_ = num_requests;
   }
 
   unsigned connect_timeout_ms() const { return connect_timeout_ms_; }
@@ -232,9 +232,9 @@ private:
   unsigned core_connections_per_host_;
   unsigned max_connections_per_host_;
   unsigned reconnect_wait_time_ms_;
-  unsigned max_simultaneous_creation_;
+  unsigned max_concurrent_creation_;
   unsigned max_requests_per_flush_;
-  unsigned max_simultaneous_requests_threshold_;
+  unsigned max_concurrent_requests_threshold_;
   unsigned write_bytes_high_water_mark_;
   unsigned write_bytes_low_water_mark_;
   unsigned pending_requests_high_water_mark_;

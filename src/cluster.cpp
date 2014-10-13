@@ -128,21 +128,21 @@ CassError cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
   return CASS_OK;
 }
 
-CassError cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
+CassError cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
                                                      unsigned num_connections) {
   if (num_connections == 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  cluster->config().set_max_simultaneous_creation(num_connections);
+  cluster->config().set_max_concurrent_creation(num_connections);
   return CASS_OK;
 }
 
-CassError cass_cluster_set_max_simultaneous_requests_threshold(CassCluster* cluster,
+CassError cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
                                                                unsigned num_requests) {
   if (num_requests == 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  cluster->config().set_max_simultaneous_requests_threshold(num_requests);
+  cluster->config().set_max_concurrent_requests_threshold(num_requests);
   return CASS_OK;
 }
 

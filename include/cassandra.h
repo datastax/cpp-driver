@@ -225,8 +225,8 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_STREAMS, 2, "No streams available") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_INIT, 3, "Unable to initialize session") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_MESSAGE_ENCODE, 4, "Unable to encode message") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_HOST_RESOLUTION, 5, "Unable to reslove host") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNEXPECTED_RESPONSE, 6, "Unexpected reponse from server") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_HOST_RESOLUTION, 5, "Unable to resolve host") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNEXPECTED_RESPONSE, 6, "Unexpected response from server") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_QUEUE_FULL, 7, "The request queue is full") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD, 8, "No available IO threads") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_WRITE_ERROR, 9, "Write error") \
@@ -250,7 +250,7 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_TRUNCATE_ERROR, 0x1003, "Truncate error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_WRITE_TIMEOUT, 0x1100, "Write timeout") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_READ_TIMEOUT, 0x1200, "Read timeout") \
-  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SYNTAX_ERROR, 0x2000, "Sytax error") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SYNTAX_ERROR, 0x2000, "Syntax error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_UNAUTHORIZED, 0x2100, "Unauthorized") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_INVALID_QUERY, 0x2200, "Invalid query") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_CONFIG_ERROR, 0x2300, "Configuration error") \
@@ -298,7 +298,7 @@ cass_cluster_new();
 /**
  * Sets/Appends contact points. This *MUST* be set. The first call sets
  * the contact points and any subsequent calls appends additional contact
- * points. Passing an empty string will clear the contact points. Whitespace
+ * points. Passing an empty string will clear the contact points. White space
  * is striped from the contact points.
  *
  * Examples: "127.0.0.1" "127.0.0.1,127.0.0.2", "server1.domain.com"
@@ -385,7 +385,7 @@ cass_cluster_set_queue_size_event(CassCluster* cluster,
 
 /**
  * Sets the size of the the fixed size queue that stores
- * log messsages.
+ * log messages.
  *
  * Default: 4096
  *
@@ -426,7 +426,7 @@ cass_cluster_set_max_connections_per_host(CassCluster* cluster,
                                           unsigned num_connections);
 
 /**
- * Sets the amount of time to wait before attempting reconnection.
+ * Sets the amount of time to wait before attempting to reconnect.
  *
  * Default: 2000 milliseconds
  *
@@ -439,7 +439,7 @@ cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
                                      unsigned wait_time);
 
 /**
- * Sets the maximum number of connections that will be simultaneously created.
+ * Sets the maximum number of connections that will be created concurrently.
  * Connections are created when the current connections are unable to keep up with
  * request throughput.
  *
@@ -450,11 +450,11 @@ cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
+cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
                                            unsigned num_connections);
 
 /**
- * Sets the threshold for the maximum number of simultaneous requests inflight
+ * Sets the threshold for the maximum number of concurrent requests in-flight
  * on a connection before creating a new connection. The number of new connections
  * created will not exceed max_connections_per_host.
  *
@@ -465,7 +465,7 @@ cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_max_simultaneous_requests_threshold(CassCluster* cluster,
+cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
                                                      unsigned num_requests);
 
 /**
@@ -633,7 +633,7 @@ cass_cluster_set_load_balance_round_robin(CassCluster* cluster);
  * followed by any node from other DCs.
  *
  * @param[in] cluster
- * @param[in] local_dc The primary datacenter to try first
+ * @param[in] local_dc The primary data center to try first
  * @return CASS_OK
  */
 CASS_EXPORT CassError
@@ -641,7 +641,7 @@ cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
                                        const char* local_dc);
 
 /**
- * Connnects a session to the cluster.
+ * Connects a session to the cluster.
  *
  * @param[in] cluster
  * @return A session that must be freed.
@@ -650,7 +650,7 @@ CASS_EXPORT CassFuture*
 cass_cluster_connect(CassCluster* cluster);
 
 /**
- * Connnects a session to the cluster and sets the keyspace.
+ * Connects a session to the cluster and sets the keyspace.
  *
  * @param[in] cluster
  * @param[in] keyspace
@@ -834,7 +834,7 @@ CASS_EXPORT CassError
 cass_future_error_code(CassFuture* future);
 
 /**
- * Gets the error messsage from future. If the future is not ready this method will
+ * Gets the error message from future. If the future is not ready this method will
  * wait for the future to be set.
  *
  * @param[in] future
@@ -855,7 +855,7 @@ cass_future_error_message(CassFuture* future);
  *
  * @param[in] query The query is copied into the statement object; the
  * memory pointed to by this parameter can be freed after this call.
- * @param[in] parameter_count The number of bound paramerters.
+ * @param[in] parameter_count The number of bound parameters.
  * @return Returns a statement that must be freed.
  *
  * @see cass_statement_free()
@@ -1092,7 +1092,7 @@ cass_statement_bind_custom(CassStatement* statement,
  *
  * @param[in] statement
  * @param[in] index
- * @param[in] collection The colleciton can be freed after this call.
+ * @param[in] collection The collection can be freed after this call.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -1297,7 +1297,7 @@ cass_statement_bind_custom_by_name(CassStatement* statement,
  *
  * @param[in] statement
  * @param[in] name
- * @param[in] collection The colleciton can be freed after this call.
+ * @param[in] collection The collection can be freed after this call.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -1529,7 +1529,7 @@ cass_collection_append_decimal(CassCollection* collection,
  * Frees a result instance.
  *
  * This method invalidates all values, rows, and
- * iterators that were dervied from this result.
+ * iterators that were derived from this result.
  *
  * @param[in] result
  */
@@ -1785,7 +1785,7 @@ cass_row_get_column_by_name(const CassRow* row,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_int32(const CassValue* value,
@@ -1796,7 +1796,7 @@ cass_value_get_int32(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_int64(const CassValue* value,
@@ -1807,7 +1807,7 @@ cass_value_get_int64(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_float(const CassValue* value,
@@ -1818,7 +1818,7 @@ cass_value_get_float(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_double(const CassValue* value,
@@ -1829,7 +1829,7 @@ cass_value_get_double(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_bool(const CassValue* value,
@@ -1840,7 +1840,7 @@ cass_value_get_bool(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_uuid(const CassValue* value,
@@ -1851,7 +1851,7 @@ cass_value_get_uuid(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_inet(const CassValue* value,
@@ -1862,7 +1862,7 @@ cass_value_get_inet(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_string(const CassValue* value,
@@ -1873,7 +1873,7 @@ cass_value_get_string(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_bytes(const CassValue* value,
@@ -1884,7 +1884,7 @@ cass_value_get_bytes(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_decimal(const CassValue* value,

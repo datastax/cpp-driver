@@ -115,7 +115,7 @@ namespace {
   template<>
   struct IsValidValueType<const CassCollection*> {
     bool operator()(uint16_t type) const {
-      // TODO(mpenick): Check acutal type against collection
+      // TODO(mpenick): Check actual type against collection
       return type == CASS_VALUE_TYPE_LIST ||
           type == CASS_VALUE_TYPE_MAP ||
           type == CASS_VALUE_TYPE_SET;
