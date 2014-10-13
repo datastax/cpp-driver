@@ -62,7 +62,6 @@ public:
 
   void set_query_plan(QueryPlan* query_plan) {
     query_plan_.reset(query_plan);
-    next_host();
   }
 
   void set_io_worker(IOWorker* io_worker);

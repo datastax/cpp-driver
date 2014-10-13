@@ -50,9 +50,7 @@ CassError cass_cluster_set_protocol_version(CassCluster* cluster,
 
 CassError cass_cluster_set_num_threads_io(CassCluster* cluster,
                                           unsigned num_threads) {
-  if (num_threads == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
+  // 0 is okay, it means use a thread per core
   cluster->config().set_thread_count_io(num_threads);
   return CASS_OK;
 }
@@ -63,6 +61,24 @@ CassError cass_cluster_set_queue_size_io(CassCluster* cluster,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_queue_size_io(queue_size);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_queue_size_event(CassCluster* cluster,
+                                            unsigned queue_size) {
+  if (queue_size == 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_queue_size_event(queue_size);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_queue_size_log(CassCluster* cluster,
+                                          unsigned queue_size) {
+  if (queue_size == 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_queue_size_log(queue_size);
   return CASS_OK;
 }
 
@@ -103,6 +119,15 @@ CassError cass_cluster_set_max_connections_per_host(CassCluster* cluster,
   return CASS_OK;
 }
 
+CassError cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
+                                               unsigned wait_time) {
+  if (wait_time == 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_reconnect_wait_time(wait_time);
+  return CASS_OK;
+}
+
 CassError cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
                                                      unsigned num_connections) {
   if (num_connections == 0) {
@@ -112,21 +137,61 @@ CassError cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
   return CASS_OK;
 }
 
-CassError cass_cluster_set_max_pending_requests(CassCluster* cluster,
-                                               unsigned num_requests) {
-  if (num_requests == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_max_pending_requests(num_requests);
-  return CASS_OK;
-}
-
 CassError cass_cluster_set_max_simultaneous_requests_threshold(CassCluster* cluster,
                                                                unsigned num_requests) {
   if (num_requests == 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_max_simultaneous_requests_threshold(num_requests);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
+                                                      unsigned num_requests) {
+  if (num_requests == 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_max_requests_per_flush(num_requests);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
+                                                        unsigned num_bytes) {
+  if (num_bytes == 0 ||
+      num_bytes < cluster->config().write_bytes_low_water_mark()) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_write_bytes_high_water_mark(num_bytes);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
+                                                       unsigned num_bytes) {
+  if (num_bytes == 0 ||
+      num_bytes > cluster->config().write_bytes_high_water_mark()) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_write_bytes_low_water_mark(num_bytes);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
+                                                            unsigned num_requests) {
+  if (num_requests == 0 ||
+      num_requests < cluster->config().pending_requests_low_water_mark()) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_pending_requests_high_water_mark(num_requests);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
+                                                           unsigned num_requests) {
+  if (num_requests == 0 ||
+      num_requests > cluster->config().pending_requests_high_water_mark()) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_pending_requests_low_water_mark(num_requests);
   return CASS_OK;
 }
 

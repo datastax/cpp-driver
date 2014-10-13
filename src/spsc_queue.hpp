@@ -44,7 +44,7 @@ public:
 
   SPSCQueue(size_t size)
       : _size(next_pow_2(size))
-      , _mask(size - 1)
+      , _mask(_size - 1)
       , _buffer(reinterpret_cast<T*>(
             // need one extra element for a guard
             new SPSCQueueAlignedEntry[_size + 1]))

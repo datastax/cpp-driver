@@ -42,6 +42,19 @@
 
 namespace cass {
 
+static void cleanup_pending_handlers(List<Handler>* pending) {
+  while (!pending->is_empty()) {
+    Handler* handler = pending->front();
+    pending->remove(handler);
+    if (handler->state() == Handler::REQUEST_STATE_WRITING ||
+        handler->state() == Handler::REQUEST_STATE_READING) {
+      handler->on_timeout();
+      handler->stop_timer();
+    }
+    handler->dec_ref();
+  }
+}
+
 void Connection::StartupHandler::on_set(ResponseMessage* response) {
   switch (response->opcode()) {
     case CQL_OPCODE_SUPPORTED:
@@ -126,6 +139,8 @@ Connection::Connection(uv_loop_t* loop, Logger* logger, const Config& config,
     , is_defunct_(false)
     , is_invalid_protocol_(false)
     , is_registered_for_events_(false)
+    , is_available_(false)
+    , pending_writes_size_(0)
     , loop_(loop)
     , logger_(logger)
     , config_(config)
@@ -151,7 +166,7 @@ void Connection::connect() {
   }
 }
 
-bool Connection::execute(Handler* handler) {
+bool Connection::write(Handler* handler, bool flush_immediately) {
   int8_t stream = stream_manager_.acquire_stream(handler);
   if (stream < 0) {
     return false;
@@ -160,28 +175,44 @@ bool Connection::execute(Handler* handler) {
   handler->inc_ref(); // Connection reference
   handler->set_stream(stream);
 
-  if (!handler->encode(protocol_version_, 0x00)) {
-    stream_manager_.release_stream(handler->stream());
+  if (pending_writes_.is_empty() || pending_writes_.back()->is_flushed()) {
+    pending_writes_.add_to_back(new PendingWriteBuffer(this));
+  }
+
+  PendingWriteBuffer* pending_write_buffer = pending_writes_.back();
+
+  int32_t request_size = pending_write_buffer->write(handler);
+  if (request_size < 0) {
+    stream_manager_.release_stream(stream);
     handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
                       "Operation unsupported by this protocol version");
     handler->dec_ref();
     return true; // Don't retry
   }
 
+  pending_writes_size_ += request_size;
+  if (pending_writes_size_ > config_.write_bytes_high_water_mark()) {
+    set_is_available(false);
+  }
+
   logger_->trace("Connection: Sending message type %s with %d",
                  opcode_to_string(handler->request()->opcode()).c_str(), stream);
-
-  pending_requests_.add_to_back(handler);
-
-  uv_stream_t* sock_stream = copy_cast<uv_tcp_t*, uv_stream_t*>(&socket_);
 
   handler->set_state(Handler::REQUEST_STATE_WRITING);
   handler->start_timer(loop_, config_.request_timeout(), handler,
                        boost::bind(&Connection::on_timeout, this, _1));
-  handler->write(sock_stream, handler,
-                 boost::bind(&Connection::on_write, this, _1));
+
+  if (flush_immediately) {
+    pending_write_buffer->flush();
+  }
 
   return true;
+}
+
+void Connection::flush() {
+  if (pending_writes_.is_empty()) return;
+
+  pending_writes_.back()->flush();
 }
 
 void Connection::schedule_schema_agreement(const SharedRefPtr<SchemaChangeHandler>& handler, uint64_t wait) {
@@ -203,6 +234,7 @@ void Connection::close() {
         uv_read_stop(copy_cast<uv_tcp_t*, uv_stream_t*>(&socket_));
       }
       state_ = CONNECTION_STATE_CLOSING;
+      set_is_available(false);
       uv_close(handle, on_close);
     }
   }
@@ -211,6 +243,16 @@ void Connection::close() {
 void Connection::defunct() {
   is_defunct_ = true;
   close();
+}
+
+void Connection::set_is_available(bool is_available) {
+  // The callback is only called once per actual state change
+  if (is_available_ != is_available) {
+    is_available_ = is_available;
+    if (availability_changed_callback_) {
+      availability_changed_callback_(this);
+    }
+  }
 }
 
 void Connection::consume(char* input, size_t size) {
@@ -251,7 +293,7 @@ void Connection::consume(char* input, size_t size) {
           switch (handler->state()) {
             case Handler::REQUEST_STATE_READING:
               maybe_set_keyspace(response.get());
-              pending_requests_.remove(handler);
+              pending_reads_.remove(handler);
               handler->stop_timer();
               handler->set_state(Handler::REQUEST_STATE_DONE);
               handler->on_set(response.get());
@@ -267,8 +309,14 @@ void Connection::consume(char* input, size_t size) {
               handler->on_set(response.get());
               break;
 
-            case Handler::REQUEST_STATE_TIMEOUT:
-              pending_requests_.remove(handler);
+            case Handler::REQUEST_STATE_WRITE_TIMEOUT:
+              pending_reads_.remove(handler);
+              handler->set_state(Handler::REQUEST_STATE_DONE);
+              handler->dec_ref();
+              break;
+
+            case Handler::REQUEST_STATE_READ_TIMEOUT:
+              pending_reads_.remove(handler);
               handler->set_state(Handler::REQUEST_STATE_DONE);
               handler->dec_ref();
               break;
@@ -336,15 +384,13 @@ void Connection::on_close(uv_handle_t* handle) {
   connection->logger_->debug("Connection to host %s closed",
                              connection->addr_string_.c_str());
 
-  while (!connection->pending_requests_.is_empty()) {
-    Handler* handler = connection->pending_requests_.front();
-    connection->pending_requests_.remove(handler);
-    if (handler->state() == Handler::REQUEST_STATE_WRITING ||
-        handler->state() == Handler::REQUEST_STATE_READING) {
-      handler->on_timeout();
-      handler->stop_timer();
-    }
-    handler->dec_ref();
+  cleanup_pending_handlers(&connection->pending_reads_);
+
+  while(!connection->pending_writes_.is_empty()) {
+    PendingWriteBuffer* pending_write_buffer
+        = connection->pending_writes_.front();
+    connection->pending_writes_.remove(pending_write_buffer);
+    delete pending_write_buffer;
   }
 
   while (!connection->pending_schema_aggreements_.is_empty()) {
@@ -380,63 +426,23 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
   free_buffer(buf);
 }
 
-void Connection::on_write(RequestWriter* writer) {
-  Handler* handler = static_cast<Handler*>(writer->data());
-
-  switch (handler->state()) {
-    case Handler::REQUEST_STATE_WRITING:
-      if (writer->status() == RequestWriter::SUCCESS) {
-        handler->set_state(Handler::REQUEST_STATE_READING);
-      } else {
-        if (!is_closing()) {
-          logger_->info("Connection: Write error '%s' on host %s",
-                        uv_err_name(uv_last_error(loop_)),
-                        addr_string_.c_str());
-          defunct();
-        }
-
-        stream_manager_.release_stream(handler->stream());
-        pending_requests_.remove(handler);
-        handler->stop_timer();
-        handler->set_state(Handler::REQUEST_STATE_DONE);
-        handler->on_error(CASS_ERROR_LIB_WRITE_ERROR,
-                          "Unable to write to socket");
-        handler->dec_ref();
-      }
-      break;
-
-    case Handler::REQUEST_STATE_TIMEOUT:
-      // The read may still come back, handle cleanup there
-      break;
-
-    case Handler::REQUEST_STATE_READ_BEFORE_WRITE:
-      // The read callback happened before the write callback
-      // returned. This is now responsible for cleanup.
-      pending_requests_.remove(handler);
-      handler->stop_timer();
-      handler->set_state(Handler::REQUEST_STATE_DONE);
-      handler->dec_ref();
-      break;
-
-    default:
-      assert(false && "Invalid request state after write finished");
-      break;
-  }
-}
-
 void Connection::on_timeout(RequestTimer* timer) {
   Handler* handler = static_cast<Handler*>(timer->data());
   logger_->info("Connection: Request timed out to host %s", addr_string_.c_str());
   // TODO (mpenick): We need to handle the case where we have too many
   // timeout requests and we run out of stream ids. The java-driver
   // uses a threshold to defunct the connneciton.
-  handler->set_state(Handler::REQUEST_STATE_TIMEOUT);
+  if (handler->state() == Handler::REQUEST_STATE_WRITING) {
+    handler->set_state(Handler::REQUEST_STATE_WRITE_TIMEOUT);
+  } else {
+    handler->set_state(Handler::REQUEST_STATE_READ_TIMEOUT);
+  }
   handler->on_timeout();
 }
 
 void Connection::on_connected() {
   // TODO (mpenick): Implement SSL
-  execute(new StartupHandler(this, new OptionsRequest()));
+  write(new StartupHandler(this, new OptionsRequest()));
 }
 
 void Connection::on_authenticate() {
@@ -451,7 +457,7 @@ void Connection::on_auth_challenge(AuthResponseRequest* request, const std::stri
   AuthResponseRequest* auth_response
       = new AuthResponseRequest(request->auth()->evaluate_challenge(token),
                                 request->auth().release());
-  execute(new StartupHandler(this, auth_response));
+  write(new StartupHandler(this, auth_response));
 }
 
 void Connection::on_auth_success(AuthResponseRequest* request, const std::string& token) {
@@ -462,7 +468,7 @@ void Connection::on_auth_success(AuthResponseRequest* request, const std::string
 void Connection::on_ready() {
   if (!is_registered_for_events_ && event_types_ != 0) {
     is_registered_for_events_ = true;
-    execute(new StartupHandler(this, new RegisterRequest(event_types_)));
+    write(new StartupHandler(this, new RegisterRequest(event_types_)));
     return;
   }
 
@@ -471,7 +477,7 @@ void Connection::on_ready() {
   } else {
     QueryRequest* query = new QueryRequest();
     query->set_query("use \"" + keyspace_ + "\"");
-    execute(new StartupHandler(this, query));
+    write(new StartupHandler(this, query));
   }
 }
 
@@ -486,7 +492,7 @@ void Connection::on_supported(ResponseMessage* response) {
   // TODO(mstump) do something with the supported info
   (void)supported;
 
-  execute(new StartupHandler(this, new StartupRequest()));
+  write(new StartupHandler(this, new StartupRequest()));
 }
 
 void Connection::on_pending_schema_agreement(Timer* timer) {
@@ -499,6 +505,7 @@ void Connection::on_pending_schema_agreement(Timer* timer) {
 
 void Connection::notify_ready() {
   state_ = CONNECTION_STATE_READY;
+  set_is_available(true);
   if (ready_callback_) {
     ready_callback_(this);
   }
@@ -515,7 +522,7 @@ void Connection::send_credentials() {
   if (v1_auth) {
     V1Authenticator::Credentials credentials;
     v1_auth->get_credentials(&credentials);
-    execute(new StartupHandler(this, new CredentialsRequest(credentials)));
+    write(new StartupHandler(this, new CredentialsRequest(credentials)));
   } else {
     send_initial_auth_response();
   }
@@ -529,7 +536,7 @@ void Connection::send_initial_auth_response() {
   } else {
     AuthResponseRequest* auth_response
         = new AuthResponseRequest(auth->initial_response(), auth);
-    execute(new StartupHandler(this, auth_response));
+    write(new StartupHandler(this, auth_response));
   }
 }
 
@@ -539,5 +546,105 @@ void Connection::PendingSchemaAgreement::stop_timer() {
     timer = NULL;
   }
 }
+
+Connection::PendingWriteBuffer::~PendingWriteBuffer() {
+  cleanup_pending_handlers(&handlers_);
+}
+
+int32_t Connection::PendingWriteBuffer::write(Handler* handler) {
+  size_t last_buffer_size = buffers_.size();
+  int32_t request_size = handler->encode(connection_->protocol_version_, 0x00, &buffers_);
+  if (request_size < 0) {
+    buffers_.resize(last_buffer_size); // rollback
+    return request_size;
+  }
+
+  size_ += request_size;
+  handlers_.add_to_back(handler);
+
+  return request_size;
+}
+
+void Connection::PendingWriteBuffer::flush() {
+  if (!is_flushed_ && !buffers_.empty()) {
+    uv_stream_t* sock_stream = copy_cast<uv_tcp_t*, uv_stream_t*>(&connection_->socket_);
+
+    uv_bufs_.clear();
+    uv_bufs_.reserve(buffers_.size());
+
+    for (BufferVec::const_iterator it = buffers_.begin(),
+         end = buffers_.end(); it != end; ++it) {
+      uv_bufs_.push_back(uv_buf_init(const_cast<char*>(it->data()), it->size()));
+    }
+
+    is_flushed_ = true;
+    uv_write(&req_, sock_stream, uv_bufs_.data(), uv_bufs_.size(), on_write);
+  }
+}
+
+void Connection::PendingWriteBuffer::on_write(uv_write_t* req, int status) {
+  PendingWriteBuffer* pending_write_buffer = static_cast<PendingWriteBuffer*>(req->data);
+
+  Connection* connection = static_cast<Connection*>(pending_write_buffer->connection_);
+
+  while (!pending_write_buffer->handlers_.is_empty()) {
+    Handler* handler = pending_write_buffer->handlers_.front();
+
+    pending_write_buffer->handlers_.remove(handler);
+
+    switch (handler->state()) {
+      case Handler::REQUEST_STATE_WRITING:
+        if (status == 0) {
+          handler->set_state(Handler::REQUEST_STATE_READING);
+          connection->pending_reads_.add_to_back(handler);
+        } else {
+          if (!connection->is_closing()) {
+            connection->logger_->info("Connection: Write error '%s' on host %s",
+                                      uv_err_name(uv_last_error(connection->loop_)),
+                                      connection->addr_string_.c_str());
+            connection->defunct();
+          }
+
+          connection->stream_manager_.release_stream(handler->stream());
+          handler->stop_timer();
+          handler->set_state(Handler::REQUEST_STATE_DONE);
+          handler->on_error(CASS_ERROR_LIB_WRITE_ERROR,
+                            "Unable to write to socket");
+          handler->dec_ref();
+        }
+        break;
+
+      case Handler::REQUEST_STATE_WRITE_TIMEOUT:
+        // The read may still come back, handle cleanup there
+        connection->pending_reads_.add_to_back(handler);
+        break;
+
+      case Handler::REQUEST_STATE_READ_BEFORE_WRITE:
+        // The read callback happened before the write callback
+        // returned. This is now responsible for cleanup.
+        handler->stop_timer();
+        handler->set_state(Handler::REQUEST_STATE_DONE);
+        handler->dec_ref();
+        break;
+
+      default:
+        assert(false && "Invalid request state after write finished");
+        break;
+    }
+  }
+
+  connection->pending_writes_size_ -= pending_write_buffer->size();
+  if (connection->pending_writes_size_ <
+      connection->config_.write_bytes_low_water_mark()) {
+    connection->set_is_available(true);
+  }
+
+  connection->pending_writes_.remove(pending_write_buffer);
+  delete pending_write_buffer;
+
+  connection->flush();
+}
+
+
 
 } // namespace cass

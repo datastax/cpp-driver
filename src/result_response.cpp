@@ -90,18 +90,23 @@ bool ResultResponse::decode(int version, char* input, size_t size) {
     case CASS_RESULT_KIND_VOID:
       return true;
       break;
+
     case CASS_RESULT_KIND_ROWS:
       return decode_rows(buffer);
       break;
+
     case CASS_RESULT_KIND_SET_KEYSPACE:
       return decode_set_keyspace(buffer);
       break;
+
     case CASS_RESULT_KIND_PREPARED:
       return decode_prepared(version, buffer);
       break;
+
     case CASS_RESULT_KIND_SCHEMA_CHANGE:
       return decode_schema_change(buffer);
       break;
+
     default:
       assert(false);
   }

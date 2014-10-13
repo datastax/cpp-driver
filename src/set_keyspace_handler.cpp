@@ -65,7 +65,7 @@ void SetKeyspaceHandler::on_result_response(ResponseMessage* response) {
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
   if (result->kind() == CASS_RESULT_KIND_SET_KEYSPACE) {
-    connection_->execute(handler_.get());
+    connection_->write(handler_.get());
   } else {
     connection_->defunct();
     handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,

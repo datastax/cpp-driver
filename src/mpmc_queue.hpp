@@ -39,7 +39,7 @@ public:
 
   MPMCQueue(size_t size)
       : size_(next_pow_2(size))
-      , mask_(size - 1)
+      , mask_(size_ - 1)
       , buffer_(reinterpret_cast<Node*>(new AlignedNode[size_]))
       , head_seq_(0)
       , tail_seq_(0) {

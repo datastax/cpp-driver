@@ -299,7 +299,7 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
   logger_->debug("ControlConnection: refresh_node_info: %s", query.c_str());
 
   RefreshNodeData data(host, callback);
-  connection_->execute(
+  connection_->write(
         new ControlHandler<RefreshNodeData>(new QueryRequest(query),
                                             this,
                                             response_callback,
