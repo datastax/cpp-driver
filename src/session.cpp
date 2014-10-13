@@ -419,7 +419,7 @@ void Session::on_down(SharedRefPtr<Host> host, bool is_critical_failure) {
 
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
-    (*it)->schedule_reconnect_async(host->address(), config_.reconnect_wait_time());
+    (*it)->schedule_reconnect_async(host->address(), config_.reconnect_wait_time_ms());
   }
 }
 

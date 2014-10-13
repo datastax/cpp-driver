@@ -274,7 +274,7 @@ typedef enum CassError_ {
 typedef void (*CassFutureCallback)(CassFuture* future,
                                    void* data);
 
-typedef void (*CassLogCallback)(cass_uint64_t time,
+typedef void (*CassLogCallback)(cass_uint64_t time_ms,
                                 CassLogLevel severity,
                                 CassString message,
                                 void* data);
@@ -550,12 +550,12 @@ cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
  * Default: 5000 milliseconds
  *
  * @param[in] cluster
- * @param[in] timeout Connect timeout in milliseconds
+ * @param[in] timeout_ms Connect timeout in milliseconds
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_cluster_set_connect_timeout(CassCluster* cluster,
-                                 unsigned timeout);
+                                 unsigned timeout_ms);
 
 /**
  * Sets the timeout for waiting for a response from a node.
@@ -563,12 +563,12 @@ cass_cluster_set_connect_timeout(CassCluster* cluster,
  * Default: 12000 milliseconds
  *
  * @param[in] cluster
- * @param[in] timeout Request timeout in milliseconds
+ * @param[in] timeout_ms Request timeout in milliseconds
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_cluster_set_request_timeout(CassCluster* cluster,
-                                 unsigned timeout);
+                                 unsigned timeout_ms);
 
 /**
  * Sets the log level.
@@ -772,12 +772,12 @@ cass_future_wait(CassFuture* future);
  * Wait for the future to be set or timeout.
  *
  * @param[in] future
- * @param[in] timeout wait time in microseconds
+ * @param[in] timeout_us wait time in microseconds
  * @return false if returned due to timeout
  */
 CASS_EXPORT cass_bool_t
 cass_future_wait_timed(CassFuture* future,
-                       cass_duration_t timeout);
+                       cass_duration_t timeout_us);
 
 /**
  * Gets the result of a successful future. If the future is not ready this method will

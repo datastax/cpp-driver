@@ -160,7 +160,7 @@ Connection::Connection(uv_loop_t* loop, Logger* logger, const Config& config,
 void Connection::connect() {
   if (state_ == CONNECTION_STATE_NEW) {
     state_ = CONNECTION_STATE_CONNECTING;
-    connect_timer_ = Timer::start(loop_, config_.connect_timeout(), this,
+    connect_timer_ = Timer::start(loop_, config_.connect_timeout_ms(), this,
                                   on_connect_timeout);
     Connecter::connect(&socket_, address_, this, on_connect);
   }
@@ -199,7 +199,7 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
                  opcode_to_string(handler->request()->opcode()).c_str(), stream);
 
   handler->set_state(Handler::REQUEST_STATE_WRITING);
-  handler->start_timer(loop_, config_.request_timeout(), handler,
+  handler->start_timer(loop_, config_.request_timeout_ms(), handler,
                        boost::bind(&Connection::on_timeout, this, _1));
 
   if (flush_immediately) {

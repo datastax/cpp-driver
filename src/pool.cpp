@@ -318,7 +318,7 @@ void Pool::on_pending_request_timeout(RequestTimer* timer) {
 }
 
 void Pool::wait_for_connection(RequestHandler* request_handler) {
-  request_handler->start_timer(loop_, config_.connect_timeout(), request_handler,
+  request_handler->start_timer(loop_, config_.connect_timeout_ms(), request_handler,
                                boost::bind(&Pool::on_pending_request_timeout, this, _1));
   add_pending_request(request_handler);
 }

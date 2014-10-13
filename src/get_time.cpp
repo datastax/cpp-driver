@@ -28,7 +28,7 @@ namespace cass {
 
 #if defined(WIN32) || defined(_WIN32)
 
-uint64_t get_time_since_epoch() {
+uint64_t get_time_since_epoch_ms() {
   _FILETIME ft;
   GetSystemTimeAsFileTime(&ft);
   uint64_t ns100 = (static_cast<uint64_t>(ft.dwHighDateTime) << 32 |
@@ -40,7 +40,7 @@ uint64_t get_time_since_epoch() {
 
 #elif defined(__APPLE__) && defined(__MACH__)
 
-uint64_t get_time_since_epoch() {
+uint64_t get_time_since_epoch_ms() {
   struct timeval tv;
   gettimeofday(&tv, NULL);
   return tv.tv_sec * 1000 + tv.tv_usec / 1000;
@@ -48,7 +48,7 @@ uint64_t get_time_since_epoch() {
 
 #else
 
-uint64_t get_time_since_epoch() {
+uint64_t get_time_since_epoch_ms() {
   struct timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
   return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
