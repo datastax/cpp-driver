@@ -22,6 +22,8 @@ The remainder of this README is per the original.
 DataStax C/C++ Driver for Apache Cassandra (Beta)
 ===============================================
 
+[![Build Status](https://travis-ci.org/datastax/cpp-driver.svg?branch=travis-ci)](https://travis-ci.org/datastax/cpp-driver)
+
 A C/C++ client driver for Apache Cassandra. This driver works exclusively with
 the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol (version 1 and 2).
 
