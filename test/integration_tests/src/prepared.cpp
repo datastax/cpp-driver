@@ -180,7 +180,7 @@ BOOST_AUTO_TEST_CASE(test_bound_all_types_different_values)
   all_types[0].id = test_utils::generate_time_uuid();
   all_types[0].text_sample = cass_string_init("first");
   all_types[0].int_sample = 10;
-  all_types[0].bigint_sample = INT64_MAX - 1L;
+  all_types[0].bigint_sample = std::numeric_limits<int64_t>::max()  - 1L;
   all_types[0].float_sample = 1.999f;
   all_types[0].double_sample = 32.002;
   all_types[0].decimal_sample = cass_decimal_init(1, cass_bytes_init(varint1, sizeof(varint1)));
@@ -204,7 +204,7 @@ BOOST_AUTO_TEST_CASE(test_bound_all_types_different_values)
   all_types[2].id = test_utils::generate_time_uuid();
   all_types[2].text_sample = cass_string_init("third");
   all_types[2].int_sample = -100;
-  all_types[2].bigint_sample = INT64_MIN + 1;
+  all_types[2].bigint_sample = std::numeric_limits<int64_t>::min() + 1;
   all_types[2].float_sample = -150.111f;
   all_types[2].double_sample = -5.12342;
   all_types[2].decimal_sample = cass_decimal_init(3, cass_bytes_init(varint3, sizeof(varint3)));

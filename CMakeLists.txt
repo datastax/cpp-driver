@@ -101,7 +101,7 @@ endif()
 set(MULTICORE_CORES_NUMBER "3" CACHE STRING "Number of cores (for multicore compilation)")
 option(MULTICORE_COMPILATION "Enable multicore compilation" OFF)
 
-set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_THREAD_USES_MOVE")
+set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_THREAD_USES_MOVE -DBOOST_NO_CXX11_RVALUE_REFERENCES")
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   if(MULTICORE_COMPILATION)
@@ -133,6 +133,12 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   add_definitions(-DBOOST_ALL_NO_LIB)
   add_definitions(-DNOMINMAX)
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  # CMAKE_CXX_COMPILER variables do not exist in 2.6.4 (min version)
+  # Parse the -dumpversion argument into the variable not already set
+  if ("${CMAKE_CXX_COMPILER_VERSION}" STREQUAL "")
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE CMAKE_CXX_COMPILER_VERSION)
+  endif()
+
   # GCC specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
   set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")

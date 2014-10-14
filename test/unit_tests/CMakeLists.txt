@@ -30,6 +30,7 @@ file(GLOB UNIT_TESTS_SRC_FILES ${PROJECT_SOURCE_DIR}/test/unit_tests/src/*.cpp)
 set(INCLUDES ${PROJECT_INCLUDE_DIR})
 set(INCLUDES ${INCLUDES} "${PROJECT_SOURCE_DIR}/src")
 set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
+set(INCLUDES ${INCLUDES} ${LIBUV_INCLUDE_DIR})
 
 # Create source groups - this is only needed to create
 # neat folder structure in Visual Studio...
