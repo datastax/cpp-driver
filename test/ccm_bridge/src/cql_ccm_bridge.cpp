@@ -320,7 +320,7 @@ namespace cql {
   }
 
 	void cql_ccm_bridge_t::start() {
-		execute_ccm_command("start");
+		execute_ccm_command("start --wait-other-notice --wait-for-binary-proto");
 	}
 
   void cql_ccm_bridge_t::start(int node) {
@@ -422,12 +422,13 @@ namespace cql {
 
     bridge->execute_ccm_command(boost::str(boost::format("remove %1%") % name));
 		bridge->execute_ccm_command(boost::str(
-      boost::format("create %1% -n %2% -s -i %3% -b -v %4%")
+      boost::format("create %1% -n %2% -i %3% -b -v %4%")
 				% name
 				% nodes_count
 				% settings.ip_prefix()
 				% settings.cassandara_version()));
-		
+
+		bridge->start();
 		return bridge;
 	}
 
@@ -441,13 +442,14 @@ namespace cql {
 
     bridge->execute_ccm_command(boost::str(boost::format("remove %1%") % name));
 		bridge->execute_ccm_command(boost::str(
-      boost::format("create %1% -n %2%:%3% -s -i %4% -b -v %5%")
+      boost::format("create %1% -n %2%:%3% -i %4% -b -v %5%")
 				% name
 				% nodes_count_dc1
 				% nodes_count_dc2
 				% settings.ip_prefix()
 				% settings.cassandara_version()));
-		
+		bridge->start();
+
 		return bridge;
 	}
 }

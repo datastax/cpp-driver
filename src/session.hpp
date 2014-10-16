@@ -38,6 +38,10 @@
 #include <uv.h>
 #include <vector>
 
+#ifdef TESTING_DIRECTIVE
+#include <stdexcept>
+#endif
+
 namespace cass {
 
 class Logger;
@@ -184,8 +188,13 @@ public:
 private:
   void session_thread_guard() {
     if (session_ != NULL && uv_thread_self() == session_->thread_id()) {
-      fprintf(stderr, "Attempted to close session with session thread (possibly from close callback). Aborting.\n");
+      const char* message = "Attempted to close session with session thread (possibly from close callback). Aborting.";
+#ifndef TESTING_DIRECTIVE
+      fprintf(stderr, "%s\n", message);
       abort();
+#else
+      throw std::runtime_error(message);
+#endif
     }
   }
 

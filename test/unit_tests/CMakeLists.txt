@@ -10,7 +10,6 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 set(Boost_USE_MULTITHREADED ON)
 
 add_definitions(-DBOOST_ALL_DYN_LINK)
-add_definitions(-DCASS_STATIC)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:LIBCMT")
@@ -43,7 +42,7 @@ add_executable(${PROJECT_UNIT_TESTS_NAME} ${UNIT_TESTS_SRC_FILES})
 # A temporary patch: explicitly link libssh2
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/test/ccm_bridge/cmake/Modules/")
 find_package(LIBSSH2 REQUIRED)
-target_link_libraries(${PROJECT_UNIT_TESTS_NAME} "${PROJECT_LIB_NAME}_static" CCMBridge ${LIBS} ${LIBSSH2_LIBRARIES})
+target_link_libraries(${PROJECT_UNIT_TESTS_NAME} "${PROJECT_LIB_NAME}" CCMBridge ${LIBS} ${LIBSSH2_LIBRARIES})
 	
 set_property(
   TARGET ${PROJECT_UNIT_TESTS_NAME}

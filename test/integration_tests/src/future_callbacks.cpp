@@ -35,9 +35,10 @@
 namespace {
 
 struct CallbackData {
-  CallbackData()
+  CallbackData(CassSession *session = NULL)
     : was_called(false)
-    , row_count(0) {}
+    , row_count(0)
+    , cass_session(session) {}
 
   void wait() {
     boost::unique_lock<boost::mutex> lock(mutex);
@@ -56,6 +57,7 @@ struct CallbackData {
   boost::condition cond;
   bool was_called;
   cass_size_t row_count;
+  CassSession* cass_session;
 };
 
 void check_callback(CassFuture* future, void* data) {
@@ -75,6 +77,50 @@ void check_result_callback(CassFuture* future, void* data) {
 
   callback_data->notify();
 }
+
+#ifdef TESTING_DIRECTIVE
+void check_session_guard_callback(CassFuture* future, void* data) {
+  CallbackData* callback_data = reinterpret_cast<CallbackData*>(data);
+  bool deadlock_error_caught = false;
+  bool free_future_error_caught = false;
+  bool double_close_error_caught = false;
+
+  //Force the session guard ...
+  // ... by creating a deadlock on the future
+  try {
+      cass_future_wait(future);
+  } catch (std::runtime_error &re) {
+      printf("Wait: %s\n", re.what());
+      try {
+        cass_future_wait_timed(future, 1);
+      } catch (std::runtime_error &re_timeout) {
+        printf("Wait Timed: %s\n", re.what());
+        deadlock_error_caught = true;
+      }
+  }
+
+  // ... by freeing the future resouce
+  try {
+    cass_future_free(future);
+  } catch (std::runtime_error &re) {
+      printf("Free Future: %s\n", re.what());
+      free_future_error_caught = true;
+  }
+
+  // ... by closing the session again
+  try {
+    test_utils::CassFuturePtr close_future(cass_session_close(callback_data->cass_session));
+  } catch (std::runtime_error &re) {
+      printf("Close: %s\n", re.what());
+      double_close_error_caught = true;
+  }
+
+  //Ensure session guards were caught
+  if (deadlock_error_caught && free_future_error_caught && double_close_error_caught) {
+    callback_data->notify();
+  }
+}
+#endif
 
 } // namespace
 
@@ -148,6 +194,33 @@ BOOST_AUTO_TEST_CASE(test_after_set)
 
   BOOST_CHECK(callback_data->was_called);
 }
+
+#ifdef TESTING_DIRECTIVE
+BOOST_AUTO_TEST_CASE(test_session_guard)
+{
+  //Connect to the cluster and create the session
+  test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
+  test_utils::wait_and_check_error(connect_future.get());
+  CassSession* session = cass_future_get_session(connect_future.get());
+
+  //Create the callback data and assign the session pointer
+  boost::scoped_ptr<CallbackData> callback_data(new CallbackData(session));
+
+  //Close the session
+  test_utils::CassFuturePtr close_future(cass_session_close(session));
+
+  //Set the callback to check the session guard
+  cass_future_set_callback(close_future.get(), check_session_guard_callback, callback_data.get());
+
+  //Wait for the callback to finish
+  callback_data->wait();
+
+  //Ensure the callback was notified and exception caught
+  BOOST_CHECK(callback_data->was_called);
+}
+#else
+#pragma message "Session Guard Test Will Not Run: Define TESTING_DIRECTIVE by enabling CASS_USE_TESTING_DIRECTIVE"
+#endif
 
 BOOST_AUTO_TEST_SUITE_END()
 

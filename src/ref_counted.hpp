@@ -23,6 +23,10 @@
 
 #include <assert.h>
 
+#ifdef TESTING_DIRECTIVE
+#include <stdexcept>
+#endif
+
 namespace cass {
 
 struct RefCountedBase {};
@@ -43,7 +47,13 @@ public:
 
   void dec_ref() const {
     int new_ref_count = ref_count_.fetch_sub(1, boost::memory_order_release);
+#ifdef TESTING_DIRECTIVE
+    if (new_ref_count < 1) {
+      throw std::runtime_error("Assertion `new_ref_count >= 1' failed.");
+    }
+#else
     assert(new_ref_count >= 1);
+#endif
     if (new_ref_count == 1) {
       boost::atomic_thread_fence(boost::memory_order_acquire);
       delete static_cast<const T*>(this);
