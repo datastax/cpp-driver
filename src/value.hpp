@@ -62,11 +62,8 @@ public:
     return buffer().size() < 0;
   }
 
-  bool is_collection() const {
-    return type_ == CASS_VALUE_TYPE_LIST ||
-           type_ == CASS_VALUE_TYPE_MAP  ||
-           type_ == CASS_VALUE_TYPE_SET;
-  }
+  bool is_collection() const { return is_collection(type_); }
+  static bool is_collection(CassValueType t);
 
   int32_t count() const {
     return count_;

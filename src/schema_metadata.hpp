@@ -17,6 +17,10 @@
 #ifndef __CASS_SCHEMA_METADATA_HPP_INCLUDED__
 #define __CASS_SCHEMA_METADATA_HPP_INCLUDED__
 
+#include "cass_type_parser.hpp"
+#include "iterator.hpp"
+#include "scoped_ptr.hpp"
+
 #include <map>
 #include <string>
 
@@ -25,67 +29,192 @@ namespace cass {
 class BufferPiece;
 class Row;
 
-class KeyspaceMetadata {
+template<class C, cass::IteratorType I>
+class ModelMapIterator : public Iterator {
 public:
-  KeyspaceMetadata(const boost::string_ref& name);
+  ModelMapIterator(const C& model_map)
+      : Iterator(I)
+      , first_next_(true)
+      , itr_(model_map.cbegin())
+      , end_(model_map.cend()) {}
 
-  static KeyspaceMetadata* from_schema_row(const Row* schema_row);
+  virtual bool next() {
+    if (itr_ == end_) {
+      return false;
+    }
+    if (!first_next_) {
+      ++itr_;
+    }
+    first_next_ = false;
+    return itr_ != end_;
+  }
 
-  const std::string& name() { return name_; }
-  bool durable_writes() { return durable_writes_; }
-  const std::string& strategy_class() { return strategy_class_; }
-  const std::map<std::string,std::string>& strategy_options() { return strategy_options_; }
+  const typename C::mapped_type::meta_type& meta() {
+    assert(itr_ != end_);
+    return itr_->second.meta();
+  }
 
-private:
-  void options_from_json(const BufferPiece& options_json);
-
-private:
-  const std::string name_;
-  bool durable_writes_;
-  std::string strategy_class_;
-  std::map<std::string,std::string> strategy_options_;
-};
-
-class ColumnFamilyMetadata {
-public:
-  ColumnFamilyMetadata(const boost::string_ref& keyspace_name,
-                       const boost::string_ref& name);
-
-  static ColumnFamilyMetadata* from_schema_row(const Row* schema_row);
-
-  const std::string& keyspace_name() { return keyspace_name_; }
-  const std::string& name() { return name_; }
+  const typename C::mapped_type& model() {
+    assert(itr_ != end_);
+    return itr_->second;
+  }
 
 private:
-  void options_from_json(const BufferPiece& options_json);
-
-private:
-  const std::string keyspace_name_;
-  const std::string name_;
+  bool first_next_;
+  typename C::const_iterator itr_;
+  const typename C::const_iterator end_;
 };
 
 class ColumnMetadata {
 public:
-  ColumnMetadata(const boost::string_ref& name);
+  ColumnMetadata();
 
-  static ColumnMetadata* from_schema_row(const Row* schema_row);
+  static ColumnMetadata from_schema_row(const Row* schema_row);
+  static std::string keyspace_name_from_row(const Row* schema_row);
+  static std::string column_family_name_from_row(const Row* schema_row);
+  static std::string name_from_row(const Row* schema_row);
 
-  const std::string& keyspace_name() { return keyspace_name_; }
-  const std::string& column_family_name() { return column_family_name_; }
-  const std::string& name() { return name_; }
+  class ColumnTypeMapper {
+  public:
+    ColumnTypeMapper();
+    CassColumnType operator[](const std::string& col_type) const;
+  private:
+    typedef std::map<std::string, CassColumnType> NameTypeMap;
+    NameTypeMap name_type_map_;
+  };
+
+  std::string name_;
+  int component_index_;
+  std::string index_name_;
+  std::string index_options_;
+  std::string index_type_;
+  CassColumnType kind_;
+  TypeDescriptor type_;
+  std::string validator_;
+
+  const static ColumnTypeMapper type_map_;
 
 private:
   void options_from_json(const BufferPiece& options_json);
+};
+
+class ColumnModel {
+public:
+  typedef ColumnMetadata meta_type;
+
+  void set_meta(const meta_type& cfm) { cf_meta_ = cfm; }
+  const meta_type& meta() const { return cf_meta_; }
 
 private:
-  const std::string keyspace_name_;
-  const std::string column_family_name_;
-  const std::string name_;
+  meta_type cf_meta_;
 };
+
+typedef std::map<std::string, ColumnModel> ColumnModelMap;
+typedef ModelMapIterator<ColumnModelMap, CASS_ITERATOR_TYPE_COL_META> ColumnIterator;
+
+class ColumnFamilyMetadata {
+public:
+  ColumnFamilyMetadata();
+
+  static ColumnFamilyMetadata from_schema_row(const Row* schema_row);
+  static std::string keyspace_name_from_row(const Row* schema_row);
+  static std::string name_from_row(const Row* schema_row);
+
+  std::string name_;
+  double bloom_filter_fp_chance_;
+  std::string caching_;
+  CassUuid cf_id_;
+  std::string column_aliases_;
+  std::string comment_;
+  std::string compaction_strategy_class_;
+  std::string compaction_strategy_options_;
+  std::string comparator_;
+  std::string compression_parameters_;
+  int default_time_to_live_;
+  std::string default_validator_;
+  std::map<std::string, cass_int64_t> dropped_columns_;
+  int gc_grace_seconds_;
+  int index_interval_;
+  cass_bool_t is_dense_;
+  std::string key_aliases_;
+  std::string key_validator_;
+  double local_read_repair_chance_;
+  int max_compaction_threshold_;
+  int max_index_interval_;
+  int memtable_flush_period_in_ms_;
+  int min_compaction_threshold_;
+  int min_index_interval_;
+  double read_repair_chance_;
+  std::string speculative_retry_;
+  std::string subcomparator_;
+  std::string type_;
+  std::string value_alias_;
+};
+
+class ColumnFamilyModel {
+public:
+  typedef ColumnFamilyMetadata meta_type;
+
+  void set_meta(const meta_type& cfm) { cf_meta_ = cfm; }
+  const meta_type& meta() const { return cf_meta_; }
+
+  void update_column_family(const Row* schema_row);
+  void update_column(const Row* schema_row);
+  const ColumnModel* get_column(const std::string& col_name) const;
+  const ColumnModelMap& columns() const { return columns_; }
+
+private:
+  meta_type cf_meta_;
+  ColumnModelMap columns_;
+};
+
+typedef std::map<std::string, ColumnFamilyModel> ColumnFamilyModelMap;
+typedef ModelMapIterator<ColumnFamilyModelMap, CASS_ITERATOR_TYPE_CF_META> ColumnFamilyIterator;
+
+class KeyspaceMetadata {
+public:
+  KeyspaceMetadata();
+
+  static KeyspaceMetadata from_schema_row(const Row* schema_row);
+  static std::string name_from_row(const Row* schema_row);
+
+  std::string name_;
+  cass_bool_t durable_writes_;
+  std::string strategy_class_;
+  std::map<std::string,std::string> strategy_options_;
+  std::string strategy_options_json_;
+};
+
+class KeyspaceModel {
+public:
+  typedef KeyspaceMetadata meta_type;
+
+  void set_meta(const meta_type& ksm) { ks_meta_ = ksm; }
+  const meta_type& meta() const { return ks_meta_; }
+
+  void update_column_family(const Row* schema_row);
+  void update_column(const Row* schema_row);
+  const ColumnFamilyModel* get_column_family(const std::string& cf_name) const;
+  const ColumnFamilyModelMap& column_families() const { return cfs_; }
+
+private:
+  meta_type ks_meta_;
+  ColumnFamilyModelMap cfs_;
+};
+
+typedef std::map<std::string, KeyspaceModel> KeyspaceModelMap;
+typedef ModelMapIterator<KeyspaceModelMap, CASS_ITERATOR_TYPE_KS_META> KeyspaceIterator;
 
 class SchemaMetadata {
 public:
+  void update_keyspace(const Row* schema_row);
+  void update_column_family(const Row* schema_row);
+  void update_column(const Row* schema_row);
+  const KeyspaceModel* get_keyspace(const std::string& ks_name) const;
+  const KeyspaceModelMap& keyspaces() const { return keyspaces_; }
+
 private:
+  KeyspaceModelMap keyspaces_;
 };
 
 } // namespace cass

@@ -279,8 +279,7 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
     keyspaces_result->decode_first_row();
     ResultIterator rows(keyspaces_result);
     while (rows.next()) {
-      KeyspaceMetadata* ksm = KeyspaceMetadata::from_schema_row(rows.row());
-      delete ksm;
+      session_->update_keyspace(rows.row());
     }
   }
   {
@@ -289,8 +288,7 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
     col_fam_result->decode_first_row();
     ResultIterator rows(col_fam_result);
     while (rows.next()) {
-      ColumnFamilyMetadata* cfm = ColumnFamilyMetadata::from_schema_row(rows.row());
-      delete cfm;
+      session_->update_column_family(rows.row());
     }
   }
   {
@@ -299,8 +297,7 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
     col_result->decode_first_row();
     ResultIterator rows(col_result);
     while (rows.next()) {
-      ColumnMetadata* cm = ColumnMetadata::from_schema_row(rows.row());
-      delete cm;
+      session_->update_column(rows.row());
     }
   }
 

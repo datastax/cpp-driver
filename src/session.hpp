@@ -27,6 +27,7 @@
 #include "logger.hpp"
 #include "mpmc_queue.hpp"
 #include "ref_counted.hpp"
+#include "schema_metadata.hpp"
 #include "scoped_mutex.hpp"
 #include "scoped_ptr.hpp"
 #include "spsc_queue.hpp"
@@ -68,6 +69,7 @@ struct SessionEvent {
 class Session : public EventThread<SessionEvent> {
 public:
   Session(const Config& config);
+  ~Session();
 
   int init();
 
@@ -96,6 +98,11 @@ public:
   Future* prepare(const char* statement, size_t length);
   Future* execute(const Request* statement);
 
+  SchemaMetadata* get_schema_meta() {
+    ScopedMutex l(&schema_meta_mutex_);
+    return new SchemaMetadata(schema_meta_);
+  }
+
 private:
   void close_handles();
 
@@ -123,6 +130,21 @@ private:
   void on_up(SharedRefPtr<Host> host);
   void on_down(SharedRefPtr<Host> host, bool is_critical_failure);
 
+  void update_keyspace(const Row* schema_row) {
+    ScopedMutex l(&schema_meta_mutex_);
+    schema_meta_.update_keyspace(schema_row);
+  }
+
+  void update_column_family(const Row* schema_row) {
+    ScopedMutex l(&schema_meta_mutex_);
+    schema_meta_.update_column_family(schema_row);
+  }
+
+  void update_column(const Row* schema_row) {
+    ScopedMutex l(&schema_meta_mutex_);
+    schema_meta_.update_column(schema_row);
+  }
+
 private:
   typedef std::vector<SharedRefPtr<IOWorker> > IOWorkerVec;
 
@@ -140,6 +162,8 @@ private:
   int pending_pool_count_;
   int pending_workers_count_;
   int current_io_worker_;
+  SchemaMetadata schema_meta_;
+  uv_mutex_t schema_meta_mutex_;
 };
 
 class SessionCloseFuture : public Future {

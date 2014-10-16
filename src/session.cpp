@@ -49,6 +49,10 @@ CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* ba
   return CassFuture::to(session->execute(batch->from()));
 }
 
+CassSchemaMetadata* cass_session_get_schema_meta(CassSession* session) {
+  return CassSchemaMetadata::to(session->get_schema_meta());
+}
+
 } // extern "C"
 
 namespace cass {
@@ -61,7 +65,13 @@ Session::Session(const Config& config)
     , pending_resolve_count_(0)
     , pending_pool_count_(0)
     , pending_workers_count_(0)
-    , current_io_worker_(0) {}
+    , current_io_worker_(0) {
+  uv_mutex_init(&schema_meta_mutex_);
+}
+
+Session::~Session() {
+  uv_mutex_destroy(&schema_meta_mutex_);
+}
 
 int Session::init() {
   int rc = EventThread<SessionEvent>::init(config_.queue_size_event());
@@ -482,5 +492,7 @@ void Session::on_execute(uv_async_t* data, int status) {
     }
   }
 }
+
+
 
 } // namespace cass

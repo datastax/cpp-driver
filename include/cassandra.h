@@ -139,6 +139,7 @@ typedef struct CassIterator_ CassIterator;
 typedef struct CassRow_ CassRow;
 typedef struct CassValue_ CassValue;
 typedef struct CassCollection_ CassCollection;
+typedef struct CassSchemaMetadata_ CassSchemaMetadata;
 
 typedef enum CassConsistency_ {
   CASS_CONSISTENCY_ANY          = 0x0000,
@@ -195,6 +196,15 @@ typedef enum CassCompression_ {
   CASS_COMPRESSION_SNAPPY = 1,
   CASS_COMPRESSION_LZ4    = 2
 } CassCompression;
+
+typedef enum CassColumnType_ {
+  CASS_COLUMN_TYPE_PARITION_KEY,
+  CASS_COLUMN_TYPE_CLUSTERING_KEY,
+  CASS_COLUMN_TYPE_REGULAR,
+  CASS_COLUMN_TYPE_COMPACT_VALUE,
+  CASS_COLUMN_TYPE_STATIC,
+  CASS_COLUMN_TYPE_UNKNOWN
+} CassColumnType;
 
 #define CASS_LOG_LEVEL_MAP(XX) \
   XX(CASS_LOG_DISABLED, "") \
@@ -278,6 +288,56 @@ typedef void (*CassLogCallback)(cass_uint64_t time,
                                 CassLogLevel severity,
                                 CassString message,
                                 void* data);
+
+typedef struct CassKeyspaceMeta_ {
+    CassString name;
+    cass_bool_t durable_writes;
+    CassString replication_strategy;
+    CassString strategy_options;
+} CassKeyspaceMeta;
+
+typedef struct CassColumnFamilyMeta_ {
+  CassString name;
+  cass_double_t bloom_filter_fp_chance;
+  CassString caching;
+  CassUuid cf_id;
+  CassString column_aliases;
+  CassString comment;
+  CassString compaction_strategy_class;
+  CassString compaction_strategy_options;
+  CassString comparator;
+  CassString compression_parameters;
+  cass_int32_t default_time_to_live;
+  CassString default_validator;
+  cass_int32_t gc_grace_seconds;
+  cass_int32_t index_interval;
+  cass_bool_t is_dense;
+  CassString key_aliases;
+  CassString key_validator;
+  cass_double_t local_read_repair_chance;
+  cass_int32_t max_compaction_threshold;
+  cass_int32_t max_index_interval;
+  cass_int32_t memtable_flush_period_in_ms;
+  cass_int32_t min_compaction_threshold;
+  cass_int32_t min_index_interval;
+  cass_double_t read_repair_chance;
+  CassString speculative_retry;
+  CassString subcomparator;
+  CassString type;
+  CassString value_alias;
+} CassColumnFamilyMeta;
+
+typedef struct CassColumnMeta_ {
+    CassString name;
+    cass_uint8_t component_index;
+    CassString index_name;
+    CassString index_options;
+    CassString index_type;
+    CassColumnType kind;
+    CassValueType type;
+    cass_bool_t is_reversed;
+    CassString validator;
+} CassColumnMeta;
 
 /***********************************************************************************
  *
@@ -725,6 +785,187 @@ cass_session_execute(CassSession* session,
 CASS_EXPORT CassFuture*
 cass_session_execute_batch(CassSession* session,
                            const CassBatch* batch);
+
+/***********************************************************************************
+ *
+ * Schema metadata
+ *
+ ***********************************************************************************/
+
+/**
+ * Get the current schema metadata model
+ *
+ * @param[in] session
+ * @return A schema metadata model that must be freed
+ *
+ * @see cass_schema_meta_free()
+ */
+CASS_EXPORT CassSchemaMetadata*
+cass_session_get_schema_meta(CassSession* session);
+
+/**
+ * Get metadata for a known keyspace
+ *
+ * @param[in] schema_meta
+ * @param[in] keyspace_name
+ * @param[out] output
+ * @return CASS_OK if keyspace is found, otherwise error
+ */
+CASS_EXPORT CassError
+cass_meta_get_keyspace(CassSchemaMetadata* schema_meta,
+                       CassString keyspace_name,
+                       CassKeyspaceMeta* output);
+
+/**
+ * Get metadata for a known keyspace
+ *
+ * @param[in] schema_meta
+ * @param[in] keyspace_name
+ * @param[out] output
+ * @return CASS_OK if keyspace is found, otherwise error
+ */
+CASS_EXPORT CassError
+cass_meta_get_keyspace2(CassSchemaMetadata* schema_meta,
+                        const char* keyspace_name,
+                        CassKeyspaceMeta* output);
+
+/**
+ * Get metadata for a known column family
+ *
+ * @param[in] schema_meta
+ * @param[in] keyspace_name
+ * @param[in] column_family_name
+ * @param[out] output
+ * @return CASS_OK if column family is found, otherwise error
+ */
+CASS_EXPORT CassError
+cass_meta_get_column_family(CassSchemaMetadata* schema_meta,
+                            CassString keyspace_name,
+                            CassString column_family_name,
+                            CassColumnFamilyMeta* output);
+
+/**
+ * Get metadata for a known column family
+ *
+ * @param[in] schema_meta
+ * @param[in] keyspace_name
+ * @param[in] column_family_name
+ * @param[out] output
+ * @return CASS_OK if column family is found, otherwise error
+ */
+CASS_EXPORT CassError
+cass_meta_get_column_family2(CassSchemaMetadata* schema_meta,
+                             const char* keyspace_name,
+                             const char* column_family_name,
+                             CassColumnFamilyMeta* output);
+
+/**
+ * Get metadata for a known column
+ *
+ * @param[in] schema_meta
+ * @param[in] keyspace_name
+ * @param[in] column_family_name
+ * @param[in] column_name
+ * @param[out] output
+ * @return CASS_OK if column is found, otherwise error
+ */
+CASS_EXPORT CassError
+cass_meta_get_column(CassSchemaMetadata* schema_meta,
+                     CassString keyspace_name,
+                     CassString column_family_name,
+                     CassString column_name,
+                     CassColumnMeta* output);
+
+/**
+ * Get metadata for a known column
+ *
+ * @param[in] schema_meta
+ * @param[in] keyspace_name
+ * @param[in] column_family_name
+ * @param[in] column_name
+ * @param[out] output
+ * @return CASS_OK if column is found, otherwise error
+ */
+CASS_EXPORT CassError
+cass_meta_get_column2(CassSchemaMetadata* schema_meta,
+                      const char* keyspace_name,
+                      const char* column_family_name,
+                      const char* column_name,
+                      CassColumnMeta* output);
+
+/**
+ * Frees a schema metadata object created by cass_session_get_schema_meta
+ *
+ * @param[in] schema_meta
+ */
+CASS_EXPORT void
+cass_meta_free(CassSchemaMetadata* meta);
+
+/**
+ * Create an iterator over keyspaces in schema metadata
+ *
+ * @param[in] schema_meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_keyspaces_from_schema_meta(CassSchemaMetadata* schema_meta);
+
+/**
+ * Get metadata for the iterator keyspace
+ *
+ * @param[in] ks_itr
+ * @param[out] output
+ * @return CASS_OK
+ */
+CASS_EXPORT CassError
+cass_iterator_get_keyspace_meta(CassIterator* ks_itr,
+                                CassKeyspaceMeta* output);
+
+/**
+ * Create an iterator over column families in the iterator keyspace
+ *
+ * @param[in] ks_itr
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_column_families_from_keyspace(CassIterator* ks_itr);
+
+/**
+ * Get metadata for the iterator column family
+ *
+ * @param[in] cf_itr
+ * @param[out] output
+ * @return CASS_OK
+ */
+CASS_EXPORT CassError
+cass_iterator_get_column_family_meta(CassIterator* cf_itr,
+                                     CassColumnFamilyMeta* output);
+
+/**
+ * Create an iterator over columns in the iterator column family
+ *
+ * @param[in] cf_itr
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_columns_from_column_family(CassIterator* cf_itr);
+
+/**
+ * Get metadata for the iterator keyspace
+ *
+ * @param[in] col_itr
+ * @param[out] output
+ * @return CASS_OK
+ */
+CASS_EXPORT CassError
+cass_iterator_get_column_meta(CassIterator* col_itr,
+                              CassColumnMeta* output);
 
 /***********************************************************************************
  *

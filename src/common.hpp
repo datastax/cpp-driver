@@ -20,12 +20,15 @@
 #include "cassandra.h"
 
 #include "third_party/boost/boost/static_assert.hpp"
+#include "uv.h"
 
-#include <uv.h>
-#include <string.h>
+#include <list>
+#include <map>
 #include <string>
 
 namespace cass {
+
+class BufferPiece;
 
 // copy_cast<> prevents incorrect code from being generated when two unrelated 
 // types reference the same memory location and strict aliasing is enabled.
@@ -60,6 +63,9 @@ void free_buffer(uv_buf_t buf);
 std::string opcode_to_string(int opcode);
 
 std::string& trim(std::string& str);
+
+void json_to_list(const BufferPiece& alias_json, std::list<std::string>* output);
+void json_to_map(const BufferPiece& json_buffer, std::map<std::string, std::string>* output);
 
 } // namespace cass
 
