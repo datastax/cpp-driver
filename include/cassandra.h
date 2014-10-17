@@ -815,15 +815,6 @@ CASS_EXPORT CassError
 cass_meta_get_keyspace(CassSchemaMetadata* schema_meta,
                        CassString keyspace_name,
                        CassKeyspaceMeta* output);
-
-/**
- * Get metadata for a known keyspace
- *
- * @param[in] schema_meta
- * @param[in] keyspace_name
- * @param[out] output
- * @return CASS_OK if keyspace is found, otherwise error
- */
 CASS_EXPORT CassError
 cass_meta_get_keyspace2(CassSchemaMetadata* schema_meta,
                         const char* keyspace_name,
@@ -843,16 +834,6 @@ cass_meta_get_column_family(CassSchemaMetadata* schema_meta,
                             CassString keyspace_name,
                             CassString column_family_name,
                             CassColumnFamilyMeta* output);
-
-/**
- * Get metadata for a known column family
- *
- * @param[in] schema_meta
- * @param[in] keyspace_name
- * @param[in] column_family_name
- * @param[out] output
- * @return CASS_OK if column family is found, otherwise error
- */
 CASS_EXPORT CassError
 cass_meta_get_column_family2(CassSchemaMetadata* schema_meta,
                              const char* keyspace_name,
@@ -875,17 +856,6 @@ cass_meta_get_column(CassSchemaMetadata* schema_meta,
                      CassString column_family_name,
                      CassString column_name,
                      CassColumnMeta* output);
-
-/**
- * Get metadata for a known column
- *
- * @param[in] schema_meta
- * @param[in] keyspace_name
- * @param[in] column_family_name
- * @param[in] column_name
- * @param[out] output
- * @return CASS_OK if column is found, otherwise error
- */
 CASS_EXPORT CassError
 cass_meta_get_column2(CassSchemaMetadata* schema_meta,
                       const char* keyspace_name,
@@ -910,7 +880,7 @@ cass_meta_free(CassSchemaMetadata* meta);
  * @see cass_iterator_free()
  */
 CASS_EXPORT CassIterator*
-cass_iterator_keyspaces_from_schema_meta(CassSchemaMetadata* schema_meta);
+cass_iterator_keyspaces(CassSchemaMetadata* schema_meta);
 
 /**
  * Get metadata for the iterator keyspace
@@ -935,6 +905,22 @@ CASS_EXPORT CassIterator*
 cass_iterator_column_families_from_keyspace(CassIterator* ks_itr);
 
 /**
+ * Create an iterator over column families in the specified keyspace
+ *
+ * @param[in] schema_meta
+ * @param[in] keyspace_name
+ * @return A new iterator that must be freed. (NULL if keyspace does not exist)
+ *
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_column_families(CassSchemaMetadata* schema_meta,
+                              CassString keyspace_name);
+CASS_EXPORT CassIterator*
+cass_iterator_column_families2(CassSchemaMetadata* schema_meta,
+                               const char* keyspace_name);
+
+/**
  * Get metadata for the iterator column family
  *
  * @param[in] cf_itr
@@ -944,6 +930,25 @@ cass_iterator_column_families_from_keyspace(CassIterator* ks_itr);
 CASS_EXPORT CassError
 cass_iterator_get_column_family_meta(CassIterator* cf_itr,
                                      CassColumnFamilyMeta* output);
+
+/**
+ * Create an iterator over columns in the specified keyspace/column family
+ *
+ * @param[in] schema_meta
+ * @param[in] keyspace_name
+ * @param[in] column_family_name
+ * @return A new iterator that must be freed. (NULL if column family does not exist)
+ *
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_columns(CassSchemaMetadata* schema_meta,
+                      CassString keyspace_name,
+                      CassString column_family_name);
+CASS_EXPORT CassIterator*
+cass_iterator_column2(CassSchemaMetadata* schema_meta,
+                      const char* keyspace_name,
+                      const char* column_family_name);
 
 /**
  * Create an iterator over columns in the iterator column family

@@ -89,11 +89,11 @@ void column_family_meta_out(const cass::ColumnFamilyMetadata& cfm,
   cass::cass_string_of_string(cfm.value_alias_, &output->value_alias);
 }
 
-CassError cass_meta_get_column_family(CassSchemaMetadata* meta,
+CassError cass_meta_get_column_family(CassSchemaMetadata* schema_meta,
                                       CassString keyspace_name,
                                       CassString column_family_name,
                                       CassColumnFamilyMeta* output) {
-  const cass::KeyspaceModel* ks = meta->get_keyspace(std::string(keyspace_name.data, keyspace_name.length));
+  const cass::KeyspaceModel* ks = schema_meta->get_keyspace(std::string(keyspace_name.data, keyspace_name.length));
   if (ks != NULL) {
     const cass::ColumnFamilyModel* cf = ks->get_column_family(std::string(column_family_name.data, column_family_name.length));
     if (cf != NULL) {
@@ -104,11 +104,11 @@ CassError cass_meta_get_column_family(CassSchemaMetadata* meta,
   return CASS_ERROR_NAME_DOES_NOT_EXIST;
 }
 
-CassError cass_meta_get_column_family2(CassSchemaMetadata* meta,
+CassError cass_meta_get_column_family2(CassSchemaMetadata* schema_meta,
                                        const char* keyspace_name,
                                        const char* column_family_name,
                                        CassColumnFamilyMeta* output) {
-  return cass_meta_get_column_family(meta, cass_string_init(keyspace_name), cass_string_init(column_family_name), output);
+  return cass_meta_get_column_family(schema_meta, cass_string_init(keyspace_name), cass_string_init(column_family_name), output);
 }
 
 void column_meta_out(const cass::ColumnMetadata& cm, CassColumnMeta* output) {
@@ -123,12 +123,12 @@ void column_meta_out(const cass::ColumnMetadata& cm, CassColumnMeta* output) {
   cass::cass_string_of_string(cm.validator_, &output->validator);
 }
 
-CassError cass_meta_get_column(CassSchemaMetadata* meta,
+CassError cass_meta_get_column(CassSchemaMetadata* schema_meta,
                                CassString keyspace_name,
                                CassString column_family_name,
                                CassString column_name,
                                CassColumnMeta* output) {
-  const cass::KeyspaceModel* ks = meta->get_keyspace(std::string(keyspace_name.data, keyspace_name.length));
+  const cass::KeyspaceModel* ks = schema_meta->get_keyspace(std::string(keyspace_name.data, keyspace_name.length));
   if (ks != NULL) {
     const cass::ColumnFamilyModel* cf = ks->get_column_family(std::string(column_family_name.data, column_family_name.length));
     if (cf != NULL) {
@@ -142,15 +142,15 @@ CassError cass_meta_get_column(CassSchemaMetadata* meta,
   return CASS_ERROR_NAME_DOES_NOT_EXIST;
 }
 
-CassError cass_meta_get_column2(CassSchemaMetadata* meta,
+CassError cass_meta_get_column2(CassSchemaMetadata* schema_meta,
                                 const char* keyspace_name,
                                 const char* column_family_name,
                                 const char* column_name,
                                 CassColumnMeta* output) {
-  return cass_meta_get_column(meta, cass_string_init(keyspace_name), cass_string_init(column_family_name), cass_string_init(column_name), output);
+  return cass_meta_get_column(schema_meta, cass_string_init(keyspace_name), cass_string_init(column_family_name), cass_string_init(column_name), output);
 }
 
-CassIterator* cass_iterator_keyspaces_from_schema_meta(CassSchemaMetadata* schema_meta) {
+CassIterator* cass_iterator_keyspaces(CassSchemaMetadata* schema_meta) {
   return CassIterator::to(new cass::KeyspaceIterator(schema_meta->keyspaces()));
 }
 
@@ -167,11 +167,44 @@ CassIterator* cass_iterator_column_families_from_keyspace(CassIterator* ks_itr) 
   return CassIterator::to(new cass::ColumnFamilyIterator(ksm.column_families()));
 }
 
+CassIterator* cass_iterator_column_families(CassSchemaMetadata* schema_meta,
+                                            CassString keyspace_name) {
+  const cass::KeyspaceModel* ksm = schema_meta->get_keyspace(std::string(keyspace_name.data, keyspace_name.length));
+  if (ksm != NULL) {
+    return CassIterator::to(new cass::ColumnFamilyIterator(ksm->column_families()));
+  }
+  return NULL;
+}
+
+CassIterator* cass_iterator_column_families2(CassSchemaMetadata* schema_meta,
+                                             const char* keyspace_name) {
+  return cass_iterator_column_families(schema_meta, cass_string_init(keyspace_name));
+}
+
 CassError cass_iterator_get_column_family_meta(CassIterator* cf_itr,
                                                CassColumnFamilyMeta* output) {
   assert(cf_itr->type() == cass::CASS_ITERATOR_TYPE_CF_META);
   column_family_meta_out(static_cast<cass::ColumnFamilyIterator*>(cf_itr->from())->meta(), output);
   return CASS_OK;
+}
+
+CassIterator* cass_iterator_columns(CassSchemaMetadata* schema_meta,
+                                    CassString keyspace_name,
+                                    CassString column_family_name) {
+  const cass::KeyspaceModel* ksm = schema_meta->get_keyspace(std::string(keyspace_name.data, keyspace_name.length));
+  if (ksm != NULL) {
+    const cass::ColumnFamilyModel* cfm = ksm->get_column_family(std::string(column_family_name.data, column_family_name.length));
+    if (cfm != NULL) {
+      return CassIterator::to(new cass::ColumnIterator(cfm->columns()));
+    }
+  }
+  return NULL;
+}
+
+CassIterator* cass_iterator_column2(CassSchemaMetadata* schema_meta,
+                                    const char* keyspace_name,
+                                    const char* column_family_name) {
+  return cass_iterator_columns(schema_meta, cass_string_init(keyspace_name), cass_string_init(column_family_name));
 }
 
 CassIterator* cass_iterator_columns_from_column_family(CassIterator *cf_itr) {

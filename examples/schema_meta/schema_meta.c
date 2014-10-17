@@ -58,7 +58,7 @@ int main() {
       CassColumnFamilyMeta cf_meta;
       CassColumnMeta col_meta;
       CassSchemaMetadata* schema_meta = cass_session_get_schema_meta(session);
-      CassIterator* ks_itr = cass_iterator_keyspaces_from_schema_meta(schema_meta);
+      CassIterator* ks_itr = cass_iterator_keyspaces(schema_meta);
       CassIterator* cf_itr;
       CassIterator* col_itr;
       printf("\nIterators:\n============\n");
