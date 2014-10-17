@@ -29,6 +29,7 @@ file(GLOB INTTESTS_SRC_FILES ${PROJECT_SOURCE_DIR}/test/integration_tests/src/*.
 
 set(INCLUDES ${PROJECT_INCLUDE_DIR})
 set(INCLUDES ${INCLUDES} "${PROJECT_SOURCE_DIR}/src")
+set(INCLUDES ${INCLUDES} "${LIBUV_INCLUDE_DIR}")
 set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
 
 # Create source groups - this is only needed to create
