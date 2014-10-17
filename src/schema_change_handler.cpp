@@ -115,13 +115,13 @@ void SchemaChangeHandler::on_set(const ResponseVec& responses) {
   if (has_error) return;
 
   if (has_schema_agreement(responses)) {
-    logger_->debug("SchemaChangeHandler: Found schema agreement in %llu ms", elaspsed_);
+    logger_->debug("SchemaChangeHandler: Found schema agreement in %llu ms", (unsigned long long)elaspsed_);
     request_handler_->set_response(request_response_);
     return;
   } else if (elaspsed_ >= MAX_SCHEMA_AGREEMENT_WAIT_MS) {
-    logger_->warn("SchemaChangeHandler: No schema aggreement on live nodes after %llu ms. "
+    logger_->warn("SchemaChangeHandler: No schema agreement on live nodes after %llu ms. "
                   "Schema may not be up-to-date on some nodes.",
-                  elaspsed_);
+                  (unsigned long long)elaspsed_);
     request_handler_->set_response(request_response_);
     return;
   }
@@ -140,15 +140,13 @@ void SchemaChangeHandler::on_set(const ResponseVec& responses) {
 }
 
 void SchemaChangeHandler::on_error(CassError code, const std::string& message) {
-  std::ostringstream ss;
-  ss << "SchemaChangeHandler: An error occured waiting for schema agreement: '" << message
-     << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
-  logger_->error(ss.str().c_str());
+  logger_->error("SchemaChangeHandler: An error occurred waiting for schema agreement: '%s' "
+                 "(0x%08x)", message.c_str(), (unsigned)code);
   request_handler_->set_response(request_response_);
 }
 
 void SchemaChangeHandler::on_timeout() {
-  logger_->error("SchemaChangeHandler: A timeout occured waiting for schema agreement");
+  logger_->error("SchemaChangeHandler: A timeout occurred waiting for schema agreement");
   request_handler_->set_response(request_response_);
 }
 
