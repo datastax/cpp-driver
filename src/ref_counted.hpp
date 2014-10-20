@@ -23,6 +23,10 @@
 
 #include <assert.h>
 
+#ifdef TESTING_DIRECTIVE
+#include <stdexcept>
+#endif
+
 namespace cass {
 
 struct RefCountedBase {};
