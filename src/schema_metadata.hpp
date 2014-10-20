@@ -35,8 +35,8 @@ public:
   ModelMapIterator(const C& model_map)
       : Iterator(I)
       , first_next_(true)
-      , itr_(model_map.cbegin())
-      , end_(model_map.cend()) {}
+      , itr_(model_map.begin())
+      , end_(model_map.end()) {}
 
   virtual bool next() {
     if (itr_ == end_) {
