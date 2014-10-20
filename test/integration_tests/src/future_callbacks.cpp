@@ -82,7 +82,6 @@ void check_result_callback(CassFuture* future, void* data) {
 void check_session_guard_callback(CassFuture* future, void* data) {
   CallbackData* callback_data = reinterpret_cast<CallbackData*>(data);
   bool deadlock_error_caught = false;
-  bool free_future_error_caught = false;
   bool double_close_error_caught = false;
 
   //Force the session guard ...
@@ -91,32 +90,24 @@ void check_session_guard_callback(CassFuture* future, void* data) {
       cass_future_wait(future);
   } catch (std::runtime_error &re) {
       printf("Wait: %s\n", re.what());
-      try {
-        cass_future_wait_timed(future, 1);
-      } catch (std::runtime_error &re_timeout) {
-        printf("Wait Timed: %s\n", re.what());
-        deadlock_error_caught = true;
-      }
-  }
-
-  // ... by freeing the future resouce
-  try {
-    cass_future_free(future);
-  } catch (std::runtime_error &re) {
-      printf("Free Future: %s\n", re.what());
-      free_future_error_caught = true;
+    try {
+      cass_future_wait_timed(future, 1);
+    } catch (std::runtime_error &re_timeout) {
+      printf("Wait Timed: %s\n", re.what());
+      deadlock_error_caught = true;
+    }
   }
 
   // ... by closing the session again
   try {
-    test_utils::CassFuturePtr close_future(cass_session_close(callback_data->cass_session));
+    cass_session_close(callback_data->cass_session);
   } catch (std::runtime_error &re) {
-      printf("Close: %s\n", re.what());
-      double_close_error_caught = true;
+    printf("Close: %s\n", re.what());
+    double_close_error_caught = true;
   }
 
   //Ensure session guards were caught
-  if (deadlock_error_caught && free_future_error_caught && double_close_error_caught) {
+  if (deadlock_error_caught && double_close_error_caught) {
     callback_data->notify();
   }
 }

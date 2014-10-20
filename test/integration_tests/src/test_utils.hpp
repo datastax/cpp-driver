@@ -102,15 +102,7 @@ template<>
 struct Deleter<CassFuture> {
   void operator()(CassFuture* ptr) {
     if (ptr != NULL) {
-#ifdef TESTING_DIRECTIVE
-      try {
-#endif
       cass_future_free(ptr);
-#ifdef TESTING_DIRECTIVE
-      } catch (std::runtime_error &re) {
-        printf("Double Free of Future: This will not effect test results\n");
-      }
-#endif
     }
   }
 };
