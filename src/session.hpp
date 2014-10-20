@@ -126,14 +126,14 @@ private:
 private:
   typedef std::vector<SharedRefPtr<IOWorker> > IOWorkerVec;
 
+  Config config_;
+  ScopedPtr<Logger> logger_;
   ControlConnection control_connection_;
   IOWorkerVec io_workers_;
-  ScopedPtr<Logger> logger_;
   ScopedRefPtr<Future> connect_future_;
   Future* close_future_;
   HostMap hosts_;
   bool current_host_mark_;
-  Config config_;
   ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*> > > request_queue_;
   ScopedRefPtr<LoadBalancingPolicy> load_balancing_policy_;
   int pending_resolve_count_;

@@ -54,9 +54,10 @@ CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* ba
 namespace cass {
 
 Session::Session(const Config& config)
-    : close_future_(NULL)
+    : config_(config)
+    , logger_(new Logger(config))
+    , close_future_(NULL)
     , current_host_mark_(true)
-    , config_(config)
     , load_balancing_policy_(config.load_balancing_policy())
     , pending_resolve_count_(0)
     , pending_pool_count_(0)
@@ -64,7 +65,9 @@ Session::Session(const Config& config)
     , current_io_worker_(0) {}
 
 int Session::init() {
-  int rc = EventThread<SessionEvent>::init(config_.queue_size_event());
+  int rc = logger_->init();
+  if (rc != 0) return rc;
+  rc = EventThread<SessionEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
   request_queue_.reset(
       new AsyncQueue<MPMCQueue<RequestHandler*> >(config_.queue_size_io()));
@@ -174,8 +177,7 @@ bool Session::notify_down_async(const Address& address, bool is_critical_failure
 }
 
 bool Session::connect_async(const std::string& keyspace, Future* future) {
-  logger_.reset(new Logger(config_));
-  if (logger_->init() != 0 || init() != 0) {
+  if (init() != 0) {
     return false;
   }
 
