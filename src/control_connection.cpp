@@ -163,7 +163,7 @@ void ControlConnection::reconnect(bool retry_current_host) {
   connection_->set_close_callback(
         boost::bind(&ControlConnection::on_connection_closed, this, _1));
   connection_->set_event_callback(
-        CASS_EVENT_TOPOLOGY_CHANGE | CASS_EVENT_STATUS_CHANGE,
+        CASS_EVENT_TOPOLOGY_CHANGE | CASS_EVENT_STATUS_CHANGE | CASS_EVENT_SCHEMA_CHANGE,
         boost::bind(&ControlConnection::on_connection_event, this, _1));
   connection_->connect();
 }
@@ -440,6 +440,75 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
   }
 }
 
+void ControlConnection::refresh_keyspace(const boost::string_ref& keyspace_name) {
+  std::string query(SELECT_KEYSPACES);
+  query.append(" WHERE keyspace_name='")
+       .append(keyspace_name.data(), keyspace_name.size())
+       .append("'");
+
+  logger_->debug("ControlConnection: refresh_keyspace: %s", query.c_str());
+
+  connection_->write(
+        new ControlHandler<std::string>(new QueryRequest(query),
+                                            this,
+                                            boost::bind(&ControlConnection::on_refresh_keyspace, this, _1, _2),
+                                            keyspace_name.to_string()));
+}
+
+void ControlConnection::on_refresh_keyspace(const std::string& keyspace_name, Response* response) {
+  ResultResponse* result = static_cast<ResultResponse*>(response);
+  if (result->row_count() == 0) {
+    logger_->error("ControlConnection: No row found for keyspace %s in system schema table.",
+                   keyspace_name.c_str());
+    return;
+  }
+  result->decode_first_row();
+  session_->update_keyspace(&result->first_row());
+}
+
+void ControlConnection::refresh_table(const boost::string_ref& keyspace_name,
+                                      const boost::string_ref& table_name) {
+  std::string cf_query(SELECT_COLUMN_FAMILIES);
+  cf_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+          .append("' AND columnfamily_name='").append(table_name.data(), table_name.size()).append("'");
+
+  std::string col_query(SELECT_COLUMNS);
+  col_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+           .append("' AND columnfamily_name='").append(table_name.data(), table_name.size()).append("'");
+
+  logger_->debug("ControlConnection: refresh_table: %s; %s", cf_query.c_str(), col_query.c_str());
+
+  ScopedRefPtr<ControlMultipleRequestHandler> handler(
+        new ControlMultipleRequestHandler(this,
+                                          boost::bind(&ControlConnection::on_refresh_table,
+                                                      this, keyspace_name.to_string(),
+                                                      table_name.to_string(), _1)));
+  handler->execute_query(cf_query);
+  handler->execute_query(col_query);
+}
+
+void ControlConnection::on_refresh_table(const std::string& keyspace_name,
+                                         const std::string& table_name,
+                                         const MultipleRequestHandler::ResponseVec& responses) {
+  ResultResponse* col_fam_result = static_cast<ResultResponse*>(responses[0]);
+  if (col_fam_result->row_count() == 0) {
+    logger_->error("ControlConnection: No row found for column family %s.%s in system schema table.",
+                   keyspace_name.c_str(), table_name.c_str());
+    return;
+  }
+  col_fam_result->decode_first_row();
+
+  ResultResponse* col_result = static_cast<ResultResponse*>(responses[1]);
+  col_result->decode_first_row();
+  std::vector<Row> rows;
+  rows.reserve(col_result->row_count());
+  ResultIterator itr(col_result);
+  while (itr.next()) {
+    rows.push_back(*itr.row());
+  }
+  session_->update_column_family(&col_fam_result->first_row(), rows);
+}
+
 bool ControlConnection::handle_query_invalid_response(Response* response) {
   if (check_error_or_invalid_response("ControlConnection", CQL_OPCODE_RESULT,
                                       response, logger_)) {
@@ -468,10 +537,9 @@ void ControlConnection::handle_query_timeout() {
 }
 
 void ControlConnection::on_connection_event(EventResponse* response) {
-  std::string address_str = response->affected_node().to_string();
-
   switch (response->event_type()) {
-    case CASS_EVENT_TOPOLOGY_CHANGE:
+    case CASS_EVENT_TOPOLOGY_CHANGE: {
+      std::string address_str = response->affected_node().to_string();
       switch (response->topology_change()) {
         case EventResponse::NEW_NODE: {
           session_->logger_->info("ControlConnection: New node %s added", address_str.c_str());
@@ -499,8 +567,10 @@ void ControlConnection::on_connection_event(EventResponse* response) {
           break;
       }
       break;
+    }
 
-    case CASS_EVENT_STATUS_CHANGE:
+    case CASS_EVENT_STATUS_CHANGE: {
+      std::string address_str = response->affected_node().to_string();
       switch (response->status_change()) {
         case EventResponse::UP: {
           session_->logger_->info("ControlConnection: Node %s is up", address_str.c_str());
@@ -515,16 +585,30 @@ void ControlConnection::on_connection_event(EventResponse* response) {
         }
       }
       break;
+    }
 
     case CASS_EVENT_SCHEMA_CHANGE:
+      logger_->debug("ControlConnection: Schema change (%d): %.*s %.*s\n",
+                     response->schema_change(),
+                     (int)response->keyspace().size(), response->keyspace().data(),
+                     (int)response->table().size(), response->table().data());
       switch (response->schema_change()) {
         case EventResponse::CREATED:
-          break;
-
         case EventResponse::UPDATED:
+          if (response->table().size() > 0) {
+            refresh_table(response->keyspace(), response->table());
+          } else {
+            refresh_keyspace(response->keyspace());
+          }
           break;
 
         case EventResponse::DROPPED:
+          if (response->table().size() > 0) {
+            session_->drop_column_family(response->keyspace().to_string(),
+                                         response->table().to_string());
+          } else {
+            session_->drop_keyspace(response->keyspace().to_string());
+          }
           break;
       }
       break;

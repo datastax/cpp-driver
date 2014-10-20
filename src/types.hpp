@@ -58,7 +58,7 @@ EXTERNAL_TYPE(cass::BufferCollection, CassCollection);
 EXTERNAL_TYPE(cass::Iterator, CassIterator);
 EXTERNAL_TYPE(cass::Row, CassRow);
 EXTERNAL_TYPE(cass::Value, CassValue);
-EXTERNAL_TYPE(cass::SchemaMetadata, CassSchemaMetadata);
+EXTERNAL_TYPE(cass::SchemaModel, CassSchemaMetadata);
 
 }
 

@@ -168,6 +168,15 @@ private:
   void refresh_node_info(SharedRefPtr<Host> host, RefreshNodeCallback callback);
   void update_node_info(SharedRefPtr<Host> host, const Row* row);
 
+  void refresh_keyspace(const boost::string_ref& keyspace_name);
+  void on_refresh_keyspace(const std::string& keyspace_name, Response* response);
+
+  void refresh_table(const boost::string_ref& keyspace_name,
+                     const boost::string_ref& table_name);
+  void on_refresh_table(const std::string& keyspace_name,
+                        const std::string& table_name,
+                        const MultipleRequestHandler::ResponseVec& responses);
+
 private:
   Session* session_;
   ControlState state_;

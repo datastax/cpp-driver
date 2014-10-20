@@ -160,6 +160,7 @@ public:
 
   void update_column_family(const Row* schema_row);
   void update_column(const Row* schema_row);
+  void update_columns(const std::vector<Row> col_rows);
   const ColumnModel* get_column(const std::string& col_name) const;
   const ColumnModelMap& columns() const { return columns_; }
 
@@ -193,7 +194,9 @@ public:
   const meta_type& meta() const { return ks_meta_; }
 
   void update_column_family(const Row* schema_row);
+  void update_column_family(const Row* schema_row, const std::vector<Row> col_rows);
   void update_column(const Row* schema_row);
+  void drop_column_family(const std::string& cf_name) { cfs_.erase(cf_name); }
   const ColumnFamilyModel* get_column_family(const std::string& cf_name) const;
   const ColumnFamilyModelMap& column_families() const { return cfs_; }
 
@@ -205,11 +208,14 @@ private:
 typedef std::map<std::string, KeyspaceModel> KeyspaceModelMap;
 typedef ModelMapIterator<KeyspaceModelMap, CASS_ITERATOR_TYPE_KS_META> KeyspaceIterator;
 
-class SchemaMetadata {
+class SchemaModel {
 public:
   void update_keyspace(const Row* schema_row);
   void update_column_family(const Row* schema_row);
+  void update_column_family(const Row* schema_row, const std::vector<Row> col_rows);
   void update_column(const Row* schema_row);
+  void drop_keyspace(const std::string& ks_name) { keyspaces_.erase(ks_name); }
+  void drop_column_family(const std::string& ks_name, const std::string& cf_name);
   const KeyspaceModel* get_keyspace(const std::string& ks_name) const;
   const KeyspaceModelMap& keyspaces() const { return keyspaces_; }
 

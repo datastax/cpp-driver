@@ -370,6 +370,23 @@ void ColumnFamilyModel::update_column(const Row* schema_row) {
       .set_meta(ColumnMetadata::from_schema_row(schema_row));
 }
 
+void ColumnFamilyModel::update_columns(const std::vector<Row> col_rows) {
+  std::set<std::string> updated;
+  for (std::vector<Row>::const_iterator i = col_rows.begin(); i != col_rows.end(); ++i) {
+    std::string col_name = ColumnMetadata::name_from_row(&*i);
+    updated.insert(col_name);
+    columns_[col_name].set_meta(ColumnMetadata::from_schema_row(&*i));
+  }
+  ColumnModelMap::iterator i = columns_.begin();
+  while(i != columns_.end()) {
+    if (updated.find(i->first) == updated.end()) {
+      columns_.erase(i++);
+    } else {
+      ++i;
+    }
+  }
+}
+
 const ColumnModel* ColumnFamilyModel::get_column(const std::string& col_name) const {
   const ColumnModel* cm = NULL;
   ColumnModelMap::const_iterator i = columns_.find(col_name);
@@ -407,6 +424,12 @@ void KeyspaceModel::update_column_family(const Row* schema_row) {
       .set_meta(ColumnFamilyMetadata::from_schema_row(schema_row));
 }
 
+void KeyspaceModel::update_column_family(const Row* schema_row, const std::vector<Row> col_rows) {
+  ColumnFamilyModel& cfm = cfs_[ColumnMetadata::column_family_name_from_row(schema_row)];
+  cfm.set_meta(ColumnFamilyMetadata::from_schema_row(schema_row));
+  cfm.update_columns(col_rows);
+}
+
 void KeyspaceModel::update_column(const Row* schema_row) {
   cfs_[ColumnMetadata::column_family_name_from_row(schema_row)]
       .update_column(schema_row);
@@ -421,22 +444,36 @@ const ColumnFamilyModel* KeyspaceModel::get_column_family(const std::string& cf_
   return cfm;
 }
 
-void SchemaMetadata::update_keyspace(const Row* schema_row) {
- keyspaces_[KeyspaceMetadata::name_from_row(schema_row)]
-     .set_meta(KeyspaceMetadata::from_schema_row(schema_row));
+void SchemaModel::update_keyspace(const Row* schema_row) {
+  keyspaces_[KeyspaceMetadata::name_from_row(schema_row)]
+      .set_meta(KeyspaceMetadata::from_schema_row(schema_row));
 }
 
-void SchemaMetadata::update_column_family(const Row* schema_row) {
- keyspaces_[ColumnFamilyMetadata::keyspace_name_from_row(schema_row)]
-     .update_column_family(schema_row);
+void SchemaModel::update_column_family(const Row* schema_row) {
+  keyspaces_[ColumnFamilyMetadata::keyspace_name_from_row(schema_row)]
+      .update_column_family(schema_row);
 }
 
-void SchemaMetadata::update_column(const Row* schema_row) {
- keyspaces_[ColumnMetadata::keyspace_name_from_row(schema_row)]
-     .update_column(schema_row);
+void SchemaModel::update_column_family(const Row* schema_row, const std::vector<Row> col_rows) {
+  KeyspaceModelMap::iterator i = keyspaces_.find(ColumnMetadata::keyspace_name_from_row(schema_row));
+  if (i != keyspaces_.end()) {
+    i->second.update_column_family(schema_row, col_rows);
+  }
 }
 
-const KeyspaceModel* SchemaMetadata::get_keyspace(const std::string& ks_name) const {
+void SchemaModel::update_column(const Row *schema_row) {
+  keyspaces_[ColumnFamilyMetadata::keyspace_name_from_row(schema_row)]
+      .update_column(schema_row);
+}
+
+void SchemaModel::drop_column_family(const std::string& ks_name, const std::string& cf_name) {
+  KeyspaceModelMap::iterator i = keyspaces_.find(ks_name);
+  if (i != keyspaces_.end()) {
+     i->second.drop_column_family(cf_name);
+  }
+}
+
+const KeyspaceModel* SchemaModel::get_keyspace(const std::string& ks_name) const {
   const KeyspaceModel* ksm = NULL;
   KeyspaceModelMap::const_iterator i = keyspaces_.find(ks_name);
   if (i != keyspaces_.end()) {

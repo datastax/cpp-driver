@@ -27,6 +27,7 @@
 #include "logger.hpp"
 #include "mpmc_queue.hpp"
 #include "ref_counted.hpp"
+#include "row.hpp"
 #include "schema_metadata.hpp"
 #include "scoped_mutex.hpp"
 #include "scoped_ptr.hpp"
@@ -98,9 +99,9 @@ public:
   Future* prepare(const char* statement, size_t length);
   Future* execute(const Request* statement);
 
-  SchemaMetadata* get_schema_meta() {
+  SchemaModel* get_schema_meta() {
     ScopedMutex l(&schema_meta_mutex_);
-    return new SchemaMetadata(schema_meta_);
+    return new SchemaModel(schema_meta_);
   }
 
 private:
@@ -140,9 +141,26 @@ private:
     schema_meta_.update_column_family(schema_row);
   }
 
+  void update_column_family(const Row* schema_row,
+                            const std::vector<Row>& column_rows) {
+    ScopedMutex l(&schema_meta_mutex_);
+    schema_meta_.update_column_family(schema_row, column_rows);
+  }
+
   void update_column(const Row* schema_row) {
     ScopedMutex l(&schema_meta_mutex_);
     schema_meta_.update_column(schema_row);
+  }
+
+  void drop_keyspace(const std::string& keyspace_name) {
+    ScopedMutex l(&schema_meta_mutex_);
+    schema_meta_.drop_keyspace(keyspace_name);
+  }
+
+  void drop_column_family(const std::string& keyspace_name,
+                          const std::string& column_family_name) {
+    ScopedMutex l(&schema_meta_mutex_);
+    schema_meta_.drop_column_family(keyspace_name, column_family_name);
   }
 
 private:
@@ -162,7 +180,7 @@ private:
   int pending_pool_count_;
   int pending_workers_count_;
   int current_io_worker_;
-  SchemaMetadata schema_meta_;
+  SchemaModel schema_meta_;
   uv_mutex_t schema_meta_mutex_;
 };
 
