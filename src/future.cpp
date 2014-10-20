@@ -138,11 +138,7 @@ bool Future::set_callback(Future::Callback callback, void* data) {
   if (is_set_) {
     // Run the callback if the future is already set
     lock.unlock();
-    if (loop_ == NULL) {
-      callback(CassFuture::to(this), data);
-    } else if(callback_) {
-      run_callback_on_work_thread();
-    }
+    callback(CassFuture::to(this), data);
   }
   return true;
 }
