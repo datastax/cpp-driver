@@ -347,6 +347,22 @@ namespace cql {
 		execute_ccm_command(boost::str(boost::format("node%1% stop --not-gently") % node));
   }
 
+	void cql_ccm_bridge_t::binary(int node, bool enable) {
+		if (enable) {
+			execute_ccm_command(boost::str(boost::format("node%1% nodetool enablebinary") % node));
+		} else {
+			execute_ccm_command(boost::str(boost::format("node%1% nodetool disablebinary") % node));
+		}
+	}
+
+	void cql_ccm_bridge_t::gossip(int node, bool enable) {
+		if (enable) {
+			execute_ccm_command(boost::str(boost::format("node%1% nodetool enablegossip") % node));
+		} else {
+			execute_ccm_command(boost::str(boost::format("node%1% nodetool disablegossip") % node));
+		}
+	}
+
 	void cql_ccm_bridge_t::remove() {
 		stop();
 		execute_ccm_command("remove");

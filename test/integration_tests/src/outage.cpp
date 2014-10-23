@@ -52,13 +52,16 @@ struct OutageTests : public test_utils::MultipleNodesTest {
   enum NodeState {
     UP,
     DOWN,
-    REMOVED
+    REMOVED,
+    GOSSIP_DISABLED,
+    BINARY_DISABLED
   };
 
   OutageTests()
     : test_utils::MultipleNodesTest(NUM_NODES, 0)
     , is_done(false)
     , timer(io_service) {
+    cass_cluster_set_log_level(cluster, CASS_LOG_DEBUG);
     printf("Warning! This test is going to take %d minutes\n", TEST_DURATION_SECS / 60);
     std::fill(nodes_states, nodes_states + NUM_NODES, UP);
     // TODO(mpenick): This is a stopgap. To be fixed in CPP-140
@@ -126,14 +129,24 @@ struct OutageTests : public test_utils::MultipleNodesTest {
       int n = random_int(1, num_up);
       for (size_t i = 0; i < NUM_NODES; ++i) {
         if (nodes_states[i] == UP) {
+          bool disableBinaryGossip = (n == random_int(1, num_up));
           if (--n == 0) {
-            if (random_int(1, 100) <= 50) {
+            if (disableBinaryGossip) {
+              if (random_int(1, 100) <= 50) {
+                ccm->binary(i, false);
+                nodes_states[i] = BINARY_DISABLED;
+              } else {
+                ccm->gossip(i, false);
+                nodes_states[i] = GOSSIP_DISABLED;
+              }
+            } else if (random_int(1, 100) <= 50) {
               ccm->decommission(i);
               nodes_states[i] = REMOVED;
+              ccm->stop(i);
             } else {
               nodes_states[i] = DOWN;
+              ccm->stop(i);
             }
-            ccm->stop(i);
             break;
           }
         }
@@ -147,6 +160,14 @@ struct OutageTests : public test_utils::MultipleNodesTest {
             ccm->start(i);
             break;
           }
+        } else if (nodes_states[i] == GOSSIP_DISABLED) {
+           nodes_states[i] = UP;
+           ccm->gossip(i, true);
+           break;
+        } else if (nodes_states[i] == BINARY_DISABLED) {
+           nodes_states[i] = UP;
+           ccm->binary(i, true);
+           break;
         }
       }
     }
