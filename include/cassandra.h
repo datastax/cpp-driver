@@ -1383,6 +1383,10 @@ cass_statement_bind_collection(CassStatement* statement,
                                const CassCollection* collection);
 
 
+/* TODO: cass_statement_add_key_index(CassStatement* statement, cass_size_t index)
+(also could do via collection, but this seems like less memory mgnt)
+cass_set_routing_key(CassStatement* statement, */
+
 /**
  * Binds an "int" to all the values with the specified name.
  *

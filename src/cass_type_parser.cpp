@@ -18,6 +18,8 @@
 
 #include "scoped_ptr.hpp"
 
+#include <sstream>
+
 namespace cass {
 
 TypeDescriptor::TypeDescriptor(CassValueType type, bool is_reversed)
@@ -28,6 +30,21 @@ TypeDescriptor::TypeDescriptor(CassValueType type, bool is_reversed, std::list<T
   : type_(type)
   , is_reversed_(is_reversed)
   , type_args_(type_arguments) {}
+
+std::string TypeDescriptor::to_string() const {
+  std::stringstream ss;
+  if (is_reversed_) ss << "reversed(";
+  ss << type_;
+  if (!type_args_.empty()) {
+    ss << '(';
+    for (std::list<TypeDescriptor>::const_iterator i = type_args_.begin(); i != type_args_.end(); ++i) {
+      ss << i->to_string() << ',';
+    }
+    ss << ')';
+  }
+  if (is_reversed_) ss << ')';
+  return ss.str();
+}
 
 CassTypeParser::CassTypeMapper::CassTypeMapper() {
   name_type_map_["org.apache.cassandra.db.marshal.AsciiType"] = CASS_VALUE_TYPE_ASCII;
@@ -49,6 +66,7 @@ CassTypeParser::CassTypeMapper::CassTypeMapper() {
   name_type_map_["org.apache.cassandra.db.marshal.ListType"] = CASS_VALUE_TYPE_LIST;
   name_type_map_["org.apache.cassandra.db.marshal.MapType"] = CASS_VALUE_TYPE_MAP;
   name_type_map_["org.apache.cassandra.db.marshal.SetType"] = CASS_VALUE_TYPE_SET;
+  name_type_map_["org.apache.cassandra.db.marshal.CompositeType"] = CASS_VALUE_TYPE_CUSTOM;
 }
 
 CassValueType CassTypeParser::CassTypeMapper::operator [](const std::string& type_name) const {

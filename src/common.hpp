@@ -22,14 +22,13 @@
 #include "third_party/boost/boost/static_assert.hpp"
 #include "uv.h"
 
-#include <cstring>
-#include <list>
-#include <map>
+#include <string.h>
 #include <string>
 
 namespace cass {
 
 class BufferPiece;
+class Value;
 
 // copy_cast<> prevents incorrect code from being generated when two unrelated 
 // types reference the same memory location and strict aliasing is enabled.

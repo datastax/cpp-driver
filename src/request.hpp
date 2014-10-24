@@ -21,6 +21,8 @@
 #include "macros.hpp"
 #include "ref_counted.hpp"
 
+#include "third_party/boost/boost/utility/string_ref.hpp"
+
 namespace cass {
 
 class RequestMessage;
@@ -45,6 +47,14 @@ private:
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Request);
+};
+
+class RoutableRequest : public Request {
+public:
+  RoutableRequest(uint8_t opcode)
+    : Request(opcode) {}
+
+  virtual const BufferRefs& key_parts() = 0;
 };
 
 } // namespace cass

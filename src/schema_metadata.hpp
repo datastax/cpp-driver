@@ -24,6 +24,8 @@
 
 #include <map>
 #include <string>
+#include <uv.h>
+#include <vector>
 
 namespace cass {
 

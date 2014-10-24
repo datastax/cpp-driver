@@ -18,6 +18,7 @@
 
 #include "buffer_piece.hpp"
 #include "constants.hpp"
+#include "value.hpp"
 
 #include <algorithm>
 #include <assert.h>

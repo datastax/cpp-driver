@@ -142,4 +142,16 @@ bool BatchRequest::prepared_statement(const std::string& id,
   return false;
 }
 
+const BufferRefs& BatchRequest::key_parts() {
+  for (BatchRequest::StatementList::const_iterator i = statements_.begin();
+       i != statements_.end(); ++i) {
+    const BufferRefs& parts = (*i)->key_parts();
+    if (!parts.empty()) {
+      return parts;
+    }
+  }
+  static BufferRefs empty;
+  return empty;
+}
+
 } // namespace cass
