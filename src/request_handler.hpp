@@ -33,15 +33,18 @@ namespace cass {
 
 class Connection;
 class IOWorker;
-class Timer;
 class Pool;
+class SchemaModel;
+class Timer;
 
 class ResponseFuture : public ResultFuture<Response> {
 public:
-  ResponseFuture()
-      : ResultFuture<Response>(CASS_FUTURE_TYPE_RESPONSE) {}
+  ResponseFuture(SchemaModel* schema_meta)
+      : ResultFuture<Response>(CASS_FUTURE_TYPE_RESPONSE)
+      , schema_meta(schema_meta) {}
 
   std::string statement;
+  SchemaModel* schema_meta;
 };
 
 class RequestHandler : public Handler {

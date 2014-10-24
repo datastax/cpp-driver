@@ -16,6 +16,7 @@
 
 #include "control_connection.hpp"
 
+#include "collection_iterator.hpp"
 #include "constants.hpp"
 #include "event_response.hpp"
 #include "load_balancing.hpp"
@@ -37,7 +38,9 @@
 #define HIGHEST_SUPPORTED_PROTOCOL_VERSION 2
 
 #define SELECT_LOCAL "SELECT data_center, rack FROM system.local WHERE key='local'"
+#define SELECT_LOCAL_TOKENS "SELECT data_center, rack, partitioner, tokens FROM system.local WHERE key='local'"
 #define SELECT_PEERS "SELECT peer, data_center, rack, rpc_address FROM system.peers"
+#define SELECT_PEERS_TOKENS "SELECT peer, data_center, rack, rpc_address, tokens FROM system.peers"
 
 #define SELECT_KEYSPACES "SELECT * FROM system.schema_keyspaces"
 #define SELECT_COLUMN_FAMILIES "SELECT * FROM system.schema_columnfamilies"
@@ -218,8 +221,8 @@ void ControlConnection::on_connection_closed(Connection* connection) {
 void ControlConnection::query_meta_all() {
   ScopedRefPtr<ControlMultipleRequestHandler> handler(
         new ControlMultipleRequestHandler(this, boost::bind(&ControlConnection::on_query_meta_all, this, _1)));
-  handler->execute_query(SELECT_LOCAL);
-  handler->execute_query(SELECT_PEERS);
+  handler->execute_query(SELECT_LOCAL_TOKENS);
+  handler->execute_query(SELECT_PEERS_TOKENS);
   handler->execute_query(SELECT_KEYSPACES);
   handler->execute_query(SELECT_COLUMN_FAMILIES);
   handler->execute_query(SELECT_COLUMNS);
@@ -232,6 +235,10 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
 
   bool is_initial_connection = (state_ == CONTROL_STATE_NEW);
 
+  if (!is_initial_connection) {
+    session_->dht_meta_.clear();
+  }
+
   {
     SharedRefPtr<Host> host = session_->get_host(connection_->address(), true);
     if (host) {
@@ -241,8 +248,12 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
       if (local_result->row_count() > 0) {
         local_result->decode_first_row();
         update_node_info(host, &local_result->first_row());
+        if (!partitioner_set_) {
+          logger_->warn("ControlConnection: No partitioner found for cluster in local system table for %s",
+                        connection_->address_string().c_str());
+        }
       } else {
-        logger_->debug("ControlConnection: No row found in %s's local system table",
+        logger_->warn("ControlConnection: No row found in %s's local system table",
                        connection_->address_string().c_str());
       }
     } else {
@@ -304,18 +315,19 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
   std::string query;
   ControlHandler<RefreshNodeData>::ResponseCallback response_callback;
 
+  bool query_tokens = host->was_just_added();
   if (is_connected_host || !host->listen_address().empty()) {
     if (is_connected_host) {
-      query.assign(SELECT_LOCAL);
+      query.assign(query_tokens ? SELECT_LOCAL_TOKENS : SELECT_LOCAL);
     } else {
-      query.assign(SELECT_PEERS);
+      query.assign(query_tokens ? SELECT_PEERS_TOKENS : SELECT_PEERS);
       query.append(" WHERE peer = '");
       query.append(host->listen_address());
       query.append("'");
     }
     response_callback = boost::bind(&ControlConnection::on_refresh_node_info, this, _1, _2);
   } else {
-    query.assign(SELECT_PEERS);
+    query.assign(query_tokens ? SELECT_PEERS_TOKENS : SELECT_PEERS);
     response_callback = boost::bind(&ControlConnection::on_refresh_node_info_all, this, _1, _2);
   }
 
@@ -392,16 +404,10 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
   const Value* v;
 
   std::string rack;
-  v = row->get_by_name("rack");
-  if (!v->is_null()) {
-    rack.assign(v->buffer().data(), v->buffer().size());
-  }
+  get_optional_string(row->get_by_name("rack"), &rack);
 
   std::string dc;
-  v = row->get_by_name("data_center");
-  if (!v->is_null()) {
-    dc.assign(v->buffer().data(), v->buffer().size());
-  }
+  get_optional_string(row->get_by_name("data_center"), &dc);
 
   // This value is not present in the "system.local" query
   v = row->get_by_name("peer");
@@ -421,6 +427,28 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
     host->set_rack_and_dc(rack, dc);
     if (!host->was_just_added()) {
       session_->load_balancing_policy_->on_add(host);
+    }
+  }
+
+  if (!partitioner_set_) {
+    std::string partitioner;
+    get_optional_string(row->get_by_name("partitioner"), &partitioner);
+    if (!partitioner.empty()) {
+      session_->dht_meta_.set_partitioner(partitioner);
+      partitioner_set_ = true;
+    }
+  }
+
+  v = row->get_by_name("tokens");
+  if (v != NULL) {
+    CollectionIterator i(v);
+    TokenStringList tokens;
+    while (i.next()) {
+      const BufferPiece& bp = i.value()->buffer();
+      tokens.push_back(boost::string_ref(bp.data(), bp.size()));
+    }
+    if (!tokens.empty()) {
+      session_->dht_meta_.update_host(host, tokens);
     }
   }
 }

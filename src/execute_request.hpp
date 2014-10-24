@@ -31,7 +31,8 @@ class ExecuteRequest : public Statement {
 public:
   ExecuteRequest(const Prepared* prepared)
       : Statement(CQL_OPCODE_EXECUTE, CASS_BATCH_KIND_PREPARED,
-                  prepared->result()->column_count())
+                  prepared->result()->column_count(),
+                  prepared->key_indices())
       , prepared_(prepared) {
       // If the prepared statment has result metadata then there is no
       // need to get the metadata with this request too.

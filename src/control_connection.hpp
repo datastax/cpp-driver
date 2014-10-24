@@ -19,6 +19,7 @@
 
 #include "address.hpp"
 #include "connection.hpp"
+#include "dht_meta.hpp"
 #include "handler.hpp"
 #include "host.hpp"
 #include "load_balancing.hpp"
@@ -55,7 +56,8 @@ public:
     : session_(NULL)
     , state_(CONTROL_STATE_NEW)
     , connection_(NULL)
-    , reconnect_timer_(NULL) {}
+    , reconnect_timer_(NULL)
+    , partitioner_set_(false) {}
 
   int protocol_version() const {
     return protocol_version_;
@@ -186,6 +188,7 @@ private:
   Timer* reconnect_timer_;
   Logger* logger_;
   std::string last_connection_error_;
+  bool partitioner_set_;
 
   static Address bind_any_ipv4_;
   static Address bind_any_ipv6_;

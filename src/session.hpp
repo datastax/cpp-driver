@@ -32,6 +32,7 @@
 #include "scoped_mutex.hpp"
 #include "scoped_ptr.hpp"
 #include "spsc_queue.hpp"
+#include "dht_meta.hpp"
 
 #include <list>
 #include <memory>
@@ -74,7 +75,6 @@ struct SessionEvent {
 class Session : public EventThread<SessionEvent> {
 public:
   Session(const Config& config);
-  ~Session();
 
   int init();
 
@@ -101,7 +101,7 @@ public:
   void close_async(Future* future);
 
   Future* prepare(const char* statement, size_t length);
-  Future* execute(const Request* statement);
+  Future* execute(const RoutableRequest* statement);
 
   const Schema* copy_schema() const {
     return new Schema(schema_);
@@ -156,7 +156,7 @@ private:
   int pending_workers_count_;
   int current_io_worker_;
   Schema schema_;
-  uv_mutex_t schema_meta_mutex_;
+  DHTMeta dht_meta_;
 };
 
 class SessionCloseFuture : public Future {

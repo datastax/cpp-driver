@@ -389,5 +389,18 @@ void ColumnMetadata::update(int version, const SharedRefPtr<RefBuffer>& buffer, 
   add_field(buffer, row, "index_type");
 }
 
+void SchemaModel::get_column_family_key_columns(const std::string& ks_name,
+                                                const std::string& cf_name,
+                                                std::vector<std::string>* output) {
+  ScopedMutex l(&mutex_);
+  const KeyspaceModel* ksm = get_keyspace(ks_name);
+  if (ksm != NULL) {
+    const ColumnFamilyModel* cfm = ksm->get_column_family(cf_name);
+    if (cfm != NULL) {
+      *output = cfm->meta().key_aliases_;
+    }
+  }
+}
+
 } // namespace cass
 

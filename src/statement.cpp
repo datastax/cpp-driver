@@ -372,4 +372,29 @@ int32_t Statement::encode_values(int version, BufferVec* bufs) const {
   return values_size;
 }
 
+const BufferRefs& Statement::key_parts() {
+  if (key_buffers_.empty() && !key_indices_.empty()) {
+    int32_t size;
+    for (std::vector<size_t>::const_iterator i = key_indices_.begin();
+         i != key_indices_.end(); ++i) {
+      if (*i < values_.size()) {
+        const Buffer& buffer = values_[*i];
+        decode_int32(const_cast<char*>(buffer.data()), size);
+        if (size > 0) {
+          key_buffers_.push_back(boost::string_ref(buffer.data() + sizeof(int32_t), size));
+        } else {
+          //TODO: global logging
+          key_buffers_.clear();
+          break;
+        }
+      } else {
+        //TODO: global logging
+        key_buffers_.clear();
+        break;
+      }
+    }
+  }
+  return key_buffers_;
+}
+
 } // namespace  cass

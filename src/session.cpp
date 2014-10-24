@@ -66,13 +66,7 @@ Session::Session(const Config& config)
     , pending_resolve_count_(0)
     , pending_pool_count_(0)
     , pending_workers_count_(0)
-    , current_io_worker_(0) {
-  uv_mutex_init(&schema_meta_mutex_);
-}
-
-Session::~Session() {
-  uv_mutex_destroy(&schema_meta_mutex_);
-}
+    , current_io_worker_(0) {}
 
 int Session::init() {
   int rc = logger_->init();
@@ -363,7 +357,7 @@ Future* Session::prepare(const char* statement, size_t length) {
   PrepareRequest* prepare = new PrepareRequest();
   prepare->set_query(statement, length);
 
-  ResponseFuture* future = new ResponseFuture();
+  ResponseFuture* future = new ResponseFuture(&schema_meta_);
   future->inc_ref(); // External reference
   future->statement.assign(statement, length);
 
@@ -435,11 +429,11 @@ void Session::on_down(SharedRefPtr<Host> host, bool is_critical_failure) {
   }
 }
 
-Future* Session::execute(const Request* statement) {
-  ResponseFuture* future = new ResponseFuture();
+Future* Session::execute(const RoutableRequest* request) {
+  ResponseFuture* future = new ResponseFuture(&schema_meta_);
   future->inc_ref(); // External reference
 
-  RequestHandler* request_handler = new RequestHandler(statement, future);
+  RequestHandler* request_handler = new RequestHandler(request, future);
   request_handler->inc_ref(); // IOWorker reference
 
   execute(request_handler);
@@ -455,6 +449,7 @@ void Session::on_execute(uv_async_t* data, int status) {
   RequestHandler* request_handler = NULL;
   while (session->request_queue_->dequeue(request_handler)) {
     if (request_handler != NULL) {
+
       request_handler->set_query_plan(session->load_balancing_policy_->new_query_plan());
 
       bool is_done = false;
