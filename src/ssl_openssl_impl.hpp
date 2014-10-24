@@ -1,0 +1,83 @@
+/*
+  Copyright 2014 DataStax
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
+#ifndef __CASS_SSL_OPENSSL_IMPL_HPP_INCLUDED__
+#define __CASS_SSL_OPENSSL_IMPL_HPP_INCLUDED__
+
+#include <assert.h>
+#include <openssl/ssl.h>
+#include <openssl/bio.h>
+
+namespace cass {
+
+class OpenSslSessionImpl : public SslSessionBase<OpenSslSessionImpl> {
+public:
+  OpenSslSessionImpl(const Address& address,
+                     const std::string& hostname,
+                     int flags,
+                     SSL_CTX* ssl_ctx);
+  ~OpenSslSessionImpl();
+
+  bool is_handshake_done_impl() const {
+    return SSL_is_init_finished(ssl_) != 0;
+  }
+
+  void do_handshake_impl();
+
+  void verify_impl();
+
+  int encrypt_impl(const char* buf, size_t size);
+
+  int decrypt_impl(char* buf, size_t size);
+
+private:
+  bool check_error(int rc);
+
+  SSL* ssl_;
+  BIO* incoming_bio_;
+  BIO* outgoing_bio_;
+};
+
+class OpenSslContextImpl: public SslContextBase<OpenSslContextImpl, OpenSslSessionImpl> {
+public:
+  OpenSslContextImpl();
+
+  ~OpenSslContextImpl();
+
+  static OpenSslContextImpl* create();
+
+  static void init();
+
+  OpenSslSessionImpl* create_session_impl(const Address& address,
+                                          const std::string& hostname);
+
+  CassError add_trusted_cert_impl(CassString cert);
+
+  CassError set_cert_impl(CassString cert);
+
+  CassError set_private_key_impl(CassString key, const char* password);
+
+private:
+  SSL_CTX* ssl_ctx_;
+  X509_STORE* trusted_store_;
+};
+
+typedef SslSessionBase<OpenSslSessionImpl> SslSession;
+typedef SslContextBase<OpenSslContextImpl, OpenSslSessionImpl> SslContext;
+
+} // namespace cass
+
+#endif

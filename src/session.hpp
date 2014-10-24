@@ -82,6 +82,8 @@ public:
     load_balancing_policy_.reset(policy);
   }
 
+  std::string hostname(const Address& address);
+
   void broadcast_keyspace_change(const std::string& keyspace,
                                  const IOWorker* calling_io_worker);
 
@@ -127,6 +129,24 @@ private:
   void on_up(SharedRefPtr<Host> host);
   void on_down(SharedRefPtr<Host> host, bool is_critical_failure);
 
+  class HostsWrapper {
+  public:
+    int init();
+
+    // All these methods are locked
+    std::string hostname(const Address& address) const;
+    void insert(const Address& address, const SharedRefPtr<Host>& host);
+    void erase(const Address& address);
+    void erase(HostMap::const_iterator it);
+
+    // This should only be called on the session thread
+    const HostMap& get() { return hosts_; }
+
+  private:
+    HostMap hosts_;
+    mutable uv_mutex_t hosts_mutex_;
+  };
+
 private:
   typedef std::vector<SharedRefPtr<IOWorker> > IOWorkerVec;
 
@@ -136,7 +156,9 @@ private:
   IOWorkerVec io_workers_;
   ScopedRefPtr<Future> connect_future_;
   Future* close_future_;
-  HostMap hosts_;
+
+  HostsWrapper hosts_wrapper_;
+
   bool current_host_mark_;
   ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*> > > request_queue_;
   ScopedRefPtr<LoadBalancingPolicy> load_balancing_policy_;

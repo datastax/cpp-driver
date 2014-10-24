@@ -28,6 +28,7 @@
 #include "row.hpp"
 #include "value.hpp"
 #include "iterator.hpp"
+#include "ssl.hpp"
 
 // This abstraction allows us to separate internal types from the
 // external opaque pointers that we expose.
@@ -58,6 +59,7 @@ EXTERNAL_TYPE(cass::BufferCollection, CassCollection);
 EXTERNAL_TYPE(cass::Iterator, CassIterator);
 EXTERNAL_TYPE(cass::Row, CassRow);
 EXTERNAL_TYPE(cass::Value, CassValue);
+EXTERNAL_TYPE(cass::SslContext, CassSsl);
 
 }
 

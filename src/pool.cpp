@@ -35,10 +35,13 @@ static bool least_busy_comp(Connection* a, Connection* b) {
   return a->pending_request_count() < b->pending_request_count();
 }
 
-Pool::Pool(IOWorker* io_worker, const Address& address,
+Pool::Pool(IOWorker* io_worker,
+           const Address& address,
+           const std::string& hostname,
            bool is_initial_connection)
     : io_worker_(io_worker)
     , address_(address)
+    , hostname_(hostname)
     , loop_(io_worker->loop())
     , logger_(io_worker->logger())
     , config_(io_worker->config())
@@ -222,6 +225,7 @@ void Pool::spawn_connection() {
     Connection* connection =
         new Connection(loop_, logger_, config_,
                        address_,
+                       hostname_,
                        io_worker_->keyspace(),
                        io_worker_->protocol_version());
 

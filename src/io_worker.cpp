@@ -36,8 +36,6 @@ IOWorker::IOWorker(Session* session)
     , pending_request_count_(0)
     , request_queue_(config_.queue_size_io()) {
   prepare_.data = this;
-  uv_mutex_init(&keyspace_mutex_);
-  uv_mutex_init(&unavailable_addresses_mutex_);
 }
 
 IOWorker::~IOWorker() {
@@ -45,7 +43,11 @@ IOWorker::~IOWorker() {
 }
 
 int IOWorker::init() {
-  int rc = EventThread<IOWorkerEvent>::init(config_.queue_size_event());
+  int rc = uv_mutex_init(&keyspace_mutex_);
+  if (rc != 0) return rc;
+  rc = uv_mutex_init(&unavailable_addresses_mutex_);
+  if (rc != 0) return rc;
+  rc = EventThread<IOWorkerEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
   rc = request_queue_.init(loop(), this, &IOWorker::on_execute);
   if (rc != 0) return rc;
@@ -137,7 +139,8 @@ void IOWorker::add_pool(const Address& address, bool is_initial_connection) {
 
     set_host_is_available(address, false);
 
-    SharedRefPtr<Pool> pool(new Pool(this, address, is_initial_connection));
+    std::string hostname = session_->hostname(address);
+    SharedRefPtr<Pool> pool(new Pool(this, address, hostname, is_initial_connection));
     pools_[address] = pool;
     pool->connect();
   }

@@ -139,6 +139,7 @@ typedef struct CassIterator_ CassIterator;
 typedef struct CassRow_ CassRow;
 typedef struct CassValue_ CassValue;
 typedef struct CassCollection_ CassCollection;
+typedef struct CassSsl_ CassSsl;
 
 typedef enum CassConsistency_ {
   CASS_CONSISTENCY_ANY          = 0x0000,
@@ -185,9 +186,9 @@ typedef enum CassCollectionType_ {
 } CassCollectionType;
 
 typedef enum CassBatchType_ {
-  CASS_BATCH_TYPE_LOGGED    = 0,
-  CASS_BATCH_TYPE_UNLOGGED  = 1,
-  CASS_BATCH_TYPE_COUNTER   = 2
+  CASS_BATCH_TYPE_LOGGED   = 0,
+  CASS_BATCH_TYPE_UNLOGGED = 1,
+  CASS_BATCH_TYPE_COUNTER  = 2
 } CassBatchType;
 
 typedef enum CassCompression_ {
@@ -211,6 +212,12 @@ typedef enum CassLogLevel_ {
 #undef XX
   CASS_LOG_LAST_ENTRY
 } CassLogLevel;
+
+typedef enum CassSslVerifyFlags {
+  CASS_SSL_VERIFY_NONE          = 0,
+  CASS_SSL_VERIFY_PEER_CERT     = 1,
+  CASS_SSL_VERIFY_PEER_IDENTITY = 2
+} CassSslVerifyFlags;
 
 typedef enum  CassErrorSource_ {
   CASS_ERROR_SOURCE_NONE,
@@ -256,10 +263,11 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_CONFIG_ERROR, 0x2300, "Configuration error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_ALREADY_EXISTS, 0x2400, "Already exists") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_UNPREPARED, 0x2500, "Unprepared") \
-  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_CERT, 1, "Unable to load certificate") \
-  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_CA_CERT, 2, "Unable to load CA certificate") \
-  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_PRIVATE_KEY, 3, "Unable to load private key") \
-  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_CRL, 4, "Unable to load certificate revocation list")
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_INVALID_CERT, 1, "Unable to load certificate") \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_INVALID_PRIVATE_KEY, 2, "Unable to load private key") \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_NO_PEER_CERT, 3, "No peer certificate")  \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_INVALID_PEER_CERT, 4, "Invalid peer certificate") \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_IDENTITY_MISMATCH, 5, "Certificate does not match host or IP address")
 
 #define CASS_ERROR(source, code) ((source << 24) | code)
 
@@ -326,6 +334,8 @@ cass_cluster_set_contact_points(CassCluster* cluster,
 CASS_EXPORT CassError
 cass_cluster_set_port(CassCluster* cluster,
                       int port);
+
+CASS_EXPORT CassError cass_cluster_set_ssl(CassCluster* cluster,  CassSsl* ssl);
 
 /**
  * Sets the protocol version. This will automatically downgrade if to
@@ -2031,6 +2041,26 @@ cass_uuid_version(CassUuid uuid);
 CASS_EXPORT void
 cass_uuid_string(CassUuid uuid,
                  char* output);
+
+
+/***********************************************************************************
+ *
+ * SSL
+ *
+ ************************************************************************************/
+
+CASS_EXPORT CassSsl* cass_ssl_new();
+
+CASS_EXPORT void cass_ssl_free(CassSsl* ssl);
+
+CASS_EXPORT CassError cass_ssl_add_trusted_cert(CassSsl* ssl, CassString cert);
+
+CASS_EXPORT void cass_ssl_set_verify_flags(CassSsl* ssl, int flags);
+
+CASS_EXPORT CassError cass_ssl_set_cert(CassSsl* ssl, CassString cert);
+
+CASS_EXPORT CassError cass_ssl_set_private_key(CassSsl* ssl, CassString key, const char* password);
+
 
 /***********************************************************************************
  *

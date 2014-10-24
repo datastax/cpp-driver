@@ -40,6 +40,10 @@
 #include <iomanip>
 #include <sstream>
 
+#define SSL_READ_SIZE 8192
+#define SSL_WRITE_SIZE 8192
+#define SSL_ENCRYPTED_BUFS_COUNT 16
+
 namespace cass {
 
 static void cleanup_pending_handlers(List<Handler>* pending) {
@@ -126,20 +130,22 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
       connection_->on_set_keyspace();
       break;
     default:
-      connection_->notify_error(
-          "Invalid result. Expected set keyspace.");
+      connection_->notify_error("Invalid result. Expected set keyspace.");
       break;
   }
 }
 
 Connection::Connection(uv_loop_t* loop, Logger* logger, const Config& config,
-                       const Address& address,  const std::string& keyspace,
+                       const Address& address,
+                       const std::string& hostname,
+                       const std::string& keyspace,
                        int protocol_version)
     : state_(CONNECTION_STATE_NEW)
     , is_defunct_(false)
     , is_invalid_protocol_(false)
     , is_registered_for_events_(false)
     , is_available_(false)
+    , ssl_error_code_(CASS_OK)
     , pending_writes_size_(0)
     , loop_(loop)
     , logger_(logger)
@@ -149,12 +155,17 @@ Connection::Connection(uv_loop_t* loop, Logger* logger, const Config& config,
     , keyspace_(keyspace)
     , protocol_version_(protocol_version)
     , response_(new ResponseMessage())
-    , ssl_handshake_done_(false)
     , version_("3.0.0")
     , event_types_(0)
-    , connect_timer_(NULL) {
+    , connect_timer_(NULL)
+    , ssl_session_(NULL) {
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
+
+  SslContext* ssl_context = config_.ssl_context();
+  if (ssl_context != NULL) {
+    ssl_session_ = ssl_context->create_session(address_, hostname);
+  }
 }
 
 void Connection::connect() {
@@ -176,12 +187,16 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
   handler->set_stream(stream);
 
   if (pending_writes_.is_empty() || pending_writes_.back()->is_flushed()) {
-    pending_writes_.add_to_back(new PendingWriteBuffer(this));
+    if (ssl_session_ != NULL) {
+      pending_writes_.add_to_back(new PendingWriteSsl(this));
+    } else {
+      pending_writes_.add_to_back(new PendingWrite(this));
+    }
   }
 
-  PendingWriteBuffer* pending_write_buffer = pending_writes_.back();
+  PendingWriteBase* pending_write = pending_writes_.back();
 
-  int32_t request_size = pending_write_buffer->write(handler);
+  int32_t request_size = pending_write->write(handler);
   if (request_size < 0) {
     stream_manager_.release_stream(stream);
     handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
@@ -195,7 +210,7 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
     set_is_available(false);
   }
 
-  logger_->trace("Connection: Sending message type %s with %d",
+  logger_->trace("Connection: Sending message type %s with stream %d",
                  opcode_to_string(handler->request()->opcode()).c_str(), stream);
 
   handler->set_state(Handler::REQUEST_STATE_WRITING);
@@ -203,7 +218,7 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
                        boost::bind(&Connection::on_timeout, this, _1));
 
   if (flush_immediately) {
-    pending_write_buffer->flush();
+    pending_write->flush();
   }
 
   return true;
@@ -262,9 +277,8 @@ void Connection::consume(char* input, size_t size) {
   while (remaining != 0) {
     int consumed = response_->decode(protocol_version_, buffer, remaining);
     if (consumed <= 0) {
-      logger_->error("Connection: Error consuming message on host %s", addr_string_.c_str());
+      notify_error("Error consuming message");
       remaining = 0;
-      defunct();
       continue;
     }
 
@@ -283,9 +297,8 @@ void Connection::consume(char* input, size_t size) {
             event_callback_(static_cast<EventResponse*>(response->response_body().get()));
           }
         } else {
-          logger_->error("Connection: Invalid response with opcode of %d returned on event stream",
-                         response->opcode());
-          defunct();
+          notify_error("Invalid response opcode for event stream: " +
+                       opcode_to_string(response->opcode()));
         }
       } else {
         Handler* handler = NULL;
@@ -326,9 +339,7 @@ void Connection::consume(char* input, size_t size) {
               break;
           }
         } else {
-          logger_->error("Connection: Invalid stream returned from host %s",
-                         addr_string_.c_str());
-          defunct();
+          notify_error("Invalid stream");
         }
       }
     }
@@ -360,10 +371,22 @@ void Connection::on_connect(Connecter* connecter) {
   if (connecter->status() == Connecter::SUCCESS) {
     connection->logger_->debug("Connection: Connected to host %s",
                                connection->addr_string_.c_str());
-    uv_read_start(copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_),
-                  alloc_buffer, on_read);
+
+    if (connection->ssl_session_ != NULL) {
+      uv_read_start(copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_),
+                    Connection::alloc_buffer_ssl, Connection::on_read_ssl);
+    } else {
+      uv_read_start(copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_),
+                    Connection::alloc_buffer, Connection::on_read);
+    }
+
     connection->state_ = CONNECTION_STATE_CONNECTED;
-    connection->on_connected();
+
+    if (connection->ssl_session_ != NULL) {
+      connection->ssl_handshake();
+    } else {
+      connection->on_connected();
+    }
   } else {
     connection->logger_->info("Connection: Connect error '%s' on host %s",
                               uv_err_name(uv_last_error(connection->loop_)),
@@ -387,10 +410,10 @@ void Connection::on_close(uv_handle_t* handle) {
   cleanup_pending_handlers(&connection->pending_reads_);
 
   while(!connection->pending_writes_.is_empty()) {
-    PendingWriteBuffer* pending_write_buffer
+    PendingWriteBase* pending_write
         = connection->pending_writes_.front();
-    connection->pending_writes_.remove(pending_write_buffer);
-    delete pending_write_buffer;
+    connection->pending_writes_.remove(pending_write);
+    delete pending_write;
   }
 
   while (!connection->pending_schema_aggreements_.is_empty()) {
@@ -409,6 +432,10 @@ void Connection::on_close(uv_handle_t* handle) {
   delete connection;
 }
 
+uv_buf_t Connection::alloc_buffer(uv_handle_t* handle, size_t suggested_size) {
+  return uv_buf_init(new char[suggested_size], suggested_size);
+}
+
 void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
   Connection* connection = static_cast<Connection*>(client->data);
 
@@ -419,11 +446,51 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
                                 connection->addr_string_.c_str());
     }
     connection->defunct();
-    free_buffer(buf);
+    delete[] buf.base;
     return;
   }
+
   connection->consume(buf.base, nread);
-  free_buffer(buf);
+
+  delete[] buf.base;
+}
+
+uv_buf_t Connection::alloc_buffer_ssl(uv_handle_t* handle, size_t suggested_size) {
+  Connection* connection = static_cast<Connection*>(handle->data);
+  char* base = connection->ssl_session_->incoming().peek_writable(&suggested_size);
+  return uv_buf_init(base, suggested_size);
+}
+
+void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
+  Connection* connection = static_cast<Connection*>(client->data);
+
+  SslSession* ssl_session = connection->ssl_session_;
+  assert(ssl_session != NULL);
+
+  if (nread == -1) {
+    if (uv_last_error(connection->loop_).code != UV_EOF) {
+      connection->logger_->info("Connection: Read error '%s' on host %s",
+                                uv_err_name(uv_last_error(connection->loop_)),
+                                connection->addr_string_.c_str());
+    }
+    connection->defunct();
+    return;
+  }
+
+  ssl_session->incoming().commit(nread);
+
+  if (ssl_session->is_handshake_done()) {
+    char buf[SSL_READ_SIZE];
+    int rc =  0;
+    while ((rc = ssl_session->decrypt(buf, sizeof(buf))) > 0) {
+      connection->consume(buf, rc);
+    }
+    if (rc <= 0 && ssl_session->has_error()) {
+      connection->notify_error_ssl("Unable to decrypt data: " + ssl_session->error_message());
+    }
+  } else {
+    connection->ssl_handshake();
+  }
 }
 
 void Connection::on_timeout(RequestTimer* timer) {
@@ -441,7 +508,6 @@ void Connection::on_timeout(RequestTimer* timer) {
 }
 
 void Connection::on_connected() {
-  // TODO (mpenick): Implement SSL
   write(new StartupHandler(this, new OptionsRequest()));
 }
 
@@ -512,9 +578,48 @@ void Connection::notify_ready() {
 }
 
 void Connection::notify_error(const std::string& error) {
-  logger_->error("Connection: Host %s had the following error on startup: '%s'",
-                 addr_string_.c_str(), error.c_str());
+  if (state_ == CONNECTION_STATE_READY) {
+    logger_->error("Connection: Host %s had the following error: '%s'",
+                   addr_string_.c_str(), error.c_str());
+  } else {
+    logger_->error("Connection: Host %s had the following error on startup: '%s'",
+                   addr_string_.c_str(), error.c_str());
+  }
   defunct();
+}
+
+void Connection::notify_error_ssl(const std::string& error) {
+  ssl_error_code_ = ssl_session_->error_code();
+  ssl_error_ = error;
+  notify_error(error);
+}
+
+void Connection::ssl_handshake() {
+  if (!ssl_session_->is_handshake_done()) {
+    ssl_session_->do_handshake();
+    if (ssl_session_->has_error()) {
+      notify_error_ssl("Error during SSL handshake: " + ssl_session_->error_message());
+      return;
+    }
+  }
+
+  char buf[SslHandshakeWriter::MAX_BUFFER_SIZE];
+  size_t size = ssl_session_->outgoing().read(buf, sizeof(buf));
+  if (size > 0) {
+    if (!SslHandshakeWriter::write(this, buf, size)) {
+      notify_error("Error writing data during SSL handshake");
+      return;
+    }
+  }
+
+  if (ssl_session_->is_handshake_done()) {
+    ssl_session_->verify();
+    if (ssl_session_->has_error()) {
+      notify_error_ssl("Error verifying peer certificate: " + ssl_session_->error_message());
+      return;
+    }
+    on_connected();
+  }
 }
 
 void Connection::send_credentials() {
@@ -547,11 +652,11 @@ void Connection::PendingSchemaAgreement::stop_timer() {
   }
 }
 
-Connection::PendingWriteBuffer::~PendingWriteBuffer() {
+Connection::PendingWriteBase::~PendingWriteBase() {
   cleanup_pending_handlers(&handlers_);
 }
 
-int32_t Connection::PendingWriteBuffer::write(Handler* handler) {
+int32_t Connection::PendingWriteBase::write(Handler* handler) {
   size_t last_buffer_size = buffers_.size();
   int32_t request_size = handler->encode(connection_->protocol_version_, 0x00, &buffers_);
   if (request_size < 0) {
@@ -565,32 +670,15 @@ int32_t Connection::PendingWriteBuffer::write(Handler* handler) {
   return request_size;
 }
 
-void Connection::PendingWriteBuffer::flush() {
-  if (!is_flushed_ && !buffers_.empty()) {
-    uv_stream_t* sock_stream = copy_cast<uv_tcp_t*, uv_stream_t*>(&connection_->socket_);
+void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
+  PendingWrite* pending_write = static_cast<PendingWrite*>(req->data);
 
-    uv_bufs_.clear();
-    uv_bufs_.reserve(buffers_.size());
+  Connection* connection = static_cast<Connection*>(pending_write->connection_);
 
-    for (BufferVec::const_iterator it = buffers_.begin(),
-         end = buffers_.end(); it != end; ++it) {
-      uv_bufs_.push_back(uv_buf_init(const_cast<char*>(it->data()), it->size()));
-    }
+  while (!pending_write->handlers_.is_empty()) {
+    Handler* handler = pending_write->handlers_.front();
 
-    is_flushed_ = true;
-    uv_write(&req_, sock_stream, uv_bufs_.data(), uv_bufs_.size(), on_write);
-  }
-}
-
-void Connection::PendingWriteBuffer::on_write(uv_write_t* req, int status) {
-  PendingWriteBuffer* pending_write_buffer = static_cast<PendingWriteBuffer*>(req->data);
-
-  Connection* connection = static_cast<Connection*>(pending_write_buffer->connection_);
-
-  while (!pending_write_buffer->handlers_.is_empty()) {
-    Handler* handler = pending_write_buffer->handlers_.front();
-
-    pending_write_buffer->handlers_.remove(handler);
+    pending_write->handlers_.remove(handler);
 
     switch (handler->state()) {
       case Handler::REQUEST_STATE_WRITING:
@@ -633,18 +721,149 @@ void Connection::PendingWriteBuffer::on_write(uv_write_t* req, int status) {
     }
   }
 
-  connection->pending_writes_size_ -= pending_write_buffer->size();
+  connection->pending_writes_size_ -= pending_write->size();
   if (connection->pending_writes_size_ <
       connection->config_.write_bytes_low_water_mark()) {
     connection->set_is_available(true);
   }
 
-  connection->pending_writes_.remove(pending_write_buffer);
-  delete pending_write_buffer;
+  connection->pending_writes_.remove(pending_write);
+  delete pending_write;
 
   connection->flush();
 }
 
+void Connection::PendingWrite::flush() {
+  if (!is_flushed_ && !buffers_.empty()) {
+    UvBufVec bufs;
+
+    bufs.reserve(buffers_.size());
+
+    for (BufferVec::const_iterator it = buffers_.begin(),
+         end = buffers_.end(); it != end; ++it) {
+      bufs.push_back(uv_buf_init(const_cast<char*>(it->data()), it->size()));
+    }
+
+    is_flushed_ = true;
+    uv_stream_t* sock_stream = copy_cast<uv_tcp_t*, uv_stream_t*>(&connection_->socket_);
+    uv_write(&req_, sock_stream, bufs.data(), bufs.size(), PendingWrite::on_write);
+  }
+}
+
+void Connection::PendingWriteSsl::encrypt() {
+  char buf[SSL_WRITE_SIZE];
+
+  size_t copied = 0;
+  size_t offset = 0;
+  size_t total = 0;
+
+  SslSession* ssl_session = connection_->ssl_session_;
+
+  BufferVec::const_iterator it = buffers_.begin(),
+      end = buffers_.end();
+
+  connection_->logger_->trace("Coping %zu bufs", buffers_.size());
+
+  bool is_done = (it == end);
+
+  while (!is_done) {
+    assert(it->size() > 0);
+    size_t size = it->size();
+
+    size_t to_copy = size - offset;
+    size_t available = SSL_WRITE_SIZE - copied;
+    if (available < to_copy) {
+      to_copy = available;
+    }
+
+    memcpy(buf + copied, it->data() + offset, to_copy);
+
+    copied += to_copy;
+    offset += to_copy;
+    total += to_copy;
+
+    if (offset == size) {
+      ++it;
+      offset = 0;
+    }
+
+    is_done = (it == end);
+
+    if (is_done || copied == SSL_WRITE_SIZE) {
+      int rc = ssl_session->encrypt(buf, copied);
+      if (rc <= 0 && ssl_session->has_error()) {
+        connection_->notify_error("Unable to encrypt data: " + ssl_session->error_message());
+        return;
+      }
+      copied = 0;
+    }
+  }
+
+  connection_->logger_->trace("Copied %zu bytes for encryption", total);
+}
+
+void Connection::PendingWriteSsl::flush() {
+  if (!is_flushed_ && !buffers_.empty()) {
+    SslSession* ssl_session = connection_->ssl_session_;
+
+    uv_bufs_.reserve(buffers_.size());
+
+    for (BufferVec::const_iterator it = buffers_.begin(),
+         end = buffers_.end(); it != end; ++it) {
+      uv_bufs_.push_back(uv_buf_init(const_cast<char*>(it->data()), it->size()));
+    }
+
+    rb::RingBuffer::Position prev_pos = ssl_session->outgoing().write_position();
+
+    encrypt();
+
+    FixedVector<uv_buf_t, SSL_ENCRYPTED_BUFS_COUNT> bufs;
+    encrypted_size_ = ssl_session->outgoing().peek_multiple(prev_pos, &bufs);
+
+    connection_->logger_->trace("Sending %zu encrypted bytes", encrypted_size_);
+
+    uv_stream_t* sock_stream = copy_cast<uv_tcp_t*, uv_stream_t*>(&connection_->socket_);
+    uv_write(&req_, sock_stream, bufs.data(), bufs.size(), PendingWriteSsl::on_write);
+
+    is_flushed_ = true;
+  }
+}
+
+void Connection::PendingWriteSsl::on_write(uv_write_t* req, int status) {
+  if (status == 0) {
+    PendingWriteSsl* pending_write = static_cast<PendingWriteSsl*>(req->data);
+    pending_write->connection_->ssl_session_->outgoing().read(NULL, pending_write->encrypted_size_);
+  }
+  PendingWriteBase::on_write(req, status);
+}
+
+bool Connection::SslHandshakeWriter::write(Connection* connection, char* buf, size_t buf_size) {
+  SslHandshakeWriter* writer = new SslHandshakeWriter(connection, buf, buf_size);
+  uv_stream_t* stream = copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_);
+
+  int rc = uv_write(&writer->req_, stream, &writer->uv_buf_, 1, SslHandshakeWriter::on_write);
+  if (rc != 0) {
+    delete writer;
+    return false;
+  }
+
+  return true;
+}
+
+Connection::SslHandshakeWriter::SslHandshakeWriter(Connection* connection, char* buf, size_t buf_size)
+  : connection_(connection)
+  , uv_buf_(uv_buf_init(buf, buf_size)) {
+  memcpy(buf_, buf, buf_size);
+  req_.data = this;
+}
+
+void Connection::SslHandshakeWriter::on_write(uv_write_t* req, int status) {
+  SslHandshakeWriter* writer = static_cast<SslHandshakeWriter*>(req->data);
+  if (status != 0) {
+    writer->connection_->notify_error("Failed to write during SSL handshake");
+  }
+  delete writer;
+}
 
 
 } // namespace cass

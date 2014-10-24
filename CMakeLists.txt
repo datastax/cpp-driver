@@ -29,6 +29,7 @@ set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${P
 # Build up the include paths
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
+set(INCLUDES ${INCLUDES} ${PROJECT_SOURCE_DIR}/src)
 set(INCLUDES ${INCLUDES} ${PROJECT_SOURCE_DIR}/src/third_party/boost)
 
 #-------------------
@@ -189,14 +190,14 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 # we must add header files as dependencies (if header
 # changes project must be recompiled, right).
-file(GLOB INC_FILES
-  ${PROJECT_SOURCE_DIR}/include/*.h )
-
+file(GLOB INC_FILES ${PROJECT_SOURCE_DIR}/include/*.h)
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp) 
 
 set(SRC_FILES ${SRC_FILES}
-  "${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/atomic/src/lockpool.cpp" 
-  "${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/random/src/random_device.cpp")
+  ${PROJECT_SOURCE_DIR}/src/third_party/rb/ring_buffer.cpp
+  ${PROJECT_SOURCE_DIR}/src/third_party/rb/ring_buffer_bio.cpp
+  ${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/atomic/src/lockpool.cpp
+  ${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/random/src/random_device.cpp)
 
 source_group("Source Files" FILES ${SRC_FILES})
 source_group("Header Files" FILES ${INC_FILES})
@@ -309,6 +310,7 @@ if(CASS_BUILD_EXAMPLES)
   add_subdirectory(examples/prepared)
   add_subdirectory(examples/uuids)
   add_subdirectory(examples/simple)
+  add_subdirectory(examples/ssl)
   add_subdirectory(examples/paging)
   add_subdirectory(examples/perf)
 endif()
