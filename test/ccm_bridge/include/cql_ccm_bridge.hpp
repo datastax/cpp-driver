@@ -46,6 +46,8 @@ namespace cql {
 		void stop(int node);
 		void kill();
 		void kill(int node);
+		void binary(int node, bool enable);
+		void gossip(int node, bool enable);
 
 		void remove();
 		void ring(int node);

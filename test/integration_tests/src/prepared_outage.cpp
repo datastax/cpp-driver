@@ -34,9 +34,10 @@
 #include "test_utils.hpp"
 
 struct PreparedOutageTests : public test_utils::SingleSessionTest {
-  PreparedOutageTests() : SingleSessionTest(2, 0) {
+  PreparedOutageTests() : SingleSessionTest(3, 0) {
+    cass_cluster_set_log_level(cluster, CASS_LOG_DEBUG);
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                           % test_utils::SIMPLE_KEYSPACE % "1"));
+                                           % test_utils::SIMPLE_KEYSPACE % "2"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
   }
 };
@@ -79,9 +80,7 @@ BOOST_AUTO_TEST_CASE(test_reprepared_on_new_node)
   ccm->start(1);
   ccm->stop(2);
 
-  boost::this_thread::sleep_for(boost::chrono::seconds(10));
-
-  for(int i = 0; i < 10; ++i){
+  for (int i = 0; i < 10; ++i) {
     test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
     BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 0, cass_string_init("456")) == CASS_OK);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
@@ -94,6 +93,50 @@ BOOST_AUTO_TEST_CASE(test_reprepared_on_new_node)
     cass_int32_t result_value;
     BOOST_REQUIRE(cass_value_get_int32(cass_row_get_column(row, 1), &result_value) == CASS_OK);
     BOOST_REQUIRE(result_value == 18);
+  }
+
+  test_utils::execute_query(session, str(boost::format(insert_query) % table_name % "789" % 19));
+  ccm->start(2);
+  ccm->gossip(1, false);
+
+  for (int i = 0; i < 10; ++i) {
+    test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
+    BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 0, cass_string_init("789")) == CASS_OK);
+    test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
+    test_utils::wait_and_check_error(future.get());
+    test_utils::CassResultPtr result(cass_future_get_result(future.get()));
+    BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
+    BOOST_REQUIRE(cass_result_column_count(result.get()) == 2);
+
+    const CassRow* row = cass_result_first_row(result.get());
+    cass_int32_t result_value;
+    BOOST_REQUIRE(cass_value_get_int32(cass_row_get_column(row, 1), &result_value) == CASS_OK);
+    BOOST_REQUIRE(result_value == 19);
+  }
+
+  ccm->gossip(1, true);
+  ccm->binary(2, false);
+  ccm->binary(1, false);
+
+  //Ensure the binary protocol is disabled before executing the inserts
+  boost::this_thread::sleep_for(boost::chrono::seconds(5));
+  test_utils::execute_query(session, str(boost::format(insert_query) % table_name % "123456789" % 20));
+  ccm->binary(2, true);
+
+
+  for (int i = 0; i < 10; ++i) {
+    test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
+    BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 0, cass_string_init("123456789")) == CASS_OK);
+    test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
+    test_utils::wait_and_check_error(future.get());
+    test_utils::CassResultPtr result(cass_future_get_result(future.get()));
+    BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
+    BOOST_REQUIRE(cass_result_column_count(result.get()) == 2);
+
+    const CassRow* row = cass_result_first_row(result.get());
+    cass_int32_t result_value;
+    BOOST_REQUIRE(cass_value_get_int32(cass_row_get_column(row, 1), &result_value) == CASS_OK);
+    BOOST_REQUIRE(result_value == 20);
   }
 }
 
