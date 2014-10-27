@@ -237,12 +237,13 @@ private:
   }
 
   static Result match_subject_alt_names(X509* cert, const boost::string_ref& to_match, int type) {
-    GENERAL_NAMES* names = static_cast<GENERAL_NAMES*>(X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL));
+    STACK_OF(GENERAL_NAME)* names
+      = static_cast<STACK_OF(GENERAL_NAME)*>(X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL));
     if (names == NULL) {
       return NO_SAN_PRESENT;
     }
 
-    for (int i = 0; i < sk_GENERAL_NAMES_num(names); ++i) {
+    for (int i = 0; i < sk_GENERAL_NAME_num(names); ++i) {
       GENERAL_NAME* name = sk_GENERAL_NAME_value(names, i);
 
       if (name->type != type) continue;
@@ -266,7 +267,7 @@ private:
         }
       }
     }
-    GENERAL_NAMES_free(names);
+    sk_GENERAL_NAME_pop_free(names, GENERAL_NAME_free);
 
     return NO_MATCH;
   }

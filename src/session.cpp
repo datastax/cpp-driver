@@ -147,7 +147,7 @@ void Session::purge_hosts(bool is_initial_connection) {
       if (is_initial_connection) {
         logger_->warn("Session: Unable to reach contact point %s",
                       address_str.c_str());
-        hosts_wrapper_.erase(to_remove_it);
+        hosts_wrapper_.erase(to_remove_it->first);
       } else {
         logger_->info("Session: Host %s removed",
                       address_str.c_str());
@@ -521,11 +521,6 @@ void Session::HostsWrapper::insert(const Address& address, const SharedRefPtr<Ho
 void Session::HostsWrapper::erase(const Address& address) {
   ScopedMutex lock(&hosts_mutex_);
   hosts_.erase(address);
-}
-
-void Session::HostsWrapper::erase(HostMap::const_iterator it) {
-  ScopedMutex lock(&hosts_mutex_);
-  hosts_.erase(it);
 }
 
 } // namespace cass

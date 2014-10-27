@@ -37,7 +37,7 @@ class RingBuffer {
  private:
   // NOTE: Size is maximum TLS frame length, this is required if we want
   // to fit whole ClientHello into one Buffer of RingBuffer.
-  static const int BUFFER_LENGTH = 16 * 1024 + 5;
+  static const size_t BUFFER_LENGTH = 16 * 1024 + 5;
 
   class Buffer {
    public:

@@ -137,7 +137,6 @@ private:
     std::string hostname(const Address& address) const;
     void insert(const Address& address, const SharedRefPtr<Host>& host);
     void erase(const Address& address);
-    void erase(HostMap::const_iterator it);
 
     // This should only be called on the session thread
     const HostMap& get() { return hosts_; }

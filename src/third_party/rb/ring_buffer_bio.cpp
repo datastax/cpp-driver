@@ -25,6 +25,8 @@
 
 #include "ring_buffer_bio.hpp"
 
+#include <string.h>
+
 namespace cass {
 namespace rb {
 

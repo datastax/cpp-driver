@@ -23,6 +23,8 @@
 
 #include "third_party/boost/boost/random/random_device.hpp"
 
+#include <stdio.h>
+
 extern "C" {
 
 void cass_uuid_generate_time(CassUuid output) {
