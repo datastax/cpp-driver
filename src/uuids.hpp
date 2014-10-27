@@ -22,7 +22,6 @@
 #include "third_party/boost/boost/cstdint.hpp"
 
 #include <uv.h>
-#include <openssl/evp.h>
 #include <assert.h>
 #include <string.h>
 

@@ -28,17 +28,6 @@
 
 namespace cass {
 
-// TODO(mpenick):
-// 1) SSL Error handling
-//    a) No SSL
-//    b) Bad handshake (no support for cipher etc.)
-//    c) Bad read/write
-// done 2) Load certificate chain
-// done 3) Load private key
-// done 4) Cert chain verification
-// done 5) Disable verification
-// done 6) Initialize SSL library
-
 template <class T>
 class SslSessionBase {
 public:
@@ -133,6 +122,10 @@ protected:
 
 } // namespace cass
 
-#include "ssl_openssl_impl.hpp"
+#ifdef CASS_USE_OPENSSL
+#include "ssl/ssl_openssl_impl.hpp"
+#else
+#include "ssl/ssl_no_impl.hpp"
+#endif
 
 #endif

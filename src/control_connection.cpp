@@ -190,7 +190,7 @@ void ControlConnection::on_connection_closed(Connection* connection) {
       if (protocol_version_ <= 1) {
         logger_->error("ControlConnection: Host %s does not support any valid protocol version",
                        connection->address_string().c_str());
-        session_->on_control_connection_error(CASS_ERROR_UNABLE_TO_DETERMINE_PROTOCOL,
+        session_->on_control_connection_error(CASS_ERROR_LIB_UNABLE_TO_DETERMINE_PROTOCOL,
                                              "Not even protocol version 1 is supported");
         return;
       }
