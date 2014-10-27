@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(test_reprepared_on_new_node)
   ccm->start(1);
   ccm->stop(2);
 
-  for(int i = 0; i < 10; ++i){
+  for (int i = 0; i < 10; ++i){
     test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
     BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 0, cass_string_init("456")) == CASS_OK);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(test_reprepared_on_new_node)
   ccm->start(2);
   ccm->gossip(1, false);
 
-  for(int i = 0; i < 10; ++i){
+  for (int i = 0; i < 10; ++i){
     test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
     BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 0, cass_string_init("789")) == CASS_OK);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE(test_reprepared_on_new_node)
   ccm->binary(2, true);
 
 
-  for(int i = 0; i < 10; ++i){
+  for (int i = 0; i < 10; ++i){
     test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
     BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 0, cass_string_init("123456789")) == CASS_OK);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
