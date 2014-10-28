@@ -85,6 +85,27 @@ void count_message_log_callback(cass_uint64_t time,
   }
 }
 
+const char* get_column_type(CassColumnType type) {
+  //Determine which column type to return text value
+  switch(type) {
+    case CASS_COLUMN_TYPE_PARITION_KEY:
+      return "Partition Key";
+    case CASS_COLUMN_TYPE_CLUSTERING_KEY:
+      return "Clustering Key";
+    case CASS_COLUMN_TYPE_REGULAR:
+      return "Regular";
+    case CASS_COLUMN_TYPE_COMPACT_VALUE:
+      return "Compact Value";
+    case CASS_COLUMN_TYPE_STATIC:
+      return "Static";
+    case CASS_COLUMN_TYPE_UNKNOWN:
+      return "Unknown";
+    default:
+      assert(false && "Invalid column type");
+      return "";
+  }
+}
+
 const char* get_value_type(CassValueType type) {
   switch(type) {
     case CASS_VALUE_TYPE_CUSTOM: return "custom";
@@ -117,12 +138,17 @@ const char* get_value_type(CassValueType type) {
 const std::string CREATE_KEYSPACE_SIMPLE_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %s }";
 const std::string CREATE_KEYSPACE_NETWORK_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'NetworkTopologyStrategy',  'dc1' : %d, 'dc2' : %d }";
 const std::string CREATE_KEYSPACE_GENERIC_FORMAT = "CREATE KEYSPACE {0} WITH replication = { 'class' : '{1}', {2} }";
+const std::string CREATE_KEYSPACE_SIMPLE_WITH_DURABLE_RIGHTS_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %s } AND durable_writes = %s";
+const std::string CREATE_KEYSPACE_NETWORK_WITH_DURABLE_RIGHTS_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'NetworkTopologyStrategy',  'dc1' : %d, 'dc2' : %d } AND durable_writes = %s";
+const std::string DROP_KEYSPACE_FORMAT = "DROP KEYSPACE %s";
+const std::string DROP_KEYSPACE_IF_EXISTS_FORMAT = "DROP KEYSPACE IF EXISTS %s";
 const std::string SIMPLE_KEYSPACE = "ks";
 const std::string SIMPLE_TABLE = "test";
 const std::string CREATE_TABLE_SIMPLE_FORMAT = "CREATE TABLE {0} (k text PRIMARY KEY, t text, i int, f float)";
 const std::string INSERT_FORMAT = "INSERT INTO {0} (k, t, i, f) VALUES ('{1}', '{2}', {3}, {4})";
 const std::string SELECT_ALL_FORMAT = "SELECT * FROM {0}";
 const std::string SELECT_WHERE_FORMAT = "SELECT * FROM {0} WHERE {1}";
+const std::string SELECT_VERSION = "SELECT release_version FROM system.local";
 
 const std::string lorem_ipsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla porta turpis vel dui venenatis, quis viverra magna"
                                 "suscipit. Praesent pharetra facilisis turpis, et fermentum leo sollicitudin sit amet. In hac habitasse platea dictumst. Donec mattis facilisis"
@@ -156,6 +182,7 @@ SingleSessionTest::SingleSessionTest(int num_nodes_dc1, int num_nodes_dc2, int p
   test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(connect_future.get());
   session = cass_future_get_session(connect_future.get());
+  version = get_version(session);
 }
 
 SingleSessionTest::~SingleSessionTest() {
@@ -233,6 +260,25 @@ std::string string_from_uuid(CassUuid uuid) {
   char buffer[CASS_UUID_STRING_LENGTH];
   cass_uuid_string(uuid, buffer);
   return std::string(buffer);
+}
+
+CassVersion get_version(CassSession* session) {
+  //Execute the version query
+  CassResultPtr result;
+  execute_query(session, SELECT_VERSION, &result);
+
+  //Only one row should be returned; get the first row
+  const CassRow *row = cass_result_first_row(result.get());
+
+  //Convert the release_version value to a string
+  const CassValue* value = cass_row_get_column_by_name(row, "release_version");
+  CassString version_string;
+  cass_value_get_string(value, &version_string);
+
+  //Parse the version string and return the Cassandra version
+  CassVersion version;
+  sscanf(version_string.data, "%hu.%hu.%hu-%s", &version.major, &version.minor, &version.patch, version.extra);
+  return version;
 }
 
 //-----------------------------------------------------------------------------------
