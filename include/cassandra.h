@@ -336,7 +336,18 @@ CASS_EXPORT CassError
 cass_cluster_set_port(CassCluster* cluster,
                       int port);
 
-CASS_EXPORT CassError cass_cluster_set_ssl(CassCluster* cluster,  CassSsl* ssl);
+/**
+ * Sets the SSL context and enables SSL.
+ *
+ * @param[in] cluster
+ * @param[in] ssl
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_ssl_new()
+ */
+CASS_EXPORT CassError
+cass_cluster_set_ssl(CassCluster* cluster,
+                     CassSsl* ssl);
 
 /**
  * Sets the protocol version. This will automatically downgrade if to
@@ -736,6 +747,89 @@ cass_session_execute(CassSession* session,
 CASS_EXPORT CassFuture*
 cass_session_execute_batch(CassSession* session,
                            const CassBatch* batch);
+
+/***********************************************************************************
+ *
+ * SSL
+ *
+ ************************************************************************************/
+
+/**
+ * Creates a new SSL context.
+ *
+ * @return Returns a SSL context that must be freed.
+ *
+ * @see cass_ssl_free()
+ */
+CASS_EXPORT CassSsl*
+cass_ssl_new();
+
+/**
+ * Adds a trusted certificate. This is used to verify
+ * the peer's certificate.
+ *
+ * @param[in] ssl
+ * @param[in] cert PEM formatted certificate string
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_ssl_add_trusted_cert(CassSsl* ssl,
+                          CassString cert);
+
+/**
+ * Sets verifcation performed on the peer's certificate.
+ *
+ * CASS_SSL_VERIFY_NONE - No verification is performed
+ * CASS_SSL_VERIFY_PEER_CERT - Certficate is present and valid
+ * CASS_SSL_VERIFY_PEER_IDENTITY - Hostname or IP address match
+ * the certificate's CN or SANs. This implies the certificate is
+ * also present.
+ *
+ * Default: CASS_SSL_VERIFY_PEER_CERT | CASS_SSL_VERIFY_PEER_IDENTITY
+ *
+ * @param[in] ssl
+ * @param[in] flags
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT void
+cass_ssl_set_verify_flags(CassSsl* ssl,
+                          int flags);
+
+/**
+ * Set client-side certficate chain. This is used to authenticate
+ * the client on the server-side. This should contain the entire
+ * certficate chain starting with the certificate itself.
+ *
+ * @param[in] ssl
+ * @param[in] cert PEM formatted certificate string
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_ssl_set_cert(CassSsl* ssl,
+                  CassString cert);
+
+/**
+ * Set client-side private key. This is used to authenticate
+ * the client on the server-side.
+ *
+ * @param[in] ssl
+ * @param[in] key PEM formatted key string
+ * @param[in] password used to decrypt key
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_ssl_set_private_key(CassSsl* ssl,
+                         CassString key,
+                         const char* password);
+
+/**
+ * Frees a SSL context instance.
+ *
+ * @param[in] cluster
+ */
+CASS_EXPORT void
+cass_ssl_free(CassSsl* ssl);
+
 
 /***********************************************************************************
  *
@@ -2042,26 +2136,6 @@ cass_uuid_version(CassUuid uuid);
 CASS_EXPORT void
 cass_uuid_string(CassUuid uuid,
                  char* output);
-
-
-/***********************************************************************************
- *
- * SSL
- *
- ************************************************************************************/
-
-CASS_EXPORT CassSsl* cass_ssl_new();
-
-CASS_EXPORT void cass_ssl_free(CassSsl* ssl);
-
-CASS_EXPORT CassError cass_ssl_add_trusted_cert(CassSsl* ssl, CassString cert);
-
-CASS_EXPORT void cass_ssl_set_verify_flags(CassSsl* ssl, int flags);
-
-CASS_EXPORT CassError cass_ssl_set_cert(CassSsl* ssl, CassString cert);
-
-CASS_EXPORT CassError cass_ssl_set_private_key(CassSsl* ssl, CassString key, const char* password);
-
 
 /***********************************************************************************
  *
