@@ -19,8 +19,6 @@
 #include "buffer_piece.hpp"
 #include "constants.hpp"
 
-#include <rapidjson/document.h>
-
 #include <algorithm>
 #include <assert.h>
 
@@ -90,40 +88,6 @@ std::string& trim(std::string& str) {
                          std::not1(std::ptr_fun<int, int>(::isspace))).base(),
             str.end());
   return str;
-}
-
-void json_to_list(const BufferPiece& alias_json, std::list<std::string>* output) {
-  char* buffer = new char[alias_json.size() + 1];
-  memcpy(buffer, alias_json.data(), alias_json.size());
-  buffer[alias_json.size()] = '\0';
-
-  rapidjson::Document d;
-  d.ParseInsitu(buffer);
-  if (!d.HasParseError()) {
-    for (rapidjson::Value::ConstValueIterator i = d.Begin(); i != d.End(); ++i) {
-      output->push_back(i->GetString());
-    }
-  } else {
-    //TODO: log to global logging
-  }
-  delete[] buffer;
-}
-
-void json_to_map(const BufferPiece& json_buffer, std::map<std::string, std::string>* output) {
-  char* buffer = new char[json_buffer.size() + 1];
-  memcpy(buffer, json_buffer.data(), json_buffer.size());
-  buffer[json_buffer.size()] = '\0';
-
-  rapidjson::Document d;
-  d.ParseInsitu(buffer);
-  if (!d.HasParseError()) {
-    for (rapidjson::Value::ConstMemberIterator i = d.MemberBegin(); i != d.MemberEnd(); ++i) {
-      (*output)[i->name.GetString()] = i->value.GetString();
-    }
-  } else {
-    //TODO: log to global logging
-  }
-  delete[] buffer;
 }
 
 } // namespace cass

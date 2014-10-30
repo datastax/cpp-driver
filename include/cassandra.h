@@ -139,7 +139,9 @@ typedef struct CassIterator_ CassIterator;
 typedef struct CassRow_ CassRow;
 typedef struct CassValue_ CassValue;
 typedef struct CassCollection_ CassCollection;
-typedef struct CassSchemaMetadata_ CassSchemaMetadata;
+typedef struct CassSchema_ CassSchema;
+typedef struct CassSchemaMeta_ CassSchemaMeta;
+typedef struct CassSchemaMetaField_ CassSchemaMetaField;
 
 typedef enum CassConsistency_ {
   CASS_CONSISTENCY_ANY          = 0x0000,
@@ -205,6 +207,21 @@ typedef enum CassColumnType_ {
   CASS_COLUMN_TYPE_STATIC,
   CASS_COLUMN_TYPE_UNKNOWN
 } CassColumnType;
+
+typedef enum CassIteratorType_ {
+  CASS_ITERATOR_TYPE_RESULT,
+  CASS_ITERATOR_TYPE_ROW,
+  CASS_ITERATOR_TYPE_COLLECTION,
+  CASS_ITERATOR_TYPE_MAP,
+  CASS_ITERATOR_TYPE_SCHEMA_META,
+  CASS_ITERATOR_TYPE_SCHEMA_META_FIELD
+} CassIteratorType;
+
+typedef enum CassSchemaMetaType_ {
+  CASS_SCHEMA_META_TYPE_KEYSPACE,
+  CASS_SCHEMA_META_TYPE_TABLE,
+  CASS_SCHEMA_META_TYPE_COLUMN
+} CassSchemaMetaType;
 
 #define CASS_LOG_LEVEL_MAP(XX) \
   XX(CASS_LOG_DISABLED, "") \
@@ -786,6 +803,20 @@ CASS_EXPORT CassFuture*
 cass_session_execute_batch(CassSession* session,
                            const CassBatch* batch);
 
+/**
+ * Gets a copy of this session's schema metadata. The returned
+ * copy of the schema metadata is not updated. This function
+ * must be called again to retrieve any schema changes since the
+ * previous call.
+ *
+ * @param[in] session
+ * @return A schema instance that must be freed.
+ *
+ * @see cass_schema_free()
+ */
+CASS_EXPORT const CassSchema*
+cass_session_get_schema(CassSession* session);
+
 /***********************************************************************************
  *
  * Schema metadata
@@ -793,184 +824,84 @@ cass_session_execute_batch(CassSession* session,
  ***********************************************************************************/
 
 /**
- * Get the current schema metadata model
+ * Gets a the metadata for the provided keyspace name.
  *
- * @param[in] session
- * @return A schema metadata model that must be freed
- *
- * @see cass_schema_meta_free()
- */
-CASS_EXPORT CassSchemaMetadata*
-cass_session_get_schema_meta(CassSession* session);
-
-/**
- * Get metadata for a known keyspace
- *
- * @param[in] schema_meta
+ * @param[in] schema
  * @param[in] keyspace_name
- * @param[out] output
- * @return CASS_OK if keyspace is found, otherwise error
+ * @return The schema metadata for a keyspace. NULL if keyspace does not exist.
+ *
+ * @see cass_schema_meta_get_entry()
+ * @see cass_schema_meta_get_field()
+ * @see cass_schema_meta_type()
+ * @see cass_iterator_from_schema_meta()
  */
-CASS_EXPORT CassError
-cass_meta_get_keyspace(CassSchemaMetadata* schema_meta,
-                       CassString keyspace_name,
-                       CassKeyspaceMeta* output);
-CASS_EXPORT CassError
-cass_meta_get_keyspace2(CassSchemaMetadata* schema_meta,
-                        const char* keyspace_name,
-                        CassKeyspaceMeta* output);
+CASS_EXPORT const CassSchemaMeta*
+cass_schema_get_keyspace(const CassSchema* schema, const char* keyspace_name);
 
 /**
- * Get metadata for a known column family
+ * Gets the type of the specified schema metadata.
  *
- * @param[in] schema_meta
- * @param[in] keyspace_name
- * @param[in] column_family_name
- * @param[out] output
- * @return CASS_OK if column family is found, otherwise error
+ * @param[in] meta
+ * @return The type of the schema metadata
  */
-CASS_EXPORT CassError
-cass_meta_get_column_family(CassSchemaMetadata* schema_meta,
-                            CassString keyspace_name,
-                            CassString column_family_name,
-                            CassColumnFamilyMeta* output);
-CASS_EXPORT CassError
-cass_meta_get_column_family2(CassSchemaMetadata* schema_meta,
-                             const char* keyspace_name,
-                             const char* column_family_name,
-                             CassColumnFamilyMeta* output);
+CASS_EXPORT CassSchemaMetaType
+cass_schema_meta_type(const CassSchemaMeta* meta);
 
 /**
- * Get metadata for a known column
+ * Gets a metadata entry for the provided table/column name.
  *
- * @param[in] schema_meta
- * @param[in] keyspace_name
- * @param[in] column_family_name
- * @param[in] column_name
- * @param[out] output
- * @return CASS_OK if column is found, otherwise error
+ * @param[in] meta
+ * @param[in] name The name of a table or column
+ * @return The schema metadata for a table/column. NULL if table/column does not exist.
+ *
+ * @see cass_schema_meta_get_entry()
+ * @see cass_schema_meta_get_field()
+ * @see cass_schema_meta_type()
+ * @see cass_iterator_from_schema_meta()
+ * @see cass_iterator_fields_from_schema_meta()
  */
-CASS_EXPORT CassError
-cass_meta_get_column(CassSchemaMetadata* schema_meta,
-                     CassString keyspace_name,
-                     CassString column_family_name,
-                     CassString column_name,
-                     CassColumnMeta* output);
-CASS_EXPORT CassError
-cass_meta_get_column2(CassSchemaMetadata* schema_meta,
-                      const char* keyspace_name,
-                      const char* column_family_name,
-                      const char* column_name,
-                      CassColumnMeta* output);
+CASS_EXPORT const CassSchemaMeta*
+cass_schema_meta_get_entry(const CassSchemaMeta* meta, const char* name);
 
 /**
- * Frees a schema metadata object created by cass_session_get_schema_meta
+ * Gets a metadata field for the provided name.
  *
- * @param[in] schema_meta
+ * @param[in] meta
+ * @param[in] name The name of a field
+ * @return A schema metadata field. NULL if the field does not exist.
+ *
+ * @see cass_schema_meta_field_name()
+ * @see cass_schema_meta_field_value()
+ */
+CASS_EXPORT const CassSchemaMetaField*
+cass_schema_meta_get_field(const CassSchemaMeta* meta, const char* name);
+
+/**
+ * Gets the name for a schema metadata field
+ *
+ * @param[in] field
+ * @return The name of the metdata data field
+ */
+CASS_EXPORT CassString
+cass_schema_meta_field_name(const CassSchemaMetaField* field);
+
+/**
+ * Gets the value for a schema metadata field
+ *
+ * @param[in] field
+ * @return The value of the metdata data field
+ */
+CASS_EXPORT const CassValue*
+cass_schema_meta_field_value(const CassSchemaMetaField* field);
+
+/**
+ * Frees a schema instance.
+ *
+ * @param[in] schema
  */
 CASS_EXPORT void
-cass_meta_free(CassSchemaMetadata* meta);
+cass_schema_free(const CassSchema* schema);
 
-/**
- * Create an iterator over keyspaces in schema metadata
- *
- * @param[in] schema_meta
- * @return A new iterator that must be freed.
- *
- * @see cass_iterator_free()
- */
-CASS_EXPORT CassIterator*
-cass_iterator_keyspaces(CassSchemaMetadata* schema_meta);
-
-/**
- * Get metadata for the iterator keyspace
- *
- * @param[in] ks_itr
- * @param[out] output
- * @return CASS_OK
- */
-CASS_EXPORT CassError
-cass_iterator_get_keyspace_meta(CassIterator* ks_itr,
-                                CassKeyspaceMeta* output);
-
-/**
- * Create an iterator over column families in the iterator keyspace
- *
- * @param[in] ks_itr
- * @return A new iterator that must be freed.
- *
- * @see cass_iterator_free()
- */
-CASS_EXPORT CassIterator*
-cass_iterator_column_families_from_keyspace(CassIterator* ks_itr);
-
-/**
- * Create an iterator over column families in the specified keyspace
- *
- * @param[in] schema_meta
- * @param[in] keyspace_name
- * @return A new iterator that must be freed. (NULL if keyspace does not exist)
- *
- * @see cass_iterator_free()
- */
-CASS_EXPORT CassIterator*
-cass_iterator_column_families(CassSchemaMetadata* schema_meta,
-                              CassString keyspace_name);
-CASS_EXPORT CassIterator*
-cass_iterator_column_families2(CassSchemaMetadata* schema_meta,
-                               const char* keyspace_name);
-
-/**
- * Get metadata for the iterator column family
- *
- * @param[in] cf_itr
- * @param[out] output
- * @return CASS_OK
- */
-CASS_EXPORT CassError
-cass_iterator_get_column_family_meta(CassIterator* cf_itr,
-                                     CassColumnFamilyMeta* output);
-
-/**
- * Create an iterator over columns in the specified keyspace/column family
- *
- * @param[in] schema_meta
- * @param[in] keyspace_name
- * @param[in] column_family_name
- * @return A new iterator that must be freed. (NULL if column family does not exist)
- *
- * @see cass_iterator_free()
- */
-CASS_EXPORT CassIterator*
-cass_iterator_columns(CassSchemaMetadata* schema_meta,
-                      CassString keyspace_name,
-                      CassString column_family_name);
-CASS_EXPORT CassIterator*
-cass_iterator_column2(CassSchemaMetadata* schema_meta,
-                      const char* keyspace_name,
-                      const char* column_family_name);
-
-/**
- * Create an iterator over columns in the iterator column family
- *
- * @param[in] cf_itr
- * @return A new iterator that must be freed.
- *
- * @see cass_iterator_free()
- */
-CASS_EXPORT CassIterator*
-cass_iterator_columns_from_column_family(CassIterator* cf_itr);
-
-/**
- * Get metadata for the iterator keyspace
- *
- * @param[in] col_itr
- * @param[out] output
- * @return CASS_OK
- */
-CASS_EXPORT CassError
-cass_iterator_get_column_meta(CassIterator* col_itr,
-                              CassColumnMeta* output);
 
 /***********************************************************************************
  *
@@ -1849,6 +1780,15 @@ cass_result_has_more_pages(const CassResult* result);
  ***********************************************************************************/
 
 /**
+ * Gets the type of the specified iterator.
+ *
+ * @param[in] iterator
+ * @return The type of the iterator.
+ */
+CASS_EXPORT CassIteratorType
+cass_iterator_type(CassIterator* iterator);
+
+/**
  * Creates a new iterator for the specified result. This can be
  * used to iterate over rows in the result.
  *
@@ -1897,6 +1837,45 @@ cass_iterator_from_collection(const CassValue* value);
  */
 CASS_EXPORT CassIterator*
 cass_iterator_from_map(const CassValue* value);
+
+/**
+ * Creates a new iterator for the specified schema.
+ * This can be used to iterate over keyspace entries.
+ *
+ * @param[in] schema
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_schema_meta()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_from_schema(const CassSchema* schema);
+
+/**
+ * Creates a new iterator for the specified schema metadata.
+ * This can be used to iterate over table/column entries.
+ *
+ * @param[in] meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_schema_meta()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_from_schema_meta(const CassSchemaMeta* meta);
+
+/**
+ * Creates a new iterator for the specified schema metadata.
+ * This can be used to iterate over schema metadata fields.
+ *
+ * @param[in] meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_schema_meta_field()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_fields_from_schema_meta(const CassSchemaMeta* meta);
 
 /**
  * Frees an iterator instance.
@@ -1987,6 +1966,34 @@ cass_iterator_get_map_key(CassIterator* iterator);
  */
 CASS_EXPORT const CassValue*
 cass_iterator_get_map_value(CassIterator* iterator);
+
+/**
+ * Gets the schema metadata entry at the iterator's current
+ * position.
+ *
+ * Calling cass_iterator_next() will invalidate the previous
+ * value returned by this method.
+ *
+ * @param[in] iterator
+ * @return A keyspace/table/column schema metadata entry
+ */
+CASS_EXPORT const CassSchemaMeta*
+cass_iterator_get_schema_meta(CassIterator* iterator);
+
+/**
+ * Gets the schema metadata field at the iterator's current
+ * position.
+ *
+ * Calling cass_iterator_next() will invalidate the previous
+ * value returned by this method.
+ *
+ * @param[in] iterator
+ * @return A schema metadata field
+ */
+CASS_EXPORT const CassSchemaMetaField*
+cass_iterator_get_schema_meta_field(CassIterator* iterator);
+
+
 
 
 /***********************************************************************************

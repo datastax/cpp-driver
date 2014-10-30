@@ -27,35 +27,40 @@ class Value {
 public:
   Value()
       : type_(CASS_VALUE_TYPE_UNKNOWN)
-      , def_(NULL)
+      , primary_type_(CASS_VALUE_TYPE_UNKNOWN)
+      , secondary_type_(CASS_VALUE_TYPE_UNKNOWN)
       , count_(0) {}
 
   Value(CassValueType type, char* data, size_t size)
       : type_(type)
-      , def_(NULL)
+      , primary_type_(CASS_VALUE_TYPE_UNKNOWN)
+      , secondary_type_(CASS_VALUE_TYPE_UNKNOWN)
       , count_(0)
       , buffer_(data, size) {}
 
-  Value(const ColumnDefinition* definition, int32_t count, char* data, size_t size)
-    : type_(static_cast<CassValueType>(definition->type))
-    , def_(definition)
+  Value(CassValueType type, CassValueType primary_type, CassValueType secondary_type,
+        int32_t count, char* data, size_t size)
+      : type_(type)
+      , primary_type_(primary_type)
+      , secondary_type_(secondary_type)
+      , count_(count)
+      , buffer_(data, size) {}
+
+  Value(const ColumnDefinition* def, int32_t count, char* data, size_t size)
+    : type_(static_cast<CassValueType>(def->type))
+    , primary_type_(static_cast<CassValueType>(def->collection_primary_type))
+    , secondary_type_(static_cast<CassValueType>(def->collection_secondary_type))
     , count_(count)
     , buffer_(data, size) {}
 
   CassValueType type() const { return type_; }
 
   CassValueType primary_type() const {
-    if (def_ == NULL) {
-      return CASS_VALUE_TYPE_UNKNOWN;
-    }
-    return static_cast<CassValueType>(def_->collection_primary_type);
+    return primary_type_;
   }
 
   CassValueType secondary_type() const {
-    if (def_ == NULL) {
-      return CASS_VALUE_TYPE_UNKNOWN;
-    }
-    return static_cast<CassValueType>(def_->collection_secondary_type);
+    return secondary_type_;
   }
 
   bool is_null() const {
@@ -75,7 +80,8 @@ public:
 
 private:
   CassValueType type_;
-  const ColumnDefinition* def_;
+  CassValueType primary_type_;
+  CassValueType secondary_type_;
   int32_t count_;
   BufferPiece buffer_;
 };

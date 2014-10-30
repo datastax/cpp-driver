@@ -19,6 +19,7 @@
 
 #include "cassandra.h"
 #include "cluster.hpp"
+#include "schema_metadata.hpp"
 #include "session.hpp"
 #include "statement.hpp"
 #include "future.hpp"
@@ -58,7 +59,9 @@ EXTERNAL_TYPE(cass::BufferCollection, CassCollection);
 EXTERNAL_TYPE(cass::Iterator, CassIterator);
 EXTERNAL_TYPE(cass::Row, CassRow);
 EXTERNAL_TYPE(cass::Value, CassValue);
-EXTERNAL_TYPE(cass::SchemaModel, CassSchemaMetadata);
+EXTERNAL_TYPE(cass::Schema, CassSchema);
+EXTERNAL_TYPE(cass::SchemaMetadata, CassSchemaMeta);
+EXTERNAL_TYPE(cass::SchemaMetadataField, CassSchemaMetaField);
 
 }
 

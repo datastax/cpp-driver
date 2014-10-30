@@ -49,8 +49,8 @@ CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* ba
   return CassFuture::to(session->execute(batch->from()));
 }
 
-CassSchemaMetadata* cass_session_get_schema_meta(CassSession* session) {
-  return CassSchemaMetadata::to(session->get_schema_meta());
+const CassSchema* cass_session_get_schema(CassSession* session) {
+  return CassSchema::to(session->copy_schema());
 }
 
 } // extern "C"

@@ -18,6 +18,7 @@
 #define __CASS_SCHEMA_METADATA_HPP_INCLUDED__
 
 #include "cass_type_parser.hpp"
+#include "copy_on_write_ptr.hpp"
 #include "iterator.hpp"
 #include "scoped_ptr.hpp"
 
@@ -26,201 +27,210 @@
 
 namespace cass {
 
-class BufferPiece;
 class Row;
+class ResultResponse;
 
-template<class C, cass::IteratorType I>
-class ModelMapIterator : public Iterator {
+template<class T>
+class SchemaMapIteratorImpl {
 public:
-  ModelMapIterator(const C& model_map)
-      : Iterator(I)
-      , first_next_(true)
-      , itr_(model_map.begin())
-      , end_(model_map.end()) {}
+  typedef std::map<std::string, T> Map;
 
-  virtual bool next() {
-    if (itr_ == end_) {
+  SchemaMapIteratorImpl(const Map& map)
+    : next_(map.begin())
+    , end_(map.end()) {}
+
+  bool next() {
+    if (next_ == end_) {
       return false;
     }
-    if (!first_next_) {
-      ++itr_;
-    }
-    first_next_ = false;
-    return itr_ != end_;
+    current_ = next_++;
+    return true;
   }
 
-  const typename C::mapped_type::meta_type& meta() {
-    assert(itr_ != end_);
-    return itr_->second.meta();
-  }
-
-  const typename C::mapped_type& model() {
-    assert(itr_ != end_);
-    return itr_->second;
+  const T* item() const {
+    return &current_->second;
   }
 
 private:
-  bool first_next_;
-  typename C::const_iterator itr_;
-  const typename C::const_iterator end_;
+  typename Map::const_iterator next_;
+  typename Map::const_iterator current_;
+  typename Map::const_iterator end_;
 };
 
-class ColumnMetadata {
+class SchemaMetadataField {
 public:
-  ColumnMetadata();
+  typedef std::map<std::string, SchemaMetadataField> Map;
 
-  static ColumnMetadata from_schema_row(const Row* schema_row);
-  static std::string keyspace_name_from_row(const Row* schema_row);
-  static std::string column_family_name_from_row(const Row* schema_row);
-  static std::string name_from_row(const Row* schema_row);
+  SchemaMetadataField() {}
 
-  class ColumnTypeMapper {
-  public:
-    ColumnTypeMapper();
-    CassColumnType operator[](const std::string& col_type) const;
-  private:
-    typedef std::map<std::string, CassColumnType> NameTypeMap;
-    NameTypeMap name_type_map_;
-  };
+  SchemaMetadataField(const std::string& name)
+    : name_(name) {}
 
+  SchemaMetadataField(const std::string& name,
+                      const Value& value,
+                      const SharedRefPtr<RefBuffer>& buffer)
+    : name_(name)
+    , value_(value)
+    , buffer_(buffer) {}
+
+  const std::string& name() const {
+    return name_;
+  }
+
+  const Value* value() const {
+    return &value_;
+  }
+
+private:
   std::string name_;
-  int component_index_;
-  std::string index_name_;
-  std::string index_options_;
-  std::string index_type_;
-  CassColumnType kind_;
-  TypeDescriptor type_;
-  std::string validator_;
+  Value value_;
+  SharedRefPtr<RefBuffer> buffer_;
+};
 
-  const static ColumnTypeMapper type_map_;
+class SchemaMetadataFieldIterator : public Iterator {
+public:
+  typedef SchemaMapIteratorImpl<SchemaMetadataField> Map;
+
+  SchemaMetadataFieldIterator(const Map& map)
+    : Iterator(CASS_ITERATOR_TYPE_SCHEMA_META_FIELD)
+    , impl_(map) {}
+
+  virtual bool next() { return impl_.next(); }
+  const SchemaMetadataField* field() const { return impl_.item(); }
 
 private:
-  void options_from_json(const BufferPiece& options_json);
+  SchemaMapIteratorImpl<SchemaMetadataField> impl_;
 };
 
-class ColumnModel {
+class SchemaMetadata {
 public:
-  typedef ColumnMetadata meta_type;
+  SchemaMetadata(CassSchemaMetaType type)
+    : type_(type) {}
 
-  void set_meta(const meta_type& cfm) { cf_meta_ = cfm; }
-  const meta_type& meta() const { return cf_meta_; }
+  CassSchemaMetaType type() const { return type_; }
+
+  virtual const SchemaMetadata* get_entry(const std::string& name) const = 0;
+  virtual Iterator* iterator() const = 0;
+
+  const SchemaMetadataField* get_field(const std::string& name) const;
+  Iterator* iterator_fields() const { return new SchemaMetadataFieldIterator(fields_); }
+
+protected:
+  void add_field(const SharedRefPtr<RefBuffer>& buffer, const Row* row, const std::string& name);
+  void add_json_list_field(int version, const Row* row, const std::string& name);
+  void add_json_map_field(int version, const Row* row, const std::string& name);
+
+  SchemaMetadataField::Map fields_;
 
 private:
-  meta_type cf_meta_;
+  const CassSchemaMetaType type_;
 };
 
-typedef std::map<std::string, ColumnModel> ColumnModelMap;
-typedef ModelMapIterator<ColumnModelMap, CASS_ITERATOR_TYPE_COL_META> ColumnIterator;
-
-class ColumnFamilyMetadata {
+class SchemaMetadataIterator : public Iterator {
 public:
-  ColumnFamilyMetadata();
-
-  static ColumnFamilyMetadata from_schema_row(const Row* schema_row);
-  static std::string keyspace_name_from_row(const Row* schema_row);
-  static std::string name_from_row(const Row* schema_row);
-
-  std::string name_;
-  double bloom_filter_fp_chance_;
-  std::string caching_;
-  CassUuid cf_id_;
-  std::string column_aliases_;
-  std::string comment_;
-  std::string compaction_strategy_class_;
-  std::string compaction_strategy_options_;
-  std::string comparator_;
-  std::string compression_parameters_;
-  int default_time_to_live_;
-  std::string default_validator_;
-  std::map<std::string, cass_int64_t> dropped_columns_;
-  int gc_grace_seconds_;
-  int index_interval_;
-  cass_bool_t is_dense_;
-  std::string key_aliases_;
-  std::string key_validator_;
-  double local_read_repair_chance_;
-  int max_compaction_threshold_;
-  int max_index_interval_;
-  int memtable_flush_period_in_ms_;
-  int min_compaction_threshold_;
-  int min_index_interval_;
-  double read_repair_chance_;
-  std::string speculative_retry_;
-  std::string subcomparator_;
-  std::string type_;
-  std::string value_alias_;
+  SchemaMetadataIterator()
+    : Iterator(CASS_ITERATOR_TYPE_SCHEMA_META) {}
+  virtual const SchemaMetadata* meta() const = 0;
 };
 
-class ColumnFamilyModel {
+template<class T>
+class SchemaMetadataIteratorImpl : public SchemaMetadataIterator {
 public:
-  typedef ColumnFamilyMetadata meta_type;
+  typedef typename SchemaMapIteratorImpl<T>::Map Map;
 
-  void set_meta(const meta_type& cfm) { cf_meta_ = cfm; }
-  const meta_type& meta() const { return cf_meta_; }
+  SchemaMetadataIteratorImpl(const Map& map)
+    : impl_(map) {}
 
-  void update_column_family(const Row* schema_row);
-  void update_column(const Row* schema_row);
-  void update_columns(const std::vector<Row> col_rows);
-  const ColumnModel* get_column(const std::string& col_name) const;
-  const ColumnModelMap& columns() const { return columns_; }
+  virtual bool next() { return impl_.next(); }
+  virtual const SchemaMetadata* meta() const { return impl_.item(); }
 
 private:
-  meta_type cf_meta_;
-  ColumnModelMap columns_;
+  SchemaMapIteratorImpl<T> impl_;
 };
 
-typedef std::map<std::string, ColumnFamilyModel> ColumnFamilyModelMap;
-typedef ModelMapIterator<ColumnFamilyModelMap, CASS_ITERATOR_TYPE_CF_META> ColumnFamilyIterator;
-
-class KeyspaceMetadata {
+class ColumnMetadata : public SchemaMetadata {
 public:
-  KeyspaceMetadata();
+  typedef std::map<std::string, ColumnMetadata> Map;
 
-  static KeyspaceMetadata from_schema_row(const Row* schema_row);
-  static std::string name_from_row(const Row* schema_row);
+  ColumnMetadata()
+    : SchemaMetadata(CASS_SCHEMA_META_TYPE_COLUMN) {}
 
-  std::string name_;
-  cass_bool_t durable_writes_;
-  std::string strategy_class_;
-  std::map<std::string,std::string> strategy_options_;
-  std::string strategy_options_json_;
+  virtual const SchemaMetadata* get_entry(const std::string& name) const {
+    return NULL;
+  }
+  virtual Iterator* iterator() const { return NULL; }
+
+  void update(int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 };
 
-class KeyspaceModel {
+class TableMetadata : public SchemaMetadata {
 public:
-  typedef KeyspaceMetadata meta_type;
+  typedef std::map<std::string, TableMetadata> Map;
+  typedef SchemaMetadataIteratorImpl<ColumnMetadata> ColumnIterator;
 
-  void set_meta(const meta_type& ksm) { ks_meta_ = ksm; }
-  const meta_type& meta() const { return ks_meta_; }
+  TableMetadata()
+    : SchemaMetadata(CASS_SCHEMA_META_TYPE_TABLE) {}
 
-  void update_column_family(const Row* schema_row);
-  void update_column_family(const Row* schema_row, const std::vector<Row> col_rows);
-  void update_column(const Row* schema_row);
-  void drop_column_family(const std::string& cf_name) { cfs_.erase(cf_name); }
-  const ColumnFamilyModel* get_column_family(const std::string& cf_name) const;
-  const ColumnFamilyModelMap& column_families() const { return cfs_; }
+  virtual const SchemaMetadata* get_entry(const std::string& name) const;
+  virtual Iterator* iterator() const { return new ColumnIterator(columns_); }
+
+  ColumnMetadata* get_or_create(const std::string& name) { return &columns_[name]; }
+  void update(int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
 private:
-  meta_type ks_meta_;
-  ColumnFamilyModelMap cfs_;
+  ColumnMetadata::Map columns_;
 };
 
-typedef std::map<std::string, KeyspaceModel> KeyspaceModelMap;
-typedef ModelMapIterator<KeyspaceModelMap, CASS_ITERATOR_TYPE_KS_META> KeyspaceIterator;
-
-class SchemaModel {
+class KeyspaceMetadata : public SchemaMetadata {
 public:
-  void update_keyspace(const Row* schema_row);
-  void update_column_family(const Row* schema_row);
-  void update_column_family(const Row* schema_row, const std::vector<Row> col_rows);
-  void update_column(const Row* schema_row);
-  void drop_keyspace(const std::string& ks_name) { keyspaces_.erase(ks_name); }
-  void drop_column_family(const std::string& ks_name, const std::string& cf_name);
-  const KeyspaceModel* get_keyspace(const std::string& ks_name) const;
-  const KeyspaceModelMap& keyspaces() const { return keyspaces_; }
+  typedef std::map<std::string, KeyspaceMetadata> Map;
+  typedef SchemaMetadataIteratorImpl<TableMetadata> TableIterator;
+
+  KeyspaceMetadata()
+    : SchemaMetadata(CASS_SCHEMA_META_TYPE_KEYSPACE) {}
+
+  virtual const SchemaMetadata* get_entry(const std::string& name) const;
+  virtual Iterator* iterator() const { return new TableIterator(tables_); }
+
+  TableMetadata* get_or_create(const std::string& name) { return &tables_[name]; }
+  void update(int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+  void drop_table(const std::string& table_name);
 
 private:
-  KeyspaceModelMap keyspaces_;
+  TableMetadata::Map tables_;
+};
+
+class Schema {
+public:
+  typedef SchemaMetadataIteratorImpl<KeyspaceMetadata> KeyspaceIterator;
+
+  Schema()
+    : keyspaces_(new KeyspaceMetadata::Map)
+    , protocol_version_(0) {}
+
+  void set_protocol_version(int version) {
+    protocol_version_ = version;
+  }
+
+  const SchemaMetadata* get(const std::string& name) const;
+  Iterator* iterator() const { return new KeyspaceIterator(*keyspaces_); }
+
+  KeyspaceMetadata* get_or_create(const std::string& name) { return &(*keyspaces_)[name]; }
+  void update_keyspaces(ResultResponse* result);
+  void update_tables(ResultResponse* result);
+  void update_columns(ResultResponse* result);
+  void drop_keyspace(const std::string& keyspace_name);
+  void drop_table(const std::string& keyspace_name, const std::string& table_name);
+  void clear();
+
+private:
+  // Really coarse grain copy-on-write. This could be made
+  // more fine grain, but it might not be worth the work.
+  CopyOnWritePtr<KeyspaceMetadata::Map> keyspaces_;
+
+  // Only used internally on a single thread, there's
+  // no need for copy-on-write.
+  int protocol_version_;
 };
 
 } // namespace cass

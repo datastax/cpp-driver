@@ -572,9 +572,9 @@ void Connection::PendingWriteBuffer::flush() {
     uv_bufs_.clear();
     uv_bufs_.reserve(buffers_.size());
 
-    for (BufferVec::const_iterator it = buffers_.begin(),
+    for (BufferVec::iterator it = buffers_.begin(),
          end = buffers_.end(); it != end; ++it) {
-      uv_bufs_.push_back(uv_buf_init(const_cast<char*>(it->data()), it->size()));
+      uv_bufs_.push_back(uv_buf_init(it->data(), it->size()));
     }
 
     is_flushed_ = true;

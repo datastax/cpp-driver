@@ -172,6 +172,9 @@ void ControlConnection::on_connection_ready(Connection* connection) {
   logger_->debug("ControlConnection: Connection ready on host %s",
                  connection->address().to_string().c_str());
 
+  // A protocol version is need to encode/decode maps properly
+  session_->schema().set_protocol_version(protocol_version_);
+
   // The control connection has to refresh meta when there's a reconnect because
   // events could have been missed while not connected.
   query_meta_all();
@@ -273,33 +276,10 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
 
   session_->purge_hosts(is_initial_connection);
 
-  {
-    ResultResponse* keyspaces_result =
-        static_cast<ResultResponse*>(responses[2]);
-    keyspaces_result->decode_first_row();
-    ResultIterator rows(keyspaces_result);
-    while (rows.next()) {
-      session_->update_keyspace(rows.row());
-    }
-  }
-  {
-    ResultResponse* col_fam_result =
-        static_cast<ResultResponse*>(responses[3]);
-    col_fam_result->decode_first_row();
-    ResultIterator rows(col_fam_result);
-    while (rows.next()) {
-      session_->update_column_family(rows.row());
-    }
-  }
-  {
-    ResultResponse* col_result =
-        static_cast<ResultResponse*>(responses[4]);
-    col_result->decode_first_row();
-    ResultIterator rows(col_result);
-    while (rows.next()) {
-      session_->update_column(rows.row());
-    }
-  }
+  session_->schema().clear();
+  session_->schema().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
+  session_->schema().update_tables(static_cast<ResultResponse*>(responses[3]));
+  session_->schema().update_columns(static_cast<ResultResponse*>(responses[4]));
 
   if (is_initial_connection) {
     state_ = CONTROL_STATE_READY;
@@ -402,7 +382,6 @@ void ControlConnection::on_refresh_node_info_all(RefreshNodeData data, Response*
   }
 }
 
-
 void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row) {
   const Value* v;
 
@@ -462,8 +441,7 @@ void ControlConnection::on_refresh_keyspace(const std::string& keyspace_name, Re
                    keyspace_name.c_str());
     return;
   }
-  result->decode_first_row();
-  session_->update_keyspace(&result->first_row());
+  session_->schema().update_keyspaces(result);
 }
 
 void ControlConnection::refresh_table(const boost::string_ref& keyspace_name,
@@ -490,23 +468,14 @@ void ControlConnection::refresh_table(const boost::string_ref& keyspace_name,
 void ControlConnection::on_refresh_table(const std::string& keyspace_name,
                                          const std::string& table_name,
                                          const MultipleRequestHandler::ResponseVec& responses) {
-  ResultResponse* col_fam_result = static_cast<ResultResponse*>(responses[0]);
-  if (col_fam_result->row_count() == 0) {
+  ResultResponse* column_family_result = static_cast<ResultResponse*>(responses[0]);
+  if (column_family_result->row_count() == 0) {
     logger_->error("ControlConnection: No row found for column family %s.%s in system schema table.",
                    keyspace_name.c_str(), table_name.c_str());
     return;
   }
-  col_fam_result->decode_first_row();
-
-  ResultResponse* col_result = static_cast<ResultResponse*>(responses[1]);
-  col_result->decode_first_row();
-  std::vector<Row> rows;
-  rows.reserve(col_result->row_count());
-  ResultIterator itr(col_result);
-  while (itr.next()) {
-    rows.push_back(*itr.row());
-  }
-  session_->update_column_family(&col_fam_result->first_row(), rows);
+  session_->schema().update_tables(column_family_result);
+  session_->schema().update_columns(static_cast<ResultResponse*>(responses[1]));
 }
 
 bool ControlConnection::handle_query_invalid_response(Response* response) {
@@ -604,10 +573,10 @@ void ControlConnection::on_connection_event(EventResponse* response) {
 
         case EventResponse::DROPPED:
           if (response->table().size() > 0) {
-            session_->drop_column_family(response->keyspace().to_string(),
-                                         response->table().to_string());
+            session_->schema().drop_table(response->keyspace().to_string(),
+                                          response->table().to_string());
           } else {
-            session_->drop_keyspace(response->keyspace().to_string());
+            session_->schema().drop_keyspace(response->keyspace().to_string());
           }
           break;
       }

@@ -64,9 +64,6 @@ std::string opcode_to_string(int opcode);
 
 std::string& trim(std::string& str);
 
-void json_to_list(const BufferPiece& alias_json, std::list<std::string>* output);
-void json_to_map(const BufferPiece& json_buffer, std::map<std::string, std::string>* output);
-
 } // namespace cass
 
 #endif

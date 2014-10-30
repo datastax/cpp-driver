@@ -17,11 +17,13 @@
 #ifndef __CASS_REF_COUNTED_HPP_INCLUDED__
 #define __CASS_REF_COUNTED_HPP_INCLUDED__
 
+#include "common.hpp"
 #include "macros.hpp"
 
 #include "third_party/boost/boost/atomic.hpp"
 
 #include <assert.h>
+#include <new>
 
 namespace cass {
 
@@ -53,6 +55,30 @@ public:
 private:
   mutable boost::atomic<int> ref_count_;
   DISALLOW_COPY_AND_ASSIGN(RefCounted);
+};
+
+class RefBuffer : public RefCounted<RefBuffer> {
+public:
+  static RefBuffer* create(size_t size) {
+    return new (size) RefBuffer();
+  }
+
+  char* data() {
+    return copy_cast<RefBuffer*, char*>(this) + sizeof(RefBuffer);
+  }
+
+  void operator delete(void* ptr) {
+    ::operator delete(ptr);
+  }
+
+private:
+  RefBuffer() {}
+
+  void* operator new(size_t size, size_t extra) {
+    return ::operator new(size + extra);
+  }
+
+  DISALLOW_COPY_AND_ASSIGN(RefBuffer);
 };
 
 template<class T>
