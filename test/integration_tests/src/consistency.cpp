@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(test_simple_two_nodes)
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 2, 0);
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 2, 0, false, false);
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 2, 0);
 
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(test_one_node_down)
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 3, 0);
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 3, 0, false, false);
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 3, 0);
 
@@ -141,7 +141,7 @@ BOOST_AUTO_TEST_CASE(test_two_nodes_down)
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 3, 0);
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 3, 0, false, false);
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 3, 0);
 

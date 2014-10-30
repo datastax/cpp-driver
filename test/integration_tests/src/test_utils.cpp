@@ -17,6 +17,9 @@
 #define BOOST_TEST_DYN_LINK
 
 #include <assert.h>
+#include <fstream>
+#include <vector>
+#include <cstdlib>
 
 #include <boost/test/test_tools.hpp>
 #include <boost/test/debug.hpp>
@@ -154,13 +157,14 @@ const std::string lorem_ipsum = "Lorem ipsum dolor sit amet, consectetur adipisc
                                 "Pellentesque auctor nisl varius, imperdiet est non, porttitor risus. Donec aliquam elementum sollicitudin. Maecenas ultrices mattis mauris,"
                                 "fringilla congue nunc sodales sed. Fusce ac neque quis erat hendrerit porta at nec massa. Maecenas blandit ut felis sed ultrices. Sed fermentum"
                                 "pharetra lacus sodales cursus.";
+const char ALPHA_NUMERIC[] = { "01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" };
 
 //-----------------------------------------------------------------------------------
 
-MultipleNodesTest::MultipleNodesTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version)
+MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version, bool isSSL /* = false */)
   : conf(cql::get_ccm_bridge_configuration()) {
   boost::debug::detect_memory_leaks(false);
-  ccm = cql::cql_ccm_bridge_t::create(conf, "test", num_nodes_dc1, num_nodes_dc2);
+  ccm = cql::cql_ccm_bridge_t::create(conf, "test", num_nodes_dc1, num_nodes_dc2, isSSL);
 
   cluster = cass_cluster_new();
   initialize_contact_points(cluster, conf.ip_prefix(), num_nodes_dc1, num_nodes_dc2);
@@ -175,8 +179,17 @@ MultipleNodesTest::~MultipleNodesTest() {
   cass_cluster_free(cluster);
 }
 
-SingleSessionTest::SingleSessionTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version)
-  : MultipleNodesTest(num_nodes_dc1, num_nodes_dc2, protocol_version) {
+SingleSessionTest::SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version, bool isSSL /* = false */)
+  : MultipleNodesTest(num_nodes_dc1, num_nodes_dc2, protocol_version, isSSL), session(NULL), ssl(NULL) {
+  //SSL verification flags must be set before establising session
+  if (!isSSL) {
+    create_session();
+  } else {
+    ssl = cass_ssl_new();
+  }
+}
+
+void SingleSessionTest::create_session() {
   test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
   test_utils::wait_and_check_error(connect_future.get());
   session = cass_future_get_session(connect_future.get());
@@ -184,12 +197,17 @@ SingleSessionTest::SingleSessionTest(int num_nodes_dc1, int num_nodes_dc2, int p
 }
 
 SingleSessionTest::~SingleSessionTest() {
-  CassFuturePtr close_future(cass_session_close(session));
-  cass_future_wait(close_future.get());
+  if (session) {
+    CassFuturePtr close_future(cass_session_close(session));
+    cass_future_wait(close_future.get());
+  }
+  if (ssl) {
+    cass_ssl_free(ssl);
+  }
 }
 
-void initialize_contact_points(CassCluster* cluster, std::string prefix, int num_nodes_dc1, int num_nodes_dc2) {
-  for(int i = 0; i < num_nodes_dc1; ++i) {
+void initialize_contact_points(CassCluster* cluster, std::string prefix, unsigned int num_nodes_dc1, unsigned int num_nodes_dc2) {
+  for(unsigned int i = 0; i < num_nodes_dc1; ++i) {
     std::string contact_point(prefix + boost::lexical_cast<std::string>(i + 1));
     cass_cluster_set_contact_points(cluster, contact_point.c_str());
   }
@@ -277,6 +295,37 @@ CassVersion get_version(CassSession* session) {
   CassVersion version;
   sscanf(version_string.data, "%hu.%hu.%hu-%s", &version.major, &version.minor, &version.patch, version.extra);
   return version;
+}
+
+std::string generate_random_string(unsigned int size /* = 1024 */) {
+  std::string randomString;
+
+  unsigned int stringLength = strlen(ALPHA_NUMERIC) - 1;
+  for (unsigned int n = 0; n < size; ++n) {
+    randomString += ALPHA_NUMERIC[rand() % stringLength];
+  }
+
+  return randomString;
+}
+
+std::string load_ssl_certificate(const std::string filename) {
+  //Open the file
+  std::ifstream file_stream(filename.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
+
+  BOOST_REQUIRE_MESSAGE(file_stream.is_open(), "Unable to load certificate file: " << filename);
+
+  //Get the length of the file
+  std::ifstream::pos_type file_size = file_stream.tellg();
+  file_stream.seekg(0, std::ios::beg);
+
+  BOOST_REQUIRE_MESSAGE(file_size > 0, "No data in certificate file: " << filename);
+
+  //Read the file into memory
+  std::vector<char> bytes(file_size);
+  file_stream.read(&bytes[0], file_size);
+
+  std::string certificate(&bytes[0], file_size);
+  return certificate;
 }
 
 //-----------------------------------------------------------------------------------
