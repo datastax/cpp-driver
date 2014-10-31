@@ -209,8 +209,8 @@ BOOST_AUTO_TEST_CASE(test_bind_not_prepared)
 
   test_utils::Uuid key = test_utils::generate_time_uuid();
 
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_ERROR_INVALID_STATEMENT_TYPE);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_int32_by_name(statement.get(), "a", 9042), CASS_ERROR_INVALID_STATEMENT_TYPE);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_ERROR_LIB_INVALID_STATEMENT_TYPE);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_int32_by_name(statement.get(), "a", 9042), CASS_ERROR_LIB_INVALID_STATEMENT_TYPE);
 }
 
 BOOST_AUTO_TEST_CASE(test_bind_invalid_name)
@@ -219,9 +219,9 @@ BOOST_AUTO_TEST_CASE(test_bind_invalid_name)
 
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
 
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_int32_by_name(statement.get(), "d", 0), CASS_ERROR_NAME_DOES_NOT_EXIST);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"aBC\"", 0.0), CASS_ERROR_NAME_DOES_NOT_EXIST);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"abC\"", 0.0), CASS_ERROR_NAME_DOES_NOT_EXIST);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_int32_by_name(statement.get(), "d", 0), CASS_ERROR_LIB_NAME_DOES_NOT_EXIST);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"aBC\"", 0.0), CASS_ERROR_LIB_NAME_DOES_NOT_EXIST);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"abC\"", 0.0), CASS_ERROR_LIB_NAME_DOES_NOT_EXIST);
 }
 
 BOOST_AUTO_TEST_CASE(test_get_invalid_name)

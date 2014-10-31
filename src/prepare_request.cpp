@@ -28,4 +28,4 @@ int PrepareRequest::encode(int version, BufferVec* bufs) const {
   return length;
 }
 
-} // namespace cas
+} // namespace cass

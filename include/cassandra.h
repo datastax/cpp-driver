@@ -139,6 +139,7 @@ typedef struct CassIterator_ CassIterator;
 typedef struct CassRow_ CassRow;
 typedef struct CassValue_ CassValue;
 typedef struct CassCollection_ CassCollection;
+typedef struct CassSsl_ CassSsl;
 
 typedef enum CassConsistency_ {
   CASS_CONSISTENCY_ANY          = 0x0000,
@@ -185,9 +186,9 @@ typedef enum CassCollectionType_ {
 } CassCollectionType;
 
 typedef enum CassBatchType_ {
-  CASS_BATCH_TYPE_LOGGED    = 0,
-  CASS_BATCH_TYPE_UNLOGGED  = 1,
-  CASS_BATCH_TYPE_COUNTER   = 2
+  CASS_BATCH_TYPE_LOGGED   = 0,
+  CASS_BATCH_TYPE_UNLOGGED = 1,
+  CASS_BATCH_TYPE_COUNTER  = 2
 } CassBatchType;
 
 typedef enum CassCompression_ {
@@ -211,6 +212,12 @@ typedef enum CassLogLevel_ {
 #undef XX
   CASS_LOG_LAST_ENTRY
 } CassLogLevel;
+
+typedef enum CassSslVerifyFlags {
+  CASS_SSL_VERIFY_NONE          = 0,
+  CASS_SSL_VERIFY_PEER_CERT     = 1,
+  CASS_SSL_VERIFY_PEER_IDENTITY = 2
+} CassSslVerifyFlags;
 
 typedef enum  CassErrorSource_ {
   CASS_ERROR_SOURCE_NONE,
@@ -237,10 +244,11 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_TIMED_OUT, 14, "Request timed out") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE, 15, "Unable to set keyspace") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_CALLBACK_ALREADY_SET, 16, "Callback already set") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_INVALID_STATEMENT_TYPE, 17, "Invalid statement type") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_NAME_DOES_NOT_EXIST, 18, "No value or column for name") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_UNABLE_TO_DETERMINE_PROTOCOL, 19, "Unable to find supported protocol version") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_STATEMENT_TYPE, 17, "Invalid statement type") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, 18, "No value or column for name") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_DETERMINE_PROTOCOL, 19, "Unable to find supported protocol version") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NULL_VALUE, 20, "NULL value specified") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NOT_IMPLEMENTED, 21, "Not implemented") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -256,10 +264,11 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_CONFIG_ERROR, 0x2300, "Configuration error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_ALREADY_EXISTS, 0x2400, "Already exists") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_UNPREPARED, 0x2500, "Unprepared") \
-  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_CERT, 1, "Unable to load certificate") \
-  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_CA_CERT, 2, "Unable to load CA certificate") \
-  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_PRIVATE_KEY, 3, "Unable to load private key") \
-  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_CRL, 4, "Unable to load certificate revocation list")
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_INVALID_CERT, 1, "Unable to load certificate") \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_INVALID_PRIVATE_KEY, 2, "Unable to load private key") \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_NO_PEER_CERT, 3, "No peer certificate")  \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_INVALID_PEER_CERT, 4, "Invalid peer certificate") \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_IDENTITY_MISMATCH, 5, "Certificate does not match host or IP address")
 
 #define CASS_ERROR(source, code) ((source << 24) | code)
 
@@ -326,6 +335,19 @@ cass_cluster_set_contact_points(CassCluster* cluster,
 CASS_EXPORT CassError
 cass_cluster_set_port(CassCluster* cluster,
                       int port);
+
+/**
+ * Sets the SSL context and enables SSL.
+ *
+ * @param[in] cluster
+ * @param[in] ssl
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_ssl_new()
+ */
+CASS_EXPORT CassError
+cass_cluster_set_ssl(CassCluster* cluster,
+                     CassSsl* ssl);
 
 /**
  * Sets the protocol version. This will automatically downgrade if to
@@ -725,6 +747,89 @@ cass_session_execute(CassSession* session,
 CASS_EXPORT CassFuture*
 cass_session_execute_batch(CassSession* session,
                            const CassBatch* batch);
+
+/***********************************************************************************
+ *
+ * SSL
+ *
+ ************************************************************************************/
+
+/**
+ * Creates a new SSL context.
+ *
+ * @return Returns a SSL context that must be freed.
+ *
+ * @see cass_ssl_free()
+ */
+CASS_EXPORT CassSsl*
+cass_ssl_new();
+
+/**
+ * Adds a trusted certificate. This is used to verify
+ * the peer's certificate.
+ *
+ * @param[in] ssl
+ * @param[in] cert PEM formatted certificate string
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_ssl_add_trusted_cert(CassSsl* ssl,
+                          CassString cert);
+
+/**
+ * Sets verifcation performed on the peer's certificate.
+ *
+ * CASS_SSL_VERIFY_NONE - No verification is performed
+ * CASS_SSL_VERIFY_PEER_CERT - Certficate is present and valid
+ * CASS_SSL_VERIFY_PEER_IDENTITY - IP address matches
+ * the one of the certificate's SANs. This implies the certificate
+ * is also present.
+ *
+ * Default: CASS_SSL_VERIFY_PEER_CERT
+ *
+ * @param[in] ssl
+ * @param[in] flags
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT void
+cass_ssl_set_verify_flags(CassSsl* ssl,
+                          int flags);
+
+/**
+ * Set client-side certficate chain. This is used to authenticate
+ * the client on the server-side. This should contain the entire
+ * certficate chain starting with the certificate itself.
+ *
+ * @param[in] ssl
+ * @param[in] cert PEM formatted certificate string
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_ssl_set_cert(CassSsl* ssl,
+                  CassString cert);
+
+/**
+ * Set client-side private key. This is used to authenticate
+ * the client on the server-side.
+ *
+ * @param[in] ssl
+ * @param[in] key PEM formatted key string
+ * @param[in] password used to decrypt key
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_ssl_set_private_key(CassSsl* ssl,
+                         CassString key,
+                         const char* password);
+
+/**
+ * Frees a SSL context instance.
+ *
+ * @param[in] cluster
+ */
+CASS_EXPORT void
+cass_ssl_free(CassSsl* ssl);
+
 
 /***********************************************************************************
  *

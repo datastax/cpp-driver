@@ -13,6 +13,7 @@ option(CASS_INSTALL_HEADER "Install header file" ON)
 option(CASS_BUILD_STATIC "Build static library" OFF)
 option(CASS_BUILD_EXAMPLES "Build examples" ON)
 option(CASS_BUILD_TESTS "Build tests" OFF)
+option(CASS_USE_OPENSSL "Use OpenSSL" ON)
 option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
 
 #-------------------
@@ -29,6 +30,7 @@ set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${P
 # Build up the include paths
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
+set(INCLUDES ${INCLUDES} ${PROJECT_SOURCE_DIR}/src)
 set(INCLUDES ${INCLUDES} ${PROJECT_SOURCE_DIR}/src/third_party/boost)
 
 #-------------------
@@ -81,20 +83,16 @@ if(CASS_USE_TCMALLOC)
 endif()
 
 # openssl
-if(WIN32)
-  set(_OPENSSL_VERSION "1.0.1h")
-  set(OPENSSL_ROOT_DIR "${PROJECT_SOURCE_DIR}/lib/openssl/")
-  #set(ZLIB_NAMES zlibwapi)
-  #set(ZLIB_ROOT "${PROJECT_SOURCE_DIR}/lib/zlib/")
+
+if(CASS_USE_OPENSSL)
+  if(WIN32)
+    set(_OPENSSL_VERSION "1.0.1h")
+    set(OPENSSL_ROOT_DIR "${PROJECT_SOURCE_DIR}/lib/openssl/")
+  endif()
+  find_package(OpenSSL REQUIRED)
+  set(LIBS ${LIBS} ${OPENSSL_LIBRARIES})
+  set(INCLUDES ${INCLUDES} ${OPENSSL_INCLUDE_DIR} )
 endif()
-
-find_package(OpenSSL REQUIRED)
-set(LIBS ${LIBS} ${OPENSSL_LIBRARIES})
-set(INCLUDES ${INCLUDES} ${OPENSSL_INCLUDE_DIR} )
-
-#find_package(ZLIB REQUIRED)
-#set(LIBS ${LIBS} ${ZLIB_LIBRARIES})
-#set(INCLUDES ${INCLUDES} ${ZLIB_INCLUDE_DIR} )
 
 if(WIN32)
   set(LIBS ${LIBS} iphlpapi psapi wsock32 ws2_32)
@@ -189,14 +187,23 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 # we must add header files as dependencies (if header
 # changes project must be recompiled, right).
-file(GLOB INC_FILES
-  ${PROJECT_SOURCE_DIR}/include/*.h )
-
+file(GLOB INC_FILES ${PROJECT_SOURCE_DIR}/include/*.h)
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp) 
 
+if(CASS_USE_OPENSSL)
+  set(SRC_FILES ${SRC_FILES}
+    ${PROJECT_SOURCE_DIR}/src/ssl/ssl_openssl_impl.cpp
+    ${PROJECT_SOURCE_DIR}/src/third_party/rb/ring_buffer_bio.cpp)
+  add_definitions(-DCASS_USE_OPENSSL)
+else()
+  set(SRC_FILES ${SRC_FILES}
+    ${PROJECT_SOURCE_DIR}/src/ssl/ssl_no_impl.cpp)
+endif()
+
 set(SRC_FILES ${SRC_FILES}
-  "${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/atomic/src/lockpool.cpp" 
-  "${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/random/src/random_device.cpp")
+  ${PROJECT_SOURCE_DIR}/src/third_party/rb/ring_buffer.cpp
+  ${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/atomic/src/lockpool.cpp
+  ${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/random/src/random_device.cpp)
 
 source_group("Source Files" FILES ${SRC_FILES})
 source_group("Header Files" FILES ${INC_FILES})
@@ -309,6 +316,7 @@ if(CASS_BUILD_EXAMPLES)
   add_subdirectory(examples/prepared)
   add_subdirectory(examples/uuids)
   add_subdirectory(examples/simple)
+  add_subdirectory(examples/ssl)
   add_subdirectory(examples/paging)
   add_subdirectory(examples/perf)
 endif()

@@ -20,6 +20,7 @@
 #include "auth.hpp"
 #include "cassandra.h"
 #include "round_robin_policy.hpp"
+#include "ssl.hpp"
 
 #include <list>
 #include <string>
@@ -221,6 +222,12 @@ public:
     load_balancing_policy_.reset(lbp);
   }
 
+  SslContext* ssl_context() const { return ssl_context_.get(); }
+
+  void set_ssl_context(SslContext* ssl_context) {
+    ssl_context_.reset(ssl_context);
+  }
+
 private:
   int port_;
   int protocol_version_;
@@ -246,6 +253,7 @@ private:
   void* log_data_;
   SharedRefPtr<AuthProvider> auth_provider_;
   SharedRefPtr<LoadBalancingPolicy> load_balancing_policy_;
+  SharedRefPtr<SslContext> ssl_context_;
 };
 
 } // namespace cass

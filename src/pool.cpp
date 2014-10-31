@@ -35,7 +35,8 @@ static bool least_busy_comp(Connection* a, Connection* b) {
   return a->pending_request_count() < b->pending_request_count();
 }
 
-Pool::Pool(IOWorker* io_worker, const Address& address,
+Pool::Pool(IOWorker* io_worker,
+           const Address& address,
            bool is_initial_connection)
     : io_worker_(io_worker)
     , address_(address)

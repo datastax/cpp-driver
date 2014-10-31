@@ -28,6 +28,7 @@
 #include "response.hpp"
 #include "schema_change_handler.hpp"
 #include "scoped_ptr.hpp"
+#include "ssl.hpp"
 #include "stream_manager.hpp"
 
 #include "third_party/boost/boost/cstdint.hpp"
@@ -61,7 +62,8 @@ public:
   typedef boost::function1<void, Connection*> Callback;
 
   Connection(uv_loop_t* loop, Logger* logger, const Config& config,
-             const Address& address, const std::string& keyspace,
+             const Address& address,
+             const std::string& keyspace,
              int protocol_version);
 
   void connect();
@@ -85,9 +87,13 @@ public:
   bool is_available() const { return is_available_; }
   bool is_defunct() const { return is_defunct_; }
   bool is_invalid_protocol() const { return is_invalid_protocol_; }
-  bool is_critical_failure() const { return is_invalid_protocol_ || !auth_error_.empty(); }
+  bool is_critical_failure() const {
+    return is_invalid_protocol_ || !auth_error_.empty() || !ssl_error_.empty();
+  }
 
-  const std::string& auth_error() { return auth_error_; }
+  const std::string& auth_error() const { return auth_error_; }
+  const std::string& ssl_error() const { return ssl_error_; }
+  CassError ssl_error_code() const { return ssl_error_code_; }
 
   int protocol_version() const { return protocol_version_; }
 
@@ -108,6 +114,24 @@ public:
   void on_timeout(RequestTimer* timer);
 
 private:
+  class SslHandshakeWriter {
+  public:
+    static const int MAX_BUFFER_SIZE = 16 * 1024 + 5;
+
+    static bool write(Connection* connection, char* buf, size_t buf_size);
+
+  private:
+    SslHandshakeWriter(Connection* connection, char* buf, size_t buf_size);
+
+    static void on_write(uv_write_t* req, int status);
+
+  private:
+    uv_write_t req_;
+    Connection* connection_;
+    uv_buf_t uv_buf_;
+    char buf_[MAX_BUFFER_SIZE];
+  };
+
   class StartupHandler : public Handler {
   public:
     StartupHandler(Connection* connection, Request* request)
@@ -129,16 +153,16 @@ private:
     ScopedRefPtr<Request> request_;
   };
 
-  class PendingWriteBuffer : public List<PendingWriteBuffer>::Node {
+  class PendingWriteBase : public List<PendingWriteBase>::Node {
   public:
-    PendingWriteBuffer(Connection* connection)
-       : connection_(connection)
-       , is_flushed_(false)
-       , size_(0) {
+    PendingWriteBase(Connection* connection)
+      : connection_(connection)
+      , is_flushed_(false)
+      , size_(0) {
       req_.data = this;
     }
 
-    ~PendingWriteBuffer();
+    virtual ~PendingWriteBase();
 
     bool is_flushed() const {
       return is_flushed_;
@@ -149,9 +173,10 @@ private:
     }
 
     int32_t write(Handler* handler);
-    void flush();
 
-  private:
+    virtual void flush() = 0;
+
+  protected:
     static void on_write(uv_write_t* req, int status);
 
     Connection* connection_;
@@ -161,6 +186,28 @@ private:
     BufferVec buffers_;
     UvBufVec uv_bufs_;
     List<Handler> handlers_;
+  };
+
+  class PendingWrite : public PendingWriteBase {
+  public:
+    PendingWrite(Connection* connection)
+       : PendingWriteBase(connection) {}
+
+    virtual void flush();
+  };
+
+  class PendingWriteSsl : public PendingWriteBase {
+  public:
+    PendingWriteSsl(Connection* connection)
+       : PendingWriteBase(connection)
+       , encrypted_size_(0) {}
+
+    void encrypt();
+    virtual void flush();
+
+  private:
+    size_t encrypted_size_;
+    static void on_write(uv_write_t* req, int status);
   };
 
   struct PendingSchemaAgreement
@@ -183,7 +230,12 @@ private:
   static void on_connect(Connecter* connecter);
   static void on_connect_timeout(Timer* timer);
   static void on_close(uv_handle_t* handle);
+
+  static uv_buf_t alloc_buffer(uv_handle_t* handle, size_t suggested_size);
   static void on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf);
+
+  static uv_buf_t alloc_buffer_ssl(uv_handle_t* handle, size_t suggested_size);
+  static void on_read_ssl(uv_stream_t* client, ssize_t nread, uv_buf_t buf);
 
   void on_connected();
   void on_authenticate();
@@ -196,6 +248,9 @@ private:
 
   void notify_ready();
   void notify_error(const std::string& error);
+  void notify_error_ssl(const std::string& error);
+
+  void ssl_handshake();
 
   void send_credentials();
   void send_initial_auth_response();
@@ -204,12 +259,15 @@ private:
   ConnectionState state_;
   bool is_defunct_;
   bool is_invalid_protocol_;
-  std::string auth_error_;
   bool is_registered_for_events_;
   bool is_available_;
 
+  std::string auth_error_;
+  std::string ssl_error_;
+  CassError ssl_error_code_;
+
   size_t pending_writes_size_;
-  List<PendingWriteBuffer> pending_writes_;
+  List<PendingWriteBase> pending_writes_;
   List<Handler> pending_reads_;
   List<PendingSchemaAgreement> pending_schema_aggreements_;
 
@@ -231,14 +289,13 @@ private:
 
   // the actual connection
   uv_tcp_t socket_;
-  // ssl stuff
-  bool ssl_handshake_done_;
   // supported stuff sent in start up message
   std::string compression_;
   std::string version_;
   int event_types_;
 
   Timer* connect_timer_;
+  ScopedPtr<SslSession> ssl_session_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Connection);

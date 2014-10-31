@@ -17,10 +17,13 @@
 #include "uuids.hpp"
 
 #include "cassandra.h"
-#include "scoped_mutex.hpp"
 #include "get_time.hpp"
+#include "md5.hpp"
+#include "scoped_mutex.hpp"
 
 #include "third_party/boost/boost/random/random_device.hpp"
+
+#include <stdio.h>
 
 extern "C" {
 
@@ -196,9 +199,7 @@ uint64_t Uuids::uuid_timestamp() {
 
 uint64_t Uuids::make_clock_seq_and_node() {
   int count = 0;
-  EVP_MD_CTX* mdctx = EVP_MD_CTX_create();
-
-  EVP_DigestInit(mdctx, EVP_md5());
+  Md5 md5;
 
   uv_interface_address_t* addresses;
   int address_count;
@@ -206,14 +207,14 @@ uint64_t Uuids::make_clock_seq_and_node() {
     for (int i = 0; i < address_count; ++i) {
       char buf[256];
       uv_interface_address_t address = addresses[i];
-      EVP_DigestUpdate(mdctx, address.name, strlen(address.name));
+      md5.update(address.name, strlen(address.name));
       if (address.address.address4.sin_family == AF_INET) {
         uv_ip4_name(&address.address.address4, buf, sizeof(buf));
-        EVP_DigestUpdate(mdctx, buf, strlen(buf));
+        md5.update(buf, strlen(buf));
         count++;
       } else if (address.address.address4.sin_family == AF_INET6) {
         uv_ip6_name(&address.address.address6, buf, sizeof(buf));
-        EVP_DigestUpdate(mdctx, buf, strlen(buf));
+        md5.update(buf, strlen(buf));
         count++;
       }
     }
@@ -227,14 +228,13 @@ uint64_t Uuids::make_clock_seq_and_node() {
   if (uv_cpu_info(&cpu_infos, &cpu_count).code == 0) {
     for (int i = 0; i < cpu_count; ++i) {
       uv_cpu_info_t cpu_info = cpu_infos[i];
-      EVP_DigestUpdate(mdctx, cpu_info.model, strlen(cpu_info.model));
+      md5.update(cpu_info.model, strlen(cpu_info.model));
     }
     uv_free_cpu_info(cpu_infos, cpu_count);
   }
 
   uint8_t hash[16];
-  EVP_DigestFinal_ex(mdctx, hash, NULL);
-  EVP_MD_CTX_destroy(mdctx);
+  md5.final(hash);
 
   uint64_t node = 0L;
   for (int i = 0; i < 6; ++i) {

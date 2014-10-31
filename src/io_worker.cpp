@@ -36,8 +36,6 @@ IOWorker::IOWorker(Session* session)
     , pending_request_count_(0)
     , request_queue_(config_.queue_size_io()) {
   prepare_.data = this;
-  uv_mutex_init(&keyspace_mutex_);
-  uv_mutex_init(&unavailable_addresses_mutex_);
 }
 
 IOWorker::~IOWorker() {
@@ -45,7 +43,11 @@ IOWorker::~IOWorker() {
 }
 
 int IOWorker::init() {
-  int rc = EventThread<IOWorkerEvent>::init(config_.queue_size_event());
+  int rc = uv_mutex_init(&keyspace_mutex_);
+  if (rc != 0) return rc;
+  rc = uv_mutex_init(&unavailable_addresses_mutex_);
+  if (rc != 0) return rc;
+  rc = EventThread<IOWorkerEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
   rc = request_queue_.init(loop(), this, &IOWorker::on_execute);
   if (rc != 0) return rc;

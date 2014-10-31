@@ -21,7 +21,6 @@
 #include "round_robin_policy.hpp"
 #include "types.hpp"
 
-
 #include <sstream>
 
 extern "C" {
@@ -36,6 +35,15 @@ CassError cass_cluster_set_port(CassCluster* cluster,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_port(port);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_ssl(CassCluster* cluster,
+                               CassSsl* ssl) {
+  if (ssl == NULL) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_ssl_context(ssl->from());
   return CASS_OK;
 }
 

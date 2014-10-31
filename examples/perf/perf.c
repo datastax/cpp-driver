@@ -190,13 +190,13 @@ void run_insert_queries(void* data) {
   thread_stats.total_average_count = 0;
   thread_stats.total_averages = 0.0;
 
-#ifdef USE_PREPARED
+#if USE_PREPARED
   if (prepare_query(session, insert_query, &insert_prepared) == CASS_OK) {
 #endif
     for (i = 0; i < NUM_ITERATIONS; ++i) {
       insert_into_perf(session, insert_query, insert_prepared, &thread_stats);
     }
-#ifdef USE_PREPARED
+#if USE_PREPARED
     cass_prepared_free(insert_prepared);
   }
 #endif
@@ -261,13 +261,13 @@ void run_select_queries(void* data) {
   thread_stats.total_average_count = 0;
   thread_stats.total_averages = 0.0;
 
-#ifdef USE_PREPARED
+#if USE_PREPARED
   if (prepare_query(session, select_query, &select_prepared) == CASS_OK) {
 #endif
     for (i = 0; i < NUM_ITERATIONS; ++i) {
       select_from_perf(session, select_query, select_prepared, &thread_stats);
     }
-#ifdef USE_PREPARED
+#if USE_PREPARED
     cass_prepared_free(select_prepared);
   }
 #endif

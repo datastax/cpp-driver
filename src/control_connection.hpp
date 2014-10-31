@@ -57,7 +57,6 @@ public:
     , connection_(NULL)
     , reconnect_timer_(NULL) {}
 
-
   int protocol_version() const {
     return protocol_version_;
   }

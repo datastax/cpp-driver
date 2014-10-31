@@ -149,7 +149,7 @@ void ControlConnection::reconnect(bool retry_current_host) {
                                session_->logger_.get(),
                                session_->config_,
                                current_host_address_,
-                               "",
+                               "", // No keyspace
                                protocol_version_);
 
   connection_->set_ready_callback(
@@ -174,7 +174,9 @@ void ControlConnection::on_connection_ready(Connection* connection) {
 void ControlConnection::on_connection_closed(Connection* connection) {
   bool retry_current_host = false;
 
-  logger_->warn("ControlConnection: Lost connection on host %s", connection->address_string().c_str());
+  if (state_ != CONTROL_STATE_CLOSED) {
+    logger_->warn("ControlConnection: Lost connection on host %s", connection->address_string().c_str());
+  }
 
   // This pointer to the connection is no longer valid once it's closed
   connection_ = NULL;
@@ -184,15 +186,19 @@ void ControlConnection::on_connection_closed(Connection* connection) {
       if (protocol_version_ <= 1) {
         logger_->error("ControlConnection: Host %s does not support any valid protocol version",
                        connection->address_string().c_str());
-        session_-> on_control_connection_error(CASS_ERROR_UNABLE_TO_DETERMINE_PROTOCOL,
-                                              "Not even protocol version 1 is supported");
+        session_->on_control_connection_error(CASS_ERROR_LIB_UNABLE_TO_DETERMINE_PROTOCOL,
+                                             "Not even protocol version 1 is supported");
         return;
       }
       protocol_version_--;
       retry_current_host = true;
     } else if(!connection->auth_error().empty()) {
-      session_-> on_control_connection_error(CASS_ERROR_SERVER_BAD_CREDENTIALS,
+      session_->on_control_connection_error(CASS_ERROR_SERVER_BAD_CREDENTIALS,
                                             connection->auth_error());
+      return;
+    } else if(!connection->ssl_error().empty()) {
+      session_->on_control_connection_error(connection->ssl_error_code(),
+                                            connection->ssl_error());
       return;
     }
   }

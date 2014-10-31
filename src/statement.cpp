@@ -134,7 +134,7 @@ namespace {
                          const char* name,
                          T value) {
     if (statement->opcode() != CQL_OPCODE_EXECUTE) {
-      return CASS_ERROR_INVALID_STATEMENT_TYPE;
+      return CASS_ERROR_LIB_INVALID_STATEMENT_TYPE;
     }
 
     const cass::ResultResponse* result
@@ -145,7 +145,7 @@ namespace {
     IsValidValueType<T> is_valid_type;
 
     if (indices.empty()) {
-      return CASS_ERROR_NAME_DOES_NOT_EXIST;
+      return CASS_ERROR_LIB_NAME_DOES_NOT_EXIST;
     }
 
     for (cass::Metadata::IndexVec::const_iterator it = indices.begin(),

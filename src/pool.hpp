@@ -46,7 +46,8 @@ public:
     POOL_STATE_CLOSED
   };
 
-  Pool(IOWorker* io_worker, const Address& address,
+  Pool(IOWorker* io_worker,
+       const Address& address,
        bool is_initial_connection);
   ~Pool();
 
