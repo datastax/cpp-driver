@@ -127,6 +127,11 @@ void RequestHandler::on_result_response(ResponseMessage* response) {
       // result_metadata() returned when the statement was prepared.
       if (request_->opcode() == CQL_OPCODE_EXECUTE && result->no_metadata()) {
         const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request_.get());
+        if (!execute->skip_metadata()) {
+          // Caused by a race condition in C* 2.1.0
+          on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE, "Expected metadata but no metadata in response");
+          return;
+        }
         result->set_metadata(execute->prepared()->result()->result_metadata().get());
       }
       set_response(response->response_body().release());

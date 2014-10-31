@@ -234,11 +234,9 @@ void select_from_perf(CassSession* session, CassString query, const CassPrepared
     if(rc != CASS_OK) {
       print_error(future);
     } else {
-      /*
       const CassResult* result = cass_future_get_result(future);
       assert(cass_result_column_count(result) == 6);
       cass_result_free(result);
-      */
       num_requests++;
     }
     cass_future_free(future);
