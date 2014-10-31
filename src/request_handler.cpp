@@ -163,9 +163,11 @@ void RequestHandler::on_error_response(ResponseMessage* response) {
 
   if (error->code() == CQL_ERROR_UNPREPARED) {
     ScopedRefPtr<PrepareHandler> prepare_handler(new PrepareHandler(this));
-
     if (prepare_handler->init(error->prepared_id())) {
-      connection_->write(prepare_handler.get());
+      if (!connection_->write(prepare_handler.get())) {
+        // Try to prepare on the same host but on a different connection
+        retry(RETRY_WITH_CURRENT_HOST);
+      }
     } else {
       connection_->defunct();
       set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
