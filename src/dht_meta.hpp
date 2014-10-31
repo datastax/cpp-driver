@@ -17,7 +17,10 @@
 #ifndef __CASS_DHT_META_HPP_INCLUDED__
 #define __CASS_DHT_META_HPP_INCLUDED__
 
+#include "buffer.hpp"
+#include "copy_on_write_ptr.hpp"
 #include "host.hpp"
+#include "replica_placement_strategies.hpp"
 #include "scoped_ptr.hpp"
 #include "schema_metadata.hpp"
 
@@ -29,83 +32,68 @@
 namespace cass {
 
 typedef std::vector<boost::string_ref> TokenStringList;
-typedef std::map<std::string, SharedRefPtr<Host> > TokenStringHostMap;
 
 class TokenMap {
 public:
   virtual ~TokenMap() {}
 
-  virtual void clear() = 0;
-  virtual void update(SharedRefPtr<Host>& host, const TokenStringList& tokens) = 0;
-  virtual void update(const std::string& keyspace_name) = 0;
-};
+  void build() { map_replicas(true); }
 
-template <typename T>
-class TypedTokenMap : public TokenMap {
-public:
-  virtual ~TypedTokenMap() {}
+  void update_host(SharedRefPtr<Host>& host, const TokenStringList& token_strings);
+  void remove_host(SharedRefPtr<Host>& host);
+  void update_keyspace(const KeyspaceMetadata& ks_meta);
+  void drop_keyspace(const std::string& ks_name);
+  const COWHostVec& get_replicas(const std::string& ks_name,
+                                              const BufferRefs& key_parts) const;
 
-  virtual void clear() { token_map_.clear(); keyspace_token_map_.clear(); }
-
-  void update(SharedRefPtr<Host>& host, const TokenStringList& token_strings) {
-    for (TokenStringList::const_iterator i = token_strings.begin();
-         i != token_strings.end(); ++i) {
-      token_map_[token_from_string_ref(*i)] = host;
-    }
-  }
-
-  void update(const std::string& keyspace_name/*, Strategy */) {
-  }
-
-  virtual T token_from_string(const std::string& token_string) = 0;
-  virtual T token_from_string_ref(const boost::string_ref& token_string_ref) = 0;
+private:
+  void map_replicas(bool force = false);
+  void map_keyspace_replicas(const std::string& ks_name,
+                             const ReplicaPlacementStrategy& rps,
+                             bool force = false);
+  bool purge_address(const Address& addr);
 
 protected:
-  std::map<T, SharedRefPtr<Host> > token_map_;
-  std::map<T, std::vector<SharedRefPtr<Host> > > keyspace_token_map_;
+  virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const = 0;
+  virtual Token hash(const BufferRefs& key_parts) const = 0;
+
+  TokenHostMap token_map_;
+
+  typedef std::map<std::string, TokenReplicaMap> KeyspaceReplicaMap;
+  KeyspaceReplicaMap keyspace_replica_map_;
+
+  typedef std::map<std::string, ScopedPtr<ReplicaPlacementStrategy> > KeyspaceStrategyMap;
+  KeyspaceStrategyMap keyspace_strategy_map_;
+
+  typedef std::set<Address> AddressSet;
+  AddressSet mapped_addresses_;
 };
 
-class M3PTokenMap : public TypedTokenMap<int64_t> {
+
+class M3PTokenMap : public TokenMap {
 public:
   static const std::string PARTIONER_CLASS;
+  static bool compare(const Token& a, const Token& b);
 
-  virtual int64_t token_from_string(const std::string& token_string);
-  virtual int64_t token_from_string_ref(const boost::string_ref& token_string_ref);
+  virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
+  virtual Token hash(const BufferRefs& key_parts) const;
 };
 
-class ReplicaPlacementStrategy {
-public:
-  static ReplicaPlacementStrategy* from_keyspace_meta(const KeyspaceMetadata& ks_meta);
-};
-
-class NetworkTopologyStrategy : public ReplicaPlacementStrategy {
-public:
-  NetworkTopologyStrategy(const StrategyOptionsMap& options) {/*TBD*/}
-  static const std::string STRATEGY_CLASS;
-};
-
-class SimpleStrategy : public ReplicaPlacementStrategy {
-public:
-  SimpleStrategy(const StrategyOptionsMap& options) {/*TBD*/}
-  static const std::string STRATEGY_CLASS;
-};
-
-class NonReplicatedStrategy : public ReplicaPlacementStrategy {
-public:
-};
 
 class DHTMeta {
 public:
   void clear() { token_map_.reset(); }
+  void build();
   void set_partitioner(const std::string& partitioner_class);
   void update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens);
+  void remove_host(SharedRefPtr<Host>& host);
   void update_keyspace(const KeyspaceModel& ks_name);
+  void drop_keyspace(const std::string& ks_name);
+
+  const COWHostVec& get_replicas(const std::string& ks_name, const BufferRefs& key_parts) const;
 
 private:
   ScopedPtr<TokenMap> token_map_;
-
-//  const KeyspaceModelMap& ks_models_;
-//  const HostMap& hosts_;
 };
 
 } // namespace cass

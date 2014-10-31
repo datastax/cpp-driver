@@ -41,9 +41,19 @@ namespace cass {
 
 class Statement : public RoutableRequest {
 public:
-  Statement(uint8_t opcode, uint8_t kind, size_t value_count = 0,
-            const std::vector<size_t>& key_indices = std::vector<size_t>())
+  Statement(uint8_t opcode, uint8_t kind, size_t value_count = 0)
       : RoutableRequest(opcode)
+      , values_(value_count)
+      , consistency_(CASS_CONSISTENCY_ONE)
+      , serial_consistency_(CASS_CONSISTENCY_ANY)
+      , skip_metadata_(false)
+      , page_size_(-1)
+      , kind_(kind) {}
+
+  Statement(uint8_t opcode, uint8_t kind, size_t value_count,
+            const std::vector<size_t>& key_indices,
+            const std::string& keyspace)
+      : RoutableRequest(opcode, keyspace)
       , values_(value_count)
       , consistency_(CASS_CONSISTENCY_ONE)
       , serial_consistency_(CASS_CONSISTENCY_ANY)
@@ -91,7 +101,7 @@ public:
   void add_key_index(size_t index) { key_indices_.push_back(index); }
   void clear_key_indices() { key_indices_.clear(); }
 
-  virtual const BufferRefs& key_parts();
+  virtual const BufferRefs& key_parts() const;
 
 #define BIND_FIXED_TYPE(DeclType, EncodeType)						\
   CassError bind(size_t index, const DeclType& value) { \
@@ -194,7 +204,7 @@ private:
   std::string paging_state_;
   uint8_t kind_;
   std::vector<size_t> key_indices_;
-  BufferRefs key_buffers_;
+  mutable BufferRefs key_buffers_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Statement);

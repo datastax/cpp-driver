@@ -52,7 +52,7 @@ public:
 
   bool prepared_statement(const std::string& id, std::string* statement) const;
 
-  virtual const BufferRefs& key_parts();
+  virtual const BufferRefs& key_parts() const;
 
 private:
   int encode(int version, BufferVec* bufs) const;

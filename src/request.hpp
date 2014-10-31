@@ -54,7 +54,17 @@ public:
   RoutableRequest(uint8_t opcode)
     : Request(opcode) {}
 
-  virtual const BufferRefs& key_parts() = 0;
+  RoutableRequest(uint8_t opcode, const std::string& keyspace)
+    : Request(opcode)
+    , keyspace_(keyspace){}
+
+  virtual const BufferRefs& key_parts() const = 0;
+
+  const std::string& keyspace() const { return keyspace_; }
+  void set_keyspace(const std::string& keyspace) { keyspace_ = keyspace; }
+
+private:
+  std::string keyspace_;
 };
 
 } // namespace cass

@@ -20,6 +20,7 @@
 #include "cassandra.h"
 #include "constants.hpp"
 #include "host.hpp"
+#include "request.hpp"
 
 #include <list>
 #include <set>
@@ -55,6 +56,9 @@ typedef enum CassHostDistance_ {
 
 namespace cass {
 
+class RoutableRequest;
+class DHTMeta;
+
 class QueryPlan {
 public:
   virtual ~QueryPlan() {}
@@ -72,7 +76,9 @@ public:
 
   virtual CassHostDistance distance(const SharedRefPtr<Host>& host) = 0;
 
-  virtual QueryPlan* new_query_plan() = 0;
+  virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
+                                    const Request* request,
+                                    const DHTMeta& dht) = 0;
 
   virtual LoadBalancingPolicy* new_instance() = 0;
 };

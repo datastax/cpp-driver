@@ -57,7 +57,7 @@ public:
     , state_(CONTROL_STATE_NEW)
     , connection_(NULL)
     , reconnect_timer_(NULL)
-    , partitioner_set_(false) {}
+    , query_tokens_(false) {}
 
   int protocol_version() const {
     return protocol_version_;
@@ -166,7 +166,9 @@ private:
   void handle_query_timeout();
 
   void query_meta_all();
-  void refresh_node_info(SharedRefPtr<Host> host, RefreshNodeCallback callback);
+  void refresh_node_info(SharedRefPtr<Host> host,
+                         RefreshNodeCallback callback,
+                         bool query_tokens = false);
   void update_node_info(SharedRefPtr<Host> host, const Row* row);
 
   void refresh_keyspace(const boost::string_ref& keyspace_name);
@@ -188,7 +190,7 @@ private:
   Timer* reconnect_timer_;
   Logger* logger_;
   std::string last_connection_error_;
-  bool partitioner_set_;
+  bool query_tokens_;
 
   static Address bind_any_ipv4_;
   static Address bind_any_ipv6_;

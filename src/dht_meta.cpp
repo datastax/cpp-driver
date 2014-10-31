@@ -15,64 +15,171 @@
 */
 
 #include "dht_meta.hpp"
+#include "murmur3.hpp"
 
+#include <algorithm>
 #include <string>
 
 namespace cass {
 
+static const COWHostVec EMPTY_REPLICA_COW_PTR(new HostVec());
 
-int64_t nstrtoll(const char* p, size_t n) {
+static void nstrtoll(const char* p, size_t n, int64_t* out) {
     int c;
     const unsigned char* s = (unsigned char*)p;
-    do {
-        c = *s++;
-    } while (isspace(c));
+    while (n != 0 && isspace(c = *s)) { ++s; --n; }
+
+    if (n == 0) {
+      *out = 0;
+      return;
+    }
 
     int64_t sign = 1;
     if (c == '-') {
       sign = -1;
-      ++s;
+      ++s; --n;
     }
 
     int64_t value = 0;
-    while(n-- && isdigit(c = *s++)) {
+    while(n != 0  && isdigit(c = *s)) {
+        ++s; --n;
         value *= 10;
         value += c - '0';
     }
-    return sign*value;
+    *out = sign*value;
 }
+
+
+void TokenMap::update_host(SharedRefPtr<Host>& host, const TokenStringList& token_strings) {
+  // There's a chance to avoid purging if tokens are the same as existing; deemed
+  // not worth the complexity because:
+  // 1.) Updates should only happen on "new" host, or "moved"
+  // 2.) Moving should only occur on non-vnode clusters, in which case the
+  //     token map is relatively small and easy to purge/repopulate
+  purge_address(host->address());
+
+  for (TokenStringList::const_iterator i = token_strings.begin();
+       i != token_strings.end(); ++i) {
+    token_map_[token_from_string_ref(*i)] = host;
+  }
+  map_replicas();
+}
+
+void TokenMap::remove_host(SharedRefPtr<Host>& host) {
+  if (purge_address(host->address())) {
+    map_replicas();
+  }
+}
+
+void TokenMap::update_keyspace(const KeyspaceMetadata& ks_meta) {
+  ScopedPtr<ReplicaPlacementStrategy> rps_now(ReplicaPlacementStrategy::from_keyspace_meta(ks_meta));
+  KeyspaceStrategyMap::iterator i = keyspace_strategy_map_.find(ks_meta.name_);
+  if (i == keyspace_strategy_map_.end() ||
+      !i->second->equals(*rps_now)) {
+    map_keyspace_replicas(ks_meta.name_, *rps_now);
+    if (i == keyspace_strategy_map_.end()) {
+      keyspace_strategy_map_[ks_meta.name_].reset(rps_now.release());
+    } else {
+      i->second.reset(rps_now.release());
+    }
+  }
+}
+
+void TokenMap::drop_keyspace(const std::string& ks_name) {
+  keyspace_replica_map_.erase(ks_name);
+  keyspace_strategy_map_.erase(ks_name);
+}
+
+const COWHostVec& TokenMap::get_replicas(const std::string& ks_name, const BufferRefs& key_parts) const {
+  KeyspaceReplicaMap::const_iterator i = keyspace_replica_map_.find(ks_name);
+  if (i != keyspace_replica_map_.end()) {
+    const Token t = hash(key_parts);
+    printf("%lld\n", *(int64_t*)&t.token[0]);
+    TokenReplicaMap::const_iterator j = i->second.upper_bound(t);
+    if (j != i->second.end()) {
+      return j->second;
+    } else {
+      if (!i->second.empty()) {
+        return i->second.begin()->second;
+      }
+    }
+  }
+  return EMPTY_REPLICA_COW_PTR;
+}
+
+void TokenMap::map_replicas(bool force) {
+  if (keyspace_replica_map_.empty() && !force) {// do nothing ahead of first build
+    return;
+  }
+  for (KeyspaceStrategyMap::const_iterator i = keyspace_strategy_map_.begin();
+       i != keyspace_strategy_map_.end(); ++i) {
+    map_keyspace_replicas(i->first, *i->second, force);
+  }
+}
+
+void TokenMap::map_keyspace_replicas(const std::string& ks_name, const ReplicaPlacementStrategy& rps, bool force) {
+  if (keyspace_replica_map_.empty() && !force) {// do nothing ahead of first build
+    return;
+  }
+  rps.tokens_to_replicas(token_map_, &keyspace_replica_map_[ks_name]);
+}
+
+bool TokenMap::purge_address(const Address& addr) {
+  AddressSet::iterator addr_itr = mapped_addresses_.find(addr);
+  if (addr_itr == mapped_addresses_.end()) {
+    return false;
+  }
+
+  TokenHostMap::iterator i = token_map_.begin();
+  while (i != token_map_.end()) {
+    if (addr.compare(i->second->address()) == 0) {
+      TokenHostMap::iterator to_erase = i++;
+      token_map_.erase(to_erase);
+    } else {
+      ++i;
+    }
+  }
+
+  mapped_addresses_.erase(addr_itr);
+  return true;
+}
+
 
 const std::string M3PTokenMap::PARTIONER_CLASS("Murmur3Partitioner");
 
-int64_t M3PTokenMap::token_from_string(const std::string& token_string) {
-  return nstrtoll(token_string.data(), token_string.size());
+bool M3PTokenMap::compare(const Token& l, const Token& r) {
+    return *reinterpret_cast<const int64_t*>(&l.token[0]) < *reinterpret_cast<const int64_t*>(&r.token[0]);
 }
 
-int64_t M3PTokenMap::token_from_string_ref(const boost::string_ref& token_string_ref) {
-  return nstrtoll(token_string_ref.data(), token_string_ref.size());
+Token M3PTokenMap::token_from_string_ref(const boost::string_ref& token_string_ref) const {
+  Token out(M3PTokenMap::compare);
+  out.token.assign(sizeof(int64_t), 0);
+  nstrtoll(token_string_ref.data(), token_string_ref.size(), (int64_t*)&out.token[0]);
+  return out;
+}
+
+Token M3PTokenMap::hash(const BufferRefs& key_parts) const {
+  Murmur3 hash;
+  for (BufferRefs::const_iterator i = key_parts.begin(); i != key_parts.end(); ++i) {
+    hash.update(i->data(), i->size());
+  }
+  Token out(M3PTokenMap::compare);
+  out.token.assign(sizeof(int64_t), 0);
+  hash.final((int64_t*)&out.token[0], NULL);
+  return out;
 }
 
 //const std::string XXTokenMap::PARTITIONER_CLASS("RandomPartitioner");
 //const std::string XXTokenMap::PARTITIONER_CLASS("OrderedPartitioner");
 
-ReplicaPlacementStrategy* ReplicaPlacementStrategy::from_keyspace_meta(const KeyspaceMetadata& ks_meta) {
-  const std::string& strategy_class = ks_meta.strategy_class_;
-
-  if (string_ends_with(strategy_class, NetworkTopologyStrategy::STRATEGY_CLASS)) {
-    return new NetworkTopologyStrategy(ks_meta.strategy_options_);
-  } else
-  if (string_ends_with(strategy_class, SimpleStrategy::STRATEGY_CLASS)) {
-    return new SimpleStrategy(ks_meta.strategy_options_);
-  } else {
-    return new NonReplicatedStrategy();
+void DHTMeta::build() {
+  if (token_map_.get()) {
+    token_map_->build();
   }
 }
 
-const std::string NetworkTopologyStrategy::STRATEGY_CLASS("NetworkTopologyStrategy");
-const std::string SimpleStrategy::STRATEGY_CLASS("SimpleStrategy");
-
 void DHTMeta::set_partitioner(const std::string& partitioner_class) {
-  if (token_map_.get() != NULL) {
+  if (token_map_.get()) {
     return;
   }
 
@@ -80,22 +187,40 @@ void DHTMeta::set_partitioner(const std::string& partitioner_class) {
     token_map_.reset(new M3PTokenMap());
   }
 
-  if (token_map_.get() == NULL) {
+  if (!token_map_) {
     //TODO: global logging
   }
 }
 
 void DHTMeta::update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens) {
-  if (token_map_.get() != NULL) {
-    token_map_->update(host, tokens);
+  if (token_map_) {
+    token_map_->update_host(host, tokens);
+  }
+}
+
+void DHTMeta::remove_host(SharedRefPtr<Host>& host) {
+  if (token_map_) {
+    token_map_->remove_host(host);
   }
 }
 
 void DHTMeta::update_keyspace(const KeyspaceModel& ksm) {
-  if (token_map_.get() != NULL) {
-    //TODO: create RPS based on meta, guard against empty and not-changing
-    token_map_->update(ksm.meta().name_);
+  if (token_map_) {
+    token_map_->update_keyspace(ksm.meta());
   }
+}
+
+void DHTMeta::drop_keyspace(const std::string& ks_name) {
+  if (token_map_) {
+    token_map_->drop_keyspace(ks_name);
+  }
+}
+
+const COWHostVec& DHTMeta::get_replicas(const std::string& ks_name, const BufferRefs& key_parts) const {
+  if (token_map_) {
+    return token_map_->get_replicas(ks_name, key_parts);
+  }
+  return EMPTY_REPLICA_COW_PTR;
 }
 
 }

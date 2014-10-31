@@ -246,6 +246,11 @@ CassError cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
   return CASS_OK;
 }
 
+void cass_cluster_set_token_aware_routing(CassCluster* cluster,
+                                          cass_bool_t enabled) {
+  cluster->config().set_token_aware_routing(enabled);
+}
+
 CassFuture* cass_cluster_connect(CassCluster* cluster) {
   return cass_cluster_connect_keyspace(cluster, "");
 }

@@ -44,7 +44,9 @@ public:
     return CASS_HOST_DISTANCE_LOCAL;
   }
 
-  virtual QueryPlan* new_query_plan() {
+  virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
+                                    const Request* request,
+                                    const DHTMeta& dht) {
     return new RoundRobinQueryPlan(hosts_, index_++);
   }
 
@@ -90,7 +92,7 @@ public:
 private:
   class RoundRobinQueryPlan : public QueryPlan {
   public:
-    RoundRobinQueryPlan(const CopyOnWritePtr<HostVec>& hosts, size_t start_index)
+    RoundRobinQueryPlan(const COWHostVec& hosts, size_t start_index)
       : hosts_(hosts)
       , index_(start_index)
       , remaining_(hosts->size()) {}
@@ -108,12 +110,12 @@ private:
     }
 
   private:
-    const CopyOnWritePtr<HostVec> hosts_;
+    const COWHostVec hosts_;
     size_t index_;
     size_t remaining_;
   };
 
-  CopyOnWritePtr<HostVec> hosts_;
+  COWHostVec hosts_;
   size_t index_;
   std::set<Address> down_addresses_;
 

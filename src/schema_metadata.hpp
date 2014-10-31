@@ -224,6 +224,9 @@ public:
   void drop_keyspace(const std::string& keyspace_name);
   void drop_table(const std::string& keyspace_name, const std::string& table_name);
   void clear();
+  void get_column_family_key_columns(const std::string& ks_name,
+                                     const std::string& cf_name,
+                                     std::vector<std::string>* output);
 
 private:
   // Really coarse grain copy-on-write. This could be made
