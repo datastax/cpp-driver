@@ -112,7 +112,7 @@ static X509* load_cert(const char* cert, size_t cert_size) {
   return x509;
 }
 
-// Implmentation taken from OpenSSL's SSL_CTX_use_certificate_chain_file()
+// Implementation taken from OpenSSL's SSL_CTX_use_certificate_chain_file()
 // (https://github.com/openssl/openssl/blob/OpenSSL_0_9_8-stable/ssl/ssl_rsa.c#L705).
 // Modified to be used for in-memory certficate chains and formatting.
 static int SSL_CTX_use_certificate_chain_bio(SSL_CTX* ctx, BIO* in) {
@@ -204,38 +204,11 @@ public:
   };
 
   static Result match(X509* cert, const boost::string_ref& to_match, int type) {
-    assert(type == GEN_DNS || type == GEN_IPADD);
-    Result result = match_subject_alt_names(cert, to_match, type);
-    if (result == NO_SAN_PRESENT && type == GEN_DNS) {
-      result = match_common_name(cert, to_match);
-    }
-    return result;
+    assert(type == GEN_IPADD);
+    return match_subject_alt_names(cert, to_match, type);
   }
 
 private:
-  static Result match_common_name(X509* cert, const boost::string_ref& to_match) {
-    int i = -1;
-    X509_NAME* name = X509_get_subject_name(cert);
-    if (name == NULL) {
-      return INVALID_CERT;
-    }
-
-    while ((i = X509_NAME_get_index_by_NID(name, NID_commonName, i)) >= 0) {
-      X509_NAME_ENTRY* name_entry = X509_NAME_get_entry(name, i);
-      if (name_entry == NULL) {
-        return INVALID_CERT;
-      }
-
-      ASN1_STRING* str = X509_NAME_ENTRY_get_data(name_entry);
-      boost::string_ref dsn_name(copy_cast<unsigned char*, char*>(ASN1_STRING_data(str)), ASN1_STRING_length(str));
-      if (boost::iequals(dsn_name, to_match)) {
-        return MATCH;
-      }
-    }
-
-    return NO_MATCH;
-  }
-
   static Result match_subject_alt_names(X509* cert, const boost::string_ref& to_match, int type) {
     STACK_OF(GENERAL_NAME)* names
       = static_cast<STACK_OF(GENERAL_NAME)*>(X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL));
@@ -274,11 +247,10 @@ private:
 
 };
 
-OpenSslSessionImpl::OpenSslSessionImpl(const Address& address,
-                                       const std::string& hostname,
-                                       int flags,
-                                       SSL_CTX* ssl_ctx)
-  : SslSessionBase<OpenSslSessionImpl>(address, hostname, flags)
+OpenSslSession::OpenSslSession(const Address& address,
+                               int flags,
+                               SSL_CTX* ssl_ctx)
+  : SslSession(address, flags)
   , ssl_(SSL_new(ssl_ctx))
   , incoming_bio_(rb::RingBufferBio::create(&incoming_))
   , outgoing_bio_(rb::RingBufferBio::create(&outgoing_)) {
@@ -290,18 +262,18 @@ OpenSslSessionImpl::OpenSslSessionImpl(const Address& address,
   SSL_set_connect_state(ssl_);
 }
 
-OpenSslSessionImpl::~OpenSslSessionImpl() {
+OpenSslSession::~OpenSslSession() {
   SSL_free(ssl_);
 }
 
-void OpenSslSessionImpl::do_handshake_impl() {
+void OpenSslSession::do_handshake() {
   int rc = SSL_connect(ssl_);
   if (rc <= 0) {
     check_error(rc);
   }
 }
 
-void OpenSslSessionImpl::verify_impl() {
+void OpenSslSession::verify() {
   if (verify_flags_ & CASS_SSL_VERIFY_NONE) return;
 
   X509* peer_cert = SSL_get_peer_certificate(ssl_);
@@ -322,25 +294,21 @@ void OpenSslSessionImpl::verify_impl() {
   }
 
   if (verify_flags_ & CASS_SSL_VERIFY_PEER_IDENTITY) {
-    OpenSslVerifyIdentity::Result result;
-    if (!hostname_.empty()) {
-      // Match host
-      result = OpenSslVerifyIdentity::match(peer_cert, hostname_, GEN_DNS);
+    // We can only match IP address because that's what
+    // Cassandra has in system local/peers tables
+    char buf[16];
+    size_t buf_size;
+    if (addr_.family() == AF_INET) {
+      buf_size = 4;
+      memcpy(buf, &addr_.addr_in()->sin_addr.s_addr, buf_size);
     } else {
-      // Match IP address
-      char buf[16];
-      size_t buf_size;
-      if (addr_.family() == AF_INET) {
-        buf_size = 4;
-        memcpy(buf, &addr_.addr_in()->sin_addr.s_addr, buf_size);
-      } else {
-        buf_size = 16;
-        memcpy(buf, &addr_.addr_in6()->sin6_addr, buf_size);
-      }
-      result = OpenSslVerifyIdentity::match(peer_cert,
-                                            boost::string_ref(buf, buf_size),
-                                            GEN_IPADD);
+      buf_size = 16;
+      memcpy(buf, &addr_.addr_in6()->sin6_addr, buf_size);
     }
+    OpenSslVerifyIdentity::Result result
+        = OpenSslVerifyIdentity::match(peer_cert,
+                                       boost::string_ref(buf, buf_size),
+                                       GEN_IPADD);
 
     if (result == OpenSslVerifyIdentity::INVALID_CERT) {
       error_code_ = CASS_ERROR_SSL_INVALID_PEER_CERT;
@@ -358,7 +326,7 @@ void OpenSslSessionImpl::verify_impl() {
   X509_free(peer_cert);
 }
 
-int OpenSslSessionImpl::encrypt_impl(const char* buf, size_t size) {
+int OpenSslSession::encrypt(const char* buf, size_t size) {
   int rc = SSL_write(ssl_, buf, size);
   if (rc <= 0) {
     check_error(rc);
@@ -366,7 +334,7 @@ int OpenSslSessionImpl::encrypt_impl(const char* buf, size_t size) {
   return rc;
 }
 
-int OpenSslSessionImpl::decrypt_impl(char* buf, size_t size)  {
+int OpenSslSession::decrypt(char* buf, size_t size)  {
   int rc = SSL_read(ssl_, buf, size);
   if (rc <= 0) {
     check_error(rc);
@@ -374,7 +342,7 @@ int OpenSslSessionImpl::decrypt_impl(char* buf, size_t size)  {
   return rc;
 }
 
-bool OpenSslSessionImpl::check_error(int rc) {
+bool OpenSslSession::check_error(int rc) {
   int err = SSL_get_error(ssl_, rc);
   if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_NONE) {
     char buf[128];
@@ -385,21 +353,68 @@ bool OpenSslSessionImpl::check_error(int rc) {
   return false;
 }
 
-OpenSslContextImpl::OpenSslContextImpl()
+OpenSslContext::OpenSslContext()
   : ssl_ctx_(SSL_CTX_new(SSLv23_client_method()))
   , trusted_store_(X509_STORE_new()) {
   SSL_CTX_set_cert_store(ssl_ctx_, trusted_store_);
 }
 
-OpenSslContextImpl::~OpenSslContextImpl() {
+OpenSslContext::~OpenSslContext() {
   SSL_CTX_free(ssl_ctx_);
 }
 
-OpenSslContextImpl* OpenSslContextImpl::create() {
-  return new OpenSslContextImpl();
+SslSession* OpenSslContext::create_session(const Address& address ) {
+  return new OpenSslSession(address, verify_flags_, ssl_ctx_);
 }
 
-void OpenSslContextImpl::init() {
+CassError OpenSslContext::add_trusted_cert(CassString cert) {
+  X509* x509 = load_cert(cert.data, cert.length);
+  if (x509 == NULL) {
+    return CASS_ERROR_SSL_INVALID_CERT;
+  }
+
+  X509_STORE_add_cert(trusted_store_, x509);
+  X509_free(x509);
+
+  return CASS_OK;
+}
+
+CassError OpenSslContext::set_cert(CassString cert) {
+  BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert.data), cert.length);
+  if (bio == NULL) {
+    return CASS_ERROR_SSL_INVALID_CERT;
+  }
+
+  int rc = SSL_CTX_use_certificate_chain_bio(ssl_ctx_, bio);
+
+  BIO_free_all(bio);
+
+  if (!rc) {
+    // TODO: Replace with global logging
+    ERR_print_errors_fp(stderr);
+    return CASS_ERROR_SSL_INVALID_CERT;
+  }
+
+  return CASS_OK;
+}
+
+CassError OpenSslContext::set_private_key(CassString key, const char* password) {
+  EVP_PKEY* pkey = load_key(key.data, key.length, password);
+  if (pkey == NULL) {
+    return CASS_ERROR_SSL_INVALID_PRIVATE_KEY;
+  }
+
+  SSL_CTX_use_PrivateKey(ssl_ctx_, pkey);
+  EVP_PKEY_free(pkey);
+
+  return CASS_OK;
+}
+
+SslContext* OpenSslContextFactory::create() {
+  return new OpenSslContext();
+}
+
+void OpenSslContextFactory::init() {
   SSL_library_init();
   SSL_load_error_strings();
   OpenSSL_add_all_algorithms();
@@ -422,52 +437,5 @@ void OpenSslContextImpl::init() {
   CRYPTO_set_id_callback(crypto_id_callback);
 }
 
-OpenSslSessionImpl* OpenSslContextImpl::create_session_impl(const Address& address,
-                                                            const std::string& hostname) {
-  return new OpenSslSessionImpl(address, hostname, verify_flags_, ssl_ctx_);
-}
-
-CassError OpenSslContextImpl::add_trusted_cert_impl(CassString cert) {
-  X509* x509 = load_cert(cert.data, cert.length);
-  if (x509 == NULL) {
-    return CASS_ERROR_SSL_INVALID_CERT;
-  }
-
-  X509_STORE_add_cert(trusted_store_, x509);
-  X509_free(x509);
-
-  return CASS_OK;
-}
-
-CassError OpenSslContextImpl::set_cert_impl(CassString cert) {
-  BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert.data), cert.length);
-  if (bio == NULL) {
-    return CASS_ERROR_SSL_INVALID_CERT;
-  }
-
-  int rc = SSL_CTX_use_certificate_chain_bio(ssl_ctx_, bio);
-
-  BIO_free_all(bio);
-
-  if (!rc) {
-    // TODO: Replace with global logging
-    ERR_print_errors_fp(stderr);
-    return CASS_ERROR_SSL_INVALID_CERT;
-  }
-
-  return CASS_OK;
-}
-
-CassError OpenSslContextImpl::set_private_key_impl(CassString key, const char* password) {
-  EVP_PKEY* pkey = load_key(key.data, key.length, password);
-  if (pkey == NULL) {
-    return CASS_ERROR_SSL_INVALID_PRIVATE_KEY;
-  }
-
-  SSL_CTX_use_PrivateKey(ssl_ctx_, pkey);
-  EVP_PKEY_free(pkey);
-
-  return CASS_OK;
-}
 
 } // namespace cass

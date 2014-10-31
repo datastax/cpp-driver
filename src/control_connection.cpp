@@ -99,8 +99,7 @@ bool ControlConnection::determine_address_for_peer_host(Logger* logger,
 void ControlConnection::connect(Session* session) {
   session_ = session;
   logger_ = session_->logger_.get();
-  const HostMap& hosts = session_->hosts_wrapper_.get();
-  query_plan_.reset(new ControlStartupQueryPlan(hosts));
+  query_plan_.reset(new ControlStartupQueryPlan(session_->hosts_));
   protocol_version_ = session->config_.protocol_version();
   if (protocol_version_ < 0) {
     protocol_version_ = HIGHEST_SUPPORTED_PROTOCOL_VERSION;
@@ -146,13 +145,10 @@ void ControlConnection::reconnect(bool retry_current_host) {
     connection_->close();
   }
 
-  std::string hostname = session_->hostname(current_host_address_);
-
   connection_ = new Connection(session_->loop(),
                                session_->logger_.get(),
                                session_->config_,
                                current_host_address_,
-                               hostname,
                                "", // No keyspace
                                protocol_version_);
 

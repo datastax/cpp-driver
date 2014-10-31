@@ -26,8 +26,7 @@ static uv_once_t ssl_init_guard = UV_ONCE_INIT;
 extern "C" {
 
 CassSsl* cass_ssl_new() {
-  cass::SslContext::init();
-  cass::SslContext* ssl_context = cass::SslContext::create();
+  cass::SslContext* ssl_context = cass::SslContextFactory::create();
   ssl_context->inc_ref();
   return CassSsl::to(ssl_context);
 }
@@ -56,14 +55,15 @@ CassError cass_ssl_set_private_key(CassSsl* ssl, CassString key, const char* pas
 
 namespace cass {
 
-template<class S, class T>
-SslContextBase<S,T>* SslContextBase<S,T>::create() {
-  return S::create();
+template<class T>
+SslContext* SslContextFactoryBase<T>::create() {
+  init();
+  return T::create();
 }
 
-template<class S, class T>
-void SslContextBase<S,T>::init() {
-  uv_once(&ssl_init_guard, S::init);
+template<class T>
+void SslContextFactoryBase<T>::init() {
+  uv_once(&ssl_init_guard, T::init);
 }
 
 

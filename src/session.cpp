@@ -67,8 +67,6 @@ Session::Session(const Config& config)
 int Session::init() {
   int rc = logger_->init();
   if (rc != 0) return rc;
-  rc = hosts_wrapper_.init();
-  if (rc != 0) return rc;
   rc = EventThread<SessionEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
   request_queue_.reset(
@@ -93,12 +91,7 @@ int Session::init() {
     if (rc != 0) return rc;
     io_workers_.push_back(io_worker);
   }
-
   return rc;
-}
-
-std::string Session::hostname(const Address& address) {
-  return hosts_wrapper_.hostname(address);
 }
 
 void Session::broadcast_keyspace_change(const std::string& keyspace,
@@ -114,10 +107,8 @@ void Session::broadcast_keyspace_change(const std::string& keyspace,
 }
 
 SharedRefPtr<Host> Session::get_host(const Address& address, bool should_mark) {
-  const HostMap& hosts = hosts_wrapper_.get();
-
-  HostMap::const_iterator it = hosts.find(address);
-  if (it == hosts.end()) {
+  HostMap::iterator it = hosts_.find(address);
+  if (it == hosts_.end()) {
     return SharedRefPtr<Host>();
   }
   if (should_mark) {
@@ -131,23 +122,21 @@ SharedRefPtr<Host> Session::add_host(const Address& address, bool should_mark) {
 
   bool mark = should_mark ? current_host_mark_ : !current_host_mark_;
   SharedRefPtr<Host> host(new Host(address, mark));
-  hosts_wrapper_.insert(address, host);
+  hosts_[address] = host;
   return host;
 }
 
 void Session::purge_hosts(bool is_initial_connection) {
-  const HostMap& hosts = hosts_wrapper_.get();
-
-  HostMap::const_iterator it = hosts.begin();
-  while (it != hosts.end()) {
+  HostMap::iterator it = hosts_.begin();
+  while (it != hosts_.end()) {
     if (it->second->mark() != current_host_mark_) {
-      HostMap::const_iterator to_remove_it = it++;
+      HostMap::iterator to_remove_it = it++;
 
       std::string address_str = to_remove_it->first.to_string();
       if (is_initial_connection) {
         logger_->warn("Session: Unable to reach contact point %s",
                       address_str.c_str());
-        hosts_wrapper_.erase(to_remove_it->first);
+        hosts_.erase(to_remove_it);
       } else {
         logger_->info("Session: Host %s removed",
                       address_str.c_str());
@@ -221,8 +210,7 @@ void Session::close_async(Future* future) {
 }
 
 void Session::internal_connect() {
-  const HostMap& hosts = hosts_wrapper_.get();
-  if (hosts.empty()) {
+  if (hosts_.empty()) {
     connect_future_->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                                "No hosts provided or no hosts resolved");
     connect_future_.reset();
@@ -267,7 +255,7 @@ void Session::on_event(const SessionEvent& event) {
         const std::string& seed = *it;
         Address address;
         if (Address::from_string(seed, port, &address)) {
-          hosts_wrapper_.insert(address, SharedRefPtr<Host>(new Host(address, !current_host_mark_)));
+          hosts_[address] = SharedRefPtr<Host>(new Host(address, !current_host_mark_));
         } else {
           pending_resolve_count_++;
           Resolver::resolve(loop(), seed, port, this, on_resolve);
@@ -318,9 +306,8 @@ void Session::on_resolve(Resolver* resolver) {
   Session* session = static_cast<Session*>(resolver->data());
   if (resolver->is_success()) {
     const Address& address = resolver->address();
-    SharedRefPtr<Host> host(new Host(address, !session->current_host_mark_));
-    host->set_hostname(resolver->host());
-    session->hosts_wrapper_.insert(address, host);
+    session->hosts_[address]
+        = SharedRefPtr<Host>(new Host(address, !session->current_host_mark_));
   } else {
     session->logger_->error("Unable to resolve host %s:%d\n",
                             resolver->host().c_str(), resolver->port());
@@ -338,19 +325,17 @@ void Session::execute(RequestHandler* request_handler) {
 }
 
 void Session::on_control_connection_ready() {
-  const HostMap& hosts = hosts_wrapper_.get();
-
-  load_balancing_policy_->init(hosts);
+  load_balancing_policy_->init(hosts_);
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
     (*it)->set_protocol_version(control_connection_.protocol_version());
   }
-  for (HostMap::const_iterator it = hosts.begin(), hosts_end = hosts.end();
+  for (HostMap::iterator it = hosts_.begin(), hosts_end = hosts_.end();
        it != hosts_end; ++it) {
     on_add(it->second, true);
   }
   if (config().core_connections_per_host() > 0) {
-    pending_pool_count_ = hosts.size() * io_workers_.size();
+    pending_pool_count_ = hosts_.size() * io_workers_.size();
   } else {
     // Special case for internal testing. Not allowed by API
     logger_->debug("Session connected with no core IO connections");
@@ -399,7 +384,7 @@ void Session::on_add(SharedRefPtr<Host> host, bool is_initial_connection) {
 void Session::on_remove(SharedRefPtr<Host> host) {
   load_balancing_policy_->on_remove(host);
 
-  hosts_wrapper_.erase(host->address());
+  hosts_.erase(host->address());
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
     (*it)->remove_pool_async(host->address());
@@ -498,29 +483,6 @@ void Session::on_execute(uv_async_t* data, int status) {
       (*it)->close_async();
     }
   }
-}
-
-int Session::HostsWrapper::init() {
-  return uv_mutex_init(&hosts_mutex_);
-}
-
-std::string Session::HostsWrapper::hostname(const Address& address) const {
-  ScopedMutex lock(&hosts_mutex_);
-  HostMap::const_iterator it = hosts_.find(address);
-  if (it == hosts_.end()) {
-    return std::string();
-  }
-  return it->second->hostname();
-}
-
-void Session::HostsWrapper::insert(const Address& address, const SharedRefPtr<Host>& host) {
-  ScopedMutex lock(&hosts_mutex_);
-  hosts_[address] = host;
-}
-
-void Session::HostsWrapper::erase(const Address& address) {
-  ScopedMutex lock(&hosts_mutex_);
-  hosts_.erase(address);
 }
 
 } // namespace cass

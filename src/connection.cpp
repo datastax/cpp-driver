@@ -137,7 +137,6 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
 
 Connection::Connection(uv_loop_t* loop, Logger* logger, const Config& config,
                        const Address& address,
-                       const std::string& hostname,
                        const std::string& keyspace,
                        int protocol_version)
     : state_(CONNECTION_STATE_NEW)
@@ -164,7 +163,7 @@ Connection::Connection(uv_loop_t* loop, Logger* logger, const Config& config,
 
   SslContext* ssl_context = config_.ssl_context();
   if (ssl_context != NULL) {
-    ssl_session_ = ssl_context->create_session(address_, hostname);
+    ssl_session_.reset(ssl_context->create_session(address_));
   }
 }
 
@@ -187,7 +186,7 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
   handler->set_stream(stream);
 
   if (pending_writes_.is_empty() || pending_writes_.back()->is_flushed()) {
-    if (ssl_session_ != NULL) {
+    if (ssl_session_) {
       pending_writes_.add_to_back(new PendingWriteSsl(this));
     } else {
       pending_writes_.add_to_back(new PendingWrite(this));
@@ -372,7 +371,7 @@ void Connection::on_connect(Connecter* connecter) {
     connection->logger_->debug("Connection: Connected to host %s",
                                connection->addr_string_.c_str());
 
-    if (connection->ssl_session_ != NULL) {
+    if (connection->ssl_session_) {
       uv_read_start(copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_),
                     Connection::alloc_buffer_ssl, Connection::on_read_ssl);
     } else {
@@ -382,7 +381,7 @@ void Connection::on_connect(Connecter* connecter) {
 
     connection->state_ = CONNECTION_STATE_CONNECTED;
 
-    if (connection->ssl_session_ != NULL) {
+    if (connection->ssl_session_) {
       connection->ssl_handshake();
     } else {
       connection->on_connected();
@@ -464,7 +463,7 @@ uv_buf_t Connection::alloc_buffer_ssl(uv_handle_t* handle, size_t suggested_size
 void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
   Connection* connection = static_cast<Connection*>(client->data);
 
-  SslSession* ssl_session = connection->ssl_session_;
+  SslSession* ssl_session = connection->ssl_session_.get();
   assert(ssl_session != NULL);
 
   if (nread == -1) {
@@ -757,7 +756,7 @@ void Connection::PendingWriteSsl::encrypt() {
   size_t offset = 0;
   size_t total = 0;
 
-  SslSession* ssl_session = connection_->ssl_session_;
+  SslSession* ssl_session = connection_->ssl_session_.get();
 
   BufferVec::const_iterator it = buffers_.begin(),
       end = buffers_.end();
@@ -804,7 +803,7 @@ void Connection::PendingWriteSsl::encrypt() {
 
 void Connection::PendingWriteSsl::flush() {
   if (!is_flushed_ && !buffers_.empty()) {
-    SslSession* ssl_session = connection_->ssl_session_;
+    SslSession* ssl_session = connection_->ssl_session_.get();
 
     uv_bufs_.reserve(buffers_.size());
 

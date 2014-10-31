@@ -18,32 +18,31 @@
 
 namespace cass {
 
-NoSessionImpl::NoSessionImpl(const Address& address,
-                             const std::string& hostname)
-  : SslSessionBase<NoSessionImpl>(address, hostname, CASS_SSL_VERIFY_NONE) {
+NoSslSession::NoSslSession(const Address& address)
+  : SslSession(address, CASS_SSL_VERIFY_NONE) {
   error_code_ = CASS_ERROR_LIB_NOT_IMPLEMENTED;
   error_message_ = "SSL support not built into driver";
 }
 
-NoContextImpl*NoContextImpl::create() {
-  return new NoContextImpl();
+SslSession* cass::NoSslContext::create_session(const Address& address) {
+  return new NoSslSession(address);
 }
 
-NoSessionImpl*cass::NoContextImpl::create_session_impl(const Address& address,
-                                                       const std::string& hostname) {
-  return new NoSessionImpl(address, hostname);
-}
-
-CassError cass::NoContextImpl::add_trusted_cert_impl(CassString cert) {
+CassError cass::NoSslContext::add_trusted_cert(CassString cert) {
   return CASS_ERROR_LIB_NOT_IMPLEMENTED;
 }
 
-CassError cass::NoContextImpl::set_cert_impl(CassString cert) {
+CassError cass::NoSslContext::set_cert(CassString cert) {
   return CASS_ERROR_LIB_NOT_IMPLEMENTED;
 }
 
-CassError cass::NoContextImpl::set_private_key_impl(CassString key, const char* password) {
+CassError cass::NoSslContext::set_private_key(CassString key, const char* password) {
   return CASS_ERROR_LIB_NOT_IMPLEMENTED;
 }
+
+SslContext* NoSslContextFactory::create() {
+  return new NoSslContext();
+}
+
 
 } // namespace cass

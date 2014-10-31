@@ -781,11 +781,11 @@ cass_ssl_add_trusted_cert(CassSsl* ssl,
  *
  * CASS_SSL_VERIFY_NONE - No verification is performed
  * CASS_SSL_VERIFY_PEER_CERT - Certficate is present and valid
- * CASS_SSL_VERIFY_PEER_IDENTITY - Hostname or IP address match
- * the certificate's CN or SANs. This implies the certificate is
- * also present.
+ * CASS_SSL_VERIFY_PEER_IDENTITY - IP address matches
+ * the one of the certificate's SANs. This implies the certificate
+ * is also present.
  *
- * Default: CASS_SSL_VERIFY_PEER_CERT | CASS_SSL_VERIFY_PEER_IDENTITY
+ * Default: CASS_SSL_VERIFY_PEER_CERT
  *
  * @param[in] ssl
  * @param[in] flags

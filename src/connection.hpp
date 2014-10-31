@@ -63,7 +63,6 @@ public:
 
   Connection(uv_loop_t* loop, Logger* logger, const Config& config,
              const Address& address,
-             const std::string& hostname,
              const std::string& keyspace,
              int protocol_version);
 
@@ -296,7 +295,7 @@ private:
   int event_types_;
 
   Timer* connect_timer_;
-  SslSession* ssl_session_;
+  ScopedPtr<SslSession> ssl_session_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Connection);

@@ -28,16 +28,15 @@
 
 namespace cass {
 
-template <class T>
-class SslSessionBase {
+class SslSession {
 public:
-  SslSessionBase(const Address& address,
-                 const std::string& hostname,
-                 int flags)
+  SslSession(const Address& address,
+             int flags)
     : addr_(address)
-    , hostname_(hostname)
     , verify_flags_(flags)
     , error_code_(CASS_OK) {}
+
+  virtual ~SslSession() {}
 
   bool has_error() const {
     return error_code() != CASS_OK;
@@ -51,33 +50,18 @@ public:
     return error_message_;
   }
 
-  bool is_handshake_done() const {
-    return static_cast<const T*>(this)->is_handshake_done_impl();
-  }
+  virtual bool is_handshake_done() const = 0;
+  virtual void do_handshake() = 0;
+  virtual void verify() = 0;
 
-  void do_handshake() {
-    static_cast<T*>(this)->do_handshake_impl();
-  }
-
-  void verify() {
-    static_cast<T*>(this)->verify_impl();
-  }
-
-  int encrypt(const char* data, size_t data_size) {
-    return static_cast<T*>(this)->encrypt_impl(data, data_size);
-  }
-
-  int decrypt(char* data, size_t data_size) {
-    return static_cast<T*>(this)->decrypt_impl(data, data_size);
-  }
+  virtual int encrypt(const char* data, size_t data_size) = 0;
+  virtual int decrypt(char* data, size_t data_size) = 0;
 
   rb::RingBuffer& incoming() { return incoming_; }
-
   rb::RingBuffer& outgoing() { return outgoing_; }
 
 protected:
   Address addr_;
-  std::string hostname_;
   int verify_flags_;
   rb::RingBuffer incoming_;
   rb::RingBuffer outgoing_;
@@ -85,39 +69,31 @@ protected:
   std::string error_message_;
 };
 
-template <class S, class T>
-class SslContextBase : public RefCounted<SslContextBase<S, T> > {
+class SslContext : public RefCounted<SslContext> {
 public:
-  SslContextBase()
-    : verify_flags_(CASS_SSL_VERIFY_PEER_CERT | CASS_SSL_VERIFY_PEER_IDENTITY) {}
+  SslContext()
+    : verify_flags_(CASS_SSL_VERIFY_PEER_CERT) {}
 
-  static SslContextBase<S, T>* create();
-
-  static void init();
-
-  SslSessionBase<T>* create_session(const Address& address,
-                                    const std::string& hostname) {
-    return static_cast<S*>(this)->create_session_impl(address, hostname);
-  }
-
-  CassError add_trusted_cert(CassString cert) {
-    return static_cast<S*>(this)->add_trusted_cert_impl(cert);
-  }
+  virtual ~SslContext() {}
 
   void set_verify_flags(int flags) {
     verify_flags_ = flags;
   }
 
-  CassError set_cert(CassString cert) {
-    return static_cast<S*>(this)->set_cert_impl(cert);
-  }
-
-  CassError set_private_key(CassString key, const char* password) {
-    return static_cast<S*>(this)->set_private_key_impl(key, password);
-  }
+  virtual SslSession* create_session(const Address& address) = 0;
+  virtual CassError add_trusted_cert(CassString cert) = 0;
+  virtual CassError set_cert(CassString cert) = 0;
+  virtual CassError set_private_key(CassString key, const char* password) = 0;
 
 protected:
   int verify_flags_;
+};
+
+template <class T>
+class SslContextFactoryBase {
+public:
+  static SslContext* create();
+  static void init();
 };
 
 } // namespace cass

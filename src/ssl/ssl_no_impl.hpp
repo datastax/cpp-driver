@@ -19,40 +19,35 @@
 
 namespace cass {
 
-class NoSessionImpl : public SslSessionBase<NoSessionImpl> {
+class NoSslSession : public SslSession {
 public:
-  NoSessionImpl(const Address& address,
-                const std::string& hostname);
+  NoSslSession(const Address& address);
 
-  bool is_handshake_done_impl() const { return false; }
+  virtual bool is_handshake_done() const { return false; }
+  virtual void do_handshake() {}
+  virtual void verify() {}
 
-  void do_handshake_impl() {}
-
-  void verify_impl() {}
-
-  int encrypt_impl(const char* buf, size_t size) { return -1; }
-
-  int decrypt_impl(char* buf, size_t size) { return -1; }
+  virtual int encrypt(const char* buf, size_t size) { return -1; }
+  virtual int decrypt(char* buf, size_t size) { return -1; }
 };
 
-class NoContextImpl: public SslContextBase<NoContextImpl, NoSessionImpl> {
+class NoSslContext : public SslContext {
 public:
-  static NoContextImpl* create();
 
+  virtual SslSession* create_session(const Address& address);
+
+  virtual CassError add_trusted_cert(CassString cert);
+  virtual CassError set_cert(CassString cert);
+  virtual CassError set_private_key(CassString key, const char* password);
+};
+
+class NoSslContextFactory : SslContextFactoryBase<NoSslContextFactory> {
+public:
+  static SslContext* create();
   static void init() {}
-
-  NoSessionImpl* create_session_impl(const Address& address,
-                                     const std::string& hostname);
-
-  CassError add_trusted_cert_impl(CassString cert);
-
-  CassError set_cert_impl(CassString cert);
-
-  CassError set_private_key_impl(CassString key, const char* password);
 };
 
-typedef SslSessionBase<NoSessionImpl> SslSession;
-typedef SslContextBase<NoContextImpl, NoSessionImpl> SslContext;
+typedef SslContextFactoryBase<NoSslContextFactory> SslContextFactory;
 
 } // namespace cass
 

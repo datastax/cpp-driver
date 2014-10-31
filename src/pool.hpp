@@ -48,7 +48,6 @@ public:
 
   Pool(IOWorker* io_worker,
        const Address& address,
-       const std::string& hostname,
        bool is_initial_connection);
   ~Pool();
 
@@ -94,7 +93,6 @@ private:
 
   IOWorker* io_worker_;
   Address address_;
-  std::string hostname_;
   uv_loop_t* loop_;
   Logger* logger_;
   const Config& config_;

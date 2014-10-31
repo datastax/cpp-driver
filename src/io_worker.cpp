@@ -139,8 +139,7 @@ void IOWorker::add_pool(const Address& address, bool is_initial_connection) {
 
     set_host_is_available(address, false);
 
-    std::string hostname = session_->hostname(address);
-    SharedRefPtr<Pool> pool(new Pool(this, address, hostname, is_initial_connection));
+    SharedRefPtr<Pool> pool(new Pool(this, address, is_initial_connection));
     pools_[address] = pool;
     pool->connect();
   }

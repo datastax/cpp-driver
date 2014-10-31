@@ -23,25 +23,22 @@
 
 namespace cass {
 
-class OpenSslSessionImpl : public SslSessionBase<OpenSslSessionImpl> {
+class OpenSslSession : public SslSession {
 public:
-  OpenSslSessionImpl(const Address& address,
-                     const std::string& hostname,
-                     int flags,
-                     SSL_CTX* ssl_ctx);
-  ~OpenSslSessionImpl();
+  OpenSslSession(const Address& address,
+                 int flags,
+                 SSL_CTX* ssl_ctx);
+  ~OpenSslSession();
 
-  bool is_handshake_done_impl() const {
+  virtual bool is_handshake_done() const {
     return SSL_is_init_finished(ssl_) != 0;
   }
 
-  void do_handshake_impl();
+  virtual void do_handshake();
+  virtual void verify();
 
-  void verify_impl();
-
-  int encrypt_impl(const char* buf, size_t size);
-
-  int decrypt_impl(char* buf, size_t size);
+  virtual int encrypt(const char* buf, size_t size);
+  virtual int decrypt(char* buf, size_t size);
 
 private:
   bool check_error(int rc);
@@ -51,32 +48,30 @@ private:
   BIO* outgoing_bio_;
 };
 
-class OpenSslContextImpl: public SslContextBase<OpenSslContextImpl, OpenSslSessionImpl> {
+class OpenSslContext : public SslContext {
 public:
-  OpenSslContextImpl();
+  OpenSslContext();
 
-  ~OpenSslContextImpl();
+  ~OpenSslContext();
 
-  static OpenSslContextImpl* create();
+  virtual SslSession* create_session(const Address& address);
 
-  static void init();
-
-  OpenSslSessionImpl* create_session_impl(const Address& address,
-                                          const std::string& hostname);
-
-  CassError add_trusted_cert_impl(CassString cert);
-
-  CassError set_cert_impl(CassString cert);
-
-  CassError set_private_key_impl(CassString key, const char* password);
+  virtual CassError add_trusted_cert(CassString cert);
+  virtual CassError set_cert(CassString cert);
+  virtual CassError set_private_key(CassString key, const char* password);
 
 private:
   SSL_CTX* ssl_ctx_;
   X509_STORE* trusted_store_;
 };
 
-typedef SslSessionBase<OpenSslSessionImpl> SslSession;
-typedef SslContextBase<OpenSslContextImpl, OpenSslSessionImpl> SslContext;
+class OpenSslContextFactory : SslContextFactoryBase<OpenSslContextFactory> {
+public:
+  static SslContext* create();
+  static void init();
+};
+
+typedef SslContextFactoryBase<OpenSslContextFactory> SslContextFactory;
 
 } // namespace cass
 

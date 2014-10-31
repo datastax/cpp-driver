@@ -56,14 +56,6 @@ public:
   bool mark() const { return mark_; }
   void set_mark(bool mark) { mark_ = mark; }
 
-  const std::string& hostname() const {
-    return hostname_;
-  }
-
-  void set_hostname(const std::string& hostname) {
-    hostname_ = hostname;
-  }
-
   const std::string& rack() const { return rack_; }
   const std::string& dc() const { return dc_; } 
   void set_rack_and_dc(const std::string& rack, const std::string& dc) {
@@ -104,7 +96,6 @@ private:
   bool mark_;
   boost::atomic<HostState> state_;
   std::string listen_address_;
-  std::string hostname_;
   std::string rack_;
   std::string dc_;
 };
