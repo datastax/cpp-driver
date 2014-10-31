@@ -299,11 +299,14 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
   logger_->debug("ControlConnection: refresh_node_info: %s", query.c_str());
 
   RefreshNodeData data(host, callback);
-  connection_->write(
+  ScopedRefPtr<ControlHandler<RefreshNodeData> > handler(
         new ControlHandler<RefreshNodeData>(new QueryRequest(query),
                                             this,
                                             response_callback,
                                             data));
+  if(!connection_->write(handler.get())) {
+    logger_->error("ControlConnection: No more stream available while attempting to refresh node info");
+  }
 }
 
 void ControlConnection::on_refresh_node_info(RefreshNodeData data, Response* response) {

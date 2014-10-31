@@ -17,10 +17,10 @@
 #ifndef __CASS_SET_KEYSPACE_HANDLER_HPP_INCLUDED__
 #define __CASS_SET_KEYSPACE_HANDLER_HPP_INCLUDED__
 
-#include "handler.hpp"
-#include "scoped_ptr.hpp"
-#include "ref_counted.hpp"
 #include "query_request.hpp"
+#include "ref_counted.hpp"
+#include "request_handler.hpp"
+#include "scoped_ptr.hpp"
 
 namespace cass {
 
@@ -31,7 +31,7 @@ class SetKeyspaceHandler : public Handler {
 public:
   SetKeyspaceHandler(Connection* connection,
                      const std::string& keyspace,
-                     Handler* handler);
+                     RequestHandler* request_handler);
 
   virtual Request* request() const { return request_.get(); }
 
@@ -47,7 +47,7 @@ private:
 private:
   Connection* connection_;
   ScopedRefPtr<QueryRequest> request_;
-  ScopedRefPtr<Handler> handler_;
+  ScopedRefPtr<RequestHandler> request_handler_;
 };
 
 } // namespace cass
