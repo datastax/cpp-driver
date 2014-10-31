@@ -389,6 +389,7 @@ void ColumnMetadata::update(int version, const SharedRefPtr<RefBuffer>& buffer, 
   add_field(buffer, row, "index_type");
 }
 
+// synchronized to be called from external thread
 void SchemaModel::get_column_family_key_columns(const std::string& ks_name,
                                                 const std::string& cf_name,
                                                 std::vector<std::string>* output) {

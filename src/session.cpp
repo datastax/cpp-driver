@@ -450,7 +450,7 @@ void Session::on_execute(uv_async_t* data, int status) {
   while (session->request_queue_->dequeue(request_handler)) {
     if (request_handler != NULL) {
 
-      request_handler->set_query_plan(session->load_balancing_policy_->new_query_plan());
+      request_handler->set_query_plan(session->get_new_query_plan(request_handler->request()));
 
       bool is_done = false;
       while(!is_done) {
@@ -488,6 +488,14 @@ void Session::on_execute(uv_async_t* data, int status) {
       (*it)->close_async();
     }
   }
+}
+
+QueryPlan* Session::get_new_query_plan(const Request* request) {
+  std::string connected_keyspace;
+  if (!io_workers_.empty()) {
+    connected_keyspace = io_workers_[0]->keyspace();
+  }
+  return load_balancing_policy_->new_query_plan(connected_keyspace, request, dht_meta_);
 }
 
 

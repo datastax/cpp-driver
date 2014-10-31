@@ -17,9 +17,29 @@
 #ifndef __CASS_MURMUR3_HPP_INCLUDED__
 #define __CASS_MURMUR3_HPP_INCLUDED__
 
+#include "macros.hpp"
+
+#include "third_party/boost/boost/cstdint.hpp"
+
 namespace cass {
 
 class Murmur3 {
+public:
+  Murmur3();
+
+  void update(const void* data, size_t size);
+  void final(int64_t* h1_out, int64_t* h2_out);
+
+private:
+  size_t ingest(int64_t k1, int64_t k2, int64_t* data, size_t size);
+
+  int64_t h1_;
+  int64_t h2_;
+  size_t length_;
+  uint8_t overlap_buffer_[16];
+  size_t overlap_bytes_;
+
+  DISALLOW_COPY_AND_ASSIGN(Murmur3);
 };
 
 } // namespace cass

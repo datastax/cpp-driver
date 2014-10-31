@@ -49,9 +49,11 @@ public:
     else return CASS_HOST_DISTANCE_REMOTE;
   }
 
-  QueryPlan* new_query_plan() {
-    return new DCAwareQueryPlan(local_rr_policy_.new_query_plan(),
-                                remote_rr_policy_.new_query_plan());
+  virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
+                                    const Request* request,
+                                    const DHTMeta& dht) {
+    return new DCAwareQueryPlan(local_rr_policy_.new_query_plan(connected_keyspace, request, dht),
+                                remote_rr_policy_.new_query_plan(connected_keyspace, request, dht));
   }
 
   virtual void on_add(const SharedRefPtr<Host>& host) {

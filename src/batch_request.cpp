@@ -142,7 +142,7 @@ bool BatchRequest::prepared_statement(const std::string& id,
   return false;
 }
 
-const BufferRefs& BatchRequest::key_parts() {
+const BufferRefs& BatchRequest::key_parts() const {
   for (BatchRequest::StatementList::const_iterator i = statements_.begin();
        i != statements_.end(); ++i) {
     const BufferRefs& parts = (*i)->key_parts();

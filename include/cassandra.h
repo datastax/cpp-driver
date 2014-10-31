@@ -739,6 +739,11 @@ CASS_EXPORT CassError
 cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
                                        const char* local_dc);
 
+/*TODO*/
+CASS_EXPORT void
+cass_cluster_set_token_aware_routing(CassCluster* cluster,
+                                     cass_bool_t enabled);
+
 /**
  * Connects a session to the cluster.
  *

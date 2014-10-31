@@ -110,6 +110,7 @@ void ControlConnection::connect(Session* session) {
   logger_ = session_->logger_.get();
   query_plan_.reset(new ControlStartupQueryPlan(session_->hosts_));
   protocol_version_ = session->config_.protocol_version();
+  query_tokens_ = session_->config().token_aware_routing();
   if (protocol_version_ < 0) {
     protocol_version_ = HIGHEST_SUPPORTED_PROTOCOL_VERSION;
   }
@@ -248,10 +249,6 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
       if (local_result->row_count() > 0) {
         local_result->decode_first_row();
         update_node_info(host, &local_result->first_row());
-        if (!partitioner_set_) {
-          logger_->warn("ControlConnection: No partitioner found for cluster in local system table for %s",
-                        connection_->address_string().c_str());
-        }
       } else {
         logger_->warn("ControlConnection: No row found in %s's local system table",
                        connection_->address_string().c_str());
@@ -297,6 +294,8 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
   session_->schema().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
   session_->schema().update_tables(static_cast<ResultResponse*>(responses[3]));
   session_->schema().update_columns(static_cast<ResultResponse*>(responses[4]));
+  //?
+  session_->dht_meta_.update_keyspace(ksm);// might want to consolidate session hosts, schema_meta, and dht_meta into one 'cluster meta' entity
 
   if (is_initial_connection) {
     state_ = CONTROL_STATE_READY;
@@ -305,7 +304,8 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
 }
 
 void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
-                                          RefreshNodeCallback callback) {
+                                          RefreshNodeCallback callback,
+                                          bool query_tokens) {
   if (connection_ == NULL) {
     return;
   }
@@ -315,19 +315,19 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
   std::string query;
   ControlHandler<RefreshNodeData>::ResponseCallback response_callback;
 
-  bool query_tokens = host->was_just_added();
+  bool token_query = query_tokens_ && (host->was_just_added() || query_tokens);
   if (is_connected_host || !host->listen_address().empty()) {
     if (is_connected_host) {
-      query.assign(query_tokens ? SELECT_LOCAL_TOKENS : SELECT_LOCAL);
+      query.assign(token_query ? SELECT_LOCAL_TOKENS : SELECT_LOCAL);
     } else {
-      query.assign(query_tokens ? SELECT_PEERS_TOKENS : SELECT_PEERS);
+      query.assign(token_query ? SELECT_PEERS_TOKENS : SELECT_PEERS);
       query.append(" WHERE peer = '");
       query.append(host->listen_address());
       query.append("'");
     }
     response_callback = boost::bind(&ControlConnection::on_refresh_node_info, this, _1, _2);
   } else {
-    query.assign(query_tokens ? SELECT_PEERS_TOKENS : SELECT_PEERS);
+    query.assign(token_query ? SELECT_PEERS_TOKENS : SELECT_PEERS);
     response_callback = boost::bind(&ControlConnection::on_refresh_node_info_all, this, _1, _2);
   }
 
@@ -360,7 +360,9 @@ void ControlConnection::on_refresh_node_info(RefreshNodeData data, Response* res
   }
   result->decode_first_row();
   update_node_info(data.host, &result->first_row());
-  data.callback(data.host);
+  if (data.callback != NULL) {
+    data.callback(data.host);
+  }
 }
 
 void ControlConnection::on_refresh_node_info_all(RefreshNodeData data, Response* response) {
@@ -394,7 +396,9 @@ void ControlConnection::on_refresh_node_info_all(RefreshNodeData data, Response*
                                           &address);
     if (is_valid_address && data.host->address().compare(address) == 0) {
       update_node_info(data.host, row);
-      data.callback(data.host);
+      if (data.callback != NULL) {
+        data.callback(data.host);
+      }
       break;
     }
   }
@@ -430,25 +434,23 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
     }
   }
 
-  if (!partitioner_set_) {
+  if (query_tokens_) {
     std::string partitioner;
     get_optional_string(row->get_by_name("partitioner"), &partitioner);
     if (!partitioner.empty()) {
       session_->dht_meta_.set_partitioner(partitioner);
-      partitioner_set_ = true;
     }
-  }
-
-  v = row->get_by_name("tokens");
-  if (v != NULL) {
-    CollectionIterator i(v);
-    TokenStringList tokens;
-    while (i.next()) {
-      const BufferPiece& bp = i.value()->buffer();
-      tokens.push_back(boost::string_ref(bp.data(), bp.size()));
-    }
-    if (!tokens.empty()) {
-      session_->dht_meta_.update_host(host, tokens);
+    v = row->get_by_name("tokens");
+    if (v != NULL) {
+      CollectionIterator i(v);
+      TokenStringList tokens;
+      while (i.next()) {
+        const BufferPiece& bp = i.value()->buffer();
+        tokens.push_back(boost::string_ref(bp.data(), bp.size()));
+      }
+      if (!tokens.empty()) {
+        session_->dht_meta_.update_host(host, tokens);
+      }
     }
   }
 }
@@ -549,7 +551,7 @@ void ControlConnection::on_connection_event(EventResponse* response) {
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
           if (!host) {
             host = session_->add_host(response->affected_node());
-            refresh_node_info(host, boost::bind(&Session::on_add, session_, _1, false));
+            refresh_node_info(host, boost::bind(&Session::on_add, session_, _1, false), true);
           }
           break;
         }
@@ -559,6 +561,7 @@ void ControlConnection::on_connection_event(EventResponse* response) {
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
           if (host) {
             session_->on_remove(host);
+            session_->dht_meta_.remove_host(host);
           } else {
             logger_->debug("ControlConnection: Tried to remove host %s that doesn't exist", address_str.c_str());
           }
@@ -567,6 +570,13 @@ void ControlConnection::on_connection_event(EventResponse* response) {
 
         case EventResponse::MOVED_NODE:
           session_->logger_->info("ControlConnection: Node %s moved", address_str.c_str());
+          SharedRefPtr<Host> host = session_->get_host(response->affected_node());
+          if (host) {
+            refresh_node_info(host, NULL, true);
+          } else {
+            logger_->debug("ControlConnection: Move event for host %s that doesn't exist", address_str.c_str());
+            session_->dht_meta_.remove_host(host);
+          }
           break;
       }
       break;
@@ -610,7 +620,9 @@ void ControlConnection::on_connection_event(EventResponse* response) {
             session_->schema().drop_table(response->keyspace().to_string(),
                                           response->table().to_string());
           } else {
-            session_->schema().drop_keyspace(response->keyspace().to_string());
+            const std::string keyspace(response->keyspace().to_string());
+            session_->schema().drop_keyspace(keyspace);
+            session_->dht_meta_.drop_keyspace(keyspace);
           }
           break;
       }
@@ -642,7 +654,7 @@ void ControlConnection::on_down(const Address& address, bool is_critical_failure
 }
 
 void ControlConnection::on_reconnect(Timer* timer) {
-  query_plan_.reset(session_->load_balancing_policy_->new_query_plan());
+  query_plan_.reset(session_->get_new_query_plan());
   reconnect(false);
   reconnect_timer_ = NULL;
 }

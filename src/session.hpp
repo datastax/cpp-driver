@@ -121,6 +121,8 @@ private:
   static void on_resolve(Resolver* resolver);
   static void on_execute(uv_async_t* data, int status);
 
+  QueryPlan* get_new_query_plan(const Request* request = NULL);
+
   void on_reconnect(Timer* timer);
 
 private:
