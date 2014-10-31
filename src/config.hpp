@@ -26,7 +26,7 @@
 
 namespace cass {
 
-void default_log_callback(cass_uint64_t time, CassLogLevel severity,
+void default_log_callback(cass_uint64_t time_ms, CassLogLevel severity,
                           CassString message, void* data);
 
 class Config {
@@ -42,16 +42,16 @@ public:
       , queue_size_log_(8192)
       , core_connections_per_host_(2)
       , max_connections_per_host_(8)
-      , reconnect_wait_time_(2000)
-      , max_simultaneous_creation_(1)
+      , reconnect_wait_time_ms_(2000)
+      , max_concurrent_creation_(1)
       , max_requests_per_flush_(128)
-      , max_simultaneous_requests_threshold_(100)
+      , max_concurrent_requests_threshold_(100)
       , write_bytes_high_water_mark_(64 * 1024)
       , write_bytes_low_water_mark_(32 * 1024)
       , pending_requests_high_water_mark_(128 * max_connections_per_host_)
       , pending_requests_low_water_mark_(pending_requests_high_water_mark_ / 2)
-      , connect_timeout_(5000)
-      , request_timeout_(12000)
+      , connect_timeout_ms_(5000)
+      , request_timeout_ms_(12000)
       , log_level_(CASS_LOG_WARN)
       , log_callback_(default_log_callback)
       , log_data_(NULL)
@@ -96,12 +96,12 @@ public:
     max_connections_per_host_ = num_connections;
   }
 
-  unsigned max_simultaneous_creation() const {
-    return max_simultaneous_creation_;
+  unsigned max_concurrent_creation() const {
+    return max_concurrent_creation_;
   }
 
-  void set_max_simultaneous_creation(unsigned num_connections) {
-    max_simultaneous_creation_ = num_connections;
+  void set_max_concurrent_creation(unsigned num_connections) {
+    max_concurrent_creation_ = num_connections;
   }
 
   unsigned write_bytes_high_water_mark() const {
@@ -136,10 +136,10 @@ public:
     pending_requests_low_water_mark_ = pending_requests_low_water_mark;
   }
 
-  unsigned reconnect_wait_time() const { return reconnect_wait_time_; }
+  unsigned reconnect_wait_time_ms() const { return reconnect_wait_time_ms_; }
 
-  void set_reconnect_wait_time(unsigned wait_time) {
-    reconnect_wait_time_ = wait_time;
+  void set_reconnect_wait_time(unsigned wait_time_ms) {
+    reconnect_wait_time_ms_ = wait_time_ms;
   }
 
   unsigned max_requests_per_flush() const { return max_requests_per_flush_; }
@@ -148,24 +148,24 @@ public:
     max_requests_per_flush_ = num_requests;
   }
 
-  unsigned max_simultaneous_requests_threshold() const {
-    return max_simultaneous_requests_threshold_;
+  unsigned max_concurrent_requests_threshold() const {
+    return max_concurrent_requests_threshold_;
   }
 
-  void set_max_simultaneous_requests_threshold(unsigned num_requests) {
-    max_simultaneous_requests_threshold_ = num_requests;
+  void set_max_concurrent_requests_threshold(unsigned num_requests) {
+    max_concurrent_requests_threshold_ = num_requests;
   }
 
-  unsigned connect_timeout() const { return connect_timeout_; }
+  unsigned connect_timeout_ms() const { return connect_timeout_ms_; }
 
-  void set_connect_timeout(unsigned timeout) {
-    connect_timeout_ = timeout;
+  void set_connect_timeout(unsigned timeout_ms) {
+    connect_timeout_ms_ = timeout_ms;
   }
 
-  unsigned request_timeout() const { return request_timeout_; }
+  unsigned request_timeout_ms() const { return request_timeout_ms_; }
 
-  void set_request_timeout(unsigned timeout) {
-    request_timeout_ = timeout;
+  void set_request_timeout(unsigned timeout_ms) {
+    request_timeout_ms_ = timeout_ms;
   }
 
   const ContactPointList& contact_points() const {
@@ -231,16 +231,16 @@ private:
   unsigned queue_size_log_;
   unsigned core_connections_per_host_;
   unsigned max_connections_per_host_;
-  unsigned reconnect_wait_time_;
-  unsigned max_simultaneous_creation_;
+  unsigned reconnect_wait_time_ms_;
+  unsigned max_concurrent_creation_;
   unsigned max_requests_per_flush_;
-  unsigned max_simultaneous_requests_threshold_;
+  unsigned max_concurrent_requests_threshold_;
   unsigned write_bytes_high_water_mark_;
   unsigned write_bytes_low_water_mark_;
   unsigned pending_requests_high_water_mark_;
   unsigned pending_requests_low_water_mark_;
-  unsigned connect_timeout_;
-  unsigned request_timeout_;
+  unsigned connect_timeout_ms_;
+  unsigned request_timeout_ms_;
   CassLogLevel log_level_;
   CassLogCallback log_callback_;
   void* log_data_;

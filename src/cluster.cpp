@@ -120,29 +120,29 @@ CassError cass_cluster_set_max_connections_per_host(CassCluster* cluster,
 }
 
 CassError cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
-                                               unsigned wait_time) {
-  if (wait_time == 0) {
+                                               unsigned wait_time_ms) {
+  if (wait_time_ms == 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  cluster->config().set_reconnect_wait_time(wait_time);
+  cluster->config().set_reconnect_wait_time(wait_time_ms);
   return CASS_OK;
 }
 
-CassError cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
+CassError cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
                                                      unsigned num_connections) {
   if (num_connections == 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  cluster->config().set_max_simultaneous_creation(num_connections);
+  cluster->config().set_max_concurrent_creation(num_connections);
   return CASS_OK;
 }
 
-CassError cass_cluster_set_max_simultaneous_requests_threshold(CassCluster* cluster,
+CassError cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
                                                                unsigned num_requests) {
   if (num_requests == 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  cluster->config().set_max_simultaneous_requests_threshold(num_requests);
+  cluster->config().set_max_concurrent_requests_threshold(num_requests);
   return CASS_OK;
 }
 
@@ -196,14 +196,14 @@ CassError cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
 }
 
 CassError cass_cluster_set_connect_timeout(CassCluster* cluster,
-                                              unsigned timeout) {
-  cluster->config().set_connect_timeout(timeout);
+                                              unsigned timeout_ms) {
+  cluster->config().set_connect_timeout(timeout_ms);
   return CASS_OK;
 }
 
 CassError cass_cluster_set_request_timeout(CassCluster* cluster,
-                                        unsigned timeout) {
-  cluster->config().set_request_timeout(timeout);
+                                        unsigned timeout_ms) {
+  cluster->config().set_request_timeout(timeout_ms);
   return CASS_OK;
 }
 

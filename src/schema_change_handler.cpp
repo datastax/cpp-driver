@@ -43,8 +43,8 @@ SchemaChangeHandler::SchemaChangeHandler(Connection* connection,
   , logger_(connection->logger())
   , request_handler_(request_handler)
   , request_response_(response)
-  , start_(get_time_since_epoch())
-  , elaspsed_(elapsed) {}
+  , start_ms_(get_time_since_epoch_ms())
+  , elapsed_ms_(elapsed) {}
 
 void SchemaChangeHandler::execute() {
   execute_query("SELECT schema_version FROM system.local WHERE key='local'");
@@ -102,7 +102,7 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
 }
 
 void SchemaChangeHandler::on_set(const ResponseVec& responses) {
-  elaspsed_ += get_time_since_epoch() - start_;
+  elapsed_ms_ += get_time_since_epoch_ms() - start_ms_;
 
   bool has_error = false;
   for (MultipleRequestHandler::ResponseVec::const_iterator it = responses.begin(),
@@ -115,13 +115,13 @@ void SchemaChangeHandler::on_set(const ResponseVec& responses) {
   if (has_error) return;
 
   if (has_schema_agreement(responses)) {
-    logger_->debug("SchemaChangeHandler: Found schema agreement in %llu ms", elaspsed_);
+    logger_->debug("SchemaChangeHandler: Found schema agreement in %llu ms", elapsed_ms_);
     request_handler_->set_response(request_response_);
     return;
-  } else if (elaspsed_ >= MAX_SCHEMA_AGREEMENT_WAIT_MS) {
+  } else if (elapsed_ms_ >= MAX_SCHEMA_AGREEMENT_WAIT_MS) {
     logger_->warn("SchemaChangeHandler: No schema aggreement on live nodes after %llu ms. "
                   "Schema may not be up-to-date on some nodes.",
-                  elaspsed_);
+                  elapsed_ms_);
     request_handler_->set_response(request_response_);
     return;
   }
@@ -134,7 +134,7 @@ void SchemaChangeHandler::on_set(const ResponseVec& responses) {
         new SchemaChangeHandler(connection(),
                                 request_handler_.get(),
                                 request_response_,
-                                elaspsed_));
+                                elapsed_ms_));
   connection()->schedule_schema_agreement(handler,
                                           RETRY_SCHEMA_AGREEMENT_WAIT_MS);
 }

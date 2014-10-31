@@ -78,9 +78,9 @@ public:
     internal_wait(lock);
   }
 
-  virtual bool wait_for(uint64_t timeout) {
+  virtual bool wait_for(uint64_t timeout_us) {
     ScopedMutex lock(&mutex_);
-    return internal_wait_for(lock, timeout);
+    return internal_wait_for(lock, timeout_us);
   }
 
   bool is_error() { return get_error() != NULL; }
@@ -114,9 +114,9 @@ protected:
     }
   }
 
-  bool internal_wait_for(ScopedMutex& lock, uint64_t timeout) {
+  bool internal_wait_for(ScopedMutex& lock, uint64_t timeout_us) {
     if (!is_set_) {
-      if (uv_cond_timedwait(&cond_, lock.get(), timeout * 1000) != 0) { // Expects nanos
+      if (uv_cond_timedwait(&cond_, lock.get(), timeout_us * 1000) != 0) { // Expects nanos
         return false;
       }
     }

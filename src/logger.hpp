@@ -17,11 +17,12 @@
 #ifndef __CASS_LOGGER_HPP_INCLUDED__
 #define __CASS_LOGGER_HPP_INCLUDED__
 
-#include "cassandra.h"
-#include "loop_thread.hpp"
 #include "async_queue.hpp"
-#include "mpmc_queue.hpp"
+#include "cassandra.h"
 #include "config.hpp"
+#include "get_time.hpp"
+#include "loop_thread.hpp"
+#include "mpmc_queue.hpp"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -84,6 +85,7 @@ private:
 
   void log(CassLogLevel severity, const char* format, va_list args) {
     LogMessage* log_message = new LogMessage;
+    log_message->time = get_time_since_epoch_ms();
     log_message->severity = severity;
     log_message->message = format_message(format, args);
     if(!log_queue_.enqueue(log_message)) {

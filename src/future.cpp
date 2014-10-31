@@ -45,8 +45,8 @@ void cass_future_wait(CassFuture* future) {
   future->wait();
 }
 
-cass_bool_t cass_future_wait_timed(CassFuture* future, cass_duration_t wait) {
-  return static_cast<cass_bool_t>(future->wait_for(wait));
+cass_bool_t cass_future_wait_timed(CassFuture* future, cass_duration_t wait_us) {
+  return static_cast<cass_bool_t>(future->wait_for(wait_us));
 }
 
 CassSession* cass_future_get_session(CassFuture* future) {

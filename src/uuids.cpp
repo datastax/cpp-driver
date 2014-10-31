@@ -174,7 +174,7 @@ void Uuids::copy_timestamp(uint64_t timestamp, uint8_t version, Uuid uuid) {
 
 uint64_t Uuids::uuid_timestamp() {
   while (true) {
-    uint64_t now = from_unix_timestamp(get_time_since_epoch());
+    uint64_t now = from_unix_timestamp(get_time_since_epoch_ms());
     uint64_t last = last_timestamp_.load();
     if (now > last) {
       if (last_timestamp_.compare_exchange_strong(last, now)) {

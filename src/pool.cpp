@@ -75,7 +75,7 @@ void Pool::connect() {
 void Pool::close() {
   if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
     logger_->debug("Pool: closing pool(%p)", this);
-    // We're closing before we've connected (likely beause of an error), we need
+    // We're closing before we've connected (likely because of an error), we need
     // to notify we're "ready"
     if (state_ == POOL_STATE_CONNECTING) {
       state_ = POOL_STATE_CLOSING;
@@ -112,7 +112,7 @@ Connection* Pool::borrow_connection() {
 
   if (connection == NULL ||
       connection->pending_request_count() >=
-        config_.max_simultaneous_requests_threshold()) {
+        config_.max_concurrent_requests_threshold()) {
       maybe_spawn_connection();
   }
 
@@ -239,7 +239,7 @@ void Pool::spawn_connection() {
 }
 
 void Pool::maybe_spawn_connection() {
-  if (connections_pending_.size() >= config_.max_simultaneous_creation()) {
+  if (connections_pending_.size() >= config_.max_concurrent_creation()) {
     return;
   }
 
@@ -318,7 +318,7 @@ void Pool::on_pending_request_timeout(RequestTimer* timer) {
 }
 
 void Pool::wait_for_connection(RequestHandler* request_handler) {
-  request_handler->start_timer(loop_, config_.connect_timeout(), request_handler,
+  request_handler->start_timer(loop_, config_.connect_timeout_ms(), request_handler,
                                boost::bind(&Pool::on_pending_request_timeout, this, _1));
   add_pending_request(request_handler);
 }

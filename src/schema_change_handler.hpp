@@ -52,8 +52,8 @@ private:
 
   ScopedRefPtr<RequestHandler> request_handler_;
   Response* request_response_;
-  uint64_t start_;
-  uint64_t elaspsed_;
+  uint64_t start_ms_;
+  uint64_t elapsed_ms_;
 };
 
 } // namespace cass

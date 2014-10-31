@@ -32,7 +32,7 @@ std::string get_host_from_future(CassFuture* future) {
 }
 
 unsigned get_connect_timeout_from_cluster(CassCluster* cluster) {
-  return cluster->config().connect_timeout();
+  return cluster->config().connect_timeout_ms();
 }
 
 int get_port_from_cluster(CassCluster* cluster) {
