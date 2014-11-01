@@ -26,14 +26,16 @@ namespace cass {
 
 struct Token {
   typedef bool(*TokenComparator)(const Token&, const Token&);
-  Token(TokenComparator tc) : comp(tc) {}
+  Token(TokenComparator tc)
+    : comp(tc) {}
+
   bool operator<(const Token& other) const { return comp(*this, other); }
-  std::vector<uint8_t> token;
+  std::vector<uint8_t> data;
   TokenComparator comp;
 };
 
 typedef std::map<Token, SharedRefPtr<Host> > TokenHostMap;
-typedef std::map<Token, COWHostVec > TokenReplicaMap;
+typedef std::map<Token, COWHostVec> TokenReplicaMap;
 
 class ReplicaPlacementStrategy {
 public:
