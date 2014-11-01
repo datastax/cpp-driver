@@ -74,7 +74,6 @@ static const int64_t c2 = BIG_CONSTANT(0x4cf5ad432745937f);
 static const size_t BLOCK_SIZE = 16;
 
 void Murmur3::update(const void* data, size_t size) {
-  printf("%.*s\n", (int)size, data);
   int64_t k1;
   int64_t k2;
   const uint8_t* data_bytes = (uint8_t*)data;

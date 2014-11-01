@@ -80,6 +80,26 @@ public:
 };
 
 
+class RPTokenMap : public TokenMap {
+public:
+  static const std::string PARTIONER_CLASS;
+  static bool compare(const Token& a, const Token& b);
+
+  virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
+  virtual Token hash(const BufferRefs& key_parts) const;
+};
+
+
+class BOPTokenMap : public TokenMap {
+public:
+  static const std::string PARTIONER_CLASS;
+  static bool compare(const Token& a, const Token& b);
+
+  virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
+  virtual Token hash(const BufferRefs& key_parts) const;
+};
+
+
 class DHTMeta {
 public:
   void clear() { token_map_.reset(); }

@@ -24,29 +24,64 @@ namespace cass {
 
 static const COWHostVec EMPTY_REPLICA_COW_PTR(new HostVec());
 
-static void nstrtoll(const char* p, size_t n, int64_t* out) {
-    int c;
-    const unsigned char* s = (unsigned char*)p;
-    while (n != 0 && isspace(c = *s)) { ++s; --n; }
+static void parse_int64(const char* p, size_t n, int64_t* out) {
+  int c;
+  const unsigned char* s = (unsigned char*)p;
+  for (; n != 0 && isspace(c = *s); ++s, --n) {}
 
-    if (n == 0) {
-      *out = 0;
-      return;
-    }
+  if (n == 0) {
+    *out = 0;
+    return;
+  }
 
-    int64_t sign = 1;
-    if (c == '-') {
-      sign = -1;
-      ++s; --n;
-    }
+  int64_t sign = 1;
+  if (c == '-') {
+    sign = -1;
+    ++s; --n;
+  }
 
-    int64_t value = 0;
-    while(n != 0  && isdigit(c = *s)) {
-        ++s; --n;
-        value *= 10;
-        value += c - '0';
-    }
-    *out = sign*value;
+  int64_t value = 0;
+  for (; n != 0  && isdigit(c = *s); ++s, --n) {
+    value *= 10;
+    value += c - '0';
+  }
+  *out = sign*value;
+}
+
+static void parse_int128(const char* p, size_t n, uint64_t output[]) {
+  // no sign handling because C* uses [0, 2^127]
+  int c;
+  const unsigned char* s = (unsigned char*)p;
+  for (; n != 0 && isspace(c = *s); ++s, --n) {}
+
+  if (n == 0) {
+    memset(output, 0, sizeof(uint64_t) * 2);
+    return;
+  }
+
+  uint64_t hi = 0;
+  uint64_t lo = 0;
+  uint64_t hi_tmp;
+  uint64_t lo_tmp;
+  uint64_t lo_tmp2;
+  for (; n != 0  && isdigit(c = *s); ++s, --n) {
+    hi_tmp = hi;
+    lo_tmp = lo;
+
+    //value *= 10;
+    lo = lo_tmp << 1;
+    hi = (lo_tmp >> 63) + (hi_tmp << 1);
+    lo_tmp2 = lo;
+    lo += lo_tmp << 3;
+    hi += (lo_tmp >> 61) + (hi_tmp << 3) + (lo < lo_tmp2 ? 1 : 0);
+
+    //value += c - '0';
+    lo_tmp = lo;
+    lo += c - '0';
+    hi += (lo < lo_tmp) ? 1 : 0;
+  }
+  encode_int64((char*)output, hi);
+  encode_int64((char*)(output+1), lo);
 }
 
 
@@ -94,7 +129,6 @@ const COWHostVec& TokenMap::get_replicas(const std::string& ks_name, const Buffe
   KeyspaceReplicaMap::const_iterator i = keyspace_replica_map_.find(ks_name);
   if (i != keyspace_replica_map_.end()) {
     const Token t = hash(key_parts);
-    printf("%lld\n", *(int64_t*)&t.token[0]);
     TokenReplicaMap::const_iterator j = i->second.upper_bound(t);
     if (j != i->second.end()) {
       return j->second;
@@ -148,13 +182,14 @@ bool TokenMap::purge_address(const Address& addr) {
 const std::string M3PTokenMap::PARTIONER_CLASS("Murmur3Partitioner");
 
 bool M3PTokenMap::compare(const Token& l, const Token& r) {
-    return *reinterpret_cast<const int64_t*>(&l.token[0]) < *reinterpret_cast<const int64_t*>(&r.token[0]);
+  assert(l.data.size() == r.data.size() && r.data.size() == sizeof(int64_t));
+  return *reinterpret_cast<const int64_t*>(&l.data[0]) < *reinterpret_cast<const int64_t*>(&r.data[0]);
 }
 
 Token M3PTokenMap::token_from_string_ref(const boost::string_ref& token_string_ref) const {
   Token out(M3PTokenMap::compare);
-  out.token.assign(sizeof(int64_t), 0);
-  nstrtoll(token_string_ref.data(), token_string_ref.size(), (int64_t*)&out.token[0]);
+  out.data.assign(sizeof(int64_t), 0);
+  parse_int64(token_string_ref.data(), token_string_ref.size(), (int64_t*)&out.data[0]);
   return out;
 }
 
@@ -164,13 +199,71 @@ Token M3PTokenMap::hash(const BufferRefs& key_parts) const {
     hash.update(i->data(), i->size());
   }
   Token out(M3PTokenMap::compare);
-  out.token.assign(sizeof(int64_t), 0);
-  hash.final((int64_t*)&out.token[0], NULL);
+  out.data.assign(sizeof(int64_t), 0);
+  hash.final((int64_t*)&out.data[0], NULL);
   return out;
 }
 
-//const std::string XXTokenMap::PARTITIONER_CLASS("RandomPartitioner");
-//const std::string XXTokenMap::PARTITIONER_CLASS("OrderedPartitioner");
+
+const std::string RPTokenMap::PARTIONER_CLASS("RandomPartitioner");
+
+bool RPTokenMap::compare(const Token& l, const Token& r) {
+  assert(l.data.size() == r.data.size() && r.data.size() == 16);
+  return (l < r);
+}
+
+Token RPTokenMap::token_from_string_ref(const boost::string_ref& token_string_ref) const {
+  Token out(RPTokenMap::compare);
+  out.data.assign(sizeof(uint64_t) * 2, 0);
+  parse_int128(token_string_ref.data(), token_string_ref.size(), (uint64_t*)&out.data[0]);
+  return out;
+}
+
+Token RPTokenMap::hash(const BufferRefs& key_parts) const {
+  // TODO: needs md5 from CPP-102-final. TBD after merge/rebase
+//  Md5 hash;
+//  for (BufferRefs::const_iterator i = key_parts.begin(); i != key_parts.end(); ++i) {
+//    hash.update(i->data(), i->size());
+//  }
+//  Token out(RPTokenMap::compare);
+//  out.data.assign(sizeof(int64_t), 0);
+//  hash.final((int64_t*)&out.data[0], NULL);
+//  return out;
+  return Token(RPTokenMap::compare);
+}
+
+
+const std::string BOPTokenMap::PARTIONER_CLASS("ByteOrderedPartitioner");
+
+bool BOPTokenMap::compare(const Token& l, const Token& r) {
+  return l.data < r.data;
+}
+
+Token BOPTokenMap::token_from_string_ref(const boost::string_ref& token_string_ref) const {
+  Token out(BOPTokenMap::compare);
+  out.data.resize(token_string_ref.size());
+  memcpy(&out.data[0], token_string_ref.data(), token_string_ref.size());
+  return out;
+}
+
+Token BOPTokenMap::hash(const BufferRefs& key_parts) const {
+  size_t total_size = 0;
+  for (BufferRefs::const_iterator i = key_parts.begin();
+       i != key_parts.end(); ++i) {
+    total_size += i->size();
+  }
+  Token out(BOPTokenMap::compare);
+  out.data.resize(total_size);
+  uint8_t* base = &out.data[0];
+  size_t offset = 0;
+  for (BufferRefs::const_iterator i = key_parts.begin();
+       i != key_parts.end(); ++i) {
+    memcpy(base + offset, i->data(), i->size());
+    offset += i->size();
+  }
+  return out;
+}
+
 
 void DHTMeta::build() {
   if (token_map_.get()) {

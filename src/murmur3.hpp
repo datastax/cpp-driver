@@ -31,8 +31,6 @@ public:
   void final(int64_t* h1_out, int64_t* h2_out);
 
 private:
-  size_t ingest(int64_t k1, int64_t k2, int64_t* data, size_t size);
-
   int64_t h1_;
   int64_t h2_;
   size_t length_;
