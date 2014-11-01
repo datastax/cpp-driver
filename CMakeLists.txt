@@ -7,6 +7,14 @@ set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
 set(CASS_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
 project(${PROJECT_NAME_STR} C CXX)
 
+if(32BIT)
+  set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS FALSE)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -m32")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -m32")
+endif()
+
 option(CASS_INSTALL_HEADER "Install header file" ON)
 option(CASS_BUILD_STATIC "Build static library" ON)
 option(CASS_BUILD_EXAMPLES "Build examples" ON)
@@ -43,7 +51,7 @@ else()
 endif()
 
 find_path(LIBUV_INCLUDE_DIR
-  NAMES uv.h 
+  NAMES uv.h
   HINTS ${_LIBUV_INCLUDEDIR} ${_LIBUV_ROOT_HINTS_AND_PATHS}
   PATH_SUFFIXES include)
 
@@ -104,7 +112,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /NODEFAULTLIB:LIBCMT")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:LIBCMT")
- 
+
   # On Visual C++ -pedantic flag is not used,
   # -fPIC is not used on Windows platform (all DLLs are
   # relocable), -Wall generates about 30k stupid warnings
@@ -174,10 +182,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 file(GLOB INC_FILES
   ${PROJECT_SOURCE_DIR}/include/*.h )
 
-file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp) 
+file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
 set(SRC_FILES ${SRC_FILES}
-  "${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/atomic/src/lockpool.cpp" 
+  "${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/atomic/src/lockpool.cpp"
   "${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/random/src/random_device.cpp")
 
 source_group("Source Files" FILES ${SRC_FILES})
@@ -220,15 +228,23 @@ endif()
 
 if(CASS_INSTALL_HEADER)
   # Where to put headers
-  set(INSTALL_HEADERS_DIR "${CMAKE_INSTALL_PREFIX}/include/")
+  set(INSTALL_HEADERS_DIR "include")
   install(FILES ${INC_FILES} DESTINATION "${INSTALL_HEADERS_DIR}")
 endif()
 
-# Where to put libraries
-set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib")
+# Where to put libraries - either lib or lib64.
+get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
+
+if ("${LIB64}" STREQUAL "TRUE")
+    set(LIBSUFFIX 64)
+else()
+    set(LIBSUFFIX "")
+endif()
+
+set(INSTALL_LIB_DIR "lib${LIBSUFFIX}")
 
 # For windows only
-set(INSTALL_DLL_DIR "${CMAKE_INSTALL_PREFIX}/bin")
+set(INSTALL_DLL_DIR "bin")
 
 install(TARGETS ${PROJECT_LIB_NAME}
   RUNTIME DESTINATION ${INSTALL_DLL_DIR}  # for dll files
@@ -310,3 +326,21 @@ if(DOXYGEN_FOUND)
     COMMENT "Generating API documentation with Doxygen" VERBATIM)
 endif(DOXYGEN_FOUND)
 
+#-----------------------------------
+# Build an RPM.
+#-----------------------------------
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION_STRING})
+set(CPACK_GENERATOR "RPM")
+set(CPACK_PACKAGE_NAME "cpp-cassandra-driver")
+set(CPACK_PACKAGE_RELEASE 1)
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "C++ driver for Cassandra")
+set(CPACK_PACKAGE_CONTACT "David Hotham")
+set(CPACK_PACKAGE_VENDOR "Metaswitch")
+if(32BIT)
+  set(CPACK_RPM_PACKAGE_ARCHITECTURE i686)
+else()
+  set(CPACK_RPM_PACKAGE_ARCHITECTURE x86_64)
+endif()
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CPACK_RPM_PACKAGE_ARCHITECTURE}")
+set(CPACK_RPM_PACKAGE_REQUIRES "libuv")
+include(CPack)

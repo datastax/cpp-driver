@@ -1,3 +1,24 @@
+This is the [DataStax C/C++ Driver for Apache Cassandra](https://github.com/datastax/cpp-driver).
+
+The only point of this repository is its rpmbuild branch, which uses CPack to add convenient building of RPMs.
+
+This process has been tested on 64-bit CentOS 6.5 only:
+
+```
+cmake28 -DCMAKE_BUILD_TYPE=RELEASE .
+make package
+```
+
+To build a 32-bit package:
+
+```
+cmake -DCMAKE_BUILD_TYPE=RELEASE -D32BIT=ON .
+setarch i686 make package
+```
+
+The remainder of this README is per the original.
+
+
 DataStax C/C++ Driver for Apache Cassandra (Beta)
 ===============================================
 
