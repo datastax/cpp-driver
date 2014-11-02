@@ -24,6 +24,7 @@
 #include "result_iterator.hpp"
 #include "error_response.hpp"
 #include "result_response.hpp"
+#include "schema_metadata.hpp"
 #include "session.hpp"
 #include "timer.hpp"
 
@@ -37,6 +38,11 @@
 
 #define SELECT_LOCAL "SELECT data_center, rack FROM system.local WHERE key='local'"
 #define SELECT_PEERS "SELECT peer, data_center, rack, rpc_address FROM system.peers"
+
+#define SELECT_KEYSPACES "SELECT * FROM system.schema_keyspaces"
+#define SELECT_COLUMN_FAMILIES "SELECT * FROM system.schema_columnfamilies"
+#define SELECT_COLUMNS "SELECT * FROM system.schema_columns"
+
 
 namespace cass {
 
@@ -157,7 +163,7 @@ void ControlConnection::reconnect(bool retry_current_host) {
   connection_->set_close_callback(
         boost::bind(&ControlConnection::on_connection_closed, this, _1));
   connection_->set_event_callback(
-        CASS_EVENT_TOPOLOGY_CHANGE | CASS_EVENT_STATUS_CHANGE,
+        CASS_EVENT_TOPOLOGY_CHANGE | CASS_EVENT_STATUS_CHANGE | CASS_EVENT_SCHEMA_CHANGE,
         boost::bind(&ControlConnection::on_connection_event, this, _1));
   connection_->connect();
 }
@@ -166,9 +172,12 @@ void ControlConnection::on_connection_ready(Connection* connection) {
   logger_->debug("ControlConnection: Connection ready on host %s",
                  connection->address().to_string().c_str());
 
-  // The control connection has to refresh the node list anytime
-  // there's a reconnect because several events could have been missed while not connected.
-  refresh_node_list();
+  // A protocol version is need to encode/decode maps properly
+  session_->schema().set_protocol_version(protocol_version_);
+
+  // The control connection has to refresh meta when there's a reconnect because
+  // events could have been missed while not connected.
+  query_meta_all();
 }
 
 void ControlConnection::on_connection_closed(Connection* connection) {
@@ -206,14 +215,17 @@ void ControlConnection::on_connection_closed(Connection* connection) {
   reconnect(retry_current_host);
 }
 
-void ControlConnection::refresh_node_list() {
+void ControlConnection::query_meta_all() {
   ScopedRefPtr<ControlMultipleRequestHandler> handler(
-        new ControlMultipleRequestHandler(this, boost::bind(&ControlConnection::on_node_refresh, this, _1)));
+        new ControlMultipleRequestHandler(this, boost::bind(&ControlConnection::on_query_meta_all, this, _1)));
   handler->execute_query(SELECT_LOCAL);
   handler->execute_query(SELECT_PEERS);
+  handler->execute_query(SELECT_KEYSPACES);
+  handler->execute_query(SELECT_COLUMN_FAMILIES);
+  handler->execute_query(SELECT_COLUMNS);
 }
 
-void ControlConnection::on_node_refresh(const MultipleRequestHandler::ResponseVec& responses) {
+void ControlConnection::on_query_meta_all(const MultipleRequestHandler::ResponseVec& responses) {
   if (connection_ == NULL) {
     return;
   }
@@ -269,6 +281,11 @@ void ControlConnection::on_node_refresh(const MultipleRequestHandler::ResponseVe
   }
 
   session_->purge_hosts(is_initial_connection);
+
+  session_->schema().clear();
+  session_->schema().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
+  session_->schema().update_tables(static_cast<ResultResponse*>(responses[3]));
+  session_->schema().update_columns(static_cast<ResultResponse*>(responses[4]));
 
   if (is_initial_connection) {
     state_ = CONTROL_STATE_READY;
@@ -371,7 +388,6 @@ void ControlConnection::on_refresh_node_info_all(RefreshNodeData data, Response*
   }
 }
 
-
 void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row) {
   const Value* v;
 
@@ -409,6 +425,65 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
   }
 }
 
+void ControlConnection::refresh_keyspace(const boost::string_ref& keyspace_name) {
+  std::string query(SELECT_KEYSPACES);
+  query.append(" WHERE keyspace_name='")
+       .append(keyspace_name.data(), keyspace_name.size())
+       .append("'");
+
+  logger_->debug("ControlConnection: refresh_keyspace: %s", query.c_str());
+
+  connection_->write(
+        new ControlHandler<std::string>(new QueryRequest(query),
+                                            this,
+                                            boost::bind(&ControlConnection::on_refresh_keyspace, this, _1, _2),
+                                            keyspace_name.to_string()));
+}
+
+void ControlConnection::on_refresh_keyspace(const std::string& keyspace_name, Response* response) {
+  ResultResponse* result = static_cast<ResultResponse*>(response);
+  if (result->row_count() == 0) {
+    logger_->error("ControlConnection: No row found for keyspace %s in system schema table.",
+                   keyspace_name.c_str());
+    return;
+  }
+  session_->schema().update_keyspaces(result);
+}
+
+void ControlConnection::refresh_table(const boost::string_ref& keyspace_name,
+                                      const boost::string_ref& table_name) {
+  std::string cf_query(SELECT_COLUMN_FAMILIES);
+  cf_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+          .append("' AND columnfamily_name='").append(table_name.data(), table_name.size()).append("'");
+
+  std::string col_query(SELECT_COLUMNS);
+  col_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+           .append("' AND columnfamily_name='").append(table_name.data(), table_name.size()).append("'");
+
+  logger_->debug("ControlConnection: refresh_table: %s; %s", cf_query.c_str(), col_query.c_str());
+
+  ScopedRefPtr<ControlMultipleRequestHandler> handler(
+        new ControlMultipleRequestHandler(this,
+                                          boost::bind(&ControlConnection::on_refresh_table,
+                                                      this, keyspace_name.to_string(),
+                                                      table_name.to_string(), _1)));
+  handler->execute_query(cf_query);
+  handler->execute_query(col_query);
+}
+
+void ControlConnection::on_refresh_table(const std::string& keyspace_name,
+                                         const std::string& table_name,
+                                         const MultipleRequestHandler::ResponseVec& responses) {
+  ResultResponse* column_family_result = static_cast<ResultResponse*>(responses[0]);
+  if (column_family_result->row_count() == 0) {
+    logger_->error("ControlConnection: No row found for column family %s.%s in system schema table.",
+                   keyspace_name.c_str(), table_name.c_str());
+    return;
+  }
+  session_->schema().update_tables(column_family_result);
+  session_->schema().update_columns(static_cast<ResultResponse*>(responses[1]));
+}
+
 bool ControlConnection::handle_query_invalid_response(Response* response) {
   if (check_error_or_invalid_response("ControlConnection", CQL_OPCODE_RESULT,
                                       response, logger_)) {
@@ -437,10 +512,9 @@ void ControlConnection::handle_query_timeout() {
 }
 
 void ControlConnection::on_connection_event(EventResponse* response) {
-  std::string address_str = response->affected_node().to_string();
-
   switch (response->event_type()) {
-    case CASS_EVENT_TOPOLOGY_CHANGE:
+    case CASS_EVENT_TOPOLOGY_CHANGE: {
+      std::string address_str = response->affected_node().to_string();
       switch (response->topology_change()) {
         case EventResponse::NEW_NODE: {
           session_->logger_->info("ControlConnection: New node %s added", address_str.c_str());
@@ -468,8 +542,10 @@ void ControlConnection::on_connection_event(EventResponse* response) {
           break;
       }
       break;
+    }
 
-    case CASS_EVENT_STATUS_CHANGE:
+    case CASS_EVENT_STATUS_CHANGE: {
+      std::string address_str = response->affected_node().to_string();
       switch (response->status_change()) {
         case EventResponse::UP: {
           session_->logger_->info("ControlConnection: Node %s is up", address_str.c_str());
@@ -484,16 +560,30 @@ void ControlConnection::on_connection_event(EventResponse* response) {
         }
       }
       break;
+    }
 
     case CASS_EVENT_SCHEMA_CHANGE:
+      logger_->debug("ControlConnection: Schema change (%d): %.*s %.*s\n",
+                     response->schema_change(),
+                     (int)response->keyspace().size(), response->keyspace().data(),
+                     (int)response->table().size(), response->table().data());
       switch (response->schema_change()) {
         case EventResponse::CREATED:
-          break;
-
         case EventResponse::UPDATED:
+          if (response->table().size() > 0) {
+            refresh_table(response->keyspace(), response->table());
+          } else {
+            refresh_keyspace(response->keyspace());
+          }
           break;
 
         case EventResponse::DROPPED:
+          if (response->table().size() > 0) {
+            session_->schema().drop_table(response->keyspace().to_string(),
+                                          response->table().to_string());
+          } else {
+            session_->schema().drop_keyspace(response->keyspace().to_string());
+          }
           break;
       }
       break;

@@ -28,7 +28,7 @@ Buffer::Buffer(const BufferCollection* collection)
 
 Buffer::~Buffer() {
   if (size_ > FIXED_BUFFER_SIZE) {
-    data_.ref.array->dec_ref();
+    data_.ref.buffer->dec_ref();
   } else if (size_ == IS_COLLECTION) {
     data_.ref.collection->dec_ref();
   }
@@ -43,8 +43,8 @@ void Buffer::copy(const Buffer& buffer) {
   BufferRef temp = data_.ref;
 
   if (buffer.size_ > FIXED_BUFFER_SIZE) {
-    buffer.data_.ref.array->inc_ref();
-    data_.ref.array = buffer.data_.ref.array;
+    buffer.data_.ref.buffer->inc_ref();
+    data_.ref.buffer = buffer.data_.ref.buffer;
   } else if (buffer.size_ == IS_COLLECTION) {
     buffer.data_.ref.collection->inc_ref();
     data_.ref.collection = buffer.data_.ref.collection;
@@ -53,7 +53,7 @@ void Buffer::copy(const Buffer& buffer) {
   }
 
   if (size_ > FIXED_BUFFER_SIZE) {
-    temp.array->dec_ref();
+    temp.buffer->dec_ref();
   } else if (size_ == IS_COLLECTION) {
     temp.collection->dec_ref();
   }

@@ -27,7 +27,7 @@ namespace cass {
 class CollectionIterator : public Iterator {
 public:
   CollectionIterator(const Value* collection)
-      : Iterator(CASS_ITERATOR_COLLECTION)
+      : Iterator(CASS_ITERATOR_TYPE_COLLECTION)
       , collection_(collection)
       , position_(collection->buffer().data())
       , index_(-1)

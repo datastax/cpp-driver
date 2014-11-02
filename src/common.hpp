@@ -20,12 +20,15 @@
 #include "cassandra.h"
 
 #include "third_party/boost/boost/static_assert.hpp"
+#include "uv.h"
 
-#include <uv.h>
-#include <string.h>
+#include <list>
+#include <map>
 #include <string>
 
 namespace cass {
+
+class BufferPiece;
 
 // copy_cast<> prevents incorrect code from being generated when two unrelated 
 // types reference the same memory location and strict aliasing is enabled.

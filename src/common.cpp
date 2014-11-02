@@ -16,15 +16,11 @@
 
 #include "common.hpp"
 
+#include "buffer_piece.hpp"
 #include "constants.hpp"
 
-#include <assert.h>
-#include <ctype.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
 #include <algorithm>
-#include <functional>
+#include <assert.h>
 
 namespace cass {
 

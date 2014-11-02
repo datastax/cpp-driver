@@ -99,30 +99,43 @@ namespace cass {
 int BufferCollection::encode(int version, BufferVec* bufs) const {
   if (version != 1 && version != 2) return -1;
 
-  int value_size = sizeof(uint16_t);
+  int buf_size = sizeof(int32_t) + sizeof(uint16_t) + calculate_size(version);
 
+  Buffer buf(buf_size);
+
+  int pos = 0;
+  pos = buf.encode_int32(pos, buf_size);
+  pos = buf.encode_uint16(pos, is_map_ ? bufs_.size() / 2 : bufs_.size());
+
+  encode(version, buf.data() + pos);
+
+  bufs->push_back(buf);
+
+  return buf_size;
+}
+
+int BufferCollection::calculate_size(int version) const {
+  if (version != 1 && version != 2) return -1;
+  int value_size = 0;
   for (BufferVec::const_iterator it = bufs_.begin(),
       end = bufs_.end(); it != end; ++it) {
     value_size += sizeof(uint16_t);
     value_size += it->size();
   }
+  return value_size;
+}
 
-  int buf_size = sizeof(int32_t) + value_size;
-
-  Buffer buf(buf_size);
-
-  size_t pos = buf.encode_int32(0, value_size);
-
-  pos = buf.encode_uint16(pos, is_map_ ? bufs_.size() / 2 : bufs_.size());
+void BufferCollection::encode(int version, char* buf) const {
+  assert(version == 1 || version == 2);
+  char* pos = buf;
   for (BufferVec::const_iterator it = bufs_.begin(),
       end = bufs_.end(); it != end; ++it) {
-    pos = buf.encode_uint16(pos, it->size());
-    pos = buf.copy(pos, it->data(), it->size());
+    encode_uint16(pos, it->size());
+    pos += sizeof(uint16_t);
+
+    memcpy(pos, it->data(), it->size());
+    pos += it->size();
   }
-
-  bufs->push_back(buf);
-
-  return buf_size;
 }
 
 }

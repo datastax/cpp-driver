@@ -27,7 +27,7 @@ namespace cass {
 class MapIterator : public Iterator {
 public:
   MapIterator(const Value* map)
-      : Iterator(CASS_ITERATOR_MAP)
+      : Iterator(CASS_ITERATOR_TYPE_MAP)
       , map_(map)
       , position_(map->buffer().data())
       , index_(-1)

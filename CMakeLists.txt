@@ -32,6 +32,7 @@ set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
 set(INCLUDES ${INCLUDES} ${PROJECT_SOURCE_DIR}/src)
 set(INCLUDES ${INCLUDES} ${PROJECT_SOURCE_DIR}/src/third_party/boost)
+set(INCLUDES ${INCLUDES} ${PROJECT_SOURCE_DIR}/src/third_party/rapidjson)
 
 #-------------------
 # Dependencies
@@ -315,6 +316,7 @@ if(CASS_BUILD_EXAMPLES)
   add_subdirectory(examples/maps)
   add_subdirectory(examples/prepared)
   add_subdirectory(examples/uuids)
+  add_subdirectory(examples/schema_meta)
   add_subdirectory(examples/simple)
   add_subdirectory(examples/ssl)
   add_subdirectory(examples/paging)

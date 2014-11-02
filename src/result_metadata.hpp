@@ -78,11 +78,11 @@ struct ColumnDefinition {
   size_t collection_secondary_class_size;
 };
 
-class Metadata : public RefCounted<Metadata> {
+class ResultMetadata : public RefCounted<ResultMetadata> {
 public:
   typedef FixedVector<size_t, 16> IndexVec;
 
-  Metadata(size_t column_count);
+  ResultMetadata(size_t column_count);
 
   const ColumnDefinition& get(size_t index) const { return defs_[index]; }
 
@@ -100,7 +100,7 @@ private:
   size_t index_mask_;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(Metadata);
+  DISALLOW_COPY_AND_ASSIGN(ResultMetadata);
 };
 
 } // namespace cass

@@ -36,7 +36,6 @@ void print_error(CassFuture* future) {
   fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
 }
 
-
 CassCluster* create_cluster() {
   CassCluster* cluster = cass_cluster_new();
   cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");

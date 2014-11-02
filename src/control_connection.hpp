@@ -149,7 +149,8 @@ private:
   void reconnect(bool retry_current_host);
 
   void on_connection_ready(Connection* connection);
-  void on_node_refresh(const MultipleRequestHandler::ResponseVec& responses);
+  //TODO: possibly reorder callback functions to pair with initiator
+  void on_query_meta_all(const MultipleRequestHandler::ResponseVec& responses);
   void on_refresh_node_info(RefreshNodeData data, Response* response);
   void on_refresh_node_info_all(RefreshNodeData data, Response* response);
   void on_local_query(ResponseMessage* response);
@@ -162,9 +163,18 @@ private:
   void handle_query_failure(CassError code, const std::string& message);
   void handle_query_timeout();
 
-  void refresh_node_list();
+  void query_meta_all();
   void refresh_node_info(SharedRefPtr<Host> host, RefreshNodeCallback callback);
   void update_node_info(SharedRefPtr<Host> host, const Row* row);
+
+  void refresh_keyspace(const boost::string_ref& keyspace_name);
+  void on_refresh_keyspace(const std::string& keyspace_name, Response* response);
+
+  void refresh_table(const boost::string_ref& keyspace_name,
+                     const boost::string_ref& table_name);
+  void on_refresh_table(const std::string& keyspace_name,
+                        const std::string& table_name,
+                        const MultipleRequestHandler::ResponseVec& responses);
 
 private:
   Session* session_;

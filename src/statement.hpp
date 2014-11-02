@@ -163,7 +163,7 @@ public:
     CASS_VALUE_CHECK_INDEX(index);
     Buffer buf(4 + custom.output_size);
     size_t pos = buf.encode_int32(0, custom.output_size);
-    *(custom.output) = reinterpret_cast<uint8_t*>(const_cast<char*>(buf.data() + pos));
+    *(custom.output) = reinterpret_cast<uint8_t*>(buf.data() + pos);
     values_[index] = buf;
     return CASS_OK;
   }
