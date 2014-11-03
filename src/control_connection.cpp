@@ -348,7 +348,9 @@ void ControlConnection::on_refresh_node_info(RefreshNodeData data, Response* res
   }
   result->decode_first_row();
   update_node_info(data.host, &result->first_row());
-  data.callback(data.host);
+  if (data.callback) {
+    data.callback(data.host);
+  }
 }
 
 void ControlConnection::on_refresh_node_info_all(RefreshNodeData data, Response* response) {
@@ -495,7 +497,6 @@ bool ControlConnection::handle_query_invalid_response(Response* response) {
   return false;
 }
 
-
 void ControlConnection::handle_query_failure(CassError code, const std::string& message) {
   // TODO(mpenick): This is a placeholder and might not be the right action for
   // all error scenarios
@@ -597,7 +598,14 @@ void ControlConnection::on_connection_event(EventResponse* response) {
 void ControlConnection::on_up(const Address& address) {
   SharedRefPtr<Host> host = session_->get_host(address);
   if (host) {
-    refresh_node_info(host, boost::bind(&Session::on_up, session_, _1));
+    if (host->is_up()) return;
+
+    // Immediately mark the node as up and asyncrhonously attempt
+    // to refresh the node's information. This is done because
+    // a control connection may not be available because it's
+    // waiting for a node to be marked as up.
+    session_->on_up(host);
+    refresh_node_info(host, RefreshNodeCallback());
   } else {
     host = session_->add_host(address);
     refresh_node_info(host, boost::bind(&Session::on_add, session_, _1, false));
@@ -607,6 +615,8 @@ void ControlConnection::on_up(const Address& address) {
 void ControlConnection::on_down(const Address& address, bool is_critical_failure) {
   SharedRefPtr<Host> host = session_->get_host(address);
   if (host) {
+    if (host->is_down()) return;
+
     session_->on_down(host, is_critical_failure);
   } else {
     logger_->debug("ControlConnection: Tried to down host %s that doesn't exist", address.to_string().c_str());

@@ -118,14 +118,6 @@ bool IOWorker::remove_pool_async(const Address& address) {
   return send_event_async(event);
 }
 
-bool IOWorker::schedule_reconnect_async(const Address& address, uint64_t wait) {
-  IOWorkerEvent event;
-  event.type = IOWorkerEvent::SCHEDULE_RECONNECT;
-  event.address = address;
-  event.reconnect_wait = wait;
-  return send_event_async(event);
-}
-
 void IOWorker::close_async() {
   while (!request_queue_.enqueue(NULL)) {
     // Keep trying
@@ -207,6 +199,7 @@ void IOWorker::notify_pool_closed(Pool* pool) {
   if (is_closing_) {
     maybe_notify_closed();
   } else {
+    schedule_reconnect(address);
     session_->notify_down_async(address, is_critical_failure);
   }
 }
@@ -270,40 +263,18 @@ void IOWorker::on_event(const IOWorkerEvent& event) {
     case IOWorkerEvent::ADD_POOL: {
       // Stop any attempts to reconnect because add_pool() is going to attempt
       // reconnection right away.
-      PendingReconnectMap::iterator it = pending_reconnects_.find(event.address);
-      if (it != pending_reconnects_.end()) {
-        logger_->debug("IOWorker: ADD_POOL for %s canceling reconnect(%p timer(%p)) io_worker(%p)",
-                       event.address.to_string().c_str(),
-                       &it->second,
-                       it->second.timer, this);
-        it->second.stop_timer();
-        pending_reconnects_.erase(it);
-      }
+      cancel_reconnect(event.address);
       add_pool(event.address, event.is_initial_connection);
       break;
     }
+
     case IOWorkerEvent::REMOVE_POOL: {
+      cancel_reconnect(event.address);
       PoolMap::iterator it = pools_.find(event.address);
       if (it != pools_.end()) {
         logger_->debug("IOWorker: REMOVE_POOL for %s closing pool(%p) io_worker(%p)", event.address.to_string().c_str(), it->second.get(), this);
         it->second->close();
       }
-      break;
-    }
-    case IOWorkerEvent::SCHEDULE_RECONNECT: {
-      if (is_closing_ || pending_reconnects_.count(event.address) > 0) {
-        logger_->debug("IOWorker: SCHEDULE_RECONNECT already pending for %s io_worker(%p)", event.address.to_string().c_str(), this);
-        return;
-      }
-
-      PendingReconnect& pr = pending_reconnects_[event.address];
-      pr.address = event.address;
-      pr.timer = Timer::start(loop(),
-                              event.reconnect_wait,
-                              &pr,
-                              boost::bind(&IOWorker::on_pending_pool_reconnect, this, _1));
-      logger_->debug("IOWorker: SCHEDULE_RECONNECT for %s reconnect(%p timer(%p)) io_worker(%p)",
-                     event.address.to_string().c_str(), &pr, pr.timer, this);
       break;
     }
 
@@ -342,6 +313,33 @@ void IOWorker::on_prepare(uv_prepare_t* prepare, int status) {
   io_worker->pools_pending_flush_.clear();
 }
 
+void IOWorker::schedule_reconnect(const Address& address) {
+  if (is_closing_ || pending_reconnects_.count(address) > 0) {
+    logger_->debug("IOWorker: Reconnect already pending for host %s io_worker(%p)", address.to_string().c_str(), this);
+    return;
+  }
+
+  PendingReconnect& pr = pending_reconnects_[address];
+  pr.address = address;
+  pr.timer = Timer::start(loop(),
+                          config_.reconnect_wait_time_ms(),
+                          &pr,
+                          boost::bind(&IOWorker::on_pending_pool_reconnect, this, _1));
+  logger_->debug("IOWorker: Scheduling reconnect(%p timer(%p)) for host %s io_worker(%p)",
+                 address.to_string().c_str(), &pr, pr.timer, this);
+}
+
+void IOWorker::cancel_reconnect(const Address& address) {
+  PendingReconnectMap::iterator it = pending_reconnects_.find(address);
+  if (it != pending_reconnects_.end()) {
+    logger_->debug("IOWorker: Canceling reconnect(%p timer(%p)) for host %s io_worker(%p)",
+                   address.to_string().c_str(),
+                   &it->second,
+                   it->second.timer, this);
+    it->second.stop_timer();
+    pending_reconnects_.erase(it);
+  }
+}
 
 void IOWorker::PendingReconnect::stop_timer() {
   if (timer != NULL) {
