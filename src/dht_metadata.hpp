@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_DHT_META_HPP_INCLUDED__
-#define __CASS_DHT_META_HPP_INCLUDED__
+#ifndef __CASS_DHT_METADATA_HPP_INCLUDED__
+#define __CASS_DHT_METADATA_HPP_INCLUDED__
 
 #include "buffer.hpp"
 #include "copy_on_write_ptr.hpp"
@@ -41,7 +41,7 @@ public:
 
   void update_host(SharedRefPtr<Host>& host, const TokenStringList& token_strings);
   void remove_host(SharedRefPtr<Host>& host);
-  void update_keyspace(const KeyspaceMetadata& ks_meta);
+  void update_keyspace(const std::string& ks_name, const KeyspaceMetadata& ks_meta);
   void drop_keyspace(const std::string& ks_name);
   const COWHostVec& get_replicas(const std::string& ks_name,
                                               const BufferRefs& key_parts) const;
@@ -100,14 +100,14 @@ public:
 };
 
 
-class DHTMeta {
+class DHTMetadata {
 public:
   void clear() { token_map_.reset(); }
   void build();
   void set_partitioner(const std::string& partitioner_class);
   void update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens);
   void remove_host(SharedRefPtr<Host>& host);
-  void update_keyspace(const KeyspaceModel& ks_name);
+  void update_keyspace(const std::string& ks_name, const KeyspaceMetadata& ks_meta);
   void drop_keyspace(const std::string& ks_name);
 
   const COWHostVec& get_replicas(const std::string& ks_name, const BufferRefs& key_parts) const;

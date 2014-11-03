@@ -50,7 +50,7 @@ public:
 class NetworkTopologyStrategy : public ReplicaPlacementStrategy {
 public:
   static const std::string STRATEGY_CLASS;
-  NetworkTopologyStrategy(const StrategyOptionsMap& options);
+  NetworkTopologyStrategy(const KeyspaceMetadata::StrategyOptions& options);
   virtual ~NetworkTopologyStrategy() {}
 
   virtual bool equals(const ReplicaPlacementStrategy& other);
@@ -64,7 +64,7 @@ private:
 class SimpleStrategy : public ReplicaPlacementStrategy {
 public:
   static const std::string STRATEGY_CLASS;
-  SimpleStrategy(const StrategyOptionsMap& options);
+  SimpleStrategy(const KeyspaceMetadata::StrategyOptions& options);
   virtual ~SimpleStrategy() {}
 
   virtual bool equals(const ReplicaPlacementStrategy& other);

@@ -58,7 +58,8 @@ public:
       , log_callback_(default_log_callback)
       , log_data_(NULL)
       , auth_provider_(new AuthProvider())
-      , load_balancing_policy_(new RoundRobinPolicy()) {}
+      , load_balancing_policy_(new RoundRobinPolicy())
+      , token_aware_routing_(true) {}
 
   unsigned thread_count_io() const { return thread_count_io_; }
 

@@ -46,7 +46,7 @@ public:
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
                                     const Request* request,
-                                    const DHTMeta& dht) {
+                                    const DHTMetadata& dht) {
     return new RoundRobinQueryPlan(hosts_, index_++);
   }
 

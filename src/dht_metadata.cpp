@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "dht_meta.hpp"
+#include "dht_metadata.hpp"
 #include "murmur3.hpp"
 
 #include <algorithm>
@@ -106,14 +106,14 @@ void TokenMap::remove_host(SharedRefPtr<Host>& host) {
   }
 }
 
-void TokenMap::update_keyspace(const KeyspaceMetadata& ks_meta) {
+void TokenMap::update_keyspace(const std::string& ks_name, const KeyspaceMetadata& ks_meta) {
   ScopedPtr<ReplicaPlacementStrategy> rps_now(ReplicaPlacementStrategy::from_keyspace_meta(ks_meta));
-  KeyspaceStrategyMap::iterator i = keyspace_strategy_map_.find(ks_meta.name_);
+  KeyspaceStrategyMap::iterator i = keyspace_strategy_map_.find(ks_name);
   if (i == keyspace_strategy_map_.end() ||
       !i->second->equals(*rps_now)) {
-    map_keyspace_replicas(ks_meta.name_, *rps_now);
+    map_keyspace_replicas(ks_name, *rps_now);
     if (i == keyspace_strategy_map_.end()) {
-      keyspace_strategy_map_[ks_meta.name_].reset(rps_now.release());
+      keyspace_strategy_map_[ks_name].reset(rps_now.release());
     } else {
       i->second.reset(rps_now.release());
     }
@@ -265,13 +265,13 @@ Token BOPTokenMap::hash(const BufferRefs& key_parts) const {
 }
 
 
-void DHTMeta::build() {
+void DHTMetadata::build() {
   if (token_map_.get()) {
     token_map_->build();
   }
 }
 
-void DHTMeta::set_partitioner(const std::string& partitioner_class) {
+void DHTMetadata::set_partitioner(const std::string& partitioner_class) {
   if (token_map_.get()) {
     return;
   }
@@ -285,31 +285,31 @@ void DHTMeta::set_partitioner(const std::string& partitioner_class) {
   }
 }
 
-void DHTMeta::update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens) {
+void DHTMetadata::update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens) {
   if (token_map_) {
     token_map_->update_host(host, tokens);
   }
 }
 
-void DHTMeta::remove_host(SharedRefPtr<Host>& host) {
+void DHTMetadata::remove_host(SharedRefPtr<Host>& host) {
   if (token_map_) {
     token_map_->remove_host(host);
   }
 }
 
-void DHTMeta::update_keyspace(const KeyspaceModel& ksm) {
+void DHTMetadata::update_keyspace(const std::string& ks_name, const KeyspaceMetadata& ks_meta) {
   if (token_map_) {
-    token_map_->update_keyspace(ksm.meta());
+    token_map_->update_keyspace(ks_name, ks_meta);
   }
 }
 
-void DHTMeta::drop_keyspace(const std::string& ks_name) {
+void DHTMetadata::drop_keyspace(const std::string& ks_name) {
   if (token_map_) {
     token_map_->drop_keyspace(ks_name);
   }
 }
 
-const COWHostVec& DHTMeta::get_replicas(const std::string& ks_name, const BufferRefs& key_parts) const {
+const COWHostVec& DHTMetadata::get_replicas(const std::string& ks_name, const BufferRefs& key_parts) const {
   if (token_map_) {
     return token_map_->get_replicas(ks_name, key_parts);
   }

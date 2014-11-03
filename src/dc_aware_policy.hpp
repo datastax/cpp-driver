@@ -51,7 +51,7 @@ public:
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
                                     const Request* request,
-                                    const DHTMeta& dht) {
+                                    const DHTMetadata& dht) {
     return new DCAwareQueryPlan(local_rr_policy_.new_query_plan(connected_keyspace, request, dht),
                                 remote_rr_policy_.new_query_plan(connected_keyspace, request, dht));
   }
