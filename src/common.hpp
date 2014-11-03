@@ -61,6 +61,10 @@ std::string opcode_to_string(int opcode);
 
 std::string& trim(std::string& str);
 
+void get_optional_string(const Value* v, std::string* output, const char* deflt = NULL);
+
+bool string_ends_with(const std::string& target, const std::string& suffix);
+
 } // namespace cass
 
 #endif

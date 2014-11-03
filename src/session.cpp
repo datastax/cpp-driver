@@ -357,7 +357,7 @@ Future* Session::prepare(const char* statement, size_t length) {
   PrepareRequest* prepare = new PrepareRequest();
   prepare->set_query(statement, length);
 
-  ResponseFuture* future = new ResponseFuture(&schema_meta_);
+  ResponseFuture* future = new ResponseFuture(cluster_meta_.schema());
   future->inc_ref(); // External reference
   future->statement.assign(statement, length);
 
@@ -430,7 +430,7 @@ void Session::on_down(SharedRefPtr<Host> host, bool is_critical_failure) {
 }
 
 Future* Session::execute(const RoutableRequest* request) {
-  ResponseFuture* future = new ResponseFuture(&schema_meta_);
+  ResponseFuture* future = new ResponseFuture(cluster_meta_.schema());
   future->inc_ref(); // External reference
 
   RequestHandler* request_handler = new RequestHandler(request, future);
@@ -495,7 +495,7 @@ QueryPlan* Session::get_new_query_plan(const Request* request) {
   if (!io_workers_.empty()) {
     connected_keyspace = io_workers_[0]->keyspace();
   }
-  return load_balancing_policy_->new_query_plan(connected_keyspace, request, dht_meta_);
+  return load_balancing_policy_->new_query_plan(connected_keyspace, request, cluster_meta_.dht_meta());
 }
 
 

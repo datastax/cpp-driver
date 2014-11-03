@@ -17,7 +17,7 @@
 #ifndef __CASS_TOKEN_AWARE_POLICY_HPP_INCLUDED__
 #define __CASS_TOKEN_AWARE_POLICY_HPP_INCLUDED__
 
-#include "dht_meta.hpp"
+#include "dht_metadata.hpp"
 #include "load_balancing.hpp"
 #include "host.hpp"
 #include "scoped_ptr.hpp"
@@ -58,12 +58,7 @@ public:
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
                                     const Request* request,
-                                    const DHTMeta& dht) {
-
-//    ByteBuffer partitionKey = statement.getRoutingKey();
-//            String keyspace = statement.getKeyspace();
-//            if (keyspace == null)
-//                keyspace = loggedKeyspace;
+                                    const DHTMetadata& dht) {
     if (request != NULL) {
       switch(request->opcode()) {
         {

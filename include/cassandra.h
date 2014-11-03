@@ -718,7 +718,7 @@ cass_cluster_set_credentials(CassCluster* cluster,
  * switching an existing from another policy.
  *
  * The driver discovers all nodes in a cluster and cycles through
- * them per request.
+ * them per request. All are considered 'local'.
  *
  * @param[in] cluster
  * @return CASS_OK
@@ -728,7 +728,7 @@ cass_cluster_set_load_balance_round_robin(CassCluster* cluster);
 
 /**
  * Configures the cluster to use DC-aware load balancing.
- * For each query, all live nodes in a primary DC are tried first,
+ * For each query, all live nodes in a primary 'local' DC are tried first,
  * followed by any node from other DCs.
  *
  * @param[in] cluster
@@ -739,7 +739,19 @@ CASS_EXPORT CassError
 cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
                                        const char* local_dc);
 
-/*TODO*/
+/**
+ * Configures the cluster to use Token-aware request routing, or not.
+ *
+ * Default is cass_true (enabled).
+ *
+ * This routing policy composes the base routing policy, routing
+ * requests first to replicas on nodes considered 'local' by
+ * the base load balancing policy.
+ *
+ * @param[in] cluster
+ * @param[in] local_dc The primary data center to try first
+ * @return CASS_OK
+ */
 CASS_EXPORT void
 cass_cluster_set_token_aware_routing(CassCluster* cluster,
                                      cass_bool_t enabled);
@@ -1152,6 +1164,24 @@ cass_statement_new(CassString query,
                    cass_size_t parameter_count);
 
 /**
+ * Adds a key index specifier to this a statement.
+ * When using Token-aware routing, this can be used to tell the driver which
+ * parameters within a non-prepared, parameterized statement are part of
+ * the partition key.
+ *
+ * Use consecutive calls for composite partition keys.
+ *
+ * This is not necessary for prepared statements, as the key
+ * parameters are determined in the metadata processed in the prepare phase.
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @return CASS_OK if successful, otherwise an error ocurred.
+ */
+CASS_EXPORT CassError
+cass_statement_add_key_index(CassStatement* statement, cass_size_t index);
+
+/**
  * Frees a statement instance. Statements can be immediately freed after
  * being prepared, executed or added to a batch.
  *
@@ -1386,11 +1416,6 @@ CASS_EXPORT CassError
 cass_statement_bind_collection(CassStatement* statement,
                                cass_size_t index,
                                const CassCollection* collection);
-
-
-/* TODO: cass_statement_add_key_index(CassStatement* statement, cass_size_t index)
-(also could do via collection, but this seems like less memory mgnt)
-cass_set_routing_key(CassStatement* statement, */
 
 /**
  * Binds an "int" to all the values with the specified name.

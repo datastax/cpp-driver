@@ -17,7 +17,7 @@
 #include "replica_placement_strategies.hpp"
 
 #include "common.hpp"
-#include "dht_meta.hpp"
+#include "dht_metadata.hpp"
 
 #include <map>
 #include <set>
@@ -25,13 +25,13 @@
 namespace cass {
 
 ReplicaPlacementStrategy* ReplicaPlacementStrategy::from_keyspace_meta(const KeyspaceMetadata& ks_meta) {
-  const std::string& strategy_class = ks_meta.strategy_class_;
+  const std::string& strategy_class = ks_meta.strategy();
 
   if (string_ends_with(strategy_class, NetworkTopologyStrategy::STRATEGY_CLASS)) {
-    return new NetworkTopologyStrategy(ks_meta.strategy_options_);
+    return new NetworkTopologyStrategy(ks_meta.strategy_options());
   } else
   if (string_ends_with(strategy_class, SimpleStrategy::STRATEGY_CLASS)) {
-    return new SimpleStrategy(ks_meta.strategy_options_);
+    return new SimpleStrategy(ks_meta.strategy_options());
   } else {
     return new NonReplicatedStrategy();
   }
@@ -40,8 +40,9 @@ ReplicaPlacementStrategy* ReplicaPlacementStrategy::from_keyspace_meta(const Key
 
 const std::string NetworkTopologyStrategy::STRATEGY_CLASS("NetworkTopologyStrategy");
 
-NetworkTopologyStrategy::NetworkTopologyStrategy(const StrategyOptionsMap& options) {
-  for (StrategyOptionsMap::const_iterator i = options.begin(); i != options.end(); ++i) {
+NetworkTopologyStrategy::NetworkTopologyStrategy(const KeyspaceMetadata::StrategyOptions& options) {
+  for (KeyspaceMetadata::StrategyOptions::const_iterator i = options.begin();
+       i != options.end(); ++i) {
     if (i->first != "class") {
       size_t replica_count = strtoull(i->second.c_str(), NULL, 10);
       if (replica_count > 0) {
@@ -145,9 +146,10 @@ void NetworkTopologyStrategy::tokens_to_replicas(const TokenHostMap& primary, To
 
 const std::string SimpleStrategy::STRATEGY_CLASS("SimpleStrategy");
 
-SimpleStrategy::SimpleStrategy(const StrategyOptionsMap& options)
+SimpleStrategy::SimpleStrategy(const KeyspaceMetadata::StrategyOptions& options)
   : replication_factor_(0) {
-  StrategyOptionsMap::const_iterator i = options.find("replication_factor");
+  KeyspaceMetadata::StrategyOptions::const_iterator i
+      = options.find("replication_factor");
   if (i != options.end()) {
     replication_factor_ = strtoull(i->second.c_str(), NULL, 10);
   }

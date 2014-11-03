@@ -17,6 +17,7 @@
 #ifndef __CASS_SESSION_HPP_INCLUDED__
 #define __CASS_SESSION_HPP_INCLUDED__
 
+#include "cluster_metadata.hpp"
 #include "config.hpp"
 #include "control_connection.hpp"
 #include "event_thread.hpp"
@@ -32,7 +33,6 @@
 #include "scoped_mutex.hpp"
 #include "scoped_ptr.hpp"
 #include "spsc_queue.hpp"
-#include "dht_meta.hpp"
 
 #include <list>
 #include <memory>
@@ -103,9 +103,7 @@ public:
   Future* prepare(const char* statement, size_t length);
   Future* execute(const RoutableRequest* statement);
 
-  const Schema* copy_schema() const {
-    return new Schema(schema_);
-  }
+  const Schema* copy_schema() const { return new Schema(cluster_meta_.schema()); }
 
 private:
   void close_handles();
@@ -128,8 +126,8 @@ private:
 private:
   friend class ControlConnection;
 
-  Schema& schema() {
-    return schema_;
+  ClusterMetadata& cluster_meta() {
+    return cluster_meta_;
   }
 
   void on_control_connection_ready();
@@ -157,8 +155,7 @@ private:
   int pending_pool_count_;
   int pending_workers_count_;
   int current_io_worker_;
-  Schema schema_;
-  DHTMeta dht_meta_;
+  ClusterMetadata cluster_meta_;
 };
 
 class SessionCloseFuture : public Future {

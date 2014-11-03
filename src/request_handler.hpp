@@ -24,6 +24,7 @@
 #include "load_balancing.hpp"
 #include "request.hpp"
 #include "response.hpp"
+#include "schema_metadata.hpp"
 #include "scoped_ptr.hpp"
 
 #include <string>
@@ -34,17 +35,16 @@ namespace cass {
 class Connection;
 class IOWorker;
 class Pool;
-class SchemaModel;
 class Timer;
 
 class ResponseFuture : public ResultFuture<Response> {
 public:
-  ResponseFuture(SchemaModel* schema_meta)
+  ResponseFuture(const Schema& schema)
       : ResultFuture<Response>(CASS_FUTURE_TYPE_RESPONSE)
-      , schema_meta(schema_meta) {}
+      , schema(schema) {}
 
   std::string statement;
-  SchemaModel* schema_meta;
+  Schema schema;
 };
 
 class RequestHandler : public Handler {

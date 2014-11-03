@@ -177,7 +177,7 @@ void ControlConnection::on_connection_ready(Connection* connection) {
                  connection->address().to_string().c_str());
 
   // A protocol version is need to encode/decode maps properly
-  session_->schema().set_protocol_version(protocol_version_);
+  session_->cluster_meta().set_protocol_version(protocol_version_);
 
   // The control connection has to refresh meta when there's a reconnect because
   // events could have been missed while not connected.
@@ -219,6 +219,8 @@ void ControlConnection::on_connection_closed(Connection* connection) {
   reconnect(retry_current_host);
 }
 
+//TODO: query and callbacks should be in ClusterMetadata
+// punting for now because of tight coupling of Session and CC state
 void ControlConnection::query_meta_all() {
   ScopedRefPtr<ControlMultipleRequestHandler> handler(
         new ControlMultipleRequestHandler(this, boost::bind(&ControlConnection::on_query_meta_all, this, _1)));
@@ -235,10 +237,6 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
   }
 
   bool is_initial_connection = (state_ == CONTROL_STATE_NEW);
-
-  if (!is_initial_connection) {
-    session_->dht_meta_.clear();
-  }
 
   {
     SharedRefPtr<Host> host = session_->get_host(connection_->address(), true);
@@ -290,12 +288,11 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
 
   session_->purge_hosts(is_initial_connection);
 
-  session_->schema().clear();
-  session_->schema().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
-  session_->schema().update_tables(static_cast<ResultResponse*>(responses[3]));
-  session_->schema().update_columns(static_cast<ResultResponse*>(responses[4]));
-  //?
-  session_->dht_meta_.update_keyspace(ksm);// might want to consolidate session hosts, schema_meta, and dht_meta into one 'cluster meta' entity
+  session_->cluster_meta().clear();
+  session_->cluster_meta().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
+  session_->cluster_meta().update_tables(static_cast<ResultResponse*>(responses[3]));
+  session_->cluster_meta().update_columns(static_cast<ResultResponse*>(responses[4]));
+  session_->cluster_meta().build();
 
   if (is_initial_connection) {
     state_ = CONTROL_STATE_READY;
@@ -438,7 +435,7 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
     std::string partitioner;
     get_optional_string(row->get_by_name("partitioner"), &partitioner);
     if (!partitioner.empty()) {
-      session_->dht_meta_.set_partitioner(partitioner);
+      session_->cluster_meta().set_partitioner(partitioner);
     }
     v = row->get_by_name("tokens");
     if (v != NULL) {
@@ -449,7 +446,7 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
         tokens.push_back(boost::string_ref(bp.data(), bp.size()));
       }
       if (!tokens.empty()) {
-        session_->dht_meta_.update_host(host, tokens);
+        session_->cluster_meta().update_host(host, tokens);
       }
     }
   }
@@ -477,7 +474,7 @@ void ControlConnection::on_refresh_keyspace(const std::string& keyspace_name, Re
                    keyspace_name.c_str());
     return;
   }
-  session_->schema().update_keyspaces(result);
+  session_->cluster_meta().update_keyspaces(result);
 }
 
 void ControlConnection::refresh_table(const boost::string_ref& keyspace_name,
@@ -510,8 +507,8 @@ void ControlConnection::on_refresh_table(const std::string& keyspace_name,
                    keyspace_name.c_str(), table_name.c_str());
     return;
   }
-  session_->schema().update_tables(column_family_result);
-  session_->schema().update_columns(static_cast<ResultResponse*>(responses[1]));
+  session_->cluster_meta().update_tables(column_family_result);
+  session_->cluster_meta().update_columns(static_cast<ResultResponse*>(responses[1]));
 }
 
 bool ControlConnection::handle_query_invalid_response(Response* response) {
@@ -561,7 +558,7 @@ void ControlConnection::on_connection_event(EventResponse* response) {
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
           if (host) {
             session_->on_remove(host);
-            session_->dht_meta_.remove_host(host);
+            session_->cluster_meta().remove_host(host);
           } else {
             logger_->debug("ControlConnection: Tried to remove host %s that doesn't exist", address_str.c_str());
           }
@@ -575,7 +572,7 @@ void ControlConnection::on_connection_event(EventResponse* response) {
             refresh_node_info(host, NULL, true);
           } else {
             logger_->debug("ControlConnection: Move event for host %s that doesn't exist", address_str.c_str());
-            session_->dht_meta_.remove_host(host);
+            session_->cluster_meta().remove_host(host);
           }
           break;
       }
@@ -617,12 +614,10 @@ void ControlConnection::on_connection_event(EventResponse* response) {
 
         case EventResponse::DROPPED:
           if (response->table().size() > 0) {
-            session_->schema().drop_table(response->keyspace().to_string(),
-                                          response->table().to_string());
+            session_->cluster_meta().drop_table(response->keyspace().to_string(),
+                                                response->table().to_string());
           } else {
-            const std::string keyspace(response->keyspace().to_string());
-            session_->schema().drop_keyspace(keyspace);
-            session_->dht_meta_.drop_keyspace(keyspace);
+            session_->cluster_meta().drop_keyspace(response->keyspace().to_string());
           }
           break;
       }
