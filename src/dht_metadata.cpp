@@ -15,6 +15,7 @@
 */
 
 #include "dht_metadata.hpp"
+#include "md5.hpp"
 #include "murmur3.hpp"
 
 #include <algorithm>
@@ -181,14 +182,13 @@ bool TokenMap::purge_address(const Address& addr) {
 
 const std::string M3PTokenMap::PARTIONER_CLASS("Murmur3Partitioner");
 
-bool M3PTokenMap::compare(const Token& l, const Token& r) {
+bool M3PTokenMap::less_than(const Token& l, const Token& r) {
   assert(l.data.size() == r.data.size() && r.data.size() == sizeof(int64_t));
   return *reinterpret_cast<const int64_t*>(&l.data[0]) < *reinterpret_cast<const int64_t*>(&r.data[0]);
 }
 
 Token M3PTokenMap::token_from_string_ref(const boost::string_ref& token_string_ref) const {
-  Token out(M3PTokenMap::compare);
-  out.data.assign(sizeof(int64_t), 0);
+  Token out(sizeof(int64_t), M3PTokenMap::less_than);
   parse_int64(token_string_ref.data(), token_string_ref.size(), (int64_t*)&out.data[0]);
   return out;
 }
@@ -198,8 +198,7 @@ Token M3PTokenMap::hash(const BufferRefs& key_parts) const {
   for (BufferRefs::const_iterator i = key_parts.begin(); i != key_parts.end(); ++i) {
     hash.update(i->data(), i->size());
   }
-  Token out(M3PTokenMap::compare);
-  out.data.assign(sizeof(int64_t), 0);
+  Token out(sizeof(int64_t), M3PTokenMap::less_than);
   hash.final((int64_t*)&out.data[0], NULL);
   return out;
 }
@@ -207,42 +206,37 @@ Token M3PTokenMap::hash(const BufferRefs& key_parts) const {
 
 const std::string RPTokenMap::PARTIONER_CLASS("RandomPartitioner");
 
-bool RPTokenMap::compare(const Token& l, const Token& r) {
+bool RPTokenMap::less_than(const Token& l, const Token& r) {
   assert(l.data.size() == r.data.size() && r.data.size() == 16);
-  return (l < r);
+  return (l.data < r.data);
 }
 
 Token RPTokenMap::token_from_string_ref(const boost::string_ref& token_string_ref) const {
-  Token out(RPTokenMap::compare);
-  out.data.assign(sizeof(uint64_t) * 2, 0);
+  Token out(sizeof(uint64_t) * 2, RPTokenMap::less_than);
   parse_int128(token_string_ref.data(), token_string_ref.size(), (uint64_t*)&out.data[0]);
   return out;
 }
 
 Token RPTokenMap::hash(const BufferRefs& key_parts) const {
-  // TODO: needs md5 from CPP-102-final. TBD after merge/rebase
-//  Md5 hash;
-//  for (BufferRefs::const_iterator i = key_parts.begin(); i != key_parts.end(); ++i) {
-//    hash.update(i->data(), i->size());
-//  }
-//  Token out(RPTokenMap::compare);
-//  out.data.assign(sizeof(int64_t), 0);
-//  hash.final((int64_t*)&out.data[0], NULL);
-//  return out;
-  return Token(RPTokenMap::compare);
+  Md5 hash;
+  for (BufferRefs::const_iterator i = key_parts.begin(); i != key_parts.end(); ++i) {
+    hash.update(i->data(), i->size());
+  }
+  Token out(sizeof(uint64_t) * 2, RPTokenMap::less_than);
+  hash.final((uint8_t*)&out.data[0]);
+  return out;
 }
 
 
 const std::string BOPTokenMap::PARTIONER_CLASS("ByteOrderedPartitioner");
 
-bool BOPTokenMap::compare(const Token& l, const Token& r) {
+bool BOPTokenMap::less_than(const Token& l, const Token& r) {
   return l.data < r.data;
 }
 
 Token BOPTokenMap::token_from_string_ref(const boost::string_ref& token_string_ref) const {
-  Token out(BOPTokenMap::compare);
-  out.data.resize(token_string_ref.size());
-  memcpy(&out.data[0], token_string_ref.data(), token_string_ref.size());
+  Token out(token_string_ref.size(), BOPTokenMap::less_than);
+  memcpy(const_cast<uint8_t*>(&out.data[0]), token_string_ref.data(), token_string_ref.size());
   return out;
 }
 
@@ -252,9 +246,8 @@ Token BOPTokenMap::hash(const BufferRefs& key_parts) const {
        i != key_parts.end(); ++i) {
     total_size += i->size();
   }
-  Token out(BOPTokenMap::compare);
-  out.data.resize(total_size);
-  uint8_t* base = &out.data[0];
+  Token out(total_size, BOPTokenMap::less_than);
+  uint8_t* base = const_cast<uint8_t*>(&out.data[0]);
   size_t offset = 0;
   for (BufferRefs::const_iterator i = key_parts.begin();
        i != key_parts.end(); ++i) {
@@ -266,18 +259,24 @@ Token BOPTokenMap::hash(const BufferRefs& key_parts) const {
 
 
 void DHTMetadata::build() {
-  if (token_map_.get()) {
+  if (token_map_) {
     token_map_->build();
+  } else {
+    //TODO global log error
   }
 }
 
 void DHTMetadata::set_partitioner(const std::string& partitioner_class) {
-  if (token_map_.get()) {
+  if (token_map_) {
     return;
   }
 
   if (string_ends_with(partitioner_class, M3PTokenMap::PARTIONER_CLASS)) {
     token_map_.reset(new M3PTokenMap());
+  } else if (string_ends_with(partitioner_class, RPTokenMap::PARTIONER_CLASS)) {
+    token_map_.reset(new RPTokenMap());
+  } else if (string_ends_with(partitioner_class, BOPTokenMap::PARTIONER_CLASS)) {
+    token_map_.reset(new BOPTokenMap());
   }
 
   if (!token_map_) {

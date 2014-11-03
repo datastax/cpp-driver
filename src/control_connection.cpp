@@ -236,6 +236,8 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
     return;
   }
 
+  session_->cluster_meta().clear();
+
   bool is_initial_connection = (state_ == CONTROL_STATE_NEW);
 
   {
@@ -288,7 +290,6 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
 
   session_->purge_hosts(is_initial_connection);
 
-  session_->cluster_meta().clear();
   session_->cluster_meta().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
   session_->cluster_meta().update_tables(static_cast<ResultResponse*>(responses[3]));
   session_->cluster_meta().update_columns(static_cast<ResultResponse*>(responses[4]));
