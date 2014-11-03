@@ -73,7 +73,7 @@ protected:
 class M3PTokenMap : public TokenMap {
 public:
   static const std::string PARTIONER_CLASS;
-  static bool compare(const Token& a, const Token& b);
+  static bool less_than(const Token& a, const Token& b);
 
   virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
   virtual Token hash(const BufferRefs& key_parts) const;
@@ -83,7 +83,7 @@ public:
 class RPTokenMap : public TokenMap {
 public:
   static const std::string PARTIONER_CLASS;
-  static bool compare(const Token& a, const Token& b);
+  static bool less_than(const Token& a, const Token& b);
 
   virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
   virtual Token hash(const BufferRefs& key_parts) const;
@@ -93,7 +93,7 @@ public:
 class BOPTokenMap : public TokenMap {
 public:
   static const std::string PARTIONER_CLASS;
-  static bool compare(const Token& a, const Token& b);
+  static bool less_than(const Token& a, const Token& b);
 
   virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
   virtual Token hash(const BufferRefs& key_parts) const;

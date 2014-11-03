@@ -24,30 +24,6 @@
 
 namespace cass {
 
-class ChainedLoadBalancingPolicy : public LoadBalancingPolicy {
-public:
-  ChainedLoadBalancingPolicy(LoadBalancingPolicy* child_policy)
-    : child_policy_(child_policy) {}
-
-  virtual ~ChainedLoadBalancingPolicy() {}
-
-  virtual void init(const HostMap& hosts) { return child_policy_->init(hosts); }
-
-  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) { return child_policy_->distance(host); }
-
-  virtual void on_add(const SharedRefPtr<Host>& host) { child_policy_->on_add(host); }
-
-  virtual void on_remove(const SharedRefPtr<Host>& host) { child_policy_->on_remove(host); }
-
-  virtual void on_up(const SharedRefPtr<Host>& host) { child_policy_->on_up(host); }
-
-  virtual void on_down(const SharedRefPtr<Host>& host) { child_policy_->on_down(host); }
-
-protected:
-  ScopedRefPtr<LoadBalancingPolicy> child_policy_;
-};
-
-
 class TokenAwarePolicy : public ChainedLoadBalancingPolicy {
 public:
   TokenAwarePolicy(LoadBalancingPolicy* child_policy)
@@ -58,35 +34,7 @@ public:
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
                                     const Request* request,
-                                    const DHTMetadata& dht) {
-    if (request != NULL) {
-      switch(request->opcode()) {
-        {
-        case CQL_OPCODE_QUERY:
-        case CQL_OPCODE_EXECUTE:
-        case CQL_OPCODE_BATCH:
-          const RoutableRequest* rr = static_cast<const RoutableRequest*>(request);
-          const std::string& statement_keyspace = rr->keyspace();
-          const BufferRefs& keys = rr->key_parts();
-          const std::string& keyspace = statement_keyspace.empty()
-                                        ? connected_keyspace : statement_keyspace;
-          if (!keys.empty() && !keyspace.empty()) {
-            COWHostVec replicas = dht.get_replicas(keyspace, keys);
-            if (!replicas->empty()) {
-              return new TokenAwareQueryPlan(child_policy_.get(),
-                                             child_policy_->new_query_plan(connected_keyspace, request, dht),
-                                             replicas,
-                                             index_++);
-            }
-          }
-          break;
-        }
-        default:
-          break;
-      }
-    }
-    return child_policy_->new_query_plan(connected_keyspace, request, dht);
-  }
+                                    const DHTMetadata& dht);
 
   LoadBalancingPolicy* new_instance() { return new TokenAwarePolicy(child_policy_->new_instance()); }
 
@@ -100,24 +48,7 @@ private:
       , index_(start_index)
       , remaining_(replicas->size()) {}
 
-    bool compute_next(Address* address)  {
-      while (remaining_ > 0) {
-        --remaining_;
-        const SharedRefPtr<Host>& host((*replicas_)[index_++ % replicas_->size()]);
-        replicas_attempted_.insert(host->address());
-        if (host->is_up() && child_policy_->distance(host) == CASS_HOST_DISTANCE_LOCAL) {
-          *address = host->address();
-          printf("TA: %s\n", address->to_string().c_str());
-          return true;
-        }
-      }
-      while (child_plan_->compute_next(address)) {
-        if (replicas_attempted_.find(*address) == replicas_attempted_.end()) {
-          return true;
-        }
-      }
-      return false;
-    }
+    bool compute_next(Address* address);
 
   private:
     LoadBalancingPolicy* child_policy_;

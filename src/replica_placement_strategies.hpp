@@ -25,13 +25,14 @@
 namespace cass {
 
 struct Token {
-  typedef bool(*TokenComparator)(const Token&, const Token&);
-  Token(TokenComparator tc)
-    : comp(tc) {}
+  typedef bool(*TokenLessThan)(const Token&, const Token&);
+  Token(size_t size, TokenLessThan tc)
+    : data(size, 0)
+    , lt(tc) {}
 
-  bool operator<(const Token& other) const { return comp(*this, other); }
-  std::vector<uint8_t> data;
-  TokenComparator comp;
+  bool operator<(const Token& other) const { return lt(*this, other); }
+  const std::vector<uint8_t> data;
+  TokenLessThan lt;
 };
 
 typedef std::map<Token, SharedRefPtr<Host> > TokenHostMap;
