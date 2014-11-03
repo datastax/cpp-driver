@@ -99,12 +99,13 @@ namespace cass {
 int BufferCollection::encode(int version, BufferVec* bufs) const {
   if (version != 1 && version != 2) return -1;
 
-  int buf_size = sizeof(int32_t) + sizeof(uint16_t) + calculate_size(version);
+  int value_size = sizeof(uint16_t) + calculate_size(version);
+  int buf_size = sizeof(int32_t) + value_size;
 
   Buffer buf(buf_size);
 
   int pos = 0;
-  pos = buf.encode_int32(pos, buf_size);
+  pos = buf.encode_int32(pos, value_size);
   pos = buf.encode_uint16(pos, is_map_ ? bufs_.size() / 2 : bufs_.size());
 
   encode(version, buf.data() + pos);
