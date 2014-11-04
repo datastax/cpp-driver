@@ -17,6 +17,7 @@
 #ifndef __CASS_SESSION_HPP_INCLUDED__
 #define __CASS_SESSION_HPP_INCLUDED__
 
+#include "cluster_metadata.hpp"
 #include "config.hpp"
 #include "control_connection.hpp"
 #include "event_thread.hpp"
@@ -74,7 +75,6 @@ struct SessionEvent {
 class Session : public EventThread<SessionEvent> {
 public:
   Session(const Config& config);
-  ~Session();
 
   int init();
 
@@ -101,11 +101,9 @@ public:
   void close_async(Future* future);
 
   Future* prepare(const char* statement, size_t length);
-  Future* execute(const Request* statement);
+  Future* execute(const RoutableRequest* statement);
 
-  const Schema* copy_schema() const {
-    return new Schema(schema_);
-  }
+  const Schema* copy_schema() const { return new Schema(cluster_meta_.schema()); }
 
 private:
   void close_handles();
@@ -121,13 +119,15 @@ private:
   static void on_resolve(Resolver* resolver);
   static void on_execute(uv_async_t* data, int status);
 
+  QueryPlan* get_new_query_plan(const Request* request = NULL);
+
   void on_reconnect(Timer* timer);
 
 private:
   friend class ControlConnection;
 
-  Schema& schema() {
-    return schema_;
+  ClusterMetadata& cluster_meta() {
+    return cluster_meta_;
   }
 
   void on_control_connection_ready();
@@ -155,8 +155,7 @@ private:
   int pending_pool_count_;
   int pending_workers_count_;
   int current_io_worker_;
-  Schema schema_;
-  uv_mutex_t schema_meta_mutex_;
+  ClusterMetadata cluster_meta_;
 };
 
 class SessionCloseFuture : public Future {

@@ -31,12 +31,12 @@ namespace cass {
 class Statement;
 class ExecuteRequest;
 
-class BatchRequest : public Request {
+class BatchRequest : public RoutableRequest {
 public:
   typedef std::list<SharedRefPtr<Statement> > StatementList;
 
   BatchRequest(uint8_t type_)
-      : Request(CQL_OPCODE_BATCH)
+      : RoutableRequest(CQL_OPCODE_BATCH)
       , type_(type_)
       , consistency_(CASS_CONSISTENCY_ONE) {}
 
@@ -51,6 +51,8 @@ public:
   void add_statement(Statement* statement);
 
   bool prepared_statement(const std::string& id, std::string* statement) const;
+
+  virtual const BufferRefs& key_parts() const;
 
 private:
   int encode(int version, BufferVec* bufs) const;

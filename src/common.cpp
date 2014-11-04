@@ -18,6 +18,7 @@
 
 #include "buffer_piece.hpp"
 #include "constants.hpp"
+#include "value.hpp"
 
 #include <algorithm>
 #include <assert.h>
@@ -75,6 +76,23 @@ std::string& trim(std::string& str) {
                          std::not1(std::ptr_fun<int, int>(::isspace))).base(),
             str.end());
   return str;
+}
+
+void get_optional_string(const Value* v, std::string* output, const char* deflt) {
+  if (v != NULL && !v->is_null()) {
+    output->assign(v->buffer().data(), v->buffer().size());
+  } else {
+    if (deflt != NULL) {
+      *output = deflt;
+    }
+  }
+}
+
+bool string_ends_with(const std::string& target, const std::string& suffix) {
+  size_t target_size = target.size();
+  size_t suffix_size = suffix.size();
+  return (target_size >= suffix_size) &&
+         (target.compare(target_size - suffix_size, suffix_size, suffix) == 0);
 }
 
 } // namespace cass

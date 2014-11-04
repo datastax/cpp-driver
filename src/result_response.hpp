@@ -82,6 +82,10 @@ public:
     return std::string(keyspace_, keyspace_size_);
   }
 
+  std::string table() const {
+    return std::string(table_, table_size_);
+  }
+
   char* rows() const { return rows_; }
 
   int32_t row_count() const { return row_count_; }

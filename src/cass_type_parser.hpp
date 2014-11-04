@@ -35,6 +35,9 @@ public:
   TypeDescriptor(CassValueType type = CASS_VALUE_TYPE_UNKNOWN, bool is_reversed = false);
   TypeDescriptor(CassValueType type, bool is_reversed, std::list<TypeDescriptor>& type_arguments);
 
+  size_t component_count() { return type_ == CASS_VALUE_TYPE_CUSTOM ? type_args_.size() : 1; }
+  std::string to_string() const;
+
   CassValueType type_;
   bool is_reversed_;
   std::list<TypeDescriptor> type_args_;
@@ -46,8 +49,6 @@ public:
   static bool is_reversed(const std::string& class_name) { return boost::starts_with(class_name, REVERSED_TYPE); }
 
   static TypeDescriptor parse(const std::string& class_name);
-  CassValueType parse_one_type(size_t hint = 0);
-  TypeDescriptor parse_types(bool is_reversed = false);
 
   class CassTypeMapper {
   public:
@@ -60,6 +61,9 @@ public:
 
 private:
   CassTypeParser(const std::string& class_name, size_t start_index = 0);
+
+  CassValueType parse_one_type(size_t hint = 0);
+  TypeDescriptor parse_types(bool is_reversed = false);
 
   CassValueType parse_name();
 

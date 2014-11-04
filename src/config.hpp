@@ -21,6 +21,7 @@
 #include "cassandra.h"
 #include "round_robin_policy.hpp"
 #include "ssl.hpp"
+#include "token_aware_policy.hpp"
 
 #include <list>
 #include <string>
@@ -57,7 +58,8 @@ public:
       , log_callback_(default_log_callback)
       , log_data_(NULL)
       , auth_provider_(new AuthProvider())
-      , load_balancing_policy_(new RoundRobinPolicy()) {}
+      , load_balancing_policy_(new RoundRobinPolicy())
+      , token_aware_routing_(true) {}
 
   unsigned thread_count_io() const { return thread_count_io_; }
 
@@ -215,7 +217,14 @@ public:
     auth_provider_.reset(new PlainTextAuthProvider(username, password));
   }
 
-  LoadBalancingPolicy* load_balancing_policy() const { return load_balancing_policy_->new_instance(); }
+  LoadBalancingPolicy* load_balancing_policy() const {
+    // base LBP can be augmented by special wrappers (whitelist, token aware, latency aware)
+    LoadBalancingPolicy* chain = load_balancing_policy_->new_instance();
+    if (token_aware_routing()) {
+      chain = new TokenAwarePolicy(chain);
+    }
+    return chain;
+  }
 
   void set_load_balancing_policy(LoadBalancingPolicy* lbp) {
     if (lbp == NULL) return;
@@ -227,6 +236,10 @@ public:
   void set_ssl_context(SslContext* ssl_context) {
     ssl_context_.reset(ssl_context);
   }
+
+  bool token_aware_routing() const { return token_aware_routing_; }
+
+  void set_token_aware_routing(bool is_token_aware) { token_aware_routing_ = is_token_aware; }
 
 private:
   int port_;
@@ -254,6 +267,7 @@ private:
   SharedRefPtr<AuthProvider> auth_provider_;
   SharedRefPtr<LoadBalancingPolicy> load_balancing_policy_;
   SharedRefPtr<SslContext> ssl_context_;
+  bool token_aware_routing_;
 };
 
 } // namespace cass

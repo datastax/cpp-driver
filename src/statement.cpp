@@ -171,6 +171,13 @@ CassStatement* cass_statement_new(CassString query, size_t parameter_count) {
   return CassStatement::to(query_request);
 }
 
+CassError cass_statement_add_key_index(CassStatement* statement, cass_size_t index) {
+  if (statement->kind() != CASS_BATCH_KIND_QUERY) return CASS_ERROR_LIB_BAD_PARAMS;
+  if (index >= statement->values_count()) return CASS_ERROR_LIB_BAD_PARAMS;
+  statement->add_key_index(index);
+  return CASS_OK;
+}
+
 void cass_statement_free(CassStatement* statement) {
   statement->dec_ref();
 }
@@ -370,6 +377,31 @@ int32_t Statement::encode_values(int version, BufferVec* bufs) const {
     }
   }
   return values_size;
+}
+
+const BufferRefs& Statement::key_parts() const {
+  if (key_buffers_.empty() && !key_indices_.empty()) {
+    int32_t size;
+    for (std::vector<size_t>::const_iterator i = key_indices_.begin();
+         i != key_indices_.end(); ++i) {
+      if (*i < values_.size()) {
+        const Buffer& buffer = values_[*i];
+        decode_int32(const_cast<char*>(buffer.data()), size);
+        if (size > 0) {
+          key_buffers_.push_back(boost::string_ref(buffer.data() + sizeof(int32_t), size));
+        } else {
+          //TODO: global logging
+          key_buffers_.clear();
+          break;
+        }
+      } else {
+        //TODO: global logging
+        key_buffers_.clear();
+        break;
+      }
+    }
+  }
+  return key_buffers_;
 }
 
 } // namespace  cass

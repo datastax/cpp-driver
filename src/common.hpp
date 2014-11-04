@@ -22,13 +22,14 @@
 #include "third_party/boost/boost/static_assert.hpp"
 #include "uv.h"
 
-#include <list>
 #include <map>
 #include <string>
+#include <vector>
 
 namespace cass {
 
 class BufferPiece;
+class Value;
 
 // copy_cast<> prevents incorrect code from being generated when two unrelated 
 // types reference the same memory location and strict aliasing is enabled.
@@ -59,6 +60,10 @@ inline size_t next_pow_2(size_t num) {
 std::string opcode_to_string(int opcode);
 
 std::string& trim(std::string& str);
+
+void get_optional_string(const Value* v, std::string* output, const char* deflt = NULL);
+
+bool string_ends_with(const std::string& target, const std::string& suffix);
 
 } // namespace cass
 

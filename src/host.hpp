@@ -18,6 +18,7 @@
 #define __CASS_HOST_HPP_INCLUDED__
 
 #include "address.hpp"
+#include "copy_on_write_ptr.hpp"
 #include "ref_counted.hpp"
 
 #include "third_party/boost/boost/atomic.hpp"
@@ -102,6 +103,7 @@ private:
 
 typedef std::map<Address, SharedRefPtr<Host> > HostMap;
 typedef std::vector<SharedRefPtr<Host> > HostVec;
+typedef CopyOnWritePtr<HostVec> COWHostVec;
 
 } // namespace cass
 

@@ -93,8 +93,10 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
   cass::ScopedPtr<cass::ResultResponse> result(
       static_cast<cass::ResultResponse*>(response_future->release_result()));
   if (result && result->kind() == CASS_RESULT_KIND_PREPARED) {
+    std::vector<std::string> key_aliases;
+    response_future->schema.get_table_key_columns(result->keyspace(), result->table(), &key_aliases);
     cass::Prepared* prepared =
-        new cass::Prepared(result.release(), response_future->statement);
+        new cass::Prepared(result.release(), response_future->statement, key_aliases);
     prepared->inc_ref();
     return CassPrepared::to(prepared);
   }

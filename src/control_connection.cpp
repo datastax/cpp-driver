@@ -16,6 +16,7 @@
 
 #include "control_connection.hpp"
 
+#include "collection_iterator.hpp"
 #include "constants.hpp"
 #include "event_response.hpp"
 #include "load_balancing.hpp"
@@ -37,7 +38,9 @@
 #define HIGHEST_SUPPORTED_PROTOCOL_VERSION 2
 
 #define SELECT_LOCAL "SELECT data_center, rack FROM system.local WHERE key='local'"
+#define SELECT_LOCAL_TOKENS "SELECT data_center, rack, partitioner, tokens FROM system.local WHERE key='local'"
 #define SELECT_PEERS "SELECT peer, data_center, rack, rpc_address FROM system.peers"
+#define SELECT_PEERS_TOKENS "SELECT peer, data_center, rack, rpc_address, tokens FROM system.peers"
 
 #define SELECT_KEYSPACES "SELECT * FROM system.schema_keyspaces"
 #define SELECT_COLUMN_FAMILIES "SELECT * FROM system.schema_columnfamilies"
@@ -107,6 +110,7 @@ void ControlConnection::connect(Session* session) {
   logger_ = session_->logger_.get();
   query_plan_.reset(new ControlStartupQueryPlan(session_->hosts_));
   protocol_version_ = session->config_.protocol_version();
+  query_tokens_ = session_->config().token_aware_routing();
   if (protocol_version_ < 0) {
     protocol_version_ = HIGHEST_SUPPORTED_PROTOCOL_VERSION;
   }
@@ -173,7 +177,7 @@ void ControlConnection::on_connection_ready(Connection* connection) {
                  connection->address().to_string().c_str());
 
   // A protocol version is need to encode/decode maps properly
-  session_->schema().set_protocol_version(protocol_version_);
+  session_->cluster_meta().set_protocol_version(protocol_version_);
 
   // The control connection has to refresh meta when there's a reconnect because
   // events could have been missed while not connected.
@@ -215,11 +219,13 @@ void ControlConnection::on_connection_closed(Connection* connection) {
   reconnect(retry_current_host);
 }
 
+//TODO: query and callbacks should be in ClusterMetadata
+// punting for now because of tight coupling of Session and CC state
 void ControlConnection::query_meta_all() {
   ScopedRefPtr<ControlMultipleRequestHandler> handler(
         new ControlMultipleRequestHandler(this, boost::bind(&ControlConnection::on_query_meta_all, this, _1)));
-  handler->execute_query(SELECT_LOCAL);
-  handler->execute_query(SELECT_PEERS);
+  handler->execute_query(SELECT_LOCAL_TOKENS);
+  handler->execute_query(SELECT_PEERS_TOKENS);
   handler->execute_query(SELECT_KEYSPACES);
   handler->execute_query(SELECT_COLUMN_FAMILIES);
   handler->execute_query(SELECT_COLUMNS);
@@ -229,6 +235,8 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
   if (connection_ == NULL) {
     return;
   }
+
+  session_->cluster_meta().clear();
 
   bool is_initial_connection = (state_ == CONTROL_STATE_NEW);
 
@@ -242,7 +250,7 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
         local_result->decode_first_row();
         update_node_info(host, &local_result->first_row());
       } else {
-        logger_->debug("ControlConnection: No row found in %s's local system table",
+        logger_->warn("ControlConnection: No row found in %s's local system table",
                        connection_->address_string().c_str());
       }
     } else {
@@ -282,10 +290,10 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
 
   session_->purge_hosts(is_initial_connection);
 
-  session_->schema().clear();
-  session_->schema().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
-  session_->schema().update_tables(static_cast<ResultResponse*>(responses[3]));
-  session_->schema().update_columns(static_cast<ResultResponse*>(responses[4]));
+  session_->cluster_meta().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
+  session_->cluster_meta().update_tables(static_cast<ResultResponse*>(responses[3]));
+  session_->cluster_meta().update_columns(static_cast<ResultResponse*>(responses[4]));
+  session_->cluster_meta().build();
 
   if (is_initial_connection) {
     state_ = CONTROL_STATE_READY;
@@ -294,7 +302,8 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
 }
 
 void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
-                                          RefreshNodeCallback callback) {
+                                          RefreshNodeCallback callback,
+                                          bool query_tokens) {
   if (connection_ == NULL) {
     return;
   }
@@ -304,18 +313,19 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
   std::string query;
   ControlHandler<RefreshNodeData>::ResponseCallback response_callback;
 
+  bool token_query = query_tokens_ && (host->was_just_added() || query_tokens);
   if (is_connected_host || !host->listen_address().empty()) {
     if (is_connected_host) {
-      query.assign(SELECT_LOCAL);
+      query.assign(token_query ? SELECT_LOCAL_TOKENS : SELECT_LOCAL);
     } else {
-      query.assign(SELECT_PEERS);
+      query.assign(token_query ? SELECT_PEERS_TOKENS : SELECT_PEERS);
       query.append(" WHERE peer = '");
       query.append(host->listen_address());
       query.append("'");
     }
     response_callback = boost::bind(&ControlConnection::on_refresh_node_info, this, _1, _2);
   } else {
-    query.assign(SELECT_PEERS);
+    query.assign(token_query ? SELECT_PEERS_TOKENS : SELECT_PEERS);
     response_callback = boost::bind(&ControlConnection::on_refresh_node_info_all, this, _1, _2);
   }
 
@@ -348,7 +358,9 @@ void ControlConnection::on_refresh_node_info(RefreshNodeData data, Response* res
   }
   result->decode_first_row();
   update_node_info(data.host, &result->first_row());
-  data.callback(data.host);
+  if (data.callback != NULL) {
+    data.callback(data.host);
+  }
 }
 
 void ControlConnection::on_refresh_node_info_all(RefreshNodeData data, Response* response) {
@@ -382,7 +394,9 @@ void ControlConnection::on_refresh_node_info_all(RefreshNodeData data, Response*
                                           &address);
     if (is_valid_address && data.host->address().compare(address) == 0) {
       update_node_info(data.host, row);
-      data.callback(data.host);
+      if (data.callback != NULL) {
+        data.callback(data.host);
+      }
       break;
     }
   }
@@ -392,16 +406,10 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
   const Value* v;
 
   std::string rack;
-  v = row->get_by_name("rack");
-  if (!v->is_null()) {
-    rack.assign(v->buffer().data(), v->buffer().size());
-  }
+  get_optional_string(row->get_by_name("rack"), &rack);
 
   std::string dc;
-  v = row->get_by_name("data_center");
-  if (!v->is_null()) {
-    dc.assign(v->buffer().data(), v->buffer().size());
-  }
+  get_optional_string(row->get_by_name("data_center"), &dc);
 
   // This value is not present in the "system.local" query
   v = row->get_by_name("peer");
@@ -421,6 +429,26 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
     host->set_rack_and_dc(rack, dc);
     if (!host->was_just_added()) {
       session_->load_balancing_policy_->on_add(host);
+    }
+  }
+
+  if (query_tokens_) {
+    std::string partitioner;
+    get_optional_string(row->get_by_name("partitioner"), &partitioner);
+    if (!partitioner.empty()) {
+      session_->cluster_meta().set_partitioner(partitioner);
+    }
+    v = row->get_by_name("tokens");
+    if (v != NULL) {
+      CollectionIterator i(v);
+      TokenStringList tokens;
+      while (i.next()) {
+        const BufferPiece& bp = i.value()->buffer();
+        tokens.push_back(boost::string_ref(bp.data(), bp.size()));
+      }
+      if (!tokens.empty()) {
+        session_->cluster_meta().update_host(host, tokens);
+      }
     }
   }
 }
@@ -447,7 +475,7 @@ void ControlConnection::on_refresh_keyspace(const std::string& keyspace_name, Re
                    keyspace_name.c_str());
     return;
   }
-  session_->schema().update_keyspaces(result);
+  session_->cluster_meta().update_keyspaces(result);
 }
 
 void ControlConnection::refresh_table(const boost::string_ref& keyspace_name,
@@ -480,8 +508,8 @@ void ControlConnection::on_refresh_table(const std::string& keyspace_name,
                    keyspace_name.c_str(), table_name.c_str());
     return;
   }
-  session_->schema().update_tables(column_family_result);
-  session_->schema().update_columns(static_cast<ResultResponse*>(responses[1]));
+  session_->cluster_meta().update_tables(column_family_result);
+  session_->cluster_meta().update_columns(static_cast<ResultResponse*>(responses[1]));
 }
 
 bool ControlConnection::handle_query_invalid_response(Response* response) {
@@ -521,7 +549,7 @@ void ControlConnection::on_connection_event(EventResponse* response) {
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
           if (!host) {
             host = session_->add_host(response->affected_node());
-            refresh_node_info(host, boost::bind(&Session::on_add, session_, _1, false));
+            refresh_node_info(host, boost::bind(&Session::on_add, session_, _1, false), true);
           }
           break;
         }
@@ -531,6 +559,7 @@ void ControlConnection::on_connection_event(EventResponse* response) {
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
           if (host) {
             session_->on_remove(host);
+            session_->cluster_meta().remove_host(host);
           } else {
             logger_->debug("ControlConnection: Tried to remove host %s that doesn't exist", address_str.c_str());
           }
@@ -539,6 +568,13 @@ void ControlConnection::on_connection_event(EventResponse* response) {
 
         case EventResponse::MOVED_NODE:
           session_->logger_->info("ControlConnection: Node %s moved", address_str.c_str());
+          SharedRefPtr<Host> host = session_->get_host(response->affected_node());
+          if (host) {
+            refresh_node_info(host, NULL, true);
+          } else {
+            logger_->debug("ControlConnection: Move event for host %s that doesn't exist", address_str.c_str());
+            session_->cluster_meta().remove_host(host);
+          }
           break;
       }
       break;
@@ -579,10 +615,10 @@ void ControlConnection::on_connection_event(EventResponse* response) {
 
         case EventResponse::DROPPED:
           if (response->table().size() > 0) {
-            session_->schema().drop_table(response->keyspace().to_string(),
-                                          response->table().to_string());
+            session_->cluster_meta().drop_table(response->keyspace().to_string(),
+                                                response->table().to_string());
           } else {
-            session_->schema().drop_keyspace(response->keyspace().to_string());
+            session_->cluster_meta().drop_keyspace(response->keyspace().to_string());
           }
           break;
       }
@@ -614,7 +650,7 @@ void ControlConnection::on_down(const Address& address, bool is_critical_failure
 }
 
 void ControlConnection::on_reconnect(Timer* timer) {
-  query_plan_.reset(session_->load_balancing_policy_->new_query_plan());
+  query_plan_.reset(session_->get_new_query_plan());
   reconnect(false);
   reconnect_timer_ = NULL;
 }

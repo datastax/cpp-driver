@@ -33,3 +33,26 @@ CassStatement* cass_prepared_bind(const CassPrepared* prepared) {
 }
 
 } // extern "C"
+
+namespace cass {
+
+Prepared::Prepared(const ResultResponse* result,
+                   const std::string& statement,
+                   const std::vector<std::string>& key_columns)
+      : result_(result)
+      , id_(result->prepared())
+      , statement_(statement) {
+
+    ResultMetadata::IndexVec indices;
+    for (std::vector<std::string>::const_iterator i = key_columns.begin();
+         i != key_columns.end(); ++i) {
+      if (result->find_column_indices(boost::string_ref(*i), &indices) == 1) {
+        key_indices_.push_back(indices[0]);
+      } else {
+        //TODO: global logging
+        key_indices_.clear();
+        break;
+      }
+    }
+  }
+}

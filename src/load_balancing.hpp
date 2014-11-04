@@ -20,6 +20,7 @@
 #include "cassandra.h"
 #include "constants.hpp"
 #include "host.hpp"
+#include "request.hpp"
 
 #include <list>
 #include <set>
@@ -55,6 +56,9 @@ typedef enum CassHostDistance_ {
 
 namespace cass {
 
+class RoutableRequest;
+class DHTMetadata;
+
 class QueryPlan {
 public:
   virtual ~QueryPlan() {}
@@ -72,9 +76,35 @@ public:
 
   virtual CassHostDistance distance(const SharedRefPtr<Host>& host) = 0;
 
-  virtual QueryPlan* new_query_plan() = 0;
+  virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
+                                    const Request* request,
+                                    const DHTMetadata& dht) = 0;
 
   virtual LoadBalancingPolicy* new_instance() = 0;
+};
+
+
+class ChainedLoadBalancingPolicy : public LoadBalancingPolicy {
+public:
+  ChainedLoadBalancingPolicy(LoadBalancingPolicy* child_policy)
+    : child_policy_(child_policy) {}
+
+  virtual ~ChainedLoadBalancingPolicy() {}
+
+  virtual void init(const HostMap& hosts) { return child_policy_->init(hosts); }
+
+  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) { return child_policy_->distance(host); }
+
+  virtual void on_add(const SharedRefPtr<Host>& host) { child_policy_->on_add(host); }
+
+  virtual void on_remove(const SharedRefPtr<Host>& host) { child_policy_->on_remove(host); }
+
+  virtual void on_up(const SharedRefPtr<Host>& host) { child_policy_->on_up(host); }
+
+  virtual void on_down(const SharedRefPtr<Host>& host) { child_policy_->on_down(host); }
+
+protected:
+  ScopedRefPtr<LoadBalancingPolicy> child_policy_;
 };
 
 } // namespace cass

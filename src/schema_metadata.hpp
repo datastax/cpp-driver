@@ -24,6 +24,8 @@
 
 #include <map>
 #include <string>
+#include <uv.h>
+#include <vector>
 
 namespace cass {
 
@@ -113,6 +115,7 @@ public:
   virtual Iterator* iterator() const = 0;
 
   const SchemaMetadataField* get_field(const std::string& name) const;
+  std::string get_string_field(const std::string& name) const;
   Iterator* iterator_fields() const { return new SchemaMetadataFieldIterator(fields_); }
 
 protected:
@@ -167,6 +170,7 @@ class TableMetadata : public SchemaMetadata {
 public:
   typedef std::map<std::string, TableMetadata> Map;
   typedef SchemaMetadataIteratorImpl<ColumnMetadata> ColumnIterator;
+  typedef std::vector<std::string> KeyAliases;
 
   TableMetadata()
     : SchemaMetadata(CASS_SCHEMA_META_TYPE_TABLE) {}
@@ -177,14 +181,18 @@ public:
   ColumnMetadata* get_or_create(const std::string& name) { return &columns_[name]; }
   void update(int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
+  const KeyAliases& key_aliases() const;
+
 private:
   ColumnMetadata::Map columns_;
+  mutable KeyAliases key_aliases_;
 };
 
 class KeyspaceMetadata : public SchemaMetadata {
 public:
   typedef std::map<std::string, KeyspaceMetadata> Map;
   typedef SchemaMetadataIteratorImpl<TableMetadata> TableIterator;
+  typedef std::map<std::string, std::string> StrategyOptions;
 
   KeyspaceMetadata()
     : SchemaMetadata(CASS_SCHEMA_META_TYPE_KEYSPACE) {}
@@ -196,13 +204,18 @@ public:
   void update(int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
   void drop_table(const std::string& table_name);
 
+  std::string strategy() const { return get_string_field("strategy"); }
+  const StrategyOptions& strategy_options() const ;
+
 private:
   TableMetadata::Map tables_;
+  mutable StrategyOptions strategy_options_;
 };
 
 class Schema {
 public:
   typedef SchemaMetadataIteratorImpl<KeyspaceMetadata> KeyspaceIterator;
+  typedef std::map<std::string, KeyspaceMetadata*> KeyspacePointerMap;
 
   Schema()
     : keyspaces_(new KeyspaceMetadata::Map)
@@ -216,12 +229,15 @@ public:
   Iterator* iterator() const { return new KeyspaceIterator(*keyspaces_); }
 
   KeyspaceMetadata* get_or_create(const std::string& name) { return &(*keyspaces_)[name]; }
-  void update_keyspaces(ResultResponse* result);
+  KeyspacePointerMap update_keyspaces(ResultResponse* result);
   void update_tables(ResultResponse* result);
   void update_columns(ResultResponse* result);
   void drop_keyspace(const std::string& keyspace_name);
   void drop_table(const std::string& keyspace_name, const std::string& table_name);
   void clear();
+  void get_table_key_columns(const std::string& ks_name,
+                             const std::string& cf_name,
+                             std::vector<std::string>* output) const;
 
 private:
   // Really coarse grain copy-on-write. This could be made
