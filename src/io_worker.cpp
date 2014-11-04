@@ -326,16 +326,14 @@ void IOWorker::schedule_reconnect(const Address& address) {
                           &pr,
                           boost::bind(&IOWorker::on_pending_pool_reconnect, this, _1));
   logger_->debug("IOWorker: Scheduling reconnect(%p timer(%p)) for host %s io_worker(%p)",
-                 address.to_string().c_str(), &pr, pr.timer, this);
+                 &pr, pr.timer, address.to_string().c_str(), this);
 }
 
 void IOWorker::cancel_reconnect(const Address& address) {
   PendingReconnectMap::iterator it = pending_reconnects_.find(address);
   if (it != pending_reconnects_.end()) {
-    logger_->debug("IOWorker: Canceling reconnect(%p timer(%p)) for host %s io_worker(%p)",
-                   address.to_string().c_str(),
-                   &it->second,
-                   it->second.timer, this);
+    logger_->debug("IOWorker: Cancelling reconnect(%p timer(%p)) for host %s io_worker(%p)",
+                   &it->second, it->second.timer, address.to_string().c_str(), this);
     it->second.stop_timer();
     pending_reconnects_.erase(it);
   }
