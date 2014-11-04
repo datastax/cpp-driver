@@ -22,6 +22,7 @@
 #include "third_party/boost/boost/static_assert.hpp"
 #include "uv.h"
 
+#include <cstring>
 #include <list>
 #include <map>
 #include <string>

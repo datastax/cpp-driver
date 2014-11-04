@@ -72,6 +72,7 @@ public:
 
   bool is_up() const { return state() == UP; }
   void set_up() { set_state(UP); }
+  bool is_down() const { return state() == DOWN; }
   void set_down() { set_state(DOWN); }
 
   std::string to_string() const {

@@ -43,8 +43,7 @@ struct IOWorkerEvent {
   enum Type {
     INVALID,
     ADD_POOL,
-    REMOVE_POOL,
-    SCHEDULE_RECONNECT
+    REMOVE_POOL
   };
 
   IOWorkerEvent()
@@ -52,7 +51,6 @@ struct IOWorkerEvent {
 
   Type type;
   Address address;
-  uint64_t reconnect_wait;
   bool is_initial_connection;
 };
 
@@ -88,7 +86,6 @@ public:
 
   bool add_pool_async(const Address& address, bool is_initial_connection);
   bool remove_pool_async(const Address& address);
-  bool schedule_reconnect_async(const Address& address, uint64_t wait);
   void close_async();
 
   bool execute(RequestHandler* request_handler);
@@ -127,6 +124,9 @@ private:
   };
 
   typedef std::map<Address, PendingReconnect> PendingReconnectMap;
+
+  void schedule_reconnect(const Address& address);
+  void cancel_reconnect(const Address& address);
 
 private:
   Session* session_;

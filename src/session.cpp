@@ -402,10 +402,6 @@ void Session::on_remove(SharedRefPtr<Host> host) {
 }
 
 void Session::on_up(SharedRefPtr<Host> host) {
-  if (host->is_up()) {
-    return;
-  }
-
   host->set_up();
   load_balancing_policy_->on_up(host);
 
@@ -419,19 +415,14 @@ void Session::on_down(SharedRefPtr<Host> host, bool is_critical_failure) {
   host->set_down();
   load_balancing_policy_->on_down(host);
 
-  for (IOWorkerVec::iterator it = io_workers_.begin(),
-       end = io_workers_.end(); it != end; ++it) {
-    (*it)->remove_pool_async(host->address());
-  }
-
   if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE ||
       is_critical_failure) {
-    return;
-  }
-
-  for (IOWorkerVec::iterator it = io_workers_.begin(),
-       end = io_workers_.end(); it != end; ++it) {
-    (*it)->schedule_reconnect_async(host->address(), config_.reconnect_wait_time_ms());
+    // This permanently removes a host from all IO workers and stops
+    // any attempt to reconnect to that host.
+    for (IOWorkerVec::iterator it = io_workers_.begin(),
+         end = io_workers_.end(); it != end; ++it) {
+      (*it)->remove_pool_async(host->address());
+    }
   }
 }
 
