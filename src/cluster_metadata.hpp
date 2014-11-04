@@ -17,7 +17,7 @@
 #ifndef __CASS_CLUSTER_METADATA_HPP_INCLUDED__
 #define __CASS_CLUSTER_METADATA_HPP_INCLUDED__
 
-#include "dht_metadata.hpp"
+#include "token_map.hpp"
 #include "schema_metadata.hpp"
 
 namespace cass {
@@ -28,22 +28,22 @@ public:
   void update_keyspaces(ResultResponse* result);
   void update_tables(ResultResponse* result) { schema_.update_tables(result); }
   void update_columns(ResultResponse* result) { schema_.update_columns(result); }
-  void set_partitioner(const std::string& partitioner_class) { dht_meta_.set_partitioner(partitioner_class); }
-  void update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens) { dht_meta_.update_host(host, tokens); }
-  void build() { dht_meta_.build(); }
+  void set_partitioner(const std::string& partitioner_class) { token_map_.set_partitioner(partitioner_class); }
+  void update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens) { token_map_.update_host(host, tokens); }
+  void build() { token_map_.build(); }
   void drop_keyspace(const std::string& keyspace_name);
   void drop_table(const std::string& keyspace_name, const std::string& table_name) { schema_.drop_table(keyspace_name, table_name); }
-  void remove_host(SharedRefPtr<Host>& host) { dht_meta_.remove_host(host); }
+  void remove_host(SharedRefPtr<Host>& host) { token_map_.remove_host(host); }
 
   const Schema& schema() const { return schema_; }
 
   void set_protocol_version(int version) { schema_.set_protocol_version(version); }
 
-  const DHTMetadata& dht_meta() const { return dht_meta_; }
+  const TokenMap& token_map() const { return token_map_; }
 
 private:
   Schema schema_;
-  DHTMetadata dht_meta_;
+  TokenMap token_map_;
 };
 
 } // namespace cass

@@ -19,7 +19,7 @@
 
 #include "address.hpp"
 #include "connection.hpp"
-#include "dht_metadata.hpp"
+#include "token_map.hpp"
 #include "handler.hpp"
 #include "host.hpp"
 #include "load_balancing.hpp"

@@ -17,7 +17,7 @@
 #ifndef __CASS_TOKEN_AWARE_POLICY_HPP_INCLUDED__
 #define __CASS_TOKEN_AWARE_POLICY_HPP_INCLUDED__
 
-#include "dht_metadata.hpp"
+#include "token_map.hpp"
 #include "load_balancing.hpp"
 #include "host.hpp"
 #include "scoped_ptr.hpp"
@@ -34,14 +34,14 @@ public:
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
                                     const Request* request,
-                                    const DHTMetadata& dht);
+                                    const TokenMap& token_map);
 
   LoadBalancingPolicy* new_instance() { return new TokenAwarePolicy(child_policy_->new_instance()); }
 
 private:
   class TokenAwareQueryPlan : public QueryPlan {
   public:
-    TokenAwareQueryPlan(LoadBalancingPolicy* child_policy, QueryPlan* child_plan, const COWHostVec& replicas, size_t start_index)
+    TokenAwareQueryPlan(LoadBalancingPolicy* child_policy, QueryPlan* child_plan, const CopyOnWriteHostVec& replicas, size_t start_index)
       : child_policy_(child_policy)
       , child_plan_(child_plan)
       , replicas_(replicas)
@@ -53,7 +53,7 @@ private:
   private:
     LoadBalancingPolicy* child_policy_;
     ScopedPtr<QueryPlan> child_plan_;
-    COWHostVec replicas_;
+    CopyOnWriteHostVec replicas_;
     size_t index_;
     size_t remaining_;
     std::set<const Address> replicas_attempted_;

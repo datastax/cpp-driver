@@ -21,7 +21,7 @@ namespace cass {
 
 QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspace,
                                             const Request* request,
-                                            const DHTMetadata& dht) {
+                                            const TokenMap& token_map) {
   if (request != NULL) {
     switch(request->opcode()) {
       {
@@ -34,10 +34,10 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspac
         const std::string& keyspace = statement_keyspace.empty()
                                       ? connected_keyspace : statement_keyspace;
         if (!keys.empty() && !keyspace.empty()) {
-          COWHostVec replicas = dht.get_replicas(keyspace, keys);
+          CopyOnWriteHostVec replicas = token_map.get_replicas(keyspace, keys);
           if (!replicas->empty()) {
             return new TokenAwareQueryPlan(child_policy_.get(),
-                                           child_policy_->new_query_plan(connected_keyspace, request, dht),
+                                           child_policy_->new_query_plan(connected_keyspace, request, token_map),
                                            replicas,
                                            index_++);
           }
@@ -48,7 +48,7 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspac
         break;
     }
   }
-  return child_policy_->new_query_plan(connected_keyspace, request, dht);
+  return child_policy_->new_query_plan(connected_keyspace, request, token_map);
 }
 
 bool TokenAwarePolicy::TokenAwareQueryPlan::compute_next(Address* address)  {

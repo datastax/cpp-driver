@@ -20,19 +20,19 @@ namespace cass {
 
 void ClusterMetadata::clear() {
   schema_.clear();
-  dht_meta_.clear();
+  token_map_.clear();
 }
 
 void ClusterMetadata::update_keyspaces(ResultResponse* result) {
   Schema::KeyspacePointerMap keyspaces = schema_.update_keyspaces(result);
   for (Schema::KeyspacePointerMap::const_iterator i = keyspaces.begin(); i != keyspaces.end(); ++i) {
-    dht_meta_.update_keyspace(i->first, *i->second);
+    token_map_.update_keyspace(i->first, *i->second);
   }
 }
 
 void ClusterMetadata::drop_keyspace(const std::string& keyspace_name) {
   schema_.drop_keyspace(keyspace_name);
-  dht_meta_.drop_keyspace(keyspace_name);
+  token_map_.drop_keyspace(keyspace_name);
 }
 
 }

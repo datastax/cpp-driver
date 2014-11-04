@@ -46,7 +46,7 @@ public:
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
                                     const Request* request,
-                                    const DHTMetadata& dht) {
+                                    const TokenMap& token_map) {
     return new RoundRobinQueryPlan(hosts_, index_++);
   }
 
@@ -92,7 +92,7 @@ public:
 private:
   class RoundRobinQueryPlan : public QueryPlan {
   public:
-    RoundRobinQueryPlan(const COWHostVec& hosts, size_t start_index)
+    RoundRobinQueryPlan(const CopyOnWriteHostVec& hosts, size_t start_index)
       : hosts_(hosts)
       , index_(start_index)
       , remaining_(hosts->size()) {}
@@ -110,12 +110,12 @@ private:
     }
 
   private:
-    const COWHostVec hosts_;
+    const CopyOnWriteHostVec hosts_;
     size_t index_;
     size_t remaining_;
   };
 
-  COWHostVec hosts_;
+  CopyOnWriteHostVec hosts_;
   size_t index_;
   std::set<Address> down_addresses_;
 

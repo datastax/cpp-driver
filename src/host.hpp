@@ -103,7 +103,7 @@ private:
 
 typedef std::map<Address, SharedRefPtr<Host> > HostMap;
 typedef std::vector<SharedRefPtr<Host> > HostVec;
-typedef CopyOnWritePtr<HostVec> COWHostVec;
+typedef CopyOnWritePtr<HostVec> CopyOnWriteHostVec;
 
 } // namespace cass
 

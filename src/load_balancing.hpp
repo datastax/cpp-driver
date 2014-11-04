@@ -57,7 +57,7 @@ typedef enum CassHostDistance_ {
 namespace cass {
 
 class RoutableRequest;
-class DHTMetadata;
+class TokenMap;
 
 class QueryPlan {
 public:
@@ -78,7 +78,7 @@ public:
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
                                     const Request* request,
-                                    const DHTMetadata& dht) = 0;
+                                    const TokenMap& token_map) = 0;
 
   virtual LoadBalancingPolicy* new_instance() = 0;
 };

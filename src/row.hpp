@@ -39,6 +39,8 @@ public:
 
   const Value* get_by_name(const boost::string_ref& name) const;
 
+  bool get_string_by_name(const boost::string_ref& name, std::string* out) const;
+
   const ResultResponse* result() const { return result_; }
 
   void set_result(ResultResponse* result) { result_ = result; }
