@@ -33,18 +33,27 @@ namespace cass {
 
 typedef std::vector<boost::string_ref> TokenStringList;
 
+class Partitioner {
+public:
+  virtual ~Partitioner() {}
+  virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const = 0;
+  virtual Token hash(const BufferRefs& key_parts) const = 0;
+};
+
 class TokenMap {
 public:
   virtual ~TokenMap() {}
 
+  void clear();
   void build() { map_replicas(true); }
 
+  void set_partitioner(const std::string& partitioner_class);
   void update_host(SharedRefPtr<Host>& host, const TokenStringList& token_strings);
   void remove_host(SharedRefPtr<Host>& host);
   void update_keyspace(const std::string& ks_name, const KeyspaceMetadata& ks_meta);
   void drop_keyspace(const std::string& ks_name);
-  const COWHostVec& get_replicas(const std::string& ks_name,
-                                              const BufferRefs& key_parts) const;
+  const CopyOnWriteHostVec& get_replicas(const std::string& ks_name,
+                                         const BufferRefs& key_parts) const;
 
 private:
   void map_replicas(bool force = false);
@@ -54,66 +63,45 @@ private:
   bool purge_address(const Address& addr);
 
 protected:
-  virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const = 0;
-  virtual Token hash(const BufferRefs& key_parts) const = 0;
-
   TokenHostMap token_map_;
 
   typedef std::map<std::string, TokenReplicaMap> KeyspaceReplicaMap;
   KeyspaceReplicaMap keyspace_replica_map_;
 
-  typedef std::map<std::string, ScopedPtr<ReplicaPlacementStrategy> > KeyspaceStrategyMap;
+  typedef std::map<std::string, SharedRefPtr<ReplicaPlacementStrategy> > KeyspaceStrategyMap;
   KeyspaceStrategyMap keyspace_strategy_map_;
 
   typedef std::set<Address> AddressSet;
   AddressSet mapped_addresses_;
+
+  ScopedPtr<Partitioner> partitioner_;
 };
 
 
-class M3PTokenMap : public TokenMap {
+class Murmur3Partitioner : public Partitioner {
 public:
-  static const std::string PARTIONER_CLASS;
-  static bool less_than(const Token& a, const Token& b);
+  static const std::string PARTITIONER_CLASS;
 
   virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
   virtual Token hash(const BufferRefs& key_parts) const;
 };
 
 
-class RPTokenMap : public TokenMap {
+class RandomPartitioner : public Partitioner {
 public:
-  static const std::string PARTIONER_CLASS;
-  static bool less_than(const Token& a, const Token& b);
+  static const std::string PARTITIONER_CLASS;
 
   virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
   virtual Token hash(const BufferRefs& key_parts) const;
 };
 
 
-class BOPTokenMap : public TokenMap {
+class ByteOrderedPartitioner : public Partitioner {
 public:
-  static const std::string PARTIONER_CLASS;
-  static bool less_than(const Token& a, const Token& b);
+  static const std::string PARTITIONER_CLASS;
 
   virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
   virtual Token hash(const BufferRefs& key_parts) const;
-};
-
-
-class DHTMetadata {
-public:
-  void clear() { token_map_.reset(); }
-  void build();
-  void set_partitioner(const std::string& partitioner_class);
-  void update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens);
-  void remove_host(SharedRefPtr<Host>& host);
-  void update_keyspace(const std::string& ks_name, const KeyspaceMetadata& ks_meta);
-  void drop_keyspace(const std::string& ks_name);
-
-  const COWHostVec& get_replicas(const std::string& ks_name, const BufferRefs& key_parts) const;
-
-private:
-  ScopedPtr<TokenMap> token_map_;
 };
 
 } // namespace cass

@@ -75,4 +75,14 @@ const Value* Row::get_by_name(const boost::string_ref& name) const {
   return &values[indices[0]];
 }
 
+bool Row::get_string_by_name(const boost::string_ref& name, std::string* out) const {
+  const Value* value = get_by_name(name);
+  if (value == NULL ||
+      value->buffer().size() <= 0) {
+    return false;
+  }
+  out->assign(value->buffer().data(), value->buffer().size());
+  return true;
+}
+
 }

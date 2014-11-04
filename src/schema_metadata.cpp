@@ -98,15 +98,6 @@ const CassSchemaMetaField* cass_iterator_get_schema_meta_field(CassIterator* ite
 
 namespace cass {
 
-static bool get_value_by_name(const Row* row, const char* column_name, std::string* output) {
-  const Value* value = row->get_by_name(column_name);
-  if (value == NULL || value->is_null() || value->buffer().size() == 0) {
-    return false;
-  }
-  output->assign(value->buffer().data(), value->buffer().size());
-  return true;
-}
-
 template <class T>
 const T* find_by_name(const std::map<std::string, T>& map, const std::string& name) {
   typename std::map<std::string, T>::const_iterator it = map.find(name);
@@ -126,12 +117,14 @@ Schema::KeyspacePointerMap Schema::update_keyspaces(ResultResponse* result) {
   ResultIterator rows(result);
 
   while (rows.next()) {
-    const Row* row = rows.row();
     std::string keyspace_name;
-    if (!get_value_by_name(row, "keyspace_name", &keyspace_name)) {
+    const Row* row = rows.row();
+
+    if (!row->get_string_by_name("keyspace_name", &keyspace_name)) {
       // TODO: Add global logging
       continue;
     }
+
     KeyspaceMetadata* ks_meta = get_or_create(keyspace_name);
     ks_meta->update(protocol_version_, buffer, row);
     updates.insert(std::make_pair(keyspace_name, ks_meta));
@@ -153,8 +146,8 @@ void Schema::update_tables(ResultResponse* result) {
     std::string temp_keyspace_name;
     const Row* row = rows.row();
 
-    if (!get_value_by_name(row, "keyspace_name", &temp_keyspace_name) ||
-        !get_value_by_name(row, "columnfamily_name", &columnfamily_name)) {
+    if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
+        !row->get_string_by_name("columnfamily_name", &columnfamily_name)) {
       // TODO: Add global logging
       continue;
     }
@@ -184,9 +177,9 @@ void Schema::update_columns(ResultResponse* result) {
     std::string temp_columnfamily_name;
     const Row* row = rows.row();
 
-    if (!get_value_by_name(row, "keyspace_name", &temp_keyspace_name) ||
-        !get_value_by_name(row, "columnfamily_name", &temp_columnfamily_name) ||
-        !get_value_by_name(row, "column_name", &column_name)) {
+    if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
+        !row->get_string_by_name("columnfamily_name", &temp_columnfamily_name) ||
+        !row->get_string_by_name("column_name", &column_name)) {
       // TODO: Add global logging
       continue;
     }

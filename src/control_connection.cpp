@@ -409,10 +409,10 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
   const Value* v;
 
   std::string rack;
-  get_optional_string(row->get_by_name("rack"), &rack);
+  row->get_string_by_name("rack", &rack);
 
   std::string dc;
-  get_optional_string(row->get_by_name("data_center"), &dc);
+  row->get_string_by_name("data_center", &dc);
 
   // This value is not present in the "system.local" query
   v = row->get_by_name("peer");
@@ -437,8 +437,7 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
 
   if (query_tokens_) {
     std::string partitioner;
-    get_optional_string(row->get_by_name("partitioner"), &partitioner);
-    if (!partitioner.empty()) {
+    if (row->get_string_by_name("partitioner", &partitioner)) {
       session_->cluster_meta().set_partitioner(partitioner);
     }
     v = row->get_by_name("tokens");
@@ -661,7 +660,7 @@ void ControlConnection::on_down(const Address& address, bool is_critical_failure
 }
 
 void ControlConnection::on_reconnect(Timer* timer) {
-  query_plan_.reset(session_->get_new_query_plan());
+  query_plan_.reset(session_->new_query_plan());
   reconnect(false);
   reconnect_timer_ = NULL;
 }

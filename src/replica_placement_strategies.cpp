@@ -17,23 +17,25 @@
 #include "replica_placement_strategies.hpp"
 
 #include "common.hpp"
-#include "dht_metadata.hpp"
+#include "token_map.hpp"
+
+#include "third_party/boost/boost/algorithm/string/predicate.hpp"
 
 #include <map>
 #include <set>
 
 namespace cass {
 
-ReplicaPlacementStrategy* ReplicaPlacementStrategy::from_keyspace_meta(const KeyspaceMetadata& ks_meta) {
+SharedRefPtr<ReplicaPlacementStrategy> ReplicaPlacementStrategy::from_keyspace_meta(const KeyspaceMetadata& ks_meta) {
   const std::string& strategy_class = ks_meta.strategy();
 
-  if (string_ends_with(strategy_class, NetworkTopologyStrategy::STRATEGY_CLASS)) {
-    return new NetworkTopologyStrategy(ks_meta.strategy_options());
+  if (boost::ends_with(strategy_class, NetworkTopologyStrategy::STRATEGY_CLASS)) {
+    return SharedRefPtr<ReplicaPlacementStrategy>(new NetworkTopologyStrategy(ks_meta.strategy_options()));
   } else
-  if (string_ends_with(strategy_class, SimpleStrategy::STRATEGY_CLASS)) {
-    return new SimpleStrategy(ks_meta.strategy_options());
+  if (boost::ends_with(strategy_class, SimpleStrategy::STRATEGY_CLASS)) {
+    return SharedRefPtr<ReplicaPlacementStrategy>(new SimpleStrategy(ks_meta.strategy_options()));
   } else {
-    return new NonReplicatedStrategy();
+    return SharedRefPtr<ReplicaPlacementStrategy>(new NonReplicatedStrategy());
   }
 }
 
@@ -139,7 +141,7 @@ void NetworkTopologyStrategy::tokens_to_replicas(const TokenHostMap& primary, To
       ++token_count;
     } while(token_count < primary.size());
 
-    output->insert(std::make_pair(i->first, COWHostVec(token_replicas)));
+    output->insert(std::make_pair(i->first, CopyOnWriteHostVec(token_replicas)));
   }
 }
 
@@ -174,7 +176,7 @@ void SimpleStrategy::tokens_to_replicas(const TokenHostMap& primary, TokenReplic
         j = primary.begin();
       }
     } while(token_replicas->size() < target_replicas);
-    output->insert(std::make_pair(i->first, COWHostVec(token_replicas)));
+    output->insert(std::make_pair(i->first, CopyOnWriteHostVec(token_replicas)));
   }
 }
 
@@ -190,7 +192,7 @@ void NonReplicatedStrategy::tokens_to_replicas(const TokenHostMap& primary, Toke
     HostVec* token_replicas = new HostVec();
     token_replicas->resize(1);
     (*token_replicas)[0] = i->second;
-    output->insert(std::make_pair(i->first, COWHostVec(token_replicas)));
+    output->insert(std::make_pair(i->first, CopyOnWriteHostVec(token_replicas)));
   }
 }
 

@@ -17,30 +17,22 @@
 #ifndef __CASS_REPLICA_PLACEMENT_STRATEGIES_HPP_INCLUDED__
 #define __CASS_REPLICA_PLACEMENT_STRATEGIES_HPP_INCLUDED__
 
+#include "buffer.hpp"
 #include "host.hpp"
+#include "ref_counted.hpp"
 #include "schema_metadata.hpp"
 
 #include <map>
 
 namespace cass {
 
-struct Token {
-  typedef bool(*TokenLessThan)(const Token&, const Token&);
-  Token(size_t size, TokenLessThan tc)
-    : data(size, 0)
-    , lt(tc) {}
-
-  bool operator<(const Token& other) const { return lt(*this, other); }
-  const std::vector<uint8_t> data;
-  TokenLessThan lt;
-};
-
+typedef std::vector<uint8_t> Token;
 typedef std::map<Token, SharedRefPtr<Host> > TokenHostMap;
-typedef std::map<Token, COWHostVec> TokenReplicaMap;
+typedef std::map<Token, CopyOnWriteHostVec> TokenReplicaMap;
 
-class ReplicaPlacementStrategy {
+class ReplicaPlacementStrategy : public RefCounted<ReplicaPlacementStrategy> {
 public:
-  static ReplicaPlacementStrategy* from_keyspace_meta(const KeyspaceMetadata& ks_meta);
+  static SharedRefPtr<ReplicaPlacementStrategy> from_keyspace_meta(const KeyspaceMetadata& ks_meta);
   virtual ~ReplicaPlacementStrategy() {}
 
   virtual bool equals(const ReplicaPlacementStrategy& other) = 0;
