@@ -98,6 +98,7 @@ void TokenMap::update_host(SharedRefPtr<Host>& host, const TokenStringList& toke
        i != token_strings.end(); ++i) {
     token_map_[token_from_string_ref(*i)] = host;
   }
+  mapped_addresses_.insert(host->address());
   map_replicas();
 }
 
