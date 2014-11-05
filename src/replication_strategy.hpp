@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_REPLICA_PLACEMENT_STRATEGIES_HPP_INCLUDED__
-#define __CASS_REPLICA_PLACEMENT_STRATEGIES_HPP_INCLUDED__
+#ifndef __CASS_REPLICATION_STRATEGY_HPP_INCLUDED__
+#define __CASS_REPLICATION_STRATEGY_HPP_INCLUDED__
 
 #include "buffer.hpp"
 #include "host.hpp"
@@ -30,49 +30,64 @@ typedef std::vector<uint8_t> Token;
 typedef std::map<Token, SharedRefPtr<Host> > TokenHostMap;
 typedef std::map<Token, CopyOnWriteHostVec> TokenReplicaMap;
 
-class ReplicaPlacementStrategy : public RefCounted<ReplicaPlacementStrategy> {
+class ReplicationStrategy : public RefCounted<ReplicationStrategy> {
 public:
-  static SharedRefPtr<ReplicaPlacementStrategy> from_keyspace_meta(const KeyspaceMetadata& ks_meta);
-  virtual ~ReplicaPlacementStrategy() {}
+  static SharedRefPtr<ReplicationStrategy> from_keyspace_meta(const KeyspaceMetadata& ks_meta);
 
-  virtual bool equals(const ReplicaPlacementStrategy& other) = 0;
+  ReplicationStrategy(const std::string& strategy_class)
+    : strategy_class_(strategy_class) {}
+
+  virtual ~ReplicationStrategy() {}
+  virtual bool equal(const KeyspaceMetadata& ks_meta) = 0;
   virtual void tokens_to_replicas(const TokenHostMap& primary, TokenReplicaMap* output) const = 0;
+
+  // Used to determine if stra
+  std::string strategy_class_;
 };
 
 
-class NetworkTopologyStrategy : public ReplicaPlacementStrategy {
+class NetworkTopologyStrategy : public ReplicationStrategy {
 public:
   static const std::string STRATEGY_CLASS;
-  NetworkTopologyStrategy(const KeyspaceMetadata::StrategyOptions& options);
+
+  NetworkTopologyStrategy(const std::string& strategy_class,
+                          const SchemaMetadataField* strategy_options);
   virtual ~NetworkTopologyStrategy() {}
 
-  virtual bool equals(const ReplicaPlacementStrategy& other);
+  virtual bool equal(const KeyspaceMetadata& ks_meta);
   virtual void tokens_to_replicas(const TokenHostMap& primary, TokenReplicaMap* output) const;
 
 private:
-  std::map<std::string, size_t> dc_replicas_;
+  typedef std::map<std::string, size_t> DCReplicaCountMap;
+  static void build_dc_replicas(const SchemaMetadataField* strategy_options, DCReplicaCountMap* dc_replicas);
+  DCReplicaCountMap dc_replicas_;
 };
 
 
-class SimpleStrategy : public ReplicaPlacementStrategy {
+class SimpleStrategy : public ReplicationStrategy {
 public:
   static const std::string STRATEGY_CLASS;
-  SimpleStrategy(const KeyspaceMetadata::StrategyOptions& options);
+
+  SimpleStrategy(const std::string& strategy_class,
+                 const SchemaMetadataField* strategy_options);
   virtual ~SimpleStrategy() {}
 
-  virtual bool equals(const ReplicaPlacementStrategy& other);
+  virtual bool equal(const KeyspaceMetadata& ks_meta);
   virtual void tokens_to_replicas(const TokenHostMap& primary, TokenReplicaMap* output) const;
 
 private:
+  static size_t get_replication_factor(const SchemaMetadataField* strategy_options);
   size_t replication_factor_;
 };
 
 
-class NonReplicatedStrategy : public ReplicaPlacementStrategy {
+class NonReplicatedStrategy : public ReplicationStrategy {
 public:
+  NonReplicatedStrategy(const std::string& strategy_class)
+    : ReplicationStrategy(strategy_class) {}
   virtual ~NonReplicatedStrategy() {}
 
-  virtual bool equals(const ReplicaPlacementStrategy& other);
+  virtual bool equal(const KeyspaceMetadata& ks_meta);
   virtual void tokens_to_replicas(const TokenHostMap& primary, TokenReplicaMap* output) const;
 };
 

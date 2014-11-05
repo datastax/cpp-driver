@@ -18,8 +18,7 @@
 #include "md5.hpp"
 #include "murmur3.hpp"
 
-#include "boost/algorithm/string/predicate.hpp"
-#include "boost/lexical_cast.hpp"
+#include "third_party/boost/boost/algorithm/string/predicate.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -29,6 +28,30 @@ namespace cass {
 
 static const CopyOnWriteHostVec NO_REPLICAS(new HostVec());
 static const uint64_t INT64_MAX_PLUS_ONE =  static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) + 1;
+
+static int64_t parse_int64(const char* p, size_t n) {
+  int c;
+  const char* s = p;
+  for (; n != 0 && isspace(c = *s); ++s, --n) {}
+
+  if (n == 0) {
+    return 0;
+  }
+
+  int64_t sign = 1;
+  if (c == '-') {
+    sign = -1;
+    ++s; --n;
+  }
+
+  int64_t value = 0;
+  for (; n != 0  && isdigit(c = *s); ++s, --n) {
+    value *= 10;
+    value += c - '0';
+  }
+
+  return sign * value;
+}
 
 static void parse_int128(const char* p, size_t n, uint8_t* output) {
   // no sign handling because C* uses [0, 2^127]
@@ -76,7 +99,19 @@ void TokenMap::clear() {
   partitioner_.reset();
 }
 
+void TokenMap::build() {
+  if (!partitioner_) {
+    // TODO: Global logging
+    return;
+  }
+
+  map_replicas(true);
+}
+
 void TokenMap::set_partitioner(const std::string& partitioner_class) {
+  // Only set the partition once
+  if (partitioner_) return;
+
   if (boost::ends_with(partitioner_class, Murmur3Partitioner::PARTITIONER_CLASS)) {
     partitioner_.reset(new Murmur3Partitioner());
   } else if (boost::ends_with(partitioner_class, RandomPartitioner::PARTITIONER_CLASS)) {
@@ -117,15 +152,14 @@ void TokenMap::remove_host(SharedRefPtr<Host>& host) {
 void TokenMap::update_keyspace(const std::string& ks_name, const KeyspaceMetadata& ks_meta) {
   if (!partitioner_) return;
 
-  SharedRefPtr<ReplicaPlacementStrategy> rps_now(ReplicaPlacementStrategy::from_keyspace_meta(ks_meta));
   KeyspaceStrategyMap::iterator i = keyspace_strategy_map_.find(ks_name);
-  if (i == keyspace_strategy_map_.end() ||
-      !i->second->equals(*rps_now)) {
-    map_keyspace_replicas(ks_name, *rps_now);
+  if (i == keyspace_strategy_map_.end() || !i->second->equal(ks_meta)) {
+    SharedRefPtr<ReplicationStrategy> strategy(ReplicationStrategy::from_keyspace_meta(ks_meta));
+    map_keyspace_replicas(ks_name, strategy);
     if (i == keyspace_strategy_map_.end()) {
-      keyspace_strategy_map_[ks_name] = rps_now;
+      keyspace_strategy_map_[ks_name] = strategy;
     } else {
-      i->second = rps_now;
+      i->second = strategy;
     }
   }
 }
@@ -161,15 +195,17 @@ void TokenMap::map_replicas(bool force) {
   }
   for (KeyspaceStrategyMap::const_iterator i = keyspace_strategy_map_.begin();
        i != keyspace_strategy_map_.end(); ++i) {
-    map_keyspace_replicas(i->first, *i->second, force);
+    map_keyspace_replicas(i->first, i->second, force);
   }
 }
 
-void TokenMap::map_keyspace_replicas(const std::string& ks_name, const ReplicaPlacementStrategy& rps, bool force) {
+void TokenMap::map_keyspace_replicas(const std::string& ks_name,
+                                     const SharedRefPtr<ReplicationStrategy>& strategy,
+                                     bool force) {
   if (keyspace_replica_map_.empty() && !force) {// do nothing ahead of first build
     return;
   }
-  rps.tokens_to_replicas(token_map_, &keyspace_replica_map_[ks_name]);
+  strategy->tokens_to_replicas(token_map_, &keyspace_replica_map_[ks_name]);
 }
 
 bool TokenMap::purge_address(const Address& addr) {
@@ -197,7 +233,7 @@ const std::string Murmur3Partitioner::PARTITIONER_CLASS("Murmur3Partitioner");
 
 Token Murmur3Partitioner::token_from_string_ref(const boost::string_ref& token_string_ref) const {
   Token token(sizeof(int64_t), 0);
-  int64_t token_value = boost::lexical_cast<int64_t>(token_string_ref);
+  int64_t token_value = parse_int64(token_string_ref.data(), token_string_ref.size());
   encode_uint64(&token[0], static_cast<uint64_t>(token_value) + INT64_MAX_PLUS_ONE);
   return token;
 }

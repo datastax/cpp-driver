@@ -1179,7 +1179,8 @@ cass_statement_new(CassString query,
  * @return CASS_OK if successful, otherwise an error ocurred.
  */
 CASS_EXPORT CassError
-cass_statement_add_key_index(CassStatement* statement, cass_size_t index);
+cass_statement_add_key_index(CassStatement* statement,
+                             cass_size_t index);
 
 /**
  * Frees a statement instance. Statements can be immediately freed after

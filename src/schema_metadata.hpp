@@ -17,10 +17,10 @@
 #ifndef __CASS_SCHEMA_METADATA_HPP_INCLUDED__
 #define __CASS_SCHEMA_METADATA_HPP_INCLUDED__
 
-#include "cass_type_parser.hpp"
 #include "copy_on_write_ptr.hpp"
 #include "iterator.hpp"
 #include "scoped_ptr.hpp"
+#include "type_parser.hpp"
 
 #include <map>
 #include <string>
@@ -192,7 +192,6 @@ class KeyspaceMetadata : public SchemaMetadata {
 public:
   typedef std::map<std::string, KeyspaceMetadata> Map;
   typedef SchemaMetadataIteratorImpl<TableMetadata> TableIterator;
-  typedef std::map<std::string, std::string> StrategyOptions;
 
   KeyspaceMetadata()
     : SchemaMetadata(CASS_SCHEMA_META_TYPE_KEYSPACE) {}
@@ -204,12 +203,11 @@ public:
   void update(int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
   void drop_table(const std::string& table_name);
 
-  std::string strategy() const { return get_string_field("strategy"); }
-  const StrategyOptions& strategy_options() const ;
+  std::string strategy_class() const { return get_string_field("strategy_class"); }
+  const SchemaMetadataField* strategy_options() const { return get_field("strategy_options"); }
 
 private:
   TableMetadata::Map tables_;
-  mutable StrategyOptions strategy_options_;
 };
 
 class Schema {

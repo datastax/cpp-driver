@@ -18,6 +18,9 @@
 #define __CASS_BUFFER_PIECE_HPP_INCLUDED__
 
 #include "third_party/boost/boost/cstdint.hpp"
+#include "third_party/boost/boost/utility/string_ref.hpp"
+
+#include <string>
 
 namespace cass {
 
@@ -33,6 +36,17 @@ public:
 
   char* data() const { return data_; }
   int32_t size() const { return size_; }
+
+  boost::string_ref to_string_ref() const {
+    if (size_ < 0) {
+      boost::string_ref();
+    }
+    return boost::string_ref(data_, size_);
+  }
+
+  std::string to_string() const {
+    return to_string_ref().to_string();
+  }
 
 private:
   char* data_;

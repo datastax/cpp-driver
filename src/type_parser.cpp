@@ -14,11 +14,13 @@
   limitations under the License.
 */
 
-#include "cass_type_parser.hpp"
+#include "type_parser.hpp"
 
 #include "scoped_ptr.hpp"
 
 #include <sstream>
+
+#define REVERSED_TYPE "org.apache.cassandra.db.marshal.ReversedType("
 
 namespace cass {
 
@@ -46,7 +48,7 @@ std::string TypeDescriptor::to_string() const {
   return ss.str();
 }
 
-CassTypeParser::CassTypeMapper::CassTypeMapper() {
+TypeParser::TypeMapper::TypeMapper() {
   name_type_map_["org.apache.cassandra.db.marshal.AsciiType"] = CASS_VALUE_TYPE_ASCII;
   name_type_map_["org.apache.cassandra.db.marshal.LongType"] = CASS_VALUE_TYPE_BIGINT;
   name_type_map_["org.apache.cassandra.db.marshal.BytesType"] = CASS_VALUE_TYPE_BLOB;
@@ -69,7 +71,7 @@ CassTypeParser::CassTypeMapper::CassTypeMapper() {
   name_type_map_["org.apache.cassandra.db.marshal.CompositeType"] = CASS_VALUE_TYPE_CUSTOM;
 }
 
-CassValueType CassTypeParser::CassTypeMapper::operator [](const std::string& type_name) const {
+CassValueType TypeParser::TypeMapper::operator [](const std::string& type_name) const {
   NameTypeMap::const_iterator itr = name_type_map_.find(type_name);
   if (itr != name_type_map_.end()) {
     return itr->second;
@@ -78,21 +80,25 @@ CassValueType CassTypeParser::CassTypeMapper::operator [](const std::string& typ
   }
 }
 
-CassTypeParser::CassTypeParser(const std::string& class_name, size_t start_index)
+TypeParser::TypeParser(const std::string& class_name, size_t start_index)
   : type_buffer_(class_name)
   , index_(start_index) {}
 
-TypeDescriptor CassTypeParser::parse(const std::string& class_name) {
+bool TypeParser::is_reversed(const std::string& class_name) {
+  return boost::starts_with(class_name, REVERSED_TYPE);
+}
+
+TypeDescriptor TypeParser::parse(const std::string& class_name) {
 
   bool reversed = is_reversed(class_name);
 
   size_t start = reversed ? strlen(REVERSED_TYPE) : 0;
-  ScopedPtr<CassTypeParser> parser(new CassTypeParser(class_name, start));
+  ScopedPtr<TypeParser> parser(new TypeParser(class_name, start));
 
   return parser->parse_types(reversed);
 }
 
-CassValueType CassTypeParser::parse_one_type(size_t hint) {
+CassValueType TypeParser::parse_one_type(size_t hint) {
   size_t bound = type_buffer_.size();
   if (hint == 0) {
     hint = type_buffer_.find_first_of(",()", index_);
@@ -106,7 +112,7 @@ CassValueType CassTypeParser::parse_one_type(size_t hint) {
   return t;
 }
 
-TypeDescriptor CassTypeParser::parse_types(bool is_reversed) {
+TypeDescriptor TypeParser::parse_types(bool is_reversed) {
 
   CassValueType value_type = parse_one_type();
   std::list<TypeDescriptor> type_args;
@@ -151,6 +157,6 @@ TypeDescriptor CassTypeParser::parse_types(bool is_reversed) {
   return TypeDescriptor(value_type, is_reversed, type_args);
 }
 
-const CassTypeParser::CassTypeMapper CassTypeParser::type_map_;
+const TypeParser::TypeMapper TypeParser::type_map_;
 
 } // namespace cass

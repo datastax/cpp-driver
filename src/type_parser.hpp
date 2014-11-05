@@ -28,8 +28,6 @@
 
 namespace cass {
 
-#define REVERSED_TYPE "org.apache.cassandra.db.marshal.ReversedType("
-
 class TypeDescriptor {
 public:
   TypeDescriptor(CassValueType type = CASS_VALUE_TYPE_UNKNOWN, bool is_reversed = false);
@@ -43,16 +41,15 @@ public:
   std::list<TypeDescriptor> type_args_;
 };
 
-class CassTypeParser {
-
+class TypeParser {
 public:
-  static bool is_reversed(const std::string& class_name) { return boost::starts_with(class_name, REVERSED_TYPE); }
+  static bool is_reversed(const std::string& class_name);
 
   static TypeDescriptor parse(const std::string& class_name);
 
-  class CassTypeMapper {
+  class TypeMapper {
   public:
-    CassTypeMapper();
+    TypeMapper();
     CassValueType operator[](const std::string& cass_type) const;
   private:
     typedef std::map<std::string, CassValueType> NameTypeMap;
@@ -60,14 +57,14 @@ public:
   };
 
 private:
-  CassTypeParser(const std::string& class_name, size_t start_index = 0);
+  TypeParser(const std::string& class_name, size_t start_index = 0);
 
   CassValueType parse_one_type(size_t hint = 0);
   TypeDescriptor parse_types(bool is_reversed = false);
 
   CassValueType parse_name();
 
-  const static CassTypeMapper type_map_;
+  const static TypeMapper type_map_;
   const std::string& type_buffer_;
   std::string::size_type index_;
 };

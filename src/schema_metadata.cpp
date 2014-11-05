@@ -18,7 +18,6 @@
 
 #include "buffer.hpp"
 #include "buffer_collection.hpp"
-#include "cass_type_parser.hpp"
 #include "collection_iterator.hpp"
 #include "iterator.hpp"
 #include "map_iterator.hpp"
@@ -214,13 +213,9 @@ const SchemaMetadataField* SchemaMetadata::get_field(const std::string& name) co
 }
 
 std::string SchemaMetadata::get_string_field(const std::string& name) const {
-  std::string out;
   const SchemaMetadataField* field = get_field(name);
-  if (field != NULL) {
-    const BufferPiece& buf = field->value()->buffer();
-    out.assign(buf.data(), buf.size());
-  }
-  return out;
+  if (field == NULL) return std::string();
+  return field->value()->buffer().to_string();
 }
 
 void SchemaMetadata::add_field(const SharedRefPtr<RefBuffer>& buffer, const Row* row, const std::string& name) {
@@ -348,22 +343,6 @@ void KeyspaceMetadata::drop_table(const std::string& table_name) {
   tables_.erase(table_name);
 }
 
-const KeyspaceMetadata::StrategyOptions& KeyspaceMetadata::strategy_options() const {
-  if (strategy_options_.empty()) {
-    const SchemaMetadataField* options = get_field("strategy_options");
-    if (options != NULL) {
-      MapIterator itr(options->value());
-      while (itr.next()) {
-        const BufferPiece& key_buf = itr.key()->buffer();
-        const BufferPiece& value_buf = itr.value()->buffer();
-        strategy_options_.insert(std::make_pair(std::string(key_buf.data(), key_buf.size()),
-                                                std::string(value_buf.data(), value_buf.size())));
-      }
-    }
-  }
-  return strategy_options_;
-}
-
 const SchemaMetadata* TableMetadata::get_entry(const std::string& name) const {
   return find_by_name<ColumnMetadata>(columns_, name);
 }
@@ -414,7 +393,7 @@ const TableMetadata::KeyAliases& TableMetadata::key_aliases() const {
       }
     }
     if (key_aliases_.empty()) {// C* 1.2 tables created via CQL2 or thrift don't have col meta or key aliases
-      TypeDescriptor key_validator_type = CassTypeParser::parse(get_string_field("key_validator"));
+      TypeDescriptor key_validator_type = TypeParser::parse(get_string_field("key_validator"));
       const size_t count = key_validator_type.component_count();
       std::ostringstream ss("key");
       for (size_t i = 0; i < count; ++i) {
