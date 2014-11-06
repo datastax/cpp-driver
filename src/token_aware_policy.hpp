@@ -56,7 +56,7 @@ private:
     CopyOnWriteHostVec replicas_;
     size_t index_;
     size_t remaining_;
-    std::set<const Address> replicas_attempted_;
+    std::set<Address> replicas_attempted_;
   };
 
   size_t index_;
