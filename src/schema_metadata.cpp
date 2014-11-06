@@ -27,8 +27,8 @@
 #include "types.hpp"
 #include "value.hpp"
 
-#include "third_party/boost/boost/algorithm/string.hpp"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include <boost/algorithm/string.hpp>
+#include <rapidjson/document.h>
 
 #include <cmath>
 

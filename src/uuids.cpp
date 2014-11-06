@@ -21,7 +21,7 @@
 #include "md5.hpp"
 #include "scoped_mutex.hpp"
 
-#include "third_party/boost/boost/random/random_device.hpp"
+#include <boost/random/random_device.hpp>
 
 #include <stdio.h>
 

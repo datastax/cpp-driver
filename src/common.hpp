@@ -19,7 +19,7 @@
 
 #include "cassandra.h"
 
-#include "third_party/boost/boost/static_assert.hpp"
+#include <boost/static_assert.hpp>
 
 #include <string>
 #include <string.h>

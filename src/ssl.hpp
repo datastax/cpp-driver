@@ -20,8 +20,7 @@
 #include "address.hpp"
 #include "cassandra.h"
 #include "ref_counted.hpp"
-
-#include "third_party/rb/ring_buffer.hpp"
+#include "ring_buffer.hpp"
 
 #include <string>
 #include <uv.h>

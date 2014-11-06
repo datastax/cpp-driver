@@ -35,7 +35,7 @@
 #include "logger.hpp"
 #include "cassandra.h"
 
-#include "third_party/boost/boost/bind.hpp"
+#include <boost/bind.hpp>
 
 #include <iomanip>
 #include <sstream>

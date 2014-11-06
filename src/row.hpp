@@ -19,7 +19,7 @@
 
 #include "value.hpp"
 
-#include "third_party/boost/boost/utility/string_ref.hpp"
+#include <boost/utility/string_ref.hpp>
 
 #include <vector>
 

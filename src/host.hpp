@@ -21,7 +21,7 @@
 #include "copy_on_write_ptr.hpp"
 #include "ref_counted.hpp"
 
-#include "third_party/boost/boost/atomic.hpp"
+#include <boost/atomic.hpp>
 
 #include <map>
 #include <set>

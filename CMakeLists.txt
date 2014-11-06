@@ -6,8 +6,18 @@ set(PROJECT_NAME_STR cassandra)
 set(PROJECT_LIB_NAME ${PROJECT_NAME_STR})
 set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
 
-set(CASS_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
+# TODO: Figure out Mac OS X rpath
+if(POLICY CMP0042)
+  cmake_policy(SET CMP0042 OLD)
+endif()
+
 project(${PROJECT_NAME_STR} C CXX)
+set(PROJECT_VERSION_MAJOR 1)
+set(PROJECT_VERSION_MINOR 0)
+set(PROJECT_VERSION_PATCH 0)
+set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}.beta5)
+
+set(CASS_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
 
 if(32BIT)
   set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS FALSE)
@@ -17,29 +27,24 @@ if(32BIT)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -m32")
 endif()
 
+set(CASS_MINIMUM_BOOST_VERSION 1.55.0)
+
 option(CASS_INSTALL_HEADER "Install header file" ON)
+option(CASS_USE_EXTERNAL_BOOST "Use external verison of Boost" OFF)
 option(CASS_BUILD_STATIC "Build static library" OFF)
 option(CASS_BUILD_EXAMPLES "Build examples" ON)
 option(CASS_BUILD_TESTS "Build tests" OFF)
 option(CASS_USE_OPENSSL "Use OpenSSL" ON)
 option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
 
-#-------------------
-# Version
-#-------------------
-
-set(PROJECT_VERSION_MAJOR 1)
-set(PROJECT_VERSION_MINOR 0)
-set(PROJECT_VERSION_PATCH 0)
-set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}.beta4)
-
-# TODO(mstump) add version header
+if(CASS_BUILD_TESTS)
+  set(CASS_USE_EXTERNAL_BOOST ON)
+endif()
 
 # Build up the include paths
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
 set(INCLUDES ${INCLUDES} ${PROJECT_SOURCE_DIR}/src)
-set(INCLUDES ${INCLUDES} ${PROJECT_SOURCE_DIR}/src/third_party/boost)
 set(INCLUDES ${INCLUDES} ${PROJECT_SOURCE_DIR}/src/third_party/rapidjson)
 
 #-------------------
@@ -76,6 +81,16 @@ find_package_handle_standard_args(Libuv "Could NOT find libuv, try to set the pa
 set(INCLUDES ${INCLUDES} ${LIBUV_INCLUDE_DIR})
 set(LIBS ${LIBS} ${LIBUV_LIBRARIES})
 
+# boost
+
+if(CASS_USE_EXTERNAL_BOOST)
+  if(WIN32)
+    set(BOOST_ROOT "${PROJECT_SOURCE_DIR}/lib/boost/")
+  endif()
+
+  find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS atomic chrono date_time log log_setup random system thread unit_test_framework)
+endif()
+
 # tcmalloc
 
 if(CASS_USE_TCMALLOC)
@@ -111,7 +126,7 @@ endif()
 # Compiler flags
 #-------------------
 
-if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 endif()
 
@@ -152,7 +167,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # CMAKE_CXX_COMPILER variables do not exist in 2.6.4 (min version)
   # Parse the -dumpversion argument into the variable not already set
-  if ("${CMAKE_CXX_COMPILER_VERSION}" STREQUAL "")
+  if("${CMAKE_CXX_COMPILER_VERSION}" STREQUAL "")
     execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE CMAKE_CXX_COMPILER_VERSION)
   endif()
 
@@ -202,17 +217,34 @@ file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 if(CASS_USE_OPENSSL)
   set(SRC_FILES ${SRC_FILES}
     ${PROJECT_SOURCE_DIR}/src/ssl/ssl_openssl_impl.cpp
-    ${PROJECT_SOURCE_DIR}/src/third_party/rb/ring_buffer_bio.cpp)
+    ${PROJECT_SOURCE_DIR}/src/ssl/ring_buffer_bio.cpp)
   add_definitions(-DCASS_USE_OPENSSL)
 else()
   set(SRC_FILES ${SRC_FILES}
     ${PROJECT_SOURCE_DIR}/src/ssl/ssl_no_impl.cpp)
 endif()
 
-set(SRC_FILES ${SRC_FILES}
-  ${PROJECT_SOURCE_DIR}/src/third_party/rb/ring_buffer.cpp
-  ${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/atomic/src/lockpool.cpp
-  ${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/random/src/random_device.cpp)
+if(Boost_FOUND)
+  message(WARNING "Using the external version of Boost")
+
+  if(NOT (Boost_ATOMIC_FOUND AND Boost_RANDOM_FOUND AND Boost_SYSTEM_FOUND))
+    message(FATAL_ERROR "Boost atomic, random, and system required to build driver")
+  endif()
+
+  set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
+  set(LIBS ${LIBS} ${Boost_LIBRARIES})
+
+  set(Boost_USE_STATIC_LIBS OFF)
+  set(Boost_USE_STATIC_RUNTIME OFF)
+  set(Boost_USE_MULTITHREADED ON)
+
+  add_definitions(-DBOOST_ALL_DYN_LINK)
+else()
+  set(INCLUDES ${INCLUDES} ${PROJECT_SOURCE_DIR}/src/third_party/boost)
+  set(SRC_FILES ${SRC_FILES}
+    ${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/atomic/src/lockpool.cpp
+    ${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/random/src/random_device.cpp)
+endif()
 
 source_group("Source Files" FILES ${SRC_FILES})
 source_group("Header Files" FILES ${INC_FILES})
@@ -251,7 +283,7 @@ endif()
 # Where to put libraries - either lib or lib64.
 get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
 
-if ("${LIB64}" STREQUAL "TRUE")
+if("${LIB64}" STREQUAL "TRUE")
     set(LIBSUFFIX 64)
 else()
     set(LIBSUFFIX "")
@@ -299,22 +331,25 @@ if(CASS_BUILD_TESTS)
   endif()
 
   if(WIN32)
-    set(BOOST_ROOT "${PROJECT_SOURCE_DIR}/lib/boost/")
     set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/")
   endif()
-
-  find_package(Boost 1.55.0 COMPONENTS system chrono thread unit_test_framework date_time program_options)
 
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/test/ccm_bridge/cmake/Modules/")
   find_package(LIBSSH2)
 
-  if(Boost_FOUND)
+  if(Boost_UNIT_TEST_FRAMEWORK_FOUND)
     add_subdirectory(test/unit_tests)
+  else()
+    message(WARNING "Not building unit tests because of missing dependencies (Boost unit_test_framework)")
   endif()
 
-  if((Boost_FOUND) AND (LIBSSH2_FOUND))
+  if(Boost_CHRONO_FOUND AND Boost_DATE_TIME_FOUND AND
+     Boost_SYSTEM_FOUND AND Boost_THREAD_FOUND AND
+     Boost_UNIT_TEST_FRAMEWORK_FOUND AND LIBSSH2_FOUND)
     add_subdirectory(test/ccm_bridge)
     add_subdirectory(test/integration_tests)
+  else()
+    message(WARNING "Not building integration tests because of missing dependencies (libss2 and Boost chrono, date_time, log, log_setup, system, thread, unit_test_framework)")
   endif()
 endif()
 

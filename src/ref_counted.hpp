@@ -20,7 +20,7 @@
 #include "common.hpp"
 #include "macros.hpp"
 
-#include "third_party/boost/boost/atomic.hpp"
+#include <boost/atomic.hpp>
 
 #include <assert.h>
 #include <new>

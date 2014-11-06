@@ -19,7 +19,7 @@
 
 #include <assert.h>
 
-#include "third_party/boost/boost/cstdint.hpp"
+#include <boost/cstdint.hpp>
 
 namespace cass {
 

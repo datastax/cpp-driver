@@ -25,7 +25,7 @@
 #include "result_iterator.hpp"
 #include "result_response.hpp"
 
-#include "third_party/boost/boost/utility/string_ref.hpp"
+#include <boost/utility/string_ref.hpp>
 
 #include <iomanip>
 #include <sstream>
