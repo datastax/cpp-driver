@@ -120,9 +120,11 @@ namespace cql {
 
 			if(!key.empty() && !value.empty()) {
 				settings[key] = value;
-				CQL_LOG(info)
-					<< "Configuration key: " << key
-					<< " equals value: " << value;
+        if (key != "ssh_password") {
+          CQL_LOG(info)
+            << "Configuration key: " << key
+            << " equals value: " << value;
+        }
 				return;
 			}
 		}
