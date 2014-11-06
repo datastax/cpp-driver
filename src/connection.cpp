@@ -321,16 +321,15 @@ void Connection::consume(char* input, size_t size) {
               handler->on_set(response.get());
               break;
 
-            case Handler::REQUEST_STATE_WRITE_TIMEOUT:
+            case Handler::REQUEST_STATE_TIMEOUT:
               pending_reads_.remove(handler);
               handler->set_state(Handler::REQUEST_STATE_DONE);
               handler->dec_ref();
               break;
 
-            case Handler::REQUEST_STATE_READ_TIMEOUT:
-              pending_reads_.remove(handler);
-              handler->set_state(Handler::REQUEST_STATE_DONE);
-              handler->dec_ref();
+            case Handler::REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING:
+              // We must wait for the write callback before we can do the cleanup
+              handler->set_state(Handler::REQUEST_STATE_READ_BEFORE_WRITE);
               break;
 
             default:
@@ -498,11 +497,7 @@ void Connection::on_timeout(RequestTimer* timer) {
   // TODO (mpenick): We need to handle the case where we have too many
   // timeout requests and we run out of stream ids. The java-driver
   // uses a threshold to defunct the connneciton.
-  if (handler->state() == Handler::REQUEST_STATE_WRITING) {
-    handler->set_state(Handler::REQUEST_STATE_WRITE_TIMEOUT);
-  } else {
-    handler->set_state(Handler::REQUEST_STATE_READ_TIMEOUT);
-  }
+  handler->set_state(Handler::REQUEST_STATE_TIMEOUT);
   handler->on_timeout();
 }
 
@@ -701,8 +696,9 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
         }
         break;
 
-      case Handler::REQUEST_STATE_WRITE_TIMEOUT:
+      case Handler::REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING:
         // The read may still come back, handle cleanup there
+        handler->set_state(Handler::REQUEST_STATE_TIMEOUT);
         connection->pending_reads_.add_to_back(handler);
         break;
 

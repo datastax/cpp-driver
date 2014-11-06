@@ -56,10 +56,10 @@ void Handler::set_state(Handler::State next_state) {
   switch (state_) {
     case REQUEST_STATE_NEW:
       if (next_state == REQUEST_STATE_NEW) {
-        state_ = REQUEST_STATE_NEW;
+        state_ = next_state;
         stream_ = -1;
       } else if (next_state == REQUEST_STATE_WRITING) {
-        state_ = REQUEST_STATE_WRITING;
+        state_ = next_state;
       } else {
         assert(false && "Invalid request state after new");
       }
@@ -72,8 +72,8 @@ void Handler::set_state(Handler::State next_state) {
                  next_state == REQUEST_STATE_DONE) {
         stop_timer();
         state_ = next_state;
-      } else if (next_state == REQUEST_STATE_WRITE_TIMEOUT) {
-        state_ = next_state;
+      } else if (next_state == REQUEST_STATE_TIMEOUT) {
+        state_ = REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING;
       } else {
         assert(false && "Invalid request state after writing");
       }
@@ -83,22 +83,22 @@ void Handler::set_state(Handler::State next_state) {
       if (next_state == REQUEST_STATE_DONE) { // Success
         stop_timer();
         state_ = next_state;
-      } else if (next_state == REQUEST_STATE_READ_TIMEOUT) {
+      } else if (next_state == REQUEST_STATE_TIMEOUT) {
         state_ = next_state;
       } else {
         assert(false && "Invalid request state after reading");
       }
       break;
 
-    case REQUEST_STATE_WRITE_TIMEOUT:
+    case REQUEST_STATE_TIMEOUT:
       assert(next_state == REQUEST_STATE_DONE &&
-             "Invalid request state after write timeout");
+             "Invalid request state after timeout");
       state_ = next_state;
       break;
 
-    case REQUEST_STATE_READ_TIMEOUT:
-      assert(next_state == REQUEST_STATE_DONE &&
-             "Invalid request state after read timeout");
+    case REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING:
+      assert((next_state == REQUEST_STATE_TIMEOUT || next_state == REQUEST_STATE_DONE) &&
+             "Invalid request state after timeout (write outstanding)");
       state_ = next_state;
       break;
 
@@ -118,6 +118,5 @@ void Handler::set_state(Handler::State next_state) {
       break;
   }
 }
-
 
 } // namespace cass
