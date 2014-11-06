@@ -26,8 +26,7 @@ class ClusterMetadata {
 public:
   void clear();
   void update_keyspaces(ResultResponse* result);
-  void update_tables(ResultResponse* result) { schema_.update_tables(result); }
-  void update_columns(ResultResponse* result) { schema_.update_columns(result); }
+  void update_tables(ResultResponse* table_result, ResultResponse* col_result) { schema_.update_tables(table_result, col_result); }
   void set_partitioner(const std::string& partitioner_class) { token_map_.set_partitioner(partitioner_class); }
   void update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens) { token_map_.update_host(host, tokens); }
   void build() { token_map_.build(); }

@@ -19,6 +19,7 @@
 
 #include "copy_on_write_ptr.hpp"
 #include "iterator.hpp"
+#include "scoped_mutex.hpp"
 #include "scoped_ptr.hpp"
 #include "type_parser.hpp"
 
@@ -218,7 +219,20 @@ public:
 
   Schema()
     : keyspaces_(new KeyspaceMetadata::Map)
-    , protocol_version_(0) {}
+    , protocol_version_(0) {
+    uv_mutex_init(&mutex_);
+  }
+
+  ~Schema() {
+    uv_mutex_destroy(&mutex_);
+  }
+
+  Schema* clone() const {
+    ScopedMutex l(&mutex_);
+    Schema* out = new Schema();
+    out->keyspaces_ = keyspaces_;
+    return out;
+  }
 
   void set_protocol_version(int version) {
     protocol_version_ = version;
@@ -229,8 +243,7 @@ public:
 
   KeyspaceMetadata* get_or_create(const std::string& name) { return &(*keyspaces_)[name]; }
   KeyspacePointerMap update_keyspaces(ResultResponse* result);
-  void update_tables(ResultResponse* result);
-  void update_columns(ResultResponse* result);
+  void update_tables(ResultResponse* table_result, ResultResponse* col_result);
   void drop_keyspace(const std::string& keyspace_name);
   void drop_table(const std::string& keyspace_name, const std::string& table_name);
   void clear();
@@ -239,13 +252,22 @@ public:
                              std::vector<std::string>* output) const;
 
 private:
+  void update_columns(ResultResponse* result);
+
+private:
   // Really coarse grain copy-on-write. This could be made
   // more fine grain, but it might not be worth the work.
   CopyOnWritePtr<KeyspaceMetadata::Map> keyspaces_;
 
+  // synchronize updates and copies
+  mutable uv_mutex_t mutex_;
+
   // Only used internally on a single thread, there's
   // no need for copy-on-write.
   int protocol_version_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(Schema);
 };
 
 } // namespace cass

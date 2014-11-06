@@ -44,7 +44,7 @@ public:
       , schema(schema) {}
 
   std::string statement;
-  Schema schema;
+  const Schema& schema;
 };
 
 class RequestHandler : public Handler {

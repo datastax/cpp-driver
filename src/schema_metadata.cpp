@@ -109,6 +109,7 @@ const SchemaMetadata* Schema::get(const std::string& name) const {
 }
 
 Schema::KeyspacePointerMap Schema::update_keyspaces(ResultResponse* result) {
+  ScopedMutex l(&mutex_);
   KeyspacePointerMap updates;
 
   SharedRefPtr<RefBuffer> buffer = result->buffer();
@@ -131,11 +132,12 @@ Schema::KeyspacePointerMap Schema::update_keyspaces(ResultResponse* result) {
   return updates;
 }
 
-void Schema::update_tables(ResultResponse* result) {
-  SharedRefPtr<RefBuffer> buffer = result->buffer();
+void Schema::update_tables(ResultResponse* table_result, ResultResponse* col_result) {
+  ScopedMutex l(&mutex_);
+  SharedRefPtr<RefBuffer> buffer = table_result->buffer();
 
-  result->decode_first_row();
-  ResultIterator rows(result);
+  table_result->decode_first_row();
+  ResultIterator rows(table_result);
 
   std::string keyspace_name;
   std::string columnfamily_name;
@@ -158,6 +160,7 @@ void Schema::update_tables(ResultResponse* result) {
 
     keyspace_metadata->get_or_create(columnfamily_name)->update(protocol_version_, buffer, row);
   }
+  update_columns(col_result);
 }
 
 void Schema::update_columns(ResultResponse* result) {

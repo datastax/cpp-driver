@@ -291,8 +291,8 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
   session_->purge_hosts(is_initial_connection);
 
   session_->cluster_meta().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
-  session_->cluster_meta().update_tables(static_cast<ResultResponse*>(responses[3]));
-  session_->cluster_meta().update_columns(static_cast<ResultResponse*>(responses[4]));
+  session_->cluster_meta().update_tables(static_cast<ResultResponse*>(responses[3]),
+                                         static_cast<ResultResponse*>(responses[4]));
   session_->cluster_meta().build();
 
   if (is_initial_connection) {
@@ -510,8 +510,8 @@ void ControlConnection::on_refresh_table(const std::string& keyspace_name,
                    keyspace_name.c_str(), table_name.c_str());
     return;
   }
-  session_->cluster_meta().update_tables(column_family_result);
-  session_->cluster_meta().update_columns(static_cast<ResultResponse*>(responses[1]));
+  session_->cluster_meta().update_tables(column_family_result,
+                                         static_cast<ResultResponse*>(responses[1]));
 }
 
 bool ControlConnection::handle_query_invalid_response(Response* response) {
