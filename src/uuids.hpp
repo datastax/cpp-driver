@@ -18,7 +18,6 @@
 #define __CASS_UUIDS_HPP_INCLUDED__
 
 #include "third_party/boost/boost/atomic.hpp"
-#include "third_party/boost/boost/random/mersenne_twister.hpp"
 #include "third_party/boost/boost/cstdint.hpp"
 
 #include <uv.h>
@@ -75,7 +74,6 @@ private:
 private:
   static uv_mutex_t mutex_;
   static boost::atomic<uint64_t> last_timestamp_;
-  static boost::mt19937_64 ng_;
 };
 
 } // namespace cass
