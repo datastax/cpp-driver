@@ -600,8 +600,6 @@ extern const char* CREATE_TABLE_SIMPLE;
 extern const std::string CREATE_KEYSPACE_SIMPLE_FORMAT;
 extern const std::string CREATE_KEYSPACE_NETWORK_FORMAT;
 extern const std::string CREATE_KEYSPACE_GENERIC_FORMAT;
-extern const std::string CREATE_KEYSPACE_SIMPLE_WITH_DURABLE_RIGHTS_FORMAT;
-extern const std::string CREATE_KEYSPACE_NETWORK_WITH_DURABLE_RIGHTS_FORMAT;
 extern const std::string DROP_KEYSPACE_FORMAT;
 extern const std::string DROP_KEYSPACE_IF_EXISTS_FORMAT;
 extern const std::string SIMPLE_KEYSPACE;

@@ -138,8 +138,6 @@ const char* get_value_type(CassValueType type) {
 const std::string CREATE_KEYSPACE_SIMPLE_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %s }";
 const std::string CREATE_KEYSPACE_NETWORK_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'NetworkTopologyStrategy',  'dc1' : %d, 'dc2' : %d }";
 const std::string CREATE_KEYSPACE_GENERIC_FORMAT = "CREATE KEYSPACE {0} WITH replication = { 'class' : '{1}', {2} }";
-const std::string CREATE_KEYSPACE_SIMPLE_WITH_DURABLE_RIGHTS_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %s } AND durable_writes = %s";
-const std::string CREATE_KEYSPACE_NETWORK_WITH_DURABLE_RIGHTS_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'NetworkTopologyStrategy',  'dc1' : %d, 'dc2' : %d } AND durable_writes = %s";
 const std::string DROP_KEYSPACE_FORMAT = "DROP KEYSPACE %s";
 const std::string DROP_KEYSPACE_IF_EXISTS_FORMAT = "DROP KEYSPACE IF EXISTS %s";
 const std::string SIMPLE_KEYSPACE = "ks";
