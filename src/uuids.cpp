@@ -21,6 +21,7 @@
 #include "md5.hpp"
 #include "scoped_mutex.hpp"
 
+#include "third_party/boost/boost/random/mersenne_twister.hpp"
 #include "third_party/boost/boost/random/random_device.hpp"
 
 #include <stdio.h>
@@ -63,6 +64,9 @@ void cass_uuid_string(CassUuid uuid, char* output) {
 
 namespace {
 
+boost::random_device rd;
+boost::mt19937_64 ng(rd());
+
 class UuidsInitializer {
 public:
   UuidsInitializer() { cass::Uuids::initialize_(); }
@@ -74,15 +78,11 @@ UuidsInitializer uuids_intitalizer_;
 
 namespace cass {
 
-boost::mt19937_64 Uuids::ng_;
 uv_mutex_t Uuids::mutex_;
 boost::atomic<uint64_t> Uuids::last_timestamp_;
 uint64_t Uuids::CLOCK_SEQ_AND_NODE;
 
 void Uuids::initialize_() {
-  boost::random_device rd;
-  ng_.seed(rd());
-
   uv_mutex_init(&mutex_);
   last_timestamp_ = 0L;
   CLOCK_SEQ_AND_NODE = make_clock_seq_and_node();
@@ -99,8 +99,8 @@ void Uuids::generate_v1(uint64_t timestamp, Uuid uuid) {
 
 void Uuids::generate_v4(Uuid uuid) {
   ScopedMutex lock(&mutex_);
-  uint64_t msb = ng_();
-  uint64_t lsb = ng_();
+  uint64_t msb = ng();
+  uint64_t lsb = ng();
   lock.unlock();
 
   copy_timestamp(msb, 4, uuid);
@@ -242,7 +242,7 @@ uint64_t Uuids::make_clock_seq_and_node() {
   }
   node |= 0x0000010000000000LL; // Multicast bit
 
-  uint64_t clock = ng_();
+  uint64_t clock = ng();
   uint64_t clock_seq_and_node = 0;
   clock_seq_and_node |= (clock & 0x0000000000003FFFLL) << 48;
   clock_seq_and_node |= 0x8000000000000000LL; // RFC4122 variant
