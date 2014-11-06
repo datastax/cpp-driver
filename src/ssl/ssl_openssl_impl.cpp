@@ -62,15 +62,18 @@ void ssl_info_callback(const SSL* ssl, int where, int ret) {
 #undef SSL_PRINT_INFO
 
 static int pem_password_callback(char* buf, int size, int rwflag, void* u) {
-  if (u != NULL) {
-    size_t to_copy = size;
-    size_t len = strlen(static_cast<const char*>(u));
-    if (len < to_copy) {
-      to_copy = len;
-    }
-    memcpy(buf, u, to_copy);
+  if (u == NULL) return 0;
+
+  int len = strlen(static_cast<const char*>(u));
+  if (len == 0) return 0;
+
+  int to_copy = size;
+  if (len < to_copy) {
+    to_copy = len;
   }
-  return 0;
+  memcpy(buf, u, to_copy);
+
+  return len;
 }
 
 static uv_rwlock_t* crypto_locks;
