@@ -170,7 +170,7 @@ void Schema::update_columns(ResultResponse* result) {
   std::string columnfamily_name;
   std::string column_name;
   TableMetadata* table_metadata = NULL;
-
+  std::set<TableMetadata*> cleared_tables;
   while (rows.next()) {
     std::string temp_keyspace_name;
     std::string temp_columnfamily_name;
@@ -188,6 +188,10 @@ void Schema::update_columns(ResultResponse* result) {
       keyspace_name = temp_keyspace_name;
       columnfamily_name = temp_columnfamily_name;
       table_metadata = get_or_create(keyspace_name)->get_or_create(columnfamily_name);
+      std::pair<std::set<TableMetadata*>::iterator, bool> pos_success = cleared_tables.insert(table_metadata);
+      if (pos_success.second) {
+        table_metadata->clear_columns();
+      }
     }
 
     table_metadata->get_or_create(column_name)->update(protocol_version_, buffer, row);
@@ -220,7 +224,8 @@ std::string SchemaMetadata::get_string_field(const std::string& name) const {
 
 void SchemaMetadata::add_field(const SharedRefPtr<RefBuffer>& buffer, const Row* row, const std::string& name) {
   const Value* value = row->get_by_name(name);
-  if (value == NULL || value->buffer().size() <= 0) {
+  if (value == NULL) return;
+  if (value->buffer().size() <= 0) {
     fields_[name] = SchemaMetadataField(name);
     return;
   }
@@ -229,7 +234,8 @@ void SchemaMetadata::add_field(const SharedRefPtr<RefBuffer>& buffer, const Row*
 
 void SchemaMetadata::add_json_list_field(int version, const Row* row, const std::string& name) {
   const Value* value = row->get_by_name(name);
-  if (value == NULL || value->buffer().size() <= 0) {
+  if (value == NULL) return;
+  if (value->buffer().size() <= 0) {
     fields_[name] = SchemaMetadataField(name);
     return;
   }
@@ -258,12 +264,6 @@ void SchemaMetadata::add_json_list_field(int version, const Row* row, const std:
   }
 
   int encoded_size = collection.calculate_size(version);
-
-  if (encoded_size <= 0) {
-    //TODO: log to global logging
-    return;
-  }
-
   SharedRefPtr<RefBuffer> encoded(RefBuffer::create(encoded_size));
 
   collection.encode(version, encoded->data());
@@ -279,7 +279,8 @@ void SchemaMetadata::add_json_list_field(int version, const Row* row, const std:
 
 void SchemaMetadata::add_json_map_field(int version, const Row* row, const std::string& name) {
   const Value* value = row->get_by_name(name);
-  if (value == NULL || value->buffer().size() <= 0) {
+  if (value == NULL) return;
+  if (value->buffer().size() <= 0) {
     fields_[name] = SchemaMetadataField(name);
     return;
   }
@@ -309,12 +310,6 @@ void SchemaMetadata::add_json_map_field(int version, const Row* row, const std::
   }
 
   int encoded_size = collection.calculate_size(version);
-
-  if (encoded_size <= 0) {
-    //TODO: log to global logging
-    return;
-  }
-
   SharedRefPtr<RefBuffer> encoded(RefBuffer::create(encoded_size));
 
   collection.encode(version, encoded->data());
@@ -351,7 +346,7 @@ void TableMetadata::update(int version, const SharedRefPtr<RefBuffer>& buffer, c
   add_field(buffer, row, "keyspace_name");
   add_field(buffer, row, "columnfamily_name");
   add_field(buffer, row, "bloom_filter_fp_chance");
-  add_json_map_field(version, row, "caching");
+  add_field(buffer, row, "caching");
   add_field(buffer, row, "cf_id");
   add_json_list_field(version, row, "column_aliases");
   add_field(buffer, row, "comment");
@@ -364,7 +359,9 @@ void TableMetadata::update(int version, const SharedRefPtr<RefBuffer>& buffer, c
   add_field(buffer, row, "dropped_columns");
   add_field(buffer, row, "gc_grace_seconds");
   add_field(buffer, row, "index_interval");
+  add_field(buffer, row, "id");
   add_field(buffer, row, "is_dense");
+  add_field(buffer, row, "key_alias");
   add_json_list_field(version, row, "key_aliases");
   add_field(buffer, row, "key_validator");
   add_field(buffer, row, "local_read_repair_chance");
@@ -373,7 +370,9 @@ void TableMetadata::update(int version, const SharedRefPtr<RefBuffer>& buffer, c
   add_field(buffer, row, "memtable_flush_period_in_ms");
   add_field(buffer, row, "min_compaction_threshold");
   add_field(buffer, row, "min_index_interval");
+  add_field(buffer, row, "populate_io_cache_on_flush");
   add_field(buffer, row, "read_repair_chance");
+  add_field(buffer, row, "replicate_on_write");
   add_field(buffer, row, "speculative_retry");
   add_field(buffer, row, "subcomparator");
   add_field(buffer, row, "type");

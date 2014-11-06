@@ -182,6 +182,7 @@ public:
   void update(int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
   const KeyAliases& key_aliases() const;
+  void clear_columns() { columns_.clear(); }
 
 private:
   ColumnMetadata::Map columns_;

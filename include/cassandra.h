@@ -315,56 +315,6 @@ typedef void (*CassLogCallback)(cass_uint64_t time_ms,
                                 CassString message,
                                 void* data);
 
-typedef struct CassKeyspaceMeta_ {
-    CassString name;
-    cass_bool_t durable_writes;
-    CassString replication_strategy;
-    CassString strategy_options;
-} CassKeyspaceMeta;
-
-typedef struct CassColumnFamilyMeta_ {
-  CassString name;
-  cass_double_t bloom_filter_fp_chance;
-  CassString caching;
-  CassUuid cf_id;
-  CassString column_aliases;
-  CassString comment;
-  CassString compaction_strategy_class;
-  CassString compaction_strategy_options;
-  CassString comparator;
-  CassString compression_parameters;
-  cass_int32_t default_time_to_live;
-  CassString default_validator;
-  cass_int32_t gc_grace_seconds;
-  cass_int32_t index_interval;
-  cass_bool_t is_dense;
-  CassString key_aliases;
-  CassString key_validator;
-  cass_double_t local_read_repair_chance;
-  cass_int32_t max_compaction_threshold;
-  cass_int32_t max_index_interval;
-  cass_int32_t memtable_flush_period_in_ms;
-  cass_int32_t min_compaction_threshold;
-  cass_int32_t min_index_interval;
-  cass_double_t read_repair_chance;
-  CassString speculative_retry;
-  CassString subcomparator;
-  CassString type;
-  CassString value_alias;
-} CassColumnFamilyMeta;
-
-typedef struct CassColumnMeta_ {
-    CassString name;
-    cass_uint8_t component_index;
-    CassString index_name;
-    CassString index_options;
-    CassString index_type;
-    CassColumnType kind;
-    CassValueType type;
-    cass_bool_t is_reversed;
-    CassString validator;
-} CassColumnMeta;
-
 /***********************************************************************************
  *
  * Cluster
