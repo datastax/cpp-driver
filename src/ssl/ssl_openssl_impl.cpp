@@ -206,13 +206,51 @@ public:
     NO_SAN_PRESENT
   };
 
-  static Result match(X509* cert, const boost::string_ref& to_match, int type) {
-    assert(type == GEN_IPADD);
-    return match_subject_alt_names(cert, to_match, type);
+  static Result match(X509* cert, const Address& addr) {
+    Result result = match_subject_alt_names(cert, addr);
+    if (result == NO_SAN_PRESENT) {
+      result = match_common_name(cert, addr);
+    }
+    return result;
   }
 
 private:
-  static Result match_subject_alt_names(X509* cert, const boost::string_ref& to_match, int type) {
+  static Result match_common_name(X509* cert, const Address& addr) {
+    std::string addr_str = addr.to_string();
+
+    X509_NAME* name = X509_get_subject_name(cert);
+    if (name == NULL) {
+      return INVALID_CERT;
+    }
+
+    int i = -1;
+    while ((i = X509_NAME_get_index_by_NID(name, NID_commonName, i)) > 0) {
+      X509_NAME_ENTRY* name_entry = X509_NAME_get_entry(name, i);
+      if (name_entry == NULL) {
+        return INVALID_CERT;
+      }
+
+      ASN1_STRING* str = X509_NAME_ENTRY_get_data(name_entry);
+      boost::string_ref common_name(copy_cast<unsigned char*, char*>(ASN1_STRING_data(str)), ASN1_STRING_length(str));
+      if (boost::iequals(common_name, addr_str)) {
+        return MATCH;
+      }
+    }
+
+    return NO_MATCH;
+  }
+
+  static Result match_subject_alt_names(X509* cert, const Address& addr) {
+    char addr_buf[16];
+    size_t addr_buf_size;
+    if (addr.family() == AF_INET) {
+      addr_buf_size = 4;
+      memcpy(addr_buf, &addr.addr_in()->sin_addr.s_addr, addr_buf_size);
+    } else {
+      addr_buf_size = 16;
+      memcpy(addr_buf, &addr.addr_in6()->sin6_addr, addr_buf_size);
+    }
+
     STACK_OF(GENERAL_NAME)* names
       = static_cast<STACK_OF(GENERAL_NAME)*>(X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL));
     if (names == NULL) {
@@ -222,23 +260,15 @@ private:
     for (int i = 0; i < sk_GENERAL_NAME_num(names); ++i) {
       GENERAL_NAME* name = sk_GENERAL_NAME_value(names, i);
 
-      if (name->type != type) continue;
-
-      if (type == GEN_DNS) {
-        ASN1_STRING* str = name->d.dNSName;
-        boost::string_ref dsn_name(copy_cast<unsigned char*, char*>(ASN1_STRING_data(str)), ASN1_STRING_length(str));
-        if (boost::iequals(dsn_name, to_match)) {
-          return MATCH;
-        }
-      } else {
+      if (name->type == GEN_IPADD){
         ASN1_STRING* str = name->d.iPAddress;
         unsigned char* ip = ASN1_STRING_data(str);
         int ip_len = ASN1_STRING_length(str);
-        if (ip_len != 4 || ip_len != 16) {
+        if (ip_len != 4 && ip_len != 16) {
           return INVALID_CERT;
         }
-        if (static_cast<size_t>(ip_len) == to_match.length() &&
-            memcmp(ip, to_match.data(), to_match.length()) == 0) {
+        if (static_cast<size_t>(ip_len) == addr_buf_size &&
+            memcmp(ip, addr_buf, addr_buf_size) == 0) {
           return MATCH;
         }
       }
@@ -247,7 +277,6 @@ private:
 
     return NO_MATCH;
   }
-
 };
 
 OpenSslSession::OpenSslSession(const Address& address,
@@ -277,7 +306,7 @@ void OpenSslSession::do_handshake() {
 }
 
 void OpenSslSession::verify() {
-  if (verify_flags_ & CASS_SSL_VERIFY_NONE) return;
+  if (!verify_flags_) return;
 
   X509* peer_cert = SSL_get_peer_certificate(ssl_);
   if (peer_cert == NULL) {
@@ -299,30 +328,23 @@ void OpenSslSession::verify() {
   if (verify_flags_ & CASS_SSL_VERIFY_PEER_IDENTITY) {
     // We can only match IP address because that's what
     // Cassandra has in system local/peers tables
-    char buf[16];
-    size_t buf_size;
-    if (addr_.family() == AF_INET) {
-      buf_size = 4;
-      memcpy(buf, &addr_.addr_in()->sin_addr.s_addr, buf_size);
-    } else {
-      buf_size = 16;
-      memcpy(buf, &addr_.addr_in6()->sin6_addr, buf_size);
-    }
-    OpenSslVerifyIdentity::Result result
-        = OpenSslVerifyIdentity::match(peer_cert,
-                                       boost::string_ref(buf, buf_size),
-                                       GEN_IPADD);
 
-    if (result == OpenSslVerifyIdentity::INVALID_CERT) {
-      error_code_ = CASS_ERROR_SSL_INVALID_PEER_CERT;
-      error_message_ = "Peer certificate has malformed subject name(s)";
-      X509_free(peer_cert);
-      return;
-    } else if (result != OpenSslVerifyIdentity::MATCH) {
-      error_code_ = CASS_ERROR_SSL_IDENTITY_MISMATCH;
-      error_message_ = "Peer certificate subject name does not match";
-      X509_free(peer_cert);
-      return;
+    switch (OpenSslVerifyIdentity::match(peer_cert, addr_)) {
+      case OpenSslVerifyIdentity::MATCH:
+        // Success
+        break;
+
+      case OpenSslVerifyIdentity::INVALID_CERT:
+        error_code_ = CASS_ERROR_SSL_INVALID_PEER_CERT;
+        error_message_ = "Peer certificate has malformed name field(s)";
+        X509_free(peer_cert);
+        return;
+
+      default:
+        error_code_ = CASS_ERROR_SSL_IDENTITY_MISMATCH;
+        error_message_ = "Peer certificate subject name does not match";
+        X509_free(peer_cert);
+        return;
     }
   }
 
