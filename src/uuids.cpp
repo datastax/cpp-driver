@@ -64,8 +64,8 @@ void cass_uuid_string(CassUuid uuid, char* output) {
 
 namespace {
 
-  boost::random_device rd;
-  boost::mt19937_64 ng_(rd());
+boost::random_device rd;
+boost::mt19937_64 ng(rd());
 
 class UuidsInitializer {
 public:
@@ -99,8 +99,8 @@ void Uuids::generate_v1(uint64_t timestamp, Uuid uuid) {
 
 void Uuids::generate_v4(Uuid uuid) {
   ScopedMutex lock(&mutex_);
-  uint64_t msb = ng_();
-  uint64_t lsb = ng_();
+  uint64_t msb = ng();
+  uint64_t lsb = ng();
   lock.unlock();
 
   copy_timestamp(msb, 4, uuid);
@@ -242,7 +242,7 @@ uint64_t Uuids::make_clock_seq_and_node() {
   }
   node |= 0x0000010000000000LL; // Multicast bit
 
-  uint64_t clock = ng_();
+  uint64_t clock = ng();
   uint64_t clock_seq_and_node = 0;
   clock_seq_and_node |= (clock & 0x0000000000003FFFLL) << 48;
   clock_seq_and_node |= 0x8000000000000000LL; // RFC4122 variant
