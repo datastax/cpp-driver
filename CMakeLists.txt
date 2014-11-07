@@ -225,7 +225,7 @@ if(CASS_INSTALL_HEADER)
 endif()
 
 # Where to put libraries
-set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib")
+set(INSTALL_LIB_DIR "${LIB_INSTALL_DIR}")
 
 # For windows only
 set(INSTALL_DLL_DIR "${CMAKE_INSTALL_PREFIX}/bin")
