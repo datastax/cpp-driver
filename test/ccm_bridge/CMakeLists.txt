@@ -3,6 +3,10 @@ cmake_minimum_required(VERSION 2.6.4)
 # Clear INCLUDE_DIRECTORIES to not include project-level includes
 set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
 
+if(POLICY CMP0048)
+  cmake_policy(SET CMP0048 OLD)
+endif()
+
 project(CCMBridge C CXX)
 
 # Allow access to custom FindLIBSSH2 module
