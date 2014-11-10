@@ -219,20 +219,7 @@ public:
 
   Schema()
     : keyspaces_(new KeyspaceMetadata::Map)
-    , protocol_version_(0) {
-    uv_mutex_init(&mutex_);
-  }
-
-  ~Schema() {
-    uv_mutex_destroy(&mutex_);
-  }
-
-  Schema* clone() const {
-    ScopedMutex l(&mutex_);
-    Schema* out = new Schema();
-    out->keyspaces_ = keyspaces_;
-    return out;
-  }
+    , protocol_version_(0) {}
 
   void set_protocol_version(int version) {
     protocol_version_ = version;
@@ -259,15 +246,9 @@ private:
   // more fine grain, but it might not be worth the work.
   CopyOnWritePtr<KeyspaceMetadata::Map> keyspaces_;
 
-  // synchronize updates and copies
-  mutable uv_mutex_t mutex_;
-
   // Only used internally on a single thread, there's
   // no need for copy-on-write.
   int protocol_version_;
-
-private:
-  DISALLOW_COPY_AND_ASSIGN(Schema);
 };
 
 } // namespace cass

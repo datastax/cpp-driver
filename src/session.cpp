@@ -71,6 +71,8 @@ Session::Session(const Config& config)
 int Session::init() {
   int rc = logger_->init();
   if (rc != 0) return rc;
+  rc = cluster_meta_.init();
+  if (rc != 0) return rc;
   rc = EventThread<SessionEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
   request_queue_.reset(

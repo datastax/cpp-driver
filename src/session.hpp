@@ -103,7 +103,7 @@ public:
   Future* prepare(const char* statement, size_t length);
   Future* execute(const RoutableRequest* statement);
 
-  const Schema* copy_schema() const { return cluster_meta_.schema().clone(); }
+  const Schema* copy_schema() const { return cluster_meta_.copy_schema(); }
 
 private:
   void close_handles();

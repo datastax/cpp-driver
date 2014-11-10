@@ -109,7 +109,6 @@ const SchemaMetadata* Schema::get(const std::string& name) const {
 }
 
 Schema::KeyspacePointerMap Schema::update_keyspaces(ResultResponse* result) {
-  ScopedMutex l(&mutex_);
   KeyspacePointerMap updates;
 
   SharedRefPtr<RefBuffer> buffer = result->buffer();
@@ -133,7 +132,6 @@ Schema::KeyspacePointerMap Schema::update_keyspaces(ResultResponse* result) {
 }
 
 void Schema::update_tables(ResultResponse* table_result, ResultResponse* col_result) {
-  ScopedMutex l(&mutex_);
   SharedRefPtr<RefBuffer> buffer = table_result->buffer();
 
   table_result->decode_first_row();
