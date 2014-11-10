@@ -18,16 +18,33 @@
 
 namespace cass {
 
+ClusterMetadata::~ClusterMetadata() {
+  uv_mutex_destroy(&mutex_);
+}
+
+int ClusterMetadata::init() {
+  return uv_mutex_init(&mutex_);
+}
+
 void ClusterMetadata::clear() {
   schema_.clear();
   token_map_.clear();
 }
 
 void ClusterMetadata::update_keyspaces(ResultResponse* result) {
-  Schema::KeyspacePointerMap keyspaces = schema_.update_keyspaces(result);
+  Schema::KeyspacePointerMap keyspaces;
+  {
+    ScopedMutex l(&mutex_);
+    keyspaces = schema_.update_keyspaces(result);
+  }
   for (Schema::KeyspacePointerMap::const_iterator i = keyspaces.begin(); i != keyspaces.end(); ++i) {
     token_map_.update_keyspace(i->first, *i->second);
   }
+}
+
+void ClusterMetadata::update_tables(ResultResponse* table_result, ResultResponse* col_result) {
+  ScopedMutex l(&mutex_);
+  schema_.update_tables(table_result, col_result);
 }
 
 void ClusterMetadata::drop_keyspace(const std::string& keyspace_name) {
@@ -35,4 +52,8 @@ void ClusterMetadata::drop_keyspace(const std::string& keyspace_name) {
   token_map_.drop_keyspace(keyspace_name);
 }
 
+Schema* ClusterMetadata::copy_schema() const {
+  ScopedMutex l(&mutex_);
+  return new Schema(schema_);
+}
 }
