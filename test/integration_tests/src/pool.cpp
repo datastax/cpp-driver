@@ -62,9 +62,9 @@ BOOST_AUTO_TEST_CASE(pending_request_timeout)
   boost::chrono::milliseconds reject_ms = boost::chrono::duration_cast<boost::chrono::milliseconds>(reject_time - start);
   boost::chrono::milliseconds pend_ms = boost::chrono::duration_cast<boost::chrono::milliseconds>(pend_fail_time - start);
 
-  BOOST_CHECK_LT(reject_ms.count(), TIME_THRESHOLD_MS);
-  BOOST_CHECK_GE(pend_ms.count(), CONNECT_TIMEOUT_MS);
-  BOOST_CHECK_LT(pend_ms.count(), CONNECT_TIMEOUT_MS + TIME_THRESHOLD_MS);
+  BOOST_CHECK_LT(reject_ms.count(), static_cast<int>(TIME_THRESHOLD_MS));
+  BOOST_CHECK_GE(pend_ms.count(), static_cast<int>(CONNECT_TIMEOUT_MS));
+  BOOST_CHECK_LT(pend_ms.count(), static_cast<int>(CONNECT_TIMEOUT_MS + TIME_THRESHOLD_MS));
   BOOST_CHECK_EQUAL(code_pend, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
   BOOST_CHECK_EQUAL(code_reject, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
