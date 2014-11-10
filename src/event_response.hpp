@@ -22,7 +22,7 @@
 #include "constants.hpp"
 #include "scoped_ptr.hpp"
 
-#include "third_party/boost/boost/utility/string_ref.hpp"
+#include <boost/utility/string_ref.hpp>
 
 namespace cass {
 

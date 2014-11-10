@@ -31,8 +31,8 @@
 #include "ssl.hpp"
 #include "stream_manager.hpp"
 
-#include "third_party/boost/boost/cstdint.hpp"
-#include "third_party/boost/boost/function.hpp"
+#include <boost/cstdint.hpp>
+#include <boost/function.hpp>
 
 #include <uv.h>
 

@@ -24,7 +24,7 @@
 #include "scoped_ptr.hpp"
 #include "ref_counted.hpp"
 
-#include "third_party/boost/boost/function.hpp"
+#include <boost/function.hpp>
 
 #include <uv.h>
 #include <assert.h>

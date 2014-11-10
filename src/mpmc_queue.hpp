@@ -26,9 +26,9 @@
 
 #include "common.hpp"
 
-#include "third_party/boost/boost/atomic.hpp"
-#include "third_party/boost/boost/type_traits/alignment_of.hpp"
-#include "third_party/boost/boost/aligned_storage.hpp"
+#include <boost/atomic.hpp>
+#include <boost/type_traits/alignment_of.hpp>
+#include <boost/aligned_storage.hpp>
 
 namespace cass {
 

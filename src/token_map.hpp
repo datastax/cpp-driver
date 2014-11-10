@@ -24,7 +24,7 @@
 #include "scoped_ptr.hpp"
 #include "schema_metadata.hpp"
 
-#include "third_party/boost/boost/utility/string_ref.hpp"
+#include <boost/utility/string_ref.hpp>
 
 #include <map>
 #include <vector>

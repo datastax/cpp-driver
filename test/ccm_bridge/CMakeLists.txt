@@ -11,26 +11,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mo
 set(INCLUDES "")
 set(LIBRARIES "")
 
-# Find boost log library 
-# -------------------------------------------------------------
-set(Boost_USE_STATIC_LIBS OFF)
-set(Boost_USE_STATIC_RUNTIME OFF)
-set(Boost_USE_MULTITHREADED ON)
-
-# needed by boost to link dynamically
-add_definitions(-DBOOST_ALL_DYN_LINK)
-
-find_package(Boost 1.55.0 COMPONENTS system date_time REQUIRED)
 set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
 set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
 
-# boost log depends on boost thread
-find_package(Boost COMPONENTS log_setup log thread)
-if(NOT Boost_FOUND)
-    add_definitions(-DCQL_NO_BOOST_LOG)
+if(Boost_LOG_FOUND AND Boost_LOG_SETUP_FOUND)
+  set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
+  set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
 else()
-    set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
-    set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
+  add_definitions(-DCQL_NO_BOOST_LOG)
 endif()
 
 # -------------------------------------------------------------

@@ -18,8 +18,8 @@
 
 #include "common.hpp"
 
-#include "third_party/boost/boost/functional/hash.hpp"
-#include "third_party/boost/boost/algorithm/string.hpp"
+#include <boost/functional/hash.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <iterator>
 

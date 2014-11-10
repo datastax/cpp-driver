@@ -17,10 +17,10 @@
 #include "ssl.hpp"
 
 #include "common.hpp"
+#include "ssl/ring_buffer_bio.hpp"
 
-#include "third_party/boost/boost/utility/string_ref.hpp"
-#include "third_party/boost/boost/algorithm/string.hpp"
-#include "third_party/rb/ring_buffer_bio.hpp"
+#include <boost/utility/string_ref.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <openssl/crypto.h>
 #include <openssl/err.h>

@@ -19,7 +19,7 @@
 
 #include "macros.hpp"
 
-#include "third_party/boost/boost/aligned_storage.hpp"
+#include <boost/aligned_storage.hpp>
 
 #include <limits>
 #include <memory>

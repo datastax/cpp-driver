@@ -27,7 +27,7 @@
 #include "result_response.hpp"
 #include "timer.hpp"
 
-#include "third_party/boost/boost/bind.hpp"
+#include <boost/bind.hpp>
 
 namespace cass {
 

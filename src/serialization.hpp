@@ -21,10 +21,10 @@
 #include "cassandra.h"
 #include "common.hpp"
 
-#include "third_party/boost/boost/cstdint.hpp"
-#include "third_party/boost/boost/limits.hpp"
-#include "third_party/boost/boost/static_assert.hpp"
-#include "third_party/boost/boost/utility/string_ref.hpp"
+#include <boost/cstdint.hpp>
+#include <boost/limits.hpp>
+#include <boost/static_assert.hpp>
+#include <boost/utility/string_ref.hpp>
 
 #include <assert.h>
 #include <string.h>

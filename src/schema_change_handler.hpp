@@ -22,8 +22,8 @@
 #include "request_handler.hpp"
 #include "scoped_ptr.hpp"
 
-#include "third_party/boost/boost/utility/string_ref.hpp"
-#include "third_party/boost/boost/cstdint.hpp"
+#include <boost/utility/string_ref.hpp>
+#include <boost/cstdint.hpp>
 
 namespace cass {
 

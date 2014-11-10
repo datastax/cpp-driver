@@ -17,8 +17,9 @@
 #ifndef __CASS_UUIDS_HPP_INCLUDED__
 #define __CASS_UUIDS_HPP_INCLUDED__
 
-#include "third_party/boost/boost/atomic.hpp"
-#include "third_party/boost/boost/cstdint.hpp"
+#include <boost/atomic.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/cstdint.hpp>
 
 #include <uv.h>
 #include <assert.h>

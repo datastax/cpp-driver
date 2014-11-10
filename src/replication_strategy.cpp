@@ -20,7 +20,7 @@
 #include "map_iterator.hpp"
 #include "token_map.hpp"
 
-#include "third_party/boost/boost/algorithm/string/predicate.hpp"
+#include <boost/algorithm/string/predicate.hpp>
 
 #include <map>
 #include <set>

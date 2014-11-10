@@ -17,8 +17,8 @@
 #ifndef __CASS_BUFFER_PIECE_HPP_INCLUDED__
 #define __CASS_BUFFER_PIECE_HPP_INCLUDED__
 
-#include "third_party/boost/boost/cstdint.hpp"
-#include "third_party/boost/boost/utility/string_ref.hpp"
+#include <boost/cstdint.hpp>
+#include <boost/utility/string_ref.hpp>
 
 #include <string>
 

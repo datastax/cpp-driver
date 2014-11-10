@@ -18,7 +18,7 @@
 #include "md5.hpp"
 #include "murmur3.hpp"
 
-#include "third_party/boost/boost/algorithm/string/predicate.hpp"
+#include <boost/algorithm/string/predicate.hpp>
 
 #include <algorithm>
 #include <limits>

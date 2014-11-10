@@ -24,7 +24,7 @@
 #include "spsc_queue.hpp"
 #include "timer.hpp"
 
-#include "third_party/boost/boost/atomic.hpp"
+#include <boost/atomic.hpp>
 
 #include <map>
 #include <string>

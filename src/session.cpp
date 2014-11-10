@@ -24,7 +24,7 @@
 #include "timer.hpp"
 #include "types.hpp"
 
-#include "third_party/boost/boost/bind.hpp"
+#include <boost/bind.hpp>
 
 extern "C" {
 
