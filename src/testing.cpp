@@ -18,6 +18,7 @@
 
 #include "address.hpp"
 #include "result_response.hpp"
+#include "schema_metadata.hpp"
 #include "types.hpp"
 
 namespace cass {
@@ -55,6 +56,16 @@ std::string get_contact_points_from_cluster(CassCluster* cluster) {
   }
 
   return str;
+}
+
+CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* schema, const std::string& keyspace) {
+  CassSchemaMeta* foundSchemaMeta = NULL;
+
+  if (schema) {
+    foundSchemaMeta = reinterpret_cast<CassSchemaMeta*>(const_cast<SchemaMetadata*>(schema->from()->get(keyspace)));
+  }
+
+  return foundSchemaMeta;
 }
 
 } // namespace cass

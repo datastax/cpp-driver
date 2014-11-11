@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <assert.h>
+#include <functional>
 
 namespace cass {
 

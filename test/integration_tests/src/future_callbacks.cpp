@@ -210,7 +210,7 @@ BOOST_AUTO_TEST_CASE(test_session_guard)
   BOOST_CHECK(callback_data->was_called);
 }
 #else
-#pragma message "Session Guard Test Will Not Run: Define TESTING_DIRECTIVE by enabling CASS_USE_TESTING_DIRECTIVE"
+#pragma message("Session Guard Test Will Not Run: Define TESTING_DIRECTIVE by enabling CASS_USE_TESTING_DIRECTIVE")
 #endif
 
 BOOST_AUTO_TEST_SUITE_END()
