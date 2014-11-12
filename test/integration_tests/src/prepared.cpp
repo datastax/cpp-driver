@@ -35,6 +35,12 @@
 #include "cassandra.h"
 #include "test_utils.hpp"
 
+#if (defined(WIN32) || defined(_WIN32))
+#define CONTAINER std::vector
+#else
+#define CONTAINER boost::container::vector
+#endif
+
 struct AllTypes {
   test_utils::Uuid id;
   CassString text_sample;
@@ -360,7 +366,8 @@ BOOST_AUTO_TEST_CASE(test_massive_number_of_prepares)
 
   test_utils::execute_query(session, create_table_query);
 
-  boost::container::vector<boost::unique_future<CassPreparedMovable> > prepare_futures;
+
+  CONTAINER<boost::unique_future<CassPreparedMovable> > prepare_futures;
 
   std::vector<test_utils::Uuid> tweet_ids;
   for(size_t i = 0; i < number_of_prepares; ++i) {
@@ -371,7 +378,7 @@ BOOST_AUTO_TEST_CASE(test_massive_number_of_prepares)
   }
 
   std::vector<boost::shared_future<void> > execute_futures;
-  boost::container::vector<CassPreparedMovable> prepares;
+  CONTAINER<CassPreparedMovable> prepares;
   for(size_t i = 0; i < prepare_futures.size(); ++i) {
     CassPreparedMovable prepared = prepare_futures[i].get();
     execute_futures.push_back(boost::async(boost::launch::async, boost::bind(execute_statement, session, prepared.get(), i)).share());
