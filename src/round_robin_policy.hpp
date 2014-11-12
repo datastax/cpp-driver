@@ -97,16 +97,15 @@ private:
       , index_(start_index)
       , remaining_(hosts->size()) {}
 
-    bool compute_next(Address* address)  {
+    SharedRefPtr<Host> compute_next()  {
       while (remaining_ > 0) {
         --remaining_;
         const SharedRefPtr<Host>& host((*hosts_)[index_++ % hosts_->size()]);
         if (host->is_up()) {
-          *address = host->address();
-          return true;
+          return host;
         }
       }
-      return false;
+      return SharedRefPtr<Host>();
     }
 
   private:

@@ -62,7 +62,16 @@ class TokenMap;
 class QueryPlan {
 public:
   virtual ~QueryPlan() {}
-  virtual bool compute_next(Address* address) = 0;
+  virtual SharedRefPtr<Host> compute_next() = 0;
+
+  bool compute_next(Address* address) {
+    SharedRefPtr<Host> host = compute_next();
+    if (host) {
+      *address = host->address();
+      return true;
+    }
+    return false;
+  }
 };
 
 class LoadBalancingPolicy : public Host::StateListener, public RefCounted<LoadBalancingPolicy> {

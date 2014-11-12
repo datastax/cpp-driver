@@ -178,6 +178,12 @@ CassError cass_statement_add_key_index(CassStatement* statement, cass_size_t ind
   return CASS_OK;
 }
 
+CassError cass_statement_set_keyspace(CassStatement* statement, const char* keyspace) {
+  if (statement->kind() != CASS_BATCH_KIND_QUERY) return CASS_ERROR_LIB_BAD_PARAMS;
+  statement->set_keyspace(keyspace);
+  return CASS_OK;
+}
+
 void cass_statement_free(CassStatement* statement) {
   statement->dec_ref();
 }
