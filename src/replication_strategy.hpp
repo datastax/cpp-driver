@@ -41,13 +41,15 @@ public:
   virtual bool equal(const KeyspaceMetadata& ks_meta) = 0;
   virtual void tokens_to_replicas(const TokenHostMap& primary, TokenReplicaMap* output) const = 0;
 
-  // Used to determine if stra
+protected:
   std::string strategy_class_;
 };
 
 
 class NetworkTopologyStrategy : public ReplicationStrategy {
 public:
+  typedef std::map<std::string, size_t> DCReplicaCountMap;
+
   static const std::string STRATEGY_CLASS;
 
   NetworkTopologyStrategy(const std::string& strategy_class,
@@ -57,10 +59,15 @@ public:
   virtual bool equal(const KeyspaceMetadata& ks_meta);
   virtual void tokens_to_replicas(const TokenHostMap& primary, TokenReplicaMap* output) const;
 
+  // Testing only
+  NetworkTopologyStrategy(const std::string& strategy_class,
+                          const DCReplicaCountMap& replication_factors)
+    : ReplicationStrategy(strategy_class)
+    , replication_factors_(replication_factors) {}
+
 private:
-  typedef std::map<std::string, size_t> DCReplicaCountMap;
   static void build_dc_replicas(const SchemaMetadataField* strategy_options, DCReplicaCountMap* dc_replicas);
-  DCReplicaCountMap dc_replicas_;
+  DCReplicaCountMap replication_factors_;
 };
 
 
@@ -74,6 +81,12 @@ public:
 
   virtual bool equal(const KeyspaceMetadata& ks_meta);
   virtual void tokens_to_replicas(const TokenHostMap& primary, TokenReplicaMap* output) const;
+
+  // Testing only
+  SimpleStrategy(const std::string& strategy_class,
+                 size_t replication_factor)
+    : ReplicationStrategy(strategy_class)
+    , replication_factor_(replication_factor) {}
 
 private:
   static size_t get_replication_factor(const SchemaMetadataField* strategy_options);

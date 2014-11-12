@@ -48,7 +48,7 @@ private:
       , index_(start_index)
       , remaining_(replicas->size()) {}
 
-    bool compute_next(Address* address);
+    SharedRefPtr<Host> compute_next();
 
   private:
     LoadBalancingPolicy* child_policy_;
@@ -56,7 +56,6 @@ private:
     CopyOnWriteHostVec replicas_;
     size_t index_;
     size_t remaining_;
-    std::set<Address> replicas_attempted_;
   };
 
   size_t index_;

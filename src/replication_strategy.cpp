@@ -48,97 +48,90 @@ const std::string NetworkTopologyStrategy::STRATEGY_CLASS("NetworkTopologyStrate
 NetworkTopologyStrategy::NetworkTopologyStrategy(const std::string& strategy_class,
                                                  const SchemaMetadataField* strategy_options)
   : ReplicationStrategy(strategy_class) {
-  build_dc_replicas(strategy_options, &dc_replicas_);
+  build_dc_replicas(strategy_options, &replication_factors_);
 }
 
 bool NetworkTopologyStrategy::equal(const KeyspaceMetadata& ks_meta) {
   if (strategy_class_ != ks_meta.strategy_class()) return false;
-  DCReplicaCountMap temp_dc_replicas;
-  build_dc_replicas(ks_meta.strategy_options(), &temp_dc_replicas);
-  return dc_replicas_ == temp_dc_replicas;
+  DCReplicaCountMap temp_rfs;
+  build_dc_replicas(ks_meta.strategy_options(), &temp_rfs);
+  return replication_factors_ == temp_rfs;
 }
 
 typedef std::map<std::string, std::set<std::string> > DCRackMap;
-DCRackMap map_dc_racks(const TokenHostMap& token_hosts) {
-  DCRackMap dc_racks;
+static DCRackMap racks_in_dcs(const TokenHostMap& token_hosts) {
+  DCRackMap racks;
   for (TokenHostMap::const_iterator i = token_hosts.begin();
        i != token_hosts.end(); ++i) {
     const std::string& dc = i->second->dc();
     const std::string& rack = i->second->rack();
     if (!dc.empty() &&  !rack.empty()) {
-      dc_racks[dc].insert(rack);
+      racks[dc].insert(rack);
     }
   }
-  return dc_racks;
+  return racks;
 }
 
 void NetworkTopologyStrategy::tokens_to_replicas(const TokenHostMap& primary, TokenReplicaMap* output) const {
-  DCRackMap dc_rack_map = map_dc_racks(primary);
-  output->clear();
-  for (TokenHostMap::const_iterator i = primary.begin(); i != primary.end(); ++i) {
-    DCReplicaCountMap dc_replica_count;
-    typedef std::map<std::string, std::set<std::string> > DCRackSetMap;
-    DCRackSetMap dc_racks_observed;
-    typedef std::map<std::string, std::list<SharedRefPtr<Host> > > DCHostListMap;
-    DCHostListMap dc_skipped_endpoints;
-    for (DCReplicaCountMap::const_iterator j = dc_replicas_.begin(); j != dc_replicas_.end(); ++j) {
-      dc_replica_count[j->first] = 0;
-    }
+  DCRackMap racks = racks_in_dcs(primary);
 
-    CopyOnWriteHostVec token_replicas(new HostVec());
+  output->clear();
+
+  for (TokenHostMap::const_iterator i = primary.begin(); i != primary.end(); ++i) {
+    DCReplicaCountMap replica_counts;
+    std::map<std::string, std::set<std::string> > racks_observed;
+    std::map<std::string, std::list<SharedRefPtr<Host> > > skipped_endpoints;
+
+    CopyOnWriteHostVec replicas(new HostVec());
     TokenHostMap::const_iterator j = i;
-    size_t token_count = 0;
-    do {
+    for (size_t count = 0; count < primary.size() && replica_counts != replication_factors_; ++count) {
       const SharedRefPtr<Host>& host = j->second;
       const std::string& dc = host->dc();
-      DCReplicaCountMap::const_iterator dc_repl_itr;
-      dc_replicas_.find(dc);
-      if (dc.empty() || (dc_repl_itr = dc_replicas_.find(dc)) == dc_replicas_.end()) {
-        continue;
-      }
-
-      const size_t target_replicas = dc_repl_itr->second;
-      size_t& dc_replicas_found = dc_replica_count[dc];
-      if (dc_replicas_found >= target_replicas) {
-        continue;
-      }
-
-      const size_t dc_rack_count = dc_rack_map[dc].size();
-      std::set<std::string>& racks_observed_this_dc = dc_racks_observed[dc];
-      const std::string& rack = host->rack();
-      if (rack.empty() || racks_observed_this_dc.size() == dc_rack_count) {
-        token_replicas->push_back(host);
-        ++dc_replicas_found;
-      } else {
-        std::list<SharedRefPtr<Host> >& skipped_endpoints_this_dc = dc_skipped_endpoints[dc];
-        if (racks_observed_this_dc.find(rack) != racks_observed_this_dc.end()) {
-          skipped_endpoints_this_dc.push_back(host);
-        } else {
-          token_replicas->push_back(host);
-          ++dc_replicas_found;
-          racks_observed_this_dc.insert(rack);
-          if (racks_observed_this_dc.size() == dc_rack_count) {
-            while (!skipped_endpoints_this_dc.empty() && dc_replicas_found < target_replicas) {
-              token_replicas->push_back(skipped_endpoints_this_dc.front());
-              skipped_endpoints_this_dc.pop_front();
-              ++dc_replicas_found;
-            }
-          }
-        }
-      }
-
-      if (dc_replica_count == dc_replicas_) {
-        break;
-      }
 
       ++j;
       if (j == primary.end()) {
         j = primary.begin();
       }
-      ++token_count;
-    } while(token_count < primary.size());
 
-    output->insert(std::make_pair(i->first, token_replicas));
+      DCReplicaCountMap::const_iterator rf_it =  replication_factors_.find(dc);
+      if (dc.empty() || rf_it == replication_factors_.end()) {
+        continue;
+      }
+
+      const size_t rf = rf_it->second;
+      size_t& replica_count_this_dc = replica_counts[dc] ;
+      if (replica_count_this_dc >= rf) {
+        continue;
+      }
+
+      const size_t rack_count_this_dc = racks[dc].size();
+      std::set<std::string>& racks_observed_this_dc = racks_observed[dc];
+      const std::string& rack = host->rack();
+
+      if (rack.empty() || racks_observed_this_dc.size() == rack_count_this_dc) {
+        ++replica_count_this_dc;
+        replicas->push_back(host);
+      } else {
+        if (racks_observed_this_dc.count(rack) > 0) {
+          skipped_endpoints[dc].push_back(host);
+        } else {
+          ++replica_count_this_dc;
+          replicas->push_back(host);
+          racks_observed_this_dc.insert(rack);
+
+          if (racks_observed_this_dc.size() == rack_count_this_dc) {
+            std::list<SharedRefPtr<Host> >& skipped_endpoints_this_dc = skipped_endpoints[dc];
+            while (!skipped_endpoints_this_dc.empty() && replica_count_this_dc < rf) {
+              ++replica_count_this_dc;
+              replicas->push_back(skipped_endpoints_this_dc.front());
+              skipped_endpoints_this_dc.pop_front();
+            }
+          }
+        }
+      }
+    }
+
+    output->insert(std::make_pair(i->first, replicas));
   }
 }
 
