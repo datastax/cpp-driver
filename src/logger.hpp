@@ -53,15 +53,15 @@ public:
     va_end(args);                \
   }
 
-  void critical(const char* format, ...) { LOG_MESSAGE(CASS_LOG_CRITICAL); }
+  void critical(const char* format, ...) __attribute__((format(printf,2,3))) { LOG_MESSAGE(CASS_LOG_CRITICAL); }
 
-  void error(const char* format, ...) { LOG_MESSAGE(CASS_LOG_ERROR); }
+  void error(const char* format, ...) __attribute__((format(printf,2,3))) { LOG_MESSAGE(CASS_LOG_ERROR); }
 
-  void warn(const char* format, ...) { LOG_MESSAGE(CASS_LOG_WARN); }
+  void warn(const char* format, ...) __attribute__((format(printf,2,3))) { LOG_MESSAGE(CASS_LOG_WARN); }
 
-  void info(const char* format, ...) { LOG_MESSAGE(CASS_LOG_INFO); }
+  void info(const char* format, ...) __attribute__((format(printf,2,3))) { LOG_MESSAGE(CASS_LOG_INFO); }
 
-  void debug(const char* format, ...) { LOG_MESSAGE(CASS_LOG_DEBUG); }
+  void debug(const char* format, ...) __attribute__((format(printf,2,3))) { LOG_MESSAGE(CASS_LOG_DEBUG); }
 
 #undef LOG_MESSAGE
 
@@ -74,13 +74,13 @@ private:
 
   void close() { log_queue_.close_handles(); }
 
-  std::string format_message(const char* format, va_list args) {
+  std::string format_message(const char* format, va_list args) __attribute__((format(printf,2,0))) {
     char buffer[1024];
     int n = vsnprintf(buffer, sizeof(buffer), format, args);
     return std::string(buffer, n);
   }
 
-  void log(CassLogLevel severity, const char* format, va_list args) {
+  void log(CassLogLevel severity, const char* format, va_list args) __attribute__((format(printf,3,0))) {
     LogMessage* log_message = new LogMessage;
     log_message->severity = severity;
     log_message->message = format_message(format, args);

@@ -52,11 +52,11 @@ bool check_error_or_invalid_response(const std::string& prefix, uint8_t expected
   if (response->opcode() == CQL_OPCODE_ERROR) {
     std::ostringstream ss;
     ss << prefix << ": Error response";
-    logger->error(error_response_message(ss.str(), static_cast<ErrorResponse*>(response)).c_str());
+    logger->error("%s",error_response_message(ss.str(), static_cast<ErrorResponse*>(response)).c_str());
   } else {
     std::ostringstream ss;
     ss << prefix << ": Unexpected opcode " << opcode_to_string(response->opcode());
-    logger->error(ss.str().c_str());
+    logger->error("%s",ss.str().c_str());
   }
 
   return true;
