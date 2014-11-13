@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE(test_round_robin)
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 3, 0, false, false);
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
 
   cass_cluster_set_load_balance_round_robin(cluster.get());;
 
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(test_dc_aware)
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 2, 1, false, false);
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 2, 1);
 
   cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1");
 

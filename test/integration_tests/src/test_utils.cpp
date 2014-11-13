@@ -164,7 +164,7 @@ const char ALPHA_NUMERIC[] = { "01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJK
 MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version, bool isSSL /* = false */)
   : conf(cql::get_ccm_bridge_configuration()) {
   boost::debug::detect_memory_leaks(false);
-  ccm = cql::cql_ccm_bridge_t::create(conf, "test", num_nodes_dc1, num_nodes_dc2, isSSL);
+  ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", num_nodes_dc1, num_nodes_dc2, isSSL);
 
   cluster = cass_cluster_new();
   initialize_contact_points(cluster, conf.ip_prefix(), num_nodes_dc1, num_nodes_dc2);

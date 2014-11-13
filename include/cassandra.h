@@ -332,6 +332,15 @@ CASS_EXPORT CassCluster*
 cass_cluster_new();
 
 /**
+ * Frees a cluster instance.
+ *
+ * @param[in] cluster
+ */
+CASS_EXPORT void
+cass_cluster_free(CassCluster* cluster);
+
+
+/**
  * Sets/Appends contact points. This *MUST* be set. The first call sets
  * the contact points and any subsequent calls appends additional contact
  * points. Passing an empty string will clear the contact points. White space
@@ -726,14 +735,6 @@ CASS_EXPORT CassFuture*
 cass_cluster_connect_keyspace(CassCluster* cluster,
                               const char* keyspace);
 
-/**
- * Frees a cluster instance.
- *
- * @param[in] cluster
- */
-CASS_EXPORT void
-cass_cluster_free(CassCluster* cluster);
-
 /***********************************************************************************
  *
  * Session
@@ -813,6 +814,14 @@ cass_session_get_schema(CassSession* session);
  ***********************************************************************************/
 
 /**
+ * Frees a schema instance.
+ *
+ * @param[in] schema
+ */
+CASS_EXPORT void
+cass_schema_free(const CassSchema* schema);
+
+/**
  * Gets a the metadata for the provided keyspace name.
  *
  * @param[in] schema
@@ -825,7 +834,8 @@ cass_session_get_schema(CassSession* session);
  * @see cass_iterator_from_schema_meta()
  */
 CASS_EXPORT const CassSchemaMeta*
-cass_schema_get_keyspace(const CassSchema* schema, const char* keyspace_name);
+cass_schema_get_keyspace(const CassSchema* schema,
+                         const char* keyspace_name);
 
 /**
  * Gets the type of the specified schema metadata.
@@ -850,7 +860,8 @@ cass_schema_meta_type(const CassSchemaMeta* meta);
  * @see cass_iterator_fields_from_schema_meta()
  */
 CASS_EXPORT const CassSchemaMeta*
-cass_schema_meta_get_entry(const CassSchemaMeta* meta, const char* name);
+cass_schema_meta_get_entry(const CassSchemaMeta* meta,
+                           const char* name);
 
 /**
  * Gets a metadata field for the provided name.
@@ -863,7 +874,8 @@ cass_schema_meta_get_entry(const CassSchemaMeta* meta, const char* name);
  * @see cass_schema_meta_field_value()
  */
 CASS_EXPORT const CassSchemaMetaField*
-cass_schema_meta_get_field(const CassSchemaMeta* meta, const char* name);
+cass_schema_meta_get_field(const CassSchemaMeta* meta,
+                           const char* name);
 
 /**
  * Gets the name for a schema metadata field
@@ -883,15 +895,6 @@ cass_schema_meta_field_name(const CassSchemaMetaField* field);
 CASS_EXPORT const CassValue*
 cass_schema_meta_field_value(const CassSchemaMetaField* field);
 
-/**
- * Frees a schema instance.
- *
- * @param[in] schema
- */
-CASS_EXPORT void
-cass_schema_free(const CassSchema* schema);
-
-
 /***********************************************************************************
  *
  * SSL
@@ -907,6 +910,14 @@ cass_schema_free(const CassSchema* schema);
  */
 CASS_EXPORT CassSsl*
 cass_ssl_new();
+
+/**
+ * Frees a SSL context instance.
+ *
+ * @param[in] cluster
+ */
+CASS_EXPORT void
+cass_ssl_free(CassSsl* ssl);
 
 /**
  * Adds a trusted certificate. This is used to verify
@@ -966,15 +977,6 @@ cass_ssl_set_private_key(CassSsl* ssl,
                          CassString key,
                          const char* password);
 
-/**
- * Frees a SSL context instance.
- *
- * @param[in] cluster
- */
-CASS_EXPORT void
-cass_ssl_free(CassSsl* ssl);
-
-
 /***********************************************************************************
  *
  * Future
@@ -986,7 +988,6 @@ cass_ssl_free(CassSsl* ssl);
  */
 CASS_EXPORT void
 cass_future_free(CassFuture* future);
-
 
 /**
  * Sets a callback that is called when a future is set
@@ -1114,8 +1115,17 @@ cass_statement_new(CassString query,
                    cass_size_t parameter_count);
 
 /**
+ * Frees a statement instance. Statements can be immediately freed after
+ * being prepared, executed or added to a batch.
+ *
+ * @param[in] statement
+ */
+CASS_EXPORT void
+cass_statement_free(CassStatement* statement);
+
+/**
  * Adds a key index specifier to this a statement.
- * When using Token-aware routing, this can be used to tell the driver which
+ * When using token-aware routing, this can be used to tell the driver which
  * parameters within a non-prepared, parameterized statement are part of
  * the partition key.
  *
@@ -1132,14 +1142,20 @@ CASS_EXPORT CassError
 cass_statement_add_key_index(CassStatement* statement,
                              cass_size_t index);
 
+
 /**
- * Frees a statement instance. Statements can be immediately freed after
- * being prepared, executed or added to a batch.
+ * Sets the statement's keyspace for use with token-aware routing.
+ *
+ * This is not necessary for prepared statements, as the keyspace
+ * is determined in the metadata processed in the prepare phase.
  *
  * @param[in] statement
+ * @param[in] keyspace
+ * @return CASS_OK if successful, otherwise an error ocurred.
  */
-CASS_EXPORT void
-cass_statement_free(CassStatement* statement);
+CASS_EXPORT CassError
+cass_statement_set_keyspace(CassStatement* statement,
+                            const char* keyspace);
 
 /**
  * Sets the statement's consistency level.
@@ -1870,6 +1886,14 @@ cass_result_has_more_pages(const CassResult* result);
  ***********************************************************************************/
 
 /**
+ * Frees an iterator instance.
+ *
+ * @param[in] iterator
+ */
+CASS_EXPORT void
+cass_iterator_free(CassIterator* iterator);
+
+/**
  * Gets the type of the specified iterator.
  *
  * @param[in] iterator
@@ -1966,14 +1990,6 @@ cass_iterator_from_schema_meta(const CassSchemaMeta* meta);
  */
 CASS_EXPORT CassIterator*
 cass_iterator_fields_from_schema_meta(const CassSchemaMeta* meta);
-
-/**
- * Frees an iterator instance.
- *
- * @param[in] iterator
- */
-CASS_EXPORT void
-cass_iterator_free(CassIterator* iterator);
 
 /**
  * Advance the iterator to the next row, column, or collection item.

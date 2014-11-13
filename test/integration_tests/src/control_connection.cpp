@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(connect_invalid_port)
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 1, 0, false, false);
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 1);
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE(reconnection)
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 2, 0, false, false);
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 2);
 
   // Ensure RR policy
   cass_cluster_set_load_balance_round_robin(cluster.get());;
@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE(topology_change)
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 1, 0, false, false);
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 1);
 
   // Ensure RR policy
   cass_cluster_set_load_balance_round_robin(cluster.get());;
@@ -164,7 +164,7 @@ BOOST_AUTO_TEST_CASE(status_change)
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 2, 0, false, false);
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 2);
 
   // Ensure RR policy
   cass_cluster_set_load_balance_round_robin(cluster.get());;
@@ -195,7 +195,7 @@ BOOST_AUTO_TEST_CASE(node_discovery)
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 3, 0, false, false);
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
 
   // Ensure RR policy
   cass_cluster_set_load_balance_round_robin(cluster.get());;
@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE(node_discovery_invalid_ips)
 
 
     const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 3, 0, false, false);
+    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
 
     cass_cluster_set_log_callback(cluster.get(), test_utils::count_message_log_callback, log_data.get());
 
@@ -243,7 +243,7 @@ BOOST_AUTO_TEST_CASE(node_discovery_no_local_rows)
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 3, 0, false, false);
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
 
   // Ensure RR policy
   cass_cluster_set_load_balance_round_robin(cluster.get());;
@@ -269,7 +269,7 @@ BOOST_AUTO_TEST_CASE(node_discovery_no_rpc_addresss)
     test_utils::CassClusterPtr cluster(cass_cluster_new());
 
     const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 3, 0, false, false);
+    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
 
     cass_cluster_set_log_callback(cluster.get(), test_utils::count_message_log_callback, log_data.get());
 

@@ -87,9 +87,10 @@ private:
       : local_plan_(local_plan)
       , remote_plan_(remote_plan) {}
 
-    bool compute_next(Address* address)  {
-      if (local_plan_->compute_next(address)) return true;
-      else return remote_plan_->compute_next(address);
+    SharedRefPtr<Host> compute_next()  {
+      SharedRefPtr<Host> host(local_plan_->compute_next());
+      if (host) return host;
+      return remote_plan_->compute_next();
     }
 
   private:

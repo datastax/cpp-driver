@@ -51,24 +51,20 @@ namespace cass {
 
 class ControlStartupQueryPlan : public QueryPlan {
 public:
-  ControlStartupQueryPlan(const HostMap& hosts) {
-    for (HostMap::const_iterator it = hosts.begin(),
-         end = hosts.end(); it != end; ++it) {
-      host_addresses_.push_back(it->second->address());
-    }
-    it_ = host_addresses_.begin();
-  }
+  ControlStartupQueryPlan(const HostMap& hosts)
+    : hosts_(hosts)
+    , it_(hosts_.begin()) {}
 
-  virtual bool compute_next(Address* address) {
-    if (it_ == host_addresses_.end()) return false;
-    *address = *it_;
-    it_++;
-    return true;
+  virtual SharedRefPtr<Host> compute_next() {
+    if (it_ == hosts_.end()) return SharedRefPtr<Host>();
+    const SharedRefPtr<Host>& host = it_->second;
+    ++it_;
+    return host;
   }
 
 private:
-  AddressVec host_addresses_;
-  AddressVec::iterator it_;
+  const HostMap& hosts_;
+  HostMap::const_iterator it_;
 };
 
 bool ControlConnection::determine_address_for_peer_host(Logger* logger,
