@@ -174,19 +174,26 @@ void TokenMap::drop_keyspace(const std::string& ks_name) {
 const CopyOnWriteHostVec& TokenMap::get_replicas(const std::string& ks_name, const BufferRefs& key_parts) const {
   if (!partitioner_) return NO_REPLICAS;
 
-  KeyspaceReplicaMap::const_iterator i = keyspace_replica_map_.find(ks_name);
-  if (i != keyspace_replica_map_.end()) {
+  KeyspaceReplicaMap::const_iterator tokens_it = keyspace_replica_map_.find(ks_name);
+  if (tokens_it != keyspace_replica_map_.end()) {
+    const TokenReplicaMap& tokens_to_replicas = tokens_it->second;
     const Token t = partitioner_->hash(key_parts);
-    TokenReplicaMap::const_iterator j = i->second.upper_bound(t);
-    if (j != i->second.end()) {
-      return j->second;
+    TokenReplicaMap::const_iterator replicas_it = tokens_to_replicas.upper_bound(t);
+    if (replicas_it != tokens_to_replicas.end()) {
+      return replicas_it->second;
     } else {
-      if (!i->second.empty()) {
-        return i->second.begin()->second;
+      if (!tokens_to_replicas.empty()) {
+        return tokens_to_replicas.begin()->second;
       }
     }
   }
   return NO_REPLICAS;
+}
+
+void TokenMap::set_replication_strategy(const std::string& ks_name,
+                                        const SharedRefPtr<ReplicationStrategy>& strategy) {
+  keyspace_strategy_map_[ks_name] = strategy;
+  map_keyspace_replicas(ks_name, strategy);
 }
 
 void TokenMap::map_replicas(bool force) {

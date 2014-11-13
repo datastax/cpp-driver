@@ -18,6 +18,17 @@
 
 namespace cass {
 
+// The number of replicas is bounded by replication factor per DC. In practice, the number
+// of replicas is fairly small so a linear search should be extremely fast.
+static inline bool contains(const CopyOnWriteHostVec& replicas, const Address& address) {
+  for (HostVec::const_iterator i = replicas->begin(),
+       end = replicas->end(); i != end; ++i) {
+    if ((*i)->address() == address) {
+      return true;
+    }
+  }
+  return false;
+}
 
 QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspace,
                                             const Request* request,
@@ -51,22 +62,23 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspac
   return child_policy_->new_query_plan(connected_keyspace, request, token_map);
 }
 
-bool TokenAwarePolicy::TokenAwareQueryPlan::compute_next(Address* address)  {
+SharedRefPtr<Host> TokenAwarePolicy::TokenAwareQueryPlan::compute_next()  {
   while (remaining_ > 0) {
     --remaining_;
     const SharedRefPtr<Host>& host((*replicas_)[index_++ % replicas_->size()]);
-    replicas_attempted_.insert(host->address());
     if (host->is_up() && child_policy_->distance(host) == CASS_HOST_DISTANCE_LOCAL) {
-      *address = host->address();
-      return true;
+      return host;
     }
   }
-  while (child_plan_->compute_next(address)) {
-    if (replicas_attempted_.find(*address) == replicas_attempted_.end()) {
-      return true;
+
+  SharedRefPtr<Host> host;
+  while ((host = child_plan_->compute_next())) {
+    if (!contains(replicas_, host->address()) ||
+        child_policy_->distance(host) != CASS_HOST_DISTANCE_LOCAL) {
+      return host;
     }
   }
-  return false;
+  return SharedRefPtr<Host>();
 }
 
 } // namespace cass

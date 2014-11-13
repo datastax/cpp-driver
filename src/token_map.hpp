@@ -55,6 +55,10 @@ public:
   const CopyOnWriteHostVec& get_replicas(const std::string& ks_name,
                                          const BufferRefs& key_parts) const;
 
+  // Testing only
+  void set_replication_strategy(const std::string& ks_name,
+                                const SharedRefPtr<ReplicationStrategy>& strategy);
+
 private:
   void map_replicas(bool force = false);
   void map_keyspace_replicas(const std::string& ks_name,

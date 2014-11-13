@@ -176,14 +176,14 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 
   # GCC specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Werror -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
+  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 
   if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.8" OR
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.8")
     set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedefs")
   endif()
 
-  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS}")
+  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Werror")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.3" OR
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.3")
     set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")

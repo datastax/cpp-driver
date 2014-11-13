@@ -441,40 +441,11 @@ namespace cql {
     return bridge;
   }
 
-  boost::shared_ptr<cql_ccm_bridge_t> cql_ccm_bridge_t::create(
-    const cql_ccm_bridge_configuration_t& settings,
-    const std::string& name,
-    unsigned nodes_count,
-    bool is_ssl /* = false */,
-    bool is_client_authentication /* = false */)
-  {
-    boost::shared_ptr<cql_ccm_bridge_t> bridge(new cql_ccm_bridge_t(settings));
-
-    bridge->execute_ccm_command(boost::str(boost::format("remove %1%") % name));
-
-    std::string ccm_command = boost::str(boost::format("create %1% -n %2% -i %3% -b -v %4%")
-        % name
-        % nodes_count
-        % settings.ip_prefix()
-        % settings.cassandara_version());
-    if (is_ssl) {
-      ccm_command += " --ssl=ssl";
-      if (is_client_authentication) {
-        ccm_command += " --require_client_auth";
-      }
-    }
-
-    bridge->execute_ccm_command(ccm_command);
-
-    bridge->start();
-    return bridge;
-  }
-
-  boost::shared_ptr<cql_ccm_bridge_t> cql_ccm_bridge_t::create(
+  boost::shared_ptr<cql_ccm_bridge_t> cql_ccm_bridge_t::create_and_start(
     const cql_ccm_bridge_configuration_t& settings,
     const std::string& name,
     unsigned nodes_count_dc1,
-    unsigned nodes_count_dc2,
+    unsigned nodes_count_dc2 /* = 0 */,
     bool is_ssl /* = false */,
     bool is_client_authentication /* = false */)
   {
@@ -483,11 +454,12 @@ namespace cql {
     bridge->execute_ccm_command(boost::str(boost::format("remove %1%") % name));
 
     std::string ccm_command = boost::str(boost::format("create %1% -n %2%:%3% -i %4% -b -v %5%")
-        % name
-        % nodes_count_dc1
-        % nodes_count_dc2
-        % settings.ip_prefix()
-        % settings.cassandara_version());
+                                         % name
+                                         % nodes_count_dc1
+                                         % nodes_count_dc2
+                                         % settings.ip_prefix()
+                                         % settings.cassandara_version());
+
     if (is_ssl) {
       ccm_command += " --ssl=ssl";
       if (is_client_authentication) {
@@ -498,7 +470,6 @@ namespace cql {
     bridge->execute_ccm_command(ccm_command);
 
     bridge->start();
-
     return bridge;
   }
 }

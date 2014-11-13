@@ -68,20 +68,14 @@ namespace cql {
 			bool is_ssl = false,
 			bool is_client_authentication = false);
 
-		static boost::shared_ptr<cql_ccm_bridge_t> create(
+    static boost::shared_ptr<cql_ccm_bridge_t> create_and_start(
 			const cql_ccm_bridge_configuration_t& settings,
 			const std::string& name,
-			unsigned nodes_count,
+      unsigned nodes_count_dc1,
+      unsigned nodes_count_dc2 = 0,
 			bool is_ssl = false,
 			bool is_client_authentication = false);
 
-		static boost::shared_ptr<cql_ccm_bridge_t> create(
-			const cql_ccm_bridge_configuration_t& settings,
-			const std::string& name,
-			unsigned nodes_count_dc1,
-			unsigned nodes_count_dc2,
-			bool is_ssl = false,
-			bool is_client_authentication = false);
 	private:
 		/* CCM functionality */
 		static const std::string CCM_COMMAND;

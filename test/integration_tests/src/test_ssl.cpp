@@ -139,7 +139,7 @@ struct TestSSL {
    */
   void setup(bool is_ssl = true, bool is_client_authentication = false, bool is_failure = false, unsigned int nodes = 1, unsigned int protocol_version = 2) {
     //Create a n-node cluster
-    ccm_ = cql::cql_ccm_bridge_t::create(configuration_, CCM_CLUSTER_NAME, nodes, is_ssl, is_client_authentication);
+    ccm_ = cql::cql_ccm_bridge_t::create_and_start(configuration_, CCM_CLUSTER_NAME, nodes, 0, is_ssl, is_client_authentication);
 
     //Initialize the cpp-driver
     cluster_ = cass_cluster_new();
