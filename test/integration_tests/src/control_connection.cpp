@@ -302,7 +302,7 @@ BOOST_AUTO_TEST_CASE(full_outage)
   const char* query = "SELECT * FROM system.local";
 
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 1, 0);
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 1);
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
