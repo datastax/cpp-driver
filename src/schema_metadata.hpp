@@ -110,6 +110,8 @@ public:
   SchemaMetadata(CassSchemaMetaType type)
     : type_(type) {}
 
+  virtual ~SchemaMetadata() {}
+
   CassSchemaMetaType type() const { return type_; }
 
   virtual const SchemaMetadata* get_entry(const std::string& name) const = 0;

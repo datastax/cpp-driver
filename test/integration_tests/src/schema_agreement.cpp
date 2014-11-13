@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(keyspace_add_drop)
   // close session to flush logger
   close_session();
 
-  BOOST_CHECK_EQUAL(log_counter.message_count, 2);
+  BOOST_CHECK_EQUAL(log_counter.message_count, 2ul);
 }
 
 BOOST_AUTO_TEST_CASE(agreement_node_down) {
@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE(agreement_node_down) {
   // close session to flush logger
   close_session();
 
-  BOOST_CHECK_EQUAL(log_counter.message_count, 2);
+  BOOST_CHECK_EQUAL(log_counter.message_count, 2ul);
 
   inst.ccm->start(3);
 }
@@ -151,7 +151,7 @@ BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
   cass_future_wait(create_future.get());
   BOOST_CHECK_EQUAL(cass_future_error_code(create_future.get()), CASS_OK);
   close_session();
-  BOOST_CHECK_EQUAL(log_counter.message_count, 1);
+  BOOST_CHECK_EQUAL(log_counter.message_count, 1ul);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

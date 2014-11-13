@@ -39,6 +39,7 @@ option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
 
 if(CASS_BUILD_TESTS)
   set(CASS_USE_EXTERNAL_BOOST ON)
+  set(CASS_BUILD_STATIC ON)
 endif()
 
 # Build up the include paths
@@ -88,7 +89,7 @@ if(CASS_USE_EXTERNAL_BOOST)
     set(BOOST_ROOT "${PROJECT_SOURCE_DIR}/lib/boost/")
   endif()
 
-  find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS atomic chrono date_time log log_setup random system thread unit_test_framework)
+  find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS atomic chrono date_time random system thread unit_test_framework)
 endif()
 
 # tcmalloc
@@ -133,7 +134,9 @@ endif()
 set(MULTICORE_CORES_NUMBER "3" CACHE STRING "Number of cores (for multicore compilation)")
 option(MULTICORE_COMPILATION "Enable multicore compilation" OFF)
 
-set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_THREAD_USES_MOVE -DBOOST_NO_CXX11_RVALUE_REFERENCES")
+if(NOT WIN32)
+  set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_THREAD_USES_MOVE -DBOOST_NO_CXX11_RVALUE_REFERENCES")
+endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   if(MULTICORE_COMPILATION)
@@ -203,8 +206,6 @@ endif()
 # Cassandra static and shared
 #-------------------
 
-include_directories(${INCLUDES})
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
@@ -269,6 +270,8 @@ if(CASS_BUILD_STATIC)
     TARGET ${PROJECT_LIB_NAME_STATIC}
     APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DCASS_STATIC")
 endif()
+
+include_directories(${INCLUDES})
 
 #-------------------
 # Install target

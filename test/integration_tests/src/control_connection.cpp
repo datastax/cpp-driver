@@ -235,7 +235,7 @@ BOOST_AUTO_TEST_CASE(test_node_discovery_invalid_ips)
     check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 3));
   }
 
-  BOOST_CHECK_EQUAL(log_data->message_count, 3);
+  BOOST_CHECK_EQUAL(log_data->message_count, 3ul);
 }
 
 BOOST_AUTO_TEST_CASE(test_node_discovery_no_local_rows)

@@ -20,8 +20,8 @@
 #endif
 
 #include "cassandra.h"
-#include "schema_metadata.hpp"
 #include "types.hpp"
+#include "testing.hpp"
 #include "test_utils.hpp"
 
 #include <boost/test/unit_test.hpp>
@@ -67,7 +67,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
       const CassSchema* old(schema_);
       schema_ = cass_session_get_schema(session);
 
-      for (size_t i = 0; i < 10 && schema_->from()->get("system") == old->from()->get("system"); ++i) {
+      for (size_t i = 0; i < 10 && get_schema_meta_from_keyspace(schema_, "system") == get_schema_meta_from_keyspace(old, "system"); ++i) {
         boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
         cass_schema_free(schema_);
         schema_ = cass_session_get_schema(session);
@@ -262,7 +262,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
 
     const CassValue* value = cass_schema_meta_field_value(cass_schema_meta_get_field(table_meta, "compression_parameters"));
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_MAP);
-    BOOST_REQUIRE_GE(cass_value_item_count(value), 1);
+    BOOST_REQUIRE_GE(cass_value_item_count(value), 1ul);
     test_utils::CassIteratorPtr itr = cass_iterator_from_map(value);
     const std::string parameter = "sstable_compression";
     bool param_found = false;
@@ -280,7 +280,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
 
     value = cass_schema_meta_field_value(cass_schema_meta_get_field(table_meta, "key_aliases"));
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_LIST);
-    BOOST_CHECK_GE(cass_value_item_count(value), 1);
+    BOOST_CHECK_GE(cass_value_item_count(value), 1ul);
 
     BOOST_CHECK(!cass_schema_meta_get_entry(table_meta, "some bogus entry"));
 
@@ -350,7 +350,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     test_utils::CassIteratorPtr itr = cass_iterator_from_schema(schema_);
     size_t keyspace_count = 0;
     while (cass_iterator_next(itr.get())) ++keyspace_count;
-    BOOST_CHECK_EQUAL(keyspace_count, 2);
+    BOOST_CHECK_EQUAL(keyspace_count, 2ul);
   }
 
   void verify_user_keyspace() {

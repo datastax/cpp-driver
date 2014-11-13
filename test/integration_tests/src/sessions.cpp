@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE(test_close_timeout_error)
     }
   }
 
-  BOOST_CHECK_EQUAL(log_data->message_count, 0);
+  BOOST_CHECK_EQUAL(log_data->message_count, 0ul);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
