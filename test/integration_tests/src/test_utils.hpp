@@ -166,8 +166,6 @@ class CassSharedPtr : public boost::shared_ptr<T> {
 public:
   CassSharedPtr(T* ptr = NULL)
     : boost::shared_ptr<T>(ptr, Deleter<T>()) {}
-
-  operator T*() const { return this->get(); }
 };
 
 typedef CassSharedPtr<CassCluster> CassClusterPtr;

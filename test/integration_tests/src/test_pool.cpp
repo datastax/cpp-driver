@@ -40,15 +40,15 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
 
   {
     test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
-    test_utils::wait_and_check_error(connect_future);
-    test_utils::CassSessionPtr session = cass_future_get_session(connect_future);
+    test_utils::wait_and_check_error(connect_future.get());
+    test_utils::CassSessionPtr session = cass_future_get_session(connect_future.get());
 
     test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("SELECT * FROM system.local"), 0));
 
     // reject should come immediately
     boost::chrono::steady_clock::time_point start = boost::chrono::steady_clock::now();
-    test_utils::CassFuturePtr future_reject(cass_session_execute(session, statement));
-    CassError code_reject = test_utils::wait_and_return_error(future_reject);
+    test_utils::CassFuturePtr future_reject(cass_session_execute(session.get(), statement.get()));
+    CassError code_reject = test_utils::wait_and_return_error(future_reject.get());
     boost::chrono::steady_clock::time_point reject_time = boost::chrono::steady_clock::now();
     boost::chrono::milliseconds reject_ms = boost::chrono::duration_cast<boost::chrono::milliseconds>(reject_time - start);
 
@@ -69,8 +69,8 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
     cass_cluster_set_pending_requests_high_water_mark(cluster, pending_high_wm);
 
     test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
-    test_utils::wait_and_check_error(connect_future);
-    test_utils::CassSessionPtr session = cass_future_get_session(connect_future);
+    test_utils::wait_and_check_error(connect_future.get());
+    test_utils::CassSessionPtr session = cass_future_get_session(connect_future.get());
 
     test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("SELECT * FROM system.local"), 0));
 
@@ -80,9 +80,9 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
     size_t max_tries = 2*max_streams; // v[12] stream has 128 ids
     std::vector<test_utils::CassFuturePtr> futures;
     for (; tries < max_tries; ++tries) {
-      futures.push_back(cass_session_execute(session, statement));
-      if (cass_future_wait_timed(futures.back(), 1)) {
-        BOOST_REQUIRE_EQUAL(cass_future_error_code(futures.back()), CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+      futures.push_back(cass_session_execute(session.get(), statement.get()));
+      if (cass_future_wait_timed(futures.back().get(), 1)) {
+        BOOST_REQUIRE_EQUAL(cass_future_error_code(futures.back().get()), CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
         break;
       }
     }
@@ -90,10 +90,10 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
     BOOST_REQUIRE_GE(tries, max_streams + pending_high_wm + 1);
     BOOST_REQUIRE_LT(tries, max_tries);
     // wait for window to advance past low water mark
-    test_utils::wait_and_check_error(futures[pending_high_wm - pending_low_wm]);
+    test_utils::wait_and_check_error(futures[pending_high_wm - pending_low_wm].get());
     // now, should be writable again
-    test_utils::CassFuturePtr future(cass_session_execute(session, statement));
-    test_utils::wait_and_check_error(future);
+    test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
+    test_utils::wait_and_check_error(future.get());
   }
 }
 
@@ -131,7 +131,7 @@ BOOST_AUTO_TEST_CASE(connection_spawn)
     // run a few to get concurrent requests
     std::vector<test_utils::CassFuturePtr> futures;
     for (size_t i = 0; i < 10; ++i) {
-      futures.push_back(cass_session_execute(session, statement));
+      futures.push_back(cass_session_execute(session.get(), statement.get()));
     }
   }
   BOOST_CHECK_EQUAL(log_data->message_count, 2);
