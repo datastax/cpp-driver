@@ -44,7 +44,7 @@ struct PreparedOutageTests : public test_utils::SingleSessionTest {
 
 BOOST_FIXTURE_TEST_SUITE(prepared_outage, PreparedOutageTests)
 
-BOOST_AUTO_TEST_CASE(test_reprepared_on_new_node)
+BOOST_AUTO_TEST_CASE(reprepared_on_new_node)
 {
   std::string table_name = "test";
 

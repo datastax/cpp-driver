@@ -82,13 +82,13 @@ struct AthenticationTests {
 
 BOOST_FIXTURE_TEST_SUITE(authentication, AthenticationTests)
 
-BOOST_AUTO_TEST_CASE(test_auth)
+BOOST_AUTO_TEST_CASE(protocol_versions)
 {
   auth(1);
   auth(2);
 }
 
-BOOST_AUTO_TEST_CASE(test_empty_credentials)
+BOOST_AUTO_TEST_CASE(empty_credentials)
 {
   // This is a case that could be guarded in the API entry point, or errored in connection. However,
   // auth is subject to major changes and this is just a simple form.
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(test_empty_credentials)
   invalid_credentials(2, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
 
-BOOST_AUTO_TEST_CASE(test_invalid_credentials)
+BOOST_AUTO_TEST_CASE(bad_credentials)
 {
   const char* expected_error
       = "'Username and/or password are incorrect'";

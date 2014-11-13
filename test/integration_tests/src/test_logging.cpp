@@ -57,7 +57,7 @@ struct LoggingTests : public test_utils::MultipleNodesTest {
 
 BOOST_FIXTURE_TEST_SUITE(logging, LoggingTests)
 
-BOOST_AUTO_TEST_CASE(test_logging_callback)
+BOOST_AUTO_TEST_CASE(logging_callback)
 {
   boost::shared_ptr<LogCount> log_count(new LogCount());
 

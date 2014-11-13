@@ -37,7 +37,7 @@ struct LoadBalancingTests {
 
 BOOST_FIXTURE_TEST_SUITE(load_balancing, LoadBalancingTests)
 
-BOOST_AUTO_TEST_CASE(test_round_robin)
+BOOST_AUTO_TEST_CASE(round_robin)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE(test_round_robin)
   policy_tool.assert_queried(host3, 6);
 }
 
-BOOST_AUTO_TEST_CASE(test_dc_aware)
+BOOST_AUTO_TEST_CASE(dc_aware)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 

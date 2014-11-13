@@ -42,7 +42,7 @@ struct IteratorTests : public test_utils::SingleSessionTest {
 
 BOOST_FIXTURE_TEST_SUITE(iterators, IteratorTests)
 
-BOOST_AUTO_TEST_CASE(test_result_iterator)
+BOOST_AUTO_TEST_CASE(result_iterator)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   std::string create_table_query = str(boost::format("CREATE TABLE %s (part timeuuid, key int, value int, PRIMARY KEY(part, key));")
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(test_result_iterator)
   }
 }
 
-BOOST_AUTO_TEST_CASE(test_row_iterator)
+BOOST_AUTO_TEST_CASE(row_iterator)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, first int, second int, third int);")
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(test_row_iterator)
   BOOST_REQUIRE(cass_result_column_count(result.get()) == static_cast<size_t>(count));
 }
 
-BOOST_AUTO_TEST_CASE(test_collection_list_iterator)
+BOOST_AUTO_TEST_CASE(collection_list_iterator)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value list<int>);")
@@ -145,7 +145,7 @@ BOOST_AUTO_TEST_CASE(test_collection_list_iterator)
   BOOST_REQUIRE(count == 4);
 }
 
-BOOST_AUTO_TEST_CASE(test_collection_set_iterator)
+BOOST_AUTO_TEST_CASE(collection_set_iterator)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value set<int>);")
@@ -178,7 +178,7 @@ BOOST_AUTO_TEST_CASE(test_collection_set_iterator)
   BOOST_REQUIRE(count == 4);
 }
 
-BOOST_AUTO_TEST_CASE(test_collection_map_iterator)
+BOOST_AUTO_TEST_CASE(collection_map_iterator)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value map<text, int>);")
@@ -218,7 +218,7 @@ BOOST_AUTO_TEST_CASE(test_collection_map_iterator)
   BOOST_REQUIRE(count == 4);
 }
 
-BOOST_AUTO_TEST_CASE(test_map_iterator)
+BOOST_AUTO_TEST_CASE(map_iterator)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value map<text, int>);")
@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_CASE(test_map_iterator)
   BOOST_REQUIRE(count == 4);
 }
 
-BOOST_AUTO_TEST_CASE(test_empty)
+BOOST_AUTO_TEST_CASE(empty)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   std::string create_table_query = str(boost::format("CREATE TABLE %s (part timeuuid, key int, value int, PRIMARY KEY(part, key));")
@@ -277,7 +277,7 @@ BOOST_AUTO_TEST_CASE(test_empty)
   BOOST_REQUIRE(cass_iterator_next(iterator.get()) == cass_false);
 }
 
-BOOST_AUTO_TEST_CASE(test_invalid_value_types)
+BOOST_AUTO_TEST_CASE(invalid_value_types)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value list<int>);")

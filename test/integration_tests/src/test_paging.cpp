@@ -43,7 +43,7 @@ struct PagingTests : public test_utils::SingleSessionTest {
 
 BOOST_FIXTURE_TEST_SUITE(paging, PagingTests)
 
-BOOST_AUTO_TEST_CASE(test_paging_simple)
+BOOST_AUTO_TEST_CASE(paging_simple)
 {
   const int num_rows = 100;
   const int page_size = 5;
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(test_paging_simple)
   } while (cass_result_has_more_pages(result.get()));
 }
 
-BOOST_AUTO_TEST_CASE(test_paging_empty)
+BOOST_AUTO_TEST_CASE(paging_empty)
 {
   const int page_size = 5;
 

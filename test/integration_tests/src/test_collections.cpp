@@ -340,17 +340,17 @@ void insert_map_all_types(CassCluster* cluster) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(test_set)
+BOOST_AUTO_TEST_CASE(set)
 {
   insert_collection_all_types(cluster, CASS_VALUE_TYPE_SET);
 }
 
-BOOST_AUTO_TEST_CASE(test_list)
+BOOST_AUTO_TEST_CASE(list)
 {
   insert_collection_all_types(cluster, CASS_VALUE_TYPE_LIST);
 }
 
-BOOST_AUTO_TEST_CASE(test_map)
+BOOST_AUTO_TEST_CASE(map)
 {
   insert_map_all_types(cluster);
 }

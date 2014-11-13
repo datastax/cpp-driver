@@ -85,7 +85,7 @@ void validate_results(CassSession* session,
   }
 }
 
-BOOST_AUTO_TEST_CASE(test_async)
+BOOST_AUTO_TEST_CASE(simple)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   const size_t num_concurrent_requests = 4096;
@@ -101,7 +101,7 @@ BOOST_AUTO_TEST_CASE(test_async)
   validate_results(session, table_name, num_concurrent_requests, ids);
 }
 
-BOOST_AUTO_TEST_CASE(test_async_close)
+BOOST_AUTO_TEST_CASE(close)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   const size_t num_concurrent_requests = 4096;

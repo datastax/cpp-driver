@@ -56,7 +56,7 @@ struct ByNameTests : public test_utils::SingleSessionTest {
 
 BOOST_FIXTURE_TEST_SUITE(by_name, ByNameTests)
 
-BOOST_AUTO_TEST_CASE(test_bind_and_get)
+BOOST_AUTO_TEST_CASE(bind_and_get)
 {
   test_utils::CassPreparedPtr prepared = prepare("INSERT INTO by_name (key, a, b, c) VALUES (?, ?, ?, ?)");
 
@@ -107,7 +107,7 @@ BOOST_AUTO_TEST_CASE(test_bind_and_get)
   BOOST_CHECK(test_utils::Value<CassString>::equal(c, cass_string_init("xyz")));
 }
 
-BOOST_AUTO_TEST_CASE(test_bind_and_get_case_sensitive)
+BOOST_AUTO_TEST_CASE(bind_and_get_case_sensitive)
 {
   test_utils::CassPreparedPtr prepared = prepare("INSERT INTO by_name (key, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?)");
 
@@ -156,7 +156,7 @@ BOOST_AUTO_TEST_CASE(test_bind_and_get_case_sensitive)
   BOOST_CHECK(abc == 3.3f);
 }
 
-BOOST_AUTO_TEST_CASE(test_bind_multiple_columns)
+BOOST_AUTO_TEST_CASE(bind_multiple_columns)
 {
   test_utils::CassPreparedPtr prepared = prepare("INSERT INTO by_name (key, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?)");
 
@@ -203,7 +203,7 @@ BOOST_AUTO_TEST_CASE(test_bind_multiple_columns)
   BOOST_CHECK(abc == 1.23f);
 }
 
-BOOST_AUTO_TEST_CASE(test_bind_not_prepared)
+BOOST_AUTO_TEST_CASE(bind_not_prepared)
 {
   test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("INSERT INTO by_name (key, a) VALUES (?, ?)"), 2));
 
@@ -213,7 +213,7 @@ BOOST_AUTO_TEST_CASE(test_bind_not_prepared)
   BOOST_REQUIRE_EQUAL(cass_statement_bind_int32_by_name(statement.get(), "a", 9042), CASS_ERROR_LIB_INVALID_STATEMENT_TYPE);
 }
 
-BOOST_AUTO_TEST_CASE(test_bind_invalid_name)
+BOOST_AUTO_TEST_CASE(bind_invalid_name)
 {
   test_utils::CassPreparedPtr prepared = prepare("INSERT INTO by_name (key, a, b, c, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?, ?, ?, ?)");
 
@@ -224,7 +224,7 @@ BOOST_AUTO_TEST_CASE(test_bind_invalid_name)
   BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"abC\"", 0.0), CASS_ERROR_LIB_NAME_DOES_NOT_EXIST);
 }
 
-BOOST_AUTO_TEST_CASE(test_get_invalid_name)
+BOOST_AUTO_TEST_CASE(get_invalid_name)
 {
   test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("INSERT INTO by_name (key, a) VALUES (?, ?)"), 2));
 

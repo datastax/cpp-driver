@@ -67,7 +67,7 @@ void validate_results(CassSession* session, int num_rows) {
   }
 }
 
-BOOST_AUTO_TEST_CASE(test_prepared)
+BOOST_AUTO_TEST_CASE(prepared)
 {
   test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
   std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(?, ?);") % BatchTests::SIMPLE_TABLE_NAME);
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(test_prepared)
   validate_results(session, 4);
 }
 
-BOOST_AUTO_TEST_CASE(test_simple)
+BOOST_AUTO_TEST_CASE(simple)
 {
   test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
   std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(?, ?);") % BatchTests::SIMPLE_TABLE_NAME);
@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(test_simple)
   validate_results(session, 4);
 }
 
-BOOST_AUTO_TEST_CASE(test_mixed)
+BOOST_AUTO_TEST_CASE(mixed)
 {
   test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
   std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(?, ?);") % BatchTests::SIMPLE_TABLE_NAME);
@@ -139,7 +139,7 @@ BOOST_AUTO_TEST_CASE(test_mixed)
   validate_results(session, 1000);
 }
 
-BOOST_AUTO_TEST_CASE(test_invalid_batch_type)
+BOOST_AUTO_TEST_CASE(invalid_batch_type)
 {
   test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
   std::string update_query = str(boost::format("UPDATE %s SET test_val = test_val + ? WHERE tweet_id = ?;") % BatchTests::COUNTER_TABLE_NAME);
@@ -155,7 +155,7 @@ BOOST_AUTO_TEST_CASE(test_invalid_batch_type)
   BOOST_REQUIRE(cass_future_error_code(update_future.get()) == CASS_ERROR_SERVER_INVALID_QUERY);
 }
 
-BOOST_AUTO_TEST_CASE(test_counter_mixed)
+BOOST_AUTO_TEST_CASE(counter_mixed)
 {
   test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_COUNTER));
   std::string update_query = str(boost::format("UPDATE %s SET test_val = test_val + ? WHERE tweet_id = ?;") % BatchTests::COUNTER_TABLE_NAME);

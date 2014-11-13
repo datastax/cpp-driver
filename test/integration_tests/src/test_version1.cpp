@@ -93,14 +93,14 @@ struct Version1Tests : public test_utils::SingleSessionTest {
 
 BOOST_FIXTURE_TEST_SUITE(version1, Version1Tests)
 
-BOOST_AUTO_TEST_CASE(test_query)
+BOOST_AUTO_TEST_CASE(query)
 {
   test_utils::execute_query(session, "CREATE TABLE test (key int PRIMARY KEY, v1 int, v2 text, v3 list<int>, v4 set<text>);");
   test_utils::execute_query(session, "INSERT INTO test (key, v1, v2, v3, v4) VALUES (0, 99, 'abc', [ 0, 1, 2 ], { 'd', 'e', 'f' });");
   check_result(session);
 }
 
-BOOST_AUTO_TEST_CASE(test_prepared)
+BOOST_AUTO_TEST_CASE(prepared)
 {
   test_utils::execute_query(session, "CREATE TABLE test (key int PRIMARY KEY, v1 int, v2 text, v3 list<int>, v4 set<text>);");
 
@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE(test_prepared)
   check_result(session);
 }
 
-BOOST_AUTO_TEST_CASE(test_batch_error)
+BOOST_AUTO_TEST_CASE(batch_error)
 {
   test_utils::execute_query(session, "CREATE TABLE test (key int PRIMARY KEY, value int);");
 
@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE(test_batch_error)
   BOOST_REQUIRE(std::string(message.data, message.length).find("Operation unsupported by this protocol version") != std::string::npos);
 }
 
-BOOST_AUTO_TEST_CASE(test_query_param_error)
+BOOST_AUTO_TEST_CASE(query_param_error)
 {
   test_utils::execute_query(session, "CREATE TABLE test (key int PRIMARY KEY, value int);");
 

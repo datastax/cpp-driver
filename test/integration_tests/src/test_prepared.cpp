@@ -158,7 +158,7 @@ void compare_all_types(const AllTypes& input, const CassRow* row) {
   BOOST_REQUIRE(test_utils::Value<CassInet>::equal(input.inet_sample, output.inet_sample));
 }
 
-BOOST_AUTO_TEST_CASE(test_bound_all_types_different_values)
+BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
 {
   std::string insert_query = str(boost::format("INSERT INTO %s "
                                                "(id, text_sample, int_sample, bigint_sample, float_sample, double_sample, decimal_sample, "
@@ -251,7 +251,7 @@ BOOST_AUTO_TEST_CASE(test_bound_all_types_different_values)
   }
 }
 
-BOOST_AUTO_TEST_CASE(test_bound_all_types_null_values)
+BOOST_AUTO_TEST_CASE(bound_all_types_null_values)
 {
   std::string insert_query = str(boost::format("INSERT INTO %s "
                                                "(id, text_sample, int_sample, bigint_sample, float_sample, double_sample, decimal_sample, "
@@ -304,7 +304,7 @@ BOOST_AUTO_TEST_CASE(test_bound_all_types_null_values)
   }
 }
 
-BOOST_AUTO_TEST_CASE(test_select_one)
+BOOST_AUTO_TEST_CASE(select_one)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   std::string create_table_query = str(boost::format("CREATE TABLE %s (tweet_id int PRIMARY KEY, numb double, label text);") % table_name);
@@ -358,7 +358,7 @@ void execute_statement(CassSession* session, const CassPrepared* prepared, int v
   test_utils::wait_and_check_error(future.get());
 }
 
-BOOST_AUTO_TEST_CASE(test_massive_number_of_prepares)
+BOOST_AUTO_TEST_CASE(massive_number_of_prepares)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
   std::string create_table_query = str(boost::format("CREATE TABLE %s (tweet_id uuid PRIMARY KEY, numb1 double, numb2 int);") % table_name);

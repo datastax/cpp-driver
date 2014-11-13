@@ -52,7 +52,7 @@ test_utils::CassFuturePtr insert_row(CassSession* session, const std::string& ke
   return test_utils::CassFuturePtr(cass_session_execute(session, statement.get()));
 }
 
-BOOST_AUTO_TEST_CASE(test_simple)
+BOOST_AUTO_TEST_CASE(simple)
 {
   for (int i = 0; i < 2; ++i) {
     test_utils::CassFuturePtr future = insert_row(session, "abc", 99, CASS_CONSISTENCY_SERIAL);
@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(test_simple)
   }
 }
 
-BOOST_AUTO_TEST_CASE(test_invalid)
+BOOST_AUTO_TEST_CASE(invalid)
 {
   test_utils::CassFuturePtr future = insert_row(session, "abc", 99, CASS_CONSISTENCY_ONE); // Invalid
 

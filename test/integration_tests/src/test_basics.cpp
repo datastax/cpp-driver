@@ -186,7 +186,7 @@ void insert_null_value(CassSession* session, CassValueType type) {
   } 
 }
 
-BOOST_AUTO_TEST_CASE(test_basic_types)
+BOOST_AUTO_TEST_CASE(basic_types)
 {
   insert_single_value<cass_int32_t>(session, CASS_VALUE_TYPE_INT, 123);
 
@@ -242,7 +242,7 @@ BOOST_AUTO_TEST_CASE(test_basic_types)
   }
 }
 
-BOOST_AUTO_TEST_CASE(test_min_max)
+BOOST_AUTO_TEST_CASE(min_max)
 {
   insert_min_max_value<cass_int32_t>(session, CASS_VALUE_TYPE_INT);
 
@@ -289,7 +289,7 @@ BOOST_AUTO_TEST_CASE(test_min_max)
   }
 }
 
-BOOST_AUTO_TEST_CASE(test_null)
+BOOST_AUTO_TEST_CASE(null)
 {
   insert_null_value(session, CASS_VALUE_TYPE_ASCII);
   insert_null_value(session, CASS_VALUE_TYPE_BIGINT);
@@ -311,7 +311,7 @@ BOOST_AUTO_TEST_CASE(test_null)
   insert_null_value(session, CASS_VALUE_TYPE_SET);
 }
 
-BOOST_AUTO_TEST_CASE(test_timestamp)
+BOOST_AUTO_TEST_CASE(timestamp)
 {
   test_utils::execute_query(session, "CREATE TABLE test(tweet_id int PRIMARY KEY, test_val int);");
 
@@ -340,7 +340,7 @@ BOOST_AUTO_TEST_CASE(test_timestamp)
   BOOST_REQUIRE(::abs(timestamp2 - timestamp1 - pause_duration) < 100000); // Tolerance
 }
 
-BOOST_AUTO_TEST_CASE(test_counters)
+BOOST_AUTO_TEST_CASE(counters)
 {
   test_utils::execute_query(session, "CREATE TABLE test(tweet_id int PRIMARY KEY, incdec counter);");
 
@@ -369,7 +369,7 @@ BOOST_AUTO_TEST_CASE(test_counters)
   BOOST_REQUIRE(counter_value == 50);
 }
 
-BOOST_AUTO_TEST_CASE(test_rows_in_rows_out)
+BOOST_AUTO_TEST_CASE(rows_in_rows_out)
 {
   CassConsistency consistency = CASS_CONSISTENCY_ONE;
 
@@ -418,7 +418,7 @@ BOOST_AUTO_TEST_CASE(test_rows_in_rows_out)
   }
 }
 
-BOOST_AUTO_TEST_CASE(test_column_name)
+BOOST_AUTO_TEST_CASE(column_name)
 {
   test_utils::execute_query(session, "CREATE TABLE test (key int PRIMARY KEY, v1 text, v2 int, v3 bigint, v4 float);");
   test_utils::execute_query(session, "INSERT INTO test (key, v1, v2, v3, v4) VALUES (0, 'abc', 123, 456, 0.123456);");

@@ -32,7 +32,7 @@ struct ConfigTests {
 BOOST_FIXTURE_TEST_SUITE(config, ConfigTests)
 
 
-BOOST_AUTO_TEST_CASE(test_options)
+BOOST_AUTO_TEST_CASE(options)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE(test_options)
   }
 }
 
-BOOST_AUTO_TEST_CASE(test_contact_points)
+BOOST_AUTO_TEST_CASE(contact_points)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 

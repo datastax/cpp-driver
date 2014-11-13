@@ -122,7 +122,7 @@ struct FutureCallbacksTests : public test_utils::MultipleNodesTest {
 
 BOOST_FIXTURE_TEST_SUITE(future_callbacks, FutureCallbacksTests)
 
-BOOST_AUTO_TEST_CASE(test_connect)
+BOOST_AUTO_TEST_CASE(connect)
 {
   boost::scoped_ptr<CallbackData> callback_data(new CallbackData());
 
@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(test_connect)
   BOOST_CHECK(callback_data->was_called);
 }
 
-BOOST_AUTO_TEST_CASE(test_close)
+BOOST_AUTO_TEST_CASE(close)
 {
   boost::scoped_ptr<CallbackData> callback_data(new CallbackData());
 
@@ -151,7 +151,7 @@ BOOST_AUTO_TEST_CASE(test_close)
   BOOST_CHECK(callback_data->was_called);
 }
 
-BOOST_AUTO_TEST_CASE(test_result)
+BOOST_AUTO_TEST_CASE(result)
 {
   boost::scoped_ptr<CallbackData> callback_data(new CallbackData());
 
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE(test_result)
   BOOST_CHECK(callback_data->row_count > 0);
 }
 
-BOOST_AUTO_TEST_CASE(test_after_set)
+BOOST_AUTO_TEST_CASE(after_set)
 {
   boost::scoped_ptr<CallbackData> callback_data(new CallbackData());
 
@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE(test_after_set)
 }
 
 #ifdef TESTING_DIRECTIVE
-BOOST_AUTO_TEST_CASE(test_session_guard)
+BOOST_AUTO_TEST_CASE(session_guard)
 {
   //Connect to the cluster and create the session
   test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));

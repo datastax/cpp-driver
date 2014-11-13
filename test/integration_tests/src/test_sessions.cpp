@@ -41,7 +41,7 @@ struct SessionTests {
 
 BOOST_FIXTURE_TEST_SUITE(sessions, SessionTests)
 
-BOOST_AUTO_TEST_CASE(test_connect_invalid_name)
+BOOST_AUTO_TEST_CASE(connect_invalid_name)
 {
   boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("Unable to resolve host node.domain-does-not-exist.dne:9042"));
 
@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(test_connect_invalid_name)
   BOOST_CHECK_EQUAL(code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
 
-BOOST_AUTO_TEST_CASE(test_connect_invalid_keyspace)
+BOOST_AUTO_TEST_CASE(connect_invalid_keyspace)
 {
   boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("Error response: 'Keyspace 'invalid' does not exist"));
 
@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(test_connect_invalid_keyspace)
   BOOST_CHECK_EQUAL(code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
 
-BOOST_AUTO_TEST_CASE(test_close_timeout_error)
+BOOST_AUTO_TEST_CASE(close_timeout_error)
 {
   boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("Timed out during startup")); // JIRA CPP-127
 
