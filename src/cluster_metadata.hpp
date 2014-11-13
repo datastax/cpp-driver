@@ -24,9 +24,11 @@ namespace cass {
 
 class ClusterMetadata {
 public:
+  ~ClusterMetadata();
+  int init();
   void clear();
   void update_keyspaces(ResultResponse* result);
-  void update_tables(ResultResponse* table_result, ResultResponse* col_result) { schema_.update_tables(table_result, col_result); }
+  void update_tables(ResultResponse* table_result, ResultResponse* col_result);
   void set_partitioner(const std::string& partitioner_class) { token_map_.set_partitioner(partitioner_class); }
   void update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens) { token_map_.update_host(host, tokens); }
   void build() { token_map_.build(); }
@@ -35,6 +37,7 @@ public:
   void remove_host(SharedRefPtr<Host>& host) { token_map_.remove_host(host); }
 
   const Schema& schema() const { return schema_; }
+  Schema* copy_schema() const;// synchronized copy for API
 
   void set_protocol_version(int version) { schema_.set_protocol_version(version); }
 
@@ -43,6 +46,9 @@ public:
 private:
   Schema schema_;
   TokenMap token_map_;
+
+  // used to synch schema updates and copies
+  mutable uv_mutex_t mutex_;
 };
 
 } // namespace cass
