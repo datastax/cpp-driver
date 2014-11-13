@@ -503,7 +503,7 @@ struct CassVersion {
     parametrized ctor. Derive from it to use it in your tests.
  */
 struct MultipleNodesTest {
-  MultipleNodesTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version = 2);
+  MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 2, bool isSSL = false);
   virtual ~MultipleNodesTest();
 
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
@@ -512,14 +512,16 @@ struct MultipleNodesTest {
 };
 
 struct SingleSessionTest : MultipleNodesTest {
-  SingleSessionTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version = 2);
+  SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 2, bool isSSL = false);
   virtual ~SingleSessionTest();
+  void create_session();
 
   CassSession* session;
   CassVersion version;
+  CassSsl* ssl;
 };
 
-void initialize_contact_points(CassCluster* cluster, std::string prefix, int num_nodes_dc1, int num_nodes_dc2);
+void initialize_contact_points(CassCluster* cluster, std::string prefix, unsigned int num_nodes_dc1, unsigned int num_nodes_dc2);
 
 /**
  * Get the textual representation of the CassColumnType
@@ -593,6 +595,20 @@ std::string string_from_uuid(CassUuid uuid);
  */
 CassVersion get_version(CassSession* session);
 
+/*
+ * Generate a random string of a certain size using alpha numeric characters
+ *
+ * @param size Size of the string (in bytes) [default: 1024]
+ */
+std::string generate_random_string(unsigned int size = 1024);
+
+/**
+ * Load the PEM SSL certificate
+ *
+ * @return String representing the PEM certificate
+ */
+std::string load_ssl_certificate(const std::string filename);
+
 extern const char* CREATE_TABLE_ALL_TYPES;
 extern const char* CREATE_TABLE_TIME_SERIES;
 extern const char* CREATE_TABLE_SIMPLE;
@@ -610,6 +626,7 @@ extern const std::string SELECT_ALL_FORMAT;
 extern const std::string SELECT_WHERE_FORMAT;
 extern const std::string SELECT_VERSION;
 extern const std::string lorem_ipsum;
+extern const char ALPHA_NUMERIC[];
 
 } // End of namespace test_utils
 
