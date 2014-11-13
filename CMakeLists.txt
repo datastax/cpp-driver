@@ -89,7 +89,7 @@ if(CASS_USE_EXTERNAL_BOOST)
     set(BOOST_ROOT "${PROJECT_SOURCE_DIR}/lib/boost/")
   endif()
 
-  find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS atomic chrono date_time random system thread unit_test_framework)
+  find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS atomic chrono date_time log random system thread unit_test_framework)
 endif()
 
 # tcmalloc

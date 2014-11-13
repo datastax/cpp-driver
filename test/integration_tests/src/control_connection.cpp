@@ -72,7 +72,7 @@ struct ControlConnectionTests {
 
 BOOST_FIXTURE_TEST_SUITE(control_connection, ControlConnectionTests)
 
-BOOST_AUTO_TEST_CASE(test_connect_invalid_ip)
+BOOST_AUTO_TEST_CASE(connect_invalid_ip)
 {
   boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("Connection: Host 1.1.1.1 had the following error on startup: 'Connection timeout'"));
 
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(test_connect_invalid_ip)
   BOOST_CHECK(log_data->message_count > 0);
 }
 
-BOOST_AUTO_TEST_CASE(test_connect_invalid_port)
+BOOST_AUTO_TEST_CASE(connect_invalid_port)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE(test_connect_invalid_port)
   BOOST_CHECK_EQUAL(code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
 
-BOOST_AUTO_TEST_CASE(test_reconnection)
+BOOST_AUTO_TEST_CASE(reconnection)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
@@ -131,7 +131,7 @@ BOOST_AUTO_TEST_CASE(test_reconnection)
   check_for_live_hosts(session, build_single_ip(conf.ip_prefix(), 3));
 }
 
-BOOST_AUTO_TEST_CASE(test_topology_change)
+BOOST_AUTO_TEST_CASE(topology_change)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
@@ -159,7 +159,7 @@ BOOST_AUTO_TEST_CASE(test_topology_change)
   check_for_live_hosts(session, should_be_present);
 }
 
-BOOST_AUTO_TEST_CASE(test_status_change)
+BOOST_AUTO_TEST_CASE(status_change)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
@@ -190,7 +190,7 @@ BOOST_AUTO_TEST_CASE(test_status_change)
   check_for_live_hosts(session, should_be_present);
 }
 
-BOOST_AUTO_TEST_CASE(test_node_discovery)
+BOOST_AUTO_TEST_CASE(node_discovery)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
@@ -208,7 +208,7 @@ BOOST_AUTO_TEST_CASE(test_node_discovery)
   check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 3));
 }
 
-BOOST_AUTO_TEST_CASE(test_node_discovery_invalid_ips)
+BOOST_AUTO_TEST_CASE(node_discovery_invalid_ips)
 {
   boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("Unable to reach contact point 192.0.2."));
 
@@ -238,7 +238,7 @@ BOOST_AUTO_TEST_CASE(test_node_discovery_invalid_ips)
   BOOST_CHECK_EQUAL(log_data->message_count, 3ul);
 }
 
-BOOST_AUTO_TEST_CASE(test_node_discovery_no_local_rows)
+BOOST_AUTO_TEST_CASE(node_discovery_no_local_rows)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
@@ -261,7 +261,7 @@ BOOST_AUTO_TEST_CASE(test_node_discovery_no_local_rows)
   check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 3));
 }
 
-BOOST_AUTO_TEST_CASE(test_node_discovery_no_rpc_addresss)
+BOOST_AUTO_TEST_CASE(node_discovery_no_rpc_addresss)
 {
   boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("No rpc_address for host 127.0.0.3 in system.peers on 127.0.0.1. Ignoring this entry."));
 
@@ -293,6 +293,29 @@ BOOST_AUTO_TEST_CASE(test_node_discovery_no_rpc_addresss)
   }
 
   BOOST_CHECK(log_data->message_count > 0);
+}
+
+BOOST_AUTO_TEST_CASE(full_outage)
+{
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+
+  const char* query = "SELECT * FROM system.local";
+
+  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test", 1, 0);
+
+  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+  test_utils::execute_query(session.get(), query);
+
+  ccm->stop();
+  BOOST_CHECK(test_utils::execute_query_with_error(session.get(), query) == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+
+  ccm->start();
+
+  boost::this_thread::sleep_for(boost::chrono::seconds(10));
+
+  test_utils::execute_query(session.get(), query);
 }
 
 
