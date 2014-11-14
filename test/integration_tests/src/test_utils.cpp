@@ -279,21 +279,22 @@ std::string string_from_uuid(CassUuid uuid) {
 }
 
 CassVersion get_version(CassSession* session) {
-  //Execute the version query
+  // Execute the version query
   CassResultPtr result;
   execute_query(session, SELECT_VERSION, &result);
 
-  //Only one row should be returned; get the first row
+  // Only one row should be returned; get the first row
   const CassRow *row = cass_result_first_row(result.get());
 
-  //Convert the release_version value to a string
+  // Convert the release_version value to a string
   const CassValue* value = cass_row_get_column_by_name(row, "release_version");
   CassString version_string;
   cass_value_get_string(value, &version_string);
 
-  //Parse the version string and return the Cassandra version
+  // Parse the version string and return the Cassandra version
   CassVersion version;
-  sscanf(version_string.data, "%hu.%hu.%hu-%s", &version.major, &version.minor, &version.patch, version.extra);
+  std::string str(version_string.data, version_string.length); // Needed for null termination
+  sscanf(str.c_str(), "%hu.%hu.%hu-%s", &version.major, &version.minor, &version.patch, version.extra);
   return version;
 }
 
@@ -309,18 +310,18 @@ std::string generate_random_string(unsigned int size /* = 1024 */) {
 }
 
 std::string load_ssl_certificate(const std::string filename) {
-  //Open the file
+  // Open the file
   std::ifstream file_stream(filename.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
 
   BOOST_REQUIRE_MESSAGE(file_stream.is_open(), "Unable to load certificate file: " << filename);
 
-  //Get the length of the file
+  // Get the length of the file
   std::ifstream::pos_type file_size = file_stream.tellg();
   file_stream.seekg(0, std::ios::beg);
 
   BOOST_REQUIRE_MESSAGE(file_size > 0, "No data in certificate file: " << filename);
 
-  //Read the file into memory
+  // Read the file into memory
   std::vector<char> bytes(file_size);
   file_stream.read(&bytes[0], file_size);
 
