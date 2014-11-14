@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(reconnection)
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 2);
 
   // Ensure RR policy
-  cass_cluster_set_load_balance_round_robin(cluster.get());;
+  cass_cluster_set_load_balance_round_robin(cluster.get());
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
@@ -122,7 +122,9 @@ BOOST_AUTO_TEST_CASE(reconnection)
   ccm->stop(1);
 
   // Add a new node to make sure the node gets added on the new control connection to node 2
-  ccm->bootstrap(3);
+  ccm->add_node(3);
+   // Allow this node to come up without node1
+  ccm->start(3, "-Dcassandra.consistent.rangemovement=false");
   boost::this_thread::sleep_for(boost::chrono::seconds(10));
 
   // Stop the other node
