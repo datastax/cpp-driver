@@ -99,7 +99,6 @@ public:
   size_t values_count() const { return values_.size(); }
 
   void add_key_index(size_t index) { key_indices_.push_back(index); }
-  void clear_key_indices() { key_indices_.clear(); }
 
   virtual const BufferRefs& key_parts() const;
 
