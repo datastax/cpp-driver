@@ -127,7 +127,7 @@ void Murmur3::update(const void* data, size_t size) {
 
     length_ += BLOCK_SIZE;
 
-    if (i < (contiguous_blocks - 1)) {
+    if (i < contiguous_blocks) {
       k1 = block_data[i * 2];
       k2 = block_data[i * 2 + 1];
     }
