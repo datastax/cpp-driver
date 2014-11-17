@@ -19,6 +19,7 @@
 
 #include "cassandra.h"
 
+#include <stdint.h>
 #include <string>
 
 namespace cass {
@@ -32,6 +33,8 @@ CASS_EXPORT int get_port_from_cluster(CassCluster* cluster);
 CASS_EXPORT std::string get_contact_points_from_cluster(CassCluster* cluster);
 
 CASS_EXPORT CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* session, const std::string& keyspace);
+
+CASS_EXPORT int64_t create_murmur3_hash_from_string(const std::string &value);
 
 } // namespace cass
 

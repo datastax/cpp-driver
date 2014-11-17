@@ -27,7 +27,6 @@
 
 #include "cassandra.h"
 #include "testing.hpp"
-#include "murmur3.hpp"
 #include "test_utils.hpp"
 #include "cql_ccm_bridge.hpp"
 
@@ -94,17 +93,9 @@ struct TestTokenMap {
     }
   }
 
-  int64_t hash(const std::string& s) {
-    cass::Murmur3 m;
-    m.update(s.data(), s.size());
-    int64_t h;
-    m.final(&h, NULL);
-    return h;
-  }
-
   ReplicaSet get_expected_replicas(size_t rf, const std::string& value, const std::string& local_dc = "") {
     ReplicaSet replicas;
-    TokenHostMap::iterator i = tokens.upper_bound(hash(value));
+    TokenHostMap::iterator i = tokens.upper_bound(cass::create_murmur3_hash_from_string(value));
     while  (replicas.size() < rf) {
       if (local_dc.empty() || local_dc == i->second.dc) {
         replicas.insert(i->second.ip);

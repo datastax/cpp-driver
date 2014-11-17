@@ -17,6 +17,7 @@
 #include "testing.hpp"
 
 #include "address.hpp"
+#include "murmur3.hpp"
 #include "result_response.hpp"
 #include "schema_metadata.hpp"
 #include "types.hpp"
@@ -66,6 +67,14 @@ CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* schema, const st
   }
 
   return foundSchemaMeta;
+}
+
+int64_t create_murmur3_hash_from_string(const std::string &value) {
+  cass::Murmur3 m;
+  m.update(value.data(), value.size());
+  int64_t h;
+  m.final(&h, NULL);
+  return h;
 }
 
 } // namespace cass
