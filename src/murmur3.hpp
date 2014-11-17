@@ -14,6 +14,11 @@
   limitations under the License.
 */
 
+/*-----------------------------------------------------------------------------
+ * MurmurHash3 was written by Austin Appleby, and is placed in the public
+ * domain. The author hereby disclaims copyright to this source code.
+ */
+
 #ifndef __CASS_MURMUR3_HPP_INCLUDED__
 #define __CASS_MURMUR3_HPP_INCLUDED__
 
@@ -23,22 +28,8 @@
 
 namespace cass {
 
-class Murmur3 {
-public:
-  Murmur3();
-
-  void update(const void* data, size_t size);
-  void final(int64_t* h1_out, int64_t* h2_out);
-
-private:
-  int64_t h1_;
-  int64_t h2_;
-  size_t length_;
-  uint8_t overlap_buffer_[16];
-  size_t overlap_bytes_;
-
-  DISALLOW_COPY_AND_ASSIGN(Murmur3);
-};
+int64_t MurmurHash3_x64_128(const void * key, const int len,
+                            const uint32_t seed);
 
 } // namespace cass
 

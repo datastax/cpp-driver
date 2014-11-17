@@ -142,16 +142,14 @@ bool BatchRequest::prepared_statement(const std::string& id,
   return false;
 }
 
-const BufferRefs& BatchRequest::key_parts() const {
+bool BatchRequest::get_routing_key(std::string* routing_key) const {
   for (BatchRequest::StatementList::const_iterator i = statements_.begin();
        i != statements_.end(); ++i) {
-    const BufferRefs& parts = (*i)->key_parts();
-    if (!parts.empty()) {
-      return parts;
+    if ((*i)->get_routing_key(routing_key)) {
+      return true;
     }
   }
-  static BufferRefs empty;
-  return empty;
+  return false;
 }
 
 } // namespace cass

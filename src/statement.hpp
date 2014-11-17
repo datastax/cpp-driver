@@ -100,7 +100,7 @@ public:
 
   void add_key_index(size_t index) { key_indices_.push_back(index); }
 
-  virtual const BufferRefs& key_parts() const;
+  virtual bool get_routing_key(std::string* routing_key)  const;
 
 #define BIND_FIXED_TYPE(DeclType, EncodeType)						\
   CassError bind(size_t index, const DeclType& value) { \
@@ -203,7 +203,6 @@ private:
   std::string paging_state_;
   uint8_t kind_;
   std::vector<size_t> key_indices_;
-  mutable BufferRefs key_buffers_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Statement);

@@ -53,7 +53,7 @@ public:
   void update_keyspace(const std::string& ks_name, const KeyspaceMetadata& ks_meta);
   void drop_keyspace(const std::string& ks_name);
   const CopyOnWriteHostVec& get_replicas(const std::string& ks_name,
-                                         const BufferRefs& key_parts) const;
+                                         const std::string& routing_key) const;
 
   // Testing only
   void set_replication_strategy(const std::string& ks_name,

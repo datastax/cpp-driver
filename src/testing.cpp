@@ -70,11 +70,7 @@ CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* schema, const st
 }
 
 int64_t create_murmur3_hash_from_string(const std::string &value) {
-  cass::Murmur3 m;
-  m.update(value.data(), value.size());
-  int64_t h;
-  m.final(&h, NULL);
-  return h;
+  return MurmurHash3_x64_128(value.data(), value.size(), 0);
 }
 
 } // namespace cass

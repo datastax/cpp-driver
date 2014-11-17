@@ -357,11 +357,7 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE(token_aware_lb)
 
 int64_t murmur3_hash(const std::string& s) {
-  cass::Murmur3 m;
-  m.update(s.data(), s.size());
-  int64_t h;
-  m.final(&h, NULL);
-  return h;
+  return cass::MurmurHash3_x64_128(s.data(), s.size(), 0);
 }
 
 BOOST_AUTO_TEST_CASE(simple)

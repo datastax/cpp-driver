@@ -385,30 +385,52 @@ int32_t Statement::encode_values(int version, BufferVec* bufs) const {
   return values_size;
 }
 
-const BufferRefs& Statement::key_parts() const {
-  key_buffers_.clear();
-  if (!key_indices_.empty()) {
-    int32_t size;
+bool Statement::get_routing_key(std::string* routing_key)  const {
+  if (key_indices_.empty()) return false;
+
+  if (key_indices_.size() == 1) {
+      const Buffer& buffer = values_.front();
+      if (!buffer.is_buffer()) {
+        // Is either null or a collection
+        // TODO: Global logging
+        return false;
+      }
+      int32_t size;
+      decode_int32(const_cast<char*>(buffer.data()), size);
+      routing_key->assign(buffer.data() + sizeof(int32_t), size);
+  } else {
+    size_t length = 0;
+
     for (std::vector<size_t>::const_iterator i = key_indices_.begin();
          i != key_indices_.end(); ++i) {
-      if (*i < values_.size()) {
-        const Buffer& buffer = values_[*i];
-        decode_int32(const_cast<char*>(buffer.data()), size);
-        if (size > 0) {
-          key_buffers_.push_back(boost::string_ref(buffer.data() + sizeof(int32_t), size));
-        } else {
-          //TODO: global logging
-          key_buffers_.clear();
-          break;
-        }
-      } else {
-        //TODO: global logging
-        key_buffers_.clear();
-        break;
+      const Buffer& buffer = values_[*i];
+      if (!buffer.is_buffer()) {
+        // Is either null or a collection
+        // TODO: Global logging
+        return false;
       }
+      int32_t size;
+      decode_int32(const_cast<char*>(buffer.data()), size);
+      length += sizeof(uint16_t) + size + 1;
+    }
+
+    routing_key->clear();
+    routing_key->reserve(length);
+
+    for (std::vector<size_t>::const_iterator i = key_indices_.begin();
+         i != key_indices_.end(); ++i) {
+      const Buffer& buffer = values_[*i];
+      int32_t size;
+      char size_buf[sizeof(uint16_t)];
+      decode_int32(const_cast<char*>(buffer.data()), size);
+      encode_uint16(size_buf, size);
+      routing_key->append(size_buf, sizeof(uint16_t));
+      routing_key->append(buffer.data() + sizeof(int32_t), size);
+      routing_key->push_back(0);
     }
   }
-  return key_buffers_;
+
+  return true;
 }
 
 } // namespace  cass

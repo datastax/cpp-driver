@@ -17,17 +17,17 @@
 #include "token_map.hpp"
 #include "md5.hpp"
 #include "murmur3.hpp"
+#include "scoped_ptr.hpp"
 
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/cstdint.hpp>
 
 #include <algorithm>
-#include <limits>
 #include <string>
 
 namespace cass {
 
 static const CopyOnWriteHostVec NO_REPLICAS(new HostVec());
-static const uint64_t INT64_MAX_PLUS_ONE =  static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) + 1;
 
 static int64_t parse_int64(const char* p, size_t n) {
   int c;
@@ -171,31 +171,16 @@ void TokenMap::drop_keyspace(const std::string& ks_name) {
   keyspace_strategy_map_.erase(ks_name);
 }
 
-const CopyOnWriteHostVec& TokenMap::get_replicas(const std::string& ks_name, const BufferRefs& key_parts) const {
+const CopyOnWriteHostVec& TokenMap::get_replicas(const std::string& ks_name,
+                                                 const std::string& routing_key) const {
   if (!partitioner_) return NO_REPLICAS;
 
   KeyspaceReplicaMap::const_iterator tokens_it = keyspace_replica_map_.find(ks_name);
   if (tokens_it != keyspace_replica_map_.end()) {
     const TokenReplicaMap& tokens_to_replicas = tokens_it->second;
-    TokenReplicaMap::const_iterator replicas_it;
-    if (key_parts.size() == 1) {
-      const Token t = partitioner_->hash(key_parts[0].data(), key_parts[0].size());
-      replicas_it = tokens_to_replicas.upper_bound(t);
-    } else {
-      size_t buffer_size = 0;
-      for (BufferRefs::const_iterator i = key_parts.begin(); i != key_parts.end(); ++i) {
-        buffer_size += sizeof(uint16_t) + i->size() + 1;
-      }
-      std::vector<uint8_t> composite(buffer_size);
-      char* pos = reinterpret_cast<char*>(&composite[0]);
-      for (BufferRefs::const_iterator i = key_parts.begin(); i != key_parts.end(); ++i) {
-        encode_uint16(pos, i->size()); pos += sizeof(uint16_t);
-        memcpy(pos, i->data(), i->size()); pos += i->size();
-        *pos = 0; ++pos;
-      }
-      const Token t = partitioner_->hash(&composite[0], composite.size());
-      replicas_it = tokens_to_replicas.upper_bound(t);
-    }
+
+    const Token t = partitioner_->hash(routing_key.data(), routing_key.size());
+    TokenReplicaMap::const_iterator replicas_it = tokens_to_replicas.upper_bound(t);
 
     if (replicas_it != tokens_to_replicas.end()) {
       return replicas_it->second;
@@ -259,18 +244,17 @@ const std::string Murmur3Partitioner::PARTITIONER_CLASS("Murmur3Partitioner");
 Token Murmur3Partitioner::token_from_string_ref(const boost::string_ref& token_string_ref) const {
   Token token(sizeof(int64_t), 0);
   int64_t token_value = parse_int64(token_string_ref.data(), token_string_ref.size());
-  encode_uint64(&token[0], static_cast<uint64_t>(token_value) + INT64_MAX_PLUS_ONE);
+  encode_uint64(&token[0], static_cast<uint64_t>(token_value) + UINT64_MAX / 2);
   return token;
 }
 
 Token Murmur3Partitioner::hash(const void* data, size_t size) const {
-  Murmur3 hash;
-  hash.update(data, size);
-
   Token token(sizeof(int64_t), 0);
-  int64_t token_value;
-  hash.final(&token_value, NULL);
-  encode_uint64(&token[0], static_cast<uint64_t>(token_value) + INT64_MAX_PLUS_ONE);
+  int64_t token_value = MurmurHash3_x64_128(data, size, 0);
+  if (token_value == INT64_MIN) {
+    token_value = INT64_MAX;
+  }
+  encode_uint64(&token[0], static_cast<uint64_t>(token_value) + UINT64_MAX / 2);
   return token;
 }
 

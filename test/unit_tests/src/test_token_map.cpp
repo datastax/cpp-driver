@@ -36,28 +36,6 @@ cass::SharedRefPtr<cass::Host> create_host(const std::string& ip) {
   return cass::SharedRefPtr<cass::Host>(new cass::Host(cass::Address(ip, 4092), false));
 }
 
-class StringRefs {
-public:
-  void add(std::string str) {
-    actual_strings_.push_back(str);
-    refs_.push_back(boost::string_ref(actual_strings_.back()));
-  }
-
-  const std::vector<boost::string_ref>& get() const {
-    return refs_;
-  }
-
-  static StringRefs one(std::string str) {
-    StringRefs refs;
-    refs.add(str);
-    return refs;
-  }
-
-private:
-  std::vector<boost::string_ref> refs_;
-  std::vector<std::string> actual_strings_;
-};
-
 template <class HashType>
 struct TestTokenMap {
   typedef HashType(HashFunc)(const std::string& s);
@@ -79,7 +57,9 @@ struct TestTokenMap {
     token_map.set_replication_strategy(ks_name, strategy);
 
     for (typename TokenHostMap::iterator i = tokens.begin(); i != tokens.end(); ++i) {
-      token_map.update_host(i->second, StringRefs::one(boost::lexical_cast<std::string>(i->first)).get());
+      cass::TokenStringList tokens;
+      tokens.push_back(boost::lexical_cast<std::string>(i->first));
+      token_map.update_host(i->second, tokens);
     }
 
     token_map.build();
@@ -89,7 +69,7 @@ struct TestTokenMap {
     for (int i = 0; i < 24; ++i) {
       std::string value(1, 'a' + i);
       const cass::CopyOnWriteHostVec& replicas
-          = token_map.get_replicas(ks_name, StringRefs::one(value).get());
+          = token_map.get_replicas(ks_name, value);
 
       HashType hash = hash_func(value);
       typename TokenHostMap::iterator token = tokens.upper_bound(hash);
@@ -106,11 +86,7 @@ struct TestTokenMap {
 BOOST_AUTO_TEST_SUITE(token_map)
 
 int64_t murmur3_hash(const std::string& s) {
-  cass::Murmur3 m;
-  m.update(s.data(), s.size());
-  int64_t h;
-  m.final(&h, NULL);
-  return h;
+  return cass::MurmurHash3_x64_128(s.data(), s.size(), 0);
 }
 
 BOOST_AUTO_TEST_CASE(murmur3)
@@ -212,7 +188,7 @@ BOOST_AUTO_TEST_CASE(remove_host)
 
   {
     const cass::CopyOnWriteHostVec& replicas
-        = token_map.get_replicas("test", StringRefs::one("abc").get());
+        = token_map.get_replicas("test", "abc");
 
     BOOST_REQUIRE(replicas->size() == 2);
     BOOST_CHECK((*replicas)[0]->address() == cass::Address("1.0.0.1", 9042));
@@ -225,7 +201,7 @@ BOOST_AUTO_TEST_CASE(remove_host)
 
   {
     const cass::CopyOnWriteHostVec& replicas
-        = token_map.get_replicas("test", StringRefs::one("abc").get());
+        = token_map.get_replicas("test", "abc");
 
     BOOST_REQUIRE(replicas->size() == 2);
     BOOST_CHECK((*replicas)[0]->address() == cass::Address("1.0.0.2", 9042));
@@ -237,7 +213,7 @@ BOOST_AUTO_TEST_CASE(remove_host)
 
   {
     const cass::CopyOnWriteHostVec& replicas
-        = token_map.get_replicas("test", StringRefs::one("abc").get());
+        = token_map.get_replicas("test", "abc");
 
     BOOST_REQUIRE(replicas->size() == 1);
     BOOST_CHECK((*replicas)[0]->address() == cass::Address("1.0.0.3", 9042));
@@ -247,8 +223,7 @@ BOOST_AUTO_TEST_CASE(remove_host)
   token_map.remove_host(host_to_remove_it->second);
 
   {
-    const cass::CopyOnWriteHostVec& replicas
-        = token_map.get_replicas("test", StringRefs::one("abc").get());
+    const cass::CopyOnWriteHostVec& replicas = token_map.get_replicas("test", "abc");
 
     BOOST_REQUIRE(replicas->size() == 0);
   }
@@ -271,7 +246,7 @@ BOOST_AUTO_TEST_CASE(drop_keyspace)
 
   {
     const cass::CopyOnWriteHostVec& replicas
-        = token_map.get_replicas("test", StringRefs::one("abc").get());
+        = token_map.get_replicas("test", "abc");
 
     BOOST_REQUIRE(replicas->size() == 2);
     BOOST_CHECK((*replicas)[0]->address() == cass::Address("1.0.0.1", 9042));
@@ -282,7 +257,7 @@ BOOST_AUTO_TEST_CASE(drop_keyspace)
 
   {
     const cass::CopyOnWriteHostVec& replicas
-        = token_map.get_replicas("test", StringRefs::one("abc").get());
+        = token_map.get_replicas("test", "abc");
 
     BOOST_REQUIRE(replicas->size() == 0);
   }

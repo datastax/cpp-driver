@@ -58,7 +58,7 @@ public:
     : Request(opcode)
     , keyspace_(keyspace){}
 
-  virtual const BufferRefs& key_parts() const = 0;
+  virtual bool get_routing_key(std::string* routing_key) const = 0;
 
   const std::string& keyspace() const { return keyspace_; }
   void set_keyspace(const std::string& keyspace) { keyspace_ = keyspace; }

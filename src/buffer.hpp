@@ -208,7 +208,6 @@ private:
 };
 
 typedef std::vector<Buffer> BufferVec;
-typedef std::vector<boost::string_ref> BufferRefs;
 
 } // namespace cass
 

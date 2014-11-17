@@ -41,11 +41,11 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspac
       case CQL_OPCODE_BATCH:
         const RoutableRequest* rr = static_cast<const RoutableRequest*>(request);
         const std::string& statement_keyspace = rr->keyspace();
-        const BufferRefs& keys = rr->key_parts();
         const std::string& keyspace = statement_keyspace.empty()
                                       ? connected_keyspace : statement_keyspace;
-        if (!keys.empty() && !keyspace.empty()) {
-          CopyOnWriteHostVec replicas = token_map.get_replicas(keyspace, keys);
+        std::string routing_key;
+        if (rr->get_routing_key(&routing_key) && !keyspace.empty()) {
+          CopyOnWriteHostVec replicas = token_map.get_replicas(keyspace, routing_key);
           if (!replicas->empty()) {
             return new TokenAwareQueryPlan(child_policy_.get(),
                                            child_policy_->new_query_plan(connected_keyspace, request, token_map),
@@ -55,6 +55,7 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspac
         }
         break;
       }
+
       default:
         break;
     }
