@@ -386,7 +386,8 @@ int32_t Statement::encode_values(int version, BufferVec* bufs) const {
 }
 
 const BufferRefs& Statement::key_parts() const {
-  if (key_buffers_.empty() && !key_indices_.empty()) {
+  key_buffers_.clear();
+  if (!key_indices_.empty()) {
     int32_t size;
     for (std::vector<size_t>::const_iterator i = key_indices_.begin();
          i != key_indices_.end(); ++i) {
