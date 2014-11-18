@@ -19,6 +19,10 @@
 #   define BOOST_TEST_MODULE cassandra
 #endif
 
+#ifdef _WIN32
+#include <openssl/applink.c>
+#endif
+
 #include <boost/chrono.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>

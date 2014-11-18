@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(keyspace_add_drop)
 }
 
 BOOST_AUTO_TEST_CASE(agreement_node_down) {
-  log_counter.reset("ControlConnection: Node 127.0.0.3 is down");
+  log_counter.reset("ControlConnection: Node 127.0.0." + inst.conf.ip_prefix() + " is down");
 
   inst.ccm->stop(3);
 
@@ -122,9 +122,9 @@ BOOST_AUTO_TEST_CASE(agreement_node_down) {
 
 #define MAX_SCHEMA_AGREEMENT_WAIT_MS 10000
 BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
-
+  std::string update_peer("UPDATE system.peers SET schema_version=? WHERE peer='" + inst.conf.ip_prefix() + "1'");
   test_utils::CassFuturePtr prepared_future(
-        cass_session_prepare(session, cass_string_init("UPDATE system.peers SET schema_version=? WHERE peer='127.0.0.1'")));
+        cass_session_prepare(session, cass_string_init2(update_peer.data(), update_peer.size())));
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prep = cass_future_get_prepared(prepared_future.get());
   test_utils::CassStatementPtr schema_stmt(cass_prepared_bind(prep.get()));

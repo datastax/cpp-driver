@@ -265,7 +265,8 @@ BOOST_AUTO_TEST_CASE(node_discovery_no_local_rows)
 
 BOOST_AUTO_TEST_CASE(node_discovery_no_rpc_addresss)
 {
-  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("No rpc_address for host 127.0.0.3 in system.peers on 127.0.0.1. Ignoring this entry."));
+  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("No rpc_address for host " + conf.ip_prefix() + "3 in system.peers on " + conf.ip_prefix() + "1. Ignoring this entry."));
 
   {
     test_utils::CassClusterPtr cluster(cass_cluster_new());
