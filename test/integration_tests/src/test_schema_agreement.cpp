@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(keyspace_add_drop)
 }
 
 BOOST_AUTO_TEST_CASE(agreement_node_down) {
-  log_counter.reset("ControlConnection: Node 127.0.0." + inst.conf.ip_prefix() + " is down");
+  log_counter.reset("ControlConnection: Node " + inst.conf.ip_prefix() + "3 is down");
 
   inst.ccm->stop(3);
 
