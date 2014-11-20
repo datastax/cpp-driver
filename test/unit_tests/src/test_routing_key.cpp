@@ -33,7 +33,9 @@ bool uuid_from_string(const std::string& str, CassUuid out) {
   const char* pos = str.data();
   for (size_t i = 0; i < 16; ++i) {
     if (*pos == '-') pos++;
-    sscanf(pos, "%2hhx", &out[i]);
+    unsigned int byte;
+    sscanf(pos, "%2x", &byte);
+    out[i] = byte;
     pos += 2;
   }
   return true;
@@ -128,7 +130,7 @@ BOOST_AUTO_TEST_CASE(composite)
     query.bind(0, uuid);
     query.add_key_index(0);
 
-    query.bind(1, 123456789LL);
+    query.bind(1, static_cast<cass_int64_t>(123456789));
     query.add_key_index(1);
 
     query.bind(2, cass_string_init("abcdefghijklmnop"));

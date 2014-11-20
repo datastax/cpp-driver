@@ -1,5 +1,47 @@
 1.0.0-beta4
 ===========
+Nov 20, 2014
+
+Features
+--------
+* Added SSL support
+* Added token-aware load balancing. It's enable by default. It can
+  be disable using `cass_cluster_set_token_aware_routing()`.
+* Added functions to get schema metadata, `cass_session_get_schema()` can 
+  be use to get a snapshot of the schema metadata and `cass_meta_*()` functions
+  can be used to retrieve detailed information about keyspaces, tables, and columns.
+
+Other
+--------
+* Significantly improved request throughput by batching socket writes.
+  Batch sizes can be configured using the function
+  `cass_cluster_set_max_requests_per_flush()`. The default is 128 because
+  the maximum write size is bounded by the number of pipelined requests
+  per connection (for version 1 and 2 of the binary protocol).
+* Added backpressure mechanism that can be configured for by the
+  number of outstanding bytes and the number of requests on a connection. These can
+  be configured using `cass_cluster_set_write_bytes_high_water_mark()`,
+  `cass_cluster_set_write_bytes_low_water_mark()`,
+  `cass_cluster_set_pending_requests_high_water_mark()`, and
+  `cass_cluster_set_pending_requests_low_water_mark()`.
+* Fixed a crash caused by a request timing out followed by a
+  call to the conneciton read callback then the write callback.
+* Fixed an issue that prevented the driver from recovering from
+  a full cluster outage. 
+* Fixed an issue that allowed `uv_queue_work()` to be called from an
+  application thread.
+* Added logic to prevent redundant node refreshes when estabilishing
+  a new connection from multiple IO workers.
+* Fixed a crash caused by Cassandra 2.1.0 not returning metadata on
+  execute requests.
+* Fixed a memory leak that could leak request handlers if the control
+  connection ran out of stream ids.
+* Fixed a crash caused by calling an invalid timeout callback
+  when waiting for connection to become available in a pool.
+* Build will use an external version of Boost if present.
+
+1.0.0-beta4
+===========
 Sep 11, 2014
 
 Features
