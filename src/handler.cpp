@@ -102,12 +102,6 @@ void Handler::set_state(Handler::State next_state) {
       state_ = next_state;
       break;
 
-    case REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING:
-      assert((next_state == REQUEST_STATE_TIMEOUT || next_state == REQUEST_STATE_DONE) &&
-              "Invalid request state after timeout (write outstanding)");
-      state_ = next_state;
-      break;
-
     case REQUEST_STATE_READ_BEFORE_WRITE:
       assert(next_state == REQUEST_STATE_DONE &&
              "Invalid request state after read before write");
