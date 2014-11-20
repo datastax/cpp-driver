@@ -17,11 +17,11 @@
 #ifndef __CASS_GET_TIME_HPP_INCLUDED__
 #define __CASS_GET_TIME_HPP_INCLUDED__
 
-#include "third_party/boost/boost/cstdint.hpp"
+#include <boost/cstdint.hpp>
 
 namespace cass {
 
-uint64_t get_time_since_epoch();
+uint64_t get_time_since_epoch_ms();
 
 }
 

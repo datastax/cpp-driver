@@ -19,13 +19,15 @@
 
 #include "cassandra.h"
 
-#include "third_party/boost/boost/static_assert.hpp"
+#include <boost/static_assert.hpp>
 
-#include <uv.h>
-#include <string.h>
 #include <string>
+#include <string.h>
 
 namespace cass {
+
+class BufferPiece;
+class Value;
 
 // copy_cast<> prevents incorrect code from being generated when two unrelated 
 // types reference the same memory location and strict aliasing is enabled.
@@ -53,10 +55,6 @@ inline size_t next_pow_2(size_t num) {
   return next;
 }
  
-uv_buf_t alloc_buffer(size_t suggested_size);
-uv_buf_t alloc_buffer(uv_handle_t* handle, size_t suggested_size);
-void free_buffer(uv_buf_t buf);
-
 std::string opcode_to_string(int opcode);
 
 std::string& trim(std::string& str);

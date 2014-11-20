@@ -72,8 +72,11 @@ public:
   size_t item_count() const { return bufs_.size(); }
 
   int encode(int version, BufferVec* bufs) const;
+  int calculate_size(int version) const;
+  void encode(int version, char* buf) const;
 
 private:
+
   BufferVec bufs_;
   bool is_map_;
 };

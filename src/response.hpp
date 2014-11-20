@@ -17,11 +17,13 @@
 #ifndef __CASS_RESPONSE_HPP_INCLUDED__
 #define __CASS_RESPONSE_HPP_INCLUDED__
 
+#include "common.hpp"
 #include "constants.hpp"
 #include "macros.hpp"
+#include "ref_counted.hpp"
 #include "scoped_ptr.hpp"
 
-#include "third_party/boost/boost/cstdint.hpp"
+#include <boost/cstdint.hpp>
 
 namespace cass {
 
@@ -34,14 +36,17 @@ public:
 
   uint8_t opcode() const { return opcode_; }
 
-  char* buffer() { return buffer_.get(); }
-  void set_buffer(char* buffer) { buffer_.reset(buffer); }
+  char* data() const { return buffer_->data(); }
+  const SharedRefPtr<RefBuffer>& buffer() const { return buffer_; }
+  void set_buffer(size_t size) {
+    buffer_ = SharedRefPtr<RefBuffer>(RefBuffer::create(size));
+  }
 
   virtual bool decode(int version, char* buffer, size_t size) = 0;
 
 private:
   uint8_t opcode_;
-  ScopedPtr<char[]> buffer_;
+  SharedRefPtr<RefBuffer> buffer_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Response);

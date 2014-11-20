@@ -97,8 +97,8 @@ int ResponseMessage::decode(int version, char* input, size_t size) {
         return -1;
       }
 
-      response_body_->set_buffer(new char[length_]);
-      body_buffer_pos_ = response_body_->buffer();
+      response_body_->set_buffer(length_);
+      body_buffer_pos_ = response_body_->data();
     } else {
       // We haven't received all the data for the header. We consume the
       // entire buffer.
@@ -119,9 +119,9 @@ int ResponseMessage::decode(int version, char* input, size_t size) {
     memcpy(body_buffer_pos_, input_pos, needed);
     body_buffer_pos_ += needed;
     input_pos += needed;
-    assert(body_buffer_pos_ == response_body_->buffer() + length_);
+    assert(body_buffer_pos_ == response_body_->data() + length_);
 
-    if (!response_body_->decode(version, response_body_->buffer(), length_)) {
+    if (!response_body_->decode(version, response_body_->data(), length_)) {
       is_body_error_ = true;
       return -1;
     }

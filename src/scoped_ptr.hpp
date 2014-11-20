@@ -20,8 +20,8 @@
 #include "macros.hpp"
 #include "ref_counted.hpp"
 
-#include "third_party/boost/boost/static_assert.hpp"
-#include "third_party/boost/boost/type_traits/is_base_and_derived.hpp"
+#include <boost/static_assert.hpp>
+#include <boost/type_traits/is_base_and_derived.hpp>
 
 #include <stddef.h>
 

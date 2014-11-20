@@ -21,7 +21,7 @@
 
 #include "address.hpp"
 
-#include "third_party/boost/boost/function.hpp"
+#include <boost/function.hpp>
 
 namespace cass {
 

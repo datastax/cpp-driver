@@ -22,8 +22,8 @@
 #include "request_handler.hpp"
 #include "scoped_ptr.hpp"
 
-#include "third_party/boost/boost/utility/string_ref.hpp"
-#include "third_party/boost/boost/cstdint.hpp"
+#include <boost/utility/string_ref.hpp>
+#include <boost/cstdint.hpp>
 
 namespace cass {
 
@@ -52,8 +52,8 @@ private:
 
   ScopedRefPtr<RequestHandler> request_handler_;
   Response* request_response_;
-  uint64_t start_;
-  uint64_t elaspsed_;
+  uint64_t start_ms_;
+  uint64_t elapsed_ms_;
 };
 
 } // namespace cass

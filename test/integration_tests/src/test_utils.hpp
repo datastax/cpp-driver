@@ -477,11 +477,33 @@ inline bool operator<(Uuid a, Uuid b) {
   return memcmp(a.uuid, b.uuid, sizeof(CassUuid)) < 0;
 }
 
+/**
+ * Cassandra release version number
+ */
+struct CassVersion {
+  /**
+   * Major portion of version number
+   */
+  unsigned short major;
+  /**
+   * Minor portion of version number
+   */
+  unsigned short minor;
+  /**
+   * Patch portion of version number
+   */
+  unsigned short patch;
+  /**
+   * Extra portion of version number
+   */
+  char extra[64];
+};
+
 /** The following class cannot be used as a kernel of test fixture because of
     parametrized ctor. Derive from it to use it in your tests.
  */
 struct MultipleNodesTest {
-  MultipleNodesTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version = 2);
+  MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 2, bool isSSL = false);
   virtual ~MultipleNodesTest();
 
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
@@ -490,13 +512,23 @@ struct MultipleNodesTest {
 };
 
 struct SingleSessionTest : MultipleNodesTest {
-  SingleSessionTest(int num_nodes_dc1, int num_nodes_dc2, int protocol_version = 2);
+  SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 2, bool isSSL = false);
   virtual ~SingleSessionTest();
+  void create_session();
 
   CassSession* session;
+  CassVersion version;
+  CassSsl* ssl;
 };
 
-void initialize_contact_points(CassCluster* cluster, std::string prefix, int num_nodes_dc1, int num_nodes_dc2);
+void initialize_contact_points(CassCluster* cluster, std::string prefix, unsigned int num_nodes_dc1, unsigned int num_nodes_dc2);
+
+/**
+ * Get the textual representation of the CassColumnType
+ *
+ * @param type Column type to convert to textual value
+ */
+const char* get_column_type(CassColumnType type);
 
 const char* get_value_type(CassValueType type);
 
@@ -556,6 +588,27 @@ inline std::string generate_unique_str() {
 std::string string_from_time_point(boost::chrono::system_clock::time_point time);
 std::string string_from_uuid(CassUuid uuid);
 
+/**
+ * Get the Cassandra version number from current session
+ *
+ * @param session Current connected session
+ */
+CassVersion get_version(CassSession* session);
+
+/*
+ * Generate a random string of a certain size using alpha numeric characters
+ *
+ * @param size Size of the string (in bytes) [default: 1024]
+ */
+std::string generate_random_string(unsigned int size = 1024);
+
+/**
+ * Load the PEM SSL certificate
+ *
+ * @return String representing the PEM certificate
+ */
+std::string load_ssl_certificate(const std::string filename);
+
 extern const char* CREATE_TABLE_ALL_TYPES;
 extern const char* CREATE_TABLE_TIME_SERIES;
 extern const char* CREATE_TABLE_SIMPLE;
@@ -563,13 +616,17 @@ extern const char* CREATE_TABLE_SIMPLE;
 extern const std::string CREATE_KEYSPACE_SIMPLE_FORMAT;
 extern const std::string CREATE_KEYSPACE_NETWORK_FORMAT;
 extern const std::string CREATE_KEYSPACE_GENERIC_FORMAT;
+extern const std::string DROP_KEYSPACE_FORMAT;
+extern const std::string DROP_KEYSPACE_IF_EXISTS_FORMAT;
 extern const std::string SIMPLE_KEYSPACE;
 extern const std::string SIMPLE_TABLE;
 extern const std::string CREATE_TABLE_SIMPLE_FORMAT;
 extern const std::string INSERT_FORMAT;
 extern const std::string SELECT_ALL_FORMAT;
 extern const std::string SELECT_WHERE_FORMAT;
+extern const std::string SELECT_VERSION;
 extern const std::string lorem_ipsum;
+extern const char ALPHA_NUMERIC[];
 
 } // End of namespace test_utils
 

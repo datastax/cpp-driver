@@ -139,6 +139,10 @@ typedef struct CassIterator_ CassIterator;
 typedef struct CassRow_ CassRow;
 typedef struct CassValue_ CassValue;
 typedef struct CassCollection_ CassCollection;
+typedef struct CassSsl_ CassSsl;
+typedef struct CassSchema_ CassSchema;
+typedef struct CassSchemaMeta_ CassSchemaMeta;
+typedef struct CassSchemaMetaField_ CassSchemaMetaField;
 
 typedef enum CassConsistency_ {
   CASS_CONSISTENCY_ANY          = 0x0000,
@@ -185,9 +189,9 @@ typedef enum CassCollectionType_ {
 } CassCollectionType;
 
 typedef enum CassBatchType_ {
-  CASS_BATCH_TYPE_LOGGED    = 0,
-  CASS_BATCH_TYPE_UNLOGGED  = 1,
-  CASS_BATCH_TYPE_COUNTER   = 2
+  CASS_BATCH_TYPE_LOGGED   = 0,
+  CASS_BATCH_TYPE_UNLOGGED = 1,
+  CASS_BATCH_TYPE_COUNTER  = 2
 } CassBatchType;
 
 typedef enum CassCompression_ {
@@ -196,13 +200,38 @@ typedef enum CassCompression_ {
   CASS_COMPRESSION_LZ4    = 2
 } CassCompression;
 
+typedef enum CassColumnType_ {
+  CASS_COLUMN_TYPE_PARITION_KEY,
+  CASS_COLUMN_TYPE_CLUSTERING_KEY,
+  CASS_COLUMN_TYPE_REGULAR,
+  CASS_COLUMN_TYPE_COMPACT_VALUE,
+  CASS_COLUMN_TYPE_STATIC,
+  CASS_COLUMN_TYPE_UNKNOWN
+} CassColumnType;
+
+typedef enum CassIteratorType_ {
+  CASS_ITERATOR_TYPE_RESULT,
+  CASS_ITERATOR_TYPE_ROW,
+  CASS_ITERATOR_TYPE_COLLECTION,
+  CASS_ITERATOR_TYPE_MAP,
+  CASS_ITERATOR_TYPE_SCHEMA_META,
+  CASS_ITERATOR_TYPE_SCHEMA_META_FIELD
+} CassIteratorType;
+
+typedef enum CassSchemaMetaType_ {
+  CASS_SCHEMA_META_TYPE_KEYSPACE,
+  CASS_SCHEMA_META_TYPE_TABLE,
+  CASS_SCHEMA_META_TYPE_COLUMN
+} CassSchemaMetaType;
+
 #define CASS_LOG_LEVEL_MAP(XX) \
   XX(CASS_LOG_DISABLED, "") \
   XX(CASS_LOG_CRITICAL, "CRITICAL") \
   XX(CASS_LOG_ERROR, "ERROR") \
   XX(CASS_LOG_WARN, "WARN") \
   XX(CASS_LOG_INFO, "INFO") \
-  XX(CASS_LOG_DEBUG, "DEBUG")
+  XX(CASS_LOG_DEBUG, "DEBUG") \
+  XX(CASS_LOG_TRACE, "TRACE")
 
 typedef enum CassLogLevel_ {
 #define XX(log_level, _) log_level,
@@ -210,6 +239,12 @@ typedef enum CassLogLevel_ {
 #undef XX
   CASS_LOG_LAST_ENTRY
 } CassLogLevel;
+
+typedef enum CassSslVerifyFlags {
+  CASS_SSL_VERIFY_NONE          = 0,
+  CASS_SSL_VERIFY_PEER_CERT     = 1,
+  CASS_SSL_VERIFY_PEER_IDENTITY = 2
+} CassSslVerifyFlags;
 
 typedef enum  CassErrorSource_ {
   CASS_ERROR_SOURCE_NONE,
@@ -224,8 +259,8 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_STREAMS, 2, "No streams available") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_INIT, 3, "Unable to initialize session") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_MESSAGE_ENCODE, 4, "Unable to encode message") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_HOST_RESOLUTION, 5, "Unable to reslove host") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNEXPECTED_RESPONSE, 6, "Unexpected reponse from server") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_HOST_RESOLUTION, 5, "Unable to resolve host") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNEXPECTED_RESPONSE, 6, "Unexpected response from server") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_QUEUE_FULL, 7, "The request queue is full") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD, 8, "No available IO threads") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_WRITE_ERROR, 9, "Write error") \
@@ -236,10 +271,11 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_REQUEST_TIMED_OUT, 14, "Request timed out") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE, 15, "Unable to set keyspace") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_CALLBACK_ALREADY_SET, 16, "Callback already set") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_INVALID_STATEMENT_TYPE, 17, "Invalid statement type") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_NAME_DOES_NOT_EXIST, 18, "No value or column for name") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_UNABLE_TO_DETERMINE_PROTOCOL, 19, "Unable to find supported protocol version") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_STATEMENT_TYPE, 17, "Invalid statement type") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NAME_DOES_NOT_EXIST, 18, "No value or column for name") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_DETERMINE_PROTOCOL, 19, "Unable to find supported protocol version") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NULL_VALUE, 20, "NULL value specified") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NOT_IMPLEMENTED, 21, "Not implemented") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -249,16 +285,17 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_TRUNCATE_ERROR, 0x1003, "Truncate error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_WRITE_TIMEOUT, 0x1100, "Write timeout") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_READ_TIMEOUT, 0x1200, "Read timeout") \
-  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SYNTAX_ERROR, 0x2000, "Sytax error") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SYNTAX_ERROR, 0x2000, "Syntax error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_UNAUTHORIZED, 0x2100, "Unauthorized") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_INVALID_QUERY, 0x2200, "Invalid query") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_CONFIG_ERROR, 0x2300, "Configuration error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_ALREADY_EXISTS, 0x2400, "Already exists") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_UNPREPARED, 0x2500, "Unprepared") \
-  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_CERT, 1, "Unable to load certificate") \
-  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_CA_CERT, 2, "Unable to load CA certificate") \
-  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_PRIVATE_KEY, 3, "Unable to load private key") \
-  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_CRL, 4, "Unable to load certificate revocation list")
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_INVALID_CERT, 1, "Unable to load certificate") \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_INVALID_PRIVATE_KEY, 2, "Unable to load private key") \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_NO_PEER_CERT, 3, "No peer certificate")  \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_INVALID_PEER_CERT, 4, "Invalid peer certificate") \
+  XX(CASS_ERROR_SOURCE_SSL, CASS_ERROR_SSL_IDENTITY_MISMATCH, 5, "Certificate does not match host or IP address")
 
 #define CASS_ERROR(source, code) ((source << 24) | code)
 
@@ -273,7 +310,7 @@ typedef enum CassError_ {
 typedef void (*CassFutureCallback)(CassFuture* future,
                                    void* data);
 
-typedef void (*CassLogCallback)(cass_uint64_t time,
+typedef void (*CassLogCallback)(cass_uint64_t time_ms,
                                 CassLogLevel severity,
                                 CassString message,
                                 void* data);
@@ -295,9 +332,18 @@ CASS_EXPORT CassCluster*
 cass_cluster_new();
 
 /**
+ * Frees a cluster instance.
+ *
+ * @param[in] cluster
+ */
+CASS_EXPORT void
+cass_cluster_free(CassCluster* cluster);
+
+
+/**
  * Sets/Appends contact points. This *MUST* be set. The first call sets
  * the contact points and any subsequent calls appends additional contact
- * points. Passing an empty string will clear the contact points. Whitespace
+ * points. Passing an empty string will clear the contact points. White space
  * is striped from the contact points.
  *
  * Examples: "127.0.0.1" "127.0.0.1,127.0.0.2", "server1.domain.com"
@@ -327,6 +373,19 @@ cass_cluster_set_port(CassCluster* cluster,
                       int port);
 
 /**
+ * Sets the SSL context and enables SSL.
+ *
+ * @param[in] cluster
+ * @param[in] ssl
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_ssl_new()
+ */
+CASS_EXPORT CassError
+cass_cluster_set_ssl(CassCluster* cluster,
+                     CassSsl* ssl);
+
+/**
  * Sets the protocol version. This will automatically downgrade if to
  * protocol version 1.
  *
@@ -344,7 +403,7 @@ cass_cluster_set_protocol_version(CassCluster* cluster,
  * Sets the number of IO threads. This is the number of threads
  * that will handle query requests.
  *
- * Default: 2
+ * Default: 0 (creates a thread per core)
  *
  * @param[in] cluster
  * @param[in] num_threads
@@ -367,6 +426,34 @@ cass_cluster_set_num_threads_io(CassCluster* cluster,
 CASS_EXPORT CassError
 cass_cluster_set_queue_size_io(CassCluster* cluster,
                                unsigned queue_size);
+
+/**
+ * Sets the size of the the fixed size queue that stores
+ * events.
+ *
+ * Default: 4096
+ *
+ * @param[in] cluster
+ * @param[in] queue_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_queue_size_event(CassCluster* cluster,
+                                  unsigned queue_size);
+
+/**
+ * Sets the size of the the fixed size queue that stores
+ * log messages.
+ *
+ * Default: 4096
+ *
+ * @param[in] cluster
+ * @param[in] queue_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_queue_size_log(CassCluster* cluster,
+                                unsigned queue_size);
 
 /**
  * Sets the number of connections made to each server in each
@@ -397,7 +484,20 @@ cass_cluster_set_max_connections_per_host(CassCluster* cluster,
                                           unsigned num_connections);
 
 /**
- * Sets the maximum number of connections that will be simultaneously created.
+ * Sets the amount of time to wait before attempting to reconnect.
+ *
+ * Default: 2000 milliseconds
+ *
+ * @param[in] cluster
+ * @param[in] wait_time
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
+                                     unsigned wait_time);
+
+/**
+ * Sets the maximum number of connections that will be created concurrently.
  * Connections are created when the current connections are unable to keep up with
  * request throughput.
  *
@@ -408,26 +508,11 @@ cass_cluster_set_max_connections_per_host(CassCluster* cluster,
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
+cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
                                            unsigned num_connections);
 
-
 /**
- * Sets the maximum number of requests that will wait for a connection to become
- * available.
- *
- * Default: 128 * max_connections_per_host
- *
- * @param[in] cluster
- * @param[in] num_requests
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_cluster_set_max_pending_requests(CassCluster* cluster,
-                                     unsigned num_requests);
-
-/**
- * Sets the threshold for the maximum number of simultaneous requests inflight
+ * Sets the threshold for the maximum number of concurrent requests in-flight
  * on a connection before creating a new connection. The number of new connections
  * created will not exceed max_connections_per_host.
  *
@@ -438,8 +523,84 @@ cass_cluster_set_max_pending_requests(CassCluster* cluster,
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_max_simultaneous_requests_threshold(CassCluster* cluster,
+cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
                                                      unsigned num_requests);
+
+/**
+ * Sets the maximum number of requests processed by an IO worker
+ * per flush.
+ *
+ * Default: 128
+ *
+ * @param[in] cluster
+ * @param[in] num_requests
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
+                                        unsigned num_requests);
+
+/**
+ * Sets the high water mark for the number of bytes outstanding
+ * on a connection. Disables writes to a connection if the number
+ * of bytes queued exceed this value.
+ *
+ * Default: 64 KB
+ *
+ * @param[in] cluster
+ * @param[in] num_bytes
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
+                                             unsigned num_bytes);
+
+/**
+ * Sets the low water mark for number of bytes outstanding on a
+ * connection. After exceeding high water mark bytes, writes will
+ * only resume once the number of bytes fall below this value.
+ *
+ * Default: 32 KB
+ *
+ * @param[in] cluster
+ * @param[in] num_bytes
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
+                                            unsigned num_bytes);
+
+/**
+ * Sets the high water mark for the number of requests queued waiting
+ * for a connection in a connection pool. Disables writes to a
+ * host on an IO worker if the number of requests queued exceed this
+ * value.
+ *
+ * Default: 128 * max_connections_per_host
+ *
+ * @param[in] cluster
+ * @param[in] num_requests
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
+                                                  unsigned num_requests);
+
+/**
+ * Sets the low water mark for the number of requests queued waiting
+ * for a connection in a connection pool. After exceeding high water mark
+ * requests, writes to a host will only resume once the number of requests
+ * fall below this value.
+ *
+ * Default: 64 * max_connections_per_host
+ *
+ * @param[in] cluster
+ * @param[in] num_requests
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
+                                                 unsigned num_requests);
 
 /**
  * Sets the timeout for connecting to a node.
@@ -447,12 +608,12 @@ cass_cluster_set_max_simultaneous_requests_threshold(CassCluster* cluster,
  * Default: 5000 milliseconds
  *
  * @param[in] cluster
- * @param[in] timeout Connect timeout in milliseconds
+ * @param[in] timeout_ms Connect timeout in milliseconds
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_cluster_set_connect_timeout(CassCluster* cluster,
-                                 unsigned timeout);
+                                 unsigned timeout_ms);
 
 /**
  * Sets the timeout for waiting for a response from a node.
@@ -460,12 +621,12 @@ cass_cluster_set_connect_timeout(CassCluster* cluster,
  * Default: 12000 milliseconds
  *
  * @param[in] cluster
- * @param[in] timeout Request timeout in milliseconds
+ * @param[in] timeout_ms Request timeout in milliseconds
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_cluster_set_request_timeout(CassCluster* cluster,
-                                 unsigned timeout);
+                                 unsigned timeout_ms);
 
 /**
  * Sets the log level.
@@ -516,7 +677,7 @@ cass_cluster_set_credentials(CassCluster* cluster,
  * switching an existing from another policy.
  *
  * The driver discovers all nodes in a cluster and cycles through
- * them per request.
+ * them per request. All are considered 'local'.
  *
  * @param[in] cluster
  * @return CASS_OK
@@ -526,11 +687,11 @@ cass_cluster_set_load_balance_round_robin(CassCluster* cluster);
 
 /**
  * Configures the cluster to use DC-aware load balancing.
- * For each query, all live nodes in a primary DC are tried first,
+ * For each query, all live nodes in a primary 'local' DC are tried first,
  * followed by any node from other DCs.
  *
  * @param[in] cluster
- * @param[in] local_dc The primary datacenter to try first
+ * @param[in] local_dc The primary data center to try first
  * @return CASS_OK
  */
 CASS_EXPORT CassError
@@ -538,7 +699,24 @@ cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
                                        const char* local_dc);
 
 /**
- * Connnects a session to the cluster.
+ * Configures the cluster to use Token-aware request routing, or not.
+ *
+ * Default is cass_true (enabled).
+ *
+ * This routing policy composes the base routing policy, routing
+ * requests first to replicas on nodes considered 'local' by
+ * the base load balancing policy.
+ *
+ * @param[in] cluster
+ * @param[in] local_dc The primary data center to try first
+ * @return CASS_OK
+ */
+CASS_EXPORT void
+cass_cluster_set_token_aware_routing(CassCluster* cluster,
+                                     cass_bool_t enabled);
+
+/**
+ * Connects a session to the cluster.
  *
  * @param[in] cluster
  * @return A session that must be freed.
@@ -547,7 +725,7 @@ CASS_EXPORT CassFuture*
 cass_cluster_connect(CassCluster* cluster);
 
 /**
- * Connnects a session to the cluster and sets the keyspace.
+ * Connects a session to the cluster and sets the keyspace.
  *
  * @param[in] cluster
  * @param[in] keyspace
@@ -556,14 +734,6 @@ cass_cluster_connect(CassCluster* cluster);
 CASS_EXPORT CassFuture*
 cass_cluster_connect_keyspace(CassCluster* cluster,
                               const char* keyspace);
-
-/**
- * Frees a cluster instance.
- *
- * @param[in] cluster
- */
-CASS_EXPORT void
-cass_cluster_free(CassCluster* cluster);
 
 /***********************************************************************************
  *
@@ -623,6 +793,190 @@ CASS_EXPORT CassFuture*
 cass_session_execute_batch(CassSession* session,
                            const CassBatch* batch);
 
+/**
+ * Gets a copy of this session's schema metadata. The returned
+ * copy of the schema metadata is not updated. This function
+ * must be called again to retrieve any schema changes since the
+ * previous call.
+ *
+ * @param[in] session
+ * @return A schema instance that must be freed.
+ *
+ * @see cass_schema_free()
+ */
+CASS_EXPORT const CassSchema*
+cass_session_get_schema(CassSession* session);
+
+/***********************************************************************************
+ *
+ * Schema metadata
+ *
+ ***********************************************************************************/
+
+/**
+ * Frees a schema instance.
+ *
+ * @param[in] schema
+ */
+CASS_EXPORT void
+cass_schema_free(const CassSchema* schema);
+
+/**
+ * Gets a the metadata for the provided keyspace name.
+ *
+ * @param[in] schema
+ * @param[in] keyspace_name
+ * @return The schema metadata for a keyspace. NULL if keyspace does not exist.
+ *
+ * @see cass_schema_meta_get_entry()
+ * @see cass_schema_meta_get_field()
+ * @see cass_schema_meta_type()
+ * @see cass_iterator_from_schema_meta()
+ */
+CASS_EXPORT const CassSchemaMeta*
+cass_schema_get_keyspace(const CassSchema* schema,
+                         const char* keyspace_name);
+
+/**
+ * Gets the type of the specified schema metadata.
+ *
+ * @param[in] meta
+ * @return The type of the schema metadata
+ */
+CASS_EXPORT CassSchemaMetaType
+cass_schema_meta_type(const CassSchemaMeta* meta);
+
+/**
+ * Gets a metadata entry for the provided table/column name.
+ *
+ * @param[in] meta
+ * @param[in] name The name of a table or column
+ * @return The schema metadata for a table/column. NULL if table/column does not exist.
+ *
+ * @see cass_schema_meta_get_entry()
+ * @see cass_schema_meta_get_field()
+ * @see cass_schema_meta_type()
+ * @see cass_iterator_from_schema_meta()
+ * @see cass_iterator_fields_from_schema_meta()
+ */
+CASS_EXPORT const CassSchemaMeta*
+cass_schema_meta_get_entry(const CassSchemaMeta* meta,
+                           const char* name);
+
+/**
+ * Gets a metadata field for the provided name.
+ *
+ * @param[in] meta
+ * @param[in] name The name of a field
+ * @return A schema metadata field. NULL if the field does not exist.
+ *
+ * @see cass_schema_meta_field_name()
+ * @see cass_schema_meta_field_value()
+ */
+CASS_EXPORT const CassSchemaMetaField*
+cass_schema_meta_get_field(const CassSchemaMeta* meta,
+                           const char* name);
+
+/**
+ * Gets the name for a schema metadata field
+ *
+ * @param[in] field
+ * @return The name of the metdata data field
+ */
+CASS_EXPORT CassString
+cass_schema_meta_field_name(const CassSchemaMetaField* field);
+
+/**
+ * Gets the value for a schema metadata field
+ *
+ * @param[in] field
+ * @return The value of the metdata data field
+ */
+CASS_EXPORT const CassValue*
+cass_schema_meta_field_value(const CassSchemaMetaField* field);
+
+/***********************************************************************************
+ *
+ * SSL
+ *
+ ************************************************************************************/
+
+/**
+ * Creates a new SSL context.
+ *
+ * @return Returns a SSL context that must be freed.
+ *
+ * @see cass_ssl_free()
+ */
+CASS_EXPORT CassSsl*
+cass_ssl_new();
+
+/**
+ * Frees a SSL context instance.
+ *
+ * @param[in] cluster
+ */
+CASS_EXPORT void
+cass_ssl_free(CassSsl* ssl);
+
+/**
+ * Adds a trusted certificate. This is used to verify
+ * the peer's certificate.
+ *
+ * @param[in] ssl
+ * @param[in] cert PEM formatted certificate string
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_ssl_add_trusted_cert(CassSsl* ssl,
+                          CassString cert);
+
+/**
+ * Sets verifcation performed on the peer's certificate.
+ *
+ * CASS_SSL_VERIFY_NONE - No verification is performed
+ * CASS_SSL_VERIFY_PEER_CERT - Certficate is present and valid
+ * CASS_SSL_VERIFY_PEER_IDENTITY - IP address matches the certificate's
+ * common name or one of its subject alternative names. This implies the
+ * certificate is also present.
+ *
+ * Default: CASS_SSL_VERIFY_PEER_CERT
+ *
+ * @param[in] ssl
+ * @param[in] flags
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT void
+cass_ssl_set_verify_flags(CassSsl* ssl,
+                          int flags);
+
+/**
+ * Set client-side certficate chain. This is used to authenticate
+ * the client on the server-side. This should contain the entire
+ * certficate chain starting with the certificate itself.
+ *
+ * @param[in] ssl
+ * @param[in] cert PEM formatted certificate string
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_ssl_set_cert(CassSsl* ssl,
+                  CassString cert);
+
+/**
+ * Set client-side private key. This is used to authenticate
+ * the client on the server-side.
+ *
+ * @param[in] ssl
+ * @param[in] key PEM formatted key string
+ * @param[in] password used to decrypt key
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_ssl_set_private_key(CassSsl* ssl,
+                         CassString key,
+                         const char* password);
+
 /***********************************************************************************
  *
  * Future
@@ -634,7 +988,6 @@ cass_session_execute_batch(CassSession* session,
  */
 CASS_EXPORT void
 cass_future_free(CassFuture* future);
-
 
 /**
  * Sets a callback that is called when a future is set
@@ -669,12 +1022,12 @@ cass_future_wait(CassFuture* future);
  * Wait for the future to be set or timeout.
  *
  * @param[in] future
- * @param[in] timeout wait time in microseconds
+ * @param[in] timeout_us wait time in microseconds
  * @return false if returned due to timeout
  */
 CASS_EXPORT cass_bool_t
 cass_future_wait_timed(CassFuture* future,
-                       cass_duration_t timeout);
+                       cass_duration_t timeout_us);
 
 /**
  * Gets the result of a successful future. If the future is not ready this method will
@@ -731,7 +1084,7 @@ CASS_EXPORT CassError
 cass_future_error_code(CassFuture* future);
 
 /**
- * Gets the error messsage from future. If the future is not ready this method will
+ * Gets the error message from future. If the future is not ready this method will
  * wait for the future to be set.
  *
  * @param[in] future
@@ -752,7 +1105,7 @@ cass_future_error_message(CassFuture* future);
  *
  * @param[in] query The query is copied into the statement object; the
  * memory pointed to by this parameter can be freed after this call.
- * @param[in] parameter_count The number of bound paramerters.
+ * @param[in] parameter_count The number of bound parameters.
  * @return Returns a statement that must be freed.
  *
  * @see cass_statement_free()
@@ -769,6 +1122,40 @@ cass_statement_new(CassString query,
  */
 CASS_EXPORT void
 cass_statement_free(CassStatement* statement);
+
+/**
+ * Adds a key index specifier to this a statement.
+ * When using token-aware routing, this can be used to tell the driver which
+ * parameters within a non-prepared, parameterized statement are part of
+ * the partition key.
+ *
+ * Use consecutive calls for composite partition keys.
+ *
+ * This is not necessary for prepared statements, as the key
+ * parameters are determined in the metadata processed in the prepare phase.
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @return CASS_OK if successful, otherwise an error ocurred.
+ */
+CASS_EXPORT CassError
+cass_statement_add_key_index(CassStatement* statement,
+                             cass_size_t index);
+
+
+/**
+ * Sets the statement's keyspace for use with token-aware routing.
+ *
+ * This is not necessary for prepared statements, as the keyspace
+ * is determined in the metadata processed in the prepare phase.
+ *
+ * @param[in] statement
+ * @param[in] keyspace
+ * @return CASS_OK if successful, otherwise an error ocurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_keyspace(CassStatement* statement,
+                            const char* keyspace);
 
 /**
  * Sets the statement's consistency level.
@@ -989,14 +1376,13 @@ cass_statement_bind_custom(CassStatement* statement,
  *
  * @param[in] statement
  * @param[in] index
- * @param[in] collection The colleciton can be freed after this call.
+ * @param[in] collection The collection can be freed after this call.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_statement_bind_collection(CassStatement* statement,
                                cass_size_t index,
                                const CassCollection* collection);
-
 
 /**
  * Binds an "int" to all the values with the specified name.
@@ -1194,7 +1580,7 @@ cass_statement_bind_custom_by_name(CassStatement* statement,
  *
  * @param[in] statement
  * @param[in] name
- * @param[in] collection The colleciton can be freed after this call.
+ * @param[in] collection The collection can be freed after this call.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -1426,7 +1812,7 @@ cass_collection_append_decimal(CassCollection* collection,
  * Frees a result instance.
  *
  * This method invalidates all values, rows, and
- * iterators that were dervied from this result.
+ * iterators that were derived from this result.
  *
  * @param[in] result
  */
@@ -1500,6 +1886,23 @@ cass_result_has_more_pages(const CassResult* result);
  ***********************************************************************************/
 
 /**
+ * Frees an iterator instance.
+ *
+ * @param[in] iterator
+ */
+CASS_EXPORT void
+cass_iterator_free(CassIterator* iterator);
+
+/**
+ * Gets the type of the specified iterator.
+ *
+ * @param[in] iterator
+ * @return The type of the iterator.
+ */
+CASS_EXPORT CassIteratorType
+cass_iterator_type(CassIterator* iterator);
+
+/**
  * Creates a new iterator for the specified result. This can be
  * used to iterate over rows in the result.
  *
@@ -1550,12 +1953,43 @@ CASS_EXPORT CassIterator*
 cass_iterator_from_map(const CassValue* value);
 
 /**
- * Frees an iterator instance.
+ * Creates a new iterator for the specified schema.
+ * This can be used to iterate over keyspace entries.
  *
- * @param[in] iterator
+ * @param[in] schema
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_schema_meta()
+ * @see cass_iterator_free()
  */
-CASS_EXPORT void
-cass_iterator_free(CassIterator* iterator);
+CASS_EXPORT CassIterator*
+cass_iterator_from_schema(const CassSchema* schema);
+
+/**
+ * Creates a new iterator for the specified schema metadata.
+ * This can be used to iterate over table/column entries.
+ *
+ * @param[in] meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_schema_meta()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_from_schema_meta(const CassSchemaMeta* meta);
+
+/**
+ * Creates a new iterator for the specified schema metadata.
+ * This can be used to iterate over schema metadata fields.
+ *
+ * @param[in] meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_schema_meta_field()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_fields_from_schema_meta(const CassSchemaMeta* meta);
 
 /**
  * Advance the iterator to the next row, column, or collection item.
@@ -1639,6 +2073,34 @@ cass_iterator_get_map_key(CassIterator* iterator);
 CASS_EXPORT const CassValue*
 cass_iterator_get_map_value(CassIterator* iterator);
 
+/**
+ * Gets the schema metadata entry at the iterator's current
+ * position.
+ *
+ * Calling cass_iterator_next() will invalidate the previous
+ * value returned by this method.
+ *
+ * @param[in] iterator
+ * @return A keyspace/table/column schema metadata entry
+ */
+CASS_EXPORT const CassSchemaMeta*
+cass_iterator_get_schema_meta(CassIterator* iterator);
+
+/**
+ * Gets the schema metadata field at the iterator's current
+ * position.
+ *
+ * Calling cass_iterator_next() will invalidate the previous
+ * value returned by this method.
+ *
+ * @param[in] iterator
+ * @return A schema metadata field
+ */
+CASS_EXPORT const CassSchemaMetaField*
+cass_iterator_get_schema_meta_field(CassIterator* iterator);
+
+
+
 
 /***********************************************************************************
  *
@@ -1682,7 +2144,7 @@ cass_row_get_column_by_name(const CassRow* row,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_int32(const CassValue* value,
@@ -1693,7 +2155,7 @@ cass_value_get_int32(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_int64(const CassValue* value,
@@ -1704,7 +2166,7 @@ cass_value_get_int64(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_float(const CassValue* value,
@@ -1715,7 +2177,7 @@ cass_value_get_float(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_double(const CassValue* value,
@@ -1726,7 +2188,7 @@ cass_value_get_double(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_bool(const CassValue* value,
@@ -1737,7 +2199,7 @@ cass_value_get_bool(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_uuid(const CassValue* value,
@@ -1748,7 +2210,7 @@ cass_value_get_uuid(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_inet(const CassValue* value,
@@ -1759,7 +2221,7 @@ cass_value_get_inet(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_string(const CassValue* value,
@@ -1770,7 +2232,7 @@ cass_value_get_string(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_bytes(const CassValue* value,
@@ -1781,7 +2243,7 @@ cass_value_get_bytes(const CassValue* value,
  *
  * @param[in] value
  * @param[out] output
- * @return CASS_OK if successful, otherwise error occured
+ * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
 cass_value_get_decimal(const CassValue* value,

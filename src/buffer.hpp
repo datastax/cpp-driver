@@ -17,31 +17,14 @@
 #ifndef __CASS_BUFFER_HPP_INCLUDED__
 #define __CASS_BUFFER_HPP_INCLUDED__
 
-#include "fixed_vector.hpp"
 #include "ref_counted.hpp"
 #include "serialization.hpp"
 
-#include "third_party/boost/boost/cstdint.hpp"
+#include <boost/cstdint.hpp>
 
 #include <vector>
 
 namespace cass {
-
-class BufferArray : public RefCounted<BufferArray> {
-public:
-  BufferArray(size_t size)
-    : data_(new char[size]) {}
-
-  virtual ~BufferArray() {
-    delete[] data_;
-  }
-
-  const char* data() const { return data_; }
-  char* data() { return data_; }
-
-private:
-  char* data_;
-};
 
 class BufferCollection;
 
@@ -53,10 +36,10 @@ public:
   Buffer(const char* data, size_t size)
     : size_(size) {
     if (size > static_cast<size_t>(FIXED_BUFFER_SIZE)) {
-      BufferArray* array = new BufferArray(size);
-      array->inc_ref();
-      memcpy(array->data(), data, size);
-      data_.ref.array = array;
+      RefBuffer* buffer = RefBuffer::create(size);
+      buffer->inc_ref();
+      memcpy(buffer->data(), data, size);
+      data_.ref.buffer = buffer;
     } else {
       memcpy(data_.fixed, data, size);
     }
@@ -66,9 +49,9 @@ public:
   Buffer(size_t size)
     : size_(size) {
     if (size > static_cast<size_t>(FIXED_BUFFER_SIZE)) {
-      BufferArray* array = new BufferArray(size);
-      array->inc_ref();
-      data_.ref.array = array;
+      RefBuffer* buffer = RefBuffer::create(size);
+      buffer->inc_ref();
+      data_.ref.buffer = buffer;
     }
   }
 
@@ -173,9 +156,14 @@ public:
     return copy(offset, reinterpret_cast<const char*>(source), size);
   }
 
+  char* data() {
+    assert(is_buffer());
+    return size_ > FIXED_BUFFER_SIZE ? static_cast<RefBuffer*>(data_.ref.buffer)->data() : data_.fixed;
+  }
+
   const char* data() const {
     assert(is_buffer());
-    return size_ > FIXED_BUFFER_SIZE ? static_cast<BufferArray*>(data_.ref.array)->data() : data_.fixed;
+    return size_ > FIXED_BUFFER_SIZE ? static_cast<RefBuffer*>(data_.ref.buffer)->data() : data_.fixed;
   }
 
   int size() const { return size_; }
@@ -197,7 +185,7 @@ private:
   char* buffer() {
     assert(is_buffer());
     return size_ > FIXED_BUFFER_SIZE
-        ? static_cast<BufferArray*>(data_.ref.array)->data()
+        ? static_cast<RefBuffer*>(data_.ref.buffer)->data()
         : data_.fixed;
   }
 
@@ -208,7 +196,7 @@ private:
   void copy(const Buffer& buffer);
 
   union BufferRef {
-    BufferArray* array;
+    RefBuffer* buffer;
     const BufferCollection* collection;
   };
 
@@ -219,7 +207,7 @@ private:
   int size_;
 };
 
-typedef FixedVector<Buffer, 8> BufferVec;
+typedef std::vector<Buffer> BufferVec;
 
 } // namespace cass
 

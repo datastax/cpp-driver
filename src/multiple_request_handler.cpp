@@ -32,7 +32,7 @@ void MultipleRequestHandler::execute_query(const std::string& query) {
   if (has_errors_or_timeouts_) return;
   responses_.push_back(NULL);
   SharedRefPtr<InternalHandler> handler(new InternalHandler(this, new QueryRequest(query), remaining_++));
-  if (!connection_->execute(handler.get())) {
+  if (!connection_->write(handler.get())) {
     on_error(CASS_ERROR_LIB_NO_STREAMS, "No more streams available");
   }
 }

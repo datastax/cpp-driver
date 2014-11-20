@@ -17,7 +17,9 @@
 #include "testing.hpp"
 
 #include "address.hpp"
+#include "murmur3.hpp"
 #include "result_response.hpp"
+#include "schema_metadata.hpp"
 #include "types.hpp"
 
 namespace cass {
@@ -32,7 +34,7 @@ std::string get_host_from_future(CassFuture* future) {
 }
 
 unsigned get_connect_timeout_from_cluster(CassCluster* cluster) {
-  return cluster->config().connect_timeout();
+  return cluster->config().connect_timeout_ms();
 }
 
 int get_port_from_cluster(CassCluster* cluster) {
@@ -55,6 +57,20 @@ std::string get_contact_points_from_cluster(CassCluster* cluster) {
   }
 
   return str;
+}
+
+CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* schema, const std::string& keyspace) {
+  CassSchemaMeta* foundSchemaMeta = NULL;
+
+  if (schema) {
+    foundSchemaMeta = reinterpret_cast<CassSchemaMeta*>(const_cast<SchemaMetadata*>(schema->from()->get(keyspace)));
+  }
+
+  return foundSchemaMeta;
+}
+
+int64_t create_murmur3_hash_from_string(const std::string &value) {
+  return MurmurHash3_x64_128(value.data(), value.size(), 0);
 }
 
 } // namespace cass

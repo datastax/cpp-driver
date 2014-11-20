@@ -19,7 +19,7 @@
 
 #include <assert.h>
 
-#include "third_party/boost/boost/cstdint.hpp"
+#include <boost/cstdint.hpp>
 
 namespace cass {
 
@@ -63,7 +63,8 @@ public:
     return false;
   }
 
-  size_t available_streams() { return MAX_STREAMS - available_stream_index_; }
+  size_t available_streams() const { return MAX_STREAMS - available_stream_index_; }
+  size_t pending_streams() const { return available_stream_index_; }
 
 private:
   int available_stream_index_;

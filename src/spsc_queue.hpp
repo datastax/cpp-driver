@@ -31,9 +31,9 @@
 
 #include "common.hpp"
 
-#include "third_party/boost/boost/atomic.hpp"
-#include "third_party/boost/boost/type_traits/alignment_of.hpp"
-#include "third_party/boost/boost/aligned_storage.hpp"
+#include <boost/atomic.hpp>
+#include <boost/type_traits/alignment_of.hpp>
+#include <boost/aligned_storage.hpp>
 
 namespace cass {
 
@@ -44,7 +44,7 @@ public:
 
   SPSCQueue(size_t size)
       : _size(next_pow_2(size))
-      , _mask(size - 1)
+      , _mask(_size - 1)
       , _buffer(reinterpret_cast<T*>(
             // need one extra element for a guard
             new SPSCQueueAlignedEntry[_size + 1]))

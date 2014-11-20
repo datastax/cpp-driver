@@ -19,6 +19,7 @@
 
 #include "cassandra.h"
 #include "cluster.hpp"
+#include "schema_metadata.hpp"
 #include "session.hpp"
 #include "statement.hpp"
 #include "future.hpp"
@@ -28,6 +29,7 @@
 #include "row.hpp"
 #include "value.hpp"
 #include "iterator.hpp"
+#include "ssl.hpp"
 
 // This abstraction allows us to separate internal types from the
 // external opaque pointers that we expose.
@@ -58,9 +60,19 @@ EXTERNAL_TYPE(cass::BufferCollection, CassCollection);
 EXTERNAL_TYPE(cass::Iterator, CassIterator);
 EXTERNAL_TYPE(cass::Row, CassRow);
 EXTERNAL_TYPE(cass::Value, CassValue);
+EXTERNAL_TYPE(cass::SslContext, CassSsl);
+EXTERNAL_TYPE(cass::Schema, CassSchema);
+EXTERNAL_TYPE(cass::SchemaMetadata, CassSchemaMeta);
+EXTERNAL_TYPE(cass::SchemaMetadataField, CassSchemaMetaField);
 
 }
 
 #undef EXTERNAL_TYPE
+
+namespace cass {
+
+void cass_string_of_string(const std::string& source, CassString* output);
+
+}
 
 #endif

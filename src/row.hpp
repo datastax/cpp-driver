@@ -19,7 +19,7 @@
 
 #include "value.hpp"
 
-#include "third_party/boost/boost/utility/string_ref.hpp"
+#include <boost/utility/string_ref.hpp>
 
 #include <vector>
 
@@ -38,6 +38,8 @@ public:
   ValueVec values;
 
   const Value* get_by_name(const boost::string_ref& name) const;
+
+  bool get_string_by_name(const boost::string_ref& name, std::string* out) const;
 
   const ResultResponse* result() const { return result_; }
 

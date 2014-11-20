@@ -17,10 +17,13 @@
 #include "uuids.hpp"
 
 #include "cassandra.h"
-#include "scoped_mutex.hpp"
 #include "get_time.hpp"
+#include "md5.hpp"
+#include "scoped_mutex.hpp"
 
-#include "third_party/boost/boost/random/random_device.hpp"
+#include <boost/random/random_device.hpp>
+
+#include <stdio.h>
 
 extern "C" {
 
@@ -60,6 +63,9 @@ void cass_uuid_string(CassUuid uuid, char* output) {
 
 namespace {
 
+boost::random_device rd;
+boost::mt19937_64 ng(rd());
+
 class UuidsInitializer {
 public:
   UuidsInitializer() { cass::Uuids::initialize_(); }
@@ -71,15 +77,11 @@ UuidsInitializer uuids_intitalizer_;
 
 namespace cass {
 
-boost::mt19937_64 Uuids::ng_;
 uv_mutex_t Uuids::mutex_;
 boost::atomic<uint64_t> Uuids::last_timestamp_;
 uint64_t Uuids::CLOCK_SEQ_AND_NODE;
 
 void Uuids::initialize_() {
-  boost::random_device rd;
-  ng_.seed(rd());
-
   uv_mutex_init(&mutex_);
   last_timestamp_ = 0L;
   CLOCK_SEQ_AND_NODE = make_clock_seq_and_node();
@@ -96,8 +98,8 @@ void Uuids::generate_v1(uint64_t timestamp, Uuid uuid) {
 
 void Uuids::generate_v4(Uuid uuid) {
   ScopedMutex lock(&mutex_);
-  uint64_t msb = ng_();
-  uint64_t lsb = ng_();
+  uint64_t msb = ng();
+  uint64_t lsb = ng();
   lock.unlock();
 
   copy_timestamp(msb, 4, uuid);
@@ -174,7 +176,7 @@ void Uuids::copy_timestamp(uint64_t timestamp, uint8_t version, Uuid uuid) {
 
 uint64_t Uuids::uuid_timestamp() {
   while (true) {
-    uint64_t now = from_unix_timestamp(get_time_since_epoch());
+    uint64_t now = from_unix_timestamp(get_time_since_epoch_ms());
     uint64_t last = last_timestamp_.load();
     if (now > last) {
       if (last_timestamp_.compare_exchange_strong(last, now)) {
@@ -196,9 +198,7 @@ uint64_t Uuids::uuid_timestamp() {
 
 uint64_t Uuids::make_clock_seq_and_node() {
   int count = 0;
-  EVP_MD_CTX* mdctx = EVP_MD_CTX_create();
-
-  EVP_DigestInit(mdctx, EVP_md5());
+  Md5 md5;
 
   uv_interface_address_t* addresses;
   int address_count;
@@ -206,14 +206,14 @@ uint64_t Uuids::make_clock_seq_and_node() {
     for (int i = 0; i < address_count; ++i) {
       char buf[256];
       uv_interface_address_t address = addresses[i];
-      EVP_DigestUpdate(mdctx, address.name, strlen(address.name));
+      md5.update(address.name, strlen(address.name));
       if (address.address.address4.sin_family == AF_INET) {
         uv_ip4_name(&address.address.address4, buf, sizeof(buf));
-        EVP_DigestUpdate(mdctx, buf, strlen(buf));
+        md5.update(buf, strlen(buf));
         count++;
       } else if (address.address.address4.sin_family == AF_INET6) {
         uv_ip6_name(&address.address.address6, buf, sizeof(buf));
-        EVP_DigestUpdate(mdctx, buf, strlen(buf));
+        md5.update(buf, strlen(buf));
         count++;
       }
     }
@@ -227,14 +227,13 @@ uint64_t Uuids::make_clock_seq_and_node() {
   if (uv_cpu_info(&cpu_infos, &cpu_count).code == 0) {
     for (int i = 0; i < cpu_count; ++i) {
       uv_cpu_info_t cpu_info = cpu_infos[i];
-      EVP_DigestUpdate(mdctx, cpu_info.model, strlen(cpu_info.model));
+      md5.update(cpu_info.model, strlen(cpu_info.model));
     }
     uv_free_cpu_info(cpu_infos, cpu_count);
   }
 
   uint8_t hash[16];
-  EVP_DigestFinal_ex(mdctx, hash, NULL);
-  EVP_MD_CTX_destroy(mdctx);
+  md5.final(hash);
 
   uint64_t node = 0L;
   for (int i = 0; i < 6; ++i) {
@@ -242,7 +241,7 @@ uint64_t Uuids::make_clock_seq_and_node() {
   }
   node |= 0x0000010000000000LL; // Multicast bit
 
-  uint64_t clock = ng_();
+  uint64_t clock = ng();
   uint64_t clock_seq_and_node = 0;
   clock_seq_and_node |= (clock & 0x0000000000003FFFLL) << 48;
   clock_seq_and_node |= 0x8000000000000000LL; // RFC4122 variant

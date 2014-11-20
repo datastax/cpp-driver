@@ -46,15 +46,18 @@ public:
     POOL_STATE_CLOSED
   };
 
-  Pool(IOWorker* io_worker, const Address& address,
+  Pool(IOWorker* io_worker,
+       const Address& address,
        bool is_initial_connection);
   ~Pool();
 
   void connect();
   void close();
 
-  bool execute(Connection* connection, RequestHandler* request_handler);
-  bool wait_for_connection(RequestHandler* request_handler);
+  bool write(Connection* connection, RequestHandler* request_handler);
+  void flush();
+
+  void wait_for_connection(RequestHandler* request_handler);
   Connection* borrow_connection();
 
   const Address& address() const { return address_; }
@@ -67,6 +70,10 @@ public:
   void return_connection(Connection* connection);
 
 private:
+  void add_pending_request(RequestHandler* request_handler);
+  void remove_pending_request(RequestHandler* request_handler);
+  void set_is_available(bool is_available);
+
   void defunct();
   void maybe_notify_ready();
   void maybe_close();
@@ -75,7 +82,8 @@ private:
 
   void on_connection_ready(Connection* connection);
   void on_connection_closed(Connection* connection);
-  void on_pending_request_timeout(RequestTimer* data);
+  void on_connection_availability_changed(Connection* connection);
+  void on_pending_request_timeout(RequestTimer* timer);
 
   Connection* find_least_busy();
 
@@ -93,9 +101,12 @@ private:
   ConnectionVec connections_;
   ConnectionSet connections_pending_;
   List<Handler> pending_requests_;
+  int available_connection_count_;
+  bool is_available_;
   bool is_initial_connection_;
   bool is_defunct_;
   bool is_critical_failure_;
+  bool is_pending_flush_;
 };
 
 } // namespace cass

@@ -16,7 +16,7 @@
 
 #include "result_response.hpp"
 
-#include "metadata.hpp"
+#include "result_metadata.hpp"
 #include "serialization.hpp"
 #include "types.hpp"
 
@@ -79,7 +79,7 @@ cass_bool_t cass_result_has_more_pages(const CassResult* result) {
 namespace cass {
 
 size_t ResultResponse::find_column_indices(boost::string_ref name,
-                                           Metadata::IndexVec* result) const {
+                                           ResultMetadata::IndexVec* result) const {
   return metadata_->get(name, result);
 }
 
@@ -90,25 +90,30 @@ bool ResultResponse::decode(int version, char* input, size_t size) {
     case CASS_RESULT_KIND_VOID:
       return true;
       break;
+
     case CASS_RESULT_KIND_ROWS:
       return decode_rows(buffer);
       break;
+
     case CASS_RESULT_KIND_SET_KEYSPACE:
       return decode_set_keyspace(buffer);
       break;
+
     case CASS_RESULT_KIND_PREPARED:
       return decode_prepared(version, buffer);
       break;
+
     case CASS_RESULT_KIND_SCHEMA_CHANGE:
       return decode_schema_change(buffer);
       break;
+
     default:
       assert(false);
   }
   return false;
 }
 
-char* ResultResponse::decode_metadata(char* input, ScopedRefPtr<Metadata>* metadata) {
+char* ResultResponse::decode_metadata(char* input, ScopedRefPtr<ResultMetadata>* metadata) {
   int32_t flags = 0;
   char* buffer = decode_int32(input, flags);
 
@@ -130,7 +135,7 @@ char* ResultResponse::decode_metadata(char* input, ScopedRefPtr<Metadata>* metad
       buffer = decode_string(buffer, &table_, table_size_);
     }
 
-    metadata->reset(new Metadata(column_count));
+    metadata->reset(new ResultMetadata(column_count));
 
     for (int i = 0; i < column_count; ++i) {
       ColumnDefinition def;

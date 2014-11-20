@@ -21,6 +21,8 @@
 #include "macros.hpp"
 #include "ref_counted.hpp"
 
+#include <boost/utility/string_ref.hpp>
+
 namespace cass {
 
 class RequestMessage;
@@ -38,9 +40,6 @@ public:
 
   uint8_t opcode() const { return opcode_; }
 
-  bool encode(int version, int flags, int stream, BufferVec* bufs) const;
-
-protected:
   virtual int encode(int version, BufferVec* bufs) const = 0;
 
 private:
@@ -48,6 +47,24 @@ private:
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Request);
+};
+
+class RoutableRequest : public Request {
+public:
+  RoutableRequest(uint8_t opcode)
+    : Request(opcode) {}
+
+  RoutableRequest(uint8_t opcode, const std::string& keyspace)
+    : Request(opcode)
+    , keyspace_(keyspace){}
+
+  virtual bool get_routing_key(std::string* routing_key) const = 0;
+
+  const std::string& keyspace() const { return keyspace_; }
+  void set_keyspace(const std::string& keyspace) { keyspace_ = keyspace; }
+
+private:
+  std::string keyspace_;
 };
 
 } // namespace cass

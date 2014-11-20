@@ -44,7 +44,6 @@ private:
 private:
   typedef std::map<std::string, std::string> OptionsMap;
 
-  ScopedPtr<char[]> guard_;
   std::string version_;
   std::string compression_;
 };

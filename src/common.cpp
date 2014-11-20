@@ -16,30 +16,15 @@
 
 #include "common.hpp"
 
+#include "buffer_piece.hpp"
 #include "constants.hpp"
+#include "value.hpp"
 
-#include <assert.h>
-#include <ctype.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
 #include <algorithm>
+#include <assert.h>
 #include <functional>
 
 namespace cass {
-
-uv_buf_t alloc_buffer(size_t suggested_size) {
-  return uv_buf_init(new char[suggested_size], suggested_size);
-}
-
-uv_buf_t alloc_buffer(uv_handle_t* handle, size_t suggested_size) {
-  (void)handle;
-  return alloc_buffer(suggested_size);
-}
-
-void free_buffer(uv_buf_t buf) {
-  delete[] buf.base;
-}
 
 std::string opcode_to_string(int opcode) {
   switch (opcode) {

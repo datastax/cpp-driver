@@ -26,9 +26,9 @@
 
 #include "common.hpp"
 
-#include "third_party/boost/boost/atomic.hpp"
-#include "third_party/boost/boost/type_traits/alignment_of.hpp"
-#include "third_party/boost/boost/aligned_storage.hpp"
+#include <boost/atomic.hpp>
+#include <boost/type_traits/alignment_of.hpp>
+#include <boost/aligned_storage.hpp>
 
 namespace cass {
 
@@ -39,7 +39,7 @@ public:
 
   MPMCQueue(size_t size)
       : size_(next_pow_2(size))
-      , mask_(size - 1)
+      , mask_(size_ - 1)
       , buffer_(reinterpret_cast<Node*>(new AlignedNode[size_]))
       , head_seq_(0)
       , tail_seq_(0) {

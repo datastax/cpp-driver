@@ -112,7 +112,10 @@ void RequestHandler::return_connection() {
 
 void RequestHandler::return_connection_and_finish() {
   return_connection();
-  io_worker_->request_finished(this);
+  if (io_worker_ != NULL) {
+    io_worker_->request_finished(this);
+  }
+  dec_ref();
 }
 
 void RequestHandler::on_result_response(ResponseMessage* response) {
@@ -124,6 +127,11 @@ void RequestHandler::on_result_response(ResponseMessage* response) {
       // result_metadata() returned when the statement was prepared.
       if (request_->opcode() == CQL_OPCODE_EXECUTE && result->no_metadata()) {
         const ExecuteRequest* execute = static_cast<const ExecuteRequest*>(request_.get());
+        if (!execute->skip_metadata()) {
+          // Caused by a race condition in C* 2.1.0
+          on_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE, "Expected metadata but no metadata in response (see CASSANDRA-8054)");
+          return;
+        }
         result->set_metadata(execute->prepared()->result()->result_metadata().get());
       }
       set_response(response->response_body().release());
@@ -155,9 +163,11 @@ void RequestHandler::on_error_response(ResponseMessage* response) {
 
   if (error->code() == CQL_ERROR_UNPREPARED) {
     ScopedRefPtr<PrepareHandler> prepare_handler(new PrepareHandler(this));
-
     if (prepare_handler->init(error->prepared_id())) {
-      connection_->execute(prepare_handler.get());
+      if (!connection_->write(prepare_handler.get())) {
+        // Try to prepare on the same host but on a different connection
+        retry(RETRY_WITH_CURRENT_HOST);
+      }
     } else {
       connection_->defunct();
       set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,

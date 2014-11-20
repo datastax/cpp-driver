@@ -24,6 +24,10 @@
 
 extern "C" {
 
+CassIteratorType cass_iterator_type(CassIterator* iterator) {
+  return iterator->type();
+}
+
 CassIterator* cass_iterator_from_result(const CassResult* result) {
   return CassIterator::to(new cass::ResultIterator(result));
 }
@@ -55,7 +59,7 @@ cass_bool_t cass_iterator_next(CassIterator* iterator) {
 }
 
 const CassRow* cass_iterator_get_row(CassIterator* iterator) {
-  if (iterator->type() != cass::CASS_ITERATOR_TYPE_RESULT) {
+  if (iterator->type() != CASS_ITERATOR_TYPE_RESULT) {
     return NULL;
   }
   return CassRow::to(
@@ -64,7 +68,7 @@ const CassRow* cass_iterator_get_row(CassIterator* iterator) {
 }
 
 const CassValue* cass_iterator_get_column(CassIterator* iterator) {
-  if (iterator->type() != cass::CASS_ITERATOR_TYPE_ROW) {
+  if (iterator->type() != CASS_ITERATOR_TYPE_ROW) {
     return NULL;
   }
   return CassValue::to(
@@ -73,7 +77,7 @@ const CassValue* cass_iterator_get_column(CassIterator* iterator) {
 }
 
 const CassValue* cass_iterator_get_value(CassIterator* iterator) {
-  if (iterator->type() != cass::CASS_ITERATOR_COLLECTION) {
+  if (iterator->type() != CASS_ITERATOR_TYPE_COLLECTION) {
     return NULL;
   }
   return CassValue::to(
@@ -82,7 +86,7 @@ const CassValue* cass_iterator_get_value(CassIterator* iterator) {
 }
 
 const CassValue* cass_iterator_get_map_key(CassIterator* iterator) {
-  if (iterator->type() != cass::CASS_ITERATOR_MAP) {
+  if (iterator->type() != CASS_ITERATOR_TYPE_MAP) {
     return NULL;
   }
   return CassValue::to(
@@ -91,7 +95,7 @@ const CassValue* cass_iterator_get_map_key(CassIterator* iterator) {
 }
 
 const CassValue* cass_iterator_get_map_value(CassIterator* iterator) {
-  if (iterator->type() != cass::CASS_ITERATOR_MAP) {
+  if (iterator->type() != CASS_ITERATOR_TYPE_MAP) {
     return NULL;
   }
   return CassValue::to(

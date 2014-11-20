@@ -17,11 +17,12 @@
 #ifndef __CASS_LOGGER_HPP_INCLUDED__
 #define __CASS_LOGGER_HPP_INCLUDED__
 
-#include "cassandra.h"
-#include "loop_thread.hpp"
 #include "async_queue.hpp"
-#include "mpmc_queue.hpp"
+#include "cassandra.h"
 #include "config.hpp"
+#include "get_time.hpp"
+#include "loop_thread.hpp"
+#include "mpmc_queue.hpp"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -63,6 +64,8 @@ public:
 
   void debug(const char* format, ...) { LOG_MESSAGE(CASS_LOG_DEBUG); }
 
+  void trace(const char* format, ...) { LOG_MESSAGE(CASS_LOG_TRACE); }
+
 #undef LOG_MESSAGE
 
 private:
@@ -82,9 +85,16 @@ private:
 
   void log(CassLogLevel severity, const char* format, va_list args) {
     LogMessage* log_message = new LogMessage;
+    log_message->time = get_time_since_epoch_ms();
     log_message->severity = severity;
     log_message->message = format_message(format, args);
-    log_queue_.enqueue(log_message);
+    if(!log_queue_.enqueue(log_message)) {
+      fprintf(stderr, "Exceeded logging queue max size\n");
+      CassString message = cass_string_init2(log_message->message.data(),
+                                             log_message->message.size());
+      cb_(log_message->time, log_message->severity, message, data_);
+      delete log_message;
+    }
   }
 
   static void on_log(uv_async_t* async, int status) {

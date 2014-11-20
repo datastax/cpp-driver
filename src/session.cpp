@@ -24,7 +24,7 @@
 #include "timer.hpp"
 #include "types.hpp"
 
-#include "third_party/boost/boost/bind.hpp"
+#include <boost/bind.hpp>
 
 extern "C" {
 
@@ -49,6 +49,10 @@ CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* ba
   return CassFuture::to(session->execute(batch->from()));
 }
 
+const CassSchema* cass_session_get_schema(CassSession* session) {
+  return CassSchema::to(session->copy_schema());
+}
+
 } // extern "C"
 
 namespace cass {
@@ -67,13 +71,27 @@ Session::Session(const Config& config)
 int Session::init() {
   int rc = logger_->init();
   if (rc != 0) return rc;
+  rc = cluster_meta_.init();
+  if (rc != 0) return rc;
   rc = EventThread<SessionEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
   request_queue_.reset(
       new AsyncQueue<MPMCQueue<RequestHandler*> >(config_.queue_size_io()));
   rc = request_queue_->init(loop(), this, &Session::on_execute);
   if (rc != 0) return rc;
-  for (unsigned i = 0; i < config_.thread_count_io(); ++i) {
+
+  unsigned num_threads = config_.thread_count_io();
+  if(num_threads == 0) {
+    num_threads = 1; // Default if we can't determine the number of cores
+    uv_cpu_info_t* cpu_infos;
+    int cpu_count;
+    if (uv_cpu_info(&cpu_infos, &cpu_count).code == 0 && cpu_count > 0) {
+      num_threads = cpu_count;
+      uv_free_cpu_info(cpu_infos, cpu_count);
+    }
+  }
+
+  for (unsigned i = 0; i < num_threads; ++i) {
     SharedRefPtr<IOWorker> io_worker(new IOWorker(this));
     int rc = io_worker->init();
     if (rc != 0) return rc;
@@ -175,6 +193,8 @@ bool Session::connect_async(const std::string& keyspace, Future* future) {
     return false;
   }
 
+  logger_->debug("Session: issued connect event");
+
   if (!keyspace.empty()) {
     broadcast_keyspace_change(keyspace, NULL);
   }
@@ -192,6 +212,7 @@ void Session::close_async(Future* future) {
   while (!request_queue_->enqueue(NULL)) {
     // Keep trying
   }
+  logger_->debug("Session: issued shutdown");
 }
 
 void Session::internal_connect() {
@@ -280,6 +301,10 @@ void Session::on_event(const SessionEvent& event) {
     case SessionEvent::NOTIFY_DOWN:
       control_connection_.on_down(event.address, event.is_critical_failure);
       break;
+
+    default:
+      assert(false);
+      break;
   }
 }
 
@@ -302,7 +327,6 @@ void Session::execute(RequestHandler* request_handler) {
   if (!request_queue_->enqueue(request_handler)) {
     request_handler->on_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
                               "The request queue has reached capacity");
-    request_handler->dec_ref();
   }
 }
 
@@ -312,10 +336,17 @@ void Session::on_control_connection_ready() {
        end = io_workers_.end(); it != end; ++it) {
     (*it)->set_protocol_version(control_connection_.protocol_version());
   }
-  pending_pool_count_ = hosts_.size() * io_workers_.size();
   for (HostMap::iterator it = hosts_.begin(), hosts_end = hosts_.end();
        it != hosts_end; ++it) {
     on_add(it->second, true);
+  }
+  if (config().core_connections_per_host() > 0) {
+    pending_pool_count_ = hosts_.size() * io_workers_.size();
+  } else {
+    // Special case for internal testing. Not allowed by API
+    logger_->debug("Session connected with no core IO connections");
+    connect_future_->set();
+    connect_future_.reset();
   }
 }
 
@@ -328,7 +359,7 @@ Future* Session::prepare(const char* statement, size_t length) {
   PrepareRequest* prepare = new PrepareRequest();
   prepare->set_query(statement, length);
 
-  ResponseFuture* future = new ResponseFuture();
+  ResponseFuture* future = new ResponseFuture(cluster_meta_.schema());
   future->inc_ref(); // External reference
   future->statement.assign(statement, length);
 
@@ -367,10 +398,6 @@ void Session::on_remove(SharedRefPtr<Host> host) {
 }
 
 void Session::on_up(SharedRefPtr<Host> host) {
-  if (host->is_up()) {
-    return;
-  }
-
   host->set_up();
   load_balancing_policy_->on_up(host);
 
@@ -384,27 +411,22 @@ void Session::on_down(SharedRefPtr<Host> host, bool is_critical_failure) {
   host->set_down();
   load_balancing_policy_->on_down(host);
 
-  for (IOWorkerVec::iterator it = io_workers_.begin(),
-       end = io_workers_.end(); it != end; ++it) {
-    (*it)->remove_pool_async(host->address());
-  }
-
   if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE ||
       is_critical_failure) {
-    return;
-  }
-
-  for (IOWorkerVec::iterator it = io_workers_.begin(),
-       end = io_workers_.end(); it != end; ++it) {
-    (*it)->schedule_reconnect_async(host->address(), config_.reconnect_wait());
+    // This permanently removes a host from all IO workers and stops
+    // any attempt to reconnect to that host.
+    for (IOWorkerVec::iterator it = io_workers_.begin(),
+         end = io_workers_.end(); it != end; ++it) {
+      (*it)->remove_pool_async(host->address());
+    }
   }
 }
 
-Future* Session::execute(const Request* statement) {
-  ResponseFuture* future = new ResponseFuture();
+Future* Session::execute(const RoutableRequest* request) {
+  ResponseFuture* future = new ResponseFuture(cluster_meta_.schema());
   future->inc_ref(); // External reference
 
-  RequestHandler* request_handler = new RequestHandler(statement, future);
+  RequestHandler* request_handler = new RequestHandler(request, future);
   request_handler->inc_ref(); // IOWorker reference
 
   execute(request_handler);
@@ -420,25 +442,31 @@ void Session::on_execute(uv_async_t* data, int status) {
   RequestHandler* request_handler = NULL;
   while (session->request_queue_->dequeue(request_handler)) {
     if (request_handler != NULL) {
-      request_handler->set_query_plan(session->load_balancing_policy_->new_query_plan());
 
-      size_t start = session->current_io_worker_;
-      size_t remaining = session->io_workers_.size();
-      const size_t size = session->io_workers_.size();
-      while (remaining != 0) {
-        // TODO(mpenick): Make this something better than RR
-        const SharedRefPtr<IOWorker>& io_worker = session->io_workers_[start % size];
-        if (io_worker->execute(request_handler)) {
-          session->current_io_worker_ = (start + 1) % size;
+      request_handler->set_query_plan(session->new_query_plan(request_handler->request()));
+
+      bool is_done = false;
+      while(!is_done) {
+        request_handler->next_host();
+
+        Address address;
+        if(!request_handler->get_current_host_address(&address)) {
+          request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                                    "No hosts available");
           break;
         }
-        start++;
-        remaining--;
-      }
 
-      if (remaining == 0) {
-        request_handler->on_error(CASS_ERROR_LIB_NO_AVAILABLE_IO_THREAD,
-                                  "All workers are busy");
+        size_t start = session->current_io_worker_;
+        for (size_t i = 0, size = session->io_workers_.size(); i < size; ++i) {
+          const SharedRefPtr<IOWorker>& io_worker = session->io_workers_[start % size];
+          if (io_worker->is_host_available(address) &&
+              io_worker->execute(request_handler)) {
+            session->current_io_worker_ = (start + 1) % size;
+            is_done = true;
+            break;
+          }
+          start++;
+        }
       }
     } else {
       is_closing = true;
@@ -454,5 +482,15 @@ void Session::on_execute(uv_async_t* data, int status) {
     }
   }
 }
+
+QueryPlan* Session::new_query_plan(const Request* request) {
+  std::string connected_keyspace;
+  if (!io_workers_.empty()) {
+    connected_keyspace = io_workers_[0]->keyspace();
+  }
+  return load_balancing_policy_->new_query_plan(connected_keyspace, request, cluster_meta_.token_map());
+}
+
+
 
 } // namespace cass

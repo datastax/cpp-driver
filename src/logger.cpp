@@ -18,10 +18,11 @@
 
 namespace cass {
 
-void default_log_callback(cass_uint64_t time, CassLogLevel severity,
+void default_log_callback(cass_uint64_t time_ms, CassLogLevel severity,
                           CassString message, void* data) {
-  // TODO(mpenick): Format time
-  fprintf(stderr, "[%s]: %.*s\n", cass_log_level_string(severity),
+  fprintf(stderr, "%u.%03u [%s]: %.*s\n",
+          (unsigned int)(time_ms/1000), (unsigned int)(time_ms % 1000),
+          cass_log_level_string(severity),
           static_cast<int>(message.length), message.data);
 }
 }

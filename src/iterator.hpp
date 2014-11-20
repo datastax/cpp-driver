@@ -17,29 +17,23 @@
 #ifndef __CASS_ITERATOR_HPP_INCLUDED__
 #define __CASS_ITERATOR_HPP_INCLUDED__
 
-namespace cass {
+#include "cassandra.h"
 
-enum IteratorType {
-  CASS_ITERATOR_TYPE_RESULT,
-  CASS_ITERATOR_TYPE_ROW,
-  CASS_ITERATOR_COLLECTION,
-  CASS_ITERATOR_MAP,
-  CASS_ITERATOR_TYPE_UNKNOWN
-};
+namespace cass {
 
 class Iterator {
 public:
-  Iterator(IteratorType type)
+  Iterator(CassIteratorType type)
       : type_(type) {}
 
   virtual ~Iterator() {}
 
-  IteratorType type() const { return type_; }
+  CassIteratorType type() const { return type_; }
 
   virtual bool next() = 0;
 
 private:
-  const IteratorType type_;
+  const CassIteratorType type_;
 };
 
 } // namespace cass

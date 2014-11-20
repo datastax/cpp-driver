@@ -19,18 +19,22 @@
 
 #include "cassandra.h"
 
+#include <stdint.h>
 #include <string>
 
 namespace cass {
 
-std::string get_host_from_future(CassFuture* future);
+CASS_EXPORT std::string get_host_from_future(CassFuture* future);
 
-unsigned get_connect_timeout_from_cluster(CassCluster* cluster);
+CASS_EXPORT unsigned get_connect_timeout_from_cluster(CassCluster* cluster);
 
-int get_port_from_cluster(CassCluster* cluster);
+CASS_EXPORT int get_port_from_cluster(CassCluster* cluster);
 
-std::string get_contact_points_from_cluster(CassCluster* cluster);
+CASS_EXPORT std::string get_contact_points_from_cluster(CassCluster* cluster);
 
+CASS_EXPORT CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* session, const std::string& keyspace);
+
+CASS_EXPORT int64_t create_murmur3_hash_from_string(const std::string &value);
 
 } // namespace cass
 

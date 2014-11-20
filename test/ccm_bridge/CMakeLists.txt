@@ -3,6 +3,10 @@ cmake_minimum_required(VERSION 2.6.4)
 # Clear INCLUDE_DIRECTORIES to not include project-level includes
 set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
 
+if(POLICY CMP0048)
+  cmake_policy(SET CMP0048 OLD)
+endif()
+
 project(CCMBridge C CXX)
 
 # Allow access to custom FindLIBSSH2 module
@@ -11,26 +15,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mo
 set(INCLUDES "")
 set(LIBRARIES "")
 
-# Find boost log library 
-# -------------------------------------------------------------
-set(Boost_USE_STATIC_LIBS OFF)
-set(Boost_USE_STATIC_RUNTIME OFF)
-set(Boost_USE_MULTITHREADED ON)
-
-# needed by boost to link dynamically
-add_definitions(-DBOOST_ALL_DYN_LINK)
-
-find_package(Boost 1.55.0 COMPONENTS system date_time REQUIRED)
 set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
 set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
 
-# boost log depends on boost thread
-find_package(Boost COMPONENTS log_setup log thread)
-if(NOT Boost_FOUND)
-    add_definitions(-DCQL_NO_BOOST_LOG)
+if(Boost_LOG_FOUND)
+  set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
+  set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
 else()
-    set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
-    set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
+  add_definitions(-DCQL_NO_BOOST_LOG)
 endif()
 
 # -------------------------------------------------------------

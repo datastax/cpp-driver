@@ -3,15 +3,6 @@ cmake_minimum_required(VERSION 2.6.4)
 # Clear INCLUDE_DIRECTORIES to not include project-level includes
 set_property(DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
 
-find_package(Boost 1.55.0 COMPONENTS system chrono thread unit_test_framework date_time program_options REQUIRED)
-
-set(Boost_USE_STATIC_LIBS OFF)
-set(Boost_USE_STATIC_RUNTIME OFF)
-set(Boost_USE_MULTITHREADED ON)
-
-add_definitions(-DBOOST_ALL_DYN_LINK)
-add_definitions(-DCASS_STATIC)
-
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:LIBCMT")
   set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /NODEFAULTLIB:LIBCMT")

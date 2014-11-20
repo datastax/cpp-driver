@@ -19,6 +19,8 @@
 #ifndef __CASS_COPY_ON_WRITE_PTR_HPP_INCLUDED__
 #define __CASS_COPY_ON_WRITE_PTR_HPP_INCLUDED__
 
+#include <stdio.h>
+
 namespace cass {
 
 template <class T>

@@ -19,34 +19,38 @@
 
 #include "address.hpp"
 #include "async_queue.hpp"
-#include "constants.hpp"
 #include "event_thread.hpp"
-#include "list.hpp"
-#include "pool.hpp"
-#include "ref_counted.hpp"
+#include "logger.hpp"
 #include "spsc_queue.hpp"
+#include "timer.hpp"
 
-#include "third_party/boost/boost/atomic.hpp"
+#include <boost/atomic.hpp>
 
 #include <map>
-#include <list>
 #include <string>
 #include <uv.h>
 
 namespace cass {
 
-class Session;
 class Config;
-class SSLContext;
+class Pool;
 class RequestHandler;
-class Logger;
+class Session;
+class SSLContext;
 class Timer;
 
 struct IOWorkerEvent {
-  enum Type { ADD_POOL, REMOVE_POOL, SCHEDULE_RECONNECT };
+  enum Type {
+    INVALID,
+    ADD_POOL,
+    REMOVE_POOL
+  };
+
+  IOWorkerEvent()
+    : type(INVALID) {}
+
   Type type;
   Address address;
-  uint64_t reconnect_wait;
   bool is_initial_connection;
 };
 
@@ -75,11 +79,13 @@ public:
   bool is_current_keyspace(const std::string& keyspace);
   void broadcast_keyspace_change(const std::string& keyspace);
 
+  void set_host_is_available(const Address& address, bool is_available);
+  bool is_host_available(const Address& address);
+
   bool is_host_up(const Address& address) const;
 
   bool add_pool_async(const Address& address, bool is_initial_connection);
   bool remove_pool_async(const Address& address);
-  bool schedule_reconnect_async(const Address& address, uint64_t wait);
   void close_async();
 
   bool execute(RequestHandler* request_handler);
@@ -89,6 +95,8 @@ public:
 
   void notify_pool_ready(Pool* pool);
   void notify_pool_closed(Pool* pool);
+
+  void add_pending_flush(Pool* pool);
 
 private:
   void add_pool(const Address& address, bool is_initial_connection);
@@ -100,15 +108,14 @@ private:
 
   virtual void on_event(const IOWorkerEvent& event);
 
-  static void on_execute(uv_async_t* data, int status);
+  static void on_execute(uv_async_t* async, int status);
+  static void on_prepare(uv_prepare_t *prepare, int status);
 
 private:
   typedef std::map<Address, SharedRefPtr<Pool> > PoolMap;
+  typedef std::vector<SharedRefPtr<Pool> > PoolVec;
 
-  struct PendingReconnect : public RefCounted<PendingReconnect> {
-    PendingReconnect(Address address)
-        : address(address)
-        , timer(NULL) {}
+  struct PendingReconnect {
 
     void stop_timer();
 
@@ -116,17 +123,26 @@ private:
     Timer* timer;
   };
 
-  typedef std::map<Address, SharedRefPtr<PendingReconnect> > PendingReconnectMap;
+  typedef std::map<Address, PendingReconnect> PendingReconnectMap;
+
+  void schedule_reconnect(const Address& address);
+  void cancel_reconnect(const Address& address);
 
 private:
   Session* session_;
   Logger* logger_;
   const Config& config_;
   boost::atomic<int> protocol_version_;
+  uv_prepare_t prepare_;
+
   std::string keyspace_;
   uv_mutex_t keyspace_mutex_;
 
+  AddressSet unavailable_addresses_;
+  uv_mutex_t unavailable_addresses_mutex_;
+
   PoolMap pools_;
+  PoolVec pools_pending_flush_;
   bool is_closing_;
   int pending_request_count_;
   PendingReconnectMap pending_reconnects_;

@@ -18,9 +18,10 @@
 #define __CASS_HOST_HPP_INCLUDED__
 
 #include "address.hpp"
+#include "copy_on_write_ptr.hpp"
 #include "ref_counted.hpp"
 
-#include "third_party/boost/boost/atomic.hpp"
+#include <boost/atomic.hpp>
 
 #include <map>
 #include <set>
@@ -72,6 +73,7 @@ public:
 
   bool is_up() const { return state() == UP; }
   void set_up() { set_state(UP); }
+  bool is_down() const { return state() == DOWN; }
   void set_down() { set_state(DOWN); }
 
   std::string to_string() const {
@@ -102,6 +104,7 @@ private:
 
 typedef std::map<Address, SharedRefPtr<Host> > HostMap;
 typedef std::vector<SharedRefPtr<Host> > HostVec;
+typedef CopyOnWritePtr<HostVec> CopyOnWriteHostVec;
 
 } // namespace cass
 

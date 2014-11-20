@@ -18,19 +18,38 @@
 
 #include "config.hpp"
 #include "connection.hpp"
+#include "constants.hpp"
 #include "logger.hpp"
 #include "request.hpp"
 #include "result_response.hpp"
+#include "serialization.hpp"
 
 namespace cass {
 
-bool Handler::encode(int version, int flags) {
-  return request()->encode(version, flags, stream_, &writer_.bufs());
-}
+int32_t Handler::encode(int version, int flags, BufferVec* bufs) const {
+  if (version != 1 && version != 2) {
+    return Request::ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
+  }
 
-void Handler::write(uv_stream_t* stream, void* data,
-                    RequestWriter::Callback cb) {
-  writer_.write(stream, data, cb);
+  size_t index = bufs->size();
+  bufs->push_back(Buffer()); // Placeholder
+
+  const Request* req = request();
+  int32_t length = req->encode(version, bufs);
+  if (length < 0) {
+    return length;
+  }
+
+  Buffer buf(CASS_HEADER_SIZE_V1_AND_V2);
+  size_t pos = 0;
+  pos = buf.encode_byte(pos, version);
+  pos = buf.encode_byte(pos, flags);
+  pos = buf.encode_byte(pos, stream_);
+  pos = buf.encode_byte(pos, req->opcode());
+  buf.encode_int32(pos, length);
+  (*bufs)[index] = buf;
+
+  return length + CASS_HEADER_SIZE_V1_AND_V2;
 }
 
 void Handler::set_state(Handler::State next_state) {
@@ -73,7 +92,13 @@ void Handler::set_state(Handler::State next_state) {
 
     case REQUEST_STATE_TIMEOUT:
       assert(next_state == REQUEST_STATE_DONE &&
-             "Invalid request state after read timeout");
+             "Invalid request state after timeout");
+      state_ = next_state;
+      break;
+
+    case REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING:
+      assert((next_state == REQUEST_STATE_TIMEOUT || next_state == REQUEST_STATE_DONE) &&
+             "Invalid request state after timeout (write outstanding)");
       state_ = next_state;
       break;
 

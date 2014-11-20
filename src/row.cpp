@@ -16,7 +16,7 @@
 
 #include "row.hpp"
 
-#include "metadata.hpp"
+#include "result_metadata.hpp"
 #include "result_response.hpp"
 #include "types.hpp"
 
@@ -68,11 +68,21 @@ char* decode_row(char* rows, const ResultResponse* result, ValueVec& output) {
 }
 
 const Value* Row::get_by_name(const boost::string_ref& name) const {
-  cass::Metadata::IndexVec indices;
+  cass::ResultMetadata::IndexVec indices;
   if (result_->find_column_indices(name, &indices) == 0) {
     return NULL;
   }
   return &values[indices[0]];
+}
+
+bool Row::get_string_by_name(const boost::string_ref& name, std::string* out) const {
+  const Value* value = get_by_name(name);
+  if (value == NULL ||
+      value->buffer().size() <= 0) {
+    return false;
+  }
+  out->assign(value->buffer().data(), value->buffer().size());
+  return true;
 }
 
 }

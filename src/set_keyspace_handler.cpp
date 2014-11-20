@@ -28,10 +28,10 @@ namespace cass {
 
 SetKeyspaceHandler::SetKeyspaceHandler(Connection* connection,
                                        const std::string& keyspace,
-                                       Handler* handler)
+                                       RequestHandler* request_handler)
     : connection_(connection)
     , request_(new QueryRequest())
-    , handler_(handler) {
+    , request_handler_(request_handler) {
   request_->set_query("use \"" + keyspace + "\"");
 }
 
@@ -42,7 +42,7 @@ void SetKeyspaceHandler::on_set(ResponseMessage* response) {
       break;
     case CQL_OPCODE_ERROR:
       connection_->defunct();
-      handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
+      request_handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
                          "Unable to set keyspsace");
       break;
     default:
@@ -52,23 +52,26 @@ void SetKeyspaceHandler::on_set(ResponseMessage* response) {
 
 void SetKeyspaceHandler::on_error(CassError code, const std::string& message) {
   connection_->defunct();
-  handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
+  request_handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
                      "Unable to set keyspsace");
 }
 
 void SetKeyspaceHandler::on_timeout() {
   // TODO(mpenick): What to do here?
-  handler_->on_timeout();
+  request_handler_->on_timeout();
 }
 
 void SetKeyspaceHandler::on_result_response(ResponseMessage* response) {
   ResultResponse* result =
       static_cast<ResultResponse*>(response->response_body().get());
   if (result->kind() == CASS_RESULT_KIND_SET_KEYSPACE) {
-    connection_->execute(handler_.get());
+    if (!connection_->write(request_handler_.get())) {
+      // Try on the same host but a different connection
+      request_handler_->retry(RETRY_WITH_CURRENT_HOST);
+    }
   } else {
     connection_->defunct();
-    handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
+    request_handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
                        "Unable to set keyspsace");
   }
 }

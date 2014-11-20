@@ -21,7 +21,6 @@
 #include "round_robin_policy.hpp"
 #include "types.hpp"
 
-
 #include <sstream>
 
 extern "C" {
@@ -39,6 +38,15 @@ CassError cass_cluster_set_port(CassCluster* cluster,
   return CASS_OK;
 }
 
+CassError cass_cluster_set_ssl(CassCluster* cluster,
+                               CassSsl* ssl) {
+  if (ssl == NULL) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_ssl_context(ssl->from());
+  return CASS_OK;
+}
+
 CassError cass_cluster_set_protocol_version(CassCluster* cluster,
                                             int protocol_version) {
   if (protocol_version != 1 && protocol_version != 2) {
@@ -50,9 +58,7 @@ CassError cass_cluster_set_protocol_version(CassCluster* cluster,
 
 CassError cass_cluster_set_num_threads_io(CassCluster* cluster,
                                           unsigned num_threads) {
-  if (num_threads == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
+  // 0 is okay, it means use a thread per core
   cluster->config().set_thread_count_io(num_threads);
   return CASS_OK;
 }
@@ -63,6 +69,24 @@ CassError cass_cluster_set_queue_size_io(CassCluster* cluster,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_queue_size_io(queue_size);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_queue_size_event(CassCluster* cluster,
+                                            unsigned queue_size) {
+  if (queue_size == 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_queue_size_event(queue_size);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_queue_size_log(CassCluster* cluster,
+                                          unsigned queue_size) {
+  if (queue_size == 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_queue_size_log(queue_size);
   return CASS_OK;
 }
 
@@ -103,42 +127,91 @@ CassError cass_cluster_set_max_connections_per_host(CassCluster* cluster,
   return CASS_OK;
 }
 
-CassError cass_cluster_set_max_simultaneous_creation(CassCluster* cluster,
+CassError cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
+                                               unsigned wait_time_ms) {
+  if (wait_time_ms == 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_reconnect_wait_time(wait_time_ms);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
                                                      unsigned num_connections) {
   if (num_connections == 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  cluster->config().set_max_simultaneous_creation(num_connections);
+  cluster->config().set_max_concurrent_creation(num_connections);
   return CASS_OK;
 }
 
-CassError cass_cluster_set_max_pending_requests(CassCluster* cluster,
-                                               unsigned num_requests) {
-  if (num_requests == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_max_pending_requests(num_requests);
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_max_simultaneous_requests_threshold(CassCluster* cluster,
+CassError cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
                                                                unsigned num_requests) {
   if (num_requests == 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  cluster->config().set_max_simultaneous_requests_threshold(num_requests);
+  cluster->config().set_max_concurrent_requests_threshold(num_requests);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
+                                                      unsigned num_requests) {
+  if (num_requests == 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_max_requests_per_flush(num_requests);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
+                                                        unsigned num_bytes) {
+  if (num_bytes == 0 ||
+      num_bytes < cluster->config().write_bytes_low_water_mark()) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_write_bytes_high_water_mark(num_bytes);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
+                                                       unsigned num_bytes) {
+  if (num_bytes == 0 ||
+      num_bytes > cluster->config().write_bytes_high_water_mark()) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_write_bytes_low_water_mark(num_bytes);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
+                                                            unsigned num_requests) {
+  if (num_requests == 0 ||
+      num_requests < cluster->config().pending_requests_low_water_mark()) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_pending_requests_high_water_mark(num_requests);
+  return CASS_OK;
+}
+
+CassError cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
+                                                           unsigned num_requests) {
+  if (num_requests == 0 ||
+      num_requests > cluster->config().pending_requests_high_water_mark()) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_pending_requests_low_water_mark(num_requests);
   return CASS_OK;
 }
 
 CassError cass_cluster_set_connect_timeout(CassCluster* cluster,
-                                              unsigned timeout) {
-  cluster->config().set_connect_timeout(timeout);
+                                              unsigned timeout_ms) {
+  cluster->config().set_connect_timeout(timeout_ms);
   return CASS_OK;
 }
 
 CassError cass_cluster_set_request_timeout(CassCluster* cluster,
-                                        unsigned timeout) {
-  cluster->config().set_request_timeout(timeout);
+                                        unsigned timeout_ms) {
+  cluster->config().set_request_timeout(timeout_ms);
   return CASS_OK;
 }
 
@@ -171,6 +244,11 @@ CassError cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
                                                  const char* local_dc) {
   cluster->config().set_load_balancing_policy(new cass::DCAwarePolicy(local_dc));
   return CASS_OK;
+}
+
+void cass_cluster_set_token_aware_routing(CassCluster* cluster,
+                                          cass_bool_t enabled) {
+  cluster->config().set_token_aware_routing(enabled == cass_true);
 }
 
 CassFuture* cass_cluster_connect(CassCluster* cluster) {

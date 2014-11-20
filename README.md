@@ -1,7 +1,7 @@
 DataStax C/C++ Driver for Apache Cassandra (Beta)
 ===============================================
 
-[![Build Status](https://travis-ci.org/datastax/cpp-driver.svg?branch=travis-ci)](https://travis-ci.org/datastax/cpp-driver)
+[![Build Status](https://travis-ci.org/datastax/cpp-driver.svg?branch=beta5)](https://travis-ci.org/datastax/cpp-driver)
 
 A C/C++ client driver for Apache Cassandra. This driver works exclusively with
 the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol (version 1 and 2).
@@ -34,7 +34,7 @@ the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol (v
 - Improved documentation
 
 ## Building
-The driver is known to work on OS X 10.9, Windows 7, RHEL 5.10, and Ubuntu 14.04. The driver itself currently has two dependencies: [libuv 0.10](https://github.com/joyent/libuv) and [OpenSSL](http://www.openssl.org/). To build the driver you will need [CMake](http://www.cmake.org). To test the driver you will also need to install [boost 1.41+](http://www.boost.org),  [libssh2](http://www.libssh2.org) and [ccm](https://github.com/pcmanus/ccm).
+The driver is known to work on OS X 10.9, Windows 7, RHEL 5/6, and Ubuntu 12.04/14.04. The driver itself currently has two dependencies: [libuv 0.10](https://github.com/joyent/libuv) and [OpenSSL](http://www.openssl.org/). To build the driver you will need [CMake](http://www.cmake.org). To test the driver you will also need to install [boost 1.55+](http://www.boost.org),  [libssh2](http://www.libssh2.org) and [ccm](https://github.com/pcmanus/ccm).
 
 Note: The driver doesn't work with libuv 0.11
 
@@ -108,7 +108,7 @@ sudo apt-get install clang make cmake libuv-dev libssl-dev
 
 To obtain test dependencies (This is not required):
 ```
-sudo apt-get install libboost-chrono-dev libboost-date-time-dev libboost-log-dev libboost-program-options-dev libboost-system-dev libboost-thread-dev libboost-test-dev libssh2-1-dev
+sudo apt-get install libboost-chrono-dev libboost-date-time-dev libboost-log-dev libboost-system-dev libboost-thread-dev libboost-test-dev libssh2-1-dev
 ```
 
 To build:
@@ -118,6 +118,9 @@ cd cpp-driver
 cmake .
 make
 ```
+
+## Building Tests
+Tests are not built by default. To build the tests add "-DCASS_BUILD_TESTS=ON" when running cmake.
 
 ## Examples
 There are several examples provided here: [examples](https://github.com/datastax/cpp-driver/tree/1.0/examples).

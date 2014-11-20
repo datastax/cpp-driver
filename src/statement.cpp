@@ -17,13 +17,13 @@
 #include "statement.hpp"
 
 #include "execute_request.hpp"
-#include "metadata.hpp"
+#include "result_metadata.hpp"
 #include "prepared.hpp"
 #include "query_request.hpp"
 #include "scoped_ptr.hpp"
 #include "types.hpp"
 
-#include "third_party/boost/boost/cstdint.hpp"
+#include <boost/cstdint.hpp>
 
 namespace {
 
@@ -115,7 +115,7 @@ namespace {
   template<>
   struct IsValidValueType<const CassCollection*> {
     bool operator()(uint16_t type) const {
-      // TODO(mpenick): Check acutal type against collection
+      // TODO(mpenick): Check actual type against collection
       return type == CASS_VALUE_TYPE_LIST ||
           type == CASS_VALUE_TYPE_MAP ||
           type == CASS_VALUE_TYPE_SET;
@@ -134,21 +134,21 @@ namespace {
                          const char* name,
                          T value) {
     if (statement->opcode() != CQL_OPCODE_EXECUTE) {
-      return CASS_ERROR_INVALID_STATEMENT_TYPE;
+      return CASS_ERROR_LIB_INVALID_STATEMENT_TYPE;
     }
 
     const cass::ResultResponse* result
         = static_cast<cass::ExecuteRequest*>(statement)->prepared()->result().get();
 
-    cass::Metadata::IndexVec indices;
+    cass::ResultMetadata::IndexVec indices;
     result->find_column_indices(name, &indices);
     IsValidValueType<T> is_valid_type;
 
     if (indices.empty()) {
-      return CASS_ERROR_NAME_DOES_NOT_EXIST;
+      return CASS_ERROR_LIB_NAME_DOES_NOT_EXIST;
     }
 
-    for (cass::Metadata::IndexVec::const_iterator it = indices.begin(),
+    for (cass::ResultMetadata::IndexVec::const_iterator it = indices.begin(),
          end = indices.end(); it != end; ++it) {
       size_t index = *it;
       if (!is_valid_type(result->metadata()->get(index).type)) {
@@ -169,6 +169,19 @@ CassStatement* cass_statement_new(CassString query, size_t parameter_count) {
   query_request->inc_ref();
   query_request->set_query(query.data, query.length);
   return CassStatement::to(query_request);
+}
+
+CassError cass_statement_add_key_index(CassStatement* statement, cass_size_t index) {
+  if (statement->kind() != CASS_BATCH_KIND_QUERY) return CASS_ERROR_LIB_BAD_PARAMS;
+  if (index >= statement->values_count()) return CASS_ERROR_LIB_BAD_PARAMS;
+  statement->add_key_index(index);
+  return CASS_OK;
+}
+
+CassError cass_statement_set_keyspace(CassStatement* statement, const char* keyspace) {
+  if (statement->kind() != CASS_BATCH_KIND_QUERY) return CASS_ERROR_LIB_BAD_PARAMS;
+  statement->set_keyspace(keyspace);
+  return CASS_OK;
 }
 
 void cass_statement_free(CassStatement* statement) {
@@ -370,6 +383,54 @@ int32_t Statement::encode_values(int version, BufferVec* bufs) const {
     }
   }
   return values_size;
+}
+
+bool Statement::get_routing_key(std::string* routing_key)  const {
+  if (key_indices_.empty()) return false;
+
+  if (key_indices_.size() == 1) {
+      const Buffer& buffer = values_.front();
+      if (!buffer.is_buffer()) {
+        // Is either null or a collection
+        // TODO: Global logging
+        return false;
+      }
+      int32_t size;
+      decode_int32(const_cast<char*>(buffer.data()), size);
+      routing_key->assign(buffer.data() + sizeof(int32_t), size);
+  } else {
+    size_t length = 0;
+
+    for (std::vector<size_t>::const_iterator i = key_indices_.begin();
+         i != key_indices_.end(); ++i) {
+      const Buffer& buffer = values_[*i];
+      if (!buffer.is_buffer()) {
+        // Is either null or a collection
+        // TODO: Global logging
+        return false;
+      }
+      int32_t size;
+      decode_int32(const_cast<char*>(buffer.data()), size);
+      length += sizeof(uint16_t) + size + 1;
+    }
+
+    routing_key->clear();
+    routing_key->reserve(length);
+
+    for (std::vector<size_t>::const_iterator i = key_indices_.begin();
+         i != key_indices_.end(); ++i) {
+      const Buffer& buffer = values_[*i];
+      int32_t size;
+      char size_buf[sizeof(uint16_t)];
+      decode_int32(const_cast<char*>(buffer.data()), size);
+      encode_uint16(size_buf, size);
+      routing_key->append(size_buf, sizeof(uint16_t));
+      routing_key->append(buffer.data() + sizeof(int32_t), size);
+      routing_key->push_back(0);
+    }
+  }
+
+  return true;
 }
 
 } // namespace  cass

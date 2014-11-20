@@ -17,6 +17,7 @@
 #ifndef __CASS_SESSION_HPP_INCLUDED__
 #define __CASS_SESSION_HPP_INCLUDED__
 
+#include "cluster_metadata.hpp"
 #include "config.hpp"
 #include "control_connection.hpp"
 #include "event_thread.hpp"
@@ -27,6 +28,8 @@
 #include "logger.hpp"
 #include "mpmc_queue.hpp"
 #include "ref_counted.hpp"
+#include "row.hpp"
+#include "schema_metadata.hpp"
 #include "scoped_mutex.hpp"
 #include "scoped_ptr.hpp"
 #include "spsc_queue.hpp"
@@ -37,6 +40,10 @@
 #include <string>
 #include <uv.h>
 #include <vector>
+
+#ifdef TESTING_DIRECTIVE
+#include <stdexcept>
+#endif
 
 namespace cass {
 
@@ -49,11 +56,16 @@ class Request;
 
 struct SessionEvent {
   enum Type {
+    INVALID,
     CONNECT,
     NOTIFY_READY,
     NOTIFY_CLOSED,
     NOTIFY_UP,
-    NOTIFY_DOWN };
+    NOTIFY_DOWN
+  };
+
+  SessionEvent()
+    : type(INVALID) {}
 
   Type type;
   Address address;
@@ -89,7 +101,9 @@ public:
   void close_async(Future* future);
 
   Future* prepare(const char* statement, size_t length);
-  Future* execute(const Request* statement);
+  Future* execute(const RoutableRequest* statement);
+
+  const Schema* copy_schema() const { return cluster_meta_.copy_schema(); }
 
 private:
   void close_handles();
@@ -105,10 +119,16 @@ private:
   static void on_resolve(Resolver* resolver);
   static void on_execute(uv_async_t* data, int status);
 
+  QueryPlan* new_query_plan(const Request* request = NULL);
+
   void on_reconnect(Timer* timer);
 
 private:
   friend class ControlConnection;
+
+  ClusterMetadata& cluster_meta() {
+    return cluster_meta_;
+  }
 
   void on_control_connection_ready();
   void on_control_connection_error(CassError code, const std::string& message);
@@ -135,19 +155,23 @@ private:
   int pending_pool_count_;
   int pending_workers_count_;
   int current_io_worker_;
+  ClusterMetadata cluster_meta_;
 };
 
 class SessionCloseFuture : public Future {
 public:
   SessionCloseFuture(Session* session)
-      : Future(CASS_FUTURE_TYPE_SESSION_CLOSE),
-        session_(session) {}
+      : Future(CASS_FUTURE_TYPE_SESSION_CLOSE)
+      , session_(session) {
+    session_thread_guard();
+  }
 
   ~SessionCloseFuture() {
     wait();
   }
 
   void wait() {
+    session_thread_guard();
     ScopedMutex lock(&mutex_);
 
     internal_wait(lock);
@@ -160,6 +184,7 @@ public:
   }
 
   bool wait_for(uint64_t timeout) {
+    session_thread_guard();
     ScopedMutex lock(&mutex_);
     if (internal_wait_for(lock, timeout)) {
       if (session_ != NULL) {
@@ -173,7 +198,20 @@ public:
   }
 
 private:
-    Session* session_;
+  void session_thread_guard() {
+    if (session_ != NULL && uv_thread_self() == session_->thread_id()) {
+      const char* message = "Attempted to close session with session thread (possibly from close callback). Aborting.";
+#ifndef TESTING_DIRECTIVE
+      fprintf(stderr, "%s\n", message);
+      abort();
+#else
+      throw std::runtime_error(message);
+#endif
+    }
+  }
+
+private:
+  Session* session_;
 };
 
 class SessionConnectFuture : public ResultFuture<Session> {

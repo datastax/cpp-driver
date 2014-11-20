@@ -19,11 +19,11 @@
 
 #include "constants.hpp"
 #include "macros.hpp"
-#include "metadata.hpp"
+#include "result_metadata.hpp"
 #include "response.hpp"
 #include "row.hpp"
 
-#include "third_party/boost/boost/utility/string_ref.hpp"
+#include <boost/utility/string_ref.hpp>
 
 #include <map>
 #include <string>
@@ -62,13 +62,13 @@ public:
 
   bool no_metadata() const { return !metadata_; }
 
-  const ScopedRefPtr<Metadata>& metadata() const { return metadata_; }
+  const ScopedRefPtr<ResultMetadata>& metadata() const { return metadata_; }
 
-  void set_metadata(Metadata* metadata) {
+  void set_metadata(ResultMetadata* metadata) {
     metadata_.reset(metadata);
   }
 
-  const ScopedRefPtr<Metadata>& result_metadata() const { return result_metadata_; }
+  const ScopedRefPtr<ResultMetadata>& result_metadata() const { return result_metadata_; }
 
   std::string paging_state() const {
     return std::string(paging_state_, paging_state_size_);
@@ -82,6 +82,10 @@ public:
     return std::string(keyspace_, keyspace_size_);
   }
 
+  std::string table() const {
+    return std::string(table_, table_size_);
+  }
+
   char* rows() const { return rows_; }
 
   int32_t row_count() const { return row_count_; }
@@ -89,14 +93,14 @@ public:
   const Row& first_row() const { return first_row_; }
 
   size_t find_column_indices(boost::string_ref name,
-                             Metadata::IndexVec* result) const;
+                             ResultMetadata::IndexVec* result) const;
 
   bool decode(int version, char* input, size_t size);
 
   void decode_first_row();
 
 private:
-  char* decode_metadata(char* input, ScopedRefPtr<Metadata>* metadata);
+  char* decode_metadata(char* input, ScopedRefPtr<ResultMetadata>* metadata);
 
   bool decode_rows(char* input);
 
@@ -109,8 +113,8 @@ private:
 private:
   int32_t kind_;
   bool has_more_pages_; // row data
-  ScopedRefPtr<Metadata> metadata_;
-  ScopedRefPtr<Metadata> result_metadata_;
+  ScopedRefPtr<ResultMetadata> metadata_;
+  ScopedRefPtr<ResultMetadata> result_metadata_;
   char* paging_state_; // row paging
   size_t paging_state_size_;
   char* prepared_; // prepared result

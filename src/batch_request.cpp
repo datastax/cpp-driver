@@ -142,4 +142,14 @@ bool BatchRequest::prepared_statement(const std::string& id,
   return false;
 }
 
+bool BatchRequest::get_routing_key(std::string* routing_key) const {
+  for (BatchRequest::StatementList::const_iterator i = statements_.begin();
+       i != statements_.end(); ++i) {
+    if ((*i)->get_routing_key(routing_key)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace cass

@@ -46,6 +46,8 @@ namespace cql {
 		void stop(int node);
 		void kill();
 		void kill(int node);
+		void binary(int node, bool enable);
+		void gossip(int node, bool enable);
 
 		void remove();
 		void ring(int node);
@@ -59,20 +61,21 @@ namespace cql {
 
 		void decommission(int node);
 
-		static boost::shared_ptr<cql_ccm_bridge_t> create(
-			const cql_ccm_bridge_configuration_t& settings,
-			const std::string& name);
-
+		//TODO: Allow CCM create to keep instances if settings are the same
 		static boost::shared_ptr<cql_ccm_bridge_t> create(
 			const cql_ccm_bridge_configuration_t& settings,
 			const std::string& name,
-			unsigned nodes_count);
+			bool is_ssl = false,
+			bool is_client_authentication = false);
 
-		static boost::shared_ptr<cql_ccm_bridge_t> create(
+    static boost::shared_ptr<cql_ccm_bridge_t> create_and_start(
 			const cql_ccm_bridge_configuration_t& settings,
 			const std::string& name,
-			unsigned nodes_count_dc1,
-			unsigned nodes_count_dc2);
+      unsigned nodes_count_dc1,
+      unsigned nodes_count_dc2 = 0,
+			bool is_ssl = false,
+			bool is_client_authentication = false);
+
 	private:
 		/* CCM functionality */
 		static const std::string CCM_COMMAND;
