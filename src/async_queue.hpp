@@ -19,6 +19,8 @@
 
 #include "common.hpp"
 
+#include <boost/atomic.hpp>
+
 #include <uv.h>
 
 namespace cass {
@@ -46,6 +48,21 @@ public:
 
   bool enqueue(const typename Q::EntryType& data) {
     if (queue_.enqueue(data)) {
+      // There's something in uv_async_send() that can be reordered
+      // before the item is written into the queue (the uv_async_t
+      // "pending" flag?). This fence prevents this write from
+      // being reordered before the  item is enqueued. Without this
+      // the dequeuing thread sometimes does't see the item  in the
+      // queue when responding to an async event (causing a request
+      // to hang).
+      //
+      // On x86: "Loads may be reordered with older stores to different locations"
+      //
+      // This is mostly necessary for SPSCQueue<> as it doesn't emit a
+      // fence (on x86). MPMCQueue<> uses a atomic compare exchange
+      // which emits a full fence (via a "lock" instruction on x86)
+      // making this not necessary on x86, but possible on other platforms.
+      boost::atomic_thread_fence(boost::memory_order_seq_cst);
       uv_async_send(&async_);
       return true;
     }
