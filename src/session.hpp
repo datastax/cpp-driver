@@ -32,7 +32,6 @@
 #include "schema_metadata.hpp"
 #include "scoped_mutex.hpp"
 #include "scoped_ptr.hpp"
-#include "spsc_queue.hpp"
 
 #include <list>
 #include <memory>
