@@ -91,7 +91,7 @@ void count_message_log_callback(cass_uint64_t time,
 const char* get_column_type(CassColumnType type) {
   //Determine which column type to return text value
   switch(type) {
-    case CASS_COLUMN_TYPE_PARITION_KEY:
+    case CASS_COLUMN_TYPE_PARTITION_KEY:
       return "Partition Key";
     case CASS_COLUMN_TYPE_CLUSTERING_KEY:
       return "Clustering Key";
