@@ -27,6 +27,8 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/atomic.hpp>
 
+#include <stdio.h>
+
 const int NUM_ITERATIONS = 1000000;
 const int NUM_ENQUEUE_THREADS = 2;
 
