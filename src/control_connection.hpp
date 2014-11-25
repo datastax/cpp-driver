@@ -31,7 +31,6 @@
 namespace cass {
 
 class EventResponse;
-class Logger;
 class Request;
 class Row;
 class Session;
@@ -40,8 +39,7 @@ class Value;
 
 class ControlConnection {
 public:
-  static bool determine_address_for_peer_host(Logger* logger,
-                                              const Address& connected_address,
+  static bool determine_address_for_peer_host(const Address& connected_address,
                                               const Value* peer_value,
                                               const Value* rpc_value,
                                               Address* output);
@@ -191,7 +189,6 @@ private:
   Address current_host_address_;
   int protocol_version_;
   Timer* reconnect_timer_;
-  Logger* logger_;
   std::string last_connection_error_;
   bool query_tokens_;
 

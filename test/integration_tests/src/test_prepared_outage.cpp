@@ -35,7 +35,6 @@
 
 struct PreparedOutageTests : public test_utils::SingleSessionTest {
   PreparedOutageTests() : SingleSessionTest(3, 0) {
-    cass_cluster_set_log_level(cluster, CASS_LOG_DEBUG);
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                            % test_utils::SIMPLE_KEYSPACE % "2"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));

@@ -20,6 +20,7 @@
 #include "buffer_collection.hpp"
 #include "collection_iterator.hpp"
 #include "iterator.hpp"
+#include "logger.hpp"
 #include "map_iterator.hpp"
 #include "result_iterator.hpp"
 #include "row.hpp"
@@ -120,7 +121,7 @@ Schema::KeyspacePointerMap Schema::update_keyspaces(ResultResponse* result) {
     const Row* row = rows.row();
 
     if (!row->get_string_by_name("keyspace_name", &keyspace_name)) {
-      // TODO: Add global logging
+      Logger::error("Schema: Unable to column value for 'keyspace_name'");
       continue;
     }
 
@@ -147,7 +148,7 @@ void Schema::update_tables(ResultResponse* table_result, ResultResponse* col_res
 
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
         !row->get_string_by_name("columnfamily_name", &columnfamily_name)) {
-      // TODO: Add global logging
+      Logger::error("Schema: Unable to column value for 'keyspace_name' or 'columnfamily_name'");
       continue;
     }
 
@@ -180,7 +181,7 @@ void Schema::update_columns(ResultResponse* result) {
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
         !row->get_string_by_name("columnfamily_name", &temp_columnfamily_name) ||
         !row->get_string_by_name("column_name", &column_name)) {
-      // TODO: Add global logging
+      Logger::error("Schema: Unable to column value for 'keyspace_name', 'columnfamily_name' or 'column_name'");
       continue;
     }
 
@@ -250,11 +251,12 @@ void SchemaMetadata::add_json_list_field(int version, const Row* row, const std:
   d.ParseInsitu(buf.get());
 
   if (d.HasParseError()) {
-    //TODO: log to global logging
+    Logger::error("SchemaMetadata: Unable to parse json (array) for column '%s'", name.c_str());
     return;
   }
 
   if (!d.IsArray()) {
+    Logger::error("SchemaMetadata: Expected json array for column '%s'", name.c_str());
     fields_[name] = SchemaMetadataField(name);
     return;
   }
@@ -295,11 +297,12 @@ void SchemaMetadata::add_json_map_field(int version, const Row* row, const std::
   d.ParseInsitu(buf.get());
 
   if (d.HasParseError()) {
-    //TODO: log to global logging
+    Logger::error("SchemaMetadata: Unable to parse json (object) for column '%s'", name.c_str());
     return;
   }
 
   if (!d.IsObject()) {
+    Logger::error("SchemaMetadata: Expected json object for column '%s'", name.c_str());
     fields_[name] = SchemaMetadataField(name);
     return;
   }

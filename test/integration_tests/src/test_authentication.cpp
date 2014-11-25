@@ -62,9 +62,8 @@ struct AthenticationTests {
   void invalid_credentials(int protocol_version, const char* username, 
                            const char* password, const char* expected_error,
                            CassError expected_code) {
-    boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData(expected_error));
+    test_utils::CassLog::reset(expected_error);
 
-    cass_cluster_set_log_callback(cluster.get(), test_utils::count_message_log_callback, log_data.get());
     cass_cluster_set_protocol_version(cluster.get(), protocol_version);
     cass_cluster_set_credentials(cluster.get(), username, password);
     {
@@ -72,7 +71,7 @@ struct AthenticationTests {
       CassError code = test_utils::wait_and_return_error(session_future.get());
       BOOST_CHECK_EQUAL(expected_code, code);
     }
-    BOOST_CHECK(log_data->message_count > 0);
+    BOOST_CHECK(test_utils::CassLog::message_count() > 0);
   }
 
   test_utils::CassClusterPtr cluster;

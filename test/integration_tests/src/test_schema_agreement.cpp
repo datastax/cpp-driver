@@ -32,11 +32,8 @@
 
 struct ClusterInit {
   ClusterInit()
-    : inst(3, 0),
-      log_counter("", true),
-      session(NULL) {
-    cass_cluster_set_log_level(inst.cluster, CASS_LOG_DEBUG);
-    cass_cluster_set_log_callback(inst.cluster, test_utils::count_message_log_callback, &log_counter);
+    : inst(3, 0)
+    , session(NULL) {
     new_session();
   }
 
@@ -60,7 +57,6 @@ struct ClusterInit {
   }
 
   test_utils::MultipleNodesTest inst;
-  test_utils::LogData log_counter;
   CassSession* session;
 };
 
@@ -69,7 +65,7 @@ BOOST_FIXTURE_TEST_SUITE(schema_agreement, ClusterInit)
 // only doing a keyspace for now since there is no difference for types or tables
 BOOST_AUTO_TEST_CASE(keyspace_add_drop)
 {
-  log_counter.reset("Found schema agreement in");
+  test_utils::CassLog::reset("Found schema agreement in");
 
   // "USE" in fast succession would normally fail on the next node if the previous query did not wait
   const std::string use_simple = str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE);
@@ -85,11 +81,11 @@ BOOST_AUTO_TEST_CASE(keyspace_add_drop)
   // close session to flush logger
   close_session();
 
-  BOOST_CHECK_EQUAL(log_counter.message_count, 2ul);
+  BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 2ul);
 }
 
 BOOST_AUTO_TEST_CASE(agreement_node_down) {
-  log_counter.reset("ControlConnection: Node " + inst.conf.ip_prefix() + "3 is down");
+  test_utils::CassLog::reset("ControlConnection: Node " + inst.conf.ip_prefix() + "3 is down");
 
   inst.ccm->stop(3);
 
@@ -97,11 +93,11 @@ BOOST_AUTO_TEST_CASE(agreement_node_down) {
   size_t max_tries = 15;
   for (; t < max_tries; ++t) {
     boost::this_thread::sleep_for(boost::chrono::seconds(1));
-    if (log_counter.message_count > 0) break;
+    if (test_utils::CassLog::message_count() > 0) break;
   }
   BOOST_REQUIRE_MESSAGE(t < max_tries, "Timed out waiting for node down log message");
 
-  log_counter.reset("Found schema agreement in");
+  test_utils::CassLog::reset("Found schema agreement in");
   const std::string use_simple = str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE);
   test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                          % test_utils::SIMPLE_KEYSPACE % 2));
@@ -115,7 +111,7 @@ BOOST_AUTO_TEST_CASE(agreement_node_down) {
   // close session to flush logger
   close_session();
 
-  BOOST_CHECK_EQUAL(log_counter.message_count, 2ul);
+  BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 2ul);
 
   inst.ccm->start(3);
 }
@@ -129,7 +125,7 @@ BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
   test_utils::CassPreparedPtr prep = cass_future_get_prepared(prepared_future.get());
   test_utils::CassStatementPtr schema_stmt(cass_prepared_bind(prep.get()));
 
-  log_counter.reset("SchemaChangeHandler: No schema aggreement on live nodes after ");
+  test_utils::CassLog::reset("SchemaChangeHandler: No schema agreement on live nodes after ");
   test_utils::CassStatementPtr create_stmt =
       cass_statement_new(
         cass_string_init(str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
@@ -146,12 +142,13 @@ BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
     test_utils::CassFuturePtr future(cass_session_execute(session, schema_stmt.get()));
     cass_future_wait(future.get());
     BOOST_REQUIRE_EQUAL(cass_future_error_code(future.get()), CASS_OK);
-  } while(boost::chrono::steady_clock::now() < end && log_counter.message_count == 0);
+  } while(boost::chrono::steady_clock::now() < end && test_utils::CassLog::message_count() == 0);
 
   cass_future_wait(create_future.get());
   BOOST_CHECK_EQUAL(cass_future_error_code(create_future.get()), CASS_OK);
   close_session();
-  BOOST_CHECK_EQUAL(log_counter.message_count, 1ul);
+
+  BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 1ul);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

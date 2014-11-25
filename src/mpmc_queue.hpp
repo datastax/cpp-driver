@@ -129,6 +129,13 @@ public:
     return false;
   }
 
+  bool is_empty() const {
+    size_t tail_seq = tail_seq_.load(boost::memory_order_acquire);
+    Node* node = &buffer_[tail_seq & mask_];
+    size_t node_seq = node->seq.load(boost::memory_order_acquire);
+    return (intptr_t)node_seq - (intptr_t)(tail_seq + 1) < 0;
+  }
+
 private:
   struct Node {
     T data;

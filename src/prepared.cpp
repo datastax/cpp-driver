@@ -17,6 +17,7 @@
 #include "prepared.hpp"
 
 #include "execute_request.hpp"
+#include "logger.hpp"
 #include "types.hpp"
 
 extern "C" {
@@ -49,7 +50,7 @@ Prepared::Prepared(const ResultResponse* result,
       if (result->find_column_indices(boost::string_ref(*i), &indices) == 1) {
         key_indices_.push_back(indices[0]);
       } else {
-        //TODO: global logging
+        Logger::warn("Prepared: Unable to find column '%s'", i->c_str());
         key_indices_.clear();
         break;
       }

@@ -61,7 +61,7 @@ struct OutageTests : public test_utils::MultipleNodesTest {
     : test_utils::MultipleNodesTest(NUM_NODES, 0)
     , is_done(false)
     , timer(io_service) {
-    cass_cluster_set_log_level(cluster, CASS_LOG_DEBUG);
+    test_utils::CassLog::set_output_log_level(CASS_LOG_DEBUG);
     printf("Warning! This test is going to take %d minutes\n", TEST_DURATION_SECS / 60);
     std::fill(nodes_states, nodes_states + NUM_NODES, UP);
     // TODO(mpenick): This is a stopgap. To be fixed in CPP-140
