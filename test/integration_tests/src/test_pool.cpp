@@ -99,12 +99,10 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
 
 BOOST_AUTO_TEST_CASE(connection_spawn)
 {
-  std::string SPAWN_MSG = "Pool: Spawning new conneciton to host " + conf.ip_prefix() + "1:9042";
-  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData(SPAWN_MSG));
+  const std::string SPAWN_MSG = "Pool: Spawning new conneciton to host " + conf.ip_prefix() + "1:9042";
+  test_utils::CassLog::reset(SPAWN_MSG);
 
   test_utils::MultipleNodesTest inst(1, 0);
-  cass_cluster_set_log_level(cluster, CASS_LOG_INFO);
-  cass_cluster_set_log_callback(cluster, test_utils::count_message_log_callback, log_data.get());
   cass_cluster_set_num_threads_io(cluster, 1);
   cass_cluster_set_core_connections_per_host(cluster, 1);
   cass_cluster_set_max_connections_per_host(cluster, 2);
@@ -116,10 +114,10 @@ BOOST_AUTO_TEST_CASE(connection_spawn)
     test_utils::wait_and_check_error(connect_future.get());
     test_utils::CassSessionPtr session = cass_future_get_session(connect_future.get());
   }
-  BOOST_CHECK_EQUAL(log_data->message_count, 1u);
+  BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 1u);
 
 
-  log_data->reset(SPAWN_MSG);
+  test_utils::CassLog::reset(SPAWN_MSG);
   // exactly two with traffic
   {
     test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
@@ -134,6 +132,6 @@ BOOST_AUTO_TEST_CASE(connection_spawn)
       futures.push_back(cass_session_execute(session.get(), statement.get()));
     }
   }
-  BOOST_CHECK_EQUAL(log_data->message_count, 2u);
+  BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 2u);
 }
 BOOST_AUTO_TEST_SUITE_END()

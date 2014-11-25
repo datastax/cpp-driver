@@ -25,7 +25,6 @@
 #include "host.hpp"
 #include "io_worker.hpp"
 #include "load_balancing.hpp"
-#include "logger.hpp"
 #include "mpmc_queue.hpp"
 #include "ref_counted.hpp"
 #include "row.hpp"
@@ -46,7 +45,6 @@
 
 namespace cass {
 
-class Logger;
 class RequestHandler;
 class Future;
 class IOWorker;
@@ -77,7 +75,6 @@ public:
 
   int init();
 
-  Logger* logger() const { return logger_.get(); }
   const Config& config() const { return config_; }
 
   void set_load_balancing_policy(LoadBalancingPolicy* policy) {
@@ -141,7 +138,6 @@ private:
   typedef std::vector<SharedRefPtr<IOWorker> > IOWorkerVec;
 
   Config config_;
-  ScopedPtr<Logger> logger_;
   ControlConnection control_connection_;
   IOWorkerVec io_workers_;
   ScopedRefPtr<Future> connect_future_;

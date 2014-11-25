@@ -36,6 +36,8 @@ CASS_EXPORT CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* sess
 
 CASS_EXPORT int64_t create_murmur3_hash_from_string(const std::string &value);
 
+CASS_EXPORT bool is_logger_queue_empty();
+
 } // namespace cass
 
 #endif

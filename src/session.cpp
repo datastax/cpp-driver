@@ -17,6 +17,7 @@
 #include "session.hpp"
 
 #include "config.hpp"
+#include "logger.hpp"
 #include "prepare_request.hpp"
 #include "request_handler.hpp"
 #include "resolver.hpp"
@@ -59,7 +60,6 @@ namespace cass {
 
 Session::Session(const Config& config)
     : config_(config)
-    , logger_(new Logger(config))
     , close_future_(NULL)
     , current_host_mark_(true)
     , load_balancing_policy_(config.load_balancing_policy())
@@ -69,9 +69,7 @@ Session::Session(const Config& config)
     , current_io_worker_(0) {}
 
 int Session::init() {
-  int rc = logger_->init();
-  if (rc != 0) return rc;
-  rc = cluster_meta_.init();
+  int rc = cluster_meta_.init();
   if (rc != 0) return rc;
   rc = EventThread<SessionEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
@@ -124,7 +122,7 @@ SharedRefPtr<Host> Session::get_host(const Address& address, bool should_mark) {
 }
 
 SharedRefPtr<Host> Session::add_host(const Address& address, bool should_mark) {
-  logger_->debug("Session: Adding new host: %s", address.to_string().c_str());
+  Logger::debug("Session: Adding new host: %s", address.to_string().c_str());
 
   bool mark = should_mark ? current_host_mark_ : !current_host_mark_;
   SharedRefPtr<Host> host(new Host(address, mark));
@@ -140,11 +138,11 @@ void Session::purge_hosts(bool is_initial_connection) {
 
       std::string address_str = to_remove_it->first.to_string();
       if (is_initial_connection) {
-        logger_->warn("Session: Unable to reach contact point %s",
+        Logger::warn("Session: Unable to reach contact point %s",
                       address_str.c_str());
         hosts_.erase(to_remove_it);
       } else {
-        logger_->info("Session: Host %s removed",
+        Logger::info("Session: Host %s removed",
                       address_str.c_str());
         on_remove(to_remove_it->second);
       }
@@ -193,7 +191,7 @@ bool Session::connect_async(const std::string& keyspace, Future* future) {
     return false;
   }
 
-  logger_->debug("Session: issued connect event");
+  Logger::debug("Session: issued connect event");
 
   if (!keyspace.empty()) {
     broadcast_keyspace_change(keyspace, NULL);
@@ -212,7 +210,7 @@ void Session::close_async(Future* future) {
   while (!request_queue_->enqueue(NULL)) {
     // Keep trying
   }
-  logger_->debug("Session: issued shutdown");
+  Logger::debug("Session: issued shutdown");
 }
 
 void Session::internal_connect() {
@@ -231,9 +229,6 @@ void Session::close_handles() {
 }
 
 void Session::on_run() {
-  if (config_.log_level() != CASS_LOG_DISABLED) {
-    logger_->run();
-  }
   for (IOWorkerVec::iterator it = io_workers_.begin(), end = io_workers_.end();
        it != end; ++it) {
     (*it)->run();
@@ -245,7 +240,6 @@ void Session::on_after_run() {
        it != end; ++it) {
     (*it)->join();
   }
-  logger_->join();
   close_future_->set();
 }
 
@@ -278,17 +272,16 @@ void Session::on_event(const SessionEvent& event) {
     case SessionEvent::NOTIFY_READY:
       if (pending_pool_count_ > 0) {
         if (--pending_pool_count_ == 0) {
-          logger_->debug("Session is connected");
+          Logger::debug("Session is connected");
           connect_future_->set();
           connect_future_.reset();
         }
-        logger_->debug("Session pending pool count %d", pending_pool_count_);
+        Logger::debug("Session pending pool count %d", pending_pool_count_);
       }
       break;
 
     case SessionEvent::NOTIFY_CLOSED:
       if (--pending_workers_count_ == 0) {
-        logger_->close_async();
         control_connection_.close();
         close_handles();
       }
@@ -315,8 +308,8 @@ void Session::on_resolve(Resolver* resolver) {
     session->hosts_[address]
         = SharedRefPtr<Host>(new Host(address, !session->current_host_mark_));
   } else {
-    session->logger_->error("Unable to resolve host %s:%d\n",
-                            resolver->host().c_str(), resolver->port());
+    Logger::error("Unable to resolve host %s:%d\n",
+                  resolver->host().c_str(), resolver->port());
   }
   if (--session->pending_resolve_count_ == 0) {
     session->internal_connect();
@@ -344,7 +337,7 @@ void Session::on_control_connection_ready() {
     pending_pool_count_ = hosts_.size() * io_workers_.size();
   } else {
     // Special case for internal testing. Not allowed by API
-    logger_->debug("Session connected with no core IO connections");
+    Logger::debug("Session connected with no core IO connections");
     connect_future_->set();
     connect_future_.reset();
   }

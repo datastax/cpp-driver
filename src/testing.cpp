@@ -21,6 +21,7 @@
 #include "result_response.hpp"
 #include "schema_metadata.hpp"
 #include "types.hpp"
+#include "logger.hpp"
 
 namespace cass {
 
@@ -71,6 +72,10 @@ CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* schema, const st
 
 int64_t create_murmur3_hash_from_string(const std::string &value) {
   return MurmurHash3_x64_128(value.data(), value.size(), 0);
+}
+
+bool is_logger_queue_empty() {
+  return Logger::is_queue_empty();
 }
 
 } // namespace cass
