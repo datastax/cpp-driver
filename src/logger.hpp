@@ -38,14 +38,14 @@ public:
 
   static void init();
 
-#ifdef __GNUC__
-#define ATTR_FORMAT(type, string, first) __attribute__((format(type, string, first)))
+#if defined(__GNUC__) || defined(__clang__)
+#define ATTR_FORMAT(string, first) __attribute__((__format__(__printf__, string, first)))
 #else
-#define ATTR_FORMAT(type, string , first)
+#define ATTR_FORMAT(string , first)
 #endif
 
 #define LOG_METHOD(name, severity)            \
-  ATTR_FORMAT(printf, 1, 2)                   \
+  ATTR_FORMAT(1, 2)                           \
   static void name(const char* format, ...) { \
     if (severity <= level_) {                 \
       va_list args;                           \
