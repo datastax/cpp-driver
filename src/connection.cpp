@@ -754,7 +754,7 @@ void Connection::PendingWriteSsl::encrypt() {
   BufferVec::const_iterator it = buffers_.begin(),
       end = buffers_.end();
 
-  Logger::trace("Coping %zu bufs", buffers_.size());
+  Logger::trace("Coping %lu bufs", buffers_.size());
 
   bool is_done = (it == end);
 
@@ -791,7 +791,7 @@ void Connection::PendingWriteSsl::encrypt() {
     }
   }
 
-  Logger::trace("Copied %zu bytes for encryption", total);
+  Logger::trace("Copied %lu bytes for encryption", total);
 }
 
 void Connection::PendingWriteSsl::flush() {
@@ -812,7 +812,7 @@ void Connection::PendingWriteSsl::flush() {
     FixedVector<uv_buf_t, SSL_ENCRYPTED_BUFS_COUNT> bufs;
     encrypted_size_ = ssl_session->outgoing().peek_multiple(prev_pos, &bufs);
 
-    Logger::trace("Sending %zu encrypted bytes", encrypted_size_);
+    Logger::trace("Sending %lu encrypted bytes", encrypted_size_);
 
     uv_stream_t* sock_stream = copy_cast<uv_tcp_t*, uv_stream_t*>(&connection_->socket_);
     uv_write(&req_, sock_stream, bufs.data(), bufs.size(), PendingWriteSsl::on_write);
