@@ -75,6 +75,10 @@ public:
     return false;
   }
 
+  bool is_empty() {
+    return _tail.load(boost::memory_order_acquire) == _head.load(boost::memory_order_acquire);
+  }
+
 private:
   typedef typename boost::aligned_storage<
       sizeof(T), boost::alignment_of<T>::value>::type SPSCQueueAlignedEntry;

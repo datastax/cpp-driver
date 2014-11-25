@@ -135,7 +135,7 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
   }
 }
 
-Connection::Connection(uv_loop_t* loop, Logger* logger, const Config& config,
+Connection::Connection(uv_loop_t* loop, const Config& config,
                        const Address& address,
                        const std::string& keyspace,
                        int protocol_version)
@@ -147,7 +147,6 @@ Connection::Connection(uv_loop_t* loop, Logger* logger, const Config& config,
     , ssl_error_code_(CASS_OK)
     , pending_writes_size_(0)
     , loop_(loop)
-    , logger_(logger)
     , config_(config)
     , address_(address)
     , addr_string_(address.to_string())
@@ -209,8 +208,8 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
     set_is_available(false);
   }
 
-  logger_->trace("Connection: Sending message type %s with stream %d",
-                 opcode_to_string(handler->request()->opcode()).c_str(), stream);
+  Logger::trace("Connection: Sending message type %s with stream %d",
+                opcode_to_string(handler->request()->opcode()).c_str(), stream);
 
   handler->set_state(Handler::REQUEST_STATE_WRITING);
   handler->start_timer(loop_, config_.request_timeout_ms(), handler,
@@ -285,10 +284,9 @@ void Connection::consume(char* input, size_t size) {
       ScopedPtr<ResponseMessage> response(response_.release());
       response_.reset(new ResponseMessage());
 
-      logger_->trace(
-          "Connection: Consumed message type %s with stream %d, input %lu, remaining %d on host %s",
-          opcode_to_string(response->opcode()).c_str(), static_cast<int>(response->stream()),
-          size, remaining, addr_string_.c_str());
+      Logger::trace("Connection: Consumed message type %s with stream %d, input %lu, remaining %d on host %s",
+                    opcode_to_string(response->opcode()).c_str(), static_cast<int>(response->stream()),
+                    size, remaining, addr_string_.c_str());
 
       if (response->stream() < 0) {
         if (response->opcode() == CQL_OPCODE_EVENT) {
@@ -367,8 +365,7 @@ void Connection::on_connect(Connecter* connecter) {
   connection->connect_timer_ = NULL;
 
   if (connecter->status() == Connecter::SUCCESS) {
-    connection->logger_->debug("Connection: Connected to host %s",
-                               connection->addr_string_.c_str());
+    Logger::debug("Connection: Connected to host %s", connection->addr_string_.c_str());
 
     if (connection->ssl_session_) {
       uv_read_start(copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_),
@@ -386,9 +383,9 @@ void Connection::on_connect(Connecter* connecter) {
       connection->on_connected();
     }
   } else {
-    connection->logger_->info("Connection: Connect error '%s' on host %s",
-                              uv_err_name(uv_last_error(connection->loop_)),
-                              connection->addr_string_.c_str() );
+    Logger::info("Connection: Connect error '%s' on host %s",
+                 uv_err_name(uv_last_error(connection->loop_)),
+                 connection->addr_string_.c_str() );
     connection->notify_error("Unable to connect");
   }
 }
@@ -402,8 +399,8 @@ void Connection::on_connect_timeout(Timer* timer) {
 void Connection::on_close(uv_handle_t* handle) {
   Connection* connection = static_cast<Connection*>(handle->data);
 
-  connection->logger_->debug("Connection to host %s closed",
-                             connection->addr_string_.c_str());
+  Logger::debug("Connection to host %s closed",
+                connection->addr_string_.c_str());
 
   cleanup_pending_handlers(&connection->pending_reads_);
 
@@ -439,9 +436,9 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
 
   if (nread == -1) {
     if (uv_last_error(connection->loop_).code != UV_EOF) {
-      connection->logger_->info("Connection: Read error '%s' on host %s",
-                                uv_err_name(uv_last_error(connection->loop_)),
-                                connection->addr_string_.c_str());
+      Logger::info("Connection: Read error '%s' on host %s",
+                   uv_err_name(uv_last_error(connection->loop_)),
+                   connection->addr_string_.c_str());
     }
     connection->defunct();
     delete[] buf.base;
@@ -467,9 +464,9 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
 
   if (nread == -1) {
     if (uv_last_error(connection->loop_).code != UV_EOF) {
-      connection->logger_->info("Connection: Read error '%s' on host %s",
-                                uv_err_name(uv_last_error(connection->loop_)),
-                                connection->addr_string_.c_str());
+      Logger::info("Connection: Read error '%s' on host %s",
+                   uv_err_name(uv_last_error(connection->loop_)),
+                   connection->addr_string_.c_str());
     }
     connection->defunct();
     return;
@@ -493,7 +490,7 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
 
 void Connection::on_timeout(RequestTimer* timer) {
   Handler* handler = static_cast<Handler*>(timer->data());
-  logger_->info("Connection: Request timed out to host %s", addr_string_.c_str());
+  Logger::info("Connection: Request timed out to host %s", addr_string_.c_str());
   // TODO (mpenick): We need to handle the case where we have too many
   // timeout requests and we run out of stream ids. The java-driver
   // uses a threshold to defunct the connneciton.
@@ -573,11 +570,11 @@ void Connection::notify_ready() {
 
 void Connection::notify_error(const std::string& error) {
   if (state_ == CONNECTION_STATE_READY) {
-    logger_->error("Connection: Host %s had the following error: '%s'",
-                   addr_string_.c_str(), error.c_str());
+    Logger::error("Connection: Host %s had the following error: '%s'",
+                  addr_string_.c_str(), error.c_str());
   } else {
-    logger_->error("Connection: Host %s had the following error on startup: '%s'",
-                   addr_string_.c_str(), error.c_str());
+    Logger::error("Connection: Host %s had the following error on startup: '%s'",
+                  addr_string_.c_str(), error.c_str());
   }
   defunct();
 }
@@ -681,9 +678,9 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
           connection->pending_reads_.add_to_back(handler);
         } else {
           if (!connection->is_closing()) {
-            connection->logger_->info("Connection: Write error '%s' on host %s",
-                                      uv_err_name(uv_last_error(connection->loop_)),
-                                      connection->addr_string_.c_str());
+            Logger::info("Connection: Write error '%s' on host %s",
+                         uv_err_name(uv_last_error(connection->loop_)),
+                         connection->addr_string_.c_str());
             connection->defunct();
           }
 
@@ -757,7 +754,7 @@ void Connection::PendingWriteSsl::encrypt() {
   BufferVec::const_iterator it = buffers_.begin(),
       end = buffers_.end();
 
-  connection_->logger_->trace("Coping %zu bufs", buffers_.size());
+  Logger::trace("Coping %zu bufs", buffers_.size());
 
   bool is_done = (it == end);
 
@@ -794,7 +791,7 @@ void Connection::PendingWriteSsl::encrypt() {
     }
   }
 
-  connection_->logger_->trace("Copied %zu bytes for encryption", total);
+  Logger::trace("Copied %zu bytes for encryption", total);
 }
 
 void Connection::PendingWriteSsl::flush() {
@@ -815,7 +812,7 @@ void Connection::PendingWriteSsl::flush() {
     FixedVector<uv_buf_t, SSL_ENCRYPTED_BUFS_COUNT> bufs;
     encrypted_size_ = ssl_session->outgoing().peek_multiple(prev_pos, &bufs);
 
-    connection_->logger_->trace("Sending %zu encrypted bytes", encrypted_size_);
+    Logger::trace("Sending %zu encrypted bytes", encrypted_size_);
 
     uv_stream_t* sock_stream = copy_cast<uv_tcp_t*, uv_stream_t*>(&connection_->socket_);
     uv_write(&req_, sock_stream, bufs.data(), bufs.size(), PendingWriteSsl::on_write);

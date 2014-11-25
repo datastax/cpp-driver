@@ -54,6 +54,9 @@ public:
 
   bool dequeue(typename Q::EntryType& data) { return queue_.dequeue(data); }
 
+  // Testing only
+  bool is_empty() const { return queue_.is_empty(); }
+
 private:
   uv_async_t async_;
   Q queue_;

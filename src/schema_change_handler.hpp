@@ -28,7 +28,6 @@
 namespace cass {
 
 class Connection;
-class Logger;
 class Response;
 
 class SchemaChangeHandler : public MultipleRequestHandler {
@@ -47,8 +46,6 @@ public:
 
 private:
   bool has_schema_agreement(const ResponseVec& responses);
-
-  Logger* logger_;
 
   ScopedRefPtr<RequestHandler> request_handler_;
   Response* request_response_;

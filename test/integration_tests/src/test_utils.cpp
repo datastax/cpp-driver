@@ -16,10 +16,11 @@
 
 #define BOOST_TEST_DYN_LINK
 
-#include <assert.h>
-#include <fstream>
-#include <vector>
-#include <cstdlib>
+#include "test_utils.hpp"
+
+#include "cassandra.h"
+#include "cql_ccm_bridge.hpp"
+#include "testing.hpp"
 
 #include <boost/test/test_tools.hpp>
 #include <boost/test/debug.hpp>
@@ -27,9 +28,10 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 
-#include "cassandra.h"
-#include "cql_ccm_bridge.hpp"
-#include "test_utils.hpp"
+#include <assert.h>
+#include <fstream>
+#include <vector>
+#include <cstdlib>
 
 namespace test_utils {
 //-----------------------------------------------------------------------------------
@@ -72,14 +74,26 @@ const char* CREATE_TABLE_SIMPLE =
     "id int PRIMARY KEY,"
     "test_val text);";
 
-void count_message_log_callback(cass_uint64_t time,
-                                CassLogLevel severity,
-                                CassString message,
-                                void* data) {
+CassLog::LogData CassLog::log_data_;
+
+size_t CassLog::message_count() {
+  while(!cass::is_logger_queue_empty()) {
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
+  }
+  return log_data_.message_count;
+}
+
+void CassLog::callback(cass_uint64_t time_ms,
+                       CassLogLevel severity,
+                       CassString message,
+                       void* data) {
   LogData* log_data = reinterpret_cast<LogData*>(data);
   std::string str(message.data, message.length);
-  if (log_data->output_messages) {
-    fprintf(stderr, "Log: %s\n", str.c_str());
+  if (severity <= log_data->output_log_level) {
+    fprintf(stderr, "CassLog: %u.%03u [%s]: %.*s\n",
+            static_cast<unsigned int>(time_ms/1000), static_cast<unsigned int>(time_ms % 1000),
+            cass_log_level_string(severity),
+            static_cast<int>(message.length), message.data);
   }
   boost::lock_guard<LogData> l(*log_data);
   if (log_data->message.empty()) return;

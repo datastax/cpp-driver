@@ -43,7 +43,6 @@ class AuthResponseRequest;
 class Config;
 class Connecter;
 class EventResponse;
-class Logger;
 class Request;
 class Timer;
 
@@ -61,7 +60,7 @@ public:
   typedef boost::function1<void, EventResponse*> EventCallback;
   typedef boost::function1<void, Connection*> Callback;
 
-  Connection(uv_loop_t* loop, Logger* logger, const Config& config,
+  Connection(uv_loop_t* loop, const Config& config,
              const Address& address,
              const std::string& keyspace,
              int protocol_version);
@@ -73,7 +72,6 @@ public:
 
   void schedule_schema_agreement(const SharedRefPtr<SchemaChangeHandler>& handler, uint64_t wait);
 
-  Logger* logger() const { return logger_; }
   const Config& config() const { return config_; }
   const Address& address() { return address_; }
   const std::string& address_string() { return addr_string_; }
@@ -272,7 +270,6 @@ private:
   List<PendingSchemaAgreement> pending_schema_aggreements_;
 
   uv_loop_t* loop_;
-  Logger* logger_;
   const Config& config_;
   Address address_;
   std::string addr_string_;

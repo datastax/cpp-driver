@@ -58,7 +58,6 @@ CassCluster* create_cluster() {
   CassCluster* cluster = cass_cluster_new();
   cass_cluster_set_contact_points(cluster, "127.0.0.1");
   cass_cluster_set_credentials(cluster, "cassandra", "cassandra");
-  cass_cluster_set_log_level(cluster, CASS_LOG_INFO);
   cass_cluster_set_num_threads_io(cluster, NUM_IO_WORKER_THREADS);
   cass_cluster_set_queue_size_io(cluster, 10000);
   cass_cluster_set_pending_requests_low_water_mark(cluster, 5000);
@@ -315,10 +314,13 @@ int main() {
   int i;
   uv_thread_t threads[NUM_THREADS];
   CassError rc = CASS_OK;
-  CassCluster* cluster = create_cluster();
+  CassCluster* cluster = NULL;
   CassSession* session = NULL;
   CassFuture* close_future = NULL;
 
+  cass_log_set_level(CASS_LOG_INFO);
+
+  cluster = create_cluster();
 
   rc = connect_session(cluster, &session);
   if(rc != CASS_OK) {

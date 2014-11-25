@@ -54,8 +54,7 @@ Doxyfile
 
 # QT Creator 
 *.config
-*.creator
-*.creator.user
+*.creator*
 *.files
 *.includes
 
