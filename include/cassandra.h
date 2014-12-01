@@ -2385,7 +2385,7 @@ cass_error_desc(CassError error);
 /**
  * Sets the log level.
  *
- * Note: This needs to be done before the any call that might log such as
+ * Note: This needs to be done before any call that might log, such as
  * any of the cass_cluster_*() or cass_ssl_*() functions.
  *
  * Default: CASS_LOG_WARN
@@ -2393,19 +2393,19 @@ cass_error_desc(CassError error);
  * @param[in] log_level
  */
 CASS_EXPORT void
-cass_log_set_level(CassLogLevel level);
+cass_log_set_level(CassLogLevel log_level);
 
 /**
  * Sets a callback for handling logging events.
  *
- * Note: This needs to be done before the any call that might log such as
+ * Note: This needs to be done before any call that might log, such as
  * any of the cass_cluster_*() or cass_ssl_*() functions.
  *
  * Default: An internal callback that prints to stdout
  *
  * @param[in] data An opaque data object passed to the callback.
  * @param[in] callback A callback that handles logging events. This is
- * called in a separate thread so access to shared data must by synchronized.
+ * called in a separate thread so access to shared data must be synchronized.
  */
 CASS_EXPORT void
 cass_log_set_callback(CassLogCallback callback,
@@ -2414,7 +2414,7 @@ cass_log_set_callback(CassLogCallback callback,
 /**
  * Sets the log queue size.
  *
- * Note: This needs to be done before the any call that might log such as
+ * Note: This needs to be done before any call that might log, such as
  * any of the cass_cluster_*() or cass_ssl_*() functions.
  *
  * Default: 16K entries
