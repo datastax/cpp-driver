@@ -44,7 +44,7 @@ namespace cass {
 
 static void ssl_info_callback(const SSL* ssl, int where, int ret) {
   if(ret == 0) {
-    fprintf(stderr, "ssl_info_callback, error occured.\n");
+    fprintf(stderr, "ssl_info_callback, error occurred.\n");
     return;
   }
   SSL_PRINT_INFO(ssl, where, SSL_CB_LOOP, "LOOP");
