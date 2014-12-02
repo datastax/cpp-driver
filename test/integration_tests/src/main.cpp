@@ -16,5 +16,13 @@
 
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE cassandra
+
+#include "test_utils.hpp"
+
 #include <boost/test/unit_test.hpp>
+
+using test_utils::CassLog;
+
+BOOST_GLOBAL_FIXTURE(CassLog)
+
 

@@ -74,17 +74,17 @@ BOOST_FIXTURE_TEST_SUITE(control_connection, ControlConnectionTests)
 
 BOOST_AUTO_TEST_CASE(connect_invalid_ip)
 {
-  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("Connection: Host 1.1.1.1 had the following error on startup: 'Connection timeout'"));
+  test_utils::CassLog::reset("Connection: Host 1.1.1.1 had the following error on startup: 'Connection timeout'");
 
   test_utils::CassClusterPtr cluster(cass_cluster_new());
   cass_cluster_set_contact_points(cluster.get(), "1.1.1.1");
-  cass_cluster_set_log_callback(cluster.get(), test_utils::count_message_log_callback, log_data.get());
   {
     test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
     CassError code = test_utils::wait_and_return_error(session_future.get());
     BOOST_CHECK_EQUAL(code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
   }
-  BOOST_CHECK(log_data->message_count > 0);
+
+  BOOST_CHECK(test_utils::CassLog::message_count() > 0);
 }
 
 BOOST_AUTO_TEST_CASE(connect_invalid_port)
@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE(node_discovery)
 
 BOOST_AUTO_TEST_CASE(node_discovery_invalid_ips)
 {
-  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("Unable to reach contact point 192.0.2."));
+  test_utils::CassLog::reset("Unable to reach contact point 192.0.2.");
 
   {
     test_utils::CassClusterPtr cluster(cass_cluster_new());
@@ -220,8 +220,6 @@ BOOST_AUTO_TEST_CASE(node_discovery_invalid_ips)
 
     const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
     boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
-
-    cass_cluster_set_log_callback(cluster.get(), test_utils::count_message_log_callback, log_data.get());
 
     // Ensure RR policy
     cass_cluster_set_load_balance_round_robin(cluster.get());;
@@ -237,7 +235,7 @@ BOOST_AUTO_TEST_CASE(node_discovery_invalid_ips)
     check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 3));
   }
 
-  BOOST_CHECK_EQUAL(log_data->message_count, 3ul);
+  BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 3ul);
 }
 
 BOOST_AUTO_TEST_CASE(node_discovery_no_local_rows)
@@ -266,15 +264,13 @@ BOOST_AUTO_TEST_CASE(node_discovery_no_local_rows)
 BOOST_AUTO_TEST_CASE(node_discovery_no_rpc_addresss)
 {
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData("No rpc_address for host " + conf.ip_prefix() + "3 in system.peers on " + conf.ip_prefix() + "1. Ignoring this entry."));
+  test_utils::CassLog::reset("No rpc_address for host " + conf.ip_prefix() + "3 in system.peers on " + conf.ip_prefix() + "1. Ignoring this entry.");
 
   {
     test_utils::CassClusterPtr cluster(cass_cluster_new());
 
     const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
     boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
-
-    cass_cluster_set_log_callback(cluster.get(), test_utils::count_message_log_callback, log_data.get());
 
     // Ensure RR policy
     cass_cluster_set_load_balance_round_robin(cluster.get());;
@@ -295,7 +291,7 @@ BOOST_AUTO_TEST_CASE(node_discovery_no_rpc_addresss)
     check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 2));
   }
 
-  BOOST_CHECK(log_data->message_count > 0);
+  BOOST_CHECK(test_utils::CassLog::message_count() > 0);
 }
 
 BOOST_AUTO_TEST_CASE(full_outage)

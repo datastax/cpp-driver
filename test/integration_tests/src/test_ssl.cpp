@@ -147,7 +147,6 @@ struct TestSSL {
 
     //Initialize the cpp-driver
     cluster_ = cass_cluster_new();
-    //cass_cluster_set_log_level(cluster_, CASS_LOG_TRACE);
     test_utils::initialize_contact_points(cluster_, configuration_.ip_prefix(), nodes, 0);
     cass_cluster_set_connect_timeout(cluster_, 10000);
     cass_cluster_set_request_timeout(cluster_, 10000);

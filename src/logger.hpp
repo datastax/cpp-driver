@@ -19,10 +19,10 @@
 
 #include "async_queue.hpp"
 #include "cassandra.h"
-#include "config.hpp"
 #include "get_time.hpp"
 #include "loop_thread.hpp"
 #include "mpmc_queue.hpp"
+#include "scoped_ptr.hpp"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -30,102 +30,84 @@
 
 namespace cass {
 
-class Logger : public LoopThread {
+class Logger {
 public:
-  Logger(const Config& config)
-      : data_(config.log_data())
-      , cb_(config.log_callback())
-      , log_level_(config.log_level())
-      , log_queue_(config.queue_size_log()) {}
+  static void set_level(CassLogLevel level);
+  static void set_queue_size(size_t queue_size);
+  static void set_callback(CassLogCallback cb, void* data);
 
-  int init() { return log_queue_.init(loop(), this, on_log); }
+  static void init();
 
-  void close_async() {
-    while (!log_queue_.enqueue(NULL)) {
-      // Keep trying
-    }
+#if defined(__GNUC__) || defined(__clang__)
+#define ATTR_FORMAT(string, first) __attribute__((__format__(__printf__, string, first)))
+#else
+#define ATTR_FORMAT(string , first)
+#endif
+
+#define LOG_METHOD(name, severity)            \
+  ATTR_FORMAT(1, 2)                           \
+  static void name(const char* format, ...) { \
+    if (severity <= level_) {                 \
+      va_list args;                           \
+      va_start(args, format);                 \
+      thread_->log(severity, format, args);   \
+      va_end(args);                           \
+    }                                         \
   }
 
-#define LOG_MESSAGE(severity)    \
-  if (severity <= log_level_) {  \
-    va_list args;                \
-    va_start(args, format);      \
-    log(severity, format, args); \
-    va_end(args);                \
-  }
-
-  void critical(const char* format, ...) { LOG_MESSAGE(CASS_LOG_CRITICAL); }
-
-  void error(const char* format, ...) { LOG_MESSAGE(CASS_LOG_ERROR); }
-
-  void warn(const char* format, ...) { LOG_MESSAGE(CASS_LOG_WARN); }
-
-  void info(const char* format, ...) { LOG_MESSAGE(CASS_LOG_INFO); }
-
-  void debug(const char* format, ...) { LOG_MESSAGE(CASS_LOG_DEBUG); }
-
-  void trace(const char* format, ...) { LOG_MESSAGE(CASS_LOG_TRACE); }
+  LOG_METHOD(critical, CASS_LOG_CRITICAL)
+  LOG_METHOD(error, CASS_LOG_ERROR)
+  LOG_METHOD(warn, CASS_LOG_WARN)
+  LOG_METHOD(info, CASS_LOG_INFO)
+  LOG_METHOD(debug, CASS_LOG_DEBUG)
+  LOG_METHOD(trace, CASS_LOG_TRACE)
 
 #undef LOG_MESSAGE
+#undef ATTR_FORMAT
+
+  // Testing only
+  static bool is_queue_empty() { return thread_->is_queue_empty(); }
 
 private:
-  struct LogMessage {
-    uint64_t time;
-    CassLogLevel severity;
-    std::string message;
+  class LogThread : public LoopThread {
+  public:
+    LogThread(CassLogCallback cb, void* data, size_t queue_size)
+      : cb_(cb)
+      , data_(data)
+      , log_queue_(queue_size) {
+      log_queue_.init(loop(), this, on_log);
+    }
+
+    void log(CassLogLevel severity, const char* format, va_list args);
+
+    bool is_queue_empty() const { return log_queue_.is_empty(); }
+
+  private:
+    struct LogMessage {
+      uint64_t time;
+      CassLogLevel severity;
+      std::string message;
+    };
+
+    std::string format_message(const char* format, va_list args);
+
+    static void on_log(uv_async_t* async, int status);
+
+    CassLogCallback cb_;
+    void* data_;
+    AsyncQueue<MPMCQueue<LogMessage*> > log_queue_;
   };
 
-  void close() { log_queue_.close_handles(); }
+private:
+  static void internal_init();
 
-  std::string format_message(const char* format, va_list args) {
-    char buffer[1024];
-    int n = vsnprintf(buffer, sizeof(buffer), format, args);
-    return std::string(buffer, n);
-  }
+  static CassLogLevel level_;
+  static CassLogCallback cb_;
+  static void* data_;
+  static size_t queue_size_;
+  static LogThread* thread_;
 
-  void log(CassLogLevel severity, const char* format, va_list args) {
-    LogMessage* log_message = new LogMessage;
-    log_message->time = get_time_since_epoch_ms();
-    log_message->severity = severity;
-    log_message->message = format_message(format, args);
-    if(!log_queue_.enqueue(log_message)) {
-      fprintf(stderr, "Exceeded logging queue max size\n");
-      CassString message = cass_string_init2(log_message->message.data(),
-                                             log_message->message.size());
-      cb_(log_message->time, log_message->severity, message, data_);
-      delete log_message;
-    }
-  }
-
-  static void on_log(uv_async_t* async, int status) {
-    Logger* logger = static_cast<Logger*>(async->data);
-
-    bool is_closing = false;
-
-    LogMessage* log_message;
-    while (logger->log_queue_.dequeue(log_message)) {
-      if (log_message != NULL) {
-        if (log_message->severity != CASS_LOG_DISABLED) {
-          CassString message = cass_string_init2(log_message->message.data(),
-                                                 log_message->message.size());
-          logger->cb_(log_message->time, log_message->severity,
-                      message, logger->data_);
-        }
-        delete log_message;
-      } else {
-        is_closing = true;
-      }
-    }
-
-    if (is_closing) {
-      logger->close();
-    }
-  }
-
-  void* data_;
-  CassLogCallback cb_;
-  CassLogLevel log_level_;
-  AsyncQueue<MPMCQueue<LogMessage*> > log_queue_;
+  Logger(); // Keep this object from being created
 };
 
 } // namespace cass

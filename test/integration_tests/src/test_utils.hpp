@@ -21,6 +21,7 @@
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/asio/ip/address.hpp>
+#include <boost/atomic.hpp>
 #include <boost/chrono.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
@@ -51,29 +52,51 @@ namespace test_utils {
 extern const cass_duration_t ONE_MILLISECOND_IN_MICROS;
 extern const cass_duration_t ONE_SECOND_IN_MICROS;
 
-struct LogData : public boost::basic_lockable_adapter<boost::mutex> {
-  LogData(const std::string& message, bool output_messages = false)
-    : message(message)
-    , message_count(0)
-    , output_messages(output_messages) {}
 
-  void reset(const std::string& msg) {
-    boost::lock_guard<LogData> l(*this);
-    message = msg;
-    message_count = 0;
+class CassLog{
+public:
+  CassLog() {
+    // Set the maximum log level we'll just ignore anthing
+    // that's not relevant.
+    cass_log_set_level(CASS_LOG_TRACE);
+    cass_log_set_callback(CassLog::callback, &CassLog::log_data_);
   }
 
-  boost::mutex m;
-  std::string message;
-  size_t message_count;
-  bool output_messages;
+  static void reset(const std::string& msg) {
+    log_data_.reset(msg);
+  }
 
+  static size_t message_count();
+
+  static void set_output_log_level(CassLogLevel log_level) {
+    log_data_.output_log_level = log_level;
+  }
+
+private:
+  struct LogData : public boost::basic_lockable_adapter<boost::mutex> {
+    LogData()
+      : message_count(0)
+      , output_log_level(CASS_LOG_DISABLED) {}
+
+    void reset(const std::string& msg) {
+      boost::lock_guard<LogData> l(*this);
+      message = msg;
+      message_count = 0;
+    }
+
+    boost::mutex m;
+    std::string message;
+    size_t message_count;
+    CassLogLevel output_log_level;
+  };
+
+  static void callback(cass_uint64_t time_ms,
+                       CassLogLevel severity,
+                       CassString message,
+                       void* data);
+
+  static LogData log_data_;
 };
-
-void count_message_log_callback(cass_uint64_t time,
-                                CassLogLevel severity,
-                                CassString message,
-                                void* data);
 
 template<class T>
 struct Deleter;

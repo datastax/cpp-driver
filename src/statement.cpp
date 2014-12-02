@@ -391,8 +391,7 @@ bool Statement::get_routing_key(std::string* routing_key)  const {
   if (key_indices_.size() == 1) {
       const Buffer& buffer = values_.front();
       if (!buffer.is_buffer()) {
-        // Is either null or a collection
-        // TODO: Global logging
+        Logger::error("Statement: Routing key cannot have null value or be a collection");
         return false;
       }
       int32_t size;
@@ -405,8 +404,7 @@ bool Statement::get_routing_key(std::string* routing_key)  const {
          i != key_indices_.end(); ++i) {
       const Buffer& buffer = values_[*i];
       if (!buffer.is_buffer()) {
-        // Is either null or a collection
-        // TODO: Global logging
+        Logger::error("Statement: Routing key cannot have null value or be a collection");
         return false;
       }
       int32_t size;

@@ -18,6 +18,7 @@
 
 #include "common.hpp"
 #include "dc_aware_policy.hpp"
+#include "logger.hpp"
 #include "round_robin_policy.hpp"
 #include "types.hpp"
 
@@ -26,6 +27,7 @@
 extern "C" {
 
 CassCluster* cass_cluster_new() {
+  cass::Logger::init();
   return CassCluster::to(new cass::Cluster());
 }
 
@@ -78,15 +80,6 @@ CassError cass_cluster_set_queue_size_event(CassCluster* cluster,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_queue_size_event(queue_size);
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_queue_size_log(CassCluster* cluster,
-                                          unsigned queue_size) {
-  if (queue_size == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_queue_size_log(queue_size);
   return CASS_OK;
 }
 
@@ -215,19 +208,6 @@ CassError cass_cluster_set_request_timeout(CassCluster* cluster,
   return CASS_OK;
 }
 
-CassError cass_cluster_set_log_level(CassCluster* cluster,
-                                     CassLogLevel level) {
-  cluster->config().set_log_level(level);
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_log_callback(CassCluster* cluster,
-                                        CassLogCallback callback,
-                                        void* data) {
-  cluster->config().set_log_callback(callback, data);
-  return CASS_OK;
-}
-
 CassError cass_cluster_set_credentials(CassCluster* cluster,
                                        const char* username,
                                        const char* password) {
@@ -276,5 +256,3 @@ void cass_cluster_free(CassCluster* cluster) {
 }
 
 } // extern "C"
-
-namespace cass {} // namespace cass

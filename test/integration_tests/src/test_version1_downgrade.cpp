@@ -43,8 +43,7 @@ BOOST_FIXTURE_TEST_SUITE(version1_downgrade, Version1DowngradeTests)
 
 BOOST_AUTO_TEST_CASE(query_after_downgrade)
 {
-  boost::scoped_ptr<test_utils::LogData> log_data(
-        new test_utils::LogData("Error response: 'Invalid or unsupported protocol version: 2"));
+  test_utils::CassLog::reset("Error response: 'Invalid or unsupported protocol version: 2");
 
   cass_size_t row_count;
 
@@ -59,8 +58,6 @@ BOOST_AUTO_TEST_CASE(query_after_downgrade)
 
     cass_cluster_set_protocol_version(cluster.get(), 2);
 
-    cass_cluster_set_log_callback(cluster.get(), test_utils::count_message_log_callback, log_data.get());
-
     test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
     test_utils::wait_and_check_error(session_future.get());
     test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
@@ -72,7 +69,7 @@ BOOST_AUTO_TEST_CASE(query_after_downgrade)
   }
 
   BOOST_CHECK(row_count > 0);
-  BOOST_CHECK(log_data->message_count > 0);
+  BOOST_CHECK(test_utils::CassLog::message_count() > 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

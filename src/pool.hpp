@@ -32,7 +32,6 @@ namespace cass {
 
 class Connection;
 class IOWorker;
-class Logger;
 class RequestHandler;
 class Config;
 
@@ -94,7 +93,6 @@ private:
   IOWorker* io_worker_;
   Address address_;
   uv_loop_t* loop_;
-  Logger* logger_;
   const Config& config_;
 
   PoolState state_;

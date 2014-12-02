@@ -19,6 +19,7 @@
 
 #include "address.hpp"
 #include "async_queue.hpp"
+#include "constants.hpp"
 #include "event_thread.hpp"
 #include "logger.hpp"
 #include "spsc_queue.hpp"
@@ -63,7 +64,6 @@ public:
 
   int init();
 
-  Logger* logger() const { return logger_; }
   const Config& config() const { return config_; }
 
   int protocol_version() const {
@@ -130,7 +130,6 @@ private:
 
 private:
   Session* session_;
-  Logger* logger_;
   const Config& config_;
   boost::atomic<int> protocol_version_;
   uv_prepare_t prepare_;

@@ -629,36 +629,6 @@ cass_cluster_set_request_timeout(CassCluster* cluster,
                                  unsigned timeout_ms);
 
 /**
- * Sets the log level.
- *
- * Default: CASS_LOG_WARN
- *
- * @param[in] cluster
- * @param[in] log_level
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_cluster_set_log_level(CassCluster* cluster,
-                           CassLogLevel level);
-
-/**
- * Sets a callback for handling logging events.
- *
- * Default: An internal callback that prints to stdout
- *
- * @param[in] cluster
- * @param[in] data An opaque data object passed to the callback.
- * @param[in] callback A callback that handles logging events. This is
- * called in a separate thread so access to shared data must by synchronized.
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_cluster_set_log_callback(CassCluster* cluster,
-                              CassLogCallback callback,
-                              void* data);
-
-
-/**
  * Sets credentials for plain text authentication.
  *
  * @param[in] cluster
@@ -2408,9 +2378,51 @@ cass_error_desc(CassError error);
 
 /***********************************************************************************
  *
- * Log level
+ * Log
  *
  ***********************************************************************************/
+
+/**
+ * Sets the log level.
+ *
+ * Note: This needs to be done before any call that might log, such as
+ * any of the cass_cluster_*() or cass_ssl_*() functions.
+ *
+ * Default: CASS_LOG_WARN
+ *
+ * @param[in] log_level
+ */
+CASS_EXPORT void
+cass_log_set_level(CassLogLevel log_level);
+
+/**
+ * Sets a callback for handling logging events.
+ *
+ * Note: This needs to be done before any call that might log, such as
+ * any of the cass_cluster_*() or cass_ssl_*() functions.
+ *
+ * Default: An internal callback that prints to stdout
+ *
+ * @param[in] data An opaque data object passed to the callback.
+ * @param[in] callback A callback that handles logging events. This is
+ * called in a separate thread so access to shared data must be synchronized.
+ */
+CASS_EXPORT void
+cass_log_set_callback(CassLogCallback callback,
+                      void* data);
+
+/**
+ * Sets the log queue size.
+ *
+ * Note: This needs to be done before any call that might log, such as
+ * any of the cass_cluster_*() or cass_ssl_*() functions.
+ *
+ * Default: 16K entries
+ *
+ * @param[in] queue_size
+ */
+CASS_EXPORT void
+cass_log_set_queue_size(cass_size_t queue_size);
 
 /**
  * Gets the string for a log level.
