@@ -166,6 +166,7 @@ MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int nu
   boost::debug::detect_memory_leaks(false);
   ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", num_nodes_dc1, num_nodes_dc2, isSSL);
 
+  uuid_gen = cass_uuid_gen_new();
   cluster = cass_cluster_new();
   initialize_contact_points(cluster, conf.ip_prefix(), num_nodes_dc1, num_nodes_dc2);
 
@@ -176,6 +177,7 @@ MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int nu
 }
 
 MultipleNodesTest::~MultipleNodesTest() {
+  cass_uuid_gen_free(uuid_gen);
   cass_cluster_free(cluster);
 }
 

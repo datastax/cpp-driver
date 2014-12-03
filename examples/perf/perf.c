@@ -43,6 +43,8 @@ const char* big_string = "012345670123456701234567012345670123456701234567012345
                          "0123456701234567012345670123456701234567012345670123456701234567"
                          "0123456701234567012345670123456701234567012345670123456701234567";
 
+CassUuidGen* uuid_gen;
+
 typedef struct ThreadStats_ {
   long count;
   double total_averages;
@@ -182,7 +184,7 @@ void insert_into_perf(CassSession* session, CassString query, const CassPrepared
       statement = cass_statement_new(query, 5);
     }
 
-    cass_uuid_generate_time(id);
+    cass_uuid_gen_time(uuid_gen, &id);
     cass_statement_bind_uuid(statement, 0, id);
     cass_statement_bind_string(statement, 1, cass_string_init(big_string));
     cass_statement_bind_string(statement, 2, cass_string_init(big_string));
@@ -319,6 +321,7 @@ int main() {
   CassSession* session = NULL;
   CassFuture* close_future = NULL;
 
+  uuid_gen = cass_uuid_gen_new();
 
   rc = connect_session(cluster, &session);
   if(rc != CASS_OK) {
@@ -348,6 +351,7 @@ int main() {
   cass_future_wait(close_future);
   cass_future_free(close_future);
   cass_cluster_free(cluster);
+  cass_uuid_gen_free(uuid_gen);
 
   return 0;
 }

@@ -146,6 +146,12 @@ public:
     return pos;
   }
 
+  size_t encode_uuid(size_t offset, CassUuid value) {
+    assert(is_buffer() && offset + sizeof(CassUuid) <= static_cast<size_t>(size_));
+    cass::encode_uuid(buffer() + offset, value);
+    return offset + sizeof(CassUuid);
+  }
+
   size_t copy(size_t offset, const char* value, size_t size) {
     assert(is_buffer() && offset + size <= static_cast<size_t>(size_));
     memcpy(buffer() + offset, value, size);
