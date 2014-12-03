@@ -39,6 +39,21 @@
 #undef max
 #endif
 
+inline bool operator<(const CassUuid& u1, const CassUuid& u2) {
+  return u1.clock_seq_and_node < u2.clock_seq_and_node ||
+         u1.time_and_version < u2.time_and_version;
+}
+
+inline bool operator==(const CassUuid& u1, const CassUuid& u2) {
+  return u1.clock_seq_and_node == u2.clock_seq_and_node &&
+         u1.time_and_version == u2.time_and_version;
+}
+
+inline bool operator!=(const CassUuid& u1, const CassUuid& u2) {
+  return u1.clock_seq_and_node != u2.clock_seq_and_node ||
+         u1.time_and_version != u2.time_and_version;
+}
+
 namespace cql {
 
 class cql_ccm_bridge_t;
@@ -161,6 +176,15 @@ struct Deleter<CassBatch> {
   }
 };
 
+template<>
+struct Deleter<CassUuidGen> {
+  void operator()(CassUuidGen* ptr) {
+    if (ptr != NULL) {
+      cass_uuid_gen_free(ptr);
+    }
+  }
+};
+
 template <class T>
 class CassSharedPtr : public boost::shared_ptr<T> {
 public:
@@ -177,6 +201,7 @@ typedef CassSharedPtr<CassIterator> CassIteratorPtr;
 typedef CassSharedPtr<CassCollection> CassCollectionPtr;
 typedef CassSharedPtr<const CassPrepared> CassPreparedPtr;
 typedef CassSharedPtr<CassBatch> CassBatchPtr;
+typedef CassSharedPtr<CassUuidGen> CassUuidGenPtr;
 
 template<class T>
 struct Value;
@@ -399,11 +424,26 @@ struct Value<CassUuid> {
   }
 
   static CassError get(const CassValue* value, CassUuid* output) {
-    return cass_value_get_uuid(value, *output);
+    return cass_value_get_uuid(value, output);
   }
 
   static bool equal(CassUuid a, CassUuid b) {
-    return memcmp(a, b, sizeof(CassUuid)) == 0;
+    return a.clock_seq_and_node == b.clock_seq_and_node &&
+           a.time_and_version == b.time_and_version;
+  }
+
+  static CassUuid min_value() {
+    CassUuid value;
+    value.clock_seq_and_node = 0;
+    value.time_and_version = 0;
+    return value;
+  }
+
+  static CassUuid max_value() {
+    CassUuid value;
+    value.clock_seq_and_node = std::numeric_limits<cass_uint64_t>::max();
+    value.clock_seq_and_node = std::numeric_limits<cass_uint64_t>::max();
+    return value;
   }
 };
 
@@ -431,51 +471,6 @@ struct Value<CassDecimal> {
     return memcmp(a.varint.data, b.varint.data, a.varint.size) == 0;
   }
 };
-
-// Simple wrapper to allow CassUuid to be added to STL containers
-struct Uuid {
-  CassUuid uuid;
-  operator cass_uint8_t*() { return uuid; }
-};
-
-template<>
-struct Value<Uuid> {
-  static CassError bind(CassStatement* statement, cass_size_t index, Uuid value) {
-    return cass_statement_bind_uuid(statement, index, value.uuid);
-  }
-
-  static CassError append(CassCollection* collection, Uuid value) {
-    return cass_collection_append_uuid(collection, value.uuid);
-  }
-
-  static CassError get(const CassValue* value, Uuid* output) {
-    return cass_value_get_uuid(value, output->uuid);
-  }
-
-  static bool equal(Uuid a, Uuid b) {
-    return memcmp(a.uuid, b.uuid, sizeof(CassUuid)) == 0;
-  }
-
-  static Uuid min_value() {
-    Uuid value;
-    memset(value.uuid, 0x0, sizeof(value.uuid));
-    return value;
-  }
-
-  static Uuid max_value() {
-    Uuid value;
-    memset(value.uuid, 0xF, sizeof(value.uuid));
-    return value;
-  }
-};
-
-inline bool operator==(Uuid a, Uuid b) {
-  return test_utils::Value<Uuid>::equal(a, b);
-}
-
-inline bool operator<(Uuid a, Uuid b) {
-  return memcmp(a.uuid, b.uuid, sizeof(CassUuid)) < 0;
-}
 
 /**
  * Cassandra release version number
@@ -508,10 +503,11 @@ struct MultipleNodesTest {
 
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
   const cql::cql_ccm_bridge_configuration_t& conf;
+  CassUuidGen* uuid_gen;
   CassCluster* cluster;
 };
 
-struct SingleSessionTest : MultipleNodesTest {
+struct SingleSessionTest : public MultipleNodesTest {
   SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 2, bool isSSL = false);
   virtual ~SingleSessionTest();
   void create_session();
@@ -565,21 +561,21 @@ inline CassDecimal decimal_from_scale_and_bytes(cass_int32_t scale, CassBytes by
   return decimal;
 }
 
-inline Uuid generate_time_uuid() {
-  Uuid uuid;
-  cass_uuid_generate_time(uuid.uuid);
+inline CassUuid generate_time_uuid(CassUuidGen* uuid_gen) {
+  CassUuid uuid;
+  cass_uuid_gen_time(uuid_gen, &uuid);
   return uuid;
 }
 
-inline Uuid generate_random_uuid() {
-  Uuid uuid;
-  cass_uuid_generate_random(uuid.uuid);
+inline CassUuid generate_random_uuid(CassUuidGen* uuid_gen) {
+  CassUuid uuid;
+  cass_uuid_gen_random(uuid_gen, &uuid);
   return uuid;
 }
 
-inline std::string generate_unique_str() {
-  Uuid uuid;
-  cass_uuid_generate_time(uuid.uuid);
+inline std::string generate_unique_str(CassUuidGen* uuid_gen) {
+  CassUuid uuid;
+  cass_uuid_gen_time(uuid_gen, &uuid);
   char buffer[CASS_UUID_STRING_LENGTH];
   cass_uuid_string(uuid, buffer);
   return boost::replace_all_copy(std::string(buffer), "-", "");

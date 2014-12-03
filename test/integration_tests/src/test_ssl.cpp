@@ -230,8 +230,8 @@ struct TestSSL {
 
       test_utils::CassResultPtr result;
       test_utils::execute_query(session_, str(boost::format("SELECT * FROM normal_load WHERE key = %d") % n), &result);
-      BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 4);
-      BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1);
+      BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 4u);
+      BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1u);
 
       const CassRow* row = cass_result_first_row(result.get());
       const CassValue* value;
@@ -285,8 +285,8 @@ struct TestSSL {
 
       test_utils::CassResultPtr result;
       test_utils::execute_query(session_, str(boost::format("SELECT * FROM high_load WHERE key = %d") % n), &result);
-      BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 4);
-      BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1);
+      BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 4u);
+      BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1u);
 
       const CassRow* row = cass_result_first_row(result.get());
       const CassValue* value;
