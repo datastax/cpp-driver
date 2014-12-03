@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(connection_spawn)
     test_utils::wait_and_check_error(connect_future.get());
     test_utils::CassSessionPtr session = cass_future_get_session(connect_future.get());
   }
-  BOOST_CHECK_EQUAL(log_data->message_count, 1);
+  BOOST_CHECK_EQUAL(log_data->message_count, 1u);
 
 
   log_data->reset(SPAWN_MSG);
@@ -134,6 +134,6 @@ BOOST_AUTO_TEST_CASE(connection_spawn)
       futures.push_back(cass_session_execute(session.get(), statement.get()));
     }
   }
-  BOOST_CHECK_EQUAL(log_data->message_count, 2);
+  BOOST_CHECK_EQUAL(log_data->message_count, 2u);
 }
 BOOST_AUTO_TEST_SUITE_END()

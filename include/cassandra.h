@@ -126,7 +126,10 @@ typedef struct CassDecimal_ {
 
 #define CASS_UUID_STRING_LENGTH 37
 
-typedef cass_uint8_t CassUuid[16];
+typedef struct CassUuid_ {
+  cass_uint64_t time_and_version;
+  cass_uint64_t clock_seq_and_node;
+} CassUuid;
 
 typedef struct CassCluster_ CassCluster;
 typedef struct CassSession_ CassSession;
@@ -143,6 +146,7 @@ typedef struct CassSsl_ CassSsl;
 typedef struct CassSchema_ CassSchema;
 typedef struct CassSchemaMeta_ CassSchemaMeta;
 typedef struct CassSchemaMetaField_ CassSchemaMetaField;
+typedef struct CassUuidGen_ CassUuidGen;
 
 typedef enum CassConsistency_ {
   CASS_CONSISTENCY_ANY          = 0x0000,
@@ -1352,7 +1356,7 @@ cass_statement_bind_bytes(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_bind_uuid(CassStatement* statement,
                          cass_size_t index,
-                         const CassUuid value);
+                         CassUuid value);
 
 /**
  * Binds an "inet" to a query or bound statement at the specified index.
@@ -1544,7 +1548,7 @@ cass_statement_bind_bytes_by_name(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_bind_uuid_by_name(CassStatement* statement,
                                  const char* name,
-                                 const CassUuid value);
+                                 CassUuid value);
 
 /**
  * Binds an "inet" to all the values with the specified name.
@@ -2231,7 +2235,7 @@ cass_value_get_bool(const CassValue* value,
  */
 CASS_EXPORT CassError
 cass_value_get_uuid(const CassValue* value,
-                    CassUuid output);
+                    CassUuid* output);
 
 /**
  * Gets an INET for the specified value.
@@ -2343,50 +2347,100 @@ cass_value_secondary_sub_type(const CassValue* collection);
  ************************************************************************************/
 
 /**
+ * Creates a new UUID generator.
+ *
+ * Note: This object is thread-safe. It is best practice to create and reuse
+ * a single object per application.
+ *
+ * Note: If unique node information (IP address) is unable to be determined
+ * then random node information will be generated.
+ *
+ * @return Returns a UUID generator that must be freed.
+ *
+ * @see cass_uuid_gen_free()
+ * @see cass_uuid_gen_new_with_node()
+ */
+CASS_EXPORT CassUuidGen*
+cass_uuid_gen_new();
+
+/**
+ * Creates a new UUID generator with custom node information.
+ *
+ * Note: This object is thread-safe. It is best practice to create and reuse
+ * a single object per application.
+ *
+ * @return Returns a UUID generator that must be freed.
+ *
+ * @see cass_uuid_gen_free()
+ */
+CASS_EXPORT CassUuidGen*
+cass_uuid_gen_new_with_node(cass_uint64_t node);
+
+/**
+ * Frees a UUID generator instance.
+ *
+ * @param[in] uuid_gen
+ */
+CASS_EXPORT void
+cass_uuid_gen_free(CassUuidGen* uuid_gen);
+
+/**
  * Generates a V1 (time) UUID.
  *
+ * Note: This method is thread-safe
+ *
+ * @param[in] uuid_gen
  * @param[out] output A V1 UUID for the current time.
  */
 CASS_EXPORT void
-cass_uuid_generate_time(CassUuid output);
+cass_uuid_gen_time(CassUuidGen* uuid_gen,
+                   CassUuid* output);
+
+/**
+ * Generates a new V4 (random) UUID
+ *
+ * Note: This method is thread-safe
+ *
+ * @param[in] uuid_gen
+ * @param output A randomly generated V4 UUID.
+ */
+CASS_EXPORT void
+cass_uuid_gen_random(CassUuidGen* uuid_gen,
+                     CassUuid* output);
 
 /**
  * Generates a V1 (time) UUID for the specified time.
  *
- * @param[in] time
+ * Note: This method is thread-safe
+ *
+ * @param[in] uuid_gen
+ * @param[in] timestamp
  * @param[out] output A V1 UUID for the specified time.
  */
 CASS_EXPORT void
-cass_uuid_from_time(cass_uint64_t time,
-                    CassUuid output);
+cass_uuid_gen_from_time(CassUuidGen* uuid_gen,
+                        cass_uint64_t timestamp,
+                        CassUuid* output);
 
 /**
- * Generates a minimum V1 (time) UUID for the specified time.
+ * Sets the UUID to the minimum V1 (time) value for the specified time.
  *
  * @param[in] time
  * @param[out] output A minimum V1 UUID for the specified time.
  */
 CASS_EXPORT void
 cass_uuid_min_from_time(cass_uint64_t time,
-                        CassUuid output);
+                        CassUuid* output);
 
 /**
- * Generates a maximum V1 (time) UUID for the specified time.
+ * Sets the UUID to the maximum V1 (time) value for the specified time.
  *
  * @param[in] time
  * @param[out] output A maximum V1 UUID for the specified time.
  */
 CASS_EXPORT void
 cass_uuid_max_from_time(cass_uint64_t time,
-                        CassUuid output);
-
-/**
- * Generates a new V4 (random) UUID
- *
- * @param output A randomly generated V4 UUID.
- */
-CASS_EXPORT void
-cass_uuid_generate_random(CassUuid output);
+                        CassUuid* output);
 
 /**
  * Gets the timestamp for a V1 UUID
@@ -2413,11 +2467,22 @@ cass_uuid_version(CassUuid uuid);
  *
  * @param[in] uuid
  * @param[out] output A null-terminated string of length CASS_UUID_STRING_LENGTH.
- * Example: "550e8400-e29b-41d4-a716-446655440000"
  */
 CASS_EXPORT void
 cass_uuid_string(CassUuid uuid,
                  char* output);
+
+/**
+ * Returns a UUID for the specified string.
+ *
+ * Example: "550e8400-e29b-41d4-a716-446655440000"
+ *
+ * @param[in] str
+ * @param[out] output
+ */
+CASS_EXPORT CassError
+cass_uuid_from_string(const char* str,
+                      CassUuid* output);
 
 /***********************************************************************************
  *

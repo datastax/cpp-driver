@@ -26,6 +26,7 @@
 uv_mutex_t mutex;
 uv_cond_t cond;
 CassFuture* close_future = NULL;
+CassUuidGen* uuid_gen = NULL;
 
 void wait_exit() {
   uv_mutex_lock(&mutex);
@@ -123,10 +124,9 @@ void on_create_table(CassFuture* future, void* data) {
 
   statement = cass_statement_new(insert_query, 2);
 
-  cass_uuid_generate_time(key);
+  cass_uuid_gen_time(uuid_gen, &key);
   cass_statement_bind_uuid(statement, 0, key);
-  cass_statement_bind_int64(statement, 1,
-                            cass_uuid_timestamp(key));
+  cass_statement_bind_int64(statement, 1, cass_uuid_timestamp(key));
 
   insert_future = cass_session_execute((CassSession*)data, statement);
 
@@ -165,16 +165,16 @@ void on_select(CassFuture* future, void* data) {
     CassIterator* iterator = cass_iterator_from_result(result);
     while (cass_iterator_next(iterator)) {
       CassUuid key;
-      char key_buf[CASS_UUID_STRING_LENGTH];
+      char key_str[CASS_UUID_STRING_LENGTH];
       cass_uint64_t value = 0;
       const CassRow* row = cass_iterator_get_row(iterator);
 
-      cass_value_get_uuid(cass_row_get_column(row, 0), key);
+      cass_value_get_uuid(cass_row_get_column(row, 0), &key);
 
-      cass_uuid_string(key, key_buf);
+      cass_uuid_string(key, key_str);
       cass_value_get_int64(cass_row_get_column(row, 1), (cass_int64_t*)&value);
 
-      printf("%s, %llu\n", key_buf, (unsigned long long)value);
+      printf("%s, %llu\n", key_str, (unsigned long long)value);
     }
     cass_iterator_free(iterator);
     cass_result_free(result);
@@ -185,6 +185,8 @@ void on_select(CassFuture* future, void* data) {
 
 int main() {
   CassCluster* cluster = create_cluster();
+
+  uuid_gen = cass_uuid_gen_new();
 
   uv_mutex_init(&mutex);
   uv_cond_init(&cond);
@@ -198,6 +200,7 @@ int main() {
   uv_cond_destroy(&cond);
   uv_mutex_destroy(&mutex);
 
+  cass_uuid_gen_free(uuid_gen);
   cass_cluster_free(cluster);
 
   return 0;

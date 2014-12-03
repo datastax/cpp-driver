@@ -141,7 +141,7 @@ BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
   // mess with system.peers for more than the wait time
   // this is hitting more than the required node, but should cycle around to the one being queried enough
   do {
-    cass_statement_bind_uuid(schema_stmt.get(), 0, test_utils::generate_random_uuid());
+    cass_statement_bind_uuid(schema_stmt.get(), 0, test_utils::generate_random_uuid(inst.uuid_gen));
 
     test_utils::CassFuturePtr future(cass_session_execute(session, schema_stmt.get()));
     cass_future_wait(future.get());

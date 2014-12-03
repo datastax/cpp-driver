@@ -162,7 +162,7 @@ void print_schema_value(const CassValue* value) {
       break;
 
     case CASS_VALUE_TYPE_UUID:
-      cass_value_get_uuid(value, u);
+      cass_value_get_uuid(value, &u);
       cass_uuid_string(u, us);
       printf("%s", us);
       break;

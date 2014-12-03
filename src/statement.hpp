@@ -121,11 +121,11 @@ public:
     return bind(index, value.data, value.size);
   }
 
-  CassError bind(size_t index, const CassUuid value) {
+  CassError bind(size_t index, CassUuid value) {
     CASS_VALUE_CHECK_INDEX(index);
     Buffer buf(sizeof(int32_t) + sizeof(CassUuid));
     size_t pos = buf.encode_int32(0, sizeof(CassUuid));
-    buf.copy(pos, value, sizeof(CassUuid));
+    buf.encode_uuid(pos, value);
     values_[index] = buf;
     return CASS_OK;
   }

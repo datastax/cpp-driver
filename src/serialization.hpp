@@ -255,6 +255,52 @@ inline char* decode_option(char* input, uint16_t& type, char** class_name,
   return buffer;
 }
 
+inline void encode_uuid(char* output, CassUuid uuid) {
+  uint64_t time_and_version = uuid.time_and_version;
+  output[3] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
+  time_and_version >>= 8;
+  output[2] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
+  time_and_version >>= 8;
+  output[1] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
+  time_and_version >>= 8;
+  output[0] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
+  time_and_version >>= 8;
+
+  output[5] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
+  time_and_version >>= 8;
+  output[4] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
+  time_and_version >>= 8;
+
+  output[7] = static_cast<char>(time_and_version & 0x00000000000000FFLL);
+  time_and_version >>= 8;
+  output[6] = static_cast<char>(time_and_version & 0x000000000000000FFLL);
+
+  uint64_t clock_seq_and_node = uuid.clock_seq_and_node;
+  for (size_t i = 0; i < 8; ++i) {
+    output[15 - i] = static_cast<char>(clock_seq_and_node & 0x00000000000000FFL);
+    clock_seq_and_node >>= 8;
+  }
+}
+
+inline char* decode_uuid(char* input, CassUuid* output) {
+  output->time_and_version  = static_cast<uint64_t>(static_cast<uint8_t>(input[3]));
+  output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[2])) << 8;
+  output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[1])) << 16;
+  output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[0])) << 24;
+
+  output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[5])) << 32;
+  output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[4])) << 40;
+
+  output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[7])) << 48;
+  output->time_and_version |= static_cast<uint64_t>(static_cast<uint8_t>(input[6])) << 56;
+
+  output->clock_seq_and_node = 0;
+  for (size_t i = 0; i < 8; ++i) {
+    output->clock_seq_and_node |= static_cast<uint64_t>(static_cast<uint8_t>(input[15 - i])) << (8 * i);
+  }
+  return input + 16;
+}
+
 } // namespace cass
 
 #endif
