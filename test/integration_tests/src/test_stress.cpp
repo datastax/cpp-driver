@@ -40,12 +40,7 @@
 #include "cql_ccm_bridge.hpp"
 
 struct StressTests : public test_utils::MultipleNodesTest {
-  StressTests() : MultipleNodesTest(3, 0) {
-// TODO(mpenick): This is a stopgap. To be fixed in CPP-140
-#if !defined(WIN32) && !defined(_WIN32)
-    signal(SIGPIPE, SIG_IGN);
-#endif
-  }
+  StressTests() : MultipleNodesTest(3, 0) {}
 };
 
 BOOST_FIXTURE_TEST_SUITE(stress, StressTests)

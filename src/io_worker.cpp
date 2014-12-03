@@ -36,6 +36,7 @@ IOWorker::IOWorker(Session* session)
     , pending_request_count_(0)
     , request_queue_(config_.queue_size_io()) {
   prepare_.data = this;
+  uv_mutex_init(&keyspace_mutex_);
 }
 
 IOWorker::~IOWorker() {
@@ -43,9 +44,7 @@ IOWorker::~IOWorker() {
 }
 
 int IOWorker::init() {
-  int rc = uv_mutex_init(&keyspace_mutex_);
-  if (rc != 0) return rc;
-  rc = uv_mutex_init(&unavailable_addresses_mutex_);
+  int rc = uv_mutex_init(&unavailable_addresses_mutex_);
   if (rc != 0) return rc;
   rc = EventThread<IOWorkerEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
@@ -54,6 +53,10 @@ int IOWorker::init() {
   rc = uv_prepare_init(loop(), &prepare_);
   if (rc != 0) return rc;
   rc = uv_prepare_start(&prepare_, on_prepare);
+  if (rc != 0) return rc;
+  rc = uv_signal_init(loop(), &sigpipe_);
+  if (rc != 0) return rc;
+  rc = uv_signal_start(&sigpipe_, on_signal, SIGPIPE);
   return rc;
 }
 
@@ -237,6 +240,8 @@ void IOWorker::close_handles() {
   request_queue_.close_handles();
   uv_prepare_stop(&prepare_);
   uv_close(copy_cast<uv_prepare_t*, uv_handle_t*>(&prepare_), NULL);
+  uv_signal_stop(&sigpipe_);
+  uv_close(copy_cast<uv_signal_t*, uv_handle_t*>(&sigpipe_), NULL);
   for (PendingReconnectMap::iterator it = pending_reconnects_.begin(),
        end = pending_reconnects_.end(); it != end; ++it) {
     logger_->debug("IOWorker: close_handles stopping reconnect(%p timer(%p)) io_worker(%p)",
@@ -311,6 +316,11 @@ void IOWorker::on_prepare(uv_prepare_t* prepare, int status) {
     (*it)->flush();
   }
   io_worker->pools_pending_flush_.clear();
+}
+
+void IOWorker::on_signal(uv_signal_t* signal, int signum) {
+  // Ignore SIGPIPE
+  // TODO: Global logging (warn)
 }
 
 void IOWorker::schedule_reconnect(const Address& address) {
