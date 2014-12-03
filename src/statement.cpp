@@ -91,7 +91,7 @@ namespace {
   };
 
   template<>
-  struct IsValidValueType<const CassUuid> {
+  struct IsValidValueType<CassUuid> {
     bool operator()(uint16_t type) const {
       return type == CASS_VALUE_TYPE_TIMEUUID ||
           type == CASS_VALUE_TYPE_UUID;
@@ -253,7 +253,7 @@ CassError cass_statement_bind_bytes(CassStatement* statement, size_t index,
 }
 
 CassError cass_statement_bind_uuid(CassStatement* statement, size_t index,
-                                   const CassUuid value) {
+                                   CassUuid value) {
   return statement->bind(index, value);
 }
 
@@ -330,8 +330,8 @@ CassError cass_statement_bind_bytes_by_name(CassStatement* statement,
 
 CassError cass_statement_bind_uuid_by_name(CassStatement* statement,
                                            const char* name,
-                                           const CassUuid value) {
-  return bind_by_name<const CassUuid>(statement, name, value);
+                                           CassUuid value) {
+  return bind_by_name<CassUuid>(statement, name, value);
 }
 
 CassError cass_statement_bind_inet_by_name(CassStatement* statement,

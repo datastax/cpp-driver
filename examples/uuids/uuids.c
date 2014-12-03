@@ -131,16 +131,16 @@ CassError select_from_log(CassSession* session, const char* key) {
       CassString key;
       CassUuid time;
       CassString entry;
-      char time_buf[CASS_UUID_STRING_LENGTH];
+      char time_str[CASS_UUID_STRING_LENGTH];
 
       cass_value_get_string(cass_row_get_column(row, 0), &key);
-      cass_value_get_uuid(cass_row_get_column(row, 1), time);
+      cass_value_get_uuid(cass_row_get_column(row, 1), &time);
       cass_value_get_string(cass_row_get_column(row, 2), &entry);
 
-      cass_uuid_string(time, time_buf);
+      cass_uuid_string(time, time_str);
 
       printf("%.*s %s %.*s\n", (int)key.length, key.data,
-                               time_buf,
+                               time_str,
                                (int)entry.length, entry.data);
     }
 
@@ -156,6 +156,7 @@ CassError select_from_log(CassSession* session, const char* key) {
 
 int main() {
   CassError rc = CASS_OK;
+  CassUuidGen* uuid_gen = cass_uuid_gen_new();
   CassCluster* cluster = create_cluster();
   CassSession* session = NULL;
   CassFuture* close_future = NULL;
@@ -176,16 +177,16 @@ int main() {
                                               PRIMARY KEY (key, time));");
 
 
-  cass_uuid_generate_time(uuid);
+  cass_uuid_gen_time(uuid_gen, &uuid);
   insert_into_log(session, "test", uuid, "Log entry #1");
 
-  cass_uuid_generate_time(uuid);
+  cass_uuid_gen_time(uuid_gen, &uuid);
   insert_into_log(session, "test", uuid, "Log entry #2");
 
-  cass_uuid_generate_time(uuid);
+  cass_uuid_gen_time(uuid_gen, &uuid);
   insert_into_log(session, "test", uuid, "Log entry #3");
 
-  cass_uuid_generate_time(uuid);
+  cass_uuid_gen_time(uuid_gen, &uuid);
   insert_into_log(session, "test", uuid, "Log entry #4");
 
   select_from_log(session, "test");
@@ -194,6 +195,7 @@ int main() {
   cass_future_wait(close_future);
   cass_future_free(close_future);
   cass_cluster_free(cluster);
+  cass_uuid_gen_free(uuid_gen);
 
   return 0;
 }

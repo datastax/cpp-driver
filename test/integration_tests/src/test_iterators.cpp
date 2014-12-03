@@ -44,13 +44,13 @@ BOOST_FIXTURE_TEST_SUITE(iterators, IteratorTests)
 
 BOOST_AUTO_TEST_CASE(result_iterator)
 {
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   std::string create_table_query = str(boost::format("CREATE TABLE %s (part timeuuid, key int, value int, PRIMARY KEY(part, key));")
                                        % table_name);
 
   test_utils::execute_query(session, create_table_query);
 
-  std::string part =  test_utils::string_from_uuid(test_utils::generate_time_uuid().uuid);
+  std::string part =  test_utils::string_from_uuid(test_utils::generate_time_uuid(uuid_gen));
 
   int num_rows = 10;
 
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(result_iterator)
 
 BOOST_AUTO_TEST_CASE(row_iterator)
 {
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, first int, second int, third int);")
                                        % table_name);
 
@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE(row_iterator)
 
 BOOST_AUTO_TEST_CASE(collection_list_iterator)
 {
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value list<int>);")
                                        % table_name);
 
@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE(collection_list_iterator)
 
 BOOST_AUTO_TEST_CASE(collection_set_iterator)
 {
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value set<int>);")
                                        % table_name);
 
@@ -180,7 +180,7 @@ BOOST_AUTO_TEST_CASE(collection_set_iterator)
 
 BOOST_AUTO_TEST_CASE(collection_map_iterator)
 {
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value map<text, int>);")
                                        % table_name);
 
@@ -220,7 +220,7 @@ BOOST_AUTO_TEST_CASE(collection_map_iterator)
 
 BOOST_AUTO_TEST_CASE(map_iterator)
 {
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value map<text, int>);")
                                        % table_name);
 
@@ -259,7 +259,7 @@ BOOST_AUTO_TEST_CASE(map_iterator)
 
 BOOST_AUTO_TEST_CASE(empty)
 {
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   std::string create_table_query = str(boost::format("CREATE TABLE %s (part timeuuid, key int, value int, PRIMARY KEY(part, key));")
                                        % table_name);
 
@@ -279,7 +279,7 @@ BOOST_AUTO_TEST_CASE(empty)
 
 BOOST_AUTO_TEST_CASE(invalid_value_types)
 {
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   std::string create_table_query = str(boost::format("CREATE TABLE %s (key int PRIMARY KEY, value list<int>);")
                                        % table_name);
 
@@ -306,4 +306,3 @@ BOOST_AUTO_TEST_CASE(invalid_value_types)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-

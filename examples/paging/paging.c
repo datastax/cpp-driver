@@ -72,7 +72,7 @@ CassError execute_query(CassSession* session, const char* query) {
   return rc;
 }
 
-void insert_into_paging(CassSession* session, const char* key) {
+void insert_into_paging(CassSession* session, CassUuidGen* uuid_gen) {
   CassError rc = CASS_OK;
   CassString query = cass_string_init("INSERT INTO paging (key, value) VALUES (?, ?);");
 
@@ -84,7 +84,7 @@ void insert_into_paging(CassSession* session, const char* key) {
     char value_buffer[256];
     CassStatement* statement = cass_statement_new(query, 2);
 
-    cass_uuid_generate_time(key);
+    cass_uuid_gen_time(uuid_gen, &key);
     cass_statement_bind_uuid(statement, 0, key);
 
     sprintf(value_buffer, "%u", (unsigned int)i);
@@ -130,19 +130,19 @@ void select_from_paging(CassSession* session) {
 
     while (cass_iterator_next(iterator)) {
       CassUuid key;
-      char key_buffer[CASS_UUID_STRING_LENGTH];
+      char key_str[CASS_UUID_STRING_LENGTH];
       CassString value;
       char value_buffer[256];
 
       const CassRow* row = cass_iterator_get_row(iterator);
-      cass_value_get_uuid(cass_row_get_column(row, 0), key);
-      cass_uuid_string(key, key_buffer);
+      cass_value_get_uuid(cass_row_get_column(row, 0), &key);
+      cass_uuid_string(key, key_str);
 
       cass_value_get_string(cass_row_get_column(row, 1), &value);
       memcpy(value_buffer, value.data, value.length);
       value_buffer[value.length] = '\0';
 
-      printf("key: '%s' value: '%s'\n", key_buffer, value_buffer);
+      printf("key: '%s' value: '%s'\n", key_str, value_buffer);
     }
 
     has_more_pages = cass_result_has_more_pages(result);
@@ -160,6 +160,7 @@ void select_from_paging(CassSession* session) {
 
 int main() {
   CassError rc = CASS_OK;
+  CassUuidGen* uuid_gen = cass_uuid_gen_new();
   CassCluster* cluster = create_cluster();
   CassSession* session = NULL;
   CassFuture* close_future = NULL;
@@ -181,13 +182,14 @@ int main() {
 
   execute_query(session, "USE examples");
 
-  insert_into_paging(session, "test");
+  insert_into_paging(session, uuid_gen);
   select_from_paging(session);
 
   close_future = cass_session_close(session);
   cass_future_wait(close_future);
   cass_future_free(close_future);
   cass_cluster_free(cluster);
+  cass_uuid_gen_free(uuid_gen);
 
   return 0;
 }

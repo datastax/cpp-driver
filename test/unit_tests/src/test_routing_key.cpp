@@ -28,19 +28,6 @@
 
 #include <string>
 
-bool uuid_from_string(const std::string& str, CassUuid out) {
-  if (str.size() != 36) return false;
-  const char* pos = str.data();
-  for (size_t i = 0; i < 16; ++i) {
-    if (*pos == '-') pos++;
-    unsigned int byte;
-    sscanf(pos, "%2x", &byte);
-    out[i] = byte;
-    pos += 2;
-  }
-  return true;
-}
-
 // The java-driver was used as a reference for the hash value
 // below.
 
@@ -52,7 +39,7 @@ BOOST_AUTO_TEST_CASE(single)
     cass::QueryRequest query(1);
 
     CassUuid uuid;
-    BOOST_REQUIRE(uuid_from_string("d8775a70-6ea4-11e4-9fa7-0db22d2a6140", uuid));
+    BOOST_REQUIRE(cass_uuid_from_string("d8775a70-6ea4-11e4-9fa7-0db22d2a6140", &uuid) == CASS_OK);
 
     query.bind(0, uuid);
     query.add_key_index(0);
@@ -125,7 +112,7 @@ BOOST_AUTO_TEST_CASE(composite)
     cass::QueryRequest query(3);
 
     CassUuid uuid;
-    BOOST_REQUIRE(uuid_from_string("d8775a70-6ea4-11e4-9fa7-0db22d2a6140", uuid));
+    BOOST_REQUIRE(cass_uuid_from_string("d8775a70-6ea4-11e4-9fa7-0db22d2a6140", &uuid) == CASS_OK);
 
     query.bind(0, uuid);
     query.add_key_index(0);

@@ -56,7 +56,7 @@ public:
 
   void append(CassUuid value) {
     Buffer buf(sizeof(CassUuid));
-    buf.copy(0, value, sizeof(CassUuid));
+    buf.encode_uuid(0, value);
     bufs_.push_back(buf);
   }
 
