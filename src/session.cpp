@@ -452,7 +452,7 @@ void Session::on_execute(uv_async_t* data, int status) {
         Address address;
         if(!request_handler->get_current_host_address(&address)) {
           request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                                    "No hosts available");
+                                    "Session: No hosts available");
           break;
         }
 

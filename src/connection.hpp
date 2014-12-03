@@ -246,6 +246,7 @@ private:
   void on_supported(ResponseMessage* response);
   void on_pending_schema_agreement(Timer* timer);
 
+  void stop_connect_timer();
   void notify_ready();
   void notify_error(const std::string& error);
   void notify_error_ssl(const std::string& error);
