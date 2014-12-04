@@ -377,11 +377,10 @@ cass_cluster_set_port(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] ssl
- * @return CASS_OK if successful, otherwise an error occurred.
  *
  * @see cass_ssl_new()
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_ssl(CassCluster* cluster,
                      CassSsl* ssl);
 
@@ -407,9 +406,8 @@ cass_cluster_set_protocol_version(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] num_threads
- * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_num_threads_io(CassCluster* cluster,
                                 unsigned num_threads);
 
@@ -490,9 +488,8 @@ cass_cluster_set_max_connections_per_host(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] wait_time
- * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
                                      unsigned wait_time);
 
@@ -609,9 +606,8 @@ cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] timeout_ms Connect timeout in milliseconds
- * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_connect_timeout(CassCluster* cluster,
                                  unsigned timeout_ms);
 
@@ -622,9 +618,8 @@ cass_cluster_set_connect_timeout(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] timeout_ms Request timeout in milliseconds
- * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_request_timeout(CassCluster* cluster,
                                  unsigned timeout_ms);
 
@@ -635,9 +630,8 @@ cass_cluster_set_request_timeout(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] log_level
- * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_log_level(CassCluster* cluster,
                            CassLogLevel level);
 
@@ -650,9 +644,8 @@ cass_cluster_set_log_level(CassCluster* cluster,
  * @param[in] data An opaque data object passed to the callback.
  * @param[in] callback A callback that handles logging events. This is
  * called in a separate thread so access to shared data must by synchronized.
- * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_log_callback(CassCluster* cluster,
                               CassLogCallback callback,
                               void* data);
@@ -664,9 +657,8 @@ cass_cluster_set_log_callback(CassCluster* cluster,
  * @param[in] cluster
  * @param[in] username
  * @param[in] password
- * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_credentials(CassCluster* cluster,
                              const char* username,
                              const char* password);
@@ -680,9 +672,8 @@ cass_cluster_set_credentials(CassCluster* cluster,
  * them per request. All are considered 'local'.
  *
  * @param[in] cluster
- * @return CASS_OK
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_load_balance_round_robin(CassCluster* cluster);
 
 /**
@@ -692,9 +683,8 @@ cass_cluster_set_load_balance_round_robin(CassCluster* cluster);
  *
  * @param[in] cluster
  * @param[in] local_dc The primary data center to try first
- * @return CASS_OK
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
                                        const char* local_dc);
 
@@ -709,11 +699,37 @@ cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] local_dc The primary data center to try first
- * @return CASS_OK
  */
 CASS_EXPORT void
 cass_cluster_set_token_aware_routing(CassCluster* cluster,
                                      cass_bool_t enabled);
+
+/**
+ * Enable/Disable Nagel's algorithm on connections.
+ *
+ * Default: cass_false (disabled).
+ *
+ * @param[in] cluster
+ * @param[in] enable
+ */
+CASS_EXPORT void
+cass_cluster_set_tcp_nodelay(CassCluster* cluster,
+                             cass_bool_t enable);
+
+/**
+ * Enable/Disable TCP keep-alive
+ *
+ * Default: cass_false (disabled).
+ *
+ * @param[in] cluster
+ * @param[in] enable
+ * @param[in] delay_secs The initial delay in seconds, ingored when
+ * `enable` is false.
+ */
+CASS_EXPORT void
+cass_cluster_set_tcp_keepalive(CassCluster* cluster,
+                               cass_bool_t enable,
+                               unsigned delay_secs);
 
 /**
  * Connects a session to the cluster.
