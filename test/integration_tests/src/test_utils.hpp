@@ -552,11 +552,13 @@ CassSessionPtr create_session(CassCluster* cluster, CassError* code, cass_durati
 CassError execute_query_with_error(CassSession* session,
                                    const std::string& query,
                                    CassResultPtr* result = NULL,
+                                   cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS,
                                    CassConsistency consistency = CASS_CONSISTENCY_ONE);
 
 void execute_query(CassSession* session,
                    const std::string& query,
                    CassResultPtr* result = NULL,
+                   cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS,
                    CassConsistency consistency = CASS_CONSISTENCY_ONE);
 
 CassError wait_and_return_error(CassFuture* future, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
