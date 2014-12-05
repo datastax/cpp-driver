@@ -48,7 +48,7 @@ static int ssl_no_verify_callback(int ok, X509_STORE_CTX* store) {
 
 void ssl_info_callback(const SSL* ssl, int where, int ret) {
   if(ret == 0) {
-    fprintf(stderr, "ssl_info_callback, error occured.\n");
+    fprintf(stderr, "ssl_info_callback, error occurred.\n");
     return;
   }
   SSL_PRINT_INFO(ssl, where, SSL_CB_LOOP, "LOOP");
@@ -117,7 +117,7 @@ static X509* load_cert(const char* cert, size_t cert_size) {
 
 // Implementation taken from OpenSSL's SSL_CTX_use_certificate_chain_file()
 // (https://github.com/openssl/openssl/blob/OpenSSL_0_9_8-stable/ssl/ssl_rsa.c#L705).
-// Modified to be used for in-memory certficate chains and formatting.
+// Modified to be used for in-memory certificate chains and formatting.
 static int SSL_CTX_use_certificate_chain_bio(SSL_CTX* ctx, BIO* in) {
   int ret = 0;
   X509* x = NULL;

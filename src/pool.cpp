@@ -226,7 +226,7 @@ void Pool::spawn_connection() {
                        io_worker_->keyspace(),
                        io_worker_->protocol_version());
 
-    logger_->info("Pool: Spawning new conneciton to host %s", address_.to_string(true).c_str());
+    logger_->info("Pool: Spawning new connection to host %s", address_.to_string(true).c_str());
     connection->set_ready_callback(
           boost::bind(&Pool::on_connection_ready, this, _1));
     connection->set_close_callback(

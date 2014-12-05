@@ -632,7 +632,7 @@ void ControlConnection::on_up(const Address& address) {
   if (host) {
     if (host->is_up()) return;
 
-    // Immediately mark the node as up and asyncrhonously attempt
+    // Immediately mark the node as up and asynchronously attempt
     // to refresh the node's information. This is done because
     // a control connection may not be available because it's
     // waiting for a node to be marked as up.

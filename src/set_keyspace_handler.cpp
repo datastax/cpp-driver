@@ -43,7 +43,7 @@ void SetKeyspaceHandler::on_set(ResponseMessage* response) {
     case CQL_OPCODE_ERROR:
       connection_->defunct();
       request_handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                         "Unable to set keyspsace");
+                         "Unable to set keyspace");
       break;
     default:
       break;
@@ -53,7 +53,7 @@ void SetKeyspaceHandler::on_set(ResponseMessage* response) {
 void SetKeyspaceHandler::on_error(CassError code, const std::string& message) {
   connection_->defunct();
   request_handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                     "Unable to set keyspsace");
+                     "Unable to set keyspace");
 }
 
 void SetKeyspaceHandler::on_timeout() {
@@ -72,7 +72,7 @@ void SetKeyspaceHandler::on_result_response(ResponseMessage* response) {
   } else {
     connection_->defunct();
     request_handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                       "Unable to set keyspsace");
+                       "Unable to set keyspace");
   }
 }
 

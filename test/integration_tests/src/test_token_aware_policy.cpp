@@ -220,7 +220,7 @@ BOOST_AUTO_TEST_CASE(network_topology)
   replicas = get_replicas(rf, session, keyspace, value);
   BOOST_CHECK(replicas.size() == 1 && local_replicas.count(*replicas.begin()) > 0);
 
-  // Using remotes nodes
+  // Using remote nodes
   ccm->stop(2);
   replicas = get_replicas(rf, session, keyspace, value);
   BOOST_CHECK(replicas.size() > 0 && !intersects(replicas, local_replicas));

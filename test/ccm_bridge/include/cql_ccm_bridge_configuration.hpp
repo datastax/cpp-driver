@@ -77,7 +77,7 @@ namespace cql {
 
 
 	// Returns current tests configuration.
-	// Configuration is readed from config.txt file.
+	// Configuration is read from config.txt file.
   const cql_ccm_bridge_configuration_t& get_ccm_bridge_configuration(const std::string& filename = "config.txt");
 }
 

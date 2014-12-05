@@ -881,7 +881,7 @@ cass_schema_meta_get_field(const CassSchemaMeta* meta,
  * Gets the name for a schema metadata field
  *
  * @param[in] field
- * @return The name of the metdata data field
+ * @return The name of the metadata data field
  */
 CASS_EXPORT CassString
 cass_schema_meta_field_name(const CassSchemaMetaField* field);
@@ -890,7 +890,7 @@ cass_schema_meta_field_name(const CassSchemaMetaField* field);
  * Gets the value for a schema metadata field
  *
  * @param[in] field
- * @return The value of the metdata data field
+ * @return The value of the metadata data field
  */
 CASS_EXPORT const CassValue*
 cass_schema_meta_field_value(const CassSchemaMetaField* field);
@@ -935,7 +935,7 @@ cass_ssl_add_trusted_cert(CassSsl* ssl,
  * Sets verifcation performed on the peer's certificate.
  *
  * CASS_SSL_VERIFY_NONE - No verification is performed
- * CASS_SSL_VERIFY_PEER_CERT - Certficate is present and valid
+ * CASS_SSL_VERIFY_PEER_CERT - Certificate is present and valid
  * CASS_SSL_VERIFY_PEER_IDENTITY - IP address matches the certificate's
  * common name or one of its subject alternative names. This implies the
  * certificate is also present.
@@ -951,9 +951,9 @@ cass_ssl_set_verify_flags(CassSsl* ssl,
                           int flags);
 
 /**
- * Set client-side certficate chain. This is used to authenticate
+ * Set client-side certificate chain. This is used to authenticate
  * the client on the server-side. This should contain the entire
- * certficate chain starting with the certificate itself.
+ * Certificate chain starting with the certificate itself.
  *
  * @param[in] ssl
  * @param[in] cert PEM formatted certificate string
@@ -1136,7 +1136,7 @@ cass_statement_free(CassStatement* statement);
  *
  * @param[in] statement
  * @param[in] index
- * @return CASS_OK if successful, otherwise an error ocurred.
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_statement_add_key_index(CassStatement* statement,
@@ -1151,7 +1151,7 @@ cass_statement_add_key_index(CassStatement* statement,
  *
  * @param[in] statement
  * @param[in] keyspace
- * @return CASS_OK if successful, otherwise an error ocurred.
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_statement_set_keyspace(CassStatement* statement,

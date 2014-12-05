@@ -64,7 +64,7 @@ bool bind_and_execute_insert(CassSession* session, CassStatement* statement) {
   CassError code = cass_future_error_code(future.get());
   if(code != CASS_OK && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT) { // Timeout is okay
     CassString message = cass_future_error_message(future.get());
-    fprintf(stderr, "Error occured during insert '%.*s'\n", static_cast<int>(message.length), message.data);
+    fprintf(stderr, "Error occurred during insert '%.*s'\n", static_cast<int>(message.length), message.data);
     return false;
   }
 
@@ -109,7 +109,7 @@ bool select_task(CassSession* session, const std::string& query, CassConsistency
        && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT
        && code != CASS_ERROR_SERVER_READ_TIMEOUT) { // Timeout is okay
       CassString message = cass_future_error_message(future.get());
-      fprintf(stderr, "Error occured during select '%.*s'\n", static_cast<int>(message.length), message.data);
+      fprintf(stderr, "Error occurred during select '%.*s'\n", static_cast<int>(message.length), message.data);
       is_successful = false;
     }
 
