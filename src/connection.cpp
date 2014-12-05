@@ -241,7 +241,7 @@ void Connection::flush() {
 
 void Connection::schedule_schema_agreement(const SharedRefPtr<SchemaChangeHandler>& handler, uint64_t wait) {
   PendingSchemaAgreement* pending_schema_agreement = new PendingSchemaAgreement(handler);
-  pending_schema_aggreements_.add_to_back(pending_schema_agreement);
+  pending_schema_agreements_.add_to_back(pending_schema_agreement);
   pending_schema_agreement->timer
       = Timer::start(loop_,
                      wait,
@@ -420,10 +420,10 @@ void Connection::on_close(uv_handle_t* handle) {
     delete pending_write;
   }
 
-  while (!connection->pending_schema_aggreements_.is_empty()) {
+  while (!connection->pending_schema_agreements_.is_empty()) {
     PendingSchemaAgreement* pending_schema_aggreement
-        = connection->pending_schema_aggreements_.front();
-    connection->pending_schema_aggreements_.remove(pending_schema_aggreement);
+        = connection->pending_schema_agreements_.front();
+    connection->pending_schema_agreements_.remove(pending_schema_aggreement);
     pending_schema_aggreement->stop_timer();
     pending_schema_aggreement->handler->on_closing();
     delete pending_schema_aggreement;
@@ -503,7 +503,7 @@ void Connection::on_timeout(RequestTimer* timer) {
   LOG_INFO("Request timed out to host %s", addr_string_.c_str());
   // TODO (mpenick): We need to handle the case where we have too many
   // timeout requests and we run out of stream ids. The java-driver
-  // uses a threshold to defunct the connneciton.
+  // uses a threshold to defunct the connection.
   handler->set_state(Handler::REQUEST_STATE_TIMEOUT);
   handler->on_timeout();
 }
@@ -565,7 +565,7 @@ void Connection::on_supported(ResponseMessage* response) {
 void Connection::on_pending_schema_agreement(Timer* timer) {
   PendingSchemaAgreement* pending_schema_agreement
       = static_cast<PendingSchemaAgreement*>(timer->data());
-  pending_schema_aggreements_.remove(pending_schema_agreement);
+  pending_schema_agreements_.remove(pending_schema_agreement);
   pending_schema_agreement->handler->execute();
   delete pending_schema_agreement;
 }
@@ -645,7 +645,7 @@ void Connection::send_credentials() {
 void Connection::send_initial_auth_response() {
   Authenticator* auth = config_.auth_provider()->new_authenticator(address_);
   if (auth == NULL) {
-    auth_error_ = "Authenticaion required but no auth provider set";
+    auth_error_ = "Authentication required but no auth provider set";
     notify_error(auth_error_);
   } else {
     AuthResponseRequest* auth_response
@@ -772,7 +772,7 @@ void Connection::PendingWriteSsl::encrypt() {
   BufferVec::const_iterator it = buffers_.begin(),
       end = buffers_.end();
 
-  LOG_TRACE("Coping %lu bufs", buffers_.size());
+  LOG_TRACE("Copying %lu bufs", buffers_.size());
 
   bool is_done = (it == end);
 
