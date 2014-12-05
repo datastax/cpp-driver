@@ -57,7 +57,7 @@ struct TestSSL {
    */
   const cql::cql_ccm_bridge_configuration_t& configuration_;
   /**
-   * CCM bridge instance for performing additonal operations against cluster
+   * CCM bridge instance for performing additional operations against cluster
    */
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm_;
   /**
@@ -94,7 +94,7 @@ struct TestSSL {
    */
   std::string invalid_cassandra_certificate_;
   /**
-   * Incalid client/driver certificate
+   * Invalid client/driver certificate
    */
   std::string invalid_driver_certificate_;
   /**
@@ -138,7 +138,7 @@ struct TestSSL {
    *                                 (default: false)
    * @param is_failure True if test is supposed to fail; false otherwise
    *                   (default: false)
-   * @param nodes Number of nodes for the cluser (default: 1)
+   * @param nodes Number of nodes for the cluster (default: 1)
    * @param protocol_version Protocol version to use for connection (default: 2)
    */
   void setup(bool is_ssl = true, bool is_client_authentication = false, bool is_failure = false, unsigned int nodes = 1, unsigned int protocol_version = 2) {
@@ -359,7 +359,7 @@ BOOST_AUTO_TEST_CASE(connect_failures) {
   //Load invalid certificates
   create_ssl_context();
   BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, cass_string_init("Invalid Client Certificate")), CASS_ERROR_SSL_INVALID_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init("Inavlid Trusted Certificate")), CASS_ERROR_SSL_INVALID_CERT);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init("Invalid Trusted Certificate")), CASS_ERROR_SSL_INVALID_CERT);
   BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, cass_string_init("Invalid Private Key"), "invalid"), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
   BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, cass_string_init2(driver_private_key_.data(), driver_private_key_.size()), "invalid"), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
 

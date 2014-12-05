@@ -268,7 +268,7 @@ private:
   size_t pending_writes_size_;
   List<PendingWriteBase> pending_writes_;
   List<Handler> pending_reads_;
-  List<PendingSchemaAgreement> pending_schema_aggreements_;
+  List<PendingSchemaAgreement> pending_schema_agreements_;
 
   uv_loop_t* loop_;
   const Config& config_;

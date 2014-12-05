@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
 
 BOOST_AUTO_TEST_CASE(connection_spawn)
 {
-  const std::string SPAWN_MSG = "Pool: Spawning new conneciton to host " + conf.ip_prefix() + "1:9042";
+  const std::string SPAWN_MSG = "Pool: Spawning new connection to host " + conf.ip_prefix() + "1:9042";
   test_utils::CassLog::reset(SPAWN_MSG);
 
   test_utils::MultipleNodesTest inst(1, 0);
