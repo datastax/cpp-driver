@@ -85,12 +85,3 @@ CassBytes cass_bytes_init(const cass_byte_t* data, cass_size_t size) {
 }
 
 } // extern "C"
-
-namespace cass {
-
-void cass_string_of_string(const std::string& source, CassString* output) {
-  output->data = source.data();
-  output->length = source.size();
-}
-
-}

@@ -34,16 +34,30 @@ public:
   };
 
   Request(uint8_t opcode)
-      : opcode_(opcode) {}
+      : opcode_(opcode)
+      , consistency_(CASS_CONSISTENCY_ONE)
+      , serial_consistency_(CASS_CONSISTENCY_ANY) {}
 
   virtual ~Request() {}
 
   uint8_t opcode() const { return opcode_; }
 
+  CassConsistency consistency() const { return consistency_; }
+
+  void set_consistency(CassConsistency consistency) { consistency_ = consistency; }
+
+  CassConsistency serial_consistency() const { return serial_consistency_; }
+
+  void set_serial_consistency(CassConsistency serial_consistency) {
+    serial_consistency_ = serial_consistency;
+  }
+
   virtual int encode(int version, BufferVec* bufs) const = 0;
 
 private:
   uint8_t opcode_;
+  CassConsistency consistency_;
+  CassConsistency serial_consistency_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Request);

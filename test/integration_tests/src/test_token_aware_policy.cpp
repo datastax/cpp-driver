@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE(network_topology)
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", rf, rf);
 
-  cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1");
+  cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1", rf, cass_false);
   cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);

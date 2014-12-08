@@ -19,7 +19,7 @@
 
 #include "auth.hpp"
 #include "cassandra.h"
-#include "round_robin_policy.hpp"
+#include "dc_aware_policy.hpp"
 #include "ssl.hpp"
 #include "token_aware_policy.hpp"
 
@@ -58,7 +58,7 @@ public:
       , log_callback_(default_log_callback)
       , log_data_(NULL)
       , auth_provider_(new AuthProvider())
-      , load_balancing_policy_(new RoundRobinPolicy())
+      , load_balancing_policy_(new DCAwarePolicy())
       , token_aware_routing_(true) {}
 
   unsigned thread_count_io() const { return thread_count_io_; }
