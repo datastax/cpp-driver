@@ -149,7 +149,7 @@ void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
   Address address;
   if (!request_handler->get_current_host_address(&address)) {
     request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                              "No hosts available");
+                              "IOWorker: No hosts available");
     return;
   }
 

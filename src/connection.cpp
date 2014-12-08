@@ -254,6 +254,7 @@ void Connection::close() {
   if (state_ != CONNECTION_STATE_CLOSING) {
     uv_handle_t* handle = copy_cast<uv_tcp_t*, uv_handle_t*>(&socket_);
     if (!uv_is_closing(handle)) {
+      stop_connect_timer();
       if (state_ == CONNECTION_STATE_CONNECTED ||
           state_ == CONNECTION_STATE_READY) {
         uv_read_stop(copy_cast<uv_tcp_t*, uv_stream_t*>(&socket_));
@@ -373,9 +374,6 @@ void Connection::on_connect(Connecter* connecter) {
   if (connection->connect_timer_ == NULL) {
     return; // Timed out
   }
-
-  Timer::stop(connection->connect_timer_);
-  connection->connect_timer_ = NULL;
 
   if (connecter->status() == Connecter::SUCCESS) {
     connection->logger_->debug("Connection: Connected to host %s",
@@ -574,7 +572,15 @@ void Connection::on_pending_schema_agreement(Timer* timer) {
   delete pending_schema_agreement;
 }
 
+void Connection::stop_connect_timer() {
+  if (connect_timer_ != NULL) {
+    Timer::stop(connect_timer_);
+    connect_timer_ = NULL;
+  }
+}
+
 void Connection::notify_ready() {
+  stop_connect_timer();
   state_ = CONNECTION_STATE_READY;
   set_is_available(true);
   if (ready_callback_) {
