@@ -97,7 +97,7 @@ void DCAwarePolicy::PerDCHostMap::add_host_to_dc(const std::string& dc, const Sh
     hosts->push_back(host);
     map_.insert(Map::value_type(dc, hosts));
   } else {
-    append_host_if_absent(i->second, host);
+    add_host(i->second, host);
   }
 }
 

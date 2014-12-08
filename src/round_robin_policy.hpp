@@ -51,7 +51,7 @@ public:
   }
 
   virtual void on_add(const SharedRefPtr<Host>& host) {
-    append_host_if_absent(hosts_, host);
+    add_host(hosts_, host);
   }
 
   virtual void on_remove(const SharedRefPtr<Host>& host) {
