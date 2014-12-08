@@ -18,10 +18,11 @@
 
 namespace cass {
 
-void append_host_if_absent(CopyOnWriteHostVec& hosts, const SharedRefPtr<Host>& host) {
+void add_host(CopyOnWriteHostVec& hosts, const SharedRefPtr<Host>& host) {
   HostVec::iterator i;
   for (i = hosts->begin(); i != hosts->end(); ++i) {
     if ((*i)->address() == host->address()) {
+      *i = host;
       break;
     }
   }
