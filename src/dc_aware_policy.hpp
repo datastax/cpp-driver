@@ -33,16 +33,16 @@ class DCAwarePolicy : public LoadBalancingPolicy {
 public:
   DCAwarePolicy()
       : used_hosts_per_remote_dc_(0)
-      , dont_use_remote_dc_for_local_cl_(true)
+      , skip_remote_dcs_for_local_cl_(true)
       , local_dc_live_hosts_(new HostVec)
       , index_(0) {}
 
   DCAwarePolicy(const std::string& local_dc,
                 size_t used_hosts_per_remote_dc,
-                bool allow_remote_dcs_for_local_cl)
+                bool skip_remote_dcs_for_local_cl)
       : local_dc_(local_dc)
       , used_hosts_per_remote_dc_(used_hosts_per_remote_dc)
-      , dont_use_remote_dc_for_local_cl_(!allow_remote_dcs_for_local_cl)
+      , skip_remote_dcs_for_local_cl_(skip_remote_dcs_for_local_cl)
       , local_dc_live_hosts_(new HostVec)
       , index_(0) {}
 
@@ -65,7 +65,7 @@ public:
   virtual LoadBalancingPolicy* new_instance() {
     return new DCAwarePolicy(local_dc_,
                              used_hosts_per_remote_dc_,
-                             !dont_use_remote_dc_for_local_cl_);
+                             skip_remote_dcs_for_local_cl_);
   }
 
 private:
@@ -113,7 +113,7 @@ private:
 
   std::string local_dc_;
   size_t used_hosts_per_remote_dc_;
-  bool dont_use_remote_dc_for_local_cl_;
+  bool skip_remote_dcs_for_local_cl_;
 
   CopyOnWriteHostVec local_dc_live_hosts_;
   PerDCHostMap per_remote_dc_live_hosts_;
