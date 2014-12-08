@@ -19,7 +19,7 @@
 
 #include "copy_on_write_ptr.hpp"
 #include "iterator.hpp"
-#include "scoped_mutex.hpp"
+#include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 #include "type_parser.hpp"
 

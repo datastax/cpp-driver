@@ -30,7 +30,7 @@
 #include "ref_counted.hpp"
 #include "row.hpp"
 #include "schema_metadata.hpp"
-#include "scoped_mutex.hpp"
+#include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 
 #include <list>

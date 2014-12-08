@@ -32,15 +32,15 @@ public:
     : hosts_(new HostVec)
     , index_(0) {}
 
-  virtual void init(const HostMap& hosts) {
+  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts) {
     hosts_->reserve(hosts.size());
-    for (HostMap::const_iterator it = hosts.begin(),
-         end = hosts.end(); it != end; ++it) {
-      hosts_->push_back(it->second);
+    for (HostMap::const_iterator i = hosts.begin(),
+         end = hosts.end(); i != end; ++i) {
+      hosts_->push_back(i->second);
     }
   }
 
-  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) {
+  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const {
     return CASS_HOST_DISTANCE_LOCAL;
   }
 
@@ -51,40 +51,19 @@ public:
   }
 
   virtual void on_add(const SharedRefPtr<Host>& host) {
-    HostVec::iterator it;
-    for (it = hosts_->begin(); it != hosts_->end(); ++it) {
-      if ((*it)->address() == host->address()) {
-        (*it) = host;
-        break;
-      }
-    }
-    if (it == hosts_->end()) {
-      hosts_->push_back(host);
-    }
+    append_host_if_absent(hosts_, host);
   }
 
   virtual void on_remove(const SharedRefPtr<Host>& host) {
-    for (HostVec::iterator it = hosts_->begin(); it != hosts_->end(); ++it) {
-      if ((*it)->address() == host->address()) {
-        hosts_->erase(it);
-        break;
-      }
-    }
+    remove_host(hosts_, host);
   }
 
   virtual void on_up(const SharedRefPtr<Host>& host) {
     on_add(host);
-    down_addresses_.erase(host->address());
   }
 
   virtual void on_down(const SharedRefPtr<Host>& host) {
-    // Note: at some point it may make more sense to guard repetitious calls
-    // in Session::on_down. For now, leaving here since this is the only place the
-    // logic exists, and letting events flow freely at a higher level can
-    // promote self-rectifying state.
-    if (down_addresses_.insert(host->address()).second) {
-      on_remove(host);
-    }
+    on_remove(host);
   }
 
   virtual LoadBalancingPolicy* new_instance() { return new RoundRobinPolicy(); }
@@ -116,7 +95,6 @@ private:
 
   CopyOnWriteHostVec hosts_;
   size_t index_;
-  std::set<Address> down_addresses_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(RoundRobinPolicy);

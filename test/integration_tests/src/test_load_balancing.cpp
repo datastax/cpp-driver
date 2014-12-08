@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(dc_aware)
   const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 2, 1);
 
-  cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1");
+  cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1", 1, cass_false);
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 

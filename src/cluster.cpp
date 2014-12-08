@@ -225,9 +225,18 @@ void cass_cluster_set_load_balance_round_robin(CassCluster* cluster) {
   cluster->config().set_load_balancing_policy(new cass::RoundRobinPolicy());
 }
 
-void cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
-                                            const char* local_dc) {
-  cluster->config().set_load_balancing_policy(new cass::DCAwarePolicy(local_dc));
+CassError cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
+                                                 const char* local_dc,
+                                                 unsigned used_hosts_per_remote_dc,
+                                                 cass_bool_t allow_remote_dcs_for_local_cl) {
+  if (local_dc == NULL || strlen(local_dc) == 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_load_balancing_policy(
+        new cass::DCAwarePolicy(local_dc,
+                                used_hosts_per_remote_dc,
+                                allow_remote_dcs_for_local_cl));
+  return CASS_OK;
 }
 
 void cass_cluster_set_token_aware_routing(CassCluster* cluster,

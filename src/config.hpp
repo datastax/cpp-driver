@@ -19,7 +19,7 @@
 
 #include "auth.hpp"
 #include "cassandra.h"
-#include "round_robin_policy.hpp"
+#include "dc_aware_policy.hpp"
 #include "ssl.hpp"
 #include "token_aware_policy.hpp"
 
@@ -58,8 +58,8 @@ public:
       , log_callback_(default_log_callback)
       , log_data_(NULL)
       , auth_provider_(new AuthProvider())
-      , load_balancing_policy_(new RoundRobinPolicy())
-      , token_aware_routing_(true)
+      , load_balancing_policy_(new DCAwarePolicy())
+      , token_aware_routing_(true) {}
       , tcp_nodelay_enable_(false)
       , tcp_keepalive_enable_(false)
       , tcp_keepalive_delay_secs_(0) {}
