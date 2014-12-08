@@ -21,7 +21,7 @@
 #include "pool.hpp"
 #include "request_handler.hpp"
 #include "session.hpp"
-#include "scoped_mutex.hpp"
+#include "scoped_lock.hpp"
 #include "timer.hpp"
 
 #include <boost/bind.hpp>

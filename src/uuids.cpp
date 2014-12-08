@@ -19,7 +19,7 @@
 #include "cassandra.h"
 #include "get_time.hpp"
 #include "md5.hpp"
-#include "scoped_mutex.hpp"
+#include "scoped_lock.hpp"
 
 #include <boost/random/random_device.hpp>
 

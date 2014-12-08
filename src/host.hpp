@@ -106,6 +106,9 @@ typedef std::map<Address, SharedRefPtr<Host> > HostMap;
 typedef std::vector<SharedRefPtr<Host> > HostVec;
 typedef CopyOnWritePtr<HostVec> CopyOnWriteHostVec;
 
+void add_host(CopyOnWriteHostVec& hosts, const SharedRefPtr<Host>& host);
+void remove_host(CopyOnWriteHostVec& hosts, const SharedRefPtr<Host>& host);
+
 } // namespace cass
 
 #endif

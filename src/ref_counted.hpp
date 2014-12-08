@@ -150,6 +150,7 @@ public:
 private:
   template<class S>
   void copy(S* ptr) {
+    if (ptr == ptr_) return;
     if (ptr != NULL) {
       ptr->inc_ref();
     }
@@ -182,6 +183,7 @@ public:
   }
 
   void reset(type* ptr = NULL) {
+    if (ptr == ptr_) return;
     if (ptr != NULL) {
       ptr->inc_ref();
     }

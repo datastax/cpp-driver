@@ -101,6 +101,10 @@ bool ControlConnection::determine_address_for_peer_host(Logger* logger,
   return true;
 }
 
+const SharedRefPtr<Host> ControlConnection::connected_host() const {
+  return session_->get_host(current_host_address_);
+}
+
 void ControlConnection::connect(Session* session) {
   session_ = session;
   logger_ = session_->logger_.get();

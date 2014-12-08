@@ -59,6 +59,10 @@ namespace cass {
 class RoutableRequest;
 class TokenMap;
 
+inline bool is_dc_local(CassConsistency cl) {
+  return cl == CASS_CONSISTENCY_LOCAL_ONE || cl == CASS_CONSISTENCY_LOCAL_QUORUM;
+}
+
 class QueryPlan {
 public:
   virtual ~QueryPlan() {}
@@ -81,9 +85,9 @@ public:
 
   virtual ~LoadBalancingPolicy() {}
 
-  virtual void init(const HostMap& hosts) = 0;
+  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts) = 0;
 
-  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) = 0;
+  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const = 0;
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
                                     const Request* request,
@@ -100,9 +104,11 @@ public:
 
   virtual ~ChainedLoadBalancingPolicy() {}
 
-  virtual void init(const HostMap& hosts) { return child_policy_->init(hosts); }
+  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts) {
+    return child_policy_->init(connected_host, hosts);
+  }
 
-  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) { return child_policy_->distance(host); }
+  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const { return child_policy_->distance(host); }
 
   virtual void on_add(const SharedRefPtr<Host>& host) { child_policy_->on_add(host); }
 

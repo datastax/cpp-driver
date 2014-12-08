@@ -665,8 +665,6 @@ cass_cluster_set_credentials(CassCluster* cluster,
 
 /**
  * Configures the cluster to use round-robin load balancing.
- * This is the default, and does not need to be called unless
- * switching an existing from another policy.
  *
  * The driver discovers all nodes in a cluster and cycles through
  * them per request. All are considered 'local'.
@@ -681,12 +679,26 @@ cass_cluster_set_load_balance_round_robin(CassCluster* cluster);
  * For each query, all live nodes in a primary 'local' DC are tried first,
  * followed by any node from other DCs.
  *
+ * Note: This is the default, and does not need to be called unless
+ * switching an existing from another policy or changing settings.
+ * Without further configuration, a default local_dc is chosen from the
+ * first connected contact point, and no remote hosts are considered in
+ * query plans. If relying on this mechanism, be sure to use only contact
+ * points from the local DC.
+ *
  * @param[in] cluster
  * @param[in] local_dc The primary data center to try first
+ * @param[in] used_hosts_per_remote_dc The number of host used in each remote DC if no hosts
+ * are available in the local dc
+ * @param[in] allow_remote_dcs_for_local_cl Allows remote hosts to be used if no local dc hosts
+ * are available and the consistency level is LOCAL_ONE or LOCAL_QUORUM
+ * @return CASS_OK if successful, otherwise an error occurred
  */
-CASS_EXPORT void
+CASS_EXPORT CassError
 cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
-                                       const char* local_dc);
+                                       const char* local_dc,
+                                       unsigned used_hosts_per_remote_dc,
+                                       cass_bool_t allow_remote_dcs_for_local_cl);
 
 /**
  * Configures the cluster to use Token-aware request routing, or not.

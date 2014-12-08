@@ -63,11 +63,14 @@ public:
     return protocol_version_;
   }
 
+  const SharedRefPtr<Host> connected_host() const;
+
   void connect(Session* session);
   void close();
 
   void on_up(const Address& address);
   void on_down(const Address& address, bool is_critical_failure);
+
 
 private:
   class ControlMultipleRequestHandler : public MultipleRequestHandler {

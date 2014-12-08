@@ -69,10 +69,4 @@ EXTERNAL_TYPE(cass::SchemaMetadataField, CassSchemaMetaField);
 
 #undef EXTERNAL_TYPE
 
-namespace cass {
-
-void cass_string_of_string(const std::string& source, CassString* output);
-
-}
-
 #endif

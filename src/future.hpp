@@ -20,7 +20,7 @@
 #include "cassandra.h"
 #include "host.hpp"
 #include "macros.hpp"
-#include "scoped_mutex.hpp"
+#include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 #include "ref_counted.hpp"
 
