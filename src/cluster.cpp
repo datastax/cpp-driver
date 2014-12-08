@@ -250,7 +250,7 @@ CassError cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
   cluster->config().set_load_balancing_policy(
         new cass::DCAwarePolicy(local_dc,
                                 used_hosts_per_remote_dc,
-                                allow_remote_dcs_for_local_cl));
+                                !allow_remote_dcs_for_local_cl));
   return CASS_OK;
 }
 
