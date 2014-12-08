@@ -378,7 +378,7 @@ BOOST_AUTO_TEST_CASE(allow_remote_dcs_for_local_cl)
   {
     // Not allowing remote DCs for local CLs
     bool allow_remote_dcs_for_local_cl = false;
-    cass::DCAwarePolicy policy(LOCAL_DC, 3, allow_remote_dcs_for_local_cl);
+    cass::DCAwarePolicy policy(LOCAL_DC, 3, !allow_remote_dcs_for_local_cl);
     policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
     // Set local CL
@@ -394,7 +394,7 @@ BOOST_AUTO_TEST_CASE(allow_remote_dcs_for_local_cl)
   {
     // Allowing remote DCs for local CLs
     bool allow_remote_dcs_for_local_cl = true;
-    cass::DCAwarePolicy policy(LOCAL_DC, 3, allow_remote_dcs_for_local_cl);
+    cass::DCAwarePolicy policy(LOCAL_DC, 3, !allow_remote_dcs_for_local_cl);
     policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
     // Set local CL
