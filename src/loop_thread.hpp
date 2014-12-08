@@ -27,6 +27,23 @@ public:
       : loop_(uv_loop_new())
       , thread_id_(0) {}
 
+  int init() {
+    int rc = 0;
+#if !defined(WIN32) && !defined(_WIN32)
+    rc = uv_signal_init(loop(), &sigpipe_);
+    if (rc != 0) return rc;
+    rc = uv_signal_start(&sigpipe_, on_signal, SIGPIPE);
+#endif
+    return rc;
+  }
+
+  void close_handles() {
+#if !defined(WIN32) && !defined(_WIN32)
+    uv_signal_stop(&sigpipe_);
+    uv_close(copy_cast<uv_signal_t*, uv_handle_t*>(&sigpipe_), NULL);
+#endif
+  }
+
   virtual ~LoopThread() { uv_loop_delete(loop_); }
 
   uv_loop_t* loop() { return loop_; }
@@ -50,9 +67,20 @@ private:
     thread->on_after_run();
   }
 
+#if !defined(WIN32) && !defined(_WIN32)
+  static void on_signal(uv_signal_t* signal, int signum) {
+    // Ignore SIGPIPE
+    // TODO: Global logging (warn)
+  }
+#endif
+
   uv_loop_t* loop_;
   uv_thread_t thread_;
   unsigned long thread_id_;
+
+#if !defined(WIN32) && !defined(_WIN32)
+  uv_signal_t sigpipe_;
+#endif
 };
 
 } // namespace cass
