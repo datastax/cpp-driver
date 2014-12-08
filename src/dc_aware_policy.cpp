@@ -153,7 +153,7 @@ SharedRefPtr<Host> DCAwarePolicy::DCAwareQueryPlan::compute_next() {
     }
   }
 
-  if (policy_->skip_remote_dcs_for_local_cl && is_dc_local(cl_)) {
+  if (policy_->skip_remote_dcs_for_local_cl_ && is_dc_local(cl_)) {
     return SharedRefPtr<Host>();
   }
 
