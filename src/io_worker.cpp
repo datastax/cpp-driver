@@ -54,11 +54,6 @@ int IOWorker::init() {
   if (rc != 0) return rc;
   rc = uv_prepare_start(&prepare_, on_prepare);
   if (rc != 0) return rc;
-#if !defined(WIN32) && !defined(_WIN32)
-  rc = uv_signal_init(loop(), &sigpipe_);
-  if (rc != 0) return rc;
-  rc = uv_signal_start(&sigpipe_, on_signal, SIGPIPE);
-#endif
   return rc;
 }
 
@@ -243,11 +238,6 @@ void IOWorker::close_handles() {
   uv_prepare_stop(&prepare_);
   uv_close(copy_cast<uv_prepare_t*, uv_handle_t*>(&prepare_), NULL);
 
-#if !defined(WIN32) && !defined(_WIN32)
-  uv_signal_stop(&sigpipe_);
-  uv_close(copy_cast<uv_signal_t*, uv_handle_t*>(&sigpipe_), NULL);
-#endif
-
   for (PendingReconnectMap::iterator it = pending_reconnects_.begin(),
        end = pending_reconnects_.end(); it != end; ++it) {
     logger_->debug("IOWorker: close_handles stopping reconnect(%p timer(%p)) io_worker(%p)",
@@ -323,13 +313,6 @@ void IOWorker::on_prepare(uv_prepare_t* prepare, int status) {
   }
   io_worker->pools_pending_flush_.clear();
 }
-
-#if !defined(WIN32) && !defined(_WIN32)
-void IOWorker::on_signal(uv_signal_t* signal, int signum) {
-  // Ignore SIGPIPE
-  // TODO: Global logging (warn)
-}
-#endif
 
 void IOWorker::schedule_reconnect(const Address& address) {
   if (is_closing_ || pending_reconnects_.count(address) > 0) {

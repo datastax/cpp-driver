@@ -111,10 +111,6 @@ private:
   static void on_execute(uv_async_t* async, int status);
   static void on_prepare(uv_prepare_t *prepare, int status);
 
-#if !defined(WIN32) && !defined(_WIN32)
-  static void on_signal(uv_signal_t* signal, int signum);
-#endif
-
 private:
   typedef std::map<Address, SharedRefPtr<Pool> > PoolMap;
   typedef std::vector<SharedRefPtr<Pool> > PoolVec;
@@ -152,10 +148,6 @@ private:
   PendingReconnectMap pending_reconnects_;
 
   AsyncQueue<SPSCQueue<RequestHandler*> > request_queue_;
-
-#if !defined(WIN32) && !defined(_WIN32)
-  uv_signal_t sigpipe_;
-#endif
 };
 
 } // namespace cass
