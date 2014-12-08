@@ -59,7 +59,10 @@ public:
       , log_data_(NULL)
       , auth_provider_(new AuthProvider())
       , load_balancing_policy_(new RoundRobinPolicy())
-      , token_aware_routing_(true) {}
+      , token_aware_routing_(true)
+      , tcp_nodelay_enable_(false)
+      , tcp_keepalive_enable_(false)
+      , tcp_keepalive_delay_secs_(0) {}
 
   unsigned thread_count_io() const { return thread_count_io_; }
 
@@ -241,6 +244,20 @@ public:
 
   void set_token_aware_routing(bool is_token_aware) { token_aware_routing_ = is_token_aware; }
 
+  bool tcp_nodelay_enable() const { return tcp_nodelay_enable_; }
+
+  void set_tcp_nodelay(bool enable) {
+    tcp_nodelay_enable_ = enable;
+  }
+
+  bool tcp_keepalive_enable() const { return tcp_keepalive_enable_; }
+  unsigned tcp_keepalive_delay_secs() const { return tcp_keepalive_delay_secs_; }
+
+  void set_tcp_keepalive(bool enable, unsigned delay_secs) {
+    tcp_keepalive_enable_ = enable;
+    tcp_keepalive_delay_secs_ = delay_secs;
+  }
+
 private:
   int port_;
   int protocol_version_;
@@ -268,6 +285,9 @@ private:
   SharedRefPtr<LoadBalancingPolicy> load_balancing_policy_;
   SharedRefPtr<SslContext> ssl_context_;
   bool token_aware_routing_;
+  bool tcp_nodelay_enable_;
+  bool tcp_keepalive_enable_;
+  unsigned tcp_keepalive_delay_secs_;
 };
 
 } // namespace cass

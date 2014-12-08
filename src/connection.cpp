@@ -161,6 +161,17 @@ Connection::Connection(uv_loop_t* loop, Logger* logger, const Config& config,
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
 
+  if (uv_tcp_nodelay(&socket_,
+                     config.tcp_nodelay_enable() ? 1 : 0) != 0) {
+    logger_->warn("Unable to set tcp nodelay");
+  }
+
+  if(uv_tcp_keepalive(&socket_,
+                      config.tcp_keepalive_enable() ? 1 : 0,
+                      config.tcp_keepalive_delay_secs()) != 0) {
+    logger_->warn("Unable to set tcp keepalive");
+  }
+
   SslContext* ssl_context = config_.ssl_context();
   if (ssl_context != NULL) {
     ssl_session_.reset(ssl_context->create_session(address_));
