@@ -162,7 +162,7 @@ SimpleStrategy::SimpleStrategy(const std::string& strategy_class,
   , replication_factor_(0) {
   replication_factor_ = get_replication_factor(strategy_options);
   if (replication_factor_ == 0) {
-    Logger::warn("SimpleStrategy: Replication factor of 0");
+    LOG_WARN("Replication factor of 0");
   }
 }
 

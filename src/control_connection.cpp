@@ -79,22 +79,22 @@ bool ControlConnection::determine_address_for_peer_host(const Address& connected
                        connected_address.port(), output);
     if (connected_address.compare(*output) == 0 ||
         connected_address.compare(peer_address) == 0) {
-      Logger::debug("system.peers on %s contains a line with rpc_address for itself. "
-                    "This is not normal, but is a known problem for some versions of DSE. "
-                    "Ignoring this entry.", connected_address.to_string(false).c_str());
+      LOG_DEBUG("system.peers on %s contains a line with rpc_address for itself. "
+                "This is not normal, but is a known problem for some versions of DSE. "
+                "Ignoring this entry.", connected_address.to_string(false).c_str());
       return false;
     }
     if (bind_any_ipv4_.compare(*output) == 0 ||
         bind_any_ipv6_.compare(*output) == 0) {
-      Logger::warn("Found host with 'bind any' for rpc_address; using listen_address (%s) to contact instead. "
-                   "If this is incorrect you should configure a specific interface for rpc_address on the server.",
-                   peer_address.to_string(false).c_str());
+      LOG_WARN("Found host with 'bind any' for rpc_address; using listen_address (%s) to contact instead. "
+               "If this is incorrect you should configure a specific interface for rpc_address on the server.",
+               peer_address.to_string(false).c_str());
       *output = peer_address;
     }
   } else {
-    Logger::warn("No rpc_address for host %s in system.peers on %s. "
-                 "Ignoring this entry.", peer_address.to_string(false).c_str(),
-                 connected_address.to_string(false).c_str());
+    LOG_WARN("No rpc_address for host %s in system.peers on %s. "
+             "Ignoring this entry.", peer_address.to_string(false).c_str(),
+             connected_address.to_string(false).c_str());
     return false;
   }
   return true;
@@ -166,8 +166,8 @@ void ControlConnection::reconnect(bool retry_current_host) {
 }
 
 void ControlConnection::on_connection_ready(Connection* connection) {
-  Logger::debug("ControlConnection: Connection ready on host %s",
-                connection->address().to_string().c_str());
+  LOG_DEBUG("Connection ready on host %s",
+            connection->address().to_string().c_str());
 
   // A protocol version is need to encode/decode maps properly
   session_->cluster_meta().set_protocol_version(protocol_version_);
@@ -181,7 +181,7 @@ void ControlConnection::on_connection_closed(Connection* connection) {
   bool retry_current_host = false;
 
   if (state_ != CONTROL_STATE_CLOSED) {
-    Logger::warn("ControlConnection: Lost connection on host %s", connection->address_string().c_str());
+    LOG_WARN("Lost connection on host %s", connection->address_string().c_str());
   }
 
   // This pointer to the connection is no longer valid once it's closed
@@ -190,8 +190,8 @@ void ControlConnection::on_connection_closed(Connection* connection) {
   if (state_ == CONTROL_STATE_NEW) {
     if (connection->is_invalid_protocol()) {
       if (protocol_version_ <= 1) {
-        Logger::error("ControlConnection: Host %s does not support any valid protocol version",
-                      connection->address_string().c_str());
+        LOG_ERROR("Host %s does not support any valid protocol version",
+                  connection->address_string().c_str());
         session_->on_control_connection_error(CASS_ERROR_LIB_UNABLE_TO_DETERMINE_PROTOCOL,
                                              "Not even protocol version 1 is supported");
         return;
@@ -243,12 +243,12 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
         local_result->decode_first_row();
         update_node_info(host, &local_result->first_row());
       } else {
-        Logger::warn("ControlConnection: No row found in %s's local system table",
-                     connection_->address_string().c_str());
+        LOG_WARN("No row found in %s's local system table",
+                 connection_->address_string().c_str());
       }
     } else {
-      Logger::debug("ControlConnection: Host %s from local system table not found",
-                    connection_->address_string().c_str());
+      LOG_DEBUG("Host %s from local system table not found",
+                connection_->address_string().c_str());
     }
   }
 
@@ -321,7 +321,7 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
     response_callback = boost::bind(&ControlConnection::on_refresh_node_info_all, this, _1, _2);
   }
 
-  Logger::debug("ControlConnection: refresh_node_info: %s", query.c_str());
+  LOG_DEBUG("refresh_node_info: %s", query.c_str());
 
   RefreshNodeData data(host, callback);
   ScopedRefPtr<ControlHandler<RefreshNodeData> > handler(
@@ -330,7 +330,7 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
                                             response_callback,
                                             data));
   if(!connection_->write(handler.get())) {
-    Logger::error("ControlConnection: No more stream available while attempting to refresh node info");
+    LOG_ERROR("No more stream available while attempting to refresh node info");
   }
 }
 
@@ -344,11 +344,11 @@ void ControlConnection::on_refresh_node_info(RefreshNodeData data, Response* res
 
   if (result->row_count() == 0) {
     std::string host_address_str = data.host->address().to_string();
-    Logger::error("ControlConnection: No row found for host %s in %s's local/peers system table. "
-                   "%s will be ignored.",
-                   host_address_str.c_str(),
-                   connection_->address_string().c_str(),
-                   host_address_str.c_str());
+    LOG_ERROR("No row found for host %s in %s's local/peers system table. "
+              "%s will be ignored.",
+              host_address_str.c_str(),
+              connection_->address_string().c_str(),
+              host_address_str.c_str());
     return;
   }
   result->decode_first_row();
@@ -368,11 +368,11 @@ void ControlConnection::on_refresh_node_info_all(RefreshNodeData data, Response*
 
   if (result->row_count() == 0) {
     std::string host_address_str = data.host->address().to_string();
-    Logger::error("ControlConnection: No row found for host %s in %s's peers system table. "
-                   "%s will be ignored.",
-                   host_address_str.c_str(),
-                   connection_->address_string().c_str(),
-                   host_address_str.c_str());
+    LOG_ERROR("No row found for host %s in %s's peers system table. "
+              "%s will be ignored.",
+              host_address_str.c_str(),
+              connection_->address_string().c_str(),
+              host_address_str.c_str());
     return;
   }
 
@@ -452,7 +452,7 @@ void ControlConnection::refresh_keyspace(const boost::string_ref& keyspace_name)
        .append(keyspace_name.data(), keyspace_name.size())
        .append("'");
 
-  Logger::debug("ControlConnection: refresh_keyspace: %s", query.c_str());
+  LOG_DEBUG("Refreshing keyspace %s", query.c_str());
 
   connection_->write(
         new ControlHandler<std::string>(new QueryRequest(query),
@@ -464,8 +464,8 @@ void ControlConnection::refresh_keyspace(const boost::string_ref& keyspace_name)
 void ControlConnection::on_refresh_keyspace(const std::string& keyspace_name, Response* response) {
   ResultResponse* result = static_cast<ResultResponse*>(response);
   if (result->row_count() == 0) {
-    Logger::error("ControlConnection: No row found for keyspace %s in system schema table.",
-                   keyspace_name.c_str());
+    LOG_ERROR("No row found for keyspace %s in system schema table.",
+              keyspace_name.c_str());
     return;
   }
   session_->cluster_meta().update_keyspaces(result);
@@ -481,7 +481,7 @@ void ControlConnection::refresh_table(const boost::string_ref& keyspace_name,
   col_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
            .append("' AND columnfamily_name='").append(table_name.data(), table_name.size()).append("'");
 
-  Logger::debug("ControlConnection: refresh_table: %s; %s", cf_query.c_str(), col_query.c_str());
+  LOG_DEBUG("Refreshing table %s; %s", cf_query.c_str(), col_query.c_str());
 
   ScopedRefPtr<ControlMultipleRequestHandler> handler(
         new ControlMultipleRequestHandler(this,
@@ -497,8 +497,8 @@ void ControlConnection::on_refresh_table(const std::string& keyspace_name,
                                          const MultipleRequestHandler::ResponseVec& responses) {
   ResultResponse* column_family_result = static_cast<ResultResponse*>(responses[0]);
   if (column_family_result->row_count() == 0) {
-    Logger::error("ControlConnection: No row found for column family %s.%s in system schema table.",
-                   keyspace_name.c_str(), table_name.c_str());
+    LOG_ERROR("No row found for column family %s.%s in system schema table.",
+              keyspace_name.c_str(), table_name.c_str());
     return;
   }
   session_->cluster_meta().update_tables(column_family_result,
@@ -537,7 +537,7 @@ void ControlConnection::on_connection_event(EventResponse* response) {
       std::string address_str = response->affected_node().to_string();
       switch (response->topology_change()) {
         case EventResponse::NEW_NODE: {
-          Logger::info("ControlConnection: New node %s added", address_str.c_str());
+          LOG_INFO("New node %s added", address_str.c_str());
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
           if (!host) {
             host = session_->add_host(response->affected_node());
@@ -547,24 +547,24 @@ void ControlConnection::on_connection_event(EventResponse* response) {
         }
 
         case EventResponse::REMOVED_NODE: {
-          Logger::info("ControlConnection: Node %s removed", address_str.c_str());
+          LOG_INFO("Node %s removed", address_str.c_str());
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
           if (host) {
             session_->on_remove(host);
             session_->cluster_meta().remove_host(host);
           } else {
-            Logger::debug("ControlConnection: Tried to remove host %s that doesn't exist", address_str.c_str());
+            LOG_DEBUG("Tried to remove host %s that doesn't exist", address_str.c_str());
           }
           break;
         }
 
         case EventResponse::MOVED_NODE:
-          Logger::info("ControlConnection: Node %s moved", address_str.c_str());
+          LOG_INFO("Node %s moved", address_str.c_str());
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
           if (host) {
             refresh_node_info(host, NULL, true);
           } else {
-            Logger::debug("ControlConnection: Move event for host %s that doesn't exist", address_str.c_str());
+            LOG_DEBUG("Move event for host %s that doesn't exist", address_str.c_str());
             session_->cluster_meta().remove_host(host);
           }
           break;
@@ -576,13 +576,13 @@ void ControlConnection::on_connection_event(EventResponse* response) {
       std::string address_str = response->affected_node().to_string();
       switch (response->status_change()) {
         case EventResponse::UP: {
-          Logger::info("ControlConnection: Node %s is up", address_str.c_str());
+          LOG_INFO("Node %s is up", address_str.c_str());
           on_up(response->affected_node());
           break;
         }
 
         case EventResponse::DOWN: {
-          Logger::info("ControlConnection: Node %s is down", address_str.c_str());
+          LOG_INFO("Node %s is down", address_str.c_str());
           on_down(response->affected_node(), false);
           break;
         }
@@ -591,10 +591,10 @@ void ControlConnection::on_connection_event(EventResponse* response) {
     }
 
     case CASS_EVENT_SCHEMA_CHANGE:
-      Logger::debug("ControlConnection: Schema change (%d): %.*s %.*s\n",
-                    response->schema_change(),
-                    (int)response->keyspace().size(), response->keyspace().data(),
-                    (int)response->table().size(), response->table().data());
+      LOG_DEBUG("Schema change (%d): %.*s %.*s\n",
+                response->schema_change(),
+                (int)response->keyspace().size(), response->keyspace().data(),
+                (int)response->table().size(), response->table().data());
       switch (response->schema_change()) {
         case EventResponse::CREATED:
         case EventResponse::UPDATED:
@@ -646,7 +646,7 @@ void ControlConnection::on_down(const Address& address, bool is_critical_failure
 
     session_->on_down(host, is_critical_failure);
   } else {
-    Logger::debug("ControlConnection: Tried to down host %s that doesn't exist", address.to_string().c_str());
+    LOG_DEBUG("Tried to down host %s that doesn't exist", address.to_string().c_str());
   }
 }
 

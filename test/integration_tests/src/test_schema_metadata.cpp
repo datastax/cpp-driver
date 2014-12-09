@@ -20,7 +20,6 @@
 #endif
 
 #include "cassandra.h"
-#include "types.hpp"
 #include "testing.hpp"
 #include "test_utils.hpp"
 
@@ -67,7 +66,9 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
       const CassSchema* old(schema_);
       schema_ = cass_session_get_schema(session);
 
-      for (size_t i = 0; i < 10 && get_schema_meta_from_keyspace(schema_, "system") == get_schema_meta_from_keyspace(old, "system"); ++i) {
+      for (size_t i = 0;
+           i < 10 && cass::get_schema_meta_from_keyspace(schema_, "system") == cass::get_schema_meta_from_keyspace(old, "system");
+           ++i) {
         boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
         cass_schema_free(schema_);
         schema_ = cass_session_get_schema(session);

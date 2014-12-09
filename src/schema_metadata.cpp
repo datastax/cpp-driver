@@ -121,7 +121,7 @@ Schema::KeyspacePointerMap Schema::update_keyspaces(ResultResponse* result) {
     const Row* row = rows.row();
 
     if (!row->get_string_by_name("keyspace_name", &keyspace_name)) {
-      Logger::error("Schema: Unable to column value for 'keyspace_name'");
+      LOG_ERROR("Unable to column value for 'keyspace_name'");
       continue;
     }
 
@@ -148,7 +148,7 @@ void Schema::update_tables(ResultResponse* table_result, ResultResponse* col_res
 
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
         !row->get_string_by_name("columnfamily_name", &columnfamily_name)) {
-      Logger::error("Schema: Unable to column value for 'keyspace_name' or 'columnfamily_name'");
+      LOG_ERROR("Unable to column value for 'keyspace_name' or 'columnfamily_name'");
       continue;
     }
 
@@ -181,7 +181,7 @@ void Schema::update_columns(ResultResponse* result) {
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
         !row->get_string_by_name("columnfamily_name", &temp_columnfamily_name) ||
         !row->get_string_by_name("column_name", &column_name)) {
-      Logger::error("Schema: Unable to column value for 'keyspace_name', 'columnfamily_name' or 'column_name'");
+      LOG_ERROR("Unable to column value for 'keyspace_name', 'columnfamily_name' or 'column_name'");
       continue;
     }
 
@@ -251,12 +251,12 @@ void SchemaMetadata::add_json_list_field(int version, const Row* row, const std:
   d.ParseInsitu(buf.get());
 
   if (d.HasParseError()) {
-    Logger::error("SchemaMetadata: Unable to parse json (array) for column '%s'", name.c_str());
+    LOG_ERROR("Unable to parse JSON (array) for column '%s'", name.c_str());
     return;
   }
 
   if (!d.IsArray()) {
-    Logger::error("SchemaMetadata: Expected json array for column '%s'", name.c_str());
+    LOG_DEBUG("Expected JSON array for column '%s' (probably null or empty)", name.c_str());
     fields_[name] = SchemaMetadataField(name);
     return;
   }
@@ -297,12 +297,12 @@ void SchemaMetadata::add_json_map_field(int version, const Row* row, const std::
   d.ParseInsitu(buf.get());
 
   if (d.HasParseError()) {
-    Logger::error("SchemaMetadata: Unable to parse json (object) for column '%s'", name.c_str());
+    LOG_ERROR("Unable to parse JSON (object) for column '%s'", name.c_str());
     return;
   }
 
   if (!d.IsObject()) {
-    Logger::error("SchemaMetadata: Expected json object for column '%s'", name.c_str());
+    LOG_DEBUG("Expected JSON object for column '%s' (probably null or empty)", name.c_str());
     fields_[name] = SchemaMetadataField(name);
     return;
   }

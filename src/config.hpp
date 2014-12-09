@@ -28,8 +28,7 @@
 
 namespace cass {
 
-void default_log_callback(cass_uint64_t time_ms, CassLogLevel severity,
-                          CassString message, void* data);
+void stderr_log_callback(const CassLogMessage* message, void* data);
 
 class Config {
 public:
@@ -55,7 +54,7 @@ public:
       , connect_timeout_ms_(5000)
       , request_timeout_ms_(12000)
       , log_level_(CASS_LOG_WARN)
-      , log_callback_(default_log_callback)
+      , log_callback_(stderr_log_callback)
       , log_data_(NULL)
       , auth_provider_(new AuthProvider())
       , load_balancing_policy_(new RoundRobinPolicy())

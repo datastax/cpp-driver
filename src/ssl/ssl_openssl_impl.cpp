@@ -115,7 +115,7 @@ static X509* load_cert(const char* cert, size_t cert_size) {
 
   X509* x509 = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL);
   if (x509 == NULL) {
-    Logger::error("SSL: Unable to load certificate: %s", ssl_error_string(ERR_get_error()).c_str());
+    LOG_ERROR("Unable to load certificate: %s", ssl_error_string(ERR_get_error()).c_str());
   }
 
   BIO_free_all(bio);
@@ -196,7 +196,7 @@ static EVP_PKEY* load_key(const char* key,
                                            pem_password_callback,
                                            const_cast<char*>(password));
   if (pkey == NULL) {
-    Logger::error("SSL: Unable to load private key: %s", ssl_error_string(ERR_get_error()).c_str());
+    LOG_ERROR("Unable to load private key: %s", ssl_error_string(ERR_get_error()).c_str());
   }
 
   BIO_free_all(bio);
@@ -420,7 +420,7 @@ CassError OpenSslContext::set_cert(CassString cert) {
   BIO_free_all(bio);
 
   if (!rc) {
-    Logger::error("SSL: Unable to load certificate chain: %s", ssl_error_string(ERR_get_error()).c_str());
+    LOG_ERROR("Unable to load certificate chain: %s", ssl_error_string(ERR_get_error()).c_str());
     return CASS_ERROR_SSL_INVALID_CERT;
   }
 

@@ -90,10 +90,7 @@ private:
     CassLogLevel output_log_level;
   };
 
-  static void callback(cass_uint64_t time_ms,
-                       CassLogLevel severity,
-                       CassString message,
-                       void* data);
+  static void callback(const CassLogMessage* message, void* data);
 
   static LogData log_data_;
 };
