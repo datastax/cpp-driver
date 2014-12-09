@@ -36,24 +36,24 @@ IOWorker::IOWorker(Session* session)
     , pending_request_count_(0)
     , request_queue_(config_.queue_size_io()) {
   prepare_.data = this;
+  uv_mutex_init(&keyspace_mutex_);
+  uv_mutex_init(&unavailable_addresses_mutex_);
 }
 
 IOWorker::~IOWorker() {
   uv_mutex_destroy(&keyspace_mutex_);
+  uv_mutex_destroy(&unavailable_addresses_mutex_);
 }
 
 int IOWorker::init() {
-  int rc = uv_mutex_init(&keyspace_mutex_);
-  if (rc != 0) return rc;
-  rc = uv_mutex_init(&unavailable_addresses_mutex_);
-  if (rc != 0) return rc;
-  rc = EventThread<IOWorkerEvent>::init(config_.queue_size_event());
+  int rc = EventThread<IOWorkerEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
   rc = request_queue_.init(loop(), this, &IOWorker::on_execute);
   if (rc != 0) return rc;
   rc = uv_prepare_init(loop(), &prepare_);
   if (rc != 0) return rc;
   rc = uv_prepare_start(&prepare_, on_prepare);
+  if (rc != 0) return rc;
   return rc;
 }
 
@@ -237,6 +237,7 @@ void IOWorker::close_handles() {
   request_queue_.close_handles();
   uv_prepare_stop(&prepare_);
   uv_close(copy_cast<uv_prepare_t*, uv_handle_t*>(&prepare_), NULL);
+
   for (PendingReconnectMap::iterator it = pending_reconnects_.begin(),
        end = pending_reconnects_.end(); it != end; ++it) {
     logger_->debug("IOWorker: close_handles stopping reconnect(%p timer(%p)) io_worker(%p)",

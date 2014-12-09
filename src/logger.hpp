@@ -38,7 +38,11 @@ public:
       , log_level_(config.log_level())
       , log_queue_(config.queue_size_log()) {}
 
-  int init() { return log_queue_.init(loop(), this, on_log); }
+  int init() {
+    int rc = LoopThread::init();
+    if (rc != 0) return rc;
+    return log_queue_.init(loop(), this, on_log);
+  }
 
   void close_async() {
     while (!log_queue_.enqueue(NULL)) {
@@ -75,7 +79,10 @@ private:
     std::string message;
   };
 
-  void close() { log_queue_.close_handles(); }
+  void close() {
+    LoopThread::close_handles();
+    log_queue_.close_handles();
+  }
 
   std::string format_message(const char* format, va_list args) {
     char buffer[1024];
