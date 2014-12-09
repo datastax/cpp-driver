@@ -66,8 +66,8 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
       current_version = boost::string_ref(v->buffer().data(), v->buffer().size());
     }
   } else {
-    Logger::debug("SchemaChangeHandler: No row found in %s's local system table",
-                  connection()->address_string().c_str());
+    LOG_DEBUG("No row found in %s's local system table",
+              connection()->address_string().c_str());
   }
 
   ResultResponse* peers_result =
@@ -112,20 +112,20 @@ void SchemaChangeHandler::on_set(const ResponseVec& responses) {
   if (has_error) return;
 
   if (has_schema_agreement(responses)) {
-    Logger::debug("SchemaChangeHandler: Found schema agreement in %llu ms",
-                  static_cast<unsigned long long>(elapsed_ms_));
+    LOG_DEBUG("Found schema agreement in %llu ms",
+              static_cast<unsigned long long>(elapsed_ms_));
     request_handler_->set_response(request_response_);
     return;
   } else if (elapsed_ms_ >= MAX_SCHEMA_AGREEMENT_WAIT_MS) {
-    Logger::warn("SchemaChangeHandler: No schema agreement on live nodes after %llu ms. "
-                 "Schema may not be up-to-date on some nodes.",
-                 static_cast<unsigned long long>(elapsed_ms_));
+    LOG_WARN("No schema agreement on live nodes after %llu ms. "
+             "Schema may not be up-to-date on some nodes.",
+             static_cast<unsigned long long>(elapsed_ms_));
     request_handler_->set_response(request_response_);
     return;
   }
 
-  Logger::debug("SchemaChangeHandler: Schema still not up-to-date on some live nodes. "
-                "Trying again in %d ms", RETRY_SCHEMA_AGREEMENT_WAIT_MS);
+  LOG_DEBUG("Schema still not up-to-date on some live nodes. "
+            "Trying again in %d ms", RETRY_SCHEMA_AGREEMENT_WAIT_MS);
 
   // Try again
   SharedRefPtr<SchemaChangeHandler> handler(
@@ -139,19 +139,19 @@ void SchemaChangeHandler::on_set(const ResponseVec& responses) {
 
 void SchemaChangeHandler::on_error(CassError code, const std::string& message) {
   std::ostringstream ss;
-  ss << "SchemaChangeHandler: An error occurred waiting for schema agreement: '" << message
+  ss << "An error occurred waiting for schema agreement: '" << message
      << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
-  Logger::error("%s", ss.str().c_str());
+  LOG_ERROR("%s", ss.str().c_str());
   request_handler_->set_response(request_response_);
 }
 
 void SchemaChangeHandler::on_timeout() {
-  Logger::error("SchemaChangeHandler: A timeout occurred waiting for schema agreement");
+  LOG_ERROR("A timeout occurred waiting for schema agreement");
   request_handler_->set_response(request_response_);
 }
 
 void SchemaChangeHandler::on_closing() {
-  Logger::warn("SchemaChangeHandler: Connection closed while waiting for schema agreement");
+  LOG_WARN("Connection closed while waiting for schema agreement");
   request_handler_->set_response(request_response_);
 }
 

@@ -19,6 +19,8 @@ set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${P
 
 set(CASS_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLOG_FILE_='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
+
 if(32BIT)
   set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS FALSE)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
@@ -183,7 +185,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedefs")
   endif()
 
-  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Werror")
+  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Wno-variadic-macros -Werror")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.3" OR
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.3")
     set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
@@ -197,7 +199,7 @@ else()
   # I disabled long-long warning because boost generates about 50 such warnings
   set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 
-  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Werror")
+  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Wno-variadic-macros -Werror")
   set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 ${WARNING_COMPILER_FLAGS}")
 endif()

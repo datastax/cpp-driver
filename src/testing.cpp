@@ -74,8 +74,8 @@ int64_t create_murmur3_hash_from_string(const std::string &value) {
   return MurmurHash3_x64_128(value.data(), value.size(), 0);
 }
 
-bool is_logger_queue_empty() {
-  return Logger::is_queue_empty();
+bool is_log_flushed() {
+  return Logger::is_flushed();
 }
 
 } // namespace cass

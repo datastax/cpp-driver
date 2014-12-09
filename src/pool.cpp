@@ -51,8 +51,8 @@ Pool::Pool(IOWorker* io_worker,
     , is_pending_flush_(false) {}
 
 Pool::~Pool() {
-  Logger::debug("Pool: dtor with %lu pending requests pool(%p)", 
-                pending_requests_.size(), static_cast<void*>(this));
+  LOG_DEBUG("Pool dtor with %lu pending requests pool(%p)",
+            pending_requests_.size(), static_cast<void*>(this));
   while (!pending_requests_.is_empty()) {
     RequestHandler* request_handler
         = static_cast<RequestHandler*>(pending_requests_.front());
@@ -63,8 +63,8 @@ Pool::~Pool() {
 }
 
 void Pool::connect() {
-  Logger::debug("Pool: connect %s pool(%p)",
-                address_.to_string().c_str(), static_cast<void*>(this));
+  LOG_DEBUG("Connect %s pool(%p)",
+            address_.to_string().c_str(), static_cast<void*>(this));
   if (state_ == POOL_STATE_NEW) {
     for (unsigned i = 0; i < config_.core_connections_per_host(); ++i) {
       spawn_connection();
@@ -76,7 +76,7 @@ void Pool::connect() {
 
 void Pool::close() {
   if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
-    Logger::debug("Pool: closing pool(%p)", static_cast<void*>(this));
+    LOG_DEBUG("Closing pool(%p)", static_cast<void*>(this));
     // We're closing before we've connected (likely because of an error), we need
     // to notify we're "ready"
     if (state_ == POOL_STATE_CONNECTING) {
@@ -136,11 +136,11 @@ void Pool::add_pending_request(RequestHandler* request_handler) {
   pending_requests_.add_to_back(request_handler);
 
   if (pending_requests_.size() % 10 == 0) {
-    Logger::debug("Pool: %lu request%s pending on %s pool(%p)",
-                  pending_requests_.size() + 1,
-                  pending_requests_.size() > 0 ? "s":"",
-                  address_.to_string().c_str(),
-                  static_cast<void*>(this));
+    LOG_DEBUG("%lu request%s pending on %s pool(%p)",
+              pending_requests_.size() + 1,
+              pending_requests_.size() > 0 ? "s":"",
+              address_.to_string().c_str(),
+              static_cast<void*>(this));
   }
 
   if (pending_requests_.size() > config_.pending_requests_high_water_mark()) {
@@ -176,10 +176,10 @@ bool Pool::write(Connection* connection, RequestHandler* request_handler) {
       return false;
     }
   } else {
-    Logger::debug("Pool: setting keyspace %s on connection(%p) pool(%p)",
-                  io_worker_->keyspace().c_str(),
-                  static_cast<void*>(connection),
-                  static_cast<void*>(this));
+    LOG_DEBUG("Setting keyspace %s on connection(%p) pool(%p)",
+              io_worker_->keyspace().c_str(),
+              static_cast<void*>(connection),
+              static_cast<void*>(this));
     if(!connection->write(new SetKeyspaceHandler(connection, io_worker_->keyspace(),
                                                  request_handler), false)) {
       return false;
@@ -230,7 +230,7 @@ void Pool::spawn_connection() {
                        io_worker_->keyspace(),
                        io_worker_->protocol_version());
 
-    Logger::info("Pool: Spawning new conneciton to host %s", address_.to_string(true).c_str());
+    LOG_INFO("Spawning new conneciton to host %s", address_.to_string(true).c_str());
     connection->set_ready_callback(
           boost::bind(&Pool::on_connection_ready, this, _1));
     connection->set_close_callback(
@@ -316,9 +316,9 @@ void Pool::on_pending_request_timeout(RequestTimer* timer) {
   RequestHandler* request_handler = static_cast<RequestHandler*>(timer->data());
   remove_pending_request(request_handler);
   request_handler->retry(RETRY_WITH_NEXT_HOST);
-  Logger::debug("Pool: timeout waiting for connection to %s pool(%p)",
-                address_.to_string().c_str(),
-                static_cast<void*>(this));
+  LOG_DEBUG("Timeout waiting for connection to %s pool(%p)",
+            address_.to_string().c_str(),
+            static_cast<void*>(this));
   maybe_close();
 }
 
