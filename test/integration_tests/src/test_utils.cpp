@@ -181,7 +181,7 @@ MultipleNodesTest::~MultipleNodesTest() {
 
 SingleSessionTest::SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version, bool isSSL /* = false */)
   : MultipleNodesTest(num_nodes_dc1, num_nodes_dc2, protocol_version, isSSL), session(NULL), ssl(NULL) {
-  //SSL verification flags must be set before establising session
+  //SSL verification flags must be set before establishing session
   if (!isSSL) {
     create_session();
   } else {
@@ -257,7 +257,7 @@ void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
   CassError code = wait_and_return_error(future, timeout);
   if(code != CASS_OK) {
     CassString message = cass_future_error_message(future);
-    BOOST_FAIL("Error occured during query '" << std::string(message.data, message.length) << "' (" << boost::format("0x%08X") % code << ")");
+    BOOST_FAIL("Error occurred during query '" << std::string(message.data, message.length) << "' (" << boost::format("0x%08X") % code << ")");
   }
 }
 
