@@ -64,7 +64,7 @@ ResultMetadata::ResultMetadata(size_t column_count) {
 
 
 size_t ResultMetadata::get(boost::string_ref name,
-                     ResultMetadata::IndexVec* result) const{
+                           ResultMetadata::IndexVec* result) const{
   result->clear();
   bool is_case_sensitive = false;
 

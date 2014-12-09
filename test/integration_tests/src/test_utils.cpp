@@ -77,23 +77,21 @@ const char* CREATE_TABLE_SIMPLE =
 CassLog::LogData CassLog::log_data_;
 
 size_t CassLog::message_count() {
-  while(!cass::is_logger_queue_empty()) {
+  while(!cass::is_log_flushed()) {
     boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
   }
   return log_data_.message_count;
 }
 
-void CassLog::callback(cass_uint64_t time_ms,
-                       CassLogLevel severity,
-                       CassString message,
-                       void* data) {
+void CassLog::callback(const CassLogMessage* message, void* data) {
   LogData* log_data = reinterpret_cast<LogData*>(data);
-  std::string str(message.data, message.length);
-  if (severity <= log_data->output_log_level) {
-    fprintf(stderr, "CassLog: %u.%03u [%s]: %.*s\n",
-            static_cast<unsigned int>(time_ms/1000), static_cast<unsigned int>(time_ms % 1000),
-            cass_log_level_string(severity),
-            static_cast<int>(message.length), message.data);
+  std::string str(message->message);
+  if (message->severity <= log_data->output_log_level) {
+    fprintf(stderr, "CassLog: %u.%03u [%s]: %s\n",
+            static_cast<unsigned int>(message->time_ms/1000),
+            static_cast<unsigned int>(message->time_ms % 1000),
+            cass_log_level_string(message->severity),
+            message->message);
   }
   boost::lock_guard<LogData> l(*log_data);
   if (log_data->message.empty()) return;

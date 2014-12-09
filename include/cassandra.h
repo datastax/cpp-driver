@@ -314,9 +314,19 @@ typedef enum CassError_ {
 typedef void (*CassFutureCallback)(CassFuture* future,
                                    void* data);
 
-typedef void (*CassLogCallback)(cass_uint64_t time_ms,
-                                CassLogLevel severity,
-                                CassString message,
+
+#define CASS_LOG_MAX_MESSAGE_SIZE 256
+
+typedef struct CassLogMessage_ {
+  cass_uint64_t time_ms;
+  CassLogLevel severity;
+  const char* file;
+  int line;
+  const char* function;
+  char message[CASS_LOG_MAX_MESSAGE_SIZE];
+} CassLogMessage;
+
+typedef void (*CassLogCallback)(const CassLogMessage* message,
                                 void* data);
 
 /***********************************************************************************
@@ -2478,6 +2488,13 @@ cass_error_desc(CassError error);
  ***********************************************************************************/
 
 /**
+ * Explicty wait for the log to flush and deallocate resources.
+ * This *MUST* be the last call using the library. It is an error
+ * to call any cass_*() functions after this call.
+ */
+void cass_log_cleanup();
+
+/**
  * Sets the log level.
  *
  * Note: This needs to be done before any call that might log, such as
@@ -2496,7 +2513,7 @@ cass_log_set_level(CassLogLevel log_level);
  * Note: This needs to be done before any call that might log, such as
  * any of the cass_cluster_*() or cass_ssl_*() functions.
  *
- * Default: An internal callback that prints to stdout
+ * Default: An internal callback that prints to stderr
  *
  * @param[in] data An opaque data object passed to the callback.
  * @param[in] callback A callback that handles logging events. This is
@@ -2512,7 +2529,7 @@ cass_log_set_callback(CassLogCallback callback,
  * Note: This needs to be done before any call that might log, such as
  * any of the cass_cluster_*() or cass_ssl_*() functions.
  *
- * Default: 16K entries
+ * Default: 2048
  *
  * @param[in] queue_size
  */

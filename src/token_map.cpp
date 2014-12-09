@@ -103,7 +103,7 @@ void TokenMap::clear() {
 
 void TokenMap::build() {
   if (!partitioner_) {
-    Logger::warn("TokenMap: No partitioner set, not building map");
+    LOG_WARN("No partitioner set, not building map");
     return;
   }
 
@@ -121,7 +121,7 @@ void TokenMap::set_partitioner(const std::string& partitioner_class) {
   } else if (boost::ends_with(partitioner_class, ByteOrderedPartitioner::PARTITIONER_CLASS)) {
     partitioner_.reset(new ByteOrderedPartitioner());
   } else {
-    Logger::warn("TokenMap: Unsupported partitioner class '%s'", partitioner_class.c_str());
+    LOG_WARN("Unsupported partitioner class '%s'", partitioner_class.c_str());
   }
 }
 
