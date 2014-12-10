@@ -44,7 +44,7 @@ public:
   typedef T EntryType;
 
   SPSCQueue(size_t size)
-      : size_(next_pow_2(size + 1)) // Need one extra element for a guard
+      : size_(next_pow_2(size))
       , mask_(size_ - 1)
       , buffer_(reinterpret_cast<T*>(
             new SPSCQueueAlignedEntry[size_]))

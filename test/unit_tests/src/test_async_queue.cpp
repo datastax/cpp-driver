@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(simple)
 BOOST_AUTO_TEST_CASE(bounds)
 {
   {
-    cass::SPSCQueue<int> queue(1); // There's a wasted element
+    cass::SPSCQueue<int> queue(1);
 
     BOOST_CHECK(queue.enqueue(0));
     BOOST_CHECK(queue.enqueue(1) == false);
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(bounds)
 
 BOOST_AUTO_TEST_CASE(spsc_async)
 {
-  TestAsyncQueue<cass::SPSCQueue<int> > test_queue(10000);
+  TestAsyncQueue<cass::SPSCQueue<int> > test_queue(NUM_ITERATIONS);
 
   test_queue.run();
 
@@ -135,7 +135,7 @@ BOOST_AUTO_TEST_CASE(spsc_async)
 BOOST_AUTO_TEST_CASE(mpmc_async)
 {
   uv_thread_t threads[NUM_ENQUEUE_THREADS];
-  TestAsyncQueue<cass::MPMCQueue<int> > test_queue(10000);
+  TestAsyncQueue<cass::MPMCQueue<int> > test_queue(NUM_ITERATIONS);
 
   test_queue.run();
 
