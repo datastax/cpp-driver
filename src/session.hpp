@@ -32,7 +32,6 @@
 #include "schema_metadata.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
-#include "spsc_queue.hpp"
 
 #include <list>
 #include <memory>

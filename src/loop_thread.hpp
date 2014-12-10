@@ -59,7 +59,7 @@ protected:
   virtual void on_after_run() {}
 
 private:
-  void static on_run_internal(void* data) {
+  static void on_run_internal(void* data) {
     LoopThread* thread = static_cast<LoopThread*>(data);
     thread->thread_id_ = uv_thread_self();
     thread->on_run();

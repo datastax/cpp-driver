@@ -442,7 +442,6 @@ void Session::on_execute(uv_async_t* data, int status) {
   RequestHandler* request_handler = NULL;
   while (session->request_queue_->dequeue(request_handler)) {
     if (request_handler != NULL) {
-
       request_handler->set_query_plan(session->new_query_plan(request_handler->request()));
 
       bool is_done = false;
