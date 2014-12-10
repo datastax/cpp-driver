@@ -16,6 +16,8 @@
 
 #include "dc_aware_policy.hpp"
 
+#include "logger.hpp"
+
 #include "scoped_lock.hpp"
 
 namespace cass {
@@ -25,7 +27,9 @@ static const CopyOnWriteHostVec NO_HOSTS(new HostVec());
 
 void DCAwarePolicy::init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts) {
   if (local_dc_.empty() && !connected_host->dc().empty()) {
-    // TODO: Global logging
+    LOG_INFO("Using '%s' for the local data center "
+             "(if this is incorrect, please provide the correct data center)",
+             connected_host->dc().c_str());
     local_dc_ = connected_host->dc();
   }
 
@@ -61,7 +65,9 @@ QueryPlan* DCAwarePolicy::new_query_plan(const std::string& connected_keyspace,
 void DCAwarePolicy::on_add(const SharedRefPtr<Host>& host) {
   const std::string& dc = host->dc();
   if (local_dc_.empty() && !dc.empty()) {
-    // TODO: Global logging
+    LOG_INFO("Using '%s' for local data center "
+             "(if this is incorrect, please provide the correct data center)",
+             host->dc().c_str());
     local_dc_ = dc;
   }
 

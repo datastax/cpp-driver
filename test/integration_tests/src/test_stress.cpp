@@ -47,7 +47,6 @@ struct StressTests : public test_utils::MultipleNodesTest {
     test_utils::wait_and_check_error(session_future.get());
     session = cass_future_get_session(session_future.get());
   }
-};
 
   ~StressTests() {
     test_utils::CassFuturePtr future(cass_session_close(session));

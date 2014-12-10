@@ -21,7 +21,7 @@
 #include "logger.hpp"
 #include "md5.hpp"
 #include "serialization.hpp"
-#include "scoped_mutex.hpp"
+#include "scoped_lock.hpp"
 #include "types.hpp"
 
 #include <boost/random/random_device.hpp>
@@ -48,6 +48,7 @@ static uint64_t set_version(uint64_t timestamp, uint8_t version) {
 extern "C" {
 
 CassUuidGen* cass_uuid_gen_new() {
+  cass::Logger::init();
   return CassUuidGen::to(new cass::UuidGen());
 }
 
@@ -183,7 +184,7 @@ UuidGen::UuidGen()
       node |= (0x00000000000000FFLL & (long)hash[i]) << (i * 8);
     }
   } else {
-    // TODO: Global logging: "Unable to determine unique data for this node. Generating a random node value."
+    LOG_INFO("Unable to determine unique data for this node. Generating a random node value.");
     node = ng_() & 0x0000FFFFFFFFFFFFLL;
   }
 
