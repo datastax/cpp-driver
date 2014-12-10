@@ -75,7 +75,8 @@ public:
   }
 
   bool is_empty() {
-    return _tail.load(boost::memory_order_acquire) == _head.load(boost::memory_order_acquire);
+    return head_.load(boost::memory_order_acquire) ==
+        tail_.load(boost::memory_order_acquire);
   }
 
 private:

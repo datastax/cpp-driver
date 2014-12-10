@@ -70,7 +70,6 @@ private:
 #if !defined(WIN32) && !defined(_WIN32)
   static void on_signal(uv_signal_t* signal, int signum) {
     // Ignore SIGPIPE
-    // TODO: Global logging (warn)
   }
 #endif
 
