@@ -387,7 +387,11 @@ void Connection::on_connect(Connecter* connecter) {
     }
   } else {
     connection->logger_->info("Connection: Connect error '%s' on host %s",
+#if UV_VERSION_MAJOR == 0
                               uv_err_name(uv_last_error(connection->loop_)),
+#else
+                              "TODO: use libuv 1.0 API",
+#endif
                               connection->addr_string_.c_str() );
     connection->notify_error("Unable to connect");
   }
@@ -430,47 +434,86 @@ void Connection::on_close(uv_handle_t* handle) {
   delete connection;
 }
 
+#if UV_VERSION_MAJOR == 0
 uv_buf_t Connection::alloc_buffer(uv_handle_t* handle, size_t suggested_size) {
   return uv_buf_init(new char[suggested_size], suggested_size);
 }
+#else
+void Connection::alloc_buffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
+  buf->base = new char[suggested_size];
+  buf->len = suggested_size;
+}
+#endif
 
+#if UV_VERSION_MAJOR == 0
 void Connection::on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
+#else
+void Connection::on_read(uv_stream_t* client, ssize_t nread, const uv_buf_t* buf) {
+#endif
   Connection* connection = static_cast<Connection*>(client->data);
 
   if (nread == -1) {
+#if UV_VERSION_MAJOR == 0
     if (uv_last_error(connection->loop_).code != UV_EOF) {
       connection->logger_->info("Connection: Read error '%s' on host %s",
                                 uv_err_name(uv_last_error(connection->loop_)),
                                 connection->addr_string_.c_str());
     }
+#else
+    //TODO: use libuv 1.0 API
+#endif
     connection->defunct();
+#if UV_VERSION_MAJOR == 0
     delete[] buf.base;
+#else
+    delete[] buf->base;
+#endif
     return;
   }
 
+#if UV_VERSION_MAJOR == 0
   connection->consume(buf.base, nread);
-
   delete[] buf.base;
+#else
+  connection->consume(buf->base, nread);
+  delete[] buf->base;
+#endif
 }
 
+#if UV_VERSION_MAJOR == 0
 uv_buf_t Connection::alloc_buffer_ssl(uv_handle_t* handle, size_t suggested_size) {
   Connection* connection = static_cast<Connection*>(handle->data);
   char* base = connection->ssl_session_->incoming().peek_writable(&suggested_size);
   return uv_buf_init(base, suggested_size);
 }
+#else
+void Connection::alloc_buffer_ssl(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
+  Connection* connection = static_cast<Connection*>(handle->data);
+  buf->base = connection->ssl_session_->incoming().peek_writable(&suggested_size);
+  buf->len = suggested_size;
+}
+#endif
 
+#if UV_VERSION_MAJOR == 0
 void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, uv_buf_t buf) {
+#else
+void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t* buf) {
+#endif
   Connection* connection = static_cast<Connection*>(client->data);
 
   SslSession* ssl_session = connection->ssl_session_.get();
   assert(ssl_session != NULL);
 
   if (nread == -1) {
+#if UV_VERSION_MAJOR == 0
     if (uv_last_error(connection->loop_).code != UV_EOF) {
       connection->logger_->info("Connection: Read error '%s' on host %s",
                                 uv_err_name(uv_last_error(connection->loop_)),
                                 connection->addr_string_.c_str());
     }
+#else
+    //TODO: use libuv 1.0 API
+#endif
     connection->defunct();
     return;
   }
@@ -682,7 +725,11 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
         } else {
           if (!connection->is_closing()) {
             connection->logger_->info("Connection: Write error '%s' on host %s",
+#if UV_VERSION_MAJOR == 0
                                       uv_err_name(uv_last_error(connection->loop_)),
+#else
+                                      "TODO: use libuv 1.0 API",
+#endif
                                       connection->addr_string_.c_str());
             connection->defunct();
           }

@@ -40,6 +40,8 @@ public:
     Connecter* connecter = new Connecter(address, data, cb);
 
     int rc = 0;
+
+#if UV_VERSION_MAJOR == 0
     if (address.family() == AF_INET) {
       rc = uv_tcp_connect(&connecter->req_, handle, *address.addr_in(),
                           on_connect);
@@ -47,6 +49,10 @@ public:
       rc = uv_tcp_connect6(&connecter->req_, handle, *address.addr_in6(),
                            on_connect);
     }
+#else
+    rc = uv_tcp_connect(&connecter->req_, handle, address.addr(),
+                        on_connect);
+#endif
 
     if (rc != 0) {
       connecter->status_ = FAILED;
@@ -56,13 +62,19 @@ public:
   }
 
 private:
+#if UV_VERSION_MAJOR == 0 || 1
   static void on_connect(uv_connect_t* req, int status) {
+#else
+  static void on_connect(uv_connect_t* req) {
+#endif
     Connecter* connecter = static_cast<Connecter*>(req->data);
+#if UV_VERSION_MAJOR == 0 || 1
     if (status != 0) {
       connecter->status_ = FAILED;
     } else {
       connecter->status_ = SUCCESS;
     }
+#endif
     connecter->cb_(connecter);
     delete connecter;
   }
