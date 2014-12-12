@@ -58,7 +58,7 @@ public:
 
   bool has_more_pages() const { return has_more_pages_; }
 
-  int32_t column_count() const { return metadata_->column_count(); }
+  int32_t column_count() const { return (metadata_ ? metadata_->column_count() : 0); }
 
   bool no_metadata() const { return !metadata_; }
 
