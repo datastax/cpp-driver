@@ -182,6 +182,25 @@ struct BasicTests : public test_utils::SingleSessionTest {
       BOOST_REQUIRE_EQUAL(cass_value_get_decimal(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
     }
   }
+
+  bool is_result_empty(const CassResult* result) {
+    bool is_empty = true;
+
+    //Go through each row in the result and ensure it is empty
+    if (result) {
+      CassIterator* rows = cass_iterator_from_result(result);
+      while(cass_iterator_next(rows)) {
+        const CassRow* row = cass_iterator_get_row(rows);
+        if (row) {
+          is_empty = false;
+          break;
+        }
+      }
+      cass_iterator_free(rows);
+    }
+
+    return is_empty;
+  }
 };
 
 BOOST_FIXTURE_TEST_SUITE(basics, BasicTests)
@@ -440,6 +459,39 @@ BOOST_AUTO_TEST_CASE(column_name)
   BOOST_REQUIRE(strncmp(v2.data, "v2", v2.length) == 0);
   BOOST_REQUIRE(strncmp(v3.data, "v3", v3.length) == 0);
   BOOST_REQUIRE(strncmp(v4.data, "v4", v4.length) == 0);
+}
+
+/**
+ * Empty Results From Executed Statements
+ *
+ * This test is for ensuring the result set is empty (CassRow* == NULL) when
+ * executing statements that do not return values from Cassandra.
+ *
+ * @since 1.0.0-rc1
+ * @test_category basic
+ *
+ */
+BOOST_AUTO_TEST_CASE(empty_results)
+{
+  test_utils::CassResultPtr result;
+  test_utils::execute_query(session, "CREATE TABLE test (key int, value int, PRIMARY KEY (key))", &result);
+  BOOST_REQUIRE(cass_result_row_count(result.get()) == 0);
+  BOOST_REQUIRE(is_result_empty(result.get()));
+
+  result.reset();
+  test_utils::execute_query(session, "INSERT INTO test (key, value) VALUES (0, 0)", &result);
+  BOOST_REQUIRE(cass_result_row_count(result.get()) == 0);
+  BOOST_REQUIRE(is_result_empty(result.get()));
+  
+  result.reset();
+  test_utils::execute_query(session, "DELETE FROM test WHERE key=0", &result);
+  BOOST_REQUIRE(cass_result_row_count(result.get()) == 0);
+  BOOST_REQUIRE(is_result_empty(result.get()));
+  
+  result.reset();
+  test_utils::execute_query(session, "SELECT * FROM test WHERE key=0", &result);
+  BOOST_REQUIRE(cass_result_row_count(result.get()) == 0);
+  BOOST_REQUIRE(is_result_empty(result.get()));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
