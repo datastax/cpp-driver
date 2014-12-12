@@ -41,7 +41,7 @@ namespace cass {
 class AuthProvider;
 class AuthResponseRequest;
 class Config;
-class Connecter;
+class Connector;
 class EventResponse;
 class Request;
 class Timer;
@@ -225,7 +225,7 @@ private:
   void consume(char* input, size_t size);
   void maybe_set_keyspace(ResponseMessage* response);
 
-  static void on_connect(Connecter* connecter);
+  static void on_connect(Connector* connecter);
   static void on_connect_timeout(Timer* timer);
   static void on_close(uv_handle_t* handle);
 
@@ -268,7 +268,7 @@ private:
   size_t pending_writes_size_;
   List<PendingWriteBase> pending_writes_;
   List<Handler> pending_reads_;
-  List<PendingSchemaAgreement> pending_schema_aggreements_;
+  List<PendingSchemaAgreement> pending_schema_agreements_;
 
   uv_loop_t* loop_;
   const Config& config_;

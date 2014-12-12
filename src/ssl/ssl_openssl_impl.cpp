@@ -125,7 +125,7 @@ static X509* load_cert(const char* cert, size_t cert_size) {
 
 // Implementation taken from OpenSSL's SSL_CTX_use_certificate_chain_file()
 // (https://github.com/openssl/openssl/blob/OpenSSL_0_9_8-stable/ssl/ssl_rsa.c#L705).
-// Modified to be used for in-memory certficate chains and formatting.
+// Modified to be used for in-memory certificate chains and formatting.
 static int SSL_CTX_use_certificate_chain_bio(SSL_CTX* ctx, BIO* in) {
   int ret = 0;
   X509* x = NULL;

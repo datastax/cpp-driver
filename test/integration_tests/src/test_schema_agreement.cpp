@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(keyspace_add_drop)
 }
 
 BOOST_AUTO_TEST_CASE(agreement_node_down) {
-  test_utils::CassLog::reset("ControlConnection: Node " + inst.conf.ip_prefix() + "3 is down");
+  test_utils::CassLog::reset("Node " + inst.conf.ip_prefix() + "3 is down");
 
   inst.ccm->stop(3);
 
@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
   test_utils::CassPreparedPtr prep = cass_future_get_prepared(prepared_future.get());
   test_utils::CassStatementPtr schema_stmt(cass_prepared_bind(prep.get()));
 
-  test_utils::CassLog::reset("SchemaChangeHandler: No schema agreement on live nodes after ");
+  test_utils::CassLog::reset("No schema agreement on live nodes after ");
   test_utils::CassStatementPtr create_stmt =
       cass_statement_new(
         cass_string_init(str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
