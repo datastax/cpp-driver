@@ -125,7 +125,7 @@ int Session::init() {
   rc = request_queue_->init(loop(), this, &Session::on_execute);
   if (rc != 0) return rc;
 
-  unsigned num_threads = config_.thread_count_io();
+  unsigned int num_threads = config_.thread_count_io();
   if(num_threads == 0) {
     num_threads = 1; // Default if we can't determine the number of cores
     uv_cpu_info_t* cpu_infos;
@@ -136,7 +136,7 @@ int Session::init() {
     }
   }
 
-  for (unsigned i = 0; i < num_threads; ++i) {
+  for (unsigned int i = 0; i < num_threads; ++i) {
     SharedRefPtr<IOWorker> io_worker(new IOWorker(this));
     int rc = io_worker->init();
     if (rc != 0) return rc;
@@ -336,6 +336,9 @@ void Session::close_handles() {
 }
 
 void Session::on_run() {
+  LOG_INFO("Creating %u IO worker threads",
+           static_cast<unsigned int>(io_workers_.size()));
+
   for (IOWorkerVec::iterator it = io_workers_.begin(), end = io_workers_.end();
        it != end; ++it) {
     (*it)->run();
@@ -439,9 +442,7 @@ void Session::on_control_connection_ready() {
        it != hosts_end; ++it) {
     on_add(it->second, true);
   }
-  if (config().core_connections_per_host() > 0) {
-    pending_pool_count_ = hosts_.size() * io_workers_.size();
-  } else {
+  if (config().core_connections_per_host() == 0) {
     // Special case for internal testing. Not allowed by API
     LOG_DEBUG("Session connected with no core IO connections");
     notify_connected();
@@ -470,12 +471,15 @@ Future* Session::prepare(const char* statement, size_t length) {
 
 void Session::on_add(SharedRefPtr<Host> host, bool is_initial_connection) {
   host->set_up();
-  if (!is_initial_connection) {
-    load_balancing_policy_->on_add(host);
-  }
 
   if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
     return;
+  }
+
+  if (is_initial_connection) {
+    pending_pool_count_ += io_workers_.size();
+  } else {
+    load_balancing_policy_->on_add(host);
   }
 
   for (IOWorkerVec::iterator it = io_workers_.begin(),
