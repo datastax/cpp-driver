@@ -68,7 +68,7 @@ struct AsyncTests : public test_utils::SingleSessionTest {
     std::string select_query = str(boost::format("SELECT * FROM %s;") % table_name);
     test_utils::CassResultPtr result;
     test_utils::execute_query(session, select_query, &result, CASS_CONSISTENCY_QUORUM);
-    BOOST_REQUIRE(cass_result_row_count(result.get()) == num_concurrent_requests);
+    BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), num_concurrent_requests);
 
     test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
 
@@ -104,9 +104,7 @@ BOOST_AUTO_TEST_CASE(close)
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   const size_t num_concurrent_requests = 4096;
 
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
-  test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr temp_session(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr temp_session(test_utils::create_session(cluster));
 
   test_utils::execute_query(temp_session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 

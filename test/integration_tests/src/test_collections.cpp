@@ -93,9 +93,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
   }
 
   void insert_collection_all_types(CassValueType type) {
-    test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
-    test_utils::wait_and_check_error(session_future.get());
-    test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
     test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                                  % test_utils::SIMPLE_KEYSPACE % "1"));
@@ -232,9 +230,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
   }
 
   void insert_map_all_types() {
-    test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
-    test_utils::wait_and_check_error(session_future.get());
-    test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
     test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                                  % test_utils::SIMPLE_KEYSPACE % "1"));

@@ -69,18 +69,14 @@ CassCluster* create_cluster() {
   return cluster;
 }
 
-CassError connect_session(CassCluster* cluster, CassSession** output) {
+CassError connect_session(CassSession* session, const CassCluster* cluster) {
   CassError rc = CASS_OK;
-  CassFuture* future = cass_cluster_connect_keyspace(cluster, "examples");
-
-  *output = NULL;
+  CassFuture* future = cass_session_connect(session, cluster);
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
   if(rc != CASS_OK) {
     print_error(future);
-  } else {
-    *output = cass_future_get_session(future);
   }
   cass_future_free(future);
 
@@ -315,18 +311,19 @@ void run_select_queries(void* data) {
 int main() {
   int i;
   uv_thread_t threads[NUM_THREADS];
-  CassError rc = CASS_OK;
   CassCluster* cluster = NULL;
   CassSession* session = NULL;
   CassFuture* close_future = NULL;
 
   cass_log_set_level(CASS_LOG_INFO);
 
-  uuid_gen = cass_uuid_gen_new();
   cluster = create_cluster();
+  uuid_gen = cass_uuid_gen_new();
+  session = cass_session_new();
 
-  rc = connect_session(cluster, &session);
-  if(rc != CASS_OK) {
+  if(connect_session(session, cluster) != CASS_OK) {
+    cass_cluster_free(cluster);
+    cass_session_free(session);
     return -1;
   }
 

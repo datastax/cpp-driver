@@ -237,26 +237,6 @@ void cass_cluster_set_tcp_keepalive(CassCluster* cluster,
   cluster->config().set_tcp_keepalive(enable == cass_true, delay_secs);
 }
 
-CassFuture* cass_cluster_connect(CassCluster* cluster) {
-  return cass_cluster_connect_keyspace(cluster, "");
-}
-
-CassFuture* cass_cluster_connect_keyspace(CassCluster* cluster,
-                                          const char* keyspace) {
-  cass::Session* session = new cass::Session(cluster->config());
-
-  cass::SessionConnectFuture* connect_future =
-      new cass::SessionConnectFuture(session);
-  connect_future->inc_ref();
-
-  if (!session->connect_async(std::string(keyspace), connect_future)) {
-    connect_future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT,
-                              "Error initializing session");
-  }
-
-  return CassFuture::to(connect_future);
-}
-
 void cass_cluster_free(CassCluster* cluster) {
   delete cluster->from();
 }

@@ -74,13 +74,13 @@ BOOST_FIXTURE_TEST_SUITE(control_connection, ControlConnectionTests)
 
 BOOST_AUTO_TEST_CASE(connect_invalid_ip)
 {
-  test_utils::CassLog::reset("Connection: Host 1.1.1.1 had the following error on startup: 'Connection timeout'");
+  test_utils::CassLog::reset("Host 1.1.1.1 had the following error on startup: 'Connection timeout'");
 
   test_utils::CassClusterPtr cluster(cass_cluster_new());
   cass_cluster_set_contact_points(cluster.get(), "1.1.1.1");
   {
-    test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-    CassError code = test_utils::wait_and_return_error(session_future.get());
+    CassError code;
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get(), &code));
     BOOST_CHECK_EQUAL(code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
   }
 
@@ -98,9 +98,8 @@ BOOST_AUTO_TEST_CASE(connect_invalid_port)
 
   cass_cluster_set_port(cluster.get(), 9999); // Invalid port
 
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-  CassError code = test_utils::wait_and_return_error(session_future.get());
-
+  CassError code;
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get(), &code));
   BOOST_CHECK_EQUAL(code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
 

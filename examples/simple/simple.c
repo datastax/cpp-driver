@@ -21,13 +21,14 @@ int main() {
   /* Setup and connect to cluster */
   CassFuture* connect_future = NULL;
   CassCluster* cluster = cass_cluster_new();
+  CassSession* session = cass_session_new();
+
   cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
 
-  connect_future = cass_cluster_connect(cluster);
+  connect_future = cass_session_connect(session, cluster);
 
   if (cass_future_error_code(connect_future) == CASS_OK) {
     CassFuture* close_future = NULL;
-    CassSession* session = cass_future_get_session(connect_future);
 
     /* Build statement and execute query */
     CassString query = cass_string_init("SELECT keyspace_name "
@@ -58,7 +59,7 @@ int main() {
       CassString message = cass_future_error_message(result_future);
       fprintf(stderr, "Unable to run query: '%.*s'\n", (int)message.length,
                                                             message.data);
-    } 
+    }
 
     cass_statement_free(statement);
     cass_future_free(result_future);
@@ -68,14 +69,15 @@ int main() {
     cass_future_wait(close_future);
     cass_future_free(close_future);
   } else {
-      /* Handle error */
-      CassString message = cass_future_error_message(connect_future);
-      fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message.length, 
-                                                          message.data);
+    /* Handle error */
+    CassString message = cass_future_error_message(connect_future);
+    fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message.length,
+                                                        message.data);
   }
 
   cass_future_free(connect_future);
   cass_cluster_free(cluster);
+  cass_session_free(session);
 
   return 0;
 }

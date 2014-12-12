@@ -44,9 +44,7 @@ BOOST_AUTO_TEST_CASE(simple_two_nodes)
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 2, 0);
 
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-  test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
   PolicyTool policy_tool;
   policy_tool.create_schema(session.get(), 1); // replication_factor = 1
@@ -92,9 +90,7 @@ BOOST_AUTO_TEST_CASE(one_node_down)
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 3, 0);
 
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-  test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
   PolicyTool policy_tool;
   policy_tool.create_schema(session.get(), 3); // replication_factor = 3
@@ -145,9 +141,7 @@ BOOST_AUTO_TEST_CASE(two_nodes_down)
 
   test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 3, 0);
 
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-  test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
   PolicyTool policy_tool;
   policy_tool.create_schema(session.get(), 3); // replication_factor = 3

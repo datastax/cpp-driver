@@ -261,7 +261,7 @@ typedef enum  CassErrorSource_ {
 #define CASS_ERROR_MAP(XX) \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_BAD_PARAMS, 1, "Bad parameters") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_STREAMS, 2, "No streams available") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_INIT, 3, "Unable to initialize session") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_INIT, 3, "Unable to initialize") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_MESSAGE_ENCODE, 4, "Unable to encode message") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_HOST_RESOLUTION, 5, "Unable to resolve host") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNEXPECTED_RESPONSE, 6, "Unexpected response from server") \
@@ -280,6 +280,8 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_DETERMINE_PROTOCOL, 19, "Unable to find supported protocol version") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NULL_VALUE, 20, "NULL value specified") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NOT_IMPLEMENTED, 21, "Not implemented") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_CONNECT, 22, "Unable to connect") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_CLOSE, 23, "Unable to close") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -313,7 +315,6 @@ typedef enum CassError_ {
 
 typedef void (*CassFutureCallback)(CassFuture* future,
                                    void* data);
-
 
 #define CASS_LOG_MAX_MESSAGE_SIZE 256
 
@@ -729,26 +730,6 @@ cass_cluster_set_tcp_keepalive(CassCluster* cluster,
                                cass_bool_t enable,
                                unsigned delay_secs);
 
-/**
- * Connects a session to the cluster.
- *
- * @param[in] cluster
- * @return A session that must be freed.
- */
-CASS_EXPORT CassFuture*
-cass_cluster_connect(CassCluster* cluster);
-
-/**
- * Connects a session to the cluster and sets the keyspace.
- *
- * @param[in] cluster
- * @param[in] keyspace
- * @return A session that must be freed.
- */
-CASS_EXPORT CassFuture*
-cass_cluster_connect_keyspace(CassCluster* cluster,
-                              const char* keyspace);
-
 /***********************************************************************************
  *
  * Session
@@ -756,10 +737,56 @@ cass_cluster_connect_keyspace(CassCluster* cluster,
  ***********************************************************************************/
 
 /**
+ * Creates a new session.
+ *
+ * @return Returns a session that must be freed.
+ *
+ * @see cass_session_free()
+ */
+CASS_EXPORT CassSession*
+cass_session_new();
+
+/**
+ * Frees a session instance. If the session is still connected it will be syncronously
+ * closed before being deallocated.
+ *
+ * @param[in] session
+ */
+CASS_EXPORT void
+cass_session_free(CassSession* session);
+
+/**
+ * Connects a session.
+ *
+ * @param[in] session
+ * @param[in] cluster
+ * @return A future that must be freed.
+ *
+ * @see cass_session_close()
+ */
+CASS_EXPORT CassFuture*
+cass_session_connect(CassSession* session,
+                     const CassCluster* cluster);
+
+/**
+ * Connects a session and sets the keyspace.
+ *
+ * @param[in] session
+ * @param[in] cluster
+ * @param[in] keyspace
+ * @return A future that must be freed.
+ *
+ * @see cass_session_close()
+ */
+CASS_EXPORT CassFuture*
+cass_session_connect_keyspace(CassSession* session,
+                              const CassCluster* cluster,
+                              const char* keyspace);
+
+/**
  * Closes the session instance, outputs a close future which can
  * be used to determine when the session has been terminated. This allows
- * in-flight requests to finish. It is an error to call this method twice
- * with the same session as it is freed after it terminates.
+ * in-flight requests to finish.
  *
  * @param[in] session
  * @return A future that must be freed.
@@ -1042,20 +1069,6 @@ cass_future_wait(CassFuture* future);
 CASS_EXPORT cass_bool_t
 cass_future_wait_timed(CassFuture* future,
                        cass_duration_t timeout_us);
-
-/**
- * Gets the result of a successful future. If the future is not ready this method will
- * wait for the future to be set. The first successful call consumes the future, all
- * subsequent calls will return NULL.
- *
- * @param[in] future
- * @return CassSession instance if successful, otherwise NULL for error. The return instance
- * must be closed using cass_session_close().
- *
- * @see cass_session_execute() and cass_session_execute_batch()
- */
-CASS_EXPORT CassSession*
-cass_future_get_session(CassFuture* future);
 
 /**
  * Gets the result of a successful future. If the future is not ready this method will

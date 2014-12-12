@@ -44,9 +44,7 @@ BOOST_AUTO_TEST_CASE(logging_callback)
   test_utils::CassLog::reset("IOWorker: add_pool for host");
 
   {
-    test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
-    test_utils::wait_and_check_error(session_future.get());
-    test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
   }
 
   BOOST_CHECK(test_utils::CassLog::message_count() > 0);

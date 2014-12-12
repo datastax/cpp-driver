@@ -17,6 +17,7 @@
 #ifndef __CASS_LOOP_THREAD_HPP_INCLUDED__
 #define __CASS_LOOP_THREAD_HPP_INCLUDED__
 
+#include <assert.h>
 #include <uv.h>
 
 namespace cass {
@@ -25,7 +26,8 @@ class LoopThread {
 public:
   LoopThread()
       : loop_(uv_loop_new())
-      , thread_id_(0) {}
+      , thread_id_(0)
+      , is_joinable_(false) {}
 
   int init() {
     int rc = 0;
@@ -48,9 +50,18 @@ public:
 
   uv_loop_t* loop() { return loop_; }
 
-  void run() { uv_thread_create(&thread_, on_run_internal, this); }
+  int run() {
+    int rc = uv_thread_create(&thread_, on_run_internal, this);
+    if (rc == 0) is_joinable_ = true;
+    return rc;
+  }
 
-  void join() { uv_thread_join(&thread_); }
+  void join() {
+    if (is_joinable_) {
+      is_joinable_ = false;
+      assert(uv_thread_join(&thread_) == 0);
+    }
+  }
 
   unsigned long thread_id() { return thread_id_; }
 
@@ -76,6 +87,7 @@ private:
   uv_loop_t* loop_;
   uv_thread_t thread_;
   unsigned long thread_id_;
+  bool is_joinable_;
 
 #if !defined(WIN32) && !defined(_WIN32)
   uv_signal_t sigpipe_;

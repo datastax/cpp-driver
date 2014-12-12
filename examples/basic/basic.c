@@ -42,18 +42,14 @@ CassCluster* create_cluster() {
   return cluster;
 }
 
-CassError connect_session(CassCluster* cluster, CassSession** output) {
+CassError connect_session(CassSession* session, const CassCluster* cluster) {
   CassError rc = CASS_OK;
-  CassFuture* future = cass_cluster_connect(cluster);
-
-  *output = NULL;
+  CassFuture* future = cass_session_connect(session, cluster);
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
   if(rc != CASS_OK) {
     print_error(future);
-  } else {
-    *output = cass_future_get_session(future);
   }
   cass_future_free(future);
 
@@ -148,16 +144,16 @@ CassError select_from_basic(CassSession* session, const char* key, Basic* basic)
 }
 
 int main() {
-  CassError rc = CASS_OK;
   CassCluster* cluster = create_cluster();
-  CassSession* session = NULL;
+  CassSession* session = cass_session_new();
   CassFuture* close_future = NULL;
 
   Basic input = { cass_true, 0.001f, 0.0002, 1, 2 };
   Basic output;
 
-  rc = connect_session(cluster, &session);
-  if(rc != CASS_OK) {
+  if(connect_session(session, cluster) != CASS_OK) {
+    cass_cluster_free(cluster);
+    cass_session_free(session);
     return -1;
   }
 
@@ -185,7 +181,9 @@ int main() {
   close_future = cass_session_close(session);
   cass_future_wait(close_future);
   cass_future_free(close_future);
+
   cass_cluster_free(cluster);
+  cass_session_close(session);
 
   return 0;
 }

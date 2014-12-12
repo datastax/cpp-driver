@@ -58,9 +58,7 @@ BOOST_AUTO_TEST_CASE(query_after_downgrade)
 
     cass_cluster_set_protocol_version(cluster.get(), 2);
 
-    test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-    test_utils::wait_and_check_error(session_future.get());
-    test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
     test_utils::CassResultPtr result;
     test_utils::execute_query(session.get(), "SELECT * FROM system.schema_keyspaces", &result);

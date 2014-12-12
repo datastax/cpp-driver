@@ -126,9 +126,7 @@ template<>
 struct Deleter<CassSession> {
   void operator()(CassSession* ptr) {
     if (ptr != NULL) {
-      CassFuture* future = cass_session_close(ptr);
-      cass_future_wait(future);
-      cass_future_free(future);
+      cass_session_free(ptr);
     }
   }
 };
@@ -549,6 +547,7 @@ const char* get_column_type(CassColumnType type);
 const char* get_value_type(CassValueType type);
 
 CassSessionPtr create_session(CassCluster* cluster);
+CassSessionPtr create_session(CassCluster* cluster, CassError* code);
 
 CassError execute_query_with_error(CassSession* session,
                                    const std::string& query,
