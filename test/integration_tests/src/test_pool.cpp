@@ -39,9 +39,7 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
   reinterpret_cast<cass::Cluster*>(cluster)->config().set_core_connections_per_host(0);// bypassing API param check
 
   {
-    test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
-    test_utils::wait_and_check_error(connect_future.get());
-    test_utils::CassSessionPtr session = cass_future_get_session(connect_future.get());
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
     test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("SELECT * FROM system.local"), 0));
 
@@ -68,9 +66,7 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
     cass_cluster_set_pending_requests_low_water_mark(cluster, pending_low_wm);
     cass_cluster_set_pending_requests_high_water_mark(cluster, pending_high_wm);
 
-    test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
-    test_utils::wait_and_check_error(connect_future.get());
-    test_utils::CassSessionPtr session = cass_future_get_session(connect_future.get());
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
     test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("SELECT * FROM system.local"), 0));
 
@@ -110,9 +106,7 @@ BOOST_AUTO_TEST_CASE(connection_spawn)
 
   // only one with no traffic
   {
-    test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
-    test_utils::wait_and_check_error(connect_future.get());
-    test_utils::CassSessionPtr session = cass_future_get_session(connect_future.get());
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
   }
   BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 1u);
 
@@ -120,9 +114,7 @@ BOOST_AUTO_TEST_CASE(connection_spawn)
   test_utils::CassLog::reset(SPAWN_MSG);
   // exactly two with traffic
   {
-    test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
-    test_utils::wait_and_check_error(connect_future.get());
-    test_utils::CassSessionPtr session = cass_future_get_session(connect_future.get());
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
     test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("SELECT * FROM system.local"), 0));
 

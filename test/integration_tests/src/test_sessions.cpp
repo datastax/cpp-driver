@@ -54,10 +54,7 @@ BOOST_AUTO_TEST_CASE(connect_invalid_name)
     test_utils::CassClusterPtr cluster(cass_cluster_new());
     cass_cluster_set_contact_points(cluster.get(), "node.domain-does-not-exist.dne");
 
-    test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-    code = cass_future_error_code(session_future.get());
-
-    test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get(), &code));
   }
 
   BOOST_CHECK(test_utils::CassLog::message_count() > 0);
@@ -78,9 +75,8 @@ BOOST_AUTO_TEST_CASE(connect_invalid_keyspace)
 
     test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
-    test_utils::CassFuturePtr session_future(cass_cluster_connect_keyspace(cluster.get(), "invalid"));
-    test_utils::wait_and_check_error(session_future.get());
-    test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+    test_utils::CassSessionPtr session(cass_session_new());
+    test_utils::CassFuturePtr connect_future(cass_session_connect_keyspace(session.get(), cluster.get(), "invalid"));
 
     CassString query = cass_string_init("SELECT * FROM table");
     test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
@@ -111,9 +107,7 @@ BOOST_AUTO_TEST_CASE(close_timeout_error)
     cass_cluster_set_max_connections_per_host(cluster.get(), 10);
 
     for (int i = 0; i < 100; ++i) {
-      test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-      test_utils::wait_and_check_error(session_future.get());
-      test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+      test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
       for (int j = 0; j < 10; ++j) {
         CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");

@@ -204,9 +204,9 @@ SingleSessionTest::SingleSessionTest(unsigned int num_nodes_dc1, unsigned int nu
 }
 
 void SingleSessionTest::create_session() {
-  test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
+  session = cass_session_new();
+  test_utils::CassFuturePtr connect_future(cass_session_connect(session, cluster));
   test_utils::wait_and_check_error(connect_future.get());
-  session = cass_future_get_session(connect_future.get());
   version = get_version(session);
 }
 
@@ -228,9 +228,17 @@ void initialize_contact_points(CassCluster* cluster, std::string prefix, unsigne
 }
 
 CassSessionPtr create_session(CassCluster* cluster) {
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
-  test_utils::wait_and_check_error(session_future.get());
-  return test_utils::CassSessionPtr(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr session(cass_session_new());
+  test_utils::CassFuturePtr connect_future(cass_session_connect(session.get(), cluster));
+  test_utils::wait_and_check_error(connect_future.get());
+  return session;
+}
+
+CassSessionPtr create_session(CassCluster* cluster, CassError* code) {
+  test_utils::CassSessionPtr session(cass_session_new());
+  test_utils::CassFuturePtr connect_future(cass_session_connect(session.get(), cluster));
+  *code = test_utils::wait_and_return_error(connect_future.get());
+  return session;
 }
 
 void execute_query(CassSession* session,

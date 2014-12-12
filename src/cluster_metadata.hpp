@@ -24,8 +24,9 @@ namespace cass {
 
 class ClusterMetadata {
 public:
+  ClusterMetadata();
   ~ClusterMetadata();
-  int init();
+
   void clear();
   void update_keyspaces(ResultResponse* result);
   void update_tables(ResultResponse* table_result, ResultResponse* col_result);
@@ -47,8 +48,8 @@ private:
   Schema schema_;
   TokenMap token_map_;
 
-  // used to synch schema updates and copies
-  mutable uv_mutex_t mutex_;
+  // Used to synch schema updates and copies
+  mutable uv_mutex_t schema_mutex_;
 };
 
 } // namespace cass

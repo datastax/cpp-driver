@@ -65,9 +65,9 @@ CassCluster* create_cluster() {
   return cluster;
 }
 
-void connect_session(CassCluster* cluster, CassFutureCallback callback) {
-  CassFuture* future = cass_cluster_connect_keyspace(cluster, "examples");
-  cass_future_set_callback(future, callback, NULL);
+void connect_session(CassSession* session, const CassCluster* cluster, CassFutureCallback callback) {
+  CassFuture* future = cass_session_connect_keyspace(session, cluster, "examples");
+  cass_future_set_callback(future, callback, session);
   cass_future_free(future);
 }
 
@@ -81,7 +81,7 @@ void execute_query(CassSession* session, const char* query,
 }
 
 void on_session_connect(CassFuture* future, void* data) {
-  CassSession* session = NULL;
+  CassSession* session = (CassSession*)data;
   CassError code = cass_future_error_code(future);
 
   if (code != CASS_OK) {
@@ -90,7 +90,6 @@ void on_session_connect(CassFuture* future, void* data) {
     return;
   }
 
-  session = cass_future_get_session(future);
   execute_query(session,
                 "CREATE KEYSPACE examples WITH replication = { "
                 "'class': 'SimpleStrategy', 'replication_factor': '3' };",
@@ -185,13 +184,14 @@ void on_select(CassFuture* future, void* data) {
 
 int main() {
   CassCluster* cluster = create_cluster();
+  CassSession* session = cass_session_new();
 
   uuid_gen = cass_uuid_gen_new();
 
   uv_mutex_init(&mutex);
   uv_cond_init(&cond);
 
-  connect_session(cluster, on_session_connect);
+  connect_session(session, cluster, on_session_connect);
 
   /* Code running in parallel with queries */
 
@@ -200,8 +200,9 @@ int main() {
   uv_cond_destroy(&cond);
   uv_mutex_destroy(&mutex);
 
-  cass_uuid_gen_free(uuid_gen);
   cass_cluster_free(cluster);
+  cass_uuid_gen_free(uuid_gen);
+  cass_session_free(session);
 
   return 0;
 }

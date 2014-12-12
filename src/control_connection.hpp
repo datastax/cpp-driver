@@ -44,24 +44,21 @@ public:
                                               const Value* rpc_value,
                                               Address* output);
 
-  enum ControlState {
+  enum State {
     CONTROL_STATE_NEW,
     CONTROL_STATE_READY,
     CONTROL_STATE_CLOSED
   };
 
-  ControlConnection()
-    : session_(NULL)
-    , state_(CONTROL_STATE_NEW)
-    , connection_(NULL)
-    , reconnect_timer_(NULL)
-    , query_tokens_(false) {}
+  ControlConnection();
 
   int protocol_version() const {
     return protocol_version_;
   }
 
   const SharedRefPtr<Host> connected_host() const;
+
+  void clear();
 
   void connect(Session* session);
   void close();
@@ -182,13 +179,13 @@ private:
                         const MultipleRequestHandler::ResponseVec& responses);
 
 private:
+  State state_;
   Session* session_;
-  ControlState state_;
   Connection* connection_;
+  Timer* reconnect_timer_;
   ScopedPtr<QueryPlan> query_plan_;
   Address current_host_address_;
   int protocol_version_;
-  Timer* reconnect_timer_;
   std::string last_connection_error_;
   bool query_tokens_;
 

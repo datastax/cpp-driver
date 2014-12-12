@@ -77,13 +77,13 @@ CassError execute_query(CassSession* session, const char* query) {
 int main() {
   CassFuture* connect_future = NULL;
   CassCluster* cluster = cass_cluster_new();
+  CassSession* session = cass_session_new();
   cass_cluster_set_contact_points(cluster, "127.0.0.1");
 
-  connect_future = cass_cluster_connect(cluster);
+  connect_future = cass_session_connect(session, cluster);
 
   if (cass_future_error_code(connect_future) == CASS_OK) {
     CassFuture* close_future = NULL;
-    CassSession* session = cass_future_get_session(connect_future);
 
     execute_query(session,
                   "CREATE KEYSPACE examples WITH replication = { \
@@ -111,6 +111,7 @@ int main() {
 
   cass_future_free(connect_future);
   cass_cluster_free(cluster);
+  cass_session_free(session);
 
   return 0;
 }

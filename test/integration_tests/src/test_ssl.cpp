@@ -155,10 +155,10 @@ struct TestSSL {
     cass_cluster_set_ssl(cluster_, ssl_);
 
     //Establish the connection (if ssl)
-    connect_future_ = cass_cluster_connect(cluster_);
+    session_ = cass_session_new();
+    connect_future_ = cass_session_connect(session_, cluster_);
     if (!is_failure) {
       test_utils::wait_and_check_error(connect_future_);
-      session_ = cass_future_get_session(connect_future_);
     } else {
       //FIXME: When CPP-179 is completed remove timeout and ccm command as connection failure validation
       BOOST_REQUIRE(!cass_future_wait_timed(connect_future_, 2000)); //Ensure the wait is long enough for slow machines
@@ -178,9 +178,7 @@ struct TestSSL {
    */
   void cleanup() {
     if (session_) {
-      CassFuture* close_future = cass_session_close(session_);
-      cass_future_wait(close_future);
-      cass_future_free(close_future);
+      cass_session_free(session_);
       session_ = NULL;
     }
 

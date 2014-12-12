@@ -43,14 +43,13 @@ struct StressTests : public test_utils::MultipleNodesTest {
   CassSession* session;
 
   StressTests() : MultipleNodesTest(3, 0) {
-    test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
+    session = cass_session_new();
+    test_utils::CassFuturePtr session_future(cass_session_connect(session, cluster));
     test_utils::wait_and_check_error(session_future.get());
-    session = cass_future_get_session(session_future.get());
   }
 
   ~StressTests() {
-    test_utils::CassFuturePtr future(cass_session_close(session));
-    test_utils::wait_and_check_error(future.get());
+    cass_session_free(session);
   }
 
   bool bind_and_execute_insert(CassStatement* statement) {

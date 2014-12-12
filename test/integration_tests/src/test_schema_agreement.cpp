@@ -43,15 +43,15 @@ struct ClusterInit {
 
   void new_session() {
     close_session();
-    test_utils::CassFuturePtr connect_future(cass_cluster_connect(inst.cluster));
+    session = cass_session_new();
+    test_utils::CassFuturePtr connect_future(cass_session_connect(session, inst.cluster));
     test_utils::wait_and_check_error(connect_future.get());
-    session = cass_future_get_session(connect_future.get());
   }
 
   void close_session() {
     if (session != NULL) {
       test_utils::CassFuturePtr close_future(cass_session_close(session));
-      cass_future_wait(close_future.get());
+      test_utils::wait_and_check_error(close_future.get());
       session = NULL;
     }
   }
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(keyspace_add_drop)
 }
 
 BOOST_AUTO_TEST_CASE(agreement_node_down) {
-  test_utils::CassLog::reset("ControlConnection: Node " + inst.conf.ip_prefix() + "3 is down");
+  test_utils::CassLog::reset("Node " + inst.conf.ip_prefix() + "3 is down");
 
   inst.ccm->stop(3);
 
@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
   test_utils::CassPreparedPtr prep = cass_future_get_prepared(prepared_future.get());
   test_utils::CassStatementPtr schema_stmt(cass_prepared_bind(prep.get()));
 
-  test_utils::CassLog::reset("SchemaChangeHandler: No schema agreement on live nodes after ");
+  test_utils::CassLog::reset("No schema agreement on live nodes after ");
   test_utils::CassStatementPtr create_stmt =
       cass_statement_new(
         cass_string_init(str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)

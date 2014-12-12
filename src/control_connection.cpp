@@ -100,8 +100,27 @@ bool ControlConnection::determine_address_for_peer_host(const Address& connected
   return true;
 }
 
+ControlConnection::ControlConnection()
+  : state_(CONTROL_STATE_NEW)
+  , session_(NULL)
+  , connection_(NULL)
+  , reconnect_timer_(NULL)
+  , protocol_version_(0)
+  , query_tokens_(false) {}
+
 const SharedRefPtr<Host> ControlConnection::connected_host() const {
   return session_->get_host(current_host_address_);
+}
+
+void ControlConnection::clear() {
+  state_ = CONTROL_STATE_NEW;
+  session_ = NULL;
+  connection_ = NULL;
+  reconnect_timer_ = NULL;
+  query_plan_.reset();
+  protocol_version_ = 0;
+  last_connection_error_.clear();
+  query_tokens_ = false;
 }
 
 void ControlConnection::connect(Session* session) {
