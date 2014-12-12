@@ -21,7 +21,7 @@
 #include "auth_responses.hpp"
 #include "common.hpp"
 #include "constants.hpp"
-#include "connecter.hpp"
+#include "connector.hpp"
 #include "timer.hpp"
 #include "config.hpp"
 #include "result_response.hpp"
@@ -182,7 +182,7 @@ void Connection::connect() {
     state_ = CONNECTION_STATE_CONNECTING;
     connect_timer_ = Timer::start(loop_, config_.connect_timeout_ms(), this,
                                   on_connect_timeout);
-    Connecter::connect(&socket_, address_, this, on_connect);
+    Connector::connect(&socket_, address_, this, on_connect);
   }
 }
 
@@ -366,14 +366,14 @@ void Connection::maybe_set_keyspace(ResponseMessage* response) {
   }
 }
 
-void Connection::on_connect(Connecter* connecter) {
+void Connection::on_connect(Connector* connecter) {
   Connection* connection = static_cast<Connection*>(connecter->data());
 
   if (connection->connect_timer_ == NULL) {
     return; // Timed out
   }
 
-  if (connecter->status() == Connecter::SUCCESS) {
+  if (connecter->status() == Connector::SUCCESS) {
     LOG_DEBUG("Connected to host %s", connection->addr_string_.c_str());
 
     if (connection->ssl_session_) {

@@ -146,7 +146,7 @@ void SchemaChangeHandler::on_error(CassError code, const std::string& message) {
 }
 
 void SchemaChangeHandler::on_timeout() {
-  logger_->error("SchemaChangeHandler: A timeout occurred waiting for schema agreement");
+  LOG_ERROR("A timeout occurred waiting for schema agreement");
   request_handler_->set_response(request_response_);
 }
 
