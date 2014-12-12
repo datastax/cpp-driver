@@ -32,15 +32,33 @@ Address::Address(const std::string& ip, int port) {
 
 bool Address::from_string(const std::string& ip, int port, Address* output) {
   char buf[sizeof(struct in6_addr)];
+#if UV_VERSION_MAJOR == 0
   if (uv_inet_pton(AF_INET, ip.c_str(), &buf).code == UV_OK) {
+#else
+  if (uv_inet_pton(AF_INET, ip.c_str(), &buf) == 0) {
+#endif
     if (output != NULL) {
-      struct sockaddr_in addr = uv_ip4_addr(ip.c_str(), port);
+      struct sockaddr_in addr;
+#if UV_VERSION_MAJOR == 0
+      addr = uv_ip4_addr(ip.c_str(), port);
+#else
+      uv_ip4_addr(ip.c_str(), port, &addr);
+#endif
       output->init(copy_cast<struct sockaddr_in*, struct sockaddr*>(&addr));
     }
     return true;
+#if UV_VERSION_MAJOR == 0
   } else if (uv_inet_pton(AF_INET6, ip.c_str(), &buf).code == UV_OK) {
+#else
+  } else if (uv_inet_pton(AF_INET6, ip.c_str(), &buf) == 0) {
+#endif
     if (output != NULL) {
-      struct sockaddr_in6 addr = uv_ip6_addr(ip.c_str(), port);
+      struct sockaddr_in6 addr;
+#if UV_VERSION_MAJOR == 0
+      addr = uv_ip6_addr(ip.c_str(), port);
+#else
+      uv_ip6_addr(ip.c_str(), port, &addr);
+#endif
       output->init(copy_cast<struct sockaddr_in6*, struct sockaddr*>(&addr));
     }
     return true;
@@ -56,14 +74,24 @@ void Address::from_inet(const char* data, size_t size, int port, Address* output
     char buf[INET_ADDRSTRLEN];
     uv_inet_ntop(AF_INET, data, buf, sizeof(buf));
     if (output != NULL) {
-      struct sockaddr_in addr = uv_ip4_addr(buf, port);
+      struct sockaddr_in addr;
+#if UV_VERSION_MAJOR == 0
+      addr = uv_ip4_addr(buf, port);
+#else
+      uv_ip4_addr(buf, port, &addr);
+#endif
       output->init(copy_cast<struct sockaddr_in*, struct sockaddr*>(&addr));
     }
   } else {
     char buf[INET6_ADDRSTRLEN];
     uv_inet_ntop(AF_INET6, data, buf, sizeof(buf));
     if (output != NULL) {
-      struct sockaddr_in6 addr = uv_ip6_addr(buf, port);
+      struct sockaddr_in6 addr;
+#if UV_VERSION_MAJOR == 0
+      addr = uv_ip6_addr(buf, port);
+#else
+      uv_ip6_addr(buf, port, &addr);
+#endif
       output->init(copy_cast<struct sockaddr_in6*, struct sockaddr*>(&addr));
     }
   }

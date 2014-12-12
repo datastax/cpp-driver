@@ -108,8 +108,13 @@ private:
 
   virtual void on_event(const IOWorkerEvent& event);
 
+#if UV_VERSION_MAJOR == 0
   static void on_execute(uv_async_t* async, int status);
   static void on_prepare(uv_prepare_t *prepare, int status);
+#else
+  static void on_execute(uv_async_t* async);
+  static void on_prepare(uv_prepare_t *prepare);
+#endif
 
 private:
   typedef std::map<Address, SharedRefPtr<Pool> > PoolMap;

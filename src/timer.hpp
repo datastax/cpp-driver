@@ -49,7 +49,11 @@ private:
     uv_close(copy_cast<uv_timer_t*, uv_handle_t*>(&timer->handle_), on_close);
   }
 
+#if UV_VERSION_MAJOR == 0
   static void on_timeout(uv_timer_t* handle, int status) {
+#else
+  static void on_timeout(uv_timer_t* handle) {
+#endif
     Timer* timer = static_cast<Timer*>(handle->data);
     timer->cb_(timer);
     close(timer);

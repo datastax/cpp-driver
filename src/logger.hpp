@@ -97,7 +97,11 @@ private:
     }
   }
 
+#if UV_VERSION_MAJOR == 0
   static void on_log(uv_async_t* async, int status) {
+#else
+  static void on_log(uv_async_t* async) {
+#endif
     Logger* logger = static_cast<Logger*>(async->data);
 
     bool is_closing = false;
