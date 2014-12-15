@@ -39,10 +39,6 @@
 #include <uv.h>
 #include <vector>
 
-#ifdef TESTING_DIRECTIVE
-#include <stdexcept>
-#endif
-
 namespace cass {
 
 class RequestHandler;
