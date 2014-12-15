@@ -445,7 +445,6 @@ void Session::on_control_connection_ready() {
   if (config().core_connections_per_host() == 0) {
     // Special case for internal testing. Not allowed by API
     LOG_DEBUG("Session connected with no core IO connections");
-    notify_connected();
   }
 }
 
