@@ -328,13 +328,6 @@ add_custom_target(UNINSTALL
 #-------------------
 
 if(CASS_BUILD_TESTS)
-  # Create a testing option for directives that change intended driver functionality
-  option(CASS_USE_TESTING_DIRECTIVE "Use testing directive" OFF)
-  if(CASS_USE_TESTING_DIRECTIVE)
-    message(warning, "Disable testing directive before using the driver in a production environment")
-    add_definitions(-DTESTING_DIRECTIVE)
-  endif()
-
   if(WIN32)
     set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/")
   endif()
