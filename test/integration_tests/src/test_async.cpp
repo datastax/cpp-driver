@@ -38,9 +38,9 @@ struct AsyncTests : public test_utils::SingleSessionTest {
 
   static std::vector<CassUuid> insert_async(CassSession* session,
                                             CassUuidGen* uuid_gen,
-                                     const std::string& table_name,
-                                     size_t num_concurrent_requests,
-                                     std::vector<test_utils::CassFuturePtr>* futures) {
+                                            const std::string& table_name,
+                                            size_t num_concurrent_requests,
+                                            std::vector<test_utils::CassFuturePtr>* futures) {
     std::string create_table_query = str(boost::format("CREATE TABLE %s (id timeuuid PRIMARY KEY, num int, str text);") % table_name);
 
     test_utils::execute_query(session, create_table_query);
@@ -64,8 +64,8 @@ struct AsyncTests : public test_utils::SingleSessionTest {
   }
 
   void validate_results(const std::string& table_name,
-                               size_t num_concurrent_requests,
-                               const std::vector<CassUuid>& ids)
+                        size_t num_concurrent_requests,
+                        const std::vector<CassUuid>& ids)
   {
     std::string select_query = str(boost::format("SELECT * FROM %s;") % table_name);
     test_utils::CassResultPtr result;
