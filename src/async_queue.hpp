@@ -29,9 +29,7 @@ template <typename Q>
 class AsyncQueue {
 public:
   AsyncQueue(size_t queue_size)
-      : queue_(queue_size) {
-    async_.data = this;
-  }
+      : queue_(queue_size) {}
 
   int init(uv_loop_t* loop, void* data, uv_async_cb async_cb) {
     async_.data = data;
