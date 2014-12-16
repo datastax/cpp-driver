@@ -5,7 +5,7 @@ Note: This is just a start and more extensive documentation is coming.
 
 # Custom logging
 
-The driver's logging system logs to `stderr` by default and uses the log level `CASS_LOG_WARN`. Both of these settings can be changed using the log API. A full example of using the logging API to log to a file can be found (here)[/examples/logging/logging.c]
+The driver's logging system logs to `stderr` by default and uses the log level `CASS_LOG_WARN`. Both of these settings can be changed using the log API. A full example of using the logging API to log to a file can be found [here](/examples/logging/logging.c)
 
 To update the log level use `cass_log_set_level()`, but this must be applied before calling any other driver function.
 
