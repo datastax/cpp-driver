@@ -36,7 +36,9 @@ struct AsyncTests : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
   }
 
-  std::vector<CassUuid> insert_async(const std::string& table_name,
+  static std::vector<CassUuid> insert_async(CassSession* session,
+                                            CassUuidGen* uuid_gen,
+                                     const std::string& table_name,
                                      size_t num_concurrent_requests,
                                      std::vector<test_utils::CassFuturePtr>* futures) {
     std::string create_table_query = str(boost::format("CREATE TABLE %s (id timeuuid PRIMARY KEY, num int, str text);") % table_name);
@@ -62,8 +64,8 @@ struct AsyncTests : public test_utils::SingleSessionTest {
   }
 
   void validate_results(const std::string& table_name,
-                        size_t num_concurrent_requests,
-                        const std::vector<CassUuid>& ids)
+                               size_t num_concurrent_requests,
+                               const std::vector<CassUuid>& ids)
   {
     std::string select_query = str(boost::format("SELECT * FROM %s;") % table_name);
     test_utils::CassResultPtr result;
@@ -89,7 +91,7 @@ BOOST_AUTO_TEST_CASE(simple)
   const size_t num_concurrent_requests = 4096;
 
   std::vector<test_utils::CassFuturePtr> futures;
-  std::vector<CassUuid> ids = insert_async(table_name, num_concurrent_requests, &futures);
+  std::vector<CassUuid> ids = insert_async(session, uuid_gen, table_name, num_concurrent_requests, &futures);
 
   for(std::vector<test_utils::CassFuturePtr>::iterator it = futures.begin(),
       end = futures.end(); it != end; ++it) {
@@ -109,9 +111,13 @@ BOOST_AUTO_TEST_CASE(close)
   test_utils::execute_query(temp_session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
   std::vector<test_utils::CassFuturePtr> futures;
-  std::vector<CassUuid> ids = insert_async(table_name, num_concurrent_requests, &futures);
+  std::vector<CassUuid> ids = insert_async(temp_session.get(), uuid_gen, table_name, num_concurrent_requests, &futures);
 
-  temp_session.reset(); // close session
+  // Close session, this should wait for all pending requests to finish
+
+  temp_session.reset();
+
+  // All requests should be finished, validate
 
   validate_results(table_name, num_concurrent_requests, ids);
 }
