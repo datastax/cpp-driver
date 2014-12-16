@@ -41,7 +41,7 @@ BOOST_FIXTURE_TEST_SUITE(logging, LoggingTests)
 
 BOOST_AUTO_TEST_CASE(logging_callback)
 {
-  test_utils::CassLog::reset("IOWorker: add_pool for host");
+  test_utils::CassLog::reset("Adding pool for host");
 
   {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));

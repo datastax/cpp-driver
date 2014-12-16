@@ -546,8 +546,8 @@ const char* get_column_type(CassColumnType type);
 
 const char* get_value_type(CassValueType type);
 
-CassSessionPtr create_session(CassCluster* cluster);
-CassSessionPtr create_session(CassCluster* cluster, CassError* code);
+CassSessionPtr create_session(CassCluster* cluster, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
+CassSessionPtr create_session(CassCluster* cluster, CassError* code, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
 
 CassError execute_query_with_error(CassSession* session,
                                    const std::string& query,

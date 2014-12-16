@@ -160,9 +160,7 @@ struct TestSSL {
     if (!is_failure) {
       test_utils::wait_and_check_error(connect_future_);
     } else {
-      //FIXME: When CPP-179 is completed remove timeout and ccm command as connection failure validation
       BOOST_REQUIRE(!cass_future_wait_timed(connect_future_, 2000)); //Ensure the wait is long enough for slow machines
-      ccm_->stop(); //Forces connection to be lost for proper test teardown
     }
   }
 

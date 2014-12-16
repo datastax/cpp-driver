@@ -228,17 +228,19 @@ void initialize_contact_points(CassCluster* cluster, std::string prefix, unsigne
   }
 }
 
-CassSessionPtr create_session(CassCluster* cluster) {
+CassSessionPtr create_session(CassCluster* cluster, cass_duration_t timeout) {
   test_utils::CassSessionPtr session(cass_session_new());
   test_utils::CassFuturePtr connect_future(cass_session_connect(session.get(), cluster));
-  test_utils::wait_and_check_error(connect_future.get());
+  test_utils::wait_and_check_error(connect_future.get(), timeout);
   return session;
 }
 
-CassSessionPtr create_session(CassCluster* cluster, CassError* code) {
+CassSessionPtr create_session(CassCluster* cluster, CassError* code, cass_duration_t timeout) {
   test_utils::CassSessionPtr session(cass_session_new());
   test_utils::CassFuturePtr connect_future(cass_session_connect(session.get(), cluster));
-  *code = test_utils::wait_and_return_error(connect_future.get());
+  if (code) {
+    *code = test_utils::wait_and_return_error(connect_future.get(), timeout);
+  }
   return session;
 }
 
