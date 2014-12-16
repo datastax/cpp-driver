@@ -157,6 +157,7 @@ const std::string CREATE_KEYSPACE_GENERIC_FORMAT = "CREATE KEYSPACE {0} WITH rep
 const std::string DROP_KEYSPACE_FORMAT = "DROP KEYSPACE %s";
 const std::string DROP_KEYSPACE_IF_EXISTS_FORMAT = "DROP KEYSPACE IF EXISTS %s";
 const std::string SIMPLE_KEYSPACE = "ks";
+const std::string NUMERIC_KEYSPACE_FORMAT = "ks%d";
 const std::string SIMPLE_TABLE = "test";
 const std::string CREATE_TABLE_SIMPLE_FORMAT = "CREATE TABLE {0} (k text PRIMARY KEY, t text, i int, f float)";
 const std::string INSERT_FORMAT = "INSERT INTO {0} (k, t, i, f) VALUES ('{1}', '{2}', {3}, {4})";
@@ -237,11 +238,12 @@ CassSessionPtr create_session(CassCluster* cluster) {
 void execute_query(CassSession* session,
                    const std::string& query,
                    CassResultPtr* result,
+                   cass_duration_t timeout,
                    CassConsistency consistency) {
   CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0));
   cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future(cass_session_execute(session, statement.get()));
-  wait_and_check_error(future.get());
+  wait_and_check_error(future.get(), timeout);
   if(result != NULL) {
     *result = CassResultPtr(cass_future_get_result(future.get()));
   }
@@ -250,11 +252,12 @@ void execute_query(CassSession* session,
 CassError execute_query_with_error(CassSession* session,
                                    const std::string& query,
                                    CassResultPtr* result,
+                                   cass_duration_t timeout,
                                    CassConsistency consistency) {
   CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0));
   cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future(cass_session_execute(session, statement.get()));
-  CassError code = wait_and_return_error(future.get());
+  CassError code = wait_and_return_error(future.get(), timeout);
   if(result != NULL) {
     *result = CassResultPtr(cass_future_get_result(future.get()));
   }
