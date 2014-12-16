@@ -64,6 +64,18 @@ static int ssl_no_verify_callback(int ok, X509_STORE_CTX* store) {
   return 1;
 }
 
+static void ssl_log_errors(const char* context) {
+  const char* data;
+  int flags;
+  int err;
+  while ((err = ERR_get_error_line_data(NULL, NULL, &data, &flags)) != 0) {
+    char buf[256];
+    ERR_error_string_n(err, buf, sizeof(buf));
+    LOG_ERROR("%s: %s:%s", context, buf, (flags & ERR_TXT_STRING) ? data : "");
+  }
+  ERR_print_errors_fp(stderr);
+}
+
 static std::string ssl_error_string(long err) {
   char buf[256];
   ERR_error_string_n(err, buf, sizeof(buf));
@@ -105,22 +117,6 @@ static void crypto_locking_callback(int mode, int n, const char* file, int line)
 
 static unsigned long crypto_id_callback() {
   return uv_thread_self();
-}
-
-static X509* load_cert(const char* cert, size_t cert_size) {
-  BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert), cert_size);
-  if (bio == NULL) {
-    return NULL;
-  }
-
-  X509* x509 = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL);
-  if (x509 == NULL) {
-    LOG_ERROR("Unable to load certificate: %s", ssl_error_string(ERR_get_error()).c_str());
-  }
-
-  BIO_free_all(bio);
-
-  return x509;
 }
 
 // Implementation taken from OpenSSL's SSL_CTX_use_certificate_chain_file()
@@ -183,6 +179,22 @@ end:
   return ret;
 }
 
+static X509* load_cert(const char* cert, size_t cert_size) {
+  BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert), cert_size);
+  if (bio == NULL) {
+    return NULL;
+  }
+
+  X509* x509 = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL);
+  if (x509 == NULL) {
+    ssl_log_errors("Unable to load certificate");
+  }
+
+  BIO_free_all(bio);
+
+  return x509;
+}
+
 static EVP_PKEY* load_key(const char* key,
                           size_t key_size,
                           const char* password) {
@@ -196,7 +208,7 @@ static EVP_PKEY* load_key(const char* key,
                                            pem_password_callback,
                                            const_cast<char*>(password));
   if (pkey == NULL) {
-    LOG_ERROR("Unable to load private key: %s", ssl_error_string(ERR_get_error()).c_str());
+    ssl_log_errors("Unable to load private key");
   }
 
   BIO_free_all(bio);
@@ -420,7 +432,7 @@ CassError OpenSslContext::set_cert(CassString cert) {
   BIO_free_all(bio);
 
   if (!rc) {
-    LOG_ERROR("Unable to load certificate chain: %s", ssl_error_string(ERR_get_error()).c_str());
+    ssl_log_errors("Unable to load certificate chain");
     return CASS_ERROR_SSL_INVALID_CERT;
   }
 

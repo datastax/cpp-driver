@@ -87,10 +87,11 @@ void CassLog::callback(const CassLogMessage* message, void* data) {
   LogData* log_data = reinterpret_cast<LogData*>(data);
   std::string str(message->message);
   if (message->severity <= log_data->output_log_level) {
-    fprintf(stderr, "CassLog: %u.%03u [%s]: %s\n",
-            static_cast<unsigned int>(message->time_ms/1000),
+    fprintf(stderr, "CassLog: %u.%03u [%s] (%s:%d:%s): %s\n",
+            static_cast<unsigned int>(message->time_ms / 1000),
             static_cast<unsigned int>(message->time_ms % 1000),
             cass_log_level_string(message->severity),
+            message->file, message->line, message->function,
             message->message);
   }
   boost::lock_guard<LogData> l(*log_data);
