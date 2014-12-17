@@ -194,7 +194,7 @@ int main() {
   cass_future_free(close_future);
 
   cass_cluster_free(cluster);
-  cass_session_close(session);
+  cass_session_free(session);
 
   return 0;
 }

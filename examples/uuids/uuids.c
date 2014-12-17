@@ -164,7 +164,7 @@ CassError select_from_log(CassSession* session, const char* key) {
 int main() {
   CassUuidGen* uuid_gen = cass_uuid_gen_new();
   CassCluster* cluster = create_cluster();
-  CassSession* session = NULL;
+  CassSession* session = cass_session_new();
   CassFuture* close_future = NULL;
   CassUuid uuid;
 
