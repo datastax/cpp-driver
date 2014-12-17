@@ -95,7 +95,7 @@ int main() {
   cass_future_free(close_future);
 
   cass_cluster_free(cluster);
-  cass_session_close(session);
+  cass_session_free(session);
 
   /* This *MUST* be the last driver call */
   cass_log_cleanup();

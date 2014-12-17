@@ -208,6 +208,7 @@ void print_schema_list(const CassValue* value) {
     is_first = cass_false;
   }
   printf(" ]");
+  cass_iterator_free(iterator);
 }
 
 void print_schema_map(const CassValue* value) {
@@ -223,6 +224,7 @@ void print_schema_map(const CassValue* value) {
     is_first = cass_false;
   }
   printf(" }");
+  cass_iterator_free(iterator);
 }
 
 void print_schema_meta_field(const CassSchemaMetaField* field, int indent) {
@@ -241,6 +243,7 @@ void print_schema_meta_fields(const CassSchemaMeta* meta, int indent) {
   while (cass_iterator_next(fields)) {
     print_schema_meta_field(cass_iterator_get_schema_meta_field(fields), indent);
   }
+  cass_iterator_free(fields);
 }
 
 void print_schema_meta_entries(const CassSchemaMeta* meta, int indent) {
@@ -249,6 +252,7 @@ void print_schema_meta_entries(const CassSchemaMeta* meta, int indent) {
   while (cass_iterator_next(entries)) {
     print_schema_meta(cass_iterator_get_schema_meta(entries), indent);
   }
+  cass_iterator_free(entries);
 }
 
 void print_schema_meta(const CassSchemaMeta* meta, int indent) {

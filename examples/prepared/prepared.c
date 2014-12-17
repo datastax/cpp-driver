@@ -176,7 +176,7 @@ CassError select_from_basic(CassSession* session, const CassPrepared * prepared,
 
 int main() {
   CassCluster* cluster = create_cluster();
-  CassSession* session = NULL;
+  CassSession* session = cass_session_new();
   CassFuture* close_future = NULL;
   Basic input = { cass_true, 0.001f, 0.0002, 1, 2 };
   Basic output;
