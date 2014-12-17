@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
   all_types[2].timestamp_sample = -13462502400;
   all_types[2].inet_sample = cass_inet_init_v4(address3);
 
-  for(size_t i = 0; i < all_types_count; ++i) {
+  for (size_t i = 0; i < all_types_count; ++i) {
     insert_all_types(session, prepared.get(), all_types[i]);
   }
 
@@ -239,12 +239,12 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
 
   test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
 
-  while(cass_iterator_next(iterator.get())) {
+  while (cass_iterator_next(iterator.get())) {
     const CassRow* row = cass_iterator_get_row(iterator.get());
     CassUuid id;
     cass_value_get_uuid(cass_row_get_column(row, 0), &id);
-    for(size_t i = 0; i < all_types_count; ++i) {
-      if(test_utils::Value<CassUuid>::equal(id, all_types[i].id)) {
+    for (size_t i = 0; i < all_types_count; ++i) {
+      if (test_utils::Value<CassUuid>::equal(id, all_types[i].id)) {
         compare_all_types(all_types[i], row);
       }
     }
@@ -299,7 +299,7 @@ BOOST_AUTO_TEST_CASE(bound_all_types_null_values)
   CassUuid result_id;
   BOOST_REQUIRE(cass_value_get_uuid(cass_row_get_column(row, 0), &result_id) == CASS_OK);
   BOOST_REQUIRE(test_utils::Value<CassUuid>::equal(id, result_id));
-  for(size_t i = 1; i < 11; ++i) {
+  for (size_t i = 1; i < 11; ++i) {
     BOOST_REQUIRE(cass_value_is_null(cass_row_get_column(row, i)));
   }
 }
@@ -311,7 +311,7 @@ BOOST_AUTO_TEST_CASE(select_one)
 
   test_utils::execute_query(session, create_table_query);
 
-  for(int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 10; ++i) {
     std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, numb, label) VALUES(%d, 0.01,'row%d')") % table_name % i % i);
     test_utils::execute_query(session, insert_query);
   }
@@ -370,7 +370,7 @@ BOOST_AUTO_TEST_CASE(massive_number_of_prepares)
   CONTAINER<boost::unique_future<CassPreparedMovable> > prepare_futures;
 
   std::vector<CassUuid> tweet_ids;
-  for(size_t i = 0; i < number_of_prepares; ++i) {
+  for (size_t i = 0; i < number_of_prepares; ++i) {
     CassUuid tweet_id = test_utils::generate_time_uuid(uuid_gen);
     std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, numb1, numb2) VALUES (%s, ?, ?);") % table_name % test_utils::string_from_uuid(tweet_id));
     prepare_futures.push_back(boost::async(boost::launch::async, boost::bind(prepare_statement, session, insert_query)));
@@ -379,7 +379,7 @@ BOOST_AUTO_TEST_CASE(massive_number_of_prepares)
 
   std::vector<boost::shared_future<void> > execute_futures;
   CONTAINER<CassPreparedMovable> prepares;
-  for(size_t i = 0; i < prepare_futures.size(); ++i) {
+  for (size_t i = 0; i < prepare_futures.size(); ++i) {
     CassPreparedMovable prepared = prepare_futures[i].get();
     execute_futures.push_back(boost::async(boost::launch::async, boost::bind(execute_statement, session, prepared.get(), i)).share());
     prepares.push_back(boost::move(prepared));
@@ -394,7 +394,7 @@ BOOST_AUTO_TEST_CASE(massive_number_of_prepares)
 
   test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
 
-  while(cass_iterator_next(iterator.get())) {
+  while (cass_iterator_next(iterator.get())) {
     const CassRow* row = cass_iterator_get_row(iterator.get());
     CassUuid result_tweet_id;
     cass_value_get_uuid(cass_row_get_column(row, 0), &result_tweet_id);

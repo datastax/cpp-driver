@@ -142,7 +142,7 @@ BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
     test_utils::CassFuturePtr future(cass_session_execute(session, schema_stmt.get()));
     cass_future_wait(future.get());
     BOOST_REQUIRE_EQUAL(cass_future_error_code(future.get()), CASS_OK);
-  } while(boost::chrono::steady_clock::now() < end && test_utils::CassLog::message_count() == 0);
+  } while (boost::chrono::steady_clock::now() < end && test_utils::CassLog::message_count() == 0);
 
   cass_future_wait(create_future.get());
   BOOST_CHECK_EQUAL(cass_future_error_code(create_future.get()), CASS_OK);

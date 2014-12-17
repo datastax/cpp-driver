@@ -54,7 +54,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
   cass_future_free(future);
@@ -105,7 +105,7 @@ CassError insert_into_maps(CassSession* session, const char* key, const Pair ite
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 
@@ -167,7 +167,7 @@ int main() {
 
   const Pair items[] = { { "apple", 1 }, { "orange", 2 }, { "banana", 3 }, { "mango", 4 }, { NULL, 0 } };
 
-  if(connect_session(session, cluster) != CASS_OK) {
+  if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);
     cass_session_free(session);
     return -1;

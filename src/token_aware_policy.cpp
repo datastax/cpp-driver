@@ -34,7 +34,7 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspac
                                             const Request* request,
                                             const TokenMap& token_map) {
   if (request != NULL) {
-    switch(request->opcode()) {
+    switch (request->opcode()) {
       {
       case CQL_OPCODE_QUERY:
       case CQL_OPCODE_EXECUTE:

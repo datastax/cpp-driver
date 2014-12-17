@@ -49,7 +49,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
   cass_future_free(future);
@@ -84,7 +84,7 @@ int main() {
   cluster = create_cluster();
   session = cass_session_new();
 
-  if(connect_session(session, cluster) != CASS_OK) {
+  if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);
     cass_session_free(session);
     return -1;

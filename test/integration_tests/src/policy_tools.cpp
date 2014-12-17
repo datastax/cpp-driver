@@ -24,7 +24,7 @@
 
 void PolicyTool::show_coordinators()	// show what queries went to what nodes IP.
 {
-  for(std::map<std::string, int>::const_iterator p = coordinators.begin(); p != coordinators.end(); ++p) {
+  for (std::map<std::string, int>::const_iterator p = coordinators.begin(); p != coordinators.end(); ++p) {
     std::cout << p->first << " : " << p->second << std::endl;
   }
 }
@@ -77,7 +77,7 @@ CassError PolicyTool::init_return_error(CassSession* session, int n, CassConsist
 {
   std::string query = str(boost::format("INSERT INTO %s (k, i) VALUES (0, 0)") % test_utils::SIMPLE_TABLE);
 
-  if(batch) {
+  if (batch) {
     std::string batch_query;
     batch_query.append("BEGIN BATCH ");
     batch_query.append(str(boost::format("INSERT INTO %s (k, i) VALUES (0, 0)") % test_utils::SIMPLE_TABLE));
@@ -100,7 +100,7 @@ CassError PolicyTool::init_return_error(CassSession* session, int n, CassConsist
 
 void PolicyTool::add_coordinator(std::string address)
 {
-  if(coordinators.count(address) == 0) {
+  if (coordinators.count(address) == 0) {
     coordinators.insert(std::make_pair(address, 1));
   } else {
     coordinators[address] += 1;
@@ -109,7 +109,7 @@ void PolicyTool::add_coordinator(std::string address)
 
 void PolicyTool::assert_queried(std::string address, int n)
 {
-  if(coordinators.count(address) != 0) {
+  if (coordinators.count(address) != 0) {
     int c = coordinators[address];
     BOOST_REQUIRE(c == n);
   } else {

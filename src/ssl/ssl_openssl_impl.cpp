@@ -34,16 +34,16 @@ namespace cass {
 
 #if DEBUG_SSL
 #define SSL_PRINT_INFO(ssl, w, flag, msg) do { \
-    if(w & flag) {                             \
+    if (w & flag) {                             \
       fprintf(stderr, "%s - %s - %s\n",        \
               msg,                             \
               SSL_state_string(ssl),           \
               SSL_state_string_long(ssl));     \
     }                                          \
- } while(0);
+ } while (0);
 
 static void ssl_info_callback(const SSL* ssl, int where, int ret) {
-  if(ret == 0) {
+  if (ret == 0) {
     fprintf(stderr, "ssl_info_callback, error occurred.\n");
     return;
   }

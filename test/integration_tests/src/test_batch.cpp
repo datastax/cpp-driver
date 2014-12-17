@@ -51,7 +51,7 @@ BOOST_FIXTURE_TEST_SUITE(batch, BatchTests)
 void validate_results(CassSession* session, int num_rows) {
   std::string select_query = str(boost::format("SELECT * FROM %s WHERE tweet_id = ?;") % BatchTests::SIMPLE_TABLE_NAME);
 
-  for(int y = 0; y < num_rows; y++)
+  for (int y = 0; y < num_rows; y++)
   {
     test_utils::CassStatementPtr select_statement(cass_statement_new(cass_string_init(select_query.c_str()), 1));
     BOOST_REQUIRE(cass_statement_bind_int32(select_statement.get(), 0, y) == CASS_OK);
@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(prepared)
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
-  for(int x = 0; x < 4; x++)
+  for (int x = 0; x < 4; x++)
   {
     test_utils::CassStatementPtr insert_statement(cass_prepared_bind(prepared.get()));
     BOOST_REQUIRE(cass_statement_bind_int32(insert_statement.get(), 0, x) == CASS_OK);
@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE(simple)
   test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
   std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(?, ?);") % BatchTests::SIMPLE_TABLE_NAME);
 
-  for(int x = 0; x < 4; x++)
+  for (int x = 0; x < 4; x++)
   {
     test_utils::CassStatementPtr insert_statement(cass_statement_new(cass_string_init(insert_query.c_str()), 2));
     BOOST_REQUIRE(cass_statement_bind_int32(insert_statement.get(), 0, x) == CASS_OK);
@@ -120,10 +120,10 @@ BOOST_AUTO_TEST_CASE(mixed)
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
-  for(int x = 0; x < 1000; x++)
+  for (int x = 0; x < 1000; x++)
   {
     test_utils::CassStatementPtr insert_statement;
-    if(x % 2 == 0) {
+    if (x % 2 == 0) {
       insert_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     } else {
       insert_statement = test_utils::CassStatementPtr(cass_statement_new(cass_string_init(insert_query.c_str()), 2));
@@ -165,10 +165,10 @@ BOOST_AUTO_TEST_CASE(counter_mixed)
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
-  for(int x = 0; x < 1000; x++)
+  for (int x = 0; x < 1000; x++)
   {
     test_utils::CassStatementPtr update_statement;
-    if(x % 2 == 0) {
+    if (x % 2 == 0) {
       update_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     } else {
       update_statement = test_utils::CassStatementPtr(cass_statement_new(cass_string_init(update_query.c_str()), 2));
@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE(counter_mixed)
 
   test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
 
-  while(cass_iterator_next(iterator.get())) {
+  while (cass_iterator_next(iterator.get())) {
     const CassValue* column1 = cass_row_get_column(cass_iterator_get_row(iterator.get()), 0);
     BOOST_REQUIRE(cass_value_type(column1) == CASS_VALUE_TYPE_INT);
     cass_int32_t tweet_id;

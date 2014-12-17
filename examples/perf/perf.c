@@ -86,7 +86,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
   cass_future_free(future);
@@ -103,7 +103,7 @@ CassError execute_query(CassSession* session, const char* query) {
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 
@@ -121,7 +121,7 @@ CassError prepare_query(CassSession* session, CassString query, const CassPrepar
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   } else {
     *prepared = cass_future_get_prepared(future);
@@ -133,9 +133,9 @@ CassError prepare_query(CassSession* session, CassString query, const CassPrepar
 }
 
 int compare_dbl(const void* d1, const void* d2) {
-  if(*((double*)d1) < *((double*)d2)) {
+  if (*((double*)d1) < *((double*)d2)) {
     return -1;
-  } else if(*((double*)d1) > *((double*)d2)) {
+  } else if (*((double*)d1) > *((double*)d2)) {
     return 1;
   } else {
     return 0;
@@ -180,7 +180,7 @@ void insert_into_perf(CassSession* session, CassString query, const CassPrepared
 
   start = uv_hrtime();
 
-  for(i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
+  for (i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
     CassUuid id;
     CassStatement* statement;
 
@@ -202,10 +202,10 @@ void insert_into_perf(CassSession* session, CassString query, const CassPrepared
     cass_statement_free(statement);
   }
 
-  for(i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
+  for (i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
     CassFuture* future = futures[i];
     CassError rc = cass_future_error_code(future);
-    if(rc != CASS_OK) {
+    if (rc != CASS_OK) {
       print_error(future);
     } else {
       num_requests++;
@@ -259,7 +259,7 @@ void select_from_perf(CassSession* session, CassString query, const CassPrepared
 
   start = uv_hrtime();
 
-  for(i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
+  for (i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
     CassStatement* statement;
 
     if (prepared != NULL) {
@@ -273,10 +273,10 @@ void select_from_perf(CassSession* session, CassString query, const CassPrepared
     cass_statement_free(statement);
   }
 
-  for(i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
+  for (i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
     CassFuture* future = futures[i];
     CassError rc = cass_future_error_code(future);
-    if(rc != CASS_OK) {
+    if (rc != CASS_OK) {
       print_error(future);
     } else {
       const CassResult* result = cass_future_get_result(future);
@@ -332,7 +332,7 @@ int main() {
   uuid_gen = cass_uuid_gen_new();
   session = cass_session_new();
 
-  if(connect_session(session, cluster) != CASS_OK) {
+  if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);
     cass_session_free(session);
     return -1;

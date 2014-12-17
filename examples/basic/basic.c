@@ -59,7 +59,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
   cass_future_free(future);
@@ -76,7 +76,7 @@ CassError execute_query(CassSession* session, const char* query) {
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 
@@ -105,7 +105,7 @@ CassError insert_into_basic(CassSession* session, const char* key, const Basic* 
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 
@@ -129,13 +129,13 @@ CassError select_from_basic(CassSession* session, const char* key, Basic* basic)
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   } else {
     const CassResult* result = cass_future_get_result(future);
     CassIterator* iterator = cass_iterator_from_result(result);
 
-    if(cass_iterator_next(iterator)) {
+    if (cass_iterator_next(iterator)) {
       const CassRow* row = cass_iterator_get_row(iterator);
       cass_value_get_bool(cass_row_get_column(row, 1), &basic->bln);
       cass_value_get_double(cass_row_get_column(row, 2), &basic->dbl);
@@ -162,7 +162,7 @@ int main() {
   Basic input = { cass_true, 0.001f, 0.0002, 1, 2 };
   Basic output;
 
-  if(connect_session(session, cluster) != CASS_OK) {
+  if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);
     cass_session_free(session);
     return -1;

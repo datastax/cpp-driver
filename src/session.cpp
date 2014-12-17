@@ -126,7 +126,7 @@ int Session::init() {
   if (rc != 0) return rc;
 
   unsigned int num_threads = config_.thread_count_io();
-  if(num_threads == 0) {
+  if (num_threads == 0) {
     num_threads = 1; // Default if we can't determine the number of cores
     uv_cpu_info_t* cpu_infos;
     int cpu_count;
@@ -545,11 +545,11 @@ void Session::on_execute(uv_async_t* data, int status) {
       request_handler->set_query_plan(session->new_query_plan(request_handler->request()));
 
       bool is_done = false;
-      while(!is_done) {
+      while (!is_done) {
         request_handler->next_host();
 
         Address address;
-        if(!request_handler->get_current_host_address(&address)) {
+        if (!request_handler->get_current_host_address(&address)) {
           request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                                     "Session: No hosts available");
           break;

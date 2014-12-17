@@ -52,7 +52,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
   cass_future_free(future);
@@ -69,7 +69,7 @@ CassError execute_query(CassSession* session, const char* query) {
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 
@@ -87,7 +87,7 @@ void insert_into_async(CassSession* session, const char* key) {
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
 
   size_t i;
-  for(i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
+  for (i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
      char key_buffer[64];
     statement = cass_statement_new(query, 6);
 
@@ -104,13 +104,13 @@ void insert_into_async(CassSession* session, const char* key) {
     cass_statement_free(statement);
   }
 
-  for(i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
+  for (i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
     CassFuture* future = futures[i];
 
     cass_future_wait(future);
 
     rc = cass_future_error_code(future);
-    if(rc != CASS_OK) {
+    if (rc != CASS_OK) {
       print_error(future);
     }
 
@@ -123,7 +123,7 @@ int main() {
   CassSession* session = cass_session_new();
   CassFuture* close_future = NULL;
 
-  if(connect_session(session, cluster) != CASS_OK) {
+  if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);
     cass_session_free(session);
     return -1;

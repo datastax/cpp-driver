@@ -64,7 +64,7 @@ struct StressTests : public test_utils::MultipleNodesTest {
     test_utils::CassFuturePtr future(cass_session_execute(session, statement));
     cass_future_wait(future.get());
     CassError code = cass_future_error_code(future.get());
-    if(code != CASS_OK && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT) { // Timeout is okay
+    if (code != CASS_OK && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT) { // Timeout is okay
       CassString message = cass_future_error_message(future.get());
       fprintf(stderr, "Error occurred during insert '%.*s'\n", static_cast<int>(message.length), message.data);
       return false;
@@ -75,10 +75,10 @@ struct StressTests : public test_utils::MultipleNodesTest {
 
   bool insert_task(const std::string& query, CassConsistency consistency, int rows_per_id) {
     bool is_successful = true;
-    for(int i = 0; i < rows_per_id; ++i) {
+    for (int i = 0; i < rows_per_id; ++i) {
       test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 3));
       cass_statement_set_consistency(statement.get(), consistency);
-      if(!bind_and_execute_insert(statement.get())) {
+      if (!bind_and_execute_insert(statement.get())) {
         is_successful = false;
       }
     }
@@ -87,10 +87,10 @@ struct StressTests : public test_utils::MultipleNodesTest {
 
   bool insert_prepared_task(const CassPrepared* prepared, CassConsistency consistency, int rows_per_id) {
     bool is_successful = true;
-    for(int i = 0; i < rows_per_id; ++i) {
+    for (int i = 0; i < rows_per_id; ++i) {
       test_utils::CassStatementPtr statement(cass_prepared_bind(prepared));
       cass_statement_set_consistency(statement.get(), consistency);
-      if(!bind_and_execute_insert(statement.get())) {
+      if (!bind_and_execute_insert(statement.get())) {
         is_successful = false;
       }
     }
@@ -102,12 +102,12 @@ struct StressTests : public test_utils::MultipleNodesTest {
 
     test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0));
     cass_statement_set_consistency(statement.get(), consistency);
-    for(int i = 0; i < num_iterations; ++i) {
+    for (int i = 0; i < num_iterations; ++i) {
       test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
       cass_future_wait(future.get());
 
       CassError code = cass_future_error_code(future.get());
-      if(code != CASS_OK
+      if (code != CASS_OK
          && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT
          && code != CASS_ERROR_SERVER_READ_TIMEOUT) { // Timeout is okay
         CassString message = cass_future_error_message(future.get());
@@ -115,9 +115,9 @@ struct StressTests : public test_utils::MultipleNodesTest {
         is_successful = false;
       }
 
-      if(code == CASS_OK) {
+      if (code == CASS_OK) {
         test_utils::CassResultPtr result(cass_future_get_result(future.get()));
-        if(cass_result_row_count(result.get()) == 0) {
+        if (cass_result_row_count(result.get()) == 0) {
           fprintf(stderr, "No rows returned from query\n");
           is_successful = false;
         }
@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
 
   std::vector<boost::shared_future<bool> > futures;
 
-  for(int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 10; ++i) {
     futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_task, this, insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
     futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::select_task, this, select_query, CASS_CONSISTENCY_QUORUM, num_iterations)).share());
     futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_prepared_task, this, prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
@@ -182,7 +182,7 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
   }
 
   boost::wait_for_all(futures.begin(), futures.end());
-  BOOST_REQUIRE(std::find_if(futures.begin(), futures.end(), is_failed) == futures.end());
+  BOOST_REQUIRE(std::find_if (futures.begin(), futures.end(), is_failed) == futures.end());
 }
 
 BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
@@ -211,7 +211,7 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
 
   std::vector<boost::shared_future<bool> > futures;
 
-  for(int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 10; ++i) {
     futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_task, this, insert_query, CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
     futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::select_task, this, select_query, CASS_CONSISTENCY_QUORUM, num_iterations)).share());
     futures.push_back(boost::async(boost::launch::async, boost::bind(&StressTests::insert_prepared_task, this, prepared.get(), CASS_CONSISTENCY_QUORUM, rows_per_id)).share());
@@ -229,7 +229,7 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
   futures.insert(futures.begin() + 8, boost::async(boost::launch::async, boost::bind(&StressTests::kill_task, this)).share());
 
   boost::wait_for_all(futures.begin(), futures.end());
-  BOOST_REQUIRE(std::find_if(futures.begin(), futures.end(), is_failed) == futures.end());
+  BOOST_REQUIRE(std::find_if (futures.begin(), futures.end(), is_failed) == futures.end());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

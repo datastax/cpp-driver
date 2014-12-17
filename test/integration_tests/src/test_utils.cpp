@@ -77,7 +77,7 @@ const char* CREATE_TABLE_SIMPLE =
 CassLog::LogData CassLog::log_data_;
 
 size_t CassLog::message_count() {
-  while(!cass::is_log_flushed()) {
+  while (!cass::is_log_flushed()) {
     boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
   }
   return log_data_.message_count;
@@ -103,7 +103,7 @@ void CassLog::callback(const CassLogMessage* message, void* data) {
 
 const char* get_column_type(CassColumnType type) {
   //Determine which column type to return text value
-  switch(type) {
+  switch (type) {
     case CASS_COLUMN_TYPE_PARTITION_KEY:
       return "Partition Key";
     case CASS_COLUMN_TYPE_CLUSTERING_KEY:
@@ -123,7 +123,7 @@ const char* get_column_type(CassColumnType type) {
 }
 
 const char* get_value_type(CassValueType type) {
-  switch(type) {
+  switch (type) {
     case CASS_VALUE_TYPE_CUSTOM: return "custom";
     case CASS_VALUE_TYPE_ASCII: return "ascii";
     case CASS_VALUE_TYPE_BIGINT: return "bigint";
@@ -222,7 +222,7 @@ SingleSessionTest::~SingleSessionTest() {
 }
 
 void initialize_contact_points(CassCluster* cluster, std::string prefix, unsigned int num_nodes_dc1, unsigned int num_nodes_dc2) {
-  for(unsigned int i = 0; i < num_nodes_dc1; ++i) {
+  for (unsigned int i = 0; i < num_nodes_dc1; ++i) {
     std::string contact_point(prefix + boost::lexical_cast<std::string>(i + 1));
     cass_cluster_set_contact_points(cluster, contact_point.c_str());
   }
@@ -252,7 +252,7 @@ void execute_query(CassSession* session,
   cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future(cass_session_execute(session, statement.get()));
   wait_and_check_error(future.get());
-  if(result != NULL) {
+  if (result != NULL) {
     *result = CassResultPtr(cass_future_get_result(future.get()));
   }
 }
@@ -265,14 +265,14 @@ CassError execute_query_with_error(CassSession* session,
   cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future(cass_session_execute(session, statement.get()));
   CassError code = wait_and_return_error(future.get());
-  if(result != NULL) {
+  if (result != NULL) {
     *result = CassResultPtr(cass_future_get_result(future.get()));
   }
   return code;
 }
 
 CassError wait_and_return_error(CassFuture* future, cass_duration_t timeout) {
-  if(!cass_future_wait_timed(future, timeout)) {
+  if (!cass_future_wait_timed(future, timeout)) {
     BOOST_FAIL("Timed out waiting for result");
   }
   return cass_future_error_code(future);
@@ -280,7 +280,7 @@ CassError wait_and_return_error(CassFuture* future, cass_duration_t timeout) {
 
 void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
   CassError code = wait_and_return_error(future, timeout);
-  if(code != CASS_OK) {
+  if (code != CASS_OK) {
     CassString message = cass_future_error_message(future);
     BOOST_FAIL("Error occurred during query '" << std::string(message.data, message.length) << "' (" << boost::format("0x%08X") % code << ")");
   }

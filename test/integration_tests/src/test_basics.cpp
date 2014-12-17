@@ -115,9 +115,9 @@ struct BasicTests : public test_utils::SingleSessionTest {
     std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
     std::string type_name = test_utils::get_value_type(type);
 
-    if(type == CASS_VALUE_TYPE_LIST || type == CASS_VALUE_TYPE_SET) {
+    if (type == CASS_VALUE_TYPE_LIST || type == CASS_VALUE_TYPE_SET) {
       type_name.append("<text>");
-    } else if(type == CASS_VALUE_TYPE_MAP) {
+    } else if (type == CASS_VALUE_TYPE_MAP) {
       type_name.append("<text, text>");
     }
 
@@ -171,7 +171,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
     } else if (type == CASS_VALUE_TYPE_INET) {
       CassInet value;
       BOOST_REQUIRE_EQUAL(cass_value_get_inet(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
-    } else if(type == CASS_VALUE_TYPE_ASCII || type == CASS_VALUE_TYPE_TEXT || type == CASS_VALUE_TYPE_VARCHAR) {
+    } else if (type == CASS_VALUE_TYPE_ASCII || type == CASS_VALUE_TYPE_TEXT || type == CASS_VALUE_TYPE_VARCHAR) {
       CassString value = cass_string_init("");
       BOOST_REQUIRE_EQUAL(cass_value_get_string(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
     } else if (type == CASS_VALUE_TYPE_BLOB || type == CASS_VALUE_TYPE_VARINT || type == CASS_VALUE_TYPE_LIST || type == CASS_VALUE_TYPE_MAP || type == CASS_VALUE_TYPE_SET) {
@@ -189,7 +189,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
     //Go through each row in the result and ensure it is empty
     if (result) {
       CassIterator* rows = cass_iterator_from_result(result);
-      while(cass_iterator_next(rows)) {
+      while (cass_iterator_next(rows)) {
         const CassRow* row = cass_iterator_get_row(rows);
         if (row) {
           is_empty = false;
@@ -366,7 +366,7 @@ BOOST_AUTO_TEST_CASE(counters)
 
   int tweet_id = 0;
 
-  for(int i = 0; i < 100; ++i) {
+  for (int i = 0; i < 100; ++i) {
     std::string update_query = str(boost::format("UPDATE %s SET incdec = incdec %s ? WHERE tweet_id = %d;")
                                    % test_utils::SIMPLE_TABLE % ((i % 2) == 0 ? "-" : "+") % tweet_id);
 
@@ -403,7 +403,7 @@ BOOST_AUTO_TEST_CASE(rows_in_rows_out)
     const size_t num_rows = 100000;
 
     std::string insert_query(boost::str(boost::format("INSERT INTO %s (tweet_id, t1, t2, t3) VALUES (?, ?, ?, ?);") % test_utils::SIMPLE_TABLE));
-    for(size_t i = 0; i < num_rows; ++i) {
+    for (size_t i = 0; i < num_rows; ++i) {
       test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(insert_query.c_str()), 4));
       cass_statement_set_consistency(statement.get(), consistency);
       BOOST_REQUIRE(test_utils::Value<cass_int64_t>::bind(statement.get(), 0, i) == CASS_OK);
@@ -423,7 +423,7 @@ BOOST_AUTO_TEST_CASE(rows_in_rows_out)
 
     test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
     size_t row_count = 0;
-    while(cass_iterator_next(iterator.get())) {
+    while (cass_iterator_next(iterator.get())) {
       cass_int64_t tweet_id = 0;
       cass_int64_t t1 = 0, t2 = 0, t3 = 0;
       BOOST_REQUIRE(test_utils::Value<cass_int64_t>::get(cass_row_get_column(cass_iterator_get_row(iterator.get()), 0), &tweet_id) == CASS_OK);

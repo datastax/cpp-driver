@@ -56,7 +56,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
   cass_future_free(future);
@@ -73,7 +73,7 @@ CassError execute_query(CassSession* session, const char* query) {
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 
@@ -92,7 +92,7 @@ CassError prepare_insert_into_batch(CassSession* session, const CassPrepared** p
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   } else {
     *prepared = cass_future_get_prepared(future);
@@ -109,7 +109,7 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
   CassBatch* batch = cass_batch_new(CASS_BATCH_TYPE_LOGGED);
 
   const Pair* pair;
-  for(pair = pairs; pair->key != NULL; pair++) {
+  for (pair = pairs; pair->key != NULL; pair++) {
     CassStatement* statement = cass_prepared_bind(prepared);
     cass_statement_bind_string(statement, 0, cass_string_init(pair->key));
     cass_statement_bind_string(statement, 1, cass_string_init(pair->value));
@@ -136,7 +136,7 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 
@@ -155,7 +155,7 @@ int main() {
 
   Pair pairs[] = { {"a", "1"}, {"b", "2"}, { NULL, NULL} };
 
-  if(connect_session(session, cluster) != CASS_OK) {
+  if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);
     cass_session_free(session);
     return -1;
@@ -171,7 +171,7 @@ int main() {
                                               value text, \
                                               PRIMARY KEY (key));");
 
-  if(prepare_insert_into_batch(session, &prepared) == CASS_OK) {
+  if (prepare_insert_into_batch(session, &prepared) == CASS_OK) {
     insert_into_batch_with_prepared(session, prepared, pairs);
   }
 

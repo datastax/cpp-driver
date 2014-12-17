@@ -165,7 +165,7 @@ Connection::Connection(uv_loop_t* loop, const Config& config,
     LOG_WARN("Unable to set tcp nodelay");
   }
 
-  if(uv_tcp_keepalive(&socket_,
+  if (uv_tcp_keepalive(&socket_,
                       config.tcp_keepalive_enable() ? 1 : 0,
                       config.tcp_keepalive_delay_secs()) != 0) {
     LOG_WARN("Unable to set tcp keepalive");
@@ -413,7 +413,7 @@ void Connection::on_close(uv_handle_t* handle) {
 
   cleanup_pending_handlers(&connection->pending_reads_);
 
-  while(!connection->pending_writes_.is_empty()) {
+  while (!connection->pending_writes_.is_empty()) {
     PendingWriteBase* pending_write
         = connection->pending_writes_.front();
     connection->pending_writes_.remove(pending_write);

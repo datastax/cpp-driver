@@ -162,7 +162,7 @@ void Pool::set_is_available(bool is_available) {
       is_available_ = true;
     }
   } else {
-    if(is_available_) {
+    if (is_available_) {
       io_worker_->set_host_is_available(address_, false);
       is_available_ = false;
     }
@@ -180,7 +180,7 @@ bool Pool::write(Connection* connection, RequestHandler* request_handler) {
               io_worker_->keyspace().c_str(),
               static_cast<void*>(connection),
               static_cast<void*>(this));
-    if(!connection->write(new SetKeyspaceHandler(connection, io_worker_->keyspace(),
+    if (!connection->write(new SetKeyspaceHandler(connection, io_worker_->keyspace(),
                                                  request_handler), false)) {
       return false;
     }
@@ -306,7 +306,7 @@ void Pool::on_connection_availability_changed(Connection* connection) {
   } else {
     --available_connection_count_;
     assert(available_connection_count_ >= 0);
-    if(available_connection_count_ == 0) {
+    if (available_connection_count_ == 0) {
       set_is_available(false);
     }
   }

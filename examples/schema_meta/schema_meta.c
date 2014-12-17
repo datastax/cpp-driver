@@ -75,7 +75,7 @@ CassError execute_query(CassSession* session, const char* query) {
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 

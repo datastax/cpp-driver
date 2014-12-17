@@ -61,7 +61,7 @@ void enqueue_thread(void* data) {
   cass::AsyncQueue<cass::MPMCQueue<int> >* queue
       = static_cast<cass::AsyncQueue<cass::MPMCQueue<int> >*>(data);
   for (int i = 0; i < NUM_ITERATIONS / NUM_ENQUEUE_THREADS; ++i) {
-    if(!queue->enqueue(i)) {
+    if (!queue->enqueue(i)) {
       fprintf(stderr, "Failed to enqueue entry\n");
     }
   }

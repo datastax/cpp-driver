@@ -71,7 +71,7 @@ int main() {
   /* Only verify the certification and not the identity */
   cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_PEER_CERT);
 
-  if(!load_trusted_cert_file("cert.pem", ssl)) {
+  if (!load_trusted_cert_file("cert.pem", ssl)) {
     fprintf(stderr, "Failed to load certificate disabling peer verification\n");
     cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_NONE);
   }
@@ -90,12 +90,12 @@ int main() {
 
     CassFuture* result_future = cass_session_execute(session, statement);
 
-    if(cass_future_error_code(result_future) == CASS_OK) {
+    if (cass_future_error_code(result_future) == CASS_OK) {
       /* Retrieve result set and iterator over the rows */
       const CassResult* result = cass_future_get_result(result_future);
       CassIterator* rows = cass_iterator_from_result(result);
 
-      while(cass_iterator_next(rows)) {
+      while (cass_iterator_next(rows)) {
         const CassRow* row = cass_iterator_get_row(rows);
         const CassValue* value = cass_row_get_column_by_name(row, "keyspace_name");
 
