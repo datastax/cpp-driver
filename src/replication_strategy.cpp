@@ -183,7 +183,7 @@ void SimpleStrategy::tokens_to_replicas(const TokenHostMap& primary, TokenReplic
       if (j == primary.end()) {
         j = primary.begin();
       }
-    } while(token_replicas->size() < target_replicas);
+    } while (token_replicas->size() < target_replicas);
     output->insert(std::make_pair(i->first, token_replicas));
   }
 }

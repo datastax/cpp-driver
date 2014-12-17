@@ -44,7 +44,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     test_utils::CassCollectionPtr input(cass_collection_new(static_cast<CassCollectionType>(type), values.size()));
 
-    for(typename std::vector<T>::const_iterator it = values.begin(),
+    for (typename std::vector<T>::const_iterator it = values.begin(),
         end = values.end(); it != end; ++it) {
       test_utils::Value<T>::append(input.get(), *it);
     }
@@ -71,17 +71,17 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     test_utils::CassIteratorPtr iterator(cass_iterator_from_collection(output));
 
-    if(type == CASS_VALUE_TYPE_LIST) {
+    if (type == CASS_VALUE_TYPE_LIST) {
       size_t i = 0;
-      while(cass_iterator_next(iterator.get())) {
+      while (cass_iterator_next(iterator.get())) {
         T result_value;
         BOOST_REQUIRE(test_utils::Value<T>::get(cass_iterator_get_value(iterator.get()), &result_value) == CASS_OK);
         BOOST_REQUIRE(cass_value_type(cass_iterator_get_value(iterator.get())) == primary_type);
         BOOST_REQUIRE(test_utils::Value<T>::equal(result_value, values[i++]));
       }
       BOOST_REQUIRE(i == values.size());
-    } else if(type == CASS_VALUE_TYPE_SET) {
-      while(cass_iterator_next(iterator.get())) {
+    } else if (type == CASS_VALUE_TYPE_SET) {
+      while (cass_iterator_next(iterator.get())) {
         T result_value;
         BOOST_REQUIRE(test_utils::Value<T>::get(cass_iterator_get_value(iterator.get()), &result_value) == CASS_OK);
         BOOST_REQUIRE(cass_value_type(cass_iterator_get_value(iterator.get())) == primary_type);
@@ -102,12 +102,12 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     {
       std::vector<cass_int32_t> values;
-      for(cass_int32_t i = 1; i <= 3; ++i) values.push_back(i);
+      for (cass_int32_t i = 1; i <= 3; ++i) values.push_back(i);
       insert_collection_value<cass_int32_t>(session.get(), type, CASS_VALUE_TYPE_INT, values);
     }
     {
       std::vector<cass_int64_t> values;
-      for(cass_int64_t i = 1LL; i <= 3LL; ++i) values.push_back(i);
+      for (cass_int64_t i = 1LL; i <= 3LL; ++i) values.push_back(i);
       insert_collection_value<cass_int64_t>(session.get(), type, CASS_VALUE_TYPE_BIGINT, values);
     }
     {
@@ -147,7 +147,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
     }
     {
       std::vector<CassUuid> values;
-      for(int i = 0; i < 3; ++i) {
+      for (int i = 0; i < 3; ++i) {
         values.push_back(test_utils::generate_time_uuid(uuid_gen));
       }
       insert_collection_value<CassUuid>(session.get(), type, CASS_VALUE_TYPE_UUID,  values);
@@ -157,7 +157,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
                                       112, 176, 158, 120, 246, 235, 29, 145, 238, 50, 108, 239, 219, 100, 250,
                                       84, 6, 186, 148, 76, 230, 46, 181, 89, 239, 247 };
       std::vector<CassDecimal> values;
-      for(int i = 0; i < 3; ++i) {
+      for (int i = 0; i < 3; ++i) {
         CassDecimal value;
         value.scale = 100 + i;
         value.varint = cass_bytes_init(varint, sizeof(varint));
@@ -181,7 +181,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     test_utils::CassCollectionPtr input(cass_collection_new(CASS_COLLECTION_TYPE_MAP, values.size()));
 
-    for(typename std::map<K, V>::const_iterator it = values.begin(),
+    for (typename std::map<K, V>::const_iterator it = values.begin(),
         end = values.end(); it != end; ++it) {
       test_utils::Value<K>::append(input.get(), it->first);
       test_utils::Value<V>::append(input.get(), it->second);
@@ -210,7 +210,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
     test_utils::CassIteratorPtr iterator(cass_iterator_from_collection(output));
 
     size_t i = 0;
-    while(cass_iterator_next(iterator.get())) {
+    while (cass_iterator_next(iterator.get())) {
       K result_key;
       V result_value;
 

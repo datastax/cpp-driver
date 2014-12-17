@@ -143,7 +143,7 @@ CassValueType cass_value_secondary_sub_type(const CassValue* collection) {
 namespace cass {
 
 bool Value::is_collection(CassValueType t) {
-  switch(t) {
+  switch (t) {
     case CASS_VALUE_TYPE_LIST:
     case CASS_VALUE_TYPE_MAP:
     case CASS_VALUE_TYPE_SET:

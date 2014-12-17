@@ -80,7 +80,7 @@ public:
   }
 
   pointer allocate(size_type n, const_pointer hint = NULL) {
-    if(fixed_ != NULL && !fixed_->is_used && n <= N) {
+    if (fixed_ != NULL && !fixed_->is_used && n <= N) {
       fixed_->is_used = true; // Don't reuse the buffer
       return static_cast<T*>(fixed_->data.address());
     } else {
@@ -89,7 +89,7 @@ public:
   }
 
   void deallocate(pointer p, size_type n) {
-    if(fixed_ != NULL && fixed_->data.address() == p) {
+    if (fixed_ != NULL && fixed_->data.address() == p) {
       fixed_->is_used = false; // It's safe to reuse the buffer
     } else {
       ::operator delete(p);

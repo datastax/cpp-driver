@@ -90,7 +90,7 @@ struct OutageTests : public test_utils::MultipleNodesTest {
       cass_future_wait(future.get());
 
       CassError code = cass_future_error_code(future.get());
-      if(code != CASS_OK
+      if (code != CASS_OK
          && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT
          && code != CASS_ERROR_SERVER_READ_TIMEOUT) { // Timeout is okay
         CassString message = cass_future_error_message(future.get());
@@ -99,9 +99,9 @@ struct OutageTests : public test_utils::MultipleNodesTest {
         return false;
       }
 
-      if(code == CASS_OK) {
+      if (code == CASS_OK) {
         test_utils::CassResultPtr result(cass_future_get_result(future.get()));
-        if(cass_result_row_count(result.get()) == 0) {
+        if (cass_result_row_count(result.get()) == 0) {
           fprintf(stderr, "No rows returned from query\n");
           is_done = true;
           return false;
@@ -151,7 +151,7 @@ struct OutageTests : public test_utils::MultipleNodesTest {
           }
         }
       }
-    } else if(NUM_NODES - num_up > 0){
+    } else if (NUM_NODES - num_up > 0){
       int n = random_int(1, NUM_NODES - num_up);
       for (size_t i = 0; i < NUM_NODES; ++i) {
         if (nodes_states[i] == DOWN || nodes_states[i] == REMOVED) {
@@ -192,7 +192,7 @@ struct OutageTests : public test_utils::MultipleNodesTest {
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     cass_future_wait(future.get());
     CassError code = cass_future_error_code(future.get());
-    if(code != CASS_OK && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT) { // Timeout is okay
+    if (code != CASS_OK && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT) { // Timeout is okay
       CassString message = cass_future_error_message(future.get());
       fprintf(stderr, "Error occurred during insert '%.*s'\n", static_cast<int>(message.length), message.data);
       return false;

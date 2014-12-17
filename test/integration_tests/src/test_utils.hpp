@@ -366,7 +366,7 @@ struct Value<CassString> {
   }
 
   static bool equal(CassString a, CassString b) {
-    if(a.length != b.length) {
+    if (a.length != b.length) {
       return false;
     }
     return strncmp(a.data, b.data, a.length) == 0;
@@ -388,7 +388,7 @@ struct Value<CassBytes> {
   }
 
   static bool equal(CassBytes a, CassBytes b) {
-    if(a.size != b.size) {
+    if (a.size != b.size) {
       return false;
     }
     return memcmp(a.data, b.data, a.size) == 0;
@@ -410,7 +410,7 @@ struct Value<CassInet> {
   }
 
   static bool equal(CassInet a, CassInet b) {
-    if(a.address_length != b.address_length) {
+    if (a.address_length != b.address_length) {
       return false;
     }
     return memcmp(a.address, b.address, a.address_length) == 0;
@@ -480,10 +480,10 @@ struct Value<CassDecimal> {
   }
 
   static bool equal(CassDecimal a, CassDecimal b) {
-    if(a.scale != b.scale) {
+    if (a.scale != b.scale) {
       return false;
     }
-    if(a.varint.size != b.varint.size) {
+    if (a.varint.size != b.varint.size) {
       return false;
     }
     return memcmp(a.varint.data, b.varint.data, a.varint.size) == 0;
@@ -650,9 +650,9 @@ inline bool operator==(CassString a, CassString b) {
 }
 
 inline bool operator<(CassString a, CassString b) {
-  if(a.length > b.length) {
+  if (a.length > b.length) {
     return false;
-  } else if(a.length < b.length) {
+  } else if (a.length < b.length) {
     return true;
   }
   return strncmp(a.data, b.data, a.length) < 0;
@@ -663,9 +663,9 @@ inline bool operator==(CassBytes a, CassBytes b) {
 }
 
 inline bool operator<(CassBytes a, CassBytes b) {
-  if(a.size > b.size) {
+  if (a.size > b.size) {
     return false;
-  } else if(a.size < b.size) {
+  } else if (a.size < b.size) {
     return true;
   }
   return memcmp(a.data, b.data, a.size) < 0;
@@ -676,9 +676,9 @@ inline bool operator==(CassInet a, CassInet b) {
 }
 
 inline bool operator<(CassInet a, CassInet b) {
-  if(a.address_length > b.address_length) {
+  if (a.address_length > b.address_length) {
     return false;
-  } else if(a.address_length < b.address_length) {
+  } else if (a.address_length < b.address_length) {
     return true;
   }
   return memcmp(a.address, b.address, a.address_length) < 0;
@@ -691,14 +691,14 @@ inline bool operator==(CassDecimal a, CassDecimal b) {
 inline bool operator<(CassDecimal a, CassDecimal b) {
   // TODO: This might not be exactly correct, but should work
   // for testing
-  if(a.scale > b.scale) {
+  if (a.scale > b.scale) {
     return false;
-  } else if(a.scale < b.scale) {
+  } else if (a.scale < b.scale) {
     return true;
   }
-  if(a.varint.size > b.varint.size) {
+  if (a.varint.size > b.varint.size) {
     return false;
-  } else if(a.varint.size < b.varint.size) {
+  } else if (a.varint.size < b.varint.size) {
     return true;
   }
   return memcmp(a.varint.data, b.varint.data, a.varint.size) < 0;

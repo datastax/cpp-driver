@@ -48,7 +48,7 @@ struct AsyncTests : public test_utils::SingleSessionTest {
     std::string insert_query = str(boost::format("INSERT INTO %s (id, num, str) VALUES(?, ?, ?)") % table_name);
 
     std::vector<CassUuid> ids;
-    for(size_t i = 0; i < num_concurrent_requests; ++i) {
+    for (size_t i = 0; i < num_concurrent_requests; ++i) {
       CassUuid id = test_utils::generate_time_uuid(uuid_gen);
       test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init2(insert_query.data(), insert_query.size()), 3));
       cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_QUORUM);
@@ -74,7 +74,7 @@ struct AsyncTests : public test_utils::SingleSessionTest {
 
     test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
 
-    while(cass_iterator_next(iterator.get())) {
+    while (cass_iterator_next(iterator.get())) {
       const CassRow* row = cass_iterator_get_row(iterator.get());
       CassUuid result_id;
       cass_value_get_uuid(cass_row_get_column(row, 0), &result_id);
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(simple)
   std::vector<test_utils::CassFuturePtr> futures;
   std::vector<CassUuid> ids = insert_async(session, uuid_gen, table_name, num_concurrent_requests, &futures);
 
-  for(std::vector<test_utils::CassFuturePtr>::iterator it = futures.begin(),
+  for (std::vector<test_utils::CassFuturePtr>::iterator it = futures.begin(),
       end = futures.end(); it != end; ++it) {
     test_utils::wait_and_check_error(it->get());
   }

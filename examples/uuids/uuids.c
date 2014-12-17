@@ -59,7 +59,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
   cass_future_free(future);
@@ -76,7 +76,7 @@ CassError execute_query(CassSession* session, const char* query) {
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 
@@ -103,7 +103,7 @@ CassError insert_into_log(CassSession* session, const char* key, CassUuid time, 
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 
@@ -127,13 +127,13 @@ CassError select_from_log(CassSession* session, const char* key) {
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   } else {
     const CassResult* result = cass_future_get_result(future);
     CassIterator* iterator = cass_iterator_from_result(result);
 
-    while(cass_iterator_next(iterator)) {
+    while (cass_iterator_next(iterator)) {
       const CassRow* row = cass_iterator_get_row(iterator);
       CassString key;
       CassUuid time;
@@ -168,7 +168,7 @@ int main() {
   CassFuture* close_future = NULL;
   CassUuid uuid;
 
-  if(connect_session(session, cluster) != CASS_OK) {
+  if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);
     cass_session_free(session);
     return -1;

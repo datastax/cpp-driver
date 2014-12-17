@@ -221,11 +221,11 @@ void ControlConnection::on_connection_closed(Connection* connection) {
       }
       protocol_version_--;
       retry_current_host = true;
-    } else if(!connection->auth_error().empty()) {
+    } else if (!connection->auth_error().empty()) {
       session_->on_control_connection_error(CASS_ERROR_SERVER_BAD_CREDENTIALS,
                                             connection->auth_error());
       return;
-    } else if(!connection->ssl_error().empty()) {
+    } else if (!connection->ssl_error().empty()) {
       session_->on_control_connection_error(connection->ssl_error_code(),
                                             connection->ssl_error());
       return;
@@ -352,7 +352,7 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
                                             this,
                                             response_callback,
                                             data));
-  if(!connection_->write(handler.get())) {
+  if (!connection_->write(handler.get())) {
     LOG_ERROR("No more stream available while attempting to refresh node info");
   }
 }

@@ -49,7 +49,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
   cass_future_free(future);
@@ -66,7 +66,7 @@ CassError execute_query(CassSession* session, const char* query) {
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 
@@ -89,7 +89,7 @@ CassError insert_into_collections(CassSession* session, const char* key, const c
   cass_statement_bind_string(statement, 0, cass_string_init(key));
 
   collection = cass_collection_new(CASS_COLLECTION_TYPE_SET, 2);
-  for(item = items; *item; item++) {
+  for (item = items; *item; item++) {
     cass_collection_append_string(collection, cass_string_init(*item));
   }
   cass_statement_bind_collection(statement, 1, collection);
@@ -99,7 +99,7 @@ CassError insert_into_collections(CassSession* session, const char* key, const c
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 
@@ -123,20 +123,20 @@ CassError select_from_collections(CassSession* session, const char* key) {
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   } else {
     const CassResult* result = cass_future_get_result(future);
     CassIterator* iterator = cass_iterator_from_result(result);
 
-    if(cass_iterator_next(iterator)) {
+    if (cass_iterator_next(iterator)) {
       const CassValue* value = NULL;
       const CassRow* row = cass_iterator_get_row(iterator);
       CassIterator* items_iterator = NULL;
 
       value = cass_row_get_column(row, 0);
       items_iterator = cass_iterator_from_collection(value);
-      while(cass_iterator_next(items_iterator)) {
+      while (cass_iterator_next(items_iterator)) {
         CassString item_string;
         cass_value_get_string(cass_iterator_get_value(items_iterator), &item_string);
         printf("item: %.*s\n", (int)item_string.length, item_string.data);
@@ -161,7 +161,7 @@ int main() {
 
   const char* items[] = { "apple", "orange", "banana", "mango", NULL };
 
-  if(connect_session(session, cluster) != CASS_OK) {
+  if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);
     cass_session_free(session);
     return -1;

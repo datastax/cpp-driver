@@ -219,7 +219,7 @@ void IOWorker::maybe_close() {
       // Requires special handling to avoid iterator invalidation and double closing
       // other resources.
       // This path only possible for internal config. API does not allow.
-      while(!pools_.empty()) pools_.begin()->second->close();
+      while (!pools_.empty()) pools_.begin()->second->close();
     }
   }
 }
@@ -263,7 +263,7 @@ void IOWorker::on_pending_pool_reconnect(Timer* timer) {
 }
 
 void IOWorker::on_event(const IOWorkerEvent& event) {
-  switch(event.type) {
+  switch (event.type) {
     case IOWorkerEvent::ADD_POOL: {
       // Stop any attempts to reconnect because add_pool() is going to attempt
       // reconnection right away.

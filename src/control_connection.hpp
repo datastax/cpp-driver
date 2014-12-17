@@ -113,7 +113,7 @@ private:
 
     virtual void on_set(ResponseMessage* response) {
       Response* response_body = response->response_body().get();
-      if(control_connection_->handle_query_invalid_response(response_body)) {
+      if (control_connection_->handle_query_invalid_response(response_body)) {
         return;
       }
       response_callback_(data_, response_body);

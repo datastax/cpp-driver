@@ -81,7 +81,7 @@ void Logger::LogThread::log(CassLogLevel severity,
 
   vsnprintf(message.message, sizeof(message.message), format, args);
 
-  if(!log_queue_.enqueue(message)) {
+  if (!log_queue_.enqueue(message)) {
     if (has_been_warned_) {
       has_been_warned_ = true;
       fprintf(stderr, "Warning: Exceeded log queue size (decreased logging performance)\n");
