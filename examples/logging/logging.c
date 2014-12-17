@@ -77,6 +77,7 @@ int main() {
     fprintf(stderr, "Unable to open log file\n");
   }
 
+  /* Log configuration *MUST* be done before any other driver call */
   cass_log_set_level(CASS_LOG_INFO);
   cass_log_set_callback(on_log, (void*)log_file);
 
@@ -96,6 +97,7 @@ int main() {
   cass_cluster_free(cluster);
   cass_session_close(session);
 
+  /* This *MUST* be the last driver call */
   cass_log_cleanup();
 
   fclose(log_file);
