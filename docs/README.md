@@ -3,10 +3,6 @@ DataStax C/C++ Driver Documenation
 
 Note: This is just a start and more extensive documentation is coming.
 
-# Upgrading from a beta5 to rc1
-
-There were a couple breaking API changes between beta5 and rc1 that are documented in detail [here](http://www.datastax.com/dev/blog/datastax-c-driver-rc1-released).
-
 # Custom logging
 
 The driver's logging system uses `stderr` by default and the log level `CASS_LOG_WARN`. Both of these settings can be changed using the following log configuration functions. A full example of using the logging API with a custom callback can be found [here](/examples/logging/logging.c). 

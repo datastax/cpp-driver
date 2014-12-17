@@ -21,10 +21,12 @@ the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol (v
 - Compatibility with binary protcol version 1 and 2
 - Authentication (via credentials using SASL PLAIN)
 
+### Upgrading from a beta5 to rc1
+
+There were a couple breaking API changes between beta5 and rc1 that are documented in detail [here](http://www.datastax.com/dev/blog/datastax-c-driver-rc1-released).
+
 ### TODO
 - Compression
-- SSL support
-- Integration tests
 - Query tracing
 - Event registration and notification
 - Callback intefaces for load balancing, authenticaiton, reconnection and retry
