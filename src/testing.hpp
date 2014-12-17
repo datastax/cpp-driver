@@ -38,6 +38,8 @@ CASS_EXPORT int64_t create_murmur3_hash_from_string(const std::string &value);
 
 CASS_EXPORT bool is_log_flushed();
 
+CASS_EXPORT uint64_t get_time_since_epoch_in_ms();
+
 } // namespace cass
 
 #endif

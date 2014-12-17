@@ -30,8 +30,9 @@
 
 
 #include <algorithm>
-#include <string>
+#include <set>
 #include <stdlib.h>
+#include <string>
 
 #define SIMPLE_STRATEGY_KEYSPACE_NAME "simple"
 #define NETWORK_TOPOLOGY_KEYSPACE_NAME "network"

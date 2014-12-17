@@ -20,8 +20,8 @@
 #endif
 
 #include "cassandra.h"
+#include "testing.hpp"
 #include "test_utils.hpp"
-#include "get_time.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/chrono.hpp>
@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE(v1)
 
   for (int i = 0; i < 1000; ++i) {
     CassUuid uuid;
-    uint64_t curr_ts = cass::get_time_since_epoch_ms();
+    uint64_t curr_ts = cass::get_time_since_epoch_in_ms();
     cass_uuid_gen_time(uuid_gen.get(), &uuid);
     cass_uint64_t ts = cass_uuid_timestamp(uuid);
 
