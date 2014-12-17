@@ -226,7 +226,7 @@ void IOWorker::maybe_close() {
 
 void IOWorker::maybe_notify_closed() {
   if (pools_.empty()) {
-    session_->notify_closed_async();
+    session_->notify_worker_closed_async();
     close_handles();
   }
 }

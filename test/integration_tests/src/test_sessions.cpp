@@ -35,6 +35,8 @@
 #include "test_utils.hpp"
 #include "cql_ccm_bridge.hpp"
 
+#define SESSION_STRESS_OPENED_LOG_MESSAGE "Session is connected"
+
 struct SessionTests {
   SessionTests() {}
 };
@@ -54,10 +56,7 @@ BOOST_AUTO_TEST_CASE(connect_invalid_name)
     test_utils::CassClusterPtr cluster(cass_cluster_new());
     cass_cluster_set_contact_points(cluster.get(), "node.domain-does-not-exist.dne");
 
-    test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-    code = cass_future_error_code(session_future.get());
-
-    test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get(), &code));
   }
 
   BOOST_CHECK(test_utils::CassLog::message_count() > 0);
@@ -78,9 +77,8 @@ BOOST_AUTO_TEST_CASE(connect_invalid_keyspace)
 
     test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
-    test_utils::CassFuturePtr session_future(cass_cluster_connect_keyspace(cluster.get(), "invalid"));
-    test_utils::wait_and_check_error(session_future.get());
-    test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+    test_utils::CassSessionPtr session(cass_session_new());
+    test_utils::CassFuturePtr connect_future(cass_session_connect_keyspace(session.get(), cluster.get(), "invalid"));
 
     CassString query = cass_string_init("SELECT * FROM table");
     test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
@@ -111,9 +109,7 @@ BOOST_AUTO_TEST_CASE(close_timeout_error)
     cass_cluster_set_max_connections_per_host(cluster.get(), 10);
 
     for (int i = 0; i < 100; ++i) {
-      test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-      test_utils::wait_and_check_error(session_future.get());
-      test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+      test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
       for (int j = 0; j < 10; ++j) {
         CassString query = cass_string_init("SELECT * FROM system.schema_keyspaces");
@@ -124,6 +120,113 @@ BOOST_AUTO_TEST_CASE(close_timeout_error)
   }
 
   BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 0ul);
+}
+
+/**
+ * Adding/Bootstrapping New Nodes Before Opening Session
+ *
+ * This test addresses a connection timeout when the Load Balancing Policy
+ * has determined a host is to be ignored.  This issue tests the commit
+ * https://github.com/datastax/cpp-driver/commit/0811afc5fc292aef9bd27af4297ab82395ef248e
+ *
+ * @since 1.0.0-rc1
+ * @test_category sessions
+ */
+BOOST_AUTO_TEST_CASE(add_nodes_connect) {
+  test_utils::CassLog::reset(SESSION_STRESS_OPENED_LOG_MESSAGE);
+  {
+    //Create a single node cluster with three nodes initialized as contact points
+    BOOST_TEST_MESSAGE("Create single node cluster with all three nodes initialized as contact points");
+    test_utils::CassClusterPtr cluster(cass_cluster_new());
+    const cql::cql_ccm_bridge_configuration_t& configuration = cql::get_ccm_bridge_configuration();
+    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(configuration, "test", 1);
+    test_utils::initialize_contact_points(cluster.get(), configuration.ip_prefix(), 3, 0);
+ 
+    //Add two nodes
+    BOOST_TEST_MESSAGE("Adding two nodes");
+    ccm->bootstrap(2);
+    ccm->bootstrap(3);
+ 
+    //Create session
+    test_utils::create_session(cluster.get());
+  }
+  BOOST_CHECK(test_utils::CassLog::message_count() == 1);
+ 
+ 
+  test_utils::CassLog::reset(SESSION_STRESS_OPENED_LOG_MESSAGE);
+  {
+    //Create a single node cluster with two nodes initialized as contact points
+    BOOST_TEST_MESSAGE("Create single node cluster with two of the three nodes initialized as contact points");
+    test_utils::CassClusterPtr cluster(cass_cluster_new());
+    const cql::cql_ccm_bridge_configuration_t& configuration = cql::get_ccm_bridge_configuration();
+    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(configuration, "test", 1);
+    test_utils::initialize_contact_points(cluster.get(), configuration.ip_prefix(), 2, 0);
+ 
+    //Add two nodes
+    BOOST_TEST_MESSAGE("Adding two nodes");
+    ccm->bootstrap(2);
+    ccm->bootstrap(3);
+ 
+    //Create session
+    test_utils::create_session(cluster.get());
+  }
+  BOOST_CHECK(test_utils::CassLog::message_count() == 1);
+ 
+ 
+  test_utils::CassLog::reset(SESSION_STRESS_OPENED_LOG_MESSAGE);
+  {
+    //Create a single node cluster with one node initialized as contact points
+    BOOST_TEST_MESSAGE("Create single node cluster with one of the three nodes initialized as contact points");
+    test_utils::CassClusterPtr cluster(cass_cluster_new());
+    const cql::cql_ccm_bridge_configuration_t& configuration = cql::get_ccm_bridge_configuration();
+    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(configuration, "test", 1);
+    test_utils::initialize_contact_points(cluster.get(), configuration.ip_prefix(), 1, 0);
+ 
+    //Add two nodes
+    BOOST_TEST_MESSAGE("Adding two nodes");
+    ccm->bootstrap(2);
+    ccm->bootstrap(3);
+ 
+    //Create session
+    test_utils::create_session(cluster.get());
+  }
+  BOOST_CHECK(test_utils::CassLog::message_count() == 1);
+ 
+  test_utils::CassLog::reset(SESSION_STRESS_OPENED_LOG_MESSAGE);
+  {
+    //Create a two node cluster with three nodes initialized as contact points
+    BOOST_TEST_MESSAGE("Create two node cluster with all three of the nodes initialized as contact points");
+    test_utils::CassClusterPtr cluster(cass_cluster_new());
+    const cql::cql_ccm_bridge_configuration_t& configuration = cql::get_ccm_bridge_configuration();
+    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(configuration, "test", 2);
+    test_utils::initialize_contact_points(cluster.get(), configuration.ip_prefix(), 3, 0);
+ 
+    //Add one nodes
+    BOOST_TEST_MESSAGE("Adding one node");
+    ccm->bootstrap(3);
+ 
+    //Create session
+    test_utils::create_session(cluster.get());
+  }
+  BOOST_CHECK(test_utils::CassLog::message_count() == 1);
+ 
+  test_utils::CassLog::reset(SESSION_STRESS_OPENED_LOG_MESSAGE);
+  {
+    //Create a two node cluster with two nodes initialized as contact points
+    BOOST_TEST_MESSAGE("Create two node cluster with two of the three nodes initialized as contact points");
+    test_utils::CassClusterPtr cluster(cass_cluster_new());
+    const cql::cql_ccm_bridge_configuration_t& configuration = cql::get_ccm_bridge_configuration();
+    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(configuration, "test", 2);
+    test_utils::initialize_contact_points(cluster.get(), configuration.ip_prefix(), 2, 0);
+ 
+    //Add one nodes
+    BOOST_TEST_MESSAGE("Adding one node");
+    ccm->bootstrap(3);
+ 
+    //Create session
+    test_utils::create_session(cluster.get());
+  }
+  BOOST_CHECK(test_utils::CassLog::message_count() == 1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

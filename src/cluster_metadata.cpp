@@ -18,12 +18,12 @@
 
 namespace cass {
 
-ClusterMetadata::~ClusterMetadata() {
-  uv_mutex_destroy(&mutex_);
+ClusterMetadata::ClusterMetadata() {
+  uv_mutex_init(&schema_mutex_);
 }
 
-int ClusterMetadata::init() {
-  return uv_mutex_init(&mutex_);
+ClusterMetadata::~ClusterMetadata() {
+  uv_mutex_destroy(&schema_mutex_);
 }
 
 void ClusterMetadata::clear() {
@@ -34,7 +34,7 @@ void ClusterMetadata::clear() {
 void ClusterMetadata::update_keyspaces(ResultResponse* result) {
   Schema::KeyspacePointerMap keyspaces;
   {
-    ScopedMutex l(&mutex_);
+    ScopedMutex l(&schema_mutex_);
     keyspaces = schema_.update_keyspaces(result);
   }
   for (Schema::KeyspacePointerMap::const_iterator i = keyspaces.begin(); i != keyspaces.end(); ++i) {
@@ -43,7 +43,7 @@ void ClusterMetadata::update_keyspaces(ResultResponse* result) {
 }
 
 void ClusterMetadata::update_tables(ResultResponse* table_result, ResultResponse* col_result) {
-  ScopedMutex l(&mutex_);
+  ScopedMutex l(&schema_mutex_);
   schema_.update_tables(table_result, col_result);
 }
 
@@ -53,7 +53,8 @@ void ClusterMetadata::drop_keyspace(const std::string& keyspace_name) {
 }
 
 Schema* ClusterMetadata::copy_schema() const {
-  ScopedMutex l(&mutex_);
+  ScopedMutex l(&schema_mutex_);
   return new Schema(schema_);
 }
-}
+
+} // namespace cass

@@ -49,9 +49,7 @@ struct AthenticationTests {
     cass_cluster_set_protocol_version(cluster.get(), protocol_version);
     cass_cluster_set_credentials(cluster.get(), "cassandra", "cassandra");
 
-    test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-    test_utils::wait_and_check_error(session_future.get());
-    test_utils::CassSessionPtr session(cass_future_get_session(session_future.get()));
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
     test_utils::CassResultPtr result;
     test_utils::execute_query(session.get(), "SELECT * FROM system.schema_keyspaces", &result);
@@ -67,8 +65,8 @@ struct AthenticationTests {
     cass_cluster_set_protocol_version(cluster.get(), protocol_version);
     cass_cluster_set_credentials(cluster.get(), username, password);
     {
-      test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-      CassError code = test_utils::wait_and_return_error(session_future.get());
+      CassError code;
+      test_utils::CassSessionPtr temp_session(test_utils::create_session(cluster.get(), &code));
       BOOST_CHECK_EQUAL(expected_code, code);
     }
     BOOST_CHECK(test_utils::CassLog::message_count() > 0);

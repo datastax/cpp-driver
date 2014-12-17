@@ -36,9 +36,11 @@ struct AsyncTests : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
   }
 
-  std::vector<CassUuid> insert_async(const std::string& table_name,
-                                     size_t num_concurrent_requests,
-                                     std::vector<test_utils::CassFuturePtr>* futures) {
+  static std::vector<CassUuid> insert_async(CassSession* session,
+                                            CassUuidGen* uuid_gen,
+                                            const std::string& table_name,
+                                            size_t num_concurrent_requests,
+                                            std::vector<test_utils::CassFuturePtr>* futures) {
     std::string create_table_query = str(boost::format("CREATE TABLE %s (id timeuuid PRIMARY KEY, num int, str text);") % table_name);
 
     test_utils::execute_query(session, create_table_query);
@@ -68,7 +70,7 @@ struct AsyncTests : public test_utils::SingleSessionTest {
     std::string select_query = str(boost::format("SELECT * FROM %s;") % table_name);
     test_utils::CassResultPtr result;
     test_utils::execute_query(session, select_query, &result, CASS_CONSISTENCY_QUORUM);
-    BOOST_REQUIRE(cass_result_row_count(result.get()) == num_concurrent_requests);
+    BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), num_concurrent_requests);
 
     test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
 
@@ -89,7 +91,7 @@ BOOST_AUTO_TEST_CASE(simple)
   const size_t num_concurrent_requests = 4096;
 
   std::vector<test_utils::CassFuturePtr> futures;
-  std::vector<CassUuid> ids = insert_async(table_name, num_concurrent_requests, &futures);
+  std::vector<CassUuid> ids = insert_async(session, uuid_gen, table_name, num_concurrent_requests, &futures);
 
   for(std::vector<test_utils::CassFuturePtr>::iterator it = futures.begin(),
       end = futures.end(); it != end; ++it) {
@@ -104,16 +106,18 @@ BOOST_AUTO_TEST_CASE(close)
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   const size_t num_concurrent_requests = 4096;
 
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
-  test_utils::wait_and_check_error(session_future.get());
-  test_utils::CassSessionPtr temp_session(cass_future_get_session(session_future.get()));
+  test_utils::CassSessionPtr temp_session(test_utils::create_session(cluster));
 
   test_utils::execute_query(temp_session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
   std::vector<test_utils::CassFuturePtr> futures;
-  std::vector<CassUuid> ids = insert_async(table_name, num_concurrent_requests, &futures);
+  std::vector<CassUuid> ids = insert_async(temp_session.get(), uuid_gen, table_name, num_concurrent_requests, &futures);
 
-  temp_session.reset(); // close session
+  // Close session, this should wait for all pending requests to finish
+
+  temp_session.reset();
+
+  // All requests should be finished, validate
 
   validate_results(table_name, num_concurrent_requests, ids);
 }

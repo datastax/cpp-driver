@@ -39,10 +39,6 @@
 #include <uv.h>
 #include <vector>
 
-#ifdef TESTING_DIRECTIVE
-#include <stdexcept>
-#endif
-
 namespace cass {
 
 class RequestHandler;
@@ -56,7 +52,7 @@ struct SessionEvent {
     INVALID,
     CONNECT,
     NOTIFY_READY,
-    NOTIFY_CLOSED,
+    NOTIFY_WORKER_CLOSED,
     NOTIFY_UP,
     NOTIFY_DOWN
   };
@@ -71,9 +67,15 @@ struct SessionEvent {
 
 class Session : public EventThread<SessionEvent> {
 public:
-  Session(const Config& config);
+  enum State {
+    SESSION_STATE_CONNECTING,
+    SESSION_STATE_CONNECTED,
+    SESSION_STATE_CLOSING,
+    SESSION_STATE_CLOSED
+  };
 
-  int init();
+  Session();
+  ~Session();
 
   const Config& config() const { return config_; }
 
@@ -89,12 +91,12 @@ public:
   void purge_hosts(bool is_initial_connection);
 
   bool notify_ready_async();
-  bool notify_closed_async();
+  bool notify_worker_closed_async();
   bool notify_up_async(const Address& address);
   bool notify_down_async(const Address& address, bool is_critical_failure);
 
-  bool connect_async(const std::string& keyspace, Future* future);
-  void close_async(Future* future);
+  void connect_async(const Config& config, const std::string& keyspace, Future* future);
+  void close_async(Future* future, bool force = false);
 
   Future* prepare(const char* statement, size_t length);
   Future* execute(const RoutableRequest* statement);
@@ -102,9 +104,17 @@ public:
   const Schema* copy_schema() const { return cluster_meta_.copy_schema(); }
 
 private:
+  void clear(const Config& config);
+  int init();
+
   void close_handles();
 
   void internal_connect();
+  void internal_close();
+
+  void notify_connected();
+  void notify_connect_error(CassError code, const std::string& message);
+  void notify_closed();
 
   void execute(RequestHandler* request_handler);
 
@@ -137,92 +147,28 @@ private:
 private:
   typedef std::vector<SharedRefPtr<IOWorker> > IOWorkerVec;
 
+  State state_;
+  uv_mutex_t state_mutex_;
   Config config_;
-  ControlConnection control_connection_;
-  IOWorkerVec io_workers_;
-  ScopedRefPtr<Future> connect_future_;
-  Future* close_future_;
-  HostMap hosts_;
-  bool current_host_mark_;
-  ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*> > > request_queue_;
   ScopedRefPtr<LoadBalancingPolicy> load_balancing_policy_;
+  ScopedRefPtr<Future> connect_future_;
+  ScopedRefPtr<Future> close_future_;
+  HostMap hosts_;
+  IOWorkerVec io_workers_;
+  ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*> > > request_queue_;
+  ClusterMetadata cluster_meta_;
+  ControlConnection control_connection_;
+  bool current_host_mark_;
   int pending_resolve_count_;
   int pending_pool_count_;
   int pending_workers_count_;
   int current_io_worker_;
-  ClusterMetadata cluster_meta_;
 };
 
-class SessionCloseFuture : public Future {
+class SessionFuture : public Future {
 public:
-  SessionCloseFuture(Session* session)
-      : Future(CASS_FUTURE_TYPE_SESSION_CLOSE)
-      , session_(session) {
-    session_thread_guard();
-  }
-
-  ~SessionCloseFuture() {
-    wait();
-  }
-
-  void wait() {
-    session_thread_guard();
-    ScopedMutex lock(&mutex_);
-
-    internal_wait(lock);
-
-    if (session_ != NULL) {
-      session_->join();
-      delete session_;
-      session_ = NULL;
-    }
-  }
-
-  bool wait_for(uint64_t timeout) {
-    session_thread_guard();
-    ScopedMutex lock(&mutex_);
-    if (internal_wait_for(lock, timeout)) {
-      if (session_ != NULL) {
-        session_->join();
-        delete session_;
-        session_ = NULL;
-      }
-      return true;
-    }
-    return false;
-  }
-
-private:
-  void session_thread_guard() {
-    if (session_ != NULL && uv_thread_self() == session_->thread_id()) {
-      const char* message = "Attempted to close session with session thread (possibly from close callback). Aborting.";
-#ifndef TESTING_DIRECTIVE
-      fprintf(stderr, "%s\n", message);
-      abort();
-#else
-      throw std::runtime_error(message);
-#endif
-    }
-  }
-
-private:
-  Session* session_;
-};
-
-class SessionConnectFuture : public ResultFuture<Session> {
-public:
-  SessionConnectFuture(Session* session)
-      : ResultFuture<Session>(CASS_FUTURE_TYPE_SESSION_CONNECT, session) {}
-
-  ~SessionConnectFuture() {
-    Session* session = release_result();
-    if (session != NULL) {
-      // The future was deleted before obtaining the session
-      ScopedRefPtr<cass::SessionCloseFuture> close_future(new cass::SessionCloseFuture(session));
-      session->close_async(close_future.get());
-      close_future->wait();
-    }
-  }
+  SessionFuture()
+      : Future(CASS_FUTURE_TYPE_SESSION) {}
 };
 
 } // namespace cass

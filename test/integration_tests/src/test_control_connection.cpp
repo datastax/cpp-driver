@@ -74,13 +74,13 @@ BOOST_FIXTURE_TEST_SUITE(control_connection, ControlConnectionTests)
 
 BOOST_AUTO_TEST_CASE(connect_invalid_ip)
 {
-  test_utils::CassLog::reset("Connection: Host 1.1.1.1 had the following error on startup: 'Connection timeout'");
+  test_utils::CassLog::reset("Host 1.1.1.1 had the following error on startup: 'Connection timeout'");
 
   test_utils::CassClusterPtr cluster(cass_cluster_new());
   cass_cluster_set_contact_points(cluster.get(), "1.1.1.1");
   {
-    test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-    CassError code = test_utils::wait_and_return_error(session_future.get());
+    CassError code;
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get(), &code));
     BOOST_CHECK_EQUAL(code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
   }
 
@@ -98,9 +98,8 @@ BOOST_AUTO_TEST_CASE(connect_invalid_port)
 
   cass_cluster_set_port(cluster.get(), 9999); // Invalid port
 
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster.get()));
-  CassError code = test_utils::wait_and_return_error(session_future.get());
-
+  CassError code;
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get(), &code));
   BOOST_CHECK_EQUAL(code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
 
@@ -207,6 +206,9 @@ BOOST_AUTO_TEST_CASE(node_discovery)
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
+  // Allow the nodes to be discovered
+  boost::this_thread::sleep_for(boost::chrono::seconds(20)); //TODO: Remove sleep and implement a pre-check
+
   check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 3));
 }
 
@@ -230,7 +232,11 @@ BOOST_AUTO_TEST_CASE(node_discovery_invalid_ips)
     // Only add a single valid IP
     test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
-    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+    // Make sure the timout is very high for the initial invalid IPs
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get(), NULL, 60 * test_utils::ONE_SECOND_IN_MICROS));
+
+    // Allow the nodes to be discovered
+    boost::this_thread::sleep_for(boost::chrono::seconds(20)); //TODO: Remove sleep and implement a pre-check
 
     check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 3));
   }
@@ -257,6 +263,9 @@ BOOST_AUTO_TEST_CASE(node_discovery_no_local_rows)
   }
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+
+  // Allow the nodes to be discovered
+  boost::this_thread::sleep_for(boost::chrono::seconds(10)); //TODO: Remove sleep and implement a pre-check
 
   check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 3));
 }

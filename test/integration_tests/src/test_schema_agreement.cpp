@@ -43,15 +43,15 @@ struct ClusterInit {
 
   void new_session() {
     close_session();
-    test_utils::CassFuturePtr connect_future(cass_cluster_connect(inst.cluster));
+    session = cass_session_new();
+    test_utils::CassFuturePtr connect_future(cass_session_connect(session, inst.cluster));
     test_utils::wait_and_check_error(connect_future.get());
-    session = cass_future_get_session(connect_future.get());
   }
 
   void close_session() {
     if (session != NULL) {
       test_utils::CassFuturePtr close_future(cass_session_close(session));
-      cass_future_wait(close_future.get());
+      test_utils::wait_and_check_error(close_future.get());
       session = NULL;
     }
   }
