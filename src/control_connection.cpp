@@ -63,7 +63,7 @@ public:
   }
 
 private:
-  const HostMap& hosts_;
+  const HostMap hosts_;
   HostMap::const_iterator it_;
 };
 
@@ -313,6 +313,9 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
   if (is_initial_connection) {
     state_ = CONTROL_STATE_READY;
     session_->on_control_connection_ready();
+    // Create a new query plan that considers all the new hosts from the
+    // "system" tables.
+    query_plan_.reset(session_->new_query_plan());
   }
 }
 

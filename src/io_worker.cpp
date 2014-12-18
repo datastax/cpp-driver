@@ -110,10 +110,11 @@ bool IOWorker::add_pool_async(const Address& address, bool is_initial_connection
   return send_event_async(event);
 }
 
-bool IOWorker::remove_pool_async(const Address& address) {
+bool IOWorker::remove_pool_async(const Address& address, bool cancel_reconnect) {
   IOWorkerEvent event;
   event.type = IOWorkerEvent::REMOVE_POOL;
   event.address = address;
+  event.cancel_reconnect = cancel_reconnect;
   return send_event_async(event);
 }
 
@@ -273,7 +274,12 @@ void IOWorker::on_event(const IOWorkerEvent& event) {
     }
 
     case IOWorkerEvent::REMOVE_POOL: {
-      cancel_reconnect(event.address);
+      if (event.cancel_reconnect) {
+        LOG_DEBUG("REMOVE_POOL event for %s cancelling reconnect io_worker(%p)",
+                  event.address.to_string().c_str(),
+                  static_cast<void*>(this));
+        cancel_reconnect(event.address);
+      }
       PoolMap::iterator it = pools_.find(event.address);
       if (it != pools_.end()) {
         LOG_DEBUG("REMOVE_POOL event for %s closing pool(%p) io_worker(%p)",
