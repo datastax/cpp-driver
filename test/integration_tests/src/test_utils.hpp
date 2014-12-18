@@ -460,7 +460,7 @@ struct Value<CassUuid> {
   static CassUuid max_value() {
     CassUuid value;
     value.clock_seq_and_node = std::numeric_limits<cass_uint64_t>::max();
-    value.clock_seq_and_node = std::numeric_limits<cass_uint64_t>::max();
+    value.time_and_version = std::numeric_limits<cass_uint64_t>::max();
     return value;
   }
 };
