@@ -53,6 +53,7 @@ struct IOWorkerEvent {
   Type type;
   Address address;
   bool is_initial_connection;
+  bool cancel_reconnect;
 };
 
 class IOWorker
@@ -85,7 +86,7 @@ public:
   bool is_host_up(const Address& address) const;
 
   bool add_pool_async(const Address& address, bool is_initial_connection);
-  bool remove_pool_async(const Address& address);
+  bool remove_pool_async(const Address& address, bool cancel_reconnect);
   void close_async();
 
   bool execute(RequestHandler* request_handler);
