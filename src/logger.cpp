@@ -61,9 +61,7 @@ Logger::LogThread::LogThread(size_t queue_size)
 
 Logger::LogThread::~LogThread() {
   CassLogMessage log_message;
-  log_message.time_ms = 0;
   log_message.severity = CASS_LOG_DISABLED;
-  log_message.message[0] = '\0';
   while (!log_queue_.enqueue(log_message)) {
     // Keep trying
   }
@@ -95,13 +93,11 @@ void Logger::LogThread::on_log(uv_async_t* async, int status) {
   CassLogMessage log_message;
   bool is_closing = false;
   while (logger->log_queue_.dequeue(log_message)) {
-    if (log_message.time_ms == 0 &&
-        log_message.severity == CASS_LOG_DISABLED &&
-        strlen(log_message.message) == 0) {
+    if (log_message.severity != CASS_LOG_DISABLED) {
+      Logger::cb_(&log_message, Logger::data_);
+    } else {
       is_closing = true;
-      break;
     }
-    Logger::cb_(&log_message, Logger::data_);
   }
 
   if (is_closing) {
