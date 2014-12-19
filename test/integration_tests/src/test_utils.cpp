@@ -248,8 +248,8 @@ CassSessionPtr create_session(CassCluster* cluster, CassError* code, cass_durati
 void execute_query(CassSession* session,
                    const std::string& query,
                    CassResultPtr* result,
-                   cass_duration_t timeout,
-                   CassConsistency consistency) {
+                   CassConsistency consistency,
+                   cass_duration_t timeout) {
   CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0));
   cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future(cass_session_execute(session, statement.get()));
@@ -262,8 +262,8 @@ void execute_query(CassSession* session,
 CassError execute_query_with_error(CassSession* session,
                                    const std::string& query,
                                    CassResultPtr* result,
-                                   cass_duration_t timeout,
-                                   CassConsistency consistency) {
+                                   CassConsistency consistency,
+                                   cass_duration_t timeout) {
   CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0));
   cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future(cass_session_execute(session, statement.get()));

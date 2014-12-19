@@ -120,7 +120,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
   void verify_fields(const CassSchemaMeta* meta, const std::set<std::string>& expected_fields) {
     // all fields present, nothing extra
     std::set<std::string> observed;
-    test_utils::CassIteratorPtr itr = cass_iterator_fields_from_schema_meta(meta);
+    test_utils::CassIteratorPtr itr(cass_iterator_fields_from_schema_meta(meta));
     while (cass_iterator_next(itr.get())) {
       const CassSchemaMetaField* field = cass_iterator_get_schema_meta_field(itr.get());
       CassString name = cass_schema_meta_field_name(field);
@@ -159,7 +159,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     BOOST_REQUIRE(value);
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_MAP);
     BOOST_CHECK_EQUAL(cass_value_item_count(value), expected.size());
-    test_utils::CassIteratorPtr itr = cass_iterator_from_map(value);
+    test_utils::CassIteratorPtr itr(cass_iterator_from_map(value));
     while (cass_iterator_next(itr.get())) {
       CassString key;
       cass_value_get_string(cass_iterator_get_map_key(itr.get()), &key);
@@ -189,7 +189,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
   }
 
   void verify_columns(const CassSchemaMeta* table_meta) {
-    test_utils::CassIteratorPtr itr = cass_iterator_from_schema_meta(table_meta);
+    test_utils::CassIteratorPtr itr(cass_iterator_from_schema_meta(table_meta));
     while (cass_iterator_next(itr.get())) {
       const CassSchemaMeta* col_meta = cass_iterator_get_schema_meta(itr.get());
       BOOST_REQUIRE_EQUAL(cass_schema_meta_type(col_meta), CASS_SCHEMA_META_TYPE_COLUMN);
@@ -265,7 +265,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     const CassValue* value = cass_schema_meta_field_value(cass_schema_meta_get_field(table_meta, "compression_parameters"));
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_MAP);
     BOOST_REQUIRE_GE(cass_value_item_count(value), 1ul);
-    test_utils::CassIteratorPtr itr = cass_iterator_from_map(value);
+    test_utils::CassIteratorPtr itr(cass_iterator_from_map(value));
     const std::string parameter = "sstable_compression";
     bool param_found = false;
     while (cass_iterator_next(itr.get())) {
@@ -349,7 +349,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     strategy_options.insert(std::make_pair("replication_factor", "2"));
     verify_keyspace("system_traces", true, SIMPLE_STRATEGY_CLASS_NAME, strategy_options);
 
-    test_utils::CassIteratorPtr itr = cass_iterator_from_schema(schema_);
+    test_utils::CassIteratorPtr itr(cass_iterator_from_schema(schema_));
     size_t keyspace_count = 0;
     while (cass_iterator_next(itr.get())) ++keyspace_count;
     BOOST_CHECK_EQUAL(keyspace_count, 2ul);

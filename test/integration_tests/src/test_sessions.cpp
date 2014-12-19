@@ -133,6 +133,71 @@ BOOST_AUTO_TEST_CASE(close_timeout_error)
 }
 
 /**
+ * Connect when already connected
+ *
+ * @since 1.0.0-rc1
+ * @test_category sessions
+ */
+BOOST_AUTO_TEST_CASE(connect_when_already_connected)
+{
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 1);
+
+  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+
+  test_utils::CassSessionPtr session(cass_session_new());
+  test_utils::CassFuturePtr connect_future1(cass_session_connect(session.get(), cluster.get()));
+  test_utils::CassFuturePtr connect_future2(cass_session_connect(session.get(), cluster.get()));
+
+  test_utils::wait_and_check_error(connect_future1.get());
+
+  CassError code = test_utils::wait_and_return_error(connect_future2.get());
+  BOOST_CHECK(code == CASS_ERROR_LIB_UNABLE_TO_CONNECT);
+}
+
+/**
+ * Close when already closed
+ *
+ * @since 1.0.0-rc1
+ * @test_category sessions
+ */
+BOOST_AUTO_TEST_CASE(close_when_already_closed)
+{
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 1);
+
+  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+
+  test_utils::CassSessionPtr session(cass_session_new());
+  test_utils::CassFuturePtr connect_future(cass_session_connect(session.get(), cluster.get()));
+  test_utils::wait_and_check_error(connect_future.get());
+
+  test_utils::CassFuturePtr close_future1(cass_session_close(session.get()));
+  test_utils::CassFuturePtr close_future2(cass_session_close(session.get()));
+
+  test_utils::wait_and_check_error(close_future1.get());
+
+  CassError code = test_utils::wait_and_return_error(close_future2.get());
+  BOOST_CHECK(code == CASS_ERROR_LIB_UNABLE_TO_CLOSE);
+}
+
+/**
+ * Close when not connected
+ *
+ * @since 1.0.0-rc1
+ * @test_category sessions
+ */
+BOOST_AUTO_TEST_CASE(close_when_not_connected)
+{
+  test_utils::CassSessionPtr session(cass_session_new());
+  test_utils::CassFuturePtr close_future(cass_session_close(session.get()));
+  CassError code = test_utils::wait_and_return_error(close_future.get());
+  BOOST_CHECK(code == CASS_ERROR_LIB_UNABLE_TO_CLOSE);
+}
+
+/**
  * Adding/Bootstrapping New Nodes Before Opening Session
  *
  * This test addresses a connection timeout when the Load Balancing Policy
@@ -246,18 +311,30 @@ struct SessionContainer {
   /**
    * Mutex for sessions array
    */
-  static uv_rwlock_t sessions_lock;
+  mutable uv_rwlock_t sessions_lock;
+
   /**
    * Sessions array
    */
-  static std::vector<CassSession*> sessions;
+  std::vector<test_utils::CassSessionPtr> sessions;
+
+  const CassCluster* cluster;
+
+  SessionContainer(const CassCluster* cluster)
+    : cluster(cluster) {
+    BOOST_REQUIRE(uv_rwlock_init(&sessions_lock) == 0);
+  }
+
+  ~SessionContainer() {
+    uv_rwlock_destroy(&sessions_lock);
+  }
 
   /**
    * Add a session to the container
    *
    * @param session Session to add
    */
-  static void add_session(CassSession* session) {
+  void add_session(const test_utils::CassSessionPtr& session) {
     uv_rwlock_wrlock(&sessions_lock);
     sessions.push_back(session);
     uv_rwlock_wrunlock(&sessions_lock);
@@ -268,28 +345,26 @@ struct SessionContainer {
    *
    * @return Sessions in array
    */
-  static unsigned int count() {
-    uv_rwlock_wrlock(&sessions_lock);
+  unsigned int count() const {
+    uv_rwlock_rdlock(&sessions_lock);
     int size = sessions.size();
-    uv_rwlock_wrunlock(&sessions_lock);
+    uv_rwlock_rdunlock(&sessions_lock);
     return size;
-  }
-
-  /**
-   * Open a session and add it to the list of sessions opened
-   *
-   * @param cluster Cluster to use in order to create the session
-   */
-  static void open_session(void* cluster) {
-    test_utils::CassFuturePtr session_future(cass_cluster_connect(static_cast<CassCluster*>(cluster)));
-    test_utils::wait_and_check_error(session_future.get(), 20 * test_utils::ONE_SECOND_IN_MICROS);
-    add_session(cass_future_get_session(session_future.get()));
   }
 };
 
-//Initialize session container variables
-std::vector<CassSession*> SessionContainer::sessions;
-uv_rwlock_t SessionContainer::sessions_lock;
+/**
+* Open a session and add it to the list of sessions opened
+*
+* @param arg Session container to add session
+*/
+static void open_session(void* arg) {
+  SessionContainer* sessions = static_cast<SessionContainer*>(arg);
+  test_utils::CassSessionPtr session(cass_session_new());
+  test_utils::CassFuturePtr session_future(cass_session_connect(session.get(), sessions->cluster));
+  test_utils::wait_and_check_error(session_future.get(), 20 * test_utils::ONE_SECOND_IN_MICROS);
+  sessions->add_session(session);
+}
 
 /**
  * Open a number of sessions concurrently or sequentially
@@ -299,14 +374,14 @@ uv_rwlock_t SessionContainer::sessions_lock;
  * @param num_of_sessions Number of sessions to create concurrently
  * @param is_concurrently True if concurrent; false otherwise
  */
-void open_sessions(CassCluster* cluster, const SessionContainer& sessions, unsigned int num_of_sessions, bool is_concurrently = true) {
+void open_sessions(SessionContainer* sessions, unsigned int num_of_sessions, bool is_concurrently = true) {
   //Create session threads
-  uv_thread_t *threads = new uv_thread_t[num_of_sessions];
+  std::vector<uv_thread_t> threads(num_of_sessions);
   for (unsigned int n = 0; n < num_of_sessions; ++n) {
     if (is_concurrently) {
-      uv_thread_create(&threads[n], sessions.open_session, cluster);
+      uv_thread_create(&threads[n], open_session, sessions);
     } else {
-      sessions.open_session(cluster);
+      open_session(sessions);
     }
   }
 
@@ -316,7 +391,6 @@ void open_sessions(CassCluster* cluster, const SessionContainer& sessions, unsig
       uv_thread_join(&threads[n]);
     }
   }
-  delete[] threads;
 
   //TODO: Remove sleep and create a timed wait for log messages (no boost)
   for (unsigned int n = 0; n < (SESSION_STRESS_NUMBER_OF_ITERATIONS * 20); ++n) {
@@ -346,14 +420,14 @@ static void close_session(void* session) {
  * @param num_of_sessions Number of sessions to close concurrently
  * @param is_concurrently True if concurrent; false otherwise
  */
-void close_sessions(const SessionContainer& sessions, unsigned int num_of_sessions, bool is_concurrently = true) {
+void close_sessions(SessionContainer* sessions, unsigned int num_of_sessions, bool is_concurrently = true) {
   //Close session threads (LIFO)
-  uv_thread_t *threads = new uv_thread_t[num_of_sessions];
+  std::vector<uv_thread_t> threads(num_of_sessions);
   for (unsigned int n = 0; n < num_of_sessions; ++n) {
     if (is_concurrently) {
-      uv_thread_create(&threads[n], close_session, sessions.sessions[sessions.count() - n - 1]);
+      uv_thread_create(&threads[n], close_session, sessions->sessions[sessions->count() - n - 1].get());
     } else {
-      close_session(sessions.sessions[sessions.count() - n - 1]);
+      close_session(sessions->sessions[sessions->count() - n - 1].get());
     }
   }
 
@@ -363,12 +437,8 @@ void close_sessions(const SessionContainer& sessions, unsigned int num_of_sessio
       uv_thread_join(&threads[n]);
     }
   }
-  delete[] threads;
 
-  //Clean up closed sessions from array
-  for (unsigned int n = 0; n < num_of_sessions; ++n) {
-    sessions.sessions.pop_back();
-  }
+  sessions->sessions.clear();
 
   //TODO: Remove sleep and create a timed wait for log messages (no boost)
   for (unsigned int n = 0; n < (SESSION_STRESS_NUMBER_OF_ITERATIONS * 20); ++n) {
@@ -381,18 +451,26 @@ void close_sessions(const SessionContainer& sessions, unsigned int num_of_sessio
   BOOST_TEST_MESSAGE("\t\tClosed: " << test_utils::CassLog::message_count());
 }
 
+struct QuerySession {
+  QuerySession(CassSession* session = NULL)
+    : session(session)
+    , error_code(CASS_OK) {}
+  CassSession* session;
+  CassError error_code;
+};
+
 /**
  * Run a query against the session
  *
- * @param session Session to query
+ * @param arg An instance of QuerySession
  */
-static void query_session(void* session) {
-  CassError error_code = test_utils::execute_query_with_error(static_cast<CassSession*>(session), test_utils::SELECT_VERSION, NULL, 20 * test_utils::ONE_SECOND_IN_MICROS);
-
-  //Timeouts are OK (especially on the minor chaos test)
-  if (error_code != CASS_OK && error_code != CASS_ERROR_LIB_REQUEST_TIMED_OUT) {
-    BOOST_FAIL("Error occurred during query '" << std::string(cass_error_desc(error_code)));
-  }
+static void query_session(void* arg) {
+  QuerySession* query = static_cast<QuerySession*>(arg);
+  query->error_code = test_utils::execute_query_with_error(query->session,
+                                                           test_utils::SELECT_VERSION,
+                                                           NULL,
+                                                           CASS_CONSISTENCY_ONE,
+                                                           20 * test_utils::ONE_SECOND_IN_MICROS);
 }
 
 /**
@@ -404,11 +482,16 @@ void query_sessions(const SessionContainer& sessions) {
   //Query session in multiple threads
   unsigned int thread_count = sessions.count() * SESSION_STRESS_NUMBER_OF_SHARED_SESSION_THREADS;
   BOOST_TEST_MESSAGE("\t\tThreads: " << thread_count);
-  uv_thread_t *threads = new uv_thread_t[thread_count];
+
+
+  std::vector<uv_thread_t> threads(thread_count);
+  std::vector<QuerySession> queries(thread_count);
+
   for (unsigned int iterations = 0; iterations < SESSION_STRESS_NUMBER_OF_SHARED_SESSION_THREADS; ++iterations) {
     for (unsigned int n = 0; n < sessions.count(); ++n) {
       int thread_index = (sessions.count() * iterations) + n;
-      uv_thread_create(&threads[thread_index], query_session, sessions.sessions[n]);
+      queries.push_back(QuerySession(sessions.sessions[n].get()));
+      uv_thread_create(&threads[thread_index], query_session, &queries.back());
     }
   }
 
@@ -416,7 +499,14 @@ void query_sessions(const SessionContainer& sessions) {
   for (unsigned int n = 0; n < thread_count; ++n) {
     uv_thread_join(&threads[n]);
   }
-  delete[] threads;
+
+  for (unsigned int n = 0; n < thread_count; ++n) {
+    //Timeouts are OK (especially on the minor chaos test)
+    CassError error_code = queries[n].error_code;
+    if (error_code != CASS_OK && error_code != CASS_ERROR_LIB_REQUEST_TIMED_OUT) {
+      BOOST_FAIL("Error occurred during query '" << std::string(cass_error_desc(error_code)));
+    }
+  }
 }
 
 /**
@@ -474,17 +564,17 @@ BOOST_AUTO_TEST_CASE(stress)
     test_utils::initialize_contact_points(cluster.get(), configuration.ip_prefix(), 1, 0);
 
     //Open and close sessions sequentially
-    SessionContainer sessions;
+    SessionContainer sessions(cluster.get());
     BOOST_TEST_MESSAGE("Sequential");
     for (unsigned int iterations = 0; iterations < SESSION_STRESS_NUMBER_OF_ITERATIONS; ++iterations) {
       BOOST_TEST_MESSAGE("\tOpening " << SESSION_STRESS_NUMBER_OF_SESSIONS << " sessions");
-      open_sessions(cluster.get(), sessions, SESSION_STRESS_NUMBER_OF_SESSIONS, false);
+      open_sessions(&sessions, SESSION_STRESS_NUMBER_OF_SESSIONS, false);
       BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), SESSION_STRESS_NUMBER_OF_SESSIONS);
       BOOST_CHECK_EQUAL(sessions.count(), SESSION_STRESS_NUMBER_OF_SESSIONS);
 
       BOOST_TEST_MESSAGE("\tClosing " << SESSION_STRESS_NUMBER_OF_SESSIONS << " sessions");
       test_utils::CassLog::reset(SESSION_STRESS_CLOSED_LOG_MESSAGE);
-      close_sessions(sessions, SESSION_STRESS_NUMBER_OF_SESSIONS, false);
+      close_sessions(&sessions, SESSION_STRESS_NUMBER_OF_SESSIONS, false);
       BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), SESSION_STRESS_NUMBER_OF_SESSIONS);
       BOOST_CHECK_EQUAL(sessions.count(), 0);
     }
@@ -494,13 +584,13 @@ BOOST_AUTO_TEST_CASE(stress)
     for (unsigned int iterations = 0; iterations < SESSION_STRESS_NUMBER_OF_ITERATIONS; ++iterations) {
       BOOST_TEST_MESSAGE("\tOpening " << SESSION_STRESS_NUMBER_OF_SESSIONS << " sessions");
       test_utils::CassLog::reset(SESSION_STRESS_OPENED_LOG_MESSAGE);
-      open_sessions(cluster.get(), sessions, SESSION_STRESS_NUMBER_OF_SESSIONS);
+      open_sessions(&sessions, SESSION_STRESS_NUMBER_OF_SESSIONS);
       BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), SESSION_STRESS_NUMBER_OF_SESSIONS);
       BOOST_CHECK_EQUAL(sessions.count(), SESSION_STRESS_NUMBER_OF_SESSIONS);
 
       BOOST_TEST_MESSAGE("\tClosing " << SESSION_STRESS_NUMBER_OF_SESSIONS << " sessions");
       test_utils::CassLog::reset(SESSION_STRESS_CLOSED_LOG_MESSAGE);
-      close_sessions(sessions, SESSION_STRESS_NUMBER_OF_SESSIONS);
+      close_sessions(&sessions, SESSION_STRESS_NUMBER_OF_SESSIONS);
       BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), SESSION_STRESS_NUMBER_OF_SESSIONS);
       BOOST_CHECK_EQUAL(sessions.count(), 0);
     }
@@ -511,7 +601,7 @@ BOOST_AUTO_TEST_CASE(stress)
     for (unsigned int n = 0; n < quarter_sessions; ++n) {
       BOOST_TEST_MESSAGE("\tOpening " << quarter_sessions << " sessions");
       test_utils::CassLog::reset(SESSION_STRESS_OPENED_LOG_MESSAGE);
-      open_sessions(cluster.get(), sessions, quarter_sessions, false);
+      open_sessions(&sessions, quarter_sessions, false);
       BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), quarter_sessions);
       BOOST_CHECK_EQUAL(sessions.count(), quarter_sessions);
 
@@ -521,7 +611,7 @@ BOOST_AUTO_TEST_CASE(stress)
 
       BOOST_TEST_MESSAGE("\tClosing " << quarter_sessions << " sessions");
       test_utils::CassLog::reset(SESSION_STRESS_CLOSED_LOG_MESSAGE);
-      close_sessions(sessions, quarter_sessions, false);
+      close_sessions(&sessions, quarter_sessions, false);
       BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), quarter_sessions);
       BOOST_CHECK_EQUAL(sessions.count(), 0);
     }
@@ -535,7 +625,7 @@ BOOST_AUTO_TEST_CASE(stress)
     //Create sessions
     BOOST_TEST_MESSAGE("\tOpening " << (SESSION_STRESS_NUMBER_OF_SESSIONS / 4) << " sessions");
     test_utils::CassLog::reset(SESSION_STRESS_OPENED_LOG_MESSAGE);
-    open_sessions(cluster.get(), sessions, (SESSION_STRESS_NUMBER_OF_SESSIONS / 4), false);
+    open_sessions(&sessions, (SESSION_STRESS_NUMBER_OF_SESSIONS / 4), false);
     BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), (SESSION_STRESS_NUMBER_OF_SESSIONS / 4));
     BOOST_CHECK_EQUAL(sessions.count(), (SESSION_STRESS_NUMBER_OF_SESSIONS / 4));
 
@@ -552,7 +642,7 @@ BOOST_AUTO_TEST_CASE(stress)
     //Close sessions
     BOOST_TEST_MESSAGE("\tClosing " << (SESSION_STRESS_NUMBER_OF_SESSIONS / 4) << " sessions");
     test_utils::CassLog::reset(SESSION_STRESS_CLOSED_LOG_MESSAGE);
-    close_sessions(sessions, (SESSION_STRESS_NUMBER_OF_SESSIONS / 4), false);
+    close_sessions(&sessions, (SESSION_STRESS_NUMBER_OF_SESSIONS / 4), false);
     BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), (SESSION_STRESS_NUMBER_OF_SESSIONS / 4));
     BOOST_CHECK_EQUAL(sessions.count(), 0);
   }

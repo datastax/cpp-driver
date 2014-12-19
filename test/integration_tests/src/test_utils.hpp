@@ -206,7 +206,7 @@ struct Deleter<CassUuidGen> {
 template <class T>
 class CassSharedPtr : public boost::shared_ptr<T> {
 public:
-  CassSharedPtr(T* ptr = NULL)
+  explicit CassSharedPtr(T* ptr = NULL)
     : boost::shared_ptr<T>(ptr, Deleter<T>()) {}
 };
 
@@ -552,14 +552,14 @@ CassSessionPtr create_session(CassCluster* cluster, CassError* code, cass_durati
 CassError execute_query_with_error(CassSession* session,
                                    const std::string& query,
                                    CassResultPtr* result = NULL,
-                                   cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS,
-                                   CassConsistency consistency = CASS_CONSISTENCY_ONE);
+                                   CassConsistency consistency = CASS_CONSISTENCY_ONE,
+                                   cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
 
 void execute_query(CassSession* session,
                    const std::string& query,
                    CassResultPtr* result = NULL,
-                   cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS,
-                   CassConsistency consistency = CASS_CONSISTENCY_ONE);
+                   CassConsistency consistency = CASS_CONSISTENCY_ONE,
+                   cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
 
 CassError wait_and_return_error(CassFuture* future, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
 void wait_and_check_error(CassFuture* future, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);

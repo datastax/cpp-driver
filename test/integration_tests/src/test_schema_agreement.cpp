@@ -122,14 +122,13 @@ BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
   test_utils::CassFuturePtr prepared_future(
         cass_session_prepare(session, cass_string_init2(update_peer.data(), update_peer.size())));
   test_utils::wait_and_check_error(prepared_future.get());
-  test_utils::CassPreparedPtr prep = cass_future_get_prepared(prepared_future.get());
+  test_utils::CassPreparedPtr prep(cass_future_get_prepared(prepared_future.get()));
   test_utils::CassStatementPtr schema_stmt(cass_prepared_bind(prep.get()));
 
   test_utils::CassLog::reset("No schema agreement on live nodes after ");
-  test_utils::CassStatementPtr create_stmt =
-      cass_statement_new(
-        cass_string_init(str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                             % test_utils::SIMPLE_KEYSPACE % 2).c_str()), 0);
+  test_utils::CassStatementPtr create_stmt(cass_statement_new(
+                                             cass_string_init(str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
+                                                                  % test_utils::SIMPLE_KEYSPACE % 2).c_str()), 0));
   test_utils::CassFuturePtr create_future(cass_session_execute(session, create_stmt.get()));
 
   boost::chrono::steady_clock::time_point end =

@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
     size_t max_tries = 2*max_streams; // v[12] stream has 128 ids
     std::vector<test_utils::CassFuturePtr> futures;
     for (; tries < max_tries; ++tries) {
-      futures.push_back(cass_session_execute(session.get(), statement.get()));
+      futures.push_back(test_utils::CassFuturePtr(cass_session_execute(session.get(), statement.get())));
       if (cass_future_wait_timed(futures.back().get(), 1)) {
         BOOST_REQUIRE_EQUAL(cass_future_error_code(futures.back().get()), CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
         break;
@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE(connection_spawn)
     // run a few to get concurrent requests
     std::vector<test_utils::CassFuturePtr> futures;
     for (size_t i = 0; i < 10; ++i) {
-      futures.push_back(cass_session_execute(session.get(), statement.get()));
+      futures.push_back(test_utils::CassFuturePtr(cass_session_execute(session.get(), statement.get())));
     }
   }
   BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 2u);
