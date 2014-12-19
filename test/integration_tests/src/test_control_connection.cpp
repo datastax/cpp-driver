@@ -287,11 +287,15 @@ BOOST_AUTO_TEST_CASE(node_discovery_no_rpc_addresss)
     // Only add a single valid IP
     test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
 
+    // Make the 'rpc_address' null on all applicable hosts (1 and 2)
     {
       test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
-      std::ostringstream ss;
-      ss << "UPDATE system.peers SET rpc_address = null WHERE peer = '" << conf.ip_prefix() << "3'";
-      test_utils::execute_query(session.get(), ss.str());
+
+      for (int i = 0; i < 3; ++i) {
+        std::ostringstream ss;
+        ss << "UPDATE system.peers SET rpc_address = null WHERE peer = '" << conf.ip_prefix() << "3'";
+        test_utils::execute_query(session.get(), ss.str());
+      }
     }
 
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
