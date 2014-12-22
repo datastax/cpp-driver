@@ -296,9 +296,9 @@ void Connection::consume(char* input, size_t size) {
       ScopedPtr<ResponseMessage> response(response_.release());
       response_.reset(new ResponseMessage());
 
-      LOG_TRACE("Consumed message type %s with stream %d, input %lu, remaining %d on host %s",
+      LOG_TRACE("Consumed message type %s with stream %d, input %d, remaining %d on host %s",
                 opcode_to_string(response->opcode()).c_str(), static_cast<int>(response->stream()),
-                size, remaining, addr_string_.c_str());
+                (int)size, remaining, addr_string_.c_str());
 
       if (response->stream() < 0) {
         if (response->opcode() == CQL_OPCODE_EVENT) {
@@ -772,7 +772,7 @@ void Connection::PendingWriteSsl::encrypt() {
   BufferVec::const_iterator it = buffers_.begin(),
       end = buffers_.end();
 
-  LOG_TRACE("Copying %lu bufs", buffers_.size());
+  LOG_TRACE("Copying %d bufs", (int)buffers_.size());
 
   bool is_done = (it == end);
 
@@ -809,7 +809,7 @@ void Connection::PendingWriteSsl::encrypt() {
     }
   }
 
-  LOG_TRACE("Copied %lu bytes for encryption", total);
+  LOG_TRACE("Copied %d bytes for encryption", (int)total);
 }
 
 void Connection::PendingWriteSsl::flush() {
@@ -830,7 +830,7 @@ void Connection::PendingWriteSsl::flush() {
     FixedVector<uv_buf_t, SSL_ENCRYPTED_BUFS_COUNT> bufs;
     encrypted_size_ = ssl_session->outgoing().peek_multiple(prev_pos, &bufs);
 
-    LOG_TRACE("Sending %lu encrypted bytes", encrypted_size_);
+    LOG_TRACE("Sending %d encrypted bytes", (int)encrypted_size_);
 
     uv_stream_t* sock_stream = copy_cast<uv_tcp_t*, uv_stream_t*>(&connection_->socket_);
     uv_write(&req_, sock_stream, bufs.data(), bufs.size(), PendingWriteSsl::on_write);
