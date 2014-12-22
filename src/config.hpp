@@ -58,7 +58,7 @@ public:
       , log_data_(NULL)
       , auth_provider_(new AuthProvider())
       , load_balancing_policy_(new DCAwarePolicy())
-      , token_aware_routing_(true) {}
+      , token_aware_routing_(true)
       , tcp_nodelay_enable_(false)
       , tcp_keepalive_enable_(false)
       , tcp_keepalive_delay_secs_(0) {}

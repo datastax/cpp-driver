@@ -679,9 +679,9 @@ cass_cluster_set_load_balance_round_robin(CassCluster* cluster);
  * are available in the local dc
  * @param[in] allow_remote_dcs_for_local_cl Allows remote hosts to be used if no local dc hosts
  * are available and the consistency level is LOCAL_ONE or LOCAL_QUORUM
- * @return CASS_OK
+ * @return CASS_OK if successful, otherwise an error occurred
  */
-CASS_EXPORT void
+CASS_EXPORT CassError
 cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
                                        const char* local_dc,
                                        unsigned used_hosts_per_remote_dc,
