@@ -69,13 +69,13 @@ CassError cass_value_get_bool(const CassValue* value, cass_bool_t* output) {
   return CASS_OK;
 }
 
-CassError cass_value_get_uuid(const CassValue* value, CassUuid output) {
+CassError cass_value_get_uuid(const CassValue* value, CassUuid* output) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
   if (value->type() != CASS_VALUE_TYPE_UUID &&
       value->type() != CASS_VALUE_TYPE_TIMEUUID) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  memcpy(output, value->buffer().data(), sizeof(CassUuid));
+  cass::decode_uuid(value->buffer().data(), output);
   return CASS_OK;
 }
 
@@ -143,7 +143,7 @@ CassValueType cass_value_secondary_sub_type(const CassValue* collection) {
 namespace cass {
 
 bool Value::is_collection(CassValueType t) {
-  switch(t) {
+  switch (t) {
     case CASS_VALUE_TYPE_LIST:
     case CASS_VALUE_TYPE_MAP:
     case CASS_VALUE_TYPE_SET:

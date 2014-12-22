@@ -1,17 +1,28 @@
 /*
-  Copyright (c) 2014 DataStax
+  This is free and unencumbered software released into the public domain.
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  Anyone is free to copy, modify, publish, use, compile, sell, or
+  distribute this software, either in source code form or as a compiled
+  binary, for any purpose, commercial or non-commercial, and by any
+  means.
 
-  http://www.apache.org/licenses/LICENSE-2.0
+  In jurisdictions that recognize copyright laws, the author or authors
+  of this software dedicate any and all copyright interest in the
+  software to the public domain. We make this dedication for the benefit
+  of the public at large and to the detriment of our heirs and
+  successors. We intend this dedication to be an overt act of
+  relinquishment in perpetuity of all present and future rights to this
+  software under copyright law.
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+  IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+  OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+  OTHER DEALINGS IN THE SOFTWARE.
+
+  For more information, please refer to <http://unlicense.org/>
 */
 
 #include <assert.h>
@@ -35,18 +46,14 @@ CassCluster* create_cluster() {
   return cluster;
 }
 
-CassError connect_session(CassCluster* cluster, CassSession** output) {
+CassError connect_session(CassSession* session, const CassCluster* cluster) {
   CassError rc = CASS_OK;
-  CassFuture* future = cass_cluster_connect(cluster);
-
-  *output = NULL;
+  CassFuture* future = cass_session_connect(session, cluster);
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
   if (rc != CASS_OK) {
     print_error(future);
-  } else {
-    *output = cass_future_get_session(future);
   }
   cass_future_free(future);
 
@@ -72,7 +79,7 @@ CassError execute_query(CassSession* session, const char* query) {
   return rc;
 }
 
-void insert_into_paging(CassSession* session, const char* key) {
+void insert_into_paging(CassSession* session, CassUuidGen* uuid_gen) {
   CassError rc = CASS_OK;
   CassString query = cass_string_init("INSERT INTO paging (key, value) VALUES (?, ?);");
 
@@ -84,7 +91,7 @@ void insert_into_paging(CassSession* session, const char* key) {
     char value_buffer[256];
     CassStatement* statement = cass_statement_new(query, 2);
 
-    cass_uuid_generate_time(key);
+    cass_uuid_gen_time(uuid_gen, &key);
     cass_statement_bind_uuid(statement, 0, key);
 
     sprintf(value_buffer, "%u", (unsigned int)i);
@@ -130,19 +137,19 @@ void select_from_paging(CassSession* session) {
 
     while (cass_iterator_next(iterator)) {
       CassUuid key;
-      char key_buffer[CASS_UUID_STRING_LENGTH];
+      char key_str[CASS_UUID_STRING_LENGTH];
       CassString value;
       char value_buffer[256];
 
       const CassRow* row = cass_iterator_get_row(iterator);
-      cass_value_get_uuid(cass_row_get_column(row, 0), key);
-      cass_uuid_string(key, key_buffer);
+      cass_value_get_uuid(cass_row_get_column(row, 0), &key);
+      cass_uuid_string(key, key_str);
 
       cass_value_get_string(cass_row_get_column(row, 1), &value);
       memcpy(value_buffer, value.data, value.length);
       value_buffer[value.length] = '\0';
 
-      printf("key: '%s' value: '%s'\n", key_buffer, value_buffer);
+      printf("key: '%s' value: '%s'\n", key_str, value_buffer);
     }
 
     has_more_pages = cass_result_has_more_pages(result);
@@ -159,13 +166,14 @@ void select_from_paging(CassSession* session) {
 }
 
 int main() {
-  CassError rc = CASS_OK;
+  CassUuidGen* uuid_gen = cass_uuid_gen_new();
   CassCluster* cluster = create_cluster();
-  CassSession* session = NULL;
+  CassSession* session = cass_session_new();
   CassFuture* close_future = NULL;
 
-  rc = connect_session(cluster, &session);
-  if (rc != CASS_OK) {
+  if (connect_session(session, cluster) != CASS_OK) {
+    cass_cluster_free(cluster);
+    cass_session_free(session);
     return -1;
   }
 
@@ -181,13 +189,16 @@ int main() {
 
   execute_query(session, "USE examples");
 
-  insert_into_paging(session, "test");
+  insert_into_paging(session, uuid_gen);
   select_from_paging(session);
 
   close_future = cass_session_close(session);
   cass_future_wait(close_future);
   cass_future_free(close_future);
+
+  cass_uuid_gen_free(uuid_gen);
   cass_cluster_free(cluster);
+  cass_session_free(session);
 
   return 0;
 }

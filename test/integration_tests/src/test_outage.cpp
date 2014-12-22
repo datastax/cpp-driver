@@ -61,7 +61,7 @@ struct OutageTests : public test_utils::MultipleNodesTest {
     : test_utils::MultipleNodesTest(NUM_NODES, 0)
     , is_done(false)
     , timer(io_service) {
-    cass_cluster_set_log_level(cluster, CASS_LOG_DEBUG);
+    test_utils::CassLog::set_output_log_level(CASS_LOG_DEBUG);
     printf("Warning! This test is going to take %d minutes\n", TEST_DURATION_SECS / 60);
     std::fill(nodes_states, nodes_states + NUM_NODES, UP);
     // TODO(mpenick): This is a stopgap. To be fixed in CPP-140
@@ -90,18 +90,18 @@ struct OutageTests : public test_utils::MultipleNodesTest {
       cass_future_wait(future.get());
 
       CassError code = cass_future_error_code(future.get());
-      if(code != CASS_OK
+      if (code != CASS_OK
          && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT
          && code != CASS_ERROR_SERVER_READ_TIMEOUT) { // Timeout is okay
         CassString message = cass_future_error_message(future.get());
-        fprintf(stderr, "Error occured during select '%.*s'\n", static_cast<int>(message.length), message.data);
+        fprintf(stderr, "Error occurred during select '%.*s'\n", static_cast<int>(message.length), message.data);
         is_done = true;
         return false;
       }
 
-      if(code == CASS_OK) {
+      if (code == CASS_OK) {
         test_utils::CassResultPtr result(cass_future_get_result(future.get()));
-        if(cass_result_row_count(result.get()) == 0) {
+        if (cass_result_row_count(result.get()) == 0) {
           fprintf(stderr, "No rows returned from query\n");
           is_done = true;
           return false;
@@ -151,7 +151,7 @@ struct OutageTests : public test_utils::MultipleNodesTest {
           }
         }
       }
-    } else if(NUM_NODES - num_up > 0){
+    } else if (NUM_NODES - num_up > 0){
       int n = random_int(1, NUM_NODES - num_up);
       for (size_t i = 0; i < NUM_NODES; ++i) {
         if (nodes_states[i] == DOWN || nodes_states[i] == REMOVED) {
@@ -176,37 +176,37 @@ struct OutageTests : public test_utils::MultipleNodesTest {
     timer.async_wait(boost::bind(&OutageTests::handle_timeout, this, _1));
   }
 
+  bool execute_insert(CassSession* session, const std::string& table_name) {
+    std::string query = str(boost::format("INSERT INTO %s (id, event_time, text_sample) VALUES (?, ?, ?)") % table_name);
+
+    test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init2(query.data(), query.size()), 3));
+
+    boost::chrono::system_clock::time_point now(boost::chrono::system_clock::now());
+    boost::chrono::milliseconds event_time(boost::chrono::duration_cast<boost::chrono::milliseconds>(now.time_since_epoch()));
+    std::string text_sample(test_utils::string_from_time_point(now));
+
+    cass_statement_bind_uuid(statement.get(), 0, test_utils::generate_time_uuid(uuid_gen));
+    cass_statement_bind_int64(statement.get(), 1, event_time.count());
+    cass_statement_bind_string(statement.get(), 2, cass_string_init2(text_sample.data(), text_sample.size()));
+
+    test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
+    cass_future_wait(future.get());
+    CassError code = cass_future_error_code(future.get());
+    if (code != CASS_OK && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT) { // Timeout is okay
+      CassString message = cass_future_error_message(future.get());
+      fprintf(stderr, "Error occurred during insert '%.*s'\n", static_cast<int>(message.length), message.data);
+      return false;
+    }
+
+    return true;
+  }
+
   NodeState nodes_states[NUM_NODES];
   boost::atomic<bool> is_done;
   boost::asio::io_service io_service;
   boost::asio::deadline_timer timer;
   boost::mt19937 rng;
 };
-
-bool execute_insert(CassSession* session, const std::string& table_name) {
-  std::string query = str(boost::format("INSERT INTO %s (id, event_time, text_sample) VALUES (?, ?, ?)") % table_name);
-
-  test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init2(query.data(), query.size()), 3));
-
-  boost::chrono::system_clock::time_point now(boost::chrono::system_clock::now());
-  boost::chrono::milliseconds event_time(boost::chrono::duration_cast<boost::chrono::milliseconds>(now.time_since_epoch()));
-  std::string text_sample(test_utils::string_from_time_point(now));
-
-  cass_statement_bind_uuid(statement.get(), 0, test_utils::generate_time_uuid().uuid);
-  cass_statement_bind_int64(statement.get(), 1, event_time.count());
-  cass_statement_bind_string(statement.get(), 2, cass_string_init2(text_sample.data(), text_sample.size()));
-
-  test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
-  cass_future_wait(future.get());
-  CassError code = cass_future_error_code(future.get());
-  if(code != CASS_OK && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT) { // Timeout is okay
-    CassString message = cass_future_error_message(future.get());
-    fprintf(stderr, "Error occured during insert '%.*s'\n", static_cast<int>(message.length), message.data);
-    return false;
-  }
-
-  return true;
-}
 
 
 BOOST_FIXTURE_TEST_SUITE(outage, OutageTests)
@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE(test)
   test_utils::execute_query(session.get(), "CREATE KEYSPACE test WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 3};");
   test_utils::execute_query(session.get(), "USE test;");
 
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_TABLE_TIME_SERIES) % table_name));
 

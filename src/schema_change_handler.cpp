@@ -40,7 +40,6 @@ SchemaChangeHandler::SchemaChangeHandler(Connection* connection,
                                          Response* response,
                                          uint64_t elapsed)
   : MultipleRequestHandler(connection)
-  , logger_(connection->logger())
   , request_handler_(request_handler)
   , request_response_(response)
   , start_ms_(get_time_since_epoch_ms())
@@ -67,8 +66,8 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
       current_version = boost::string_ref(v->buffer().data(), v->buffer().size());
     }
   } else {
-    logger_->debug("SchemaChangeHandler: No row found in %s's local system table",
-                   connection()->address_string().c_str());
+    LOG_DEBUG("No row found in %s's local system table",
+              connection()->address_string().c_str());
   }
 
   ResultResponse* peers_result =
@@ -81,8 +80,7 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
 
     Address address;
     bool is_valid_address
-        = ControlConnection::determine_address_for_peer_host(logger_,
-                                                             connection()->address(),
+        = ControlConnection::determine_address_for_peer_host(connection()->address(),
                                                              row->get_by_name("peer"),
                                                              row->get_by_name("rpc_address"),
                                                              &address);
@@ -107,27 +105,27 @@ void SchemaChangeHandler::on_set(const ResponseVec& responses) {
   bool has_error = false;
   for (MultipleRequestHandler::ResponseVec::const_iterator it = responses.begin(),
        end = responses.end(); it != end; ++it) {
-    if (check_error_or_invalid_response("SchemaChangeHandler", CQL_OPCODE_RESULT,
-                                        *it, logger_)) {
+    if (check_error_or_invalid_response("SchemaChangeHandler", CQL_OPCODE_RESULT, *it)) {
       has_error = true;
     }
   }
   if (has_error) return;
 
   if (has_schema_agreement(responses)) {
-    logger_->debug("SchemaChangeHandler: Found schema agreement in %llu ms", elapsed_ms_);
+    LOG_DEBUG("Found schema agreement in %llu ms",
+              static_cast<unsigned long long>(elapsed_ms_));
     request_handler_->set_response(request_response_);
     return;
   } else if (elapsed_ms_ >= MAX_SCHEMA_AGREEMENT_WAIT_MS) {
-    logger_->warn("SchemaChangeHandler: No schema aggreement on live nodes after %llu ms. "
-                  "Schema may not be up-to-date on some nodes.",
-                  elapsed_ms_);
+    LOG_WARN("No schema agreement on live nodes after %llu ms. "
+             "Schema may not be up-to-date on some nodes.",
+             static_cast<unsigned long long>(elapsed_ms_));
     request_handler_->set_response(request_response_);
     return;
   }
 
-  logger_->debug("SchemaChangeHandler: Schema still not up-to-date on some live nodes. "
-                 "Trying again in %d ms", RETRY_SCHEMA_AGREEMENT_WAIT_MS);
+  LOG_DEBUG("Schema still not up-to-date on some live nodes. "
+            "Trying again in %d ms", RETRY_SCHEMA_AGREEMENT_WAIT_MS);
 
   // Try again
   SharedRefPtr<SchemaChangeHandler> handler(
@@ -141,19 +139,19 @@ void SchemaChangeHandler::on_set(const ResponseVec& responses) {
 
 void SchemaChangeHandler::on_error(CassError code, const std::string& message) {
   std::ostringstream ss;
-  ss << "SchemaChangeHandler: An error occured waiting for schema agreement: '" << message
+  ss << "An error occurred waiting for schema agreement: '" << message
      << "' (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << code << ")";
-  logger_->error(ss.str().c_str());
+  LOG_ERROR("%s", ss.str().c_str());
   request_handler_->set_response(request_response_);
 }
 
 void SchemaChangeHandler::on_timeout() {
-  logger_->error("SchemaChangeHandler: A timeout occured waiting for schema agreement");
+  LOG_ERROR("A timeout occurred waiting for schema agreement");
   request_handler_->set_response(request_response_);
 }
 
 void SchemaChangeHandler::on_closing() {
-  logger_->warn("SchemaChangeHandler: Connection closed while waiting for schema agreement");
+  LOG_WARN("Connection closed while waiting for schema agreement");
   request_handler_->set_response(request_response_);
 }
 

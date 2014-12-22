@@ -31,37 +31,37 @@ bool EventResponse::decode(int version, char* buffer, size_t size) {
     pos = decode_string_ref(pos, &topology_change);
     if (topology_change == "NEW_NODE") {
       topology_change_ = NEW_NODE;
-    } else if(topology_change == "REMOVED_NODE") {
+    } else if (topology_change == "REMOVED_NODE") {
       topology_change_ = REMOVED_NODE;
-    } else if(topology_change == "MOVED_NODE") {
+    } else if (topology_change == "MOVED_NODE") {
       topology_change_ = MOVED_NODE;
     } else {
       return false;
     }
     decode_inet(pos, &affected_node_);
-  } else if(event_type == "STATUS_CHANGE") {
+  } else if (event_type == "STATUS_CHANGE") {
     event_type_ = CASS_EVENT_STATUS_CHANGE;
 
     boost::string_ref status_change;
     pos = decode_string_ref(pos, &status_change);
     if (status_change == "UP") {
       status_change_ = UP;
-    } else if(status_change == "DOWN") {
+    } else if (status_change == "DOWN") {
       status_change_ = DOWN;
     } else {
       return false;
     }
     decode_inet(pos, &affected_node_);
-  } else if(event_type == "SCHEMA_CHANGE") {
+  } else if (event_type == "SCHEMA_CHANGE") {
     event_type_ = CASS_EVENT_SCHEMA_CHANGE;
 
     boost::string_ref schema_change;
     pos = decode_string_ref(pos, &schema_change);
     if (schema_change == "CREATED") {
       schema_change_ = CREATED;
-    } else if(schema_change == "UPDATED") {
+    } else if (schema_change == "UPDATED") {
       schema_change_ = UPDATED;
-    } else if(schema_change == "DROPPED") {
+    } else if (schema_change == "DROPPED") {
       schema_change_ = DROPPED;
     } else {
       return false;

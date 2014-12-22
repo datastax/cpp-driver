@@ -57,7 +57,7 @@ struct TestSSL {
    */
   const cql::cql_ccm_bridge_configuration_t& configuration_;
   /**
-   * CCM bridge instance for performing additonal operations against cluster
+   * CCM bridge instance for performing additional operations against cluster
    */
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm_;
   /**
@@ -94,7 +94,7 @@ struct TestSSL {
    */
   std::string invalid_cassandra_certificate_;
   /**
-   * Incalid client/driver certificate
+   * Invalid client/driver certificate
    */
   std::string invalid_driver_certificate_;
   /**
@@ -138,7 +138,7 @@ struct TestSSL {
    *                                 (default: false)
    * @param is_failure True if test is supposed to fail; false otherwise
    *                   (default: false)
-   * @param nodes Number of nodes for the cluser (default: 1)
+   * @param nodes Number of nodes for the cluster (default: 1)
    * @param protocol_version Protocol version to use for connection (default: 2)
    */
   void setup(bool is_ssl = true, bool is_client_authentication = false, bool is_failure = false, unsigned int nodes = 1, unsigned int protocol_version = 2) {
@@ -147,7 +147,6 @@ struct TestSSL {
 
     //Initialize the cpp-driver
     cluster_ = cass_cluster_new();
-    //cass_cluster_set_log_level(cluster_, CASS_LOG_TRACE);
     test_utils::initialize_contact_points(cluster_, configuration_.ip_prefix(), nodes, 0);
     cass_cluster_set_connect_timeout(cluster_, 10000);
     cass_cluster_set_request_timeout(cluster_, 10000);
@@ -156,14 +155,12 @@ struct TestSSL {
     cass_cluster_set_ssl(cluster_, ssl_);
 
     //Establish the connection (if ssl)
-    connect_future_ = cass_cluster_connect(cluster_);
+    session_ = cass_session_new();
+    connect_future_ = cass_session_connect(session_, cluster_);
     if (!is_failure) {
       test_utils::wait_and_check_error(connect_future_);
-      session_ = cass_future_get_session(connect_future_);
     } else {
-      //FIXME: When CPP-179 is completed remove timeout and ccm command as connection failure validation
       BOOST_REQUIRE(!cass_future_wait_timed(connect_future_, 2000)); //Ensure the wait is long enough for slow machines
-      ccm_->stop(); //Forces connection to be lost for proper test teardown
     }
   }
 
@@ -179,9 +176,7 @@ struct TestSSL {
    */
   void cleanup() {
     if (session_) {
-      CassFuture* close_future = cass_session_close(session_);
-      cass_future_wait(close_future);
-      cass_future_free(close_future);
+      cass_session_free(session_);
       session_ = NULL;
     }
 
@@ -230,8 +225,8 @@ struct TestSSL {
 
       test_utils::CassResultPtr result;
       test_utils::execute_query(session_, str(boost::format("SELECT * FROM normal_load WHERE key = %d") % n), &result);
-      BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 4);
-      BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1);
+      BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 4u);
+      BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1u);
 
       const CassRow* row = cass_result_first_row(result.get());
       const CassValue* value;
@@ -285,8 +280,8 @@ struct TestSSL {
 
       test_utils::CassResultPtr result;
       test_utils::execute_query(session_, str(boost::format("SELECT * FROM high_load WHERE key = %d") % n), &result);
-      BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 4);
-      BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1);
+      BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 4u);
+      BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1u);
 
       const CassRow* row = cass_result_first_row(result.get());
       const CassValue* value;
@@ -362,7 +357,7 @@ BOOST_AUTO_TEST_CASE(connect_failures) {
   //Load invalid certificates
   create_ssl_context();
   BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, cass_string_init("Invalid Client Certificate")), CASS_ERROR_SSL_INVALID_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init("Inavlid Trusted Certificate")), CASS_ERROR_SSL_INVALID_CERT);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init("Invalid Trusted Certificate")), CASS_ERROR_SSL_INVALID_CERT);
   BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, cass_string_init("Invalid Private Key"), "invalid"), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
   BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, cass_string_init2(driver_private_key_.data(), driver_private_key_.size()), "invalid"), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
 

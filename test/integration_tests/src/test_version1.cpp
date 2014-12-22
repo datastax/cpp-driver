@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(batch_error)
 
   test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
 
-  for(int x = 0; x < 4; x++)
+  for (int x = 0; x < 4; x++)
   {
     std::string insert_query = str(boost::format("INSERT INTO test (key, value) VALUES(%d, %d);") % x % x);
     test_utils::CassStatementPtr insert_statement(cass_statement_new(cass_string_init(insert_query.c_str()), 0));

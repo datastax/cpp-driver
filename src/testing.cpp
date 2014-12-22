@@ -17,6 +17,8 @@
 #include "testing.hpp"
 
 #include "address.hpp"
+#include "get_time.hpp"
+#include "logger.hpp"
 #include "murmur3.hpp"
 #include "result_response.hpp"
 #include "schema_metadata.hpp"
@@ -71,6 +73,14 @@ CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* schema, const st
 
 int64_t create_murmur3_hash_from_string(const std::string &value) {
   return MurmurHash3_x64_128(value.data(), value.size(), 0);
+}
+
+bool is_log_flushed() {
+  return Logger::is_flushed();
+}
+
+uint64_t get_time_since_epoch_in_ms() {
+  return cass::get_time_since_epoch_ms();
 }
 
 } // namespace cass

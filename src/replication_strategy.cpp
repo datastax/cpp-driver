@@ -17,6 +17,7 @@
 #include "replication_strategy.hpp"
 
 #include "common.hpp"
+#include "logger.hpp"
 #include "map_iterator.hpp"
 #include "token_map.hpp"
 
@@ -161,7 +162,7 @@ SimpleStrategy::SimpleStrategy(const std::string& strategy_class,
   , replication_factor_(0) {
   replication_factor_ = get_replication_factor(strategy_options);
   if (replication_factor_ == 0) {
-    // TODO: Global logging
+    LOG_WARN("Replication factor of 0");
   }
 }
 
@@ -182,7 +183,7 @@ void SimpleStrategy::tokens_to_replicas(const TokenHostMap& primary, TokenReplic
       if (j == primary.end()) {
         j = primary.begin();
       }
-    } while(token_replicas->size() < target_replicas);
+    } while (token_replicas->size() < target_replicas);
     output->insert(std::make_pair(i->first, token_replicas));
   }
 }

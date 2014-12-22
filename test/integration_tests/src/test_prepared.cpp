@@ -42,7 +42,7 @@
 #endif
 
 struct AllTypes {
-  test_utils::Uuid id;
+  CassUuid id;
   CassString text_sample;
   cass_int32_t int_sample;
   cass_int64_t bigint_sample;
@@ -108,7 +108,7 @@ BOOST_FIXTURE_TEST_SUITE(prepared, PreparedTests)
 void insert_all_types(CassSession* session, const CassPrepared* prepared, const AllTypes& all_types) {
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared));
 
-  cass_statement_bind_uuid(statement.get(), 0, all_types.id.uuid);
+  cass_statement_bind_uuid(statement.get(), 0, all_types.id);
   cass_statement_bind_string(statement.get(), 1, all_types.text_sample);
   cass_statement_bind_int32(statement.get(), 2, all_types.int_sample);
   cass_statement_bind_int64(statement.get(), 3, all_types.bigint_sample);
@@ -183,7 +183,7 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
   const size_t all_types_count = 3;
   AllTypes all_types[all_types_count];
 
-  all_types[0].id = test_utils::generate_time_uuid();
+  all_types[0].id = test_utils::generate_time_uuid(uuid_gen);
   all_types[0].text_sample = cass_string_init("first");
   all_types[0].int_sample = 10;
   all_types[0].bigint_sample = std::numeric_limits<int64_t>::max()  - 1L;
@@ -195,7 +195,7 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
   all_types[0].timestamp_sample = 1123200000;
   all_types[0].inet_sample = cass_inet_init_v4(address1);
 
-  all_types[1].id = test_utils::generate_time_uuid();
+  all_types[1].id = test_utils::generate_time_uuid(uuid_gen);
   all_types[1].text_sample = cass_string_init("second");
   all_types[1].int_sample = 0;
   all_types[1].bigint_sample = 0L;
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
   all_types[1].timestamp_sample = 0;
   all_types[1].inet_sample = cass_inet_init_v4(address2);
 
-  all_types[2].id = test_utils::generate_time_uuid();
+  all_types[2].id = test_utils::generate_time_uuid(uuid_gen);
   all_types[2].text_sample = cass_string_init("third");
   all_types[2].int_sample = -100;
   all_types[2].bigint_sample = std::numeric_limits<int64_t>::min() + 1;
@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
   all_types[2].timestamp_sample = -13462502400;
   all_types[2].inet_sample = cass_inet_init_v4(address3);
 
-  for(size_t i = 0; i < all_types_count; ++i) {
+  for (size_t i = 0; i < all_types_count; ++i) {
     insert_all_types(session, prepared.get(), all_types[i]);
   }
 
@@ -239,12 +239,12 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
 
   test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
 
-  while(cass_iterator_next(iterator.get())) {
+  while (cass_iterator_next(iterator.get())) {
     const CassRow* row = cass_iterator_get_row(iterator.get());
     CassUuid id;
-    cass_value_get_uuid(cass_row_get_column(row, 0), id);
-    for(size_t i = 0; i < all_types_count; ++i) {
-      if(test_utils::Value<CassUuid>::equal(id, all_types[i].id)) {
+    cass_value_get_uuid(cass_row_get_column(row, 0), &id);
+    for (size_t i = 0; i < all_types_count; ++i) {
+      if (test_utils::Value<CassUuid>::equal(id, all_types[i].id)) {
         compare_all_types(all_types[i], row);
       }
     }
@@ -265,7 +265,7 @@ BOOST_AUTO_TEST_CASE(bound_all_types_null_values)
 
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
 
-  test_utils::Uuid id = test_utils::generate_time_uuid();
+  CassUuid id = test_utils::generate_time_uuid(uuid_gen);
 
   cass_statement_bind_uuid(statement.get(), 0, id);
   cass_statement_bind_null(statement.get(), 1);
@@ -296,22 +296,22 @@ BOOST_AUTO_TEST_CASE(bound_all_types_null_values)
   BOOST_REQUIRE(cass_result_column_count(result.get()) == 11);
 
   const CassRow* row = cass_result_first_row(result.get());
-  test_utils::Uuid result_id;
-  BOOST_REQUIRE(cass_value_get_uuid(cass_row_get_column(row, 0), result_id) == CASS_OK);
+  CassUuid result_id;
+  BOOST_REQUIRE(cass_value_get_uuid(cass_row_get_column(row, 0), &result_id) == CASS_OK);
   BOOST_REQUIRE(test_utils::Value<CassUuid>::equal(id, result_id));
-  for(size_t i = 1; i < 11; ++i) {
+  for (size_t i = 1; i < 11; ++i) {
     BOOST_REQUIRE(cass_value_is_null(cass_row_get_column(row, i)));
   }
 }
 
 BOOST_AUTO_TEST_CASE(select_one)
 {
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   std::string create_table_query = str(boost::format("CREATE TABLE %s (tweet_id int PRIMARY KEY, numb double, label text);") % table_name);
 
   test_utils::execute_query(session, create_table_query);
 
-  for(int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 10; ++i) {
     std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, numb, label) VALUES(%d, 0.01,'row%d')") % table_name % i % i);
     test_utils::execute_query(session, insert_query);
   }
@@ -360,7 +360,7 @@ void execute_statement(CassSession* session, const CassPrepared* prepared, int v
 
 BOOST_AUTO_TEST_CASE(massive_number_of_prepares)
 {
-  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str());
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   std::string create_table_query = str(boost::format("CREATE TABLE %s (tweet_id uuid PRIMARY KEY, numb1 double, numb2 int);") % table_name);
   size_t number_of_prepares = 100;
 
@@ -369,9 +369,9 @@ BOOST_AUTO_TEST_CASE(massive_number_of_prepares)
 
   CONTAINER<boost::unique_future<CassPreparedMovable> > prepare_futures;
 
-  std::vector<test_utils::Uuid> tweet_ids;
-  for(size_t i = 0; i < number_of_prepares; ++i) {
-    test_utils::Uuid tweet_id = test_utils::generate_time_uuid();
+  std::vector<CassUuid> tweet_ids;
+  for (size_t i = 0; i < number_of_prepares; ++i) {
+    CassUuid tweet_id = test_utils::generate_time_uuid(uuid_gen);
     std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, numb1, numb2) VALUES (%s, ?, ?);") % table_name % test_utils::string_from_uuid(tweet_id));
     prepare_futures.push_back(boost::async(boost::launch::async, boost::bind(prepare_statement, session, insert_query)));
     tweet_ids.push_back(tweet_id);
@@ -379,7 +379,7 @@ BOOST_AUTO_TEST_CASE(massive_number_of_prepares)
 
   std::vector<boost::shared_future<void> > execute_futures;
   CONTAINER<CassPreparedMovable> prepares;
-  for(size_t i = 0; i < prepare_futures.size(); ++i) {
+  for (size_t i = 0; i < prepare_futures.size(); ++i) {
     CassPreparedMovable prepared = prepare_futures[i].get();
     execute_futures.push_back(boost::async(boost::launch::async, boost::bind(execute_statement, session, prepared.get(), i)).share());
     prepares.push_back(boost::move(prepared));
@@ -394,10 +394,10 @@ BOOST_AUTO_TEST_CASE(massive_number_of_prepares)
 
   test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
 
-  while(cass_iterator_next(iterator.get())) {
+  while (cass_iterator_next(iterator.get())) {
     const CassRow* row = cass_iterator_get_row(iterator.get());
-    test_utils::Uuid result_tweet_id;
-    cass_value_get_uuid(cass_row_get_column(row, 0), result_tweet_id.uuid);
+    CassUuid result_tweet_id;
+    cass_value_get_uuid(cass_row_get_column(row, 0), &result_tweet_id);
     BOOST_REQUIRE(std::find(tweet_ids.begin(), tweet_ids.end(), result_tweet_id) != tweet_ids.end());
   }
 }

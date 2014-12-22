@@ -30,6 +30,7 @@
 #include <assert.h>
 
 #include "common.hpp"
+#include "macros.hpp"
 
 #include <boost/atomic.hpp>
 #include <boost/type_traits/alignment_of.hpp>
@@ -43,36 +44,39 @@ public:
   typedef T EntryType;
 
   SPSCQueue(size_t size)
-      : _size(next_pow_2(size))
-      , _mask(_size - 1)
-      , _buffer(reinterpret_cast<T*>(
-            // need one extra element for a guard
-            new SPSCQueueAlignedEntry[_size + 1]))
-      , _head(0)
-      , _tail(0) {}
+      : size_(next_pow_2(size))
+      , mask_(size_ - 1)
+      , buffer_(reinterpret_cast<T*>(
+            new SPSCQueueAlignedEntry[size_]))
+      , tail_(0)
+      , head_(0) {}
 
-  ~SPSCQueue() { delete[] _buffer; }
+  ~SPSCQueue() { delete[] buffer_; }
 
   bool enqueue(const T& input) {
-    const size_t head = _head.load(boost::memory_order_relaxed);
-
-    if (((_tail.load(boost::memory_order_acquire) - (head + 1)) & _mask) >= 1) {
-      _buffer[head & _mask] = input;
-      _head.store(head + 1, boost::memory_order_release);
-      return true;
+    const size_t pos = tail_.load(boost::memory_order_relaxed);
+    const size_t next_pos = (pos + 1) & mask_;
+    if (next_pos == head_.load(boost::memory_order_acquire)) {
+      return false;
     }
-    return false;
+    buffer_[pos] = input;
+    tail_.store(next_pos, boost::memory_order_release);
+    return true;
   }
 
   bool dequeue(T& output) {
-    const size_t tail = _tail.load(boost::memory_order_relaxed);
-
-    if (((_head.load(boost::memory_order_acquire) - tail) & _mask) >= 1) {
-      output = _buffer[_tail & _mask];
-      _tail.store(tail + 1, boost::memory_order_release);
-      return true;
+    const size_t pos = head_.load(boost::memory_order_relaxed);
+    if (pos == tail_.load(boost::memory_order_acquire)) {
+      return false;
     }
-    return false;
+    output = buffer_[pos];
+    head_.store((pos + 1) & mask_, boost::memory_order_release);
+    return true;
+  }
+
+  bool is_empty() {
+    return head_.load(boost::memory_order_acquire) ==
+        tail_.load(boost::memory_order_acquire);
   }
 
 private:
@@ -81,19 +85,18 @@ private:
 
   typedef char cache_line_pad_t[64];
 
-  cache_line_pad_t _pad0;
-  const size_t _size;
-  const size_t _mask;
-  T* const _buffer;
+  cache_line_pad_t pad0_;
+  const size_t size_;
+  const size_t mask_;
+  T* const buffer_;
 
-  cache_line_pad_t _pad1;
-  boost::atomic<size_t> _head;
+  cache_line_pad_t pad1_;
+  boost::atomic<size_t> tail_;
 
-  cache_line_pad_t _pad2;
-  boost::atomic<size_t> _tail;
+  cache_line_pad_t pad2_;
+  boost::atomic<size_t> head_;
 
-  SPSCQueue(const SPSCQueue&) {}
-  void operator=(const SPSCQueue&) {}
+  DISALLOW_COPY_AND_ASSIGN(SPSCQueue);
 };
 
 } // namespace cass

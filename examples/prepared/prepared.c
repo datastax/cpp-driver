@@ -1,17 +1,28 @@
 /*
-  Copyright (c) 2014 DataStax
+  This is free and unencumbered software released into the public domain.
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  Anyone is free to copy, modify, publish, use, compile, sell, or
+  distribute this software, either in source code form or as a compiled
+  binary, for any purpose, commercial or non-commercial, and by any
+  means.
 
-  http://www.apache.org/licenses/LICENSE-2.0
+  In jurisdictions that recognize copyright laws, the author or authors
+  of this software dedicate any and all copyright interest in the
+  software to the public domain. We make this dedication for the benefit
+  of the public at large and to the detriment of our heirs and
+  successors. We intend this dedication to be an overt act of
+  relinquishment in perpetuity of all present and future rights to this
+  software under copyright law.
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+  IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+  OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+  OTHER DEALINGS IN THE SOFTWARE.
+
+  For more information, please refer to <http://unlicense.org/>
 */
 
 #include <assert.h>
@@ -42,18 +53,14 @@ CassCluster* create_cluster() {
   return cluster;
 }
 
-CassError connect_session(CassCluster* cluster, CassSession** output) {
+CassError connect_session(CassSession* session, const CassCluster* cluster) {
   CassError rc = CASS_OK;
-  CassFuture* future = cass_cluster_connect(cluster);
-
-  *output = NULL;
+  CassFuture* future = cass_session_connect(session, cluster);
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
-  } else {
-    *output = cass_future_get_session(future);
   }
   cass_future_free(future);
 
@@ -68,7 +75,7 @@ CassError execute_query(CassSession* session, const char* query) {
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 
@@ -98,7 +105,7 @@ CassError insert_into_basic(CassSession* session, const char* key, const Basic* 
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 
@@ -117,7 +124,7 @@ CassError prepare_select_from_basic(CassSession* session, const CassPrepared** p
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   } else {
     *prepared = cass_future_get_prepared(future);
@@ -141,13 +148,13 @@ CassError select_from_basic(CassSession* session, const CassPrepared * prepared,
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   } else {
     const CassResult* result = cass_future_get_result(future);
     CassIterator* iterator = cass_iterator_from_result(result);
 
-    if(cass_iterator_next(iterator)) {
+    if (cass_iterator_next(iterator)) {
       const CassRow* row = cass_iterator_get_row(iterator);
 
       cass_value_get_bool(cass_row_get_column(row, 1), &basic->bln);
@@ -168,16 +175,16 @@ CassError select_from_basic(CassSession* session, const CassPrepared * prepared,
 }
 
 int main() {
-  CassError rc = CASS_OK;
   CassCluster* cluster = create_cluster();
-  CassSession* session = NULL;
+  CassSession* session = cass_session_new();
   CassFuture* close_future = NULL;
   Basic input = { cass_true, 0.001f, 0.0002, 1, 2 };
   Basic output;
   const CassPrepared* prepared = NULL;
 
-  rc = connect_session(cluster, &session);
-  if(rc != CASS_OK) {
+  if (connect_session(session, cluster) != CASS_OK) {
+    cass_cluster_free(cluster);
+    cass_session_free(session);
     return -1;
   }
 
@@ -195,7 +202,7 @@ int main() {
 
   insert_into_basic(session, "prepared_test", &input);
 
-  if(prepare_select_from_basic(session, &prepared) == CASS_OK) {
+  if (prepare_select_from_basic(session, &prepared) == CASS_OK) {
     select_from_basic(session, prepared, "prepared_test", &output);
 
     assert(input.bln == output.bln);
@@ -209,7 +216,9 @@ int main() {
   close_future = cass_session_close(session);
   cass_future_wait(close_future);
   cass_future_free(close_future);
+
   cass_cluster_free(cluster);
+  cass_session_free(session);
 
   return 0;
 }

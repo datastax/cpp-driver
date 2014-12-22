@@ -21,6 +21,7 @@
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/asio/ip/address.hpp>
+#include <boost/atomic.hpp>
 #include <boost/chrono.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/mutex.hpp>
@@ -39,6 +40,21 @@
 #undef max
 #endif
 
+inline bool operator<(const CassUuid& u1, const CassUuid& u2) {
+  return u1.clock_seq_and_node < u2.clock_seq_and_node ||
+         u1.time_and_version < u2.time_and_version;
+}
+
+inline bool operator==(const CassUuid& u1, const CassUuid& u2) {
+  return u1.clock_seq_and_node == u2.clock_seq_and_node &&
+         u1.time_and_version == u2.time_and_version;
+}
+
+inline bool operator!=(const CassUuid& u1, const CassUuid& u2) {
+  return u1.clock_seq_and_node != u2.clock_seq_and_node ||
+         u1.time_and_version != u2.time_and_version;
+}
+
 namespace cql {
 
 class cql_ccm_bridge_t;
@@ -51,29 +67,48 @@ namespace test_utils {
 extern const cass_duration_t ONE_MILLISECOND_IN_MICROS;
 extern const cass_duration_t ONE_SECOND_IN_MICROS;
 
-struct LogData : public boost::basic_lockable_adapter<boost::mutex> {
-  LogData(const std::string& message, bool output_messages = false)
-    : message(message)
-    , message_count(0)
-    , output_messages(output_messages) {}
 
-  void reset(const std::string& msg) {
-    boost::lock_guard<LogData> l(*this);
-    message = msg;
-    message_count = 0;
+class CassLog{
+public:
+  CassLog() {
+    // Set the maximum log level we'll just ignore anthing
+    // that's not relevant.
+    cass_log_set_level(CASS_LOG_TRACE);
+    cass_log_set_callback(CassLog::callback, &CassLog::log_data_);
   }
 
-  boost::mutex m;
-  std::string message;
-  size_t message_count;
-  bool output_messages;
+  static void reset(const std::string& msg) {
+    log_data_.reset(msg);
+  }
 
+  static size_t message_count();
+
+  static void set_output_log_level(CassLogLevel log_level) {
+    log_data_.output_log_level = log_level;
+  }
+
+private:
+  struct LogData : public boost::basic_lockable_adapter<boost::mutex> {
+    LogData()
+      : message_count(0)
+      , output_log_level(CASS_LOG_DISABLED) {}
+
+    void reset(const std::string& msg) {
+      boost::lock_guard<LogData> l(*this);
+      message = msg;
+      message_count = 0;
+    }
+
+    boost::mutex m;
+    std::string message;
+    size_t message_count;
+    CassLogLevel output_log_level;
+  };
+
+  static void callback(const CassLogMessage* message, void* data);
+
+  static LogData log_data_;
 };
-
-void count_message_log_callback(cass_uint64_t time,
-                                CassLogLevel severity,
-                                CassString message,
-                                void* data);
 
 template<class T>
 struct Deleter;
@@ -91,9 +126,7 @@ template<>
 struct Deleter<CassSession> {
   void operator()(CassSession* ptr) {
     if (ptr != NULL) {
-      CassFuture* future = cass_session_close(ptr);
-      cass_future_wait(future);
-      cass_future_free(future);
+      cass_session_free(ptr);
     }
   }
 };
@@ -161,10 +194,19 @@ struct Deleter<CassBatch> {
   }
 };
 
+template<>
+struct Deleter<CassUuidGen> {
+  void operator()(CassUuidGen* ptr) {
+    if (ptr != NULL) {
+      cass_uuid_gen_free(ptr);
+    }
+  }
+};
+
 template <class T>
 class CassSharedPtr : public boost::shared_ptr<T> {
 public:
-  CassSharedPtr(T* ptr = NULL)
+  explicit CassSharedPtr(T* ptr = NULL)
     : boost::shared_ptr<T>(ptr, Deleter<T>()) {}
 };
 
@@ -177,6 +219,7 @@ typedef CassSharedPtr<CassIterator> CassIteratorPtr;
 typedef CassSharedPtr<CassCollection> CassCollectionPtr;
 typedef CassSharedPtr<const CassPrepared> CassPreparedPtr;
 typedef CassSharedPtr<CassBatch> CassBatchPtr;
+typedef CassSharedPtr<CassUuidGen> CassUuidGenPtr;
 
 template<class T>
 struct Value;
@@ -323,7 +366,7 @@ struct Value<CassString> {
   }
 
   static bool equal(CassString a, CassString b) {
-    if(a.length != b.length) {
+    if (a.length != b.length) {
       return false;
     }
     return strncmp(a.data, b.data, a.length) == 0;
@@ -345,7 +388,7 @@ struct Value<CassBytes> {
   }
 
   static bool equal(CassBytes a, CassBytes b) {
-    if(a.size != b.size) {
+    if (a.size != b.size) {
       return false;
     }
     return memcmp(a.data, b.data, a.size) == 0;
@@ -367,7 +410,7 @@ struct Value<CassInet> {
   }
 
   static bool equal(CassInet a, CassInet b) {
-    if(a.address_length != b.address_length) {
+    if (a.address_length != b.address_length) {
       return false;
     }
     return memcmp(a.address, b.address, a.address_length) == 0;
@@ -399,11 +442,26 @@ struct Value<CassUuid> {
   }
 
   static CassError get(const CassValue* value, CassUuid* output) {
-    return cass_value_get_uuid(value, *output);
+    return cass_value_get_uuid(value, output);
   }
 
   static bool equal(CassUuid a, CassUuid b) {
-    return memcmp(a, b, sizeof(CassUuid)) == 0;
+    return a.clock_seq_and_node == b.clock_seq_and_node &&
+           a.time_and_version == b.time_and_version;
+  }
+
+  static CassUuid min_value() {
+    CassUuid value;
+    value.clock_seq_and_node = 0;
+    value.time_and_version = 0;
+    return value;
+  }
+
+  static CassUuid max_value() {
+    CassUuid value;
+    value.clock_seq_and_node = std::numeric_limits<cass_uint64_t>::max();
+    value.time_and_version = std::numeric_limits<cass_uint64_t>::max();
+    return value;
   }
 };
 
@@ -422,60 +480,15 @@ struct Value<CassDecimal> {
   }
 
   static bool equal(CassDecimal a, CassDecimal b) {
-    if(a.scale != b.scale) {
+    if (a.scale != b.scale) {
       return false;
     }
-    if(a.varint.size != b.varint.size) {
+    if (a.varint.size != b.varint.size) {
       return false;
     }
     return memcmp(a.varint.data, b.varint.data, a.varint.size) == 0;
   }
 };
-
-// Simple wrapper to allow CassUuid to be added to STL containers
-struct Uuid {
-  CassUuid uuid;
-  operator cass_uint8_t*() { return uuid; }
-};
-
-template<>
-struct Value<Uuid> {
-  static CassError bind(CassStatement* statement, cass_size_t index, Uuid value) {
-    return cass_statement_bind_uuid(statement, index, value.uuid);
-  }
-
-  static CassError append(CassCollection* collection, Uuid value) {
-    return cass_collection_append_uuid(collection, value.uuid);
-  }
-
-  static CassError get(const CassValue* value, Uuid* output) {
-    return cass_value_get_uuid(value, output->uuid);
-  }
-
-  static bool equal(Uuid a, Uuid b) {
-    return memcmp(a.uuid, b.uuid, sizeof(CassUuid)) == 0;
-  }
-
-  static Uuid min_value() {
-    Uuid value;
-    memset(value.uuid, 0x0, sizeof(value.uuid));
-    return value;
-  }
-
-  static Uuid max_value() {
-    Uuid value;
-    memset(value.uuid, 0xF, sizeof(value.uuid));
-    return value;
-  }
-};
-
-inline bool operator==(Uuid a, Uuid b) {
-  return test_utils::Value<Uuid>::equal(a, b);
-}
-
-inline bool operator<(Uuid a, Uuid b) {
-  return memcmp(a.uuid, b.uuid, sizeof(CassUuid)) < 0;
-}
 
 /**
  * Cassandra release version number
@@ -508,10 +521,11 @@ struct MultipleNodesTest {
 
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
   const cql::cql_ccm_bridge_configuration_t& conf;
+  CassUuidGen* uuid_gen;
   CassCluster* cluster;
 };
 
-struct SingleSessionTest : MultipleNodesTest {
+struct SingleSessionTest : public MultipleNodesTest {
   SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 2, bool isSSL = false);
   virtual ~SingleSessionTest();
   void create_session();
@@ -532,17 +546,20 @@ const char* get_column_type(CassColumnType type);
 
 const char* get_value_type(CassValueType type);
 
-CassSessionPtr create_session(CassCluster* cluster);
+CassSessionPtr create_session(CassCluster* cluster, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
+CassSessionPtr create_session(CassCluster* cluster, CassError* code, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
 
 CassError execute_query_with_error(CassSession* session,
                                    const std::string& query,
                                    CassResultPtr* result = NULL,
-                                   CassConsistency consistency = CASS_CONSISTENCY_ONE);
+                                   CassConsistency consistency = CASS_CONSISTENCY_ONE,
+                                   cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
 
 void execute_query(CassSession* session,
                    const std::string& query,
                    CassResultPtr* result = NULL,
-                   CassConsistency consistency = CASS_CONSISTENCY_ONE);
+                   CassConsistency consistency = CASS_CONSISTENCY_ONE,
+                   cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
 
 CassError wait_and_return_error(CassFuture* future, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
 void wait_and_check_error(CassFuture* future, cass_duration_t timeout = 10 * ONE_SECOND_IN_MICROS);
@@ -565,21 +582,21 @@ inline CassDecimal decimal_from_scale_and_bytes(cass_int32_t scale, CassBytes by
   return decimal;
 }
 
-inline Uuid generate_time_uuid() {
-  Uuid uuid;
-  cass_uuid_generate_time(uuid.uuid);
+inline CassUuid generate_time_uuid(CassUuidGen* uuid_gen) {
+  CassUuid uuid;
+  cass_uuid_gen_time(uuid_gen, &uuid);
   return uuid;
 }
 
-inline Uuid generate_random_uuid() {
-  Uuid uuid;
-  cass_uuid_generate_random(uuid.uuid);
+inline CassUuid generate_random_uuid(CassUuidGen* uuid_gen) {
+  CassUuid uuid;
+  cass_uuid_gen_random(uuid_gen, &uuid);
   return uuid;
 }
 
-inline std::string generate_unique_str() {
-  Uuid uuid;
-  cass_uuid_generate_time(uuid.uuid);
+inline std::string generate_unique_str(CassUuidGen* uuid_gen) {
+  CassUuid uuid;
+  cass_uuid_gen_time(uuid_gen, &uuid);
   char buffer[CASS_UUID_STRING_LENGTH];
   cass_uuid_string(uuid, buffer);
   return boost::replace_all_copy(std::string(buffer), "-", "");
@@ -635,9 +652,9 @@ inline bool operator==(CassString a, CassString b) {
 }
 
 inline bool operator<(CassString a, CassString b) {
-  if(a.length > b.length) {
+  if (a.length > b.length) {
     return false;
-  } else if(a.length < b.length) {
+  } else if (a.length < b.length) {
     return true;
   }
   return strncmp(a.data, b.data, a.length) < 0;
@@ -648,9 +665,9 @@ inline bool operator==(CassBytes a, CassBytes b) {
 }
 
 inline bool operator<(CassBytes a, CassBytes b) {
-  if(a.size > b.size) {
+  if (a.size > b.size) {
     return false;
-  } else if(a.size < b.size) {
+  } else if (a.size < b.size) {
     return true;
   }
   return memcmp(a.data, b.data, a.size) < 0;
@@ -661,9 +678,9 @@ inline bool operator==(CassInet a, CassInet b) {
 }
 
 inline bool operator<(CassInet a, CassInet b) {
-  if(a.address_length > b.address_length) {
+  if (a.address_length > b.address_length) {
     return false;
-  } else if(a.address_length < b.address_length) {
+  } else if (a.address_length < b.address_length) {
     return true;
   }
   return memcmp(a.address, b.address, a.address_length) < 0;
@@ -676,14 +693,14 @@ inline bool operator==(CassDecimal a, CassDecimal b) {
 inline bool operator<(CassDecimal a, CassDecimal b) {
   // TODO: This might not be exactly correct, but should work
   // for testing
-  if(a.scale > b.scale) {
+  if (a.scale > b.scale) {
     return false;
-  } else if(a.scale < b.scale) {
+  } else if (a.scale < b.scale) {
     return true;
   }
-  if(a.varint.size > b.varint.size) {
+  if (a.varint.size > b.varint.size) {
     return false;
-  } else if(a.varint.size < b.varint.size) {
+  } else if (a.varint.size < b.varint.size) {
     return true;
   }
   return memcmp(a.varint.data, b.varint.data, a.varint.size) < 0;

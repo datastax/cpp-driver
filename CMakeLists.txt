@@ -19,6 +19,10 @@ set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${P
 
 set(CASS_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
 
+if(NOT WIN32)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLOG_FILE_='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
+endif()
+
 if(32BIT)
   set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS FALSE)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
@@ -183,7 +187,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedefs")
   endif()
 
-  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Werror")
+  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Wno-variadic-macros -Werror")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.3" OR
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.3")
     set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
@@ -197,7 +201,7 @@ else()
   # I disabled long-long warning because boost generates about 50 such warnings
   set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
 
-  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Werror")
+  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Wno-variadic-macros -Werror")
   set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 ${WARNING_COMPILER_FLAGS}")
 endif()
@@ -326,13 +330,6 @@ add_custom_target(UNINSTALL
 #-------------------
 
 if(CASS_BUILD_TESTS)
-  # Create a testing option for directives that change intended driver functionality
-  option(CASS_USE_TESTING_DIRECTIVE "Use testing directive" OFF)
-  if(CASS_USE_TESTING_DIRECTIVE)
-    message(warning, "Disable testing directive before using the driver in a production environment")
-    add_definitions(-DTESTING_DIRECTIVE)
-  endif()
-
   if(WIN32)
     set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/")
   endif()
@@ -367,6 +364,7 @@ if(CASS_BUILD_EXAMPLES)
   add_subdirectory(examples/bind_by_name)
   add_subdirectory(examples/callbacks)
   add_subdirectory(examples/collections)
+  add_subdirectory(examples/logging)
   add_subdirectory(examples/maps)
   add_subdirectory(examples/prepared)
   add_subdirectory(examples/uuids)

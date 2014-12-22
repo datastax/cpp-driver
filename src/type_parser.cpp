@@ -120,9 +120,9 @@ TypeDescriptor TypeParser::parse_types(bool is_reversed) {
   bool list_open = false;
   size_t i;
 
-  while(index_ < type_buffer_.size() &&
+  while (index_ < type_buffer_.size() &&
         (i = type_buffer_.find_first_of(",() ", index_)) != std::string::npos) {
-    switch(type_buffer_[i]) {
+    switch (type_buffer_[i]) {
       case ' ':
         ++index_;
         break;

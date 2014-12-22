@@ -19,10 +19,10 @@
 
 #include "async_queue.hpp"
 #include "cassandra.h"
-#include "config.hpp"
 #include "get_time.hpp"
 #include "loop_thread.hpp"
 #include "mpmc_queue.hpp"
+#include "scoped_ptr.hpp"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -30,104 +30,137 @@
 
 namespace cass {
 
-class Logger : public LoopThread {
+class Logger {
 public:
-  Logger(const Config& config)
-      : data_(config.log_data())
-      , cb_(config.log_callback())
-      , log_level_(config.log_level())
-      , log_queue_(config.queue_size_log()) {}
+  static void set_log_level(CassLogLevel level);
+  static void set_queue_size(size_t queue_size);
+  static void set_callback(CassLogCallback cb, void* data);
 
-  int init() { return log_queue_.init(loop(), this, on_log); }
+  static void init();
+  static void cleanup();
 
-  void close_async() {
-    while (!log_queue_.enqueue(NULL)) {
-      // Keep trying
-    }
+#if defined(__GNUC__) || defined(__clang__)
+#define ATTR_FORMAT(string, first) __attribute__((__format__(__printf__, string, first)))
+#else
+#define ATTR_FORMAT(string , first)
+#endif
+
+#define LOG_METHOD(name, severity)                                   \
+  ATTR_FORMAT(4, 5)                                                  \
+  static void name(const char* file, int line, const char* function, \
+                   const char* format, ...) {                        \
+    if (severity <= log_level_) {                                    \
+      va_list args;                                                  \
+      va_start(args, format);                                        \
+      thread_->log(severity, file, line, function, format, args);    \
+      va_end(args);                                                  \
+    }                                                                \
   }
 
-#define LOG_MESSAGE(severity)    \
-  if (severity <= log_level_) {  \
-    va_list args;                \
-    va_start(args, format);      \
-    log(severity, format, args); \
-    va_end(args);                \
-  }
-
-  void critical(const char* format, ...) { LOG_MESSAGE(CASS_LOG_CRITICAL); }
-
-  void error(const char* format, ...) { LOG_MESSAGE(CASS_LOG_ERROR); }
-
-  void warn(const char* format, ...) { LOG_MESSAGE(CASS_LOG_WARN); }
-
-  void info(const char* format, ...) { LOG_MESSAGE(CASS_LOG_INFO); }
-
-  void debug(const char* format, ...) { LOG_MESSAGE(CASS_LOG_DEBUG); }
-
-  void trace(const char* format, ...) { LOG_MESSAGE(CASS_LOG_TRACE); }
+  LOG_METHOD(critical_, CASS_LOG_CRITICAL)
+  LOG_METHOD(error_, CASS_LOG_ERROR)
+  LOG_METHOD(warn_, CASS_LOG_WARN)
+  LOG_METHOD(info_, CASS_LOG_INFO)
+  LOG_METHOD(debug_, CASS_LOG_DEBUG)
+  LOG_METHOD(trace_, CASS_LOG_TRACE)
 
 #undef LOG_MESSAGE
+#undef ATTR_FORMAT
+
+  // Testing only
+  static bool is_flushed() { return thread_->is_flushed(); }
 
 private:
-  struct LogMessage {
-    uint64_t time;
-    CassLogLevel severity;
-    std::string message;
+  class LogThread : public LoopThread {
+  public:
+    LogThread(size_t queue_size);
+    ~LogThread();
+
+    void log(CassLogLevel severity,
+             const char* file, int line, const char* function,
+             const char* format, va_list args);
+    bool is_flushed() const { return log_queue_.is_empty(); }
+
+  private:
+    static void on_log(uv_async_t* async, int status);
+
+    bool has_been_warned_;
+    AsyncQueue<MPMCQueue<CassLogMessage> > log_queue_;
   };
 
-  void close() { log_queue_.close_handles(); }
+private:
+  static void internal_init();
 
-  std::string format_message(const char* format, va_list args) {
-    char buffer[1024];
-    int n = vsnprintf(buffer, sizeof(buffer), format, args);
-    return std::string(buffer, n);
-  }
+  static CassLogLevel log_level_;
+  static CassLogCallback cb_;
+  static void* data_;
+  static size_t queue_size_;
+  static ScopedPtr<LogThread> thread_;
 
-  void log(CassLogLevel severity, const char* format, va_list args) {
-    LogMessage* log_message = new LogMessage;
-    log_message->time = get_time_since_epoch_ms();
-    log_message->severity = severity;
-    log_message->message = format_message(format, args);
-    if(!log_queue_.enqueue(log_message)) {
-      fprintf(stderr, "Exceeded logging queue max size\n");
-      CassString message = cass_string_init2(log_message->message.data(),
-                                             log_message->message.size());
-      cb_(log_message->time, log_message->severity, message, data_);
-      delete log_message;
-    }
-  }
-
-  static void on_log(uv_async_t* async, int status) {
-    Logger* logger = static_cast<Logger*>(async->data);
-
-    bool is_closing = false;
-
-    LogMessage* log_message;
-    while (logger->log_queue_.dequeue(log_message)) {
-      if (log_message != NULL) {
-        if (log_message->severity != CASS_LOG_DISABLED) {
-          CassString message = cass_string_init2(log_message->message.data(),
-                                                 log_message->message.size());
-          logger->cb_(log_message->time, log_message->severity,
-                      message, logger->data_);
-        }
-        delete log_message;
-      } else {
-        is_closing = true;
-      }
-    }
-
-    if (is_closing) {
-      logger->close();
-    }
-  }
-
-  void* data_;
-  CassLogCallback cb_;
-  CassLogLevel log_level_;
-  AsyncQueue<MPMCQueue<LogMessage*> > log_queue_;
+  Logger(); // Keep this object from being created
 };
 
 } // namespace cass
+
+// These macros allow the LOG_<level>() methods to accept one or more
+// arguments (including the format string). This needs to be extended
+// if using greater than 20 arguments. The first macro alway returns
+// the first argument. The second macro returns the rest of the arguments
+// if the number of variadic arguments is greater than one.
+#define LOG_FIRST_(...) LOG_FIRST_HELPER_(__VA_ARGS__, throwaway)
+#define LOG_FIRST_HELPER_(format, ...) format
+#define LOG_REST_(...) LOG_REST_HELPER_(LOG_NUM_ARGS_(__VA_ARGS__), __VA_ARGS__)
+#define LOG_REST_HELPER_(num, ...) LOG_REST_HELPER2_(num, __VA_ARGS__)
+#define LOG_REST_HELPER2_(num, ...) LOG_REST_HELPER_##num##_(__VA_ARGS__)
+#define LOG_REST_HELPER_ONE_(first)
+#define LOG_REST_HELPER_TWOORMORE_(first, ...) , __VA_ARGS__
+#define LOG_SELECT_20TH_(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, \
+  a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, ...) a20
+#define LOG_NUM_ARGS_(...) LOG_SELECT_20TH_(__VA_ARGS__, \
+  TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE,            \
+  TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE,            \
+  TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE,            \
+  TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE,            \
+  TWOORMORE, TWOORMORE, ONE, throwaway)
+
+// Using __FILE__ returns the whole absolute path of the file, this
+// allows something more concise to be used via -DLOG_FILE_=<path>
+#ifndef LOG_FILE_
+#define LOG_FILE_ __FILE__
+#endif
+
+#if defined(_MSC_VER)
+#  define LOG_FUNCTION_ __FUNCSIG__
+#elif defined(__clang__) || defined(__GNUC__) || defined(__INTEL_COMPILER)
+#  define LOG_FUNCTION_ __PRETTY_FUNCTION__
+#elif defined(__func__)
+#  define LOG_FUNCTION_ __func__
+#else
+#  define LOG_FUNCTION_ ""
+#endif
+
+#define LOG_CRITICAL(...) Logger::critical_(       \
+  LOG_FILE_, __LINE__, LOG_FUNCTION_,              \
+  LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__))
+
+#define LOG_ERROR(...) Logger::error_(             \
+  LOG_FILE_, __LINE__, LOG_FUNCTION_,              \
+  LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__))
+
+#define LOG_WARN(...) Logger::warn_(               \
+  LOG_FILE_, __LINE__, LOG_FUNCTION_,              \
+  LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__))
+
+#define LOG_INFO(...) Logger::info_(              \
+  LOG_FILE_, __LINE__, LOG_FUNCTION_,             \
+  LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__))
+
+#define LOG_DEBUG(...) Logger::debug_(            \
+  LOG_FILE_, __LINE__, LOG_FUNCTION_,             \
+  LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__))
+
+#define LOG_TRACE(...) Logger::trace_(             \
+  LOG_FILE_, __LINE__, LOG_FUNCTION_,              \
+  LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__))
 
 #endif

@@ -19,6 +19,8 @@
 
 #include "common.hpp"
 
+#include <boost/atomic.hpp>
+
 #include <uv.h>
 
 namespace cass {
@@ -27,9 +29,7 @@ template <typename Q>
 class AsyncQueue {
 public:
   AsyncQueue(size_t queue_size)
-      : queue_(queue_size) {
-    async_.data = this;
-  }
+      : queue_(queue_size) {}
 
   int init(uv_loop_t* loop, void* data, uv_async_cb async_cb) {
     async_.data = data;
@@ -53,6 +53,9 @@ public:
   }
 
   bool dequeue(typename Q::EntryType& data) { return queue_.dequeue(data); }
+
+  // Testing only
+  bool is_empty() const { return queue_.is_empty(); }
 
 private:
   uv_async_t async_;

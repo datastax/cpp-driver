@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CONNECTER_HPP_INCLUDED__
-#define __CASS_CONNECTER_HPP_INCLUDED__
+#ifndef __CASS_CONNECTOR_HPP_INCLUDED__
+#define __CASS_CONNECTOR_HPP_INCLUDED__
 
 #include <uv.h>
 
@@ -25,9 +25,9 @@
 
 namespace cass {
 
-class Connecter {
+class Connector {
 public:
-  typedef boost::function1<void, Connecter*> Callback;
+  typedef boost::function1<void, Connector*> Callback;
 
   enum Status { CONNECTING, FAILED, SUCCESS };
 
@@ -37,7 +37,7 @@ public:
 
   static void connect(uv_tcp_t* handle, const Address& address, void* data,
                       Callback cb) {
-    Connecter* connecter = new Connecter(address, data, cb);
+    Connector* connecter = new Connector(address, data, cb);
 
     int rc = 0;
     if (address.family() == AF_INET) {
@@ -57,7 +57,7 @@ public:
 
 private:
   static void on_connect(uv_connect_t* req, int status) {
-    Connecter* connecter = static_cast<Connecter*>(req->data);
+    Connector* connecter = static_cast<Connector*>(req->data);
     if (status != 0) {
       connecter->status_ = FAILED;
     } else {
@@ -68,7 +68,7 @@ private:
   }
 
 private:
-  Connecter(const Address& address, void* data, Callback cb)
+  Connector(const Address& address, void* data, Callback cb)
       : address_(address)
       , data_(data)
       , cb_(cb)
@@ -76,7 +76,7 @@ private:
     req_.data = this;
   }
 
-  ~Connecter() {}
+  ~Connector() {}
 
   uv_connect_t req_;
   Address address_;

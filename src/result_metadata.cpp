@@ -64,7 +64,7 @@ ResultMetadata::ResultMetadata(size_t column_count) {
 
 
 size_t ResultMetadata::get(boost::string_ref name,
-                     ResultMetadata::IndexVec* result) const{
+                           ResultMetadata::IndexVec* result) const{
   result->clear();
   bool is_case_sensitive = false;
 
@@ -93,12 +93,12 @@ size_t ResultMetadata::get(boost::string_ref name,
   }
 
   if (!is_case_sensitive) {
-    while(def != NULL) {
+    while (def != NULL) {
       result->push_back(def->index);
       def = def->next;
     }
   } else {
-    while(def != NULL) {
+    while (def != NULL) {
       if (name.compare(boost::string_ref(def->name, def->name_size)) == 0) {
         result->push_back(def->index);
       }
@@ -130,7 +130,7 @@ void ResultMetadata::insert(ColumnDefinition& def) {
       index_[h] = &defs_.back();
     } else {
       ColumnDefinition* curr = index_[h];
-      while(curr->next != NULL) {
+      while (curr->next != NULL) {
         curr = curr->next;
       }
       curr->next = &defs_.back();

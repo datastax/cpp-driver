@@ -17,10 +17,11 @@
 #include "session.hpp"
 
 #include "config.hpp"
+#include "logger.hpp"
 #include "prepare_request.hpp"
 #include "request_handler.hpp"
 #include "resolver.hpp"
-#include "round_robin_policy.hpp"
+#include "scoped_lock.hpp"
 #include "timer.hpp"
 #include "types.hpp"
 
@@ -28,9 +29,36 @@
 
 extern "C" {
 
+CassSession* cass_session_new() {
+  return CassSession::to(new cass::Session());
+}
+
+void cass_session_free(CassSession* session) {
+  // This attempts to close the session because the joining will
+  // hang indefinately otherwise. This causes minimal delay
+  // if the session is already closed.
+  cass::SharedRefPtr<cass::Future> future(new cass::SessionFuture());
+  session->close_async(future.get(), true);
+  future->wait();
+
+  delete session->from();
+}
+
+CassFuture* cass_session_connect(CassSession* session, const CassCluster* cluster) {
+  return cass_session_connect_keyspace(session, cluster, "");
+}
+
+CassFuture* cass_session_connect_keyspace(CassSession* session,
+                                          const CassCluster* cluster,
+                                          const char* keyspace) {
+  cass::SessionFuture* connect_future = new cass::SessionFuture();
+  connect_future->inc_ref();
+  session->connect_async(cluster->config(), std::string(keyspace), connect_future);
+  return CassFuture::to(connect_future);
+}
+
 CassFuture* cass_session_close(CassSession* session) {
-  // TODO(mpenick): Make sure this handles close during the middle of a connect
-  cass::SessionCloseFuture* close_future = new cass::SessionCloseFuture(session);
+  cass::SessionFuture* close_future = new cass::SessionFuture();
   close_future->inc_ref();
   session->close_async(close_future);
   return CassFuture::to(close_future);
@@ -57,31 +85,48 @@ const CassSchema* cass_session_get_schema(CassSession* session) {
 
 namespace cass {
 
-Session::Session(const Config& config)
-    : config_(config)
-    , logger_(new Logger(config))
-    , close_future_(NULL)
+Session::Session()
+    : state_(SESSION_STATE_CLOSED)
     , current_host_mark_(true)
-    , load_balancing_policy_(config.load_balancing_policy())
     , pending_resolve_count_(0)
     , pending_pool_count_(0)
     , pending_workers_count_(0)
-    , current_io_worker_(0) {}
+    , current_io_worker_(0) {
+  uv_mutex_init(&state_mutex_);
+}
+
+Session::~Session() {
+  join();
+  uv_mutex_destroy(&state_mutex_);
+}
+
+void Session::clear(const Config& config) {
+  config_ = config;
+  load_balancing_policy_.reset(config.load_balancing_policy());
+  connect_future_.reset();
+  close_future_.reset();
+  hosts_.clear();
+  io_workers_.clear();
+  request_queue_.reset();
+  cluster_meta_.clear();
+  control_connection_.clear();
+  current_host_mark_ = true;
+  pending_resolve_count_ = 0;
+  pending_pool_count_ = 0;
+  pending_workers_count_ = 0;
+  current_io_worker_ = 0;
+}
 
 int Session::init() {
-  int rc = logger_->init();
-  if (rc != 0) return rc;
-  rc = cluster_meta_.init();
-  if (rc != 0) return rc;
-  rc = EventThread<SessionEvent>::init(config_.queue_size_event());
+  int rc = EventThread<SessionEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
   request_queue_.reset(
       new AsyncQueue<MPMCQueue<RequestHandler*> >(config_.queue_size_io()));
   rc = request_queue_->init(loop(), this, &Session::on_execute);
   if (rc != 0) return rc;
 
-  unsigned num_threads = config_.thread_count_io();
-  if(num_threads == 0) {
+  unsigned int num_threads = config_.thread_count_io();
+  if (num_threads == 0) {
     num_threads = 1; // Default if we can't determine the number of cores
     uv_cpu_info_t* cpu_infos;
     int cpu_count;
@@ -91,7 +136,7 @@ int Session::init() {
     }
   }
 
-  for (unsigned i = 0; i < num_threads; ++i) {
+  for (unsigned int i = 0; i < num_threads; ++i) {
     SharedRefPtr<IOWorker> io_worker(new IOWorker(this));
     int rc = io_worker->init();
     if (rc != 0) return rc;
@@ -124,7 +169,7 @@ SharedRefPtr<Host> Session::get_host(const Address& address, bool should_mark) {
 }
 
 SharedRefPtr<Host> Session::add_host(const Address& address, bool should_mark) {
-  logger_->debug("Session: Adding new host: %s", address.to_string().c_str());
+  LOG_DEBUG("Adding new host: %s", address.to_string().c_str());
 
   bool mark = should_mark ? current_host_mark_ : !current_host_mark_;
   SharedRefPtr<Host> host(new Host(address, mark));
@@ -140,12 +185,10 @@ void Session::purge_hosts(bool is_initial_connection) {
 
       std::string address_str = to_remove_it->first.to_string();
       if (is_initial_connection) {
-        logger_->warn("Session: Unable to reach contact point %s",
-                      address_str.c_str());
+        LOG_WARN("Unable to reach contact point %s", address_str.c_str());
         hosts_.erase(to_remove_it);
       } else {
-        logger_->info("Session: Host %s removed",
-                      address_str.c_str());
+        LOG_WARN("Host %s removed", address_str.c_str());
         on_remove(to_remove_it->second);
       }
     } else {
@@ -161,9 +204,9 @@ bool Session::notify_ready_async() {
   return send_event_async(event);
 }
 
-bool Session::notify_closed_async() {
+bool Session::notify_worker_closed_async() {
   SessionEvent event;
-  event.type = SessionEvent::NOTIFY_CLOSED;
+  event.type = SessionEvent::NOTIFY_WORKER_CLOSED;
   return send_event_async(event);
 }
 
@@ -182,47 +225,109 @@ bool Session::notify_down_async(const Address& address, bool is_critical_failure
   return send_event_async(event);
 }
 
-bool Session::connect_async(const std::string& keyspace, Future* future) {
+void Session::connect_async(const Config& config, const std::string& keyspace, Future* future) {
+  ScopedMutex l(&state_mutex_);
+
+  if (state_ != SESSION_STATE_CLOSED) {
+    future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT,
+                      "Already connecting, connected or closed");
+    return;
+  }
+
+  clear(config);
+
   if (init() != 0) {
-    return false;
+    future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT,
+                      "Error initializing session");
+    return;
   }
 
   SessionEvent event;
   event.type = SessionEvent::CONNECT;
+
   if (!send_event_async(event)) {
-    return false;
+    future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT,
+                      "Unable to enqueue connected event");
+    return;
   }
 
-  logger_->debug("Session: issued connect event");
+  LOG_DEBUG("Issued connect event");
+
+  state_ = SESSION_STATE_CONNECTING;
+  connect_future_.reset(future);
 
   if (!keyspace.empty()) {
     broadcast_keyspace_change(keyspace, NULL);
   }
 
-  connect_future_.reset(future);
+  // If this is a reconnect then the old thread needs to be
+  // joined before creating a new thread.
+  join();
 
   run();
-
-  return true;
 }
 
-void Session::close_async(Future* future) {
-  assert(future != NULL);
-  close_future_ = future;
-  while (!request_queue_->enqueue(NULL)) {
-    // Keep trying
+void Session::close_async(Future* future, bool force) {
+  ScopedMutex l(&state_mutex_);
+
+  bool wait_for_connect_to_finish = (force && state_ == SESSION_STATE_CONNECTING);
+  if (state_ != SESSION_STATE_CONNECTED && !wait_for_connect_to_finish) {
+    future->set_error(CASS_ERROR_LIB_UNABLE_TO_CLOSE,
+                      "Already closing or closed");
+    return;
   }
-  logger_->debug("Session: issued shutdown");
+
+  state_ = SESSION_STATE_CLOSING;
+  close_future_.reset(future);
+
+  if (!wait_for_connect_to_finish) {
+    internal_close();
+  }
 }
 
 void Session::internal_connect() {
   if (hosts_.empty()) {
-    connect_future_->set_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                               "No hosts provided or no hosts resolved");
-    connect_future_.reset();
+    notify_connect_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                         "No hosts provided or no hosts resolved");
     return;
   }
   control_connection_.connect(this);
+}
+
+void Session::internal_close() {
+  while (!request_queue_->enqueue(NULL)) {
+    // Keep trying
+  }
+
+  LOG_DEBUG("Issued close");
+}
+
+void Session::notify_connected() {
+  ScopedMutex l(&state_mutex_);
+  if (state_ == SESSION_STATE_CONNECTING) {
+    state_ = SESSION_STATE_CONNECTED;
+  } else { // We recieved a 'force' close event
+    internal_close();
+  }
+  connect_future_->set();
+  connect_future_.reset();
+}
+
+void Session::notify_connect_error(CassError code, const std::string& message) {
+  ScopedMutex l(&state_mutex_);
+  state_ = SESSION_STATE_CLOSING;
+  internal_close();
+  connect_future_->set_error(code, message);
+  connect_future_.reset();
+}
+
+void Session::notify_closed() {
+  ScopedMutex l(&state_mutex_);
+  state_ = SESSION_STATE_CLOSED;
+  if (close_future_) {
+    close_future_->set();
+    close_future_.reset();
+  }
 }
 
 void Session::close_handles() {
@@ -231,9 +336,9 @@ void Session::close_handles() {
 }
 
 void Session::on_run() {
-  if (config_.log_level() != CASS_LOG_DISABLED) {
-    logger_->run();
-  }
+  LOG_INFO("Creating %u IO worker threads",
+           static_cast<unsigned int>(io_workers_.size()));
+
   for (IOWorkerVec::iterator it = io_workers_.begin(), end = io_workers_.end();
        it != end; ++it) {
     (*it)->run();
@@ -245,8 +350,7 @@ void Session::on_after_run() {
        it != end; ++it) {
     (*it)->join();
   }
-  logger_->join();
-  close_future_->set();
+  notify_closed();
 }
 
 void Session::on_event(const SessionEvent& event) {
@@ -278,17 +382,16 @@ void Session::on_event(const SessionEvent& event) {
     case SessionEvent::NOTIFY_READY:
       if (pending_pool_count_ > 0) {
         if (--pending_pool_count_ == 0) {
-          logger_->debug("Session is connected");
-          connect_future_->set();
-          connect_future_.reset();
+          LOG_DEBUG("Session is connected");
+          notify_connected();
         }
-        logger_->debug("Session pending pool count %d", pending_pool_count_);
+        LOG_DEBUG("Session pending pool count %d", pending_pool_count_);
       }
       break;
 
-    case SessionEvent::NOTIFY_CLOSED:
+    case SessionEvent::NOTIFY_WORKER_CLOSED:
       if (--pending_workers_count_ == 0) {
-        logger_->close_async();
+        LOG_DEBUG("Session is disconnected");
         control_connection_.close();
         close_handles();
       }
@@ -315,8 +418,8 @@ void Session::on_resolve(Resolver* resolver) {
     session->hosts_[address]
         = SharedRefPtr<Host>(new Host(address, !session->current_host_mark_));
   } else {
-    session->logger_->error("Unable to resolve host %s:%d\n",
-                            resolver->host().c_str(), resolver->port());
+    LOG_ERROR("Unable to resolve host %s:%d\n",
+              resolver->host().c_str(), resolver->port());
   }
   if (--session->pending_resolve_count_ == 0) {
     session->internal_connect();
@@ -331,7 +434,7 @@ void Session::execute(RequestHandler* request_handler) {
 }
 
 void Session::on_control_connection_ready() {
-  load_balancing_policy_->init(hosts_);
+  load_balancing_policy_->init(control_connection_.connected_host(), hosts_);
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
     (*it)->set_protocol_version(control_connection_.protocol_version());
@@ -340,19 +443,14 @@ void Session::on_control_connection_ready() {
        it != hosts_end; ++it) {
     on_add(it->second, true);
   }
-  if (config().core_connections_per_host() > 0) {
-    pending_pool_count_ = hosts_.size() * io_workers_.size();
-  } else {
+  if (config().core_connections_per_host() == 0) {
     // Special case for internal testing. Not allowed by API
-    logger_->debug("Session connected with no core IO connections");
-    connect_future_->set();
-    connect_future_.reset();
+    LOG_DEBUG("Session connected with no core IO connections");
   }
 }
 
 void Session::on_control_connection_error(CassError code, const std::string& message) {
-  connect_future_->set_error(code, message);
-  connect_future_.reset();
+  notify_connect_error(code, message);
 }
 
 Future* Session::prepare(const char* statement, size_t length) {
@@ -373,12 +471,15 @@ Future* Session::prepare(const char* statement, size_t length) {
 
 void Session::on_add(SharedRefPtr<Host> host, bool is_initial_connection) {
   host->set_up();
-  if (!is_initial_connection) {
-    load_balancing_policy_->on_add(host);
-  }
 
   if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
     return;
+  }
+
+  if (is_initial_connection) {
+    pending_pool_count_ += io_workers_.size();
+  } else {
+    load_balancing_policy_->on_add(host);
   }
 
   for (IOWorkerVec::iterator it = io_workers_.begin(),
@@ -393,7 +494,7 @@ void Session::on_remove(SharedRefPtr<Host> host) {
   hosts_.erase(host->address());
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
-    (*it)->remove_pool_async(host->address());
+    (*it)->remove_pool_async(host->address(), true);
   }
 }
 
@@ -411,14 +512,16 @@ void Session::on_down(SharedRefPtr<Host> host, bool is_critical_failure) {
   host->set_down();
   load_balancing_policy_->on_down(host);
 
+  bool cancel_reconnect = false;
   if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE ||
       is_critical_failure) {
-    // This permanently removes a host from all IO workers and stops
+    // This permanently removes a host from all IO workers by stopping
     // any attempt to reconnect to that host.
-    for (IOWorkerVec::iterator it = io_workers_.begin(),
-         end = io_workers_.end(); it != end; ++it) {
-      (*it)->remove_pool_async(host->address());
-    }
+    cancel_reconnect = true;
+  }
+  for (IOWorkerVec::iterator it = io_workers_.begin(),
+       end = io_workers_.end(); it != end; ++it) {
+    (*it)->remove_pool_async(host->address(), cancel_reconnect);
   }
 }
 
@@ -442,17 +545,16 @@ void Session::on_execute(uv_async_t* data, int status) {
   RequestHandler* request_handler = NULL;
   while (session->request_queue_->dequeue(request_handler)) {
     if (request_handler != NULL) {
-
       request_handler->set_query_plan(session->new_query_plan(request_handler->request()));
 
       bool is_done = false;
-      while(!is_done) {
+      while (!is_done) {
         request_handler->next_host();
 
         Address address;
-        if(!request_handler->get_current_host_address(&address)) {
+        if (!request_handler->get_current_host_address(&address)) {
           request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                                    "No hosts available");
+                                    "Session: No hosts available");
           break;
         }
 
@@ -490,7 +592,5 @@ QueryPlan* Session::new_query_plan(const Request* request) {
   }
   return load_balancing_policy_->new_query_plan(connected_keyspace, request, cluster_meta_.token_map());
 }
-
-
 
 } // namespace cass

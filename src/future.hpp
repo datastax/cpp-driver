@@ -20,7 +20,7 @@
 #include "cassandra.h"
 #include "host.hpp"
 #include "macros.hpp"
-#include "scoped_mutex.hpp"
+#include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 #include "ref_counted.hpp"
 
@@ -35,8 +35,7 @@ namespace cass {
 struct Error;
 
 enum FutureType {
-  CASS_FUTURE_TYPE_SESSION_CONNECT,
-  CASS_FUTURE_TYPE_SESSION_CLOSE,
+  CASS_FUTURE_TYPE_SESSION,
   CASS_FUTURE_TYPE_RESPONSE
 };
 

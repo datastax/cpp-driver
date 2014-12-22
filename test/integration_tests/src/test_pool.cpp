@@ -39,9 +39,7 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
   reinterpret_cast<cass::Cluster*>(cluster)->config().set_core_connections_per_host(0);// bypassing API param check
 
   {
-    test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
-    test_utils::wait_and_check_error(connect_future.get());
-    test_utils::CassSessionPtr session = cass_future_get_session(connect_future.get());
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
     test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("SELECT * FROM system.local"), 0));
 
@@ -68,9 +66,7 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
     cass_cluster_set_pending_requests_low_water_mark(cluster, pending_low_wm);
     cass_cluster_set_pending_requests_high_water_mark(cluster, pending_high_wm);
 
-    test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
-    test_utils::wait_and_check_error(connect_future.get());
-    test_utils::CassSessionPtr session = cass_future_get_session(connect_future.get());
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
     test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("SELECT * FROM system.local"), 0));
 
@@ -80,7 +76,7 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
     size_t max_tries = 2*max_streams; // v[12] stream has 128 ids
     std::vector<test_utils::CassFuturePtr> futures;
     for (; tries < max_tries; ++tries) {
-      futures.push_back(cass_session_execute(session.get(), statement.get()));
+      futures.push_back(test_utils::CassFuturePtr(cass_session_execute(session.get(), statement.get())));
       if (cass_future_wait_timed(futures.back().get(), 1)) {
         BOOST_REQUIRE_EQUAL(cass_future_error_code(futures.back().get()), CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
         break;
@@ -99,12 +95,10 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
 
 BOOST_AUTO_TEST_CASE(connection_spawn)
 {
-  std::string SPAWN_MSG = "Pool: Spawning new conneciton to host " + conf.ip_prefix() + "1:9042";
-  boost::scoped_ptr<test_utils::LogData> log_data(new test_utils::LogData(SPAWN_MSG));
+  const std::string SPAWN_MSG = "Pool: Spawning new connection to host " + conf.ip_prefix() + "1:9042";
+  test_utils::CassLog::reset(SPAWN_MSG);
 
   test_utils::MultipleNodesTest inst(1, 0);
-  cass_cluster_set_log_level(cluster, CASS_LOG_INFO);
-  cass_cluster_set_log_callback(cluster, test_utils::count_message_log_callback, log_data.get());
   cass_cluster_set_num_threads_io(cluster, 1);
   cass_cluster_set_core_connections_per_host(cluster, 1);
   cass_cluster_set_max_connections_per_host(cluster, 2);
@@ -112,28 +106,24 @@ BOOST_AUTO_TEST_CASE(connection_spawn)
 
   // only one with no traffic
   {
-    test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
-    test_utils::wait_and_check_error(connect_future.get());
-    test_utils::CassSessionPtr session = cass_future_get_session(connect_future.get());
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
   }
-  BOOST_CHECK_EQUAL(log_data->message_count, 1);
+  BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 1u);
 
 
-  log_data->reset(SPAWN_MSG);
+  test_utils::CassLog::reset(SPAWN_MSG);
   // exactly two with traffic
   {
-    test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
-    test_utils::wait_and_check_error(connect_future.get());
-    test_utils::CassSessionPtr session = cass_future_get_session(connect_future.get());
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
     test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("SELECT * FROM system.local"), 0));
 
     // run a few to get concurrent requests
     std::vector<test_utils::CassFuturePtr> futures;
     for (size_t i = 0; i < 10; ++i) {
-      futures.push_back(cass_session_execute(session.get(), statement.get()));
+      futures.push_back(test_utils::CassFuturePtr(cass_session_execute(session.get(), statement.get())));
     }
   }
-  BOOST_CHECK_EQUAL(log_data->message_count, 2);
+  BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 2u);
 }
 BOOST_AUTO_TEST_SUITE_END()

@@ -21,7 +21,7 @@
 #include "pool.hpp"
 #include "request_handler.hpp"
 #include "session.hpp"
-#include "scoped_mutex.hpp"
+#include "scoped_lock.hpp"
 #include "timer.hpp"
 
 #include <boost/bind.hpp>
@@ -30,30 +30,29 @@ namespace cass {
 
 IOWorker::IOWorker(Session* session)
     : session_(session)
-    , logger_(session->logger())
     , config_(session->config())
     , is_closing_(false)
     , pending_request_count_(0)
     , request_queue_(config_.queue_size_io()) {
   prepare_.data = this;
+  uv_mutex_init(&keyspace_mutex_);
+  uv_mutex_init(&unavailable_addresses_mutex_);
 }
 
 IOWorker::~IOWorker() {
   uv_mutex_destroy(&keyspace_mutex_);
+  uv_mutex_destroy(&unavailable_addresses_mutex_);
 }
 
 int IOWorker::init() {
-  int rc = uv_mutex_init(&keyspace_mutex_);
-  if (rc != 0) return rc;
-  rc = uv_mutex_init(&unavailable_addresses_mutex_);
-  if (rc != 0) return rc;
-  rc = EventThread<IOWorkerEvent>::init(config_.queue_size_event());
+  int rc = EventThread<IOWorkerEvent>::init(config_.queue_size_event());
   if (rc != 0) return rc;
   rc = request_queue_.init(loop(), this, &IOWorker::on_execute);
   if (rc != 0) return rc;
   rc = uv_prepare_init(loop(), &prepare_);
   if (rc != 0) return rc;
   rc = uv_prepare_start(&prepare_, on_prepare);
+  if (rc != 0) return rc;
   return rc;
 }
 
@@ -111,10 +110,11 @@ bool IOWorker::add_pool_async(const Address& address, bool is_initial_connection
   return send_event_async(event);
 }
 
-bool IOWorker::remove_pool_async(const Address& address) {
+bool IOWorker::remove_pool_async(const Address& address, bool cancel_reconnect) {
   IOWorkerEvent event;
   event.type = IOWorkerEvent::REMOVE_POOL;
   event.address = address;
+  event.cancel_reconnect = cancel_reconnect;
   return send_event_async(event);
 }
 
@@ -126,8 +126,8 @@ void IOWorker::close_async() {
 
 void IOWorker::add_pool(const Address& address, bool is_initial_connection) {
   if (!is_closing_ && pools_.count(address) == 0) {
-    logger_->info("IOWorker: add_pool for host %s io_worker(%p)",
-                  address.to_string(true).c_str(), this);
+    LOG_INFO("Adding pool for host %s io_worker(%p)",
+             address.to_string(true).c_str(), static_cast<void*>(this));
 
     set_host_is_available(address, false);
 
@@ -149,7 +149,7 @@ void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
   Address address;
   if (!request_handler->get_current_host_address(&address)) {
     request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                              "No hosts available");
+                              "IOWorker: No hosts available");
     return;
   }
 
@@ -187,10 +187,10 @@ void IOWorker::notify_pool_closed(Pool* pool) {
   Address address = pool->address(); // Not a reference on purpose
   bool is_critical_failure = pool->is_critical_failure();
 
-  logger_->info("IOWorker: Pool for host %s closed: pool(%p) io_worker(%p)",
-                address.to_string().c_str(),
-                pool,
-                this);
+  LOG_INFO("Pool for host %s closed: pool(%p) io_worker(%p)",
+           address.to_string().c_str(),
+           static_cast<void*>(pool),
+           static_cast<void*>(this));
 
   // All non-shared pointers to this pool are invalid after this call
   // and it must be done before maybe_notify_closed().
@@ -220,14 +220,14 @@ void IOWorker::maybe_close() {
       // Requires special handling to avoid iterator invalidation and double closing
       // other resources.
       // This path only possible for internal config. API does not allow.
-      while(!pools_.empty()) pools_.begin()->second->close();
+      while (!pools_.empty()) pools_.begin()->second->close();
     }
   }
 }
 
 void IOWorker::maybe_notify_closed() {
   if (pools_.empty()) {
-    session_->notify_closed_async();
+    session_->notify_worker_closed_async();
     close_handles();
   }
 }
@@ -237,21 +237,26 @@ void IOWorker::close_handles() {
   request_queue_.close_handles();
   uv_prepare_stop(&prepare_);
   uv_close(copy_cast<uv_prepare_t*, uv_handle_t*>(&prepare_), NULL);
+
   for (PendingReconnectMap::iterator it = pending_reconnects_.begin(),
        end = pending_reconnects_.end(); it != end; ++it) {
-    logger_->debug("IOWorker: close_handles stopping reconnect(%p timer(%p)) io_worker(%p)",
-                   &it->second,
-                   it->second.timer, this);
+    LOG_DEBUG("Stopping reconnect timers reconnect(%p timer(%p)) io_worker(%p)",
+              static_cast<void*>(&it->second),
+              static_cast<void*>(it->second.timer),
+              static_cast<void*>(this));
     it->second.stop_timer();
   }
-  logger_->debug("IOWorker: active handles following close: %d", loop()->active_handles);
+  LOG_DEBUG("Active handles following close: %d", loop()->active_handles);
 }
 
 void IOWorker::on_pending_pool_reconnect(Timer* timer) {
   PendingReconnect* pending_reconnect =
       static_cast<PendingReconnect*>(timer->data());
 
-  logger_->debug("IOWorker: on_pending_pool_connect reconnect(%p timer(%p)) io_worker(%p)", pending_reconnect, timer, this);
+  LOG_DEBUG("Reconnecting pool reconnect(%p timer(%p)) io_worker(%p)",
+            static_cast<void*>(pending_reconnect),
+            static_cast<void*>(timer),
+            static_cast<void*>(this));
 
   const Address& address = pending_reconnect->address;
   add_pool(address, false);
@@ -259,7 +264,7 @@ void IOWorker::on_pending_pool_reconnect(Timer* timer) {
 }
 
 void IOWorker::on_event(const IOWorkerEvent& event) {
-  switch(event.type) {
+  switch (event.type) {
     case IOWorkerEvent::ADD_POOL: {
       // Stop any attempts to reconnect because add_pool() is going to attempt
       // reconnection right away.
@@ -269,10 +274,18 @@ void IOWorker::on_event(const IOWorkerEvent& event) {
     }
 
     case IOWorkerEvent::REMOVE_POOL: {
-      cancel_reconnect(event.address);
+      if (event.cancel_reconnect) {
+        LOG_DEBUG("REMOVE_POOL event for %s cancelling reconnect io_worker(%p)",
+                  event.address.to_string().c_str(),
+                  static_cast<void*>(this));
+        cancel_reconnect(event.address);
+      }
       PoolMap::iterator it = pools_.find(event.address);
       if (it != pools_.end()) {
-        logger_->debug("IOWorker: REMOVE_POOL for %s closing pool(%p) io_worker(%p)", event.address.to_string().c_str(), it->second.get(), this);
+        LOG_DEBUG("REMOVE_POOL event for %s closing pool(%p) io_worker(%p)",
+                  event.address.to_string().c_str(),
+                  static_cast<void*>(it->second.get()),
+                  static_cast<void*>(this));
         it->second->close();
       }
       break;
@@ -315,7 +328,8 @@ void IOWorker::on_prepare(uv_prepare_t* prepare, int status) {
 
 void IOWorker::schedule_reconnect(const Address& address) {
   if (is_closing_ || pending_reconnects_.count(address) > 0) {
-    logger_->debug("IOWorker: Reconnect already pending for host %s io_worker(%p)", address.to_string().c_str(), this);
+    LOG_DEBUG("Reconnect already pending for host %s io_worker(%p)",
+              address.to_string().c_str(), static_cast<void*>(this));
     return;
   }
 
@@ -325,15 +339,21 @@ void IOWorker::schedule_reconnect(const Address& address) {
                           config_.reconnect_wait_time_ms(),
                           &pr,
                           boost::bind(&IOWorker::on_pending_pool_reconnect, this, _1));
-  logger_->debug("IOWorker: Scheduling reconnect(%p timer(%p)) for host %s io_worker(%p)",
-                 &pr, pr.timer, address.to_string().c_str(), this);
+  LOG_DEBUG("Scheduling reconnect(%p timer(%p)) for host %s io_worker(%p)",
+            static_cast<void*>(&pr),
+            static_cast<void*>(pr.timer),
+            address.to_string().c_str(),
+            static_cast<void*>(this));
 }
 
 void IOWorker::cancel_reconnect(const Address& address) {
   PendingReconnectMap::iterator it = pending_reconnects_.find(address);
   if (it != pending_reconnects_.end()) {
-    logger_->debug("IOWorker: Cancelling reconnect(%p timer(%p)) for host %s io_worker(%p)",
-                   &it->second, it->second.timer, address.to_string().c_str(), this);
+    LOG_DEBUG("Cancelling reconnect(%p timer(%p)) for host %s io_worker(%p)",
+              static_cast<void*>(&it->second),
+              static_cast<void*>(it->second.timer),
+              address.to_string().c_str(),
+              static_cast<void*>(this));
     it->second.stop_timer();
     pending_reconnects_.erase(it);
   }

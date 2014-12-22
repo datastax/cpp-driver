@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(paging_simple)
   for (int i = 0; i < num_rows; ++i) {
     test_utils::CassStatementPtr statement(cass_statement_new(insert_query, 3));
     cass_statement_bind_int32(statement.get(), 0, part_key);
-    cass_statement_bind_uuid(statement.get(), 1, test_utils::generate_time_uuid().uuid);
+    cass_statement_bind_uuid(statement.get(), 1, test_utils::generate_time_uuid(uuid_gen));
     cass_statement_bind_int32(statement.get(), 2, i);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);

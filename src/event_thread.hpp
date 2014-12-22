@@ -30,11 +30,16 @@ template <class E>
 class EventThread : public LoopThread {
 public:
   int init(size_t queue_size) {
+    int rc = LoopThread::init();
+    if (rc != 0) return rc;
     event_queue_.reset(new AsyncQueue<MPMCQueue<E> >(queue_size));
     return event_queue_->init(loop(), this, on_event_internal);
   }
 
-  void close_handles() { event_queue_->close_handles(); }
+  void close_handles() {
+    LoopThread::close_handles();
+    event_queue_->close_handles();
+  }
 
   bool send_event_async(const E& event) { return event_queue_->enqueue(event); }
 

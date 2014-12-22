@@ -44,8 +44,6 @@ public:
   Statement(uint8_t opcode, uint8_t kind, size_t value_count = 0)
       : RoutableRequest(opcode)
       , values_(value_count)
-      , consistency_(CASS_CONSISTENCY_ONE)
-      , serial_consistency_(CASS_CONSISTENCY_ANY)
       , skip_metadata_(false)
       , page_size_(-1)
       , kind_(kind) {}
@@ -55,24 +53,12 @@ public:
             const std::string& keyspace)
       : RoutableRequest(opcode, keyspace)
       , values_(value_count)
-      , consistency_(CASS_CONSISTENCY_ONE)
-      , serial_consistency_(CASS_CONSISTENCY_ANY)
       , skip_metadata_(false)
       , page_size_(-1)
       , kind_(kind)
       , key_indices_(key_indices) {}
 
   virtual ~Statement() {}
-
-  int16_t consistency() const { return consistency_; }
-
-  void set_consistency(int16_t consistency) { consistency_ = consistency; }
-
-  int16_t serial_consistency() const { return serial_consistency_; }
-
-  void set_serial_consistency(int16_t serial_consistency) {
-    serial_consistency_ = serial_consistency;
-  }
 
   void set_skip_metadata(bool skip_metadata) {
     skip_metadata_ = skip_metadata;
@@ -135,11 +121,11 @@ public:
     return bind(index, value.data, value.size);
   }
 
-  CassError bind(size_t index, const CassUuid value) {
+  CassError bind(size_t index, CassUuid value) {
     CASS_VALUE_CHECK_INDEX(index);
     Buffer buf(sizeof(int32_t) + sizeof(CassUuid));
     size_t pos = buf.encode_int32(0, sizeof(CassUuid));
-    buf.copy(pos, value, sizeof(CassUuid));
+    buf.encode_uuid(pos, value);
     values_[index] = buf;
     return CASS_OK;
   }
@@ -196,8 +182,6 @@ private:
   typedef BufferVec ValueVec;
 
   ValueVec values_;
-  int16_t consistency_;
-  int16_t serial_consistency_;
   bool skip_metadata_;
   int32_t page_size_;
   std::string paging_state_;

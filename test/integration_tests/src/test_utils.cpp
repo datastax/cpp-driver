@@ -16,10 +16,11 @@
 
 #define BOOST_TEST_DYN_LINK
 
-#include <assert.h>
-#include <fstream>
-#include <vector>
-#include <cstdlib>
+#include "test_utils.hpp"
+
+#include "cassandra.h"
+#include "cql_ccm_bridge.hpp"
+#include "testing.hpp"
 
 #include <boost/test/test_tools.hpp>
 #include <boost/test/debug.hpp>
@@ -27,9 +28,10 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 
-#include "cassandra.h"
-#include "cql_ccm_bridge.hpp"
-#include "test_utils.hpp"
+#include <assert.h>
+#include <fstream>
+#include <vector>
+#include <cstdlib>
 
 namespace test_utils {
 //-----------------------------------------------------------------------------------
@@ -72,14 +74,25 @@ const char* CREATE_TABLE_SIMPLE =
     "id int PRIMARY KEY,"
     "test_val text);";
 
-void count_message_log_callback(cass_uint64_t time,
-                                CassLogLevel severity,
-                                CassString message,
-                                void* data) {
+CassLog::LogData CassLog::log_data_;
+
+size_t CassLog::message_count() {
+  while (!cass::is_log_flushed()) {
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
+  }
+  return log_data_.message_count;
+}
+
+void CassLog::callback(const CassLogMessage* message, void* data) {
   LogData* log_data = reinterpret_cast<LogData*>(data);
-  std::string str(message.data, message.length);
-  if (log_data->output_messages) {
-    fprintf(stderr, "Log: %s\n", str.c_str());
+  std::string str(message->message);
+  if (message->severity <= log_data->output_log_level) {
+    fprintf(stderr, "CassLog: %u.%03u [%s] (%s:%d:%s): %s\n",
+            static_cast<unsigned int>(message->time_ms / 1000),
+            static_cast<unsigned int>(message->time_ms % 1000),
+            cass_log_level_string(message->severity),
+            message->file, message->line, message->function,
+            message->message);
   }
   boost::lock_guard<LogData> l(*log_data);
   if (log_data->message.empty()) return;
@@ -90,7 +103,7 @@ void count_message_log_callback(cass_uint64_t time,
 
 const char* get_column_type(CassColumnType type) {
   //Determine which column type to return text value
-  switch(type) {
+  switch (type) {
     case CASS_COLUMN_TYPE_PARTITION_KEY:
       return "Partition Key";
     case CASS_COLUMN_TYPE_CLUSTERING_KEY:
@@ -110,7 +123,7 @@ const char* get_column_type(CassColumnType type) {
 }
 
 const char* get_value_type(CassValueType type) {
-  switch(type) {
+  switch (type) {
     case CASS_VALUE_TYPE_CUSTOM: return "custom";
     case CASS_VALUE_TYPE_ASCII: return "ascii";
     case CASS_VALUE_TYPE_BIGINT: return "bigint";
@@ -144,6 +157,7 @@ const std::string CREATE_KEYSPACE_GENERIC_FORMAT = "CREATE KEYSPACE {0} WITH rep
 const std::string DROP_KEYSPACE_FORMAT = "DROP KEYSPACE %s";
 const std::string DROP_KEYSPACE_IF_EXISTS_FORMAT = "DROP KEYSPACE IF EXISTS %s";
 const std::string SIMPLE_KEYSPACE = "ks";
+const std::string NUMERIC_KEYSPACE_FORMAT = "ks%d";
 const std::string SIMPLE_TABLE = "test";
 const std::string CREATE_TABLE_SIMPLE_FORMAT = "CREATE TABLE {0} (k text PRIMARY KEY, t text, i int, f float)";
 const std::string INSERT_FORMAT = "INSERT INTO {0} (k, t, i, f) VALUES ('{1}', '{2}', {3}, {4})";
@@ -166,6 +180,7 @@ MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int nu
   boost::debug::detect_memory_leaks(false);
   ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", num_nodes_dc1, num_nodes_dc2, isSSL);
 
+  uuid_gen = cass_uuid_gen_new();
   cluster = cass_cluster_new();
   initialize_contact_points(cluster, conf.ip_prefix(), num_nodes_dc1, num_nodes_dc2);
 
@@ -176,12 +191,13 @@ MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int nu
 }
 
 MultipleNodesTest::~MultipleNodesTest() {
+  cass_uuid_gen_free(uuid_gen);
   cass_cluster_free(cluster);
 }
 
 SingleSessionTest::SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version, bool isSSL /* = false */)
   : MultipleNodesTest(num_nodes_dc1, num_nodes_dc2, protocol_version, isSSL), session(NULL), ssl(NULL) {
-  //SSL verification flags must be set before establising session
+  //SSL verification flags must be set before establishing session
   if (!isSSL) {
     create_session();
   } else {
@@ -190,9 +206,9 @@ SingleSessionTest::SingleSessionTest(unsigned int num_nodes_dc1, unsigned int nu
 }
 
 void SingleSessionTest::create_session() {
-  test_utils::CassFuturePtr connect_future(cass_cluster_connect(cluster));
+  session = cass_session_new();
+  test_utils::CassFuturePtr connect_future(cass_session_connect(session, cluster));
   test_utils::wait_and_check_error(connect_future.get());
-  session = cass_future_get_session(connect_future.get());
   version = get_version(session);
 }
 
@@ -207,27 +223,38 @@ SingleSessionTest::~SingleSessionTest() {
 }
 
 void initialize_contact_points(CassCluster* cluster, std::string prefix, unsigned int num_nodes_dc1, unsigned int num_nodes_dc2) {
-  for(unsigned int i = 0; i < num_nodes_dc1; ++i) {
+  for (unsigned int i = 0; i < num_nodes_dc1; ++i) {
     std::string contact_point(prefix + boost::lexical_cast<std::string>(i + 1));
     cass_cluster_set_contact_points(cluster, contact_point.c_str());
   }
 }
 
-CassSessionPtr create_session(CassCluster* cluster) {
-  test_utils::CassFuturePtr session_future(cass_cluster_connect(cluster));
-  test_utils::wait_and_check_error(session_future.get());
-  return test_utils::CassSessionPtr(cass_future_get_session(session_future.get()));
+CassSessionPtr create_session(CassCluster* cluster, cass_duration_t timeout) {
+  test_utils::CassSessionPtr session(cass_session_new());
+  test_utils::CassFuturePtr connect_future(cass_session_connect(session.get(), cluster));
+  test_utils::wait_and_check_error(connect_future.get(), timeout);
+  return session;
+}
+
+CassSessionPtr create_session(CassCluster* cluster, CassError* code, cass_duration_t timeout) {
+  test_utils::CassSessionPtr session(cass_session_new());
+  test_utils::CassFuturePtr connect_future(cass_session_connect(session.get(), cluster));
+  if (code) {
+    *code = test_utils::wait_and_return_error(connect_future.get(), timeout);
+  }
+  return session;
 }
 
 void execute_query(CassSession* session,
                    const std::string& query,
                    CassResultPtr* result,
-                   CassConsistency consistency) {
+                   CassConsistency consistency,
+                   cass_duration_t timeout) {
   CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0));
   cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future(cass_session_execute(session, statement.get()));
-  wait_and_check_error(future.get());
-  if(result != NULL) {
+  wait_and_check_error(future.get(), timeout);
+  if (result != NULL) {
     *result = CassResultPtr(cass_future_get_result(future.get()));
   }
 }
@@ -235,11 +262,12 @@ void execute_query(CassSession* session,
 CassError execute_query_with_error(CassSession* session,
                                    const std::string& query,
                                    CassResultPtr* result,
-                                   CassConsistency consistency) {
+                                   CassConsistency consistency,
+                                   cass_duration_t timeout) {
   CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0));
   cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future(cass_session_execute(session, statement.get()));
-  CassError code = wait_and_return_error(future.get());
+  CassError code = wait_and_return_error(future.get(), timeout);
   if(result != NULL) {
     *result = CassResultPtr(cass_future_get_result(future.get()));
   }
@@ -247,7 +275,7 @@ CassError execute_query_with_error(CassSession* session,
 }
 
 CassError wait_and_return_error(CassFuture* future, cass_duration_t timeout) {
-  if(!cass_future_wait_timed(future, timeout)) {
+  if (!cass_future_wait_timed(future, timeout)) {
     BOOST_FAIL("Timed out waiting for result");
   }
   return cass_future_error_code(future);
@@ -255,9 +283,9 @@ CassError wait_and_return_error(CassFuture* future, cass_duration_t timeout) {
 
 void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
   CassError code = wait_and_return_error(future, timeout);
-  if(code != CASS_OK) {
+  if (code != CASS_OK) {
     CassString message = cass_future_error_message(future);
-    BOOST_FAIL("Error occured during query '" << std::string(message.data, message.length) << "' (" << boost::format("0x%08X") % code << ")");
+    BOOST_FAIL("Error occurred during query '" << std::string(message.data, message.length) << "' (" << boost::format("0x%08X") % code << ")");
   }
 }
 

@@ -24,6 +24,25 @@ CMakeScripts
 Makefile
 install_manifest.txt
 
+# library files
+lib/boost/include/**
+lib/boost/lib/**
+lib/libuv/include/**
+lib/libuv/lib/**
+lib/libssh2/include/**
+lib/libssh2/lib/**
+lib/openssl/include/**
+lib/openssl/lib/**
+# Excluded library files from ignore
+!lib/boost/include/README
+!lib/boost/lib/README
+!lib/libuv/include/README
+!lib/libuv/lib/README
+!lib/libssh2/include/README
+!lib/libssh2/lib/README
+!lib/openssl/include/README
+!lib/openssl/lib/README
+
 # build files
 build
 Testing
@@ -54,8 +73,7 @@ Doxyfile
 
 # QT Creator 
 *.config
-*.creator
-*.creator.user
+*.creator*
 *.files
 *.includes
 

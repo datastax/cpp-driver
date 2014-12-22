@@ -17,6 +17,7 @@
 #include "ssl.hpp"
 
 #include "common.hpp"
+#include "logger.hpp"
 #include "ssl/ring_buffer_bio.hpp"
 
 #include <boost/utility/string_ref.hpp>
@@ -31,24 +32,19 @@
 
 namespace cass {
 
-static int ssl_no_verify_callback(int ok, X509_STORE_CTX* store) {
-  // Verification happens after in SslSession::verify() via
-  // SSL_get_verify_result().
-  return 1;
-}
-
+#if DEBUG_SSL
 #define SSL_PRINT_INFO(ssl, w, flag, msg) do { \
-    if(w & flag) {                             \
+    if (w & flag) {                             \
       fprintf(stderr, "%s - %s - %s\n",        \
               msg,                             \
               SSL_state_string(ssl),           \
               SSL_state_string_long(ssl));     \
     }                                          \
- } while(0);
+ } while (0);
 
-void ssl_info_callback(const SSL* ssl, int where, int ret) {
-  if(ret == 0) {
-    fprintf(stderr, "ssl_info_callback, error occured.\n");
+static void ssl_info_callback(const SSL* ssl, int where, int ret) {
+  if (ret == 0) {
+    fprintf(stderr, "ssl_info_callback, error occurred.\n");
     return;
   }
   SSL_PRINT_INFO(ssl, where, SSL_CB_LOOP, "LOOP");
@@ -60,6 +56,31 @@ void ssl_info_callback(const SSL* ssl, int where, int ret) {
 }
 
 #undef SSL_PRINT_INFO
+#endif
+
+static int ssl_no_verify_callback(int ok, X509_STORE_CTX* store) {
+  // Verification happens after in SslSession::verify()
+  // via SSL_get_verify_result().
+  return 1;
+}
+
+static void ssl_log_errors(const char* context) {
+  const char* data;
+  int flags;
+  int err;
+  while ((err = ERR_get_error_line_data(NULL, NULL, &data, &flags)) != 0) {
+    char buf[256];
+    ERR_error_string_n(err, buf, sizeof(buf));
+    LOG_ERROR("%s: %s:%s", context, buf, (flags & ERR_TXT_STRING) ? data : "");
+  }
+  ERR_print_errors_fp(stderr);
+}
+
+static std::string ssl_error_string(long err) {
+  char buf[256];
+  ERR_error_string_n(err, buf, sizeof(buf));
+  return std::string(buf);
+}
 
 static int pem_password_callback(char* buf, int size, int rwflag, void* u) {
   if (u == NULL) return 0;
@@ -98,26 +119,9 @@ static unsigned long crypto_id_callback() {
   return uv_thread_self();
 }
 
-static X509* load_cert(const char* cert, size_t cert_size) {
-  BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert), cert_size);
-  if (bio == NULL) {
-    return NULL;
-  }
-
-  X509* x509 = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL);
-  if (x509 == NULL) {
-    // TODO: Replace with global logging
-    ERR_print_errors_fp(stderr);
-  }
-
-  BIO_free_all(bio);
-
-  return x509;
-}
-
 // Implementation taken from OpenSSL's SSL_CTX_use_certificate_chain_file()
 // (https://github.com/openssl/openssl/blob/OpenSSL_0_9_8-stable/ssl/ssl_rsa.c#L705).
-// Modified to be used for in-memory certficate chains and formatting.
+// Modified to be used for in-memory certificate chains and formatting.
 static int SSL_CTX_use_certificate_chain_bio(SSL_CTX* ctx, BIO* in) {
   int ret = 0;
   X509* x = NULL;
@@ -175,6 +179,22 @@ end:
   return ret;
 }
 
+static X509* load_cert(const char* cert, size_t cert_size) {
+  BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert), cert_size);
+  if (bio == NULL) {
+    return NULL;
+  }
+
+  X509* x509 = PEM_read_bio_X509(bio, NULL, pem_password_callback, NULL);
+  if (x509 == NULL) {
+    ssl_log_errors("Unable to load certificate");
+  }
+
+  BIO_free_all(bio);
+
+  return x509;
+}
+
 static EVP_PKEY* load_key(const char* key,
                           size_t key_size,
                           const char* password) {
@@ -188,8 +208,7 @@ static EVP_PKEY* load_key(const char* key,
                                            pem_password_callback,
                                            const_cast<char*>(password));
   if (pkey == NULL) {
-    // TODO: Replace with global logging
-    ERR_print_errors_fp(stderr);
+    ssl_log_errors("Unable to load private key");
   }
 
   BIO_free_all(bio);
@@ -370,9 +389,7 @@ int OpenSslSession::decrypt(char* buf, size_t size)  {
 bool OpenSslSession::check_error(int rc) {
   int err = SSL_get_error(ssl_, rc);
   if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_NONE) {
-    char buf[128];
-    ERR_error_string_n(err, buf, sizeof(buf));
-    error_message_ = buf;
+    error_message_ = ssl_error_string(err);
     return true;
   }
   return false;
@@ -415,8 +432,7 @@ CassError OpenSslContext::set_cert(CassString cert) {
   BIO_free_all(bio);
 
   if (!rc) {
-    // TODO: Replace with global logging
-    ERR_print_errors_fp(stderr);
+    ssl_log_errors("Unable to load certificate chain");
     return CASS_ERROR_SSL_INVALID_CERT;
   }
 

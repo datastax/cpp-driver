@@ -41,9 +41,8 @@ namespace cass {
 class AuthProvider;
 class AuthResponseRequest;
 class Config;
-class Connecter;
+class Connector;
 class EventResponse;
-class Logger;
 class Request;
 class Timer;
 
@@ -61,7 +60,7 @@ public:
   typedef boost::function1<void, EventResponse*> EventCallback;
   typedef boost::function1<void, Connection*> Callback;
 
-  Connection(uv_loop_t* loop, Logger* logger, const Config& config,
+  Connection(uv_loop_t* loop, const Config& config,
              const Address& address,
              const std::string& keyspace,
              int protocol_version);
@@ -73,7 +72,6 @@ public:
 
   void schedule_schema_agreement(const SharedRefPtr<SchemaChangeHandler>& handler, uint64_t wait);
 
-  Logger* logger() const { return logger_; }
   const Config& config() const { return config_; }
   const Address& address() { return address_; }
   const std::string& address_string() { return addr_string_; }
@@ -227,7 +225,7 @@ private:
   void consume(char* input, size_t size);
   void maybe_set_keyspace(ResponseMessage* response);
 
-  static void on_connect(Connecter* connecter);
+  static void on_connect(Connector* connecter);
   static void on_connect_timeout(Timer* timer);
   static void on_close(uv_handle_t* handle);
 
@@ -246,6 +244,7 @@ private:
   void on_supported(ResponseMessage* response);
   void on_pending_schema_agreement(Timer* timer);
 
+  void stop_connect_timer();
   void notify_ready();
   void notify_error(const std::string& error);
   void notify_error_ssl(const std::string& error);
@@ -269,10 +268,9 @@ private:
   size_t pending_writes_size_;
   List<PendingWriteBase> pending_writes_;
   List<Handler> pending_reads_;
-  List<PendingSchemaAgreement> pending_schema_aggreements_;
+  List<PendingSchemaAgreement> pending_schema_agreements_;
 
   uv_loop_t* loop_;
-  Logger* logger_;
   const Config& config_;
   Address address_;
   std::string addr_string_;

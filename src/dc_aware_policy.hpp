@@ -21,87 +21,103 @@
 #include "host.hpp"
 #include "round_robin_policy.hpp"
 #include "scoped_ptr.hpp"
+#include "scoped_lock.hpp"
+
+#include <map>
+#include <set>
+#include <uv.h>
 
 namespace cass {
 
 class DCAwarePolicy : public LoadBalancingPolicy {
 public:
-  DCAwarePolicy(const std::string& local_dc)
-      : local_dc_(local_dc) {}
+  DCAwarePolicy()
+      : used_hosts_per_remote_dc_(0)
+      , skip_remote_dcs_for_local_cl_(true)
+      , local_dc_live_hosts_(new HostVec)
+      , index_(0) {}
 
-  void init(const HostMap& hosts) {
-    HostMap local_hosts;
-    HostMap remote_hosts;
-    for (HostMap::const_iterator it = hosts.begin(),
-         end = hosts.end(); it != end; ++it) {
-      if (it->second->dc() == local_dc_) {
-        local_hosts.insert(*it);
-      } else {
-        remote_hosts.insert(*it);
-      }
-    }
-    local_rr_policy_.init(local_hosts);
-    remote_rr_policy_.init(remote_hosts);
-  }
+  DCAwarePolicy(const std::string& local_dc,
+                size_t used_hosts_per_remote_dc,
+                bool skip_remote_dcs_for_local_cl)
+      : local_dc_(local_dc)
+      , used_hosts_per_remote_dc_(used_hosts_per_remote_dc)
+      , skip_remote_dcs_for_local_cl_(skip_remote_dcs_for_local_cl)
+      , local_dc_live_hosts_(new HostVec)
+      , index_(0) {}
 
-  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) {
-    if (host->dc() == local_dc_) return CASS_HOST_DISTANCE_LOCAL;
-    else return CASS_HOST_DISTANCE_REMOTE;
-  }
+  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts);
+
+  virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const;
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
                                     const Request* request,
-                                    const TokenMap& token_map) {
-    return new DCAwareQueryPlan(local_rr_policy_.new_query_plan(connected_keyspace, request, token_map),
-                                remote_rr_policy_.new_query_plan(connected_keyspace, request, token_map));
-  }
+                                    const TokenMap& token_map);
 
-  virtual void on_add(const SharedRefPtr<Host>& host) {
-    plan_for_host(host).on_add(host);
-  }
+  virtual void on_add(const SharedRefPtr<Host>& host);
 
-  virtual void on_remove(const SharedRefPtr<Host>& host) {
-    plan_for_host(host).on_remove(host);
-  }
+  virtual void on_remove(const SharedRefPtr<Host>& host);
 
-  virtual void on_up(const SharedRefPtr<Host>& host) {
-    plan_for_host(host).on_up(host);
-  }
+  virtual void on_up(const SharedRefPtr<Host>& host);
 
-  virtual void on_down(const SharedRefPtr<Host>& host) {
-    plan_for_host(host).on_down(host);
-  }
+  virtual void on_down(const SharedRefPtr<Host>& host);
 
-  LoadBalancingPolicy* new_instance() { return new DCAwarePolicy(local_dc_); }
-
-private:
-  RoundRobinPolicy& plan_for_host(const SharedRefPtr<Host>& host) {
-    if (host->dc() == local_dc_) return local_rr_policy_;
-    else return remote_rr_policy_;
+  virtual LoadBalancingPolicy* new_instance() {
+    return new DCAwarePolicy(local_dc_,
+                             used_hosts_per_remote_dc_,
+                             skip_remote_dcs_for_local_cl_);
   }
 
 private:
-  class DCAwareQueryPlan : public QueryPlan {
+  class PerDCHostMap {
   public:
-    DCAwareQueryPlan(QueryPlan* local_plan, QueryPlan* remote_plan)
-      : local_plan_(local_plan)
-      , remote_plan_(remote_plan) {}
+    typedef std::map<std::string, CopyOnWriteHostVec> Map;
+    typedef std::set<std::string> KeySet;
 
-    SharedRefPtr<Host> compute_next()  {
-      SharedRefPtr<Host> host(local_plan_->compute_next());
-      if (host) return host;
-      return remote_plan_->compute_next();
-    }
+    PerDCHostMap() { uv_rwlock_init(&rwlock_); }
+    ~PerDCHostMap() { uv_rwlock_destroy(&rwlock_); }
+
+    void add_host_to_dc(const std::string& dc, const SharedRefPtr<Host>& host);
+    void remove_host_from_dc(const std::string& dc, const SharedRefPtr<Host>& host);
+    const CopyOnWriteHostVec& get_hosts(const std::string& dc) const;
+    void copy_dcs(KeySet* dcs) const;
 
   private:
-    ScopedPtr<QueryPlan> local_plan_;
-    ScopedPtr<QueryPlan> remote_plan_;
+    Map map_;
+    mutable uv_rwlock_t rwlock_;
+
+  private:
+    DISALLOW_COPY_AND_ASSIGN(PerDCHostMap);
   };
 
+  const CopyOnWriteHostVec& get_local_dc_hosts() const;
+  void get_remote_dcs(PerDCHostMap::KeySet* remote_dcs) const;
+
+  class DCAwareQueryPlan : public QueryPlan {
+  public:
+    DCAwareQueryPlan(const DCAwarePolicy* policy,
+                     CassConsistency cl,
+                     size_t start_index);
+
+    virtual SharedRefPtr<Host> compute_next();
+
+  private:
+    const DCAwarePolicy* policy_;
+    CassConsistency cl_;
+    CopyOnWriteHostVec hosts_;
+    ScopedPtr<PerDCHostMap::KeySet> remote_dcs_;
+    size_t local_remaining_;
+    size_t remote_remaining_;
+    size_t index_;
+  };
 
   std::string local_dc_;
-  RoundRobinPolicy local_rr_policy_;
-  RoundRobinPolicy remote_rr_policy_;
+  size_t used_hosts_per_remote_dc_;
+  bool skip_remote_dcs_for_local_cl_;
+
+  CopyOnWriteHostVec local_dc_live_hosts_;
+  PerDCHostMap per_remote_dc_live_hosts_;
+  size_t index_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(DCAwarePolicy);

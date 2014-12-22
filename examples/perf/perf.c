@@ -1,17 +1,28 @@
 /*
-  Copyright (c) 2014 DataStax
+  This is free and unencumbered software released into the public domain.
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  Anyone is free to copy, modify, publish, use, compile, sell, or
+  distribute this software, either in source code form or as a compiled
+  binary, for any purpose, commercial or non-commercial, and by any
+  means.
 
-  http://www.apache.org/licenses/LICENSE-2.0
+  In jurisdictions that recognize copyright laws, the author or authors
+  of this software dedicate any and all copyright interest in the
+  software to the public domain. We make this dedication for the benefit
+  of the public at large and to the detriment of our heirs and
+  successors. We intend this dedication to be an overt act of
+  relinquishment in perpetuity of all present and future rights to this
+  software under copyright law.
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+  IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+  OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+  OTHER DEALINGS IN THE SOFTWARE.
+
+  For more information, please refer to <http://unlicense.org/>
 */
 
 #include <assert.h>
@@ -25,12 +36,12 @@
 #include "cassandra.h"
 
 /*
- *  Don't use this example. It's just used as a scratch example for debugging and
+ * Use this example with caution. It's just used as a scratch example for debugging and
  * roughly analyzing performance.
  */
 
 #define NUM_THREADS 1
-#define NUM_IO_WORKER_THREADS 5
+#define NUM_IO_WORKER_THREADS 4
 #define NUM_CONCURRENT_REQUESTS 10000
 #define NUM_SAMPLES 1000
 #define USE_PREPARED 1
@@ -42,6 +53,8 @@ const char* big_string = "012345670123456701234567012345670123456701234567012345
                          "0123456701234567012345670123456701234567012345670123456701234567"
                          "0123456701234567012345670123456701234567012345670123456701234567"
                          "0123456701234567012345670123456701234567012345670123456701234567";
+
+CassUuidGen* uuid_gen;
 
 typedef struct ThreadStats_ {
   long count;
@@ -58,7 +71,6 @@ CassCluster* create_cluster() {
   CassCluster* cluster = cass_cluster_new();
   cass_cluster_set_contact_points(cluster, "127.0.0.1");
   cass_cluster_set_credentials(cluster, "cassandra", "cassandra");
-  cass_cluster_set_log_level(cluster, CASS_LOG_INFO);
   cass_cluster_set_num_threads_io(cluster, NUM_IO_WORKER_THREADS);
   cass_cluster_set_queue_size_io(cluster, 10000);
   cass_cluster_set_pending_requests_low_water_mark(cluster, 5000);
@@ -68,18 +80,14 @@ CassCluster* create_cluster() {
   return cluster;
 }
 
-CassError connect_session(CassCluster* cluster, CassSession** output) {
+CassError connect_session(CassSession* session, const CassCluster* cluster) {
   CassError rc = CASS_OK;
-  CassFuture* future = cass_cluster_connect_keyspace(cluster, "examples");
-
-  *output = NULL;
+  CassFuture* future = cass_session_connect(session, cluster);
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
-  } else {
-    *output = cass_future_get_session(future);
   }
   cass_future_free(future);
 
@@ -95,7 +103,7 @@ CassError execute_query(CassSession* session, const char* query) {
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   }
 
@@ -113,7 +121,7 @@ CassError prepare_query(CassSession* session, CassString query, const CassPrepar
   cass_future_wait(future);
 
   rc = cass_future_error_code(future);
-  if(rc != CASS_OK) {
+  if (rc != CASS_OK) {
     print_error(future);
   } else {
     *prepared = cass_future_get_prepared(future);
@@ -125,9 +133,9 @@ CassError prepare_query(CassSession* session, CassString query, const CassPrepar
 }
 
 int compare_dbl(const void* d1, const void* d2) {
-  if(*((double*)d1) < *((double*)d2)) {
+  if (*((double*)d1) < *((double*)d2)) {
     return -1;
-  } else if(*((double*)d1) > *((double*)d2)) {
+  } else if (*((double*)d1) > *((double*)d2)) {
     return 1;
   } else {
     return 0;
@@ -172,7 +180,7 @@ void insert_into_perf(CassSession* session, CassString query, const CassPrepared
 
   start = uv_hrtime();
 
-  for(i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
+  for (i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
     CassUuid id;
     CassStatement* statement;
 
@@ -182,7 +190,7 @@ void insert_into_perf(CassSession* session, CassString query, const CassPrepared
       statement = cass_statement_new(query, 5);
     }
 
-    cass_uuid_generate_time(id);
+    cass_uuid_gen_time(uuid_gen, &id);
     cass_statement_bind_uuid(statement, 0, id);
     cass_statement_bind_string(statement, 1, cass_string_init(big_string));
     cass_statement_bind_string(statement, 2, cass_string_init(big_string));
@@ -194,10 +202,10 @@ void insert_into_perf(CassSession* session, CassString query, const CassPrepared
     cass_statement_free(statement);
   }
 
-  for(i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
+  for (i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
     CassFuture* future = futures[i];
     CassError rc = cass_future_error_code(future);
-    if(rc != CASS_OK) {
+    if (rc != CASS_OK) {
       print_error(future);
     } else {
       num_requests++;
@@ -251,7 +259,7 @@ void select_from_perf(CassSession* session, CassString query, const CassPrepared
 
   start = uv_hrtime();
 
-  for(i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
+  for (i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
     CassStatement* statement;
 
     if (prepared != NULL) {
@@ -265,10 +273,10 @@ void select_from_perf(CassSession* session, CassString query, const CassPrepared
     cass_statement_free(statement);
   }
 
-  for(i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
+  for (i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
     CassFuture* future = futures[i];
     CassError rc = cass_future_error_code(future);
-    if(rc != CASS_OK) {
+    if (rc != CASS_OK) {
       print_error(future);
     } else {
       const CassResult* result = cass_future_get_result(future);
@@ -314,14 +322,19 @@ void run_select_queries(void* data) {
 int main() {
   int i;
   uv_thread_t threads[NUM_THREADS];
-  CassError rc = CASS_OK;
-  CassCluster* cluster = create_cluster();
+  CassCluster* cluster = NULL;
   CassSession* session = NULL;
   CassFuture* close_future = NULL;
 
+  cass_log_set_level(CASS_LOG_INFO);
 
-  rc = connect_session(cluster, &session);
-  if(rc != CASS_OK) {
+  cluster = create_cluster();
+  uuid_gen = cass_uuid_gen_new();
+  session = cass_session_new();
+
+  if (connect_session(session, cluster) != CASS_OK) {
+    cass_cluster_free(cluster);
+    cass_session_free(session);
     return -1;
   }
 
@@ -348,6 +361,7 @@ int main() {
   cass_future_wait(close_future);
   cass_future_free(close_future);
   cass_cluster_free(cluster);
+  cass_uuid_gen_free(uuid_gen);
 
   return 0;
 }

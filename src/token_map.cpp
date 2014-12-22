@@ -15,6 +15,7 @@
 */
 
 #include "token_map.hpp"
+#include "logger.hpp"
 #include "md5.hpp"
 #include "murmur3.hpp"
 #include "scoped_ptr.hpp"
@@ -102,7 +103,7 @@ void TokenMap::clear() {
 
 void TokenMap::build() {
   if (!partitioner_) {
-    // TODO: Global logging
+    LOG_WARN("No partitioner set, not building map");
     return;
   }
 
@@ -120,7 +121,7 @@ void TokenMap::set_partitioner(const std::string& partitioner_class) {
   } else if (boost::ends_with(partitioner_class, ByteOrderedPartitioner::PARTITIONER_CLASS)) {
     partitioner_.reset(new ByteOrderedPartitioner());
   } else {
-    // TODO: Global logging
+    LOG_WARN("Unsupported partitioner class '%s'", partitioner_class.c_str());
   }
 }
 

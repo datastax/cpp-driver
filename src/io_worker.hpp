@@ -19,6 +19,7 @@
 
 #include "address.hpp"
 #include "async_queue.hpp"
+#include "constants.hpp"
 #include "event_thread.hpp"
 #include "logger.hpp"
 #include "spsc_queue.hpp"
@@ -52,6 +53,7 @@ struct IOWorkerEvent {
   Type type;
   Address address;
   bool is_initial_connection;
+  bool cancel_reconnect;
 };
 
 class IOWorker
@@ -63,7 +65,6 @@ public:
 
   int init();
 
-  Logger* logger() const { return logger_; }
   const Config& config() const { return config_; }
 
   int protocol_version() const {
@@ -85,7 +86,7 @@ public:
   bool is_host_up(const Address& address) const;
 
   bool add_pool_async(const Address& address, bool is_initial_connection);
-  bool remove_pool_async(const Address& address);
+  bool remove_pool_async(const Address& address, bool cancel_reconnect);
   void close_async();
 
   bool execute(RequestHandler* request_handler);
@@ -130,7 +131,6 @@ private:
 
 private:
   Session* session_;
-  Logger* logger_;
   const Config& config_;
   boost::atomic<int> protocol_version_;
   uv_prepare_t prepare_;

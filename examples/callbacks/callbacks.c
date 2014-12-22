@@ -1,17 +1,28 @@
 /*
-  Copyright (c) 2014 DataStax
+  This is free and unencumbered software released into the public domain.
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  Anyone is free to copy, modify, publish, use, compile, sell, or
+  distribute this software, either in source code form or as a compiled
+  binary, for any purpose, commercial or non-commercial, and by any
+  means.
 
-  http://www.apache.org/licenses/LICENSE-2.0
+  In jurisdictions that recognize copyright laws, the author or authors
+  of this software dedicate any and all copyright interest in the
+  software to the public domain. We make this dedication for the benefit
+  of the public at large and to the detriment of our heirs and
+  successors. We intend this dedication to be an overt act of
+  relinquishment in perpetuity of all present and future rights to this
+  software under copyright law.
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+  IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+  OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+  OTHER DEALINGS IN THE SOFTWARE.
+
+  For more information, please refer to <http://unlicense.org/>
 */
 
 #include <assert.h>
@@ -26,6 +37,7 @@
 uv_mutex_t mutex;
 uv_cond_t cond;
 CassFuture* close_future = NULL;
+CassUuidGen* uuid_gen = NULL;
 
 void wait_exit() {
   uv_mutex_lock(&mutex);
@@ -64,9 +76,9 @@ CassCluster* create_cluster() {
   return cluster;
 }
 
-void connect_session(CassCluster* cluster, CassFutureCallback callback) {
-  CassFuture* future = cass_cluster_connect_keyspace(cluster, "examples");
-  cass_future_set_callback(future, callback, NULL);
+void connect_session(CassSession* session, const CassCluster* cluster, CassFutureCallback callback) {
+  CassFuture* future = cass_session_connect_keyspace(session, cluster, "examples");
+  cass_future_set_callback(future, callback, session);
   cass_future_free(future);
 }
 
@@ -80,7 +92,7 @@ void execute_query(CassSession* session, const char* query,
 }
 
 void on_session_connect(CassFuture* future, void* data) {
-  CassSession* session = NULL;
+  CassSession* session = (CassSession*)data;
   CassError code = cass_future_error_code(future);
 
   if (code != CASS_OK) {
@@ -89,7 +101,6 @@ void on_session_connect(CassFuture* future, void* data) {
     return;
   }
 
-  session = cass_future_get_session(future);
   execute_query(session,
                 "CREATE KEYSPACE examples WITH replication = { "
                 "'class': 'SimpleStrategy', 'replication_factor': '3' };",
@@ -123,10 +134,9 @@ void on_create_table(CassFuture* future, void* data) {
 
   statement = cass_statement_new(insert_query, 2);
 
-  cass_uuid_generate_time(key);
+  cass_uuid_gen_time(uuid_gen, &key);
   cass_statement_bind_uuid(statement, 0, key);
-  cass_statement_bind_int64(statement, 1,
-                            cass_uuid_timestamp(key));
+  cass_statement_bind_int64(statement, 1, cass_uuid_timestamp(key));
 
   insert_future = cass_session_execute((CassSession*)data, statement);
 
@@ -165,16 +175,16 @@ void on_select(CassFuture* future, void* data) {
     CassIterator* iterator = cass_iterator_from_result(result);
     while (cass_iterator_next(iterator)) {
       CassUuid key;
-      char key_buf[CASS_UUID_STRING_LENGTH];
+      char key_str[CASS_UUID_STRING_LENGTH];
       cass_uint64_t value = 0;
       const CassRow* row = cass_iterator_get_row(iterator);
 
-      cass_value_get_uuid(cass_row_get_column(row, 0), key);
+      cass_value_get_uuid(cass_row_get_column(row, 0), &key);
 
-      cass_uuid_string(key, key_buf);
+      cass_uuid_string(key, key_str);
       cass_value_get_int64(cass_row_get_column(row, 1), (cass_int64_t*)&value);
 
-      printf("%s, %llu\n", key_buf, (unsigned long long)value);
+      printf("%s, %llu\n", key_str, (unsigned long long)value);
     }
     cass_iterator_free(iterator);
     cass_result_free(result);
@@ -185,11 +195,14 @@ void on_select(CassFuture* future, void* data) {
 
 int main() {
   CassCluster* cluster = create_cluster();
+  CassSession* session = cass_session_new();
+
+  uuid_gen = cass_uuid_gen_new();
 
   uv_mutex_init(&mutex);
   uv_cond_init(&cond);
 
-  connect_session(cluster, on_session_connect);
+  connect_session(session, cluster, on_session_connect);
 
   /* Code running in parallel with queries */
 
@@ -199,6 +212,8 @@ int main() {
   uv_mutex_destroy(&mutex);
 
   cass_cluster_free(cluster);
+  cass_uuid_gen_free(uuid_gen);
+  cass_session_free(session);
 
   return 0;
 }

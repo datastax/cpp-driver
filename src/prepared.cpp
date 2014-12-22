@@ -17,6 +17,7 @@
 #include "prepared.hpp"
 
 #include "execute_request.hpp"
+#include "logger.hpp"
 #include "types.hpp"
 
 extern "C" {
@@ -42,16 +43,18 @@ Prepared::Prepared(const ResultResponse* result,
       : result_(result)
       , id_(result->prepared())
       , statement_(statement) {
-
     ResultMetadata::IndexVec indices;
-    for (std::vector<std::string>::const_iterator i = key_columns.begin();
-         i != key_columns.end(); ++i) {
-      if (result->find_column_indices(boost::string_ref(*i), &indices) == 1) {
-        key_indices_.push_back(indices[0]);
-      } else {
-        //TODO: global logging
-        key_indices_.clear();
-        break;
+    // If the statement has bound parameters find the key indices
+    if (result->column_count() > 0) {
+      for (std::vector<std::string>::const_iterator i = key_columns.begin();
+           i != key_columns.end(); ++i) {
+        if (result->find_column_indices(boost::string_ref(*i), &indices) > 0) {
+          key_indices_.push_back(indices[0]);
+        } else {
+          LOG_WARN("Unable to find key column '%s' in prepared query", i->c_str());
+          key_indices_.clear();
+          break;
+        }
       }
     }
   }

@@ -1,3 +1,28 @@
+1.0.0-rc1
+===========
+Dec 22, 2014
+
+Features
+--------
+* Added global logging. Logging is no longer configured per session.
+* DC-aware load balancing policy is now the default and uses the DC of the first 
+  connected contact point. The DC-aware policy now has settings to control the 
+  number of remote hosts used in each DC (after exhausting the hosts in the 
+  local DC) and whether to ignore local consistency levels.
+* Added socket options for TCP nodelay and keepalive:
+  `cass_cluster_set_tcp_nodelay()` and `cass_cluster_set_tcp_keepalive()`.
+
+Other
+--------
+* `CassSession` objects must now be explictly allocated/freed using 
+  `cass_session_new()` and `cass_session_free()`. `cass_cluster_connect()` has been
+  removed and replaced by `cass_session_connect()`.
+* SIGPIPE is ignored on driver threads
+* Connection timeout now covers the entire connection handshake instead of just
+  the socket connection.
+* UUID API has been updated to use explict state via `CassUuidGen` instead of
+  using internal global state. See `cass_uuid_gen_new()` and corresponding functions.
+
 1.0.0-beta5
 ===========
 Nov 20, 2014

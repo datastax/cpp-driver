@@ -21,11 +21,10 @@
 
 #include <uv.h>
 
-static uv_once_t ssl_init_guard = UV_ONCE_INIT;
-
 extern "C" {
 
 CassSsl* cass_ssl_new() {
+  cass::Logger::init();
   cass::SslContext* ssl_context = cass::SslContextFactory::create();
   ssl_context->inc_ref();
   return CassSsl::to(ssl_context);
@@ -54,6 +53,8 @@ CassError cass_ssl_set_private_key(CassSsl* ssl, CassString key, const char* pas
 } // extern "C"
 
 namespace cass {
+
+static uv_once_t ssl_init_guard = UV_ONCE_INIT;
 
 template<class T>
 SslContext* SslContextFactoryBase<T>::create() {

@@ -18,6 +18,7 @@
 
 #include "common.hpp"
 #include "dc_aware_policy.hpp"
+#include "logger.hpp"
 #include "round_robin_policy.hpp"
 #include "types.hpp"
 
@@ -26,6 +27,7 @@
 extern "C" {
 
 CassCluster* cass_cluster_new() {
+  cass::Logger::init();
   return CassCluster::to(new cass::Cluster());
 }
 
@@ -38,13 +40,9 @@ CassError cass_cluster_set_port(CassCluster* cluster,
   return CASS_OK;
 }
 
-CassError cass_cluster_set_ssl(CassCluster* cluster,
-                               CassSsl* ssl) {
-  if (ssl == NULL) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
+void cass_cluster_set_ssl(CassCluster* cluster,
+                          CassSsl* ssl) {
   cluster->config().set_ssl_context(ssl->from());
-  return CASS_OK;
 }
 
 CassError cass_cluster_set_protocol_version(CassCluster* cluster,
@@ -56,11 +54,10 @@ CassError cass_cluster_set_protocol_version(CassCluster* cluster,
   return CASS_OK;
 }
 
-CassError cass_cluster_set_num_threads_io(CassCluster* cluster,
-                                          unsigned num_threads) {
+void cass_cluster_set_num_threads_io(CassCluster* cluster,
+                                     unsigned num_threads) {
   // 0 is okay, it means use a thread per core
   cluster->config().set_thread_count_io(num_threads);
-  return CASS_OK;
 }
 
 CassError cass_cluster_set_queue_size_io(CassCluster* cluster,
@@ -81,15 +78,6 @@ CassError cass_cluster_set_queue_size_event(CassCluster* cluster,
   return CASS_OK;
 }
 
-CassError cass_cluster_set_queue_size_log(CassCluster* cluster,
-                                          unsigned queue_size) {
-  if (queue_size == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
-  cluster->config().set_queue_size_log(queue_size);
-  return CASS_OK;
-}
-
 CassError cass_cluster_set_contact_points(CassCluster* cluster,
                                           const char* contact_points) {
   size_t length = strlen(contact_points);
@@ -97,7 +85,7 @@ CassError cass_cluster_set_contact_points(CassCluster* cluster,
     cluster->config().contact_points().clear();
   } else {
     std::istringstream stream(
-        std::string(contact_points, length));
+          std::string(contact_points, length));
     while (!stream.eof()) {
       std::string contact_point;
       std::getline(stream, contact_point, ',');
@@ -127,17 +115,13 @@ CassError cass_cluster_set_max_connections_per_host(CassCluster* cluster,
   return CASS_OK;
 }
 
-CassError cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
-                                               unsigned wait_time_ms) {
-  if (wait_time_ms == 0) {
-    return CASS_ERROR_LIB_BAD_PARAMS;
-  }
+void cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
+                                          unsigned wait_time_ms) {
   cluster->config().set_reconnect_wait_time(wait_time_ms);
-  return CASS_OK;
 }
 
 CassError cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
-                                                     unsigned num_connections) {
+                                                   unsigned num_connections) {
   if (num_connections == 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
@@ -146,7 +130,7 @@ CassError cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
 }
 
 CassError cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
-                                                               unsigned num_requests) {
+                                                             unsigned num_requests) {
   if (num_requests == 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
@@ -155,7 +139,7 @@ CassError cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluste
 }
 
 CassError cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
-                                                      unsigned num_requests) {
+                                                  unsigned num_requests) {
   if (num_requests == 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
@@ -164,7 +148,7 @@ CassError cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
 }
 
 CassError cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
-                                                        unsigned num_bytes) {
+                                                       unsigned num_bytes) {
   if (num_bytes == 0 ||
       num_bytes < cluster->config().write_bytes_low_water_mark()) {
     return CASS_ERROR_LIB_BAD_PARAMS;
@@ -174,7 +158,7 @@ CassError cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
 }
 
 CassError cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
-                                                       unsigned num_bytes) {
+                                                      unsigned num_bytes) {
   if (num_bytes == 0 ||
       num_bytes > cluster->config().write_bytes_high_water_mark()) {
     return CASS_ERROR_LIB_BAD_PARAMS;
@@ -203,46 +187,37 @@ CassError cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
   return CASS_OK;
 }
 
-CassError cass_cluster_set_connect_timeout(CassCluster* cluster,
-                                              unsigned timeout_ms) {
+void cass_cluster_set_connect_timeout(CassCluster* cluster,
+                                      unsigned timeout_ms) {
   cluster->config().set_connect_timeout(timeout_ms);
-  return CASS_OK;
 }
 
-CassError cass_cluster_set_request_timeout(CassCluster* cluster,
-                                        unsigned timeout_ms) {
+void cass_cluster_set_request_timeout(CassCluster* cluster,
+                                      unsigned timeout_ms) {
   cluster->config().set_request_timeout(timeout_ms);
-  return CASS_OK;
 }
 
-CassError cass_cluster_set_log_level(CassCluster* cluster,
-                                     CassLogLevel level) {
-  cluster->config().set_log_level(level);
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_log_callback(CassCluster* cluster,
-                                        CassLogCallback callback,
-                                        void* data) {
-  cluster->config().set_log_callback(callback, data);
-  return CASS_OK;
-}
-
-CassError cass_cluster_set_credentials(CassCluster* cluster,
-                                       const char* username,
-                                       const char* password) {
+void cass_cluster_set_credentials(CassCluster* cluster,
+                                  const char* username,
+                                  const char* password) {
   cluster->config().set_credentials(username, password);
-  return CASS_OK;
 }
 
-CassError cass_cluster_set_load_balance_round_robin(CassCluster* cluster) {
+void cass_cluster_set_load_balance_round_robin(CassCluster* cluster) {
   cluster->config().set_load_balancing_policy(new cass::RoundRobinPolicy());
-  return CASS_OK;
 }
 
 CassError cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
-                                                 const char* local_dc) {
-  cluster->config().set_load_balancing_policy(new cass::DCAwarePolicy(local_dc));
+                                                 const char* local_dc,
+                                                 unsigned used_hosts_per_remote_dc,
+                                                 cass_bool_t allow_remote_dcs_for_local_cl) {
+  if (local_dc == NULL || strlen(local_dc) == 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cluster->config().set_load_balancing_policy(
+        new cass::DCAwarePolicy(local_dc,
+                                used_hosts_per_remote_dc,
+                                !allow_remote_dcs_for_local_cl));
   return CASS_OK;
 }
 
@@ -251,24 +226,15 @@ void cass_cluster_set_token_aware_routing(CassCluster* cluster,
   cluster->config().set_token_aware_routing(enabled == cass_true);
 }
 
-CassFuture* cass_cluster_connect(CassCluster* cluster) {
-  return cass_cluster_connect_keyspace(cluster, "");
+void cass_cluster_set_tcp_nodelay(CassCluster* cluster,
+                                  cass_bool_t enable) {
+  cluster->config().set_tcp_nodelay(enable == cass_true);
 }
 
-CassFuture* cass_cluster_connect_keyspace(CassCluster* cluster,
-                                          const char* keyspace) {
-  cass::Session* session = new cass::Session(cluster->config());
-
-  cass::SessionConnectFuture* connect_future =
-      new cass::SessionConnectFuture(session);
-  connect_future->inc_ref();
-
-  if (!session->connect_async(std::string(keyspace), connect_future)) {
-    connect_future->set_error(CASS_ERROR_LIB_UNABLE_TO_INIT,
-                              "Error initializing session");
-  }
-
-  return CassFuture::to(connect_future);
+void cass_cluster_set_tcp_keepalive(CassCluster* cluster,
+                                    cass_bool_t enable,
+                                    unsigned delay_secs) {
+  cluster->config().set_tcp_keepalive(enable == cass_true, delay_secs);
 }
 
 void cass_cluster_free(CassCluster* cluster) {
@@ -276,5 +242,3 @@ void cass_cluster_free(CassCluster* cluster) {
 }
 
 } // extern "C"
-
-namespace cass {} // namespace cass

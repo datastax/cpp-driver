@@ -30,6 +30,7 @@
 #include "value.hpp"
 #include "iterator.hpp"
 #include "ssl.hpp"
+#include "uuids.hpp"
 
 // This abstraction allows us to separate internal types from the
 // external opaque pointers that we expose.
@@ -64,15 +65,10 @@ EXTERNAL_TYPE(cass::SslContext, CassSsl);
 EXTERNAL_TYPE(cass::Schema, CassSchema);
 EXTERNAL_TYPE(cass::SchemaMetadata, CassSchemaMeta);
 EXTERNAL_TYPE(cass::SchemaMetadataField, CassSchemaMetaField);
+EXTERNAL_TYPE(cass::UuidGen, CassUuidGen);
 
 }
 
 #undef EXTERNAL_TYPE
-
-namespace cass {
-
-void cass_string_of_string(const std::string& source, CassString* output);
-
-}
 
 #endif

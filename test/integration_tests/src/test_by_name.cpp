@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(bind_and_get)
 
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
 
-  test_utils::Uuid key = test_utils::generate_time_uuid();
+  CassUuid key = test_utils::generate_time_uuid(uuid_gen);
 
   BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_OK);
   BOOST_REQUIRE_EQUAL(cass_statement_bind_int32_by_name(statement.get(), "a", 9042), CASS_OK);
@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(bind_and_get)
   BOOST_REQUIRE(value != NULL);
 
   CassUuid result_key;
-  BOOST_REQUIRE_EQUAL(cass_value_get_uuid(value, result_key), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_value_get_uuid(value, &result_key), CASS_OK);
   BOOST_CHECK(test_utils::Value<CassUuid>::equal(result_key, key));
 
   value = cass_row_get_column_by_name(row, "a");
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(bind_and_get_case_sensitive)
 
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
 
-  test_utils::Uuid key = test_utils::generate_time_uuid();
+  CassUuid key = test_utils::generate_time_uuid(uuid_gen);
 
   BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_OK);
   BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"abc\"", 1.1f), CASS_OK);
@@ -133,7 +133,7 @@ BOOST_AUTO_TEST_CASE(bind_and_get_case_sensitive)
   BOOST_REQUIRE(value != NULL);
 
   CassUuid result_key;
-  BOOST_REQUIRE_EQUAL(cass_value_get_uuid(value, result_key), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_value_get_uuid(value, &result_key), CASS_OK);
   BOOST_CHECK(test_utils::Value<CassUuid>::equal(result_key, key));
 
   value = cass_row_get_column_by_name(row, "\"abc\"");
@@ -162,7 +162,7 @@ BOOST_AUTO_TEST_CASE(bind_multiple_columns)
 
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
 
-  test_utils::Uuid key = test_utils::generate_time_uuid();
+  CassUuid key = test_utils::generate_time_uuid(uuid_gen);
 
   BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_OK);
   BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "abc", 1.23f), CASS_OK);
@@ -180,7 +180,7 @@ BOOST_AUTO_TEST_CASE(bind_multiple_columns)
   BOOST_REQUIRE(value != NULL);
 
   CassUuid result_key;
-  BOOST_REQUIRE_EQUAL(cass_value_get_uuid(value, result_key), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_value_get_uuid(value, &result_key), CASS_OK);
   BOOST_CHECK(test_utils::Value<CassUuid>::equal(result_key, key));
 
   value = cass_row_get_column_by_name(row, "\"abc\"");
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(bind_not_prepared)
 {
   test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("INSERT INTO by_name (key, a) VALUES (?, ?)"), 2));
 
-  test_utils::Uuid key = test_utils::generate_time_uuid();
+  CassUuid key = test_utils::generate_time_uuid(uuid_gen);
 
   BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_ERROR_LIB_INVALID_STATEMENT_TYPE);
   BOOST_REQUIRE_EQUAL(cass_statement_bind_int32_by_name(statement.get(), "a", 9042), CASS_ERROR_LIB_INVALID_STATEMENT_TYPE);
@@ -228,7 +228,7 @@ BOOST_AUTO_TEST_CASE(get_invalid_name)
 {
   test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("INSERT INTO by_name (key, a) VALUES (?, ?)"), 2));
 
-  test_utils::Uuid key = test_utils::generate_time_uuid();
+  CassUuid key = test_utils::generate_time_uuid(uuid_gen);
 
   BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid(statement.get(), 0, key), CASS_OK);
   BOOST_REQUIRE_EQUAL(cass_statement_bind_int32(statement.get(), 1, 9042), CASS_OK);

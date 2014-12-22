@@ -126,7 +126,10 @@ typedef struct CassDecimal_ {
 
 #define CASS_UUID_STRING_LENGTH 37
 
-typedef cass_uint8_t CassUuid[16];
+typedef struct CassUuid_ {
+  cass_uint64_t time_and_version;
+  cass_uint64_t clock_seq_and_node;
+} CassUuid;
 
 typedef struct CassCluster_ CassCluster;
 typedef struct CassSession_ CassSession;
@@ -143,6 +146,7 @@ typedef struct CassSsl_ CassSsl;
 typedef struct CassSchema_ CassSchema;
 typedef struct CassSchemaMeta_ CassSchemaMeta;
 typedef struct CassSchemaMetaField_ CassSchemaMetaField;
+typedef struct CassUuidGen_ CassUuidGen;
 
 typedef enum CassConsistency_ {
   CASS_CONSISTENCY_ANY          = 0x0000,
@@ -257,7 +261,7 @@ typedef enum  CassErrorSource_ {
 #define CASS_ERROR_MAP(XX) \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_BAD_PARAMS, 1, "Bad parameters") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_STREAMS, 2, "No streams available") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_INIT, 3, "Unable to initialize session") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_INIT, 3, "Unable to initialize") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_MESSAGE_ENCODE, 4, "Unable to encode message") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_HOST_RESOLUTION, 5, "Unable to resolve host") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNEXPECTED_RESPONSE, 6, "Unexpected response from server") \
@@ -276,6 +280,8 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_DETERMINE_PROTOCOL, 19, "Unable to find supported protocol version") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NULL_VALUE, 20, "NULL value specified") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NOT_IMPLEMENTED, 21, "Not implemented") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_CONNECT, 22, "Unable to connect") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_CLOSE, 23, "Unable to close") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -310,9 +316,18 @@ typedef enum CassError_ {
 typedef void (*CassFutureCallback)(CassFuture* future,
                                    void* data);
 
-typedef void (*CassLogCallback)(cass_uint64_t time_ms,
-                                CassLogLevel severity,
-                                CassString message,
+#define CASS_LOG_MAX_MESSAGE_SIZE 256
+
+typedef struct CassLogMessage_ {
+  cass_uint64_t time_ms;
+  CassLogLevel severity;
+  const char* file;
+  int line;
+  const char* function;
+  char message[CASS_LOG_MAX_MESSAGE_SIZE];
+} CassLogMessage;
+
+typedef void (*CassLogCallback)(const CassLogMessage* message,
                                 void* data);
 
 /***********************************************************************************
@@ -377,11 +392,10 @@ cass_cluster_set_port(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] ssl
- * @return CASS_OK if successful, otherwise an error occurred.
  *
  * @see cass_ssl_new()
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_ssl(CassCluster* cluster,
                      CassSsl* ssl);
 
@@ -407,9 +421,8 @@ cass_cluster_set_protocol_version(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] num_threads
- * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_num_threads_io(CassCluster* cluster,
                                 unsigned num_threads);
 
@@ -490,9 +503,8 @@ cass_cluster_set_max_connections_per_host(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] wait_time
- * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
                                      unsigned wait_time);
 
@@ -609,9 +621,8 @@ cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] timeout_ms Connect timeout in milliseconds
- * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_connect_timeout(CassCluster* cluster,
                                  unsigned timeout_ms);
 
@@ -622,41 +633,10 @@ cass_cluster_set_connect_timeout(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] timeout_ms Request timeout in milliseconds
- * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_request_timeout(CassCluster* cluster,
                                  unsigned timeout_ms);
-
-/**
- * Sets the log level.
- *
- * Default: CASS_LOG_WARN
- *
- * @param[in] cluster
- * @param[in] log_level
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_cluster_set_log_level(CassCluster* cluster,
-                           CassLogLevel level);
-
-/**
- * Sets a callback for handling logging events.
- *
- * Default: An internal callback that prints to stdout
- *
- * @param[in] cluster
- * @param[in] data An opaque data object passed to the callback.
- * @param[in] callback A callback that handles logging events. This is
- * called in a separate thread so access to shared data must by synchronized.
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_cluster_set_log_callback(CassCluster* cluster,
-                              CassLogCallback callback,
-                              void* data);
-
 
 /**
  * Sets credentials for plain text authentication.
@@ -664,25 +644,21 @@ cass_cluster_set_log_callback(CassCluster* cluster,
  * @param[in] cluster
  * @param[in] username
  * @param[in] password
- * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_credentials(CassCluster* cluster,
                              const char* username,
                              const char* password);
 
 /**
  * Configures the cluster to use round-robin load balancing.
- * This is the default, and does not need to be called unless
- * switching an existing from another policy.
  *
  * The driver discovers all nodes in a cluster and cycles through
  * them per request. All are considered 'local'.
  *
  * @param[in] cluster
- * @return CASS_OK
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_load_balance_round_robin(CassCluster* cluster);
 
 /**
@@ -690,13 +666,26 @@ cass_cluster_set_load_balance_round_robin(CassCluster* cluster);
  * For each query, all live nodes in a primary 'local' DC are tried first,
  * followed by any node from other DCs.
  *
+ * Note: This is the default, and does not need to be called unless
+ * switching an existing from another policy or changing settings.
+ * Without further configuration, a default local_dc is chosen from the
+ * first connected contact point, and no remote hosts are considered in
+ * query plans. If relying on this mechanism, be sure to use only contact
+ * points from the local DC.
+ *
  * @param[in] cluster
  * @param[in] local_dc The primary data center to try first
+ * @param[in] used_hosts_per_remote_dc The number of host used in each remote DC if no hosts
+ * are available in the local dc
+ * @param[in] allow_remote_dcs_for_local_cl Allows remote hosts to be used if no local dc hosts
+ * are available and the consistency level is LOCAL_ONE or LOCAL_QUORUM
  * @return CASS_OK
  */
-CASS_EXPORT CassError
+CASS_EXPORT void
 cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
-                                       const char* local_dc);
+                                       const char* local_dc,
+                                       unsigned used_hosts_per_remote_dc,
+                                       cass_bool_t allow_remote_dcs_for_local_cl);
 
 /**
  * Configures the cluster to use Token-aware request routing, or not.
@@ -709,31 +698,37 @@ cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] local_dc The primary data center to try first
- * @return CASS_OK
  */
 CASS_EXPORT void
 cass_cluster_set_token_aware_routing(CassCluster* cluster,
                                      cass_bool_t enabled);
 
 /**
- * Connects a session to the cluster.
+ * Enable/Disable Nagel's algorithm on connections.
+ *
+ * Default: cass_false (disabled).
  *
  * @param[in] cluster
- * @return A session that must be freed.
+ * @param[in] enable
  */
-CASS_EXPORT CassFuture*
-cass_cluster_connect(CassCluster* cluster);
+CASS_EXPORT void
+cass_cluster_set_tcp_nodelay(CassCluster* cluster,
+                             cass_bool_t enable);
 
 /**
- * Connects a session to the cluster and sets the keyspace.
+ * Enable/Disable TCP keep-alive
+ *
+ * Default: cass_false (disabled).
  *
  * @param[in] cluster
- * @param[in] keyspace
- * @return A session that must be freed.
+ * @param[in] enable
+ * @param[in] delay_secs The initial delay in seconds, ingored when
+ * `enable` is false.
  */
-CASS_EXPORT CassFuture*
-cass_cluster_connect_keyspace(CassCluster* cluster,
-                              const char* keyspace);
+CASS_EXPORT void
+cass_cluster_set_tcp_keepalive(CassCluster* cluster,
+                               cass_bool_t enable,
+                               unsigned delay_secs);
 
 /***********************************************************************************
  *
@@ -742,10 +737,56 @@ cass_cluster_connect_keyspace(CassCluster* cluster,
  ***********************************************************************************/
 
 /**
+ * Creates a new session.
+ *
+ * @return Returns a session that must be freed.
+ *
+ * @see cass_session_free()
+ */
+CASS_EXPORT CassSession*
+cass_session_new();
+
+/**
+ * Frees a session instance. If the session is still connected it will be syncronously
+ * closed before being deallocated.
+ *
+ * @param[in] session
+ */
+CASS_EXPORT void
+cass_session_free(CassSession* session);
+
+/**
+ * Connects a session.
+ *
+ * @param[in] session
+ * @param[in] cluster
+ * @return A future that must be freed.
+ *
+ * @see cass_session_close()
+ */
+CASS_EXPORT CassFuture*
+cass_session_connect(CassSession* session,
+                     const CassCluster* cluster);
+
+/**
+ * Connects a session and sets the keyspace.
+ *
+ * @param[in] session
+ * @param[in] cluster
+ * @param[in] keyspace
+ * @return A future that must be freed.
+ *
+ * @see cass_session_close()
+ */
+CASS_EXPORT CassFuture*
+cass_session_connect_keyspace(CassSession* session,
+                              const CassCluster* cluster,
+                              const char* keyspace);
+
+/**
  * Closes the session instance, outputs a close future which can
  * be used to determine when the session has been terminated. This allows
- * in-flight requests to finish. It is an error to call this method twice
- * with the same session as it is freed after it terminates.
+ * in-flight requests to finish.
  *
  * @param[in] session
  * @return A future that must be freed.
@@ -881,7 +922,7 @@ cass_schema_meta_get_field(const CassSchemaMeta* meta,
  * Gets the name for a schema metadata field
  *
  * @param[in] field
- * @return The name of the metdata data field
+ * @return The name of the metadata data field
  */
 CASS_EXPORT CassString
 cass_schema_meta_field_name(const CassSchemaMetaField* field);
@@ -890,7 +931,7 @@ cass_schema_meta_field_name(const CassSchemaMetaField* field);
  * Gets the value for a schema metadata field
  *
  * @param[in] field
- * @return The value of the metdata data field
+ * @return The value of the metadata data field
  */
 CASS_EXPORT const CassValue*
 cass_schema_meta_field_value(const CassSchemaMetaField* field);
@@ -935,7 +976,7 @@ cass_ssl_add_trusted_cert(CassSsl* ssl,
  * Sets verifcation performed on the peer's certificate.
  *
  * CASS_SSL_VERIFY_NONE - No verification is performed
- * CASS_SSL_VERIFY_PEER_CERT - Certficate is present and valid
+ * CASS_SSL_VERIFY_PEER_CERT - Certificate is present and valid
  * CASS_SSL_VERIFY_PEER_IDENTITY - IP address matches the certificate's
  * common name or one of its subject alternative names. This implies the
  * certificate is also present.
@@ -951,9 +992,9 @@ cass_ssl_set_verify_flags(CassSsl* ssl,
                           int flags);
 
 /**
- * Set client-side certficate chain. This is used to authenticate
+ * Set client-side certificate chain. This is used to authenticate
  * the client on the server-side. This should contain the entire
- * certficate chain starting with the certificate itself.
+ * Certificate chain starting with the certificate itself.
  *
  * @param[in] ssl
  * @param[in] cert PEM formatted certificate string
@@ -1028,20 +1069,6 @@ cass_future_wait(CassFuture* future);
 CASS_EXPORT cass_bool_t
 cass_future_wait_timed(CassFuture* future,
                        cass_duration_t timeout_us);
-
-/**
- * Gets the result of a successful future. If the future is not ready this method will
- * wait for the future to be set. The first successful call consumes the future, all
- * subsequent calls will return NULL.
- *
- * @param[in] future
- * @return CassSession instance if successful, otherwise NULL for error. The return instance
- * must be closed using cass_session_close().
- *
- * @see cass_session_execute() and cass_session_execute_batch()
- */
-CASS_EXPORT CassSession*
-cass_future_get_session(CassFuture* future);
 
 /**
  * Gets the result of a successful future. If the future is not ready this method will
@@ -1136,7 +1163,7 @@ cass_statement_free(CassStatement* statement);
  *
  * @param[in] statement
  * @param[in] index
- * @return CASS_OK if successful, otherwise an error ocurred.
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_statement_add_key_index(CassStatement* statement,
@@ -1151,7 +1178,7 @@ cass_statement_add_key_index(CassStatement* statement,
  *
  * @param[in] statement
  * @param[in] keyspace
- * @return CASS_OK if successful, otherwise an error ocurred.
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_statement_set_keyspace(CassStatement* statement,
@@ -1324,7 +1351,7 @@ cass_statement_bind_bytes(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_bind_uuid(CassStatement* statement,
                          cass_size_t index,
-                         const CassUuid value);
+                         CassUuid value);
 
 /**
  * Binds an "inet" to a query or bound statement at the specified index.
@@ -1516,7 +1543,7 @@ cass_statement_bind_bytes_by_name(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_bind_uuid_by_name(CassStatement* statement,
                                  const char* name,
-                                 const CassUuid value);
+                                 CassUuid value);
 
 /**
  * Binds an "inet" to all the values with the specified name.
@@ -2203,7 +2230,7 @@ cass_value_get_bool(const CassValue* value,
  */
 CASS_EXPORT CassError
 cass_value_get_uuid(const CassValue* value,
-                    CassUuid output);
+                    CassUuid* output);
 
 /**
  * Gets an INET for the specified value.
@@ -2315,50 +2342,100 @@ cass_value_secondary_sub_type(const CassValue* collection);
  ************************************************************************************/
 
 /**
+ * Creates a new UUID generator.
+ *
+ * Note: This object is thread-safe. It is best practice to create and reuse
+ * a single object per application.
+ *
+ * Note: If unique node information (IP address) is unable to be determined
+ * then random node information will be generated.
+ *
+ * @return Returns a UUID generator that must be freed.
+ *
+ * @see cass_uuid_gen_free()
+ * @see cass_uuid_gen_new_with_node()
+ */
+CASS_EXPORT CassUuidGen*
+cass_uuid_gen_new();
+
+/**
+ * Creates a new UUID generator with custom node information.
+ *
+ * Note: This object is thread-safe. It is best practice to create and reuse
+ * a single object per application.
+ *
+ * @return Returns a UUID generator that must be freed.
+ *
+ * @see cass_uuid_gen_free()
+ */
+CASS_EXPORT CassUuidGen*
+cass_uuid_gen_new_with_node(cass_uint64_t node);
+
+/**
+ * Frees a UUID generator instance.
+ *
+ * @param[in] uuid_gen
+ */
+CASS_EXPORT void
+cass_uuid_gen_free(CassUuidGen* uuid_gen);
+
+/**
  * Generates a V1 (time) UUID.
  *
+ * Note: This method is thread-safe
+ *
+ * @param[in] uuid_gen
  * @param[out] output A V1 UUID for the current time.
  */
 CASS_EXPORT void
-cass_uuid_generate_time(CassUuid output);
+cass_uuid_gen_time(CassUuidGen* uuid_gen,
+                   CassUuid* output);
+
+/**
+ * Generates a new V4 (random) UUID
+ *
+ * Note: This method is thread-safe
+ *
+ * @param[in] uuid_gen
+ * @param output A randomly generated V4 UUID.
+ */
+CASS_EXPORT void
+cass_uuid_gen_random(CassUuidGen* uuid_gen,
+                     CassUuid* output);
 
 /**
  * Generates a V1 (time) UUID for the specified time.
  *
- * @param[in] time
+ * Note: This method is thread-safe
+ *
+ * @param[in] uuid_gen
+ * @param[in] timestamp
  * @param[out] output A V1 UUID for the specified time.
  */
 CASS_EXPORT void
-cass_uuid_from_time(cass_uint64_t time,
-                    CassUuid output);
+cass_uuid_gen_from_time(CassUuidGen* uuid_gen,
+                        cass_uint64_t timestamp,
+                        CassUuid* output);
 
 /**
- * Generates a minimum V1 (time) UUID for the specified time.
+ * Sets the UUID to the minimum V1 (time) value for the specified time.
  *
  * @param[in] time
  * @param[out] output A minimum V1 UUID for the specified time.
  */
 CASS_EXPORT void
 cass_uuid_min_from_time(cass_uint64_t time,
-                        CassUuid output);
+                        CassUuid* output);
 
 /**
- * Generates a maximum V1 (time) UUID for the specified time.
+ * Sets the UUID to the maximum V1 (time) value for the specified time.
  *
  * @param[in] time
  * @param[out] output A maximum V1 UUID for the specified time.
  */
 CASS_EXPORT void
 cass_uuid_max_from_time(cass_uint64_t time,
-                        CassUuid output);
-
-/**
- * Generates a new V4 (random) UUID
- *
- * @param output A randomly generated V4 UUID.
- */
-CASS_EXPORT void
-cass_uuid_generate_random(CassUuid output);
+                        CassUuid* output);
 
 /**
  * Gets the timestamp for a V1 UUID
@@ -2385,11 +2462,22 @@ cass_uuid_version(CassUuid uuid);
  *
  * @param[in] uuid
  * @param[out] output A null-terminated string of length CASS_UUID_STRING_LENGTH.
- * Example: "550e8400-e29b-41d4-a716-446655440000"
  */
 CASS_EXPORT void
 cass_uuid_string(CassUuid uuid,
                  char* output);
+
+/**
+ * Returns a UUID for the specified string.
+ *
+ * Example: "550e8400-e29b-41d4-a716-446655440000"
+ *
+ * @param[in] str
+ * @param[out] output
+ */
+CASS_EXPORT CassError
+cass_uuid_from_string(const char* str,
+                      CassUuid* output);
 
 /***********************************************************************************
  *
@@ -2408,9 +2496,58 @@ cass_error_desc(CassError error);
 
 /***********************************************************************************
  *
- * Log level
+ * Log
  *
  ***********************************************************************************/
+
+/**
+ * Explicty wait for the log to flush and deallocate resources.
+ * This *MUST* be the last call using the library. It is an error
+ * to call any cass_*() functions after this call.
+ */
+void cass_log_cleanup();
+
+/**
+ * Sets the log level.
+ *
+ * Note: This needs to be done before any call that might log, such as
+ * any of the cass_cluster_*() or cass_ssl_*() functions.
+ *
+ * Default: CASS_LOG_WARN
+ *
+ * @param[in] log_level
+ */
+CASS_EXPORT void
+cass_log_set_level(CassLogLevel log_level);
+
+/**
+ * Sets a callback for handling logging events.
+ *
+ * Note: This needs to be done before any call that might log, such as
+ * any of the cass_cluster_*() or cass_ssl_*() functions.
+ *
+ * Default: An internal callback that prints to stderr
+ *
+ * @param[in] data An opaque data object passed to the callback.
+ * @param[in] callback A callback that handles logging events. This is
+ * called in a separate thread so access to shared data must be synchronized.
+ */
+CASS_EXPORT void
+cass_log_set_callback(CassLogCallback callback,
+                      void* data);
+
+/**
+ * Sets the log queue size.
+ *
+ * Note: This needs to be done before any call that might log, such as
+ * any of the cass_cluster_*() or cass_ssl_*() functions.
+ *
+ * Default: 2048
+ *
+ * @param[in] queue_size
+ */
+CASS_EXPORT void
+cass_log_set_queue_size(cass_size_t queue_size);
 
 /**
  * Gets the string for a log level.

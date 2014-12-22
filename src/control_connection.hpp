@@ -31,7 +31,6 @@
 namespace cass {
 
 class EventResponse;
-class Logger;
 class Request;
 class Row;
 class Session;
@@ -40,34 +39,33 @@ class Value;
 
 class ControlConnection {
 public:
-  static bool determine_address_for_peer_host(Logger* logger,
-                                              const Address& connected_address,
+  static bool determine_address_for_peer_host(const Address& connected_address,
                                               const Value* peer_value,
                                               const Value* rpc_value,
                                               Address* output);
 
-  enum ControlState {
+  enum State {
     CONTROL_STATE_NEW,
     CONTROL_STATE_READY,
     CONTROL_STATE_CLOSED
   };
 
-  ControlConnection()
-    : session_(NULL)
-    , state_(CONTROL_STATE_NEW)
-    , connection_(NULL)
-    , reconnect_timer_(NULL)
-    , query_tokens_(false) {}
+  ControlConnection();
 
   int protocol_version() const {
     return protocol_version_;
   }
+
+  const SharedRefPtr<Host> connected_host() const;
+
+  void clear();
 
   void connect(Session* session);
   void close();
 
   void on_up(const Address& address);
   void on_down(const Address& address, bool is_critical_failure);
+
 
 private:
   class ControlMultipleRequestHandler : public MultipleRequestHandler {
@@ -115,7 +113,7 @@ private:
 
     virtual void on_set(ResponseMessage* response) {
       Response* response_body = response->response_body().get();
-      if(control_connection_->handle_query_invalid_response(response_body)) {
+      if (control_connection_->handle_query_invalid_response(response_body)) {
         return;
       }
       response_callback_(data_, response_body);
@@ -181,14 +179,13 @@ private:
                         const MultipleRequestHandler::ResponseVec& responses);
 
 private:
+  State state_;
   Session* session_;
-  ControlState state_;
   Connection* connection_;
+  Timer* reconnect_timer_;
   ScopedPtr<QueryPlan> query_plan_;
   Address current_host_address_;
   int protocol_version_;
-  Timer* reconnect_timer_;
-  Logger* logger_;
   std::string last_connection_error_;
   bool query_tokens_;
 
