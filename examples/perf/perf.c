@@ -76,13 +76,13 @@ CassCluster* create_cluster() {
   cass_cluster_set_pending_requests_low_water_mark(cluster, 5000);
   cass_cluster_set_pending_requests_high_water_mark(cluster, 10000);
   cass_cluster_set_core_connections_per_host(cluster, 1);
-  cass_cluster_set_max_connections_per_host(cluster, 1);
+  cass_cluster_set_max_connections_per_host(cluster, 2);
   return cluster;
 }
 
 CassError connect_session(CassSession* session, const CassCluster* cluster) {
   CassError rc = CASS_OK;
-  CassFuture* future = cass_session_connect(session, cluster);
+  CassFuture* future = cass_session_connect_keyspace(session, cluster, "examples");
 
   cass_future_wait(future);
   rc = cass_future_error_code(future);
