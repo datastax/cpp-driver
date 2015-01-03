@@ -1,0 +1,31 @@
+Compass.add_project_configuration 'nanoc/compass.rb'
+
+compile '/api*' do
+  layout 'api'
+  filter :add_ids_to_headers
+  layout 'default'
+  # filter :relativize_paths, :type => :html
+  # filter :rubypants
+  # filter :beautify
+end
+
+route 'api*' do
+  item.identifier + 'index.html'
+end
+
+compile '/sass/*/' do
+  filter :erb
+  filter :sass, Compass.sass_engine_options
+
+  filter :relativize_paths, :type => :css
+end
+
+route 'sass/*' do
+  item.identifier.sub('sass', 'css').chop + '.css'
+end
+
+passthrough '/css/*'
+passthrough '/js/*'
+passthrough '/fonts/*'
+
+layout '*', :erb

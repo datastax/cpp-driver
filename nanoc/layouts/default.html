@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta name="description" content="DataStax C++ Driver for Apache Cassandra Documentation">
+    <meta name="author" content="DataStax">
+
+    <title>DataStax C++ Driver for Apache Cassandra - <%=h @item[:title] %></title>
+
+    <link rel="icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/favicon.png">
+    <link href="/css/style.css" rel="stylesheet">
+    <link href="/css/highlight.css" rel="stylesheet">
+
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <header class="navbar navbar-default navbar-static-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/">Cassandra Ruby Driver</a>
+        </div>
+        <div class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li<% if @item == @items.at('/') %> class="active"<% end %>><a href="/">Introduction</a></li>
+            <li<% if @item == @items.at('/api/') || child_of?(@item, @items.at('/api/')) %> class="active"<% end %>><a href="/api/">API docs</a></li>
+          </ul>
+        </div>
+      </div>
+    </header>
+
+    <div class="container" id="content">
+      <div class="row">
+        <div class="col-md-9 content">
+          <nav class="crumbs">
+            <ol class="breadcrumb">
+              <% breadcrumbs_trail.each do |item| %>
+              <% if item %>
+              <% if item == @item %>
+              <li class="active"><%= @item[:title] %></li>
+              <% else %>
+              <li><a href="<%= item.path %>"><%= item[:title] %></a></li>
+              <% end %>
+              <% end %>
+              <% end %>
+            </ol>
+          </nav>
+          <%= yield %>
+        </div>
+      </div>
+    </div>
+
+    <footer class="container text-muted">
+      <ul class="list-inline">
+        <li>
+          <a href="https://github.com/datastax/cpp-driver">Code</a>
+        </li>
+        <li>·</li>
+        <li>
+          <a href="http://datastax.github.io/cpp-driver/">Docs</a>
+        </li>
+        <li>·</li>
+        <li>
+          <a href="https://datastax-oss.atlassian.net/browse/RUBY">Issues</a>
+        </li>
+        <li>·</li>
+        <li>
+          <a href="https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user">Mailing List</a>
+        </li>
+        <li>·</li>
+        <li>
+          <a href="irc://irc.freenode.net/datastax-drivers">IRC Channel</a>
+        </li>
+        <li>·</li>
+        <li>
+          <a href="https://github.com/datastax/cpp-driver/releases">Releases</a>
+        </li>
+      </ul>
+    </footer>
+
+    <script src="/js/jquery.js"></script>
+    <script src="/js/bootstrap.js"></script>
+  </body>
+</html>
