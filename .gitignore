@@ -95,3 +95,9 @@ boost_1_*
 
 
 config*.txt
+
+# HTML documentation
+.sass-cache
+gh-pages
+crash.log
+tmp

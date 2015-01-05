@@ -1,0 +1,109 @@
+Compass.add_project_configuration 'nanoc/compass.rb'
+
+preprocess do
+  @items.each do |item|
+    path = item.identifier.sub('/', '') + '.nav'
+
+    if File.exists?(path)
+      nav = File.read(path).split("\n").map do |line|
+        item.identifier + line.chomp('/') + '/'
+      end
+
+      item[:nav] = item.children.reject {|i| i[:title].nil?}.sort do |a, b|
+        a = nav.index(a.identifier)
+        b = nav.index(b.identifier)
+
+        if a.nil? && !b.nil?
+          1
+        elsif b.nil? && !a.nil?
+          -1
+        else
+          a <=> b
+        end
+      end
+    else
+      item[:nav] = item.children.reject {|i| i[:title].nil?}.sort {|a, b| a[:title] <=> b[:title]}
+    end
+  end
+end
+
+compile '/' do
+  filter :redcarpet, :renderer => Docs::Markdown, :options => {
+    :no_intra_emphasis   => true,
+    :tables              => true,
+    :fenced_code_blocks  => true,
+    :autolink            => true,
+    :space_after_headers => true,
+    :superscript         => true,
+    :underline           => true,
+    :highlight           => true
+  }
+
+  filter :add_ids_to_headers
+  layout 'default'
+  filter :add_toc
+  filter :relativize_paths, :type => :html
+  filter :rubypants
+end
+
+compile '/topics*' do
+  case item[:extension]
+  when 'md'
+    filter :redcarpet, :renderer => Docs::Markdown, :options => {
+      :no_intra_emphasis   => true,
+      :tables              => true,
+      :fenced_code_blocks  => true,
+      :autolink            => true,
+      :space_after_headers => true,
+      :superscript         => true,
+      :underline           => true,
+      :highlight           => true
+    }
+    filter :add_topics
+  end
+
+  filter :add_ids_to_headers
+  layout 'default'
+  filter :add_toc
+  filter :relativize_paths, :type => :html
+  filter :rubypants
+end
+
+compile '/api*' do
+  layout 'api'
+  filter :add_ids_to_headers
+  layout 'default'
+  # filter :relativize_paths, :type => :html
+  # filter :rubypants
+  # filter :beautify
+end
+
+route '/' do
+  '/index.html'
+end
+
+route '/topics*' do
+  item.identifier + 'index.html'
+end
+
+route 'api*' do
+  item.identifier + 'index.html'
+end
+
+compile '/sass/*/' do
+  filter :erb
+  filter :sass, Compass.sass_engine_options
+
+  filter :relativize_paths, :type => :css
+end
+
+route 'sass/*' do
+  item.identifier.sub('sass', 'css').chop + '.css'
+end
+
+passthrough '/css/*'
+passthrough '/js/*'
+passthrough '/fonts/*'
+passthrough '/favicons/*'
+
+layout '*', :erb
