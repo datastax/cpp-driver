@@ -51,8 +51,9 @@ Pool::Pool(IOWorker* io_worker,
     , is_pending_flush_(false) {}
 
 Pool::~Pool() {
-  LOG_DEBUG("Pool dtor with %d pending requests pool(%p)",
-            (int)pending_requests_.size(), static_cast<void*>(this));
+  LOG_DEBUG("Pool dtor with %u pending requests pool(%p)",
+            static_cast<unsigned int>(pending_requests_.size()),
+            static_cast<void*>(this));
   while (!pending_requests_.is_empty()) {
     RequestHandler* request_handler
         = static_cast<RequestHandler*>(pending_requests_.front());
@@ -136,8 +137,8 @@ void Pool::add_pending_request(RequestHandler* request_handler) {
   pending_requests_.add_to_back(request_handler);
 
   if (pending_requests_.size() % 10 == 0) {
-    LOG_DEBUG("%d request%s pending on %s pool(%p)",
-              (int)pending_requests_.size() + 1,
+    LOG_DEBUG("%u request%s pending on %s pool(%p)",
+              static_cast<unsigned int>(pending_requests_.size() + 1),
               pending_requests_.size() > 0 ? "s":"",
               address_.to_string().c_str(),
               static_cast<void*>(this));
