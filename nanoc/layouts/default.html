@@ -10,10 +10,10 @@
 
     <title>DataStax C++ Driver for Apache Cassandra - <%=h @item[:title] %></title>
 
-    <link rel="icon" href="/favicon.ico">
-    <link rel="apple-touch-icon" href="/favicon.png">
+    <link rel="icon" href="/favicons/favicon.ico">
+    <link rel="apple-touch-icon" href="/favicons/favicon.png">
     <link href="/css/style.css" rel="stylesheet">
-    <link href="/css/highlight.css" rel="stylesheet">
+    <link href="/css/pygments.css" rel="stylesheet">
 
     <!--[if lt IE 9]>
       <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
@@ -30,11 +30,12 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="/">Cassandra Ruby Driver</a>
+          <a class="navbar-brand" href="/">Cassandra C/C++ Driver</a>
         </div>
         <div class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
             <li<% if @item == @items.at('/') %> class="active"<% end %>><a href="/">Introduction</a></li>
+            <li<% if @item == @items.at('/topics/') || child_of?(@item, @items.at('/topics/')) %> class="active"<% end %>><a href="/topics/">Topics</a></li>
             <li<% if @item == @items.at('/api/') || child_of?(@item, @items.at('/api/')) %> class="active"<% end %>><a href="/api/">API docs</a></li>
           </ul>
         </div>
@@ -59,6 +60,35 @@
           </nav>
           <%= yield %>
         </div>
+        <nav class="col-md-3 side-nav">
+          <ol class="nav nav-pills nav-stacked toc" data-spy="affix" data-offset-top="60" data-offset-bottom="25">
+            <% if @item == @items.at('/') %>
+              {{TOC}}
+            <% elsif @items.at('/topics/') && (@item == @items.at('/topics/') || child_of?(@item, @items.at('/topics/'))) %>
+              <% @items.at('/topics/')[:nav].each do |section| %>
+                <% if @item == section || @item.parent == section %>
+                  <li class="active">
+                    <a href="<%= section.path %>"><%= section[:title] %></a>
+                    <ul class="nav nav-pills nav-stacked">
+                      <% section[:nav].each do |child| %>
+                      <% if @item == child %>
+                      <li class="active">
+                        <a href="<%= child.path %>"><%= child[:title] %></a>
+                        <ul class="nav nav-pills nav-stacked">{{TOC}}</ul>
+                      </li>
+                      <% else %>
+                      <li><a href="<%= child.path %>"><%= child[:title] %></a></li>
+                      <% end %>
+                      <% end %>
+                    </ul>
+                  </li>
+                <% else %>
+                  <li><a href="<%= section.path %>"><%= section[:title] %></a></li>
+                <% end %>
+              <% end %>
+            <% end %>
+          </ol>
+        </nav>
       </div>
     </div>
 
@@ -73,7 +103,7 @@
         </li>
         <li>·</li>
         <li>
-          <a href="https://datastax-oss.atlassian.net/browse/RUBY">Issues</a>
+          <a href="https://datastax-oss.atlassian.net/browse/CPP">Issues</a>
         </li>
         <li>·</li>
         <li>
