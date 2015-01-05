@@ -1,0 +1,14 @@
+<% @items.each do |item| %>
+<% if @item == item || child_of?(@item, item) %>
+<li class="active">
+  <a href="<%= item.path %>"><%= item[:title] %></a>
+  <% unless item[:nav].empty? %>
+  <ul class="nav nav-pills nav-stacked">
+    <%= render 'side-nav', :items => item[:nav] %>
+  </ul>
+  <% end %>
+</li>
+<% else %>
+<li><a href="<%= item.path %>"><%= item[:title] %></a></li>
+<% end %>
+<% end %>

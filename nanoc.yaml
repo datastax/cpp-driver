@@ -18,8 +18,12 @@ data_sources:
     content_dir: nanoc/assets
     allow_periods_in_identifiers: false
   -
+    type: index_page
+  -
+    type: topics
+  -
     type: api
-    doxygen: doxygen/xml
+    doxygen: build/doxygen/xml
 prune:
   auto_prune: true,
   exclude: [ '.git' ]

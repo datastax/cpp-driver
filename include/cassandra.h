@@ -198,12 +198,6 @@ typedef enum CassBatchType_ {
   CASS_BATCH_TYPE_COUNTER  = 2
 } CassBatchType;
 
-typedef enum CassCompression_ {
-  CASS_COMPRESSION_NONE   = 0,
-  CASS_COMPRESSION_SNAPPY = 1,
-  CASS_COMPRESSION_LZ4    = 2
-} CassCompression;
-
 typedef enum CassColumnType_ {
   CASS_COLUMN_TYPE_PARTITION_KEY,
   CASS_COLUMN_TYPE_CLUSTERING_KEY,
