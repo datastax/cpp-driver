@@ -750,6 +750,9 @@ cass_session_new();
  * Frees a session instance. If the session is still connected it will be syncronously
  * closed before being deallocated.
  *
+ * Important: Do not free a session in a future callback. Freeing a session in a future
+ * callback will cause a deadlock.
+ *
  * @param[in] session
  */
 CASS_EXPORT void
@@ -1053,6 +1056,9 @@ cass_future_ready(CassFuture* future);
 
 /**
  * Wait for the future to be set with either a result or error.
+ *
+ * Important: Do not wait in a future callback. Waiting in a future
+ * callback will cause a deadlock.
  *
  * @param[in] future
  */
