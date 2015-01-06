@@ -13,7 +13,7 @@ module Docs
     end
 
     def prefix
-      'api/'
+      'api'
     end
 
     def path_to_xml_dir
@@ -21,15 +21,22 @@ module Docs
     end
 
     def items
-      items = []
+      items    = []
+      registry = Doxygen.load(path_to_xml_dir, @markdown)
 
-      Doxygen.load(path_to_xml_dir, @markdown) do |object|
+      registry.each_object do |object|
         items << Nanoc::Item.new('_', {
           :doxygen => object,
           :title   => object.name,
           :mtime   => File.mtime(object.file)
-        }, prefix + object.id)
+        }, prefix + '/' + object.id)
       end
+
+      items << Nanoc::Item.new('_', {
+        :doxygen => registry.index,
+        :title   => 'API docs',
+        :mtime   => File.mtime(registry.index_file)
+      }, prefix)
 
       items
     end
@@ -38,18 +45,23 @@ end
 
 
 class Doxygen
-  def self.load(path_to_xml_dir, markdown, &block)
+  private_class_method :new
+
+  def self.load(path_to_xml_dir, markdown)
     instance = new(markdown)
-    instance.load(path_to_xml_dir, &block)
+    instance.load(path_to_xml_dir)
     instance
   end
+
+  attr_reader :index
 
   def initialize(markdown)
     @markdown = markdown
     @objects  = ::Hash.new
+    @index    = Index.new
   end
 
-  def load(path_to_xml_dir, &block)
+  def load(path_to_xml_dir)
     index_path   = path_to_xml_dir + '/index.xml'
     objects_path = path_to_xml_dir + '/*.xml'
     Dir.glob(objects_path) do |path|
@@ -63,12 +75,42 @@ class Doxygen
       end
     end
 
-    @objects.each_value(&block)
+    @index.file = index_path
+    xml = Nokogiri::XML.parse(File.read(index_path))
+
+    xml.xpath('//doxygenindex/compound').each do |element|
+      @index.add(load_compound_reference(element))
+    end
 
     self
   end
 
+  def each_object(&block)
+    @objects.each_value(&block)
+  end
+
+  def index_file
+    @index.file
+  end
+
   private
+
+  def load_compound_reference(node)
+    Reference.new({
+      :id      => node.attr('refid'),
+      :name    => load_text(node.at_xpath('name')),
+      :kind    => load_compound_kind(node.attr('kind')),
+      :members => node.xpath('member').map {|el| load_member_reference(el)}
+    })
+  end
+
+  def load_member_reference(node)
+    MemberReference.new({
+      :id    => node.attr('refid'),
+      :name  => load_text(node.at_xpath('name')),
+      :kind  => load_member_kind(node.attr('kind'))
+    })
+  end
 
   def load_compound(node)
     sections   = {}
@@ -91,8 +133,7 @@ class Doxygen
       :namespaces => node.xpath('innernamespace').map {|el| load_ref(el)},
       :pages      => node.xpath('innerpage').map {|el| load_ref(el)},
       :groups     => node.xpath('innergroup').map {|el| load_ref(el)},
-      :summary    => load_docblock(node.at_xpath('briefdescription')),
-      :details    => load_docblock(node.at_xpath('detaileddescription')),
+      :details    => load_docblock(node),
       :sections   => sections,
     }
     attributes.merge!(load_location_info(node.at_xpath('location')))
@@ -135,8 +176,7 @@ class Doxygen
       :add         => load_bool(node.attr('add')),
       :remove      => load_bool(node.attr('remove')),
       :raise       => load_bool(node.attr('raise')),
-      :summary     => load_docblock(node.at_xpath('briefdescription')),
-      :details     => load_docblock(node.at_xpath('detaileddescription'))
+      :details     => load_docblock(node)
     }
 
     attributes.merge!(load_location_info(node.at_xpath('location')))
@@ -149,8 +189,7 @@ class Doxygen
       :id          => node.attr('id').split('_').last,
       :name        => load_text(node.at_xpath('name')),
       :initializer => load_markdown_line(node.at_xpath('initializer')),
-      :summary     => load_docblock(node.at_xpath('briefdescription')),
-      :details     => load_docblock(node.at_xpath('detaileddescription'))
+      :details     => load_docblock(node)
     })
   end
 
@@ -166,20 +205,21 @@ class Doxygen
 
   def load_member_kind(value)
     case value
-    when 'define'   then :define
-    when 'property' then :property
-    when 'event'    then :event
-    when 'variable' then :variable
-    when 'typedef'  then :typedef
-    when 'enum'     then :enum
-    when 'function' then :function
-    when 'signal'   then :signal
-    when 'prototype'then :prototype
-    when 'friend'   then :friend
-    when 'dcop'     then :dcop
-    when 'slot'     then :slot
-    when 'interface'then :interface
-    when 'service'  then :service
+    when 'define'    then :define
+    when 'property'  then :property
+    when 'event'     then :event
+    when 'variable'  then :variable
+    when 'typedef'   then :typedef
+    when 'enum'      then :enum
+    when 'enumvalue' then :enumvalue
+    when 'function'  then :function
+    when 'signal'    then :signal
+    when 'prototype' then :prototype
+    when 'friend'    then :friend
+    when 'dcop'      then :dcop
+    when 'slot'      then :slot
+    when 'interface' then :interface
+    when 'service'   then :service
     else
       raise ::ArgumentError, "unsupported member kind: #{value.inspect}"
     end
@@ -241,13 +281,15 @@ class Doxygen
 
   def load_docblock(node)
     title          = nil
+    description    = load_markdown(node.at_xpath('briefdescription')) + load_markdown(node.at_xpath('detaileddescription'))
     tags           = ::Hash.new
     params         = ::Hash.new
     retvals        = []
     exception      = []
     templateparams = []
 
-    node.traverse do |el|
+    el = node.at_xpath('detaileddescription')
+    el && el.traverse do |el|
       case el.name
       when 'simplesect'
         tag = load_simplesect(el)
@@ -286,7 +328,7 @@ class Doxygen
 
     Docblock.new({
       :title          => title,
-      :description    => load_markdown(node),
+      :description    => description,
       :tags           => tags,
       :params         => params,
       :retvals        => retvals,
@@ -590,13 +632,51 @@ class Doxygen
     end
   end
 
+  class Index
+    attr_accessor :file
+    attr_reader :sections
+
+    def initialize
+      @sections = ::Hash.new
+    end
+
+    def each_object(*kinds, &block)
+      kinds.each do |kind|
+        next unless @sections.include?(kind)
+        @sections[kind].each(&block)
+      end
+
+      self
+    end
+
+    def add(reference)
+      @sections[reference.kind] ||= []
+      @sections[reference.kind] << reference
+
+      self
+    end
+  end
+
+  class Reference < Object
+    attr_reader :id
+    attr_reader :name
+    attr_reader :kind
+    attr_reader :members
+  end
+
+  class MemberReference < Object
+    attr_reader :id
+    attr_reader :name
+    attr_reader :kind
+  end
+
+
   class CodeObject < Object
     attr_reader :id
     attr_reader :file
     attr_reader :line
     attr_reader :column
 
-    attr_reader :summary
     attr_reader :details
   end
 
@@ -657,6 +737,8 @@ class Doxygen
   class Ref < Object
     attr_reader :id
     attr_reader :visibility
+    attr_reader :tooltip
+    attr_reader :name
   end
 
   class CompoundRef < Ref
@@ -719,7 +801,6 @@ class Doxygen
     attr_reader :id
     attr_reader :name
     attr_reader :initializer
-    attr_reader :summary
     attr_reader :details
   end
 

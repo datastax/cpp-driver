@@ -70,10 +70,15 @@ compile '/topics*' do
 end
 
 compile '/api*' do
-  layout 'api'
+  if item.identifier == '/api/'
+    layout 'api'
+  else
+    layout 'api/object'
+  end
+
   filter :add_ids_to_headers
   layout 'default'
-  # filter :relativize_paths, :type => :html
+  filter :relativize_paths, :type => :html
   # filter :rubypants
   # filter :beautify
 end
