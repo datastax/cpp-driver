@@ -86,6 +86,12 @@
                   <li><a href="<%= section.path %>"><%= section[:title] %></a></li>
                 <% end %>
               <% end %>
+            <% elsif @items.at('/api/') && (@item == @items.at('/api/') || child_of?(@item, @items.at('/api/'))) %>
+            <% @items.at('/api/')[:doxygen].each_object(:file, :class, :struct, :union, :interface) do |obj| %>
+            <li<% if child_of?(@item, @items.at('/api/')) && @item[:doxygen].id == obj.id %> class="active"<% end %>>
+              <a href="/api/<%= obj.id %>"><%= obj.name %></a>
+            </li>
+            <% end %>
             <% end %>
           </ol>
         </nav>

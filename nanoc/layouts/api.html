@@ -1,81 +1,20 @@
-<% object = item[:doxygen] %>
+<% index = item[:doxygen] %>
 <div class="page-header">
   <h1>
-    <small><%= object.kind %></small>
-    <%= object.name %>
+    API Documentation
   </h1>
 </div>
-<% object.each_section do |section, members| %>
-<h2><%= h section_title(section) %></h2>
-<div class="<%= section %>-content">
-<% members.each do |member| %>
-  <% case member.kind
-     when :function %>
-  <div class="panel panel-default member-definition" id="<%= member.id %>">
-    <div class="panel-heading <%= section %>-heading">
-      <a class="anchor" href="#<%= member.id %>" aria-hidden="true"><span class="glyphicon glyphicon-link"></span></a>
-      <%= member.type %> <%= member.name %> <big>(</big> <%= format_params(member) %> <big>)</big>
-    </div>
-    <div class="panel-body <%= section %>-body">
-      <% docblock =  member.details ? member.details : member.summary %>
-      <%= render 'api/function', :function => member, :docblock => docblock %>
-    </div>
-  </div>
-  <% when :define %>
-  <div class="panel panel-default member-definition" id="<%= member.id %>">
-    <div class="panel-heading <%= section %>-heading">
-      <a class="anchor" href="#<%= member.id %>" aria-hidden="true"><span class="glyphicon glyphicon-link"></span></a>
-      <%= member.name %><% unless member.params.empty? %> <big>(</big> <%= format_params(member) %> <big>)</big><% end %>
-    </div>
-    <div class="panel-body <%= section %>-body">
-      <% docblock =  member.details ? member.details : member.summary %>
-      <%= docblock.description %>
-      <pre>#define <%= member.name %><% unless member.params.empty? %>(<%= format_params(member) %>)<% end %> <%= member.initializer %></pre>
-    </div>
-  </div>
-  <% when :enum %>
-  <div class="panel panel-default member-definition" id="<%= member.id %>">
-    <div class="panel-heading <%= section %>-heading">
-      <a class="anchor" href="#<%= member.id %>" aria-hidden="true"><span class="glyphicon glyphicon-link"></span></a>
-      <%= member.name %>
-    </div>
-    <div class="panel-body <%= section %>-body">
-      <% docblock = member.details ? member.details : member.summary %>
-      <%= docblock.description %>
-      <dl class="enumerations">
-        <% member.values.each do |value| %>
-        <% description = (member.details ? member.details : member.summary).description %>
-        <dt><var><%= value.name %></var><% if value.initializer %> <small><%= value.initializer %></small> <% end %></dt>
-        <% if description %>
-        <dd><%= description %></dd>
-        <% end %>
-        <% end %>
-      </dl>
-    </div>
-  </div>
-  <% when :typedef %>
-  <div class="panel panel-default member-definition" id="<%= member.id %>">
-    <div class="panel-heading <%= section %>-heading">
-      <a class="anchor" href="#<%= member.id %>" aria-hidden="true"><span class="glyphicon glyphicon-link"></span></a>
-      <%= member.name %>
-    </div>
-    <div class="panel-body <%= section %>-body">
-      <% docblock = member.details ? member.details : member.summary %>
-      <%= docblock.description %>
-      <pre>typedef <%= member.type %><%= member.argsstring %> <%= member.name %></pre>
-    </div>
-  </div>
-  <% else %>
-  <div class="panel panel-default member-definition" id="<%= member.id %>">
-    <div class="panel-heading <%= section %>-heading">
-      <a class="anchor" href="#<%= member.id %>" aria-hidden="true"><span class="glyphicon glyphicon-link"></span></a>
-      <var><%= member.name %></var>
-    </div>
-    <div class="panel-body <%= section %>-body">
-      <textarea><%=h member.inspect %></textarea>
-    </div>
-  </div>
-  <% end %>
+
+<h2>Files</h2>
+<ul class="list-inline">
+<% index.each_object(:file) do |o| %>
+  <li><code><a href="/api/<%= o.id %>"><%= h o.name %></a></code></li>
 <% end %>
-</div>
+</ul>
+
+<h2>Classes</h2>
+<ul class="list-inline">
+<% index.each_object(:class, :struct, :union, :interface) do |o| %>
+  <li><code><a href="/api/<%= o.id %>"><%= h o.name %></a></code></li>
 <% end %>
+</ul>
