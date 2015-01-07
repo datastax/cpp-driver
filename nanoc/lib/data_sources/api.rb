@@ -25,17 +25,25 @@ module Docs
       registry = Doxygen.load(path_to_xml_dir, @markdown)
 
       registry.each_object do |object|
+        next if object.kind == :dir
+
         items << Nanoc::Item.new('_', {
-          :doxygen => object,
-          :title   => object.name,
-          :mtime   => File.mtime(object.file)
+          :doxygen   => object,
+          :title     => object.name,
+          :extension => 'xml',
+          :text      => Nokogiri::XML(object.raw_content).text,
+          :summary   => "#{object.name} <small class=\"text-muted\">#{object.kind}</small>",
+          :mtime     => File.mtime(object.file)
         }, prefix + '/' + object.id)
       end
 
       items << Nanoc::Item.new('_', {
-        :doxygen => registry.index,
-        :title   => 'API docs',
-        :mtime   => File.mtime(registry.index_file)
+        :doxygen   => registry.index,
+        :title     => 'API docs',
+        :extension => 'xml',
+        :text      => Nokogiri::XML(registry.index.raw_content).text,
+        :summary   => "API docs <small class=\"text-muted\">index</small>",
+        :mtime     => File.mtime(registry.index_file)
       }, prefix)
 
       items
@@ -67,16 +75,20 @@ class Doxygen
     Dir.glob(objects_path) do |path|
       next if path == index_path
 
-      xml = Nokogiri::XML.parse(File.read(path))
+      raw_xml = File.read(path)
+      xml     = Nokogiri::XML.parse(raw_xml)
 
       xml.xpath('//doxygen/compounddef').each do |element|
         object = load_compound(element)
+        object.raw_content  = raw_xml
         @objects[object.id] = object
       end
     end
 
     @index.file = index_path
-    xml = Nokogiri::XML.parse(File.read(index_path))
+    raw_xml = File.read(index_path)
+    xml     = Nokogiri::XML.parse(raw_xml)
+    @index.raw_content = raw_xml
 
     xml.xpath('//doxygenindex/compound').each do |element|
       @index.add(load_compound_reference(element))
@@ -633,7 +645,7 @@ class Doxygen
   end
 
   class Index
-    attr_accessor :file
+    attr_accessor :file, :raw_content
     attr_reader :sections
 
     def initialize
@@ -746,6 +758,8 @@ class Doxygen
   end
 
   class Compound < CodeObject
+    attr_accessor :raw_content
+
     # e.g. 'cassandra.h' or 'CassBytes'
     attr_reader :name
 
