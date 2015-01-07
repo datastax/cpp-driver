@@ -23,7 +23,7 @@ data_sources:
     type: topics
   -
     type: api
-    doxygen: build/doxygen/xml
+    doxygen: doxygen/xml
 prune:
   auto_prune: true,
   exclude: [ '.git' ]

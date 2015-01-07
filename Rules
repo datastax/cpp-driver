@@ -106,9 +106,22 @@ route 'sass/*' do
   item.identifier.sub('sass', 'css').chop + '.css'
 end
 
+compile '/js/*/' do
+  filter :erb unless item.binary?
+end
+
+route '/js/*/' do
+  path = item.identifier.chop
+  if path.end_with?('.js')
+    path
+  else
+    path + '.js'
+  end
+end
+
 passthrough '/css/*'
-passthrough '/js/*'
 passthrough '/fonts/*'
 passthrough '/favicons/*'
+passthrough '/flash/*'
 
 layout '*', :erb
