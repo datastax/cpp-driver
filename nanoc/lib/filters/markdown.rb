@@ -226,7 +226,8 @@ module Docs
         data = Base64.encode64(Ditaa.render(code, :separation => false))
         "<img src=\"data:image/png;base64,#{data}\" alt=\"Text Diagram\" class=\"img-rounded img-thumbnail center-block ditaa\" />"
       else
-        markup = ::Rouge.highlight(code, LEXER, 'html')
+        lexer = language == 'c' ? C_LEXER : language
+        markup = ::Rouge.highlight(code, lexer, 'html')
         markup.sub!(/<pre><code class="highlight">/,'<pre class="highlight"><code class="' + language + '">')
         markup.sub!(/<\/code><\/pre>/,"</code></pre>")
         markup.strip!
@@ -236,6 +237,6 @@ module Docs
       "<pre><code class=\"#{language}\">#{CGI.escapeHTML(code)}</code></pre>"
     end
 
-    LEXER = Lexer::C.new
+    C_LEXER = Lexer::C.new
   end
 end
