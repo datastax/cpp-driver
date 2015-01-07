@@ -8,7 +8,7 @@ module Docs
       return content if @item.children.empty?
 
       content  = "#{content}"
-      content << '<h3>Topics</h3>'
+      content << '<h3>Subtopics</h3>'
       content << '<ul class="sub-topics">'
       item[:nav].each do |child|
         content << "<li><a href=\"#{child.path}\">#{child[:title]}</a></li>"

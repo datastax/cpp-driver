@@ -5,6 +5,19 @@
     <%= object.name %>
   </h1>
 </div>
+<%= object.details.description %>
+<% if object.details.has_tag?(:see) %>
+<dl class="tags">
+  <dt class="tag-title">See also:</dt>
+  <dd class="tag-content">
+    <ul>
+    <% object.details.each_tag(:see) do |tag| %>
+      <li><%= tag.description %></li>
+    <% end %>
+    </ul>
+  </dd>
+</dl>
+<% end %>
 <% object.each_section do |section, members| %>
 <h2><%= h section_title(section) %></h2>
 <div class="<%= section %>-content">
