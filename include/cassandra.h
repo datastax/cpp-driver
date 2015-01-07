@@ -105,8 +105,8 @@ typedef cass_uint64_t cass_duration_t;
  * Byte buffer object.
  */
 typedef struct CassBytes_ {
-    const cass_byte_t* data; //!< @public Data.
-    cass_size_t size;        //!< @public Size.
+    const cass_byte_t* data; /* !< @public Data. */
+    cass_size_t size;        /* !< @public Size. */
 } CassBytes;
 
 typedef struct CassString_ {
@@ -152,6 +152,7 @@ typedef struct CassSession_ CassSession;
  * @struct CassStatement
  *
  * CassStatement type
+ * @see CassSession Executing a statement
  */
 typedef struct CassStatement_ CassStatement;
 
@@ -328,10 +329,12 @@ typedef enum CassSchemaMetaType_ {
   XX(CASS_LOG_TRACE, "TRACE")
 
 typedef enum CassLogLevel_ {
-#define XX(log_level, _) log_level,
-  CASS_LOG_LEVEL_MAP(XX)
-#undef XX
+#define XX_LOG(log_level, _) log_level,
+  CASS_LOG_LEVEL_MAP(XX_LOG)
+#undef XX_LOG
+/* @cond IGNORE */
   CASS_LOG_LAST_ENTRY
+/* @endcond */
 } CassLogLevel;
 
 typedef enum CassSslVerifyFlags {
@@ -397,10 +400,12 @@ typedef enum  CassErrorSource_ {
 
 typedef enum CassError_ {
   CASS_OK = 0,
-#define XX(source, name, code, _) name = CASS_ERROR(source, code),
-  CASS_ERROR_MAP(XX)
-#undef XX
+#define XX_ERROR(source, name, code, _) name = CASS_ERROR(source, code),
+  CASS_ERROR_MAP(XX_ERROR)
+#undef XX_ERROR
+/* @cond IGNORE */
   CASS_ERROR_LAST_ENTRY
+/* @endcond*/
 } CassError;
 
 typedef void (*CassFutureCallback)(CassFuture* future,
