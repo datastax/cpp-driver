@@ -3,6 +3,8 @@ require 'redcarpet'
 require 'rouge'
 require 'nokogiri'
 require 'compass'
+require 'cliver'
+require 'json'
 
 class Markdown < Redcarpet::Render::SmartyHTML
   def initialize(*args)

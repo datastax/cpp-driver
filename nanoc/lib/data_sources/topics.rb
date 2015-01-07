@@ -29,11 +29,15 @@ module Docs
           next
         end
 
-        items << Nanoc::Item.new(File.read(path), {
+        content = File.read(path)
+
+        items << Nanoc::Item.new(content, {
           :title     => title,
           :extension => ext,
+          :text      => content,
           :type      => type,
-          :summary   => "#{title} <small class=\"text-muted\">#{kind}</small>"
+          :summary   => "#{title} <small class=\"text-muted\">#{kind}</small>",
+          :mtime     => File.mtime(path)
         }, identifier)
       end
 

@@ -92,3 +92,49 @@ def format_params(function)
     end
   end.join(", ")
 end
+
+def lunr_index
+  unless File.directory?('node_modules')
+    npm_bin  = Cliver.detect!('npm', '~> 2.1')
+
+    system(npm_bin, 'install')
+  end
+
+  node_bin = Cliver.detect!('node', '~> 0.10')
+
+  items = []
+
+  @items.each do |item|
+    next unless ['xml', 'md'].include?(item[:extension])
+
+    items << {
+      'title' => item[:title],
+      'text'  => item[:text],
+      'path'  => item.path
+    }
+  end
+
+  json = JSON.dump(items)
+
+  IO.popen("#{node_bin} nanoc/create-index.js", "r+") do |node|
+    node.puts json
+    node.close_write
+    node.gets
+  end
+end
+
+def pages_json
+  data = {}
+
+  @items.each do |item|
+    next unless ['xml', 'md'].include?(item[:extension])
+
+    data[item.path] = {
+      'title'   => item[:title],
+      'summary' => item[:summary],
+      'path'    => item.path
+    }
+  end
+
+  JSON.dump(data)
+end
