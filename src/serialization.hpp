@@ -116,22 +116,32 @@ inline char* decode_int64(char* input, cass_int64_t& output) {
 
 inline void encode_float(char* output, float value) {
   BOOST_STATIC_ASSERT(std::numeric_limits<float>::is_iec559);
-  encode_int32(output, *copy_cast<float*, int32_t*>(&value));
+  int32_t int_value;
+  memcpy(&int_value, &value, sizeof(int_value));
+  encode_int32(output, int_value);
 }
 
 inline char* decode_float(char* input, float& output) {
   BOOST_STATIC_ASSERT(std::numeric_limits<float>::is_iec559);
-  return decode_int32(input, *copy_cast<float*, int32_t*>(&output));
+  int32_t int_value;
+  char* pos = decode_int32(input, int_value);
+  memcpy(&output, &int_value, sizeof(int_value));
+  return pos;
 }
 
 inline void encode_double(char* output, double value) {
   BOOST_STATIC_ASSERT(std::numeric_limits<double>::is_iec559);
-  encode_int64(output, *copy_cast<double*, cass_int64_t*>(&value));
+  cass_int64_t int_value;
+  memcpy(&int_value, &value, sizeof(int_value));
+  encode_int64(output, int_value);
 }
 
 inline char* decode_double(char* input, double& output) {
   BOOST_STATIC_ASSERT(std::numeric_limits<double>::is_iec559);
-  return decode_int64(input, *copy_cast<double*, cass_int64_t*>(&output));
+  cass_int64_t int_value;
+  char* pos = decode_int64(input, int_value);
+  memcpy(&output, &int_value, sizeof(int_value));
+  return pos;
 }
 
 inline char* decode_string(char* input, char** output, size_t& size) {
