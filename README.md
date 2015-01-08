@@ -9,7 +9,7 @@ the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol (v
 - MAILING LIST: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 - IRC: #datastax-drivers on `irc.freenode.net <http://freenode.net>`
 
-## Current Functionality and Design
+## Functionality
 - Completely asynchronous
 - Exception safe
 - Ad-hoc queries
@@ -19,20 +19,11 @@ the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol (v
 - Cassandra collections
 - Compatibility with binary protcol version 1 and 2
 - Authentication (via credentials using SASL PLAIN)
+- SSL
 
 ## Upgrading from a beta to a RC release
 
 There were a couple breaking API changes between beta5 and rc1 that are documented in detail [here](http://www.datastax.com/dev/blog/datastax-c-driver-rc1-released).
-
-## TODO
-- Compression
-- Query tracing
-- Event registration and notification
-- Callback intefaces for load balancing, authenticaiton, reconnection and retry
-- Packaging for Debian-based Linux, RHEL-based Linux and OS X
-- Binary releases for Windows and Linux
-- Getting started guide
-- Improved documentation
 
 ## Examples
 There are several examples provided here: [examples](https://github.com/datastax/cpp-driver/tree/1.0/examples).

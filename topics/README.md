@@ -82,4 +82,15 @@ printf("Query result: %s\n", cass_error_desc(rc));
 cass_future_free(query_future);
 ```
 
+## TODO
+
+Here are some features that are missing from the C/C++ driver, but are included with other drivers. The schedule for these features can be found on [JIRA](https://datastax-oss.atlassian.net/browse/CPP).
+
+- Compression
+- Query tracing
+- Event registration and notification
+- Callback intefaces for load balancing, authenticaiton, reconnection and retry
+- Packaging for Debian-based Linux, RHEL-based Linux and OS X
+- Binary releases for Windows and Linux
+
 ## FAQ
