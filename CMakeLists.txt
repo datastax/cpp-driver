@@ -229,7 +229,7 @@ else()
     ${PROJECT_SOURCE_DIR}/src/ssl/ssl_no_impl.cpp)
 endif()
 
-if(Boost_FOUND)
+if(CASS_USE_EXTERNAL_BOOST)
   message(WARNING "Using the external version of Boost")
 
   if(NOT (Boost_ATOMIC_FOUND AND Boost_RANDOM_FOUND AND Boost_SYSTEM_FOUND))
