@@ -71,7 +71,7 @@ public:
   }
 
   char* data() {
-    return copy_cast<RefBuffer*, char*>(this) + sizeof(RefBuffer);
+    return reinterpret_cast<char*>(this) + sizeof(RefBuffer);
   }
 
   void operator delete(void* ptr) {

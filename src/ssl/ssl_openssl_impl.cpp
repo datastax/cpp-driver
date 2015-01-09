@@ -250,7 +250,7 @@ private:
       }
 
       ASN1_STRING* str = X509_NAME_ENTRY_get_data(name_entry);
-      boost::string_ref common_name(copy_cast<unsigned char*, char*>(ASN1_STRING_data(str)), ASN1_STRING_length(str));
+      boost::string_ref common_name(reinterpret_cast<char*>(ASN1_STRING_data(str)), ASN1_STRING_length(str));
       if (boost::iequals(common_name, addr_str)) {
         return MATCH;
       }

@@ -181,7 +181,7 @@ const CopyOnWriteHostVec& TokenMap::get_replicas(const std::string& ks_name,
   if (tokens_it != keyspace_replica_map_.end()) {
     const TokenReplicaMap& tokens_to_replicas = tokens_it->second;
 
-    const Token t = partitioner_->hash(routing_key.data(), routing_key.size());
+    const Token t = partitioner_->hash(reinterpret_cast<const uint8_t*>(routing_key.data()), routing_key.size());
     TokenReplicaMap::const_iterator replicas_it = tokens_to_replicas.upper_bound(t);
 
     if (replicas_it != tokens_to_replicas.end()) {
@@ -250,7 +250,7 @@ Token Murmur3Partitioner::token_from_string_ref(const boost::string_ref& token_s
   return token;
 }
 
-Token Murmur3Partitioner::hash(const void* data, size_t size) const {
+Token Murmur3Partitioner::hash(const uint8_t* data, size_t size) const {
   Token token(sizeof(int64_t), 0);
   int64_t token_value = MurmurHash3_x64_128(data, size, 0);
   if (token_value == std::numeric_limits<int64_t>::min()) {
@@ -268,7 +268,7 @@ Token RandomPartitioner::token_from_string_ref(const boost::string_ref& token_st
   return token;
 }
 
-Token RandomPartitioner::hash(const void* data, size_t size) const {
+Token RandomPartitioner::hash(const uint8_t* data, size_t size) const {
   Md5 hash;
   hash.update(data, size);
 
@@ -280,12 +280,12 @@ Token RandomPartitioner::hash(const void* data, size_t size) const {
 const std::string ByteOrderedPartitioner::PARTITIONER_CLASS("ByteOrderedPartitioner");
 
 Token ByteOrderedPartitioner::token_from_string_ref(const boost::string_ref& token_string_ref) const {
-  const uint8_t* data = copy_cast<const char*, const uint8_t*>(token_string_ref.data());
+  const uint8_t* data = reinterpret_cast<const uint8_t*>(token_string_ref.data());
   size_t size = token_string_ref.size();
   return Token(data, data + size);
 }
 
-Token ByteOrderedPartitioner::hash(const void* data, size_t size) const {
+Token ByteOrderedPartitioner::hash(const uint8_t* data, size_t size) const {
   const uint8_t* first = static_cast<const uint8_t*>(data);
   Token token(first, first + size);
   return token;

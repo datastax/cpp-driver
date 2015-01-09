@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE(murmur3_multiple_tokens_per_host)
 
 boost::multiprecision::int128_t random_hash(const std::string& s) {
   cass::Md5 m;
-  m.update(s.data(), s.size());
+  m.update(reinterpret_cast<const uint8_t*>(s.data()), s.size());
   uint8_t h[16];
   m.final(h);
   std::string hex("0x");

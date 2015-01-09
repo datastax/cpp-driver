@@ -43,7 +43,7 @@ static bool hash_equal(uint8_t* hash, const char* hash_str) {
 
 static bool check_hash(const char* data, const char* hash_str) {
   cass::Md5 m;
-  m.update(data, strlen(data));
+  m.update(reinterpret_cast<const uint8_t*>(data), strlen(data));
   uint8_t hash[16];
   m.final(hash);
   return hash_equal(hash, hash_str);

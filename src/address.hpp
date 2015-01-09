@@ -42,14 +42,6 @@ public:
 
   bool init(const struct sockaddr* addr);
 
-  struct sockaddr* addr() {
-    return copy_cast<struct sockaddr_storage*, struct sockaddr*>(&addr_);
-  }
-
-  const struct sockaddr* addr() const {
-    return copy_cast<const struct sockaddr_storage*, const struct sockaddr*>(&addr_);
-  }
-
   struct sockaddr_in* addr_in() {
     return copy_cast<struct sockaddr_storage*, struct sockaddr_in*>(&addr_);
   }
@@ -66,7 +58,7 @@ public:
     return copy_cast<const struct sockaddr_storage*, const sockaddr_in6*>(&addr_);
   }
 
-  int family() const { return addr()->sa_family; }
+  int family() const { return addr_.ss_family; }
 
   int port() const;
 

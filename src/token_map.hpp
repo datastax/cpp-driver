@@ -37,7 +37,7 @@ class Partitioner {
 public:
   virtual ~Partitioner() {}
   virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const = 0;
-  virtual Token hash(const void* data, size_t size) const = 0;
+  virtual Token hash(const uint8_t* data, size_t size) const = 0;
 };
 
 class TokenMap {
@@ -87,7 +87,7 @@ public:
   static const std::string PARTITIONER_CLASS;
 
   virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
-  virtual Token hash(const void* data, size_t size) const;
+  virtual Token hash(const uint8_t* data, size_t size) const;
 };
 
 
@@ -96,7 +96,7 @@ public:
   static const std::string PARTITIONER_CLASS;
 
   virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
-  virtual Token hash(const void* data, size_t size) const;
+  virtual Token hash(const uint8_t* data, size_t size) const;
 };
 
 
@@ -105,7 +105,7 @@ public:
   static const std::string PARTITIONER_CLASS;
 
   virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
-  virtual Token hash(const void* data, size_t size) const;
+  virtual Token hash(const uint8_t* data, size_t size) const;
 };
 
 } // namespace cass

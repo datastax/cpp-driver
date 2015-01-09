@@ -68,7 +68,7 @@ Md5::Md5()
   , a_(0x67452301), b_(0xefcdab89)
   , c_(0x98badcfe), d_(0x10325476) {}
 
-void Md5::update(const void* data, size_t size) {
+void Md5::update(const uint8_t* data, size_t size) {
   MD5_u32plus saved_lo;
   size_t used, free;
 
@@ -153,13 +153,11 @@ void Md5::final(uint8_t* result) {
 
 // This processes one or more 64-byte data blocks, but does NOT update
 // the bit counters.  There are no alignment requirements.
-const void* Md5::body(const void* data, size_t size)
+const uint8_t* Md5::body(const uint8_t* data, size_t size)
 {
-  const uint8_t* ptr;
+  const uint8_t* ptr = data;
   MD5_u32plus a, b, c, d;
   MD5_u32plus saved_a, saved_b, saved_c, saved_d;
-
-  ptr = copy_cast<const void*, const uint8_t*>(data);
 
   a = a_;
   b = b_;

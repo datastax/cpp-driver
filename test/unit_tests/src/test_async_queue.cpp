@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE(spsc_async)
   BOOST_CHECK(test_queue.async_queue_.enqueue(-1));
   test_queue.join();
 
-  BOOST_CHECK(test_queue.value_ == NUM_ITERATIONS);
+  BOOST_CHECK_EQUAL(test_queue.value_.load(), NUM_ITERATIONS);
 }
 
 BOOST_AUTO_TEST_CASE(mpmc_async)
@@ -150,7 +150,7 @@ BOOST_AUTO_TEST_CASE(mpmc_async)
   BOOST_CHECK(test_queue.async_queue_.enqueue(-1));
   test_queue.join();
 
-  BOOST_CHECK(test_queue.value_ == NUM_ITERATIONS);
+  BOOST_CHECK_EQUAL(test_queue.value_.load(), NUM_ITERATIONS);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

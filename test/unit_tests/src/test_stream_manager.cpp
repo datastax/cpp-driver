@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(simple)
   BOOST_CHECK(streams.acquire_stream(128) < 0);
 
   for (int i = 0; i < 128; ++i) {
-    int item;
+    int item = -1;
     BOOST_CHECK(streams.get_item(i, item));
     BOOST_CHECK(item == i);
   }
@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(alloc)
   }
 
   for (int i = 0; i < 5; ++i) {
-    int item;
+    int item = -1;
     BOOST_CHECK(streams.get_item(i, item, false));
     BOOST_CHECK(item == i);
   }

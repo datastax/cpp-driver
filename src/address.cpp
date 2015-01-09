@@ -81,9 +81,9 @@ bool Address::init(const sockaddr* addr) {
 }
 
 int Address::port() const {
-  if (addr()->sa_family == AF_INET) {
+  if (family() == AF_INET) {
     return htons(addr_in()->sin_port);
-  } else if (addr()->sa_family == AF_INET6) {
+  } else if (family() == AF_INET6) {
     return htons(addr_in6()->sin6_port);
   } else {
     assert(false);
@@ -94,12 +94,12 @@ int Address::port() const {
 std::string Address::to_string(bool with_port) const {
   std::stringstream ss;
   char host[INET6_ADDRSTRLEN + 1] = {'\0'};
-  if (addr()->sa_family == AF_INET) {
+  if (family() == AF_INET) {
     uv_ip4_name(const_cast<struct sockaddr_in*>(addr_in()), host,
                 INET_ADDRSTRLEN);
     ss << host;
     if (with_port) ss << ":" << port();
-  } else if (addr()->sa_family == AF_INET6) {
+  } else if (family() == AF_INET6) {
     uv_ip6_name(const_cast<struct sockaddr_in6*>(addr_in6()), host,
                 INET6_ADDRSTRLEN);
     if (with_port) ss << "[";
