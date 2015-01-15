@@ -21,7 +21,15 @@ module Docs
         filename = filename.join('.')
 
         if filename == 'README'
-          title      = base.last.split('_').map(&:capitalize).join(' ')
+          title = base.last.split('_').map do |x|
+            if ['ssl', 'faq' ].include? x
+              x.upcase
+            else
+              x.capitalize
+            end
+          end
+
+          title      = title.join(' ')
           kind       = 'section'
           identifier = base.join('/')
           type       = :section
