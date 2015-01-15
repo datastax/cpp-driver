@@ -297,7 +297,11 @@ void IOWorker::on_event(const IOWorkerEvent& event) {
   }
 }
 
+#if UV_VERSION_MAJOR == 0
 void IOWorker::on_execute(uv_async_t* async, int status) {
+#else
+void IOWorker::on_execute(uv_async_t* async) {
+#endif
   IOWorker* io_worker = static_cast<IOWorker*>(async->data);
 
   RequestHandler* request_handler = NULL;
@@ -316,7 +320,11 @@ void IOWorker::on_execute(uv_async_t* async, int status) {
   io_worker->maybe_close();
 }
 
+#if UV_VERSION_MAJOR == 0
 void IOWorker::on_prepare(uv_prepare_t* prepare, int status) {
+#else
+void IOWorker::on_prepare(uv_prepare_t* prepare) {
+#endif
   IOWorker* io_worker = static_cast<IOWorker*>(prepare->data);
 
   for (PoolVec::iterator it = io_worker->pools_pending_flush_.begin(),

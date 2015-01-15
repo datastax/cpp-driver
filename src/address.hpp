@@ -42,6 +42,10 @@ public:
 
   bool init(const struct sockaddr* addr);
 
+  const struct sockaddr* addr() const {
+    return copy_cast<const struct sockaddr_storage*, const struct sockaddr*>(&addr_);
+  }
+
   struct sockaddr_in* addr_in() {
     return copy_cast<struct sockaddr_storage*, struct sockaddr_in*>(&addr_);
   }
