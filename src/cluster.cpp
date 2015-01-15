@@ -56,8 +56,8 @@ CassError cass_cluster_set_protocol_version(CassCluster* cluster,
 
 void cass_cluster_set_num_threads_io(CassCluster* cluster,
                                      unsigned num_threads) {
-  // 0 is okay, it means use a thread per core
-  cluster->config().set_thread_count_io(num_threads);
+  // At least one thread is required
+  cluster->config().set_thread_count_io(num_threads > 0 ? num_threads : 1);
 }
 
 CassError cass_cluster_set_queue_size_io(CassCluster* cluster,

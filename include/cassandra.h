@@ -417,7 +417,7 @@ cass_cluster_set_protocol_version(CassCluster* cluster,
  * Sets the number of IO threads. This is the number of threads
  * that will handle query requests.
  *
- * Default: 0 (creates a thread per core)
+ * Default: 1
  *
  * @param[in] cluster
  * @param[in] num_threads
@@ -472,7 +472,7 @@ cass_cluster_set_queue_size_log(CassCluster* cluster,
  * Sets the number of connections made to each server in each
  * IO thread.
  *
- * Default: 2
+ * Default: 1
  *
  * @param[in] cluster
  * @param[in] num_connections
@@ -486,7 +486,7 @@ cass_cluster_set_core_connections_per_host(CassCluster* cluster,
  * Sets the maximum number of connections made to each server in each
  * IO thread.
  *
- * Default: 4
+ * Default: 2
  *
  * @param[in] cluster
  * @param[in] num_connections
