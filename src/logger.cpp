@@ -88,7 +88,11 @@ void Logger::LogThread::log(CassLogLevel severity,
   }
 }
 
+#if UV_VERSION_MAJOR == 0
 void Logger::LogThread::on_log(uv_async_t* async, int status) {
+#else
+void Logger::LogThread::on_log(uv_async_t* async) {
+#endif
   LogThread* logger = static_cast<LogThread*>(async->data);
   CassLogMessage log_message;
   bool is_closing = false;

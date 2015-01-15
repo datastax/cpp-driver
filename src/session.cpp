@@ -130,7 +130,11 @@ int Session::init() {
     num_threads = 1; // Default if we can't determine the number of cores
     uv_cpu_info_t* cpu_infos;
     int cpu_count;
-    if (uv_cpu_info(&cpu_infos, &cpu_count).code == 0 && cpu_count > 0) {
+#if UV_VERSION_MAJOR == 0
+    if (uv_cpu_info(&cpu_infos, &cpu_count).code == UV_OK && cpu_count > 0) {
+#else
+    if (uv_cpu_info(&cpu_infos, &cpu_count) == 0 && cpu_count > 0) {
+#endif
       num_threads = cpu_count;
       uv_free_cpu_info(cpu_infos, cpu_count);
     }
@@ -537,7 +541,11 @@ Future* Session::execute(const RoutableRequest* request) {
   return future;
 }
 
+#if UV_VERSION_MAJOR == 0
 void Session::on_execute(uv_async_t* data, int status) {
+#else
+void Session::on_execute(uv_async_t* data) {
+#endif
   Session* session = static_cast<Session*>(data->data);
 
   bool is_closing = false;

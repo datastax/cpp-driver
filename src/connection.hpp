@@ -229,11 +229,17 @@ private:
   static void on_connect_timeout(Timer* timer);
   static void on_close(uv_handle_t* handle);
 
+#if UV_VERSION_MAJOR == 0
   static uv_buf_t alloc_buffer(uv_handle_t* handle, size_t suggested_size);
   static void on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf);
-
   static uv_buf_t alloc_buffer_ssl(uv_handle_t* handle, size_t suggested_size);
   static void on_read_ssl(uv_stream_t* client, ssize_t nread, uv_buf_t buf);
+#else
+  static void alloc_buffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
+  static void on_read(uv_stream_t* client, ssize_t nread, const uv_buf_t* buf);
+  static void alloc_buffer_ssl(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
+  static void on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t *buf);
+#endif
 
   void on_connected();
   void on_authenticate();

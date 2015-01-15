@@ -70,7 +70,11 @@ struct RequestTimer {
     }
   }
 
+#if UV_VERSION_MAJOR == 0
   static void on_timeout(uv_timer_t* handle, int status) {
+#else
+  static void on_timeout(uv_timer_t* handle) {
+#endif
     RequestTimer* timer = static_cast<RequestTimer*>(handle->data);
     timer->cb_(timer);
   }

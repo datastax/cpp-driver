@@ -29,42 +29,42 @@ class Connector {
 public:
   typedef boost::function1<void, Connector*> Callback;
 
-  enum Status { CONNECTING, FAILED, SUCCESS };
-
   const Address& address() { return address_; }
-  Status status() { return status_; }
+  int status() { return status_; }
   void* data() { return data_; }
 
   static void connect(uv_tcp_t* handle, const Address& address, void* data,
                       Callback cb) {
-    Connector* connecter = new Connector(address, data, cb);
+    Connector* connector = new Connector(address, data, cb);
 
     int rc = 0;
+
+#if UV_VERSION_MAJOR == 0
     if (address.family() == AF_INET) {
-      rc = uv_tcp_connect(&connecter->req_, handle, *address.addr_in(),
+      rc = uv_tcp_connect(&connector->req_, handle, *address.addr_in(),
                           on_connect);
     } else {
-      rc = uv_tcp_connect6(&connecter->req_, handle, *address.addr_in6(),
+      rc = uv_tcp_connect6(&connector->req_, handle, *address.addr_in6(),
                            on_connect);
     }
+#else
+    rc = uv_tcp_connect(&connector->req_, handle, address.addr(),
+                        on_connect);
+#endif
 
     if (rc != 0) {
-      connecter->status_ = FAILED;
-      connecter->cb_(connecter);
-      delete connecter;
+      connector->status_ = -1;
+      connector->cb_(connector);
+      delete connector;
     }
   }
 
 private:
   static void on_connect(uv_connect_t* req, int status) {
-    Connector* connecter = static_cast<Connector*>(req->data);
-    if (status != 0) {
-      connecter->status_ = FAILED;
-    } else {
-      connecter->status_ = SUCCESS;
-    }
-    connecter->cb_(connecter);
-    delete connecter;
+    Connector* connector = static_cast<Connector*>(req->data);
+    connector->status_ = status;
+    connector->cb_(connector);
+    delete connector;
   }
 
 private:
@@ -72,7 +72,7 @@ private:
       : address_(address)
       , data_(data)
       , cb_(cb)
-      , status_(CONNECTING) {
+      , status_(-1) {
     req_.data = this;
   }
 
@@ -82,7 +82,7 @@ private:
   Address address_;
   void* data_;
   Callback cb_;
-  Status status_;
+  int status_;
 };
 }
 #endif
