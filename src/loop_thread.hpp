@@ -26,7 +26,6 @@ class LoopThread {
 public:
   LoopThread()
       : loop_(uv_loop_new())
-      , thread_id_(0)
       , is_joinable_(false) {}
 
   int init() {
@@ -63,8 +62,6 @@ public:
     }
   }
 
-  unsigned long thread_id() { return thread_id_; }
-
 protected:
   virtual void on_run() {}
   virtual void on_after_run() {}
@@ -72,7 +69,6 @@ protected:
 private:
   static void on_run_internal(void* data) {
     LoopThread* thread = static_cast<LoopThread*>(data);
-    thread->thread_id_ = uv_thread_self();
     thread->on_run();
     uv_run(thread->loop_, UV_RUN_DEFAULT);
     thread->on_after_run();
@@ -86,7 +82,6 @@ private:
 
   uv_loop_t* loop_;
   uv_thread_t thread_;
-  unsigned long thread_id_;
   bool is_joinable_;
 
 #if !defined(WIN32) && !defined(_WIN32)

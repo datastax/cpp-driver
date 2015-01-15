@@ -82,7 +82,11 @@ private:
     bool is_flushed() const { return log_queue_.is_empty(); }
 
   private:
+#if UV_VERSION_MAJOR == 0
     static void on_log(uv_async_t* async, int status);
+#else
+    static void on_log(uv_async_t* async);
+#endif
 
     bool has_been_warned_;
     AsyncQueue<MPMCQueue<CassLogMessage> > log_queue_;
