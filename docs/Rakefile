@@ -1,0 +1,24 @@
+# encoding: utf-8
+
+require 'bundler/setup'
+
+task :default => [:docs]
+
+desc 'Generate documentation'
+task :docs => 'doxygen' do 
+  require 'nanoc'
+  Nanoc::Site.new('.').compile
+end
+
+directory 'doxygen' => 'Doxyfile' do
+  `doxygen`
+end
+
+file 'Doxyfile' => '../Doxyfile.in' do |t|
+  contents = File.read('../Doxyfile.in').gsub(/@CMAKE_CURRENT_SOURCE_DIR@/, '..')
+  File.open(t.name, 'w') { |file| file.puts contents } 
+end
+
+task :clean do
+  rm_rf ['gh-pages', 'tmp', '.sass_cache', 'Doxyfile', 'doxygen']
+end
