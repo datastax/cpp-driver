@@ -22,3 +22,5 @@
   TypeName& operator=(const TypeName&)
 
 #endif
+
+#define UNUSED_(X) ((void)X)

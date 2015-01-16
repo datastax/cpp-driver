@@ -17,6 +17,8 @@
 #ifndef __CASS_LOOP_THREAD_HPP_INCLUDED__
 #define __CASS_LOOP_THREAD_HPP_INCLUDED__
 
+#include "macros.hpp"
+
 #include <assert.h>
 #include <uv.h>
 
@@ -59,7 +61,9 @@ public:
   void join() {
     if (is_joinable_) {
       is_joinable_ = false;
-      assert(uv_thread_join(&thread_) == 0);
+      int rc = uv_thread_join(&thread_);
+      UNUSED_(rc);
+      assert(rc == 0);
     }
   }
 
