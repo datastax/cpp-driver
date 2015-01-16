@@ -162,7 +162,8 @@ void ControlConnection::reconnect(bool retry_current_host) {
       if (state_ == CONTROL_STATE_READY) {
         schedule_reconnect(1000); // TODO(mpenick): Configurable?
       } else {
-        session_->on_control_connection_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE, "No hosts available");
+        session_->on_control_connection_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                                              "No hosts available for the control connection");
       }
       return;
     }

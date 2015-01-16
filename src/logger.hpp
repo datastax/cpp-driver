@@ -88,8 +88,9 @@ private:
     static void on_log(uv_async_t* async);
 #endif
 
-    bool has_been_warned_;
     AsyncQueue<MPMCQueue<CassLogMessage> > log_queue_;
+    bool has_been_warned_;
+    bool is_initialized_;
   };
 
 private:
