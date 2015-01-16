@@ -59,7 +59,9 @@ public:
   void join() {
     if (is_joinable_) {
       is_joinable_ = false;
-      assert(uv_thread_join(&thread_) == 0);
+      int rc = uv_thread_join(&thread_);
+      (void) rc;
+      assert(rc == 0);
     }
   }
 
