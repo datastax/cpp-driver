@@ -1,0 +1,99 @@
+<% object = item[:doxygen] %>
+<div class="page-header">
+  <h1>
+    <small><%= object.kind %></small>
+    <%= object.name %>
+  </h1>
+</div>
+<%= object.details.description %>
+<% if object.details.has_tag?(:see) %>
+<dl class="tags">
+  <dt class="tag-title">See also:</dt>
+  <dd class="tag-content">
+    <ul>
+    <% object.details.each_tag(:see) do |tag| %>
+      <li><%= tag.description %></li>
+    <% end %>
+    </ul>
+  </dd>
+</dl>
+<% end %>
+<% object.each_section do |section, members| %>
+<h2><%= h section_title(section) %></h2>
+<div class="<%= section %>-content">
+<% members.each do |member| %>
+  <% case member.kind
+     when :function %>
+  <div class="panel panel-default member-definition" id="<%= member.id %>">
+    <div class="panel-heading <%= section %>-heading">
+      <a class="anchor" href="#<%= member.id %>" aria-hidden="true"><span class="glyphicon glyphicon-link"></span></a>
+      <%= member.type %> <%= member.name %> <big>(</big> <%= format_params(member) %> <big>)</big>
+    </div>
+    <div class="panel-body <%= section %>-body">
+      <%= render 'api/function', :function => member, :docblock => member.details %>
+    </div>
+  </div>
+  <% when :variable %>
+  <div class="panel panel-default member-definition" id="<%= member.id %>">
+    <div class="panel-heading <%= section %>-heading">
+      <a class="anchor" href="#<%= member.id %>" aria-hidden="true"><span class="glyphicon glyphicon-link"></span></a>
+      <%= member.type %> <%= member.name %>
+    </div>
+    <div class="panel-body <%= section %>-body">
+      <%= member.details.description %>
+    </div>
+  </div>
+  <% when :define %>
+  <div class="panel panel-default member-definition" id="<%= member.id %>">
+    <div class="panel-heading <%= section %>-heading">
+      <a class="anchor" href="#<%= member.id %>" aria-hidden="true"><span class="glyphicon glyphicon-link"></span></a>
+      <%= member.name %><% unless member.params.empty? %> <big>(</big> <%= format_params(member) %> <big>)</big><% end %>
+    </div>
+    <div class="panel-body <%= section %>-body">
+      <%= member.details.description %>
+      <pre>#define <%= member.name %><% unless member.params.empty? %>(<%= format_params(member) %>)<% end %> <%= member.initializer %></pre>
+    </div>
+  </div>
+  <% when :enum %>
+  <div class="panel panel-default member-definition" id="<%= member.id %>">
+    <div class="panel-heading <%= section %>-heading">
+      <a class="anchor" href="#<%= member.id %>" aria-hidden="true"><span class="glyphicon glyphicon-link"></span></a>
+      <%= member.name %>
+    </div>
+    <div class="panel-body <%= section %>-body">
+      <%= member.details.description %>
+      <dl class="enumerations">
+        <% member.values.each do |value| %>
+        <dt><var><%= value.name %></var><% if value.initializer %> <small><%= value.initializer %></small> <% end %></dt>
+        <% if member.details.description && !member.details.description.empty? %>
+        <dd><%= member.details.description %></dd>
+        <% end %>
+        <% end %>
+      </dl>
+    </div>
+  </div>
+  <% when :typedef %>
+  <div class="panel panel-default member-definition" id="<%= member.id %>">
+    <div class="panel-heading <%= section %>-heading">
+      <a class="anchor" href="#<%= member.id %>" aria-hidden="true"><span class="glyphicon glyphicon-link"></span></a>
+      <%= member.name %>
+    </div>
+    <div class="panel-body <%= section %>-body">
+      <%= member.details.description %>
+      <pre>typedef <%= member.type %><%= member.argsstring %> <%= member.name %></pre>
+    </div>
+  </div>
+  <% else %>
+  <div class="panel panel-default member-definition" id="<%= member.id %>">
+    <div class="panel-heading <%= section %>-heading">
+      <a class="anchor" href="#<%= member.id %>" aria-hidden="true"><span class="glyphicon glyphicon-link"></span></a>
+      <var><%= member.name %></var>
+    </div>
+    <div class="panel-body <%= section %>-body">
+      <textarea><%=h member.inspect %></textarea>
+    </div>
+  </div>
+  <% end %>
+<% end %>
+</div>
+<% end %>

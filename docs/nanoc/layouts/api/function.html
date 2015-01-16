@@ -1,0 +1,43 @@
+<%= docblock.description %>
+<% if docblock.has_tags? %>
+<dl class="tags">
+<% unless function.params.empty? %>
+  <dt class="tag-title">Parameters:</dt>
+  <dd class="tag-content">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th class="name">Name</th>
+          <th class="type">Type</th>
+          <th class="details">Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% function.params.each do |param| %>
+        <% parameter = docblock.param(param.name) %>
+        <tr>
+          <td><small><%= parameter && parameter.direction %></small> <var><%= param.name %></var></td>
+          <td><%= param.type %></td>
+          <td><%= parameter && parameter.description %></td>
+        </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </dd>
+<% end %>
+<% if docblock.has_tag?(:return) %>
+  <dt class="tag-title">Return:</dt>
+  <dd class="tag-content"><%= docblock.tag(:return).description %></dd>
+<% end %>
+<% if docblock.has_tag?(:see) %>
+  <dt class="tag-title">See also:</dt>
+  <dd class="tag-content">
+    <ul>
+    <% docblock.each_tag(:see) do |tag| %>
+      <li><%= tag.description %></li>
+    <% end %>
+    </ul>
+  </dd>
+<% end %>
+</dl>
+<% end %>
