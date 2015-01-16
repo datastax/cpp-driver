@@ -402,7 +402,7 @@ void Connection::on_connect(Connector* connector) {
       connection->on_connected();
     }
   } else {
-    LOG_DEBUG("Connect error '%s' on host %s",
+    LOG_ERROR("Connect error '%s' on host %s",
               UV_ERRSTR(connector->status()),
               connection->addr_string_.c_str() );
     connection->notify_error("Unable to connect");
@@ -744,9 +744,9 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
           connection->pending_reads_.add_to_back(handler);
         } else {
           if (!connection->is_closing()) {
-            LOG_INFO("Write error '%s' on host %s",
-                     UV_ERRSTR(status),
-                     connection->addr_string_.c_str());
+            LOG_ERROR("Write error '%s' on host %s",
+                      UV_ERRSTR(status),
+                      connection->addr_string_.c_str());
             connection->defunct();
           }
 
