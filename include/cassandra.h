@@ -421,8 +421,9 @@ cass_cluster_set_protocol_version(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] num_threads
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
-CASS_EXPORT void
+CASS_EXPORT CassError
 cass_cluster_set_num_threads_io(CassCluster* cluster,
                                 unsigned num_threads);
 
