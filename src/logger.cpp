@@ -93,6 +93,11 @@ void Logger::LogThread::log(CassLogLevel severity,
   }
 }
 
+void Logger::LogThread::close_handles() {
+  LoopThread::close_handles();
+  log_queue_.close_handles();
+}
+
 #if UV_VERSION_MAJOR == 0
 void Logger::LogThread::on_log(uv_async_t* async, int status) {
 #else
@@ -110,7 +115,7 @@ void Logger::LogThread::on_log(uv_async_t* async) {
   }
 
   if (is_closing) {
-    logger->log_queue_.close_handles();
+    logger->close_handles();
   }
 }
 

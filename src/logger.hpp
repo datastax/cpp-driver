@@ -76,12 +76,15 @@ private:
     LogThread(size_t queue_size);
     ~LogThread();
 
+
     void log(CassLogLevel severity,
              const char* file, int line, const char* function,
              const char* format, va_list args);
     bool is_flushed() const { return log_queue_.is_empty(); }
 
   private:
+    void close_handles();
+
 #if UV_VERSION_MAJOR == 0
     static void on_log(uv_async_t* async, int status);
 #else
