@@ -35,7 +35,7 @@ add_executable(${PROJECT_INTTESTS_NAME} ${INTTESTS_SRC_FILES})
 # A temporary patch: explicitly link libssh2
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/test/ccm_bridge/cmake/Modules/")
 find_package(LIBSSH2 REQUIRED)
-target_link_libraries(${PROJECT_INTTESTS_NAME} "${PROJECT_LIB_NAME}" CCMBridge ${LIBS} ${LIBSSH2_LIBRARIES})
+target_link_libraries(${PROJECT_INTTESTS_NAME} "${PROJECT_TARGET_LIB_NAME}" CCMBridge ${LIBS} ${LIBSSH2_LIBRARIES})
 	
 set_property(
   TARGET ${PROJECT_INTTESTS_NAME}
