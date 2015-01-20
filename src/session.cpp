@@ -500,6 +500,11 @@ void Session::on_remove(SharedRefPtr<Host> host) {
 
 void Session::on_up(SharedRefPtr<Host> host) {
   host->set_up();
+
+  if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
+    return;
+  }
+
   load_balancing_policy_->on_up(host);
 
   for (IOWorkerVec::iterator it = io_workers_.begin(),
