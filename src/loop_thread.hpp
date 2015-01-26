@@ -27,12 +27,31 @@ namespace cass {
 class LoopThread {
 public:
   LoopThread()
+#if UV_VERSION_MAJOR == 0
       : loop_(uv_loop_new())
-      , thread_id_(0)
+#else
+      : is_loop_initialized_(false)
+#endif
       , is_joinable_(false) {}
+
+  virtual ~LoopThread() { 
+#if UV_VERSION_MAJOR == 0
+    uv_loop_delete(loop_); 
+#else
+    if (is_loop_initialized_) {
+      uv_loop_close(&loop_);
+    }
+#endif
+  }
 
   int init() {
     int rc = 0;
+#if UV_VERSION_MAJOR > 0
+    rc = uv_loop_init(&loop_);
+    if (rc != 0) return rc;
+    is_loop_initialized_ = true;
+#endif
+
 #if !defined(WIN32) && !defined(_WIN32)
     rc = uv_signal_init(loop(), &sigpipe_);
     if (rc != 0) return rc;
@@ -48,9 +67,12 @@ public:
 #endif
   }
 
-  virtual ~LoopThread() { uv_loop_delete(loop_); }
 
+#if UV_VERSION_MAJOR == 0
   uv_loop_t* loop() { return loop_; }
+#else
+  uv_loop_t* loop() { return &loop_; }
+#endif
 
   int run() {
     int rc = uv_thread_create(&thread_, on_run_internal, this);
@@ -67,8 +89,6 @@ public:
     }
   }
 
-  unsigned long thread_id() { return thread_id_; }
-
 protected:
   virtual void on_run() {}
   virtual void on_after_run() {}
@@ -76,9 +96,8 @@ protected:
 private:
   static void on_run_internal(void* data) {
     LoopThread* thread = static_cast<LoopThread*>(data);
-    thread->thread_id_ = uv_thread_self();
     thread->on_run();
-    uv_run(thread->loop_, UV_RUN_DEFAULT);
+    uv_run(thread->loop(), UV_RUN_DEFAULT);
     thread->on_after_run();
   }
 
@@ -88,9 +107,14 @@ private:
   }
 #endif
 
+#if UV_VERSION_MAJOR == 0
   uv_loop_t* loop_;
+#else
+  uv_loop_t loop_;
+  bool is_loop_initialized_;
+#endif
+
   uv_thread_t thread_;
-  unsigned long thread_id_;
   bool is_joinable_;
 
 #if !defined(WIN32) && !defined(_WIN32)

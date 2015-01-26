@@ -123,7 +123,12 @@ private:
   virtual void on_event(const SessionEvent& event);
 
   static void on_resolve(Resolver* resolver);
+
+#if UV_VERSION_MAJOR == 0
   static void on_execute(uv_async_t* data, int status);
+#else
+  static void on_execute(uv_async_t* data);
+#endif
 
   QueryPlan* new_query_plan(const Request* request = NULL);
 

@@ -125,18 +125,7 @@ int Session::init() {
   rc = request_queue_->init(loop(), this, &Session::on_execute);
   if (rc != 0) return rc;
 
-  unsigned int num_threads = config_.thread_count_io();
-  if (num_threads == 0) {
-    num_threads = 1; // Default if we can't determine the number of cores
-    uv_cpu_info_t* cpu_infos;
-    int cpu_count;
-    if (uv_cpu_info(&cpu_infos, &cpu_count).code == 0 && cpu_count > 0) {
-      num_threads = cpu_count;
-      uv_free_cpu_info(cpu_infos, cpu_count);
-    }
-  }
-
-  for (unsigned int i = 0; i < num_threads; ++i) {
+  for (unsigned int i = 0; i < config_.thread_count_io(); ++i) {
     SharedRefPtr<IOWorker> io_worker(new IOWorker(this));
     int rc = io_worker->init();
     if (rc != 0) return rc;
@@ -500,6 +489,11 @@ void Session::on_remove(SharedRefPtr<Host> host) {
 
 void Session::on_up(SharedRefPtr<Host> host) {
   host->set_up();
+
+  if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
+    return;
+  }
+
   load_balancing_policy_->on_up(host);
 
   for (IOWorkerVec::iterator it = io_workers_.begin(),
@@ -537,7 +531,11 @@ Future* Session::execute(const RoutableRequest* request) {
   return future;
 }
 
+#if UV_VERSION_MAJOR == 0
 void Session::on_execute(uv_async_t* data, int status) {
+#else
+void Session::on_execute(uv_async_t* data) {
+#endif
   Session* session = static_cast<Session*>(data->data);
 
   bool is_closing = false;

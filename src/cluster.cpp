@@ -54,10 +54,13 @@ CassError cass_cluster_set_protocol_version(CassCluster* cluster,
   return CASS_OK;
 }
 
-void cass_cluster_set_num_threads_io(CassCluster* cluster,
-                                     unsigned num_threads) {
-  // 0 is okay, it means use a thread per core
+CassError cass_cluster_set_num_threads_io(CassCluster* cluster,
+                                          unsigned num_threads) {
+  if (num_threads == 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
   cluster->config().set_thread_count_io(num_threads);
+  return CASS_OK;
 }
 
 CassError cass_cluster_set_queue_size_io(CassCluster* cluster,

@@ -40,7 +40,11 @@ struct TestAsyncQueue : public cass::LoopThread {
     async_queue_.init(loop(), this, TestAsyncQueue::async_func);
   }
 
+#if UV_VERSION_MAJOR == 0
   static void async_func(uv_async_t *handle, int status) {
+#else
+  static void async_func(uv_async_t *handle) {
+#endif
     TestAsyncQueue* test_queue = static_cast<TestAsyncQueue*>(handle->data);
     int n;
     while (test_queue->async_queue_.dequeue(n)) {

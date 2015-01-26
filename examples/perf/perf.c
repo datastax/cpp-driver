@@ -44,6 +44,8 @@
 #define NUM_IO_WORKER_THREADS 4
 #define NUM_CONCURRENT_REQUESTS 10000
 #define NUM_SAMPLES 1000
+
+#define DO_SELECTS 1
 #define USE_PREPARED 1
 
 const char* big_string = "0123456701234567012345670123456701234567012345670123456701234567"
@@ -56,11 +58,14 @@ const char* big_string = "012345670123456701234567012345670123456701234567012345
 
 CassUuidGen* uuid_gen;
 
-typedef struct ThreadStats_ {
-  long count;
+typedef struct ThreadState_ {
+  int id;
+  uv_thread_t thread;
+  CassSession* session;
+  int count;
   double total_averages;
   double samples[NUM_SAMPLES];
-} ThreadStats;
+} ThreadState;
 
 void print_error(CassFuture* future) {
   CassString message = cass_future_error_message(future);
@@ -142,18 +147,18 @@ int compare_dbl(const void* d1, const void* d2) {
   }
 }
 
-void print_thread_stats(ThreadStats* thread_stats) {
+void print_stats(ThreadState* state) {
   double throughput_avg = 0.0;
   double throughput_min = 0.0;
   double throughput_median = 0.0;
   double throughput_max = 0.0;
   int index_median = ceil(0.5 * NUM_SAMPLES);
 
-  qsort(thread_stats->samples, NUM_SAMPLES, sizeof(double), compare_dbl);
-  throughput_avg = thread_stats->total_averages / thread_stats->count;
-  throughput_min = thread_stats->samples[0];
-  throughput_median = thread_stats->samples[index_median];
-  throughput_max = thread_stats->samples[NUM_SAMPLES - 1];
+  qsort(state->samples, NUM_SAMPLES, sizeof(double), compare_dbl);
+  throughput_avg = state->total_averages / state->count;
+  throughput_min = state->samples[0];
+  throughput_median = state->samples[index_median];
+  throughput_max = state->samples[NUM_SAMPLES - 1];
 
   printf("%d IO threads, %d requests/batch:\navg: %f\nmin: %f\nmedian: %f\nmax: %f\n",
          NUM_IO_WORKER_THREADS,
@@ -164,15 +169,13 @@ void print_thread_stats(ThreadStats* thread_stats) {
          throughput_max);
 }
 
-void insert_into_perf(CassSession* session, CassString query, const CassPrepared* prepared,
-                      ThreadStats* thread_stats) {
+void insert_into_perf(ThreadState* state, CassString query, const CassPrepared* prepared) {
   int i;
   double elapsed, throughput;
   uint64_t start;
   int num_requests = 0;
+  CassSession* session = state->session;
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
-
-  unsigned long thread_id = uv_thread_self();
 
   CassCollection* collection = cass_collection_new(CASS_COLLECTION_TYPE_SET, 2);
   cass_collection_append_string(collection, cass_string_init("jazz"));
@@ -215,47 +218,42 @@ void insert_into_perf(CassSession* session, CassString query, const CassPrepared
 
   elapsed = (double)(uv_hrtime() - start) / 1000000000.0;
   throughput = (double)num_requests / elapsed;
-  thread_stats->samples[thread_stats->count++] = throughput;
-  thread_stats->total_averages += throughput;
+  state->samples[state->count++] = throughput;
+  state->total_averages += throughput;
 
-  printf("%ld: average %f inserts/sec (%d, %f)\n", thread_id, thread_stats->total_averages / thread_stats->count, num_requests, elapsed);
+  printf("%d: average %f inserts/sec (%d, %f)\n", state->id, state->total_averages / state->count, num_requests, elapsed);
 
   cass_collection_free(collection);
 }
 
 void run_insert_queries(void* data) {
   int i;
-  CassSession* session = (CassSession*)data;
+  ThreadState* state = (ThreadState*)data;
+
   const CassPrepared* insert_prepared = NULL;
   CassString insert_query = cass_string_init("INSERT INTO songs (id, title, album, artist, tags) VALUES (?, ?, ?, ?, ?);");
 
-  ThreadStats thread_stats;
-  thread_stats.count = 0;
-  thread_stats.total_averages = 0.0;
-
 #if USE_PREPARED
-  if (prepare_query(session, insert_query, &insert_prepared) == CASS_OK) {
+  if (prepare_query(state->session, insert_query, &insert_prepared) == CASS_OK) {
 #endif
     for (i = 0; i < NUM_SAMPLES; ++i) {
-      insert_into_perf(session, insert_query, insert_prepared, &thread_stats);
+      insert_into_perf(state, insert_query, insert_prepared);
     }
 #if USE_PREPARED
     cass_prepared_free(insert_prepared);
   }
 #endif
 
-  print_thread_stats(&thread_stats);
+  print_stats(state);
 }
 
-void select_from_perf(CassSession* session, CassString query, const CassPrepared* prepared,
-                      ThreadStats* thread_stats) {
+void select_from_perf(ThreadState* state, CassString query, const CassPrepared* prepared) {
   int i;
   double elapsed, throughput;
   uint64_t start;
   int num_requests = 0;
+  CassSession* session = state->session;
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
-
-  unsigned long thread_id = uv_thread_self();
 
   start = uv_hrtime();
 
@@ -289,39 +287,35 @@ void select_from_perf(CassSession* session, CassString query, const CassPrepared
 
   elapsed = (double)(uv_hrtime() - start) / 1000000000.0;
   throughput = (double)num_requests / elapsed;
-  thread_stats->samples[thread_stats->count++] = throughput;
-  thread_stats->total_averages += throughput;
+  state->samples[state->count++] = throughput;
+  state->total_averages += throughput;
 
-  printf("%ld: average %f selects/sec (%d, %f)\n", thread_id, thread_stats->total_averages / thread_stats->count, num_requests, elapsed);
+  printf("%d: average %f selects/sec (%d, %f)\n", state->id, state->total_averages / state->count, num_requests, elapsed);
 }
 
 void run_select_queries(void* data) {
   int i;
-  CassSession* session = (CassSession*)data;
+  ThreadState* state = (ThreadState*)data;
   const CassPrepared* select_prepared = NULL;
   CassString select_query = cass_string_init("SELECT * FROM songs WHERE id = a98d21b2-1900-11e4-b97b-e5e358e71e0d");
 
-  ThreadStats thread_stats;
-  thread_stats.count = 0;
-  thread_stats.total_averages = 0.0;
-
 #if USE_PREPARED
-  if (prepare_query(session, select_query, &select_prepared) == CASS_OK) {
+  if (prepare_query(state->session, select_query, &select_prepared) == CASS_OK) {
 #endif
     for (i = 0; i < NUM_SAMPLES; ++i) {
-      select_from_perf(session, select_query, select_prepared, &thread_stats);
+      select_from_perf(state, select_query, select_prepared);
     }
 #if USE_PREPARED
     cass_prepared_free(select_prepared);
   }
 #endif
 
-  print_thread_stats(&thread_stats);
+  print_stats(state);
 }
 
 int main() {
   int i;
-  uv_thread_t threads[NUM_THREADS];
+  ThreadState states[NUM_THREADS];
   CassCluster* cluster = NULL;
   CassSession* session = NULL;
   CassFuture* close_future = NULL;
@@ -343,18 +337,22 @@ int main() {
                 "(a98d21b2-1900-11e4-b97b-e5e358e71e0d, "
                 "'La Petite Tonkinoise', 'Bye Bye Blackbird', 'Joséphine Baker', { 'jazz', '2013' });");
 
-#define DO_SELECTS
+
   for (i = 0; i < NUM_THREADS; ++i) {
-#ifdef DO_INSERTS
-    uv_thread_create(&threads[i], run_insert_queries, (void*)session);
-#endif
-#ifdef DO_SELECTS
-    uv_thread_create(&threads[i], run_select_queries, (void*)session);
+    states[i].id = i;
+    states[i].session = session;
+    states[i].count = 0;
+    states[i].total_averages = 0.0;
+
+#if DO_SELECTS
+    uv_thread_create(&states[i].thread, run_select_queries, (void*)&states[i]);
+#else
+    uv_thread_create(&states[i].thread, run_insert_queries, (void*)&states[i]);
 #endif
   }
 
   for (i = 0; i < NUM_THREADS; ++i) {
-    uv_thread_join(&threads[i]);
+    uv_thread_join(&states[i].thread);
   }
 
   close_future = cass_session_close(session);

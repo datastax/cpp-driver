@@ -53,13 +53,18 @@ void stderr_log_callback(const CassLogMessage* message, void* data) {
 }
 
 Logger::LogThread::LogThread(size_t queue_size)
-    : has_been_warned_(false)
-    , log_queue_(queue_size) {
-  log_queue_.init(loop(), this, on_log);
-  run();
+    : log_queue_(queue_size)
+    , has_been_warned_(false)
+    , is_initialized_(init() == 0 && log_queue_.init(loop(), this, on_log) == 0) {
+  if (is_initialized_) {
+    run();
+  } else {
+    fprintf(stderr, "Unable to initialize logging thread\n");
+  }
 }
 
 Logger::LogThread::~LogThread() {
+  if (!is_initialized_) return;
   CassLogMessage log_message;
   log_message.severity = CASS_LOG_DISABLED;
   while (!log_queue_.enqueue(log_message)) {
@@ -88,7 +93,16 @@ void Logger::LogThread::log(CassLogLevel severity,
   }
 }
 
+void Logger::LogThread::close_handles() {
+  LoopThread::close_handles();
+  log_queue_.close_handles();
+}
+
+#if UV_VERSION_MAJOR == 0
 void Logger::LogThread::on_log(uv_async_t* async, int status) {
+#else
+void Logger::LogThread::on_log(uv_async_t* async) {
+#endif
   LogThread* logger = static_cast<LogThread*>(async->data);
   CassLogMessage log_message;
   bool is_closing = false;
@@ -101,7 +115,7 @@ void Logger::LogThread::on_log(uv_async_t* async, int status) {
   }
 
   if (is_closing) {
-    logger->log_queue_.close_handles();
+    logger->close_handles();
   }
 }
 
