@@ -88,18 +88,20 @@ First you will need to open a "Command Prompt" (or Windows SDK Command Prompt) t
 ```
 Usage: VC_BUILD.BAT [OPTION...]
 
-        --DEBUG                 Enable debug build
-        --RELEASE               Enable release build (default)
-        --DISABLE-CLEAN         Disable clean build
-        --DISABLE-OPENSSL       Disable OpenSSL support
-        --SHARED                Build shared library (default)
-        --STATIC                Build static library
-        --X86                   Target 32-bit build (*)
-        --X64                   Target 64-bit build (*)
+        --DEBUG                         Enable debug build
+        --RELEASE                       Enable release build (default)
+        --DISABLE-CLEAN                 Disable clean build
+        --DISABLE-OPENSSL               Disable OpenSSL support
+	--ENABLE-PACKAGES [version]     Enable package generation (**)
+        --SHARED                        Build shared library (default)
+        --STATIC                        Build static library
+        --X86                           Target 32-bit build (*)
+        --X64                           Target 64-bit build (*)
 
-        --HELP                  Display this message
+        --HELP                          Display this message
 
 *  Default target architecture is determined based on system architecture
+** Packages are only generated using detected installations of Visual Studio
 ```
 
 To build 32-bit shared library:
