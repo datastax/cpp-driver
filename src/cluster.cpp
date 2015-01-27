@@ -227,14 +227,14 @@ void cass_cluster_set_token_aware_routing(CassCluster* cluster,
 }
 
 void cass_cluster_set_tcp_nodelay(CassCluster* cluster,
-                                  cass_bool_t enable) {
-  cluster->config().set_tcp_nodelay(enable == cass_true);
+                                  cass_bool_t enabled) {
+  cluster->config().set_tcp_nodelay(enabled == cass_true);
 }
 
 void cass_cluster_set_tcp_keepalive(CassCluster* cluster,
-                                    cass_bool_t enable,
+                                    cass_bool_t enabled,
                                     unsigned delay_secs) {
-  cluster->config().set_tcp_keepalive(enable == cass_true, delay_secs);
+  cluster->config().set_tcp_keepalive(enabled == cass_true, delay_secs);
 }
 
 void cass_cluster_free(CassCluster* cluster) {

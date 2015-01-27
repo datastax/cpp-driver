@@ -38,7 +38,8 @@
 /**
  * @file include/cassandra.h
  *
- * TBD.
+ * C/C++ driver for Apache Cassandra. Uses the Cassandra Query Language versions 3
+ * over the Cassandra Binary Protocol (versions 1 or 2).
  */
 
 #ifdef __cplusplus
@@ -114,21 +115,46 @@ typedef struct CassString_ {
     cass_size_t length;
 } CassString;
 
+/**
+ * The size of a IPv4 address
+ */
 #define CASS_INET_V4_LENGTH 4
+
+/**
+ * The size of a IPv6 address
+ */
 #define CASS_INET_V6_LENGTH 16
 
+/**
+ * @struct CassInet
+ *
+ * IP address for either IPv4 or IPv6.
+ */
 typedef struct CassInet_ {
   cass_uint8_t address[CASS_INET_V6_LENGTH];
   cass_uint8_t address_length;
 } CassInet;
 
+/**
+ * @struct CassDecimal
+ *
+ * Arbitrary-precision integer.
+ */
 typedef struct CassDecimal_ {
   cass_int32_t scale;
   CassBytes varint;
 } CassDecimal;
 
+/**
+ * The size of a hexidecimal UUID string including a null terminator.
+ */
 #define CASS_UUID_STRING_LENGTH 37
 
+/**
+ * @struct CassUuid
+ *
+ * Type 1 (time-based) or type 4 (random) UUID.
+ */
 typedef struct CassUuid_ {
   cass_uint64_t time_and_version;
   cass_uint64_t clock_seq_and_node;
@@ -137,111 +163,140 @@ typedef struct CassUuid_ {
 /**
  * @struct CassCluster
  *
- * Cassandra Cluster object.
+ * A cluster object describes the configuration of the Cassandra cluster and is used
+ * to construct a session instance. Unlike other DataStax drivers the cluster object 
+ * does not maintain the control connection.
  */
 typedef struct CassCluster_ CassCluster;
 
 /**
  * @struct CassSession
  *
- * CassSession type
+ * A session object is used to execute queries and maintains cluster state through
+ * the control connection. The control connection is used to auto-discover nodes and
+ * monitor cluster changes (topology and schema). Each session also maintains multiple 
+ * pools of connections to cluster nodes which are used to query the cluster.
+ *
+ * Instances of the session object are thread-safe to execute queries.
  */
 typedef struct CassSession_ CassSession;
 
 /**
  * @struct CassStatement
  *
- * CassStatement type
- * @see CassSession Executing a statement
+ * A statement object is an executable query. It represents either a regular 
+ * (adhoc) statment or a prepared statement. It maitains the queries' parameter
+ * values along with query options (consistency level, paging state, etc.)
+ *
+ * Note: Parameters for regular queries are not supported by the binary protocol
+ * version 1.
  */
 typedef struct CassStatement_ CassStatement;
 
 /**
  * @struct CassBatch
  *
- * CassBatch type
+ * A group of statements that are executed as a single batch.
+ *
+ * Note: Batches are not supported by the binary protocol version 1.
  */
 typedef struct CassBatch_ CassBatch;
 
 /**
  * @struct CassFuture
  *
- * CassFuture type
+ * The future result of an operation.
+ *
+ * It can represent a result if the operation completed successfully or an
+ * error if the operation failed. It can be waited on, polled or a callback
+ * can be attached.
+ *
  */
 typedef struct CassFuture_ CassFuture;
 
 /**
  * @struct CassPrepared
  *
- * CassPrepared type
+ * A statement that has been prepared cluster-side (It has been pre-parsed
+ * and cached).
+ *
+ * A prepared statement is read-only and it is thread-safe to concurrently
+ * bind new statements.
  */
 typedef struct CassPrepared_ CassPrepared;
 
 /**
- * CassResult type
+ * @struct CassResult
+ *
+ * The result of a query.
+ *
+ * A result object is read-only and is thread-safe to read or iterate over
+ * concurrently.
  */
 typedef struct CassResult_ CassResult;
 
 /**
  * @struct CassIterator
  *
- * CassIterator type
+ * An object used to iterate over a group of rows, columns or collection values.
  */
 typedef struct CassIterator_ CassIterator;
 
 /**
  * @struct CassRow
  *
- * CassRow type
+ * A collection of column values.
  */
 typedef struct CassRow_ CassRow;
 
 /**
  * @struct CassValue
  *
- * CassValue type
+ * A single primitive value or a collection of values.
  */
 typedef struct CassValue_ CassValue;
 
 /**
  * @struct CassCollection
  *
- * CassCollection type
+ *  A collection of primitive values.
  */
 typedef struct CassCollection_ CassCollection;
 
 /**
  * @struct CassSsl
  *
- * CassSsl type
+ * Describes the SSL configuration of a cluster.
  */
 typedef struct CassSsl_ CassSsl;
 
 /**
  * @struct CassSchema
  *
- * CassSchema type
+ * A snapshot of the cluster's schema metadata.
  */
 typedef struct CassSchema_ CassSchema;
 
 /**
  * @struct CassSchemaMeta
  *
- * CassSchemaMeta type
+ * Table/Column schema metdata.
  */
 typedef struct CassSchemaMeta_ CassSchemaMeta;
 
 /**
  * @struct CassSchemaMetaField
  *
- * CassSchemaMetaField type
+ * Key/Value metadata field for a keyspace, table, or column.
  */
 typedef struct CassSchemaMetaField_ CassSchemaMetaField;
 
 /**
  * @struct CassUuidGen
  *
- * CassUuidGen type
+ * A UUID generator object.
+ *
+ * Instances of the UUID generator object are thread-safe to generate UUIDs.
  */
 typedef struct CassUuidGen_ CassUuidGen;
 
@@ -294,15 +349,6 @@ typedef enum CassBatchType_ {
   CASS_BATCH_TYPE_UNLOGGED = 1,
   CASS_BATCH_TYPE_COUNTER  = 2
 } CassBatchType;
-
-typedef enum CassColumnType_ {
-  CASS_COLUMN_TYPE_PARTITION_KEY,
-  CASS_COLUMN_TYPE_CLUSTERING_KEY,
-  CASS_COLUMN_TYPE_REGULAR,
-  CASS_COLUMN_TYPE_COMPACT_VALUE,
-  CASS_COLUMN_TYPE_STATIC,
-  CASS_COLUMN_TYPE_UNKNOWN
-} CassColumnType;
 
 typedef enum CassIteratorType_ {
   CASS_ITERATOR_TYPE_RESULT,
@@ -408,11 +454,20 @@ typedef enum CassError_ {
 /* @endcond*/
 } CassError;
 
+/**
+ * A callback that's notified when the future is set.
+ */
 typedef void (*CassFutureCallback)(CassFuture* future,
                                    void* data);
 
+/**
+ * Maximum size of a log message
+ */
 #define CASS_LOG_MAX_MESSAGE_SIZE 256
 
+/**
+ * A log message.
+ */
 typedef struct CassLogMessage_ {
   cass_uint64_t time_ms;
   CassLogLevel severity;
@@ -422,6 +477,9 @@ typedef struct CassLogMessage_ {
   char message[CASS_LOG_MAX_MESSAGE_SIZE];
 } CassLogMessage;
 
+/**
+ * A callback that's used to handle logging.
+ */
 typedef void (*CassLogCallback)(const CassLogMessage* message,
                                 void* data);
 
@@ -452,7 +510,6 @@ cass_cluster_new();
  */
 CASS_EXPORT void
 cass_cluster_free(CassCluster* cluster);
-
 
 /**
  * Sets/Appends contact points. This *MUST* be set. The first call sets
@@ -844,7 +901,7 @@ cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] local_dc The primary data center to try first
+ * @param[in] enabled 
  */
 CASS_EXPORT void
 cass_cluster_set_token_aware_routing(CassCluster* cluster,
@@ -858,11 +915,11 @@ cass_cluster_set_token_aware_routing(CassCluster* cluster,
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] enable
+ * @param[in] enabled
  */
 CASS_EXPORT void
 cass_cluster_set_tcp_nodelay(CassCluster* cluster,
-                             cass_bool_t enable);
+                             cass_bool_t enabled);
 
 /**
  * Enable/Disable TCP keep-alive
@@ -872,13 +929,13 @@ cass_cluster_set_tcp_nodelay(CassCluster* cluster,
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] enable
+ * @param[in] enabled
  * @param[in] delay_secs The initial delay in seconds, ingored when
- * `enable` is false.
+ * `enabled` is false.
  */
 CASS_EXPORT void
 cass_cluster_set_tcp_keepalive(CassCluster* cluster,
-                               cass_bool_t enable,
+                               cass_bool_t enabled,
                                unsigned delay_secs);
 
 /***********************************************************************************
@@ -1142,7 +1199,7 @@ cass_ssl_new();
  *
  * @public @memberof CassSsl
  *
- * @param[in] cluster
+ * @param[in] ssl
  */
 CASS_EXPORT void
 cass_ssl_free(CassSsl* ssl);
@@ -1234,6 +1291,7 @@ cass_future_free(CassFuture* future);
  *
  * @param[in] future
  * @param[in] callback
+ * @param[in] data
  * @return CASS_OK if successful, otherwise an error occurred
  */
 CASS_EXPORT CassError
@@ -2912,8 +2970,6 @@ cass_uuid_from_string(const char* str,
 
 /**
  * Gets a description for an error code.
- *
- * @public @memberof CassError
  *
  * @param[in] error
  * @return A null-terminated string describing the error.
