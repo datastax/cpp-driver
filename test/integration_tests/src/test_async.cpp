@@ -32,7 +32,7 @@
 struct AsyncTests : public test_utils::SingleSessionTest {
   AsyncTests() : test_utils::SingleSessionTest(3, 0) {
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                           % test_utils::SIMPLE_KEYSPACE % "1"));
+                                           % test_utils::SIMPLE_KEYSPACE % "3"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
   }
 
@@ -89,8 +89,6 @@ BOOST_AUTO_TEST_CASE(simple)
 {
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
   const size_t num_concurrent_requests = 4096;
-
-  cass_cluster_set_request_timeout(cluster, 60000);
 
   std::vector<test_utils::CassFuturePtr> futures;
   std::vector<CassUuid> ids = insert_async(session, uuid_gen, table_name, num_concurrent_requests, &futures);
