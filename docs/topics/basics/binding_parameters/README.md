@@ -1,6 +1,6 @@
 # Binding Parameters
 
-## Datatypes mapping
+## Datatypes Mapping
 
 <table class="table table-striped table-hover table-condensed">
   <thead>
@@ -67,9 +67,9 @@
   </tbody>
 </table>
 
-## Binding parameters
+## Binding Parameters
 
-The ‘?’ marker is used to denote the bind variables in a query string. This can be used for both regular and prepared parameterized queries.  In addition to adding the bind marker to your query string your application must also provide the number of bind variables to `cass_statement_new()` when constructing a new statement. If a query doesn’t require any bind variables then 0 can be used. `cass_statement_bind_*()` functions are then used to bind values to the statement’s variables. Bind variables can be bound by the marker’s index or by name. 
+The ‘?’ marker is used to denote the bind variables in a query string. This can be used for both regular and prepared parameterized queries. In addition to adding the bind marker to your query string your application must also provide the number of bind variables to `cass_statement_new()` when constructing a new statement. If a query doesn’t require any bind variables then 0 can be used. `cass_statement_bind_*()` functions are then used to bind values to the statement’s variables. Bind variables can be bound by the marker’s index or by name and must be supplied for all bound variables. 
 
 ```c
 CassString query = cass_string_init("SELECT * FROM table1 WHERE column1 = ?");
@@ -100,12 +100,13 @@ cass_statement_bind_string_by_name(statement, "column1", cass_string_init("abc")
 cass_statement_free(statement);
 ```
 
-## Large values
+## Large Values
 
-The data of values bound to statements are copied into the statement. That means that values bound to statements can be freed immediately after being bound. However, this might be problematic for large values so the driver provides `cass_statement_bind_custom()` which allocates a buffer where the large value can be directly stored avoiding an extra allocation and copy.
+The data of values bound to a statement are copied into the statement. That means that values bound to statements can be freed immediately after being bound. However, this might be problematic for large values so the driver provides `cass_statement_bind_custom()` which allocates a buffer where the large values can be directly stored avoiding an extra allocation and copy.
 
 ```c
-CassString query = cass_string_init("INSERT INTO table1 (column1, column2) VALUES (?, ?)");
+CassString query
+  = cass_string_init("INSERT INTO table1 (column1, column2) VALUES (?, ?)");
 
 /* Create a statement with two parameters */
 CassStatement* statement = cass_statement_new(query, 2);
@@ -121,9 +122,9 @@ cass_statement_bind_custom(statement, 1, 8 * 1024 * 1024, &bytes);
 
 ```
 
-## Constructing collections
+## Constructing Collections
 
-Collections are supported using `CassCollection` objects. It supports the `list`, `map` and `set` Cassandra types. The code below shows to construct a `list` collection.  A set can be constructed in a very similiar way. The only difference is the type `CASS_COLLECTION_TYPE_SET` is used to create the collection instead of `CASS_COLLECTION_TYPE_LIST`. 
+Collections are supported using [`CassCollection`](http://datastax.github.io/cpp-driver/api/struct_cass_collection/) objects; supporting `list`, `map` and `set` Cassandra types. The code below shows how to construct a `list` collection; however, a set can be constructed in a very similiar way. The only difference is the type `CASS_COLLECTION_TYPE_SET` is used to create the collection instead of `CASS_COLLECTION_TYPE_LIST`. 
 
 **Important**: Values appended to the colleciton can be freed immediately afterward because the values are copied.
 
