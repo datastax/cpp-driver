@@ -34,8 +34,10 @@ int main() {
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
 
+  /* Add contact points */
   cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
 
+  /* Provide the cluster object as configuration to connect the session */
   connect_future = cass_session_connect(session, cluster);
 
   if (cass_future_error_code(connect_future) == CASS_OK) {
@@ -49,7 +51,7 @@ int main() {
     CassFuture* result_future = cass_session_execute(session, statement);
 
     if (cass_future_error_code(result_future) == CASS_OK) {
-      /* Retrieve result set and iterator over the rows */
+      /* Retrieve result set and iterate over the rows */
       const CassResult* result = cass_future_get_result(result_future);
       CassIterator* rows = cass_iterator_from_result(result);
 
