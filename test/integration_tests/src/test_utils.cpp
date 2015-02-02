@@ -101,27 +101,6 @@ void CassLog::callback(const CassLogMessage* message, void* data) {
   }
 }
 
-const char* get_column_type(CassColumnType type) {
-  //Determine which column type to return text value
-  switch (type) {
-    case CASS_COLUMN_TYPE_PARTITION_KEY:
-      return "Partition Key";
-    case CASS_COLUMN_TYPE_CLUSTERING_KEY:
-      return "Clustering Key";
-    case CASS_COLUMN_TYPE_REGULAR:
-      return "Regular";
-    case CASS_COLUMN_TYPE_COMPACT_VALUE:
-      return "Compact Value";
-    case CASS_COLUMN_TYPE_STATIC:
-      return "Static";
-    case CASS_COLUMN_TYPE_UNKNOWN:
-      return "Unknown";
-    default:
-      assert(false && "Invalid column type");
-      return "";
-  }
-}
-
 const char* get_value_type(CassValueType type) {
   switch (type) {
     case CASS_VALUE_TYPE_CUSTOM: return "custom";

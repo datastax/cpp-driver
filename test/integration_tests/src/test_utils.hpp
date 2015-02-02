@@ -537,13 +537,6 @@ struct SingleSessionTest : public MultipleNodesTest {
 
 void initialize_contact_points(CassCluster* cluster, std::string prefix, unsigned int num_nodes_dc1, unsigned int num_nodes_dc2);
 
-/**
- * Get the textual representation of the CassColumnType
- *
- * @param type Column type to convert to textual value
- */
-const char* get_column_type(CassColumnType type);
-
 const char* get_value_type(CassValueType type);
 
 CassSessionPtr create_session(CassCluster* cluster, cass_duration_t timeout = 60 * ONE_SECOND_IN_MICROS);
