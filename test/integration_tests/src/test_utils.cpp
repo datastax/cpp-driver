@@ -184,9 +184,12 @@ MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int nu
   cluster = cass_cluster_new();
   initialize_contact_points(cluster, conf.ip_prefix(), num_nodes_dc1, num_nodes_dc2);
 
-  cass_cluster_set_connect_timeout(cluster, 10000);
-  cass_cluster_set_request_timeout(cluster, 10000);
-  cass_cluster_set_num_threads_io(cluster, 2);
+  cass_cluster_set_connect_timeout(cluster, 10 * ONE_SECOND_IN_MICROS);
+  cass_cluster_set_request_timeout(cluster, 30 * ONE_SECOND_IN_MICROS);
+  cass_cluster_set_core_connections_per_host(cluster, 2);
+  cass_cluster_set_max_connections_per_host(cluster, 4);
+  cass_cluster_set_num_threads_io(cluster, 4);
+  cass_cluster_set_max_concurrent_creation(cluster, 8);
   cass_cluster_set_protocol_version(cluster, protocol_version);
 }
 
