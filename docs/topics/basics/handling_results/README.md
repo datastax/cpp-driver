@@ -1,6 +1,6 @@
 # Handling Results
 
-The `CassResult` object is generally only returned for `SELECT` statments. For mutations (`INSERT`, `UPDATE`, and `DELETE`) only a status code will be present can be accessed using `cass_future_error_code()`. However, when using lightweight transactions a result object will be available to check the status of the transaction. The result object is obtained from the queries' future object.
+The [`CassResult`](http://datastax.github.io/cpp-driver/api/struct_cass_result/) object is typically returned for `SELECT` statments. For mutations (`INSERT`, `UPDATE`, and `DELETE`) only a status code will be present and can be accessed using `cass_future_error_code()`. However, when using lightweight transactions a result object will be available to check the status of the transaction. The result object is obtained from executed statements' future object.
 
 **Important**: Rows, column values, collections, decimals, strings, and bytes objects are all invalidated when the result object is freed. All of these objects point to memory held by the result. This allows the driver to avoid unneccessarily copying data.
 
@@ -16,7 +16,7 @@ cass_result_free(result);
 
 ## Rows and Column Values
 
-The result object represents a collection of rows. The first row, if present, can be obtained using `cass_result_first_row()`. Multiple rows are accessed using a `CassIterator` object. Once a row is retrieved the column values can be retreived from a row by either index or by name. A `CassIterator` object can also be used to enumerated column values.
+The result object represents a collection of rows. The first row, if present, can be obtained using `cass_result_first_row()`. Multiple rows are accessed using a [`CassIterator`](http://datastax.github.io/cpp-driver/api/struct_cass_iterator/) object. After a row has been retrieved, the column value(s) can be accessed from a row by either index or by name. The iterator object can also be used with enumerated column values.
 
 ```c
 const CassRow* row = cass_result_first_row(result);
@@ -32,7 +32,7 @@ const CassRow* row = cass_result_first_row(result);
 const CassValue* column1 = cass_row_get_column_by_name(row, "column1");
 ```
 
-Once you have the column values you can retrieve actual value of the data in the column.
+Once the [`CassValue`]((http://datastax.github.io/cpp-driver/api/struct_cass_value/)) has been obtained from the column, the actual value can be retrieved and assigned into the proper datatype.
 
 ```c
 cass_int32_t int_value;
@@ -47,7 +47,7 @@ cass_value_get_string(column3, &string_value);
 
 ## Iterators
 
-Iterators can used to interate over the rows in a result, the columns in a row, or the values in a collection. 
+Iterators can be used to interate over the rows in a result, the columns in a row, or the values in a collection. 
 
 **Important**: `cass_iterator_next()` invalidates values retreived by the previous iteration.
 
@@ -64,7 +64,7 @@ while (cass_iterator_next(iterator)) {
 cass_iterator_free(iterator);
 ```
 
-All iterator use the same pattern, but will have different iterator creation and retreival functions. Iterating over a map colleciton is slightly different because it has two values per entry, but it uses the same basic pattern.
+All iterators use the same pattern, but will have different iterator creation and retreival functions. Iterating over a map colleciton is slightly different because it has two values per entry, but utilizes the same basic pattern.
 
 ```c
 /* Execute SELECT query where a map colleciton is returned */
@@ -91,7 +91,7 @@ cass_iterator_free(iterator);
 
 ## Paging
 
-Large result sets can be divided into multiple pages automatically using paging. To do this the result object keeps track of the pagination state for the sequence of paging queries. When paging through the result set the result object is checked to see if more pages exist and then attached to the statement before re-executing the query to get the next page.
+When communicating with Cassandra 2.0 or later, large result sets can be divided into multiple pages automatically. The [`CassResult`](http://datastax.github.io/cpp-driver/api/struct_cass_result/) object keeps track of the pagination state for the sequence of paging queries. When paging through the result set, the result object is checked to see if more pages exist where it is then attached to the statement before re-executing the query to get the next page.
 
 ```c
 CassString query = cass_string_init("SELECT * FROM table1");

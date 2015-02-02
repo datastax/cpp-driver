@@ -1,17 +1,19 @@
 # Keyspaces
 
-## Setting the keyspace at connection time
+## Setting the Keyspace at Connection Time
 
-It's best to only create a single session per keyspace. A session can be initially connected using a supplied keyspace.
+A session can be initially connected using a supplied keyspace.
+
+**Performance Tip:**  An application should create a single session object per keyspace as a session object is designed to be created once, reused, and shared by multiple threads within the application.
 
 ```c
 CassFuture* connect_future 
   = cass_session_connect_keyspace(session, cluster, "keyspace1");
 ```
 
-## Setting the keyspace using a "USE" statement
+## Changing Keyspaces
 
-It's also possible to change the keyspace of an already connected session by executing a "USE" statement.
+You can specify a keyspace to change to by executing a `USE` statement on a connection session object.
 
 ```c
 CassStatement use_statment 
@@ -23,13 +25,32 @@ CassFuture* use_future
 /* Check future result... */
 ```
 
-## Single session mulitple keyspaces
+## Single Session and Mulitple Keyspaces
 
-It is possible to use multiple keyspaces from a single session by full qualifying the table names in your queries e.g. `keyspace_name.table_name`.
+It is possible to interact with multiple keyspaces using a single session object by fully qualifying the table names in your queries e.g. `keyspace_name.table_name`.
 
-Examples:
+### Examples
 
 ```cql
 SELECT * FROM keyspace_name.table_name WHERE ...;
 INSERT INTO keyspace_name.table_name (...) VALUES (...);
+```
+
+## Creating Keyspaces and Tables
+
+It is also possible to create keyspaces and tables by executing CQL using a session object.
+
+### Examples
+
+```cql
+CREATE KEYSPACE cpp_driver
+  WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
+CREATE TABLE cpp_driver.contributers (
+  lastname text,
+  firstname test,
+  company text,
+  website text,
+  since timestamp,
+  last_activity timestamp
+  PRIMARY KEY(lastname));
 ```

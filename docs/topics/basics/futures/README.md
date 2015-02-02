@@ -1,12 +1,12 @@
 # Futures
 
-Futures are returned from any driver call that would have required your application to block. This allows your application to continue processing and/or also submit several queries at once. Although the driver has an asynchronous design it can be used sychronously by immediately attempting to get result or explicting waiting for the future.
+Futures are returned from any driver call that would result in blocking the client application/thread. This allows the client application to continue processing and/or also submit multiple queries in succession. Although the driver has an asynchronous design it can be used sychronously by immediately attempting to get result or explicting waiting on the future.
 
-## Waiting for results
+## Waiting for Results
 
-Futures results can be waited on indefinately by either calling a wait method or by attempting to get the result. They can also be waited on for an explict amount of time or they can polled without waiting.
+Futures results can be waited on indefinately by either calling a wait method or by attempting to get the result. They can also be waited on for an explict amount of time or periodically polled without waiting to execute application code.
 
-### Synchronously waiting
+### Synchronously Waiting on the Future
 ```c
 CassFuture* future = /* Some operation */
 
@@ -16,7 +16,7 @@ cass_future_wait(future);
 cass_future_free(future);
 ```
 
-### Synchronously waiting for the result
+### Synchronously Waiting for the Result
 ```c
 CassFuture* future = cass_session_execute(session, statement);
 
@@ -35,7 +35,7 @@ if (result == NULL) {
 cass_future_free(future);
 ```
 
-### Timed wait
+### Timed Wait
 ```c
 CassFuture* future = /* Some operation */
 
@@ -68,7 +68,7 @@ cass_future_free(future);
 
 ## Callbacks
 
-A callback can be set on a future to notify your application when a request has completed. Using a future callback is the lowest latency method of notification when waiting for several asynchronous operations.  
+A callback can be set on a future to notify the client application when a request has completed. Using a future callback is the lowest latency method of notification when waiting for several asynchronous operations.  
 
 **Important**: The driver may run the callback on thread that’s different from the application’s calling thread. Any data accessed in the callback must be immutable or synchronized with a mutex, semaphore, etc. 
 

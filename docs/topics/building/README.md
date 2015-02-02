@@ -1,100 +1,154 @@
 # Building
 
-## Driver Dependencies
+## Supported Platforms
+
+The driver is known to work on OS X 10.9, Windows 7, CentOS/RHEL 5/6, and Ubuntu 12.04/14.04. 
+
+It has been built using GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2012/2013.
+
+## Dependencies
 
 - [CMake](http://www.cmake.org)
-- [libuv (1.0x or 0.10)](https://github.com/libuv/libuv)
+- [libuv (1.x or 0.10.x)](https://github.com/libuv/libuv)
 - [OpenSSL](http://www.openssl.org/) (optional)
 
-## Test Dependencies
+**NOTE:** Utilizing the default package manager configuration to install dependencies on \*nix based operating systems may result in older versions of dependecies being retrieved. OpenSSL is of the upmost concern as each new version addresses security [vulnerabilities](https://www.openssl.org/news/vulnerabilities.html) that have been identifed and corrected.
+
+### Test Dependencies
 
 - [boost 1.55+](http://www.boost.org)
 - [libssh2](http://www.libssh2.org)
 - [ccm](https://github.com/pcmanus/ccm)
 
-## Supported Platforms
-
-The driver is known to work on OS X 10.9, Windows 7, RHEL 5/6, and Ubuntu 12.04/14.04. 
-
-It has been built using GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2013.
-
 ## OS X
 The driver has been built and tested using the Clang compiler provided by XCode 5.1. The dependencies were obtained using [Homebrew](http://brew.sh).
 
-To obtain dependencies:
+### Obtaining Dependencies
 
 ```bash
 brew install libuv cmake
 ```
 
-Note: We currently use the OpenSSL library included with XCode.
+**NOTE:** The driver utilizes the OpenSSL library included with XCode.
 
-To obtain test dependencies (This is not required):
+### Building
+
+```bash
+git clone https://github.com/datastax/cpp-driver.git
+cd cpp-driver
+cmake .
+make
+```
+### Test Dependencies and Building Tests (NOT REQUIRED)
+
+#### Obtaining Test Dependencies
 
 ```bash
 brew install boost libssh2
 ```
 
-To build:
+#### Building with the Testing Framework
 
 ```bash
-git clone https://github.com/datastax/cpp-driver.git
-cd cpp-driver
-cmake .
+cmake -DCASS_BUILD_TESTS=ON .
 make
 ```
 
 ## Windows
-The driver has been built and tested using Microsoft Visual Studio 2010 and 2013 (using the "Express" versions) on Windows 7 SP1. The dependencies need to be manually built or obtained.
+The driver has been built and tested using Microsoft Visual Studio 2010, 2012 and 2013 (using the "Express" and Professional versions) and Windows SDK v7.1, 8.0, and 8.1 on Windows 7 SP1. The library dependencies will automatically download and build; however the following build dependencies will need to be installed.
 
-To obtain dependencies:
-* Download and install CMake for Windows. Make sure to select the option "Add CMake to the system PATH for all users" or "Add CMake to the system PATH for current user".
-* Download and build the latest release of libuv 0.10 from https://github.com/joyent/libuv/releases.
-  1. Follow the instructions [here](https://github.com/joyent/libuv#windows).
-  2. Open up the generated Visual Studio solution "uv.sln".
-  3. If you want a 64-bit build you will need to create a "x64" solution platform in the "Configuration Manager".
-  4. Open "Properties" on the "libuv" project. Set "Multi-threaded DLL (/MD)" for the "Configuration Properties -> C/C++ -> Code Generation -> Runtime Library" option.
-  5. Build the "libuv" project
-  6. Copy the files in "libuv/include" to "cpp-driver/lib/libuv/include" and "libuv/Release/lib" to "cpp-driver/lib/libuv/lib".
-* Download and install either the 32-bit or 64-bit version of OpenSSL from http://slproweb.com/products/Win32OpenSSL.html. You may also need to install the "Visual C++ 2008 Redistributables".
+### Windows Build Dependencies
+To obtain build dependencies:
 
-To build 32-bit (using "VS2013 x86 Native Tools Command Prompt"):
+- Download and install [CMake](http://www.cmake.org/download).
+ - Make sure to select the option "Add CMake to the system PATH for all users" or "Add CMake to the system PATH for current user".
+- Download and install [Git](http://git-scm.com/download/win)
+ - Make sure to select the option "Use Git from Windows Command Prompt" or manually add the git executable to the system PATH.
+ - NOTE: This build dependency is required if building with OpenSSL support
+- Download and install [ActiveState Perl](https://www.perl.org/get.html#win32)
+ - Make sure to select the option "Add Perl to PATH environment variable".
+- Download and install [Python v2.7.x](https://www.python.org/downloads)
+ - Make sure to select/install the feature "Add python.exe to Path"
 
-```bash
-cd <path to driver>/cpp-driver
-cmake -G "Visual Studio 12"
-msbuild cassandra.vcxproj /p:Configuration=Release /t:Clean,Build
+### Performing the Windows Build
+A batch script has been created to detect installed Visual Studio version(s) (and/or Windows SDK installtion) in order to simplify the build operations on Windows.  If you have more than one version of Visual Studio (and/or Windows SDK) installed you will be prompted to select which version to use when compiling the driver.
+
+First you will need to open a "Command Prompt" (or Windows SDK Command Prompt) to execute the batch script.
+
+```dos
+Usage: VC_BUILD.BAT [OPTION...]
+
+        --DEBUG                         Enable debug build
+        --RELEASE                       Enable release build (default)
+        --DISABLE-CLEAN                 Disable clean build
+        --DISABLE-OPENSSL               Disable OpenSSL support
+        --ENABLE-PACKAGES [version]     Enable package generation (**)
+        --SHARED                        Build shared library (default)
+        --STATIC                        Build static library
+        --X86                           Target 32-bit build (*)
+        --X64                           Target 64-bit build (*)
+
+        --HELP                          Display this message
+
+*  Default target architecture is determined based on system architecture
+** Packages are only generated using detected installations of Visual Studio
 ```
 
-To build 64-bit (using "VS2013 x64 Cross Tools Command Prompt"):
+To build 32-bit shared library:
 
-```bash
-cd <path to driver>/cpp-driver
-cmake -G "Visual Studio 12 Win64"
-msbuild cassandra.vcxproj /p:Configuration=Release /t:Clean,Build
+```dos
+VC_BUILD.BAT --X86
 ```
 
-Note: Use "cmake -G "Visual Studio 10" for Visual Studio 2010
+To build 64-bit shared library:
+
+```dos
+VC_BUILD.BAT --X64
+```
+
+To build static library:
+
+```dos
+VC_BUILD.BAT --STATIC
+```
+
+To build library without OpenSSL support:
+
+```dos
+VC_BUILD.BAT --DISABLE-OPENSSL
+```
+
+To build 32-bit static library without OpenSSL support:
+
+```dos
+VC_BUILD.BAT --DISABLE-OPENSSL --STATIC --X86
+```
 
 ## Linux
-The driver was built and tested using both GCC and Clang on Ubuntu 14.04.
+The driver has been built using both Clang and GCC while being tested with GCC compiled source on Ubuntu 12.04/14.04.
 
-To obtain dependencies (GCC):
+### Obtaining Dependencies
+
+#### Ubuntu
+
+##### Additional Requirements for Ubuntu 12.04 LTS
+Ubuntu 12.04 does not have libuv in its repositories; however LinuxJedi created a PPA for this dependency which is a backport from Ubuntu 14.04 LTS. It can be found at: https://launchpad.net/~linuxjedi/+archive/ubuntu/ppa.
+
+```bash
+sudo apt-add-repository ppa:linuxjedi/ppa
+sudo apt-get update
+```
+
+#### GCC
 
 ```bash
 sudo apt-get install g++ make cmake libuv-dev libssl-dev
 ```
 
-To obtain dependencies (Clang):
+#### Clang
 
 ```bash
 sudo apt-get install clang make cmake libuv-dev libssl-dev
-```
-
-To obtain test dependencies (This is not required):
-
-```bash
-sudo apt-get install libboost-chrono-dev libboost-date-time-dev libboost-log-dev libboost-system-dev libboost-thread-dev libboost-test-dev libssh2-1-dev
 ```
 
 To build:
@@ -106,5 +160,27 @@ cmake .
 make
 ```
 
-## Building Tests
-Tests are not built by default. To build the tests add "-DCASS_BUILD_TESTS=ON" when running cmake.
+### Test Dependencies and Building Tests (NOT REQUIRED)
+
+#### Obtaining Test Dependencies
+
+##### Ubuntu 12.04 LTS
+
+```bash
+sudo add-apt-repository ppa:boost-latest/ppa
+sudo apt-get update
+sudo apt-get install libboost1.55-all-dev libssh2-1-dev
+```
+
+##### Ubuntu 14.04 LTS
+
+```bash
+sudo apt-get install libboost-chrono-dev libboost-date-time-dev libboost-log-dev libboost-system-dev libboost-thread-dev libboost-test-dev libssh2-1-dev
+```
+
+#### Building with the Testing Framework
+
+```bash
+cmake -DCASS_BUILD_TESTS=ON .
+make
+```

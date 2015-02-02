@@ -1,13 +1,15 @@
-# DataStax C/C++ Driver for Apache Cassandra (Beta)
+# DataStax C/C++ Driver for Apache Cassandra
 
 [![Build Status](https://travis-ci.org/datastax/cpp-driver.svg?branch=1.0)](https://travis-ci.org/datastax/cpp-driver)
 
 A C/C++ client driver for Apache Cassandra. This driver works exclusively with
 the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol (version 1 and 2).
 
+- Code: https://github.com/datastax/cpp-driver
+- Docs: http://datastax.github.io/cpp-driver
 - JIRA: https://datastax-oss.atlassian.net/browse/CPP
-- MAILING LIST: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
-- IRC: #datastax-drivers on `irc.freenode.net <http://freenode.net>`
+- Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
+- IRC: [#datastax-drivers on `irc.freenode.net <http://freenode.net>`](http://webchat.freenode.net/?channels=datastax-drivers)
 
 ## Functionality
 - Completely asynchronous
@@ -21,7 +23,7 @@ the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol (v
 - Authentication (via credentials using SASL PLAIN)
 - SSL
 
-## Upgrading from a beta to a RC release
+## Upgrading from a Beta to a RC Release
 
 There were a couple breaking API changes between beta5 and rc1 that are documented in detail [here](http://www.datastax.com/dev/blog/datastax-c-driver-rc1-released).
 
@@ -39,8 +41,10 @@ int main() {
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
 
+  /* Add contact points */
   cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
 
+  /* Provide the cluster object as configuration to connect the session */
   connect_future = cass_session_connect(session, cluster);
 
   if (cass_future_error_code(connect_future) == CASS_OK) {
@@ -54,7 +58,7 @@ int main() {
     CassFuture* result_future = cass_session_execute(session, statement);
 
     if(cass_future_error_code(result_future) == CASS_OK) {
-      /* Retrieve result set and iterator over the rows */
+      /* Retrieve result set and iterate over the rows */
       const CassResult* result = cass_future_get_result(result_future);
       CassIterator* rows = cass_iterator_from_result(result);
 
@@ -100,7 +104,7 @@ int main() {
 ```
 
 ## License
-Copyright (c) 2014 DataStax
+Copyright (c) 2015 DataStax
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
