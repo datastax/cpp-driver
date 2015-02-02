@@ -91,7 +91,7 @@ cass_iterator_free(iterator);
 
 ## Paging
 
-When communicating with Cassandra 2.0 or later, large result sets can be divided into multiple blocks automatically using paging. To perform this operation the result object keeps track of the pagination state for the sequence of paging queries. When paging through the result set, the result object is checked to see if more pages exist where it is then attached to the statement before re-executing the query to get the next page.
+When communicating with Cassandra 2.0 or later, large result sets can be divided into multiple pages automatically. The [`CassResult`](http://datastax.github.io/cpp-driver/api/struct_cass_result/) object keeps track of the pagination state for the sequence of paging queries. When paging through the result set, the result object is checked to see if more pages exist where it is then attached to the statement before re-executing the query to get the next page.
 
 ```c
 CassString query = cass_string_init("SELECT * FROM table1");

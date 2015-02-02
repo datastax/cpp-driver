@@ -31,7 +31,7 @@ It is possible to interact with multiple keyspaces using a single session object
 
 ### Examples
 
-```sql
+```cql
 SELECT * FROM keyspace_name.table_name WHERE ...;
 INSERT INTO keyspace_name.table_name (...) VALUES (...);
 ```
@@ -42,7 +42,7 @@ It is also possible to create keyspaces and tables by executing CQL using a sess
 
 ### Examples
 
-```sql
+```cql
 CREATE KEYSPACE cpp_driver
   WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
 CREATE TABLE cpp_driver.contributers (

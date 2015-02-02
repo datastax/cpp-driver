@@ -36,7 +36,7 @@ int main() {
 }
 ```
 
-To connect a session, a [`CassCluster`](http://datastax.github.io/cpp-driver/api/struct_cass_cluster/) object will need to be created and configured. The minimal configuration needed to connect a session is a single or multiple list of contact points. The contact points are used to initialize the driver and it will automatically discover the rest of the nodes in your cluster.
+To connect a session, a [`CassCluster`](http://datastax.github.io/cpp-driver/api/struct_cass_cluster/) object will need to be created and configured. The minimal configuration needed to connect is a list of contact points. The contact points are used to initialize the driver and it will automatically discover the rest of the nodes in your cluster.
 
 **Perfomance Tip:** Include more than one contact point to be robust against node failures.
 
