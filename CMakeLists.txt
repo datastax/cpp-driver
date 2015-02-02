@@ -36,7 +36,8 @@ set(CASS_MINIMUM_BOOST_VERSION 1.55.0)
 option(CASS_INSTALL_HEADER "Install header file" ON)
 option(CASS_USE_EXTERNAL_BOOST "Use external verison of Boost" OFF)
 option(CASS_BUILD_STATIC "Build static library" OFF)
-option(CASS_BUILD_EXAMPLES "Build examples" ON)
+option(CASS_BUILD_EXAMPLES "Build examples" OFF)
+option(CASS_BUILD_DOCS "Build documentation" OFF)
 option(CASS_BUILD_TESTS "Build tests" OFF)
 option(CASS_USE_OPENSSL "Use OpenSSL" ON)
 option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
@@ -270,7 +271,7 @@ set_property(
 if(CASS_BUILD_STATIC)
   add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${ALL_SOURCE_FILES})
   target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${LIBS})
-  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
+  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
   set_property(
     TARGET ${PROJECT_LIB_NAME_STATIC}
@@ -292,7 +293,7 @@ endif()
 # Where to put libraries - either lib or lib64.
 get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
 
-if("${LIB64}" STREQUAL "TRUE")
+if("${LIB64}" STREQUAL "TRUE" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
     set(LIBSUFFIX 64)
 else()
     set(LIBSUFFIX "")
@@ -381,15 +382,16 @@ endif()
 # Generating API docs with Doxygen
 #-----------------------------------
 
-find_package(Doxygen)
-
-if(DOXYGEN_FOUND)
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
-  add_custom_target(doc
-    ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "Generating API documentation with Doxygen" VERBATIM)
-endif(DOXYGEN_FOUND)
+if(CASS_BUILD_DOCS)
+  find_package(Doxygen)
+  if (DOXYGEN_FOUND)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+    add_custom_target(doc
+      ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      COMMENT "Generating API documentation with Doxygen" VERBATIM)
+  endif()
+endif()
 
 #-----------------------------------
 # Build an RPM.
