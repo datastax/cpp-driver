@@ -24,9 +24,9 @@ override_dh_auto_build:
 	dh_auto_build -- -j$(NUMJOBS)
 
 override_dh_strip:
-	dh_strip --dbg-package=datastax-cpp-driver-dbg
-	sed -i s/@DEB_HOST_MULTIARCH@/$(DEB_HOST_MULTIARCH)/ debian/datastax-cpp-driver-dev/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig/cassandra.pc
-	sed -i s/@DEB_VERSION_UPSTREAM@/$(DEB_VERSION_UPSTREAM)/ debian/datastax-cpp-driver-dev/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig/cassandra.pc
+	dh_strip --dbg-package=cassandra-cpp-driver-dbg
+	sed -i s/@DEB_HOST_MULTIARCH@/$(DEB_HOST_MULTIARCH)/ debian/cassandra-cpp-driver-dev/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig/cassandra.pc
+	sed -i s/@DEB_VERSION_UPSTREAM@/$(DEB_VERSION_UPSTREAM)/ debian/cassandra-cpp-driver-dev/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig/cassandra.pc
 
 override_dh_auto_test:
 override_dh_auto_clean:

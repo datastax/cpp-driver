@@ -1,4 +1,4 @@
-Source: datastax-cpp-driver
+Source: cassandra-cpp-driver
 Priority: extra
 Maintainer: Michael Penick <michael.penick@datastax.com>
 Build-Depends: debhelper (>= 9.0.0), dh-exec, cmake, make,
@@ -6,11 +6,11 @@ Build-Depends: debhelper (>= 9.0.0), dh-exec, cmake, make,
         libssl-dev
 Standards-Version: 3.9.2
 Section: libs
-Homepage: http://datastax-cpp-driver.org
+Homepage: http://datastax.github.io/cpp-driver/
 Vcs-Git: git://github.com/datastax/cpp-driver.git
 Vcs-Browser: https://github.com/datastax/cpp-driver
 
-Package: datastax-cpp-driver
+Package: cassandra-cpp-driver
 Section: libs
 Architecture: any
 Pre-Depends: multiarch-support, ${misc:Pre-Depends}
@@ -20,19 +20,19 @@ Description: C/C++ client driver for Apache Cassandra - runtime library
  the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol 
  (version 1 and 2).
 
-Package: datastax-cpp-driver-dev
+Package: cassandra-cpp-driver-dev
 Section: libdevel
 Architecture: any
-Depends: datastax-cpp-driver (= ${binary:Version}), ${misc:Depends}
+Depends: cassandra-cpp-driver (= ${binary:Version}), ${misc:Depends}
 Description: C/C++ client driver for Apache Cassandra - development files
  A C/C++ client driver for Apache Cassandra. This driver works exclusively with
  the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol 
  (version 1 and 2).
 
-Package: datastax-cpp-driver-dbg
+Package: cassandra-cpp-driver-dbg
 Section: debug
 Architecture: any
-Depends: datastax-cpp-driver (= ${binary:Version}), ${misc:Depends}
+Depends: cassandra-cpp-driver (= ${binary:Version}), ${misc:Depends}
 Description: C/C++ client driver for Apache Cassandra - debugging symbols
  A C/C++ client driver for Apache Cassandra. This driver works exclusively with
  the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol 

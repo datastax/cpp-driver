@@ -10,7 +10,7 @@ function check_command {
 }
 
 version="1.0.0"
-base="datastax-cpp-driver-$version"
+base="cassandra-cpp-driver-$version"
 archive="$base.tar.gz"
 files="CMakeLists.txt cmake_uninstall.cmake.in include src README.md LICENSE.txt"
 
@@ -39,6 +39,6 @@ tar zcf $archive $base
 popd
 
 echo "Building package:"
-rpmbuild --define "_topdir ${PWD}/build" -ba cpp-driver.spec
+rpmbuild --define "_topdir ${PWD}/build" -ba cassandra-cpp-driver.spec
 
 exit 0

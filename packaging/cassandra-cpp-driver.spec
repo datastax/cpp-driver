@@ -1,4 +1,4 @@
-Name:    datastax-cpp-driver
+Name:    cassandra-cpp-driver
 Epoch:   1
 Version: 1.0.0
 Release: 1%{?dist}

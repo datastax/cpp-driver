@@ -10,7 +10,7 @@ function check_command {
 }
 
 version="1.0.0"
-base="datastax-cpp-driver-$version"
+base="cassandra-cpp-driver-$version"
 archive="$base.tar.gz"
 files="CMakeLists.txt cmake_uninstall.cmake.in include src"
 
