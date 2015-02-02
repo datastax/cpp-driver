@@ -1,4 +1,4 @@
-# DataStax C/C++ Driver for Apache Cassandra 1.0 GA
+# DataStax C/C++ Driver for Apache Cassandra
 
 [![Build Status](https://travis-ci.org/datastax/cpp-driver.svg?branch=1.0)](https://travis-ci.org/datastax/cpp-driver)
 
