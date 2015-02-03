@@ -1,3 +1,20 @@
+1.0.0
+===========
+Feb 2, 2015
+
+Features
+--------
+* Libuv 1.x supported
+
+Other
+--------
+* `cass_cluster_set_num_threads_io()` now returns an error code
+* Fixed an issue where a node in a remote DC could reconnect even if it 
+  was supposed to be ignored.
+* Reduced the defaults for IO worker threads (1), core connections (1), and
+  max connections (2).
+* Fixed crash caused by a null token-aware key value.
+
 1.0.0-rc1
 ===========
 Dec 22, 2014

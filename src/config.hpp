@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 DataStax
+  Copyright (c) 2015 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -37,12 +37,12 @@ public:
   Config()
       : port_(9042)
       , protocol_version_(2)
-      , thread_count_io_(0)
+      , thread_count_io_(1)
       , queue_size_io_(8192)
       , queue_size_event_(8192)
       , queue_size_log_(8192)
-      , core_connections_per_host_(2)
-      , max_connections_per_host_(8)
+      , core_connections_per_host_(1)
+      , max_connections_per_host_(2)
       , reconnect_wait_time_ms_(2000)
       , max_concurrent_creation_(1)
       , max_requests_per_flush_(128)

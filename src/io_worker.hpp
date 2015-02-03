@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 DataStax
+  Copyright (c) 2015 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -109,8 +109,13 @@ private:
 
   virtual void on_event(const IOWorkerEvent& event);
 
+#if UV_VERSION_MAJOR == 0
   static void on_execute(uv_async_t* async, int status);
   static void on_prepare(uv_prepare_t *prepare, int status);
+#else
+  static void on_execute(uv_async_t* async);
+  static void on_prepare(uv_prepare_t *prepare);
+#endif
 
 private:
   typedef std::map<Address, SharedRefPtr<Pool> > PoolMap;

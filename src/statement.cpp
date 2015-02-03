@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2014 DataStax
+  Copyright (c) 2015 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -366,6 +366,19 @@ CassError cass_statement_bind_collection_by_name(CassStatement* statement,
 
 namespace cass {
 
+static int32_t decode_buffer_size(const Buffer& buffer) {
+  if (!buffer.is_buffer()) {
+    LOG_ERROR("Routing key cannot contain an empty value or a collection");
+    return -1;
+  }
+  int32_t size;
+  decode_int32(const_cast<char*>(buffer.data()), size);
+  if (size < 0) {
+    LOG_ERROR("Routing key cannot contain a null value");
+  }
+  return size;
+}
+
 int32_t Statement::encode_values(int version, BufferVec* bufs) const {
   int32_t values_size = 0;
   for (ValueVec::const_iterator it = values_.begin(), end = values_.end();
@@ -390,12 +403,8 @@ bool Statement::get_routing_key(std::string* routing_key)  const {
 
   if (key_indices_.size() == 1) {
       const Buffer& buffer = values_.front();
-      if (!buffer.is_buffer()) {
-        LOG_ERROR("Routing key cannot have null value or be a collection");
-        return false;
-      }
-      int32_t size;
-      decode_int32(const_cast<char*>(buffer.data()), size);
+      int32_t size = decode_buffer_size(buffer);
+      if (size < 0) return false;
       routing_key->assign(buffer.data() + sizeof(int32_t), size);
   } else {
     size_t length = 0;
@@ -403,12 +412,8 @@ bool Statement::get_routing_key(std::string* routing_key)  const {
     for (std::vector<size_t>::const_iterator i = key_indices_.begin();
          i != key_indices_.end(); ++i) {
       const Buffer& buffer = values_[*i];
-      if (!buffer.is_buffer()) {
-        LOG_ERROR("Routing key cannot have null value or be a collection");
-        return false;
-      }
-      int32_t size;
-      decode_int32(const_cast<char*>(buffer.data()), size);
+      int32_t size = decode_buffer_size(buffer);
+      if (size < 0) return false;
       length += sizeof(uint16_t) + size + 1;
     }
 

@@ -51,7 +51,6 @@ demo/cassandra_demo
 test/unit_tests/cassandra_test
 
 # API docs files
-doxygen
 Doxyfile
 
 # editor
@@ -93,5 +92,5 @@ lib/libuv/lib/**
 !lib/libuv/lib/README
 boost_1_*
 
-
+# Integration test configuration
 config*.txt

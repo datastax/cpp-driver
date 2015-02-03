@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 DataStax
+  Copyright (c) 2015 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -54,10 +54,13 @@ CassError cass_cluster_set_protocol_version(CassCluster* cluster,
   return CASS_OK;
 }
 
-void cass_cluster_set_num_threads_io(CassCluster* cluster,
-                                     unsigned num_threads) {
-  // 0 is okay, it means use a thread per core
+CassError cass_cluster_set_num_threads_io(CassCluster* cluster,
+                                          unsigned num_threads) {
+  if (num_threads == 0) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
   cluster->config().set_thread_count_io(num_threads);
+  return CASS_OK;
 }
 
 CassError cass_cluster_set_queue_size_io(CassCluster* cluster,
@@ -227,14 +230,14 @@ void cass_cluster_set_token_aware_routing(CassCluster* cluster,
 }
 
 void cass_cluster_set_tcp_nodelay(CassCluster* cluster,
-                                  cass_bool_t enable) {
-  cluster->config().set_tcp_nodelay(enable == cass_true);
+                                  cass_bool_t enabled) {
+  cluster->config().set_tcp_nodelay(enabled == cass_true);
 }
 
 void cass_cluster_set_tcp_keepalive(CassCluster* cluster,
-                                    cass_bool_t enable,
+                                    cass_bool_t enabled,
                                     unsigned delay_secs) {
-  cluster->config().set_tcp_keepalive(enable == cass_true, delay_secs);
+  cluster->config().set_tcp_keepalive(enabled == cass_true, delay_secs);
 }
 
 void cass_cluster_free(CassCluster* cluster) {

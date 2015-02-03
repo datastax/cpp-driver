@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 DataStax
+  Copyright (c) 2015 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -46,7 +46,11 @@ public:
   virtual void on_event(const E& event) = 0;
 
 private:
+#if UV_VERSION_MAJOR == 0
   static void on_event_internal(uv_async_t* async, int status) {
+#else
+  static void on_event_internal(uv_async_t* async) {
+#endif
     EventThread* thread = static_cast<EventThread*>(async->data);
     E event;
     while (thread->event_queue_->dequeue(event)) {

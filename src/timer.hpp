@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 DataStax
+  Copyright (c) 2015 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -49,7 +49,11 @@ private:
     uv_close(copy_cast<uv_timer_t*, uv_handle_t*>(&timer->handle_), on_close);
   }
 
+#if UV_VERSION_MAJOR == 0
   static void on_timeout(uv_timer_t* handle, int status) {
+#else
+  static void on_timeout(uv_timer_t* handle) {
+#endif
     Timer* timer = static_cast<Timer*>(handle->data);
     timer->cb_(timer);
     close(timer);

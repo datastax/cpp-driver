@@ -1,0 +1,9 @@
+# HTML documentation
+.sass-cache
+gh-pages
+crash.log
+tmp
+node_modules
+
+# Doxygen output
+doxygen

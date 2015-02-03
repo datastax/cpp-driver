@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2014 DataStax
+  Copyright (c) 2015 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -101,27 +101,6 @@ void CassLog::callback(const CassLogMessage* message, void* data) {
   }
 }
 
-const char* get_column_type(CassColumnType type) {
-  //Determine which column type to return text value
-  switch (type) {
-    case CASS_COLUMN_TYPE_PARTITION_KEY:
-      return "Partition Key";
-    case CASS_COLUMN_TYPE_CLUSTERING_KEY:
-      return "Clustering Key";
-    case CASS_COLUMN_TYPE_REGULAR:
-      return "Regular";
-    case CASS_COLUMN_TYPE_COMPACT_VALUE:
-      return "Compact Value";
-    case CASS_COLUMN_TYPE_STATIC:
-      return "Static";
-    case CASS_COLUMN_TYPE_UNKNOWN:
-      return "Unknown";
-    default:
-      assert(false && "Invalid column type");
-      return "";
-  }
-}
-
 const char* get_value_type(CassValueType type) {
   switch (type) {
     case CASS_VALUE_TYPE_CUSTOM: return "custom";
@@ -184,9 +163,12 @@ MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int nu
   cluster = cass_cluster_new();
   initialize_contact_points(cluster, conf.ip_prefix(), num_nodes_dc1, num_nodes_dc2);
 
-  cass_cluster_set_connect_timeout(cluster, 10000);
-  cass_cluster_set_request_timeout(cluster, 10000);
-  cass_cluster_set_num_threads_io(cluster, 2);
+  cass_cluster_set_connect_timeout(cluster, 10 * ONE_SECOND_IN_MICROS);
+  cass_cluster_set_request_timeout(cluster, 30 * ONE_SECOND_IN_MICROS);
+  cass_cluster_set_core_connections_per_host(cluster, 2);
+  cass_cluster_set_max_connections_per_host(cluster, 4);
+  cass_cluster_set_num_threads_io(cluster, 4);
+  cass_cluster_set_max_concurrent_creation(cluster, 8);
   cass_cluster_set_protocol_version(cluster, protocol_version);
 }
 

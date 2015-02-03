@@ -1,0 +1,20 @@
+<% index = item[:doxygen] %>
+<div class="page-header">
+  <h1>
+    API Documentation
+  </h1>
+</div>
+
+<h2>Files</h2>
+<ul class="list-inline">
+<% index.each_object(:file) do |o| %>
+  <li><code><a href="/api/<%= o.id %>"><%= h o.name %></a></code></li>
+<% end %>
+</ul>
+
+<h2>Classes</h2>
+<ul class="list-inline">
+<% index.each_object(:class, :struct, :union, :interface) do |o| %>
+  <li><code><a href="/api/<%= o.id %>"><%= h o.name %></a></code></li>
+<% end %>
+</ul>

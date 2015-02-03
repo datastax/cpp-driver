@@ -1,5 +1,5 @@
 /*
-  Copyright 2014 DataStax
+  Copyright (c) 2015 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -70,7 +70,11 @@ struct RequestTimer {
     }
   }
 
+#if UV_VERSION_MAJOR == 0
   static void on_timeout(uv_timer_t* handle, int status) {
+#else
+  static void on_timeout(uv_timer_t* handle) {
+#endif
     RequestTimer* timer = static_cast<RequestTimer*>(handle->data);
     timer->cb_(timer);
   }

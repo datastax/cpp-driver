@@ -15,7 +15,7 @@ project(${PROJECT_NAME_STR} C CXX)
 set(PROJECT_VERSION_MAJOR 1)
 set(PROJECT_VERSION_MINOR 0)
 set(PROJECT_VERSION_PATCH 0)
-set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}.rc1)
+set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 set(CASS_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
 
@@ -35,8 +35,10 @@ set(CASS_MINIMUM_BOOST_VERSION 1.55.0)
 
 option(CASS_INSTALL_HEADER "Install header file" ON)
 option(CASS_USE_EXTERNAL_BOOST "Use external verison of Boost" OFF)
+option(CASS_BUILD_SHARED "Build shared library" ON)
 option(CASS_BUILD_STATIC "Build static library" OFF)
-option(CASS_BUILD_EXAMPLES "Build examples" ON)
+option(CASS_BUILD_EXAMPLES "Build examples" OFF)
+option(CASS_BUILD_DOCS "Build documentation" OFF)
 option(CASS_BUILD_TESTS "Build tests" OFF)
 option(CASS_USE_OPENSSL "Use OpenSSL" ON)
 option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
@@ -112,11 +114,13 @@ if(CASS_USE_TCMALLOC)
 endif()
 
 # openssl
+set(_OPENSSL_ROOT_HINTS ${OPENSSL_ROOT_DIR} ENV OPENSSL_ROOT_DIR)
 
 if(CASS_USE_OPENSSL)
   if(WIN32)
     set(_OPENSSL_VERSION "1.0.1h")
-    set(OPENSSL_ROOT_DIR "${PROJECT_SOURCE_DIR}/lib/openssl/")
+    set(_OPENSSL_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/openssl/")
+    set(_OPENSSL_ROOT_HINTS_AND_PATHS HINTS ${_OPENSSL_ROOT_HINTS} PATHS ${_OPENSSL_ROOT_PATHS})
   endif()
   find_package(OpenSSL REQUIRED)
   set(LIBS ${LIBS} ${OPENSSL_LIBRARIES})
@@ -138,7 +142,9 @@ endif()
 set(MULTICORE_CORES_NUMBER "3" CACHE STRING "Number of cores (for multicore compilation)")
 option(MULTICORE_COMPILATION "Enable multicore compilation" OFF)
 
-if(NOT WIN32)
+if(WIN32)
+  set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+else()
   set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_THREAD_USES_MOVE -DBOOST_NO_CXX11_RVALUE_REFERENCES")
 endif()
 
@@ -180,28 +186,28 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 
   # GCC specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
+  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-variadic-macros")
 
   if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.8" OR
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.8")
     set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedefs")
   endif()
 
-  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Wno-variadic-macros -Werror")
+  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Werror")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.3" OR
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.3")
     set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   else()
     # TODO(mpenick): stress.cpp might not compile on older compilers because of boost::unique_future<>
-    set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+    set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   endif()
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
 else()
   # Clang/Intel specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter")
+  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-variadic-macros")
 
-  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Wno-variadic-macros -Werror")
+  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Werror")
   set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 ${WARNING_COMPILER_FLAGS}")
 endif()
@@ -257,18 +263,22 @@ source_group("Header Files" FILES ${INC_FILES})
 set(ALL_SOURCE_FILES ${SRC_FILES} ${INC_FILES})
 
 # build dynamic and static version of library
-add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})
-target_link_libraries(${PROJECT_LIB_NAME} ${LIBS})
-set_target_properties(${PROJECT_LIB_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME})
-set_target_properties(${PROJECT_LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
-set_property(
-  TARGET ${PROJECT_LIB_NAME}
-  APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DCASS_BUILDING")
+if(CASS_BUILD_SHARED)
+  set(PROJECT_TARGET_LIB_NAME ${PROJECT_LIB_NAME})
+  add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})
+  target_link_libraries(${PROJECT_LIB_NAME} ${LIBS})
+  set_target_properties(${PROJECT_LIB_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME})
+  set_target_properties(${PROJECT_LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
+  set_property(
+    TARGET ${PROJECT_LIB_NAME}
+    APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DCASS_BUILDING")
+endif()
 
 if(CASS_BUILD_STATIC)
+  set(PROJECT_TARGET_LIB_NAME ${PROJECT_LIB_NAME_STATIC})
   add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${ALL_SOURCE_FILES})
   target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${LIBS})
-  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
+  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
   set_property(
     TARGET ${PROJECT_LIB_NAME_STATIC}
@@ -290,7 +300,7 @@ endif()
 # Where to put libraries - either lib or lib64.
 get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
 
-if("${LIB64}" STREQUAL "TRUE")
+if("${LIB64}" STREQUAL "TRUE" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
     set(LIBSUFFIX 64)
 else()
     set(LIBSUFFIX "")
@@ -301,10 +311,12 @@ set(INSTALL_LIB_DIR "lib${LIBSUFFIX}")
 # For windows only
 set(INSTALL_DLL_DIR "bin")
 
-install(TARGETS ${PROJECT_LIB_NAME}
-  RUNTIME DESTINATION ${INSTALL_DLL_DIR}  # for dll files
-  LIBRARY DESTINATION ${INSTALL_LIB_DIR}  # for shared library
-  ARCHIVE DESTINATION ${INSTALL_LIB_DIR}) # for static library
+if(CASS_BUILD_SHARED)
+  install(TARGETS ${PROJECT_LIB_NAME}
+    RUNTIME DESTINATION ${INSTALL_DLL_DIR}  # for dll files
+    LIBRARY DESTINATION ${INSTALL_LIB_DIR}  # for shared library
+    ARCHIVE DESTINATION ${INSTALL_LIB_DIR}) # for static library
+endif()
 
 if(CASS_BUILD_STATIC)
   install(TARGETS ${PROJECT_LIB_NAME_STATIC}
@@ -379,15 +391,16 @@ endif()
 # Generating API docs with Doxygen
 #-----------------------------------
 
-find_package(Doxygen)
-
-if(DOXYGEN_FOUND)
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
-  add_custom_target(doc
-    ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "Generating API documentation with Doxygen" VERBATIM)
-endif(DOXYGEN_FOUND)
+if(CASS_BUILD_DOCS)
+  find_package(Doxygen)
+  if (DOXYGEN_FOUND)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+    add_custom_target(docs
+      ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      COMMENT "Generating API documentation with Doxygen" VERBATIM)
+  endif()
+endif()
 
 #-----------------------------------
 # Build an RPM.
