@@ -2,7 +2,7 @@
 
 ## Installation
 
-Binary packages can be downloaded from [GitHub](https://github.com/datastax/cpp-driver/releases) or the driver can be [built from source](http://datastax.github.io/cpp-driver/topics/building/).
+Binary packages are [available](http://downloads.datastax.com/cpp-driver/) (CentOS, Ubuntu, and Windows) or the driver can be [built from source](http://datastax.github.io/cpp-driver/topics/building/).
 
 ## Connecting
 
