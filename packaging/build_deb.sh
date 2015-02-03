@@ -9,12 +9,15 @@ function check_command {
   fi
 }
 
+check_command "dch" "debhelper"
+check_command "lsb_release" "lsb-release"
+
 version="1.0.0"
+release=1
+dist=$(lsb_release -s -c)
 base="cassandra-cpp-driver-$version"
 archive="$base.tar.gz"
 files="CMakeLists.txt cmake_uninstall.cmake.in include src"
-
-check_command "dch" "debhelper"
 
 if [[ -d build ]]; then
   read -p "Build directory exists, remove? [y|n] " -n 1 -r
@@ -33,7 +36,7 @@ cp -r debian "build/$base"
 
 pushd "build/$base"
 echo "Updating changlog"
-dch -m -v $version-$release "Version $version"
+dch -m -v "$version-$release" -D $dist "Version $version"
 echo "Building package:"
 nprocs=$(grep -e '^processor' -c /proc/cpuinfo)
 DEB_BUILD_OPTIONS="parallel=$nprocs" debuild -i -b -uc -us

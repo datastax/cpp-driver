@@ -35,6 +35,7 @@ set(CASS_MINIMUM_BOOST_VERSION 1.55.0)
 
 option(CASS_INSTALL_HEADER "Install header file" ON)
 option(CASS_USE_EXTERNAL_BOOST "Use external verison of Boost" OFF)
+option(CASS_BUILD_SHARED "Build shared library" ON)
 option(CASS_BUILD_STATIC "Build static library" OFF)
 option(CASS_BUILD_EXAMPLES "Build examples" OFF)
 option(CASS_BUILD_DOCS "Build documentation" OFF)
@@ -262,7 +263,7 @@ source_group("Header Files" FILES ${INC_FILES})
 set(ALL_SOURCE_FILES ${SRC_FILES} ${INC_FILES})
 
 # build dynamic and static version of library
-if(NOT CASS_BUILD_STATIC)
+if(CASS_BUILD_SHARED)
   set(PROJECT_TARGET_LIB_NAME ${PROJECT_LIB_NAME})
   add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})
   target_link_libraries(${PROJECT_LIB_NAME} ${LIBS})
@@ -310,7 +311,7 @@ set(INSTALL_LIB_DIR "lib${LIBSUFFIX}")
 # For windows only
 set(INSTALL_DLL_DIR "bin")
 
-if(NOT CASS_BUILD_STATIC)
+if(CASS_BUILD_SHARED)
   install(TARGETS ${PROJECT_LIB_NAME}
     RUNTIME DESTINATION ${INSTALL_DLL_DIR}  # for dll files
     LIBRARY DESTINATION ${INSTALL_LIB_DIR}  # for shared library
@@ -394,7 +395,7 @@ if(CASS_BUILD_DOCS)
   find_package(Doxygen)
   if (DOXYGEN_FOUND)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
-    add_custom_target(doc
+    add_custom_target(docs
       ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       COMMENT "Generating API documentation with Doxygen" VERBATIM)

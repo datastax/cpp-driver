@@ -1,4 +1,4 @@
-cassandra-cpp-driver (1.0.0-1) unstable; urgency=low
+cassandra-cpp-driver (1.0.0-1) stable; urgency=low
 
   * Initial release
 

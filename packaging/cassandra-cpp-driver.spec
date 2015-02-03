@@ -11,6 +11,7 @@ Source0: %{name}-%{version}.tar.gz
 Source1: cassandra.pc.in
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+BuildRequires: buildsys-macros >= 5
 BuildRequires: cmake >= 2.6.4
 BuildRequires: libuv-devel >= 1.2.1
 BuildRequires: openssl-devel >= 0.9.8e
