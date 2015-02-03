@@ -59,7 +59,7 @@ Other
   Batch sizes can be configured using the function
   `cass_cluster_set_max_requests_per_flush()`. The default is 128 because
   the maximum write size is bounded by the number of pipelined requests
-  per connection (for version 1 and 2 of the binary protocol).
+  per connection (for version 1 and 2 of the native protocol).
 * Added backpressure mechanism that can be configured for by the
   number of outstanding bytes and the number of requests on a connection. These can
   be configured using `cass_cluster_set_write_bytes_high_water_mark()`,
@@ -124,7 +124,7 @@ Jul 17, 2014
 Features
 --------
 * Removed C++1x dependency 
-* Support for Cassandra 1.2 (binary protocol version 1)
+* Support for Cassandra 1.2 (native protocol version 1)
 * Support for automatic paging
 * Added method to set serial consistency on statement
 * Added batch type to batches
@@ -155,6 +155,6 @@ Jun 16, 2014
 
 Features
 --------
-* Support for Cassandra 2.0 (binary protocol version 2)
+* Support for Cassandra 2.0 (native protocol version 2)
 * Support for prepared and batch statements
 * Support for collections

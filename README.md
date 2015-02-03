@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/datastax/cpp-driver.svg?branch=1.0)](https://travis-ci.org/datastax/cpp-driver)
 
 A C/C++ client driver for Apache Cassandra. This driver works exclusively with
-the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol (version 1 and 2).
+the Cassandra Query Language version 3 (CQL3) and Cassandra's Native Protocol (version 1 and 2).
 
 - Code: https://github.com/datastax/cpp-driver
 - Docs: http://datastax.github.io/cpp-driver
