@@ -297,16 +297,18 @@ if(CASS_INSTALL_HEADER)
   install(FILES ${INC_FILES} DESTINATION "${INSTALL_HEADERS_DIR}")
 endif()
 
-# Where to put libraries - either lib or lib64.
-get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
-
-if("${LIB64}" STREQUAL "TRUE" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-    set(LIBSUFFIX 64)
-else()
-    set(LIBSUFFIX "")
+if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
+  # Where to put libraries - either lib or lib64.
+  get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
+  
+  if("${LIB64}" STREQUAL "TRUE")
+      set(LIBSUFFIX 64)
+  else()
+      set(LIBSUFFIX "")
+  endif()
+  
+  set(CMAKE_INSTALL_LIBDIR "lib${LIBSUFFIX}")
 endif()
-
-set(INSTALL_LIB_DIR "lib${LIBSUFFIX}")
 
 # For windows only
 set(INSTALL_DLL_DIR "bin")
@@ -314,15 +316,15 @@ set(INSTALL_DLL_DIR "bin")
 if(CASS_BUILD_SHARED)
   install(TARGETS ${PROJECT_LIB_NAME}
     RUNTIME DESTINATION ${INSTALL_DLL_DIR}  # for dll files
-    LIBRARY DESTINATION ${INSTALL_LIB_DIR}  # for shared library
-    ARCHIVE DESTINATION ${INSTALL_LIB_DIR}) # for static library
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for shared library
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static library
 endif()
 
 if(CASS_BUILD_STATIC)
   install(TARGETS ${PROJECT_LIB_NAME_STATIC}
     RUNTIME DESTINATION ${INSTALL_DLL_DIR}  # for dll files
-    LIBRARY DESTINATION ${INSTALL_LIB_DIR}  # for shared library
-    ARCHIVE DESTINATION ${INSTALL_LIB_DIR}) # for static library
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for shared library
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static library
 endif()
 
 #-------------------

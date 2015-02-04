@@ -9,13 +9,25 @@ function check_command {
   fi
 }
 
+# 'redhat-rpm-config' needs to be installed for the 'debuginfo' package
+check_command "rpmbuild" "rpm-build"
+
+arch="amd64"
+if [[ ! -z $1 ]]; then
+  arch=$1
+fi
+
 version="1.0.0"
 base="cassandra-cpp-driver-$version"
 archive="$base.tar.gz"
 files="CMakeLists.txt cmake_uninstall.cmake.in include src README.md LICENSE.txt"
 
-# 'redhat-rpm-config' needs to be installed for the 'debuginfo' package
-check_command "rpmbuild" "rpm-build"
+libuv_version=$(rpm -q --queryformat "%{VERSION}" libuv)
+
+if [[ -e $libuv_version ]]; then
+  echo "'libuv' required, but not installed"
+  exit 1
+fi
 
 if [[ -d build ]]; then
   read -p "Build directory exists, remove? [y|n] " -n 1 -r
@@ -39,6 +51,6 @@ tar zcf $archive $base
 popd
 
 echo "Building package:"
-rpmbuild --define "_topdir ${PWD}/build" -ba cassandra-cpp-driver.spec
+rpmbuild --target $arch --define "_topdir ${PWD}/build" -ba cassandra-cpp-driver.spec
 
 exit 0
