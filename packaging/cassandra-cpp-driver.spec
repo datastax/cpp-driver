@@ -1,3 +1,7 @@
+%define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
+
+%{!?libuv_version: %define libuv_version 1.2.1}
+
 Name:    cassandra-cpp-driver
 Epoch:   1
 Version: 1.0.0
@@ -11,9 +15,11 @@ Source0: %{name}-%{version}.tar.gz
 Source1: cassandra.pc.in
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-BuildRequires: buildsys-macros >= 5
+%if %{distnum} == 5
+  BuildRequires: buildsys-macros >= 5
+%endif
 BuildRequires: cmake >= 2.6.4
-BuildRequires: libuv-devel >= 1.2.1
+BuildRequires: libuv-devel >= %{libuv_version}
 BuildRequires: openssl-devel >= 0.9.8e
 
 %description
@@ -23,7 +29,7 @@ C/C++ client driver for Apache Cassandra. This driver works exclusively with the
 Summary: Development libraries for ${name}
 Group: Development/Tools
 Requires: %{name} = %{epoch}:%{version}-%{release}
-Requires: libuv >= 1.2.1
+Requires: libuv >= %{libuv_version}
 Requires: openssl >= 0.9.8e
 Requires: pkgconfig
 
@@ -36,7 +42,7 @@ Development libraries for %{name}
 %build
 export CFLAGS='%{optflags}'
 export CXXFLAGS='%{optflags}'
-cmake -DCMAKE_BUILD_TYPE=RELEASE -DCASS_BUILD_STATIC=ON -DCMAKE_INSTALL_PREFIX:PATH=%{_prefix} .
+cmake -DCMAKE_BUILD_TYPE=RELEASE -DCASS_BUILD_STATIC=ON -DCMAKE_INSTALL_PREFIX:PATH=%{_prefix} -DCMAKE_INSTALL_LIBDIR=%{_libdir} .
 make %{?_smp_mflags}
 
 %install
