@@ -51,7 +51,7 @@ public:
   ~Pool();
 
   void connect();
-  void close();
+  void close(bool cancel_reconnect = false);
 
   bool write(Connection* connection, RequestHandler* request_handler);
   void flush();
@@ -65,6 +65,7 @@ public:
   bool is_ready() const { return state_ == POOL_STATE_READY; }
   bool is_defunct() const { return is_defunct_; }
   bool is_critical_failure() const { return is_critical_failure_; }
+  bool cancel_reconnect() const { return cancel_reconnect_; }
 
   void return_connection(Connection* connection);
 
@@ -105,6 +106,7 @@ private:
   bool is_defunct_;
   bool is_critical_failure_;
   bool is_pending_flush_;
+  bool cancel_reconnect_;
 };
 
 } // namespace cass

@@ -610,7 +610,7 @@ void ControlConnection::on_connection_event(EventResponse* response) {
 
         case EventResponse::DOWN: {
           LOG_INFO("Node %s is down", address_str.c_str());
-          on_down(response->affected_node(), false);
+          on_down(response->affected_node());
           break;
         }
       }
@@ -666,12 +666,12 @@ void ControlConnection::on_up(const Address& address) {
   }
 }
 
-void ControlConnection::on_down(const Address& address, bool is_critical_failure) {
+void ControlConnection::on_down(const Address& address) {
   SharedRefPtr<Host> host = session_->get_host(address);
   if (host) {
     if (host->is_down()) return;
 
-    session_->on_down(host, is_critical_failure);
+    session_->on_down(host);
   } else {
     LOG_DEBUG("Tried to down host %s that doesn't exist", address.to_string().c_str());
   }

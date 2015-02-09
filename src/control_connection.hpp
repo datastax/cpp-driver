@@ -64,8 +64,7 @@ public:
   void close();
 
   void on_up(const Address& address);
-  void on_down(const Address& address, bool is_critical_failure);
-
+  void on_down(const Address& address);
 
 private:
   class ControlMultipleRequestHandler : public MultipleRequestHandler {

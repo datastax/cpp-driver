@@ -48,7 +48,8 @@ Pool::Pool(IOWorker* io_worker,
     , is_initial_connection_(is_initial_connection)
     , is_defunct_(false)
     , is_critical_failure_(false)
-    , is_pending_flush_(false) {}
+    , is_pending_flush_(false)
+    , cancel_reconnect_(false) {}
 
 Pool::~Pool() {
   LOG_DEBUG("Pool dtor with %u pending requests pool(%p)",
@@ -75,7 +76,7 @@ void Pool::connect() {
   }
 }
 
-void Pool::close() {
+void Pool::close(bool cancel_reconnect) {
   if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
     LOG_DEBUG("Closing pool(%p)", static_cast<void*>(this));
     // We're closing before we've connected (likely because of an error), we need
@@ -88,6 +89,7 @@ void Pool::close() {
     }
 
     set_is_available(false);
+    cancel_reconnect_ = cancel_reconnect;
 
     for (ConnectionVec::iterator it = connections_.begin(),
                                  end = connections_.end();
