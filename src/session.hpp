@@ -62,7 +62,6 @@ struct SessionEvent {
 
   Type type;
   Address address;
-  bool is_critical_failure;
 };
 
 class Session : public EventThread<SessionEvent> {
@@ -93,7 +92,7 @@ public:
   bool notify_ready_async();
   bool notify_worker_closed_async();
   bool notify_up_async(const Address& address);
-  bool notify_down_async(const Address& address, bool is_critical_failure);
+  bool notify_down_async(const Address& address);
 
   void connect_async(const Config& config, const std::string& keyspace, Future* future);
   void close_async(Future* future, bool force = false);
@@ -147,7 +146,7 @@ private:
   void on_add(SharedRefPtr<Host> host, bool is_initial_connection);
   void on_remove(SharedRefPtr<Host> host);
   void on_up(SharedRefPtr<Host> host);
-  void on_down(SharedRefPtr<Host> host, bool is_critical_failure);
+  void on_down(SharedRefPtr<Host> host);
 
 private:
   typedef std::vector<SharedRefPtr<IOWorker> > IOWorkerVec;
