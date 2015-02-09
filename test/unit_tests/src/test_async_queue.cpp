@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015 DataStax
+  Copyright (c) 2014-2015 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
   limitations under the License.
 */
 
-#define BOOST_TEST_DYN_LINK
 #ifdef STAND_ALONE
 #   define BOOST_TEST_MODULE cassandra
 #endif
@@ -37,7 +36,18 @@ struct TestAsyncQueue : public cass::LoopThread {
   TestAsyncQueue(size_t queue_size)
     : value_(0)
     , async_queue_(queue_size) {
+    init();
     async_queue_.init(loop(), this, TestAsyncQueue::async_func);
+  }
+
+  ~TestAsyncQueue() {
+    close_handles();
+  }
+
+  void wait_on_values() {
+    while (!(value_.load() == NUM_ITERATIONS)) {
+      // Keep trying
+    }
   }
 
 #if UV_VERSION_MAJOR == 0
@@ -131,7 +141,7 @@ BOOST_AUTO_TEST_CASE(spsc_async)
   }
 
   BOOST_CHECK(test_queue.async_queue_.enqueue(-1));
-  test_queue.join();
+  test_queue.wait_on_values();
 
   BOOST_CHECK_EQUAL(test_queue.value_.load(), NUM_ITERATIONS);
 }
@@ -152,7 +162,7 @@ BOOST_AUTO_TEST_CASE(mpmc_async)
   }
 
   BOOST_CHECK(test_queue.async_queue_.enqueue(-1));
-  test_queue.join();
+  test_queue.wait_on_values();
 
   BOOST_CHECK_EQUAL(test_queue.value_.load(), NUM_ITERATIONS);
 }

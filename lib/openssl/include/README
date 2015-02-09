@@ -1,1 +1,0 @@
-Copy the openssl headers here. This is only necessary if you're building openssl manually, otherwise, use the package from http://slproweb.com/products/Win32OpenSSL.html.

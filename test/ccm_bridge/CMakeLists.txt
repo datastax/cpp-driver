@@ -7,88 +7,61 @@ if(POLICY CMP0048)
   cmake_policy(SET CMP0048 OLD)
 endif()
 
-project(CCMBridge C CXX)
+# Title the project
+set(PROJECT_CCM_BRIDGE_LIB_NAME CCMBridge)
+project(${PROJECT_CCM_BRIDGE_LIB_NAME} C CXX)
 
-# Allow access to custom FindLIBSSH2 module
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
+# Constants
+set(CCM_BRIDGE_CONFIGURATION_FILE ${PROJECT_SOURCE_DIR}/data/config.txt) # CCM configuration file
 
-set(INCLUDES "")
-set(LIBRARIES "")
+# Gather the header and source files
+file(GLOB CCM_BRIDGE_INC_FILES ${PROJECT_SOURCE_DIR}/include/*.hpp)
+file(GLOB CCM_BRIDGE_SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
-set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
-set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
+# Build up the include paths
+set(INTEGRATION_TESTS_INCLUDES ${PROJECT_SOURCE_DIR}/include
+  ${Boost_INCLUDE_DIRS}
+  ${LIBSSH2_INCLUDE_DIRS})
 
-if(Boost_LOG_FOUND)
-  set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
-  set(INCLUDES ${INCLUDES} ${Boost_INCLUDE_DIRS})
-else()
+# Assign the include directories
+include_directories(${INTEGRATION_TESTS_INCLUDES})
+
+# Build up the libraries paths
+set(INTEGRATION_TESTS_LIBS ${Boost_LIBRARIES}
+  ${LIBSSH2_LIBRARIES}
+  ${OPENSSL_LIBRARIES})
+if(ZLIB_FOUND)
+  set(INTEGRATION_TESTS_LIBS ${INTEGRATION_TESTS_LIBS} ${ZLIB_LIBRARIES})
+endif()
+
+# Ensure the Boost logger can be utilized
+if(NOT Boost_LOG_FOUND)
   add_definitions(-DCQL_NO_BOOST_LOG)
 endif()
 
-# -------------------------------------------------------------
-
-# Find libSSH2 library
-# -------------------------------------------------------------
-find_package(LIBSSH2 REQUIRED)
-
-set(LIBRARIES ${LIBRARIES} ${LIBSSH2_LIBRARIES})
-set(INCLUDES ${INCLUDES} ${LIBSSH2_INCLUDE_DIRS})
-
-# -------------------------------------------------------------
-
-# Find OpenSSL library
-# -------------------------------------------------------------
-find_package(OpenSSL REQUIRED)
-
-set(LIBRARIES ${LIBRARIES} ${OPENSSL_LIBRARIES})
-set(INCLUDES ${INCLUDES} ${OPENSSL_INCLUDE_DIR})
-	
-# -------------------------------------------------------------
-# Find ZLIB library
-# -------------------------------------------------------------
-#find_package(ZLIB REQUIRED)
-#set(LIBRARIES ${LIBRARIES} ${ZLIB_LIBRARIES})
-#set(INCLUDES ${INCLUDES} ${ZLIB_INCLUDE_DIR})
-
-# -------------------------------------------------------------
-
-# Set platform conditional compilation flags.
-# We define WIN32 on windows, and UNIX on Linux/OS X/Unix
-#
-# On Windows box we must link to socket library!
-# -------------------------------------------------------------
+# Set platform conditional compilation flags
+# Define WIN32 on windows, and UNIX on Linux/OS X/Unix
 if(WIN32)
-	set(LIBRARIES ${LIBRARIES} wsock32 ws2_32)
-    add_definitions(-DWIN32)
+  # Assign additional library requirements for Windows (winsock2)
+  set(INTEGRATION_TESTS_LIBS ${INTEGRATION_TESTS_LIBS} wsock32 ws2_32)
+
+  # Add preprocessor definition for Windows
+  add_definitions(-DWIN32)
 elseif(UNIX)
-    add_definitions(-DUNIX)
+  # Add preprocessor definition for *nix
+  add_definitions(-DUNIX)
 endif()
 
-# -------------------------------------------------------------
+# Create header and source groups (mainly for Visual Studio generator)
+source_group("Source Files" FILES ${CCM_BRIDGE_SRC_FILES})
+source_group("Header Files" FILES ${CCM_BRIDGE_INC_FILES})
 
-# Add project include directory to INCLUDES
-# Group include files into INC_FILES
-set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
-file(GLOB INC_FILES ${PROJECT_INCLUDE_DIR}/*.hpp)
-set(INCLUDES ${INCLUDES} ${PROJECT_INCLUDE_DIR})
+# Build the CCM bridge static library
+add_library(CCMBridge STATIC ${CCM_BRIDGE_SRC_FILES} ${CCM_BRIDGE_INC_FILES} ${CCM_BRIDGE_CONFIGURATION_FILE})
+target_link_libraries(CCMBridge ${INTEGRATION_TESTS_LIBS})
 
-# Get project files used to create executable
-file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
-
-# Get project data files (currently only 1 file)
-set(DATA_FILES ${PROJECT_SOURCE_DIR}/data/config.txt)
-
-# SPECIFY TARGET
-add_library(CCMBridge STATIC ${SRC_FILES} ${INC_FILES} ${DATA_FILES})
-
-# Set project includes and lib directories
-include_directories(PUBLIC ${INCLUDES})
-target_link_libraries(CCMBridge ${LIBRARIES})
-
-# Create source groups - this is only needed to create
-# neat folder structure in Visual Studio...
-source_group("Source Files" FILES ${SRC_FILES})
-source_group("Header Files" FILES ${INC_FILES})
+# Install the CCM bridge library
+install(TARGETS ${PROJECT_CCM_BRIDGE_LIB_NAME} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # Copy data file to output directory
-configure_file(${DATA_FILES} ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+configure_file(${CCM_BRIDGE_CONFIGURATION_FILE} ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)

@@ -4,10 +4,10 @@ before_install:
   - sudo add-apt-repository ppa:boost-latest/ppa -y
   - sudo apt-get update -qq
   - sudo apt-get install libboost1.55-all-dev libssl-dev libssh2-1-dev -qq
-  - wget -q http://libuv.org/dist/v0.10.28/libuv-v0.10.28.tar.gz
+  - wget -q http://libuv.org/dist/v1.4.0/libuv-v1.4.0.tar.gz
 install:
-  - tar xzf libuv-v0.10.28.tar.gz 
-  - cd libuv-v0.10.28 && make -s && cd - 2&> /dev/null && cp -r libuv-v0.10.28/libuv.a libuv-v0.10.28/libuv.so lib/libuv/lib && cd lib/libuv/lib && ln -sf libuv.so libuv.so.0.10 && cd - 2&> /dev/null && cp -r libuv-v0.10.28/include/* lib/libuv/include
+  - tar xzf libuv-v1.4.0.tar.gz 
+  - cd libuv-v1.4.0 && sh autogen.sh && ./configure --prefix=${PWD}/../lib/libuv && make -s install && cd -
 before_script: cmake -DLIBUV_ROOT_DIR=lib/libuv/ -DCASS_BUILD_TESTS=ON .
 script:
   - make
