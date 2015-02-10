@@ -402,7 +402,8 @@ bool Statement::get_routing_key(std::string* routing_key)  const {
   if (key_indices_.empty()) return false;
 
   if (key_indices_.size() == 1) {
-      const Buffer& buffer = values_.front();
+      assert(key_indices_.front() < values_.size());
+      const Buffer& buffer = values_[key_indices_.front()];
       int32_t size = decode_buffer_size(buffer);
       if (size < 0) return false;
       routing_key->assign(buffer.data() + sizeof(int32_t), size);
@@ -411,6 +412,7 @@ bool Statement::get_routing_key(std::string* routing_key)  const {
 
     for (std::vector<size_t>::const_iterator i = key_indices_.begin();
          i != key_indices_.end(); ++i) {
+      assert(*i < values_.size());
       const Buffer& buffer = values_[*i];
       int32_t size = decode_buffer_size(buffer);
       if (size < 0) return false;
