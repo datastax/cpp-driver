@@ -185,7 +185,9 @@ void IOWorker::notify_pool_ready(Pool* pool) {
 
 void IOWorker::notify_pool_closed(Pool* pool) {
   Address address = pool->address(); // Not a reference on purpose
+
   bool is_critical_failure = pool->is_critical_failure();
+  bool cancel_reconnect = pool->cancel_reconnect();
 
   LOG_INFO("Pool for host %s closed: pool(%p) io_worker(%p)",
            address.to_string().c_str(),
@@ -199,8 +201,10 @@ void IOWorker::notify_pool_closed(Pool* pool) {
   if (is_closing_) {
     maybe_notify_closed();
   } else {
-    schedule_reconnect(address);
-    session_->notify_down_async(address, is_critical_failure);
+    session_->notify_down_async(address);
+    if (!is_critical_failure && !cancel_reconnect) {
+      schedule_reconnect(address);
+    }
   }
 }
 
@@ -280,13 +284,14 @@ void IOWorker::on_event(const IOWorkerEvent& event) {
                   static_cast<void*>(this));
         cancel_reconnect(event.address);
       }
+
       PoolMap::iterator it = pools_.find(event.address);
       if (it != pools_.end()) {
         LOG_DEBUG("REMOVE_POOL event for %s closing pool(%p) io_worker(%p)",
                   event.address.to_string().c_str(),
                   static_cast<void*>(it->second.get()),
                   static_cast<void*>(this));
-        it->second->close();
+        it->second->close(event.cancel_reconnect);
       }
       break;
     }

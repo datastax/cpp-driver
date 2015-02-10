@@ -206,11 +206,10 @@ bool Session::notify_up_async(const Address& address) {
   return send_event_async(event);
 }
 
-bool Session::notify_down_async(const Address& address, bool is_critical_failure) {
+bool Session::notify_down_async(const Address& address) {
   SessionEvent event;
   event.type = SessionEvent::NOTIFY_DOWN;
   event.address = address;
-  event.is_critical_failure = is_critical_failure;
   return send_event_async(event);
 }
 
@@ -391,7 +390,7 @@ void Session::on_event(const SessionEvent& event) {
       break;
 
     case SessionEvent::NOTIFY_DOWN:
-      control_connection_.on_down(event.address, event.is_critical_failure);
+      control_connection_.on_down(event.address);
       break;
 
     default:
@@ -502,13 +501,12 @@ void Session::on_up(SharedRefPtr<Host> host) {
   }
 }
 
-void Session::on_down(SharedRefPtr<Host> host, bool is_critical_failure) {
+void Session::on_down(SharedRefPtr<Host> host) {
   host->set_down();
   load_balancing_policy_->on_down(host);
 
   bool cancel_reconnect = false;
-  if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE ||
-      is_critical_failure) {
+  if (load_balancing_policy_->distance(host) == CASS_HOST_DISTANCE_IGNORE) {
     // This permanently removes a host from all IO workers by stopping
     // any attempt to reconnect to that host.
     cancel_reconnect = true;
