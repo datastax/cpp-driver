@@ -82,7 +82,10 @@ void Logger::LogThread::log(CassLogLevel severity,
     ""
   };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
   vsnprintf(message.message, sizeof(message.message), format, args);
+#pragma GCC diagnostic pop
 
   if (!log_queue_.enqueue(message)) {
     if (has_been_warned_) {
