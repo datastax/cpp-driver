@@ -67,6 +67,10 @@ public:
     r.prepared_ = NULL;
   }
 
+  CassPreparedMovable(const CassPreparedMovable& r)
+    : prepared_(r.prepared_) {
+  }
+
   CassPreparedMovable& operator=(BOOST_RV_REF(CassPreparedMovable) r) {
     if (prepared_ != NULL) {
       cass_prepared_free(prepared_);
