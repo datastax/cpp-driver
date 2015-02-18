@@ -1,13 +1,13 @@
 # Cassandra Cluster Manager (CCM)
 [CCM](https://github.com/pcmanus/ccm) is a script/library used to assist in
-setup and teardown of Apache Cassandra on a local machine.  In an effort to
+setup and teardown of Apache Cassandra on a local machine. In an effort to
 reduce inconsistencies and create a repeatable testing environment
 [Vagrant](https://www.vagrantup.com/downloads.html) can be utilized to start
 and stop a [Virtual Box](https://www.virtualbox.org/wiki/Downloads) VM for
 integration testing.
 
 ## CCM Cluster by way of Vagrant and Virtual Box
-CCM Cluster is a 64-bit Ubuntu 12.04 VM.  This VM comes configured with ant,
+CCM Cluster is a 64-bit Ubuntu 12.04 VM. This VM comes configured with ant,
 git, maven, python, CCM, JDK v1.7 Update (Latest), and Java Cryptography
 Extension (JCE) Unlimited Strength Jurisdiction Policy Files v7
 
@@ -41,7 +41,7 @@ CCM_PROVISION_SCRIPT = <<EOF
 #Install package updates
 printf "Installing System Packages ...\n"
 #Add JDK repository and update packages
-add-apt-repository ppa:webupd8team/java -y > /dev/null 2>&1 
+add-apt-repository ppa:webupd8team/java -y > /dev/null 2>&1
 apt-get update -y -qq
 
 #Auto accept the the Java license aggreement
@@ -82,19 +82,19 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     ccm_cluster.vm.network "private_network", ip: "192.168.33.12"
     ccm_cluster.vm.network "private_network", ip: "192.168.33.13"
   end
-  
+
   # Prepare/Provision the VM
   config.vm.provision :shell do |root_provision|
     root_provision.privileged = true
     root_provision.inline = CCM_PROVISION_SCRIPT
   end
-  
+
   # VM parameters for the CCM cluster
   config.vm.provider :virtualbox do |provider|
     provider.name = "ccm-cluster"
     provider.customize ["modifyvm", :id, "--memory", "2048"]
     provider.customize ["modifyvm", :id, "--vram", "32"]
-    provider.customize ["modifyvm", :id, "--cpus", "4"]   
+    provider.customize ["modifyvm", :id, "--cpus", "4"]
     provider.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
     provider.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
   end
@@ -117,7 +117,7 @@ To stop the CCM cluster VM run the following command in the directory with the
 Vagrant script file:
 
 ```bash
-vagrant stop
+vagrant halt
 ```
 
 To speed up launch times of the CCM cluster VM a suspend command can be issued

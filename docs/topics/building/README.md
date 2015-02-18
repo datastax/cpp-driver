@@ -2,7 +2,7 @@
 
 ## Supported Platforms
 
-The driver is known to work on Community Enterprise Operating System (CentOS)/RedHat Enterprise Linux (RHEL) 5/6/7, Macintosh Operating System X (OS X) 10.9 [Mavericks], Ubuntu 12.04/14.04 Long Term Support (LTS), and Windows 7 Service Pack 1 (SP1). 
+The driver is known to work on CentOS/RHEL 5/6/7, Mac OS X 10.8/10.9 (Mavericks and Yosemite), Ubuntu 12.04/14.04 LTS, and Windows 7 SP1.
 
 It has been built using GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2012/2013.
 
@@ -14,7 +14,7 @@ It has been built using GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2012/2013.
 - [libuv (1.x or 0.10.x)](https://github.com/libuv/libuv)
 - [OpenSSL](http://www.openssl.org/) (optional)
 
-**NOTE:** Utilizing the default package manager configuration to install dependencies on \*nix based operating systems may result in older versions of dependencies being retrieved. OpenSSL is of the utmost concern as each new version addresses security [vulnerabilities](https://www.openssl.org/news/vulnerabilities.html) that have been identified and corrected.
+**NOTE:** Utilizing the default package manager configuration to install dependencies on \*nix based operating systems may result in older versions of dependencies being installed.
 
 ### Test Dependencies
 
@@ -22,14 +22,14 @@ It has been built using GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2012/2013.
 - [libssh2](http://www.libssh2.org)
 
 ## Linux/OS X
-The driver has been built using both Clang (Ubuntu 12.04/14.04 and OSX) and GCC while being tested with GCC (Linux) and Clang (OS X) compiled source.
+The driver has been built using both Clang (Ubuntu 12.04/14.04 and OS X) and GCC (Linux).
 
 ### Obtaining Dependencies
 
 #### CentOS/RHEL
 
 ##### Additional Requirements for CentOS/RHEL 5
-CentOS/RHEL 5 does not contain *git* in its repositories; however RepoForge (formerly RPMforge) created a RPM for this dependency. It can be found [here](http://pkgs.repoforge.org/git/).
+CentOS/RHEL 5 does not contain `git` in its repositories; however RepoForge (formerly RPMforge) has a RPM for this dependency. It can be found [here](http://pkgs.repoforge.org/git/).
 
 ###### Download the Appropriate RepoForge Release Package
 - [32-bit](http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el5.rf.i386.rpm)
@@ -58,7 +58,7 @@ popd
 ```
 
 #### OS X
-The driver has been built and tested using the Clang compiler provided by XCode 5.1. The dependencies were obtained using [Homebrew](http://brew.sh).
+The driver has been built and tested using the Clang compiler provided by XCode 5.1+. The dependencies were obtained using [Homebrew](http://brew.sh).
 
 ```bash
 brew install libuv cmake
@@ -69,7 +69,7 @@ brew install libuv cmake
 #### Ubuntu
 
 ##### Additional Requirements for Ubuntu 12.04
-Ubuntu 12.04 does not contain libuv in its repositories; however LinuxJedi created a PPA for this dependency which is a backport from Ubuntu 14.04. It can be found [here](https://launchpad.net/~linuxjedi/+archive/ubuntu/ppa).
+Ubuntu 12.04 does not contain libuv in its repositories; however the LinuxJedi PPA has a backport from Ubuntu 14.04 which can be found [here](https://launchpad.net/~linuxjedi/+archive/ubuntu/ppa).
 
 ```bash
 sudo apt-add-repository ppa:linuxjedi/ppa
@@ -88,7 +88,7 @@ sudo apt-get install g++ make cmake libuv-dev libssl-dev
 sudo apt-get install clang make cmake libuv-dev libssl-dev
 ```
 
-### Building Driver
+### Building the Driver
 
 ```bash
 git clone https://github.com/datastax/cpp-driver.git
@@ -98,12 +98,12 @@ cmake ..
 make
 ```
 
-### Test Dependencies and Building Tests (_NOT REQUIRED_)
+### Test Dependencies and Building the Tests (_NOT REQUIRED_)
 
 #### Obtaining Test Dependencies
 
 ##### CentOS/RHEL
-CentOS/RHEL does not contain Boost v1.55+ libraries in its repositories; however these can be easily generated from source.  Ensure previous version of Boost has been removed by executing the command `sudo yum remove boost*` before proceeding.
+CentOS/RHEL does not contain Boost v1.55+ libraries in its repositories; however these can be easily installed from source. Ensure previous version of Boost has been removed by executing the command `sudo yum remove boost*` before proceeding.
 
 ```bash
 sudo yum install libssh2-devel
@@ -128,7 +128,7 @@ brew install boost libssh2
 ##### Ubuntu
 
 ###### Additional Requirements for Ubuntu 12.04
-Ubuntu 12.04 does not contain Boost v1.55+ C++ libraries in its repositories; however Boost created a PPA for this dependency. It can be found [here](https://launchpad.net/~boost-latest/+archive/ubuntu/ppa).
+Ubuntu 12.04 does not contain Boost v1.55+ C++ libraries in its repositories; however it can be obtained from the Boost PPA which can be found [here](https://launchpad.net/~boost-latest/+archive/ubuntu/ppa).
 
 ```bash
 sudo add-apt-repository ppa:boost-latest/ppa
@@ -141,7 +141,7 @@ sudo apt-get update
 sudo apt-get install libboost1.55-all-dev libssh2-1-dev
 ```
 
-#### Building Driver with the Testing Framework
+#### Building the Driver with the Tests
 
 ```bash
 git clone https://github.com/datastax/cpp-driver.git
@@ -165,8 +165,8 @@ The driver has been built and tested using Microsoft Visual Studio 2010, 2012 an
 - Download and install [Python v2.7.x](https://www.python.org/downloads)
  - Make sure to select/install the feature "Add python.exe to Path"
 
-### Building Driver
-A batch script has been created to detect installed Visual Studio version(s) (and/or Windows SDK installation) in order to simplify the build operations on Windows.  If you have more than one version of Visual Studio (and/or Windows SDK) installed you will be prompted to select which version to use when compiling the driver.
+### Building the Driver
+A batch script has been created to detect installed versions of Visual Studio (and/or Windows SDK installations) to simplify the build process on Windows. If you have more than one version of Visual Studio (and/or Windows SDK) installed you will be prompted to select which version to use when compiling the driver.
 
 First you will need to open a "Command Prompt" (or Windows SDK Command Prompt) to execute the batch script.
 
@@ -221,12 +221,12 @@ To build 32-bit static library without OpenSSL support:
 VC_BUILD.BAT --DISABLE-OPENSSL --STATIC --X86
 ```
 
-### Test Dependencies and Building Tests (_NOT REQUIRED_)
+### Test Dependencies and Building the Tests (_NOT REQUIRED_)
 
 #### Obtaining Test Dependencies
 Boost v1.55+ is the only external dependency that will need to be obtained in order to build the unit and integration tests.
 
-To simplify the process; pre-built binaries can be obtained [here](http://sourceforge.net/projects/boost/files/boost-binaries/1.57.0/).  Ensure the proper Visual Studio (or Windows SDK) version and architecture is obtained and select from the following list:
+To simplify the process; pre-built binaries can be obtained [here](http://sourceforge.net/projects/boost/files/boost-binaries/1.57.0/). Ensure the proper Visual Studio (or Windows SDK) version and architecture is obtained and select from the following list:
 
 - Visual Studio 2010 (Windows SDK 7.1)
  - Boost v1.55 [32-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.55.0/boost_1_55_0-msvc-10.0-32.exe/download)/[64-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.55.0/boost_1_55_0-msvc-10.0-64.exe/download)
@@ -243,7 +243,7 @@ To simplify the process; pre-built binaries can be obtained [here](http://source
 
 **NOTE:** Ensure the Boost library directory structure is configured correctly by renaming the library directory to _lib_ (e.g. lib64-msvc-12.0 to lib).
 
-#### Building Driver with the Testing Framework
+#### Building the Driver with the Tests
 
 ```dos
 VC_BUILD.BAT --STATIC --ENABLE-TESTS <ABSOLUTE-PATH-TO-BOOST>

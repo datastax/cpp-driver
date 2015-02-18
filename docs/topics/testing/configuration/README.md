@@ -1,9 +1,7 @@
 # Configuration
 In order to execute the integration tests, a `config.txt` file must be
-created in the working directory where the integration test is run.  Below is
-an example of the configuration file for use with the
-[CCM Cluster](http://datastax.github.io/cpp-driver/topics/testing/ccm/#ccm-cluster-by-way-of-vagrant-and-virtual-box)
-VM.
+created in the working directory where the integration tests are run. Below is
+an example of the configuration file for use with the [CCM Cluster] VM.
 
 ```text
 ##
@@ -58,6 +56,7 @@ SSH_PASSWORD=vagrant
 #
 IP_PREFIX=192.168.33.1
 ```
+(where `CASSANDRA_VERSION=2.1.2` is the latest version of Cassandra)
 
 ## Driver Downgrade Test Suite
 To execute any of the tests in the `version1_downgrade` test suite, a copy of
@@ -67,8 +66,11 @@ To execute any of the tests in the `version1_downgrade` test suite, a copy of
 ```text
 CASSANDRA_VERSION=1.2.19
 ```
+(where `CASSANDRA_VERSION=1.2.19` is the latest version of Cassandra 1.2)
 
 ## SSL Test Suite
 To execute any of the tests in the `ssl` test suite, follow the
 [instructions](https://github.com/datastax/cpp-driver/tree/1.0/test/ccm_bridge/data/ssl)
 for generating public and private keys to use with the driver and Cassandra.
+
+[CCM Cluster]: http://datastax.github.io/cpp-driver/topics/testing/ccm/#ccm-cluster-by-way-of-vagrant-and-virtual-box

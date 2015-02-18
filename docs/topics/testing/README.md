@@ -1,7 +1,5 @@
 # Testing
-Before proceeding ensure the
-[build procedures](http://datastax.github.io/cpp-driver/topics/building/#test-dependencies-and-building-tests-not-required)
-were performed enabling the tests.
+Before proceeding ensure the tests were built using the build procedures found [here](http://datastax.github.io/cpp-driver/topics/building/#test-dependencies-and-building-tests-not-required)
 
 Each test performs a [setup](#setup-cassandra), [execute](#execute-test), and
 [teardown](#teardown-cassandra). This ensures that each test has a clean and
@@ -107,7 +105,7 @@ phase.
 ## TODO
 Here are some of the items being scheduled for future enhancements.
 
-- Incorporate Integration Tests into Jenkins Environment
+- Incorporate integration tests into Jenkins environment
 - Remove Boost Test Framework in Favor of Google Test Framework
 - Updates to CCM Bridge
  - Add SSH key support (extra security over plain text password)
