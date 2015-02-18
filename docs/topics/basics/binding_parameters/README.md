@@ -1,75 +1,6 @@
 # Binding Parameters
 
-## Datatypes Mapping
-
-<table class="table table-striped table-hover table-condensed">
-  <thead>
-    <tr>
-      <th>Driver</th>
-      <th>Cassandra</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code>cass_int32_t</code></td>
-      <td><code>int</code></td>
-    </tr>
-
-    <tr>
-      <td><code>cass_int64_t</code></td>
-      <td><code>bigint</code>, <code>counter</code>, <code>timestamp</code></td>
-    </tr>
-
-    <tr>
-      <td><code>cass_float_t</code></td>
-      <td><code>float</code></td>
-    </tr>
-
-    <tr>
-      <td><code>cass_double_t</code></td>
-      <td><code>double</code></td>
-    </tr>
-
-    <tr>
-      <td><code>cass_boot_t</code></td>
-      <td><code>boolean</code></td>
-    </tr>
-
-    <tr>
-      <td><code>CassString</code></td>
-      <td><code>ascii</code>, <code>text</code>, <code>varchar</code></td>
-    </tr>
-
-    <tr>
-      <td><code>CassBytes</code></td>
-      <td><code>blob</code>, <code>varint</code></td>
-    </tr>
-
-    <tr>
-      <td><code>CassUuid</code></td>
-      <td><code>uuid</code>, <code>timeuuid</code></td>
-    </tr>
-
-    <tr>
-      <td><code>CassInet</code></td>
-      <td><code>inet</code></td>
-    </tr>
-
-    <tr>
-      <td><code>CassDecimal</code></td>
-      <td><code>decimal</code></td>
-    </tr>
-
-    <tr>
-      <td><code>CassCollection</code></td>
-      <td><code>list</code>, <code>map</code>, <code>set</code></td>
-    </tr>
-  </tbody>
-</table>
-
-## Binding Parameters
-
-The ‘?’ marker is used to denote the bind variables in a query string. This can be used for both regular and prepared parameterized queries. In addition to adding the bind marker to your query string your application must also provide the number of bind variables to `cass_statement_new()` when constructing a new statement. If a query doesn’t require any bind variables then 0 can be used. `cass_statement_bind_*()` functions are then used to bind values to the statement’s variables. Bind variables can be bound by the marker’s index or by name and must be supplied for all bound variables. 
+The ‘?’ marker is used to denote the bind variables in a query string. This can be used for both regular and prepared parameterized queries. In addition to adding the bind marker to your query string your application must also provide the number of bind variables to `cass_statement_new()` when constructing a new statement. If a query doesn’t require any bind variables then 0 can be used. `cass_statement_bind_*()` functions are then used to bind values to the statement’s variables. Bind variables can be bound by the marker’s index or by name and must be supplied for all bound variables.
 
 ```c
 CassString query = cass_string_init("SELECT * FROM table1 WHERE column1 = ?");
@@ -124,7 +55,7 @@ cass_statement_bind_custom(statement, 1, 8 * 1024 * 1024, &bytes);
 
 ## Constructing Collections
 
-Collections are supported using [`CassCollection`](http://datastax.github.io/cpp-driver/api/struct_cass_collection/) objects; supporting `list`, `map` and `set` Cassandra types. The code below shows how to construct a `list` collection; however, a set can be constructed in a very similiar way. The only difference is the type `CASS_COLLECTION_TYPE_SET` is used to create the collection instead of `CASS_COLLECTION_TYPE_LIST`. 
+Collections are supported using [`CassCollection`](http://datastax.github.io/cpp-driver/api/struct_cass_collection/) objects; supporting `list`, `map` and `set` Cassandra types. The code below shows how to construct a `list` collection; however, a set can be constructed in a very similiar way. The only difference is the type `CASS_COLLECTION_TYPE_SET` is used to create the collection instead of `CASS_COLLECTION_TYPE_LIST`.
 
 **Important**: Values appended to the colleciton can be freed immediately afterward because the values are copied.
 
@@ -137,7 +68,7 @@ cass_collection_append_string(list, cass_string_init("123"));
 cass_collection_append_string(list, cass_string_init("456"));
 cass_collection_append_string(list, cass_string_init("789"));
 
-cass_statement_bind_collection(statement, 0, list); 
+cass_statement_bind_collection(statement, 0, list);
 
 /* The colleciton can be freed after binding */
 cass_collection_free(list);
@@ -158,7 +89,7 @@ cass_collection_append_int32(map, 123);
 cass_collection_append_string(map, cass_string_init("def"));
 cass_collection_append_int32(map, 456);
 
-cass_statement_bind_collection(statement, 0, map); 
+cass_statement_bind_collection(statement, 0, map);
 
 /* The colleciton can be freed after binding */
 cass_collection_free(map);
