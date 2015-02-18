@@ -36,18 +36,15 @@ struct TestAsyncQueue : public cass::LoopThread {
   TestAsyncQueue(size_t queue_size)
     : value_(0)
     , async_queue_(queue_size) {
-    init();
-    async_queue_.init(loop(), this, TestAsyncQueue::async_func);
+    BOOST_REQUIRE(init() == 0);
+    BOOST_REQUIRE(async_queue_.init(loop(), this, TestAsyncQueue::async_func) == 0);
   }
 
-  ~TestAsyncQueue() {
-    close_handles();
-  }
-
-  void wait_on_values() {
-    while (!(value_.load() == NUM_ITERATIONS)) {
+  void close_and_join() {
+    while(!async_queue_.enqueue(-1)) {
       // Keep trying
     }
+    join();
   }
 
 #if UV_VERSION_MAJOR == 0
@@ -59,6 +56,7 @@ struct TestAsyncQueue : public cass::LoopThread {
     int n;
     while (test_queue->async_queue_.dequeue(n)) {
       if (n < 0) {
+        test_queue->close_handles();
         test_queue->async_queue_.close_handles();
         break;
       } else {
@@ -140,8 +138,7 @@ BOOST_AUTO_TEST_CASE(spsc_async)
     BOOST_CHECK(test_queue.async_queue_.enqueue(i));
   }
 
-  BOOST_CHECK(test_queue.async_queue_.enqueue(-1));
-  test_queue.wait_on_values();
+  test_queue.close_and_join();
 
   BOOST_CHECK_EQUAL(test_queue.value_.load(), NUM_ITERATIONS);
 }
@@ -161,8 +158,7 @@ BOOST_AUTO_TEST_CASE(mpmc_async)
     uv_thread_join(&threads[i]);
   }
 
-  BOOST_CHECK(test_queue.async_queue_.enqueue(-1));
-  test_queue.wait_on_values();
+  test_queue.close_and_join();
 
   BOOST_CHECK_EQUAL(test_queue.value_.load(), NUM_ITERATIONS);
 }
