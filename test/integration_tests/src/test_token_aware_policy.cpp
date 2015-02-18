@@ -231,4 +231,56 @@ BOOST_AUTO_TEST_CASE(network_topology)
   BOOST_CHECK(replicas.size() > 0 && !intersects(replicas, local_replicas));
 }
 
+/**
+ * Invalid Key Index: Single Entry for Token-Aware Routing Key
+ *
+ * This test addresses an issue where single entry routing keys caused a driver
+ * error when values were empty on insert.
+ *
+ * @since 1.0.1
+ * @jira_ticket CPP-214
+ * @test_category load_balancing:token_aware
+ * @test_subcategory collections
+ */
+BOOST_AUTO_TEST_CASE(single_entry_routing_key)
+{
+  const size_t rf = 2;
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+
+  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", rf, rf);
+
+  cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1", rf, cass_false);
+  cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
+
+  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+
+  std::string keyspace = "ks";
+  test_utils::execute_query(session.get(),
+                            str(boost::format("CREATE KEYSPACE %s "
+                                              "WITH replication = { 'class': 'NetworkTopologyStrategy', 'dc1': %d , 'dc2': %d }") %
+                                keyspace % rf % rf));
+  test_utils::execute_query(session.get(), str(boost::format("USE %s") % keyspace));
+  test_utils::execute_query(session.get(), "CREATE TABLE invalid_routing_key (routing_key text PRIMARY KEY,"
+                                            "cass_collection map<text,text>);");
+
+  std::string insert_query = "UPDATE invalid_routing_key SET cass_collection = ? WHERE routing_key = ?";
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session.get(),
+                                                                 cass_string_init2(insert_query.data(), insert_query.size())));
+  test_utils::wait_and_check_error(prepared_future.get());
+  test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
+
+  test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
+  
+  CassCollection* collection = cass_collection_new(CASS_COLLECTION_TYPE_MAP, 0);
+  cass_statement_bind_collection(statement.get(), 0, collection);
+  cass_statement_bind_string(statement.get(), 1, cass_string_init("cassandra cpp-driver"));
+
+  test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
+
+  test_utils::wait_and_check_error(future.get());
+}
+
 BOOST_AUTO_TEST_SUITE_END()
