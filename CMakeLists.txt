@@ -119,6 +119,15 @@ set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARY})
 #------------------------
 
 # Boost
+
+# Check to make sure the driver is not compiling on a system with Boost where
+# CASS_USE_EXTERNAL_BOOST=Off.
+find_package(Boost)
+if(Boost_FOUND AND NOT CASS_USE_EXTERNAL_BOOST)
+  message(STATUS "### BOOST FOUND AND 'CASS_USE_EXTERNAL_BOOST' IS DISABLED (THIS MAY CAUSE BUILD ERRORS) ###")
+  message(STATUS "Fix: Either use '-DCASS_USE_EXTERNAL_BOOST=On' or remove Boost from your system.")
+endif()
+
 if(CASS_USE_EXTERNAL_BOOST)
   # Setup the root directories for boost
   set(ENV{BOOST_ROOT} "${PROJECT_SOURCE_DIR}/lib/boost/")
@@ -137,9 +146,15 @@ if(CASS_USE_EXTERNAL_BOOST)
   set(Boost_USE_MULTITHREADED ON)
 
   # Ensure the driver can be built
-  find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS atomic random system)
+  find_package(Boost COMPONENTS atomic random system)
   if(NOT Boost_FOUND)
     message(FATAL_ERROR "Boost [atomic, random, and system] are required to build driver")
+  endif()
+
+  # Verify minimum Boost version
+  set(CASS_FOUND_BOOST_VERSION "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
+  if(CASS_FOUND_BOOST_VERSION VERSION_LESS CASS_MINIMUM_BOOST_VERSION)
+    message(FATAL_ERROR "Minimum supported version of Boost is ${CASS_MINIMUM_BOOST_VERSION} (Found: ${CASS_FOUND_BOOST_VERSION})")
   endif()
 
   # Display a status message regarding external boost use
@@ -352,7 +367,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 # Gather the header and source files
 file(GLOB API_HEADER_FILES ${PROJECT_SOURCE_DIR}/include/*.h)
 file(GLOB INC_FILES ${PROJECT_SOURCE_DIR}/src/*.hpp)
-file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp) 
+file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
 # Determine if OpenSSL should be compiled in (or not)
 if(CASS_USE_OPENSSL)
