@@ -330,5 +330,42 @@ BOOST_AUTO_TEST_CASE(full_outage)
   test_utils::execute_query(session.get(), query);
 }
 
+/**
+ * Node Decommission
+ *
+ * This test ensures the driver will not attempt reconnects after a node has
+ * been decommissioned from a cluster
+ *
+ * @since 1.0.1
+ * @jira_ticket CPP-210
+ * @test_category control_connection
+ */
+BOOST_AUTO_TEST_CASE(node_decommission)
+{
+  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+  test_utils::CassLog::reset("Adding pool for host " + conf.ip_prefix());
+
+  {
+    test_utils::CassClusterPtr cluster(cass_cluster_new());
+    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 2);
+
+    test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 2, 0);
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+
+    // Wait for all hosts to be added to the pool; timeout after 10 seconds
+    boost::chrono::steady_clock::time_point end = boost::chrono::steady_clock::now() + boost::chrono::milliseconds(10000);
+    while (test_utils::CassLog::message_count() != 2 && boost::chrono::steady_clock::now() < end) {
+      boost::this_thread::sleep_for(boost::chrono::seconds(1));
+    }
+    BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 2ul);
+
+    test_utils::CassLog::reset("Spawning new connection to host " + conf.ip_prefix() + "1");
+    ccm->decommission(1);
+    BOOST_TEST_MESSAGE("Node Decommissioned [" << conf.ip_prefix() << "1]: Sleeping for 30 seconds");
+    boost::this_thread::sleep_for(boost::chrono::seconds(30));
+  }
+  
+  BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 0ul);
+}
 
 BOOST_AUTO_TEST_SUITE_END()
