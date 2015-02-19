@@ -42,6 +42,11 @@
  * over the Cassandra Binary Protocol (versions 1 or 2).
  */
 
+#define CASS_VERSION_MAJOR 1
+#define CASS_VERSION_MINOR 0
+#define CASS_VERSION_PATCH 1
+#define CASS_VERSION_SUFFIX ""
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -164,7 +169,7 @@ typedef struct CassUuid_ {
  * @struct CassCluster
  *
  * A cluster object describes the configuration of the Cassandra cluster and is used
- * to construct a session instance. Unlike other DataStax drivers the cluster object 
+ * to construct a session instance. Unlike other DataStax drivers the cluster object
  * does not maintain the control connection.
  */
 typedef struct CassCluster_ CassCluster;
@@ -174,7 +179,7 @@ typedef struct CassCluster_ CassCluster;
  *
  * A session object is used to execute queries and maintains cluster state through
  * the control connection. The control connection is used to auto-discover nodes and
- * monitor cluster changes (topology and schema). Each session also maintains multiple 
+ * monitor cluster changes (topology and schema). Each session also maintains multiple
  * pools of connections to cluster nodes which are used to query the cluster.
  *
  * Instances of the session object are thread-safe to execute queries.
@@ -184,7 +189,7 @@ typedef struct CassSession_ CassSession;
 /**
  * @struct CassStatement
  *
- * A statement object is an executable query. It represents either a regular 
+ * A statement object is an executable query. It represents either a regular
  * (adhoc) statment or a prepared statement. It maitains the queries' parameter
  * values along with query options (consistency level, paging state, etc.)
  *
@@ -902,7 +907,7 @@ cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] enabled 
+ * @param[in] enabled
  */
 CASS_EXPORT void
 cass_cluster_set_token_aware_routing(CassCluster* cluster,
