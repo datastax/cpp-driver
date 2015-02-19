@@ -33,6 +33,7 @@ int load_trusted_cert_file(const char* file, CassSsl* ssl) {
   CassError rc;
   char* cert;
   long cert_size;
+  size_t bytes_read;
 
   FILE *in = fopen(file, "rb");
   if (in == NULL) {
@@ -45,14 +46,16 @@ int load_trusted_cert_file(const char* file, CassSsl* ssl) {
   rewind(in);
 
   cert = (char*)malloc(cert_size);
-  fread(cert, sizeof(char), cert_size, in);
+  bytes_read = fread(cert, 1, cert_size, in);
   fclose(in);
 
-  rc = cass_ssl_add_trusted_cert(ssl, cass_string_init2(cert, cert_size));
-  if (rc != CASS_OK) {
-    fprintf(stderr, "Error loading SSL certificate: %s\n", cass_error_desc(rc));
-    free(cert);
-    return 0;
+  if (bytes_read == (size_t) cert_size) {
+    rc = cass_ssl_add_trusted_cert(ssl, cass_string_init2(cert, cert_size));
+    if (rc != CASS_OK) {
+      fprintf(stderr, "Error loading SSL certificate: %s\n", cass_error_desc(rc));
+      free(cert);
+      return 0;
+    }
   }
 
   free(cert);
