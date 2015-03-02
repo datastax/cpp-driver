@@ -1,3 +1,19 @@
+1.0.1
+===========
+Mar 2, 2015
+
+Other
+--------
+* Added testing documentation
+* Added docmentation for the `varint` data type
+* Added a contributing document
+* Added version defines to `cassandra.h`
+* Fixed an issue where connections were attempted against decommissioned nodes
+* Fixed an issue where an invalid key index was used for a single entry
+  token-aware routing key
+* Improved build error output when an incompatabile version of Boost is used to
+  build the driver
+
 1.0.0
 ===========
 Feb 2, 2015
@@ -9,7 +25,7 @@ Features
 Other
 --------
 * `cass_cluster_set_num_threads_io()` now returns an error code
-* Fixed an issue where a node in a remote DC could reconnect even if it 
+* Fixed an issue where a node in a remote DC could reconnect even if it
   was supposed to be ignored.
 * Reduced the defaults for IO worker threads (1), core connections (1), and
   max connections (2).
@@ -22,16 +38,16 @@ Dec 22, 2014
 Features
 --------
 * Added global logging. Logging is no longer configured per session.
-* DC-aware load balancing policy is now the default and uses the DC of the first 
-  connected contact point. The DC-aware policy now has settings to control the 
-  number of remote hosts used in each DC (after exhausting the hosts in the 
+* DC-aware load balancing policy is now the default and uses the DC of the first
+  connected contact point. The DC-aware policy now has settings to control the
+  number of remote hosts used in each DC (after exhausting the hosts in the
   local DC) and whether to ignore local consistency levels.
 * Added socket options for TCP nodelay and keepalive:
   `cass_cluster_set_tcp_nodelay()` and `cass_cluster_set_tcp_keepalive()`.
 
 Other
 --------
-* `CassSession` objects must now be explictly allocated/freed using 
+* `CassSession` objects must now be explictly allocated/freed using
   `cass_session_new()` and `cass_session_free()`. `cass_cluster_connect()` has been
   removed and replaced by `cass_session_connect()`.
 * SIGPIPE is ignored on driver threads
@@ -49,7 +65,7 @@ Features
 * Added SSL support
 * Added token-aware load balancing. It's enable by default. It can
   be disable using `cass_cluster_set_token_aware_routing()`.
-* Added functions to get schema metadata, `cass_session_get_schema()` can 
+* Added functions to get schema metadata, `cass_session_get_schema()` can
   be use to get a snapshot of the schema metadata and `cass_meta_*()` functions
   can be used to retrieve detailed information about keyspaces, tables, and columns.
 
@@ -69,7 +85,7 @@ Other
 * Fixed a crash caused by a request timing out followed by a
   call to the conneciton read callback then the write callback.
 * Fixed an issue that prevented the driver from recovering from
-  a full cluster outage. 
+  a full cluster outage.
 * Fixed an issue that allowed `uv_queue_work()` to be called from an
   application thread.
 * Added logic to prevent redundant node refreshes when estabilishing
@@ -92,7 +108,7 @@ Features
 * Queries that modify schema wait for cluster schema agreement
 * Added DC aware load balancing policy. The default policy is set to
   round robin.
-* Added new methods to configure the load balancing policy, 
+* Added new methods to configure the load balancing policy,
   `cass_cluster_set_load_balance_round_robin()` and
   `cass_cluster_set_load_balance_dc_aware()`
 * It is now possible for a session future to return an error when
@@ -105,9 +121,9 @@ Aug 13, 2014
 
 Features
 --------
-* Added callbacks to futures, `cass_future_set_callback()` 
+* Added callbacks to futures, `cass_future_set_callback()`
 * Added plaintext authentication support, `cass_cluster_set_credentials()`
-* Added map iterator, `cass_iterator_from_map()`, key and value pairs can be 
+* Added map iterator, `cass_iterator_from_map()`, key and value pairs can be
   retreived using `cass_iterator_get_map_key()` and `cass_iterator_get_map_value()`
 * Values can be bound by name (statements created from prepared statments only)
 * Values can be retreived by name from result sets
@@ -123,7 +139,7 @@ Jul 17, 2014
 
 Features
 --------
-* Removed C++1x dependency 
+* Removed C++1x dependency
 * Support for Cassandra 1.2 (native protocol version 1)
 * Support for automatic paging
 * Added method to set serial consistency on statement
