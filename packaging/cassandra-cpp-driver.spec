@@ -1,10 +1,10 @@
 %define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
-%{!?libuv_version: %define libuv_version 1.2.1}
+%{!?libuv_version: %define libuv_version 1.4.2}
 
 Name:    cassandra-cpp-driver
 Epoch:   1
-Version: 1.0.0
+Version: 1.0.1
 Release: 1%{?dist}
 Summary: DataStax C/C++ Driver for Apache Cassandra
 
@@ -13,10 +13,11 @@ License: Apache 2.0
 URL: https://github.com/datastax/cpp-driver
 Source0: %{name}-%{version}.tar.gz
 Source1: cassandra.pc.in
+Source2: cassandra_static.pc.in
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 %if %{distnum} == 5
-  BuildRequires: buildsys-macros >= 5
+BuildRequires: buildsys-macros >= 5
 %endif
 BuildRequires: cmake >= 2.6.4
 BuildRequires: libuv-devel >= %{libuv_version}
@@ -56,6 +57,12 @@ sed -e "s#@prefix@#%{_prefix}#g" \
     -e "s#@includedir@#%{_includedir}#g" \
     -e "s#@version@#%{version}#g" \
     %SOURCE1 > %{buildroot}/%{_libdir}/pkgconfig/cassandra.pc
+sed -e "s#@prefix@#%{_prefix}#g" \
+    -e "s#@exec_prefix@#%{_exec_prefix}#g" \
+    -e "s#@libdir@#%{_libdir}#g" \
+    -e "s#@includedir@#%{_includedir}#g" \
+    -e "s#@version@#%{version}#g" \
+    %SOURCE2 > %{buildroot}/%{_libdir}/pkgconfig/cassandra_static.pc
 
 %clean
 rm -rf %{buildroot}
@@ -80,5 +87,7 @@ rm -rf %{buildroot}
 %{_libdir}/pkgconfig/*.pc
 
 %changelog
+* Mon Mar 02 2015 Michael Penick <michael.penick@datastax.com> - 1.0.1-1
+- patch release
 * Fri Jan 23 2015 Michael Penick <michael.penick@datastax.com> - 1.0.0-1
 - init release

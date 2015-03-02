@@ -17,7 +17,7 @@ if [[ ! -z $1 ]]; then
   arch=$1
 fi
 
-version="1.0.0"
+version="1.0.1"
 base="cassandra-cpp-driver-$version"
 archive="$base.tar.gz"
 files="CMakeLists.txt cmake_uninstall.cmake.in include src README.md LICENSE.txt"
@@ -44,6 +44,7 @@ for file in $files; do
   cp -r  "../$file" "build/SOURCES/$base"
 done
 cp cassandra.pc.in build/SOURCES
+cp cassandra_static.pc.in build/SOURCES
 
 echo "Archiving $archive"
 pushd "build/SOURCES"
