@@ -126,6 +126,8 @@ find_package(Boost QUIET)
 if(Boost_FOUND AND NOT CASS_USE_EXTERNAL_BOOST)
   message(STATUS "### BOOST FOUND AND 'CASS_USE_EXTERNAL_BOOST' IS DISABLED (THIS MAY CAUSE BUILD ERRORS) ###")
   message(STATUS "Fix: Either use '-DCASS_USE_EXTERNAL_BOOST=On' or remove Boost from your include paths.")
+else()
+  add_definitions(-DBOOST_ALL_NO_LIB)
 endif()
 
 if(CASS_USE_EXTERNAL_BOOST)
