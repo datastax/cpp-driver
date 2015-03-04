@@ -236,7 +236,7 @@ endif()
 #--------------------
 
 # libssh2
-if (CASS_BUILD_TESTS)
+if(CASS_BUILD_TESTS)
   # Setup the root directory for libssh2
   set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/" $ENV{LIBSSH2_ROOT})
   set(LIBSSH2_ROOT ${LIBSSH2_ROOT} ${LIBSSH2_ROOT_DIR} $ENV{LIBSSH2_ROOT_DIR})
@@ -252,6 +252,9 @@ if (CASS_BUILD_TESTS)
 
   # Assign test libraries (additional boost and libssh2 dependencies)
   set(CASS_TEST_LIBS ${Boost_LIBRARIES} ${LIBSSH2_LIBRARIES})
+  if(UNIX)
+    set(CASS_TEST_LIBS ${CASS_TEST_LIBS} pthread)
+  endif()
 endif()
 
 # Assign additional library requirements for Windows
