@@ -162,6 +162,11 @@ if(CASS_USE_EXTERNAL_BOOST)
   # Display a status message regarding external boost use
   message(STATUS "### USING THE EXTERNAL VERSION OF BOOST ###")
 
+  # Handle explicit initialization warning in atomic/details/casts
+  if((CASS_FOUND_BOOST_VERSION VERSION_GREATER "1.56.0") OR (CASS_FOUND_BOOST_VERSION VERSION_EQUAL "1.56.0"))
+    add_definitions(-Wno-missing-field-initializers)
+  endif()
+
   # Assign Boost include and libraries
   set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
   set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES})
@@ -289,7 +294,12 @@ endif()
 if(WIN32)
   set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 else()
-  set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_THREAD_USES_MOVE -DBOOST_NO_CXX11_RVALUE_REFERENCES")
+  set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_THREAD_USES_MOVE")
+
+  # Handle redefinition warning of BOOST_NO_CXX11_RVALUE_REFERENCES
+  if(CASS_FOUND_BOOST_VERSION VERSION_LESS "1.56.0")
+    set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_NO_CXX11_RVALUE_REFERENCES")
+  endif()
 endif()
 
 # Assign compiler specific flags
