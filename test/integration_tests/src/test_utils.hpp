@@ -30,6 +30,7 @@
 
 #include "cassandra.h"
 
+#include "cql_ccm_bridge.hpp"
 #include "cql_ccm_bridge_configuration.hpp"
 
 #ifdef min
@@ -490,28 +491,6 @@ struct Value<CassDecimal> {
   }
 };
 
-/**
- * Cassandra release version number
- */
-struct CassVersion {
-  /**
-   * Major portion of version number
-   */
-  unsigned short major;
-  /**
-   * Minor portion of version number
-   */
-  unsigned short minor;
-  /**
-   * Patch portion of version number
-   */
-  unsigned short patch;
-  /**
-   * Extra portion of version number
-   */
-  char extra[64];
-};
-
 /** The following class cannot be used as a kernel of test fixture because of
     parametrized ctor. Derive from it to use it in your tests.
  */
@@ -520,6 +499,7 @@ struct MultipleNodesTest {
   virtual ~MultipleNodesTest();
 
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
+  CassVersion version;
   const cql::cql_ccm_bridge_configuration_t& conf;
   CassUuidGen* uuid_gen;
   CassCluster* cluster;
@@ -531,7 +511,6 @@ struct SingleSessionTest : public MultipleNodesTest {
   void create_session();
 
   CassSession* session;
-  CassVersion version;
   CassSsl* ssl;
 };
 
