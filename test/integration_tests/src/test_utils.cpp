@@ -17,7 +17,6 @@
 #include "test_utils.hpp"
 
 #include "cassandra.h"
-#include "cql_ccm_bridge.hpp"
 #include "testing.hpp"
 
 #include <boost/test/test_tools.hpp>
@@ -156,6 +155,7 @@ MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int nu
   : conf(cql::get_ccm_bridge_configuration()) {
   boost::debug::detect_memory_leaks(false);
   ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", num_nodes_dc1, num_nodes_dc2, isSSL);
+  version = ccm->version();
 
   uuid_gen = cass_uuid_gen_new();
   cluster = cass_cluster_new();
@@ -189,7 +189,6 @@ void SingleSessionTest::create_session() {
   session = cass_session_new();
   test_utils::CassFuturePtr connect_future(cass_session_connect(session, cluster));
   test_utils::wait_and_check_error(connect_future.get());
-  version = get_version(session);
 }
 
 SingleSessionTest::~SingleSessionTest() {
