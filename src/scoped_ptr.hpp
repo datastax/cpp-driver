@@ -20,9 +20,6 @@
 #include "macros.hpp"
 #include "ref_counted.hpp"
 
-#include <boost/static_assert.hpp>
-#include <boost/type_traits/is_base_and_derived.hpp>
-
 #include <stddef.h>
 
 namespace cass {
@@ -44,7 +41,7 @@ public:
   typedef D deleter;
 
   // Prevent RefCounted<> objects from using ScopedPtr<>, that would be bad
-  BOOST_STATIC_ASSERT(!boost::is_base_and_derived<RefCountedBase, T>::value);
+  STATIC_ASSERT((!IsConvertable<T, RefCountedBase>::value));
 
   explicit ScopedPtr(type* ptr = NULL)
       : ptr_(ptr) {}

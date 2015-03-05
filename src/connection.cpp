@@ -35,8 +35,6 @@
 #include "logger.hpp"
 #include "cassandra.h"
 
-#include <boost/bind.hpp>
-
 #include <iomanip>
 #include <sstream>
 
@@ -142,10 +140,12 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
   }
 }
 
-Connection::Connection(uv_loop_t* loop, const Config& config,
+Connection::Connection(uv_loop_t* loop,
+                       const Config& config,
                        const Address& address,
                        const std::string& keyspace,
-                       int protocol_version)
+                       int protocol_version,
+                       Listener* listener)
     : state_(CONNECTION_STATE_NEW)
     , is_defunct_(false)
     , is_invalid_protocol_(false)
@@ -159,9 +159,9 @@ Connection::Connection(uv_loop_t* loop, const Config& config,
     , addr_string_(address.to_string())
     , keyspace_(keyspace)
     , protocol_version_(protocol_version)
+    , listener_(listener)
     , response_(new ResponseMessage())
     , version_("3.0.0")
-    , event_types_(0)
     , connect_timer_(NULL)
     , ssl_session_(NULL) {
   socket_.data = this;
@@ -200,6 +200,7 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
   }
 
   handler->inc_ref(); // Connection reference
+  handler->set_connection(this);
   handler->set_stream(stream);
 
   if (pending_writes_.is_empty() || pending_writes_.back()->is_flushed()) {
@@ -230,8 +231,10 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
             opcode_to_string(handler->request()->opcode()).c_str(), stream);
 
   handler->set_state(Handler::REQUEST_STATE_WRITING);
-  handler->start_timer(loop_, config_.request_timeout_ms(), handler,
-                       boost::bind(&Connection::on_timeout, this, _1));
+  handler->start_timer(loop_,
+                       config_.request_timeout_ms(),
+                       handler,
+                       Connection::on_timeout);
 
   if (flush_immediately) {
     pending_write->flush();
@@ -253,7 +256,7 @@ void Connection::schedule_schema_agreement(const SharedRefPtr<SchemaChangeHandle
       = Timer::start(loop_,
                      wait,
                      pending_schema_agreement,
-                     boost::bind(&Connection::on_pending_schema_agreement, this, _1));
+                     Connection::on_pending_schema_agreement);
 }
 
 void Connection::close() {
@@ -281,9 +284,7 @@ void Connection::set_is_available(bool is_available) {
   // The callback is only called once per actual state change
   if (is_available_ != is_available) {
     is_available_ = is_available;
-    if (availability_changed_callback_) {
-      availability_changed_callback_(this);
-    }
+    listener_->on_availability_change(this);
   }
 }
 
@@ -312,9 +313,7 @@ void Connection::consume(char* input, size_t size) {
 
       if (response->stream() < 0) {
         if (response->opcode() == CQL_OPCODE_EVENT) {
-          if (event_callback_) {
-            event_callback_(static_cast<EventResponse*>(response->response_body().get()));
-          }
+          listener_->on_event(static_cast<EventResponse*>(response->response_body().get()));
         } else {
           notify_error("Invalid response opcode for event stream: " +
                        opcode_to_string(response->opcode()));
@@ -439,9 +438,7 @@ void Connection::on_close(uv_handle_t* handle) {
     delete pending_schema_aggreement;
   }
 
-  if (connection->closed_callback_) {
-    connection->closed_callback_(connection);
-  }
+  connection->listener_->on_close(connection);
 
   delete connection;
 }
@@ -548,7 +545,8 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
 
 void Connection::on_timeout(RequestTimer* timer) {
   Handler* handler = static_cast<Handler*>(timer->data());
-  LOG_INFO("Request timed out to host %s", addr_string_.c_str());
+  Connection* connection = handler->connection();
+  LOG_INFO("Request timed out to host %s", connection->addr_string_.c_str());
   // TODO (mpenick): We need to handle the case where we have too many
   // timeout requests and we run out of stream ids. The java-driver
   // uses a threshold to defunct the connection.
@@ -581,9 +579,9 @@ void Connection::on_auth_success(AuthResponseRequest* request, const std::string
 }
 
 void Connection::on_ready() {
-  if (!is_registered_for_events_ && event_types_ != 0) {
+  if (!is_registered_for_events_ && listener_->event_types() != 0) {
     is_registered_for_events_ = true;
-    write(new StartupHandler(this, new RegisterRequest(event_types_)));
+    write(new StartupHandler(this, new RegisterRequest(listener_->event_types())));
     return;
   }
 
@@ -613,7 +611,8 @@ void Connection::on_supported(ResponseMessage* response) {
 void Connection::on_pending_schema_agreement(Timer* timer) {
   PendingSchemaAgreement* pending_schema_agreement
       = static_cast<PendingSchemaAgreement*>(timer->data());
-  pending_schema_agreements_.remove(pending_schema_agreement);
+  Connection* connection = pending_schema_agreement->handler->connection();
+  connection->pending_schema_agreements_.remove(pending_schema_agreement);
   pending_schema_agreement->handler->execute();
   delete pending_schema_agreement;
 }
@@ -629,9 +628,7 @@ void Connection::notify_ready() {
   stop_connect_timer();
   state_ = CONNECTION_STATE_READY;
   set_is_available(true);
-  if (ready_callback_) {
-    ready_callback_(this);
-  }
+  listener_->on_ready(this);
 }
 
 void Connection::notify_error(const std::string& error) {

@@ -29,12 +29,9 @@
 
 #include <assert.h>
 
+#include "atomic.hpp"
 #include "common.hpp"
 #include "macros.hpp"
-
-#include <boost/atomic.hpp>
-#include <boost/type_traits/alignment_of.hpp>
-#include <boost/aligned_storage.hpp>
 
 namespace cass {
 
@@ -46,42 +43,39 @@ public:
   SPSCQueue(size_t size)
       : size_(next_pow_2(size))
       , mask_(size_ - 1)
-      , buffer_(reinterpret_cast<T*>(
-            new SPSCQueueAlignedEntry[size_]))
+      , buffer_(new T[size_])
       , tail_(0)
       , head_(0) {}
 
   ~SPSCQueue() { delete[] buffer_; }
 
   bool enqueue(const T& input) {
-    const size_t pos = tail_.load(boost::memory_order_relaxed);
+    const size_t pos = tail_.load(MEMORY_ORDER_RELAXED);
     const size_t next_pos = (pos + 1) & mask_;
-    if (next_pos == head_.load(boost::memory_order_acquire)) {
+    if (next_pos == head_.load(MEMORY_ORDER_ACQUIRE)) {
       return false;
     }
     buffer_[pos] = input;
-    tail_.store(next_pos, boost::memory_order_release);
+    tail_.store(next_pos, MEMORY_ORDER_RELEASE);
     return true;
   }
 
   bool dequeue(T& output) {
-    const size_t pos = head_.load(boost::memory_order_relaxed);
-    if (pos == tail_.load(boost::memory_order_acquire)) {
+    const size_t pos = head_.load(MEMORY_ORDER_RELAXED);
+    if (pos == tail_.load(MEMORY_ORDER_ACQUIRE)) {
       return false;
     }
     output = buffer_[pos];
-    head_.store((pos + 1) & mask_, boost::memory_order_release);
+    head_.store((pos + 1) & mask_, MEMORY_ORDER_RELEASE);
     return true;
   }
 
   bool is_empty() {
-    return head_.load(boost::memory_order_acquire) ==
-        tail_.load(boost::memory_order_acquire);
+    return head_.load(MEMORY_ORDER_ACQUIRE) ==
+        tail_.load(MEMORY_ORDER_ACQUIRE);
   }
 
 private:
-  typedef typename boost::aligned_storage<
-      sizeof(T), boost::alignment_of<T>::value>::type SPSCQueueAlignedEntry;
 
   typedef char cache_line_pad_t[64];
 
@@ -91,10 +85,10 @@ private:
   T* const buffer_;
 
   cache_line_pad_t pad1_;
-  boost::atomic<size_t> tail_;
+  Atomic<size_t> tail_;
 
   cache_line_pad_t pad2_;
-  boost::atomic<size_t> head_;
+  Atomic<size_t> head_;
 
   DISALLOW_COPY_AND_ASSIGN(SPSCQueue);
 };

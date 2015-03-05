@@ -18,9 +18,9 @@
 #define __CASS_COMMON_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "macros.hpp"
 
-#include <boost/static_assert.hpp>
-
+#include <stddef.h>
 #include <string>
 #include <string.h>
 
@@ -28,6 +28,41 @@ namespace cass {
 
 class BufferPiece;
 class Value;
+
+// Done this way so that macros like __LINE__ will expand before
+// being concatenated.
+#define STATIC_ASSERT_CONCAT(Arg1, Arg2)  STATIC_ASSERT_CONCAT1(Arg1, Arg2)
+#define STATIC_ASSERT_CONCAT1(Arg1, Arg2) STATIC_ASSERT_CONCAT2(Arg1, Arg2)
+#define STATIC_ASSERT_CONCAT2(Arg1, Arg2) Arg1##Arg2
+
+#define STATIC_ASSERT(Expression) \
+  struct STATIC_ASSERT_CONCAT(__static_assertion_at_line_, __LINE__) \
+  { \
+    StaticAssert<static_cast<bool>(Expression)> \
+      STATIC_ASSERT_CONCAT(STATIC_ASSERTION_FAILED_AT_LINE_, __LINE__); \
+  }; \
+  typedef StaticAssertTest<sizeof(STATIC_ASSERT_CONCAT(__static_assertion_at_line_, __LINE__))> \
+    STATIC_ASSERT_CONCAT(__static_assertion_test_at_line_, __LINE__)
+
+template <bool> struct StaticAssert;
+template <> struct StaticAssert<true> {};
+template<size_t s> struct StaticAssertTest {};
+
+template<class From, class To>
+class IsConvertable {
+  private:
+    typedef char Yes;
+    typedef struct { char not_used[2]; } No;
+
+    struct Helper {
+      static Yes test(To);
+      static No test(...);
+      static From& check();
+    };
+
+  public:
+    static const bool value = sizeof(Helper::test(Helper::check())) == sizeof(Yes);
+};
 
 // copy_cast<> prevents incorrect code from being generated when two unrelated 
 // types reference the same memory location and strict aliasing is enabled.
@@ -39,7 +74,7 @@ class Value;
 template<typename From, typename To>
 inline To copy_cast(const From& from)
 {
-  BOOST_STATIC_ASSERT(sizeof(From) == sizeof(To));
+  STATIC_ASSERT(sizeof(From) == sizeof(To));
 
   To to;
   memcpy(&to, &from, sizeof(from));

@@ -21,9 +21,9 @@
 #include "list.hpp"
 #include "fixed_vector.hpp"
 #include "ref_counted.hpp"
+#include "string_ref.hpp"
 
-#include <boost/cstdint.hpp>
-#include <boost/utility/string_ref.hpp>
+#include <uv.h>
 
 #include <algorithm>
 #include <map>
@@ -86,7 +86,7 @@ public:
 
   const ColumnDefinition& get(size_t index) const { return defs_[index]; }
 
-  size_t get(boost::string_ref name, IndexVec* result) const;
+  size_t get(StringRef name, IndexVec* result) const;
 
   size_t column_count() const { return defs_.size(); }
 

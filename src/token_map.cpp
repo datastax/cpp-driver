@@ -14,14 +14,14 @@
   limitations under the License.
 */
 
+#include "common.hpp"
 #include "token_map.hpp"
 #include "logger.hpp"
 #include "md5.hpp"
 #include "murmur3.hpp"
 #include "scoped_ptr.hpp"
 
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/cstdint.hpp>
+#include <uv.h>
 
 #include <algorithm>
 #include <limits>
@@ -114,11 +114,11 @@ void TokenMap::set_partitioner(const std::string& partitioner_class) {
   // Only set the partition once
   if (partitioner_) return;
 
-  if (boost::ends_with(partitioner_class, Murmur3Partitioner::PARTITIONER_CLASS)) {
+  if (ends_with(partitioner_class, Murmur3Partitioner::PARTITIONER_CLASS)) {
     partitioner_.reset(new Murmur3Partitioner());
-  } else if (boost::ends_with(partitioner_class, RandomPartitioner::PARTITIONER_CLASS)) {
+  } else if (ends_with(partitioner_class, RandomPartitioner::PARTITIONER_CLASS)) {
     partitioner_.reset(new RandomPartitioner());
-  } else if (boost::ends_with(partitioner_class, ByteOrderedPartitioner::PARTITIONER_CLASS)) {
+  } else if (ends_with(partitioner_class, ByteOrderedPartitioner::PARTITIONER_CLASS)) {
     partitioner_.reset(new ByteOrderedPartitioner());
   } else {
     LOG_WARN("Unsupported partitioner class '%s'", partitioner_class.c_str());
@@ -243,7 +243,7 @@ bool TokenMap::purge_address(const Address& addr) {
 
 const std::string Murmur3Partitioner::PARTITIONER_CLASS("Murmur3Partitioner");
 
-Token Murmur3Partitioner::token_from_string_ref(const boost::string_ref& token_string_ref) const {
+Token Murmur3Partitioner::token_from_string_ref(const StringRef& token_string_ref) const {
   Token token(sizeof(int64_t), 0);
   int64_t token_value = parse_int64(token_string_ref.data(), token_string_ref.size());
   encode_uint64(&token[0], static_cast<uint64_t>(token_value) + std::numeric_limits<uint64_t>::max() / 2);
@@ -262,7 +262,7 @@ Token Murmur3Partitioner::hash(const uint8_t* data, size_t size) const {
 
 const std::string RandomPartitioner::PARTITIONER_CLASS("RandomPartitioner");
 
-Token RandomPartitioner::token_from_string_ref(const boost::string_ref& token_string_ref) const {
+Token RandomPartitioner::token_from_string_ref(const StringRef& token_string_ref) const {
   Token token(sizeof(uint64_t) * 2, 0);
   parse_int128(token_string_ref.data(), token_string_ref.size(), &token[0]);
   return token;
@@ -279,7 +279,7 @@ Token RandomPartitioner::hash(const uint8_t* data, size_t size) const {
 
 const std::string ByteOrderedPartitioner::PARTITIONER_CLASS("ByteOrderedPartitioner");
 
-Token ByteOrderedPartitioner::token_from_string_ref(const boost::string_ref& token_string_ref) const {
+Token ByteOrderedPartitioner::token_from_string_ref(const StringRef& token_string_ref) const {
   const uint8_t* data = reinterpret_cast<const uint8_t*>(token_string_ref.data());
   size_t size = token_string_ref.size();
   return Token(data, data + size);

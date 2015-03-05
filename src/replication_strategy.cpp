@@ -21,8 +21,6 @@
 #include "map_iterator.hpp"
 #include "token_map.hpp"
 
-#include <boost/algorithm/string/predicate.hpp>
-
 #include <map>
 #include <set>
 
@@ -32,10 +30,10 @@ SharedRefPtr<ReplicationStrategy> ReplicationStrategy::from_keyspace_meta(const 
   std::string strategy_class = ks_meta.strategy_class();
 
   SharedRefPtr<ReplicationStrategy> strategy;
-  if (boost::ends_with(strategy_class, NetworkTopologyStrategy::STRATEGY_CLASS)) {
+  if (ends_with(strategy_class, NetworkTopologyStrategy::STRATEGY_CLASS)) {
     return SharedRefPtr<ReplicationStrategy>(
           new NetworkTopologyStrategy(strategy_class, ks_meta.strategy_options()));
-  } else if (boost::ends_with(strategy_class, SimpleStrategy::STRATEGY_CLASS)) {
+  } else if (ends_with(strategy_class, SimpleStrategy::STRATEGY_CLASS)) {
     return SharedRefPtr<ReplicationStrategy>(
           new SimpleStrategy(strategy_class, ks_meta.strategy_options()));
   } else {
@@ -141,8 +139,8 @@ void NetworkTopologyStrategy::build_dc_replicas(const SchemaMetadataField* strat
   if (strategy_options != NULL) {
     MapIterator itr(strategy_options->value());
     while (itr.next()) {
-      boost::string_ref key = itr.key()->buffer().to_string_ref();
-      boost::string_ref value = itr.value()->buffer().to_string_ref();
+      StringRef key = itr.key()->buffer().to_string_ref();
+      StringRef value = itr.value()->buffer().to_string_ref();
       if (key != "class") {
         size_t replica_count = strtoul(value.to_string().c_str(), NULL, 10);
         if (replica_count > 0) {
@@ -192,8 +190,8 @@ size_t SimpleStrategy::get_replication_factor(const SchemaMetadataField* strateg
   if (strategy_options != NULL) {
     MapIterator itr(strategy_options->value());
     while (itr.next()) {
-      boost::string_ref key = itr.key()->buffer().to_string_ref();
-      boost::string_ref value = itr.value()->buffer().to_string_ref();
+      StringRef key = itr.key()->buffer().to_string_ref();
+      StringRef value = itr.value()->buffer().to_string_ref();
       if (key == "replication_factor") {
         return strtoul(value.to_string().c_str(), NULL, 10);
       }

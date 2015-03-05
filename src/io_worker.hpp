@@ -18,14 +18,13 @@
 #define __CASS_IO_WORKER_HPP_INCLUDED__
 
 #include "address.hpp"
+#include "atomic.hpp"
 #include "async_queue.hpp"
 #include "constants.hpp"
 #include "event_thread.hpp"
 #include "logger.hpp"
 #include "spsc_queue.hpp"
 #include "timer.hpp"
-
-#include <boost/atomic.hpp>
 
 #include <map>
 #include <string>
@@ -68,10 +67,10 @@ public:
   const Config& config() const { return config_; }
 
   int protocol_version() const {
-    return protocol_version_;
+    return protocol_version_.load();
   }
   void set_protocol_version(int protocol_version) {
-    protocol_version_ = protocol_version;
+    protocol_version_.store(protocol_version);
   }
 
   std::string keyspace();
@@ -105,7 +104,7 @@ private:
   void maybe_notify_closed();
   void close_handles();
 
-  void on_pending_pool_reconnect(Timer* timer);
+  static void on_pending_pool_reconnect(Timer* timer);
 
   virtual void on_event(const IOWorkerEvent& event);
 
@@ -125,6 +124,7 @@ private:
 
     void stop_timer();
 
+    IOWorker *io_worker;
     Address address;
     Timer* timer;
   };
@@ -137,7 +137,7 @@ private:
 private:
   Session* session_;
   const Config& config_;
-  boost::atomic<int> protocol_version_;
+  Atomic<int> protocol_version_;
   uv_prepare_t prepare_;
 
   std::string keyspace_;

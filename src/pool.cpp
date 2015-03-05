@@ -27,8 +27,6 @@
 #include "result_response.hpp"
 #include "timer.hpp"
 
-#include <boost/bind.hpp>
-
 namespace cass {
 
 static bool least_busy_comp(Connection* a, Connection* b) {
@@ -173,7 +171,7 @@ void Pool::set_is_available(bool is_available) {
 }
 
 bool Pool::write(Connection* connection, RequestHandler* request_handler) {
-  request_handler->set_connection_and_pool(connection, this);
+  request_handler->set_pool(this);
   if (io_worker_->is_current_keyspace(connection->keyspace())) {
     if (!connection->write(request_handler, false)) {
       return false;
@@ -231,15 +229,10 @@ void Pool::spawn_connection() {
         new Connection(loop_, config_,
                        address_,
                        io_worker_->keyspace(),
-                       io_worker_->protocol_version());
+                       io_worker_->protocol_version(),
+                       this);
 
     LOG_INFO("Spawning new connection to host %s", address_.to_string(true).c_str());
-    connection->set_ready_callback(
-          boost::bind(&Pool::on_connection_ready, this, _1));
-    connection->set_close_callback(
-          boost::bind(&Pool::on_connection_closed, this, _1));
-    connection->set_availability_changed_callback(
-          boost::bind(&Pool::on_connection_availability_changed, this, _1));
     connection->connect();
 
     connections_pending_.insert(connection);
@@ -272,7 +265,7 @@ Connection* Pool::find_least_busy() {
   return NULL;
 }
 
-void Pool::on_connection_ready(Connection* connection) {
+void Pool::on_ready(Connection* connection) {
   connections_pending_.erase(connection);
   maybe_notify_ready();
 
@@ -280,7 +273,7 @@ void Pool::on_connection_ready(Connection* connection) {
   return_connection(connection);
 }
 
-void Pool::on_connection_closed(Connection* connection) {
+void Pool::on_close(Connection* connection) {
   connections_pending_.erase(connection);
 
   ConnectionVec::iterator it =
@@ -302,7 +295,7 @@ void Pool::on_connection_closed(Connection* connection) {
   maybe_close();
 }
 
-void Pool::on_connection_availability_changed(Connection* connection) {
+void Pool::on_availability_change(Connection* connection) {
   if (connection->is_available()) {
     ++available_connection_count_;
     set_is_available(true);
@@ -317,17 +310,20 @@ void Pool::on_connection_availability_changed(Connection* connection) {
 
 void Pool::on_pending_request_timeout(RequestTimer* timer) {
   RequestHandler* request_handler = static_cast<RequestHandler*>(timer->data());
-  remove_pending_request(request_handler);
+  Pool* pool = request_handler->pool();
+  pool->remove_pending_request(request_handler);
   request_handler->retry(RETRY_WITH_NEXT_HOST);
   LOG_DEBUG("Timeout waiting for connection to %s pool(%p)",
-            address_.to_string().c_str(),
-            static_cast<void*>(this));
-  maybe_close();
+            pool->address_.to_string().c_str(),
+            static_cast<void*>(pool));
+  pool->maybe_close();
 }
 
 void Pool::wait_for_connection(RequestHandler* request_handler) {
-  request_handler->start_timer(loop_, config_.connect_timeout_ms(), request_handler,
-                               boost::bind(&Pool::on_pending_request_timeout, this, _1));
+  request_handler->start_timer(loop_,
+                               config_.connect_timeout_ms(),
+                               request_handler,
+                               Pool::on_pending_request_timeout);
   add_pending_request(request_handler);
 }
 

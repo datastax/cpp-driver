@@ -25,8 +25,6 @@
 #include "timer.hpp"
 #include "types.hpp"
 
-#include <boost/bind.hpp>
-
 extern "C" {
 
 CassSession* cass_session_new() {

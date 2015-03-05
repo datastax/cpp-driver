@@ -26,8 +26,6 @@
 #include <string>
 #include <uv.h>
 
-#include <boost/function.hpp>
-
 namespace cass {
 
 class Config;
@@ -38,7 +36,7 @@ class ResponseMessage;
 typedef std::vector<uv_buf_t> UvBufVec;
 
 struct RequestTimer {
-  typedef boost::function1<void, RequestTimer*> Callback;
+  typedef void (*Callback)(RequestTimer*);
 
   RequestTimer()
     : handle_(NULL)
@@ -102,7 +100,8 @@ public:
   };
 
   Handler()
-    : stream_(-1)
+    : connection_(NULL)
+    , stream_(-1)
     , state_(REQUEST_STATE_NEW) {}
 
   virtual ~Handler() {}
@@ -114,6 +113,12 @@ public:
   virtual void on_set(ResponseMessage* response) = 0;
   virtual void on_error(CassError code, const std::string& message) = 0;
   virtual void on_timeout() = 0;
+
+  Connection* connection() const { return connection_; }
+
+  void set_connection(Connection* connection) {
+    connection_ = connection;
+  }
 
   int8_t stream() const { return stream_; }
 
@@ -133,6 +138,9 @@ public:
   void stop_timer() {
     timer_.stop();
   }
+
+protected:
+  Connection* connection_;
 
 private:
   RequestTimer timer_;

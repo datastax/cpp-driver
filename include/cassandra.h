@@ -20,7 +20,7 @@
 #include <stddef.h>
 
 #if !defined(CASS_STATIC)
-#  if (defined(WIN32) || defined(_WIN32))
+#  if defined(_WIN32)
 #    if defined(CASS_BUILDING)
 #      define CASS_EXPORT __declspec(dllexport)
 #    else

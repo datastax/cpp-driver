@@ -17,8 +17,9 @@
 #ifndef __CASS_BUFFER_PIECE_HPP_INCLUDED__
 #define __CASS_BUFFER_PIECE_HPP_INCLUDED__
 
-#include <boost/cstdint.hpp>
-#include <boost/utility/string_ref.hpp>
+#include "string_ref.hpp"
+
+#include <uv.h>
 
 #include <string>
 
@@ -37,11 +38,11 @@ public:
   char* data() const { return data_; }
   int32_t size() const { return size_; }
 
-  boost::string_ref to_string_ref() const {
+  StringRef to_string_ref() const {
     if (size_ < 0) {
-      boost::string_ref();
+      StringRef();
     }
-    return boost::string_ref(data_, size_);
+    return StringRef(data_, size_);
   }
 
   std::string to_string() const {

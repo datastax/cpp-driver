@@ -24,8 +24,7 @@
 #include "logger.hpp"
 #include "result_iterator.hpp"
 #include "result_response.hpp"
-
-#include <boost/utility/string_ref.hpp>
+#include "string_ref.hpp"
 
 #include <iomanip>
 #include <sstream>
@@ -51,7 +50,7 @@ void SchemaChangeHandler::execute() {
 }
 
 bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
-  boost::string_ref current_version;
+  StringRef current_version;
 
   ResultResponse* local_result =
       static_cast<ResultResponse*>(responses[0]);
@@ -63,7 +62,7 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
 
     const Value* v = row->get_by_name("schema_version");
     if (!v->is_null()) {
-      current_version = boost::string_ref(v->buffer().data(), v->buffer().size());
+      current_version = StringRef(v->buffer().data(), v->buffer().size());
     }
   } else {
     LOG_DEBUG("No row found in %s's local system table",
@@ -88,7 +87,7 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
     if (is_valid_address && request_handler_->is_host_up(address)) {
       const Value* v = row->get_by_name("schema_version");
       if (!row->get_by_name("rpc_address")->is_null() && !v->is_null()) {
-        boost::string_ref version(v->buffer().data(), v->buffer().size());
+        StringRef version(v->buffer().data(), v->buffer().size());
         if (version != current_version) {
           return false;
         }

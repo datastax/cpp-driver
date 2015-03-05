@@ -37,7 +37,7 @@ class Session;
 class Timer;
 class Value;
 
-class ControlConnection {
+class ControlConnection : public Connection::Listener {
 public:
   static bool determine_address_for_peer_host(const Address& connected_address,
                                               const Value* peer_value,
@@ -51,6 +51,7 @@ public:
   };
 
   ControlConnection();
+  virtual ~ControlConnection() {}
 
   int protocol_version() const {
     return protocol_version_;
@@ -67,15 +68,18 @@ public:
   void on_down(const Address& address);
 
 private:
+  template<class T>
   class ControlMultipleRequestHandler : public MultipleRequestHandler {
   public:
-    typedef boost::function1<void, const MultipleRequestHandler::ResponseVec&> ResponseCallback;
+    typedef void (*ResponseCallback)(ControlConnection*, const T&, const MultipleRequestHandler::ResponseVec&);
 
     ControlMultipleRequestHandler(ControlConnection* control_connection,
-                                  ResponseCallback response_callback)
+                                  ResponseCallback response_callback,
+                                  const T& data)
         : MultipleRequestHandler(control_connection->connection_)
         , control_connection_(control_connection)
-        , response_callback_(response_callback) {}
+        , response_callback_(response_callback)
+        , data_(data) {}
 
     virtual void on_set(const MultipleRequestHandler::ResponseVec& responses);
 
@@ -90,12 +94,24 @@ private:
   private:
     ControlConnection* control_connection_;
     ResponseCallback response_callback_;
+    T data_;
   };
+
+  struct RefreshTableData {
+    RefreshTableData(const std::string& keyspace_name,
+                     const std::string& table_name)
+      : keyspace_name(keyspace_name)
+      , table_name(table_name) {}
+    std::string keyspace_name;
+    std::string table_name;
+  };
+
+  struct QueryMetadataAllData {};
 
   template<class T>
   class ControlHandler : public Handler {
   public:
-    typedef boost::function2<void, T, Response*> ResponseCallback;
+    typedef void (*ResponseCallback)(ControlConnection*, const T&, Response*);
 
     ControlHandler(Request* request,
                    ControlConnection* control_connection,
@@ -115,7 +131,7 @@ private:
       if (control_connection_->handle_query_invalid_response(response_body)) {
         return;
       }
-      response_callback_(data_, response_body);
+      response_callback_(control_connection_, data_, response_body);
     }
 
     virtual void on_error(CassError code, const std::string& message) {
@@ -133,30 +149,37 @@ private:
     T data_;
   };
 
-  typedef boost::function1<void, SharedRefPtr<Host> > RefreshNodeCallback;
-
   struct RefreshNodeData {
     RefreshNodeData(const SharedRefPtr<Host>& host,
-                    RefreshNodeCallback callback)
+                    bool is_new_node)
       : host(host)
-      , callback(callback) {}
+      , is_new_node(is_new_node) {}
     SharedRefPtr<Host> host;
-    RefreshNodeCallback callback;
+    bool is_new_node;
   };
 
   void schedule_reconnect(uint64_t ms = 0);
   void reconnect(bool retry_current_host);
 
-  void on_connection_ready(Connection* connection);
+  // Connection listener methods
+  virtual void on_ready(Connection* connection);
+  virtual void on_close(Connection* connection);
+  virtual void on_availability_change(Connection* connection) {}
+  virtual void on_event(EventResponse* response);
+
   //TODO: possibly reorder callback functions to pair with initiator
-  void on_query_meta_all(const MultipleRequestHandler::ResponseVec& responses);
-  void on_refresh_node_info(RefreshNodeData data, Response* response);
-  void on_refresh_node_info_all(RefreshNodeData data, Response* response);
+  static void on_query_meta_all(ControlConnection* control_connection,
+                                const QueryMetadataAllData& data,
+                                const MultipleRequestHandler::ResponseVec& responses);
+  static void on_refresh_node_info(ControlConnection* control_connection,
+                                   const RefreshNodeData& data,
+                                   Response* response);
+  static void on_refresh_node_info_all(ControlConnection* control_connection,
+                                       const RefreshNodeData& data,
+                                       Response* response);
   void on_local_query(ResponseMessage* response);
   void on_peer_query(ResponseMessage* response);
-  void on_connection_closed(Connection* connection);
-  void on_connection_event(EventResponse* response);
-  void on_reconnect(Timer* timer);
+  static void on_reconnect(Timer* timer);
 
   bool handle_query_invalid_response(Response* response);
   void handle_query_failure(CassError code, const std::string& message);
@@ -164,18 +187,18 @@ private:
 
   void query_meta_all();
   void refresh_node_info(SharedRefPtr<Host> host,
-                         RefreshNodeCallback callback,
+                         bool is_new_node,
                          bool query_tokens = false);
   void update_node_info(SharedRefPtr<Host> host, const Row* row);
 
-  void refresh_keyspace(const boost::string_ref& keyspace_name);
-  void on_refresh_keyspace(const std::string& keyspace_name, Response* response);
+  void refresh_keyspace(const StringRef& keyspace_name);
+  static void on_refresh_keyspace(ControlConnection* control_connection, const std::string& keyspace_name, Response* response);
 
-  void refresh_table(const boost::string_ref& keyspace_name,
-                     const boost::string_ref& table_name);
-  void on_refresh_table(const std::string& keyspace_name,
-                        const std::string& table_name,
-                        const MultipleRequestHandler::ResponseVec& responses);
+  void refresh_table(const StringRef& keyspace_name,
+                     const StringRef& table_name);
+  static void on_refresh_table(ControlConnection* control_connection,
+                               const RefreshTableData& data,
+                               const MultipleRequestHandler::ResponseVec& responses);
 
 private:
   State state_;

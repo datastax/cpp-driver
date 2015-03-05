@@ -54,7 +54,6 @@ public:
       , future_(future)
       , is_query_plan_exhausted_(true)
       , io_worker_(NULL)
-      , connection_(NULL)
       , pool_(NULL) {}
 
   virtual const Request* request() const { return request_.get(); }
@@ -69,8 +68,9 @@ public:
 
   void set_io_worker(IOWorker* io_worker);
 
-  void set_connection_and_pool(Connection* connection, Pool* pool) {
-    connection_ = connection;
+  Pool* pool() const { return pool_; }
+
+  void set_pool(Pool* pool) {
     pool_ = pool;
   }
 
@@ -96,7 +96,6 @@ private:
   Address current_address_;
   ScopedPtr<QueryPlan> query_plan_;
   IOWorker* io_worker_;
-  Connection* connection_;
   Pool* pool_;
 };
 

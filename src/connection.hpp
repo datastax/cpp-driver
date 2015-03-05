@@ -31,9 +31,6 @@
 #include "ssl.hpp"
 #include "stream_manager.hpp"
 
-#include <boost/cstdint.hpp>
-#include <boost/function.hpp>
-
 #include <uv.h>
 
 namespace cass {
@@ -57,13 +54,31 @@ public:
     CONNECTION_STATE_CLOSED
   };
 
-  typedef boost::function1<void, EventResponse*> EventCallback;
-  typedef boost::function1<void, Connection*> Callback;
+  class Listener {
+  public:
+    Listener(int event_types = 0)
+      : event_types_(event_types) {}
 
-  Connection(uv_loop_t* loop, const Config& config,
+    virtual ~Listener() {}
+
+    int event_types() const { return event_types_; }
+
+    virtual void on_ready(Connection* connection) = 0;
+    virtual void on_close(Connection* connection) = 0;
+    virtual void on_availability_change(Connection* connection) = 0;
+
+    virtual void on_event(EventResponse* response) = 0;
+
+  private:
+    const int event_types_;
+  };
+
+  Connection(uv_loop_t* loop,
+             const Config& config,
              const Address& address,
              const std::string& keyspace,
-             int protocol_version);
+             int protocol_version,
+             Listener* listener);
 
   void connect();
 
@@ -95,21 +110,10 @@ public:
 
   int protocol_version() const { return protocol_version_; }
 
-  void set_ready_callback(Callback callback) { ready_callback_ = callback; }
-  void set_close_callback(Callback callback) { closed_callback_ = callback; }
-  void set_availability_changed_callback(Callback callback) {
-    availability_changed_callback_ = callback;
-  }
-
-  void set_event_callback(int types, EventCallback callback) {
-    event_types_ = types;
-    event_callback_ = callback;
-  }
-
   size_t available_streams() const { return stream_manager_.available_streams(); }
   size_t pending_request_count() const { return stream_manager_.pending_streams(); }
 
-  void on_timeout(RequestTimer* timer);
+  static void on_timeout(RequestTimer* timer);
 
 private:
   class SslHandshakeWriter {
@@ -248,7 +252,7 @@ private:
   void on_ready();
   void on_set_keyspace();
   void on_supported(ResponseMessage* response);
-  void on_pending_schema_agreement(Timer* timer);
+  static void on_pending_schema_agreement(Timer* timer);
 
   void stop_connect_timer();
   void notify_ready();
@@ -282,21 +286,16 @@ private:
   std::string addr_string_;
   std::string keyspace_;
   const int protocol_version_;
+  Listener* listener_;
 
   ScopedPtr<ResponseMessage> response_;
   StreamManager<Handler*> stream_manager_;
-
-  Callback ready_callback_;
-  Callback closed_callback_;
-  Callback availability_changed_callback_;
-  EventCallback event_callback_;
 
   // the actual connection
   uv_tcp_t socket_;
   // supported stuff sent in start up message
   std::string compression_;
   std::string version_;
-  int event_types_;
 
   Timer* connect_timer_;
   ScopedPtr<SslSession> ssl_session_;

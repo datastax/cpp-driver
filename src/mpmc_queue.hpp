@@ -22,14 +22,11 @@
 #ifndef __CASS_MPMC_QUEUE_INCLUDED__
 #define __CASS_MPMC_QUEUE_INCLUDED__
 
-#include <assert.h>
-
+#include "atomic.hpp"
 #include "common.hpp"
 #include "macros.hpp"
 
-#include <boost/atomic.hpp>
-#include <boost/type_traits/alignment_of.hpp>
-#include <boost/aligned_storage.hpp>
+#include <assert.h>
 
 namespace cass {
 
@@ -41,12 +38,12 @@ public:
   MPMCQueue(size_t size)
       : size_(next_pow_2(size))
       , mask_(size_ - 1)
-      , buffer_(reinterpret_cast<Node*>(new AlignedNode[size_]))
+      , buffer_(new Node[size_])
       , tail_(0)
       , head_(0) {
     // populate the sequence initial values
     for (size_t i = 0; i < size_; ++i) {
-      buffer_[i].seq.store(i, boost::memory_order_relaxed);
+      buffer_[i].seq.store(i, MEMORY_ORDER_RELAXED);
     }
   }
 
@@ -57,11 +54,11 @@ public:
     // convert the sequence to an array index this is why the ring
     // buffer must be a size which is a power of 2. this also allows
     // the sequence to double as a ticket/lock.
-    size_t pos = tail_.load(boost::memory_order_relaxed);
+    size_t pos = tail_.load(MEMORY_ORDER_RELAXED);
 
     for (;;) {
       Node* node = &buffer_[pos & mask_];
-      size_t node_seq = node->seq.load(boost::memory_order_acquire);
+      size_t node_seq = node->seq.load(MEMORY_ORDER_ACQUIRE);
       intptr_t dif = (intptr_t)node_seq - (intptr_t)pos;
 
       // if seq and head_seq are the same then it means this slot is empty
@@ -70,12 +67,11 @@ public:
         // last checked then that means someone beat us to the punch
         // weak compare is faster, but can return spurious results
         // which in this instance is OK, because it's in the loop
-        if (tail_.compare_exchange_weak(pos, pos + 1,
-                                        boost::memory_order_relaxed)) {
+        if (tail_.compare_exchange_weak(pos, pos + 1, MEMORY_ORDER_RELAXED)) {
           // set the data
           node->data = data;
           // increment the sequence so that the tail knows it's accessible
-          node->seq.store(pos + 1, boost::memory_order_release);
+          node->seq.store(pos + 1, MEMORY_ORDER_RELEASE);
           return true;
         }
       } else if (dif < 0) {
@@ -84,7 +80,7 @@ public:
         return false;
       } else {
         // under normal circumstances this branch should never be taken
-        pos = tail_.load(boost::memory_order_relaxed);
+        pos = tail_.load(MEMORY_ORDER_RELAXED);
       }
     }
 
@@ -93,11 +89,11 @@ public:
   }
 
   bool dequeue(T& data) {
-    size_t pos = head_.load(boost::memory_order_relaxed);
+    size_t pos = head_.load(MEMORY_ORDER_RELAXED);
 
     for (;;) {
       Node* node = &buffer_[pos & mask_];
-      size_t node_seq = node->seq.load(boost::memory_order_acquire);
+      size_t node_seq = node->seq.load(MEMORY_ORDER_ACQUIRE);
       intptr_t dif = (intptr_t)node_seq - (intptr_t)(pos + 1);
 
       // if seq and head_seq are the same then it means this slot is empty
@@ -106,13 +102,12 @@ public:
         // last checked then that means someone beat us to the punch
         // weak compare is faster, but can return spurious results
         // which in this instance is OK, because it's in the loop
-        if (head_.compare_exchange_weak(pos, pos + 1,
-                                        boost::memory_order_relaxed)) {
+        if (head_.compare_exchange_weak(pos, pos + 1, MEMORY_ORDER_RELAXED)) {
           // set the output
           data = node->data;
           // set the sequence to what the head sequence should be next
           // time around
-          node->seq.store(pos + mask_ + 1, boost::memory_order_release);
+          node->seq.store(pos + mask_ + 1, MEMORY_ORDER_RELEASE);
           return true;
         }
       } else if (dif < 0) {
@@ -121,7 +116,7 @@ public:
         return false;
       } else {
         // under normal circumstances this branch should never be taken
-        pos = head_.load(boost::memory_order_relaxed);
+        pos = head_.load(MEMORY_ORDER_RELAXED);
       }
     }
 
@@ -130,20 +125,17 @@ public:
   }
 
   bool is_empty() const {
-    size_t pos = head_.load(boost::memory_order_acquire);
+    size_t pos = head_.load(MEMORY_ORDER_ACQUIRE);
     Node* node = &buffer_[pos & mask_];
-    size_t node_seq = node->seq.load(boost::memory_order_acquire);
+    size_t node_seq = node->seq.load(MEMORY_ORDER_ACQUIRE);
     return (intptr_t)node_seq - (intptr_t)(pos + 1) < 0;
   }
 
 private:
   struct Node {
+    Atomic<size_t> seq;
     T data;
-    boost::atomic<size_t> seq;
   };
-
-  typedef typename boost::aligned_storage<
-      sizeof(Node), boost::alignment_of<Node>::value>::type AlignedNode;
 
   // it's either 32 or 64 so 64 is good enough
   typedef char CachePad[64];
@@ -153,9 +145,9 @@ private:
   const size_t mask_;
   Node* const buffer_;
   CachePad pad1_;
-  boost::atomic<size_t> tail_;
+  Atomic<size_t> tail_;
   CachePad pad2_;
-  boost::atomic<size_t> head_;
+  Atomic<size_t> head_;
   CachePad pad3_;
 
   DISALLOW_COPY_AND_ASSIGN(MPMCQueue);

@@ -46,7 +46,6 @@ public:
   virtual void on_error(CassError code, const std::string& message) = 0;
   virtual void on_timeout() = 0;
 
-protected:
   Connection* connection() {
     return connection_;
   }

@@ -17,10 +17,9 @@
 #ifndef __CASS_REF_COUNTED_HPP_INCLUDED__
 #define __CASS_REF_COUNTED_HPP_INCLUDED__
 
+#include "atomic.hpp"
 #include "common.hpp"
 #include "macros.hpp"
-
-#include <boost/atomic.hpp>
 
 #include <assert.h>
 #include <new>
@@ -36,36 +35,36 @@ public:
       : ref_count_(0) {}
 
   int ref_count() const {
-    return ref_count_.load(boost::memory_order_acquire);
+    return ref_count_.load(MEMORY_ORDER_ACQUIRE);
   }
 
   void inc_ref() const {
-    ref_count_.fetch_add(1, boost::memory_order_relaxed);
+    ref_count_.fetch_add(1, MEMORY_ORDER_RELAXED);
   }
 
   void dec_ref() const {
-    int new_ref_count = ref_count_.fetch_sub(1, boost::memory_order_release);
+    int new_ref_count = ref_count_.fetch_sub(1, MEMORY_ORDER_RELEASE);
     assert(new_ref_count >= 1);
     if (new_ref_count == 1) {
-      boost::atomic_thread_fence(boost::memory_order_acquire);
+      atomic_thread_fence(MEMORY_ORDER_ACQUIRE);
       delete static_cast<const T*>(this);
     }
   }
 
 private:
-  mutable boost::atomic<int> ref_count_;
+  mutable Atomic<int> ref_count_;
   DISALLOW_COPY_AND_ASSIGN(RefCounted);
 };
 
 class RefBuffer : public RefCounted<RefBuffer> {
 public:
   static RefBuffer* create(size_t size) {
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
 #pragma warning(push)
 #pragma warning(disable: 4291) //Invalid warning thrown RefBuffer has a delete function
 #endif
     return new (size) RefBuffer();
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
 #pragma warning(pop)
 #endif
   }

@@ -14,40 +14,16 @@
   limitations under the License.
 */
 
-#ifndef __CASS_UUIDS_HPP_INCLUDED__
-#define __CASS_UUIDS_HPP_INCLUDED__
+#ifndef __CASS_RANDOM_HPP_INCLUDED__
+#define __CASS_RANDOM_HPP_INCLUDED__
 
-#include "atomic.hpp"
-#include "cassandra.h"
-#include "random.hpp"
-
-#include <uv.h>
-#include <assert.h>
-#include <string.h>
+#include "third_party/mt19937_64/mt19937_64.hpp"
 
 namespace cass {
 
-class UuidGen {
-public:
-  UuidGen();
-  UuidGen(uint64_t node);
-  ~UuidGen();
-
-  void generate_time(CassUuid* output);
-  void from_time(uint64_t timestamp, CassUuid* output);
-  void generate_random(CassUuid* output);
-
-private:
-  void set_clock_seq_and_node(uint64_t node);
-  uint64_t monotonic_timestamp();
-
-  uint64_t clock_seq_and_node_;
-  Atomic<uint64_t> last_timestamp_;
-
-  uv_mutex_t mutex_;
-  MT19937_64 ng_;
-};
+uint64_t get_random_seed(uint64_t seed);
 
 } // namespace cass
 
 #endif
+

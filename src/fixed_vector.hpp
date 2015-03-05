@@ -17,9 +17,8 @@
 #ifndef __CASS_FIXED_ALLOCATOR_HPP_INCLUDED__
 #define __CASS_FIXED_ALLOCATOR_HPP_INCLUDED__
 
+#include "aligned_storage.hpp"
 #include "macros.hpp"
-
-#include <boost/aligned_storage.hpp>
 
 #include <limits>
 #include <memory>
@@ -48,8 +47,8 @@ public:
     Fixed()
       : is_used(false) {}
 
-    typedef boost::aligned_storage<N * sizeof(T),
-                                   boost::alignment_of<T>::value> Storage;
+    // See aligned_storage.hpp for why this is required
+    typedef AlignedStorage<N * sizeof(T), ALIGN_OF(T)> Storage;
 
     bool is_used;
     Storage data;

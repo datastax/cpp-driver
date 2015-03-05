@@ -24,13 +24,12 @@
 #include "scoped_lock.hpp"
 #include "timer.hpp"
 
-#include <boost/bind.hpp>
-
 namespace cass {
 
 IOWorker::IOWorker(Session* session)
     : session_(session)
     , config_(session->config())
+    , protocol_version_(-1)
     , is_closing_(false)
     , pending_request_count_(0)
     , request_queue_(config_.queue_size_io()) {
@@ -257,14 +256,16 @@ void IOWorker::on_pending_pool_reconnect(Timer* timer) {
   PendingReconnect* pending_reconnect =
       static_cast<PendingReconnect*>(timer->data());
 
+  IOWorker* io_worker = pending_reconnect->io_worker;
+
   LOG_DEBUG("Reconnecting pool reconnect(%p timer(%p)) io_worker(%p)",
             static_cast<void*>(pending_reconnect),
             static_cast<void*>(timer),
-            static_cast<void*>(this));
+            static_cast<void*>(io_worker));
 
   const Address& address = pending_reconnect->address;
-  add_pool(address, false);
-  pending_reconnects_.erase(address);
+  io_worker->add_pool(address, false);
+  io_worker->pending_reconnects_.erase(address);
 }
 
 void IOWorker::on_event(const IOWorkerEvent& event) {
@@ -347,11 +348,12 @@ void IOWorker::schedule_reconnect(const Address& address) {
   }
 
   PendingReconnect& pr = pending_reconnects_[address];
+  pr.io_worker = this;
   pr.address = address;
   pr.timer = Timer::start(loop(),
                           config_.reconnect_wait_time_ms(),
                           &pr,
-                          boost::bind(&IOWorker::on_pending_pool_reconnect, this, _1));
+                          IOWorker::on_pending_pool_reconnect);
   LOG_DEBUG("Scheduling reconnect(%p timer(%p)) for host %s io_worker(%p)",
             static_cast<void*>(&pr),
             static_cast<void*>(pr.timer),

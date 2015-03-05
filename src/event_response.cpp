@@ -21,13 +21,13 @@
 namespace cass {
 
 bool EventResponse::decode(int version, char* buffer, size_t size) {
-  boost::string_ref event_type;
+  StringRef event_type;
   char* pos = decode_string_ref(buffer, &event_type);
 
   if (event_type == "TOPOLOGY_CHANGE") {
     event_type_ = CASS_EVENT_TOPOLOGY_CHANGE;
 
-    boost::string_ref topology_change;
+    StringRef topology_change;
     pos = decode_string_ref(pos, &topology_change);
     if (topology_change == "NEW_NODE") {
       topology_change_ = NEW_NODE;
@@ -42,7 +42,7 @@ bool EventResponse::decode(int version, char* buffer, size_t size) {
   } else if (event_type == "STATUS_CHANGE") {
     event_type_ = CASS_EVENT_STATUS_CHANGE;
 
-    boost::string_ref status_change;
+    StringRef status_change;
     pos = decode_string_ref(pos, &status_change);
     if (status_change == "UP") {
       status_change_ = UP;
@@ -55,7 +55,7 @@ bool EventResponse::decode(int version, char* buffer, size_t size) {
   } else if (event_type == "SCHEMA_CHANGE") {
     event_type_ = CASS_EVENT_SCHEMA_CHANGE;
 
-    boost::string_ref schema_change;
+    StringRef schema_change;
     pos = decode_string_ref(pos, &schema_change);
     if (schema_change == "CREATED") {
       schema_change_ = CREATED;

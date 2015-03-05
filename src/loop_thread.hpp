@@ -52,7 +52,7 @@ public:
     is_loop_initialized_ = true;
 #endif
 
-#if !defined(WIN32) && !defined(_WIN32)
+#if !defined(_WIN32)
     rc = uv_signal_init(loop(), &sigpipe_);
     if (rc != 0) return rc;
     rc = uv_signal_start(&sigpipe_, on_signal, SIGPIPE);
@@ -61,7 +61,7 @@ public:
   }
 
   void close_handles() {
-#if !defined(WIN32) && !defined(_WIN32)
+#if !defined(_WIN32)
     uv_signal_stop(&sigpipe_);
     uv_close(copy_cast<uv_signal_t*, uv_handle_t*>(&sigpipe_), NULL);
 #endif
@@ -101,7 +101,7 @@ private:
     thread->on_after_run();
   }
 
-#if !defined(WIN32) && !defined(_WIN32)
+#if !defined(_WIN32)
   static void on_signal(uv_signal_t* signal, int signum) {
     // Ignore SIGPIPE
   }
@@ -117,7 +117,7 @@ private:
   uv_thread_t thread_;
   bool is_joinable_;
 
-#if !defined(WIN32) && !defined(_WIN32)
+#if !defined(_WIN32)
   uv_signal_t sigpipe_;
 #endif
 };

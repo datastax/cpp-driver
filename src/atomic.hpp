@@ -14,15 +14,16 @@
   limitations under the License.
 */
 
-#ifndef __CASS_GET_TIME_HPP_INCLUDED__
-#define __CASS_GET_TIME_HPP_INCLUDED__
+#ifndef __CASS_ATOMIC_HPP_INCLUDED__
+#define __CASS_ATOMIC_HPP_INCLUDED__
 
-#include <uv.h>
-
-namespace cass {
-
-uint64_t get_time_since_epoch_ms();
-
-}
+#if defined(CASS_USE_BOOST_ATOMIC)
+#include "atomic/atomic_boost.hpp"
+#elif defined(CASS_USE_STD_ATOMIC)
+#include "atomic/atomic_std.hpp"
+#else
+#include "atomic/atomic_intrinsics.hpp"
+#endif
 
 #endif
+

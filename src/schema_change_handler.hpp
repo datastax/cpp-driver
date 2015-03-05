@@ -21,9 +21,9 @@
 #include "ref_counted.hpp"
 #include "request_handler.hpp"
 #include "scoped_ptr.hpp"
+#include "string_ref.hpp"
 
-#include <boost/utility/string_ref.hpp>
-#include <boost/cstdint.hpp>
+#include <uv.h>
 
 namespace cass {
 

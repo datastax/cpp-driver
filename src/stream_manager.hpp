@@ -19,7 +19,7 @@
 
 #include <assert.h>
 
-#include <boost/cstdint.hpp>
+#include <uv.h>
 
 namespace cass {
 

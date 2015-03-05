@@ -21,13 +21,11 @@
 
 #include "address.hpp"
 
-#include <boost/function.hpp>
-
 namespace cass {
 
 class Connector {
 public:
-  typedef boost::function1<void, Connector*> Callback;
+  typedef void (*Callback)(Connector*);
 
   const Address& address() { return address_; }
   int status() { return status_; }

@@ -20,17 +20,16 @@
 #include "address.hpp"
 #include "cassandra.h"
 #include "common.hpp"
+#include "string_ref.hpp"
 
-#include <boost/cstdint.hpp>
-#include <boost/limits.hpp>
-#include <boost/static_assert.hpp>
-#include <boost/utility/string_ref.hpp>
+#include <uv.h>
 
 #include <assert.h>
-#include <string.h>
+#include <limits>
 #include <list>
 #include <map>
 #include <string>
+#include <string.h>
 
 namespace cass {
 
@@ -78,7 +77,7 @@ inline char* decode_int32(char* input, int32_t& output) {
 }
 
 inline void encode_int64(char* output, cass_int64_t value) {
-  BOOST_STATIC_ASSERT(sizeof(cass_int64_t) == 8);
+  STATIC_ASSERT(sizeof(cass_int64_t) == 8);
   output[0] = static_cast<char>(value >> 56);
   output[1] = static_cast<char>(value >> 48);
   output[2] = static_cast<char>(value >> 40);
@@ -90,7 +89,7 @@ inline void encode_int64(char* output, cass_int64_t value) {
 }
 
 inline void encode_uint64(uint8_t* output, uint64_t value) {
-  BOOST_STATIC_ASSERT(sizeof(cass_uint64_t) == 8);
+  STATIC_ASSERT(sizeof(cass_uint64_t) == 8);
   output[0] = static_cast<uint8_t>(value >> 56);
   output[1] = static_cast<uint8_t>(value >> 48);
   output[2] = static_cast<uint8_t>(value >> 40);
@@ -102,7 +101,7 @@ inline void encode_uint64(uint8_t* output, uint64_t value) {
 }
 
 inline char* decode_int64(char* input, cass_int64_t& output) {
-  BOOST_STATIC_ASSERT(sizeof(cass_int64_t) == 8);
+  STATIC_ASSERT(sizeof(cass_int64_t) == 8);
   output = (static_cast<cass_int64_t>(static_cast<uint8_t>(input[7])) << 0) |
            (static_cast<cass_int64_t>(static_cast<uint8_t>(input[6])) << 8) |
            (static_cast<cass_int64_t>(static_cast<uint8_t>(input[5])) << 16) |
@@ -115,12 +114,12 @@ inline char* decode_int64(char* input, cass_int64_t& output) {
 }
 
 inline void encode_float(char* output, float value) {
-  BOOST_STATIC_ASSERT(std::numeric_limits<float>::is_iec559);
+  STATIC_ASSERT(std::numeric_limits<float>::is_iec559);
   encode_int32(output, copy_cast<float, int32_t>(value));
 }
 
 inline char* decode_float(char* input, float& output) {
-  BOOST_STATIC_ASSERT(std::numeric_limits<float>::is_iec559);
+  STATIC_ASSERT(std::numeric_limits<float>::is_iec559);
   int32_t int_value;
   char* pos = decode_int32(input, int_value);
   output = copy_cast<int32_t, float>(int_value);
@@ -128,12 +127,12 @@ inline char* decode_float(char* input, float& output) {
 }
 
 inline void encode_double(char* output, double value) {
-  BOOST_STATIC_ASSERT(std::numeric_limits<double>::is_iec559);
+  STATIC_ASSERT(std::numeric_limits<double>::is_iec559);
   encode_int64(output, copy_cast<double, int64_t>(value));
 }
 
 inline char* decode_double(char* input, double& output) {
-  BOOST_STATIC_ASSERT(std::numeric_limits<double>::is_iec559);
+  STATIC_ASSERT(std::numeric_limits<double>::is_iec559);
   cass_int64_t int_value;
   char* pos = decode_int64(input, int_value);
   output = copy_cast<int64_t, double>(int_value);
@@ -148,11 +147,11 @@ inline char* decode_string(char* input, char** output, size_t& size) {
   return pos + string_size;
 }
 
-inline char* decode_string_ref(char* buffer, boost::string_ref* output) {
+inline char* decode_string_ref(char* buffer, StringRef* output) {
   char* str;
   size_t str_size;
   buffer = decode_string(buffer, &str, str_size);
-  *output = boost::string_ref(str, str_size);
+  *output = StringRef(str, str_size);
   return buffer;
 }
 

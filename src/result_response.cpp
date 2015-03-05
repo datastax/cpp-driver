@@ -78,7 +78,7 @@ cass_bool_t cass_result_has_more_pages(const CassResult* result) {
 
 namespace cass {
 
-size_t ResultResponse::find_column_indices(boost::string_ref name,
+size_t ResultResponse::find_column_indices(StringRef name,
                                            ResultMetadata::IndexVec* result) const {
   return metadata_->get(name, result);
 }

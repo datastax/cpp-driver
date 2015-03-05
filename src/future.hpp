@@ -17,14 +17,13 @@
 #ifndef __CASS_FUTURE_HPP_INCLUDED__
 #define __CASS_FUTURE_HPP_INCLUDED__
 
+#include "atomic.hpp"
 #include "cassandra.h"
 #include "host.hpp"
 #include "macros.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 #include "ref_counted.hpp"
-
-#include <boost/function.hpp>
 
 #include <uv.h>
 #include <assert.h>
@@ -41,7 +40,7 @@ enum FutureType {
 
 class Future : public RefCounted<Future> {
 public:
-  typedef boost::function2<void, CassFuture*, void*> Callback;
+  typedef void (*Callback)(CassFuture*, void*);
 
   struct Error {
     Error(CassError code, const std::string& message)
@@ -55,7 +54,8 @@ public:
   Future(FutureType type)
       : is_set_(false)
       , type_(type)
-      , loop_(NULL) {
+      , loop_(NULL)
+      , callback_(NULL) {
     uv_mutex_init(&mutex_);
     uv_cond_init(&cond_);
   }
@@ -101,7 +101,7 @@ public:
   }
 
   void set_loop(uv_loop_t* loop) {
-    loop_ = loop;
+    loop_.store(loop);
   }
 
   bool set_callback(Callback callback, void* data);
@@ -141,7 +141,7 @@ private:
   uv_cond_t cond_;
   FutureType type_;
   ScopedPtr<Error> error_;
-  boost::atomic<uv_loop_t*> loop_;
+  Atomic<uv_loop_t*> loop_;
   uv_work_t work_;
   Callback callback_;
   void* data_;
