@@ -14,46 +14,11 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BUFFER_PIECE_HPP_INCLUDED__
-#define __CASS_BUFFER_PIECE_HPP_INCLUDED__
-
 #include "string_ref.hpp"
-
-#include <boost/cstdint.hpp>
-
-#include <string>
 
 namespace cass {
 
-class BufferPiece {
-public:
-  BufferPiece()
-      : data_(NULL)
-      , size_(-1) {}
-
-  BufferPiece(char* data, size_t size)
-      : data_(data)
-      , size_(size) {}
-
-  char* data() const { return data_; }
-  int32_t size() const { return size_; }
-
-  StringRef to_string_ref() const {
-    if (size_ < 0) {
-      StringRef();
-    }
-    return StringRef(data_, size_);
-  }
-
-  std::string to_string() const {
-    return to_string_ref().to_string();
-  }
-
-private:
-  char* data_;
-  int32_t size_;
-};
+StringRef::size_type StringRef::npos = -1;
 
 } // namespace cass
 
-#endif

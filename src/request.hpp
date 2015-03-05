@@ -20,8 +20,7 @@
 #include "buffer.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
-
-#include <boost/utility/string_ref.hpp>
+#include "string_ref.hpp"
 
 namespace cass {
 

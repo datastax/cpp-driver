@@ -59,6 +59,40 @@ std::string opcode_to_string(int opcode);
 
 std::string& trim(std::string& str);
 
+//template<class RangeInput, class RangeTest>
+//bool starts_with(const RangeInput& input, const RangeTest& test) {
+//  typename RangeTest::const_iterator test_it = test.begin();
+//  typename RangeTest::const_iterator test_end = test.end();
+//
+//  typename RangeInput::const_iterator input_it = input.begin();
+//  typename RangeInput::const_iterator input_end = input.end();
+//  for (; input_it != input_end && test_it != test_end; ++input_it, ++test_it) {
+//    if (*input_it != *test_it) {
+//      return false;
+//    }
+//  }
+//
+//  return test_it == test_end;
+//}
+//
+//template<class RangeInput, class RangeTest>
+//bool ends_with(const RangeInput& input, const RangeTest& test) {
+//  typename RangeTest::const_iterator test_it = test.end();
+//  typename RangeTest::const_iterator test_begin = test.begin();
+//
+//  typename RangeInput::const_iterator input_it = input.end();
+//  typename RangeInput::const_iterator input_begin = input.begin();
+//
+//  while (input_it != input_begin && test_it != test_begin) {
+//    if (*(input_it--) != *(test_it--)) {
+//      return false;
+//    }
+//  }
+//  return test_it == test_begin;
+//}
+
+//bool iequals(const std::string& str, const std::string& end);
+
 } // namespace cass
 
 #endif

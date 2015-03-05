@@ -467,7 +467,7 @@ BOOST_AUTO_TEST_CASE(simple)
   for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
     std::string ts = boost::lexical_cast<std::string>(t);
     cass::TokenStringList tokens;
-    tokens.push_back(boost::string_ref(ts));
+    tokens.push_back(StringRef(ts));
     token_map.update_host(i->second, tokens);
     t += partition_size;
   }
@@ -547,7 +547,7 @@ BOOST_AUTO_TEST_CASE(network_topology)
   for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
     std::string ts = boost::lexical_cast<std::string>(t);
     cass::TokenStringList tokens;
-    tokens.push_back(boost::string_ref(ts));
+    tokens.push_back(StringRef(ts));
     token_map.update_host(i->second, tokens);
     t += partition_size;
   }

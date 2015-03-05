@@ -67,7 +67,7 @@ char* decode_row(char* rows, const ResultResponse* result, ValueVec& output) {
   return buffer;
 }
 
-const Value* Row::get_by_name(const boost::string_ref& name) const {
+const Value* Row::get_by_name(const StringRef& name) const {
   cass::ResultMetadata::IndexVec indices;
   if (result_->find_column_indices(name, &indices) == 0) {
     return NULL;
@@ -75,7 +75,7 @@ const Value* Row::get_by_name(const boost::string_ref& name) const {
   return &values[indices[0]];
 }
 
-bool Row::get_string_by_name(const boost::string_ref& name, std::string* out) const {
+bool Row::get_string_by_name(const StringRef& name, std::string* out) const {
   const Value* value = get_by_name(name);
   if (value == NULL ||
       value->buffer().size() < 0) {

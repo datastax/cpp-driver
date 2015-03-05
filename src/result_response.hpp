@@ -22,8 +22,7 @@
 #include "result_metadata.hpp"
 #include "response.hpp"
 #include "row.hpp"
-
-#include <boost/utility/string_ref.hpp>
+#include "string_ref.hpp"
 
 #include <map>
 #include <string>
@@ -92,7 +91,7 @@ public:
 
   const Row& first_row() const { return first_row_; }
 
-  size_t find_column_indices(boost::string_ref name,
+  size_t find_column_indices(StringRef name,
                              ResultMetadata::IndexVec* result) const;
 
   bool decode(int version, char* input, size_t size);

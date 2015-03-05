@@ -21,8 +21,7 @@
 #include "response.hpp"
 #include "constants.hpp"
 #include "scoped_ptr.hpp"
-
-#include <boost/utility/string_ref.hpp>
+#include "string_ref.hpp"
 
 namespace cass {
 
@@ -73,12 +72,12 @@ public:
     return schema_change_;
   }
 
-  boost::string_ref keyspace() const {
-    return boost::string_ref(keyspace_, keyspace_size_);
+  StringRef keyspace() const {
+    return StringRef(keyspace_, keyspace_size_);
   }
 
-  boost::string_ref table() const {
-    return boost::string_ref(table_, table_size_);
+  StringRef table() const {
+    return StringRef(table_, table_size_);
   }
 
 private:

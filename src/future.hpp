@@ -24,8 +24,6 @@
 #include "scoped_ptr.hpp"
 #include "ref_counted.hpp"
 
-#include <boost/function.hpp>
-
 #include <uv.h>
 #include <assert.h>
 #include <string>
@@ -41,7 +39,7 @@ enum FutureType {
 
 class Future : public RefCounted<Future> {
 public:
-  typedef boost::function2<void, CassFuture*, void*> Callback;
+  typedef void (*Callback)(CassFuture*, void*);
 
   struct Error {
     Error(CassError code, const std::string& message)

@@ -464,7 +464,7 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
       TokenStringList tokens;
       while (i.next()) {
         const BufferPiece& bp = i.value()->buffer();
-        tokens.push_back(boost::string_ref(bp.data(), bp.size()));
+        tokens.push_back(StringRef(bp.data(), bp.size()));
       }
       if (!tokens.empty()) {
         session_->cluster_meta().update_host(host, tokens);
@@ -473,7 +473,7 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
   }
 }
 
-void ControlConnection::refresh_keyspace(const boost::string_ref& keyspace_name) {
+void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
   std::string query(SELECT_KEYSPACES);
   query.append(" WHERE keyspace_name='")
        .append(keyspace_name.data(), keyspace_name.size())
@@ -498,8 +498,8 @@ void ControlConnection::on_refresh_keyspace(const std::string& keyspace_name, Re
   session_->cluster_meta().update_keyspaces(result);
 }
 
-void ControlConnection::refresh_table(const boost::string_ref& keyspace_name,
-                                      const boost::string_ref& table_name) {
+void ControlConnection::refresh_table(const StringRef& keyspace_name,
+                                      const StringRef& table_name) {
   std::string cf_query(SELECT_COLUMN_FAMILIES);
   cf_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
           .append("' AND columnfamily_name='").append(table_name.data(), table_name.size()).append("'");

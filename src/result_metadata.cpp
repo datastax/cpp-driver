@@ -27,17 +27,17 @@
 // additional memory.
 #define LOAD_FACTOR 0.75
 
-namespace {
+namespace cass {
 
 struct ToLowerIterator {
 public:
-  typedef boost::string_ref::value_type value_type;
-  typedef boost::string_ref::difference_type difference_type;
-  typedef boost::string_ref::pointer pointer;
-  typedef boost::string_ref::reference reference;
+  typedef StringRef::value_type value_type;
+  typedef StringRef::difference_type difference_type;
+  typedef StringRef::pointer pointer;
+  typedef StringRef::reference reference;
   typedef std::forward_iterator_tag iterator_category;
 
-  ToLowerIterator(boost::string_ref::iterator it)
+  ToLowerIterator(StringRef::iterator it)
     : it_(it) {}
 
   value_type operator*() { return ::tolower(*it_); }
@@ -47,12 +47,8 @@ public:
   bool operator!=(const ToLowerIterator& rhs) { return it_ != rhs.it_; }
 
 private:
-    boost::string_ref::const_iterator it_;
+    StringRef::const_iterator it_;
 };
-
-} // namespace
-
-namespace cass {
 
 ResultMetadata::ResultMetadata(size_t column_count) {
   defs_.reserve(column_count);
@@ -63,7 +59,7 @@ ResultMetadata::ResultMetadata(size_t column_count) {
 }
 
 
-size_t ResultMetadata::get(boost::string_ref name,
+size_t ResultMetadata::get(StringRef name,
                            ResultMetadata::IndexVec* result) const{
   result->clear();
   bool is_case_sensitive = false;
@@ -78,7 +74,7 @@ size_t ResultMetadata::get(boost::string_ref name,
 
   size_t start = h;
   while (index_[h] != NULL && !boost::iequals(name,
-                                              boost::string_ref(index_[h]->name,
+                                              StringRef(index_[h]->name,
                                                                 index_[h]->name_size))) {
     h = (h + 1) & index_mask_;
     if (h == start) {
@@ -99,7 +95,7 @@ size_t ResultMetadata::get(boost::string_ref name,
     }
   } else {
     while (def != NULL) {
-      if (name.compare(boost::string_ref(def->name, def->name_size)) == 0) {
+      if (name.compare(StringRef(def->name, def->name_size)) == 0) {
         result->push_back(def->index);
       }
       def = def->next;
@@ -112,7 +108,7 @@ size_t ResultMetadata::get(boost::string_ref name,
 void ResultMetadata::insert(ColumnDefinition& def) {
   defs_.push_back(def);
 
-  boost::string_ref name(def.name, def.name_size);
+  StringRef name(def.name, def.name_size);
 
   size_t h = boost::hash_range(ToLowerIterator(name.begin()),
                                ToLowerIterator(name.end())) & index_mask_;
@@ -122,7 +118,7 @@ void ResultMetadata::insert(ColumnDefinition& def) {
   } else {
     // Use linear probing to find an open bucket
     while (index_[h] != NULL && !boost::iequals(name,
-                                                boost::string_ref(index_[h]->name,
+                                                StringRef(index_[h]->name,
                                                                   index_[h]->name_size))) {
       h = (h + 1) & index_mask_;
     }

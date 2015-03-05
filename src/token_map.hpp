@@ -23,20 +23,19 @@
 #include "replication_strategy.hpp"
 #include "scoped_ptr.hpp"
 #include "schema_metadata.hpp"
-
-#include <boost/utility/string_ref.hpp>
+#include "string_ref.hpp"
 
 #include <map>
 #include <vector>
 
 namespace cass {
 
-typedef std::vector<boost::string_ref> TokenStringList;
+typedef std::vector<StringRef> TokenStringList;
 
 class Partitioner {
 public:
   virtual ~Partitioner() {}
-  virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const = 0;
+  virtual Token token_from_string_ref(const StringRef& token_string_ref) const = 0;
   virtual Token hash(const uint8_t* data, size_t size) const = 0;
 };
 
@@ -86,7 +85,7 @@ class Murmur3Partitioner : public Partitioner {
 public:
   static const std::string PARTITIONER_CLASS;
 
-  virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
+  virtual Token token_from_string_ref(const StringRef& token_string_ref) const;
   virtual Token hash(const uint8_t* data, size_t size) const;
 };
 
@@ -95,7 +94,7 @@ class RandomPartitioner : public Partitioner {
 public:
   static const std::string PARTITIONER_CLASS;
 
-  virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
+  virtual Token token_from_string_ref(const StringRef& token_string_ref) const;
   virtual Token hash(const uint8_t* data, size_t size) const;
 };
 
@@ -104,7 +103,7 @@ class ByteOrderedPartitioner : public Partitioner {
 public:
   static const std::string PARTITIONER_CLASS;
 
-  virtual Token token_from_string_ref(const boost::string_ref& token_string_ref) const;
+  virtual Token token_from_string_ref(const StringRef& token_string_ref) const;
   virtual Token hash(const uint8_t* data, size_t size) const;
 };
 

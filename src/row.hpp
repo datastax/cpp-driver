@@ -18,8 +18,7 @@
 #define __CASS_ROW_HPP_INCLUDED__
 
 #include "value.hpp"
-
-#include <boost/utility/string_ref.hpp>
+#include "string_ref.hpp"
 
 #include <vector>
 
@@ -37,9 +36,9 @@ public:
 
   ValueVec values;
 
-  const Value* get_by_name(const boost::string_ref& name) const;
+  const Value* get_by_name(const StringRef& name) const;
 
-  bool get_string_by_name(const boost::string_ref& name, std::string* out) const;
+  bool get_string_by_name(const StringRef& name, std::string* out) const;
 
   const ResultResponse* result() const { return result_; }
 

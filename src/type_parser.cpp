@@ -16,6 +16,7 @@
 
 #include "type_parser.hpp"
 
+#include "common.hpp"
 #include "scoped_ptr.hpp"
 
 #include <sstream>
@@ -85,7 +86,7 @@ TypeParser::TypeParser(const std::string& class_name, size_t start_index)
   , index_(start_index) {}
 
 bool TypeParser::is_reversed(const std::string& class_name) {
-  return boost::starts_with(class_name, REVERSED_TYPE);
+  return starts_with(class_name, REVERSED_TYPE);
 }
 
 TypeDescriptor TypeParser::parse(const std::string& class_name) {

@@ -20,11 +20,11 @@
 #include "address.hpp"
 #include "cassandra.h"
 #include "common.hpp"
+#include "string_ref.hpp"
 
 #include <boost/cstdint.hpp>
 #include <boost/limits.hpp>
 #include <boost/static_assert.hpp>
-#include <boost/utility/string_ref.hpp>
 
 #include <assert.h>
 #include <string.h>
@@ -148,11 +148,11 @@ inline char* decode_string(char* input, char** output, size_t& size) {
   return pos + string_size;
 }
 
-inline char* decode_string_ref(char* buffer, boost::string_ref* output) {
+inline char* decode_string_ref(char* buffer, StringRef* output) {
   char* str;
   size_t str_size;
   buffer = decode_string(buffer, &str, str_size);
-  *output = boost::string_ref(str, str_size);
+  *output = StringRef(str, str_size);
   return buffer;
 }
 
