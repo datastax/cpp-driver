@@ -218,7 +218,6 @@ endif()
 # OpenSSL
 if(CASS_USE_OPENSSL)
   # Setup the paths and hints for OpenSSL
-  set(_OPENSSL_VERSION "1.0.2") # OpenSSL version variable set due to bug in FindOpenSSL module; addressed in Cmake v3.1.2
   set(_OPENSSL_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/openssl/")
   set(_OPENSSL_ROOT_HINTS ${OPENSSL_ROOT_DIR} $ENV{OPENSSL_ROOT_DIR})
   set(_OPENSSL_ROOT_HINTS_AND_PATHS
