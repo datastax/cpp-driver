@@ -20,6 +20,8 @@
 #include "auth.hpp"
 #include "cassandra.h"
 #include "dc_aware_policy.hpp"
+#include "ref_counted.hpp"
+#include "scoped_ptr.hpp"
 #include "ssl.hpp"
 #include "token_aware_policy.hpp"
 
@@ -211,8 +213,7 @@ public:
   const SharedRefPtr<AuthProvider>& auth_provider() const { return auth_provider_; }
 
   void set_auth_provider(AuthProvider* auth_provider) {
-    if (auth_provider == NULL) return;
-    auth_provider_.reset(auth_provider);
+    auth_provider_.reset(auth_provider == NULL ? new AuthProvider() : auth_provider);
   }
 
   void set_credentials(const std::string& username, const std::string& password) {

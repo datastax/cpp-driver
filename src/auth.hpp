@@ -79,11 +79,43 @@ public:
 
   virtual ~AuthProvider() {}
 
-  virtual V1Authenticator* new_authenticator_v1(Address host) const { return NULL; }
-  virtual Authenticator* new_authenticator(Address host) const { return NULL; }
+  virtual V1Authenticator* new_authenticator_v1(const Address& host) const { return NULL; }
+  virtual Authenticator* new_authenticator(const Address& host) const { return NULL; }
 
 private:
   DISALLOW_COPY_AND_ASSIGN(AuthProvider);
+};
+
+class SaslAuthenticator : public Authenticator {
+public:
+  SaslAuthenticator(const Address& host, const CassAuthCallbacks* callbacks, void* data);
+
+  ~SaslAuthenticator();
+
+  virtual std::string initial_response();
+  virtual std::string evaluate_challenge(const std::string& challenge);
+  virtual void on_authenticate_success(const std::string& token);
+
+private:
+  CassAuth auth_;
+  const CassAuthCallbacks* callbacks_;
+  void* data_;
+};
+
+class SaslAuthProvider : public AuthProvider {
+public:
+  SaslAuthProvider(const CassAuthCallbacks* callbacks, void* data)
+    : callbacks_(*callbacks)
+    , data_(data) {}
+
+  virtual V1Authenticator* new_authenticator_v1(const Address& host) const { return NULL; }
+  virtual Authenticator* new_authenticator(const Address& host) const {
+    return new SaslAuthenticator(host, &callbacks_, data_);
+  }
+
+private:
+  const CassAuthCallbacks callbacks_;
+  void* data_;
 };
 
 class PlainTextAuthProvider : public AuthProvider {
@@ -93,11 +125,11 @@ public:
       : username_(username)
       , password_(password) {}
 
-  virtual V1Authenticator* new_authenticator_v1(Address host) const {
+  virtual V1Authenticator* new_authenticator_v1(const Address& host) const {
     return new PlainTextAuthenticator(username_, password_);
   }
 
-  virtual Authenticator* new_authenticator(Address host) const {
+  virtual Authenticator* new_authenticator(const Address& host) const {
     return new PlainTextAuthenticator(username_, password_);
   }
 
