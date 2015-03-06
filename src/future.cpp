@@ -100,18 +100,18 @@ CassError cass_future_error_code(CassFuture* future) {
   }
 }
 
-CassString cass_future_error_message(CassFuture* future) {
-  CassString str;
+void cass_future_error_message(CassFuture* future,
+                               const char** message,
+                               size_t* message_length) {
   const cass::Future::Error* error = future->get_error();
   if (error != NULL) {
-    const std::string& message = error->message;
-    str.data = message.data();
-    str.length = message.size();
+    const std::string& m = error->message;
+    *message = m.data();
+    *message_length = m.length();
   } else {
-    str.data = "";
-    str.length = 0;
+    *message = "";
+    *message_length = 0;
   }
-  return str;
 }
 
 } // extern "C"

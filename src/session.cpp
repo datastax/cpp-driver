@@ -49,9 +49,19 @@ CassFuture* cass_session_connect(CassSession* session, const CassCluster* cluste
 CassFuture* cass_session_connect_keyspace(CassSession* session,
                                           const CassCluster* cluster,
                                           const char* keyspace) {
+  return cass_session_connect_keyspace_n(session,
+                                         cluster,
+                                         keyspace,
+                                         strlen(keyspace));
+}
+
+CassFuture* cass_session_connect_keyspace_n(CassSession* session,
+                                            const CassCluster* cluster,
+                                            const char* keyspace,
+                                            size_t keyspace_length) {
   cass::SessionFuture* connect_future = new cass::SessionFuture();
   connect_future->inc_ref();
-  session->connect_async(cluster->config(), std::string(keyspace), connect_future);
+  session->connect_async(cluster->config(), std::string(keyspace, keyspace_length), connect_future);
   return CassFuture::to(connect_future);
 }
 
@@ -62,8 +72,14 @@ CassFuture* cass_session_close(CassSession* session) {
   return CassFuture::to(close_future);
 }
 
-CassFuture* cass_session_prepare(CassSession* session, CassString query) {
-  return CassFuture::to(session->prepare(query.data, query.length));
+CassFuture* cass_session_prepare(CassSession* session, const char* query) {
+  return cass_session_prepare_n(session, query, strlen(query));
+}
+
+CassFuture* cass_session_prepare_n(CassSession* session,
+                                   const char* query,
+                                   size_t query_length) {
+  return CassFuture::to(session->prepare(query, query_length));
 }
 
 CassFuture* cass_session_execute(CassSession* session,

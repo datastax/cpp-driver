@@ -28,13 +28,6 @@
 
 extern "C" {
 
-typedef struct CassHost_ {
-  CassInet address;
-  CassString rack;
-  CassString datacenter;
-  CassString version;
-} CassHost;
-
 typedef enum CassBalancingState_ {
   CASS_BALANCING_INIT,
   CASS_BALANCING_CLEANUP,

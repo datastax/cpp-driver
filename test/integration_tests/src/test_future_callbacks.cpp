@@ -55,7 +55,7 @@ struct CallbackData {
   boost::mutex mutex;
   boost::condition cond;
   bool was_called;
-  cass_size_t row_count;
+  size_t row_count;
   CassSession* cass_session;
 };
 
@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(result)
 
   test_utils::CassResultPtr result;
 
-  test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("SELECT * FROM system.schema_keyspaces"), 0));
+  test_utils::CassStatementPtr statement(cass_statement_new("SELECT * FROM system.schema_keyspaces", 0));
   test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
 
   cass_future_set_callback(future.get(), check_result_callback, callback_data.get());

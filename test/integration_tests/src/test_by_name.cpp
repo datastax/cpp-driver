@@ -38,8 +38,8 @@ struct ByNameTests : public test_utils::SingleSessionTest {
   }
 
   test_utils::CassPreparedPtr prepare(const std::string& query) {
-    test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
-                                                                   cass_string_init2(query.data(), query.size())));
+    test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
+                                                                     query.data(), query.size()));
     test_utils::wait_and_check_error(prepared_future.get());
     return test_utils::CassPreparedPtr(cass_future_get_prepared(prepared_future.get()));
   }
@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(bind_and_get)
   BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_OK);
   BOOST_REQUIRE_EQUAL(cass_statement_bind_int32_by_name(statement.get(), "a", 9042), CASS_OK);
   BOOST_REQUIRE_EQUAL(cass_statement_bind_bool_by_name(statement.get(), "b", cass_true), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_string_by_name(statement.get(), "c", cass_string_init("xyz")), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_string_by_name(statement.get(), "c", "xyz"), CASS_OK);
 
   test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
   test_utils::wait_and_check_error(future.get());
@@ -102,8 +102,8 @@ BOOST_AUTO_TEST_CASE(bind_and_get)
   BOOST_REQUIRE(value != NULL);
 
   CassString c;
-  BOOST_REQUIRE_EQUAL(cass_value_get_string(value, &c), CASS_OK);
-  BOOST_CHECK(test_utils::Value<CassString>::equal(c, cass_string_init("xyz")));
+  BOOST_REQUIRE_EQUAL(cass_value_get_string(value, &c.data, &c.length), CASS_OK);
+  BOOST_CHECK(test_utils::Value<CassString>::equal(c, "xyz"));
 }
 
 BOOST_AUTO_TEST_CASE(bind_and_get_case_sensitive)
@@ -204,7 +204,7 @@ BOOST_AUTO_TEST_CASE(bind_multiple_columns)
 
 BOOST_AUTO_TEST_CASE(bind_not_prepared)
 {
-  test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("INSERT INTO by_name (key, a) VALUES (?, ?)"), 2));
+  test_utils::CassStatementPtr statement(cass_statement_new("INSERT INTO by_name (key, a) VALUES (?, ?)", 2));
 
   CassUuid key = test_utils::generate_time_uuid(uuid_gen);
 
@@ -225,7 +225,7 @@ BOOST_AUTO_TEST_CASE(bind_invalid_name)
 
 BOOST_AUTO_TEST_CASE(get_invalid_name)
 {
-  test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init("INSERT INTO by_name (key, a) VALUES (?, ?)"), 2));
+  test_utils::CassStatementPtr statement(cass_statement_new("INSERT INTO by_name (key, a) VALUES (?, ?)", 2));
 
   CassUuid key = test_utils::generate_time_uuid(uuid_gen);
 

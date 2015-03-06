@@ -83,12 +83,21 @@ CassError cass_cluster_set_queue_size_event(CassCluster* cluster,
 
 CassError cass_cluster_set_contact_points(CassCluster* cluster,
                                           const char* contact_points) {
-  size_t length = strlen(contact_points);
-  if (length == 0) {
+  size_t contact_points_length
+      = contact_points == NULL ? 0 : strlen(contact_points);
+  return cass_cluster_set_contact_points_n(cluster,
+                                           contact_points,
+                                           contact_points_length);
+}
+
+CassError cass_cluster_set_contact_points_n(CassCluster* cluster,
+                                            const char* contact_points,
+                                            size_t contact_points_length) {
+  if (contact_points_length == 0) {
     cluster->config().contact_points().clear();
   } else {
     std::istringstream stream(
-          std::string(contact_points, length));
+          std::string(contact_points, contact_points_length));
     while (!stream.eof()) {
       std::string contact_point;
       std::getline(stream, contact_point, ',');
@@ -99,6 +108,7 @@ CassError cass_cluster_set_contact_points(CassCluster* cluster,
   }
   return CASS_OK;
 }
+
 
 CassError cass_cluster_set_core_connections_per_host(CassCluster* cluster,
                                                      unsigned num_connections) {
@@ -203,7 +213,18 @@ void cass_cluster_set_request_timeout(CassCluster* cluster,
 void cass_cluster_set_credentials(CassCluster* cluster,
                                   const char* username,
                                   const char* password) {
-  cluster->config().set_credentials(username, password);
+  return cass_cluster_set_credentials_n(cluster,
+                                        username, strlen(username),
+                                        password, strlen(password));
+}
+
+void cass_cluster_set_credentials_n(CassCluster* cluster,
+                                    const char* username,
+                                    size_t username_length,
+                                    const char* password,
+                                    size_t password_length) {
+  cluster->config().set_credentials(std::string(username, username_length),
+                                    std::string(password, password_length));
 }
 
 void cass_cluster_set_load_balance_round_robin(CassCluster* cluster) {
@@ -214,11 +235,26 @@ CassError cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
                                                  const char* local_dc,
                                                  unsigned used_hosts_per_remote_dc,
                                                  cass_bool_t allow_remote_dcs_for_local_cl) {
-  if (local_dc == NULL || strlen(local_dc) == 0) {
+  if (local_dc == NULL) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  return cass_cluster_set_load_balance_dc_aware_n(cluster,
+                                                  local_dc,
+                                                  strlen(local_dc),
+                                                  used_hosts_per_remote_dc,
+                                                  allow_remote_dcs_for_local_cl);
+}
+
+CassError cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
+                                                 const char* local_dc,
+                                                 size_t local_dc_length,
+                                                 unsigned used_hosts_per_remote_dc,
+                                                 cass_bool_t allow_remote_dcs_for_local_cl) {
+  if (local_dc == NULL || local_dc_length == 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_load_balancing_policy(
-        new cass::DCAwarePolicy(local_dc,
+        new cass::DCAwarePolicy(std::string(local_dc, local_dc_length),
                                 used_hosts_per_remote_dc,
                                 !allow_remote_dcs_for_local_cl));
   return CASS_OK;

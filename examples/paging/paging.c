@@ -35,10 +35,11 @@
 #define NUM_CONCURRENT_REQUESTS 1000
 
 void print_error(CassFuture* future) {
-  CassString message = cass_future_error_message(future);
-  fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
+  const char* message;
+  size_t message_length;
+  cass_future_error_message(future, &message, &message_length);
+  fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
 }
-
 
 CassCluster* create_cluster() {
   CassCluster* cluster = cass_cluster_new();
@@ -63,7 +64,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
+  CassStatement* statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -81,7 +82,7 @@ CassError execute_query(CassSession* session, const char* query) {
 
 void insert_into_paging(CassSession* session, CassUuidGen* uuid_gen) {
   CassError rc = CASS_OK;
-  CassString query = cass_string_init("INSERT INTO paging (key, value) VALUES (?, ?);");
+  const char* query = "INSERT INTO paging (key, value) VALUES (?, ?);";
 
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
 
@@ -95,7 +96,7 @@ void insert_into_paging(CassSession* session, CassUuidGen* uuid_gen) {
     cass_statement_bind_uuid(statement, 0, key);
 
     sprintf(value_buffer, "%u", (unsigned int)i);
-    cass_statement_bind_string(statement, 1, cass_string_init(value_buffer));
+    cass_statement_bind_string(statement, 1, value_buffer);
 
     futures[i] = cass_session_execute(session, statement);
 
@@ -117,7 +118,7 @@ void insert_into_paging(CassSession* session, CassUuidGen* uuid_gen) {
 void select_from_paging(CassSession* session) {
   cass_bool_t has_more_pages = cass_false;
   const CassResult* result = NULL;
-  CassString query = cass_string_init("SELECT * FROM paging");
+  const char* query = "SELECT * FROM paging";
   CassStatement* statement = cass_statement_new(query, 0);
 
   cass_statement_set_paging_size(statement, 100);
@@ -138,16 +139,17 @@ void select_from_paging(CassSession* session) {
     while (cass_iterator_next(iterator)) {
       CassUuid key;
       char key_str[CASS_UUID_STRING_LENGTH];
-      CassString value;
+      const char* value;
+      size_t value_length;
       char value_buffer[256];
 
       const CassRow* row = cass_iterator_get_row(iterator);
       cass_value_get_uuid(cass_row_get_column(row, 0), &key);
       cass_uuid_string(key, key_str);
 
-      cass_value_get_string(cass_row_get_column(row, 1), &value);
-      memcpy(value_buffer, value.data, value.length);
-      value_buffer[value.length] = '\0';
+      cass_value_get_string(cass_row_get_column(row, 1), &value, &value_length);
+      memcpy(value_buffer, value, value_length);
+      value_buffer[value_length] = '\0';
 
       printf("key: '%s' value: '%s'\n", key_str, value_buffer);
     }

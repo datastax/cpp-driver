@@ -30,6 +30,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/move/move.hpp>
 #include <boost/container/vector.hpp>
+#include <boost/version.hpp>
 
 #include "cassandra.h"
 #include "test_utils.hpp"
@@ -54,6 +55,10 @@ struct AllTypes {
   CassInet inet_sample;
 };
 
+// This crashes in Boost 1.57 and the test_utils::CassPreparedPtr version
+// doesn't compile against Boost 1.55 or 1.56
+
+#if BOOST_VERSION < 105700
 // Move emulation wrapper for CassPrepared. This has to be used
 // with boost::container's because they have boost move emulation support.
 class CassPreparedMovable {
@@ -66,11 +71,9 @@ public:
     r.prepared_ = NULL;
   }
 
-#ifndef _WIN32
   CassPreparedMovable(const CassPreparedMovable& r)
     : prepared_(r.prepared_) {
   }
-#endif
 
   CassPreparedMovable& operator=(BOOST_RV_REF(CassPreparedMovable) r) {
     if (prepared_ != NULL) {
@@ -94,6 +97,7 @@ private:
 
   const CassPrepared* prepared_;
 };
+#endif
 
 struct PreparedTests : public test_utils::SingleSessionTest {
   static const char* ALL_TYPE_TABLE_NAME;
@@ -114,13 +118,17 @@ void insert_all_types(CassSession* session, const CassPrepared* prepared, const 
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared));
 
   cass_statement_bind_uuid(statement.get(), 0, all_types.id);
-  cass_statement_bind_string(statement.get(), 1, all_types.text_sample);
+  cass_statement_bind_string_n(statement.get(), 1,
+                               all_types.text_sample.data, all_types.text_sample.length);
   cass_statement_bind_int32(statement.get(), 2, all_types.int_sample);
   cass_statement_bind_int64(statement.get(), 3, all_types.bigint_sample);
   cass_statement_bind_float(statement.get(), 4, all_types.float_sample);
   cass_statement_bind_double(statement.get(), 5, all_types.double_sample);
-  cass_statement_bind_decimal(statement.get(), 6, all_types.decimal_sample);
-  cass_statement_bind_bytes(statement.get(), 7, all_types.blob_sample);
+  cass_statement_bind_decimal(statement.get(), 6,
+                              all_types.decimal_sample.varint, all_types.decimal_sample.varint_size,
+                              all_types.decimal_sample.scale);
+  cass_statement_bind_bytes(statement.get(), 7,
+                            all_types.blob_sample.data, all_types.blob_sample.size);
   cass_statement_bind_bool(statement.get(), 8, all_types.boolean_sample);
   cass_statement_bind_int64(statement.get(), 9, all_types.timestamp_sample);
   cass_statement_bind_inet(statement.get(), 10, all_types.inet_sample);
@@ -132,7 +140,7 @@ void insert_all_types(CassSession* session, const CassPrepared* prepared, const 
 
 void compare_all_types(const AllTypes& input, const CassRow* row) {
   AllTypes output;
-  BOOST_REQUIRE(cass_value_get_string(cass_row_get_column(row, 1), &output.text_sample) == CASS_OK);
+  BOOST_REQUIRE(cass_value_get_string(cass_row_get_column(row, 1), &output.text_sample.data, &output.text_sample.length) == CASS_OK);
   BOOST_REQUIRE(test_utils::Value<CassString>::equal(input.text_sample, output.text_sample));
 
   BOOST_REQUIRE(cass_value_get_int32(cass_row_get_column(row, 2), &output.int_sample) == CASS_OK);
@@ -147,10 +155,13 @@ void compare_all_types(const AllTypes& input, const CassRow* row) {
   BOOST_REQUIRE(cass_value_get_double(cass_row_get_column(row, 5), &output.double_sample) == CASS_OK);
   BOOST_REQUIRE(test_utils::Value<cass_double_t>::equal(input.double_sample, output.double_sample));
 
-  BOOST_REQUIRE(cass_value_get_decimal(cass_row_get_column(row, 6), &output.decimal_sample) == CASS_OK);
+  BOOST_REQUIRE(cass_value_get_decimal(cass_row_get_column(row, 6),
+                                       &output.decimal_sample.varint,
+                                       &output.decimal_sample.varint_size,
+                                       &output.decimal_sample.scale) == CASS_OK);
   BOOST_REQUIRE(test_utils::Value<CassDecimal>::equal(input.decimal_sample, output.decimal_sample));
 
-  BOOST_REQUIRE(cass_value_get_bytes(cass_row_get_column(row, 7), &output.blob_sample) == CASS_OK);
+  BOOST_REQUIRE(cass_value_get_bytes(cass_row_get_column(row, 7), &output.blob_sample.data, &output.blob_sample.size) == CASS_OK);
   BOOST_REQUIRE(test_utils::Value<CassBytes>::equal(input.blob_sample, output.blob_sample));
 
   BOOST_REQUIRE(cass_value_get_bool(cass_row_get_column(row, 8), &output.boolean_sample) == CASS_OK);
@@ -170,8 +181,8 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
                                                "blob_sample, boolean_sample, timestamp_sample, inet_sample) "
                                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)") % ALL_TYPE_TABLE_NAME);
 
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
-                                                                 cass_string_init2(insert_query.data(), insert_query.size())));
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
+                                                                   insert_query.data(), insert_query.size()));
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
@@ -189,37 +200,37 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
   AllTypes all_types[all_types_count];
 
   all_types[0].id = test_utils::generate_time_uuid(uuid_gen);
-  all_types[0].text_sample = cass_string_init("first");
+  all_types[0].text_sample = CassString("first");
   all_types[0].int_sample = 10;
   all_types[0].bigint_sample = std::numeric_limits<int64_t>::max()  - 1L;
   all_types[0].float_sample = 1.999f;
   all_types[0].double_sample = 32.002;
-  all_types[0].decimal_sample = cass_decimal_init(1, cass_bytes_init(varint1, sizeof(varint1)));
-  all_types[0].blob_sample = cass_bytes_init(bytes1, sizeof(bytes1));
+  all_types[0].decimal_sample = CassDecimal(varint1, sizeof(varint1), 1);
+  all_types[0].blob_sample = CassBytes(bytes1, sizeof(bytes1));
   all_types[0].boolean_sample = cass_true;
   all_types[0].timestamp_sample = 1123200000;
   all_types[0].inet_sample = cass_inet_init_v4(address1);
 
   all_types[1].id = test_utils::generate_time_uuid(uuid_gen);
-  all_types[1].text_sample = cass_string_init("second");
+  all_types[1].text_sample = CassString("second");
   all_types[1].int_sample = 0;
   all_types[1].bigint_sample = 0L;
   all_types[1].float_sample = 0.0f;
   all_types[1].double_sample = 0.0;
-  all_types[1].decimal_sample = cass_decimal_init(2, cass_bytes_init(varint2, sizeof(varint2)));
-  all_types[1].blob_sample = cass_bytes_init(bytes2, sizeof(bytes2));
+  all_types[1].decimal_sample = CassDecimal(varint2, sizeof(varint2), 2);
+  all_types[1].blob_sample = CassBytes(bytes2, sizeof(bytes2));
   all_types[1].boolean_sample = cass_false;
   all_types[1].timestamp_sample = 0;
   all_types[1].inet_sample = cass_inet_init_v4(address2);
 
   all_types[2].id = test_utils::generate_time_uuid(uuid_gen);
-  all_types[2].text_sample = cass_string_init("third");
+  all_types[2].text_sample = CassString("third");
   all_types[2].int_sample = -100;
   all_types[2].bigint_sample = std::numeric_limits<int64_t>::min() + 1;
   all_types[2].float_sample = -150.111f;
   all_types[2].double_sample = -5.12342;
-  all_types[2].decimal_sample = cass_decimal_init(3, cass_bytes_init(varint3, sizeof(varint3)));
-  all_types[2].blob_sample = cass_bytes_init(bytes3, sizeof(bytes3));
+  all_types[2].decimal_sample = CassDecimal(varint3, sizeof(varint3), 3);
+  all_types[2].blob_sample = CassBytes(bytes3, sizeof(bytes3));
   all_types[2].boolean_sample = cass_true;
   all_types[2].timestamp_sample = -13462502400;
   all_types[2].inet_sample = cass_inet_init_v4(address3);
@@ -263,8 +274,8 @@ BOOST_AUTO_TEST_CASE(bound_all_types_null_values)
                                                "blob_sample, boolean_sample, timestamp_sample, inet_sample) "
                                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)") % ALL_TYPE_TABLE_NAME);
 
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
-                                                                 cass_string_init2(insert_query.data(), insert_query.size())));
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
+                                                                   insert_query.data(), insert_query.size()));
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
@@ -323,8 +334,8 @@ BOOST_AUTO_TEST_CASE(select_one)
 
   std::string select_query = str(boost::format("SELECT * FROM %s WHERE tweet_id = ?;") % table_name);
 
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
-                                                                 cass_string_init2(select_query.data(), select_query.size())));
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
+                                                                   select_query.data(), select_query.size()));
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
@@ -344,15 +355,23 @@ BOOST_AUTO_TEST_CASE(select_one)
   CassString result_label;
   BOOST_REQUIRE(cass_value_get_int32(cass_row_get_column(row, 0), &result_tweet_id) == CASS_OK);
   BOOST_REQUIRE(test_utils::Value<cass_int32_t>::equal(tweet_id, result_tweet_id));
-  BOOST_REQUIRE(cass_value_get_string(cass_row_get_column(row, 1), &result_label) == CASS_OK);
-  BOOST_REQUIRE(test_utils::Value<CassString>::equal(cass_string_init("row5"), result_label));
+  BOOST_REQUIRE(cass_value_get_string(cass_row_get_column(row, 1), &result_label.data, &result_label.length) == CASS_OK);
+  BOOST_REQUIRE(test_utils::Value<CassString>::equal(CassString("row5"), result_label));
 }
 
+#if BOOST_VERSION < 105700
 CassPreparedMovable prepare_statement(CassSession* session, std::string query) {
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
-                                                                 cass_string_init2(query.data(), query.size())));
+#else
+test_utils::CassPreparedPtr prepare_statement(CassSession* session, std::string query) {
+#endif
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
+                                                                   query.data(), query.size()));
   test_utils::wait_and_check_error(prepared_future.get());
+#if BOOST_VERSION < 105700
   return CassPreparedMovable(cass_future_get_prepared(prepared_future.get()));
+#else
+  return test_utils::CassPreparedPtr(cass_future_get_prepared(prepared_future.get()));
+#endif
 }
 
 void execute_statement(CassSession* session, const CassPrepared* prepared, int value) {
@@ -372,7 +391,11 @@ BOOST_AUTO_TEST_CASE(massive_number_of_prepares)
   test_utils::execute_query(session, create_table_query);
 
 
+#if BOOST_VERSION < 105700
   CONTAINER<boost::unique_future<CassPreparedMovable> > prepare_futures;
+#else
+  CONTAINER<boost::unique_future<test_utils::CassPreparedPtr> > prepare_futures;
+#endif
 
   std::vector<CassUuid> tweet_ids;
   for (size_t i = 0; i < number_of_prepares; ++i) {
@@ -383,9 +406,17 @@ BOOST_AUTO_TEST_CASE(massive_number_of_prepares)
   }
 
   std::vector<boost::shared_future<void> > execute_futures;
+#if BOOST_VERSION < 105700
   CONTAINER<CassPreparedMovable> prepares;
+#else
+  CONTAINER<test_utils::CassPreparedPtr> prepares;
+#endif
   for (size_t i = 0; i < prepare_futures.size(); ++i) {
+#if BOOST_VERSION < 105700
     CassPreparedMovable prepared = prepare_futures[i].get();
+#else
+    test_utils::CassPreparedPtr prepared = prepare_futures[i].get();
+#endif
     execute_futures.push_back(boost::async(boost::launch::async, boost::bind(execute_statement, session, prepared.get(), i)).share());
     prepares.push_back(boost::move(prepared));
   }

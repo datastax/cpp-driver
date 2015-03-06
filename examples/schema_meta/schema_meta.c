@@ -62,14 +62,16 @@ void print_table(CassSession* session, const char* keyspace, const char* table) 
 }
 
 void print_error(CassFuture* future) {
-  CassString message = cass_future_error_message(future);
-  fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
+  const char* message;
+  size_t message_length;
+  cass_future_error_message(future, &message, &message_length);
+  fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
 }
 
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
+  CassStatement* statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -114,10 +116,7 @@ int main() {
     cass_future_wait(close_future);
     cass_future_free(close_future);
   } else {
-    /* Handle error */
-    CassString message = cass_future_error_message(connect_future);
-    fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message.length,
-            message.data);
+    print_error(connect_future);
   }
 
   cass_future_free(connect_future);
@@ -145,7 +144,8 @@ void print_schema_value(const CassValue* value) {
   cass_int32_t i;
   cass_bool_t b;
   cass_double_t d;
-  CassString s;
+  const char* s;
+  size_t s_length;
   CassUuid u;
   char us[CASS_UUID_STRING_LENGTH];
 
@@ -169,8 +169,8 @@ void print_schema_value(const CassValue* value) {
     case CASS_VALUE_TYPE_TEXT:
     case CASS_VALUE_TYPE_ASCII:
     case CASS_VALUE_TYPE_VARCHAR:
-      cass_value_get_string(value, &s);
-      printf("\"%.*s\"", (int)s.length, s.data);
+      cass_value_get_string(value, &s, &s_length);
+      printf("\"%.*s\"", (int)s_length, s);
       break;
 
     case CASS_VALUE_TYPE_UUID:
@@ -228,11 +228,15 @@ void print_schema_map(const CassValue* value) {
 }
 
 void print_schema_meta_field(const CassSchemaMetaField* field, int indent) {
-  CassString name = cass_schema_meta_field_name(field);
-  const CassValue* value = cass_schema_meta_field_value(field);
+  const char* name;
+  size_t name_length;
+  const CassValue* value;
+
+  cass_schema_meta_field_name(field, &name, &name_length);
+  value = cass_schema_meta_field_value(field);
 
   print_indent(indent);
-  printf("%.*s: ", (int)name.length, name.data);
+  printf("%.*s: ", (int)name_length, name);
   print_schema_value(value);
   printf("\n");
 }
@@ -257,14 +261,15 @@ void print_schema_meta_entries(const CassSchemaMeta* meta, int indent) {
 
 void print_schema_meta(const CassSchemaMeta* meta, int indent) {
   const CassSchemaMetaField* field = NULL;
-  CassString name;
+  const char* name;
+  size_t name_length;
   print_indent(indent);
 
   switch (cass_schema_meta_type(meta)) {
     case CASS_SCHEMA_META_TYPE_KEYSPACE:
       field = cass_schema_meta_get_field(meta, "keyspace_name");
-      cass_value_get_string(cass_schema_meta_field_value(field), &name);
-      printf("Keyspace \"%.*s\":\n", (int)name.length, name.data);
+      cass_value_get_string(cass_schema_meta_field_value(field), &name, &name_length);
+      printf("Keyspace \"%.*s\":\n", (int)name_length, name);
       print_schema_meta_fields(meta, indent + 1);
       printf("\n");
       print_schema_meta_entries(meta, indent + 1);
@@ -272,8 +277,8 @@ void print_schema_meta(const CassSchemaMeta* meta, int indent) {
 
     case CASS_SCHEMA_META_TYPE_TABLE:
       field = cass_schema_meta_get_field(meta, "columnfamily_name");
-      cass_value_get_string(cass_schema_meta_field_value(field), &name);
-      printf("Table \"%.*s\":\n", (int)name.length, name.data);
+      cass_value_get_string(cass_schema_meta_field_value(field), &name, &name_length);
+      printf("Table \"%.*s\":\n", (int)name_length, name);
       print_schema_meta_fields(meta, indent + 1);
       printf("\n");
       print_schema_meta_entries(meta, indent + 1);
@@ -281,8 +286,8 @@ void print_schema_meta(const CassSchemaMeta* meta, int indent) {
 
     case CASS_SCHEMA_META_TYPE_COLUMN:
       field = cass_schema_meta_get_field(meta, "column_name");
-      cass_value_get_string(cass_schema_meta_field_value(field), &name);
-      printf("Column \"%.*s\":\n", (int)name.length, name.data);
+      cass_value_get_string(cass_schema_meta_field_value(field), &name, &name_length);
+      printf("Column \"%.*s\":\n", (int)name_length, name);
       print_schema_meta_fields(meta, indent + 1);
       printf("\n");
       break;
