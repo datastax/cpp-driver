@@ -670,6 +670,7 @@ endif()
 
 if(CASS_BUILD_EXAMPLES)
   add_subdirectory(examples/async)
+  add_subdirectory(examples/auth)
   add_subdirectory(examples/basic)
   add_subdirectory(examples/batch)
   add_subdirectory(examples/bind_by_name)

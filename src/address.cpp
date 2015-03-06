@@ -139,6 +139,16 @@ std::string Address::to_string(bool with_port) const {
   return ss.str();
 }
 
+uint8_t Address::to_inet(uint8_t* data) const {
+  if (family() == AF_INET) {
+    memcpy(data, &addr_in()->sin_addr, 4);
+    return 4;
+  } else {
+    memcpy(data, &addr_in6()->sin6_addr, 16);
+    return 16;
+  }
+}
+
 int Address::compare(const Address& a) const {
   if (family() != a.family()) {
     return family() < a.family() ? -1 : 1;

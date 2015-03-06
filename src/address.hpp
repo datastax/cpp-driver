@@ -38,7 +38,7 @@ public:
                           Address* output = NULL);
 
   static void from_inet(const char* data, size_t size, int port,
-                              Address* output = NULL);
+                        Address* output = NULL);
 
   bool init(const struct sockaddr* addr);
 
@@ -67,6 +67,7 @@ public:
   int port() const;
 
   std::string to_string(bool with_port = false) const;
+  uint8_t to_inet(uint8_t* data) const;
 
   int compare(const Address& a) const;
 

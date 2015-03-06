@@ -371,6 +371,13 @@ void cass_cluster_set_tcp_keepalive(CassCluster* cluster,
   cluster->config().set_tcp_keepalive(enabled == cass_true, delay_secs);
 }
 
+CassError cass_cluster_set_auth_callbacks(CassCluster* cluster,
+                                          const CassAuthCallbacks* callbacks,
+                                          void* data) {
+  cluster->config().set_auth_provider(new cass::SaslAuthProvider(callbacks, data));
+  return CASS_OK;
+}
+
 void cass_cluster_set_connection_heartbeat_interval(CassCluster* cluster,
                                                unsigned interval_secs) {
   cluster->config().set_connection_heartbeat_interval_secs(interval_secs);
