@@ -44,8 +44,8 @@ int main() {
     CassFuture* close_future = NULL;
 
     /* Build statement and execute query */
-    CassString query = cass_string_init("SELECT keyspace_name "
-                                        "FROM system.schema_keyspaces;");
+    const char* query = "SELECT keyspace_name "
+                        "FROM system.schema_keyspaces;";
     CassStatement* statement = cass_statement_new(query, 0);
 
     CassFuture* result_future = cass_session_execute(session, statement);

@@ -32,8 +32,8 @@
 #include "test_utils.hpp"
 
 const CassPrepared* prepare_statement(CassSession* session, std::string query) {
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
-                                                                 cass_string_init2(query.data(), query.size())));
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
+                                                                   query.data(), query.size()));
   test_utils::wait_and_check_error(prepared_future.get());
   return cass_future_get_prepared(prepared_future.get());
 }
@@ -140,7 +140,7 @@ BOOST_AUTO_TEST_CASE(batch_error)
   for (int x = 0; x < 4; x++)
   {
     std::string insert_query = str(boost::format("INSERT INTO test (key, value) VALUES(%d, %d);") % x % x);
-    test_utils::CassStatementPtr insert_statement(cass_statement_new(cass_string_init(insert_query.c_str()), 0));
+    test_utils::CassStatementPtr insert_statement(cass_statement_new(insert_query.c_str(), 0));
     cass_batch_add_statement(batch.get(), insert_statement.get());
   }
 
@@ -156,7 +156,7 @@ BOOST_AUTO_TEST_CASE(query_param_error)
 {
   test_utils::execute_query(session, "CREATE TABLE test (key int PRIMARY KEY, value int);");
 
-  CassString insert_query = cass_string_init("INSERT INTO test (key, value) VALUES(?, ?);");
+  const char* insert_query = "INSERT INTO test (key, value) VALUES(?, ?);";
 
   test_utils::CassStatementPtr statement(cass_statement_new(insert_query, 2));
 

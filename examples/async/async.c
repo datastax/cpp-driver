@@ -63,7 +63,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
+  CassStatement* statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -82,7 +82,7 @@ CassError execute_query(CassSession* session, const char* query) {
 void insert_into_async(CassSession* session, const char* key) {
   CassError rc = CASS_OK;
   CassStatement* statement = NULL;
-  CassString query = cass_string_init("INSERT INTO async (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);");
+  const char* query = "INSERT INTO async (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);";
 
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
 

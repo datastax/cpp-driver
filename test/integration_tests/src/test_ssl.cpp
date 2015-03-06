@@ -329,7 +329,7 @@ BOOST_AUTO_TEST_CASE(connect) {
 
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init2(cassandra_certificate_.data(), cassandra_certificate_.size())), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert_n(ssl_, cassandra_certificate_.data(), cassandra_certificate_.size()), CASS_OK);
   setup();
   test_normal_load();
   test_high_load();
@@ -337,7 +337,7 @@ BOOST_AUTO_TEST_CASE(connect) {
   
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_IDENTITY);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init2(cassandra_certificate_.data(), cassandra_certificate_.size())), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert_n(ssl_, cassandra_certificate_.data(), cassandra_certificate_.size()), CASS_OK);
   setup();
   test_normal_load();
   test_high_load();
@@ -345,9 +345,9 @@ BOOST_AUTO_TEST_CASE(connect) {
 
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init2(cassandra_certificate_.data(), cassandra_certificate_.size())), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, cass_string_init2(driver_certificate_.data(), driver_certificate_.size())), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, cass_string_init2(driver_private_key_.data(), driver_private_key_.size()), DRIVER_PEM_PRIVATE_KEY_PASSWORD), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cassandra_certificate_.c_str()), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, driver_certificate_.c_str()), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), DRIVER_PEM_PRIVATE_KEY_PASSWORD), CASS_OK);
   setup(true, true);
   test_normal_load();
   test_high_load();
@@ -357,10 +357,10 @@ BOOST_AUTO_TEST_CASE(connect) {
 BOOST_AUTO_TEST_CASE(connect_failures) {
   //Load invalid certificates
   create_ssl_context();
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, cass_string_init("Invalid Client Certificate")), CASS_ERROR_SSL_INVALID_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init("Invalid Trusted Certificate")), CASS_ERROR_SSL_INVALID_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, cass_string_init("Invalid Private Key"), "invalid"), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, cass_string_init2(driver_private_key_.data(), driver_private_key_.size()), "invalid"), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, "Invalid Client Certificate"), CASS_ERROR_SSL_INVALID_CERT);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, "Invalid Trusted Certificate"), CASS_ERROR_SSL_INVALID_CERT);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, "Invalid Private Key", "invalid"), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), "invalid"), CASS_ERROR_SSL_INVALID_PRIVATE_KEY);
 
   //Connect with SSL where the Cassandra server has SSL disabled
   create_ssl_context();
@@ -369,45 +369,45 @@ BOOST_AUTO_TEST_CASE(connect_failures) {
   teardown();
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init2(cassandra_certificate_.data(), cassandra_certificate_.size())), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cassandra_certificate_.c_str()), CASS_OK);
   setup(false, false, true);
   teardown();
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_IDENTITY);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init2(cassandra_certificate_.data(), cassandra_certificate_.size())), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cassandra_certificate_.c_str()), CASS_OK);
   setup(false, false, true);
   teardown();
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init2(cassandra_certificate_.data(), cassandra_certificate_.size())), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, cass_string_init2(driver_certificate_.data(), driver_certificate_.size())), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, cass_string_init2(driver_private_key_.data(), driver_private_key_.size()), DRIVER_PEM_PRIVATE_KEY_PASSWORD), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cassandra_certificate_.c_str()), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, driver_certificate_.c_str()), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), DRIVER_PEM_PRIVATE_KEY_PASSWORD), CASS_OK);
   setup(false, false, true);
   teardown();
 
   //Connect with SSL with invalid peer and client certificates
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init2(invalid_cassandra_certificate_.data(), invalid_cassandra_certificate_.size())), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, invalid_cassandra_certificate_.c_str()), CASS_OK);
   setup(true, false, true);
   teardown();
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_IDENTITY);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init2(invalid_cassandra_certificate_.data(), invalid_cassandra_certificate_.size())), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, invalid_cassandra_certificate_.c_str()), CASS_OK);
   setup(true, false, true);
   teardown();
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init2(invalid_cassandra_certificate_.data(), invalid_cassandra_certificate_.size())), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, cass_string_init2(driver_certificate_.data(), driver_certificate_.size())), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, cass_string_init2(driver_private_key_.data(), driver_private_key_.size()), DRIVER_PEM_PRIVATE_KEY_PASSWORD), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, invalid_cassandra_certificate_.c_str()), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, driver_certificate_.c_str()), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, driver_private_key_.c_str(), DRIVER_PEM_PRIVATE_KEY_PASSWORD), CASS_OK);
   setup(true, true, true);
   teardown();
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_CERT);
-  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cass_string_init2(cassandra_certificate_.data(), cassandra_certificate_.size())), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, cass_string_init2(invalid_driver_certificate_.data(), invalid_driver_certificate_.size())), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, cass_string_init2(invalid_driver_private_key_.data(), invalid_driver_private_key_.size()), INVALID_DRIVER_PEM_PRIVATE_KEY_PASSWORD), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert(ssl_, cassandra_certificate_.c_str()), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_cert(ssl_, invalid_driver_certificate_.c_str()), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_ssl_set_private_key(ssl_, invalid_driver_private_key_.c_str(), INVALID_DRIVER_PEM_PRIVATE_KEY_PASSWORD), CASS_OK);
   setup(true, true, true);
   teardown();
 }

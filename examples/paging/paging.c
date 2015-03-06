@@ -63,7 +63,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
+  CassStatement* statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -81,7 +81,7 @@ CassError execute_query(CassSession* session, const char* query) {
 
 void insert_into_paging(CassSession* session, CassUuidGen* uuid_gen) {
   CassError rc = CASS_OK;
-  CassString query = cass_string_init("INSERT INTO paging (key, value) VALUES (?, ?);");
+  const char* query = "INSERT INTO paging (key, value) VALUES (?, ?);";
 
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
 
@@ -117,7 +117,7 @@ void insert_into_paging(CassSession* session, CassUuidGen* uuid_gen) {
 void select_from_paging(CassSession* session) {
   cass_bool_t has_more_pages = cass_false;
   const CassResult* result = NULL;
-  CassString query = cass_string_init("SELECT * FROM paging");
+  const char* query = "SELECT * FROM paging";
   CassStatement* statement = cass_statement_new(query, 0);
 
   cass_statement_set_paging_size(statement, 100);

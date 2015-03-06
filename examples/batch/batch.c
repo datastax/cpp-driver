@@ -67,7 +67,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
+  CassStatement* statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -86,7 +86,7 @@ CassError execute_query(CassSession* session, const char* query) {
 CassError prepare_insert_into_batch(CassSession* session, const CassPrepared** prepared) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassString query = cass_string_init("INSERT INTO examples.pairs (key, value) VALUES (?, ?)");
+  const char* query = "INSERT INTO examples.pairs (key, value) VALUES (?, ?)";
 
   future = cass_session_prepare(session, query);
   cass_future_wait(future);
@@ -118,14 +118,13 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
   }
 
   {
-    CassStatement* statement = cass_statement_new(cass_string_init("INSERT INTO examples.pairs (key, value) VALUES ('c', '3')"), 0);
+    CassStatement* statement = cass_statement_new("INSERT INTO examples.pairs (key, value) VALUES ('c', '3')", 0);
     cass_batch_add_statement(batch, statement);
     cass_statement_free(statement);
   }
 
   {
-    CassStatement* statement = cass_statement_new(cass_string_init("INSERT INTO examples.pairs (key, value) VALUES (?, ?)"),
-                                                  2);
+    CassStatement* statement = cass_statement_new("INSERT INTO examples.pairs (key, value) VALUES (?, ?)", 2);
     cass_statement_bind_string(statement, 0, cass_string_init("d"));
     cass_statement_bind_string(statement, 1, cass_string_init("4"));
     cass_batch_add_statement(batch, statement);

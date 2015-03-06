@@ -54,8 +54,8 @@ BOOST_AUTO_TEST_CASE(reprepared_on_new_node)
 
 
   std::string select_query = str(boost::format("SELECT * FROM %s WHERE key = ?;") % table_name);
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
-                                                                 cass_string_init2(select_query.data(), select_query.size())));
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
+                                                                   select_query.data(), select_query.size()));
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 

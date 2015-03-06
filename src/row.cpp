@@ -22,7 +22,7 @@
 
 extern "C" {
 
-const CassValue* cass_row_get_column(const CassRow* row, cass_size_t index) {
+const CassValue* cass_row_get_column(const CassRow* row, size_t index) {
   if (index >= row->values.size()) {
     return NULL;
   }
@@ -32,7 +32,14 @@ const CassValue* cass_row_get_column(const CassRow* row, cass_size_t index) {
 const CassValue* cass_row_get_column_by_name(const CassRow* row,
                                              const char* name) {
 
-  return CassValue::to(row->get_by_name(name));
+  return cass_row_get_column_by_name_n(row, name, strlen(name));
+}
+
+const CassValue* cass_row_get_column_by_name_n(const CassRow* row,
+                                               const char* name,
+                                               size_t name_length) {
+
+  return CassValue::to(row->get_by_name(boost::string_ref(name, name_length)));
 }
 
 } // extern "C"

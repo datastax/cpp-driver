@@ -70,14 +70,14 @@ CassString cass_string_init(const char* null_terminated) {
   return str;
 }
 
-CassString cass_string_init2(const char* data, cass_size_t length) {
+CassString cass_string_init_n(const char* data, size_t length) {
   CassString str;
   str.data = data;
   str.length = length;
   return str;
 }
 
-CassBytes cass_bytes_init(const cass_byte_t* data, cass_size_t size) {
+CassBytes cass_bytes_init(const cass_byte_t* data, size_t size) {
   CassBytes bytes;
   bytes.data = data;
   bytes.size = size;

@@ -69,7 +69,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
-  CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
+  CassStatement* statement = cass_statement_new(query, 0);
   CassFuture* future = cass_session_execute(session, statement);
 
   cass_future_wait(future);
@@ -89,7 +89,7 @@ CassError insert_into_basic(CassSession* session, const char* key, const Basic* 
   CassError rc = CASS_OK;
   CassStatement* statement = NULL;
   CassFuture* future = NULL;
-  CassString query = cass_string_init("INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);");
+  const char* query = "INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);";
 
   statement = cass_statement_new(query, 6);
 
@@ -118,7 +118,7 @@ CassError insert_into_basic(CassSession* session, const char* key, const Basic* 
 CassError prepare_select_from_basic(CassSession* session, const CassPrepared** prepared) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassString query = cass_string_init("SELECT * FROM examples.basic WHERE key = ?");
+  const char* query = "SELECT * FROM examples.basic WHERE key = ?";
 
   future = cass_session_prepare(session, query);
   cass_future_wait(future);

@@ -107,11 +107,23 @@ void cass_uuid_string(CassUuid uuid, char* output) {
   output[pos] = '\0';
 }
 
-CassError cass_uuid_from_string(const char* str, CassUuid* output) {
+CassError cass_uuid_from_string(const char* str,
+                                CassUuid* output) {
+  if (str == NULL) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+
+  return cass_uuid_from_string_n(str, strlen(str),
+                                 output);
+}
+
+CassError cass_uuid_from_string_n(const char* str,
+                                  size_t str_length,
+                                  CassUuid* output) {
   const char* pos = str;
   char buf[16];
 
-  if (str == NULL || strlen(str) != 36) {
+  if (str == NULL || str_length != 36) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
 

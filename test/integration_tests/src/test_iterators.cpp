@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(result_iterator)
                                          % part),
                             &result);
 
-  BOOST_REQUIRE(cass_result_row_count(result.get()) == static_cast<cass_size_t>(num_rows));
+  BOOST_REQUIRE(cass_result_row_count(result.get()) == static_cast<size_t>(num_rows));
 
   test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
 

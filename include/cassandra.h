@@ -103,7 +103,6 @@ typedef long long cass_int64_t;
 typedef unsigned long long cass_uint64_t;
 #endif
 
-typedef size_t cass_size_t;
 typedef cass_uint8_t cass_byte_t;
 typedef cass_uint64_t cass_duration_t;
 
@@ -112,12 +111,12 @@ typedef cass_uint64_t cass_duration_t;
  */
 typedef struct CassBytes_ {
     const cass_byte_t* data; /* !< @public Data. */
-    cass_size_t size;        /* !< @public Size. */
+    size_t size;        /* !< @public Size. */
 } CassBytes;
 
 typedef struct CassString_ {
     const char* data;
-    cass_size_t length;
+    size_t length;
 } CassString;
 
 /**
@@ -538,6 +537,14 @@ cass_cluster_set_contact_points(CassCluster* cluster,
                                 const char* contact_points);
 
 /**
+  * @see cass_cluster_set_contact_points()
+  */
+CASS_EXPORT CassError
+cass_cluster_set_contact_points_n(CassCluster* cluster,
+                                  const char* contact_points,
+                                  size_t contact_points_length);
+
+/**
  * Sets the port.
  *
  * Default: 9042
@@ -855,6 +862,16 @@ cass_cluster_set_credentials(CassCluster* cluster,
                              const char* password);
 
 /**
+  * @see cass_cluster_set_credentials();
+  */
+CASS_EXPORT void
+cass_cluster_set_credentials_n(CassCluster* cluster,
+                               const char* username,
+                               size_t username_length,
+                               const char* password,
+                               size_t password_length);
+
+/**
  * Configures the cluster to use round-robin load balancing.
  *
  * The driver discovers all nodes in a cluster and cycles through
@@ -894,6 +911,16 @@ cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
                                        const char* local_dc,
                                        unsigned used_hosts_per_remote_dc,
                                        cass_bool_t allow_remote_dcs_for_local_cl);
+
+/**
+  * @see cass_cluster_set_load_balance_dc_aware()
+  */
+CASS_EXPORT CassError
+cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
+                                         const char* local_dc,
+                                         size_t local_dc_length,
+                                         unsigned used_hosts_per_remote_dc,
+                                         cass_bool_t allow_remote_dcs_for_local_cl);
 
 /**
  * Configures the cluster to use Token-aware request routing, or not.
@@ -1009,6 +1036,15 @@ cass_session_connect_keyspace(CassSession* session,
                               const char* keyspace);
 
 /**
+  * @see cass_session_connect_keyspace()
+  */
+CASS_EXPORT CassFuture*
+cass_session_connect_keyspace_n(CassSession* session,
+                                const CassCluster* cluster,
+                                const char* keyspace,
+                                size_t keyspace_length);
+
+/**
  * Closes the session instance, outputs a close future which can
  * be used to determine when the session has been terminated. This allows
  * in-flight requests to finish.
@@ -1035,7 +1071,15 @@ cass_session_close(CassSession* session);
  */
 CASS_EXPORT CassFuture*
 cass_session_prepare(CassSession* session,
-                     CassString query);
+                     const char* query);
+
+/**
+  * @see cass_session_prepare()
+  */
+CASS_EXPORT CassFuture*
+cass_session_prepare_n(CassSession* session,
+                       const char* query,
+                       size_t query_length);
 
 /**
  * Execute a query or bound statement.
@@ -1115,7 +1159,15 @@ cass_schema_free(const CassSchema* schema);
  */
 CASS_EXPORT const CassSchemaMeta*
 cass_schema_get_keyspace(const CassSchema* schema,
-                         const char* keyspace_name);
+                         const char* keyspace);
+
+/**
+  * @see cass_schema_get_keyspace()
+  */
+CASS_EXPORT const CassSchemaMeta*
+cass_schema_get_keyspace_n(const CassSchema* schema,
+                           const char* keyspace,
+                           size_t keyspace_length);
 
 /**
  * Gets the type of the specified schema metadata.
@@ -1148,6 +1200,14 @@ cass_schema_meta_get_entry(const CassSchemaMeta* meta,
                            const char* name);
 
 /**
+  * @see cass_schema_meta_get_entry()
+  */
+CASS_EXPORT const CassSchemaMeta*
+cass_schema_meta_get_entry_n(const CassSchemaMeta* meta,
+                             const char* name,
+                             size_t name_length);
+
+/**
  * Gets a metadata field for the provided name.
  *
  * @public @memberof CassSchemaMeta
@@ -1162,6 +1222,14 @@ cass_schema_meta_get_entry(const CassSchemaMeta* meta,
 CASS_EXPORT const CassSchemaMetaField*
 cass_schema_meta_get_field(const CassSchemaMeta* meta,
                            const char* name);
+
+/**
+  * @see cass_schema_meta_get_field()
+  */
+CASS_EXPORT const CassSchemaMetaField*
+cass_schema_meta_get_field_n(const CassSchemaMeta* meta,
+                             const char* name,
+                             size_t name_length);
 
 /**
  * Gets the name for a schema metadata field
@@ -1225,7 +1293,15 @@ cass_ssl_free(CassSsl* ssl);
  */
 CASS_EXPORT CassError
 cass_ssl_add_trusted_cert(CassSsl* ssl,
-                          CassString cert);
+                          const char* cert);
+
+/**
+  * @see cass_ssl_add_trusted_cert()
+  */
+CASS_EXPORT CassError
+cass_ssl_add_trusted_cert_n(CassSsl* ssl,
+                            const char* cert,
+                            size_t);
 
 /**
  * Sets verifcation performed on the peer's certificate.
@@ -1261,7 +1337,15 @@ cass_ssl_set_verify_flags(CassSsl* ssl,
  */
 CASS_EXPORT CassError
 cass_ssl_set_cert(CassSsl* ssl,
-                  CassString cert);
+                  const char* cert);
+
+/**
+  * @see cass_ssl_set_cert()
+  */
+CASS_EXPORT CassError
+cass_ssl_set_cert_n(CassSsl* ssl,
+                    const char* cert,
+                    size_t cert_length);
 
 /**
  * Set client-side private key. This is used to authenticate
@@ -1276,8 +1360,18 @@ cass_ssl_set_cert(CassSsl* ssl,
  */
 CASS_EXPORT CassError
 cass_ssl_set_private_key(CassSsl* ssl,
-                         CassString key,
+                         const char* key,
                          const char* password);
+
+/**
+  * @see cass_ssl_set_private_key()
+  */
+CASS_EXPORT CassError
+cass_ssl_set_private_key_n(CassSsl* ssl,
+                           const char* key,
+                           size_t key_length,
+                           const char* password,
+                           size_t password_length);
 
 /***********************************************************************************
  *
@@ -1423,8 +1517,16 @@ cass_future_error_message(CassFuture* future);
  * @see cass_statement_free()
  */
 CASS_EXPORT CassStatement*
-cass_statement_new(CassString query,
-                   cass_size_t parameter_count);
+cass_statement_new(const char* query,
+                   size_t parameter_count);
+
+/**
+  * @see cass_statement_new()
+  */
+CASS_EXPORT CassStatement*
+cass_statement_new_n(const char* query,
+                     size_t query_length,
+                     size_t parameter_count);
 
 /**
  * Frees a statement instance. Statements can be immediately freed after
@@ -1456,7 +1558,7 @@ cass_statement_free(CassStatement* statement);
  */
 CASS_EXPORT CassError
 cass_statement_add_key_index(CassStatement* statement,
-                             cass_size_t index);
+                             size_t index);
 
 
 /**
@@ -1474,6 +1576,14 @@ cass_statement_add_key_index(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_set_keyspace(CassStatement* statement,
                             const char* keyspace);
+
+/**
+  * @see cass_statement_set_keyspace()
+  */
+CASS_EXPORT CassError
+cass_statement_set_keyspace_n(CassStatement* statement,
+                              const char* keyspace,
+                              size_t keyspace_length);
 
 /**
  * Sets the statement's consistency level.
@@ -1544,7 +1654,7 @@ cass_statement_set_paging_state(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_bind_null(CassStatement* statement,
-                         cass_size_t index);
+                         size_t index);
 
 /**
  * Binds an "int" to a query or bound statement at the specified index.
@@ -1558,7 +1668,7 @@ cass_statement_bind_null(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_bind_int32(CassStatement* statement,
-                          cass_size_t index,
+                          size_t index,
                           cass_int32_t value);
 
 /**
@@ -1574,7 +1684,7 @@ cass_statement_bind_int32(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_bind_int64(CassStatement* statement,
-                          cass_size_t index,
+                          size_t index,
                           cass_int64_t value);
 
 /**
@@ -1589,7 +1699,7 @@ cass_statement_bind_int64(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_bind_float(CassStatement* statement,
-                          cass_size_t index,
+                          size_t index,
                           cass_float_t value);
 
 /**
@@ -1604,7 +1714,7 @@ cass_statement_bind_float(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_bind_double(CassStatement* statement,
-                           cass_size_t index,
+                           size_t index,
                            cass_double_t value);
 
 /**
@@ -1619,7 +1729,7 @@ cass_statement_bind_double(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_bind_bool(CassStatement* statement,
-                         cass_size_t index,
+                         size_t index,
                          cass_bool_t value);
 
 /**
@@ -1636,7 +1746,7 @@ cass_statement_bind_bool(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_bind_string(CassStatement* statement,
-                           cass_size_t index,
+                           size_t index,
                            CassString value);
 
 /**
@@ -1652,7 +1762,7 @@ cass_statement_bind_string(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_bind_bytes(CassStatement* statement,
-                           cass_size_t index,
+                           size_t index,
                            CassBytes value);
 
 /**
@@ -1667,7 +1777,7 @@ cass_statement_bind_bytes(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_bind_uuid(CassStatement* statement,
-                         cass_size_t index,
+                         size_t index,
                          CassUuid value);
 
 /**
@@ -1682,7 +1792,7 @@ cass_statement_bind_uuid(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_bind_inet(CassStatement* statement,
-                         cass_size_t index,
+                         size_t index,
                          CassInet value);
 
 /**
@@ -1698,7 +1808,7 @@ cass_statement_bind_inet(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_bind_decimal(CassStatement* statement,
-                            cass_size_t index,
+                            size_t index,
                             CassDecimal value);
 
 /**
@@ -1716,8 +1826,8 @@ cass_statement_bind_decimal(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_bind_custom(CassStatement* statement,
-                           cass_size_t index,
-                           cass_size_t size,
+                           size_t index,
+                           size_t size,
                            cass_byte_t** output);
 
 /**
@@ -1733,8 +1843,20 @@ cass_statement_bind_custom(CassStatement* statement,
  */
 CASS_EXPORT CassError
 cass_statement_bind_collection(CassStatement* statement,
-                               cass_size_t index,
+                               size_t index,
                                const CassCollection* collection);
+
+
+CASS_EXPORT CassError
+cass_statement_bind_null_by_name(CassStatement* statement,
+                                 const char* name);
+/**
+  * @see cass_statement_bind_null_by_name()
+  */
+CASS_EXPORT CassError
+cass_statement_bind_null_by_name_n(CassStatement* statement,
+                                   const char* name,
+                                   size_t name_length);
 
 /**
  * Binds an "int" to all the values with the specified name.
@@ -1753,6 +1875,15 @@ CASS_EXPORT CassError
 cass_statement_bind_int32_by_name(CassStatement* statement,
                                   const char* name,
                                   cass_int32_t value);
+
+/**
+  * @see cass_statement_bind_int32_by_name()
+  */
+CASS_EXPORT CassError
+cass_statement_bind_int32_by_name_n(CassStatement* statement,
+                                    const char* name,
+                                    size_t name_length,
+                                    cass_int32_t value);
 
 /**
  * Binds a "bigint", "counter" or "timestamp" to all values
@@ -1774,6 +1905,15 @@ cass_statement_bind_int64_by_name(CassStatement* statement,
                                   cass_int64_t value);
 
 /**
+  * @see cass_statement_bind_int64_by_name()
+  */
+CASS_EXPORT CassError
+cass_statement_bind_int64_by_name_n(CassStatement* statement,
+                                    const char* name,
+                                    size_t name_length,
+                                    cass_int64_t value);
+
+/**
  * Binds a "float" to all the values with the specified name.
  *
  * This can only be used with statements created by
@@ -1790,6 +1930,15 @@ CASS_EXPORT CassError
 cass_statement_bind_float_by_name(CassStatement* statement,
                                   const char* name,
                                   cass_float_t value);
+
+/**
+  * @see cass_statement_bind_float_by_name()
+  */
+CASS_EXPORT CassError
+cass_statement_bind_float_by_name_n(CassStatement* statement,
+                                    const char* name,
+                                    size_t name_length,
+                                    cass_float_t value);
 
 /**
  * Binds a "double" to all the values with the specified name.
@@ -1810,6 +1959,14 @@ cass_statement_bind_double_by_name(CassStatement* statement,
                                    cass_double_t value);
 
 /**
+  * @see cass_statement_bind_double_by_name()
+  */
+CASS_EXPORT CassError
+cass_statement_bind_double_by_name_n(CassStatement* statement,
+                                     const char* name,
+                                     size_t name_length,
+                                     cass_double_t value);
+/**
  * Binds a "boolean" to all the values with the specified name.
  *
  * This can only be used with statements created by
@@ -1826,6 +1983,15 @@ CASS_EXPORT CassError
 cass_statement_bind_bool_by_name(CassStatement* statement,
                                  const char* name,
                                  cass_bool_t value);
+
+/**
+  * @see cass_statement_bind_bool_by_name()
+  */
+CASS_EXPORT CassError
+cass_statement_bind_bool_by_name_n(CassStatement* statement,
+                                   const char* name,
+                                   size_t name_length,
+                                   cass_bool_t value);
 
 /**
  * Binds a "ascii", "text" or "varchar" to all the values
@@ -1848,6 +2014,15 @@ cass_statement_bind_string_by_name(CassStatement* statement,
                                    CassString value);
 
 /**
+  * @see cass_statement_bind_string_by_name()
+  */
+CASS_EXPORT CassError
+cass_statement_bind_string_by_name_n(CassStatement* statement,
+                                     const char* name,
+                                     size_t name_length,
+                                     CassString value);
+
+/**
  * Binds a "blob" or "varint" to all the values with the
  * specified name.
  *
@@ -1866,6 +2041,15 @@ CASS_EXPORT CassError
 cass_statement_bind_bytes_by_name(CassStatement* statement,
                                   const char* name,
                                   CassBytes value);
+
+/**
+  * @see cass_statement_bind_bytes_by_name()
+  */
+CASS_EXPORT CassError
+cass_statement_bind_bytes_by_name_n(CassStatement* statement,
+                                    const char* name,
+                                    size_t name_length,
+                                    CassBytes value);
 
 /**
  * Binds a "uuid" or "timeuuid" to all the values
@@ -1887,6 +2071,15 @@ cass_statement_bind_uuid_by_name(CassStatement* statement,
                                  CassUuid value);
 
 /**
+  * @see cass_statement_bind_uuid_by_name()
+  */
+CASS_EXPORT CassError
+cass_statement_bind_uuid_by_name_n(CassStatement* statement,
+                                   const char* name,
+                                   size_t name_length,
+                                   CassUuid value);
+
+/**
  * Binds an "inet" to all the values with the specified name.
  *
  * This can only be used with statements created by
@@ -1903,6 +2096,15 @@ CASS_EXPORT CassError
 cass_statement_bind_inet_by_name(CassStatement* statement,
                                  const char* name,
                                  CassInet value);
+
+/**
+  * @see cass_statement_bind_inet_by_name()
+  */
+CASS_EXPORT CassError
+cass_statement_bind_inet_by_name_n(CassStatement* statement,
+                                   const char* name,
+                                   size_t name_length,
+                                   CassInet value);
 
 /**
  * Binds a "decimal" to all the values with the specified name.
@@ -1924,6 +2126,15 @@ cass_statement_bind_decimal_by_name(CassStatement* statement,
                                     CassDecimal value);
 
 /**
+  * @see cass_statement_bind_decimal_by_name()
+  */
+CASS_EXPORT CassError
+cass_statement_bind_decimal_by_name_n(CassStatement* statement,
+                                      const char* name,
+                                      size_t name_length,
+                                      CassDecimal value);
+
+/**
  * Binds any type to all the values with the specified name. A value
  * can be copied into the resulting output buffer. This is normally reserved for
  * large values to avoid extra memory copies.
@@ -1942,8 +2153,18 @@ cass_statement_bind_decimal_by_name(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_bind_custom_by_name(CassStatement* statement,
                                    const char* name,
-                                   cass_size_t size,
+                                   size_t size,
                                    cass_byte_t** output);
+
+/**
+  * @see cass_statement_bind_custom_by_name()
+  */
+CASS_EXPORT CassError
+cass_statement_bind_custom_by_name_n(CassStatement* statement,
+                                     const char* name,
+                                     size_t name_length,
+                                     size_t size,
+                                     cass_byte_t** output);
 
 /**
  * Bind a "list", "map", or "set" to all the values with the
@@ -1963,6 +2184,15 @@ CASS_EXPORT CassError
 cass_statement_bind_collection_by_name(CassStatement* statement,
                                        const char* name,
                                        const CassCollection* collection);
+
+/**
+  * @see cass_statement_bind_collection_by_name()
+  */
+CASS_EXPORT CassError
+cass_statement_bind_collection_by_name_n(CassStatement* statement,
+                                         const char* name,
+                                         size_t name_length,
+                                         const CassCollection* collection);
 
 
 /***********************************************************************************
@@ -2069,7 +2299,7 @@ cass_batch_add_statement(CassBatch* batch,
  * @see cass_collection_free()
  */
 CASS_EXPORT CassCollection*
-cass_collection_new(CassCollectionType type, cass_size_t item_count);
+cass_collection_new(CassCollectionType type, size_t item_count);
 
 /**
  * Frees a collection instance.
@@ -2241,7 +2471,7 @@ cass_result_free(const CassResult* result);
  * @param[in] result
  * @return The number of rows in the result.
  */
-CASS_EXPORT cass_size_t
+CASS_EXPORT size_t
 cass_result_row_count(const CassResult* result);
 
 /**
@@ -2252,7 +2482,7 @@ cass_result_row_count(const CassResult* result);
  * @param[in] result
  * @return The number of columns per row in the result.
  */
-CASS_EXPORT cass_size_t
+CASS_EXPORT size_t
 cass_result_column_count(const CassResult* result);
 
 /**
@@ -2267,7 +2497,7 @@ cass_result_column_count(const CassResult* result);
  */
 CASS_EXPORT CassString
 cass_result_column_name(const CassResult *result,
-                        cass_size_t index);
+                        size_t index);
 
 /**
  * Gets the column type at index for the specified result.
@@ -2281,7 +2511,7 @@ cass_result_column_name(const CassResult *result,
  */
 CASS_EXPORT CassValueType
 cass_result_column_type(const CassResult* result,
-                        cass_size_t index);
+                        size_t index);
 
 /**
  * Gets the first row of the result.
@@ -2582,7 +2812,7 @@ cass_iterator_get_schema_meta_field(CassIterator* iterator);
  */
 CASS_EXPORT const CassValue*
 cass_row_get_column(const CassRow* row,
-                    cass_size_t index);
+                    size_t index);
 
 
 /**
@@ -2598,6 +2828,14 @@ cass_row_get_column(const CassRow* row,
 CASS_EXPORT const CassValue*
 cass_row_get_column_by_name(const CassRow* row,
                             const char* name);
+
+/**
+  * @see cass_row_get_column_by_name()
+  */
+CASS_EXPORT const CassValue*
+cass_row_get_column_by_name_n(const CassRow* row,
+                              const char* name,
+                              size_t name_length);
 
 /***********************************************************************************
  *
@@ -2776,7 +3014,7 @@ cass_value_is_collection(const CassValue* value);
  * @param[in] collection
  * @return Count of items in a collection. 0 if not a collection.
  */
-CASS_EXPORT cass_size_t
+CASS_EXPORT size_t
 cass_value_item_count(const CassValue* collection);
 
 /**
@@ -2973,6 +3211,13 @@ cass_uuid_string(CassUuid uuid,
 CASS_EXPORT CassError
 cass_uuid_from_string(const char* str,
                       CassUuid* output);
+/**
+  * @see cass_uuid_from_string()
+  */
+CASS_EXPORT CassError
+cass_uuid_from_string_n(const char* str,
+                        size_t str_length,
+                        CassUuid* output);
 
 /***********************************************************************************
  *
@@ -3042,7 +3287,7 @@ cass_log_set_callback(CassLogCallback callback,
  * @param[in] queue_size
  */
 CASS_EXPORT void
-cass_log_set_queue_size(cass_size_t queue_size);
+cass_log_set_queue_size(size_t queue_size);
 
 /**
  * Gets the string for a log level.
@@ -3122,7 +3367,7 @@ cass_decimal_init(cass_int32_t scale, CassBytes varint);
  * @return A bytes object.
  */
 CASS_EXPORT CassBytes
-cass_bytes_init(const cass_byte_t* data, cass_size_t size);
+cass_bytes_init(const cass_byte_t* data, size_t size);
 
 /**
  * Constructs a string object from a null-terminated string.
@@ -3147,11 +3392,11 @@ cass_string_init(const char* null_terminated);
  * @public @memberof CassString
  *
  * @param[in] data
- * @param[in] length
+ * @param[in] data_length
  * @return A string object.
  */
 CASS_EXPORT CassString
-cass_string_init2(const char* data, cass_size_t length);
+cass_string_init_n(const char* data, size_t data_length);
 
 #ifdef __cplusplus
 } /* extern "C" */

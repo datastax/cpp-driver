@@ -126,7 +126,7 @@ cass_bool_t cass_value_is_collection(const CassValue* value) {
   return static_cast<cass_bool_t>(value->is_collection());
 }
 
-cass_size_t cass_value_item_count(const CassValue* collection) {
+size_t cass_value_item_count(const CassValue* collection) {
   return collection->count();
 }
 

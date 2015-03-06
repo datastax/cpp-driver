@@ -415,8 +415,9 @@ SslSession* OpenSslContext::create_session(const Address& address ) {
   return new OpenSslSession(address, verify_flags_, ssl_ctx_);
 }
 
-CassError OpenSslContext::add_trusted_cert(CassString cert) {
-  X509* x509 = load_cert(cert.data, cert.length);
+CassError OpenSslContext::add_trusted_cert(const char* cert,
+                                           size_t cert_length) {
+  X509* x509 = load_cert(cert, cert_length);
   if (x509 == NULL) {
     return CASS_ERROR_SSL_INVALID_CERT;
   }
@@ -427,8 +428,9 @@ CassError OpenSslContext::add_trusted_cert(CassString cert) {
   return CASS_OK;
 }
 
-CassError OpenSslContext::set_cert(CassString cert) {
-  BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert.data), cert.length);
+CassError OpenSslContext::set_cert(const char* cert,
+                                   size_t cert_length) {
+  BIO* bio = BIO_new_mem_buf(const_cast<char*>(cert), cert_length);
   if (bio == NULL) {
     return CASS_ERROR_SSL_INVALID_CERT;
   }
@@ -445,8 +447,12 @@ CassError OpenSslContext::set_cert(CassString cert) {
   return CASS_OK;
 }
 
-CassError OpenSslContext::set_private_key(CassString key, const char* password) {
-  EVP_PKEY* pkey = load_key(key.data, key.length, password);
+CassError OpenSslContext::set_private_key(const char* key,
+                                          size_t key_length,
+                                          const char* password,
+                                          size_t password_length) {
+  // TODO: Password buffer
+  EVP_PKEY* pkey = load_key(key, key_length, password);
   if (pkey == NULL) {
     return CASS_ERROR_SSL_INVALID_PRIVATE_KEY;
   }

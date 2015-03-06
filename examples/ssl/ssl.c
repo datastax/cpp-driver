@@ -50,7 +50,7 @@ int load_trusted_cert_file(const char* file, CassSsl* ssl) {
   fclose(in);
 
   if (bytes_read == (size_t) cert_size) {
-    rc = cass_ssl_add_trusted_cert(ssl, cass_string_init2(cert, cert_size));
+    rc = cass_ssl_add_trusted_cert_n(ssl, cert, cert_size);
     if (rc != CASS_OK) {
       fprintf(stderr, "Error loading SSL certificate: %s\n", cass_error_desc(rc));
       free(cert);
@@ -87,8 +87,8 @@ int main() {
     CassFuture* close_future = NULL;
 
     /* Build statement and execute query */
-    CassString query = cass_string_init("SELECT keyspace_name "
-                                        "FROM system.schema_keyspaces;");
+    const char* query = "SELECT keyspace_name "
+                        "FROM system.schema_keyspaces;";
     CassStatement* statement = cass_statement_new(query, 0);
 
     CassFuture* result_future = cass_session_execute(session, statement);

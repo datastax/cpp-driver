@@ -102,7 +102,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
+  CassStatement* statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -118,7 +118,7 @@ CassError execute_query(CassSession* session, const char* query) {
   return rc;
 }
 
-CassError prepare_query(CassSession* session, CassString query, const CassPrepared** prepared) {
+CassError prepare_query(CassSession* session, const char* query, const CassPrepared** prepared) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
 
@@ -169,7 +169,7 @@ void print_stats(ThreadState* state) {
          throughput_max);
 }
 
-void insert_into_perf(ThreadState* state, CassString query, const CassPrepared* prepared) {
+void insert_into_perf(ThreadState* state, const char* query, const CassPrepared* prepared) {
   int i;
   double elapsed, throughput;
   uint64_t start;
@@ -231,7 +231,7 @@ void run_insert_queries(void* data) {
   ThreadState* state = (ThreadState*)data;
 
   const CassPrepared* insert_prepared = NULL;
-  CassString insert_query = cass_string_init("INSERT INTO songs (id, title, album, artist, tags) VALUES (?, ?, ?, ?, ?);");
+  const char* insert_query = "INSERT INTO songs (id, title, album, artist, tags) VALUES (?, ?, ?, ?, ?);";
 
 #if USE_PREPARED
   if (prepare_query(state->session, insert_query, &insert_prepared) == CASS_OK) {
@@ -247,7 +247,7 @@ void run_insert_queries(void* data) {
   print_stats(state);
 }
 
-void select_from_perf(ThreadState* state, CassString query, const CassPrepared* prepared) {
+void select_from_perf(ThreadState* state, const char* query, const CassPrepared* prepared) {
   int i;
   double elapsed, throughput;
   uint64_t start;
@@ -297,7 +297,7 @@ void run_select_queries(void* data) {
   int i;
   ThreadState* state = (ThreadState*)data;
   const CassPrepared* select_prepared = NULL;
-  CassString select_query = cass_string_init("SELECT * FROM songs WHERE id = a98d21b2-1900-11e4-b97b-e5e358e71e0d");
+  const char* select_query = "SELECT * FROM songs WHERE id = a98d21b2-1900-11e4-b97b-e5e358e71e0d";
 
 #if USE_PREPARED
   if (prepare_query(state->session, select_query, &select_prepared) == CASS_OK) {

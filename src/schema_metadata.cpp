@@ -39,25 +39,46 @@ void cass_schema_free(const CassSchema* schema) {
   delete schema->from();
 }
 
-const CassSchemaMeta* cass_schema_get_keyspace(const CassSchema* schema, const char* keyspace_name) {
-  return CassSchemaMeta::to(schema->get(keyspace_name));
+const CassSchemaMeta* cass_schema_get_keyspace(const CassSchema* schema,
+                                               const char* keyspace) {
+  return cass_schema_get_keyspace_n(schema, keyspace, strlen(keyspace));
+}
+
+const CassSchemaMeta* cass_schema_get_keyspace_n(const CassSchema* schema,
+                                                 const char* keyspace,
+                                                 size_t keyspace_length) {
+  return CassSchemaMeta::to(schema->get(std::string(keyspace, keyspace_length)));
 }
 
 CassSchemaMetaType cass_schema_meta_type(const CassSchemaMeta* meta) {
   return meta->type();
 }
 
-const CassSchemaMeta* cass_schema_meta_get_entry(const CassSchemaMeta* meta, const char* name) {
-  return CassSchemaMeta::to(meta->get_entry(name));
+const CassSchemaMeta* cass_schema_meta_get_entry(const CassSchemaMeta* meta,
+                                                 const char* name) {
+  return cass_schema_meta_get_entry_n(meta, name, strlen(name));
 }
 
-const CassSchemaMetaField* cass_schema_meta_get_field(const CassSchemaMeta* meta, const char* name) {
-  return CassSchemaMetaField::to(meta->get_field(name));
+const CassSchemaMeta* cass_schema_meta_get_entry_n(const CassSchemaMeta* meta,
+                                                   const char* name,
+                                                   size_t name_length) {
+  return CassSchemaMeta::to(meta->get_entry(std::string(name, name_length)));
+}
+
+const CassSchemaMetaField* cass_schema_meta_get_field(const CassSchemaMeta* meta,
+                                                      const char* name) {
+  return cass_schema_meta_get_field_n(meta, name, strlen(name));
+}
+
+const CassSchemaMetaField* cass_schema_meta_get_field_n(const CassSchemaMeta* meta,
+                                                        const char* name,
+                                                        size_t name_length) {
+  return CassSchemaMetaField::to(meta->get_field(std::string(name, name_length)));
 }
 
 CassString cass_schema_meta_field_name(const CassSchemaMetaField* field) {
   const std::string& name = field->name();
-  return cass_string_init2(name.data(), name.size());
+  return cass_string_init_n(name.data(), name.size());
 }
 
 const CassValue* cass_schema_meta_field_value(const CassSchemaMetaField* field) {

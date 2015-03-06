@@ -41,10 +41,10 @@ struct SerialConsistencyTests : public test_utils::SingleSessionTest {
 BOOST_FIXTURE_TEST_SUITE(serial_consistency, SerialConsistencyTests)
 
 test_utils::CassFuturePtr insert_row(CassSession* session, const std::string& key, int value, CassConsistency serial_consistency) {
-  CassString insert_query = cass_string_init("INSERT INTO test (key, value) VALUES (?, ?) IF NOT EXISTS;");
+  const char* insert_query = "INSERT INTO test (key, value) VALUES (?, ?) IF NOT EXISTS;";
 
   test_utils::CassStatementPtr statement(cass_statement_new(insert_query, 2));
-  cass_statement_bind_string(statement.get(), 0, cass_string_init2(key.data(), key.size()));
+  cass_statement_bind_string(statement.get(), 0, cass_string_init_n(key.data(), key.size()));
   cass_statement_bind_int32(statement.get(), 1, value);
 
   cass_statement_set_serial_consistency(statement.get(), serial_consistency);

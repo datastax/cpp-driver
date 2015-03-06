@@ -84,7 +84,7 @@ void connect_session(CassSession* session, const CassCluster* cluster, CassFutur
 
 void execute_query(CassSession* session, const char* query,
                    CassFutureCallback callback) {
-  CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
+  CassStatement* statement = cass_statement_new(query, 0);
   CassFuture* future = cass_session_execute(session, statement);
   cass_future_set_callback(future, callback, session);
   cass_future_free(future);
@@ -120,9 +120,8 @@ void on_create_keyspace(CassFuture* future, void* data) {
 }
 
 void on_create_table(CassFuture* future, void* data) {
-  CassString insert_query
-      = cass_string_init("INSERT INTO callbacks (key, value) "
-                         "VALUES (?, ?)");
+  const char* insert_query = "INSERT INTO callbacks (key, value) "
+                             "VALUES (?, ?)";
   CassUuid key;
   CassStatement* statement = NULL;
   CassFuture* insert_future = NULL;
@@ -152,8 +151,7 @@ void on_insert(CassFuture* future, void* data) {
     print_error(future);
     signal_exit((CassSession*)data);
   } else {
-    CassString select_query
-        = cass_string_init("SELECT * FROM callbacks");
+    const char* select_query = "SELECT * FROM callbacks";
     CassStatement* statement
         = cass_statement_new(select_query, 0);
     CassFuture* select_future

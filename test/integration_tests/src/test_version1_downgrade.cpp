@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE(query_after_downgrade)
 {
   test_utils::CassLog::reset("Error response: 'Invalid or unsupported protocol version: 2");
 
-  cass_size_t row_count;
+  size_t row_count;
 
   {
     test_utils::CassClusterPtr cluster(cass_cluster_new());

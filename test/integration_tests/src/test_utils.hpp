@@ -226,7 +226,7 @@ struct Value;
 
 template<>
 struct Value<cass_int32_t> {
-  static CassError bind(CassStatement* statement, cass_size_t index, cass_int32_t value) {
+  static CassError bind(CassStatement* statement, size_t index, cass_int32_t value) {
     return cass_statement_bind_int32(statement, index, value);
   }
 
@@ -253,7 +253,7 @@ struct Value<cass_int32_t> {
 
 template<>
 struct Value<cass_int64_t> {
-  static CassError bind(CassStatement* statement, cass_size_t index, cass_int64_t value) {
+  static CassError bind(CassStatement* statement, size_t index, cass_int64_t value) {
     return cass_statement_bind_int64(statement, index, value);
   }
 
@@ -280,7 +280,7 @@ struct Value<cass_int64_t> {
 
 template<>
 struct Value<cass_float_t> {
-  static CassError bind(CassStatement* statement, cass_size_t index, cass_float_t value) {
+  static CassError bind(CassStatement* statement, size_t index, cass_float_t value) {
     return cass_statement_bind_float(statement, index, value);
   }
 
@@ -307,7 +307,7 @@ struct Value<cass_float_t> {
 
 template<>
 struct Value<cass_double_t> {
-  static CassError bind(CassStatement* statement, cass_size_t index, cass_double_t value) {
+  static CassError bind(CassStatement* statement, size_t index, cass_double_t value) {
     return cass_statement_bind_double(statement, index, value);
   }
 
@@ -334,7 +334,7 @@ struct Value<cass_double_t> {
 
 template<>
 struct Value<cass_bool_t> {
-  static CassError bind(CassStatement* statement, cass_size_t index, cass_bool_t value) {
+  static CassError bind(CassStatement* statement, size_t index, cass_bool_t value) {
     return cass_statement_bind_bool(statement, index, value);
   }
 
@@ -353,7 +353,7 @@ struct Value<cass_bool_t> {
 
 template<>
 struct Value<CassString> {
-  static CassError bind(CassStatement* statement, cass_size_t index, CassString value) {
+  static CassError bind(CassStatement* statement, size_t index, CassString value) {
     return cass_statement_bind_string(statement, index, value);
   }
 
@@ -375,7 +375,7 @@ struct Value<CassString> {
 
 template<>
 struct Value<CassBytes> {
-  static CassError bind(CassStatement* statement, cass_size_t index, CassBytes value) {
+  static CassError bind(CassStatement* statement, size_t index, CassBytes value) {
     return cass_statement_bind_bytes(statement, index, value);
   }
 
@@ -397,7 +397,7 @@ struct Value<CassBytes> {
 
 template<>
 struct Value<CassInet> {
-  static CassError bind(CassStatement* statement, cass_size_t index, CassInet value) {
+  static CassError bind(CassStatement* statement, size_t index, CassInet value) {
     return cass_statement_bind_inet(statement, index, value);
   }
 
@@ -433,7 +433,7 @@ struct Value<CassInet> {
 
 template<>
 struct Value<CassUuid> {
-  static CassError bind(CassStatement* statement, cass_size_t index, CassUuid value) {
+  static CassError bind(CassStatement* statement, size_t index, CassUuid value) {
     return cass_statement_bind_uuid(statement, index, value);
   }
 
@@ -467,7 +467,7 @@ struct Value<CassUuid> {
 
 template<>
 struct Value<CassDecimal> {
-  static CassError bind(CassStatement* statement, cass_size_t index, CassDecimal value) {
+  static CassError bind(CassStatement* statement, size_t index, CassDecimal value) {
     return cass_statement_bind_decimal(statement, index, value);
   }
 

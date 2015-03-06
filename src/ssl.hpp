@@ -80,9 +80,12 @@ public:
   }
 
   virtual SslSession* create_session(const Address& address) = 0;
-  virtual CassError add_trusted_cert(CassString cert) = 0;
-  virtual CassError set_cert(CassString cert) = 0;
-  virtual CassError set_private_key(CassString key, const char* password) = 0;
+  virtual CassError add_trusted_cert(const char* cert, size_t cert_length) = 0;
+  virtual CassError set_cert(const char* cert, size_t cert_length) = 0;
+  virtual CassError set_private_key(const char* key,
+                                    size_t key_length,
+                                    const char* password,
+                                    size_t password_length) = 0;
 
 protected:
   int verify_flags_;

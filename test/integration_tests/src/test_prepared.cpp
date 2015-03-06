@@ -168,8 +168,8 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
                                                "blob_sample, boolean_sample, timestamp_sample, inet_sample) "
                                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)") % ALL_TYPE_TABLE_NAME);
 
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
-                                                                 cass_string_init2(insert_query.data(), insert_query.size())));
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
+                                                                   insert_query.data(), insert_query.size()));
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
@@ -261,8 +261,8 @@ BOOST_AUTO_TEST_CASE(bound_all_types_null_values)
                                                "blob_sample, boolean_sample, timestamp_sample, inet_sample) "
                                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)") % ALL_TYPE_TABLE_NAME);
 
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
-                                                                 cass_string_init2(insert_query.data(), insert_query.size())));
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
+                                                                   insert_query.data(), insert_query.size()));
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
@@ -321,8 +321,8 @@ BOOST_AUTO_TEST_CASE(select_one)
 
   std::string select_query = str(boost::format("SELECT * FROM %s WHERE tweet_id = ?;") % table_name);
 
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
-                                                                 cass_string_init2(select_query.data(), select_query.size())));
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
+                                                                   select_query.data(), select_query.size()));
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
@@ -347,8 +347,8 @@ BOOST_AUTO_TEST_CASE(select_one)
 }
 
 CassPreparedMovable prepare_statement(CassSession* session, std::string query) {
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
-                                                                 cass_string_init2(query.data(), query.size())));
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
+                                                                   query.data(), query.size()));
   test_utils::wait_and_check_error(prepared_future.get());
   return CassPreparedMovable(cass_future_get_prepared(prepared_future.get()));
 }

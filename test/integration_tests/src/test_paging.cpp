@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(paging_simple)
   const int num_rows = 100;
   const int page_size = 5;
 
-  CassString insert_query = cass_string_init("INSERT INTO test (part, key, value) VALUES (?, ?, ?);");
+  const char* insert_query = "INSERT INTO test (part, key, value) VALUES (?, ?, ?);";
 
   const cass_int32_t part_key = 0;
 
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(paging_simple)
     BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
   }
 
-  CassString select_query = cass_string_init("SELECT value FROM test");
+  const char* select_query = "SELECT value FROM test";
 
   test_utils::CassResultPtr result;
   test_utils::CassStatementPtr statement(cass_statement_new(select_query, 0));
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(paging_empty)
 {
   const int page_size = 5;
 
-  CassString select_query = cass_string_init("SELECT value FROM test");
+  const char* select_query = "SELECT value FROM test";
 
   test_utils::CassStatementPtr statement(cass_statement_new(select_query, 0));
   cass_statement_set_paging_size(statement.get(), page_size);

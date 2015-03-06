@@ -58,7 +58,7 @@ struct StressTests : public test_utils::MultipleNodesTest {
 
     cass_statement_bind_uuid(statement, 0, test_utils::generate_time_uuid(uuid_gen));
     cass_statement_bind_int64(statement, 1, event_time.count());
-    cass_statement_bind_string(statement, 2, cass_string_init2(text_sample.data(), text_sample.size()));
+    cass_statement_bind_string(statement, 2, cass_string_init_n(text_sample.data(), text_sample.size()));
 
     test_utils::CassFuturePtr future(cass_session_execute(session, statement));
     cass_future_wait(future.get());
@@ -75,7 +75,7 @@ struct StressTests : public test_utils::MultipleNodesTest {
   bool insert_task(const std::string& query, CassConsistency consistency, int rows_per_id) {
     bool is_successful = true;
     for (int i = 0; i < rows_per_id; ++i) {
-      test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 3));
+      test_utils::CassStatementPtr statement(cass_statement_new(query.c_str(), 3));
       cass_statement_set_consistency(statement.get(), consistency);
       if (!bind_and_execute_insert(statement.get())) {
         is_successful = false;
@@ -99,7 +99,7 @@ struct StressTests : public test_utils::MultipleNodesTest {
   bool select_task(const std::string& query, CassConsistency consistency, int num_iterations) {
     bool is_successful = true;
 
-    test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0));
+    test_utils::CassStatementPtr statement(cass_statement_new(query.c_str(), 0));
     cass_statement_set_consistency(statement.get(), consistency);
     for (int i = 0; i < num_iterations; ++i) {
       test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
@@ -151,8 +151,8 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
   std::string insert_query = str(boost::format("INSERT INTO %s (id, event_time, text_sample) VALUES (?, ?, ?)") % table_name);
   std::string select_query = str(boost::format("SELECT * FROM %s LIMIT 10000") % table_name);
 
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
-                                                                 cass_string_init2(insert_query.data(), insert_query.size())));
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
+                                                                   insert_query.data(), insert_query.size()));
 
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
@@ -196,8 +196,8 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
   std::string insert_query = str(boost::format("INSERT INTO %s (id, event_time, text_sample) VALUES (?, ?, ?)") % table_name);
   std::string select_query = str(boost::format("SELECT * FROM %s LIMIT 10000") % table_name);
 
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session,
-                                                                 cass_string_init2(insert_query.data(), insert_query.size())));
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
+                                                                   insert_query.data(), insert_query.size()));
 
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));

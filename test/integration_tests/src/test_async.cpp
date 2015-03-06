@@ -49,12 +49,12 @@ struct AsyncTests : public test_utils::SingleSessionTest {
     std::vector<CassUuid> ids;
     for (size_t i = 0; i < num_concurrent_requests; ++i) {
       CassUuid id = test_utils::generate_time_uuid(uuid_gen);
-      test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init2(insert_query.data(), insert_query.size()), 3));
+      test_utils::CassStatementPtr statement(cass_statement_new_n(insert_query.data(), insert_query.size(), 3));
       cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_QUORUM);
       BOOST_REQUIRE(cass_statement_bind_uuid(statement.get(), 0, id) == CASS_OK);
       BOOST_REQUIRE(cass_statement_bind_int32(statement.get(), 1, i) == CASS_OK);
       std::string str_value = str(boost::format("row%d") % i);
-      BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 2, cass_string_init2(str_value.data(), str_value.size())) == CASS_OK);
+      BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 2, cass_string_init_n(str_value.data(), str_value.size())) == CASS_OK);
       futures->push_back(test_utils::CassFuturePtr(cass_session_execute(session, statement.get())));
       ids.push_back(id);
     }

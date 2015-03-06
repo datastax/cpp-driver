@@ -50,7 +50,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     std::string query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(0, ?);") % table_name);
 
-    test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 1));
+    test_utils::CassStatementPtr statement(cass_statement_new(query.c_str(), 1));
 
     BOOST_REQUIRE(cass_statement_bind_collection(statement.get(), 0, input.get()) == CASS_OK);
 
@@ -188,7 +188,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     std::string query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(0, ?);") % table_name);
 
-    test_utils::CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 1));
+    test_utils::CassStatementPtr statement(cass_statement_new(query.c_str(), 1));
 
     BOOST_REQUIRE(cass_statement_bind_collection(statement.get(), 0, input.get()) == CASS_OK);
 
