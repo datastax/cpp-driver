@@ -65,7 +65,6 @@ public:
   LOG_METHOD(trace_, CASS_LOG_TRACE)
 
 #undef LOG_MESSAGE
-#undef ATTR_FORMAT
 
   // Testing only
   static bool is_flushed() { return thread_->is_flushed(); }
@@ -77,9 +76,14 @@ private:
     ~LogThread();
 
 
+    // "this" is argument 1
+    ATTR_FORMAT(6, 0)
     void log(CassLogLevel severity,
              const char* file, int line, const char* function,
              const char* format, va_list args);
+
+#undef ATTR_FORMAT
+
     bool is_flushed() const { return log_queue_.is_empty(); }
 
   private:
