@@ -16,6 +16,8 @@
 
 #include "types.hpp"
 
+#include <uv.h>
+
 extern "C" {
 
 const char* cass_error_desc(CassError error) {
@@ -54,6 +56,32 @@ CassInet cass_inet_init_v6(const cass_uint8_t* address) {
   inet.address_length = CASS_INET_V6_LENGTH;
   memcpy(inet.address, address, CASS_INET_V6_LENGTH);
   return inet;
+}
+
+void cass_inet_string(CassInet inet, char* output) {
+  uv_inet_ntop(inet.address_length == CASS_INET_V4_LENGTH ? AF_INET : AF_INET6,
+               inet.address,
+               output, CASS_INET_STRING_LENGTH);
+}
+
+CassError cass_inet_from_string(const char* str, CassInet* output) {
+#if UV_VERSION_MAJOR == 0
+  if (uv_inet_pton(AF_INET, str, output->address).code == UV_OK) {
+#else
+  if (uv_inet_pton(AF_INET, str, output->address) == 0) {
+#endif
+    output->address_length = CASS_INET_V4_LENGTH;
+    return CASS_OK;
+#if UV_VERSION_MAJOR == 0
+  } else if (uv_inet_pton(AF_INET6, str, output->address).code == UV_OK) {
+#else
+  } else if (uv_inet_pton(AF_INET6, str, output->address) == 0) {
+#endif
+    output->address_length = CASS_INET_V6_LENGTH;
+    return CASS_OK;
+  } else {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
 }
 
 CassDecimal cass_decimal_init(cass_int32_t scale, CassBytes varint) {
