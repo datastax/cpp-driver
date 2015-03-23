@@ -183,7 +183,7 @@ if(CASS_USE_TCMALLOC)
   endif()
   set(_GPERFTOOLS_ROOT_HINTS_AND_PATHS
     HINTS ${_GPERFTOOLS_ROOT_HINTS}
-	PATHS ${_GPERFTOOLS_ROOT_PATHS})
+    PATHS ${_GPERFTOOLS_ROOT_PATHS})
 
   # Ensure gperftools (tcmalloc) was found
   find_library(GPERFLIBRARY_LIBRARY
@@ -207,16 +207,16 @@ if(CASS_USE_ZLIB)
   find_package(ZLIB)
   if(ZLIB_FOUND)
     # Determine if the static library needs to be used for Windows
-	if(WIN32 AND CASS_USE_STATIC_LIBS)
-	  string(REPLACE "zlib.lib" "zlibstatic.lib" ZLIB_LIBRARIES "${ZLIB_LIBRARIES}")
-	endif()
+    if(WIN32 AND CASS_USE_STATIC_LIBS)
+      string(REPLACE "zlib.lib" "zlibstatic.lib" ZLIB_LIBRARIES "${ZLIB_LIBRARIES}")
+    endif()
 
-	# Assign zlib properties
+    # Assign zlib properties
     set(CASS_INCLUDES ${CASS_INCLUDES} ${ZLIB_INCLUDE_DIRS})
     set(CASS_LIBS ${CASS_LIBS} ${ZLIB_LIBRARIES})
   else()
     message(WARNING "Could not find zlib, try to set the path to zlib root folder in the system variable ZLIB_ROOT_DIR")
-	message(WARNING "zlib libraries will not be linked into build")
+    message(WARNING "zlib libraries will not be linked into build")
   endif()
 endif()
 
@@ -227,7 +227,7 @@ if(CASS_USE_OPENSSL)
   set(_OPENSSL_ROOT_HINTS ${OPENSSL_ROOT_DIR} $ENV{OPENSSL_ROOT_DIR})
   set(_OPENSSL_ROOT_HINTS_AND_PATHS
     HINTS ${_OPENSSL_ROOT_HINTS}
-	PATHS ${_OPENSSL_ROOT_PATHS})
+  PATHS ${_OPENSSL_ROOT_PATHS})
 
   # Discover OpenSSL and assign OpenSSL include and libraries
   find_package(OpenSSL REQUIRED)
@@ -351,7 +351,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedefs")
   endif()
 
-  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Werror")
+  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} -Werror")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.3" OR
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.3")
     set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
@@ -365,7 +365,7 @@ else()
   # I disabled long-long warning because boost generates about 50 such warnings
   set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-variadic-macros")
 
-  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Werror")
+  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} -Werror")
   set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 ${WARNING_COMPILER_FLAGS}")
 endif()
@@ -412,12 +412,28 @@ source_group("Source Files" FILES ${SRC_FILES})
 source_group("Header Files" FILES ${API_HEADER_FILES} ${INC_FILES})
 set(ALL_SOURCE_FILES ${SRC_FILES} ${API_HEADER_FILES} ${INC_FILES})
 
+# Create an object library for the driver (single build)
+if(NOT CMAKE_VERSION VERSION_LESS "2.8.8")
+  add_library(cpp-driver OBJECT ${ALL_SOURCE_FILES})
+  if(NOT WIN32)
+    set_property(TARGET cpp-driver PROPERTY COMPILE_FLAGS "-fPIC")
+  endif()
+
+  # Build both shared and static libraries
+  set(CASS_BUILD_SHARED ON)
+  set(CASS_BUILD_STATIC ON)
+endif()
+
 # Assign the include directories
 include_directories(${CASS_INCLUDES})
 
 # Determine if the dynamic/shared library should be built
 if(CASS_BUILD_SHARED)
-  add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})
+  if(CMAKE_VERSION VERSION_LESS "2.8.8")
+    add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})
+  else()
+    add_library(${PROJECT_LIB_NAME} SHARED $<TARGET_OBJECTS:cpp-driver>)
+  endif()
   target_link_libraries(${PROJECT_LIB_NAME} ${CASS_LIBS})
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME})
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
@@ -429,7 +445,11 @@ endif()
 
 # Determine if the static library should be built
 if(CASS_BUILD_STATIC)
-  add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${ALL_SOURCE_FILES})
+  if(CMAKE_VERSION VERSION_LESS "2.8.8")
+    add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${ALL_SOURCE_FILES})
+  else()
+    add_library(${PROJECT_LIB_NAME_STATIC} STATIC $<TARGET_OBJECTS:cpp-driver>)
+  endif()
   target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${LIBS})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})

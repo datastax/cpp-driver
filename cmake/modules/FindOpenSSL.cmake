@@ -37,8 +37,13 @@
 #  License text for the above reference.)
 
 if (UNIX)
-  find_package(PkgConfig QUIET)
-  pkg_check_modules(_OPENSSL QUIET openssl)
+  if(CMAKE_VERSION VERSION_LESS "2.8.0")
+    find_package(PkgConfig)
+    pkg_check_modules(_OPENSSL openssl)
+  else()
+    find_package(PkgConfig QUIET)
+    pkg_check_modules(_OPENSSL QUIET openssl)
+  endif()
 endif ()
 
 if (WIN32)
@@ -147,7 +152,7 @@ if(WIN32 AND NOT CYGWIN)
     set(SSL_EAY_LIBRARY_DEBUG "${SSL_EAY_DEBUG}")
     set(SSL_EAY_LIBRARY_RELEASE "${SSL_EAY_RELEASE}")
 
-    include(${CMAKE_CURRENT_LIST_DIR}/SelectLibraryConfigurations.cmake)
+    include(SelectLibraryConfigurations)
     select_library_configurations(LIB_EAY)
     select_library_configurations(SSL_EAY)
 
@@ -251,7 +256,11 @@ function(from_hex HEX DEC)
   while (_strlen GREATER 0)
     math(EXPR _res "${_res} * 16")
     string(SUBSTRING "${HEX}" 0 1 NIBBLE)
-    string(SUBSTRING "${HEX}" 1 -1 HEX)
+    if(_strlen GREATER 1)
+      string(SUBSTRING "${HEX}" 1 1 HEX)
+    else()
+      set(HEX "")
+    endif()
     if (NIBBLE STREQUAL "A")
       math(EXPR _res "${_res} + 10")
     elseif (NIBBLE STREQUAL "B")
@@ -313,15 +322,29 @@ if (OPENSSL_INCLUDE_DIR)
 endif ()
 
 if (OPENSSL_VERSION)
-  find_package_handle_standard_args(OpenSSL
-    REQUIRED_VARS
-      OPENSSL_LIBRARIES
-      OPENSSL_INCLUDE_DIR
-    VERSION_VAR
-      OPENSSL_VERSION
-    FAIL_MESSAGE
-      "Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR"
-  )
+  if(CMAKE_VERSION VERSION_LESS "2.8.0")
+    find_package_handle_standard_args(OpenSSL
+      REQUIRED_VARS
+        OPENSSL_FOUND
+        OPENSSL_LIBRARIES
+        OPENSSL_INCLUDE_DIR
+    )
+  if(OPENSSL_FOUND)
+    message(STATUS "Found OpenSSL: ${OPENSSL_LIBRARIES} (found version ${OPENSSL_VERSION})")
+  else()
+    message(FATAL_ERROR "Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR")
+  endif()
+  else()
+    find_package_handle_standard_args(OpenSSL
+      REQUIRED_VARS
+        OPENSSL_LIBRARIES
+        OPENSSL_INCLUDE_DIR
+      VERSION_VAR
+        OPENSSL_VERSION
+      FAIL_MESSAGE
+        "Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR"
+    )
+  endif()
 else ()
   find_package_handle_standard_args(OpenSSL "Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR"
     OPENSSL_LIBRARIES
