@@ -52,8 +52,10 @@ public:
 
   virtual ~LatencyAwarePolicy() {}
 
-  void init(uv_loop_t* loop, const SharedRefPtr<Host>& connected_host, const HostMap& hosts);
-  void close_handles();
+  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts);
+
+  virtual void register_handles(uv_loop_t* loop);
+  virtual void close_handles();
 
   virtual QueryPlan* new_query_plan(const std::string& connected_keyspace,
                                     const Request* request,

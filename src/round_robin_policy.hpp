@@ -32,7 +32,7 @@ public:
     : hosts_(new HostVec)
     , index_(0) {}
 
-  virtual void init(uv_loop_t* loop, const SharedRefPtr<Host>& connected_host, const HostMap& hosts) {
+  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts) {
     copy_hosts(hosts, hosts_);
   }
 

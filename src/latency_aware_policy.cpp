@@ -21,13 +21,16 @@
 
 namespace cass {
 
-void LatencyAwarePolicy::init(uv_loop_t* loop, const SharedRefPtr<Host>& connected_host, const HostMap& hosts) {
+void LatencyAwarePolicy::init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts) {
   copy_hosts(hosts, hosts_);
   for (HostMap::const_iterator i = hosts.begin(),
        end = hosts.end(); i != end; ++i) {
     i->second->enable_latency_tracking(settings_.scale_ns, settings_.min_measured);
   }
-  ChainedLoadBalancingPolicy::init(loop, connected_host, hosts);
+  ChainedLoadBalancingPolicy::init(connected_host, hosts);
+}
+
+void LatencyAwarePolicy::register_handles(uv_loop_t* loop) {
   calculate_min_average_task_ = PeriodicTask::start(loop,
                                                     settings_.update_rate_ms,
                                                     this,
