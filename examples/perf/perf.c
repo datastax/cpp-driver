@@ -43,7 +43,7 @@
 #define NUM_THREADS 1
 #define NUM_IO_WORKER_THREADS 4
 #define NUM_CONCURRENT_REQUESTS 10000
-#define NUM_SAMPLES 1000
+#define NUM_ITERATIONS 1000
 
 #define DO_SELECTS 1
 #define USE_PREPARED 1
@@ -58,14 +58,44 @@ const char* big_string = "012345670123456701234567012345670123456701234567012345
 
 CassUuidGen* uuid_gen;
 
-typedef struct ThreadState_ {
-  int id;
-  uv_thread_t thread;
-  CassSession* session;
+typedef struct Status_ {
+  uv_mutex_t mutex;
+  uv_cond_t cond;
   int count;
-  double total_averages;
-  double samples[NUM_SAMPLES];
-} ThreadState;
+} Status;
+
+Status status;
+
+int status_init(Status* status, int initial_count) {
+  int rc;
+  rc = uv_mutex_init(&status->mutex);
+  if (rc != 0) return rc;
+  rc = uv_cond_init(&status->cond);
+  if (rc != 0) return rc;
+  status->count = initial_count;
+  return rc;
+}
+
+void status_destroy(Status* status) {
+  uv_mutex_destroy(&status->mutex);
+  uv_cond_destroy(&status->cond);
+}
+
+void status_notify(Status* status) {
+  uv_mutex_lock(&status->mutex);
+  status->count--;
+  uv_cond_signal(&status->cond);
+  uv_mutex_unlock(&status->mutex);
+}
+
+int status_wait(Status* status, uint64_t timeout_secs) {
+  int count;
+  uv_mutex_lock(&status->mutex);
+  uv_cond_timedwait(&status->cond, &status->mutex, timeout_secs * 1000 * 1000 * 1000);
+  count = status->count;
+  uv_mutex_unlock(&status->mutex);
+  return count;
+}
 
 void print_error(CassFuture* future) {
   const char* message;
@@ -149,41 +179,13 @@ int compare_dbl(const void* d1, const void* d2) {
   }
 }
 
-void print_stats(ThreadState* state) {
-  double throughput_avg = 0.0;
-  double throughput_min = 0.0;
-  double throughput_median = 0.0;
-  double throughput_max = 0.0;
-  int index_median = ceil(0.5 * NUM_SAMPLES);
-
-  qsort(state->samples, NUM_SAMPLES, sizeof(double), compare_dbl);
-  throughput_avg = state->total_averages / state->count;
-  throughput_min = state->samples[0];
-  throughput_median = state->samples[index_median];
-  throughput_max = state->samples[NUM_SAMPLES - 1];
-
-  printf("%d IO threads, %d requests/batch:\navg: %f\nmin: %f\nmedian: %f\nmax: %f\n",
-         NUM_IO_WORKER_THREADS,
-         NUM_CONCURRENT_REQUESTS,
-         throughput_avg,
-         throughput_min,
-         throughput_median,
-         throughput_max);
-}
-
-void insert_into_perf(ThreadState* state, const char* query, const CassPrepared* prepared) {
+void insert_into_perf(CassSession* session, CassString query, const CassPrepared* prepared) {
   int i;
-  double elapsed, throughput;
-  uint64_t start;
-  int num_requests = 0;
-  CassSession* session = state->session;
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
 
   CassCollection* collection = cass_collection_new(CASS_COLLECTION_TYPE_SET, 2);
   cass_collection_append_string(collection, "jazz");
   cass_collection_append_string(collection, "2013");
-
-  start = uv_hrtime();
 
   for (i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
     CassUuid id;
@@ -212,52 +214,37 @@ void insert_into_perf(ThreadState* state, const char* query, const CassPrepared*
     CassError rc = cass_future_error_code(future);
     if (rc != CASS_OK) {
       print_error(future);
-    } else {
-      num_requests++;
     }
     cass_future_free(future);
   }
-
-  elapsed = (double)(uv_hrtime() - start) / 1000000000.0;
-  throughput = (double)num_requests / elapsed;
-  state->samples[state->count++] = throughput;
-  state->total_averages += throughput;
-
-  printf("%d: average %f inserts/sec (%d, %f)\n", state->id, state->total_averages / state->count, num_requests, elapsed);
 
   cass_collection_free(collection);
 }
 
 void run_insert_queries(void* data) {
   int i;
-  ThreadState* state = (ThreadState*)data;
+  CassSession* session = (CassSession*)data;
 
   const CassPrepared* insert_prepared = NULL;
   const char* insert_query = "INSERT INTO songs (id, title, album, artist, tags) VALUES (?, ?, ?, ?, ?);";
 
 #if USE_PREPARED
-  if (prepare_query(state->session, insert_query, &insert_prepared) == CASS_OK) {
+  if (prepare_query(session, insert_query, &insert_prepared) == CASS_OK) {
 #endif
-    for (i = 0; i < NUM_SAMPLES; ++i) {
-      insert_into_perf(state, insert_query, insert_prepared);
+    for (i = 0; i < NUM_ITERATIONS; ++i) {
+      insert_into_perf(session, insert_query, insert_prepared);
     }
 #if USE_PREPARED
     cass_prepared_free(insert_prepared);
   }
 #endif
 
-  print_stats(state);
+  status_notify(&status);
 }
 
 void select_from_perf(ThreadState* state, const char* query, const CassPrepared* prepared) {
   int i;
-  double elapsed, throughput;
-  uint64_t start;
-  int num_requests = 0;
-  CassSession* session = state->session;
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
-
-  start = uv_hrtime();
 
   for (i = 0; i < NUM_CONCURRENT_REQUESTS; ++i) {
     CassStatement* statement;
@@ -282,45 +269,40 @@ void select_from_perf(ThreadState* state, const char* query, const CassPrepared*
       const CassResult* result = cass_future_get_result(future);
       assert(cass_result_column_count(result) == 6);
       cass_result_free(result);
-      num_requests++;
     }
     cass_future_free(future);
   }
-
-  elapsed = (double)(uv_hrtime() - start) / 1000000000.0;
-  throughput = (double)num_requests / elapsed;
-  state->samples[state->count++] = throughput;
-  state->total_averages += throughput;
-
-  printf("%d: average %f selects/sec (%d, %f)\n", state->id, state->total_averages / state->count, num_requests, elapsed);
 }
 
 void run_select_queries(void* data) {
   int i;
-  ThreadState* state = (ThreadState*)data;
+  CassSession* session = (CassSession*)data;
   const CassPrepared* select_prepared = NULL;
   const char* select_query = "SELECT * FROM songs WHERE id = a98d21b2-1900-11e4-b97b-e5e358e71e0d";
 
 #if USE_PREPARED
-  if (prepare_query(state->session, select_query, &select_prepared) == CASS_OK) {
+  if (prepare_query(session, select_query, &select_prepared) == CASS_OK) {
 #endif
-    for (i = 0; i < NUM_SAMPLES; ++i) {
-      select_from_perf(state, select_query, select_prepared);
+    for (i = 0; i < NUM_ITERATIONS; ++i) {
+      select_from_perf(session, select_query, select_prepared);
     }
 #if USE_PREPARED
     cass_prepared_free(select_prepared);
   }
 #endif
 
-  print_stats(state);
+  status_notify(&status);
 }
 
 int main() {
   int i;
-  ThreadState states[NUM_THREADS];
+  CassMetrics metrics;
+  uv_thread_t threads[NUM_THREADS];
   CassCluster* cluster = NULL;
   CassSession* session = NULL;
   CassFuture* close_future = NULL;
+
+  status_init(&status, NUM_THREADS);
 
   cass_log_set_level(CASS_LOG_INFO);
 
@@ -341,20 +323,31 @@ int main() {
 
 
   for (i = 0; i < NUM_THREADS; ++i) {
-    states[i].id = i;
-    states[i].session = session;
-    states[i].count = 0;
-    states[i].total_averages = 0.0;
-
 #if DO_SELECTS
-    uv_thread_create(&states[i].thread, run_select_queries, (void*)&states[i]);
+    uv_thread_create(&threads[i], run_select_queries, (void*)session);
 #else
-    uv_thread_create(&states[i].thread, run_insert_queries, (void*)&states[i]);
+    uv_thread_create(&threads[i], run_insert_queries, (void*)session);
 #endif
   }
 
+  while (status_wait(&status, 5) > 0) {
+    cass_session_get_metrics(session, &metrics);
+    printf("rate stats (requests/second): mean %f 1m %f 5m %f 10m %f\n",
+           metrics.requests.mean_rate,
+           metrics.requests.one_minute_rate,
+           metrics.requests.five_minute_rate,
+           metrics.requests.fifteen_minute_rate);
+  }
+
+  cass_session_get_metrics(session, &metrics);
+  printf("final stats (microseconds): min %llu max %llu median %llu 75th %llu 95th %llu 98th %llu 99th %llu 99.9th %llu\n",
+         metrics.requests.min, metrics.requests.max,
+         metrics.requests.median,  metrics.requests.percentile_75th,
+         metrics.requests.percentile_95th, metrics.requests.percentile_98th,
+         metrics.requests.percentile_99th, metrics.requests.percentile_999th);
+
   for (i = 0; i < NUM_THREADS; ++i) {
-    uv_thread_join(&states[i].thread);
+    uv_thread_join(&threads[i]);
   }
 
   close_future = cass_session_close(session);
@@ -362,6 +355,8 @@ int main() {
   cass_future_free(close_future);
   cass_cluster_free(cluster);
   cass_uuid_gen_free(uuid_gen);
+
+  status_destroy(&status);
 
   return 0;
 }

@@ -124,7 +124,7 @@ void ControlConnection::clear() {
 void ControlConnection::connect(Session* session) {
   session_ = session;
   query_plan_.reset(new ControlStartupQueryPlan(session_->hosts_));
-  protocol_version_ = session->config_.protocol_version();
+  protocol_version_ = session_->config().protocol_version();
   query_tokens_ = session_->config().token_aware_routing();
   if (protocol_version_ < 0) {
     protocol_version_ = HIGHEST_SUPPORTED_PROTOCOL_VERSION;
@@ -172,7 +172,8 @@ void ControlConnection::reconnect(bool retry_current_host) {
   }
 
   connection_ = new Connection(session_->loop(),
-                               session_->config_,
+                               session_->config(),
+                               session_->metrics(),
                                current_host_address_,
                                "", // No keyspace
                                protocol_version_,

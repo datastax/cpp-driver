@@ -110,6 +110,8 @@ public:
 
   int32_t encode(int version, int flags, BufferVec* bufs) const;
 
+  virtual void start_request() {}
+
   virtual void on_set(ResponseMessage* response) = 0;
   virtual void on_error(CassError code, const std::string& message) = 0;
   virtual void on_timeout() = 0;

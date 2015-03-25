@@ -29,6 +29,7 @@ namespace cass {
 IOWorker::IOWorker(Session* session)
     : session_(session)
     , config_(session->config())
+    , metrics_(session->metrics())
     , protocol_version_(-1)
     , is_closing_(false)
     , pending_request_count_(0)
@@ -148,7 +149,8 @@ void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
   Address address;
   if (!request_handler->get_current_host_address(&address)) {
     request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                              "IOWorker: No hosts available");
+                              "All hosts in current policy attempted "
+                              "and were either unavailable or failed");
     return;
   }
 

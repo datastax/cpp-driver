@@ -59,6 +59,7 @@ void Handler::set_state(Handler::State next_state) {
         state_ = next_state;
         stream_ = -1;
       } else if (next_state == REQUEST_STATE_WRITING) {
+        start_request();
         state_ = next_state;
       } else {
         assert(false && "Invalid request state after new");

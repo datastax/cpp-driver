@@ -23,6 +23,7 @@
 #include "handler.hpp"
 #include "list.hpp"
 #include "macros.hpp"
+#include "metrics.hpp"
 #include "ref_counted.hpp"
 #include "request.hpp"
 #include "response.hpp"
@@ -75,6 +76,7 @@ public:
 
   Connection(uv_loop_t* loop,
              const Config& config,
+             Metrics* metrics,
              const Address& address,
              const std::string& keyspace,
              int protocol_version,
@@ -88,6 +90,7 @@ public:
   void schedule_schema_agreement(const SharedRefPtr<SchemaChangeHandler>& handler, uint64_t wait);
 
   const Config& config() const { return config_; }
+  Metrics* metrics() { return metrics_; }
   const Address& address() { return address_; }
   const std::string& address_string() { return addr_string_; }
   const std::string& keyspace() { return keyspace_; }
@@ -282,6 +285,7 @@ private:
 
   uv_loop_t* loop_;
   const Config& config_;
+  Metrics* metrics_;
   Address address_;
   std::string addr_string_;
   std::string keyspace_;

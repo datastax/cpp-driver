@@ -142,6 +142,7 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
 
 Connection::Connection(uv_loop_t* loop,
                        const Config& config,
+                       Metrics* metrics,
                        const Address& address,
                        const std::string& keyspace,
                        int protocol_version,
@@ -155,6 +156,7 @@ Connection::Connection(uv_loop_t* loop,
     , pending_writes_size_(0)
     , loop_(loop)
     , config_(config)
+    , metrics_(metrics)
     , address_(address)
     , addr_string_(address.to_string())
     , keyspace_(keyspace)
@@ -224,6 +226,11 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
 
   pending_writes_size_ += request_size;
   if (pending_writes_size_ > config_.write_bytes_high_water_mark()) {
+    LOG_WARN("Exceeded write bytes water mark (current: %u water mark: %u) on connection to host %s",
+             static_cast<unsigned int>(pending_writes_size_),
+             config_.write_bytes_high_water_mark(),
+             addr_string_.c_str());
+    metrics_->exceeded_write_bytes_water_mark.inc();
     set_is_available(false);
   }
 
@@ -412,6 +419,8 @@ void Connection::on_connect_timeout(Timer* timer) {
   Connection* connection = static_cast<Connection*>(timer->data());
   connection->connect_timer_ = NULL;
   connection->notify_error("Connection timeout");
+
+  connection->metrics_->connection_timeouts.inc();
 }
 
 void Connection::on_close(uv_handle_t* handle) {
@@ -552,6 +561,8 @@ void Connection::on_timeout(RequestTimer* timer) {
   // uses a threshold to defunct the connection.
   handler->set_state(Handler::REQUEST_STATE_TIMEOUT);
   handler->on_timeout();
+
+  metrics_->request_timeouts.inc();
 }
 
 void Connection::on_connected() {
