@@ -175,6 +175,7 @@ void ControlConnection::reconnect(bool retry_current_host) {
 
   connection_ = new Connection(session_->loop(),
                                session_->config_,
+                               session_->metrics_.get(),
                                current_host_address_,
                                "", // No keyspace
                                protocol_version_);

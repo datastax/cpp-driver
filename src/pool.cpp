@@ -42,6 +42,7 @@ Pool::Pool(IOWorker* io_worker,
     , address_(address)
     , loop_(io_worker->loop())
     , config_(io_worker->config())
+    , metrics_(io_worker->metrics())
     , state_(POOL_STATE_NEW)
     , available_connection_count_(0)
     , is_available_(false)
@@ -147,7 +148,12 @@ void Pool::add_pending_request(RequestHandler* request_handler) {
   }
 
   if (pending_requests_.size() > config_.pending_requests_high_water_mark()) {
+    LOG_WARN("Exceeded pending requests water mark (current: %u water mark: %u) for host %s",
+             static_cast<unsigned int>(pending_requests_.size()),
+             config_.pending_requests_high_water_mark(),
+             address_.to_string().c_str());
     set_is_available(false);
+    metrics_->exceeded_pending_requests_water_mark.inc();
   }
 }
 
@@ -228,7 +234,7 @@ void Pool::maybe_close() {
 void Pool::spawn_connection() {
   if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
     Connection* connection =
-        new Connection(loop_, config_,
+        new Connection(loop_, config_, metrics_,
                        address_,
                        io_worker_->keyspace(),
                        io_worker_->protocol_version());
@@ -278,6 +284,8 @@ void Pool::on_connection_ready(Connection* connection) {
 
   connections_.push_back(connection);
   return_connection(connection);
+
+  metrics_->total_connections.inc();
 }
 
 void Pool::on_connection_closed(Connection* connection) {
@@ -287,6 +295,7 @@ void Pool::on_connection_closed(Connection* connection) {
       std::find(connections_.begin(), connections_.end(), connection);
   if (it != connections_.end()) {
     connections_.erase(it);
+    metrics_->total_connections.dec();
   }
 
   if (connection->is_defunct()) {
@@ -306,12 +315,16 @@ void Pool::on_connection_availability_changed(Connection* connection) {
   if (connection->is_available()) {
     ++available_connection_count_;
     set_is_available(true);
+
+    metrics_->available_connections.inc();
   } else {
     --available_connection_count_;
     assert(available_connection_count_ >= 0);
     if (available_connection_count_ == 0) {
       set_is_available(false);
     }
+
+    metrics_->available_connections.dec();
   }
 }
 

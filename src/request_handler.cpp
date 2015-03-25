@@ -27,6 +27,8 @@
 #include "schema_change_handler.hpp"
 #include "session.hpp"
 
+#include <uv.h>
+
 namespace cass {
 
 void RequestHandler::on_set(ResponseMessage* response) {
@@ -90,7 +92,14 @@ bool RequestHandler::is_host_up(const Address& address) const {
   return io_worker_->is_host_up(address);
 }
 
+void RequestHandler::start_request() {
+  start_time_ns_ = uv_hrtime();
+}
+
 void RequestHandler::set_response(Response* response) {
+  uint64_t elapsed = uv_hrtime() - start_time_ns_;
+  connection_->metrics()->requests.record_value(elapsed / 1000);
+  connection_->metrics()->request_rates.mark();
   future_->set_result(current_address_, response);
   return_connection_and_finish();
 }
