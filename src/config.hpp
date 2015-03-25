@@ -20,6 +20,7 @@
 #include "auth.hpp"
 #include "cassandra.h"
 #include "dc_aware_policy.hpp"
+#include "latency_aware_policy.hpp"
 #include "ssl.hpp"
 #include "token_aware_policy.hpp"
 
@@ -59,6 +60,7 @@ public:
       , auth_provider_(new AuthProvider())
       , load_balancing_policy_(new DCAwarePolicy())
       , token_aware_routing_(true)
+      , latency_aware_routing_(false)
       , tcp_nodelay_enable_(false)
       , tcp_keepalive_enable_(false)
       , tcp_keepalive_delay_secs_(0) {}
@@ -225,6 +227,9 @@ public:
     if (token_aware_routing()) {
       chain = new TokenAwarePolicy(chain);
     }
+    if (latency_aware()) {
+      chain = new LatencyAwarePolicy(chain, latency_aware_routing_settings_);
+    }
     return chain;
   }
 
@@ -242,6 +247,14 @@ public:
   bool token_aware_routing() const { return token_aware_routing_; }
 
   void set_token_aware_routing(bool is_token_aware) { token_aware_routing_ = is_token_aware; }
+
+  bool latency_aware() const { return latency_aware_routing_; }
+
+  void set_latency_aware_routing(bool is_latency_aware) { latency_aware_routing_ = is_latency_aware; }
+
+  void set_latency_aware_routing_settings(const LatencyAwarePolicy::Settings& settings) {
+    latency_aware_routing_settings_ = settings;
+  }
 
   bool tcp_nodelay_enable() const { return tcp_nodelay_enable_; }
 
@@ -284,6 +297,8 @@ private:
   SharedRefPtr<LoadBalancingPolicy> load_balancing_policy_;
   SharedRefPtr<SslContext> ssl_context_;
   bool token_aware_routing_;
+  bool latency_aware_routing_;
+  LatencyAwarePolicy::Settings latency_aware_routing_settings_;
   bool tcp_nodelay_enable_;
   bool tcp_keepalive_enable_;
   unsigned tcp_keepalive_delay_secs_;

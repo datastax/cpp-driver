@@ -33,11 +33,7 @@ public:
     , index_(0) {}
 
   virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts) {
-    hosts_->reserve(hosts.size());
-    for (HostMap::const_iterator i = hosts.begin(),
-         end = hosts.end(); i != end; ++i) {
-      hosts_->push_back(i->second);
-    }
+    copy_hosts(hosts, hosts_);
   }
 
   virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const {

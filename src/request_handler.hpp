@@ -95,7 +95,7 @@ private:
   ScopedRefPtr<const Request> request_;
   ScopedRefPtr<ResponseFuture> future_;
   bool is_query_plan_exhausted_;
-  Address current_address_;
+  SharedRefPtr<Host> current_host_;
   ScopedPtr<QueryPlan> query_plan_;
   IOWorker* io_worker_;
   Pool* pool_;

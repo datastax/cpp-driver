@@ -67,7 +67,6 @@ public:
 #endif
   }
 
-
 #if UV_VERSION_MAJOR == 0
   uv_loop_t* loop() { return loop_; }
 #else

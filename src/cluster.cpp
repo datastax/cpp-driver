@@ -265,6 +265,26 @@ void cass_cluster_set_token_aware_routing(CassCluster* cluster,
   cluster->config().set_token_aware_routing(enabled == cass_true);
 }
 
+void cass_cluster_set_latency_aware_routing(CassCluster* cluster,
+                                            cass_bool_t enabled) {
+  cluster->config().set_latency_aware_routing(enabled == cass_true);
+}
+
+void cass_cluster_set_latency_aware_routing_settings(CassCluster* cluster,
+                                                     cass_double_t exclusion_threshold,
+                                                     cass_uint64_t scale_ms,
+                                                     cass_uint64_t retry_period_ms,
+                                                     cass_uint64_t update_rate_ms,
+                                                     cass_uint64_t min_measured) {
+  cass::LatencyAwarePolicy::Settings settings;
+  settings.exclusion_threshold = exclusion_threshold;
+  settings.scale_ns = scale_ms * 1000 * 1000;
+  settings.retry_period_ns = retry_period_ms * 1000 * 1000;
+  settings.update_rate_ms = update_rate_ms;
+  settings.min_measured = min_measured;
+  cluster->config().set_latency_aware_routing_settings(settings);
+}
+
 void cass_cluster_set_tcp_nodelay(CassCluster* cluster,
                                   cass_bool_t enabled) {
   cluster->config().set_tcp_nodelay(enabled == cass_true);

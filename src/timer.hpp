@@ -17,7 +17,7 @@
 #ifndef __CASS_TIMER_HPP_INCLUDED__
 #define __CASS_TIMER_HPP_INCLUDED__
 
-#include "common.hpp"
+#include "macros.hpp"
 
 #include <uv.h>
 
@@ -74,6 +74,9 @@ private:
   uv_timer_t handle_;
   void* data_;
   Callback cb_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(Timer);
 };
 
 } // namespace cass

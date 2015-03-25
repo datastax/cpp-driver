@@ -26,6 +26,8 @@
 #include <set>
 #include <string>
 
+#include <uv.h>
+
 extern "C" {
 
 typedef enum CassBalancingState_ {
@@ -79,6 +81,9 @@ public:
   virtual ~LoadBalancingPolicy() {}
 
   virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts) = 0;
+
+  virtual void register_handles(uv_loop_t* loop) {}
+  virtual void close_handles() {}
 
   virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const = 0;
 
