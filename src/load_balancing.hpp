@@ -26,6 +26,8 @@
 #include <set>
 #include <string>
 
+#include <uv.h>
+
 extern "C" {
 
 typedef struct CassHost_ {
@@ -85,7 +87,8 @@ public:
 
   virtual ~LoadBalancingPolicy() {}
 
-  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts) = 0;
+  virtual void init(uv_loop_t* loop, const SharedRefPtr<Host>& connected_host, const HostMap& hosts) = 0;
+  virtual void close_handles() {}
 
   virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const = 0;
 
@@ -104,8 +107,8 @@ public:
 
   virtual ~ChainedLoadBalancingPolicy() {}
 
-  virtual void init(const SharedRefPtr<Host>& connected_host, const HostMap& hosts) {
-    return child_policy_->init(connected_host, hosts);
+  virtual void init(uv_loop_t* loop,const SharedRefPtr<Host>& connected_host, const HostMap& hosts) {
+    return child_policy_->init(loop, connected_host, hosts);
   }
 
   virtual CassHostDistance distance(const SharedRefPtr<Host>& host) const { return child_policy_->distance(host); }

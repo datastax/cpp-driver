@@ -19,6 +19,7 @@
 #include "connection.hpp"
 #include "error_response.hpp"
 #include "execute_request.hpp"
+#include "get_time.hpp"
 #include "io_worker.hpp"
 #include "pool.hpp"
 #include "prepare_handler.hpp"
@@ -78,20 +79,26 @@ bool RequestHandler::get_current_host_address(Address* address) {
   if (is_query_plan_exhausted_) {
     return false;
   }
-  *address = current_address_;
+  *address = current_host_->address();
   return true;
 }
 
 void RequestHandler::next_host() {
-  is_query_plan_exhausted_ = !query_plan_->compute_next(&current_address_);
+  current_host_ = query_plan_->compute_next();
+  is_query_plan_exhausted_ = !current_host_;
 }
 
 bool RequestHandler::is_host_up(const Address& address) const {
   return io_worker_->is_host_up(address);
 }
 
+void RequestHandler::start_request() {
+  start_time_ns_ = uv_hrtime();
+}
+
 void RequestHandler::set_response(Response* response) {
-  future_->set_result(current_address_, response);
+  current_host_->update_latency(uv_hrtime() - start_time_ns_);
+  future_->set_result(current_host_->address(), response);
   return_connection_and_finish();
 }
 
@@ -99,7 +106,7 @@ void RequestHandler::set_error(CassError code, const std::string& message) {
   if (is_query_plan_exhausted_) {
     future_->set_error(code, message);
   } else {
-    future_->set_error_with_host_address(current_address_, code, message);
+    future_->set_error_with_host_address(current_host_->address(), code, message);
   }
   return_connection_and_finish();
 }

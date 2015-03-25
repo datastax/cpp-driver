@@ -895,8 +895,9 @@ cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
                                        unsigned used_hosts_per_remote_dc,
                                        cass_bool_t allow_remote_dcs_for_local_cl);
 
+
 /**
- * Configures the cluster to use Token-aware request routing, or not.
+ * Configures the cluster to use token-aware request routing, or not.
  *
  * Default is cass_true (enabled).
  *
@@ -912,6 +913,58 @@ cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
 CASS_EXPORT void
 cass_cluster_set_token_aware_routing(CassCluster* cluster,
                                      cass_bool_t enabled);
+
+
+/**
+ * Configures the cluster to use latency-aware request routing, or not.
+ *
+ * Default is cass_true (enabled).
+ *
+ * This routing policy is a top-level routing policy. It uses the
+ * base routing policy to determine locality (dc-aware) and/or
+ * placement (token-aware) before considering the latency.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] enabled
+ */
+CASS_EXPORT void
+cass_cluster_set_latency_aware_routing(CassCluster* cluster,
+                                       cass_bool_t enabled);
+
+/**
+ * Configures the settings for latency-aware request routing.
+ *
+ * Defaults:
+ *
+ * exclusion_threshold: 2.0
+ * static_ms: 100 milliseconds
+ * retry_period_ms: 10,000 milliseconds (10 seconds)
+ * update_rate_ms: 100 milliseconds
+ * min_measured: 50
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] exclusion_threshold Controls how much worse the latency must be compared to the
+ * average latency of the best performing node before it penalized.
+ * @param[in] scale_ms Controls the weight given to older latencies when calculating the average
+ * latency of a node. A bigger scale with give more weight to older latency measurements.
+ * @param[in] retry_period_ms The amount of time a node is penalized by the policy before
+ * being given a second chance when the current average latency exceeds the calculated
+ * threshold (exclusion_threshold * best_average_latency).
+ * @param[in] update_rate_ms The rate at  which the best average latency is recomputed.
+ * @param[in] min_measured The minimum number of measurements per-host required to
+ * be considered by the policy.
+ */
+CASS_EXPORT void
+cass_cluster_set_latency_aware_routing_settings(CassCluster* cluster,
+                                                cass_double_t exclusion_threshold,
+                                                cass_uint64_t scale_ms,
+                                                cass_uint64_t retry_period_ms,
+                                                cass_uint64_t update_rate_ms,
+                                                cass_uint64_t min_measured);
 
 /**
  * Enable/Disable Nagel's algorithm on connections.
