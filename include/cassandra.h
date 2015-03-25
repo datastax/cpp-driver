@@ -1737,6 +1737,22 @@ cass_statement_bind_collection(CassStatement* statement,
                                const CassCollection* collection);
 
 /**
+ * Binds a null to all the values with the specified name.
+ *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_null_by_name(CassStatement* statement,
+                                 const char* name);
+
+/**
  * Binds an "int" to all the values with the specified name.
  *
  * This can only be used with statements created by
