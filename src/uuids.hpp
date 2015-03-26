@@ -21,7 +21,6 @@
 
 #include <boost/atomic.hpp>
 #include <boost/random/mersenne_twister.hpp>
-#include <boost/cstdint.hpp>
 
 #include <uv.h>
 #include <assert.h>

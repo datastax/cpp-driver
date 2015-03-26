@@ -23,7 +23,7 @@
 #include "scoped_ptr.hpp"
 #include "string_ref.hpp"
 
-#include <boost/cstdint.hpp>
+#include <uv.h>
 
 namespace cass {
 

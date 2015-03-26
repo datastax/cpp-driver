@@ -31,8 +31,6 @@
 #include "ssl.hpp"
 #include "stream_manager.hpp"
 
-#include <boost/cstdint.hpp>
-
 #include <uv.h>
 
 namespace cass {

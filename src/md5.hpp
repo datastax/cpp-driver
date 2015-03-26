@@ -22,7 +22,7 @@
 
 #include "macros.hpp"
 
-#include <boost/cstdint.hpp>
+#include <uv.h>
 
 namespace cass {
 

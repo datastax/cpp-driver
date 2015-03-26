@@ -21,6 +21,9 @@
   TypeName(const TypeName&);               \
   TypeName& operator=(const TypeName&)
 
+#define UNUSED_(X) ((void)X)
+
 #endif
 
-#define UNUSED_(X) ((void)X)
+
+

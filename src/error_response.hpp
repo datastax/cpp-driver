@@ -21,7 +21,7 @@
 #include "constants.hpp"
 #include "scoped_ptr.hpp"
 
-#include <boost/cstdint.hpp>
+#include <uv.h>
 
 #include <string.h>
 #include <string>

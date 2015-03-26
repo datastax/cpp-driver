@@ -14,12 +14,15 @@
   limitations under the License.
 */
 
+// The FNV1a hash code is based on work found here:
+// http://www.isthe.com/chongo/tech/comp/fnv/index.html
+// and is therefore public domain.
+
 #include "result_metadata.hpp"
 
 #include "common.hpp"
 
 #include <boost/functional/hash.hpp>
-#include <boost/algorithm/string.hpp>
 
 #include <iterator>
 
@@ -27,28 +30,19 @@
 // additional memory.
 #define LOAD_FACTOR 0.75
 
+#define FNV1_64_INIT 0xcbf29ce484222325ULL
+#define FNV1_64_PRIME 0x100000001b3ULL
+
 namespace cass {
 
-struct ToLowerIterator {
-public:
-  typedef StringRef::value_type value_type;
-  typedef StringRef::difference_type difference_type;
-  typedef StringRef::pointer pointer;
-  typedef StringRef::reference reference;
-  typedef std::forward_iterator_tag iterator_category;
-
-  ToLowerIterator(StringRef::iterator it)
-    : it_(it) {}
-
-  value_type operator*() { return ::tolower(*it_); }
-
-  ToLowerIterator operator++() { ++it_; return *this; }
-
-  bool operator!=(const ToLowerIterator& rhs) { return it_ != rhs.it_; }
-
-private:
-    StringRef::const_iterator it_;
-};
+uint64_t fnv1a_hash_lower(StringRef s) {
+  uint64_t h = FNV1_64_INIT;
+  for(StringRef::const_iterator i = s.begin(), end = s.end(); i != end; ++i) {
+      h ^= static_cast<uint64_t>(static_cast<unsigned char>(::tolower(*i)));
+      h *= FNV1_64_PRIME;
+    }
+    return h;
+}
 
 ResultMetadata::ResultMetadata(size_t column_count) {
   defs_.reserve(column_count);
@@ -69,13 +63,10 @@ size_t ResultMetadata::get(StringRef name,
     name = name.substr(1, name.size() - 2);
   }
 
-  size_t h = boost::hash_range(ToLowerIterator(name.begin()),
-                               ToLowerIterator(name.end())) & index_mask_;
+  size_t h = fnv1a_hash_lower(name) & index_mask_;
 
   size_t start = h;
-  while (index_[h] != NULL && !boost::iequals(name,
-                                              StringRef(index_[h]->name,
-                                                                index_[h]->name_size))) {
+  while (index_[h] != NULL && !iequals(name, StringRef(index_[h]->name, index_[h]->name_size))) {
     h = (h + 1) & index_mask_;
     if (h == start) {
       return 0;
@@ -110,16 +101,13 @@ void ResultMetadata::insert(ColumnDefinition& def) {
 
   StringRef name(def.name, def.name_size);
 
-  size_t h = boost::hash_range(ToLowerIterator(name.begin()),
-                               ToLowerIterator(name.end())) & index_mask_;
+  size_t h = fnv1a_hash_lower(name) & index_mask_;
 
   if (index_[h] == NULL) {
     index_[h] = &defs_.back();
   } else {
     // Use linear probing to find an open bucket
-    while (index_[h] != NULL && !boost::iequals(name,
-                                                StringRef(index_[h]->name,
-                                                                  index_[h]->name_size))) {
+    while (index_[h] != NULL && !iequals(name, StringRef(index_[h]->name, index_[h]->name_size))) {
       h = (h + 1) & index_mask_;
     }
     if (index_[h] == NULL) {

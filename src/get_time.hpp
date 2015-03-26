@@ -17,7 +17,7 @@
 #ifndef __CASS_GET_TIME_HPP_INCLUDED__
 #define __CASS_GET_TIME_HPP_INCLUDED__
 
-#include <boost/cstdint.hpp>
+#include <uv.h>
 
 namespace cass {
 

@@ -20,7 +20,7 @@
 #include "ref_counted.hpp"
 #include "serialization.hpp"
 
-#include <boost/cstdint.hpp>
+#include <uv.h>
 
 #include <vector>
 

@@ -21,7 +21,7 @@
 #include "murmur3.hpp"
 #include "scoped_ptr.hpp"
 
-#include <boost/cstdint.hpp>
+#include <uv.h>
 
 #include <algorithm>
 #include <limits>
