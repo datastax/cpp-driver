@@ -18,7 +18,7 @@
 
 namespace cass {
 
-StringRef::size_type StringRef::npos = -1;
+const StringRef::size_type StringRef::npos = -1;
 
 } // namespace cass
 

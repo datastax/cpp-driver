@@ -105,7 +105,7 @@ private:
   void maybe_notify_closed();
   void close_handles();
 
-  void on_pending_pool_reconnect(Timer* timer);
+  static void on_pending_pool_reconnect(Timer* timer);
 
   virtual void on_event(const IOWorkerEvent& event);
 
@@ -125,6 +125,7 @@ private:
 
     void stop_timer();
 
+    IOWorker *io_worker;
     Address address;
     Timer* timer;
   };

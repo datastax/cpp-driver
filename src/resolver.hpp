@@ -25,13 +25,11 @@
 
 #include "address.hpp"
 
-#include <boost/function.hpp>
-
 namespace cass {
 
 class Resolver {
 public:
-  typedef boost::function1<void, Resolver*> Callback;
+  typedef void (*Callback)(Resolver*);
 
   enum Status {
     RESOLVING,

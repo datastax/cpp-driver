@@ -18,6 +18,7 @@
 #define __CASS_POOL_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "connection.hpp"
 #include "ref_counted.hpp"
 #include "request.hpp"
 #include "request_handler.hpp"
@@ -30,12 +31,12 @@
 
 namespace cass {
 
-class Connection;
 class IOWorker;
 class RequestHandler;
 class Config;
 
-class Pool : public RefCounted<Pool> {
+class Pool : public RefCounted<Pool>
+           , public Connection::Listener {
 public:
   enum PoolState {
     POOL_STATE_NEW,
@@ -48,7 +49,7 @@ public:
   Pool(IOWorker* io_worker,
        const Address& address,
        bool is_initial_connection);
-  ~Pool();
+  virtual ~Pool();
 
   void connect();
   void close(bool cancel_reconnect = false);
@@ -80,10 +81,12 @@ private:
   void spawn_connection();
   void maybe_spawn_connection();
 
-  void on_connection_ready(Connection* connection);
-  void on_connection_closed(Connection* connection);
-  void on_connection_availability_changed(Connection* connection);
-  void on_pending_request_timeout(RequestTimer* timer);
+  // Connection listener methods
+  virtual void on_ready(Connection* connection);
+  virtual void on_closed(Connection* connection);
+  virtual void on_availability_changed(Connection* connection);
+
+  static void on_pending_request_timeout(RequestTimer* timer);
 
   Connection* find_least_busy();
 
