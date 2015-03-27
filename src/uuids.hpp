@@ -18,9 +18,9 @@
 #define __CASS_UUIDS_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "random.hpp"
 
 #include <boost/atomic.hpp>
-#include <boost/random/mersenne_twister.hpp>
 
 #include <uv.h>
 #include <assert.h>
@@ -46,7 +46,7 @@ private:
   boost::atomic<uint64_t> last_timestamp_;
 
   uv_mutex_t mutex_;
-  boost::mt19937_64 ng_;
+  MT19937_64 ng_;
 };
 
 } // namespace cass

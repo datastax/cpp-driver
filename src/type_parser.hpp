@@ -20,8 +20,6 @@
 #include "cassandra.h"
 #include "value.hpp"
 
-#include <boost/algorithm/string/predicate.hpp>
-
 #include <list>
 #include <map>
 #include <string>

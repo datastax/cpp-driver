@@ -24,8 +24,6 @@
 #include "scoped_lock.hpp"
 #include "types.hpp"
 
-#include <boost/random/random_device.hpp>
-
 #include <stdio.h>
 #include <ctype.h>
 
@@ -139,7 +137,7 @@ namespace cass {
 UuidGen::UuidGen()
   : clock_seq_and_node_(0)
   , last_timestamp_(0LL)
-  , ng_(boost::random_device()()){
+  , ng_(get_random_seed(MT19937_64::DEFAULT_SEED)){
   uv_mutex_init(&mutex_);
 
   Md5 md5;
@@ -204,7 +202,7 @@ UuidGen::UuidGen()
 UuidGen::UuidGen(uint64_t node)
   : clock_seq_and_node_(0)
   , last_timestamp_(0LL)
-  , ng_(boost::random_device()()){
+  , ng_(get_random_seed(MT19937_64::DEFAULT_SEED)){
   uv_mutex_init(&mutex_);
   set_clock_seq_and_node(node & 0x0000FFFFFFFFFFFFLL);
 }

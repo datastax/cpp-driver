@@ -394,8 +394,7 @@ endif()
 if(NOT CASS_USE_EXTERNAL_BOOST)
   set(CASS_INCLUDES ${CASS_INCLUDES} ${PROJECT_SOURCE_DIR}/src/third_party/boost)
   set(SRC_FILES ${SRC_FILES}
-    ${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/atomic/src/lockpool.cpp
-    ${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/random/src/random_device.cpp)
+    ${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/atomic/src/lockpool.cpp)
 endif()
 
 # Create header and source groups (mainly for Visual Studio generator)

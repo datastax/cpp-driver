@@ -22,8 +22,6 @@
 
 #include "common.hpp"
 
-#include <boost/functional/hash.hpp>
-
 #include <iterator>
 
 // This can be decreased to reduce hash collisions, but it will require
