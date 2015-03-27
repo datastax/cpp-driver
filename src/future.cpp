@@ -137,7 +137,7 @@ void Future::internal_set(ScopedMutex& lock) {
   is_set_ = true;
   uv_cond_broadcast(&cond_);
   if (callback_) {
-    if (loop_ == NULL) {
+    if (loop_.load() == NULL) {
       Callback callback = callback_;
       void* data = data_;
       lock.unlock();
@@ -151,7 +151,7 @@ void Future::internal_set(ScopedMutex& lock) {
 void Future::run_callback_on_work_thread() {
   inc_ref(); // Keep the future alive for the callback
   work_.data = this;
-  uv_queue_work(loop_, &work_, on_work, on_after_work);
+  uv_queue_work(loop_.load(), &work_, on_work, on_after_work);
 }
 
 void Future::on_work(uv_work_t* work) {

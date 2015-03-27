@@ -19,8 +19,6 @@
 
 #include "common.hpp"
 
-#include <boost/atomic.hpp>
-
 #include <uv.h>
 
 namespace cass {

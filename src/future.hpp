@@ -17,6 +17,7 @@
 #ifndef __CASS_FUTURE_HPP_INCLUDED__
 #define __CASS_FUTURE_HPP_INCLUDED__
 
+#include "atomic.hpp"
 #include "cassandra.h"
 #include "host.hpp"
 #include "macros.hpp"
@@ -99,7 +100,7 @@ public:
   }
 
   void set_loop(uv_loop_t* loop) {
-    loop_ = loop;
+    loop_.store(loop);
   }
 
   bool set_callback(Callback callback, void* data);
@@ -139,7 +140,7 @@ private:
   uv_cond_t cond_;
   FutureType type_;
   ScopedPtr<Error> error_;
-  boost::atomic<uv_loop_t*> loop_;
+  Atomic<uv_loop_t*> loop_;
   uv_work_t work_;
   Callback callback_;
   void* data_;

@@ -249,7 +249,7 @@ uint64_t UuidGen::monotonic_timestamp() {
     } else {
       uint64_t last_ms = to_milliseconds(last);
       if (to_milliseconds(now) < last_ms) {
-        return ++last_timestamp_;
+        return last_timestamp_.fetch_add(1);
       }
       uint64_t candidate = last + 1;
       if (to_milliseconds(candidate) == last_ms &&

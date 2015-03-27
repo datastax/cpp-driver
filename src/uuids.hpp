@@ -17,10 +17,9 @@
 #ifndef __CASS_UUIDS_HPP_INCLUDED__
 #define __CASS_UUIDS_HPP_INCLUDED__
 
+#include "atomic.hpp"
 #include "cassandra.h"
 #include "random.hpp"
-
-#include <boost/atomic.hpp>
 
 #include <uv.h>
 #include <assert.h>
@@ -43,7 +42,7 @@ private:
   uint64_t monotonic_timestamp();
 
   uint64_t clock_seq_and_node_;
-  boost::atomic<uint64_t> last_timestamp_;
+  Atomic<uint64_t> last_timestamp_;
 
   uv_mutex_t mutex_;
   MT19937_64 ng_;

@@ -18,10 +18,9 @@
 #define __CASS_HOST_HPP_INCLUDED__
 
 #include "address.hpp"
+#include "atomic.hpp"
 #include "copy_on_write_ptr.hpp"
 #include "ref_counted.hpp"
-
-#include <boost/atomic.hpp>
 
 #include <map>
 #include <set>
@@ -87,16 +86,16 @@ public:
 
 private:
   HostState state() const {
-    return state_.load(boost::memory_order_acquire);
+    return state_.load(MEMORY_ORDER_ACQUIRE);
   }
 
   void set_state(HostState state) {
-    state_.store(state, boost::memory_order_release);
+    state_.store(state, MEMORY_ORDER_RELEASE);
   }
 
   Address address_;
   bool mark_;
-  boost::atomic<HostState> state_;
+  Atomic<HostState> state_;
   std::string listen_address_;
   std::string rack_;
   std::string dc_;

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.6.4)
 
 # Ensure functions/modules are available
 include(FindPackageHandleStandardArgs)
+include(CheckCXXCompilerFlag)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
 set(PROJECT_NAME_STR cassandra)
@@ -22,12 +23,6 @@ set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${P
 
 set(CASS_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
 
-# Shorten the source file pathing for log messages
-# TODO: Investigate if NMake works correctly on Windows (need to be able to detect generator used)
-if(NOT WIN32)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLOG_FILE_='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
-endif()
-
 # Assign specialized 32-bit compiler flags
 if(32BIT)
   set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS FALSE)
@@ -35,6 +30,12 @@ if(32BIT)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -m32")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -m32")
+endif()
+
+# Shorten the source file pathing for log messages
+# TODO: Investigate if NMake works correctly on Windows (need to be able to detect generator used)
+if(NOT WIN32)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLOG_FILE_='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
 endif()
 
 # Dependency minimum version
@@ -52,6 +53,8 @@ option(CASS_BUILD_TESTS "Build tests" OFF)
 option(CASS_INSTALL_HEADER "Install header file" ON)
 option(CASS_MULTICORE_COMPILATION "Enable multicore compilation" OFF)
 option(CASS_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
+option(CASS_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
+option(CASS_USE_STD_ATOMIC "Use C++11 atomics library" ON)
 option(CASS_USE_EXTERNAL_BOOST "Use external verison of Boost" OFF)
 option(CASS_USE_OPENSSL "Use OpenSSL" ON)
 option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
@@ -337,6 +340,10 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # I disabled long-long warning because boost generates about 50 such warnings
   set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-variadic-macros")
 
+  if (CASS_USE_STD_ATOMIC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  endif()
+
   if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.8" OR
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.8")
     set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedefs")
@@ -355,6 +362,10 @@ else()
   # Clang/Intel specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
   set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-variadic-macros")
+
+  if (CASS_USE_STD_ATOMIC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  endif()
 
   set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Werror")
   set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")

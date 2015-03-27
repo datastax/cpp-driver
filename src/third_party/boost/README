@@ -1,9 +1,0 @@
-Generated using:
-
-Download and extract boost then run the following:
-# cd boost
-# ./bootstrap
-# ./b2 tools/bcp/
-# mkdir myboost
-# dist/bin/bcp boost/atomic/atomic.hpp boost/aligned_storage.hpp boost/type_traits/alignment_of.hpp myboost/
-# cp -r myboost <path to project>/cpp-driver/src/third_party/boost

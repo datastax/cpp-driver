@@ -29,6 +29,7 @@ namespace cass {
 IOWorker::IOWorker(Session* session)
     : session_(session)
     , config_(session->config())
+    , protocol_version_(-1)
     , is_closing_(false)
     , pending_request_count_(0)
     , request_queue_(config_.queue_size_io()) {
