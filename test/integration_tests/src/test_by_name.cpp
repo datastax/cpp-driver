@@ -244,7 +244,32 @@ BOOST_AUTO_TEST_CASE(get_invalid_name)
   BOOST_CHECK(cass_row_get_column_by_name(row, "\"abC\"") == NULL);
 }
 
+BOOST_AUTO_TEST_CASE(null)
+{
+  test_utils::CassPreparedPtr prepared = prepare("INSERT INTO by_name (key, a, b, c, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?, ?, ?, ?)");
+  test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
 
+  CassUuid key = test_utils::generate_time_uuid(uuid_gen);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "a"), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "b"), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "c"), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "abc"), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "\"ABC\""), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "\"aBc\""), CASS_OK);
 
+  test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
+  test_utils::wait_and_check_error(future.get());
+
+  test_utils::CassResultPtr result = select_all_from_by_name();
+  const CassRow* row = cass_result_first_row(result.get());
+
+  BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "a")));
+  BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "b")));
+  BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "c")));
+  BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "abc")));
+  BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "\"ABC\"")));
+  BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "\"aBc\"")));
+}
 
 BOOST_AUTO_TEST_SUITE_END()
