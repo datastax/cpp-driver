@@ -66,9 +66,11 @@ public:
     r.prepared_ = NULL;
   }
 
+#ifndef _WIN32
   CassPreparedMovable(const CassPreparedMovable& r)
     : prepared_(r.prepared_) {
   }
+#endif
 
   CassPreparedMovable& operator=(BOOST_RV_REF(CassPreparedMovable) r) {
     if (prepared_ != NULL) {

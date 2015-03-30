@@ -47,9 +47,9 @@ sudo rpm -i rpmforge-release-0.5.3-1.el5.rf.*.rpm
 ```bash
 sudo yum install automake cmake gcc-c++ git libtool openssl-devel wget
 pushd /tmp
-wget http://libuv.org/dist/v1.4.0/libuv-v1.4.0.tar.gz
-tar xzf libuv-v1.4.0.tar.gz
-pushd libuv-v1.4.0
+wget http://libuv.org/dist/v1.4.2/libuv-v1.4.2.tar.gz
+tar xzf libuv-v1.4.2.tar.gz
+pushd libuv-v1.4.2
 sh autogen.sh
 ./configure
 sudo make install
@@ -177,18 +177,20 @@ Usage: VC_BUILD.BAT [OPTION...]
         --RELEASE                       Enable release build (default)
         --DISABLE-CLEAN                 Disable clean build
         --DISABLE-OPENSSL               Disable OpenSSL support
-        --ENABLE-PACKAGES [version]     Enable package generation (**)
+        --ENABLE-PACKAGES [version]     Enable package generation (*)
         --ENABLE-TESTS [boost-root-dir] Enable test builds
         --ENABLE-ZLIB                   Enable zlib
+        --GENERATE-SOLUTION             Generate Visual Studio solution (**)
         --SHARED                        Build shared library (default)
         --STATIC                        Build static library
-        --X86                           Target 32-bit build (*)
-        --X64                           Target 64-bit build (*)
+        --X86                           Target 32-bit build (***)
+        --X64                           Target 64-bit build (***)
 
         --HELP                          Display this message
 
-*  Default target architecture is determined based on system architecture
-** Packages are only generated using detected installations of Visual Studio
+*   Packages are only generated using detected installations of Visual Studio
+**  Dependencies are built before generation of Visual Studio solution
+*** Default target architecture is determined based on system architecture
 ```
 
 To build 32-bit shared library:
@@ -221,6 +223,12 @@ To build 32-bit static library without OpenSSL support:
 VC_BUILD.BAT --DISABLE-OPENSSL --STATIC --X86
 ```
 
+To generate Visual Studio solution file:
+
+```dos
+VC_BUILD.BAT --GENERATE-SOLUTION
+```
+
 ### Test Dependencies and Building the Tests (_NOT REQUIRED_)
 
 #### Obtaining Test Dependencies
@@ -250,4 +258,3 @@ VC_BUILD.BAT --STATIC --ENABLE-TESTS <ABSOLUTE-PATH-TO-BOOST>
 
 [e.g. C:\local\boost_1_57_0]
 ```
-**NOTE:** `--STATIC` is preferred on Windows in order to statically link all the libraries into the executable

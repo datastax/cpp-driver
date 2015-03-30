@@ -164,7 +164,9 @@ if(CASS_USE_EXTERNAL_BOOST)
 
   # Handle explicit initialization warning in atomic/details/casts
   if((CASS_FOUND_BOOST_VERSION VERSION_GREATER "1.56.0") OR (CASS_FOUND_BOOST_VERSION VERSION_EQUAL "1.56.0"))
-    add_definitions(-Wno-missing-field-initializers)
+    if(NOT WIN32)
+      add_definitions(-Wno-missing-field-initializers)
+    endif()
   endif()
 
   # Assign Boost include and libraries
