@@ -131,6 +131,11 @@ typedef struct CassString_ {
 #define CASS_INET_V6_LENGTH 16
 
 /**
+ * The size of an inet string including a null terminator.
+ */
+#define CASS_INET_STRING_LENGTH 46
+
+/**
  * @struct CassInet
  *
  * IP address for either IPv4 or IPv6.
@@ -3097,6 +3102,32 @@ cass_inet_init_v4(const cass_uint8_t* address);
  */
 CASS_EXPORT CassInet
 cass_inet_init_v6(const cass_uint8_t* address);
+
+/**
+ * Returns a null-terminated string for the specified inet.
+ *
+ * @public @memberof CassInet
+ *
+ * @param[in] inet
+ * @param[out] output A null-terminated string of length CASS_INET_STRING_LENGTH.
+ */
+CASS_EXPORT void
+cass_inet_string(CassInet inet,
+                 char* output);
+
+/**
+ * Returns an inet for the specified string.
+ *
+ * Examples: "127.0.0.1" or "::1"
+ *
+ * @public @memberof CassInet
+ *
+ * @param[in] str
+ * @param[out] output
+ */
+CASS_EXPORT CassError
+cass_inet_from_string(const char* str,
+                      CassInet* output);
 
 /***********************************************************************************
  *
