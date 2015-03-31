@@ -17,6 +17,10 @@
 #ifndef __CASS_STRING_REF_HPP_INCLUDED__
 #define __CASS_STRING_REF_HPP_INCLUDED__
 
+#include <algorithm>
+#include <assert.h>
+#include <cctype>
+#include <stddef.h>
 #include <string>
 #include <string.h>
 
@@ -84,8 +88,9 @@ namespace cass {
       return StringRef(ptr_ + pos, std::min(length_ - pos, length));
     }
 
-    template<class Predicate>
-    int compare(size_t pos, size_t length, const StringRef& ref, Predicate predicate) const {
+    template<class IsEqual>
+    int compare(size_t pos, size_t length, const StringRef& ref, IsEqual is_equal) const {
+      assert(pos < length_);
       if (length < ref.length_) {
         length = ref.length_;
       }
@@ -94,7 +99,7 @@ namespace cass {
       } else if(length_ > length) {
         return 1;
       }
-      return std::equal(begin(), end(), ref.begin(), predicate);
+      return internal_compare(ptr_ + pos, ref.ptr_, length, is_equal);
     }
 
     int compare(size_t pos, size_t length, const StringRef& ref) const {
@@ -106,7 +111,7 @@ namespace cass {
     }
 
     bool iequal(const StringRef& ref) const {
-      return compare(0, ref.length(), ref, IsEqualInsensitive());
+      return compare(0, ref.length(), ref, IsEqualInsensitive()) == 0;
     }
 
     bool operator==(const StringRef& ref) {
@@ -118,6 +123,16 @@ namespace cass {
     }
 
   private:
+    template<class IsEqual>
+    static int internal_compare(const char* s1, const char* s2, size_t length, IsEqual is_equal) {
+      for (size_t i = 0; i < length; ++i) {
+        if (!is_equal(s1[i], s2[i])) {
+          return s1[i] < s2[i] ? -1 : 1;
+        }
+      }
+      return 0;
+    }
+
     const char* ptr_;
     size_t length_;
   };
@@ -129,7 +144,7 @@ namespace cass {
 
   inline bool ends_with(const StringRef& input, const StringRef& target) {
     return input.length() >= target.length() &&
-        input.compare(input.length() - target.length(), target.length(), target);
+        input.compare(input.length() - target.length(), target.length(), target) == 0;
   }
 
   inline bool iequals(const StringRef& input, const StringRef& target) {

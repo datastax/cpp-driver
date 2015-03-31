@@ -54,7 +54,8 @@ public:
   Future(FutureType type)
       : is_set_(false)
       , type_(type)
-      , loop_(NULL) {
+      , loop_(NULL)
+      , callback_(NULL) {
     uv_mutex_init(&mutex_);
     uv_cond_init(&cond_);
   }

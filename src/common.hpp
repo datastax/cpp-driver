@@ -31,14 +31,14 @@ class Value;
 
 // Done this way so that macros like __LINE__ will expand before
 // being concatenated.
-#define STATIC_ASSERT_CONCAT(arg1, arg2)  STATIC_ASSERT_CONCAT1(arg1, arg2)
-#define STATIC_ASSERT_CONCAT1(arg1, arg2) STATIC_ASSERT_CONCAT2(arg1, arg2)
-#define STATIC_ASSERT_CONCAT2(arg1, arg2) arg1##arg2
+#define STATIC_ASSERT_CONCAT(Arg1, Arg2)  STATIC_ASSERT_CONCAT1(Arg1, Arg2)
+#define STATIC_ASSERT_CONCAT1(Arg1, Arg2) STATIC_ASSERT_CONCAT2(Arg1, Arg2)
+#define STATIC_ASSERT_CONCAT2(Arg1, Arg2) Arg1##Arg2
 
-#define STATIC_ASSERT(expression) \
+#define STATIC_ASSERT(Expression) \
   struct STATIC_ASSERT_CONCAT(__static_assertion_at_line_, __LINE__) \
   { \
-    StaticAssert<static_cast<bool>(expression)> \
+    StaticAssert<static_cast<bool>(Expression)> \
       STATIC_ASSERT_CONCAT(STATIC_ASSERTION_FAILED_AT_LINE_, __LINE__); \
   }; \
   typedef StaticAssertTest<sizeof(STATIC_ASSERT_CONCAT(__static_assertion_at_line_, __LINE__))> \
@@ -57,7 +57,7 @@ class IsConvertable {
     struct Helper {
       static Yes test(To);
       static No test(...);
-      static From check();
+      static From& check();
     };
 
   public:
@@ -93,40 +93,6 @@ inline size_t next_pow_2(size_t num) {
 std::string opcode_to_string(int opcode);
 
 std::string& trim(std::string& str);
-
-//template<class RangeInput, class RangeTest>
-//bool starts_with(const RangeInput& input, const RangeTest& test) {
-//  typename RangeTest::const_iterator test_it = test.begin();
-//  typename RangeTest::const_iterator test_end = test.end();
-//
-//  typename RangeInput::const_iterator input_it = input.begin();
-//  typename RangeInput::const_iterator input_end = input.end();
-//  for (; input_it != input_end && test_it != test_end; ++input_it, ++test_it) {
-//    if (*input_it != *test_it) {
-//      return false;
-//    }
-//  }
-//
-//  return test_it == test_end;
-//}
-//
-//template<class RangeInput, class RangeTest>
-//bool ends_with(const RangeInput& input, const RangeTest& test) {
-//  typename RangeTest::const_iterator test_it = test.end();
-//  typename RangeTest::const_iterator test_begin = test.begin();
-//
-//  typename RangeInput::const_iterator input_it = input.end();
-//  typename RangeInput::const_iterator input_begin = input.begin();
-//
-//  while (input_it != input_begin && test_it != test_begin) {
-//    if (*(input_it--) != *(test_it--)) {
-//      return false;
-//    }
-//  }
-//  return test_it == test_begin;
-//}
-
-//bool iequals(const std::string& str, const std::string& end);
 
 } // namespace cass
 

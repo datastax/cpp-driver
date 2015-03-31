@@ -83,8 +83,9 @@ private:
 
   // Connection listener methods
   virtual void on_ready(Connection* connection);
-  virtual void on_closed(Connection* connection);
-  virtual void on_availability_changed(Connection* connection);
+  virtual void on_close(Connection* connection);
+  virtual void on_availability_change(Connection* connection);
+  virtual void on_event(EventResponse* response) {}
 
   static void on_pending_request_timeout(RequestTimer* timer);
 

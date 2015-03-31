@@ -25,10 +25,11 @@
 #include <uv.h>
 
 #include <assert.h>
-#include <string.h>
+#include <limits>
 #include <list>
 #include <map>
 #include <string>
+#include <string.h>
 
 namespace cass {
 

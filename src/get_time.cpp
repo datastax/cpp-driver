@@ -17,6 +17,9 @@
 #include "get_time.hpp"
 
 #if defined(WIN32) || defined(_WIN32)
+#ifndef _WINSOCKAPI_
+#define _WINSOCKAPI_
+#endif
 #include <Windows.h>
 #elif defined(__APPLE__) && defined(__MACH__)
 #include <sys/time.h>

@@ -273,7 +273,7 @@ void Pool::on_ready(Connection* connection) {
   return_connection(connection);
 }
 
-void Pool::on_closed(Connection* connection) {
+void Pool::on_close(Connection* connection) {
   connections_pending_.erase(connection);
 
   ConnectionVec::iterator it =
@@ -295,7 +295,7 @@ void Pool::on_closed(Connection* connection) {
   maybe_close();
 }
 
-void Pool::on_availability_changed(Connection* connection) {
+void Pool::on_availability_change(Connection* connection) {
   if (connection->is_available()) {
     ++available_connection_count_;
     set_is_available(true);

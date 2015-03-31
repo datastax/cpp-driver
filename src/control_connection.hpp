@@ -164,6 +164,7 @@ private:
   // Connection listener methods
   virtual void on_ready(Connection* connection);
   virtual void on_close(Connection* connection);
+  virtual void on_availability_change(Connection* connection) {}
   virtual void on_event(EventResponse* response);
 
   //TODO: possibly reorder callback functions to pair with initiator

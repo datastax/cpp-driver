@@ -17,15 +17,12 @@
 #ifndef __CASS_ATOMIC_HPP_INCLUDED__
 #define __CASS_ATOMIC_HPP_INCLUDED__
 
-//#define CASS_USE_BOOST_ATOMIC
-#define CASS_USE_STD_ATOMIC
-
 #if defined(CASS_USE_BOOST_ATOMIC)
 #include "atomic/atomic_boost.hpp"
 #elif defined(CASS_USE_STD_ATOMIC)
 #include "atomic/atomic_std.hpp"
 #else
-#include "atomic/atomic_base.hpp"
+#include "atomic/atomic_intrinsics.hpp"
 #endif
 
 #endif

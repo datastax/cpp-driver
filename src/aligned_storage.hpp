@@ -20,11 +20,11 @@
 #include <stddef.h>
 
 #if defined(_MSC_VER)
-#define ALIGN_AS(alignment) __declspec(align(alignment))
-#define ALIGN_OF(type) __alignof(type)
+#define ALIGN_AS(Alignment) __declspec(align(Alignment))
+#define ALIGN_OF(Type) __alignof(Type)
 #elif defined(__GNUC__)
-#define ALIGN_AS(alignment) __attribute__((aligned(alignment)))
-#define ALIGN_OF(type) __alignof__(type)
+#define ALIGN_AS(Alignment) __attribute__((aligned(Alignment)))
+#define ALIGN_OF(Type) __alignof__(Type)
 #else
 #error Unsupported compiler!
 #endif
@@ -39,13 +39,14 @@ namespace cass {
 template<size_t N, size_t A>
 class AlignedStorage;
 
-#define ALIGNED_STORAGE(alignment)     \
-  template<size_t N>                   \
-  class AlignedStorage<N, alignment> { \
-  public:                              \
-    void* address() { return data_; }  \
-  private:                             \
-    ALIGN_AS(alignment) char data_[N]; \
+#define ALIGNED_STORAGE(Alignment)                \
+  template<size_t N>                              \
+  class AlignedStorage<N, Alignment> {            \
+  public:                                         \
+    void* address() { return data_; }             \
+    const void* address() const { return data_; } \
+  private:                                        \
+    ALIGN_AS(Alignment) char data_[N];            \
   }
 
 ALIGNED_STORAGE(1);

@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 2.6.4)
 
 # Ensure functions/modules are available
 include(FindPackageHandleStandardArgs)
-include(CheckCXXCompilerFlag)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
 set(PROJECT_NAME_STR cassandra)
@@ -54,15 +53,12 @@ option(CASS_INSTALL_HEADER "Install header file" ON)
 option(CASS_MULTICORE_COMPILATION "Enable multicore compilation" OFF)
 option(CASS_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
 option(CASS_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
-option(CASS_USE_STD_ATOMIC "Use C++11 atomics library" ON)
-option(CASS_USE_EXTERNAL_BOOST "Use external verison of Boost" OFF)
+option(CASS_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
 option(CASS_USE_OPENSSL "Use OpenSSL" ON)
 option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
 option(CASS_USE_ZLIB "Use zlib" OFF)
 
-# Ensure external Boost is used and static lib is available when enabling tests
 if(CASS_BUILD_TESTS)
-  set(CASS_USE_EXTERNAL_BOOST ON)
   set(CASS_BUILD_STATIC ON) # Required for unit tests
 endif()
 
@@ -122,48 +118,17 @@ set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARY})
 #------------------------
 
 # Boost
-
-# Check to make sure the driver is not compiling on a system with Boost where
-# CASS_USE_EXTERNAL_BOOST=Off.
-find_package(Boost QUIET)
-if(Boost_FOUND AND NOT CASS_USE_EXTERNAL_BOOST)
-  message(STATUS "### BOOST FOUND AND 'CASS_USE_EXTERNAL_BOOST' IS DISABLED (THIS MAY CAUSE BUILD ERRORS) ###")
-  message(STATUS "Fix: Either use '-DCASS_USE_EXTERNAL_BOOST=On' or remove Boost from your include paths.")
-else()
-  add_definitions(-DBOOST_ALL_NO_LIB)
-endif()
-
-if(CASS_USE_EXTERNAL_BOOST)
-  # Setup the root directories for boost
-  set(ENV{BOOST_ROOT} "${PROJECT_SOURCE_DIR}/lib/boost/")
-  if (BOOST_ROOT_DIR)
-    set(ENV{BOOST_ROOT} ${BOOST_ROOT_DIR})
-  endif()
-
-  # Determine if shared or static boost libraries should be used
-  if(CASS_USE_STATIC_LIBS)
-    set(Boost_USE_STATIC_LIBS ON)
-  else()
-    set(Boost_USE_STATIC_LIBS OFF)
-    add_definitions(-DBOOST_ALL_DYN_LINK)
-  endif()
-  set(Boost_USE_STATIC_RUNTIME OFF)
-  set(Boost_USE_MULTITHREADED ON)
-
+if (CASS_USE_BOOST_ATOMIC)
   # Ensure the driver can be built
-  find_package(Boost COMPONENTS atomic random system)
+  find_package(Boost COMPONENTS atomic)
   if(NOT Boost_FOUND)
-    message(FATAL_ERROR "Boost [atomic, random, and system] are required to build driver")
+    message(FATAL_ERROR "Boost atomic is required to build driver because of -DCASS_USE_BOOST_ATOMIC=On")
   endif()
 
-  # Verify minimum Boost version
-  set(CASS_FOUND_BOOST_VERSION "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
-  if(CASS_FOUND_BOOST_VERSION VERSION_LESS CASS_MINIMUM_BOOST_VERSION)
-    message(FATAL_ERROR "Minimum supported version of Boost is ${CASS_MINIMUM_BOOST_VERSION} (Found: ${CASS_FOUND_BOOST_VERSION})")
+  # Handle explicit initialization warning in atomic/details/casts
+  if((CASS_FOUND_BOOST_VERSION VERSION_GREATER "1.56.0") OR (CASS_FOUND_BOOST_VERSION VERSION_EQUAL "1.56.0"))
+    add_definitions(-Wno-missing-field-initializers)
   endif()
-
-  # Display a status message regarding external boost use
-  message(STATUS "### USING THE EXTERNAL VERSION OF BOOST ###")
 
   # Assign Boost include and libraries
   set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
@@ -248,10 +213,20 @@ if(CASS_BUILD_TESTS)
   find_package(LIBSSH2 REQUIRED)
 
   # Ensure unit and integration test boost components exist
-  find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono date_time filesystem log log_setup regex thread unit_test_framework)
+  find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono date_time filesystem log log_setup system regex thread unit_test_framework)
   if(NOT Boost_FOUND OR NOT LIBSSH2_FOUND)
     message(FATAL_ERROR "Boost [chrono, date_time, filesystem, log, log_setup, system, regex, thread, and unit_test_framework] and libssh2 are required to build tests")
   endif()
+
+  # Determine if shared or static boost libraries should be used
+  if(CASS_USE_STATIC_LIBS)
+    set(Boost_USE_STATIC_LIBS ON)
+  else()
+    set(Boost_USE_STATIC_LIBS OFF)
+    add_definitions(-DBOOST_ALL_DYN_LINK)
+  endif()
+  set(Boost_USE_STATIC_RUNTIME OFF)
+  set(Boost_USE_MULTITHREADED ON)
 
   # Assign test libraries (additional boost and libssh2 dependencies)
   set(CASS_TEST_LIBS ${Boost_LIBRARIES} ${LIBSSH2_LIBRARIES})
@@ -296,6 +271,41 @@ else()
   set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_THREAD_USES_MOVE -DBOOST_NO_CXX11_RVALUE_REFERENCES")
 endif()
 
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GCC" OR
+   "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  # CMAKE_CXX_COMPILER variables do not exist in 2.6.4 (min version)
+  # Parse the -dumpversion argument into the variable not already set
+  if("${CMAKE_CXX_COMPILER_VERSION}" STREQUAL "")
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE CMAKE_CXX_COMPILER_VERSION)
+  endif()
+endif()
+
+# Determine if std::atomic can be used for GCC or Clang
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GCC")
+  # Version determined from: https://gcc.gnu.org/wiki/Atomic/GCCMM
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.7" OR
+      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.7")
+    set(CASS_USE_STD_ATOMIC On)
+  endif()
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  # Version determined from: http://clang.llvm.org/cxx_status.html
+  # 3.2 includes the full C++11 memory model, but 3.1 had atomic
+  # support.
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "3.1" OR
+     CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "3.1")
+   set(CASS_USE_STD_ATOMIC On)
+  endif()
+endif()
+
+# Enable specific cass::Atomic implementation
+if(CASS_USE_BOOST_ATOMIC)
+  message(STATUS "Using boost::atomic implementation for atomic operations")
+  set(PROJECT_CXX_FLAGS "-DCASS_USE_BOOST_ATOMIC")
+elseif(CASS_USE_STD_ATOMIC)
+  message(STATUS "Using std::atomic implementation for atomic operations")
+  set(PROJECT_CXX_FLAGS "-DCASS_USE_STD_ATOMIC")
+endif()
+
 # Assign compiler specific flags
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # Determine if multicore compilation should be enabled and set
@@ -326,30 +336,25 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   add_definitions(-DNOMINMAX)                 # Does not define min/max macros
 
   # Create the project, example, and test flags
-  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PROJECT_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
   set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-  # CMAKE_CXX_COMPILER variables do not exist in 2.6.4 (min version)
-  # Parse the -dumpversion argument into the variable not already set
-  if("${CMAKE_CXX_COMPILER_VERSION}" STREQUAL "")
-    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE CMAKE_CXX_COMPILER_VERSION)
-  endif()
-
   # GCC specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
   set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-variadic-macros")
-
-  if (CASS_USE_STD_ATOMIC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-  endif()
 
   if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.8" OR
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.8")
     set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedefs")
   endif()
 
-  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Werror")
+  # Enable C++11 support to use std::atomic
+  if(CASS_USE_STD_ATOMIC)
+    set(PROJECT_CXX_FLAGS "${PROJECT_CXX_FLAGS} -std=c++11")
+  endif()
+
+  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PROJECT_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Werror")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.3" OR
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.3")
     set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
@@ -358,18 +363,21 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   endif()
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
-else()
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # Clang/Intel specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
   set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-variadic-macros")
 
-  if (CASS_USE_STD_ATOMIC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  # Enable C++11 support to use std::atomic
+  if(CASS_USE_STD_ATOMIC)
+    set(PROJECT_CXX_FLAGS "${PROJECT_CXX_FLAGS} -std=c++11")
   endif()
 
-  set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Werror")
+  set(PROJECT_CXX_FLAGS " ${CMAKE_CXX_FLAGS} ${PROJECT_CXX_FLAGS} -fPIC ${WARNING_COMPILER_FLAGS} -Werror ")
   set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 ${WARNING_COMPILER_FLAGS}")
+else()
+  message(FATAL_ERROR "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
 endif()
 
 #------------------------------
@@ -399,13 +407,6 @@ else()
     ${PROJECT_SOURCE_DIR}/src/ssl/ssl_no_impl.hpp)
   set(SRC_FILES ${SRC_FILES}
     ${PROJECT_SOURCE_DIR}/src/ssl/ssl_no_impl.cpp)
-endif()
-
-# Determine if third party boost libraries should be compiled in
-if(NOT CASS_USE_EXTERNAL_BOOST)
-  set(CASS_INCLUDES ${CASS_INCLUDES} ${PROJECT_SOURCE_DIR}/src/third_party/boost)
-  set(SRC_FILES ${SRC_FILES}
-    ${PROJECT_SOURCE_DIR}/src/third_party/boost/libs/atomic/src/lockpool.cpp)
 endif()
 
 # Create header and source groups (mainly for Visual Studio generator)
