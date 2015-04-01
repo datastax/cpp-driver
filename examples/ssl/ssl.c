@@ -50,7 +50,7 @@ int load_trusted_cert_file(const char* file, CassSsl* ssl) {
   fclose(in);
 
   if (bytes_read == (size_t) cert_size) {
-    rc = cass_ssl_add_trusted_cert(ssl, cass_string_init2(cert, cert_size));
+    rc = cass_ssl_add_trusted_cert_n(ssl, cert, cert_size);
     if (rc != CASS_OK) {
       fprintf(stderr, "Error loading SSL certificate: %s\n", cass_error_desc(rc));
       free(cert);
@@ -87,8 +87,8 @@ int main() {
     CassFuture* close_future = NULL;
 
     /* Build statement and execute query */
-    CassString query = cass_string_init("SELECT keyspace_name "
-                                        "FROM system.schema_keyspaces;");
+    const char* query = "SELECT keyspace_name "
+                        "FROM system.schema_keyspaces;";
     CassStatement* statement = cass_statement_new(query, 0);
 
     CassFuture* result_future = cass_session_execute(session, statement);
@@ -102,19 +102,22 @@ int main() {
         const CassRow* row = cass_iterator_get_row(rows);
         const CassValue* value = cass_row_get_column_by_name(row, "keyspace_name");
 
-        CassString keyspace_name;
-        cass_value_get_string(value, &keyspace_name);
-        printf("keyspace_name: '%.*s'\n", (int)keyspace_name.length,
-                                               keyspace_name.data);
+        const char* keyspace_name;
+        size_t keyspace_name_length;
+        cass_value_get_string(value, &keyspace_name, &keyspace_name_length);
+        printf("keyspace_name: '%.*s'\n", (int)keyspace_name_length,
+                                               keyspace_name);
       }
 
       cass_result_free(result);
       cass_iterator_free(rows);
     } else {
       /* Handle error */
-      CassString message = cass_future_error_message(result_future);
-      fprintf(stderr, "Unable to run query: '%.*s'\n", (int)message.length,
-                                                            message.data);
+      const char* message;
+      size_t message_length;
+      cass_future_error_message(result_future, &message, &message_length);
+      fprintf(stderr, "Unable to run query: '%.*s'\n", (int)message_length,
+                                                            message);
     } 
 
     cass_statement_free(statement);
@@ -126,9 +129,11 @@ int main() {
     cass_future_free(close_future);
   } else {
       /* Handle error */
-      CassString message = cass_future_error_message(connect_future);
-      fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message.length, 
-                                                          message.data);
+      const char* message;
+      size_t message_length;
+      cass_future_error_message(connect_future, &message, &message_length);
+      fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message_length,
+                                                          message);
   }
 
   cass_future_free(connect_future);

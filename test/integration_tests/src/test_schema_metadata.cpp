@@ -122,7 +122,8 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     test_utils::CassIteratorPtr itr(cass_iterator_fields_from_schema_meta(meta));
     while (cass_iterator_next(itr.get())) {
       const CassSchemaMetaField* field = cass_iterator_get_schema_meta_field(itr.get());
-      CassString name = cass_schema_meta_field_name(field);
+      CassString name;
+      cass_schema_meta_field_name(field, &name.data, &name.length);
       observed.insert(std::string(name.data, name.length));
       // can get same field by name as by iterator
       BOOST_CHECK_EQUAL(cass_schema_meta_get_field(meta, std::string(name.data, name.length).c_str()), field);
@@ -140,7 +141,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     CassValueType type = cass_value_type(value);
     BOOST_REQUIRE(type == CASS_VALUE_TYPE_ASCII || type == CASS_VALUE_TYPE_TEXT || type == CASS_VALUE_TYPE_VARCHAR);
     CassString v;
-    cass_value_get_string(value, &v);
+    cass_value_get_string(value, &v.data, &v.length);
     BOOST_CHECK_EQUAL(v.length, expected.size());
     BOOST_CHECK_EQUAL(expected.compare(0, std::string::npos, v.data, v.length), 0);
   }
@@ -161,7 +162,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     test_utils::CassIteratorPtr itr(cass_iterator_from_map(value));
     while (cass_iterator_next(itr.get())) {
       CassString key;
-      cass_value_get_string(cass_iterator_get_map_key(itr.get()), &key);
+      cass_value_get_string(cass_iterator_get_map_key(itr.get()), &key.data, &key.length);
       typename std::map<std::string, value_type>::const_iterator i = expected.find(std::string(key.data, key.length));
       BOOST_REQUIRE(i != expected.end());
       verify_value(cass_iterator_get_map_value(itr.get()), i->second);
@@ -270,7 +271,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     while (cass_iterator_next(itr.get())) {
       value = cass_iterator_get_map_key(itr.get());
       CassString name;
-      cass_value_get_string(value, &name);
+      cass_value_get_string(value, &name.data, &name.length);
       if (name.length == parameter.size() &&
           parameter.compare(0, std::string::npos, name.data, name.length) == 0) {
         param_found = true;

@@ -230,7 +230,7 @@ void execute_query(CassSession* session,
                    CassResultPtr* result,
                    CassConsistency consistency,
                    cass_duration_t timeout) {
-  CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0));
+  CassStatementPtr statement(cass_statement_new(query.c_str(), 0));
   cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future(cass_session_execute(session, statement.get()));
   wait_and_check_error(future.get(), timeout);
@@ -244,7 +244,7 @@ CassError execute_query_with_error(CassSession* session,
                                    CassResultPtr* result,
                                    CassConsistency consistency,
                                    cass_duration_t timeout) {
-  CassStatementPtr statement(cass_statement_new(cass_string_init(query.c_str()), 0));
+  CassStatementPtr statement(cass_statement_new(query.c_str(), 0));
   cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future(cass_session_execute(session, statement.get()));
   CassError code = wait_and_return_error(future.get(), timeout);
@@ -264,7 +264,8 @@ CassError wait_and_return_error(CassFuture* future, cass_duration_t timeout) {
 void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
   CassError code = wait_and_return_error(future, timeout);
   if (code != CASS_OK) {
-    CassString message = cass_future_error_message(future);
+    CassString message;
+    cass_future_error_message(future, &message.data, &message.length);
     BOOST_FAIL("Error occurred during query '" << std::string(message.data, message.length) << "' (" << boost::format("0x%08X") % code << ")");
   }
 }
@@ -297,7 +298,7 @@ CassVersion get_version(CassSession* session) {
   // Convert the release_version value to a string
   const CassValue* value = cass_row_get_column_by_name(row, "release_version");
   CassString version_string;
-  cass_value_get_string(value, &version_string);
+  cass_value_get_string(value, &version_string.data, &version_string.length);
 
   // Parse the version string and return the Cassandra version
   CassVersion version;

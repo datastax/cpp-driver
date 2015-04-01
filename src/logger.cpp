@@ -33,7 +33,7 @@ void cass_log_set_callback(CassLogCallback callback,
   cass::Logger::set_callback(callback, data);
 }
 
-void cass_log_set_queue_size(cass_size_t queue_size) {
+void cass_log_set_queue_size(size_t queue_size) {
   cass::Logger::set_queue_size(queue_size);
 }
 

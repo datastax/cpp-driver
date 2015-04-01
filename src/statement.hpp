@@ -30,14 +30,30 @@
     return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS; \
   }
 
+namespace cass {
+
+struct CassNull {};
+
+struct CassBytes {
+  const cass_byte_t* data;
+  size_t size;
+};
+
+struct CassString {
+  const char* data;
+  size_t length;
+};
+
 struct CassCustom {
   uint8_t** output;
   size_t output_size;
 };
 
-struct CassNull {};
-
-namespace cass {
+struct CassDecimal {
+  const cass_byte_t* varint;
+  size_t varint_size;
+  cass_int32_t scale;
+};
 
 class Statement : public RoutableRequest {
 public:
@@ -135,11 +151,15 @@ public:
   }
 
   CassError bind(size_t index, CassDecimal value) {
+    return bind(index, value.varint, value.varint_size, value.scale);
+  }
+
+  CassError bind(size_t index, const uint8_t* varint, size_t varint_size, int32_t scale) {
     CASS_VALUE_CHECK_INDEX(index);
-    Buffer buf(sizeof(int32_t) + sizeof(int32_t) + value.varint.size);
-    size_t pos = buf.encode_int32(0, sizeof(int32_t) + value.varint.size);
-    pos = buf.encode_int32(pos, value.scale);
-    buf.copy(pos, value.varint.data, value.varint.size);
+    Buffer buf(sizeof(int32_t) + sizeof(int32_t) + varint_size);
+    size_t pos = buf.encode_int32(0, sizeof(int32_t) + varint_size);
+    pos = buf.encode_int32(pos, scale);
+    buf.copy(pos, varint, varint_size);
     values_[index] = buf;
     return CASS_OK;
   }
@@ -162,9 +182,6 @@ public:
     return CASS_OK;
   }
 
-  int32_t encode_values(int version, BufferVec*  bufs) const;
-
-private:
   CassError bind(size_t index, const char* value, size_t value_length) {
     CASS_VALUE_CHECK_INDEX(index);
     Buffer buf(sizeof(int32_t) + value_length);
@@ -177,6 +194,8 @@ private:
   CassError bind(size_t index, const uint8_t* value, size_t value_length) {
     return bind(index, reinterpret_cast<const char*>(value), value_length);
   }
+
+  int32_t encode_values(int version, BufferVec*  bufs) const;
 
 private:
   typedef BufferVec ValueVec;

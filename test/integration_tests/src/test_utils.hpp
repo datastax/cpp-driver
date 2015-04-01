@@ -16,8 +16,9 @@
 
 #pragma once
 
-#include <string>
 #include <limits>
+#include <string>
+#include <string.h>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/asio/ip/address.hpp>
@@ -39,6 +40,44 @@
 #ifdef max
 #undef max
 #endif
+
+struct CassBytes {
+  CassBytes()
+   : data(NULL)
+   , size(0) {}
+  CassBytes(const cass_byte_t* data, size_t size)
+    : data(data), size(size) {}
+  const cass_byte_t* data;
+  size_t size;
+};
+
+struct CassString {
+  CassString()
+    : data(NULL)
+    , length(0) {}
+  CassString(const char* data)
+    : data(data)
+    , length(strlen(data)) {}
+
+  CassString(const char* data, size_t length)
+    : data(data), length(length) {}
+  const char* data;
+  size_t length;
+};
+
+struct CassDecimal {
+  CassDecimal()
+    : varint(NULL)
+    , varint_size(0)
+    , scale(0) {}
+  CassDecimal(const cass_byte_t* varint, size_t varint_size,
+              cass_int32_t scale)
+    : varint(varint), varint_size(varint_size)
+    , scale(scale) {}
+  const cass_byte_t* varint;
+  size_t varint_size;
+  cass_int32_t scale;
+};
 
 inline bool operator<(const CassUuid& u1, const CassUuid& u2) {
   return u1.clock_seq_and_node < u2.clock_seq_and_node ||
@@ -226,7 +265,7 @@ struct Value;
 
 template<>
 struct Value<cass_int32_t> {
-  static CassError bind(CassStatement* statement, cass_size_t index, cass_int32_t value) {
+  static CassError bind(CassStatement* statement, size_t index, cass_int32_t value) {
     return cass_statement_bind_int32(statement, index, value);
   }
 
@@ -253,7 +292,7 @@ struct Value<cass_int32_t> {
 
 template<>
 struct Value<cass_int64_t> {
-  static CassError bind(CassStatement* statement, cass_size_t index, cass_int64_t value) {
+  static CassError bind(CassStatement* statement, size_t index, cass_int64_t value) {
     return cass_statement_bind_int64(statement, index, value);
   }
 
@@ -280,7 +319,7 @@ struct Value<cass_int64_t> {
 
 template<>
 struct Value<cass_float_t> {
-  static CassError bind(CassStatement* statement, cass_size_t index, cass_float_t value) {
+  static CassError bind(CassStatement* statement, size_t index, cass_float_t value) {
     return cass_statement_bind_float(statement, index, value);
   }
 
@@ -307,7 +346,7 @@ struct Value<cass_float_t> {
 
 template<>
 struct Value<cass_double_t> {
-  static CassError bind(CassStatement* statement, cass_size_t index, cass_double_t value) {
+  static CassError bind(CassStatement* statement, size_t index, cass_double_t value) {
     return cass_statement_bind_double(statement, index, value);
   }
 
@@ -334,7 +373,7 @@ struct Value<cass_double_t> {
 
 template<>
 struct Value<cass_bool_t> {
-  static CassError bind(CassStatement* statement, cass_size_t index, cass_bool_t value) {
+  static CassError bind(CassStatement* statement, size_t index, cass_bool_t value) {
     return cass_statement_bind_bool(statement, index, value);
   }
 
@@ -353,16 +392,16 @@ struct Value<cass_bool_t> {
 
 template<>
 struct Value<CassString> {
-  static CassError bind(CassStatement* statement, cass_size_t index, CassString value) {
-    return cass_statement_bind_string(statement, index, value);
+  static CassError bind(CassStatement* statement, size_t index, CassString value) {
+    return cass_statement_bind_string_n(statement, index, value.data, value.length);
   }
 
   static CassError append(CassCollection* collection, CassString value) {
-    return cass_collection_append_string(collection, value);
+    return cass_collection_append_string_n(collection, value.data, value.length);
   }
 
   static CassError get(const CassValue* value, CassString* output) {
-    return cass_value_get_string(value, output);
+    return cass_value_get_string(value, &output->data, &output->length);
   }
 
   static bool equal(CassString a, CassString b) {
@@ -375,16 +414,16 @@ struct Value<CassString> {
 
 template<>
 struct Value<CassBytes> {
-  static CassError bind(CassStatement* statement, cass_size_t index, CassBytes value) {
-    return cass_statement_bind_bytes(statement, index, value);
+  static CassError bind(CassStatement* statement, size_t index, CassBytes value) {
+    return cass_statement_bind_bytes(statement, index, value.data, value.size);
   }
 
   static CassError append(CassCollection* collection, CassBytes value) {
-    return cass_collection_append_bytes(collection, value);
+    return cass_collection_append_bytes(collection, value.data, value.size);
   }
 
   static CassError get(const CassValue* value, CassBytes* output) {
-    return cass_value_get_bytes(value, output);
+    return cass_value_get_bytes(value, &output->data, &output->size);
   }
 
   static bool equal(CassBytes a, CassBytes b) {
@@ -397,7 +436,7 @@ struct Value<CassBytes> {
 
 template<>
 struct Value<CassInet> {
-  static CassError bind(CassStatement* statement, cass_size_t index, CassInet value) {
+  static CassError bind(CassStatement* statement, size_t index, CassInet value) {
     return cass_statement_bind_inet(statement, index, value);
   }
 
@@ -433,7 +472,7 @@ struct Value<CassInet> {
 
 template<>
 struct Value<CassUuid> {
-  static CassError bind(CassStatement* statement, cass_size_t index, CassUuid value) {
+  static CassError bind(CassStatement* statement, size_t index, CassUuid value) {
     return cass_statement_bind_uuid(statement, index, value);
   }
 
@@ -467,26 +506,26 @@ struct Value<CassUuid> {
 
 template<>
 struct Value<CassDecimal> {
-  static CassError bind(CassStatement* statement, cass_size_t index, CassDecimal value) {
-    return cass_statement_bind_decimal(statement, index, value);
+  static CassError bind(CassStatement* statement, size_t index, CassDecimal value) {
+    return cass_statement_bind_decimal(statement, index, value.varint, value.varint_size, value.scale);
   }
 
   static CassError append(CassCollection* collection, CassDecimal value) {
-    return cass_collection_append_decimal(collection, value);
+    return cass_collection_append_decimal(collection, value.varint, value.varint_size, value.scale);
   }
 
   static CassError get(const CassValue* value, CassDecimal* output) {
-    return cass_value_get_decimal(value, output);
+    return cass_value_get_decimal(value, &output->varint, &output->varint_size, &output->scale);
   }
 
   static bool equal(CassDecimal a, CassDecimal b) {
     if (a.scale != b.scale) {
       return false;
     }
-    if (a.varint.size != b.varint.size) {
+    if (a.varint_size != b.varint_size) {
       return false;
     }
-    return memcmp(a.varint.data, b.varint.data, a.varint.size) == 0;
+    return memcmp(a.varint, b.varint, a.varint_size) == 0;
   }
 };
 
@@ -558,7 +597,7 @@ CassError wait_and_return_error(CassFuture* future, cass_duration_t timeout = 60
 void wait_and_check_error(CassFuture* future, cass_duration_t timeout = 60 * ONE_SECOND_IN_MICROS);
 
 inline CassBytes bytes_from_string(const char* str) {
-  return cass_bytes_init(reinterpret_cast<const cass_uint8_t*>(str), strlen(str));
+  return CassBytes(reinterpret_cast<const cass_uint8_t*>(str), strlen(str));
 }
 
 inline CassInet inet_v4_from_int(int32_t address) {
@@ -566,13 +605,6 @@ inline CassInet inet_v4_from_int(int32_t address) {
   memcpy(inet.address, &address, sizeof(int32_t));
   inet.address_length = sizeof(int32_t);
   return inet;
-}
-
-inline CassDecimal decimal_from_scale_and_bytes(cass_int32_t scale, CassBytes bytes) {
-  CassDecimal decimal;
-  decimal.scale = scale;
-  decimal.varint = bytes;
-  return decimal;
 }
 
 inline CassUuid generate_time_uuid(CassUuidGen* uuid_gen) {
@@ -691,10 +723,10 @@ inline bool operator<(CassDecimal a, CassDecimal b) {
   } else if (a.scale < b.scale) {
     return true;
   }
-  if (a.varint.size > b.varint.size) {
+  if (a.varint_size > b.varint_size) {
     return false;
-  } else if (a.varint.size < b.varint.size) {
+  } else if (a.varint_size < b.varint_size) {
     return true;
   }
-  return memcmp(a.varint.data, b.varint.data, a.varint.size) < 0;
+  return memcmp(a.varint, b.varint, a.varint_size) < 0;
 }

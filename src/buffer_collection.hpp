@@ -60,7 +60,7 @@ public:
     bufs_.push_back(buf);
   }
 
-  void append(int32_t scale, const uint8_t* varint, size_t varint_len) {
+  void append(const uint8_t* varint, size_t varint_len, int32_t scale) {
     Buffer buf(sizeof(int32_t) + varint_len);
     size_t pos = buf.encode_int32(0, scale);
     buf.copy(pos, varint, varint_len);

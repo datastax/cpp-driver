@@ -43,8 +43,10 @@ struct Basic_ {
 typedef struct Basic_ Basic;
 
 void print_error(CassFuture* future) {
-  CassString message = cass_future_error_message(future);
-  fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
+  const char* message;
+  size_t message_length;
+  cass_future_error_message(future, &message, &message_length);
+  fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
 }
 
 CassCluster* create_cluster() {
@@ -69,7 +71,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
-  CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
+  CassStatement* statement = cass_statement_new(query, 0);
   CassFuture* future = cass_session_execute(session, statement);
 
   cass_future_wait(future);
@@ -85,7 +87,7 @@ CassError execute_query(CassSession* session, const char* query) {
   return rc;
 }
 
-CassError prepare_query(CassSession* session, CassString query, const CassPrepared** prepared) {
+CassError prepare_query(CassSession* session, const char* query, const CassPrepared** prepared) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
 
@@ -111,7 +113,7 @@ CassError insert_into_basic(CassSession* session, const CassPrepared* prepared, 
 
   statement = cass_prepared_bind(prepared);
 
-  cass_statement_bind_string_by_name(statement, "key", cass_string_init(key));
+  cass_statement_bind_string_by_name(statement, "key", key);
   cass_statement_bind_bool_by_name(statement, "BLN", basic->bln);
   cass_statement_bind_float_by_name(statement, "FLT", basic->flt);
   cass_statement_bind_double_by_name(statement, "\"dbl\"", basic->dbl);
@@ -140,7 +142,7 @@ CassError select_from_basic(CassSession* session, const CassPrepared * prepared,
 
   statement = cass_prepared_bind(prepared);
 
-  cass_statement_bind_string_by_name(statement, "key", cass_string_init(key));
+  cass_statement_bind_string_by_name(statement, "key", key);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -181,10 +183,10 @@ int main() {
   const CassPrepared* insert_prepared = NULL;
   const CassPrepared* select_prepared = NULL;
 
-  CassString insery_query
-    = cass_string_init("INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);");
-  CassString select_query
-    = cass_string_init("SELECT * FROM examples.basic WHERE key = ?");
+  const char* insert_query
+    = "INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);";
+  const char* select_query
+    = "SELECT * FROM examples.basic WHERE key = ?";
 
   if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);
@@ -205,7 +207,7 @@ int main() {
                                               PRIMARY KEY (key));");
 
 
-  if (prepare_query(session, insery_query, &insert_prepared) == CASS_OK) {
+  if (prepare_query(session, insert_query, &insert_prepared) == CASS_OK) {
     insert_into_basic(session, insert_prepared, "prepared_test", &input);
     cass_prepared_free(insert_prepared);
   }

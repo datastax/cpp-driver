@@ -70,7 +70,7 @@ struct TestTokenMap {
 
     for (int i = 0; i < num_nodes; ++i) {
       test_utils::CassStatementPtr statement(
-            cass_statement_new(cass_string_init("SELECT tokens, data_center FROM system.local"), 0));
+            cass_statement_new("SELECT tokens, data_center FROM system.local", 0));
       test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
       test_utils::wait_and_check_error(future.get());
       test_utils::CassResultPtr result(cass_future_get_result(future.get()));
@@ -79,13 +79,13 @@ struct TestTokenMap {
       const CassValue* token_set = cass_row_get_column_by_name(row, "tokens");
 
       CassString str;
-      cass_value_get_string(data_center, &str);
+      cass_value_get_string(data_center, &str.data, &str.length);
       std::string dc(str.data, str.length);
 
       std::string ip = cass::get_host_from_future(future.get());
       test_utils::CassIteratorPtr iterator(cass_iterator_from_collection(token_set));
       while (cass_iterator_next(iterator.get())) {
-        cass_value_get_string(cass_iterator_get_value(iterator.get()), &str);
+        cass_value_get_string(cass_iterator_get_value(iterator.get()), &str.data, &str.length);
         std::string token(str.data, str.length);
         tokens[boost::lexical_cast<int64_t>(token)] = Host(ip, dc);
       }
@@ -113,8 +113,8 @@ std::string get_replica(test_utils::CassSessionPtr session,
                         const std::string& value) {
   // The query doesn't matter
   test_utils::CassStatementPtr statement(
-        cass_statement_new(cass_string_init("SELECT * FROM system.local"), 1));
-  cass_statement_bind_string(statement.get(), 0, cass_string_init2(value.data(), value.size()));
+        cass_statement_new("SELECT * FROM system.local", 1));
+  cass_statement_bind_string_n(statement.get(), 0, value.data(), value.size());
   cass_statement_add_key_index(statement.get(), 0);
   cass_statement_set_keyspace(statement.get(), keyspace.c_str());
   test_utils::CassFuturePtr future(
@@ -266,8 +266,8 @@ BOOST_AUTO_TEST_CASE(single_entry_routing_key)
                                             "cass_collection map<text,text>);");
 
   std::string insert_query = "UPDATE invalid_routing_key SET cass_collection = ? WHERE routing_key = ?";
-  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session.get(),
-                                                                 cass_string_init2(insert_query.data(), insert_query.size())));
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session.get(),
+                                                                   insert_query.data(), insert_query.size()));
   test_utils::wait_and_check_error(prepared_future.get());
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
@@ -275,7 +275,7 @@ BOOST_AUTO_TEST_CASE(single_entry_routing_key)
   
   CassCollection* collection = cass_collection_new(CASS_COLLECTION_TYPE_MAP, 0);
   cass_statement_bind_collection(statement.get(), 0, collection);
-  cass_statement_bind_string(statement.get(), 1, cass_string_init("cassandra cpp-driver"));
+  cass_statement_bind_string(statement.get(), 1, "cassandra cpp-driver");
 
   test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
 

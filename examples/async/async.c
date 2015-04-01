@@ -35,8 +35,10 @@
 #define NUM_CONCURRENT_REQUESTS 1000
 
 void print_error(CassFuture* future) {
-  CassString message = cass_future_error_message(future);
-  fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
+  const char* message;
+  size_t message_length;
+  cass_future_error_message(future, &message, &message_length);
+  fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
 }
 
 
@@ -63,7 +65,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(cass_string_init(query), 0);
+  CassStatement* statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -82,7 +84,7 @@ CassError execute_query(CassSession* session, const char* query) {
 void insert_into_async(CassSession* session, const char* key) {
   CassError rc = CASS_OK;
   CassStatement* statement = NULL;
-  CassString query = cass_string_init("INSERT INTO async (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);");
+  const char* query = "INSERT INTO async (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);";
 
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
 
@@ -92,7 +94,7 @@ void insert_into_async(CassSession* session, const char* key) {
     statement = cass_statement_new(query, 6);
 
     sprintf(key_buffer, "%s%u", key, (unsigned int)i);
-    cass_statement_bind_string(statement, 0, cass_string_init(key_buffer));
+    cass_statement_bind_string(statement, 0, key_buffer);
     cass_statement_bind_bool(statement, 1, i % 2 == 0 ? cass_true : cass_false);
     cass_statement_bind_float(statement, 2, i / 2.0f);
     cass_statement_bind_double(statement, 3, i / 200.0);
