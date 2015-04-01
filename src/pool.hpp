@@ -18,6 +18,7 @@
 #define __CASS_POOL_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "metrics.hpp"
 #include "ref_counted.hpp"
 #include "request.hpp"
 #include "request_handler.hpp"
@@ -95,6 +96,7 @@ private:
   Address address_;
   uv_loop_t* loop_;
   const Config& config_;
+  Metrics* metrics_;
 
   PoolState state_;
   ConnectionVec connections_;

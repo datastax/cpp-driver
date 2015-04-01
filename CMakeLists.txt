@@ -365,7 +365,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 else()
   # Clang/Intel specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-variadic-macros")
+  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-variadic-macros -Wno-zero-length-array")
 
   set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} -Werror")
   set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
@@ -384,6 +384,9 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 file(GLOB API_HEADER_FILES ${PROJECT_SOURCE_DIR}/include/*.h)
 file(GLOB INC_FILES ${PROJECT_SOURCE_DIR}/src/*.hpp)
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
+
+set(SRC_FILES ${SRC_FILES}
+  ${PROJECT_SOURCE_DIR}/src/third_party/hdr_histogram/hdr_histogram.cpp)
 
 # Determine if OpenSSL should be compiled in (or not)
 if(CASS_USE_OPENSSL)

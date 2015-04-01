@@ -81,6 +81,40 @@ const CassSchema* cass_session_get_schema(CassSession* session) {
   return CassSchema::to(session->copy_schema());
 }
 
+void  cass_session_get_metrics(CassSession* session,
+                               CassMetrics* metrics) {
+  const cass::Metrics* internal_metrics = session->metrics();
+
+  cass::Metrics::Histogram::Snapshot requests_snapshot;
+  internal_metrics->request_latencies.get_snapshot(&requests_snapshot);
+
+  metrics->requests.min = requests_snapshot.min;
+  metrics->requests.max = requests_snapshot.max;
+  metrics->requests.mean = requests_snapshot.mean;
+  metrics->requests.stddev = requests_snapshot.stddev;
+  metrics->requests.median = requests_snapshot.median;
+  metrics->requests.percentile_75th = requests_snapshot.percentile_75th;
+  metrics->requests.percentile_95th = requests_snapshot.percentile_95th;
+  metrics->requests.percentile_98th = requests_snapshot.percentile_98th;
+  metrics->requests.percentile_99th = requests_snapshot.percentile_99th;
+  metrics->requests.percentile_999th = requests_snapshot.percentile_999th;
+
+  metrics->requests.one_minute_rate = internal_metrics->request_rates.one_minute_rate();
+  metrics->requests.five_minute_rate = internal_metrics->request_rates.five_minute_rate();
+  metrics->requests.fifteen_minute_rate = internal_metrics->request_rates.fifteen_minute_rate();
+  metrics->requests.mean_rate = internal_metrics->request_rates.mean_rate();
+
+
+  metrics->stats.total_connections = internal_metrics->total_connections.sum();
+  metrics->stats.available_connections = internal_metrics->available_connections.sum();
+  metrics->stats.exceeded_write_bytes_water_mark = internal_metrics->exceeded_write_bytes_water_mark.sum();
+  metrics->stats.exceeded_pending_requests_water_mark = internal_metrics->exceeded_pending_requests_water_mark.sum();
+
+  metrics->errors.connection_timeouts = internal_metrics->connection_timeouts.sum();
+  metrics->errors.pending_request_timeouts = internal_metrics->pending_request_timeouts.sum();
+  metrics->errors.request_timeouts = internal_metrics->request_timeouts.sum();
+}
+
 } // extern "C"
 
 namespace cass {
@@ -102,6 +136,7 @@ Session::~Session() {
 
 void Session::clear(const Config& config) {
   config_ = config;
+  metrics_.reset(new Metrics(config_.thread_count_io() + 1));
   load_balancing_policy_.reset(config.load_balancing_policy());
   connect_future_.reset();
   close_future_.reset();
@@ -131,6 +166,7 @@ int Session::init() {
     if (rc != 0) return rc;
     io_workers_.push_back(io_worker);
   }
+
   return rc;
 }
 
@@ -550,7 +586,7 @@ void Session::on_execute(uv_async_t* data) {
         Address address;
         if (!request_handler->get_current_host_address(&address)) {
           request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                                    "Session: No hosts available");
+                                    "All connections on all I/O threads are busy");
           break;
         }
 

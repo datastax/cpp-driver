@@ -22,6 +22,7 @@
 #include "constants.hpp"
 #include "event_thread.hpp"
 #include "logger.hpp"
+#include "metrics.hpp"
 #include "spsc_queue.hpp"
 #include "timer.hpp"
 
@@ -66,6 +67,7 @@ public:
   int init();
 
   const Config& config() const { return config_; }
+  Metrics* metrics() const { return metrics_; }
 
   int protocol_version() const {
     return protocol_version_;
@@ -137,6 +139,7 @@ private:
 private:
   Session* session_;
   const Config& config_;
+  Metrics* metrics_;
   boost::atomic<int> protocol_version_;
   uv_prepare_t prepare_;
 
