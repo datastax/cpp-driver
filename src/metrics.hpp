@@ -29,6 +29,15 @@
 
 #include <uv.h>
 
+#if defined(WIN32) || defined(_WIN32)
+#ifndef _WINSOCKAPI_
+#define _WINSOCKAPI_
+#endif
+#include <Windows.h>
+#else
+#include <sched.h>
+#endif
+
 #include <limits>
 #include <math.h>
 
@@ -378,7 +387,11 @@ public:
             is_caught_up = (even_end_epoch_ == start_value_at_flip);
           }
           if (!is_caught_up) {
+#if defined(WIN32) || defined(_WIN32)
+            SwitchToThread();
+#else
             sched_yield();
+#endif
           }
         } while(!is_caught_up);
       }

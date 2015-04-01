@@ -11,7 +11,9 @@
 #define HDR_HISTOGRAM_H 1
 
 #include <stdint.h>
+#ifndef _MSC_VER
 #include <stdbool.h>
+#endif
 #include <stdio.h>
 
 struct hdr_histogram
@@ -257,27 +259,6 @@ void hdr_iter_log_init(
  * @return 'false' if there are no values remaining for this iterator.
  */
 bool hdr_iter_next(struct hdr_iter* iter);
-
-typedef enum {
-    CLASSIC,
-    CSV
-} format_type;
-
-/**
- * Print out a percentile based histogram to the supplied stream.  Note that
- * this call will not flush the FILE, this is left up to the user.
- *
- * @param h 'This' pointer
- * @param stream The FILE to write the output to
- * @param ticks_per_half_distance The number of iteration steps per half-distance to 100%
- * @param value_scale Scale the output values by this amount
- * @param format_type Format to use, e.g. CSV.
- * @return 0 on success, error code on failure.  EIO if an error occurs writing
- * the output.
- */
-int hdr_percentiles_print(
-    struct hdr_histogram* h, FILE* stream, int32_t ticks_per_half_distance,
-    double value_scale, format_type format);
 
 /**
 * Internal allocation methods, used by hdr_dbl_histogram.

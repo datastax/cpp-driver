@@ -5,16 +5,40 @@
  */
 
 #include <stdlib.h>
-#include <stdbool.h>
 #include <math.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
+
+#if defined(_MSC_VER)
+#include <intrin.h>
+#else
 #include <inttypes.h>
+#endif
 
 #include "hdr_histogram.hpp"
+
+inline int32_t hdr_clz64(uint64_t x) {
+#if defined(_MSC_VER)
+#  if defined(_M_AMD64)
+  return (int32_t)__lzcnt64(x);
+#  else
+  // On 32-bit this needs to be split into two operations
+  int32_t lz = (int32_t)__lzcnt((unsigned long)(x >> 32));
+  if (lz == 32) {
+    // Scan the last 32 bits by truncating the 64-bit value
+    return (int32_t)__lzcnt((unsigned long)x) + 32;
+  }
+  return lz;
+#  endif
+#else
+  return (int32_t)__builtin_clzll(x)
+#endif
+
+}
+
 
 //  ######   #######  ##     ## ##    ## ########  ######
 // ##    ## ##     ## ##     ## ###   ##    ##    ##    ##
@@ -107,7 +131,7 @@ static int64_t power(int64_t base, int64_t exp)
 
 static int32_t get_bucket_index(struct hdr_histogram* h, int64_t value)
 {
-    int32_t pow2ceiling = 64 - __builtin_clzll(value | h->sub_bucket_mask); // smallest power of 2 containing value
+    int32_t pow2ceiling = 64 - hdr_clz64(value | h->sub_bucket_mask); // smallest power of 2 containing value
     return pow2ceiling - h->unit_magnitude - (h->sub_bucket_half_count_magnitude + 1);
 }
 
@@ -291,12 +315,12 @@ int hdr_calculate_bucket_config(
     cfg->highest_trackable_value = highest_trackable_value;
 
     int64_t largest_value_with_single_unit_resolution = 2 * power(10, significant_figures);
-    int32_t sub_bucket_count_magnitude = (int32_t) ceil(log(largest_value_with_single_unit_resolution) / log(2));
+    int32_t sub_bucket_count_magnitude = (int32_t) ceil(log((double)largest_value_with_single_unit_resolution) / log(2.0));
     cfg->sub_bucket_half_count_magnitude = ((sub_bucket_count_magnitude > 1) ? sub_bucket_count_magnitude : 1) - 1;
 
-    cfg->unit_magnitude = (int32_t) floor(log(lowest_trackable_value) / log(2));
+    cfg->unit_magnitude = (int32_t) floor(log((double)lowest_trackable_value) / log(2.0));
 
-    cfg->sub_bucket_count      = (int32_t) pow(2, (cfg->sub_bucket_half_count_magnitude + 1));
+    cfg->sub_bucket_count      = (int32_t) pow(2.0, (cfg->sub_bucket_half_count_magnitude + 1));
     cfg->sub_bucket_half_count = cfg->sub_bucket_count / 2;
     cfg->sub_bucket_mask       = ((int64_t) cfg->sub_bucket_count - 1) << cfg->unit_magnitude;
 
@@ -835,7 +859,7 @@ bool _percentile_iter_next(struct hdr_iter* iter)
         {
             percentiles->percentile = percentiles->percentile_to_iterate_to;
 
-            int64_t half_distance = (int64_t) pow(2, (int64_t) (log(100 / (100.0 - (percentiles->percentile_to_iterate_to))) / log(2)) + 1);
+            int64_t half_distance = (int64_t) pow(2.0, (double)((int64_t)(log(100.0 / (100.0 - (percentiles->percentile_to_iterate_to))) / log(2.0)) + 1));
             int64_t percentile_reporting_ticks = percentiles->ticks_per_half_distance * half_distance;
             percentiles->percentile_to_iterate_to += 100.0 / percentile_reporting_ticks;
 
@@ -860,24 +884,6 @@ void hdr_iter_percentile_init(struct hdr_iter* iter, struct hdr_histogram* h, in
 
     iter->_next_fp = _percentile_iter_next;
 }
-
-static void format_line_string(char* str, size_t len, int significant_figures, format_type format)
-{
-    const char* format_str = "%s%d%s";
-
-    switch (format)
-    {
-        case CSV:
-            snprintf(str, len, format_str, "%.", significant_figures, "f,%f,%d,%.2f\n");
-            break;
-        case CLASSIC:
-            snprintf(str, len, format_str, "%12.", significant_figures, "f %12f %12d %12.2f\n");
-            break;
-        default:
-            snprintf(str, len, format_str, "%12.", significant_figures, "f %12f %12d %12.2f\n");
-    }
-}
-
 
 // ########  ########  ######   #######  ########  ########  ######## ########
 // ##     ## ##       ##    ## ##     ## ##     ## ##     ## ##       ##     ##
@@ -1018,81 +1024,4 @@ void hdr_iter_log_init(
     iter->specifics.log.next_value_reporting_level_lowest_equivalent = lowest_equivalent_value(h, value_units_first_bucket);
 
     iter->_next_fp = _log_iter_next;
-}
-
-// Printing.
-
-static const char* format_head_string(format_type format)
-{
-    switch (format)
-    {
-        case CSV:
-            return "%s,%s,%s,%s\n";
-        case CLASSIC:
-            return "%12s %12s %12s %12s\n\n";
-        default:
-            return "%12s %12s %12s %12s\n\n";
-    }
-}
-
-static const char CLASSIC_FOOTER[] =
-        "#[Mean    = %12.3f, StdDeviation   = %12.3f]\n"
-                "#[Max     = %12.3f, Total count    = %12" PRIu64 "]\n"
-                "#[Buckets = %12d, SubBuckets     = %12d]\n";
-
-int hdr_percentiles_print(
-        struct hdr_histogram* h, FILE* stream, int32_t ticks_per_half_distance,
-        double value_scale, format_type format)
-{
-    char line_format[25];
-    format_line_string(line_format, 25, h->significant_figures, format);
-    const char* head_format = format_head_string(format);
-    int rc = 0;
-
-    struct hdr_iter iter;
-    hdr_iter_percentile_init(&iter, h, ticks_per_half_distance);
-
-    struct hdr_iter_percentiles* percentiles;
-
-    if (fprintf(
-            stream, head_format,
-            "Value", "Percentile", "TotalCount", "1/(1-Percentile)") < 0)
-    {
-        rc = EIO;
-        goto cleanup;
-    }
-
-    percentiles = &iter.specifics.percentiles;
-    while (_basic_iter_next(&iter))
-    {
-        double  value               = iter.highest_equivalent_value / value_scale;
-        double  percentile          = percentiles->percentile / 100.0;
-        int64_t total_count         = iter.count_to_index;
-        double  inverted_percentile = (1.0 / (1.0 - percentile));
-
-        if (fprintf(
-                stream, line_format, value, percentile, total_count, inverted_percentile) < 0)
-        {
-            rc = EIO;
-            goto cleanup;
-        }
-    }
-
-    if (CLASSIC == format)
-    {
-        double mean   = hdr_mean(h)   / value_scale;
-        double stddev = hdr_stddev(h) / value_scale;
-        double max    = hdr_max(h)    / value_scale;
-
-        if (fprintf(
-                stream, CLASSIC_FOOTER,  mean, stddev, max,
-                h->total_count, h->bucket_count, h->sub_bucket_count) < 0)
-        {
-            rc = EIO;
-            goto cleanup;
-        }
-    }
-
-    cleanup:
-    return rc;
 }
