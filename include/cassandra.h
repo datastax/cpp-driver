@@ -111,13 +111,13 @@ typedef cass_uint64_t cass_duration_t;
  * Byte buffer object.
  */
 typedef struct CassBytes_ {
-    const cass_byte_t* data; /* !< @public Data. */
-    cass_size_t size;        /* !< @public Size. */
+  const cass_byte_t* data; /* !< @public Data. */
+  cass_size_t size;        /* !< @public Size. */
 } CassBytes;
 
 typedef struct CassString_ {
-    const char* data;
-    cass_size_t length;
+  const char* data;
+  cass_size_t length;
 } CassString;
 
 /**
@@ -483,10 +483,95 @@ typedef struct CassLogMessage_ {
 } CassLogMessage;
 
 /**
- * A callback that's used to handle logging.
+ * A callback used to handle logging.
  */
 typedef void (*CassLogCallback)(const CassLogMessage* message,
                                 void* data);
+
+
+/**
+ * An authentication exchange.
+ */
+typedef struct CassAuth_ {
+  CassInet host; /**< The IP address of the server */
+  void* data; /**< User data for resources acquired during an exchange */
+} CassAuth;
+
+/**
+ * A callback used to initiate an authentication exchange.
+ *
+ * If the number of bytes exceeds response_size then immediately
+ * return the number of required bytes. The callback will then
+ * be recalled with a new buffer of the correct size.
+ *
+ * @param[in] auth
+ * @param[in] data
+ * @param[out] response
+ * @param[out] response_size
+ * @return The number of bytes copied into response or the required size
+ * of the response array
+ */
+typedef size_t (*CassAuthInitalCallback)(CassAuth* auth,
+                                         void* data,
+                                         char* response,
+                                         size_t response_size);
+
+/**
+ * A callback used when an authentication challenge initiated
+ * by the server.
+ *
+ * If the number of bytes exceeds response_size then immediately
+ * return the number of required bytes. The callback will then
+ * be recalled with a new buffer of the correct size.
+ *
+ * @param[in] auth
+ * @param[in] data
+ * @param[in] challenge
+ * @param[in] challenge_size
+ * @param[out] response
+ * @param[out] response_size
+ * @return The number of bytes copied into response or the required size
+ * of the response array
+ */
+typedef size_t (*CassAuthChallengeCallback)(CassAuth* auth,
+                                            void* data,
+                                            const char* challenge,
+                                            size_t challenge_size,
+                                            char* response,
+                                            size_t response_size);
+/**
+ * A callback used to indicate the success of the authentication
+ * exchange.
+ *
+ * @param[in] auth
+ * @param[in] data
+ * @param[in] token
+ * @param[in] token_size
+ */
+typedef void (*CassAuthSuccessCallback)(CassAuth* auth,
+                                        void* data,
+                                        const char* token,
+                                        size_t token_size);
+/**
+ * A callback used to cleanup resources that were acquired during
+ * the process of the authentication exchange. This is called after
+ * the termination of the exchange regardless of the outcome.
+ *
+ * @param[in] auth
+ * @param[in] data
+ */
+typedef void (*CassAuthCleanupCallback)(CassAuth* auth,
+                                        void* data);
+
+/**
+ * Authentication callbacks
+ */
+typedef struct CassAuthCallbacks_ {
+  CassAuthInitalCallback initial_callback;
+  CassAuthChallengeCallback challenge_callback;
+  CassAuthSuccessCallback success_callback;
+  CassAuthCleanupCallback cleanup_callback;
+} CassAuthCallbacks;
 
 /***********************************************************************************
  *
@@ -565,6 +650,21 @@ cass_cluster_set_port(CassCluster* cluster,
 CASS_EXPORT void
 cass_cluster_set_ssl(CassCluster* cluster,
                      CassSsl* ssl);
+
+/**
+ * Sets custom authentication callbacks
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] callbacks
+ * @param[in] data
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_auth_callbacks(CassCluster* cluster,
+                                const CassAuthCallbacks* callbacks,
+                                void* data);
 
 /**
  * Sets the protocol version. This will automatically downgrade if to
