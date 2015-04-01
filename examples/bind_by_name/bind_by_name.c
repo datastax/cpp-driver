@@ -183,7 +183,7 @@ int main() {
   const CassPrepared* insert_prepared = NULL;
   const CassPrepared* select_prepared = NULL;
 
-  const char* insery_query
+  const char* insert_query
     = "INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);";
   const char* select_query
     = "SELECT * FROM examples.basic WHERE key = ?";
@@ -207,7 +207,7 @@ int main() {
                                               PRIMARY KEY (key));");
 
 
-  if (prepare_query(session, insery_query, &insert_prepared) == CASS_OK) {
+  if (prepare_query(session, insert_query, &insert_prepared) == CASS_OK) {
     insert_into_basic(session, insert_prepared, "prepared_test", &input);
     cass_prepared_free(insert_prepared);
   }
