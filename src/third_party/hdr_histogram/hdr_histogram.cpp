@@ -14,14 +14,14 @@
 #include <errno.h>
 #include <inttypes.h>
 
-#include "hdr_histogram.h"
+#include "hdr_histogram.hpp"
 
-//  ######   #######  ##     ## ##    ## ########  ######  
-// ##    ## ##     ## ##     ## ###   ##    ##    ##    ## 
-// ##       ##     ## ##     ## ####  ##    ##    ##       
-// ##       ##     ## ##     ## ## ## ##    ##     ######  
-// ##       ##     ## ##     ## ##  ####    ##          ## 
-// ##    ## ##     ## ##     ## ##   ###    ##    ##    ## 
+//  ######   #######  ##     ## ##    ## ########  ######
+// ##    ## ##     ## ##     ## ###   ##    ##    ##    ##
+// ##       ##     ## ##     ## ####  ##    ##    ##
+// ##       ##     ## ##     ## ## ## ##    ##     ######
+// ##       ##     ## ##     ## ##  ####    ##          ##
+// ##    ## ##     ## ##     ## ##   ###    ##    ##    ##
 //  ######   #######   #######  ##    ##    ##     ######
 
 static int32_t normalize_index(struct hdr_histogram* h, int32_t index)
@@ -41,7 +41,7 @@ static int32_t normalize_index(struct hdr_histogram* h, int32_t index)
     else if (normalized_index >= h->counts_len)
     {
         adjustment = -h->counts_len;
-    } 
+    }
 
     return normalized_index + adjustment;
 }
@@ -341,7 +341,7 @@ int hdr_init(
     }
 
     size_t histogram_size           = sizeof(struct hdr_histogram) + cfg.counts_len * sizeof(int64_t);
-    struct hdr_histogram* histogram = malloc(histogram_size);
+    struct hdr_histogram* histogram = (struct hdr_histogram*)malloc(histogram_size);
 
     if (!histogram)
     {
@@ -578,7 +578,7 @@ int64_t hdr_add_while_correcting_for_coordinated_omission(
     struct hdr_iter iter;
     hdr_iter_recorded_init(&iter, from);
     int64_t dropped = 0;
-    
+
     while (hdr_iter_next(&iter))
     {
         int64_t value = iter.value_from_index;
@@ -589,7 +589,7 @@ int64_t hdr_add_while_correcting_for_coordinated_omission(
             dropped += count;
         }
     }
-    
+
     return dropped;
 }
 
@@ -1052,6 +1052,8 @@ int hdr_percentiles_print(
     struct hdr_iter iter;
     hdr_iter_percentile_init(&iter, h, ticks_per_half_distance);
 
+    struct hdr_iter_percentiles* percentiles;
+
     if (fprintf(
             stream, head_format,
             "Value", "Percentile", "TotalCount", "1/(1-Percentile)") < 0)
@@ -1060,7 +1062,7 @@ int hdr_percentiles_print(
         goto cleanup;
     }
 
-    struct hdr_iter_percentiles * percentiles = &iter.specifics.percentiles;
+    percentiles = &iter.specifics.percentiles;
     while (_basic_iter_next(&iter))
     {
         double  value               = iter.highest_equivalent_value / value_scale;

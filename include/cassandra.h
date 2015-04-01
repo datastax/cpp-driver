@@ -320,7 +320,7 @@ typedef struct CassMetrics_ {
     cass_uint64_t percentile_75th; /**< 75th percentile in microseconds */
     cass_uint64_t percentile_95th; /**< 95th percentile in microseconds */
     cass_uint64_t percentile_98th; /**< 98th percentile in microseconds */
-    cass_uint64_t percentile_99th; /**< 99the percentile microseconds */
+    cass_uint64_t percentile_99th; /**< 99the percentile in microseconds */
     cass_uint64_t percentile_999th; /**< 99.9th percentile in microseconds */
     cass_double_t mean_rate; /**<  Mean rate in requests per second*/
     cass_double_t one_minute_rate; /**< 1 minute rate in requests per second */

@@ -98,8 +98,7 @@ void RequestHandler::start_request() {
 
 void RequestHandler::set_response(Response* response) {
   uint64_t elapsed = uv_hrtime() - start_time_ns_;
-  connection_->metrics()->requests.record_value(elapsed / 1000);
-  connection_->metrics()->request_rates.mark();
+  connection_->metrics()->record_request(elapsed);
   future_->set_result(current_address_, response);
   return_connection_and_finish();
 }

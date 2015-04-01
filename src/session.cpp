@@ -86,7 +86,7 @@ void  cass_session_get_metrics(CassSession* session,
   const cass::Metrics* internal_metrics = session->metrics();
 
   cass::Metrics::Histogram::Snapshot requests_snapshot;
-  internal_metrics->requests.get_snapshot(&requests_snapshot);
+  internal_metrics->request_latencies.get_snapshot(&requests_snapshot);
 
   metrics->requests.min = requests_snapshot.min;
   metrics->requests.max = requests_snapshot.max;

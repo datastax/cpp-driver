@@ -384,7 +384,7 @@ file(GLOB INC_FILES ${PROJECT_SOURCE_DIR}/src/*.hpp)
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
 set(SRC_FILES ${SRC_FILES}
-  ${PROJECT_SOURCE_DIR}/src/third_party/hdr_histogram/hdr_histogram.c)
+  ${PROJECT_SOURCE_DIR}/src/third_party/hdr_histogram/hdr_histogram.cpp)
 
 # Determine if OpenSSL should be compiled in (or not)
 if(CASS_USE_OPENSSL)

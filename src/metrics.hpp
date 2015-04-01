@@ -21,10 +21,9 @@
 #define __CASS_METRICS_HPP_INCLUDED__
 
 #include "scoped_ptr.hpp"
+#include "scoped_lock.hpp"
 
-extern "C" {
-#include "third_party/hdr_histogram/hdr_histogram.h"
-}
+#include "third_party/hdr_histogram/hdr_histogram.hpp"
 
 #include <boost/atomic.hpp>
 
@@ -39,21 +38,31 @@ class Metrics {
 private:
   class ThreadState {
   public:
+#if UV_VERSION_MAJOR == 0
+    ThreadState()
+      : max_threads_(1) {}
+#else
     ThreadState(size_t max_threads)
       : max_threads_(max_threads)
       , thread_count_(1) {
       uv_key_create(&thread_id_key_);
     }
+#endif
 
+#if UV_VERSION_MAJOR >= 1
     ~ThreadState() {
       uv_key_delete(&thread_id_key_);
     }
+#endif
 
     size_t max_threads() const {
       return max_threads_;
     }
 
     size_t current_thread_id() {
+#if UV_VERSION_MAJOR == 0
+      return 0;
+#else
       void* id = uv_key_get(&thread_id_key_);
       if (id == NULL) {
         size_t thread_id = thread_count_++;
@@ -62,12 +71,15 @@ private:
         uv_key_set(&thread_id_key_, id);
       }
       return reinterpret_cast<size_t>(id) - 1;
+#endif
     }
 
   private:
     const size_t max_threads_;
+#if UV_VERSION_MAJOR >= 1
     boost::atomic<size_t> thread_count_;
     uv_key_t thread_id_key_;
+#endif
   };
 
 public:
@@ -273,11 +285,15 @@ public:
     }
 
     void record_value(int64_t value) {
+      // All threads share the same histogram so access needs to be synchronized
+#if UV_VERSION_MAJOR == 0
+      ScopedMutex l(&mutex_);
+#endif
       histograms_[thread_state_->current_thread_id()].record_value(value);
     }
 
     void get_snapshot(Snapshot* snapshot) const {
-      uv_mutex_lock(&mutex_);
+      ScopedMutex l(&mutex_);
       hdr_histogram* h = histogram_;
       for (size_t i = 0; i < thread_state_->max_threads(); ++i) {
         histograms_[i].add(h);
@@ -292,10 +308,33 @@ public:
       snapshot->percentile_98th = hdr_value_at_percentile(h, 98.0);
       snapshot->percentile_99th = hdr_value_at_percentile(h, 99.0);
       snapshot->percentile_999th = hdr_value_at_percentile(h, 99.9);
-      uv_mutex_unlock(&mutex_);
     }
 
   private:
+#if UV_VERSION_MAJOR == 0
+    class PerThreadHistogram {
+    public:
+      PerThreadHistogram() {
+        hdr_init(1LL, HIGHEST_TRACKABLE_VALUE, 3, &histogram_);
+      }
+
+      ~PerThreadHistogram() {
+        free(histogram_);
+      }
+
+      void record_value(int64_t value) {
+        hdr_record_value(histogram_, value);
+
+      }
+
+      void add(hdr_histogram* to) {
+        hdr_add(to, histogram_);
+      }
+
+    private:
+      hdr_histogram* histogram_;
+    };
+#else
     class WriterReaderPhaser {
     public:
       WriterReaderPhaser()
@@ -367,7 +406,7 @@ public:
         int64_t critical_value_enter = phaser_.writer_critical_section_enter();
         hdr_histogram* h = histograms_[active_index_];
         hdr_record_value(h, value);
-        phaser_.writer_critical_section_end(critical_value_enter);
+
       }
 
       void add(hdr_histogram* to) {
@@ -382,6 +421,7 @@ public:
       boost::atomic<int> active_index_;
       WriterReaderPhaser phaser_;
     };
+#endif
 
     ThreadState* thread_state_;
     ScopedPtr<PerThreadHistogram[]> histograms_;
@@ -393,8 +433,21 @@ public:
   };
 
   Metrics(size_t max_threads)
+  // Note: For best performance use libuv 1.X!
+
+  // libuv 0.10.X doesn't support thread-local variables so that means
+  // per-thread counters and histograms are disabled which means
+  // that these shared objects need to have their access synchronized
+  // (and means increased contention). Counters already uses an atomic
+  // type so this doesn't need any update, but it means that all threads
+  // use the same counter. Histogram uses a shared lock instead
+  // of accumulating latencies from per-thread instances.
+#if UV_VERSION_MAJOR == 0
+    : thread_state_()
+#else
     : thread_state_(max_threads)
-    , requests(&thread_state_)
+#endif
+    , request_latencies(&thread_state_)
     , request_rates(&thread_state_)
     , total_connections(&thread_state_)
     , available_connections(&thread_state_)
@@ -404,10 +457,17 @@ public:
     , pending_request_timeouts(&thread_state_)
     , request_timeouts(&thread_state_) {}
 
+  void record_request(uint64_t latency_ns) {
+    // Final measurement is in microseconds
+    request_latencies.record_value(latency_ns / 1000);
+    request_rates.mark();
+  }
+
+private:
   ThreadState thread_state_;
 
 public:
-  Histogram requests;
+  Histogram request_latencies;
   Meter request_rates;
 
   Counter total_connections;
