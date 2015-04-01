@@ -75,14 +75,17 @@ private:
   public:
     LatencyAwareQueryPlan(LatencyAwarePolicy* policy, QueryPlan* child_plan)
       : policy_(policy)
-      , child_plan_(child_plan) {}
+      , child_plan_(child_plan)
+      , skipped_index_(0) {}
 
     SharedRefPtr<Host> compute_next();
 
   private:
     LatencyAwarePolicy* policy_;
     ScopedPtr<QueryPlan> child_plan_;
+
     HostVec skipped_;
+    size_t skipped_index_;
   };
 
   static void on_work(PeriodicTask* task);

@@ -29,7 +29,9 @@ public:
     : state_(UNLOCKED) {}
 
   void lock() {
-    while (state_.exchange(LOCKED, boost::memory_order_acquire) == LOCKED) { }
+    while (state_.exchange(LOCKED, boost::memory_order_acquire) == LOCKED) {
+      // Spin
+    }
   }
 
   void unlock() {
@@ -39,9 +41,9 @@ public:
 private:
   boost::atomic<LockState> state_;
 
-public:
-  typedef char CachePad[64];
-  CachePad pad__;
+  static const size_t cacheline_size = 64;
+  char pad__[cacheline_size];
+  void no_unused_private_warning__() { pad__[0] = 0; }
 };
 
 class ScopedSpinlock {

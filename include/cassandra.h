@@ -939,7 +939,7 @@ cass_cluster_set_latency_aware_routing(CassCluster* cluster,
  * Defaults:
  *
  * exclusion_threshold: 2.0
- * static_ms: 100 milliseconds
+ * scale_ms: 100 milliseconds
  * retry_period_ms: 10,000 milliseconds (10 seconds)
  * update_rate_ms: 100 milliseconds
  * min_measured: 50
@@ -950,7 +950,7 @@ cass_cluster_set_latency_aware_routing(CassCluster* cluster,
  * @param[in] exclusion_threshold Controls how much worse the latency must be compared to the
  * average latency of the best performing node before it penalized.
  * @param[in] scale_ms Controls the weight given to older latencies when calculating the average
- * latency of a node. A bigger scale with give more weight to older latency measurements.
+ * latency of a node. A bigger scale will give more weight to older latency measurements.
  * @param[in] retry_period_ms The amount of time a node is penalized by the policy before
  * being given a second chance when the current average latency exceeds the calculated
  * threshold (exclusion_threshold * best_average_latency).

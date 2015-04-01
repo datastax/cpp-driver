@@ -95,10 +95,8 @@ SharedRefPtr<Host> LatencyAwarePolicy::LatencyAwareQueryPlan::compute_next() {
     skipped_.push_back(host);
   }
 
-  if (!skipped_.empty()) {
-    host = skipped_.back();
-    skipped_.pop_back();
-    return host;
+  if (skipped_index_ < skipped_.size()) {
+    return skipped_[skipped_index_++];
   }
 
   return SharedRefPtr<Host>();
@@ -124,7 +122,7 @@ void LatencyAwarePolicy::on_work(PeriodicTask* task) {
   }
 
   if (new_min_average != std::numeric_limits<int64_t>::max()) {
-    LOG_DEBUG("Calculated new minimum: %f", static_cast<double>(new_min_average) / 1e6);
+    LOG_TRACE("Calculated new minimum: %f", static_cast<double>(new_min_average) / 1e6);
     policy->min_average_.store(new_min_average);
   }
 }
