@@ -19,16 +19,33 @@
 
 #include "address.hpp"
 #include "copy_on_write_ptr.hpp"
+#include "get_time.hpp"
+#include "logger.hpp"
+#include "macros.hpp"
 #include "ref_counted.hpp"
+#include "scoped_ptr.hpp"
+#include "spin_lock.hpp"
 
 #include <boost/atomic.hpp>
 
+#include <math.h>
 #include <map>
 #include <set>
 #include <sstream>
 #include <vector>
 
 namespace cass {
+
+struct TimestampedAverage {
+  TimestampedAverage()
+    : average(-1)
+    , timestamp(0)
+    , num_measured(0) {}
+
+  int64_t average;
+  uint64_t timestamp;
+  uint64_t num_measured;
+};
 
 class Host : public RefCounted<Host> {
 public:
@@ -85,6 +102,49 @@ public:
     return ss.str();
   }
 
+  void enable_latency_tracking(int64_t scale, int64_t min_measured) {
+    if (!latency_tracker_) {
+      latency_tracker_.reset(new LatencyTracker(scale, (30LL * min_measured) / 100LL));
+    }
+  }
+
+  void update_latency(uint64_t latency_ns) {
+    if (latency_tracker_) {
+      LOG_TRACE("Latency %f ms", static_cast<double>(latency_ns) / 1e6);
+      latency_tracker_->update(latency_ns);
+    }
+  }
+
+  TimestampedAverage get_current_average() const {
+    if (latency_tracker_) {
+      return latency_tracker_->get();
+    }
+    return TimestampedAverage();
+  }
+
+private:
+  class LatencyTracker {
+  public:
+    LatencyTracker(int64_t scale_ns, int64_t threshold_to_account)
+      : scale_ns_(scale_ns)
+      , threshold_to_account_(threshold_to_account) {}
+
+    void update(uint64_t latency_ns);
+
+    TimestampedAverage get() const {
+      ScopedSpinlock l(SpinlockPool<LatencyTracker>::get_spinlock(this));
+      return current_;
+    }
+
+  private:
+    uint64_t scale_ns_;
+    uint64_t threshold_to_account_;
+    TimestampedAverage current_;
+
+  private:
+    DISALLOW_COPY_AND_ASSIGN(LatencyTracker);
+  };
+
 private:
   HostState state() const {
     return state_.load(boost::memory_order_acquire);
@@ -100,12 +160,18 @@ private:
   std::string listen_address_;
   std::string rack_;
   std::string dc_;
+
+  ScopedPtr<LatencyTracker> latency_tracker_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(Host);
 };
 
 typedef std::map<Address, SharedRefPtr<Host> > HostMap;
 typedef std::vector<SharedRefPtr<Host> > HostVec;
 typedef CopyOnWritePtr<HostVec> CopyOnWriteHostVec;
 
+void copy_hosts(const HostMap& from_hosts, CopyOnWriteHostVec& to_hosts);
 void add_host(CopyOnWriteHostVec& hosts, const SharedRefPtr<Host>& host);
 void remove_host(CopyOnWriteHostVec& hosts, const SharedRefPtr<Host>& host);
 

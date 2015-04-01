@@ -59,6 +59,8 @@ public:
 
   virtual const Request* request() const { return request_.get(); }
 
+  virtual void start_request();
+
   virtual void on_set(ResponseMessage* response);
   virtual void on_error(CassError code, const std::string& message);
   virtual void on_timeout();
@@ -93,11 +95,12 @@ private:
   ScopedRefPtr<const Request> request_;
   ScopedRefPtr<ResponseFuture> future_;
   bool is_query_plan_exhausted_;
-  Address current_address_;
+  SharedRefPtr<Host> current_host_;
   ScopedPtr<QueryPlan> query_plan_;
   IOWorker* io_worker_;
   Connection* connection_;
   Pool* pool_;
+  uint64_t start_time_ns_;
 };
 
 } // namespace cass

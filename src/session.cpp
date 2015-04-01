@@ -321,6 +321,7 @@ void Session::notify_closed() {
 void Session::close_handles() {
   EventThread<SessionEvent>::close_handles();
   request_queue_->close_handles();
+  load_balancing_policy_->close_handles();
 }
 
 void Session::on_run() {
@@ -423,6 +424,7 @@ void Session::execute(RequestHandler* request_handler) {
 
 void Session::on_control_connection_ready() {
   load_balancing_policy_->init(control_connection_.connected_host(), hosts_);
+  load_balancing_policy_->register_handles(loop());
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
     (*it)->set_protocol_version(control_connection_.protocol_version());
