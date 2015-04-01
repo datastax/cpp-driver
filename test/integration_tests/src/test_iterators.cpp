@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(collection_map_iterator)
   while (cass_iterator_next(iterator.get())) {
     CassString key;
     BOOST_REQUIRE(cass_value_type(cass_iterator_get_value(iterator.get())) == CASS_VALUE_TYPE_VARCHAR);
-    BOOST_REQUIRE(cass_value_get_string(cass_iterator_get_value(iterator.get()), &key) == CASS_OK);
+    BOOST_REQUIRE(cass_value_get_string(cass_iterator_get_value(iterator.get()), &key.data, &key.length) == CASS_OK);
     BOOST_REQUIRE(key.length == 1 && key.data[0] == 'a' + count);
     BOOST_REQUIRE(cass_iterator_next(iterator.get()));
 
@@ -245,7 +245,7 @@ BOOST_AUTO_TEST_CASE(map_iterator)
   while (cass_iterator_next(iterator.get())) {
     CassString key;
     BOOST_REQUIRE(cass_value_type(cass_iterator_get_map_key(iterator.get())) == CASS_VALUE_TYPE_VARCHAR);
-    BOOST_REQUIRE(cass_value_get_string(cass_iterator_get_map_key(iterator.get()), &key) == CASS_OK);
+    BOOST_REQUIRE(cass_value_get_string(cass_iterator_get_map_key(iterator.get()), &key.data, &key.length) == CASS_OK);
     BOOST_REQUIRE(key.length == 1 && key.data[0] == 'a' + count);
 
     cass_int32_t value;

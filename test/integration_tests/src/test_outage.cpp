@@ -92,7 +92,8 @@ struct OutageTests : public test_utils::MultipleNodesTest {
       if (code != CASS_OK
          && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT
          && code != CASS_ERROR_SERVER_READ_TIMEOUT) { // Timeout is okay
-        CassString message = cass_future_error_message(future.get());
+        CassString message;
+        cass_future_error_message(future.get(), &message.data, &message.length);
         fprintf(stderr, "Error occurred during select '%.*s'\n", static_cast<int>(message.length), message.data);
         is_done = true;
         return false;
@@ -186,13 +187,14 @@ struct OutageTests : public test_utils::MultipleNodesTest {
 
     cass_statement_bind_uuid(statement.get(), 0, test_utils::generate_time_uuid(uuid_gen));
     cass_statement_bind_int64(statement.get(), 1, event_time.count());
-    cass_statement_bind_string(statement.get(), 2, cass_string_init_n(text_sample.data(), text_sample.size()));
+    cass_statement_bind_string_n(statement.get(), 2, text_sample.data(), text_sample.size());
 
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     cass_future_wait(future.get());
     CassError code = cass_future_error_code(future.get());
     if (code != CASS_OK && code != CASS_ERROR_LIB_REQUEST_TIMED_OUT) { // Timeout is okay
-      CassString message = cass_future_error_message(future.get());
+      CassString message;
+      cass_future_error_message(future.get(), &message.data, &message.length);
       fprintf(stderr, "Error occurred during insert '%.*s'\n", static_cast<int>(message.length), message.data);
       return false;
     }

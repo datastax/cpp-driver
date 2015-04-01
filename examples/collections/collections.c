@@ -33,8 +33,10 @@
 #include "cassandra.h"
 
 void print_error(CassFuture* future) {
-  CassString message = cass_future_error_message(future);
-  fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
+  const char* message;
+  size_t message_length;
+  cass_future_error_message(future, &message, &message_length);
+  fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
 }
 
 CassCluster* create_cluster() {
@@ -86,11 +88,11 @@ CassError insert_into_collections(CassSession* session, const char* key, const c
 
   statement = cass_statement_new(query, 2);
 
-  cass_statement_bind_string(statement, 0, cass_string_init(key));
+  cass_statement_bind_string(statement, 0, key);
 
   collection = cass_collection_new(CASS_COLLECTION_TYPE_SET, 2);
   for (item = items; *item; item++) {
-    cass_collection_append_string(collection, cass_string_init(*item));
+    cass_collection_append_string(collection, *item);
   }
   cass_statement_bind_collection(statement, 1, collection);
   cass_collection_free(collection);
@@ -117,7 +119,7 @@ CassError select_from_collections(CassSession* session, const char* key) {
 
   statement = cass_statement_new(query, 1);
 
-  cass_statement_bind_string(statement, 0, cass_string_init(key));
+  cass_statement_bind_string(statement, 0, key);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -137,9 +139,10 @@ CassError select_from_collections(CassSession* session, const char* key) {
       value = cass_row_get_column(row, 0);
       items_iterator = cass_iterator_from_collection(value);
       while (cass_iterator_next(items_iterator)) {
-        CassString item_string;
-        cass_value_get_string(cass_iterator_get_value(items_iterator), &item_string);
-        printf("item: %.*s\n", (int)item_string.length, item_string.data);
+        const char* item;
+        size_t item_length;
+        cass_value_get_string(cass_iterator_get_value(items_iterator), &item, &item_length);
+        printf("item: %.*s\n", (int)item_length, item);
       }
       cass_iterator_free(items_iterator);
     }

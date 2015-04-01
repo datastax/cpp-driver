@@ -89,28 +89,35 @@ CassError cass_value_get_inet(const CassValue* value, CassInet* output) {
   return CASS_OK;
 }
 
-CassError cass_value_get_string(const CassValue* value, CassString* output) {
+CassError cass_value_get_string(const CassValue* value,
+                                const char** output,
+                                size_t* output_length) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
-  output->data = value->buffer().data();
-  output->length = value->buffer().size();
+  *output = value->buffer().data();
+  *output_length = value->buffer().size();
   return CASS_OK;
 }
 
-CassError cass_value_get_bytes(const CassValue* value, CassBytes* output) {
+CassError cass_value_get_bytes(const CassValue* value,
+                               const cass_byte_t** output,
+                               size_t* output_size) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
-  output->data = reinterpret_cast<cass_byte_t*>(value->buffer().data());
-  output->size = value->buffer().size();
+  *output = reinterpret_cast<cass_byte_t*>(value->buffer().data());
+  *output_size = value->buffer().size();
   return CASS_OK;
 }
 
-CassError cass_value_get_decimal(const CassValue* value, CassDecimal* output) {
+CassError cass_value_get_decimal(const CassValue* value,
+                                 const cass_byte_t** varint,
+                                 size_t* varint_size,
+                                 cass_int32_t* scale) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
   if (value->type() != CASS_VALUE_TYPE_DECIMAL) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
-  const char* buffer = cass::decode_int32(value->buffer().data(), output->scale);
-  output->varint.data = reinterpret_cast<const cass_byte_t*>(buffer);
-  output->varint.size = value->buffer().size() - sizeof(int32_t);
+  const char* buffer = cass::decode_int32(value->buffer().data(), *scale);
+  *varint = reinterpret_cast<const cass_byte_t*>(buffer);
+  *varint_size = value->buffer().size() - sizeof(int32_t);
   return CASS_OK;
 }
 

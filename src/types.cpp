@@ -56,32 +56,4 @@ CassInet cass_inet_init_v6(const cass_uint8_t* address) {
   return inet;
 }
 
-CassDecimal cass_decimal_init(cass_int32_t scale, CassBytes varint) {
-  CassDecimal decimal;
-  decimal.scale = scale;
-  decimal.varint = varint;
-  return decimal;
-}
-
-CassString cass_string_init(const char* null_terminated) {
-  CassString str;
-  str.data = null_terminated;
-  str.length = strlen(null_terminated);
-  return str;
-}
-
-CassString cass_string_init_n(const char* data, size_t length) {
-  CassString str;
-  str.data = data;
-  str.length = length;
-  return str;
-}
-
-CassBytes cass_bytes_init(const cass_byte_t* data, size_t size) {
-  CassBytes bytes;
-  bytes.data = data;
-  bytes.size = size;
-  return bytes;
-}
-
 } // extern "C"

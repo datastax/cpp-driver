@@ -54,7 +54,7 @@ struct AsyncTests : public test_utils::SingleSessionTest {
       BOOST_REQUIRE(cass_statement_bind_uuid(statement.get(), 0, id) == CASS_OK);
       BOOST_REQUIRE(cass_statement_bind_int32(statement.get(), 1, i) == CASS_OK);
       std::string str_value = str(boost::format("row%d") % i);
-      BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 2, cass_string_init_n(str_value.data(), str_value.size())) == CASS_OK);
+      BOOST_REQUIRE(cass_statement_bind_string_n(statement.get(), 2, str_value.data(), str_value.size()) == CASS_OK);
       futures->push_back(test_utils::CassFuturePtr(cass_session_execute(session, statement.get())));
       ids.push_back(id);
     }

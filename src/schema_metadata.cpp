@@ -76,9 +76,12 @@ const CassSchemaMetaField* cass_schema_meta_get_field_n(const CassSchemaMeta* me
   return CassSchemaMetaField::to(meta->get_field(std::string(name, name_length)));
 }
 
-CassString cass_schema_meta_field_name(const CassSchemaMetaField* field) {
-  const std::string& name = field->name();
-  return cass_string_init_n(name.data(), name.size());
+void cass_schema_meta_field_name(const CassSchemaMetaField* field,
+                                 const char** name,
+                                 size_t* name_length) {
+  const std::string& n = field->name();
+  *name = n.data();
+  *name_length = n.length();
 }
 
 const CassValue* cass_schema_meta_field_value(const CassSchemaMetaField* field) {

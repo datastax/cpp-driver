@@ -68,8 +68,10 @@ typedef struct ThreadState_ {
 } ThreadState;
 
 void print_error(CassFuture* future) {
-  CassString message = cass_future_error_message(future);
-  fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
+  const char* message;
+  size_t message_length;
+  cass_future_error_message(future, &message, &message_length);
+  fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
 }
 
 CassCluster* create_cluster() {
@@ -178,8 +180,8 @@ void insert_into_perf(ThreadState* state, const char* query, const CassPrepared*
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
 
   CassCollection* collection = cass_collection_new(CASS_COLLECTION_TYPE_SET, 2);
-  cass_collection_append_string(collection, cass_string_init("jazz"));
-  cass_collection_append_string(collection, cass_string_init("2013"));
+  cass_collection_append_string(collection, "jazz");
+  cass_collection_append_string(collection, "2013");
 
   start = uv_hrtime();
 
@@ -195,9 +197,9 @@ void insert_into_perf(ThreadState* state, const char* query, const CassPrepared*
 
     cass_uuid_gen_time(uuid_gen, &id);
     cass_statement_bind_uuid(statement, 0, id);
-    cass_statement_bind_string(statement, 1, cass_string_init(big_string));
-    cass_statement_bind_string(statement, 2, cass_string_init(big_string));
-    cass_statement_bind_string(statement, 3, cass_string_init(big_string));
+    cass_statement_bind_string(statement, 1, big_string);
+    cass_statement_bind_string(statement, 2, big_string);
+    cass_statement_bind_string(statement, 3, big_string);
     cass_statement_bind_collection(statement, 4, collection);
 
     futures[i] = cass_session_execute(session, statement);

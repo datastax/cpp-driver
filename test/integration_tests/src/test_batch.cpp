@@ -62,7 +62,7 @@ void validate_results(CassSession* session, int num_rows) {
     CassString result_value;
     BOOST_REQUIRE(cass_value_type(column) == CASS_VALUE_TYPE_VARCHAR);
     BOOST_REQUIRE(test_utils::Value<CassString>::get(column, &result_value) == CASS_OK);
-    BOOST_REQUIRE(test_utils::Value<CassString>::equal(result_value, cass_string_init(str(boost::format("test data %s") % y).c_str())));
+    BOOST_REQUIRE(test_utils::Value<CassString>::equal(result_value, CassString(str(boost::format("test data %s") % y).c_str())));
   }
 }
 
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(prepared)
   {
     test_utils::CassStatementPtr insert_statement(cass_prepared_bind(prepared.get()));
     BOOST_REQUIRE(cass_statement_bind_int32(insert_statement.get(), 0, x) == CASS_OK);
-    BOOST_REQUIRE(cass_statement_bind_string(insert_statement.get(), 1, cass_string_init(str(boost::format("test data %s") % x).c_str())) == CASS_OK);
+    BOOST_REQUIRE(cass_statement_bind_string(insert_statement.get(), 1, str(boost::format("test data %s") % x).c_str()) == CASS_OK);
     cass_batch_add_statement(batch.get(), insert_statement.get());
   }
 
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(simple)
   {
     test_utils::CassStatementPtr insert_statement(cass_statement_new(insert_query.c_str(), 2));
     BOOST_REQUIRE(cass_statement_bind_int32(insert_statement.get(), 0, x) == CASS_OK);
-    BOOST_REQUIRE(cass_statement_bind_string(insert_statement.get(), 1, cass_string_init(str(boost::format("test data %s") % x).c_str())) == CASS_OK);
+    BOOST_REQUIRE(cass_statement_bind_string(insert_statement.get(), 1, str(boost::format("test data %s") % x).c_str()) == CASS_OK);
     cass_batch_add_statement(batch.get(), insert_statement.get());
   }
 
@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE(mixed)
       insert_statement = test_utils::CassStatementPtr(cass_statement_new(insert_query.c_str(), 2));
     }
     BOOST_REQUIRE(cass_statement_bind_int32(insert_statement.get(), 0, x) == CASS_OK);
-    BOOST_REQUIRE(cass_statement_bind_string(insert_statement.get(), 1, cass_string_init(str(boost::format("test data %s") % x).c_str())) == CASS_OK);
+    BOOST_REQUIRE(cass_statement_bind_string(insert_statement.get(), 1, str(boost::format("test data %s") % x).c_str()) == CASS_OK);
     cass_batch_add_statement(batch.get(), insert_statement.get());
   }
 

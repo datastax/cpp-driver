@@ -171,14 +171,14 @@ struct BasicTests : public test_utils::SingleSessionTest {
       CassInet value;
       BOOST_REQUIRE_EQUAL(cass_value_get_inet(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
     } else if (type == CASS_VALUE_TYPE_ASCII || type == CASS_VALUE_TYPE_TEXT || type == CASS_VALUE_TYPE_VARCHAR) {
-      CassString value = cass_string_init("");
-      BOOST_REQUIRE_EQUAL(cass_value_get_string(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
+      CassString value;
+      BOOST_REQUIRE_EQUAL(cass_value_get_string(testValue, &value.data, &value.length), CASS_ERROR_LIB_NULL_VALUE);
     } else if (type == CASS_VALUE_TYPE_BLOB || type == CASS_VALUE_TYPE_VARINT || type == CASS_VALUE_TYPE_LIST || type == CASS_VALUE_TYPE_MAP || type == CASS_VALUE_TYPE_SET) {
       CassBytes value;
-      BOOST_REQUIRE_EQUAL(cass_value_get_bytes(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
+      BOOST_REQUIRE_EQUAL(cass_value_get_bytes(testValue, &value.data, &value.size), CASS_ERROR_LIB_NULL_VALUE);
     } else if (type == CASS_VALUE_TYPE_DECIMAL) {
       CassDecimal value;
-      BOOST_REQUIRE_EQUAL(cass_value_get_decimal(testValue, &value), CASS_ERROR_LIB_NULL_VALUE);
+      BOOST_REQUIRE_EQUAL(cass_value_get_decimal(testValue, &value.varint, &value.varint_size, &value.scale), CASS_ERROR_LIB_NULL_VALUE);
     }
   }
 
@@ -220,7 +220,7 @@ BOOST_AUTO_TEST_CASE(basic_types)
   insert_single_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE, 3.141592653589793);
 
   {
-    CassString value = cass_string_init("Test Value.");
+    CassString value("Test Value.");
     insert_single_value<CassString>(CASS_VALUE_TYPE_ASCII, value);
     insert_single_value<CassString>(CASS_VALUE_TYPE_VARCHAR, value);
   }
@@ -254,9 +254,7 @@ BOOST_AUTO_TEST_CASE(basic_types)
     const cass_uint8_t varint[] = { 57, 115, 235, 135, 229, 215, 8, 125, 13, 43, 1, 25, 32, 135, 129, 180,
                                     112, 176, 158, 120, 246, 235, 29, 145, 238, 50, 108, 239, 219, 100, 250,
                                     84, 6, 186, 148, 76, 230, 46, 181, 89, 239, 247 };
-    CassDecimal value;
-    value.scale = scale;
-    value.varint = cass_bytes_init(varint, sizeof(varint));
+    CassDecimal value(varint, sizeof(varint), scale);
     insert_single_value<CassDecimal>(CASS_VALUE_TYPE_DECIMAL, value);
   }
 }
@@ -290,19 +288,17 @@ BOOST_AUTO_TEST_CASE(min_max)
 
   {
     CassDecimal value;
-    value.scale = 0;
-    value.varint = cass_bytes_init(NULL, 0);
     insert_single_value<CassDecimal>(CASS_VALUE_TYPE_DECIMAL, value);
   }
 
   {
-    CassString value = cass_string_init_n(NULL, 0);
+    CassString value;
     insert_single_value<CassString>(CASS_VALUE_TYPE_ASCII, value);
     insert_single_value<CassString>(CASS_VALUE_TYPE_VARCHAR, value);
   }
 
   {
-    CassBytes value = cass_bytes_init(NULL, 0);
+    CassBytes value;
     insert_single_value<CassBytes>(CASS_VALUE_TYPE_BLOB, value);
     insert_single_value<CassBytes>(CASS_VALUE_TYPE_VARINT, value);
   }
@@ -447,11 +443,12 @@ BOOST_AUTO_TEST_CASE(column_name)
 
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 1);
 
-  CassString key = cass_result_column_name(result.get(), 0);
-  CassString v1 = cass_result_column_name(result.get(), 1);
-  CassString v2 = cass_result_column_name(result.get(), 2);
-  CassString v3 = cass_result_column_name(result.get(), 3);
-  CassString v4 = cass_result_column_name(result.get(), 4);
+  CassString key, v1, v2, v3, v4;
+  cass_result_column_name(result.get(), 0, &key.data, &key.length);
+  cass_result_column_name(result.get(), 1, &v1.data, &v1.length);
+  cass_result_column_name(result.get(), 2, &v2.data, &v2.length);
+  cass_result_column_name(result.get(), 3, &v3.data, &v3.length);
+  cass_result_column_name(result.get(), 4, &v4.data, &v4.length);
 
   BOOST_REQUIRE(strncmp(key.data, "key", key.length) == 0);
   BOOST_REQUIRE(strncmp(v1.data, "v1", v1.length) == 0);

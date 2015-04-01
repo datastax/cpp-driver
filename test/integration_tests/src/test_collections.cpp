@@ -125,9 +125,9 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
     }
     {
       std::vector<CassString> values;
-      values.push_back(cass_string_init("abc"));
-      values.push_back(cass_string_init("def"));
-      values.push_back(cass_string_init("ghi"));
+      values.push_back(CassString("abc"));
+      values.push_back(CassString("def"));
+      values.push_back(CassString("ghi"));
       insert_collection_value<CassString>(session.get(), type, CASS_VALUE_TYPE_VARCHAR,  values);
     }
     {
@@ -159,7 +159,8 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
       for (int i = 0; i < 3; ++i) {
         CassDecimal value;
         value.scale = 100 + i;
-        value.varint = cass_bytes_init(varint, sizeof(varint));
+        value.varint = varint;
+        value.varint_size = sizeof(varint);
         values.push_back(value);
       }
       insert_collection_value<CassDecimal>(session.get(), type, CASS_VALUE_TYPE_DECIMAL,  values);
@@ -270,9 +271,9 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     {
       std::map<CassString, CassString> values;
-      values[cass_string_init("abc")] = cass_string_init("123");
-      values[cass_string_init("def")] = cass_string_init("456");
-      values[cass_string_init("ghi")] = cass_string_init("789");
+      values[CassString("abc")] = CassString("123");
+      values[CassString("def")] = CassString("456");
+      values[CassString("ghi")] = CassString("789");
       insert_map_value<CassString, CassString>(session.get(), CASS_VALUE_TYPE_VARCHAR, CASS_VALUE_TYPE_VARCHAR, values);
     }
 
@@ -306,28 +307,25 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
       const cass_uint8_t varint3[] = { 84, 6, 186, 148, 76, 230, 46, 181, 89, 239, 247 };
 
       std::map<CassDecimal, CassDecimal> values;
-      values[test_utils::decimal_from_scale_and_bytes(0, cass_bytes_init(varint1, sizeof(varint1)))]
-          = test_utils::decimal_from_scale_and_bytes(1, cass_bytes_init(varint1, sizeof(varint1)));
-      values[test_utils::decimal_from_scale_and_bytes(2, cass_bytes_init(varint2, sizeof(varint2)))]
-          = test_utils::decimal_from_scale_and_bytes(3, cass_bytes_init(varint2, sizeof(varint2)));
-      values[test_utils::decimal_from_scale_and_bytes(4, cass_bytes_init(varint3, sizeof(varint3)))]
-          = test_utils::decimal_from_scale_and_bytes(5, cass_bytes_init(varint3, sizeof(varint3)));
+      values[CassDecimal(varint1, sizeof(varint1), 0)] = CassDecimal(varint1, sizeof(varint1), 1);
+      values[CassDecimal(varint2, sizeof(varint2), 2)] = CassDecimal(varint2, sizeof(varint2), 3);
+      values[CassDecimal(varint3, sizeof(varint3), 4)] = CassDecimal(varint3, sizeof(varint3), 5);
       insert_map_value<CassDecimal, CassDecimal>(session.get(), CASS_VALUE_TYPE_DECIMAL, CASS_VALUE_TYPE_DECIMAL, values);
     }
 
     {
       std::map<CassString, cass_int32_t> values;
-      values[cass_string_init("a")] = 1;
-      values[cass_string_init("b")] = 2;
-      values[cass_string_init("c")] = 3;
+      values[CassString("a")] = 1;
+      values[CassString("b")] = 2;
+      values[CassString("c")] = 3;
       insert_map_value<CassString, cass_int32_t>(session.get(), CASS_VALUE_TYPE_VARCHAR, CASS_VALUE_TYPE_INT, values);
     }
 
     {
       std::map<CassUuid, CassString> values;
-      values[test_utils::generate_time_uuid(uuid_gen)] = cass_string_init("123");
-      values[test_utils::generate_time_uuid(uuid_gen)] = cass_string_init("456");
-      values[test_utils::generate_time_uuid(uuid_gen)] = cass_string_init("789");
+      values[test_utils::generate_time_uuid(uuid_gen)] = CassString("123");
+      values[test_utils::generate_time_uuid(uuid_gen)] = CassString("456");
+      values[test_utils::generate_time_uuid(uuid_gen)] = CassString("789");
       insert_map_value<CassUuid, CassString>(session.get(), CASS_VALUE_TYPE_UUID, CASS_VALUE_TYPE_VARCHAR, values);
     }
   }

@@ -63,14 +63,21 @@ CassError cass_collection_append_bool(CassCollection* collection,
 }
 
 CassError cass_collection_append_string(CassCollection* collection,
-                                        CassString value) {
-  collection->append(value.data, value.length);
+                                        const char* value) {
+  return cass_collection_append_string_n(collection, value, strlen(value));
+}
+
+CassError cass_collection_append_string_n(CassCollection* collection,
+                                          const char* value,
+                                          size_t value_length) {
+  collection->append(value, value_length);
   return CASS_OK;
 }
 
 CassError cass_collection_append_bytes(CassCollection* collection,
-                                       CassBytes value) {
-  collection->append(value.data, value.size);
+                                       const cass_byte_t* value,
+                                       size_t value_size) {
+  collection->append(value, value_size);
   return CASS_OK;
 }
 
@@ -87,8 +94,10 @@ CassError cass_collection_append_inet(CassCollection* collection,
 }
 
 CassError cass_collection_append_decimal(CassCollection* collection,
-                                         CassDecimal value) {
-  collection->append(value.scale, value.varint.data, value.varint.size);
+                                         const cass_byte_t* varint,
+                                         size_t varint_size,
+                                         cass_int32_t scale) {
+  collection->append(varint, varint_size, scale);
   return CASS_OK;
 }
 

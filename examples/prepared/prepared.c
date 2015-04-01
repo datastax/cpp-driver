@@ -43,8 +43,10 @@ struct Basic_ {
 typedef struct Basic_ Basic;
 
 void print_error(CassFuture* future) {
-  CassString message = cass_future_error_message(future);
-  fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
+  const char* message;
+  size_t message_length;
+  cass_future_error_message(future, &message, &message_length);
+  fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
 }
 
 CassCluster* create_cluster() {
@@ -93,7 +95,7 @@ CassError insert_into_basic(CassSession* session, const char* key, const Basic* 
 
   statement = cass_statement_new(query, 6);
 
-  cass_statement_bind_string(statement, 0, cass_string_init(key));
+  cass_statement_bind_string(statement, 0, key);
   cass_statement_bind_bool(statement, 1, basic->bln);
   cass_statement_bind_float(statement, 2, basic->flt);
   cass_statement_bind_double(statement, 3, basic->dbl);
@@ -142,7 +144,7 @@ CassError select_from_basic(CassSession* session, const CassPrepared * prepared,
 
   statement = cass_prepared_bind(prepared);
 
-  cass_statement_bind_string(statement, 0, cass_string_init(key));
+  cass_statement_bind_string(statement, 0, key);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);

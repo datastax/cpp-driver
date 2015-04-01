@@ -44,7 +44,7 @@ test_utils::CassFuturePtr insert_row(CassSession* session, const std::string& ke
   const char* insert_query = "INSERT INTO test (key, value) VALUES (?, ?) IF NOT EXISTS;";
 
   test_utils::CassStatementPtr statement(cass_statement_new(insert_query, 2));
-  cass_statement_bind_string(statement.get(), 0, cass_string_init_n(key.data(), key.size()));
+  cass_statement_bind_string_n(statement.get(), 0, key.data(), key.size());
   cass_statement_bind_int32(statement.get(), 1, value);
 
   cass_statement_set_serial_consistency(statement.get(), serial_consistency);
@@ -72,7 +72,8 @@ BOOST_AUTO_TEST_CASE(invalid)
   CassError code = cass_future_error_code(future.get());
   BOOST_REQUIRE_EQUAL(code, CASS_ERROR_SERVER_INVALID_QUERY);
 
-  CassString message = cass_future_error_message(future.get());
+  CassString message;
+  cass_future_error_message(future.get(), &message.data, &message.length);
   BOOST_REQUIRE(strncmp(message.data, "Invalid consistency for conditional update. Must be one of SERIAL or LOCAL_SERIAL", message.length) == 0);
 }
 

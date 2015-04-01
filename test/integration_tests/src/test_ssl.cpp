@@ -252,8 +252,8 @@ struct TestSSL {
       value = cass_row_get_column_by_name(row, "c");
       BOOST_REQUIRE(value != NULL);
       CassString c;
-      BOOST_REQUIRE_EQUAL(cass_value_get_string(value, &c), CASS_OK);
-      BOOST_CHECK(test_utils::Value<CassString>::equal(c, cass_string_init(text.c_str())));
+      BOOST_REQUIRE_EQUAL(cass_value_get_string(value, &c.data, &c.length), CASS_OK);
+      BOOST_CHECK(test_utils::Value<CassString>::equal(c, CassString(text.c_str())));
     }
 
     //Drop the table and keyspace
@@ -295,20 +295,20 @@ struct TestSSL {
       value = cass_row_get_column_by_name(row, "a");
       BOOST_REQUIRE(value != NULL);
       CassString a;
-      BOOST_REQUIRE_EQUAL(cass_value_get_string(value, &a), CASS_OK);
-      BOOST_CHECK(test_utils::Value<CassString>::equal(a, cass_string_init(text_a.c_str())));
+      BOOST_REQUIRE_EQUAL(cass_value_get_string(value, &a.data, &a.length), CASS_OK);
+      BOOST_CHECK(test_utils::Value<CassString>::equal(a, CassString(text_a.c_str())));
 
       value = cass_row_get_column_by_name(row, "b");
       BOOST_REQUIRE(value != NULL);
       CassString b;
-      BOOST_REQUIRE_EQUAL(cass_value_get_string(value, &b), CASS_OK);
-      BOOST_CHECK(test_utils::Value<CassString>::equal(b, cass_string_init(text_b.c_str())));
+      BOOST_REQUIRE_EQUAL(cass_value_get_string(value, &b.data, &b.length), CASS_OK);
+      BOOST_CHECK(test_utils::Value<CassString>::equal(b, CassString(text_b.c_str())));
 
       value = cass_row_get_column_by_name(row, "c");
       BOOST_REQUIRE(value != NULL);
       CassString c;
-      BOOST_REQUIRE_EQUAL(cass_value_get_string(value, &c), CASS_OK);
-      BOOST_CHECK(test_utils::Value<CassString>::equal(c, cass_string_init(text_c.c_str())));
+      BOOST_REQUIRE_EQUAL(cass_value_get_string(value, &c.data, &c.length), CASS_OK);
+      BOOST_CHECK(test_utils::Value<CassString>::equal(c, CassString(text_c.c_str())));
     }
 
     //Drop the table and keyspace

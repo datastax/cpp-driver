@@ -38,8 +38,10 @@ typedef struct Pair_ {
 } Pair;
 
 void print_error(CassFuture* future) {
-  CassString message = cass_future_error_message(future);
-  fprintf(stderr, "Error: %.*s\n", (int)message.length, message.data);
+  const char* message;
+  size_t message_length;
+  cass_future_error_message(future, &message, &message_length);
+  fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
 }
 
 CassCluster* create_cluster() {
@@ -91,11 +93,11 @@ CassError insert_into_maps(CassSession* session, const char* key, const Pair ite
 
   statement = cass_statement_new(query, 2);
 
-  cass_statement_bind_string(statement, 0, cass_string_init(key));
+  cass_statement_bind_string(statement, 0, key);
 
   collection = cass_collection_new(CASS_COLLECTION_TYPE_MAP, 5);
   for (item = items; item->key; item++) {
-    cass_collection_append_string(collection, cass_string_init(item->key));
+    cass_collection_append_string(collection, item->key);
     cass_collection_append_int32(collection, item->value);
   }
   cass_statement_bind_collection(statement, 1, collection);
@@ -123,7 +125,7 @@ CassError select_from_maps(CassSession* session, const char* key) {
 
   statement = cass_statement_new(query, 1);
 
-  cass_statement_bind_string(statement, 0, cass_string_init(key));
+  cass_statement_bind_string(statement, 0, key);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -142,11 +144,12 @@ CassError select_from_maps(CassSession* session, const char* key) {
               cass_row_get_column(row, 0));
 
       while (cass_iterator_next(iterator)) {
-        CassString key;
+        const char* key;
+        size_t key_length;
         cass_int32_t value;
-        cass_value_get_string(cass_iterator_get_map_key(iterator), &key);
+        cass_value_get_string(cass_iterator_get_map_key(iterator), &key, &key_length);
         cass_value_get_int32(cass_iterator_get_map_value(iterator), &value);
-        printf("item: '%.*s' : %d \n", (int)key.length, key.data, value);
+        printf("item: '%.*s' : %d \n", (int)key_length, key, value);
       }
       cass_iterator_free(iterator);
     }

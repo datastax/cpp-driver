@@ -476,7 +476,8 @@ BOOST_AUTO_TEST_CASE(simple)
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
   cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest(1));
-  request->bind(0, cass_string_init("kjdfjkldsdjkl")); // hash: 9024137376112061887
+  const char* value = "kjdfjkldsdjkl"; // hash: 9024137376112061887
+  request->bind(0, value, strlen(value));
   request->add_key_index(0);
 
   {
@@ -556,7 +557,8 @@ BOOST_AUTO_TEST_CASE(network_topology)
   policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
 
   cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest(1));
-  request->bind(0, cass_string_init("abc")); // hash: -5434086359492102041
+  const char* value = "abc"; // hash: -5434086359492102041
+  request->bind(0, value, strlen(value));
   request->add_key_index(0);
 
   {
