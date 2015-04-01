@@ -576,10 +576,10 @@ void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
   LOG_DEBUG("Refreshing keyspace %s", query.c_str());
 
   connection_->write(
-        new ControlHandler<const std::string&>(new QueryRequest(query),
-                                               this,
-                                               ControlConnection::on_refresh_keyspace,
-                                               keyspace_name.to_string()));
+        new ControlHandler<std::string>(new QueryRequest(query),
+                                        this,
+                                        ControlConnection::on_refresh_keyspace,
+                                        keyspace_name.to_string()));
 }
 
 void ControlConnection::on_refresh_keyspace(ControlConnection* control_connection,

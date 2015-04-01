@@ -59,6 +59,8 @@ public:
     Listener(int event_types = 0)
       : event_types_(event_types) {}
 
+    virtual ~Listener() {}
+
     int event_types() const { return event_types_; }
 
     virtual void on_ready(Connection* connection) = 0;
