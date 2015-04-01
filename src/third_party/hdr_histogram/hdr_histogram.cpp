@@ -4,6 +4,9 @@
  * as explained at http://creativecommons.org/publicdomain/zero/1.0/
  */
 
+#define __STDC_CONSTANT_MACROS
+#define __STDC_LIMIT_MACROS
+
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
@@ -34,11 +37,9 @@ inline int32_t hdr_clz64(uint64_t x) {
   return lz;
 #  endif
 #else
-  return (int32_t)__builtin_clzll(x)
+  return (int32_t)__builtin_clzll(x);
 #endif
-
 }
-
 
 //  ######   #######  ##     ## ##    ## ########  ######
 // ##    ## ##     ## ##     ## ###   ##    ##    ##    ##

@@ -419,7 +419,7 @@ public:
         int64_t critical_value_enter = phaser_.writer_critical_section_enter();
         hdr_histogram* h = histograms_[active_index_];
         hdr_record_value(h, value);
-
+        phaser_.writer_critical_section_end(critical_value_enter);
       }
 
       void add(hdr_histogram* to) {
