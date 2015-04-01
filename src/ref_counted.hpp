@@ -59,12 +59,12 @@ private:
 class RefBuffer : public RefCounted<RefBuffer> {
 public:
   static RefBuffer* create(size_t size) {
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
 #pragma warning(push)
 #pragma warning(disable: 4291) //Invalid warning thrown RefBuffer has a delete function
 #endif
     return new (size) RefBuffer();
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
 #pragma warning(pop)
 #endif
   }

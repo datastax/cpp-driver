@@ -14,8 +14,14 @@
   limitations under the License.
 */
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
+#ifndef _WINSOCKAPI_
+#define _WINSOCKAPI_
+#endif
+#include <Windows.h>
+#include <WinCrypt.h>
 #else
+#include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
@@ -27,12 +33,30 @@
 
 namespace cass {
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
+
   uint64_t get_random_seed(uint64_t seed) {
-    // TODO: Implement
+    HCRYPTPROV provider;
+
+    if (!CryptAcquireContext(&provider, 
+                             NULL, NULL, 
+                             PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
+      LOG_CRITICAL("Unable to aqcuire cryptographic provider: 0x%x", GetLastError());
+      return seed;
+    }
+
+    if (!CryptGenRandom(provider, sizeof(seed), (BYTE*)&seed)) {
+      LOG_CRITICAL("An error occurred attempting to generate random data: 0x%x", GetLastError());
+      return seed;
+    }
+
+    CryptReleaseContext(provider, 0);
+
     return seed;
   }
+
 #else
+
   uint64_t get_random_seed(uint64_t seed) {
     static const char* device = "/dev/urandom";
 
@@ -64,6 +88,7 @@ namespace cass {
 
     return seed;
   }
+
 #endif
 
 } // namespace cass

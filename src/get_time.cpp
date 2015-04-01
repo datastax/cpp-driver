@@ -16,7 +16,7 @@
 
 #include "get_time.hpp"
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
 #endif
@@ -29,7 +29,7 @@
 
 namespace cass {
 
-#if defined(WIN32) || defined(_WIN32)
+#if defined(_WIN32)
 
 uint64_t get_time_since_epoch_ms() {
   _FILETIME ft;
