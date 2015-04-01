@@ -30,6 +30,7 @@
 #include <boost/make_shared.hpp>
 #include <boost/move/move.hpp>
 #include <boost/container/vector.hpp>
+#include <boost/version.hpp>
 
 #include "cassandra.h"
 #include "test_utils.hpp"
@@ -53,6 +54,50 @@ struct AllTypes {
   cass_int64_t timestamp_sample;
   CassInet inet_sample;
 };
+
+// This crashes in Boost 1.57 and the test_utils::CassPreparedPtr version
+// doesn't compile against Boost 1.55 or 1.56
+
+#if BOOST_VERSION < 105700
+// Move emulation wrapper for CassPrepared. This has to be used
+// with boost::container's because they have boost move emulation support.
+class CassPreparedMovable {
+public:
+  CassPreparedMovable(const CassPrepared* prepared = NULL)
+    : prepared_(prepared) {}
+
+  CassPreparedMovable(BOOST_RV_REF(CassPreparedMovable) r)
+    : prepared_(r.prepared_) {
+    r.prepared_ = NULL;
+  }
+
+  CassPreparedMovable(const CassPreparedMovable& r)
+    : prepared_(r.prepared_) {
+  }
+
+  CassPreparedMovable& operator=(BOOST_RV_REF(CassPreparedMovable) r) {
+    if (prepared_ != NULL) {
+      cass_prepared_free(prepared_);
+    }
+    prepared_ = r.prepared_;
+    r.prepared_ = NULL;
+    return *this;
+  }
+
+  ~CassPreparedMovable() {
+    if (prepared_ != NULL) {
+      cass_prepared_free(prepared_);
+    }
+  }
+
+  const CassPrepared* get() const { return prepared_; }
+
+private:
+  BOOST_MOVABLE_BUT_NOT_COPYABLE(CassPreparedMovable)
+
+  const CassPrepared* prepared_;
+};
+#endif
 
 struct PreparedTests : public test_utils::SingleSessionTest {
   static const char* ALL_TYPE_TABLE_NAME;
@@ -314,11 +359,19 @@ BOOST_AUTO_TEST_CASE(select_one)
   BOOST_REQUIRE(test_utils::Value<CassString>::equal(CassString("row5"), result_label));
 }
 
+#if BOOST_VERSION < 105700
+CassPreparedMovable prepare_statement(CassSession* session, std::string query) {
+#else
 test_utils::CassPreparedPtr prepare_statement(CassSession* session, std::string query) {
+#endif
   test_utils::CassFuturePtr prepared_future(cass_session_prepare_n(session,
                                                                    query.data(), query.size()));
   test_utils::wait_and_check_error(prepared_future.get());
+#if BOOST_VERSION < 105700
+  return CassPreparedMovable(cass_future_get_prepared(prepared_future.get()));
+#else
   return test_utils::CassPreparedPtr(cass_future_get_prepared(prepared_future.get()));
+#endif
 }
 
 void execute_statement(CassSession* session, const CassPrepared* prepared, int value) {
@@ -338,7 +391,11 @@ BOOST_AUTO_TEST_CASE(massive_number_of_prepares)
   test_utils::execute_query(session, create_table_query);
 
 
+#if BOOST_VERSION < 105700
+  CONTAINER<boost::unique_future<CassPreparedMovable> > prepare_futures;
+#else
   CONTAINER<boost::unique_future<test_utils::CassPreparedPtr> > prepare_futures;
+#endif
 
   std::vector<CassUuid> tweet_ids;
   for (size_t i = 0; i < number_of_prepares; ++i) {
@@ -349,9 +406,17 @@ BOOST_AUTO_TEST_CASE(massive_number_of_prepares)
   }
 
   std::vector<boost::shared_future<void> > execute_futures;
+#if BOOST_VERSION < 105700
+  CONTAINER<CassPreparedMovable> prepares;
+#else
   CONTAINER<test_utils::CassPreparedPtr> prepares;
+#endif
   for (size_t i = 0; i < prepare_futures.size(); ++i) {
+#if BOOST_VERSION < 105700
+    CassPreparedMovable prepared = prepare_futures[i].get();
+#else
     test_utils::CassPreparedPtr prepared = prepare_futures[i].get();
+#endif
     execute_futures.push_back(boost::async(boost::launch::async, boost::bind(execute_statement, session, prepared.get(), i)).share());
     prepares.push_back(boost::move(prepared));
   }
