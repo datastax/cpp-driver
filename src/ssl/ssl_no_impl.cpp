@@ -28,15 +28,20 @@ SslSession* cass::NoSslContext::create_session(const Address& address) {
   return new NoSslSession(address);
 }
 
-CassError cass::NoSslContext::add_trusted_cert(CassString cert) {
+CassError cass::NoSslContext::add_trusted_cert(const char* cert, 
+                                               size_t cert_length) {
   return CASS_ERROR_LIB_NOT_IMPLEMENTED;
 }
 
-CassError cass::NoSslContext::set_cert(CassString cert) {
+CassError cass::NoSslContext::set_cert(const char* cert,
+                                       size_t cert_length) {
   return CASS_ERROR_LIB_NOT_IMPLEMENTED;
 }
 
-CassError cass::NoSslContext::set_private_key(CassString key, const char* password) {
+CassError cass::NoSslContext::set_private_key(const char* key,
+                                              size_t key_length,
+                                              const char* password,
+                                              size_t password_length) {
   return CASS_ERROR_LIB_NOT_IMPLEMENTED;
 }
 
