@@ -992,7 +992,7 @@ bool _log_iter_next(struct hdr_iter *iter)
         {
             if (iter->value_from_index >= logarithmic->next_value_reporting_level_lowest_equivalent)
             {
-                logarithmic->next_value_reporting_level *= logarithmic->log_base;
+                logarithmic->next_value_reporting_level *= (int64_t)logarithmic->log_base;
                 logarithmic->next_value_reporting_level_lowest_equivalent = lowest_equivalent_value(iter->h, logarithmic->next_value_reporting_level);
 
                 return true;

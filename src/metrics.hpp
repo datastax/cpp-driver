@@ -309,8 +309,8 @@ public:
       }
       snapshot->min = hdr_min(h);
       snapshot->max = hdr_max(h);
-      snapshot->mean = hdr_mean(h);
-      snapshot->stddev = hdr_stddev(h);
+      snapshot->mean = static_cast<int64_t>(hdr_mean(h));
+      snapshot->stddev = static_cast<int64_t>(hdr_stddev(h));
       snapshot->median = hdr_value_at_percentile(h, 50.0);
       snapshot->percentile_75th = hdr_value_at_percentile(h, 75.0);
       snapshot->percentile_95th = hdr_value_at_percentile(h, 95.0);
