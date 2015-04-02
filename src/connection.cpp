@@ -562,7 +562,7 @@ void Connection::on_timeout(RequestTimer* timer) {
   handler->set_state(Handler::REQUEST_STATE_TIMEOUT);
   handler->on_timeout();
 
-  metrics_->request_timeouts.inc();
+  connection->metrics_->request_timeouts.inc();
 }
 
 void Connection::on_connected() {

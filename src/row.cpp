@@ -18,6 +18,7 @@
 
 #include "result_metadata.hpp"
 #include "result_response.hpp"
+#include "string_ref.hpp"
 #include "types.hpp"
 
 extern "C" {
@@ -39,7 +40,7 @@ const CassValue* cass_row_get_column_by_name_n(const CassRow* row,
                                                const char* name,
                                                size_t name_length) {
 
-  return CassValue::to(row->get_by_name(boost::string_ref(name, name_length)));
+  return CassValue::to(row->get_by_name(cass::StringRef(name, name_length)));
 }
 
 } // extern "C"

@@ -179,7 +179,7 @@ int compare_dbl(const void* d1, const void* d2) {
   }
 }
 
-void insert_into_perf(CassSession* session, CassString query, const CassPrepared* prepared) {
+void insert_into_perf(CassSession* session, const char* query, const CassPrepared* prepared) {
   int i;
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
 
@@ -242,7 +242,7 @@ void run_insert_queries(void* data) {
   status_notify(&status);
 }
 
-void select_from_perf(ThreadState* state, const char* query, const CassPrepared* prepared) {
+void select_from_perf(CassSession* session, const char* query, const CassPrepared* prepared) {
   int i;
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
 
