@@ -29,6 +29,15 @@
 
 #include <uv.h>
 
+#if defined(WIN32) || defined(_WIN32)
+#ifndef _WINSOCKAPI_
+#define _WINSOCKAPI_
+#endif
+#include <Windows.h>
+#else
+#include <sched.h>
+#endif
+
 #include <limits>
 #include <math.h>
 
@@ -300,8 +309,8 @@ public:
       }
       snapshot->min = hdr_min(h);
       snapshot->max = hdr_max(h);
-      snapshot->mean = hdr_mean(h);
-      snapshot->stddev = hdr_stddev(h);
+      snapshot->mean = static_cast<int64_t>(hdr_mean(h));
+      snapshot->stddev = static_cast<int64_t>(hdr_stddev(h));
       snapshot->median = hdr_value_at_percentile(h, 50.0);
       snapshot->percentile_75th = hdr_value_at_percentile(h, 75.0);
       snapshot->percentile_95th = hdr_value_at_percentile(h, 95.0);
@@ -378,7 +387,11 @@ public:
             is_caught_up = (even_end_epoch_ == start_value_at_flip);
           }
           if (!is_caught_up) {
+#if defined(WIN32) || defined(_WIN32)
+            SwitchToThread();
+#else
             sched_yield();
+#endif
           }
         } while(!is_caught_up);
       }

@@ -341,10 +341,10 @@ int main() {
 
   cass_session_get_metrics(session, &metrics);
   printf("final stats (microseconds): min %llu max %llu median %llu 75th %llu 95th %llu 98th %llu 99th %llu 99.9th %llu\n",
-         metrics.requests.min, metrics.requests.max,
-         metrics.requests.median,  metrics.requests.percentile_75th,
-         metrics.requests.percentile_95th, metrics.requests.percentile_98th,
-         metrics.requests.percentile_99th, metrics.requests.percentile_999th);
+         (unsigned long long int)metrics.requests.min, (unsigned long long int)metrics.requests.max,
+         (unsigned long long int)metrics.requests.median, (unsigned long long int)metrics.requests.percentile_75th,
+         (unsigned long long int)metrics.requests.percentile_95th, (unsigned long long int)metrics.requests.percentile_98th,
+         (unsigned long long int)metrics.requests.percentile_99th, (unsigned long long int)metrics.requests.percentile_999th);
 
   for (i = 0; i < NUM_THREADS; ++i) {
     uv_thread_join(&threads[i]);
