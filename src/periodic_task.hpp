@@ -22,13 +22,11 @@
 
 #include <uv.h>
 
-#include <boost/function.hpp>
-
 namespace cass {
 
 class PeriodicTask : public RefCounted<PeriodicTask> {
 public:
-  typedef boost::function1<void, PeriodicTask*> Callback;
+  typedef void (*Callback)(PeriodicTask*);
 
   void* data() { return data_; }
 

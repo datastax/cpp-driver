@@ -108,6 +108,11 @@ struct Classify<T, true> {
   typedef int Type;
 };
 
+template <>
+struct Classify<bool, false> {
+  typedef bool Type;
+};
+
 template <class T>
 struct Classify<T*, false> {
   typedef void* Type;
@@ -184,8 +189,8 @@ struct AtomicImpl<8, Signed> {
   }
 
   static inline Type fetch_sub(volatile Type& storage, Type value) {
-    typedef typename AtomicStorageType<4, true>::Type SignedStorageType;
-    return fetch_add(storage, static_cast<StorageType>(-static_cast<SignedStorageType>(value)));
+    typedef typename AtomicStorageType<4, true>::Type SignedType;
+    return fetch_add(storage, static_cast<Type>(-static_cast<SignedType>(value)));
   }
 
   static inline Type exchange(volatile Type& storage, Type value) {
@@ -236,16 +241,8 @@ public:
     return result;
   }
 
-  inline T fetch_add(T value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
-    return Impl::fetch_add(value_, static_cast<ImplType>(value));
-  }
-
-  inline T fetch_sub(T value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
-    return Impl::fetch_sub(value_, static_cast<ImplType>(value));
-  }
-
   inline T exchange(T value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
-    return Impl::exchange(value_, static_cast<ImplType>(value));
+    return static_cast<T>(Impl::exchange(value_, static_cast<ImplType>(value)));
   }
 
   inline bool compare_exchange_strong(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
@@ -260,6 +257,66 @@ public:
   }
 
 private:
+  typename ImplType value_;
+};
+
+// Boolean
+template <class T>
+class AtomicBase<T, bool> {
+public:
+  typedef typename impl::AtomicImpl<4, false> Impl;
+  typedef typename Impl::Type ImplType;
+
+  AtomicBase() {}
+  explicit AtomicBase(T value) : value_(cast(value)) {}
+
+  inline void store(T value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+    assert(order != MEMORY_ORDER_ACQUIRE);
+    assert(order != MEMORY_ORDER_CONSUME);
+    assert(order != MEMORY_ORDER_ACQ_REL);
+    if (order != MEMORY_ORDER_SEQ_CST) {
+      _ReadWriteBarrier();
+      value_ = cast(value);
+      _ReadWriteBarrier();
+    } else {
+      Impl::exchange(value_, cast(value));
+    }
+  }
+
+  inline T load(MemoryOrder order = MEMORY_ORDER_SEQ_CST) const volatile {
+    assert(order != MEMORY_ORDER_RELEASE);
+    assert(order != MEMORY_ORDER_CONSUME);
+    assert(order != MEMORY_ORDER_ACQ_REL);
+    _ReadWriteBarrier();
+    T result = cast(value_);
+    _ReadWriteBarrier();
+    return result;
+  }
+
+  inline T exchange(T value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+    return cast(Impl::exchange(value_, cast(value)));
+  }
+
+  inline bool compare_exchange_strong(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+    ImplType temp_expected = cast(expected);
+    bool result = Impl::compare_exchange(value_, temp_expected, cast(desired));
+    expected = cast(temp_expected);
+    return result;
+  }
+
+  inline bool compare_exchange_weak(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
+    return compare_exchange_strong(expected, desired, order);
+  }
+
+private:
+  static inline bool cast(ImplType value) {
+    return static_cast<ImplType>(value ? 1 : 0);
+  }
+
+  static inline ImplType cast(bool value) {
+    return static_cast<T>(value != 0);
+  }
+
   typename ImplType value_;
 };
 
@@ -297,15 +354,15 @@ public:
   }
 
   inline T fetch_add(T value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
-    return Impl::fetch_add(value_, static_cast<ImplType>(value));
+    return static_cast<T>(Impl::fetch_add(value_, static_cast<ImplType>(value)));
   }
 
   inline T fetch_sub(T value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
-    return Impl::fetch_sub(value_, static_cast<ImplType>(value));
+    return static_cast<T>(Impl::fetch_sub(value_, static_cast<ImplType>(value)));
   }
 
   inline T exchange(T value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
-    return Impl::exchange(value_, static_cast<ImplType>(value));
+    return static_cast<T>(Impl::exchange(value_, static_cast<ImplType>(value)));
   }
 
   inline bool compare_exchange_strong(T& expected, T desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
@@ -356,22 +413,14 @@ public:
     return result;
   }
 
-  inline T* fetch_add(T* value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
-    return Impl::fetch_add(value_, union_cast<T*, ImplType>(value));
-  }
-
-  inline T* fetch_sub(T* value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
-    return Impl::fetch_sub(value_, union_cast<T*, ImplType>(value));
-  }
-
   inline T* exchange(T* value, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
-    return Impl::exchange(value_, union_cast<T*, ImplType>(value));
+    return union_cast<volatile ImplType, T*>(Impl::exchange(value_, union_cast<T*, ImplType>(value)));
   }
 
   inline bool compare_exchange_strong(T*& expected, T* desired, MemoryOrder order = MEMORY_ORDER_SEQ_CST) volatile {
     ImplType temp_expected = union_cast<T*, ImplType>(expected);
-    bool result = Impl::compare_exchange(value_, temp_expected, static_cast<ImplType>(desired));
-    expected = union_cast<ImplType, T*>(temp_expected);
+    bool result = Impl::compare_exchange(value_, temp_expected, union_cast<T*, ImplType>(desired));
+    expected = union_cast<volatile ImplType, T*>(temp_expected);
     return result;
   }
 

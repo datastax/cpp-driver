@@ -20,14 +20,14 @@
 #ifndef __CASS_METRICS_HPP_INCLUDED__
 #define __CASS_METRICS_HPP_INCLUDED__
 
+#include "atomic.hpp"
 #include "scoped_ptr.hpp"
 #include "scoped_lock.hpp"
 
 #include "third_party/hdr_histogram/hdr_histogram.hpp"
 
-#include <boost/atomic.hpp>
-
 #include <uv.h>
+#include <stdlib.h>
 
 #if defined(WIN32) || defined(_WIN32)
 #ifndef _WINSOCKAPI_
@@ -74,7 +74,7 @@ private:
 #else
       void* id = uv_key_get(&thread_id_key_);
       if (id == NULL) {
-        size_t thread_id = thread_count_++;
+        size_t thread_id = thread_count_.fetch_add(1);
         assert(thread_id <= max_threads_);
         id = reinterpret_cast<void*>(thread_id);
         uv_key_set(&thread_id_key_, id);
@@ -86,7 +86,7 @@ private:
   private:
     const size_t max_threads_;
 #if UV_VERSION_MAJOR >= 1
-    boost::atomic<size_t> thread_count_;
+    Atomic<size_t> thread_count_;
     uv_key_t thread_id_key_;
 #endif
   };
@@ -129,23 +129,23 @@ public:
         : value_(0) {}
 
       void add(int64_t n) {
-        value_.fetch_add(n, boost::memory_order_release);
+        value_.fetch_add(n, MEMORY_ORDER_RELEASE);
       }
 
       void sub(int64_t n) {
-        value_.fetch_sub(n, boost::memory_order_release);
+        value_.fetch_sub(n, MEMORY_ORDER_RELEASE);
       }
 
       int64_t get() const {
-        return value_.load(boost::memory_order_acquire);
+        return value_.load(MEMORY_ORDER_ACQUIRE);
       }
 
       int64_t get_and_reset() {
-        return value_.exchange(0, boost::memory_order_release);
+        return value_.exchange(0, MEMORY_ORDER_RELEASE);
       }
 
     private:
-      boost::atomic<int64_t> value_;
+      Atomic<int64_t> value_;
 
       static const size_t cacheline_size = 64;
       char pad__[cacheline_size];
@@ -171,7 +171,7 @@ public:
         , rate_(0.0) {}
 
       double rate() const {
-        return rate_.load(boost::memory_order_acquire);
+        return rate_.load(MEMORY_ORDER_ACQUIRE);
       }
 
       void update() {
@@ -182,20 +182,20 @@ public:
         const int64_t count = uncounted_.sum_and_reset();
         double instant_rate = static_cast<double>(count) / INTERVAL;
 
-        if (is_initialized_.load(boost::memory_order_acquire)) {
-          double rate = rate_.load(boost::memory_order_acquire);
-          rate_.store(rate + (alpha_ * (instant_rate - rate)), boost::memory_order_release);
+        if (is_initialized_.load(MEMORY_ORDER_ACQUIRE)) {
+          double rate = rate_.load(MEMORY_ORDER_ACQUIRE);
+          rate_.store(rate + (alpha_ * (instant_rate - rate)), MEMORY_ORDER_RELEASE);
         } else {
-          rate_.store(instant_rate, boost::memory_order_release);
-          is_initialized_.store(true, boost::memory_order_release);
+          rate_.store(instant_rate, MEMORY_ORDER_RELEASE);
+          is_initialized_.store(true, MEMORY_ORDER_RELEASE);
         }
       }
 
     private:
       const double alpha_;
       Counter uncounted_;
-      boost::atomic<bool> is_initialized_;
-      boost::atomic<double> rate_;
+      Atomic<bool> is_initialized_;
+      Atomic<double> rate_;
   };
 
   class Meter {
@@ -259,7 +259,7 @@ public:
       ExponentiallyWeightedMovingAverage fifteen_minute_rate_;
       Counter count_;
       const uint64_t start_time_;
-      boost::atomic<uint64_t> last_tick_;
+      Atomic<uint64_t> last_tick_;
   private:
       DISALLOW_COPY_AND_ASSIGN(Meter);
   };
@@ -352,29 +352,29 @@ public:
         , odd_end_epoch_(std::numeric_limits<int64_t>::min()) {}
 
       int64_t writer_critical_section_enter() {
-        return start_epoch_++;
+        return start_epoch_.fetch_add(1);
       }
 
       void writer_critical_section_end(int64_t critical_value_enter) {
         if (critical_value_enter < 0) {
-          odd_end_epoch_++;
+          odd_end_epoch_.fetch_add(1);
         } else {
-          even_end_epoch_++;
+          even_end_epoch_.fetch_add(1);
         }
       }
 
       // The reader is protected by a mutex in Histogram
       void flip_phase() {
-        bool is_next_phase_even = (start_epoch_ < 0);
+        bool is_next_phase_even = (start_epoch_.load() < 0);
 
         int64_t initial_start_value;
 
         if (is_next_phase_even) {
           initial_start_value = 0;
-          even_end_epoch_.store(initial_start_value, boost::memory_order_relaxed);
+          even_end_epoch_.store(initial_start_value, MEMORY_ORDER_RELAXED);
         } else {
           initial_start_value = std::numeric_limits<int64_t>::min();
-          odd_end_epoch_.store(initial_start_value, boost::memory_order_relaxed);
+          odd_end_epoch_.store(initial_start_value, MEMORY_ORDER_RELAXED);
         }
 
         int64_t start_value_at_flip = start_epoch_.exchange(initial_start_value);
@@ -382,9 +382,9 @@ public:
         bool is_caught_up = false;
         do {
           if (is_next_phase_even) {
-            is_caught_up = (odd_end_epoch_ == start_value_at_flip);
+            is_caught_up = (odd_end_epoch_.load() == start_value_at_flip);
           } else {
-            is_caught_up = (even_end_epoch_ == start_value_at_flip);
+            is_caught_up = (even_end_epoch_.load() == start_value_at_flip);
           }
           if (!is_caught_up) {
 #if defined(WIN32) || defined(_WIN32)
@@ -397,9 +397,9 @@ public:
       }
 
     private:
-      boost::atomic<int64_t> start_epoch_;
-      boost::atomic<int64_t> even_end_epoch_;
-      boost::atomic<int64_t> odd_end_epoch_;
+      Atomic<int64_t> start_epoch_;
+      Atomic<int64_t> even_end_epoch_;
+      Atomic<int64_t> odd_end_epoch_;
     };
 
     class PerThreadHistogram {
@@ -417,13 +417,13 @@ public:
 
       void record_value(int64_t value) {
         int64_t critical_value_enter = phaser_.writer_critical_section_enter();
-        hdr_histogram* h = histograms_[active_index_];
+        hdr_histogram* h = histograms_[active_index_.load()];
         hdr_record_value(h, value);
         phaser_.writer_critical_section_end(critical_value_enter);
       }
 
       void add(hdr_histogram* to) {
-        int inactive_index = active_index_.exchange(!active_index_);
+        int inactive_index = active_index_.exchange(!active_index_.load());
         hdr_histogram* from = histograms_[inactive_index];
         phaser_.flip_phase();
         hdr_add(to, from);
@@ -431,7 +431,7 @@ public:
 
     private:
       hdr_histogram* histograms_[2];
-      boost::atomic<int> active_index_;
+      Atomic<int> active_index_;
       WriterReaderPhaser phaser_;
     };
 #endif

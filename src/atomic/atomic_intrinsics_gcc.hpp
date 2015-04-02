@@ -81,7 +81,7 @@ public:
     }
     // According to GCC this may only support storing the immediate value of 1 on some
     // platforms, but is an atomic exchange operation on Intel processors.
-    __sync_lock_test_and_set(&value_, value);
+    return __sync_lock_test_and_set(&value_, value);
 #else
     T before = load(MEMORY_ORDER_RELAXED);
     while (!compare_exchange_weak(before, before, order)) {}

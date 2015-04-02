@@ -78,7 +78,7 @@ static int64_t counts_get_direct(struct hdr_histogram* h, int32_t index)
 
 static int32_t counts_get_normalised(struct hdr_histogram* h, int32_t index)
 {
-    return counts_get_direct(h, normalize_index(h, index));
+    return (int32_t)counts_get_direct(h, normalize_index(h, index));
 }
 
 static void counts_inc_normalised(
@@ -125,7 +125,7 @@ static int64_t power(int64_t base, int64_t exp)
     int result = 1;
     while(exp)
     {
-        result *= base; exp--;
+        result *= (int)base; exp--;
     }
     return result;
 }
@@ -133,7 +133,7 @@ static int64_t power(int64_t base, int64_t exp)
 static int32_t get_bucket_index(struct hdr_histogram* h, int64_t value)
 {
     int32_t pow2ceiling = 64 - hdr_clz64(value | h->sub_bucket_mask); // smallest power of 2 containing value
-    return pow2ceiling - h->unit_magnitude - (h->sub_bucket_half_count_magnitude + 1);
+    return pow2ceiling - (int32_t)h->unit_magnitude - (h->sub_bucket_half_count_magnitude + 1);
 }
 
 static int32_t get_sub_bucket_index(int64_t value, int32_t bucket_index, int32_t unit_magnitude)
@@ -155,7 +155,7 @@ static int32_t counts_index(struct hdr_histogram* h, int32_t bucket_index, int32
 static int32_t counts_index_for(struct hdr_histogram* h, int64_t value)
 {
     int32_t bucket_index     = get_bucket_index(h, value);
-    int32_t sub_bucket_index = get_sub_bucket_index(value, bucket_index, h->unit_magnitude);
+    int32_t sub_bucket_index = get_sub_bucket_index(value, bucket_index, (int32_t)h->unit_magnitude);
 
     return counts_index(h, bucket_index, sub_bucket_index);
 }
@@ -176,7 +176,7 @@ int64_t hdr_value_at_index(struct hdr_histogram *h, int32_t index)
         bucket_index = 0;
     }
 
-    return value_from_index(bucket_index, sub_bucket_index, h->unit_magnitude);
+    return value_from_index(bucket_index, sub_bucket_index, (int32_t)h->unit_magnitude);
 }
 
 static int64_t get_count_at_index(
@@ -190,7 +190,7 @@ static int64_t get_count_at_index(
 int64_t hdr_size_of_equivalent_value_range(struct hdr_histogram* h, int64_t value)
 {
     int32_t bucket_index     = get_bucket_index(h, value);
-    int32_t sub_bucket_index = get_sub_bucket_index(value, bucket_index, h->unit_magnitude);
+    int32_t sub_bucket_index = get_sub_bucket_index(value, bucket_index, (int32_t)h->unit_magnitude);
     int32_t adjusted_bucket  = (sub_bucket_index >= h->sub_bucket_count) ? (bucket_index + 1) : bucket_index;
     return INT64_C(1) << (h->unit_magnitude + adjusted_bucket);
 }
@@ -198,8 +198,8 @@ int64_t hdr_size_of_equivalent_value_range(struct hdr_histogram* h, int64_t valu
 static int64_t lowest_equivalent_value(struct hdr_histogram* h, int64_t value)
 {
     int32_t bucket_index     = get_bucket_index(h, value);
-    int32_t sub_bucket_index = get_sub_bucket_index(value, bucket_index, h->unit_magnitude);
-    return value_from_index(bucket_index, sub_bucket_index, h->unit_magnitude);
+    int32_t sub_bucket_index = get_sub_bucket_index(value, bucket_index, (int32_t)h->unit_magnitude);
+    return value_from_index(bucket_index, sub_bucket_index, (int32_t)h->unit_magnitude);
 }
 
 int64_t hdr_next_non_equivalent_value(struct hdr_histogram *h, int64_t value)
@@ -326,7 +326,7 @@ int hdr_calculate_bucket_config(
     cfg->sub_bucket_mask       = ((int64_t) cfg->sub_bucket_count - 1) << cfg->unit_magnitude;
 
     // determine exponent range needed to support the trackable value with no overflow:
-    cfg->bucket_count = buckets_needed_to_cover_value(highest_trackable_value, cfg->sub_bucket_count, cfg->unit_magnitude);
+    cfg->bucket_count = buckets_needed_to_cover_value(highest_trackable_value, cfg->sub_bucket_count, (int32_t)cfg->unit_magnitude);
     cfg->counts_len = (cfg->bucket_count + 1) * (cfg->sub_bucket_count / 2);
 
     return 0;
@@ -775,7 +775,7 @@ static bool move_next(struct hdr_iter* iter)
     iter->count_at_index  = get_count_at_index(iter->h, iter->bucket_index, iter->sub_bucket_index);
     iter->count_to_index += iter->count_at_index;
 
-    iter->value_from_index = value_from_index(iter->bucket_index, iter->sub_bucket_index, iter->h->unit_magnitude);
+    iter->value_from_index = value_from_index(iter->bucket_index, iter->sub_bucket_index, (int32_t)iter->h->unit_magnitude);
     iter->highest_equivalent_value = highest_equivalent_value(iter->h, iter->value_from_index);
 
     return true;
@@ -788,7 +788,7 @@ static int64_t peek_next_value_from_index(struct hdr_iter* iter)
 
     increment_bucket(iter->h, &bucket_index, &sub_bucket_index);
 
-    return value_from_index(bucket_index, sub_bucket_index, iter->h->unit_magnitude);
+    return value_from_index(bucket_index, sub_bucket_index, (int32_t)iter->h->unit_magnitude);
 }
 
 bool _basic_iter_next(struct hdr_iter *iter)

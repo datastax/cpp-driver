@@ -21,8 +21,6 @@
 #include "ssl/ring_buffer_bio.hpp"
 #include "string_ref.hpp"
 
-#include <boost/algorithm/string.hpp>
-
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
@@ -257,7 +255,7 @@ private:
 
       ASN1_STRING* str = X509_NAME_ENTRY_get_data(name_entry);
       StringRef common_name(reinterpret_cast<char*>(ASN1_STRING_data(str)), ASN1_STRING_length(str));
-      if (boost::iequals(common_name, addr_str)) {
+      if (iequals(common_name, addr_str)) {
         return MATCH;
       }
     }

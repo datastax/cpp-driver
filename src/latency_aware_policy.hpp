@@ -17,12 +17,11 @@
 #ifndef __CASS_LATENCY_AWARE_POLICY_HPP_INCLUDED__
 #define __CASS_LATENCY_AWARE_POLICY_HPP_INCLUDED__
 
+#include "atomic.hpp"
 #include "load_balancing.hpp"
 #include "macros.hpp"
 #include "periodic_task.hpp"
 #include "scoped_ptr.hpp"
-
-#include <boost/atomic.hpp>
 
 namespace cass {
 
@@ -91,7 +90,7 @@ private:
   static void on_work(PeriodicTask* task);
   static void on_after_work(PeriodicTask* task);
 
-  boost::atomic<int64_t> min_average_;
+  Atomic<int64_t> min_average_;
   PeriodicTask* calculate_min_average_task_;
   Settings settings_;
   CopyOnWriteHostVec hosts_;

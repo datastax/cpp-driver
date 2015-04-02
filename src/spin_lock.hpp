@@ -14,10 +14,11 @@
   limitations under the License.
 */
 
+#include "atomic.hpp"
+#include "macros.hpp"
+
 #ifndef __CASS_SPINLOCK_HPP_INCLUDED__
 #define __CASS_SPINLOCK_HPP_INCLUDED__
-
-#include <boost/atomic.hpp>
 
 namespace cass {
 
@@ -29,17 +30,17 @@ public:
     : state_(UNLOCKED) {}
 
   void lock() {
-    while (state_.exchange(LOCKED, boost::memory_order_acquire) == LOCKED) {
+    while (state_.exchange(LOCKED, MEMORY_ORDER_ACQUIRE) == LOCKED) {
       // Spin
     }
   }
 
   void unlock() {
-    state_.store(UNLOCKED, boost::memory_order_release);
+    state_.store(UNLOCKED, MEMORY_ORDER_RELEASE);
   }
 
 private:
-  boost::atomic<LockState> state_;
+  Atomic<LockState> state_;
 
   static const size_t cacheline_size = 64;
   char pad__[cacheline_size];
