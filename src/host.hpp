@@ -109,7 +109,7 @@ public:
 
   void update_latency(uint64_t latency_ns) {
     if (latency_tracker_) {
-      LOG_TRACE("Latency %f ms", static_cast<double>(latency_ns) / 1e6);
+      LOG_TRACE("Latency %f ms for %s", static_cast<double>(latency_ns) / 1e6, to_string().c_str());
       latency_tracker_->update(latency_ns);
     }
   }

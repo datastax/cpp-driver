@@ -77,6 +77,8 @@ class cql_ccm_bridge_t : public boost::noncopyable {
   void start(int node, const std::string& option);
   void stop();
   void stop(int node);
+  void pause(int node);
+  void resume(int node);
   void kill();
   void kill(int node);
   void binary(int node, bool enable);
