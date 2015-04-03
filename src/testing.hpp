@@ -40,6 +40,8 @@ CASS_EXPORT bool is_log_flushed();
 
 CASS_EXPORT uint64_t get_time_since_epoch_in_ms();
 
+CASS_EXPORT uint64_t get_host_latency_average(CassSession* session, std::string ip_address, int port);
+
 } // namespace cass
 
 #endif
