@@ -51,11 +51,9 @@ The driver is designed so that no operation will force an application to block. 
 Queries are executed using [`CassStatement`](http://datastax.github.io/cpp-driver/api/struct_cass_statement/) objects. Statements encapsulate the query string and the query parameters. Query parameters are not supported by ealier versions of Cassandra (1.2 and below) and values need to be inlined in the query string itself.
 
 ```c
-CassString insert_query
-  = cass_string_init("INSERT INTO example (key, value) VALUES ('abc', 123)");
-
 /* Create a statement with zero parameters */
-CassStatement* statement = cass_statement_new(insert_query, 0);
+CassStatement* statement
+  = cass_statement_new("INSERT INTO example (key, value) VALUES ('abc', 123)", 0);
 
 CassFuture* query_future = cass_session_execute(session, statement);
 
@@ -77,11 +75,9 @@ Cassandra 2.0+ supports the use of parameterized queries. This allows the same q
 **Perfomance Tip:** If the same query is being reused mulitple times, [prepared statements](http://datastax.github.io/cpp-driver/topics/basics/prepared_statements/) should be used to optimize performance.
 
 ```c
-CassString insert_query
-  = cass_string_init("INSERT INTO example (key, value) VALUES (?, ?)");
-
 /* There are two bind variables in the query string */
-CassStatement* statement = cass_statement_new(insert_query, 2);
+CassStatement* statement
+  = cass_statement_new("INSERT INTO example (key, value) VALUES (?, ?)", 2);
 
 /* Bind the values using the indices of the bind variables */
 cass_statement_bind_string(statement, 0, cass_string_init("abc"));
@@ -106,34 +102,35 @@ A single row can be retrieved using the convenience function [`cass_result_first
 
 ```c
 /* Execute "SELECT * FROM example (key, value) WHERE key = 'abc'" */
- 
+
 /* This will also block until the query returns */
 const CassResult* result = cass_future_get_result(future);
- 
+
 /* If there was an error then the result won't be available */
 if (result == NULL) {
   /* Handle error */
   cass_future_free(query_future);
   return -1;
 }
- 
+
 /* The future can be freed immediately after getting the result object */
 cass_future_free(query_future);
- 
+
 /* This can be used to retrieve on the first row of the result */
 const CassRow* row = cass_result_first_row(result);
- 
+
 /* Now we can retrieve the column values from the row */
-CassString key;
+const char* key;
+size_t key_length;
 /* Get the column value of "key" by name */
-cass_value_get_string(cass_row_get_column_by_name(row, "key"), &key);
- 
+cass_value_get_string(cass_row_get_column_by_name(row, "key"), &key, &key_length);
+
 cass_int32_t value;
 /* Get the column value of "value" by name */
 cass_value_get_int32(cass_row_get_column_by_name(row, "value"), &value);
- 
- 
-/* This will free the future as well as the string pointed to by the CassString 'key' */
+
+
+/* This will free the result as well as the string pointed to by 'key' */
 cass_result_free(result);
 ```
 
@@ -155,7 +152,7 @@ A [`CassSession`](http://datastax.github.io/cpp-driver/api/struct_cass_session/)
 
 ## Memory handling
 
-Values such as [`CassString`](http://datastax.github.io/cpp-driver/api/struct_cass_string/) and [`CassBytes`](http://datastax.github.io/cpp-driver/api/struct_cass_bytes/) point to memory held by the result object. The lifetimes of these values are valid as long as the result object isn’t freed. These values **must** be copied into application memory if they need to live longer than the result object’s lifetime. Primitive types such as [`cass_int32_t`](TODO) are copied by the driver because it can be done cheaply without incurring extra allocations.
+Values such as strings (`const char*`),  bytes and decimals (`const cass_bytes_t*`) point to memory held by the result object. The lifetimes of these values are valid as long as the result object isn’t freed. These values **must** be copied into application memory if they need to live longer than the result object’s lifetime. Primitive types such as [`cass_int32_t`](TODO) are copied by the driver because it can be done cheaply without incurring extra allocations.
 
 **NOTE:** Advancing an iterator invalidates the value it previously returned.
 

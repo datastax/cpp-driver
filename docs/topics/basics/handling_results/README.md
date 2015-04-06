@@ -20,7 +20,7 @@ The result object represents a collection of rows. The first row, if present, ca
 
 ```c
 const CassRow* row = cass_result_first_row(result);
- 
+
 /* Get the first column value using the index */
 const CassValue* column1 = cass_row_get_column(row, 0);
 ```
@@ -41,13 +41,14 @@ cass_value_get_int32(column1, &int_value);
 cass_int64_t timestamp_value;
 cass_value_get_int32(column2, &timestamp_value);
 
-CassString string_value;
-cass_value_get_string(column3, &string_value);
+const char* string_value;
+size_t string_value_length;
+cass_value_get_string(column3, &string_value, &string_value_length);
 ```
 
 ## Iterators
 
-Iterators can be used to interate over the rows in a result, the columns in a row, or the values in a collection. 
+Iterators can be used to interate over the rows in a result, the columns in a row, or the values in a collection.
 
 **Important**: `cass_iterator_next()` invalidates values retreived by the previous iteration.
 
@@ -94,35 +95,34 @@ cass_iterator_free(iterator);
 When communicating with Cassandra 2.0 or later, large result sets can be divided into multiple pages automatically. The [`CassResult`](http://datastax.github.io/cpp-driver/api/struct_cass_result/) object keeps track of the pagination state for the sequence of paging queries. When paging through the result set, the result object is checked to see if more pages exist where it is then attached to the statement before re-executing the query to get the next page.
 
 ```c
-CassString query = cass_string_init("SELECT * FROM table1");
-CassStatement* statement = cass_statement_new(query, 0);
- 
+CassStatement* statement = cass_statement_new("SELECT * FROM table1", 0);
+
 /* Return a 100 rows every time this statement is executed */
 cass_statement_set_paging_size(statement, 100);
- 
+
 cass_bool_t has_more_pages = cass_true;
- 
+
 while (has_more_pages) {
   CassFuture* query_future = cass_session_execute(session, statement);
- 
+
   const CassResult* result = cass_future_get_result(future);
- 
+
   if (result == NULL) {
      /* Handle error */
      cass_future_free(query_future);
      break;
   }
- 
+
   /* Get values from result... */
- 
+
   /* Check to see if there are more pages remaining for this result */
   has_more_pages = cass_result_has_more_pages(result);
- 
+
   if (has_more_pages) {
     /* If there are more pages we need to set the position for the next execute */
     cass_statement_set_paging_state(statement, result);
   }
- 
-  cass_result_free(result);  
+
+  cass_result_free(result);
 }
 ```

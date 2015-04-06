@@ -27,7 +27,9 @@ const CassResult* result = cass_future_get_result(future);
 if (result == NULL) {
   /* The error code and message will be set instead */
   CassError error_code = cass_future_error_code(future);
-  CassString error_message = cass_future_error_message(future);
+  const char* error_message;
+  size_t error_message_length;
+  cass_future_error_message(future, &error_message, &error_message_length);
 
   /* Handle error */
 }
@@ -68,9 +70,9 @@ cass_future_free(future);
 
 ## Callbacks
 
-A callback can be set on a future to notify the client application when a request has completed. Using a future callback is the lowest latency method of notification when waiting for several asynchronous operations.  
+A callback can be set on a future to notify the client application when a request has completed. Using a future callback is the lowest latency method of notification when waiting for several asynchronous operations.
 
-**Important**: The driver may run the callback on thread that’s different from the application’s calling thread. Any data accessed in the callback must be immutable or synchronized with a mutex, semaphore, etc. 
+**Important**: The driver may run the callback on thread that’s different from the application’s calling thread. Any data accessed in the callback must be immutable or synchronized with a mutex, semaphore, etc.
 
 ```c
 void on_result(CassFuture* future, void* data) {
@@ -80,15 +82,15 @@ void on_result(CassFuture* future, void* data) {
 }
 
 ...
- 
+
 CassFuture* future = /* Some operation */;
- 
+
 /* Set a callback instead of waiting for the result to be returned */
 cass_future_set_callback(on_result, NULL);
- 
+
 /* The application's reference to the future can be freed immediately */
 cass_future_free(future);
- 
+
 /* Run other application logic */
 ```
 
