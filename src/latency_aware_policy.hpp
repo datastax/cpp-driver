@@ -69,6 +69,12 @@ public:
   virtual void on_up(const SharedRefPtr<Host>& host);
   virtual void on_down(const SharedRefPtr<Host>& host);
 
+public:
+  // Testing only
+  int64_t min_average() const {
+    return min_average_.load();
+  }
+
 private:
   class LatencyAwareQueryPlan : public QueryPlan {
   public:

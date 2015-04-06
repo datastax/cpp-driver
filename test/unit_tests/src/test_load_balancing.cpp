@@ -20,20 +20,24 @@
 
 #include "address.hpp"
 #include "dc_aware_policy.hpp"
+#include "latency_aware_policy.hpp"
+#include "loop_thread.hpp"
+#include "murmur3.hpp"
 #include "query_request.hpp"
 #include "token_aware_policy.hpp"
 #include "token_map.hpp"
 #include "replication_strategy.hpp"
 
+#include <boost/chrono.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/test/unit_test.hpp>
+#include <boost/test/floating_point_comparison.hpp>
+#include <boost/thread/thread.hpp>
 
 #include <limits>
 #include <string>
-
-#include "murmur3.hpp"
-
+#include <uv.h>
 
 using std::string;
 
@@ -78,6 +82,68 @@ void verify_sequence(cass::QueryPlan* qp, const std::vector<size_t>& sequence) {
     BOOST_CHECK_EQUAL(expected, received);
   }
   BOOST_CHECK(!qp->compute_next(&received));
+}
+
+struct RunPeriodicTask : public cass::LoopThread {
+  RunPeriodicTask(cass::LatencyAwarePolicy* policy)
+    : policy(policy) {
+    async.data = this;
+  }
+
+  int init() {
+    int rc = cass::LoopThread::init();
+    if (rc != 0) return rc;
+    rc = uv_async_init(loop(), &async, on_async);
+    if (rc != 0) return rc;
+    policy->register_handles(loop());
+    return rc;
+  }
+
+  void done() {
+    uv_async_send(&async);
+  }
+
+#if UV_VERSION_MAJOR == 0
+  static void on_async(uv_async_t *handle, int status) {
+#else
+  static void on_async(uv_async_t *handle) {
+#endif
+    RunPeriodicTask* task = static_cast<RunPeriodicTask*>(handle->data);
+    task->close_handles();
+    task->policy->close_handles();
+    uv_close(reinterpret_cast<uv_handle_t*>(&task->async), NULL);
+  }
+
+  uv_async_t async;
+  cass::LatencyAwarePolicy* policy;
+};
+
+// Latency-aware utility functions
+
+// Don't make "time_between_ns" too high because it spin waits
+uint64_t calculate_moving_average(uint64_t first_latency_ns,
+                                  uint64_t second_latency_ns,
+                                  uint64_t time_between_ns) {
+  const uint64_t scale = 100LL;
+  const uint64_t min_measured = 15LL;
+  const uint64_t threshold_to_account = (30LL * min_measured) / 100LL;
+
+  cass::Host host(cass::Address("0.0.0.0", 9042), false);
+  host.enable_latency_tracking(scale, min_measured);
+
+  for (uint64_t i = 0; i < threshold_to_account; ++i) {
+    host.update_latency(0); // This can be anything because it's not recorded
+  }
+
+  host.update_latency(first_latency_ns);
+
+  // Spin wait
+  uint64_t start = uv_hrtime();
+  while (uv_hrtime() - start < time_between_ns) {}
+
+  host.update_latency(second_latency_ns);
+  cass::TimestampedAverage current = host.get_current_average();
+  return current.average;
 }
 
 BOOST_AUTO_TEST_SUITE(round_robin_lb)
@@ -589,5 +655,160 @@ BOOST_AUTO_TEST_CASE(network_topology)
     verify_sequence(qp.get(), VECTOR_FROM(size_t, seq));
   }
 }
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(latency_aware_lb)
+
+BOOST_AUTO_TEST_CASE(threshold_to_account)
+{
+  const uint64_t scale = 100LL;
+  const uint64_t min_measured = 15LL;
+  const uint64_t threshold_to_account = (30LL * min_measured) / 100LL;
+  const uint64_t one_ms = 1000000LL; // 1 ms in ns
+
+  cass::Host host(cass::Address("0.0.0.0", 9042), false);
+  host.enable_latency_tracking(scale, min_measured);
+
+  cass::TimestampedAverage current = host.get_current_average();
+  for (uint64_t i = 0; i < threshold_to_account; ++i) {
+    host.update_latency(one_ms);
+    current = host.get_current_average();
+    BOOST_CHECK(current.num_measured == i + 1);
+    BOOST_CHECK(current.average == -1);
+  }
+
+  host.update_latency(one_ms);
+  current = host.get_current_average();
+  BOOST_CHECK(current.num_measured == threshold_to_account + 1);
+  BOOST_CHECK(current.average == static_cast<int64_t>(one_ms));
+}
+
+BOOST_AUTO_TEST_CASE(moving_average)
+{
+  const uint64_t one_ms = 1000000LL; // 1 ms in ns
+
+  // Verify average is approx. the same when recording the same latency twice
+  BOOST_CHECK_CLOSE(static_cast<double>(calculate_moving_average(one_ms, one_ms, 100LL)),
+                    static_cast<double>(one_ms),
+                    0.2);
+
+  BOOST_CHECK_CLOSE(static_cast<double>(calculate_moving_average(one_ms, one_ms, 1000LL)),
+                    static_cast<double>(one_ms),
+                    0.2);
+
+  // First average is 100 us and second average is 50 us, expect a 75 us average approx.
+  // after a short wait time. This has a high tolerance because the time waited varies.
+  BOOST_CHECK_CLOSE(static_cast<double>(calculate_moving_average(one_ms, one_ms / 2LL, 50LL)),
+                    static_cast<double>((3LL * one_ms) / 4LL),
+                    50.0); // Highly variable because it's in the early part of the logarithmic curve
+
+  // First average is 100 us and second average is 50 us, expect a 50 us average approx.
+  // after a longer wait time. This has a high tolerance because the time waited varies
+  BOOST_CHECK_CLOSE(static_cast<double>(calculate_moving_average(one_ms, one_ms / 2LL, 100000LL)),
+                    static_cast<double>(one_ms / 2LL),
+                    2.0);
+}
+
+BOOST_AUTO_TEST_CASE(simple)
+{
+  cass::LatencyAwarePolicy::Settings settings;
+
+  // Disable min_measured
+  settings.min_measured = 0L;
+
+  // Latencies can't excceed 2x the minimum latency
+  settings.exclusion_threshold = 2.0;
+
+  // Set the retry period to 1 second
+  settings.retry_period_ns = 1000LL * 1000LL * 1000L;
+
+  const int64_t num_hosts = 4;
+  cass::HostMap hosts;
+  populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
+  cass::LatencyAwarePolicy policy(new cass::RoundRobinPolicy(), settings);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+
+  // Record some latencies with 100 ns being the minimum
+  for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
+    i->second->enable_latency_tracking(settings.scale_ns, settings.min_measured);
+  }
+
+  hosts[cass::Address("1.0.0.0", 9042)]->update_latency(100);
+  hosts[cass::Address("4.0.0.0", 9042)]->update_latency(150);
+
+  // Hosts 2 and 3 will excceed the exclusion threshold
+  hosts[cass::Address("2.0.0.0", 9042)]->update_latency(201);
+  hosts[cass::Address("3.0.0.0", 9042)]->update_latency(1000);
+
+  // Verify we don't have a current minimum average
+  BOOST_CHECK(policy.min_average() == -1);
+
+  // Run minimum average calculation
+  RunPeriodicTask task(&policy);
+  BOOST_REQUIRE(task.init() == 0);
+  task.run();
+
+  // Wait for task to run (minimum average calculation will happen after 100 ms)
+  boost::this_thread::sleep_for(boost::chrono::milliseconds(150));
+
+  task.done();
+  task.join();
+
+  // Verify current minimum average
+  BOOST_CHECK(policy.min_average() == 100);
+
+  // 1 and 4  are under the minimum, but 2 and 3 will be skipped
+  {
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("", NULL, cass::TokenMap()));
+    const size_t seq1[] = {1, 4, 2, 3};
+    verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
+  }
+
+  // Excceed retry period
+  boost::this_thread::sleep_for(boost::chrono::seconds(1));
+
+  // After waiting no hosts should be skipped (notice 2 and 3 tried first)
+  {
+    cass::ScopedPtr<cass::QueryPlan> qp(policy.new_query_plan("", NULL, cass::TokenMap()));
+    const size_t seq1[] = {2, 3, 4, 1};
+    verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
+  }
+}
+
+BOOST_AUTO_TEST_CASE(min_average_under_min_measured)
+{
+  cass::LatencyAwarePolicy::Settings settings;
+
+  const int64_t num_hosts = 4;
+  cass::HostMap hosts;
+  populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
+  cass::LatencyAwarePolicy policy(new cass::RoundRobinPolicy(), settings);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+
+  int count = 1;
+  for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
+    i->second->enable_latency_tracking(settings.scale_ns, settings.min_measured);
+    i->second->update_latency(100 * count++);
+  }
+
+  // Verify we don't have a current minimum average
+  BOOST_CHECK(policy.min_average() == -1);
+
+  // Run minimum average calculation
+  RunPeriodicTask task(&policy);
+  BOOST_REQUIRE(task.init() == 0);
+  task.run();
+
+  // Wait for task to run (minimum average calculation will happen after 100 ms)
+  boost::this_thread::sleep_for(boost::chrono::milliseconds(150));
+
+  task.done();
+  task.join();
+
+  // No hosts have the minimum measured
+  BOOST_CHECK(policy.min_average() == -1);
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()

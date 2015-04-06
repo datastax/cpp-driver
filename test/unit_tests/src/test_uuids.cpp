@@ -19,8 +19,8 @@
 #endif
 
 #include "cassandra.h"
+#include "scoped_ptr.hpp"
 #include "testing.hpp"
-#include "test_utils.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/chrono.hpp>
@@ -29,20 +29,25 @@
 
 #include <string.h>
 
+inline bool operator!=(const CassUuid& u1, const CassUuid& u2) {
+  return u1.clock_seq_and_node != u2.clock_seq_and_node ||
+         u1.time_and_version != u2.time_and_version;
+}
+
 BOOST_AUTO_TEST_SUITE(uuids)
 
 BOOST_AUTO_TEST_CASE(v1)
 {
-  test_utils::CassUuidGenPtr uuid_gen(cass_uuid_gen_new());
+  CassUuidGen* uuid_gen = cass_uuid_gen_new();
 
   CassUuid prev_uuid;
-  cass_uuid_gen_time(uuid_gen.get(), &prev_uuid);
+  cass_uuid_gen_time(uuid_gen, &prev_uuid);
   BOOST_CHECK(cass_uuid_version(prev_uuid) == 1);
 
   for (int i = 0; i < 1000; ++i) {
     CassUuid uuid;
     uint64_t curr_ts = cass::get_time_since_epoch_in_ms();
-    cass_uuid_gen_time(uuid_gen.get(), &uuid);
+    cass_uuid_gen_time(uuid_gen, &uuid);
     cass_uint64_t ts = cass_uuid_timestamp(uuid);
 
     BOOST_CHECK(cass_uuid_version(uuid) == 1);
@@ -52,44 +57,50 @@ BOOST_AUTO_TEST_CASE(v1)
     // only accurate to the millisecond. The generated uuid might have more
     // granularity.
     CassUuid from_ts_uuid;
-    cass_uuid_gen_from_time(uuid_gen.get(), ts, &from_ts_uuid);
+    cass_uuid_gen_from_time(uuid_gen, ts, &from_ts_uuid);
     BOOST_CHECK(ts == cass_uuid_timestamp(from_ts_uuid));
     BOOST_CHECK(cass_uuid_version(from_ts_uuid) == 1);
 
     BOOST_CHECK(uuid != prev_uuid);
     prev_uuid = uuid;
   }
+
+  cass_uuid_gen_free(uuid_gen);
 }
 
 BOOST_AUTO_TEST_CASE(v1_node)
 {
-  test_utils::CassUuidGenPtr uuid_gen(cass_uuid_gen_new_with_node(0x0000112233445566LL));
+  CassUuidGen* uuid_gen = cass_uuid_gen_new_with_node(0x0000112233445566LL);
 
   CassUuid uuid;
-  cass_uuid_gen_time(uuid_gen.get(), &uuid);
+  cass_uuid_gen_time(uuid_gen, &uuid);
   BOOST_CHECK(cass_uuid_version(uuid) == 1);
 
   char str[CASS_UUID_STRING_LENGTH];
   cass_uuid_string(uuid, str);
 
   BOOST_CHECK(strstr(str, "-112233445566") != NULL);
+
+  cass_uuid_gen_free(uuid_gen);
 }
 
 BOOST_AUTO_TEST_CASE(v4)
 {
-  test_utils::CassUuidGenPtr uuid_gen(cass_uuid_gen_new());
+  CassUuidGen* uuid_gen = cass_uuid_gen_new();
 
   CassUuid prev_uuid;
-  cass_uuid_gen_random(uuid_gen.get(), &prev_uuid);
+  cass_uuid_gen_random(uuid_gen, &prev_uuid);
   BOOST_CHECK(cass_uuid_version(prev_uuid) == 4);
 
   for (int i = 0; i < 1000; ++i) {
     CassUuid uuid;
-    cass_uuid_gen_random(uuid_gen.get(), &uuid);
+    cass_uuid_gen_random(uuid_gen, &uuid);
     BOOST_CHECK(cass_uuid_version(uuid) == 4);
     BOOST_CHECK(uuid != prev_uuid);
     prev_uuid = uuid;
   }
+
+  cass_uuid_gen_free(uuid_gen);
 }
 
 BOOST_AUTO_TEST_CASE(from_string)

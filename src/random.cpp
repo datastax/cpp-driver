@@ -36,6 +36,8 @@ namespace cass {
 #if defined(_WIN32)
 
   uint64_t get_random_seed(uint64_t seed) {
+    Logger::init();
+
     HCRYPTPROV provider;
 
     if (!CryptAcquireContext(&provider, 
@@ -58,6 +60,8 @@ namespace cass {
 #else
 
   uint64_t get_random_seed(uint64_t seed) {
+    Logger::init();
+
     static const char* device = "/dev/urandom";
 
     int fd = open(device, O_RDONLY);
@@ -69,7 +73,7 @@ namespace cass {
       return seed;
     }
 
-    ssize_t num_bytes = read(fd, reinterpret_cast<char*>(seed), sizeof(seed));
+    ssize_t num_bytes = read(fd, reinterpret_cast<char*>(&seed), sizeof(seed));
     if (num_bytes < 0) {
       char buf[128];
       strerror_r(errno, buf, sizeof(buf));

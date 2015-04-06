@@ -44,7 +44,7 @@
 namespace cass {
 
 class Metrics {
-private:
+public:
   class ThreadState {
   public:
 #if UV_VERSION_MAJOR == 0
@@ -91,7 +91,6 @@ private:
 #endif
   };
 
-public:
   class Counter {
   public:
     Counter(ThreadState* thread_state)
@@ -260,6 +259,7 @@ public:
       Counter count_;
       const uint64_t start_time_;
       Atomic<uint64_t> last_tick_;
+
   private:
       DISALLOW_COPY_AND_ASSIGN(Meter);
   };

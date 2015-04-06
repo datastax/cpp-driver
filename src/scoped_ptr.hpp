@@ -41,7 +41,7 @@ public:
   typedef D deleter;
 
   // Prevent RefCounted<> objects from using ScopedPtr<>, that would be bad
-  STATIC_ASSERT((!IsConvertable<T, RefCountedBase>::value));
+  STATIC_ASSERT((!IsConvertible<T, RefCountedBase>::value));
 
   explicit ScopedPtr(type* ptr = NULL)
       : ptr_(ptr) {}

@@ -57,7 +57,8 @@ struct TestTokenMap {
 
     for (typename TokenHostMap::iterator i = tokens.begin(); i != tokens.end(); ++i) {
       cass::TokenStringList tokens;
-      tokens.push_back(boost::lexical_cast<std::string>(i->first));
+      std::string token(boost::lexical_cast<std::string>(i->first));
+      tokens.push_back(token);
       token_map.update_host(i->second, tokens);
     }
 

@@ -82,21 +82,20 @@ namespace cass {
     }
 
     StringRef substr(size_t pos = 0, size_t length = npos) {
-      if (pos > length_) {
-        return StringRef();
-      }
+      assert(pos < length_);
       return StringRef(ptr_ + pos, std::min(length_ - pos, length));
     }
 
     template<class IsEqual>
-    int compare(size_t pos, size_t length, const StringRef& ref, IsEqual is_equal) const {
+    int compare(size_t pos, size_t length,
+                const StringRef& ref, IsEqual is_equal) const {
       assert(pos < length_);
-      if (length < ref.length_) {
-        length = ref.length_;
+      if (length == npos || length + pos > length_) {
+        length = length_ - pos;
       }
-      if (length_ < length) {
+      if (length < ref.length_) {
         return -1;
-      } else if(length_ > length) {
+      } else if(length > ref.length_) {
         return 1;
       }
       return internal_compare(ptr_ + pos, ref.ptr_, length, is_equal);
@@ -107,11 +106,11 @@ namespace cass {
     }
 
     int compare(const StringRef& ref) const {
-      return compare(0, ref.length(), ref, IsEqual());
+      return compare(0, length_, ref, IsEqual());
     }
 
-    bool iequal(const StringRef& ref) const {
-      return compare(0, ref.length(), ref, IsEqualInsensitive()) == 0;
+    bool iequals(const StringRef& ref) const {
+      return compare(0, length_, ref, IsEqualInsensitive()) == 0;
     }
 
     bool operator==(const StringRef& ref) {
@@ -124,7 +123,8 @@ namespace cass {
 
   private:
     template<class IsEqual>
-    static int internal_compare(const char* s1, const char* s2, size_t length, IsEqual is_equal) {
+    static int internal_compare(const char* s1,  const char* s2,
+                                size_t length, IsEqual is_equal) {
       for (size_t i = 0; i < length; ++i) {
         if (!is_equal(s1[i], s2[i])) {
           return s1[i] < s2[i] ? -1 : 1;
@@ -148,7 +148,7 @@ namespace cass {
   }
 
   inline bool iequals(const StringRef& input, const StringRef& target) {
-    return input.iequal(target);
+    return input.iequals(target);
   }
 
 } // namespace cass

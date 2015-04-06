@@ -101,7 +101,7 @@ public:
     return ss.str();
   }
 
-  void enable_latency_tracking(int64_t scale, int64_t min_measured) {
+  void enable_latency_tracking(uint64_t scale, uint64_t min_measured) {
     if (!latency_tracker_) {
       latency_tracker_.reset(new LatencyTracker(scale, (30LL * min_measured) / 100LL));
     }
@@ -124,7 +124,7 @@ public:
 private:
   class LatencyTracker {
   public:
-    LatencyTracker(int64_t scale_ns, int64_t threshold_to_account)
+    LatencyTracker(uint64_t scale_ns, uint64_t threshold_to_account)
       : scale_ns_(scale_ns)
       , threshold_to_account_(threshold_to_account) {}
 

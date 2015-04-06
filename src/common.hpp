@@ -49,7 +49,7 @@ template <> struct StaticAssert<true> {};
 template<size_t s> struct StaticAssertTest {};
 
 template<class From, class To>
-class IsConvertable {
+class IsConvertible {
   private:
     typedef char Yes;
     typedef struct { char not_used[2]; } No;

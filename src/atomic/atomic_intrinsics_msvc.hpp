@@ -172,9 +172,9 @@ struct AtomicImpl<4, Signed> {
     return static_cast<Type>(InterlockedExchange((long*)&storage, (long)value));
   }
 
-  static inline bool compare_exchange(volatile Type& storage, Type& expected, Type value) {
+  static inline bool compare_exchange(volatile Type& storage, Type& expected, Type desired) {
     Type temp_expected = expected;
-    Type previous = static_cast<Type>(InterlockedCompareExchange((long*)&storage, (long)temp_expected, (long)value));
+    Type previous = static_cast<Type>(InterlockedCompareExchange((long*)&storage, (long)desired, (long)temp_expected));
     expected = previous;
     return (previous == temp_expected);
   }
@@ -197,9 +197,9 @@ struct AtomicImpl<8, Signed> {
     return static_cast<Type>(InterlockedExchange64((__int64*)&storage, (__int64)value));
   }
 
-  static inline bool compare_exchange(volatile Type& storage, Type& expected, Type value) {
+  static inline bool compare_exchange(volatile Type& storage, Type& expected, Type desired) {
     Type temp_expected = expected;
-    Type previous = static_cast<Type>(InterlockedCompareExchange64((__int64*)&storage, (__int64)temp_expected, (__int64)value));
+    Type previous = static_cast<Type>(InterlockedCompareExchange64((__int64*)&storage, (__int64)desired, (__int64)temp_expected));
     expected = previous;
     return (previous == temp_expected);
   }

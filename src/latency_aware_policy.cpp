@@ -75,7 +75,7 @@ void LatencyAwarePolicy::on_down(const SharedRefPtr<Host>& host) {
 SharedRefPtr<Host> LatencyAwarePolicy::LatencyAwareQueryPlan::compute_next() {
   int64_t min = policy_->min_average_.load();
   const Settings& settings = policy_->settings_;
-  int64_t now = uv_hrtime();
+  uint64_t now = uv_hrtime();
 
   SharedRefPtr<Host> host;
   while ((host = child_plan_->compute_next())) {
