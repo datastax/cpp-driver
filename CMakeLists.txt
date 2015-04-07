@@ -74,6 +74,18 @@ if(NOT CASS_BUILD_SHARED AND NOT CASS_BUILD_STATIC)
   message(FATAL_ERROR "Driver is not Configured to Build: Ensure shared and/or static library is enabled")
 endif()
 
+# Ensure Windows platform is supported
+if(WIN32)
+  if(CMAKE_SYSTEM_VERSION GREATER 5.2 OR
+     CMAKE_SYSTEM_VERSION EQUAL 5.2)
+    add_definitions(-D_WIN32_WINNT=0x502)
+  else()
+    string(REPLACE "." "" WINDOWS_VERSION ${CMAKE_SYSTEM_VERSION})
+    string(REGEX REPLACE "([0-9])" "0\\1" WINDOWS_VERSION ${WINDOWS_VERSION})
+    message(FATAL_ERROR "Unable to build driver: Unsupported Windows platform 0x${WINDOWS_VERSION}")
+  endif()
+endif()
+
 # Build up the include paths
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(CASS_INCLUDES ${CASS_INCLUDES} ${PROJECT_INCLUDE_DIR})
@@ -248,7 +260,7 @@ endif()
 # Doxygen
 if(CASS_BUILD_DOCS)
   find_package(Doxygen)
-  if (DOXYGEN_FOUND)
+  if(DOXYGEN_FOUND)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
     add_custom_target(docs
       ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
@@ -286,12 +298,12 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GCC" OR
   endif()
 endif()
 
-# Determine if std::atomic can be used for GCC or Clang
+# Determine if std::atomic can be used for GCC, Clang, or MSVC
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GCC")
   # Version determined from: https://gcc.gnu.org/wiki/Atomic/GCCMM
   if (CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.7" OR
       CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.7")
-    set(CASS_USE_STD_ATOMIC On)
+    set(CASS_USE_STD_ATOMIC ON)
   endif()
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # Version determined from: http://clang.llvm.org/cxx_status.html
@@ -299,7 +311,14 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # support.
   if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "3.1" OR
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "3.1")
-   set(CASS_USE_STD_ATOMIC On)
+   set(CASS_USE_STD_ATOMIC ON)
+  endif()
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  # Version determined from https://msdn.microsoft.com/en-us/library/hh874894
+  # VS2012+/VS 11.0+/WindowsSDK v8.0+
+  if(MSVC_VERSION GREATER 1700 OR
+     MSVC_VERSION EQUAL 1700)
+    set(CASS_USE_STD_ATOMIC ON)
   endif()
 endif()
 
