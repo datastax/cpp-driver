@@ -130,23 +130,64 @@ set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARY})
 #------------------------
 
 # Boost
-if (CASS_USE_BOOST_ATOMIC)
-  # Ensure the driver can be built
-  find_package(Boost COMPONENTS atomic)
-  if(NOT Boost_FOUND)
-    message(FATAL_ERROR "Boost atomic is required to build driver because of -DCASS_USE_BOOST_ATOMIC=On")
+if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_TESTS)
+  # Allow for boost directory to be specified on the command line
+  set(ENV{BOOST_ROOT} "${PROJECT_SOURCE_DIR}/lib/boost/")
+  if(BOOST_ROOT_DIR)
+    set(ENV{BOOST_ROOT} ${BOOST_ROOT_DIR})
   endif()
 
-  # Handle explicit initialization warning in atomic/details/casts
+  # Ensure Boost auto linking is disabled (defaults to auto linking on Windows)
+  if(WIN32)
+    add_definitions(-DBOOST_ALL_NO_LIB)
+  endif()
+
+  # Determine if shared or static boost libraries should be used
+  if(CASS_USE_STATIC_LIBS)
+    set(Boost_USE_STATIC_LIBS ON)
+  else()
+    set(Boost_USE_STATIC_LIBS OFF)
+    add_definitions(-DBOOST_ALL_DYN_LINK)
+  endif()
+  set(Boost_USE_STATIC_RUNTIME OFF)
+  set(Boost_USE_MULTITHREADED ON)
+  add_definitions(-DBOOST_THREAD_USES_MOVE)
+
+  # Ensure the driver components exist (optional)
+  if(CASS_USE_BOOST_ATOMIC)
+    find_package(Boost COMPONENTS atomic)
+    if(NOT Boost_FOUND)
+      message(FATAL_ERROR "Boost atomic is required to build driver because of -DCASS_USE_BOOST_ATOMIC=On")
+    endif()
+
+    # Assign Boost include and libraries
+    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
+    set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES})
+  endif()
+
+  # Ensure unit and integration test boost components exist
+  if(CASS_BUILD_TESTS)
+    find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono date_time filesystem log log_setup system regex thread unit_test_framework)
+    if(NOT Boost_FOUND)
+      message(FATAL_ERROR "Boost [chrono, date_time, filesystem, log, log_setup, system, regex, thread, and unit_test_framework] are required to build tests")
+    endif()
+
+    # Assign Boost include and libraries
+    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
+    set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES})
+  endif()
+
+  # Determine if additional Boost definitions are required for driver/executables
+  set(CASS_FOUND_BOOST_VERSION "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
   if((CASS_FOUND_BOOST_VERSION VERSION_GREATER "1.56.0") OR (CASS_FOUND_BOOST_VERSION VERSION_EQUAL "1.56.0"))
     if(NOT WIN32)
+      # Handle explicit initialization warning in atomic/details/casts
       add_definitions(-Wno-missing-field-initializers)
     endif()
+  else()
+    # Handle redefinition warning of BOOST_NO_CXX11_RVALUE_REFERENCES
+    add_definitions(-DBOOST_NO_CXX11_RVALUE_REFERENCES)
   endif()
-
-  # Assign Boost include and libraries
-  set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
-  set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES})
 endif()
 
 # gperftools (tcmalloc)
@@ -224,22 +265,9 @@ if(CASS_BUILD_TESTS)
 
   # Discover libssh2
   find_package(LIBSSH2 REQUIRED)
-
-  # Ensure unit and integration test boost components exist
-  find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono date_time filesystem log log_setup system regex thread unit_test_framework)
-  if(NOT Boost_FOUND OR NOT LIBSSH2_FOUND)
-    message(FATAL_ERROR "Boost [chrono, date_time, filesystem, log, log_setup, system, regex, thread, and unit_test_framework] and libssh2 are required to build tests")
+  if(NOT LIBSSH2_FOUND)
+    message(FATAL_ERROR "libssh2 are required to build tests")
   endif()
-
-  # Determine if shared or static boost libraries should be used
-  if(CASS_USE_STATIC_LIBS)
-    set(Boost_USE_STATIC_LIBS ON)
-  else()
-    set(Boost_USE_STATIC_LIBS OFF)
-    add_definitions(-DBOOST_ALL_DYN_LINK)
-  endif()
-  set(Boost_USE_STATIC_RUNTIME OFF)
-  set(Boost_USE_MULTITHREADED ON)
 
   # Assign test libraries (additional boost and libssh2 dependencies)
   set(CASS_TEST_LIBS ${Boost_LIBRARIES} ${LIBSSH2_LIBRARIES})
@@ -278,17 +306,6 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 endif()
 
-if(WIN32)
-  set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-else()
-  set(TEST_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_THREAD_USES_MOVE")
-
-  # Handle redefinition warning of BOOST_NO_CXX11_RVALUE_REFERENCES
-  if(CASS_FOUND_BOOST_VERSION VERSION_LESS "1.56.0")
-    set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -DBOOST_NO_CXX11_RVALUE_REFERENCES")
-  endif()
-endif()
-
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GCC" OR
    "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # CMAKE_CXX_COMPILER variables do not exist in 2.6.4 (min version)
@@ -325,10 +342,10 @@ endif()
 # Enable specific cass::Atomic implementation
 if(CASS_USE_BOOST_ATOMIC)
   message(STATUS "Using boost::atomic implementation for atomic operations")
-  set(PROJECT_CXX_FLAGS "-DCASS_USE_BOOST_ATOMIC")
+  add_definitions(-DCASS_USE_BOOST_ATOMIC)
 elseif(CASS_USE_STD_ATOMIC)
   message(STATUS "Using std::atomic implementation for atomic operations")
-  set(PROJECT_CXX_FLAGS "-DCASS_USE_STD_ATOMIC")
+  add_definitions(-DCASS_USE_STD_ATOMIC)
 endif()
 
 # Assign compiler specific flags
@@ -344,7 +361,9 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 
   # Create specific linker flags
   if(CASS_USE_STATIC_LIBS)
-    set(PROJECT_CXX_LINKER_FLAGS "/INCREMENTAL:NO /LTCG /NODEFAULTLIB:LIBCMT.LIB")
+    set(WINDOWS_LINKER_FLAGS "/INCREMENTAL:NO /LTCG /NODEFAULTLIB:LIBCMT.LIB /NODEFAULTLIB:LIBCMTD.LIB")
+    set(PROJECT_CXX_LINKER_FLAGS "${WINDOWS_LINKER_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${WINDOWS_LINKER_FLAGS}")
   endif()
 
   # On Visual C++ -pedantic flag is not used,
@@ -353,7 +372,8 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # that can hide useful ones.
   # Create specific warning disable compiler flags
   # TODO(mpenick): Fix these "possible loss of data" warnings
-  set(WARNING_COMPILER_FLAGS "/wd4244 /wd4267")
+  add_definitions(/wd4244)
+  add_definitions(/wd4267)
 
   # Add preprocessor definitions for proper compilation
   add_definitions(-D_WIN32_WINNT=0x0501)      # Required for winsock (pre Windows XP wspiapi.h only)
@@ -363,7 +383,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # Create the project, example, and test flags
   set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PROJECT_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
-  set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+  set(TEST_CXX_FLAGS "${PROJECT_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # GCC specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
@@ -398,7 +418,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(PROJECT_CXX_FLAGS "${PROJECT_CXX_FLAGS} -std=c++11")
   endif()
 
-  set(PROJECT_CXX_FLAGS " ${CMAKE_CXX_FLAGS} ${PROJECT_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} -Werror ")
+  set(PROJECT_CXX_FLAGS " ${CMAKE_CXX_FLAGS} ${PROJECT_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} -Werror")
   set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   set(EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 ${WARNING_COMPILER_FLAGS}")
 else()
