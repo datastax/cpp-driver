@@ -177,6 +177,7 @@ Usage: VC_BUILD.BAT [OPTION...]
         --RELEASE                       Enable release build (default)
         --DISABLE-CLEAN                 Disable clean build
         --DISABLE-OPENSSL               Disable OpenSSL support
+        --ENABLE-EXAMPLES               Enable example builds
         --ENABLE-PACKAGES [version]     Enable package generation (*)
         --ENABLE-TESTS [boost-root-dir] Enable test builds
         --ENABLE-ZLIB                   Enable zlib
@@ -209,6 +210,12 @@ To build static library:
 
 ```dos
 VC_BUILD.BAT --STATIC
+```
+
+To build examples:
+
+```dos
+VC_BUILD.BAT --ENABLE-EXAMPLES
 ```
 
 To build library without OpenSSL support:
