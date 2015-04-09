@@ -319,6 +319,7 @@ void Pool::on_availability_change(Connection* connection) {
 void Pool::on_pending_request_timeout(RequestTimer* timer) {
   RequestHandler* request_handler = static_cast<RequestHandler*>(timer->data());
   Pool* pool = request_handler->pool();
+  pool->metrics_->pending_request_timeouts.inc();
   pool->remove_pending_request(request_handler);
   request_handler->retry(RETRY_WITH_NEXT_HOST);
   LOG_DEBUG("Timeout waiting for connection to %s pool(%p)",
@@ -328,6 +329,7 @@ void Pool::on_pending_request_timeout(RequestTimer* timer) {
 }
 
 void Pool::wait_for_connection(RequestHandler* request_handler) {
+  request_handler->set_pool(this);
   request_handler->start_timer(loop_,
                                config_.connect_timeout_ms(),
                                request_handler,
