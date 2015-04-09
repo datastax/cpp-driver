@@ -65,7 +65,6 @@ public:
 
   bool is_initial_connection() const { return is_initial_connection_; }
   bool is_ready() const { return state_ == POOL_STATE_READY; }
-  bool is_defunct() const { return is_defunct_; }
   bool is_critical_failure() const { return is_critical_failure_; }
   bool cancel_reconnect() const { return cancel_reconnect_; }
 
@@ -109,7 +108,6 @@ private:
   int available_connection_count_;
   bool is_available_;
   bool is_initial_connection_;
-  bool is_defunct_;
   bool is_critical_failure_;
   bool is_pending_flush_;
   bool cancel_reconnect_;

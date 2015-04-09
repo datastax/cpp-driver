@@ -99,7 +99,10 @@ bool ControlConnection::determine_address_for_peer_host(const Address& connected
 }
 
 ControlConnection::ControlConnection()
-  : state_(CONTROL_STATE_NEW)
+  : Connection::Listener(CASS_EVENT_TOPOLOGY_CHANGE |
+                         CASS_EVENT_STATUS_CHANGE |
+                         CASS_EVENT_SCHEMA_CHANGE)
+  ,  state_(CONTROL_STATE_NEW)
   , session_(NULL)
   , connection_(NULL)
   , reconnect_timer_(NULL)

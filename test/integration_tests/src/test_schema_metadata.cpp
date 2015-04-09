@@ -374,7 +374,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     verify_keyspace(SIMPLE_STRATEGY_KEYSPACE_NAME, false, SIMPLE_STRATEGY_CLASS_NAME, strategy_options);
 
     // keyspace goes away
-    test_utils::execute_query(session, "DROP KEYSPACE "SIMPLE_STRATEGY_KEYSPACE_NAME);
+    test_utils::execute_query(session, "DROP KEYSPACE " SIMPLE_STRATEGY_KEYSPACE_NAME);
     refresh_schema_meta();
     BOOST_CHECK(!cass_schema_get_keyspace(schema_, SIMPLE_STRATEGY_KEYSPACE_NAME));
 
@@ -384,15 +384,15 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     strategy_options.insert(std::make_pair("dc1", "3"));
     strategy_options.insert(std::make_pair("dc2", "2"));
     verify_keyspace(NETWORK_TOPOLOGY_KEYSPACE_NAME, true, NETWORK_TOPOLOGY_STRATEGY_CLASS_NAME, strategy_options);
-    test_utils::execute_query(session, "DROP KEYSPACE "NETWORK_TOPOLOGY_KEYSPACE_NAME);
+    test_utils::execute_query(session, "DROP KEYSPACE " NETWORK_TOPOLOGY_KEYSPACE_NAME);
   }
 
   void verify_user_table() {
     create_simple_strategy_keyspace();
 
-    test_utils::execute_query(session, "USE "SIMPLE_STRATEGY_KEYSPACE_NAME);
+    test_utils::execute_query(session, "USE " SIMPLE_STRATEGY_KEYSPACE_NAME);
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_TABLE_ALL_TYPES) % ALL_DATA_TYPES_TABLE_NAME));
-    test_utils::execute_query(session, "ALTER TABLE "ALL_DATA_TYPES_TABLE_NAME" WITH comment='"COMMENT"'");
+    test_utils::execute_query(session, "ALTER TABLE " ALL_DATA_TYPES_TABLE_NAME " WITH comment='" COMMENT "'");
     refresh_schema_meta();
 
     verify_table(SIMPLE_STRATEGY_KEYSPACE_NAME, ALL_DATA_TYPES_TABLE_NAME, COMMENT, "boolean_sample");

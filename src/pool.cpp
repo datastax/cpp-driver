@@ -45,7 +45,6 @@ Pool::Pool(IOWorker* io_worker,
     , available_connection_count_(0)
     , is_available_(false)
     , is_initial_connection_(is_initial_connection)
-    , is_defunct_(false)
     , is_critical_failure_(false)
     , is_pending_flush_(false)
     , cancel_reconnect_(false) {}
@@ -100,8 +99,9 @@ void Pool::close(bool cancel_reconnect) {
          it != end; ++it) {
       (*it)->close();
     }
-    maybe_close();
   }
+
+  maybe_close();
 }
 
 Connection* Pool::borrow_connection() {
@@ -207,11 +207,6 @@ void Pool::flush() {
   }
 }
 
-void Pool::defunct() {
-  is_defunct_ = true;
-  close();
-}
-
 void Pool::maybe_notify_ready() {
   // This will notify ready even if all the connections fail.
   // it is up to the holder to inspect state
@@ -273,10 +268,10 @@ Connection* Pool::find_least_busy() {
 
 void Pool::on_ready(Connection* connection) {
   connections_pending_.erase(connection);
-  maybe_notify_ready();
-
   connections_.push_back(connection);
   return_connection(connection);
+
+  maybe_notify_ready();
 
   metrics_->total_connections.inc();
 }
@@ -297,11 +292,11 @@ void Pool::on_close(Connection* connection) {
     if (connection->is_critical_failure()) {
       is_critical_failure_ = true;
     }
-    defunct();
+    close();
+  } else {
+    maybe_notify_ready();
+    maybe_close();
   }
-
-  maybe_notify_ready();
-  maybe_close();
 }
 
 void Pool::on_availability_change(Connection* connection) {

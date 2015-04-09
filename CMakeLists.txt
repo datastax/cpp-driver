@@ -397,6 +397,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # Enable C++11 support to use std::atomic
   if(CASS_USE_STD_ATOMIC)
     set(PROJECT_CXX_FLAGS "${PROJECT_CXX_FLAGS} -std=c++11")
+    set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -std=c++11")
   endif()
 
   set(PROJECT_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PROJECT_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} -Werror")
@@ -416,6 +417,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # Enable C++11 support to use std::atomic
   if(CASS_USE_STD_ATOMIC)
     set(PROJECT_CXX_FLAGS "${PROJECT_CXX_FLAGS} -std=c++11")
+    set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -std=c++11")
   endif()
 
   set(PROJECT_CXX_FLAGS " ${CMAKE_CXX_FLAGS} ${PROJECT_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} -Werror")

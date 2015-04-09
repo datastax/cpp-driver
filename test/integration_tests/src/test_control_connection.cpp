@@ -43,8 +43,13 @@ struct ControlConnectionTests {
       const char* query = "SELECT * FROM system.schema_keyspaces";
       test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
       test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
-      BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
-      hosts.insert(cass::get_host_from_future(future.get()));
+      if (cass_future_error_code(future.get()) ==  CASS_OK) {
+        hosts.insert(cass::get_host_from_future(future.get()));
+      } else {
+        CassString message;
+        cass_future_error_message(future.get(), &message.data, &message.length);
+        BOOST_MESSAGE("Failed to query host" << std::string(message.data, message.length));
+      }
     }
 
     BOOST_CHECK(hosts.size() == should_be_present.size());

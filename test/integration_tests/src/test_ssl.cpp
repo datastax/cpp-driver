@@ -152,6 +152,8 @@ struct TestSSL {
     cass_cluster_set_connect_timeout(cluster_, 10000);
     cass_cluster_set_request_timeout(cluster_, 10000);
     cass_cluster_set_num_threads_io(cluster_, 1);
+    cass_cluster_set_core_connections_per_host(cluster_, 2);
+    cass_cluster_set_max_connections_per_host(cluster_, 4);
     cass_cluster_set_protocol_version(cluster_, protocol_version);
     cass_cluster_set_ssl(cluster_, ssl_);
 
