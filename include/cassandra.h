@@ -289,7 +289,7 @@ typedef struct CassUuidGen_ CassUuidGen;
 /**
  * @struct CassMetric
  *
- * A snapshot of the session's performance/dianostic metrics.
+ * A snapshot of the session's performance/diagnostic metrics.
  */
 typedef struct CassMetrics_ {
   struct {
@@ -312,14 +312,14 @@ typedef struct CassMetrics_ {
   struct {
     cass_uint64_t total_connections; /**< The total number of connections */
     cass_uint64_t available_connections; /**< The number of connections available to take requests */
-    cass_uint64_t exceeded_pending_requests_water_mark; /**< Occurences when requests excceeded a pool's water mark */
-    cass_uint64_t exceeded_write_bytes_water_mark; /**< Occurences when number of bytes excceeded a connections's water mark */
+    cass_uint64_t exceeded_pending_requests_water_mark; /**< Occurrences when requests exceeded a pool's water mark */
+    cass_uint64_t exceeded_write_bytes_water_mark; /**< Occurrences when number of bytes exceeded a connection's water mark */
   } stats;
 
   struct {
-    cass_uint64_t connection_timeouts; /**< Occurences of a connection timeout */
-    cass_uint64_t pending_request_timeouts; /** Occurences of requests that timed out waiting for a connection */
-    cass_uint64_t request_timeouts; /** Occurences of requests that timed out waiting for a request to finish */
+    cass_uint64_t connection_timeouts; /**< Occurrences of a connection timeout */
+    cass_uint64_t pending_request_timeouts; /** Occurrences of requests that timed out waiting for a connection */
+    cass_uint64_t request_timeouts; /** Occurrences of requests that timed out waiting for a request to finish */
   } errors;
 
 } CassMetrics;
@@ -1036,7 +1036,7 @@ cass_cluster_set_tcp_nodelay(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] enabled
- * @param[in] delay_secs The initial delay in seconds, ingored when
+ * @param[in] delay_secs The initial delay in seconds, ignored when
  * `enabled` is false.
  */
 CASS_EXPORT void
@@ -1063,7 +1063,7 @@ CASS_EXPORT CassSession*
 cass_session_new();
 
 /**
- * Frees a session instance. If the session is still connected it will be syncronously
+ * Frees a session instance. If the session is still connected it will be synchronously
  * closed before being deallocated.
  *
  * Important: Do not free a session in a future callback. Freeing a session in a future
@@ -1201,7 +1201,7 @@ CASS_EXPORT const CassSchema*
 cass_session_get_schema(CassSession* session);
 
 /**
- * Gets a copy of this session's performance/dianostic metrics.
+ * Gets a copy of this session's performance/diagnostic metrics.
  *
  * @public @memberof CassSession
  *
@@ -1393,7 +1393,7 @@ cass_ssl_add_trusted_cert_n(CassSsl* ssl,
                             size_t);
 
 /**
- * Sets verifcation performed on the peer's certificate.
+ * Sets verification performed on the peer's certificate.
  *
  * CASS_SSL_VERIFY_NONE - No verification is performed
  * CASS_SSL_VERIFY_PEER_CERT - Certificate is present and valid
@@ -3402,7 +3402,7 @@ cass_error_desc(CassError error);
  ***********************************************************************************/
 
 /**
- * Explicty wait for the log to flush and deallocate resources.
+ * Explicitly wait for the log to flush and deallocate resources.
  * This *MUST* be the last call using the library. It is an error
  * to call any cass_*() functions after this call.
  */
