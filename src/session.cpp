@@ -141,11 +141,13 @@ Session::Session()
     , pending_workers_count_(0)
     , current_io_worker_(0) {
   uv_mutex_init(&state_mutex_);
+  uv_mutex_init(&hosts_mutex_);
 }
 
 Session::~Session() {
   join();
   uv_mutex_destroy(&state_mutex_);
+  uv_mutex_destroy(&hosts_mutex_);
 }
 
 void Session::clear(const Config& config) {
@@ -154,7 +156,10 @@ void Session::clear(const Config& config) {
   load_balancing_policy_.reset(config.load_balancing_policy());
   connect_future_.reset();
   close_future_.reset();
-  hosts_.clear();
+  { // Lock hosts
+    ScopedMutex l(&hosts_mutex_);
+    hosts_.clear();
+  }
   io_workers_.clear();
   request_queue_.reset();
   cluster_meta_.clear();
@@ -196,27 +201,28 @@ void Session::broadcast_keyspace_change(const std::string& keyspace,
   }
 }
 
-SharedRefPtr<Host> Session::get_host(const Address& address, bool should_mark) {
+SharedRefPtr<Host> Session::get_host(const Address& address) {
+  // Lock hosts. This can be called on a non-session thread.
+  ScopedMutex l(&hosts_mutex_);
   HostMap::iterator it = hosts_.find(address);
   if (it == hosts_.end()) {
     return SharedRefPtr<Host>();
   }
-  if (should_mark) {
-    it->second->set_mark(current_host_mark_);
-  }
   return it->second;
 }
 
-SharedRefPtr<Host> Session::add_host(const Address& address, bool should_mark) {
+SharedRefPtr<Host> Session::add_host(const Address& address) {
   LOG_DEBUG("Adding new host: %s", address.to_string().c_str());
-
-  bool mark = should_mark ? current_host_mark_ : !current_host_mark_;
-  SharedRefPtr<Host> host(new Host(address, mark));
-  hosts_[address] = host;
+  SharedRefPtr<Host> host(new Host(address, !current_host_mark_));
+  { // Lock hosts
+    ScopedMutex l(&hosts_mutex_);
+    hosts_[address] = host;
+  }
   return host;
 }
 
 void Session::purge_hosts(bool is_initial_connection) {
+  // Hosts lock not held for reading (only called on session thread)
   HostMap::iterator it = hosts_.begin();
   while (it != hosts_.end()) {
     if (it->second->mark() != current_host_mark_) {
@@ -225,7 +231,10 @@ void Session::purge_hosts(bool is_initial_connection) {
       std::string address_str = to_remove_it->first.to_string();
       if (is_initial_connection) {
         LOG_WARN("Unable to reach contact point %s", address_str.c_str());
-        hosts_.erase(to_remove_it);
+        { // Lock hosts
+          ScopedMutex l(&hosts_mutex_);
+          hosts_.erase(to_remove_it);
+        }
       } else {
         LOG_WARN("Host %s removed", address_str.c_str());
         on_remove(to_remove_it->second);
@@ -324,7 +333,7 @@ void Session::close_async(Future* future, bool force) {
 }
 
 void Session::internal_connect() {
-  if (hosts_.empty()) {
+  if (hosts_.empty()) { // No hosts lock necessary (only called on session thread)
     notify_connect_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
                          "No hosts provided or no hosts resolved");
     return;
@@ -404,7 +413,7 @@ void Session::on_event(const SessionEvent& event) {
         const std::string& seed = *it;
         Address address;
         if (Address::from_string(seed, port, &address)) {
-          hosts_[address] = SharedRefPtr<Host>(new Host(address, !current_host_mark_));
+          add_host(address);
         } else {
           pending_resolve_count_++;
           Resolver::resolve(loop(), seed, port, this, on_resolve);
@@ -453,9 +462,7 @@ void Session::on_event(const SessionEvent& event) {
 void Session::on_resolve(Resolver* resolver) {
   Session* session = static_cast<Session*>(resolver->data());
   if (resolver->is_success()) {
-    const Address& address = resolver->address();
-    session->hosts_[address]
-        = SharedRefPtr<Host>(new Host(address, !session->current_host_mark_));
+    session->add_host(resolver->address());
   } else {
     LOG_ERROR("Unable to resolve host %s:%d\n",
               resolver->host().c_str(), resolver->port());
@@ -473,6 +480,7 @@ void Session::execute(RequestHandler* request_handler) {
 }
 
 void Session::on_control_connection_ready() {
+  // No hosts lock necessary (only called on session thread and read-only)
   load_balancing_policy_->init(control_connection_.connected_host(), hosts_);
   load_balancing_policy_->register_handles(loop());
   for (IOWorkerVec::iterator it = io_workers_.begin(),
@@ -530,8 +538,10 @@ void Session::on_add(SharedRefPtr<Host> host, bool is_initial_connection) {
 
 void Session::on_remove(SharedRefPtr<Host> host) {
   load_balancing_policy_->on_remove(host);
-
-  hosts_.erase(host->address());
+  { // Lock hosts
+    ScopedMutex l(&hosts_mutex_);
+    hosts_.erase(host->address());
+  }
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
     (*it)->remove_pool_async(host->address(), true);

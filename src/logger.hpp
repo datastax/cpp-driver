@@ -45,26 +45,17 @@ public:
 #define ATTR_FORMAT(string , first)
 #endif
 
-#define LOG_METHOD(name, severity)                                   \
-  ATTR_FORMAT(4, 5)                                                  \
-  static void name(const char* file, int line, const char* function, \
-                   const char* format, ...) {                        \
-    if (severity <= log_level_) {                                    \
-      va_list args;                                                  \
-      va_start(args, format);                                        \
-      thread_->log(severity, file, line, function, format, args);    \
-      va_end(args);                                                  \
-    }                                                                \
+  static CassLogLevel log_level() { return log_level_; }
+
+  ATTR_FORMAT(5, 6)                                                  \
+  static void log(CassLogLevel severity,
+                   const char* file, int line, const char* function,
+                   const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    thread_->log(severity, file, line, function, format, args);
+    va_end(args);
   }
-
-  LOG_METHOD(critical_, CASS_LOG_CRITICAL)
-  LOG_METHOD(error_, CASS_LOG_ERROR)
-  LOG_METHOD(warn_, CASS_LOG_WARN)
-  LOG_METHOD(info_, CASS_LOG_INFO)
-  LOG_METHOD(debug_, CASS_LOG_DEBUG)
-  LOG_METHOD(trace_, CASS_LOG_TRACE)
-
-#undef LOG_MESSAGE
 
   // Testing only
   static bool is_flushed() { return thread_->is_flushed(); }
@@ -74,7 +65,6 @@ private:
   public:
     LogThread(size_t queue_size);
     ~LogThread();
-
 
     // "this" is argument 1
     ATTR_FORMAT(6, 0)
@@ -151,28 +141,19 @@ private:
 #  define LOG_FUNCTION_ ""
 #endif
 
-#define LOG_CRITICAL(...) Logger::critical_(       \
-  LOG_FILE_, __LINE__, LOG_FUNCTION_,              \
-  LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__))
+#define LOG_CHECK_LEVEL(severity, ...) do {                       \
+  if (severity <= Logger::log_level()) {                          \
+    Logger::log(severity,                                         \
+                 LOG_FILE_, __LINE__, LOG_FUNCTION_,              \
+                 LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__)); \
+  }                                                               \
+} while(0)
 
-#define LOG_ERROR(...) Logger::error_(             \
-  LOG_FILE_, __LINE__, LOG_FUNCTION_,              \
-  LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__))
-
-#define LOG_WARN(...) Logger::warn_(               \
-  LOG_FILE_, __LINE__, LOG_FUNCTION_,              \
-  LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__))
-
-#define LOG_INFO(...) Logger::info_(              \
-  LOG_FILE_, __LINE__, LOG_FUNCTION_,             \
-  LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__))
-
-#define LOG_DEBUG(...) Logger::debug_(            \
-  LOG_FILE_, __LINE__, LOG_FUNCTION_,             \
-  LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__))
-
-#define LOG_TRACE(...) Logger::trace_(             \
-  LOG_FILE_, __LINE__, LOG_FUNCTION_,              \
-  LOG_FIRST_(__VA_ARGS__) LOG_REST_(__VA_ARGS__))
+#define LOG_CRITICAL(...) LOG_CHECK_LEVEL(CASS_LOG_CRITICAL, __VA_ARGS__)
+#define LOG_ERROR(...) LOG_CHECK_LEVEL(CASS_LOG_ERROR, __VA_ARGS__)
+#define LOG_WARN(...) LOG_CHECK_LEVEL(CASS_LOG_WARN, __VA_ARGS__)
+#define LOG_INFO(...) LOG_CHECK_LEVEL(CASS_LOG_INFO, __VA_ARGS__)
+#define LOG_DEBUG(...) LOG_CHECK_LEVEL(CASS_LOG_DEBUG, __VA_ARGS__)
+#define LOG_TRACE(...) LOG_CHECK_LEVEL(CASS_LOG_TRACE, __VA_ARGS__)
 
 #endif

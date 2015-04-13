@@ -126,7 +126,7 @@ void ControlConnection::clear() {
 
 void ControlConnection::connect(Session* session) {
   session_ = session;
-  query_plan_.reset(new ControlStartupQueryPlan(session_->hosts_));
+  query_plan_.reset(new ControlStartupQueryPlan(session_->hosts_)); // No hosts lock necessary (read-only)
   protocol_version_ = session_->config().protocol_version();
   query_tokens_ = session_->config().token_aware_routing();
   if (protocol_version_ < 0) {
@@ -349,8 +349,10 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
   bool is_initial_connection = (control_connection->state_ == CONTROL_STATE_NEW);
 
   {
-    SharedRefPtr<Host> host = session->get_host(connection->address(), true);
+    SharedRefPtr<Host> host = session->get_host(connection->address());
     if (host) {
+      host->set_mark(session->current_host_mark_);
+
       ResultResponse* local_result =
           static_cast<ResultResponse*>(responses[0]);
 
@@ -382,12 +384,15 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
         continue;
       }
 
-      SharedRefPtr<Host> host = session->get_host(address, true);
+      SharedRefPtr<Host> host = session->get_host(address);
       bool is_new = false;
       if (!host) {
         is_new = true;
-        host = session->add_host(address, true);
+        host = session->add_host(address);
       }
+
+      host->set_mark(session->current_host_mark_);
+
       control_connection->update_node_info(host, rows.row());
       if (is_new && !is_initial_connection) {
         session->on_add(host, false);
