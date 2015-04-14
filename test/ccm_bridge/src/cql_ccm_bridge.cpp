@@ -355,6 +355,14 @@ void cql_ccm_bridge_t::stop(int node) {
   execute_ccm_command(boost::str(boost::format("node%1% stop") % node));
 }
 
+void cql_ccm_bridge_t::pause(int node) {
+  execute_ccm_command(boost::str(boost::format("node%1% pause") % node));
+}
+
+void cql_ccm_bridge_t::resume(int node) {
+  execute_ccm_command(boost::str(boost::format("node%1% resume") % node));
+}
+
 void cql_ccm_bridge_t::kill() {
   execute_ccm_command("stop --not-gently");
 }
