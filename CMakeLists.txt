@@ -306,7 +306,7 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 endif()
 
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GCC" OR
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR
    "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # CMAKE_CXX_COMPILER variables do not exist in 2.6.4 (min version)
   # Parse the -dumpversion argument into the variable not already set
@@ -316,11 +316,13 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GCC" OR
 endif()
 
 # Determine if std::atomic can be used for GCC, Clang, or MSVC
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GCC")
-  # Version determined from: https://gcc.gnu.org/wiki/Atomic/GCCMM
-  if (CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.7" OR
-      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.7")
-    set(CASS_USE_STD_ATOMIC ON)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+    # Version determined from: https://gcc.gnu.org/wiki/Atomic/GCCMM
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.7" OR
+       CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.7")
+      set(CASS_USE_STD_ATOMIC ON)
+    endif()
   endif()
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # Version determined from: http://clang.llvm.org/cxx_status.html
