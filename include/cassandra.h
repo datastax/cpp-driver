@@ -3514,6 +3514,14 @@ CASS_EXPORT CassError
 cass_inet_from_string(const char* str,
                       CassInet* output);
 
+/**
+  * @see cass_inet_from_string()
+  */
+CASS_EXPORT CassError
+cass_inet_from_string_n(const char* str,
+                        size_t str_length,
+                        CassInet* output);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

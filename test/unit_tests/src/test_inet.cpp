@@ -59,5 +59,31 @@ BOOST_AUTO_TEST_CASE(ipv6)
   BOOST_CHECK(cass_inet_from_string("ffff", &inet) == CASS_ERROR_LIB_BAD_PARAMS);
 }
 
+BOOST_AUTO_TEST_CASE(length)
+{
+  const char* ip_address = "127.0.0.1";
+  const char* ip_address_junk = "127.0.0.1<junk>";
+
+  CassInet inet;
+  BOOST_CHECK(cass_inet_from_string_n(ip_address_junk, strlen(ip_address), &inet) == CASS_OK);
+
+  char output[CASS_INET_STRING_LENGTH];
+  cass_inet_string(inet, output);
+  BOOST_CHECK(strcmp(ip_address, output) == 0);
+
+  const char* max_ip_address = "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255";
+  const char* max_ip_address_v6 = "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"; // Last octets converted to hex
+
+  BOOST_CHECK(cass_inet_from_string_n(max_ip_address, strlen(max_ip_address), &inet) == CASS_OK);
+
+  cass_inet_string(inet, output);
+  BOOST_CHECK(strcmp(max_ip_address_v6, output) == 0);
+
+  // Too long
+  const char* too_long = "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255_";
+
+  BOOST_CHECK(cass_inet_from_string_n(too_long, strlen(too_long), &inet) == CASS_ERROR_LIB_BAD_PARAMS);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 

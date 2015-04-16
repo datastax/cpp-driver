@@ -84,4 +84,17 @@ CassError cass_inet_from_string(const char* str, CassInet* output) {
   }
 }
 
+CassError cass_inet_from_string_n(const char* str,
+                                  size_t str_length,
+                                  CassInet* output) {
+  char buf[CASS_INET_STRING_LENGTH];
+   // Need space for null terminator
+  if (str_length > CASS_INET_STRING_LENGTH - 1) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  memcpy(buf, str, str_length);
+  buf[str_length] = '\0';
+  return cass_inet_from_string(buf, output);
+}
+
 } // extern "C"
