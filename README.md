@@ -2,30 +2,36 @@
 
 [![Build Status](https://travis-ci.org/datastax/cpp-driver.svg?branch=master)](https://travis-ci.org/datastax/cpp-driver)
 
-A C/C++ client driver for Apache Cassandra. This driver works exclusively with
-the Cassandra Query Language version 3 (CQL3) and Cassandra's Native Protocol (version 1 and 2).
+A modern, [feature-rich](#features), and highly tunable C/C++ client library for
+Apache Cassandra (1.2+) and DataStax Enterprise (3.1+) using exclusively
+Cassandra's native protocol and Cassandra Query Language v3.
 
-- Code: https://github.com/datastax/cpp-driver
 - Docs: http://datastax.github.io/cpp-driver
 - JIRA: https://datastax-oss.atlassian.net/browse/CPP
 - Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 - IRC: [#datastax-drivers on `irc.freenode.net <http://freenode.net>`](http://webchat.freenode.net/?channels=datastax-drivers)
 
-## Functionality
-- Completely asynchronous
-- Exception safe
-- Ad-hoc queries
-- Prepared statements
-- Batch statements
-- Connection pool with auto-reconnect
-- Cassandra collections
-- Compatibility with binary protcol version 1 and 2
-- Authentication (via credentials using SASL PLAIN)
-- SSL
+## What's New in 2.0
 
-## Upgrading from a Beta to a RC Release
+- [Latency-aware routing]
+- [Performance metrics]
 
-There were a couple breaking API changes between beta5 and rc1 that are documented in detail [here](http://www.datastax.com/dev/blog/datastax-c-driver-rc1-released).
+## Upgrading from 1.0 to 2.0
+
+There were a couple breaking API changes between 1.0 and 2.0 that are documented [here](http://www.datastax.com/dev/blog/datastax-c-driver-2-0-released).
+
+## Features
+- [Asynchronous API]
+- [Simple], [Prepared], and [Batch] statements
+- [Asynchronous I/O], [parallel execution], and request pipelining
+- Connection pooling
+- Automatic node discovery
+- Automatic reconnection
+- Configurable [load balancing]
+- Works with any cluster size
+- Compatibility with binary protocol version 1 and 2
+- [Authentication] (via credentials using SASL PLAIN)
+- [SSL]
 
 ## Examples
 There are several examples provided here: [examples](https://github.com/datastax/cpp-driver/tree/1.0/examples).
@@ -122,3 +128,16 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+[Latency-aware routing]: http://datastax.github.io/cpp-driver/topics/configuration/#latency-aware-routing
+[Performance metrics]: http://datastax.github.io/cpp-driver/topics/metrics/
+
+[Asynchronous API]: http://datastax.github.io/cpp-driver/topics/#futures
+[Simple]: http://datastax.github.io/cpp-driver/topics/#executing-queries
+[Prepared]: http://datastax.github.io/cpp-driver/topics/basics/prepared_statements/
+[Batch]: http://datastax.github.io/cpp-driver/topics/basics/batches/
+[Asynchronous I/O]: http://datastax.github.io/cpp-driver/topics/#asynchronous-i-o
+[parallel execution]: http://datastax.github.io/cpp-driver/topics/#thread-safety
+[Authentication]: http://datastax.github.io/cpp-driver/topics/security/#authentication
+[load balancing]: http://datastax.github.io/cpp-driver/topics/configuration/#load-balancing
+[SSL]: http://datastax.github.io/cpp-driver/topics/security/ssl/
