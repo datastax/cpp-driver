@@ -3724,6 +3724,7 @@ cass_uuid_string(CassUuid uuid,
 CASS_EXPORT CassError
 cass_uuid_from_string(const char* str,
                       CassUuid* output);
+
 /**
  * Same as cass_uuid_from_string(), but with lengths for string
  * parameters.
@@ -3877,8 +3878,18 @@ cass_inet_from_string(const char* str,
                       CassInet* output);
 
 /**
-  * @see cass_inet_from_string()
-  */
+ * Same as cass_inet_from_string(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassInet
+ *
+ * @param[in] str
+ * @param[in] str_length
+ * @param[out] output
+ * @return same as cass_inet_from_string()
+ *
+ * @see cass_inet_from_string()
+ */
 CASS_EXPORT CassError
 cass_inet_from_string_n(const char* str,
                         size_t str_length,
