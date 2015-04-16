@@ -317,6 +317,9 @@ struct SessionContainer {
    */
   std::vector<test_utils::CassSessionPtr> sessions;
 
+  /**
+   * Cluster instance
+   */
   const CassCluster* cluster;
 
   SessionContainer(const CassCluster* cluster)
@@ -484,13 +487,14 @@ void query_sessions(const SessionContainer& sessions) {
 
 
   std::vector<uv_thread_t> threads(thread_count);
-  std::vector<QuerySession> queries(thread_count);
+  std::vector<QuerySession> queries;
 
   for (unsigned int iterations = 0; iterations < SESSION_STRESS_NUMBER_OF_SHARED_SESSION_THREADS; ++iterations) {
     for (unsigned int n = 0; n < sessions.count(); ++n) {
       int thread_index = (sessions.count() * iterations) + n;
-      queries.push_back(QuerySession(sessions.sessions[n].get()));
-      uv_thread_create(&threads[thread_index], query_session, &queries.back());
+      QuerySession query = QuerySession(sessions.sessions[n].get());
+      queries.push_back(query);
+      uv_thread_create(&threads[thread_index], query_session, &query);
     }
   }
 
@@ -617,13 +621,13 @@ BOOST_AUTO_TEST_CASE(stress)
 
     //Perform query operations between threads using sessions; with chaos
     BOOST_TEST_MESSAGE("Querying " << (SESSION_STRESS_NUMBER_OF_SESSIONS / 4) << " sessions across threads ... This may take awhile");
-    ccm->bootstrap(2);
-    ccm->bootstrap(3);
-    boost::this_thread::sleep_for(boost::chrono::seconds(120));
+    ccm = cql::cql_ccm_bridge_t::create_and_start(configuration, "test", 3);
+    test_utils::initialize_contact_points(cluster.get(), configuration.ip_prefix(), 3, 0);
 
     //Create sessions
     BOOST_TEST_MESSAGE("\tOpening " << (SESSION_STRESS_NUMBER_OF_SESSIONS / 4) << " sessions");
     test_utils::CassLog::reset(SESSION_STRESS_OPENED_LOG_MESSAGE);
+    cass_cluster_set_num_threads_io(cluster.get(), 2);
     open_sessions(&sessions, (SESSION_STRESS_NUMBER_OF_SESSIONS / 4), false);
     BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), (SESSION_STRESS_NUMBER_OF_SESSIONS / 4));
     BOOST_CHECK_EQUAL(sessions.count(), (SESSION_STRESS_NUMBER_OF_SESSIONS / 4));
