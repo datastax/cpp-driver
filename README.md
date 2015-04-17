@@ -19,7 +19,7 @@ the Cassandra Query Language version 3 (CQL3) and Cassandra's Native Protocol (v
 - Batch statements
 - Connection pool with auto-reconnect
 - Cassandra collections
-- Compatibility with binary protcol version 1 and 2
+- Compatibility with binary protocol version 1 and 2
 - Authentication (via credentials using SASL PLAIN)
 - SSL
 
