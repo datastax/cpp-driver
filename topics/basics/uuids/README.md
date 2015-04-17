@@ -1,7 +1,7 @@
 # UUIDs
 
 UUIDs are 128-bit identifiers that can be used to uniquely identify information
-without requiring central coordination. These are often used in Cassandra as
+without requiring central coordination. These are often used in Cassandra 
 for primary and clustering keys. There are two types of UUIDs supported by
 the driver (and Cassandra), version 1 which is time-based and version 4 which
 is randomly generated. Version 1 can be used with Cassandra'a `timeuuid` type

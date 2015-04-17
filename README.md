@@ -6,6 +6,7 @@ A modern, [feature-rich](#features), and highly tunable C/C++ client library for
 Apache Cassandra (1.2+) and DataStax Enterprise (3.1+) using exclusively
 Cassandra's native protocol and Cassandra Query Language v3.
 
+- Code: https://github.com/datastax/cpp-driver
 - Docs: http://datastax.github.io/cpp-driver
 - JIRA: https://datastax-oss.atlassian.net/browse/CPP
 - Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user

@@ -173,21 +173,22 @@ First you will need to open a "Command Prompt" (or Windows SDK Command Prompt) t
 ```dos
 Usage: VC_BUILD.BAT [OPTION...]
 
-        --DEBUG                         Enable debug build
-        --RELEASE                       Enable release build (default)
-        --DISABLE-CLEAN                 Disable clean build
-        --DISABLE-OPENSSL               Disable OpenSSL support
-        --ENABLE-EXAMPLES               Enable example builds
-        --ENABLE-PACKAGES [version]     Enable package generation (*)
-        --ENABLE-TESTS [boost-root-dir] Enable test builds
-        --ENABLE-ZLIB                   Enable zlib
-        --GENERATE-SOLUTION             Generate Visual Studio solution (**)
-        --SHARED                        Build shared library (default)
-        --STATIC                        Build static library
-        --X86                           Target 32-bit build (***)
-        --X64                           Target 64-bit build (***)
+    --DEBUG                           Enable debug build
+    --RELEASE                         Enable release build (default)
+    --DISABLE-CLEAN                   Disable clean build
+    --DISABLE-OPENSSL                 Disable OpenSSL support
+    --ENABLE-EXAMPLES                 Enable example builds
+    --ENABLE-PACKAGES [version]       Enable package generation (*)
+    --ENABLE-TESTS [boost-root-dir]   Enable test builds
+    --ENABLE-ZLIB                     Enable zlib
+    --GENERATE-SOLUTION               Generate Visual Studio solution (**)
+    --SHARED                          Build shared library (default)
+    --STATIC                          Build static library
+    --X86                             Target 32-bit build (***)
+    --X64                             Target 64-bit build (***)
+    --USE-BOOST-ATOMIC                Use Boost atomics - header only
 
-        --HELP                          Display this message
+    --HELP                            Display this message
 
 *   Packages are only generated using detected installations of Visual Studio
 **  Dependencies are built before generation of Visual Studio solution
@@ -204,6 +205,12 @@ To build 64-bit shared library:
 
 ```dos
 VC_BUILD.BAT --X64
+```
+
+To build using Boost atomic implementation:
+
+```dos
+VC_BUILD.BAT --USE-BOOST-ATOMIC
 ```
 
 To build static library:
@@ -265,3 +272,4 @@ VC_BUILD.BAT --STATIC --ENABLE-TESTS <ABSOLUTE-PATH-TO-BOOST>
 
 [e.g. C:\local\boost_1_57_0]
 ```
+ **NOTE:** When enabling tests, --USE-BOOST-ATOMIC will use the Boost atomic implementation supplied by <ABSOLUTE-PATH-TO-BOOST>
