@@ -525,12 +525,13 @@ IF !USE_BOOST_ATOMIC! EQU !TRUE! (
 	REM Determine if Boost atomic should be cloned
 	IF !ENABLE_TESTS! EQU !FALSE! (
 		REM Clone Boost atomic and checkout the appropriate tag
+		ECHO Gathering Boost atomic ^(and dependencies^) > !LOG_BOOST_CLONE!
 		ECHO | SET /P=Gathering Boost atomic ^(and dependencies^) ... 
 		SET "BOOST_ATOMIC_DEPENDENCIES=atomic assert config mpl preprocessor static_assert type_traits"
 		IF NOT EXIST "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!\include" MKDIR "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!\include"
 		REM Store current Visual Studio tools environment variables
 		FOR %%A IN (!BOOST_ATOMIC_DEPENDENCIES!) DO (
-			!GIT! clone !BOOST_REPOSITORY_URL!/%%A "!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!\%%A" > !LOG_BOOST_CLONE! 2>&1
+			!GIT! clone !BOOST_REPOSITORY_URL!/%%A "!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!\%%A" >> !LOG_BOOST_CLONE! 2>&1
 			IF !ERRORLEVEL! EQU 0 (
 				PUSHD "!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!\%%A" > NUL
 				ECHO. >> !LOG_BOOST_CLONE!
