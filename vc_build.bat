@@ -42,11 +42,13 @@ SET ARGUMENT_ENABLE_BUILD_PACKAGES=--ENABLE-PACKAGES
 SET ARGUMENT_ENABLE_TESTS=--ENABLE-TESTS
 SET ARGUMENT_ENABLE_ZLIB=--ENABLE-ZLIB
 SET ARGUMENT_GENERATE_SOLUTION=--GENERATE-SOLUTION
+SET ARGUMENT_INSTALLATION_DIRECTORY=--INSTALL-DIR
 SET ARGUMENT_USE_BOOST_ATOMIC=--USE-BOOST-ATOMIC
 SET ARGUMENT_LIBRARY_TYPE_SHARED=--SHARED
 SET ARGUMENT_LIBRARY_TYPE_STATIC=--STATIC
 SET ARGUMENT_TARGET_ARCHITECTURE_32BIT=--X86
 SET ARGUMENT_TARGET_ARCHITECTURE_64BIT=--X64
+SET ARGUMENT_TARGET_COMPILER=--TARGET-COMPILER
 SET ARGUMENT_HELP=--HELP
 
 REM Option/Value constants
@@ -188,6 +190,31 @@ IF NOT [%1] == [] (
 		SET TARGET_ARCHITECTURE=!ARCHITECTURE_64BIT!
 	)
 
+	REM Target compiler (VS/Windows SDK)
+	IF "!ARGUMENT!" == "!ARGUMENT_TARGET_COMPILER!" (
+		REM Make sure the compiler is valid
+		IF [%2] == [] (
+			ECHO Invalid Compiler: Visual Studio/Windows SDK version must be supplied
+			EXIT /B !EXIT_CODE_MISSING_VISUAL_STUDIO!
+		) ELSE (
+			REM Get the compiler version to use
+			CALL :UPPERCASE %2 TARGET_COMPILER_VERSION
+			SHIFT
+
+			REM Ensure the targeted compiler is valid
+			IF NOT "!TARGET_COMPILER_VERSION!" == "100" (
+				IF NOT "!TARGET_COMPILER_VERSION!" == "110" (
+					IF NOT "!TARGET_COMPILER_VERSION!" == "120" (
+						IF NOT "!TARGET_COMPILER_VERSION!" == "WINSDK" (
+							ECHO Invalid Compiler Version: 100, 110, 120, or WINSDK must be supplied
+							EXIT /B !EXIT_CODE_MISSING_VISUAL_STUDIO!
+						)
+					)
+				)
+			)
+		)
+	)
+
 	REM Enable build of examples
 	IF "!ARGUMENT!" == "!ARGUMENT_ENABLE_EXAMPLES!" (
 		SET ENABLE_EXAMPLES=!TRUE!
@@ -247,7 +274,20 @@ IF NOT [%1] == [] (
 		SET GENERATE_SOLUTION=!TRUE!
 	)
 
-	REM Enable the use of Boot atomics library (header only)
+	REM Update installation directory for the driver
+	IF "!ARGUMENT!" == "!ARGUMENT_INSTALLATION_DIRECTORY!" (
+		REM Make sure the installation directory is available
+		IF [%2] == [] (
+			ECHO Invalid Installation Directory: Directory must be supplied
+			EXIT /B !EXIT_CODE_MISSING_BUILD_DEPENDENCY!
+		) ELSE (
+			REM Get the driver installation directory
+			SET "DRIVER_INSTALLATION_DIRECTORY=%2"
+			SHIFT
+		)
+	)
+
+	REM Enable the use of Boost atomic library (header only)
 	IF "!ARGUMENT!" == "!ARGUMENT_USE_BOOST_ATOMIC!" (
 		SET USE_BOOST_ATOMIC=!TRUE!
 	)
@@ -289,9 +329,21 @@ SET "VISUAL_STUDIO_INTERNAL_VERSIONS=120 110 100"
 SET "VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSIONS=12 11 10"
 SET "VISUAL_STUDIO_VERSIONS=2013 2012 2010"
 SET INDEX=0
+SET TARGET_COMPILER_VERSION_FOUND=!FALSE!
 FOR %%A IN (!VISUAL_STUDIO_INTERNAL_VERSIONS!) DO (
 	SET /A INDEX+=1
-	IF DEFINED VS%%ACOMNTOOLS SET "AVAILABLE_VISUAL_STUDIO_VERSIONS=!AVAILABLE_VISUAL_STUDIO_VERSIONS! !INDEX!"
+	IF DEFINED VS%%ACOMNTOOLS (
+		SET "AVAILABLE_VISUAL_STUDIO_VERSIONS=!AVAILABLE_VISUAL_STUDIO_VERSIONS! !INDEX!"
+
+		REM Determine if targeted version can be detected
+		IF NOT "!TARGET_COMPILER_VERSION!" == "WINSDK" (
+			IF %%A EQU !TARGET_COMPILER_VERSION! (
+				REM Indicate the compiler was found and set the user choice
+				SET TARGET_COMPILER_VERSION_FOUND=!TRUE!
+				SET USER_CHOICE_ENTRY=!INDEX!
+			)
+		)
+	)
 )
 
 REM Determine Windows SDK Version(s) available
@@ -303,8 +355,22 @@ IF DEFINED WindowsSDKDir (
 		FOR %%A IN (!WINDOWS_SDK_VERSIONS!) DO (
 			SET /A INDEX+=1
 			CALL :GETARRAYELEMENT WINDOWS_SDK_VERSIONS !INDEX! CHECK_WINDOWS_SDK_VERSION
-			IF "!WINDOWS_SDK_VERSION!" == "!CHECK_WINDOWS_SDK_VERSION!" SET WINDOWS_SDK_FOUND=!TRUE!
+			IF "!WINDOWS_SDK_VERSION!" == "!CHECK_WINDOWS_SDK_VERSION!" (
+				SET WINDOWS_SDK_FOUND=!TRUE!
+
+				REM Determine if targeted version can be detected
+				IF "!TARGET_COMPILER_VERSION!" == "WINSDK" (
+					SET TARGET_COMPILER_VERSION_FOUND=!TRUE!
+				)
+			)
 		)
+	)
+)
+
+REM Determine if targeted compiler was detected
+IF NOT "!TARGET_COMPILER_VERSION!" == "" (
+	IF !TARGET_COMPILER_VERSION_FOUND! EQU !FALSE! (
+		ECHO Could Not Detect Compiler: !TARGET_COMPILER_VERSION! is not installed
 	)
 )
 
@@ -415,16 +481,24 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
 		ECHO E^) Exit
 		SET "SELECTION_OPTIONS=!SELECTION_OPTIONS!E"
 
-		REM Present selection to the user
-		CHOICE /C !SELECTION_OPTIONS! /N /T 60 /D E /M "Please Select a Compiler:"
-		IF !ERRORLEVEL! GTR !NUMBER_OF_VERSIONS! (
-			EXIT /B
+		REM Determine if the targeted compiler should be used
+		IF !TARGET_COMPILER_VERSION_FOUND! EQU !TRUE! (
+			REM Make selection choice for the user
+			IF "!TARGET_COMPILER_VERSION!" == "WINSDK" SET USER_CHOICE_ENTRY=!WINDOWS_SDK_SELECTION_OPTION!
+			ECHO Please Select a Compiler: !USER_CHOICE_ENTRY!
+		) ELSE (
+			REM Present selection to the user
+			CHOICE /C !SELECTION_OPTIONS! /N /T 60 /D E /M "Please Select a Compiler:"
+			IF !ERRORLEVEL! GTR !NUMBER_OF_VERSIONS! (
+				EXIT /B
+			)
+			SET USER_CHOICE_ENTRY=!ERRORLEVEL!
 		)
 		ECHO.
 
 		REM Determine the selection
-		IF !ERRORLEVEL! NEQ !WINDOWS_SDK_SELECTION_OPTION! (
-			CALL :GETARRAYELEMENT AVAILABLE_VISUAL_STUDIO_VERSIONS !ERRORLEVEL! USER_SELECTION
+		IF !USER_CHOICE_ENTRY! NEQ !WINDOWS_SDK_SELECTION_OPTION! (
+			CALL :GETARRAYELEMENT AVAILABLE_VISUAL_STUDIO_VERSIONS !USER_CHOICE_ENTRY! USER_SELECTION
 			CALL :GETARRAYELEMENT VISUAL_STUDIO_INTERNAL_VERSIONS !USER_SELECTION! VISUAL_STUDIO_INTERNAL_VERSION
 			CALL :GETARRAYELEMENT VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSIONS !USER_SELECTION! VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION
 			CALL :GETARRAYELEMENT VISUAL_STUDIO_VERSIONS !USER_SELECTION! VISUAL_STUDIO_VERSION
@@ -711,9 +785,29 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
 	ECHO Building Driver
 
 	REM Determine if the driver needs to be built
-	IF NOT EXIST "!ABSOLUTE_DRIVER_LIBRARY_DIRECTORY!" (
-		CALL :BUILDDRIVER "!ABSOLUTE_BATCH_DIRECTORY!" "!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!" "!ABSOLUTE_DRIVER_LIBRARY_DIRECTORY!" "!ABSOLUTE_LIBUV_LIBRARY_DIRECTORY!" "!ABSOLUTE_OPENSSL_LIBRARY_DIRECTORY!" "!BOOST_ROOT_DIRECTORY!" "!ABSOLUTE_LIBSSH2_LIBRARY_DIRECTORY!" "!ABSOLUTE_ZLIB_LIBRARY_DIRECTORY!" !BUILD_TYPE! !TARGET_ARCHITECTURE! !LIBRARY_TYPE! !VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION! !ENABLE_EXAMPLES! !GENERATE_SOLUTION! "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!" "!LOG_DRIVER_BUILD!"
+	SET DRIVER_INSTALLATION_DIRECTORY_OVERRIDDEN=!TRUE!
+	IF "!DRIVER_INSTALLATION_DIRECTORY!" == "" (
+		SET "DRIVER_INSTALLATION_DIRECTORY=!ABSOLUTE_DRIVER_LIBRARY_DIRECTORY!"
+		SET DRIVER_INSTALLATION_DIRECTORY_OVERRIDDEN=!FALSE!
+	)
+	IF NOT EXIST "!DRIVER_INSTALLATION_DIRECTORY!" (
+		SET BOOST_DEPENDENCY_SOURCE_DIRECTORY=
+		IF !USE_BOOST_ATOMIC! EQU !TRUE! SET "BOOST_DEPENDENCY_SOURCE_DIRECTORY=!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!"
+		CALL :BUILDDRIVER "!ABSOLUTE_BATCH_DIRECTORY!" "!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!" "!DRIVER_INSTALLATION_DIRECTORY!" "!ABSOLUTE_LIBUV_LIBRARY_DIRECTORY!" "!ABSOLUTE_OPENSSL_LIBRARY_DIRECTORY!" "!BOOST_ROOT_DIRECTORY!" "!ABSOLUTE_LIBSSH2_LIBRARY_DIRECTORY!" "!ABSOLUTE_ZLIB_LIBRARY_DIRECTORY!" !BUILD_TYPE! !TARGET_ARCHITECTURE! !LIBRARY_TYPE! !VISUAL_STUDIO_INTERNAL_SHORTHAND_VERSION! !ENABLE_EXAMPLES! !GENERATE_SOLUTION! "!BOOST_DEPENDENCY_SOURCE_DIRECTORY!" "!LOG_DRIVER_BUILD!"
 		IF !ERRORLEVEL! NEQ 0 EXIT /B !ERRORLEVEL!
+	)
+
+	REM Determine if dependencies should be copied
+	IF !DRIVER_INSTALLATION_DIRECTORY_OVERRIDDEN! EQU !TRUE! (
+		IF EXIST "!DRIVER_INSTALLATION_DIRECTORY!\..\" (
+			ECHO | SET /P=Installing cpp-driver dependencies ... 
+			XCOPY /E /Y "!ABSOLUTE_DEPENDENCIES_LIBRARIES_DIRECTORY!" "!DRIVER_INSTALLATION_DIRECTORY!\..\" >> "!LOG_DRIVER_BUILD!" 2>&1
+			IF NOT !ERRORLEVEL! EQU 0 (
+				ECHO FAILED!
+				ECHO 	See !LOG_DRIVER_BUILD! for more details
+			)
+			ECHO done.
+		)
 	)
 
 	REM Display success message with location to built driver library
@@ -723,7 +817,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
 		ECHO 	!ABSOLUTE_BUILD_DIRECTORY!\!DRIVER_DRIVER_DIRECTORY!\cassandra.sln
 	) ELSE (
 		ECHO Driver has been successfully built [!TARGET_ARCHITECTURE!-bit !BUILD_TYPE!]
-		ECHO 	!ABSOLUTE_DRIVER_LIBRARY_DIRECTORY!
+		ECHO 	!DRIVER_INSTALLATION_DIRECTORY!
 	)
 ) ELSE (
 	REM Ensure the Windows SDK version is undefined (unset)
@@ -813,7 +907,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
 			)			
 
 			REM Build the zip packages for the current target architecture and Visual Studio version
-			ECHO | SET /P=Building the driver package for Win%%C MSVC!VISUAL_STUDIO_INTERNAL_VERSION! ...
+			ECHO | SET /P=Building the driver package for Win%%C MSVC!VISUAL_STUDIO_INTERNAL_VERSION! ... 
 			ECHO !ZIP! a -tzip !ABSOLUTE_PACKAGES_DIRECTORY!\!BUILD_PACKAGE_PREFIX!-!BUILD_PACKAGE_VERSION!-win%%C-msvc!VISUAL_STUDIO_INTERNAL_VERSION!.zip -r !ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!\ -xr^^!!DEPENDENCIES_DIRECTORY! >> "!LOG_PACKAGE_BUILD!"
 			!ZIP! a -tzip "!ABSOLUTE_PACKAGES_DIRECTORY!\!BUILD_PACKAGE_PREFIX!-!BUILD_PACKAGE_VERSION!-win%%C-msvc!VISUAL_STUDIO_INTERNAL_VERSION!.zip" -r "!ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!\*" -xr^^!!DEPENDENCIES_DIRECTORY! >> "!LOG_PACKAGE_BUILD!" 2>&1
 			IF NOT !ERRORLEVEL! EQU 0 (
@@ -822,7 +916,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
 				EXIT /B !EXIT_CODE_PACKAGE_FAILED!
 			)
 			ECHO done.
-			ECHO | SET /P=Building the libuv package for Win%%C MSVC!VISUAL_STUDIO_INTERNAL_VERSION! ...
+			ECHO | SET /P=Building the libuv package for Win%%C MSVC!VISUAL_STUDIO_INTERNAL_VERSION! ... 
 			ECHO !ZIP! a -tzip "!ABSOLUTE_PACKAGES_DIRECTORY!\libuv-!LIBUV_PACKAGE_VERSION!-win%%C-msvc!VISUAL_STUDIO_INTERNAL_VERSION!.zip" -r !ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!\!DEPENDENCIES_DIRECTORY!\!LIBUV_DIRECTORY!\ >> "!LOG_PACKAGE_BUILD!"
 			!ZIP! a -tzip "!ABSOLUTE_PACKAGES_DIRECTORY!\libuv-!LIBUV_PACKAGE_VERSION!-win%%C-msvc!VISUAL_STUDIO_INTERNAL_VERSION!.zip" -r "!ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!\!DEPENDENCIES_DIRECTORY!\!LIBUV_DIRECTORY!\*" >> "!LOG_PACKAGE_BUILD!" 2>&1
 			IF NOT !ERRORLEVEL! EQU 0 (
@@ -831,7 +925,7 @@ IF "!ENABLE_BUILD_PACKAGES!" == "!FALSE!" (
 				EXIT /B !EXIT_CODE_PACKAGE_FAILED!
 			)
 			ECHO done.
-			ECHO | SET /P=Building the OpenSSL package for Win%%C MSVC!VISUAL_STUDIO_INTERNAL_VERSION! ...
+			ECHO | SET /P=Building the OpenSSL package for Win%%C MSVC!VISUAL_STUDIO_INTERNAL_VERSION! ... 
 			ECHO !ZIP! a -tzip !ABSOLUTE_PACKAGES_DIRECTORY!\openssl-!OPENSSL_PACKAGE_VERSION!-win%%C-msvc!VISUAL_STUDIO_INTERNAL_VERSION!.zip -r !ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!\!OPENSSL_DIRECTORY!\ >> "!LOG_PACKAGE_BUILD!"
 			!ZIP! a -tzip "!ABSOLUTE_PACKAGES_DIRECTORY!\openssl-!OPENSSL_PACKAGE_VERSION!-win%%C-msvc!VISUAL_STUDIO_INTERNAL_VERSION!.zip" -r "!ABSOLUTE_DRIVER_PACKAGE_INSTALLATION_DIRECTORY!\!DEPENDENCIES_DIRECTORY!\!OPENSSL_DIRECTORY!\*" >> "!LOG_PACKAGE_BUILD!" 2>&1
 			IF NOT !ERRORLEVEL! EQU 0 (
@@ -884,12 +978,14 @@ REM Display the help message and exit with error code
 	ECHO     !ARGUMENT_BUILD_TYPE_DEBUG!                           Enable debug build
 	ECHO     !ARGUMENT_BUILD_TYPE_RELEASE!                         Enable release build ^(default^)
 	ECHO     !ARGUMENT_DISABLE_CLEAN_BUILD!                   Disable clean build
+	ECHO     !ARGUMENT_TARGET_COMPILER! [version]       120, 110, 100, or WINSDK
 	ECHO     !ARGUMENT_DISABLE_OPENSSL!                 Disable OpenSSL support
 	ECHO     !ARGUMENT_ENABLE_EXAMPLES!                 Enable example builds
 	ECHO     !ARGUMENT_ENABLE_BUILD_PACKAGES! [version]       Enable package generation
 	ECHO     !ARGUMENT_ENABLE_TESTS! [boost-root-dir]   Enable test builds
 	ECHO     !ARGUMENT_ENABLE_ZLIB!                     Enable zlib
 	ECHO     !ARGUMENT_GENERATE_SOLUTION!               Generate Visual Studio solution
+	ECHO     !ARGUMENT_INSTALLATION_DIRECTORY! [install-dir]       Override installation directory
 	ECHO     !ARGUMENT_LIBRARY_TYPE_SHARED!                          Build shared library ^(default^)
 	ECHO     !ARGUMENT_LIBRARY_TYPE_STATIC!                          Build static library
 	IF !SYSTEM_ARCHITECTURE! EQU !ARCHITECTURE_32BIT! (
@@ -899,7 +995,7 @@ REM Display the help message and exit with error code
 		ECHO     !ARGUMENT_TARGET_ARCHITECTURE_32BIT!                             Target 32-bit build
 		ECHO     !ARGUMENT_TARGET_ARCHITECTURE_64BIT!                             Target 64-bit build ^(default^)
 	)
-	ECHO     !ARGUMENT_USE_BOOST_ATOMIC!                Use Boost atomics - header only
+	ECHO     !ARGUMENT_USE_BOOST_ATOMIC!                Use Boost atomic
 	ECHO.
 	ECHO     !ARGUMENT_HELP!                            Display this message
 	EXIT /B
@@ -908,7 +1004,7 @@ REM Get an element from an array
 REM
 REM @param array Global array to iterate through
 REM @param index Index to retrieve
-REM @param return Variable to assign retieved value
+REM @param return Variable to assign retrieved value
 :GETARRAYELEMENT [array] [index] [return]
 	FOR /F "TOKENS=%~2" %%A IN ("!%~1!") DO SET %~3=%%A
 	EXIT /B
@@ -923,7 +1019,7 @@ REM @param return Value parsed from key/value pair
 
 REM Get full path for a given executable in the system PATH
 REM
-REM @param executable Exectuable to search for in PATH
+REM @param executable Executable to search for in PATH
 REM @param return Full path with executable
 :GETFULLPATH [executable] [return]
 	FOR %%A IN ("%~1") DO SET %~2=%%~$PATH:A
@@ -977,7 +1073,7 @@ REM @param target-architecture 32 or 64-bit
 
 REM Configure Visual Studio environment
 REM
-REM @param internal-version Visual Studio interal version (e.b 100, 110,
+REM @param internal-version Visual Studio internal version (e.b 100, 110,
 REM                         120, ...etc)
 REM @param target-architecture 32 or 64-bit
 :CONFIGUREVISUALSTUDIOENVIRONMENT [internal-version] [target-architecture]
@@ -1329,10 +1425,10 @@ REM                              string indicates Windows SDK build
 REM @param build-examples True to build examples; false otherwise
 REM @param generate-solution True to generate visual studio solution file;
 REM                          false to perform build using NMake
-REM @param boost-atomics-directory Library directory for atomic; empty string
+REM @param boost-atomic-directory Library directory for atomic; empty string
 REM                                indicates Boost atomic is not being used
 REM @param log-filename Absolute path and filename for log output
-:BUILDDRIVER [source-directory] [build-directory] [install-directory] [libuv-library-directory] [openssl-library-directory] [boost-library-directory] [libssh2-library-directory] [zlib-library-directory] [build-type] [target-architecture] [library-type] [visual-studio-version] [build-examples] [generate-solution] [boost-atomics-directory] [log-filename]
+:BUILDDRIVER [source-directory] [build-directory] [install-directory] [libuv-library-directory] [openssl-library-directory] [boost-library-directory] [libssh2-library-directory] [zlib-library-directory] [build-type] [target-architecture] [library-type] [visual-studio-version] [build-examples] [generate-solution] [boost-atomic-directory] [log-filename]
 	REM Create driver variables from arguments
 	SET "DRIVER_SOURCE_DIRECTORY=%~1"
 	SHIFT
