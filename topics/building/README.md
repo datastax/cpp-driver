@@ -176,17 +176,19 @@ Usage: VC_BUILD.BAT [OPTION...]
     --DEBUG                           Enable debug build
     --RELEASE                         Enable release build (default)
     --DISABLE-CLEAN                   Disable clean build
+    --TARGET-COMPILER [version]       120, 110, 100, or WINSDK
     --DISABLE-OPENSSL                 Disable OpenSSL support
     --ENABLE-EXAMPLES                 Enable example builds
     --ENABLE-PACKAGES [version]       Enable package generation (*)
     --ENABLE-TESTS [boost-root-dir]   Enable test builds
     --ENABLE-ZLIB                     Enable zlib
     --GENERATE-SOLUTION               Generate Visual Studio solution (**)
+    --INSTALL-DIR [install-dir]       Override installation directory
     --SHARED                          Build shared library (default)
     --STATIC                          Build static library
     --X86                             Target 32-bit build (***)
     --X64                             Target 64-bit build (***)
-    --USE-BOOST-ATOMIC                Use Boost atomics - header only
+    --USE-BOOST-ATOMIC                Use Boost atomic
 
     --HELP                            Display this message
 
@@ -242,6 +244,15 @@ To generate Visual Studio solution file:
 ```dos
 VC_BUILD.BAT --GENERATE-SOLUTION
 ```
+
+To use vc_build.bat for easy inclusion into a project:
+
+``dos
+VC_BUILD.BAT --TARGET-COMPILER 120 --INSTALL-DIR C:\myproject\dependencies\libs\cpp-driver
+```
+
+**NOTE:** When overridding installation directory using `--INSTALL-DIR`, the
+driver dependencies will also be copied (e.g. C:\myproject\dependencies\libs)
 
 ### Test Dependencies and Building the Tests (_NOT REQUIRED_)
 
