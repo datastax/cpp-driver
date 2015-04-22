@@ -94,7 +94,7 @@ SomeObject()
 ```
 * Comments should begin with a space.
 ```cpp
-// This is commnet
+// This is comment
 ```
 
 ## Testing
