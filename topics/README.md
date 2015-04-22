@@ -144,6 +144,16 @@ The [`CassCluster`](http://datastax.github.io/cpp-driver/api/struct_cass_cluster
 
 The [`CassSession`](http://datastax.github.io/cpp-driver/api/struct_cass_session/) object is used for query execution. Internally, a session object also manages a pool of client connections to Cassandra and uses a load balancing policy to distribute requests across those connections. An application should create a single session object per keyspace as a session object is designed to be created once, reused, and shared by multiple threads within the application. The throughput of a session can be scaled by increasing the number of I/O threads. An I/O thread is used to handle reading and writing query request data to and from Cassandra. The number of I/O threads defaults to one per CPU core, but it can be configured using [`cass_cluster_set_num_threads_io()`](). It’s generally better to create a single session with more I/O threads than multiple sessions with a smaller number of I/O threads. More DataStax driver best practices can be found in this [post](http://www.datastax.com/dev/blog/4-simple-rules-when-using-the-datastax-drivers-for-cassandra).
 
+## Asynchronous I/O
+
+Each I/O thread maintains a small number of connections for each node in the
+Cassandra cluster and each of those connections can handle several simultaneous
+requests using pipelining. Asynchronous I/O and pipelining together allow each
+connection to handle several (up to 128 requests with protocol v1/v2 and 32k with
+protocol v3) in-flight requests concurrently. This significantly reduces the
+number of connections required to be open to Cassandra and
+allows the driver to batch requests destined for the same node.
+
 ## Thread safety
 
 A [`CassSession`](http://datastax.github.io/cpp-driver/api/struct_cass_session/) is designed to be used concurrently from multiple threads. [`CassFuture`](http://datastax.github.io/cpp-driver/api/struct_cass_future/) is also thread safe. Other than these exclusions, in general, functions that might modify an object's state are **NOT** thread safe. Object's that are immutable (marked 'const') can be read safely by multiple threads.

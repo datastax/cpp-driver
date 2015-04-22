@@ -173,21 +173,24 @@ First you will need to open a "Command Prompt" (or Windows SDK Command Prompt) t
 ```dos
 Usage: VC_BUILD.BAT [OPTION...]
 
-        --DEBUG                         Enable debug build
-        --RELEASE                       Enable release build (default)
-        --DISABLE-CLEAN                 Disable clean build
-        --DISABLE-OPENSSL               Disable OpenSSL support
-        --ENABLE-EXAMPLES               Enable example builds
-        --ENABLE-PACKAGES [version]     Enable package generation (*)
-        --ENABLE-TESTS [boost-root-dir] Enable test builds
-        --ENABLE-ZLIB                   Enable zlib
-        --GENERATE-SOLUTION             Generate Visual Studio solution (**)
-        --SHARED                        Build shared library (default)
-        --STATIC                        Build static library
-        --X86                           Target 32-bit build (***)
-        --X64                           Target 64-bit build (***)
+    --DEBUG                           Enable debug build
+    --RELEASE                         Enable release build (default)
+    --DISABLE-CLEAN                   Disable clean build
+    --TARGET-COMPILER [version]       120, 110, 100, or WINSDK
+    --DISABLE-OPENSSL                 Disable OpenSSL support
+    --ENABLE-EXAMPLES                 Enable example builds
+    --ENABLE-PACKAGES [version]       Enable package generation (*)
+    --ENABLE-TESTS [boost-root-dir]   Enable test builds
+    --ENABLE-ZLIB                     Enable zlib
+    --GENERATE-SOLUTION               Generate Visual Studio solution (**)
+    --INSTALL-DIR [install-dir]       Override installation directory
+    --SHARED                          Build shared library (default)
+    --STATIC                          Build static library
+    --X86                             Target 32-bit build (***)
+    --X64                             Target 64-bit build (***)
+    --USE-BOOST-ATOMIC                Use Boost atomic
 
-        --HELP                          Display this message
+    --HELP                            Display this message
 
 *   Packages are only generated using detected installations of Visual Studio
 **  Dependencies are built before generation of Visual Studio solution
@@ -204,6 +207,12 @@ To build 64-bit shared library:
 
 ```dos
 VC_BUILD.BAT --X64
+```
+
+To build using Boost atomic implementation:
+
+```dos
+VC_BUILD.BAT --USE-BOOST-ATOMIC
 ```
 
 To build static library:
@@ -236,6 +245,15 @@ To generate Visual Studio solution file:
 VC_BUILD.BAT --GENERATE-SOLUTION
 ```
 
+To use vc_build.bat for easy inclusion into a project:
+
+``dos
+VC_BUILD.BAT --TARGET-COMPILER 120 --INSTALL-DIR C:\myproject\dependencies\libs\cpp-driver
+```
+
+**NOTE:** When overridding installation directory using `--INSTALL-DIR`, the
+driver dependencies will also be copied (e.g. C:\myproject\dependencies\libs)
+
 ### Test Dependencies and Building the Tests (_NOT REQUIRED_)
 
 #### Obtaining Test Dependencies
@@ -265,3 +283,4 @@ VC_BUILD.BAT --STATIC --ENABLE-TESTS <ABSOLUTE-PATH-TO-BOOST>
 
 [e.g. C:\local\boost_1_57_0]
 ```
+ **NOTE:** When enabling tests, --USE-BOOST-ATOMIC will use the Boost atomic implementation supplied by <ABSOLUTE-PATH-TO-BOOST>
