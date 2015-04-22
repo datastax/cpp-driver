@@ -31,7 +31,7 @@ There were a couple breaking API changes between 1.0 and 2.0 that are documented
 - Configurable [load balancing]
 - Works with any cluster size
 - Compatibility with binary protocol version 1 and 2
-- [Authentication] (via credentials using SASL PLAIN)
+- [Authentication]
 - [SSL]
 
 ## Examples
