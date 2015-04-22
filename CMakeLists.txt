@@ -155,9 +155,9 @@ if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_TESTS)
 
   # Ensure the driver components exist (optional)
   if(CASS_USE_BOOST_ATOMIC)
-    find_package(Boost COMPONENTS atomic)
-    if(NOT Boost_FOUND)
-      message(FATAL_ERROR "Boost atomic is required to build driver because of -DCASS_USE_BOOST_ATOMIC=On")
+    find_package(Boost)
+    if(NOT Boost_INCLUDE_DIR)
+      message(FATAL_ERROR "Boost headers required to build driver because of -DCASS_USE_BOOST_ATOMIC=On")
     endif()
 
     # Assign Boost include and libraries
@@ -441,6 +441,25 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 file(GLOB API_HEADER_FILES ${PROJECT_SOURCE_DIR}/include/*.h)
 file(GLOB INC_FILES ${PROJECT_SOURCE_DIR}/src/*.hpp)
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
+
+# Determine atomic library to include
+if(CASS_USE_BOOST_ATOMIC)
+  set(INC_FILES ${INC_FILES}
+    ${PROJECT_SOURCE_DIR}/src/atomic/atomic_boost.hpp)
+elseif(CASS_USE_STD_ATOMIC)
+  set(INC_FILES ${INC_FILES}
+    ${PROJECT_SOURCE_DIR}/src/atomic/atomic_std.hpp)
+else()
+  set(INC_FILES ${INC_FILES}
+    ${PROJECT_SOURCE_DIR}/src/atomic/atomic_intrinsics.hpp)
+  if(WIN32)
+    set(INC_FILES ${INC_FILES}
+      ${PROJECT_SOURCE_DIR}/src/atomic/atomic_intrinsics_msvc.hpp)
+  else()
+    set(INC_FILES ${INC_FILES}
+      ${PROJECT_SOURCE_DIR}/src/atomic/atomic_intrinsics_gcc.hpp)
+  endif()
+endif()
 
 set(SRC_FILES ${SRC_FILES}
   ${PROJECT_SOURCE_DIR}/src/third_party/hdr_histogram/hdr_histogram.cpp)
