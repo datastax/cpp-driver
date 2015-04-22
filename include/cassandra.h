@@ -309,7 +309,7 @@ typedef struct CassSchemaMetaField_ CassSchemaMetaField;
 typedef struct CassUuidGen_ CassUuidGen;
 
 /**
- * @struct CassMetric
+ * @struct CassMetrics
  *
  * A snapshot of the session's performance/diagnostic metrics.
  */
