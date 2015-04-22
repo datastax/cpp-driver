@@ -52,6 +52,7 @@ test/unit_tests/cassandra_test
 
 # API docs files
 Doxyfile
+docs
 
 # editor
 *.swp
@@ -70,7 +71,7 @@ Doxyfile
 # AStyle backup
 *.orig
 
-# QT Creator 
+# QT Creator
 *.config
 *.creator*
 *.files

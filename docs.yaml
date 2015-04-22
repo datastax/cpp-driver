@@ -4,7 +4,7 @@ sections:
   - title:    Topics
     prefix:   /topics
     type:     markdown
-    files:    'topics/**/*.md'
+    files:   'topics/**/*.md'
 
   - title:     API docs
     prefix:    /api
@@ -20,3 +20,9 @@ sections:
       TYPEDEF_HIDES_STRUCT = YES
       EXTRACT_ALL = NO
       INLINE_SOURCES = NO
+
+versions:
+  - name: v2.0
+    ref: a978c1c15aeb986f3c1df18f7b3598b785af989e
+  - name: v1.0
+    ref: fd331e09f25e8e6058ad7f98e7e72f54bc9a9a94
