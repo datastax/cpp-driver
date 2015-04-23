@@ -1,3 +1,27 @@
+2.0.0
+===========
+April 23, 2015
+
+Features
+--------
+* Added latency-aware load balancing. To enable use:
+  `cass_cluster_set_latency_aware_routing()`
+* Added performance metrics. To get metrics use:
+  `cass_session_get_metrics()`
+* Added `CassInet` string conversion functions:
+  `cass_inet_string()` and `cass_inet_to_string()`
+
+Other
+--------
+* Removed internal dependency on Boost. Optional: Boost Atomic can still be used
+  as an implementation for internal atomic operations and memory fences.
+* Removed wrapper types `CassString`, `CassBytes` and `CassDecimal`
+* Added string length functions (functions with the suffix "_n") for all
+  functions that previously took a null-terminated or `CassString` parameter.
+* Added missing `cass_statement_bind_null_by_name()` function
+* Fixed issue where time-based UUIDs (`CassUuid` v4) had the incorrect time on
+  32-bit systems
+
 1.0.1
 ===========
 Mar 2, 2015
