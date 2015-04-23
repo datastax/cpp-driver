@@ -12,7 +12,7 @@ function check_command {
 check_command "dch" "debhelper"
 check_command "lsb_release" "lsb-release"
 
-version="1.0.1"
+version="2.0.0"
 release=1
 dist=$(lsb_release -s -c)
 base="cassandra-cpp-driver-$version"

@@ -59,6 +59,8 @@ namespace cass {
 
 #else
 
+#define STRERROR_BUFSIZE_ 256
+
   uint64_t get_random_seed(uint64_t seed) {
     Logger::init();
 
@@ -67,25 +69,25 @@ namespace cass {
     int fd = open(device, O_RDONLY);
 
     if (fd < 0) {
-      char buf[128];
-      strerror_r(errno, buf, sizeof(buf));
-      LOG_CRITICAL("Unable to open random device (%s): %s", device, buf);
+      char buf[STRERROR_BUFSIZE_];
+      char* err = strerror_r(errno, buf, sizeof(buf));
+      LOG_CRITICAL("Unable to open random device (%s): %s", device, err);
       return seed;
     }
 
     ssize_t num_bytes = read(fd, reinterpret_cast<char*>(&seed), sizeof(seed));
     if (num_bytes < 0) {
-      char buf[128];
-      strerror_r(errno, buf, sizeof(buf));
-      LOG_CRITICAL("Unable to read from random device (%s): %s", device, buf);
+      char buf[STRERROR_BUFSIZE_];
+      char* err = strerror_r(errno, buf, sizeof(buf));
+      LOG_CRITICAL("Unable to read from random device (%s): %s", device, err);
     } else if (num_bytes != sizeof(seed)) {
-      char buf[128];
-      strerror_r(errno, buf, sizeof(buf));
+      char buf[STRERROR_BUFSIZE_];
+      char* err = strerror_r(errno, buf, sizeof(buf));
       LOG_CRITICAL("Unable to read full seed value (expected: %u read: %u) "
                    "from random device (%s): %s",
                    static_cast<unsigned int>(sizeof(seed)),
                    static_cast<unsigned int>(num_bytes),
-                   device, buf);
+                   device, err);
     }
 
     close(fd);
