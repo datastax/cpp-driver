@@ -1,10 +1,8 @@
 %define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
-%{!?libuv_version: %define libuv_version 1.4.2}
-
 Name:    cassandra-cpp-driver
 Epoch:   1
-Version: 1.0.1
+Version: %{driver_version}
 Release: 1%{?dist}
 Summary: DataStax C/C++ Driver for Apache Cassandra
 

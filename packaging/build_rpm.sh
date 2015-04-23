@@ -17,7 +17,7 @@ if [[ ! -z $1 ]]; then
   arch=$1
 fi
 
-version="1.0.1"
+version="2.0.0"
 base="cassandra-cpp-driver-$version"
 archive="$base.tar.gz"
 files="CMakeLists.txt cmake_uninstall.cmake.in include src README.md LICENSE.txt"
@@ -28,6 +28,8 @@ if [[ -e $libuv_version ]]; then
   echo "'libuv' required, but not installed"
   exit 1
 fi
+
+echo "Using libuv version $libuv_version"
 
 if [[ -d build ]]; then
   read -p "Build directory exists, remove? [y|n] " -n 1 -r
@@ -52,6 +54,6 @@ tar zcf $archive $base
 popd
 
 echo "Building package:"
-rpmbuild --target $arch --define "_topdir ${PWD}/build" -ba cassandra-cpp-driver.spec
+rpmbuild --target $arch --define "_topdir ${PWD}/build" --define "driver_version $version" --define "libuv_version $libuv_version" -ba cassandra-cpp-driver.spec
 
 exit 0
