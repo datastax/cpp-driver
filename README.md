@@ -17,9 +17,13 @@ Cassandra's native protocol and Cassandra Query Language v3.
 - [Latency-aware routing]
 - [Performance metrics]
 
+More information about all the changes found in the 2.0 release can be found in
+this [blog post] and in the [changelog](CHANGELOG.md).
+
 ## Upgrading from 1.0 to 2.0
 
-There were a couple breaking API changes between 1.0 and 2.0 that are documented [here](http://www.datastax.com/dev/blog/datastax-c-driver-2-0-released).
+There were a couple breaking API changes between 1.0 and 2.0 that are
+documented [here](http://www.datastax.com/dev/blog/datastax-c-driver-2-0-released).
 
 ## Features
 - [Asynchronous API]
@@ -132,6 +136,7 @@ limitations under the License.
 
 [Latency-aware routing]: http://datastax.github.io/cpp-driver/topics/configuration/#latency-aware-routing
 [Performance metrics]: http://datastax.github.io/cpp-driver/topics/metrics/
+[blog post]: http://www.datastax.com/dev/blog/datastax-c-driver-2-0-released
 
 [Asynchronous API]: http://datastax.github.io/cpp-driver/topics/#futures
 [Simple]: http://datastax.github.io/cpp-driver/topics/#executing-queries
