@@ -29,6 +29,8 @@ if [[ -e $libuv_version ]]; then
   exit 1
 fi
 
+echo "Using libuv version $libuv_version"
+
 if [[ -d build ]]; then
   read -p "Build directory exists, remove? [y|n] " -n 1 -r
   echo
@@ -52,6 +54,6 @@ tar zcf $archive $base
 popd
 
 echo "Building package:"
-rpmbuild --target $arch --define "_topdir ${PWD}/build" -ba cassandra-cpp-driver.spec
+rpmbuild --target $arch --define "_topdir ${PWD}/build" --define "driver_version $version" --define "libuv_version $libuv_version" -ba cassandra-cpp-driver.spec
 
 exit 0
