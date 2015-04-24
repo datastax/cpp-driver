@@ -367,4 +367,42 @@ BOOST_AUTO_TEST_CASE(node_decommission)
   BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 0ul);
 }
 
+/**
+ * Empty 'system.local' table (Ignored/Skipped control connection)
+ *
+ * This test ensures that a node with an empty 'system.local' table is
+ * ignored/skipped and the next node in the query plan is used.
+ *
+ * @since 1.0.2
+ * @jira_ticket CPP-257
+ * @test_category control_connection
+ */
+BOOST_AUTO_TEST_CASE(empty_system_local_table)
+{
+  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 1);
+  test_utils::CassLog::reset("No row found in " + conf.ip_prefix() + "1's local system table");
+
+  // Truncate the 'system.local' table on node 1
+  {
+    test_utils::CassClusterPtr cluster(cass_cluster_new());
+    test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+    test_utils::execute_query(session.get(), "TRUNCATE system.local");
+    test_utils::execute_query(session.get(), "DELETE FROM system.local WHERE key='local'");
+  }
+
+  // Add a new node to complete connection
+  ccm->bootstrap(2);
+
+  // Attempt to connect to defunct control connection
+  {
+    test_utils::CassClusterPtr cluster(cass_cluster_new());
+    test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 2, 0);
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+  }
+
+  BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 1ul);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
