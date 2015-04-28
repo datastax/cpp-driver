@@ -26,11 +26,10 @@ SET EXIT_CODE_MISSING_VISUAL_STUDIO=2
 SET EXIT_CODE_MISSING_BUILD_DEPENDENCY=3
 SET EXIT_CODE_INVALID_BUILD_DEPENDENCY_VERSION=4
 SET EXIT_CODE_CLONE_FAILED=5
-SET EXIT_CODE_CHECKOUT_FAILED=6
-SET EXIT_CODE_BUILD_DEPENDENCY_FAILED=7
-SET EXIT_CODE_BUILD_DRIVER_FAILED=8
-SET EXIT_CODE_INVALID_VERSION=9
-SET EXIT_CODE_PACKAGE_FAILED=10
+SET EXIT_CODE_BUILD_DEPENDENCY_FAILED=6
+SET EXIT_CODE_BUILD_DRIVER_FAILED=7
+SET EXIT_CODE_INVALID_VERSION=8
+SET EXIT_CODE_PACKAGE_FAILED=9
 
 REM Argument constants
 SET ARGUMENT_BUILD_TYPE_DEBUG=--DEBUG
@@ -110,6 +109,7 @@ SET LIBUV_PACKAGE_VERSION=1.4.2
 SET GYP_REPOSITORY_URL=https://chromium.googlesource.com/external/gyp.git
 SET LIBSSH2_REPOSITORY_URL=http://git.libssh2.org/libssh2.git
 SET LIBSSH2_DIRECTORY=libssh2
+SET LIBSSH2_BRANCH_TAG_VERSION=libssh2-1.5.0
 SET OPENSSL_REPOSITORY_URL=https://github.com/openssl/openssl.git
 SET OPENSSL_DIRECTORY=openssl
 SET OPENSSL_BRANCH_TAG_VERSION=OpenSSL_1_0_2
@@ -599,29 +599,17 @@ IF !USE_BOOST_ATOMIC! EQU !TRUE! (
 	REM Determine if Boost atomic should be cloned
 	IF !ENABLE_TESTS! EQU !FALSE! (
 		REM Clone Boost atomic and checkout the appropriate tag
-		ECHO Gathering Boost atomic ^(and dependencies^) > !LOG_BOOST_CLONE!
-		ECHO | SET /P=Gathering Boost atomic ^(and dependencies^) ... 
+		ECHO Gathering Boost atomic ^(and dependencies^) !BOOST_BRANCH_TAG_VERSION! > "!LOG_BOOST_CLONE!"
+		ECHO | SET /P=Gathering Boost atomic ^(and dependencies^) !BOOST_BRANCH_TAG_VERSION! ... 
 		SET "BOOST_ATOMIC_DEPENDENCIES=atomic assert config mpl preprocessor static_assert type_traits"
 		IF NOT EXIST "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!\include" MKDIR "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!\include"
 		REM Store current Visual Studio tools environment variables
 		FOR %%A IN (!BOOST_ATOMIC_DEPENDENCIES!) DO (
-			!GIT! clone !BOOST_REPOSITORY_URL!/%%A "!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!\%%A" >> !LOG_BOOST_CLONE! 2>&1
-			IF !ERRORLEVEL! EQU 0 (
-				PUSHD "!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!\%%A" > NUL
-				ECHO. >> !LOG_BOOST_CLONE!
-				!GIT! checkout !BOOST_BRANCH_TAG_VERSION! >> !LOG_BOOST_CLONE! 2>&1.
-				IF !ERRORLEVEL! EQU 0 (
-					XCOPY /E /Y include "!ABSOLUTE_DEPENDENCIES_DIRECTORY!\!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!\include" >> !LOG_BOOST_CLONE!
-				) ELSE (
-					ECHO FAILED!
-					ECHO 	See !LOG_BOOST_CLONE! for more details
-					EXIT /B !EXIT_CODE_CHECKOUT_FAILED!
-				)
-				POPD
-			) ELSE (
+			!GIT! clone --depth 1 --branch !BOOST_BRANCH_TAG_VERSION! --single-branch !BOOST_REPOSITORY_URL!/%%A "!DEPENDENCIES_SOURCE_DIRECTORY!\!BOOST_DIRECTORY!\%%A" >> "!LOG_BOOST_CLONE!" 2>&1
+			IF NOT !ERRORLEVEL! EQU 0 (
 				ECHO FAILED!
 				ECHO 	See !LOG_BOOST_CLONE! for more details
-				EXIT /B !EXIT_CODE_CHECKOUT_FAILED!
+				EXIT /B !EXIT_CODE_CLONE_FAILED!
 			)
 		)
 		ECHO done.
@@ -630,33 +618,23 @@ IF !USE_BOOST_ATOMIC! EQU !TRUE! (
 
 REM Clone libuv and checkout the appropriate tag
 IF NOT EXIST "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" (
-	ECHO | SET /P=Cloning libuv ... 
-	!GIT! clone !LIBUV_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" > !LOG_LIBUV_BUILD! 2>&1
+	ECHO Cloning libuv !LIBUV_BRANCH_TAG_VERSION! > "!LOG_LIBUV_BUILD!"
+	ECHO | SET /P=Cloning libuv !LIBUV_BRANCH_TAG_VERSION! ... 
+	!GIT! clone --depth 1 --branch !LIBUV_BRANCH_TAG_VERSION! --single-branch !LIBUV_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" >> "!LOG_LIBUV_BUILD!" 2>&1
 	IF !ERRORLEVEL! EQU 0 (
 		ECHO done.
-		PUSHD "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" > NUL
-		ECHO | SET /P=Checking out !LIBUV_BRANCH_TAG_VERSION! ... 
-		ECHO. >> !LOG_LIBUV_BUILD!
-		!GIT! checkout !LIBUV_BRANCH_TAG_VERSION! >> !LOG_LIBUV_BUILD! 2>&1
+		REM Clone GYP (libuv dependency) to correctly use googlesource URL
+		ECHO. >> "!LOG_LIBUV_BUILD!"
+		ECHO Cloning gyp >> "!LOG_LIBUV_BUILD!"
+		ECHO | SET /P=Cloning gyp ... 
+		!GIT! clone --depth 1 --single-branch !GYP_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!\build\gyp" >> "!LOG_LIBUV_BUILD!" 2>&1
 		IF !ERRORLEVEL! EQU 0 (
 			ECHO done.
-			REM Clone GYP (libuv dependency) to correctly use googlesource URL
-			ECHO | SET /P=Cloning gyp ... 
-			ECHO. >> !LOG_LIBUV_BUILD!
-			!GIT! clone !GYP_REPOSITORY_URL! build\gyp >> !LOG_LIBUV_BUILD! 2>&1
-			IF !ERRORLEVEL! EQU 0 (
-				ECHO done.
-			) ELSE (
-				ECHO FAILED!
-				ECHO 	See !LOG_LIBUV_BUILD! for more details
-				EXIT /B !EXIT_CODE_CLONE_FAILED!
-			)
 		) ELSE (
 			ECHO FAILED!
 			ECHO 	See !LOG_LIBUV_BUILD! for more details
-			EXIT /B !EXIT_CODE_CHECKOUT_FAILED!
+			EXIT /B !EXIT_CODE_CLONE_FAILED!
 		)
-		POPD
 	) ELSE (
 		ECHO FAILED!
 		ECHO 	See !LOG_LIBUV_BUILD! for more details
@@ -667,22 +645,11 @@ IF NOT EXIST "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" (
 REM Clone zlib (libssh2 dependency) and checkout the appropriate tag
 IF !ENABLE_ZLIB! EQU !TRUE! (
 	IF NOT EXIST "!DEPENDENCIES_SOURCE_DIRECTORY!\!ZLIB_DIRECTORY!" (
-		ECHO | SET /P=Cloning zlib ... 
-		!GIT! clone !ZLIB_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!ZLIB_DIRECTORY!" > !LOG_ZLIB_BUILD! 2>&1
+		ECHO Cloning zlib !ZLIB_BRANCH_TAG_VERSION! > "!LOG_ZLIB_BUILD!"
+		ECHO | SET /P=Cloning zlib !ZLIB_BRANCH_TAG_VERSION! ... 
+		!GIT! clone --depth 1 --branch !ZLIB_BRANCH_TAG_VERSION! --single-branch !ZLIB_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!ZLIB_DIRECTORY!" >> "!LOG_ZLIB_BUILD!" 2>&1
 		IF !ERRORLEVEL! EQU 0 (
 			ECHO done.
-			PUSHD "!DEPENDENCIES_SOURCE_DIRECTORY!\!ZLIB_DIRECTORY!" > NUL
-			ECHO | SET /P=Checking out !ZLIB_BRANCH_TAG_VERSION! ... 
-			ECHO. >> !LOG_ZLIB_BUILD!
-			!GIT! checkout !ZLIB_BRANCH_TAG_VERSION! >> !LOG_ZLIB_BUILD! 2>&1
-			IF !ERRORLEVEL! EQU 0 (
-				ECHO done.
-			) ELSE (
-				ECHO FAILED!
-				ECHO 	See !LOG_ZLIB_BUILD! for more details
-				EXIT /B !EXIT_CODE_CHECKOUT_FAILED!
-			)
-			POPD
 		) ELSE (
 			ECHO FAILED!
 			ECHO 	See !LOG_ZLIB_BUILD! for more details
@@ -695,8 +662,9 @@ REM Determine if libssh2 should be cloned
 IF !ENABLE_LIBSSH2! EQU !TRUE! (
 	REM Clone libssh2
 	IF NOT EXIST "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBSSH2_DIRECTORY!" (
-		ECHO | SET /P=Cloning libssh2 ... 
-		!GIT! clone !LIBSSH2_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBSSH2_DIRECTORY!" > !LOG_LIBSSH2_BUILD! 2>&1
+		ECHO Cloning libssh2 !LIBSSH2_BRANCH_TAG_VERSION! > "!LOG_LIBSSH2_BUILD!"
+		ECHO | SET /P=Cloning libssh2 !LIBSSH2_BRANCH_TAG_VERSION! ... 
+		!GIT! clone --depth 1 --branch !LIBSSH2_BRANCH_TAG_VERSION! --single-branch !LIBSSH2_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBSSH2_DIRECTORY!" >> "!LOG_LIBSSH2_BUILD!" 2>&1
 		IF !ERRORLEVEL! EQU 0 (
 			ECHO done.
 		) ELSE (
@@ -711,22 +679,11 @@ REM Determine is OpenSSL should be cloned
 IF !ENABLE_OPENSSL! EQU !TRUE! (
 	REM Clone OpenSSL and checkout the appropriate tag
 	IF NOT EXIST "!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" (
-		ECHO | SET /P=Cloning OpenSSL ... 
-		!GIT! clone !OPENSSL_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" > !LOG_OPENSSL_BUILD! 2>&1
+		ECHO Cloning OpenSSL !OPENSSL_BRANCH_TAG_VERSION! > "!LOG_OPENSSL_BUILD!"
+		ECHO | SET /P=Cloning OpenSSL !OPENSSL_BRANCH_TAG_VERSION! ... 
+		!GIT! clone --depth 1 --branch !OPENSSL_BRANCH_TAG_VERSION! --single-branch !OPENSSL_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" >> "!LOG_OPENSSL_BUILD!" 2>&1
 		IF !ERRORLEVEL! EQU 0 (
 			ECHO done.
-			PUSHD "!DEPENDENCIES_SOURCE_DIRECTORY!\!OPENSSL_DIRECTORY!" > NUL
-			ECHO | SET /P=Checking out !OPENSSL_BRANCH_TAG_VERSION! ... 
-			ECHO. >> !LOG_OPENSSL_BUILD!
-			!GIT! checkout !OPENSSL_BRANCH_TAG_VERSION! >> !LOG_OPENSSL_BUILD! 2>&1
-			IF !ERRORLEVEL! EQU 0 (
-				ECHO done.
-			) ELSE (
-				ECHO FAILED!
-				ECHO 	See !LOG_OPENSSL_BUILD! for more details
-				EXIT /B !EXIT_CODE_CHECKOUT_FAILED!
-			)
-			POPD
 		) ELSE (
 			ECHO FAILED!
 			ECHO 	See !LOG_OPENSSL_BUILD! for more details
@@ -1129,17 +1086,32 @@ REM @param is-clean-after-install True if clean should be performed after
 REM                               install; false otherwise
 REM @param log-filename Absolute path and filename for log output
 :BUILDLIBUV [source-directory] [install-directory] [target-architecture] [library-type] [is-windows-sdk-build] [is-clean-after-install] [log-filename]
+	REM Create library variables from arguments
+	SET LIBUV_SOURCE_DIRECTORY=%~1"
+	SHIFT
+	SET "LIBUV_INSTALL_DIRECTORY=%~1"
+	SHIFT
+	SET LIBUV_TARGET_ARCHITECTURE=%~1
+	SHIFT
+	SET "LIBUV_LIBRARY_TYPE=%~1"
+	SHIFT
+	SET LIBUV_IS_WINDOWS_SDK_BUILD=%~1
+	SHIFT
+	SET LIBUV_IS_CLEAN_AFTER_INSTALL=%~1
+	SHIFT
+	SET "LIBUV_LOG_FILENAME=%~1"
+
 	REM Build libuv dependency
 	ECHO Building libuv
-	PUSHD "%~1" > NUL
-	IF %~3 EQU !ARCHITECTURE_32BIT! (
+	PUSHD "!LIBUV_SOURCE_DIRECTORY!" > NUL
+	IF !LIBUV_TARGET_ARCHITECTURE! EQU !ARCHITECTURE_32BIT! (
 		SET LIBUV_TARGET_ARCHITECTURE=x86
 		SET LIBUV_VC_TARGET_ARCHITECTURE=Win32
 	) ELSE (
 		SET LIBUV_TARGET_ARCHITECTURE=x64
 		SET LIBUV_VC_TARGET_ARCHITECTURE=x64
 	)
-	IF "%~4" == "!LIBRARY_TYPE_SHARED!" (
+	IF "!LIBUV_LIBRARY_TYPE!" == "!LIBRARY_TYPE_SHARED!" (
 		SET LIBUV_LIBRARY_TYPE=shared
 	) ELSE (
 		SET LIBUV_LIBRARY_TYPE=static
@@ -1147,62 +1119,62 @@ REM @param log-filename Absolute path and filename for log output
 	ECHO | SET /P=Configuring libuv ... 
 	REM Modify the libuv build script to ensure proper Visual Studio detection
 	SET LIBUV_VCBUILD_SCRIPT=vcbuild.bat
-	IF "%~5" == "!FALSE!" (
+	IF "!LIBUV_IS_WINDOWS_SDK_BUILD!" == "!FALSE!" (
 		SET LIBUV_VCBUILD_SCRIPT=vcbuild-modified.bat
 		TYPE vcbuild.bat | FINDSTR /V /C:"if defined WindowsSDKDir goto select-target" | FINDSTR /V /C:"if defined VCINSTALLDIR goto select-target" > !LIBUV_VCBUILD_SCRIPT!
 	)
-	ECHO !LIBUV_VCBUILD_SCRIPT! release nobuild !LIBUV_TARGET_ARCHITECTURE! !LIBUV_LIBRARY_TYPE! >> "%~7"
-	CALL !LIBUV_VCBUILD_SCRIPT! release nobuild !LIBUV_TARGET_ARCHITECTURE! !LIBUV_LIBRARY_TYPE! >> "%~7" 2>&1
+	ECHO !LIBUV_VCBUILD_SCRIPT! release nobuild !LIBUV_TARGET_ARCHITECTURE! !LIBUV_LIBRARY_TYPE! >> "!LIBUV_LOG_FILENAME!"
+	CALL !LIBUV_VCBUILD_SCRIPT! release nobuild !LIBUV_TARGET_ARCHITECTURE! !LIBUV_LIBRARY_TYPE! >> "!LIBUV_LOG_FILENAME!" 2>&1
 	IF NOT !ERRORLEVEL! EQU 0 (
 		ECHO FAILED!
-		ECHO 	See %~7 for more details
+		ECHO 	See !LIBUV_LOG_FILENAME! for more details
 		EXIT /B !EXIT_CODE_BUILD_DEPENDENCY_FAILED!
 	)
 	ECHO done.
 	ECHO | SET /P=Building libuv ... 
-	ECHO !MSBUILD! uv.sln /T:libuv /P:Configuration=Release /P:Platform=!LIBUV_VC_TARGET_ARCHITECTURE! /CLP:NoSummary;NoItemAndPropertyList;Verbosity=minimal /NOLOGO >> "%~7"
-	!MSBUILD! uv.sln /T:libuv /P:Configuration=Release /P:Platform=!LIBUV_VC_TARGET_ARCHITECTURE! /CLP:NoSummary;NoItemAndPropertyList;Verbosity=minimal /NOLOGO >> "%~7" 2>&1
+	ECHO !MSBUILD! uv.sln /T:libuv /P:Configuration=Release /P:Platform=!LIBUV_VC_TARGET_ARCHITECTURE! /CLP:NoSummary;NoItemAndPropertyList;Verbosity=minimal /NOLOGO >> "!LIBUV_LOG_FILENAME!"
+	!MSBUILD! uv.sln /T:libuv /P:Configuration=Release /P:Platform=!LIBUV_VC_TARGET_ARCHITECTURE! /CLP:NoSummary;NoItemAndPropertyList;Verbosity=minimal /NOLOGO >> "!LIBUV_LOG_FILENAME!" 2>&1
 	IF NOT !ERRORLEVEL! EQU 0 (
 		ECHO FAILED!
-		ECHO 	See %~7 for more details
+		ECHO 	See !LIBUV_LOG_FILENAME! for more details
 		EXIT /B !EXIT_CODE_BUILD_DEPENDENCY_FAILED!
 	)
 	ECHO done.
 	ECHO | SET /P=Installing libuv ...
-	MKDIR "%~2\!LIBRARY_INCLUDE_DIRECTORY!"
+	MKDIR "!LIBUV_INSTALL_DIRECTORY!\!LIBRARY_INCLUDE_DIRECTORY!"
 	IF NOT !ERRORLEVEL! EQU 0 (
 		ECHO FAILED!
-		ECHO 	See %~7 for more details
+		ECHO 	See !LIBUV_LOG_FILENAME! for more details
 		EXIT /B !EXIT_CODE_BUILD_DEPENDENCY_FAILED!
 	)
-	XCOPY /E /Y include "%~2\!LIBRARY_INCLUDE_DIRECTORY!" >> "%~7" 2>&1
+	XCOPY /E /Y include "!LIBUV_INSTALL_DIRECTORY!\!LIBRARY_INCLUDE_DIRECTORY!" >> "!LIBUV_LOG_FILENAME!" 2>&1
 	IF NOT !ERRORLEVEL! EQU 0 (
 		ECHO FAILED!
-		ECHO 	See %~7 for more details
+		ECHO 	See !LIBUV_LOG_FILENAME! for more details
 		EXIT /B !EXIT_CODE_BUILD_DEPENDENCY_FAILED!
 	)
-	MKDIR "%~2\!LIBRARY_BINARY_DIRECTORY!"
+	MKDIR "!LIBUV_INSTALL_DIRECTORY!\!LIBRARY_BINARY_DIRECTORY!"
 	IF NOT !ERRORLEVEL! EQU 0 (
 		ECHO FAILED!
-		ECHO 	See %~7 for more details
+		ECHO 	See !LIBUV_LOG_FILENAME! for more details
 		EXIT /B !EXIT_CODE_BUILD_DEPENDENCY_FAILED!
 	)
-	XCOPY /E /Y Release\lib "%~2\!LIBRARY_BINARY_DIRECTORY!" >> "%~7" 2>&1
+	XCOPY /E /Y Release\lib "!LIBUV_INSTALL_DIRECTORY!\!LIBRARY_BINARY_DIRECTORY!" >> "!LIBUV_LOG_FILENAME!" 2>&1
 	IF NOT !ERRORLEVEL! EQU 0 (
 		REM Try again in the other location libuv likes to put files
-		XCOPY /Y Release\*.* "%~2\!LIBRARY_BINARY_DIRECTORY!" >> "%~7" 2>&1
+		XCOPY /Y Release\*.* "!LIBUV_INSTALL_DIRECTORY!\!LIBRARY_BINARY_DIRECTORY!" >> "!LIBUV_LOG_FILENAME!" 2>&1
 		IF NOT !ERRORLEVEL! EQU 0 (
 			ECHO FAILED!
-			ECHO 	See %~7 for more details
+			ECHO 	See !LIBUV_LOG_FILENAME! for more details
 			EXIT /B !EXIT_CODE_BUILD_DEPENDENCY_FAILED!
 		)
 	)
 	ECHO done.
-	IF "%~6" == "!TRUE!" (
+	IF "!LIBUV_IS_CLEAN_AFTER_INSTALL!" == "!TRUE!" (
 		ECHO | SET /P=Cleaning libuv build ... 
-		ECHO !MSBUILD! uv.sln /T:Clean /P:Configuration=Release /P:Platform=!LIBUV_VC_TARGET_ARCHITECTURE! /CLP:NoSummary;NoItemAndPropertyList;Verbosity=minimal /NOLOGO >> "%~7"
-		!MSBUILD! uv.sln /T:Clean /P:Configuration=Release /P:Platform=!LIBUV_VC_TARGET_ARCHITECTURE! /CLP:NoSummary;NoItemAndPropertyList;Verbosity=minimal /NOLOGO >> "%~7" 2>&1
-		IF EXIST Release RMDIR /S /Q Release >> "%~7" 2>&1
+		ECHO !MSBUILD! uv.sln /T:Clean /P:Configuration=Release /P:Platform=!LIBUV_VC_TARGET_ARCHITECTURE! /CLP:NoSummary;NoItemAndPropertyList;Verbosity=minimal /NOLOGO >> "!LIBUV_LOG_FILENAME!"
+		!MSBUILD! uv.sln /T:Clean /P:Configuration=Release /P:Platform=!LIBUV_VC_TARGET_ARCHITECTURE! /CLP:NoSummary;NoItemAndPropertyList;Verbosity=minimal /NOLOGO >> "!LIBUV_LOG_FILENAME!" 2>&1
+		IF EXIST Release RMDIR /S /Q Release >> "!LIBUV_LOG_FILENAME!" 2>&1
 		ECHO done.
 	)
 	POPD
@@ -1496,12 +1468,14 @@ REM @param log-filename Absolute path and filename for log output
 		SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE! -DCASS_BUILD_STATIC=ON -DCASS_USE_STATIC_LIBS=ON"
 		SET DRIVER_VISUAL_STUDIO_TARGETS=cassandra_static
 	)
+	IF NOT "!TESTS_ZLIB_LIBRARY_DIRECTORY!" == "" (
+		SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE! -DCASS_USE_ZLIB=ON -DZLIB_ROOT_DIR=^"!TESTS_ZLIB_LIBRARY_DIRECTORY!^""
+	) ELSE (
+		SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE! -DCASS_USE_ZLIB=OFF"
+	)
 	IF NOT "!BOOST_LIBRARY_DIRECTORY!" == "" (
 		IF NOT "!TESTS_LIBSSH2_LIBRARY_DIRECTORY!" == "" (
 			SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE! -DCASS_BUILD_TESTS=ON -DBOOST_ROOT_DIR=^"!BOOST_LIBRARY_DIRECTORY!^" -DLIBSSH2_ROOT_DIR=^"!TESTS_LIBSSH2_LIBRARY_DIRECTORY!^""
-			IF NOT "!TESTS_ZLIB_LIBRARY_DIRECTORY!" == "" (
-				SET "DRIVER_CMAKE_COMMAND_LINE=!DRIVER_CMAKE_COMMAND_LINE! -DZLIB_ROOT_DIR=^"!TESTS_ZLIB_LIBRARY_DIRECTORY!^""
-			)
 		)
 	)
 	IF NOT "!DRIVER_BOOST_DEPENDENCY_SOURCE_DIRECTORY!" == "" (
