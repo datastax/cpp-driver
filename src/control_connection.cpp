@@ -257,6 +257,11 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
 
   bool is_initial_connection = (state_ == CONTROL_STATE_NEW);
 
+  // If the 'system.local' table is empty the connection isn't used as a control
+  // connection because at least one node's information is required (itself). An
+  // empty 'system.local' can happen during the bootstrapping process on some
+  // versions of Cassandra. If this happens we defunct the connection and move
+  // to the next node in the query plan.
   {
     SharedRefPtr<Host> host = session_->get_host(connection_->address(), true);
     if (host) {
@@ -269,10 +274,14 @@ void ControlConnection::on_query_meta_all(const MultipleRequestHandler::Response
       } else {
         LOG_WARN("No row found in %s's local system table",
                  connection_->address_string().c_str());
+        connection_->defunct();
+        return;
       }
     } else {
-      LOG_DEBUG("Host %s from local system table not found",
-                connection_->address_string().c_str());
+      LOG_WARN("Host %s from local system table not found",
+               connection_->address_string().c_str());
+      connection_->defunct();
+      return;
     }
   }
 
