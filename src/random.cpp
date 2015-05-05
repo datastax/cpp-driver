@@ -61,7 +61,7 @@ namespace cass {
 
 #define STRERROR_BUFSIZE_ 256
 
-#if defined(__APPLE__) || defined(FreeBSD)
+#if defined(__APPLE__) || defined(__FreeBSD__)
 #define STRERROR_R_(errno, buf, bufsize) (strerror_r(errno, buf, bufsize), buf)
 #else
 #define STRERROR_R_(errno, buf, bufsize) strerror_r(errno, buf, bufsize)
