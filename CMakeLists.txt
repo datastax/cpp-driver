@@ -389,11 +389,17 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # GCC specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-variadic-macros")
+  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-unused-parameter -Wno-variadic-macros")
 
   if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.8" OR
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.8")
     set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedefs")
+  endif()
+
+  # OpenSSL is deprecated on later versions of Mac OS X. The long-term solution
+  # is to provide a CommonCryto implementation.
+  if (APPLE AND CASS_USE_OPENSSL)
+    set(PROJECT_CXX_FLAGS "${PROJECT_CXX_FLAGS} -Wno-deprecated-declarations")
   endif()
 
   # Enable C++11 support to use std::atomic
@@ -414,7 +420,13 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # Clang/Intel specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-deprecated-declarations -Wno-unused-parameter -Wno-variadic-macros -Wno-zero-length-array")
+  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-unused-parameter -Wno-variadic-macros -Wno-zero-length-array")
+
+  # OpenSSL is deprecated on later versions of Mac OS X. The long-term solution
+  # is to provide a CommonCryto implementation.
+  if (APPLE AND CASS_USE_OPENSSL)
+    set(PROJECT_CXX_FLAGS "${PROJECT_CXX_FLAGS} -Wno-deprecated-declarations")
+  endif()
 
   # Enable C++11 support to use std::atomic
   if(CASS_USE_STD_ATOMIC)

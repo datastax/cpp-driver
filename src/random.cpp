@@ -68,8 +68,6 @@ namespace cass {
 #endif
 
   uint64_t get_random_seed(uint64_t seed) {
-    Logger::init();
-
     static const char* device = "/dev/urandom";
 
     int fd = open(device, O_RDONLY);

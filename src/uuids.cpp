@@ -46,7 +46,6 @@ static uint64_t set_version(uint64_t timestamp, uint8_t version) {
 extern "C" {
 
 CassUuidGen* cass_uuid_gen_new() {
-  cass::Logger::init();
   return CassUuidGen::to(new cass::UuidGen());
 }
 
