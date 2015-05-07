@@ -27,7 +27,6 @@
 extern "C" {
 
 CassCluster* cass_cluster_new() {
-  cass::Logger::init();
   return CassCluster::to(new cass::Cluster());
 }
 

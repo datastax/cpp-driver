@@ -356,7 +356,7 @@ BOOST_AUTO_TEST_CASE(timestamp)
   cass_value_get_int64(cass_row_get_column(cass_result_first_row(timestamp_result2.get()), 0), &timestamp2);
 
   BOOST_REQUIRE(timestamp1 != 0 && timestamp2 != 0);
-  BOOST_REQUIRE(::abs(timestamp2 - timestamp1 - pause_duration) < 100000); // Tolerance
+  BOOST_REQUIRE(std::abs(timestamp2 - timestamp1 - pause_duration) < 100000); // Tolerance
 }
 
 BOOST_AUTO_TEST_CASE(counters)

@@ -75,9 +75,6 @@ const char* CREATE_TABLE_SIMPLE =
 CassLog::LogData CassLog::log_data_;
 
 size_t CassLog::message_count() {
-  while (!cass::is_log_flushed()) {
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
-  }
   return log_data_.message_count;
 }
 

@@ -20,7 +20,7 @@
 #include <stddef.h>
 
 #if !defined(CASS_STATIC)
-#  if (defined(WIN32) || defined(_WIN32))
+#  if defined(_MSC_VER)
 #    if defined(CASS_BUILDING)
 #      define CASS_EXPORT __declspec(dllexport)
 #    else
@@ -33,6 +33,14 @@
 #  endif
 #else
 #define CASS_EXPORT
+#endif
+
+#if defined(_MSC_VER)
+#  define CASS_DEPRECATED(func) __declspec(deprecated) func
+#elif defined(__GNUC__) || defined(__INTEL_COMPILER)
+#  define CASS_DEPRECATED(func) func __attribute__((deprecated))
+#else
+#  define CASS_DEPRECATED(func) func
 #endif
 
 /**
@@ -2996,11 +3004,16 @@ cass_error_desc(CassError error);
  ***********************************************************************************/
 
 /**
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a few releases.
+ *
  * Explicty wait for the log to flush and deallocate resources.
  * This *MUST* be the last call using the library. It is an error
  * to call any cass_*() functions after this call.
+ *
  */
-void cass_log_cleanup();
+CASS_EXPORT void
+CASS_DEPRECATED(cass_log_cleanup());
 
 /**
  * Sets the log level.
@@ -3024,14 +3037,18 @@ cass_log_set_level(CassLogLevel log_level);
  * Default: An internal callback that prints to stderr
  *
  * @param[in] data An opaque data object passed to the callback.
- * @param[in] callback A callback that handles logging events. This is
- * called in a separate thread so access to shared data must be synchronized.
+ * @param[in] callback A callback that handles logging events. This can be
+ * called by several threads concurrently so access to shared resources must
+ * be synchronized.
  */
 CASS_EXPORT void
 cass_log_set_callback(CassLogCallback callback,
                       void* data);
 
 /**
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a few releases.
+ *
  * Sets the log queue size.
  *
  * Note: This needs to be done before any call that might log, such as
@@ -3042,7 +3059,7 @@ cass_log_set_callback(CassLogCallback callback,
  * @param[in] queue_size
  */
 CASS_EXPORT void
-cass_log_set_queue_size(cass_size_t queue_size);
+CASS_DEPRECATED(cass_log_set_queue_size(cass_size_t queue_size));
 
 /**
  * Gets the string for a log level.
