@@ -44,6 +44,7 @@ public:
 
   bool enqueue(const typename Q::EntryType& data) {
     if (queue_.enqueue(data)) {
+      Q::memory_fence();
       uv_async_send(&async_);
       return true;
     }
