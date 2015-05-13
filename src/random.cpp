@@ -36,8 +36,6 @@ namespace cass {
 #if defined(_WIN32)
 
   uint64_t get_random_seed(uint64_t seed) {
-    Logger::init();
-
     HCRYPTPROV provider;
 
     if (!CryptAcquireContext(&provider,
