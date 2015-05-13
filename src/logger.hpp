@@ -33,11 +33,7 @@ namespace cass {
 class Logger {
 public:
   static void set_log_level(CassLogLevel level);
-  static void set_queue_size(size_t queue_size);
   static void set_callback(CassLogCallback cb, void* data);
-
-  static void init();
-  static void cleanup();
 
 #if defined(__GNUC__) || defined(__clang__)
 #define ATTR_FORMAT(string, first) __attribute__((__format__(__printf__, string, first)))
@@ -53,51 +49,20 @@ public:
                    const char* format, ...) {
     va_list args;
     va_start(args, format);
-    thread_->log(severity, file, line, function, format, args);
+    log(severity, file, line, function, format, args);
     va_end(args);
   }
 
-  // Testing only
-  static bool is_flushed() { return thread_->is_flushed(); }
+private:
+  ATTR_FORMAT(5, 0)
+  static void log(CassLogLevel severity,
+                  const char* file, int line, const char* function,
+                  const char* format, va_list args);
 
 private:
-  class LogThread : public LoopThread {
-  public:
-    LogThread(size_t queue_size);
-    ~LogThread();
-
-    // "this" is argument 1
-    ATTR_FORMAT(6, 0)
-    void log(CassLogLevel severity,
-             const char* file, int line, const char* function,
-             const char* format, va_list args);
-
-#undef ATTR_FORMAT
-
-    bool is_flushed() const { return log_queue_.is_empty(); }
-
-  private:
-    void close_handles();
-
-#if UV_VERSION_MAJOR == 0
-    static void on_log(uv_async_t* async, int status);
-#else
-    static void on_log(uv_async_t* async);
-#endif
-
-    AsyncQueue<MPMCQueue<CassLogMessage> > log_queue_;
-    bool has_been_warned_;
-    bool is_initialized_;
-  };
-
-private:
-  static void internal_init();
-
   static CassLogLevel log_level_;
   static CassLogCallback cb_;
   static void* data_;
-  static size_t queue_size_;
-  static ScopedPtr<LogThread> thread_;
 
   Logger(); // Keep this object from being created
 };

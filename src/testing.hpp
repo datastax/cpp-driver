@@ -36,8 +36,6 @@ CASS_EXPORT CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* sess
 
 CASS_EXPORT int64_t create_murmur3_hash_from_string(const std::string &value);
 
-CASS_EXPORT bool is_log_flushed();
-
 CASS_EXPORT uint64_t get_time_since_epoch_in_ms();
 
 CASS_EXPORT uint64_t get_host_latency_average(CassSession* session, std::string ip_address, int port);

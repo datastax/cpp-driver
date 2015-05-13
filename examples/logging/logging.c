@@ -99,8 +99,7 @@ int main() {
   cass_cluster_free(cluster);
   cass_session_free(session);
 
-  /* This *MUST* be the last driver call */
-  cass_log_cleanup();
+  /* Stop all sessions before cleaning up log resources */
 
   fclose(log_file);
 
