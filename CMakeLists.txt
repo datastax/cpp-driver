@@ -133,7 +133,7 @@ endif()
 if(CASS_USE_EXTERNAL_BOOST)
   # Setup the root directories for boost
   set(ENV{BOOST_ROOT} "${PROJECT_SOURCE_DIR}/lib/boost/")
-  if (BOOST_ROOT_DIR)
+  if(BOOST_ROOT_DIR)
     set(ENV{BOOST_ROOT} ${BOOST_ROOT_DIR})
   endif()
 
@@ -164,7 +164,10 @@ if(CASS_USE_EXTERNAL_BOOST)
 
   # Handle explicit initialization warning in atomic/details/casts
   if((CASS_FOUND_BOOST_VERSION VERSION_GREATER "1.56.0") OR (CASS_FOUND_BOOST_VERSION VERSION_EQUAL "1.56.0"))
-    add_definitions(-Wno-missing-field-initializers)
+    if(NOT WIN32)
+      # Handle explicit initialization warning in atomic/details/casts
+      add_definitions(-Wno-missing-field-initializers)
+    endif()
   endif()
 
   # Assign Boost include and libraries
@@ -183,7 +186,7 @@ if(CASS_USE_TCMALLOC)
   endif()
   set(_GPERFTOOLS_ROOT_HINTS_AND_PATHS
     HINTS ${_GPERFTOOLS_ROOT_HINTS}
-	PATHS ${_GPERFTOOLS_ROOT_PATHS})
+    PATHS ${_GPERFTOOLS_ROOT_PATHS})
 
   # Ensure gperftools (tcmalloc) was found
   find_library(GPERFLIBRARY_LIBRARY
@@ -207,16 +210,16 @@ if(CASS_USE_ZLIB)
   find_package(ZLIB)
   if(ZLIB_FOUND)
     # Determine if the static library needs to be used for Windows
-	if(WIN32 AND CASS_USE_STATIC_LIBS)
-	  string(REPLACE "zlib.lib" "zlibstatic.lib" ZLIB_LIBRARIES "${ZLIB_LIBRARIES}")
-	endif()
+    if(WIN32 AND CASS_USE_STATIC_LIBS)
+      string(REPLACE "zlib.lib" "zlibstatic.lib" ZLIB_LIBRARIES "${ZLIB_LIBRARIES}")
+    endif()
 
-	# Assign zlib properties
+    # Assign zlib properties
     set(CASS_INCLUDES ${CASS_INCLUDES} ${ZLIB_INCLUDE_DIRS})
     set(CASS_LIBS ${CASS_LIBS} ${ZLIB_LIBRARIES})
   else()
     message(WARNING "Could not find zlib, try to set the path to zlib root folder in the system variable ZLIB_ROOT_DIR")
-	message(WARNING "zlib libraries will not be linked into build")
+    message(WARNING "zlib libraries will not be linked into build")
   endif()
 endif()
 
@@ -227,7 +230,7 @@ if(CASS_USE_OPENSSL)
   set(_OPENSSL_ROOT_HINTS ${OPENSSL_ROOT_DIR} $ENV{OPENSSL_ROOT_DIR})
   set(_OPENSSL_ROOT_HINTS_AND_PATHS
     HINTS ${_OPENSSL_ROOT_HINTS}
-	PATHS ${_OPENSSL_ROOT_PATHS})
+  PATHS ${_OPENSSL_ROOT_PATHS})
 
   # Discover OpenSSL and assign OpenSSL include and libraries
   find_package(OpenSSL REQUIRED)
@@ -273,7 +276,7 @@ endif()
 # Doxygen
 if(CASS_BUILD_DOCS)
   find_package(Doxygen)
-  if (DOXYGEN_FOUND)
+  if(DOXYGEN_FOUND)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
     add_custom_target(docs
       ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
