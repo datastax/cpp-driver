@@ -79,6 +79,14 @@ public:
         tail_.load(boost::memory_order_acquire);
   }
 
+  static void memory_fence() {
+    // Internally, libuv has a "pending" flag check whose load can be reordered
+    // before storing the data into the queue causing the data in the queue
+    // not to be consumed. This fence ensures that the load happens after the
+    // data has been store in the queue.
+    boost::atomic_thread_fence(boost::memory_order_seq_cst);
+  }
+
 private:
   typedef typename boost::aligned_storage<
       sizeof(T), boost::alignment_of<T>::value>::type SPSCQueueAlignedEntry;

@@ -136,6 +136,14 @@ public:
     return (intptr_t)node_seq - (intptr_t)(pos + 1) < 0;
   }
 
+  static void memory_fence() {
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+    // No fence required becauase compare_exchange_weak() emits "lock cmpxchg" on x86/x64 enforcing total order.
+#else
+    boost::atomic_thread_fence(boost::memory_order_seq_cst);
+#endif
+  }
+
 private:
   struct Node {
     T data;
