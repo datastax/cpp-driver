@@ -133,7 +133,7 @@ public:
 
   static void memory_fence() {
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
-    // No fence required becauase compared_exchange_weak() emits "lock; cmpxchg" on x86/x64 enforcing total order.
+    // No fence required becauase compare_exchange_weak() emits "lock cmpxchg" on x86/x64 enforcing total order.
 #elif defined(CASS_USE_BOOST_ATOMIC) || defined(CASS_USE_STD_ATOMIC)
     atomic_thread_fence(MEMORY_ORDER_SEQ_CST);
 #endif
