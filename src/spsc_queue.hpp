@@ -75,8 +75,17 @@ public:
         tail_.load(MEMORY_ORDER_ACQUIRE);
   }
 
-private:
+  static void memory_fence() {
+   // Internally, libuv has a "pending" flag check whose load can be reordered
+   // before storing the data into the queue causing the data in the queue
+   // not to be consumed. This fence ensures that the load happens after the
+   // data has been store in the queue.
+#if defined(CASS_USE_BOOST_ATOMIC) || defined(CASS_USE_STD_ATOMIC)
+    atomic_thread_fence(MEMORY_ORDER_SEQ_CST);
+#endif
+  }
 
+private:
   typedef char cache_line_pad_t[64];
 
   cache_line_pad_t pad0_;
