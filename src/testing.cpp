@@ -75,10 +75,6 @@ int64_t create_murmur3_hash_from_string(const std::string &value) {
   return MurmurHash3_x64_128(value.data(), value.size(), 0);
 }
 
-bool is_log_flushed() {
-  return Logger::is_flushed();
-}
-
 uint64_t get_time_since_epoch_in_ms() {
   return cass::get_time_since_epoch_ms();
 }

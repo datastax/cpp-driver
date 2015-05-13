@@ -33,7 +33,6 @@
 
 struct RoutingKeyTest {
   RoutingKeyTest() {
-    cass::Logger::init();
     cass::Logger::set_log_level(CASS_LOG_DISABLED);
   }
 };
