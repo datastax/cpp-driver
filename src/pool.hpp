@@ -75,7 +75,6 @@ private:
   void remove_pending_request(RequestHandler* request_handler);
   void set_is_available(bool is_available);
 
-  void defunct();
   void maybe_notify_ready();
   void maybe_close();
   void spawn_connection();
