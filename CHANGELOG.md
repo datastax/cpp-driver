@@ -1,3 +1,22 @@
+1.0.2
+===========
+May 15, 2015
+
+Other
+--------
+* Removed logging thread. `cass_log_cleanup()` and `cass_log_set_queue_size()`
+  are now deprecated. A logging callback registered with
+  `cass_log_set_callback()` will now be called on mulitple threads concurrently.
+* Fixed an issue where the driver might crash/hang when `system.local` contains
+  no entries
+* Fixed an issue where the driver might hang under high-load due to missing
+  memory fence before `uv_async_send()` in `cass::AsyncQueue::enqueue()`
+* Fixed an issue where time-based UUIDs (CassUuid v4) had the incorrect time on
+  32-bit systems
+* Fixed an issue where a `cass::Pool` object might be double freed if a
+  connection timed out while connecting
+
+
 1.0.1
 ===========
 Mar 2, 2015
