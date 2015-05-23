@@ -2,11 +2,11 @@ require "formula"
 
 class CassandraCppDriver < Formula
   homepage "http://datastax.github.io/cpp-driver/"
-  url "https://github.com/datastax/cpp-driver/archive/1.0.0.tar.gz"
-  sha1 "087aa2cf00e3c6f0eb75bb0471b78d255ea94562"
-  version "1.0.0"
+  url "https://github.com/datastax/cpp-driver/archive/2.0.0.tar.gz"
+  sha1 "7bb41ba0caf5a8211bc2ed9dc8c99563e4fd047e"
+  version "2.0.0"
 
-  head "git://github.com:datastax/cpp-driver.git", :branch => "1.0"
+  head "git://github.com:datastax/cpp-driver.git", :branch => "2.0"
 
   depends_on "cmake" => :build
   depends_on "libuv"
