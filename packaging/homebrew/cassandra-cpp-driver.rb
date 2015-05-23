@@ -3,7 +3,7 @@ require "formula"
 class CassandraCppDriver < Formula
   homepage "http://datastax.github.io/cpp-driver/"
   url "https://github.com/datastax/cpp-driver/archive/2.0.0.tar.gz"
-  sha1 "7bb41ba0caf5a8211bc2ed9dc8c99563e4fd047e"
+  sha1 "f00de7ce2c6cc702426d443639d7bf9855fbe8a3"
   version "2.0.0"
 
   head "git://github.com:datastax/cpp-driver.git", :branch => "2.0"
