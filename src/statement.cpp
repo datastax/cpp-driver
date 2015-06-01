@@ -108,7 +108,7 @@ CassError cass_statement_set_paging_state(CassStatement* statement,
     return statement->set(cass::StringRef(name, name_length), Value);           \
   }
 
-CASS_STATEMENT_BIND(null, , cass::CassNull())
+CASS_STATEMENT_BIND(null, ZERO_PARAMS_(), cass::CassNull())
 CASS_STATEMENT_BIND(int32, ONE_PARAM_(cass_int32_t value), value)
 CASS_STATEMENT_BIND(int64, ONE_PARAM_(cass_int64_t) value, value)
 CASS_STATEMENT_BIND(float, ONE_PARAM_(cass_float_t value), value)

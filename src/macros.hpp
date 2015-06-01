@@ -25,6 +25,9 @@
 
 #define UNUSED_(X) ((void)X)
 
+#define ZERO_PARAMS1_()
+#define ZERO_PARAMS_() ZERO_PARAMS1_()
+
 #define ONE_PARAM1_(A) ,A
 #define ONE_PARAM_(A) ONE_PARAM1_(A)
 
