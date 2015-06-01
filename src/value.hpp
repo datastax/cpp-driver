@@ -107,6 +107,11 @@ public:
     return data_type_->is_map();
   }
 
+  bool is_tuple() const {
+    if (!data_type_) return false;
+    return data_type_->is_tuple();
+  }
+
   int32_t count() const {
     return count_;
   }
