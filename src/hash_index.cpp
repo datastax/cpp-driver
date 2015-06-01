@@ -22,6 +22,8 @@
 
 #include "utils.hpp"
 
+#include <stdint.h>
+
 // This can be decreased to reduce hash collisions, but it will require
 // additional memory.
 #define LOAD_FACTOR 0.75

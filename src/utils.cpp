@@ -97,12 +97,10 @@ std::string& to_cql_id(std::string& str) {
     std::transform(str.begin(), str.end(), str.begin(), tolower);
     return str;
   }
-  if (str.length() > 2 && str.front() == '"' && str.back() == '"') {
-    str.pop_back();
-    return str.erase(0, 1);
+  if (str.length() > 2 && str[0] == '"' && str[str.length() - 1] == '"') {
+    return str.erase(str.length() - 1, 1).erase(0, 1);
   }
   return str;
 }
-
 
 } // namespace cass
