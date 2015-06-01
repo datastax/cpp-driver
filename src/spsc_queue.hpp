@@ -30,7 +30,7 @@
 #include <assert.h>
 
 #include "atomic.hpp"
-#include "common.hpp"
+#include "utils.hpp"
 #include "macros.hpp"
 
 namespace cass {

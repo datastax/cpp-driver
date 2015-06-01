@@ -226,7 +226,7 @@ void execute_query(CassSession* session,
                    CassResultPtr* result,
                    CassConsistency consistency,
                    cass_duration_t timeout) {
-  CassStatementPtr statement(cass_statement_new(query.c_str(), 0));
+  CassStatementPtr statement(cass_statement_new(session, query.c_str(), 0));
   cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future(cass_session_execute(session, statement.get()));
   wait_and_check_error(future.get(), timeout);
@@ -240,7 +240,7 @@ CassError execute_query_with_error(CassSession* session,
                                    CassResultPtr* result,
                                    CassConsistency consistency,
                                    cass_duration_t timeout) {
-  CassStatementPtr statement(cass_statement_new(query.c_str(), 0));
+  CassStatementPtr statement(cass_statement_new(session, query.c_str(), 0));
   cass_statement_set_consistency(statement.get(), consistency);
   CassFuturePtr future(cass_session_execute(session, statement.get()));
   CassError code = wait_and_return_error(future.get(), timeout);

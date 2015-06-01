@@ -18,8 +18,10 @@
 #define __CASS_METADATA_HPP_INCLUDED__
 
 #include "cassandra.h"
-#include "list.hpp"
+#include "data_type.hpp"
 #include "fixed_vector.hpp"
+#include "hash_index.hpp"
+#include "list.hpp"
 #include "ref_counted.hpp"
 #include "string_ref.hpp"
 
@@ -32,61 +34,19 @@
 
 namespace cass {
 
-struct ColumnDefinition {
-  ColumnDefinition()
-      : index(0)
-      , next(NULL)
-      , type(CASS_VALUE_TYPE_UNKNOWN)
-      , keyspace(NULL)
-      , keyspace_size(0)
-      , table(NULL)
-      , table_size(0)
-      , name(NULL)
-      , name_size(0)
-      , class_name(NULL)
-      , class_name_size(0)
-      , collection_primary_type(CASS_VALUE_TYPE_UNKNOWN)
-      , collection_primary_class(NULL)
-      , collection_primary_class_size(0)
-      , collection_secondary_type(CASS_VALUE_TYPE_UNKNOWN)
-      , collection_secondary_class(NULL)
-      , collection_secondary_class_size(0) {}
-
-  size_t index;
-  ColumnDefinition* next;
-
-  uint16_t type;
-  char* keyspace;
-  size_t keyspace_size;
-
-  char* table;
-  size_t table_size;
-
-  char* name;
-  size_t name_size;
-
-  char* class_name;
-  size_t class_name_size;
-
-  uint16_t collection_primary_type;
-  char* collection_primary_class;
-
-  size_t collection_primary_class_size;
-  uint16_t collection_secondary_type;
-
-  char* collection_secondary_class;
-  size_t collection_secondary_class_size;
+struct ColumnDefinition : public HashIndex::Entry {
+  StringRef keyspace;
+  StringRef table;
+  SharedRefPtr<DataType> data_type;
 };
 
 class ResultMetadata : public RefCounted<ResultMetadata> {
 public:
-  typedef FixedVector<size_t, 16> IndexVec;
-
   ResultMetadata(size_t column_count);
 
-  const ColumnDefinition& get(size_t index) const { return defs_[index]; }
+  const ColumnDefinition& get_column_definition(size_t index) const { return defs_[index]; }
 
-  size_t get(StringRef name, IndexVec* result) const;
+  size_t get_indices(StringRef name, HashIndex::IndexVec* result) const;
 
   size_t column_count() const { return defs_.size(); }
 
@@ -96,8 +56,7 @@ private:
   static const size_t FIXED_COLUMN_META_SIZE = 16;
 
   FixedVector<ColumnDefinition, FIXED_COLUMN_META_SIZE> defs_;
-  FixedVector<ColumnDefinition*, 2 * FIXED_COLUMN_META_SIZE> index_;
-  size_t index_mask_;
+  HashIndex index_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(ResultMetadata);

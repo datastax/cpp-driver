@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
   {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
-    test_utils::CassStatementPtr statement(cass_statement_new("SELECT * FROM system.local", 0));
+    test_utils::CassStatementPtr statement(cass_statement_new(session.get(), "SELECT * FROM system.local", 0));
 
     // reject should come immediately
     boost::chrono::steady_clock::time_point start = boost::chrono::steady_clock::now();
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
 
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
-    test_utils::CassStatementPtr statement(cass_statement_new("SELECT * FROM system.local", 0));
+    test_utils::CassStatementPtr statement(cass_statement_new(session.get(), "SELECT * FROM system.local", 0));
 
     // blow through streams until we get rejected
     const size_t max_streams = 128;
@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE(connection_spawn)
   {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
 
-    test_utils::CassStatementPtr statement(cass_statement_new("SELECT * FROM system.local", 0));
+    test_utils::CassStatementPtr statement(cass_statement_new(session.get(), "SELECT * FROM system.local", 0));
 
     // run a few to get concurrent requests
     std::vector<test_utils::CassFuturePtr> futures;

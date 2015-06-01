@@ -41,7 +41,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
     test_utils::execute_query(session, str(boost::format("CREATE TABLE %s (tweet_id int PRIMARY KEY, test_val %s);")
                                            % table_name % type_name));
 
-    test_utils::CassCollectionPtr input(cass_collection_new(static_cast<CassCollectionType>(type), values.size()));
+    test_utils::CassCollectionPtr input(cass_collection_new(session, static_cast<CassCollectionType>(type), values.size()));
 
     for (typename std::vector<T>::const_iterator it = values.begin(),
         end = values.end(); it != end; ++it) {
@@ -50,7 +50,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     std::string query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(0, ?);") % table_name);
 
-    test_utils::CassStatementPtr statement(cass_statement_new(query.c_str(), 1));
+    test_utils::CassStatementPtr statement(cass_statement_new(session, query.c_str(), 1));
 
     BOOST_REQUIRE(cass_statement_bind_collection(statement.get(), 0, input.get()) == CASS_OK);
 
@@ -179,7 +179,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
     test_utils::execute_query(session, str(boost::format("CREATE TABLE %s (tweet_id int PRIMARY KEY, test_val %s);")
                                            % table_name % type_name));
 
-    test_utils::CassCollectionPtr input(cass_collection_new(CASS_COLLECTION_TYPE_MAP, values.size()));
+    test_utils::CassCollectionPtr input(cass_collection_new(session, CASS_COLLECTION_TYPE_MAP, values.size()));
 
     for (typename std::map<K, V>::const_iterator it = values.begin(),
         end = values.end(); it != end; ++it) {
@@ -189,7 +189,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     std::string query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(0, ?);") % table_name);
 
-    test_utils::CassStatementPtr statement(cass_statement_new(query.c_str(), 1));
+    test_utils::CassStatementPtr statement(cass_statement_new(session, query.c_str(), 1));
 
     BOOST_REQUIRE(cass_statement_bind_collection(statement.get(), 0, input.get()) == CASS_OK);
 

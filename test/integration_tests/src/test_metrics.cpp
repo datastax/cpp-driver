@@ -93,7 +93,7 @@ public:
   */
   void execute_query(bool is_async = false) {
     std::string query = "SELECT * FROM system.local";
-    test_utils::CassStatementPtr statement(cass_statement_new_n(query.data(), query.size(), 0));
+    test_utils::CassStatementPtr statement(cass_statement_new_n(session_.get(), query.data(), query.size(), 0));
     test_utils::CassFuturePtr future(cass_session_execute(session_.get(), statement.get()));
     if (!is_async) {
       test_utils::wait_and_check_error(future.get());

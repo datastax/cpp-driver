@@ -18,23 +18,6 @@
 
 namespace cass {
 
-char* CollectionIterator::decode_value(char* position) {
-  uint16_t size;
-  char* buffer = decode_uint16(position, size);
-
-  CassValueType type;
-  if (collection_->type() == CASS_VALUE_TYPE_MAP) {
-    type = (index_ % 2 == 0) ? collection_->primary_type()
-                             : collection_->secondary_type();
-  } else {
-    type = collection_->primary_type();
-  }
-
-  value_ = Value(type, buffer, size);
-
-  return buffer + size;
-}
-
 bool CollectionIterator::next() {
   if (index_ + 1 >= count_) {
     return false;
@@ -42,6 +25,25 @@ bool CollectionIterator::next() {
   ++index_;
   position_ = decode_value(position_);
   return true;
+}
+
+char* CollectionIterator::decode_value(char* position) {
+  int protocol_version = collection_->protocol_version();
+
+  int32_t size;
+  char* buffer = decode_size(protocol_version, position, size);
+
+  SharedRefPtr<DataType> data_type;
+  if (collection_->value_type() == CASS_VALUE_TYPE_MAP) {
+    data_type = (index_ % 2 == 0) ? collection_->primary_data_type()
+                                  : collection_->secondary_data_type();
+  } else {
+    data_type = collection_->primary_data_type();
+  }
+
+  value_ = Value(protocol_version, data_type, buffer, size);
+
+  return buffer + size;
 }
 
 } // namespace cass

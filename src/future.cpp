@@ -18,7 +18,7 @@
 
 #include "request_handler.hpp"
 #include "scoped_ptr.hpp"
-#include "types.hpp"
+#include "external_types.hpp"
 
 extern "C" {
 

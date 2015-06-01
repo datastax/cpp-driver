@@ -19,13 +19,15 @@
 namespace cass {
 
 char* MapIterator::decode_pair(char* position) {
-  uint16_t size;
+  int protocol_version = map_->protocol_version();
 
-  position = decode_uint16(position, size);
-  key_ = Value(map_->primary_type(), position, size);
+  int32_t size;
 
-  position = decode_uint16(position + size, size);
-  value_ = Value(map_->secondary_type(), position, size);
+  position = decode_size(protocol_version, position, size);
+  key_ = Value(protocol_version, map_->primary_data_type(), position, size);
+
+  position = decode_size(protocol_version, position + size, size);
+  value_ = Value(protocol_version, map_->secondary_data_type(), position, size);
 
   return position + size;
 }

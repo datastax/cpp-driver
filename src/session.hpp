@@ -102,6 +102,10 @@ public:
 
   const Schema* copy_schema() const { return cluster_meta_.copy_schema(); }
 
+  int protocol_version() const {
+    return control_connection_.protocol_version();
+  }
+
 private:
   void clear(const Config& config);
   int init();

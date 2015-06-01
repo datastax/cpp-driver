@@ -35,7 +35,7 @@ int main() {
   CassSession* session = cass_session_new();
 
   /* Add contact points */
-  cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
+  cass_cluster_set_contact_points(cluster, "127.0.0.1");
 
   /* Provide the cluster object as configuration to connect the session */
   connect_future = cass_session_connect(session, cluster);
@@ -46,7 +46,7 @@ int main() {
     /* Build statement and execute query */
     const char* query = "SELECT keyspace_name "
                         "FROM system.schema_keyspaces;";
-    CassStatement* statement = cass_statement_new(query, 0);
+    CassStatement* statement = cass_statement_new(session, query, 0);
 
     CassFuture* result_future = cass_session_execute(session, statement);
 

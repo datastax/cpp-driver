@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(result)
 
   test_utils::CassResultPtr result;
 
-  test_utils::CassStatementPtr statement(cass_statement_new("SELECT * FROM system.schema_keyspaces", 0));
+  test_utils::CassStatementPtr statement(cass_statement_new(session.get(), "SELECT * FROM system.schema_keyspaces", 0));
   test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
 
   cass_future_set_callback(future.get(), check_result_callback, callback_data.get());

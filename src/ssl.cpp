@@ -17,7 +17,7 @@
 #include "ssl.hpp"
 
 #include "cassandra.h"
-#include "types.hpp"
+#include "external_types.hpp"
 
 #include <uv.h>
 

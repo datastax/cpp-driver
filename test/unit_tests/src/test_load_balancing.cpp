@@ -543,7 +543,8 @@ BOOST_AUTO_TEST_CASE(simple)
 
   cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest(1));
   const char* value = "kjdfjkldsdjkl"; // hash: 9024137376112061887
-  request->bind(0, value, strlen(value));
+  cass::CassString s = { value, strlen(value) };
+  request->set(0, s);
   request->add_key_index(0);
 
   {
@@ -624,7 +625,8 @@ BOOST_AUTO_TEST_CASE(network_topology)
 
   cass::SharedRefPtr<cass::QueryRequest> request(new cass::QueryRequest(1));
   const char* value = "abc"; // hash: -5434086359492102041
-  request->bind(0, value, strlen(value));
+  cass::CassString s = { value, strlen(value) };
+  request->set(0, s);
   request->add_key_index(0);
 
   {

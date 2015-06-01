@@ -204,7 +204,7 @@ BOOST_AUTO_TEST_CASE(bind_multiple_columns)
 
 BOOST_AUTO_TEST_CASE(bind_not_prepared)
 {
-  test_utils::CassStatementPtr statement(cass_statement_new("INSERT INTO by_name (key, a) VALUES (?, ?)", 2));
+  test_utils::CassStatementPtr statement(cass_statement_new(session, "INSERT INTO by_name (key, a) VALUES (?, ?)", 2));
 
   CassUuid key = test_utils::generate_time_uuid(uuid_gen);
 
@@ -225,7 +225,7 @@ BOOST_AUTO_TEST_CASE(bind_invalid_name)
 
 BOOST_AUTO_TEST_CASE(get_invalid_name)
 {
-  test_utils::CassStatementPtr statement(cass_statement_new("INSERT INTO by_name (key, a) VALUES (?, ?)", 2));
+  test_utils::CassStatementPtr statement(cass_statement_new(session, "INSERT INTO by_name (key, a) VALUES (?, ?)", 2));
 
   CassUuid key = test_utils::generate_time_uuid(uuid_gen);
 

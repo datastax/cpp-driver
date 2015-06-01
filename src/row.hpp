@@ -17,8 +17,8 @@
 #ifndef __CASS_ROW_HPP_INCLUDED__
 #define __CASS_ROW_HPP_INCLUDED__
 
-#include "value.hpp"
 #include "string_ref.hpp"
+#include "value.hpp"
 
 #include <vector>
 
@@ -34,7 +34,7 @@ public:
   Row(const ResultResponse* result)
     : result_(result) {}
 
-  ValueVec values;
+  OutputValueVec values;
 
   const Value* get_by_name(const StringRef& name) const;
 
@@ -48,7 +48,7 @@ private:
   const ResultResponse* result_;
 };
 
-char* decode_row(char* row, const ResultResponse* result, ValueVec& output);
+char* decode_row(char* row, const ResultResponse* result, OutputValueVec& output);
 
 } // namespace cass
 

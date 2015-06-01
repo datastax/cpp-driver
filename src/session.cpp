@@ -23,7 +23,7 @@
 #include "resolver.hpp"
 #include "scoped_lock.hpp"
 #include "timer.hpp"
-#include "types.hpp"
+#include "external_types.hpp"
 
 extern "C" {
 

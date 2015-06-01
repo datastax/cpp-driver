@@ -19,7 +19,7 @@
 #include "auth.hpp"
 #include "auth_requests.hpp"
 #include "auth_responses.hpp"
-#include "common.hpp"
+#include "cassandra.h"
 #include "constants.hpp"
 #include "connector.hpp"
 #include "timer.hpp"
@@ -33,7 +33,7 @@
 #include "error_response.hpp"
 #include "event_response.hpp"
 #include "logger.hpp"
-#include "cassandra.h"
+#include "utils.hpp"
 
 #include <iomanip>
 #include <sstream>
