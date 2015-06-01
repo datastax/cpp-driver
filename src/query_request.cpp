@@ -23,10 +23,8 @@ namespace cass {
 int QueryRequest::encode(int version, BufferVec* bufs) const {
   if (version == 1) {
     return encode_v1(bufs);
-  } else if (version == 2) {
-    return encode_v2(bufs);
-  } else {
-    return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
+  } else  {
+    return encode(bufs);
   }
 }
 
@@ -42,9 +40,7 @@ int QueryRequest::encode_v1(BufferVec* bufs) const {
   return length;
 }
 
-int QueryRequest::encode_v2(BufferVec* bufs) const {
-  const int version = 2;
-
+int QueryRequest::encode(BufferVec* bufs) const {
   uint8_t flags = 0;
   size_t length = 0;
 
@@ -53,7 +49,7 @@ int QueryRequest::encode_v2(BufferVec* bufs) const {
                           sizeof(uint16_t) + sizeof(uint8_t);
   size_t paging_buf_size = 0;
 
-  if (values_count() > 0) { // <values> = <n><value_1>...<value_n>
+  if (buffers_count() > 0) { // <values> = <n><value_1>...<value_n>
     query_buf_size += sizeof(uint16_t); // <n> [short]
     flags |= CASS_QUERY_FLAG_VALUES;
   }
@@ -88,9 +84,9 @@ int QueryRequest::encode_v2(BufferVec* bufs) const {
     pos = buf.encode_uint16(pos, consistency());
     pos = buf.encode_byte(pos, flags);
 
-    if (values_count() > 0) {
-      buf.encode_uint16(pos, values_count());
-      length += encode_values(version, bufs);
+    if (buffers_count() > 0) {
+      buf.encode_uint16(pos, buffers_count());
+      length += copy_buffers(bufs);
     }
   }
 

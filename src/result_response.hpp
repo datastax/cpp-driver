@@ -18,6 +18,7 @@
 #define __CASS_RESULT_RESPONSE_HPP_INCLUDED__
 
 #include "constants.hpp"
+#include "data_type.hpp"
 #include "macros.hpp"
 #include "result_metadata.hpp"
 #include "response.hpp"
@@ -36,6 +37,7 @@ class ResultResponse : public Response {
 public:
   ResultResponse()
       : Response(CQL_OPCODE_RESULT)
+      , protocol_version_(0)
       , kind_(0)
       , has_more_pages_(false)
       , paging_state_(NULL)
@@ -53,6 +55,8 @@ public:
     first_row_.set_result(this);
   }
 
+  int protocol_version() const{ return protocol_version_; }
+
   int32_t kind() const { return kind_; }
 
   bool has_more_pages() const { return has_more_pages_; }
@@ -61,13 +65,13 @@ public:
 
   bool no_metadata() const { return !metadata_; }
 
-  const ScopedRefPtr<ResultMetadata>& metadata() const { return metadata_; }
+  const SharedRefPtr<ResultMetadata>& metadata() const { return metadata_; }
 
   void set_metadata(ResultMetadata* metadata) {
     metadata_.reset(metadata);
   }
 
-  const ScopedRefPtr<ResultMetadata>& result_metadata() const { return result_metadata_; }
+  const SharedRefPtr<ResultMetadata>& result_metadata() const { return result_metadata_; }
 
   std::string paging_state() const {
     return std::string(paging_state_, paging_state_size_);
@@ -91,15 +95,12 @@ public:
 
   const Row& first_row() const { return first_row_; }
 
-  size_t find_column_indices(StringRef name,
-                             ResultMetadata::IndexVec* result) const;
-
   bool decode(int version, char* input, size_t size);
 
   void decode_first_row();
 
 private:
-  char* decode_metadata(char* input, ScopedRefPtr<ResultMetadata>* metadata);
+  char* decode_metadata(char* input, SharedRefPtr<ResultMetadata>* metadata);
 
   bool decode_rows(char* input);
 
@@ -110,10 +111,11 @@ private:
   bool decode_schema_change(char* input);
 
 private:
+  int protocol_version_;
   int32_t kind_;
   bool has_more_pages_; // row data
-  ScopedRefPtr<ResultMetadata> metadata_;
-  ScopedRefPtr<ResultMetadata> result_metadata_;
+  SharedRefPtr<ResultMetadata> metadata_;
+  SharedRefPtr<ResultMetadata> result_metadata_;
   char* paging_state_; // row paging
   size_t paging_state_size_;
   char* prepared_; // prepared result

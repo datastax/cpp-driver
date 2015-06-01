@@ -46,7 +46,7 @@ void print_error(CassFuture* future) {
 
 CassCluster* create_cluster() {
   CassCluster* cluster = cass_cluster_new();
-  cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
+  cass_cluster_set_contact_points(cluster, "127.0.0.1");
   return cluster;
 }
 
@@ -67,7 +67,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(query, 0);
+  CassStatement* statement = cass_statement_new(session, query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -91,11 +91,11 @@ CassError insert_into_maps(CassSession* session, const char* key, const Pair ite
   const Pair* item = NULL;
   const char* query = "INSERT INTO examples.maps (key, items) VALUES (?, ?);";
 
-  statement = cass_statement_new(query, 2);
+  statement = cass_statement_new(session, query, 2);
 
   cass_statement_bind_string(statement, 0, key);
 
-  collection = cass_collection_new(CASS_COLLECTION_TYPE_MAP, 5);
+  collection = cass_collection_new(session, CASS_COLLECTION_TYPE_MAP, 5);
   for (item = items; item->key; item++) {
     cass_collection_append_string(collection, item->key);
     cass_collection_append_int32(collection, item->value);
@@ -123,7 +123,7 @@ CassError select_from_maps(CassSession* session, const char* key) {
   CassFuture* future = NULL;
   const char* query = "SELECT items FROM examples.maps WHERE key = ?";
 
-  statement = cass_statement_new(query, 1);
+  statement = cass_statement_new(session, query, 1);
 
   cass_statement_bind_string(statement, 0, key);
 

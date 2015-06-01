@@ -70,7 +70,7 @@ struct TestTokenMap {
 
     for (int i = 0; i < num_nodes; ++i) {
       test_utils::CassStatementPtr statement(
-            cass_statement_new("SELECT tokens, data_center FROM system.local", 0));
+            cass_statement_new(session.get(), "SELECT tokens, data_center FROM system.local", 0));
       test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
       test_utils::wait_and_check_error(future.get());
       test_utils::CassResultPtr result(cass_future_get_result(future.get()));
@@ -113,7 +113,7 @@ std::string get_replica(test_utils::CassSessionPtr session,
                         const std::string& value) {
   // The query doesn't matter
   test_utils::CassStatementPtr statement(
-        cass_statement_new("SELECT * FROM system.local", 1));
+        cass_statement_new(session.get(), "SELECT * FROM system.local", 1));
   cass_statement_bind_string_n(statement.get(), 0, value.data(), value.size());
   cass_statement_add_key_index(statement.get(), 0);
   cass_statement_set_keyspace(statement.get(), keyspace.c_str());
@@ -273,7 +273,7 @@ BOOST_AUTO_TEST_CASE(single_entry_routing_key)
 
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
   
-  CassCollection* collection = cass_collection_new(CASS_COLLECTION_TYPE_MAP, 0);
+  CassCollection* collection = cass_collection_new(session.get(), CASS_COLLECTION_TYPE_MAP, 0);
   cass_statement_bind_collection(statement.get(), 0, collection);
   cass_statement_bind_string(statement.get(), 1, "cassandra cpp-driver");
 

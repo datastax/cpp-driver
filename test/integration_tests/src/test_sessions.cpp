@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(connect_invalid_keyspace)
     test_utils::CassFuturePtr connect_future(cass_session_connect_keyspace(session.get(), cluster.get(), "invalid"));
 
     const char* query = "SELECT * FROM table";
-    test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
+    test_utils::CassStatementPtr statement(cass_statement_new(session.get(), query, 0));
 
     test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
 
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE(close_timeout_error)
 
       for (int j = 0; j < 10; ++j) {
         const char* query = "SELECT * FROM system.schema_keyspaces";
-        test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
+        test_utils::CassStatementPtr statement(cass_statement_new(session.get(), query, 0));
         cass_future_free(cass_session_execute(session.get(), statement.get()));
       }
     }

@@ -17,15 +17,14 @@
 #include "schema_metadata.hpp"
 
 #include "buffer.hpp"
-#include "buffer_collection.hpp"
 #include "collection_iterator.hpp"
+#include "external_types.hpp"
 #include "iterator.hpp"
 #include "logger.hpp"
 #include "map_iterator.hpp"
 #include "result_iterator.hpp"
 #include "row.hpp"
 #include "row_iterator.hpp"
-#include "types.hpp"
 #include "value.hpp"
 
 #include "third_party/rapidjson/rapidjson/document.h"
@@ -244,13 +243,13 @@ const SchemaMetadataField* SchemaMetadata::get_field(const std::string& name) co
 std::string SchemaMetadata::get_string_field(const std::string& name) const {
   const SchemaMetadataField* field = get_field(name);
   if (field == NULL) return std::string();
-  return field->value()->buffer().to_string();
+  return field->value()->to_string();
 }
 
 void SchemaMetadata::add_field(const SharedRefPtr<RefBuffer>& buffer, const Row* row, const std::string& name) {
   const Value* value = row->get_by_name(name);
   if (value == NULL) return;
-  if (value->buffer().size() <= 0) {
+  if (value->size() <= 0) {
     fields_[name] = SchemaMetadataField(name);
     return;
   }
@@ -260,14 +259,14 @@ void SchemaMetadata::add_field(const SharedRefPtr<RefBuffer>& buffer, const Row*
 void SchemaMetadata::add_json_list_field(int version, const Row* row, const std::string& name) {
   const Value* value = row->get_by_name(name);
   if (value == NULL) return;
-  if (value->buffer().size() <= 0) {
+  if (value->size() <= 0) {
     fields_[name] = SchemaMetadataField(name);
     return;
   }
 
-  int32_t buffer_size = value->buffer().size();
+  int32_t buffer_size = value->size();
   ScopedPtr<char[]> buf(new char[buffer_size + 1]);
-  memcpy(buf.get(), value->buffer().data(), buffer_size);
+  memcpy(buf.get(), value->data(), buffer_size);
   buf[buffer_size] = '\0';
 
   rapidjson::Document d;
@@ -284,36 +283,35 @@ void SchemaMetadata::add_json_list_field(int version, const Row* row, const std:
     return;
   }
 
-  BufferCollection collection(false, d.Size());
+  Collection collection(version, CASS_COLLECTION_TYPE_LIST, d.Size());
   for (rapidjson::Value::ConstValueIterator i = d.Begin(); i != d.End(); ++i) {
-    collection.append(i->GetString(), i->GetStringLength());
+    collection.append(cass::CassString(i->GetString(), i->GetStringLength()));
   }
 
-  int encoded_size = collection.calculate_size(version);
+  size_t encoded_size = collection.get_items_size();
   SharedRefPtr<RefBuffer> encoded(RefBuffer::create(encoded_size));
 
-  collection.encode(version, encoded->data());
+  collection.encode_items(encoded->data());
 
-  Value map(CASS_VALUE_TYPE_LIST,
-            CASS_VALUE_TYPE_TEXT,
-            CASS_VALUE_TYPE_UNKNOWN,
-            d.Size(),
-            encoded->data(),
-            encoded_size);
-  fields_[name] = SchemaMetadataField(name, map, encoded);
+  Value list(version,
+             collection.data_type(),
+             d.Size(),
+             encoded->data(),
+             encoded_size);
+  fields_[name] = SchemaMetadataField(name, list, encoded);
 }
 
 void SchemaMetadata::add_json_map_field(int version, const Row* row, const std::string& name) {
   const Value* value = row->get_by_name(name);
   if (value == NULL) return;
-  if (value->buffer().size() <= 0) {
+  if (value->size() <= 0) {
     fields_[name] = SchemaMetadataField(name);
     return;
   }
 
-  int32_t buffer_size = value->buffer().size();
+  int32_t buffer_size = value->size();
   ScopedPtr<char[]> buf(new char[buffer_size + 1]);
-  memcpy(buf.get(), value->buffer().data(), buffer_size);
+  memcpy(buf.get(), value->data(), buffer_size);
   buf[buffer_size] = '\0';
 
   rapidjson::Document d;
@@ -330,20 +328,19 @@ void SchemaMetadata::add_json_map_field(int version, const Row* row, const std::
     return;
   }
 
-  BufferCollection collection(true, 2 * d.MemberCount());
+  Collection collection(version, CASS_COLLECTION_TYPE_MAP, 2 * d.MemberCount());
   for (rapidjson::Value::ConstMemberIterator i = d.MemberBegin(); i != d.MemberEnd(); ++i) {
-    collection.append(i->name.GetString(), i->name.GetStringLength());
-    collection.append(i->value.GetString(), i->value.GetStringLength());
+    collection.append(CassString(i->name.GetString(), i->name.GetStringLength()));
+    collection.append(CassString(i->value.GetString(), i->value.GetStringLength()));
   }
 
-  int encoded_size = collection.calculate_size(version);
+  size_t encoded_size = collection.get_items_size();
   SharedRefPtr<RefBuffer> encoded(RefBuffer::create(encoded_size));
 
-  collection.encode(version, encoded->data());
+  collection.encode_items(encoded->data());
 
-  Value map(CASS_VALUE_TYPE_MAP,
-            CASS_VALUE_TYPE_TEXT,
-            CASS_VALUE_TYPE_TEXT,
+  Value map(version,
+            collection.data_type(),
             d.MemberCount(),
             encoded->data(),
             encoded_size);
@@ -414,13 +411,12 @@ const TableMetadata::KeyAliases& TableMetadata::key_aliases() const {
       CollectionIterator itr(aliases->value());
       size_t i = 0;
       while (itr.next()) {
-        const BufferPiece& buf = itr.value()->buffer();
-        key_aliases_[i++].assign(buf.data(), buf.size());
+        key_aliases_[i++].assign(itr.value()->data(), itr.value()->size());
       }
     }
     if (key_aliases_.empty()) {// C* 1.2 tables created via CQL2 or thrift don't have col meta or key aliases
-      TypeDescriptor key_validator_type = TypeParser::parse(get_string_field("key_validator"));
-      const size_t count = key_validator_type.component_count();
+      SharedRefPtr<ParseResult> key_validator_type = TypeParser::parse_with_composite(get_string_field("key_validator"));
+      const size_t count = key_validator_type->types().size();
       std::ostringstream ss("key");
       for (size_t i = 0; i < count; ++i) {
         if (i > 0) {

@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(paging_simple)
   const cass_int32_t part_key = 0;
 
   for (int i = 0; i < num_rows; ++i) {
-    test_utils::CassStatementPtr statement(cass_statement_new(insert_query, 3));
+    test_utils::CassStatementPtr statement(cass_statement_new(session, insert_query, 3));
     cass_statement_bind_int32(statement.get(), 0, part_key);
     cass_statement_bind_uuid(statement.get(), 1, test_utils::generate_time_uuid(uuid_gen));
     cass_statement_bind_int32(statement.get(), 2, i);
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(paging_simple)
   const char* select_query = "SELECT value FROM test";
 
   test_utils::CassResultPtr result;
-  test_utils::CassStatementPtr statement(cass_statement_new(select_query, 0));
+  test_utils::CassStatementPtr statement(cass_statement_new(session, select_query, 0));
   cass_statement_set_paging_size(statement.get(), page_size);
 
   cass_int32_t count = 0;
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(paging_empty)
 
   const char* select_query = "SELECT value FROM test";
 
-  test_utils::CassStatementPtr statement(cass_statement_new(select_query, 0));
+  test_utils::CassStatementPtr statement(cass_statement_new(session, select_query, 0));
   cass_statement_set_paging_size(statement.get(), page_size);
 
   test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));

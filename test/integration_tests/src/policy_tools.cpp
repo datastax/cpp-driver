@@ -127,7 +127,7 @@ void PolicyTool::query(CassSession* session, int n, CassConsistency cl)
 {
   std::string select_query = str(boost::format("SELECT * FROM %s WHERE k = 0") % test_utils::SIMPLE_TABLE);
   for (int i = 0; i < n; ++i) {
-    test_utils::CassStatementPtr statement(cass_statement_new_n(select_query.data(), select_query.size(), 0));
+    test_utils::CassStatementPtr statement(cass_statement_new_n(session, select_query.data(), select_query.size(), 0));
     cass_statement_set_consistency(statement.get(), cl);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());
@@ -140,7 +140,7 @@ CassError PolicyTool::query_return_error(CassSession* session, int n, CassConsis
   std::string select_query = str(boost::format("SELECT * FROM %s WHERE k = 0") % test_utils::SIMPLE_TABLE);
   for (int i = 0; i < n; ++i) {
     test_utils::CassStatementPtr statement
-        (cass_statement_new_n(select_query.data(), select_query.size(), 0));
+        (cass_statement_new_n(session, select_query.data(), select_query.size(), 0));
     cass_statement_set_consistency(statement.get(), cl);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     CassError rc = test_utils::wait_and_return_error(future.get());

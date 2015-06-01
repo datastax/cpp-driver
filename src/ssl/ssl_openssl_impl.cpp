@@ -16,10 +16,10 @@
 
 #include "ssl.hpp"
 
-#include "common.hpp"
 #include "logger.hpp"
 #include "ssl/ring_buffer_bio.hpp"
 #include "string_ref.hpp"
+#include "utils.hpp"
 
 #include <openssl/crypto.h>
 #include <openssl/err.h>

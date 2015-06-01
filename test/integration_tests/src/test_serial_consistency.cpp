@@ -43,7 +43,7 @@ BOOST_FIXTURE_TEST_SUITE(serial_consistency, SerialConsistencyTests)
 test_utils::CassFuturePtr insert_row(CassSession* session, const std::string& key, int value, CassConsistency serial_consistency) {
   const char* insert_query = "INSERT INTO test (key, value) VALUES (?, ?) IF NOT EXISTS;";
 
-  test_utils::CassStatementPtr statement(cass_statement_new(insert_query, 2));
+  test_utils::CassStatementPtr statement(cass_statement_new(session, insert_query, 2));
   cass_statement_bind_string_n(statement.get(), 0, key.data(), key.size());
   cass_statement_bind_int32(statement.get(), 1, value);
 

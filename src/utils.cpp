@@ -14,11 +14,9 @@
   limitations under the License.
 */
 
-#include "common.hpp"
+#include "utils.hpp"
 
-#include "buffer_piece.hpp"
 #include "constants.hpp"
-#include "value.hpp"
 
 #include <algorithm>
 #include <assert.h>
@@ -78,5 +76,33 @@ std::string& trim(std::string& str) {
             str.end());
   return str;
 }
+
+static bool is_valid_cql_id_char(int c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+         (c >= '0' && c <= '9') || c == '_';
+}
+
+bool is_valid_cql_id(const std::string& str) {
+  for (std::string::const_iterator i = str.begin(),
+       end = str.end(); i != end; ++i) {
+    if (!is_valid_cql_id_char(*i)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+std::string& to_cql_id(std::string& str) {
+  if (is_valid_cql_id(str)) {
+    std::transform(str.begin(), str.end(), str.begin(), tolower);
+    return str;
+  }
+  if (str.length() > 2 && str.front() == '"' && str.back() == '"') {
+    str.pop_back();
+    return str.erase(0, 1);
+  }
+  return str;
+}
+
 
 } // namespace cass

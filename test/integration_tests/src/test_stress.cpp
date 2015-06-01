@@ -76,7 +76,7 @@ struct StressTests : public test_utils::MultipleNodesTest {
   bool insert_task(const std::string& query, CassConsistency consistency, int rows_per_id) {
     bool is_successful = true;
     for (int i = 0; i < rows_per_id; ++i) {
-      test_utils::CassStatementPtr statement(cass_statement_new(query.c_str(), 3));
+      test_utils::CassStatementPtr statement(cass_statement_new(session, query.c_str(), 3));
       cass_statement_set_consistency(statement.get(), consistency);
       if (!bind_and_execute_insert(statement.get())) {
         is_successful = false;
@@ -100,7 +100,7 @@ struct StressTests : public test_utils::MultipleNodesTest {
   bool select_task(const std::string& query, CassConsistency consistency, int num_iterations) {
     bool is_successful = true;
 
-    test_utils::CassStatementPtr statement(cass_statement_new(query.c_str(), 0));
+    test_utils::CassStatementPtr statement(cass_statement_new(session, query.c_str(), 0));
     cass_statement_set_consistency(statement.get(), consistency);
     for (int i = 0; i < num_iterations; ++i) {
       test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));

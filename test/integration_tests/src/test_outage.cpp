@@ -81,7 +81,7 @@ struct OutageTests : public test_utils::MultipleNodesTest {
 
     boost::posix_time::ptime start = boost::posix_time::second_clock::universal_time();
 
-    test_utils::CassStatementPtr statement(cass_statement_new(query.c_str(), 0));
+    test_utils::CassStatementPtr statement(cass_statement_new(session, query.c_str(), 0));
     cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_ONE);
 
     while ((boost::posix_time::second_clock::universal_time() - start).total_seconds() < TEST_DURATION_SECS) {
@@ -179,7 +179,7 @@ struct OutageTests : public test_utils::MultipleNodesTest {
   bool execute_insert(CassSession* session, const std::string& table_name) {
     std::string query = str(boost::format("INSERT INTO %s (id, event_time, text_sample) VALUES (?, ?, ?)") % table_name);
 
-    test_utils::CassStatementPtr statement(cass_statement_new_n(query.data(), query.size(), 3));
+    test_utils::CassStatementPtr statement(cass_statement_new_n(session, query.data(), query.size(), 3));
 
     boost::chrono::system_clock::time_point now(boost::chrono::system_clock::now());
     boost::chrono::milliseconds event_time(boost::chrono::duration_cast<boost::chrono::milliseconds>(now.time_since_epoch()));

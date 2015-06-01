@@ -134,7 +134,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(query, 0);
+  CassStatement* statement = cass_statement_new(session, query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -183,7 +183,7 @@ void insert_into_perf(CassSession* session, const char* query, const CassPrepare
   int i;
   CassFuture* futures[NUM_CONCURRENT_REQUESTS];
 
-  CassCollection* collection = cass_collection_new(CASS_COLLECTION_TYPE_SET, 2);
+  CassCollection* collection = cass_collection_new(session, CASS_COLLECTION_TYPE_SET, 2);
   cass_collection_append_string(collection, "jazz");
   cass_collection_append_string(collection, "2013");
 
@@ -194,7 +194,7 @@ void insert_into_perf(CassSession* session, const char* query, const CassPrepare
     if (prepared != NULL) {
       statement = cass_prepared_bind(prepared);
     } else {
-      statement = cass_statement_new(query, 5);
+      statement = cass_statement_new(session, query, 5);
     }
 
     cass_uuid_gen_time(uuid_gen, &id);
@@ -252,7 +252,7 @@ void select_from_perf(CassSession* session, const char* query, const CassPrepare
     if (prepared != NULL) {
       statement = cass_prepared_bind(prepared);
     } else {
-      statement = cass_statement_new(query, 0);
+      statement = cass_statement_new(session, query, 0);
     }
 
     futures[i] = cass_session_execute(session, statement);

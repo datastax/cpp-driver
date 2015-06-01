@@ -14,44 +14,36 @@
   limitations under the License.
 */
 
-#ifndef __CASS_BUFFER_PIECE_HPP_INCLUDED__
-#define __CASS_BUFFER_PIECE_HPP_INCLUDED__
+#ifndef __CASS_HASH_INDEX_HPP_INCLUDED__
+#define __CASS_HASH_INDEX_HPP_INCLUDED__
 
+#include "fixed_vector.hpp"
 #include "string_ref.hpp"
-
-#include <uv.h>
-
-#include <string>
 
 namespace cass {
 
-class BufferPiece {
+class HashIndex {
 public:
-  BufferPiece()
-      : data_(NULL)
-      , size_(-1) {}
+  typedef FixedVector<size_t, 16> IndexVec;
 
-  BufferPiece(char* data, size_t size)
-      : data_(data)
-      , size_(size) {}
+  struct Entry {
+    Entry()
+      : index(0)
+      , next(NULL) { }
 
-  char* data() const { return data_; }
-  int32_t size() const { return size_; }
+    StringRef name;
+    size_t index;
+    Entry* next;
+  };
 
-  StringRef to_string_ref() const {
-    if (size_ < 0) {
-      StringRef();
-    }
-    return StringRef(data_, size_);
-  }
+  HashIndex(size_t count);
 
-  std::string to_string() const {
-    return to_string_ref().to_string();
-  }
+  size_t get(StringRef name, HashIndex::IndexVec* result) const;
+  void insert(Entry* entry);
 
 private:
-  char* data_;
-  int32_t size_;
+  FixedVector<Entry*, 32> index_;
+  size_t index_mask_;
 };
 
 } // namespace cass

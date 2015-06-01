@@ -14,31 +14,22 @@
   limitations under the License.
 */
 
-// The FNV1a hash code is based on work found here:
-// http://www.isthe.com/chongo/tech/comp/fnv/index.html
-// and is therefore public domain.
+#include "data_type.hpp"
 
-#include "result_metadata.hpp"
-
-#include "utils.hpp"
-
-#include <iterator>
+#include "collection.hpp"
+#include "types.hpp"
 
 namespace cass {
 
-ResultMetadata::ResultMetadata(size_t column_count)
-  : index_(column_count) {
-  defs_.reserve(column_count);
+const SharedRefPtr<DataType> DataType::NIL;
+
+bool cass::IsValidDataType<const Collection*>::operator()(const Collection* value,
+                                                          const SharedRefPtr<DataType>& data_type) const {
+  return value->data_type()->equals(data_type, false);
 }
 
-size_t ResultMetadata::get_indices(StringRef name,
-                           HashIndex::IndexVec* result) const{
-  return index_.get(name, result);
-}
-
-void ResultMetadata::insert(ColumnDefinition& def) {
-  defs_.push_back(def);
-  index_.insert(&defs_.back());
+SharedRefPtr<DataType> cass::CreateDataType<const Collection*>::operator()(const Collection* value) const {
+  return value->data_type();
 }
 
 } // namespace cass

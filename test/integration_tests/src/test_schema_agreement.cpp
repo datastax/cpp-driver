@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
   test_utils::CassStatementPtr schema_stmt(cass_prepared_bind(prep.get()));
 
   test_utils::CassLog::reset("No schema agreement on live nodes after ");
-  test_utils::CassStatementPtr create_stmt(cass_statement_new(
+  test_utils::CassStatementPtr create_stmt(cass_statement_new(session,
                                              str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                                                   % test_utils::SIMPLE_KEYSPACE % 2).c_str(), 0));
   test_utils::CassFuturePtr create_future(cass_session_execute(session, create_stmt.get()));
