@@ -131,6 +131,22 @@ const SchemaMetadata* Schema::get(const std::string& name) const {
   return find_by_name<KeyspaceMetadata>(*keyspaces_, name);
 }
 
+SharedRefPtr<UserType> Schema::get_user_type(const std::string& keyspace,
+                                      const std::string& type_name) const
+{
+  KeyspaceUserTypeMap::const_iterator i = user_types_->find(keyspace);
+  if (i == user_types_->end()) {
+    return SharedRefPtr<UserType>();
+  }
+
+  UserTypeMap::const_iterator j = i->second.find(type_name);
+  if (j == i->second.end()) {
+    return SharedRefPtr<UserType>();
+  }
+
+  return j->second;
+}
+
 Schema::KeyspacePointerMap Schema::update_keyspaces(ResultResponse* result) {
   KeyspacePointerMap updates;
 
@@ -182,6 +198,80 @@ void Schema::update_tables(ResultResponse* table_result, ResultResponse* col_res
     keyspace_metadata->get_or_create(columnfamily_name)->update(protocol_version_, buffer, row);
   }
   update_columns(col_result);
+}
+
+void Schema::update_usertypes(ResultResponse* usertypes_result) {
+
+  usertypes_result->decode_first_row();
+  ResultIterator rows(usertypes_result);
+
+  ScopedPtr<KeyspaceUserTypeMap> user_types(new KeyspaceUserTypeMap);
+
+  while (rows.next()) {
+    std::string keyspace_name;
+    std::string type_name;
+    const Row* row = rows.row();
+
+    if (!row->get_string_by_name("keyspace_name", &keyspace_name) ||
+        !row->get_string_by_name("type_name", &type_name)) {
+      LOG_ERROR("Unable to column value for 'keyspace_name' or 'type_name'");
+      continue;
+    }
+
+    const Value* names_value = row->get_by_name("field_names");
+    if (names_value == NULL || names_value->is_null()) {
+      LOG_ERROR("'field_name's column for keyspace \"%s\" and type \"%s\" is null",
+                keyspace_name.c_str(), type_name.c_str());
+      continue;
+    }
+
+    const Value* types_value = row->get_by_name("field_types");
+    if (types_value == NULL || types_value->is_null()) {
+      LOG_ERROR("'field_type's column for keyspace '%s' and type '%s' is null",
+                keyspace_name.c_str(), type_name.c_str());
+      continue;
+    }
+
+    CollectionIterator names(names_value);
+    CollectionIterator types(types_value);
+
+    UserType::FieldVec fields;
+
+    while (names.next()) {
+      if(!types.next()) {
+        LOG_ERROR("The number of 'field_type's doesn\"t match the number of field_names for keyspace \"%s\" and type \"%s\"",
+                  keyspace_name.c_str(), type_name.c_str());
+        break;
+      }
+
+      const cass::Value* name = names.value();
+      const cass::Value* type = types.value();
+
+      if (name->is_null() || type->is_null()) {
+        LOG_ERROR("'field_name' or 'field_type' is null for keyspace \"%s\" and type \"%s\"",
+                  keyspace_name.c_str(), type_name.c_str());
+        break;
+      }
+
+      std::string field_name(name->to_string());
+
+      SharedRefPtr<DataType> data_type = TypeParser::parse_one(type->to_string());
+      if (!data_type) {
+        LOG_ERROR("Invalid 'field_type' for field \"%s\", keyspace \"%s\" and type \"%s\"",
+                  field_name.c_str(),
+                  keyspace_name.c_str(),
+                  type_name.c_str());
+        break;
+      }
+
+      fields.push_back(UserType::Field(field_name, data_type));
+    }
+
+    (*user_types)[keyspace_name][type_name]
+        = SharedRefPtr<UserType>(new UserType(keyspace_name, type_name, fields));
+  }
+
+  user_types_ = user_types.release();
 }
 
 void Schema::update_columns(ResultResponse* result) {

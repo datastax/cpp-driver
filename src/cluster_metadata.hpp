@@ -30,6 +30,7 @@ public:
   void clear();
   void update_keyspaces(ResultResponse* result);
   void update_tables(ResultResponse* table_result, ResultResponse* col_result);
+  void update_usertypes(ResultResponse* usertypes_result);
   void set_partitioner(const std::string& partitioner_class) { token_map_.set_partitioner(partitioner_class); }
   void update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens) { token_map_.update_host(host, tokens); }
   void build() { token_map_.build(); }
@@ -39,6 +40,11 @@ public:
 
   const Schema& schema() const { return schema_; }
   Schema* copy_schema() const;// synchronized copy for API
+
+  SharedRefPtr<UserType> get_user_type(const std::string& keyspace,
+                                       const std::string& type_name) const {
+    return schema_.get_user_type(keyspace, type_name);
+  }
 
   void set_protocol_version(int version) { schema_.set_protocol_version(version); }
 

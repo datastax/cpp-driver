@@ -28,39 +28,49 @@ namespace cass {
 class EventResponse : public Response {
 public:
   enum TopologyChange {
-    NEW_NODE,
+    NEW_NODE = 1,
     REMOVED_NODE,
     MOVED_NODE
   };
 
   enum StatusChange {
-    UP,
+    UP = 1,
     DOWN
   };
 
   enum SchemaChange {
-    CREATED,
+    CREATED = 1,
     UPDATED,
     DROPPED
+  };
+
+  enum SchemaChangeTarget {
+    KEYSPACE = 1,
+    TABLE,
+    TYPE
   };
 
   EventResponse()
       : Response(CQL_OPCODE_EVENT)
       , event_type_(0)
+      , topology_change_(0)
+      , status_change_(0)
+      , schema_change_(0)
+      , schema_change_target_(0)
       , keyspace_(NULL)
       , keyspace_size_(0)
-      , table_(NULL)
-      , table_size_(0) {}
+      , table_or_type_(NULL)
+      , table_or_type_size_(0) {}
 
   bool decode(int version, char* buffer, size_t size);
 
   int event_type() const { return event_type_; }
 
-  TopologyChange topology_change() const {
+  int topology_change() const {
     return topology_change_;
   }
 
-  StatusChange status_change() const {
+  int status_change() const {
     return status_change_;
   }
 
@@ -68,31 +78,35 @@ public:
     return affected_node_;
   }
 
-  SchemaChange schema_change() const {
+  int schema_change() const {
     return schema_change_;
+  }
+
+  int schema_change_target() const {
+    return schema_change_target_;
   }
 
   StringRef keyspace() const {
     return StringRef(keyspace_, keyspace_size_);
   }
 
-  StringRef table() const {
-    return StringRef(table_, table_size_);
+  StringRef table_or_type() const {
+    return StringRef(table_or_type_, table_or_type_size_);
   }
 
 private:
   int event_type_;
 
-  TopologyChange topology_change_;
-  StatusChange status_change_;
+  int topology_change_;
+  int status_change_;
   Address affected_node_;
 
-  SchemaChange schema_change_;
+  int schema_change_;
+  int schema_change_target_;
   char* keyspace_;
   size_t keyspace_size_;
-  char* table_;
-  size_t table_size_;
-
+  char* table_or_type_;
+  size_t table_or_type_size_;
 };
 
 } // namespace cass

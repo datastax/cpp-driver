@@ -218,9 +218,12 @@ class Schema {
 public:
   typedef SchemaMetadataIteratorImpl<KeyspaceMetadata> KeyspaceIterator;
   typedef std::map<std::string, KeyspaceMetadata*> KeyspacePointerMap;
+  typedef std::map<std::string, SharedRefPtr<UserType> > UserTypeMap;
+  typedef std::map<std::string,  UserTypeMap> KeyspaceUserTypeMap;
 
   Schema()
     : keyspaces_(new KeyspaceMetadata::Map)
+    , user_types_(new KeyspaceUserTypeMap)
     , protocol_version_(0) {}
 
   void set_protocol_version(int version) {
@@ -230,9 +233,13 @@ public:
   const SchemaMetadata* get(const std::string& name) const;
   Iterator* iterator() const { return new KeyspaceIterator(*keyspaces_); }
 
+  SharedRefPtr<UserType> get_user_type(const std::string& keyspace,
+                                       const std::string& type_name) const;
+
   KeyspaceMetadata* get_or_create(const std::string& name) { return &(*keyspaces_)[name]; }
   KeyspacePointerMap update_keyspaces(ResultResponse* result);
   void update_tables(ResultResponse* table_result, ResultResponse* col_result);
+  void update_usertypes(ResultResponse* usertypes_result);
   void drop_keyspace(const std::string& keyspace_name);
   void drop_table(const std::string& keyspace_name, const std::string& table_name);
   void clear();
@@ -247,6 +254,7 @@ private:
   // Really coarse grain copy-on-write. This could be made
   // more fine grain, but it might not be worth the work.
   CopyOnWritePtr<KeyspaceMetadata::Map> keyspaces_;
+  CopyOnWritePtr<KeyspaceUserTypeMap> user_types_;
 
   // Only used internally on a single thread, there's
   // no need for copy-on-write.

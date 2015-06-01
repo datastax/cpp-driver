@@ -102,6 +102,11 @@ public:
 
   const Schema* copy_schema() const { return cluster_meta_.copy_schema(); }
 
+  SharedRefPtr<UserType> get_user_type(const std::string& keyspace,
+                                       const std::string& type_name) {
+    return cluster_meta_.get_user_type(keyspace, type_name);
+  }
+
   int protocol_version() const {
     return control_connection_.protocol_version();
   }

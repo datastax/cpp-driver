@@ -200,6 +200,12 @@ private:
                                const RefreshTableData& data,
                                const MultipleRequestHandler::ResponseVec& responses);
 
+  void refresh_type(const StringRef& keyspace_name,
+                        const StringRef& type_name);
+  static void on_refresh_type(ControlConnection* control_connection,
+                              const std::pair<std::string, std::string>& keyspace_and_type_names,
+                              Response* response);
+
 private:
   State state_;
   Session* session_;

@@ -97,6 +97,12 @@ public:
       case CASS_VALUE_TYPE_MAP:
         return decode_collection(static_cast<CassValueType>(value_type));
 
+      case CASS_VALUE_TYPE_UDT:
+        return decode_user_type();
+
+      case CASS_VALUE_TYPE_TUPLE:
+        return decode_tuple();
+
       default:
         if (value_type < CASS_VALUE_TYPE_LAST_ENTRY) {
           if (data_type_cache_[value_type]) {
@@ -128,6 +134,38 @@ private:
       types.push_back(decode());
     }
     return SharedRefPtr<DataType>(new CollectionType(collection_type, types));
+  }
+
+  SharedRefPtr<DataType> decode_user_type() {
+    StringRef keyspace;
+    buffer_ = decode_string_ref(buffer_, &keyspace);
+
+    StringRef type_name;
+    buffer_ = decode_string_ref(buffer_, &type_name);
+
+    uint16_t n;
+    buffer_ = decode_uint16(buffer_, n);
+
+    UserType::FieldVec fields;
+    for (uint16_t i = 0; i < n; ++i) {
+      StringRef field_name;
+      buffer_ = decode_string_ref(buffer_, &field_name);
+      fields.push_back(UserType::Field(field_name.to_string(), decode()));
+    }
+    return SharedRefPtr<DataType>(new UserType(keyspace.to_string(),
+                                               type_name.to_string(),
+                                               fields));
+  }
+
+  SharedRefPtr<DataType> decode_tuple() {
+    uint16_t n;
+    buffer_ = decode_uint16(buffer_, n);
+
+    DataTypeVec types;
+    for (uint16_t i = 0; i < n; ++i) {
+      types.push_back(decode());
+    }
+    return CollectionType::tuple(types);
   }
 
 private:

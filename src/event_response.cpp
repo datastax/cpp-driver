@@ -55,6 +55,7 @@ bool EventResponse::decode(int version, char* buffer, size_t size) {
   } else if (event_type == "SCHEMA_CHANGE") {
     event_type_ = CASS_EVENT_SCHEMA_CHANGE;
 
+    // Version 1+: <change>... (all start with change type)
     StringRef schema_change;
     pos = decode_string_ref(pos, &schema_change);
     if (schema_change == "CREATED") {
@@ -66,8 +67,36 @@ bool EventResponse::decode(int version, char* buffer, size_t size) {
     } else {
       return false;
     }
-    pos = decode_string(pos, &keyspace_, keyspace_size_);
-    decode_string(pos, &table_, table_size_);
+
+    if (version <= 2) {
+      // Version 1 and 2: ...<keyspace><table> ([string][string])
+      pos = decode_string(pos, &keyspace_, keyspace_size_);
+      decode_string(pos, &table_or_type_, table_or_type_size_);
+      schema_change_target_ = table_or_type_size_ == 0 ? KEYSPACE : TABLE;
+    } else {
+      // Version 3+: ...<target><options>
+      // <target> = [string]
+      // <options> = [string] OR [string][string]
+
+      StringRef target;
+      pos = decode_string_ref(pos, &target);
+      if (target == "KEYSPACE") {
+        schema_change_target_ = KEYSPACE;
+      } else if (target == "TABLE") {
+        schema_change_target_ = TABLE;
+      } else if (target == "TYPE") {
+        schema_change_target_ = TYPE;
+      } else {
+        return false;
+      }
+
+      pos = decode_string(pos, &keyspace_, keyspace_size_);
+
+      if (schema_change_target_ == TABLE ||
+          schema_change_target_ == TYPE) {
+        decode_string(pos, &table_or_type_, table_or_type_size_);
+      }
+    }
   } else {
     return false;
   }
