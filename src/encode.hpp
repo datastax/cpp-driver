@@ -35,7 +35,7 @@ inline Buffer encode_with_length(cass_int32_t value) {
   return buf;
 }
 
-inline Buffer encode_with_length(int64_t value) {
+inline Buffer encode_with_length(cass_int64_t value) {
   Buffer buf(sizeof(int32_t) + sizeof(int64_t));
   size_t pos = buf.encode_int32(0, sizeof(int64_t));
   buf.encode_int64(pos, value);
@@ -105,7 +105,7 @@ inline Buffer encode(cass_int32_t value) {
   return buf;
 }
 
-inline Buffer encode(int64_t value) {
+inline Buffer encode(cass_int64_t value) {
   Buffer buf(sizeof(int64_t));
   buf.encode_int64(0, value);
   return buf;
