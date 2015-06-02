@@ -166,14 +166,23 @@ bool Statement::get_routing_key(std::string* routing_key)  const {
   if (key_indices_.size() == 1) {
       assert(key_indices_.front() < buffers_count());
       Buffer buf(buffers()[key_indices_.front()]);
-      routing_key->assign(buf.data() + sizeof(int32_t), buf.size());
+      if (buf.size() <= sizeof(int32_t)) {
+        return false;
+      }
+      routing_key->assign(buf.data() + sizeof(int32_t),
+                          buf.size() - sizeof(int32_t));
   } else {
     size_t length = 0;
 
     for (std::vector<size_t>::const_iterator i = key_indices_.begin();
          i != key_indices_.end(); ++i) {
       assert(*i < buffers_count());
-      length += sizeof(uint16_t) + buffers()[*i].size() + 1;
+      Buffer buf(buffers()[*i]);
+      if (buf.size() <= sizeof(int32_t)) {
+        return false;
+      }
+      size_t size = buf.size() - sizeof(int32_t);
+      length += sizeof(uint16_t) + size + 1;
     }
 
     routing_key->clear();
@@ -181,13 +190,13 @@ bool Statement::get_routing_key(std::string* routing_key)  const {
 
     for (std::vector<size_t>::const_iterator i = key_indices_.begin();
          i != key_indices_.end(); ++i) {
-
       Buffer buf(buffers()[*i]);
+      size_t size = buf.size() - sizeof(int32_t);
 
       char size_buf[sizeof(uint16_t)];
-      encode_uint16(size_buf, buf.size());
+      encode_uint16(size_buf, size);
       routing_key->append(size_buf, sizeof(uint16_t));
-      routing_key->append(buf.data() + sizeof(int32_t), buf.size());
+      routing_key->append(buf.data() + sizeof(int32_t), size);
       routing_key->push_back(0);
     }
   }

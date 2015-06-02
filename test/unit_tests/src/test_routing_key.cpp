@@ -154,7 +154,7 @@ BOOST_AUTO_TEST_CASE(composite)
   {
     cass::QueryRequest query(3);
 
-    query.set(0, cass_true);
+    query.set(0, cass_false);
     query.add_key_index(0);
 
     query.set(1, static_cast<cass_int32_t>(123456789));
