@@ -33,6 +33,8 @@
 
 namespace cass{
 
+// TODO: Add 32-bit hash
+
 static uint64_t fnv1a_hash_lower(StringRef s) {
   uint64_t h = FNV1_64_INIT;
   for(StringRef::const_iterator i = s.begin(), end = s.end(); i != end; ++i) {
@@ -42,10 +44,8 @@ static uint64_t fnv1a_hash_lower(StringRef s) {
   return h;
 }
 
-HashIndex::HashIndex(size_t count) {
-  size_t index_size = next_pow_2(static_cast<size_t>(count / LOAD_FACTOR) + 1);
-  index_.resize(index_size, NULL);
-  index_mask_ = index_size - 1;
+HashIndex::HashIndex(size_t capacity) {
+  reset(capacity);
 }
 
 size_t HashIndex::get(StringRef name, HashIndex::IndexVec* result) const {
@@ -94,13 +94,19 @@ void HashIndex::insert(HashIndex::Entry* entry) {
   size_t h = fnv1a_hash_lower(entry->name) & index_mask_;
 
   if (index_[h] == NULL) {
+    count_++;
     index_[h] = entry;
   } else {
     // Use linear probing to find an open bucket
+    size_t start = h;
     while (index_[h] != NULL && !iequals(entry->name, index_[h]->name)) {
       h = (h + 1) & index_mask_;
+      if (h == start) {
+        return;
+      }
     }
     if (index_[h] == NULL) {
+      count_++;
       index_[h] = entry;
     } else {
       Entry* curr = index_[h];
@@ -110,6 +116,18 @@ void HashIndex::insert(HashIndex::Entry* entry) {
       curr->next = entry;
     }
   }
+}
+
+bool HashIndex::requires_resize() const {
+  return (static_cast<double>(count_) / index_.size()) > LOAD_FACTOR;
+}
+
+void HashIndex::reset(size_t capacity) {
+  size_t index_size = next_pow_2(static_cast<size_t>(capacity / LOAD_FACTOR) + 1);
+  std::fill(index_.begin(), index_.end(), static_cast<Entry*>(NULL)); // Clear the old entries
+  index_.resize(index_size, static_cast<Entry*>(NULL));
+  index_mask_ = index_size - 1;
+  count_ = 0;
 }
 
 } // namespace cass

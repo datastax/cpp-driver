@@ -20,6 +20,10 @@
 
 extern "C" {
 
+const CassDataType* cass_value_data_type(const CassValue* value) {
+  return CassDataType::to(value->data_type().get());
+}
+
 CassError cass_value_get_int32(const CassValue* value, cass_int32_t* output) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
   if (value->value_type() != CASS_VALUE_TYPE_INT) {

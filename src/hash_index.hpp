@@ -18,6 +18,7 @@
 #define __CASS_HASH_INDEX_HPP_INCLUDED__
 
 #include "fixed_vector.hpp"
+#include "macros.hpp"
 #include "string_ref.hpp"
 
 namespace cass {
@@ -36,14 +37,23 @@ public:
     Entry* next;
   };
 
-  HashIndex(size_t count);
+  HashIndex(size_t capacity);
 
   size_t get(StringRef name, HashIndex::IndexVec* result) const;
+
   void insert(Entry* entry);
+
+  bool requires_resize() const;
+
+  void reset(size_t capacity);
 
 private:
   FixedVector<Entry*, 32> index_;
   size_t index_mask_;
+  size_t count_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(HashIndex);
 };
 
 } // namespace cass

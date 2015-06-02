@@ -19,6 +19,7 @@
 #include "constants.hpp"
 #include "external_types.hpp"
 #include "macros.hpp"
+#include "user_type_value.hpp"
 
 #include <string.h>
 
@@ -31,8 +32,23 @@ CassCollection* cass_collection_new(CassCollectionType type,
   return CassCollection::to(collection);
 }
 
+CassCollection* cass_collection_new_from_data_type(CassSession* session,
+                                                   const CassDataType* data_type,
+                                                   size_t item_count) {
+  if (!data_type->is_collection()) {
+    return NULL;
+  }
+  return CassCollection::to(new cass::Collection(session->protocol_version(),
+                                                 cass::SharedRefPtr<const cass::DataType>(data_type),
+                                                 item_count));
+}
+
 void cass_collection_free(CassCollection* collection) {
   collection->dec_ref();
+}
+
+const CassDataType* cass_collection_data_type(const CassCollection* collection) {
+  return CassDataType::to(collection->data_type().get());
 }
 
 #define CASS_COLLECTION_APPEND(Name, Params, Value)                           \
@@ -74,6 +90,12 @@ CassError cass_collection_append_string_n(CassCollection* collection,
 namespace cass {
 
 CassError Collection::append(const Collection* value) {
+  CASS_COLLECTION_CHECK_TYPE(value);
+  items_.push_back(value->encode());
+  return CASS_OK;
+}
+
+CassError Collection::append(const UserTypeValue* value) {
   CASS_COLLECTION_CHECK_TYPE(value);
   items_.push_back(value->encode());
   return CASS_OK;

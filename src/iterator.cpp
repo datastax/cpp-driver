@@ -21,6 +21,7 @@
 #include "map_iterator.hpp"
 #include "result_iterator.hpp"
 #include "row_iterator.hpp"
+#include "user_type_iterator.hpp"
 
 extern "C" {
 
@@ -49,6 +50,37 @@ CassIterator* cass_iterator_from_map(const CassValue* value) {
   }
   return NULL;
 }
+
+CassIterator* cass_iterator_from_user_type(const CassValue* value) {
+  if (!value->is_user_type()) {
+    return NULL;
+  }
+  return CassIterator::to(new cass::UserTypeIterator(value));
+}
+
+CassError cass_iterator_get_user_type_field_name(CassIterator* iterator,
+                                       const char** name,
+                                       size_t* name_length) {
+  if (iterator->type() != CASS_ITERATOR_TYPE_USER_TYPE) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  cass::StringRef field_name
+      = static_cast<cass::UserTypeIterator*>(
+          iterator->from())->field_name();
+  *name = field_name.data();
+  *name_length = field_name.size();
+  return CASS_OK;
+}
+
+const CassValue* cass_iterator_get_user_type_field_value(CassIterator* iterator) {
+  if (iterator->type() != CASS_ITERATOR_TYPE_USER_TYPE) {
+    return NULL;
+  }
+  return CassValue::to(
+        static_cast<cass::UserTypeIterator*>(
+          iterator->from())->field_value());
+}
+
 
 void cass_iterator_free(CassIterator* iterator) {
   delete iterator->from();

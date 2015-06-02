@@ -56,7 +56,7 @@ private:
     return 0;
   }
 
-  virtual const SharedRefPtr<DataType>& get_type(size_t index) const {
+  virtual const SharedRefPtr<const DataType>& get_type(size_t index) const {
     return DataType::NIL;
   }
 

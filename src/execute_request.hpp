@@ -52,7 +52,7 @@ private:
     return metadata_->get_indices(name, indices);
   }
 
-  virtual const SharedRefPtr<DataType>& get_type(size_t index) const {
+  virtual const SharedRefPtr<const DataType>& get_type(size_t index) const {
     return metadata_->get_column_definition(index).data_type;
   }
 

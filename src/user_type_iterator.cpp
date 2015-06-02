@@ -14,35 +14,25 @@
   limitations under the License.
 */
 
-#include "collection_iterator.hpp"
+#include "user_type_iterator.hpp"
+
+#include "serialization.hpp"
 
 namespace cass {
 
-bool CollectionIterator::next() {
-  if (index_ + 1 >= count_) {
+bool UserTypeIterator::next() {
+  if (next_ == end_) {
     return false;
   }
-  ++index_;
-  position_ = decode_value(position_);
+  current_ = next_++;
+  position_ = decode_field(position_);
   return true;
 }
 
-char* CollectionIterator::decode_value(char* position) {
-  int protocol_version = collection_->protocol_version();
-
+char* UserTypeIterator::decode_field(char* position) {
   int32_t size;
-  char* buffer = decode_size(protocol_version, position, size);
-
-  SharedRefPtr<const DataType> data_type;
-  if (collection_->value_type() == CASS_VALUE_TYPE_MAP) {
-    data_type = (index_ % 2 == 0) ? collection_->primary_data_type()
-                                  : collection_->secondary_data_type();
-  } else {
-    data_type = collection_->primary_data_type();
-  }
-
-  value_ = Value(protocol_version, data_type, buffer, size);
-
+  char* buffer = decode_int32(position, size);
+  value_ = Value(user_type_value_->protocol_version(), current_->type, buffer, size);
   return buffer + size;
 }
 
