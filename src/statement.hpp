@@ -34,31 +34,48 @@ public:
   Statement(uint8_t opcode, uint8_t kind, size_t values_count = 0)
       : RoutableRequest(opcode)
       , AbstractData(values_count)
-      , skip_metadata_(false)
+      , flags_(0)
       , page_size_(-1)
-      , kind_(kind) {}
+      , kind_(kind) { }
 
   Statement(uint8_t opcode, uint8_t kind, size_t values_count,
             const std::vector<size_t>& key_indices,
             const std::string& keyspace)
       : RoutableRequest(opcode, keyspace)
       , AbstractData(values_count)
-      , skip_metadata_(false)
       , page_size_(-1)
       , kind_(kind)
       , key_indices_(key_indices) { }
 
   virtual ~Statement() { }
 
-  void set_skip_metadata(bool skip_metadata) {
-    skip_metadata_ = skip_metadata;
-  }
+  uint8_t flags() const { return flags_; }
 
   bool skip_metadata() const {
-    return skip_metadata_;
+    return flags_ & CASS_QUERY_FLAG_SKIP_METADATA;
   }
 
-  int32_t page_size() const { return page_size_; }
+  void set_skip_metadata(bool skip_metadata) {
+    if (skip_metadata) {
+      flags_ |= CASS_QUERY_FLAG_SKIP_METADATA;
+    } else {
+      flags_ &= ~CASS_QUERY_FLAG_SKIP_METADATA;
+    }
+  }
+
+  void set_has_names_for_values(bool has_names_for_values) {
+    if (has_names_for_values) {
+      flags_ |= CASS_QUERY_FLAG_NAMES_FOR_VALUES;
+    } else {
+      flags_ &= ~CASS_QUERY_FLAG_NAMES_FOR_VALUES;
+    }
+  }
+
+  bool has_names_for_values() const {
+    return flags_ & CASS_QUERY_FLAG_NAMES_FOR_VALUES;
+  }
+
+  int32_t page_size() const {  return page_size_;  }
 
   void set_page_size(int32_t page_size) { page_size_ = page_size; }
 
@@ -70,14 +87,17 @@ public:
 
   uint8_t kind() const { return kind_; }
 
-  virtual const std::string& query() const = 0;
-
   void add_key_index(size_t index) { key_indices_.push_back(index); }
 
   virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const;
 
+  virtual int32_t encode_batch(int version, BufferVec* bufs) const = 0;
+
+protected:
+  int32_t copy_buffers(BufferVec* bufs) const;
+
 private:
-  bool skip_metadata_;
+  uint8_t flags_;
   int32_t page_size_;
   std::string paging_state_;
   uint8_t kind_;

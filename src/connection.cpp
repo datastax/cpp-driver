@@ -599,9 +599,7 @@ void Connection::on_ready() {
   if (keyspace_.empty()) {
     notify_ready();
   } else {
-    QueryRequest* query = new QueryRequest();
-    query->set_query("use \"" + keyspace_ + "\"");
-    write(new StartupHandler(this, query));
+    write(new StartupHandler(this, new QueryRequest("use \"" + keyspace_ + "\"")));
   }
 }
 

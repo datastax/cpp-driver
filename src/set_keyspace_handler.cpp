@@ -30,10 +30,8 @@ SetKeyspaceHandler::SetKeyspaceHandler(Connection* connection,
                                        const std::string& keyspace,
                                        RequestHandler* request_handler)
     : connection_(connection)
-    , request_(new QueryRequest())
-    , request_handler_(request_handler) {
-  request_->set_query("use \"" + keyspace + "\"");
-}
+    , request_(new QueryRequest("use \"" + keyspace + "\""))
+    , request_handler_(request_handler) { }
 
 void SetKeyspaceHandler::on_set(ResponseMessage* response) {
   switch (response->opcode()) {
