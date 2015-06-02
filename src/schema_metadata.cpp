@@ -379,7 +379,8 @@ void SchemaMetadata::add_json_list_field(int version, const Row* row, const std:
     return;
   }
 
-  Collection collection(CASS_COLLECTION_TYPE_LIST, d.Size());
+  Collection collection(CollectionType::list(SharedRefPtr<DataType>(new DataType(CASS_VALUE_TYPE_TEXT))),
+                        d.Size());
   for (rapidjson::Value::ConstValueIterator i = d.Begin(); i != d.End(); ++i) {
     collection.append(cass::CassString(i->GetString(), i->GetStringLength()));
   }
@@ -424,7 +425,11 @@ void SchemaMetadata::add_json_map_field(int version, const Row* row, const std::
     return;
   }
 
-  Collection collection(CASS_COLLECTION_TYPE_MAP, 2 * d.MemberCount());
+
+
+  Collection collection(CollectionType::map(SharedRefPtr<DataType>(new DataType(CASS_VALUE_TYPE_TEXT)),
+                                            SharedRefPtr<DataType>(new DataType(CASS_VALUE_TYPE_TEXT))),
+                        2 * d.MemberCount());
   for (rapidjson::Value::ConstMemberIterator i = d.MemberBegin(); i != d.MemberEnd(); ++i) {
     collection.append(CassString(i->name.GetString(), i->name.GetStringLength()));
     collection.append(CassString(i->value.GetString(), i->value.GetStringLength()));

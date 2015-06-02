@@ -73,8 +73,11 @@ public:
     if (!data_type_ || !data_type_->is_collection()) {
       return DataType::NIL;
     }
-    assert(static_cast<const SharedRefPtr<const CollectionType>&>(data_type_)->types().size() > 0);
-    return static_cast<const SharedRefPtr<const CollectionType>&>(data_type_)->types()[0];
+    const SharedRefPtr<const CollectionType>& collection_type(data_type_);
+    if (collection_type->types().size() < 1) {
+      return DataType::NIL;
+    }
+    return collection_type->types()[0];
   }
 
   CassValueType secondary_value_type() const {
@@ -89,8 +92,11 @@ public:
     if (!data_type_ || !data_type_->is_map()) {
       return DataType::NIL;
     }
-    assert(static_cast<const SharedRefPtr<const CollectionType>&>(data_type_)->types().size() > 1);
-    return static_cast<const SharedRefPtr<const CollectionType>&>(data_type_)->types()[1];
+    const SharedRefPtr<const CollectionType>& collection_type(data_type_);
+    if (collection_type->types().size() < 2) {
+      return DataType::NIL;
+    }
+    return collection_type->types()[1];
   }
 
   bool is_null() const {

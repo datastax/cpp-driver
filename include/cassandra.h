@@ -318,7 +318,7 @@ typedef struct CassSchemaMeta_ CassSchemaMeta;
 /**
  * @struct CassSchemaMetaField
  *
- * Key/Value metadata field for a keyspace, table, or column.
+ * Key/Value metadata field for a keyspace, table or column.
  */
 typedef struct CassSchemaMetaField_ CassSchemaMetaField;
 
@@ -1045,7 +1045,7 @@ cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
                                          cass_bool_t allow_remote_dcs_for_local_cl);
 
 /**
- * Configures the cluster to use token-aware request routing, or not.
+ * Configures the cluster to use token-aware request routing or not.
  *
  * Default is cass_true (enabled).
  *
@@ -1064,7 +1064,7 @@ cass_cluster_set_token_aware_routing(CassCluster* cluster,
 
 
 /**
- * Configures the cluster to use latency-aware request routing, or not.
+ * Configures the cluster to use latency-aware request routing or not.
  *
  * Default is cass_false (disabled).
  *
@@ -2068,7 +2068,7 @@ cass_statement_bind_string_n(CassStatement* statement,
                              size_t value_length);
 
 /**
- * Binds a "blob" or "varint" to a query or bound statement at the specified index.
+ * Binds a "blob", "varint" or "custom" to a query or bound statement at the specified index.
  *
  * @public @memberof CassStatement
  *
@@ -2155,7 +2155,7 @@ cass_statement_bind_custom(CassStatement* statement,
                            cass_byte_t** output);
 
 /**
- * Bind a "list", "map", or "set" to a query or bound statement at the
+ * Bind a "list", "map", "set" or "tuple" to a query or bound statement at the
  * specified index.
  *
  * @public @memberof CassStatement
@@ -2455,7 +2455,7 @@ cass_statement_bind_string_by_name_n(CassStatement* statement,
                                      size_t value_length);
 
 /**
- * Binds a "blob" or "varint" to all the values with the
+ * Binds a "blob", "varint" or "custom" to all the values with the
  * specified name.
  *
  * This can only be used with statements created by
@@ -2667,7 +2667,7 @@ cass_statement_bind_custom_by_name_n(CassStatement* statement,
                                      cass_byte_t** output);
 
 /**
- * Bind a "list", "map", or "set" to all the values with the
+ * Bind a "list", "map", "set" or "tuple" to all the values with the
  * specified name.
  *
  * This can only be used with statements created by
@@ -3434,7 +3434,7 @@ cass_collection_append_string_n(CassCollection* collection,
                                 size_t value_length);
 
 /**
- * Appends a "blob" or "varint" to the collection.
+ * Appends a "blob", "varint" or "custom" to the collection.
  *
  * @public @memberof CassCollection
  *
@@ -3494,7 +3494,7 @@ cass_collection_append_decimal(CassCollection* collection,
                                cass_int32_t scale);
 
 /**
- * Appends a "list", "map" or "set" to the collection.
+ * Appends a "list", "map", "set" or "tuple" to the collection.
  *
  * @public @memberof CassCollection
  *
@@ -3654,7 +3654,7 @@ cass_user_type_set_int32_by_name_n(CassUserType* user_type,
                                    cass_int32_t value);
 
 /**
- * Sets an "bigint, "counter", or "timestamp" in a user defined type
+ * Sets an "bigint, "counter" or "timestamp" in a user defined type
  * at the specified index.
  *
  * @public @memberof CassUserType
@@ -3670,7 +3670,7 @@ cass_user_type_set_int64(CassUserType* user_type,
                          cass_int64_t value);
 
 /**
- * Sets an "bigint, "counter", or "timestamp" in a user defined type
+ * Sets an "bigint, "counter" or "timestamp" in a user defined type
  * at the specified name.
  *
  * @public @memberof CassUserType
@@ -3931,7 +3931,7 @@ cass_user_type_set_string_by_name_n(CassUserType* user_type,
                                    size_t value_length);
 
 /**
- * Sets a "blob" or "varint" in a user defined type at the specified index.
+ * Sets a "blob" "varint" or "custom" in a user defined type at the specified index.
  *
  * @public @memberof CassUserType
  *
@@ -3947,7 +3947,7 @@ cass_user_type_set_bytes(CassUserType* user_type,
                          size_t value_size);
 
 /**
- * Sets a "blob" or "varint" in a user defined type at the specified name.
+ * Sets a "blob", "varint" or "custom" in a user defined type at the specified name.
  *
  * @public @memberof CassUserType
  *
@@ -4140,7 +4140,7 @@ cass_user_type_set_decimal_by_name_n(CassUserType* user_type,
                                      int scale);
 
 /**
- * Sets a "list", "map" or "set" in a user defined type at the
+ * Sets a "list", "map", "set" or "tuple" in a user defined type at the
  * specified index.
  *
  * @public @memberof CassUserType
@@ -4156,7 +4156,7 @@ cass_user_type_set_collection(CassUserType* user_type,
                               const CassCollection* value);
 
 /**
- * Sets a "list", "map" or "set" in a user defined type at the
+ * Sets a "list", "map", "set" or "tuple in a user defined type at the
  * specified name.
  *
  * @public @memberof CassUserType
@@ -4494,12 +4494,12 @@ CASS_EXPORT CassIterator*
 cass_iterator_fields_from_schema_meta(const CassSchemaMeta* meta);
 
 /**
- * Advance the iterator to the next row, column, or collection item.
+ * Advance the iterator to the next row, column or collection item.
  *
  * @public @memberof CassIterator
  *
  * @param[in] iterator
- * @return false if no more rows, columns, or items, otherwise true
+ * @return false if no more rows, columns or items, otherwise true
  */
 CASS_EXPORT cass_bool_t
 cass_iterator_next(CassIterator* iterator);

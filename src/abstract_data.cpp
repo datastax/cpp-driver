@@ -41,12 +41,6 @@ CassError AbstractData::set(size_t index, const Collection* value) {
   return CASS_OK;
 }
 
-Buffer AbstractData::encode() const {
-  Buffer buf(get_buffers_size());
-  encode_buffers(0, &buf);
-  return buf;
-}
-
 CassError AbstractData::set(size_t index, const UserTypeValue* value) {
   CASS_CHECK_INDEX_AND_TYPE(index, value);
   buffers_[index] = value->encode_with_length();

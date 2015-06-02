@@ -63,6 +63,8 @@ CASS_COLLECTION_APPEND(double, ONE_PARAM_(cass_double_t value), value)
 CASS_COLLECTION_APPEND(bool, ONE_PARAM_(cass_bool_t value), value)
 CASS_COLLECTION_APPEND(uuid, ONE_PARAM_(CassUuid value), value)
 CASS_COLLECTION_APPEND(inet, ONE_PARAM_(CassInet value), value)
+CASS_COLLECTION_APPEND(collection, ONE_PARAM_(const CassCollection* value), value)
+CASS_COLLECTION_APPEND(user_type, ONE_PARAM_(const CassUserType* value), value)
 CASS_COLLECTION_APPEND(bytes,
                        TWO_PARAMS_(const cass_byte_t* value, size_t value_size),
                        cass::CassBytes(value, value_size))
