@@ -278,7 +278,7 @@ endif()
 
 # Assign additional library requirements for Windows
 if(WIN32)
-  set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 ws2_32)
+  set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 ws2_32 userenv)
 endif()
 
 #----------------------
