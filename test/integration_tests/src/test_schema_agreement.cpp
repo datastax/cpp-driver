@@ -20,7 +20,6 @@
 
 #include "cassandra.h"
 #include "test_utils.hpp"
-#include "cql_ccm_bridge.hpp"
 
 #include <boost/format.hpp>
 #include <boost/scoped_ptr.hpp>

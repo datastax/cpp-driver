@@ -49,12 +49,20 @@ struct AsyncTests : public test_utils::SingleSessionTest {
     std::vector<CassUuid> ids;
     for (size_t i = 0; i < num_concurrent_requests; ++i) {
       CassUuid id = test_utils::generate_time_uuid(uuid_gen);
-      test_utils::CassStatementPtr statement(cass_statement_new_n(session, insert_query.data(), insert_query.size(), 3));
+      test_utils::CassStatementPtr statement(cass_statement_new(session, insert_query.c_str(), 3));
+      
+      // Determine if bound parameters can be used based on C* version
+      if (version.major == 1) {
+        insert_query = str(boost::format("INSERT INTO %s (id, num, str) VALUES(%s, %s, 'row%s')") % table_name % test_utils::Value<CassUuid>::to_string(id) % i % i);
+        statement = test_utils::CassStatementPtr(cass_statement_new(session, insert_query.c_str(), 0));
+      } else {
+        BOOST_REQUIRE(cass_statement_bind_uuid(statement.get(), 0, id) == CASS_OK);
+        BOOST_REQUIRE(cass_statement_bind_int32(statement.get(), 1, i) == CASS_OK);
+        std::string str_value = str(boost::format("row%d") % i);
+        BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 2, str_value.c_str()) == CASS_OK);
+      }
+
       cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_QUORUM);
-      BOOST_REQUIRE(cass_statement_bind_uuid(statement.get(), 0, id) == CASS_OK);
-      BOOST_REQUIRE(cass_statement_bind_int32(statement.get(), 1, i) == CASS_OK);
-      std::string str_value = str(boost::format("row%d") % i);
-      BOOST_REQUIRE(cass_statement_bind_string_n(statement.get(), 2, str_value.data(), str_value.size()) == CASS_OK);
       futures->push_back(test_utils::CassFuturePtr(cass_session_execute(session, statement.get())));
       ids.push_back(id);
     }

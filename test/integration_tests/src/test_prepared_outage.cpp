@@ -28,7 +28,6 @@
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
 
-#include "cql_ccm_bridge.hpp"
 #include "cassandra.h"
 #include "test_utils.hpp"
 
@@ -113,13 +112,13 @@ BOOST_AUTO_TEST_CASE(reprepared_on_new_node)
   }
 
   ccm->gossip(1, true);
-  ccm->binary(2, false);
-  ccm->binary(1, false);
+  ccm->gossip(2, false);
+  ccm->gossip(1, false);
 
   //Ensure the binary protocol is disabled before executing the inserts
   boost::this_thread::sleep_for(boost::chrono::seconds(5));
   test_utils::execute_query(session, str(boost::format(insert_query) % table_name % "123456789" % 20));
-  ccm->binary(2, true);
+  ccm->gossip(2, true);
 
 
   for (int i = 0; i < 10; ++i) {
