@@ -40,7 +40,6 @@
 
 #include "cassandra.h"
 #include "test_utils.hpp"
-#include "cql_ccm_bridge.hpp"
 
 #define TEST_DURATION_SECS 300 // 5 minutes
 #define NUM_NODES 3
@@ -60,7 +59,7 @@ struct OutageTests : public test_utils::MultipleNodesTest {
     : test_utils::MultipleNodesTest(NUM_NODES, 0)
     , is_done(false)
     , timer(io_service) {
-    test_utils::CassLog::set_output_log_level(CASS_LOG_DEBUG);
+    test_utils::CassLog::set_output_log_level(CASS_LOG_DISABLED);
     printf("Warning! This test is going to take %d minutes\n", TEST_DURATION_SECS / 60);
     std::fill(nodes_states, nodes_states + NUM_NODES, UP);
     // TODO(mpenick): This is a stopgap. To be fixed in CPP-140
@@ -133,7 +132,7 @@ struct OutageTests : public test_utils::MultipleNodesTest {
           if (--n == 0) {
             if (disableBinaryGossip) {
               if (random_int(1, 100) <= 50) {
-                ccm->binary(i, false);
+                ccm->gossip(i, false);
                 nodes_states[i] = BINARY_DISABLED;
               } else {
                 ccm->gossip(i, false);
@@ -166,7 +165,7 @@ struct OutageTests : public test_utils::MultipleNodesTest {
            break;
         } else if (nodes_states[i] == BINARY_DISABLED) {
            nodes_states[i] = UP;
-           ccm->binary(i, true);
+           ccm->gossip(i, true);
            break;
         }
       }
@@ -178,8 +177,13 @@ struct OutageTests : public test_utils::MultipleNodesTest {
 
   bool execute_insert(CassSession* session, const std::string& table_name) {
     std::string query = str(boost::format("INSERT INTO %s (id, event_time, text_sample) VALUES (?, ?, ?)") % table_name);
+    test_utils::CassStatementPtr statement(cass_statement_new(session, query.c_str(), 3));
 
-    test_utils::CassStatementPtr statement(cass_statement_new_n(query.data(), query.size(), 3));
+    // Determine if bound parameters can be used based on C* version
+    if (version.major == 1) {
+      test_utils::CassPreparedPtr prepared = test_utils::prepare(session, query.c_str());
+      statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
+    }
 
     boost::chrono::system_clock::time_point now(boost::chrono::system_clock::now());
     boost::chrono::milliseconds event_time(boost::chrono::duration_cast<boost::chrono::milliseconds>(now.time_since_epoch()));
@@ -187,7 +191,7 @@ struct OutageTests : public test_utils::MultipleNodesTest {
 
     cass_statement_bind_uuid(statement.get(), 0, test_utils::generate_time_uuid(uuid_gen));
     cass_statement_bind_int64(statement.get(), 1, event_time.count());
-    cass_statement_bind_string_n(statement.get(), 2, text_sample.data(), text_sample.size());
+    cass_statement_bind_string(statement.get(), 2, text_sample.c_str());
 
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     cass_future_wait(future.get());

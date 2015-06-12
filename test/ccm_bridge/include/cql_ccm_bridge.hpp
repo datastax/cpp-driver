@@ -20,6 +20,7 @@
 #include <exception>
 #include <deque>
 #include <string.h>
+#include <sstream>
 
 #include <boost/smart_ptr.hpp>
 #include <boost/noncopyable.hpp>
@@ -28,35 +29,85 @@
 #include "cql_escape_sequences_remover.hpp"
 
 /**
- * Cassandra release version number
- */
+* Cassandra release version number
+*/
 struct CassVersion {
   /**
-   * Major portion of version number
-   */
+  * Major portion of version number
+  */
   unsigned short major;
   /**
-   * Minor portion of version number
-   */
+  * Minor portion of version number
+  */
   unsigned short minor;
   /**
-   * Patch portion of version number
-   */
+  * Patch portion of version number
+  */
   unsigned short patch;
   /**
-   * Extra portion of version number
-   */
-  char extra[64];
+  * Extra portion of version number
+  */
+  std::string extra;
 
   /**
-   * Initializing constructor for structure
-   */
+  * Initializing constructor for structure
+  */
   CassVersion() {
     major = 0;
     minor = 0;
     patch = 0;
-    memset(extra, '\0', sizeof(extra));
+    extra = "";
   };
+
+  /**
+  * Create the CassVersion from a human readable string
+  *
+  * @param version_string String representation to convert
+  */
+  CassVersion(std::string version_string) {
+    major = 0;
+    minor = 0;
+    patch = 0;
+    extra = "";
+    from_string(version_string);
+  };
+
+  /**
+  * Convert the version into a human readable string
+  */
+  std::string to_string() {
+    std::stringstream version_string;
+    version_string << major << "." << minor << "." << patch;
+    if (!extra.empty()) {
+      version_string << "-" << patch;
+    }
+    return version_string.str();
+  }
+
+  /**
+  * Convert the version from human readable string to structure
+  *
+  * @param version_string String representation to convert
+  */
+  void from_string(const std::string &version_string) {
+    // Clean up the string for tokens
+    std::string version(version_string);
+    std::replace(version.begin(), version.end(), '.', ' ');
+    std::size_t found = version.find("-");
+    if (found != std::string::npos) {
+      version.replace(found, 1, " ");
+    }
+
+    // Convert to tokens and assign version parameters
+    std::istringstream tokens(version);
+    if (tokens >> major) {
+      if (tokens >> minor) {
+        if (tokens >> patch) {
+          tokens >> extra;
+        }
+      }
+    }
+  }
 };
 
 namespace cql {
@@ -81,7 +132,6 @@ class cql_ccm_bridge_t : public boost::noncopyable {
   void resume(int node);
   void kill();
   void kill(int node);
-  void binary(int node, bool enable);
   void gossip(int node, bool enable);
 
   void remove();
