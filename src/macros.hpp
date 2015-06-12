@@ -57,6 +57,3 @@ template <> struct StaticAssert<true> { };
 template<size_t s> struct StaticAssertTest { };
 
 #endif
-
-
-
