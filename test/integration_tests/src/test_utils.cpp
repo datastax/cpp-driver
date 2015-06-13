@@ -27,6 +27,7 @@
 
 #include <assert.h>
 #include <fstream>
+#include <istream>
 #include <vector>
 #include <cstdlib>
 
@@ -123,6 +124,31 @@ const char* get_value_type(CassValueType type) {
   }
 }
 
+std::string to_hex(const char *byte_array) {
+    std::stringstream value;
+    value << std::hex << std::setfill('0');
+    for (unsigned int n = 0; n < strlen(byte_array); ++n) {
+      value << std::setw(2) << static_cast<unsigned>(byte_array[n]);
+    }
+
+    if (value.str().size() == 0) {
+      value << "00";
+    }
+    return value.str();
+}
+
+std::string replaceAll(const std::string& current, const std::string& search, const std::string& replace) {
+  // Go through each found occurrence and replace the value (in place)
+  std::string updated = current;
+  size_t found_position = 0;
+  while ((found_position = updated.find(search, found_position)) != std::string::npos) {
+    updated.replace(found_position, search.length(), replace);
+    found_position += replace.length();
+  }
+
+  return updated;
+}
+
 //-----------------------------------------------------------------------------------
 const std::string CREATE_KEYSPACE_SIMPLE_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %s }";
 const std::string CREATE_KEYSPACE_NETWORK_FORMAT = "CREATE KEYSPACE %s WITH replication = { 'class' : 'NetworkTopologyStrategy',  'dc1' : %d, 'dc2' : %d }";
@@ -148,11 +174,13 @@ const char ALPHA_NUMERIC[] = { "01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJK
 
 //-----------------------------------------------------------------------------------
 
+CassVersion MultipleNodesTest::version;
+
 MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version, bool isSSL /* = false */)
   : conf(cql::get_ccm_bridge_configuration()) {
   boost::debug::detect_memory_leaks(false);
   ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", num_nodes_dc1, num_nodes_dc2, isSSL);
-  version = ccm->version();
+  version.from_string(ccm->version().to_string());
 
   uuid_gen = cass_uuid_gen_new();
   cluster = cass_cluster_new();
@@ -192,6 +220,7 @@ SingleSessionTest::~SingleSessionTest() {
   if (session) {
     CassFuturePtr close_future(cass_session_close(session));
     cass_future_wait(close_future.get());
+    cass_session_free(session);
   }
   if (ssl) {
     cass_ssl_free(ssl);
@@ -266,6 +295,12 @@ void wait_and_check_error(CassFuture* future, cass_duration_t timeout) {
   }
 }
 
+test_utils::CassPreparedPtr prepare(CassSession* session, const std::string& query) {
+  test_utils::CassFuturePtr prepared_future(cass_session_prepare(session, query.c_str()));
+  test_utils::wait_and_check_error(prepared_future.get());
+  return test_utils::CassPreparedPtr(cass_future_get_prepared(prepared_future.get()));
+}
+
 std::string string_from_time_point(boost::chrono::system_clock::time_point time) {
   std::time_t t = boost::chrono::system_clock::to_time_t(time);
   char buffer[26];
@@ -283,23 +318,30 @@ std::string string_from_uuid(CassUuid uuid) {
   return std::string(buffer);
 }
 
-CassVersion get_version(CassSession* session) {
-  // Execute the version query
-  CassResultPtr result;
-  execute_query(session, SELECT_VERSION, &result);
+CassVersion get_version(CassSession* session /* = NULL */) {
+  // Determine if we should get the version from C* or the configuration file
+  std::string version_string;
+  if (session) {
+    // Execute the version query
+    CassResultPtr result;
+    execute_query(session, SELECT_VERSION, &result);
 
-  // Only one row should be returned; get the first row
-  const CassRow *row = cass_result_first_row(result.get());
+    // Only one row should be returned; get the first row
+    const CassRow *row = cass_result_first_row(result.get());
 
-  // Convert the release_version value to a string
-  const CassValue* value = cass_row_get_column_by_name(row, "release_version");
-  CassString version_string;
-  cass_value_get_string(value, &version_string.data, &version_string.length);
+    // Convert the release_version value to a string
+    CassString version_cass_string;
+    const CassValue* value = cass_row_get_column_by_name(row, "release_version");
+    cass_value_get_string(value, &version_cass_string.data, &version_cass_string.length);
+    version_string = std::string(version_cass_string.data, version_cass_string.length); // Needed for null termination
+  } else {
+    // Get the version string from the configuration
+    const cql::cql_ccm_bridge_configuration_t& conf(cql::get_ccm_bridge_configuration());
+    version_string = std::string(conf.cassandara_version());
+  }
 
-  // Parse the version string and return the Cassandra version
-  CassVersion version;
-  std::string str(version_string.data, version_string.length); // Needed for null termination
-  sscanf(str.c_str(), "%hu.%hu.%hu-%s", &version.major, &version.minor, &version.patch, version.extra);
+  // Return the version information
+  CassVersion version(version_string);
   return version;
 }
 

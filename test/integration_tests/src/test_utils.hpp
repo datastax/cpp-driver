@@ -18,7 +18,7 @@
 
 #include <limits>
 #include <string>
-#include <string.h>
+#include <iomanip>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/asio/ip/address.hpp>
@@ -28,6 +28,10 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/lockable_adapter.hpp>
 #include <boost/thread/lock_guard.hpp>
+
+#include <openssl/bn.h>
+
+#include <uv.h>
 
 #include "cassandra.h"
 
@@ -148,6 +152,84 @@ private:
   static void callback(const CassLogMessage* message, void* data);
 
   static LogData log_data_;
+};
+
+/**
+ * Simplified "Big Number" implementation for converting binary values
+ */
+class BigNumber {
+private:
+  /**
+   * Decode a two's complement varint (e.g. Java BigInteger) byte array into its
+   * numerical value
+   *
+   * @param byte_array Two's complement varint byte array
+   * @return Numerical value of the varint
+   */
+  static std::string decode_varint(const char *byte_array) {
+    std::string result;
+    // Assuming positive numbers only
+    //TODO: Add check for bit to return negative values
+    BIGNUM *value = BN_bin2bn(reinterpret_cast<unsigned const char *>(byte_array), static_cast<int>(strlen(byte_array)), NULL);
+    if (value) {
+      char * decimal = BN_bn2dec(value);
+      result = std::string(decimal);
+      delete decimal;
+      decimal = NULL;
+
+      //Normalize - strip leading zeros
+      for (unsigned int n = 0; n < result.size(); ++n) {
+        if (result.at(n) == '0') {
+          result.replace(n, 1, "");
+        } else {
+          break;
+        }
+      }
+      if (result.size() == 0) {
+        result = "0";
+      }
+    }
+
+    BN_free(value);
+    return result;
+  }
+
+public:
+  /**
+   * Convert a two's compliment byte array into a numerical string value
+   *
+   * @param byte_array Byte array to convert
+   * @return String representation of numerical value
+   */
+  static std::string to_string(const char *byte_array) {
+    return decode_varint(byte_array);
+  }
+  /**
+   * Convert a <code>CassBytes<code/> object into a numerical string value
+   *
+   * @param byte_array Byte array to convert
+   * @return String representation of numerical value
+   */
+  static std::string to_string(CassBytes bytes) {
+    return to_string(std::string(reinterpret_cast<char const*>(bytes.data), bytes.size).c_str());
+  }
+  /**
+   * Convert a <code>CassDecimal<code/> object into a numerical string value
+   *
+   * @param byte_array Byte array to convert
+   * @return String representation of numerical value
+   */
+  static std::string to_string(CassDecimal decimal) {
+    std::string byte_array = std::string(reinterpret_cast<const char *>(decimal.varint), decimal.varint_size);
+    std::string integer_value = decode_varint(byte_array.c_str());
+
+    //Ensure the decimal has scale
+    if (decimal.scale > 0) {
+      unsigned int period_position = integer_value.size() - decimal.scale;
+      return integer_value.substr(0, period_position) + "." + integer_value.substr(period_position);
+    }
+    return integer_value;
+  }
 };
 
 template<class T>
@@ -289,6 +371,12 @@ struct Value<cass_int32_t> {
   static cass_int32_t max_value() {
     return std::numeric_limits<cass_int32_t>::max();
   }
+
+  static std::string to_string(cass_int32_t value) {
+    std::stringstream value_stream;
+    value_stream << value;
+    return value_stream.str();
+  }
 };
 
 template<>
@@ -315,6 +403,12 @@ struct Value<cass_int64_t> {
 
   static cass_int64_t max_value() {
     return std::numeric_limits<cass_int64_t>::max();
+  }
+
+  static std::string to_string(cass_int64_t value) {
+    std::stringstream value_stream;
+    value_stream << value;
+    return value_stream.str();
   }
 };
 
@@ -343,6 +437,12 @@ struct Value<cass_float_t> {
   static cass_float_t max_value() {
     return std::numeric_limits<cass_float_t>::max();
   }
+
+  static std::string to_string(cass_float_t value) {
+    std::stringstream value_stream;
+    value_stream << std::setprecision(32) << value;
+    return value_stream.str();
+  }
 };
 
 template<>
@@ -370,6 +470,12 @@ struct Value<cass_double_t> {
   static cass_double_t max_value() {
     return std::numeric_limits<cass_double_t>::max();
   }
+
+  static std::string to_string(cass_double_t value) {
+    std::stringstream value_stream;
+    value_stream << std::setprecision(32) << value;
+    return value_stream.str();
+  }
 };
 
 template<>
@@ -388,6 +494,10 @@ struct Value<cass_bool_t> {
 
   static bool equal(cass_bool_t a, cass_bool_t b) {
     return a == b;
+  }
+
+  static std::string to_string(cass_bool_t value) {
+    return value == cass_true ? "TRUE" : "FALSE";
   }
 };
 
@@ -411,6 +521,10 @@ struct Value<CassString> {
     }
     return strncmp(a.data, b.data, a.length) == 0;
   }
+
+  static std::string to_string(CassString value) {
+    return std::string(value.data, value.length);
+  }
 };
 
 template<>
@@ -432,6 +546,10 @@ struct Value<CassBytes> {
       return false;
     }
     return memcmp(a.data, b.data, a.size) == 0;
+  }
+
+  static std::string to_string(CassBytes value) {
+    return std::string(reinterpret_cast<char const*>(value.data), value.size);
   }
 };
 
@@ -469,6 +587,17 @@ struct Value<CassInet> {
     memset(value.address, 0xF, sizeof(value.address));
     return value;
   }
+
+  static std::string to_string(CassInet value) {
+    char buffer[INET6_ADDRSTRLEN];
+    if (value.address_length == 4) {
+      uv_inet_ntop(AF_INET, value.address, buffer, sizeof(buffer));
+    } else {
+      uv_inet_ntop(AF_INET6, value.address, buffer, sizeof(buffer));
+    }
+
+    return std::string(buffer);
+  }
 };
 
 template<>
@@ -503,6 +632,12 @@ struct Value<CassUuid> {
     value.time_and_version = std::numeric_limits<cass_uint64_t>::max();
     return value;
   }
+
+  static std::string to_string(CassUuid value) {
+    char c_string[CASS_UUID_STRING_LENGTH];
+    cass_uuid_string(value, c_string);
+    return std::string(c_string);
+  }
 };
 
 template<>
@@ -528,8 +663,16 @@ struct Value<CassDecimal> {
     }
     return memcmp(a.varint, b.varint, a.varint_size) == 0;
   }
+
+  static std::string to_string(CassDecimal value) {
+    return test_utils::BigNumber::to_string(value);
+  }
 };
 
+/*
+ * TODO: Implement https://datastax-oss.atlassian.net/browse/CPP-244 to avoid
+ *       current test skip implementation in batch and serial_consistency.
+ */
 /** The following class cannot be used as a kernel of test fixture because of
     parametrized ctor. Derive from it to use it in your tests.
  */
@@ -538,7 +681,7 @@ struct MultipleNodesTest {
   virtual ~MultipleNodesTest();
 
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
-  CassVersion version;
+  static CassVersion version;
   const cql::cql_ccm_bridge_configuration_t& conf;
   CassUuidGen* uuid_gen;
   CassCluster* cluster;
@@ -557,6 +700,24 @@ void initialize_contact_points(CassCluster* cluster, std::string prefix, unsigne
 
 const char* get_value_type(CassValueType type);
 
+/**
+ * Convert a byte array to hex
+ *
+ * @param byte_array Byte array to convert
+ * @return Hex representation of the byte array
+ */
+std::string to_hex(const char *byte_array);
+
+/**
+ * Find and replace all occurrences of a string and replace with a new value
+ *
+ * @param current The string to replace all occurrences
+ * @param search The string to find
+ * @param replace The string to replace with
+ * @return Updated string
+ */
+std::string replaceAll(const std::string& current, const std::string& search, const std::string& replace);
+
 CassSessionPtr create_session(CassCluster* cluster, cass_duration_t timeout = 60 * ONE_SECOND_IN_MICROS);
 CassSessionPtr create_session(CassCluster* cluster, CassError* code, cass_duration_t timeout = 60 * ONE_SECOND_IN_MICROS);
 
@@ -574,6 +735,8 @@ void execute_query(CassSession* session,
 
 CassError wait_and_return_error(CassFuture* future, cass_duration_t timeout = 60 * ONE_SECOND_IN_MICROS);
 void wait_and_check_error(CassFuture* future, cass_duration_t timeout = 60 * ONE_SECOND_IN_MICROS);
+
+test_utils::CassPreparedPtr prepare(CassSession* session, const std::string& query);
 
 inline CassBytes bytes_from_string(const char* str) {
   return CassBytes(reinterpret_cast<const cass_uint8_t*>(str), strlen(str));
@@ -609,12 +772,19 @@ inline std::string generate_unique_str(CassUuidGen* uuid_gen) {
 std::string string_from_time_point(boost::chrono::system_clock::time_point time);
 std::string string_from_uuid(CassUuid uuid);
 
+inline std::string generate_random_uuid_str(CassUuidGen* uuid_gen) {
+  return string_from_uuid(generate_random_uuid(uuid_gen));
+}
+
 /**
- * Get the Cassandra version number from current session
+ * Get the Cassandra version number from current session or from the
+ * configuration file.
  *
- * @param session Current connected session
+ * @param session Current connected session (default: NULL; get version from
+ *                configuration file)
+ * @return Cassandra version from session or configuration file
  */
-CassVersion get_version(CassSession* session);
+CassVersion get_version(CassSession* session = NULL);
 
 /*
  * Generate a random string of a certain size using alpha numeric characters
