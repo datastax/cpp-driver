@@ -74,7 +74,7 @@ void print_error(CassFuture* future) {
 
 CassCluster* create_cluster() {
   CassCluster* cluster = cass_cluster_new();
-  cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
+  cass_cluster_set_contact_points(cluster, "127.0.0.1");
   return cluster;
 }
 
@@ -86,7 +86,7 @@ void connect_session(CassSession* session, const CassCluster* cluster, CassFutur
 
 void execute_query(CassSession* session, const char* query,
                    CassFutureCallback callback) {
-  CassStatement* statement = cass_statement_new(query, 0);
+  CassStatement* statement = cass_statement_new(session, query, 0);
   CassFuture* future = cass_session_execute(session, statement);
   cass_future_set_callback(future, callback, session);
   cass_future_free(future);
@@ -133,7 +133,7 @@ void on_create_table(CassFuture* future, void* data) {
     print_error(future);
   }
 
-  statement = cass_statement_new(insert_query, 2);
+  statement = cass_statement_new((CassSession*)data, insert_query, 2);
 
   cass_uuid_gen_time(uuid_gen, &key);
   cass_statement_bind_uuid(statement, 0, key);
@@ -155,7 +155,7 @@ void on_insert(CassFuture* future, void* data) {
   } else {
     const char* select_query = "SELECT * FROM callbacks";
     CassStatement* statement
-        = cass_statement_new(select_query, 0);
+        = cass_statement_new((CassSession*)data, select_query, 0);
     CassFuture* select_future
         = cass_session_execute((CassSession*)data, statement);
 

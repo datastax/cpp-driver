@@ -22,7 +22,7 @@
 #include "md5.hpp"
 #include "serialization.hpp"
 #include "scoped_lock.hpp"
-#include "types.hpp"
+#include "external_types.hpp"
 
 #include <stdio.h>
 #include <ctype.h>

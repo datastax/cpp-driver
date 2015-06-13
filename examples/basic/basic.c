@@ -51,7 +51,7 @@ void print_error(CassFuture* future) {
 
 CassCluster* create_cluster() {
   CassCluster* cluster = cass_cluster_new();
-  cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
+  cass_cluster_set_contact_points(cluster, "127.0.0.1");
   return cluster;
 }
 
@@ -72,7 +72,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(query, 0);
+  CassStatement* statement = cass_statement_new(session, query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -94,7 +94,7 @@ CassError insert_into_basic(CassSession* session, const char* key, const Basic* 
   CassFuture* future = NULL;
   const char* query = "INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);";
 
-  statement = cass_statement_new(query, 6);
+  statement = cass_statement_new(session, query, 6);
 
   cass_statement_bind_string(statement, 0, key);
   cass_statement_bind_bool(statement, 1, basic->bln);
@@ -123,7 +123,7 @@ CassError select_from_basic(CassSession* session, const char* key, Basic* basic)
   CassFuture* future = NULL;
   const char* query = "SELECT * FROM examples.basic WHERE key = ?";
 
-  statement = cass_statement_new(query, 1);
+  statement = cass_statement_new(session, query, 1);
 
   cass_statement_bind_string(statement, 0, key);
 

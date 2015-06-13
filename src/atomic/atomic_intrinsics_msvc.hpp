@@ -48,7 +48,7 @@
 #include <Windows.h>
 #include <intrin.h>
 
-#include "common.hpp"
+#include "macros.hpp"
 
 #include <assert.h>
 

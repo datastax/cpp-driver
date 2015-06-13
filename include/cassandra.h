@@ -389,7 +389,12 @@ typedef enum CassValueType_ {
   CASS_VALUE_TYPE_INET      = 0x0010,
   CASS_VALUE_TYPE_LIST      = 0x0020,
   CASS_VALUE_TYPE_MAP       = 0x0021,
-  CASS_VALUE_TYPE_SET       = 0x0022
+  CASS_VALUE_TYPE_SET       = 0x0022,
+  CASS_VALUE_TYPE_UDT       = 0x0030,
+  CASS_VALUE_TYPE_TUPLE     = 0x0031,
+  /* @cond IGNORE */
+  CASS_VALUE_TYPE_LAST_ENTRY
+  /* @endcond */
 } CassValueType;
 
 typedef enum CassCollectionType_ {
@@ -1765,6 +1770,7 @@ cass_future_error_message(CassFuture* future,
  *
  * @public @memberof CassStatement
  *
+ * @param[in] session
  * @param[in] query The query is copied into the statement object; the
  * memory pointed to by this parameter can be freed after this call.
  * @param[in] parameter_count The number of bound parameters.
@@ -1773,7 +1779,8 @@ cass_future_error_message(CassFuture* future,
  * @see cass_statement_free()
  */
 CASS_EXPORT CassStatement*
-cass_statement_new(const char* query,
+cass_statement_new(CassSession* session,
+                   const char* query,
                    size_t parameter_count);
 
 /**
@@ -1782,6 +1789,7 @@ cass_statement_new(const char* query,
  *
  * @public @memberof CassStatement
  *
+ * @param[in] session
  * @param[in] query
  * @param[in] query_length
  * @param[in] parameter_count
@@ -1790,7 +1798,8 @@ cass_statement_new(const char* query,
  * @see cass_statement_new()
  */
 CASS_EXPORT CassStatement*
-cass_statement_new_n(const char* query,
+cass_statement_new_n(CassSession* session,
+                     const char* query,
                      size_t query_length,
                      size_t parameter_count);
 
@@ -2435,7 +2444,7 @@ cass_statement_bind_string_by_name_n(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_bind_bytes_by_name(CassStatement* statement,
                                   const char* name,
-                                  cass_byte_t* value,
+                                  const cass_byte_t* value,
                                   size_t value_size);
 
 /**
@@ -2457,7 +2466,7 @@ CASS_EXPORT CassError
 cass_statement_bind_bytes_by_name_n(CassStatement* statement,
                                     const char* name,
                                     size_t name_length,
-                                    cass_byte_t* value,
+                                    const cass_byte_t* value,
                                     size_t value_size);
 
 /**
@@ -2667,7 +2676,6 @@ cass_statement_bind_collection_by_name_n(CassStatement* statement,
                                          size_t name_length,
                                          const CassCollection* collection);
 
-
 /***********************************************************************************
  *
  * Prepared
@@ -2711,10 +2719,12 @@ cass_prepared_bind(const CassPrepared* prepared);
  * @param[in] type
  * @return Returns a batch statement that must be freed.
  *
+ * @param[in] session
  * @see cass_batch_free()
  */
 CASS_EXPORT CassBatch*
-cass_batch_new(CassBatchType type);
+cass_batch_new(CassSession* session,
+               CassBatchType type);
 
 /**
  * Frees a batch instance. Batches can be immediately freed after being
@@ -2765,6 +2775,7 @@ cass_batch_add_statement(CassBatch* batch,
  *
  * @public @memberof CassCollection
  *
+ * @param[in] session
  * @param[in] type
  * @param[in] item_count The approximate number of items in the collection.
  * @return Returns a collection that must be freed.
@@ -2772,7 +2783,9 @@ cass_batch_add_statement(CassBatch* batch,
  * @see cass_collection_free()
  */
 CASS_EXPORT CassCollection*
-cass_collection_new(CassCollectionType type, size_t item_count);
+cass_collection_new(CassSession* session,
+                    CassCollectionType type,
+                    size_t item_count);
 
 /**
  * Frees a collection instance.
@@ -2941,6 +2954,11 @@ cass_collection_append_decimal(CassCollection* collection,
                                const cass_byte_t* varint,
                                size_t varint_size,
                                cass_int32_t scale);
+
+
+CASS_EXPORT CassError
+cass_collection_append_collection(CassCollection* collection,
+                                  const CassCollection* value);
 
 /***********************************************************************************
  *

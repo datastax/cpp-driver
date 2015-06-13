@@ -113,13 +113,13 @@ BOOST_AUTO_TEST_CASE(prepared)
   cass_statement_bind_int32(statement.get(), 1, 99);
   cass_statement_bind_string(statement.get(), 2, "abc");
 
-  test_utils::CassCollectionPtr list(cass_collection_new(CASS_COLLECTION_TYPE_LIST, 3));
+  test_utils::CassCollectionPtr list(cass_collection_new(session, CASS_COLLECTION_TYPE_LIST, 3));
   cass_collection_append_int32(list.get(), 0);
   cass_collection_append_int32(list.get(), 1);
   cass_collection_append_int32(list.get(), 2);
   cass_statement_bind_collection(statement.get(), 3, list.get());
 
-  test_utils::CassCollectionPtr set(cass_collection_new(CASS_COLLECTION_TYPE_SET, 3));
+  test_utils::CassCollectionPtr set(cass_collection_new(session, CASS_COLLECTION_TYPE_SET, 3));
   cass_collection_append_string(set.get(), "d");
   cass_collection_append_string(set.get(), "e");
   cass_collection_append_string(set.get(), "f");
@@ -135,12 +135,12 @@ BOOST_AUTO_TEST_CASE(batch_error)
 {
   test_utils::execute_query(session, "CREATE TABLE test (key int PRIMARY KEY, value int);");
 
-  test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
+  test_utils::CassBatchPtr batch(cass_batch_new(session, CASS_BATCH_TYPE_LOGGED));
 
   for (int x = 0; x < 4; x++)
   {
     std::string insert_query = str(boost::format("INSERT INTO test (key, value) VALUES(%d, %d);") % x % x);
-    test_utils::CassStatementPtr insert_statement(cass_statement_new(insert_query.c_str(), 0));
+    test_utils::CassStatementPtr insert_statement(cass_statement_new(session, insert_query.c_str(), 0));
     cass_batch_add_statement(batch.get(), insert_statement.get());
   }
 
@@ -159,7 +159,7 @@ BOOST_AUTO_TEST_CASE(query_param_error)
 
   const char* insert_query = "INSERT INTO test (key, value) VALUES(?, ?);";
 
-  test_utils::CassStatementPtr statement(cass_statement_new(insert_query, 2));
+  test_utils::CassStatementPtr statement(cass_statement_new(session, insert_query, 2));
 
   cass_statement_bind_int32(statement.get(), 0, 11);
   cass_statement_bind_int32(statement.get(), 1, 99);
@@ -170,7 +170,11 @@ BOOST_AUTO_TEST_CASE(query_param_error)
   CassString message;
   cass_future_error_message(future.get(), &message.data, &message.length);
   BOOST_REQUIRE(code == CASS_ERROR_SERVER_INVALID_QUERY);
-  BOOST_REQUIRE(std::string(message.data, message.length).find("Invalid amount of bind variables") != std::string::npos);
+  if (version.major == 1) {
+    BOOST_REQUIRE(std::string(message.data, message.length).find("Cannot execute query with bind variables") != std::string::npos);
+  } else {
+    BOOST_REQUIRE(std::string(message.data, message.length).find("Invalid amount of bind variables") != std::string::npos);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

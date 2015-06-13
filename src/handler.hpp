@@ -19,7 +19,7 @@
 
 #include "buffer.hpp"
 #include "cassandra.h"
-#include "common.hpp"
+#include "utils.hpp"
 #include "list.hpp"
 #include "scoped_ptr.hpp"
 
@@ -146,7 +146,7 @@ protected:
 
 private:
   RequestTimer timer_;
-  int8_t stream_;
+  int16_t stream_;
   State state_;
 
 private:

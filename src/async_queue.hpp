@@ -17,7 +17,7 @@
 #ifndef __CASS_ASYNC_QUEUE_HPP_INCLUDED__
 #define __CASS_ASYNC_QUEUE_HPP_INCLUDED__
 
-#include "common.hpp"
+#include "utils.hpp"
 
 #include <uv.h>
 

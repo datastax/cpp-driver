@@ -29,25 +29,6 @@ namespace cass {
 class BufferPiece;
 class Value;
 
-// Done this way so that macros like __LINE__ will expand before
-// being concatenated.
-#define STATIC_ASSERT_CONCAT(Arg1, Arg2)  STATIC_ASSERT_CONCAT1(Arg1, Arg2)
-#define STATIC_ASSERT_CONCAT1(Arg1, Arg2) STATIC_ASSERT_CONCAT2(Arg1, Arg2)
-#define STATIC_ASSERT_CONCAT2(Arg1, Arg2) Arg1##Arg2
-
-#define STATIC_ASSERT(Expression) \
-  struct STATIC_ASSERT_CONCAT(__static_assertion_at_line_, __LINE__) \
-  { \
-    StaticAssert<static_cast<bool>(Expression)> \
-      STATIC_ASSERT_CONCAT(STATIC_ASSERTION_FAILED_AT_LINE_, __LINE__); \
-  }; \
-  typedef StaticAssertTest<sizeof(STATIC_ASSERT_CONCAT(__static_assertion_at_line_, __LINE__))> \
-    STATIC_ASSERT_CONCAT(__static_assertion_test_at_line_, __LINE__)
-
-template <bool> struct StaticAssert;
-template <> struct StaticAssert<true> {};
-template<size_t s> struct StaticAssertTest {};
-
 template<class From, class To>
 class IsConvertible {
   private:
@@ -93,6 +74,10 @@ inline size_t next_pow_2(size_t num) {
 std::string opcode_to_string(int opcode);
 
 std::string& trim(std::string& str);
+
+bool is_valid_cql_id(const std::string& str);
+
+std::string& to_cql_id(std::string& str);
 
 } // namespace cass
 

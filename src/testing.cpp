@@ -22,7 +22,7 @@
 #include "murmur3.hpp"
 #include "result_response.hpp"
 #include "schema_metadata.hpp"
-#include "types.hpp"
+#include "external_types.hpp"
 
 namespace cass {
 

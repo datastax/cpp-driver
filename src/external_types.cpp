@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "types.hpp"
+#include "external_types.hpp"
 
 #include <uv.h>
 

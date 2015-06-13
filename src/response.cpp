@@ -72,21 +72,29 @@ int ResponseMessage::decode(int version, char* input, size_t size) {
 
   received_ += size;
 
+  const size_t header_size
+      = (version >= 3) ? CASS_HEADER_SIZE_V3 : CASS_HEADER_SIZE_V1_AND_V2;
+
   if (!is_header_received_) {
-    if (received_ >= CASS_HEADER_SIZE_V1_AND_V2) {
+    if (received_ >= header_size) {
       // We may have received more data then we need, only copy what we need
-      size_t overage = received_ - CASS_HEADER_SIZE_V1_AND_V2;
+      size_t overage = received_ - header_size;
       size_t needed = size - overage;
 
       memcpy(header_buffer_pos_, input_pos, needed);
       header_buffer_pos_ += needed;
       input_pos += needed;
-      assert(header_buffer_pos_ == header_buffer_ + CASS_HEADER_SIZE_V1_AND_V2);
+      assert(header_buffer_pos_ == header_buffer_ + header_size);
 
       char* buffer = header_buffer_;
       version_ = *(buffer++);
       flags_ = *(buffer++);
-      stream_ = *(buffer++);
+
+      if (version >= 3) {
+        buffer = decode_int16(buffer, stream_);
+      } else {
+        stream_ = *(buffer++);
+      }
       opcode_ = *(buffer++);
 
       decode_int32(buffer, length_);
@@ -109,7 +117,7 @@ int ResponseMessage::decode(int version, char* input, size_t size) {
   }
 
   const size_t remaining = size - (input_pos - input);
-  const size_t frame_size = CASS_HEADER_SIZE_V1_AND_V2 + length_;
+  const size_t frame_size = header_size + length_;
 
   if (received_ >= frame_size) {
     // We may have received more data then we need, only copy what we need

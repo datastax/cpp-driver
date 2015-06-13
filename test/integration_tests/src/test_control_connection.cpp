@@ -41,7 +41,7 @@ struct ControlConnectionTests {
 
     for (size_t i = 0; i < should_be_present.size() + 1; ++i) {
       const char* query = "SELECT * FROM system.schema_keyspaces";
-      test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
+      test_utils::CassStatementPtr statement(cass_statement_new(session.get(), query, 0));
       test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
       if (cass_future_error_code(future.get()) ==  CASS_OK) {
         hosts.insert(cass::get_host_from_future(future.get()));

@@ -18,53 +18,111 @@
 #define __CASS_TYPE_PARSER_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "data_type.hpp"
+#include "ref_counted.hpp"
 #include "value.hpp"
 
-#include <list>
 #include <map>
 #include <string>
+#include <vector>
 
 namespace cass {
 
-class TypeDescriptor {
+class ParseResult : public RefCounted<ParseResult> {
 public:
-  TypeDescriptor(CassValueType type = CASS_VALUE_TYPE_UNKNOWN, bool is_reversed = false);
-  TypeDescriptor(CassValueType type, bool is_reversed, std::list<TypeDescriptor>& type_arguments);
+  typedef std::vector<bool> ReversedVec;
+  typedef std::map<std::string, SharedRefPtr<DataType> > CollectionMap;
 
-  size_t component_count() { return type_ == CASS_VALUE_TYPE_CUSTOM ? type_args_.size() : 1; }
-  std::string to_string() const;
+  ParseResult(SharedRefPtr<DataType> type, bool reversed)
+    : is_composite_(false) {
+    types_.push_back(type);
+    reversed_.push_back(reversed);
+  }
 
-  CassValueType type_;
-  bool is_reversed_;
-  std::list<TypeDescriptor> type_args_;
+  ParseResult(bool is_composite,
+              const DataTypeVec& types,
+              ReversedVec reversed,
+              CollectionMap collections)
+    : is_composite_(is_composite)
+    , types_(types)
+    , reversed_(reversed)
+    , collections_(collections) { }
+
+  bool is_composite() const { return is_composite_; }
+  const DataTypeVec& types() const { return types_; }
+  const ReversedVec& reversed() const  { return reversed_; }
+  const CollectionMap& collections() const  { return collections_; }
+
+private:
+  bool is_composite_;
+  DataTypeVec types_;
+  ReversedVec reversed_;
+  CollectionMap collections_;
 };
 
 class TypeParser {
 public:
-  static bool is_reversed(const std::string& class_name);
+  static bool is_reversed(const std::string& type);
+  static bool is_frozen(const std::string& type);
+  static bool is_composite(const std::string& type);
+  static bool is_collection(const std::string& type);
 
-  static TypeDescriptor parse(const std::string& class_name);
+  static bool is_user_type(const std::string& type);
+  static bool is_tuple_type(const std::string& type);
 
-  class TypeMapper {
-  public:
-    TypeMapper();
-    CassValueType operator[](const std::string& cass_type) const;
-  private:
-    typedef std::map<std::string, CassValueType> NameTypeMap;
-    NameTypeMap name_type_map_;
-  };
+  static SharedRefPtr<DataType> parse_one(const std::string& type);
+  static SharedRefPtr<ParseResult> parse_with_composite(const std::string& type);
 
 private:
-  TypeParser(const std::string& class_name, size_t start_index = 0);
+  static bool get_nested_class_name(const std::string& type, std::string* class_name);
 
-  CassValueType parse_one_type(size_t hint = 0);
-  TypeDescriptor parse_types(bool is_reversed = false);
+  typedef std::vector<std::string> TypeParamsVec;
+  typedef std::vector<std::pair<std::string, std::string> > NameAndTypeParamsVec;
 
-  CassValueType parse_name();
+  class Parser {
+  public:
+    Parser(const std::string& str, size_t index)
+      : str_(str)
+      , index_(index) {}
 
-  const static TypeMapper type_map_;
-  const std::string& type_buffer_;
-  std::string::size_type index_;
+    void skip() { ++index_; }
+    void skip_blank();
+    bool skip_blank_and_comma();
+
+    bool read_one(std::string* name_and_args);
+    void get_next_name(std::string* name = NULL);
+    bool get_type_params(TypeParamsVec* params);
+    bool get_name_and_type_params(NameAndTypeParamsVec* params);
+    bool get_collection_params(NameAndTypeParamsVec* params);
+
+  private:
+    bool read_raw_arguments(std::string* args);
+    void read_next_identifier(std::string* name);
+
+    static void parse_error(const std::string& str,
+                            size_t index,
+                            const char* error);
+
+    bool is_eos() const {
+      return index_ >= str_.length();
+    }
+
+    static bool is_identifier_char(int c) {
+      return (c >= '0' && c <= '9')
+          || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+          || c == '-' || c == '+' || c == '.' || c == '_' || c == '&';
+    }
+
+    static bool is_blank(int c) {
+      return c == ' ' || c == '\t' || c == '\n';
+    }
+
+  private:
+    const std::string str_;
+    size_t index_;
+  };
+
+  TypeParser();
 };
 
 } // namespace cass
