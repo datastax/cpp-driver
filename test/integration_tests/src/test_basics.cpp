@@ -233,8 +233,8 @@ struct BasicTests : public test_utils::SingleSessionTest {
                                            % table_name % type_name));
 
     /*
-    * Bound parameters or prepared statement validation
-    */
+     * Bound parameters or prepared statement validation
+     */
 
     // Create insert statement for bound parameters
     CassUuid tweet_id = test_utils::generate_random_uuid(uuid_gen);
