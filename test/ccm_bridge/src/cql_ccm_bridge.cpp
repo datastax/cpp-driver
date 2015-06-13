@@ -310,24 +310,21 @@ void cql_ccm_bridge_t::execute_ccm_and_print(const string& ccm_args) {
 }
 
 CassVersion cql_ccm_bridge_t::get_cassandra_version() {
-  //Convert the cassandra_version value into the CassVersion structure
-  CassVersion version;
-  sscanf(_cassandra_version.c_str(), "%hu.%hu.%hu-%s", &version.major, &version.minor, &version.patch, version.extra);
+  CassVersion version(_cassandra_version);
   return version;
 }
 
 
 CassVersion cql_ccm_bridge_t::get_cassandra_version(int node) {
-  //Get the version string from CCM
+  // Get the version string from CCM
   std::string version_string = execute_command(boost::str(boost::format("%1% node%2% version") % CCM_COMMAND % node));
   size_t prefix_index = version_string.find("ReleaseVersion: ");
   if (prefix_index != std::string::npos) {
     version_string.replace(0, 16, "");
   }
 
-  //Convert the version string into the CassVersion structure
-  CassVersion version;
-  sscanf(version_string.c_str(), "%hu.%hu.%hu-%s", &version.major, &version.minor, &version.patch, version.extra);
+  // Return the version of the node
+  CassVersion version(_cassandra_version);
   return version;
 }
 
@@ -369,14 +366,6 @@ void cql_ccm_bridge_t::kill() {
 
 void cql_ccm_bridge_t::kill(int node) {
   execute_ccm_command(boost::str(boost::format("node%1% stop --not-gently") % node));
-}
-
-void cql_ccm_bridge_t::binary(int node, bool enable) {
-  if (enable) {
-    execute_ccm_command(boost::str(boost::format("node%1% nodetool enablebinary") % node));
-  } else {
-    execute_ccm_command(boost::str(boost::format("node%1% nodetool disablebinary") % node));
-  }
 }
 
 void cql_ccm_bridge_t::gossip(int node, bool enable) {
