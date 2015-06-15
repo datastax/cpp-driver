@@ -133,7 +133,8 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
       values.push_back(CassString("abc"));
       values.push_back(CassString("def"));
       values.push_back(CassString("ghi"));
-      insert_collection_value<CassString>(session.get(), type, CASS_VALUE_TYPE_VARCHAR,  values);
+      insert_collection_value<CassString>(session.get(), type, CASS_VALUE_TYPE_ASCII, values);
+      insert_collection_value<CassString>(session.get(), type, CASS_VALUE_TYPE_VARCHAR,  values); // NOTE: text is alias for varchar
     }
     {
       std::vector<CassBytes> values;
