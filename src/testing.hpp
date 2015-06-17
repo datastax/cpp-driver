@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <string>
+#include <vector>
 
 namespace cass {
 
@@ -33,6 +34,8 @@ CASS_EXPORT int get_port_from_cluster(CassCluster* cluster);
 CASS_EXPORT std::string get_contact_points_from_cluster(CassCluster* cluster);
 
 CASS_EXPORT CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* session, const std::string& keyspace);
+
+CASS_EXPORT std::vector<std::string> get_user_data_type_field_names(const CassSchema* schema, const std::string& keyspace, const std::string& udt_name);
 
 CASS_EXPORT int64_t create_murmur3_hash_from_string(const std::string &value);
 
