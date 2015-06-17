@@ -44,7 +44,7 @@ int ExecuteRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) c
   if (version == 1) {
     return internal_encode_v1(bufs);
   } else {
-    return encode(version, bufs);
+    return internal_encode(version, bufs);
   }
 }
 
