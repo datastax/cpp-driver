@@ -306,8 +306,8 @@ public:
 };
 
 const unsigned int TupleTests::sizes_[] = { 1, 2, 3, 5, 37, 73, 74, 877 };
-//const CassValueType TupleTests::nested_collection_types_[] = { CASS_VALUE_TYPE_UNKNOWN, CASS_VALUE_TYPE_LIST, CASS_VALUE_TYPE_MAP, CASS_VALUE_TYPE_SET, CASS_VALUE_TYPE_TUPLE };
 //TODO: Determine why nested collections are not working properly (values are inserted as seen via cqlsh)
+//const CassValueType TupleTests::nested_collection_types_[] = { CASS_VALUE_TYPE_UNKNOWN, CASS_VALUE_TYPE_LIST, CASS_VALUE_TYPE_MAP, CASS_VALUE_TYPE_SET, CASS_VALUE_TYPE_TUPLE };
 const CassValueType TupleTests::nested_collection_types_[] = { CASS_VALUE_TYPE_UNKNOWN };
 
 BOOST_AUTO_TEST_SUITE(tuples)
@@ -324,7 +324,7 @@ BOOST_AUTO_TEST_SUITE(tuples)
  */
 BOOST_AUTO_TEST_CASE(read_write) {
   CassVersion version = test_utils::get_version();
-  if (version.major >= 2 && version.minor >= 1) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
     TupleTests tester;
     std::string create_table = "CREATE TABLE tuple_read_write(key int PRIMARY KEY, value frozen<tuple<int, text, float>>)";
     std::string insert_query = "INSERT INTO tuple_read_write(key, value) VALUES (?, ?)";
@@ -451,7 +451,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
  */
 BOOST_AUTO_TEST_CASE(varying_size) {
   CassVersion version = test_utils::get_version();
-  if (version.major >= 2 && version.minor >= 1) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
     TupleTests tester;
 
     // Create some varying size tuple tests (primitives)
@@ -530,7 +530,7 @@ BOOST_AUTO_TEST_CASE(varying_size) {
 */
 BOOST_AUTO_TEST_CASE(null) {
   CassVersion version = test_utils::get_version();
-  if (version.major >= 2 && version.minor >= 1) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
     TupleTests tester;
 
     // Create some varying size null tuple tests
@@ -573,7 +573,7 @@ BOOST_AUTO_TEST_CASE(null) {
 */
 BOOST_AUTO_TEST_CASE(invalid) {
   CassVersion version = test_utils::get_version();
-  if (version.major >= 2 && version.minor >= 1) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
     TupleTests tester;
     std::string create_table = "CREATE TABLE tuple_invalid(key int PRIMARY KEY, value frozen<tuple<int, text, float>>)";
     std::string insert_query = "INSERT INTO tuple_invalid(key, value) VALUES (?, ?)";
