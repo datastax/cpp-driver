@@ -1,17 +1,17 @@
 /*
-Copyright (c) 2014-2015 DataStax
+  Copyright (c) 2014-2015 DataStax
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+  http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
 */
 
 #ifdef STAND_ALONE
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_SUITE(named_parameters)
  */
 BOOST_AUTO_TEST_CASE(ordered_unordered_read_write) {
   CassVersion version = test_utils::get_version();
-  if (version.major >= 2 && version.minor >= 1) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
     NamedParametersTests tester;
     std::string create_table = "CREATE TABLE ordered_unordered_read_write(key int PRIMARY KEY, value_text text, value_uuid uuid, value_blob blob, value_list_floats list<float>)";
     std::string insert_query = "INSERT INTO ordered_unordered_read_write(key, value_text, value_uuid, value_blob, value_list_floats) VALUES (:key, :one_text, :two_uuid, :three_blob, :four_list_floats)";
@@ -324,7 +324,7 @@ BOOST_AUTO_TEST_CASE(ordered_unordered_read_write) {
  */
 BOOST_AUTO_TEST_CASE(all_primitives) {
   CassVersion version = test_utils::get_version();
-  if (version.major >= 2 && version.minor >= 1) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
     NamedParametersTests tester;
     for (unsigned int i = 0; i < 2; ++i) {
       bool is_prepared = i == 0 ? false : true;
@@ -398,9 +398,19 @@ BOOST_AUTO_TEST_CASE(all_primitives) {
   }
 }
 
+/**
+ * Simple/Prepared Statements Using invalid named parameters
+ *
+ * This test ensures invalid named parameters return errors when prepared or executed.
+ *
+ * @since 2.1.0-beta
+ * @jira_ticket CPP-263
+ * @test_category queries:named_parameters
+ * @cassandra_version 2.1.x
+ */
 BOOST_AUTO_TEST_CASE(invalid_name) {
   CassVersion version = test_utils::get_version();
-  if (version.major >= 2 && version.minor >= 1) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
     NamedParametersTests tester;
     std::string create_table = "CREATE TABLE named_parameter_invalid(key int PRIMARY KEY, value text)";
     std::string insert_query = "INSERT INTO named_parameter_invalid(key, value) VALUES (:key_name, :value_name)";
