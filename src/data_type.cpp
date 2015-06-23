@@ -25,8 +25,7 @@
 
 extern "C" {
 
-CassDataType* cass_data_type_new(CassSession* session,
-                                 CassValueType type) {
+CassDataType* cass_data_type_new(CassValueType type) {
   cass::DataType* data_type = NULL;
   switch (type) {
     case CASS_VALUE_TYPE_LIST:
@@ -61,33 +60,28 @@ CassDataType* cass_data_type_new(CassSession* session,
   return CassDataType::to(data_type);
 }
 
-CassDataType* cass_data_type_new_from_existing(CassSession* session,
-                                               const CassDataType* data_type) {
+CassDataType* cass_data_type_new_from_existing(const CassDataType* data_type) {
   cass::DataType* copy = data_type->copy();
   copy->inc_ref();
   return CassDataType::to(copy);
 }
 
-CassDataType* cass_data_type_new_tuple(CassSession* session,
-                                       size_t item_count) {
+CassDataType* cass_data_type_new_tuple(size_t item_count) {
   cass::DataType* data_type
       = new cass::CollectionType(CASS_VALUE_TYPE_TUPLE, item_count);
   data_type->inc_ref();
   return CassDataType::to(data_type);
 }
 
-CassDataType* cass_data_type_new_udt(CassSession* session,
-                                     const char* keyspace,
+CassDataType* cass_data_type_new_udt(const char* keyspace,
                                      const char* type_name,
                                      size_t field_count) {
-  return cass_data_type_new_udt_n(session,
-                                  keyspace, strlen(keyspace),
+  return cass_data_type_new_udt_n(keyspace, strlen(keyspace),
                                   type_name, strlen(type_name),
                                   field_count);
 }
 
-CassDataType* cass_data_type_new_udt_n(CassSession* session,
-                                       const char* keyspace,
+CassDataType* cass_data_type_new_udt_n(const char* keyspace,
                                        size_t keyspace_length,
                                        const char* type_name,
                                        size_t type_name_length,

@@ -25,30 +25,7 @@
 
 extern "C" {
 
-CassUserType* cass_user_type_new_from_schema(CassSession* session,
-                                               const char* keyspace,
-                                               const char* type_name) {
-  return cass_user_type_new_from_schema_n(session,
-                                          keyspace, strlen(keyspace),
-                                          type_name, strlen(type_name));
-}
-
-CassUserType* cass_user_type_new_from_schema_n(CassSession* session,
-                                               const char* keyspace,
-                                               size_t keyspace_length,
-                                               const char* type_name,
-                                               size_t type_name_length) {
-  std::string keyspace_id(keyspace, keyspace_length);
-  std::string type_name_id(type_name, type_name_length);
-  cass::SharedRefPtr<cass::UserType> user_type
-      = session->get_user_type(cass::to_cql_id(keyspace_id),
-                               cass::to_cql_id(type_name_id));
-  if (!user_type) return NULL;
-  return CassUserType::to(new cass::UserTypeValue(user_type));
-}
-
-CassUserType* cass_user_type_new_from_data_type(CassSession* session,
-                                                const CassDataType* data_type) {
+CassUserType* cass_user_type_new_from_data_type(const CassDataType* data_type) {
   if (!data_type->is_user_type()) {
     return NULL;
   }

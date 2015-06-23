@@ -1391,6 +1391,43 @@ cass_schema_get_keyspace_n(const CassSchema* schema,
                            size_t keyspace_length);
 
 /**
+ * Gets a UDT data type
+ *
+ * @public @memberof CassSchema
+ *
+ * @param[in] schema
+ * @param[in] keyspace
+ * @param[in] type_name
+ * @return Returns a reference to the data type of the parameter. Do not free
+ * this reference as it is bound to the lifetime of the schema.
+ */
+CASS_EXPORT const CassDataType*
+cass_schema_get_udt(const CassSchema* schema,
+                    const char* keyspace,
+                    const char* type_name);
+
+/**
+ * Same as cass_schema_get_udt(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassSchema
+ *
+ * @param[in] schema
+ * @param[in] keyspace
+ * @param[in] keyspace_length
+ * @param[in] type_name
+ * @param[in] type_name_length
+ * @return Returns a reference to the data type of the parameter. Do not free
+ * this reference as it is bound to the lifetime of the schema.
+ */
+CASS_EXPORT const CassDataType*
+cass_schema_get_udt_n(const CassSchema* schema,
+                      const char* keyspace,
+                      size_t keyspace_length,
+                      const char* type_name,
+                      size_t type_name_length);
+
+/**
  * Gets the type of the specified schema metadata.
  *
  * @public @memberof CassSchema
@@ -2841,7 +2878,6 @@ cass_prepared_parameter_data_type_by_name_n(const CassPrepared* prepared,
  *
  * @public @memberof CassBatch
  *
- * @param[in] session
  * @param[in] type
  * @return Returns a batch statement that must be freed.
  *
@@ -2898,52 +2934,45 @@ cass_batch_add_statement(CassBatch* batch,
  *
  * @public @memberof CassDataType
  *
- * @param[in] session
  * @param[in] type
  * @return Returns a data type that must be freed.
  *
  * @see cass_data_type_free()
  */
 CASS_EXPORT CassDataType*
-cass_data_type_new(CassSession* session,
-                   CassValueType type);
+cass_data_type_new(CassValueType type);
 
 /**
  * Creates a new data type from an existing data type.
  *
  * @public @memberof CassDataType
  *
- * @param[in] session
  * @param[in] data_type
  * @return Returns a data type that must be freed.
  *
  * @see cass_data_type_free()
  */
 CASS_EXPORT CassDataType*
-cass_data_type_new_from_existing(CassSession* session,
-                                 const CassDataType* data_type);
+cass_data_type_new_from_existing(const CassDataType* data_type);
 
 /**
  * Creates a new tuple data type.
  *
  * @public @memberof CassDataType
  *
- * @param[in] session
  * @param[in] item_count The number of items in the tuple
  * @return Returns a data type that must be freed.
  *
  * @see cass_data_type_free()
  */
 CASS_EXPORT CassDataType*
-cass_data_type_new_tuple(CassSession* session,
-                         size_t item_count);
+cass_data_type_new_tuple(size_t item_count);
 
 /**
  * Creates a new UDT (user defined type) data type.
  *
  * @public @memberof CassDataType
  *
- * @param[in] session
  * @param[in] keyspace
  * @param[in] type_name
  * @param[in] field_count The number of fields in the UDT
@@ -2952,8 +2981,7 @@ cass_data_type_new_tuple(CassSession* session,
  * @see cass_data_type_free()
  */
 CASS_EXPORT CassDataType*
-cass_data_type_new_udt(CassSession* session,
-                       const char* keyspace,
+cass_data_type_new_udt(const char* keyspace,
                        const char* type_name,
                        size_t field_count);
 
@@ -2963,7 +2991,6 @@ cass_data_type_new_udt(CassSession* session,
  *
  * @public @memberof CassDataType
  *
- * @param[in] session
  * @param[in] keyspace
  * @param[in] keyspace_length
  * @param[in] type_name
@@ -2974,8 +3001,7 @@ cass_data_type_new_udt(CassSession* session,
  * @see cass_data_type_free()
  */
 CASS_EXPORT CassDataType*
-cass_data_type_new_udt_n(CassSession* session,
-                         const char* keyspace,
+cass_data_type_new_udt_n(const char* keyspace,
                          size_t keyspace_length,
                          const char* type_name,
                          size_t type_name_length,
@@ -2986,15 +3012,13 @@ cass_data_type_new_udt_n(CassSession* session,
  *
  * @public @memberof CassDataType
  *
- * @param[in] session
  * @param[in] class_name
  * @return Returns a data type that must be freed.
  *
  * @see cass_data_type_free()
  */
 CASS_EXPORT CassDataType*
-cass_data_type_new_custom(CassSession* session,
-                          const char* class_name);
+cass_data_type_new_custom(const char* class_name);
 
 /**
  * Same as cass_data_type_new_custom(), but with lengths for string
@@ -3002,7 +3026,6 @@ cass_data_type_new_custom(CassSession* session,
  *
  * @public @memberof CassDataType
  *
- * @param[in] session
  * @param[in] class_name
  * @param[in] class_name_length
  * @return Returns a data type that must be freed.
@@ -3010,9 +3033,19 @@ cass_data_type_new_custom(CassSession* session,
  * @see cass_data_type_free()
  */
 CASS_EXPORT CassDataType*
-cass_data_type_new_custom_n(CassSession* session,
-                            const char* class_name,
+cass_data_type_new_custom_n(const char* class_name,
                             size_t class_name_size);
+
+/**
+ * Frees a data type instance.
+ *
+ * @public @memberof CassDataType
+ *
+ * @param[in] data_type
+ */
+CASS_EXPORT void
+cass_data_type_free(CassDataType* data_type);
+
 
 /**
  * Gets the value type of the specified data type.
@@ -3267,16 +3300,6 @@ cass_data_type_add_named_sub_type_n(CassDataType* data_type,
                                     size_t name_length,
                                     const CassDataType* type);
 
-/**
- * Frees a data type instance.
- *
- * @public @memberof CassDataType
- *
- * @param[in] data_type
- */
-CASS_EXPORT void
-cass_data_type_free(CassDataType* data_type);
-
 /***********************************************************************************
  *
  * Collection
@@ -3303,7 +3326,6 @@ cass_collection_new(CassCollectionType type,
  *
  * @public @memberof CassCollection
  *
- * @param[in] session
  * @param[in] data_type
  * @param[in] item_count The approximate number of items in the collection.
  * @return Returns a collection that must be freed.
@@ -3311,8 +3333,7 @@ cass_collection_new(CassCollectionType type,
  * @see cass_collection_free();
  */
 CASS_EXPORT CassCollection*
-cass_collection_new_from_data_type(CassSession* session,
-                                   const CassDataType* data_type,
+cass_collection_new_from_data_type(const CassDataType* data_type,
                                    size_t item_count);
 
 /**
@@ -3526,52 +3547,10 @@ cass_collection_append_user_type(CassCollection* collection,
  ***********************************************************************************/
 
 /**
- * Creates a new user defined type from schema metadata.
- *
- * @public @memberof CassUserType
- *
- * @param[in] session
- * @param[in] keyspace
- * @param[in] type_name
- * @return Returns a user defined type that must be freed. NULL is returned if
- * a type doesn't exist for the "keyspace" and "type_name".
- *
- * @see cass_user_type_free()
- */
-CASS_EXPORT CassUserType*
-cass_user_type_new_from_schema(CassSession* session,
-                               const char* keyspace,
-                               const char* type_name);
-
-/**
- * Same as cass_user_type_new_from_schema(), but with lengths for string
- * parameters.
- *
- * @public @memberof CassUserType
- *
- * @param[in] session
- * @param[in] keyspace
- * @param[in] keyspace_length
- * @param[in] type_name
- * @param[in] type_name_length
- * @return Returns a user defined type that must be freed. NULL is returned if
- * a type doesn't exist for the "keyspace" and "type_name".
- *
- * @see cass_user_type_free()
- */
-CASS_EXPORT CassUserType*
-cass_user_type_new_from_schema_n(CassSession* session,
-                                 const char* keyspace,
-                                 size_t keyspace_length,
-                                 const char* type_name,
-                                 size_t type_name_length);
-
-/**
  * Creates a new user defined type from existing data type;
  *
  * @public @memberof CassUserType
  *
- * @param[in] session
  * @param[in] data_type
  * @return Returns a user defined type that must be freed. NULL is returned if
  * the data type is not a user defined type.
@@ -3579,8 +3558,7 @@ cass_user_type_new_from_schema_n(CassSession* session,
  * @see cass_user_type_free()
  */
 CASS_EXPORT CassUserType*
-cass_user_type_new_from_data_type(CassSession* session,
-                                  const CassDataType* data_type);
+cass_user_type_new_from_data_type(const CassDataType* data_type);
 
 /**
  * Frees a user defined type instance.

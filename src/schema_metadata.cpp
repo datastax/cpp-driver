@@ -52,6 +52,27 @@ CassSchemaMetaType cass_schema_meta_type(const CassSchemaMeta* meta) {
   return meta->type();
 }
 
+const CassDataType* cass_schema_get_udt(const CassSchema* schema,
+                                        const char* keyspace,
+                                        const char* type_name) {
+  return cass_schema_get_udt_n(schema,
+                               keyspace, strlen(keyspace),
+                               type_name, strlen(type_name));
+}
+
+const CassDataType* cass_schema_get_udt_n(const CassSchema* schema,
+                                          const char* keyspace,
+                                          size_t keyspace_length,
+                                          const char* type_name,
+                                          size_t type_name_length) {
+  std::string keyspace_id(keyspace, keyspace_length);
+  std::string type_name_id(type_name, type_name_length);
+  cass::SharedRefPtr<cass::UserType> user_type
+      = schema->get_user_type(cass::to_cql_id(keyspace_id),
+                              cass::to_cql_id(type_name_id));
+  return CassDataType::to(user_type.get());
+}
+
 const CassSchemaMeta* cass_schema_meta_get_entry(const CassSchemaMeta* meta,
                                                  const char* name) {
   return cass_schema_meta_get_entry_n(meta, name, strlen(name));

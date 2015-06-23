@@ -26,7 +26,7 @@ namespace cass {
 CassError AbstractData::set(size_t index, CassCustom custom) {
   CASS_CHECK_INDEX_AND_TYPE(index, custom);
   Buffer buf(custom.output_size);
-  elements_[index] = Element(buf);
+  elements_[index] = buf;
   *(custom.output) = reinterpret_cast<uint8_t*>(buf.data());
   return CASS_OK;
 }
@@ -37,14 +37,20 @@ CassError AbstractData::set(size_t index, const Collection* value) {
       value->items().size() % 2 != 0) {
     return CASS_ERROR_LIB_INVALID_ITEM_COUNT;
   }
-  elements_[index] = Element(value);
+  elements_[index] = value;
   return CASS_OK;
 }
 
 CassError AbstractData::set(size_t index, const UserTypeValue* value) {
   CASS_CHECK_INDEX_AND_TYPE(index, value);
-  buffers_[index] = value->encode_with_length();
+  elements_[index] = value->encode_with_length();
   return CASS_OK;
+}
+
+Buffer AbstractData::encode() const {
+  Buffer buf(get_buffers_size());
+  encode_buffers(0, &buf);
+  return buf;
 }
 
 Buffer AbstractData::encode_with_length() const {

@@ -38,21 +38,21 @@ CassIterator* cass_iterator_from_row(const CassRow* row) {
 }
 
 CassIterator* cass_iterator_from_collection(const CassValue* value) {
-  if (value->is_collection()) {
-    return CassIterator::to(new cass::CollectionIterator(value));
+  if (value->is_null() || !value->is_collection()) {
+    return NULL;
   }
-  return NULL;
+  return CassIterator::to(new cass::CollectionIterator(value));
 }
 
 CassIterator* cass_iterator_from_map(const CassValue* value) {
-  if (value->is_map()) {
-    return CassIterator::to(new cass::MapIterator(value));
+  if (value->is_null() || !value->is_map()) {
+    return NULL;
   }
-  return NULL;
+  return CassIterator::to(new cass::MapIterator(value));
 }
 
 CassIterator* cass_iterator_from_user_type(const CassValue* value) {
-  if (!value->is_user_type()) {
+  if (value->is_null() || !value->is_user_type()) {
     return NULL;
   }
   return CassIterator::to(new cass::UserTypeIterator(value));

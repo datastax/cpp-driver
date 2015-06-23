@@ -33,6 +33,7 @@
 #include "cassandra.h"
 
 CassUuidGen* uuid_gen;
+const CassSchema* schema;
 
 void print_error(CassFuture* future) {
   const char* message;
@@ -64,7 +65,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(session, query, 0);
+  CassStatement* statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -87,35 +88,41 @@ CassError insert_into_udt(CassSession* session) {
 
   CassUuid id;
   char id_str[CASS_UUID_STRING_LENGTH];
+  const CassDataType* udt = NULL;
   CassUserType* item = NULL;
 
   const char* query = "INSERT INTO examples.udt (id, item) VALUES (?, ?)";
 
-  statement = cass_statement_new(session, query, 2);
+  statement = cass_statement_new(query, 2);
 
   cass_uuid_gen_time(uuid_gen, &id);
   cass_uuid_string(id, id_str);
 
-  item = cass_user_type_new_from_schema(session, "examples", "item");
+  udt = cass_schema_get_udt(schema, "examples", "item");
 
-  cass_user_type_set_string_by_name(item, "street", id_str);
-  cass_user_type_set_string_by_name(item, "city", id_str);
-  cass_user_type_set_int32_by_name(item, "zip", (cass_int32_t)id.time_and_version);
+  if (udt != NULL) {
+    item = cass_user_type_new_from_data_type(udt);
 
-  cass_statement_bind_uuid(statement, 0, id);
-  cass_statement_bind_user_type(statement, 1, item);
+    cass_user_type_set_string_by_name(item, "street", id_str);
+    cass_user_type_set_string_by_name(item, "city", id_str);
+    cass_user_type_set_int32_by_name(item, "zip", (cass_int32_t)id.time_and_version);
 
-  future = cass_session_execute(session, statement);
-  cass_future_wait(future);
+    cass_statement_bind_uuid(statement, 0, id);
+    cass_statement_bind_user_type(statement, 1, item);
 
-  rc = cass_future_error_code(future);
-  if (rc != CASS_OK) {
-    print_error(future);
+    future = cass_session_execute(session, statement);
+    cass_future_wait(future);
+
+    rc = cass_future_error_code(future);
+    if (rc != CASS_OK) {
+      print_error(future);
+    }
+
+    cass_future_free(future);
+    cass_user_type_free(item);
   }
 
-  cass_future_free(future);
   cass_statement_free(statement);
-  cass_user_type_free(item);
 
   return rc;
 }
@@ -127,7 +134,7 @@ CassError select_from_udt(CassSession* session) {
 
   const char* query = "SELECT * FROM examples.udt";
 
-  statement = cass_statement_new(session, query, 0);
+  statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -155,7 +162,7 @@ CassError select_from_udt(CassSession* session) {
 
       printf("id %s ", id_str);
 
-      while(cass_iterator_next(fields)) {
+      while(fields != NULL && cass_iterator_next(fields)) {
         const char* field_name;
         size_t field_name_length;
         const CassValue* field_value = NULL;
@@ -163,17 +170,21 @@ CassError select_from_udt(CassSession* session) {
         field_value = cass_iterator_get_user_type_field_value(fields);
         printf("%.*s ", (int)field_name_length, field_name);
 
-        if (cass_value_type(field_value) == CASS_VALUE_TYPE_VARCHAR) {
-          const char* text;
-          size_t text_length;
-          cass_value_get_string(field_value, &text, &text_length);
-          printf("\"%.*s\" ", (int)text_length, text);
-        } else if (cass_value_type(field_value) == CASS_VALUE_TYPE_INT) {
-          cass_int32_t i;
-          cass_value_get_int32(field_value, &i);
-          printf("%d ", i);
+        if (!cass_value_is_null(field_value)) {
+          if (cass_value_type(field_value) == CASS_VALUE_TYPE_VARCHAR) {
+            const char* text;
+            size_t text_length;
+            cass_value_get_string(field_value, &text, &text_length);
+            printf("\"%.*s\" ", (int)text_length, text);
+          } else if (cass_value_type(field_value) == CASS_VALUE_TYPE_INT) {
+            cass_int32_t i;
+            cass_value_get_int32(field_value, &i);
+            printf("%d ", i);
+          } else {
+            printf("<invalid> ");
+          }
         } else {
-          printf("<invalid> ");
+          printf("<null> ");
         }
       }
 
@@ -203,6 +214,8 @@ int main() {
     return -1;
   }
 
+  schema = cass_session_get_schema(session);
+
   execute_query(session,
                 "CREATE KEYSPACE examples WITH replication = { \
                            'class': 'SimpleStrategy', 'replication_factor': '3' }");
@@ -224,6 +237,7 @@ int main() {
   cass_session_free(session);
 
   cass_uuid_gen_free(uuid_gen);
+  cass_schema_free(schema);
 
   return 0;
 }

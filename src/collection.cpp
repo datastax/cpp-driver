@@ -32,14 +32,12 @@ CassCollection* cass_collection_new(CassCollectionType type,
   return CassCollection::to(collection);
 }
 
-CassCollection* cass_collection_new_from_data_type(CassSession* session,
-                                                   const CassDataType* data_type,
+CassCollection* cass_collection_new_from_data_type(const CassDataType* data_type,
                                                    size_t item_count) {
   if (!data_type->is_collection()) {
     return NULL;
   }
-  return CassCollection::to(new cass::Collection(session->protocol_version(),
-                                                 cass::SharedRefPtr<const cass::DataType>(data_type),
+  return CassCollection::to(new cass::Collection(cass::SharedRefPtr<const cass::DataType>(data_type),
                                                  item_count));
 }
 
