@@ -1770,7 +1770,6 @@ cass_future_error_message(CassFuture* future,
  *
  * @public @memberof CassStatement
  *
- * @param[in] session
  * @param[in] query The query is copied into the statement object; the
  * memory pointed to by this parameter can be freed after this call.
  * @param[in] parameter_count The number of bound parameters.
@@ -1779,8 +1778,7 @@ cass_future_error_message(CassFuture* future,
  * @see cass_statement_free()
  */
 CASS_EXPORT CassStatement*
-cass_statement_new(CassSession* session,
-                   const char* query,
+cass_statement_new(const char* query,
                    size_t parameter_count);
 
 /**
@@ -1789,7 +1787,6 @@ cass_statement_new(CassSession* session,
  *
  * @public @memberof CassStatement
  *
- * @param[in] session
  * @param[in] query
  * @param[in] query_length
  * @param[in] parameter_count
@@ -1798,8 +1795,7 @@ cass_statement_new(CassSession* session,
  * @see cass_statement_new()
  */
 CASS_EXPORT CassStatement*
-cass_statement_new_n(CassSession* session,
-                     const char* query,
+cass_statement_new_n(const char* query,
                      size_t query_length,
                      size_t parameter_count);
 
@@ -2719,12 +2715,10 @@ cass_prepared_bind(const CassPrepared* prepared);
  * @param[in] type
  * @return Returns a batch statement that must be freed.
  *
- * @param[in] session
  * @see cass_batch_free()
  */
 CASS_EXPORT CassBatch*
-cass_batch_new(CassSession* session,
-               CassBatchType type);
+cass_batch_new(CassBatchType type);
 
 /**
  * Frees a batch instance. Batches can be immediately freed after being
@@ -2775,7 +2769,6 @@ cass_batch_add_statement(CassBatch* batch,
  *
  * @public @memberof CassCollection
  *
- * @param[in] session
  * @param[in] type
  * @param[in] item_count The approximate number of items in the collection.
  * @return Returns a collection that must be freed.
@@ -2783,8 +2776,7 @@ cass_batch_add_statement(CassBatch* batch,
  * @see cass_collection_free()
  */
 CASS_EXPORT CassCollection*
-cass_collection_new(CassSession* session,
-                    CassCollectionType type,
+cass_collection_new(CassCollectionType type,
                     size_t item_count);
 
 /**

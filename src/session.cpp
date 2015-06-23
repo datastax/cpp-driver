@@ -603,7 +603,8 @@ void Session::on_execute(uv_async_t* data) {
   RequestHandler* request_handler = NULL;
   while (session->request_queue_->dequeue(request_handler)) {
     if (request_handler != NULL) {
-      request_handler->set_query_plan(session->new_query_plan(request_handler->request()));
+      request_handler->set_query_plan(session->new_query_plan(request_handler->request(),
+                                                              request_handler->encoding_cache()));
 
       bool is_done = false;
       while (!is_done) {
@@ -643,12 +644,13 @@ void Session::on_execute(uv_async_t* data) {
   }
 }
 
-QueryPlan* Session::new_query_plan(const Request* request) {
+QueryPlan* Session::new_query_plan(const Request* request, Request::EncodingCache* cache) {
   std::string connected_keyspace;
   if (!io_workers_.empty()) {
     connected_keyspace = io_workers_[0]->keyspace();
   }
-  return load_balancing_policy_->new_query_plan(connected_keyspace, request, cluster_meta_.token_map());
+  return load_balancing_policy_->new_query_plan(connected_keyspace, request,
+                                                cluster_meta_.token_map(), cache);
 }
 
 } // namespace cass

@@ -29,14 +29,12 @@
 
 extern "C" {
 
-CassStatement* cass_statement_new(CassSession* session,
-                                  const char* query,
+CassStatement* cass_statement_new(const char* query,
                                   size_t parameter_count) {
-  return cass_statement_new_n(session, query, strlen(query), parameter_count);
+  return cass_statement_new_n(query, strlen(query), parameter_count);
 }
 
-CassStatement* cass_statement_new_n(CassSession* session,
-                                    const char* query,
+CassStatement* cass_statement_new_n(const char* query,
                                     size_t query_length,
                                     size_t parameter_count) {
   cass::QueryRequest* query_request = new cass::QueryRequest(parameter_count);
@@ -48,7 +46,7 @@ CassStatement* cass_statement_new_n(CassSession* session,
 
 CassError cass_statement_add_key_index(CassStatement* statement, size_t index) {
   if (statement->kind() != CASS_BATCH_KIND_QUERY) return CASS_ERROR_LIB_BAD_PARAMS;
-  if (index >= statement->buffers_count()) return CASS_ERROR_LIB_BAD_PARAMS;
+  if (index >= statement->elements_count()) return CASS_ERROR_LIB_BAD_PARAMS;
   statement->add_key_index(index);
   return CASS_OK;
 }
@@ -160,15 +158,16 @@ CassError cass_statement_bind_string_by_name_n(CassStatement* statement,
 
 namespace cass {
 
-bool Statement::get_routing_key(std::string* routing_key)  const {
+bool Statement::get_routing_key(std::string* routing_key, EncodingCache* cache)  const {
   if (key_indices_.empty()) return false;
 
   if (key_indices_.size() == 1) {
-      assert(key_indices_.front() < buffers_count());
-      Buffer buf(buffers()[key_indices_.front()]);
-      if (buf.size() <= sizeof(int32_t)) {
+      assert(key_indices_.front() < elements_count());
+      const AbstractData::Element& element(elements()[key_indices_.front()]);
+      if (element.is_empty()) {
         return false;
       }
+      Buffer buf(element.get_buffer_cached(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, cache, true));
       routing_key->assign(buf.data() + sizeof(int32_t),
                           buf.size() - sizeof(int32_t));
   } else {
@@ -176,12 +175,12 @@ bool Statement::get_routing_key(std::string* routing_key)  const {
 
     for (std::vector<size_t>::const_iterator i = key_indices_.begin();
          i != key_indices_.end(); ++i) {
-      assert(*i < buffers_count());
-      Buffer buf(buffers()[*i]);
-      if (buf.size() <= sizeof(int32_t)) {
+      assert(*i < elements_count());
+      const AbstractData::Element& element(elements()[key_indices_.front()]);
+      if (element.is_empty()) {
         return false;
       }
-      size_t size = buf.size() - sizeof(int32_t);
+      size_t size = element.get_size(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) - sizeof(int32_t);
       length += sizeof(uint16_t) + size + 1;
     }
 
@@ -190,7 +189,8 @@ bool Statement::get_routing_key(std::string* routing_key)  const {
 
     for (std::vector<size_t>::const_iterator i = key_indices_.begin();
          i != key_indices_.end(); ++i) {
-      Buffer buf(buffers()[*i]);
+      const AbstractData::Element& element(elements()[key_indices_.front()]);
+      Buffer buf(element.get_buffer_cached(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, cache, true));
       size_t size = buf.size() - sizeof(int32_t);
 
       char size_buf[sizeof(uint16_t)];

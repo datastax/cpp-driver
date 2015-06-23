@@ -24,7 +24,7 @@
 
 extern "C" {
 
-CassBatch* cass_batch_new(CassSession* session, CassBatchType type) {
+CassBatch* cass_batch_new(CassBatchType type) {
   cass::BatchRequest* batch = new cass::BatchRequest(type);
   batch->inc_ref();
   return CassBatch::to(batch);
@@ -49,14 +49,14 @@ CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
 
 namespace cass {
 
-int BatchRequest::encode(int version, BufferVec* bufs) const {
+int BatchRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) const {
   if (version == 1) {
     return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
   }
-  return encode(bufs);
+  return encode_internal(version, bufs, cache);
 }
 
-int BatchRequest::encode(BufferVec* bufs) const {
+int BatchRequest::encode_internal(int version, BufferVec* bufs, EncodingCache* cache) const {
   size_t length = 0;
 
   {
@@ -103,9 +103,11 @@ int BatchRequest::encode(BufferVec* bufs) const {
                               statement->query().size());
     }
 
-    buf.encode_uint16(pos, statement->buffers_count());
-    if (statement->buffers_count() > 0) {
-      length += statement->copy_buffers(bufs);
+    buf.encode_uint16(pos, statement->elements_count());
+    if (statement->elements_count() > 0) {
+      int32_t buffers_size = statement->copy_buffers(version, bufs, cache);
+      if (buffers_size < 0) return buffers_size;
+      length += buffers_size;
     }
   }
 
@@ -140,10 +142,10 @@ bool BatchRequest::prepared_statement(const std::string& id,
   return false;
 }
 
-bool BatchRequest::get_routing_key(std::string* routing_key) const {
+bool BatchRequest::get_routing_key(std::string* routing_key, EncodingCache* cache) const {
   for (BatchRequest::StatementList::const_iterator i = statements_.begin();
        i != statements_.end(); ++i) {
-    if ((*i)->get_routing_key(routing_key)) {
+    if ((*i)->get_routing_key(routing_key, cache)) {
       return true;
     }
   }

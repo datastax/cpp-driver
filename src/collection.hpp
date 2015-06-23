@@ -24,7 +24,6 @@
 #include "ref_counted.hpp"
 #include "types.hpp"
 
-
 #define CASS_COLLECTION_CHECK_TYPE(Value) do { \
   CassError rc = check(Value);                 \
   if (rc != CASS_OK) return rc;                \
@@ -32,13 +31,11 @@
 
 namespace cass {
 
-class Collection {
+class Collection : public RefCounted<Collection> {
 public:
-  Collection(int protocol_version,
-             CassCollectionType type,
+  Collection(CassCollectionType type,
              size_t item_count)
-    : protocol_version_(protocol_version)
-    , type_(type)
+    : type_(type)
     , data_type_(new CollectionType(static_cast<CassValueType>(type))) {
     items_.reserve(item_count);
   }
@@ -69,11 +66,11 @@ public:
 
   CassError append(const Collection* value);
 
-  size_t get_items_size() const;
-  void encode_items(char* buf) const;
+  size_t get_items_size(int version) const;
+  void encode_items(int version, char* buf) const;
 
   Buffer encode() const;
-  Buffer encode_with_length() const;
+  Buffer encode_with_length(int version) const;
 
   void clear() {
     items_.clear();
@@ -115,7 +112,6 @@ private:
   void encode_items_uint16(char* buf) const;
 
 private:
-  int protocol_version_;
   CassCollectionType type_;
   SharedRefPtr<CollectionType> data_type_;
   BufferVec items_;

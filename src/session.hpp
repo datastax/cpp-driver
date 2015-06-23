@@ -133,7 +133,7 @@ private:
   static void on_execute(uv_async_t* data);
 #endif
 
-  QueryPlan* new_query_plan(const Request* request = NULL);
+  QueryPlan* new_query_plan(const Request* request = NULL, Request::EncodingCache* cache = NULL);
 
   void on_reconnect(Timer* timer);
 

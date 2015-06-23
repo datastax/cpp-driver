@@ -61,9 +61,9 @@ private:
   }
 
 private:
-  int encode(int version, BufferVec* bufs) const;
+  int encode(int version, BufferVec* bufs, EncodingCache* cache) const;
   int encode_v1(BufferVec* bufs) const;
-  int encode(BufferVec* bufs) const;
+  int encode_internal(int version, BufferVec* bufs, EncodingCache* cache) const;
 
 private:
   std::string query_;

@@ -283,15 +283,15 @@ void SchemaMetadata::add_json_list_field(int version, const Row* row, const std:
     return;
   }
 
-  Collection collection(version, CASS_COLLECTION_TYPE_LIST, d.Size());
+  Collection collection(CASS_COLLECTION_TYPE_LIST, d.Size());
   for (rapidjson::Value::ConstValueIterator i = d.Begin(); i != d.End(); ++i) {
     collection.append(cass::CassString(i->GetString(), i->GetStringLength()));
   }
 
-  size_t encoded_size = collection.get_items_size();
+  size_t encoded_size = collection.get_items_size(version);
   SharedRefPtr<RefBuffer> encoded(RefBuffer::create(encoded_size));
 
-  collection.encode_items(encoded->data());
+  collection.encode_items(version, encoded->data());
 
   Value list(version,
              collection.data_type(),
@@ -328,16 +328,16 @@ void SchemaMetadata::add_json_map_field(int version, const Row* row, const std::
     return;
   }
 
-  Collection collection(version, CASS_COLLECTION_TYPE_MAP, 2 * d.MemberCount());
+  Collection collection(CASS_COLLECTION_TYPE_MAP, 2 * d.MemberCount());
   for (rapidjson::Value::ConstMemberIterator i = d.MemberBegin(); i != d.MemberEnd(); ++i) {
     collection.append(CassString(i->name.GetString(), i->name.GetStringLength()));
     collection.append(CassString(i->value.GetString(), i->value.GetStringLength()));
   }
 
-  size_t encoded_size = collection.get_items_size();
+  size_t encoded_size = collection.get_items_size(version);
   SharedRefPtr<RefBuffer> encoded(RefBuffer::create(encoded_size));
 
-  collection.encode_items(encoded->data());
+  collection.encode_items(version, encoded->data());
 
   Value map(version,
             collection.data_type(),

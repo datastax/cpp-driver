@@ -31,7 +31,7 @@ public:
     , credentials_(credentials) {}
 
 private:
-  int encode(int version, BufferVec* bufs) const;
+  int encode(int version, BufferVec* bufs, EncodingCache* cache) const;
 
 private:
   V1Authenticator::Credentials credentials_;
@@ -47,7 +47,7 @@ public:
   ScopedPtr<Authenticator>& auth() { return auth_; }
 
 private:
-  int encode(int version, BufferVec* bufs) const;
+  int encode(int version, BufferVec* bufs, EncodingCache* cache) const;
 
 private:
   std::string token_;

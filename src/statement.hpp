@@ -74,7 +74,7 @@ public:
 
   void add_key_index(size_t index) { key_indices_.push_back(index); }
 
-  virtual bool get_routing_key(std::string* routing_key) const;
+  virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const;
 
 private:
   bool skip_metadata_;

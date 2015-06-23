@@ -39,7 +39,7 @@ public:
   }
 
 private:
-  int encode(int version, BufferVec* bufs) const;
+  int encode(int version, BufferVec* bufs, EncodingCache* cache) const;
 
 private:
   std::string query_;

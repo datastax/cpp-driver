@@ -62,7 +62,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(session, query, 0);
+  CassStatement* statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -86,11 +86,11 @@ CassError insert_into_collections(CassSession* session, const char* key, const c
   const char** item = NULL;
   const char* query = "INSERT INTO examples.collections (key, items) VALUES (?, ?);";
 
-  statement = cass_statement_new(session, query, 2);
+  statement = cass_statement_new(query, 2);
 
   cass_statement_bind_string(statement, 0, key);
 
-  collection = cass_collection_new(session, CASS_COLLECTION_TYPE_SET, 2);
+  collection = cass_collection_new(CASS_COLLECTION_TYPE_SET, 2);
   for (item = items; *item; item++) {
     cass_collection_append_string(collection, *item);
   }
@@ -117,7 +117,7 @@ CassError select_from_collections(CassSession* session, const char* key) {
   CassFuture* future = NULL;
   const char* query = "SELECT items FROM examples.collections WHERE key = ?";
 
-  statement = cass_statement_new(session, query, 1);
+  statement = cass_statement_new(query, 1);
 
   cass_statement_bind_string(statement, 0, key);
 
@@ -163,6 +163,8 @@ int main() {
   CassFuture* close_future = NULL;
 
   const char* items[] = { "apple", "orange", "banana", "mango", NULL };
+
+  cass_cluster_set_protocol_version(cluster, 2);
 
   if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);

@@ -72,7 +72,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(session, query, 0);
+  CassStatement* statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -94,7 +94,7 @@ CassError insert_into_log(CassSession* session, const char* key, CassUuid time, 
   CassFuture* future = NULL;
   const char* query = "INSERT INTO examples.log (key, time, entry) VALUES (?, ?, ?);";
 
-  statement = cass_statement_new(session, query, 3);
+  statement = cass_statement_new(query, 3);
 
   cass_statement_bind_string(statement, 0, key);
   cass_statement_bind_uuid(statement, 1, time);
@@ -121,7 +121,7 @@ CassError select_from_log(CassSession* session, const char* key) {
   CassFuture* future = NULL;
   const char* query = "SELECT * FROM examples.log WHERE key = ?";
 
-  statement = cass_statement_new(session, query, 1);
+  statement = cass_statement_new(query, 1);
 
   cass_statement_bind_string(statement, 0, key);
 

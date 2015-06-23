@@ -26,7 +26,7 @@
 
 namespace cass {
 
-int32_t Handler::encode(int version, int flags, BufferVec* bufs) const {
+int32_t Handler::encode(int version, int flags, BufferVec* bufs) {
   if (version < 1 || version > 3) {
     return Request::ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
   }
@@ -35,7 +35,7 @@ int32_t Handler::encode(int version, int flags, BufferVec* bufs) const {
   bufs->push_back(Buffer()); // Placeholder
 
   const Request* req = request();
-  int32_t length = req->encode(version, bufs);
+  int32_t length = req->encode(version, bufs, &encoding_cache_);
   if (length < 0) {
     return length;
   }

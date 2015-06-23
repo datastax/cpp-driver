@@ -43,6 +43,8 @@ BOOST_AUTO_TEST_CASE(single)
 {
   {
     cass::QueryRequest query(1);
+    cass::Request::EncodingCache cache;
+
 
     CassUuid uuid;
     BOOST_REQUIRE(cass_uuid_from_string("d8775a70-6ea4-11e4-9fa7-0db22d2a6140", &uuid) == CASS_OK);
@@ -51,7 +53,7 @@ BOOST_AUTO_TEST_CASE(single)
     query.add_key_index(0);
 
     std::string routing_key;
-    BOOST_CHECK(query.get_routing_key(&routing_key));
+    BOOST_CHECK(query.get_routing_key(&routing_key, &cache));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     BOOST_CHECK(hash == 6739078495667776670);
@@ -59,13 +61,14 @@ BOOST_AUTO_TEST_CASE(single)
 
   {
     cass::QueryRequest query(1);
+    cass::Request::EncodingCache cache;
 
     cass_int32_t value = 123456789;
     query.set(0, value);
     query.add_key_index(0);
 
     std::string routing_key;
-    BOOST_CHECK(query.get_routing_key(&routing_key));
+    BOOST_CHECK(query.get_routing_key(&routing_key, &cache));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     BOOST_CHECK(hash == -567416363967733925);
@@ -73,13 +76,14 @@ BOOST_AUTO_TEST_CASE(single)
 
   {
     cass::QueryRequest query(1);
+    cass::Request::EncodingCache cache;
 
     cass_int64_t value = 123456789;
     query.set(0, value);
     query.add_key_index(0);
 
     std::string routing_key;
-    BOOST_CHECK(query.get_routing_key(&routing_key));
+    BOOST_CHECK(query.get_routing_key(&routing_key, &cache));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     BOOST_CHECK(hash == 5616923877423390342);
@@ -87,12 +91,13 @@ BOOST_AUTO_TEST_CASE(single)
 
   {
     cass::QueryRequest query(1);
+    cass::Request::EncodingCache cache;
 
     query.set(0, cass_true);
     query.add_key_index(0);
 
     std::string routing_key;
-    BOOST_CHECK(query.get_routing_key(&routing_key));
+    BOOST_CHECK(query.get_routing_key(&routing_key, &cache));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     BOOST_CHECK(hash == 8849112093580131862);
@@ -100,13 +105,14 @@ BOOST_AUTO_TEST_CASE(single)
 
   {
     cass::QueryRequest query(1);
+    cass::Request::EncodingCache cache;
 
     const char* value = "abcdefghijklmnop";
     query.set(0, cass::CassString(value, strlen(value)));
     query.add_key_index(0);
 
     std::string routing_key;
-    BOOST_CHECK(query.get_routing_key(&routing_key));
+    BOOST_CHECK(query.get_routing_key(&routing_key, &cache));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     BOOST_CHECK(hash == -4266531025627334877);
@@ -116,20 +122,22 @@ BOOST_AUTO_TEST_CASE(single)
 BOOST_AUTO_TEST_CASE(empty_and_null)
 {
   cass::QueryRequest query(1);
+  cass::Request::EncodingCache cache;
 
   std::string routing_key;
-  BOOST_CHECK_EQUAL(query.get_routing_key(&routing_key), false);
+  BOOST_CHECK_EQUAL(query.get_routing_key(&routing_key, &cache), false);
 
   query.set(0, cass::CassNull());
   query.add_key_index(0);
 
-  BOOST_CHECK_EQUAL(query.get_routing_key(&routing_key), false);
+  BOOST_CHECK_EQUAL(query.get_routing_key(&routing_key, &cache), false);
 }
 
 BOOST_AUTO_TEST_CASE(composite)
 {
   {
     cass::QueryRequest query(3);
+    cass::Request::EncodingCache cache;
 
     CassUuid uuid;
     BOOST_REQUIRE(cass_uuid_from_string("d8775a70-6ea4-11e4-9fa7-0db22d2a6140", &uuid) == CASS_OK);
@@ -145,7 +153,7 @@ BOOST_AUTO_TEST_CASE(composite)
     query.add_key_index(2);
 
     std::string routing_key;
-    BOOST_CHECK(query.get_routing_key(&routing_key));
+    BOOST_CHECK(query.get_routing_key(&routing_key, &cache));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     BOOST_CHECK(hash == 3838437721532426513);
@@ -153,6 +161,7 @@ BOOST_AUTO_TEST_CASE(composite)
 
   {
     cass::QueryRequest query(3);
+    cass::Request::EncodingCache cache;
 
     query.set(0, cass_false);
     query.add_key_index(0);
@@ -165,7 +174,7 @@ BOOST_AUTO_TEST_CASE(composite)
     query.add_key_index(2);
 
     std::string routing_key;
-    BOOST_CHECK(query.get_routing_key(&routing_key));
+    BOOST_CHECK(query.get_routing_key(&routing_key, &cache));
 
     int64_t hash = cass::MurmurHash3_x64_128(routing_key.data(), routing_key.size(), 0);
     BOOST_CHECK(hash == 4466051201071860026);

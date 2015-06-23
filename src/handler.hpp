@@ -21,6 +21,7 @@
 #include "cassandra.h"
 #include "utils.hpp"
 #include "list.hpp"
+#include "request.hpp"
 #include "scoped_ptr.hpp"
 
 #include <string>
@@ -30,7 +31,6 @@ namespace cass {
 
 class Config;
 class Connection;
-class Request;
 class ResponseMessage;
 
 typedef std::vector<uv_buf_t> UvBufVec;
@@ -108,7 +108,7 @@ public:
 
   virtual const Request* request() const = 0;
 
-  int32_t encode(int version, int flags, BufferVec* bufs) const;
+  int32_t encode(int version, int flags, BufferVec* bufs);
 
   virtual void start_request() {}
 
@@ -141,6 +141,8 @@ public:
     timer_.stop();
   }
 
+  Request::EncodingCache* encoding_cache() { return &encoding_cache_; }
+
 protected:
   Connection* connection_;
 
@@ -148,6 +150,7 @@ private:
   RequestTimer timer_;
   int16_t stream_;
   State state_;
+  Request::EncodingCache encoding_cache_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Handler);

@@ -33,8 +33,6 @@
 #include <sstream>
 #include <vector>
 
-#define HIGHEST_SUPPORTED_PROTOCOL_VERSION 2
-
 #define SELECT_LOCAL "SELECT data_center, rack FROM system.local WHERE key='local'"
 #define SELECT_LOCAL_TOKENS "SELECT data_center, rack, partitioner, tokens FROM system.local WHERE key='local'"
 #define SELECT_PEERS "SELECT peer, data_center, rack, rpc_address FROM system.peers"
@@ -129,7 +127,7 @@ void ControlConnection::connect(Session* session) {
   protocol_version_ = session_->config().protocol_version();
   query_tokens_ = session_->config().token_aware_routing();
   if (protocol_version_ < 0) {
-    protocol_version_ = HIGHEST_SUPPORTED_PROTOCOL_VERSION;
+    protocol_version_ = CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION;
   }
   reconnect(false);
 }

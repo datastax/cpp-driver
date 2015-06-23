@@ -71,7 +71,7 @@ void print_error(CassFuture* future) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(session, query, 0);
+  CassStatement* statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);

@@ -17,6 +17,8 @@
 #include "abstract_data.hpp"
 
 #include "collection.hpp"
+#include "constants.hpp"
+#include "request.hpp"
 
 namespace cass {
 
@@ -26,27 +28,20 @@ CassError AbstractData::set(size_t index, const Collection* value) {
       value->items().size() % 2 != 0) {
     return CASS_ERROR_LIB_INVALID_ITEM_COUNT;
   }
-  buffers_[index] = value->encode_with_length();
+  elements_[index] = Element(value);
   return CASS_OK;
 }
 
 CassError AbstractData::set(size_t index, CassCustom custom) {
   CASS_CHECK_INDEX_AND_TYPE(index, custom);
   Buffer buf(custom.output_size);
-  buffers_[index] = buf;
+  elements_[index] = buf;
   *(custom.output) = reinterpret_cast<uint8_t*>(buf.data());
   return CASS_OK;
 }
 
-Buffer AbstractData::encode() const {
-  Buffer buf(get_buffers_size());
-  encode_buffers(0, &buf);
-  return buf;
-}
-
 Buffer AbstractData::encode_with_length() const {
   size_t buffers_size = get_buffers_size();
-
   Buffer buf(sizeof(int32_t) + buffers_size);
 
   size_t pos = buf.encode_int32(0, buffers_size);
@@ -55,12 +50,12 @@ Buffer AbstractData::encode_with_length() const {
   return buf;
 }
 
-int32_t AbstractData::copy_buffers(BufferVec* bufs) const {
+int32_t AbstractData::copy_buffers(int version, BufferVec* bufs, Request::EncodingCache* cache) const {
   int32_t size = 0;
-  for (BufferVec::const_iterator i = buffers_.begin(),
-       end = buffers_.end(); i != end; ++i) {
-    if (i->size() > 0) {
-      bufs->push_back(*i);
+  for (ElementVec::const_iterator i = elements_.begin(),
+       end = elements_.end(); i != end; ++i) {
+    if (!i->is_empty()) {
+      bufs->push_back(i->get_buffer_cached(version, cache, false));
     } else  {
       bufs->push_back(cass::encode_with_length(CassNull()));
     }
@@ -71,10 +66,10 @@ int32_t AbstractData::copy_buffers(BufferVec* bufs) const {
 
 size_t AbstractData::get_buffers_size() const {
   size_t size = 0;
-  for (BufferVec::const_iterator i = buffers_.begin(),
-       end = buffers_.end(); i != end; ++i) {
-    if (i->size() > 0) {
-      size += i->size();
+  for (ElementVec::const_iterator i = elements_.begin(),
+       end = elements_.end(); i != end; ++i) {
+    if (!i->is_empty()) {
+      size += i->get_size(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
     } else {
       size += sizeof(int32_t); // null
     }
@@ -83,10 +78,10 @@ size_t AbstractData::get_buffers_size() const {
 }
 
 void AbstractData::encode_buffers(size_t pos, Buffer* buf) const {
-  for (BufferVec::const_iterator i = buffers_.begin(),
-       end = buffers_.end(); i != end; ++i) {
-    if (i->size() > 0) {
-      pos = buf->copy(pos, i->data(), i->size());
+  for (ElementVec::const_iterator i = elements_.begin(),
+       end = elements_.end(); i != end; ++i) {
+    if (!i->is_empty()) {
+      *buf  = i->get_buffer(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
     } else {
       pos = buf->encode_int32(pos, -1); // null
     }

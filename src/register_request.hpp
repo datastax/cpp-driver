@@ -33,7 +33,7 @@ public:
       , event_types_(event_types) {}
 
 private:
-  int encode(int version, BufferVec* bufs) const;
+  int encode(int version, BufferVec* bufs, EncodingCache* cache) const;
 
   int event_types_;
 };

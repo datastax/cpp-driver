@@ -18,9 +18,11 @@
 #define __CASS_ABSTRACT_DATA_HPP_INCLUDED__
 
 #include "buffer.hpp"
+#include "collection.hpp"
 #include "data_type.hpp"
 #include "encode.hpp"
 #include "hash_index.hpp"
+#include "request.hpp"
 #include "string_ref.hpp"
 #include "types.hpp"
 
@@ -31,23 +33,90 @@
 
 namespace cass {
 
-class Collection;
-
 class AbstractData {
 public:
+  class Element {
+  public:
+    enum Type {
+      EMPTY,
+      BUFFER,
+      COLLECTION
+    };
+
+    Element()
+      : type_(EMPTY) { }
+
+    Element(const Buffer& buf)
+      : type_(BUFFER)
+      , buf_(buf) { }
+
+    Element(const Collection* collection)
+      : type_(COLLECTION)
+      , collection_(collection) { }
+
+    bool is_empty() const {
+      return type_ == EMPTY || (type_ == BUFFER && buf_.size() == 0);
+    }
+
+    size_t get_size(int version) const {
+      if (type_ == COLLECTION) {
+        return collection_->get_items_size(version);
+      } else {
+        assert(type_ == BUFFER);
+        return buf_.size();
+      }
+    }
+
+    Buffer get_buffer(int version) const {
+      if (type_ == COLLECTION) {
+        return collection_->encode_with_length(version);
+      } else {
+        assert(type_ == BUFFER);
+        return buf_;
+      }
+    }
+
+    Buffer get_buffer_cached(int version, Request::EncodingCache* cache, bool add_to_cache) const {
+      if (type_ == COLLECTION) {
+        Request::EncodingCache::const_iterator i = cache->find(collection_.get());
+        if (i != cache->end()) {
+          return i->second;
+        } else {
+          Buffer buf(collection_->encode_with_length(version));
+          if (add_to_cache) {
+            // TODO: Is there a size threshold where it might be faster to alway re-encode?
+            cache->insert(std::make_pair(collection_.get(), buf));
+          }
+          return buf;
+        }
+      } else {
+        assert(type_ == BUFFER);
+        return buf_;
+      }
+    }
+
+  private:
+    Type type_;
+    Buffer buf_;
+    SharedRefPtr<const Collection> collection_;
+  };
+
+  typedef std::vector<Element> ElementVec;
+
+public:
   AbstractData(size_t count)
-    : buffers_(count) { }
+    : elements_(count) { }
 
   virtual ~AbstractData() { }
 
-  const BufferVec& buffers() const { return buffers_; }
-  size_t buffers_count() const { return buffers_.size(); }
+  const ElementVec& elements() const { return elements_; }
+  size_t elements_count() const { return elements_.size(); }
 
-#define SET_TYPE(Type)                                 \
-  CassError set(size_t index, const Type value) {      \
-    CASS_CHECK_INDEX_AND_TYPE(index, value);           \
-    buffers_[index] = cass::encode_with_length(value); \
-    return CASS_OK;                                    \
+#define SET_TYPE(Type)                                  \
+  CassError set(size_t index, const Type value) {       \
+    CASS_CHECK_INDEX_AND_TYPE(index, value);            \
+    elements_[index] = cass::encode_with_length(value); \
+    return CASS_OK;                                     \
   }
 
   SET_TYPE(CassNull)
@@ -85,10 +154,9 @@ public:
     return CASS_OK;
   }
 
-  Buffer encode() const;
   Buffer encode_with_length() const;
 
-  int32_t copy_buffers(BufferVec* bufs) const;
+  int32_t copy_buffers(int version, BufferVec* bufs, Request::EncodingCache* cache) const;
 
 protected:
   virtual size_t get_indices(StringRef name,
@@ -98,7 +166,7 @@ protected:
 private:
   template <class T>
   CassError check(size_t index, const T value) {
-    if (index >= buffers_.size()) {
+    if (index >= elements_.size()) {
       return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
     }
     IsValidDataType<T> is_valid_type;
@@ -113,7 +181,7 @@ private:
   void encode_buffers(size_t pos, Buffer* buf) const;
 
 private:
-  BufferVec buffers_;
+  ElementVec elements_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(AbstractData);

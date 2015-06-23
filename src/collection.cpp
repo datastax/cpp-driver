@@ -16,6 +16,7 @@
 
 #include "collection.hpp"
 
+#include "constants.hpp"
 #include "external_types.hpp"
 #include "macros.hpp"
 
@@ -23,16 +24,15 @@
 
 extern "C" {
 
-CassCollection* cass_collection_new(CassSession* session,
-                                    CassCollectionType type,
+CassCollection* cass_collection_new(CassCollectionType type,
                                     size_t item_count) {
-  return CassCollection::to(new cass::Collection(session->protocol_version(),
-                                                 type,
-                                                 item_count));
+  cass::Collection* collection = new cass::Collection(type, item_count);
+  collection->inc_ref();
+  return CassCollection::to(collection);
 }
 
 void cass_collection_free(CassCollection* collection) {
-  delete collection->from();
+  collection->dec_ref();
 }
 
 #define CASS_COLLECTION_APPEND(Name, Params, Value)                           \
@@ -79,16 +79,16 @@ CassError Collection::append(const Collection* value) {
   return CASS_OK;
 }
 
-size_t Collection::get_items_size() const {
-  if (protocol_version_ >= 3) {
+size_t Collection::get_items_size(int version) const {
+  if (version >= 3) {
     return get_items_size(sizeof(int32_t));
   } else {
     return get_items_size(sizeof(uint16_t));
   }
 }
 
-void Collection::encode_items(char* buf) const {
-  if (protocol_version_ >= 3) {
+void Collection::encode_items(int version, char* buf) const {
+  if (version >= 3) {
     encode_items_int32(buf);
   } else {
     encode_items_uint16(buf);
@@ -96,23 +96,17 @@ void Collection::encode_items(char* buf) const {
 }
 
 Buffer Collection::encode() const {
-  if (protocol_version_ >= 3) {
-    Buffer buf(sizeof(int32_t) + get_items_size(sizeof(int32_t)));
-    size_t pos = buf.encode_int32(0, get_count());
-    encode_items_int32(buf.data() + pos);
-    return buf;
-  } else {
-    Buffer buf(sizeof(int16_t) + get_items_size(sizeof(int16_t)));
-    size_t pos = buf.encode_uint16(0, get_count());
-    encode_items_uint16(buf.data() + pos);
-    return buf;
-  }
+  // Inner types are always encoded using the v3+ (int32_t) encoding
+  Buffer buf(sizeof(int32_t) + get_items_size(sizeof(int32_t)));
+  size_t pos = buf.encode_int32(0, get_count());
+  encode_items_int32(buf.data() + pos);
+  return buf;
 }
 
-Buffer Collection::encode_with_length() const {
+Buffer Collection::encode_with_length(int version) const {
   size_t internal_size;
 
-  if (protocol_version_ >= 3) {
+  if (version >= 3) {
     internal_size = sizeof(int32_t) + get_items_size(sizeof(int32_t));
   } else {
     internal_size = sizeof(uint16_t) + get_items_size(sizeof(uint16_t));
@@ -122,7 +116,7 @@ Buffer Collection::encode_with_length() const {
 
   size_t pos = buf.encode_int32(0, internal_size);
 
-  if (protocol_version_ >= 3) {
+  if (version >= 3) {
     pos = buf.encode_int32(pos, get_count());
     encode_items_int32(buf.data() + pos);
   } else {
