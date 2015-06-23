@@ -289,7 +289,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
     test_utils::wait_and_check_error(insert_future.get());
 
     select_query = str(boost::format(test_utils::replaceAll(select_query, "?", "%s")) % tweet_id_string);
-    select_statement = test_utils::CassStatementPtr(cass_statement_new(session, select_query.c_str(), 0));
+    select_statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 0));
     select_future = test_utils::CassFuturePtr(cass_session_execute(session, select_statement.get()));
     test_utils::wait_and_check_error(select_future.get());
 

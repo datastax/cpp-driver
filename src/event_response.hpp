@@ -59,8 +59,8 @@ public:
       , schema_change_target_(0)
       , keyspace_(NULL)
       , keyspace_size_(0)
-      , table_or_type_(NULL)
-      , table_or_type_size_(0) {}
+      , target_(NULL)
+      , target_size_(0) {}
 
   bool decode(int version, char* buffer, size_t size);
 
@@ -90,8 +90,8 @@ public:
     return StringRef(keyspace_, keyspace_size_);
   }
 
-  StringRef table_or_type() const {
-    return StringRef(table_or_type_, table_or_type_size_);
+  StringRef target() const {
+    return StringRef(target_, target_size_);
   }
 
 private:
@@ -105,8 +105,8 @@ private:
   int schema_change_target_;
   char* keyspace_;
   size_t keyspace_size_;
-  char* table_or_type_;
-  size_t table_or_type_size_;
+  char* target_;
+  size_t target_size_;
 };
 
 } // namespace cass

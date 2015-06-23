@@ -71,8 +71,8 @@ bool EventResponse::decode(int version, char* buffer, size_t size) {
     if (version <= 2) {
       // Version 1 and 2: ...<keyspace><table> ([string][string])
       pos = decode_string(pos, &keyspace_, keyspace_size_);
-      decode_string(pos, &table_or_type_, table_or_type_size_);
-      schema_change_target_ = table_or_type_size_ == 0 ? KEYSPACE : TABLE;
+      decode_string(pos, &target_, target_size_);
+      schema_change_target_ = target_size_ == 0 ? KEYSPACE : TABLE;
     } else {
       // Version 3+: ...<target><options>
       // <target> = [string]
@@ -94,7 +94,7 @@ bool EventResponse::decode(int version, char* buffer, size_t size) {
 
       if (schema_change_target_ == TABLE ||
           schema_change_target_ == TYPE) {
-        decode_string(pos, &table_or_type_, table_or_type_size_);
+        decode_string(pos, &target_, target_size_);
       }
     }
   } else {

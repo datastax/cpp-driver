@@ -322,6 +322,12 @@ void Schema::drop_table(const std::string& keyspace_name, const std::string& tab
   it->second.drop_table(table_name);
 }
 
+void Schema::drop_type(const std::string& keyspace_name, const std::string& type_name) {
+  KeyspaceUserTypeMap::iterator it = user_types_->find(keyspace_name);
+  if (it == user_types_->end()) return;
+  it->second.erase(type_name);
+}
+
 void Schema::clear() {
   keyspaces_->clear();
 }

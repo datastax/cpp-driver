@@ -49,7 +49,7 @@ struct AsyncTests : public test_utils::SingleSessionTest {
     std::vector<CassUuid> ids;
     for (size_t i = 0; i < num_concurrent_requests; ++i) {
       CassUuid id = test_utils::generate_time_uuid(uuid_gen);
-      test_utils::CassStatementPtr statement(cass_statement_new(session, insert_query.c_str(), 3));
+      test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 3));
       
       // Determine if bound parameters can be used based on C* version
       if (version.major == 1) {

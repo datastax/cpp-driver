@@ -295,7 +295,7 @@ BOOST_AUTO_TEST_CASE(null)
  */
 BOOST_AUTO_TEST_CASE(bind_bytes_by_name)
 {
-  test_utils::CassPreparedPtr prepared = prepare("INSERT INTO bytes_by_name (key, blobs, varints) VALUES (?, ?, ?)");
+  test_utils::CassPreparedPtr prepared = test_utils::prepare(session, "INSERT INTO bytes_by_name (key, blobs, varints) VALUES (?, ?, ?)");
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
 
   CassUuid key = test_utils::generate_time_uuid(uuid_gen);

@@ -177,7 +177,7 @@ struct OutageTests : public test_utils::MultipleNodesTest {
 
   bool execute_insert(CassSession* session, const std::string& table_name) {
     std::string query = str(boost::format("INSERT INTO %s (id, event_time, text_sample) VALUES (?, ?, ?)") % table_name);
-    test_utils::CassStatementPtr statement(cass_statement_new(session, query.c_str(), 3));
+    test_utils::CassStatementPtr statement(cass_statement_new(query.c_str(), 3));
 
     // Determine if bound parameters can be used based on C* version
     if (version.major == 1) {

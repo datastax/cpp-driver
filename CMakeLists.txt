@@ -400,6 +400,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # is to provide a CommonCryto implementation.
   if (APPLE AND CASS_USE_OPENSSL)
     set(PROJECT_CXX_FLAGS "${PROJECT_CXX_FLAGS} -Wno-deprecated-declarations")
+    set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -Wno-deprecated-declarations")
   endif()
 
   # Enable C++11 support to use std::atomic
@@ -426,6 +427,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # is to provide a CommonCryto implementation.
   if (APPLE AND CASS_USE_OPENSSL)
     set(PROJECT_CXX_FLAGS "${PROJECT_CXX_FLAGS} -Wno-deprecated-declarations")
+    set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -Wno-deprecated-declarations")
   endif()
 
   # Enable C++11 support to use std::atomic

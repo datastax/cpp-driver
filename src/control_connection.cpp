@@ -292,7 +292,7 @@ void ControlConnection::on_event(EventResponse* response) {
       LOG_DEBUG("Schema change (%d): %.*s %.*s\n",
                 response->schema_change(),
                 (int)response->keyspace().size(), response->keyspace().data(),
-                (int)response->table_or_type().size(), response->table_or_type().data());
+                (int)response->target().size(), response->target().data());
       switch (response->schema_change()) {
         case EventResponse::CREATED:
         case EventResponse::UPDATED:
@@ -301,10 +301,10 @@ void ControlConnection::on_event(EventResponse* response) {
               refresh_keyspace(response->keyspace());
               break;
             case EventResponse::TABLE:
-              refresh_table(response->keyspace(), response->table_or_type());
+              refresh_table(response->keyspace(), response->target());
               break;
             case EventResponse::TYPE:
-              refresh_type(response->keyspace(), response->table_or_type());
+              refresh_type(response->keyspace(), response->target());
               break;
           }
           break;
@@ -316,9 +316,11 @@ void ControlConnection::on_event(EventResponse* response) {
               break;
             case EventResponse::TABLE:
               session_->cluster_meta().drop_table(response->keyspace().to_string(),
-                                                  response->table_or_type().to_string());
+                                                  response->target().to_string());
               break;
             case EventResponse::TYPE:
+              session_->cluster_meta().drop_type(response->keyspace().to_string(),
+                                                 response->target().to_string());
               break;
           }
           break;

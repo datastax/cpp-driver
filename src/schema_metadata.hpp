@@ -242,6 +242,7 @@ public:
   void update_usertypes(ResultResponse* usertypes_result);
   void drop_keyspace(const std::string& keyspace_name);
   void drop_table(const std::string& keyspace_name, const std::string& table_name);
+  void drop_type(const std::string& keyspace_name, const std::string& type_name);
   void clear();
   void get_table_key_columns(const std::string& ks_name,
                              const std::string& cf_name,

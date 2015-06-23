@@ -35,7 +35,12 @@ public:
   void update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens) { token_map_.update_host(host, tokens); }
   void build() { token_map_.build(); }
   void drop_keyspace(const std::string& keyspace_name);
-  void drop_table(const std::string& keyspace_name, const std::string& table_name) { schema_.drop_table(keyspace_name, table_name); }
+  void drop_table(const std::string& keyspace_name, const std::string& table_name) {
+    schema_.drop_table(keyspace_name, table_name);
+  }
+  void drop_type(const std::string& keyspace_name, const std::string& type_name) {
+    schema_.drop_type(keyspace_name, type_name);
+  }
   void remove_host(SharedRefPtr<Host>& host) { token_map_.remove_host(host); }
 
   const Schema& schema() const { return schema_; }

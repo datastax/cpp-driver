@@ -59,7 +59,7 @@ struct StressTests : public test_utils::MultipleNodesTest {
 
     std::string simple_query = test_utils::replaceAll(query, "?", "%s");
     simple_query = str(boost::format(simple_query) % time_uuid_string % event_time.count() % text_sample);
-    test_utils::CassStatementPtr statement(cass_statement_new(session, simple_query.c_str(), 0));
+    test_utils::CassStatementPtr statement(cass_statement_new(simple_query.c_str(), 0));
     cass_statement_set_consistency(statement.get(), consistency);
 
     return execute_insert(statement.get());
