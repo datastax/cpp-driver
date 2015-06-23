@@ -22,6 +22,14 @@
 
 namespace cass {
 
+CassError AbstractData::set(size_t index, CassCustom custom) {
+  CASS_CHECK_INDEX_AND_TYPE(index, custom);
+  Buffer buf(custom.output_size);
+  elements_[index] = Element(buf);
+  *(custom.output) = reinterpret_cast<uint8_t*>(buf.data());
+  return CASS_OK;
+}
+
 CassError AbstractData::set(size_t index, const Collection* value) {
   CASS_CHECK_INDEX_AND_TYPE(index, value);
   if (value->type() == CASS_COLLECTION_TYPE_MAP &&
@@ -32,12 +40,10 @@ CassError AbstractData::set(size_t index, const Collection* value) {
   return CASS_OK;
 }
 
-CassError AbstractData::set(size_t index, CassCustom custom) {
-  CASS_CHECK_INDEX_AND_TYPE(index, custom);
-  Buffer buf(custom.output_size);
-  elements_[index] = buf;
-  *(custom.output) = reinterpret_cast<uint8_t*>(buf.data());
-  return CASS_OK;
+Buffer AbstractData::encode() const {
+  Buffer buf(get_buffers_size());
+  encode_buffers(0, &buf);
+  return buf;
 }
 
 Buffer AbstractData::encode_with_length() const {
@@ -81,10 +87,48 @@ void AbstractData::encode_buffers(size_t pos, Buffer* buf) const {
   for (ElementVec::const_iterator i = elements_.begin(),
        end = elements_.end(); i != end; ++i) {
     if (!i->is_empty()) {
-      *buf  = i->get_buffer(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
+      pos = i->copy_buffer(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, pos, buf);
     } else {
       pos = buf->encode_int32(pos, -1); // null
     }
+  }
+}
+
+size_t AbstractData::Element::get_size(int version) const {
+  if (type_ == COLLECTION) {
+    return collection_->get_items_size(version);
+  } else {
+    assert(type_ == BUFFER);
+    return buf_.size();
+  }
+}
+
+size_t AbstractData::Element::copy_buffer(int version, size_t pos, Buffer* buf) const {
+  if (type_ == COLLECTION) {
+    Buffer encoded(collection_->encode_with_length(version));
+    return buf->copy(pos, encoded.data(), encoded.size());
+  } else {
+    assert(type_ == BUFFER);
+    return buf->copy(pos, buf_.data(), buf_.size());
+  }
+}
+
+Buffer AbstractData::Element::get_buffer_cached(int version, Request::EncodingCache* cache, bool add_to_cache) const {
+  if (type_ == COLLECTION) {
+    Request::EncodingCache::const_iterator i = cache->find(collection_.get());
+    if (i != cache->end()) {
+      return i->second;
+    } else {
+      Buffer buf(collection_->encode_with_length(version));
+      if (add_to_cache) {
+        // TODO: Is there a size threshold where it might be faster to alway re-encode?
+        cache->insert(std::make_pair(collection_.get(), buf));
+      }
+      return buf;
+    }
+  } else {
+    assert(type_ == BUFFER);
+    return buf_;
   }
 }
 

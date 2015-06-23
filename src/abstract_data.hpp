@@ -58,42 +58,9 @@ public:
       return type_ == EMPTY || (type_ == BUFFER && buf_.size() == 0);
     }
 
-    size_t get_size(int version) const {
-      if (type_ == COLLECTION) {
-        return collection_->get_items_size(version);
-      } else {
-        assert(type_ == BUFFER);
-        return buf_.size();
-      }
-    }
-
-    Buffer get_buffer(int version) const {
-      if (type_ == COLLECTION) {
-        return collection_->encode_with_length(version);
-      } else {
-        assert(type_ == BUFFER);
-        return buf_;
-      }
-    }
-
-    Buffer get_buffer_cached(int version, Request::EncodingCache* cache, bool add_to_cache) const {
-      if (type_ == COLLECTION) {
-        Request::EncodingCache::const_iterator i = cache->find(collection_.get());
-        if (i != cache->end()) {
-          return i->second;
-        } else {
-          Buffer buf(collection_->encode_with_length(version));
-          if (add_to_cache) {
-            // TODO: Is there a size threshold where it might be faster to alway re-encode?
-            cache->insert(std::make_pair(collection_.get(), buf));
-          }
-          return buf;
-        }
-      } else {
-        assert(type_ == BUFFER);
-        return buf_;
-      }
-    }
+    size_t get_size(int version) const;
+    size_t copy_buffer(int version, size_t pos, Buffer* buf) const;
+    Buffer get_buffer_cached(int version, Request::EncodingCache* cache, bool add_to_cache) const;
 
   private:
     Type type_;
@@ -154,6 +121,7 @@ public:
     return CASS_OK;
   }
 
+  Buffer encode() const;
   Buffer encode_with_length() const;
 
   int32_t copy_buffers(int version, BufferVec* bufs, Request::EncodingCache* cache) const;
@@ -170,7 +138,7 @@ private:
       return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
     }
     IsValidDataType<T> is_valid_type;
-    const SharedRefPtr<DataType> data_type(get_type(index));
+    SharedRefPtr<DataType> data_type(get_type(index));
     if (data_type && !is_valid_type(value, data_type)) {
       return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
     }
