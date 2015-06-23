@@ -64,7 +64,7 @@ CassError connect_session(CassSession* session, const CassCluster* cluster) {
 CassError execute_query(CassSession* session, const char* query) {
   CassError rc = CASS_OK;
   CassFuture* future = NULL;
-  CassStatement* statement = cass_statement_new(session, query, 0);
+  CassStatement* statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -110,12 +110,12 @@ CassError insert_into_tuple(CassSession* session) {
 
   const char* query = "INSERT INTO examples.tuples (id, item) VALUES (?, ?)";
 
-  statement = cass_statement_new(session, query, 2);
+  statement = cass_statement_new(query, 2);
 
   cass_uuid_gen_time(uuid_gen, &id);
   cass_uuid_string(id, id_str);
 
-  item = cass_collection_new(session, CASS_COLLECTION_TYPE_TUPLE, 3);
+  item = cass_collection_new(CASS_COLLECTION_TYPE_TUPLE, 3);
 
   cass_collection_append_string(item, id_str);
   cass_collection_append_string(item, id_str);
@@ -146,7 +146,7 @@ CassError select_from_tuple(CassSession* session) {
 
   const char* query = "SELECT * FROM examples.tuples";
 
-  statement = cass_statement_new(session, query, 0);
+  statement = cass_statement_new(query, 0);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);

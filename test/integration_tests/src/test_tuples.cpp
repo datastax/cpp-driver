@@ -132,11 +132,11 @@ public:
     test_utils::execute_query(session, create_table.c_str());
 
     // Insert the values into the tuple collection
-    test_utils::CassCollectionPtr tuple(cass_collection_new(session, CASS_COLLECTION_TYPE_TUPLE, size));
+    test_utils::CassCollectionPtr tuple(cass_collection_new(CASS_COLLECTION_TYPE_TUPLE, size));
     for (unsigned int i = 0; i < size; ++i) {
       // Handle collection subtypes
       if (collection_type == CASS_VALUE_TYPE_LIST || collection_type == CASS_VALUE_TYPE_MAP || collection_type == CASS_VALUE_TYPE_SET || collection_type == CASS_VALUE_TYPE_TUPLE) {
-        test_utils::CassCollectionPtr collection(cass_collection_new(session, static_cast<CassCollectionType>(collection_type), size));
+        test_utils::CassCollectionPtr collection(cass_collection_new(static_cast<CassCollectionType>(collection_type), size));
         for (unsigned int j = 0; j < size; ++j) {
           BOOST_REQUIRE_EQUAL(test_utils::Value<T>::append(collection.get(), tuple_values), CASS_OK);
           if (collection_type == CASS_VALUE_TYPE_MAP) {
@@ -153,14 +153,14 @@ public:
     // Bind and insert the tuple collection into Cassandra
     CassUuid key = test_utils::generate_time_uuid(uuid_gen);
     std::string insert_query = "INSERT INTO " + table_name + "(key, value) VALUES(? , ?)";
-    test_utils::CassStatementPtr statement(cass_statement_new(session, insert_query.c_str(), 2));
+    test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
     BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid(statement.get(), 0, key), CASS_OK);
     BOOST_REQUIRE_EQUAL(cass_statement_bind_collection(statement.get(), 1, tuple.get()), CASS_OK);
     test_utils::wait_and_check_error(cass_session_execute(session, statement.get()));
 
     // Ensure the tuple collection can be read
     std::string select_query = "SELECT value FROM " + table_name + " WHERE key=?";
-    statement = test_utils::CassStatementPtr(cass_statement_new(session, select_query.c_str(), 1));
+    statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 1));
     BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid(statement.get(), 0, key), CASS_OK);
     test_utils::CassFuturePtr future = test_utils::CassFuturePtr(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());
@@ -232,11 +232,11 @@ public:
     test_utils::execute_query(session, create_table.c_str());
 
     // Create empty (null) tuple collection
-    test_utils::CassCollectionPtr tuple(cass_collection_new(session, CASS_COLLECTION_TYPE_TUPLE, size));
+    test_utils::CassCollectionPtr tuple(cass_collection_new(CASS_COLLECTION_TYPE_TUPLE, size));
     for (unsigned int i = 0; i < size; ++i) {
       // Handle collection subtypes
       if (collection_type == CASS_VALUE_TYPE_LIST || collection_type == CASS_VALUE_TYPE_MAP || collection_type == CASS_VALUE_TYPE_SET || collection_type == CASS_VALUE_TYPE_TUPLE) {
-        test_utils::CassCollectionPtr collection(cass_collection_new(session, static_cast<CassCollectionType>(collection_type), size));
+        test_utils::CassCollectionPtr collection(cass_collection_new(static_cast<CassCollectionType>(collection_type), size));
         BOOST_REQUIRE_EQUAL(cass_collection_append_collection(tuple.get(), collection.get()), CASS_OK);
       }
     }
@@ -244,14 +244,14 @@ public:
     // Bind and insert the tuple collection into Cassandra
     CassUuid key = test_utils::generate_time_uuid(uuid_gen);
     std::string insert_query = "INSERT INTO " + table_name + "(key, value) VALUES(? , ?)";
-    test_utils::CassStatementPtr statement(cass_statement_new(session, insert_query.c_str(), 2));
+    test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
     BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid(statement.get(), 0, key), CASS_OK);
     BOOST_REQUIRE_EQUAL(cass_statement_bind_collection(statement.get(), 1, tuple.get()), CASS_OK);
     test_utils::wait_and_check_error(cass_session_execute(session, statement.get()));
 
     // Ensure the tuple collection can be read
     std::string select_query = "SELECT value FROM " + table_name + " WHERE key=?";
-    statement = test_utils::CassStatementPtr(cass_statement_new(session, select_query.c_str(), 1));
+    statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 1));
     BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid(statement.get(), 0, key), CASS_OK);
     test_utils::CassFuturePtr future = test_utils::CassFuturePtr(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());
@@ -338,7 +338,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
       // Create one hundred simple read/write tests
       for (unsigned int size = 1; size <= 1; ++size) {
         // Insert the values into the tuple collection
-        test_utils::CassCollectionPtr tuple(cass_collection_new(tester.session, CASS_COLLECTION_TYPE_TUPLE, 3));
+        test_utils::CassCollectionPtr tuple(cass_collection_new(CASS_COLLECTION_TYPE_TUPLE, 3));
         test_utils::Value<cass_int32_t>::append(tuple.get(), size * 10);
         std::string random_string = test_utils::generate_random_string();
         CassString tuple_string = CassString(random_string.c_str());
@@ -346,7 +346,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
         test_utils::Value<cass_float_t>::append(tuple.get(), static_cast<cass_float_t>(size * 100.0f));
 
         // Bind and insert the tuple collection into Cassandra
-        test_utils::CassStatementPtr statement(cass_statement_new(tester.session, insert_query.c_str(), 2));
+        test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
         // Alternate bound parameters (simple) and prepared statement use
         if (size % 2 == 0) {
           test_utils::CassPreparedPtr prepared = test_utils::prepare(tester.session, insert_query.c_str());
@@ -357,7 +357,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
         test_utils::wait_and_check_error(cass_session_execute(tester.session, statement.get()));
 
         // Ensure the tuple collection can be read
-        statement = test_utils::CassStatementPtr(cass_statement_new(tester.session, select_query.c_str(), 1));
+        statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 1));
         // Alternate bound parameters (simple) and prepared statement use
         if (size % 2 == 0) {
           test_utils::CassPreparedPtr prepared = test_utils::prepare(tester.session, select_query.c_str());
@@ -393,18 +393,18 @@ BOOST_AUTO_TEST_CASE(read_write) {
 
     // Partial tuple
     {
-      test_utils::CassCollectionPtr tuple(cass_collection_new(tester.session, CASS_COLLECTION_TYPE_TUPLE, 3));
+      test_utils::CassCollectionPtr tuple(cass_collection_new(CASS_COLLECTION_TYPE_TUPLE, 3));
       test_utils::Value<cass_int32_t>::append(tuple.get(), 123);
       test_utils::Value<CassString>::append(tuple.get(), CassString("foo"));
 
       // Bind and insert the tuple collection into Cassandra
-      test_utils::CassStatementPtr statement(cass_statement_new(tester.session, insert_query.c_str(), 2));
+      test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
       BOOST_REQUIRE_EQUAL(cass_statement_bind_int32(statement.get(), 0, 1), CASS_OK);
       BOOST_REQUIRE_EQUAL(cass_statement_bind_collection(statement.get(), 1, tuple.get()), CASS_OK);
       test_utils::wait_and_check_error(cass_session_execute(tester.session, statement.get()));
 
       // Ensure the tuple collection can be read
-      statement = test_utils::CassStatementPtr(cass_statement_new(tester.session, select_query.c_str(), 1));
+      statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 1));
       BOOST_REQUIRE_EQUAL(cass_statement_bind_int32(statement.get(), 0, 1), CASS_OK);
       test_utils::CassFuturePtr future = test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get()));
       test_utils::wait_and_check_error(future.get());
@@ -584,7 +584,7 @@ BOOST_AUTO_TEST_CASE(invalid) {
 
     // Exceeding size tuple
     {
-      test_utils::CassCollectionPtr tuple(cass_collection_new(tester.session, CASS_COLLECTION_TYPE_TUPLE, 3));
+      test_utils::CassCollectionPtr tuple(cass_collection_new(CASS_COLLECTION_TYPE_TUPLE, 3));
       test_utils::Value<cass_int32_t>::append(tuple.get(), 123);
       test_utils::Value<CassString>::append(tuple.get(), CassString("foo"));
       test_utils::Value<cass_float_t>::append(tuple.get(), 3.1415926f);
@@ -592,7 +592,7 @@ BOOST_AUTO_TEST_CASE(invalid) {
       test_utils::Value<CassString>::append(tuple.get(), CassString("bar"));
 
       // Bind and insert the tuple collection into Cassandra
-      test_utils::CassStatementPtr statement(cass_statement_new(tester.session, insert_query.c_str(), 2));
+      test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
       BOOST_REQUIRE_EQUAL(cass_statement_bind_int32(statement.get(), 0, 1), CASS_OK);
       BOOST_REQUIRE_EQUAL(cass_statement_bind_collection(statement.get(), 1, tuple.get()), CASS_OK);
       BOOST_REQUIRE_EQUAL(test_utils::wait_and_return_error(cass_session_execute(tester.session, statement.get())), CASS_ERROR_SERVER_INVALID_QUERY);
@@ -600,13 +600,13 @@ BOOST_AUTO_TEST_CASE(invalid) {
 
     // Invalid type in tuple
     {
-      test_utils::CassCollectionPtr tuple(cass_collection_new(tester.session, CASS_COLLECTION_TYPE_TUPLE, 3));
+      test_utils::CassCollectionPtr tuple(cass_collection_new(CASS_COLLECTION_TYPE_TUPLE, 3));
       test_utils::Value<CassString>::append(tuple.get(), CassString("foo"));
       test_utils::Value<cass_int32_t>::append(tuple.get(), 123);      
       test_utils::Value<cass_float_t>::append(tuple.get(), 3.1415926f);
 
       // Bind and insert the tuple collection into Cassandra
-      test_utils::CassStatementPtr statement(cass_statement_new(tester.session, insert_query.c_str(), 2));
+      test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
       BOOST_REQUIRE_EQUAL(cass_statement_bind_int32(statement.get(), 0, 1), CASS_OK);
       BOOST_REQUIRE_EQUAL(cass_statement_bind_collection(statement.get(), 1, tuple.get()), CASS_OK);
       BOOST_REQUIRE_EQUAL(test_utils::wait_and_return_error(cass_session_execute(tester.session, statement.get())), CASS_ERROR_SERVER_INVALID_QUERY);
