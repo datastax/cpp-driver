@@ -190,7 +190,7 @@ bool Statement::get_routing_key(std::string* routing_key, EncodingCache* cache) 
     for (std::vector<size_t>::const_iterator i = key_indices_.begin();
          i != key_indices_.end(); ++i) {
       assert(*i < elements_count());
-      const AbstractData::Element& element(elements()[key_indices_.front()]);
+      const AbstractData::Element& element(elements()[*i]);
       if (element.is_empty()) {
         return false;
       }
@@ -203,7 +203,7 @@ bool Statement::get_routing_key(std::string* routing_key, EncodingCache* cache) 
 
     for (std::vector<size_t>::const_iterator i = key_indices_.begin();
          i != key_indices_.end(); ++i) {
-      const AbstractData::Element& element(elements()[key_indices_.front()]);
+      const AbstractData::Element& element(elements()[*i]);
       Buffer buf(element.get_buffer_cached(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, cache, true));
       size_t size = buf.size() - sizeof(int32_t);
 
