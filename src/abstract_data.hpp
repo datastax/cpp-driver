@@ -46,6 +46,9 @@ public:
     Element()
       : type_(EMPTY) { }
 
+    Element(CassNull)
+      : type_(EMPTY) { }
+
     Element(const Buffer& buf)
       : type_(BUFFER)
       , buf_(buf) { }
@@ -86,7 +89,6 @@ public:
     return CASS_OK;                                     \
   }
 
-  SET_TYPE(CassNull)
   SET_TYPE(cass_int32_t)
   SET_TYPE(cass_int64_t)
   SET_TYPE(cass_float_t)
@@ -100,6 +102,7 @@ public:
 
 #undef SET_TYPE
 
+  CassError set(size_t index, CassNull value);
   CassError set(size_t index, CassCustom custom);
   CassError set(size_t index, const Collection* value);
 
