@@ -226,8 +226,6 @@ void Schema::update_usertypes(ResultResponse* usertypes_result) {
   usertypes_result->decode_first_row();
   ResultIterator rows(usertypes_result);
 
-  ScopedPtr<KeyspaceUserTypeMap> user_types(new KeyspaceUserTypeMap);
-
   while (rows.next()) {
     std::string keyspace_name;
     std::string type_name;
@@ -288,11 +286,9 @@ void Schema::update_usertypes(ResultResponse* usertypes_result) {
       fields.push_back(UserType::Field(field_name, data_type));
     }
 
-    (*user_types)[keyspace_name][type_name]
+    (*user_types_)[keyspace_name][type_name]
         = SharedRefPtr<UserType>(new UserType(keyspace_name, type_name, fields));
   }
-
-  user_types_ = user_types.release();
 }
 
 void Schema::update_columns(ResultResponse* result) {
