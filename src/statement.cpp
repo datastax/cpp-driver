@@ -158,12 +158,12 @@ CassError cass_statement_bind_string_by_name_n(CassStatement* statement,
 
 namespace cass {
 
-int32_t Statement::copy_buffers(BufferVec* bufs) const {
+int32_t Statement::copy_buffers(int version, BufferVec* bufs, EncodingCache* cache) const {
   int32_t size = 0;
-  for (BufferVec::const_iterator i = buffers().begin(),
-       end = buffers().end(); i != end; ++i) {
-    if (i->size() > 0) {
-      bufs->push_back(*i);
+  for (ElementVec::const_iterator i = elements().begin(),
+       end = elements().end(); i != end; ++i) {
+    if (!i->is_empty()) {
+      bufs->push_back(i->get_buffer_cached(version, cache, false));
     } else  {
       bufs->push_back(cass::encode_with_length(CassNull()));
     }

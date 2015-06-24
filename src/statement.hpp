@@ -43,6 +43,7 @@ public:
             const std::string& keyspace)
       : RoutableRequest(opcode, keyspace)
       , AbstractData(values_count)
+      , flags_(0)
       , page_size_(-1)
       , kind_(kind)
       , key_indices_(key_indices) { }
@@ -91,10 +92,10 @@ public:
 
   virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const;
 
-  virtual int32_t encode_batch(int version, BufferVec* bufs) const = 0;
+  virtual int32_t encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const = 0;
 
 protected:
-  int32_t copy_buffers(BufferVec* bufs) const;
+  int32_t copy_buffers(int version, BufferVec* bufs, EncodingCache* cache) const;
 
 private:
   uint8_t flags_;

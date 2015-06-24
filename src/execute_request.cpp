@@ -18,7 +18,7 @@
 
 namespace cass {
 
-int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs) const {
+int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const {
   int32_t length = 0;
   const std::string& id(prepared_->id());
 
@@ -32,9 +32,9 @@ int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs) const {
   size_t pos = buf.encode_byte(0, kind());
   pos = buf.encode_string(pos, id.data(), id.size());
 
-  buf.encode_uint16(pos, buffers_count());
-  if (buffers_count() > 0) {
-    length += copy_buffers(bufs);
+  buf.encode_uint16(pos, elements_count());
+  if (elements_count() > 0) {
+    length += copy_buffers(version, bufs, cache);
   }
 
   return length;
@@ -42,13 +42,13 @@ int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs) const {
 
 int ExecuteRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) const {
   if (version == 1) {
-    return internal_encode_v1(bufs);
+    return internal_encode_v1(bufs, cache);
   } else {
-    return internal_encode(version, bufs);
+    return internal_encode(version, bufs, cache);
   }
 }
 
-int ExecuteRequest::internal_encode_v1(BufferVec* bufs) const {
+int ExecuteRequest::internal_encode_v1(BufferVec* bufs, EncodingCache* cache) const {
   size_t length = 0;
   const int version = 1;
 
@@ -68,9 +68,7 @@ int ExecuteRequest::internal_encode_v1(BufferVec* bufs) const {
                                  prepared_id.size());
     buf.encode_uint16(pos, elements_count());
     // <value_1>...<value_n>
-    int32_t buffers_size = copy_buffers(version, bufs, cache);
-    if (buffers_size < 0) return buffers_size;
-    length += buffers_size;
+    length += copy_buffers(version, bufs, cache);
   }
 
   {
@@ -86,7 +84,7 @@ int ExecuteRequest::internal_encode_v1(BufferVec* bufs) const {
   return length;
 }
 
-int ExecuteRequest::encode_internal(int version, BufferVec* bufs, EncodingCache* cache) const {
+int ExecuteRequest::internal_encode(int version, BufferVec* bufs, EncodingCache* cache) const {
   int length = 0;
   uint8_t flags = this->flags();
 
@@ -130,9 +128,7 @@ int ExecuteRequest::encode_internal(int version, BufferVec* bufs, EncodingCache*
 
     if (elements_count() > 0) {
       buf.encode_uint16(pos, elements_count());
-      int32_t buffers_size = copy_buffers(version, bufs, cache);
-      if (buffers_size < 0) return buffers_size;
-      length += buffers_size;
+      length += copy_buffers(version, bufs, cache);
     }
   }
 

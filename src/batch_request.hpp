@@ -55,7 +55,7 @@ public:
   virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const;
 
 private:
-  int encode(int version, BufferVec* bufs) const;
+  int encode(int version, BufferVec* bufs, EncodingCache* cache) const;
 
 private:
   typedef std::map<std::string, ExecuteRequest*> PreparedMap;

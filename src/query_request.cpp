@@ -21,12 +21,12 @@
 
 namespace cass {
 
-int32_t QueryRequest::encode_batch(int version, BufferVec* bufs) const {
+int32_t QueryRequest::encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const {
   int32_t length = 0;
   const std::string& query(query_);
 
   // <kind><string><n>[name_1]<value_1>...[name_n]<value_n> ([byte][long string][short][bytes]...[bytes])
-  int buf_size = sizeof(uint8_t) + sizeof(uint16_t) + query.size() + sizeof(uint16_t);
+  int buf_size = sizeof(uint8_t) + sizeof(int32_t) + query.size() + sizeof(uint16_t);
 
   bufs->push_back(Buffer(buf_size));
   length += buf_size;
@@ -41,10 +41,12 @@ int32_t QueryRequest::encode_batch(int version, BufferVec* bufs) const {
       return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
     }
     buf.encode_uint16(pos, value_names_.size());
-    length += copy_buffers_with_names(bufs);
-  } else if (buffers_count() > 0) {
-    buf.encode_uint16(pos, buffers_count());
-    length += copy_buffers(bufs);
+    length += copy_buffers_with_names(version, bufs, cache);
+  } else {
+    buf.encode_uint16(pos, elements_count());
+    if (elements_count() > 0) {
+      length += copy_buffers(version, bufs, cache);
+    }
   }
 
   return length;
@@ -53,13 +55,13 @@ int32_t QueryRequest::encode_batch(int version, BufferVec* bufs) const {
 size_t QueryRequest::get_indices(StringRef name, HashIndex::IndexVec* indices) {
   if (!value_names_index_) {
     set_has_names_for_values(true);
-    value_names_index_.reset(new HashIndex(buffers_count()));
+    value_names_index_.reset(new HashIndex(elements_count()));
   }
 
   if (value_names_index_->get(name, indices) == 0) {
     size_t index = value_names_.size();
 
-    if (index > buffers_count()) {
+    if (index > elements_count()) {
     // No more space left for new named values
       return 0;
     }
@@ -76,13 +78,15 @@ size_t QueryRequest::get_indices(StringRef name, HashIndex::IndexVec* indices) {
   return indices->size();
 }
 
-int32_t QueryRequest::copy_buffers_with_names(BufferVec* bufs) const {
+int32_t QueryRequest::copy_buffers_with_names(int version,
+                                              BufferVec* bufs,
+                                              EncodingCache* cache) const {
   int32_t size = 0;
   for (size_t i = 0; i < value_names_.size(); ++i) {
     const Buffer& name_buf = value_names_[i].buf;
     bufs->push_back(name_buf);
 
-    const Buffer& value_buf(buffers()[i]);
+    Buffer value_buf(elements()[i].get_buffer_cached(version, cache, false));
     bufs->push_back(value_buf);
 
     size += name_buf.size() + value_buf.size();
@@ -94,7 +98,7 @@ int QueryRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) con
   if (version == 1) {
     return internal_encode_v1(bufs);
   } else  {
-    return encode_internal(version, bufs, cache);
+    return internal_encode(version, bufs, cache);
   }
 }
 
@@ -110,7 +114,7 @@ int QueryRequest::internal_encode_v1(BufferVec* bufs) const {
   return length;
 }
 
-int QueryRequest::encode_internal(int version, BufferVec* bufs, EncodingCache* cache) const {
+int QueryRequest::internal_encode(int version, BufferVec* bufs, EncodingCache* cache) const {
   int length = 0;
   uint8_t flags = this->flags();
 
@@ -156,10 +160,10 @@ int QueryRequest::encode_internal(int version, BufferVec* bufs, EncodingCache* c
         return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
       }
       buf.encode_uint16(pos, value_names_.size());
-      length += copy_buffers_with_names(bufs);
-    } else if (buffers_count() > 0) {
-      buf.encode_uint16(pos, buffers_count());
-      length += copy_buffers(bufs);
+      length += copy_buffers_with_names(version, bufs, cache);
+    } else if (elements_count() > 0) {
+      buf.encode_uint16(pos, elements_count());
+      length += copy_buffers(version, bufs, cache);
     }
   }
 

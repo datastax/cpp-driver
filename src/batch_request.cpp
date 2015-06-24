@@ -62,6 +62,7 @@ int BatchRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) con
     size_t buf_size = sizeof(uint8_t) + sizeof(uint16_t);
 
     Buffer buf(buf_size);
+
     size_t pos = buf.encode_byte(0, type_);
     buf.encode_uint16(pos, statements().size());
 
@@ -78,8 +79,10 @@ int BatchRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) con
     } else if (has_names_for_values) {
       return ENCODE_ERROR_BATCH_MIXED_NAMED_VALUES;
     }
-    int32_t result = (*i)->encode_batch(version, bufs);
-    if (result < 0) return result;
+    int32_t result = (*i)->encode_batch(version, bufs, cache);
+    if (result < 0) {
+      return result;
+    }
     length += result;
   }
 
@@ -90,15 +93,19 @@ int BatchRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) con
   {
     // <consistency> [short]
     size_t buf_size = sizeof(uint16_t);
+    if (version >= 3) {
+      buf_size += sizeof(uint8_t);
+    }
 
     Buffer buf(buf_size);
-    size_t pos = buf.encode_uint16(0, consistency_);
-    bufs->push_back(buf);
-    length += buf_size;
 
+    size_t pos = buf.encode_uint16(0, consistency_);
     if (version >= 3) {
       buf.encode_byte(pos, flags);
     }
+
+    bufs->push_back(buf);
+    length += buf_size;
   }
 
   return length;

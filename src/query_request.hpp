@@ -60,7 +60,7 @@ public:
                 value_count)
       , query_(query, query_length) { }
 
-  virtual int32_t encode_batch(int version, BufferVec* bufs) const;
+  virtual int32_t encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const;
 
 private:
   virtual size_t get_indices(StringRef name,
@@ -71,11 +71,11 @@ private:
   }
 
 private:
-  int32_t copy_buffers_with_names(BufferVec* bufs) const;
+  int32_t copy_buffers_with_names(int version, BufferVec* bufs, EncodingCache* cache) const;
 
   int encode(int version, BufferVec* bufs, EncodingCache* cache) const;
-  int encode_v1(BufferVec* bufs) const;
-  int encode_internal(int version, BufferVec* bufs, EncodingCache* cache) const;
+  int internal_encode_v1(BufferVec* bufs) const;
+  int internal_encode(int version, BufferVec* bufs, EncodingCache* cache) const;
 
 private:
   std::string query_;
