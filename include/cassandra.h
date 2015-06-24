@@ -2981,60 +2981,7 @@ cass_data_type_new_tuple(size_t item_count);
  * @see cass_data_type_free()
  */
 CASS_EXPORT CassDataType*
-cass_data_type_new_udt(const char* keyspace,
-                       const char* type_name,
-                       size_t field_count);
-
-/**
- * Same as cass_data_type_new_udt(), but with lengths for string
- * parameters.
- *
- * @public @memberof CassDataType
- *
- * @param[in] keyspace
- * @param[in] keyspace_length
- * @param[in] type_name
- * @param[in] type_name_length
- * @param[in] field_count
- * @return Returns a data type that must be freed.
- *
- * @see cass_data_type_free()
- */
-CASS_EXPORT CassDataType*
-cass_data_type_new_udt_n(const char* keyspace,
-                         size_t keyspace_length,
-                         const char* type_name,
-                         size_t type_name_length,
-                         size_t field_count);
-
-/**
- * Creates a new custom data type.
- *
- * @public @memberof CassDataType
- *
- * @param[in] class_name
- * @return Returns a data type that must be freed.
- *
- * @see cass_data_type_free()
- */
-CASS_EXPORT CassDataType*
-cass_data_type_new_custom(const char* class_name);
-
-/**
- * Same as cass_data_type_new_custom(), but with lengths for string
- * parameters.
- *
- * @public @memberof CassDataType
- *
- * @param[in] class_name
- * @param[in] class_name_length
- * @return Returns a data type that must be freed.
- *
- * @see cass_data_type_free()
- */
-CASS_EXPORT CassDataType*
-cass_data_type_new_custom_n(const char* class_name,
-                            size_t class_name_size);
+cass_data_type_new_udt(size_t field_count);
 
 /**
  * Frees a data type instance.
@@ -3045,7 +2992,6 @@ cass_data_type_new_custom_n(const char* class_name,
  */
 CASS_EXPORT void
 cass_data_type_free(CassDataType* data_type);
-
 
 /**
  * Gets the value type of the specified data type.

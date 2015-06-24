@@ -73,24 +73,8 @@ CassDataType* cass_data_type_new_tuple(size_t item_count) {
   return CassDataType::to(data_type);
 }
 
-CassDataType* cass_data_type_new_udt(const char* keyspace,
-                                     const char* type_name,
-                                     size_t field_count) {
-  return cass_data_type_new_udt_n(keyspace, strlen(keyspace),
-                                  type_name, strlen(type_name),
-                                  field_count);
-}
-
-CassDataType* cass_data_type_new_udt_n(const char* keyspace,
-                                       size_t keyspace_length,
-                                       const char* type_name,
-                                       size_t type_name_length,
-                                       size_t field_count) {
-  std::string keyspace_id(keyspace, keyspace_length);
-  std::string type_name_id(type_name, type_name_length);
-  cass::UserType* user_type = new cass::UserType(cass::to_cql_id(keyspace_id),
-                                                 cass::to_cql_id((type_name_id)),
-                                                 field_count);
+CassDataType* cass_data_type_new_udt(size_t field_count) {
+  cass::UserType* user_type = new cass::UserType(field_count);
   user_type->inc_ref();
   return CassDataType::to(user_type);
 }

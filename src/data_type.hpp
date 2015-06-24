@@ -55,6 +55,12 @@ inline bool is_uuid_type(CassValueType value_type) {
       value_type == CASS_VALUE_TYPE_UUID;
 }
 
+// Only compare when both arguments are not empty
+inline bool equals_both_not_empty(const std::string& s1,
+                                  const std::string& s2) {
+  return s1.empty() || s2.empty() || s1 == s2;
+}
+
 class DataType : public RefCounted<DataType> {
 public:
   static const SharedRefPtr<const DataType> NIL;
@@ -205,7 +211,7 @@ public:
       return false;
     }
     const SharedRefPtr<const CustomType>& custom_type(data_type);
-    return class_name_ == custom_type->class_name_;
+    return equals_both_not_empty(class_name_, custom_type->class_name_);
   }
 
   virtual DataType* copy() const {
@@ -234,12 +240,8 @@ public:
     : DataType(CASS_VALUE_TYPE_UDT)
     , index_(0) { }
 
-  UserType(const std::string& keyspace,
-           const std::string& type_name,
-           size_t field_count)
+  UserType(size_t field_count)
     : DataType(CASS_VALUE_TYPE_UDT)
-    , keyspace_(keyspace)
-    , type_name_(type_name)
     , index_(field_count) { }
 
   UserType(const std::string& keyspace,
@@ -291,6 +293,15 @@ public:
     }
 
     const SharedRefPtr<const UserType>& user_type(data_type);
+
+    if (!equals_both_not_empty(keyspace_, user_type->keyspace_)) {
+      return false;
+    }
+
+    if (!equals_both_not_empty(type_name_, user_type->type_name_)) {
+      return false;
+    }
+
     if (fields_.size() != user_type->fields_.size()) {
       return false;
     }
