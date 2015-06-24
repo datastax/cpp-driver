@@ -23,6 +23,12 @@
 
 namespace cass {
 
+CassError AbstractData::set(size_t index, CassNull value) {
+  CASS_CHECK_INDEX_AND_TYPE(index, value);
+  elements_[index] = Element(value);
+  return CASS_OK;
+}
+
 CassError AbstractData::set(size_t index, CassCustom custom) {
   CASS_CHECK_INDEX_AND_TYPE(index, custom);
   Buffer buf(custom.output_size);
