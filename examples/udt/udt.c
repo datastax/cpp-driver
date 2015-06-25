@@ -88,8 +88,8 @@ CassError insert_into_udt(CassSession* session) {
 
   CassUuid id;
   char id_str[CASS_UUID_STRING_LENGTH];
-  const CassDataType* udt = NULL;
-  CassUserType* item = NULL;
+  const CassDataType* udt_item = NULL;
+  const CassDataType* udt_foo = NULL;
 
   const char* query = "INSERT INTO examples.udt (id, item) VALUES (?, ?)";
 
@@ -98,14 +98,26 @@ CassError insert_into_udt(CassSession* session) {
   cass_uuid_gen_time(uuid_gen, &id);
   cass_uuid_string(id, id_str);
 
-  udt = cass_schema_get_udt(schema, "examples", "item");
+  udt_item = cass_schema_get_udt(schema, "examples", "item");
+  udt_foo = cass_schema_get_udt(schema, "examples", "foo");
 
-  if (udt != NULL) {
-    item = cass_user_type_new_from_data_type(udt);
+  if (udt_item != NULL && udt_foo != NULL) {
+    int i;
+    CassUserType* item = cass_user_type_new_from_data_type(udt_item);
+    CassCollection* phones = cass_collection_new(CASS_COLLECTION_TYPE_SET, 2);
+
+    for (i = 0; i < 2; ++i) {
+      CassUserType* foo = cass_user_type_new_from_data_type(udt_foo);
+      cass_user_type_set_int32_by_name(foo, "phone1", i + 1);
+      cass_user_type_set_int32_by_name(foo, "phone2", i + 2);
+      cass_collection_append_user_type(phones, foo);
+      cass_user_type_free(foo);
+    }
 
     cass_user_type_set_string_by_name(item, "street", id_str);
     cass_user_type_set_string_by_name(item, "city", id_str);
     cass_user_type_set_int32_by_name(item, "zip", (cass_int32_t)id.time_and_version);
+    cass_user_type_set_collection_by_name(item, "phones", phones);
 
     cass_statement_bind_uuid(statement, 0, id);
     cass_statement_bind_user_type(statement, 1, item);
@@ -120,6 +132,7 @@ CassError insert_into_udt(CassSession* session) {
 
     cass_future_free(future);
     cass_user_type_free(item);
+    cass_collection_free(phones);
   }
 
   cass_statement_free(statement);
@@ -180,6 +193,19 @@ CassError select_from_udt(CassSession* session) {
             cass_int32_t i;
             cass_value_get_int32(field_value, &i);
             printf("%d ", i);
+          } else if (cass_value_type(field_value) == CASS_VALUE_TYPE_SET) {
+            CassIterator* phones = cass_iterator_from_collection(field_value);
+            while (cass_iterator_next(phones)) {
+              const CassValue* phone_value = cass_iterator_get_value(phones);
+              CassIterator* phone_fields = cass_iterator_from_user_type(phone_value);
+              assert(cass_value_type(phone_value) == CASS_VALUE_TYPE_UDT);
+              while (cass_iterator_next(phone_fields)) {
+                const CassValue* phone_number_value = cass_iterator_get_user_type_field_value(phone_fields);
+                cass_int32_t i;
+                cass_value_get_int32(phone_number_value, &i);
+                printf("%d ", i);
+              }
+            }
           } else {
             printf("<invalid> ");
           }
@@ -221,7 +247,10 @@ int main() {
                            'class': 'SimpleStrategy', 'replication_factor': '3' }");
 
   execute_query(session,
-                "CREATE TYPE examples.item (street text, city text, zip int)");
+                "CREATE TYPE examples.foo (phone1 int, phone2 int)");
+
+  execute_query(session,
+                "CREATE TYPE examples.item (street text, city text, zip int, phones set<frozen<foo>>)");
 
   execute_query(session,
                 "CREATE TABLE examples.udt (id timeuuid, item frozen<item>, PRIMARY KEY(id))");

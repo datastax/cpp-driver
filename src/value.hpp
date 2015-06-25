@@ -30,19 +30,14 @@ public:
       , count_(0)
       , size_(-1) { }
 
-  Value(int protcol_version,
+  Value(int protocol_version,
         const SharedRefPtr<const DataType>& data_type,
-        char* data, int32_t size)
-      : protocol_version_(protcol_version)
-      , data_type_(data_type)
-      , count_(0)
-      , data_(data)
-      , size_(size) { }
+        char* data, int32_t size);
 
-  Value(int protcol_version,
+  Value(int protocol_version,
         const SharedRefPtr<const DataType>& data_type,
         int32_t count, char* data, int32_t size)
-      : protocol_version_(protcol_version)
+      : protocol_version_(protocol_version)
       , data_type_(data_type)
       , count_(count)
       , data_(data)

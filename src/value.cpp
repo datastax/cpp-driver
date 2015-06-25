@@ -17,6 +17,7 @@
 #include "value.hpp"
 
 #include "external_types.hpp"
+#include "serialization.hpp"
 
 extern "C" {
 
@@ -150,3 +151,19 @@ CassValueType cass_value_secondary_sub_type(const CassValue* collection) {
 }
 
 } // extern "C"
+
+
+cass::Value::Value(int protocol_version,
+                   const SharedRefPtr<const cass::DataType>& data_type,
+                   char* data, int32_t size)
+  : protocol_version_(protocol_version)
+  , data_type_(data_type) {
+  if (data_type->is_collection()) {
+    data_ = decode_size(protocol_version, data, count_);
+    size_ -= protocol_version >= 3 ? sizeof(int32_t) : sizeof(int16_t);
+  } else {
+    count_ = 0;
+    data_ = data;
+    size_ = size;
+  }
+}
