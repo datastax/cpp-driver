@@ -418,13 +418,6 @@ struct IsValidDataType<CassDecimal> {
 };
 
 template<>
-struct IsValidDataType<CassCustom> {
-  bool operator()(CassCustom, const SharedRefPtr<const DataType>& data_type) const {
-    return true;
-  }
-};
-
-template<>
 struct IsValidDataType<const Collection*> {
   bool operator()(const Collection* value, const SharedRefPtr<const DataType>& data_type) const;
 };

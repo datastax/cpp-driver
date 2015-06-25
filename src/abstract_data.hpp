@@ -105,7 +105,6 @@ public:
 #undef SET_TYPE
 
   CassError set(size_t index, CassNull value);
-  CassError set(size_t index, CassCustom custom);
   CassError set(size_t index, const Collection* value);
   CassError set(size_t index, const UserTypeValue* value);
 

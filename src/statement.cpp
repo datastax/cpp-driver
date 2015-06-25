@@ -120,9 +120,6 @@ CASS_STATEMENT_BIND(user_type, ONE_PARAM_(const CassUserType* value), value->fro
 CASS_STATEMENT_BIND(bytes,
                     TWO_PARAMS_(const cass_byte_t* value, size_t value_size),
                     cass::CassBytes(value, value_size))
-CASS_STATEMENT_BIND(custom,
-                    TWO_PARAMS_(size_t size, cass_byte_t** output),
-                    cass::CassCustom(output, size))
 CASS_STATEMENT_BIND(decimal,
                     THREE_PARAMS_(const cass_byte_t* varint, size_t varint_size, int scale),
                     cass::CassDecimal(varint, varint_size, scale))

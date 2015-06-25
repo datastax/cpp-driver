@@ -80,6 +80,8 @@ public:
   size_t get_items_size(int version) const;
   void encode_items(int version, char* buf) const;
 
+  size_t get_size_with_length(int version) const;
+
   Buffer encode() const;
   Buffer encode_with_length(int version) const;
 

@@ -2173,25 +2173,6 @@ cass_statement_bind_decimal(CassStatement* statement,
                             cass_int32_t scale);
 
 /**
- * Binds any type to a query or bound statement at the specified index. A value
- * can be copied into the resulting output buffer. This is normally reserved for
- * large values to avoid extra memory copies.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] size
- * @param[out] output
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_custom(CassStatement* statement,
-                           size_t index,
-                           size_t size,
-                           cass_byte_t** output);
-
-/**
  * Bind a "list", "map", "set" or "tuple" to a query or bound statement at the
  * specified index.
  *
@@ -2658,50 +2639,6 @@ cass_statement_bind_decimal_by_name_n(CassStatement* statement,
                                       const cass_byte_t* varint,
                                       size_t varint_size,
                                       cass_int32_t scale);
-
-/**
- * Binds any type to all the values with the specified name. A value
- * can be copied into the resulting output buffer. This is normally reserved for
- * large values to avoid extra memory copies.
- *
- * This can only be used with statements created by
- * cass_prepared_bind().
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] name
- * @param[in] size
- * @param[out] output
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_custom_by_name(CassStatement* statement,
-                                   const char* name,
-                                   size_t size,
-                                   cass_byte_t** output);
-
-/**
- * Same as cass_statement_bind_custom_by_name(), but with lengths for string
- * parameters.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] name
- * @param[in] name_length
- * @param[in] size
- * @param[out] output
- * @return same as cass_statement_bind_custom_by_name()
- *
- * @see cass_statement_bind_custom_by_name()
- */
-CASS_EXPORT CassError
-cass_statement_bind_custom_by_name_n(CassStatement* statement,
-                                     const char* name,
-                                     size_t name_length,
-                                     size_t size,
-                                     cass_byte_t** output);
 
 /**
  * Bind a "list", "map", "set" or "tuple" to all the values with the

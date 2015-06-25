@@ -117,6 +117,16 @@ void Collection::encode_items(int version, char* buf) const {
   }
 }
 
+size_t Collection::get_size_with_length(int version) const {
+  size_t internal_size = sizeof(int32_t);
+  if (version >= 3) {
+    internal_size += sizeof(int32_t) + get_items_size(sizeof(int32_t));
+  } else {
+    internal_size += sizeof(uint16_t) + get_items_size(sizeof(uint16_t));
+  }
+  return internal_size;
+}
+
 Buffer Collection::encode() const {
   // Inner types are always encoded using the v3+ (int32_t) encoding
   Buffer buf(sizeof(int32_t) + get_items_size(sizeof(int32_t)));
