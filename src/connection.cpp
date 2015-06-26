@@ -44,8 +44,8 @@
 #define SSL_WRITE_SIZE 8192
 #define SSL_ENCRYPTED_BUFS_COUNT 16
 
-#define MAX_BUFFER_REUSE_NO 8;
-#define BUFFER_REUSE_SIZE 64 * 1024;
+#define MAX_BUFFER_REUSE_NO 8
+#define BUFFER_REUSE_SIZE 64 * 1024
 
 #if UV_VERSION_MAJOR == 0
 #define UV_ERRSTR(status) uv_strerror(uv_last_error(connection->loop_))
