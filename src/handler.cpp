@@ -26,8 +26,8 @@
 
 namespace cass {
 
-int32_t Handler::encode(int version, int flags, BufferVec* bufs) const {
-  if (version != 1 && version != 2) {
+int32_t Handler::encode(int version, int flags, BufferVec* bufs) {
+  if (version < 1 || version > 3) {
     return Request::ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
   }
 
@@ -35,21 +35,30 @@ int32_t Handler::encode(int version, int flags, BufferVec* bufs) const {
   bufs->push_back(Buffer()); // Placeholder
 
   const Request* req = request();
-  int32_t length = req->encode(version, bufs);
+  int32_t length = req->encode(version, bufs, &encoding_cache_);
   if (length < 0) {
     return length;
   }
 
-  Buffer buf(CASS_HEADER_SIZE_V1_AND_V2);
+  const size_t header_size
+      = (version >= 3) ? CASS_HEADER_SIZE_V3 : CASS_HEADER_SIZE_V1_AND_V2;
+
+  Buffer buf(header_size);
   size_t pos = 0;
   pos = buf.encode_byte(pos, version);
   pos = buf.encode_byte(pos, flags);
-  pos = buf.encode_byte(pos, stream_);
+
+  if (version >= 3) {
+    pos = buf.encode_int16(pos, stream_);
+  } else {
+    pos = buf.encode_byte(pos, stream_);
+  }
+
   pos = buf.encode_byte(pos, req->opcode());
   buf.encode_int32(pos, length);
   (*bufs)[index] = buf;
 
-  return length + CASS_HEADER_SIZE_V1_AND_V2;
+  return length + header_size;
 }
 
 void Handler::set_state(Handler::State next_state) {

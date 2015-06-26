@@ -18,20 +18,17 @@
 
 namespace cass {
 
-int ExecuteRequest::encode(int version, BufferVec* bufs) const {
+int ExecuteRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) const {
   if (version == 1) {
-    return encode_v1(bufs);
-  } else if (version == 2) {
-    return encode_v2(bufs);
+    return encode_v1(bufs, cache);
   } else {
-    return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
+    return encode_internal(version, bufs, cache);
   }
 }
 
-int ExecuteRequest::encode_v1(BufferVec* bufs) const {
-  const int version = 1;
-
+int ExecuteRequest::encode_v1(BufferVec* bufs, EncodingCache* cache) const {
   size_t length = 0;
+  const int version = 1;
 
   const std::string& prepared_id = prepared_->id();
 
@@ -47,9 +44,11 @@ int ExecuteRequest::encode_v1(BufferVec* bufs) const {
     size_t pos = buf.encode_string(0,
                                  prepared_id.data(),
                                  prepared_id.size());
-    buf.encode_uint16(pos, values_count());
+    buf.encode_uint16(pos, elements_count());
     // <value_1>...<value_n>
-    length += encode_values(version, bufs);
+    int32_t buffers_size = copy_buffers(version, bufs, cache);
+    if (buffers_size < 0) return buffers_size;
+    length += buffers_size;
   }
 
   {
@@ -65,9 +64,7 @@ int ExecuteRequest::encode_v1(BufferVec* bufs) const {
   return length;
 }
 
-int ExecuteRequest::encode_v2(BufferVec* bufs) const {
-  const int version = 2;
-
+int ExecuteRequest::encode_internal(int version, BufferVec* bufs, EncodingCache* cache) const {
   uint8_t flags = 0;
   size_t length = 0;
 
@@ -78,7 +75,7 @@ int ExecuteRequest::encode_v2(BufferVec* bufs) const {
                           sizeof(uint16_t) + sizeof(uint8_t);
   size_t paging_buf_size = 0;
 
-  if (values_count() > 0) { // <values> = <n><value_1>...<value_n>
+  if (elements_count() > 0) { // <values> = <n><value_1>...<value_n>
     prepared_buf_size += sizeof(uint16_t); // <n> [short]
     flags |= CASS_QUERY_FLAG_VALUES;
   }
@@ -113,9 +110,11 @@ int ExecuteRequest::encode_v2(BufferVec* bufs) const {
     pos = buf.encode_uint16(pos, consistency());
     pos = buf.encode_byte(pos, flags);
 
-    if (values_count() > 0) {
-      buf.encode_uint16(pos, values_count());
-      length += encode_values(version, bufs);
+    if (elements_count() > 0) {
+      buf.encode_uint16(pos, elements_count());
+      int32_t buffers_size = copy_buffers(version, bufs, cache);
+      if (buffers_size < 0) return buffers_size;
+      length += buffers_size;
     }
   }
 

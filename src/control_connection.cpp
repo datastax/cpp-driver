@@ -33,8 +33,6 @@
 #include <sstream>
 #include <vector>
 
-#define HIGHEST_SUPPORTED_PROTOCOL_VERSION 2
-
 #define SELECT_LOCAL "SELECT data_center, rack FROM system.local WHERE key='local'"
 #define SELECT_LOCAL_TOKENS "SELECT data_center, rack, partitioner, tokens FROM system.local WHERE key='local'"
 #define SELECT_PEERS "SELECT peer, data_center, rack, rpc_address FROM system.peers"
@@ -43,7 +41,6 @@
 #define SELECT_KEYSPACES "SELECT * FROM system.schema_keyspaces"
 #define SELECT_COLUMN_FAMILIES "SELECT * FROM system.schema_columnfamilies"
 #define SELECT_COLUMNS "SELECT * FROM system.schema_columns"
-
 
 namespace cass {
 
@@ -70,10 +67,10 @@ bool ControlConnection::determine_address_for_peer_host(const Address& connected
                                                         const Value* rpc_value,
                                                         Address* output) {
   Address peer_address;
-  Address::from_inet(peer_value->buffer().data(), peer_value->buffer().size(),
+  Address::from_inet(peer_value->data(), peer_value->size(),
                      connected_address.port(), &peer_address);
-  if (rpc_value->buffer().size() > 0) {
-    Address::from_inet(rpc_value->buffer().data(), rpc_value->buffer().size(),
+  if (rpc_value->size() > 0) {
+    Address::from_inet(rpc_value->data(), rpc_value->size(),
                        connected_address.port(), output);
     if (connected_address.compare(*output) == 0 ||
         connected_address.compare(peer_address) == 0) {
@@ -130,7 +127,7 @@ void ControlConnection::connect(Session* session) {
   protocol_version_ = session_->config().protocol_version();
   query_tokens_ = session_->config().token_aware_routing();
   if (protocol_version_ < 0) {
-    protocol_version_ = HIGHEST_SUPPORTED_PROTOCOL_VERSION;
+    protocol_version_ = CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION;
   }
   reconnect(false);
 }
@@ -200,7 +197,7 @@ void ControlConnection::on_close(Connection* connection) {
   bool retry_current_host = false;
 
   if (state_ != CONTROL_STATE_CLOSED) {
-    LOG_WARN("Lost connection on host %s", connection->address_string().c_str());
+    LOG_WARN("Lost control connection on host %s", connection->address_string().c_str());
   }
 
   // This pointer to the connection is no longer valid once it's closed
@@ -313,6 +310,7 @@ void ControlConnection::on_event(EventResponse* response) {
             session_->cluster_meta().drop_keyspace(response->keyspace().to_string());
           }
           break;
+
       }
       break;
 
@@ -329,6 +327,7 @@ void ControlConnection::query_meta_all() {
         new ControlMultipleRequestHandler<QueryMetadataAllData>(this, ControlConnection::on_query_meta_all, QueryMetadataAllData()));
   handler->execute_query(SELECT_LOCAL_TOKENS);
   handler->execute_query(SELECT_PEERS_TOKENS);
+
   handler->execute_query(SELECT_KEYSPACES);
   handler->execute_query(SELECT_COLUMN_FAMILIES);
   handler->execute_query(SELECT_COLUMNS);
@@ -548,7 +547,7 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
   v = row->get_by_name("peer");
   if (v != NULL) {
     Address listen_address;
-    Address::from_inet(v->buffer().data(), v->buffer().size(),
+    Address::from_inet(v->data(), v->size(),
                        connection_->address().port(),
                        &listen_address);
     host->set_listen_address(listen_address.to_string());
@@ -575,8 +574,7 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
       CollectionIterator i(v);
       TokenStringList tokens;
       while (i.next()) {
-        const BufferPiece& bp = i.value()->buffer();
-        tokens.push_back(StringRef(bp.data(), bp.size()));
+        tokens.push_back(i.value()->to_string_ref());
       }
       if (!tokens.empty()) {
         session_->cluster_meta().update_host(host, tokens);
@@ -646,6 +644,7 @@ void ControlConnection::on_refresh_table(ControlConnection* control_connection,
   session->cluster_meta().update_tables(column_family_result,
                                         static_cast<ResultResponse*>(responses[1]));
 }
+
 
 bool ControlConnection::handle_query_invalid_response(Response* response) {
   if (check_error_or_invalid_response("ControlConnection", CQL_OPCODE_RESULT,

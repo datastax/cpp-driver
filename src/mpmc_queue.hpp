@@ -23,7 +23,7 @@
 #define __CASS_MPMC_QUEUE_INCLUDED__
 
 #include "atomic.hpp"
-#include "common.hpp"
+#include "utils.hpp"
 #include "macros.hpp"
 
 #include <assert.h>

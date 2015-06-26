@@ -17,9 +17,9 @@
 #include "batch_request.hpp"
 
 #include "execute_request.hpp"
+#include "external_types.hpp"
 #include "serialization.hpp"
 #include "statement.hpp"
-#include "types.hpp"
 
 
 extern "C" {
@@ -49,16 +49,14 @@ CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
 
 namespace cass {
 
-int BatchRequest::encode(int version, BufferVec* bufs) const {
-  if (version != 2) {
+int BatchRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) const {
+  if (version == 1) {
     return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
   }
-  return encode_v2(bufs);
+  return encode_internal(version, bufs, cache);
 }
 
-int BatchRequest::encode_v2(BufferVec* bufs) const {
-  const int version = 2;
-
+int BatchRequest::encode_internal(int version, BufferVec* bufs, EncodingCache* cache) const {
   size_t length = 0;
 
   {
@@ -105,9 +103,11 @@ int BatchRequest::encode_v2(BufferVec* bufs) const {
                               statement->query().size());
     }
 
-    buf.encode_uint16(pos, statement->values_count());
-    if (statement->values_count() > 0) {
-      length += statement->encode_values(version, bufs);
+    buf.encode_uint16(pos, statement->elements_count());
+    if (statement->elements_count() > 0) {
+      int32_t buffers_size = statement->copy_buffers(version, bufs, cache);
+      if (buffers_size < 0) return buffers_size;
+      length += buffers_size;
     }
   }
 
@@ -142,10 +142,10 @@ bool BatchRequest::prepared_statement(const std::string& id,
   return false;
 }
 
-bool BatchRequest::get_routing_key(std::string* routing_key) const {
+bool BatchRequest::get_routing_key(std::string* routing_key, EncodingCache* cache) const {
   for (BatchRequest::StatementList::const_iterator i = statements_.begin();
        i != statements_.end(); ++i) {
-    if ((*i)->get_routing_key(routing_key)) {
+    if ((*i)->get_routing_key(routing_key, cache)) {
       return true;
     }
   }

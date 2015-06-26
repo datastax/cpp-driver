@@ -16,10 +16,9 @@
 
 #include "result_response.hpp"
 
+#include "external_types.hpp"
 #include "result_metadata.hpp"
 #include "serialization.hpp"
-#include "types.hpp"
-
 
 extern "C" {
 
@@ -47,9 +46,9 @@ CassError cass_result_column_name(const CassResult* result,
                                   size_t* name_length) {
   if (result->kind() == CASS_RESULT_KIND_ROWS &&
       index < result->metadata()->column_count()) {
-    const cass::ColumnDefinition def = result->metadata()->get(index);
-    *name = def.name;
-    *name_length = def.name_size;
+    const cass::ColumnDefinition def = result->metadata()->get_column_definition(index);
+    *name = def.name.data();
+    *name_length = def.name.size();
     return CASS_OK;
   }
   return CASS_ERROR_LIB_BAD_PARAMS;
@@ -58,7 +57,7 @@ CassError cass_result_column_name(const CassResult* result,
 CassValueType cass_result_column_type(const CassResult* result, size_t index) {
   if (result->kind() == CASS_RESULT_KIND_ROWS &&
       index < result->metadata()->column_count()) {
-    return static_cast<CassValueType>(result->metadata()->get(index).type);
+    return static_cast<CassValueType>(result->metadata()->get_column_definition(index).data_type->value_type());
   }
   return CASS_VALUE_TYPE_UNKNOWN;
 }
@@ -78,12 +77,67 @@ cass_bool_t cass_result_has_more_pages(const CassResult* result) {
 
 namespace cass {
 
-size_t ResultResponse::find_column_indices(StringRef name,
-                                           ResultMetadata::IndexVec* result) const {
-  return metadata_->get(name, result);
-}
+class DataTypeDecoder {
+public:
+  DataTypeDecoder(char* input)
+    : buffer_(input) { }
+
+  char* buffer() const { return buffer_; }
+
+  SharedRefPtr<DataType> decode() {
+    uint16_t value_type;
+    buffer_ = decode_uint16(buffer_, value_type);
+
+    switch (value_type) {
+      case CASS_VALUE_TYPE_CUSTOM:
+        return decode_custom();
+
+      case CASS_VALUE_TYPE_LIST:
+      case CASS_VALUE_TYPE_SET:
+      case CASS_VALUE_TYPE_MAP:
+        return decode_collection(static_cast<CassValueType>(value_type));
+
+      default:
+        if (value_type < CASS_VALUE_TYPE_LAST_ENTRY) {
+          if (data_type_cache_[value_type]) {
+            return data_type_cache_[value_type];
+          } else {
+            SharedRefPtr<DataType> data_type(
+                  new DataType(static_cast<CassValueType>(value_type)));
+            data_type_cache_[value_type] = data_type;
+            return data_type;
+          }
+        }
+        break;
+    }
+
+    return SharedRefPtr<DataType>();
+  }
+
+private:
+  SharedRefPtr<DataType> decode_custom() {
+    StringRef class_name;
+    buffer_ = decode_string_ref(buffer_, &class_name);
+    return SharedRefPtr<DataType>(new CustomType(class_name.to_string()));
+  }
+
+  SharedRefPtr<DataType> decode_collection(CassValueType collection_type) {
+    DataTypeVec types;
+    types.push_back(decode());
+    if (collection_type == CASS_VALUE_TYPE_MAP) {
+      types.push_back(decode());
+    }
+    return SharedRefPtr<DataType>(new CollectionType(collection_type, types));
+  }
+
+private:
+  char* buffer_;
+  SharedRefPtr<DataType> data_type_cache_[CASS_VALUE_TYPE_LAST_ENTRY];
+};
 
 bool ResultResponse::decode(int version, char* input, size_t size) {
+  protocol_version_ = version;
+
   char* buffer = decode_int32(input, kind_);
 
   switch (kind_) {
@@ -113,7 +167,7 @@ bool ResultResponse::decode(int version, char* input, size_t size) {
   return false;
 }
 
-char* ResultResponse::decode_metadata(char* input, ScopedRefPtr<ResultMetadata>* metadata) {
+char* ResultResponse::decode_metadata(char* input, SharedRefPtr<ResultMetadata>* metadata) {
   int32_t flags = 0;
   char* buffer = decode_int32(input, flags);
 
@@ -143,27 +197,15 @@ char* ResultResponse::decode_metadata(char* input, ScopedRefPtr<ResultMetadata>*
       def.index = i;
 
       if (!global_table_spec) {
-        buffer = decode_string(buffer, &def.keyspace, def.keyspace_size);
-        buffer = decode_string(buffer, &def.table, def.table_size);
+        buffer = decode_string_ref(buffer, &def.keyspace);
+        buffer = decode_string_ref(buffer, &def.table);
       }
 
-      buffer = decode_string(buffer, &def.name, def.name_size);
-      buffer = decode_option(buffer, def.type, &def.class_name,
-                             def.class_name_size);
+      buffer = decode_string_ref(buffer, &def.name);
 
-      if (def.type == CASS_VALUE_TYPE_SET ||
-          def.type == CASS_VALUE_TYPE_LIST ||
-          def.type == CASS_VALUE_TYPE_MAP) {
-        buffer = decode_option(buffer, def.collection_primary_type,
-                               &def.collection_primary_class,
-                               def.collection_primary_class_size);
-      }
-
-      if (def.type == CASS_VALUE_TYPE_MAP) {
-        buffer = decode_option(buffer, def.collection_secondary_type,
-                               &def.collection_secondary_class,
-                               def.collection_secondary_class_size);
-      }
+      DataTypeDecoder type_decoder(buffer);
+      def.data_type = type_decoder.decode();
+      buffer = type_decoder.buffer();
 
       (*metadata)->insert(def);
     }

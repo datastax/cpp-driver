@@ -17,7 +17,7 @@
 #ifndef __CASS_RESPONSE_HPP_INCLUDED__
 #define __CASS_RESPONSE_HPP_INCLUDED__
 
-#include "common.hpp"
+#include "utils.hpp"
 #include "constants.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
@@ -83,7 +83,7 @@ private:
 private:
   uint8_t version_;
   int8_t flags_;
-  int8_t stream_;
+  int16_t stream_;
   uint8_t opcode_;
   int32_t length_;
   size_t received_;

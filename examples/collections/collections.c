@@ -41,7 +41,7 @@ void print_error(CassFuture* future) {
 
 CassCluster* create_cluster() {
   CassCluster* cluster = cass_cluster_new();
-  cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
+  cass_cluster_set_contact_points(cluster, "127.0.0.1");
   return cluster;
 }
 
@@ -163,6 +163,8 @@ int main() {
   CassFuture* close_future = NULL;
 
   const char* items[] = { "apple", "orange", "banana", "mango", NULL };
+
+  cass_cluster_set_protocol_version(cluster, 2);
 
   if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);

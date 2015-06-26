@@ -16,11 +16,11 @@
 
 #include "cluster.hpp"
 
-#include "common.hpp"
 #include "dc_aware_policy.hpp"
 #include "logger.hpp"
 #include "round_robin_policy.hpp"
-#include "types.hpp"
+#include "external_types.hpp"
+#include "utils.hpp"
 
 #include <sstream>
 
@@ -46,7 +46,7 @@ void cass_cluster_set_ssl(CassCluster* cluster,
 
 CassError cass_cluster_set_protocol_version(CassCluster* cluster,
                                             int protocol_version) {
-  if (protocol_version != 1 && protocol_version != 2) {
+  if (protocol_version < 1 || protocol_version > 3) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_protocol_version(protocol_version);

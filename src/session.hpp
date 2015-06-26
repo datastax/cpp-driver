@@ -102,6 +102,10 @@ public:
 
   const Schema* copy_schema() const { return cluster_meta_.copy_schema(); }
 
+  int protocol_version() const {
+    return control_connection_.protocol_version();
+  }
+
 private:
   void clear(const Config& config);
   int init();
@@ -129,7 +133,7 @@ private:
   static void on_execute(uv_async_t* data);
 #endif
 
-  QueryPlan* new_query_plan(const Request* request = NULL);
+  QueryPlan* new_query_plan(const Request* request = NULL, Request::EncodingCache* cache = NULL);
 
   void on_reconnect(Timer* timer);
 

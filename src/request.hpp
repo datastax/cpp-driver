@@ -22,6 +22,7 @@
 #include "ref_counted.hpp"
 #include "string_ref.hpp"
 
+
 namespace cass {
 
 class RequestMessage;
@@ -31,6 +32,8 @@ public:
   enum {
     ENCODE_ERROR_UNSUPPORTED_PROTOCOL = -1
   };
+
+  typedef std::map<const void*, Buffer> EncodingCache;
 
   Request(uint8_t opcode)
       : opcode_(opcode)
@@ -51,7 +54,7 @@ public:
     serial_consistency_ = serial_consistency;
   }
 
-  virtual int encode(int version, BufferVec* bufs) const = 0;
+  virtual int encode(int version, BufferVec* bufs, EncodingCache* cache) const = 0;
 
 private:
   uint8_t opcode_;
@@ -71,7 +74,7 @@ public:
     : Request(opcode)
     , keyspace_(keyspace){}
 
-  virtual bool get_routing_key(std::string* routing_key) const = 0;
+  virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const = 0;
 
   const std::string& keyspace() const { return keyspace_; }
   void set_keyspace(const std::string& keyspace) { keyspace_ = keyspace; }

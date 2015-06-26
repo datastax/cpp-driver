@@ -20,7 +20,6 @@
 #include "iterator.hpp"
 #include "result_response.hpp"
 #include "row.hpp"
-#include "buffer_piece.hpp"
 
 namespace cass {
 

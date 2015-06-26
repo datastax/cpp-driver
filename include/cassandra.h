@@ -389,7 +389,12 @@ typedef enum CassValueType_ {
   CASS_VALUE_TYPE_INET      = 0x0010,
   CASS_VALUE_TYPE_LIST      = 0x0020,
   CASS_VALUE_TYPE_MAP       = 0x0021,
-  CASS_VALUE_TYPE_SET       = 0x0022
+  CASS_VALUE_TYPE_SET       = 0x0022,
+  CASS_VALUE_TYPE_UDT       = 0x0030,
+  CASS_VALUE_TYPE_TUPLE     = 0x0031,
+  /* @cond IGNORE */
+  CASS_VALUE_TYPE_LAST_ENTRY
+  /* @endcond */
 } CassValueType;
 
 typedef enum CassCollectionType_ {
@@ -2435,7 +2440,7 @@ cass_statement_bind_string_by_name_n(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_bind_bytes_by_name(CassStatement* statement,
                                   const char* name,
-                                  cass_byte_t* value,
+                                  const cass_byte_t* value,
                                   size_t value_size);
 
 /**
@@ -2457,7 +2462,7 @@ CASS_EXPORT CassError
 cass_statement_bind_bytes_by_name_n(CassStatement* statement,
                                     const char* name,
                                     size_t name_length,
-                                    cass_byte_t* value,
+                                    const cass_byte_t* value,
                                     size_t value_size);
 
 /**
@@ -2667,7 +2672,6 @@ cass_statement_bind_collection_by_name_n(CassStatement* statement,
                                          size_t name_length,
                                          const CassCollection* collection);
 
-
 /***********************************************************************************
  *
  * Prepared
@@ -2772,7 +2776,8 @@ cass_batch_add_statement(CassBatch* batch,
  * @see cass_collection_free()
  */
 CASS_EXPORT CassCollection*
-cass_collection_new(CassCollectionType type, size_t item_count);
+cass_collection_new(CassCollectionType type,
+                    size_t item_count);
 
 /**
  * Frees a collection instance.
@@ -2941,6 +2946,11 @@ cass_collection_append_decimal(CassCollection* collection,
                                const cass_byte_t* varint,
                                size_t varint_size,
                                cass_int32_t scale);
+
+
+CASS_EXPORT CassError
+cass_collection_append_collection(CassCollection* collection,
+                                  const CassCollection* value);
 
 /***********************************************************************************
  *
