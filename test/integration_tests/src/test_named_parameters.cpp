@@ -87,7 +87,6 @@ public:
     test_utils::CassFuturePtr future = test_utils::CassFuturePtr(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());
     test_utils::CassResultPtr result(cass_future_get_result(future.get()));
-    size_t row_count = cass_result_row_count(result.get());
     BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1);
     BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 1);
     const CassRow* row = cass_result_first_row(result.get());
@@ -144,7 +143,6 @@ public:
       test_utils::CassFuturePtr future = test_utils::CassFuturePtr(cass_session_execute(session, statement.get()));
       test_utils::wait_and_check_error(future.get());
       test_utils::CassResultPtr result(cass_future_get_result(future.get()));
-      size_t row_count = cass_result_row_count(result.get());
       BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1);
       BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 1);
       const CassRow* row = cass_result_first_row(result.get());
