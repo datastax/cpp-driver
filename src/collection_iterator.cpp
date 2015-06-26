@@ -46,4 +46,20 @@ char* CollectionIterator::decode_value(char* position) {
   return buffer + size;
 }
 
+bool TupleIterator::next() {
+  if (next_ == end_) {
+    return false;
+  }
+  current_ = next_++;
+  position_ = decode_value(position_);
+  return true;
+}
+
+char* TupleIterator::decode_value(char* position) {
+  int32_t size;
+  char* buffer = decode_int32(position, size);
+  value_ = Value(tuple_->protocol_version(), *current_, buffer, size);
+  return buffer + size;
+}
+
 } // namespace cass

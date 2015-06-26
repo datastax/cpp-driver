@@ -38,10 +38,14 @@ CassIterator* cass_iterator_from_row(const CassRow* row) {
 }
 
 CassIterator* cass_iterator_from_collection(const CassValue* value) {
-  if (value->is_null() || !value->is_collection()) {
-    return NULL;
+  if (!value->is_null()) {
+    if (value->is_collection()) {
+      return CassIterator::to(new cass::CollectionIterator(value));
+    } else if (value->is_tuple()) {
+      return CassIterator::to(new cass::TupleIterator(value));
+    }
   }
-  return CassIterator::to(new cass::CollectionIterator(value));
+  return NULL;
 }
 
 CassIterator* cass_iterator_from_map(const CassValue* value) {

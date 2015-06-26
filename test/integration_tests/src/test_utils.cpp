@@ -118,6 +118,7 @@ const char* get_value_type(CassValueType type) {
     case CASS_VALUE_TYPE_LIST: return "list";
     case CASS_VALUE_TYPE_MAP: return "map";
     case CASS_VALUE_TYPE_SET: return "set";
+    case CASS_VALUE_TYPE_TUPLE: return "tuple";
     default:
       assert(false && "Invalid value type");
       return "";
