@@ -35,6 +35,8 @@ struct ByNameTests : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
     test_utils::execute_query(session, "CREATE TABLE by_name (key uuid PRIMARY KEY, a int, b boolean, c text, abc float, \"ABC\" float, \"aBc\" float)");
+
+    test_utils::execute_query(session, "CREATE TABLE bytes_by_name (key uuid PRIMARY KEY, blobs blob, varints varint)");
   }
 
   test_utils::CassPreparedPtr prepare(const std::string& query) {
@@ -48,6 +50,14 @@ struct ByNameTests : public test_utils::SingleSessionTest {
     test_utils::CassResultPtr result;
     test_utils::execute_query(session, "SELECT * FROM by_name", &result);
     BOOST_REQUIRE(cass_result_column_count(result.get()) ==  7);
+    BOOST_REQUIRE(cass_result_row_count(result.get()) > 0);
+    return result;
+  }
+
+  test_utils::CassResultPtr select_all_from_bytes_by_name() {
+    test_utils::CassResultPtr result;
+    test_utils::execute_query(session, "SELECT * FROM bytes_by_name", &result);
+    BOOST_REQUIRE(cass_result_column_count(result.get()) == 3);
     BOOST_REQUIRE(cass_result_row_count(result.get()) > 0);
     return result;
   }
@@ -270,6 +280,57 @@ BOOST_AUTO_TEST_CASE(null)
   BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "abc")));
   BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "\"ABC\"")));
   BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "\"aBc\"")));
+}
+
+/**
+ * Bind bytes by name
+ *
+ * This test handles the binding of a prepared statement with a
+ * CASS_VALUE_TYPE_BLOB and CASS_VALUE_TYPE_VARINT datatype.
+ *
+ * @since 2.0.2
+ * @test_category prepared_statements:binding
+ * @jira_ticket CPP-272 [https://datastax-oss.atlassian.net/browse/CPP-272]
+ */
+BOOST_AUTO_TEST_CASE(bind_bytes_by_name)
+{
+  test_utils::CassPreparedPtr prepared = prepare("INSERT INTO bytes_by_name (key, blobs, varints) VALUES (?, ?, ?)");
+  test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
+
+  CassUuid key = test_utils::generate_time_uuid(uuid_gen);
+  CassBytes blob;
+  blob.data = reinterpret_cast<const cass_byte_t *>("68971169783116971203269110116101114112114105115101329911211245100114105118101114");
+  blob.size = strlen(reinterpret_cast<const char*>(blob.data));
+  CassBytes varint;
+  varint.data = reinterpret_cast<const cass_byte_t *>("1234567890123456789012345678901234567890");
+  varint.size = strlen(reinterpret_cast<const char*>(varint.data));
+
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_bytes_by_name(statement.get(), "blobs", const_cast<cass_byte_t *>(blob.data), blob.size), CASS_OK);
+  BOOST_REQUIRE_EQUAL(cass_statement_bind_bytes_by_name(statement.get(), "varints", const_cast<cass_byte_t *>(varint.data), varint.size), CASS_OK);
+
+  test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
+  test_utils::wait_and_check_error(future.get());
+  test_utils::CassResultPtr result = select_all_from_bytes_by_name();
+  const CassRow* row = cass_result_first_row(result.get());
+
+  const CassValue* value = cass_row_get_column_by_name(row, "key");
+  CassUuid result_key;
+  BOOST_REQUIRE(value != NULL);
+  BOOST_REQUIRE_EQUAL(cass_value_get_uuid(value, &result_key), CASS_OK);
+  BOOST_CHECK(test_utils::Value<CassUuid>::equal(result_key, key));
+
+  value = cass_row_get_column_by_name(row, "blobs");
+  CassBytes result_blob;
+  BOOST_REQUIRE(value != NULL);
+  BOOST_REQUIRE_EQUAL(cass_value_get_bytes(value, &result_blob.data, &result_blob.size), CASS_OK);
+  BOOST_REQUIRE(test_utils::Value<CassBytes>::equal(blob, result_blob));
+
+  value = cass_row_get_column_by_name(row, "varints");
+  CassBytes result_varint;
+  BOOST_REQUIRE(value != NULL);
+  BOOST_REQUIRE_EQUAL(cass_value_get_bytes(value, &result_varint.data, &result_varint.size), CASS_OK);
+  BOOST_REQUIRE(test_utils::Value<CassBytes>::equal(varint, result_varint));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

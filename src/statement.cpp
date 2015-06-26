@@ -87,7 +87,8 @@ namespace cass {
   template<>
   struct IsValidValueType<CassBytes> {
     bool operator()(uint16_t type) const {
-      return type == CASS_VALUE_TYPE_BLOB;
+      return type == CASS_VALUE_TYPE_BLOB ||
+          type == CASS_VALUE_TYPE_VARINT;
     }
   };
 
