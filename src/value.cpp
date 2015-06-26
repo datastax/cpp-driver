@@ -168,7 +168,15 @@ Value::Value(int protocol_version,
       size_ = size - sizeof(uint16_t);
     }
   } else {
-    count_ = 0;
+    if (data_type->is_tuple()) {
+      const SharedRefPtr<const CollectionType> collection_type(data_type);
+      count_ = collection_type->types().size();
+    } else if (data_type->is_user_type()) {
+      const SharedRefPtr<const UserType> user_type(data_type);
+      count_ = user_type->fields().size();
+    } else {
+      count_ = 0;
+    }
     data_ = data;
     size_ = size;
   }
