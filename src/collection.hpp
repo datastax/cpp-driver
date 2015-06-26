@@ -31,17 +31,27 @@
 
 namespace cass {
 
+class UserTypeValue;
+
 class Collection : public RefCounted<Collection> {
 public:
   Collection(CassCollectionType type,
              size_t item_count)
-    : type_(type)
-    , data_type_(new CollectionType(static_cast<CassValueType>(type))) {
+    : data_type_(new CollectionType(static_cast<CassValueType>(type))) {
     items_.reserve(item_count);
   }
 
-  CassCollectionType type() const { return type_; }
-  const SharedRefPtr<CollectionType>& data_type() const { return data_type_; }
+  Collection(const SharedRefPtr<const CollectionType>& data_type,
+             size_t item_count)
+    : data_type_(data_type) {
+    items_.reserve(item_count);
+  }
+
+  CassCollectionType type() const {
+    return static_cast<CassCollectionType>(data_type_->value_type());
+  }
+
+  const SharedRefPtr<const CollectionType>& data_type() const { return data_type_; }
   const BufferVec& items() const { return items_; }
 
 #define APPEND_TYPE(Type)                  \
@@ -65,49 +75,54 @@ public:
 #undef APPEND_TYPE
 
   CassError append(const Collection* value);
+  CassError append(const UserTypeValue* value);
 
   size_t get_items_size(int version) const;
   void encode_items(int version, char* buf) const;
+
+  size_t get_size_with_length(int version) const;
 
   Buffer encode() const;
   Buffer encode_with_length(int version) const;
 
   void clear() {
     items_.clear();
-    data_type_->types().clear();
   }
 
 private:
   template <class T>
   CassError check(const T value) {
-    CreateDataType<T> create_data_type;
-    if (type_ == CASS_COLLECTION_TYPE_TUPLE) {
-      data_type_->types().push_back(create_data_type(value));
-    } else {
-      IsValidDataType<T> is_valid_type;
-      if (type_ == CASS_COLLECTION_TYPE_MAP) {
-        if (data_type_->types().size() == 2) {
-          if (!is_valid_type(value, data_type_->types()[items_.size() % 2])) {
-            return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
-          }
-        } else {
-          data_type_->types().push_back(create_data_type(value));
+    IsValidDataType<T> is_valid_type;
+    size_t index = items_.size();
+
+    switch(type()) {
+      case CASS_COLLECTION_TYPE_MAP:
+        if (data_type_->types().size() == 2 &&
+            !is_valid_type(value, data_type_->types()[index % 2])) {
+          return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
         }
-      } else {
-        if (data_type_->types().size() == 1) {
-          if (!is_valid_type(value, data_type_->types()[0])) {
-            return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
-          }
-        } else {
-          data_type_->types().push_back(create_data_type(value));
+        break;
+
+      case CASS_COLLECTION_TYPE_LIST:
+      case CASS_COLLECTION_TYPE_SET:
+        if (data_type_->types().size() == 1 &&
+            !is_valid_type(value, data_type_->types()[0])) {
+          return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
         }
-      }
+        break;
+
+      case CASS_COLLECTION_TYPE_TUPLE:
+        if (index < data_type()->types().size() &&
+            !is_valid_type(value, data_type_->types()[index])) {
+          return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
+        }
+        break;
     }
     return CASS_OK;
   }
 
   int32_t get_count() const {
-    return ((type_ == CASS_COLLECTION_TYPE_MAP) ? items_.size() / 2 : items_.size());
+    return ((type() == CASS_COLLECTION_TYPE_MAP) ? items_.size() / 2 : items_.size());
   }
 
   size_t get_items_size(size_t num_bytes_for_size) const;
@@ -116,8 +131,7 @@ private:
   void encode_items_uint16(char* buf) const;
 
 private:
-  CassCollectionType type_;
-  SharedRefPtr<CollectionType> data_type_;
+  SharedRefPtr<const CollectionType> data_type_;
   BufferVec items_;
 
 private:

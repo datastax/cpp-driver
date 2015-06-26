@@ -44,22 +44,35 @@ CassError cass_result_column_name(const CassResult* result,
                                   size_t index,
                                   const char** name,
                                   size_t* name_length) {
-  if (result->kind() == CASS_RESULT_KIND_ROWS &&
-      index < result->metadata()->column_count()) {
-    const cass::ColumnDefinition def = result->metadata()->get_column_definition(index);
-    *name = def.name.data();
-    *name_length = def.name.size();
-    return CASS_OK;
+  const cass::SharedRefPtr<cass::ResultMetadata>& metadata(result->metadata());
+  if (index >= metadata->column_count()) {
+    return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
   }
-  return CASS_ERROR_LIB_BAD_PARAMS;
+  if (result->kind() != CASS_RESULT_KIND_ROWS) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  const cass::ColumnDefinition def = metadata->get_column_definition(index);
+  *name = def.name.data();
+  *name_length = def.name.size();
+  return CASS_OK;
 }
 
 CassValueType cass_result_column_type(const CassResult* result, size_t index) {
+  const cass::SharedRefPtr<cass::ResultMetadata>& metadata(result->metadata());
   if (result->kind() == CASS_RESULT_KIND_ROWS &&
-      index < result->metadata()->column_count()) {
-    return static_cast<CassValueType>(result->metadata()->get_column_definition(index).data_type->value_type());
+      index < metadata->column_count()) {
+    return metadata->get_column_definition(index).data_type->value_type();
   }
   return CASS_VALUE_TYPE_UNKNOWN;
+}
+
+const CassDataType* cass_result_column_data_type(const CassResult* result, size_t index) {
+  const cass::SharedRefPtr<cass::ResultMetadata>& metadata(result->metadata());
+  if (result->kind() == CASS_RESULT_KIND_ROWS &&
+      index < metadata->column_count()) {
+    return CassDataType::to(metadata->get_column_definition(index).data_type.get());
+  }
+  return NULL;
 }
 
 const CassRow* cass_result_first_row(const CassResult* result) {
@@ -242,7 +255,7 @@ char* ResultResponse::decode_metadata(char* input, SharedRefPtr<ResultMetadata>*
       buffer = decode_string_ref(buffer, &def.name);
 
       DataTypeDecoder type_decoder(buffer);
-      def.data_type = type_decoder.decode();
+      def.data_type = SharedRefPtr<const DataType>(type_decoder.decode());
       buffer = type_decoder.buffer();
 
       (*metadata)->insert(def);

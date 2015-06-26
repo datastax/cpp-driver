@@ -33,6 +33,8 @@
 
 namespace cass {
 
+class UserTypeValue;
+
 class AbstractData {
 public:
   class Element {
@@ -103,8 +105,8 @@ public:
 #undef SET_TYPE
 
   CassError set(size_t index, CassNull value);
-  CassError set(size_t index, CassCustom custom);
   CassError set(size_t index, const Collection* value);
+  CassError set(size_t index, const UserTypeValue* value);
 
   template<class T>
   CassError set(StringRef name, const T value) {
@@ -132,7 +134,7 @@ public:
 protected:
   virtual size_t get_indices(StringRef name,
                              HashIndex::IndexVec* indices) const = 0;
-  virtual const SharedRefPtr<DataType>& get_type(size_t index) const = 0;
+  virtual const SharedRefPtr<const DataType>& get_type(size_t index) const = 0;
 
 private:
   template <class T>
@@ -141,7 +143,7 @@ private:
       return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
     }
     IsValidDataType<T> is_valid_type;
-    SharedRefPtr<DataType> data_type(get_type(index));
+    SharedRefPtr<const DataType> data_type(get_type(index));
     if (data_type && !is_valid_type(value, data_type)) {
       return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
     }

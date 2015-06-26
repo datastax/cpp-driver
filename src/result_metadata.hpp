@@ -37,7 +37,7 @@ namespace cass {
 struct ColumnDefinition : public HashIndex::Entry {
   StringRef keyspace;
   StringRef table;
-  SharedRefPtr<DataType> data_type;
+  SharedRefPtr<const DataType> data_type;
 };
 
 class ResultMetadata : public RefCounted<ResultMetadata> {

@@ -19,6 +19,7 @@
 #include "constants.hpp"
 #include "external_types.hpp"
 #include "macros.hpp"
+#include "user_type_value.hpp"
 
 #include <string.h>
 
@@ -31,8 +32,21 @@ CassCollection* cass_collection_new(CassCollectionType type,
   return CassCollection::to(collection);
 }
 
+CassCollection* cass_collection_new_from_data_type(const CassDataType* data_type,
+                                                   size_t item_count) {
+  if (!data_type->is_collection()) {
+    return NULL;
+  }
+  return CassCollection::to(new cass::Collection(cass::SharedRefPtr<const cass::DataType>(data_type),
+                                                 item_count));
+}
+
 void cass_collection_free(CassCollection* collection) {
   collection->dec_ref();
+}
+
+const CassDataType* cass_collection_data_type(const CassCollection* collection) {
+  return CassDataType::to(collection->data_type().get());
 }
 
 #define CASS_COLLECTION_APPEND(Name, Params, Value)                           \
@@ -48,6 +62,7 @@ CASS_COLLECTION_APPEND(bool, ONE_PARAM_(cass_bool_t value), value)
 CASS_COLLECTION_APPEND(uuid, ONE_PARAM_(CassUuid value), value)
 CASS_COLLECTION_APPEND(inet, ONE_PARAM_(CassInet value), value)
 CASS_COLLECTION_APPEND(collection, ONE_PARAM_(const CassCollection* value), value)
+CASS_COLLECTION_APPEND(user_type, ONE_PARAM_(const CassUserType* value), value)
 CASS_COLLECTION_APPEND(bytes,
                        TWO_PARAMS_(const cass_byte_t* value, size_t value_size),
                        cass::CassBytes(value, value_size))
@@ -80,8 +95,14 @@ CassError Collection::append(const Collection* value) {
   return CASS_OK;
 }
 
+CassError Collection::append(const UserTypeValue* value) {
+  CASS_COLLECTION_CHECK_TYPE(value);
+  items_.push_back(value->encode());
+  return CASS_OK;
+}
+
 size_t Collection::get_items_size(int version) const {
-  if (version >= 3 || type_ == CASS_COLLECTION_TYPE_TUPLE) {
+  if (version >= 3 || type() == CASS_COLLECTION_TYPE_TUPLE) {
     return get_items_size(sizeof(int32_t));
   } else {
     return get_items_size(sizeof(uint16_t));
@@ -89,16 +110,26 @@ size_t Collection::get_items_size(int version) const {
 }
 
 void Collection::encode_items(int version, char* buf) const {
-  if (version >= 3 || type_ == CASS_COLLECTION_TYPE_TUPLE) {
+  if (version >= 3 || type() == CASS_COLLECTION_TYPE_TUPLE) {
     encode_items_int32(buf);
   } else {
     encode_items_uint16(buf);
   }
 }
 
+size_t Collection::get_size_with_length(int version) const {
+  size_t internal_size = sizeof(int32_t);
+  if (version >= 3) {
+    internal_size += sizeof(int32_t) + get_items_size(sizeof(int32_t));
+  } else {
+    internal_size += sizeof(uint16_t) + get_items_size(sizeof(uint16_t));
+  }
+  return internal_size;
+}
+
 Buffer Collection::encode() const {
   // Inner types are always encoded using the v3+ (int32_t) encoding
-  if (type_ == CASS_COLLECTION_TYPE_TUPLE) {
+  if (type() == CASS_COLLECTION_TYPE_TUPLE) {
     Buffer buf(get_items_size(sizeof(int32_t)));
     encode_items_int32(buf.data());
     return buf;
@@ -111,7 +142,7 @@ Buffer Collection::encode() const {
 }
 
 Buffer Collection::encode_with_length(int version) const {
-  if (type_ == CASS_COLLECTION_TYPE_TUPLE) {
+  if (type() == CASS_COLLECTION_TYPE_TUPLE) {
     size_t internal_size = get_items_size(sizeof(int32_t));
 
     Buffer buf(sizeof(int32_t) + internal_size);

@@ -60,13 +60,7 @@ char* decode_row(char* rows, const ResultResponse* result, OutputValueVec& outpu
     const ColumnDefinition& def = result->metadata()->get_column_definition(i);
 
     if (size >= 0) {
-      if (def.data_type->is_collection()) {
-        int32_t count;
-        char* data = decode_size(protocol_version, buffer, count);
-        output.push_back(Value(protocol_version, def.data_type, count, data, size - sizeof(uint16_t)));
-      } else {
-        output.push_back(Value(protocol_version, def.data_type, buffer, size));
-      }
+      output.push_back(Value(protocol_version, def.data_type, buffer, size));
       buffer += size;
     } else { // null value
       output.push_back(Value());

@@ -21,6 +21,7 @@
 #include "batch_request.hpp"
 #include "cluster.hpp"
 #include "collection.hpp"
+#include "data_type.hpp"
 #include "future.hpp"
 #include "iterator.hpp"
 #include "prepared.hpp"
@@ -30,6 +31,7 @@
 #include "session.hpp"
 #include "ssl.hpp"
 #include "statement.hpp"
+#include "user_type_value.hpp"
 #include "uuids.hpp"
 #include "value.hpp"
 
@@ -67,6 +69,8 @@ EXTERNAL_TYPE(cass::Schema, CassSchema);
 EXTERNAL_TYPE(cass::SchemaMetadata, CassSchemaMeta);
 EXTERNAL_TYPE(cass::SchemaMetadataField, CassSchemaMetaField);
 EXTERNAL_TYPE(cass::UuidGen, CassUuidGen);
+EXTERNAL_TYPE(cass::UserTypeValue, CassUserType);
+EXTERNAL_TYPE(cass::DataType, CassDataType);
 
 }
 

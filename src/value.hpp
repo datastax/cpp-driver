@@ -30,19 +30,14 @@ public:
       , count_(0)
       , size_(-1) { }
 
-  Value(int protcol_version,
-        const SharedRefPtr<DataType>& data_type,
-        char* data, int32_t size)
-      : protocol_version_(protcol_version)
-      , data_type_(data_type)
-      , count_(0)
-      , data_(data)
-      , size_(size) { }
+  Value(int protocol_version,
+        const SharedRefPtr<const DataType>& data_type,
+        char* data, int32_t size);
 
-  Value(int protcol_version,
-        const SharedRefPtr<DataType>& data_type,
+  Value(int protocol_version,
+        const SharedRefPtr<const DataType>& data_type,
         int32_t count, char* data, int32_t size)
-      : protocol_version_(protcol_version)
+      : protocol_version_(protocol_version)
       , data_type_(data_type)
       , count_(count)
       , data_(data)
@@ -57,40 +52,46 @@ public:
     return data_type_->value_type();
   }
 
-  const SharedRefPtr<DataType>& data_type() const {
+  const SharedRefPtr<const DataType>& data_type() const {
     return data_type_;
   }
 
   CassValueType primary_value_type() const {
-    SharedRefPtr<DataType> primary(primary_data_type());
+    const SharedRefPtr<const DataType>& primary(primary_data_type());
     if (!primary) {
       return CASS_VALUE_TYPE_UNKNOWN;
     }
     return primary->value_type();
   }
 
-  SharedRefPtr<DataType> primary_data_type() const {
+  const SharedRefPtr<const DataType>& primary_data_type() const {
     if (!data_type_ || !data_type_->is_collection()) {
-      return SharedRefPtr<DataType>();
+      return DataType::NIL;
     }
-    assert(static_cast<const SharedRefPtr<CollectionType>&>(data_type_)->types().size() > 0);
-    return static_cast<const SharedRefPtr<CollectionType>&>(data_type_)->types()[0];
+    const SharedRefPtr<const CollectionType>& collection_type(data_type_);
+    if (collection_type->types().size() < 1) {
+      return DataType::NIL;
+    }
+    return collection_type->types()[0];
   }
 
   CassValueType secondary_value_type() const {
-    SharedRefPtr<DataType> secondary(secondary_data_type());
+    const SharedRefPtr<const DataType>& secondary(secondary_data_type());
     if (!secondary) {
       return CASS_VALUE_TYPE_UNKNOWN;
     }
     return secondary->value_type();
   }
 
-  SharedRefPtr<DataType> secondary_data_type() const {
+  const SharedRefPtr<const DataType>& secondary_data_type() const {
     if (!data_type_ || !data_type_->is_map()) {
-      return SharedRefPtr<DataType>();
+      return DataType::NIL;
     }
-    assert(static_cast<const SharedRefPtr<CollectionType>&>(data_type_)->types().size() > 1);
-    return static_cast<const SharedRefPtr<CollectionType>&>(data_type_)->types()[1];
+    const SharedRefPtr<const CollectionType>& collection_type(data_type_);
+    if (collection_type->types().size() < 2) {
+      return DataType::NIL;
+    }
+    return collection_type->types()[1];
   }
 
   bool is_null() const {
@@ -112,6 +113,11 @@ public:
     return data_type_->is_tuple();
   }
 
+  bool is_user_type() const {
+    if (!data_type_) return false;
+    return data_type_->is_user_type();
+  }
+
   int32_t count() const {
     return count_;
   }
@@ -130,7 +136,7 @@ public:
 
 private:
   int protocol_version_;
-  SharedRefPtr<DataType> data_type_;
+  SharedRefPtr<const DataType> data_type_;
   int32_t count_;
 
   char* data_;

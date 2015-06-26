@@ -609,6 +609,7 @@ if(CASS_BUILD_EXAMPLES)
   add_subdirectory(examples/paging)
   add_subdirectory(examples/perf)
   add_subdirectory(examples/tuple)
+  add_subdirectory(examples/udt)
 endif()
 
 #------------------

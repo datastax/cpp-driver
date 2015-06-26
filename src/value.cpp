@@ -17,8 +17,13 @@
 #include "value.hpp"
 
 #include "external_types.hpp"
+#include "serialization.hpp"
 
 extern "C" {
+
+const CassDataType* cass_value_data_type(const CassValue* value) {
+  return CassDataType::to(value->data_type().get());
+}
 
 CassError cass_value_get_int32(const CassValue* value, cass_int32_t* output) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
@@ -146,3 +151,35 @@ CassValueType cass_value_secondary_sub_type(const CassValue* collection) {
 }
 
 } // extern "C"
+
+
+namespace cass {
+
+Value::Value(int protocol_version,
+                   const SharedRefPtr<const DataType>& data_type,
+                   char* data, int32_t size)
+  : protocol_version_(protocol_version)
+  , data_type_(data_type) {
+  if (data_type->is_collection()) {
+    data_ = decode_size(protocol_version, data, count_);
+    if (protocol_version_ >= 3) {
+      size_ = size - sizeof(int32_t);
+    } else {
+      size_ = size - sizeof(uint16_t);
+    }
+  } else {
+    if (data_type->is_tuple()) {
+      const SharedRefPtr<const CollectionType> collection_type(data_type);
+      count_ = collection_type->types().size();
+    } else if (data_type->is_user_type()) {
+      const SharedRefPtr<const UserType> user_type(data_type);
+      count_ = user_type->fields().size();
+    } else {
+      count_ = 0;
+    }
+    data_ = data;
+    size_ = size;
+  }
+}
+
+} // namespace cassandra
