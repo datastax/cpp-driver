@@ -38,9 +38,9 @@ CassStatement* cass_statement_new(const char* query,
 CassStatement* cass_statement_new_n(const char* query,
                                     size_t query_length,
                                     size_t parameter_count) {
-  cass::QueryRequest* query_request = new cass::QueryRequest(parameter_count);
+  cass::QueryRequest* query_request
+      = new cass::QueryRequest(query, query_length, parameter_count);
   query_request->inc_ref();
-  query_request->set_query(query, query_length);
   return CassStatement::to(query_request);
 }
 
@@ -156,6 +156,20 @@ CassError cass_statement_bind_string_by_name_n(CassStatement* statement,
 } // extern "C"
 
 namespace cass {
+
+int32_t Statement::copy_buffers(int version, BufferVec* bufs, EncodingCache* cache) const {
+  int32_t size = 0;
+  for (ElementVec::const_iterator i = elements().begin(),
+       end = elements().end(); i != end; ++i) {
+    if (!i->is_empty()) {
+      bufs->push_back(i->get_buffer_cached(version, cache, false));
+    } else  {
+      bufs->push_back(cass::encode_with_length(CassNull()));
+    }
+    size += bufs->back().size();
+  }
+  return size;
+}
 
 bool Statement::get_routing_key(std::string* routing_key, EncodingCache* cache)  const {
   if (key_indices_.empty()) return false;

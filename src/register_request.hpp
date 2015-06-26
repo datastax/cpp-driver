@@ -24,10 +24,6 @@ namespace cass {
 
 class RegisterRequest : public Request {
 public:
-  enum EventType {
-
-  };
-
   RegisterRequest(int event_types)
       : Request(CQL_OPCODE_REGISTER)
       , event_types_(event_types) {}

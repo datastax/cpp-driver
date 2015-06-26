@@ -35,8 +35,6 @@ struct ByNameTests : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
     test_utils::execute_query(session, "CREATE TABLE by_name (key uuid PRIMARY KEY, a int, b boolean, c text, abc float, \"ABC\" float, \"aBc\" float)");
-
-    test_utils::execute_query(session, "CREATE TABLE bytes_by_name (key uuid PRIMARY KEY, blobs blob, varints varint)");
   }
 
   test_utils::CassResultPtr select_all_from_by_name() {

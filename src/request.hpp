@@ -30,7 +30,8 @@ class RequestMessage;
 class Request : public RefCounted<Request> {
 public:
   enum {
-    ENCODE_ERROR_UNSUPPORTED_PROTOCOL = -1
+    ENCODE_ERROR_UNSUPPORTED_PROTOCOL = -1,
+    ENCODE_ERROR_BATCH_MIXED_NAMED_VALUES = -2
   };
 
   typedef std::map<const void*, Buffer> EncodingCache;

@@ -129,11 +129,9 @@ public:
   Buffer encode() const;
   Buffer encode_with_length() const;
 
-  int32_t copy_buffers(int version, BufferVec* bufs, Request::EncodingCache* cache) const;
-
 protected:
   virtual size_t get_indices(StringRef name,
-                             HashIndex::IndexVec* indices) const = 0;
+                             HashIndex::IndexVec* indices) = 0;
   virtual const SharedRefPtr<const DataType>& get_type(size_t index) const = 0;
 
 private:

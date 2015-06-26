@@ -382,6 +382,10 @@ struct Value<cass_int32_t> {
     return cass_statement_bind_int32(statement, index, value);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, cass_int32_t value) {
+    return cass_statement_bind_int32_by_name(statement, name, value);
+  }
+
   static CassError append(CassCollection* collection, cass_int32_t value) {
     return cass_collection_append_int32(collection, value);
   }
@@ -417,6 +421,10 @@ template<>
 struct Value<cass_int64_t> {
   static CassError bind(CassStatement* statement, size_t index, cass_int64_t value) {
     return cass_statement_bind_int64(statement, index, value);
+  }
+
+  static CassError bind_by_name(CassStatement* statement, const char* name, cass_int64_t value) {
+    return cass_statement_bind_int64_by_name(statement, name, value);
   }
 
   static CassError append(CassCollection* collection, cass_int64_t value) {
@@ -456,6 +464,10 @@ struct Value<cass_float_t> {
     return cass_statement_bind_float(statement, index, value);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, cass_float_t value) {
+    return cass_statement_bind_float_by_name(statement, name, value);
+  }
+
   static CassError append(CassCollection* collection, cass_float_t value) {
     return cass_collection_append_float(collection, value);
   }
@@ -491,6 +503,10 @@ template<>
 struct Value<cass_double_t> {
   static CassError bind(CassStatement* statement, size_t index, cass_double_t value) {
     return cass_statement_bind_double(statement, index, value);
+  }
+
+  static CassError bind_by_name(CassStatement* statement, const char* name, cass_double_t value) {
+    return cass_statement_bind_double_by_name(statement, name, value);
   }
 
   static CassError append(CassCollection* collection, cass_double_t value) {
@@ -530,6 +546,10 @@ struct Value<cass_bool_t> {
     return cass_statement_bind_bool(statement, index, value);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, cass_bool_t value) {
+    return cass_statement_bind_bool_by_name(statement, name, value);
+  }
+
   static CassError append(CassCollection* collection, cass_bool_t value) {
     return cass_collection_append_bool(collection, value);
   }
@@ -555,6 +575,10 @@ template<>
 struct Value<CassString> {
   static CassError bind(CassStatement* statement, size_t index, CassString value) {
     return cass_statement_bind_string_n(statement, index, value.data, value.length);
+  }
+
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassString value) {
+    return cass_statement_bind_string_by_name_n(statement, name, strlen(name), value.data, value.length);
   }
 
   static CassError append(CassCollection* collection, CassString value) {
@@ -587,6 +611,10 @@ struct Value<CassBytes> {
     return cass_statement_bind_bytes(statement, index, value.data, value.size);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassBytes value) {
+    return cass_statement_bind_bytes_by_name(statement, name, value.data, value.size);
+  }
+
   static CassError append(CassCollection* collection, CassBytes value) {
     return cass_collection_append_bytes(collection, value.data, value.size);
   }
@@ -615,6 +643,10 @@ template<>
 struct Value<CassInet> {
   static CassError bind(CassStatement* statement, size_t index, CassInet value) {
     return cass_statement_bind_inet(statement, index, value);
+  }
+
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassInet value) {
+    return cass_statement_bind_inet_by_name(statement, name, value);
   }
 
   static CassError append(CassCollection* collection, CassInet value) {
@@ -668,6 +700,10 @@ struct Value<CassUuid> {
     return cass_statement_bind_uuid(statement, index, value);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassUuid value) {
+    return cass_statement_bind_uuid_by_name(statement, name, value);
+  }
+
   static CassError append(CassCollection* collection, CassUuid value) {
     return cass_collection_append_uuid(collection, value);
   }
@@ -710,6 +746,10 @@ template<>
 struct Value<CassDecimal> {
   static CassError bind(CassStatement* statement, size_t index, CassDecimal value) {
     return cass_statement_bind_decimal(statement, index, value.varint, value.varint_size, value.scale);
+  }
+
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassDecimal value) {
+    return cass_statement_bind_decimal_by_name(statement, name, value.varint, value.varint_size, value.scale);
   }
 
   static CassError append(CassCollection* collection, CassDecimal value) {

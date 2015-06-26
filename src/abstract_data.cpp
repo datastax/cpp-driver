@@ -61,20 +61,6 @@ Buffer AbstractData::encode_with_length() const {
   return buf;
 }
 
-int32_t AbstractData::copy_buffers(int version, BufferVec* bufs, Request::EncodingCache* cache) const {
-  int32_t size = 0;
-  for (ElementVec::const_iterator i = elements_.begin(),
-       end = elements_.end(); i != end; ++i) {
-    if (!i->is_empty()) {
-      bufs->push_back(i->get_buffer_cached(version, cache, false));
-    } else  {
-      bufs->push_back(cass::encode_with_length(CassNull()));
-    }
-    size += bufs->back().size();
-  }
-  return size;
-}
-
 size_t AbstractData::get_buffers_size() const {
   size_t size = 0;
   for (ElementVec::const_iterator i = elements_.begin(),

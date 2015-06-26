@@ -34,7 +34,7 @@ public:
 
 protected:
   virtual size_t get_indices(StringRef name,
-                             HashIndex::IndexVec* indices) const {
+                             HashIndex::IndexVec* indices) {
     return data_type_->get_indices(name, indices);
   }
 

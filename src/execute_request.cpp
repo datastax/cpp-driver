@@ -18,15 +18,37 @@
 
 namespace cass {
 
+int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const {
+  int32_t length = 0;
+  const std::string& id(prepared_->id());
+
+  // <kind><id><n><value_1>...<value_n> ([byte][short bytes][short][bytes]...[bytes])
+  int buf_size = sizeof(uint8_t) + sizeof(uint16_t) + id.size() + sizeof(uint16_t);
+
+  bufs->push_back(Buffer(buf_size));
+  length += buf_size;
+
+  Buffer& buf = bufs->back();
+  size_t pos = buf.encode_byte(0, kind());
+  pos = buf.encode_string(pos, id.data(), id.size());
+
+  buf.encode_uint16(pos, elements_count());
+  if (elements_count() > 0) {
+    length += copy_buffers(version, bufs, cache);
+  }
+
+  return length;
+}
+
 int ExecuteRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) const {
   if (version == 1) {
-    return encode_v1(bufs, cache);
+    return internal_encode_v1(bufs, cache);
   } else {
-    return encode_internal(version, bufs, cache);
+    return internal_encode(version, bufs, cache);
   }
 }
 
-int ExecuteRequest::encode_v1(BufferVec* bufs, EncodingCache* cache) const {
+int ExecuteRequest::internal_encode_v1(BufferVec* bufs, EncodingCache* cache) const {
   size_t length = 0;
   const int version = 1;
 
@@ -46,9 +68,7 @@ int ExecuteRequest::encode_v1(BufferVec* bufs, EncodingCache* cache) const {
                                  prepared_id.size());
     buf.encode_uint16(pos, elements_count());
     // <value_1>...<value_n>
-    int32_t buffers_size = copy_buffers(version, bufs, cache);
-    if (buffers_size < 0) return buffers_size;
-    length += buffers_size;
+    length += copy_buffers(version, bufs, cache);
   }
 
   {
@@ -64,9 +84,9 @@ int ExecuteRequest::encode_v1(BufferVec* bufs, EncodingCache* cache) const {
   return length;
 }
 
-int ExecuteRequest::encode_internal(int version, BufferVec* bufs, EncodingCache* cache) const {
-  uint8_t flags = 0;
-  size_t length = 0;
+int ExecuteRequest::internal_encode(int version, BufferVec* bufs, EncodingCache* cache) const {
+  int length = 0;
+  uint8_t flags = this->flags();
 
   const std::string& prepared_id = prepared_->id();
 
@@ -78,10 +98,6 @@ int ExecuteRequest::encode_internal(int version, BufferVec* bufs, EncodingCache*
   if (elements_count() > 0) { // <values> = <n><value_1>...<value_n>
     prepared_buf_size += sizeof(uint16_t); // <n> [short]
     flags |= CASS_QUERY_FLAG_VALUES;
-  }
-
-  if (skip_metadata()) {
-    flags |= CASS_QUERY_FLAG_SKIP_METADATA;
   }
 
   if (page_size() >= 0) {
@@ -112,9 +128,7 @@ int ExecuteRequest::encode_internal(int version, BufferVec* bufs, EncodingCache*
 
     if (elements_count() > 0) {
       buf.encode_uint16(pos, elements_count());
-      int32_t buffers_size = copy_buffers(version, bufs, cache);
-      if (buffers_size < 0) return buffers_size;
-      length += buffers_size;
+      length += copy_buffers(version, bufs, cache);
     }
   }
 

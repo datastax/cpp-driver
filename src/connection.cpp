@@ -218,8 +218,13 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
   int32_t request_size = pending_write->write(handler);
   if (request_size < 0) {
     stream_manager_.release_stream(stream);
-    handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
-                      "Operation unsupported by this protocol version");
+    if (request_size == Request::ENCODE_ERROR_BATCH_MIXED_NAMED_VALUES) {
+      handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
+                        "Mixing named values with non-named values in a batch");
+    } else {
+      handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
+                        "Operation unsupported by this protocol version");
+    }
     handler->dec_ref();
     return true; // Don't retry
   }
@@ -599,9 +604,7 @@ void Connection::on_ready() {
   if (keyspace_.empty()) {
     notify_ready();
   } else {
-    QueryRequest* query = new QueryRequest();
-    query->set_query("use \"" + keyspace_ + "\"");
-    write(new StartupHandler(this, query));
+    write(new StartupHandler(this, new QueryRequest("use \"" + keyspace_ + "\"")));
   }
 }
 
