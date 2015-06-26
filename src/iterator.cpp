@@ -45,9 +45,9 @@ CassIterator* cass_iterator_from_collection(const CassValue* value) {
 
 CassIterator* cass_iterator_from_map(const CassValue* value) {
   if (value->is_map()) {
-    return NULL;
+    return CassIterator::to(new cass::MapIterator(value));
   }
-  return CassIterator::to(new cass::MapIterator(value));
+  return NULL;
 }
 
 void cass_iterator_free(CassIterator* iterator) {

@@ -30,15 +30,26 @@ public:
   void clear();
   void update_keyspaces(ResultResponse* result);
   void update_tables(ResultResponse* table_result, ResultResponse* col_result);
+  void update_usertypes(ResultResponse* usertypes_result);
   void set_partitioner(const std::string& partitioner_class) { token_map_.set_partitioner(partitioner_class); }
   void update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens) { token_map_.update_host(host, tokens); }
   void build() { token_map_.build(); }
   void drop_keyspace(const std::string& keyspace_name);
-  void drop_table(const std::string& keyspace_name, const std::string& table_name) { schema_.drop_table(keyspace_name, table_name); }
+  void drop_table(const std::string& keyspace_name, const std::string& table_name) {
+    schema_.drop_table(keyspace_name, table_name);
+  }
+  void drop_type(const std::string& keyspace_name, const std::string& type_name) {
+    schema_.drop_type(keyspace_name, type_name);
+  }
   void remove_host(SharedRefPtr<Host>& host) { token_map_.remove_host(host); }
 
   const Schema& schema() const { return schema_; }
   Schema* copy_schema() const;// synchronized copy for API
+
+  SharedRefPtr<UserType> get_user_type(const std::string& keyspace,
+                                       const std::string& type_name) const {
+    return schema_.get_user_type(keyspace, type_name);
+  }
 
   void set_protocol_version(int version) { schema_.set_protocol_version(version); }
 

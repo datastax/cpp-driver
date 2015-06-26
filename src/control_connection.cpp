@@ -41,6 +41,7 @@
 #define SELECT_KEYSPACES "SELECT * FROM system.schema_keyspaces"
 #define SELECT_COLUMN_FAMILIES "SELECT * FROM system.schema_columnfamilies"
 #define SELECT_COLUMNS "SELECT * FROM system.schema_columns"
+#define SELECT_USERTYPES "SELECT * FROM system.schema_usertypes"
 
 namespace cass {
 
@@ -291,23 +292,36 @@ void ControlConnection::on_event(EventResponse* response) {
       LOG_DEBUG("Schema change (%d): %.*s %.*s\n",
                 response->schema_change(),
                 (int)response->keyspace().size(), response->keyspace().data(),
-                (int)response->table().size(), response->table().data());
+                (int)response->target().size(), response->target().data());
       switch (response->schema_change()) {
         case EventResponse::CREATED:
         case EventResponse::UPDATED:
-          if (response->table().size() > 0) {
-            refresh_table(response->keyspace(), response->table());
-          } else {
-            refresh_keyspace(response->keyspace());
+          switch (response->schema_change_target()) {
+            case EventResponse::KEYSPACE:
+              refresh_keyspace(response->keyspace());
+              break;
+            case EventResponse::TABLE:
+              refresh_table(response->keyspace(), response->target());
+              break;
+            case EventResponse::TYPE:
+              refresh_type(response->keyspace(), response->target());
+              break;
           }
           break;
 
         case EventResponse::DROPPED:
-          if (response->table().size() > 0) {
-            session_->cluster_meta().drop_table(response->keyspace().to_string(),
-                                                response->table().to_string());
-          } else {
-            session_->cluster_meta().drop_keyspace(response->keyspace().to_string());
+          switch (response->schema_change_target()) {
+            case EventResponse::KEYSPACE:
+              session_->cluster_meta().drop_keyspace(response->keyspace().to_string());
+              break;
+            case EventResponse::TABLE:
+              session_->cluster_meta().drop_table(response->keyspace().to_string(),
+                                                  response->target().to_string());
+              break;
+            case EventResponse::TYPE:
+              session_->cluster_meta().drop_type(response->keyspace().to_string(),
+                                                 response->target().to_string());
+              break;
           }
           break;
 
@@ -331,6 +345,7 @@ void ControlConnection::query_meta_all() {
   handler->execute_query(SELECT_KEYSPACES);
   handler->execute_query(SELECT_COLUMN_FAMILIES);
   handler->execute_query(SELECT_COLUMNS);
+  handler->execute_query(SELECT_USERTYPES);
 }
 
 void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
@@ -413,6 +428,7 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
   session->cluster_meta().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
   session->cluster_meta().update_tables(static_cast<ResultResponse*>(responses[3]),
                                          static_cast<ResultResponse*>(responses[4]));
+  session->cluster_meta().update_usertypes(static_cast<ResultResponse*>(responses[5]));
   session->cluster_meta().build();
 
   if (is_initial_connection) {
@@ -645,6 +661,35 @@ void ControlConnection::on_refresh_table(ControlConnection* control_connection,
                                         static_cast<ResultResponse*>(responses[1]));
 }
 
+
+void ControlConnection::refresh_type(const StringRef& keyspace_name,
+                                     const StringRef& type_name) {
+
+  std::string query(SELECT_USERTYPES);
+  query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+                .append("' AND type_name='").append(type_name.data(), type_name.size()).append("'");
+
+  LOG_DEBUG("Refreshing type %s", query.c_str());
+
+  connection_->write(
+        new ControlHandler<std::pair<std::string, std::string> >(new QueryRequest(query),
+                                        this,
+                                        ControlConnection::on_refresh_type,
+                                        std::make_pair(keyspace_name.to_string(), type_name.to_string())));
+}
+
+void ControlConnection::on_refresh_type(ControlConnection* control_connection,
+                                        const std::pair<std::string, std::string>& keyspace_and_type_names,
+                                        Response* response) {
+  ResultResponse* result = static_cast<ResultResponse*>(response);
+  if (result->row_count() == 0) {
+    LOG_ERROR("No row found for keyspace %s and type %s in system schema table.",
+              keyspace_and_type_names.first.c_str(),
+              keyspace_and_type_names.first.c_str());
+    return;
+  }
+  control_connection->session_->cluster_meta().update_usertypes(result);
+}
 
 bool ControlConnection::handle_query_invalid_response(Response* response) {
   if (check_error_or_invalid_response("ControlConnection", CQL_OPCODE_RESULT,

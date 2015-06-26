@@ -71,6 +71,20 @@ CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* schema, const st
   return foundSchemaMeta;
 }
 
+std::vector<std::string> get_user_data_type_field_names(const CassSchema* schema, const std::string& keyspace, const std::string& udt_name) {
+  std::vector<std::string> udt_field_names;
+  if (schema) {
+    SharedRefPtr<UserType> udt = schema->from()->get_user_type(keyspace, udt_name);
+    if (udt) {
+      for (cass::UserType::FieldVec::const_iterator it = udt->fields().begin(); it != udt->fields().end(); ++it) {
+        udt_field_names.push_back((*it).field_name);
+      }
+    }
+  }
+
+  return udt_field_names;
+}
+
 int64_t create_murmur3_hash_from_string(const std::string &value) {
   return MurmurHash3_x64_128(value.data(), value.size(), 0);
 }
