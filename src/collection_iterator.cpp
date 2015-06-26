@@ -33,7 +33,7 @@ char* CollectionIterator::decode_value(char* position) {
   int32_t size;
   char* buffer = decode_size(protocol_version, position, size);
 
-  SharedRefPtr<DataType> data_type;
+  SharedRefPtr<const DataType> data_type;
   if (collection_->value_type() == CASS_VALUE_TYPE_MAP) {
     data_type = (index_ % 2 == 0) ? collection_->primary_data_type()
                                   : collection_->secondary_data_type();
@@ -43,6 +43,22 @@ char* CollectionIterator::decode_value(char* position) {
 
   value_ = Value(protocol_version, data_type, buffer, size);
 
+  return buffer + size;
+}
+
+bool TupleIterator::next() {
+  if (next_ == end_) {
+    return false;
+  }
+  current_ = next_++;
+  position_ = decode_value(position_);
+  return true;
+}
+
+char* TupleIterator::decode_value(char* position) {
+  int32_t size;
+  char* buffer = decode_int32(position, size);
+  value_ = Value(tuple_->protocol_version(), *current_, buffer, size);
   return buffer + size;
 }
 

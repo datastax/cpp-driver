@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(udt)
 
   // Check external UDT
 
-  cass::SharedRefPtr<cass::UserType> udt = static_cast<cass::SharedRefPtr<cass::UserType> >(data_type);
+  cass::SharedRefPtr<const cass::UserType> udt(data_type);
 
   BOOST_CHECK(udt->keyspace() == "foo");
   BOOST_CHECK(udt->type_name() == "address");
@@ -111,15 +111,15 @@ BOOST_AUTO_TEST_CASE(udt)
   BOOST_CHECK(i->name == "phones");
   BOOST_REQUIRE(i->type->value_type() == CASS_VALUE_TYPE_SET);
 
-  cass::SharedRefPtr<cass::CollectionType> collection
-      = static_cast<cass::SharedRefPtr<cass::CollectionType> >(i->type);
+  cass::SharedRefPtr<const cass::CollectionType> collection
+      = static_cast<cass::SharedRefPtr<const cass::CollectionType> >(i->type);
 
   BOOST_REQUIRE(collection->types().size() == 1);
   BOOST_REQUIRE(collection->types()[0]->value_type() == CASS_VALUE_TYPE_UDT);
 
   // Check internal UDT
 
-  udt = static_cast<cass::SharedRefPtr<cass::UserType> >(collection->types()[0]);
+  udt = static_cast<cass::SharedRefPtr<const cass::UserType> >(collection->types()[0]);
 
   BOOST_CHECK(udt->keyspace() == "foo");
   BOOST_CHECK(udt->type_name() == "phone");
@@ -175,8 +175,8 @@ BOOST_AUTO_TEST_CASE(nested_collections)
 
   BOOST_REQUIRE(collection->types()[1]->value_type() == CASS_VALUE_TYPE_MAP);
 
-  cass::SharedRefPtr<cass::CollectionType> nested_collection
-      = static_cast<cass::SharedRefPtr<cass::CollectionType> >(collection->types()[1]);
+  cass::SharedRefPtr<const cass::CollectionType> nested_collection
+      = static_cast<cass::SharedRefPtr<const cass::CollectionType> >(collection->types()[1]);
 
   BOOST_REQUIRE(nested_collection->types().size() == 2);
   BOOST_CHECK(nested_collection->types()[0]->value_type() == CASS_VALUE_TYPE_INT);

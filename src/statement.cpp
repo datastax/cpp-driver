@@ -24,6 +24,7 @@
 #include "query_request.hpp"
 #include "scoped_ptr.hpp"
 #include "string_ref.hpp"
+#include "user_type_value.hpp"
 
 #include <uv.h>
 
@@ -115,12 +116,10 @@ CASS_STATEMENT_BIND(bool, ONE_PARAM_(cass_bool_t value), value)
 CASS_STATEMENT_BIND(uuid, ONE_PARAM_(CassUuid value), value)
 CASS_STATEMENT_BIND(inet, ONE_PARAM_(CassInet value), value)
 CASS_STATEMENT_BIND(collection, ONE_PARAM_(const CassCollection* value), value->from())
+CASS_STATEMENT_BIND(user_type, ONE_PARAM_(const CassUserType* value), value->from())
 CASS_STATEMENT_BIND(bytes,
                     TWO_PARAMS_(const cass_byte_t* value, size_t value_size),
                     cass::CassBytes(value, value_size))
-CASS_STATEMENT_BIND(custom,
-                    TWO_PARAMS_(size_t size, cass_byte_t** output),
-                    cass::CassCustom(output, size))
 CASS_STATEMENT_BIND(decimal,
                     THREE_PARAMS_(const cass_byte_t* varint, size_t varint_size, int scale),
                     cass::CassDecimal(varint, varint_size, scale))

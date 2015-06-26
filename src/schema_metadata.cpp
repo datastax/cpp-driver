@@ -52,6 +52,27 @@ CassSchemaMetaType cass_schema_meta_type(const CassSchemaMeta* meta) {
   return meta->type();
 }
 
+const CassDataType* cass_schema_get_udt(const CassSchema* schema,
+                                        const char* keyspace,
+                                        const char* type_name) {
+  return cass_schema_get_udt_n(schema,
+                               keyspace, strlen(keyspace),
+                               type_name, strlen(type_name));
+}
+
+const CassDataType* cass_schema_get_udt_n(const CassSchema* schema,
+                                          const char* keyspace,
+                                          size_t keyspace_length,
+                                          const char* type_name,
+                                          size_t type_name_length) {
+  std::string keyspace_id(keyspace, keyspace_length);
+  std::string type_name_id(type_name, type_name_length);
+  cass::SharedRefPtr<cass::UserType> user_type
+      = schema->get_user_type(cass::to_cql_id(keyspace_id),
+                              cass::to_cql_id(type_name_id));
+  return CassDataType::to(user_type.get());
+}
+
 const CassSchemaMeta* cass_schema_meta_get_entry(const CassSchemaMeta* meta,
                                                  const char* name) {
   return cass_schema_meta_get_entry_n(meta, name, strlen(name));
@@ -205,8 +226,6 @@ void Schema::update_usertypes(ResultResponse* usertypes_result) {
   usertypes_result->decode_first_row();
   ResultIterator rows(usertypes_result);
 
-  ScopedPtr<KeyspaceUserTypeMap> user_types(new KeyspaceUserTypeMap);
-
   while (rows.next()) {
     std::string keyspace_name;
     std::string type_name;
@@ -267,11 +286,9 @@ void Schema::update_usertypes(ResultResponse* usertypes_result) {
       fields.push_back(UserType::Field(field_name, data_type));
     }
 
-    (*user_types)[keyspace_name][type_name]
+    (*user_types_)[keyspace_name][type_name]
         = SharedRefPtr<UserType>(new UserType(keyspace_name, type_name, fields));
   }
-
-  user_types_ = user_types.release();
 }
 
 void Schema::update_columns(ResultResponse* result) {
@@ -379,7 +396,8 @@ void SchemaMetadata::add_json_list_field(int version, const Row* row, const std:
     return;
   }
 
-  Collection collection(CASS_COLLECTION_TYPE_LIST, d.Size());
+  Collection collection(CollectionType::list(SharedRefPtr<DataType>(new DataType(CASS_VALUE_TYPE_TEXT))),
+                        d.Size());
   for (rapidjson::Value::ConstValueIterator i = d.Begin(); i != d.End(); ++i) {
     collection.append(cass::CassString(i->GetString(), i->GetStringLength()));
   }
@@ -424,7 +442,11 @@ void SchemaMetadata::add_json_map_field(int version, const Row* row, const std::
     return;
   }
 
-  Collection collection(CASS_COLLECTION_TYPE_MAP, 2 * d.MemberCount());
+
+
+  Collection collection(CollectionType::map(SharedRefPtr<DataType>(new DataType(CASS_VALUE_TYPE_TEXT)),
+                                            SharedRefPtr<DataType>(new DataType(CASS_VALUE_TYPE_TEXT))),
+                        2 * d.MemberCount());
   for (rapidjson::Value::ConstMemberIterator i = d.MemberBegin(); i != d.MemberEnd(); ++i) {
     collection.append(CassString(i->name.GetString(), i->name.GetStringLength()));
     collection.append(CassString(i->value.GetString(), i->value.GetStringLength()));

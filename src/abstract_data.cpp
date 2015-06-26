@@ -19,6 +19,7 @@
 #include "collection.hpp"
 #include "constants.hpp"
 #include "request.hpp"
+#include "user_type_value.hpp"
 
 namespace cass {
 
@@ -28,21 +29,19 @@ CassError AbstractData::set(size_t index, CassNull value) {
   return CASS_OK;
 }
 
-CassError AbstractData::set(size_t index, CassCustom custom) {
-  CASS_CHECK_INDEX_AND_TYPE(index, custom);
-  Buffer buf(custom.output_size);
-  elements_[index] = Element(buf);
-  *(custom.output) = reinterpret_cast<uint8_t*>(buf.data());
-  return CASS_OK;
-}
-
 CassError AbstractData::set(size_t index, const Collection* value) {
   CASS_CHECK_INDEX_AND_TYPE(index, value);
   if (value->type() == CASS_COLLECTION_TYPE_MAP &&
       value->items().size() % 2 != 0) {
     return CASS_ERROR_LIB_INVALID_ITEM_COUNT;
   }
-  elements_[index] = Element(value);
+  elements_[index] = value;
+  return CASS_OK;
+}
+
+CassError AbstractData::set(size_t index, const UserTypeValue* value) {
+  CASS_CHECK_INDEX_AND_TYPE(index, value);
+  elements_[index] = value->encode_with_length();
   return CASS_OK;
 }
 
@@ -88,7 +87,7 @@ void AbstractData::encode_buffers(size_t pos, Buffer* buf) const {
 
 size_t AbstractData::Element::get_size(int version) const {
   if (type_ == COLLECTION) {
-    return collection_->get_items_size(version);
+    return collection_->get_size_with_length(version);
   } else {
     assert(type_ == BUFFER);
     return buf_.size();

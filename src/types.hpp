@@ -49,15 +49,6 @@ struct CassDecimal {
   cass_int32_t scale;
 };
 
-struct CassCustom {
-  CassCustom(cass_byte_t** output,
-             size_t output_size)
-    : output(output)
-    , output_size(output_size) { }
-  cass_byte_t** output;
-  size_t output_size;
-};
-
 } // namespace cass
 
 #endif
