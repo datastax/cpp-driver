@@ -81,22 +81,26 @@ private:
   template <class T>
   CassError check(const T value) {
     CreateDataType<T> create_data_type;
-    IsValidDataType<T> is_valid_type;
-    if (type_ == CASS_COLLECTION_TYPE_MAP) {
-      if (data_type_->types().size() == 2) {
-        if (!is_valid_type(value, data_type_->types()[items_.size() % 2])) {
-          return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
-        }
-      } else {
-        data_type_->types().push_back(create_data_type(value));
-      }
+    if (type_ == CASS_COLLECTION_TYPE_TUPLE) {
+      data_type_->types().push_back(create_data_type(value));
     } else {
-      if (data_type_->types().size() == 1) {
-        if (!is_valid_type(value, data_type_->types()[0])) {
-          return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
+      IsValidDataType<T> is_valid_type;
+      if (type_ == CASS_COLLECTION_TYPE_MAP) {
+        if (data_type_->types().size() == 2) {
+          if (!is_valid_type(value, data_type_->types()[items_.size() % 2])) {
+            return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
+          }
+        } else {
+          data_type_->types().push_back(create_data_type(value));
         }
       } else {
-        data_type_->types().push_back(create_data_type(value));
+        if (data_type_->types().size() == 1) {
+          if (!is_valid_type(value, data_type_->types()[0])) {
+            return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
+          }
+        } else {
+          data_type_->types().push_back(create_data_type(value));
+        }
       }
     }
     return CASS_OK;

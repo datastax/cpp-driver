@@ -60,6 +60,30 @@ private:
   const int32_t count_;
 };
 
+class TupleIterator : public CollectionIteratorBase {
+public:
+  TupleIterator(const Value* tuple)
+      : tuple_(tuple)
+      , position_(tuple->data()) {
+    SharedRefPtr<CollectionType> collection_type(tuple->data_type());
+    next_ = collection_type->types().begin();
+    end_ = collection_type->types().end();
+  }
+
+  virtual bool next();
+
+private:
+  char* decode_value(char* position);
+
+private:
+  const Value* tuple_;
+
+  char* position_;
+  DataTypeVec::const_iterator next_;
+  DataTypeVec::const_iterator current_;
+  DataTypeVec::const_iterator end_;
+};
+
 } // namespace cass
 
 #endif

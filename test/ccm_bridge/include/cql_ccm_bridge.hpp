@@ -29,29 +29,29 @@
 #include "cql_escape_sequences_remover.hpp"
 
 /**
- * Cassandra release version number
- */
+* Cassandra release version number
+*/
 struct CassVersion {
   /**
-   * Major portion of version number
-   */
+  * Major portion of version number
+  */
   unsigned short major;
   /**
-   * Minor portion of version number
-   */
+  * Minor portion of version number
+  */
   unsigned short minor;
   /**
-   * Patch portion of version number
-   */
+  * Patch portion of version number
+  */
   unsigned short patch;
   /**
-   * Extra portion of version number
-   */
+  * Extra portion of version number
+  */
   std::string extra;
 
   /**
-   * Initializing constructor for structure
-   */
+  * Initializing constructor for structure
+  */
   CassVersion() {
     major = 0;
     minor = 0;
@@ -60,10 +60,10 @@ struct CassVersion {
   };
 
   /**
-   * Create the CassVersion from a human readable string
-   *
-   * @param version_string String representation to convert
-   */
+  * Create the CassVersion from a human readable string
+  *
+  * @param version_string String representation to convert
+  */
   CassVersion(std::string version_string) {
     major = 0;
     minor = 0;
@@ -73,8 +73,8 @@ struct CassVersion {
   };
 
   /**
-   * Convert the version into a human readable string
-   */
+  * Convert the version into a human readable string
+  */
   std::string to_string() {
     std::stringstream version_string;
     version_string << major << "." << minor << "." << patch;
@@ -85,10 +85,10 @@ struct CassVersion {
   }
 
   /**
-   * Convert the version from human readable string to structure
-   *
-   * @param version_string String representation to convert
-   */
+  * Convert the version from human readable string to structure
+  *
+  * @param version_string String representation to convert
+  */
   void from_string(const std::string &version_string) {
     // Clean up the string for tokens
     std::string version(version_string);
