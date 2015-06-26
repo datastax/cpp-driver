@@ -170,7 +170,11 @@ BOOST_AUTO_TEST_CASE(query_param_error)
   CassString message;
   cass_future_error_message(future.get(), &message.data, &message.length);
   BOOST_REQUIRE(code == CASS_ERROR_SERVER_INVALID_QUERY);
-  BOOST_REQUIRE(std::string(message.data, message.length).find("Invalid amount of bind variables") != std::string::npos);
+  if (version.major == 1) {
+    BOOST_REQUIRE(std::string(message.data, message.length).find("Cannot execute query with bind variables") != std::string::npos);
+  } else {
+    BOOST_REQUIRE(std::string(message.data, message.length).find("Invalid amount of bind variables") != std::string::npos);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
