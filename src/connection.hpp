@@ -36,6 +36,8 @@
 
 #include <uv.h>
 
+#include <stack>
+
 namespace cass {
 
 class AuthProvider;
@@ -64,6 +66,7 @@ public:
              const Address& address,
              const std::string& keyspace,
              int protocol_version);
+  ~Connection();
 
   void connect();
 
@@ -229,6 +232,9 @@ private:
   static void on_connect_timeout(Timer* timer);
   static void on_close(uv_handle_t* handle);
 
+  uv_buf_t internal_alloc_buffer(size_t suggested_size);
+  void internal_reuse_buffer(uv_buf_t buf);
+
 #if UV_VERSION_MAJOR == 0
   static uv_buf_t alloc_buffer(uv_handle_t* handle, size_t suggested_size);
   static void on_read(uv_stream_t* client, ssize_t nread, uv_buf_t buf);
@@ -300,6 +306,9 @@ private:
 
   Timer* connect_timer_;
   ScopedPtr<SslSession> ssl_session_;
+
+  // buffer reuse for libuv
+  std::stack<uv_buf_t> buffer_reuse_list_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Connection);
