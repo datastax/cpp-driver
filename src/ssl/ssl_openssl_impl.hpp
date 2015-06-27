@@ -41,7 +41,7 @@ public:
   virtual int decrypt(char* buf, size_t size);
 
 private:
-  bool check_error(int rc);
+  void check_error(int rc);
 
   SSL* ssl_;
   BIO* incoming_bio_;
