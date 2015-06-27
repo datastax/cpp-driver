@@ -51,9 +51,9 @@
  */
 
 #define CASS_VERSION_MAJOR 2
-#define CASS_VERSION_MINOR 0
-#define CASS_VERSION_PATCH 1
-#define CASS_VERSION_SUFFIX ""
+#define CASS_VERSION_MINOR 1
+#define CASS_VERSION_PATCH 0
+#define CASS_VERSION_SUFFIX "beta"
 
 #ifdef __cplusplus
 extern "C" {
@@ -167,7 +167,7 @@ typedef struct CassUuid_ {
   /**
    * Represents the clock sequence and the node part of a UUID. The most
    * significant 16 bits represent the clock sequence (except for the most
-   * significant bit which is always set) and the bottom 48 bits respresent
+   * significant bit which is always set) and the bottom 48 bits represent
    * the node part. For version 1 (time-based) the clock sequence part is randomly
    * generated and the node part can be explicitly set, otherwise, it's generated
    * from node unique information. For version 4 both the clock sequence and the node
@@ -201,7 +201,7 @@ typedef struct CassSession_ CassSession;
  * @struct CassStatement
  *
  * A statement object is an executable query. It represents either a regular
- * (adhoc) statment or a prepared statement. It maitains the queries' parameter
+ * (adhoc) statement or a prepared statement. It maintains the queries' parameter
  * values along with query options (consistency level, paging state, etc.)
  *
  * <b>Note:</b> Parameters for regular queries are not supported by the binary protocol
@@ -704,7 +704,7 @@ cass_cluster_set_num_threads_io(CassCluster* cluster,
                                 unsigned num_threads);
 
 /**
- * Sets the size of the the fixed size queue that stores
+ * Sets the size of the fixed size queue that stores
  * pending requests.
  *
  * Default: 4096
@@ -720,7 +720,7 @@ cass_cluster_set_queue_size_io(CassCluster* cluster,
                                unsigned queue_size);
 
 /**
- * Sets the size of the the fixed size queue that stores
+ * Sets the size of the fixed size queue that stores
  * events.
  *
  * Default: 4096
@@ -736,7 +736,7 @@ cass_cluster_set_queue_size_event(CassCluster* cluster,
                                   unsigned queue_size);
 
 /**
- * Sets the size of the the fixed size queue that stores
+ * Sets the size of the fixed size queue that stores
  * log messages.
  *
  * Default: 4096
@@ -1356,7 +1356,7 @@ CASS_EXPORT void
 cass_schema_free(const CassSchema* schema);
 
 /**
- * Gets a the metadata for the provided keyspace name.
+ * Gets the metadata for the provided keyspace name.
  *
  * @public @memberof CassSchema
  *
@@ -5004,7 +5004,7 @@ cass_error_desc(CassError error);
  * @deprecated This is no longer useful and does nothing. Expect this to be
  * removed in a few releases.
  *
- * Explicty wait for the log to flush and deallocate resources.
+ * Explicitly wait for the log to flush and deallocate resources.
  * This *MUST* be the last call using the library. It is an error
  * to call any cass_*() functions after this call.
  *
