@@ -376,6 +376,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # TODO(mpenick): Fix these "possible loss of data" warnings
   add_definitions(/wd4244)
   add_definitions(/wd4267)
+  add_definitions(/wd4800) # Performance warning due to automatic compiler casting from int to bool
 
   # Add preprocessor definitions for proper compilation
   add_definitions(-D_WIN32_WINNT=0x0501)      # Required for winsock (pre Windows XP wspiapi.h only)
