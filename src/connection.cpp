@@ -42,6 +42,8 @@
 #define SSL_WRITE_SIZE 8192
 #define SSL_ENCRYPTED_BUFS_COUNT 16
 
+#define MAX_BUFFER_REUSE_NO 8
+#define BUFFER_REUSE_SIZE 64 * 1024
 
 #if UV_VERSION_MAJOR == 0
 #define UV_ERRSTR(status) uv_strerror(uv_last_error(connection->loop_))
@@ -183,6 +185,15 @@ Connection::Connection(uv_loop_t* loop,
   SslContext* ssl_context = config_.ssl_context();
   if (ssl_context != NULL) {
     ssl_session_.reset(ssl_context->create_session(address_));
+  }
+}
+
+Connection::~Connection()
+{
+  while (!buffer_reuse_list_.empty()) {
+    uv_buf_t buf = buffer_reuse_list_.top();
+    delete[] buf.base;
+    buffer_reuse_list_.pop();
   }
 }
 
@@ -457,14 +468,35 @@ void Connection::on_close(uv_handle_t* handle) {
   delete connection;
 }
 
+uv_buf_t Connection::internal_alloc_buffer(size_t suggested_size) {
+  if (suggested_size <= BUFFER_REUSE_SIZE) {
+    if (!buffer_reuse_list_.empty()) {
+      uv_buf_t ret = buffer_reuse_list_.top();
+      buffer_reuse_list_.pop();
+      return ret;
+    }
+    return uv_buf_init(new char[BUFFER_REUSE_SIZE], BUFFER_REUSE_SIZE);
+  }
+  return uv_buf_init(new char[suggested_size], suggested_size);
+}
+
+void Connection::internal_reuse_buffer(uv_buf_t buf) {
+  if (buf.len == BUFFER_REUSE_SIZE && buffer_reuse_list_.size() < MAX_BUFFER_REUSE_NO) {
+    buffer_reuse_list_.push(buf);
+    return;
+  }
+  delete[] buf.base;
+}
+
 #if UV_VERSION_MAJOR == 0
 uv_buf_t Connection::alloc_buffer(uv_handle_t* handle, size_t suggested_size) {
-  return uv_buf_init(new char[suggested_size], suggested_size);
+  Connection* connection = static_cast<Connection*>(handle->data);
+  return connection->internal_alloc_buffer(suggested_size);
 }
 #else
 void Connection::alloc_buffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
-  buf->base = new char[suggested_size];
-  buf->len = suggested_size;
+  Connection* connection = static_cast<Connection*>(handle->data);
+  *buf =  connection->internal_alloc_buffer(suggested_size);
 }
 #endif
 
@@ -486,20 +518,21 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, const uv_buf_t* buf
                 connection->addr_string_.c_str());
     }
     connection->defunct();
+
 #if UV_VERSION_MAJOR == 0
-    delete[] buf.base;
+    connection->internal_reuse_buffer(buf);
 #else
-    delete[] buf->base;
+    connection->internal_reuse_buffer(*buf);
 #endif
     return;
   }
 
 #if UV_VERSION_MAJOR == 0
   connection->consume(buf.base, nread);
-  delete[] buf.base;
+  connection->internal_reuse_buffer(buf);
 #else
   connection->consume(buf->base, nread);
-  delete[] buf->base;
+  connection->internal_reuse_buffer(*buf);
 #endif
 }
 
