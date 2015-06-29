@@ -55,41 +55,45 @@ private:
 class ResponseMessage {
 public:
   ResponseMessage()
-      : version_(0x02)
+      : version_(0)
       , flags_(0)
       , stream_(0)
       , opcode_(0)
       , length_(0)
       , received_(0)
+      , header_size_(0)
       , is_header_received_(false)
       , header_buffer_pos_(header_buffer_)
       , is_body_ready_(false)
       , is_body_error_(false)
       , body_buffer_pos_(NULL) {}
 
+  uint8_t floats() const { return flags_; }
+
   uint8_t opcode() const { return opcode_; }
 
-  int8_t stream() const { return stream_; }
+  int16_t stream() const { return stream_; }
 
   ScopedPtr<Response>& response_body() { return response_body_; }
 
   bool is_body_ready() const { return is_body_ready_; }
 
-  int decode(int version, char* input, size_t size);
+  ssize_t decode(char* input, size_t size);
 
 private:
   bool allocate_body(int8_t opcode);
 
 private:
   uint8_t version_;
-  int8_t flags_;
+  uint8_t flags_;
   int16_t stream_;
   uint8_t opcode_;
   int32_t length_;
   size_t received_;
+  size_t header_size_;
 
   bool is_header_received_;
-  char header_buffer_[CASS_HEADER_SIZE_V1_AND_V2];
+  char header_buffer_[CASS_HEADER_SIZE_V3];
   char* header_buffer_pos_;
 
   bool is_body_ready_;

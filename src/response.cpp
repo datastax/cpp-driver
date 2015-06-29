@@ -67,30 +67,35 @@ bool ResponseMessage::allocate_body(int8_t opcode) {
   }
 }
 
-int ResponseMessage::decode(int version, char* input, size_t size) {
+ssize_t ResponseMessage::decode(char* input, size_t size) {
   char* input_pos = input;
 
   received_ += size;
 
-  const size_t header_size
-      = (version >= 3) ? CASS_HEADER_SIZE_V3 : CASS_HEADER_SIZE_V1_AND_V2;
-
   if (!is_header_received_) {
-    if (received_ >= header_size) {
+    if (version_ == 0) {
+      version_ = input[0] & 0x7F; // "input" will always have at least 1 bytes
+      if (version_ >= 3) {
+        header_size_  = CASS_HEADER_SIZE_V3;
+      } else {
+        header_size_ = CASS_HEADER_SIZE_V1_AND_V2;
+      }
+    }
+
+    if (received_ >= header_size_) {
       // We may have received more data then we need, only copy what we need
-      size_t overage = received_ - header_size;
+      size_t overage = received_ - header_size_;
       size_t needed = size - overage;
 
       memcpy(header_buffer_pos_, input_pos, needed);
       header_buffer_pos_ += needed;
       input_pos += needed;
-      assert(header_buffer_pos_ == header_buffer_ + header_size);
+      assert(header_buffer_pos_ == header_buffer_ + header_size_);
 
-      char* buffer = header_buffer_;
-      version_ = *(buffer++);
+      char* buffer = header_buffer_ + 1; // Skip over "version" byte
       flags_ = *(buffer++);
 
-      if (version >= 3) {
+      if (version_ >= 3) {
         buffer = decode_int16(buffer, stream_);
       } else {
         stream_ = *(buffer++);
@@ -117,7 +122,7 @@ int ResponseMessage::decode(int version, char* input, size_t size) {
   }
 
   const size_t remaining = size - (input_pos - input);
-  const size_t frame_size = header_size + length_;
+  const size_t frame_size = header_size_ + length_;
 
   if (received_ >= frame_size) {
     // We may have received more data then we need, only copy what we need
@@ -129,7 +134,7 @@ int ResponseMessage::decode(int version, char* input, size_t size) {
     input_pos += needed;
     assert(body_buffer_pos_ == response_body_->data() + length_);
 
-    if (!response_body_->decode(version, response_body_->data(), length_)) {
+    if (!response_body_->decode(version_, response_body_->data(), length_)) {
       is_body_error_ = true;
       return -1;
     }

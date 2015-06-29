@@ -78,10 +78,14 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
       if (error->code() == CQL_ERROR_PROTOCOL_ERROR &&
           error->message().find("Invalid or unsupported protocol version") != std::string::npos) {
         connection_->is_invalid_protocol_ = true;
+        LOG_WARN("Host %s received invalid protocol response %s",
+                 connection_->addr_string_.c_str(), error->error_message().c_str());
+        connection_->defunct();
+        return;
       } else if (error->code() == CQL_ERROR_BAD_CREDENTIALS) {
         connection_->auth_error_ = error->message();
       }
-      connection_->notify_error(error_response_message("Error response", error));
+      connection_->notify_error("Received error response " + error->error_message());
       break;
     }
 
@@ -316,7 +320,7 @@ void Connection::consume(char* input, size_t size) {
   size_t remaining = size;
 
   while (remaining != 0) {
-    int consumed = response_->decode(protocol_version_, buffer, remaining);
+    ssize_t consumed = response_->decode(buffer, remaining);
     if (consumed <= 0) {
       notify_error("Error consuming message");
       remaining = 0;
@@ -680,10 +684,10 @@ void Connection::notify_ready() {
 
 void Connection::notify_error(const std::string& error) {
   if (state_ == CONNECTION_STATE_READY) {
-    LOG_ERROR("Host %s had the following error: '%s'",
+    LOG_ERROR("Host %s had the following error: %s",
               addr_string_.c_str(), error.c_str());
   } else {
-    LOG_ERROR("Host %s had the following error on startup: '%s'",
+    LOG_ERROR("Host %s had the following error on startup: %s",
               addr_string_.c_str(), error.c_str());
   }
   defunct();

@@ -213,6 +213,11 @@ void ControlConnection::on_close(Connection* connection) {
                                              "Not even protocol version 1 is supported");
         return;
       }
+      LOG_WARN("Host %s does not support protocol version %d. "
+               "Trying protocol version %d...",
+               connection->address_string().c_str(),
+               protocol_version_,
+               protocol_version_ - 1);
       protocol_version_--;
       retry_current_host = true;
     } else if (!connection->auth_error().empty()) {
@@ -345,7 +350,9 @@ void ControlConnection::query_meta_all() {
   handler->execute_query(SELECT_KEYSPACES);
   handler->execute_query(SELECT_COLUMN_FAMILIES);
   handler->execute_query(SELECT_COLUMNS);
-  handler->execute_query(SELECT_USERTYPES);
+  if (protocol_version_ >= 3) {
+    handler->execute_query(SELECT_USERTYPES);
+  }
 }
 
 void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
@@ -428,7 +435,9 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
   session->cluster_meta().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
   session->cluster_meta().update_tables(static_cast<ResultResponse*>(responses[3]),
                                          static_cast<ResultResponse*>(responses[4]));
-  session->cluster_meta().update_usertypes(static_cast<ResultResponse*>(responses[5]));
+  if (control_connection->protocol_version_ >= 3) {
+    session->cluster_meta().update_usertypes(static_cast<ResultResponse*>(responses[5]));
+  }
   session->cluster_meta().build();
 
   if (is_initial_connection) {
