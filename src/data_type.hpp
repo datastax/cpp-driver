@@ -75,8 +75,7 @@ public:
   bool is_collection() const  {
     return value_type_ == CASS_VALUE_TYPE_LIST ||
         value_type_ == CASS_VALUE_TYPE_MAP ||
-        value_type_ == CASS_VALUE_TYPE_SET ||
-        value_type_ == CASS_VALUE_TYPE_TUPLE;
+        value_type_ == CASS_VALUE_TYPE_SET;
   }
 
   bool is_map() const  {

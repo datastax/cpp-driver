@@ -34,7 +34,7 @@ CassCollection* cass_collection_new(CassCollectionType type,
 
 CassCollection* cass_collection_new_from_data_type(const CassDataType* data_type,
                                                    size_t item_count) {
-  if (!data_type->is_collection()) {
+  if (!data_type->is_collection() && !data_type->is_tuple()) {
     return NULL;
   }
   return CassCollection::to(new cass::Collection(cass::SharedRefPtr<const cass::DataType>(data_type),

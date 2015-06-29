@@ -82,7 +82,7 @@ CassDataType* cass_data_type_new_udt(size_t field_count) {
 const CassDataType* cass_data_type_sub_data_type(const CassDataType* data_type,
                                                      size_t index) {
   const cass::DataType* sub_type = NULL;
-  if (sub_type->is_collection()) {
+  if (sub_type->is_collection() || sub_type->is_tuple()) {
     const cass::CollectionType* collection_type
         = static_cast<const cass::CollectionType*>(data_type->from());
     if (index < collection_type->types().size()) {
@@ -262,7 +262,7 @@ CassError cass_data_type_sub_type_name(const CassDataType* data_type,
 
 CassError cass_data_type_add_sub_type(CassDataType* data_type,
                                       const CassDataType* type) {
-  if (!data_type->is_collection()) {
+  if (!data_type->is_collection() && !data_type->is_tuple()) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
 
