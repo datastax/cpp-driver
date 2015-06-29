@@ -260,7 +260,7 @@ SharedRefPtr<DataType> TypeParser::parse_one(const std::string& type) {
       types.push_back(data_type);
     }
 
-    return CollectionType::tuple(types);
+    return SharedRefPtr<DataType>(new TupleType(types));
   }
 
   CassValueType t = get_value_type(next);

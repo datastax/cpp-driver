@@ -19,6 +19,7 @@
 #include "collection.hpp"
 #include "constants.hpp"
 #include "request.hpp"
+#include "tuple.hpp"
 #include "user_type_value.hpp"
 
 namespace cass {
@@ -36,6 +37,12 @@ CassError AbstractData::set(size_t index, const Collection* value) {
     return CASS_ERROR_LIB_INVALID_ITEM_COUNT;
   }
   elements_[index] = value;
+  return CASS_OK;
+}
+
+CassError AbstractData::set(size_t index, const Tuple* value) {
+  CASS_CHECK_INDEX_AND_TYPE(index, value);
+  elements_[index] = value->encode_with_length();
   return CASS_OK;
 }
 

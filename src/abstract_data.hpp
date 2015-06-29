@@ -33,6 +33,7 @@
 
 namespace cass {
 
+class Tuple;
 class UserTypeValue;
 
 class AbstractData {
@@ -106,6 +107,7 @@ public:
 
   CassError set(size_t index, CassNull value);
   CassError set(size_t index, const Collection* value);
+  CassError set(size_t index, const Tuple* value);
   CassError set(size_t index, const UserTypeValue* value);
 
   template<class T>

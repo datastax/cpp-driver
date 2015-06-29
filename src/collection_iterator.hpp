@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_COLLECTION_ITERATOR_HPP_INCLUDED__
-#define __CASS_COLLECTION_ITERATOR_HPP_INCLUDED__
+#ifndef __CASS_VALUE_ITERATOR_HPP_INCLUDED__
+#define __CASS_VALUE_ITERATOR_HPP_INCLUDED__
 
 #include "cassandra.h"
 #include "iterator.hpp"
@@ -24,10 +24,10 @@
 
 namespace cass {
 
-class CollectionIteratorBase : public Iterator {
+class ValueIterator : public Iterator {
 public:
-  CollectionIteratorBase()
-    : Iterator(CASS_ITERATOR_TYPE_COLLECTION) { }
+  ValueIterator(CassIteratorType type)
+    : Iterator(type) { }
 
   const Value* value() const {
     return &value_;
@@ -37,10 +37,11 @@ protected:
   Value value_;
 };
 
-class CollectionIterator : public CollectionIteratorBase {
+class CollectionIterator : public ValueIterator {
 public:
   CollectionIterator(const Value* collection)
-      : collection_(collection)
+      : ValueIterator(CASS_ITERATOR_TYPE_COLLECTION)
+      , collection_(collection)
       , position_(collection->data())
       , index_(-1)
       , count_(collection_->value_type() == CASS_VALUE_TYPE_MAP
@@ -60,10 +61,11 @@ private:
   const int32_t count_;
 };
 
-class TupleIterator : public CollectionIteratorBase {
+class TupleIterator : public ValueIterator {
 public:
   TupleIterator(const Value* tuple)
-      : tuple_(tuple)
+      : ValueIterator(CASS_ITERATOR_TYPE_TUPLE)
+      , tuple_(tuple)
       , position_(tuple->data()) {
     SharedRefPtr<const CollectionType> collection_type(tuple->data_type());
     next_ = collection_type->types().begin();

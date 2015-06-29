@@ -58,8 +58,10 @@ bool TupleIterator::next() {
 char* TupleIterator::decode_value(char* position) {
   int32_t size;
   char* buffer = decode_int32(position, size);
+
   value_ = Value(tuple_->protocol_version(), *current_, buffer, size);
-  return buffer + size;
+
+  return size > 0 ? buffer + size : buffer;
 }
 
 } // namespace cass

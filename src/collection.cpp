@@ -34,7 +34,7 @@ CassCollection* cass_collection_new(CassCollectionType type,
 
 CassCollection* cass_collection_new_from_data_type(const CassDataType* data_type,
                                                    size_t item_count) {
-  if (!data_type->is_collection() && !data_type->is_tuple()) {
+  if (!data_type->is_collection()) {
     return NULL;
   }
   return CassCollection::to(new cass::Collection(cass::SharedRefPtr<const cass::DataType>(data_type),
@@ -54,6 +54,7 @@ const CassDataType* cass_collection_data_type(const CassCollection* collection) 
    return collection->append(Value);                                          \
  }
 
+CASS_COLLECTION_APPEND(null, ZERO_PARAMS_(), cass::CassNull())
 CASS_COLLECTION_APPEND(int32, ONE_PARAM_(cass_int32_t value), value)
 CASS_COLLECTION_APPEND(int64, ONE_PARAM_(cass_int64_t value), value)
 CASS_COLLECTION_APPEND(float, ONE_PARAM_(cass_float_t value), value)
@@ -89,6 +90,12 @@ CassError cass_collection_append_string_n(CassCollection* collection,
 
 namespace cass {
 
+CassError Collection::append(CassNull value) {
+  CASS_COLLECTION_CHECK_TYPE(value);
+  items_.push_back(Buffer());
+  return CASS_OK;
+}
+
 CassError Collection::append(const Collection* value) {
   CASS_COLLECTION_CHECK_TYPE(value);
   items_.push_back(value->encode());
@@ -102,7 +109,7 @@ CassError Collection::append(const UserTypeValue* value) {
 }
 
 size_t Collection::get_items_size(int version) const {
-  if (version >= 3 || type() == CASS_COLLECTION_TYPE_TUPLE) {
+  if (version >= 3) {
     return get_items_size(sizeof(int32_t));
   } else {
     return get_items_size(sizeof(uint16_t));
@@ -110,7 +117,7 @@ size_t Collection::get_items_size(int version) const {
 }
 
 void Collection::encode_items(int version, char* buf) const {
-  if (version >= 3 || type() == CASS_COLLECTION_TYPE_TUPLE) {
+  if (version >= 3) {
     encode_items_int32(buf);
   } else {
     encode_items_uint16(buf);
@@ -129,51 +136,34 @@ size_t Collection::get_size_with_length(int version) const {
 
 Buffer Collection::encode() const {
   // Inner types are always encoded using the v3+ (int32_t) encoding
-  if (type() == CASS_COLLECTION_TYPE_TUPLE) {
-    Buffer buf(get_items_size(sizeof(int32_t)));
-    encode_items_int32(buf.data());
-    return buf;
-  } else {
-    Buffer buf(sizeof(int32_t) + get_items_size(sizeof(int32_t)));
-    size_t pos = buf.encode_int32(0, get_count());
-    encode_items_int32(buf.data() + pos);
-    return buf;
-  }
+  Buffer buf(sizeof(int32_t) + get_items_size(sizeof(int32_t)));
+  size_t pos = buf.encode_int32(0, get_count());
+  encode_items_int32(buf.data() + pos);
+  return buf;
 }
 
 Buffer Collection::encode_with_length(int version) const {
-  if (type() == CASS_COLLECTION_TYPE_TUPLE) {
-    size_t internal_size = get_items_size(sizeof(int32_t));
+  size_t internal_size;
 
-    Buffer buf(sizeof(int32_t) + internal_size);
-    size_t pos = buf.encode_int32(0, internal_size);
-
-    encode_items_int32(buf.data() + pos);
-
-    return buf;
+  if (version >= 3) {
+    internal_size = sizeof(int32_t) + get_items_size(sizeof(int32_t));
   } else {
-    size_t internal_size;
-
-    if (version >= 3) {
-      internal_size = sizeof(int32_t) + get_items_size(sizeof(int32_t));
-    } else {
-      internal_size = sizeof(uint16_t) + get_items_size(sizeof(uint16_t));
-    }
-
-    Buffer buf(sizeof(int32_t) + internal_size);
-
-    size_t pos = buf.encode_int32(0, internal_size);
-
-    if (version >= 3) {
-      pos = buf.encode_int32(pos, get_count());
-      encode_items_int32(buf.data() + pos);
-    } else {
-      pos = buf.encode_uint16(pos, get_count());
-      encode_items_uint16(buf.data() + pos);
-    }
-
-    return buf;
+    internal_size = sizeof(uint16_t) + get_items_size(sizeof(uint16_t));
   }
+
+  Buffer buf(sizeof(int32_t) + internal_size);
+
+  size_t pos = buf.encode_int32(0, internal_size);
+
+  if (version >= 3) {
+    pos = buf.encode_int32(pos, get_count());
+    encode_items_int32(buf.data() + pos);
+  } else {
+    pos = buf.encode_uint16(pos, get_count());
+    encode_items_uint16(buf.data() + pos);
+  }
+
+  return buf;
 }
 
 size_t Collection::get_items_size(size_t num_bytes_for_size) const {

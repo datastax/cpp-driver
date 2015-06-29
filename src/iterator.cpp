@@ -38,14 +38,17 @@ CassIterator* cass_iterator_from_row(const CassRow* row) {
 }
 
 CassIterator* cass_iterator_from_collection(const CassValue* value) {
-  if (!value->is_null()) {
-    if (value->is_collection()) {
-      return CassIterator::to(new cass::CollectionIterator(value));
-    } else if (value->is_tuple()) {
-      return CassIterator::to(new cass::TupleIterator(value));
-    }
+  if (value->is_null() || !value->is_collection()) {
+    return NULL;
   }
-  return NULL;
+  return CassIterator::to(new cass::CollectionIterator(value));
+}
+
+CassIterator* cass_iterator_from_tuple(const CassValue* value) {
+  if (value->is_null() || !value->is_tuple()) {
+    return NULL;
+  }
+  return CassIterator::to(new cass::TupleIterator(value));
 }
 
 CassIterator* cass_iterator_from_map(const CassValue* value) {
@@ -113,11 +116,12 @@ const CassValue* cass_iterator_get_column(CassIterator* iterator) {
 }
 
 const CassValue* cass_iterator_get_value(CassIterator* iterator) {
-  if (iterator->type() != CASS_ITERATOR_TYPE_COLLECTION) {
+  if (iterator->type() != CASS_ITERATOR_TYPE_COLLECTION &&
+      iterator->type() != CASS_ITERATOR_TYPE_TUPLE) {
     return NULL;
   }
   return CassValue::to(
-        static_cast<cass::CollectionIterator*>(
+        static_cast<cass::ValueIterator*>(
           iterator->from())->value());
 }
 

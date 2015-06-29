@@ -18,6 +18,7 @@
 
 #include "collection.hpp"
 #include "external_types.hpp"
+#include "tuple.hpp"
 #include "types.hpp"
 #include "user_type_value.hpp"
 
@@ -83,10 +84,10 @@ const CassDataType* cass_data_type_sub_data_type(const CassDataType* data_type,
                                                      size_t index) {
   const cass::DataType* sub_type = NULL;
   if (sub_type->is_collection() || sub_type->is_tuple()) {
-    const cass::CollectionType* collection_type
-        = static_cast<const cass::CollectionType*>(data_type->from());
-    if (index < collection_type->types().size()) {
-      sub_type = collection_type->types()[index].get();
+    const cass::SubTypesDataType* sub_types
+        = static_cast<const cass::SubTypesDataType*>(data_type->from());
+    if (index < sub_types->types().size()) {
+      sub_type = sub_types->types()[index].get();
     }
   } else if (sub_type->is_user_type()) {
     const cass::UserType* user_type
@@ -266,27 +267,27 @@ CassError cass_data_type_add_sub_type(CassDataType* data_type,
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
 
-  cass::CollectionType* collection_type
-      = static_cast<cass::CollectionType*>(data_type->from());
+  cass::SubTypesDataType* sub_types
+      = static_cast<cass::SubTypesDataType*>(data_type->from());
 
-  switch (collection_type->value_type()) {
+  switch (sub_types->value_type()) {
     case CASS_VALUE_TYPE_LIST:
     case CASS_VALUE_TYPE_SET:
-      if (collection_type->types().size() >= 1) {
+      if (sub_types->types().size() >= 1) {
         return CASS_ERROR_LIB_BAD_PARAMS;
       }
-      collection_type->types().push_back(cass::SharedRefPtr<const cass::DataType>(type));
+      sub_types->types().push_back(cass::SharedRefPtr<const cass::DataType>(type));
       break;
 
     case CASS_VALUE_TYPE_MAP:
-      if (collection_type->types().size() >= 2) {
+      if (sub_types->types().size() >= 2) {
         return CASS_ERROR_LIB_BAD_PARAMS;
       }
-      collection_type->types().push_back(cass::SharedRefPtr<const cass::DataType>(type));
+      sub_types->types().push_back(cass::SharedRefPtr<const cass::DataType>(type));
       break;
 
     case CASS_VALUE_TYPE_TUPLE:
-      collection_type->types().push_back(cass::SharedRefPtr<const cass::DataType>(type));
+      sub_types->types().push_back(cass::SharedRefPtr<const cass::DataType>(type));
       break;
 
     default:
@@ -335,6 +336,11 @@ const SharedRefPtr<const DataType> DataType::NIL;
 
 bool cass::IsValidDataType<const Collection*>::operator()(const Collection* value,
                                                           const SharedRefPtr<const DataType>& data_type) const {
+  return value->data_type()->equals(data_type);
+}
+
+bool cass::IsValidDataType<const Tuple*>::operator()(const Tuple* value,
+                                                     const SharedRefPtr<const DataType>& data_type) const {
   return value->data_type()->equals(data_type);
 }
 

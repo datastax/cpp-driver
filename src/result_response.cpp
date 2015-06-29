@@ -178,7 +178,7 @@ private:
     for (uint16_t i = 0; i < n; ++i) {
       types.push_back(decode());
     }
-    return CollectionType::tuple(types);
+    return SharedRefPtr<DataType>(new TupleType(types));
   }
 
 private:

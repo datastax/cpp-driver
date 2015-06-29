@@ -106,7 +106,7 @@ CassError insert_into_tuple(CassSession* session) {
 
   CassUuid id;
   char id_str[CASS_UUID_STRING_LENGTH];
-  CassCollection* item = NULL;
+  CassTuple* item = NULL;
 
   const char* query = "INSERT INTO examples.tuples (id, item) VALUES (?, ?)";
 
@@ -115,14 +115,13 @@ CassError insert_into_tuple(CassSession* session) {
   cass_uuid_gen_time(uuid_gen, &id);
   cass_uuid_string(id, id_str);
 
-  item = cass_collection_new(CASS_COLLECTION_TYPE_TUPLE, 3);
+  item = cass_tuple_new(2);
 
-  cass_collection_append_string(item, id_str);
-  cass_collection_append_string(item, id_str);
-  cass_collection_append_int32(item, (cass_int32_t)id.time_and_version);
+  cass_tuple_set_string(item, 0, id_str);
+  cass_tuple_set_int64(item, 1, id.time_and_version);
 
   cass_statement_bind_uuid(statement, 0, id);
-  cass_statement_bind_collection(statement, 1, item);
+  cass_statement_bind_tuple(statement, 1, item);
 
   future = cass_session_execute(session, statement);
   cass_future_wait(future);
@@ -134,7 +133,7 @@ CassError insert_into_tuple(CassSession* session) {
 
   cass_future_free(future);
   cass_statement_free(statement);
-  cass_collection_free(item);
+  cass_tuple_free(item);
 
   return rc;
 }
@@ -167,7 +166,7 @@ CassError select_from_tuple(CassSession* session) {
       const CassRow* row = cass_iterator_get_row(rows);
       const CassValue* id_value = cass_row_get_column_by_name(row, "id");
       const CassValue* item_value = cass_row_get_column_by_name(row, "item");
-      CassIterator* item = cass_iterator_from_collection(item_value);
+      CassIterator* item = cass_iterator_from_tuple(item_value);
 
       cass_value_get_uuid(id_value, &id);
       cass_uuid_string(id, id_str);
@@ -177,17 +176,21 @@ CassError select_from_tuple(CassSession* session) {
       while(cass_iterator_next(item)) {
         const CassValue* value = cass_iterator_get_value(item);
 
-        if (cass_value_type(value) == CASS_VALUE_TYPE_VARCHAR) {
-          const char* text;
-          size_t text_length;
-          cass_value_get_string(value, &text, &text_length);
-          printf("\"%.*s\" ", (int)text_length, text);
-        } else if (cass_value_type(value) == CASS_VALUE_TYPE_INT) {
-          cass_int32_t i;
-          cass_value_get_int32(value, &i);
-          printf("%d ", i);
+        if (!cass_value_is_null(value)) {
+          if (cass_value_type(value) == CASS_VALUE_TYPE_VARCHAR) {
+            const char* text;
+            size_t text_length;
+            cass_value_get_string(value, &text, &text_length);
+            printf("\"%.*s\" ", (int)text_length, text);
+          } else if (cass_value_type(value) == CASS_VALUE_TYPE_BIGINT) {
+            cass_int64_t i;
+            cass_value_get_int64(value, &i);
+            printf("%lld ", i);
+          } else {
+            printf("<invalid> ");
+          }
         } else {
-          printf("<invalid> ");
+          printf("<null> ");
         }
       }
 
@@ -222,7 +225,7 @@ int main() {
                            'class': 'SimpleStrategy', 'replication_factor': '3' }");
 
   execute_query(session,
-                "CREATE TABLE examples.tuples (id timeuuid, item frozen<tuple<text, text, int>>, PRIMARY KEY(id))");
+                "CREATE TABLE examples.tuples (id timeuuid, item frozen<tuple<text, bigint>>, PRIMARY KEY(id))");
 
   insert_into_tuple(session);
   select_from_tuple(session);

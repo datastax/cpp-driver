@@ -74,6 +74,7 @@ public:
 
 #undef APPEND_TYPE
 
+  CassError append(CassNull value);
   CassError append(const Collection* value);
   CassError append(const UserTypeValue* value);
 
@@ -107,13 +108,6 @@ private:
       case CASS_COLLECTION_TYPE_SET:
         if (data_type_->types().size() == 1 &&
             !is_valid_type(value, data_type_->types()[0])) {
-          return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
-        }
-        break;
-
-      case CASS_COLLECTION_TYPE_TUPLE:
-        if (index < data_type()->types().size() &&
-            !is_valid_type(value, data_type_->types()[index])) {
           return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
         }
         break;

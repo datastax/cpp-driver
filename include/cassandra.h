@@ -283,9 +283,16 @@ typedef struct CassDataType_ CassDataType;
 /**
  * @struct CassCollection
  *
- *  A collection of primitive values.
+ *  A collection of values.
  */
 typedef struct CassCollection_ CassCollection;
+
+/**
+ * @struct CassTuple
+ *
+ *  A tuple of values.
+ */
+typedef struct CassTuple_ CassTuple;
 
 /**
  * @struct CassUserType
@@ -415,8 +422,7 @@ typedef enum CassValueType_ {
 typedef enum CassCollectionType_ {
   CASS_COLLECTION_TYPE_LIST = CASS_VALUE_TYPE_LIST,
   CASS_COLLECTION_TYPE_MAP = CASS_VALUE_TYPE_MAP,
-  CASS_COLLECTION_TYPE_SET = CASS_VALUE_TYPE_SET,
-  CASS_COLLECTION_TYPE_TUPLE = CASS_VALUE_TYPE_TUPLE
+  CASS_COLLECTION_TYPE_SET = CASS_VALUE_TYPE_SET
 } CassCollectionType;
 
 typedef enum CassBatchType_ {
@@ -432,6 +438,7 @@ typedef enum CassIteratorType_ {
   CASS_ITERATOR_TYPE_MAP,
   CASS_ITERATOR_TYPE_SCHEMA_META,
   CASS_ITERATOR_TYPE_SCHEMA_META_FIELD,
+  CASS_ITERATOR_TYPE_TUPLE,
   CASS_ITERATOR_TYPE_USER_TYPE
 } CassIteratorType;
 
@@ -2069,7 +2076,7 @@ cass_statement_bind_bool(CassStatement* statement,
                          cass_bool_t value);
 
 /**
- * Binds a "ascii", "text" or "varchar" to a query or bound statement
+ * Binds an "ascii", "text" or "varchar" to a query or bound statement
  * at the specified index.
  *
  * @public @memberof CassStatement
@@ -2174,7 +2181,7 @@ cass_statement_bind_decimal(CassStatement* statement,
                             cass_int32_t scale);
 
 /**
- * Bind a "list", "map", "set" or "tuple" to a query or bound statement at the
+ * Bind a "list", "map" or "set" to a query or bound statement at the
  * specified index.
  *
  * @public @memberof CassStatement
@@ -2188,8 +2195,20 @@ CASS_EXPORT CassError
 cass_statement_bind_collection(CassStatement* statement,
                                size_t index,
                                const CassCollection* collection);
-
-
+/**
+ * Bind a "tuple" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] tuple The tuple can be freed after this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_tuple(CassStatement* statement,
+                          size_t index,
+                          const CassTuple* tuple);
 /**
  * Bind a user defined type to a query or bound statement at the
  * specified index.
@@ -2432,7 +2451,7 @@ cass_statement_bind_bool_by_name_n(CassStatement* statement,
                                    cass_bool_t value);
 
 /**
- * Binds a "ascii", "text" or "varchar" to all the values
+ * Binds an "ascii", "text" or "varchar" to all the values
  * with the specified name.
  *
  * This can only be used with statements created by
@@ -2642,7 +2661,7 @@ cass_statement_bind_decimal_by_name_n(CassStatement* statement,
                                       cass_int32_t scale);
 
 /**
- * Bind a "list", "map", "set" or "tuple" to all the values with the
+ * Bind a "list", "map" or "set" to all the values with the
  * specified name.
  *
  * This can only be used with statements created by
@@ -2679,6 +2698,44 @@ cass_statement_bind_collection_by_name_n(CassStatement* statement,
                                          const char* name,
                                          size_t name_length,
                                          const CassCollection* collection);
+
+/**
+ * Bind a "tuple" to all the values with the specified name.
+ *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] tuple The tuple can be freed after this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_tuple_by_name(CassStatement* statement,
+                                  const char* name,
+                                  const CassTuple* tuple);
+
+/**
+ * Same as cass_statement_bind_tuple_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] tuple
+ * @return same as cass_statement_bind_tuple_by_name()
+ *
+ * @see cass_statement_bind_tuple_by_name()
+ */
+CASS_EXPORT CassError
+cass_statement_bind_tuple_by_name_n(CassStatement* statement,
+                                    const char* name,
+                                    size_t name_length,
+                                    const CassTuple* tuple);
 
 /**
  * Bind a user defined type to a query or bound statement with the
@@ -3306,7 +3363,7 @@ cass_collection_append_bool(CassCollection* collection,
                             cass_bool_t value);
 
 /**
- * Appends a "ascii", "text" or "varchar" to the collection.
+ * Appends an "ascii", "text" or "varchar" to the collection.
  *
  * @public @memberof CassCollection
  *
@@ -3399,7 +3456,7 @@ cass_collection_append_decimal(CassCollection* collection,
                                cass_int32_t scale);
 
 /**
- * Appends a "list", "map", "set" or "tuple" to the collection.
+ * Appends a "list", "map" or "set" to the collection.
  *
  * @public @memberof CassCollection
  *
@@ -3410,6 +3467,19 @@ cass_collection_append_decimal(CassCollection* collection,
 CASS_EXPORT CassError
 cass_collection_append_collection(CassCollection* collection,
                                   const CassCollection* value);
+
+/**
+ * Appends a "tuple" to the collection.
+ *
+ * @public @memberof CassCollection
+ *
+ * @param[in] collection
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_collection_append_tuple(CassTuple* tuple,
+                             const CassTuple* value);
 
 /**
  * Appends a "udt" to the collection.
@@ -3423,6 +3493,295 @@ cass_collection_append_collection(CassCollection* collection,
 CASS_EXPORT CassError
 cass_collection_append_user_type(CassCollection* collection,
                                  const CassUserType* value);
+
+/***********************************************************************************
+ *
+ * Tuple
+ *
+ ***********************************************************************************/
+
+/**
+ * Creates a new tuple.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] type
+ * @param[in] item_count The number of items in the tuple.
+ * @return Returns a tuple that must be freed.
+ *
+ * @see cass_tuple_free()
+ */
+CASS_EXPORT CassTuple*
+cass_tuple_new(size_t item_count);
+
+/**
+ * Creates a new tuple from an existing data type.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] data_type
+ * @return Returns a tuple that must be freed.
+ *
+ * @see cass_tuple_free();
+ */
+CASS_EXPORT CassTuple*
+cass_tuple_new_from_data_type(const CassDataType* data_type);
+
+/**
+ * Frees a tuple instance.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ */
+CASS_EXPORT void
+cass_tuple_free(CassTuple* tuple);
+
+/**
+ * Gets the data type of a tuple.
+ *
+ * @param[in] tuple
+ * @return Returns a reference to the data type of the tuple. Do not free
+ * this reference as it is bound to the lifetime of the tuple.
+ */
+CASS_EXPORT const CassDataType*
+cass_tuple_data_type(const CassTuple* tuple);
+
+/**
+ * Sets an null in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_null(CassTuple* tuple, size_t index);
+
+/**
+ * Sets an "int" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_int32(CassTuple* tuple,
+                     size_t index,
+                     cass_int32_t value);
+
+/**
+ * Sets a "bigint" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_int64(CassTuple* tuple,
+                     size_t index,
+                     cass_int64_t value);
+
+/**
+ * Sets a "float" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_float(CassTuple* tuple,
+                     size_t index,
+                     cass_float_t value);
+
+/**
+ * Sets a "double" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_double(CassTuple* tuple,
+                      size_t index,
+                      cass_double_t value);
+
+/**
+ * Sets a "boolean" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_bool(CassTuple* tuple,
+                    size_t index,
+                    cass_bool_t value);
+
+/**
+ * Sets an "ascii", "text" or "varchar" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value The value is copied into the tuple object; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_string(CassTuple* tuple,
+                      size_t index,
+                      const char* value);
+
+/**
+ * Same as cass_tuple_set_string(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @param[in] value_length
+ * @return same as cass_tuple_set_string()
+ *
+ * @see cass_tuple_set_string();
+ */
+CASS_EXPORT CassError
+cass_tuple_set_string_n(CassTuple* tuple,
+                        size_t index,
+                        const char* value,
+                        size_t value_length);
+
+/**
+ * Sets a "blob", "varint" or "custom" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value The value is copied into the tuple object; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @param[in] value_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_bytes(CassTuple* tuple,
+                     size_t index,
+                     const cass_byte_t* value,
+                     size_t value_size);
+
+/**
+ * Sets a "uuid" or "timeuuid" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_uuid(CassTuple* tuple,
+                    size_t index,
+                    CassUuid value);
+
+/**
+ * Sets an "inet" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_inet(CassTuple* tuple,
+                    size_t index,
+                    CassInet value);
+
+/**
+ * Sets a "decimal" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] varint The value is copied into the tuple object; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @param[in] varint_size
+ * @param[in] scale
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_decimal(CassTuple* tuple,
+                       size_t index,
+                       const cass_byte_t* varint,
+                       size_t varint_size,
+                       cass_int32_t scale);
+
+/**
+ * Sets a "list", "map" or "set" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_collection(CassTuple* tuple,
+                          size_t index,
+                          const CassCollection* value);
+
+/**
+ * Sets a "tuple" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_tuple(CassTuple* tuple,
+                     size_t index,
+                     const CassTuple* value);
+
+/**
+ * Sets a "udt" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_user_type(CassTuple* tuple,
+                         size_t index,
+                         const CassUserType* value);
 
 /***********************************************************************************
  *
@@ -3465,6 +3824,49 @@ cass_user_type_free(CassUserType* user_type);
 CASS_EXPORT const CassDataType*
 cass_user_type_data_type(const CassUserType* user_type);
 
+/**
+ * Sets a null in a user defined type at the specified index.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] index
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_null(CassUserType* user_type,
+                        size_t index);
+
+/**
+ * Sets a null in a user defined type at the specified name.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_null_by_name(CassUserType* user_type,
+                                const char* name);
+
+/**
+ * Same as cass_user_type_set_null_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] name_length
+ * @return same as cass_user_type_set_null_by_name()
+ *
+ * @see cass_user_type_set_null_by_name()
+ */
+CASS_EXPORT CassError
+cass_user_type_set_null_by_name_n(CassUserType* user_type,
+                                   const char* name,
+                                   size_t name_length);
 /**
  * Sets an "int" in a user defined type at the specified index.
  *
@@ -3514,7 +3916,6 @@ cass_user_type_set_int32_by_name_n(CassUserType* user_type,
                                    const char* name,
                                    size_t name_length,
                                    cass_int32_t value);
-
 /**
  * Sets an "bigint, "counter" or "timestamp" in a user defined type
  * at the specified index.
@@ -3719,7 +4120,7 @@ cass_user_type_set_bool_by_name_n(CassUserType* user_type,
 
 
 /**
- * Sets a "ascii", "text" or "varchar" in a user defined type at the
+ * Sets an "ascii", "text" or "varchar" in a user defined type at the
  * specified index.
  *
  * @public @memberof CassUserType
@@ -3756,7 +4157,7 @@ cass_user_type_set_string_n(CassUserType* user_type,
                             size_t value_length);
 
 /**
- * Sets a "ascii", "text" or "varchar" in a user defined type at the
+ * Sets an "ascii", "text" or "varchar" in a user defined type at the
  * specified name.
  *
  * @public @memberof CassUserType
@@ -4002,7 +4403,7 @@ cass_user_type_set_decimal_by_name_n(CassUserType* user_type,
                                      int scale);
 
 /**
- * Sets a "list", "map", "set" or "tuple" in a user defined type at the
+ * Sets a "list", "map" or "set" in a user defined type at the
  * specified index.
  *
  * @public @memberof CassUserType
@@ -4018,7 +4419,7 @@ cass_user_type_set_collection(CassUserType* user_type,
                               const CassCollection* value);
 
 /**
- * Sets a "list", "map", "set" or "tuple in a user defined type at the
+ * Sets a "list", "map" or "set" in a user defined type at the
  * specified name.
  *
  * @public @memberof CassUserType
@@ -4052,6 +4453,56 @@ cass_user_type_set_collection_by_name_n(CassUserType* user_type,
                                         const char* name,
                                         size_t name_length,
                                         const CassCollection* value);
+
+/**
+ * Sets a "tuple" in a user defined type at the specified index.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_tuple(CassUserType* user_type,
+                              size_t index,
+                              const CassTuple* value);
+
+/**
+ * Sets a "tuple" in a user defined type at the specified name.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_tuple_by_name(CassUserType* user_type,
+                                      const char* name,
+                                      const CassTuple* value);
+
+/**
+ * Same as cass_user_type_set_tuple_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] value
+ * @return same as cass_user_type_set_tuple_by_name()
+ *
+ * @see cass_user_type_set_tuple_by_name()
+ */
+CASS_EXPORT CassError
+cass_user_type_set_tuple_by_name_n(CassUserType* user_type,
+                                        const char* name,
+                                        size_t name_length,
+                                        const CassTuple* value);
 
 /**
  * Sets a user defined type in a user defined type at the specified index.
@@ -4296,6 +4747,21 @@ CASS_EXPORT CassIterator*
 cass_iterator_from_map(const CassValue* value);
 
 /**
+ * Creates a new iterator for the specified tuple. This can be
+ * used to iterate over values in a tuple.
+ *
+ * @public @memberof CassValue
+ *
+ * @param[in] value
+ * @return A new iterator that must be freed. NULL returned if the
+ * value is not a collection.
+ *
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_from_tuple(const CassValue* value);
+
+/**
  * Creates a new iterator for the specified user defined type. This can be
  * used to iterate over fields in a user defined type.
  *
@@ -4395,21 +4861,7 @@ CASS_EXPORT const CassValue*
 cass_iterator_get_column(CassIterator* iterator);
 
 /**
- * Gets the value at the collection iterator's current position.
- *
- * Calling cass_iterator_next() will invalidate the previous
- * key returned by this method.
- *
- * @public @memberof CassIterator
- *
- * @param[in] iterator
- * @return A value
- */
-CASS_EXPORT const CassValue*
-cass_iterator_get_value(CassIterator* iterator);
-
-/**
- * Gets the value at the collection iterator's current position.
+ * Gets the value at a collection or tuple iterator's current position.
  *
  * Calling cass_iterator_next() will invalidate the previous
  * value returned by this method.

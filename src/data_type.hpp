@@ -30,6 +30,7 @@
 namespace cass {
 
 class Collection;
+class Tuple;
 class UserTypeValue;
 
 inline bool is_int64_type(CassValueType value_type) {
@@ -112,29 +113,72 @@ private:
 
 typedef std::vector<SharedRefPtr<const DataType> > DataTypeVec;
 
-class CollectionType : public DataType {
+class CustomType : public DataType {
 public:
-  CollectionType(CassValueType collection_type)
-    : DataType(collection_type) { }
+  CustomType()
+    : DataType(CASS_VALUE_TYPE_CUSTOM) { }
 
-  CollectionType(CassValueType collection_type,
-                 size_t types_count)
-    : DataType(collection_type) {
-    types_.reserve(types_count);
+  CustomType(const std::string& class_name)
+    : DataType(CASS_VALUE_TYPE_CUSTOM)
+    , class_name_(class_name) { }
+
+  const std::string& class_name() const { return class_name_; }
+
+  void set_class_name(const std::string& class_name) {
+    class_name_ = class_name;
   }
 
-  CollectionType(CassValueType collection_type, const DataTypeVec& types)
-    : DataType(collection_type)
+  virtual bool equals(const SharedRefPtr<const DataType>& data_type) const {
+    assert(value_type() == CASS_VALUE_TYPE_CUSTOM);
+    if (data_type->value_type() != CASS_VALUE_TYPE_CUSTOM) {
+      return false;
+    }
+    const SharedRefPtr<const CustomType>& custom_type(data_type);
+    return equals_both_not_empty(class_name_, custom_type->class_name_);
+  }
+
+  virtual DataType* copy() const {
+    return new CustomType(class_name_);
+  }
+
+private:
+  std::string class_name_;
+};
+
+class SubTypesDataType : public DataType {
+public:
+  SubTypesDataType(CassValueType type)
+   : DataType(type) { }
+
+  SubTypesDataType(CassValueType type, const DataTypeVec& types)
+    : DataType(type)
     , types_(types) { }
 
   DataTypeVec& types() { return types_; }
   const DataTypeVec& types() const { return types_; }
 
+protected:
+  DataTypeVec types_;
+};
+
+class CollectionType : public SubTypesDataType {
+public:
+  CollectionType(CassValueType collection_type)
+    : SubTypesDataType(collection_type) { }
+
+  CollectionType(CassValueType collection_type,
+                 size_t types_count)
+    : SubTypesDataType(collection_type) {
+    types_.reserve(types_count);
+  }
+
+  CollectionType(CassValueType collection_type, const DataTypeVec& types)
+    : SubTypesDataType(collection_type, types) { }
+
   virtual bool equals(const SharedRefPtr<const DataType>& data_type) const {
     assert(value_type() == CASS_VALUE_TYPE_LIST ||
            value_type() == CASS_VALUE_TYPE_SET ||
-           value_type() == CASS_VALUE_TYPE_MAP ||
-           value_type() == CASS_VALUE_TYPE_TUPLE);
+           value_type() == CASS_VALUE_TYPE_MAP);
 
     if (value_type() != data_type->value_type()) {
       return false;
@@ -180,46 +224,45 @@ public:
     types.push_back(value_type);
     return SharedRefPtr<DataType>(new CollectionType(CASS_VALUE_TYPE_MAP, types));
   }
-
-  static SharedRefPtr<DataType> tuple(const DataTypeVec& types) {
-    return SharedRefPtr<DataType>(new CollectionType(CASS_VALUE_TYPE_TUPLE, types));
-  }
-
-private:
-  DataTypeVec types_;
 };
 
-class CustomType : public DataType {
+class TupleType : public SubTypesDataType {
 public:
-  CustomType()
-    : DataType(CASS_VALUE_TYPE_CUSTOM) { }
+  TupleType()
+    : SubTypesDataType(CASS_VALUE_TYPE_TUPLE) { }
 
-  CustomType(const std::string& class_name)
-    : DataType(CASS_VALUE_TYPE_CUSTOM)
-    , class_name_(class_name) { }
-
-  const std::string& class_name() const { return class_name_; }
-
-  void set_class_name(const std::string& class_name) {
-    class_name_ = class_name;
-  }
+  TupleType(const DataTypeVec& types)
+    : SubTypesDataType(CASS_VALUE_TYPE_TUPLE, types) { }
 
   virtual bool equals(const SharedRefPtr<const DataType>& data_type) const {
-    assert(value_type() == CASS_VALUE_TYPE_CUSTOM);
-    if (data_type->value_type() != CASS_VALUE_TYPE_CUSTOM) {
+    assert(value_type() == CASS_VALUE_TYPE_TUPLE);
+
+    if (value_type() != data_type->value_type()) {
       return false;
     }
-    const SharedRefPtr<const CustomType>& custom_type(data_type);
-    return equals_both_not_empty(class_name_, custom_type->class_name_);
+
+    const SharedRefPtr<const TupleType>& tuple_type(data_type);
+
+    // Only compare sub-types if both have sub-types
+    if(!types_.empty() && !tuple_type->types_.empty()) {
+      if (types_.size() != tuple_type->types_.size()) {
+        return false;
+      }
+      for (size_t i = 0; i < types_.size(); ++i) {
+        if(!types_[i]->equals(tuple_type->types_[i])) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   virtual DataType* copy() const {
-    return new CustomType(class_name_);
+    return new TupleType(types_);
   }
-
-private:
-  std::string class_name_;
 };
+
 
 class UserType : public DataType {
 public:
@@ -419,6 +462,11 @@ struct IsValidDataType<CassDecimal> {
 template<>
 struct IsValidDataType<const Collection*> {
   bool operator()(const Collection* value, const SharedRefPtr<const DataType>& data_type) const;
+};
+
+template<>
+struct IsValidDataType<const Tuple*> {
+  bool operator()(const Tuple* value, const SharedRefPtr<const DataType>& data_type) const;
 };
 
 template<>
