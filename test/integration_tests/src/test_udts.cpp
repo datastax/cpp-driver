@@ -122,8 +122,7 @@ public:
   void verify_phone_udt_field_names(const CassValue* value) {
     // Ensure the value is a UDT and create the iterator for the validation
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UDT);
-    //TODO: Determine why the count for the UDT is not correct
-    //BOOST_REQUIRE_EQUAL(cass_value_item_count(home_phone_number_udt_value), 2);
+    BOOST_REQUIRE_EQUAL(cass_value_item_count(value), 2);
     test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
 
     // Verify alias field name
@@ -140,12 +139,12 @@ public:
   }
 
   /**
-  * Verify the phone UDT (field names and results)
-  *
-  * @param value The phone UDT value to iterate over
-  * @param expected_alias Expected alias to verify against result
-  * @param expected_number Expected number to verify against result
-  */
+   * Verify the phone UDT (field names and results)
+   *
+   * @param value The phone UDT value to iterate over
+   * @param expected_alias Expected alias to verify against result
+   * @param expected_number Expected number to verify against result
+   */
   void verify_phone_udt(const CassValue* value, CassString expected_alias, CassString expected_number) {
     // Verify field names for phone UDT and create the iterator for validation
     verify_phone_udt_field_names(value);
@@ -168,11 +167,15 @@ public:
     BOOST_REQUIRE(test_utils::Value<CassString>::equal(number_result, expected_number));
   }
 
+  /**
+   * Verify the address UDT field names
+   *
+   * @param value The address UDT value to iterate over
+   */
   void verify_address_udt_field_names(const CassValue* value) {
     // Ensure the value is a UDT and create the iterator for the validation
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UDT);
-    //TODO: Determine why the count for the UDT is not correct
-    //BOOST_REQUIRE_EQUAL(cass_value_item_count(value), 3);
+    BOOST_REQUIRE_EQUAL(cass_value_item_count(value), 3);
     test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
 
     // Verify street field name
@@ -194,6 +197,14 @@ public:
     BOOST_REQUIRE(test_utils::Value<CassString>::equal("phone_numbers", phone_numbers_field_name));
   }
 
+  /**
+   * Verify the address UDT (field names and results)
+   *
+   * @param value The address UDT value to iterate over
+   * @param expected_street Expected street address to verify against result
+   * @param expected_zip Expected zip code to verify against result
+   * @param expected_phone_numbers Expected numbers to verify against result
+   */
   void verify_address_udt(const CassValue* value, CassString expected_street, cass_int32_t expected_zip, PhoneMap expected_phone_numbers) {
     // Verify field names for address UDT and create the iterator for validation
     verify_address_udt_field_names(value);
@@ -232,7 +243,7 @@ public:
   }
 };
 
-BOOST_AUTO_TEST_SUITE(udts);
+BOOST_AUTO_TEST_SUITE(udts)
 
 /**
  * Read/Write User Defined Type (UDT)

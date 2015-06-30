@@ -172,9 +172,8 @@ public:
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_TUPLE);
     BOOST_REQUIRE_EQUAL(cass_value_primary_sub_type(value), CASS_VALUE_TYPE_UNKNOWN);
     BOOST_REQUIRE_EQUAL(cass_value_secondary_sub_type(value), CASS_VALUE_TYPE_UNKNOWN);
-    //TODO: Determine why the count for the collection is not correct
-    //BOOST_REQUIRE_EQUAL(cass_value_item_count(value), size);
     test_utils::CassIteratorPtr tuple_iterator(cass_iterator_from_tuple(value));
+    BOOST_REQUIRE_EQUAL(cass_value_item_count(value), size);
     int count = 0;
     while (cass_iterator_next(tuple_iterator.get())) {
       ++count;
@@ -185,8 +184,7 @@ public:
         BOOST_REQUIRE_EQUAL(cass_value_type(abstract_collection_value), collection_type);
         BOOST_REQUIRE_EQUAL(cass_value_primary_sub_type(abstract_collection_value), tuple_type);
         BOOST_REQUIRE_EQUAL(cass_value_secondary_sub_type(abstract_collection_value), collection_type == CASS_VALUE_TYPE_MAP ? tuple_type : CASS_VALUE_TYPE_UNKNOWN);
-        //TODO: Determine why the count for the collection is not correct
-        //BOOST_REQUIRE_EQUAL(cass_value_item_count(abstract_collection_value), size);
+        BOOST_REQUIRE_EQUAL(cass_value_item_count(abstract_collection_value), size);
 
         test_utils::CassIteratorPtr subtype_iterator(cass_iterator_from_collection(abstract_collection_value));
         int subtype_count = 0;
@@ -262,9 +260,8 @@ public:
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_TUPLE);
     BOOST_REQUIRE_EQUAL(cass_value_primary_sub_type(value), CASS_VALUE_TYPE_UNKNOWN);
     BOOST_REQUIRE_EQUAL(cass_value_secondary_sub_type(value), CASS_VALUE_TYPE_UNKNOWN);
-    //TODO: Determine why the count for the collection is not correct
-    //BOOST_REQUIRE_EQUAL(cass_value_item_count(value), size);
     test_utils::CassIteratorPtr tuple_iterator(cass_iterator_from_tuple(value));
+    BOOST_REQUIRE_EQUAL(cass_value_item_count(value), size);
     int count = 0;
     while (cass_iterator_next(tuple_iterator.get())) {
       ++count;
@@ -275,8 +272,7 @@ public:
         BOOST_REQUIRE_EQUAL(cass_value_type(abstract_collection_value), collection_type);
         BOOST_REQUIRE_EQUAL(cass_value_primary_sub_type(abstract_collection_value), tuple_type);
         BOOST_REQUIRE_EQUAL(cass_value_secondary_sub_type(abstract_collection_value), collection_type == CASS_VALUE_TYPE_MAP ? tuple_type : CASS_VALUE_TYPE_UNKNOWN);
-        //TODO: Determine why the count for the collection is not correct
-        //BOOST_REQUIRE_EQUAL(cass_value_item_count(abstract_collection_value), size);
+        BOOST_REQUIRE_EQUAL(cass_value_item_count(abstract_collection_value), size);
 
         test_utils::CassIteratorPtr subtype_iterator(cass_iterator_from_collection(abstract_collection_value));
         int subtype_count = 0;

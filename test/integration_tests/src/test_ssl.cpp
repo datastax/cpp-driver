@@ -25,6 +25,7 @@
 #endif
 
 #include <boost/chrono.hpp>
+#include <boost/test/debug.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>
 #include <boost/format.hpp>
@@ -112,6 +113,8 @@ struct TestSSL {
       , connect_future_(NULL)
       , session_(NULL)
       , ssl_(NULL) {
+    boost::debug::detect_memory_leaks(false);
+
     //Load the PEM certificates and private keys
     cassandra_certificate_ = test_utils::load_ssl_certificate(CASSANDRA_PEM_CERTIFICATE_FILENAME);
     driver_certificate_ = test_utils::load_ssl_certificate(DRIVER_PEM_CERTIFICATE_FILENAME);

@@ -35,14 +35,17 @@
 #include "cql_ccm_bridge.hpp"
 
 struct Version1DowngradeTests {
-  Version1DowngradeTests() {}
+  Version1DowngradeTests() {
+    boost::debug::detect_memory_leaks(false);
+  }
 };
 
 BOOST_FIXTURE_TEST_SUITE(version1_downgrade, Version1DowngradeTests)
 
+//TODO: Add additional tests for v2 downgrade
 BOOST_AUTO_TEST_CASE(query_after_downgrade)
 {
-  test_utils::CassLog::reset("Error response: 'Invalid or unsupported protocol version: 2");
+  test_utils::CassLog::reset("'Invalid or unsupported protocol version: ");
 
   size_t row_count;
 

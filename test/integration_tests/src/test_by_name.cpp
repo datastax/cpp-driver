@@ -35,6 +35,8 @@ struct ByNameTests : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
     test_utils::execute_query(session, "CREATE TABLE by_name (key uuid PRIMARY KEY, a int, b boolean, c text, abc float, \"ABC\" float, \"aBc\" float)");
+
+    test_utils::execute_query(session, "CREATE TABLE bytes_by_name (key uuid PRIMARY KEY, blobs blob, varints varint)");
   }
 
   test_utils::CassResultPtr select_all_from_by_name() {
@@ -201,16 +203,6 @@ BOOST_AUTO_TEST_CASE(bind_multiple_columns)
 
   BOOST_REQUIRE_EQUAL(cass_value_get_float(value, &abc), CASS_OK);
   BOOST_CHECK(abc == 1.23f);
-}
-
-BOOST_AUTO_TEST_CASE(bind_not_prepared)
-{
-  test_utils::CassStatementPtr statement(cass_statement_new("INSERT INTO by_name (key, a) VALUES (?, ?)", 2));
-
-  CassUuid key = test_utils::generate_time_uuid(uuid_gen);
-
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_ERROR_LIB_INVALID_STATEMENT_TYPE);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_int32_by_name(statement.get(), "a", 9042), CASS_ERROR_LIB_INVALID_STATEMENT_TYPE);
 }
 
 BOOST_AUTO_TEST_CASE(bind_invalid_name)
