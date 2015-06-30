@@ -70,24 +70,17 @@ int BatchRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) con
     length += buf_size;
   }
 
-  bool has_names_for_values = false;
   for (BatchRequest::StatementList::const_iterator i = statements_.begin(),
        end = statements_.end(); i != end; ++i) {
     const SharedRefPtr<Statement>& statement(*i);
     if (statement->has_names_for_values()) {
-      has_names_for_values = true;
-    } else if (has_names_for_values) {
-      return ENCODE_ERROR_BATCH_MIXED_NAMED_VALUES;
+      return ENCODE_ERROR_BATCH_WITH_NAMED_VALUES;
     }
     int32_t result = (*i)->encode_batch(version, bufs, cache);
     if (result < 0) {
       return result;
     }
     length += result;
-  }
-
-  if (has_names_for_values) {
-    flags |= CASS_QUERY_FLAG_NAMES_FOR_VALUES;
   }
 
   {

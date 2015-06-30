@@ -233,9 +233,9 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
   int32_t request_size = pending_write->write(handler);
   if (request_size < 0) {
     stream_manager_.release_stream(stream);
-    if (request_size == Request::ENCODE_ERROR_BATCH_MIXED_NAMED_VALUES) {
+    if (request_size == Request::ENCODE_ERROR_BATCH_WITH_NAMED_VALUES) {
       handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
-                        "Mixing named values with non-named values in a batch");
+                        "Batches cannot contain queries with named values");
     } else {
       handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
                         "Operation unsupported by this protocol version");
