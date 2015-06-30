@@ -24,6 +24,8 @@
 #include <boost/format.hpp>
 #include <boost/test/unit_test.hpp>
 
+#define TOTAL_NUMBER_OF_BATCHES 1000
+
 struct NamedParametersTests : public test_utils::SingleSessionTest {
 private:
   /**
@@ -64,7 +66,7 @@ public:
 
     // Bind and insert the named value parameter into Cassandra
     CassUuid key = test_utils::generate_time_uuid(uuid_gen);
-    std::string insert_query = "INSERT INTO " + table_name + "(key, value) VALUES(:named_key , :named_value)";
+    std::string insert_query = "INSERT INTO " + table_name + "(key, value) VALUES(:named_key, :named_value)";
     test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
     if (is_prepared) {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query.c_str());
@@ -75,10 +77,10 @@ public:
     test_utils::wait_and_check_error(cass_session_execute(session, statement.get()));
 
     // Ensure the named parameter value can be read using a named parameter
-    std::string select_query = "SELECT value FROM " + table_name + " WHERE key=:named_key";
+    std::string select_query = "SELECT value FROM " + table_name + " WHERE key = :named_key";
     statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 1));
     if (is_prepared) {
-      test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query.c_str());
+      test_utils::CassPreparedPtr prepared = test_utils::prepare(session, select_query.c_str());
       statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
     BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "named_key", key), CASS_OK);
@@ -93,6 +95,55 @@ public:
     BOOST_REQUIRE(cass_value_type(row_value) == value_type);
     BOOST_REQUIRE_EQUAL(test_utils::Value<T>::get(row_value, &result_value), CASS_OK);
     BOOST_REQUIRE(test_utils::Value<T>::equal(result_value, value));
+  }
+
+  /**
+  * Insert and validate a batch
+  *
+  * @param value_type CassValueType to use for value
+  * @param value Value to use
+  * @param total Total number of batches to insert and validate
+  */
+  template <class T>
+  void insert_primitive_batch_value(CassValueType value_type, T value, unsigned int total) {
+    // Create the table for the test
+    std::string table_name = table_name_builder(value_type, true, "batch");
+    std::string create_table = "CREATE TABLE " + table_name + "(key timeuuid PRIMARY KEY, value " + test_utils::get_value_type(value_type) + ")";
+    test_utils::execute_query(session, create_table.c_str());
+
+    // Bind and insert the named value parameter into Cassandra
+    test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
+    std::string insert_query = "INSERT INTO " + table_name + "(key, value) VALUES(:named_key , :named_value)";
+    test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query.c_str());
+    std::vector<CassUuid> uuids;
+    for (unsigned int i = 0; i < total; ++i) {
+      CassUuid key = test_utils::generate_time_uuid(uuid_gen);
+      uuids.push_back(key);
+      test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
+      BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "named_key", key), CASS_OK);
+      BOOST_REQUIRE_EQUAL(test_utils::Value<T>::bind_by_name(statement.get(), "named_value", value), CASS_OK);
+      cass_batch_add_statement(batch.get(), statement.get());
+    }
+    test_utils::wait_and_check_error(cass_session_execute_batch(session, batch.get()));
+
+    // Ensure the named parameter can be read using a named parameter
+    std::string select_query = "SELECT value FROM " + table_name + " WHERE key=:named_key";
+    prepared = test_utils::prepare(session, select_query.c_str());
+    for (std::vector<CassUuid>::iterator iterator = uuids.begin(); iterator != uuids.end(); ++iterator) {
+      test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
+      BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "named_key", *iterator), CASS_OK);
+      test_utils::CassFuturePtr future = test_utils::CassFuturePtr(cass_session_execute(session, statement.get()));
+      test_utils::wait_and_check_error(future.get());
+      test_utils::CassResultPtr result(cass_future_get_result(future.get()));
+      BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1);
+      BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 1);
+      const CassRow* row = cass_result_first_row(result.get());
+      const CassValue* row_value = cass_row_get_column(row, 0);
+      T result_value;
+      BOOST_REQUIRE(cass_value_type(row_value) == value_type);
+      BOOST_REQUIRE_EQUAL(test_utils::Value<T>::get(row_value, &result_value), CASS_OK);
+      BOOST_REQUIRE(test_utils::Value<T>::equal(result_value, value));
+    }
   }
 };
 
@@ -256,8 +307,6 @@ BOOST_AUTO_TEST_CASE(ordered_unordered_read_write) {
  * This test ensures named parameters can be read/written using Cassandra v2.1+
  * for all primitive datatypes either bound or prepared statements
  *
- * NOTE: Prepared statements are currently disabled; re-enable when available
- *
  * @since 2.1.0-beta
  * @jira_ticket CPP-263
  * @test_category queries:named_parameters
@@ -267,9 +316,8 @@ BOOST_AUTO_TEST_CASE(all_primitives) {
   CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
     NamedParametersTests tester;
-    //for (unsigned int i = 0; i < 2; ++i) {
-    //  bool is_prepared = i == 0 ? false : true;
-    bool is_prepared = false;
+    for (unsigned int i = 0; i < 2; ++i) {
+      bool is_prepared = i == 0 ? false : true;
 
       {
         CassString value("Test Value");
@@ -318,7 +366,77 @@ BOOST_AUTO_TEST_CASE(all_primitives) {
         CassUuid value = test_utils::generate_time_uuid(tester.uuid_gen);
         tester.insert_primitive_value<CassUuid>(CASS_VALUE_TYPE_TIMEUUID, value, is_prepared);
       }
-    //}
+    }
+  } else {
+    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
+    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping named_parameters/all_primitives");
+    BOOST_REQUIRE(true);
+  }
+}
+
+/**
+ * Batch Statements Using All Primitive Datatype for named parameters
+ *
+ * This test ensures named parameters can be read/written using Cassandra v2.1+
+ * for all primitive datatypes using batched statements
+ *
+ * @since 2.1.0-beta
+ * @jira_ticket CPP-263
+ * @test_category queries:named_parameters
+ * @cassandra_version 2.1.x
+ */
+BOOST_AUTO_TEST_CASE(all_primitives_batched) {
+  CassVersion version = test_utils::get_version();
+  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+    NamedParametersTests tester;
+
+    {
+      CassString value("Test Value");
+      tester.insert_primitive_batch_value<CassString>(CASS_VALUE_TYPE_ASCII, value, TOTAL_NUMBER_OF_BATCHES);
+      tester.insert_primitive_batch_value<CassString>(CASS_VALUE_TYPE_VARCHAR, value, TOTAL_NUMBER_OF_BATCHES); // NOTE: text is alias for varchar
+    }
+
+    {
+      cass_int64_t value = 1234567890;
+      tester.insert_primitive_batch_value<cass_int64_t>(CASS_VALUE_TYPE_BIGINT, value, TOTAL_NUMBER_OF_BATCHES);
+      tester.insert_primitive_batch_value<cass_int64_t>(CASS_VALUE_TYPE_TIMESTAMP, value, TOTAL_NUMBER_OF_BATCHES);
+    }
+
+    {
+      CassBytes value = test_utils::bytes_from_string("012345678900123456789001234567890012345678900123456789001234567890");
+      tester.insert_primitive_batch_value<CassBytes>(CASS_VALUE_TYPE_BLOB, value, TOTAL_NUMBER_OF_BATCHES);
+      tester.insert_primitive_batch_value<CassBytes>(CASS_VALUE_TYPE_VARINT, value, TOTAL_NUMBER_OF_BATCHES);
+    }
+
+    tester.insert_primitive_batch_value<cass_bool_t>(CASS_VALUE_TYPE_BOOLEAN, cass_true, TOTAL_NUMBER_OF_BATCHES);
+
+    {
+      const cass_uint8_t pi[] = { 57, 115, 235, 135, 229, 215, 8, 125, 13, 43, 1, 25, 32, 135, 129, 180,
+        112, 176, 158, 120, 246, 235, 29, 145, 238, 50, 108, 239, 219, 100, 250,
+        84, 6, 186, 148, 76, 230, 46, 181, 89, 239, 247 };
+      const cass_int32_t pi_scale = 100;
+      CassDecimal value = CassDecimal(pi, sizeof(pi), pi_scale);
+      tester.insert_primitive_batch_value<CassDecimal>(CASS_VALUE_TYPE_DECIMAL, value, TOTAL_NUMBER_OF_BATCHES);
+    }
+
+    tester.insert_primitive_batch_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE, 3.141592653589793, TOTAL_NUMBER_OF_BATCHES);
+    tester.insert_primitive_batch_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT, 3.1415926f, TOTAL_NUMBER_OF_BATCHES);
+    tester.insert_primitive_batch_value<cass_int32_t>(CASS_VALUE_TYPE_INT, 123, TOTAL_NUMBER_OF_BATCHES);
+
+    {
+      CassUuid value = test_utils::generate_random_uuid(tester.uuid_gen);
+      tester.insert_primitive_batch_value<CassUuid>(CASS_VALUE_TYPE_UUID, value, TOTAL_NUMBER_OF_BATCHES);
+    }
+
+    {
+      CassInet value = test_utils::inet_v4_from_int(16777343); // 127.0.0.1
+      tester.insert_primitive_batch_value<CassInet>(CASS_VALUE_TYPE_INET, value, TOTAL_NUMBER_OF_BATCHES);
+    }
+
+    {
+      CassUuid value = test_utils::generate_time_uuid(tester.uuid_gen);
+      tester.insert_primitive_batch_value<CassUuid>(CASS_VALUE_TYPE_TIMEUUID, value, TOTAL_NUMBER_OF_BATCHES);
+    }
   } else {
     boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
     BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping named_parameters/all_primitives");
