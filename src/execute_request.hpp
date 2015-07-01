@@ -46,8 +46,7 @@ public:
   const SharedRefPtr<const Prepared>& prepared() const { return prepared_; }
 
 private:
-  virtual size_t get_indices(StringRef name,
-                             HashIndex::IndexVec* indices) {
+  virtual size_t get_indices(StringRef name, IndexVec* indices) {
     return metadata_->get_indices(name, indices);
   }
 

@@ -33,7 +33,7 @@ char* UserTypeIterator::decode_field(char* position) {
   int32_t size;
   char* buffer = decode_int32(position, size);
   value_ = Value(user_type_value_->protocol_version(), current_->type, buffer, size);
-  return buffer + size;
+  return size > 0 ? buffer + size : buffer;
 }
 
 } // namespace cass

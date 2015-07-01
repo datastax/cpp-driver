@@ -70,7 +70,7 @@ char* decode_row(char* rows, const ResultResponse* result, OutputValueVec& outpu
 }
 
 const Value* Row::get_by_name(const StringRef& name) const {
-  cass::HashIndex::IndexVec indices;
+  IndexVec indices;
   if (result_->metadata()->get_indices(name, &indices) == 0) {
     return NULL;
   }

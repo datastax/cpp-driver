@@ -52,27 +52,15 @@ int32_t QueryRequest::encode_batch(int version, BufferVec* bufs, EncodingCache* 
   return length;
 }
 
-size_t QueryRequest::get_indices(StringRef name, HashIndex::IndexVec* indices) {
-  if (!value_names_index_) {
-    set_has_names_for_values(true);
-    value_names_index_.reset(new HashIndex(elements_count()));
-  }
+size_t QueryRequest::get_indices(StringRef name, IndexVec* indices) {
+  set_has_names_for_values(true);
 
-  if (value_names_index_->get(name, indices) == 0) {
-    size_t index = value_names_.size();
-
-    if (index > elements_count()) {
-    // No more space left for new named values
+  if (value_names_.get_indices(name, indices) == 0) {
+    if (value_names_.size() > elements_count()) {
+      // No more space left for new named values
       return 0;
     }
-    value_names_.push_back(ValueName(name.to_string()));
-
-    ValueName* value_name = &value_names_.back();
-    value_name->index = index;
-    value_name->name = value_name->to_string_ref();
-    value_names_index_->insert(value_name);
-
-    indices->push_back(index);
+    indices->push_back(value_names_.add(ValueName(name.to_string())));
   }
 
   return indices->size();

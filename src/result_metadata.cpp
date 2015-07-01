@@ -27,18 +27,14 @@
 namespace cass {
 
 ResultMetadata::ResultMetadata(size_t column_count)
-  : index_(column_count) {
-  defs_.reserve(column_count);
+  : defs_(column_count) { }
+
+size_t ResultMetadata::get_indices(StringRef name, IndexVec* result) const{
+  return defs_.get_indices(name, result);
 }
 
-size_t ResultMetadata::get_indices(StringRef name,
-                           HashIndex::IndexVec* result) const{
-  return index_.get(name, result);
-}
-
-void ResultMetadata::insert(ColumnDefinition& def) {
-  defs_.push_back(def);
-  index_.insert(&defs_.back());
+void ResultMetadata::add(const ColumnDefinition& def) {
+  defs_.add(def);
 }
 
 } // namespace cass

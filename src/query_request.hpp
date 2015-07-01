@@ -18,7 +18,7 @@
 #define __CASS_QUERY_REQUEST_HPP_INCLUDED__
 
 #include "constants.hpp"
-#include "hash_index.hpp"
+#include "hash_table.hpp"
 #include "statement.hpp"
 
 #include <string>
@@ -28,43 +28,44 @@ namespace cass {
 
 class QueryRequest : public Statement {
 public:
-  struct ValueName : HashIndex::Entry {
+  struct ValueName : HashTableEntry<ValueName> {
+    ValueName() { }
+
     ValueName(const std::string& name)
       : buf(sizeof(uint16_t) + name.size()) {
       buf.encode_string(0, name.data(), name.size());
-    }
-
-    StringRef to_string_ref() const {
-      return StringRef(buf.data() + sizeof(uint16_t),
-                       buf.size() - sizeof(uint16_t));
+      this->name = StringRef(buf.data() + sizeof(uint16_t),
+                             buf.size() - sizeof(uint16_t));
     }
 
     Buffer buf;
+    StringRef name;
   };
-
-  typedef std::vector<ValueName> ValueNameVec;
 
   explicit QueryRequest(size_t value_count = 0)
     : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY,
-                value_count) { }
+                value_count)
+    , value_names_(value_count) { }
 
   QueryRequest(const std::string& query,
                size_t value_count = 0)
     : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY,
                 value_count)
-    , query_(query) { }
+    , query_(query)
+    , value_names_(value_count) { }
 
   QueryRequest(const char* query, size_t query_length,
                size_t value_count = 0)
     : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY,
                 value_count)
-      , query_(query, query_length) { }
+    , query_(query, query_length)
+    , value_names_(value_count) { }
 
   virtual int32_t encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const;
 
 private:
   virtual size_t get_indices(StringRef name,
-                             HashIndex::IndexVec* indices);
+                             IndexVec* indices);
 
   virtual const SharedRefPtr<const DataType>& get_type(size_t index) const {
     return DataType::NIL;
@@ -79,8 +80,12 @@ private:
 
 private:
   std::string query_;
+  CaseInsensitiveHashTable<ValueName> value_names_;
+  /*
   ValueNameVec value_names_;
+  size_t value_names_count_;
   ScopedPtr<HashIndex> value_names_index_;
+  */
 };
 
 } // namespace cass

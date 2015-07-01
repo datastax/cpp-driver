@@ -3200,13 +3200,12 @@ cass_data_type_sub_type_name(const CassDataType* data_type,
  * <b>Note:</b> Only valid for tuple and collection data types.
  *
  * @param[in] data_type
- * @param[out] name
- * @param[out] name_length
+ * @param[in] sub_data_type
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_data_type_add_sub_type(CassDataType* data_type,
-                            const CassDataType* type);
+                            const CassDataType* sub_data_type);
 
 /**
  * Adds a sub-data type to a UDT (user defined type).
@@ -3215,16 +3214,16 @@ cass_data_type_add_sub_type(CassDataType* data_type,
  *
  * @param[in] data_type
  * @param[in] name
- * @param[in] type
+ * @param[in] sub_data_type
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_data_type_add_named_sub_type(CassDataType* data_type,
-                                  const char* name,
-                                  const CassDataType* type);
+cass_data_type_add_sub_type_by_name(CassDataType* data_type,
+                                    const char* name,
+                                    const CassDataType* sub_data_type);
 
 /**
- * Same as cass_data_type_add_named_sub_type(), but with lengths for string
+ * Same as cass_data_type_add_sub_type_by_name(), but with lengths for string
  * parameters.
  *
  * <b>Note:</b> Only valid for UDT data types.
@@ -3232,14 +3231,61 @@ cass_data_type_add_named_sub_type(CassDataType* data_type,
  * @param[in] data_type
  * @param[in] name
  * @param[in] name_length
- * @param[in] type
+ * @param[in] sub_data_type
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_data_type_add_named_sub_type_n(CassDataType* data_type,
-                                    const char* name,
-                                    size_t name_length,
-                                    const CassDataType* type);
+cass_data_type_add_sub_type_by_name_n(CassDataType* data_type,
+                                      const char* name,
+                                      size_t name_length,
+                                      const CassDataType* sub_data_type);
+
+/**
+ * Adds a sub-data type to a tuple or collection using a value type.
+ *
+ * <b>Note:</b> Only valid for tuple and collection data types.
+ *
+ * @param[in] data_type
+ * @param[in] sub_value_type
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_data_type_add_sub_value_type(CassDataType* data_type,
+                                  CassValueType sub_value_type);
+
+
+/**
+ * Adds a sub-data type to a UDT (user defined type) using a value type.
+ *
+ * <b>Note:</b> Only valid for UDT data types.
+ *
+ * @param[in] data_type
+ * @param[in] name
+ * @param[in] sub_value_type
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_data_type_add_sub_value_type_by_name(CassDataType* data_type,
+                                          const char* name,
+                                          CassValueType sub_value_type);
+
+/**
+ * Same as cass_data_type_add_sub_value_type_by_name(), but with lengths for string
+ * parameters.
+ *
+ * <b>Note:</b> Only valid for UDT data types.
+ *
+ * @param[in] data_type
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] sub_value_type
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_data_type_add_sub_value_type_by_name_n(CassDataType* data_type,
+                                            const char* name,
+                                            size_t name_length,
+                                            CassValueType sub_value_type);
 
 /***********************************************************************************
  *

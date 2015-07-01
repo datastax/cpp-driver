@@ -18,7 +18,7 @@
 #define __CASS_DATA_TYPE_HPP_INCLUDED__
 
 #include "cassandra.h"
-#include "hash_index.hpp"
+#include "hash_table.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
 #include "types.hpp"
@@ -266,25 +266,25 @@ public:
 
 class UserType : public DataType {
 public:
-  struct Field : public HashIndex::Entry {
+  struct Field : public HashTableEntry<Field> {
     Field(const std::string& field_name,
           const SharedRefPtr<const DataType>& type)
-      : field_name(field_name)
+      : name(field_name)
       , type(type) { }
 
-    std::string field_name;
+    std::string name;
     SharedRefPtr<const DataType> type;
   };
 
-  typedef std::vector<Field> FieldVec;
+  typedef CaseInsensitiveHashTable<Field>::EntryVec FieldVec;
 
   UserType()
     : DataType(CASS_VALUE_TYPE_UDT)
-    , index_(0) { }
+    , fields_(0) { }
 
   UserType(size_t field_count)
     : DataType(CASS_VALUE_TYPE_UDT)
-    , index_(field_count) { }
+    , fields_(field_count) { }
 
   UserType(const std::string& keyspace,
            const std::string& type_name,
@@ -292,10 +292,7 @@ public:
     : DataType(CASS_VALUE_TYPE_UDT)
     , keyspace_(keyspace)
     , type_name_(type_name)
-    , fields_(fields)
-    , index_(fields.size()) {
-    reindex_fields();
-  }
+    , fields_(fields) { }
 
   const std::string& keyspace() const { return keyspace_; }
 
@@ -309,23 +306,14 @@ public:
     type_name_ = type_name;
   }
 
-  const FieldVec& fields() const { return fields_; }
+  const FieldVec& fields() const { return fields_.entries(); }
 
-  size_t get_indices(StringRef name, HashIndex::IndexVec* result) const {
-    return index_.get(name, result);
+  size_t get_indices(StringRef name, IndexVec* result) const {
+    return fields_.get_indices(name, result);
   }
 
-  void add_field(StringRef name, const SharedRefPtr<const DataType>& data_type) {
-    if (index_.requires_resize()) {
-      index_.reset(fields_.capacity());
-      reindex_fields();
-    }
-    size_t index = fields_.size();
-    fields_.push_back(Field(name.to_string(), data_type));
-    Field* field = &fields_.back();
-    field->index = index;
-    field->name = StringRef(field->field_name);
-    index_.insert(field);
+  void add_field(const std::string name, const SharedRefPtr<const DataType>& data_type) {
+    fields_.add(Field(name, data_type));
   }
 
   virtual bool equals(const SharedRefPtr<const DataType>& data_type) const {
@@ -359,24 +347,13 @@ public:
   }
 
   virtual DataType* copy() const {
-    return new UserType(keyspace_, type_name_, fields_);
-  }
-
-private:
-  void reindex_fields() {
-    for (size_t i = 0; i < fields_.size(); ++i) {
-      Field* field = &fields_[i];
-      field->index = i;
-      field->name = StringRef(field->field_name);
-      index_.insert(field);
-    }
+    return new UserType(keyspace_, type_name_, fields_.entries());
   }
 
 private:
   std::string keyspace_;
   std::string type_name_;
-  FieldVec fields_;
-  HashIndex index_;
+  CaseInsensitiveHashTable<Field> fields_;
 };
 
 template<class T>

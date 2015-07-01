@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
     BOOST_REQUIRE_GE(tries, max_streams + pending_high_wm + 1);
     BOOST_REQUIRE_LT(tries, max_tries);
     // wait for window to advance past low water mark
-    test_utils::wait_and_check_error(futures[pending_high_wm - pending_low_wm].get());
+    test_utils::wait_and_check_error(futures[pending_low_wm + (tries - max_streams)].get());
     // now, should be writable again
     test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
     test_utils::wait_and_check_error(future.get());

@@ -115,7 +115,7 @@ const CassDataType* cass_data_type_sub_data_type_by_name_n(const CassDataType* d
   const cass::UserType* user_type
       = static_cast<const cass::UserType*>(data_type->from());
 
-  cass::HashIndex::IndexVec indices;
+  cass::IndexVec indices;
   if (user_type->get_indices(cass::StringRef(name, name_length), &indices) == 0) {
     return NULL;
   }
@@ -262,7 +262,7 @@ CassError cass_data_type_sub_type_name(const CassDataType* data_type,
 }
 
 CassError cass_data_type_add_sub_type(CassDataType* data_type,
-                                      const CassDataType* type) {
+                                      const CassDataType* sub_data_type) {
   if (!data_type->is_collection() && !data_type->is_tuple()) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
@@ -276,18 +276,18 @@ CassError cass_data_type_add_sub_type(CassDataType* data_type,
       if (sub_types->types().size() >= 1) {
         return CASS_ERROR_LIB_BAD_PARAMS;
       }
-      sub_types->types().push_back(cass::SharedRefPtr<const cass::DataType>(type));
+      sub_types->types().push_back(cass::SharedRefPtr<const cass::DataType>(sub_data_type));
       break;
 
     case CASS_VALUE_TYPE_MAP:
       if (sub_types->types().size() >= 2) {
         return CASS_ERROR_LIB_BAD_PARAMS;
       }
-      sub_types->types().push_back(cass::SharedRefPtr<const cass::DataType>(type));
+      sub_types->types().push_back(cass::SharedRefPtr<const cass::DataType>(sub_data_type));
       break;
 
     case CASS_VALUE_TYPE_TUPLE:
-      sub_types->types().push_back(cass::SharedRefPtr<const cass::DataType>(type));
+      sub_types->types().push_back(cass::SharedRefPtr<const cass::DataType>(sub_data_type));
       break;
 
     default:
@@ -298,18 +298,18 @@ CassError cass_data_type_add_sub_type(CassDataType* data_type,
   return CASS_OK;
 }
 
-CassError cass_data_type_add_named_sub_type(CassDataType* data_type,
+CassError cass_data_type_add_sub_type_by_name(CassDataType* data_type,
                                               const char* name,
-                                              const CassDataType* type) {
-  return cass_data_type_add_named_sub_type_n(data_type,
-                                                 name, strlen(name),
-                                                 type);
+                                              const CassDataType* sub_data_type) {
+  return cass_data_type_add_sub_type_by_name_n(data_type,
+                                               name, strlen(name),
+                                               sub_data_type);
 }
 
-CassError cass_data_type_add_named_sub_type_n(CassDataType* data_type,
+CassError cass_data_type_add_sub_type_by_name_n(CassDataType* data_type,
                                                 const char* name,
                                                 size_t name_length,
-                                                const CassDataType* type) {
+                                                const CassDataType* sub_data_type) {
   if (!data_type->is_user_type()) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
@@ -317,11 +317,39 @@ CassError cass_data_type_add_named_sub_type_n(CassDataType* data_type,
   cass::UserType* user_type
       = static_cast<cass::UserType*>(data_type->from());
 
-  user_type->add_field(cass::StringRef(name, name_length),
-                       cass::SharedRefPtr<const cass::DataType>(type));
+  user_type->add_field(std::string(name, name_length),
+                       cass::SharedRefPtr<const cass::DataType>(sub_data_type));
 
   return CASS_OK;
 
+}
+
+CassError cass_data_type_add_sub_value_type(CassDataType* data_type,
+                                            CassValueType sub_value_type) {
+  cass::SharedRefPtr<const cass::DataType> sub_data_type(
+        new cass::DataType(sub_value_type));
+  return cass_data_type_add_sub_type(data_type,
+                                     CassDataType::to(sub_data_type.get()));
+}
+
+
+CassError cass_data_type_add_sub_value_type_by_name(CassDataType* data_type,
+                                                    const char* name,
+                                                    CassValueType sub_value_type) {
+  cass::SharedRefPtr<const cass::DataType> sub_data_type(
+        new cass::DataType(sub_value_type));
+  return cass_data_type_add_sub_type_by_name(data_type, name,
+                                             CassDataType::to(sub_data_type.get()));
+}
+
+CassError cass_data_type_add_sub_value_type_by_name_n(CassDataType* data_type,
+                                                      const char* name,
+                                                      size_t name_length,
+                                                      CassValueType sub_value_type) {
+  cass::SharedRefPtr<const cass::DataType> sub_data_type(
+        new cass::DataType(sub_value_type));
+  return cass_data_type_add_sub_type_by_name_n(data_type, name, name_length,
+                                               CassDataType::to(sub_data_type.get()));
 }
 
 void cass_data_type_free(CassDataType* data_type) {

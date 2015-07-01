@@ -68,7 +68,7 @@ const CassDataType* cass_prepared_parameter_data_type_by_name_n(const CassPrepar
 
   const cass::SharedRefPtr<cass::ResultMetadata>& metadata(prepared->result()->metadata());
 
-  cass::HashIndex::IndexVec indices;
+  cass::IndexVec indices;
   if (metadata->get_indices(cass::StringRef(name, name_length), &indices) == 0) {
     return NULL;
   }
@@ -85,7 +85,7 @@ Prepared::Prepared(const ResultResponse* result,
       : result_(result)
       , id_(result->prepared())
       , statement_(statement) {
-    HashIndex::IndexVec indices;
+    IndexVec indices;
     // If the statement has bound parameters find the key indices
     if (result->column_count() > 0) {
       for (std::vector<std::string>::const_iterator i = key_columns.begin();

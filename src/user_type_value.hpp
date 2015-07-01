@@ -33,8 +33,7 @@ public:
   const SharedRefPtr<const UserType>& data_type() const { return data_type_; }
 
 protected:
-  virtual size_t get_indices(StringRef name,
-                             HashIndex::IndexVec* indices) {
+  virtual size_t get_indices(StringRef name, IndexVec* indices) {
     return data_type_->get_indices(name, indices);
   }
 

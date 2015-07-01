@@ -160,7 +160,7 @@ Value::Value(int protocol_version,
              char* data, int32_t size)
   : protocol_version_(protocol_version)
   , data_type_(data_type) {
-  if (data_type->is_collection()) {
+  if (size > 0 && data_type->is_collection()) {
     data_ = decode_size(protocol_version, data, count_);
     if (protocol_version_ >= 3) {
       size_ = size - sizeof(int32_t);

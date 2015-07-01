@@ -20,7 +20,7 @@
 #include "cassandra.h"
 #include "data_type.hpp"
 #include "fixed_vector.hpp"
-#include "hash_index.hpp"
+#include "hash_table.hpp"
 #include "list.hpp"
 #include "ref_counted.hpp"
 #include "string_ref.hpp"
@@ -34,7 +34,8 @@
 
 namespace cass {
 
-struct ColumnDefinition : public HashIndex::Entry {
+struct ColumnDefinition : public HashTableEntry<ColumnDefinition> {
+  StringRef name;
   StringRef keyspace;
   StringRef table;
   SharedRefPtr<const DataType> data_type;
@@ -46,17 +47,14 @@ public:
 
   const ColumnDefinition& get_column_definition(size_t index) const { return defs_[index]; }
 
-  size_t get_indices(StringRef name, HashIndex::IndexVec* result) const;
+  size_t get_indices(StringRef name, IndexVec* result) const;
 
   size_t column_count() const { return defs_.size(); }
 
-  void insert(ColumnDefinition& meta);
+  void add(const ColumnDefinition& meta);
 
 private:
-  static const size_t FIXED_COLUMN_META_SIZE = 16;
-
-  FixedVector<ColumnDefinition, FIXED_COLUMN_META_SIZE> defs_;
-  HashIndex index_;
+  CaseInsensitiveHashTable<ColumnDefinition> defs_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(ResultMetadata);

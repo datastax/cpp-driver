@@ -21,7 +21,7 @@
 #include "collection.hpp"
 #include "data_type.hpp"
 #include "encode.hpp"
-#include "hash_index.hpp"
+#include "hash_table.hpp"
 #include "request.hpp"
 #include "string_ref.hpp"
 #include "types.hpp"
@@ -112,13 +112,13 @@ public:
 
   template<class T>
   CassError set(StringRef name, const T value) {
-    cass::HashIndex::IndexVec indices;
+    IndexVec indices;
 
     if (get_indices(name, &indices) == 0) {
       return CASS_ERROR_LIB_NAME_DOES_NOT_EXIST;
     }
 
-    for (cass::HashIndex::IndexVec::const_iterator it = indices.begin(),
+    for (IndexVec::const_iterator it = indices.begin(),
          end = indices.end(); it != end; ++it) {
       size_t index = *it;
       CassError rc = set(index, value);
@@ -133,7 +133,7 @@ public:
 
 protected:
   virtual size_t get_indices(StringRef name,
-                             HashIndex::IndexVec* indices) = 0;
+                             IndexVec* indices) = 0;
   virtual const SharedRefPtr<const DataType>& get_type(size_t index) const = 0;
 
 private:
