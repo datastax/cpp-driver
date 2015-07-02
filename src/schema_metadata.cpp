@@ -521,31 +521,27 @@ void TableMetadata::update(int version, const SharedRefPtr<RefBuffer>& buffer, c
   add_field(buffer, row, "value_alias");
 }
 
-const TableMetadata::KeyAliases& TableMetadata::key_aliases() const {
-  if (key_aliases_.empty()) {
-    const SchemaMetadataField* aliases = get_field("key_aliases");
-    if (aliases != NULL) {
-      key_aliases_.resize(aliases->value()->count());
-      CollectionIterator itr(aliases->value());
-      size_t i = 0;
-      while (itr.next()) {
-        key_aliases_[i++].assign(itr.value()->data(), itr.value()->size());
-      }
-    }
-    if (key_aliases_.empty()) {// C* 1.2 tables created via CQL2 or thrift don't have col meta or key aliases
-      SharedRefPtr<ParseResult> key_validator_type = TypeParser::parse_with_composite(get_string_field("key_validator"));
-      const size_t count = key_validator_type->types().size();
-      std::ostringstream ss("key");
-      for (size_t i = 0; i < count; ++i) {
-        if (i > 0) {
-          ss.seekp(3);// position after "key"
-          ss << i + 1;
-        }
-        key_aliases_.push_back(ss.str());
-      }
+void TableMetadata::key_aliases(KeyAliases* output) const {
+  const SchemaMetadataField* aliases = get_field("key_aliases");
+  if (aliases != NULL) {
+    output->reserve(aliases->value()->count());
+    CollectionIterator itr(aliases->value());
+    while (itr.next()) {
+      output->push_back(itr.value()->to_string());
     }
   }
-  return key_aliases_;
+  if (output->empty()) {// C* 1.2 tables created via CQL2 or thrift don't have col meta or key aliases
+    SharedRefPtr<ParseResult> key_validator_type = TypeParser::parse_with_composite(get_string_field("key_validator"));
+    const size_t count = key_validator_type->types().size();
+    std::ostringstream ss("key");
+    for (size_t i = 0; i < count; ++i) {
+      if (i > 0) {
+        ss.seekp(3);// position after "key"
+        ss << i + 1;
+      }
+      output->push_back(ss.str());
+    }
+  }
 }
 
 void ColumnMetadata::update(int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row) {
@@ -567,7 +563,7 @@ void Schema::get_table_key_columns(const std::string& ks_name,
   if (ks_meta != NULL) {
     const SchemaMetadata* table_meta = static_cast<const KeyspaceMetadata*>(ks_meta)->get_entry(table_name);
     if (table_meta != NULL) {
-      *output = static_cast<const TableMetadata*>(table_meta)->key_aliases();
+      static_cast<const TableMetadata*>(table_meta)->key_aliases(output);
     }
   }
 }

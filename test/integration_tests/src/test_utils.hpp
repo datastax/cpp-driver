@@ -30,6 +30,7 @@
 #include <boost/thread/lock_guard.hpp>
 
 #include <openssl/bn.h>
+#include <openssl/crypto.h>
 
 #include <uv.h>
 
@@ -172,10 +173,9 @@ private:
     //TODO: Add check for bit to return negative values
     BIGNUM *value = BN_bin2bn(reinterpret_cast<unsigned const char *>(byte_array), static_cast<int>(strlen(byte_array)), NULL);
     if (value) {
-      char * decimal = BN_bn2dec(value);
+      char* decimal = BN_bn2dec(value);
       result = std::string(decimal);
-      delete decimal;
-      decimal = NULL;
+      OPENSSL_free(decimal);
 
       //Normalize - strip leading zeros
       for (unsigned int n = 0; n < result.size(); ++n) {

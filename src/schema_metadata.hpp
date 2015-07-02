@@ -184,12 +184,11 @@ public:
   ColumnMetadata* get_or_create(const std::string& name) { return &columns_[name]; }
   void update(int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
-  const KeyAliases& key_aliases() const;
+  void key_aliases(KeyAliases* output) const;
   void clear_columns() { columns_.clear(); }
 
 private:
   ColumnMetadata::Map columns_;
-  mutable KeyAliases key_aliases_;
 };
 
 class KeyspaceMetadata : public SchemaMetadata {
