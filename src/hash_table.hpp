@@ -22,6 +22,8 @@
 #include "string_ref.hpp"
 #include "utils.hpp"
 
+#include <stdint.h>
+
 // This can be decreased to reduce hash collisions, but it will require
 // additional memory.
 #define CASS_LOAD_FACTOR 0.75
