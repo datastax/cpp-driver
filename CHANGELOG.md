@@ -1,3 +1,19 @@
+2.1.0-beta
+===========
+July 7, 2015
+
+Features
+--------
+* Added support for tuples and UDTs
+* Added support for nested collections
+* Added support for named parameters when using simple queries (non-prepared)
+* Added support for protocol version 3 (and schema changes)
+
+Other
+--------
+* Fixed SSL error handling
+* Added libuv read buffer caching in cass::Connection
+
 2.0.1
 ===========
 May 15, 2015

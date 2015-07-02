@@ -12,10 +12,12 @@ Cassandra's native protocol and Cassandra Query Language v3.
 - Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 - IRC: [#datastax-drivers on `irc.freenode.net <http://freenode.net>`](http://webchat.freenode.net/?channels=datastax-drivers)
 
-## What's New in 2.0
+## What's New in 2.1
 
-- [Latency-aware routing]
-- [Performance metrics]
+- Tuples and UDTs
+- Nested collections
+- Data types
+- Support for Cassandra 2.1 (CQL protocol version 3)
 
 More information about all the changes found in the 2.0 release can be found in
 this [blog post] and in the [changelog](CHANGELOG.md).
@@ -37,6 +39,8 @@ documented [here](http://www.datastax.com/dev/blog/datastax-c-driver-2-0-release
 - Compatibility with binary protocol version 1 and 2
 - [Authentication]
 - [SSL]
+- [Latency-aware routing]
+- [Performance metrics]
 
 ## Examples
 There are several examples provided here: [examples](https://github.com/datastax/cpp-driver/tree/1.0/examples).
