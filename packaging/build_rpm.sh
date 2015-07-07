@@ -17,7 +17,7 @@ if [[ ! -z $1 ]]; then
   arch=$1
 fi
 
-version="2.1.0b"
+version="2.1.0beta"
 base="cassandra-cpp-driver-$version"
 archive="$base.tar.gz"
 files="CMakeLists.txt cmake_uninstall.cmake.in include src README.md LICENSE.txt"

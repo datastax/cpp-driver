@@ -85,7 +85,7 @@ rm -rf %{buildroot}
 %{_libdir}/pkgconfig/*.pc
 
 %changelog
-* Tue Jul 07 2015 Michael Penick <michael.penick@datastax.com> - 2.0.1-1
+* Tue Jul 07 2015 Michael Penick <michael.penick@datastax.com> - 2.0.1beta-1
 - release
 * Mon Mar 02 2015 Michael Penick <michael.penick@datastax.com> - 1.0.1-1
 - patch release
