@@ -247,7 +247,7 @@ VC_BUILD.BAT --GENERATE-SOLUTION
 
 To use vc_build.bat for easy inclusion into a project:
 
-``dos
+```dos
 VC_BUILD.BAT --TARGET-COMPILER 120 --INSTALL-DIR C:\myproject\dependencies\libs\cpp-driver
 ```
 
