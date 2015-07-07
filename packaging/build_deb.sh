@@ -12,12 +12,21 @@ function check_command {
 check_command "dch" "debhelper"
 check_command "lsb_release" "lsb-release"
 
-version="2.1.0"
+version="2.1.0~beta"
 release=1
 dist=$(lsb_release -s -c)
 base="cassandra-cpp-driver-$version"
 archive="$base.tar.gz"
 files="CMakeLists.txt cmake_uninstall.cmake.in include src"
+
+libuv_version=$(dpkg -s libuv | grep 'Version' | awk '{ print $2 }')
+
+if [[ -e $libuv_version ]]; then
+  echo "'libuv' required, but not installed"
+  exit 1
+fi
+
+echo "Using libuv version $libuv_version"
 
 if [[ -d build ]]; then
   read -p "Build directory exists, remove? [y|n] " -n 1 -r
