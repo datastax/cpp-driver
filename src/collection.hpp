@@ -76,6 +76,7 @@ public:
 
   CassError append(CassNull value);
   CassError append(const Collection* value);
+  CassError append(const Tuple* value);
   CassError append(const UserTypeValue* value);
 
   size_t get_items_size(int version) const;

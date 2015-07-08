@@ -63,6 +63,7 @@ CASS_COLLECTION_APPEND(bool, ONE_PARAM_(cass_bool_t value), value)
 CASS_COLLECTION_APPEND(uuid, ONE_PARAM_(CassUuid value), value)
 CASS_COLLECTION_APPEND(inet, ONE_PARAM_(CassInet value), value)
 CASS_COLLECTION_APPEND(collection, ONE_PARAM_(const CassCollection* value), value)
+CASS_COLLECTION_APPEND(tuple, ONE_PARAM_(const CassTuple* value), value)
 CASS_COLLECTION_APPEND(user_type, ONE_PARAM_(const CassUserType* value), value)
 CASS_COLLECTION_APPEND(bytes,
                        TWO_PARAMS_(const cass_byte_t* value, size_t value_size),
@@ -97,6 +98,12 @@ CassError Collection::append(CassNull value) {
 }
 
 CassError Collection::append(const Collection* value) {
+  CASS_COLLECTION_CHECK_TYPE(value);
+  items_.push_back(value->encode());
+  return CASS_OK;
+}
+
+CassError Collection::append(const Tuple* value) {
   CASS_COLLECTION_CHECK_TYPE(value);
   items_.push_back(value->encode());
   return CASS_OK;

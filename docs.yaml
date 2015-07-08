@@ -23,7 +23,9 @@ sections:
       INLINE_SOURCES = NO
 
 versions:
-  - name: v2.0
+  - name: v2.1
     ref: HEAD
+  - name: v2.0
+    ref: 4c009fc8e56177173f11a738802be5e6b98bccb9
   - name: v1.0
     ref: fd331e09f25e8e6058ad7f98e7e72f54bc9a9a94

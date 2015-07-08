@@ -115,12 +115,12 @@ typedef cass_uint8_t cass_byte_t;
 typedef cass_uint64_t cass_duration_t;
 
 /**
- * The size of a IPv4 address
+ * The size of an IPv4 address
  */
 #define CASS_INET_V4_LENGTH 4
 
 /**
- * The size of a IPv6 address
+ * The size of an IPv6 address
  */
 #define CASS_INET_V6_LENGTH 16
 
@@ -2744,7 +2744,7 @@ cass_statement_bind_tuple_by_name_n(CassStatement* statement,
  * @public @memberof CassStatement
  *
  * @param[in] statement
- * @param[in] index
+ * @param[in] name
  * @param[in] user_type The user type can be freed after this call.
  * @return CASS_OK if successful, otherwise an error occurred.
  */
@@ -2808,6 +2808,10 @@ cass_prepared_bind(const CassPrepared* prepared);
  * @public @memberof CassPrepared
  *
  * @param[in] prepared
+ * @param[in] index
+ * @param[out] name
+ * @param[out] name_length
+ * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
 cass_prepared_parameter_name(const CassPrepared* prepared,
@@ -2968,8 +2972,6 @@ cass_data_type_new_tuple(size_t item_count);
  *
  * @public @memberof CassDataType
  *
- * @param[in] keyspace
- * @param[in] type_name
  * @param[in] field_count The number of fields in the UDT
  * @return Returns a data type that must be freed.
  *
@@ -3184,6 +3186,7 @@ cass_data_type_sub_data_type_by_name_n(const CassDataType* data_type,
  * <b>Note:</b> Only valid for UDT data types.
  *
  * @param[in] data_type
+ * @param[in] index
  * @param[out] name
  * @param[out] name_length
  * @return CASS_OK if successful, otherwise an error occurred.
@@ -3524,7 +3527,7 @@ cass_collection_append_collection(CassCollection* collection,
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_collection_append_tuple(CassTuple* tuple,
+cass_collection_append_tuple(CassCollection* collection,
                              const CassTuple* value);
 
 /**
@@ -3551,7 +3554,6 @@ cass_collection_append_user_type(CassCollection* collection,
  *
  * @public @memberof CassTuple
  *
- * @param[in] type
  * @param[in] item_count The number of items in the tuple.
  * @return Returns a tuple that must be freed.
  *
@@ -3599,7 +3601,7 @@ cass_tuple_data_type(const CassTuple* tuple);
  * @public @memberof CassTuple
  *
  * @param[in] tuple
- * @param[in] value
+ * @param[in] index
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -3902,7 +3904,7 @@ cass_user_type_set_null_by_name(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
+ * @param[in] user_type
  * @param[in] name
  * @param[in] name_length
  * @return same as cass_user_type_set_null_by_name()
@@ -3949,7 +3951,7 @@ cass_user_type_set_int32_by_name(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
+ * @param[in] user_type
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
@@ -4000,7 +4002,7 @@ cass_user_type_set_int64_by_name(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
+ * @param[in] user_type
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
@@ -4050,7 +4052,7 @@ cass_user_type_set_float_by_name(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
+ * @param[in] user_type
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
@@ -4100,7 +4102,7 @@ cass_user_type_set_double_by_name(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
+ * @param[in] user_type
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
@@ -4150,7 +4152,7 @@ cass_user_type_set_bool_by_name(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
+ * @param[in] user_type
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
@@ -4187,9 +4189,8 @@ cass_user_type_set_string(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
- * @param[in] name
- * @param[in] name_length
+ * @param[in] user_type
+ * @param[in] index
  * @param[in] value
  * @param[in] value_length
  * @return same as cass_user_type_set_string()
@@ -4224,10 +4225,11 @@ cass_user_type_set_string_by_name(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
+ * @param[in] user_type
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
+ * @param[in] value_length
  * @return same as cass_user_type_set_string_by_name()
  *
  * @see cass_user_type_set_string_by_name()
@@ -4247,6 +4249,7 @@ cass_user_type_set_string_by_name_n(CassUserType* user_type,
  * @param[in] user_type
  * @param[in] index
  * @param[in] value
+ * @param[in] value_size
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -4263,6 +4266,7 @@ cass_user_type_set_bytes(CassUserType* user_type,
  * @param[in] user_type
  * @param[in] name
  * @param[in] value
+ * @param[in] value_size
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -4277,10 +4281,11 @@ cass_user_type_set_bytes_by_name(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
+ * @param[in] user_type
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
+ * @param[in] value_size
  * @return same as cass_user_type_set_bytes_by_name()
  *
  * @see cass_user_type_set_bytes_by_name()
@@ -4328,7 +4333,7 @@ cass_user_type_set_uuid_by_name(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
+ * @param[in] user_type
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
@@ -4378,7 +4383,7 @@ cass_user_type_set_inet_by_name(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
+ * @param[in] user_type
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
@@ -4399,7 +4404,9 @@ cass_user_type_set_inet_by_name_n(CassUserType* user_type,
  *
  * @param[in] user_type
  * @param[in] index
- * @param[in] value
+ * @param[in] varint
+ * @param[in] varint_size
+ * @param[in] scale
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -4416,7 +4423,9 @@ cass_user_type_set_decimal(CassUserType* user_type,
  *
  * @param[in] user_type
  * @param[in] name
- * @param[in] value
+ * @param[in] varint
+ * @param[in] varint_size
+ * @param[in] scale
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
@@ -4432,10 +4441,12 @@ cass_user_type_set_decimal_by_name(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
+ * @param[in] user_type
  * @param[in] name
  * @param[in] name_length
- * @param[in] value
+ * @param[in] varint
+ * @param[in] varint_size
+ * @param[in] scale
  * @return same as cass_user_type_set_decimal_by_name()
  *
  * @see cass_user_type_set_decimal_by_name()
@@ -4486,7 +4497,7 @@ cass_user_type_set_collection_by_name(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
+ * @param[in] user_type
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
@@ -4536,7 +4547,7 @@ cass_user_type_set_tuple_by_name(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
+ * @param[in] user_type
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
@@ -4586,7 +4597,7 @@ cass_user_type_set_user_type_by_name(CassUserType* user_type,
  *
  * @public @memberof CassUserType
  *
- * @param[in] statement
+ * @param[in] user_type
  * @param[in] name
  * @param[in] name_length
  * @param[in] value
