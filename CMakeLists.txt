@@ -446,16 +446,18 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
   # Detect if this is Apple's clang
   execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v ERROR_VARIABLE CASS_CLANG_VERSION_INFO)
-  if (CASS_CLANG_VERSION_INFO MATCHES "^Apple LLVM")
-    set(CASS_IS_APPLE_CLANG 1)
+  if (${CASS_CLANG_VERSION_INFO} MATCHES "Apple LLVM version ([0-9]+\\.[0-9]+\\.[0-9]+).*")
+    string (REGEX REPLACE "Apple LLVM version ([0-9]+\\.[0-9]+\\.[0-9]+).*" "\\1" APPLE_CLANG_VERSION ${CASS_CLANG_VERSION_INFO})
+  endif()
+  if (${clang_full_version_string} MATCHES ".*based on LLVM ([0-9]+\\.[0-9]+).*")
+    string (REGEX REPLACE ".*based on LLVM ([0-9]+\\.[0-9]+).*" "\\1" CLANG_VERSION ${CASS_CLANG_VERSION_INFO})
   else()
-    set(CASS_IS_APPLE_CLANG 0)
+    if (${clang_full_version_string} MATCHES ".*clang version ([0-9]+\\.[0-9]+).*")
+      string (REGEX REPLACE ".*clang version ([0-9]+\\.[0-9]+).*" "\\1" CLANG_VERSION ${CASS_CLANG_VERSION_INFO})
+    endif()
   endif()
 
-  if(NOT CASS_IS_APPLE_CLANG AND
-      (${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "3.6" OR
-       ${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER "3.6")
-     )
+  if (CLANG_VERSION VERSION_GREATER 3.6 OR CLANG_VERSION VERSION_EQUAL 3.6 OR APPLE_CLANG_VERSION VERSION_GREATER 6.0)
     set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedef ")
   endif()
 
