@@ -652,7 +652,7 @@ cass_cluster_set_contact_points_n(CassCluster* cluster,
 /**
  * Sets the port.
  *
- * Default: 9042
+ * <b>Default:</b> 9042
  *
  * @public @memberof CassCluster
  *
@@ -682,7 +682,7 @@ cass_cluster_set_ssl(CassCluster* cluster,
  * Sets the protocol version. This will automatically downgrade if to
  * protocol version 1.
  *
- * Default: 2
+ * <b>Default:</b> 2
  *
  * @public @memberof CassCluster
  *
@@ -698,7 +698,7 @@ cass_cluster_set_protocol_version(CassCluster* cluster,
  * Sets the number of IO threads. This is the number of threads
  * that will handle query requests.
  *
- * Default: 1
+ * <b>Default:</b> 1
  *
  * @public @memberof CassCluster
  *
@@ -714,7 +714,7 @@ cass_cluster_set_num_threads_io(CassCluster* cluster,
  * Sets the size of the fixed size queue that stores
  * pending requests.
  *
- * Default: 4096
+ * <b>Default:</b> 4096
  *
  * @public @memberof CassCluster
  *
@@ -730,7 +730,7 @@ cass_cluster_set_queue_size_io(CassCluster* cluster,
  * Sets the size of the fixed size queue that stores
  * events.
  *
- * Default: 4096
+ * <b>Default:</b> 4096
  *
  * @public @memberof CassCluster
  *
@@ -746,7 +746,7 @@ cass_cluster_set_queue_size_event(CassCluster* cluster,
  * Sets the size of the fixed size queue that stores
  * log messages.
  *
- * Default: 4096
+ * <b>Default:</b> 4096
  *
  * @public @memberof CassCluster
  *
@@ -762,7 +762,7 @@ cass_cluster_set_queue_size_log(CassCluster* cluster,
  * Sets the number of connections made to each server in each
  * IO thread.
  *
- * Default: 1
+ * <b>Default:</b> 1
  *
  * @public @memberof CassCluster
  *
@@ -778,7 +778,7 @@ cass_cluster_set_core_connections_per_host(CassCluster* cluster,
  * Sets the maximum number of connections made to each server in each
  * IO thread.
  *
- * Default: 2
+ * <b>Default:</b> 2
  *
  * @public @memberof CassCluster
  *
@@ -793,7 +793,7 @@ cass_cluster_set_max_connections_per_host(CassCluster* cluster,
 /**
  * Sets the amount of time to wait before attempting to reconnect.
  *
- * Default: 2000 milliseconds
+ * <b>Default:</b> 2000 milliseconds
  *
  * @public @memberof CassCluster
  *
@@ -809,7 +809,7 @@ cass_cluster_set_reconnect_wait_time(CassCluster* cluster,
  * Connections are created when the current connections are unable to keep up with
  * request throughput.
  *
- * Default: 1
+ * <b>Default:</b> 1
  *
  * @public @memberof CassCluster
  *
@@ -826,7 +826,7 @@ cass_cluster_set_max_concurrent_creation(CassCluster* cluster,
  * on a connection before creating a new connection. The number of new connections
  * created will not exceed max_connections_per_host.
  *
- * Default: 100
+ * <b>Default:</b> 100
  *
  * @public @memberof CassCluster
  *
@@ -842,7 +842,7 @@ cass_cluster_set_max_concurrent_requests_threshold(CassCluster* cluster,
  * Sets the maximum number of requests processed by an IO worker
  * per flush.
  *
- * Default: 128
+ * <b>Default:</b> 128
  *
  * @public @memberof CassCluster
  *
@@ -859,7 +859,7 @@ cass_cluster_set_max_requests_per_flush(CassCluster* cluster,
  * on a connection. Disables writes to a connection if the number
  * of bytes queued exceed this value.
  *
- * Default: 64 KB
+ * <b>Default:</b> 64 KB
  *
  * @public @memberof CassCluster
  *
@@ -876,7 +876,7 @@ cass_cluster_set_write_bytes_high_water_mark(CassCluster* cluster,
  * connection. After exceeding high water mark bytes, writes will
  * only resume once the number of bytes fall below this value.
  *
- * Default: 32 KB
+ * <b>Default:</b> 32 KB
  *
  * @public @memberof CassCluster
  *
@@ -894,7 +894,7 @@ cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
  * host on an IO worker if the number of requests queued exceed this
  * value.
  *
- * Default: 128 * max_connections_per_host
+ * <b>Default:</b> 128 * max_connections_per_host
  *
  * @public @memberof CassCluster
  *
@@ -912,7 +912,7 @@ cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
  * requests, writes to a host will only resume once the number of requests
  * fall below this value.
  *
- * Default: 64 * max_connections_per_host
+ * <b>Default:</b> 64 * max_connections_per_host
  *
  * @public @memberof CassCluster
  *
@@ -927,7 +927,7 @@ cass_cluster_set_pending_requests_low_water_mark(CassCluster* cluster,
 /**
  * Sets the timeout for connecting to a node.
  *
- * Default: 5000 milliseconds
+ * <b>Default:</b> 5000 milliseconds
  *
  * @public @memberof CassCluster
  *
@@ -941,7 +941,7 @@ cass_cluster_set_connect_timeout(CassCluster* cluster,
 /**
  * Sets the timeout for waiting for a response from a node.
  *
- * Default: 12000 milliseconds
+ * <b>Default:</b> 12000 milliseconds
  *
  * @public @memberof CassCluster
  *
@@ -1127,7 +1127,7 @@ cass_cluster_set_latency_aware_routing_settings(CassCluster* cluster,
 /**
  * Enable/Disable Nagel's algorithm on connections.
  *
- * Default: cass_false (disabled).
+ * <b>Default:</b> cass_false (disabled).
  *
  * @public @memberof CassCluster
  *
@@ -1141,7 +1141,7 @@ cass_cluster_set_tcp_nodelay(CassCluster* cluster,
 /**
  * Enable/Disable TCP keep-alive
  *
- * Default: cass_false (disabled).
+ * <b>Default:</b> cass_false (disabled).
  *
  * @public @memberof CassCluster
  *
@@ -1610,7 +1610,7 @@ cass_ssl_add_trusted_cert_n(CassSsl* ssl,
  * common name or one of its subject alternative names. This implies the
  * certificate is also present.
  *
- * Default: CASS_SSL_VERIFY_PEER_CERT
+ * <b>Default:</b> CASS_SSL_VERIFY_PEER_CERT
  *
  * @public @memberof CassSsl
  *
@@ -1931,7 +1931,7 @@ cass_statement_set_keyspace_n(CassStatement* statement,
 /**
  * Sets the statement's consistency level.
  *
- * Default: CASS_CONSISTENCY_ONE
+ * <b>Default:</b> CASS_CONSISTENCY_ONE
  *
  * @public @memberof CassStatement
  *
@@ -1946,7 +1946,7 @@ cass_statement_set_consistency(CassStatement* statement,
 /**
  * Sets the statement's serial consistency level.
  *
- * Default: Not set
+ * <b>Default:</b> Not set
  *
  * @public @memberof CassStatement
  *
@@ -1961,7 +1961,7 @@ cass_statement_set_serial_consistency(CassStatement* statement,
 /**
  * Sets the statement's page size.
  *
- * Default: -1 (Disabled)
+ * <b>Default:</b> -1 (Disabled)
  *
  * @public @memberof CassStatement
  *
@@ -5510,13 +5510,12 @@ cass_error_desc(CassError error);
  ***********************************************************************************/
 
 /**
- * @deprecated This is no longer useful and does nothing. Expect this to be
- * removed in a few releases.
- *
  * Explicitly wait for the log to flush and deallocate resources.
  * This *MUST* be the last call using the library. It is an error
  * to call any cass_*() functions after this call.
  *
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a few releases.
  */
 CASS_EXPORT void
 CASS_DEPRECATED(cass_log_cleanup());
@@ -5527,7 +5526,7 @@ CASS_DEPRECATED(cass_log_cleanup());
  * <b>Note:</b> This needs to be done before any call that might log, such as
  * any of the cass_cluster_*() or cass_ssl_*() functions.
  *
- * Default: CASS_LOG_WARN
+ * <b>Default:</b> CASS_LOG_WARN
  *
  * @param[in] log_level
  */
@@ -5540,7 +5539,7 @@ cass_log_set_level(CassLogLevel log_level);
  * <b>Note:</b> This needs to be done before any call that might log, such as
  * any of the cass_cluster_*() or cass_ssl_*() functions.
  *
- * Default: An internal callback that prints to stderr
+ * <b>Default:</b> An internal callback that prints to stderr
  *
  * @param[in] data An opaque data object passed to the callback.
  * @param[in] callback A callback that handles logging events. This is
@@ -5551,15 +5550,15 @@ cass_log_set_callback(CassLogCallback callback,
                       void* data);
 
 /**
- * @deprecated This is no longer useful and does nothing. Expect this to be
- * removed in a few releases.
- *
  * Sets the log queue size.
  *
  * <b>Note:</b> This needs to be done before any call that might log, such as
  * any of the cass_cluster_*() or cass_ssl_*() functions.
  *
- * Default: 2048
+ * <b>Default:</b> 2048
+ *
+ * @deprecated This is no longer useful and does nothing. Expect this to be
+ * removed in a few releases.
  *
  * @param[in] queue_size
  */
