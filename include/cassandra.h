@@ -5524,7 +5524,7 @@ CASS_DEPRECATED(cass_log_cleanup());
 /**
  * Sets the log level.
  *
- * <b>Note:</b>: This needs to be done before any call that might log, such as
+ * <b>Note:</b> This needs to be done before any call that might log, such as
  * any of the cass_cluster_*() or cass_ssl_*() functions.
  *
  * Default: CASS_LOG_WARN
@@ -5537,7 +5537,7 @@ cass_log_set_level(CassLogLevel log_level);
 /**
  * Sets a callback for handling logging events.
  *
- * <b>Note:</b>: This needs to be done before any call that might log, such as
+ * <b>Note:</b> This needs to be done before any call that might log, such as
  * any of the cass_cluster_*() or cass_ssl_*() functions.
  *
  * Default: An internal callback that prints to stderr
@@ -5556,7 +5556,7 @@ cass_log_set_callback(CassLogCallback callback,
  *
  * Sets the log queue size.
  *
- * Note: This needs to be done before any call that might log, such as
+ * <b>Note:</b> This needs to be done before any call that might log, such as
  * any of the cass_cluster_*() or cass_ssl_*() functions.
  *
  * Default: 2048
