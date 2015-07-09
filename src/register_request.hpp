@@ -29,7 +29,7 @@ public:
       , event_types_(event_types) {}
 
 private:
-  int encode(int version, BufferVec* bufs, EncodingCache* cache) const;
+  int encode(int version, Handler* handler, BufferVec* bufs) const;
 
   int event_types_;
 };

@@ -18,12 +18,14 @@
 #define __CASS_REQUEST_HANDLER_HPP_INCLUDED__
 
 #include "constants.hpp"
+#include "error_response.hpp"
 #include "future.hpp"
 #include "handler.hpp"
 #include "host.hpp"
 #include "load_balancing.hpp"
 #include "request.hpp"
 #include "response.hpp"
+#include "retry_policy.hpp"
 #include "schema_metadata.hpp"
 #include "scoped_ptr.hpp"
 
@@ -49,12 +51,16 @@ public:
 
 class RequestHandler : public Handler {
 public:
-  RequestHandler(const Request* request, ResponseFuture* future)
+  RequestHandler(const Request* request,
+                 ResponseFuture* future,
+                 RetryPolicy* retry_policy)
       : request_(request)
       , future_(future)
+      , retry_policy_(retry_policy)
+      , num_retries_(0)
       , is_query_plan_exhausted_(true)
       , io_worker_(NULL)
-      , pool_(NULL) {}
+      , pool_(NULL) { }
 
   virtual const Request* request() const { return request_.get(); }
 
@@ -91,9 +97,16 @@ private:
 
   void on_result_response(ResponseMessage* response);
   void on_error_response(ResponseMessage* response);
+  void on_error_unprepared(ErrorResponse* error);
+
+  void handle_retry_decision(ErrorResponse* error,
+                             const RetryPolicy::RetryDecision& decision);
+
 
   ScopedRefPtr<const Request> request_;
   ScopedRefPtr<ResponseFuture> future_;
+  RetryPolicy* retry_policy_;
+  int num_retries_;
   bool is_query_plan_exhausted_;
   SharedRefPtr<Host> current_host_;
   ScopedPtr<QueryPlan> query_plan_;

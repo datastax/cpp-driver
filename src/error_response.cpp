@@ -26,18 +26,51 @@ namespace cass {
 
 std::string ErrorResponse::error_message() const {
   std::ostringstream ss;
-  ss << "'" << message() << "'"
+  ss << "'" << message().to_string() << "'"
      << " (0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
      << CASS_ERROR(CASS_ERROR_SOURCE_SERVER, code()) << ")";
   return ss.str();
 }
 
 bool ErrorResponse::decode(int version, char* buffer, size_t size) {
+  uint8_t data_present;
+  StringRef write_type;
+
   char* pos = decode_int32(buffer, code_);
-  pos = decode_string(pos, &message_, message_size_);
+  pos = decode_string_ref(pos, &message_);
+
   switch (code_) {
+    case CQL_ERROR_UNAVAILABLE:
+      pos = decode_uint16(pos, cl_);
+      pos = decode_int32(pos, received_);
+      pos = decode_int32(pos, alive_);
+      break;
+    case CQL_ERROR_READ_TIMEOUT:
+      pos = decode_uint16(pos, cl_);
+      pos = decode_int32(pos, received_);
+      pos = decode_int32(pos, required_);
+      decode_byte(pos, data_present);
+      data_present_ = data_present > 0;
+      break;
+    case CQL_ERROR_WRITE_TIMEOUT:
+      pos = decode_uint16(pos, cl_);
+      pos = decode_int32(pos, received_);
+      pos = decode_int32(pos, required_);
+      decode_string_ref(pos, &write_type);
+      if (write_type == "SIMPLE") {
+        write_type_ = RetryPolicy::SIMPLE;
+      } else if(write_type == "BATCH") {
+        write_type_ = RetryPolicy::BATCH;
+      } else if(write_type == "UNLOGGED_BATCH") {
+        write_type_ = RetryPolicy::UNLOGGED_BATCH;
+      } else if(write_type == "COUNTER") {
+        write_type_ = RetryPolicy::COUNTER;
+      } else if(write_type == "BATCH_LOG") {
+        write_type_ = RetryPolicy::BATCH_LOG;
+      }
+      break;
     case CQL_ERROR_UNPREPARED:
-      decode_string(pos, &prepared_id_, prepared_id_size_);
+      decode_string_ref(pos, &prepared_id_);
       break;
   }
   return true;

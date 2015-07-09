@@ -16,6 +16,8 @@
 
 #include "execute_request.hpp"
 
+#include "handler.hpp"
+
 namespace cass {
 
 int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const {
@@ -40,15 +42,15 @@ int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs, EncodingCache
   return length;
 }
 
-int ExecuteRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) const {
+int ExecuteRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
   if (version == 1) {
-    return internal_encode_v1(bufs, cache);
+    return internal_encode_v1(handler, bufs);
   } else {
-    return internal_encode(version, bufs, cache);
+    return internal_encode(version, handler, bufs);
   }
 }
 
-int ExecuteRequest::internal_encode_v1(BufferVec* bufs, EncodingCache* cache) const {
+int ExecuteRequest::internal_encode_v1(Handler* handler, BufferVec* bufs) const {
   size_t length = 0;
   const int version = 1;
 
@@ -68,7 +70,7 @@ int ExecuteRequest::internal_encode_v1(BufferVec* bufs, EncodingCache* cache) co
                                  prepared_id.size());
     buf.encode_uint16(pos, elements_count());
     // <value_1>...<value_n>
-    length += copy_buffers(version, bufs, cache);
+    length += copy_buffers(version, bufs, handler->encoding_cache());
   }
 
   {
@@ -76,7 +78,7 @@ int ExecuteRequest::internal_encode_v1(BufferVec* bufs, EncodingCache* cache) co
     size_t buf_size = sizeof(uint16_t);
 
     Buffer buf(buf_size);
-    buf.encode_uint16(0, consistency());
+    buf.encode_uint16(0, handler->consistency());
     bufs->push_back(buf);
     length += buf_size;
   }
@@ -84,7 +86,7 @@ int ExecuteRequest::internal_encode_v1(BufferVec* bufs, EncodingCache* cache) co
   return length;
 }
 
-int ExecuteRequest::internal_encode(int version, BufferVec* bufs, EncodingCache* cache) const {
+int ExecuteRequest::internal_encode(int version, Handler* handler, BufferVec* bufs) const {
   int length = 0;
   uint8_t flags = this->flags();
 
@@ -123,12 +125,12 @@ int ExecuteRequest::internal_encode(int version, BufferVec* bufs, EncodingCache*
     size_t pos = buf.encode_string(0,
                                  prepared_id.data(),
                                  prepared_id.size());
-    pos = buf.encode_uint16(pos, consistency());
+    pos = buf.encode_uint16(pos, handler->consistency());
     pos = buf.encode_byte(pos, flags);
 
     if (elements_count() > 0) {
       buf.encode_uint16(pos, elements_count());
-      length += copy_buffers(version, bufs, cache);
+      length += copy_buffers(version, bufs, handler->encoding_cache());
     }
   }
 

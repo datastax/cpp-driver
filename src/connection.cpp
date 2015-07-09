@@ -76,14 +76,14 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
       ErrorResponse* error
           = static_cast<ErrorResponse*>(response->response_body().get());
       if (error->code() == CQL_ERROR_PROTOCOL_ERROR &&
-          error->message().find("Invalid or unsupported protocol version") != std::string::npos) {
+          error->message().to_string().find("Invalid or unsupported protocol version") != std::string::npos) {
         connection_->is_invalid_protocol_ = true;
         LOG_WARN("Host %s received invalid protocol response %s",
                  connection_->addr_string_.c_str(), error->error_message().c_str());
         connection_->defunct();
         return;
       } else if (error->code() == CQL_ERROR_BAD_CREDENTIALS) {
-        connection_->auth_error_ = error->message();
+        connection_->auth_error_ = error->message().to_string();
       }
       connection_->notify_error("Received error response " + error->error_message());
       break;

@@ -35,7 +35,7 @@ int32_t Handler::encode(int version, int flags, BufferVec* bufs) {
   bufs->push_back(Buffer()); // Placeholder
 
   const Request* req = request();
-  int32_t length = req->encode(version, bufs, &encoding_cache_);
+  int32_t length = req->encode(version, this, bufs);
   if (length < 0) {
     return length;
   }

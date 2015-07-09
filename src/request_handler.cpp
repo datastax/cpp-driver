@@ -17,7 +17,7 @@
 #include "request_handler.hpp"
 
 #include "connection.hpp"
-#include "error_response.hpp"
+#include "constants.hpp"
 #include "execute_request.hpp"
 #include "io_worker.hpp"
 #include "pool.hpp"
@@ -171,23 +171,73 @@ void RequestHandler::on_error_response(ResponseMessage* response) {
   ErrorResponse* error =
       static_cast<ErrorResponse*>(response->response_body().get());
 
-  if (error->code() == CQL_ERROR_UNPREPARED) {
-    ScopedRefPtr<PrepareHandler> prepare_handler(new PrepareHandler(this));
-    if (prepare_handler->init(error->prepared_id())) {
-      if (!connection_->write(prepare_handler.get())) {
-        // Try to prepare on the same host but on a different connection
-        retry(RETRY_WITH_CURRENT_HOST);
-      }
-    } else {
-      connection_->defunct();
-      set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
-               "Received unprepared error for invalid "
-               "request type or invalid prepared id");
+
+  switch(error->code()) {
+    case CQL_ERROR_UNPREPARED:
+      on_error_unprepared(error);
+      break;
+    case CQL_ERROR_READ_TIMEOUT:
+      handle_retry_decision(error,
+                            retry_policy_->on_read_timeout(error->consistency(),
+                                                           error->received(),
+                                                           error->required(),
+                                                           error->data_present(),
+                                                           num_retries_));
+      break;
+    case CQL_ERROR_WRITE_TIMEOUT:
+      handle_retry_decision(error,
+                            retry_policy_->on_write_timeout(error->consistency(),
+                                                            error->received(),
+                                                            error->required(),
+                                                            error->write_type(),
+                                                            num_retries_));
+      break;
+    case CQL_ERROR_UNAVAILABLE:
+      handle_retry_decision(error,
+                            retry_policy_->on_unavailable(error->consistency(),
+                                                          error->required(),
+                                                          error->alive(),
+                                                          num_retries_));
+      break;
+    default:
+      set_error(static_cast<CassError>(CASS_ERROR(
+                                         CASS_ERROR_SOURCE_SERVER, error->code())),
+                error->message().to_string());
+      break;
+  }
+}
+
+void RequestHandler::on_error_unprepared(ErrorResponse* error) {
+  ScopedRefPtr<PrepareHandler> prepare_handler(new PrepareHandler(this));
+  if (prepare_handler->init(error->prepared_id().to_string())) {
+    if (!connection_->write(prepare_handler.get())) {
+      // Try to prepare on the same host but on a different connection
+      retry(RETRY_WITH_CURRENT_HOST);
     }
   } else {
-    set_error(static_cast<CassError>(CASS_ERROR(
-                                       CASS_ERROR_SOURCE_SERVER, error->code())),
-              error->message());
+    connection_->defunct();
+    set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
+              "Received unprepared error for invalid "
+              "request type or invalid prepared id");
+  }
+}
+
+void RequestHandler::handle_retry_decision(ErrorResponse* error,
+                                           const RetryPolicy::RetryDecision& decision) {
+  switch(decision.type()) {
+    case RetryPolicy::RetryDecision::RETURN_ERROR:
+      set_error(static_cast<CassError>(CASS_ERROR(
+                                         CASS_ERROR_SOURCE_SERVER, error->code())),
+                error->message().to_string());
+      break;
+    case RetryPolicy::RetryDecision::RETRY:
+      set_consistency(decision.retry_consistency());
+      retry(decision.retry_current_host() ?
+              RETRY_WITH_CURRENT_HOST : RETRY_WITH_NEXT_HOST);
+      break;
+    case RetryPolicy::RetryDecision::IGNORE:
+      set_response(new ResultResponse());
+      break;
   }
 }
 

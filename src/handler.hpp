@@ -102,7 +102,8 @@ public:
   Handler()
     : connection_(NULL)
     , stream_(-1)
-    , state_(REQUEST_STATE_NEW) {}
+    , state_(REQUEST_STATE_NEW)
+    , cl_(CASS_CONSISTENCY_UNKNOWN) { }
 
   virtual ~Handler() {}
 
@@ -141,6 +142,12 @@ public:
     timer_.stop();
   }
 
+  CassConsistency consistency() const {
+    return cl_ != CASS_CONSISTENCY_UNKNOWN ? cl_ : request()->consistency();
+  }
+
+  void set_consistency(CassConsistency cl) { cl_ = cl; }
+
   Request::EncodingCache* encoding_cache() { return &encoding_cache_; }
 
 protected:
@@ -150,6 +157,7 @@ private:
   RequestTimer timer_;
   int16_t stream_;
   State state_;
+  CassConsistency cl_;
   Request::EncodingCache encoding_cache_;
 
 private:

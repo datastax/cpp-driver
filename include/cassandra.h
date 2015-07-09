@@ -377,6 +377,7 @@ typedef struct CassMetrics_ {
 } CassMetrics;
 
 typedef enum CassConsistency_ {
+  CASS_CONSISTENCY_UNKNOWN      = 0xFFFF,
   CASS_CONSISTENCY_ANY          = 0x0000,
   CASS_CONSISTENCY_ONE          = 0x0001,
   CASS_CONSISTENCY_TWO          = 0x0002,

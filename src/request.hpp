@@ -20,11 +20,12 @@
 #include "buffer.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
+#include "retry_policy.hpp"
 #include "string_ref.hpp"
-
 
 namespace cass {
 
+class Handler;
 class RequestMessage;
 
 class Request : public RefCounted<Request> {
@@ -55,12 +56,21 @@ public:
     serial_consistency_ = serial_consistency;
   }
 
-  virtual int encode(int version, BufferVec* bufs, EncodingCache* cache) const = 0;
+  RetryPolicy* retry_policy() const {
+    return retry_policy_.get();
+  }
+
+  void set_retry_policy(RetryPolicy* retry_policy) {
+    retry_policy_.reset(retry_policy);
+  }
+
+  virtual int encode(int version, Handler* handler, BufferVec* bufs) const = 0;
 
 private:
   uint8_t opcode_;
   CassConsistency consistency_;
   CassConsistency serial_consistency_;
+  SharedRefPtr<RetryPolicy> retry_policy_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Request);
