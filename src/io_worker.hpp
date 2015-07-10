@@ -92,7 +92,7 @@ public:
 
   bool execute(RequestHandler* request_handler);
 
-  void retry(RequestHandler* request_handler, RetryType retry_type);
+  void retry(RequestHandler* request_handler);
   void request_finished(RequestHandler* request_handler);
 
   void notify_pool_ready(Pool* pool);

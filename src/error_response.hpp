@@ -34,7 +34,12 @@ class ErrorResponse : public Response {
 public:
   ErrorResponse()
       : Response(CQL_OPCODE_ERROR)
-      , code_(0xFFFFFFFF) { }
+      , code_(0xFFFFFFFF)
+      , cl_(CASS_CONSISTENCY_UNKNOWN)
+      , actual_(-1)
+      , required_(-1)
+      , data_present_(0)
+      , write_type_(CASS_WRITE_TYPE_UKNOWN) { }
 
   int32_t code() const { return code_; }
   StringRef message() const { return message_; }
@@ -44,11 +49,10 @@ public:
   CassConsistency consistency() const {
     return static_cast<CassConsistency>(cl_);
   }
-  int32_t received() const { return received_; }
+  int32_t actual() const { return actual_; }
   int32_t required() const { return required_; }
-  int32_t alive() const { return alive_; }
-  bool data_present() const { return data_present_; }
-  RetryPolicy::WriteType write_type() const { return write_type_; }
+  uint8_t data_present() const { return data_present_; }
+  CassWriteType write_type() const { return write_type_; }
 
   std::string error_message() const;
 
@@ -61,11 +65,10 @@ private:
   StringRef prepared_id_;
 
   uint16_t cl_;
-  int32_t received_;
+  int32_t actual_;
   int32_t required_;
-  int32_t alive_;
-  bool data_present_;
-  RetryPolicy::WriteType write_type_;
+  uint8_t data_present_;
+  CassWriteType write_type_;
 };
 
 bool check_error_or_invalid_response(const std::string& prefix, uint8_t expected_opcode,

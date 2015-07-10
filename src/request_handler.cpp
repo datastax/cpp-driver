@@ -51,7 +51,8 @@ void RequestHandler::on_set(ResponseMessage* response) {
 void RequestHandler::on_error(CassError code, const std::string& message) {
   if (code == CASS_ERROR_LIB_WRITE_ERROR ||
       code == CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE) {
-    retry(RETRY_WITH_NEXT_HOST);
+    next_host();
+    retry();
     return_connection();
   } else {
     set_error(code, message);
@@ -68,12 +69,11 @@ void RequestHandler::set_io_worker(IOWorker* io_worker) {
   io_worker_ = io_worker;
 }
 
-void RequestHandler::retry(RetryType type) {
+void RequestHandler::retry() {
   // Reset the request so it can be executed again
   set_state(REQUEST_STATE_NEW);
   pool_ = NULL;
-
-  io_worker_->retry(this, type);
+  io_worker_->retry(this);
 }
 
 bool RequestHandler::get_current_host_address(Address* address) {
@@ -111,6 +111,11 @@ void RequestHandler::set_error(CassError code, const std::string& message) {
   } else {
     future_->set_error_with_host_address(current_host_->address(), code, message);
   }
+  return_connection_and_finish();
+}
+
+void RequestHandler::set_error_with_error_response(Response* error, CassError code, const std::string& message) {
+  future_->set_error_with_result(current_host_->address(), error, code, message);
   return_connection_and_finish();
 }
 
@@ -176,29 +181,33 @@ void RequestHandler::on_error_response(ResponseMessage* response) {
     case CQL_ERROR_UNPREPARED:
       on_error_unprepared(error);
       break;
+
     case CQL_ERROR_READ_TIMEOUT:
-      handle_retry_decision(error,
+      handle_retry_decision(response,
                             retry_policy_->on_read_timeout(error->consistency(),
-                                                           error->received(),
+                                                           error->actual(),
                                                            error->required(),
-                                                           error->data_present(),
+                                                           error->data_present() > 0,
                                                            num_retries_));
       break;
+
     case CQL_ERROR_WRITE_TIMEOUT:
-      handle_retry_decision(error,
+      handle_retry_decision(response,
                             retry_policy_->on_write_timeout(error->consistency(),
-                                                            error->received(),
+                                                            error->actual(),
                                                             error->required(),
                                                             error->write_type(),
                                                             num_retries_));
       break;
+
     case CQL_ERROR_UNAVAILABLE:
-      handle_retry_decision(error,
+      handle_retry_decision(response,
                             retry_policy_->on_unavailable(error->consistency(),
                                                           error->required(),
-                                                          error->alive(),
+                                                          error->actual(),
                                                           num_retries_));
       break;
+
     default:
       set_error(static_cast<CassError>(CASS_ERROR(
                                          CASS_ERROR_SOURCE_SERVER, error->code())),
@@ -212,7 +221,7 @@ void RequestHandler::on_error_unprepared(ErrorResponse* error) {
   if (prepare_handler->init(error->prepared_id().to_string())) {
     if (!connection_->write(prepare_handler.get())) {
       // Try to prepare on the same host but on a different connection
-      retry(RETRY_WITH_CURRENT_HOST);
+      retry();
     }
   } else {
     connection_->defunct();
@@ -222,23 +231,36 @@ void RequestHandler::on_error_unprepared(ErrorResponse* error) {
   }
 }
 
-void RequestHandler::handle_retry_decision(ErrorResponse* error,
+void RequestHandler::handle_retry_decision(ResponseMessage* response,
                                            const RetryPolicy::RetryDecision& decision) {
+  ErrorResponse* error =
+      static_cast<ErrorResponse*>(response->response_body().get());
+
   switch(decision.type()) {
     case RetryPolicy::RetryDecision::RETURN_ERROR:
-      set_error(static_cast<CassError>(CASS_ERROR(
-                                         CASS_ERROR_SOURCE_SERVER, error->code())),
-                error->message().to_string());
+      set_error_with_error_response(response->response_body().release(),
+                                    static_cast<CassError>(CASS_ERROR(
+                                                             CASS_ERROR_SOURCE_SERVER, error->code())),
+                                    error->message().to_string());
       break;
+
     case RetryPolicy::RetryDecision::RETRY:
       set_consistency(decision.retry_consistency());
-      retry(decision.retry_current_host() ?
-              RETRY_WITH_CURRENT_HOST : RETRY_WITH_NEXT_HOST);
+      if (!decision.retry_current_host()) {
+        next_host();
+      }
+      if (state() == REQUEST_STATE_DONE) {
+        retry();
+      } else {
+        set_state(REQUEST_STATE_RETRY_WRITE_OUTSTANDING);
+      }
       break;
+
     case RetryPolicy::RetryDecision::IGNORE:
       set_response(new ResultResponse());
       break;
   }
+  num_retries_++;
 }
 
 } // namespace cass

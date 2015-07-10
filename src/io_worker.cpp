@@ -141,11 +141,7 @@ bool IOWorker::execute(RequestHandler* request_handler) {
   return request_queue_.enqueue(request_handler);
 }
 
-void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
-  if (retry_type == RETRY_WITH_NEXT_HOST) {
-    request_handler->next_host();
-  }
-
+void IOWorker::retry(RequestHandler* request_handler) {
   Address address;
   if (!request_handler->get_current_host_address(&address)) {
     request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
@@ -160,13 +156,15 @@ void IOWorker::retry(RequestHandler* request_handler, RetryType retry_type) {
     Connection* connection = pool->borrow_connection();
     if (connection != NULL) {
       if (!pool->write(connection, request_handler)) {
-        retry(request_handler, RETRY_WITH_NEXT_HOST);
+        request_handler->next_host();
+        retry(request_handler);
       }
     } else { // Too busy, or no connections
       pool->wait_for_connection(request_handler);
     }
   } else {
-    retry(request_handler, RETRY_WITH_NEXT_HOST);
+    request_handler->next_host();
+    retry(request_handler);
   }
 }
 
@@ -318,7 +316,7 @@ void IOWorker::on_execute(uv_async_t* async) {
     if (request_handler != NULL) {
       io_worker->pending_request_count_++;
       request_handler->set_io_worker(io_worker);
-      request_handler->retry(RETRY_WITH_CURRENT_HOST);
+      request_handler->retry();
     } else {
       io_worker->is_closing_ = true;
     }

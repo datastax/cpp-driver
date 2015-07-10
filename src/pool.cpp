@@ -58,7 +58,8 @@ Pool::~Pool() {
         = static_cast<RequestHandler*>(pending_requests_.front());
     pending_requests_.remove(request_handler);
     request_handler->stop_timer();
-    request_handler->retry(RETRY_WITH_NEXT_HOST);
+    request_handler->next_host();
+    request_handler->retry();
   }
 }
 
@@ -130,7 +131,8 @@ void Pool::return_connection(Connection* connection) {
   remove_pending_request(request_handler);
   request_handler->stop_timer();
   if (!write(connection, request_handler)) {
-    request_handler->retry(RETRY_WITH_NEXT_HOST);
+    request_handler->next_host();
+    request_handler->retry();
   }
 }
 
@@ -321,7 +323,8 @@ void Pool::on_pending_request_timeout(RequestTimer* timer) {
   Pool* pool = request_handler->pool();
   pool->metrics_->pending_request_timeouts.inc();
   pool->remove_pending_request(request_handler);
-  request_handler->retry(RETRY_WITH_NEXT_HOST);
+  request_handler->next_host();
+  request_handler->retry();
   LOG_DEBUG("Timeout waiting for connection to %s pool(%p)",
             pool->address_.to_string().c_str(),
             static_cast<void*>(pool));

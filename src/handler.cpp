@@ -113,8 +113,13 @@ void Handler::set_state(Handler::State next_state) {
       break;
 
     case REQUEST_STATE_READ_BEFORE_WRITE:
-      assert(next_state == REQUEST_STATE_DONE &&
+      assert(next_state == REQUEST_STATE_DONE || next_state == REQUEST_STATE_RETRY_WRITE_OUTSTANDING &&
              "Invalid request state after read before write");
+      state_ = next_state;
+      break;
+
+    case REQUEST_STATE_RETRY_WRITE_OUTSTANDING:
+      assert(next_state == REQUEST_STATE_NEW && "Invalid request state after retry");
       state_ = next_state;
       break;
 

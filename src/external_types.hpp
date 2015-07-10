@@ -22,10 +22,12 @@
 #include "cluster.hpp"
 #include "collection.hpp"
 #include "data_type.hpp"
+#include "error_response.hpp"
 #include "future.hpp"
 #include "iterator.hpp"
 #include "prepared.hpp"
 #include "result_response.hpp"
+#include "retry_policy.hpp"
 #include "row.hpp"
 #include "schema_metadata.hpp"
 #include "session.hpp"
@@ -61,6 +63,7 @@ EXTERNAL_TYPE(cass::Future, CassFuture);
 EXTERNAL_TYPE(cass::Prepared, CassPrepared);
 EXTERNAL_TYPE(cass::BatchRequest, CassBatch);
 EXTERNAL_TYPE(cass::ResultResponse, CassResult);
+EXTERNAL_TYPE(cass::ErrorResponse, CassErrorResult);
 EXTERNAL_TYPE(cass::Collection, CassCollection);
 EXTERNAL_TYPE(cass::Iterator, CassIterator);
 EXTERNAL_TYPE(cass::Row, CassRow);
@@ -73,6 +76,7 @@ EXTERNAL_TYPE(cass::UuidGen, CassUuidGen);
 EXTERNAL_TYPE(cass::Tuple, CassTuple);
 EXTERNAL_TYPE(cass::UserTypeValue, CassUserType);
 EXTERNAL_TYPE(cass::DataType, CassDataType);
+EXTERNAL_TYPE(cass::RetryPolicy, CassRetryPolicy);
 
 }
 

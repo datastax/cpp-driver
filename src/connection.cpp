@@ -821,6 +821,12 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
         handler->dec_ref();
         break;
 
+      case Handler::REQUEST_STATE_RETRY_WRITE_OUTSTANDING:
+        handler->stop_timer();
+        handler->retry();
+        handler->dec_ref();
+        break;
+
       default:
         assert(false && "Invalid request state after write finished");
         break;

@@ -295,6 +295,11 @@ void cass_cluster_set_tcp_keepalive(CassCluster* cluster,
   cluster->config().set_tcp_keepalive(enabled == cass_true, delay_secs);
 }
 
+void cass_cluster_set_retry_policy(CassCluster* cluster,
+                                   CassRetryPolicy* retry_policy) {
+  cluster->config().set_retry_policy(retry_policy);
+}
+
 void cass_cluster_free(CassCluster* cluster) {
   delete cluster->from();
 }

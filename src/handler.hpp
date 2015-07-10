@@ -96,6 +96,7 @@ public:
     REQUEST_STATE_TIMEOUT,
     REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING,
     REQUEST_STATE_READ_BEFORE_WRITE,
+    REQUEST_STATE_RETRY_WRITE_OUTSTANDING,
     REQUEST_STATE_DONE
   };
 
@@ -116,6 +117,8 @@ public:
   virtual void on_set(ResponseMessage* response) = 0;
   virtual void on_error(CassError code, const std::string& message) = 0;
   virtual void on_timeout() = 0;
+
+  virtual void retry() { }
 
   Connection* connection() const { return connection_; }
 

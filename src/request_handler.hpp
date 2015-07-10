@@ -47,6 +47,7 @@ public:
 
   std::string statement;
   Schema schema;
+
 };
 
 class RequestHandler : public Handler {
@@ -70,6 +71,8 @@ public:
   virtual void on_error(CassError code, const std::string& message);
   virtual void on_timeout();
 
+  virtual void retry();
+
   void set_query_plan(QueryPlan* query_plan) {
     query_plan_.reset(query_plan);
   }
@@ -82,7 +85,6 @@ public:
     pool_ = pool;
   }
 
-  void retry(RetryType type);
   bool get_current_host_address(Address* address);
   void next_host();
 
@@ -92,6 +94,7 @@ public:
 
 private:
   void set_error(CassError code, const std::string& message);
+  void set_error_with_error_response(Response* error, CassError code, const std::string& message);
   void return_connection();
   void return_connection_and_finish();
 
@@ -99,7 +102,7 @@ private:
   void on_error_response(ResponseMessage* response);
   void on_error_unprepared(ErrorResponse* error);
 
-  void handle_retry_decision(ErrorResponse* error,
+  void handle_retry_decision(ResponseMessage* response,
                              const RetryPolicy::RetryDecision& decision);
 
 

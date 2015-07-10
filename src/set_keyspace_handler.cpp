@@ -65,7 +65,7 @@ void SetKeyspaceHandler::on_result_response(ResponseMessage* response) {
   if (result->kind() == CASS_RESULT_KIND_SET_KEYSPACE) {
     if (!connection_->write(request_handler_.get())) {
       // Try on the same host but a different connection
-      request_handler_->retry(RETRY_WITH_CURRENT_HOST);
+      request_handler_->retry();
     }
   } else {
     connection_->defunct();
