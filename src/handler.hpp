@@ -122,9 +122,9 @@ public:
     connection_ = connection;
   }
 
-  int8_t stream() const { return stream_; }
+  int stream() const { return stream_; }
 
-  void set_stream(int8_t stream) {
+  void set_stream(int stream) {
     stream_ = stream;
   }
 
@@ -148,7 +148,7 @@ protected:
 
 private:
   RequestTimer timer_;
-  int16_t stream_;
+  int stream_;
   State state_;
   Request::EncodingCache encoding_cache_;
 
