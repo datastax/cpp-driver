@@ -40,6 +40,12 @@ CassError cass_batch_set_consistency(CassBatch* batch,
   return CASS_OK;
 }
 
+CassError cass_batch_set_retry_policy(CassBatch* batch,
+                                      CassRetryPolicy* retry_policy) {
+  batch->set_retry_policy(retry_policy);
+  return CASS_OK;
+}
+
 CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
   batch->add_statement(statement);
   return CASS_OK;

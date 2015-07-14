@@ -21,25 +21,25 @@
 
 extern "C" {
 
-CassRetryPolicy* cass_default_retry_policy_new() {
+CassRetryPolicy* cass_retry_policy_default_new() {
   cass::RetryPolicy* policy = new cass::DefaultRetryPolicy();
   policy->inc_ref();
   return CassRetryPolicy::to(policy);
 }
 
-CassRetryPolicy* cass_downgrading_consistency_retry_policy_new() {
+CassRetryPolicy* cass_retry_policy_downgrading_consistency_new() {
   cass::RetryPolicy* policy = new cass::DowngradingConsistencyRetryPolicy();
   policy->inc_ref();
   return CassRetryPolicy::to(policy);
 }
 
-CassRetryPolicy* cass_fallthrough_retry_policy_new() {
+CassRetryPolicy* cass_retry_policy_fallthrough_new() {
   cass::RetryPolicy* policy = new cass::FallthroughRetryPolicy();
   policy->inc_ref();
   return CassRetryPolicy::to(policy);
 }
 
-CassRetryPolicy* cass_logging_retry_policy(CassRetryPolicy* child_retry_policy) {
+CassRetryPolicy* cass_retry_policylogging_new(CassRetryPolicy* child_retry_policy) {
   if (child_retry_policy->type() == cass::RetryPolicy::LOGGING) {
     return NULL;
   }

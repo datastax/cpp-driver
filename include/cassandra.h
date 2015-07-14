@@ -346,6 +346,9 @@ typedef struct CassSchemaMetaField_ CassSchemaMetaField;
 typedef struct CassUuidGen_ CassUuidGen;
 
 /**
+ * Policies that defined the behavior of a request when a server-side
+ * read/write timeout or unavailable error occurs.
+ *
  * @struct CassRetryPolicy
  */
 typedef struct CassRetryPolicy_ CassRetryPolicy;
@@ -1202,7 +1205,7 @@ cass_cluster_set_tcp_keepalive(CassCluster* cluster,
 
 /**
  * Sets the retry policy used for all requests unless overridden by setting
- * a retry policy on a statement.
+ * a retry policy on a statement or a batch.
  *
  * <b>Default:</b> default retry policy.
  *
@@ -1212,6 +1215,7 @@ cass_cluster_set_tcp_keepalive(CassCluster* cluster,
  * @param[in] retry_policy
  *
  * @see cass_statement_set_retry_policy()
+ * @see cass_batch_set_retry_policy()
  */
 CASS_EXPORT void
 cass_cluster_set_retry_policy(CassCluster* cluster,
@@ -3000,6 +3004,19 @@ cass_batch_free(CassBatch* batch);
 CASS_EXPORT CassError
 cass_batch_set_consistency(CassBatch* batch,
                            CassConsistency consistency);
+
+/**
+ * Sets the batch's retry policy.
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] retry_policy
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_batch_set_retry_policy(CassBatch* batch,
+                            CassRetryPolicy* retry_policy);
 
 /**
  * Adds a statement to a batch.
@@ -5706,6 +5723,17 @@ cass_uuid_from_string_n(const char* str,
 /**
  * Creates a new default retry policy.
  *
+ * This policy retries queries in the following cases:
+ * <ul>
+ *   <li>On a read timeout, if enough replicas replied but data was not received.</li>
+ *   <li>On a write timeout, if a timeout occurs while writing the distributed batch log</li>
+ *   <li>On unavailble, it will move to the next host</li>
+ * </ul>
+ *
+ * In all other cases the error will be returned.
+ *
+ * This policy always uses the queries original consistency level.
+ *
  * @public @memberof CassRetryPolicy
  *
  * @return Returns a retry policy that must be freed.
@@ -5713,11 +5741,33 @@ cass_uuid_from_string_n(const char* str,
  * @see cass_retry_policy_free()
  */
 CASS_EXPORT CassRetryPolicy*
-cass_default_retry_policy_new();
+cass_retry_policy_default_new();
 
 /**
  * Creates a new downgrading consistency retry policy.
  *
+ * <b>Important:</b> This policy may attempt to retry requests with a lower
+ * consistency level. Using this policy can break consistency guarantees.
+ *
+ * This policy will retry in the same scenarios as the default policy, but
+ * it will also retry in the following cases:
+ * <ul>
+ *   <li>On a read timeout, if some replicas responded but is lower than
+ *   required by the current consistency level then retry with a lower
+ *   consistency level.</li>
+ *   <li>On a write timeout, Retry unlogged batches at a lower consistency level
+ *   if at least one replica responded. For single queries and batch if any
+ *    replicas responded then consider the request successful and swallow the
+ *    error.</li>
+ *   <li>On unavailable, retry at a lower consistency if at lease one replica
+ *   responded.</li>
+ * </ul>
+ *
+ * This goal of this policy is to attempt to save a request if there's any
+ * chance of success. A writes succeeds as long as there's a single copy
+ * persisted and a read will succeed if there's some data available even
+ * if it increases the risk of reading stale data.
+ *
  * @public @memberof CassRetryPolicy
  *
  * @return Returns a retry policy that must be freed.
@@ -5725,11 +5775,14 @@ cass_default_retry_policy_new();
  * @see cass_retry_policy_free()
  */
 CASS_EXPORT CassRetryPolicy*
-cass_downgrading_consistency_retry_policy_new();
+cass_retry_policy_downgrading_consistency_new();
 
 /**
  * Creates a new fallthrough retry policy.
  *
+ * This policy never retries or ignores a server-side failure. The error
+ * is always returned.
+ *
  * @public @memberof CassRetryPolicy
  *
  * @return Returns a retry policy that must be freed.
@@ -5737,10 +5790,13 @@ cass_downgrading_consistency_retry_policy_new();
  * @see cass_retry_policy_free()
  */
 CASS_EXPORT CassRetryPolicy*
-cass_fallthrough_retry_policy_new();
+cass_retry_policy_fallthrough_new();
 
 /**
  * Creates a new logging retry policy.
+ *
+ * This policy logs the retry decision of its child policy. Logging is
+ * done using CASS_LOG_INFO.
  *
  * @public @memberof CassRetryPolicy
  *
@@ -5751,7 +5807,7 @@ cass_fallthrough_retry_policy_new();
  * @see cass_retry_policy_free()
  */
 CASS_EXPORT CassRetryPolicy*
-cass_logging_retry_policy(CassRetryPolicy* child_retry_policy);
+cass_retry_policy_logging_new(CassRetryPolicy* child_retry_policy);
 
 /**
  * Frees a retry policy instance.
