@@ -23,6 +23,9 @@
 #include "retry_policy.hpp"
 #include "string_ref.hpp"
 
+#include <limits>
+#include <stdint.h>
+
 namespace cass {
 
 class Handler;
@@ -35,12 +38,15 @@ public:
     ENCODE_ERROR_BATCH_WITH_NAMED_VALUES = -2
   };
 
+  static const int64_t MIN_TIMESTAMP = std::numeric_limits<int64_t>::min();
+
   typedef std::map<const void*, Buffer> EncodingCache;
 
   Request(uint8_t opcode)
       : opcode_(opcode)
       , consistency_(CASS_CONSISTENCY_ONE)
-      , serial_consistency_(CASS_CONSISTENCY_ANY) {}
+      , serial_consistency_(CASS_CONSISTENCY_ANY)
+      , default_timestamp_(MIN_TIMESTAMP) {}
 
   virtual ~Request() {}
 
@@ -56,6 +62,10 @@ public:
     serial_consistency_ = serial_consistency;
   }
 
+  int64_t default_timestamp() const { return default_timestamp_; }
+
+  void set_default_timestamp(int64_t timestamp) { default_timestamp_ = timestamp; }
+
   RetryPolicy* retry_policy() const {
     return retry_policy_.get();
   }
@@ -70,6 +80,7 @@ private:
   uint8_t opcode_;
   CassConsistency consistency_;
   CassConsistency serial_consistency_;
+  int64_t default_timestamp_;
   SharedRefPtr<RetryPolicy> retry_policy_;
 
 private:

@@ -349,6 +349,14 @@ typedef struct CassUuidGen_ CassUuidGen;
  * Policies that defined the behavior of a request when a server-side
  * read/write timeout or unavailable error occurs.
  *
+ * Generators of client-side, microsecond-precision timestamps.
+ *
+ * @struct CassTimestampGen
+ *
+ */
+typedef struct CassTimestampGen_ CassTimestampGen;
+
+/**
  * @struct CassRetryPolicy
  */
 typedef struct CassRetryPolicy_ CassRetryPolicy;
@@ -1202,6 +1210,23 @@ CASS_EXPORT void
 cass_cluster_set_tcp_keepalive(CassCluster* cluster,
                                cass_bool_t enabled,
                                unsigned delay_secs);
+/**
+ * Sets the timestamp generator used to assign timestamps to all requests
+ * unless overridden by setting the default timestamp on a statement or a batch.
+ *
+ * <b>Default:</b> server-side timestamp generator.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] timestamp_gen
+ *
+ * @see cass_statement_set_default_timestamp()
+ * @see cass_batch_set_default_timestamp()
+ */
+CASS_EXPORT void
+cass_cluster_set_timestamp_gen(CassCluster* cluster,
+                               CassTimestampGen* timestamp_gen);
 
 /**
  * Sets the retry policy used for all requests unless overridden by setting
@@ -2068,6 +2093,20 @@ cass_statement_set_paging_size(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_set_paging_state(CassStatement* statement,
                                 const CassResult* result);
+
+/**
+ * Sets the statement's default timestamp.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] timestamp
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_default_timestamp(CassStatement* statement,
+                                     cass_int64_t timestamp);
+
 
 /**
  * Sets the statement's retry policy.
@@ -3004,6 +3043,34 @@ cass_batch_free(CassBatch* batch);
 CASS_EXPORT CassError
 cass_batch_set_consistency(CassBatch* batch,
                            CassConsistency consistency);
+
+/**
+ * Sets the batch's serial consistency level.
+ *
+ * <b>Default:</b> Not set
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] serial_consistency
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_batch_set_serial_consistency(CassBatch* batch,
+                                  CassConsistency serial_consistency);
+
+/**
+ * Sets the batch's default timestamp.
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] timestamp
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_batch_set_default_timestamp(CassBatch* batch,
+                                 cass_int64_t timestamp);
 
 /**
  * Sets the batch's retry policy.
@@ -5712,6 +5779,56 @@ CASS_EXPORT CassError
 cass_uuid_from_string_n(const char* str,
                         size_t str_length,
                         CassUuid* output);
+
+/***********************************************************************************
+ *
+ * Timestamp generators
+ *
+ ***********************************************************************************/
+
+/**
+ * Creates a new server-side timestamp generator. This generator allows Cassandra
+ * to assign timestamps server-side.
+ *
+ * <bold>Note:</bold> This is the default timestamp generator.
+ *
+ * @public @memberof CassTimestampGen
+ *
+ * @return Returns a timestamp generator that must be freed.
+ *
+ * @see cass_timestamp_gen_free()
+ */
+CASS_EXPORT CassTimestampGen*
+cass_timestamp_gen_server_side_new();
+
+/**
+ * Creates a new monotonically increasing timestamp generator. This generates
+ * microsecond timestamps with the sub-millisecond part generated using a counter.
+ * The implementation gaurantees that no more than 1000 timestamps will be generated
+ * for a given clock tick even if shared by multiple session objects. If that rate is
+ * excceeded then a warning is logged and timestamps stop incrementing until the next
+ * clock tick.
+ *
+ * <bold>Note:</bold> This generator is thread-safe and can be shared by multiple sessions.
+ *
+ * @public @memberof CassTimestampGen
+ *
+ * @return Returns a timestamp generator that must be freed.
+ *
+ * @see cass_timestamp_gen_free()
+ */
+CASS_EXPORT CassTimestampGen*
+cass_timestamp_gen_monotonic_new();
+
+/**
+ * Frees a timestamp generator instance.
+ *
+ * @public @memberof CassTimestampGen
+ *
+ * @param[in] timestamp_gen
+ */
+CASS_EXPORT void
+cass_timestamp_gen_free(CassTimestampGen* timestamp_gen);
 
 
 /***********************************************************************************

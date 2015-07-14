@@ -300,6 +300,11 @@ void cass_cluster_set_retry_policy(CassCluster* cluster,
   cluster->config().set_retry_policy(retry_policy);
 }
 
+void cass_cluster_set_timestamp_gen(CassCluster* cluster,
+                                    CassTimestampGen* timestamp_gen) {
+  cluster->config().set_timestamp_gen(timestamp_gen);
+}
+
 void cass_cluster_free(CassCluster* cluster) {
   delete cluster->from();
 }

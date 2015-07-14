@@ -40,6 +40,18 @@ CassError cass_batch_set_consistency(CassBatch* batch,
   return CASS_OK;
 }
 
+CassError cass_batch_set_serial_consistency(CassBatch* batch,
+                                            CassConsistency serial_consistency) {
+  batch->set_serial_consistency(serial_consistency);
+  return CASS_OK;
+}
+
+CassError cass_batch_set_default_timestamp(CassBatch* batch,
+                                           cass_int64_t timestamp) {
+  batch->set_default_timestamp(timestamp);
+  return CASS_OK;
+}
+
 CassError cass_batch_set_retry_policy(CassBatch* batch,
                                       CassRetryPolicy* retry_policy) {
   batch->set_retry_policy(retry_policy);
@@ -93,14 +105,33 @@ int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
     // <consistency> [short]
     size_t buf_size = sizeof(uint16_t);
     if (version >= 3) {
-      buf_size += sizeof(uint8_t);
+      // <flags>[<serial_consistency><timestamp>]
+      buf_size += sizeof(uint8_t); // [byte]
+
+      if (serial_consistency() != 0) {
+        buf_size += sizeof(uint16_t); // [short]
+        flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
+      }
+
+      if (handler->default_timestamp() != Request::MIN_TIMESTAMP) {
+        buf_size += sizeof(int64_t); // [long]
+        flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
+      }
     }
 
     Buffer buf(buf_size);
 
     size_t pos = buf.encode_uint16(0, consistency_);
     if (version >= 3) {
-      buf.encode_byte(pos, flags);
+      pos = buf.encode_byte(pos, flags);
+
+      if (serial_consistency() != 0) {
+        pos = buf.encode_uint16(pos, serial_consistency());
+      }
+
+      if (handler->default_timestamp() != Request::MIN_TIMESTAMP) {
+        pos = buf.encode_int64(pos, handler->default_timestamp());
+      }
     }
 
     bufs->push_back(buf);

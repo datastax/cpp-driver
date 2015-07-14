@@ -134,6 +134,11 @@ int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs
     flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
   }
 
+  if (version >= 3 && handler->default_timestamp() != Request::MIN_TIMESTAMP) {
+      paging_buf_size += sizeof(int64_t); // [long]
+      flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
+  }
+
   {
     bufs->push_back(Buffer(query_buf_size));
     length += query_buf_size;
@@ -173,6 +178,10 @@ int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs
 
     if (serial_consistency() != 0) {
       pos = buf.encode_uint16(pos, serial_consistency());
+    }
+
+    if (version >= 3 && handler->default_timestamp() != Request::MIN_TIMESTAMP) {
+      pos = buf.encode_int64(pos, handler->default_timestamp());
     }
   }
 

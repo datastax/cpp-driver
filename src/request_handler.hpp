@@ -61,7 +61,9 @@ public:
       , num_retries_(0)
       , is_query_plan_exhausted_(true)
       , io_worker_(NULL)
-      , pool_(NULL) { }
+      , pool_(NULL) {
+    set_default_timestamp(request->default_timestamp());
+  }
 
   virtual const Request* request() const { return request_.get(); }
 
