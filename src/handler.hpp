@@ -18,6 +18,7 @@
 #define __CASS_HANDLER_HPP_INCLUDED__
 
 #include "buffer.hpp"
+#include "constants.hpp"
 #include "cassandra.h"
 #include "utils.hpp"
 #include "list.hpp"
@@ -105,7 +106,7 @@ public:
     , stream_(-1)
     , state_(REQUEST_STATE_NEW)
     , cl_(CASS_CONSISTENCY_UNKNOWN)
-    , default_timestamp_(Request::MIN_TIMESTAMP) { }
+    , default_timestamp_(CASS_INT64_MIN) { }
 
   virtual ~Handler() {}
 

@@ -18,12 +18,12 @@
 #define __CASS_REQUEST_HPP_INCLUDED__
 
 #include "buffer.hpp"
+#include "constants.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
 #include "retry_policy.hpp"
 #include "string_ref.hpp"
 
-#include <limits>
 #include <stdint.h>
 
 namespace cass {
@@ -38,15 +38,13 @@ public:
     ENCODE_ERROR_BATCH_WITH_NAMED_VALUES = -2
   };
 
-  static const int64_t MIN_TIMESTAMP = std::numeric_limits<int64_t>::min();
-
   typedef std::map<const void*, Buffer> EncodingCache;
 
   Request(uint8_t opcode)
       : opcode_(opcode)
       , consistency_(CASS_CONSISTENCY_ONE)
       , serial_consistency_(CASS_CONSISTENCY_ANY)
-      , default_timestamp_(MIN_TIMESTAMP) {}
+      , default_timestamp_(CASS_INT64_MIN) {}
 
   virtual ~Request() {}
 

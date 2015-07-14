@@ -14,17 +14,18 @@
   limitations under the License.
 */
 
-#include "utils.hpp"
 #include "token_map.hpp"
+
+#include "constants.hpp"
 #include "logger.hpp"
 #include "md5.hpp"
 #include "murmur3.hpp"
 #include "scoped_ptr.hpp"
+#include "utils.hpp"
 
 #include <uv.h>
 
 #include <algorithm>
-#include <limits>
 #include <string>
 
 namespace cass {
@@ -246,17 +247,17 @@ const std::string Murmur3Partitioner::PARTITIONER_CLASS("Murmur3Partitioner");
 Token Murmur3Partitioner::token_from_string_ref(const StringRef& token_string_ref) const {
   Token token(sizeof(int64_t), 0);
   int64_t token_value = parse_int64(token_string_ref.data(), token_string_ref.size());
-  encode_uint64(&token[0], static_cast<uint64_t>(token_value) + std::numeric_limits<uint64_t>::max() / 2);
+  encode_uint64(&token[0], static_cast<uint64_t>(token_value) + CASS_UINT64_MAX / 2);
   return token;
 }
 
 Token Murmur3Partitioner::hash(const uint8_t* data, size_t size) const {
   Token token(sizeof(int64_t), 0);
   int64_t token_value = MurmurHash3_x64_128(data, size, 0);
-  if (token_value == std::numeric_limits<int64_t>::min()) {
-    token_value = std::numeric_limits<int64_t>::max();
+  if (token_value == CASS_INT64_MIN) {
+    token_value = CASS_INT64_MAX;
   }
-  encode_uint64(&token[0], static_cast<uint64_t>(token_value) + std::numeric_limits<uint64_t>::max() / 2);
+  encode_uint64(&token[0], static_cast<uint64_t>(token_value) + CASS_UINT64_MAX / 2);
   return token;
 }
 

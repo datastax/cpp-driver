@@ -30,6 +30,7 @@
 #include <boost/chrono.hpp>
 
 #include "cassandra.h"
+#include "constants.hpp"
 #include "test_utils.hpp"
 
 struct BasicTests : public test_utils::SingleSessionTest {
@@ -403,7 +404,7 @@ BOOST_AUTO_TEST_CASE(min_max)
 
   {
     CassUuid value;
-    cass_uuid_max_from_time(std::numeric_limits<uint64_t>::max(), &value);
+    cass_uuid_max_from_time(CASS_UINT64_MAX, &value);
     insert_single_value<CassUuid>(CASS_VALUE_TYPE_TIMEUUID, value);
   }
 }

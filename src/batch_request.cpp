@@ -16,11 +16,11 @@
 
 #include "batch_request.hpp"
 
+#include "constants.hpp"
 #include "execute_request.hpp"
 #include "external_types.hpp"
 #include "serialization.hpp"
 #include "statement.hpp"
-
 
 extern "C" {
 
@@ -113,7 +113,7 @@ int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
         flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
       }
 
-      if (handler->default_timestamp() != Request::MIN_TIMESTAMP) {
+      if (handler->default_timestamp() != CASS_INT64_MIN) {
         buf_size += sizeof(int64_t); // [long]
         flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
       }
@@ -129,7 +129,7 @@ int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
         pos = buf.encode_uint16(pos, serial_consistency());
       }
 
-      if (handler->default_timestamp() != Request::MIN_TIMESTAMP) {
+      if (handler->default_timestamp() != CASS_INT64_MIN) {
         pos = buf.encode_int64(pos, handler->default_timestamp());
       }
     }

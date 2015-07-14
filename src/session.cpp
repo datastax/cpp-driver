@@ -17,6 +17,7 @@
 #include "session.hpp"
 
 #include "config.hpp"
+#include "constants.hpp"
 #include "logger.hpp"
 #include "prepare_request.hpp"
 #include "request_handler.hpp"
@@ -612,7 +613,7 @@ void Session::on_execute(uv_async_t* data) {
       request_handler->set_query_plan(session->new_query_plan(request_handler->request(),
                                                               request_handler->encoding_cache()));
 
-      if (request_handler->default_timestamp() == Request::MIN_TIMESTAMP) {
+      if (request_handler->default_timestamp() == CASS_INT64_MIN) {
         request_handler->set_default_timestamp(session->config_.timestamp_gen()->next());
       }
 

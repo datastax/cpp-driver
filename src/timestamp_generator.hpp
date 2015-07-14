@@ -18,6 +18,7 @@
 #define __CASS_TIMESTAMP_GENERATOR_HPP_INCLUDED__
 
 #include "atomic.hpp"
+#include "constants.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
 #include "request.hpp"
@@ -54,7 +55,7 @@ public:
   ServerSideTimestampGenerator()
     : TimestampGenerator(SERVER_SIDE) { }
 
-  virtual int64_t next() { return Request::MIN_TIMESTAMP; }
+  virtual int64_t next() { return CASS_INT64_MIN; }
 };
 
 class MonotonicTimestampGenerator : public TimestampGenerator {
