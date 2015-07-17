@@ -157,7 +157,7 @@ void RequestHandler::on_result_response(ResponseMessage* response) {
     }
 
     case CASS_RESULT_KIND_SET_KEYSPACE:
-      io_worker_->broadcast_keyspace_change(result->keyspace());
+      io_worker_->broadcast_keyspace_change(result->keyspace().to_string());
       set_response(response->response_body().release());
       break;
 

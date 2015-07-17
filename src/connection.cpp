@@ -397,7 +397,7 @@ void Connection::maybe_set_keyspace(ResponseMessage* response) {
     ResultResponse* result =
         static_cast<ResultResponse*>(response->response_body().get());
     if (result->kind() == CASS_RESULT_KIND_SET_KEYSPACE) {
-      keyspace_ = result->keyspace();
+      keyspace_ = result->keyspace().to_string();
     }
   }
 }

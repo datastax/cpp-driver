@@ -33,7 +33,7 @@ public:
       : Statement(CQL_OPCODE_EXECUTE, CASS_BATCH_KIND_PREPARED,
                   prepared->result()->column_count(),
                   prepared->key_indices(),
-                  prepared->result()->keyspace())
+                  prepared->result()->keyspace().to_string())
       , prepared_(prepared)
       , metadata_(prepared->result()->metadata()){
       // If the prepared statement has result metadata then there is no

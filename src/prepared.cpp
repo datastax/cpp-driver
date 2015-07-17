@@ -83,7 +83,7 @@ Prepared::Prepared(const ResultResponse* result,
                    const std::string& statement,
                    const std::vector<std::string>& key_columns)
       : result_(result)
-      , id_(result->prepared())
+      , id_(result->prepared().to_string())
       , statement_(statement) {
     IndexVec indices;
     // If the statement has bound parameters find the key indices

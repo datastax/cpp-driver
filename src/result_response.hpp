@@ -40,16 +40,6 @@ public:
       , protocol_version_(0)
       , kind_(0)
       , has_more_pages_(false)
-      , paging_state_(NULL)
-      , paging_state_size_(0)
-      , prepared_(NULL)
-      , prepared_size_(0)
-      , change_(NULL)
-      , change_size_(0)
-      , keyspace_(NULL)
-      , keyspace_size_(0)
-      , table_(NULL)
-      , table_size_(0)
       , row_count_(0)
       , rows_(NULL) {
     first_row_.set_result(this);
@@ -73,21 +63,10 @@ public:
 
   const SharedRefPtr<ResultMetadata>& result_metadata() const { return result_metadata_; }
 
-  std::string paging_state() const {
-    return std::string(paging_state_, paging_state_size_);
-  }
-
-  std::string prepared() const {
-    return std::string(prepared_, prepared_size_);
-  }
-
-  std::string keyspace() const {
-    return std::string(keyspace_, keyspace_size_);
-  }
-
-  std::string table() const {
-    return std::string(table_, table_size_);
-  }
+  StringRef paging_state() const { return paging_state_; }
+  StringRef prepared() const { return prepared_; }
+  StringRef keyspace() const { return keyspace_; }
+  StringRef table() const { return table_; }
 
   char* rows() const { return rows_; }
 
@@ -116,16 +95,11 @@ private:
   bool has_more_pages_; // row data
   SharedRefPtr<ResultMetadata> metadata_;
   SharedRefPtr<ResultMetadata> result_metadata_;
-  char* paging_state_; // row paging
-  size_t paging_state_size_;
-  char* prepared_; // prepared result
-  size_t prepared_size_;
-  char* change_; // schema change
-  size_t change_size_;
-  char* keyspace_; // rows, set keyspace, and schema change
-  size_t keyspace_size_;
-  char* table_; // rows, and schema change
-  size_t table_size_;
+  StringRef paging_state_; // row paging
+  StringRef prepared_; // prepared result
+  StringRef change_; // schema change
+  StringRef keyspace_; // rows, set keyspace, and schema change
+  StringRef table_; // rows, and schema change
   int32_t row_count_;
   char* rows_;
   Row first_row_;

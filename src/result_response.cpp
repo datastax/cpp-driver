@@ -86,6 +86,17 @@ cass_bool_t cass_result_has_more_pages(const CassResult* result) {
   return static_cast<cass_bool_t>(result->has_more_pages());
 }
 
+CassError cass_result_paging_state(const CassResult* result,
+                                   const char** paging_state,
+                                   size_t* paging_state_size) {
+  if (!result->has_more_pages()) {
+    return CASS_ERROR_NO_PAGING_STATE;
+  }
+  *paging_state = result->paging_state().data();
+  *paging_state_size = result->paging_state().size();
+  return CASS_OK;
+}
+
 } // extern "C"
 
 namespace cass {
@@ -136,7 +147,7 @@ public:
 private:
   SharedRefPtr<DataType> decode_custom() {
     StringRef class_name;
-    buffer_ = decode_string_ref(buffer_, &class_name);
+    buffer_ = decode_string(buffer_, &class_name);
     return SharedRefPtr<DataType>(new CustomType(class_name.to_string()));
   }
 
@@ -151,10 +162,10 @@ private:
 
   SharedRefPtr<DataType> decode_user_type() {
     StringRef keyspace;
-    buffer_ = decode_string_ref(buffer_, &keyspace);
+    buffer_ = decode_string(buffer_, &keyspace);
 
     StringRef type_name;
-    buffer_ = decode_string_ref(buffer_, &type_name);
+    buffer_ = decode_string(buffer_, &type_name);
 
     uint16_t n;
     buffer_ = decode_uint16(buffer_, n);
@@ -162,7 +173,7 @@ private:
     UserType::FieldVec fields;
     for (uint16_t i = 0; i < n; ++i) {
       StringRef field_name;
-      buffer_ = decode_string_ref(buffer_, &field_name);
+      buffer_ = decode_string(buffer_, &field_name);
       fields.push_back(UserType::Field(field_name.to_string(), decode()));
     }
     return SharedRefPtr<DataType>(new UserType(keyspace.to_string(),
@@ -227,7 +238,7 @@ char* ResultResponse::decode_metadata(char* input, SharedRefPtr<ResultMetadata>*
 
   if (flags & CASS_RESULT_FLAG_HAS_MORE_PAGES) {
     has_more_pages_ = true;
-    buffer = decode_bytes(buffer, &paging_state_, paging_state_size_);
+    buffer = decode_bytes(buffer, &paging_state_);
   } else {
     has_more_pages_ = false;
   }
@@ -236,8 +247,8 @@ char* ResultResponse::decode_metadata(char* input, SharedRefPtr<ResultMetadata>*
     bool global_table_spec = flags & CASS_RESULT_FLAG_GLOBAL_TABLESPEC;
 
     if (global_table_spec) {
-      buffer = decode_string(buffer, &keyspace_, keyspace_size_);
-      buffer = decode_string(buffer, &table_, table_size_);
+      buffer = decode_string(buffer, &keyspace_);
+      buffer = decode_string(buffer, &table_);
     }
 
     metadata->reset(new ResultMetadata(column_count));
@@ -248,11 +259,11 @@ char* ResultResponse::decode_metadata(char* input, SharedRefPtr<ResultMetadata>*
       def.index = i;
 
       if (!global_table_spec) {
-        buffer = decode_string_ref(buffer, &def.keyspace);
-        buffer = decode_string_ref(buffer, &def.table);
+        buffer = decode_string(buffer, &def.keyspace);
+        buffer = decode_string(buffer, &def.table);
       }
 
-      buffer = decode_string_ref(buffer, &def.name);
+      buffer = decode_string(buffer, &def.name);
 
       DataTypeDecoder type_decoder(buffer);
       def.data_type = SharedRefPtr<const DataType>(type_decoder.decode());
@@ -278,12 +289,12 @@ bool ResultResponse::decode_rows(char* input) {
 }
 
 bool ResultResponse::decode_set_keyspace(char* input) {
-  decode_string(input, &keyspace_, keyspace_size_);
+  decode_string(input, &keyspace_);
   return true;
 }
 
 bool ResultResponse::decode_prepared(int version, char* input) {
-  char* buffer = decode_string(input, &prepared_, prepared_size_);
+  char* buffer = decode_string(input, &prepared_);
   buffer = decode_metadata(buffer, &metadata_);
   if (version > 1) {
     decode_metadata(buffer, &result_metadata_);
@@ -292,9 +303,9 @@ bool ResultResponse::decode_prepared(int version, char* input) {
 }
 
 bool ResultResponse::decode_schema_change(char* input) {
-  char* buffer = decode_string(input, &change_, change_size_);
-  buffer = decode_string(buffer, &keyspace_, keyspace_size_);
-  buffer = decode_string(buffer, &table_, table_size_);
+  char* buffer = decode_string(input, &change_);
+  buffer = decode_string(buffer, &keyspace_);
+  buffer = decode_string(buffer, &table_);
   return true;
 }
 

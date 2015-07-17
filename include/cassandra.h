@@ -504,6 +504,7 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NOT_IMPLEMENTED, 21, "Not implemented") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_CONNECT, 22, "Unable to connect") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_CLOSE, 23, "Unable to close") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_NO_PAGING_STATE, 24, "No paging state") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -1985,6 +1986,21 @@ cass_statement_set_paging_size(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_set_paging_state(CassStatement* statement,
                                 const CassResult* result);
+
+/**
+ * Sets the statement's paging state.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] paging_state
+ * @param[in] paging_state_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_paging_state_raw(CassStatement* statement,
+                                    const char* paging_state,
+                                    size_t paging_state_size);
 
 /**
  * Binds null to a query or bound statement at the specified index.
@@ -4717,6 +4733,23 @@ cass_result_first_row(const CassResult* result);
  */
 CASS_EXPORT cass_bool_t
 cass_result_has_more_pages(const CassResult* result);
+
+/**
+ * Gets the raw paging state from the result. The paging state is bound to the
+ * lifetime of the result object. If paging state needs to live beyond the
+ * lifetime of the result object it must be copied.
+ *
+ * @public @memberof CassResult
+ *
+ * @param[in] result
+ * @param[out] paging_state
+ * @param[out] paging_state_size
+ * @return CASS_OK if successful, otherwise error occurred
+ */
+CASS_EXPORT CassError
+cass_result_paging_state(const CassResult* result,
+                         const char** paging_state,
+                         size_t* paging_state_size);
 
 /***********************************************************************************
  *
