@@ -56,6 +56,7 @@ option(CASS_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
 option(CASS_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
 option(CASS_USE_OPENSSL "Use OpenSSL" ON)
 option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
+option(CASS_USE_SPARSEHASH "Use sparsehash" OFF)
 option(CASS_USE_ZLIB "Use zlib" OFF)
 
 if(CASS_BUILD_TESTS)
@@ -213,6 +214,31 @@ if(CASS_USE_TCMALLOC)
 
   # Assign gperftools (tcmalloc) library
   set(CASS_LIBS ${CASS_LIBS} ${GPERFLIBRARY_LIBRARY})
+endif()
+
+// SparseHash
+if(CASS_USE_SPARSEHASH)
+  # Setup the paths and hints for sparsehash
+  set(_SPARSEHASH_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/sparsehash/")
+  set(_SPARSEHASH_ROOT_HINTS ${SPARSEHASH_ROOT_DIR} $ENV{SPARSEHASH_ROOT_DIR})
+  if(NOT WIN32)
+    set(_SPARSEHASH_ROOT_PATHS ${_SPARSEHASH_ROOT_PATHS} "/usr/" "/usr/local/")
+  endif()
+  set(_SPARSEHASH_ROOT_HINTS_AND_PATHS
+    HINTS ${_SPARSEHASH_ROOT_HINTS}
+    PATHS ${_SPARSEHASH_ROOT_PATHS})
+
+  # Ensure sparsehash headers were found
+  find_path(SPARSEHASH_INCLUDE_DIR
+    NAMES google/dense_hash_map
+    HINTS ${_SPARSEHASH_INCLUDE_DIR} ${_SPARSEHASH_ROOT_HINTS_AND_PATHS}
+    PATH_SUFFIXES include)
+  find_package_handle_standard_args(SparseJash "Could NOT find sparsehash, try to set the path to the sparsehash root folder in the system variable SPARSEHASH_ROOT_DIR"
+    SPARSEHASH_INCLUDE_DIR)
+
+  if (SPARSEHASH_INCLUDE_DIR)
+    add_definitions("-DCASS_USE_SPARSEHASH")
+  endif()
 endif()
 
 # zlib

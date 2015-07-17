@@ -24,7 +24,11 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifdef CASS_USE_SPARSEHASH
 #include <google/dense_hash_map>
+#else
+#include <map>
+#endif
 
 #if defined(_MSC_VER)
 #include <intrin.h>
@@ -40,9 +44,12 @@ public:
       , num_words_(max_streams_ / NUM_BITS_PER_WORD)
       , offset_(0)
       , words_(new word_t[num_words_]) {
+#ifdef CASS_USE_SPARSEHASH
+    // Client request stream IDs are always positive values so it's
+    // safe to use negative values for the empty and deleted keys.
     pending_.set_empty_key(-1);
     pending_.set_deleted_key(-2);
-    pending_.min_load_factor(0.0);
+#endif
     memset(words_.get(), 0xFF, sizeof(word_t) * num_words_);
   }
 
@@ -60,7 +67,7 @@ public:
   }
 
   bool get_pending_and_release(int stream, T& output) {
-    typename google::dense_hash_map<int, T>::iterator i = pending_.find(stream);
+    typename PendingMap::iterator i = pending_.find(stream);
     if (i != pending_.end()) {
       output = i->second;
       pending_.erase(i);
@@ -75,6 +82,12 @@ public:
   size_t max_streams() const { return max_streams_; }
 
 private:
+#ifdef CASS_USE_SPARSEHASH
+  typedef google::dense_hash_map<int, T> PendingMap;
+#else
+  typedef std::map<int, T> PendingMap;
+#endif
+
 #if defined(_MSC_VER) && defined(_M_AMD64)
   typedef __int64 word_t;
 #else
@@ -141,7 +154,7 @@ private:
   const size_t num_words_;
   size_t offset_;
   ScopedPtr<word_t[]> words_;
-  google::dense_hash_map<int, T> pending_;
+  PendingMap pending_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(StreamManager);
