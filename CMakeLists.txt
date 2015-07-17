@@ -216,7 +216,7 @@ if(CASS_USE_TCMALLOC)
   set(CASS_LIBS ${CASS_LIBS} ${GPERFLIBRARY_LIBRARY})
 endif()
 
-// SparseHash
+# SparseHash
 if(CASS_USE_SPARSEHASH)
   # Setup the paths and hints for sparsehash
   set(_SPARSEHASH_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/sparsehash/")
