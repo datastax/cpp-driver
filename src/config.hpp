@@ -63,7 +63,8 @@ public:
       , latency_aware_routing_(false)
       , tcp_nodelay_enable_(false)
       , tcp_keepalive_enable_(false)
-      , tcp_keepalive_delay_secs_(0) {}
+      , tcp_keepalive_delay_secs_(0)
+      , use_schema_(true) { }
 
   unsigned thread_count_io() const { return thread_count_io_; }
 
@@ -270,6 +271,11 @@ public:
     tcp_keepalive_delay_secs_ = delay_secs;
   }
 
+  bool use_schema() const { return use_schema_; }
+  void set_use_schema(bool enable) {
+    use_schema_ = enable;
+  }
+
 private:
   int port_;
   int protocol_version_;
@@ -302,6 +308,7 @@ private:
   bool tcp_nodelay_enable_;
   bool tcp_keepalive_enable_;
   unsigned tcp_keepalive_delay_secs_;
+  bool use_schema_;
 };
 
 } // namespace cass

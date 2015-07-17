@@ -97,10 +97,7 @@ bool ControlConnection::determine_address_for_peer_host(const Address& connected
 }
 
 ControlConnection::ControlConnection()
-  : Connection::Listener(CASS_EVENT_TOPOLOGY_CHANGE |
-                         CASS_EVENT_STATUS_CHANGE |
-                         CASS_EVENT_SCHEMA_CHANGE)
-  ,  state_(CONTROL_STATE_NEW)
+  : state_(CONTROL_STATE_NEW)
   , session_(NULL)
   , connection_(NULL)
   , reconnect_timer_(NULL)
@@ -130,6 +127,14 @@ void ControlConnection::connect(Session* session) {
   if (protocol_version_ < 0) {
     protocol_version_ = CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION;
   }
+
+  if (session_->config().use_schema()) {
+    set_event_types(CASS_EVENT_TOPOLOGY_CHANGE | CASS_EVENT_STATUS_CHANGE |
+                    CASS_EVENT_SCHEMA_CHANGE);
+  } else {
+    set_event_types(CASS_EVENT_TOPOLOGY_CHANGE | CASS_EVENT_STATUS_CHANGE);
+  }
+
   reconnect(false);
 }
 
@@ -347,11 +352,13 @@ void ControlConnection::query_meta_all() {
   handler->execute_query(SELECT_LOCAL_TOKENS);
   handler->execute_query(SELECT_PEERS_TOKENS);
 
-  handler->execute_query(SELECT_KEYSPACES);
-  handler->execute_query(SELECT_COLUMN_FAMILIES);
-  handler->execute_query(SELECT_COLUMNS);
-  if (protocol_version_ >= 3) {
-    handler->execute_query(SELECT_USERTYPES);
+  if (session_->config().use_schema()) {
+    handler->execute_query(SELECT_KEYSPACES);
+    handler->execute_query(SELECT_COLUMN_FAMILIES);
+    handler->execute_query(SELECT_COLUMNS);
+    if (protocol_version_ >= 3) {
+      handler->execute_query(SELECT_USERTYPES);
+    }
   }
 }
 
@@ -432,13 +439,15 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
 
   session->purge_hosts(is_initial_connection);
 
-  session->cluster_meta().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
-  session->cluster_meta().update_tables(static_cast<ResultResponse*>(responses[3]),
-                                         static_cast<ResultResponse*>(responses[4]));
-  if (control_connection->protocol_version_ >= 3) {
-    session->cluster_meta().update_usertypes(static_cast<ResultResponse*>(responses[5]));
+  if (session->config().use_schema()) {
+    session->cluster_meta().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
+    session->cluster_meta().update_tables(static_cast<ResultResponse*>(responses[3]),
+        static_cast<ResultResponse*>(responses[4]));
+    if (control_connection->protocol_version_ >= 3) {
+      session->cluster_meta().update_usertypes(static_cast<ResultResponse*>(responses[5]));
+    }
+    session->cluster_meta().build();
   }
-  session->cluster_meta().build();
 
   if (is_initial_connection) {
     control_connection->state_ = CONTROL_STATE_READY;
