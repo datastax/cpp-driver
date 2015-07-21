@@ -1207,13 +1207,19 @@ cass_cluster_set_tcp_keepalive(CassCluster* cluster,
  * Sets the retry policy used for all requests unless overridden by setting
  * a retry policy on a statement or a batch.
  *
- * <b>Default:</b> default retry policy.
+ * <b>Default:</b> The same policy as would be created by the function:
+ * cass_retry_policy_default_new(). This policy will retry on a read timeout
+ * if there was enough replicas, but no data present, on a write timeout if a
+ * logged batch request failed to write the batch log, and on a unavailable
+ * error it retries using a new host. In all other cases the default policy
+ * will return an error.
  *
  * @public @memberof CassCluster
  *
  * @param[in] cluster
  * @param[in] retry_policy
  *
+ * @see cass_retry_policy_default_new()
  * @see cass_statement_set_retry_policy()
  * @see cass_batch_set_retry_policy()
  */
@@ -4893,7 +4899,7 @@ cass_error_result_consistency(const CassErrorResult* error_result);
  * error. Undefined for other error result types.
  */
 CASS_EXPORT cass_int32_t
-cass_error_result_actual(const CassErrorResult* error_result);
+cass_error_result_responses_received(const CassErrorResult* error_result);
 
 /**
  * Gets required responses, required acknowlegements or required alive nodes
@@ -4914,7 +4920,7 @@ cass_error_result_actual(const CassErrorResult* error_result);
  * Undefined for other error result types.
  */
 CASS_EXPORT cass_int32_t
-cass_error_result_required(const CassErrorResult* error_result);
+cass_error_result_responses_required(const CassErrorResult* error_result);
 
 
 /**
@@ -5732,7 +5738,7 @@ cass_uuid_from_string_n(const char* str,
  *
  * In all other cases the error will be returned.
  *
- * This policy always uses the queries original consistency level.
+ * This policy always uses the query's original consistency level.
  *
  * @public @memberof CassRetryPolicy
  *
