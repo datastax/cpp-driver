@@ -1975,7 +1975,8 @@ cass_statement_set_paging_size(CassStatement* statement,
                                int page_size);
 
 /**
- * Sets the statement's paging state.
+ * Sets the statement's paging state. This can be used to get the next page of
+ * data in a multi-page query.
  *
  * @public @memberof CassStatement
  *
@@ -1988,7 +1989,12 @@ cass_statement_set_paging_state(CassStatement* statement,
                                 const CassResult* result);
 
 /**
- * Sets the statement's paging state.
+ * Sets the statement's paging state. This can be used to get the next page of
+ * data in a multi-page query.
+ *
+ * <b>Warning:</b> The paging state should not be exposed to or come from
+ * untrusted environments. The paging state could be spoofed and potentially
+ * used to gain access to other data.
  *
  * @public @memberof CassStatement
  *
@@ -1996,6 +2002,8 @@ cass_statement_set_paging_state(CassStatement* statement,
  * @param[in] paging_state
  * @param[in] paging_state_size
  * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_result_paging_state()
  */
 CASS_EXPORT CassError
 cass_statement_set_paging_state_raw(CassStatement* statement,
@@ -4739,12 +4747,18 @@ cass_result_has_more_pages(const CassResult* result);
  * lifetime of the result object. If paging state needs to live beyond the
  * lifetime of the result object it must be copied.
  *
+ * <b>Warning:</b> The paging state should not be exposed to or come from
+ * untrusted environments. The paging state could be spoofed and potentially
+ * used to gain access to other data.
+ *
  * @public @memberof CassResult
  *
  * @param[in] result
  * @param[out] paging_state
  * @param[out] paging_state_size
  * @return CASS_OK if successful, otherwise error occurred
+ *
+ * @see cass_statement_set_paging_state_raw()
  */
 CASS_EXPORT CassError
 cass_result_paging_state(const CassResult* result,
