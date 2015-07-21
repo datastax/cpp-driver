@@ -62,6 +62,7 @@ public:
   enum ConnectionError {
     CONNECTION_OK,
     CONNECTION_ERROR_GENERIC,
+    CONNECTION_ERROR_TIMEOUT,
     CONNECTION_ERROR_INVALID_PROTOCOL,
     CONNECTION_ERROR_AUTH,
     CONNECTION_ERROR_SSL
@@ -123,6 +124,7 @@ public:
   bool is_invalid_protocol() const { return error_code_ == CONNECTION_ERROR_INVALID_PROTOCOL; }
   bool is_auth_error() const { return error_code_ == CONNECTION_ERROR_AUTH; }
   bool is_ssl_error() const { return error_code_ == CONNECTION_ERROR_SSL; }
+  bool is_timeout_error() const { return error_code_ == CONNECTION_ERROR_TIMEOUT; }
 
   bool is_critical_failure() const {
     return error_code_ == CONNECTION_ERROR_INVALID_PROTOCOL ||

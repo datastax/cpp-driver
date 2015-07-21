@@ -126,7 +126,7 @@ void Connection::StartupHandler::on_error(CassError code,
 
 void Connection::StartupHandler::on_timeout() {
   if (!connection_->is_closing()) {
-    connection_->notify_error("Timed out");
+    connection_->notify_error("Timed out", CONNECTION_ERROR_TIMEOUT);
   }
 }
 
@@ -496,7 +496,7 @@ void Connection::on_connect(Connector* connector) {
 void Connection::on_connect_timeout(Timer* timer) {
   Connection* connection = static_cast<Connection*>(timer->data());
   connection->connect_timer_ = NULL;
-  connection->notify_error("Connection timeout");
+  connection->notify_error("Connection timeout", CONNECTION_ERROR_TIMEOUT);
 
   connection->metrics_->connection_timeouts.inc();
 }

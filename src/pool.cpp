@@ -47,7 +47,8 @@ Pool::Pool(IOWorker* io_worker,
     , is_initial_connection_(is_initial_connection)
     , is_critical_failure_(false)
     , is_pending_flush_(false)
-    , cancel_reconnect_(false) {}
+    , cancel_reconnect_(false)
+    , respawn_timer_(NULL) { }
 
 Pool::~Pool() {
   LOG_DEBUG("Pool dtor with %u pending requests pool(%p)",
@@ -59,6 +60,10 @@ Pool::~Pool() {
     pending_requests_.remove(request_handler);
     request_handler->stop_timer();
     request_handler->retry(RETRY_WITH_NEXT_HOST);
+  }
+
+  if (respawn_timer_ != NULL) {
+    Timer::stop(respawn_timer_);
   }
 }
 
@@ -286,7 +291,16 @@ void Pool::on_close(Connection* connection) {
     metrics_->total_connections.dec();
   }
 
-  if (connection->is_defunct()) {
+  // For timeouts, if there are any valid connections left then don't close the
+  // entire pool, but attempt to reconnect the timed out connections.
+  if (connection->is_timeout_error() && !connections_.empty()) {
+    if (respawn_timer_ == NULL) {
+      respawn_timer_ = Timer::start(loop_,
+                                    config_.reconnect_wait_time_ms(),
+                                    this, on_respawn);
+    }
+    maybe_notify_ready();
+  } else if (connection->is_defunct()) {
     // If at least one connection has a critical failure then don't try to
     // reconnect automatically.
     if (connection->is_critical_failure()) {
@@ -335,6 +349,24 @@ void Pool::wait_for_connection(RequestHandler* request_handler) {
                                request_handler,
                                Pool::on_pending_request_timeout);
   add_pending_request(request_handler);
+}
+
+void Pool::on_respawn(Timer* timer) {
+  Pool* pool = static_cast<Pool*>(timer->data());
+
+  size_t current = pool->connections_.size() +
+                   pool->connections_pending_.size();
+
+  size_t want = pool->config_.core_connections_per_host();
+
+  if (current < want) {
+    size_t need = want - current;
+    for (size_t i = 0; i < need; ++i) {
+      pool->spawn_connection();
+    }
+  }
+
+  pool->respawn_timer_ = NULL;
 }
 
 } // namespace cass
