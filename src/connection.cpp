@@ -92,13 +92,13 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
 
     case CQL_OPCODE_AUTH_CHALLENGE:
       connection_->on_auth_challenge(
-            static_cast<AuthResponseRequest*>(request_.get()),
+            static_cast<const AuthResponseRequest*>(request_.get()),
             static_cast<AuthChallengeResponse*>(response->response_body().get())->token());
       break;
 
     case CQL_OPCODE_AUTH_SUCCESS:
       connection_->on_auth_success(
-            static_cast<AuthResponseRequest*>(request_.get()),
+            static_cast<const AuthResponseRequest*>(request_.get()),
             static_cast<AuthSuccessResponse*>(response->response_body().get())->token());
       break;
 
@@ -259,6 +259,7 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
   if (flush_immediately) {
     pending_write->flush();
   }
+
 
   return true;
 }
@@ -678,14 +679,16 @@ void Connection::on_authenticate() {
   }
 }
 
-void Connection::on_auth_challenge(AuthResponseRequest* request, const std::string& token) {
+void Connection::on_auth_challenge(const AuthResponseRequest* request,
+                                   const std::string& token) {
   AuthResponseRequest* auth_response
       = new AuthResponseRequest(request->auth()->evaluate_challenge(token),
-                                request->auth().release());
+                                request->auth());
   write(new StartupHandler(this, auth_response));
 }
 
-void Connection::on_auth_success(AuthResponseRequest* request, const std::string& token) {
+void Connection::on_auth_success(const AuthResponseRequest* request,
+                                 const std::string& token) {
   request->auth()->on_authenticate_success(token);
   on_ready();
 }
@@ -818,8 +821,9 @@ void Connection::send_credentials() {
 }
 
 void Connection::send_initial_auth_response() {
-  Authenticator* auth = config_.auth_provider()->new_authenticator(address_);
-  if (auth == NULL) {
+  SharedRefPtr<Authenticator> auth(
+        config_.auth_provider()->new_authenticator(address_));
+  if (!auth) {
     notify_error("Authentication required but no auth provider set", CONNECTION_ERROR_AUTH);
   } else {
     AuthResponseRequest* auth_response
@@ -1046,6 +1050,5 @@ void Connection::SslHandshakeWriter::on_write(uv_write_t* req, int status) {
   }
   delete writer;
 }
-
 
 } // namespace cass

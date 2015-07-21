@@ -99,22 +99,21 @@ public:
     REQUEST_STATE_DONE
   };
 
-  Handler()
-    : connection_(NULL)
+  Handler(const Request* request)
+    : request_(request)
+    , connection_(NULL)
     , stream_(-1)
     , state_(REQUEST_STATE_NEW) {}
 
   virtual ~Handler() {}
 
-  virtual const Request* request() const = 0;
-
   int32_t encode(int version, int flags, BufferVec* bufs);
-
-  virtual void start_request() {}
 
   virtual void on_set(ResponseMessage* response) = 0;
   virtual void on_error(CassError code, const std::string& message) = 0;
   virtual void on_timeout() = 0;
+
+  const Request* request() const { return request_.get(); }
 
   Connection* connection() const { return connection_; }
 
@@ -141,15 +140,19 @@ public:
     timer_.stop();
   }
 
+  uint64_t start_time_ns() const { return start_time_ns_; }
+
   Request::EncodingCache* encoding_cache() { return &encoding_cache_; }
 
 protected:
+  ScopedRefPtr<const Request> request_;
   Connection* connection_;
 
 private:
   RequestTimer timer_;
   int16_t stream_;
   State state_;
+  uint64_t start_time_ns_;
   Request::EncodingCache encoding_cache_;
 
 private:

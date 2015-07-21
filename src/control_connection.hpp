@@ -113,18 +113,14 @@ private:
   public:
     typedef void (*ResponseCallback)(ControlConnection*, const T&, Response*);
 
-    ControlHandler(Request* request,
+    ControlHandler(const Request* request,
                    ControlConnection* control_connection,
                    ResponseCallback response_callback,
                    const T& data)
-      : request_(request)
+      : Handler(request)
       , control_connection_(control_connection)
       , response_callback_(response_callback)
       , data_(data) {}
-
-    const Request* request() const {
-      return request_.get();
-    }
 
     virtual void on_set(ResponseMessage* response) {
       Response* response_body = response->response_body().get();
@@ -143,7 +139,6 @@ private:
     }
 
   private:
-    ScopedRefPtr<Request> request_;
     ControlConnection* control_connection_;
     ResponseCallback response_callback_;
     T data_;

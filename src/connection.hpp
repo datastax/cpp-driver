@@ -166,11 +166,8 @@ private:
   class StartupHandler : public Handler {
   public:
     StartupHandler(Connection* connection, Request* request)
-        : connection_(connection)
-        , request_(request) {}
-
-    const Request* request() const {
-      return request_.get();
+        : Handler(request) {
+      set_connection(connection);
     }
 
     virtual void on_set(ResponseMessage* response);
@@ -179,9 +176,6 @@ private:
 
   private:
     void on_result_response(ResponseMessage* response);
-
-    Connection* connection_;
-    ScopedRefPtr<Request> request_;
   };
 
   class PendingWriteBase : public List<PendingWriteBase>::Node {
@@ -279,8 +273,8 @@ private:
 
   void on_connected();
   void on_authenticate();
-  void on_auth_challenge(AuthResponseRequest* auth_response, const std::string& token);
-  void on_auth_success(AuthResponseRequest* auth_response, const std::string& token);
+  void on_auth_challenge(const AuthResponseRequest* auth_response, const std::string& token);
+  void on_auth_success(const AuthResponseRequest* auth_response, const std::string& token);
   void on_ready();
   void on_set_keyspace();
   void on_supported(ResponseMessage* response);

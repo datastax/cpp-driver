@@ -39,7 +39,7 @@ private:
   DISALLOW_COPY_AND_ASSIGN(V1Authenticator);
 };
 
-class Authenticator {
+class Authenticator : public RefCounted<Authenticator> {
 public:
   Authenticator() {}
   virtual ~Authenticator() {}
