@@ -1166,25 +1166,26 @@ cass_cluster_set_tcp_keepalive(CassCluster* cluster,
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] interval_ms Use 0 to disable heartbeat messages
+ * @param[in] interval_secs Use 0 to disable heartbeat messages
  */
 CASS_EXPORT void
 cass_cluster_set_connection_heartbeat_interval(CassCluster* cluster,
                                                unsigned interval_secs);
 
 /**
- * TODO
+ * Sets the amount of time a connection is allowed to be without a successful
+ * hearbeat response before being terminated and scheduled for reconnection.
  *
  * <b>Default:</b> 60 seconds
  *
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] interval_ms
+ * @param[in] timeout_secs
  */
 CASS_EXPORT void
-cass_cluster_set_connection_idle_interval(CassCluster* cluster,
-                                          unsigned interval_secs);
+cass_cluster_set_connection_idle_timeout(CassCluster* cluster,
+                                         unsigned timeout_secs);
 
 /***********************************************************************************
  *

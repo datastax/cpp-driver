@@ -300,9 +300,9 @@ void cass_cluster_set_connection_heartbeat_interval(CassCluster* cluster,
   cluster->config().set_connection_heartbeat_interval_secs(interval_secs);
 }
 
-void cass_cluster_set_connection_idle_interval(CassCluster* cluster,
-                                               unsigned interval_secs) {
-  cluster->config().set_connection_idle_interval_secs(interval_secs);
+void cass_cluster_set_connection_idle_timeout(CassCluster* cluster,
+                                               unsigned timeout_secs) {
+  cluster->config().set_connection_idle_timeout_secs(timeout_secs);
 }
 
 void cass_cluster_free(CassCluster* cluster) {

@@ -328,7 +328,7 @@ private:
   Timer connect_timer_;
   ScopedPtr<SslSession> ssl_session_;
 
-  uint64_t idle_time_ms_;
+  uint64_t idle_start_time_ms_;
   bool heartbeat_outstanding_;
   Timer heartbeat_timer_;
 

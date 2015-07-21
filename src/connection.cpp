@@ -149,7 +149,7 @@ Connection::HeartbeatHandler::HeartbeatHandler(Connection* connection)
 }
 
 void Connection::HeartbeatHandler::on_set(ResponseMessage* response) {
-  connection_->idle_time_ms_ = 0;
+  connection_->idle_start_time_ms_ = 0;
   connection_->heartbeat_outstanding_ = false;
 }
 
@@ -187,7 +187,7 @@ Connection::Connection(uv_loop_t* loop,
     , listener_(listener)
     , response_(new ResponseMessage())
     , ssl_session_(NULL)
-    , idle_time_ms_(0)
+    , idle_start_time_ms_(0)
     , heartbeat_outstanding_(false) {
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
@@ -289,7 +289,7 @@ bool Connection::internal_write(Handler* handler, bool flush_immediately, bool r
   }
 
   if (reset_idle_time) {
-    idle_time_ms_ = 0;
+    idle_start_time_ms_ = 0;
     restart_heartbeat_timer();
   }
 
@@ -867,10 +867,10 @@ void Connection::restart_heartbeat_timer() {
 void Connection::on_heartbeat(Timer* timer) {
   Connection* connection = static_cast<Connection*>(timer->data());
 
-  if (connection->idle_time_ms_ == 0) {
-    connection->idle_time_ms_ = get_time_since_epoch_ms();
-  } else if ((get_time_since_epoch_ms() - connection->idle_time_ms_) / 1000 >
-             connection->config().connection_idle_interval_secs()){
+  if (connection->idle_start_time_ms_ == 0) {
+    connection->idle_start_time_ms_ = get_time_since_epoch_ms();
+  } else if ((get_time_since_epoch_ms() - connection->idle_start_time_ms_) / 1000 >
+             connection->config().connection_idle_timeout_secs()){
     connection->notify_error("Failed to send a heartbeat within connection idle interval. "
                              "Terminating connection...",
                  CONNECTION_ERROR_TIMEOUT);

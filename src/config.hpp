@@ -64,7 +64,7 @@ public:
       , tcp_nodelay_enable_(false)
       , tcp_keepalive_enable_(false)
       , tcp_keepalive_delay_secs_(0)
-      , connection_idle_interval_secs_(60)
+      , connection_idle_timeout_secs_(60)
       , connection_heartbeat_interval_secs_(30) { }
 
   unsigned thread_count_io() const { return thread_count_io_; }
@@ -272,12 +272,12 @@ public:
     tcp_keepalive_delay_secs_ = delay_secs;
   }
 
-  unsigned connection_idle_interval_secs() const {
-    return connection_idle_interval_secs_;
+  unsigned connection_idle_timeout_secs() const {
+    return connection_idle_timeout_secs_;
   }
 
-  void set_connection_idle_interval_secs(unsigned interval_secs) {
-    connection_idle_interval_secs_ = interval_secs;
+  void set_connection_idle_timeout_secs(unsigned timeout_secs) {
+    connection_idle_timeout_secs_ = timeout_secs;
   }
 
   unsigned connection_heartbeat_interval_secs() const {
@@ -320,7 +320,7 @@ private:
   bool tcp_nodelay_enable_;
   bool tcp_keepalive_enable_;
   unsigned tcp_keepalive_delay_secs_;
-  unsigned connection_idle_interval_secs_;
+  unsigned connection_idle_timeout_secs_;
   unsigned connection_heartbeat_interval_secs_;
 };
 
