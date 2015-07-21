@@ -122,19 +122,7 @@ private:
   typedef std::map<Address, SharedRefPtr<Pool> > PoolMap;
   typedef std::vector<SharedRefPtr<Pool> > PoolVec;
 
-  struct PendingReconnect {
-
-    void stop_timer();
-
-    IOWorker *io_worker;
-    Address address;
-    Timer timer;
-  };
-
-  typedef std::map<Address, PendingReconnect> PendingReconnectMap;
-
   void schedule_reconnect(const Address& address);
-  void cancel_reconnect(const Address& address);
 
 private:
   Session* session_;
@@ -153,7 +141,6 @@ private:
   PoolVec pools_pending_flush_;
   bool is_closing_;
   int pending_request_count_;
-  PendingReconnectMap pending_reconnects_;
 
   AsyncQueue<SPSCQueue<RequestHandler*> > request_queue_;
 };
