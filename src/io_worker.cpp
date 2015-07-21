@@ -245,9 +245,8 @@ void IOWorker::close_handles() {
 
   for (PendingReconnectMap::iterator it = pending_reconnects_.begin(),
        end = pending_reconnects_.end(); it != end; ++it) {
-    LOG_DEBUG("Stopping reconnect timers reconnect(%p timer(%p)) io_worker(%p)",
+    LOG_DEBUG("Stopping reconnect timers reconnect(%p) io_worker(%p)",
               static_cast<void*>(&it->second),
-              static_cast<void*>(it->second.timer),
               static_cast<void*>(this));
     it->second.stop_timer();
   }
@@ -352,13 +351,12 @@ void IOWorker::schedule_reconnect(const Address& address) {
   PendingReconnect& pr = pending_reconnects_[address];
   pr.io_worker = this;
   pr.address = address;
-  pr.timer = Timer::start(loop(),
-                          config_.reconnect_wait_time_ms(),
-                          &pr,
-                          IOWorker::on_pending_pool_reconnect);
-  LOG_DEBUG("Scheduling reconnect(%p timer(%p)) for host %s io_worker(%p)",
+  pr.timer.start(loop(),
+                 config_.reconnect_wait_time_ms(),
+                 &pr,
+                 IOWorker::on_pending_pool_reconnect);
+  LOG_DEBUG("Scheduling reconnect(%p) for host %s io_worker(%p)",
             static_cast<void*>(&pr),
-            static_cast<void*>(pr.timer),
             address.to_string().c_str(),
             static_cast<void*>(this));
 }
@@ -366,9 +364,8 @@ void IOWorker::schedule_reconnect(const Address& address) {
 void IOWorker::cancel_reconnect(const Address& address) {
   PendingReconnectMap::iterator it = pending_reconnects_.find(address);
   if (it != pending_reconnects_.end()) {
-    LOG_DEBUG("Cancelling reconnect(%p timer(%p)) for host %s io_worker(%p)",
+    LOG_DEBUG("Cancelling reconnect(%p) for host %s io_worker(%p)",
               static_cast<void*>(&it->second),
-              static_cast<void*>(it->second.timer),
               address.to_string().c_str(),
               static_cast<void*>(this));
     it->second.stop_timer();
@@ -377,10 +374,7 @@ void IOWorker::cancel_reconnect(const Address& address) {
 }
 
 void IOWorker::PendingReconnect::stop_timer() {
-  if (timer != NULL) {
-    Timer::stop(timer);
-    timer = NULL;
-  }
+  timer.stop();
 }
 
 } // namespace cass

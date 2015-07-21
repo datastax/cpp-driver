@@ -87,7 +87,7 @@ private:
   virtual void on_availability_change(Connection* connection);
   virtual void on_event(EventResponse* response) {}
 
-  static void on_pending_request_timeout(RequestTimer* timer);
+  static void on_pending_request_timeout(Timer* timer);
   static void on_respawn(Timer* timer);
 
   Connection* find_least_busy();
@@ -113,7 +113,7 @@ private:
   bool is_pending_flush_;
   bool cancel_reconnect_;
 
-  Timer* respawn_timer_;
+  Timer respawn_timer_;
 };
 
 } // namespace cass

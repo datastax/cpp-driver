@@ -205,7 +205,7 @@ private:
   State state_;
   Session* session_;
   Connection* connection_;
-  Timer* reconnect_timer_;
+  Timer reconnect_timer_;
   ScopedPtr<QueryPlan> query_plan_;
   Address current_host_address_;
   int protocol_version_;

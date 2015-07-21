@@ -128,7 +128,7 @@ private:
 
     IOWorker *io_worker;
     Address address;
-    Timer* timer;
+    Timer timer;
   };
 
   typedef std::map<Address, PendingReconnect> PendingReconnectMap;

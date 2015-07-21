@@ -31,6 +31,7 @@
 #include "scoped_ptr.hpp"
 #include "ssl.hpp"
 #include "stream_manager.hpp"
+#include "timer.hpp"
 
 #include <uv.h>
 
@@ -44,7 +45,6 @@ class Config;
 class Connector;
 class EventResponse;
 class Request;
-class Timer;
 
 class Connection {
 public:
@@ -142,7 +142,7 @@ public:
   size_t available_streams() const { return stream_manager_.available_streams(); }
   size_t pending_request_count() const { return stream_manager_.pending_streams(); }
 
-  static void on_timeout(RequestTimer* timer);
+  static void on_timeout(Timer* timer);
 
 private:
   class SslHandshakeWriter {
@@ -238,13 +238,12 @@ private:
   struct PendingSchemaAgreement
       : public List<PendingSchemaAgreement>::Node {
     PendingSchemaAgreement(const SharedRefPtr<SchemaChangeHandler>& handler)
-        : handler(handler)
-        , timer(NULL) {}
+        : handler(handler) { }
 
     void stop_timer();
 
     SharedRefPtr<SchemaChangeHandler> handler;
-    Timer* timer;
+    Timer timer;
   };
 
   void internal_close(ConnectionState close_state);
@@ -280,7 +279,6 @@ private:
   void on_supported(ResponseMessage* response);
   static void on_pending_schema_agreement(Timer* timer);
 
-  void stop_connect_timer();
   void notify_ready();
   void notify_error(const std::string& message, ConnectionError code = CONNECTION_ERROR_GENERIC);
   void log_error(const std::string& error);
@@ -314,7 +312,7 @@ private:
   StreamManager<Handler*> stream_manager_;
 
   uv_tcp_t socket_;
-  Timer* connect_timer_;
+  Timer connect_timer_;
   ScopedPtr<SslSession> ssl_session_;
 
   // buffer reuse for libuv
