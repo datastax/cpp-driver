@@ -1164,7 +1164,7 @@ cass_cluster_set_tcp_keepalive(CassCluster* cluster,
 /**
  * Enable/Disable retrieving and updating schema metadata. If disabled
  * this is allows the driver to skip over retrieving and updating schema
- * metadata, but it also disable's the usage of token-aware routing and
+ * metadata, but it also disables the usage of token-aware routing and
  * cass_session_get_schema() will always return an empty object. This can be
  * useful for reducing the startup overhead of short-lived sessions.
  *
