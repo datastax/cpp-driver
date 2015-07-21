@@ -143,6 +143,29 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
   }
 }
 
+Connection::HeartbeatHandler::HeartbeatHandler(Connection* connection)
+  : Handler(new OptionsRequest()) {
+  set_connection(connection);
+}
+
+void Connection::HeartbeatHandler::on_set(ResponseMessage* response) {
+  connection_->idle_time_ms_ = 0;
+  connection_->heartbeat_outstanding_ = false;
+}
+
+void Connection::HeartbeatHandler::on_error(CassError code, const std::string& message) {
+  LOG_WARN("An error occurred on host %s during a heartbeat request: %s",
+           connection_->address_string().c_str(),
+           message.c_str());
+  connection_->heartbeat_outstanding_ = false;
+}
+
+void Connection::HeartbeatHandler::on_timeout() {
+  LOG_WARN("Heartbeat request timed out on host %s",
+           connection_->address_string().c_str());
+  connection_->heartbeat_outstanding_ = false;
+}
+
 Connection::Connection(uv_loop_t* loop,
                        const Config& config,
                        Metrics* metrics,
@@ -163,7 +186,9 @@ Connection::Connection(uv_loop_t* loop,
     , protocol_version_(protocol_version)
     , listener_(listener)
     , response_(new ResponseMessage())
-    , ssl_session_(NULL) {
+    , ssl_session_(NULL)
+    , idle_time_ms_(0)
+    , heartbeat_outstanding_(false) {
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
 
@@ -203,6 +228,10 @@ void Connection::connect() {
 }
 
 bool Connection::write(Handler* handler, bool flush_immediately) {
+  return internal_write(handler, flush_immediately, true);
+}
+
+bool Connection::internal_write(Handler* handler, bool flush_immediately, bool reset_idle_time) {
   int8_t stream = stream_manager_.acquire_stream(handler);
   if (stream < 0) {
     return false;
@@ -259,6 +288,10 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
     pending_write->flush();
   }
 
+  if (reset_idle_time) {
+    idle_time_ms_ = 0;
+    restart_heartbeat_timer();
+  }
 
   return true;
 }
@@ -294,6 +327,7 @@ void Connection::internal_close(ConnectionState close_state) {
       state_ != CONNECTION_STATE_CLOSE_DEFUNCT) {
     uv_handle_t* handle = copy_cast<uv_tcp_t*, uv_handle_t*>(&socket_);
     if (!uv_is_closing(handle)) {
+      heartbeat_timer_.stop();
       connect_timer_.stop();
       if (state_ == CONNECTION_STATE_CONNECTED ||
           state_ == CONNECTION_STATE_READY) {
@@ -728,6 +762,7 @@ void Connection::on_pending_schema_agreement(Timer* timer) {
 
 void Connection::notify_ready() {
   connect_timer_.stop();
+  restart_heartbeat_timer();
   set_state(CONNECTION_STATE_READY);
   listener_->on_ready(this);
 }
@@ -819,6 +854,43 @@ void Connection::send_initial_auth_response() {
         = new AuthResponseRequest(auth->initial_response(), auth);
     write(new StartupHandler(this, auth_response));
   }
+}
+
+void Connection::restart_heartbeat_timer() {
+  if (config_.connection_heartbeat_interval_secs() > 0) {
+    heartbeat_timer_.start(loop_,
+                           1000 * config_.connection_heartbeat_interval_secs(),
+                           this, on_heartbeat);
+  }
+}
+
+void Connection::on_heartbeat(Timer* timer) {
+  Connection* connection = static_cast<Connection*>(timer->data());
+
+  if (connection->idle_time_ms_ == 0) {
+    connection->idle_time_ms_ = get_time_since_epoch_ms();
+  } else if ((get_time_since_epoch_ms() - connection->idle_time_ms_) / 1000 >
+             connection->config().connection_idle_interval_secs()){
+    connection->notify_error("Failed to send a heartbeat within connection idle interval. "
+                             "Terminating connection...",
+                 CONNECTION_ERROR_TIMEOUT);
+    return;
+  }
+
+  if (!connection->heartbeat_outstanding_) {
+    if (!connection->internal_write(new HeartbeatHandler(connection), true, false)) {
+      // Recycling only this connection with a timeout error. This is unlikely and
+      // it means the connection ran out of stream IDs as a result of requests
+      // that never returned and as a result timed out.
+      connection->notify_error("No streams IDs available for heartbeat request. "
+                               "Terminating connection...",
+                               CONNECTION_ERROR_TIMEOUT);
+      return;
+    }
+    connection->heartbeat_outstanding_ = true;
+  }
+
+  connection->restart_heartbeat_timer();
 }
 
 void Connection::PendingSchemaAgreement::stop_timer() {

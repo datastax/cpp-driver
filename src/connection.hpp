@@ -178,6 +178,15 @@ private:
     void on_result_response(ResponseMessage* response);
   };
 
+  class HeartbeatHandler : public Handler {
+  public:
+    HeartbeatHandler(Connection* connection);
+
+    virtual void on_set(ResponseMessage* response);
+    virtual void on_error(CassError code, const std::string& message);
+    virtual void on_timeout();
+  };
+
   class PendingWriteBase : public List<PendingWriteBase>::Node {
   public:
     PendingWriteBase(Connection* connection)
@@ -246,6 +255,7 @@ private:
     Timer timer;
   };
 
+  bool internal_write(Handler* request, bool flush_immediately, bool reset_idle_time);
   void internal_close(ConnectionState close_state);
   void set_state(ConnectionState state);
   void consume(char* input, size_t size);
@@ -288,6 +298,9 @@ private:
   void send_credentials();
   void send_initial_auth_response();
 
+  void restart_heartbeat_timer();
+  static void on_heartbeat(Timer* timer);
+
 private:
   ConnectionState state_;
   ConnectionError error_code_;
@@ -314,6 +327,10 @@ private:
   uv_tcp_t socket_;
   Timer connect_timer_;
   ScopedPtr<SslSession> ssl_session_;
+
+  uint64_t idle_time_ms_;
+  bool heartbeat_outstanding_;
+  Timer heartbeat_timer_;
 
   // buffer reuse for libuv
   std::stack<uv_buf_t> buffer_reuse_list_;
