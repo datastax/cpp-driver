@@ -76,10 +76,10 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
       ErrorResponse* error
           = static_cast<ErrorResponse*>(response->response_body().get());
       if (error->code() == CQL_ERROR_PROTOCOL_ERROR &&
-          error->message().find("Invalid or unsupported protocol version") != std::string::npos) {
-        connection_->notify_error(error->message(), CONNECTION_ERROR_INVALID_PROTOCOL);
+          error->message().to_string().find("Invalid or unsupported protocol version") != std::string::npos) {
+        connection_->notify_error(error->message().to_string(), CONNECTION_ERROR_INVALID_PROTOCOL);
       } else if (error->code() == CQL_ERROR_BAD_CREDENTIALS) {
-        connection_->notify_error(error->message(), CONNECTION_ERROR_AUTH);
+        connection_->notify_error(error->message().to_string(), CONNECTION_ERROR_AUTH);
       } else {
         connection_->notify_error("Received error response " + error->error_message());
       }
@@ -957,6 +957,12 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
         // returned. This is now responsible for cleanup.
         handler->stop_timer();
         handler->set_state(Handler::REQUEST_STATE_DONE);
+        handler->dec_ref();
+        break;
+
+      case Handler::REQUEST_STATE_RETRY_WRITE_OUTSTANDING:
+        handler->stop_timer();
+        handler->retry();
         handler->dec_ref();
         break;
 

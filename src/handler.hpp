@@ -45,6 +45,7 @@ public:
     REQUEST_STATE_TIMEOUT,
     REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING,
     REQUEST_STATE_READ_BEFORE_WRITE,
+    REQUEST_STATE_RETRY_WRITE_OUTSTANDING,
     REQUEST_STATE_DONE
   };
 
@@ -52,7 +53,8 @@ public:
     : request_(request)
     , connection_(NULL)
     , stream_(-1)
-    , state_(REQUEST_STATE_NEW) {}
+    , state_(REQUEST_STATE_NEW)
+    , cl_(CASS_CONSISTENCY_UNKNOWN) { }
 
   virtual ~Handler() {}
 
@@ -61,6 +63,8 @@ public:
   virtual void on_set(ResponseMessage* response) = 0;
   virtual void on_error(CassError code, const std::string& message) = 0;
   virtual void on_timeout() = 0;
+
+  virtual void retry() { }
 
   const Request* request() const { return request_.get(); }
 
@@ -89,6 +93,12 @@ public:
     timer_.stop();
   }
 
+  CassConsistency consistency() const {
+    return cl_ != CASS_CONSISTENCY_UNKNOWN ? cl_ : request()->consistency();
+  }
+
+  void set_consistency(CassConsistency cl) { cl_ = cl; }
+
   uint64_t start_time_ns() const { return start_time_ns_; }
 
   Request::EncodingCache* encoding_cache() { return &encoding_cache_; }
@@ -101,6 +111,7 @@ private:
   Timer timer_;
   int stream_;
   State state_;
+  CassConsistency cl_;
   uint64_t start_time_ns_;
   Request::EncodingCache encoding_cache_;
 

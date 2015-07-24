@@ -21,6 +21,7 @@
 #include "cassandra.h"
 #include "dc_aware_policy.hpp"
 #include "latency_aware_policy.hpp"
+#include "retry_policy.hpp"
 #include "ssl.hpp"
 #include "token_aware_policy.hpp"
 
@@ -65,7 +66,8 @@ public:
       , tcp_keepalive_enable_(false)
       , tcp_keepalive_delay_secs_(0)
       , connection_idle_timeout_secs_(60)
-      , connection_heartbeat_interval_secs_(30) { }
+      , connection_heartbeat_interval_secs_(30)
+      , retry_policy_(new DefaultRetryPolicy()) { }
 
   unsigned thread_count_io() const { return thread_count_io_; }
 
@@ -288,6 +290,15 @@ public:
     connection_heartbeat_interval_secs_ = interval_secs;
   }
 
+  RetryPolicy* retry_policy() const {
+    return retry_policy_.get();
+  }
+
+  void set_retry_policy(RetryPolicy* retry_policy) {
+    if (retry_policy == NULL) return;
+    retry_policy_.reset(retry_policy);
+  }
+
 private:
   int port_;
   int protocol_version_;
@@ -322,6 +333,7 @@ private:
   unsigned tcp_keepalive_delay_secs_;
   unsigned connection_idle_timeout_secs_;
   unsigned connection_heartbeat_interval_secs_;
+  SharedRefPtr<RetryPolicy> retry_policy_;
 };
 
 } // namespace cass

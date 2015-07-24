@@ -305,6 +305,11 @@ void cass_cluster_set_connection_idle_timeout(CassCluster* cluster,
   cluster->config().set_connection_idle_timeout_secs(timeout_secs);
 }
 
+void cass_cluster_set_retry_policy(CassCluster* cluster,
+                                   CassRetryPolicy* retry_policy) {
+  cluster->config().set_retry_policy(retry_policy);
+}
+
 void cass_cluster_free(CassCluster* cluster) {
   delete cluster->from();
 }

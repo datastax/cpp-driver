@@ -40,6 +40,12 @@ CassError cass_batch_set_consistency(CassBatch* batch,
   return CASS_OK;
 }
 
+CassError cass_batch_set_retry_policy(CassBatch* batch,
+                                      CassRetryPolicy* retry_policy) {
+  batch->set_retry_policy(retry_policy);
+  return CASS_OK;
+}
+
 CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
   batch->add_statement(statement);
   return CASS_OK;
@@ -49,7 +55,7 @@ CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
 
 namespace cass {
 
-int BatchRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) const {
+int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
   int length = 0;
   uint8_t flags = 0;
 
@@ -76,7 +82,7 @@ int BatchRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) con
     if (statement->has_names_for_values()) {
       return ENCODE_ERROR_BATCH_WITH_NAMED_VALUES;
     }
-    int32_t result = (*i)->encode_batch(version, bufs, cache);
+    int32_t result = (*i)->encode_batch(version, bufs, handler->encoding_cache());
     if (result < 0) {
       return result;
     }
