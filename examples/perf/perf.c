@@ -114,6 +114,7 @@ CassCluster* create_cluster() {
   cass_cluster_set_pending_requests_high_water_mark(cluster, 10000);
   cass_cluster_set_core_connections_per_host(cluster, 1);
   cass_cluster_set_max_connections_per_host(cluster, 2);
+  cass_cluster_set_max_requests_per_flush(cluster, 10000);
   return cluster;
 }
 
