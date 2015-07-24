@@ -16,11 +16,11 @@
 
 #include "batch_request.hpp"
 
+#include "constants.hpp"
 #include "execute_request.hpp"
 #include "external_types.hpp"
 #include "serialization.hpp"
 #include "statement.hpp"
-
 
 extern "C" {
 
@@ -40,6 +40,24 @@ CassError cass_batch_set_consistency(CassBatch* batch,
   return CASS_OK;
 }
 
+CassError cass_batch_set_serial_consistency(CassBatch* batch,
+                                            CassConsistency serial_consistency) {
+  batch->set_serial_consistency(serial_consistency);
+  return CASS_OK;
+}
+
+CassError cass_batch_set_timestamp(CassBatch* batch,
+                                   cass_int64_t timestamp) {
+  batch->set_timestamp(timestamp);
+  return CASS_OK;
+}
+
+CassError cass_batch_set_retry_policy(CassBatch* batch,
+                                      CassRetryPolicy* retry_policy) {
+  batch->set_retry_policy(retry_policy);
+  return CASS_OK;
+}
+
 CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
   batch->add_statement(statement);
   return CASS_OK;
@@ -49,7 +67,7 @@ CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
 
 namespace cass {
 
-int BatchRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) const {
+int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
   int length = 0;
   uint8_t flags = 0;
 
@@ -76,7 +94,7 @@ int BatchRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) con
     if (statement->has_names_for_values()) {
       return ENCODE_ERROR_BATCH_WITH_NAMED_VALUES;
     }
-    int32_t result = (*i)->encode_batch(version, bufs, cache);
+    int32_t result = (*i)->encode_batch(version, bufs, handler->encoding_cache());
     if (result < 0) {
       return result;
     }
@@ -87,14 +105,33 @@ int BatchRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) con
     // <consistency> [short]
     size_t buf_size = sizeof(uint16_t);
     if (version >= 3) {
-      buf_size += sizeof(uint8_t);
+      // <flags>[<serial_consistency><timestamp>]
+      buf_size += sizeof(uint8_t); // [byte]
+
+      if (serial_consistency() != 0) {
+        buf_size += sizeof(uint16_t); // [short]
+        flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
+      }
+
+      if (handler->timestamp() != CASS_INT64_MIN) {
+        buf_size += sizeof(int64_t); // [long]
+        flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
+      }
     }
 
     Buffer buf(buf_size);
 
     size_t pos = buf.encode_uint16(0, consistency_);
     if (version >= 3) {
-      buf.encode_byte(pos, flags);
+      pos = buf.encode_byte(pos, flags);
+
+      if (serial_consistency() != 0) {
+        pos = buf.encode_uint16(pos, serial_consistency());
+      }
+
+      if (handler->timestamp() != CASS_INT64_MIN) {
+        pos = buf.encode_int64(pos, handler->timestamp());
+      }
     }
 
     bufs->push_back(buf);

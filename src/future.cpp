@@ -55,9 +55,6 @@ const CassResult* cass_future_get_result(CassFuture* future) {
   }
   cass::ResponseFuture* response_future =
       static_cast<cass::ResponseFuture*>(future->from());
-  if (response_future->is_error()) {
-    return NULL;
-  }
 
   cass::ResultResponse* result
       = static_cast<cass::ResultResponse*>(response_future->release_result());
@@ -75,9 +72,6 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
   }
   cass::ResponseFuture* response_future =
       static_cast<cass::ResponseFuture*>(future->from());
-  if (response_future->is_error()) {
-    return NULL;
-  }
   cass::ScopedPtr<cass::ResultResponse> result(
       static_cast<cass::ResultResponse*>(response_future->release_result()));
   if (result && result->kind() == CASS_RESULT_KIND_PREPARED) {
@@ -89,6 +83,19 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
     return CassPrepared::to(prepared);
   }
   return NULL;
+}
+
+const CassErrorResult* cass_future_get_error_result(CassFuture* future) {
+  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
+    return NULL;
+  }
+  cass::ResponseFuture* response_future =
+      static_cast<cass::ResponseFuture*>(future->from());
+
+  cass::ErrorResponse* error_result
+      = static_cast<cass::ErrorResponse*>(response_future->release_result());
+
+  return CassErrorResult::to(error_result);
 }
 
 CassError cass_future_error_code(CassFuture* future) {

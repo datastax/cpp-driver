@@ -21,6 +21,7 @@
 #define __CASS_METRICS_HPP_INCLUDED__
 
 #include "atomic.hpp"
+#include "constants.hpp"
 #include "scoped_ptr.hpp"
 #include "scoped_lock.hpp"
 
@@ -38,7 +39,6 @@
 #include <sched.h>
 #endif
 
-#include <limits>
 #include <math.h>
 
 namespace cass {
@@ -349,7 +349,7 @@ public:
       WriterReaderPhaser()
         : start_epoch_(0)
         , even_end_epoch_(0)
-        , odd_end_epoch_(std::numeric_limits<int64_t>::min()) {}
+        , odd_end_epoch_(CASS_INT64_MIN) {}
 
       int64_t writer_critical_section_enter() {
         return start_epoch_.fetch_add(1);
@@ -373,7 +373,7 @@ public:
           initial_start_value = 0;
           even_end_epoch_.store(initial_start_value, MEMORY_ORDER_RELAXED);
         } else {
-          initial_start_value = std::numeric_limits<int64_t>::min();
+          initial_start_value = CASS_INT64_MIN;
           odd_end_epoch_.store(initial_start_value, MEMORY_ORDER_RELAXED);
         }
 

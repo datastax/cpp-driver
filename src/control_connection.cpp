@@ -100,7 +100,6 @@ ControlConnection::ControlConnection()
   : state_(CONTROL_STATE_NEW)
   , session_(NULL)
   , connection_(NULL)
-  , reconnect_timer_(NULL)
   , protocol_version_(0)
   , query_tokens_(false) {}
 
@@ -112,7 +111,7 @@ void ControlConnection::clear() {
   state_ = CONTROL_STATE_NEW;
   session_ = NULL;
   connection_ = NULL;
-  reconnect_timer_ = NULL;
+  reconnect_timer_.stop();
   query_plan_.reset();
   protocol_version_ = 0;
   last_connection_error_.clear();
@@ -143,17 +142,14 @@ void ControlConnection::close() {
   if (connection_ != NULL) {
     connection_->close();
   }
-  if (reconnect_timer_ != NULL) {
-    Timer::stop(reconnect_timer_);
-    reconnect_timer_ = NULL;
-  }
+  reconnect_timer_.stop();
 }
 
 void ControlConnection::schedule_reconnect(uint64_t ms) {
-  reconnect_timer_= Timer::start(session_->loop(),
-                                 ms,
-                                 this,
-                                 ControlConnection::on_reconnect);
+  reconnect_timer_.start(session_->loop(),
+                         ms,
+                         this,
+                         ControlConnection::on_reconnect);
 }
 
 void ControlConnection::reconnect(bool retry_current_host) {
@@ -225,13 +221,13 @@ void ControlConnection::on_close(Connection* connection) {
                protocol_version_ - 1);
       protocol_version_--;
       retry_current_host = true;
-    } else if (!connection->auth_error().empty()) {
+    } else if (!connection->is_auth_error()) {
       session_->on_control_connection_error(CASS_ERROR_SERVER_BAD_CREDENTIALS,
-                                            connection->auth_error());
+                                            connection->error_message());
       return;
-    } else if (!connection->ssl_error().empty()) {
+    } else if (!connection->is_ssl_error()) {
       session_->on_control_connection_error(connection->ssl_error_code(),
-                                            connection->ssl_error());
+                                            connection->error_message());
       return;
     }
   }
@@ -767,7 +763,6 @@ void ControlConnection::on_reconnect(Timer* timer) {
   ControlConnection* control_connection = static_cast<ControlConnection*>(timer->data());
   control_connection->query_plan_.reset(control_connection->session_->new_query_plan());
   control_connection->reconnect(false);
-  control_connection->reconnect_timer_ = NULL;
 }
 
 template<class T>

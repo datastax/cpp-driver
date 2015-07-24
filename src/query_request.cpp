@@ -16,6 +16,8 @@
 
 #include "query_request.hpp"
 
+#include "constants.hpp"
+#include "handler.hpp"
 #include "logger.hpp"
 #include "serialization.hpp"
 
@@ -82,27 +84,27 @@ int32_t QueryRequest::copy_buffers_with_names(int version,
   return size;
 }
 
-int QueryRequest::encode(int version, BufferVec* bufs, EncodingCache* cache) const {
+int QueryRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
   if (version == 1) {
-    return internal_encode_v1(bufs);
+    return internal_encode_v1(handler, bufs);
   } else  {
-    return internal_encode(version, bufs, cache);
+    return internal_encode(version, handler, bufs);
   }
 }
 
-int QueryRequest::internal_encode_v1(BufferVec* bufs) const {
+int QueryRequest::internal_encode_v1(Handler* handler, BufferVec* bufs) const {
   // <query> [long string] + <consistency> [short]
   size_t length = sizeof(int32_t) + query_.size() + sizeof(uint16_t);
 
   Buffer buf(length);
   size_t pos = buf.encode_long_string(0, query_.data(), query_.size());
-  buf.encode_uint16(pos, consistency());
+  buf.encode_uint16(pos, handler->consistency());
   bufs->push_back(buf);
 
   return length;
 }
 
-int QueryRequest::internal_encode(int version, BufferVec* bufs, EncodingCache* cache) const {
+int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs) const {
   int length = 0;
   uint8_t flags = this->flags();
 
@@ -133,13 +135,18 @@ int QueryRequest::internal_encode(int version, BufferVec* bufs, EncodingCache* c
     flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
   }
 
+  if (version >= 3 && handler->timestamp() != CASS_INT64_MIN) {
+      paging_buf_size += sizeof(int64_t); // [long]
+      flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
+  }
+
   {
     bufs->push_back(Buffer(query_buf_size));
     length += query_buf_size;
 
     Buffer& buf = bufs->back();
     size_t pos = buf.encode_long_string(0, query_.data(), query_.size());
-    pos = buf.encode_uint16(pos, consistency());
+    pos = buf.encode_uint16(pos, handler->consistency());
     pos = buf.encode_byte(pos, flags);
 
     if (has_names_for_values()) {
@@ -148,10 +155,10 @@ int QueryRequest::internal_encode(int version, BufferVec* bufs, EncodingCache* c
         return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
       }
       buf.encode_uint16(pos, value_names_.size());
-      length += copy_buffers_with_names(version, bufs, cache);
+      length += copy_buffers_with_names(version, bufs, handler->encoding_cache());
     } else if (elements_count() > 0) {
       buf.encode_uint16(pos, elements_count());
-      length += copy_buffers(version, bufs, cache);
+      length += copy_buffers(version, bufs, handler->encoding_cache());
     }
   }
 
@@ -172,6 +179,10 @@ int QueryRequest::internal_encode(int version, BufferVec* bufs, EncodingCache* c
 
     if (serial_consistency() != 0) {
       pos = buf.encode_uint16(pos, serial_consistency());
+    }
+
+    if (version >= 3 && handler->timestamp() != CASS_INT64_MIN) {
+      pos = buf.encode_int64(pos, handler->timestamp());
     }
   }
 

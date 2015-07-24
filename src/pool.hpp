@@ -24,6 +24,7 @@
 #include "request.hpp"
 #include "request_handler.hpp"
 #include "scoped_ptr.hpp"
+#include "timer.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -42,6 +43,7 @@ public:
   enum PoolState {
     POOL_STATE_NEW,
     POOL_STATE_CONNECTING,
+    POOL_STATE_WAITING_TO_CONNECT,
     POOL_STATE_READY,
     POOL_STATE_CLOSING,
     POOL_STATE_CLOSED
@@ -53,6 +55,7 @@ public:
   virtual ~Pool();
 
   void connect();
+  void delayed_connect();
   void close(bool cancel_reconnect = false);
 
   bool write(Connection* connection, RequestHandler* request_handler);
@@ -86,7 +89,9 @@ private:
   virtual void on_availability_change(Connection* connection);
   virtual void on_event(EventResponse* response) {}
 
-  static void on_pending_request_timeout(RequestTimer* timer);
+  static void on_pending_request_timeout(Timer* timer);
+  static void on_partial_reconnect(Timer* timer);
+  static void on_wait_to_connect(Timer* timer);
 
   Connection* find_least_busy();
 
@@ -110,6 +115,8 @@ private:
   bool is_critical_failure_;
   bool is_pending_flush_;
   bool cancel_reconnect_;
+
+  Timer connect_timer;
 };
 
 } // namespace cass

@@ -38,7 +38,7 @@ public:
   ResultResponse()
       : Response(CQL_OPCODE_RESULT)
       , protocol_version_(0)
-      , kind_(0)
+      , kind_(CASS_RESULT_KIND_VOID)
       , has_more_pages_(false)
       , paging_state_(NULL)
       , paging_state_size_(0)

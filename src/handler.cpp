@@ -35,7 +35,7 @@ int32_t Handler::encode(int version, int flags, BufferVec* bufs) {
   bufs->push_back(Buffer()); // Placeholder
 
   const Request* req = request();
-  int32_t length = req->encode(version, bufs, &encoding_cache_);
+  int32_t length = req->encode(version, this, bufs);
   if (length < 0) {
     return length;
   }
@@ -68,7 +68,7 @@ void Handler::set_state(Handler::State next_state) {
         state_ = next_state;
         stream_ = -1;
       } else if (next_state == REQUEST_STATE_WRITING) {
-        start_request();
+        start_time_ns_ = uv_hrtime();
         state_ = next_state;
       } else {
         assert(false && "Invalid request state after new");
@@ -113,8 +113,13 @@ void Handler::set_state(Handler::State next_state) {
       break;
 
     case REQUEST_STATE_READ_BEFORE_WRITE:
-      assert(next_state == REQUEST_STATE_DONE &&
+      assert((next_state == REQUEST_STATE_DONE || next_state == REQUEST_STATE_RETRY_WRITE_OUTSTANDING) &&
              "Invalid request state after read before write");
+      state_ = next_state;
+      break;
+
+    case REQUEST_STATE_RETRY_WRITE_OUTSTANDING:
+      assert(next_state == REQUEST_STATE_NEW && "Invalid request state after retry");
       state_ = next_state;
       break;
 
