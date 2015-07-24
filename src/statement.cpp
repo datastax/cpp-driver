@@ -88,7 +88,14 @@ CassError cass_statement_set_paging_size(CassStatement* statement,
 
 CassError cass_statement_set_paging_state(CassStatement* statement,
                                           const CassResult* result) {
-  statement->set_paging_state(result->paging_state());
+  statement->set_paging_state(result->paging_state().to_string());
+  return CASS_OK;
+}
+
+CassError cass_statement_set_paging_state_raw(CassStatement* statement,
+                                              const char* paging_state,
+                                              size_t paging_state_size) {
+  statement->set_paging_state(std::string(paging_state, paging_state_size));
   return CASS_OK;
 }
 

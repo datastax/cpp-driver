@@ -70,7 +70,7 @@ bool ErrorResponse::decode(int version, char* buffer, size_t size) {
   StringRef write_type;
 
   char* pos = decode_int32(buffer, code_);
-  pos = decode_string_ref(pos, &message_);
+  pos = decode_string(pos, &message_);
 
   switch (code_) {
     case CQL_ERROR_UNAVAILABLE:
@@ -88,7 +88,7 @@ bool ErrorResponse::decode(int version, char* buffer, size_t size) {
       pos = decode_uint16(pos, cl_);
       pos = decode_int32(pos, actual_);
       pos = decode_int32(pos, required_);
-      decode_string_ref(pos, &write_type);
+      decode_string(pos, &write_type);
       if (write_type == "SIMPLE") {
         write_type_ = CASS_WRITE_TYPE_SIMPLE;
       } else if(write_type == "BATCH") {
@@ -102,7 +102,7 @@ bool ErrorResponse::decode(int version, char* buffer, size_t size) {
       }
       break;
     case CQL_ERROR_UNPREPARED:
-      decode_string_ref(pos, &prepared_id_);
+      decode_string(pos, &prepared_id_);
       break;
   }
   return true;

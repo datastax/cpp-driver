@@ -158,7 +158,7 @@ inline char* decode_string(char* input, char** output, size_t& size) {
   return pos + string_size;
 }
 
-inline char* decode_string_ref(char* buffer, StringRef* output) {
+inline char* decode_string(char* buffer, StringRef* output) {
   char* str;
   size_t str_size;
   buffer = decode_string(buffer, &str, str_size);
@@ -187,6 +187,14 @@ inline char* decode_bytes(char* input, char** output, size_t& size) {
     size = bytes_size;
     return pos + size;
   }
+}
+
+inline char* decode_bytes(char* buffer, StringRef* output) {
+  char* bytes;
+  size_t bytes_size;
+  buffer = decode_bytes(buffer, &bytes, bytes_size);
+  *output = StringRef(bytes, bytes_size);
+  return buffer;
 }
 
 inline char* decode_inet(char* input, Address* output) {
