@@ -17,6 +17,7 @@
 #include "session.hpp"
 
 #include "config.hpp"
+#include "constants.hpp"
 #include "logger.hpp"
 #include "prepare_request.hpp"
 #include "request_handler.hpp"
@@ -509,7 +510,7 @@ Future* Session::prepare(const char* statement, size_t length) {
   future->inc_ref(); // External reference
   future->statement.assign(statement, length);
 
-  RequestHandler* request_handler = new RequestHandler(prepare, future);
+  RequestHandler* request_handler = new RequestHandler(prepare, future, NULL);
   request_handler->inc_ref(); // IOWorker reference
 
   execute(request_handler);
@@ -583,7 +584,13 @@ Future* Session::execute(const RoutableRequest* request) {
   ResponseFuture* future = new ResponseFuture(cluster_meta_.schema());
   future->inc_ref(); // External reference
 
-  RequestHandler* request_handler = new RequestHandler(request, future);
+  RetryPolicy* retry_policy
+      = request->retry_policy() != NULL ? request->retry_policy()
+                                        : config().retry_policy();
+
+  RequestHandler* request_handler = new RequestHandler(request,
+                                                       future,
+                                                       retry_policy);
   request_handler->inc_ref(); // IOWorker reference
 
   execute(request_handler);
@@ -605,6 +612,10 @@ void Session::on_execute(uv_async_t* data) {
     if (request_handler != NULL) {
       request_handler->set_query_plan(session->new_query_plan(request_handler->request(),
                                                               request_handler->encoding_cache()));
+
+      if (request_handler->timestamp() == CASS_INT64_MIN) {
+        request_handler->set_timestamp(session->config_.timestamp_gen()->next());
+      }
 
       bool is_done = false;
       while (!is_done) {

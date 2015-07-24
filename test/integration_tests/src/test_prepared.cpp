@@ -33,6 +33,7 @@
 #include <boost/version.hpp>
 
 #include "cassandra.h"
+#include "constants.hpp"
 #include "test_utils.hpp"
 
 #if (defined(WIN32) || defined(_WIN32))
@@ -202,7 +203,7 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
   all_types[0].id = test_utils::generate_time_uuid(uuid_gen);
   all_types[0].text_sample = CassString("first");
   all_types[0].int_sample = 10;
-  all_types[0].bigint_sample = std::numeric_limits<int64_t>::max()  - 1L;
+  all_types[0].bigint_sample = CASS_INT64_MAX  - 1L;
   all_types[0].float_sample = 1.999f;
   all_types[0].double_sample = 32.002;
   all_types[0].decimal_sample = CassDecimal(varint1, sizeof(varint1), 1);
@@ -226,7 +227,7 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
   all_types[2].id = test_utils::generate_time_uuid(uuid_gen);
   all_types[2].text_sample = CassString("third");
   all_types[2].int_sample = -100;
-  all_types[2].bigint_sample = std::numeric_limits<int64_t>::min() + 1;
+  all_types[2].bigint_sample = CASS_INT64_MIN + 1;
   all_types[2].float_sample = -150.111f;
   all_types[2].double_sample = -5.12342;
   all_types[2].decimal_sample = CassDecimal(varint3, sizeof(varint3), 3);

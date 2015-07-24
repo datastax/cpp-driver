@@ -252,6 +252,13 @@ typedef struct CassPrepared_ CassPrepared;
 typedef struct CassResult_ CassResult;
 
 /**
+ * @struct CassErrorResult
+ *
+ * A error result of a request
+ */
+typedef struct CassErrorResult_ CassErrorResult;
+
+/**
  * @struct CassIterator
  *
  * An object used to iterate over a group of rows, columns or collection values.
@@ -339,6 +346,22 @@ typedef struct CassSchemaMetaField_ CassSchemaMetaField;
 typedef struct CassUuidGen_ CassUuidGen;
 
 /**
+ * Policies that defined the behavior of a request when a server-side
+ * read/write timeout or unavailable error occurs.
+ *
+ * Generators of client-side, microsecond-precision timestamps.
+ *
+ * @struct CassTimestampGen
+ *
+ */
+typedef struct CassTimestampGen_ CassTimestampGen;
+
+/**
+ * @struct CassRetryPolicy
+ */
+typedef struct CassRetryPolicy_ CassRetryPolicy;
+
+/**
  * @struct CassMetrics
  *
  * A snapshot of the session's performance/diagnostic metrics.
@@ -377,6 +400,7 @@ typedef struct CassMetrics_ {
 } CassMetrics;
 
 typedef enum CassConsistency_ {
+  CASS_CONSISTENCY_UNKNOWN      = 0xFFFF,
   CASS_CONSISTENCY_ANY          = 0x0000,
   CASS_CONSISTENCY_ONE          = 0x0001,
   CASS_CONSISTENCY_TWO          = 0x0002,
@@ -389,6 +413,38 @@ typedef enum CassConsistency_ {
   CASS_CONSISTENCY_LOCAL_SERIAL = 0x0009,
   CASS_CONSISTENCY_LOCAL_ONE    = 0x000A
 } CassConsistency;
+
+#define CASS_CONSISTENCY_MAP(XX) \
+  XX(CASS_CONSISTENCY_UNKNOWN, "UNKNOWN") \
+  XX(CASS_CONSISTENCY_ANY, "ANY") \
+  XX(CASS_CONSISTENCY_ONE, "ONE") \
+  XX(CASS_CONSISTENCY_TWO, "TWO") \
+  XX(CASS_CONSISTENCY_THREE, "THREE") \
+  XX(CASS_CONSISTENCY_QUORUM, "QUORUM") \
+  XX(CASS_CONSISTENCY_ALL, "ALL") \
+  XX(CASS_CONSISTENCY_LOCAL_QUORUM, "LOCAL_QUORUM") \
+  XX(CASS_CONSISTENCY_EACH_QUORUM, "EACH_QUORUM") \
+  XX(CASS_CONSISTENCY_SERIAL, "SERIAL") \
+  XX(CASS_CONSISTENCY_LOCAL_SERIAL, "LOCAL_SERIAL") \
+  XX(CASS_CONSISTENCY_LOCAL_ONE, "LOCAL_ONE")
+
+typedef enum CassWriteType_ {
+  CASS_WRITE_TYPE_UKNOWN,
+  CASS_WRITE_TYPE_SIMPLE,
+  CASS_WRITE_TYPE_BATCH,
+  CASS_WRITE_TYPE_UNLOGGED_BATCH,
+  CASS_WRITE_TYPE_COUNTER,
+  CASS_WRITE_TYPE_BATCH_LOG,
+  CASS_WRITE_TYPE_CAS
+} CassWriteType;
+
+#define CASS_WRITE_TYPE_MAP(XX) \
+  XX(CASS_WRITE_TYPE_SIMPLE, "SIMPLE") \
+  XX(CASS_WRITE_TYPE_BATCH, "BATCH") \
+  XX(CASS_WRITE_TYPE_UNLOGGED_BATCH, "UNLOGGED_BATCH") \
+  XX(CASS_WRITE_TYPE_COUNTER, "COUNTER") \
+  XX(CASS_WRITE_TYPE_BATCH_LOG, "BATCH_LOG") \
+  XX(CASS_WRITE_TYPE_CAS, "CAS")
 
 typedef enum CassValueType_ {
   CASS_VALUE_TYPE_UNKNOWN   = 0xFFFF,
@@ -467,9 +523,9 @@ typedef enum CassLogLevel_ {
 } CassLogLevel;
 
 typedef enum CassSslVerifyFlags {
-  CASS_SSL_VERIFY_NONE          = 0,
-  CASS_SSL_VERIFY_PEER_CERT     = 1,
-  CASS_SSL_VERIFY_PEER_IDENTITY = 2
+  CASS_SSL_VERIFY_NONE,
+  CASS_SSL_VERIFY_PEER_CERT,
+  CASS_SSL_VERIFY_PEER_IDENTITY
 } CassSslVerifyFlags;
 
 typedef enum  CassErrorSource_ {
@@ -1056,7 +1112,11 @@ cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
 /**
  * Configures the cluster to use token-aware request routing or not.
  *
- * Default is cass_true (enabled).
+ * <b>Important:</b> Token-aware routing depends on keyspace information.
+ * For this reason enabling token-aware routing will also enable the usage
+ * of schema metadata.
+ *
+ * <b>Default:</b> cass_true (enabled).
  *
  * This routing policy composes the base routing policy, routing
  * requests first to replicas on nodes considered 'local' by
@@ -1066,6 +1126,8 @@ cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] enabled
+ *
+ * @see cass_cluster_set_use_schema();
  */
 CASS_EXPORT void
 cass_cluster_set_token_aware_routing(CassCluster* cluster,
@@ -1075,7 +1137,7 @@ cass_cluster_set_token_aware_routing(CassCluster* cluster,
 /**
  * Configures the cluster to use latency-aware request routing or not.
  *
- * Default is cass_false (disabled).
+ * <b>Default:</b> cass_false (disabled).
  *
  * This routing policy is a top-level routing policy. It uses the
  * base routing policy to determine locality (dc-aware) and/or
@@ -1093,7 +1155,7 @@ cass_cluster_set_latency_aware_routing(CassCluster* cluster,
 /**
  * Configures the settings for latency-aware request routing.
  *
- * Defaults:
+ * <b>Defaults:</b>
  *
  * <ul>
  *   <li>exclusion_threshold: 2.0</li>
@@ -1155,6 +1217,100 @@ CASS_EXPORT void
 cass_cluster_set_tcp_keepalive(CassCluster* cluster,
                                cass_bool_t enabled,
                                unsigned delay_secs);
+/**
+ * Sets the timestamp generator used to assign timestamps to all requests
+ * unless overridden by setting the timestamp on a statement or a batch.
+ *
+ * <b>Default:</b> server-side timestamp generator.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] timestamp_gen
+ *
+ * @see cass_statement_set_timestamp()
+ * @see cass_batch_set_timestamp()
+ */
+CASS_EXPORT void
+cass_cluster_set_timestamp_gen(CassCluster* cluster,
+                               CassTimestampGen* timestamp_gen);
+
+/**
+ * Sets the amount of time between heartbeat messages and controls the amount
+ * of time the connection must be idle before sending heartbeat messages. This
+ * is useful for preventing intermediate network devices from dropping
+ * connections.
+ *
+ * <b>Default:</b> 30 seconds
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] interval_secs Use 0 to disable heartbeat messages
+ */
+CASS_EXPORT void
+cass_cluster_set_connection_heartbeat_interval(CassCluster* cluster,
+                                               unsigned interval_secs);
+
+/**
+ * Sets the amount of time a connection is allowed to be without a successful
+ * hearbeat response before being terminated and scheduled for reconnection.
+ *
+ * <b>Default:</b> 60 seconds
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] timeout_secs
+ */
+CASS_EXPORT void
+cass_cluster_set_connection_idle_timeout(CassCluster* cluster,
+                                         unsigned timeout_secs);
+
+/**
+ * Sets the retry policy used for all requests unless overridden by setting
+ * a retry policy on a statement or a batch.
+ *
+ * <b>Default:</b> The same policy as would be created by the function:
+ * cass_retry_policy_default_new(). This policy will retry on a read timeout
+ * if there was enough replicas, but no data present, on a write timeout if a
+ * logged batch request failed to write the batch log, and on a unavailable
+ * error it retries using a new host. In all other cases the default policy
+ * will return an error.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] retry_policy
+ *
+ * @see cass_retry_policy_default_new()
+ * @see cass_statement_set_retry_policy()
+ * @see cass_batch_set_retry_policy()
+ */
+CASS_EXPORT void
+cass_cluster_set_retry_policy(CassCluster* cluster,
+                              CassRetryPolicy* retry_policy);
+
+/**
+ * Enable/Disable retrieving and updating schema metadata. If disabled
+ * this is allows the driver to skip over retrieving and updating schema
+ * metadata, but it also disables the usage of token-aware routing and
+ * cass_session_get_schema() will always return an empty object. This can be
+ * useful for reducing the startup overhead of short-lived sessions.
+ *
+ * <b>Default:</b> cass_true (enabled).
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] enabled
+ *
+ * @see cass_session_get_schema()
+ * @see cass_cluster_set_token_aware_routing();
+ */
+CASS_EXPORT void
+cass_cluster_set_use_schema(CassCluster* cluster,
+                            cass_bool_t enabled);
 
 /***********************************************************************************
  *
@@ -1777,6 +1933,23 @@ CASS_EXPORT const CassResult*
 cass_future_get_result(CassFuture* future);
 
 /**
+ * Gets the error result from a future that failed as a result of a server error. If the
+ * future is not ready this method will wait for the future to be set. The first
+ * successful call consumes the future, all subsequent calls will return NULL.
+ *
+ * @public @memberof CassFuture
+ *
+ * @param[in] future
+ * @return CassErrorResult instance if the request failed with a server error,
+ * otherwise NULL if the request was sucessful or the failure was not caused by
+ * a server error. The return instance must be freed using cass_error_result_free().
+ *
+ * @see cass_session_execute() and cass_session_execute_batch()
+ */
+CASS_EXPORT const CassErrorResult*
+cass_future_get_error_result(CassFuture* future);
+
+/**
  * Gets the result of a successful future. If the future is not ready this method will
  * wait for the future to be set. The first successful call consumes the future, all
  * subsequent calls will return NULL.
@@ -2009,6 +2182,33 @@ CASS_EXPORT CassError
 cass_statement_set_paging_state_raw(CassStatement* statement,
                                     const char* paging_state,
                                     size_t paging_state_size);
+
+/**
+ * Sets the statement's timestamp.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] timestamp
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_timestamp(CassStatement* statement,
+                             cass_int64_t timestamp);
+
+
+/**
+ * Sets the statement's retry policy.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] retry_policy
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_retry_policy(CassStatement* statement,
+                                CassRetryPolicy* retry_policy);
 
 /**
  * Binds null to a query or bound statement at the specified index.
@@ -2932,6 +3132,47 @@ cass_batch_free(CassBatch* batch);
 CASS_EXPORT CassError
 cass_batch_set_consistency(CassBatch* batch,
                            CassConsistency consistency);
+
+/**
+ * Sets the batch's serial consistency level.
+ *
+ * <b>Default:</b> Not set
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] serial_consistency
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_batch_set_serial_consistency(CassBatch* batch,
+                                  CassConsistency serial_consistency);
+
+/**
+ * Sets the batch's timestamp.
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] timestamp
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_batch_set_timestamp(CassBatch* batch,
+                         cass_int64_t timestamp);
+
+/**
+ * Sets the batch's retry policy.
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] retry_policy
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_batch_set_retry_policy(CassBatch* batch,
+                            CassRetryPolicy* retry_policy);
 
 /**
  * Adds a statement to a batch.
@@ -4767,6 +5008,122 @@ cass_result_paging_state(const CassResult* result,
 
 /***********************************************************************************
  *
+ * Error result
+ *
+ ***********************************************************************************/
+
+/**
+ * Frees an error result instance.
+ *
+ * @public @memberof CassErrorResult
+ *
+ * @param[in] result
+ */
+CASS_EXPORT void
+cass_error_result_free(const CassErrorResult* error_result);
+
+/**
+ * Gets error code for the error result. This error code will always
+ * have an server error source.
+ *
+ * @public @memberof CassErrorResult
+ *
+ * @param[in] error_result
+ * @return The server error code
+ */
+CASS_EXPORT CassError
+cass_error_result_code(const CassErrorResult* error_result);
+
+/**
+ * Gets consistency that triggered the error result of the
+ * following types:
+ *
+ * <ul>
+ *   <li>CASS_ERROR_SERVER_READ_TIMEOUT</li>
+ *   <li>CASS_ERROR_SERVER_WRITE_TIMEOUT</li>
+ *   <li>CASS_ERROR_SERVER_UNAVAILABLE</li>
+ * </ul>
+ *
+ * @public @memberof CassErrorResult
+ *
+ * @param[in] error_result
+ * @return The consistency that triggered the error for a read timeout,
+ * write timeout or an unavailable error result. Undefined for other
+ * error result types.
+ */
+CASS_EXPORT CassConsistency
+cass_error_result_consistency(const CassErrorResult* error_result);
+
+/**
+ * Gets the acutal number of recieved responses, recieved acknowlegements
+ * or alive nodes for following error result types, respectively:
+ *
+ * <ul>
+ *   <li>CASS_ERROR_SERVER_READ_TIMEOUT</li>
+ *   <li>CASS_ERROR_SERVER_WRITE_TIMEOUT</li>
+ *   <li>CASS_ERROR_SERVER_UNAVAILABLE</li>
+ * </ul>
+ *
+ * @public @memberof CassErrorResult
+ *
+ * @param[in] error_result
+ * @return The actual received responses for a read timeout, actual recieved
+ * acknowlegements for a write timeout or actual alive nodes for a unavailable
+ * error. Undefined for other error result types.
+ */
+CASS_EXPORT cass_int32_t
+cass_error_result_responses_received(const CassErrorResult* error_result);
+
+/**
+ * Gets required responses, required acknowlegements or required alive nodes
+ * needed to successfully complete the request for following error result types,
+ * respectively:
+ *
+ * <ul>
+ *   <li>CASS_ERROR_SERVER_READ_TIMEOUT</li>
+ *   <li>CASS_ERROR_SERVER_WRITE_TIMEOUT</li>
+ *   <li>CASS_ERROR_SERVER_UNAVAILABLE</li>
+ * </ul>
+ *
+ * @public @memberof CassErrorResult
+ *
+ * @param[in] error_result
+ * @return The required responses for a read time, required acknowlegements
+ * for a write timeout or required alive nodes for an unavailable error result.
+ * Undefined for other error result types.
+ */
+CASS_EXPORT cass_int32_t
+cass_error_result_responses_required(const CassErrorResult* error_result);
+
+
+/**
+ * Gets if the data was actually present in the responses from the replicas when
+ * the read timed out (CASS_ERROR_SERVER_READ_TIMEOUT).
+ *
+ * @public @memberof CassErrorResult
+ *
+ * @param[in] error_result
+ * @return cass_true if the data was present in the recieved responses when the
+ * read timeout occured. Undefined for other error result types.
+ */
+CASS_EXPORT cass_bool_t
+cass_error_result_data_present(const CassErrorResult* error_result);
+
+/**
+ * Gets the write type of a request when the write timed out
+ * (CASS_ERROR_SERVER_WRITE_TIMEOUT).
+ *
+ * @public @memberof CassErrorResult
+ *
+ * @param[in] error_result
+ * @return The type of the write that timed out. Undefined for
+ * other error result types.
+ */
+CASS_EXPORT CassWriteType
+cass_error_result_write_type(const CassErrorResult* error_result);
+
+/***********************************************************************************
+ *
  * Iterator
  *
  ***********************************************************************************/
@@ -5534,6 +5891,193 @@ CASS_EXPORT CassError
 cass_uuid_from_string_n(const char* str,
                         size_t str_length,
                         CassUuid* output);
+
+/***********************************************************************************
+ *
+ * Timestamp generators
+ *
+ ***********************************************************************************/
+
+/**
+ * Creates a new server-side timestamp generator. This generator allows Cassandra
+ * to assign timestamps server-side.
+ *
+ * <bold>Note:</bold> This is the default timestamp generator.
+ *
+ * @public @memberof CassTimestampGen
+ *
+ * @return Returns a timestamp generator that must be freed.
+ *
+ * @see cass_timestamp_gen_free()
+ */
+CASS_EXPORT CassTimestampGen*
+cass_timestamp_gen_server_side_new();
+
+/**
+ * Creates a new monotonically increasing timestamp generator. This generates
+ * microsecond timestamps with the sub-millisecond part generated using a counter.
+ * The implementation gaurantees that no more than 1000 timestamps will be generated
+ * for a given clock tick even if shared by multiple session objects. If that rate is
+ * excceeded then a warning is logged and timestamps stop incrementing until the next
+ * clock tick.
+ *
+ * <bold>Note:</bold> This generator is thread-safe and can be shared by multiple sessions.
+ *
+ * @public @memberof CassTimestampGen
+ *
+ * @return Returns a timestamp generator that must be freed.
+ *
+ * @see cass_timestamp_gen_free()
+ */
+CASS_EXPORT CassTimestampGen*
+cass_timestamp_gen_monotonic_new();
+
+/**
+ * Frees a timestamp generator instance.
+ *
+ * @public @memberof CassTimestampGen
+ *
+ * @param[in] timestamp_gen
+ */
+CASS_EXPORT void
+cass_timestamp_gen_free(CassTimestampGen* timestamp_gen);
+
+
+/***********************************************************************************
+ *
+ * Retry policies
+ *
+ ***********************************************************************************/
+
+/**
+ * Creates a new default retry policy.
+ *
+ * This policy retries queries in the following cases:
+ * <ul>
+ *   <li>On a read timeout, if enough replicas replied but data was not received.</li>
+ *   <li>On a write timeout, if a timeout occurs while writing the distributed batch log</li>
+ *   <li>On unavailble, it will move to the next host</li>
+ * </ul>
+ *
+ * In all other cases the error will be returned.
+ *
+ * This policy always uses the query's original consistency level.
+ *
+ * @public @memberof CassRetryPolicy
+ *
+ * @return Returns a retry policy that must be freed.
+ *
+ * @see cass_retry_policy_free()
+ */
+CASS_EXPORT CassRetryPolicy*
+cass_retry_policy_default_new();
+
+/**
+ * Creates a new downgrading consistency retry policy.
+ *
+ * <b>Important:</b> This policy may attempt to retry requests with a lower
+ * consistency level. Using this policy can break consistency guarantees.
+ *
+ * This policy will retry in the same scenarios as the default policy, but
+ * it will also retry in the following cases:
+ * <ul>
+ *   <li>On a read timeout, if some replicas responded but is lower than
+ *   required by the current consistency level then retry with a lower
+ *   consistency level.</li>
+ *   <li>On a write timeout, Retry unlogged batches at a lower consistency level
+ *   if at least one replica responded. For single queries and batch if any
+ *    replicas responded then consider the request successful and swallow the
+ *    error.</li>
+ *   <li>On unavailable, retry at a lower consistency if at lease one replica
+ *   responded.</li>
+ * </ul>
+ *
+ * This goal of this policy is to attempt to save a request if there's any
+ * chance of success. A writes succeeds as long as there's a single copy
+ * persisted and a read will succeed if there's some data available even
+ * if it increases the risk of reading stale data.
+ *
+ * @public @memberof CassRetryPolicy
+ *
+ * @return Returns a retry policy that must be freed.
+ *
+ * @see cass_retry_policy_free()
+ */
+CASS_EXPORT CassRetryPolicy*
+cass_retry_policy_downgrading_consistency_new();
+
+/**
+ * Creates a new fallthrough retry policy.
+ *
+ * This policy never retries or ignores a server-side failure. The error
+ * is always returned.
+ *
+ * @public @memberof CassRetryPolicy
+ *
+ * @return Returns a retry policy that must be freed.
+ *
+ * @see cass_retry_policy_free()
+ */
+CASS_EXPORT CassRetryPolicy*
+cass_retry_policy_fallthrough_new();
+
+/**
+ * Creates a new logging retry policy.
+ *
+ * This policy logs the retry decision of its child policy. Logging is
+ * done using CASS_LOG_INFO.
+ *
+ * @public @memberof CassRetryPolicy
+ *
+ * @param[in] child_retry_policy
+ * @return Returns a retry policy that must be freed. NULL is returned if
+ * the child_policy is a logging retry policy.
+ *
+ * @see cass_retry_policy_free()
+ */
+CASS_EXPORT CassRetryPolicy*
+cass_retry_policy_logging_new(CassRetryPolicy* child_retry_policy);
+
+/**
+ * Frees a retry policy instance.
+ *
+ * @public @memberof CassRetryPolicy
+ *
+ * @param[in] policy
+ */
+CASS_EXPORT void
+cass_retry_policy_free(CassRetryPolicy* policy);
+
+/***********************************************************************************
+ *
+ * Consistency
+ *
+ ***********************************************************************************/
+
+/**
+ * Gets the string for a consistency.
+ *
+ * @param[in] consistency
+ * @return A null-terminated string for the consistency.
+ * Example: "ALL", "ONE", "QUORUM", etc.
+ */
+CASS_EXPORT const char*
+cass_consistency_string(CassConsistency consistency);
+
+/***********************************************************************************
+ *
+ * Write type
+ *
+ ***********************************************************************************/
+/**
+ * Gets the string for a write type.
+ *
+ * @param[in] write_type
+ * @return A null-terminated string for the write type.
+ * Example: "BATCH", "SIMPLE", "COUNTER", etc.
+ */
+CASS_EXPORT const char*
+cass_write_type_string(CassWriteType write_type);
 
 /***********************************************************************************
  *

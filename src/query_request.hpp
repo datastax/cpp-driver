@@ -74,18 +74,13 @@ private:
 private:
   int32_t copy_buffers_with_names(int version, BufferVec* bufs, EncodingCache* cache) const;
 
-  int encode(int version, BufferVec* bufs, EncodingCache* cache) const;
-  int internal_encode_v1(BufferVec* bufs) const;
-  int internal_encode(int version, BufferVec* bufs, EncodingCache* cache) const;
+  int encode(int version, Handler* handler, BufferVec* bufs) const;
+  int internal_encode_v1(Handler* handler, BufferVec* bufs) const;
+  int internal_encode(int version, Handler* handler, BufferVec* bufs) const;
 
 private:
   std::string query_;
   CaseInsensitiveHashTable<ValueName> value_names_;
-  /*
-  ValueNameVec value_names_;
-  size_t value_names_count_;
-  ScopedPtr<HashIndex> value_names_index_;
-  */
 };
 
 } // namespace cass

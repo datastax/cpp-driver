@@ -23,6 +23,7 @@
 #include "request.hpp"
 #include "result_metadata.hpp"
 #include "result_response.hpp"
+#include "retry_policy.hpp"
 
 #include <vector>
 #include <string>
@@ -80,7 +81,7 @@ public:
 
   void set_page_size(int32_t page_size) { page_size_ = page_size; }
 
-  const std::string paging_state() const { return paging_state_; }
+  const std::string& paging_state() const { return paging_state_; }
 
   void set_paging_state(const std::string& paging_state) {
     paging_state_ = paging_state;

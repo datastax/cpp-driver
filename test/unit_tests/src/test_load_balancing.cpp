@@ -19,6 +19,7 @@
 #endif
 
 #include "address.hpp"
+#include "constants.hpp"
 #include "dc_aware_policy.hpp"
 #include "latency_aware_policy.hpp"
 #include "loop_thread.hpp"
@@ -35,7 +36,6 @@
 #include <boost/test/floating_point_comparison.hpp>
 #include <boost/thread/thread.hpp>
 
-#include <limits>
 #include <string>
 #include <uv.h>
 
@@ -528,8 +528,8 @@ BOOST_AUTO_TEST_CASE(simple)
   // 3.0.0.0  4611686018427387901
   // 4.0.0.0  9223372036854775804
 
-  uint64_t partition_size = std::numeric_limits<uint64_t>::max() / num_hosts;
-  int64_t t = std::numeric_limits<int64_t>::min() + partition_size;
+  uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
+  int64_t t = CASS_INT64_MIN + partition_size;
   for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
     std::string ts = boost::lexical_cast<std::string>(t);
     cass::TokenStringList tokens;
@@ -609,8 +609,8 @@ BOOST_AUTO_TEST_CASE(network_topology)
   // 6.0.0.0 remote  6588122883467697004
   // 7.0.0.0 local   9223372036854775806
 
-  uint64_t partition_size = std::numeric_limits<uint64_t>::max() / num_hosts;
-  int64_t t = std::numeric_limits<int64_t>::min() + partition_size;
+  uint64_t partition_size = CASS_UINT64_MAX / num_hosts;
+  int64_t t = CASS_INT64_MIN + partition_size;
   for (cass::HostMap::iterator i = hosts.begin(); i != hosts.end(); ++i) {
     std::string ts = boost::lexical_cast<std::string>(t);
     cass::TokenStringList tokens;

@@ -18,13 +18,17 @@
 #define __CASS_REQUEST_HPP_INCLUDED__
 
 #include "buffer.hpp"
+#include "constants.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
+#include "retry_policy.hpp"
 #include "string_ref.hpp"
 
+#include <stdint.h>
 
 namespace cass {
 
+class Handler;
 class RequestMessage;
 
 class Request : public RefCounted<Request> {
@@ -39,7 +43,8 @@ public:
   Request(uint8_t opcode)
       : opcode_(opcode)
       , consistency_(CASS_CONSISTENCY_ONE)
-      , serial_consistency_(CASS_CONSISTENCY_ANY) {}
+      , serial_consistency_(CASS_CONSISTENCY_ANY)
+      , timestamp_(CASS_INT64_MIN) {}
 
   virtual ~Request() {}
 
@@ -55,12 +60,26 @@ public:
     serial_consistency_ = serial_consistency;
   }
 
-  virtual int encode(int version, BufferVec* bufs, EncodingCache* cache) const = 0;
+  int64_t timestamp() const { return timestamp_; }
+
+  void set_timestamp(int64_t timestamp) { timestamp_ = timestamp; }
+
+  RetryPolicy* retry_policy() const {
+    return retry_policy_.get();
+  }
+
+  void set_retry_policy(RetryPolicy* retry_policy) {
+    retry_policy_.reset(retry_policy);
+  }
+
+  virtual int encode(int version, Handler* handler, BufferVec* bufs) const = 0;
 
 private:
   uint8_t opcode_;
   CassConsistency consistency_;
   CassConsistency serial_consistency_;
+  int64_t timestamp_;
+  SharedRefPtr<RetryPolicy> retry_policy_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Request);

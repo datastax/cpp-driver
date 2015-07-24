@@ -20,6 +20,8 @@
 #include "response.hpp"
 #include "constants.hpp"
 #include "scoped_ptr.hpp"
+#include "string_ref.hpp"
+#include "retry_policy.hpp"
 
 #include <uv.h>
 
@@ -33,39 +35,40 @@ public:
   ErrorResponse()
       : Response(CQL_OPCODE_ERROR)
       , code_(0xFFFFFFFF)
-      , message_(NULL)
-      , message_size_(0)
-      , prepared_id_(NULL)
-      , prepared_id_size_(0) {}
-
-  ErrorResponse(int32_t code, const char* input, size_t input_size)
-      : Response(CQL_OPCODE_ERROR)
-      , guard(new char[input_size])
-      , code_(code)
-      , message_(guard.get())
-      , message_size_(input_size) {
-    memcpy(message_, input, input_size);
-  }
+      , cl_(CASS_CONSISTENCY_UNKNOWN)
+      , actual_(-1)
+      , required_(-1)
+      , data_present_(0)
+      , write_type_(CASS_WRITE_TYPE_UKNOWN) { }
 
   int32_t code() const { return code_; }
+  StringRef message() const { return message_; }
 
-  std::string prepared_id() const {
-    return std::string(prepared_id_, prepared_id_size_);
+  StringRef prepared_id() const { return prepared_id_; }
+
+  CassConsistency consistency() const {
+    return static_cast<CassConsistency>(cl_);
   }
-
-  std::string message() const { return std::string(message_, message_size_); }
+  int32_t actual() const { return actual_; }
+  int32_t required() const { return required_; }
+  uint8_t data_present() const { return data_present_; }
+  CassWriteType write_type() const { return write_type_; }
 
   std::string error_message() const;
 
   bool decode(int version, char* buffer, size_t size);
 
 private:
-  ScopedPtr<char> guard;
   int32_t code_;
-  char* message_;
-  size_t message_size_;
-  char* prepared_id_;
-  size_t prepared_id_size_;
+  StringRef message_;
+
+  StringRef prepared_id_;
+
+  uint16_t cl_;
+  int32_t actual_;
+  int32_t required_;
+  uint8_t data_present_;
+  CassWriteType write_type_;
 };
 
 bool check_error_or_invalid_response(const std::string& prefix, uint8_t expected_opcode,

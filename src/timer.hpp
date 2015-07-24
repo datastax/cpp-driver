@@ -18,6 +18,7 @@
 #define __CASS_TIMER_HPP_INCLUDED__
 
 #include "macros.hpp"
+#include "utils.hpp"
 
 #include <uv.h>
 
@@ -27,24 +28,39 @@ class Timer {
 public:
   typedef void (*Callback)(Timer*);
 
-  void* data() { return data_; }
+  Timer()
+    : handle_(NULL)
+    , data_(NULL) { }
 
-  static Timer* start(uv_loop_t* loop, uint64_t timeout, void* data,
-                      Callback cb) {
-    Timer* timer = new Timer(data, cb);
-    uv_timer_init(loop, &timer->handle_);
-    uv_timer_start(&timer->handle_, on_timeout, timeout, 0);
-    return timer;
+  ~Timer() {
+    if (handle_ != NULL) {
+      uv_close(copy_cast<uv_timer_t*, uv_handle_t*>(handle_), on_close);
+    }
   }
 
-  static void stop(Timer* timer) {
-    uv_timer_stop(&timer->handle_);
-    close(timer);
+  void* data() const { return data_; }
+
+  bool is_running() const {
+    if (handle_ == NULL) return false;
+    return uv_is_active(copy_cast<uv_timer_t*, uv_handle_t*>(handle_)) != 0;
   }
 
-private:
-  static void close(Timer* timer) {
-    uv_close(copy_cast<uv_timer_t*, uv_handle_t*>(&timer->handle_), on_close);
+  void start(uv_loop_t* loop, uint64_t timeout, void* data,
+             Callback cb) {
+    if (handle_ == NULL) {
+      handle_ = new  uv_timer_t;
+      handle_->data = this;
+      uv_timer_init(loop, handle_);
+    }
+    data_ = data;
+    cb_ = cb;
+    uv_timer_start(handle_, on_timeout, timeout, 0);
+  }
+
+  void stop() {
+    if (handle_ != NULL) {
+      uv_timer_stop(handle_);
+    }
   }
 
 #if UV_VERSION_MAJOR == 0
@@ -54,24 +70,14 @@ private:
 #endif
     Timer* timer = static_cast<Timer*>(handle->data);
     timer->cb_(timer);
-    close(timer);
   }
 
   static void on_close(uv_handle_t* handle) {
-    Timer* timer = static_cast<Timer*>(handle->data);
-    delete timer;
+    delete copy_cast<uv_handle_t*, uv_timer_t*>(handle);
   }
 
 private:
-  Timer(void* data, Callback cb)
-      : data_(data)
-      , cb_(cb) {
-    handle_.data = this;
-  }
-
-  ~Timer() {}
-
-  uv_timer_t handle_;
+  uv_timer_t* handle_;
   void* data_;
   Callback cb_;
 
