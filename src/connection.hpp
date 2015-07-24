@@ -70,12 +70,16 @@ public:
 
   class Listener {
   public:
-    Listener(int event_types = 0)
-      : event_types_(event_types) {}
+    Listener()
+      : event_types_(0) {}
 
     virtual ~Listener() {}
 
     int event_types() const { return event_types_; }
+
+    void set_event_types(int event_types) {
+      event_types_ = event_types;
+    }
 
     virtual void on_ready(Connection* connection) = 0;
     virtual void on_close(Connection* connection) = 0;
@@ -84,7 +88,7 @@ public:
     virtual void on_event(EventResponse* response) = 0;
 
   private:
-    const int event_types_;
+    int event_types_;
   };
 
   Connection(uv_loop_t* loop,

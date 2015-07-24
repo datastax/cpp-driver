@@ -262,6 +262,10 @@ CassError cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
 void cass_cluster_set_token_aware_routing(CassCluster* cluster,
                                           cass_bool_t enabled) {
   cluster->config().set_token_aware_routing(enabled == cass_true);
+  // Token-aware routing relies on up-to-date schema information
+  if (enabled == cass_true) {
+    cluster->config().set_use_schema(true);
+  }
 }
 
 void cass_cluster_set_latency_aware_routing(CassCluster* cluster,
@@ -313,6 +317,15 @@ void cass_cluster_set_retry_policy(CassCluster* cluster,
 void cass_cluster_set_timestamp_gen(CassCluster* cluster,
                                     CassTimestampGen* timestamp_gen) {
   cluster->config().set_timestamp_gen(timestamp_gen);
+}
+
+void cass_cluster_set_use_schema(CassCluster* cluster,
+                                 cass_bool_t enabled) {
+  cluster->config().set_use_schema(enabled == cass_true);
+  // Token-aware routing relies on up-to-date schema information
+  if (enabled == cass_false) {
+    cluster->config().set_token_aware_routing(false);
+  }
 }
 
 void cass_cluster_free(CassCluster* cluster) {

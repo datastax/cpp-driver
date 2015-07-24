@@ -69,7 +69,8 @@ public:
       , connection_idle_timeout_secs_(60)
       , connection_heartbeat_interval_secs_(30)
       , timestamp_gen_(new ServerSideTimestampGenerator())
-      , retry_policy_(new DefaultRetryPolicy()) { }
+      , retry_policy_(new DefaultRetryPolicy())
+      , use_schema_(true) { }
 
   unsigned thread_count_io() const { return thread_count_io_; }
 
@@ -310,6 +311,11 @@ public:
     retry_policy_.reset(retry_policy);
   }
 
+  bool use_schema() const { return use_schema_; }
+  void set_use_schema(bool enable) {
+    use_schema_ = enable;
+  }
+
 private:
   int port_;
   int protocol_version_;
@@ -346,6 +352,7 @@ private:
   unsigned connection_heartbeat_interval_secs_;
   SharedRefPtr<TimestampGenerator> timestamp_gen_;
   SharedRefPtr<RetryPolicy> retry_policy_;
+  bool use_schema_;
 };
 
 } // namespace cass

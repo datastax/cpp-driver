@@ -1111,7 +1111,11 @@ cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
 /**
  * Configures the cluster to use token-aware request routing or not.
  *
- * Default is cass_true (enabled).
+ * <b>Important:</b> Token-aware routing depends on keyspace information.
+ * For this reason enabling token-aware routing will also enable the usage
+ * of schema metadata.
+ *
+ * <b>Default:</b> cass_true (enabled).
  *
  * This routing policy composes the base routing policy, routing
  * requests first to replicas on nodes considered 'local' by
@@ -1121,6 +1125,8 @@ cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
  *
  * @param[in] cluster
  * @param[in] enabled
+ *
+ * @see cass_cluster_set_use_schema();
  */
 CASS_EXPORT void
 cass_cluster_set_token_aware_routing(CassCluster* cluster,
@@ -1130,7 +1136,7 @@ cass_cluster_set_token_aware_routing(CassCluster* cluster,
 /**
  * Configures the cluster to use latency-aware request routing or not.
  *
- * Default is cass_false (disabled).
+ * <b>Default:</b> cass_false (disabled).
  *
  * This routing policy is a top-level routing policy. It uses the
  * base routing policy to determine locality (dc-aware) and/or
@@ -1148,7 +1154,7 @@ cass_cluster_set_latency_aware_routing(CassCluster* cluster,
 /**
  * Configures the settings for latency-aware request routing.
  *
- * Defaults:
+ * <b>Defaults:</b>
  *
  * <ul>
  *   <li>exclusion_threshold: 2.0</li>
@@ -1283,6 +1289,27 @@ cass_cluster_set_connection_idle_timeout(CassCluster* cluster,
 CASS_EXPORT void
 cass_cluster_set_retry_policy(CassCluster* cluster,
                               CassRetryPolicy* retry_policy);
+
+/**
+ * Enable/Disable retrieving and updating schema metadata. If disabled
+ * this is allows the driver to skip over retrieving and updating schema
+ * metadata, but it also disables the usage of token-aware routing and
+ * cass_session_get_schema() will always return an empty object. This can be
+ * useful for reducing the startup overhead of short-lived sessions.
+ *
+ * <b>Default:</b> cass_true (enabled).
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] enabled
+ *
+ * @see cass_session_get_schema()
+ * @see cass_cluster_set_token_aware_routing();
+ */
+CASS_EXPORT void
+cass_cluster_set_use_schema(CassCluster* cluster,
+                            cass_bool_t enabled);
 
 /***********************************************************************************
  *
