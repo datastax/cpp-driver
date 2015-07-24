@@ -613,8 +613,8 @@ void Session::on_execute(uv_async_t* data) {
       request_handler->set_query_plan(session->new_query_plan(request_handler->request(),
                                                               request_handler->encoding_cache()));
 
-      if (request_handler->default_timestamp() == CASS_INT64_MIN) {
-        request_handler->set_default_timestamp(session->config_.timestamp_gen()->next());
+      if (request_handler->timestamp() == CASS_INT64_MIN) {
+        request_handler->set_timestamp(session->config_.timestamp_gen()->next());
       }
 
       bool is_done = false;

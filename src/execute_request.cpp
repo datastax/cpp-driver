@@ -118,7 +118,7 @@ int ExecuteRequest::internal_encode(int version, Handler* handler, BufferVec* bu
     flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
   }
 
-  if (version >= 3 && handler->default_timestamp() != CASS_INT64_MIN) {
+  if (version >= 3 && handler->timestamp() != CASS_INT64_MIN) {
       paging_buf_size += sizeof(int64_t); // [long]
       flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
   }
@@ -159,8 +159,8 @@ int ExecuteRequest::internal_encode(int version, Handler* handler, BufferVec* bu
       pos = buf.encode_uint16(pos, serial_consistency());
     }
 
-    if (version >= 3 && handler->default_timestamp() != CASS_INT64_MIN) {
-      pos = buf.encode_int64(pos, handler->default_timestamp());
+    if (version >= 3 && handler->timestamp() != CASS_INT64_MIN) {
+      pos = buf.encode_int64(pos, handler->timestamp());
     }
   }
 

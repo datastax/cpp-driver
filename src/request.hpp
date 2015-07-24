@@ -44,7 +44,7 @@ public:
       : opcode_(opcode)
       , consistency_(CASS_CONSISTENCY_ONE)
       , serial_consistency_(CASS_CONSISTENCY_ANY)
-      , default_timestamp_(CASS_INT64_MIN) {}
+      , timestamp_(CASS_INT64_MIN) {}
 
   virtual ~Request() {}
 
@@ -60,9 +60,9 @@ public:
     serial_consistency_ = serial_consistency;
   }
 
-  int64_t default_timestamp() const { return default_timestamp_; }
+  int64_t timestamp() const { return timestamp_; }
 
-  void set_default_timestamp(int64_t timestamp) { default_timestamp_ = timestamp; }
+  void set_timestamp(int64_t timestamp) { timestamp_ = timestamp; }
 
   RetryPolicy* retry_policy() const {
     return retry_policy_.get();
@@ -78,7 +78,7 @@ private:
   uint8_t opcode_;
   CassConsistency consistency_;
   CassConsistency serial_consistency_;
-  int64_t default_timestamp_;
+  int64_t timestamp_;
   SharedRefPtr<RetryPolicy> retry_policy_;
 
 private:

@@ -1212,7 +1212,7 @@ cass_cluster_set_tcp_keepalive(CassCluster* cluster,
                                unsigned delay_secs);
 /**
  * Sets the timestamp generator used to assign timestamps to all requests
- * unless overridden by setting the default timestamp on a statement or a batch.
+ * unless overridden by setting the timestamp on a statement or a batch.
  *
  * <b>Default:</b> server-side timestamp generator.
  *
@@ -1221,8 +1221,8 @@ cass_cluster_set_tcp_keepalive(CassCluster* cluster,
  * @param[in] cluster
  * @param[in] timestamp_gen
  *
- * @see cass_statement_set_default_timestamp()
- * @see cass_batch_set_default_timestamp()
+ * @see cass_statement_set_timestamp()
+ * @see cass_batch_set_timestamp()
  */
 CASS_EXPORT void
 cass_cluster_set_timestamp_gen(CassCluster* cluster,
@@ -2095,7 +2095,7 @@ cass_statement_set_paging_state(CassStatement* statement,
                                 const CassResult* result);
 
 /**
- * Sets the statement's default timestamp.
+ * Sets the statement's timestamp.
  *
  * @public @memberof CassStatement
  *
@@ -2104,8 +2104,8 @@ cass_statement_set_paging_state(CassStatement* statement,
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_statement_set_default_timestamp(CassStatement* statement,
-                                     cass_int64_t timestamp);
+cass_statement_set_timestamp(CassStatement* statement,
+                             cass_int64_t timestamp);
 
 
 /**
@@ -3060,7 +3060,7 @@ cass_batch_set_serial_consistency(CassBatch* batch,
                                   CassConsistency serial_consistency);
 
 /**
- * Sets the batch's default timestamp.
+ * Sets the batch's timestamp.
  *
  * @public @memberof CassBatch
  *
@@ -3069,8 +3069,8 @@ cass_batch_set_serial_consistency(CassBatch* batch,
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_batch_set_default_timestamp(CassBatch* batch,
-                                 cass_int64_t timestamp);
+cass_batch_set_timestamp(CassBatch* batch,
+                         cass_int64_t timestamp);
 
 /**
  * Sets the batch's retry policy.

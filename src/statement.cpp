@@ -98,9 +98,9 @@ CassError cass_statement_set_retry_policy(CassStatement* statement,
   return CASS_OK;
 }
 
-CassError cass_statement_set_default_timestamp(CassStatement* statement,
-                                               cass_int64_t timestamp)  {
-  statement->set_default_timestamp(timestamp);
+CassError cass_statement_set_timestamp(CassStatement* statement,
+                                       cass_int64_t timestamp)  {
+  statement->set_timestamp(timestamp);
   return CASS_OK;
 }
 

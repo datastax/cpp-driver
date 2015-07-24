@@ -46,9 +46,9 @@ CassError cass_batch_set_serial_consistency(CassBatch* batch,
   return CASS_OK;
 }
 
-CassError cass_batch_set_default_timestamp(CassBatch* batch,
-                                           cass_int64_t timestamp) {
-  batch->set_default_timestamp(timestamp);
+CassError cass_batch_set_timestamp(CassBatch* batch,
+                                   cass_int64_t timestamp) {
+  batch->set_timestamp(timestamp);
   return CASS_OK;
 }
 
@@ -113,7 +113,7 @@ int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
         flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
       }
 
-      if (handler->default_timestamp() != CASS_INT64_MIN) {
+      if (handler->timestamp() != CASS_INT64_MIN) {
         buf_size += sizeof(int64_t); // [long]
         flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
       }
@@ -129,8 +129,8 @@ int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
         pos = buf.encode_uint16(pos, serial_consistency());
       }
 
-      if (handler->default_timestamp() != CASS_INT64_MIN) {
-        pos = buf.encode_int64(pos, handler->default_timestamp());
+      if (handler->timestamp() != CASS_INT64_MIN) {
+        pos = buf.encode_int64(pos, handler->timestamp());
       }
     }
 

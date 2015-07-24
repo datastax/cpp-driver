@@ -106,7 +106,7 @@ public:
     , stream_(-1)
     , state_(REQUEST_STATE_NEW)
     , cl_(CASS_CONSISTENCY_UNKNOWN)
-    , default_timestamp_(CASS_INT64_MIN) { }
+    , timestamp_(CASS_INT64_MIN) { }
 
   virtual ~Handler() {}
 
@@ -153,12 +153,12 @@ public:
 
   void set_consistency(CassConsistency cl) { cl_ = cl; }
 
-  int64_t default_timestamp() const {
-    return default_timestamp_;
+  int64_t timestamp() const {
+    return timestamp_;
   }
 
-  void set_default_timestamp(int64_t timestamp) {
-    default_timestamp_ = timestamp;
+  void set_timestamp(int64_t timestamp) {
+    timestamp_ = timestamp;
   }
 
   Request::EncodingCache* encoding_cache() { return &encoding_cache_; }
@@ -171,7 +171,7 @@ private:
   int16_t stream_;
   State state_;
   CassConsistency cl_;
-  int64_t default_timestamp_;
+  int64_t timestamp_;
   Request::EncodingCache encoding_cache_;
 
 private:
