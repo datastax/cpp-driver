@@ -47,8 +47,7 @@ Pool::Pool(IOWorker* io_worker,
     , is_initial_connection_(is_initial_connection)
     , is_critical_failure_(false)
     , is_pending_flush_(false)
-    , cancel_reconnect_(false)
-    , respawn_timer_(NULL) { }
+    , cancel_reconnect_(false) { }
 
 Pool::~Pool() {
   LOG_DEBUG("Pool dtor with %u pending requests pool(%p)",
@@ -61,16 +60,16 @@ Pool::~Pool() {
     request_handler->stop_timer();
     request_handler->retry(RETRY_WITH_NEXT_HOST);
   }
-
-  if (respawn_timer_ != NULL) {
-    Timer::stop(respawn_timer_);
-  }
 }
 
 void Pool::connect() {
-  LOG_DEBUG("Connect %s pool(%p)",
-            address_.to_string().c_str(), static_cast<void*>(this));
-  if (state_ == POOL_STATE_NEW) {
+  if (state_ == POOL_STATE_NEW ||
+      state_ == POOL_STATE_WAITING_TO_CONNECT) {
+    LOG_DEBUG("Connect %s pool(%p)",
+              address_.to_string().c_str(), static_cast<void*>(this));
+
+    connect_timer.stop(); // There could be a delayed connect waiting
+
     for (unsigned i = 0; i < config_.core_connections_per_host(); ++i) {
       spawn_connection();
     }
@@ -79,9 +78,21 @@ void Pool::connect() {
   }
 }
 
+void Pool::delayed_connect() {
+  if (state_ == POOL_STATE_NEW) {
+    state_ = POOL_STATE_WAITING_TO_CONNECT;
+    connect_timer.start(loop_,
+                        config_.reconnect_wait_time_ms(),
+                        this, on_wait_to_connect);
+  }
+}
+
 void Pool::close(bool cancel_reconnect) {
   if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
     LOG_DEBUG("Closing pool(%p)", static_cast<void*>(this));
+
+    connect_timer.stop();
+
     // We're closing before we've connected (likely because of an error), we need
     // to notify we're "ready"
     if (state_ == POOL_STATE_CONNECTING) {
@@ -294,10 +305,10 @@ void Pool::on_close(Connection* connection) {
   // For timeouts, if there are any valid connections left then don't close the
   // entire pool, but attempt to reconnect the timed out connections.
   if (connection->is_timeout_error() && !connections_.empty()) {
-    if (respawn_timer_ == NULL) {
-      respawn_timer_ = Timer::start(loop_,
-                                    config_.reconnect_wait_time_ms(),
-                                    this, on_respawn);
+    if (!connect_timer.is_running()) {
+      connect_timer.start(loop_,
+                             config_.reconnect_wait_time_ms(),
+                             this, on_partial_reconnect);
     }
     maybe_notify_ready();
   } else if (connection->is_defunct()) {
@@ -330,7 +341,7 @@ void Pool::on_availability_change(Connection* connection) {
   }
 }
 
-void Pool::on_pending_request_timeout(RequestTimer* timer) {
+void Pool::on_pending_request_timeout(Timer* timer) {
   RequestHandler* request_handler = static_cast<RequestHandler*>(timer->data());
   Pool* pool = request_handler->pool();
   pool->metrics_->pending_request_timeouts.inc();
@@ -351,7 +362,7 @@ void Pool::wait_for_connection(RequestHandler* request_handler) {
   add_pending_request(request_handler);
 }
 
-void Pool::on_respawn(Timer* timer) {
+void Pool::on_partial_reconnect(Timer* timer) {
   Pool* pool = static_cast<Pool*>(timer->data());
 
   size_t current = pool->connections_.size() +
@@ -365,8 +376,11 @@ void Pool::on_respawn(Timer* timer) {
       pool->spawn_connection();
     }
   }
+}
 
-  pool->respawn_timer_ = NULL;
+void Pool::on_wait_to_connect(Timer* timer) {
+  Pool* pool = static_cast<Pool*>(timer->data());
+  pool->connect();
 }
 
 } // namespace cass

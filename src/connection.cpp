@@ -92,13 +92,13 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
 
     case CQL_OPCODE_AUTH_CHALLENGE:
       connection_->on_auth_challenge(
-            static_cast<AuthResponseRequest*>(request_.get()),
+            static_cast<const AuthResponseRequest*>(request_.get()),
             static_cast<AuthChallengeResponse*>(response->response_body().get())->token());
       break;
 
     case CQL_OPCODE_AUTH_SUCCESS:
       connection_->on_auth_success(
-            static_cast<AuthResponseRequest*>(request_.get()),
+            static_cast<const AuthResponseRequest*>(request_.get()),
             static_cast<AuthSuccessResponse*>(response->response_body().get())->token());
       break;
 
@@ -143,6 +143,29 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
   }
 }
 
+Connection::HeartbeatHandler::HeartbeatHandler(Connection* connection)
+  : Handler(new OptionsRequest()) {
+  set_connection(connection);
+}
+
+void Connection::HeartbeatHandler::on_set(ResponseMessage* response) {
+  connection_->idle_start_time_ms_ = 0;
+  connection_->heartbeat_outstanding_ = false;
+}
+
+void Connection::HeartbeatHandler::on_error(CassError code, const std::string& message) {
+  LOG_WARN("An error occurred on host %s during a heartbeat request: %s",
+           connection_->address_string().c_str(),
+           message.c_str());
+  connection_->heartbeat_outstanding_ = false;
+}
+
+void Connection::HeartbeatHandler::on_timeout() {
+  LOG_WARN("Heartbeat request timed out on host %s",
+           connection_->address_string().c_str());
+  connection_->heartbeat_outstanding_ = false;
+}
+
 Connection::Connection(uv_loop_t* loop,
                        const Config& config,
                        Metrics* metrics,
@@ -164,8 +187,9 @@ Connection::Connection(uv_loop_t* loop,
     , listener_(listener)
     , response_(new ResponseMessage())
     , stream_manager_(protocol_version)
-    , connect_timer_(NULL)
-    , ssl_session_(NULL) {
+    , ssl_session_(NULL)
+    , idle_start_time_ms_(0)
+    , heartbeat_outstanding_(false) {
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
 
@@ -198,13 +222,17 @@ Connection::~Connection()
 void Connection::connect() {
   if (state_ == CONNECTION_STATE_NEW) {
     set_state(CONNECTION_STATE_CONNECTING);
-    connect_timer_ = Timer::start(loop_, config_.connect_timeout_ms(), this,
-                                  on_connect_timeout);
+    connect_timer_.start(loop_, config_.connect_timeout_ms(), this,
+                         on_connect_timeout);
     Connector::connect(&socket_, address_, this, on_connect);
   }
 }
 
 bool Connection::write(Handler* handler, bool flush_immediately) {
+  return internal_write(handler, flush_immediately, true);
+}
+
+bool Connection::internal_write(Handler* handler, bool flush_immediately, bool reset_idle_time) {
   int stream = stream_manager_.acquire(handler);
   if (stream < 0) {
     return false;
@@ -261,6 +289,11 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
     pending_write->flush();
   }
 
+  if (reset_idle_time) {
+    idle_start_time_ms_ = 0;
+    restart_heartbeat_timer();
+  }
+
   return true;
 }
 
@@ -273,11 +306,10 @@ void Connection::flush() {
 void Connection::schedule_schema_agreement(const SharedRefPtr<SchemaChangeHandler>& handler, uint64_t wait) {
   PendingSchemaAgreement* pending_schema_agreement = new PendingSchemaAgreement(handler);
   pending_schema_agreements_.add_to_back(pending_schema_agreement);
-  pending_schema_agreement->timer
-      = Timer::start(loop_,
-                     wait,
-                     pending_schema_agreement,
-                     Connection::on_pending_schema_agreement);
+  pending_schema_agreement->timer.start(loop_,
+                                        wait,
+                                        pending_schema_agreement,
+                                        Connection::on_pending_schema_agreement);
 }
 
 void Connection::close() {
@@ -296,7 +328,8 @@ void Connection::internal_close(ConnectionState close_state) {
       state_ != CONNECTION_STATE_CLOSE_DEFUNCT) {
     uv_handle_t* handle = copy_cast<uv_tcp_t*, uv_handle_t*>(&socket_);
     if (!uv_is_closing(handle)) {
-      stop_connect_timer();
+      heartbeat_timer_.stop();
+      connect_timer_.stop();
       if (state_ == CONNECTION_STATE_CONNECTED ||
           state_ == CONNECTION_STATE_READY) {
         uv_read_stop(copy_cast<uv_tcp_t*, uv_stream_t*>(&socket_));
@@ -464,7 +497,7 @@ void Connection::maybe_set_keyspace(ResponseMessage* response) {
 void Connection::on_connect(Connector* connector) {
   Connection* connection = static_cast<Connection*>(connector->data());
 
-  if (connection->connect_timer_ == NULL) {
+  if (!connection->connect_timer_.is_running()) {
     return; // Timed out
   }
 
@@ -496,9 +529,7 @@ void Connection::on_connect(Connector* connector) {
 
 void Connection::on_connect_timeout(Timer* timer) {
   Connection* connection = static_cast<Connection*>(timer->data());
-  connection->connect_timer_ = NULL;
   connection->notify_error("Connection timeout", CONNECTION_ERROR_TIMEOUT);
-
   connection->metrics_->connection_timeouts.inc();
 }
 
@@ -654,7 +685,7 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
   }
 }
 
-void Connection::on_timeout(RequestTimer* timer) {
+void Connection::on_timeout(Timer* timer) {
   Handler* handler = static_cast<Handler*>(timer->data());
   Connection* connection = handler->connection();
   LOG_INFO("Request timed out to host %s", connection->addr_string_.c_str());
@@ -679,14 +710,16 @@ void Connection::on_authenticate() {
   }
 }
 
-void Connection::on_auth_challenge(AuthResponseRequest* request, const std::string& token) {
+void Connection::on_auth_challenge(const AuthResponseRequest* request,
+                                   const std::string& token) {
   AuthResponseRequest* auth_response
       = new AuthResponseRequest(request->auth()->evaluate_challenge(token),
-                                request->auth().release());
+                                request->auth());
   write(new StartupHandler(this, auth_response));
 }
 
-void Connection::on_auth_success(AuthResponseRequest* request, const std::string& token) {
+void Connection::on_auth_success(const AuthResponseRequest* request,
+                                 const std::string& token) {
   request->auth()->on_authenticate_success(token);
   on_ready();
 }
@@ -728,15 +761,9 @@ void Connection::on_pending_schema_agreement(Timer* timer) {
   delete pending_schema_agreement;
 }
 
-void Connection::stop_connect_timer() {
-  if (connect_timer_ != NULL) {
-    Timer::stop(connect_timer_);
-    connect_timer_ = NULL;
-  }
-}
-
 void Connection::notify_ready() {
-  stop_connect_timer();
+  connect_timer_.stop();
+  restart_heartbeat_timer();
   set_state(CONNECTION_STATE_READY);
   listener_->on_ready(this);
 }
@@ -819,8 +846,9 @@ void Connection::send_credentials() {
 }
 
 void Connection::send_initial_auth_response() {
-  Authenticator* auth = config_.auth_provider()->new_authenticator(address_);
-  if (auth == NULL) {
+  SharedRefPtr<Authenticator> auth(
+        config_.auth_provider()->new_authenticator(address_));
+  if (!auth) {
     notify_error("Authentication required but no auth provider set", CONNECTION_ERROR_AUTH);
   } else {
     AuthResponseRequest* auth_response
@@ -829,11 +857,45 @@ void Connection::send_initial_auth_response() {
   }
 }
 
-void Connection::PendingSchemaAgreement::stop_timer() {
-  if (timer != NULL) {
-    Timer::stop(timer);
-    timer = NULL;
+void Connection::restart_heartbeat_timer() {
+  if (config_.connection_heartbeat_interval_secs() > 0) {
+    heartbeat_timer_.start(loop_,
+                           1000 * config_.connection_heartbeat_interval_secs(),
+                           this, on_heartbeat);
   }
+}
+
+void Connection::on_heartbeat(Timer* timer) {
+  Connection* connection = static_cast<Connection*>(timer->data());
+
+  if (connection->idle_start_time_ms_ == 0) {
+    connection->idle_start_time_ms_ = get_time_since_epoch_ms();
+  } else if ((get_time_since_epoch_ms() - connection->idle_start_time_ms_) / 1000 >
+             connection->config().connection_idle_timeout_secs()){
+    connection->notify_error("Failed to send a heartbeat within connection idle interval. "
+                             "Terminating connection...",
+                 CONNECTION_ERROR_TIMEOUT);
+    return;
+  }
+
+  if (!connection->heartbeat_outstanding_) {
+    if (!connection->internal_write(new HeartbeatHandler(connection), true, false)) {
+      // Recycling only this connection with a timeout error. This is unlikely and
+      // it means the connection ran out of stream IDs as a result of requests
+      // that never returned and as a result timed out.
+      connection->notify_error("No streams IDs available for heartbeat request. "
+                               "Terminating connection...",
+                               CONNECTION_ERROR_TIMEOUT);
+      return;
+    }
+    connection->heartbeat_outstanding_ = true;
+  }
+
+  connection->restart_heartbeat_timer();
+}
+
+void Connection::PendingSchemaAgreement::stop_timer() {
+  timer.stop();
 }
 
 Connection::PendingWriteBase::~PendingWriteBase() {
@@ -906,7 +968,8 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
 
   connection->pending_writes_size_ -= pending_write->size();
   if (connection->pending_writes_size_ <
-      connection->config_.write_bytes_low_water_mark()) {
+      connection->config_.write_bytes_low_water_mark() &&
+      connection->state_ == CONNECTION_STATE_OVERWHELMED) {
     connection->set_state(CONNECTION_STATE_READY);
   }
 
@@ -1047,6 +1110,5 @@ void Connection::SslHandshakeWriter::on_write(uv_write_t* req, int status) {
   }
   delete writer;
 }
-
 
 } // namespace cass

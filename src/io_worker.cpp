@@ -125,7 +125,10 @@ void IOWorker::close_async() {
 }
 
 void IOWorker::add_pool(const Address& address, bool is_initial_connection) {
-  if (!is_closing_ && pools_.count(address) == 0) {
+  if (is_closing_) return;
+
+  PoolMap::iterator it = pools_.find(address);
+  if (it == pools_.end()) {
     LOG_INFO("Adding pool for host %s io_worker(%p)",
              address.to_string(true).c_str(), static_cast<void*>(this));
 
@@ -134,6 +137,12 @@ void IOWorker::add_pool(const Address& address, bool is_initial_connection) {
     SharedRefPtr<Pool> pool(new Pool(this, address, is_initial_connection));
     pools_[address] = pool;
     pool->connect();
+  } else  {
+    // We could have a connection that's waiting to reconnect. In that case,
+    // this will start to connect immediately.
+    LOG_DEBUG("Host %s already present attempting to initiate immediate connection",
+              address.to_string().c_str());
+    it->second->connect();
   }
 }
 
@@ -242,52 +251,17 @@ void IOWorker::close_handles() {
   request_queue_.close_handles();
   uv_prepare_stop(&prepare_);
   uv_close(copy_cast<uv_prepare_t*, uv_handle_t*>(&prepare_), NULL);
-
-  for (PendingReconnectMap::iterator it = pending_reconnects_.begin(),
-       end = pending_reconnects_.end(); it != end; ++it) {
-    LOG_DEBUG("Stopping reconnect timers reconnect(%p timer(%p)) io_worker(%p)",
-              static_cast<void*>(&it->second),
-              static_cast<void*>(it->second.timer),
-              static_cast<void*>(this));
-    it->second.stop_timer();
-  }
   LOG_DEBUG("Active handles following close: %d", loop()->active_handles);
-}
-
-void IOWorker::on_pending_pool_reconnect(Timer* timer) {
-  PendingReconnect* pending_reconnect =
-      static_cast<PendingReconnect*>(timer->data());
-
-  IOWorker* io_worker = pending_reconnect->io_worker;
-
-  LOG_DEBUG("Reconnecting pool reconnect(%p timer(%p)) io_worker(%p)",
-            static_cast<void*>(pending_reconnect),
-            static_cast<void*>(timer),
-            static_cast<void*>(io_worker));
-
-  const Address& address = pending_reconnect->address;
-  io_worker->add_pool(address, false);
-  io_worker->pending_reconnects_.erase(address);
 }
 
 void IOWorker::on_event(const IOWorkerEvent& event) {
   switch (event.type) {
     case IOWorkerEvent::ADD_POOL: {
-      // Stop any attempts to reconnect because add_pool() is going to attempt
-      // reconnection right away.
-      cancel_reconnect(event.address);
       add_pool(event.address, event.is_initial_connection);
       break;
     }
 
     case IOWorkerEvent::REMOVE_POOL: {
-      if (event.cancel_reconnect) {
-        LOG_DEBUG("REMOVE_POOL event for %s cancelling reconnect io_worker(%p)",
-                  event.address.to_string().c_str(),
-                  static_cast<void*>(this));
-        cancel_reconnect(event.address);
-      }
-
       PoolMap::iterator it = pools_.find(event.address);
       if (it != pools_.end()) {
         LOG_DEBUG("REMOVE_POOL event for %s closing pool(%p) io_worker(%p)",
@@ -343,44 +317,15 @@ void IOWorker::on_prepare(uv_prepare_t* prepare) {
 }
 
 void IOWorker::schedule_reconnect(const Address& address) {
-  if (is_closing_ || pending_reconnects_.count(address) > 0) {
-    LOG_DEBUG("Reconnect already pending for host %s io_worker(%p)",
-              address.to_string().c_str(), static_cast<void*>(this));
-    return;
-  }
-
-  PendingReconnect& pr = pending_reconnects_[address];
-  pr.io_worker = this;
-  pr.address = address;
-  pr.timer = Timer::start(loop(),
-                          config_.reconnect_wait_time_ms(),
-                          &pr,
-                          IOWorker::on_pending_pool_reconnect);
-  LOG_DEBUG("Scheduling reconnect(%p timer(%p)) for host %s io_worker(%p)",
-            static_cast<void*>(&pr),
-            static_cast<void*>(pr.timer),
-            address.to_string().c_str(),
-            static_cast<void*>(this));
-}
-
-void IOWorker::cancel_reconnect(const Address& address) {
-  PendingReconnectMap::iterator it = pending_reconnects_.find(address);
-  if (it != pending_reconnects_.end()) {
-    LOG_DEBUG("Cancelling reconnect(%p timer(%p)) for host %s io_worker(%p)",
-              static_cast<void*>(&it->second),
-              static_cast<void*>(it->second.timer),
+  if (pools_.count(address) == 0) {
+    LOG_DEBUG("Scheduling reconnect for host %s io_worker(%p)",
               address.to_string().c_str(),
               static_cast<void*>(this));
-    it->second.stop_timer();
-    pending_reconnects_.erase(it);
+    SharedRefPtr<Pool> pool(new Pool(this, address, false));
+    pools_[address] = pool;
+    pool->delayed_connect();
   }
 }
 
-void IOWorker::PendingReconnect::stop_timer() {
-  if (timer != NULL) {
-    Timer::stop(timer);
-    timer = NULL;
-  }
-}
 
 } // namespace cass
