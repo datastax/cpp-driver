@@ -23,6 +23,7 @@
 #include "latency_aware_policy.hpp"
 #include "retry_policy.hpp"
 #include "ssl.hpp"
+#include "timestamp_generator.hpp"
 #include "token_aware_policy.hpp"
 
 #include <list>
@@ -67,6 +68,7 @@ public:
       , tcp_keepalive_delay_secs_(0)
       , connection_idle_timeout_secs_(60)
       , connection_heartbeat_interval_secs_(30)
+      , timestamp_gen_(new ServerSideTimestampGenerator())
       , retry_policy_(new DefaultRetryPolicy()) { }
 
   unsigned thread_count_io() const { return thread_count_io_; }
@@ -290,6 +292,15 @@ public:
     connection_heartbeat_interval_secs_ = interval_secs;
   }
 
+  TimestampGenerator* timestamp_gen() const {
+    return timestamp_gen_.get();
+  }
+
+  void set_timestamp_gen(TimestampGenerator* timestamp_gen) {
+    if (timestamp_gen == NULL) return;
+    timestamp_gen_.reset(timestamp_gen);
+  }
+
   RetryPolicy* retry_policy() const {
     return retry_policy_.get();
   }
@@ -333,6 +344,7 @@ private:
   unsigned tcp_keepalive_delay_secs_;
   unsigned connection_idle_timeout_secs_;
   unsigned connection_heartbeat_interval_secs_;
+  SharedRefPtr<TimestampGenerator> timestamp_gen_;
   SharedRefPtr<RetryPolicy> retry_policy_;
 };
 

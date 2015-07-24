@@ -98,6 +98,12 @@ CassError cass_statement_set_retry_policy(CassStatement* statement,
   return CASS_OK;
 }
 
+CassError cass_statement_set_timestamp(CassStatement* statement,
+                                       cass_int64_t timestamp)  {
+  statement->set_timestamp(timestamp);
+  return CASS_OK;
+}
+
 #define CASS_STATEMENT_BIND(Name, Params, Value)                                \
   CassError cass_statement_bind_##Name(CassStatement* statement,                \
                                       size_t index Params) {                    \

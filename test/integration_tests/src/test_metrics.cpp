@@ -22,9 +22,8 @@ limitations under the License.
 #include <boost/test/debug.hpp>
 #include <boost/thread.hpp> // Sleep functionality
 
-#include <limits>
-
 #include "cassandra.h"
+#include "constants.hpp"
 #include "test_utils.hpp"
 
 struct MetricsTest {
@@ -245,7 +244,7 @@ BOOST_AUTO_TEST_CASE(request_statistics) {
   } while (boost::chrono::steady_clock::now() < end &&
     metrics.requests.one_minute_rate == 0.0);
 
-  BOOST_CHECK_LT(metrics.requests.min, std::numeric_limits<uint64_t>::max());
+  BOOST_CHECK_LT(metrics.requests.min, CASS_UINT64_MAX);
   BOOST_CHECK_GT(metrics.requests.max, 0);
   BOOST_CHECK_GT(metrics.requests.mean, 0);
   BOOST_CHECK_GT(metrics.requests.stddev, 0);

@@ -18,6 +18,7 @@
 #define __CASS_HANDLER_HPP_INCLUDED__
 
 #include "buffer.hpp"
+#include "constants.hpp"
 #include "cassandra.h"
 #include "utils.hpp"
 #include "list.hpp"
@@ -54,7 +55,8 @@ public:
     , connection_(NULL)
     , stream_(-1)
     , state_(REQUEST_STATE_NEW)
-    , cl_(CASS_CONSISTENCY_UNKNOWN) { }
+    , cl_(CASS_CONSISTENCY_UNKNOWN)
+    , timestamp_(CASS_INT64_MIN) { }
 
   virtual ~Handler() {}
 
@@ -99,6 +101,14 @@ public:
 
   void set_consistency(CassConsistency cl) { cl_ = cl; }
 
+  int64_t timestamp() const {
+    return timestamp_;
+  }
+
+  void set_timestamp(int64_t timestamp) {
+    timestamp_ = timestamp;
+  }
+
   uint64_t start_time_ns() const { return start_time_ns_; }
 
   Request::EncodingCache* encoding_cache() { return &encoding_cache_; }
@@ -112,6 +122,7 @@ private:
   int stream_;
   State state_;
   CassConsistency cl_;
+  int64_t timestamp_;
   uint64_t start_time_ns_;
   Request::EncodingCache encoding_cache_;
 

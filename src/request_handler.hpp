@@ -61,7 +61,9 @@ public:
       , num_retries_(0)
       , is_query_plan_exhausted_(true)
       , io_worker_(NULL)
-      , pool_(NULL) { }
+      , pool_(NULL) {
+    set_timestamp(request->timestamp());
+  }
 
   virtual void on_set(ResponseMessage* response);
   virtual void on_error(CassError code, const std::string& message);

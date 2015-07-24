@@ -16,6 +16,7 @@
 
 #include "query_request.hpp"
 
+#include "constants.hpp"
 #include "handler.hpp"
 #include "logger.hpp"
 #include "serialization.hpp"
@@ -134,6 +135,11 @@ int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs
     flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
   }
 
+  if (version >= 3 && handler->timestamp() != CASS_INT64_MIN) {
+      paging_buf_size += sizeof(int64_t); // [long]
+      flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
+  }
+
   {
     bufs->push_back(Buffer(query_buf_size));
     length += query_buf_size;
@@ -173,6 +179,10 @@ int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs
 
     if (serial_consistency() != 0) {
       pos = buf.encode_uint16(pos, serial_consistency());
+    }
+
+    if (version >= 3 && handler->timestamp() != CASS_INT64_MIN) {
+      pos = buf.encode_int64(pos, handler->timestamp());
     }
   }
 

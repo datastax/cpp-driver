@@ -33,6 +33,7 @@
 #include "session.hpp"
 #include "ssl.hpp"
 #include "statement.hpp"
+#include "timestamp_generator.hpp"
 #include "tuple.hpp"
 #include "user_type_value.hpp"
 #include "uuids.hpp"
@@ -76,6 +77,7 @@ EXTERNAL_TYPE(cass::UuidGen, CassUuidGen);
 EXTERNAL_TYPE(cass::Tuple, CassTuple);
 EXTERNAL_TYPE(cass::UserTypeValue, CassUserType);
 EXTERNAL_TYPE(cass::DataType, CassDataType);
+EXTERNAL_TYPE(cass::TimestampGenerator, CassTimestampGen);
 EXTERNAL_TYPE(cass::RetryPolicy, CassRetryPolicy);
 
 }
