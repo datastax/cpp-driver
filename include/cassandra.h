@@ -1204,6 +1204,38 @@ cass_cluster_set_tcp_keepalive(CassCluster* cluster,
                                unsigned delay_secs);
 
 /**
+ * Sets the amount of time between heartbeat messages and controls the amount
+ * of time the connection must be idle before sending heartbeat messages. This
+ * is useful for preventing intermediate network devices from dropping
+ * connections.
+ *
+ * <b>Default:</b> 30 seconds
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] interval_secs Use 0 to disable heartbeat messages
+ */
+CASS_EXPORT void
+cass_cluster_set_connection_heartbeat_interval(CassCluster* cluster,
+                                               unsigned interval_secs);
+
+/**
+ * Sets the amount of time a connection is allowed to be without a successful
+ * hearbeat response before being terminated and scheduled for reconnection.
+ *
+ * <b>Default:</b> 60 seconds
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] timeout_secs
+ */
+CASS_EXPORT void
+cass_cluster_set_connection_idle_timeout(CassCluster* cluster,
+                                         unsigned timeout_secs);
+
+/**
  * Sets the retry policy used for all requests unless overridden by setting
  * a retry policy on a statement or a batch.
  *

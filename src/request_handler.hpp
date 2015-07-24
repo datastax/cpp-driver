@@ -55,17 +55,13 @@ public:
   RequestHandler(const Request* request,
                  ResponseFuture* future,
                  RetryPolicy* retry_policy)
-      : request_(request)
+      : Handler(request)
       , future_(future)
       , retry_policy_(retry_policy)
       , num_retries_(0)
       , is_query_plan_exhausted_(true)
       , io_worker_(NULL)
       , pool_(NULL) { }
-
-  virtual const Request* request() const { return request_.get(); }
-
-  virtual void start_request();
 
   virtual void on_set(ResponseMessage* response);
   virtual void on_error(CassError code, const std::string& message);
@@ -115,7 +111,6 @@ private:
   ScopedPtr<QueryPlan> query_plan_;
   IOWorker* io_worker_;
   Pool* pool_;
-  uint64_t start_time_ns_;
 };
 
 } // namespace cass

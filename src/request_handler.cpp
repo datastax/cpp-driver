@@ -93,12 +93,8 @@ bool RequestHandler::is_host_up(const Address& address) const {
   return io_worker_->is_host_up(address);
 }
 
-void RequestHandler::start_request() {
-  start_time_ns_ = uv_hrtime();
-}
-
 void RequestHandler::set_response(Response* response) {
-  uint64_t elapsed = uv_hrtime() - start_time_ns_;
+  uint64_t elapsed = uv_hrtime() - start_time_ns();
   current_host_->update_latency(elapsed);
   connection_->metrics()->record_request(elapsed);
   future_->set_result(current_host_->address(), response);
