@@ -61,7 +61,7 @@ public:
       , load_balancing_policy_(new DCAwarePolicy())
       , token_aware_routing_(true)
       , latency_aware_routing_(false)
-      , tcp_nodelay_enable_(false)
+      , tcp_nodelay_enable_(true)
       , tcp_keepalive_enable_(false)
       , tcp_keepalive_delay_secs_(0)
       , connection_idle_timeout_secs_(60)

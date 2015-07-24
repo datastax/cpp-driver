@@ -186,6 +186,7 @@ Connection::Connection(uv_loop_t* loop,
     , protocol_version_(protocol_version)
     , listener_(listener)
     , response_(new ResponseMessage())
+    , stream_manager_(protocol_version)
     , ssl_session_(NULL)
     , idle_start_time_ms_(0)
     , heartbeat_outstanding_(false) {
@@ -232,7 +233,7 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
 }
 
 bool Connection::internal_write(Handler* handler, bool flush_immediately, bool reset_idle_time) {
-  int8_t stream = stream_manager_.acquire_stream(handler);
+  int stream = stream_manager_.acquire(handler);
   if (stream < 0) {
     return false;
   }
@@ -253,7 +254,7 @@ bool Connection::internal_write(Handler* handler, bool flush_immediately, bool r
 
   int32_t request_size = pending_write->write(handler);
   if (request_size < 0) {
-    stream_manager_.release_stream(stream);
+    stream_manager_.release(stream);
     if (request_size == Request::ENCODE_ERROR_BATCH_WITH_NAMED_VALUES) {
       handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
                         "Batches cannot contain queries with named values");
@@ -438,7 +439,7 @@ void Connection::consume(char* input, size_t size) {
         }
       } else {
         Handler* handler = NULL;
-        if (stream_manager_.get_item(response->stream(), handler)) {
+        if (stream_manager_.get_pending_and_release(response->stream(), handler)) {
           switch (handler->state()) {
             case Handler::REQUEST_STATE_READING:
               maybe_set_keyspace(response.get());
@@ -936,7 +937,7 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
             connection->defunct();
           }
 
-          connection->stream_manager_.release_stream(handler->stream());
+          connection->stream_manager_.release(handler->stream());
           handler->stop_timer();
           handler->set_state(Handler::REQUEST_STATE_DONE);
           handler->on_error(CASS_ERROR_LIB_WRITE_ERROR,

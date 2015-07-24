@@ -25,60 +25,70 @@
 
 BOOST_AUTO_TEST_SUITE(streams)
 
-BOOST_AUTO_TEST_CASE(simple)
+
+BOOST_AUTO_TEST_CASE(max_streams)
 {
-  cass::StreamManager<int> streams;
-
-  for (int i = 0; i < 128; ++i) {
-    int8_t stream = streams.acquire_stream(i);
-    BOOST_REQUIRE(stream == i);
-  }
-
-  // No more streams left
-  BOOST_CHECK(streams.acquire_stream(128) < 0);
-
-  for (int i = 0; i < 128; ++i) {
-    int item = -1;
-    BOOST_CHECK(streams.get_item(i, item));
-    BOOST_CHECK(item == i);
-  }
-
-  // 127 was the stream last given back
-  int stream = streams.acquire_stream(0);
-  BOOST_CHECK(stream == 127);
+  BOOST_REQUIRE(cass::StreamManager<int>(1).max_streams() == 128);
+  BOOST_REQUIRE(cass::StreamManager<int>(2).max_streams() == 128);
+  BOOST_REQUIRE(cass::StreamManager<int>(3).max_streams() == 32768);
 }
 
-BOOST_AUTO_TEST_CASE(alloc)
+BOOST_AUTO_TEST_CASE(simple)
 {
-  cass::StreamManager<int> streams;
+  const int protocol_versions[] = { 1, 3, 0 };
 
-  for (int i = 0; i < 5; ++i) {
-    int8_t stream = streams.acquire_stream(i);
-    BOOST_REQUIRE(stream == i);
+  for (const int* version = protocol_versions; *version > 0; ++version) {
+    cass::StreamManager<int> streams(*version);
+
+    for (size_t i = 0; i < streams.max_streams(); ++i) {
+      int stream = streams.acquire(i);
+      BOOST_REQUIRE(stream >= 0);
+    }
+
+    // Verify there are no more streams left
+    BOOST_CHECK(streams.acquire(streams.max_streams()) < 0);
+
+    for (size_t i = 0; i < streams.max_streams(); ++i) {
+      int item = -1;
+      BOOST_CHECK(streams.get_pending_and_release(i, item));
+      BOOST_CHECK(item >= 0);
+    }
+
+    for (size_t i = 0; i < streams.max_streams(); ++i) {
+      int stream = streams.acquire(i);
+      BOOST_REQUIRE(stream >= 0);
+    }
+
+    // Verify there are no more streams left
+    BOOST_CHECK(streams.acquire(streams.max_streams()) < 0);
   }
+}
 
-  for (int i = 0; i < 5; ++i) {
-    int item = -1;
-    BOOST_CHECK(streams.get_item(i, item, false));
-    BOOST_CHECK(item == i);
+BOOST_AUTO_TEST_CASE(release)
+{
+  const int protocol_versions[] = { 1, 3, 0 };
+
+  for (const int* version = protocol_versions; *version > 0; ++version) {
+    cass::StreamManager<int> streams(*version);
+
+    for (size_t i = 0; i < streams.max_streams(); ++i) {
+      int stream = streams.acquire(i);
+      BOOST_REQUIRE(stream >= 0);
+    }
+
+    // Verify there are no more streams left
+    BOOST_CHECK(streams.acquire(streams.max_streams()) < 0);
+
+    // Verify that the stream the was previously release is re-acquired
+    for (size_t i = 0; i < streams.max_streams(); ++i) {
+      streams.release(i);
+      int stream = streams.acquire(i);
+      BOOST_REQUIRE(static_cast<size_t>(stream) == i);
+    }
+
+    // Verify there are no more streams left
+    BOOST_CHECK(streams.acquire(streams.max_streams()) < 0);
   }
-
-  // Release streams in "random" order
-  streams.release_stream(3);
-  streams.release_stream(0);
-  streams.release_stream(2);
-  streams.release_stream(4);
-  streams.release_stream(1);
-
-  // Verify that streams are reused
-  BOOST_CHECK(streams.acquire_stream(0) == 1);
-  BOOST_CHECK(streams.acquire_stream(0) == 4);
-  BOOST_CHECK(streams.acquire_stream(0) == 2);
-  BOOST_CHECK(streams.acquire_stream(0) == 0);
-  BOOST_CHECK(streams.acquire_stream(0) == 3);
-
-  // Now we should get the first never alloc'd stream
-  BOOST_CHECK(streams.acquire_stream(0) == 5);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

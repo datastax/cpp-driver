@@ -70,9 +70,9 @@ public:
     connection_ = connection;
   }
 
-  int8_t stream() const { return stream_; }
+  int stream() const { return stream_; }
 
-  void set_stream(int8_t stream) {
+  void set_stream(int stream) {
     stream_ = stream;
   }
 
@@ -99,7 +99,7 @@ protected:
 
 private:
   Timer timer_;
-  int16_t stream_;
+  int stream_;
   State state_;
   uint64_t start_time_ns_;
   Request::EncodingCache encoding_cache_;
