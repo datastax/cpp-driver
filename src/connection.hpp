@@ -52,9 +52,20 @@ public:
     CONNECTION_STATE_NEW,
     CONNECTION_STATE_CONNECTING,
     CONNECTION_STATE_CONNECTED,
+    CONNECTION_STATE_REGISTERING_EVENTS,
     CONNECTION_STATE_READY,
-    CONNECTION_STATE_CLOSING,
-    CONNECTION_STATE_CLOSED
+    CONNECTION_STATE_OVERWHELMED,
+    CONNECTION_STATE_CLOSE,
+    CONNECTION_STATE_CLOSE_DEFUNCT
+  };
+
+  enum ConnectionError {
+    CONNECTION_OK,
+    CONNECTION_ERROR_GENERIC,
+    CONNECTION_ERROR_TIMEOUT,
+    CONNECTION_ERROR_INVALID_PROTOCOL,
+    CONNECTION_ERROR_AUTH,
+    CONNECTION_ERROR_SSL
   };
 
   class Listener {
@@ -101,17 +112,29 @@ public:
   void close();
   void defunct();
 
-  bool is_closing() const { return state_ == CONNECTION_STATE_CLOSING; }
-  bool is_ready() const { return state_ == CONNECTION_STATE_READY; }
-  bool is_available() const { return is_available_; }
-  bool is_defunct() const { return is_defunct_; }
-  bool is_invalid_protocol() const { return is_invalid_protocol_; }
-  bool is_critical_failure() const {
-    return is_invalid_protocol_ || !auth_error_.empty() || !ssl_error_.empty();
+  bool is_closing() const {
+    return state_ == CONNECTION_STATE_CLOSE ||
+        state_ == CONNECTION_STATE_CLOSE_DEFUNCT;
   }
 
-  const std::string& auth_error() const { return auth_error_; }
-  const std::string& ssl_error() const { return ssl_error_; }
+  bool is_ready() const { return state_ == CONNECTION_STATE_READY; }
+  bool is_available() const { return is_ready(); }
+  bool is_defunct() const { return state_ == CONNECTION_STATE_CLOSE_DEFUNCT; }
+
+  bool is_invalid_protocol() const { return error_code_ == CONNECTION_ERROR_INVALID_PROTOCOL; }
+  bool is_auth_error() const { return error_code_ == CONNECTION_ERROR_AUTH; }
+  bool is_ssl_error() const { return error_code_ == CONNECTION_ERROR_SSL; }
+  bool is_timeout_error() const { return error_code_ == CONNECTION_ERROR_TIMEOUT; }
+
+  bool is_critical_failure() const {
+    return error_code_ == CONNECTION_ERROR_INVALID_PROTOCOL ||
+        error_code_ == CONNECTION_ERROR_AUTH ||
+        error_code_ == CONNECTION_ERROR_SSL;
+  }
+
+  ConnectionError error_code() const { return error_code_; }
+  const std::string& error_message() const { return error_message_; }
+
   CassError ssl_error_code() const { return ssl_error_code_; }
 
   int protocol_version() const { return protocol_version_; }
@@ -230,8 +253,8 @@ private:
     Timer* timer;
   };
 
-  void set_is_available(bool is_available);
-  void actually_close();
+  void internal_close(ConnectionState close_state);
+  void set_state(ConnectionState state);
   void consume(char* input, size_t size);
   void maybe_set_keyspace(ResponseMessage* response);
 
@@ -265,8 +288,8 @@ private:
 
   void stop_connect_timer();
   void notify_ready();
-  void notify_error(const std::string& error);
-  void notify_error_ssl(const std::string& error);
+  void notify_error(const std::string& message, ConnectionError code = CONNECTION_ERROR_GENERIC);
+  void log_error(const std::string& error);
 
   void ssl_handshake();
 
@@ -275,13 +298,8 @@ private:
 
 private:
   ConnectionState state_;
-  bool is_defunct_;
-  bool is_invalid_protocol_;
-  bool is_registered_for_events_;
-  bool is_available_;
-
-  std::string auth_error_;
-  std::string ssl_error_;
+  ConnectionError error_code_;
+  std::string error_message_;
   CassError ssl_error_code_;
 
   size_t pending_writes_size_;
@@ -301,12 +319,7 @@ private:
   ScopedPtr<ResponseMessage> response_;
   StreamManager<Handler*> stream_manager_;
 
-  // the actual connection
   uv_tcp_t socket_;
-  // supported stuff sent in start up message
-  std::string compression_;
-  std::string version_;
-
   Timer* connect_timer_;
   ScopedPtr<SslSession> ssl_session_;
 

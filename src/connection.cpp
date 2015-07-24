@@ -77,15 +77,12 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
           = static_cast<ErrorResponse*>(response->response_body().get());
       if (error->code() == CQL_ERROR_PROTOCOL_ERROR &&
           error->message().find("Invalid or unsupported protocol version") != std::string::npos) {
-        connection_->is_invalid_protocol_ = true;
-        LOG_WARN("Host %s received invalid protocol response %s",
-                 connection_->addr_string_.c_str(), error->error_message().c_str());
-        connection_->defunct();
-        return;
+        connection_->notify_error(error->message(), CONNECTION_ERROR_INVALID_PROTOCOL);
       } else if (error->code() == CQL_ERROR_BAD_CREDENTIALS) {
-        connection_->auth_error_ = error->message();
+        connection_->notify_error(error->message(), CONNECTION_ERROR_AUTH);
+      } else {
+        connection_->notify_error("Received error response " + error->error_message());
       }
-      connection_->notify_error("Received error response " + error->error_message());
       break;
     }
 
@@ -129,7 +126,7 @@ void Connection::StartupHandler::on_error(CassError code,
 
 void Connection::StartupHandler::on_timeout() {
   if (!connection_->is_closing()) {
-    connection_->notify_error("Timed out");
+    connection_->notify_error("Timed out", CONNECTION_ERROR_TIMEOUT);
   }
 }
 
@@ -141,7 +138,7 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
       connection_->on_set_keyspace();
       break;
     default:
-      connection_->notify_error("Invalid result. Expected set keyspace.");
+      connection_->notify_error("Invalid result response. Expected set keyspace.");
       break;
   }
 }
@@ -154,10 +151,7 @@ Connection::Connection(uv_loop_t* loop,
                        int protocol_version,
                        Listener* listener)
     : state_(CONNECTION_STATE_NEW)
-    , is_defunct_(false)
-    , is_invalid_protocol_(false)
-    , is_registered_for_events_(false)
-    , is_available_(false)
+    , error_code_(CONNECTION_OK)
     , ssl_error_code_(CASS_OK)
     , pending_writes_size_(0)
     , loop_(loop)
@@ -170,7 +164,6 @@ Connection::Connection(uv_loop_t* loop,
     , listener_(listener)
     , response_(new ResponseMessage())
     , stream_manager_(protocol_version)
-    , version_("3.0.0")
     , connect_timer_(NULL)
     , ssl_session_(NULL) {
   socket_.data = this;
@@ -204,7 +197,7 @@ Connection::~Connection()
 
 void Connection::connect() {
   if (state_ == CONNECTION_STATE_NEW) {
-    state_ = CONNECTION_STATE_CONNECTING;
+    set_state(CONNECTION_STATE_CONNECTING);
     connect_timer_ = Timer::start(loop_, config_.connect_timeout_ms(), this,
                                   on_connect_timeout);
     Connector::connect(&socket_, address_, this, on_connect);
@@ -252,7 +245,7 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
              config_.write_bytes_high_water_mark(),
              addr_string_.c_str());
     metrics_->exceeded_write_bytes_water_mark.inc();
-    set_is_available(false);
+    set_state(CONNECTION_STATE_OVERWHELMED);
   }
 
   LOG_TRACE("Sending message type %s with stream %d",
@@ -288,7 +281,19 @@ void Connection::schedule_schema_agreement(const SharedRefPtr<SchemaChangeHandle
 }
 
 void Connection::close() {
-  if (state_ != CONNECTION_STATE_CLOSING) {
+  internal_close(CONNECTION_STATE_CLOSE);
+}
+
+void Connection::defunct() {
+  internal_close(CONNECTION_STATE_CLOSE_DEFUNCT);
+}
+
+void Connection::internal_close(ConnectionState close_state) {
+  assert(close_state == CONNECTION_STATE_CLOSE ||
+         close_state == CONNECTION_STATE_CLOSE_DEFUNCT);
+
+  if (state_ != CONNECTION_STATE_CLOSE &&
+      state_ != CONNECTION_STATE_CLOSE_DEFUNCT) {
     uv_handle_t* handle = copy_cast<uv_tcp_t*, uv_handle_t*>(&socket_);
     if (!uv_is_closing(handle)) {
       stop_connect_timer();
@@ -296,22 +301,75 @@ void Connection::close() {
           state_ == CONNECTION_STATE_READY) {
         uv_read_stop(copy_cast<uv_tcp_t*, uv_stream_t*>(&socket_));
       }
-      state_ = CONNECTION_STATE_CLOSING;
-      set_is_available(false);
+      set_state(close_state);
       uv_close(handle, on_close);
     }
   }
 }
 
-void Connection::defunct() {
-  is_defunct_ = true;
-  close();
-}
+void Connection::set_state(ConnectionState new_state) {
+  // Only update if the state changed
+  if (new_state == state_) return;
 
-void Connection::set_is_available(bool is_available) {
-  // The callback is only called once per actual state change
-  if (is_available_ != is_available) {
-    is_available_ = is_available;
+  ConnectionState old_state = state_;
+
+  switch (state_) {
+    case CONNECTION_STATE_NEW:
+      assert(new_state == CONNECTION_STATE_CONNECTING &&
+             "Invalid connection state after new");
+      state_ = new_state;
+      break;
+
+    case CONNECTION_STATE_CONNECTING:
+      assert((new_state == CONNECTION_STATE_CONNECTED ||
+              new_state == CONNECTION_STATE_CLOSE ||
+              new_state == CONNECTION_STATE_CLOSE_DEFUNCT) &&
+             "Invalid connection state after connecting");
+      state_ = new_state;
+      break;
+
+    case CONNECTION_STATE_CONNECTED:
+      assert((new_state == CONNECTION_STATE_REGISTERING_EVENTS ||
+              new_state == CONNECTION_STATE_READY ||
+              new_state == CONNECTION_STATE_CLOSE ||
+              new_state == CONNECTION_STATE_CLOSE_DEFUNCT) &&
+             "Invalid connection state after connected");
+      state_ = new_state;
+      break;
+
+    case CONNECTION_STATE_REGISTERING_EVENTS:
+      assert(new_state == CONNECTION_STATE_READY &&
+             "Invalid connection state after registering for events");
+      state_ = new_state;
+      break;
+
+    case CONNECTION_STATE_READY:
+      assert((new_state == CONNECTION_STATE_OVERWHELMED ||
+              new_state == CONNECTION_STATE_CLOSE ||
+              new_state == CONNECTION_STATE_CLOSE_DEFUNCT) &&
+             "Invalid connection state after ready");
+      state_ = new_state;
+      break;
+
+    case CONNECTION_STATE_OVERWHELMED:
+      assert((new_state == CONNECTION_STATE_READY ||
+              new_state == CONNECTION_STATE_CLOSE ||
+              new_state == CONNECTION_STATE_CLOSE_DEFUNCT) &&
+             "Invalid connection state after being overwhelmed");
+      state_ = new_state;
+      break;
+
+    case CONNECTION_STATE_CLOSE:
+      assert(false && "No state change after close");
+      break;
+
+    case CONNECTION_STATE_CLOSE_DEFUNCT:
+      assert(false && "No state change after close defunct");
+      break;
+  }
+
+  // Only change the availability if the state changes to/from being ready
+  if (new_state == CONNECTION_STATE_READY || old_state == CONNECTION_STATE_READY) {
     listener_->on_availability_change(this);
   }
 }
@@ -384,7 +442,7 @@ void Connection::consume(char* input, size_t size) {
               break;
           }
         } else {
-          notify_error("Invalid stream");
+          notify_error("Invalid stream ID");
         }
       }
     }
@@ -421,7 +479,7 @@ void Connection::on_connect(Connector* connector) {
                     Connection::alloc_buffer, Connection::on_read);
     }
 
-    connection->state_ = CONNECTION_STATE_CONNECTED;
+    connection->set_state(CONNECTION_STATE_CONNECTED);
 
     if (connection->ssl_session_) {
       connection->ssl_handshake();
@@ -439,7 +497,7 @@ void Connection::on_connect(Connector* connector) {
 void Connection::on_connect_timeout(Timer* timer) {
   Connection* connection = static_cast<Connection*>(timer->data());
   connection->connect_timer_ = NULL;
-  connection->notify_error("Connection timeout");
+  connection->notify_error("Connection timeout", CONNECTION_ERROR_TIMEOUT);
 
   connection->metrics_->connection_timeouts.inc();
 }
@@ -588,7 +646,8 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
       connection->consume(buf, rc);
     }
     if (rc <= 0 && ssl_session->has_error()) {
-      connection->notify_error_ssl("Unable to decrypt data: " + ssl_session->error_message());
+      connection->notify_error("Unable to decrypt data: " + ssl_session->error_message(),
+                               CONNECTION_ERROR_SSL);
     }
   } else {
     connection->ssl_handshake();
@@ -633,8 +692,8 @@ void Connection::on_auth_success(AuthResponseRequest* request, const std::string
 }
 
 void Connection::on_ready() {
-  if (!is_registered_for_events_ && listener_->event_types() != 0) {
-    is_registered_for_events_ = true;
+  if (state_ == CONNECTION_STATE_CONNECTED && listener_->event_types() != 0) {
+    set_state(CONNECTION_STATE_REGISTERING_EVENTS);
     write(new StartupHandler(this, new RegisterRequest(listener_->event_types())));
     return;
   }
@@ -678,12 +737,38 @@ void Connection::stop_connect_timer() {
 
 void Connection::notify_ready() {
   stop_connect_timer();
-  state_ = CONNECTION_STATE_READY;
-  set_is_available(true);
+  set_state(CONNECTION_STATE_READY);
   listener_->on_ready(this);
 }
 
-void Connection::notify_error(const std::string& error) {
+void Connection::notify_error(const std::string& message, ConnectionError code) {
+  error_message_ = message;
+  error_code_ = code;
+
+  switch (code) {
+    case CONNECTION_OK:
+      assert(false && "Notified error without an error");
+      return;
+
+    case CONNECTION_ERROR_INVALID_PROTOCOL:
+      LOG_WARN("Host %s received invalid protocol response %s",
+               addr_string_.c_str(), message.c_str());
+      break;
+
+    case CONNECTION_ERROR_SSL:
+      ssl_error_code_ = ssl_session_->error_code();
+      log_error(message);
+      break;
+
+    default:
+      log_error(message);
+      break;
+  }
+
+  defunct();
+}
+
+void Connection::log_error(const std::string& error) {
   if (state_ == CONNECTION_STATE_READY) {
     LOG_ERROR("Host %s had the following error: %s",
               addr_string_.c_str(), error.c_str());
@@ -694,17 +779,11 @@ void Connection::notify_error(const std::string& error) {
   defunct();
 }
 
-void Connection::notify_error_ssl(const std::string& error) {
-  ssl_error_code_ = ssl_session_->error_code();
-  ssl_error_ = error;
-  notify_error(error);
-}
-
 void Connection::ssl_handshake() {
   if (!ssl_session_->is_handshake_done()) {
     ssl_session_->do_handshake();
     if (ssl_session_->has_error()) {
-      notify_error_ssl("Error during SSL handshake: " + ssl_session_->error_message());
+      notify_error("Error during SSL handshake: " + ssl_session_->error_message(), CONNECTION_ERROR_SSL);
       return;
     }
   }
@@ -721,7 +800,7 @@ void Connection::ssl_handshake() {
   if (ssl_session_->is_handshake_done()) {
     ssl_session_->verify();
     if (ssl_session_->has_error()) {
-      notify_error_ssl("Error verifying peer certificate: " + ssl_session_->error_message());
+      notify_error("Error verifying peer certificate: " + ssl_session_->error_message(), CONNECTION_ERROR_SSL);
       return;
     }
     on_connected();
@@ -742,8 +821,7 @@ void Connection::send_credentials() {
 void Connection::send_initial_auth_response() {
   Authenticator* auth = config_.auth_provider()->new_authenticator(address_);
   if (auth == NULL) {
-    auth_error_ = "Authentication required but no auth provider set";
-    notify_error(auth_error_);
+    notify_error("Authentication required but no auth provider set", CONNECTION_ERROR_AUTH);
   } else {
     AuthResponseRequest* auth_response
         = new AuthResponseRequest(auth->initial_response(), auth);
@@ -793,9 +871,7 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
           connection->pending_reads_.add_to_back(handler);
         } else {
           if (!connection->is_closing()) {
-            LOG_ERROR("Write error '%s' on host %s",
-                      UV_ERRSTR(status),
-                      connection->addr_string_.c_str());
+            connection->notify_error("Write error '" + std::string(UV_ERRSTR(status)) + "'");
             connection->defunct();
           }
 
@@ -831,7 +907,7 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
   connection->pending_writes_size_ -= pending_write->size();
   if (connection->pending_writes_size_ <
       connection->config_.write_bytes_low_water_mark()) {
-    connection->set_is_available(true);
+    connection->set_state(CONNECTION_STATE_READY);
   }
 
   connection->pending_writes_.remove(pending_write);
@@ -899,7 +975,7 @@ void Connection::PendingWriteSsl::encrypt() {
     if (is_done || copied == SSL_WRITE_SIZE) {
       int rc = ssl_session->encrypt(buf, copied);
       if (rc <= 0 && ssl_session->has_error()) {
-        connection_->notify_error("Unable to encrypt data: " + ssl_session->error_message());
+        connection_->notify_error("Unable to encrypt data: " + ssl_session->error_message(), CONNECTION_ERROR_SSL);
         return;
       }
       copied = 0;
@@ -967,7 +1043,7 @@ Connection::SslHandshakeWriter::SslHandshakeWriter(Connection* connection, char*
 void Connection::SslHandshakeWriter::on_write(uv_write_t* req, int status) {
   SslHandshakeWriter* writer = static_cast<SslHandshakeWriter*>(req->data);
   if (status != 0) {
-    writer->connection_->notify_error("Failed to write during SSL handshake");
+    writer->connection_->notify_error("Write error '" + std::string(UV_ERRSTR(status)) + "'");
   }
   delete writer;
 }

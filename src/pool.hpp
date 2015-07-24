@@ -24,6 +24,7 @@
 #include "request.hpp"
 #include "request_handler.hpp"
 #include "scoped_ptr.hpp"
+#include "timer.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -87,6 +88,7 @@ private:
   virtual void on_event(EventResponse* response) {}
 
   static void on_pending_request_timeout(RequestTimer* timer);
+  static void on_respawn(Timer* timer);
 
   Connection* find_least_busy();
 
@@ -110,6 +112,8 @@ private:
   bool is_critical_failure_;
   bool is_pending_flush_;
   bool cancel_reconnect_;
+
+  Timer* respawn_timer_;
 };
 
 } // namespace cass

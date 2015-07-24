@@ -220,13 +220,13 @@ void ControlConnection::on_close(Connection* connection) {
                protocol_version_ - 1);
       protocol_version_--;
       retry_current_host = true;
-    } else if (!connection->auth_error().empty()) {
+    } else if (!connection->is_auth_error()) {
       session_->on_control_connection_error(CASS_ERROR_SERVER_BAD_CREDENTIALS,
-                                            connection->auth_error());
+                                            connection->error_message());
       return;
-    } else if (!connection->ssl_error().empty()) {
+    } else if (!connection->is_ssl_error()) {
       session_->on_control_connection_error(connection->ssl_error_code(),
-                                            connection->ssl_error());
+                                            connection->error_message());
       return;
     }
   }
