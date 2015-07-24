@@ -1229,16 +1229,54 @@ cass_cluster_set_timestamp_gen(CassCluster* cluster,
                                CassTimestampGen* timestamp_gen);
 
 /**
+ * Sets the amount of time between heartbeat messages and controls the amount
+ * of time the connection must be idle before sending heartbeat messages. This
+ * is useful for preventing intermediate network devices from dropping
+ * connections.
+ *
+ * <b>Default:</b> 30 seconds
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] interval_secs Use 0 to disable heartbeat messages
+ */
+CASS_EXPORT void
+cass_cluster_set_connection_heartbeat_interval(CassCluster* cluster,
+                                               unsigned interval_secs);
+
+/**
+ * Sets the amount of time a connection is allowed to be without a successful
+ * hearbeat response before being terminated and scheduled for reconnection.
+ *
+ * <b>Default:</b> 60 seconds
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] timeout_secs
+ */
+CASS_EXPORT void
+cass_cluster_set_connection_idle_timeout(CassCluster* cluster,
+                                         unsigned timeout_secs);
+
+/**
  * Sets the retry policy used for all requests unless overridden by setting
  * a retry policy on a statement or a batch.
  *
- * <b>Default:</b> default retry policy.
+ * <b>Default:</b> The same policy as would be created by the function:
+ * cass_retry_policy_default_new(). This policy will retry on a read timeout
+ * if there was enough replicas, but no data present, on a write timeout if a
+ * logged batch request failed to write the batch log, and on a unavailable
+ * error it retries using a new host. In all other cases the default policy
+ * will return an error.
  *
  * @public @memberof CassCluster
  *
  * @param[in] cluster
  * @param[in] retry_policy
  *
+ * @see cass_retry_policy_default_new()
  * @see cass_statement_set_retry_policy()
  * @see cass_batch_set_retry_policy()
  */
@@ -4960,7 +4998,7 @@ cass_error_result_consistency(const CassErrorResult* error_result);
  * error. Undefined for other error result types.
  */
 CASS_EXPORT cass_int32_t
-cass_error_result_actual(const CassErrorResult* error_result);
+cass_error_result_responses_received(const CassErrorResult* error_result);
 
 /**
  * Gets required responses, required acknowlegements or required alive nodes
@@ -4981,7 +5019,7 @@ cass_error_result_actual(const CassErrorResult* error_result);
  * Undefined for other error result types.
  */
 CASS_EXPORT cass_int32_t
-cass_error_result_required(const CassErrorResult* error_result);
+cass_error_result_responses_required(const CassErrorResult* error_result);
 
 
 /**
@@ -5849,7 +5887,7 @@ cass_timestamp_gen_free(CassTimestampGen* timestamp_gen);
  *
  * In all other cases the error will be returned.
  *
- * This policy always uses the queries original consistency level.
+ * This policy always uses the query's original consistency level.
  *
  * @public @memberof CassRetryPolicy
  *

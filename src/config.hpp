@@ -63,9 +63,11 @@ public:
       , load_balancing_policy_(new DCAwarePolicy())
       , token_aware_routing_(true)
       , latency_aware_routing_(false)
-      , tcp_nodelay_enable_(false)
+      , tcp_nodelay_enable_(true)
       , tcp_keepalive_enable_(false)
       , tcp_keepalive_delay_secs_(0)
+      , connection_idle_timeout_secs_(60)
+      , connection_heartbeat_interval_secs_(30)
       , timestamp_gen_(new ServerSideTimestampGenerator())
       , retry_policy_(new DefaultRetryPolicy()) { }
 
@@ -274,6 +276,22 @@ public:
     tcp_keepalive_delay_secs_ = delay_secs;
   }
 
+  unsigned connection_idle_timeout_secs() const {
+    return connection_idle_timeout_secs_;
+  }
+
+  void set_connection_idle_timeout_secs(unsigned timeout_secs) {
+    connection_idle_timeout_secs_ = timeout_secs;
+  }
+
+  unsigned connection_heartbeat_interval_secs() const {
+    return connection_heartbeat_interval_secs_;
+  }
+
+  void set_connection_heartbeat_interval_secs(unsigned interval_secs) {
+    connection_heartbeat_interval_secs_ = interval_secs;
+  }
+
   TimestampGenerator* timestamp_gen() const {
     return timestamp_gen_.get();
   }
@@ -324,6 +342,8 @@ private:
   bool tcp_nodelay_enable_;
   bool tcp_keepalive_enable_;
   unsigned tcp_keepalive_delay_secs_;
+  unsigned connection_idle_timeout_secs_;
+  unsigned connection_heartbeat_interval_secs_;
   SharedRefPtr<TimestampGenerator> timestamp_gen_;
   SharedRefPtr<RetryPolicy> retry_policy_;
 };
