@@ -96,4 +96,4 @@ cass_cluster_set_latency_aware_routing_settings(cluster,
                                                 min_measured);
 ```
 
-[`allow_remote_dcs_for_local_cl`]: http://datastax.github.io/cpp-driver/api/struct_cass_cluster/#1a46b9816129aaa5ab61a1363489dccfd0
+[`allow_remote_dcs_for_local_cl`]: http://datastax.github.io/cpp-driver/api/CassCluster/#1a46b9816129aaa5ab61a1363489dccfd0
