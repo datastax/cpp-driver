@@ -1,7 +1,7 @@
 # UUIDs
 
 UUIDs are 128-bit identifiers that can be used to uniquely identify information
-without requiring central coordination. These are often used in Cassandra 
+without requiring central coordination. These are often used in Cassandra
 for primary and clustering keys. There are two types of UUIDs supported by
 the driver (and Cassandra), version 1 which is time-based and version 4 which
 is randomly generated. Version 1 can be used with Cassandra'a `timeuuid` type
@@ -63,5 +63,5 @@ cass_uint8_t version = cass_uuid_version(uuid);
 char uuid_str[CASS_UUID_STRING_LENGTH];
 cass_uuid_string(uuid, uuid_str);
 ```
-[`cass_uuid_timestamp()`]: http://datastax.github.io/cpp-driver/api/struct_cass_uuid/#1a3980467a0bb6642054ecf37d49aebf1a
-[`CassUuidGen`]: http://datastax.github.io/cpp-driver/api/struct_cass_uuid_gen/
+[`cass_uuid_timestamp()`]: http://datastax.github.io/cpp-driver/api/CassUuid/#1a3980467a0bb6642054ecf37d49aebf1a
+[`CassUuidGen`]: http://datastax.github.io/cpp-driver/api/CassUuidGen/

@@ -58,7 +58,7 @@ The following [guide](http://www.datastax.com/documentation/cassandra/2.1/cassan
 
 ## Setting up the C/C++ Driver to Use SSL
 
-A [`CassSsl`](http://datastax.github.io/cpp-driver/api/struct_cass_ssl/) object is required and must be configured:
+A [`CassSsl`](http://datastax.github.io/cpp-driver/api/CassSsl/) object is required and must be configured:
 
 ```c
 #include <cassandra.h>
@@ -67,7 +67,7 @@ void setup_ssl(CassCluster* cluster) {
   CassSsl* ssl = cass_ssl_new();
 
   // Configure SSL object...
-  
+
   // To enable SSL attach it to the cluster object
   cass_cluster_set_ssl(cluster, ssl);
 
@@ -79,7 +79,7 @@ void setup_ssl(CassCluster* cluster) {
 
 #### Exporting and Loading the Cassandra Public Key
 
-The default setting of the driver is to verify the certifcate sent during the SSL handshake. For the driver to properly verify the Cassandra certifcate the driver needs either the public key from the self-signed public key or the CA certificate chain used to sign the public key. To have this work, extract the public key from the Cassandra keystore generated in the previous steps. This exports a [PEM formatted](https://www.openssl.org/docs/crypto/pem.html#PEM_ENCRYPTION_FORMAT) certficate which is required by the C/C++ driver. 
+The default setting of the driver is to verify the certifcate sent during the SSL handshake. For the driver to properly verify the Cassandra certifcate the driver needs either the public key from the self-signed public key or the CA certificate chain used to sign the public key. To have this work, extract the public key from the Cassandra keystore generated in the previous steps. This exports a [PEM formatted](https://www.openssl.org/docs/crypto/pem.html#PEM_ENCRYPTION_FORMAT) certficate which is required by the C/C++ driver.
 
 ```bash
 keytool -exportcert -rfc -noprompt \

@@ -77,7 +77,7 @@ The consistency level determines the number of replicas on which the read/write 
 
 ## Setting Consistency Level
 
-A ['CassStatement'](http://datastax.github.io/cpp-driver/api/struct_cass_future/) object can have its consistency level altered at anytime before the statement is executed by the session.
+A ['CassStatement'](http://datastax.github.io/cpp-driver/api/CassFuture/) object can have its consistency level altered at anytime before the statement is executed by the session.
 
 ```c
 /* Create a simple or prepared statment */

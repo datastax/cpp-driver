@@ -19,13 +19,13 @@ sections:
       EXPAND_ONLY_PREDEF = NO
       SKIP_FUNCTION_MACROS = YES
       TYPEDEF_HIDES_STRUCT = YES
-      EXTRACT_ALL = NO
+      EXTRACT_ALL = YES
       INLINE_SOURCES = NO
 
 versions:
   - name: v2.1
     ref: HEAD
   - name: v2.0
-    ref: 4c009fc8e56177173f11a738802be5e6b98bccb9
+    ref: fc9c25a3db879894d40306642864413ef8f7d979
   - name: v1.0
-    ref: fd331e09f25e8e6058ad7f98e7e72f54bc9a9a94
+    ref: b2146f44ba5df28e37af28031f7609342023b329
