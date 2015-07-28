@@ -46,9 +46,9 @@
 #define BUFFER_REUSE_SIZE 64 * 1024
 
 #if UV_VERSION_MAJOR == 0
-#define UV_ERRSTR(status) uv_strerror(uv_last_error(connection->loop_))
+#define UV_ERRSTR(status, loop) uv_strerror(uv_last_error(loop))
 #else
-#define UV_ERRSTR(status) uv_strerror(status)
+#define UV_ERRSTR(status, loop) uv_strerror(status)
 #endif
 
 namespace cass {
@@ -521,7 +521,8 @@ void Connection::on_connect(Connector* connector) {
     }
   } else {
     LOG_ERROR("Connect error '%s' on host %s",
-              UV_ERRSTR(connector->status()),
+              UV_ERRSTR(connector->status(),
+                        connection->loop_),
               connection->addr_string_.c_str() );
     connection->notify_error("Unable to connect");
   }
@@ -608,7 +609,7 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, const uv_buf_t* buf
     if (nread != UV_EOF) {
 #endif
       LOG_ERROR("Read error '%s' on host %s",
-                UV_ERRSTR(nread),
+                UV_ERRSTR(nread, connection->loop_),
                 connection->addr_string_.c_str());
     }
     connection->defunct();
@@ -661,7 +662,7 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
     if (nread != UV_EOF) {
 #endif
       LOG_ERROR("Read error '%s' on host %s",
-                UV_ERRSTR(nread),
+                UV_ERRSTR(nread, connection->loop_),
                 connection->addr_string_.c_str());
     }
     connection->defunct();
@@ -933,7 +934,9 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
           connection->pending_reads_.add_to_back(handler);
         } else {
           if (!connection->is_closing()) {
-            connection->notify_error("Write error '" + std::string(UV_ERRSTR(status)) + "'");
+            connection->notify_error("Write error '" +
+                                     std::string(UV_ERRSTR(status, connection->loop_)) +
+                                     "'");
             connection->defunct();
           }
 
@@ -1112,7 +1115,9 @@ Connection::SslHandshakeWriter::SslHandshakeWriter(Connection* connection, char*
 void Connection::SslHandshakeWriter::on_write(uv_write_t* req, int status) {
   SslHandshakeWriter* writer = static_cast<SslHandshakeWriter*>(req->data);
   if (status != 0) {
-    writer->connection_->notify_error("Write error '" + std::string(UV_ERRSTR(status)) + "'");
+    writer->connection_->notify_error("Write error '" +
+                                      std::string(UV_ERRSTR(status, writer->connection_->loop_)) +
+                                      "'");
   }
   delete writer;
 }

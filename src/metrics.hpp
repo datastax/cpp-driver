@@ -48,7 +48,7 @@ public:
   class ThreadState {
   public:
 #if UV_VERSION_MAJOR == 0
-    ThreadState()
+    ThreadState(size_t max_threads)
       : max_threads_(1) {}
 #else
     ThreadState(size_t max_threads)
@@ -456,7 +456,7 @@ public:
   // use the same counter. Histogram uses a shared lock instead
   // of accumulating latencies from per-thread instances.
 #if UV_VERSION_MAJOR == 0
-    : thread_state_()
+    : thread_state_(max_threads)
 #else
     : thread_state_(max_threads)
 #endif
