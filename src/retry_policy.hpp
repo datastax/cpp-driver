@@ -20,6 +20,12 @@
 #include "cassandra.h"
 #include "ref_counted.hpp"
 
+#ifdef _WIN32
+# ifdef IGNORE
+#   undef IGNORE
+# endif
+#endif
+
 namespace cass {
 
 class RetryPolicy : public RefCounted<RetryPolicy> {
