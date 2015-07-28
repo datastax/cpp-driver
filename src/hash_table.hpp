@@ -30,9 +30,7 @@
 
 namespace cass {
 
-#if defined(__x86_64__) || defined(_M_X64)
-#undef FNV1_32_INIT
-#undef FNV1_32_PRIME
+#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
 #define FNV1_64_INIT 0xcbf29ce484222325ULL
 #define FNV1_64_PRIME 0x100000001b3ULL
 
@@ -47,7 +45,7 @@ inline uint64_t fnv1a_hash_lower(StringRef s) {
 
 #undef FNV1_64_INIT
 #undef FNV1_64_PRIME
-#elif defined(__i386) || defined(_M_IX86)
+#else
 #define FNV1_32_INIT 0x811c9dc5
 #define FNV1_32_PRIME 0x01000193
 inline uint32_t fnv1a_hash_lower(StringRef s) {
@@ -60,8 +58,6 @@ inline uint32_t fnv1a_hash_lower(StringRef s) {
 }
 #undef FNV1_32_INIT
 #undef FNV1_32_PRIME
-#else
-#error Unsupported platform! Please add proper defines.
 #endif
 
 typedef FixedVector<size_t, 4> IndexVec;
