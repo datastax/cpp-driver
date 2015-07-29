@@ -104,7 +104,6 @@ private:
                              const RetryPolicy::RetryDecision& decision);
 
 
-  ScopedRefPtr<const Request> request_;
   ScopedRefPtr<ResponseFuture> future_;
   RetryPolicy* retry_policy_;
   int num_retries_;
