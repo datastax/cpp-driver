@@ -247,7 +247,7 @@ BOOST_AUTO_TEST_CASE(server_side)
     BOOST_CHECK_GE(tester.get_timestamp(table_name, key), static_cast<int64_t>(timestamp));
   } else {
     boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping timestamps/generator");
+    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping timestamps/server_side");
     BOOST_REQUIRE(true);
   }
 }
