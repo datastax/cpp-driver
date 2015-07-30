@@ -71,7 +71,7 @@ private:
   int64_t timestamp_;
 };
 
-BOOST_FIXTURE_TEST_SUITE(timestamps, TimestampsTest)
+BOOST_AUTO_TEST_SUITE(timestamps)
 
 /**
  * Set timestamp directly on statement and batch
@@ -80,55 +80,63 @@ BOOST_FIXTURE_TEST_SUITE(timestamps, TimestampsTest)
  *
  * @since 2.1.0
  * @jira_ticket CPP-266
- * @test_category timestamps
+ * @test_category queries:timestamp
  * @cassandra_version 2.1.x
  */
 BOOST_AUTO_TEST_CASE(statement_and_batch)
 {
-  std::string table_name("table_" + test_utils::generate_unique_str(uuid_gen));
-  std::string create_table = "CREATE TABLE " + table_name + "(key text PRIMARY KEY, value text)";
-  test_utils::execute_query(session, create_table.c_str());
+  CassVersion version = test_utils::get_version();
+  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+    TimestampsTest tester;
+    std::string table_name("table_" + test_utils::generate_unique_str(tester.uuid_gen));
+    std::string create_table = "CREATE TABLE " + table_name + "(key text PRIMARY KEY, value text)";
+    test_utils::execute_query(tester.session, create_table.c_str());
 
-  // Statement
-  {
-    std::string key(test_utils::generate_unique_str(uuid_gen));
-    CassStatementPtr statement(create_insert_statement(table_name));
-    cass_statement_bind_string(statement.get(), 0, key.c_str());
-    cass_statement_bind_string(statement.get(), 1, key.c_str());
+    // Statement
+    {
+      std::string key(test_utils::generate_unique_str(tester.uuid_gen));
+      test_utils::CassStatementPtr statement(tester.create_insert_statement(table_name));
+      cass_statement_bind_string(statement.get(), 0, key.c_str());
+      cass_statement_bind_string(statement.get(), 1, key.c_str());
 
-    // Set the timestamp to a known value
-    cass_statement_set_timestamp(statement.get(), 1234);
+      // Set the timestamp to a known value
+      cass_statement_set_timestamp(statement.get(), 1234);
 
-    CassFuturePtr future(cass_session_execute(session, statement.get()));
-    BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
+      test_utils::CassFuturePtr future(cass_session_execute(tester.session, statement.get()));
+      BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
 
-    BOOST_CHECK_EQUAL(get_timestamp(table_name, key), 1234);
-  }
+      BOOST_CHECK_EQUAL(tester.get_timestamp(table_name, key), 1234);
+    }
 
-  // Batch
-  {
-    CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
+    // Batch
+    {
+      test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
 
-    std::string key1(test_utils::generate_unique_str(uuid_gen));
-    CassStatementPtr statement1(create_insert_statement(table_name));
-    cass_statement_bind_string(statement1.get(), 0, key1.c_str());
-    cass_statement_bind_string(statement1.get(), 1, key1.c_str());
-    cass_batch_add_statement(batch.get(), statement1.get());
+      std::string key1(test_utils::generate_unique_str(tester.uuid_gen));
+      test_utils::CassStatementPtr statement1(tester.create_insert_statement(table_name));
+      cass_statement_bind_string(statement1.get(), 0, key1.c_str());
+      cass_statement_bind_string(statement1.get(), 1, key1.c_str());
+      cass_batch_add_statement(batch.get(), statement1.get());
 
-    std::string key2(test_utils::generate_unique_str(uuid_gen));
-    CassStatementPtr statement2(create_insert_statement(table_name));
-    cass_statement_bind_string(statement2.get(), 0, key2.c_str());
-    cass_statement_bind_string(statement2.get(), 1, key2.c_str());
-    cass_batch_add_statement(batch.get(), statement2.get());
+      std::string key2(test_utils::generate_unique_str(tester.uuid_gen));
+      test_utils::CassStatementPtr statement2(tester.create_insert_statement(table_name));
+      cass_statement_bind_string(statement2.get(), 0, key2.c_str());
+      cass_statement_bind_string(statement2.get(), 1, key2.c_str());
+      cass_batch_add_statement(batch.get(), statement2.get());
 
-    // Set the timestamp to a known value
-    cass_batch_set_timestamp(batch.get(), 1234);
+      // Set the timestamp to a known value
+      cass_batch_set_timestamp(batch.get(), 1234);
 
-    CassFuturePtr future(cass_session_execute_batch(session, batch.get()));
-    BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
+      test_utils::CassFuturePtr future(cass_session_execute_batch(tester.session, batch.get()));
+      BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
 
-    BOOST_CHECK_EQUAL(get_timestamp(table_name, key1), 1234);
-    BOOST_CHECK_EQUAL(get_timestamp(table_name, key2), 1234);
+      BOOST_CHECK_EQUAL(tester.get_timestamp(table_name, key1), 1234);
+      BOOST_CHECK_EQUAL(tester.get_timestamp(table_name, key2), 1234);
+    }
+  } else {
+    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
+    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping timestamps/statement_and_batch");
+    BOOST_REQUIRE(true);
   }
 }
 
@@ -140,61 +148,69 @@ BOOST_AUTO_TEST_CASE(statement_and_batch)
  *
  * @since 2.1.0
  * @jira_ticket CPP-266
- * @test_category timestamps
+ * @test_category queries:timestamp
  * @cassandra_version 2.1.x
  */
 BOOST_AUTO_TEST_CASE(generator)
 {
-  cass::SharedRefPtr<TestTimestampGenerator> gen(new TestTimestampGenerator(1234));
+  CassVersion version = test_utils::get_version();
+  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+    TimestampsTest tester;
+    cass::SharedRefPtr<TestTimestampGenerator> gen(new TestTimestampGenerator(1234));
 
-  close_session();
-  cass_cluster_set_timestamp_gen(cluster, CassTimestampGen::to(gen.get()));
-  create_session();
+    tester.close_session();
+    cass_cluster_set_timestamp_gen(tester.cluster, CassTimestampGen::to(gen.get()));
+    tester.create_session();
 
-  test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+    test_utils::execute_query(tester.session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
-  std::string table_name("table_" + test_utils::generate_unique_str(uuid_gen));
-  std::string create_table = "CREATE TABLE " + table_name + "(key text PRIMARY KEY, value text)";
-  test_utils::execute_query(session, create_table.c_str());
-
-  // Statement
-  {
-    std::string table_name("table_" + test_utils::generate_unique_str(uuid_gen));
+    std::string table_name("table_" + test_utils::generate_unique_str(tester.uuid_gen));
     std::string create_table = "CREATE TABLE " + table_name + "(key text PRIMARY KEY, value text)";
-    test_utils::execute_query(session, create_table.c_str());
+    test_utils::execute_query(tester.session, create_table.c_str());
 
-    std::string key(test_utils::generate_unique_str(uuid_gen));
-    CassStatementPtr statement(create_insert_statement(table_name));
-    cass_statement_bind_string(statement.get(), 0, key.c_str());
-    cass_statement_bind_string(statement.get(), 1, key.c_str());
+    // Statement
+    {
+      std::string table_name("table_" + test_utils::generate_unique_str(tester.uuid_gen));
+      std::string create_table = "CREATE TABLE " + table_name + "(key text PRIMARY KEY, value text)";
+      test_utils::execute_query(tester.session, create_table.c_str());
 
-    CassFuturePtr future(cass_session_execute(session, statement.get()));
-    BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
+      std::string key(test_utils::generate_unique_str(tester.uuid_gen));
+      test_utils::CassStatementPtr statement(tester.create_insert_statement(table_name));
+      cass_statement_bind_string(statement.get(), 0, key.c_str());
+      cass_statement_bind_string(statement.get(), 1, key.c_str());
 
-    BOOST_CHECK_EQUAL(get_timestamp(table_name, key), 1234);
-  }
+      test_utils::CassFuturePtr future(cass_session_execute(tester.session, statement.get()));
+      BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
 
-  // Batch
-  {
-    CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
+      BOOST_CHECK_EQUAL(tester.get_timestamp(table_name, key), 1234);
+    }
 
-    std::string key1(test_utils::generate_unique_str(uuid_gen));
-    CassStatementPtr statement1(create_insert_statement(table_name));
-    cass_statement_bind_string(statement1.get(), 0, key1.c_str());
-    cass_statement_bind_string(statement1.get(), 1, key1.c_str());
-    cass_batch_add_statement(batch.get(), statement1.get());
+    // Batch
+    {
+      test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
 
-    std::string key2(test_utils::generate_unique_str(uuid_gen));
-    CassStatementPtr statement2(create_insert_statement(table_name));
-    cass_statement_bind_string(statement2.get(), 0, key2.c_str());
-    cass_statement_bind_string(statement2.get(), 1, key2.c_str());
-    cass_batch_add_statement(batch.get(), statement2.get());
+      std::string key1(test_utils::generate_unique_str(tester.uuid_gen));
+      test_utils::CassStatementPtr statement1(tester.create_insert_statement(table_name));
+      cass_statement_bind_string(statement1.get(), 0, key1.c_str());
+      cass_statement_bind_string(statement1.get(), 1, key1.c_str());
+      cass_batch_add_statement(batch.get(), statement1.get());
 
-    CassFuturePtr future(cass_session_execute_batch(session, batch.get()));
-    BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
+      std::string key2(test_utils::generate_unique_str(tester.uuid_gen));
+      test_utils::CassStatementPtr statement2(tester.create_insert_statement(table_name));
+      cass_statement_bind_string(statement2.get(), 0, key2.c_str());
+      cass_statement_bind_string(statement2.get(), 1, key2.c_str());
+      cass_batch_add_statement(batch.get(), statement2.get());
 
-    BOOST_CHECK_EQUAL(get_timestamp(table_name, key1), 1234);
-    BOOST_CHECK_EQUAL(get_timestamp(table_name, key2), 1234);
+      test_utils::CassFuturePtr future(cass_session_execute_batch(tester.session, batch.get()));
+      BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
+
+      BOOST_CHECK_EQUAL(tester.get_timestamp(table_name, key1), 1234);
+      BOOST_CHECK_EQUAL(tester.get_timestamp(table_name, key2), 1234);
+    }
+  } else {
+    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
+    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping timestamps/generator");
+    BOOST_REQUIRE(true);
   }
 }
 
@@ -206,27 +222,34 @@ BOOST_AUTO_TEST_CASE(generator)
  *
  * @since 2.1.0
  * @jira_ticket CPP-266
- * @test_category timestamps
+ * @test_category queries:timestamp
  * @cassandra_version 2.1.x
  */
 BOOST_AUTO_TEST_CASE(server_side)
 {
-  // Server-side is the default timestamp generator
-  std::string table_name("table_" + test_utils::generate_unique_str(uuid_gen));
-  std::string create_table = "CREATE TABLE " + table_name + "(key text PRIMARY KEY, value text)";
-  test_utils::execute_query(session, create_table.c_str());
+  CassVersion version = test_utils::get_version();
+  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+    TimestampsTest tester;
+    // Server-side is the default timestamp generator
+    std::string table_name("table_" + test_utils::generate_unique_str(tester.uuid_gen));
+    std::string create_table = "CREATE TABLE " + table_name + "(key text PRIMARY KEY, value text)";
+    test_utils::execute_query(tester.session, create_table.c_str());
 
-  std::string key(test_utils::generate_unique_str(uuid_gen));
-  CassStatementPtr statement(create_insert_statement(table_name));
-  cass_statement_bind_string(statement.get(), 0, key.c_str());
-  cass_statement_bind_string(statement.get(), 1, key.c_str());
+    std::string key(test_utils::generate_unique_str(tester.uuid_gen));
+    test_utils::CassStatementPtr statement(tester.create_insert_statement(table_name));
+    cass_statement_bind_string(statement.get(), 0, key.c_str());
+    cass_statement_bind_string(statement.get(), 1, key.c_str());
 
-  uint64_t timestamp = cass::get_time_since_epoch_ms();
-  CassFuturePtr future(cass_session_execute(session, statement.get()));
-  BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
+    uint64_t timestamp = cass::get_time_since_epoch_ms();
+    test_utils::CassFuturePtr future(cass_session_execute(tester.session, statement.get()));
+    BOOST_REQUIRE(cass_future_error_code(future.get()) == CASS_OK);
 
-  BOOST_CHECK_GE(get_timestamp(table_name, key), static_cast<int64_t>(timestamp));
+    BOOST_CHECK_GE(tester.get_timestamp(table_name, key), static_cast<int64_t>(timestamp));
+  } else {
+    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
+    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping timestamps/generator");
+    BOOST_REQUIRE(true);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-
