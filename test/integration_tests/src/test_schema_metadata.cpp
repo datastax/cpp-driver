@@ -62,6 +62,21 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
 		}
 	}
 
+  void verify_keyspace_created(const std::string& ks) {
+    test_utils::CassResultPtr result;
+
+    for (int i = 0; i < 10; ++i) {
+      test_utils::execute_query(session,
+                                str(boost::format(
+                                      "SELECT * FROM SYSTEM.SCHEMA_KEYSPACES WHERE keyspace_name = '%s'") % ks), &result);
+      if (cass_result_row_count(result.get()) > 0) {
+        return;
+      }
+      boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+    }
+    BOOST_REQUIRE(false);
+  }
+
   void refresh_schema_meta() {
     if (schema_) {
       const CassSchema* old(schema_);
@@ -447,6 +462,56 @@ BOOST_AUTO_TEST_CASE(simple) {
   verify_user_table();
   if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
     verify_user_data_type();
+  }
+}
+
+/**
+ * Test the disabling schema metadata
+ *
+ * Verifies that initial schema and schema change events don't occur when
+ * schema metadata is disabled.
+ *
+ * @since 2.1.0
+ * @jira_ticket CPP-249
+ * @test_category schema
+ * @cassandra_version 1.2.x
+ */
+BOOST_AUTO_TEST_CASE(disable) {
+  // Verify known keyspace
+  {
+    test_utils::CassSchemaPtr schema(cass_session_get_schema(session));
+    BOOST_CHECK(cass_schema_get_keyspace(schema.get(), "system") != NULL);
+  }
+
+  // Verify schema change event
+  {
+    test_utils::execute_query(session, "CREATE KEYSPACE ks1 WITH replication = "
+                                       "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+    verify_keyspace_created("ks1");
+    test_utils::CassSchemaPtr schema(cass_session_get_schema(session));
+    BOOST_CHECK(cass_schema_get_keyspace(schema.get(), "ks1") != NULL);
+  }
+
+  close_session();
+
+
+  // Disable schema and reconnect
+  cass_cluster_set_use_schema(cluster, cass_false);
+  create_session();
+
+  // Verify known keyspace doesn't exist in metadata
+  {
+    test_utils::CassSchemaPtr schema2(cass_session_get_schema(session));
+    BOOST_CHECK(cass_schema_get_keyspace(schema2.get(), "system") == NULL);
+  }
+
+  // Verify schema change event didn't happen
+  {
+    test_utils::execute_query(session, "CREATE KEYSPACE ks2 WITH replication = "
+                                       "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+    verify_keyspace_created("ks2");
+    test_utils::CassSchemaPtr schema(cass_session_get_schema(session));
+    BOOST_CHECK(cass_schema_get_keyspace(schema.get(), "ks2") == NULL);
   }
 }
 
