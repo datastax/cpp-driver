@@ -217,12 +217,16 @@ void SingleSessionTest::create_session() {
   test_utils::wait_and_check_error(connect_future.get());
 }
 
-SingleSessionTest::~SingleSessionTest() {
+void SingleSessionTest::close_session() {
   if (session) {
     CassFuturePtr close_future(cass_session_close(session));
     cass_future_wait(close_future.get());
     cass_session_free(session);
   }
+}
+
+SingleSessionTest::~SingleSessionTest() {
+  close_session();
   if (ssl) {
     cass_ssl_free(ssl);
   }

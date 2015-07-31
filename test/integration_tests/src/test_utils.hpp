@@ -851,6 +851,7 @@ struct SingleSessionTest : public MultipleNodesTest {
   SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 3, bool isSSL = false);
   virtual ~SingleSessionTest();
   void create_session();
+  void close_session();
 
   CassSession* session;
   CassSsl* ssl;
