@@ -155,7 +155,7 @@ while (has_more_pages) {
 The [`cass_statement_set_paging_state()`] function abstracts the actual paging
 state token away from the application. The raw paging state token can be
 accessed using [`cass_result_paging_state()`] and added to a statement using
-[`cass_statement_set_paging_state_raw()`].
+[`cass_statement_set_paging_state_token()`].
 
 **Warning**: The paging state token should not be exposed to or come from
 untrusted environments. That paging state could be spoofed and potentially used
@@ -163,4 +163,4 @@ to gain access to other data.
 
 [`cass_statement_set_paging_state()`]: http://datastax.github.io/cpp-driver/api/CassStatement/#cass-statement-set-paging-state
 [`cass_result_paging_state()`]: http://datastax.github.io/cpp-driver/api/CassResult/#cass-result-paging-state
-[`cass_statement_set_paging_state_raw()`]: http://datastax.github.io/cpp-driver/api/CassStatement/#cass-statement-set-paging-state-raw
+[`cass_statement_set_paging_state_token()`]: http://datastax.github.io/cpp-driver/api/CassStatement/#cass-statement-set-paging-state-token
