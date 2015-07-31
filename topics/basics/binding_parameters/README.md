@@ -90,3 +90,11 @@ cass_statement_bind_collection(statement, 0, map);
 /* The colleciton can be freed after binding */
 cass_collection_free(map);
 ```
+
+## Nested Collections
+
+When using Cassandra 2.1+ it is possible to nest collections. A collection can
+be added to another collection using [`cass_collection_append_collection()`].
+
+[`cass_collection_append_collection()`]:
+http://datastax.github.io/cpp-driver/api/CassCollection/#cass-collection-append-collection
