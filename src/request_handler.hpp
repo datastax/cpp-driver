@@ -103,7 +103,6 @@ private:
   void handle_retry_decision(ResponseMessage* response,
                              const RetryPolicy::RetryDecision& decision);
 
-
   ScopedRefPtr<ResponseFuture> future_;
   RetryPolicy* retry_policy_;
   int num_retries_;

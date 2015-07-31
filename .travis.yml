@@ -1,14 +1,45 @@
 language: c++
-compiler: gcc
+compiler:
+  - clang
+  - gcc
+env:
+  matrix:
+    - LIBUV_VERSION=0.10.x EXACT_LIBUV_VERSION=0.10.36
+    - LIBUV_VERSION=1.x EXACT_LIBUV_VERSION=1.6.1
 before_install:
   - sudo add-apt-repository ppa:boost-latest/ppa -y
   - sudo apt-get update -qq
   - sudo apt-get install libboost1.55-all-dev libssl-dev libssh2-1-dev -qq
-  - wget -q http://dist.libuv.org/dist/v1.4.0/libuv-v1.4.0.tar.gz
+  - wget -q http://dist.libuv.org/dist/v${EXACT_LIBUV_VERSION}/libuv-v${EXACT_LIBUV_VERSION}.tar.gz
 install:
-  - tar xzf libuv-v1.4.0.tar.gz 
-  - cd libuv-v1.4.0 && sh autogen.sh && ./configure --prefix=${PWD}/../lib/libuv && make -s install && cd -
-before_script: cmake -DLIBUV_ROOT_DIR=lib/libuv/ -DCASS_BUILD_TESTS=ON .
+  - tar xzf libuv-v${EXACT_LIBUV_VERSION}.tar.gz
+  - cd libuv-v${EXACT_LIBUV_VERSION}
+  - if [ "${LIBUV_VERSION}" == "0.10.x" ]; then
+      make;
+      mkdir -p ${PWD}/../lib/libuv-${LIBUV_VERSION}/lib;
+      cp libuv* ${PWD}/../lib/libuv-${LIBUV_VERSION}/lib;
+      cp -r include ${PWD}/../lib/libuv-${LIBUV_VERSION};
+      cd ${PWD}/../lib/libuv-${LIBUV_VERSION}/lib;
+      ln -s libuv.so libuv.so.0.10;
+    fi
+  - if [ "${LIBUV_VERSION}" == "1.x" ]; then
+      sh autogen.sh;
+      ./configure --prefix=${PWD}/../lib/libuv-${LIBUV_VERSION};
+      make -s install;
+    fi
+  - cd ${TRAVIS_BUILD_DIR}
+before_script:
+  - EXTRA_CXX_FLAGS=
+  - BUILD_EXAMPLES=ON
+  - BUILD_TESTS=ON
+  - if [ "$CXX" == "clang++" ]; then
+      EXTRA_CXX_FLAGS="-Wno-unknown-warning-option";
+      BUILD_EXAMPLES=OFF;
+      BUILD_TESTS=OFF;
+    fi
+  - CXXFLAGS="${EXTRA_CXX_FLAGS}" cmake -DLIBUV_ROOT_DIR=lib/libuv-${LIBUV_VERSION}/ -DCASS_BUILD_STATIC=ON -DCASS_BUILD_EXAMPLES=${BUILD_EXAMPLES} -DCASS_BUILD_TESTS=${BUILD_TESTS} .
 script:
   - make
-  - test/unit_tests/cassandra_unit_tests
+  - if [ "$CXX" != "clang++" ]; then
+      test/unit_tests/cassandra_unit_tests;
+    fi
