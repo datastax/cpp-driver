@@ -223,10 +223,12 @@ void IOWorker::add_pending_flush(Pool* pool) {
 void IOWorker::maybe_close() {
   if (is_closing_ && pending_request_count_ <= 0) {
     if (config_.core_connections_per_host() > 0) {
-      for (PoolMap::iterator it = pools_.begin(); it != pools_.end(); ++it) {
-        it->second->close();
+      for (PoolMap::iterator it = pools_.begin(); it != pools_.end();) {
+        // Get the next iterator because Pool::close() can invalidate the
+        // current iterator.
+        PoolMap::iterator curr_it = it++;
+        curr_it->second->close();
       }
-      maybe_notify_closed();
     } else {
       // Pool::close is intertwined with this class via notify_pool_closed.
       // Requires special handling to avoid iterator invalidation and double closing
