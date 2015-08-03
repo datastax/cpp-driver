@@ -64,6 +64,17 @@
       <td><code>CassCollection</code></td>
       <td><code>list</code>, <code>map</code>, <code>set</code></td>
     </tr>
+
+    <tr>
+      <td><code>CassTuple</code></td>
+      <td><code>tuple</code></td>
+    </tr>
+
+    <tr>
+      <td><code>CassUserType</code></td>
+      <td><code>type</code></td>
+    </tr>
+
   </tbody>
 </table>
 
