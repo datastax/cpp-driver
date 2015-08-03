@@ -136,7 +136,7 @@ private:
   }
 
   inline void release_stream(int stream) {
-    assert((words_[stream / NUM_BITS_PER_WORD] & (1L << (stream % NUM_BITS_PER_WORD))) == 0);
+    assert((words_[stream / NUM_BITS_PER_WORD] & (static_cast<word_t>(1) << (stream % NUM_BITS_PER_WORD))) == 0);
     words_[stream / NUM_BITS_PER_WORD] |=
         (static_cast<word_t>(1) << (stream % NUM_BITS_PER_WORD));
   }

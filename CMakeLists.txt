@@ -403,7 +403,6 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   add_definitions(/wd4244)
   add_definitions(/wd4267)
   add_definitions(/wd4800) # Performance warning due to automatic compiler casting from int to bool
-  add_definitions(/wd4334) # Implicit casting for 64-bit shift
 
   # Add preprocessor definitions for proper compilation
   add_definitions(-D_WIN32_WINNT=0x0501)      # Required for winsock (pre Windows XP wspiapi.h only)

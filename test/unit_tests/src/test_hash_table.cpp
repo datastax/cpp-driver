@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(case_sensitivity)
   BOOST_CHECK(indices[0] == 1);
 
   BOOST_CHECK(ht.get_indices("\"DEF\"", &indices) == 1);
-  BOOST_CHECK(indices[1] == 2);
+  BOOST_CHECK(indices[0] == 2);
 }
 
 BOOST_AUTO_TEST_CASE(resize)
