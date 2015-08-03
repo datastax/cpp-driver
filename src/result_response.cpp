@@ -90,7 +90,7 @@ CassError cass_result_paging_state(const CassResult* result,
                                    const char** paging_state,
                                    size_t* paging_state_size) {
   if (!result->has_more_pages()) {
-    return CASS_ERROR_NO_PAGING_STATE;
+    return CASS_ERROR_LIB_NO_PAGING_STATE;
   }
   *paging_state = result->paging_state().data();
   *paging_state_size = result->paging_state().size();

@@ -276,7 +276,7 @@ bool Session::notify_down_async(const Address& address) {
 void Session::connect_async(const Config& config, const std::string& keyspace, Future* future) {
   ScopedMutex l(&state_mutex_);
 
-  if (state_ != SESSION_STATE_CLOSED) {
+  if (state_.load(MEMORY_ORDER_RELAXED) != SESSION_STATE_CLOSED) {
     future->set_error(CASS_ERROR_LIB_UNABLE_TO_CONNECT,
                       "Already connecting, connected or closed");
     return;
@@ -301,7 +301,7 @@ void Session::connect_async(const Config& config, const std::string& keyspace, F
 
   LOG_DEBUG("Issued connect event");
 
-  state_ = SESSION_STATE_CONNECTING;
+  state_.store(SESSION_STATE_CONNECTING, MEMORY_ORDER_RELAXED);
   connect_future_.reset(future);
 
   if (!keyspace.empty()) {
@@ -318,14 +318,15 @@ void Session::connect_async(const Config& config, const std::string& keyspace, F
 void Session::close_async(Future* future, bool force) {
   ScopedMutex l(&state_mutex_);
 
-  bool wait_for_connect_to_finish = (force && state_ == SESSION_STATE_CONNECTING);
-  if (state_ != SESSION_STATE_CONNECTED && !wait_for_connect_to_finish) {
+  State state = state_.load(MEMORY_ORDER_RELAXED);
+  bool wait_for_connect_to_finish = (force && state == SESSION_STATE_CONNECTING);
+  if (state != SESSION_STATE_CONNECTED && !wait_for_connect_to_finish) {
     future->set_error(CASS_ERROR_LIB_UNABLE_TO_CLOSE,
                       "Already closing or closed");
     return;
   }
 
-  state_ = SESSION_STATE_CLOSING;
+  state_.store(SESSION_STATE_CLOSING, MEMORY_ORDER_RELAXED);
   close_future_.reset(future);
 
   if (!wait_for_connect_to_finish) {
@@ -352,8 +353,8 @@ void Session::internal_close() {
 
 void Session::notify_connected() {
   ScopedMutex l(&state_mutex_);
-  if (state_ == SESSION_STATE_CONNECTING) {
-    state_ = SESSION_STATE_CONNECTED;
+  if (state_.load(MEMORY_ORDER_RELAXED) == SESSION_STATE_CONNECTING) {
+    state_.store(SESSION_STATE_CONNECTED, MEMORY_ORDER_RELAXED);
   } else { // We recieved a 'force' close event
     internal_close();
   }
@@ -363,7 +364,7 @@ void Session::notify_connected() {
 
 void Session::notify_connect_error(CassError code, const std::string& message) {
   ScopedMutex l(&state_mutex_);
-  state_ = SESSION_STATE_CLOSING;
+  state_.store(SESSION_STATE_CLOSING, MEMORY_ORDER_RELAXED);
   internal_close();
   connect_future_->set_error(code, message);
   connect_future_.reset();
@@ -371,7 +372,7 @@ void Session::notify_connect_error(CassError code, const std::string& message) {
 
 void Session::notify_closed() {
   ScopedMutex l(&state_mutex_);
-  state_ = SESSION_STATE_CLOSED;
+  state_.store(SESSION_STATE_CLOSED, MEMORY_ORDER_RELAXED);
   if (close_future_) {
     close_future_->set();
     close_future_.reset();
@@ -474,7 +475,10 @@ void Session::on_resolve(Resolver* resolver) {
 }
 
 void Session::execute(RequestHandler* request_handler) {
-  if (!request_queue_->enqueue(request_handler)) {
+  if (state_.load(MEMORY_ORDER_ACQUIRE) != SESSION_STATE_CONNECTED) {
+    request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                              "Session is not connected");
+  } else if (!request_queue_->enqueue(request_handler)) {
     request_handler->on_error(CASS_ERROR_LIB_REQUEST_QUEUE_FULL,
                               "The request queue has reached capacity");
   }
@@ -610,6 +614,11 @@ void Session::on_execute(uv_async_t* data) {
   RequestHandler* request_handler = NULL;
   while (session->request_queue_->dequeue(request_handler)) {
     if (request_handler != NULL) {
+      if (is_closing) {
+        request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
+                                  "Session is closing");
+        continue;
+      }
       request_handler->set_query_plan(session->new_query_plan(request_handler->request(),
                                                               request_handler->encoding_cache()));
 

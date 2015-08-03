@@ -60,10 +60,19 @@ class IOWorker
     : public EventThread<IOWorkerEvent>
     , public RefCounted<IOWorker> {
 public:
+  enum State {
+    IO_WORKER_STATE_READY,
+    IO_WORKER_STATE_CLOSING,
+    IO_WORKER_STATE_CLOSED
+  };
+
   IOWorker(Session* session);
   ~IOWorker();
 
   int init();
+
+  bool is_closing() const { return state_ == IO_WORKER_STATE_CLOSING; }
+  bool is_ready() const { return state_ == IO_WORKER_STATE_READY; }
 
   const Config& config() const { return config_; }
   Metrics* metrics() const { return metrics_; }
@@ -125,6 +134,7 @@ private:
   void schedule_reconnect(const Address& address);
 
 private:
+  State state_;
   Session* session_;
   const Config& config_;
   Metrics* metrics_;

@@ -27,11 +27,11 @@
 namespace cass {
 
 IOWorker::IOWorker(Session* session)
-    : session_(session)
+    : state_(IO_WORKER_STATE_READY)
+    , session_(session)
     , config_(session->config())
     , metrics_(session->metrics())
     , protocol_version_(-1)
-    , is_closing_(false)
     , pending_request_count_(0)
     , request_queue_(config_.queue_size_io()) {
   prepare_.data = this;
@@ -125,7 +125,7 @@ void IOWorker::close_async() {
 }
 
 void IOWorker::add_pool(const Address& address, bool is_initial_connection) {
-  if (is_closing_) return;
+  if (!is_ready()) return;
 
   PoolMap::iterator it = pools_.find(address);
   if (it == pools_.end()) {
@@ -186,7 +186,7 @@ void IOWorker::request_finished(RequestHandler* request_handler) {
 void IOWorker::notify_pool_ready(Pool* pool) {
   if (pool->is_initial_connection()) {
     session_->notify_ready_async();
-  } else if (!is_closing_ && pool->is_ready()){
+  } else if (is_ready() && pool->is_ready()){
     session_->notify_up_async(pool->address());
   }
 }
@@ -206,7 +206,7 @@ void IOWorker::notify_pool_closed(Pool* pool) {
   // and it must be done before maybe_notify_closed().
   pools_.erase(address);
 
-  if (is_closing_) {
+  if (is_closing()) {
     maybe_notify_closed();
   } else {
     session_->notify_down_async(address);
@@ -221,7 +221,7 @@ void IOWorker::add_pending_flush(Pool* pool) {
 }
 
 void IOWorker::maybe_close() {
-  if (is_closing_ && pending_request_count_ <= 0) {
+  if (is_closing() && pending_request_count_ <= 0) {
     if (config_.core_connections_per_host() > 0) {
       for (PoolMap::iterator it = pools_.begin(); it != pools_.end();) {
         // Get the next iterator because Pool::close() can invalidate the
@@ -229,6 +229,7 @@ void IOWorker::maybe_close() {
         PoolMap::iterator curr_it = it++;
         curr_it->second->close();
       }
+      maybe_notify_closed();
     } else {
       // Pool::close is intertwined with this class via notify_pool_closed.
       // Requires special handling to avoid iterator invalidation and double closing
@@ -240,7 +241,8 @@ void IOWorker::maybe_close() {
 }
 
 void IOWorker::maybe_notify_closed() {
-  if (pools_.empty()) {
+  if (is_closing() && pools_.empty()) {
+    state_ = IO_WORKER_STATE_CLOSED;
     session_->notify_worker_closed_async();
     close_handles();
   }
@@ -294,7 +296,7 @@ void IOWorker::on_execute(uv_async_t* async) {
       request_handler->set_io_worker(io_worker);
       request_handler->retry();
     } else {
-      io_worker->is_closing_ = true;
+      io_worker->state_ = IO_WORKER_STATE_CLOSING;
     }
     remaining--;
   }

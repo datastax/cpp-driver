@@ -159,7 +159,7 @@ private:
 private:
   typedef std::vector<SharedRefPtr<IOWorker> > IOWorkerVec;
 
-  State state_;
+  Atomic<State> state_;
   uv_mutex_t state_mutex_;
 
   Config config_;
