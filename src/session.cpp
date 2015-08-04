@@ -614,11 +614,6 @@ void Session::on_execute(uv_async_t* data) {
   RequestHandler* request_handler = NULL;
   while (session->request_queue_->dequeue(request_handler)) {
     if (request_handler != NULL) {
-      if (is_closing) {
-        request_handler->on_error(CASS_ERROR_LIB_NO_HOSTS_AVAILABLE,
-                                  "Session is closing");
-        continue;
-      }
       request_handler->set_query_plan(session->new_query_plan(request_handler->request(),
                                                               request_handler->encoding_cache()));
 
