@@ -46,7 +46,7 @@ The snapshot obtained by [`cass_session_get_schema()`] will not see schema chang
 that happened after the call. A new snapshot needs to be obtained to see
 subsequent updates to the schema.
 
-## Enableing/Disabling Schema Metadata
+## Enabling/Disabling Schema Metadata
 
 Retrieving and updating schema metadata can be enabled or disabled. It is
 enabled by default. However, some application might wish to reduce this
