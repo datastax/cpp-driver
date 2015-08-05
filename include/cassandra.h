@@ -53,7 +53,7 @@
 #define CASS_VERSION_MAJOR 2
 #define CASS_VERSION_MINOR 1
 #define CASS_VERSION_PATCH 0
-#define CASS_VERSION_SUFFIX "beta"
+#define CASS_VERSION_SUFFIX ""
 
 #ifdef __cplusplus
 extern "C" {
@@ -5487,6 +5487,8 @@ cass_row_get_column_by_name_n(const CassRow* row,
 
 /**
  * Gets the data type of a value.
+ *
+ * @public @memberof CassValue
  *
  * @param[in] value
  * @return Returns a reference to the data type of the value.
