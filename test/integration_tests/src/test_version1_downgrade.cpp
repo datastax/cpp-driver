@@ -45,7 +45,8 @@ BOOST_FIXTURE_TEST_SUITE(version1_downgrade, Version1DowngradeTests)
 //TODO: Add additional tests for v2 downgrade
 BOOST_AUTO_TEST_CASE(query_after_downgrade)
 {
-  test_utils::CassLog::reset("'Invalid or unsupported protocol version: ");
+  test_utils::CassLog::set_output_log_level(CASS_LOG_DEBUG);
+  test_utils::CassLog::reset("does not support protocol version 2. Trying protocol version 1...");
 
   size_t row_count;
 

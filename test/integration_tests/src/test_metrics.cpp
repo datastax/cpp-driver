@@ -178,30 +178,37 @@ BOOST_AUTO_TEST_CASE(timeouts) {
   /*
    * Check for pending request timeouts
    */
-  // Limit the connections to one
-  cass_cluster_set_core_connections_per_host(cluster_.get(), 1);
-  cass_cluster_set_max_connections_per_host(cluster_.get(), 1);
-  // Lower connect timeout because this is what affects pending request timeout
-  cass_cluster_set_connect_timeout(cluster_.get(), 100);
-  // Make the number of pending requests really high to exceed the timeout
-  cass_cluster_set_pending_requests_high_water_mark(cluster_.get(), 1000);
-  ccm_ = cql::cql_ccm_bridge_t::create_and_start(configuration_, "test", 2, 0);
-  create_session(true);
+  CassVersion version = test_utils::get_version();
+  if ((version.major <= 2 && version.minor < 1) || version.major < 2) {
+    // Limit the connections to one
+    cass_cluster_set_core_connections_per_host(cluster_.get(), 1);
+    cass_cluster_set_max_connections_per_host(cluster_.get(), 1);
+    // Lower connect timeout because this is what affects pending request timeout
+    cass_cluster_set_connect_timeout(cluster_.get(), 100);
+    // Make the number of pending requests really high to exceed the timeout
+    cass_cluster_set_pending_requests_high_water_mark(cluster_.get(), 1000);
+    ccm_ = cql::cql_ccm_bridge_t::create_and_start(configuration_, "test", 2, 0);
+    create_session(true);
 
-  // Execute async queries to create pending request timeouts
-  for (int n = 0; n < 1000; ++n) {
-    execute_query(true);
+    // Execute async queries to create pending request timeouts
+    for (int n = 0; n < 1000; ++n) {
+      execute_query(true);
+    }
+
+    // Ensure the pending request has occurred
+    boost::chrono::steady_clock::time_point end =
+      boost::chrono::steady_clock::now() + boost::chrono::seconds(10);
+    do {
+      boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+      get_metrics(&metrics);
+    } while (boost::chrono::steady_clock::now() < end &&
+      metrics.errors.pending_request_timeouts == 0);
+    BOOST_CHECK_GT(metrics.errors.pending_request_timeouts, 0);
+  } else {
+    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
+    BOOST_TEST_MESSAGE("Skipping Pending Request Timeout for Cassandra v" << version.to_string());
+    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_warnings);
   }
-
-  // Ensure the pending request has occurred
-  boost::chrono::steady_clock::time_point end =
-    boost::chrono::steady_clock::now() + boost::chrono::seconds(10);
-  do {
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
-    get_metrics(&metrics);
-  } while (boost::chrono::steady_clock::now() < end &&
-           metrics.errors.pending_request_timeouts == 0);
-  BOOST_CHECK_GT(metrics.errors.pending_request_timeouts, 0);
 
   /*
    * Check for request timeouts
