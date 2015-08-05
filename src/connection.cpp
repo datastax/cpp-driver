@@ -149,6 +149,8 @@ Connection::HeartbeatHandler::HeartbeatHandler(Connection* connection)
 }
 
 void Connection::HeartbeatHandler::on_set(ResponseMessage* response) {
+  LOG_TRACE("Heartbeat completed on host %s",
+            connection_->address_string().c_str());
   connection_->idle_start_time_ms_ = 0;
   connection_->heartbeat_outstanding_ = false;
 }
