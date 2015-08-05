@@ -74,7 +74,7 @@ BOOST_FIXTURE_TEST_SUITE(heartbeat, HeartbestTest)
 BOOST_AUTO_TEST_CASE(interval) {
   // Heartbeat disabled
   cass_cluster_set_connection_heartbeat_interval(cluster, 0);
-  test_utils::CassLog::reset("Heartbeat request timed out on host " + conf.ip_prefix());
+  test_utils::CassLog::reset("Heartbeat completed on host " + conf.ip_prefix());
   {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
     execute_system_query(30, session);
