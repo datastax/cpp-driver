@@ -96,7 +96,15 @@ public:
   }
 
   virtual bool equals(const SharedRefPtr<const DataType>& data_type) const {
-    return value_type_ == data_type->value_type_;
+    switch (value_type_) {
+      // "text" is an alias for  "varchar"
+      case CASS_VALUE_TYPE_TEXT:
+      case CASS_VALUE_TYPE_VARCHAR:
+        return data_type->value_type_ == CASS_VALUE_TYPE_TEXT ||
+            data_type->value_type_ == CASS_VALUE_TYPE_VARCHAR;
+      default:
+        return value_type_ == data_type->value_type_;
+    }
   }
 
   virtual DataType* copy() const {
