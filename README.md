@@ -15,13 +15,14 @@ Cassandra's native protocol and Cassandra Query Language v3.
 
 ## What's New in 2.1
 
-- Tuples and UDTs
-- Nested collections
-- Data types
-- Retry policies
-- Idle connection heartbeats
-- Support for disabling schema metadata
 - Support for Cassandra 2.1 (CQL protocol version 3)
+- [Tuples] and [UDTs]
+- [Nested collections]
+- [Retry policies]
+- [Client-side timestamps]
+- [Data types]
+- [Idle connection heartbeats]
+- [Support for disabling schema metadata]
 
 More information about all the changes found in the 2.1 release can be found in
 [2.1 beta] and [2.1 GA] blog posts and in the [changelog](CHANGELOG.md).
@@ -146,6 +147,15 @@ limitations under the License.
 [Performance metrics]: http://datastax.github.io/cpp-driver/topics/metrics/
 [2.1 beta]: http://www.datastax.com/dev/blog/datastax-c-driver-2-1-beta-released
 [2.1 GA]: http://www.datastax.com/dev/blog/datastax-c-driver-2-1-ga-released
+
+[Tuples]: http://datastax.github.io/cpp-driver/topics/basics/tuples/
+[UDTs]: http://datastax.github.io/cpp-driver/topics/basics/user_defined_types/
+[Nested collections]: http://datastax.github.io/cpp-driver/topics/basics/binding_parameters/#nested-collections
+[Data types]: http://datastax.github.io/cpp-driver/topics/basics/data_types/
+[Retry policies]: http://datastax.github.io/cpp-driver/topics/configuration/retry_policies/
+[Client-side timestamps]: http://datastax.github.io/cpp-driver/topics/basics/client_side_timestamps/
+[Idle connection heartbeats]: http://datastax.github.io/cpp-driver/topics/configuration/#connection-heartbeats
+[Support for disabling schema metadata]: http://datastax.github.io/cpp-driver/topics/basics/schema_metadata/#enabling-disabling-schema-metadata
 
 [Asynchronous API]: http://datastax.github.io/cpp-driver/topics/#futures
 [Simple]: http://datastax.github.io/cpp-driver/topics/#executing-queries

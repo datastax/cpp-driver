@@ -1190,7 +1190,7 @@ cass_cluster_set_latency_aware_routing_settings(CassCluster* cluster,
 /**
  * Enable/Disable Nagel's algorithm on connections.
  *
- * <b>Default:</b> cass_false (disabled).
+ * <b>Default:</b> cass_true (disables Nagel's algorithm).
  *
  * @public @memberof CassCluster
  *
