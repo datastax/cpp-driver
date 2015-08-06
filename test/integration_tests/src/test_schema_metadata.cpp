@@ -68,7 +68,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     for (int i = 0; i < 10; ++i) {
       test_utils::execute_query(session,
                                 str(boost::format(
-                                      "SELECT * FROM SYSTEM.SCHEMA_KEYSPACES WHERE keyspace_name = '%s'") % ks), &result);
+                                      "SELECT * FROM system.schema_keyspaces WHERE keyspace_name = '%s'") % ks), &result);
       if (cass_result_row_count(result.get()) > 0) {
         return;
       }
@@ -501,8 +501,8 @@ BOOST_AUTO_TEST_CASE(disable) {
 
   // Verify known keyspace doesn't exist in metadata
   {
-    test_utils::CassSchemaPtr schema2(cass_session_get_schema(session));
-    BOOST_CHECK(cass_schema_get_keyspace(schema2.get(), "system") == NULL);
+    test_utils::CassSchemaPtr schema(cass_session_get_schema(session));
+    BOOST_CHECK(cass_schema_get_keyspace(schema.get(), "system") == NULL);
   }
 
   // Verify schema change event didn't happen
