@@ -62,10 +62,6 @@ struct OutageTests : public test_utils::MultipleNodesTest {
     test_utils::CassLog::set_output_log_level(CASS_LOG_DISABLED);
     printf("Warning! This test is going to take %d minutes\n", TEST_DURATION_SECS / 60);
     std::fill(nodes_states, nodes_states + NUM_NODES, UP);
-    // TODO(mpenick): This is a stopgap. To be fixed in CPP-140
-#if !defined(WIN32) && !defined(_WIN32)
-    signal(SIGPIPE, SIG_IGN);
-#endif
   }
 
   int random_int(int s, int e) {
