@@ -1,7 +1,7 @@
 # Handling Results
 
 The [`CassResult`](http://datastax.github.io/cpp-driver/api/CassResult/) object
-is typically returned for `SELECT` statments. For mutations (`INSERT`, `UPDATE`,
+is typically returned for `SELECT` statements. For mutations (`INSERT`, `UPDATE`,
 and `DELETE`) only a status code will be present and can be accessed using
 `cass_future_error_code()`. However, when using lightweight transactions a
 result object will be available to check the status of the transaction. The
@@ -10,7 +10,7 @@ result object is obtained from executed statements' future object.
 **Important**: Rows, column values, collections, decimals, strings, and bytes
 objects are all invalidated when the result object is freed. All of these
 objects point to memory held by the result. This allows the driver to avoid
-unneccessarily copying data.
+unnecessarily copying data.
 
 ```c
 const CassResult* result = cass_future_get_result(future);
@@ -20,7 +20,7 @@ const CassResult* result = cass_future_get_result(future);
 cass_result_free(result);
 ```
 
-*Note*: The result object is immutable and can be accessed by mutliple threads concurrently.
+*Note*: The result object is immutable and can be accessed by multiple threads concurrently.
 
 ## Rows and Column Values
 
@@ -63,10 +63,10 @@ cass_value_get_string(column3, &string_value, &string_value_length);
 
 ## Iterators
 
-Iterators can be used to interate over the rows in a result, the columns in a
+Iterators can be used to iterate over the rows in a result, the columns in a
 row, or the values in a collection.
 
-**Important**: `cass_iterator_next()` invalidates values retreived by the
+**Important**: `cass_iterator_next()` invalidates values retrieved by the
 previous iteration.
 
 ```c
@@ -83,7 +83,7 @@ cass_iterator_free(iterator);
 ```
 
 All iterators use the same pattern, but will have different iterator creation
-and retreival functions. Iterating over a map colleciton is slightly different
+and retrieval functions. Iterating over a map collection is slightly different
 because it has two values per entry, but utilizes the same basic pattern.
 
 ```c

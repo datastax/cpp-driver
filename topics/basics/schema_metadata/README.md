@@ -1,7 +1,7 @@
 # Schema Metadata
 
 The driver provides access to keyspace and table metadata. This schema metadata
-is monitored by the control conneciton and automatically kept up-to-date.
+is monitored by the control connection and automatically kept up-to-date.
 
 ```c
 /* Create session */

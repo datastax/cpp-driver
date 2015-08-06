@@ -48,7 +48,7 @@ The driver is designed so that no operation will force an application to block. 
 
 ## Executing Queries
 
-Queries are executed using [`CassStatement`](http://datastax.github.io/cpp-driver/api/CassStatement/) objects. Statements encapsulate the query string and the query parameters. Query parameters are not supported by ealier versions of Cassandra (1.2 and below) and values need to be inlined in the query string itself.
+Queries are executed using [`CassStatement`](http://datastax.github.io/cpp-driver/api/CassStatement/) objects. Statements encapsulate the query string and the query parameters. Query parameters are not supported by earlier versions of Cassandra (1.2 and below) and values need to be inlined in the query string itself.
 
 ```c
 /* Create a statement with zero parameters */
@@ -70,9 +70,9 @@ cass_future_free(query_future);
 
 ## Parameterized Queries (Positional)
 
-Cassandra 2.0+ supports the use of parameterized queries. This allows the same query string to be executed mulitple times with different values; avoiding string manipulation in your application.
+Cassandra 2.0+ supports the use of parameterized queries. This allows the same query string to be executed multiple times with different values; avoiding string manipulation in your application.
 
-**Perfomance Tip:** If the same query is being reused mulitple times, [prepared statements](http://datastax.github.io/cpp-driver/topics/basics/prepared_statements/) should be used to optimize performance.
+**Perfomance Tip:** If the same query is being reused multiple times, [prepared statements](http://datastax.github.io/cpp-driver/topics/basics/prepared_statements/) should be used to optimize performance.
 
 ```c
 /* There are two bind variables in the query string */
@@ -158,7 +158,7 @@ allows the driver to batch requests destined for the same node.
 
 A [`CassSession`](http://datastax.github.io/cpp-driver/api/CassSession/) is designed to be used concurrently from multiple threads. [`CassFuture`](http://datastax.github.io/cpp-driver/api/CassFuture/) is also thread safe. Other than these exclusions, in general, functions that might modify an object's state are **NOT** thread safe. Object's that are immutable (marked 'const') can be read safely by multiple threads.
 
-**NOTE:** The object/resource free-ing functions (e.g. cass_cluster_free, cass_session_free, ... cass_*_free) cannot be called conncurently on the same instance of an object.
+**NOTE:** The object/resource free-ing functions (e.g. cass_cluster_free, cass_session_free, ... cass_*_free) cannot be called concurrently on the same instance of an object.
 
 ## Memory handling
 
@@ -173,7 +173,7 @@ Here are some features that are missing from the C/C++ driver, but are included 
 - Compression
 - Query tracing
 - Event registration and notification
-- Callback intefaces for load balancing, authenticaiton, reconnection and retry
+- Callback interfaces for load balancing, authentication, reconnection and retry
 - Generic SASL authentication interface
 - [User Defined Type (UDT)](http://www.datastax.com/documentation/cql/3.1/cql/cql_reference/cqlRefUDType.html)
 
