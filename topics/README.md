@@ -16,7 +16,7 @@ int main() {
   CassSession* session = cass_session_new();
 
   /* Add contact points */
-  cass_cluster_set_contact_points("127.0.0.1");
+  cass_cluster_set_contact_points(cluster, "127.0.0.1");
 
   /* Provide the cluster object as configuration to connect the session */
   CassFuture* connect_future = cass_session_connect(session, cluster);
