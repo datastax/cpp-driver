@@ -86,7 +86,7 @@ cass_bool_t cass_result_has_more_pages(const CassResult* result) {
   return static_cast<cass_bool_t>(result->has_more_pages());
 }
 
-CassError cass_result_paging_state(const CassResult* result,
+CassError cass_result_paging_state_token(const CassResult* result,
                                    const char** paging_state,
                                    size_t* paging_state_size) {
   if (!result->has_more_pages()) {

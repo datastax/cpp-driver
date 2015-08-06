@@ -92,7 +92,7 @@ CassError cass_statement_set_paging_state(CassStatement* statement,
   return CASS_OK;
 }
 
-CassError cass_statement_set_paging_state_raw(CassStatement* statement,
+CassError cass_statement_set_paging_state_token(CassStatement* statement,
                                               const char* paging_state,
                                               size_t paging_state_size) {
   statement->set_paging_state(std::string(paging_state, paging_state_size));

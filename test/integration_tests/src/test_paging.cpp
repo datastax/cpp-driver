@@ -38,6 +38,27 @@ struct PagingTests : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
     test_utils::execute_query(session, "CREATE TABLE test (part int, key timeuuid, value int, PRIMARY KEY(part, key));");
   }
+
+  void insert_rows(int num_rows) {
+    std::string insert_query = "INSERT INTO test (part, key, value) VALUES (?, ?, ?);";
+    test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 3));
+
+    // Determine if bound parameters can be used based on C* version
+    if (version.major == 1) {
+      test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query.c_str());
+      statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
+    }
+
+    const cass_int32_t part_key = 0;
+
+    for (int i = 0; i < num_rows; ++i) {
+      cass_statement_bind_int32(statement.get(), 0, part_key);
+      cass_statement_bind_uuid(statement.get(), 1, test_utils::generate_time_uuid(uuid_gen));
+      cass_statement_bind_int32(statement.get(), 2, i);
+      test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
+      test_utils::wait_and_check_error(future.get());
+    }
+  }
 };
 
 BOOST_FIXTURE_TEST_SUITE(paging, PagingTests)
@@ -47,29 +68,12 @@ BOOST_AUTO_TEST_CASE(paging_simple)
   const int num_rows = 100;
   const int page_size = 5;
 
-  std::string insert_query = "INSERT INTO test (part, key, value) VALUES (?, ?, ?);";
-  test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 3));
-
-  // Determine if bound parameters can be used based on C* version
-  if (version.major == 1) {
-    test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query.c_str());
-    statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
-  }
-
-  const cass_int32_t part_key = 0;
-
-  for (int i = 0; i < num_rows; ++i) {
-    cass_statement_bind_int32(statement.get(), 0, part_key);
-    cass_statement_bind_uuid(statement.get(), 1, test_utils::generate_time_uuid(uuid_gen));
-    cass_statement_bind_int32(statement.get(), 2, i);
-    test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
-    test_utils::wait_and_check_error(future.get());
-  }
-
   std::string select_query = "SELECT value FROM test";
 
+  insert_rows(num_rows);
+
   test_utils::CassResultPtr result;
-  statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 0));
+  test_utils::CassStatementPtr statement(test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 0)));
   cass_statement_set_paging_size(statement.get(), page_size);
 
   cass_int32_t count = 0;
@@ -89,6 +93,44 @@ BOOST_AUTO_TEST_CASE(paging_simple)
 
     if (cass_result_has_more_pages(result.get())) {
       cass_statement_set_paging_state(statement.get(), result.get());
+    }
+  } while (cass_result_has_more_pages(result.get()));
+}
+
+BOOST_AUTO_TEST_CASE(paging_raw)
+{
+  const int num_rows = 100;
+  const int page_size = 5;
+
+  std::string select_query = "SELECT value FROM test";
+
+  insert_rows(num_rows);
+
+  test_utils::CassResultPtr result;
+  test_utils::CassStatementPtr statement(test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 0)));
+  cass_statement_set_paging_size(statement.get(), page_size);
+
+  cass_int32_t count = 0;
+  do {
+    test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
+    test_utils::wait_and_check_error(future.get());
+    result = test_utils::CassResultPtr(cass_future_get_result(future.get()));
+
+    test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));
+
+    while (cass_iterator_next(iterator.get())) {
+      const CassRow* row = cass_iterator_get_row(iterator.get());
+      cass_int32_t value;
+      cass_value_get_int32(cass_row_get_column(row, 0), &value);
+      BOOST_REQUIRE(value == count++);
+    }
+
+
+    if (cass_result_has_more_pages(result.get())) {
+      const char* paging_state;
+      size_t paging_state_size;
+      BOOST_CHECK(cass_result_paging_state_token(result.get(), &paging_state, &paging_state_size) == CASS_OK);
+      cass_statement_set_paging_state_token(statement.get(), paging_state, paging_state_size);
     }
   } while (cass_result_has_more_pages(result.get()));
 }

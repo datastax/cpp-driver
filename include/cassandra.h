@@ -2176,12 +2176,12 @@ cass_statement_set_paging_state(CassStatement* statement,
  * @param[in] paging_state_size
  * @return CASS_OK if successful, otherwise an error occurred.
  *
- * @see cass_result_paging_state()
+ * @see cass_result_paging_state_token()
  */
 CASS_EXPORT CassError
-cass_statement_set_paging_state_raw(CassStatement* statement,
-                                    const char* paging_state,
-                                    size_t paging_state_size);
+cass_statement_set_paging_state_token(CassStatement* statement,
+                                      const char* paging_state,
+                                      size_t paging_state_size);
 
 /**
  * Sets the statement's timestamp.
@@ -4999,12 +4999,12 @@ cass_result_has_more_pages(const CassResult* result);
  * @param[out] paging_state_size
  * @return CASS_OK if successful, otherwise error occurred
  *
- * @see cass_statement_set_paging_state_raw()
+ * @see cass_statement_set_paging_state_token()
  */
 CASS_EXPORT CassError
-cass_result_paging_state(const CassResult* result,
-                         const char** paging_state,
-                         size_t* paging_state_size);
+cass_result_paging_state_token(const CassResult* result,
+                               const char** paging_state,
+                               size_t* paging_state_size);
 
 /***********************************************************************************
  *
