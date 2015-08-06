@@ -60,6 +60,7 @@ BOOST_AUTO_TEST_CASE(reprepared_on_new_node)
 
   {
     test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
+    BOOST_REQUIRE(cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_QUORUM) == CASS_OK);
     BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 0, "123") == CASS_OK);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());
@@ -98,6 +99,7 @@ BOOST_AUTO_TEST_CASE(reprepared_on_new_node)
 
   for (int i = 0; i < 10; ++i) {
     test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
+    BOOST_REQUIRE(cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_QUORUM) == CASS_OK);
     BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 0, "789") == CASS_OK);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());
@@ -123,6 +125,7 @@ BOOST_AUTO_TEST_CASE(reprepared_on_new_node)
 
   for (int i = 0; i < 10; ++i) {
     test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
+    BOOST_REQUIRE(cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_QUORUM) == CASS_OK);
     BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 0, "123456789") == CASS_OK);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());
