@@ -39,7 +39,7 @@ CassRetryPolicy* cass_retry_policy_fallthrough_new() {
   return CassRetryPolicy::to(policy);
 }
 
-CassRetryPolicy* cass_retry_policylogging_new(CassRetryPolicy* child_retry_policy) {
+CassRetryPolicy* cass_retry_policy_logging_new(CassRetryPolicy* child_retry_policy) {
   if (child_retry_policy->type() == cass::RetryPolicy::LOGGING) {
     return NULL;
   }
