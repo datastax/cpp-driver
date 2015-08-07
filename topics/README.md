@@ -156,7 +156,7 @@ allows the driver to batch requests destined for the same node.
 
 ## Thread safety
 
-A [`CassSession`](http://datastax.github.io/cpp-driver/api/CassSession/) is designed to be used concurrently from multiple threads. [`CassFuture`](http://datastax.github.io/cpp-driver/api/CassFuture/) is also thread safe. Other than these exclusions, in general, functions that might modify an object's state are **NOT** thread safe. Object's that are immutable (marked 'const') can be read safely by multiple threads.
+A [`CassSession`](http://datastax.github.io/cpp-driver/api/CassSession/) is designed to be used concurrently from multiple threads. [`CassFuture`](http://datastax.github.io/cpp-driver/api/CassFuture/) is also thread safe. Other than these exclusions, in general, functions that might modify an object's state are **NOT** thread safe. Objects that are immutable (marked 'const') can be read safely by multiple threads.
 
 **NOTE:** The object/resource free-ing functions (e.g. cass_cluster_free, cass_session_free, ... cass_*_free) cannot be called conncurently on the same instance of an object.
 
