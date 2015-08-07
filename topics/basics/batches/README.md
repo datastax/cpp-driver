@@ -16,21 +16,21 @@ CassBatch* batch = cass_batch_new(CASS_BATCH_TYPE_LOGGED);
  
 {
   CassStatement* statement
-    = cass_statement_new(cass_string_init("INSERT INTO example1(key, value) VALUES ('a', '1')"), 0);
+    = cass_statement_new("INSERT INTO example1(key, value) VALUES ('a', '1')", 0);
   cass_batch_add_statement(batch, statement);
   cass_statement_free(statement);
 }
  
 {
   CassStatement* statement
-    = cass_statement_new(cass_string_init("UPDATE example2 set value = '2' WHERE key = 'b'"), 0);
+    = cass_statement_new("UPDATE example2 set value = '2' WHERE key = 'b'", 0);
   cass_batch_add_statement(batch, statement);
   cass_statement_free(statement);
 }
  
 {
   CassStatement* statement
-    = cass_statement_new(cass_string_init("DELETE FROM example3 WHERE key = 'c'"), 0);
+    = cass_statement_new("DELETE FROM example3 WHERE key = 'c'", 0);
   cass_batch_add_statement(batch, statement);
   cass_statement_free(statement);
 }

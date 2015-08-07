@@ -111,7 +111,7 @@ int load_trusted_cert_file(const char* file, CassSsl* ssl) {
   fclose(in);
 
   // Add the trusted certificate (or chain) to the driver
-  rc = cass_ssl_add_trusted_cert(ssl, cass_string_init2(cert, cert_size));
+  rc = cass_ssl_add_trusted_cert_n(ssl, cert, cert_size);
   if (rc != CASS_OK) {
     fprintf(stderr, "Error loading SSL certificate: %s\n", cass_error_desc(rc));
     free(cert);
@@ -196,7 +196,7 @@ size_t cert_size = 0;
 
 // Load PEM-formatted certificate data and size into cert and cert_size...
 
-rc = cass_ssl_set_cert(ssl, cass_string_init2(cert, cert_size));
+rc = cass_ssl_set_cert_n(ssl, cert, cert_size);
 if (rc != CASS_OK) {
   // Handle error
 }
@@ -210,7 +210,7 @@ const char* key_password = "<key password>";
 
 // Load PEM-formatted private key data and size into key and key_size...
 
-rc = cass_ssl_set_private_key(ssl, cass_string_init2(key, key_size), key_password);
+rc = cass_ssl_set_private_key_n(ssl, key, key_size, key_password, strlen(key_password));
 if (rc != CASS_OK) {
   // Handle error
 }

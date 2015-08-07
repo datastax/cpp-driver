@@ -17,7 +17,7 @@ You can specify a keyspace to change to by executing a `USE` statement on a conn
 
 ```c
 CassStatement use_statment 
-  = cass_statement_new(cass_string_init("USE keyspace1"), 0);
+  = cass_statement_new("USE keyspace1", 0);
 
 CassFuture* use_future 
   = cass_session_execute(session, use_statement);
