@@ -14,8 +14,8 @@ without side effect. It's up to application code to make this distinction.
 
 ## Setting Retry Policy
 
-By default driver uses the `default retry policy` for all requests unless it is
-overridden. The retry policy can be set globally using
+By default, the driver uses the `default retry policy` for all requests unless
+it is overridden. The retry policy can be set globally using
 [`cass_cluster_set_retry_policy()`] or it can be set per statement or batch
 using [`cass_statement_set_retry_policy()`] or
 [`cass_batch_set_retry_policy()`], respectively.
