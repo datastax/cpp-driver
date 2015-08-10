@@ -53,7 +53,7 @@ struct DataTypesTests : public test_utils::SingleSessionTest {
     }
     BOOST_REQUIRE_EQUAL(cass_statement_bind_string(statement.get(), 0, "simple"), CASS_OK);
     BOOST_REQUIRE_EQUAL(test_utils::Value<T>::bind(statement.get(), 1, value), CASS_OK);
-    test_utils::wait_and_check_error(cass_session_execute(session, statement.get()));
+    test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(session, statement.get())).get());
     test_utils::CassPreparedPtr prepared(test_utils::prepare(session, insert_query.c_str()));
     statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     BOOST_REQUIRE_EQUAL(cass_data_type_type(cass_prepared_parameter_data_type(prepared.get(), 0)), CASS_VALUE_TYPE_VARCHAR);
@@ -62,7 +62,7 @@ struct DataTypesTests : public test_utils::SingleSessionTest {
     BOOST_REQUIRE_EQUAL(cass_data_type_type(cass_prepared_parameter_data_type_by_name(prepared.get(), "value")), value_type);
     BOOST_REQUIRE_EQUAL(cass_statement_bind_string(statement.get(), 0, "prepared"), CASS_OK);
     BOOST_REQUIRE_EQUAL(test_utils::Value<T>::bind(statement.get(), 1, value), CASS_OK);
-    test_utils::wait_and_check_error(cass_session_execute(session, statement.get()));
+    test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(session, statement.get())).get());
 
     // Ensure the value can be read
     std::string select_query = "SELECT key, value FROM " + table_name;

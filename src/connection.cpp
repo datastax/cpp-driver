@@ -373,7 +373,9 @@ void Connection::set_state(ConnectionState new_state) {
       break;
 
     case CONNECTION_STATE_REGISTERING_EVENTS:
-      assert(new_state == CONNECTION_STATE_READY &&
+      assert((new_state == CONNECTION_STATE_READY ||
+              new_state == CONNECTION_STATE_CLOSE ||
+              new_state == CONNECTION_STATE_CLOSE_DEFUNCT) &&
              "Invalid connection state after registering for events");
       state_ = new_state;
       break;

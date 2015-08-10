@@ -302,7 +302,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
       test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
       BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid(statement.get(), 0, key), CASS_OK);
       BOOST_REQUIRE_EQUAL(cass_statement_bind_user_type(statement.get(), 1, address.get()), CASS_OK);
-      test_utils::wait_and_check_error(cass_session_execute(tester.session, statement.get()));
+      test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get());
 
       // Ensure the UDT can be read
       statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 1));
@@ -329,7 +329,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
       test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
       BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid(statement.get(), 0, key), CASS_OK);
       BOOST_REQUIRE_EQUAL(cass_statement_bind_user_type(statement.get(), 1, address.get()), CASS_OK);
-      test_utils::wait_and_check_error(cass_session_execute(tester.session, statement.get()));
+      test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get());
 
       // Ensure the UDT can be read
       statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 1));
