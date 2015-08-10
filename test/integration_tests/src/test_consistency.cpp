@@ -29,7 +29,9 @@
 #include <boost/thread.hpp>
 
 struct ConsistencyTests {
-  ConsistencyTests() {}
+  ConsistencyTests() {
+    boost::debug::detect_memory_leaks(false);
+  }
 };
 
 BOOST_FIXTURE_TEST_SUITE(consistency, ConsistencyTests)
@@ -175,6 +177,80 @@ BOOST_AUTO_TEST_CASE(two_nodes_down)
     BOOST_CHECK(init_result  != CASS_OK);
     BOOST_CHECK(query_result != CASS_OK);
   }
+}
+
+BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
+{
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+  CassRetryPolicy* downgrading_policy = cass_retry_policy_downgrading_consistency_new();
+  cass_cluster_set_retry_policy(cluster.get(), downgrading_policy);
+  cass_cluster_set_connection_heartbeat_interval(cluster.get(), 0);
+
+  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
+  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
+
+  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 3, 0);
+
+  test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+
+  PolicyTool policy_tool;
+  policy_tool.create_schema(session.get(), 3); // replication_factor = 3
+
+  {
+    // Sanity check
+    CassError init_result = policy_tool.init_return_error(session.get(), 12, CASS_CONSISTENCY_ALL);	// Should work (N=3, RF=3)
+    CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_ALL);	// Should work (N=3, RF=3)
+    BOOST_CHECK_EQUAL(init_result, CASS_OK);
+    BOOST_CHECK_EQUAL(query_result, CASS_OK);
+  }
+
+  ccm->pause(2);
+
+  {
+    CassError init_result;
+    do {
+      init_result = policy_tool.init_return_error(session.get(), 12, CASS_CONSISTENCY_QUORUM);	// Should work (N=2, RF=3)
+    } while (init_result == CASS_ERROR_LIB_REQUEST_TIMED_OUT);
+    BOOST_CHECK_EQUAL(init_result, CASS_OK);
+    CassError query_result;
+    do {
+      query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_QUORUM);	// Should work (N=2, RF=3)
+    } while (init_result == CASS_ERROR_LIB_REQUEST_TIMED_OUT);
+    BOOST_CHECK_EQUAL(query_result, CASS_OK);
+  }
+
+  ccm->pause(3);
+
+  {
+    CassError init_result;
+    do {
+      init_result = policy_tool.init_return_error(session.get(), 12, CASS_CONSISTENCY_QUORUM);	// Should work (N=1, RF=3)
+    } while (init_result == CASS_ERROR_LIB_REQUEST_TIMED_OUT);
+    BOOST_CHECK_EQUAL(init_result, CASS_OK);
+    CassError query_result;
+    do {
+      query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_QUORUM);	// Should work (N=1, RF=3)
+    } while (init_result == CASS_ERROR_LIB_REQUEST_TIMED_OUT);
+    BOOST_CHECK_EQUAL(query_result, CASS_OK);
+  }
+
+  {
+    CassError init_result;
+    do {
+      init_result = policy_tool.init_return_error(session.get(), 12, CASS_CONSISTENCY_TWO);	// Should work (N=1, RF=3)
+    } while (init_result == CASS_ERROR_LIB_REQUEST_TIMED_OUT);
+    BOOST_CHECK_EQUAL(init_result, CASS_OK);
+    CassError query_result;
+    do {
+      query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_TWO);	// Should work (N=1, RF=3)
+    } while (init_result == CASS_ERROR_LIB_REQUEST_TIMED_OUT);
+    BOOST_CHECK_EQUAL(query_result, CASS_OK);
+  }
+
+  ccm->resume(2);
+  ccm->resume(3);
+
+  cass_retry_policy_free(downgrading_policy);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
