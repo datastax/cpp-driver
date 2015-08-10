@@ -33,9 +33,7 @@ public:
     , data_(NULL) { }
 
   ~Timer() {
-    if (handle_ != NULL) {
-      uv_close(copy_cast<uv_timer_t*, uv_handle_t*>(handle_), on_close);
-    }
+    stop();
   }
 
   void* data() const { return data_; }
@@ -48,7 +46,7 @@ public:
   void start(uv_loop_t* loop, uint64_t timeout, void* data,
              Callback cb) {
     if (handle_ == NULL) {
-      handle_ = new  uv_timer_t;
+      handle_ = new uv_timer_t;
       handle_->data = this;
       uv_timer_init(loop, handle_);
     }
@@ -58,9 +56,10 @@ public:
   }
 
   void stop() {
-    if (handle_ != NULL) {
-      uv_timer_stop(handle_);
-    }
+    if (handle_ == NULL) return;
+    // This also stops the timer
+    uv_close(copy_cast<uv_timer_t*, uv_handle_t*>(handle_), on_close);
+    handle_ = NULL;
   }
 
 #if UV_VERSION_MAJOR == 0
@@ -69,6 +68,12 @@ public:
   static void on_timeout(uv_timer_t* handle) {
 #endif
     Timer* timer = static_cast<Timer*>(handle->data);
+    // The timer handle needs to be closed everytime because a stopped timer
+    // will not prevent uv_run() from exiting the event loop and the handle
+    // can't be deleted immediately because the event loop is still using the
+    // memory. Closing the handle everytime guarantees it will be cleaned up
+    // properly without crashing the event loop.
+    timer->stop();
     timer->cb_(timer);
   }
 
