@@ -23,15 +23,29 @@
 #include <boost/test/unit_test.hpp>
 
 
-void on_timer(cass::Timer* timer) {
+void on_timer_once(cass::Timer* timer) {
   bool* was_timer_called = static_cast<bool*>(timer->data());
   *was_timer_called = true;
   BOOST_CHECK(!timer->is_running());
 }
 
+struct RepeatData {
+  uv_loop_t* loop;
+  int count;
+};
+
+void on_timer_repeat(cass::Timer* timer) {
+  RepeatData* data = static_cast<RepeatData*>(timer->data());
+  BOOST_CHECK(!timer->is_running());
+  data->count++;
+  if (data->count == 1) {
+    timer->start(data->loop, 1, data, on_timer_repeat);
+  }
+}
+
 BOOST_AUTO_TEST_SUITE(timer)
 
-BOOST_AUTO_TEST_CASE(simple)
+BOOST_AUTO_TEST_CASE(once)
 {
   uv_loop_t* loop;
 
@@ -47,7 +61,7 @@ BOOST_AUTO_TEST_CASE(simple)
 
   bool was_timer_called = false;
 
-  timer.start(loop, 1, &was_timer_called, on_timer);
+  timer.start(loop, 1, &was_timer_called, on_timer_once);
 
   BOOST_CHECK(timer.is_running());
 
@@ -64,5 +78,39 @@ BOOST_AUTO_TEST_CASE(simple)
 
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_CASE(repeat)
+{
+  uv_loop_t* loop;
 
+#if UV_VERSION_MAJOR == 0
+  loop = uv_loop_new();
+#else
+  uv_loop_t loop_storage__;
+  loop = &loop_storage__;
+  uv_loop_init(loop);
+#endif
+
+  cass::Timer timer;
+
+  RepeatData data;
+  data.loop = loop;
+  data.count = 0;
+
+  timer.start(loop, 1, &data, on_timer_repeat);
+
+  BOOST_CHECK(timer.is_running());
+
+  uv_run(loop, UV_RUN_DEFAULT);
+
+  BOOST_CHECK(!timer.is_running());
+  BOOST_CHECK(data.count == 2);
+
+#if UV_VERSION_MAJOR == 0
+  uv_loop_delete(loop);
+#else
+  uv_loop_close(loop);
+#endif
+
+}
+
+BOOST_AUTO_TEST_SUITE_END()

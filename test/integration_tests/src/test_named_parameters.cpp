@@ -74,7 +74,7 @@ public:
     }
     BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "named_key", key), CASS_OK);
     BOOST_REQUIRE_EQUAL(test_utils::Value<T>::bind_by_name(statement.get(), "named_value", value), CASS_OK);
-    test_utils::wait_and_check_error(cass_session_execute(session, statement.get()));
+    test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(session, statement.get())).get());
 
     // Ensure the named parameter value can be read using a named parameter
     std::string select_query = "SELECT value FROM " + table_name + " WHERE key = :named_key";
@@ -124,7 +124,7 @@ public:
       BOOST_REQUIRE_EQUAL(test_utils::Value<T>::bind_by_name(statement.get(), "named_value", value), CASS_OK);
       cass_batch_add_statement(batch.get(), statement.get());
     }
-    test_utils::wait_and_check_error(cass_session_execute_batch(session, batch.get()));
+    test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute_batch(session, batch.get())).get());
 
     // Ensure the named parameter can be read using a named parameter
     std::string select_query = "SELECT value FROM " + table_name + " WHERE key=:named_key";
@@ -185,7 +185,7 @@ BOOST_AUTO_TEST_CASE(ordered_unordered_read_write) {
       test_utils::CassCollectionPtr list(cass_collection_new(CASS_COLLECTION_TYPE_LIST, 1));
       test_utils::Value<cass_float_t>::append(list.get(), 0.01f);
       BOOST_REQUIRE_EQUAL(cass_statement_bind_collection_by_name(statement.get(), "four_list_floats", list.get()), CASS_OK);
-      test_utils::wait_and_check_error(cass_session_execute(tester.session, statement.get()));
+      test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get());
 
       // Ensure the named query parameters can be read
       statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 1));
@@ -226,7 +226,7 @@ BOOST_AUTO_TEST_CASE(ordered_unordered_read_write) {
       BOOST_REQUIRE_EQUAL(cass_statement_bind_collection_by_name(statement.get(), "four_list_floats", list.get()), CASS_OK);
       BOOST_REQUIRE_EQUAL(test_utils::Value<cass_int32_t>::bind_by_name(statement.get(), "key", 2), CASS_OK);
       BOOST_REQUIRE_EQUAL(test_utils::Value<CassUuid>::bind_by_name(statement.get(), "two_uuid", uuid), CASS_OK);
-      test_utils::wait_and_check_error(cass_session_execute(tester.session, statement.get()));
+      test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get());
 
       // Ensure the named query parameters can be read
       statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 1));
@@ -268,7 +268,7 @@ BOOST_AUTO_TEST_CASE(ordered_unordered_read_write) {
       BOOST_REQUIRE_EQUAL(cass_statement_bind_collection_by_name(statement.get(), "four_list_floats", list.get()), CASS_OK);
       BOOST_REQUIRE_EQUAL(test_utils::Value<cass_int32_t>::bind_by_name(statement.get(), "key", 3), CASS_OK);
       BOOST_REQUIRE_EQUAL(test_utils::Value<CassUuid>::bind_by_name(statement.get(), "two_uuid", uuid), CASS_OK);
-      test_utils::wait_and_check_error(cass_session_execute(tester.session, statement.get()));
+      test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get());
 
       // Ensure the named query parameters can be read
       statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 1));

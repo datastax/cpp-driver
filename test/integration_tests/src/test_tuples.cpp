@@ -156,7 +156,7 @@ public:
     test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
     BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid(statement.get(), 0, key), CASS_OK);
     BOOST_REQUIRE_EQUAL(cass_statement_bind_tuple(statement.get(), 1, tuple.get()), CASS_OK);
-    test_utils::wait_and_check_error(cass_session_execute(session, statement.get()));
+    test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(session, statement.get())).get());
 
     // Ensure the tuple collection can be read
     std::string select_query = "SELECT value FROM " + table_name + " WHERE key=?";
@@ -244,7 +244,7 @@ public:
     test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
     BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid(statement.get(), 0, key), CASS_OK);
     BOOST_REQUIRE_EQUAL(cass_statement_bind_tuple(statement.get(), 1, tuple.get()), CASS_OK);
-    test_utils::wait_and_check_error(cass_session_execute(session, statement.get()));
+    test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(session, statement.get())).get());
 
     // Ensure the tuple collection can be read
     std::string select_query = "SELECT value FROM " + table_name + " WHERE key=?";
@@ -348,7 +348,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
         }
         BOOST_REQUIRE_EQUAL(cass_statement_bind_int32(statement.get(), 0, size), CASS_OK);
         BOOST_REQUIRE_EQUAL(cass_statement_bind_tuple(statement.get(), 1, tuple.get()), CASS_OK);
-        test_utils::wait_and_check_error(cass_session_execute(tester.session, statement.get()));
+        test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get());
 
         // Ensure the tuple collection can be read
         statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 1));
@@ -394,7 +394,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
       test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
       BOOST_REQUIRE_EQUAL(cass_statement_bind_int32(statement.get(), 0, 1), CASS_OK);
       BOOST_REQUIRE_EQUAL(cass_statement_bind_tuple(statement.get(), 1, tuple.get()), CASS_OK);
-      test_utils::wait_and_check_error(cass_session_execute(tester.session, statement.get()));
+      test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get());
 
       // Ensure the tuple collection can be read
       statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 1));

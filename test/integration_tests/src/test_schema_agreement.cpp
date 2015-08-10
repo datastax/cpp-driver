@@ -48,8 +48,7 @@ struct ClusterInit {
 
   void close_session() {
     if (session != NULL) {
-      test_utils::CassFuturePtr close_future(cass_session_close(session));
-      test_utils::wait_and_check_error(close_future.get());
+      cass_session_free(session);
       session = NULL;
     }
   }
