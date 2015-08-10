@@ -471,7 +471,8 @@ BOOST_AUTO_TEST_CASE(invalid_name) {
       test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
       BOOST_REQUIRE_EQUAL(test_utils::Value<cass_int32_t>::bind_by_name(statement.get(), "invalid_key_name", 0), CASS_OK);
       BOOST_REQUIRE_EQUAL(test_utils::Value<CassString>::bind_by_name(statement.get(), "invalid_value_name", CassString("invalid")), CASS_OK);
-      BOOST_REQUIRE_EQUAL(test_utils::wait_and_return_error(cass_session_execute(tester.session, statement.get())), CASS_ERROR_SERVER_INVALID_QUERY);
+      BOOST_REQUIRE_EQUAL(test_utils::wait_and_return_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get()), 
+                                                            CASS_ERROR_SERVER_INVALID_QUERY);
 
       // Prepared
       test_utils::CassPreparedPtr prepared = test_utils::prepare(tester.session, insert_query.c_str());

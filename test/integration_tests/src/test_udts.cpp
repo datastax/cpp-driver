@@ -412,7 +412,8 @@ BOOST_AUTO_TEST_CASE(invalid) {
       test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
       BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid(statement.get(), 0, key), CASS_OK);
       BOOST_REQUIRE_EQUAL(cass_statement_bind_user_type(statement.get(), 1, phone.get()), CASS_OK);
-      BOOST_REQUIRE_EQUAL(test_utils::wait_and_return_error(cass_session_execute(tester.session, statement.get())), CASS_ERROR_SERVER_INVALID_QUERY);
+      BOOST_REQUIRE_EQUAL(test_utils::wait_and_return_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get()), 
+                          CASS_ERROR_SERVER_INVALID_QUERY);
     }
   } else {
     boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
