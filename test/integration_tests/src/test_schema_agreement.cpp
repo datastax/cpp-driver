@@ -115,35 +115,43 @@ BOOST_AUTO_TEST_CASE(agreement_node_down) {
 
 #define MAX_SCHEMA_AGREEMENT_WAIT_MS 10000
 BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
-  std::string update_peer("UPDATE system.peers SET schema_version=? WHERE peer='" + inst.conf.ip_prefix() + "1'");
-  test_utils::CassFuturePtr prepared_future(
-        cass_session_prepare_n(session, update_peer.data(), update_peer.size()));
-  test_utils::wait_and_check_error(prepared_future.get());
-  test_utils::CassPreparedPtr prep(cass_future_get_prepared(prepared_future.get()));
-  test_utils::CassStatementPtr schema_stmt(cass_prepared_bind(prep.get()));
+  //TODO: Needs to be updated to support C* 2.1.x (Nodes IP address is not allowed in peers table)
+  CassVersion version = test_utils::get_version();
+  if (version.major < 1 || (version.major == 2 && version.minor < 1)) {
+    std::string update_peer("UPDATE system.peers SET schema_version=? WHERE peer='" + inst.conf.ip_prefix() + "1'");
+    test_utils::CassFuturePtr prepared_future(
+          cass_session_prepare_n(session, update_peer.data(), update_peer.size()));
+    test_utils::wait_and_check_error(prepared_future.get());
+    test_utils::CassPreparedPtr prep(cass_future_get_prepared(prepared_future.get()));
+    test_utils::CassStatementPtr schema_stmt(cass_prepared_bind(prep.get()));
 
-  test_utils::CassLog::reset("No schema agreement on live nodes after ");
-  test_utils::CassStatementPtr create_stmt(cass_statement_new(str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
-                                                               % test_utils::SIMPLE_KEYSPACE % 2).c_str(), 0));
-  test_utils::CassFuturePtr create_future(cass_session_execute(session, create_stmt.get()));
+    test_utils::CassLog::reset("No schema agreement on live nodes after ");
+    test_utils::CassStatementPtr create_stmt(cass_statement_new(str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
+                                                                 % test_utils::SIMPLE_KEYSPACE % 2).c_str(), 0));
+    test_utils::CassFuturePtr create_future(cass_session_execute(session, create_stmt.get()));
 
-  boost::chrono::steady_clock::time_point end =
-      boost::chrono::steady_clock::now() + boost::chrono::milliseconds(MAX_SCHEMA_AGREEMENT_WAIT_MS + 1000);
-  // mess with system.peers for more than the wait time
-  // this is hitting more than the required node, but should cycle around to the one being queried enough
-  do {
-    cass_statement_bind_uuid(schema_stmt.get(), 0, test_utils::generate_random_uuid(inst.uuid_gen));
+    boost::chrono::steady_clock::time_point end =
+        boost::chrono::steady_clock::now() + boost::chrono::milliseconds(MAX_SCHEMA_AGREEMENT_WAIT_MS + 1000);
+    // mess with system.peers for more than the wait time
+    // this is hitting more than the required node, but should cycle around to the one being queried enough
+    do {
+      cass_statement_bind_uuid(schema_stmt.get(), 0, test_utils::generate_random_uuid(inst.uuid_gen));
 
-    test_utils::CassFuturePtr future(cass_session_execute(session, schema_stmt.get()));
-    cass_future_wait(future.get());
-    BOOST_REQUIRE_EQUAL(cass_future_error_code(future.get()), CASS_OK);
-  } while (boost::chrono::steady_clock::now() < end && test_utils::CassLog::message_count() == 0);
+      test_utils::CassFuturePtr future(cass_session_execute(session, schema_stmt.get()));
+      cass_future_wait(future.get());
+      BOOST_REQUIRE_EQUAL(cass_future_error_code(future.get()), CASS_OK);
+    } while (boost::chrono::steady_clock::now() < end && test_utils::CassLog::message_count() == 0);
 
-  cass_future_wait(create_future.get());
-  BOOST_CHECK_EQUAL(cass_future_error_code(create_future.get()), CASS_OK);
-  close_session();
+    cass_future_wait(create_future.get());
+    BOOST_CHECK_EQUAL(cass_future_error_code(create_future.get()), CASS_OK);
+    close_session();
 
-  BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 1ul);
+    BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 1ul);
+  } else {
+    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
+    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping schema_agreement/no_agreement_timeout");
+    BOOST_REQUIRE(true);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
