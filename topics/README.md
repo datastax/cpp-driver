@@ -80,7 +80,7 @@ CassStatement* statement
   = cass_statement_new("INSERT INTO example (key, value) VALUES (?, ?)", 2);
 
 /* Bind the values using the indices of the bind variables */
-cass_statement_bind_string(statement, 0, cass_string_init("abc"));
+cass_statement_bind_string(statement, 0, "abc");
 cass_statement_bind_int32(statement, 1, 123);
 
 CassFuture* query_future = cass_session_execute(session, statement);
