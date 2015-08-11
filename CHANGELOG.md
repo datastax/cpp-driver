@@ -5,6 +5,7 @@ August 11, 2015
 Features
 --------
 * Added support for retry policies
+* Added support for client-side timestamps
 * Exposed raw paging state token via `cass_result_paging_state_token()`
   and it can be added to a statement using
   `cass_statement_set_paging_state_token()`
