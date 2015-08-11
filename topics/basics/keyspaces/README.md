@@ -25,7 +25,7 @@ CassFuture* use_future
 /* Check future result... */
 ```
 
-## Single Session and Mulitple Keyspaces
+## Single Session and Multiple Keyspaces
 
 It is possible to interact with multiple keyspaces using a single session object by fully qualifying the table names in your queries e.g. `keyspace_name.table_name`.
 

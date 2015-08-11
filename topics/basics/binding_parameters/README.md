@@ -51,9 +51,9 @@ cass_statement_bind_custom(statement, 1, 8 * 1024 * 1024, &bytes);
 
 ## Constructing Collections
 
-Collections are supported using [`CassCollection`](http://datastax.github.io/cpp-driver/api/CassCollection/) objects; supporting `list`, `map` and `set` Cassandra types. The code below shows how to construct a `list` collection; however, a set can be constructed in a very similiar way. The only difference is the type `CASS_COLLECTION_TYPE_SET` is used to create the collection instead of `CASS_COLLECTION_TYPE_LIST`.
+Collections are supported using [`CassCollection`](http://datastax.github.io/cpp-driver/api/CassCollection/) objects; supporting `list`, `map` and `set` Cassandra types. The code below shows how to construct a `list` collection; however, a set can be constructed in a very similar way. The only difference is the type `CASS_COLLECTION_TYPE_SET` is used to create the collection instead of `CASS_COLLECTION_TYPE_LIST`.
 
-**Important**: Values appended to the colleciton can be freed immediately afterward because the values are copied.
+**Important**: Values appended to the collection can be freed immediately afterward because the values are copied.
 
 ```c
 CassStatement* statement = cass_statement_new(query, 1);
@@ -70,7 +70,7 @@ cass_statement_bind_collection(statement, 0, list);
 cass_collection_free(list);
 ```
 
-Maps are built similarly, but the key and value need to be interleaved as they are appended to the collecion.
+Maps are built similarly, but the key and value need to be interleaved as they are appended to the collection.
 
 ```c
 CassStatement* statement = cass_statement_new(query, 1);
@@ -90,3 +90,11 @@ cass_statement_bind_collection(statement, 0, map);
 /* The colleciton can be freed after binding */
 cass_collection_free(map);
 ```
+
+## Nested Collections
+
+When using Cassandra 2.1+ it is possible to nest collections. A collection can
+be added to another collection using [`cass_collection_append_collection()`].
+
+[`cass_collection_append_collection()`]:
+http://datastax.github.io/cpp-driver/api/CassCollection/#cass-collection-append-collection

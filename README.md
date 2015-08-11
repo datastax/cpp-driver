@@ -13,15 +13,19 @@ Cassandra's native protocol and Cassandra Query Language v3.
 - Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 - IRC: [#datastax-drivers on `irc.freenode.net <http://freenode.net>`](http://webchat.freenode.net/?channels=datastax-drivers)
 
-## What's New in 2.1 Beta
+## What's New in 2.1
 
-- Tuples and UDTs
-- Nested collections
-- Data types
 - Support for Cassandra 2.1 (CQL protocol version 3)
+- [Tuples] and [UDTs]
+- [Nested collections]
+- [Retry policies]
+- [Client-side timestamps]
+- [Data types]
+- [Idle connection heartbeats]
+- [Support for disabling schema metadata]
 
-More information about all the changes found in the 2.1 beta release can be found in
-this [blog post] and in the [changelog](CHANGELOG.md).
+More information about all the changes found in the 2.1 release can be found in
+[2.1 beta] and [2.1 GA] blog posts and in the [changelog](CHANGELOG.md).
 
 ## Upgrading from 1.0 to 2.0
 
@@ -141,7 +145,17 @@ limitations under the License.
 
 [Latency-aware routing]: http://datastax.github.io/cpp-driver/topics/configuration/#latency-aware-routing
 [Performance metrics]: http://datastax.github.io/cpp-driver/topics/metrics/
-[blog post]: http://www.datastax.com/dev/blog/datastax-c-driver-2-1-beta-released
+[2.1 beta]: http://www.datastax.com/dev/blog/datastax-c-driver-2-1-beta-released
+[2.1 GA]: http://www.datastax.com/dev/blog/datastax-c-driver-2-1-ga-released
+
+[Tuples]: http://datastax.github.io/cpp-driver/topics/basics/tuples/
+[UDTs]: http://datastax.github.io/cpp-driver/topics/basics/user_defined_types/
+[Nested collections]: http://datastax.github.io/cpp-driver/topics/basics/binding_parameters/#nested-collections
+[Data types]: http://datastax.github.io/cpp-driver/topics/basics/data_types/
+[Retry policies]: http://datastax.github.io/cpp-driver/topics/configuration/retry_policies/
+[Client-side timestamps]: http://datastax.github.io/cpp-driver/topics/basics/client_side_timestamps/
+[Idle connection heartbeats]: http://datastax.github.io/cpp-driver/topics/configuration/#connection-heartbeats
+[Support for disabling schema metadata]: http://datastax.github.io/cpp-driver/topics/basics/schema_metadata/#enabling-disabling-schema-metadata
 
 [Asynchronous API]: http://datastax.github.io/cpp-driver/topics/#futures
 [Simple]: http://datastax.github.io/cpp-driver/topics/#executing-queries

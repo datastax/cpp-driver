@@ -96,4 +96,33 @@ cass_cluster_set_latency_aware_routing_settings(cluster,
                                                 min_measured);
 ```
 
+### Connection Heartbeats
+
+To prevent intermediate network devices (routers, switches, etc.) from
+disconnecting pooled connections the driver sends a lightweight heartbeat
+request (using an [`OPTIONS`] protocol request) periodically. By default the
+driver sends a heartbeat every 30 seconds. This can be changed or disabled (0
+second interval) using the following:
+
+```c
+/* Change the heartbeat interval to 1 minute */
+cass_cluster_set_connection_heartbeat_interval(cluster, 60);
+
+/* Disable heartbeat requests */
+cass_cluster_set_connection_heartbeat_interval(cluster, 0);
+```
+Heartbeats are also used to detect unresponsive connections. An idle timeout
+setting controls the amount of time a connection is allowed to be without a
+successful heartbeat before being terminated and scheduled for reconnection. This
+interval can be changed from the default of 60 seconds:
+
+```c
+/* Change the idle timeout to 2 minute */
+cass_cluster_set_connection_idle_timeout(cluster, 120);
+```
+
+It can be disabled by setting the value to a very long timeout or by disabling
+heartbeats.
+
 [`allow_remote_dcs_for_local_cl`]: http://datastax.github.io/cpp-driver/api/CassCluster/#1a46b9816129aaa5ab61a1363489dccfd0
+[`OPTIONS`]: https://github.com/apache/cassandra/blob/trunk/doc/native_protocol_v3.spec#L278-L282
