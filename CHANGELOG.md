@@ -1,6 +1,6 @@
 2.1
 ===========
-August 10, 2015
+August 11, 2015
 
 Features
 --------
@@ -8,7 +8,7 @@ Features
 * Exposed raw paging state token via `cass_result_paging_state_token()`
   and it can be added to a statement using
   `cass_statement_set_paging_state_token()`
-* Added support to enable/disable schema metadata using
+* Added support for enabling/disabling schema metadata using
   `cass_cluster_set_use_schema()`
 
 Other
