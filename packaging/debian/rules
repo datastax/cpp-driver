@@ -12,7 +12,7 @@ ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
 endif
 
 export SOVER ?= $(shell dpkg-parsechangelog \
-    | sed -rne 's/^Version: ([0-9.]+)[~\-+].*$$/\1/p')
+    | sed -rne 's/^Version: ([0-9.]+)[-+~].*$$/\1/p')
 export SONAME=libcassandra.so.$(SOVER)
 
 %:
