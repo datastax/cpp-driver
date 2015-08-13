@@ -35,7 +35,8 @@ class Request : public RefCounted<Request> {
 public:
   enum {
     ENCODE_ERROR_UNSUPPORTED_PROTOCOL = -1,
-    ENCODE_ERROR_BATCH_WITH_NAMED_VALUES = -2
+    ENCODE_ERROR_BATCH_WITH_NAMED_VALUES = -2,
+    ENCODE_ERROR_PARAMETER_UNSET = -3
   };
 
   typedef std::map<const void*, Buffer> EncodingCache;
