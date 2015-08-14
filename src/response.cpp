@@ -49,15 +49,27 @@ char* Response::decode_custom_payload(char* buffer, size_t size) {
   char* pos = decode_uint16(buffer, item_count);
 
   for (uint16_t i = 0; i < item_count; ++i) {
-    uint16_t name_length;
-    pos = decode_uint16(pos, name_length);
-    StringRef name(pos, name_length);
-    pos += name_length;
-
+    StringRef name;
     int32_t value_length;
+    pos = decode_string(pos, &name);
     pos = decode_int32(pos, value_length);
     custom_payload_.add(CustomPayloadItem(name, reinterpret_cast<const uint8_t*>(pos), value_length));
     pos += value_length;
+  }
+
+  return pos;
+}
+
+char* Response::decode_warnings(char* buffer, size_t size) {
+  uint16_t warning_count;
+  char* pos = decode_uint16(buffer, warning_count);
+
+  warnings_.reserve(warning_count);
+
+  for (uint16_t i = 0; i < warning_count; ++i) {
+    StringRef warning;
+    pos = decode_string(pos, &warning);
+    warnings_.push_back(warning);
   }
 
   return pos;
@@ -172,6 +184,11 @@ ssize_t ResponseMessage::decode(char* input, size_t size) {
     assert(body_buffer_pos_ == response_body_->data() + length_);
 
     char* pos = response_body()->data();
+
+    if (flags_ & CASS_FLAG_WARNING) {
+      pos = response_body()->decode_warnings(pos, length_);
+    }
+
     if (flags_ & CASS_FLAG_CUSTOM_PAYLOAD) {
       pos = response_body()->decode_custom_payload(pos, length_);
     }

@@ -118,6 +118,23 @@ CassError cass_result_custom_payload_item_n(const CassResult* result,
   return CASS_OK;
 }
 
+size_t cass_result_warning_count(const CassResult* result) {
+  return result->warnings().size();
+}
+
+CassError cass_result_warning(const CassResult *result,
+                              size_t index,
+                              const char** warning,
+                              size_t* warning_size) {
+  if (index >= result->warnings().size()) {
+    return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
+  }
+  cass::StringRef warn = result->warnings()[index];
+  *warning = warn.data();
+  *warning_size = warn.size();
+  return CASS_OK;
+}
+
 } // extern "C"
 
 namespace cass {

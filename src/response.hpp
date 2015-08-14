@@ -30,6 +30,8 @@ namespace cass {
 
 class Response {
 public:
+  typedef FixedVector<StringRef, 8> WarningVec;
+
   Response(uint8_t opcode)
       : opcode_(opcode) { }
 
@@ -49,7 +51,13 @@ public:
                            const uint8_t** value,
                            size_t* value_size) const;
 
+  const WarningVec& warnings() const {
+    return warnings_;
+  }
+
   char* decode_custom_payload(char* buffer, size_t size);
+
+  char* decode_warnings(char* buffer, size_t size);
 
   virtual bool decode(int version, char* buffer, size_t size) = 0;
 
@@ -68,6 +76,7 @@ private:
   uint8_t opcode_;
   SharedRefPtr<RefBuffer> buffer_;
   CaseInsensitiveHashTable<CustomPayloadItem> custom_payload_;
+  WarningVec warnings_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Response);

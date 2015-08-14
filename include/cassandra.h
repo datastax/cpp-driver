@@ -5032,6 +5032,15 @@ cass_result_custom_payload_item_n(const CassResult* result,
                                   const cass_byte_t** value,
                                   size_t* value_size);
 
+CASS_EXPORT size_t
+cass_result_warning_count(const CassResult* result);
+
+CASS_EXPORT CassError
+cass_result_warning(const CassResult *result,
+                    size_t index,
+                    const char** warning,
+                    size_t* warning_size);
+
 /***********************************************************************************
  *
  * Error result
