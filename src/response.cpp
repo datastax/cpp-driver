@@ -26,6 +26,43 @@
 
 namespace cass {
 
+bool Response::custom_payload_item(StringRef name,
+                                   const uint8_t** value,
+                                   size_t* value_size) const {
+  IndexVec indices;
+  if (custom_payload_.get_indices(name, &indices) > 0) {
+    const CustomPayloadItem& item(custom_payload_[indices.front()]);
+    if (item.value_size < 0) {
+      *value = NULL;
+      *value_size = 0;
+    } else {
+      *value = item.value;
+      *value_size = item.value_size;
+    }
+    return true;
+  }
+  return false;
+}
+
+char* Response::decode_custom_payload(char* buffer, size_t size) {
+  uint16_t item_count;
+  char* pos = decode_uint16(buffer, item_count);
+
+  for (uint16_t i = 0; i < item_count; ++i) {
+    uint16_t name_length;
+    pos = decode_uint16(pos, name_length);
+    StringRef name(pos, name_length);
+    pos += name_length;
+
+    int32_t value_length;
+    pos = decode_int32(pos, value_length);
+    custom_payload_.add(CustomPayloadItem(name, reinterpret_cast<const uint8_t*>(pos), value_length));
+    pos += value_length;
+  }
+
+  return pos;
+}
+
 bool ResponseMessage::allocate_body(int8_t opcode) {
   response_body_.reset();
   switch (opcode) {
@@ -134,7 +171,12 @@ ssize_t ResponseMessage::decode(char* input, size_t size) {
     input_pos += needed;
     assert(body_buffer_pos_ == response_body_->data() + length_);
 
-    if (!response_body_->decode(version_, response_body_->data(), length_)) {
+    char* pos = response_body()->data();
+    if (flags_ & CASS_FLAG_CUSTOM_PAYLOAD) {
+      pos = response_body()->decode_custom_payload(pos, length_);
+    }
+
+    if (!response_body_->decode(version_, pos, length_)) {
       is_body_error_ = true;
       return -1;
     }

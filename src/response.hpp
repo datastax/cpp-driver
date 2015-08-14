@@ -19,6 +19,7 @@
 
 #include "utils.hpp"
 #include "constants.hpp"
+#include "hash_table.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
 #include "scoped_ptr.hpp"
@@ -30,23 +31,43 @@ namespace cass {
 class Response {
 public:
   Response(uint8_t opcode)
-      : opcode_(opcode) {}
+      : opcode_(opcode) { }
 
-  virtual ~Response() {}
+  virtual ~Response() { }
 
   uint8_t opcode() const { return opcode_; }
 
   char* data() const { return buffer_->data(); }
+
   const SharedRefPtr<RefBuffer>& buffer() const { return buffer_; }
+
   void set_buffer(size_t size) {
     buffer_ = SharedRefPtr<RefBuffer>(RefBuffer::create(size));
   }
 
+  bool custom_payload_item(StringRef name,
+                           const uint8_t** value,
+                           size_t* value_size) const;
+
+  char* decode_custom_payload(char* buffer, size_t size);
+
   virtual bool decode(int version, char* buffer, size_t size) = 0;
 
 private:
+  struct CustomPayloadItem : public HashTableEntry<CustomPayloadItem> {
+    CustomPayloadItem(StringRef name, const uint8_t* value, int32_t value_size)
+      : name(name)
+      , value(value)
+      , value_size(value_size) { }
+
+    StringRef name;
+    const uint8_t* value;
+    int32_t value_size;
+  };
+
   uint8_t opcode_;
   SharedRefPtr<RefBuffer> buffer_;
+  CaseInsensitiveHashTable<CustomPayloadItem> custom_payload_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Response);

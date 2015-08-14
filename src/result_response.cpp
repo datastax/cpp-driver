@@ -97,6 +97,27 @@ CassError cass_result_paging_state_token(const CassResult* result,
   return CASS_OK;
 }
 
+CassError cass_result_custom_payload_item(const CassResult* result,
+                                          const char* name,
+                                          const cass_byte_t** value,
+                                          size_t* value_size) {
+  return cass_result_custom_payload_item_n(result,
+                                           name, strlen(name),
+                                           value, value_size);
+}
+
+CassError cass_result_custom_payload_item_n(const CassResult* result,
+                                            const char* name,
+                                            size_t name_length,
+                                            const cass_byte_t** value,
+                                            size_t* value_size) {
+  if (!result->custom_payload_item(cass::StringRef(name, name_length),
+                                   value, value_size)) {
+    return CASS_ERROR_LIB_NAME_DOES_NOT_EXIST;
+  }
+  return CASS_OK;
+}
+
 } // extern "C"
 
 namespace cass {

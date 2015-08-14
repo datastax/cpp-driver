@@ -27,6 +27,7 @@
 #include "iterator.hpp"
 #include "prepared.hpp"
 #include "result_response.hpp"
+#include "request.hpp"
 #include "retry_policy.hpp"
 #include "row.hpp"
 #include "schema_metadata.hpp"
@@ -79,6 +80,7 @@ EXTERNAL_TYPE(cass::UserTypeValue, CassUserType);
 EXTERNAL_TYPE(cass::DataType, CassDataType);
 EXTERNAL_TYPE(cass::TimestampGenerator, CassTimestampGen);
 EXTERNAL_TYPE(cass::RetryPolicy, CassRetryPolicy);
+EXTERNAL_TYPE(cass::CustomPayload, CassCustomPayload);
 
 }
 

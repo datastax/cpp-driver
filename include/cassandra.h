@@ -362,6 +362,11 @@ typedef struct CassTimestampGen_ CassTimestampGen;
 typedef struct CassRetryPolicy_ CassRetryPolicy;
 
 /**
+ * @struct CassCustomPayload
+ */
+typedef struct CassCustomPayload_ CassCustomPayload;
+
+/**
  * @struct CassMetrics
  *
  * A snapshot of the session's performance/diagnostic metrics.
@@ -2210,6 +2215,10 @@ CASS_EXPORT CassError
 cass_statement_set_retry_policy(CassStatement* statement,
                                 CassRetryPolicy* retry_policy);
 
+CASS_EXPORT CassError
+cass_statement_set_custom_payload(CassStatement* statement,
+                                  const CassCustomPayload* payload);
+
 /**
  * Binds null to a query or bound statement at the specified index.
  *
@@ -3173,6 +3182,10 @@ cass_batch_set_timestamp(CassBatch* batch,
 CASS_EXPORT CassError
 cass_batch_set_retry_policy(CassBatch* batch,
                             CassRetryPolicy* retry_policy);
+
+CASS_EXPORT CassError
+cass_batch_set_custom_payload(CassBatch* batch,
+                              const CassCustomPayload* payload);
 
 /**
  * Adds a statement to a batch.
@@ -5006,6 +5019,19 @@ cass_result_paging_state_token(const CassResult* result,
                                const char** paging_state,
                                size_t* paging_state_size);
 
+CASS_EXPORT CassError
+cass_result_custom_payload_item(const CassResult* result,
+                                const char* name,
+                                const cass_byte_t** value,
+                                size_t* value_size);
+
+CASS_EXPORT CassError
+cass_result_custom_payload_item_n(const CassResult* result,
+                                  const char* name,
+                                  size_t name_length,
+                                  const cass_byte_t** value,
+                                  size_t* value_size);
+
 /***********************************************************************************
  *
  * Error result
@@ -6049,6 +6075,32 @@ cass_retry_policy_logging_new(CassRetryPolicy* child_retry_policy);
  */
 CASS_EXPORT void
 cass_retry_policy_free(CassRetryPolicy* policy);
+
+/***********************************************************************************
+ *
+ * Custom payload
+ *
+ ***********************************************************************************/
+
+CASS_EXPORT CassCustomPayload*
+cass_custom_payload_new(size_t item_count);
+
+
+CASS_EXPORT void
+cass_custom_payload_append(CassCustomPayload* payload,
+                           const char* name,
+                           const cass_byte_t* value,
+                           size_t value_size);
+
+CASS_EXPORT void
+cass_custom_payload_append_n(CassCustomPayload* payload,
+                             const char* name,
+                             size_t name_length,
+                             const cass_byte_t* value,
+                             size_t value_size);
+
+CASS_EXPORT void
+cass_custom_payload_free(CassCustomPayload* payload);
 
 /***********************************************************************************
  *

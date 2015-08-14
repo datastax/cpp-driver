@@ -79,7 +79,7 @@ class CaseInsensitiveHashTable {
 public:
   typedef FixedVector<T, 16> EntryVec;
 
-  CaseInsensitiveHashTable(size_t capacity);
+  CaseInsensitiveHashTable(size_t capacity = 16);
   CaseInsensitiveHashTable(const EntryVec& entries);
 
   T& operator[](size_t index) { return entries_[index]; }
