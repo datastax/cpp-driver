@@ -5215,7 +5215,7 @@ cass_iterator_from_map(const CassValue* value);
  *
  * @param[in] value
  * @return A new iterator that must be freed. NULL returned if the
- * value is not a collection.
+ * value is not a tuple.
  *
  * @see cass_iterator_free()
  */
