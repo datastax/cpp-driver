@@ -156,6 +156,12 @@ namespace cql {
     else if(key == "ssh_password") {
       _ssh_pass = value;
     }
+    else if(key == "ssh_public_key") {
+      _ssh_public_key_file = value;
+    }
+    else if(key == "ssh_private_key") {
+      _ssh_private_key_file = value;
+    }
     else if(key == "ssh_port") {
       try {
         _ssh_port = boost::lexical_cast<short>(value);

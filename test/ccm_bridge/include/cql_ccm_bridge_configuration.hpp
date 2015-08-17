@@ -34,6 +34,9 @@ namespace cql {
 		const std::string& ssh_username() const;
 		const std::string& ssh_password() const;
 
+    const std::string& ssh_public_key_file() const { return _ssh_public_key_file; }
+    const std::string& ssh_private_key_file() const { return _ssh_private_key_file; }
+
 		bool use_buffering() const;
 		bool use_logger() const;
 		bool use_compression() const;
@@ -67,7 +70,9 @@ namespace cql {
 		short _ssh_port;
 		std::string _ssh_user;
 		std::string _ssh_pass;
-		bool _use_buffering;
+    std::string _ssh_public_key_file;
+    std::string _ssh_private_key_file;
+    bool _use_buffering;
 		bool _use_logger;
 		bool _use_compression;
         

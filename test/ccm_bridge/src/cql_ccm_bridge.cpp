@@ -136,13 +136,22 @@ void cql_ccm_bridge_t::start_ssh_connection(const cql_ccm_bridge_configuration_t
                                                settings.ssh_username().c_str(),
                                                settings.ssh_username().size());
 
-    if (strstr(auth_methods, "password") == NULL)
-      throw cql_ccm_bridge_exception_t("server doesn't support authentication by password");
+    int auth_result;
+    if (!settings.ssh_public_key_file().empty() && !settings.ssh_private_key_file().empty()) {
+      auth_result = libssh2_userauth_publickey_fromfile(_ssh_internals->_session,
+                                                        settings.ssh_username().c_str(),
+                                                        settings.ssh_public_key_file().c_str(),
+                                                        settings.ssh_private_key_file().c_str(),
+                                                        "");
+    } else {
+      if (strstr(auth_methods, "password") == NULL)
+        throw cql_ccm_bridge_exception_t("server doesn't support authentication by password");
 
-    // try to login using username and password
-    int auth_result = libssh2_userauth_password(_ssh_internals->_session,
-                                                settings.ssh_username().c_str(),
-                                                settings.ssh_password().c_str());
+      // try to login using username and password
+      auth_result = libssh2_userauth_password(_ssh_internals->_session,
+                                              settings.ssh_username().c_str(),
+                                              settings.ssh_password().c_str());
+    }
 
     if (auth_result != 0)
       throw cql_ccm_bridge_exception_t("invalid password or user");
