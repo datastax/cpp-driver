@@ -50,6 +50,16 @@ inline char* decode_byte(char* input, uint8_t& output) {
   return input + sizeof(uint8_t);
 }
 
+inline char* encode_int8(char* output, int8_t value) {
+  output[0] = static_cast<char>(value);
+  return output + sizeof(int8_t);
+}
+
+inline char* decode_int8(char* input, int8_t& output) {
+  output = static_cast<int8_t>(input[0]);
+  return input + sizeof(int8_t);
+}
+
 inline void encode_uint16(char* output, uint16_t value) {
   output[0] = static_cast<char>(value >> 8);
   output[1] = static_cast<char>(value >> 0);

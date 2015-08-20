@@ -58,6 +58,8 @@ const CassDataType* cass_user_type_data_type(const CassUserType* user_type) {
   }
 
 CASS_USER_TYPE_SET(null, ZERO_PARAMS_(), cass::CassNull())
+CASS_USER_TYPE_SET(int8, ONE_PARAM_(cass_int8_t value), value)
+CASS_USER_TYPE_SET(int16, ONE_PARAM_(cass_int16_t value), value)
 CASS_USER_TYPE_SET(int32, ONE_PARAM_(cass_int32_t value), value)
 CASS_USER_TYPE_SET(int64, ONE_PARAM_(cass_int64_t value), value)
 CASS_USER_TYPE_SET(float, ONE_PARAM_(cass_float_t value), value)

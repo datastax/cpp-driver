@@ -28,6 +28,20 @@ inline Buffer encode_with_length(CassNull) {
   return buf;
 }
 
+inline Buffer encode_with_length(cass_int8_t value) {
+  Buffer buf(sizeof(int32_t) + sizeof(int8_t));
+  size_t pos = buf.encode_int32(0, sizeof(int8_t));
+  buf.encode_int8(pos, value);
+  return buf;
+}
+
+inline Buffer encode_with_length(cass_int16_t value) {
+  Buffer buf(sizeof(int32_t) + sizeof(int16_t));
+  size_t pos = buf.encode_int32(0, sizeof(int16_t));
+  buf.encode_int16(pos, value);
+  return buf;
+}
+
 inline Buffer encode_with_length(cass_int32_t value) {
   Buffer buf(sizeof(int32_t) + sizeof(int32_t));
   size_t pos = buf.encode_int32(0, sizeof(int32_t));
