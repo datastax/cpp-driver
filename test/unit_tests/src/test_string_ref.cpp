@@ -34,7 +34,6 @@ BOOST_AUTO_TEST_CASE(compare)
   BOOST_CHECK(s.compare(s) == 0);
   BOOST_CHECK(s == s);
   BOOST_CHECK(s == value);
-  BOOST_CHECK(s.compare(0, strlen(value), value) == 0);
 
   // Not equals
   BOOST_CHECK(s != "xyz");
@@ -43,23 +42,20 @@ BOOST_AUTO_TEST_CASE(compare)
   // Case insensitive
   BOOST_CHECK(s.iequals("ABC"));
   BOOST_CHECK(cass::iequals(s, "ABC"));
+}
 
-  // Zero length
-  BOOST_CHECK(s.compare(0, 0, value) < 0);
-  BOOST_CHECK(s.compare(strlen(value) - 1, 0, value) < 0);
+BOOST_AUTO_TEST_CASE(empty)
+{
+  cass::StringRef s;
 
-  // Exceeds length
-  BOOST_CHECK(s.compare(0, strlen(value) + 1, value) == 0);
-  BOOST_CHECK(s.compare(0, cass::StringRef::npos, value) == 0);
+  BOOST_CHECK(s == "");
+  BOOST_CHECK(s != "abc");
 
-  // Position
-  BOOST_CHECK(s.compare(1, 2, "bc") == 0);
-  BOOST_CHECK(s.compare(1, 3, "bc") == 0);
-  BOOST_CHECK(s.compare(1, cass::StringRef::npos, "bc") == 0);
+  BOOST_CHECK(cass::starts_with(s, "") == true);
+  BOOST_CHECK(cass::ends_with(s, "") == true);
 
-  BOOST_CHECK(s.compare(2, 1, "c") == 0);
-  BOOST_CHECK(s.compare(2, 1, "c") == 0);
-  BOOST_CHECK(s.compare(2, cass::StringRef::npos, "c") == 0);
+  BOOST_CHECK(cass::starts_with(s, "abc") == false);
+  BOOST_CHECK(cass::ends_with(s, "abc") == false);
 }
 
 BOOST_AUTO_TEST_CASE(substr)

@@ -16,7 +16,7 @@ int main() {
   CassSession* session = cass_session_new();
 
   /* Add contact points */
-  cass_cluster_set_contact_points("127.0.0.1");
+  cass_cluster_set_contact_points(cluster, "127.0.0.1");
 
   /* Provide the cluster object as configuration to connect the session */
   CassFuture* connect_future = cass_session_connect(session, cluster);
@@ -48,7 +48,7 @@ The driver is designed so that no operation will force an application to block. 
 
 ## Executing Queries
 
-Queries are executed using [`CassStatement`](http://datastax.github.io/cpp-driver/api/CassStatement/) objects. Statements encapsulate the query string and the query parameters. Query parameters are not supported by ealier versions of Cassandra (1.2 and below) and values need to be inlined in the query string itself.
+Queries are executed using [`CassStatement`](http://datastax.github.io/cpp-driver/api/CassStatement/) objects. Statements encapsulate the query string and the query parameters. Query parameters are not supported by earlier versions of Cassandra (1.2 and below) and values need to be inlined in the query string itself.
 
 ```c
 /* Create a statement with zero parameters */
@@ -70,9 +70,9 @@ cass_future_free(query_future);
 
 ## Parameterized Queries (Positional)
 
-Cassandra 2.0+ supports the use of parameterized queries. This allows the same query string to be executed mulitple times with different values; avoiding string manipulation in your application.
+Cassandra 2.0+ supports the use of parameterized queries. This allows the same query string to be executed multiple times with different values; avoiding string manipulation in your application.
 
-**Perfomance Tip:** If the same query is being reused mulitple times, [prepared statements](http://datastax.github.io/cpp-driver/topics/basics/prepared_statements/) should be used to optimize performance.
+**Perfomance Tip:** If the same query is being reused multiple times, [prepared statements](http://datastax.github.io/cpp-driver/topics/basics/prepared_statements/) should be used to optimize performance.
 
 ```c
 /* There are two bind variables in the query string */
@@ -80,7 +80,7 @@ CassStatement* statement
   = cass_statement_new("INSERT INTO example (key, value) VALUES (?, ?)", 2);
 
 /* Bind the values using the indices of the bind variables */
-cass_statement_bind_string(statement, 0, cass_string_init("abc"));
+cass_statement_bind_string(statement, 0, "abc");
 cass_statement_bind_int32(statement, 1, 123);
 
 CassFuture* query_future = cass_session_execute(session, statement);
@@ -98,7 +98,7 @@ cass_future_free(query_future);
 
 ## Handling Query Results
 
-A single row can be retrieved using the convenience function [`cass_result_first_row()`](TODO) to get the first row. A [`CassIterator`](http://datastax.github.io/cpp-driver/api/CassIterator/) object may also be used to iterate over the returned row(s).
+A single row can be retrieved using the convenience function [`cass_result_first_row()`] to get the first row. A [`CassIterator`](http://datastax.github.io/cpp-driver/api/CassIterator/) object may also be used to iterate over the returned row(s).
 
 ```c
 /* Execute "SELECT * FROM example (key, value) WHERE key = 'abc'" */
@@ -156,13 +156,13 @@ allows the driver to batch requests destined for the same node.
 
 ## Thread safety
 
-A [`CassSession`](http://datastax.github.io/cpp-driver/api/CassSession/) is designed to be used concurrently from multiple threads. [`CassFuture`](http://datastax.github.io/cpp-driver/api/CassFuture/) is also thread safe. Other than these exclusions, in general, functions that might modify an object's state are **NOT** thread safe. Object's that are immutable (marked 'const') can be read safely by multiple threads.
+A [`CassSession`](http://datastax.github.io/cpp-driver/api/CassSession/) is designed to be used concurrently from multiple threads. [`CassFuture`](http://datastax.github.io/cpp-driver/api/CassFuture/) is also thread safe. Other than these exclusions, in general, functions that might modify an object's state are **NOT** thread safe. Objects that are immutable (marked 'const') can be read safely by multiple threads.
 
-**NOTE:** The object/resource free-ing functions (e.g. cass_cluster_free, cass_session_free, ... cass_*_free) cannot be called conncurently on the same instance of an object.
+**NOTE:** The object/resource free-ing functions (e.g. cass_cluster_free, cass_session_free, ... cass_*_free) cannot be called concurrently on the same instance of an object.
 
 ## Memory handling
 
-Values such as strings (`const char*`),  bytes and decimals (`const cass_bytes_t*`) point to memory held by the result object. The lifetimes of these values are valid as long as the result object isn’t freed. These values **must** be copied into application memory if they need to live longer than the result object’s lifetime. Primitive types such as [`cass_int32_t`](TODO) are copied by the driver because it can be done cheaply without incurring extra allocations.
+Values such as strings (`const char*`),  bytes and decimals (`const cass_bytes_t*`) point to memory held by the result object. The lifetimes of these values are valid as long as the result object isn’t freed. These values **must** be copied into application memory if they need to live longer than the result object’s lifetime. Primitive types such as [`cass_int32_t`] are copied by the driver because it can be done cheaply without incurring extra allocations.
 
 **NOTE:** Advancing an iterator invalidates the value it previously returned.
 
@@ -173,8 +173,9 @@ Here are some features that are missing from the C/C++ driver, but are included 
 - Compression
 - Query tracing
 - Event registration and notification
-- Callback intefaces for load balancing, authenticaiton, reconnection and retry
+- Callback interfaces for load balancing, authentication, reconnection and retry
 - Generic SASL authentication interface
 - [User Defined Type (UDT)](http://www.datastax.com/documentation/cql/3.1/cql/cql_reference/cqlRefUDType.html)
 
-
+[`cass_int32_t`]: http://datastax.github.io/cpp-driver/api/cassandra.h/#cass-int32-t
+[`cass_result_first_row()`]: http://datastax.github.io/cpp-driver/api/CassResult/#cass-result-first-row

@@ -184,12 +184,11 @@ public:
   ColumnMetadata* get_or_create(const std::string& name) { return &columns_[name]; }
   void update(int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
-  const KeyAliases& key_aliases() const;
+  void key_aliases(KeyAliases* output) const;
   void clear_columns() { columns_.clear(); }
 
 private:
   ColumnMetadata::Map columns_;
-  mutable KeyAliases key_aliases_;
 };
 
 class KeyspaceMetadata : public SchemaMetadata {
@@ -218,9 +217,12 @@ class Schema {
 public:
   typedef SchemaMetadataIteratorImpl<KeyspaceMetadata> KeyspaceIterator;
   typedef std::map<std::string, KeyspaceMetadata*> KeyspacePointerMap;
+  typedef std::map<std::string, SharedRefPtr<UserType> > UserTypeMap;
+  typedef std::map<std::string,  UserTypeMap> KeyspaceUserTypeMap;
 
   Schema()
     : keyspaces_(new KeyspaceMetadata::Map)
+    , user_types_(new KeyspaceUserTypeMap)
     , protocol_version_(0) {}
 
   void set_protocol_version(int version) {
@@ -230,11 +232,16 @@ public:
   const SchemaMetadata* get(const std::string& name) const;
   Iterator* iterator() const { return new KeyspaceIterator(*keyspaces_); }
 
+  SharedRefPtr<UserType> get_user_type(const std::string& keyspace,
+                                       const std::string& type_name) const;
+
   KeyspaceMetadata* get_or_create(const std::string& name) { return &(*keyspaces_)[name]; }
   KeyspacePointerMap update_keyspaces(ResultResponse* result);
   void update_tables(ResultResponse* table_result, ResultResponse* col_result);
+  void update_usertypes(ResultResponse* usertypes_result);
   void drop_keyspace(const std::string& keyspace_name);
   void drop_table(const std::string& keyspace_name, const std::string& table_name);
+  void drop_type(const std::string& keyspace_name, const std::string& type_name);
   void clear();
   void get_table_key_columns(const std::string& ks_name,
                              const std::string& cf_name,
@@ -247,6 +254,7 @@ private:
   // Really coarse grain copy-on-write. This could be made
   // more fine grain, but it might not be worth the work.
   CopyOnWritePtr<KeyspaceMetadata::Map> keyspaces_;
+  CopyOnWritePtr<KeyspaceUserTypeMap> user_types_;
 
   // Only used internally on a single thread, there's
   // no need for copy-on-write.

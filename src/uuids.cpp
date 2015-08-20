@@ -22,7 +22,7 @@
 #include "md5.hpp"
 #include "serialization.hpp"
 #include "scoped_lock.hpp"
-#include "types.hpp"
+#include "external_types.hpp"
 
 #include <stdio.h>
 #include <ctype.h>
@@ -70,12 +70,12 @@ void cass_uuid_gen_from_time(CassUuidGen* uuid_gen, cass_uint64_t timestamp, Cas
 }
 
 void cass_uuid_min_from_time(cass_uint64_t timestamp, CassUuid* output) {
-  output->time_and_version = set_version(timestamp, 1);
+  output->time_and_version = set_version(from_unix_timestamp(timestamp), 1);
   output->clock_seq_and_node = MIN_CLOCK_SEQ_AND_NODE;
 }
 
 void cass_uuid_max_from_time(cass_uint64_t timestamp, CassUuid* output) {
-  output->time_and_version = set_version(timestamp, 1);
+  output->time_and_version = set_version(from_unix_timestamp(timestamp), 1);
   output->clock_seq_and_node = MAX_CLOCK_SEQ_AND_NODE;
 }
 

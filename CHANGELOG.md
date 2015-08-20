@@ -1,3 +1,42 @@
+2.1
+===========
+August 11, 2015
+
+Features
+--------
+* Added support for retry policies
+* Added support for client-side timestamps
+* Exposed raw paging state token via `cass_result_paging_state_token()`
+  and it can be added to a statement using
+  `cass_statement_set_paging_state_token()`
+* Added support for enabling/disabling schema metadata using
+  `cass_cluster_set_use_schema()`
+
+Other
+--------
+* Connections that timeout will not disconnect an entire conneciton pool
+* `TCP_NODELAY` is enabled by default
+* Connections now support using 32,767 stream IDs when using the CQL Native
+  Protocol v3
+* `cass_uuid_min_from_time()` and `cass_uuid_max_from_time()` now correctly
+  considers the time parameter as epoch time
+
+2.1.0-beta
+===========
+July 7, 2015
+
+Features
+--------
+* Added support for tuples and UDTs
+* Added support for nested collections
+* Added support for named parameters when using simple queries (non-prepared)
+* Added support for protocol version 3 (and schema changes)
+
+Other
+--------
+* Fixed SSL error handling
+* Added libuv read buffer caching in cass::Connection
+
 2.0.1
 ===========
 May 15, 2015

@@ -16,10 +16,10 @@
 
 #include "row.hpp"
 
+#include "external_types.hpp"
 #include "result_metadata.hpp"
 #include "result_response.hpp"
 #include "string_ref.hpp"
-#include "types.hpp"
 
 extern "C" {
 
@@ -47,26 +47,20 @@ const CassValue* cass_row_get_column_by_name_n(const CassRow* row,
 
 namespace cass {
 
-char* decode_row(char* rows, const ResultResponse* result, ValueVec& output) {
+char* decode_row(char* rows, const ResultResponse* result, OutputValueVec& output) {
   char* buffer = rows;
   output.clear();
+
+  const int protocol_version = result->protocol_version();
 
   for (int i = 0; i < result->column_count(); ++i) {
     int32_t size = 0;
     buffer = decode_int32(buffer, size);
 
-    const ColumnDefinition& def = result->metadata()->get(i);
-    CassValueType type = static_cast<CassValueType>(def.type);
+    const ColumnDefinition& def = result->metadata()->get_column_definition(i);
 
     if (size >= 0) {
-      if (type == CASS_VALUE_TYPE_MAP || type == CASS_VALUE_TYPE_LIST ||
-          type == CASS_VALUE_TYPE_SET) {
-        uint16_t count = 0;
-        char* data = decode_uint16(buffer, count);
-        output.push_back(Value(&def, count, data, size - sizeof(uint16_t)));
-      } else {
-        output.push_back(Value(type, buffer, size));
-      }
+      output.push_back(Value(protocol_version, def.data_type, buffer, size));
       buffer += size;
     } else { // null value
       output.push_back(Value());
@@ -76,8 +70,8 @@ char* decode_row(char* rows, const ResultResponse* result, ValueVec& output) {
 }
 
 const Value* Row::get_by_name(const StringRef& name) const {
-  cass::ResultMetadata::IndexVec indices;
-  if (result_->find_column_indices(name, &indices) == 0) {
+  IndexVec indices;
+  if (result_->metadata()->get_indices(name, &indices) == 0) {
     return NULL;
   }
   return &values[indices[0]];
@@ -86,10 +80,10 @@ const Value* Row::get_by_name(const StringRef& name) const {
 bool Row::get_string_by_name(const StringRef& name, std::string* out) const {
   const Value* value = get_by_name(name);
   if (value == NULL ||
-      value->buffer().size() < 0) {
+      value->size() < 0) {
     return false;
   }
-  out->assign(value->buffer().data(), value->buffer().size());
+  out->assign(value->data(), value->size());
   return true;
 }
 

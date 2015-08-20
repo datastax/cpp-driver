@@ -21,6 +21,7 @@
 #define __CASS_METRICS_HPP_INCLUDED__
 
 #include "atomic.hpp"
+#include "constants.hpp"
 #include "scoped_ptr.hpp"
 #include "scoped_lock.hpp"
 
@@ -38,7 +39,6 @@
 #include <sched.h>
 #endif
 
-#include <limits>
 #include <math.h>
 
 namespace cass {
@@ -48,7 +48,7 @@ public:
   class ThreadState {
   public:
 #if UV_VERSION_MAJOR == 0
-    ThreadState()
+    ThreadState(size_t max_threads)
       : max_threads_(1) {}
 #else
     ThreadState(size_t max_threads)
@@ -349,7 +349,7 @@ public:
       WriterReaderPhaser()
         : start_epoch_(0)
         , even_end_epoch_(0)
-        , odd_end_epoch_(std::numeric_limits<int64_t>::min()) {}
+        , odd_end_epoch_(CASS_INT64_MIN) {}
 
       int64_t writer_critical_section_enter() {
         return start_epoch_.fetch_add(1);
@@ -373,7 +373,7 @@ public:
           initial_start_value = 0;
           even_end_epoch_.store(initial_start_value, MEMORY_ORDER_RELAXED);
         } else {
-          initial_start_value = std::numeric_limits<int64_t>::min();
+          initial_start_value = CASS_INT64_MIN;
           odd_end_epoch_.store(initial_start_value, MEMORY_ORDER_RELAXED);
         }
 
@@ -456,7 +456,7 @@ public:
   // use the same counter. Histogram uses a shared lock instead
   // of accumulating latencies from per-thread instances.
 #if UV_VERSION_MAJOR == 0
-    : thread_state_()
+    : thread_state_(max_threads)
 #else
     : thread_state_(max_threads)
 #endif

@@ -118,6 +118,7 @@ const char* get_value_type(CassValueType type) {
     case CASS_VALUE_TYPE_LIST: return "list";
     case CASS_VALUE_TYPE_MAP: return "map";
     case CASS_VALUE_TYPE_SET: return "set";
+    case CASS_VALUE_TYPE_TUPLE: return "tuple";
     default:
       assert(false && "Invalid value type");
       return "";
@@ -216,12 +217,16 @@ void SingleSessionTest::create_session() {
   test_utils::wait_and_check_error(connect_future.get());
 }
 
-SingleSessionTest::~SingleSessionTest() {
+void SingleSessionTest::close_session() {
   if (session) {
     CassFuturePtr close_future(cass_session_close(session));
     cass_future_wait(close_future.get());
     cass_session_free(session);
   }
+}
+
+SingleSessionTest::~SingleSessionTest() {
+  close_session();
   if (ssl) {
     cass_ssl_free(ssl);
   }

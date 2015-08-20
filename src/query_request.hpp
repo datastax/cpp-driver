@@ -17,8 +17,9 @@
 #ifndef __CASS_QUERY_REQUEST_HPP_INCLUDED__
 #define __CASS_QUERY_REQUEST_HPP_INCLUDED__
 
-#include "statement.hpp"
 #include "constants.hpp"
+#include "hash_table.hpp"
+#include "statement.hpp"
 
 #include <string>
 #include <vector>
@@ -27,36 +28,59 @@ namespace cass {
 
 class QueryRequest : public Statement {
 public:
+  struct ValueName : HashTableEntry<ValueName> {
+    ValueName() { }
+
+    ValueName(const std::string& name)
+      : buf(sizeof(uint16_t) + name.size()) {
+      buf.encode_string(0, name.data(), name.size());
+      this->name = StringRef(buf.data() + sizeof(uint16_t),
+                             buf.size() - sizeof(uint16_t));
+    }
+
+    Buffer buf;
+    StringRef name;
+  };
+
   explicit QueryRequest(size_t value_count = 0)
-    : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY, value_count) {}
+    : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY,
+                value_count)
+    , value_names_(value_count) { }
 
-
-  QueryRequest(const std::string& query, size_t value_count = 0)
-    : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY, value_count)
-    , query_(query) {}
+  QueryRequest(const std::string& query,
+               size_t value_count = 0)
+    : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY,
+                value_count)
+    , query_(query)
+    , value_names_(value_count) { }
 
   QueryRequest(const char* query, size_t query_length,
-               size_t value_count)
-      : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY, value_count)
-      , query_(query, query_length) {}
+               size_t value_count = 0)
+    : Statement(CQL_OPCODE_QUERY, CASS_BATCH_KIND_QUERY,
+                value_count)
+    , query_(query, query_length)
+    , value_names_(value_count) { }
 
-  const std::string& query() const { return query_; }
+  virtual int32_t encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const;
 
-  void set_query(const std::string& query) {
-    query_ = query;
-  }
+private:
+  virtual size_t get_indices(StringRef name,
+                             IndexVec* indices);
 
-  void set_query(const char* query, size_t query_length) {
-    query_.assign(query, query_length);
+  virtual const SharedRefPtr<const DataType>& get_type(size_t index) const {
+    return DataType::NIL;
   }
 
 private:
-  int encode(int version, BufferVec* bufs) const;
-  int encode_v1(BufferVec* bufs) const;
-  int encode_v2(BufferVec* bufs) const;
+  int32_t copy_buffers_with_names(int version, BufferVec* bufs, EncodingCache* cache) const;
+
+  int encode(int version, Handler* handler, BufferVec* bufs) const;
+  int internal_encode_v1(Handler* handler, BufferVec* bufs) const;
+  int internal_encode(int version, Handler* handler, BufferVec* bufs) const;
 
 private:
   std::string query_;
+  CaseInsensitiveHashTable<ValueName> value_names_;
 };
 
 } // namespace cass

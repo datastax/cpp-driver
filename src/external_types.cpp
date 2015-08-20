@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "types.hpp"
+#include "external_types.hpp"
 
 #include <uv.h>
 
@@ -43,6 +43,31 @@ const char* cass_log_level_string(CassLogLevel log_level) {
       return "";
   }
 }
+
+const char* cass_consistency_string(CassConsistency consistency) {
+  switch (consistency) {
+#define XX(consistency, desc) \
+  case consistency:           \
+    return desc;
+    CASS_CONSISTENCY_MAP(XX)
+#undef XX
+    default:
+      return "";
+  }
+}
+
+const char* cass_write_type_string(CassWriteType write_type) {
+  switch (write_type) {
+#define XX(write_type, desc) \
+  case write_type:           \
+    return desc;
+    CASS_WRITE_TYPE_MAP(XX)
+#undef XX
+    default:
+      return "";
+  }
+}
+
 
 CassInet cass_inet_init_v4(const cass_uint8_t* address) {
   CassInet inet;

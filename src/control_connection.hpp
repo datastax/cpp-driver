@@ -113,18 +113,14 @@ private:
   public:
     typedef void (*ResponseCallback)(ControlConnection*, const T&, Response*);
 
-    ControlHandler(Request* request,
+    ControlHandler(const Request* request,
                    ControlConnection* control_connection,
                    ResponseCallback response_callback,
                    const T& data)
-      : request_(request)
+      : Handler(request)
       , control_connection_(control_connection)
       , response_callback_(response_callback)
       , data_(data) {}
-
-    const Request* request() const {
-      return request_.get();
-    }
 
     virtual void on_set(ResponseMessage* response) {
       Response* response_body = response->response_body().get();
@@ -143,7 +139,6 @@ private:
     }
 
   private:
-    ScopedRefPtr<Request> request_;
     ControlConnection* control_connection_;
     ResponseCallback response_callback_;
     T data_;
@@ -200,11 +195,17 @@ private:
                                const RefreshTableData& data,
                                const MultipleRequestHandler::ResponseVec& responses);
 
+  void refresh_type(const StringRef& keyspace_name,
+                        const StringRef& type_name);
+  static void on_refresh_type(ControlConnection* control_connection,
+                              const std::pair<std::string, std::string>& keyspace_and_type_names,
+                              Response* response);
+
 private:
   State state_;
   Session* session_;
   Connection* connection_;
-  Timer* reconnect_timer_;
+  Timer reconnect_timer_;
   ScopedPtr<QueryPlan> query_plan_;
   Address current_host_address_;
   int protocol_version_;

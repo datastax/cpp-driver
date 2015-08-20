@@ -18,12 +18,14 @@
 #define __CASS_REQUEST_HANDLER_HPP_INCLUDED__
 
 #include "constants.hpp"
+#include "error_response.hpp"
 #include "future.hpp"
 #include "handler.hpp"
 #include "host.hpp"
 #include "load_balancing.hpp"
 #include "request.hpp"
 #include "response.hpp"
+#include "retry_policy.hpp"
 #include "schema_metadata.hpp"
 #include "scoped_ptr.hpp"
 
@@ -45,24 +47,29 @@ public:
 
   std::string statement;
   Schema schema;
+
 };
 
 class RequestHandler : public Handler {
 public:
-  RequestHandler(const Request* request, ResponseFuture* future)
-      : request_(request)
+  RequestHandler(const Request* request,
+                 ResponseFuture* future,
+                 RetryPolicy* retry_policy)
+      : Handler(request)
       , future_(future)
+      , retry_policy_(retry_policy)
+      , num_retries_(0)
       , is_query_plan_exhausted_(true)
       , io_worker_(NULL)
-      , pool_(NULL) {}
-
-  virtual const Request* request() const { return request_.get(); }
-
-  virtual void start_request();
+      , pool_(NULL) {
+    set_timestamp(request->timestamp());
+  }
 
   virtual void on_set(ResponseMessage* response);
   virtual void on_error(CassError code, const std::string& message);
   virtual void on_timeout();
+
+  virtual void retry();
 
   void set_query_plan(QueryPlan* query_plan) {
     query_plan_.reset(query_plan);
@@ -76,7 +83,6 @@ public:
     pool_ = pool;
   }
 
-  void retry(RetryType type);
   bool get_current_host_address(Address* address);
   void next_host();
 
@@ -86,20 +92,25 @@ public:
 
 private:
   void set_error(CassError code, const std::string& message);
+  void set_error_with_error_response(Response* error, CassError code, const std::string& message);
   void return_connection();
   void return_connection_and_finish();
 
   void on_result_response(ResponseMessage* response);
   void on_error_response(ResponseMessage* response);
+  void on_error_unprepared(ErrorResponse* error);
 
-  ScopedRefPtr<const Request> request_;
+  void handle_retry_decision(ResponseMessage* response,
+                             const RetryPolicy::RetryDecision& decision);
+
   ScopedRefPtr<ResponseFuture> future_;
+  RetryPolicy* retry_policy_;
+  int num_retries_;
   bool is_query_plan_exhausted_;
   SharedRefPtr<Host> current_host_;
   ScopedPtr<QueryPlan> query_plan_;
   IOWorker* io_worker_;
   Pool* pool_;
-  uint64_t start_time_ns_;
 };
 
 } // namespace cass

@@ -46,9 +46,11 @@ void LatencyAwarePolicy::close_handles() {
 
 QueryPlan* LatencyAwarePolicy::new_query_plan(const std::string& connected_keyspace,
                                               const Request* request,
-                                              const TokenMap& token_map) {
+                                              const TokenMap& token_map,
+                                              Request::EncodingCache* cache) {
   return new LatencyAwareQueryPlan(this,
-                                   child_policy_->new_query_plan(connected_keyspace, request, token_map));
+                                   child_policy_->new_query_plan(connected_keyspace, request,
+                                                                 token_map, cache));
 }
 
 void LatencyAwarePolicy::on_add(const SharedRefPtr<Host>& host) {
@@ -108,7 +110,7 @@ void LatencyAwarePolicy::on_work(PeriodicTask* task) {
   const Settings& settings = policy->settings_;
   const CopyOnWriteHostVec& hosts = policy->hosts_;
 
-  int64_t new_min_average = std::numeric_limits<int64_t>::max();
+  int64_t new_min_average = CASS_INT64_MAX;
   int64_t now = uv_hrtime();
 
   for (HostVec::const_iterator i = hosts->begin(),
@@ -121,7 +123,7 @@ void LatencyAwarePolicy::on_work(PeriodicTask* task) {
     }
   }
 
-  if (new_min_average != std::numeric_limits<int64_t>::max()) {
+  if (new_min_average != CASS_INT64_MAX) {
     LOG_TRACE("Calculated new minimum: %f", static_cast<double>(new_min_average) / 1e6);
     policy->min_average_.store(new_min_average);
   }

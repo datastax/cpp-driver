@@ -17,7 +17,7 @@
 #include "request_handler.hpp"
 
 #include "connection.hpp"
-#include "error_response.hpp"
+#include "constants.hpp"
 #include "execute_request.hpp"
 #include "io_worker.hpp"
 #include "pool.hpp"
@@ -51,7 +51,8 @@ void RequestHandler::on_set(ResponseMessage* response) {
 void RequestHandler::on_error(CassError code, const std::string& message) {
   if (code == CASS_ERROR_LIB_WRITE_ERROR ||
       code == CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE) {
-    retry(RETRY_WITH_NEXT_HOST);
+    next_host();
+    retry();
     return_connection();
   } else {
     set_error(code, message);
@@ -68,12 +69,11 @@ void RequestHandler::set_io_worker(IOWorker* io_worker) {
   io_worker_ = io_worker;
 }
 
-void RequestHandler::retry(RetryType type) {
+void RequestHandler::retry() {
   // Reset the request so it can be executed again
   set_state(REQUEST_STATE_NEW);
   pool_ = NULL;
-
-  io_worker_->retry(this, type);
+  io_worker_->retry(this);
 }
 
 bool RequestHandler::get_current_host_address(Address* address) {
@@ -93,12 +93,8 @@ bool RequestHandler::is_host_up(const Address& address) const {
   return io_worker_->is_host_up(address);
 }
 
-void RequestHandler::start_request() {
-  start_time_ns_ = uv_hrtime();
-}
-
 void RequestHandler::set_response(Response* response) {
-  uint64_t elapsed = uv_hrtime() - start_time_ns_;
+  uint64_t elapsed = uv_hrtime() - start_time_ns();
   current_host_->update_latency(elapsed);
   connection_->metrics()->record_request(elapsed);
   future_->set_result(current_host_->address(), response);
@@ -111,6 +107,11 @@ void RequestHandler::set_error(CassError code, const std::string& message) {
   } else {
     future_->set_error_with_host_address(current_host_->address(), code, message);
   }
+  return_connection_and_finish();
+}
+
+void RequestHandler::set_error_with_error_response(Response* error, CassError code, const std::string& message) {
+  future_->set_error_with_result(current_host_->address(), error, code, message);
   return_connection_and_finish();
 }
 
@@ -157,7 +158,7 @@ void RequestHandler::on_result_response(ResponseMessage* response) {
     }
 
     case CASS_RESULT_KIND_SET_KEYSPACE:
-      io_worker_->broadcast_keyspace_change(result->keyspace());
+      io_worker_->broadcast_keyspace_change(result->keyspace().to_string());
       set_response(response->response_body().release());
       break;
 
@@ -171,24 +172,91 @@ void RequestHandler::on_error_response(ResponseMessage* response) {
   ErrorResponse* error =
       static_cast<ErrorResponse*>(response->response_body().get());
 
-  if (error->code() == CQL_ERROR_UNPREPARED) {
-    ScopedRefPtr<PrepareHandler> prepare_handler(new PrepareHandler(this));
-    if (prepare_handler->init(error->prepared_id())) {
-      if (!connection_->write(prepare_handler.get())) {
-        // Try to prepare on the same host but on a different connection
-        retry(RETRY_WITH_CURRENT_HOST);
-      }
-    } else {
-      connection_->defunct();
-      set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
-               "Received unprepared error for invalid "
-               "request type or invalid prepared id");
+
+  switch(error->code()) {
+    case CQL_ERROR_UNPREPARED:
+      on_error_unprepared(error);
+      break;
+
+    case CQL_ERROR_READ_TIMEOUT:
+      handle_retry_decision(response,
+                            retry_policy_->on_read_timeout(error->consistency(),
+                                                           error->actual(),
+                                                           error->required(),
+                                                           error->data_present() > 0,
+                                                           num_retries_));
+      break;
+
+    case CQL_ERROR_WRITE_TIMEOUT:
+      handle_retry_decision(response,
+                            retry_policy_->on_write_timeout(error->consistency(),
+                                                            error->actual(),
+                                                            error->required(),
+                                                            error->write_type(),
+                                                            num_retries_));
+      break;
+
+    case CQL_ERROR_UNAVAILABLE:
+      handle_retry_decision(response,
+                            retry_policy_->on_unavailable(error->consistency(),
+                                                          error->required(),
+                                                          error->actual(),
+                                                          num_retries_));
+      break;
+
+    default:
+      set_error(static_cast<CassError>(CASS_ERROR(
+                                         CASS_ERROR_SOURCE_SERVER, error->code())),
+                error->message().to_string());
+      break;
+  }
+}
+
+void RequestHandler::on_error_unprepared(ErrorResponse* error) {
+  ScopedRefPtr<PrepareHandler> prepare_handler(new PrepareHandler(this));
+  if (prepare_handler->init(error->prepared_id().to_string())) {
+    if (!connection_->write(prepare_handler.get())) {
+      // Try to prepare on the same host but on a different connection
+      retry();
     }
   } else {
-    set_error(static_cast<CassError>(CASS_ERROR(
-                                       CASS_ERROR_SOURCE_SERVER, error->code())),
-              error->message());
+    connection_->defunct();
+    set_error(CASS_ERROR_LIB_UNEXPECTED_RESPONSE,
+              "Received unprepared error for invalid "
+              "request type or invalid prepared id");
   }
+}
+
+void RequestHandler::handle_retry_decision(ResponseMessage* response,
+                                           const RetryPolicy::RetryDecision& decision) {
+  ErrorResponse* error =
+      static_cast<ErrorResponse*>(response->response_body().get());
+
+  switch(decision.type()) {
+    case RetryPolicy::RetryDecision::RETURN_ERROR:
+      set_error_with_error_response(response->response_body().release(),
+                                    static_cast<CassError>(CASS_ERROR(
+                                                             CASS_ERROR_SOURCE_SERVER, error->code())),
+                                    error->message().to_string());
+      break;
+
+    case RetryPolicy::RetryDecision::RETRY:
+      set_consistency(decision.retry_consistency());
+      if (!decision.retry_current_host()) {
+        next_host();
+      }
+      if (state() == REQUEST_STATE_DONE) {
+        retry();
+      } else {
+        set_state(REQUEST_STATE_RETRY_WRITE_OUTSTANDING);
+      }
+      break;
+
+    case RetryPolicy::RetryDecision::IGNORE:
+      set_response(new ResultResponse());
+      break;
+  }
+  num_retries_++;
 }
 
 } // namespace cass

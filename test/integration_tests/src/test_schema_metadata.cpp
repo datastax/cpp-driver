@@ -40,6 +40,7 @@
 #define LOCAL_STRATEGY_CLASS_NAME "org.apache.cassandra.locator.LocalStrategy"
 #define COMMENT "A TESTABLE COMMENT HERE"
 #define ALL_DATA_TYPES_TABLE_NAME "all"
+#define USER_DATA_TYPE_NAME "user_data_type"
 
 /**
  * Schema Metadata Test Class
@@ -61,6 +62,21 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
 		}
 	}
 
+  void verify_keyspace_created(const std::string& ks) {
+    test_utils::CassResultPtr result;
+
+    for (int i = 0; i < 10; ++i) {
+      test_utils::execute_query(session,
+                                str(boost::format(
+                                      "SELECT * FROM system.schema_keyspaces WHERE keyspace_name = '%s'") % ks), &result);
+      if (cass_result_row_count(result.get()) > 0) {
+        return;
+      }
+      boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+    }
+    BOOST_REQUIRE(false);
+  }
+
   void refresh_schema_meta() {
     if (schema_) {
       const CassSchema* old(schema_);
@@ -69,9 +85,14 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
       for (size_t i = 0;
            i < 10 && cass::get_schema_meta_from_keyspace(schema_, "system") == cass::get_schema_meta_from_keyspace(old, "system");
            ++i) {
-        boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
         cass_schema_free(schema_);
         schema_ = cass_session_get_schema(session);
+      }
+      if (cass::get_schema_meta_from_keyspace(schema_, "system") == cass::get_schema_meta_from_keyspace(old, "system")) {
+        boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
+        BOOST_TEST_MESSAGE("Schema metadata was not refreshed or was not changed");
+        boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_all_errors);
       }
       cass_schema_free(old);
     } else {
@@ -397,6 +418,37 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
 
     verify_table(SIMPLE_STRATEGY_KEYSPACE_NAME, ALL_DATA_TYPES_TABLE_NAME, COMMENT, "boolean_sample");
   }
+
+  void verify_user_type(const std::string& ks_name,
+    const std::string& udt_name,
+    const std::vector<std::string>& udt_datatypes) {
+    std::vector<std::string> udt_field_names = cass::get_user_data_type_field_names(schema_, ks_name, udt_name);
+    BOOST_REQUIRE_EQUAL_COLLECTIONS(udt_datatypes.begin(), udt_datatypes.end(), udt_field_names.begin(), udt_field_names.end());
+  }
+
+  void verify_user_data_type() {
+    create_simple_strategy_keyspace();
+    test_utils::execute_query(session, "USE " SIMPLE_STRATEGY_KEYSPACE_NAME);
+    std::vector<std::string> udt_datatypes;
+
+    // New UDT
+    test_utils::execute_query(session, str(boost::format("CREATE TYPE %s(integer_value int)") % USER_DATA_TYPE_NAME));
+    udt_datatypes.push_back("integer_value");
+    refresh_schema_meta();
+    verify_user_type(SIMPLE_STRATEGY_KEYSPACE_NAME, USER_DATA_TYPE_NAME, udt_datatypes);
+
+    // Altered UDT
+    test_utils::execute_query(session, str(boost::format("ALTER TYPE %s ADD text_value text") % USER_DATA_TYPE_NAME));
+    udt_datatypes.push_back("text_value");
+    refresh_schema_meta();
+    verify_user_type(SIMPLE_STRATEGY_KEYSPACE_NAME, USER_DATA_TYPE_NAME, udt_datatypes);
+
+    // Dropped UDT
+    test_utils::execute_query(session, str(boost::format("DROP TYPE %s") % USER_DATA_TYPE_NAME));
+    udt_datatypes.clear();
+    refresh_schema_meta();
+    verify_user_type(SIMPLE_STRATEGY_KEYSPACE_NAME, USER_DATA_TYPE_NAME, udt_datatypes);
+  }
 };
 
 BOOST_FIXTURE_TEST_SUITE(schema_metadata, TestSchemaMetadata)
@@ -408,6 +460,59 @@ BOOST_AUTO_TEST_CASE(simple) {
   verify_system_tables();// must be run first -- looking for "no other tables"
   verify_user_keyspace();
   verify_user_table();
+  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+    verify_user_data_type();
+  }
+}
+
+/**
+ * Test the disabling schema metadata
+ *
+ * Verifies that initial schema and schema change events don't occur when
+ * schema metadata is disabled.
+ *
+ * @since 2.1.0
+ * @jira_ticket CPP-249
+ * @test_category schema
+ * @cassandra_version 1.2.x
+ */
+BOOST_AUTO_TEST_CASE(disable) {
+  // Verify known keyspace
+  {
+    test_utils::CassSchemaPtr schema(cass_session_get_schema(session));
+    BOOST_CHECK(cass_schema_get_keyspace(schema.get(), "system") != NULL);
+  }
+
+  // Verify schema change event
+  {
+    test_utils::execute_query(session, "CREATE KEYSPACE ks1 WITH replication = "
+                                       "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+    verify_keyspace_created("ks1");
+    test_utils::CassSchemaPtr schema(cass_session_get_schema(session));
+    BOOST_CHECK(cass_schema_get_keyspace(schema.get(), "ks1") != NULL);
+  }
+
+  close_session();
+
+
+  // Disable schema and reconnect
+  cass_cluster_set_use_schema(cluster, cass_false);
+  create_session();
+
+  // Verify known keyspace doesn't exist in metadata
+  {
+    test_utils::CassSchemaPtr schema(cass_session_get_schema(session));
+    BOOST_CHECK(cass_schema_get_keyspace(schema.get(), "system") == NULL);
+  }
+
+  // Verify schema change event didn't happen
+  {
+    test_utils::execute_query(session, "CREATE KEYSPACE ks2 WITH replication = "
+                                       "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+    verify_keyspace_created("ks2");
+    test_utils::CassSchemaPtr schema(cass_session_get_schema(session));
+    BOOST_CHECK(cass_schema_get_keyspace(schema.get(), "ks2") == NULL);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

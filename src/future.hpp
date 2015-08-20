@@ -179,6 +179,13 @@ public:
     internal_set_error(code, message, lock);
   }
 
+  void set_error_with_result(Address address, T* result, CassError code, const std::string& message) {
+    ScopedMutex lock(&mutex_);
+    address_ = address;
+    result_.reset(result);
+    internal_set_error(code, message, lock);
+  }
+
   Address get_host_address() {
     ScopedMutex lock(&mutex_);
     internal_wait(lock);

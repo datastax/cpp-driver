@@ -14,61 +14,41 @@
   limitations under the License.
 */
 
-#ifndef __CASS_CASSANDRA_HPP_INCLUDED__
-#define __CASS_CASSANDRA_HPP_INCLUDED__
+#ifndef __CASS_TYPES_HPP_INCLUDED__
+#define __CASS_TYPES_HPP_INCLUDED__
 
 #include "cassandra.h"
-#include "cluster.hpp"
-#include "schema_metadata.hpp"
-#include "session.hpp"
-#include "statement.hpp"
-#include "future.hpp"
-#include "prepared.hpp"
-#include "batch_request.hpp"
-#include "result_response.hpp"
-#include "row.hpp"
-#include "value.hpp"
-#include "iterator.hpp"
-#include "ssl.hpp"
-#include "uuids.hpp"
 
-// This abstraction allows us to separate internal types from the
-// external opaque pointers that we expose.
-template <typename In, typename Ex>
-struct External : public In {
-  In* from() { return static_cast<In*>(this); }
-  const In* from() const { return static_cast<const In*>(this); }
-  static Ex* to(In* in) { return static_cast<Ex*>(in); }
-  static const Ex* to(const In* in) { return static_cast<const Ex*>(in); }
+namespace cass {
+
+struct CassNull { };
+
+struct CassBytes {
+  CassBytes(const cass_byte_t* data, size_t size)
+    : data(data), size(size) { }
+  const cass_byte_t* data;
+  size_t size;
 };
 
-#define EXTERNAL_TYPE(InternalType, ExternalType)                        \
-  struct ExternalType##_ : public External<InternalType, ExternalType> { \
-    private:                                                             \
-      ~ExternalType##_() { }                                             \
-  }
+struct CassString {
+  CassString(const char* data, size_t length)
+    : data(data), length(length) { }
+  const char* data;
+  size_t length;
+};
 
-extern "C" {
+struct CassDecimal {
+  CassDecimal(const cass_byte_t* varint,
+              size_t varint_size,
+              int scale)
+    : varint(varint)
+    , varint_size(varint_size)
+    , scale(scale) { }
+  const cass_byte_t* varint;
+  size_t varint_size;
+  cass_int32_t scale;
+};
 
-EXTERNAL_TYPE(cass::Cluster, CassCluster);
-EXTERNAL_TYPE(cass::Session, CassSession);
-EXTERNAL_TYPE(cass::Statement, CassStatement);
-EXTERNAL_TYPE(cass::Future, CassFuture);
-EXTERNAL_TYPE(cass::Prepared, CassPrepared);
-EXTERNAL_TYPE(cass::BatchRequest, CassBatch);
-EXTERNAL_TYPE(cass::ResultResponse, CassResult);
-EXTERNAL_TYPE(cass::BufferCollection, CassCollection);
-EXTERNAL_TYPE(cass::Iterator, CassIterator);
-EXTERNAL_TYPE(cass::Row, CassRow);
-EXTERNAL_TYPE(cass::Value, CassValue);
-EXTERNAL_TYPE(cass::SslContext, CassSsl);
-EXTERNAL_TYPE(cass::Schema, CassSchema);
-EXTERNAL_TYPE(cass::SchemaMetadata, CassSchemaMeta);
-EXTERNAL_TYPE(cass::SchemaMetadataField, CassSchemaMetaField);
-EXTERNAL_TYPE(cass::UuidGen, CassUuidGen);
-
-}
-
-#undef EXTERNAL_TYPE
+} // namespace cass
 
 #endif

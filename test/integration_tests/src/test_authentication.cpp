@@ -35,6 +35,7 @@ struct AthenticationTests {
     : cluster(cass_cluster_new())
     , conf(cql::get_ccm_bridge_configuration())
     , ccm(cql::cql_ccm_bridge_t::create(conf, "test")) {
+    boost::debug::detect_memory_leaks(false);
     ccm->populate(1);
     ccm->update_config("authenticator", "PasswordAuthenticator");
     ccm->start(1, "-Dcassandra.superuser_setup_delay_ms=0");
@@ -98,7 +99,7 @@ BOOST_AUTO_TEST_CASE(empty_credentials)
 BOOST_AUTO_TEST_CASE(bad_credentials)
 {
   const char* expected_error
-      = "'Username and/or password are incorrect'";
+      = "had the following error on startup: Username and/or password are incorrect";
   invalid_credentials(1, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
   invalid_credentials(2, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
 }

@@ -18,7 +18,7 @@
 #   define BOOST_TEST_MODULE cassandra
 #endif
 
-#include "common.hpp"
+#include "utils.hpp"
 
 #include <boost/test/unit_test.hpp>
 

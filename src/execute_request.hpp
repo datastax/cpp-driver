@@ -33,8 +33,9 @@ public:
       : Statement(CQL_OPCODE_EXECUTE, CASS_BATCH_KIND_PREPARED,
                   prepared->result()->column_count(),
                   prepared->key_indices(),
-                  prepared->result()->keyspace())
-      , prepared_(prepared) {
+                  prepared->result()->keyspace().to_string())
+      , prepared_(prepared)
+      , metadata_(prepared->result()->metadata()){
       // If the prepared statement has result metadata then there is no
       // need to get the metadata with this request too.
       if (prepared->result()->result_metadata()) {
@@ -42,16 +43,27 @@ public:
       }
   }
 
-  const std::string& query() const { return prepared_->id(); }
   const SharedRefPtr<const Prepared>& prepared() const { return prepared_; }
 
 private:
-  int encode(int version, BufferVec* bufs) const;
-  int encode_v1(BufferVec* bufs) const;
-  int encode_v2(BufferVec* bufs) const;
+  virtual size_t get_indices(StringRef name, IndexVec* indices) {
+    return metadata_->get_indices(name, indices);
+  }
+
+  virtual const SharedRefPtr<const DataType>& get_type(size_t index) const {
+    return metadata_->get_column_definition(index).data_type;
+  }
+
+  virtual int32_t encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const;
+
+private:
+  int encode(int version, Handler* handler, BufferVec* bufs) const;
+  int internal_encode_v1(Handler* handler, BufferVec* bufs) const;
+  int internal_encode(int version, Handler* handler, BufferVec* bufs) const;
 
 private:
   SharedRefPtr<const Prepared> prepared_;
+  SharedRefPtr<ResultMetadata> metadata_;
 };
 
 } // namespace cass

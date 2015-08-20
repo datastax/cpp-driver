@@ -1,6 +1,7 @@
 # Schema Metadata
 
-The driver provides access to keyspace and table metadata. This schema metadata is monitored by the control conneciton and automatically kept up-to-date.
+The driver provides access to keyspace and table metadata. This schema metadata
+is monitored by the control connection and automatically kept up-to-date.
 
 ```c
 /* Create session */
@@ -41,4 +42,23 @@ cass_value_get_string(strategy_class_value,
 cass_schema_free(schema);
 ```
 
-The snapshot obtained by `cass_session_get_schema()` will not see schema changes that happened after the call. A new snapshot needs to be obtained to see subsequent updates to the schema.
+The snapshot obtained by [`cass_session_get_schema()`] will not see schema changes
+that happened after the call. A new snapshot needs to be obtained to see
+subsequent updates to the schema.
+
+## Enabling/Disabling Schema Metadata
+
+Retrieving and updating schema metadata can be enabled or disabled. It is
+enabled by default. However, some application might wish to reduce this
+overhead. This can be useful to improve the startup performance of the
+short-lived sessions or an environment where up-to-date schema metadata is
+unnecessary.
+
+**Important**: This also disables token-aware routing because it depends on
+schema metadata.
+
+```c
+/* Disable schema metdata */
+cass_cluster_set_use_schema(cluster, cass_false);
+```
+[`cass_session_get_schema()`]: http://datastax.github.io/cpp-driver/api/CassSession/#cass-session-get-schema

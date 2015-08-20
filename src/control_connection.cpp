@@ -33,8 +33,6 @@
 #include <sstream>
 #include <vector>
 
-#define HIGHEST_SUPPORTED_PROTOCOL_VERSION 2
-
 #define SELECT_LOCAL "SELECT data_center, rack FROM system.local WHERE key='local'"
 #define SELECT_LOCAL_TOKENS "SELECT data_center, rack, partitioner, tokens FROM system.local WHERE key='local'"
 #define SELECT_PEERS "SELECT peer, data_center, rack, rpc_address FROM system.peers"
@@ -43,7 +41,7 @@
 #define SELECT_KEYSPACES "SELECT * FROM system.schema_keyspaces"
 #define SELECT_COLUMN_FAMILIES "SELECT * FROM system.schema_columnfamilies"
 #define SELECT_COLUMNS "SELECT * FROM system.schema_columns"
-
+#define SELECT_USERTYPES "SELECT * FROM system.schema_usertypes"
 
 namespace cass {
 
@@ -70,10 +68,10 @@ bool ControlConnection::determine_address_for_peer_host(const Address& connected
                                                         const Value* rpc_value,
                                                         Address* output) {
   Address peer_address;
-  Address::from_inet(peer_value->buffer().data(), peer_value->buffer().size(),
+  Address::from_inet(peer_value->data(), peer_value->size(),
                      connected_address.port(), &peer_address);
-  if (rpc_value->buffer().size() > 0) {
-    Address::from_inet(rpc_value->buffer().data(), rpc_value->buffer().size(),
+  if (rpc_value->size() > 0) {
+    Address::from_inet(rpc_value->data(), rpc_value->size(),
                        connected_address.port(), output);
     if (connected_address.compare(*output) == 0 ||
         connected_address.compare(peer_address) == 0) {
@@ -99,13 +97,9 @@ bool ControlConnection::determine_address_for_peer_host(const Address& connected
 }
 
 ControlConnection::ControlConnection()
-  : Connection::Listener(CASS_EVENT_TOPOLOGY_CHANGE |
-                         CASS_EVENT_STATUS_CHANGE |
-                         CASS_EVENT_SCHEMA_CHANGE)
-  ,  state_(CONTROL_STATE_NEW)
+  : state_(CONTROL_STATE_NEW)
   , session_(NULL)
   , connection_(NULL)
-  , reconnect_timer_(NULL)
   , protocol_version_(0)
   , query_tokens_(false) {}
 
@@ -117,7 +111,7 @@ void ControlConnection::clear() {
   state_ = CONTROL_STATE_NEW;
   session_ = NULL;
   connection_ = NULL;
-  reconnect_timer_ = NULL;
+  reconnect_timer_.stop();
   query_plan_.reset();
   protocol_version_ = 0;
   last_connection_error_.clear();
@@ -130,8 +124,16 @@ void ControlConnection::connect(Session* session) {
   protocol_version_ = session_->config().protocol_version();
   query_tokens_ = session_->config().token_aware_routing();
   if (protocol_version_ < 0) {
-    protocol_version_ = HIGHEST_SUPPORTED_PROTOCOL_VERSION;
+    protocol_version_ = CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION;
   }
+
+  if (session_->config().use_schema()) {
+    set_event_types(CASS_EVENT_TOPOLOGY_CHANGE | CASS_EVENT_STATUS_CHANGE |
+                    CASS_EVENT_SCHEMA_CHANGE);
+  } else {
+    set_event_types(CASS_EVENT_TOPOLOGY_CHANGE | CASS_EVENT_STATUS_CHANGE);
+  }
+
   reconnect(false);
 }
 
@@ -140,17 +142,14 @@ void ControlConnection::close() {
   if (connection_ != NULL) {
     connection_->close();
   }
-  if (reconnect_timer_ != NULL) {
-    Timer::stop(reconnect_timer_);
-    reconnect_timer_ = NULL;
-  }
+  reconnect_timer_.stop();
 }
 
 void ControlConnection::schedule_reconnect(uint64_t ms) {
-  reconnect_timer_= Timer::start(session_->loop(),
-                                 ms,
-                                 this,
-                                 ControlConnection::on_reconnect);
+  reconnect_timer_.start(session_->loop(),
+                         ms,
+                         this,
+                         ControlConnection::on_reconnect);
 }
 
 void ControlConnection::reconnect(bool retry_current_host) {
@@ -200,7 +199,7 @@ void ControlConnection::on_close(Connection* connection) {
   bool retry_current_host = false;
 
   if (state_ != CONTROL_STATE_CLOSED) {
-    LOG_WARN("Lost connection on host %s", connection->address_string().c_str());
+    LOG_WARN("Lost control connection on host %s", connection->address_string().c_str());
   }
 
   // This pointer to the connection is no longer valid once it's closed
@@ -215,15 +214,20 @@ void ControlConnection::on_close(Connection* connection) {
                                              "Not even protocol version 1 is supported");
         return;
       }
+      LOG_WARN("Host %s does not support protocol version %d. "
+               "Trying protocol version %d...",
+               connection->address_string().c_str(),
+               protocol_version_,
+               protocol_version_ - 1);
       protocol_version_--;
       retry_current_host = true;
-    } else if (!connection->auth_error().empty()) {
+    } else if (connection->is_auth_error()) {
       session_->on_control_connection_error(CASS_ERROR_SERVER_BAD_CREDENTIALS,
-                                            connection->auth_error());
+                                            connection->error_message());
       return;
-    } else if (!connection->ssl_error().empty()) {
+    } else if (connection->is_ssl_error()) {
       session_->on_control_connection_error(connection->ssl_error_code(),
-                                            connection->ssl_error());
+                                            connection->error_message());
       return;
     }
   }
@@ -294,25 +298,39 @@ void ControlConnection::on_event(EventResponse* response) {
       LOG_DEBUG("Schema change (%d): %.*s %.*s\n",
                 response->schema_change(),
                 (int)response->keyspace().size(), response->keyspace().data(),
-                (int)response->table().size(), response->table().data());
+                (int)response->target().size(), response->target().data());
       switch (response->schema_change()) {
         case EventResponse::CREATED:
         case EventResponse::UPDATED:
-          if (response->table().size() > 0) {
-            refresh_table(response->keyspace(), response->table());
-          } else {
-            refresh_keyspace(response->keyspace());
+          switch (response->schema_change_target()) {
+            case EventResponse::KEYSPACE:
+              refresh_keyspace(response->keyspace());
+              break;
+            case EventResponse::TABLE:
+              refresh_table(response->keyspace(), response->target());
+              break;
+            case EventResponse::TYPE:
+              refresh_type(response->keyspace(), response->target());
+              break;
           }
           break;
 
         case EventResponse::DROPPED:
-          if (response->table().size() > 0) {
-            session_->cluster_meta().drop_table(response->keyspace().to_string(),
-                                                response->table().to_string());
-          } else {
-            session_->cluster_meta().drop_keyspace(response->keyspace().to_string());
+          switch (response->schema_change_target()) {
+            case EventResponse::KEYSPACE:
+              session_->cluster_meta().drop_keyspace(response->keyspace().to_string());
+              break;
+            case EventResponse::TABLE:
+              session_->cluster_meta().drop_table(response->keyspace().to_string(),
+                                                  response->target().to_string());
+              break;
+            case EventResponse::TYPE:
+              session_->cluster_meta().drop_type(response->keyspace().to_string(),
+                                                 response->target().to_string());
+              break;
           }
           break;
+
       }
       break;
 
@@ -329,9 +347,15 @@ void ControlConnection::query_meta_all() {
         new ControlMultipleRequestHandler<QueryMetadataAllData>(this, ControlConnection::on_query_meta_all, QueryMetadataAllData()));
   handler->execute_query(SELECT_LOCAL_TOKENS);
   handler->execute_query(SELECT_PEERS_TOKENS);
-  handler->execute_query(SELECT_KEYSPACES);
-  handler->execute_query(SELECT_COLUMN_FAMILIES);
-  handler->execute_query(SELECT_COLUMNS);
+
+  if (session_->config().use_schema()) {
+    handler->execute_query(SELECT_KEYSPACES);
+    handler->execute_query(SELECT_COLUMN_FAMILIES);
+    handler->execute_query(SELECT_COLUMNS);
+    if (protocol_version_ >= 3) {
+      handler->execute_query(SELECT_USERTYPES);
+    }
+  }
 }
 
 void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
@@ -411,10 +435,15 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
 
   session->purge_hosts(is_initial_connection);
 
-  session->cluster_meta().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
-  session->cluster_meta().update_tables(static_cast<ResultResponse*>(responses[3]),
-                                         static_cast<ResultResponse*>(responses[4]));
-  session->cluster_meta().build();
+  if (session->config().use_schema()) {
+    session->cluster_meta().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
+    session->cluster_meta().update_tables(static_cast<ResultResponse*>(responses[3]),
+        static_cast<ResultResponse*>(responses[4]));
+    if (control_connection->protocol_version_ >= 3) {
+      session->cluster_meta().update_usertypes(static_cast<ResultResponse*>(responses[5]));
+    }
+    session->cluster_meta().build();
+  }
 
   if (is_initial_connection) {
     control_connection->state_ = CONTROL_STATE_READY;
@@ -548,7 +577,7 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
   v = row->get_by_name("peer");
   if (v != NULL) {
     Address listen_address;
-    Address::from_inet(v->buffer().data(), v->buffer().size(),
+    Address::from_inet(v->data(), v->size(),
                        connection_->address().port(),
                        &listen_address);
     host->set_listen_address(listen_address.to_string());
@@ -575,8 +604,7 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
       CollectionIterator i(v);
       TokenStringList tokens;
       while (i.next()) {
-        const BufferPiece& bp = i.value()->buffer();
-        tokens.push_back(StringRef(bp.data(), bp.size()));
+        tokens.push_back(i.value()->to_string_ref());
       }
       if (!tokens.empty()) {
         session_->cluster_meta().update_host(host, tokens);
@@ -647,6 +675,36 @@ void ControlConnection::on_refresh_table(ControlConnection* control_connection,
                                         static_cast<ResultResponse*>(responses[1]));
 }
 
+
+void ControlConnection::refresh_type(const StringRef& keyspace_name,
+                                     const StringRef& type_name) {
+
+  std::string query(SELECT_USERTYPES);
+  query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+                .append("' AND type_name='").append(type_name.data(), type_name.size()).append("'");
+
+  LOG_DEBUG("Refreshing type %s", query.c_str());
+
+  connection_->write(
+        new ControlHandler<std::pair<std::string, std::string> >(new QueryRequest(query),
+                                        this,
+                                        ControlConnection::on_refresh_type,
+                                        std::make_pair(keyspace_name.to_string(), type_name.to_string())));
+}
+
+void ControlConnection::on_refresh_type(ControlConnection* control_connection,
+                                        const std::pair<std::string, std::string>& keyspace_and_type_names,
+                                        Response* response) {
+  ResultResponse* result = static_cast<ResultResponse*>(response);
+  if (result->row_count() == 0) {
+    LOG_ERROR("No row found for keyspace %s and type %s in system schema table.",
+              keyspace_and_type_names.first.c_str(),
+              keyspace_and_type_names.first.c_str());
+    return;
+  }
+  control_connection->session_->cluster_meta().update_usertypes(result);
+}
+
 bool ControlConnection::handle_query_invalid_response(Response* response) {
   if (check_error_or_invalid_response("ControlConnection", CQL_OPCODE_RESULT,
                                       response)) {
@@ -705,7 +763,6 @@ void ControlConnection::on_reconnect(Timer* timer) {
   ControlConnection* control_connection = static_cast<ControlConnection*>(timer->data());
   control_connection->query_plan_.reset(control_connection->session_->new_query_plan());
   control_connection->reconnect(false);
-  control_connection->reconnect_timer_ = NULL;
 }
 
 template<class T>

@@ -19,7 +19,7 @@
 #include "auth.hpp"
 #include "auth_requests.hpp"
 #include "auth_responses.hpp"
-#include "common.hpp"
+#include "cassandra.h"
 #include "constants.hpp"
 #include "connector.hpp"
 #include "timer.hpp"
@@ -33,7 +33,7 @@
 #include "error_response.hpp"
 #include "event_response.hpp"
 #include "logger.hpp"
-#include "cassandra.h"
+#include "utils.hpp"
 
 #include <iomanip>
 #include <sstream>
@@ -42,11 +42,13 @@
 #define SSL_WRITE_SIZE 8192
 #define SSL_ENCRYPTED_BUFS_COUNT 16
 
+#define MAX_BUFFER_REUSE_NO 8
+#define BUFFER_REUSE_SIZE 64 * 1024
 
 #if UV_VERSION_MAJOR == 0
-#define UV_ERRSTR(status) uv_strerror(uv_last_error(connection->loop_))
+#define UV_ERRSTR(status, loop) uv_strerror(uv_last_error(loop))
 #else
-#define UV_ERRSTR(status) uv_strerror(status)
+#define UV_ERRSTR(status, loop) uv_strerror(status)
 #endif
 
 namespace cass {
@@ -74,12 +76,13 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
       ErrorResponse* error
           = static_cast<ErrorResponse*>(response->response_body().get());
       if (error->code() == CQL_ERROR_PROTOCOL_ERROR &&
-          error->message().find("Invalid or unsupported protocol version") != std::string::npos) {
-        connection_->is_invalid_protocol_ = true;
+          error->message().to_string().find("Invalid or unsupported protocol version") != std::string::npos) {
+        connection_->notify_error(error->message().to_string(), CONNECTION_ERROR_INVALID_PROTOCOL);
       } else if (error->code() == CQL_ERROR_BAD_CREDENTIALS) {
-        connection_->auth_error_ = error->message();
+        connection_->notify_error(error->message().to_string(), CONNECTION_ERROR_AUTH);
+      } else {
+        connection_->notify_error("Received error response " + error->error_message());
       }
-      connection_->notify_error(error_response_message("Error response", error));
       break;
     }
 
@@ -89,13 +92,13 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
 
     case CQL_OPCODE_AUTH_CHALLENGE:
       connection_->on_auth_challenge(
-            static_cast<AuthResponseRequest*>(request_.get()),
+            static_cast<const AuthResponseRequest*>(request_.get()),
             static_cast<AuthChallengeResponse*>(response->response_body().get())->token());
       break;
 
     case CQL_OPCODE_AUTH_SUCCESS:
       connection_->on_auth_success(
-            static_cast<AuthResponseRequest*>(request_.get()),
+            static_cast<const AuthResponseRequest*>(request_.get()),
             static_cast<AuthSuccessResponse*>(response->response_body().get())->token());
       break;
 
@@ -123,7 +126,7 @@ void Connection::StartupHandler::on_error(CassError code,
 
 void Connection::StartupHandler::on_timeout() {
   if (!connection_->is_closing()) {
-    connection_->notify_error("Timed out");
+    connection_->notify_error("Timed out", CONNECTION_ERROR_TIMEOUT);
   }
 }
 
@@ -135,9 +138,34 @@ void Connection::StartupHandler::on_result_response(ResponseMessage* response) {
       connection_->on_set_keyspace();
       break;
     default:
-      connection_->notify_error("Invalid result. Expected set keyspace.");
+      connection_->notify_error("Invalid result response. Expected set keyspace.");
       break;
   }
+}
+
+Connection::HeartbeatHandler::HeartbeatHandler(Connection* connection)
+  : Handler(new OptionsRequest()) {
+  set_connection(connection);
+}
+
+void Connection::HeartbeatHandler::on_set(ResponseMessage* response) {
+  LOG_TRACE("Heartbeat completed on host %s",
+            connection_->address_string().c_str());
+  connection_->idle_start_time_ms_ = 0;
+  connection_->heartbeat_outstanding_ = false;
+}
+
+void Connection::HeartbeatHandler::on_error(CassError code, const std::string& message) {
+  LOG_WARN("An error occurred on host %s during a heartbeat request: %s",
+           connection_->address_string().c_str(),
+           message.c_str());
+  connection_->heartbeat_outstanding_ = false;
+}
+
+void Connection::HeartbeatHandler::on_timeout() {
+  LOG_WARN("Heartbeat request timed out on host %s",
+           connection_->address_string().c_str());
+  connection_->heartbeat_outstanding_ = false;
 }
 
 Connection::Connection(uv_loop_t* loop,
@@ -148,10 +176,7 @@ Connection::Connection(uv_loop_t* loop,
                        int protocol_version,
                        Listener* listener)
     : state_(CONNECTION_STATE_NEW)
-    , is_defunct_(false)
-    , is_invalid_protocol_(false)
-    , is_registered_for_events_(false)
-    , is_available_(false)
+    , error_code_(CONNECTION_OK)
     , ssl_error_code_(CASS_OK)
     , pending_writes_size_(0)
     , loop_(loop)
@@ -163,9 +188,10 @@ Connection::Connection(uv_loop_t* loop,
     , protocol_version_(protocol_version)
     , listener_(listener)
     , response_(new ResponseMessage())
-    , version_("3.0.0")
-    , connect_timer_(NULL)
-    , ssl_session_(NULL) {
+    , stream_manager_(protocol_version)
+    , ssl_session_(NULL)
+    , idle_start_time_ms_(0)
+    , heartbeat_outstanding_(false) {
   socket_.data = this;
   uv_tcp_init(loop_, &socket_);
 
@@ -186,17 +212,30 @@ Connection::Connection(uv_loop_t* loop,
   }
 }
 
+Connection::~Connection()
+{
+  while (!buffer_reuse_list_.empty()) {
+    uv_buf_t buf = buffer_reuse_list_.top();
+    delete[] buf.base;
+    buffer_reuse_list_.pop();
+  }
+}
+
 void Connection::connect() {
   if (state_ == CONNECTION_STATE_NEW) {
-    state_ = CONNECTION_STATE_CONNECTING;
-    connect_timer_ = Timer::start(loop_, config_.connect_timeout_ms(), this,
-                                  on_connect_timeout);
+    set_state(CONNECTION_STATE_CONNECTING);
+    connect_timer_.start(loop_, config_.connect_timeout_ms(), this,
+                         on_connect_timeout);
     Connector::connect(&socket_, address_, this, on_connect);
   }
 }
 
 bool Connection::write(Handler* handler, bool flush_immediately) {
-  int8_t stream = stream_manager_.acquire_stream(handler);
+  return internal_write(handler, flush_immediately, true);
+}
+
+bool Connection::internal_write(Handler* handler, bool flush_immediately, bool reset_idle_time) {
+  int stream = stream_manager_.acquire(handler);
   if (stream < 0) {
     return false;
   }
@@ -217,9 +256,14 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
 
   int32_t request_size = pending_write->write(handler);
   if (request_size < 0) {
-    stream_manager_.release_stream(stream);
-    handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
-                      "Operation unsupported by this protocol version");
+    stream_manager_.release(stream);
+    if (request_size == Request::ENCODE_ERROR_BATCH_WITH_NAMED_VALUES) {
+      handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
+                        "Batches cannot contain queries with named values");
+    } else {
+      handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
+                        "Operation unsupported by this protocol version");
+    }
     handler->dec_ref();
     return true; // Don't retry
   }
@@ -231,7 +275,7 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
              config_.write_bytes_high_water_mark(),
              addr_string_.c_str());
     metrics_->exceeded_write_bytes_water_mark.inc();
-    set_is_available(false);
+    set_state(CONNECTION_STATE_OVERWHELMED);
   }
 
   LOG_TRACE("Sending message type %s with stream %d",
@@ -247,6 +291,11 @@ bool Connection::write(Handler* handler, bool flush_immediately) {
     pending_write->flush();
   }
 
+  if (reset_idle_time) {
+    idle_start_time_ms_ = 0;
+    restart_heartbeat_timer();
+  }
+
   return true;
 }
 
@@ -259,38 +308,105 @@ void Connection::flush() {
 void Connection::schedule_schema_agreement(const SharedRefPtr<SchemaChangeHandler>& handler, uint64_t wait) {
   PendingSchemaAgreement* pending_schema_agreement = new PendingSchemaAgreement(handler);
   pending_schema_agreements_.add_to_back(pending_schema_agreement);
-  pending_schema_agreement->timer
-      = Timer::start(loop_,
-                     wait,
-                     pending_schema_agreement,
-                     Connection::on_pending_schema_agreement);
+  pending_schema_agreement->timer.start(loop_,
+                                        wait,
+                                        pending_schema_agreement,
+                                        Connection::on_pending_schema_agreement);
 }
 
 void Connection::close() {
-  if (state_ != CONNECTION_STATE_CLOSING) {
+  internal_close(CONNECTION_STATE_CLOSE);
+}
+
+void Connection::defunct() {
+  internal_close(CONNECTION_STATE_CLOSE_DEFUNCT);
+}
+
+void Connection::internal_close(ConnectionState close_state) {
+  assert(close_state == CONNECTION_STATE_CLOSE ||
+         close_state == CONNECTION_STATE_CLOSE_DEFUNCT);
+
+  if (state_ != CONNECTION_STATE_CLOSE &&
+      state_ != CONNECTION_STATE_CLOSE_DEFUNCT) {
     uv_handle_t* handle = copy_cast<uv_tcp_t*, uv_handle_t*>(&socket_);
     if (!uv_is_closing(handle)) {
-      stop_connect_timer();
+      heartbeat_timer_.stop();
+      connect_timer_.stop();
       if (state_ == CONNECTION_STATE_CONNECTED ||
           state_ == CONNECTION_STATE_READY) {
         uv_read_stop(copy_cast<uv_tcp_t*, uv_stream_t*>(&socket_));
       }
-      state_ = CONNECTION_STATE_CLOSING;
-      set_is_available(false);
+      set_state(close_state);
       uv_close(handle, on_close);
     }
   }
 }
 
-void Connection::defunct() {
-  is_defunct_ = true;
-  close();
-}
+void Connection::set_state(ConnectionState new_state) {
+  // Only update if the state changed
+  if (new_state == state_) return;
 
-void Connection::set_is_available(bool is_available) {
-  // The callback is only called once per actual state change
-  if (is_available_ != is_available) {
-    is_available_ = is_available;
+  ConnectionState old_state = state_;
+
+  switch (state_) {
+    case CONNECTION_STATE_NEW:
+      assert(new_state == CONNECTION_STATE_CONNECTING &&
+             "Invalid connection state after new");
+      state_ = new_state;
+      break;
+
+    case CONNECTION_STATE_CONNECTING:
+      assert((new_state == CONNECTION_STATE_CONNECTED ||
+              new_state == CONNECTION_STATE_CLOSE ||
+              new_state == CONNECTION_STATE_CLOSE_DEFUNCT) &&
+             "Invalid connection state after connecting");
+      state_ = new_state;
+      break;
+
+    case CONNECTION_STATE_CONNECTED:
+      assert((new_state == CONNECTION_STATE_REGISTERING_EVENTS ||
+              new_state == CONNECTION_STATE_READY ||
+              new_state == CONNECTION_STATE_CLOSE ||
+              new_state == CONNECTION_STATE_CLOSE_DEFUNCT) &&
+             "Invalid connection state after connected");
+      state_ = new_state;
+      break;
+
+    case CONNECTION_STATE_REGISTERING_EVENTS:
+      assert((new_state == CONNECTION_STATE_READY ||
+              new_state == CONNECTION_STATE_CLOSE ||
+              new_state == CONNECTION_STATE_CLOSE_DEFUNCT) &&
+             "Invalid connection state after registering for events");
+      state_ = new_state;
+      break;
+
+    case CONNECTION_STATE_READY:
+      assert((new_state == CONNECTION_STATE_OVERWHELMED ||
+              new_state == CONNECTION_STATE_CLOSE ||
+              new_state == CONNECTION_STATE_CLOSE_DEFUNCT) &&
+             "Invalid connection state after ready");
+      state_ = new_state;
+      break;
+
+    case CONNECTION_STATE_OVERWHELMED:
+      assert((new_state == CONNECTION_STATE_READY ||
+              new_state == CONNECTION_STATE_CLOSE ||
+              new_state == CONNECTION_STATE_CLOSE_DEFUNCT) &&
+             "Invalid connection state after being overwhelmed");
+      state_ = new_state;
+      break;
+
+    case CONNECTION_STATE_CLOSE:
+      assert(false && "No state change after close");
+      break;
+
+    case CONNECTION_STATE_CLOSE_DEFUNCT:
+      assert(false && "No state change after close defunct");
+      break;
+  }
+
+  // Only change the availability if the state changes to/from being ready
+  if (new_state == CONNECTION_STATE_READY || old_state == CONNECTION_STATE_READY) {
     listener_->on_availability_change(this);
   }
 }
@@ -300,7 +416,7 @@ void Connection::consume(char* input, size_t size) {
   size_t remaining = size;
 
   while (remaining != 0) {
-    int consumed = response_->decode(protocol_version_, buffer, remaining);
+    ssize_t consumed = response_->decode(buffer, remaining);
     if (consumed <= 0) {
       notify_error("Error consuming message");
       remaining = 0;
@@ -327,7 +443,7 @@ void Connection::consume(char* input, size_t size) {
         }
       } else {
         Handler* handler = NULL;
-        if (stream_manager_.get_item(response->stream(), handler)) {
+        if (stream_manager_.get_pending_and_release(response->stream(), handler)) {
           switch (handler->state()) {
             case Handler::REQUEST_STATE_READING:
               maybe_set_keyspace(response.get());
@@ -363,7 +479,7 @@ void Connection::consume(char* input, size_t size) {
               break;
           }
         } else {
-          notify_error("Invalid stream");
+          notify_error("Invalid stream ID");
         }
       }
     }
@@ -377,7 +493,7 @@ void Connection::maybe_set_keyspace(ResponseMessage* response) {
     ResultResponse* result =
         static_cast<ResultResponse*>(response->response_body().get());
     if (result->kind() == CASS_RESULT_KIND_SET_KEYSPACE) {
-      keyspace_ = result->keyspace();
+      keyspace_ = result->keyspace().to_string();
     }
   }
 }
@@ -385,7 +501,7 @@ void Connection::maybe_set_keyspace(ResponseMessage* response) {
 void Connection::on_connect(Connector* connector) {
   Connection* connection = static_cast<Connection*>(connector->data());
 
-  if (connection->connect_timer_ == NULL) {
+  if (!connection->connect_timer_.is_running()) {
     return; // Timed out
   }
 
@@ -400,7 +516,7 @@ void Connection::on_connect(Connector* connector) {
                     Connection::alloc_buffer, Connection::on_read);
     }
 
-    connection->state_ = CONNECTION_STATE_CONNECTED;
+    connection->set_state(CONNECTION_STATE_CONNECTED);
 
     if (connection->ssl_session_) {
       connection->ssl_handshake();
@@ -409,7 +525,8 @@ void Connection::on_connect(Connector* connector) {
     }
   } else {
     LOG_ERROR("Connect error '%s' on host %s",
-              UV_ERRSTR(connector->status()),
+              UV_ERRSTR(connector->status(),
+                        connection->loop_),
               connection->addr_string_.c_str() );
     connection->notify_error("Unable to connect");
   }
@@ -417,9 +534,7 @@ void Connection::on_connect(Connector* connector) {
 
 void Connection::on_connect_timeout(Timer* timer) {
   Connection* connection = static_cast<Connection*>(timer->data());
-  connection->connect_timer_ = NULL;
-  connection->notify_error("Connection timeout");
-
+  connection->notify_error("Connection timeout", CONNECTION_ERROR_TIMEOUT);
   connection->metrics_->connection_timeouts.inc();
 }
 
@@ -452,14 +567,35 @@ void Connection::on_close(uv_handle_t* handle) {
   delete connection;
 }
 
+uv_buf_t Connection::internal_alloc_buffer(size_t suggested_size) {
+  if (suggested_size <= BUFFER_REUSE_SIZE) {
+    if (!buffer_reuse_list_.empty()) {
+      uv_buf_t ret = buffer_reuse_list_.top();
+      buffer_reuse_list_.pop();
+      return ret;
+    }
+    return uv_buf_init(new char[BUFFER_REUSE_SIZE], BUFFER_REUSE_SIZE);
+  }
+  return uv_buf_init(new char[suggested_size], suggested_size);
+}
+
+void Connection::internal_reuse_buffer(uv_buf_t buf) {
+  if (buf.len == BUFFER_REUSE_SIZE && buffer_reuse_list_.size() < MAX_BUFFER_REUSE_NO) {
+    buffer_reuse_list_.push(buf);
+    return;
+  }
+  delete[] buf.base;
+}
+
 #if UV_VERSION_MAJOR == 0
 uv_buf_t Connection::alloc_buffer(uv_handle_t* handle, size_t suggested_size) {
-  return uv_buf_init(new char[suggested_size], suggested_size);
+  Connection* connection = static_cast<Connection*>(handle->data);
+  return connection->internal_alloc_buffer(suggested_size);
 }
 #else
 void Connection::alloc_buffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
-  buf->base = new char[suggested_size];
-  buf->len = suggested_size;
+  Connection* connection = static_cast<Connection*>(handle->data);
+  *buf =  connection->internal_alloc_buffer(suggested_size);
 }
 #endif
 
@@ -477,24 +613,25 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, const uv_buf_t* buf
     if (nread != UV_EOF) {
 #endif
       LOG_ERROR("Read error '%s' on host %s",
-                UV_ERRSTR(nread),
+                UV_ERRSTR(nread, connection->loop_),
                 connection->addr_string_.c_str());
     }
     connection->defunct();
+
 #if UV_VERSION_MAJOR == 0
-    delete[] buf.base;
+    connection->internal_reuse_buffer(buf);
 #else
-    delete[] buf->base;
+    connection->internal_reuse_buffer(*buf);
 #endif
     return;
   }
 
 #if UV_VERSION_MAJOR == 0
   connection->consume(buf.base, nread);
-  delete[] buf.base;
+  connection->internal_reuse_buffer(buf);
 #else
   connection->consume(buf->base, nread);
-  delete[] buf->base;
+  connection->internal_reuse_buffer(*buf);
 #endif
 }
 
@@ -529,7 +666,7 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
     if (nread != UV_EOF) {
 #endif
       LOG_ERROR("Read error '%s' on host %s",
-                UV_ERRSTR(nread),
+                UV_ERRSTR(nread, connection->loop_),
                 connection->addr_string_.c_str());
     }
     connection->defunct();
@@ -545,14 +682,15 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
       connection->consume(buf, rc);
     }
     if (rc <= 0 && ssl_session->has_error()) {
-      connection->notify_error_ssl("Unable to decrypt data: " + ssl_session->error_message());
+      connection->notify_error("Unable to decrypt data: " + ssl_session->error_message(),
+                               CONNECTION_ERROR_SSL);
     }
   } else {
     connection->ssl_handshake();
   }
 }
 
-void Connection::on_timeout(RequestTimer* timer) {
+void Connection::on_timeout(Timer* timer) {
   Handler* handler = static_cast<Handler*>(timer->data());
   Connection* connection = handler->connection();
   LOG_INFO("Request timed out to host %s", connection->addr_string_.c_str());
@@ -577,21 +715,23 @@ void Connection::on_authenticate() {
   }
 }
 
-void Connection::on_auth_challenge(AuthResponseRequest* request, const std::string& token) {
+void Connection::on_auth_challenge(const AuthResponseRequest* request,
+                                   const std::string& token) {
   AuthResponseRequest* auth_response
       = new AuthResponseRequest(request->auth()->evaluate_challenge(token),
-                                request->auth().release());
+                                request->auth());
   write(new StartupHandler(this, auth_response));
 }
 
-void Connection::on_auth_success(AuthResponseRequest* request, const std::string& token) {
+void Connection::on_auth_success(const AuthResponseRequest* request,
+                                 const std::string& token) {
   request->auth()->on_authenticate_success(token);
   on_ready();
 }
 
 void Connection::on_ready() {
-  if (!is_registered_for_events_ && listener_->event_types() != 0) {
-    is_registered_for_events_ = true;
+  if (state_ == CONNECTION_STATE_CONNECTED && listener_->event_types() != 0) {
+    set_state(CONNECTION_STATE_REGISTERING_EVENTS);
     write(new StartupHandler(this, new RegisterRequest(listener_->event_types())));
     return;
   }
@@ -599,9 +739,7 @@ void Connection::on_ready() {
   if (keyspace_.empty()) {
     notify_ready();
   } else {
-    QueryRequest* query = new QueryRequest();
-    query->set_query("use \"" + keyspace_ + "\"");
-    write(new StartupHandler(this, query));
+    write(new StartupHandler(this, new QueryRequest("use \"" + keyspace_ + "\"")));
   }
 }
 
@@ -628,42 +766,56 @@ void Connection::on_pending_schema_agreement(Timer* timer) {
   delete pending_schema_agreement;
 }
 
-void Connection::stop_connect_timer() {
-  if (connect_timer_ != NULL) {
-    Timer::stop(connect_timer_);
-    connect_timer_ = NULL;
-  }
-}
-
 void Connection::notify_ready() {
-  stop_connect_timer();
-  state_ = CONNECTION_STATE_READY;
-  set_is_available(true);
+  connect_timer_.stop();
+  restart_heartbeat_timer();
+  set_state(CONNECTION_STATE_READY);
   listener_->on_ready(this);
 }
 
-void Connection::notify_error(const std::string& error) {
-  if (state_ == CONNECTION_STATE_READY) {
-    LOG_ERROR("Host %s had the following error: '%s'",
-              addr_string_.c_str(), error.c_str());
-  } else {
-    LOG_ERROR("Host %s had the following error on startup: '%s'",
-              addr_string_.c_str(), error.c_str());
+void Connection::notify_error(const std::string& message, ConnectionError code) {
+  error_message_ = message;
+  error_code_ = code;
+
+  switch (code) {
+    case CONNECTION_OK:
+      assert(false && "Notified error without an error");
+      return;
+
+    case CONNECTION_ERROR_INVALID_PROTOCOL:
+      LOG_WARN("Host %s received invalid protocol response %s",
+               addr_string_.c_str(), message.c_str());
+      break;
+
+    case CONNECTION_ERROR_SSL:
+      ssl_error_code_ = ssl_session_->error_code();
+      log_error(message);
+      break;
+
+    default:
+      log_error(message);
+      break;
   }
+
   defunct();
 }
 
-void Connection::notify_error_ssl(const std::string& error) {
-  ssl_error_code_ = ssl_session_->error_code();
-  ssl_error_ = error;
-  notify_error(error);
+void Connection::log_error(const std::string& error) {
+  if (state_ == CONNECTION_STATE_READY) {
+    LOG_ERROR("Host %s had the following error: %s",
+              addr_string_.c_str(), error.c_str());
+  } else {
+    LOG_ERROR("Host %s had the following error on startup: %s",
+              addr_string_.c_str(), error.c_str());
+  }
+  defunct();
 }
 
 void Connection::ssl_handshake() {
   if (!ssl_session_->is_handshake_done()) {
     ssl_session_->do_handshake();
     if (ssl_session_->has_error()) {
-      notify_error_ssl("Error during SSL handshake: " + ssl_session_->error_message());
+      notify_error("Error during SSL handshake: " + ssl_session_->error_message(), CONNECTION_ERROR_SSL);
       return;
     }
   }
@@ -680,7 +832,7 @@ void Connection::ssl_handshake() {
   if (ssl_session_->is_handshake_done()) {
     ssl_session_->verify();
     if (ssl_session_->has_error()) {
-      notify_error_ssl("Error verifying peer certificate: " + ssl_session_->error_message());
+      notify_error("Error verifying peer certificate: " + ssl_session_->error_message(), CONNECTION_ERROR_SSL);
       return;
     }
     on_connected();
@@ -699,10 +851,10 @@ void Connection::send_credentials() {
 }
 
 void Connection::send_initial_auth_response() {
-  Authenticator* auth = config_.auth_provider()->new_authenticator(address_);
-  if (auth == NULL) {
-    auth_error_ = "Authentication required but no auth provider set";
-    notify_error(auth_error_);
+  SharedRefPtr<Authenticator> auth(
+        config_.auth_provider()->new_authenticator(address_));
+  if (!auth) {
+    notify_error("Authentication required but no auth provider set", CONNECTION_ERROR_AUTH);
   } else {
     AuthResponseRequest* auth_response
         = new AuthResponseRequest(auth->initial_response(), auth);
@@ -710,11 +862,45 @@ void Connection::send_initial_auth_response() {
   }
 }
 
-void Connection::PendingSchemaAgreement::stop_timer() {
-  if (timer != NULL) {
-    Timer::stop(timer);
-    timer = NULL;
+void Connection::restart_heartbeat_timer() {
+  if (config_.connection_heartbeat_interval_secs() > 0) {
+    heartbeat_timer_.start(loop_,
+                           1000 * config_.connection_heartbeat_interval_secs(),
+                           this, on_heartbeat);
   }
+}
+
+void Connection::on_heartbeat(Timer* timer) {
+  Connection* connection = static_cast<Connection*>(timer->data());
+
+  if (connection->idle_start_time_ms_ == 0) {
+    connection->idle_start_time_ms_ = get_time_since_epoch_ms();
+  } else if ((get_time_since_epoch_ms() - connection->idle_start_time_ms_) / 1000 >
+             connection->config().connection_idle_timeout_secs()){
+    connection->notify_error("Failed to send a heartbeat within connection idle interval. "
+                             "Terminating connection...",
+                 CONNECTION_ERROR_TIMEOUT);
+    return;
+  }
+
+  if (!connection->heartbeat_outstanding_) {
+    if (!connection->internal_write(new HeartbeatHandler(connection), true, false)) {
+      // Recycling only this connection with a timeout error. This is unlikely and
+      // it means the connection ran out of stream IDs as a result of requests
+      // that never returned and as a result timed out.
+      connection->notify_error("No streams IDs available for heartbeat request. "
+                               "Terminating connection...",
+                               CONNECTION_ERROR_TIMEOUT);
+      return;
+    }
+    connection->heartbeat_outstanding_ = true;
+  }
+
+  connection->restart_heartbeat_timer();
+}
+
+void Connection::PendingSchemaAgreement::stop_timer() {
+  timer.stop();
 }
 
 Connection::PendingWriteBase::~PendingWriteBase() {
@@ -752,13 +938,13 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
           connection->pending_reads_.add_to_back(handler);
         } else {
           if (!connection->is_closing()) {
-            LOG_ERROR("Write error '%s' on host %s",
-                      UV_ERRSTR(status),
-                      connection->addr_string_.c_str());
+            connection->notify_error("Write error '" +
+                                     std::string(UV_ERRSTR(status, connection->loop_)) +
+                                     "'");
             connection->defunct();
           }
 
-          connection->stream_manager_.release_stream(handler->stream());
+          connection->stream_manager_.release(handler->stream());
           handler->stop_timer();
           handler->set_state(Handler::REQUEST_STATE_DONE);
           handler->on_error(CASS_ERROR_LIB_WRITE_ERROR,
@@ -781,6 +967,12 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
         handler->dec_ref();
         break;
 
+      case Handler::REQUEST_STATE_RETRY_WRITE_OUTSTANDING:
+        handler->stop_timer();
+        handler->retry();
+        handler->dec_ref();
+        break;
+
       default:
         assert(false && "Invalid request state after write finished");
         break;
@@ -789,8 +981,9 @@ void Connection::PendingWriteBase::on_write(uv_write_t* req, int status) {
 
   connection->pending_writes_size_ -= pending_write->size();
   if (connection->pending_writes_size_ <
-      connection->config_.write_bytes_low_water_mark()) {
-    connection->set_is_available(true);
+      connection->config_.write_bytes_low_water_mark() &&
+      connection->state_ == CONNECTION_STATE_OVERWHELMED) {
+    connection->set_state(CONNECTION_STATE_READY);
   }
 
   connection->pending_writes_.remove(pending_write);
@@ -858,7 +1051,7 @@ void Connection::PendingWriteSsl::encrypt() {
     if (is_done || copied == SSL_WRITE_SIZE) {
       int rc = ssl_session->encrypt(buf, copied);
       if (rc <= 0 && ssl_session->has_error()) {
-        connection_->notify_error("Unable to encrypt data: " + ssl_session->error_message());
+        connection_->notify_error("Unable to encrypt data: " + ssl_session->error_message(), CONNECTION_ERROR_SSL);
         return;
       }
       copied = 0;
@@ -926,10 +1119,11 @@ Connection::SslHandshakeWriter::SslHandshakeWriter(Connection* connection, char*
 void Connection::SslHandshakeWriter::on_write(uv_write_t* req, int status) {
   SslHandshakeWriter* writer = static_cast<SslHandshakeWriter*>(req->data);
   if (status != 0) {
-    writer->connection_->notify_error("Failed to write during SSL handshake");
+    writer->connection_->notify_error("Write error '" +
+                                      std::string(UV_ERRSTR(status, writer->connection_->loop_)) +
+                                      "'");
   }
   delete writer;
 }
-
 
 } // namespace cass

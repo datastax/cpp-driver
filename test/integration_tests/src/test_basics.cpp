@@ -30,6 +30,7 @@
 #include <boost/chrono.hpp>
 
 #include "cassandra.h"
+#include "constants.hpp"
 #include "test_utils.hpp"
 
 struct BasicTests : public test_utils::SingleSessionTest {
@@ -150,7 +151,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query);
       insert_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
-
+    
     BOOST_REQUIRE(cass_statement_bind_uuid(insert_statement.get(), 0, tweet_id) == CASS_OK);
     BOOST_REQUIRE(test_utils::Value<T>::bind(insert_statement.get(), 1, test_utils::Value<T>::min_value()) == CASS_OK);
     BOOST_REQUIRE(test_utils::Value<T>::bind(insert_statement.get(), 2, test_utils::Value<T>::max_value()) == CASS_OK);
@@ -233,8 +234,8 @@ struct BasicTests : public test_utils::SingleSessionTest {
                                            % table_name % type_name));
 
     /*
-     * Bound parameters or prepared statement validation
-     */
+    * Bound parameters or prepared statement validation
+    */
 
     // Create insert statement for bound parameters
     CassUuid tweet_id = test_utils::generate_random_uuid(uuid_gen);
@@ -246,7 +247,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query);
       insert_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
-
+    
     BOOST_REQUIRE(cass_statement_bind_uuid(insert_statement.get(), 0, tweet_id) == CASS_OK);
     BOOST_REQUIRE(cass_statement_bind_null(insert_statement.get(), 1) == CASS_OK);
     test_utils::CassFuturePtr insert_future(cass_session_execute(session, insert_statement.get()));
@@ -261,7 +262,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, select_query);
       select_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
-
+    
     BOOST_REQUIRE(cass_statement_bind_uuid(select_statement.get(), 0, tweet_id) == CASS_OK);
     test_utils::CassFuturePtr select_future(cass_session_execute(session, select_statement.get()));
     test_utils::wait_and_check_error(select_future.get());
@@ -403,7 +404,7 @@ BOOST_AUTO_TEST_CASE(min_max)
 
   {
     CassUuid value;
-    cass_uuid_max_from_time(std::numeric_limits<uint64_t>::max(), &value);
+    cass_uuid_max_from_time(CASS_UINT64_MAX, &value);
     insert_single_value<CassUuid>(CASS_VALUE_TYPE_TIMEUUID, value);
   }
 }

@@ -45,6 +45,8 @@
 
 struct SessionTests {
   SessionTests() {
+    boost::debug::detect_memory_leaks(false);
+
     //Force the boost test messages to be displayed
     //boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages); //TODO: Make configurable
   }
@@ -74,7 +76,7 @@ BOOST_AUTO_TEST_CASE(connect_invalid_name)
 
 BOOST_AUTO_TEST_CASE(connect_invalid_keyspace)
 {
-  test_utils::CassLog::reset("Error response: 'Keyspace 'invalid' does not exist");
+  test_utils::CassLog::reset("Received error response 'Keyspace 'invalid' does not exist");
 
   CassError code;
 

@@ -32,7 +32,8 @@ static inline bool contains(const CopyOnWriteHostVec& replicas, const Address& a
 
 QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspace,
                                             const Request* request,
-                                            const TokenMap& token_map) {
+                                            const TokenMap& token_map,
+                                            Request::EncodingCache* cache) {
   if (request != NULL) {
     switch (request->opcode()) {
       {
@@ -44,11 +45,11 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspac
         const std::string& keyspace = statement_keyspace.empty()
                                       ? connected_keyspace : statement_keyspace;
         std::string routing_key;
-        if (rr->get_routing_key(&routing_key) && !keyspace.empty()) {
+        if (rr->get_routing_key(&routing_key, cache) && !keyspace.empty()) {
           CopyOnWriteHostVec replicas = token_map.get_replicas(keyspace, routing_key);
           if (!replicas->empty()) {
             return new TokenAwareQueryPlan(child_policy_.get(),
-                                           child_policy_->new_query_plan(connected_keyspace, request, token_map),
+                                           child_policy_->new_query_plan(connected_keyspace, request, token_map, cache),
                                            replicas,
                                            index_++);
           }
@@ -60,7 +61,7 @@ QueryPlan* TokenAwarePolicy::new_query_plan(const std::string& connected_keyspac
         break;
     }
   }
-  return child_policy_->new_query_plan(connected_keyspace, request, token_map);
+  return child_policy_->new_query_plan(connected_keyspace, request, token_map, cache);
 }
 
 SharedRefPtr<Host> TokenAwarePolicy::TokenAwareQueryPlan::compute_next()  {

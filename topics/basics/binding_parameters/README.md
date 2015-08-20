@@ -6,7 +6,7 @@ The ‘?’ marker is used to denote the bind variables in a query string. This 
 /* Create a statement with a single parameter */
 CassStatement* statement = cass_statement_new("SELECT * FROM table1 WHERE column1 = ?", 1);
 
-cass_statement_bind_string(statement, 0, cass_string_init("abc"));
+cass_statement_bind_string(statement, 0, "abc");
 
 /* Execute statement */
 
@@ -22,7 +22,7 @@ Variables can only be bound by name for prepared statements. This limitation exi
 CassStatement* statement = cass_prepared_bind(prepared);
 
 /* The parameter can now be bound by name */
-cass_statement_bind_string_by_name(statement, "column1", cass_string_init("abc"));
+cass_statement_bind_string_by_name(statement, "column1", "abc");
 
 /* Execute statement */
 
@@ -38,7 +38,7 @@ The data of values bound to a statement are copied into the statement. That mean
 CassStatement* statement
   = cass_statement_new("INSERT INTO table1 (column1, column2) VALUES (?, ?)", 2);
 
-cass_statement_bind_string(statement, 0, cass_string_init("abc"));
+cass_statement_bind_string(statement, 0, "abc");
 
 cass_byte_t* bytes;
 cass_statement_bind_custom(statement, 1, 8 * 1024 * 1024, &bytes);
@@ -51,18 +51,18 @@ cass_statement_bind_custom(statement, 1, 8 * 1024 * 1024, &bytes);
 
 ## Constructing Collections
 
-Collections are supported using [`CassCollection`](http://datastax.github.io/cpp-driver/api/CassCollection/) objects; supporting `list`, `map` and `set` Cassandra types. The code below shows how to construct a `list` collection; however, a set can be constructed in a very similiar way. The only difference is the type `CASS_COLLECTION_TYPE_SET` is used to create the collection instead of `CASS_COLLECTION_TYPE_LIST`.
+Collections are supported using [`CassCollection`](http://datastax.github.io/cpp-driver/api/CassCollection/) objects; supporting `list`, `map` and `set` Cassandra types. The code below shows how to construct a `list` collection; however, a set can be constructed in a very similar way. The only difference is the type `CASS_COLLECTION_TYPE_SET` is used to create the collection instead of `CASS_COLLECTION_TYPE_LIST`.
 
-**Important**: Values appended to the colleciton can be freed immediately afterward because the values are copied.
+**Important**: Values appended to the collection can be freed immediately afterward because the values are copied.
 
 ```c
 CassStatement* statement = cass_statement_new(query, 1);
 
 CassCollection* list = cass_collection_new(CASS_COLLECTION_TYPE_LIST, 3);
 
-cass_collection_append_string(list, cass_string_init("123"));
-cass_collection_append_string(list, cass_string_init("456"));
-cass_collection_append_string(list, cass_string_init("789"));
+cass_collection_append_string(list, "123");
+cass_collection_append_string(list, "456");
+cass_collection_append_string(list, "789");
 
 cass_statement_bind_collection(statement, 0, list);
 
@@ -70,7 +70,7 @@ cass_statement_bind_collection(statement, 0, list);
 cass_collection_free(list);
 ```
 
-Maps are built similarly, but the key and value need to be interleaved as they are appended to the collecion.
+Maps are built similarly, but the key and value need to be interleaved as they are appended to the collection.
 
 ```c
 CassStatement* statement = cass_statement_new(query, 1);
@@ -78,11 +78,11 @@ CassStatement* statement = cass_statement_new(query, 1);
 CassCollection* map = cass_collection_new(CASS_COLLECTION_TYPE_MAP, 2);
 
 /* map["abc"] = 123 */
-cass_collection_append_string(map, cass_string_init("abc"));
+cass_collection_append_string(map, "abc");
 cass_collection_append_int32(map, 123);
 
 /* map["def"] = 456 */
-cass_collection_append_string(map, cass_string_init("def"));
+cass_collection_append_string(map, "def");
 cass_collection_append_int32(map, 456);
 
 cass_statement_bind_collection(statement, 0, map);
@@ -90,3 +90,11 @@ cass_statement_bind_collection(statement, 0, map);
 /* The colleciton can be freed after binding */
 cass_collection_free(map);
 ```
+
+## Nested Collections
+
+When using Cassandra 2.1+ it is possible to nest collections. A collection can
+be added to another collection using [`cass_collection_append_collection()`].
+
+[`cass_collection_append_collection()`]:
+http://datastax.github.io/cpp-driver/api/CassCollection/#cass-collection-append-collection

@@ -31,8 +31,11 @@
 #include "scoped_ptr.hpp"
 #include "ssl.hpp"
 #include "stream_manager.hpp"
+#include "timer.hpp"
 
 #include <uv.h>
+
+#include <stack>
 
 namespace cass {
 
@@ -42,7 +45,6 @@ class Config;
 class Connector;
 class EventResponse;
 class Request;
-class Timer;
 
 class Connection {
 public:
@@ -50,19 +52,34 @@ public:
     CONNECTION_STATE_NEW,
     CONNECTION_STATE_CONNECTING,
     CONNECTION_STATE_CONNECTED,
+    CONNECTION_STATE_REGISTERING_EVENTS,
     CONNECTION_STATE_READY,
-    CONNECTION_STATE_CLOSING,
-    CONNECTION_STATE_CLOSED
+    CONNECTION_STATE_OVERWHELMED,
+    CONNECTION_STATE_CLOSE,
+    CONNECTION_STATE_CLOSE_DEFUNCT
+  };
+
+  enum ConnectionError {
+    CONNECTION_OK,
+    CONNECTION_ERROR_GENERIC,
+    CONNECTION_ERROR_TIMEOUT,
+    CONNECTION_ERROR_INVALID_PROTOCOL,
+    CONNECTION_ERROR_AUTH,
+    CONNECTION_ERROR_SSL
   };
 
   class Listener {
   public:
-    Listener(int event_types = 0)
-      : event_types_(event_types) {}
+    Listener()
+      : event_types_(0) {}
 
     virtual ~Listener() {}
 
     int event_types() const { return event_types_; }
+
+    void set_event_types(int event_types) {
+      event_types_ = event_types;
+    }
 
     virtual void on_ready(Connection* connection) = 0;
     virtual void on_close(Connection* connection) = 0;
@@ -71,7 +88,7 @@ public:
     virtual void on_event(EventResponse* response) = 0;
 
   private:
-    const int event_types_;
+    int event_types_;
   };
 
   Connection(uv_loop_t* loop,
@@ -81,6 +98,7 @@ public:
              const std::string& keyspace,
              int protocol_version,
              Listener* listener);
+  ~Connection();
 
   void connect();
 
@@ -98,17 +116,29 @@ public:
   void close();
   void defunct();
 
-  bool is_closing() const { return state_ == CONNECTION_STATE_CLOSING; }
-  bool is_ready() const { return state_ == CONNECTION_STATE_READY; }
-  bool is_available() const { return is_available_; }
-  bool is_defunct() const { return is_defunct_; }
-  bool is_invalid_protocol() const { return is_invalid_protocol_; }
-  bool is_critical_failure() const {
-    return is_invalid_protocol_ || !auth_error_.empty() || !ssl_error_.empty();
+  bool is_closing() const {
+    return state_ == CONNECTION_STATE_CLOSE ||
+        state_ == CONNECTION_STATE_CLOSE_DEFUNCT;
   }
 
-  const std::string& auth_error() const { return auth_error_; }
-  const std::string& ssl_error() const { return ssl_error_; }
+  bool is_ready() const { return state_ == CONNECTION_STATE_READY; }
+  bool is_available() const { return is_ready(); }
+  bool is_defunct() const { return state_ == CONNECTION_STATE_CLOSE_DEFUNCT; }
+
+  bool is_invalid_protocol() const { return error_code_ == CONNECTION_ERROR_INVALID_PROTOCOL; }
+  bool is_auth_error() const { return error_code_ == CONNECTION_ERROR_AUTH; }
+  bool is_ssl_error() const { return error_code_ == CONNECTION_ERROR_SSL; }
+  bool is_timeout_error() const { return error_code_ == CONNECTION_ERROR_TIMEOUT; }
+
+  bool is_critical_failure() const {
+    return error_code_ == CONNECTION_ERROR_INVALID_PROTOCOL ||
+        error_code_ == CONNECTION_ERROR_AUTH ||
+        error_code_ == CONNECTION_ERROR_SSL;
+  }
+
+  ConnectionError error_code() const { return error_code_; }
+  const std::string& error_message() const { return error_message_; }
+
   CassError ssl_error_code() const { return ssl_error_code_; }
 
   int protocol_version() const { return protocol_version_; }
@@ -116,7 +146,7 @@ public:
   size_t available_streams() const { return stream_manager_.available_streams(); }
   size_t pending_request_count() const { return stream_manager_.pending_streams(); }
 
-  static void on_timeout(RequestTimer* timer);
+  static void on_timeout(Timer* timer);
 
 private:
   class SslHandshakeWriter {
@@ -140,11 +170,8 @@ private:
   class StartupHandler : public Handler {
   public:
     StartupHandler(Connection* connection, Request* request)
-        : connection_(connection)
-        , request_(request) {}
-
-    const Request* request() const {
-      return request_.get();
+        : Handler(request) {
+      set_connection(connection);
     }
 
     virtual void on_set(ResponseMessage* response);
@@ -153,9 +180,15 @@ private:
 
   private:
     void on_result_response(ResponseMessage* response);
+  };
 
-    Connection* connection_;
-    ScopedRefPtr<Request> request_;
+  class HeartbeatHandler : public Handler {
+  public:
+    HeartbeatHandler(Connection* connection);
+
+    virtual void on_set(ResponseMessage* response);
+    virtual void on_error(CassError code, const std::string& message);
+    virtual void on_timeout();
   };
 
   class PendingWriteBase : public List<PendingWriteBase>::Node {
@@ -218,23 +251,26 @@ private:
   struct PendingSchemaAgreement
       : public List<PendingSchemaAgreement>::Node {
     PendingSchemaAgreement(const SharedRefPtr<SchemaChangeHandler>& handler)
-        : handler(handler)
-        , timer(NULL) {}
+        : handler(handler) { }
 
     void stop_timer();
 
     SharedRefPtr<SchemaChangeHandler> handler;
-    Timer* timer;
+    Timer timer;
   };
 
-  void set_is_available(bool is_available);
-  void actually_close();
+  bool internal_write(Handler* request, bool flush_immediately, bool reset_idle_time);
+  void internal_close(ConnectionState close_state);
+  void set_state(ConnectionState state);
   void consume(char* input, size_t size);
   void maybe_set_keyspace(ResponseMessage* response);
 
   static void on_connect(Connector* connecter);
   static void on_connect_timeout(Timer* timer);
   static void on_close(uv_handle_t* handle);
+
+  uv_buf_t internal_alloc_buffer(size_t suggested_size);
+  void internal_reuse_buffer(uv_buf_t buf);
 
 #if UV_VERSION_MAJOR == 0
   static uv_buf_t alloc_buffer(uv_handle_t* handle, size_t suggested_size);
@@ -250,32 +286,29 @@ private:
 
   void on_connected();
   void on_authenticate();
-  void on_auth_challenge(AuthResponseRequest* auth_response, const std::string& token);
-  void on_auth_success(AuthResponseRequest* auth_response, const std::string& token);
+  void on_auth_challenge(const AuthResponseRequest* auth_response, const std::string& token);
+  void on_auth_success(const AuthResponseRequest* auth_response, const std::string& token);
   void on_ready();
   void on_set_keyspace();
   void on_supported(ResponseMessage* response);
   static void on_pending_schema_agreement(Timer* timer);
 
-  void stop_connect_timer();
   void notify_ready();
-  void notify_error(const std::string& error);
-  void notify_error_ssl(const std::string& error);
+  void notify_error(const std::string& message, ConnectionError code = CONNECTION_ERROR_GENERIC);
+  void log_error(const std::string& error);
 
   void ssl_handshake();
 
   void send_credentials();
   void send_initial_auth_response();
 
+  void restart_heartbeat_timer();
+  static void on_heartbeat(Timer* timer);
+
 private:
   ConnectionState state_;
-  bool is_defunct_;
-  bool is_invalid_protocol_;
-  bool is_registered_for_events_;
-  bool is_available_;
-
-  std::string auth_error_;
-  std::string ssl_error_;
+  ConnectionError error_code_;
+  std::string error_message_;
   CassError ssl_error_code_;
 
   size_t pending_writes_size_;
@@ -295,14 +328,16 @@ private:
   ScopedPtr<ResponseMessage> response_;
   StreamManager<Handler*> stream_manager_;
 
-  // the actual connection
   uv_tcp_t socket_;
-  // supported stuff sent in start up message
-  std::string compression_;
-  std::string version_;
-
-  Timer* connect_timer_;
+  Timer connect_timer_;
   ScopedPtr<SslSession> ssl_session_;
+
+  uint64_t idle_start_time_ms_;
+  bool heartbeat_outstanding_;
+  Timer heartbeat_timer_;
+
+  // buffer reuse for libuv
+  std::stack<uv_buf_t> buffer_reuse_list_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Connection);

@@ -68,6 +68,39 @@ BOOST_AUTO_TEST_CASE(v1)
   cass_uuid_gen_free(uuid_gen);
 }
 
+BOOST_AUTO_TEST_CASE(v1_min_max)
+{
+  cass_uint64_t founded_ts = 1270080000; // April 2010
+  cass_uint64_t curr_ts = cass::get_time_since_epoch_in_ms();
+
+  CassUuid min_uuid_1;
+  CassUuid min_uuid_2;
+  cass_uuid_min_from_time(founded_ts, &min_uuid_1);
+  cass_uuid_min_from_time(curr_ts, &min_uuid_2);
+  BOOST_CHECK(founded_ts == cass_uuid_timestamp(min_uuid_1));
+  BOOST_CHECK(curr_ts == cass_uuid_timestamp(min_uuid_2));
+  BOOST_CHECK(cass_uuid_version(min_uuid_1) == 1);
+  BOOST_CHECK(cass_uuid_version(min_uuid_2) == 1);
+  BOOST_CHECK_EQUAL(min_uuid_1.clock_seq_and_node, min_uuid_2.clock_seq_and_node);
+  BOOST_CHECK_NE(min_uuid_1.time_and_version, min_uuid_2.time_and_version);
+
+  CassUuid max_uuid_1;
+  CassUuid max_uuid_2;
+  cass_uuid_max_from_time(founded_ts, &max_uuid_1);
+  cass_uuid_max_from_time(curr_ts, &max_uuid_2);
+  BOOST_CHECK(founded_ts == cass_uuid_timestamp(max_uuid_1));
+  BOOST_CHECK(curr_ts == cass_uuid_timestamp(max_uuid_2));
+  BOOST_CHECK(cass_uuid_version(max_uuid_1) == 1);
+  BOOST_CHECK(cass_uuid_version(max_uuid_2) == 1);
+  BOOST_CHECK_EQUAL(max_uuid_1.clock_seq_and_node, max_uuid_2.clock_seq_and_node);
+  BOOST_CHECK_NE(max_uuid_1.time_and_version, max_uuid_2.time_and_version);
+
+  BOOST_CHECK_NE(min_uuid_1.clock_seq_and_node, max_uuid_1.clock_seq_and_node);
+  BOOST_CHECK_NE(min_uuid_1.clock_seq_and_node, max_uuid_2.clock_seq_and_node);
+  BOOST_CHECK_NE(min_uuid_2.clock_seq_and_node, max_uuid_1.clock_seq_and_node);
+  BOOST_CHECK_NE(min_uuid_2.clock_seq_and_node, max_uuid_2.clock_seq_and_node);
+}
+
 BOOST_AUTO_TEST_CASE(v1_node)
 {
   CassUuidGen* uuid_gen = cass_uuid_gen_new_with_node(0x0000112233445566LL);

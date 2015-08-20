@@ -30,6 +30,7 @@
 #include <boost/thread/lock_guard.hpp>
 
 #include <openssl/bn.h>
+#include <openssl/crypto.h>
 
 #include <uv.h>
 
@@ -172,10 +173,9 @@ private:
     //TODO: Add check for bit to return negative values
     BIGNUM *value = BN_bin2bn(reinterpret_cast<unsigned const char *>(byte_array), static_cast<int>(strlen(byte_array)), NULL);
     if (value) {
-      char * decimal = BN_bn2dec(value);
+      char* decimal = BN_bn2dec(value);
       result = std::string(decimal);
-      delete decimal;
-      decimal = NULL;
+      OPENSSL_free(decimal);
 
       //Normalize - strip leading zeros
       for (unsigned int n = 0; n < result.size(); ++n) {
@@ -299,6 +299,33 @@ struct Deleter<CassCollection> {
 };
 
 template<>
+struct Deleter<CassDataType> {
+  void operator()(CassDataType* ptr) {
+    if (ptr != NULL) {
+      cass_data_type_free(ptr);
+    }
+  }
+};
+
+template<>
+struct Deleter<CassTuple> {
+  void operator()(CassTuple* ptr) {
+    if (ptr != NULL) {
+      cass_tuple_free(ptr);
+    }
+  }
+};
+
+template<>
+struct Deleter<CassUserType> {
+  void operator()(CassUserType* ptr) {
+    if (ptr != NULL) {
+      cass_user_type_free(ptr);
+    }
+  }
+};
+
+template<>
 struct Deleter<const CassPrepared> {
   void operator()(const CassPrepared* ptr) {
     if (ptr != NULL) {
@@ -325,6 +352,15 @@ struct Deleter<CassUuidGen> {
   }
 };
 
+template<>
+struct Deleter<const CassSchema> {
+  void operator()(const CassSchema* ptr) {
+    if (ptr != NULL) {
+      cass_schema_free(ptr);
+    }
+  }
+};
+
 template <class T>
 class CassSharedPtr : public boost::shared_ptr<T> {
 public:
@@ -339,9 +375,13 @@ typedef CassSharedPtr<CassStatement> CassStatementPtr;
 typedef CassSharedPtr<const CassResult> CassResultPtr;
 typedef CassSharedPtr<CassIterator> CassIteratorPtr;
 typedef CassSharedPtr<CassCollection> CassCollectionPtr;
+typedef CassSharedPtr<CassDataType> CassDataTypePtr;
+typedef CassSharedPtr<CassTuple> CassTuplePtr;
+typedef CassSharedPtr<CassUserType> CassUserTypePtr;
 typedef CassSharedPtr<const CassPrepared> CassPreparedPtr;
 typedef CassSharedPtr<CassBatch> CassBatchPtr;
 typedef CassSharedPtr<CassUuidGen> CassUuidGenPtr;
+typedef CassSharedPtr<const CassSchema> CassSchemaPtr;
 
 template<class T>
 struct Value;
@@ -352,8 +392,20 @@ struct Value<cass_int32_t> {
     return cass_statement_bind_int32(statement, index, value);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, cass_int32_t value) {
+    return cass_statement_bind_int32_by_name(statement, name, value);
+  }
+
   static CassError append(CassCollection* collection, cass_int32_t value) {
     return cass_collection_append_int32(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, cass_int32_t value) {
+    return cass_tuple_set_int32(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, cass_int32_t value) {
+    return cass_user_type_set_int32(user_type, index, value);
   }
 
   static CassError get(const CassValue* value, cass_int32_t* output) {
@@ -385,8 +437,20 @@ struct Value<cass_int64_t> {
     return cass_statement_bind_int64(statement, index, value);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, cass_int64_t value) {
+    return cass_statement_bind_int64_by_name(statement, name, value);
+  }
+
   static CassError append(CassCollection* collection, cass_int64_t value) {
     return cass_collection_append_int64(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, cass_int64_t value) {
+    return cass_tuple_set_int64(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, cass_int64_t value) {
+    return cass_user_type_set_int64(user_type, index, value);
   }
 
   static CassError get(const CassValue* value, cass_int64_t* output) {
@@ -418,8 +482,20 @@ struct Value<cass_float_t> {
     return cass_statement_bind_float(statement, index, value);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, cass_float_t value) {
+    return cass_statement_bind_float_by_name(statement, name, value);
+  }
+
   static CassError append(CassCollection* collection, cass_float_t value) {
     return cass_collection_append_float(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, cass_float_t value) {
+    return cass_tuple_set_float(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, cass_float_t value) {
+    return cass_user_type_set_float(user_type, index, value);
   }
 
   static CassError get(const CassValue* value, cass_float_t* output) {
@@ -451,8 +527,20 @@ struct Value<cass_double_t> {
     return cass_statement_bind_double(statement, index, value);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, cass_double_t value) {
+    return cass_statement_bind_double_by_name(statement, name, value);
+  }
+
   static CassError append(CassCollection* collection, cass_double_t value) {
     return cass_collection_append_double(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, cass_double_t value) {
+    return cass_tuple_set_double(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, cass_double_t value) {
+    return cass_user_type_set_double(user_type, index, value);
   }
 
   static CassError get(const CassValue* value, cass_double_t* output) {
@@ -484,8 +572,20 @@ struct Value<cass_bool_t> {
     return cass_statement_bind_bool(statement, index, value);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, cass_bool_t value) {
+    return cass_statement_bind_bool_by_name(statement, name, value);
+  }
+
   static CassError append(CassCollection* collection, cass_bool_t value) {
     return cass_collection_append_bool(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, cass_bool_t value) {
+    return cass_tuple_set_bool(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, cass_bool_t value) {
+    return cass_user_type_set_bool(user_type, index, value);
   }
 
   static CassError get(const CassValue* value, cass_bool_t* output) {
@@ -507,8 +607,20 @@ struct Value<CassString> {
     return cass_statement_bind_string_n(statement, index, value.data, value.length);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassString value) {
+    return cass_statement_bind_string_by_name_n(statement, name, strlen(name), value.data, value.length);
+  }
+
   static CassError append(CassCollection* collection, CassString value) {
     return cass_collection_append_string_n(collection, value.data, value.length);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, CassString value) {
+    return cass_tuple_set_string_n(tuple, index, value.data, value.length);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, CassString value) {
+    return cass_user_type_set_string_n(user_type, index, value.data, value.length);
   }
 
   static CassError get(const CassValue* value, CassString* output) {
@@ -533,8 +645,20 @@ struct Value<CassBytes> {
     return cass_statement_bind_bytes(statement, index, value.data, value.size);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassBytes value) {
+    return cass_statement_bind_bytes_by_name(statement, name, value.data, value.size);
+  }
+
   static CassError append(CassCollection* collection, CassBytes value) {
     return cass_collection_append_bytes(collection, value.data, value.size);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, CassBytes value) {
+    return cass_tuple_set_bytes(tuple, index, value.data, value.size);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, CassBytes value) {
+    return cass_user_type_set_bytes(user_type, index, value.data, value.size);
   }
 
   static CassError get(const CassValue* value, CassBytes* output) {
@@ -559,8 +683,20 @@ struct Value<CassInet> {
     return cass_statement_bind_inet(statement, index, value);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassInet value) {
+    return cass_statement_bind_inet_by_name(statement, name, value);
+  }
+
   static CassError append(CassCollection* collection, CassInet value) {
     return cass_collection_append_inet(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, CassInet value) {
+    return cass_tuple_set_inet(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, CassInet value) {
+    return cass_user_type_set_inet(user_type, index, value);
   }
 
   static CassError get(const CassValue* value, CassInet* output) {
@@ -606,8 +742,20 @@ struct Value<CassUuid> {
     return cass_statement_bind_uuid(statement, index, value);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassUuid value) {
+    return cass_statement_bind_uuid_by_name(statement, name, value);
+  }
+
   static CassError append(CassCollection* collection, CassUuid value) {
     return cass_collection_append_uuid(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, CassUuid value) {
+    return cass_tuple_set_uuid(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, CassUuid value) {
+    return cass_user_type_set_uuid(user_type, index, value);
   }
 
   static CassError get(const CassValue* value, CassUuid* output) {
@@ -646,8 +794,20 @@ struct Value<CassDecimal> {
     return cass_statement_bind_decimal(statement, index, value.varint, value.varint_size, value.scale);
   }
 
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassDecimal value) {
+    return cass_statement_bind_decimal_by_name(statement, name, value.varint, value.varint_size, value.scale);
+  }
+
   static CassError append(CassCollection* collection, CassDecimal value) {
     return cass_collection_append_decimal(collection, value.varint, value.varint_size, value.scale);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, CassDecimal value) {
+    return cass_tuple_set_decimal(tuple, index, value.varint, value.varint_size, value.scale);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, CassDecimal value) {
+    return cass_user_type_set_decimal(user_type, index, value.varint, value.varint_size, value.scale);
   }
 
   static CassError get(const CassValue* value, CassDecimal* output) {
@@ -677,7 +837,7 @@ struct Value<CassDecimal> {
     parametrized ctor. Derive from it to use it in your tests.
  */
 struct MultipleNodesTest {
-  MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 2, bool isSSL = false);
+  MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 3, bool isSSL = false);
   virtual ~MultipleNodesTest();
 
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
@@ -688,9 +848,10 @@ struct MultipleNodesTest {
 };
 
 struct SingleSessionTest : public MultipleNodesTest {
-  SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 2, bool isSSL = false);
+  SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 3, bool isSSL = false);
   virtual ~SingleSessionTest();
   void create_session();
+  void close_session();
 
   CassSession* session;
   CassSsl* ssl;

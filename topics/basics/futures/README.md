@@ -1,10 +1,10 @@
 # Futures
 
-Futures are returned from any driver call that would result in blocking the client application/thread. This allows the client application to continue processing and/or also submit multiple queries in succession. Although the driver has an asynchronous design it can be used sychronously by immediately attempting to get result or explicting waiting on the future.
+Futures are returned from any driver call that would result in blocking the client application/thread. This allows the client application to continue processing and/or also submit multiple queries in succession. Although the driver has an asynchronous design it can be used synchronously by immediately attempting to get result or explicitly waiting on the future.
 
 ## Waiting for Results
 
-Futures results can be waited on indefinately by either calling a wait method or by attempting to get the result. They can also be waited on for an explict amount of time or periodically polled without waiting to execute application code.
+Futures results can be waited on indefinitely by either calling a wait method or by attempting to get the result. They can also be waited on for an explicit amount of time or periodically polled without waiting to execute application code.
 
 ### Synchronously Waiting on the Future
 ```c

@@ -33,20 +33,14 @@ public:
                      const std::string& keyspace,
                      RequestHandler* request_handler);
 
-  virtual Request* request() const { return request_.get(); }
-
   virtual void on_set(ResponseMessage* response);
-
   virtual void on_error(CassError code, const std::string& message);
-
   virtual void on_timeout();
 
 private:
   void on_result_response(ResponseMessage* response);
 
 private:
-  Connection* connection_;
-  ScopedRefPtr<QueryRequest> request_;
   ScopedRefPtr<RequestHandler> request_handler_;
 };
 

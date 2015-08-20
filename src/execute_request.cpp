@@ -16,22 +16,44 @@
 
 #include "execute_request.hpp"
 
+#include "constants.hpp"
+#include "handler.hpp"
+
 namespace cass {
 
-int ExecuteRequest::encode(int version, BufferVec* bufs) const {
+int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const {
+  int32_t length = 0;
+  const std::string& id(prepared_->id());
+
+  // <kind><id><n><value_1>...<value_n> ([byte][short bytes][short][bytes]...[bytes])
+  int buf_size = sizeof(uint8_t) + sizeof(uint16_t) + id.size() + sizeof(uint16_t);
+
+  bufs->push_back(Buffer(buf_size));
+  length += buf_size;
+
+  Buffer& buf = bufs->back();
+  size_t pos = buf.encode_byte(0, kind());
+  pos = buf.encode_string(pos, id.data(), id.size());
+
+  buf.encode_uint16(pos, elements_count());
+  if (elements_count() > 0) {
+    length += copy_buffers(version, bufs, cache);
+  }
+
+  return length;
+}
+
+int ExecuteRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
   if (version == 1) {
-    return encode_v1(bufs);
-  } else if (version == 2) {
-    return encode_v2(bufs);
+    return internal_encode_v1(handler, bufs);
   } else {
-    return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
+    return internal_encode(version, handler, bufs);
   }
 }
 
-int ExecuteRequest::encode_v1(BufferVec* bufs) const {
-  const int version = 1;
-
+int ExecuteRequest::internal_encode_v1(Handler* handler, BufferVec* bufs) const {
   size_t length = 0;
+  const int version = 1;
 
   const std::string& prepared_id = prepared_->id();
 
@@ -47,9 +69,9 @@ int ExecuteRequest::encode_v1(BufferVec* bufs) const {
     size_t pos = buf.encode_string(0,
                                  prepared_id.data(),
                                  prepared_id.size());
-    buf.encode_uint16(pos, values_count());
+    buf.encode_uint16(pos, elements_count());
     // <value_1>...<value_n>
-    length += encode_values(version, bufs);
+    length += copy_buffers(version, bufs, handler->encoding_cache());
   }
 
   {
@@ -57,7 +79,7 @@ int ExecuteRequest::encode_v1(BufferVec* bufs) const {
     size_t buf_size = sizeof(uint16_t);
 
     Buffer buf(buf_size);
-    buf.encode_uint16(0, consistency());
+    buf.encode_uint16(0, handler->consistency());
     bufs->push_back(buf);
     length += buf_size;
   }
@@ -65,11 +87,9 @@ int ExecuteRequest::encode_v1(BufferVec* bufs) const {
   return length;
 }
 
-int ExecuteRequest::encode_v2(BufferVec* bufs) const {
-  const int version = 2;
-
-  uint8_t flags = 0;
-  size_t length = 0;
+int ExecuteRequest::internal_encode(int version, Handler* handler, BufferVec* bufs) const {
+  int length = 0;
+  uint8_t flags = this->flags();
 
   const std::string& prepared_id = prepared_->id();
 
@@ -78,13 +98,9 @@ int ExecuteRequest::encode_v2(BufferVec* bufs) const {
                           sizeof(uint16_t) + sizeof(uint8_t);
   size_t paging_buf_size = 0;
 
-  if (values_count() > 0) { // <values> = <n><value_1>...<value_n>
+  if (elements_count() > 0) { // <values> = <n><value_1>...<value_n>
     prepared_buf_size += sizeof(uint16_t); // <n> [short]
     flags |= CASS_QUERY_FLAG_VALUES;
-  }
-
-  if (skip_metadata()) {
-    flags |= CASS_QUERY_FLAG_SKIP_METADATA;
   }
 
   if (page_size() >= 0) {
@@ -102,6 +118,11 @@ int ExecuteRequest::encode_v2(BufferVec* bufs) const {
     flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
   }
 
+  if (version >= 3 && handler->timestamp() != CASS_INT64_MIN) {
+      paging_buf_size += sizeof(int64_t); // [long]
+      flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
+  }
+
   {
     bufs->push_back(Buffer(prepared_buf_size));
     length += prepared_buf_size;
@@ -110,12 +131,12 @@ int ExecuteRequest::encode_v2(BufferVec* bufs) const {
     size_t pos = buf.encode_string(0,
                                  prepared_id.data(),
                                  prepared_id.size());
-    pos = buf.encode_uint16(pos, consistency());
+    pos = buf.encode_uint16(pos, handler->consistency());
     pos = buf.encode_byte(pos, flags);
 
-    if (values_count() > 0) {
-      buf.encode_uint16(pos, values_count());
-      length += encode_values(version, bufs);
+    if (elements_count() > 0) {
+      buf.encode_uint16(pos, elements_count());
+      length += copy_buffers(version, bufs, handler->encoding_cache());
     }
   }
 
@@ -136,6 +157,10 @@ int ExecuteRequest::encode_v2(BufferVec* bufs) const {
 
     if (serial_consistency() != 0) {
       pos = buf.encode_uint16(pos, serial_consistency());
+    }
+
+    if (version >= 3 && handler->timestamp() != CASS_INT64_MIN) {
+      pos = buf.encode_int64(pos, handler->timestamp());
     }
   }
 

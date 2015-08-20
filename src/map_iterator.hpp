@@ -19,8 +19,8 @@
 
 #include "cassandra.h"
 #include "iterator.hpp"
-#include "value.hpp"
 #include "serialization.hpp"
+#include "value.hpp"
 
 namespace cass {
 
@@ -29,7 +29,7 @@ public:
   MapIterator(const Value* map)
       : Iterator(CASS_ITERATOR_TYPE_MAP)
       , map_(map)
-      , position_(map->buffer().data())
+      , position_(map->data())
       , index_(-1)
       , count_(map_->count()) {}
 

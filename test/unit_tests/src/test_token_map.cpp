@@ -19,6 +19,7 @@
 #endif
 
 #include "address.hpp"
+#include "constants.hpp"
 #include "md5.hpp"
 #include "murmur3.hpp"
 #include "token_map.hpp"
@@ -28,8 +29,6 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/random/mersenne_twister.hpp>
-
-#include <limits>
 
 cass::SharedRefPtr<cass::Host> create_host(const std::string& ip) {
   return cass::SharedRefPtr<cass::Host>(new cass::Host(cass::Address(ip, 4092), false));
@@ -93,9 +92,9 @@ BOOST_AUTO_TEST_CASE(murmur3)
 {
   TestTokenMap<int64_t> test_murmur3;
 
-  test_murmur3.tokens[std::numeric_limits<int64_t>::min() / 2] = create_host("1.0.0.1");
+  test_murmur3.tokens[CASS_INT64_MIN / 2] = create_host("1.0.0.1");
   test_murmur3.tokens[0] = create_host("1.0.0.2");
-  test_murmur3.tokens[std::numeric_limits<int64_t>::max() / 2] = create_host("1.0.0.3");
+  test_murmur3.tokens[CASS_INT64_MAX / 2] = create_host("1.0.0.3");
   // Anything greater than the last host should be wrapped around to host1
 
   test_murmur3.build(cass::Murmur3Partitioner::PARTITIONER_CLASS, "test");
@@ -178,9 +177,9 @@ BOOST_AUTO_TEST_CASE(remove_host)
   test_remove_host.strategy =
       cass::SharedRefPtr<cass::ReplicationStrategy>(new cass::SimpleStrategy("", 2));
 
-  test_remove_host.tokens[std::numeric_limits<int64_t>::min() / 2] = create_host("1.0.0.1");
+  test_remove_host.tokens[CASS_INT64_MIN / 2] = create_host("1.0.0.1");
   test_remove_host.tokens[0] = create_host("1.0.0.2");
-  test_remove_host.tokens[std::numeric_limits<int64_t>::max() / 2] = create_host("1.0.0.3");
+  test_remove_host.tokens[CASS_INT64_MAX / 2] = create_host("1.0.0.3");
 
   test_remove_host.build(cass::Murmur3Partitioner::PARTITIONER_CLASS, "test");
 
@@ -236,9 +235,9 @@ BOOST_AUTO_TEST_CASE(drop_keyspace)
   test_drop_keyspace.strategy =
       cass::SharedRefPtr<cass::ReplicationStrategy>(new cass::SimpleStrategy("", 2));
 
-  test_drop_keyspace.tokens[std::numeric_limits<int64_t>::min() / 2] = create_host("1.0.0.1");
+  test_drop_keyspace.tokens[CASS_INT64_MIN / 2] = create_host("1.0.0.1");
   test_drop_keyspace.tokens[0] = create_host("1.0.0.2");
-  test_drop_keyspace.tokens[std::numeric_limits<int64_t>::max() / 2] = create_host("1.0.0.3");
+  test_drop_keyspace.tokens[CASS_INT64_MAX / 2] = create_host("1.0.0.3");
 
   test_drop_keyspace.build(cass::Murmur3Partitioner::PARTITIONER_CLASS, "test");
 

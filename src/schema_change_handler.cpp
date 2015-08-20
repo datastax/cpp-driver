@@ -62,7 +62,7 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
 
     const Value* v = row->get_by_name("schema_version");
     if (!v->is_null()) {
-      current_version = StringRef(v->buffer().data(), v->buffer().size());
+      current_version = StringRef(v->data(), v->size());
     }
   } else {
     LOG_DEBUG("No row found in %s's local system table",
@@ -87,7 +87,7 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
     if (is_valid_address && request_handler_->is_host_up(address)) {
       const Value* v = row->get_by_name("schema_version");
       if (!row->get_by_name("rpc_address")->is_null() && !v->is_null()) {
-        StringRef version(v->buffer().data(), v->buffer().size());
+        StringRef version(v->to_string_ref());
         if (version != current_version) {
           return false;
         }

@@ -29,11 +29,10 @@ namespace cass {
 SetKeyspaceHandler::SetKeyspaceHandler(Connection* connection,
                                        const std::string& keyspace,
                                        RequestHandler* request_handler)
-    : connection_(connection)
-    , request_(new QueryRequest())
+    : Handler(new QueryRequest("use \"" + keyspace + "\""))
     , request_handler_(request_handler) {
-  request_->set_query("use \"" + keyspace + "\"");
-}
+    set_connection(connection);
+  }
 
 void SetKeyspaceHandler::on_set(ResponseMessage* response) {
   switch (response->opcode()) {
@@ -67,7 +66,7 @@ void SetKeyspaceHandler::on_result_response(ResponseMessage* response) {
   if (result->kind() == CASS_RESULT_KIND_SET_KEYSPACE) {
     if (!connection_->write(request_handler_.get())) {
       // Try on the same host but a different connection
-      request_handler_->retry(RETRY_WITH_CURRENT_HOST);
+      request_handler_->retry();
     }
   } else {
     connection_->defunct();

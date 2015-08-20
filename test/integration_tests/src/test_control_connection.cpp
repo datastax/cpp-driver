@@ -23,6 +23,7 @@
 #include "cql_ccm_bridge.hpp"
 #include "test_utils.hpp"
 
+#include <boost/test/debug.hpp>
 #include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>
 #include <boost/chrono.hpp>
@@ -33,7 +34,9 @@
 #include <stdarg.h>
 
 struct ControlConnectionTests {
-  ControlConnectionTests() {}
+  ControlConnectionTests() {
+    boost::debug::detect_memory_leaks(false);
+  }
 
   void check_for_live_hosts(test_utils::CassSessionPtr session,
                             const std::set<std::string>& should_be_present) {
@@ -78,7 +81,7 @@ BOOST_FIXTURE_TEST_SUITE(control_connection, ControlConnectionTests)
 
 BOOST_AUTO_TEST_CASE(connect_invalid_ip)
 {
-  test_utils::CassLog::reset("Host 1.1.1.1 had the following error on startup: 'Connection timeout'");
+  test_utils::CassLog::reset("Host 1.1.1.1 had the following error on startup: Connection timeout");
 
   test_utils::CassClusterPtr cluster(cass_cluster_new());
   cass_cluster_set_contact_points(cluster.get(), "1.1.1.1");

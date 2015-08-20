@@ -18,7 +18,7 @@
 
 #include "request_handler.hpp"
 #include "scoped_ptr.hpp"
-#include "types.hpp"
+#include "external_types.hpp"
 
 extern "C" {
 
@@ -55,9 +55,8 @@ const CassResult* cass_future_get_result(CassFuture* future) {
   }
   cass::ResponseFuture* response_future =
       static_cast<cass::ResponseFuture*>(future->from());
-  if (response_future->is_error()) {
-    return NULL;
-  }
+
+  if (response_future->is_error()) return NULL;
 
   cass::ResultResponse* result
       = static_cast<cass::ResultResponse*>(response_future->release_result());
@@ -75,20 +74,37 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
   }
   cass::ResponseFuture* response_future =
       static_cast<cass::ResponseFuture*>(future->from());
-  if (response_future->is_error()) {
-    return NULL;
-  }
+
+  if (response_future->is_error()) return NULL;
+
   cass::ScopedPtr<cass::ResultResponse> result(
       static_cast<cass::ResultResponse*>(response_future->release_result()));
   if (result && result->kind() == CASS_RESULT_KIND_PREPARED) {
     std::vector<std::string> key_aliases;
-    response_future->schema.get_table_key_columns(result->keyspace(), result->table(), &key_aliases);
+    response_future->schema.get_table_key_columns(result->keyspace().to_string(),
+                                                  result->table().to_string(),
+                                                  &key_aliases);
     cass::Prepared* prepared =
         new cass::Prepared(result.release(), response_future->statement, key_aliases);
     prepared->inc_ref();
     return CassPrepared::to(prepared);
   }
   return NULL;
+}
+
+const CassErrorResult* cass_future_get_error_result(CassFuture* future) {
+  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
+    return NULL;
+  }
+  cass::ResponseFuture* response_future =
+      static_cast<cass::ResponseFuture*>(future->from());
+
+  if (!response_future->is_error()) return NULL;
+
+  cass::ErrorResponse* error_result
+      = static_cast<cass::ErrorResponse*>(response_future->release_result());
+
+  return CassErrorResult::to(error_result);
 }
 
 CassError cass_future_error_code(CassFuture* future) {

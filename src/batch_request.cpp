@@ -16,11 +16,11 @@
 
 #include "batch_request.hpp"
 
+#include "constants.hpp"
 #include "execute_request.hpp"
+#include "external_types.hpp"
 #include "serialization.hpp"
 #include "statement.hpp"
-#include "types.hpp"
-
 
 extern "C" {
 
@@ -40,6 +40,24 @@ CassError cass_batch_set_consistency(CassBatch* batch,
   return CASS_OK;
 }
 
+CassError cass_batch_set_serial_consistency(CassBatch* batch,
+                                            CassConsistency serial_consistency) {
+  batch->set_serial_consistency(serial_consistency);
+  return CASS_OK;
+}
+
+CassError cass_batch_set_timestamp(CassBatch* batch,
+                                   cass_int64_t timestamp) {
+  batch->set_timestamp(timestamp);
+  return CASS_OK;
+}
+
+CassError cass_batch_set_retry_policy(CassBatch* batch,
+                                      CassRetryPolicy* retry_policy) {
+  batch->set_retry_policy(retry_policy);
+  return CASS_OK;
+}
+
 CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
   batch->add_statement(statement);
   return CASS_OK;
@@ -49,23 +67,20 @@ CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
 
 namespace cass {
 
-int BatchRequest::encode(int version, BufferVec* bufs) const {
-  if (version != 2) {
+int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
+  int length = 0;
+  uint8_t flags = 0;
+
+  if (version == 1) {
     return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
   }
-  return encode_v2(bufs);
-}
-
-int BatchRequest::encode_v2(BufferVec* bufs) const {
-  const int version = 2;
-
-  size_t length = 0;
 
   {
     // <type> [byte] + <n> [short]
     size_t buf_size = sizeof(uint8_t) + sizeof(uint16_t);
 
     Buffer buf(buf_size);
+
     size_t pos = buf.encode_byte(0, type_);
     buf.encode_uint16(pos, statements().size());
 
@@ -73,50 +88,52 @@ int BatchRequest::encode_v2(BufferVec* bufs) const {
     length += buf_size;
   }
 
-  for (BatchRequest::StatementList::const_iterator
-       it = statements_.begin(),
-       end = statements_.end();
-       it != end; ++it) {
-    const SharedRefPtr<Statement>& statement = *it;
-
-    // <kind> [byte]
-    int buf_size = sizeof(uint8_t);
-
-    // <string_or_id> [long string] | [short bytes]
-    buf_size += (statement->kind() == CASS_BATCH_KIND_QUERY) ? sizeof(int32_t) : sizeof(uint16_t);
-    buf_size += statement->query().size();
-
-    // <n><value_1>...<value_n>
-    buf_size += sizeof(uint16_t); // <n> [short]
-
-    bufs->push_back(Buffer(buf_size));
-    length += buf_size;
-
-    Buffer& buf = bufs->back();
-    size_t pos = buf.encode_byte(0, statement->kind());
-
-    if (statement->kind() == CASS_BATCH_KIND_QUERY) {
-      pos = buf.encode_long_string(pos,
-                                 statement->query().data(),
-                                 statement->query().size());
-    } else {
-      pos = buf.encode_string(pos,
-                              statement->query().data(),
-                              statement->query().size());
+  for (BatchRequest::StatementList::const_iterator i = statements_.begin(),
+       end = statements_.end(); i != end; ++i) {
+    const SharedRefPtr<Statement>& statement(*i);
+    if (statement->has_names_for_values()) {
+      return ENCODE_ERROR_BATCH_WITH_NAMED_VALUES;
     }
-
-    buf.encode_uint16(pos, statement->values_count());
-    if (statement->values_count() > 0) {
-      length += statement->encode_values(version, bufs);
+    int32_t result = (*i)->encode_batch(version, bufs, handler->encoding_cache());
+    if (result < 0) {
+      return result;
     }
+    length += result;
   }
 
   {
     // <consistency> [short]
     size_t buf_size = sizeof(uint16_t);
+    if (version >= 3) {
+      // <flags>[<serial_consistency><timestamp>]
+      buf_size += sizeof(uint8_t); // [byte]
+
+      if (serial_consistency() != 0) {
+        buf_size += sizeof(uint16_t); // [short]
+        flags |= CASS_QUERY_FLAG_SERIAL_CONSISTENCY;
+      }
+
+      if (handler->timestamp() != CASS_INT64_MIN) {
+        buf_size += sizeof(int64_t); // [long]
+        flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
+      }
+    }
 
     Buffer buf(buf_size);
-    buf.encode_uint16(0, consistency_);
+
+    size_t pos = buf.encode_uint16(0, consistency_);
+    if (version >= 3) {
+      pos = buf.encode_byte(pos, flags);
+
+      if (serial_consistency() != 0) {
+        pos = buf.encode_uint16(pos, serial_consistency());
+      }
+
+      if (handler->timestamp() != CASS_INT64_MIN) {
+        pos = buf.encode_int64(pos, handler->timestamp());
+      }
+    }
+
     bufs->push_back(buf);
     length += buf_size;
   }
@@ -125,9 +142,9 @@ int BatchRequest::encode_v2(BufferVec* bufs) const {
 }
 
 void BatchRequest::add_statement(Statement* statement) {
-  if (statement->kind() == 1) {
+  if (statement->kind() == CASS_BATCH_KIND_PREPARED) {
     ExecuteRequest* execute_request = static_cast<ExecuteRequest*>(statement);
-    prepared_statements_[execute_request->query()] = execute_request;
+    prepared_statements_[execute_request->prepared()->id()] = execute_request;
   }
   statements_.push_back(SharedRefPtr<Statement>(statement));
 }
@@ -142,10 +159,10 @@ bool BatchRequest::prepared_statement(const std::string& id,
   return false;
 }
 
-bool BatchRequest::get_routing_key(std::string* routing_key) const {
+bool BatchRequest::get_routing_key(std::string* routing_key, EncodingCache* cache) const {
   for (BatchRequest::StatementList::const_iterator i = statements_.begin();
        i != statements_.end(); ++i) {
-    if ((*i)->get_routing_key(routing_key)) {
+    if ((*i)->get_routing_key(routing_key, cache)) {
       return true;
     }
   }

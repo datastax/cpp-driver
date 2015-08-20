@@ -16,148 +16,512 @@
 
 #include "type_parser.hpp"
 
-#include "common.hpp"
+#include "utils.hpp"
+#include "logger.hpp"
 #include "scoped_ptr.hpp"
+#include "string_ref.hpp"
 
 #include <sstream>
 
-#define REVERSED_TYPE "org.apache.cassandra.db.marshal.ReversedType("
+#define REVERSED_TYPE "org.apache.cassandra.db.marshal.ReversedType"
+#define FROZEN_TYPE "org.apache.cassandra.db.marshal.FrozenType"
+#define COMPOSITE_TYPE "org.apache.cassandra.db.marshal.CompositeType"
+#define COLLECTION_TYPE "org.apache.cassandra.db.marshal.ColumnToCollectionType"
+
+#define LIST_TYPE "org.apache.cassandra.db.marshal.ListType"
+#define SET_TYPE "org.apache.cassandra.db.marshal.SetType"
+#define MAP_TYPE "org.apache.cassandra.db.marshal.MapType"
+#define UDT_TYPE "org.apache.cassandra.db.marshal.UserType"
+#define TUPLE_TYPE "org.apache.cassandra.db.marshal.TupleType"
+
+#define MARSHAL_PACKAGE "org.apache.cassandra.db.marshal."
 
 namespace cass {
 
-TypeDescriptor::TypeDescriptor(CassValueType type, bool is_reversed)
-  : type_(type)
-  , is_reversed_(is_reversed) {}
+static CassValueType get_value_type(const std::string& str) {
+  if (starts_with(str, MARSHAL_PACKAGE)) {
+    StringRef type(StringRef(str).substr(sizeof(MARSHAL_PACKAGE) - 1));
+    switch (type.front()) {
+      case 'A':
+        if (type == "AsciiType") return CASS_VALUE_TYPE_ASCII;
+        break;
 
-TypeDescriptor::TypeDescriptor(CassValueType type, bool is_reversed, std::list<TypeDescriptor>& type_arguments)
-  : type_(type)
-  , is_reversed_(is_reversed)
-  , type_args_(type_arguments) {}
+      case 'B':
+        if (type == "BooleanType") return CASS_VALUE_TYPE_BOOLEAN;
+        if (type == "BytesType") return CASS_VALUE_TYPE_BLOB;
+        break;
 
-std::string TypeDescriptor::to_string() const {
-  std::stringstream ss;
-  if (is_reversed_) ss << "reversed(";
-  ss << type_;
-  if (!type_args_.empty()) {
-    ss << '(';
-    for (std::list<TypeDescriptor>::const_iterator i = type_args_.begin(); i != type_args_.end(); ++i) {
-      ss << i->to_string() << ',';
+      case 'C':
+        if (type == "CounterColumnType") return CASS_VALUE_TYPE_COUNTER;
+        break;
+
+      case 'D':
+        if (type == "DateType") return CASS_VALUE_TYPE_TIMESTAMP;
+        if (type == "DecimalType") return CASS_VALUE_TYPE_DECIMAL;
+        if (type == "DoubleType") return CASS_VALUE_TYPE_DOUBLE;
+        break;
+
+      case 'F':
+        if (type == "FloatType") return CASS_VALUE_TYPE_FLOAT;
+        break;
+
+      case 'I':
+        if (type == "InetAddressType") return CASS_VALUE_TYPE_INET;
+        if (type == "Int32Type") return CASS_VALUE_TYPE_INT;
+        if (type == "IntegerType") return CASS_VALUE_TYPE_INT;
+        break;
+
+      case 'L':
+        if (type == "LongType") return CASS_VALUE_TYPE_BIGINT;
+        break;
+
+      case 'T':
+        if (type == "TimestampType") return CASS_VALUE_TYPE_TIMESTAMP;
+        if (type == "TimeUUIDType") return CASS_VALUE_TYPE_TIMEUUID;
+        break;
+
+      case 'U':
+        if (type == "UTF8Type") return CASS_VALUE_TYPE_TEXT;
+        if (type == "UUIDType") return CASS_VALUE_TYPE_UUID;
+        break;
+
+      default:
+        break;
     }
-    ss << ')';
   }
-  if (is_reversed_) ss << ')';
-  return ss.str();
+  return CASS_VALUE_TYPE_UNKNOWN;
 }
 
-TypeParser::TypeMapper::TypeMapper() {
-  name_type_map_["org.apache.cassandra.db.marshal.AsciiType"] = CASS_VALUE_TYPE_ASCII;
-  name_type_map_["org.apache.cassandra.db.marshal.LongType"] = CASS_VALUE_TYPE_BIGINT;
-  name_type_map_["org.apache.cassandra.db.marshal.BytesType"] = CASS_VALUE_TYPE_BLOB;
-  name_type_map_["org.apache.cassandra.db.marshal.BooleanType"] = CASS_VALUE_TYPE_BOOLEAN;
-  name_type_map_["org.apache.cassandra.db.marshal.CounterColumnType"] = CASS_VALUE_TYPE_COUNTER;
-  name_type_map_["org.apache.cassandra.db.marshal.DecimalType"] = CASS_VALUE_TYPE_DECIMAL;
-  name_type_map_["org.apache.cassandra.db.marshal.DoubleType"] = CASS_VALUE_TYPE_DOUBLE;
-  name_type_map_["org.apache.cassandra.db.marshal.FloatType"] = CASS_VALUE_TYPE_FLOAT;
-  name_type_map_["org.apache.cassandra.db.marshal.InetAddressType"] = CASS_VALUE_TYPE_INET;
-  name_type_map_["org.apache.cassandra.db.marshal.Int32Type"] = CASS_VALUE_TYPE_INT;
-  name_type_map_["org.apache.cassandra.db.marshal.UTF8Type"] = CASS_VALUE_TYPE_TEXT;
-  name_type_map_["org.apache.cassandra.db.marshal.TimestampType"] = CASS_VALUE_TYPE_TIMESTAMP;
-  name_type_map_["org.apache.cassandra.db.marshal.DateType"] = CASS_VALUE_TYPE_TIMESTAMP;
-  name_type_map_["org.apache.cassandra.db.marshal.UUIDType"] = CASS_VALUE_TYPE_UUID;
-  name_type_map_["org.apache.cassandra.db.marshal.IntegerType"] = CASS_VALUE_TYPE_INT;
-  name_type_map_["org.apache.cassandra.db.marshal.TimeUUIDType"] = CASS_VALUE_TYPE_TIMEUUID;
-  name_type_map_["org.apache.cassandra.db.marshal.ListType"] = CASS_VALUE_TYPE_LIST;
-  name_type_map_["org.apache.cassandra.db.marshal.MapType"] = CASS_VALUE_TYPE_MAP;
-  name_type_map_["org.apache.cassandra.db.marshal.SetType"] = CASS_VALUE_TYPE_SET;
-  name_type_map_["org.apache.cassandra.db.marshal.CompositeType"] = CASS_VALUE_TYPE_CUSTOM;
+int hex_value(int c) {
+  if (c >= '0' && c <= '9') {
+    return c - '0';
+  } else if (c >= 'A' && c <= 'F') {
+    return c - 'A' + 10;
+  } else if (c >= 'a' && c <= 'f') {
+    return c - 'a' + 10;
+  }
+  return -1;
 }
 
-CassValueType TypeParser::TypeMapper::operator [](const std::string& type_name) const {
-  NameTypeMap::const_iterator itr = name_type_map_.find(type_name);
-  if (itr != name_type_map_.end()) {
-    return itr->second;
+bool from_hex(const std::string& hex, std::string* result) {
+  if ((hex.length() & 1) == 1) { // Invalid if not divisible by 2
+    return false;
+  }
+  size_t size = hex.length() / 2;
+  result->resize(size);
+  for (size_t i = 0; i < size; ++i) {
+    int half0 = hex_value(hex[i * 2]);
+    int half1 = hex_value(hex[i * 2 + 1]);
+    if (half0 < 0 || half1 < 0) {
+      return false;
+    }
+    (*result)[i] = static_cast<char>((static_cast<uint8_t>(half0) << 4) | static_cast<uint8_t>(half1));
+  }
+  return true;
+}
+
+bool TypeParser::is_reversed(const std::string& type) {
+  return starts_with(type, REVERSED_TYPE);
+}
+
+bool TypeParser::is_frozen(const std::string& type) {
+  return starts_with(type, FROZEN_TYPE);
+}
+
+bool TypeParser::is_composite(const std::string& type) {
+  return starts_with(type, COMPOSITE_TYPE);
+}
+
+bool TypeParser::is_collection(const std::string& type) {
+  return starts_with(type, COLLECTION_TYPE);
+}
+
+bool TypeParser::is_user_type(const std::string& type) {
+  return starts_with(type, UDT_TYPE);
+}
+
+bool TypeParser::is_tuple_type(const std::string& type) {
+  return starts_with(type, TUPLE_TYPE);
+}
+
+SharedRefPtr<DataType> TypeParser::parse_one(const std::string& type) {
+  bool frozen = is_frozen(type);
+
+  std::string class_name;
+
+  if (is_reversed(type) || frozen) {
+    if (!get_nested_class_name(type, &class_name)) {
+      return SharedRefPtr<DataType>();
+    }
   } else {
-    return CASS_VALUE_TYPE_UNKNOWN;
+    class_name = type;
   }
-}
 
-TypeParser::TypeParser(const std::string& class_name, size_t start_index)
-  : type_buffer_(class_name)
-  , index_(start_index) {}
+  Parser parser(class_name, 0);
+  std::string next;
 
-bool TypeParser::is_reversed(const std::string& class_name) {
-  return starts_with(class_name, REVERSED_TYPE);
-}
+  parser.get_next_name(&next);
 
-TypeDescriptor TypeParser::parse(const std::string& class_name) {
-
-  bool reversed = is_reversed(class_name);
-
-  size_t start = reversed ? strlen(REVERSED_TYPE) : 0;
-  ScopedPtr<TypeParser> parser(new TypeParser(class_name, start));
-
-  return parser->parse_types(reversed);
-}
-
-CassValueType TypeParser::parse_one_type(size_t hint) {
-  size_t bound = type_buffer_.size();
-  if (hint == 0) {
-    hint = type_buffer_.find_first_of(",()", index_);
+  if (starts_with(next, LIST_TYPE)) {
+    TypeParamsVec params;
+    if (!parser.get_type_params(&params) || params.empty()) {
+      return SharedRefPtr<DataType>();
+    }
+    SharedRefPtr<DataType> element_type(parse_one(params[0]));
+    if (!element_type) {
+      return SharedRefPtr<DataType>();
+    }
+    return CollectionType::list(element_type);
+  } else if(starts_with(next, SET_TYPE)) {
+    TypeParamsVec params;
+    if (!parser.get_type_params(&params) || params.empty()) {
+      return SharedRefPtr<DataType>();
+    }
+    SharedRefPtr<DataType> element_type(parse_one(params[0]));
+    if (!element_type) {
+      return SharedRefPtr<DataType>();
+    }
+    return CollectionType::set(element_type);
+  } else if(starts_with(next, MAP_TYPE)) {
+    TypeParamsVec params;
+    if (!parser.get_type_params(&params) || params.size() < 2) {
+      return SharedRefPtr<DataType>();
+    }
+    SharedRefPtr<DataType> key_type(parse_one(params[0]));
+    SharedRefPtr<DataType> value_type(parse_one(params[1]));
+    if (!key_type || !value_type) {
+      return SharedRefPtr<DataType>();
+    }
+    return CollectionType::map(key_type, value_type);
   }
-  if (hint != std::string::npos) {
-    bound = hint;
+
+  if (frozen) {
+    LOG_WARN("Got a frozen type for something other than a collection, "
+             "this driver might be too old for your version of Cassandra");
   }
-  size_t len = bound - index_;
-  CassValueType t = type_map_[type_buffer_.substr(index_, len)];
-  index_ += len;
-  return t;
-}
 
-TypeDescriptor TypeParser::parse_types(bool is_reversed) {
+  if (is_user_type(next)) {
+    parser.skip(); // Skip '('
 
-  CassValueType value_type = parse_one_type();
-  std::list<TypeDescriptor> type_args;
+    std::string keyspace;
+    if (!parser.read_one(&keyspace)) {
+      return SharedRefPtr<DataType>();
+    }
+    parser.skip_blank_and_comma();
 
-  bool list_open = false;
-  size_t i;
+    std::string hex;
+    if (!parser.read_one(&hex)) {
+      return SharedRefPtr<DataType>();
+    }
 
-  while (index_ < type_buffer_.size() &&
-        (i = type_buffer_.find_first_of(",() ", index_)) != std::string::npos) {
-    switch (type_buffer_[i]) {
-      case ' ':
-        ++index_;
-        break;
-      case ',':
-        if (list_open) {
-          CassValueType inner_type = parse_one_type(i);
-          type_args.push_back(TypeDescriptor(inner_type));
-        }
-        ++index_;
-        break;
-      case '(':
-        list_open = true;
-        ++index_;
-        type_args.push_back(parse_types(false));
-        break;
-      case ')':
-      {
-        CassValueType inner_type = parse_one_type(i);
-        type_args.push_back(TypeDescriptor(inner_type));
+    std::string type_name;
+    if (!from_hex(hex, &type_name)) {
+      LOG_ERROR("Invalid hex string \"%s\" for parameter", hex.c_str());
+      return SharedRefPtr<DataType>();
+    }
+
+    if (keyspace.empty() || type_name.empty()) {
+      LOG_ERROR("UDT has no keyspace or type name");
+      return SharedRefPtr<DataType>();
+    }
+
+    parser.skip_blank_and_comma();
+    NameAndTypeParamsVec raw_fields;
+    if (!parser.get_name_and_type_params(&raw_fields)) {
+      return SharedRefPtr<DataType>();
+    }
+
+    UserType::FieldVec fields;
+    for (NameAndTypeParamsVec::const_iterator i = raw_fields.begin(),
+         end = raw_fields.end(); i != end; ++i) {
+      SharedRefPtr<DataType> data_type = parse_one(i->second);
+      if (!data_type) {
+        return SharedRefPtr<DataType>();
       }
-        list_open = false;
-        ++index_;
-        break;
-      default: // unexpected state
-        index_ = type_buffer_.size();
-        break;
+      fields.push_back(UserType::Field(i->first, data_type));
     }
-    if (!list_open) {
-      break;
-    }
+
+    return SharedRefPtr<DataType>(new UserType(keyspace, type_name, fields));
   }
-  return TypeDescriptor(value_type, is_reversed, type_args);
+
+  if (is_tuple_type(type)) {
+    TypeParamsVec raw_types;
+    if (!parser.get_type_params(&raw_types)) {
+      return SharedRefPtr<DataType>();
+    }
+
+    DataTypeVec types;
+    for (TypeParamsVec::const_iterator i = raw_types.begin(),
+         end = raw_types.end(); i != end; ++i) {
+      SharedRefPtr<DataType> data_type = parse_one(*i);
+      if (!data_type) {
+        return SharedRefPtr<DataType>();
+      }
+      types.push_back(data_type);
+    }
+
+    return SharedRefPtr<DataType>(new TupleType(types));
+  }
+
+  CassValueType t = get_value_type(next);
+  return t == CASS_VALUE_TYPE_UNKNOWN ? SharedRefPtr<DataType>(new CustomType(next))
+                                      : SharedRefPtr<DataType>(new DataType(t));
 }
 
-const TypeParser::TypeMapper TypeParser::type_map_;
+SharedRefPtr<ParseResult> TypeParser::parse_with_composite(const std::string& type) {
+  Parser parser(type, 0);
+
+  std::string next;
+  parser.get_next_name(&next);
+
+  if (!is_composite(next)) {
+    SharedRefPtr<DataType> data_type = parse_one(type);
+    if (!data_type) {
+      return SharedRefPtr<ParseResult>();
+    }
+    return SharedRefPtr<ParseResult>(new ParseResult(data_type, is_reversed(next)));
+  }
+
+  TypeParamsVec sub_class_names;
+
+  if (!parser.get_type_params(&sub_class_names)) {
+    return SharedRefPtr<ParseResult>();
+  }
+
+  if (sub_class_names.empty()) {
+    LOG_ERROR("Expected at least one subclass type for a composite type");
+    return SharedRefPtr<ParseResult>();
+  }
+
+  ParseResult::CollectionMap collections;
+  const std::string& last = sub_class_names.back();
+  size_t count = sub_class_names.size();
+  if (is_collection(last)) {
+    count--;
+
+    Parser collection_parser(last, 0);
+    collection_parser.get_next_name();
+    NameAndTypeParamsVec params;
+    if (!collection_parser.get_collection_params(&params)) {
+      return SharedRefPtr<ParseResult>();
+    }
+
+    for (NameAndTypeParamsVec::const_iterator i = params.begin(),
+         end = params.end(); i != end; ++i) {
+      SharedRefPtr<DataType> data_type = parse_one(i->second);
+      if (!data_type) {
+        return SharedRefPtr<ParseResult>();
+      }
+      collections[i->first] = data_type;
+    }
+  }
+
+  DataTypeVec types;
+  ParseResult::ReversedVec reversed;
+  for (size_t i = 0; i < count; ++i) {
+    SharedRefPtr<DataType> data_type = parse_one(sub_class_names[i]);
+    if (!data_type) {
+      return SharedRefPtr<ParseResult>();
+    }
+    types.push_back(data_type);
+    reversed.push_back(is_reversed(sub_class_names[i]));
+  }
+
+  return SharedRefPtr<ParseResult>(new ParseResult(true, types, reversed, collections));
+}
+
+bool TypeParser::get_nested_class_name(const std::string& type, std::string* class_name) {
+  Parser parser(type, 0);
+  parser.get_next_name();
+  TypeParamsVec params;
+  parser.get_type_params(&params);
+  if (params.size() != 1) {
+    return false;
+  }
+  *class_name = params[0];
+  return true;
+}
+
+bool TypeParser::Parser::read_one(std::string* name_and_args) {
+  std::string name;
+  get_next_name(&name);
+  std::string args;
+  if (!read_raw_arguments(&args)) {
+    return false;
+  }
+  *name_and_args = name + args;
+  return true;
+}
+
+void TypeParser::Parser::get_next_name(std::string* name) {
+  skip_blank();
+  read_next_identifier(name);
+}
+
+bool TypeParser::Parser::get_type_params(TypeParamsVec* params) {
+  if (is_eos()) {
+    params->clear();
+    return true;
+  }
+
+  if (str_[index_] != '(') {
+    parse_error(str_, index_,  "Expected '(' before type parameters");
+    return false;
+  }
+
+  ++index_; // Skip '('
+
+  while (skip_blank_and_comma()) {
+    if (str_[index_] == ')') {
+      ++index_;
+      return true;
+    }
+
+    std::string param;
+    if (!read_one(&param)) {
+      return false;
+    }
+    params->push_back(param);
+  }
+
+  parse_error(str_, index_,  "Unexpected end of string");
+  return false;
+}
+
+bool TypeParser::Parser::get_name_and_type_params(NameAndTypeParamsVec* params) {
+  while (skip_blank_and_comma()) {
+    if (str_[index_] == ')') {
+      ++index_;
+      return true;
+    }
+
+    std::string hex;
+    read_next_identifier(&hex);
+
+    std::string name;
+    if (!from_hex(hex, &name)) {
+      LOG_ERROR("Invalid hex string \"%s\" for parameter", hex.c_str());
+      return SharedRefPtr<DataType>();
+    }
+
+    skip_blank();
+
+    if (str_[index_] != ':') {
+      parse_error(str_, index_,  "Expected ':'");
+      return false;
+    }
+
+    ++index_;
+    skip_blank();
+
+    std::string type;
+
+    if (!read_one(&type)) {
+      return false;
+    }
+
+    params->push_back(std::make_pair(name, type));
+  }
+
+  parse_error(str_, index_,  "Unexpected end of string");
+  return false;
+}
+
+bool TypeParser::Parser::get_collection_params(NameAndTypeParamsVec* params) {
+  if (is_eos()) {
+    params->clear();
+    return true;
+  }
+
+  if (str_[index_] != '(') {
+    parse_error(str_, index_,  "Expected '(' before collection parameters");
+    return false;
+  }
+
+  ++index_; // Skip '('
+
+  return get_name_and_type_params(params);
+}
+
+void TypeParser::Parser::skip_blank() {
+  while (!is_eos() && is_blank(str_[index_])) {
+    ++index_;
+  }
+}
+
+bool TypeParser::Parser::skip_blank_and_comma() {
+  bool comma_found = false;
+  while (!is_eos()) {
+    int c = str_[index_];
+    if (c == ',') {
+      if (comma_found) {
+        return true;
+      } else {
+        comma_found = true;
+      }
+    } else if (!is_blank(c)) {
+      return true;
+    }
+    ++index_;
+  }
+  return false;
+}
+
+bool TypeParser::Parser::read_raw_arguments(std::string* args) {
+  skip_blank();
+
+  if (is_eos() || str_[index_] == ')' || str_[index_] == ',') {
+    *args = "";
+    return true;
+  }
+
+  if (str_[index_] != '(') {
+    parse_error(str_, index_, "Expected '('");
+    return false;
+  }
+
+  int i = index_;
+  int open = 1;
+  while (open > 0) {
+    ++index_;
+
+    if (is_eos()) {
+      parse_error(str_, index_, "Expected ')'");
+      return false;
+    }
+
+    if (str_[index_] == '(') {
+      open++;
+    } else if (str_[index_] == ')') {
+      open--;
+    }
+  }
+
+  ++index_; // Skip ')'
+  *args = str_.substr(i, index_);
+  return true;
+}
+
+void TypeParser::Parser::read_next_identifier(std::string* name) {
+  size_t i = index_;
+  while (!is_eos() && is_identifier_char(str_[index_]))
+    ++index_;
+  if (name != NULL) {
+    if (index_ > i) {
+      *name = str_.substr(i, index_ - i);
+    } else{
+      name->clear();
+    }
+  }
+}
+
+void TypeParser::Parser::parse_error(const std::string& str,
+                                     size_t index,
+                                     const char* error) {
+  LOG_ERROR("Error parsing '%s' at %u index: %s",
+            str.c_str(),
+            static_cast<unsigned int>(index),
+            error);
+}
 
 } // namespace cass

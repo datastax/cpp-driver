@@ -26,21 +26,19 @@
 
 namespace cass {
 
-class BufferCollection;
-
 class Buffer {
 public:
   Buffer()
-      : size_(IS_EMPTY) {}
+    : size_(0) { }
 
   Buffer(const char* data, size_t size)
     : size_(size) {
-    if (size > static_cast<size_t>(FIXED_BUFFER_SIZE)) {
+    if (size > FIXED_BUFFER_SIZE) {
       RefBuffer* buffer = RefBuffer::create(size);
       buffer->inc_ref();
       memcpy(buffer->data(), data, size);
-      data_.ref.buffer = buffer;
-    } else {
+      data_.buffer = buffer;
+    } else if (size > 0){
       memcpy(data_.fixed, data, size);
     }
   }
@@ -48,17 +46,15 @@ public:
   explicit
   Buffer(size_t size)
     : size_(size) {
-    if (size > static_cast<size_t>(FIXED_BUFFER_SIZE)) {
+    if (size > FIXED_BUFFER_SIZE) {
       RefBuffer* buffer = RefBuffer::create(size);
       buffer->inc_ref();
-      data_.ref.buffer = buffer;
+      data_.buffer = buffer;
     }
   }
 
-  Buffer(const BufferCollection* collection);
-
   Buffer(const Buffer& buf)
-    : size_(IS_EMPTY) {
+    : size_(0) {
     copy(buf);
   }
 
@@ -67,46 +63,52 @@ public:
     return *this;
   }
 
-  ~Buffer();
+  ~Buffer() {
+    if (size_ > FIXED_BUFFER_SIZE) {
+      data_.buffer->dec_ref();
+    }
+  }
 
   size_t encode_byte(size_t offset, uint8_t value) {
-    assert(is_buffer() && offset + sizeof(uint8_t) <= static_cast<size_t>(size_));
-    cass::encode_byte(buffer() + offset, value);
+    assert(offset + sizeof(uint8_t) <= static_cast<size_t>(size_));
+    cass::encode_byte(data() + offset, value);
     return offset + sizeof(uint8_t);
   }
 
   size_t encode_uint16(size_t offset, uint16_t value) {
-    assert(is_buffer() && offset + sizeof(int16_t) <= static_cast<size_t>(size_));
-    cass::encode_uint16(buffer() + offset, value);
+    assert(offset + sizeof(uint16_t) <= static_cast<size_t>(size_));
+    cass::encode_uint16(data() + offset, value);
+    return offset + sizeof(uint16_t);
+  }
+
+  size_t encode_int16(size_t offset, int16_t value) {
+    assert(offset + sizeof(int16_t) <= static_cast<size_t>(size_));
+    cass::encode_int16(data() + offset, value);
     return offset + sizeof(int16_t);
   }
 
   size_t encode_int32(size_t offset, int32_t value) {
-    assert(is_buffer() && offset + sizeof(int32_t) <= static_cast<size_t>(size_));
-    cass::encode_int32(buffer() + offset, value);
+    assert(offset + sizeof(int32_t) <= static_cast<size_t>(size_));
+    cass::encode_int32(data() + offset, value);
     return offset + sizeof(int32_t);
   }
 
   size_t encode_int64(size_t offset, int64_t value) {
-    assert(is_buffer() && offset + sizeof(int64_t) <= static_cast<size_t>(size_));
-    cass::encode_int64(buffer() + offset, value);
+    assert(offset + sizeof(int64_t) <= static_cast<size_t>(size_));
+    cass::encode_int64(data() + offset, value);
     return offset + sizeof(int64_t);
   }
 
   size_t encode_float(size_t offset, float value) {
-    assert(is_buffer() && offset + sizeof(float) <= static_cast<size_t>(size_));
-    cass::encode_float(buffer() + offset, value);
+    assert(offset + sizeof(float) <= static_cast<size_t>(size_));
+    cass::encode_float(data() + offset, value);
     return offset + sizeof(float);
   }
 
   size_t encode_double(size_t offset, double value) {
-    assert(is_buffer() && offset + sizeof(double) <= static_cast<size_t>(size_));
-    cass::encode_double(buffer() + offset, value);
+    assert(offset + sizeof(double) <= static_cast<size_t>(size_));
+    cass::encode_double(data() + offset, value);
     return offset + sizeof(double);
-  }
-
-  size_t encode_bool(size_t offset, bool value) {
-    return encode_byte(offset, value);
   }
 
   size_t encode_long_string(size_t offset, const char* value, int32_t size) {
@@ -147,14 +149,14 @@ public:
   }
 
   size_t encode_uuid(size_t offset, CassUuid value) {
-    assert(is_buffer() && offset + sizeof(CassUuid) <= static_cast<size_t>(size_));
-    cass::encode_uuid(buffer() + offset, value);
+    assert(offset + sizeof(CassUuid) <= static_cast<size_t>(size_));
+    cass::encode_uuid(data() + offset, value);
     return offset + sizeof(CassUuid);
   }
 
   size_t copy(size_t offset, const char* value, size_t size) {
-    assert(is_buffer() && offset + size <= static_cast<size_t>(size_));
-    memcpy(buffer() + offset, value, size);
+    assert(offset + size <= static_cast<size_t>(size_));
+    memcpy(data() + offset, value, size);
     return offset + size;
   }
 
@@ -163,54 +165,47 @@ public:
   }
 
   char* data() {
-    assert(is_buffer());
-    return size_ > FIXED_BUFFER_SIZE ? static_cast<RefBuffer*>(data_.ref.buffer)->data() : data_.fixed;
-  }
-
-  const char* data() const {
-    assert(is_buffer());
-    return size_ > FIXED_BUFFER_SIZE ? static_cast<RefBuffer*>(data_.ref.buffer)->data() : data_.fixed;
-  }
-
-  int size() const { return size_; }
-
-  bool is_buffer() const { return size_ >= 0; }
-
-  bool is_empty() const { return size_ == IS_EMPTY; }
-
-  bool is_collection() const { return size_ == IS_COLLECTION; }
-
-  const BufferCollection* collection() const;
-
-private:
-  enum {
-    IS_EMPTY = -1,
-    IS_COLLECTION = -2
-  };
-
-  char* buffer() {
-    assert(is_buffer());
     return size_ > FIXED_BUFFER_SIZE
-        ? static_cast<RefBuffer*>(data_.ref.buffer)->data()
+        ? static_cast<RefBuffer*>(data_.buffer)->data()
         : data_.fixed;
   }
 
-  // Enough space to avoid extra allocations for most of the basic types
-  static const int FIXED_BUFFER_SIZE = 16;
+  const char* data() const {
+    return size_ > FIXED_BUFFER_SIZE
+        ? static_cast<RefBuffer*>(data_.buffer)->data()
+        : data_.fixed;
+  }
+
+  size_t size() const { return size_; }
 
 private:
-  void copy(const Buffer& buffer);
+  // Enough space to avoid extra allocations for most of the basic types
+  static const size_t FIXED_BUFFER_SIZE = 16;
 
-  union BufferRef {
-    RefBuffer* buffer;
-    const BufferCollection* collection;
-  };
+private:
+  void copy(const Buffer& buf) {
+    RefBuffer* temp = data_.buffer;
+
+    if (buf.size_ > FIXED_BUFFER_SIZE) {
+      buf.data_.buffer->inc_ref();
+      data_.buffer = buf.data_.buffer;
+    } else if (buf.size_ > 0) {
+      memcpy(data_.fixed, buf.data_.fixed, buf.size_);
+    }
+
+    if (size_ > FIXED_BUFFER_SIZE) {
+      temp->dec_ref();
+    }
+
+    size_ = buf.size_;
+  }
 
   union {
     char fixed[FIXED_BUFFER_SIZE];
-    BufferRef ref;
+    RefBuffer* buffer;
   } data_;
-  int size_;
+
+  size_t size_;
 };
 
 typedef std::vector<Buffer> BufferVec;

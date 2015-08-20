@@ -19,6 +19,7 @@
 
 #include "macros.hpp"
 #include "ref_counted.hpp"
+#include "utils.hpp"
 
 #include <stddef.h>
 

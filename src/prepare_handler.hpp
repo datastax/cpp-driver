@@ -30,20 +30,16 @@ class Request;
 class PrepareHandler : public Handler {
 public:
   PrepareHandler(RequestHandler* request_handler)
-      : request_handler_(request_handler) {}
+      : Handler(NULL)
+      , request_handler_(request_handler) {}
 
   bool init(const std::string& prepared_id);
 
-  virtual const Request* request() const { return request_.get(); }
-
   virtual void on_set(ResponseMessage* response);
-
   virtual void on_error(CassError code, const std::string& message);
-
   virtual void on_timeout();
 
 private:
-  ScopedRefPtr<Request> request_;
   ScopedRefPtr<RequestHandler> request_handler_;
 };
 

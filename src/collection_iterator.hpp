@@ -14,43 +14,76 @@
   limitations under the License.
 */
 
-#ifndef __CASS_COLLECTION_ITERATOR_HPP_INCLUDED__
-#define __CASS_COLLECTION_ITERATOR_HPP_INCLUDED__
+#ifndef __CASS_VALUE_ITERATOR_HPP_INCLUDED__
+#define __CASS_VALUE_ITERATOR_HPP_INCLUDED__
 
 #include "cassandra.h"
 #include "iterator.hpp"
-#include "value.hpp"
 #include "serialization.hpp"
+#include "value.hpp"
 
 namespace cass {
 
-class CollectionIterator : public Iterator {
+class ValueIterator : public Iterator {
+public:
+  ValueIterator(CassIteratorType type)
+    : Iterator(type) { }
+
+  const Value* value() const {
+    return &value_;
+  }
+
+protected:
+  Value value_;
+};
+
+class CollectionIterator : public ValueIterator {
 public:
   CollectionIterator(const Value* collection)
-      : Iterator(CASS_ITERATOR_TYPE_COLLECTION)
+      : ValueIterator(CASS_ITERATOR_TYPE_COLLECTION)
       , collection_(collection)
-      , position_(collection->buffer().data())
+      , position_(collection->data())
       , index_(-1)
-      , count_(collection_->type() == CASS_VALUE_TYPE_MAP
+      , count_(collection_->value_type() == CASS_VALUE_TYPE_MAP
                    ? (2 * collection_->count())
                    : collection->count()) {}
 
   virtual bool next();
-
-  const Value* value() {
-    assert(index_ >= 0 && index_ < count_);
-    return &value_;
-  }
 
 private:
   char* decode_value(char* position);
 
 private:
   const Value* collection_;
+
   char* position_;
-  Value value_;
   int32_t index_;
   const int32_t count_;
+};
+
+class TupleIterator : public ValueIterator {
+public:
+  TupleIterator(const Value* tuple)
+      : ValueIterator(CASS_ITERATOR_TYPE_TUPLE)
+      , tuple_(tuple)
+      , position_(tuple->data()) {
+    SharedRefPtr<const CollectionType> collection_type(tuple->data_type());
+    next_ = collection_type->types().begin();
+    end_ = collection_type->types().end();
+  }
+
+  virtual bool next();
+
+private:
+  char* decode_value(char* position);
+
+private:
+  const Value* tuple_;
+
+  char* position_;
+  DataTypeVec::const_iterator next_;
+  DataTypeVec::const_iterator current_;
+  DataTypeVec::const_iterator end_;
 };
 
 } // namespace cass

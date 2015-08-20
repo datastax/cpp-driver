@@ -20,104 +20,21 @@
 
 #include "result_metadata.hpp"
 
-#include "common.hpp"
+#include "utils.hpp"
 
 #include <iterator>
 
-// This can be decreased to reduce hash collisions, but it will require
-// additional memory.
-#define LOAD_FACTOR 0.75
-
-#define FNV1_64_INIT 0xcbf29ce484222325ULL
-#define FNV1_64_PRIME 0x100000001b3ULL
-
 namespace cass {
 
-uint64_t fnv1a_hash_lower(StringRef s) {
-  uint64_t h = FNV1_64_INIT;
-  for(StringRef::const_iterator i = s.begin(), end = s.end(); i != end; ++i) {
-      h ^= static_cast<uint64_t>(static_cast<unsigned char>(::tolower(*i)));
-      h *= FNV1_64_PRIME;
-    }
-    return h;
+ResultMetadata::ResultMetadata(size_t column_count)
+  : defs_(column_count) { }
+
+size_t ResultMetadata::get_indices(StringRef name, IndexVec* result) const{
+  return defs_.get_indices(name, result);
 }
 
-ResultMetadata::ResultMetadata(size_t column_count) {
-  defs_.reserve(column_count);
-
-  size_t index_size = next_pow_2(static_cast<size_t>(column_count / LOAD_FACTOR) + 1);
-  index_.resize(index_size, NULL);
-  index_mask_ = index_size - 1;
-}
-
-
-size_t ResultMetadata::get(StringRef name,
-                           ResultMetadata::IndexVec* result) const{
-  result->clear();
-  bool is_case_sensitive = false;
-
-  if (name.size() > 0 && name.front() == '"' && name.back() == '"') {
-    is_case_sensitive = true;
-    name = name.substr(1, name.size() - 2);
-  }
-
-  size_t h = fnv1a_hash_lower(name) & index_mask_;
-
-  size_t start = h;
-  while (index_[h] != NULL && !iequals(name, StringRef(index_[h]->name, index_[h]->name_size))) {
-    h = (h + 1) & index_mask_;
-    if (h == start) {
-      return 0;
-    }
-  }
-
-  const ColumnDefinition* def = index_[h];
-
-  if (def == NULL) {
-    return 0;
-  }
-
-  if (!is_case_sensitive) {
-    while (def != NULL) {
-      result->push_back(def->index);
-      def = def->next;
-    }
-  } else {
-    while (def != NULL) {
-      if (name.compare(StringRef(def->name, def->name_size)) == 0) {
-        result->push_back(def->index);
-      }
-      def = def->next;
-    }
-  }
-
-  return result->size();
-}
-
-void ResultMetadata::insert(ColumnDefinition& def) {
-  defs_.push_back(def);
-
-  StringRef name(def.name, def.name_size);
-
-  size_t h = fnv1a_hash_lower(name) & index_mask_;
-
-  if (index_[h] == NULL) {
-    index_[h] = &defs_.back();
-  } else {
-    // Use linear probing to find an open bucket
-    while (index_[h] != NULL && !iequals(name, StringRef(index_[h]->name, index_[h]->name_size))) {
-      h = (h + 1) & index_mask_;
-    }
-    if (index_[h] == NULL) {
-      index_[h] = &defs_.back();
-    } else {
-      ColumnDefinition* curr = index_[h];
-      while (curr->next != NULL) {
-        curr = curr->next;
-      }
-      curr->next = &defs_.back();
-    }
-  }
+void ResultMetadata::add(const ColumnDefinition& def) {
+  defs_.add(def);
 }
 
 } // namespace cass

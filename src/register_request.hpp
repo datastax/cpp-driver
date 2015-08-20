@@ -24,16 +24,12 @@ namespace cass {
 
 class RegisterRequest : public Request {
 public:
-  enum EventType {
-
-  };
-
   RegisterRequest(int event_types)
       : Request(CQL_OPCODE_REGISTER)
       , event_types_(event_types) {}
 
 private:
-  int encode(int version, BufferVec* bufs) const;
+  int encode(int version, Handler* handler, BufferVec* bufs) const;
 
   int event_types_;
 };

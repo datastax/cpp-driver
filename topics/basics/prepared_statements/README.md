@@ -28,7 +28,7 @@ cass_future_free(prepare_future);
 CassStatement* statement = cass_prepared_bind(prepared);
 
 /* Bind variables by name this time (this can only be done with prepared statements)*/
-cass_statement_bind_string_by_name(statement, "key", cass_string_init("abc"));
+cass_statement_bind_string_by_name(statement, "key", "abc");
 cass_statement_bind_int32_by_name(statement, "value", 123);
 
 /* Execute statement (same a the non-prepared code) */

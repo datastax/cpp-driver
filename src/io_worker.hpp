@@ -60,10 +60,19 @@ class IOWorker
     : public EventThread<IOWorkerEvent>
     , public RefCounted<IOWorker> {
 public:
+  enum State {
+    IO_WORKER_STATE_READY,
+    IO_WORKER_STATE_CLOSING,
+    IO_WORKER_STATE_CLOSED
+  };
+
   IOWorker(Session* session);
   ~IOWorker();
 
   int init();
+
+  bool is_closing() const { return state_ == IO_WORKER_STATE_CLOSING; }
+  bool is_ready() const { return state_ == IO_WORKER_STATE_READY; }
 
   const Config& config() const { return config_; }
   Metrics* metrics() const { return metrics_; }
@@ -92,7 +101,7 @@ public:
 
   bool execute(RequestHandler* request_handler);
 
-  void retry(RequestHandler* request_handler, RetryType retry_type);
+  void retry(RequestHandler* request_handler);
   void request_finished(RequestHandler* request_handler);
 
   void notify_pool_ready(Pool* pool);
@@ -122,21 +131,10 @@ private:
   typedef std::map<Address, SharedRefPtr<Pool> > PoolMap;
   typedef std::vector<SharedRefPtr<Pool> > PoolVec;
 
-  struct PendingReconnect {
-
-    void stop_timer();
-
-    IOWorker *io_worker;
-    Address address;
-    Timer* timer;
-  };
-
-  typedef std::map<Address, PendingReconnect> PendingReconnectMap;
-
   void schedule_reconnect(const Address& address);
-  void cancel_reconnect(const Address& address);
 
 private:
+  State state_;
   Session* session_;
   const Config& config_;
   Metrics* metrics_;
@@ -153,7 +151,6 @@ private:
   PoolVec pools_pending_flush_;
   bool is_closing_;
   int pending_request_count_;
-  PendingReconnectMap pending_reconnects_;
 
   AsyncQueue<SPSCQueue<RequestHandler*> > request_queue_;
 };

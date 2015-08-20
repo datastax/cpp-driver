@@ -19,8 +19,8 @@
 
 #include "auth.hpp"
 #include "constants.hpp"
+#include "ref_counted.hpp"
 #include "request.hpp"
-#include "scoped_ptr.hpp"
 
 namespace cass {
 
@@ -28,10 +28,10 @@ class CredentialsRequest : public Request {
 public:
   CredentialsRequest(const V1Authenticator::Credentials& credentials)
     : Request(CQL_OPCODE_CREDENTIALS)
-    , credentials_(credentials) {}
+    , credentials_(credentials) { }
 
 private:
-  int encode(int version, BufferVec* bufs) const;
+  int encode(int version, Handler* handler, BufferVec* bufs) const;
 
 private:
   V1Authenticator::Credentials credentials_;
@@ -39,19 +39,20 @@ private:
 
 class AuthResponseRequest : public Request {
 public:
-  AuthResponseRequest(const std::string& token, Authenticator* auth)
+  AuthResponseRequest(const std::string& token,
+                      const SharedRefPtr<Authenticator>& auth)
     : Request(CQL_OPCODE_AUTH_RESPONSE)
     , token_(token)
-    , auth_(auth) {}
+    , auth_(auth) { }
 
-  ScopedPtr<Authenticator>& auth() { return auth_; }
+  const SharedRefPtr<Authenticator>& auth() const { return auth_; }
 
 private:
-  int encode(int version, BufferVec* bufs) const;
+  int encode(int version, Handler* handler, BufferVec* bufs) const;
 
 private:
   std::string token_;
-  ScopedPtr<Authenticator> auth_;
+  SharedRefPtr<Authenticator> auth_;
 };
 
 } // namespace cass

@@ -54,13 +54,15 @@ void PrepareHandler::on_set(ResponseMessage* response) {
       ResultResponse* result =
           static_cast<ResultResponse*>(response->response_body().get());
       if (result->kind() == CASS_RESULT_KIND_PREPARED) {
-        request_handler_->retry(RETRY_WITH_CURRENT_HOST);
+        request_handler_->retry();
       } else {
-        request_handler_->retry(RETRY_WITH_NEXT_HOST);
+        request_handler_->next_host();
+        request_handler_->retry();
       }
     } break;
     case CQL_OPCODE_ERROR:
-      request_handler_->retry(RETRY_WITH_NEXT_HOST);
+      request_handler_->next_host();
+      request_handler_->retry();
       break;
     default:
       break;
@@ -68,11 +70,13 @@ void PrepareHandler::on_set(ResponseMessage* response) {
 }
 
 void PrepareHandler::on_error(CassError code, const std::string& message) {
-  request_handler_->retry(RETRY_WITH_NEXT_HOST);
+  request_handler_->next_host();
+  request_handler_->retry();
 }
 
 void PrepareHandler::on_timeout() {
-  request_handler_->retry(RETRY_WITH_NEXT_HOST);
+  request_handler_->next_host();
+  request_handler_->retry();
 }
 
 } // namespace cass

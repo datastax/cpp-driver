@@ -16,8 +16,8 @@ endif()
 # Title the project and define the versioning
 project(${PROJECT_NAME_STR} C CXX)
 set(PROJECT_VERSION_MAJOR 2)
-set(PROJECT_VERSION_MINOR 0)
-set(PROJECT_VERSION_PATCH 1)
+set(PROJECT_VERSION_MINOR 1)
+set(PROJECT_VERSION_PATCH 0)
 set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
 set(CASS_DRIVER_PROJECT_NAME ${PROJECT_NAME_STR})
@@ -56,6 +56,7 @@ option(CASS_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
 option(CASS_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
 option(CASS_USE_OPENSSL "Use OpenSSL" ON)
 option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
+option(CASS_USE_SPARSEHASH "Use sparsehash" OFF)
 option(CASS_USE_ZLIB "Use zlib" OFF)
 
 if(CASS_BUILD_TESTS)
@@ -215,6 +216,31 @@ if(CASS_USE_TCMALLOC)
   set(CASS_LIBS ${CASS_LIBS} ${GPERFLIBRARY_LIBRARY})
 endif()
 
+# SparseHash
+if(CASS_USE_SPARSEHASH)
+  # Setup the paths and hints for sparsehash
+  set(_SPARSEHASH_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/sparsehash/")
+  set(_SPARSEHASH_ROOT_HINTS ${SPARSEHASH_ROOT_DIR} $ENV{SPARSEHASH_ROOT_DIR})
+  if(NOT WIN32)
+    set(_SPARSEHASH_ROOT_PATHS ${_SPARSEHASH_ROOT_PATHS} "/usr/" "/usr/local/")
+  endif()
+  set(_SPARSEHASH_ROOT_HINTS_AND_PATHS
+    HINTS ${_SPARSEHASH_ROOT_HINTS}
+    PATHS ${_SPARSEHASH_ROOT_PATHS})
+
+  # Ensure sparsehash headers were found
+  find_path(SPARSEHASH_INCLUDE_DIR
+    NAMES google/dense_hash_map
+    HINTS ${_SPARSEHASH_INCLUDE_DIR} ${_SPARSEHASH_ROOT_HINTS_AND_PATHS}
+    PATH_SUFFIXES include)
+  find_package_handle_standard_args(SparseJash "Could NOT find sparsehash, try to set the path to the sparsehash root folder in the system variable SPARSEHASH_ROOT_DIR"
+    SPARSEHASH_INCLUDE_DIR)
+
+  if (SPARSEHASH_INCLUDE_DIR)
+    add_definitions("-DCASS_USE_SPARSEHASH")
+  endif()
+endif()
+
 # zlib
 if(CASS_USE_ZLIB)
   # Setup the root directory for zlib
@@ -278,7 +304,7 @@ endif()
 
 # Assign additional library requirements for Windows
 if(WIN32)
-  set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 ws2_32)
+  set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 ws2_32 userenv)
 endif()
 
 #----------------------
@@ -376,6 +402,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # TODO(mpenick): Fix these "possible loss of data" warnings
   add_definitions(/wd4244)
   add_definitions(/wd4267)
+  add_definitions(/wd4800) # Performance warning due to automatic compiler casting from int to bool
 
   # Add preprocessor definitions for proper compilation
   add_definitions(-D_WIN32_WINNT=0x0501)      # Required for winsock (pre Windows XP wspiapi.h only)
@@ -400,6 +427,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # is to provide a CommonCryto implementation.
   if (APPLE AND CASS_USE_OPENSSL)
     set(PROJECT_CXX_FLAGS "${PROJECT_CXX_FLAGS} -Wno-deprecated-declarations")
+    set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -Wno-deprecated-declarations")
   endif()
 
   # Enable C++11 support to use std::atomic
@@ -422,10 +450,23 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # I disabled long-long warning because boost generates about 50 such warnings
   set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-unused-parameter -Wno-variadic-macros -Wno-zero-length-array")
 
+  # Detect if this is Apple's clang
+  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v ERROR_VARIABLE CASS_CLANG_VERSION_INFO)
+  if (CASS_CLANG_VERSION_INFO MATCHES "^Apple LLVM")
+    set(CASS_IS_APPLE_CLANG 1)
+  else()
+    set(CASS_IS_APPLE_CLANG 0)
+  endif()
+
+  if(NOT CASS_IS_APPLE_CLANG AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER "3.6")
+    set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedef ")
+  endif()
+
   # OpenSSL is deprecated on later versions of Mac OS X. The long-term solution
   # is to provide a CommonCryto implementation.
   if (APPLE AND CASS_USE_OPENSSL)
     set(PROJECT_CXX_FLAGS "${PROJECT_CXX_FLAGS} -Wno-deprecated-declarations")
+    set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -Wno-deprecated-declarations")
   endif()
 
   # Enable C++11 support to use std::atomic
@@ -606,6 +647,9 @@ if(CASS_BUILD_EXAMPLES)
   add_subdirectory(examples/ssl)
   add_subdirectory(examples/paging)
   add_subdirectory(examples/perf)
+  add_subdirectory(examples/named_parameters)
+  add_subdirectory(examples/tuple)
+  add_subdirectory(examples/udt)
 endif()
 
 #------------------

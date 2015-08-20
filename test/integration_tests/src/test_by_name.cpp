@@ -205,16 +205,6 @@ BOOST_AUTO_TEST_CASE(bind_multiple_columns)
   BOOST_CHECK(abc == 1.23f);
 }
 
-BOOST_AUTO_TEST_CASE(bind_not_prepared)
-{
-  test_utils::CassStatementPtr statement(cass_statement_new("INSERT INTO by_name (key, a) VALUES (?, ?)", 2));
-
-  CassUuid key = test_utils::generate_time_uuid(uuid_gen);
-
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_ERROR_LIB_INVALID_STATEMENT_TYPE);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_int32_by_name(statement.get(), "a", 9042), CASS_ERROR_LIB_INVALID_STATEMENT_TYPE);
-}
-
 BOOST_AUTO_TEST_CASE(bind_invalid_name)
 {
   test_utils::CassPreparedPtr prepared = test_utils::prepare(session, "INSERT INTO by_name (key, a, b, c, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?, ?, ?, ?)");
@@ -289,7 +279,7 @@ BOOST_AUTO_TEST_CASE(null)
  * This test handles the binding of a prepared statement with a
  * CASS_VALUE_TYPE_BLOB and CASS_VALUE_TYPE_VARINT datatype.
  *
- * @since 2.0.2
+ * @since 2.1.0-beta
  * @test_category prepared_statements:binding
  * @jira_ticket CPP-272 [https://datastax-oss.atlassian.net/browse/CPP-272]
  */

@@ -16,10 +16,10 @@
 
 #include "ssl.hpp"
 
-#include "common.hpp"
 #include "logger.hpp"
 #include "ssl/ring_buffer_bio.hpp"
 #include "string_ref.hpp"
+#include "utils.hpp"
 
 #include <openssl/crypto.h>
 #include <openssl/err.h>
@@ -74,10 +74,22 @@ static void ssl_log_errors(const char* context) {
   ERR_print_errors_fp(stderr);
 }
 
-static std::string ssl_error_string(long err) {
-  char buf[256];
-  ERR_error_string_n(err, buf, sizeof(buf));
-  return std::string(buf);
+static std::string ssl_error_string() {
+  const char* data;
+  int flags;
+  int err;
+  std::string error;
+  while ((err = ERR_get_error_line_data(NULL, NULL, &data, &flags)) != 0) {
+    char buf[256];
+    ERR_error_string_n(err, buf, sizeof(buf));
+    if (!error.empty()) error.push_back(',');
+    error.append(buf);
+    if (flags & ERR_TXT_STRING) {
+      error.push_back(':');
+      error.append(data);
+    }
+  }
+  return error;
 }
 
 static int pem_password_callback(char* buf, int size, int rwflag, void* u) {
@@ -323,9 +335,7 @@ OpenSslSession::~OpenSslSession() {
 
 void OpenSslSession::do_handshake() {
   int rc = SSL_connect(ssl_);
-  if (rc <= 0) {
-    check_error(rc);
-  }
+  if (rc <= 0) check_error(rc);
 }
 
 void OpenSslSession::verify() {
@@ -376,27 +386,22 @@ void OpenSslSession::verify() {
 
 int OpenSslSession::encrypt(const char* buf, size_t size) {
   int rc = SSL_write(ssl_, buf, size);
-  if (rc <= 0) {
-    check_error(rc);
-  }
+  if (rc <= 0) check_error(rc);
   return rc;
 }
 
 int OpenSslSession::decrypt(char* buf, size_t size)  {
   int rc = SSL_read(ssl_, buf, size);
-  if (rc <= 0) {
-    check_error(rc);
-  }
+  if (rc <= 0) check_error(rc);
   return rc;
 }
 
-bool OpenSslSession::check_error(int rc) {
+void OpenSslSession::check_error(int rc) {
   int err = SSL_get_error(ssl_, rc);
   if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_NONE) {
-    error_message_ = ssl_error_string(err);
-    return true;
+    error_code_ = CASS_ERROR_SSL_PROTOCOL_ERROR;
+    error_message_ = ssl_error_string();
   }
-  return false;
 }
 
 OpenSslContext::OpenSslContext()

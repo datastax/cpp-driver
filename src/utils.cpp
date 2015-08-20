@@ -14,11 +14,9 @@
   limitations under the License.
 */
 
-#include "common.hpp"
+#include "utils.hpp"
 
-#include "buffer_piece.hpp"
 #include "constants.hpp"
-#include "value.hpp"
 
 #include <algorithm>
 #include <assert.h>
@@ -76,6 +74,32 @@ std::string& trim(std::string& str) {
   str.erase(std::find_if(str.rbegin(), str.rend(),
                          std::not1(std::ptr_fun<int, int>(::isspace))).base(),
             str.end());
+  return str;
+}
+
+static bool is_valid_cql_id_char(int c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+         (c >= '0' && c <= '9') || c == '_';
+}
+
+bool is_valid_cql_id(const std::string& str) {
+  for (std::string::const_iterator i = str.begin(),
+       end = str.end(); i != end; ++i) {
+    if (!is_valid_cql_id_char(*i)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+std::string& to_cql_id(std::string& str) {
+  if (is_valid_cql_id(str)) {
+    std::transform(str.begin(), str.end(), str.begin(), tolower);
+    return str;
+  }
+  if (str.length() > 2 && str[0] == '"' && str[str.length() - 1] == '"') {
+    return str.erase(str.length() - 1, 1).erase(0, 1);
+  }
   return str;
 }
 

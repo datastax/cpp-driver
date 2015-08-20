@@ -47,6 +47,11 @@ void ClusterMetadata::update_tables(ResultResponse* table_result, ResultResponse
   schema_.update_tables(table_result, col_result);
 }
 
+void ClusterMetadata::update_usertypes(ResultResponse* usertypes_result) {
+  ScopedMutex l(&schema_mutex_);
+  schema_.update_usertypes(usertypes_result);
+}
+
 void ClusterMetadata::drop_keyspace(const std::string& keyspace_name) {
   schema_.drop_keyspace(keyspace_name);
   token_map_.drop_keyspace(keyspace_name);

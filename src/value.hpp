@@ -18,75 +18,132 @@
 #define __CASS_VALUE_HPP_INCLUDED__
 
 #include "cassandra.h"
-#include "buffer_piece.hpp"
 #include "result_metadata.hpp"
+#include "string_ref.hpp"
 
 namespace cass {
 
 class Value {
 public:
   Value()
-      : type_(CASS_VALUE_TYPE_UNKNOWN)
-      , primary_type_(CASS_VALUE_TYPE_UNKNOWN)
-      , secondary_type_(CASS_VALUE_TYPE_UNKNOWN)
-      , count_(0) {}
-
-  Value(CassValueType type, char* data, size_t size)
-      : type_(type)
-      , primary_type_(CASS_VALUE_TYPE_UNKNOWN)
-      , secondary_type_(CASS_VALUE_TYPE_UNKNOWN)
+      : protocol_version_(0)
       , count_(0)
-      , buffer_(data, size) {}
+      , size_(-1) { }
 
-  Value(CassValueType type, CassValueType primary_type, CassValueType secondary_type,
-        int32_t count, char* data, size_t size)
-      : type_(type)
-      , primary_type_(primary_type)
-      , secondary_type_(secondary_type)
+  Value(int protocol_version,
+        const SharedRefPtr<const DataType>& data_type,
+        char* data, int32_t size);
+
+  Value(int protocol_version,
+        const SharedRefPtr<const DataType>& data_type,
+        int32_t count, char* data, int32_t size)
+      : protocol_version_(protocol_version)
+      , data_type_(data_type)
       , count_(count)
-      , buffer_(data, size) {}
+      , data_(data)
+      , size_(size) { }
 
-  Value(const ColumnDefinition* def, int32_t count, char* data, size_t size)
-    : type_(static_cast<CassValueType>(def->type))
-    , primary_type_(static_cast<CassValueType>(def->collection_primary_type))
-    , secondary_type_(static_cast<CassValueType>(def->collection_secondary_type))
-    , count_(count)
-    , buffer_(data, size) {}
+  int protocol_version() const { return protocol_version_; }
 
-  CassValueType type() const { return type_; }
-
-  CassValueType primary_type() const {
-    return primary_type_;
+  CassValueType value_type() const {
+    if (!data_type_) {
+      return CASS_VALUE_TYPE_UNKNOWN;
+    }
+    return data_type_->value_type();
   }
 
-  CassValueType secondary_type() const {
-    return secondary_type_;
+  const SharedRefPtr<const DataType>& data_type() const {
+    return data_type_;
+  }
+
+  CassValueType primary_value_type() const {
+    const SharedRefPtr<const DataType>& primary(primary_data_type());
+    if (!primary) {
+      return CASS_VALUE_TYPE_UNKNOWN;
+    }
+    return primary->value_type();
+  }
+
+  const SharedRefPtr<const DataType>& primary_data_type() const {
+    if (!data_type_ || !data_type_->is_collection()) {
+      return DataType::NIL;
+    }
+    const SharedRefPtr<const CollectionType>& collection_type(data_type_);
+    if (collection_type->types().size() < 1) {
+      return DataType::NIL;
+    }
+    return collection_type->types()[0];
+  }
+
+  CassValueType secondary_value_type() const {
+    const SharedRefPtr<const DataType>& secondary(secondary_data_type());
+    if (!secondary) {
+      return CASS_VALUE_TYPE_UNKNOWN;
+    }
+    return secondary->value_type();
+  }
+
+  const SharedRefPtr<const DataType>& secondary_data_type() const {
+    if (!data_type_ || !data_type_->is_map()) {
+      return DataType::NIL;
+    }
+    const SharedRefPtr<const CollectionType>& collection_type(data_type_);
+    if (collection_type->types().size() < 2) {
+      return DataType::NIL;
+    }
+    return collection_type->types()[1];
   }
 
   bool is_null() const {
-    return buffer().size() < 0;
+    return size_ < 0;
   }
 
-  bool is_collection() const { return is_collection(type_); }
-  static bool is_collection(CassValueType t);
+  bool is_collection() const {
+    if (!data_type_) return false;
+    return data_type_->is_collection();
+  }
+
+  bool is_map() const {
+    if (!data_type_) return false;
+    return data_type_->is_map();
+  }
+
+  bool is_tuple() const {
+    if (!data_type_) return false;
+    return data_type_->is_tuple();
+  }
+
+  bool is_user_type() const {
+    if (!data_type_) return false;
+    return data_type_->is_user_type();
+  }
 
   int32_t count() const {
     return count_;
   }
 
-  const BufferPiece& buffer() const {
-    return buffer_;
+  char* data() const { return data_; }
+  int32_t size() const { return size_; }
+
+  StringRef to_string_ref() const {
+    if (size_ < 0) return StringRef();
+    return StringRef(data_, size_);
+  }
+
+  std::string to_string() const {
+    return to_string_ref().to_string();
   }
 
 private:
-  CassValueType type_;
-  CassValueType primary_type_;
-  CassValueType secondary_type_;
+  int protocol_version_;
+  SharedRefPtr<const DataType> data_type_;
   int32_t count_;
-  BufferPiece buffer_;
+
+  char* data_;
+  int32_t size_;
 };
 
-typedef std::vector<Value> ValueVec;
+typedef std::vector<Value> OutputValueVec;
 
 } // namespace cass
 
