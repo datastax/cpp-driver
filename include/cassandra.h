@@ -738,10 +738,10 @@ cass_cluster_set_ssl(CassCluster* cluster,
                      CassSsl* ssl);
 
 /**
- * Sets the protocol version. This will automatically downgrade if to
- * protocol version 1.
+ * Sets the protocol version. This will automatically downgrade to the lowest
+ * supported protocol version.
  *
- * <b>Default:</b> 2
+ * <b>Default:</b> 4
  *
  * @public @memberof CassCluster
  *

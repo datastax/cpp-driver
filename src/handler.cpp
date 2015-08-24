@@ -27,7 +27,7 @@
 namespace cass {
 
 int32_t Handler::encode(int version, int flags, BufferVec* bufs) {
-  if (version < 1 || version > 3) {
+  if (version < 1 || version > 4) {
     return Request::ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
   }
 
