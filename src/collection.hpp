@@ -62,6 +62,7 @@ public:
   }
 
   APPEND_TYPE(cass_int32_t)
+  APPEND_TYPE(cass_uint32_t)
   APPEND_TYPE(cass_int64_t)
   APPEND_TYPE(cass_float_t)
   APPEND_TYPE(cass_double_t)

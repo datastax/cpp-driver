@@ -36,7 +36,8 @@ class UserTypeValue;
 inline bool is_int64_type(CassValueType value_type) {
   return value_type == CASS_VALUE_TYPE_BIGINT ||
       value_type == CASS_VALUE_TYPE_COUNTER ||
-      value_type == CASS_VALUE_TYPE_TIMESTAMP;
+      value_type == CASS_VALUE_TYPE_TIMESTAMP ||
+      value_type == CASS_VALUE_TYPE_TIME;
 }
 
 inline bool is_string_type(CassValueType value_type) {
@@ -378,6 +379,13 @@ template<>
 struct IsValidDataType<cass_int32_t> {
   bool operator()(cass_int32_t, const SharedRefPtr<const DataType>& data_type) const {
     return data_type->value_type() == CASS_VALUE_TYPE_INT;
+  }
+};
+
+template<>
+struct IsValidDataType<cass_uint32_t> {
+  bool operator()(cass_uint32_t, const SharedRefPtr<const DataType>& data_type) const {
+    return data_type->value_type() == CASS_VALUE_TYPE_DATE;
   }
 };
 

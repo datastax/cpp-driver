@@ -16,7 +16,13 @@
 
 #include "external_types.hpp"
 
+#include <limits>
+#include <time.h>
 #include <uv.h>
+
+#define CASS_DATE_NUM_SECONDS_PER_DAY (24U * 60U * 60U)
+#define CASS_DATE_EPOCH 2147483648U // 2^31
+#define CASS_TIME_NANOSECONDS_PER_SECOND 1000000000LL
 
 extern "C" {
 
@@ -120,6 +126,20 @@ CassError cass_inet_from_string_n(const char* str,
   memcpy(buf, str, str_length);
   buf[str_length] = '\0';
   return cass_inet_from_string(buf, output);
+}
+
+cass_uint32_t cass_date_from_epoch(cass_int64_t epoch_secs) {
+  return (epoch_secs / CASS_DATE_NUM_SECONDS_PER_DAY) + CASS_DATE_EPOCH;
+}
+
+cass_int64_t cass_time_from_epoch(cass_int64_t epoch_secs) {
+  return  CASS_TIME_NANOSECONDS_PER_SECOND *
+      (epoch_secs % CASS_DATE_NUM_SECONDS_PER_DAY);
+}
+
+cass_int64_t cass_date_time_to_epoch(cass_uint32_t date, cass_int64_t time) {
+  return (date - CASS_DATE_EPOCH) * CASS_DATE_NUM_SECONDS_PER_DAY +
+      time / CASS_TIME_NANOSECONDS_PER_SECOND;
 }
 
 } // extern "C"

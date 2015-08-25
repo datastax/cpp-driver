@@ -55,6 +55,7 @@ public:
   }
 
   SET_TYPE(cass_int32_t)
+  SET_TYPE(cass_uint32_t)
   SET_TYPE(cass_int64_t)
   SET_TYPE(cass_float_t)
   SET_TYPE(cass_double_t)

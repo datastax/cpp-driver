@@ -35,6 +35,13 @@ inline Buffer encode_with_length(cass_int32_t value) {
   return buf;
 }
 
+inline Buffer encode_with_length(cass_uint32_t value) {
+  Buffer buf(sizeof(int32_t) + sizeof(uint32_t));
+  size_t pos = buf.encode_int32(0, sizeof(uint32_t));
+  buf.encode_uint32(pos, value);
+  return buf;
+}
+
 inline Buffer encode_with_length(cass_int64_t value) {
   Buffer buf(sizeof(int32_t) + sizeof(int64_t));
   size_t pos = buf.encode_int32(0, sizeof(int64_t));
@@ -102,6 +109,12 @@ inline Buffer encode_with_length(CassDecimal value) {
 inline Buffer encode(cass_int32_t value) {
   Buffer buf(sizeof(int32_t));
   buf.encode_int32(0, value);
+  return buf;
+}
+
+inline Buffer encode(cass_uint32_t value) {
+  Buffer buf(sizeof(uint32_t));
+  buf.encode_uint32(0, value);
   return buf;
 }
 
