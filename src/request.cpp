@@ -60,7 +60,8 @@ void CustomPayload::append(const char* name, size_t name_length, const uint8_t* 
 int32_t CustomPayload::encode(BufferVec* bufs) const {
   int32_t length = sizeof(uint16_t);
   Buffer buf(sizeof(uint16_t));
-  buf.encode_uint16(0, items_.size());
+  assert(items_.size() % 2 == 0);
+  buf.encode_uint16(0, items_.size() / 2);
   bufs->push_back(buf);
   for (ItemVec::const_iterator i = items_.begin(), end = items_.end();
        i != end;

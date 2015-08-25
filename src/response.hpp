@@ -28,7 +28,7 @@
 
 namespace cass {
 
-class Response {
+class Response : public RefCounted<Response> {
 public:
   typedef FixedVector<StringRef, 8> WarningVec;
 
@@ -47,9 +47,15 @@ public:
     buffer_ = SharedRefPtr<RefBuffer>(RefBuffer::create(size));
   }
 
+  size_t custom_payload_item_count() const { return custom_payload_.size(); }
+
+  bool custom_payload_item(size_t index,
+                           const char** name, size_t* name_length,
+                           const uint8_t** value, size_t* value_size) const;
+
   bool custom_payload_item(StringRef name,
-                           const uint8_t** value,
-                           size_t* value_size) const;
+                           const uint8_t** value, size_t* value_size) const;
+
 
   const WarningVec& warnings() const {
     return warnings_;
@@ -104,7 +110,7 @@ public:
 
   int16_t stream() const { return stream_; }
 
-  ScopedPtr<Response>& response_body() { return response_body_; }
+  const SharedRefPtr<Response>& response_body() { return response_body_; }
 
   bool is_body_ready() const { return is_body_ready_; }
 
@@ -128,7 +134,7 @@ private:
 
   bool is_body_ready_;
   bool is_body_error_;
-  ScopedPtr<Response> response_body_;
+  SharedRefPtr<Response> response_body_;
   char* body_buffer_pos_;
 
 private:

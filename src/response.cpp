@@ -26,6 +26,23 @@
 
 namespace cass {
 
+bool Response::custom_payload_item(size_t index,
+                                   const char** name, size_t* name_length,
+                                   const uint8_t** value, size_t* value_size) const {
+  if (index >= custom_payload_.size()) return false;
+  const CustomPayloadItem& item(custom_payload_[index]);
+  *name = item.name.data();
+  *name_length = item.name.size();
+  if (item.value_size < 0) {
+    *value = NULL;
+    *value_size = 0;
+  } else {
+    *value = item.value;
+    *value_size = item.value_size;
+  }
+  return true;
+}
+
 bool Response::custom_payload_item(StringRef name,
                                    const uint8_t** value,
                                    size_t* value_size) const {

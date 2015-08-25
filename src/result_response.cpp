@@ -23,7 +23,7 @@
 extern "C" {
 
 void cass_result_free(const CassResult* result) {
-  delete result->from();
+  result->dec_ref();
 }
 
 size_t cass_result_row_count(const CassResult* result) {
@@ -94,44 +94,6 @@ CassError cass_result_paging_state_token(const CassResult* result,
   }
   *paging_state = result->paging_state().data();
   *paging_state_size = result->paging_state().size();
-  return CASS_OK;
-}
-
-CassError cass_result_custom_payload_item(const CassResult* result,
-                                          const char* name,
-                                          const cass_byte_t** value,
-                                          size_t* value_size) {
-  return cass_result_custom_payload_item_n(result,
-                                           name, strlen(name),
-                                           value, value_size);
-}
-
-CassError cass_result_custom_payload_item_n(const CassResult* result,
-                                            const char* name,
-                                            size_t name_length,
-                                            const cass_byte_t** value,
-                                            size_t* value_size) {
-  if (!result->custom_payload_item(cass::StringRef(name, name_length),
-                                   value, value_size)) {
-    return CASS_ERROR_LIB_NAME_DOES_NOT_EXIST;
-  }
-  return CASS_OK;
-}
-
-size_t cass_result_warning_count(const CassResult* result) {
-  return result->warnings().size();
-}
-
-CassError cass_result_warning(const CassResult *result,
-                              size_t index,
-                              const char** warning,
-                              size_t* warning_size) {
-  if (index >= result->warnings().size()) {
-    return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
-  }
-  cass::StringRef warn = result->warnings()[index];
-  *warning = warn.data();
-  *warning_size = warn.size();
   return CASS_OK;
 }
 

@@ -111,6 +111,12 @@ CassError cass_statement_set_timestamp(CassStatement* statement,
   return CASS_OK;
 }
 
+CassError cass_statement_set_custom_payload(CassStatement* statement,
+                                            const CassCustomPayload* payload) {
+  statement->set_custom_payload(payload);
+  return CASS_OK;
+}
+
 #define CASS_STATEMENT_BIND(Name, Params, Value)                                \
   CassError cass_statement_bind_##Name(CassStatement* statement,                \
                                       size_t index Params) {                    \

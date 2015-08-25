@@ -26,7 +26,7 @@
 extern "C" {
 
 void cass_error_result_free(const CassErrorResult* error_result) {
-  delete error_result->from();
+  error_result->dec_ref();
 }
 
 CassError cass_error_result_code(const CassErrorResult* error_result) {

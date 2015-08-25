@@ -31,14 +31,14 @@ class Response;
 
 class MultipleRequestHandler : public RefCounted<MultipleRequestHandler> {
 public:
-  typedef std::vector<Response*> ResponseVec;
+  typedef std::vector<SharedRefPtr<Response> > ResponseVec;
 
   MultipleRequestHandler(Connection* connection)
     : connection_(connection)
     , has_errors_or_timeouts_(false)
-    , remaining_(0) {}
+    , remaining_(0) { }
 
-  virtual ~MultipleRequestHandler();
+  virtual ~MultipleRequestHandler() { }
 
   void execute_query(const std::string& query);
 

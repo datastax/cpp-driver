@@ -79,7 +79,7 @@ const CassDataType* cass_prepared_parameter_data_type_by_name_n(const CassPrepar
 
 namespace cass {
 
-Prepared::Prepared(const ResultResponse* result,
+Prepared::Prepared(const SharedRefPtr<ResultResponse>& result,
                    const std::string& statement,
                    const std::vector<std::string>& key_columns)
       : result_(result)

@@ -58,14 +58,15 @@ const CassResult* cass_future_get_result(CassFuture* future) {
 
   if (response_future->is_error()) return NULL;
 
-  cass::ResultResponse* result
-      = static_cast<cass::ResultResponse*>(response_future->release_result());
+  cass::SharedRefPtr<cass::ResultResponse> result(response_future->response());
 
-  if (result != NULL) {
+  if (result) {
     result->decode_first_row();
   }
 
-  return CassResult::to(result);
+  result->inc_ref();
+
+  return CassResult::to(result.get());
 }
 
 const CassPrepared* cass_future_get_prepared(CassFuture* future) {
@@ -77,15 +78,14 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
 
   if (response_future->is_error()) return NULL;
 
-  cass::ScopedPtr<cass::ResultResponse> result(
-      static_cast<cass::ResultResponse*>(response_future->release_result()));
+  cass::SharedRefPtr<cass::ResultResponse> result(response_future->response());
   if (result && result->kind() == CASS_RESULT_KIND_PREPARED) {
     std::vector<std::string> key_aliases;
     response_future->schema.get_table_key_columns(result->keyspace().to_string(),
                                                   result->table().to_string(),
                                                   &key_aliases);
     cass::Prepared* prepared =
-        new cass::Prepared(result.release(), response_future->statement, key_aliases);
+        new cass::Prepared(result, response_future->statement, key_aliases);
     prepared->inc_ref();
     return CassPrepared::to(prepared);
   }
@@ -101,10 +101,9 @@ const CassErrorResult* cass_future_get_error_result(CassFuture* future) {
 
   if (!response_future->is_error()) return NULL;
 
-  cass::ErrorResponse* error_result
-      = static_cast<cass::ErrorResponse*>(response_future->release_result());
-
-  return CassErrorResult::to(error_result);
+  cass::SharedRefPtr<cass::ErrorResponse> error_result(response_future->response());
+  error_result->inc_ref();
+  return CassErrorResult::to(error_result.get());
 }
 
 CassError cass_future_error_code(CassFuture* future) {
@@ -128,6 +127,87 @@ void cass_future_error_message(CassFuture* future,
     *message = "";
     *message_length = 0;
   }
+}
+
+size_t cass_future_custom_payload_item_count(CassFuture* future) {
+  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
+    return 0;
+  }
+  cass::SharedRefPtr<cass::Response> response(
+        static_cast<cass::ResponseFuture*>(future->from())->response());
+  return response->custom_payload_item_count();
+}
+
+CassError cass_future_custom_payload_item(CassFuture* future,
+                                          size_t index,
+                                          const char** name,
+                                          size_t* name_length,
+                                          const cass_byte_t** value,
+                                          size_t* value_size) {
+  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
+    return CASS_ERROR_LIB_INVALID_FUTURE_TYPE;
+  }
+  cass::SharedRefPtr<cass::Response> response(
+        static_cast<cass::ResponseFuture*>(future->from())->response());
+  if (!response->custom_payload_item(index,
+                                     name, name_length,
+                                     value, value_size)) {
+    return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
+  }
+  return CASS_OK;
+}
+
+CassError cass_future_custom_payload_item_by_name(CassFuture* future,
+                                                  const char* name,
+                                                  const cass_byte_t** value,
+                                                  size_t* value_size) {
+  return cass_future_custom_payload_item_by_name_n(future,
+                                                   name, strlen(name),
+                                                   value, value_size);
+}
+
+CassError cass_future_custom_payload_item_by_name_n(CassFuture* future,
+                                                    const char* name,
+                                                    size_t name_length,
+                                                    const cass_byte_t** value,
+                                                    size_t* value_size) {
+  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
+    return CASS_ERROR_LIB_INVALID_FUTURE_TYPE;
+  }
+  cass::SharedRefPtr<cass::Response> response(
+        static_cast<cass::ResponseFuture*>(future->from())->response());
+  if (!response->custom_payload_item(cass::StringRef(name, name_length),
+                                     value, value_size)) {
+    return CASS_ERROR_LIB_NAME_DOES_NOT_EXIST;
+  }
+  return CASS_OK;
+}
+
+size_t cass_future_warning_count(CassFuture* future) {
+  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
+    return 0;
+  }
+  cass::SharedRefPtr<cass::Response> response(
+        static_cast<cass::ResponseFuture*>(future->from())->response());
+  return response->warnings().size();
+}
+
+CassError cass_future_warning(CassFuture *future,
+                              size_t index,
+                              const char** warning,
+                              size_t* warning_size) {
+  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
+    return CASS_ERROR_LIB_INVALID_FUTURE_TYPE;
+  }
+  cass::SharedRefPtr<cass::Response> response(
+        static_cast<cass::ResponseFuture*>(future->from())->response());
+  if (index >= response->warnings().size()) {
+    return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
+  }
+  cass::StringRef warn = response->warnings()[index];
+  *warning = warn.data();
+  *warning_size = warn.size();
+  return CASS_OK;
 }
 
 } // extern "C"

@@ -21,16 +21,9 @@
 
 namespace cass {
 
-MultipleRequestHandler::~MultipleRequestHandler() {
-  for (ResponseVec::iterator it = responses_.begin(),
-       end = responses_.end(); it != end; ++it) {
-    delete (*it);
-  }
-}
-
 void MultipleRequestHandler::execute_query(const std::string& query) {
   if (has_errors_or_timeouts_) return;
-  responses_.push_back(NULL);
+  responses_.push_back(SharedRefPtr<Response>());
   SharedRefPtr<InternalHandler> handler(new InternalHandler(this, new QueryRequest(query), remaining_++));
   if (!connection_->write(handler.get())) {
     on_error(CASS_ERROR_LIB_NO_STREAMS, "No more streams available");
@@ -38,7 +31,7 @@ void MultipleRequestHandler::execute_query(const std::string& query) {
 }
 
 void MultipleRequestHandler::InternalHandler::on_set(ResponseMessage* response) {
-  parent_->responses_[index_] = response->response_body().release();
+  parent_->responses_[index_] = response->response_body();
   if (--parent_->remaining_ == 0 && !parent_->has_errors_or_timeouts_) {
     parent_->on_set(parent_->responses_);
   }
