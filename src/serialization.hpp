@@ -251,6 +251,20 @@ inline char* decode_stringlist(char* input, std::list<std::string>& output) {
   return buffer;
 }
 
+inline char* decode_stringlist(char* input, StringRefVec& output) {
+  output.clear();
+  uint16_t len = 0;
+  char* buffer = decode_uint16(input, len);
+  output.reserve(len);
+  for (int i = 0; i < len; i++) {
+    char* s = NULL;
+    size_t size = 0;
+    buffer = decode_string(buffer, &s,  size);
+    output.push_back(StringRef(s,  size));
+  }
+  return buffer;
+}
+
 typedef std::map<std::string, std::list<std::string> > StringMultimap;
 
 inline char* decode_string_multimap(char* input, StringMultimap& output) {

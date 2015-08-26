@@ -36,39 +36,47 @@ public:
       : Response(CQL_OPCODE_ERROR)
       , code_(0xFFFFFFFF)
       , cl_(CASS_CONSISTENCY_UNKNOWN)
-      , actual_(-1)
+      , received_(-1)
       , required_(-1)
+      , num_failures_(-1)
       , data_present_(0)
       , write_type_(CASS_WRITE_TYPE_UKNOWN) { }
 
   int32_t code() const { return code_; }
   StringRef message() const { return message_; }
-
   StringRef prepared_id() const { return prepared_id_; }
-
-  CassConsistency consistency() const {
-    return static_cast<CassConsistency>(cl_);
-  }
-  int32_t actual() const { return actual_; }
+  CassConsistency consistency() const { return static_cast<CassConsistency>(cl_); }
+  int32_t actual() const { return received_; }
   int32_t required() const { return required_; }
+  int32_t num_failures() const { return num_failures_; }
   uint8_t data_present() const { return data_present_; }
   CassWriteType write_type() const { return write_type_; }
+  StringRef keyspace() const { return keyspace_; }
+  StringRef table() const { return table_; }
+  StringRef function() const { return function_; }
+  const StringRefVec& arg_types() const { return arg_types_; }
 
   std::string error_message() const;
 
   bool decode(int version, char* buffer, size_t size);
 
 private:
+  void decode_write_type(char* pos);
+
+private:
   int32_t code_;
   StringRef message_;
-
   StringRef prepared_id_;
-
   uint16_t cl_;
-  int32_t actual_;
+  int32_t received_;
   int32_t required_;
+  int32_t num_failures_;
   uint8_t data_present_;
   CassWriteType write_type_;
+  StringRef keyspace_;
+  StringRef table_;
+  StringRef function_;
+  StringRefVec arg_types_;
 };
 
 bool check_error_or_invalid_response(const std::string& prefix, uint8_t expected_opcode,

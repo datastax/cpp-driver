@@ -561,6 +561,7 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_CONNECT, 22, "Unable to connect") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_CLOSE, 23, "Unable to close") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_PAGING_STATE, 24, "No paging state") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE, 29, "Invalid error result type") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -570,6 +571,9 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_TRUNCATE_ERROR, 0x1003, "Truncate error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_WRITE_TIMEOUT, 0x1100, "Write timeout") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_READ_TIMEOUT, 0x1200, "Read timeout") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_READ_FAILURE, 0x1300, "Read failure") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_FUNCTION_FAILURE, 0x1400, "Function failure") \
+  XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_WRITE_FAILURE, 0x1500, "Write failure") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SYNTAX_ERROR, 0x2000, "Syntax error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_UNAUTHORIZED, 0x2100, "Unauthorized") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_INVALID_QUERY, 0x2200, "Invalid query") \
@@ -5041,6 +5045,8 @@ cass_error_result_code(const CassErrorResult* error_result);
  * <ul>
  *   <li>CASS_ERROR_SERVER_READ_TIMEOUT</li>
  *   <li>CASS_ERROR_SERVER_WRITE_TIMEOUT</li>
+ *   <li>CASS_ERROR_SERVER_READ_FAILURE</li>
+ *   <li>CASS_ERROR_SERVER_WRITE_FAILURE</li>
  *   <li>CASS_ERROR_SERVER_UNAVAILABLE</li>
  * </ul>
  *
@@ -5061,6 +5067,8 @@ cass_error_result_consistency(const CassErrorResult* error_result);
  * <ul>
  *   <li>CASS_ERROR_SERVER_READ_TIMEOUT</li>
  *   <li>CASS_ERROR_SERVER_WRITE_TIMEOUT</li>
+ *   <li>CASS_ERROR_SERVER_READ_FAILURE</li>
+ *   <li>CASS_ERROR_SERVER_WRITE_FAILURE</li>
  *   <li>CASS_ERROR_SERVER_UNAVAILABLE</li>
  * </ul>
  *
@@ -5082,6 +5090,8 @@ cass_error_result_responses_received(const CassErrorResult* error_result);
  * <ul>
  *   <li>CASS_ERROR_SERVER_READ_TIMEOUT</li>
  *   <li>CASS_ERROR_SERVER_WRITE_TIMEOUT</li>
+ *   <li>CASS_ERROR_SERVER_READ_FAILURE</li>
+ *   <li>CASS_ERROR_SERVER_WRITE_FAILURE</li>
  *   <li>CASS_ERROR_SERVER_UNAVAILABLE</li>
  * </ul>
  *
@@ -5095,10 +5105,30 @@ cass_error_result_responses_received(const CassErrorResult* error_result);
 CASS_EXPORT cass_int32_t
 cass_error_result_responses_required(const CassErrorResult* error_result);
 
+/**
+ * Gets the number of nodes that experienced failures for the following error types:
+ *
+ * <ul>
+ *   <li>CASS_ERROR_SERVER_READ_FAILURE</li>
+ *   <li>CASS_ERROR_SERVER_WRITE_FAILURE</li>
+ * </ul>
+ *
+ * @public @memberof CassErrorResult
+ *
+ * @param[in] error_result
+ * @return The number of nodes that failed during a read or write request.
+ */
+CASS_EXPORT cass_int32_t
+cass_error_result_num_failures(const CassErrorResult* error_result);
 
 /**
- * Gets if the data was actually present in the responses from the replicas when
- * the read timed out (CASS_ERROR_SERVER_READ_TIMEOUT).
+ * Determines whether the actual data was present in the responses from the
+ * replicas for the following error result types:
+ *
+ * <ul>
+ *   <li>CASS_ERROR_SERVER_READ_TIMEOUT</li>
+ *   <li>CASS_ERROR_SERVER_READ_FAILURE</li>
+ * </ul>
  *
  * @public @memberof CassErrorResult
  *
@@ -5110,8 +5140,12 @@ CASS_EXPORT cass_bool_t
 cass_error_result_data_present(const CassErrorResult* error_result);
 
 /**
- * Gets the write type of a request when the write timed out
- * (CASS_ERROR_SERVER_WRITE_TIMEOUT).
+ * Gets the write type of a request for the following error result types:
+ *
+ * <ul>
+ *   <li>CASS_ERROR_SERVER_WRITE_TIMEOUT</li>
+ *   <li>CASS_ERROR_SERVER_WRITE_FAILURE</li>
+ * </ul>
  *
  * @public @memberof CassErrorResult
  *
@@ -5121,6 +5155,87 @@ cass_error_result_data_present(const CassErrorResult* error_result);
  */
 CASS_EXPORT CassWriteType
 cass_error_result_write_type(const CassErrorResult* error_result);
+
+/**
+ * Gets the affected keyspace for the following error result types:
+ *
+ * <ul>
+ *   <li>CASS_ERROR_SERVER_ALREADY_EXISTS</li>
+ *   <li>CASS_ERROR_SERVER_FUNCTION_FAILURE</li>
+ * </ul>
+ *
+ * @public @memberof CassErrorResult
+ *
+ * @param[in] error_result
+ * @param[out] keyspace
+ * @param[out] keyspace_length
+ * @return CASS_OK if successful, otherwise error occurred
+ */
+CASS_EXPORT CassError
+cass_error_result_keyspace(const CassErrorResult* error_result,
+                           const char** keyspace,
+                           size_t* keyspace_length);
+
+/**
+ * Gets the affected table for the already exists error
+ * (CASS_ERROR_SERVER_ALREADY_EXISTS) result type.
+ *
+ * @public @memberof CassErrorResult
+ *
+ * @param[in] error_result
+ * @param[out] table
+ * @param[out] table_length
+ * @return CASS_OK if successful, otherwise error occurred
+ */
+CASS_EXPORT CassError
+cass_error_result_table(const CassErrorResult* error_result,
+                        const char** table,
+                        size_t* table_length);
+
+/**
+ * Gets the affected function for the function failure error
+ * (CASS_ERROR_SERVER_FUNCTION_FAILURE) result type.
+ *
+ * @public @memberof CassErrorResult
+ *
+ * @param[in] error_result
+ * @param[out] function
+ * @param[out] function_length
+ * @return CASS_OK if successful, otherwise error occurred
+ */
+CASS_EXPORT CassError
+cass_error_result_function(const CassErrorResult* error_result,
+                           const char** function,
+                           size_t* function_length);
+
+/**
+ * Gets the number of argument types for the function failure error
+ * (CASS_ERROR_SERVER_FUNCTION_FAILURE) result type.
+ *
+ * @public @memberof CassErrorResult
+ *
+ * @param[in] error_result
+ * @return The number of arguments for the affected function.
+ */
+CASS_EXPORT size_t
+cass_error_num_arg_types(const CassErrorResult* error_result);
+
+/**
+ * Gets the argument type at the specified index for the function failure
+ * error (CASS_ERROR_SERVER_FUNCTION_FAILURE) result type.
+ *
+ * @public @memberof CassErrorResult
+ *
+ * @param[in] error_result
+ * @param[out] arg_type
+ * @param[out] arg_type_length
+ * @return CASS_OK if successful, otherwise error occurred
+ */
+CASS_EXPORT CassError
+cass_error_result_arg_type(const CassErrorResult* error_result,
+                           size_t index,
+                           const char** arg_type,
+                           size_t* arg_type_length);
 
 /***********************************************************************************
  *
