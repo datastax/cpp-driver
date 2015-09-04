@@ -30,6 +30,8 @@
 
 namespace cass {
 
+class Handler;
+
 class Statement : public RoutableRequest, public AbstractData {
 public:
   Statement(uint8_t opcode, uint8_t kind, size_t values_count = 0)
@@ -93,10 +95,10 @@ public:
 
   virtual bool get_routing_key(std::string* routing_key, EncodingCache* cache) const;
 
-  virtual int32_t encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const = 0;
+  virtual int32_t encode_batch(int version, BufferVec* bufs, Handler* handler) const = 0;
 
 protected:
-  int32_t copy_buffers(int version, BufferVec* bufs, EncodingCache* cache) const;
+  int32_t copy_buffers(int version, BufferVec* bufs, Handler* handler) const;
 
 private:
   uint8_t flags_;
