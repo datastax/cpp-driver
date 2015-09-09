@@ -23,6 +23,7 @@
 #include <stddef.h>
 #include <string>
 #include <string.h>
+#include <vector>
 
 namespace cass {
 
@@ -136,6 +137,8 @@ private:
   const char* ptr_;
   size_t length_;
 };
+
+typedef std::vector<StringRef> StringRefVec;
 
 inline bool starts_with(const StringRef& input, const StringRef& target) {
   return input.length() >= target.length() &&
