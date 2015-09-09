@@ -465,6 +465,8 @@ typedef enum CassValueType_ {
   CASS_VALUE_TYPE_VARINT    = 0x000E,
   CASS_VALUE_TYPE_TIMEUUID  = 0x000F,
   CASS_VALUE_TYPE_INET      = 0x0010,
+  CASS_VALUE_TYPE_DATE      = 0x0011,
+  CASS_VALUE_TYPE_TIME      = 0x0012,
   CASS_VALUE_TYPE_SMALL_INT = 0x0013,
   CASS_VALUE_TYPE_TINY_INT  = 0x0014,
   CASS_VALUE_TYPE_LIST      = 0x0020,
@@ -2420,8 +2422,61 @@ cass_statement_bind_int32_by_name_n(CassStatement* statement,
                                     cass_int32_t value);
 
 /**
- * Binds a "bigint", "counter" or "timestamp" to a query or bound statement
- * at the specified index.
+ * Binds a "date" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_uint32(CassStatement* statement,
+                           size_t index,
+                           cass_uint32_t value);
+
+/**
+ * Binds a "date" to all the values with the specified name.
+ *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_uint32_by_name(CassStatement* statement,
+                                   const char* name,
+                                   cass_uint32_t value);
+
+/**
+ * Same as cass_statement_bind_uint32_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] value
+ * @return same as cass_statement_bind_uint32_by_name()
+ *
+ * @see cass_statement_bind_uint32_by_name()
+ */
+CASS_EXPORT CassError
+cass_statement_bind_uint32_by_name_n(CassStatement* statement,
+                                     const char* name,
+                                     size_t name_length,
+                                     cass_uint32_t value);
+
+/**
+ * Binds a "bigint", "counter", "timestamp" or "time" to a query or
+ * bound statement at the specified index.
  *
  * @public @memberof CassStatement
  *
@@ -2436,7 +2491,7 @@ cass_statement_bind_int64(CassStatement* statement,
                           cass_int64_t value);
 
 /**
- * Binds a "bigint", "counter" or "timestamp" to all values
+ * Binds a "bigint", "counter", "timestamp" or "time" to all values
  * with the specified name.
  *
  * This can only be used with statements created by
@@ -3761,7 +3816,22 @@ cass_collection_append_int32(CassCollection* collection,
                              cass_int32_t value);
 
 /**
- * Appends a "bigint", "counter" or "timestamp" to the collection.
+ * Appends a "date" to the collection.
+ *
+ * @public @memberof CassCollection
+ *
+ * @param[in] collection
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_collection_append_uint32(CassCollection* collection,
+                              cass_uint32_t value);
+
+
+/**
+ * Appends a "bigint", "counter", "timestamp" or "time" to the
+ * collection.
  *
  * @public @memberof CassCollection
  *
@@ -4054,7 +4124,23 @@ cass_tuple_set_int32(CassTuple* tuple,
                      cass_int32_t value);
 
 /**
- * Sets a "bigint" in a tuple at the specified index.
+ * Sets a "date" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_uint32(CassTuple* tuple,
+                      size_t index,
+                      cass_uint32_t value);
+
+/**
+ * Sets a "bigint", "counter", "timestamp" or "time" in a tuple at the
+ * specified index.
  *
  * @public @memberof CassTuple
  *
@@ -4496,9 +4582,61 @@ cass_user_type_set_int32_by_name_n(CassUserType* user_type,
                                    const char* name,
                                    size_t name_length,
                                    cass_int32_t value);
+
 /**
- * Sets an "bigint, "counter" or "timestamp" in a user defined type
- * at the specified index.
+ * Sets a "date" in a user defined type at the specified index.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_uint32(CassUserType* user_type,
+                          size_t index,
+                          cass_uint32_t value);
+
+/**
+ * Sets a "date" in a user defined type at the specified name.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_uint32_by_name(CassUserType* user_type,
+                                  const char* name,
+                                  cass_uint32_t value);
+
+/**
+ * Same as cass_user_type_set_uint32_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] value
+ * @return same as cass_user_type_set_uint32_by_name()
+ *
+ * @see cass_user_type_set_uint32_by_name()
+ */
+CASS_EXPORT CassError
+cass_user_type_set_uint32_by_name_n(CassUserType* user_type,
+                                    const char* name,
+                                    size_t name_length,
+                                    cass_uint32_t value);
+
+
+/**
+ * Sets an "bigint", "counter", "timestamp" or "time" in a
+ * user defined type at the specified index.
  *
  * @public @memberof CassUserType
  *
@@ -4513,8 +4651,8 @@ cass_user_type_set_int64(CassUserType* user_type,
                          cass_int64_t value);
 
 /**
- * Sets an "bigint, "counter" or "timestamp" in a user defined type
- * at the specified name.
+ * Sets an "bigint", "counter", "timestamp" or "time" in a
+ * user defined type at the specified name.
  *
  * @public @memberof CassUserType
  *
@@ -5804,6 +5942,19 @@ cass_value_get_int32(const CassValue* value,
                      cass_int32_t* output);
 
 /**
+ * Gets an uint32 for the specified value.
+ *
+ * @public @memberof CassValue
+ *
+ * @param[in] value
+ * @param[out] output
+ * @return CASS_OK if successful, otherwise error occurred
+ */
+CASS_EXPORT CassError
+cass_value_get_uint32(const CassValue* value,
+                      cass_uint32_t* output);
+
+/**
  * Gets an int64 for the specified value.
  *
  * @public @memberof CassValue
@@ -6530,6 +6681,45 @@ CASS_EXPORT CassError
 cass_inet_from_string_n(const char* str,
                         size_t str_length,
                         CassInet* output);
+
+/***********************************************************************************
+ *
+ * Date/Time
+ *
+ ************************************************************************************/
+
+/**
+ * Converts a unix timestamp (in seconds) to the Cassandra "date" type. The "date" type
+ * represents the number of days since the Epoch (1970-01-01) with the Epoch centered at
+ * the value 2^31.
+ *
+ * @param[in] time
+ * @return the number of days since the date -5877641-06-23
+ */
+CASS_EXPORT cass_uint32_t
+cass_date_from_epoch(cass_int64_t epoch_secs);
+
+/**
+ * Converts a unix timestamp (in seconds) to the Cassandra "time" type. The "time" type
+ * represents the number of nanoseconds since midnight (range 0 to 86399999999999).
+ *
+ * @param[in] time
+ * @return nanoseconds since midnight
+ */
+CASS_EXPORT cass_int64_t
+cass_time_from_epoch(cass_int64_t epoch_secs);
+
+/**
+ * Combines the Cassandra "date" and "time" types to Epoch time in seconds.
+ *
+ * @param[in] date
+ * @param[in] time
+ * @return Epoch time in seconds. Negative times are possible if the date
+ * occurs before the Epoch (1970-1-1).
+ */
+CASS_EXPORT cass_int64_t
+cass_date_time_to_epoch(cass_uint32_t date,
+                        cass_int64_t time);
 
 #ifdef __cplusplus
 } /* extern "C" */

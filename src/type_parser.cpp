@@ -78,9 +78,11 @@ static CassValueType get_value_type(const std::string& str) {
 
       case 'S':
         if (type == "ShortType") return CASS_VALUE_TYPE_SMALL_INT;
+        if (type == "SimpleDateType") return CASS_VALUE_TYPE_DATE;
         break;
 
       case 'T':
+        if (type == "TimeType") return CASS_VALUE_TYPE_TIME;
         if (type == "TimestampType") return CASS_VALUE_TYPE_TIMESTAMP;
         if (type == "TimeUUIDType") return CASS_VALUE_TYPE_TIMEUUID;
         break;

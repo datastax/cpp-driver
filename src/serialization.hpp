@@ -97,6 +97,21 @@ inline char* decode_int32(char* input, int32_t& output) {
   return input + sizeof(int32_t);
 }
 
+inline void encode_uint32(char* output, uint32_t value) {
+  output[0] = static_cast<char>(value >> 24);
+  output[1] = static_cast<char>(value >> 16);
+  output[2] = static_cast<char>(value >> 8);
+  output[3] = static_cast<char>(value >> 0);
+}
+
+inline char* decode_uint32(char* input, uint32_t& output) {
+  output = (static_cast<uint32_t>(static_cast<uint8_t>(input[3])) << 0) |
+           (static_cast<uint32_t>(static_cast<uint8_t>(input[2])) << 8) |
+           (static_cast<uint32_t>(static_cast<uint8_t>(input[1])) << 16) |
+           (static_cast<uint32_t>(static_cast<uint8_t>(input[0])) << 24);
+  return input + sizeof(uint32_t);
+}
+
 inline void encode_int64(char* output, cass_int64_t value) {
   STATIC_ASSERT(sizeof(cass_int64_t) == 8);
   output[0] = static_cast<char>(value >> 56);
