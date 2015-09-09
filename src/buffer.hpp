@@ -75,6 +75,12 @@ public:
     return offset + sizeof(uint8_t);
   }
 
+  size_t encode_int8(size_t offset, int8_t value) {
+    assert(offset + sizeof(int8_t) <= static_cast<size_t>(size_));
+    cass::encode_int8(data() + offset, value);
+    return offset + sizeof(int8_t);
+  }
+
   size_t encode_int16(size_t offset, int16_t value) {
     assert(offset + sizeof(int16_t) <= static_cast<size_t>(size_));
     cass::encode_int16(data() + offset, value);

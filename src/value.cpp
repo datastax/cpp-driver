@@ -26,6 +26,24 @@ const CassDataType* cass_value_data_type(const CassValue* value) {
   return CassDataType::to(value->data_type().get());
 }
 
+CassError cass_value_get_int8(const CassValue* value, cass_int8_t* output) {
+  if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
+  if (value->value_type() != CASS_VALUE_TYPE_TINY_INT) {
+    return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
+  }
+  cass::decode_int8(value->data(), *output);
+  return CASS_OK;
+}
+
+CassError cass_value_get_int16(const CassValue* value, cass_int16_t* output) {
+  if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
+  if (value->value_type() != CASS_VALUE_TYPE_SMALL_INT) {
+    return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
+  }
+  cass::decode_int16(value->data(), *output);
+  return CASS_OK;
+}
+
 CassError cass_value_get_int32(const CassValue* value, cass_int32_t* output) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
   if (value->value_type() != CASS_VALUE_TYPE_INT) {

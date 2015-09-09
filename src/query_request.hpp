@@ -61,7 +61,7 @@ public:
     , query_(query, query_length)
     , value_names_(value_count) { }
 
-  virtual int32_t encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const;
+  virtual int32_t encode_batch(int version, BufferVec* bufs, Handler* handler) const;
 
 private:
   virtual size_t get_indices(StringRef name,
