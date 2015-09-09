@@ -21,7 +21,7 @@
 
 namespace cass {
 
-int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const {
+int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs, Handler* handler) const {
   int32_t length = 0;
   const std::string& id(prepared_->id());
 
@@ -37,7 +37,9 @@ int32_t ExecuteRequest::encode_batch(int version, BufferVec* bufs, EncodingCache
 
   buf.encode_uint16(pos, elements_count());
   if (elements_count() > 0) {
-    length += copy_buffers(version, bufs, cache);
+    int32_t result = copy_buffers(version, bufs, handler);
+    if (result < 0) return result;
+    length += result;
   }
 
   return length;
@@ -71,7 +73,9 @@ int ExecuteRequest::internal_encode_v1(Handler* handler, BufferVec* bufs) const 
                                  prepared_id.size());
     buf.encode_uint16(pos, elements_count());
     // <value_1>...<value_n>
-    length += copy_buffers(version, bufs, handler->encoding_cache());
+    int32_t result = copy_buffers(version, bufs, handler);
+    if (result < 0) return result;
+    length += result;
   }
 
   {
@@ -136,7 +140,9 @@ int ExecuteRequest::internal_encode(int version, Handler* handler, BufferVec* bu
 
     if (elements_count() > 0) {
       buf.encode_uint16(pos, elements_count());
-      length += copy_buffers(version, bufs, handler->encoding_cache());
+      int32_t result = copy_buffers(version, bufs, handler);
+      if (result < 0) return result;
+      length += result;
     }
   }
 

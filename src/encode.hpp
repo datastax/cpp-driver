@@ -28,6 +28,12 @@ inline Buffer encode_with_length(CassNull) {
   return buf;
 }
 
+inline Buffer encode_with_length(CassUnset) {
+  Buffer buf(sizeof(int32_t));
+  buf.encode_int32(0, -2); // [bytes] "unset"
+  return buf;
+}
+
 inline Buffer encode_with_length(cass_int8_t value) {
   Buffer buf(sizeof(int32_t) + sizeof(int8_t));
   size_t pos = buf.encode_int32(0, sizeof(int8_t));
