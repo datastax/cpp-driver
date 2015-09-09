@@ -48,6 +48,7 @@ static CassValueType get_value_type(const std::string& str) {
 
       case 'B':
         if (type == "BooleanType") return CASS_VALUE_TYPE_BOOLEAN;
+        if (type == "ByteType") return CASS_VALUE_TYPE_TINY_INT;
         if (type == "BytesType") return CASS_VALUE_TYPE_BLOB;
         break;
 
@@ -73,6 +74,10 @@ static CassValueType get_value_type(const std::string& str) {
 
       case 'L':
         if (type == "LongType") return CASS_VALUE_TYPE_BIGINT;
+        break;
+
+      case 'S':
+        if (type == "ShortType") return CASS_VALUE_TYPE_SMALL_INT;
         break;
 
       case 'T':

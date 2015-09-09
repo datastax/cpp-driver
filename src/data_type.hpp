@@ -375,6 +375,20 @@ struct IsValidDataType<CassNull> {
 };
 
 template<>
+struct IsValidDataType<cass_int8_t> {
+  bool operator()(cass_int8_t, const SharedRefPtr<const DataType>& data_type) const {
+    return data_type->value_type() == CASS_VALUE_TYPE_TINY_INT;
+  }
+};
+
+template<>
+struct IsValidDataType<cass_int16_t> {
+  bool operator()(cass_int16_t, const SharedRefPtr<const DataType>& data_type) const {
+    return data_type->value_type() == CASS_VALUE_TYPE_SMALL_INT;
+  }
+};
+
+template<>
 struct IsValidDataType<cass_int32_t> {
   bool operator()(cass_int32_t, const SharedRefPtr<const DataType>& data_type) const {
     return data_type->value_type() == CASS_VALUE_TYPE_INT;

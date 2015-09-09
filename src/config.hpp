@@ -39,7 +39,7 @@ public:
 
   Config()
       : port_(9042)
-      , protocol_version_(3)
+      , protocol_version_(4)
       , thread_count_io_(1)
       , queue_size_io_(8192)
       , queue_size_event_(8192)

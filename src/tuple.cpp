@@ -53,6 +53,8 @@ const CassDataType* cass_tuple_data_type(const CassTuple* tuple) {
 }
 
 CASS_TUPLE_SET(null, ZERO_PARAMS_(), cass::CassNull())
+CASS_TUPLE_SET(int8, ONE_PARAM_(cass_int8_t value), value)
+CASS_TUPLE_SET(int16, ONE_PARAM_(cass_int16_t value), value)
 CASS_TUPLE_SET(int32, ONE_PARAM_(cass_int32_t value), value)
 CASS_TUPLE_SET(int64, ONE_PARAM_(cass_int64_t value), value)
 CASS_TUPLE_SET(float, ONE_PARAM_(cass_float_t value), value)
