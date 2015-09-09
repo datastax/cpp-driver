@@ -2260,7 +2260,7 @@ cass_statement_bind_null_by_name_n(CassStatement* statement,
                                    size_t name_length);
 
 /**
- * Binds an "tinyint" to a query or bound statement at the specified index.
+ * Binds a "tinyint" to a query or bound statement at the specified index.
  *
  * @public @memberof CassStatement
  *
@@ -2275,7 +2275,7 @@ cass_statement_bind_int8(CassStatement* statement,
                          cass_int8_t value);
 
 /**
- * Binds an "tinyint" to all the values with the specified name.
+ * Binds a "tinyint" to all the values with the specified name.
  *
  * This can only be used with statements created by
  * cass_prepared_bind().
@@ -3721,7 +3721,7 @@ CASS_EXPORT const CassDataType*
 cass_collection_data_type(const CassCollection* collection);
 
 /**
- * Appends an "tinyint" to the collection.
+ * Appends a "tinyint" to the collection.
  *
  * @public @memberof CassCollection
  *
@@ -4008,7 +4008,7 @@ CASS_EXPORT CassError
 cass_tuple_set_null(CassTuple* tuple, size_t index);
 
 /**
- * Sets an "tinyint" in a tuple at the specified index.
+ * Sets a "tinyint" in a tuple at the specified index.
  *
  * @public @memberof CassTuple
  *
@@ -4347,7 +4347,7 @@ cass_user_type_set_null_by_name_n(CassUserType* user_type,
                                    size_t name_length);
 
 /**
- * Sets an "tinyint" in a user defined type at the specified index.
+ * Sets a "tinyint" in a user defined type at the specified index.
  *
  * @public @memberof CassUserType
  *
@@ -4362,7 +4362,7 @@ cass_user_type_set_int8(CassUserType* user_type,
                         cass_int8_t value);
 
 /**
- * Sets an "tinyint" in a user defined type at the specified name.
+ * Sets a "tinyint" in a user defined type at the specified name.
  *
  * @public @memberof CassUserType
  *
