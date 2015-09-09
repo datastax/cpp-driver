@@ -39,7 +39,7 @@ CassConsistency cass_error_result_consistency(const CassErrorResult* error_resul
 }
 
 cass_int32_t cass_error_result_actual(const CassErrorResult* error_result) {
-  return error_result->actual();
+  return error_result->received();
 }
 
 cass_int32_t cass_error_result_required(const CassErrorResult* error_result) {

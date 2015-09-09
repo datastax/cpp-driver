@@ -46,7 +46,7 @@ public:
   StringRef message() const { return message_; }
   StringRef prepared_id() const { return prepared_id_; }
   CassConsistency consistency() const { return static_cast<CassConsistency>(cl_); }
-  int32_t actual() const { return received_; }
+  int32_t received() const { return received_; }
   int32_t required() const { return required_; }
   int32_t num_failures() const { return num_failures_; }
   uint8_t data_present() const { return data_present_; }
