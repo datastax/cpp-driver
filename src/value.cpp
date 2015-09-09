@@ -16,6 +16,7 @@
 
 #include "value.hpp"
 
+#include "data_type.hpp"
 #include "external_types.hpp"
 #include "serialization.hpp"
 
@@ -25,6 +26,24 @@ const CassDataType* cass_value_data_type(const CassValue* value) {
   return CassDataType::to(value->data_type().get());
 }
 
+CassError cass_value_get_int8(const CassValue* value, cass_int8_t* output) {
+  if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
+  if (value->value_type() != CASS_VALUE_TYPE_TINY_INT) {
+    return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
+  }
+  cass::decode_int8(value->data(), *output);
+  return CASS_OK;
+}
+
+CassError cass_value_get_int16(const CassValue* value, cass_int16_t* output) {
+  if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
+  if (value->value_type() != CASS_VALUE_TYPE_SMALL_INT) {
+    return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
+  }
+  cass::decode_int16(value->data(), *output);
+  return CASS_OK;
+}
+
 CassError cass_value_get_int32(const CassValue* value, cass_int32_t* output) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
   if (value->value_type() != CASS_VALUE_TYPE_INT) {
@@ -32,13 +51,21 @@ CassError cass_value_get_int32(const CassValue* value, cass_int32_t* output) {
   }
   cass::decode_int32(value->data(), *output);
   return CASS_OK;
+
+}
+
+CassError cass_value_get_uint32(const CassValue* value, cass_uint32_t* output) {
+  if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
+  if (value->value_type() != CASS_VALUE_TYPE_DATE) {
+    return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
+  }
+  cass::decode_uint32(value->data(), *output);
+  return CASS_OK;
 }
 
 CassError cass_value_get_int64(const CassValue* value, cass_int64_t* output) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
-  if (value->value_type() != CASS_VALUE_TYPE_BIGINT &&
-      value->value_type() != CASS_VALUE_TYPE_COUNTER &&
-      value->value_type() != CASS_VALUE_TYPE_TIMESTAMP) {
+  if (!cass::is_int64_type(value->value_type())) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
   cass::decode_int64(value->data(), *output);
@@ -76,8 +103,7 @@ CassError cass_value_get_bool(const CassValue* value, cass_bool_t* output) {
 
 CassError cass_value_get_uuid(const CassValue* value, CassUuid* output) {
   if (value == NULL || value->is_null()) return CASS_ERROR_LIB_NULL_VALUE;
-  if (value->value_type() != CASS_VALUE_TYPE_UUID &&
-      value->value_type() != CASS_VALUE_TYPE_TIMEUUID) {
+  if (!cass::is_uuid_type(value->value_type())) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
   cass::decode_uuid(value->data(), output);

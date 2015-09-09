@@ -465,6 +465,10 @@ typedef enum CassValueType_ {
   CASS_VALUE_TYPE_VARINT    = 0x000E,
   CASS_VALUE_TYPE_TIMEUUID  = 0x000F,
   CASS_VALUE_TYPE_INET      = 0x0010,
+  CASS_VALUE_TYPE_DATE      = 0x0011,
+  CASS_VALUE_TYPE_TIME      = 0x0012,
+  CASS_VALUE_TYPE_SMALL_INT = 0x0013,
+  CASS_VALUE_TYPE_TINY_INT  = 0x0014,
   CASS_VALUE_TYPE_LIST      = 0x0020,
   CASS_VALUE_TYPE_MAP       = 0x0021,
   CASS_VALUE_TYPE_SET       = 0x0022,
@@ -561,7 +565,8 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_CONNECT, 22, "Unable to connect") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_UNABLE_TO_CLOSE, 23, "Unable to close") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_PAGING_STATE, 24, "No paging state") \
-  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE, 29, "Invalid error result type") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_PARAMETER_UNSET, 25, "Parameter unset") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE, 26, "Invalid error result type") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -740,10 +745,10 @@ cass_cluster_set_ssl(CassCluster* cluster,
                      CassSsl* ssl);
 
 /**
- * Sets the protocol version. This will automatically downgrade if to
- * protocol version 1.
+ * Sets the protocol version. This will automatically downgrade to the lowest
+ * supported protocol version.
  *
- * <b>Default:</b> 2
+ * <b>Default:</b> 4
  *
  * @public @memberof CassCluster
  *
@@ -2228,232 +2233,6 @@ cass_statement_bind_null(CassStatement* statement,
                          size_t index);
 
 /**
- * Binds an "int" to a query or bound statement at the specified index.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] value
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_int32(CassStatement* statement,
-                          size_t index,
-                          cass_int32_t value);
-
-/**
- * Binds a "bigint", "counter" or "timestamp" to a query or bound statement
- * at the specified index.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] value
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_int64(CassStatement* statement,
-                          size_t index,
-                          cass_int64_t value);
-
-/**
- * Binds a "float" to a query or bound statement at the specified index.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] value
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_float(CassStatement* statement,
-                          size_t index,
-                          cass_float_t value);
-
-/**
- * Binds a "double" to a query or bound statement at the specified index.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] value
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_double(CassStatement* statement,
-                           size_t index,
-                           cass_double_t value);
-
-/**
- * Binds a "boolean" to a query or bound statement at the specified index.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] value
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_bool(CassStatement* statement,
-                         size_t index,
-                         cass_bool_t value);
-
-/**
- * Binds an "ascii", "text" or "varchar" to a query or bound statement
- * at the specified index.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] value The value is copied into the statement object; the
- * memory pointed to by this parameter can be freed after this call.
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_string(CassStatement* statement,
-                           size_t index,
-                           const char* value);
-
-/**
- * Same as cass_statement_bind_string(), but with lengths for string
- * parameters.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] value
- * @param[in] value_length
- * @return same as cass_statement_bind_string()
- *
- * @see cass_statement_bind_string()
- */
-CASS_EXPORT CassError
-cass_statement_bind_string_n(CassStatement* statement,
-                             size_t index,
-                             const char* value,
-                             size_t value_length);
-
-/**
- * Binds a "blob", "varint" or "custom" to a query or bound statement at the specified index.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] value The value is copied into the statement object; the
- * memory pointed to by this parameter can be freed after this call.
- * @param[in] value_size
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_bytes(CassStatement* statement,
-                          size_t index,
-                          const cass_byte_t* value,
-                          size_t value_size);
-
-/**
- * Binds a "uuid" or "timeuuid" to a query or bound statement at the specified index.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] value
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_uuid(CassStatement* statement,
-                         size_t index,
-                         CassUuid value);
-
-/**
- * Binds an "inet" to a query or bound statement at the specified index.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] value
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_inet(CassStatement* statement,
-                         size_t index,
-                         CassInet value);
-
-/**
- * Bind a "decimal" to a query or bound statement at the specified index.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] varint The value is copied into the statement object; the
- * memory pointed to by this parameter can be freed after this call.
- * @param[in] varint_size
- * @param[in] scale
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_decimal(CassStatement* statement,
-                            size_t index,
-                            const cass_byte_t* varint,
-                            size_t varint_size,
-                            cass_int32_t scale);
-
-/**
- * Bind a "list", "map" or "set" to a query or bound statement at the
- * specified index.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] collection The collection can be freed after this call.
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_collection(CassStatement* statement,
-                               size_t index,
-                               const CassCollection* collection);
-/**
- * Bind a "tuple" to a query or bound statement at the specified index.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] tuple The tuple can be freed after this call.
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_tuple(CassStatement* statement,
-                          size_t index,
-                          const CassTuple* tuple);
-/**
- * Bind a user defined type to a query or bound statement at the
- * specified index.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] user_type The user type can be freed after this call.
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_statement_bind_user_type(CassStatement* statement,
-                              size_t index,
-                              const CassUserType* user_type);
-
-/**
  * Binds a null to all the values with the specified name.
  *
  * This can only be used with statements created by
@@ -2487,6 +2266,126 @@ cass_statement_bind_null_by_name_n(CassStatement* statement,
                                    const char* name,
                                    size_t name_length);
 
+/**
+ * Binds a "tinyint" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_int8(CassStatement* statement,
+                         size_t index,
+                         cass_int8_t value);
+
+/**
+ * Binds a "tinyint" to all the values with the specified name.
+ *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_int8_by_name(CassStatement* statement,
+                                 const char* name,
+                                 cass_int8_t value);
+
+/**
+ * Same as cass_statement_bind_int8_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] value
+ * @return same as cass_statement_bind_int8_by_name()
+ *
+ * @see cass_statement_bind_int8_by_name()
+ */
+CASS_EXPORT CassError
+cass_statement_bind_int8_by_name_n(CassStatement* statement,
+                                   const char* name,
+                                   size_t name_length,
+                                   cass_int8_t value);
+
+/**
+ * Binds an "smallint" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_int16(CassStatement* statement,
+                          size_t index,
+                          cass_int16_t value);
+
+/**
+ * Binds an "smallint" to all the values with the specified name.
+ *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_int16_by_name(CassStatement* statement,
+                                  const char* name,
+                                  cass_int16_t value);
+
+/**
+ * Same as cass_statement_bind_int16_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] value
+ * @return same as cass_statement_bind_int16_by_name()
+ *
+ * @see cass_statement_bind_int16_by_name()
+ */
+CASS_EXPORT CassError
+cass_statement_bind_int16_by_name_n(CassStatement* statement,
+                                    const char* name,
+                                    size_t name_length,
+                                    cass_int16_t value);
+
+/**
+ * Binds an "int" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_int32(CassStatement* statement,
+                          size_t index,
+                          cass_int32_t value);
 
 /**
  * Binds an "int" to all the values with the specified name.
@@ -2527,7 +2426,76 @@ cass_statement_bind_int32_by_name_n(CassStatement* statement,
                                     cass_int32_t value);
 
 /**
- * Binds a "bigint", "counter" or "timestamp" to all values
+ * Binds a "date" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_uint32(CassStatement* statement,
+                           size_t index,
+                           cass_uint32_t value);
+
+/**
+ * Binds a "date" to all the values with the specified name.
+ *
+ * This can only be used with statements created by
+ * cass_prepared_bind().
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_uint32_by_name(CassStatement* statement,
+                                   const char* name,
+                                   cass_uint32_t value);
+
+/**
+ * Same as cass_statement_bind_uint32_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] value
+ * @return same as cass_statement_bind_uint32_by_name()
+ *
+ * @see cass_statement_bind_uint32_by_name()
+ */
+CASS_EXPORT CassError
+cass_statement_bind_uint32_by_name_n(CassStatement* statement,
+                                     const char* name,
+                                     size_t name_length,
+                                     cass_uint32_t value);
+
+/**
+ * Binds a "bigint", "counter", "timestamp" or "time" to a query or
+ * bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_int64(CassStatement* statement,
+                          size_t index,
+                          cass_int64_t value);
+
+/**
+ * Binds a "bigint", "counter", "timestamp" or "time" to all values
  * with the specified name.
  *
  * This can only be used with statements created by
@@ -2564,6 +2532,21 @@ cass_statement_bind_int64_by_name_n(CassStatement* statement,
                                     const char* name,
                                     size_t name_length,
                                     cass_int64_t value);
+
+/**
+ * Binds a "float" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_float(CassStatement* statement,
+                          size_t index,
+                          cass_float_t value);
 
 /**
  * Binds a "float" to all the values with the specified name.
@@ -2604,6 +2587,21 @@ cass_statement_bind_float_by_name_n(CassStatement* statement,
                                     cass_float_t value);
 
 /**
+ * Binds a "double" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_double(CassStatement* statement,
+                           size_t index,
+                           cass_double_t value);
+
+/**
  * Binds a "double" to all the values with the specified name.
  *
  * This can only be used with statements created by
@@ -2640,6 +2638,22 @@ cass_statement_bind_double_by_name_n(CassStatement* statement,
                                      const char* name,
                                      size_t name_length,
                                      cass_double_t value);
+
+/**
+ * Binds a "boolean" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_bool(CassStatement* statement,
+                         size_t index,
+                         cass_bool_t value);
+
 /**
  * Binds a "boolean" to all the values with the specified name.
  *
@@ -2677,6 +2691,43 @@ cass_statement_bind_bool_by_name_n(CassStatement* statement,
                                    const char* name,
                                    size_t name_length,
                                    cass_bool_t value);
+
+/**
+ * Binds an "ascii", "text" or "varchar" to a query or bound statement
+ * at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] value The value is copied into the statement object; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_string(CassStatement* statement,
+                           size_t index,
+                           const char* value);
+
+/**
+ * Same as cass_statement_bind_string(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] value
+ * @param[in] value_length
+ * @return same as cass_statement_bind_string()
+ *
+ * @see cass_statement_bind_string()
+ */
+CASS_EXPORT CassError
+cass_statement_bind_string_n(CassStatement* statement,
+                             size_t index,
+                             const char* value,
+                             size_t value_length);
 
 /**
  * Binds an "ascii", "text" or "varchar" to all the values
@@ -2719,6 +2770,24 @@ cass_statement_bind_string_by_name_n(CassStatement* statement,
                                      size_t name_length,
                                      const char* value,
                                      size_t value_length);
+
+/**
+ * Binds a "blob", "varint" or "custom" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] value The value is copied into the statement object; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @param[in] value_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_bytes(CassStatement* statement,
+                          size_t index,
+                          const cass_byte_t* value,
+                          size_t value_size);
 
 /**
  * Binds a "blob", "varint" or "custom" to all the values with the
@@ -2765,6 +2834,21 @@ cass_statement_bind_bytes_by_name_n(CassStatement* statement,
                                     size_t value_size);
 
 /**
+ * Binds a "uuid" or "timeuuid" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_uuid(CassStatement* statement,
+                         size_t index,
+                         CassUuid value);
+
+/**
  * Binds a "uuid" or "timeuuid" to all the values
  * with the specified name.
  *
@@ -2804,6 +2888,21 @@ cass_statement_bind_uuid_by_name_n(CassStatement* statement,
                                    CassUuid value);
 
 /**
+ * Binds an "inet" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_inet(CassStatement* statement,
+                         size_t index,
+                         CassInet value);
+
+/**
  * Binds an "inet" to all the values with the specified name.
  *
  * This can only be used with statements created by
@@ -2840,6 +2939,26 @@ cass_statement_bind_inet_by_name_n(CassStatement* statement,
                                    const char* name,
                                    size_t name_length,
                                    CassInet value);
+
+/**
+ * Bind a "decimal" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] varint The value is copied into the statement object; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @param[in] varint_size
+ * @param[in] scale
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_decimal(CassStatement* statement,
+                            size_t index,
+                            const cass_byte_t* varint,
+                            size_t varint_size,
+                            cass_int32_t scale);
 
 /**
  * Binds a "decimal" to all the values with the specified name.
@@ -2889,6 +3008,22 @@ cass_statement_bind_decimal_by_name_n(CassStatement* statement,
                                       cass_int32_t scale);
 
 /**
+ * Bind a "list", "map" or "set" to a query or bound statement at the
+ * specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] collection The collection can be freed after this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_collection(CassStatement* statement,
+                               size_t index,
+                               const CassCollection* collection);
+
+/**
  * Bind a "list", "map" or "set" to all the values with the
  * specified name.
  *
@@ -2928,6 +3063,21 @@ cass_statement_bind_collection_by_name_n(CassStatement* statement,
                                          const CassCollection* collection);
 
 /**
+ * Bind a "tuple" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] tuple The tuple can be freed after this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_tuple(CassStatement* statement,
+                          size_t index,
+                          const CassTuple* tuple);
+
+/**
  * Bind a "tuple" to all the values with the specified name.
  *
  * This can only be used with statements created by
@@ -2965,6 +3115,21 @@ cass_statement_bind_tuple_by_name_n(CassStatement* statement,
                                     size_t name_length,
                                     const CassTuple* tuple);
 
+/**
+ * Bind a user defined type to a query or bound statement at the
+ * specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] user_type The user type can be freed after this call.
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_user_type(CassStatement* statement,
+                              size_t index,
+                              const CassUserType* user_type);
 /**
  * Bind a user defined type to a query or bound statement with the
  * specified name.
@@ -3616,6 +3781,32 @@ CASS_EXPORT const CassDataType*
 cass_collection_data_type(const CassCollection* collection);
 
 /**
+ * Appends a "tinyint" to the collection.
+ *
+ * @public @memberof CassCollection
+ *
+ * @param[in] collection
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_collection_append_int8(CassCollection* collection,
+                            cass_int8_t value);
+
+/**
+ * Appends an "smallint" to the collection.
+ *
+ * @public @memberof CassCollection
+ *
+ * @param[in] collection
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_collection_append_int16(CassCollection* collection,
+                             cass_int16_t value);
+
+/**
  * Appends an "int" to the collection.
  *
  * @public @memberof CassCollection
@@ -3629,7 +3820,22 @@ cass_collection_append_int32(CassCollection* collection,
                              cass_int32_t value);
 
 /**
- * Appends a "bigint", "counter" or "timestamp" to the collection.
+ * Appends a "date" to the collection.
+ *
+ * @public @memberof CassCollection
+ *
+ * @param[in] collection
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_collection_append_uint32(CassCollection* collection,
+                              cass_uint32_t value);
+
+
+/**
+ * Appends a "bigint", "counter", "timestamp" or "time" to the
+ * collection.
  *
  * @public @memberof CassCollection
  *
@@ -3877,6 +4083,36 @@ CASS_EXPORT CassError
 cass_tuple_set_null(CassTuple* tuple, size_t index);
 
 /**
+ * Sets a "tinyint" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_int8(CassTuple* tuple,
+                    size_t index,
+                    cass_int8_t value);
+
+/**
+ * Sets an "smallint" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_int16(CassTuple* tuple,
+                     size_t index,
+                     cass_int16_t value);
+
+/**
  * Sets an "int" in a tuple at the specified index.
  *
  * @public @memberof CassTuple
@@ -3892,7 +4128,23 @@ cass_tuple_set_int32(CassTuple* tuple,
                      cass_int32_t value);
 
 /**
- * Sets a "bigint" in a tuple at the specified index.
+ * Sets a "date" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_uint32(CassTuple* tuple,
+                      size_t index,
+                      cass_uint32_t value);
+
+/**
+ * Sets a "bigint", "counter", "timestamp" or "time" in a tuple at the
+ * specified index.
  *
  * @public @memberof CassTuple
  *
@@ -4184,6 +4436,107 @@ CASS_EXPORT CassError
 cass_user_type_set_null_by_name_n(CassUserType* user_type,
                                    const char* name,
                                    size_t name_length);
+
+/**
+ * Sets a "tinyint" in a user defined type at the specified index.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_int8(CassUserType* user_type,
+                        size_t index,
+                        cass_int8_t value);
+
+/**
+ * Sets a "tinyint" in a user defined type at the specified name.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_int8_by_name(CassUserType* user_type,
+                                const char* name,
+                                cass_int8_t value);
+
+/**
+ * Same as cass_user_type_set_int8_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] value
+ * @return same as cass_user_type_set_int8_by_name()
+ *
+ * @see cass_user_type_set_int8_by_name()
+ */
+CASS_EXPORT CassError
+cass_user_type_set_int8_by_name_n(CassUserType* user_type,
+                                  const char* name,
+                                  size_t name_length,
+                                  cass_int8_t value);
+
+/**
+ * Sets an "smallint" in a user defined type at the specified index.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_int16(CassUserType* user_type,
+                         size_t index,
+                         cass_int16_t value);
+
+/**
+ * Sets an "smallint" in a user defined type at the specified name.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_int16_by_name(CassUserType* user_type,
+                                 const char* name,
+                                 cass_int16_t value);
+
+/**
+ * Same as cass_user_type_set_int16_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] value
+ * @return same as cass_user_type_set_int16_by_name()
+ *
+ * @see cass_user_type_set_int16_by_name()
+ */
+CASS_EXPORT CassError
+cass_user_type_set_int16_by_name_n(CassUserType* user_type,
+                                   const char* name,
+                                   size_t name_length,
+                                   cass_int16_t value);
+
 /**
  * Sets an "int" in a user defined type at the specified index.
  *
@@ -4233,9 +4586,61 @@ cass_user_type_set_int32_by_name_n(CassUserType* user_type,
                                    const char* name,
                                    size_t name_length,
                                    cass_int32_t value);
+
 /**
- * Sets an "bigint, "counter" or "timestamp" in a user defined type
- * at the specified index.
+ * Sets a "date" in a user defined type at the specified index.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] index
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_uint32(CassUserType* user_type,
+                          size_t index,
+                          cass_uint32_t value);
+
+/**
+ * Sets a "date" in a user defined type at the specified name.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] value
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_uint32_by_name(CassUserType* user_type,
+                                  const char* name,
+                                  cass_uint32_t value);
+
+/**
+ * Same as cass_user_type_set_uint32_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] value
+ * @return same as cass_user_type_set_uint32_by_name()
+ *
+ * @see cass_user_type_set_uint32_by_name()
+ */
+CASS_EXPORT CassError
+cass_user_type_set_uint32_by_name_n(CassUserType* user_type,
+                                    const char* name,
+                                    size_t name_length,
+                                    cass_uint32_t value);
+
+
+/**
+ * Sets an "bigint", "counter", "timestamp" or "time" in a
+ * user defined type at the specified index.
  *
  * @public @memberof CassUserType
  *
@@ -4250,8 +4655,8 @@ cass_user_type_set_int64(CassUserType* user_type,
                          cass_int64_t value);
 
 /**
- * Sets an "bigint, "counter" or "timestamp" in a user defined type
- * at the specified name.
+ * Sets an "bigint", "counter", "timestamp" or "time" in a
+ * user defined type at the specified name.
  *
  * @public @memberof CassUserType
  *
@@ -5613,6 +6018,32 @@ CASS_EXPORT const CassDataType*
 cass_value_data_type(const CassValue* value);
 
 /**
+ * Gets an int8 for the specified value.
+ *
+ * @public @memberof CassValue
+ *
+ * @param[in] value
+ * @param[out] output
+ * @return CASS_OK if successful, otherwise error occurred
+ */
+CASS_EXPORT CassError
+cass_value_get_int8(const CassValue* value,
+                     cass_int8_t* output);
+
+/**
+ * Gets an int16 for the specified value.
+ *
+ * @public @memberof CassValue
+ *
+ * @param[in] value
+ * @param[out] output
+ * @return CASS_OK if successful, otherwise error occurred
+ */
+CASS_EXPORT CassError
+cass_value_get_int16(const CassValue* value,
+                     cass_int16_t* output);
+
+/**
  * Gets an int32 for the specified value.
  *
  * @public @memberof CassValue
@@ -5624,6 +6055,19 @@ cass_value_data_type(const CassValue* value);
 CASS_EXPORT CassError
 cass_value_get_int32(const CassValue* value,
                      cass_int32_t* output);
+
+/**
+ * Gets an uint32 for the specified value.
+ *
+ * @public @memberof CassValue
+ *
+ * @param[in] value
+ * @param[out] output
+ * @return CASS_OK if successful, otherwise error occurred
+ */
+CASS_EXPORT CassError
+cass_value_get_uint32(const CassValue* value,
+                      cass_uint32_t* output);
 
 /**
  * Gets an int64 for the specified value.
@@ -5732,8 +6176,6 @@ CASS_EXPORT CassError
 cass_value_get_bytes(const CassValue* value,
                      const cass_byte_t** output,
                      size_t* output_size);
-
-
 
 /**
  * Gets a decimal for the specified value.
@@ -6354,6 +6796,45 @@ CASS_EXPORT CassError
 cass_inet_from_string_n(const char* str,
                         size_t str_length,
                         CassInet* output);
+
+/***********************************************************************************
+ *
+ * Date/Time
+ *
+ ************************************************************************************/
+
+/**
+ * Converts a unix timestamp (in seconds) to the Cassandra "date" type. The "date" type
+ * represents the number of days since the Epoch (1970-01-01) with the Epoch centered at
+ * the value 2^31.
+ *
+ * @param[in] time
+ * @return the number of days since the date -5877641-06-23
+ */
+CASS_EXPORT cass_uint32_t
+cass_date_from_epoch(cass_int64_t epoch_secs);
+
+/**
+ * Converts a unix timestamp (in seconds) to the Cassandra "time" type. The "time" type
+ * represents the number of nanoseconds since midnight (range 0 to 86399999999999).
+ *
+ * @param[in] time
+ * @return nanoseconds since midnight
+ */
+CASS_EXPORT cass_int64_t
+cass_time_from_epoch(cass_int64_t epoch_secs);
+
+/**
+ * Combines the Cassandra "date" and "time" types to Epoch time in seconds.
+ *
+ * @param[in] date
+ * @param[in] time
+ * @return Epoch time in seconds. Negative times are possible if the date
+ * occurs before the Epoch (1970-1-1).
+ */
+CASS_EXPORT cass_int64_t
+cass_date_time_to_epoch(cass_uint32_t date,
+                        cass_int64_t time);
 
 #ifdef __cplusplus
 } /* extern "C" */

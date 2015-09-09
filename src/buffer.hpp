@@ -75,10 +75,10 @@ public:
     return offset + sizeof(uint8_t);
   }
 
-  size_t encode_uint16(size_t offset, uint16_t value) {
-    assert(offset + sizeof(uint16_t) <= static_cast<size_t>(size_));
-    cass::encode_uint16(data() + offset, value);
-    return offset + sizeof(uint16_t);
+  size_t encode_int8(size_t offset, int8_t value) {
+    assert(offset + sizeof(int8_t) <= static_cast<size_t>(size_));
+    cass::encode_int8(data() + offset, value);
+    return offset + sizeof(int8_t);
   }
 
   size_t encode_int16(size_t offset, int16_t value) {
@@ -87,10 +87,22 @@ public:
     return offset + sizeof(int16_t);
   }
 
+  size_t encode_uint16(size_t offset, uint16_t value) {
+    assert(offset + sizeof(uint16_t) <= static_cast<size_t>(size_));
+    cass::encode_uint16(data() + offset, value);
+    return offset + sizeof(uint16_t);
+  }
+
   size_t encode_int32(size_t offset, int32_t value) {
     assert(offset + sizeof(int32_t) <= static_cast<size_t>(size_));
     cass::encode_int32(data() + offset, value);
     return offset + sizeof(int32_t);
+  }
+
+  size_t encode_uint32(size_t offset, uint32_t value) {
+    assert(offset + sizeof(uint32_t) <= static_cast<size_t>(size_));
+    cass::encode_uint32(data() + offset, value);
+    return offset + sizeof(uint32_t);
   }
 
   size_t encode_int64(size_t offset, int64_t value) {
