@@ -6400,9 +6400,9 @@ cass_inet_from_string_n(const char* str,
  ************************************************************************************/
 
 /**
- * Converts Epoch time in seconds to the Cassandra "date" type. The "date" type
- * represents the number of days since the Epoch with the Epoch centered at the
- * value 2^31.
+ * Converts a unix timestamp (in seconds) to the Cassandra "date" type. The "date" type
+ * represents the number of days since the Epoch (1970-01-01) with the Epoch centered at
+ * the value 2^31.
  *
  * @param[in] time
  * @return the number of days since the date -5877641-06-23
@@ -6411,9 +6411,8 @@ CASS_EXPORT cass_uint32_t
 cass_date_from_epoch(cass_int64_t epoch_secs);
 
 /**
- * Converts Epoch time in seconds to the Cassandra "time" type. The "time" type
- * represents the number of nanoseconds since midnight (range 0 to
- * 86399999999999).
+ * Converts a unix timestamp (in seconds) to the Cassandra "time" type. The "time" type
+ * represents the number of nanoseconds since midnight (range 0 to 86399999999999).
  *
  * @param[in] time
  * @return nanoseconds since midnight
