@@ -145,6 +145,7 @@ size_t RingBuffer::peek_multiple(Position pos, FixedVector<uv_buf_t, N>* bufs) {
     char* base = (buf->data_ + offset);
     size_t len = (buf->write_pos_ - offset);
     bufs->push_back(uv_buf_init(base, len));
+    total += len;
 
     /* Don't get past write head */
     if (buf == write_head_)
