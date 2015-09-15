@@ -32,14 +32,13 @@ public:
     ValueName() { }
 
     ValueName(const std::string& name)
-      : buf(sizeof(uint16_t) + name.size()) {
+      : name(name)
+      , buf(sizeof(uint16_t) + name.size()) {
       buf.encode_string(0, name.data(), name.size());
-      this->name = StringRef(buf.data() + sizeof(uint16_t),
-                             buf.size() - sizeof(uint16_t));
     }
 
+    std::string name;
     Buffer buf;
-    StringRef name;
   };
 
   explicit QueryRequest(size_t value_count = 0)
