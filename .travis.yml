@@ -5,7 +5,7 @@ compiler:
 env:
   matrix:
     - LIBUV_VERSION=0.10.x EXACT_LIBUV_VERSION=0.10.36
-    - LIBUV_VERSION=1.x EXACT_LIBUV_VERSION=1.6.1
+    - LIBUV_VERSION=1.x EXACT_LIBUV_VERSION=1.7.4
 before_install:
   - sudo add-apt-repository ppa:boost-latest/ppa -y
   - sudo apt-get update -qq
