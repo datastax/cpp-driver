@@ -51,7 +51,7 @@ struct ControlConnectionTests {
       } else {
         CassString message;
         cass_future_error_message(future.get(), &message.data, &message.length);
-        BOOST_MESSAGE("Failed to query host: " << std::string(message.data, message.length));
+        BOOST_TEST_MESSAGE("Failed to query host: " << std::string(message.data, message.length));
       }
     }
 
