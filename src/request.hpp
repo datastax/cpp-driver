@@ -26,7 +26,7 @@
 
 #include <stdint.h>
 #include <utility>
-#include <vector>
+#include <map>
 
 namespace cass {
 
@@ -35,19 +35,16 @@ class RequestMessage;
 
 class CustomPayload : public RefCounted<CustomPayload> {
 public:
-  CustomPayload(size_t item_count)
-    : items_(item_count) { }
-
   virtual ~CustomPayload() { }
 
-  void append(const char* name, size_t name_length,
-              const uint8_t* value, size_t value_size);
+  void set(const char* name, size_t name_length,
+           const uint8_t* value, size_t value_size);
 
   int32_t encode(BufferVec* bufs) const;
 
 private:
-  typedef std::vector<Buffer> ItemVec;
-  ItemVec items_;
+  typedef std::map<std::string, Buffer> ItemMap;
+  ItemMap items_;
 };
 
 class Request : public RefCounted<Request> {

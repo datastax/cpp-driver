@@ -30,6 +30,14 @@ namespace cass {
 
 class Response : public RefCounted<Response> {
 public:
+  struct CustomPayloadItem {
+    CustomPayloadItem(StringRef name, StringRef value)
+      : name(name)
+      , value(value) { }
+    StringRef name;
+    StringRef value;
+  };
+  typedef FixedVector<CustomPayloadItem, 8> CustomPayloadVec;
   typedef FixedVector<StringRef, 8> WarningVec;
 
   Response(uint8_t opcode)
@@ -47,19 +55,7 @@ public:
     buffer_ = SharedRefPtr<RefBuffer>(RefBuffer::create(size));
   }
 
-  size_t custom_payload_item_count() const { return custom_payload_.size(); }
-
-  bool custom_payload_item(size_t index,
-                           const char** name, size_t* name_length,
-                           const uint8_t** value, size_t* value_size) const;
-
-  bool custom_payload_item(StringRef name,
-                           const uint8_t** value, size_t* value_size) const;
-
-
-  const WarningVec& warnings() const {
-    return warnings_;
-  }
+  const CustomPayloadVec& custom_payload() const { return custom_payload_; }
 
   char* decode_custom_payload(char* buffer, size_t size);
 
@@ -68,21 +64,9 @@ public:
   virtual bool decode(int version, char* buffer, size_t size) = 0;
 
 private:
-  struct CustomPayloadItem : public HashTableEntry<CustomPayloadItem> {
-    CustomPayloadItem(StringRef name, const uint8_t* value, int32_t value_size)
-      : name(name)
-      , value(value)
-      , value_size(value_size) { }
-
-    StringRef name;
-    const uint8_t* value;
-    int32_t value_size;
-  };
-
   uint8_t opcode_;
   SharedRefPtr<RefBuffer> buffer_;
-  CaseInsensitiveHashTable<CustomPayloadItem> custom_payload_;
-  WarningVec warnings_;
+  CustomPayloadVec custom_payload_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Response);

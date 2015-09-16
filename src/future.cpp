@@ -135,7 +135,7 @@ size_t cass_future_custom_payload_item_count(CassFuture* future) {
   }
   cass::SharedRefPtr<cass::Response> response(
         static_cast<cass::ResponseFuture*>(future->from())->response());
-  return response->custom_payload_item_count();
+  return response->custom_payload().size();
 }
 
 CassError cass_future_custom_payload_item(CassFuture* future,
@@ -149,64 +149,16 @@ CassError cass_future_custom_payload_item(CassFuture* future,
   }
   cass::SharedRefPtr<cass::Response> response(
         static_cast<cass::ResponseFuture*>(future->from())->response());
-  if (!response->custom_payload_item(index,
-                                     name, name_length,
-                                     value, value_size)) {
+  const cass::Response::CustomPayloadVec& custom_payload
+      = response->custom_payload();
+  if (index >= custom_payload.size()) {
     return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
   }
-  return CASS_OK;
-}
-
-CassError cass_future_custom_payload_item_by_name(CassFuture* future,
-                                                  const char* name,
-                                                  const cass_byte_t** value,
-                                                  size_t* value_size) {
-  return cass_future_custom_payload_item_by_name_n(future,
-                                                   name, strlen(name),
-                                                   value, value_size);
-}
-
-CassError cass_future_custom_payload_item_by_name_n(CassFuture* future,
-                                                    const char* name,
-                                                    size_t name_length,
-                                                    const cass_byte_t** value,
-                                                    size_t* value_size) {
-  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
-    return CASS_ERROR_LIB_INVALID_FUTURE_TYPE;
-  }
-  cass::SharedRefPtr<cass::Response> response(
-        static_cast<cass::ResponseFuture*>(future->from())->response());
-  if (!response->custom_payload_item(cass::StringRef(name, name_length),
-                                     value, value_size)) {
-    return CASS_ERROR_LIB_NAME_DOES_NOT_EXIST;
-  }
-  return CASS_OK;
-}
-
-size_t cass_future_warning_count(CassFuture* future) {
-  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
-    return 0;
-  }
-  cass::SharedRefPtr<cass::Response> response(
-        static_cast<cass::ResponseFuture*>(future->from())->response());
-  return response->warnings().size();
-}
-
-CassError cass_future_warning(CassFuture *future,
-                              size_t index,
-                              const char** warning,
-                              size_t* warning_size) {
-  if (future->type() != cass::CASS_FUTURE_TYPE_RESPONSE) {
-    return CASS_ERROR_LIB_INVALID_FUTURE_TYPE;
-  }
-  cass::SharedRefPtr<cass::Response> response(
-        static_cast<cass::ResponseFuture*>(future->from())->response());
-  if (index >= response->warnings().size()) {
-    return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
-  }
-  cass::StringRef warn = response->warnings()[index];
-  *warning = warn.data();
-  *warning_size = warn.size();
+  const cass::Response::CustomPayloadItem& item = custom_payload[index];
+  *name = item.name.data();
+  *name_length = item.name.size();
+  *value = reinterpret_cast<const cass_byte_t*>(item.value.data());
+  *value_size = item.value.size();
   return CASS_OK;
 }
 

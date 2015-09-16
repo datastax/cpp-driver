@@ -19,6 +19,7 @@
 #include "auth_responses.hpp"
 #include "error_response.hpp"
 #include "event_response.hpp"
+#include "logger.hpp"
 #include "ready_response.hpp"
 #include "result_response.hpp"
 #include "supported_response.hpp"
@@ -26,52 +27,15 @@
 
 namespace cass {
 
-bool Response::custom_payload_item(size_t index,
-                                   const char** name, size_t* name_length,
-                                   const uint8_t** value, size_t* value_size) const {
-  if (index >= custom_payload_.size()) return false;
-  const CustomPayloadItem& item(custom_payload_[index]);
-  *name = item.name.data();
-  *name_length = item.name.size();
-  if (item.value_size < 0) {
-    *value = NULL;
-    *value_size = 0;
-  } else {
-    *value = item.value;
-    *value_size = item.value_size;
-  }
-  return true;
-}
-
-bool Response::custom_payload_item(StringRef name,
-                                   const uint8_t** value,
-                                   size_t* value_size) const {
-  IndexVec indices;
-  if (custom_payload_.get_indices(name, &indices) > 0) {
-    const CustomPayloadItem& item(custom_payload_[indices.front()]);
-    if (item.value_size < 0) {
-      *value = NULL;
-      *value_size = 0;
-    } else {
-      *value = item.value;
-      *value_size = item.value_size;
-    }
-    return true;
-  }
-  return false;
-}
-
 char* Response::decode_custom_payload(char* buffer, size_t size) {
   uint16_t item_count;
   char* pos = decode_uint16(buffer, item_count);
-
   for (uint16_t i = 0; i < item_count; ++i) {
     StringRef name;
-    int32_t value_length;
+    StringRef value;
     pos = decode_string(pos, &name);
-    pos = decode_int32(pos, value_length);
-    custom_payload_.add(CustomPayloadItem(name, reinterpret_cast<const uint8_t*>(pos), value_length));
-    pos += value_length;
+    pos = decode_bytes(pos, &value);
+    custom_payload_.push_back(CustomPayloadItem(name, value));
   }
 
   return pos;
@@ -81,12 +45,10 @@ char* Response::decode_warnings(char* buffer, size_t size) {
   uint16_t warning_count;
   char* pos = decode_uint16(buffer, warning_count);
 
-  warnings_.reserve(warning_count);
-
   for (uint16_t i = 0; i < warning_count; ++i) {
     StringRef warning;
     pos = decode_string(pos, &warning);
-    warnings_.push_back(warning);
+    LOG_WARN("Server-side warning: %.*s", (int)warning.size(), warning.data());
   }
 
   return pos;

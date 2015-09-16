@@ -2071,36 +2071,6 @@ cass_future_custom_payload_item_by_name_n(CassFuture* future,
                                           const cass_byte_t** value,
                                           size_t* value_size);
 
-/**
- * Gets a the number of warnings from a response future. If the future is not
- * ready this method will wait for the future to be set.
- *
- * @public @memberof CassFuture
- *
- * @param[in] future
- * @return the number of warnings.
- */
-CASS_EXPORT size_t
-cass_future_warning_count(CassFuture* future);
-
-/**
- * Gets a warning from a response future. If the future is not
- * ready this method will wait for the future to be set.
- *
- * @public @memberof CassFuture
- *
- * @param[in] future
- * @param[in] index
- * @param[out] warning
- * @param[out] warning_size
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_future_warning(CassFuture *future,
-                    size_t index,
-                    const char** warning,
-                    size_t* warning_size);
-
 /***********************************************************************************
  *
  * Statement
@@ -6193,13 +6163,12 @@ cass_retry_policy_free(CassRetryPolicy* policy);
  *
  * @public @memberof CassCustomPayload
  *
- * @param[in] item_count
  * @return Returns a custom payload that must be freed.
  *
  * @see cass_custom_payload_free()
  */
 CASS_EXPORT CassCustomPayload*
-cass_custom_payload_new(size_t item_count);
+cass_custom_payload_new();
 
 /**
  * Frees a custom payload instance.
@@ -6212,7 +6181,7 @@ CASS_EXPORT void
 cass_custom_payload_free(CassCustomPayload* payload);
 
 /**
- * Appends an item to the custom payload.
+ * Sets an item to the custom payload.
  *
  * @public @memberof CassCustomPayload
  *
@@ -6222,13 +6191,13 @@ cass_custom_payload_free(CassCustomPayload* payload);
  * @param[in] value_size
  */
 CASS_EXPORT void
-cass_custom_payload_append(CassCustomPayload* payload,
-                           const char* name,
-                           const cass_byte_t* value,
-                           size_t value_size);
+cass_custom_payload_set(CassCustomPayload* payload,
+                        const char* name,
+                        const cass_byte_t* value,
+                        size_t value_size);
 
 /**
- * Same as cass_custom_payload_append(), but with lengths for string
+ * Same as cass_custom_payload_set(), but with lengths for string
  * parameters.
  *
  * @public @memberof CassInet
@@ -6240,11 +6209,11 @@ cass_custom_payload_append(CassCustomPayload* payload,
  * @param[in] value_size
  */
 CASS_EXPORT void
-cass_custom_payload_append_n(CassCustomPayload* payload,
-                             const char* name,
-                             size_t name_length,
-                             const cass_byte_t* value,
-                             size_t value_size);
+cass_custom_payload_set_n(CassCustomPayload* payload,
+                          const char* name,
+                          size_t name_length,
+                          const cass_byte_t* value,
+                          size_t value_size);
 
 /***********************************************************************************
  *
