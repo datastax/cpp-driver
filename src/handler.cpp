@@ -35,10 +35,16 @@ int32_t Handler::encode(int version, int flags, BufferVec* bufs) {
   bufs->push_back(Buffer()); // Placeholder
 
   const Request* req = request();
-  int32_t length = req->encode(version, this, bufs);
-  if (length < 0) {
-    return length;
+  int32_t length = 0;
+
+  if (version >= 4 && req->custom_payload()) {
+    flags |= CASS_FLAG_CUSTOM_PAYLOAD;
+    length += req->custom_payload()->encode(bufs);
   }
+
+  int32_t result = req->encode(version, this, bufs);
+  if (result < 0) return result;
+  length += result;
 
   const size_t header_size
       = (version >= 3) ? CASS_HEADER_SIZE_V3 : CASS_HEADER_SIZE_V1_AND_V2;

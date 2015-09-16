@@ -36,7 +36,7 @@ namespace cass {
 
 SchemaChangeHandler::SchemaChangeHandler(Connection* connection,
                                          RequestHandler* request_handler,
-                                         Response* response,
+                                         const SharedRefPtr<Response>& response,
                                          uint64_t elapsed)
   : MultipleRequestHandler(connection)
   , request_handler_(request_handler)
@@ -53,7 +53,7 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
   StringRef current_version;
 
   ResultResponse* local_result =
-      static_cast<ResultResponse*>(responses[0]);
+      static_cast<ResultResponse*>(responses[0].get());
 
   if (local_result->row_count() > 0) {
     local_result->decode_first_row();
@@ -70,7 +70,7 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
   }
 
   ResultResponse* peers_result =
-      static_cast<ResultResponse*>(responses[1]);
+      static_cast<ResultResponse*>(responses[1].get());
   peers_result->decode_first_row();
 
   ResultIterator rows(peers_result);
@@ -104,7 +104,7 @@ void SchemaChangeHandler::on_set(const ResponseVec& responses) {
   bool has_error = false;
   for (MultipleRequestHandler::ResponseVec::const_iterator it = responses.begin(),
        end = responses.end(); it != end; ++it) {
-    if (check_error_or_invalid_response("SchemaChangeHandler", CQL_OPCODE_RESULT, *it)) {
+    if (check_error_or_invalid_response("SchemaChangeHandler", CQL_OPCODE_RESULT, it->get())) {
       has_error = true;
     }
   }

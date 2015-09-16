@@ -23,7 +23,7 @@
 extern "C" {
 
 void cass_result_free(const CassResult* result) {
-  delete result->from();
+  result->dec_ref();
 }
 
 size_t cass_result_row_count(const CassResult* result) {

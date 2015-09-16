@@ -383,7 +383,7 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
       host->set_mark(session->current_host_mark_);
 
       ResultResponse* local_result =
-          static_cast<ResultResponse*>(responses[0]);
+          static_cast<ResultResponse*>(responses[0].get());
 
       if (local_result->row_count() > 0) {
         local_result->decode_first_row();
@@ -404,7 +404,7 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
 
   {
     ResultResponse* peers_result =
-        static_cast<ResultResponse*>(responses[1]);
+        static_cast<ResultResponse*>(responses[1].get());
     peers_result->decode_first_row();
     ResultIterator rows(peers_result);
     while (rows.next()) {
@@ -436,11 +436,11 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
   session->purge_hosts(is_initial_connection);
 
   if (session->config().use_schema()) {
-    session->cluster_meta().update_keyspaces(static_cast<ResultResponse*>(responses[2]));
-    session->cluster_meta().update_tables(static_cast<ResultResponse*>(responses[3]),
-        static_cast<ResultResponse*>(responses[4]));
+    session->cluster_meta().update_keyspaces(static_cast<ResultResponse*>(responses[2].get()));
+    session->cluster_meta().update_tables(static_cast<ResultResponse*>(responses[3].get()),
+        static_cast<ResultResponse*>(responses[4].get()));
     if (control_connection->protocol_version_ >= 3) {
-      session->cluster_meta().update_usertypes(static_cast<ResultResponse*>(responses[5]));
+      session->cluster_meta().update_usertypes(static_cast<ResultResponse*>(responses[5].get()));
     }
     session->cluster_meta().build();
   }
@@ -663,7 +663,7 @@ void ControlConnection::refresh_table(const StringRef& keyspace_name,
 void ControlConnection::on_refresh_table(ControlConnection* control_connection,
                                          const RefreshTableData& data,
                                          const MultipleRequestHandler::ResponseVec& responses) {
-  ResultResponse* column_family_result = static_cast<ResultResponse*>(responses[0]);
+  ResultResponse* column_family_result = static_cast<ResultResponse*>(responses[0].get());
   if (column_family_result->row_count() == 0) {
     LOG_ERROR("No row found for column family %s.%s in system schema table.",
               data.keyspace_name.c_str(), data.table_name.c_str());
@@ -672,7 +672,7 @@ void ControlConnection::on_refresh_table(ControlConnection* control_connection,
 
   Session* session = control_connection->session_;
   session->cluster_meta().update_tables(column_family_result,
-                                        static_cast<ResultResponse*>(responses[1]));
+                                        static_cast<ResultResponse*>(responses[1].get()));
 }
 
 
@@ -771,7 +771,7 @@ void ControlConnection::ControlMultipleRequestHandler<T>::on_set(
   bool has_error = false;
   for (MultipleRequestHandler::ResponseVec::const_iterator it = responses.begin(),
        end = responses.end(); it != end; ++it) {
-    if (control_connection_->handle_query_invalid_response(*it)) {
+    if (control_connection_->handle_query_invalid_response(it->get())) {
       has_error = true;
     }
   }

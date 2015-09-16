@@ -362,6 +362,11 @@ typedef struct CassTimestampGen_ CassTimestampGen;
 typedef struct CassRetryPolicy_ CassRetryPolicy;
 
 /**
+ * @struct CassCustomPayload
+ */
+typedef struct CassCustomPayload_ CassCustomPayload;
+
+/**
  * @struct CassMetrics
  *
  * A snapshot of the session's performance/diagnostic metrics.
@@ -567,6 +572,7 @@ typedef enum  CassErrorSource_ {
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_NO_PAGING_STATE, 24, "No paging state") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_PARAMETER_UNSET, 25, "Parameter unset") \
   XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE, 26, "Invalid error result type") \
+  XX(CASS_ERROR_SOURCE_LIB, CASS_ERROR_LIB_INVALID_FUTURE_TYPE, 27, "Invalid future type") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_SERVER_ERROR, 0x0000, "Server error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_PROTOCOL_ERROR, 0x000A, "Protocol error") \
   XX(CASS_ERROR_SOURCE_SERVER, CASS_ERROR_SERVER_BAD_CREDENTIALS, 0x0100, "Bad credentials") \
@@ -1927,8 +1933,7 @@ cass_future_wait_timed(CassFuture* future,
 
 /**
  * Gets the result of a successful future. If the future is not ready this method will
- * wait for the future to be set. The first successful call consumes the future, all
- * subsequent calls will return NULL.
+ * wait for the future to be set.
  *
  * @public @memberof CassFuture
  *
@@ -1943,8 +1948,7 @@ cass_future_get_result(CassFuture* future);
 
 /**
  * Gets the error result from a future that failed as a result of a server error. If the
- * future is not ready this method will wait for the future to be set. The first
- * successful call consumes the future, all subsequent calls will return NULL.
+ * future is not ready this method will wait for the future to be set.
  *
  * @public @memberof CassFuture
  *
@@ -2003,6 +2007,78 @@ CASS_EXPORT void
 cass_future_error_message(CassFuture* future,
                           const char** message,
                           size_t* message_length);
+
+/**
+ * Gets a the number of custom payload items from a response future. If the future is not
+ * ready this method will wait for the future to be set.
+ *
+ * @public @memberof CassFuture
+ *
+ * @param[in] future
+ * @return the number of custom payload items.
+ */
+CASS_EXPORT size_t
+cass_future_custom_payload_item_count(CassFuture* future);
+
+/**
+ * Gets a custom payload item from a response future at the specified index. If the future is not
+ * ready this method will wait for the future to be set.
+ *
+ * @public @memberof CassFuture
+ *
+ * @param[in] future
+ * @param[in] index
+ * @param[out] name
+ * @param[out] name_length
+ * @param[out] value
+ * @param[out] value_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_future_custom_payload_item(CassFuture* future,
+                                size_t index,
+                                const char** name,
+                                size_t* name_length,
+                                const cass_byte_t** value,
+                                size_t* value_size);
+
+/**
+ * Gets a custom payload item from a response future with the specified name. If the future is not
+ * ready this method will wait for the future to be set.
+ *
+ * @public @memberof CassFuture
+ *
+ * @param[in] future
+ * @param[in] name
+ * @param[out] value
+ * @param[out] value_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_future_custom_payload_item_by_name(CassFuture* future,
+                                        const char* name,
+                                        const cass_byte_t** value,
+                                        size_t* value_size);
+
+/**
+ * Same as cass_future_custom_payload_item_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassFuture
+ *
+ * @param[in] future
+ * @param[in] name
+ * @param[in] name_length
+ * @param[out] value
+ * @param[out] value_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_future_custom_payload_item_by_name_n(CassFuture* future,
+                                          const char* name,
+                                          size_t name_length,
+                                          const cass_byte_t** value,
+                                          size_t* value_size);
 
 /***********************************************************************************
  *
@@ -2218,6 +2294,19 @@ cass_statement_set_timestamp(CassStatement* statement,
 CASS_EXPORT CassError
 cass_statement_set_retry_policy(CassStatement* statement,
                                 CassRetryPolicy* retry_policy);
+
+/**
+ * Sets the statement's custom payload.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] payload
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_set_custom_payload(CassStatement* statement,
+                                  const CassCustomPayload* payload);
 
 /**
  * Binds null to a query or bound statement at the specified index.
@@ -3342,6 +3431,19 @@ cass_batch_set_timestamp(CassBatch* batch,
 CASS_EXPORT CassError
 cass_batch_set_retry_policy(CassBatch* batch,
                             CassRetryPolicy* retry_policy);
+
+/**
+ * Sets the batch's custom payload.
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] payload
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_batch_set_custom_payload(CassBatch* batch,
+                              const CassCustomPayload* payload);
 
 /**
  * Adds a statement to a batch.
@@ -6606,6 +6708,69 @@ cass_retry_policy_logging_new(CassRetryPolicy* child_retry_policy);
  */
 CASS_EXPORT void
 cass_retry_policy_free(CassRetryPolicy* policy);
+
+/***********************************************************************************
+ *
+ * Custom payload
+ *
+ ***********************************************************************************/
+
+/**
+ * Creates a new custom payload.
+ *
+ * @public @memberof CassCustomPayload
+ *
+ * @return Returns a custom payload that must be freed.
+ *
+ * @see cass_custom_payload_free()
+ */
+CASS_EXPORT CassCustomPayload*
+cass_custom_payload_new();
+
+/**
+ * Frees a custom payload instance.
+ *
+ * @public @memberof CassCustomPayload
+ *
+ * @param[in] payload
+ */
+CASS_EXPORT void
+cass_custom_payload_free(CassCustomPayload* payload);
+
+/**
+ * Sets an item to the custom payload.
+ *
+ * @public @memberof CassCustomPayload
+ *
+ * @param[in] payload
+ * @param[in] name
+ * @param[in] value
+ * @param[in] value_size
+ */
+CASS_EXPORT void
+cass_custom_payload_set(CassCustomPayload* payload,
+                        const char* name,
+                        const cass_byte_t* value,
+                        size_t value_size);
+
+/**
+ * Same as cass_custom_payload_set(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassInet
+ *
+ * @param[in] payload
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] value
+ * @param[in] value_size
+ */
+CASS_EXPORT void
+cass_custom_payload_set_n(CassCustomPayload* payload,
+                          const char* name,
+                          size_t name_length,
+                          const cass_byte_t* value,
+                          size_t value_size);
 
 /***********************************************************************************
  *

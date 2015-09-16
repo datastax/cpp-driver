@@ -58,6 +58,12 @@ CassError cass_batch_set_retry_policy(CassBatch* batch,
   return CASS_OK;
 }
 
+CassError cass_batch_set_custom_payload(CassBatch* batch,
+                                        const CassCustomPayload* payload) {
+  batch->set_custom_payload(payload);
+  return CASS_OK;
+}
+
 CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
   batch->add_statement(statement);
   return CASS_OK;

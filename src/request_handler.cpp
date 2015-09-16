@@ -93,11 +93,11 @@ bool RequestHandler::is_host_up(const Address& address) const {
   return io_worker_->is_host_up(address);
 }
 
-void RequestHandler::set_response(Response* response) {
+void RequestHandler::set_response(const SharedRefPtr<Response>& response) {
   uint64_t elapsed = uv_hrtime() - start_time_ns();
   current_host_->update_latency(elapsed);
   connection_->metrics()->record_request(elapsed);
-  future_->set_result(current_host_->address(), response);
+  future_->set_response(current_host_->address(), response);
   return_connection_and_finish();
 }
 
@@ -110,8 +110,9 @@ void RequestHandler::set_error(CassError code, const std::string& message) {
   return_connection_and_finish();
 }
 
-void RequestHandler::set_error_with_error_response(Response* error, CassError code, const std::string& message) {
-  future_->set_error_with_result(current_host_->address(), error, code, message);
+void RequestHandler::set_error_with_error_response(const SharedRefPtr<Response>& error,
+                                                   CassError code, const std::string& message) {
+  future_->set_error_with_response(current_host_->address(), error, code, message);
   return_connection_and_finish();
 }
 
@@ -145,25 +146,25 @@ void RequestHandler::on_result_response(ResponseMessage* response) {
         }
         result->set_metadata(execute->prepared()->result()->result_metadata().get());
       }
-      set_response(response->response_body().release());
+      set_response(response->response_body());
       break;
 
     case CASS_RESULT_KIND_SCHEMA_CHANGE: {
       SharedRefPtr<SchemaChangeHandler> schema_change_handler(
             new SchemaChangeHandler(connection_,
                                     this,
-                                    response->response_body().release()));
+                                    response->response_body()));
       schema_change_handler->execute();
       break;
     }
 
     case CASS_RESULT_KIND_SET_KEYSPACE:
       io_worker_->broadcast_keyspace_change(result->keyspace().to_string());
-      set_response(response->response_body().release());
+      set_response(response->response_body());
       break;
 
     default:
-      set_response(response->response_body().release());
+      set_response(response->response_body());
       break;
   }
 }
@@ -234,7 +235,7 @@ void RequestHandler::handle_retry_decision(ResponseMessage* response,
 
   switch(decision.type()) {
     case RetryPolicy::RetryDecision::RETURN_ERROR:
-      set_error_with_error_response(response->response_body().release(),
+      set_error_with_error_response(response->response_body(),
                                     static_cast<CassError>(CASS_ERROR(
                                                              CASS_ERROR_SOURCE_SERVER, error->code())),
                                     error->message().to_string());
@@ -253,7 +254,7 @@ void RequestHandler::handle_retry_decision(ResponseMessage* response,
       break;
 
     case RetryPolicy::RetryDecision::IGNORE:
-      set_response(new ResultResponse());
+      set_response(SharedRefPtr<Response>(new ResultResponse()));
       break;
   }
   num_retries_++;

@@ -138,8 +138,8 @@ int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs
   }
 
   if (version >= 3 && handler->timestamp() != CASS_INT64_MIN) {
-      paging_buf_size += sizeof(int64_t); // [long]
-      flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
+    paging_buf_size += sizeof(int64_t); // [long]
+    flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
   }
 
   {

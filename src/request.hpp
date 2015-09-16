@@ -25,11 +25,27 @@
 #include "string_ref.hpp"
 
 #include <stdint.h>
+#include <utility>
+#include <map>
 
 namespace cass {
 
 class Handler;
 class RequestMessage;
+
+class CustomPayload : public RefCounted<CustomPayload> {
+public:
+  virtual ~CustomPayload() { }
+
+  void set(const char* name, size_t name_length,
+           const uint8_t* value, size_t value_size);
+
+  int32_t encode(BufferVec* bufs) const;
+
+private:
+  typedef std::map<std::string, Buffer> ItemMap;
+  ItemMap items_;
+};
 
 class Request : public RefCounted<Request> {
 public:
@@ -45,9 +61,9 @@ public:
       : opcode_(opcode)
       , consistency_(CASS_CONSISTENCY_ONE)
       , serial_consistency_(CASS_CONSISTENCY_ANY)
-      , timestamp_(CASS_INT64_MIN) {}
+      , timestamp_(CASS_INT64_MIN) { }
 
-  virtual ~Request() {}
+  virtual ~Request() { }
 
   uint8_t opcode() const { return opcode_; }
 
@@ -73,6 +89,14 @@ public:
     retry_policy_.reset(retry_policy);
   }
 
+  const SharedRefPtr<const CustomPayload>& custom_payload() const {
+    return custom_payload_;
+  }
+
+  void set_custom_payload(const CustomPayload* payload) {
+    custom_payload_.reset(payload);
+  }
+
   virtual int encode(int version, Handler* handler, BufferVec* bufs) const = 0;
 
 private:
@@ -81,6 +105,7 @@ private:
   CassConsistency serial_consistency_;
   int64_t timestamp_;
   SharedRefPtr<RetryPolicy> retry_policy_;
+  SharedRefPtr<const CustomPayload> custom_payload_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Request);
