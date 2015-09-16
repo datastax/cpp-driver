@@ -26,7 +26,7 @@ namespace cass {
 
 CassError AbstractData::set(size_t index, CassNull value) {
   CASS_CHECK_INDEX_AND_TYPE(index, value);
-  elements_[index] = Element(value);
+  elements_[index] = Element(cass::encode_with_length(value));
   return CASS_OK;
 }
 

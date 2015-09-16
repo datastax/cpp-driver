@@ -49,9 +49,6 @@ public:
     Element()
       : type_(EMPTY) { }
 
-    Element(CassNull)
-      : type_(EMPTY) { }
-
     Element(const Buffer& buf)
       : type_(BUFFER)
       , buf_(buf) { }
