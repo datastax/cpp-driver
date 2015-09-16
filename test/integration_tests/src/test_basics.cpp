@@ -151,7 +151,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query);
       insert_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
-    
+
     BOOST_REQUIRE(cass_statement_bind_uuid(insert_statement.get(), 0, tweet_id) == CASS_OK);
     BOOST_REQUIRE(test_utils::Value<T>::bind(insert_statement.get(), 1, test_utils::Value<T>::min_value()) == CASS_OK);
     BOOST_REQUIRE(test_utils::Value<T>::bind(insert_statement.get(), 2, test_utils::Value<T>::max_value()) == CASS_OK);
@@ -247,7 +247,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query);
       insert_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
-    
+
     BOOST_REQUIRE(cass_statement_bind_uuid(insert_statement.get(), 0, tweet_id) == CASS_OK);
     BOOST_REQUIRE(cass_statement_bind_null(insert_statement.get(), 1) == CASS_OK);
     test_utils::CassFuturePtr insert_future(cass_session_execute(session, insert_statement.get()));
@@ -262,7 +262,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, select_query);
       select_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
-    
+
     BOOST_REQUIRE(cass_statement_bind_uuid(select_statement.get(), 0, tweet_id) == CASS_OK);
     test_utils::CassFuturePtr select_future(cass_session_execute(session, select_statement.get()));
     test_utils::wait_and_check_error(select_future.get());
@@ -329,6 +329,10 @@ BOOST_FIXTURE_TEST_SUITE(basics, BasicTests)
 
 BOOST_AUTO_TEST_CASE(basic_types)
 {
+  if ((version.major >= 2 && version.minor >= 2) || version.major > 2) {
+    insert_single_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, 123);
+    insert_single_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, 123);
+  }
   insert_single_value<cass_int32_t>(CASS_VALUE_TYPE_INT, 123);
 
   insert_single_value<cass_int64_t>(CASS_VALUE_TYPE_BIGINT, 1234567890);
@@ -383,6 +387,10 @@ BOOST_AUTO_TEST_CASE(basic_types)
 
 BOOST_AUTO_TEST_CASE(min_max)
 {
+  if ((version.major >= 2 && version.minor >= 2) || version.major > 2) {
+    insert_min_max_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT);
+    insert_min_max_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT);
+  }
   insert_min_max_value<cass_int32_t>(CASS_VALUE_TYPE_INT);
 
   insert_min_max_value<cass_int64_t>(CASS_VALUE_TYPE_BIGINT);
@@ -419,6 +427,10 @@ BOOST_AUTO_TEST_CASE(null)
   insert_null_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE);
   insert_null_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT);
   insert_null_value<cass_int32_t>(CASS_VALUE_TYPE_INT);
+  if ((version.major >= 2 && version.minor >= 2) || version.major > 2) {
+    insert_null_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT);
+    insert_null_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT);
+  }
   insert_null_value<CassString>(CASS_VALUE_TYPE_TEXT);
   insert_null_value<cass_int64_t>(CASS_VALUE_TYPE_TIMESTAMP);
   insert_null_value<CassUuid>(CASS_VALUE_TYPE_UUID);
@@ -599,12 +611,12 @@ BOOST_AUTO_TEST_CASE(empty_results)
   test_utils::execute_query(session, "INSERT INTO test (key, value) VALUES (0, 0)", &result);
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 0);
   BOOST_REQUIRE(is_result_empty(result.get()));
-  
+
   result.reset();
   test_utils::execute_query(session, "DELETE FROM test WHERE key=0", &result);
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 0);
   BOOST_REQUIRE(is_result_empty(result.get()));
-  
+
   result.reset();
   test_utils::execute_query(session, "SELECT * FROM test WHERE key=0", &result);
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 0);
