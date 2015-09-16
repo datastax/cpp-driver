@@ -116,7 +116,7 @@ extern const cass_duration_t ONE_SECOND_IN_MICROS;
 class CassLog{
 public:
   CassLog() {
-    // Set the maximum log level we'll just ignore anthing
+    // Set the maximum log level we'll just ignore anything
     // that's not relevant.
     cass_log_set_level(CASS_LOG_TRACE);
     cass_log_set_callback(CassLog::callback, &CassLog::log_data_);
@@ -385,6 +385,96 @@ typedef CassSharedPtr<const CassSchema> CassSchemaPtr;
 
 template<class T>
 struct Value;
+
+template<>
+struct Value<cass_int8_t> {
+  static CassError bind(CassStatement* statement, size_t index, cass_int8_t value) {
+    return cass_statement_bind_int8(statement, index, value);
+  }
+
+  static CassError bind_by_name(CassStatement* statement, const char* name, cass_int8_t value) {
+    return cass_statement_bind_int8_by_name(statement, name, value);
+  }
+
+  static CassError append(CassCollection* collection, cass_int8_t value) {
+    return cass_collection_append_int8(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, cass_int8_t value) {
+    return cass_tuple_set_int8(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, cass_int8_t value) {
+    return cass_user_type_set_int8(user_type, index, value);
+  }
+
+  static CassError get(const CassValue* value, cass_int8_t* output) {
+    return cass_value_get_int8(value, output);
+  }
+
+  static bool equal(cass_int8_t a, cass_int8_t b) {
+    return a == b;
+  }
+
+  static cass_int8_t min_value() {
+    return std::numeric_limits<cass_int8_t>::min();
+  }
+
+  static cass_int8_t max_value() {
+    return std::numeric_limits<cass_int8_t>::max();
+  }
+
+  static std::string to_string(cass_int8_t value) {
+    std::stringstream value_stream;
+    value_stream << static_cast<int>(value);
+    return value_stream.str();
+  }
+};
+
+template<>
+struct Value<cass_int16_t> {
+  static CassError bind(CassStatement* statement, size_t index, cass_int16_t value) {
+    return cass_statement_bind_int16(statement, index, value);
+  }
+
+  static CassError bind_by_name(CassStatement* statement, const char* name, cass_int16_t value) {
+    return cass_statement_bind_int16_by_name(statement, name, value);
+  }
+
+  static CassError append(CassCollection* collection, cass_int16_t value) {
+    return cass_collection_append_int16(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, cass_int16_t value) {
+    return cass_tuple_set_int16(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, cass_int16_t value) {
+    return cass_user_type_set_int16(user_type, index, value);
+  }
+
+  static CassError get(const CassValue* value, cass_int16_t* output) {
+    return cass_value_get_int16(value, output);
+  }
+
+  static bool equal(cass_int16_t a, cass_int16_t b) {
+    return a == b;
+  }
+
+  static cass_int16_t min_value() {
+    return std::numeric_limits<cass_int16_t>::min();
+  }
+
+  static cass_int16_t max_value() {
+    return std::numeric_limits<cass_int16_t>::max();
+  }
+
+  static std::string to_string(cass_int16_t value) {
+    std::stringstream value_stream;
+    value_stream << value;
+    return value_stream.str();
+  }
+};
 
 template<>
 struct Value<cass_int32_t> {
@@ -837,7 +927,7 @@ struct Value<CassDecimal> {
     parametrized ctor. Derive from it to use it in your tests.
  */
 struct MultipleNodesTest {
-  MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 3, bool isSSL = false);
+  MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 4, bool isSSL = false);
   virtual ~MultipleNodesTest();
 
   boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
@@ -848,7 +938,7 @@ struct MultipleNodesTest {
 };
 
 struct SingleSessionTest : public MultipleNodesTest {
-  SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 3, bool isSSL = false);
+  SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 4, bool isSSL = false);
   virtual ~SingleSessionTest();
   void create_session();
   void close_session();
@@ -962,6 +1052,7 @@ std::string generate_random_string(unsigned int size = 1024);
 std::string load_ssl_certificate(const std::string filename);
 
 extern const char* CREATE_TABLE_ALL_TYPES;
+extern const char* CREATE_TABLE_ALL_TYPES_V4;
 extern const char* CREATE_TABLE_TIME_SERIES;
 extern const char* CREATE_TABLE_SIMPLE;
 

@@ -51,6 +51,22 @@ const char* CREATE_TABLE_ALL_TYPES =
     "timestamp_sample timestamp,"
     "inet_sample inet);";
 
+const char* CREATE_TABLE_ALL_TYPES_V4 =
+    "CREATE TABLE %s ("
+    "id uuid PRIMARY KEY,"
+    "text_sample text,"
+    "int_sample int,"
+    "bigint_sample bigint,"
+    "float_sample float,"
+    "double_sample double,"
+    "decimal_sample decimal,"
+    "blob_sample blob,"
+    "boolean_sample boolean,"
+    "timestamp_sample timestamp,"
+    "inet_sample inet,"
+    "tinyint_sample tinyint,"
+    "smallint_sample smallint);";
+
 const char* CREATE_TABLE_TIME_SERIES =
     "CREATE TABLE %s ("
     "id uuid,"
@@ -119,6 +135,8 @@ const char* get_value_type(CassValueType type) {
     case CASS_VALUE_TYPE_MAP: return "map";
     case CASS_VALUE_TYPE_SET: return "set";
     case CASS_VALUE_TYPE_TUPLE: return "tuple";
+    case CASS_VALUE_TYPE_SMALL_INT: return "smallint";
+    case CASS_VALUE_TYPE_TINY_INT: return "tinyint";
     default:
       assert(false && "Invalid value type");
       return "";
