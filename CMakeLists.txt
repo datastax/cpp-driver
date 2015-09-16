@@ -31,12 +31,6 @@ if(32BIT)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -m32")
 endif()
 
-# Shorten the source file pathing for log messages
-# TODO: Investigate if NMake works correctly on Windows (need to be able to detect generator used)
-if(NOT WIN32)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLOG_FILE_='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
-endif()
-
 # Dependency minimum version
 set(CASS_MINIMUM_BOOST_VERSION 1.55.0)
 
@@ -538,6 +532,12 @@ source_group("Source Files" FILES ${SRC_FILES})
 source_group("Header Files" FILES ${API_HEADER_FILES} ${INC_FILES})
 set(ALL_SOURCE_FILES ${SRC_FILES} ${API_HEADER_FILES} ${INC_FILES})
 
+# Shorten the source file pathing for log messages
+foreach(SRC_FILE ${SRC_FILES})
+  string(REPLACE "${CMAKE_SOURCE_DIR}/" "" LOG_FILE_ ${SRC_FILE})
+  set_source_files_properties(${SRC_FILE} PROPERTIES COMPILE_FLAGS -DLOG_FILE_=\\\"${LOG_FILE_}\\\")
+endforeach()
+
 # Create an object library for the driver (single build)
 if(NOT CMAKE_VERSION VERSION_LESS "2.8.8")
   add_library(cpp-driver OBJECT ${ALL_SOURCE_FILES})
@@ -638,6 +638,7 @@ if(CASS_BUILD_EXAMPLES)
   add_subdirectory(examples/bind_by_name)
   add_subdirectory(examples/callbacks)
   add_subdirectory(examples/collections)
+  add_subdirectory(examples/date_time)
   add_subdirectory(examples/logging)
   add_subdirectory(examples/maps)
   add_subdirectory(examples/prepared)

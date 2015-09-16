@@ -98,9 +98,11 @@ int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
        end = statements_.end(); i != end; ++i) {
     const SharedRefPtr<Statement>& statement(*i);
     if (statement->has_names_for_values()) {
+      handler->on_error(CASS_ERROR_LIB_BAD_PARAMS,
+                        "Batches cannot contain queries with named values");
       return ENCODE_ERROR_BATCH_WITH_NAMED_VALUES;
     }
-    int32_t result = (*i)->encode_batch(version, bufs, handler->encoding_cache());
+    int32_t result = (*i)->encode_batch(version, bufs, handler);
     if (result < 0) {
       return result;
     }

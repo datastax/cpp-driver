@@ -39,11 +39,15 @@ CassConsistency cass_error_result_consistency(const CassErrorResult* error_resul
 }
 
 cass_int32_t cass_error_result_actual(const CassErrorResult* error_result) {
-  return error_result->actual();
+  return error_result->received();
 }
 
 cass_int32_t cass_error_result_required(const CassErrorResult* error_result) {
   return error_result->required();
+}
+
+cass_int32_t cass_error_result_num_failures(const CassErrorResult* error_result) {
+  return error_result->num_failures();
 }
 
 cass_bool_t cass_error_result_data_present(const CassErrorResult* error_result) {
@@ -52,6 +56,60 @@ cass_bool_t cass_error_result_data_present(const CassErrorResult* error_result) 
 
 CassWriteType cass_error_result_write_type(const CassErrorResult* error_result) {
   return error_result->write_type();
+}
+
+CassError cass_error_result_keyspace(const CassErrorResult* error_result,
+                                     const char** keyspace,
+                                     size_t* keyspace_length) {
+  if (error_result->code() != CASS_ERROR_SERVER_ALREADY_EXISTS ||
+      error_result->code() != CASS_ERROR_SERVER_FUNCTION_FAILURE) {
+    return CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE;
+  }
+  *keyspace = error_result->keyspace().data();
+  *keyspace_length = error_result->keyspace().size();
+  return CASS_OK;
+}
+
+CassError cass_error_result_table(const CassErrorResult* error_result,
+                                  const char** table,
+                                  size_t* table_length) {
+  if (error_result->code() != CASS_ERROR_SERVER_ALREADY_EXISTS) {
+    return CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE;
+  }
+  *table = error_result->table().data();
+  *table_length = error_result->table().size();
+  return CASS_OK;
+}
+
+CassError cass_error_result_function(const CassErrorResult* error_result,
+                                     const char** function,
+                                     size_t* function_length) {
+  if (error_result->code() != CASS_ERROR_SERVER_FUNCTION_FAILURE) {
+    return CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE;
+  }
+  *function = error_result->function().data();
+  *function_length = error_result->function().size();
+  return CASS_OK;
+}
+
+size_t cass_error_num_arg_types(const CassErrorResult* error_result) {
+  return error_result->arg_types().size();
+}
+
+CassError cass_error_result_arg_type(const CassErrorResult* error_result,
+                                     size_t index,
+                                     const char** arg_type,
+                                     size_t* arg_type_length) {
+  if (error_result->code() != CASS_ERROR_SERVER_FUNCTION_FAILURE) {
+    return CASS_ERROR_LIB_INVALID_ERROR_RESULT_TYPE;
+  }
+  if (index > error_result->arg_types().size()) {
+    return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
+  }
+  cass::StringRef arg_type_ref = error_result->arg_types()[index];
+  *arg_type = arg_type_ref.data();
+  *arg_type_length = arg_type_ref.size();
+  return CASS_OK;
 }
 
 } // extern "C"
@@ -67,8 +125,6 @@ std::string ErrorResponse::error_message() const {
 }
 
 bool ErrorResponse::decode(int version, char* buffer, size_t size) {
-  StringRef write_type;
-
   char* pos = decode_int32(buffer, code_);
   pos = decode_string(pos, &message_);
 
@@ -76,36 +132,64 @@ bool ErrorResponse::decode(int version, char* buffer, size_t size) {
     case CQL_ERROR_UNAVAILABLE:
       pos = decode_uint16(pos, cl_);
       pos = decode_int32(pos, required_);
-      pos = decode_int32(pos, actual_);
+      decode_int32(pos, received_);
       break;
     case CQL_ERROR_READ_TIMEOUT:
       pos = decode_uint16(pos, cl_);
-      pos = decode_int32(pos, actual_);
+      pos = decode_int32(pos, received_);
       pos = decode_int32(pos, required_);
       decode_byte(pos, data_present_);
       break;
     case CQL_ERROR_WRITE_TIMEOUT:
       pos = decode_uint16(pos, cl_);
-      pos = decode_int32(pos, actual_);
+      pos = decode_int32(pos, received_);
       pos = decode_int32(pos, required_);
-      decode_string(pos, &write_type);
-      if (write_type == "SIMPLE") {
-        write_type_ = CASS_WRITE_TYPE_SIMPLE;
-      } else if(write_type == "BATCH") {
-        write_type_ = CASS_WRITE_TYPE_BATCH;
-      } else if(write_type == "UNLOGGED_BATCH") {
-        write_type_ = CASS_WRITE_TYPE_UNLOGGED_BATCH;
-      } else if(write_type == "COUNTER") {
-        write_type_ = CASS_WRITE_TYPE_COUNTER;
-      } else if(write_type == "BATCH_LOG") {
-        write_type_ = CASS_WRITE_TYPE_BATCH_LOG;
-      }
+      decode_write_type(pos);
+      break;
+    case CQL_ERROR_READ_FAILURE:
+      pos = decode_uint16(pos, cl_);
+      pos = decode_int32(pos, received_);
+      pos = decode_int32(pos, required_);
+      pos = decode_int32(pos, num_failures_);
+      decode_byte(pos, data_present_);
+      break;
+    case CQL_ERROR_FUNCTION_FAILURE:
+      pos = decode_string(pos, &keyspace_);
+      pos = decode_string(pos, &function_);
+      decode_stringlist(pos, arg_types_);
+      break;
+    case CQL_ERROR_WRITE_FAILURE:
+      pos = decode_uint16(pos, cl_);
+      pos = decode_int32(pos, received_);
+      pos = decode_int32(pos, required_);
+      pos = decode_int32(pos, num_failures_);
+      decode_write_type(pos);
       break;
     case CQL_ERROR_UNPREPARED:
       decode_string(pos, &prepared_id_);
       break;
+    case CQL_ERROR_ALREADY_EXISTS:
+      pos = decode_string(pos, &keyspace_);
+      pos = decode_string(pos, &table_);
+      break;
   }
   return true;
+}
+
+void ErrorResponse::decode_write_type(char* pos) {
+  StringRef write_type;
+  decode_string(pos, &write_type);
+  if (write_type == "SIMPLE") {
+    write_type_ = CASS_WRITE_TYPE_SIMPLE;
+  } else if(write_type == "BATCH") {
+    write_type_ = CASS_WRITE_TYPE_BATCH;
+  } else if(write_type == "UNLOGGED_BATCH") {
+    write_type_ = CASS_WRITE_TYPE_UNLOGGED_BATCH;
+  } else if(write_type == "COUNTER") {
+    write_type_ = CASS_WRITE_TYPE_COUNTER;
+  } else if(write_type == "BATCH_LOG") {
+    write_type_ = CASS_WRITE_TYPE_BATCH_LOG;
+  }
 }
 
 bool check_error_or_invalid_response(const std::string& prefix, uint8_t expected_opcode,

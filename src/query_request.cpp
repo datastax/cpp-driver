@@ -23,7 +23,7 @@
 
 namespace cass {
 
-int32_t QueryRequest::encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const {
+int32_t QueryRequest::encode_batch(int version, BufferVec* bufs, Handler* handler) const {
   int32_t length = 0;
   const std::string& query(query_);
 
@@ -43,11 +43,13 @@ int32_t QueryRequest::encode_batch(int version, BufferVec* bufs, EncodingCache* 
       return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
     }
     buf.encode_uint16(pos, value_names_.size());
-    length += copy_buffers_with_names(version, bufs, cache);
+    length += copy_buffers_with_names(version, bufs, handler->encoding_cache());
   } else {
     buf.encode_uint16(pos, elements_count());
     if (elements_count() > 0) {
-      length += copy_buffers(version, bufs, cache);
+      int32_t result = copy_buffers(version, bufs, handler);
+      if (result < 0) return result;
+      length += result;
     }
   }
 
@@ -158,7 +160,9 @@ int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs
       length += copy_buffers_with_names(version, bufs, handler->encoding_cache());
     } else if (elements_count() > 0) {
       buf.encode_uint16(pos, elements_count());
-      length += copy_buffers(version, bufs, handler->encoding_cache());
+      int32_t result = copy_buffers(version, bufs, handler);
+      if (result < 0) return result;
+      length += result;
     }
   }
 

@@ -48,6 +48,7 @@ static CassValueType get_value_type(const std::string& str) {
 
       case 'B':
         if (type == "BooleanType") return CASS_VALUE_TYPE_BOOLEAN;
+        if (type == "ByteType") return CASS_VALUE_TYPE_TINY_INT;
         if (type == "BytesType") return CASS_VALUE_TYPE_BLOB;
         break;
 
@@ -75,7 +76,13 @@ static CassValueType get_value_type(const std::string& str) {
         if (type == "LongType") return CASS_VALUE_TYPE_BIGINT;
         break;
 
+      case 'S':
+        if (type == "ShortType") return CASS_VALUE_TYPE_SMALL_INT;
+        if (type == "SimpleDateType") return CASS_VALUE_TYPE_DATE;
+        break;
+
       case 'T':
+        if (type == "TimeType") return CASS_VALUE_TYPE_TIME;
         if (type == "TimestampType") return CASS_VALUE_TYPE_TIMESTAMP;
         if (type == "TimeUUIDType") return CASS_VALUE_TYPE_TIMEUUID;
         break;

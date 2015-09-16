@@ -23,6 +23,8 @@ namespace cass {
 
 struct CassNull { };
 
+struct CassUnset { };
+
 struct CassBytes {
   CassBytes(const cass_byte_t* data, size_t size)
     : data(data), size(size) { }

@@ -182,7 +182,7 @@ void RequestHandler::on_error_response(ResponseMessage* response) {
     case CQL_ERROR_READ_TIMEOUT:
       handle_retry_decision(response,
                             retry_policy_->on_read_timeout(error->consistency(),
-                                                           error->actual(),
+                                                           error->received(),
                                                            error->required(),
                                                            error->data_present() > 0,
                                                            num_retries_));
@@ -191,7 +191,7 @@ void RequestHandler::on_error_response(ResponseMessage* response) {
     case CQL_ERROR_WRITE_TIMEOUT:
       handle_retry_decision(response,
                             retry_policy_->on_write_timeout(error->consistency(),
-                                                            error->actual(),
+                                                            error->received(),
                                                             error->required(),
                                                             error->write_type(),
                                                             num_retries_));
@@ -201,7 +201,7 @@ void RequestHandler::on_error_response(ResponseMessage* response) {
       handle_retry_decision(response,
                             retry_policy_->on_unavailable(error->consistency(),
                                                           error->required(),
-                                                          error->actual(),
+                                                          error->received(),
                                                           num_retries_));
       break;
 
