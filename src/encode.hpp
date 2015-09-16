@@ -126,6 +126,18 @@ inline Buffer encode_with_length(CassDecimal value) {
   return buf;
 }
 
+inline Buffer encode(cass_int8_t value) {
+  Buffer buf(sizeof(cass_int8_t));
+  buf.encode_int8(0, value);
+  return buf;
+}
+
+inline Buffer encode(cass_int16_t value) {
+  Buffer buf(sizeof(cass_int16_t));
+  buf.encode_int16(0, value);
+  return buf;
+}
+
 inline Buffer encode(cass_int32_t value) {
   Buffer buf(sizeof(int32_t));
   buf.encode_int32(0, value);
