@@ -57,11 +57,10 @@ struct AthenticationTests {
     BOOST_CHECK(cass_result_row_count(result.get()) > 0);
   }
 
-  void invalid_credentials(int protocol_version, const char* username, 
+  void invalid_credentials(int protocol_version, const char* username,
                            const char* password, const char* expected_error,
                            CassError expected_code) {
     test_utils::CassLog::reset(expected_error);
-
     cass_cluster_set_protocol_version(cluster.get(), protocol_version);
     cass_cluster_set_credentials(cluster.get(), username, password);
     {
@@ -83,6 +82,8 @@ BOOST_AUTO_TEST_CASE(protocol_versions)
 {
   auth(1);
   auth(2);
+  auth(3);
+  auth(4);
 }
 
 BOOST_AUTO_TEST_CASE(empty_credentials)
@@ -91,9 +92,11 @@ BOOST_AUTO_TEST_CASE(empty_credentials)
   // auth is subject to major changes and this is just a simple form.
   // This test serves to characterize what is there presently.
   const char* expected_error
-      = "java.lang.AssertionError: org.apache.cassandra.exceptions.InvalidRequestException: Key may not be empty";
+      = "Key may not be empty";
   invalid_credentials(1, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
   invalid_credentials(2, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+  invalid_credentials(3, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+  invalid_credentials(4, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
 
 BOOST_AUTO_TEST_CASE(bad_credentials)
@@ -102,6 +105,8 @@ BOOST_AUTO_TEST_CASE(bad_credentials)
       = "had the following error on startup: Username and/or password are incorrect";
   invalid_credentials(1, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
   invalid_credentials(2, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
+  invalid_credentials(3, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
+  invalid_credentials(4, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
