@@ -412,12 +412,101 @@ BOOST_AUTO_TEST_CASE(invalid) {
       test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
       BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid(statement.get(), 0, key), CASS_OK);
       BOOST_REQUIRE_EQUAL(cass_statement_bind_user_type(statement.get(), 1, phone.get()), CASS_OK);
-      BOOST_REQUIRE_EQUAL(test_utils::wait_and_return_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get()), 
+      BOOST_REQUIRE_EQUAL(test_utils::wait_and_return_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get()),
                           CASS_ERROR_SERVER_INVALID_QUERY);
     }
   } else {
     boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
     BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping udts/invalid");
+    BOOST_REQUIRE(true);
+  }
+}
+
+/**
+* Ensure varchar/text datatypes are correctly handled with nested UDTs
+*
+* This test ensures the text datatypes are handled correctly using Cassandra
+* v2.1+ with nested UDTs
+*
+* @since 2.2.0-beta
+* @jira_ticket CPP-287
+* @test_category data_types:udt
+* @cassandra_version 2.1.x
+*/
+BOOST_AUTO_TEST_CASE(text_types) {
+  CassVersion version = test_utils::get_version();
+  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+    UDTTests tester;
+    std::string nested_type = "CREATE TYPE nested_type (value_1 int, value_2 int)";
+    std::string parent_type = "CREATE TYPE parent_type (name text, values frozen<nested_type>)";
+    std::string create_table = "CREATE TABLE key_value_pair (key int PRIMARY KEY, value frozen<parent_type>)";
+    std::string insert_query = "INSERT INTO key_value_pair(key, value) VALUES (?, ?)";
+    std::string select_query = "SELECT value FROM key_value_pair WHERE key=?";
+
+    // Create the UDTs and table for the test
+    test_utils::execute_query(tester.session, nested_type.c_str());
+    test_utils::execute_query(tester.session, parent_type.c_str());
+    test_utils::CassUserTypePtr nested_udt = tester.new_udt("nested_type");
+    test_utils::CassUserTypePtr parent_udt = tester.new_udt("parent_type");
+    test_utils::execute_query(tester.session, create_table.c_str());
+
+    // Fill in the nested UDT values
+    BOOST_REQUIRE_EQUAL(test_utils::Value<cass_int32_t>::user_type_set_by_name(nested_udt.get(), "value_1", 100), CASS_OK);
+    BOOST_REQUIRE_EQUAL(test_utils::Value<cass_int32_t>::user_type_set_by_name(nested_udt.get(), "value_2", 200), CASS_OK);
+
+    // Fill in the parent UDT values
+    BOOST_REQUIRE_EQUAL(test_utils::Value<CassString>::user_type_set_by_name(parent_udt.get(), "name", "DataStax"), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_user_type_set_user_type_by_name(parent_udt.get(), "values", nested_udt.get()), CASS_OK);
+
+    // Bind and insert the nested UDT into Cassandra
+    test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
+    BOOST_REQUIRE_EQUAL(test_utils::Value<cass_int32_t>::bind_by_name(statement.get(), "key", 1), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_user_type_by_name(statement.get(), "value", parent_udt.get()), CASS_OK);
+    test_utils::wait_and_check_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get());
+
+    // Ensure the UDT can be read
+    statement = test_utils::CassStatementPtr(cass_statement_new(select_query.c_str(), 1));
+    BOOST_REQUIRE_EQUAL(test_utils::Value<cass_int32_t>::bind(statement.get(), 0, 1), CASS_OK);
+    test_utils::CassFuturePtr future = test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get()));
+    test_utils::wait_and_check_error(future.get());
+    test_utils::CassResultPtr result(cass_future_get_result(future.get()));
+    BOOST_REQUIRE_EQUAL(cass_result_row_count(result.get()), 1);
+    BOOST_REQUIRE_EQUAL(cass_result_column_count(result.get()), 1);
+    const CassRow* row = cass_result_first_row(result.get());
+    const CassValue* value = cass_row_get_column(row, 0);
+    BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UDT);
+
+    // Verify the parent key
+    test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
+    BOOST_REQUIRE(cass_iterator_next(iterator.get()));
+    const CassValue* name_value = cass_iterator_get_user_type_field_value(iterator.get());
+    BOOST_REQUIRE_EQUAL(cass_value_type(name_value), CASS_VALUE_TYPE_VARCHAR);
+    CassString name_result;
+    BOOST_REQUIRE_EQUAL(test_utils::Value<CassString>::get(name_value, &name_result), CASS_OK);
+    BOOST_REQUIRE(test_utils::Value<CassString>::equal(name_result, "DataStax"));
+
+    // Ensure the nested value is a UDT and create the iterator for the validation
+    BOOST_REQUIRE(cass_iterator_next(iterator.get()));
+    value = cass_iterator_get_user_type_field_value(iterator.get());
+    BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UDT);
+    BOOST_REQUIRE_EQUAL(cass_value_item_count(value), 2);
+
+    // Verify the values in the nested UDT
+    test_utils::CassIteratorPtr nested_iterator(cass_iterator_from_user_type(value));
+    BOOST_REQUIRE(cass_iterator_next(nested_iterator.get()));
+    const CassValue* value_value = cass_iterator_get_user_type_field_value(nested_iterator.get());
+    BOOST_REQUIRE_EQUAL(cass_value_type(value_value), CASS_VALUE_TYPE_INT);
+    cass_int32_t value_result;
+    BOOST_REQUIRE_EQUAL(test_utils::Value<cass_int32_t>::get(value_value, &value_result), CASS_OK);
+    BOOST_REQUIRE(test_utils::Value<cass_int32_t>::equal(value_result, 100));
+    BOOST_REQUIRE(cass_iterator_next(nested_iterator.get()));
+    value_value = cass_iterator_get_user_type_field_value(nested_iterator.get());
+    BOOST_REQUIRE_EQUAL(cass_value_type(value_value), CASS_VALUE_TYPE_INT);
+    BOOST_REQUIRE_EQUAL(test_utils::Value<cass_int32_t>::get(value_value, &value_result), CASS_OK);
+    BOOST_REQUIRE(test_utils::Value<cass_int32_t>::equal(value_result, 200));
+  } else {
+    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
+    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping udts/text_types");
     BOOST_REQUIRE(true);
   }
 }

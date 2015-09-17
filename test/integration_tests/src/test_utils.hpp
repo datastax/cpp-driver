@@ -408,6 +408,10 @@ struct Value<cass_int8_t> {
     return cass_user_type_set_int8(user_type, index, value);
   }
 
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, cass_int8_t value) {
+    return cass_user_type_set_int8_by_name(user_type, name, value);
+  }
+
   static CassError get(const CassValue* value, cass_int8_t* output) {
     return cass_value_get_int8(value, output);
   }
@@ -451,6 +455,10 @@ struct Value<cass_int16_t> {
 
   static CassError user_type_set(CassUserType* user_type, size_t index, cass_int16_t value) {
     return cass_user_type_set_int16(user_type, index, value);
+  }
+
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, cass_int16_t value) {
+    return cass_user_type_set_int16_by_name(user_type, name, value);
   }
 
   static CassError get(const CassValue* value, cass_int16_t* output) {
@@ -498,6 +506,10 @@ struct Value<cass_int32_t> {
     return cass_user_type_set_int32(user_type, index, value);
   }
 
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, cass_int32_t value) {
+    return cass_user_type_set_int32_by_name(user_type, name, value);
+  }
+
   static CassError get(const CassValue* value, cass_int32_t* output) {
     return cass_value_get_int32(value, output);
   }
@@ -541,6 +553,10 @@ struct Value<cass_int64_t> {
 
   static CassError user_type_set(CassUserType* user_type, size_t index, cass_int64_t value) {
     return cass_user_type_set_int64(user_type, index, value);
+  }
+
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, cass_int64_t value) {
+    return cass_user_type_set_int64_by_name(user_type, name, value);
   }
 
   static CassError get(const CassValue* value, cass_int64_t* output) {
@@ -588,6 +604,10 @@ struct Value<cass_float_t> {
     return cass_user_type_set_float(user_type, index, value);
   }
 
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, cass_float_t value) {
+    return cass_user_type_set_float_by_name(user_type, name, value);
+  }
+
   static CassError get(const CassValue* value, cass_float_t* output) {
     return cass_value_get_float(value, output);
   }
@@ -631,6 +651,10 @@ struct Value<cass_double_t> {
 
   static CassError user_type_set(CassUserType* user_type, size_t index, cass_double_t value) {
     return cass_user_type_set_double(user_type, index, value);
+  }
+
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, cass_double_t value) {
+    return cass_user_type_set_double_by_name(user_type, name, value);
   }
 
   static CassError get(const CassValue* value, cass_double_t* output) {
@@ -678,6 +702,10 @@ struct Value<cass_bool_t> {
     return cass_user_type_set_bool(user_type, index, value);
   }
 
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, cass_bool_t value) {
+    return cass_user_type_set_bool_by_name(user_type, name, value);
+  }
+
   static CassError get(const CassValue* value, cass_bool_t* output) {
     return cass_value_get_bool(value, output);
   }
@@ -711,6 +739,10 @@ struct Value<CassString> {
 
   static CassError user_type_set(CassUserType* user_type, size_t index, CassString value) {
     return cass_user_type_set_string_n(user_type, index, value.data, value.length);
+  }
+
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, CassString value) {
+    return cass_user_type_set_string_by_name_n(user_type, name, strlen(name), value.data, value.length);
   }
 
   static CassError get(const CassValue* value, CassString* output) {
@@ -751,6 +783,10 @@ struct Value<CassBytes> {
     return cass_user_type_set_bytes(user_type, index, value.data, value.size);
   }
 
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, CassBytes value) {
+    return cass_user_type_set_bytes_by_name(user_type, name, value.data, value.size);
+  }
+
   static CassError get(const CassValue* value, CassBytes* output) {
     return cass_value_get_bytes(value, &output->data, &output->size);
   }
@@ -787,6 +823,10 @@ struct Value<CassInet> {
 
   static CassError user_type_set(CassUserType* user_type, size_t index, CassInet value) {
     return cass_user_type_set_inet(user_type, index, value);
+  }
+
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, CassInet value) {
+    return cass_user_type_set_inet_by_name(user_type, name, value);
   }
 
   static CassError get(const CassValue* value, CassInet* output) {
@@ -848,6 +888,10 @@ struct Value<CassUuid> {
     return cass_user_type_set_uuid(user_type, index, value);
   }
 
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, CassUuid value) {
+    return cass_user_type_set_uuid_by_name(user_type, name, value);
+  }
+
   static CassError get(const CassValue* value, CassUuid* output) {
     return cass_value_get_uuid(value, output);
   }
@@ -898,6 +942,10 @@ struct Value<CassDecimal> {
 
   static CassError user_type_set(CassUserType* user_type, size_t index, CassDecimal value) {
     return cass_user_type_set_decimal(user_type, index, value.varint, value.varint_size, value.scale);
+  }
+
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, CassDecimal value) {
+    return cass_user_type_set_decimal_by_name(user_type, name, value.varint, value.varint_size, value.scale);
   }
 
   static CassError get(const CassValue* value, CassDecimal* output) {
