@@ -313,7 +313,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     BOOST_REQUIRE(cass_schema_meta_get_entry(table_meta, non_key_column.c_str()));
 
     // goes away
-    if (version.major > 1) {// dropping a column not supported in 1.2
+    if (version.major >= 2) {// dropping a column not supported in 1.2
       test_utils::execute_query(session, "ALTER TABLE "+table_name+" DROP "+non_key_column);
       refresh_schema_meta();
       table_meta = schema_get_table(SIMPLE_STRATEGY_KEYSPACE_NAME, ALL_DATA_TYPES_TABLE_NAME);
@@ -460,7 +460,7 @@ BOOST_AUTO_TEST_CASE(simple) {
   verify_system_tables();// must be run first -- looking for "no other tables"
   verify_user_keyspace();
   verify_user_table();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     verify_user_data_type();
   }
 }

@@ -143,7 +143,7 @@ BOOST_AUTO_TEST_CASE(read_write_primitives) {
   insert_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE, 3.141592653589793);
   insert_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT, 3.1415926f);
   insert_value<cass_int32_t>(CASS_VALUE_TYPE_INT, 123);
-  if ((version.major >= 2 && version.minor >= 2) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
     insert_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, 123);
     insert_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, 123);
   }

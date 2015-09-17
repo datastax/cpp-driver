@@ -104,7 +104,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
-    if ((version.major >= 2 && version.minor >= 2) || version.major > 2) {
+    if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
       {
         std::vector<cass_int8_t> values;
         for (cass_int8_t i = 1; i <= 3; ++i) values.push_back(i);
@@ -260,7 +260,7 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
-    if ((version.major >= 2 && version.minor >= 2) || version.major > 2) {
+    if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
       {
         std::map<cass_int8_t, cass_int8_t> values;
         values[1] = 2;

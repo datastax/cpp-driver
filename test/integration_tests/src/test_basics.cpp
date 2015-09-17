@@ -329,7 +329,7 @@ BOOST_FIXTURE_TEST_SUITE(basics, BasicTests)
 
 BOOST_AUTO_TEST_CASE(basic_types)
 {
-  if ((version.major >= 2 && version.minor >= 2) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
     insert_single_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, 123);
     insert_single_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, 123);
   }
@@ -387,7 +387,7 @@ BOOST_AUTO_TEST_CASE(basic_types)
 
 BOOST_AUTO_TEST_CASE(min_max)
 {
-  if ((version.major >= 2 && version.minor >= 2) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
     insert_min_max_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT);
     insert_min_max_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT);
   }
@@ -427,7 +427,7 @@ BOOST_AUTO_TEST_CASE(null)
   insert_null_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE);
   insert_null_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT);
   insert_null_value<cass_int32_t>(CASS_VALUE_TYPE_INT);
-  if ((version.major >= 2 && version.minor >= 2) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
     insert_null_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT);
     insert_null_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT);
   }

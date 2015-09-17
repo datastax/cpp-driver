@@ -162,7 +162,7 @@ BOOST_AUTO_TEST_SUITE(named_parameters)
  */
 BOOST_AUTO_TEST_CASE(ordered_unordered_read_write) {
   CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     NamedParametersTests tester;
     std::string create_table = "CREATE TABLE ordered_unordered_read_write(key int PRIMARY KEY, value_text text, value_uuid uuid, value_blob blob, value_list_floats list<float>)";
     std::string insert_query = "INSERT INTO ordered_unordered_read_write(key, value_text, value_uuid, value_blob, value_list_floats) VALUES (:key, :one_text, :two_uuid, :three_blob, :four_list_floats)";
@@ -314,7 +314,7 @@ BOOST_AUTO_TEST_CASE(ordered_unordered_read_write) {
  */
 BOOST_AUTO_TEST_CASE(all_primitives) {
   CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     NamedParametersTests tester;
     for (unsigned int i = 0; i < 2; ++i) {
       bool is_prepared = i == 0 ? false : true;
@@ -351,7 +351,7 @@ BOOST_AUTO_TEST_CASE(all_primitives) {
       tester.insert_primitive_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE, 3.141592653589793, is_prepared);
       tester.insert_primitive_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT, 3.1415926f, is_prepared);
       tester.insert_primitive_value<cass_int32_t>(CASS_VALUE_TYPE_INT, 123, is_prepared);
-      if ((version.major >= 2 && version.minor >= 2) || version.major > 2) {
+      if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
         tester.insert_primitive_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, 123, is_prepared);
         tester.insert_primitive_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, 123, is_prepared);
       }
@@ -391,7 +391,7 @@ BOOST_AUTO_TEST_CASE(all_primitives) {
  */
 BOOST_AUTO_TEST_CASE(all_primitives_batched) {
   CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     NamedParametersTests tester;
 
     {
@@ -426,7 +426,7 @@ BOOST_AUTO_TEST_CASE(all_primitives_batched) {
     tester.insert_primitive_batch_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE, 3.141592653589793, TOTAL_NUMBER_OF_BATCHES);
     tester.insert_primitive_batch_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT, 3.1415926f, TOTAL_NUMBER_OF_BATCHES);
     tester.insert_primitive_batch_value<cass_int32_t>(CASS_VALUE_TYPE_INT, 123, TOTAL_NUMBER_OF_BATCHES);
-    if ((version.major >= 2 && version.minor >= 2) || version.major > 2) {
+    if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
       tester.insert_primitive_batch_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, 123, TOTAL_NUMBER_OF_BATCHES);
       tester.insert_primitive_batch_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, 123, TOTAL_NUMBER_OF_BATCHES);
     }
@@ -465,7 +465,7 @@ BOOST_AUTO_TEST_CASE(all_primitives_batched) {
  */
 BOOST_AUTO_TEST_CASE(invalid_name) {
   CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     NamedParametersTests tester;
     std::string create_table = "CREATE TABLE named_parameter_invalid(key int PRIMARY KEY, value text)";
     std::string insert_query = "INSERT INTO named_parameter_invalid(key, value) VALUES (:key_name, :value_name)";

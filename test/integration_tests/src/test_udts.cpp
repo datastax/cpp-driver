@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_SUITE(udts)
  */
 BOOST_AUTO_TEST_CASE(read_write) {
   CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     UDTTests tester;
     std::string create_table = "CREATE TABLE user (id uuid PRIMARY KEY, addr frozen<address>)";
     std::string insert_query = "INSERT INTO user(id, addr) VALUES (?, ?)";
@@ -377,7 +377,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
  */
 BOOST_AUTO_TEST_CASE(invalid) {
   CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     UDTTests tester;
     std::string invalid_udt_missing_frozen_keyword = "CREATE TYPE invalid_udt (id uuid, address address)";
     std::string invalid_parent_udt = "CREATE TYPE invalid_udt (address frozen<address>)";
