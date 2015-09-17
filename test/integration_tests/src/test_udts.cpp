@@ -435,7 +435,7 @@ BOOST_AUTO_TEST_CASE(invalid) {
 */
 BOOST_AUTO_TEST_CASE(text_types) {
   CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     UDTTests tester;
     std::string nested_type = "CREATE TYPE nested_type (value_1 int, value_2 int)";
     std::string parent_type = "CREATE TYPE parent_type (name text, values frozen<nested_type>)";
