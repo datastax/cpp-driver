@@ -190,7 +190,7 @@ int32_t Statement::copy_buffers(int version, BufferVec* bufs, Handler* handler) 
   int32_t size = 0;
   for (size_t i = 0; i < elements().size(); ++i) {
     const Element& element = elements()[i];
-    if (!element.is_empty()) {
+    if (!element.is_unset()) {
       bufs->push_back(element.get_buffer_cached(version, handler->encoding_cache(), false));
     } else  {
       if (version >= 4) {
@@ -213,7 +213,7 @@ bool Statement::get_routing_key(std::string* routing_key, EncodingCache* cache) 
   if (key_indices_.size() == 1) {
       assert(key_indices_.front() < elements_count());
       const AbstractData::Element& element(elements()[key_indices_.front()]);
-      if (element.is_empty()) {
+      if (element.is_unset() || element.is_null()) {
         return false;
       }
       Buffer buf(element.get_buffer_cached(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, cache, true));
@@ -226,7 +226,7 @@ bool Statement::get_routing_key(std::string* routing_key, EncodingCache* cache) 
          i != key_indices_.end(); ++i) {
       assert(*i < elements_count());
       const AbstractData::Element& element(elements()[*i]);
-      if (element.is_empty()) {
+      if (element.is_unset() || element.is_null()) {
         return false;
       }
       size_t size = element.get_size(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) - sizeof(int32_t);

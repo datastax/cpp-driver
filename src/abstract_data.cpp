@@ -26,7 +26,7 @@ namespace cass {
 
 CassError AbstractData::set(size_t index, CassNull value) {
   CASS_CHECK_INDEX_AND_TYPE(index, value);
-  elements_[index] = Element(cass::encode_with_length(value));
+  elements_[index] = Element(value);
   return CASS_OK;
 }
 
@@ -72,7 +72,7 @@ size_t AbstractData::get_buffers_size() const {
   size_t size = 0;
   for (ElementVec::const_iterator i = elements_.begin(),
        end = elements_.end(); i != end; ++i) {
-    if (!i->is_empty()) {
+    if (!i->is_unset()) {
       size += i->get_size(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION);
     } else {
       size += sizeof(int32_t); // null
@@ -84,7 +84,7 @@ size_t AbstractData::get_buffers_size() const {
 void AbstractData::encode_buffers(size_t pos, Buffer* buf) const {
   for (ElementVec::const_iterator i = elements_.begin(),
        end = elements_.end(); i != end; ++i) {
-    if (!i->is_empty()) {
+    if (!i->is_unset()) {
       pos = i->copy_buffer(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, pos, buf);
     } else {
       pos = buf->encode_int32(pos, -1); // null
@@ -96,7 +96,7 @@ size_t AbstractData::Element::get_size(int version) const {
   if (type_ == COLLECTION) {
     return collection_->get_size_with_length(version);
   } else {
-    assert(type_ == BUFFER);
+    assert(type_ == BUFFER || type_ == NUL);
     return buf_.size();
   }
 }
@@ -106,7 +106,7 @@ size_t AbstractData::Element::copy_buffer(int version, size_t pos, Buffer* buf) 
     Buffer encoded(collection_->encode_with_length(version));
     return buf->copy(pos, encoded.data(), encoded.size());
   } else {
-    assert(type_ == BUFFER);
+    assert(type_ == BUFFER || type_ == NUL);
     return buf->copy(pos, buf_.data(), buf_.size());
   }
 }
@@ -125,7 +125,7 @@ Buffer AbstractData::Element::get_buffer_cached(int version, Request::EncodingCa
       return buf;
     }
   } else {
-    assert(type_ == BUFFER);
+    assert(type_ == BUFFER || type_ == NUL);
     return buf_;
   }
 }
