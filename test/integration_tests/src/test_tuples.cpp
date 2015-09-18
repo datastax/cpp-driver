@@ -487,6 +487,10 @@ BOOST_AUTO_TEST_CASE(varying_size) {
           if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
             tester.insert_varying_sized_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, 123, size, nested_collection_type);
             tester.insert_varying_sized_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, 123, size, nested_collection_type);
+            tester.insert_varying_sized_value<CassDate>(CASS_VALUE_TYPE_DATE,
+                                                                    test_utils::Value<CassDate>::min_value() + 1u,
+                                                                    size, nested_collection_type);
+            tester.insert_varying_sized_value<CassTime>(CASS_VALUE_TYPE_TIME, 123, size, nested_collection_type);
           }
 
           {
@@ -551,6 +555,8 @@ BOOST_AUTO_TEST_CASE(null) {
         if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
           tester.insert_varying_sized_null_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, size, nested_collection_type);
           tester.insert_varying_sized_null_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, size, nested_collection_type);
+          tester.insert_varying_sized_null_value<CassDate>(CASS_VALUE_TYPE_DATE, size, nested_collection_type);
+          tester.insert_varying_sized_null_value<CassTime>(CASS_VALUE_TYPE_TIME, size, nested_collection_type);
         }
       }
     }

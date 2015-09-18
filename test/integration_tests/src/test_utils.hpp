@@ -85,6 +85,20 @@ struct CassDecimal {
   cass_int32_t scale;
 };
 
+struct CassDate {
+  CassDate(cass_uint32_t date = 0)
+    : date(date) { }
+  operator cass_uint32_t() const { return date; }
+  cass_uint32_t date;
+};
+
+struct CassTime {
+  CassTime(cass_int64_t time = 0)
+    : time(time) { }
+  operator cass_int64_t() const { return time; }
+  cass_int64_t time;
+};
+
 inline bool operator<(const CassUuid& u1, const CassUuid& u2) {
   return u1.clock_seq_and_node < u2.clock_seq_and_node ||
          u1.time_and_version < u2.time_and_version;
@@ -518,6 +532,104 @@ struct Value<cass_int32_t> {
     std::stringstream value_stream;
     value_stream << value;
     return value_stream.str();
+  }
+};
+
+template<>
+struct Value<CassDate> {
+  static CassError bind(CassStatement* statement, size_t index, CassDate value) {
+    return cass_statement_bind_uint32(statement, index, value);
+  }
+
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassDate value) {
+    return cass_statement_bind_uint32_by_name(statement, name, value);
+  }
+
+  static CassError append(CassCollection* collection, CassDate value) {
+    return cass_collection_append_uint32(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, CassDate value) {
+    return cass_tuple_set_uint32(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, CassDate value) {
+    return cass_user_type_set_uint32(user_type, index, value);
+  }
+
+  static CassError get(const CassValue* value, CassDate* output) {
+    return cass_value_get_uint32(value, &output->date);
+  }
+
+  static bool equal(CassDate a, CassDate b) {
+    return a == b;
+  }
+
+  static CassDate min_value() {
+    return 2147483648u; // This is the minimum value supported by strftime()
+  }
+
+  static CassDate max_value() {
+    return 2147533357u; // This is the maximum value supported by strftime()
+  }
+
+  static std::string to_string(CassDate value) {
+    char temp[32];
+    time_t epoch_secs = static_cast<time_t>(cass_date_time_to_epoch(value, 0));
+    strftime(temp, sizeof(temp), "'%Y-%m-%d'", gmtime(&epoch_secs));
+    return temp;
+  }
+};
+
+template<>
+struct Value<CassTime> {
+  static CassError bind(CassStatement* statement, size_t index, CassTime value) {
+    return cass_statement_bind_int64(statement, index, value.time);
+  }
+
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassTime value) {
+    return cass_statement_bind_int64_by_name(statement, name, value);
+  }
+
+  static CassError append(CassCollection* collection, CassTime value) {
+    return cass_collection_append_int64(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, CassTime value) {
+    return cass_tuple_set_int64(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, CassTime value) {
+    return cass_user_type_set_int64(user_type, index, value);
+  }
+
+  static CassError get(const CassValue* value, CassTime* output) {
+    return cass_value_get_int64(value, &output->time);
+  }
+
+  static bool equal(CassTime a, CassTime b) {
+    return a == b;
+  }
+
+  static CassTime min_value() {
+    return 0;
+  }
+
+  static CassTime max_value() {
+    return 86399999999999;
+  }
+
+  static std::string to_string(CassTime value) {
+    char temp[32];
+    time_t epoch_secs = static_cast<time_t>(cass_date_time_to_epoch(0, value));
+    strftime(temp, sizeof(temp), "'%H:%M:%S", gmtime(&epoch_secs));
+    std::string str(temp);
+    cass_int64_t diff = value - epoch_secs * 1000000000;
+    sprintf(temp, "%09u", (unsigned int)diff);
+    str.append(".");
+    str.append(temp);
+    str.append("'");
+    return str;
   }
 };
 

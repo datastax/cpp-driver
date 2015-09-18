@@ -65,7 +65,9 @@ const char* CREATE_TABLE_ALL_TYPES_V4 =
     "timestamp_sample timestamp,"
     "inet_sample inet,"
     "tinyint_sample tinyint,"
-    "smallint_sample smallint);";
+    "smallint_sample smallint,"
+    "date_sample date,"
+    "time_sample time);";
 
 const char* CREATE_TABLE_TIME_SERIES =
     "CREATE TABLE %s ("
@@ -137,6 +139,8 @@ const char* get_value_type(CassValueType type) {
     case CASS_VALUE_TYPE_TUPLE: return "tuple";
     case CASS_VALUE_TYPE_SMALL_INT: return "smallint";
     case CASS_VALUE_TYPE_TINY_INT: return "tinyint";
+    case CASS_VALUE_TYPE_DATE: return "date";
+    case CASS_VALUE_TYPE_TIME: return "time";
     default:
       assert(false && "Invalid value type");
       return "";

@@ -205,7 +205,6 @@ BOOST_AUTO_TEST_CASE(dont_recycle_pool_on_timeout) {
     uv_thread_create(&connection_interruptions_thread, connection_interruptions, &ci_data);
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
     uv_thread_join(&connection_interruptions_thread);
-    boost::posix_time::ptime start = boost::posix_time::second_clock::universal_time();
     execute_system_query(60, session);
   }
   BOOST_CHECK_GE(test_utils::CassLog::message_count(), 1);
@@ -219,7 +218,6 @@ BOOST_AUTO_TEST_CASE(dont_recycle_pool_on_timeout) {
     test_utils::CassSessionPtr session(cass_session_new());
     test_utils::CassFuturePtr future(cass_session_connect(session.get(), cluster));
     cass_future_wait_timed(future.get(), test_utils::ONE_SECOND_IN_MICROS);
-    boost::posix_time::ptime start = boost::posix_time::second_clock::universal_time();
     uv_thread_t connection_interruptions_thread;
     ci_data.delay = 5;
     ci_data.duration = 45;
