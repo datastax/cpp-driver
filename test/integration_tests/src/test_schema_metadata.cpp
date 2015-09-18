@@ -260,12 +260,19 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
         fields.insert("memtable_flush_period_in_ms");
         fields.insert("speculative_retry");
 
-        if (version.minor == 1) {
+        if (version.minor >= 1) {
           fields.insert("cf_id");
           fields.insert("max_index_interval");
           fields.insert("min_index_interval");
           fields.erase("populate_io_cache_on_flush");
           fields.erase("replicate_on_write");
+        }
+
+        if (version.minor >= 2) {
+          fields.erase("column_aliases");
+          fields.erase("key_aliases");
+          fields.erase("value_alias");
+          fields.erase("index_interval");
         }
       }
     }
@@ -301,9 +308,14 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     }
     BOOST_CHECK(param_found);
 
-    value = cass_schema_meta_field_value(cass_schema_meta_get_field(table_meta, "key_aliases"));
-    BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_LIST);
-    BOOST_CHECK_GE(cass_value_item_count(value), 1ul);
+    if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+      value = cass_schema_meta_field_value(cass_schema_meta_get_field(table_meta, "cf_id"));
+      BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UUID);
+    } else {
+      value = cass_schema_meta_field_value(cass_schema_meta_get_field(table_meta, "key_aliases"));
+      BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_LIST);
+      BOOST_CHECK_GE(cass_value_item_count(value), 1ul);
+    }
 
     BOOST_CHECK(!cass_schema_meta_get_entry(table_meta, "some bogus entry"));
 
@@ -373,7 +385,11 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     test_utils::CassIteratorPtr itr(cass_iterator_from_schema(schema_));
     size_t keyspace_count = 0;
     while (cass_iterator_next(itr.get())) ++keyspace_count;
-    BOOST_CHECK_EQUAL(keyspace_count, 2ul);
+    size_t number_of_default_keyspaces = 2;
+    if (version.major == 2 && version.minor >= 2) {
+      number_of_default_keyspaces = 4;
+    }
+    BOOST_CHECK_EQUAL(keyspace_count, number_of_default_keyspaces);
   }
 
   void verify_user_keyspace() {
