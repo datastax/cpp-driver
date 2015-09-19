@@ -18,34 +18,33 @@
 #   define BOOST_TEST_MODULE cassandra
 #endif
 
-#include <algorithm>
-#include <cmath>
-
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/cstdint.hpp>
-#include <boost/format.hpp>
-#include <boost/thread.hpp>
-#include <boost/chrono.hpp>
 
 #include "cassandra.h"
-#include "constants.hpp"
 #include "test_utils.hpp"
 
 struct WarningsTests : public test_utils::SingleSessionTest {
   WarningsTests() : SingleSessionTest(1, 0) { }
 };
 
-BOOST_FIXTURE_TEST_SUITE(warnings, WarningsTests)
+BOOST_AUTO_TEST_SUITE(warnings)
 
 BOOST_AUTO_TEST_CASE(aggregate_without_partition_key)
 {
-  test_utils::CassStatementPtr statement(cass_statement_new("SELECT sum(gossip_generation) FROM system.local", 0));
-  test_utils::CassLog::reset("Server-side warning: Aggregation query used without partition key");
-  test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
-  BOOST_CHECK(cass_future_error_code(future.get()) == CASS_OK);
-  BOOST_CHECK(test_utils::CassLog::message_count() > 0);
+  CassVersion version = test_utils::get_version();
+  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+    WarningsTests tester;
+    test_utils::CassStatementPtr statement(cass_statement_new("SELECT sum(gossip_generation) FROM system.local", 0));
+    test_utils::CassLog::reset("Server-side warning: Aggregation query used without partition key");
+    test_utils::CassFuturePtr future(cass_session_execute(tester.session, statement.get()));
+    BOOST_CHECK(cass_future_error_code(future.get()) == CASS_OK);
+    BOOST_CHECK(test_utils::CassLog::message_count() > 0);
+  } else {
+    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
+    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping warnings/aggregate_without_partition_key");
+    BOOST_REQUIRE(true);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
