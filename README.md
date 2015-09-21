@@ -13,19 +13,12 @@ Cassandra's native protocol and Cassandra Query Language v3.
 - Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 - IRC: [#datastax-drivers on `irc.freenode.net <http://freenode.net>`](http://webchat.freenode.net/?channels=datastax-drivers)
 
-## What's New in 2.1
+## What's New in 2.2 Beta1
 
-- Support for Cassandra 2.1 (CQL protocol version 3)
-- [Tuples] and [UDTs]
-- [Nested collections]
-- [Retry policies]
-- [Client-side timestamps]
-- [Data types]
-- [Idle connection heartbeats]
-- [Support for disabling schema metadata]
-
-More information about all the changes found in the 2.1 release can be found in
-[2.1 beta] and [2.1 GA] blog posts and in the [changelog](CHANGELOG.md).
+- Support for new Cassandra 2.2 datatypes: `tinyint`, `smallint`, `date` and
+  `time`
+- Support for custom payloads
+- Support for server-side warnings
 
 ## Upgrading from 1.0 to 2.0
 
@@ -46,6 +39,12 @@ documented [here](http://www.datastax.com/dev/blog/datastax-c-driver-2-0-release
 - [SSL]
 - [Latency-aware routing]
 - [Performance metrics]
+- [Tuples] and [UDTs]
+- [Nested collections]
+- [Retry policies]
+- [Client-side timestamps]
+- [Data types]
+- [Idle connection heartbeats]
 
 ## Examples
 There are several examples provided here: [examples](https://github.com/datastax/cpp-driver/tree/1.0/examples).

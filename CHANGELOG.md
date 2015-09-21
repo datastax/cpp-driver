@@ -1,4 +1,33 @@
-2.1
+2.2.0-beta1
+===========
+September 21, 2015
+
+Features
+--------
+* Added support for Cassandra 2.2 data types `tinyint` and `smallint`
+  (`cass_int8_t` and `cass_int16_t`)
+* Added `cass_uint32_t` support for the Cassandra 2.2 `date` data type
+* Added functions to convert from Unix Epoch time (in seconds) to and from the
+  Cassandra `date` and `time` types
+* Added support for sending and recieving custom payloads to and from Cassandra
+* Added support for server-side warnings
+* Added new error response functions to handle the 'Read_failure', 'Write_failure',
+  'Function_failure', and 'Already_exists' errors
+
+Other
+--------
+* Fixed SSL ring buffer memory leak
+* Fixed potential memory issue caused by using named parameters
+* Fixed hanging issue when calling `cass_session_get_metrics()`
+* Fixed hanging issue caused by `cass::MPMCQueue` memory race
+* Fixed invalid state assertion in `cass::Handler`
+* Fixed UDTs with `text` fields
+* Not binding a statement parameter will now return the error
+  `CASS_ERROR_LIB_PARAMETER_UNSET` when connected to Cassandra 2.1 or earlier
+  otherwise, the UNSET value (protocol version 4) will be sent for the value for
+  Cassandra 2.2 and later.
+
+2.1.0
 ===========
 August 11, 2015
 
