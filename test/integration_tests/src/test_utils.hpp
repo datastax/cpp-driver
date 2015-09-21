@@ -375,6 +375,15 @@ struct Deleter<const CassSchema> {
   }
 };
 
+template<>
+struct Deleter<CassCustomPayload> {
+  void operator()(CassCustomPayload* ptr) {
+    if (ptr != NULL) {
+      cass_custom_payload_free(ptr);
+    }
+  }
+};
+
 template <class T>
 class CassSharedPtr : public boost::shared_ptr<T> {
 public:
@@ -396,6 +405,7 @@ typedef CassSharedPtr<const CassPrepared> CassPreparedPtr;
 typedef CassSharedPtr<CassBatch> CassBatchPtr;
 typedef CassSharedPtr<CassUuidGen> CassUuidGenPtr;
 typedef CassSharedPtr<const CassSchema> CassSchemaPtr;
+typedef CassSharedPtr<CassCustomPayload> CassCustomPayloadPtr;
 
 template<class T>
 struct Value;

@@ -2042,44 +2042,6 @@ cass_future_custom_payload_item(CassFuture* future,
                                 const cass_byte_t** value,
                                 size_t* value_size);
 
-/**
- * Gets a custom payload item from a response future with the specified name. If the future is not
- * ready this method will wait for the future to be set.
- *
- * @public @memberof CassFuture
- *
- * @param[in] future
- * @param[in] name
- * @param[out] value
- * @param[out] value_size
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_future_custom_payload_item_by_name(CassFuture* future,
-                                        const char* name,
-                                        const cass_byte_t** value,
-                                        size_t* value_size);
-
-/**
- * Same as cass_future_custom_payload_item_by_name(), but with lengths for string
- * parameters.
- *
- * @public @memberof CassFuture
- *
- * @param[in] future
- * @param[in] name
- * @param[in] name_length
- * @param[out] value
- * @param[out] value_size
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-CASS_EXPORT CassError
-cass_future_custom_payload_item_by_name_n(CassFuture* future,
-                                          const char* name,
-                                          size_t name_length,
-                                          const cass_byte_t** value,
-                                          size_t* value_size);
-
 /***********************************************************************************
  *
  * Statement
