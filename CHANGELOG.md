@@ -22,10 +22,10 @@ Other
 * Fixed hanging issue caused by `cass::MPMCQueue` memory race
 * Fixed invalid state assertion in `cass::Handler`
 * Fixed UDTs with `text` fields
-* Not binding a statement parameter will now return the error
-  `CASS_ERROR_LIB_PARAMETER_UNSET` when connected to Cassandra 2.1 or earlier
-  otherwise, the UNSET value (protocol version 4) will be sent for the value for
-  Cassandra 2.2 and later.
+* A value of `null` is no longer implictly used for unbound statement
+  parameters. An error is returned (`CASS_ERROR_LIB_PARAMETER_UNSET`) for
+  Cassandra 2.1 and earlier or the UNSET value is used for Cassandra 2.2 and
+  later
 
 2.1.0
 ===========
