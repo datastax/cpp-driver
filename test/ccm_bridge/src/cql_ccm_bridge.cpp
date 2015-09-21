@@ -436,6 +436,12 @@ boost::shared_ptr<cql_ccm_bridge_t> cql_ccm_bridge_t::create(
 
   bridge->execute_ccm_command(ccm_command);
 
+  // Enable UDFs for C* 2.2+
+  CassVersion version = bridge->version();
+  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+    bridge->update_config("enable_user_defined_functions", "true");
+  }
+
   return bridge;
 }
 
@@ -459,6 +465,12 @@ boost::shared_ptr<cql_ccm_bridge_t> cql_ccm_bridge_t::create_and_start(
   }
 
   bridge->execute_ccm_command(ccm_command);
+
+  // Enable UDFs for C* 2.2+
+  CassVersion version = bridge->version();
+  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+    bridge->update_config("enable_user_defined_functions", "true");
+  }
 
   bridge->start();
   return bridge;
