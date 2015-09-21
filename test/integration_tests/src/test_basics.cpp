@@ -332,6 +332,8 @@ BOOST_AUTO_TEST_CASE(basic_types)
   if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
     insert_single_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, 123);
     insert_single_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, 123);
+    insert_single_value<CassDate>(CASS_VALUE_TYPE_DATE, test_utils::Value<CassDate>::min_value() + 1u);
+    insert_single_value<CassTime>(CASS_VALUE_TYPE_TIME, 123);
   }
   insert_single_value<cass_int32_t>(CASS_VALUE_TYPE_INT, 123);
 
@@ -390,6 +392,8 @@ BOOST_AUTO_TEST_CASE(min_max)
   if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
     insert_min_max_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT);
     insert_min_max_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT);
+    insert_min_max_value<CassDate>(CASS_VALUE_TYPE_DATE);
+    insert_min_max_value<CassTime>(CASS_VALUE_TYPE_TIME);
   }
   insert_min_max_value<cass_int32_t>(CASS_VALUE_TYPE_INT);
 
@@ -430,6 +434,8 @@ BOOST_AUTO_TEST_CASE(null)
   if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
     insert_null_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT);
     insert_null_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT);
+    insert_null_value<CassDate>(CASS_VALUE_TYPE_DATE);
+    insert_null_value<CassTime>(CASS_VALUE_TYPE_TIME);
   }
   insert_null_value<CassString>(CASS_VALUE_TYPE_TEXT);
   insert_null_value<cass_int64_t>(CASS_VALUE_TYPE_TIMESTAMP);

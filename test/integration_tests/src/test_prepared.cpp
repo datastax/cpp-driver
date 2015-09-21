@@ -56,6 +56,8 @@ struct AllTypes {
   CassInet inet_sample;
   cass_int8_t tinyint_sample;
   cass_int16_t smallint_sample;
+  CassDate date_sample;
+  CassTime time_sample;
 };
 
 // This crashes in Boost 1.57 and the test_utils::CassPreparedPtr version
@@ -106,7 +108,7 @@ struct PreparedTests : public test_utils::SingleSessionTest {
   static const char* ALL_TYPE_TABLE_NAME;
   std::string columns_;
   std::string values_;
-  int column_size_;
+  size_t column_size_;
 
   PreparedTests() : test_utils::SingleSessionTest(2, 0) {
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
@@ -114,7 +116,7 @@ struct PreparedTests : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
     if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
       test_utils::execute_query(session, str(boost::format(test_utils::CREATE_TABLE_ALL_TYPES_V4) % ALL_TYPE_TABLE_NAME));
-      column_size_ = 13;
+      column_size_ = 15;
     } else {
       test_utils::execute_query(session, str(boost::format(test_utils::CREATE_TABLE_ALL_TYPES) % ALL_TYPE_TABLE_NAME));
       column_size_ = 11;
@@ -124,8 +126,8 @@ struct PreparedTests : public test_utils::SingleSessionTest {
       "blob_sample, boolean_sample, timestamp_sample, inet_sample";
     values_ = "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?";
     if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
-      columns_ += ", tinyint_sample, smallint_sample";
-      values_ += ", ?, ?";
+      columns_ += ", tinyint_sample, smallint_sample, date_sample, time_sample";
+      values_ += ", ?, ?, ?, ?";
     }
   }
 
@@ -150,6 +152,8 @@ struct PreparedTests : public test_utils::SingleSessionTest {
     if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
       cass_statement_bind_int8(statement.get(), 11, all_types.tinyint_sample);
       cass_statement_bind_int16(statement.get(), 12, all_types.smallint_sample);
+      cass_statement_bind_uint32(statement.get(), 13, all_types.date_sample.date);
+      cass_statement_bind_int64(statement.get(), 14, all_types.time_sample.time);
     }
 
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
@@ -198,6 +202,12 @@ struct PreparedTests : public test_utils::SingleSessionTest {
 
       BOOST_REQUIRE(cass_value_get_int16(cass_row_get_column(row, 12), &output.smallint_sample) == CASS_OK);
       BOOST_REQUIRE(test_utils::Value<cass_int16_t>::equal(input.smallint_sample, output.smallint_sample));
+
+      BOOST_REQUIRE(cass_value_get_uint32(cass_row_get_column(row, 13), &output.date_sample.date) == CASS_OK);
+      BOOST_REQUIRE(test_utils::Value<CassDate>::equal(input.date_sample, output.date_sample));
+
+      BOOST_REQUIRE(cass_value_get_int64(cass_row_get_column(row, 14), &output.time_sample.time) == CASS_OK);
+      BOOST_REQUIRE(test_utils::Value<CassTime>::equal(input.time_sample, output.time_sample));
     }
   }
 };
@@ -245,6 +255,8 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
   if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
     all_types[0].tinyint_sample = 37;
     all_types[0].smallint_sample = 456;
+    all_types[0].date_sample = test_utils::Value<CassDate>::max_value();
+    all_types[0].time_sample = test_utils::Value<CassTime>::max_value();
   }
 
   all_types[1].id = test_utils::generate_time_uuid(uuid_gen);
@@ -261,6 +273,8 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
   if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
     all_types[1].tinyint_sample = 0;
     all_types[1].smallint_sample = 0;
+    all_types[1].date_sample = 0;
+    all_types[1].time_sample = 0;
   }
 
   all_types[2].id = test_utils::generate_time_uuid(uuid_gen);
@@ -277,6 +291,8 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
   if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
     all_types[2].tinyint_sample = 127;
     all_types[2].smallint_sample = 32767;
+    all_types[2].date_sample = test_utils::Value<CassDate>::min_value();
+    all_types[2].time_sample = 12345678;
   }
 
   for (size_t i = 0; i < all_types_count; ++i) {
@@ -326,7 +342,7 @@ BOOST_AUTO_TEST_CASE(bound_all_types_null_values)
   CassUuid id = test_utils::generate_time_uuid(uuid_gen);
 
   cass_statement_bind_uuid(statement.get(), 0, id);
-  for (int i = 1; i < column_size_; ++i) {
+  for (size_t i = 1; i < column_size_; ++i) {
     cass_statement_bind_null(statement.get(), i);
   }
 

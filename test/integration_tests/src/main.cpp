@@ -22,6 +22,6 @@
 
 using test_utils::CassLog;
 
-BOOST_GLOBAL_FIXTURE(CassLog);
+BOOST_GLOBAL_FIXTURE(CassLog)
 
 
