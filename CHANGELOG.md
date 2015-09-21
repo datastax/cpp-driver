@@ -1,3 +1,13 @@
+1.0.3
+===========
+September 21, 2015
+
+Other
+--------
+* Fixed SSL ring buffer memory leak
+* Fixed hanging issue caused by `cass::MPMCQueue` memory race
+* Fixed invalid state assertion in `cass::Handler`
+
 1.0.2
 ===========
 May 15, 2015
