@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_SUITE(timestamps)
 BOOST_AUTO_TEST_CASE(statement_and_batch)
 {
   CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     TimestampsTest tester;
     std::string table_name("table_" + test_utils::generate_unique_str(tester.uuid_gen));
     std::string create_table = "CREATE TABLE " + table_name + "(key text PRIMARY KEY, value text)";
@@ -154,7 +154,7 @@ BOOST_AUTO_TEST_CASE(statement_and_batch)
 BOOST_AUTO_TEST_CASE(generator)
 {
   CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     TimestampsTest tester;
     cass::SharedRefPtr<TestTimestampGenerator> gen(new TestTimestampGenerator(1234));
 
@@ -228,7 +228,7 @@ BOOST_AUTO_TEST_CASE(generator)
 BOOST_AUTO_TEST_CASE(server_side)
 {
   CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     TimestampsTest tester;
     // Server-side is the default timestamp generator
     std::string table_name("table_" + test_utils::generate_unique_str(tester.uuid_gen));

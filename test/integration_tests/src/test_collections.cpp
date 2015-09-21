@@ -104,6 +104,18 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
+    if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+      {
+        std::vector<cass_int8_t> values;
+        for (cass_int8_t i = 1; i <= 3; ++i) values.push_back(i);
+        insert_collection_value<cass_int8_t>(session.get(), type, CASS_VALUE_TYPE_TINY_INT, values);
+      }
+      {
+        std::vector<cass_int16_t> values;
+        for (cass_int16_t i = 1; i <= 3; ++i) values.push_back(i);
+        insert_collection_value<cass_int16_t>(session.get(), type, CASS_VALUE_TYPE_SMALL_INT, values);
+      }
+    }
     {
       std::vector<cass_int32_t> values;
       for (cass_int32_t i = 1; i <= 3; ++i) values.push_back(i);
@@ -247,6 +259,24 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
                                                  % test_utils::SIMPLE_KEYSPACE % "1"));
 
     test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+
+    if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+      {
+        std::map<cass_int8_t, cass_int8_t> values;
+        values[1] = 2;
+        values[3] = 4;
+        values[5] = 6;
+        insert_map_value<cass_int8_t, cass_int8_t>(session.get(), CASS_VALUE_TYPE_TINY_INT, CASS_VALUE_TYPE_TINY_INT, values);
+      }
+
+      {
+        std::map<cass_int16_t, cass_int16_t> values;
+        values[1] = 2;
+        values[3] = 4;
+        values[5] = 6;
+        insert_map_value<cass_int16_t, cass_int16_t>(session.get(), CASS_VALUE_TYPE_SMALL_INT, CASS_VALUE_TYPE_SMALL_INT, values);
+      }
+    }
 
     {
       std::map<cass_int32_t, cass_int32_t> values;

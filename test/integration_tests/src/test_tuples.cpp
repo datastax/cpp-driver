@@ -30,7 +30,7 @@ struct TupleTests : public test_utils::SingleSessionTest {
 private:
   /**
    * Helper method to create the table name for the create CQL statement
-   * 
+   *
    * @param tuple_type CassValueType to use for value
    * @param size Size of the tuple
    * @param collection_type Value type to use when overriding primary subtype
@@ -54,7 +54,7 @@ private:
 
   /**
    * Helper method to build the CQL for a tuple datatype
-   * 
+   *
    * @param tuple_type CassValueType to use for value
    * @param size Size of the tuple
    * @param collection_type Value type to use when overriding primary subtype
@@ -102,7 +102,7 @@ public:
   static const unsigned int sizes_[];
   /**
    * Value types associated with nested collections
-   * 
+   *
    * NOTE: Includes CASS_VALUE_TYPE_UNKNOWN for looping
    */
   static const CassValueType nested_collection_types_[];
@@ -114,7 +114,7 @@ public:
 
   /**
    * Insert and validate a tuple of varying size
-   * 
+   *
    * @param tuple_type CassValueType to use for value
    * @param tuple_values Value to use for all tuple values
    * @param size Size of the tuple (default: 1)
@@ -310,7 +310,7 @@ BOOST_AUTO_TEST_SUITE(tuples)
  * Read/Write Tuple
  *
  * This test ensures tuple values can be read/written using Cassandra v2.1+
- * 
+ *
  * @since 2.1.0-beta
  * @jira_ticket CPP-262
  * @test_category data_types:tuples
@@ -318,7 +318,7 @@ BOOST_AUTO_TEST_SUITE(tuples)
  */
 BOOST_AUTO_TEST_CASE(read_write) {
   CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     TupleTests tester;
     std::string create_table = "CREATE TABLE tuple_read_write(key int PRIMARY KEY, value frozen<tuple<int, text, float>>)";
     std::string insert_query = "INSERT INTO tuple_read_write(key, value) VALUES (?, ?)";
@@ -443,7 +443,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
  */
 BOOST_AUTO_TEST_CASE(varying_size) {
   CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     TupleTests tester;
 
     // Create some varying size tuple tests (primitives)
@@ -484,6 +484,10 @@ BOOST_AUTO_TEST_CASE(varying_size) {
           tester.insert_varying_sized_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE, 3.141592653589793, size, nested_collection_type);
           tester.insert_varying_sized_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT, 3.1415926f, size, nested_collection_type);
           tester.insert_varying_sized_value<cass_int32_t>(CASS_VALUE_TYPE_INT, 123, size, nested_collection_type);
+          if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+            tester.insert_varying_sized_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, 123, size, nested_collection_type);
+            tester.insert_varying_sized_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, 123, size, nested_collection_type);
+          }
 
           {
             CassUuid value = test_utils::generate_random_uuid(tester.uuid_gen);
@@ -522,7 +526,7 @@ BOOST_AUTO_TEST_CASE(varying_size) {
 */
 BOOST_AUTO_TEST_CASE(null) {
   CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     TupleTests tester;
 
     // Create some varying size null tuple tests
@@ -544,6 +548,10 @@ BOOST_AUTO_TEST_CASE(null) {
         tester.insert_varying_sized_null_value<CassUuid>(CASS_VALUE_TYPE_UUID, size, nested_collection_type);
         tester.insert_varying_sized_null_value<CassInet>(CASS_VALUE_TYPE_INET, size, nested_collection_type);
         tester.insert_varying_sized_null_value<CassUuid>(CASS_VALUE_TYPE_TIMEUUID, size, nested_collection_type);
+        if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+          tester.insert_varying_sized_null_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, size, nested_collection_type);
+          tester.insert_varying_sized_null_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, size, nested_collection_type);
+        }
       }
     }
   } else {
@@ -565,7 +573,7 @@ BOOST_AUTO_TEST_CASE(null) {
 */
 BOOST_AUTO_TEST_CASE(invalid) {
   CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major > 2) {
+  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     TupleTests tester;
     std::string create_table = "CREATE TABLE tuple_invalid(key int PRIMARY KEY, value frozen<tuple<int, text, float>>)";
     std::string insert_query = "INSERT INTO tuple_invalid(key, value) VALUES (?, ?)";
@@ -587,7 +595,7 @@ BOOST_AUTO_TEST_CASE(invalid) {
       test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
       BOOST_REQUIRE_EQUAL(cass_statement_bind_int32(statement.get(), 0, 1), CASS_OK);
       BOOST_REQUIRE_EQUAL(cass_statement_bind_tuple(statement.get(), 1, tuple.get()), CASS_OK);
-      BOOST_REQUIRE_EQUAL(test_utils::wait_and_return_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get()), 
+      BOOST_REQUIRE_EQUAL(test_utils::wait_and_return_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get()),
                           CASS_ERROR_SERVER_INVALID_QUERY);
     }
 
@@ -602,7 +610,7 @@ BOOST_AUTO_TEST_CASE(invalid) {
       test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
       BOOST_REQUIRE_EQUAL(cass_statement_bind_int32(statement.get(), 0, 1), CASS_OK);
       BOOST_REQUIRE_EQUAL(cass_statement_bind_tuple(statement.get(), 1, tuple.get()), CASS_OK);
-      BOOST_REQUIRE_EQUAL(test_utils::wait_and_return_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get()), 
+      BOOST_REQUIRE_EQUAL(test_utils::wait_and_return_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get()),
                           CASS_ERROR_SERVER_INVALID_QUERY);
     }
   } else {
