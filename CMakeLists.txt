@@ -442,22 +442,9 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # Clang/Intel specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-unused-parameter -Wno-variadic-macros -Wno-zero-length-array")
-
-  # Detect if this is Apple's clang
-  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v ERROR_VARIABLE CASS_CLANG_VERSION_INFO)
-  if (CASS_CLANG_VERSION_INFO MATCHES "^Apple LLVM")
-    set(CASS_IS_APPLE_CLANG 1)
-  else()
-    set(CASS_IS_APPLE_CLANG 0)
-  endif()
-
-  if(NOT CASS_IS_APPLE_CLANG AND
-      (${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "3.6" OR
-       ${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER "3.6")
-     )
-    set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedef ")
-  endif()
+  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-unused-parameter")
+  set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-variadic-macros -Wno-zero-length-array")
+  set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedef -Wno-unknown-warning-option")
 
   # OpenSSL is deprecated on later versions of Mac OS X. The long-term solution
   # is to provide a CommonCryto implementation.
