@@ -28,29 +28,30 @@
 #include <stdio.h>
 #include <cassandra.h>
 
-void print_schema_meta(const CassSchemaMeta* meta, int indent);
+void print_keyspace_meta(const CassKeyspaceMeta* meta, int indent);
+void print_table_meta(const CassTableMeta* meta, int indent);
 
 void print_keyspace(CassSession* session, const char* keyspace) {
-  const CassSchema* schema = cass_session_get_schema(session);
-  const CassSchemaMeta* keyspace_meta = cass_schema_get_keyspace(schema, keyspace);
+  const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session);
+  const CassKeyspaceMeta* keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta, keyspace);
 
   if (keyspace_meta != NULL) {
-    print_schema_meta(keyspace_meta, 0);
+    print_keyspace_meta(keyspace_meta, 0);
   } else {
     fprintf(stderr, "Unable to find \"%s\" keyspace in the schema metadata\n", keyspace);
   }
 
-  cass_schema_free(schema);
+  cass_schema_meta_free(schema_meta);
 }
 
 void print_table(CassSession* session, const char* keyspace, const char* table) {
-  const CassSchema* schema = cass_session_get_schema(session);
-  const CassSchemaMeta* keyspace_meta = cass_schema_get_keyspace(schema, keyspace);
+  const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session);
+  const CassKeyspaceMeta* keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta, keyspace);
 
   if (keyspace_meta != NULL) {
-    const CassSchemaMeta* table_meta = cass_schema_meta_get_entry(keyspace_meta, table);
+    const CassTableMeta* table_meta = cass_keyspace_meta_table_by_name(keyspace_meta, table);
     if (table_meta != NULL) {
-      print_schema_meta(table_meta, 0);
+      print_table_meta(table_meta, 0);
     } else {
       fprintf(stderr, "Unable to find \"%s\" table in the schema metadata\n", table);
     }
@@ -58,7 +59,7 @@ void print_table(CassSession* session, const char* keyspace, const char* table) 
     fprintf(stderr, "Unable to find \"%s\" keyspace in the schema metadata\n", keyspace);
   }
 
-  cass_schema_free(schema);
+  cass_schema_meta_free(schema_meta);
 }
 
 void print_error(CassFuture* future) {
@@ -129,9 +130,9 @@ int main() {
 void print_schema_value(const CassValue* value);
 void print_schema_list(const CassValue* value);
 void print_schema_map(const CassValue* value);
-void print_schema_meta_field(const CassSchemaMetaField* field, int indent);
-void print_schema_meta_fields(const CassSchemaMeta* meta, int indent);
-void print_schema_meta_entries(const CassSchemaMeta* meta, int indent);
+void print_meta_field(const CassMetaField* field, int indent);
+void print_meta_fields(CassIterator* iterator, int indent);
+void print_column_meta(const CassColumnMeta* meta, int indent);
 
 void print_indent(int indent) {
   int i;
@@ -227,13 +228,13 @@ void print_schema_map(const CassValue* value) {
   cass_iterator_free(iterator);
 }
 
-void print_schema_meta_field(const CassSchemaMetaField* field, int indent) {
+void print_meta_field(const CassMetaField* field, int indent) {
   const char* name;
   size_t name_length;
   const CassValue* value;
 
-  cass_schema_meta_field_name(field, &name, &name_length);
-  value = cass_schema_meta_field_value(field);
+  cass_meta_field_name(field, &name, &name_length);
+  value = cass_meta_field_value(field);
 
   print_indent(indent);
   printf("%.*s: ", (int)name_length, name);
@@ -241,55 +242,63 @@ void print_schema_meta_field(const CassSchemaMetaField* field, int indent) {
   printf("\n");
 }
 
-void print_schema_meta_fields(const CassSchemaMeta* meta, int indent) {
-  CassIterator* fields = cass_iterator_fields_from_schema_meta(meta);
-
-  while (cass_iterator_next(fields)) {
-    print_schema_meta_field(cass_iterator_get_schema_meta_field(fields), indent);
+void print_meta_fields(CassIterator* iterator, int indent) {
+  while (cass_iterator_next(iterator)) {
+    print_meta_field(cass_iterator_get_meta_field(iterator), indent);
   }
-  cass_iterator_free(fields);
+  cass_iterator_free(iterator);
 }
 
-void print_schema_meta_entries(const CassSchemaMeta* meta, int indent) {
-  CassIterator* entries = cass_iterator_from_schema_meta(meta);
-
-  while (cass_iterator_next(entries)) {
-    print_schema_meta(cass_iterator_get_schema_meta(entries), indent);
-  }
-  cass_iterator_free(entries);
-}
-
-void print_schema_meta(const CassSchemaMeta* meta, int indent) {
-  const CassSchemaMetaField* field = NULL;
+void print_keyspace_meta(const CassKeyspaceMeta* meta, int indent) {
   const char* name;
   size_t name_length;
+  CassIterator* iterator;
+
   print_indent(indent);
+  cass_keyspace_meta_name(meta, &name, &name_length);
+  printf("Keyspace \"%.*s\":\n", (int)name_length, name);
 
-  switch (cass_schema_meta_type(meta)) {
-    case CASS_SCHEMA_META_TYPE_KEYSPACE:
-      field = cass_schema_meta_get_field(meta, "keyspace_name");
-      cass_value_get_string(cass_schema_meta_field_value(field), &name, &name_length);
-      printf("Keyspace \"%.*s\":\n", (int)name_length, name);
-      print_schema_meta_fields(meta, indent + 1);
-      printf("\n");
-      print_schema_meta_entries(meta, indent + 1);
-      break;
+  print_meta_fields(cass_iterator_fields_from_keyspace_meta(meta), indent + 1);
+  printf("\n");
 
-    case CASS_SCHEMA_META_TYPE_TABLE:
-      field = cass_schema_meta_get_field(meta, "columnfamily_name");
-      cass_value_get_string(cass_schema_meta_field_value(field), &name, &name_length);
-      printf("Table \"%.*s\":\n", (int)name_length, name);
-      print_schema_meta_fields(meta, indent + 1);
-      printf("\n");
-      print_schema_meta_entries(meta, indent + 1);
-      break;
-
-    case CASS_SCHEMA_META_TYPE_COLUMN:
-      field = cass_schema_meta_get_field(meta, "column_name");
-      cass_value_get_string(cass_schema_meta_field_value(field), &name, &name_length);
-      printf("Column \"%.*s\":\n", (int)name_length, name);
-      print_schema_meta_fields(meta, indent + 1);
-      printf("\n");
-      break;
+  iterator = cass_iterator_tables_from_keyspace_meta(meta);
+  while (cass_iterator_next(iterator)) {
+    print_table_meta(cass_iterator_get_table_meta(iterator), indent + 1);
   }
+  printf("\n");
+
+  cass_iterator_free(iterator);
 }
+
+void print_table_meta(const CassTableMeta* meta, int indent) {
+  const char* name;
+  size_t name_length;
+  CassIterator* iterator;
+
+  print_indent(indent);
+  cass_table_meta_name(meta, &name, &name_length);
+  printf("Table \"%.*s\":\n", (int)name_length, name);
+
+  print_meta_fields(cass_iterator_fields_from_table_meta(meta), indent + 1);
+  printf("\n");
+
+  iterator = cass_iterator_columns_from_table_meta(meta);
+  while (cass_iterator_next(iterator)) {
+    print_column_meta(cass_iterator_get_column_meta(iterator), indent + 1);
+  }
+  printf("\n");
+
+  cass_iterator_free(iterator);
+}
+
+void print_column_meta(const CassColumnMeta* meta, int indent) {
+  const char* name;
+  size_t name_length;
+
+  print_indent(indent);
+  cass_column_meta_name(meta, &name, &name_length);
+  printf("Column \"%.*s\":\n", (int)name_length, name);
+  print_meta_fields(cass_iterator_fields_from_column_meta(meta), indent + 1);
+  printf("\n");
+}
+

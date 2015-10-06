@@ -134,6 +134,9 @@ public:
     return to_string_ref().to_string();
   }
 
+  int32_t as_int32() const;
+  CassUuid as_uuid() const;
+
 private:
   int protocol_version_;
   SharedRefPtr<const DataType> data_type_;

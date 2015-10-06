@@ -43,7 +43,7 @@ class ResponseFuture : public Future {
 public:
   ResponseFuture(const Metadata& metadata)
       : Future(CASS_FUTURE_TYPE_RESPONSE)
-      , snapshot(metadata.snapshot()) { }
+      , schema_metadata(metadata.schema_snapshot()) { }
 
   void set_response(Address address, const SharedRefPtr<Response>& response) {
     ScopedMutex lock(&mutex_);
@@ -79,7 +79,7 @@ public:
   }
 
   std::string statement;
-  ScopedPtr<Metadata::Snapshot> snapshot;
+  Metadata::SchemaSnapshot schema_metadata;
 
 private:
   Address address_;

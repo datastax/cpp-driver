@@ -26,7 +26,7 @@
 namespace cass {
 
 class KeyspaceMetadata;
-class SchemaMetadataField;
+class MetadataField;
 
 typedef std::vector<uint8_t> Token;
 typedef std::map<Token, SharedRefPtr<Host> > TokenHostMap;
@@ -55,7 +55,7 @@ public:
   static const std::string STRATEGY_CLASS;
 
   NetworkTopologyStrategy(const std::string& strategy_class,
-                          const SchemaMetadataField* strategy_options);
+                          const MetadataField* strategy_options);
   virtual ~NetworkTopologyStrategy() {}
 
   virtual bool equal(const KeyspaceMetadata& ks_meta);
@@ -68,7 +68,7 @@ public:
     , replication_factors_(replication_factors) {}
 
 private:
-  static void build_dc_replicas(const SchemaMetadataField* strategy_options, DCReplicaCountMap* dc_replicas);
+  static void build_dc_replicas(const MetadataField* strategy_options, DCReplicaCountMap* dc_replicas);
   DCReplicaCountMap replication_factors_;
 };
 
@@ -78,7 +78,7 @@ public:
   static const std::string STRATEGY_CLASS;
 
   SimpleStrategy(const std::string& strategy_class,
-                 const SchemaMetadataField* strategy_options);
+                 const MetadataField* strategy_options);
   virtual ~SimpleStrategy() {}
 
   virtual bool equal(const KeyspaceMetadata& ks_meta);
@@ -91,7 +91,7 @@ public:
     , replication_factor_(replication_factor) {}
 
 private:
-  static size_t get_replication_factor(const SchemaMetadataField* strategy_options);
+  static size_t get_replication_factor(const MetadataField* strategy_options);
   size_t replication_factor_;
 };
 

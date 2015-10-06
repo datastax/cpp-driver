@@ -101,7 +101,7 @@ ControlConnection::ControlConnection()
   , session_(NULL)
   , connection_(NULL)
   , protocol_version_(0)
-  , query_tokens_(false) {}
+  , should_query_tokens_(false) {}
 
 const SharedRefPtr<Host> ControlConnection::connected_host() const {
   return session_->get_host(current_host_address_);
@@ -115,14 +115,14 @@ void ControlConnection::clear() {
   query_plan_.reset();
   protocol_version_ = 0;
   last_connection_error_.clear();
-  query_tokens_ = false;
+  should_query_tokens_ = false;
 }
 
 void ControlConnection::connect(Session* session) {
   session_ = session;
   query_plan_.reset(new ControlStartupQueryPlan(session_->hosts_)); // No hosts lock necessary (read-only)
   protocol_version_ = session_->config().protocol_version();
-  query_tokens_ = session_->config().token_aware_routing();
+  should_query_tokens_ = session_->config().token_aware_routing();
   if (protocol_version_ < 0) {
     protocol_version_ = CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION;
   }
@@ -340,7 +340,7 @@ void ControlConnection::on_event(EventResponse* response) {
   }
 }
 
-//TODO: query and callbacks should be in ClusterMetadata
+//TODO: query and callbacks should be in Metadata
 // punting for now because of tight coupling of Session and CC state
 void ControlConnection::query_meta_all() {
   ScopedRefPtr<ControlMultipleRequestHandler<QueryMetadataAllData> > handler(
@@ -368,7 +368,7 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
 
   Session* session = control_connection->session_;
 
-  session->metadata().clear();
+  session->metadata().clear_and_update_back();
 
   bool is_initial_connection = (control_connection->state_ == CONTROL_STATE_NEW);
 
@@ -442,7 +442,8 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
     if (control_connection->protocol_version_ >= 3) {
       session->metadata().update_types(static_cast<ResultResponse*>(responses[5].get()));
     }
-    session->metadata().build();
+
+    session->metadata().swap_to_back_and_update_front();
   }
 
   if (is_initial_connection) {
@@ -466,7 +467,7 @@ void ControlConnection::refresh_node_info(SharedRefPtr<Host> host,
   std::string query;
   ControlHandler<RefreshNodeData>::ResponseCallback response_callback;
 
-  bool token_query = query_tokens_ && (host->was_just_added() || query_tokens);
+  bool token_query = should_query_tokens_ && (host->was_just_added() || query_tokens);
   if (is_connected_host || !host->listen_address().empty()) {
     if (is_connected_host) {
       query.assign(token_query ? SELECT_LOCAL_TOKENS : SELECT_LOCAL);
@@ -594,7 +595,7 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
     }
   }
 
-  if (query_tokens_) {
+  if (should_query_tokens_) {
     std::string partitioner;
     if (row->get_string_by_name("partitioner", &partitioner)) {
       session_->metadata().set_partitioner(partitioner);

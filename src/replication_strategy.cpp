@@ -46,7 +46,7 @@ SharedRefPtr<ReplicationStrategy> ReplicationStrategy::from_keyspace_meta(const 
 const std::string NetworkTopologyStrategy::STRATEGY_CLASS("NetworkTopologyStrategy");
 
 NetworkTopologyStrategy::NetworkTopologyStrategy(const std::string& strategy_class,
-                                                 const SchemaMetadataField* strategy_options)
+                                                 const MetadataField* strategy_options)
   : ReplicationStrategy(strategy_class) {
   build_dc_replicas(strategy_options, &replication_factors_);
 }
@@ -135,7 +135,7 @@ void NetworkTopologyStrategy::tokens_to_replicas(const TokenHostMap& primary, To
   }
 }
 
-void NetworkTopologyStrategy::build_dc_replicas(const SchemaMetadataField* strategy_options,
+void NetworkTopologyStrategy::build_dc_replicas(const MetadataField* strategy_options,
                                                 NetworkTopologyStrategy::DCReplicaCountMap* output) {
   if (strategy_options != NULL) {
     MapIterator itr(strategy_options->value());
@@ -156,7 +156,7 @@ void NetworkTopologyStrategy::build_dc_replicas(const SchemaMetadataField* strat
 const std::string SimpleStrategy::STRATEGY_CLASS("SimpleStrategy");
 
 SimpleStrategy::SimpleStrategy(const std::string& strategy_class,
-                               const SchemaMetadataField* strategy_options)
+                               const MetadataField* strategy_options)
   : ReplicationStrategy(strategy_class)
   , replication_factor_(0) {
   replication_factor_ = get_replication_factor(strategy_options);
@@ -187,7 +187,7 @@ void SimpleStrategy::tokens_to_replicas(const TokenHostMap& primary, TokenReplic
   }
 }
 
-size_t SimpleStrategy::get_replication_factor(const SchemaMetadataField* strategy_options) {
+size_t SimpleStrategy::get_replication_factor(const MetadataField* strategy_options) {
   if (strategy_options != NULL) {
     MapIterator itr(strategy_options->value());
     while (itr.next()) {

@@ -92,8 +92,8 @@ CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* ba
   return CassFuture::to(session->execute(batch->from()));
 }
 
-const CassSchema* cass_session_get_schema(const CassSession* session) {
-  return CassSchema::to(session->metadata().snapshot());
+const CassSchemaMeta* cass_session_get_schema_meta(const CassSession* session) {
+  return CassSchemaMeta::to(new cass::Metadata::SchemaSnapshot(session->metadata().schema_snapshot()));
 }
 
 void  cass_session_get_metrics(const CassSession* session,

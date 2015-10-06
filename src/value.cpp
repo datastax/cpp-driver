@@ -208,4 +208,19 @@ Value::Value(int protocol_version,
   }
 }
 
+int32_t Value::as_int32() const {
+  assert(value_type() == CASS_VALUE_TYPE_INT);
+  int32_t value;
+  decode_int32(data_, value);
+  return value;
+}
+
+CassUuid Value::as_uuid() const {
+  assert(value_type() == CASS_VALUE_TYPE_UUID || value_type() == CASS_VALUE_TYPE_TIMEUUID);
+  CassUuid value;
+  decode_uuid(data_, &value);
+  return value;
+
+}
+
 } // namespace cassandra
