@@ -32,14 +32,14 @@ inline int32_t hdr_bsr64(uint64_t x) {
 #if defined(_MSC_VER)
   unsigned long index;
 #  if defined(_M_AMD64)
-  char isNonzero = _BitScanReverse64(&index, x);
+  const char isNonzero = _BitScanReverse64(&index, x);
   if (isNonzero)
     return index + 1;
   else
     return 0;
 #  else
   // On 32-bit this needs to be split into two operations
-  const char isNonzero = _BitScanReverse(&index, (unsigned long)(x >> 32));
+  char isNonzero = _BitScanReverse(&index, (unsigned long)(x >> 32));
   if (isNonzero)
     return index + 32 + 1;
   else {
