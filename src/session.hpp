@@ -24,11 +24,11 @@
 #include "host.hpp"
 #include "io_worker.hpp"
 #include "load_balancing.hpp"
+#include "metadata.hpp"
 #include "metrics.hpp"
 #include "mpmc_queue.hpp"
 #include "ref_counted.hpp"
 #include "row.hpp"
-#include "schema_metadata.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 

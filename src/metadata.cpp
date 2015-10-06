@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-#include "schema_metadata.hpp"
+#include "metadata.hpp"
 
 #include "buffer.hpp"
 #include "collection_iterator.hpp"

@@ -21,11 +21,11 @@
 #include "event_response.hpp"
 #include "load_balancing.hpp"
 #include "logger.hpp"
+#include "metadata.hpp"
 #include "query_request.hpp"
 #include "result_iterator.hpp"
 #include "error_response.hpp"
 #include "result_response.hpp"
-#include "schema_metadata.hpp"
 #include "session.hpp"
 #include "timer.hpp"
 

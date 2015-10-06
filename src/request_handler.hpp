@@ -23,10 +23,10 @@
 #include "handler.hpp"
 #include "host.hpp"
 #include "load_balancing.hpp"
+#include "metadata.hpp"
 #include "request.hpp"
 #include "response.hpp"
 #include "retry_policy.hpp"
-#include "schema_metadata.hpp"
 #include "scoped_ptr.hpp"
 
 #include <string>

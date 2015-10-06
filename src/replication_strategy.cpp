@@ -18,7 +18,7 @@
 
 #include "logger.hpp"
 #include "map_iterator.hpp"
-#include "schema_metadata.hpp"
+#include "metadata.hpp"
 #include "token_map.hpp"
 #include "utils.hpp"
 
