@@ -52,7 +52,10 @@ inline int32_t hdr_bsr64(uint64_t x) {
   }
 #  endif
 #else
-  return 64 - (int32_t)__builtin_clzll(x);
+  if (x == 0)
+    return 0;
+  else
+    return 64 - (int32_t)__builtin_clzll(x);
 #endif
 }
 
