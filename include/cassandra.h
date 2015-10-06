@@ -1502,7 +1502,7 @@ cass_session_execute_batch(CassSession* session,
  * @see cass_schema_free()
  */
 CASS_EXPORT const CassSchema*
-cass_session_get_schema(CassSession* session);
+cass_session_get_schema(const CassSession* session);
 
 /**
  * Gets a copy of this session's performance/diagnostic metrics.
@@ -1515,7 +1515,7 @@ cass_session_get_schema(CassSession* session);
  * @see cass_schema_free()
  */
 CASS_EXPORT void
-cass_session_get_metrics(CassSession* session,
+cass_session_get_metrics(const CassSession* session,
                          CassMetrics* output);
 
 /***********************************************************************************

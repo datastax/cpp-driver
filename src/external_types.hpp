@@ -71,7 +71,7 @@ EXTERNAL_TYPE(cass::Iterator, CassIterator);
 EXTERNAL_TYPE(cass::Row, CassRow);
 EXTERNAL_TYPE(cass::Value, CassValue);
 EXTERNAL_TYPE(cass::SslContext, CassSsl);
-EXTERNAL_TYPE(cass::Schema, CassSchema);
+EXTERNAL_TYPE(cass::Metadata::Snapshot, CassSchema);
 EXTERNAL_TYPE(cass::SchemaMetadata, CassSchemaMeta);
 EXTERNAL_TYPE(cass::SchemaMetadataField, CassSchemaMetaField);
 EXTERNAL_TYPE(cass::UuidGen, CassUuidGen);

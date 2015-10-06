@@ -19,8 +19,10 @@
 
 #include "copy_on_write_ptr.hpp"
 #include "iterator.hpp"
+#include "ref_counted.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
+#include "token_map.hpp"
 #include "type_parser.hpp"
 
 #include <map>
@@ -191,10 +193,13 @@ private:
   ColumnMetadata::Map columns_;
 };
 
-class KeyspaceMetadata : public SchemaMetadata {
+class KeyspaceMetadata : public SchemaMetadata, public RefCounted<KeyspaceMetadata> {
 public:
-  typedef std::map<std::string, KeyspaceMetadata> Map;
+  typedef SharedRefPtr<KeyspaceMetadata> Ptr;
+  typedef std::map<std::string, Ptr> Map;
+  typedef CopyOnWritePtr<Map> MapPtr;
   typedef SchemaMetadataIteratorImpl<TableMetadata> TableIterator;
+  typedef std::map<std::string, SharedRefPtr<UserType> > UserTypeMap;
 
   KeyspaceMetadata()
     : SchemaMetadata(CASS_SCHEMA_META_TYPE_KEYSPACE) {}
@@ -202,59 +207,117 @@ public:
   virtual const SchemaMetadata* get_entry(const std::string& name) const;
   virtual Iterator* iterator() const { return new TableIterator(tables_); }
 
-  TableMetadata* get_or_create(const std::string& name) { return &tables_[name]; }
+  TableMetadata* get_or_create_table(const std::string& name) { return &tables_[name]; }
+
+  SharedRefPtr<UserType> get_type(const std::string& type_name) const;
+
   void update(int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+  void add_type(const SharedRefPtr<UserType>& user_type);
+
   void drop_table(const std::string& table_name);
+  void drop_type(const std::string& type_name);
 
   std::string strategy_class() const { return get_string_field("strategy_class"); }
   const SchemaMetadataField* strategy_options() const { return get_field("strategy_options"); }
 
 private:
   TableMetadata::Map tables_;
+  UserTypeMap types_;
 };
 
-class Schema {
+class Metadata {
 public:
-  typedef SchemaMetadataIteratorImpl<KeyspaceMetadata> KeyspaceIterator;
-  typedef std::map<std::string, KeyspaceMetadata*> KeyspacePointerMap;
-  typedef std::map<std::string, SharedRefPtr<UserType> > UserTypeMap;
-  typedef std::map<std::string,  UserTypeMap> KeyspaceUserTypeMap;
+  class KeyspaceIterator : public SchemaMetadataIterator {
+  public:
+    typedef typename SchemaMapIteratorImpl<KeyspaceMetadata::Ptr>::Map Map;
 
-  Schema()
-    : keyspaces_(new KeyspaceMetadata::Map)
-    , user_types_(new KeyspaceUserTypeMap)
-    , protocol_version_(0) {}
+    KeyspaceIterator(const Map& map)
+      : impl_(map) {}
+
+    virtual bool next() { return impl_.next(); }
+    virtual const SchemaMetadata* meta() const { return impl_.item()->get(); }
+
+  private:
+    SchemaMapIteratorImpl<KeyspaceMetadata::Ptr> impl_;
+  };
+  typedef std::map<std::string, KeyspaceMetadata::Ptr> KeyspacePointerMap;
+
+  class Snapshot {
+  public:
+    Snapshot()
+      : keyspaces_(new KeyspaceMetadata::Map()) { }
+
+    const SchemaMetadata* get_keyspace(const std::string& name) const;
+
+    SharedRefPtr<UserType> get_type(const std::string& keyspace_name,
+                                    const std::string& type_name) const;
+
+    Iterator* iterator() const { return new KeyspaceIterator(*keyspaces_); }
+
+    void get_table_key_columns(const std::string& ks_name,
+                               const std::string& cf_name,
+                               std::vector<std::string>* output) const;
+
+  private:
+    // We don't want external snapshots to be modified
+    friend class Metadata;
+
+    const KeyspaceMetadata::Ptr& get_or_create_keyspace(const std::string& keyspace_name) {
+      KeyspaceMetadata::Map::iterator i = keyspaces_->find(keyspace_name);
+      if (i == keyspaces_->end()) {
+        i = keyspaces_->insert(std::make_pair(keyspace_name,
+                                              KeyspaceMetadata::Ptr(new KeyspaceMetadata()))).first;
+      }
+      return i->second;
+    }
+
+
+  private:
+    KeyspaceMetadata::MapPtr keyspaces_;
+  };
+
+
+  Metadata()
+    : protocol_version_(0) {
+    uv_mutex_init(&mutex_);
+  }
+
+  ~Metadata() {
+    uv_mutex_destroy(&mutex_);
+  }
+
+  Snapshot* snapshot() const;
 
   void set_protocol_version(int version) {
     protocol_version_ = version;
   }
 
-  const SchemaMetadata* get(const std::string& name) const;
-  Iterator* iterator() const { return new KeyspaceIterator(*keyspaces_); }
+  void update_keyspaces(ResultResponse* result);
+  void update_tables(ResultResponse* tables_result, ResultResponse* columns_result);
+  void update_types(ResultResponse* result);
 
-  SharedRefPtr<UserType> get_user_type(const std::string& keyspace,
-                                       const std::string& type_name) const;
-
-  KeyspaceMetadata* get_or_create(const std::string& name) { return &(*keyspaces_)[name]; }
-  KeyspacePointerMap update_keyspaces(ResultResponse* result);
-  void update_tables(ResultResponse* table_result, ResultResponse* col_result);
-  void update_usertypes(ResultResponse* usertypes_result);
   void drop_keyspace(const std::string& keyspace_name);
   void drop_table(const std::string& keyspace_name, const std::string& table_name);
   void drop_type(const std::string& keyspace_name, const std::string& type_name);
+
   void clear();
-  void get_table_key_columns(const std::string& ks_name,
-                             const std::string& cf_name,
-                             std::vector<std::string>* output) const;
+
+  void set_partitioner(const std::string& partitioner_class) { token_map_.set_partitioner(partitioner_class); }
+  void update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens) { token_map_.update_host(host, tokens); }
+  void build() { token_map_.build(); }
+  void remove_host(SharedRefPtr<Host>& host) { token_map_.remove_host(host); }
+
+  const TokenMap& token_map() const { return token_map_; }
 
 private:
   void update_columns(ResultResponse* result);
 
 private:
-  // Really coarse grain copy-on-write. This could be made
-  // more fine grain, but it might not be worth the work.
-  CopyOnWritePtr<KeyspaceMetadata::Map> keyspaces_;
-  CopyOnWritePtr<KeyspaceUserTypeMap> user_types_;
+  // This lock prevents partial snapshots when updating metadata
+  mutable uv_mutex_t mutex_;
+
+  Snapshot snapshot_;
+  TokenMap token_map_;
 
   // Only used internally on a single thread, there's
   // no need for copy-on-write.

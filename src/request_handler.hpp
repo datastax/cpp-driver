@@ -41,9 +41,9 @@ class Timer;
 
 class ResponseFuture : public Future {
 public:
-  ResponseFuture(const Schema& schema)
+  ResponseFuture(const Metadata& metadata)
       : Future(CASS_FUTURE_TYPE_RESPONSE)
-      , schema(schema) { }
+      , snapshot(metadata.snapshot()) { }
 
   void set_response(Address address, const SharedRefPtr<Response>& response) {
     ScopedMutex lock(&mutex_);
@@ -79,7 +79,7 @@ public:
   }
 
   std::string statement;
-  Schema schema;
+  ScopedPtr<Metadata::Snapshot> snapshot;
 
 private:
   Address address_;

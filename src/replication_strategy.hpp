@@ -20,11 +20,13 @@
 #include "buffer.hpp"
 #include "host.hpp"
 #include "ref_counted.hpp"
-#include "schema_metadata.hpp"
 
 #include <map>
 
 namespace cass {
+
+class KeyspaceMetadata;
+class SchemaMetadataField;
 
 typedef std::vector<uint8_t> Token;
 typedef std::map<Token, SharedRefPtr<Host> > TokenHostMap;

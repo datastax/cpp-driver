@@ -25,6 +25,7 @@
 #include "result_iterator.hpp"
 #include "row.hpp"
 #include "row_iterator.hpp"
+#include "scoped_lock.hpp"
 #include "value.hpp"
 
 #include "third_party/rapidjson/rapidjson/document.h"
@@ -45,7 +46,7 @@ const CassSchemaMeta* cass_schema_get_keyspace(const CassSchema* schema,
 const CassSchemaMeta* cass_schema_get_keyspace_n(const CassSchema* schema,
                                                  const char* keyspace,
                                                  size_t keyspace_length) {
-  return CassSchemaMeta::to(schema->get(std::string(keyspace, keyspace_length)));
+  return CassSchemaMeta::to(schema->get_keyspace(std::string(keyspace, keyspace_length)));
 }
 
 CassSchemaMetaType cass_schema_meta_type(const CassSchemaMeta* meta) {
@@ -68,7 +69,7 @@ const CassDataType* cass_schema_get_udt_n(const CassSchema* schema,
   std::string keyspace_id(keyspace, keyspace_length);
   std::string type_name_id(type_name, type_name_length);
   cass::SharedRefPtr<cass::UserType> user_type
-      = schema->get_user_type(cass::to_cql_id(keyspace_id),
+      = schema->get_type(cass::to_cql_id(keyspace_id),
                               cass::to_cql_id(type_name_id));
   return CassDataType::to(user_type.get());
 }
@@ -142,33 +143,38 @@ const CassSchemaMetaField* cass_iterator_get_schema_meta_field(CassIterator* ite
 namespace cass {
 
 template <class T>
+const T& as_const(const T& x) { return x; }
+
+template <class T>
 const T* find_by_name(const std::map<std::string, T>& map, const std::string& name) {
   typename std::map<std::string, T>::const_iterator it = map.find(name);
   if (it == map.end()) return NULL;
   return &it->second;
 }
 
-const SchemaMetadata* Schema::get(const std::string& name) const {
-  return find_by_name<KeyspaceMetadata>(*keyspaces_, name);
+const SchemaMetadata* Metadata::Snapshot::get_keyspace(const std::string& name) const {
+  KeyspaceMetadata::Map::const_iterator i = keyspaces_->find(name);
+  if (i == keyspaces_->end()) return NULL;
+  return i->second.get();
 }
 
-SharedRefPtr<UserType> Schema::get_user_type(const std::string& keyspace,
-                                      const std::string& type_name) const
+SharedRefPtr<UserType> Metadata::Snapshot::get_type(const std::string& keyspace_name,
+                                                    const std::string& type_name) const
 {
-  KeyspaceUserTypeMap::const_iterator i = user_types_->find(keyspace);
-  if (i == user_types_->end()) {
-    return SharedRefPtr<UserType>();
-  }
-
-  UserTypeMap::const_iterator j = i->second.find(type_name);
-  if (j == i->second.end()) {
-    return SharedRefPtr<UserType>();
-  }
-
-  return j->second;
+ KeyspaceMetadata::Map::const_iterator i = as_const(keyspaces_)->find(keyspace_name);
+ if (i == as_const(keyspaces_)->end()) {
+   return SharedRefPtr<UserType>();
+ }
+ return i->second->get_type(type_name);
 }
 
-Schema::KeyspacePointerMap Schema::update_keyspaces(ResultResponse* result) {
+Metadata::Snapshot* Metadata::snapshot() const {
+  ScopedMutex l(&mutex_);
+  return new Snapshot(snapshot_);
+}
+
+void Metadata::update_keyspaces(ResultResponse* result) {
+  ScopedMutex l(&mutex_);
   KeyspacePointerMap updates;
 
   SharedRefPtr<RefBuffer> buffer = result->buffer();
@@ -184,22 +190,26 @@ Schema::KeyspacePointerMap Schema::update_keyspaces(ResultResponse* result) {
       continue;
     }
 
-    KeyspaceMetadata* ks_meta = get_or_create(keyspace_name);
-    ks_meta->update(protocol_version_, buffer, row);
-    updates.insert(std::make_pair(keyspace_name, ks_meta));
+    KeyspaceMetadata::Ptr keyspace = snapshot_.get_or_create_keyspace(keyspace_name);
+    keyspace->update(protocol_version_, buffer, row);
+    updates.insert(std::make_pair(keyspace_name, keyspace));
   }
-  return updates;
+
+  for (KeyspacePointerMap::const_iterator i = updates.begin(); i != updates.end(); ++i) {
+    token_map_.update_keyspace(i->first, *i->second);
+  }
 }
 
-void Schema::update_tables(ResultResponse* table_result, ResultResponse* col_result) {
-  SharedRefPtr<RefBuffer> buffer = table_result->buffer();
+void Metadata::update_tables(ResultResponse* tables_result, ResultResponse* columns_result) {
+  ScopedMutex l(&mutex_);
+  SharedRefPtr<RefBuffer> buffer = tables_result->buffer();
 
-  table_result->decode_first_row();
-  ResultIterator rows(table_result);
+  tables_result->decode_first_row();
+  ResultIterator rows(tables_result);
 
   std::string keyspace_name;
   std::string columnfamily_name;
-  KeyspaceMetadata* keyspace_metadata = NULL;
+  KeyspaceMetadata::Ptr keyspace;
 
   while (rows.next()) {
     std::string temp_keyspace_name;
@@ -213,18 +223,19 @@ void Schema::update_tables(ResultResponse* table_result, ResultResponse* col_res
 
     if (keyspace_name != temp_keyspace_name) {
       keyspace_name = temp_keyspace_name;
-      keyspace_metadata = get_or_create(keyspace_name);
+      keyspace = snapshot_.get_or_create_keyspace(keyspace_name);
     }
 
-    keyspace_metadata->get_or_create(columnfamily_name)->update(protocol_version_, buffer, row);
+    keyspace->get_or_create_table(columnfamily_name)->update(protocol_version_, buffer, row);
   }
-  update_columns(col_result);
+
+  update_columns(columns_result);
 }
 
-void Schema::update_usertypes(ResultResponse* usertypes_result) {
-
-  usertypes_result->decode_first_row();
-  ResultIterator rows(usertypes_result);
+void Metadata::update_types(ResultResponse* result) {
+  ScopedMutex l(&mutex_);
+  result->decode_first_row();
+  ResultIterator rows(result);
 
   while (rows.next()) {
     std::string keyspace_name;
@@ -286,12 +297,14 @@ void Schema::update_usertypes(ResultResponse* usertypes_result) {
       fields.push_back(UserType::Field(field_name, data_type));
     }
 
-    (*user_types_)[keyspace_name][type_name]
-        = SharedRefPtr<UserType>(new UserType(keyspace_name, type_name, fields));
+    snapshot_.get_or_create_keyspace(keyspace_name)->add_type(
+          SharedRefPtr<UserType>(new UserType(keyspace_name, type_name, fields)));
   }
 }
 
-void Schema::update_columns(ResultResponse* result) {
+void Metadata::update_columns(ResultResponse* result) {
+  // DO NOT LOCK: This is private and called from update_tables().
+
   SharedRefPtr<RefBuffer> buffer = result->buffer();
 
   result->decode_first_row();
@@ -300,7 +313,7 @@ void Schema::update_columns(ResultResponse* result) {
   std::string keyspace_name;
   std::string columnfamily_name;
   std::string column_name;
-  TableMetadata* table_metadata = NULL;
+  TableMetadata* table = NULL;
   std::set<TableMetadata*> cleared_tables;
   while (rows.next()) {
     std::string temp_keyspace_name;
@@ -318,35 +331,34 @@ void Schema::update_columns(ResultResponse* result) {
         columnfamily_name != temp_columnfamily_name) {
       keyspace_name = temp_keyspace_name;
       columnfamily_name = temp_columnfamily_name;
-      table_metadata = get_or_create(keyspace_name)->get_or_create(columnfamily_name);
-      std::pair<std::set<TableMetadata*>::iterator, bool> pos_success = cleared_tables.insert(table_metadata);
-      if (pos_success.second) {
-        table_metadata->clear_columns();
+      table = snapshot_.get_or_create_keyspace(keyspace_name)->get_or_create_table(columnfamily_name);
+      if (cleared_tables.insert(table).second) {
+        table->clear_columns();
       }
     }
 
-    table_metadata->get_or_create(column_name)->update(protocol_version_, buffer, row);
+    table->get_or_create(column_name)->update(protocol_version_, buffer, row);
   }
 }
 
-void Schema::drop_keyspace(const std::string& keyspace_name) {
-  keyspaces_->erase(keyspace_name);
+void Metadata::drop_keyspace(const std::string& keyspace_name) {
+  snapshot_.keyspaces_->erase(keyspace_name);
 }
 
-void Schema::drop_table(const std::string& keyspace_name, const std::string& table_name) {
-  KeyspaceMetadata::Map::iterator it = keyspaces_->find(keyspace_name);
-  if (it == keyspaces_->end()) return;
-  it->second.drop_table(table_name);
+void Metadata::drop_table(const std::string& keyspace_name, const std::string& table_name) {
+  KeyspaceMetadata::Map::iterator it = snapshot_.keyspaces_->find(keyspace_name);
+  if (it == snapshot_.keyspaces_->end()) return;
+  it->second->drop_table(table_name);
 }
 
-void Schema::drop_type(const std::string& keyspace_name, const std::string& type_name) {
-  KeyspaceUserTypeMap::iterator it = user_types_->find(keyspace_name);
-  if (it == user_types_->end()) return;
-  it->second.erase(type_name);
+void Metadata::drop_type(const std::string& keyspace_name, const std::string& type_name) {
+  KeyspaceMetadata::Map::iterator it = snapshot_.keyspaces_->find(keyspace_name);
+  if (it == snapshot_.keyspaces_->end()) return;
+  it->second->drop_type(type_name);
 }
 
-void Schema::clear() {
-  keyspaces_->clear();
+void Metadata::clear() {
+  snapshot_.keyspaces_->clear();
 }
 
 const SchemaMetadataField* SchemaMetadata::get_field(const std::string& name) const {
@@ -469,6 +481,12 @@ const SchemaMetadata* KeyspaceMetadata::get_entry(const std::string& name) const
   return find_by_name<TableMetadata>(tables_, name);
 }
 
+SharedRefPtr<UserType> KeyspaceMetadata::get_type(const std::string& type_name) const {
+  UserTypeMap::const_iterator i = types_.find(type_name);
+  if (i == types_.end()) return SharedRefPtr<UserType>();
+  return i->second;
+}
+
 void KeyspaceMetadata::update(int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row) {
   add_field(buffer, row, "keyspace_name");
   add_field(buffer, row, "durable_writes");
@@ -476,8 +494,16 @@ void KeyspaceMetadata::update(int version, const SharedRefPtr<RefBuffer>& buffer
   add_json_map_field(version, row, "strategy_options");
 }
 
+void KeyspaceMetadata::add_type(const SharedRefPtr<UserType>& user_type) {
+  types_[user_type->type_name()] = user_type;
+}
+
 void KeyspaceMetadata::drop_table(const std::string& table_name) {
   tables_.erase(table_name);
+}
+
+void KeyspaceMetadata::drop_type(const std::string& type_name) {
+  types_.erase(type_name);
 }
 
 const SchemaMetadata* TableMetadata::get_entry(const std::string& name) const {
@@ -556,10 +582,10 @@ void ColumnMetadata::update(int version, const SharedRefPtr<RefBuffer>& buffer, 
   add_field(buffer, row, "index_type");
 }
 
-void Schema::get_table_key_columns(const std::string& ks_name,
-                                   const std::string& table_name,
-                                   std::vector<std::string>* output) const {
-  const SchemaMetadata* ks_meta = get(ks_name);
+void Metadata::Snapshot::get_table_key_columns(const std::string& ks_name,
+                                               const std::string& table_name,
+                                               std::vector<std::string>* output) const {
+  const SchemaMetadata* ks_meta = get_keyspace(ks_name);
   if (ks_meta != NULL) {
     const SchemaMetadata* table_meta = static_cast<const KeyspaceMetadata*>(ks_meta)->get_entry(table_name);
     if (table_meta != NULL) {

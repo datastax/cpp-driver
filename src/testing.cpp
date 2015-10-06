@@ -65,7 +65,7 @@ CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* schema, const st
   CassSchemaMeta* foundSchemaMeta = NULL;
 
   if (schema) {
-    foundSchemaMeta = reinterpret_cast<CassSchemaMeta*>(const_cast<SchemaMetadata*>(schema->from()->get(keyspace)));
+    foundSchemaMeta = reinterpret_cast<CassSchemaMeta*>(const_cast<SchemaMetadata*>(schema->from()->get_keyspace(keyspace)));
   }
 
   return foundSchemaMeta;
@@ -74,7 +74,7 @@ CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* schema, const st
 std::vector<std::string> get_user_data_type_field_names(const CassSchema* schema, const std::string& keyspace, const std::string& udt_name) {
   std::vector<std::string> udt_field_names;
   if (schema) {
-    SharedRefPtr<UserType> udt = schema->from()->get_user_type(keyspace, udt_name);
+    SharedRefPtr<UserType> udt = schema->from()->get_type(keyspace, udt_name);
     if (udt) {
       for (cass::UserType::FieldVec::const_iterator it = udt->fields().begin(); it != udt->fields().end(); ++it) {
         udt_field_names.push_back((*it).name);

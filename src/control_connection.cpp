@@ -188,7 +188,7 @@ void ControlConnection::on_ready(Connection* connection) {
             connection->address().to_string().c_str());
 
   // A protocol version is need to encode/decode maps properly
-  session_->cluster_meta().set_protocol_version(protocol_version_);
+  session_->metadata().set_protocol_version(protocol_version_);
 
   // The control connection has to refresh meta when there's a reconnect because
   // events could have been missed while not connected.
@@ -255,7 +255,7 @@ void ControlConnection::on_event(EventResponse* response) {
           SharedRefPtr<Host> host = session_->get_host(response->affected_node());
           if (host) {
             session_->on_remove(host);
-            session_->cluster_meta().remove_host(host);
+            session_->metadata().remove_host(host);
           } else {
             LOG_DEBUG("Tried to remove host %s that doesn't exist", address_str.c_str());
           }
@@ -269,7 +269,7 @@ void ControlConnection::on_event(EventResponse* response) {
             refresh_node_info(host, false, true);
           } else {
             LOG_DEBUG("Move event for host %s that doesn't exist", address_str.c_str());
-            session_->cluster_meta().remove_host(host);
+            session_->metadata().remove_host(host);
           }
           break;
       }
@@ -318,14 +318,14 @@ void ControlConnection::on_event(EventResponse* response) {
         case EventResponse::DROPPED:
           switch (response->schema_change_target()) {
             case EventResponse::KEYSPACE:
-              session_->cluster_meta().drop_keyspace(response->keyspace().to_string());
+              session_->metadata().drop_keyspace(response->keyspace().to_string());
               break;
             case EventResponse::TABLE:
-              session_->cluster_meta().drop_table(response->keyspace().to_string(),
+              session_->metadata().drop_table(response->keyspace().to_string(),
                                                   response->target().to_string());
               break;
             case EventResponse::TYPE:
-              session_->cluster_meta().drop_type(response->keyspace().to_string(),
+              session_->metadata().drop_type(response->keyspace().to_string(),
                                                  response->target().to_string());
               break;
           }
@@ -368,7 +368,7 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
 
   Session* session = control_connection->session_;
 
-  session->cluster_meta().clear();
+  session->metadata().clear();
 
   bool is_initial_connection = (control_connection->state_ == CONTROL_STATE_NEW);
 
@@ -436,13 +436,13 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
   session->purge_hosts(is_initial_connection);
 
   if (session->config().use_schema()) {
-    session->cluster_meta().update_keyspaces(static_cast<ResultResponse*>(responses[2].get()));
-    session->cluster_meta().update_tables(static_cast<ResultResponse*>(responses[3].get()),
-        static_cast<ResultResponse*>(responses[4].get()));
+    session->metadata().update_keyspaces(static_cast<ResultResponse*>(responses[2].get()));
+    session->metadata().update_tables(static_cast<ResultResponse*>(responses[3].get()),
+                                      static_cast<ResultResponse*>(responses[4].get()));
     if (control_connection->protocol_version_ >= 3) {
-      session->cluster_meta().update_usertypes(static_cast<ResultResponse*>(responses[5].get()));
+      session->metadata().update_types(static_cast<ResultResponse*>(responses[5].get()));
     }
-    session->cluster_meta().build();
+    session->metadata().build();
   }
 
   if (is_initial_connection) {
@@ -597,7 +597,7 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
   if (query_tokens_) {
     std::string partitioner;
     if (row->get_string_by_name("partitioner", &partitioner)) {
-      session_->cluster_meta().set_partitioner(partitioner);
+      session_->metadata().set_partitioner(partitioner);
     }
     v = row->get_by_name("tokens");
     if (v != NULL) {
@@ -607,7 +607,7 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
         tokens.push_back(i.value()->to_string_ref());
       }
       if (!tokens.empty()) {
-        session_->cluster_meta().update_host(host, tokens);
+        session_->metadata().update_host(host, tokens);
       }
     }
   }
@@ -637,7 +637,7 @@ void ControlConnection::on_refresh_keyspace(ControlConnection* control_connectio
               keyspace_name.c_str());
     return;
   }
-  control_connection->session_->cluster_meta().update_keyspaces(result);
+  control_connection->session_->metadata().update_keyspaces(result);
 }
 
 void ControlConnection::refresh_table(const StringRef& keyspace_name,
@@ -671,8 +671,8 @@ void ControlConnection::on_refresh_table(ControlConnection* control_connection,
   }
 
   Session* session = control_connection->session_;
-  session->cluster_meta().update_tables(column_family_result,
-                                        static_cast<ResultResponse*>(responses[1].get()));
+  session->metadata().update_tables(static_cast<ResultResponse*>(responses[0].get()),
+                                    static_cast<ResultResponse*>(responses[1].get()));
 }
 
 
@@ -702,7 +702,7 @@ void ControlConnection::on_refresh_type(ControlConnection* control_connection,
               keyspace_and_type_names.first.c_str());
     return;
   }
-  control_connection->session_->cluster_meta().update_usertypes(result);
+  control_connection->session_->metadata().update_types(result);
 }
 
 bool ControlConnection::handle_query_invalid_response(Response* response) {
