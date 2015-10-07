@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "cassandra.h"
 #include "test_utils.hpp"
 #include "cluster.hpp"
@@ -116,7 +112,7 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
 
 BOOST_AUTO_TEST_CASE(connection_spawn)
 {
-  const std::string SPAWN_MSG = "Spawning new connection to host " + conf.ip_prefix() + "1:9042";
+  const std::string SPAWN_MSG = "Spawning new connection to host " + ccm->get_ip_prefix() + "1:9042";
   test_utils::CassLog::reset(SPAWN_MSG);
 
   test_utils::MultipleNodesTest inst(1, 0);
@@ -152,7 +148,7 @@ BOOST_AUTO_TEST_CASE(connection_spawn)
  * Data for performing the connection interruption
  */
 struct ConnectionInterruptionData {
-  cql::cql_ccm_bridge_t* ccm_ptr;
+  CCM::Bridge* ccm;
   int node;
   int duration;
   int delay;
@@ -167,9 +163,9 @@ static void connection_interruptions(void *data) {
   boost::posix_time::ptime start = boost::posix_time::second_clock::universal_time();
   ConnectionInterruptionData* ci_data = static_cast<ConnectionInterruptionData*>(data);
   while ((boost::posix_time::second_clock::universal_time() - start).total_seconds() < ci_data->duration) {
-    ci_data->ccm_ptr->pause(ci_data->node);
+    ci_data->ccm->pause_node(ci_data->node);
     boost::this_thread::sleep(boost::posix_time::seconds(ci_data->delay));
-    ci_data->ccm_ptr->resume(ci_data->node);
+    ci_data->ccm->resume_node(ci_data->node);
   }
 }
 
@@ -186,19 +182,20 @@ static void connection_interruptions(void *data) {
  */
 BOOST_AUTO_TEST_CASE(dont_recycle_pool_on_timeout) {
   // Add a second node
-  ccm->bootstrap(2);
+  ccm->bootstrap_node();
 
   // Create the connection interruption data
   ConnectionInterruptionData ci_data = { ccm.get(), 2, 0, 0 };
 
-  test_utils::initialize_contact_points(cluster, conf.ip_prefix(), 2, 0);
+  std::string ip_prefix = ccm->get_ip_prefix();
+  test_utils::initialize_contact_points(cluster, ip_prefix, 2, 0);
   cass_cluster_set_connect_timeout(cluster, 1000);
   cass_cluster_set_num_threads_io(cluster, 32);
   cass_cluster_set_core_connections_per_host(cluster, 4);
   cass_cluster_set_load_balance_round_robin(cluster);
 
   // Create session during "connection interruptions"
-  test_utils::CassLog::reset("Host " + conf.ip_prefix() + "2 already present attempting to initiate immediate connection");
+  test_utils::CassLog::reset("Host " + ip_prefix + "2 already present attempting to initiate immediate connection");
   {
     uv_thread_t connection_interruptions_thread;
     ci_data.duration = 5;
@@ -226,6 +223,9 @@ BOOST_AUTO_TEST_CASE(dont_recycle_pool_on_timeout) {
     uv_thread_join(&connection_interruptions_thread);
   }
   BOOST_CHECK_GE(test_utils::CassLog::message_count(), 1);
+
+  // Destroy the current cluster (node added)
+  ccm->remove_cluster();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

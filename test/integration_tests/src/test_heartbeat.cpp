@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "test_utils.hpp"
 #include "cassandra.h"
 
@@ -74,7 +70,7 @@ BOOST_FIXTURE_TEST_SUITE(heartbeat, HeartbestTest)
 BOOST_AUTO_TEST_CASE(interval) {
   // Heartbeat disabled
   cass_cluster_set_connection_heartbeat_interval(cluster, 0);
-  test_utils::CassLog::reset("Heartbeat completed on host " + conf.ip_prefix());
+  test_utils::CassLog::reset("Heartbeat completed on host " + ccm->get_ip_prefix());
   {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
     execute_system_query(30, session);
@@ -83,7 +79,7 @@ BOOST_AUTO_TEST_CASE(interval) {
 
   // Heartbeat enabled
   cass_cluster_set_connection_heartbeat_interval(cluster, 1);
-  test_utils::CassLog::reset("Heartbeat completed on host " + conf.ip_prefix());
+  test_utils::CassLog::reset("Heartbeat completed on host " + ccm->get_ip_prefix());
   {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
     execute_system_query(2, session);
@@ -97,10 +93,10 @@ BOOST_AUTO_TEST_CASE(interval) {
   {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
     start_total_connections = get_total_connections(session);
-    ccm->pause(2);
+    ccm->pause_node(2);
     execute_system_query(30, session);
     end_total_connections = get_total_connections(session);
-    ccm->resume(2);
+    ccm->resume_node(2);
   }
   BOOST_CHECK_EQUAL(end_total_connections, start_total_connections / 2);
 }
@@ -120,9 +116,9 @@ BOOST_AUTO_TEST_CASE(idle_timeout) {
   test_utils::CassLog::reset("Failed to send a heartbeat within connection idle interval.");
   {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
-    ccm->pause(2);
+    ccm->pause_node(2);
     execute_system_query(10, session);
-    ccm->resume(2);
+    ccm->resume_node(2);
   }
   BOOST_CHECK_GE(test_utils::CassLog::message_count(), 1);
 }

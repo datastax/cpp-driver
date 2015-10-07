@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "test_utils.hpp"
 #include "cassandra.h"
 
@@ -29,6 +25,13 @@ public:
   ServerFailuresTest() : test_utils::SingleSessionTest(1, 0) {
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+  }
+
+  ~ServerFailuresTest() {
+    // Drop the keyspace (ignore any and all errors)
+    test_utils::execute_query_with_error(session,
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+      % test_utils::SIMPLE_KEYSPACE));
   }
 };
 
@@ -47,7 +50,7 @@ BOOST_AUTO_TEST_SUITE(server_failures)
  * @cassandra_version 2.2.x
  */
  BOOST_AUTO_TEST_CASE(function_failure) {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
     ServerFailuresTest tester;
     std::string create_table = "CREATE TABLE server_function_failures (id int PRIMARY KEY, value double)";
@@ -71,8 +74,7 @@ BOOST_AUTO_TEST_SUITE(server_failures)
     CassError error_code = test_utils::wait_and_return_error(test_utils::CassFuturePtr(cass_session_execute(tester.session, statement.get())).get());
     BOOST_REQUIRE_EQUAL(error_code, CASS_ERROR_SERVER_FUNCTION_FAILURE);
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping server_failures/function_failure");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping server_failures/function_failure" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
@@ -90,7 +92,7 @@ BOOST_AUTO_TEST_SUITE(server_failures)
  * @cassandra_version 2.2.x
  */
 BOOST_AUTO_TEST_CASE(already_exists) {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
     ServerFailuresTest tester;
     std::string create_table = "CREATE TABLE already_exists_table (id int PRIMARY KEY, value double)";
@@ -104,8 +106,7 @@ BOOST_AUTO_TEST_CASE(already_exists) {
     BOOST_REQUIRE_EQUAL(test_utils::execute_query_with_error(tester.session, create_keyspace.c_str()), CASS_ERROR_SERVER_ALREADY_EXISTS);
   }
   else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping server_failures/already_exists");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping server_failures/already_exists" << std::endl;
     BOOST_REQUIRE(true);
   }
 }

@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "cassandra.h"
 #include "test_utils.hpp"
 
@@ -82,9 +78,9 @@ BOOST_AUTO_TEST_CASE(keyspace_add_drop)
 }
 
 BOOST_AUTO_TEST_CASE(agreement_node_down) {
-  test_utils::CassLog::reset("Node " + inst.conf.ip_prefix() + "3 is down");
+  test_utils::CassLog::reset("Node " + inst.ccm->get_ip_prefix() + "3 is down");
 
-  inst.ccm->stop(3);
+  inst.ccm->stop_node(3);
 
   size_t t = 0;
   size_t max_tries = 15;
@@ -110,15 +106,15 @@ BOOST_AUTO_TEST_CASE(agreement_node_down) {
 
   BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 2ul);
 
-  inst.ccm->start(3);
+  inst.ccm->start_node(3);
 }
 
 #define MAX_SCHEMA_AGREEMENT_WAIT_MS 10000
 BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
   //TODO: Needs to be updated to support C* 2.1.x (Nodes IP address is not allowed in peers table)
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if (version.major < 1 || (version.major == 2 && version.minor < 1)) {
-    std::string update_peer("UPDATE system.peers SET schema_version=? WHERE peer='" + inst.conf.ip_prefix() + "1'");
+    std::string update_peer("UPDATE system.peers SET schema_version=? WHERE peer='" + inst.ccm->get_ip_prefix() + "1'");
     test_utils::CassFuturePtr prepared_future(
           cass_session_prepare_n(session, update_peer.data(), update_peer.size()));
     test_utils::wait_and_check_error(prepared_future.get());
@@ -147,9 +143,13 @@ BOOST_AUTO_TEST_CASE(no_agreement_timeout) {
     close_session();
 
     BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 1ul);
+
+    // Drop the keyspace (ignore any and all errors)
+    test_utils::execute_query_with_error(session,
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+      % test_utils::SIMPLE_KEYSPACE));
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping schema_agreement/no_agreement_timeout");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping schema_agreement/no_agreement_timeout" << std::endl;
     BOOST_REQUIRE(true);
   }
 }

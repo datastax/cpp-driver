@@ -14,13 +14,8 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "cassandra.h"
 #include "test_utils.hpp"
-#include "cql_ccm_bridge.hpp"
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
@@ -33,17 +28,17 @@ BOOST_AUTO_TEST_SUITE(custom_payload)
 
 BOOST_AUTO_TEST_CASE(simple)
 {
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  CassVersion version(conf.cassandara_version());
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
-    boost::debug::detect_memory_leaks(false);
-    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create(conf, "test");
-
-    ccm->populate(1);
-    ccm->start(1, "-Dcassandra.custom_query_handler_class=org.apache.cassandra.cql3.CustomPayloadMirroringQueryHandler");
+    boost::shared_ptr<CCM::Bridge> ccm(new CCM::Bridge("config.txt"));
+    if (ccm->create_cluster()) {
+      // Ensure the cluster is down before updating JVM argument
+      ccm->kill_cluster();
+    }
+    ccm->start_cluster("-Dcassandra.custom_query_handler_class=org.apache.cassandra.cql3.CustomPayloadMirroringQueryHandler");
 
     test_utils::CassClusterPtr cluster(cass_cluster_new());
-    test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
 
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -84,10 +79,12 @@ BOOST_AUTO_TEST_CASE(simple)
       PayloadItemMap::const_iterator it = items.find(std::string(name, name_length));
       BOOST_REQUIRE(it != items.end());
       BOOST_CHECK_EQUAL(it->second, std::string(reinterpret_cast<const char*>(value), value_size));
+
+      // Ensure the cluster is down before (updated JVM argument)
+      ccm->kill_cluster();
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping custom_payload/simple");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping custom_payload/simple" << std::endl;
     BOOST_REQUIRE(true);
   }
 }

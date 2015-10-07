@@ -35,9 +35,7 @@
 #include <uv.h>
 
 #include "cassandra.h"
-
-#include "cql_ccm_bridge.hpp"
-#include "cql_ccm_bridge_configuration.hpp"
+#include "bridge.hpp"
 
 #ifdef min
 #undef min
@@ -1097,18 +1095,17 @@ struct Value<CassDecimal> {
     parametrized ctor. Derive from it to use it in your tests.
  */
 struct MultipleNodesTest {
-  MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 4, bool isSSL = false);
+  MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 4, bool is_ssl = false);
   virtual ~MultipleNodesTest();
 
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
-  static CassVersion version;
-  const cql::cql_ccm_bridge_configuration_t& conf;
+  boost::shared_ptr<CCM::Bridge> ccm;
+  static CCM::CassVersion version;
   CassUuidGen* uuid_gen;
   CassCluster* cluster;
 };
 
 struct SingleSessionTest : public MultipleNodesTest {
-  SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 4, bool isSSL = false);
+  SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 4, bool is_ssl = false);
   virtual ~SingleSessionTest();
   void create_session();
   void close_session();
@@ -1205,7 +1202,7 @@ inline std::string generate_random_uuid_str(CassUuidGen* uuid_gen) {
  *                configuration file)
  * @return Cassandra version from session or configuration file
  */
-CassVersion get_version(CassSession* session = NULL);
+CCM::CassVersion get_version(CassSession* session = NULL);
 
 /*
  * Generate a random string of a certain size using alpha numeric characters
