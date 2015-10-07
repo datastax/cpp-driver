@@ -1,24 +1,103 @@
+###############################################################################
+# This is configuration file for CCM bridge library used primarily by the     #
+# integration testing framework                                               #
+###############################################################################
+
+###############################################################################
+# CCM Options                                                                 #
+###############################################################################
+##
+# CCM Cassandra Deployment Version
 #
-# This is configuration file for CCMBridge library.
-# Options have same name as in .NET CCMBridge settings file, 
-# except USE_NOBUFFERING which now is replaced by USE_BUFFERNING option.
-# 
-
-IP_PREFIX=192.168.13.
-CASSANDRA_VERSION=1.2.8
-
-# Addresses MUST be in IP form
-
-# Amazon 
-# SSH_HOST=54.224.125.58
-SSH_HOST=192.168.13.1
-SSH_PORT=22
-SSH_USERNAME=user
-SSH_PASSWORD=password
-
+# Cassandra version to deploy using CCM
+# (branches and tags can be used from https://github.com/apache/cassandra) if
+# USE_GITHUB=true
 #
-# Use NO or YES for binary options
+# Uncomment to specify Cassandra version
+##
+#CASSANDRA_VERSION=2.2.2
+##
+# Flag to determine if Cassandra version should be obtained from GitHub
 #
-USE_COMPRESSION=NO
-USE_BUFFERING=YES
-USE_LOGGER=NO
+# Uncomment to specify use of GitHub
+##
+#USE_GITHUB=false
+##
+# CCM Deployment Type (local|remote)
+#
+# Setting to indicate how CCM commands should be run (locally or through SSH)
+#
+# Uncomment to specify deployment type (defaults to local)
+##
+#DEPLOYMENT_TYPE=local
+
+###############################################################################
+# SSH Options                                                                 #
+# Enusre DEPLOYMENT_TYPE=ssh to enable these options                          #
+###############################################################################
+##
+# SSH Port (Port)
+#
+# TCP/IP port to use when establishing ssh connection for remote CCM command
+# execution
+#
+# Uncomment to specify SSH port (defaults to 22)
+##
+#SSH_PORT=22
+##
+# CCM Authentication Type (username_password|public_key)
+#
+# Setting to indicate how SSH connections should be authenticated
+#
+# Uncomment to specify authentication type (defaults to username and password)
+##
+#AUTHENTICATION_TYPE=username_password
+##
+# SSH Username (Username)
+#
+# Username for authenticating SSH connection
+#
+# Uncomment to specify SSH username (defaults to vagrant)
+##
+#SSH_USERNAME=vagrant
+##
+# SSH Password (Password)
+#
+# Password for authenticating SSH connection
+#
+# NOTE: This password is plain text
+#
+# Uncomment to specify SSH password (defaults to vagrant)
+##
+#SSH_PASSWORD=vagrant
+##
+# SSH Public Key
+#
+# Path name of the public key file
+#
+# Uncomment to specify public key filename
+##
+#SSH_PUBLIC_KEY=
+##
+# SSH Private Key
+#
+# Path name of the private key file
+#
+# Uncomment to specify private key filename
+##
+#SSH_PRIVATE_KEY=
+
+###############################################################################
+# C/C++-Driver Options                                                        #
+###############################################################################
+##
+# Host (Single/Multiple Node Test Connections)
+#
+# Cassandra node IP for cpp-driver connection(s), CCM node creation, and SSH
+# remote connections
+#
+# NOTE: This must be in IPv4 format
+#
+# Uncomment to specify host/ip address
+##
+#HOST=127.0.0.1
