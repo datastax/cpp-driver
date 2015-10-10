@@ -10,18 +10,16 @@
 # CCM Cassandra Deployment Version
 #
 # Cassandra version to deploy using CCM
-# (branches and tags can be used from https://github.com/apache/cassandra) if
-# USE_GITHUB=true
 #
 # Uncomment to specify Cassandra version
 ##
 #CASSANDRA_VERSION=2.2.2
 ##
-# Flag to determine if Cassandra version should be obtained from GitHub
+# Flag to determine if Cassandra version should be obtained from ASF git
 #
-# Uncomment to specify use of GitHub
+# Uncomment to specify use of ASF git
 ##
-#USE_GITHUB=false
+#USE_ASFGIT=false
 ##
 # CCM Deployment Type (local|remote)
 #

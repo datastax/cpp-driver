@@ -99,7 +99,7 @@
 
 // Configuration file setting keys
 #define CCM_CONFIGURATION_KEY_CASSANDRA_VERSION "cassandra_version"
-#define CCM_CONFIGURATION_KEY_USE_GITHUB "use_github"
+#define CCM_CONFIGURATION_KEY_USE_ASFGIT "use_asfgit"
 #define CCM_CONFIGURATION_KEY_DEPLOYMENT_TYPE "deployment_type"
 #define CCM_CONFIGURATION_KEY_AUTHENTICATION_TYPE "authentication_type"
 #define CCM_CONFIGURATION_KEY_HOST "host"
@@ -112,7 +112,7 @@
 using namespace CCM;
 
 CCM::Bridge::Bridge(CassVersion cassandra_version /*= DEFAULT_CASSANDRA_VERSION*/,
-  bool use_github /*= DEFAULT_USE_GITHUB*/,
+  bool use_asfgit /*= DEFAULT_USE_ASFGIT*/,
   const std::string& cluster_prefix /*= DEFAULT_CLUSTER_PREFIX*/,
   DeploymentType deployment_type /*= DEFAULT_DEPLOYMENT*/,
   AuthenticationType authentication_type /*= DEFAULT_AUTHENTICATION*/,
@@ -126,7 +126,7 @@ CCM::Bridge::Bridge(CassVersion cassandra_version /*= DEFAULT_CASSANDRA_VERSION*
   , channel_(NULL)
   , socket_(NULL)
   , cassandra_version_(cassandra_version)
-  , use_github_(use_github)
+  , use_asfgit_(use_asfgit)
   , cluster_prefix_(cluster_prefix)
   , deployment_type_(deployment_type)
   , authentication_type_(authentication_type)
@@ -161,7 +161,7 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
   , channel_(NULL)
   , socket_(NULL)
   , cassandra_version_(DEFAULT_CASSANDRA_VERSION)
-  , use_github_(DEFAULT_USE_GITHUB)
+  , use_asfgit_(DEFAULT_USE_ASFGIT)
   , cluster_prefix_(DEFAULT_CLUSTER_PREFIX)
   , deployment_type_(DEFAULT_DEPLOYMENT)
   , authentication_type_(DEFAULT_AUTHENTICATION)
@@ -191,14 +191,14 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
           // Find and apply the configuration setting
           if (key.compare(CCM_CONFIGURATION_KEY_CASSANDRA_VERSION) == 0) {
             cassandra_version_ = CassVersion(value);
-          } else if (key.compare(CCM_CONFIGURATION_KEY_USE_GITHUB) == 0) {
+          } else if (key.compare(CCM_CONFIGURATION_KEY_USE_ASFGIT) == 0) {
             //Convert the value
             std::stringstream valueStream(value);
-            if (!(valueStream >> std::boolalpha >> use_github_).fail()) {
+            if (!(valueStream >> std::boolalpha >> use_asfgit_).fail()) {
               continue;
             } else {
-              LOG_ERROR("Invalid Flag [" << value << "] for Use GitHub: Using default [" << DEFAULT_USE_GITHUB << "]");
-              use_github_ = DEFAULT_USE_GITHUB;
+              LOG_ERROR("Invalid Flag [" << value << "] for Use ASF git: Using default [" << DEFAULT_USE_ASFGIT << "]");
+              use_asfgit_ = DEFAULT_USE_ASFGIT;
             }
           } else if (key.compare(CCM_CONFIGURATION_KEY_DEPLOYMENT_TYPE) == 0) {
             // Determine the deployment type
@@ -412,7 +412,7 @@ bool CCM::Bridge::create_cluster(unsigned short data_center_one_nodes /*= 1*/,
     std::vector<std::string> create_command;
     create_command.push_back("create");
     create_command.push_back("-v");
-    if (use_github_) {
+    if (use_asfgit_) {
       create_command.push_back("git:cassandra-" + cassandra_version_.to_string());
     } else {
       create_command.push_back(cassandra_version_.to_string());
@@ -664,6 +664,20 @@ void CCM::Bridge::enable_node_gossip(unsigned int node) {
   disable_node_gossip_command.push_back("nodetool");
   disable_node_gossip_command.push_back("enablegossip");
   execute_ccm_command(disable_node_gossip_command);
+}
+
+void CCM::Bridge::execute_cql_on_node(unsigned int node, const std::string& cql) {
+  // Update the CQL statement for the command line
+  std::stringstream execute_statement;
+  execute_statement << "\"" << cql << ";\"";
+
+  // Create the CQLSH pass through command and execute
+  std::vector<std::string> cqlsh_node_command;
+  cqlsh_node_command.push_back(generate_node_name(node));
+  cqlsh_node_command.push_back("cqlsh");
+  cqlsh_node_command.push_back("-x");
+  cqlsh_node_command.push_back(execute_statement.str());
+  execute_ccm_command(cqlsh_node_command);
 }
 
 bool CCM::Bridge::kill_node(unsigned int node) {

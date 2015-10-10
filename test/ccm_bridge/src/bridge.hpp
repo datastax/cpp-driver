@@ -40,7 +40,7 @@ typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
 
 // Default values
 #define DEFAULT_CASSANDRA_VERSION CassVersion("2.2.1")
-#define DEFAULT_USE_GITHUB false
+#define DEFAULT_USE_ASFGIT false
 #define DEFAULT_CLUSTER_PREFIX "cpp-driver"
 #define DEFAULT_DEPLOYMENT DeploymentType::LOCAL
 #define DEFAULT_AUTHENTICATION AuthenticationType::USERNAME_PASSWORD
@@ -93,8 +93,8 @@ namespace CCM {
      *
      * @param cassandra_version Cassandra version to use
      *                          (default: DEFAULT_CASSANDRA_VERSION)
-     * @param use_github True if version should be obtained from GitHub; false
-     *                otherwise (default: DEFAULT_USE_GITHUB). Prepends
+     * @param use_asfgit True if version should be obtained from ASF git; false
+     *                otherwise (default: DEFAULT_USE_ASFGIT). Prepends
           *           `cassandra-` to version when creating cluster through CCM
      * @param cluster_prefix Prefix to use when creating a cluster name
      *                       (default: DEFAULT_CLUSTER_PREFIX)
@@ -117,7 +117,7 @@ namespace CCM {
      * @throws BridgeException
      */
     Bridge(CassVersion cassandra_version = DEFAULT_CASSANDRA_VERSION,
-      bool use_github = DEFAULT_USE_GITHUB,
+      bool use_asfgit = DEFAULT_USE_ASFGIT,
       const std::string& cluster_prefix = DEFAULT_CLUSTER_PREFIX,
       DeploymentType deployment_type = DEFAULT_DEPLOYMENT,
       AuthenticationType authentication_type = DEFAULT_AUTHENTICATION,
@@ -334,6 +334,14 @@ namespace CCM {
     void enable_node_gossip(unsigned int node);
 
     /**
+     * Execute a CQL statement on a particular node
+     *
+     * @param node Node to execute CQL statement on
+     * @param cql CQL statement to execute
+     */
+    void execute_cql_on_node(unsigned int node, const std::string& cql);
+
+    /**
      * Alias for stop_node(node, true)
      *
      * @return True if node is down; false otherwise
@@ -466,9 +474,9 @@ namespace CCM {
      */
     CassVersion cassandra_version_;
     /**
-     * Flag to determine if Cassandra should be built from GitHub
+     * Flag to determine if Cassandra should be built from ASF git
      */
-    bool use_github_;
+    bool use_asfgit_;
     /**
      * Cluster prefix to apply to cluster name during create command
      */
