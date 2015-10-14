@@ -81,9 +81,9 @@ private:
   const Value* tuple_;
 
   char* position_;
-  DataTypeVec::const_iterator next_;
-  DataTypeVec::const_iterator current_;
-  DataTypeVec::const_iterator end_;
+  DataType::Vec::const_iterator next_;
+  DataType::Vec::const_iterator current_;
+  DataType::Vec::const_iterator end_;
 };
 
 } // namespace cass
