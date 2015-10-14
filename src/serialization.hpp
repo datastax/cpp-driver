@@ -279,15 +279,14 @@ inline char* decode_stringlist(char* input, std::list<std::string>& output) {
 inline char* decode_stringlist(char* input, StringRefVec& output) {
   output.clear();
   uint16_t len = 0;
-  char* buffer = decode_uint16(input, len);
+  char* pos = decode_uint16(input, len);
   output.reserve(len);
   for (int i = 0; i < len; i++) {
-    char* s = NULL;
-    size_t size = 0;
-    buffer = decode_string(buffer, &s,  size);
-    output.push_back(StringRef(s,  size));
+    StringRef s;
+    pos = decode_string(pos, &s);
+    output.push_back(s);
   }
-  return buffer;
+  return pos;
 }
 
 typedef std::map<std::string, std::list<std::string> > StringMultimap;

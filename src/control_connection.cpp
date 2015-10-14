@@ -42,6 +42,8 @@
 #define SELECT_COLUMN_FAMILIES "SELECT * FROM system.schema_columnfamilies"
 #define SELECT_COLUMNS "SELECT * FROM system.schema_columns"
 #define SELECT_USERTYPES "SELECT * FROM system.schema_usertypes"
+#define SELECT_FUNCTIONS "SELECT * FROM system.schema_functions"
+#define SELECT_AGGREGATES "SELECT * FROM system.schema_aggregates"
 
 namespace cass {
 
@@ -312,6 +314,13 @@ void ControlConnection::on_event(EventResponse* response) {
             case EventResponse::TYPE:
               refresh_type(response->keyspace(), response->target());
               break;
+            case EventResponse::FUNCTION:
+            case EventResponse::AGGREGATE:
+              refresh_function(response->keyspace(),
+                               response->target(),
+                               response->arg_types(),
+                               response->schema_change() == EventResponse::AGGREGATE);
+              break;
           }
           break;
 
@@ -326,7 +335,7 @@ void ControlConnection::on_event(EventResponse* response) {
               break;
             case EventResponse::TYPE:
               session_->metadata().drop_type(response->keyspace().to_string(),
-                                                 response->target().to_string());
+                                             response->target().to_string());
               break;
           }
           break;
@@ -354,6 +363,10 @@ void ControlConnection::query_meta_all() {
     handler->execute_query(SELECT_COLUMNS);
     if (protocol_version_ >= 3) {
       handler->execute_query(SELECT_USERTYPES);
+    }
+    if (protocol_version_ >= 4) {
+      handler->execute_query(SELECT_FUNCTIONS);
+      handler->execute_query(SELECT_AGGREGATES);
     }
   }
 }
@@ -442,7 +455,10 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
     if (control_connection->protocol_version_ >= 3) {
       session->metadata().update_types(static_cast<ResultResponse*>(responses[5].get()));
     }
-
+    if (control_connection->protocol_version_ >= 4) {
+      session->metadata().update_functions(static_cast<ResultResponse*>(responses[6].get()));
+      session->metadata().update_aggregates(static_cast<ResultResponse*>(responses[7].get()));
+    }
     session->metadata().swap_to_back_and_update_front();
   }
 
@@ -698,12 +714,68 @@ void ControlConnection::on_refresh_type(ControlConnection* control_connection,
                                         Response* response) {
   ResultResponse* result = static_cast<ResultResponse*>(response);
   if (result->row_count() == 0) {
-    LOG_ERROR("No row found for keyspace %s and type %s in system schema table.",
+    LOG_ERROR("No row found for keyspace %s and type %s in system schema.",
               keyspace_and_type_names.first.c_str(),
-              keyspace_and_type_names.first.c_str());
+              keyspace_and_type_names.second.c_str());
     return;
   }
   control_connection->session_->metadata().update_types(result);
+}
+
+void ControlConnection::refresh_function(const StringRef& keyspace_name,
+                                         const StringRef& function_name,
+                                         const StringRefVec& arg_types,
+                                         bool is_aggregate) {
+
+  std::string query;
+  if (is_aggregate) {
+    query.assign(SELECT_AGGREGATES);
+    query.append(" WHERE keyspace_name=? AND aggregate_name=? AND signature=?");
+  } else {
+    query.assign(SELECT_FUNCTIONS);
+    query.append(" WHERE keyspace_name=? AND function_name=? AND signature=?");
+  }
+
+  // TODO: Fix this logging statment
+  LOG_DEBUG("Refreshing function or aggregate %s", query.c_str());
+
+  SharedRefPtr<QueryRequest> request(new QueryRequest(query, 3));
+  SharedRefPtr<Collection> signature(new Collection(CASS_COLLECTION_TYPE_LIST, arg_types.size()));
+
+  for (StringRefVec::const_iterator i = arg_types.begin(),
+       end = arg_types.end();
+       i != end;
+       ++i) {
+    signature->append(CassString(i->data(), i->size()));
+  }
+
+  request->set(0, CassString(keyspace_name.data(), keyspace_name.size()));
+  request->set(1, CassString(function_name.data(), function_name.size()));
+  request->set(2, signature.get());
+
+  connection_->write(
+        new ControlHandler<RefreshFunctionData>(request.get(),
+                                                this,
+                                                ControlConnection::on_refresh_function,
+                                                RefreshFunctionData(keyspace_name, function_name, arg_types, is_aggregate)));
+}
+
+void ControlConnection::on_refresh_function(ControlConnection* control_connection,
+                                            const RefreshFunctionData& data,
+                                            Response* response) {
+  ResultResponse* result = static_cast<ResultResponse*>(response);
+  if (result->row_count() == 0) {
+    // TODO: Fix this error
+    LOG_ERROR("No row found for keyspace %s and function %s in system schema.",
+              data.keyspace.c_str(),
+              data.function.c_str());
+    return;
+  }
+  if (data.is_aggregate) {
+    control_connection->session_->metadata().update_aggregates(result);
+  } else {
+    control_connection->session_->metadata().update_functions(result);
+  }
 }
 
 bool ControlConnection::handle_query_invalid_response(Response* response) {

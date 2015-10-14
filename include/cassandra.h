@@ -288,6 +288,16 @@ typedef struct CassValue_ CassValue;
 typedef struct CassDataType_ CassDataType;
 
 /**
+ * @struct CassFunctionMeta
+ */
+typedef struct CassFunctionMeta_ CassFunctionMeta;
+
+/**
+ * @struct CassAggregateMeta
+ */
+typedef struct CassAggregateMeta_ CassAggregateMeta;
+
+/**
  * @struct CassCollection
  *
  *  A collection of values.
@@ -514,6 +524,8 @@ typedef enum CassIteratorType_ {
   CASS_ITERATOR_TYPE_KEYSPACE_META,
   CASS_ITERATOR_TYPE_TABLE_META,
   CASS_ITERATOR_TYPE_TYPE_META,
+  CASS_ITERATOR_TYPE_FUNCTION_META,
+  CASS_ITERATOR_TYPE_AGGREGATE_META,
   CASS_ITERATOR_TYPE_COLUMN_META
 } CassIteratorType;
 
@@ -1619,7 +1631,6 @@ cass_keyspace_meta_table_by_name_n(const CassKeyspaceMeta* keyspace_meta,
                                    const char* table,
                                    size_t table_length);
 
-
 /**
  * Gets the data type for the provided type name.
  *
@@ -1651,6 +1662,80 @@ CASS_EXPORT const CassDataType*
 cass_keyspace_meta_type_by_name_n(const CassKeyspaceMeta* keyspace_meta,
                                   const char* type,
                                   size_t type_length);
+
+/**
+ * Gets the function metadata for the provided function name.
+ *
+ * @public @memberof CassKeyspaceMeta
+ *
+ * @param[in] keyspace_meta
+ * @param[in] name
+ * @param[in] arguments
+ *
+ * @return The data function for a user defined function. NULL if function does not exist.
+ */
+CASS_EXPORT const CassFunctionMeta*
+cass_keyspace_meta_function_by_name(const CassKeyspaceMeta* keyspace_meta,
+                                    const char* name,
+                                    const char* arguments);
+
+/**
+ * Same as cass_keyspace_meta_function_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassKeyspaceMeta
+ *
+ * @param[in] keyspace_meta
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] arguments
+ * @param[in] argument_length
+ * @return same as cass_keyspace_meta_function_by_name()
+ *
+ * @see cass_keyspace_meta_function_by_name()
+ */
+CASS_EXPORT const CassFunctionMeta*
+cass_keyspace_meta_function_by_name_n(const CassKeyspaceMeta* keyspace_meta,
+                                      const char* name,
+                                      size_t name_length,
+                                      const char* arguments,
+                                      size_t arguments_length);
+
+/**
+ * Gets the aggregate metadata for the provided aggregate name.
+ *
+ * @public @memberof CassKeyspaceMeta
+ *
+ * @param[in] keyspace_meta
+ * @param[in] name
+ * @param[in] arguments
+ *
+ * @return The data aggregate for a user defined aggregate. NULL if aggregate does not exist.
+ */
+CASS_EXPORT const CassAggregateMeta*
+cass_keyspace_meta_aggregate_by_name(const CassKeyspaceMeta* keyspace_meta,
+                                     const char* name,
+                                     const char* arguments);
+
+/**
+ * Same as cass_keyspace_meta_aggregate_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassKeyspaceMeta
+ *
+ * @param[in] keyspace_meta
+ * @param[in] name
+ * @param[in] name_length
+ * @return same as cass_keyspace_meta_aggregate_by_name()
+ *
+ * @see cass_keyspace_meta_aggregate_by_name()
+ */
+CASS_EXPORT const CassAggregateMeta*
+cass_keyspace_meta_aggregate_by_name_n(const CassKeyspaceMeta* keyspace_meta,
+                                       const char* name,
+                                       size_t name_length,
+                                       const char* arguments,
+                                       size_t arguments_length);
 
 /**
  * Gets the name of the keyspace.
@@ -1890,7 +1975,7 @@ cass_column_meta_type(const CassColumnMeta* column_meta);
  * @param[in] column_meta
  * @return The column's data type.
  */
-CASS_EXPORT CassDataType*
+CASS_EXPORT const CassDataType*
 cass_column_meta_data_type(const CassColumnMeta* column_meta);
 
 /**
@@ -1923,6 +2008,281 @@ CASS_EXPORT const CassValue*
 cass_column_meta_field_by_name_n(const CassColumnMeta* column_meta,
                                  const char* name,
                                  size_t name_length);
+
+/**
+ * Gets the name of the function.
+ *
+ * @public @memberof CassFunctionMeta
+ *
+ * @param[in] function_meta
+ * @param[out] name
+ * @param[out] name_length
+ */
+CASS_EXPORT void
+cass_function_meta_name(const CassFunctionMeta* function_meta,
+                        const char** name,
+                        size_t* name_length);
+
+/**
+ * Gets the full name of the function. The full name includes the
+ * function's name and the function's signature:
+ * "name(type1 type2.. typeN)".
+ *
+ * @public @memberof CassFunctionMeta
+ *
+ * @param[in] function_meta
+ * @param[out] full_name
+ * @param[out] full_name_length
+ */
+CASS_EXPORT void
+cass_function_meta_full_name(const CassFunctionMeta* function_meta,
+                             const char** full_name,
+                             size_t* full_name_length);
+
+/**
+ * Gets the body of the function.
+ *
+ * @public @memberof CassFunctionMeta
+ *
+ * @param[in] function_meta
+ * @param[out] body
+ * @param[out] body_length
+ */
+CASS_EXPORT void
+cass_function_meta_body(const CassFunctionMeta* function_meta,
+                        const char** body,
+                        size_t* body_length);
+
+/**
+ * Gets the language of the function.
+ *
+ * @public @memberof CassFunctionMeta
+ *
+ * @param[in] function_meta
+ * @param[out] language
+ * @param[out] language_length
+ */
+CASS_EXPORT void
+cass_function_meta_language(const CassFunctionMeta* function_meta,
+                            const char** language,
+                            size_t* language_length);
+
+/**
+ * Gets whether a function is called on "null".
+ *
+ * @public @memberof CassFunctionMeta
+ *
+ * @param[in] function_meta
+ * @return cass_true if a function is called on null, otherwise cass_false.
+ */
+CASS_EXPORT cass_bool_t
+cass_function_meta_called_on_null_input(const CassFunctionMeta* function_meta);
+
+/**
+ * Gets the number of arguments this function takes.
+ *
+ * @public @memberof CassFunctionMeta
+ *
+ * @param[in] function_meta
+ * @return The number of arguments.
+ */
+CASS_EXPORT size_t
+cass_function_meta_argument_count(const CassFunctionMeta* function_meta);
+
+/**
+ * Gets the function's argument name and type for the provided index.
+ *
+ * @public @memberof CassFunctionMeta
+ *
+ * @param[in] function_meta
+ * @param[in] index
+ * @param[out] name
+ * @param[out] name_lenght
+ * @param[out] type
+ * @return CASS_OK if successful, otherwise an error occurred
+ */
+CASS_EXPORT CassError
+cass_function_meta_argument(const CassFunctionMeta* function_meta,
+                            size_t index,
+                            const char** name,
+                            size_t* name_length,
+                            const CassDataType** type);
+
+/**
+ * Gets the function's argument and type for the provided name.
+ *
+ * @public @memberof CassFunctionMeta
+ *
+ * @param[in] function_meta
+ * @param[in] name
+ * @return A data type. NULL if the argument does not exist.
+ */
+CASS_EXPORT const CassDataType*
+cass_function_meta_argument_type_by_name(const CassFunctionMeta* function_meta,
+                                         const char* name);
+
+/**
+ * Same as cass_function_meta_argument_type_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassFunctionMeta
+ *
+ * @param[in] column_meta
+ * @param[in] name
+ * @param[in] name_length
+ * @return same as cass_function_meta_argument_type_by_name()
+ *
+ * @see cass_function_meta_argument_type_by_name()
+ */
+CASS_EXPORT const CassDataType*
+cass_function_meta_argument_type_by_name_n(const CassFunctionMeta* function_meta,
+                                           const char* name,
+                                           size_t name_length);
+
+/**
+ * Gets the return type of the function.
+ *
+ * @public @memberof CassFunctionMeta
+ *
+ * @param[in] function_meta
+ * @return The data type returned by the function.
+ */
+CASS_EXPORT const CassDataType*
+cass_function_meta_return_type(const CassFunctionMeta* function_meta);
+
+/**
+ * Gets the name of the aggregate.
+ *
+ * @public @memberof CassAggregateMeta
+ *
+ * @param[in] aggregate_meta
+ * @param[out] name
+ * @param[out] name_length
+ */
+CASS_EXPORT void
+cass_aggregate_meta_name(const CassAggregateMeta* aggregate_meta,
+                         const char** name,
+                         size_t* name_length);
+
+/**
+ * Gets the full name of the aggregate. The full name includes the
+ * aggregate's name and the aggregate's signature:
+ * "name(type1 type2.. typeN)".
+ *
+ * @public @memberof CassAggregateMeta
+ *
+ * @param[in] aggregate_meta
+ * @param[out] full_name
+ * @param[out] full_name_length
+ */
+CASS_EXPORT void
+cass_aggregate_meta_full_name(const CassAggregateMeta* aggregate_meta,
+                              const char** full_name,
+                              size_t* full_name_length);
+
+/**
+ * Gets the number of arguments this aggregate takes.
+ *
+ * @public @memberof CassAggregateMeta
+ *
+ * @param[in] aggregate_meta
+ * @return The number of arguments.
+ */
+CASS_EXPORT size_t
+cass_aggregate_meta_argument_count(const CassAggregateMeta* aggregate_meta);
+
+/**
+ * Gets the aggregate's argument type for the provided index.
+ *
+ * @public @memberof CassAggregateMeta
+ *
+ * @param[in] aggregate_meta
+ * @param[in] index
+ * @return The data type for argument. NULL returned if the index is out of range.
+ */
+CASS_EXPORT const CassDataType*
+cass_aggregate_meta_argument_type(const CassAggregateMeta* aggregate_meta,
+                                  size_t index);
+
+/**
+ * Gets the return type of the aggregate.
+ *
+ * @public @memberof CassAggregateMeta
+ *
+ * @param[in] aggregate_meta
+ * @return The data type returned by the aggregate.
+ */
+CASS_EXPORT const CassDataType*
+cass_aggregate_meta_return_type(const CassAggregateMeta* aggregate_meta);
+
+/**
+ * Gets the state type of the aggregate.
+ *
+ * @public @memberof CassAggregateMeta
+ *
+ * @param[in] aggregate_meta
+ * @return The data type of the aggregate's state.
+ */
+CASS_EXPORT const CassDataType*
+cass_aggregate_meta_state_type(const CassAggregateMeta* aggregate_meta);
+
+/**
+ * Gets the function metadata for the aggregate's state function.
+ *
+ * @public @memberof CassAggregateMeta
+ *
+ * @param[in] aggregate_meta
+ * @return The function metadata for the state function.
+ */
+CASS_EXPORT const CassFunctionMeta*
+cass_aggregate_meta_state_func(const CassAggregateMeta* aggregate_meta);
+
+/**
+ * Gets the function metadata for the aggregates's final function.
+ *
+ * @public @memberof CassAggregateMeta
+ *
+ * @param[in] aggregate_meta
+ * @return The function metadata for the final function.
+ */
+CASS_EXPORT const CassFunctionMeta*
+cass_aggregate_meta_final_func(const CassAggregateMeta* aggregate_meta);
+
+/**
+ * Gets the initial condition value for the aggregate.
+ *
+ * @public @memberof CassAggregateMeta
+ *
+ * @param[in] aggregate_meta
+ * @return The value of the intial condidtion.
+ */
+CASS_EXPORT const CassValue*
+cass_aggregate_meta_init_cond(const CassAggregateMeta* aggregate_meta);
+
+/**
+ * Gets the name for a metadata field
+ *
+ * @public @memberof CassMetaField
+ *
+ * @param[in] field
+ * @param[out] name The name of the metadata data field
+ * @param[out] name_length
+ */
+CASS_EXPORT void
+cass_meta_field_name(const CassMetaField* field,
+                     const char** name,
+                     size_t* name_length);
+
+/**
+ * Gets the value for a metadata field
+ *
+ * @public @memberof CassMetaField
+ *
+ * @param[in] field
+ * @return The value of the metadata data field
+ */
+CASS_EXPORT const CassValue*
+cass_meta_field_value(const CassMetaField* field);
 
 /***********************************************************************************
  *
@@ -6079,6 +6439,36 @@ cass_iterator_types_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta);
 
 /**
  * Creates a new iterator for the specified keyspace metadata.
+ * This can be used to iterate over functions.
+ *
+ * @public @memberof CassKeyspaceMeta
+ *
+ * @param[in] keyspace_meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_function_meta()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_functions_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta);
+
+/**
+ * Creates a new iterator for the specified keyspace metadata.
+ * This can be used to iterate over aggregates.
+ *
+ * @public @memberof CassKeyspaceMeta
+ *
+ * @param[in] keyspace_meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_aggregate_meta()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_aggregates_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta);
+
+/**
+ * Creates a new iterator for the specified keyspace metadata.
  * This can be used to iterate over field entries.
  *
  * @public @memberof CassKeyspaceMeta
@@ -6139,6 +6529,36 @@ cass_iterator_fields_from_table_meta(const CassTableMeta* table_meta);
  */
 CASS_EXPORT CassIterator*
 cass_iterator_fields_from_column_meta(const CassColumnMeta* column_meta);
+
+/**
+ * Creates a new iterator for the specified function metadata.
+ * This can be used to iterate over field entries.
+ *
+ * @public @memberof CassColumnMeta
+ *
+ * @param[in] function_meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_meta_field()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_fields_from_function_meta(const CassFunctionMeta* function_meta);
+
+/**
+ * Creates a new iterator for the specified aggregate metadata.
+ * This can be used to iterate over field entries.
+ *
+ * @public @memberof CassColumnMeta
+ *
+ * @param[in] aggregate_meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_meta_field()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_fields_from_aggregate_meta(const CassAggregateMeta* aggregate_meta);
 
 /**
  * Advance the iterator to the next row, column or collection item.
@@ -6295,6 +6715,34 @@ cass_iterator_get_table_meta(const CassIterator* iterator);
  */
 CASS_EXPORT const CassDataType*
 cass_iterator_get_type_meta(const CassIterator* iterator);
+
+/**
+ * Gets the function metadata entry at the iterator's current position.
+ *
+ * Calling cass_iterator_next() will invalidate the previous
+ * value returned by this method.
+ *
+ * @public @memberof CassIterator
+ *
+ * @param[in] iterator
+ * @return A function metadata entry
+ */
+CASS_EXPORT const CassFunctionMeta*
+cass_iterator_get_function_meta(const CassIterator* iterator);
+
+/**
+ * Gets the aggregate metadata entry at the iterator's current position.
+ *
+ * Calling cass_iterator_next() will invalidate the previous
+ * value returned by this method.
+ *
+ * @public @memberof CassIterator
+ *
+ * @param[in] iterator
+ * @return A aggregate metadata entry
+ */
+CASS_EXPORT const CassAggregateMeta*
+cass_iterator_get_aggregate_meta(const CassIterator* iterator);
 
 /**
  * Gets the column metadata entry at the iterator's current position.
