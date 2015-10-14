@@ -29,16 +29,10 @@
 #include "cassandra.h"
 #include "test_utils.hpp"
 
-struct Version1DowngradeTests {
-  Version1DowngradeTests() {}
-};
+BOOST_AUTO_TEST_SUITE(version1_downgrade)
 
-BOOST_FIXTURE_TEST_SUITE(version1_downgrade, Version1DowngradeTests)
-
-//TODO: Add additional tests for v2 and v3 downgrade
 BOOST_AUTO_TEST_CASE(query_after_downgrade)
 {
-  test_utils::CassLog::set_output_log_level(CASS_LOG_DEBUG);
   test_utils::CassLog::reset("does not support protocol version 2. Trying protocol version 1...");
 
   size_t row_count;
@@ -46,7 +40,7 @@ BOOST_AUTO_TEST_CASE(query_after_downgrade)
   {
     test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-    boost::shared_ptr<CCM::Bridge> ccm(new CCM::Bridge("config_v1.txt"));
+    boost::shared_ptr<CCM::Bridge> ccm(new CCM::Bridge("config.txt"));
     if (ccm->create_cluster()) {
       ccm->start_cluster();
     }

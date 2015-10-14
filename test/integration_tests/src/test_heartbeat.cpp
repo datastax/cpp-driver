@@ -90,12 +90,18 @@ BOOST_AUTO_TEST_CASE(interval) {
   cass_uint64_t start_total_connections = 0;
   cass_uint64_t end_total_connections = 0;
   cass_cluster_set_load_balance_round_robin(cluster);
+  cass_cluster_set_connection_idle_timeout(cluster, 5000);
+  cass_cluster_set_connection_heartbeat_interval(cluster, 1000);
   {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster));
     start_total_connections = get_total_connections(session);
     ccm->pause_node(2);
-    execute_system_query(30, session);
-    end_total_connections = get_total_connections(session);
+    int duration = 0;
+    do {
+      execute_system_query(1, session);
+      ++duration;
+      end_total_connections = get_total_connections(session);
+    } while (end_total_connections > (start_total_connections / 2) && duration < 60);
     ccm->resume_node(2);
   }
   BOOST_CHECK_EQUAL(end_total_connections, start_total_connections / 2);

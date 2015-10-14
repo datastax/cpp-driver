@@ -589,8 +589,10 @@ unsigned int CCM::Bridge::add_node(const std::string& data_center /*= ""*/) {
   unsigned int node = get_next_available_node();
   std::stringstream node_ip_address;
   node_ip_address << get_ip_prefix() << node;
+  std::stringstream jmx_port;
   std::stringstream jmx_remote_debug_port;
-  jmx_remote_debug_port << (7000 + (100 * node));
+  jmx_port << (7000 + (100 * node));
+  jmx_remote_debug_port << (2000 + (100 * node));
 
   // Create the add node command and execute
   std::vector<std::string> add_node_command;
@@ -599,7 +601,7 @@ unsigned int CCM::Bridge::add_node(const std::string& data_center /*= ""*/) {
   add_node_command.push_back("-i");
   add_node_command.push_back(node_ip_address.str());
   add_node_command.push_back("-j");
-  add_node_command.push_back(jmx_remote_debug_port.str());
+  add_node_command.push_back(jmx_port.str());
   add_node_command.push_back("-r");
   add_node_command.push_back(jmx_remote_debug_port.str());
   if (!data_center.empty()) {
@@ -1275,10 +1277,10 @@ std::vector<std::string> CCM::Bridge::generate_create_updateconf_command(CassVer
   // Create the update configuration command (common updates)
   std::vector<std::string> updateconf_command;
   updateconf_command.push_back("updateconf");
-  updateconf_command.push_back("--rt=1000");
-  updateconf_command.push_back("read_request_timeout_in_ms:1000");
-  updateconf_command.push_back("write_request_timeout_in_ms:1000");
-  updateconf_command.push_back("request_timeout_in_ms:1000");
+  updateconf_command.push_back("--rt=10000");
+  updateconf_command.push_back("read_request_timeout_in_ms:10000");
+  updateconf_command.push_back("write_request_timeout_in_ms:10000");
+  updateconf_command.push_back("request_timeout_in_ms:10000");
   updateconf_command.push_back("phi_convict_threshold:16");
   updateconf_command.push_back("hinted_handoff_enabled:false");
   updateconf_command.push_back("dynamic_snitch_update_interval_in_ms:1000");

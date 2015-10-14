@@ -152,7 +152,7 @@ BOOST_AUTO_TEST_CASE(topology_change)
   }
 
   // Ensure RR policy
-  cass_cluster_set_load_balance_round_robin(cluster.get());;
+  cass_cluster_set_load_balance_round_robin(cluster.get());
 
   test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
 

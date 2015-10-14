@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE(network_topology)
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
   boost::shared_ptr<CCM::Bridge> ccm(new CCM::Bridge("config.txt"));
-  if (ccm->create_cluster(rf)) {
+  if (ccm->create_cluster(rf, rf)) {
     ccm->start_cluster();
   }
 
