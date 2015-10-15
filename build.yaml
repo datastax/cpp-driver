@@ -1,0 +1,76 @@
+os:
+  - ubuntu/trusty64
+env:
+  CASSANDRA_VERSION:
+    - 1.2.19
+    - 2.0.16
+    - 2.1.8
+  COMPILER:
+    - g++-4.4
+    - g++-4.6
+    - g++-4.7
+    - g++-4.8
+    - clang-3.3
+    - clang-3.4
+    - clang-3.5
+    - clang-3.6
+  LIBUV_VERSION:
+    - 0.10.36
+    - 1.7.0
+build:
+  - script: |
+      sudo add-apt-repository ppa:kojoley/boost -y
+      sudo apt-get update -qq
+      sudo apt-get install -y cmake make libssl-dev libssh2-1-dev $COMPILER
+      sudo apt-get install -y libboost1.58-dev libboost-atomic1.58-dev libboost-chrono1.58-dev libboost-program-options1.58-dev libboost-random1.58-dev libboost-regex1.58-dev libboost-system1.58-dev libboost-thread1.58-dev libboost-test1.58-dev libboost-log1.58-dev libboost-date-time1.58-dev
+
+      wget http://dist.libuv.org/dist/v${LIBUV_VERSION}/libuv-v${LIBUV_VERSION}.tar.gz
+      tar xzf libuv-v${LIBUV_VERSION}.tar.gz
+      pushd libuv-v${LIBUV_VERSION}
+
+      if (echo "${LIBUV_VERSION}" | grep -q "^0"); then
+        make -j$(nproc)
+        mkdir -p ${PWD}/../lib/libuv-${LIBUV_VERSION}/lib
+        cp libuv* ${PWD}/../lib/libuv-${LIBUV_VERSION}/lib
+        cp -r include ${PWD}/../lib/libuv-${LIBUV_VERSION}
+        cd ${PWD}/../lib/libuv-${LIBUV_VERSION}/lib
+        ln -s libuv.so libuv.so.0.10
+      elif (echo "${LIBUV_VERSION}" | grep -q "^1"); then
+        sh autogen.sh
+        ./configure --prefix=${PWD}/../lib/libuv-${LIBUV_VERSION}
+        make -j$(nproc) -s install
+      else
+        echo "The ${LIBUV_VERSION} release of libuv is not supported"
+        exit 1
+      fi
+
+      popd
+
+      export COMPILER_VERSION=$(echo "${COMPILER}" | sed -rne 's/^[a-zA-Z0-9+]+-([0-9.]+)$/\1/p')
+
+      if (echo "${COMPILER}" | grep -q "^clang"); then
+        if [ "${COMPILER_VERSION}" == "3.4" ] || [ "${COMPILER_VERSION}" == "3.3" ]; then
+          export CC_COMPILER="clang"
+          export CXX_COMPILER="clang++"
+        else
+          export CC_COMPILER="clang-${COMPILER_VERSION}"
+          export CXX_COMPILER="clang++-${COMPILER_VERSION}"
+        fi
+        export EXTRA_CXX_FLAGS="-Wno-unknown-warning-option"
+      else
+        export CC_COMPILER="gcc-${COMPILER_VERSION}"
+        export CXX_COMPILER="g++-${COMPILER_VERSION}"
+      fi
+
+      CC=${CC_COMPILER} CXX=${CXX_COMPILER} CXXFLAGS="${EXTRA_CXX_FLAGS}" cmake -DLIBUV_ROOT_DIR=lib/libuv-${LIBUV_VERSION}/ -DCASS_BUILD_STATIC=ON -DCASS_BUILD_EXAMPLES=ON -DCASS_BUILD_TESTS=ON .
+      make -j$(nproc)
+
+      ./test/unit_tests/cassandra_unit_tests
+
+      ssh-keygen -f ccm.rsa -t rsa -b 4096 -N '' -C ccm
+      mkdir -p ${HOME}/.ssh
+      chmod 700 ${HOME}/.ssh
+      cat ccm.rsa.pub >> ${HOME}/.ssh/authorized_keys
+      echo -e "IP_PREFIX=127.0.0.\nCASSANDRA_VERSION=${CASSANDRA_VERSION}\nSSH_HOST=127.0.0.1\nSSH_PORT=22\nSSH_USERNAME=${USER}\nSSH_PUBLIC_KEY=ccm.rsa.pub\nSSH_PRIVATE_KEY=ccm.rsa" > config.txt
+
+      ./test/integration_tests/cassandra_integration_tests --run_test="basics"
