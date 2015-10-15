@@ -48,44 +48,44 @@ BOOST_AUTO_TEST_CASE(simple)
   BOOST_CHECK(const_vec.operator->() == ptr);
 }
 
+struct Table : public cass::RefCounted<Table> {
+  typedef cass::SharedRefPtr<Table> Ptr;
+  typedef std::map<std::string, Table::Ptr> Map;
+
+  Table(const std::string name)
+    : name(name) { }
+
+  std::string name;
+private:
+  DISALLOW_COPY_AND_ASSIGN(Table);
+};
+
+struct Keyspace {
+  typedef std::map<std::string, Keyspace> Map;
+
+  Keyspace()
+    : tables(new Table::Map) { }
+
+  void add_table(const Table::Ptr& table) {
+    (*tables)[table->name] = table;
+  }
+
+  cass::CopyOnWritePtr<Table::Map> tables;
+};
+
+struct Metadata {
+  Metadata()
+    : keyspaces(new Keyspace::Map) { }
+
+  Keyspace* get_or_create(const std::string& name) {
+    return &(*keyspaces)[name];
+  }
+
+  cass::CopyOnWritePtr<Keyspace::Map> keyspaces;
+};
+
 BOOST_AUTO_TEST_CASE(nested)
 {
-  struct Table : public cass::RefCounted<Table> {
-    typedef cass::SharedRefPtr<Table> Ptr;
-    typedef std::map<std::string, Table::Ptr> Map;
-
-    Table(const std::string name)
-      : name(name) { }
-
-    std::string name;
-  private:
-    DISALLOW_COPY_AND_ASSIGN(Table);
-  };
-
-  struct Keyspace {
-    typedef std::map<std::string, Keyspace> Map;
-
-    Keyspace()
-      : tables(new Table::Map) { }
-
-    void add_table(const Table::Ptr& table) {
-      (*tables)[table->name] = table;
-    }
-
-    cass::CopyOnWritePtr<Table::Map> tables;
-  };
-
-  struct Metadata {
-    Metadata()
-      : keyspaces(new Keyspace::Map) { }
-
-    Keyspace* get_or_create(const std::string& name) {
-      return &(*keyspaces)[name];
-    }
-
-    cass::CopyOnWritePtr<Keyspace::Map> keyspaces;
-  };
-
   Metadata m1;
   Keyspace* k1 = m1.get_or_create("k1");
   k1->add_table(Table::Ptr(new Table("t1")));

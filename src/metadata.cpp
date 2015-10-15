@@ -411,7 +411,7 @@ void Metadata::clear() {
 }
 
 const MetadataField* MetadataBase::get_field(const std::string& name) const {
-  typename MetadataField::Map::const_iterator it = fields_.find(name);
+  MetadataField::Map::const_iterator it = fields_.find(name);
   if (it == fields_.end()) return NULL;
   return &it->second;
 }
