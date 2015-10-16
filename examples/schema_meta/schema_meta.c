@@ -130,7 +130,7 @@ int main() {
 void print_schema_value(const CassValue* value);
 void print_schema_list(const CassValue* value);
 void print_schema_map(const CassValue* value);
-void print_meta_field(const CassMetaField* field, int indent);
+void print_meta_field(const CassIterator* iterator, int indent);
 void print_meta_fields(CassIterator* iterator, int indent);
 void print_column_meta(const CassColumnMeta* meta, int indent);
 
@@ -228,13 +228,13 @@ void print_schema_map(const CassValue* value) {
   cass_iterator_free(iterator);
 }
 
-void print_meta_field(const CassMetaField* field, int indent) {
+void print_meta_field(const CassIterator* iterator, int indent) {
   const char* name;
   size_t name_length;
   const CassValue* value;
 
-  cass_meta_field_name(field, &name, &name_length);
-  value = cass_meta_field_value(field);
+  cass_iterator_get_meta_field_name(iterator, &name, &name_length);
+  value = cass_iterator_get_meta_field_value(iterator);
 
   print_indent(indent);
   printf("%.*s: ", (int)name_length, name);
@@ -244,7 +244,7 @@ void print_meta_field(const CassMetaField* field, int indent) {
 
 void print_meta_fields(CassIterator* iterator, int indent) {
   while (cass_iterator_next(iterator)) {
-    print_meta_field(cass_iterator_get_meta_field(iterator), indent);
+    print_meta_field(iterator, indent);
   }
   cass_iterator_free(iterator);
 }

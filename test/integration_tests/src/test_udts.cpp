@@ -128,7 +128,7 @@ public:
     // Ensure the value is a UDT and create the iterator for the validation
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UDT);
     BOOST_REQUIRE_EQUAL(cass_value_item_count(value), 2);
-    test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
+    test_utils::CassIteratorPtr iterator(cass_iterator_fields_from_user_type(value));
 
     // Verify alias field name
     BOOST_REQUIRE(cass_iterator_next(iterator.get()));
@@ -153,7 +153,7 @@ public:
   void verify_phone_udt(const CassValue* value, CassString expected_alias, CassString expected_number) {
     // Verify field names for phone UDT and create the iterator for validation
     verify_phone_udt_field_names(value);
-    test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
+    test_utils::CassIteratorPtr iterator(cass_iterator_fields_from_user_type(value));
 
     // Verify alias result
     BOOST_REQUIRE(cass_iterator_next(iterator.get()));
@@ -181,7 +181,7 @@ public:
     // Ensure the value is a UDT and create the iterator for the validation
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UDT);
     BOOST_REQUIRE_EQUAL(cass_value_item_count(value), 3);
-    test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
+    test_utils::CassIteratorPtr iterator(cass_iterator_fields_from_user_type(value));
 
     // Verify street field name
     BOOST_REQUIRE(cass_iterator_next(iterator.get()));
@@ -213,7 +213,7 @@ public:
   void verify_address_udt(const CassValue* value, CassString expected_street, cass_int32_t expected_zip, PhoneMap expected_phone_numbers) {
     // Verify field names for address UDT and create the iterator for validation
     verify_address_udt_field_names(value);
-    test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
+    test_utils::CassIteratorPtr iterator(cass_iterator_fields_from_user_type(value));
 
     // Verify street result
     BOOST_REQUIRE(cass_iterator_next(iterator.get()));
@@ -348,7 +348,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
       const CassValue* value = cass_row_get_column(row, 0);
       BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UDT);
       tester.verify_address_udt_field_names(value);
-      test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
+      test_utils::CassIteratorPtr iterator(cass_iterator_fields_from_user_type(value));
       // Verify street result
       BOOST_REQUIRE(cass_iterator_next(iterator.get()));
       const CassValue* street_value = cass_iterator_get_user_type_field_value(iterator.get());
@@ -482,7 +482,7 @@ BOOST_AUTO_TEST_CASE(text_types) {
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UDT);
 
     // Verify the parent key
-    test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
+    test_utils::CassIteratorPtr iterator(cass_iterator_fields_from_user_type(value));
     BOOST_REQUIRE(cass_iterator_next(iterator.get()));
     const CassValue* name_value = cass_iterator_get_user_type_field_value(iterator.get());
     BOOST_REQUIRE_EQUAL(cass_value_type(name_value), CASS_VALUE_TYPE_VARCHAR);
@@ -497,7 +497,7 @@ BOOST_AUTO_TEST_CASE(text_types) {
     BOOST_REQUIRE_EQUAL(cass_value_item_count(value), 2);
 
     // Verify the values in the nested UDT
-    test_utils::CassIteratorPtr nested_iterator(cass_iterator_from_user_type(value));
+    test_utils::CassIteratorPtr nested_iterator(cass_iterator_fields_from_user_type(value));
     BOOST_REQUIRE(cass_iterator_next(nested_iterator.get()));
     const CassValue* value_value = cass_iterator_get_user_type_field_value(nested_iterator.get());
     BOOST_REQUIRE_EQUAL(cass_value_type(value_value), CASS_VALUE_TYPE_INT);

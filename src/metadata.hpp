@@ -144,7 +144,7 @@ public:
 
   const std::string name() const { return name_; }
 
-  const MetadataField* get_field(const std::string& name) const;
+  const Value* get_field(const std::string& name) const;
   std::string get_string_field(const std::string& name) const;
   Iterator* iterator_fields() const { return new MetadataFieldIterator(fields_); }
 
@@ -286,7 +286,7 @@ public:
   void drop_type(const std::string& type_name);
 
   std::string strategy_class() const { return get_string_field("strategy_class"); }
-  const MetadataField* strategy_options() const { return get_field("strategy_options"); }
+  const Value* strategy_options() const { return get_field("strategy_options"); }
 
 private:
   CopyOnWritePtr<TableMetadata::Map> tables_;

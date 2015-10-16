@@ -83,14 +83,14 @@ void cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
   *name_length = keyspace_meta->name().size();
 }
 
-const CassMetaField* cass_keyspace_meta_field_by_name(const CassKeyspaceMeta* keyspace_meta,
+const CassValue* cass_keyspace_meta_field_by_name(const CassKeyspaceMeta* keyspace_meta,
                                                const char* name) {
-  return CassMetaField::to(keyspace_meta->get_field(name));
+  return CassValue::to(keyspace_meta->get_field(name));
 }
 
-const CassMetaField* cass_keyspace_meta_field_by_name_n(const CassKeyspaceMeta* keyspace_meta,
+const CassValue* cass_keyspace_meta_field_by_name_n(const CassKeyspaceMeta* keyspace_meta,
                                                  const char* name, size_t name_length) {
-  return CassMetaField::to(keyspace_meta->get_field(std::string(name, name_length)));
+  return CassValue::to(keyspace_meta->get_field(std::string(name, name_length)));
 }
 
 
@@ -115,14 +115,14 @@ CassUuid cass_table_meta_id(const CassTableMeta* table_meta) {
   return table_meta->id();
 }
 
-const CassMetaField* cass_table_meta_field_by_name(const CassTableMeta* table_meta,
+const CassValue* cass_table_meta_field_by_name(const CassTableMeta* table_meta,
                                                const char* name) {
-  return CassMetaField::to(table_meta->get_field(name));
+  return CassValue::to(table_meta->get_field(name));
 }
 
-const CassMetaField* cass_table_meta_field_by_name_n(const CassTableMeta* table_meta,
+const CassValue* cass_table_meta_field_by_name_n(const CassTableMeta* table_meta,
                                                  const char* name, size_t name_length) {
-  return CassMetaField::to(table_meta->get_field(std::string(name, name_length)));
+  return CassValue::to(table_meta->get_field(std::string(name, name_length)));
 }
 
 size_t cass_table_meta_column_count(const CassTableMeta* table_meta) {
@@ -179,27 +179,16 @@ cass_bool_t cass_column_meta_is_reversed(const CassColumnMeta* column_meta) {
   return column_meta->is_reversed() ? cass_true : cass_false;
 }
 
-const CassMetaField*
+const CassValue*
 cass_column_meta_field_by_name(const CassColumnMeta* column_meta,
                            const char* name) {
-  return CassMetaField::to(column_meta->get_field(name));
+  return CassValue::to(column_meta->get_field(name));
 }
 
-const CassMetaField*
+const CassValue*
 cass_column_meta_field_by_name_n(const CassColumnMeta* column_meta,
                              const char* name, size_t name_length) {
-  return CassMetaField::to(column_meta->get_field(std::string(name, name_length)));
-}
-
-void cass_meta_field_name(const CassMetaField* field,
-                          const char** name, size_t* name_length) {
-  const std::string& n = field->name();
-  *name = n.data();
-  *name_length = n.length();
-}
-
-const CassValue* cass_meta_field_value(const CassMetaField* field) {
-  return CassValue::to(field->value());
+  return CassValue::to(column_meta->get_field(std::string(name, name_length)));
 }
 
 CassIterator* cass_iterator_keyspaces_from_schema_meta(const CassSchemaMeta* schema_meta) {
@@ -266,14 +255,26 @@ const CassColumnMeta* cass_iterator_get_column_meta(const CassIterator* iterator
           iterator->from())->column());
 }
 
-CASS_EXPORT const CassMetaField*
-cass_iterator_get_meta_field(const CassIterator* iterator) {
+CassError cass_iterator_get_meta_field_name(const CassIterator* iterator,
+                                       const char** name,
+                                       size_t* name_length) {
+  if (iterator->type() != CASS_ITERATOR_TYPE_META_FIELD) {
+    return CASS_ERROR_LIB_BAD_PARAMS;
+  }
+  const cass::MetadataField* field =
+      static_cast<const cass::MetadataFieldIterator*>(iterator->from())->field();
+  *name = field->name().data();
+  *name_length = field->name().size();
+  return CASS_OK;
+}
+
+const CassValue* cass_iterator_get_meta_field_value(const CassIterator* iterator) {
   if (iterator->type() != CASS_ITERATOR_TYPE_META_FIELD) {
     return NULL;
   }
-  return CassMetaField::to(
+  return CassValue::to(
         static_cast<const cass::MetadataFieldIterator*>(
-          iterator->from())->field());
+          iterator->from())->field()->value());
 }
 
 } // extern "C"
@@ -410,16 +411,16 @@ void Metadata::clear() {
   token_map_.clear();
 }
 
-const MetadataField* MetadataBase::get_field(const std::string& name) const {
+const Value* MetadataBase::get_field(const std::string& name) const {
   MetadataField::Map::const_iterator it = fields_.find(name);
   if (it == fields_.end()) return NULL;
-  return &it->second;
+  return it->second.value();
 }
 
 std::string MetadataBase::get_string_field(const std::string& name) const {
-  const MetadataField* field = get_field(name);
-  if (field == NULL) return std::string();
-  return field->value()->to_string();
+  const Value* value = get_field(name);
+  if (value == NULL) return std::string();
+  return value->to_string();
 }
 
 const Value* MetadataBase::add_field(const SharedRefPtr<RefBuffer>& buffer, const Row* row, const std::string& name) {
@@ -673,10 +674,10 @@ void TableMetadata::build_keys() {
 }
 
 void TableMetadata::key_aliases(KeyAliases* output) const {
-  const MetadataField* aliases = get_field("key_aliases");
+  const Value* aliases = get_field("key_aliases");
   if (aliases != NULL) {
-    output->reserve(aliases->value()->count());
-    CollectionIterator itr(aliases->value());
+    output->reserve(aliases->count());
+    CollectionIterator itr(aliases);
     while (itr.next()) {
       output->push_back(itr.value()->to_string());
     }

@@ -142,9 +142,8 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     // all fields present, nothing extra
     std::set<std::string> observed;
     while (cass_iterator_next(itr.get())) {
-      const CassMetaField* field = cass_iterator_get_meta_field(itr.get());
       CassString name;
-      cass_meta_field_name(field, &name.data, &name.length);
+      cass_iterator_get_meta_field_name(itr.get(), &name.data, &name.length);
       observed.insert(std::string(name.data, name.length));
     }
 
@@ -298,13 +297,13 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
 
     verify_fields(test_utils::CassIteratorPtr(cass_iterator_fields_from_table_meta(table_meta)), table_fields());
     verify_fields_by_name(table_meta, table_fields());
-    verify_value(cass_meta_field_value(cass_table_meta_field_by_name(table_meta, "keyspace_name")), SIMPLE_STRATEGY_KEYSPACE_NAME);
-    verify_value(cass_meta_field_value(cass_table_meta_field_by_name(table_meta, "columnfamily_name")), ALL_DATA_TYPES_TABLE_NAME);
+    verify_value(cass_table_meta_field_by_name(table_meta, "keyspace_name"), SIMPLE_STRATEGY_KEYSPACE_NAME);
+    verify_value(cass_table_meta_field_by_name(table_meta, "columnfamily_name"), ALL_DATA_TYPES_TABLE_NAME);
 
     // not going for every field, just making sure one of each type (fixed, list, map) is correctly added
-    verify_value(cass_meta_field_value(cass_table_meta_field_by_name(table_meta, "comment")), COMMENT);
+    verify_value(cass_table_meta_field_by_name(table_meta, "comment"), COMMENT);
 
-    const CassValue* value = cass_meta_field_value(cass_table_meta_field_by_name(table_meta, "compression_parameters"));
+    const CassValue* value = cass_table_meta_field_by_name(table_meta, "compression_parameters");
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_MAP);
     BOOST_REQUIRE_GE(cass_value_item_count(value), 1ul);
     test_utils::CassIteratorPtr itr(cass_iterator_from_map(value));
@@ -323,10 +322,10 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     BOOST_CHECK(param_found);
 
     if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
-      value = cass_meta_field_value(cass_table_meta_field_by_name(table_meta, "cf_id"));
+      value = cass_table_meta_field_by_name(table_meta, "cf_id");
       BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UUID);
     } else {
-      value = cass_meta_field_value(cass_table_meta_field_by_name(table_meta, "key_aliases"));
+      value = cass_table_meta_field_by_name(table_meta, "key_aliases");
       BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_LIST);
       BOOST_CHECK_GE(cass_value_item_count(value), 1ul);
     }
@@ -378,10 +377,10 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     const CassKeyspaceMeta* ks_meta = schema_get_keyspace(name);
     verify_fields(test_utils::CassIteratorPtr(cass_iterator_fields_from_keyspace_meta(ks_meta)), keyspace_fields());
     verify_fields_by_name(ks_meta, keyspace_fields());
-    verify_value(cass_meta_field_value(cass_keyspace_meta_field_by_name(ks_meta, "keyspace_name")), name);
-    verify_value(cass_meta_field_value(cass_keyspace_meta_field_by_name(ks_meta, "durable_writes")), (cass_bool_t)durable_writes);
-    verify_value(cass_meta_field_value(cass_keyspace_meta_field_by_name(ks_meta, "strategy_class")), strategy_class);
-    verify_value(cass_meta_field_value(cass_keyspace_meta_field_by_name(ks_meta, "strategy_options")), strategy_options);
+    verify_value(cass_keyspace_meta_field_by_name(ks_meta, "keyspace_name"), name);
+    verify_value(cass_keyspace_meta_field_by_name(ks_meta, "durable_writes"), (cass_bool_t)durable_writes);
+    verify_value(cass_keyspace_meta_field_by_name(ks_meta, "strategy_class"), strategy_class);
+    verify_value(cass_keyspace_meta_field_by_name(ks_meta, "strategy_options"), strategy_options);
     BOOST_CHECK(!cass_keyspace_meta_table_by_name(ks_meta, "some bogus entry"));
   }
 
