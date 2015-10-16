@@ -321,16 +321,27 @@ typedef struct CassSsl_ CassSsl;
  * A snapshot of the schema's metadata.
  */
 typedef struct CassSchemaMeta_ CassSchemaMeta;
-typedef struct CassKeyspaceMeta_ CassKeyspaceMeta;
-typedef struct CassTableMeta_ CassTableMeta;
-typedef struct CassColumnMeta_ CassColumnMeta;
 
-typedef enum CassColumnType_ {
-  CASS_COLUMN_TYPE_REGULAR,
-  CASS_COLUMN_TYPE_PARTITION_KEY,
-  CASS_COLUMN_TYPE_CLUSTERING_KEY,
-  CASS_COLUMN_TYPE_STATIC
-} CassColumnType;
+/**
+ * @struct CassKeyspaceMeta
+ *
+ * Keyspace metadata
+ */
+typedef struct CassKeyspaceMeta_ CassKeyspaceMeta;
+
+/**
+ * @struct CassTableMeta
+ *
+ * Table metadata
+ */
+typedef struct CassTableMeta_ CassTableMeta;
+
+/**
+ * @struct CassColumnMeta
+ *
+ * Column metadata
+ */
+typedef struct CassColumnMeta_ CassColumnMeta;
 
 /**
  * @struct CassUuidGen
@@ -529,6 +540,13 @@ typedef enum CassSslVerifyFlags {
   CASS_SSL_VERIFY_PEER_CERT,
   CASS_SSL_VERIFY_PEER_IDENTITY
 } CassSslVerifyFlags;
+
+typedef enum CassColumnType_ {
+  CASS_COLUMN_TYPE_REGULAR,
+  CASS_COLUMN_TYPE_PARTITION_KEY,
+  CASS_COLUMN_TYPE_CLUSTERING_KEY,
+  CASS_COLUMN_TYPE_STATIC
+} CassColumnType;
 
 typedef enum  CassErrorSource_ {
   CASS_ERROR_SOURCE_NONE,
