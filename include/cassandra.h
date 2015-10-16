@@ -6168,7 +6168,7 @@ cass_iterator_next(CassIterator* iterator);
  * @return A row
  */
 CASS_EXPORT const CassRow*
-cass_iterator_get_row(CassIterator* iterator);
+cass_iterator_get_row(const CassIterator* iterator);
 
 /**
  * Gets the column value at the row iterator's current position.
@@ -6182,7 +6182,7 @@ cass_iterator_get_row(CassIterator* iterator);
  * @return A value
  */
 CASS_EXPORT const CassValue*
-cass_iterator_get_column(CassIterator* iterator);
+cass_iterator_get_column(const CassIterator* iterator);
 
 /**
  * Gets the value at a collection or tuple iterator's current position.
@@ -6196,7 +6196,7 @@ cass_iterator_get_column(CassIterator* iterator);
  * @return A value
  */
 CASS_EXPORT const CassValue*
-cass_iterator_get_value(CassIterator* iterator);
+cass_iterator_get_value(const CassIterator* iterator);
 
 /**
  * Gets the key at the map iterator's current position.
@@ -6210,7 +6210,7 @@ cass_iterator_get_value(CassIterator* iterator);
  * @return A value
  */
 CASS_EXPORT const CassValue*
-cass_iterator_get_map_key(CassIterator* iterator);
+cass_iterator_get_map_key(const CassIterator* iterator);
 
 
 /**
@@ -6225,7 +6225,7 @@ cass_iterator_get_map_key(CassIterator* iterator);
  * @return A value
  */
 CASS_EXPORT const CassValue*
-cass_iterator_get_map_value(CassIterator* iterator);
+cass_iterator_get_map_value(const CassIterator* iterator);
 
 /**
  * Gets the field name at the user type defined iterator's current position.
@@ -6241,7 +6241,7 @@ cass_iterator_get_map_value(CassIterator* iterator);
  * @return CASS_OK if successful, otherwise error occurred
  */
 CASS_EXPORT CassError
-cass_iterator_get_user_type_field_name(CassIterator* iterator,
+cass_iterator_get_user_type_field_name(const CassIterator* iterator,
                                        const char** name,
                                        size_t* name_length);
 
@@ -6257,7 +6257,7 @@ cass_iterator_get_user_type_field_name(CassIterator* iterator,
  * @return A value
  */
 CASS_EXPORT const CassValue*
-cass_iterator_get_user_type_field_value(CassIterator* iterator);
+cass_iterator_get_user_type_field_value(const CassIterator* iterator);
 
 /**
  * Gets the keyspace metadata entry at the iterator's current position.
