@@ -1890,7 +1890,7 @@ cass_column_meta_type(const CassColumnMeta* column_meta);
  * @param[in] column_meta
  * @return The column's data type.
  */
-CASS_EXPORT CassDataType*
+CASS_EXPORT const CassDataType*
 cass_column_meta_data_type(const CassColumnMeta* column_meta);
 
 /**

@@ -75,4 +75,8 @@ void Host::LatencyTracker::update(uint64_t latency_ns) {
   current_.timestamp = now;
 }
 
+bool VersionNumber::parse(const std::string& version) {
+  return sscanf(version.c_str(), "%d.%d.%d", &major_, &minor_, &patch_) == 3;
+}
+
 } // namespace cass

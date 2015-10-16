@@ -171,7 +171,7 @@ CassColumnType cass_column_meta_type(const CassColumnMeta* column_meta) {
   return column_meta->type();
 }
 
-CassDataType* cass_column_meta_data_type(const CassColumnMeta* column_meta) {
+const CassDataType* cass_column_meta_data_type(const CassColumnMeta* column_meta) {
   return CassDataType::to(column_meta->data_type().get());
 }
 
@@ -309,7 +309,9 @@ const UserType* Metadata::SchemaSnapshot::get_type(const std::string& keyspace_n
 
 Metadata::SchemaSnapshot Metadata::schema_snapshot() const {
   ScopedMutex l(&mutex_);
-  return SchemaSnapshot(schema_snapshot_version_, front_.keyspaces());
+  return SchemaSnapshot(schema_snapshot_version_,
+                        protocol_version_,
+                        front_.keyspaces());
 }
 
 void Metadata::update_keyspaces(ResultResponse* result) {
@@ -334,9 +336,9 @@ void Metadata::update_tables(ResultResponse* tables_result, ResultResponse* colu
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_tables(protocol_version_, tables_result, columns_result);
+    updating_->update_tables(protocol_version_, cassandra_version_, tables_result, columns_result);
   } else {
-    updating_->update_tables(protocol_version_, tables_result, columns_result);
+    updating_->update_tables(protocol_version_, cassandra_version_, tables_result, columns_result);
   }
 }
 
@@ -655,20 +657,93 @@ size_t get_column_count(const ColumnMetadata::Vec& columns, CassColumnType type)
   return count;
 }
 
-void TableMetadata::build_keys() {
-  partition_key_.resize(get_column_count(columns_, CASS_COLUMN_TYPE_PARTITION_KEY));
-  clustering_key_.resize(get_column_count(columns_, CASS_COLUMN_TYPE_CLUSTERING_KEY));
-  for (ColumnMetadata::Vec::const_iterator i = columns_.begin(),
-       end = columns_.end(); i != end; ++i) {
-    ColumnMetadata::Ptr column(*i);
-    if (column->type() == CASS_COLUMN_TYPE_PARTITION_KEY &&
-        column->position() >= 0 &&
-        static_cast<size_t>(column->position()) < partition_key_.size()) {
-      partition_key_[column->position()] = column;
-    } else if (column->type() == CASS_COLUMN_TYPE_CLUSTERING_KEY &&
-               column->position() >= 0 &&
-               static_cast<size_t>(column->position()) < clustering_key_.size()) {
-      clustering_key_[column->position()] = column;
+void TableMetadata::build_keys(const VersionNumber& cassandra_version) {
+  if (cassandra_version.major() >= 2) {
+    partition_key_.resize(get_column_count(columns_, CASS_COLUMN_TYPE_PARTITION_KEY));
+    clustering_key_.resize(get_column_count(columns_, CASS_COLUMN_TYPE_CLUSTERING_KEY));
+    for (ColumnMetadata::Vec::const_iterator i = columns_.begin(),
+         end = columns_.end(); i != end; ++i) {
+      ColumnMetadata::Ptr column(*i);
+      if (column->type() == CASS_COLUMN_TYPE_PARTITION_KEY &&
+          column->position() >= 0 &&
+          static_cast<size_t>(column->position()) < partition_key_.size()) {
+        partition_key_[column->position()] = column;
+      } else if (column->type() == CASS_COLUMN_TYPE_CLUSTERING_KEY &&
+                 column->position() >= 0 &&
+                 static_cast<size_t>(column->position()) < clustering_key_.size()) {
+        clustering_key_[column->position()] = column;
+      }
+    }
+  } else {
+    // Partition key
+    {
+      StringRefVec key_aliases;
+      const Value* key_aliases_value = get_field("key_aliases");
+      if (key_aliases_value != NULL) {
+        CollectionIterator iterator(key_aliases_value);
+        while (iterator.next()) {
+          key_aliases.push_back(iterator.value()->to_string_ref());
+        }
+      }
+
+      SharedRefPtr<ParseResult> key_validator = TypeParser::parse_with_composite(get_string_field("key_validator"));
+      size_t size = key_validator->types().size();
+      partition_key_.reserve(size);
+      for (size_t i = 0; i < size; ++i) {
+        std::string key_alias;
+        if (i < key_aliases.size()) {
+          key_alias = key_aliases[i].to_string();
+        } else {
+          std::ostringstream ss("key");
+          if (i > 0) {
+            ss << i + 1;
+          }
+          key_alias = ss.str();
+        }
+        partition_key_.push_back(ColumnMetadata::Ptr(new ColumnMetadata(key_alias,
+                                                                        CASS_COLUMN_TYPE_PARTITION_KEY,
+                                                                        key_validator->types()[i])));
+      }
+    }
+
+    // Clustring key
+    {
+      StringRefVec column_aliases;
+      const Value* column_aliases_value = get_field("column_aliases");
+      if (column_aliases_value != NULL) {
+        CollectionIterator iterator(column_aliases_value);
+        while (iterator.next()) {
+          column_aliases.push_back(iterator.value()->to_string_ref());
+        }
+      }
+
+      // TODO: Figure out how to test these special cases and properly document them here
+      SharedRefPtr<ParseResult> comparator = TypeParser::parse_with_composite(get_string_field("comparator"));
+      size_t size = comparator->types().size();
+      if (comparator->is_composite()) {
+        if (!comparator->collections().empty() ||
+            (column_aliases.size() == size - 1 && comparator->types().back()->value_type() == CASS_VALUE_TYPE_TEXT)) {
+          size = size - 1;
+        }
+      } else {
+        size = !column_aliases.empty() || columns_.empty() ? size : 0;
+      }
+      clustering_key_.reserve(size);
+      for (size_t i = 0; i < size; ++i) {
+        std::string column_alias;
+        if (i < column_aliases.size()) {
+          column_alias = column_aliases[i].to_string();
+        } else {
+          std::ostringstream ss("column");
+          if (i > 0) {
+            ss << i + 1;
+          }
+          column_alias = ss.str();
+        }
+        clustering_key_.push_back(ColumnMetadata::Ptr(new ColumnMetadata(column_alias,
+                                                                         CASS_COLUMN_TYPE_CLUSTERING_KEY,
+                                                                         comparator->types()[i])));
+      }
     }
   }
 }
@@ -733,7 +808,8 @@ ColumnMetadata::ColumnMetadata(const std::string& name,
   if (value != NULL &&
       value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
     std::string validator(value->to_string());
-    data_type_ = TypeParser::parse_one(validator);
+    // TODO: Use const changes from CPP-295
+    data_type_ = SharedRefPtr<const DataType>(TypeParser::parse_one(validator));
     is_reversed_ = TypeParser::is_reversed(validator);
   }
 
@@ -774,7 +850,7 @@ void Metadata::InternalData::update_keyspaces(int version, ResultResponse* resul
   }
 }
 
-void Metadata::InternalData::update_tables(int version, ResultResponse* tables_result, ResultResponse* columns_result) {
+void Metadata::InternalData::update_tables(int version, const VersionNumber& cassandra_version, ResultResponse* tables_result, ResultResponse* columns_result) {
   SharedRefPtr<RefBuffer> buffer = tables_result->buffer();
 
   tables_result->decode_first_row();
@@ -800,7 +876,7 @@ void Metadata::InternalData::update_tables(int version, ResultResponse* tables_r
     keyspace->add_table(TableMetadata::Ptr(new TableMetadata(columnfamily_name, version, buffer, row)));
   }
 
-  update_columns(version, columns_result);
+  update_columns(version, cassandra_version, columns_result);
 }
 
 void Metadata::InternalData::update_types(ResultResponse* result) {
@@ -888,7 +964,7 @@ void Metadata::InternalData::drop_type(const std::string& keyspace_name, const s
   i->second.drop_type(type_name);
 }
 
-void Metadata::InternalData::update_columns(int version, ResultResponse* result) {
+void Metadata::InternalData::update_columns(int version, const VersionNumber& cassandra_version, ResultResponse* result) {
   SharedRefPtr<RefBuffer> buffer = result->buffer();
 
   result->decode_first_row();
@@ -912,7 +988,7 @@ void Metadata::InternalData::update_columns(int version, ResultResponse* result)
 
     if (keyspace_name != temp_keyspace_name ||
         columnfamily_name != temp_columnfamily_name) {
-      if (table) table->build_keys();
+      if (table) table->build_keys(cassandra_version);
 
       keyspace_name = temp_keyspace_name;
       columnfamily_name = temp_columnfamily_name;

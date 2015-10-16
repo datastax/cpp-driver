@@ -19,7 +19,6 @@
 
 #include "constants.hpp"
 #include "data_type.hpp"
-#include "fixed_vector.hpp"
 #include "macros.hpp"
 #include "result_metadata.hpp"
 #include "response.hpp"
@@ -36,7 +35,8 @@ class ResultIterator;
 
 class ResultResponse : public Response {
 public:
-  typedef FixedVector<uint16_t, 8> PKIndexVec;
+  typedef std::vector<size_t> PKIndexVec;
+
   ResultResponse()
       : Response(CQL_OPCODE_RESULT)
       , protocol_version_(0)
