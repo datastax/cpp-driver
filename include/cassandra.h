@@ -324,7 +324,6 @@ typedef struct CassSchemaMeta_ CassSchemaMeta;
 typedef struct CassKeyspaceMeta_ CassKeyspaceMeta;
 typedef struct CassTableMeta_ CassTableMeta;
 typedef struct CassColumnMeta_ CassColumnMeta;
-typedef struct CassMetaField_ CassMetaField;
 
 typedef enum CassColumnType_ {
   CASS_COLUMN_TYPE_REGULAR,
@@ -499,7 +498,7 @@ typedef enum CassIteratorType_ {
   CASS_ITERATOR_TYPE_COLLECTION,
   CASS_ITERATOR_TYPE_MAP,
   CASS_ITERATOR_TYPE_TUPLE,
-  CASS_ITERATOR_TYPE_USER_TYPE,
+  CASS_ITERATOR_TYPE_USER_TYPE_FIELD,
   CASS_ITERATOR_TYPE_META_FIELD,
   CASS_ITERATOR_TYPE_KEYSPACE_META,
   CASS_ITERATOR_TYPE_TABLE_META,
@@ -1656,9 +1655,9 @@ cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
  *
  * @param[in] keyspace_meta
  * @param[in] name
- * @return A schema metadata field. NULL if the field does not exist.
+ * @return A metadata field value. NULL if the field does not exist.
  */
-CASS_EXPORT const CassMetaField*
+CASS_EXPORT const CassValue*
 cass_keyspace_meta_field_by_name(const CassKeyspaceMeta* keyspace_meta,
                                  const char* name);
 
@@ -1675,7 +1674,7 @@ cass_keyspace_meta_field_by_name(const CassKeyspaceMeta* keyspace_meta,
  *
  * @see cass_keyspace_meta_field_by_name()
  */
-CASS_EXPORT const CassMetaField*
+CASS_EXPORT const CassValue*
 cass_keyspace_meta_field_by_name_n(const CassKeyspaceMeta* keyspace_meta,
                                    const char* name,
                                    size_t name_length);
@@ -1816,9 +1815,9 @@ cass_table_meta_clustering_key(const CassTableMeta* table_meta,
  *
  * @param[in] table_meta
  * @param[in] name
- * @return A schema metadata field. NULL if the field does not exist.
+ * @return A metadata field value. NULL if the field does not exist.
  */
-CASS_EXPORT const CassMetaField*
+CASS_EXPORT const CassValue*
 cass_table_meta_field_by_name(const CassTableMeta* table_meta,
                               const char* name);
 
@@ -1835,7 +1834,7 @@ cass_table_meta_field_by_name(const CassTableMeta* table_meta,
  *
  * @see cass_table_meta_field_by_name()
  */
-CASS_EXPORT const CassMetaField*
+CASS_EXPORT const CassValue*
 cass_table_meta_field_by_name_n(const CassTableMeta* table_meta,
                                 const char* name,
                                 size_t name_length);
@@ -1883,9 +1882,9 @@ cass_column_meta_data_type(const CassColumnMeta* column_meta);
  *
  * @param[in] column_meta
  * @param[in] name
- * @return A schema metadata field. NULL if the field does not exist.
+ * @return A metadata field value. NULL if the field does not exist.
  */
-CASS_EXPORT const CassMetaField*
+CASS_EXPORT const CassValue*
 cass_column_meta_field_by_name(const CassColumnMeta* column_meta,
                                const char* name);
 
@@ -1902,35 +1901,10 @@ cass_column_meta_field_by_name(const CassColumnMeta* column_meta,
  *
  * @see cass_column_meta_field_by_name()
  */
-CASS_EXPORT const CassMetaField*
+CASS_EXPORT const CassValue*
 cass_column_meta_field_by_name_n(const CassColumnMeta* column_meta,
                                  const char* name,
                                  size_t name_length);
-
-/**
- * Gets the name for a metadata field
- *
- * @public @memberof CassMetaField
- *
- * @param[in] field
- * @param[out] name The name of the metadata data field
- * @param[out] name_length
- */
-CASS_EXPORT void
-cass_meta_field_name(const CassMetaField* field,
-                     const char** name,
-                     size_t* name_length);
-
-/**
- * Gets the value for a metadata field
- *
- * @public @memberof CassMetaField
- *
- * @param[in] field
- * @return The value of the metadata data field
- */
-CASS_EXPORT const CassValue*
-cass_meta_field_value(const CassMetaField* field);
 
 /***********************************************************************************
  *
@@ -6038,7 +6012,7 @@ cass_iterator_from_tuple(const CassValue* value);
  * @see cass_iterator_free()
  */
 CASS_EXPORT CassIterator*
-cass_iterator_from_user_type(const CassValue* value);
+cass_iterator_fields_from_user_type(const CassValue* value);
 
 /**
  * Creates a new iterator for the specified schema metadata.
@@ -6094,7 +6068,8 @@ cass_iterator_types_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta);
  * @param[in] keyspace_meta
  * @return A new iterator that must be freed.
  *
- * @see cass_iterator_get_meta_field()
+ * @see cass_iterator_get_meta_field_name()
+ * @see cass_iterator_get_meta_field_value()
  * @see cass_iterator_free()
  */
 CASS_EXPORT CassIterator*
@@ -6124,7 +6099,8 @@ cass_iterator_columns_from_table_meta(const CassTableMeta* table_meta);
  * @param[in] table_meta
  * @return A new iterator that must be freed.
  *
- * @see cass_iterator_get_meta_field()
+ * @see cass_iterator_get_meta_field_name()
+ * @see cass_iterator_get_meta_field_value()
  * @see cass_iterator_free()
  */
 CASS_EXPORT CassIterator*
@@ -6139,7 +6115,8 @@ cass_iterator_fields_from_table_meta(const CassTableMeta* table_meta);
  * @param[in] column_meta
  * @return A new iterator that must be freed.
  *
- * @see cass_iterator_get_meta_field()
+ * @see cass_iterator_get_meta_field_name()
+ * @see cass_iterator_get_meta_field_value()
  * @see cass_iterator_free()
  */
 CASS_EXPORT CassIterator*
@@ -6316,7 +6293,7 @@ CASS_EXPORT const CassColumnMeta*
 cass_iterator_get_column_meta(const CassIterator* iterator);
 
 /**
- * Gets the metadata field entry at the iterator's current position.
+ * Gets the metadata field name at the iterator's current position.
  *
  * Calling cass_iterator_next() will invalidate the previous
  * value returned by this method.
@@ -6324,11 +6301,28 @@ cass_iterator_get_column_meta(const CassIterator* iterator);
  * @public @memberof CassIterator
  *
  * @param[in] iterator
- * @return A metadata field
+ * @param[out] name
+ * @param[out] name_length
+ * @return CASS_OK if successful, otherwise error occurred
  */
-CASS_EXPORT const CassMetaField*
-cass_iterator_get_meta_field(const CassIterator* iterator);
+CASS_EXPORT CassError
+cass_iterator_get_meta_field_name(const CassIterator* iterator,
+                                  const char** name,
+                                  size_t* name_length);
 
+/**
+ * Gets the metadata field value at the iterator's current position.
+ *
+ * Calling cass_iterator_next() will invalidate the previous
+ * value returned by this method.
+ *
+ * @public @memberof CassIterator
+ *
+ * @param[in] iterator
+ * @return A metadata field value
+ */
+CASS_EXPORT const CassValue*
+cass_iterator_get_meta_field_value(const CassIterator* iterator);
 
 /***********************************************************************************
  *

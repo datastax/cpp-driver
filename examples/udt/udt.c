@@ -172,7 +172,7 @@ CassError select_from_udt(CassSession* session) {
       const CassRow* row = cass_iterator_get_row(rows);
       const CassValue* id_value = cass_row_get_column_by_name(row, "id");
       const CassValue* address_value = cass_row_get_column_by_name(row, "address");
-      CassIterator* fields = cass_iterator_from_user_type(address_value);
+      CassIterator* fields = cass_iterator_fields_from_user_type(address_value);
 
       cass_value_get_uuid(id_value, &id);
       cass_uuid_string(id, id_str);
@@ -201,7 +201,7 @@ CassError select_from_udt(CassSession* session) {
             CassIterator* phone_numbers = cass_iterator_from_collection(field_value);
             while (cass_iterator_next(phone_numbers)) {
               const CassValue* phone_value = cass_iterator_get_value(phone_numbers);
-              CassIterator* phone_fields = cass_iterator_from_user_type(phone_value);
+              CassIterator* phone_fields = cass_iterator_fields_from_user_type(phone_value);
               assert(cass_value_type(phone_value) == CASS_VALUE_TYPE_UDT);
               while (cass_iterator_next(phone_fields)) {
                 const CassValue* phone_number_value = cass_iterator_get_user_type_field_value(phone_fields);

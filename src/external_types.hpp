@@ -72,7 +72,6 @@ EXTERNAL_TYPE(cass::Row, CassRow);
 EXTERNAL_TYPE(cass::Value, CassValue);
 EXTERNAL_TYPE(cass::SslContext, CassSsl);
 EXTERNAL_TYPE(cass::Metadata::SchemaSnapshot, CassSchemaMeta);
-EXTERNAL_TYPE(cass::MetadataField, CassMetaField);
 EXTERNAL_TYPE(cass::KeyspaceMetadata, CassKeyspaceMeta);
 EXTERNAL_TYPE(cass::TableMetadata, CassTableMeta);
 EXTERNAL_TYPE(cass::ColumnMetadata, CassColumnMeta);
