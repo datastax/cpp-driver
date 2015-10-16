@@ -38,7 +38,7 @@ public:
   BatchRequest(uint8_t type_)
       : RoutableRequest(CQL_OPCODE_BATCH)
       , type_(type_)
-      , consistency_(CASS_CONSISTENCY_ONE) {}
+      , consistency_(CASS_CONSISTENCY_QUORUM) { }
 
   uint8_t type() const { return type_; }
 

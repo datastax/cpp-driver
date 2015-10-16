@@ -59,7 +59,7 @@ public:
 
   Request(uint8_t opcode)
       : opcode_(opcode)
-      , consistency_(CASS_CONSISTENCY_ONE)
+      , consistency_(CASS_CONSISTENCY_QUORUM)
       , serial_consistency_(CASS_CONSISTENCY_ANY)
       , timestamp_(CASS_INT64_MIN) { }
 
