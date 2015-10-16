@@ -139,12 +139,12 @@ std::string Address::to_string(bool with_port) const {
   return ss.str();
 }
 
-int Address::compare(const Address& a) const {
+std::int64_t Address::compare(const Address& a) const {
   if (family() != a.family()) {
     return family() - a.family();
   }
   if (family() == AF_INET) {
-    return (addr_in()->sin_addr.s_addr - a.addr_in()->sin_addr.s_addr);
+    return (static_cast< std::int64_t >(addr_in()->sin_addr.s_addr) - static_cast< std::int64_t >(a.addr_in()->sin_addr.s_addr));
   } else if (family() == AF_INET6) {
     return memcmp(&(addr_in6()->sin6_addr), &(a.addr_in6()->sin6_addr),
                   sizeof(addr_in6()->sin6_addr));
