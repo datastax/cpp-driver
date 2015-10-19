@@ -187,8 +187,8 @@ public:
     Argument(const StringRef& name, const DataType::Ptr& type)
       : name(name)
       , type(type) { }
-    const StringRef name;
-    const DataType::Ptr type;
+    StringRef name;
+    DataType::Ptr type;
   };
 
   FunctionMetadata(const std::string& name, const Value* signature,
