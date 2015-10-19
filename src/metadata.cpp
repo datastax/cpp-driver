@@ -358,18 +358,6 @@ const CassValue* cass_aggregate_meta_init_cond(const CassAggregateMeta* aggregat
   return CassValue::to(&aggregate_meta->init_cond());
 }
 
-
-void cass_meta_field_name(const CassMetaField* field,
-                          const char** name, size_t* name_length) {
-  const std::string& n = field->name();
-  *name = n.data();
-  *name_length = n.length();
-}
-
-const CassValue* cass_meta_field_value(const CassMetaField* field) {
-  return CassValue::to(field->value());
-}
-
 CassIterator* cass_iterator_keyspaces_from_schema_meta(const CassSchemaMeta* schema_meta) {
   return CassIterator::to(schema_meta->iterator_keyspaces());
 }

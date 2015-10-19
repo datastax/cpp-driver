@@ -2259,31 +2259,6 @@ cass_aggregate_meta_final_func(const CassAggregateMeta* aggregate_meta);
 CASS_EXPORT const CassValue*
 cass_aggregate_meta_init_cond(const CassAggregateMeta* aggregate_meta);
 
-/**
- * Gets the name for a metadata field
- *
- * @public @memberof CassMetaField
- *
- * @param[in] field
- * @param[out] name The name of the metadata data field
- * @param[out] name_length
- */
-CASS_EXPORT void
-cass_meta_field_name(const CassMetaField* field,
-                     const char** name,
-                     size_t* name_length);
-
-/**
- * Gets the value for a metadata field
- *
- * @public @memberof CassMetaField
- *
- * @param[in] field
- * @return The value of the metadata data field
- */
-CASS_EXPORT const CassValue*
-cass_meta_field_value(const CassMetaField* field);
-
 /***********************************************************************************
  *
  * SSL
