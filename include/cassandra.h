@@ -786,7 +786,7 @@ cass_cluster_set_num_threads_io(CassCluster* cluster,
  * Sets the size of the fixed size queue that stores
  * pending requests.
  *
- * <b>Default:</b> 4096
+ * <b>Default:</b> 8192
  *
  * @public @memberof CassCluster
  *
@@ -802,7 +802,7 @@ cass_cluster_set_queue_size_io(CassCluster* cluster,
  * Sets the size of the fixed size queue that stores
  * events.
  *
- * <b>Default:</b> 4096
+ * <b>Default:</b> 8192
  *
  * @public @memberof CassCluster
  *
@@ -818,7 +818,7 @@ cass_cluster_set_queue_size_event(CassCluster* cluster,
  * Sets the size of the fixed size queue that stores
  * log messages.
  *
- * <b>Default:</b> 4096
+ * <b>Default:</b> 8192
  *
  * @public @memberof CassCluster
  *
@@ -966,7 +966,7 @@ cass_cluster_set_write_bytes_low_water_mark(CassCluster* cluster,
  * host on an IO worker if the number of requests queued exceed this
  * value.
  *
- * <b>Default:</b> 128 * max_connections_per_host
+ * <b>Default:</b> 256
  *
  * @public @memberof CassCluster
  *
@@ -984,7 +984,7 @@ cass_cluster_set_pending_requests_high_water_mark(CassCluster* cluster,
  * requests, writes to a host will only resume once the number of requests
  * fall below this value.
  *
- * <b>Default:</b> 64 * max_connections_per_host
+ * <b>Default:</b> 128
  *
  * @public @memberof CassCluster
  *
