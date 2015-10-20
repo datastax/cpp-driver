@@ -894,7 +894,9 @@ void CCM::Bridge::initialize_libssh2() {
   int error_code = libssh2_init(LIBSSH2_INIT_ALL);
   if (error_code) {
     finalize_libssh2();
-    throw BridgeException("libssh2 Initialization Failed: " + error_code);
+    std::stringstream message;
+    message << "libssh2 Initialization Failed: " << error_code;
+    throw BridgeException(message.str());
   }
 
   // Initialize and create the libssh2 session
@@ -913,32 +915,33 @@ void CCM::Bridge::initialize_libssh2() {
   }
   if (error_code) {
     // Determine error that occurred
-    std::string message("libssh2 Session Handshake Failed: ");
+    std::stringstream message;
+    message << "libssh2 Session Handshake Failed: ";
     switch (error_code) {
       case LIBSSH2_ERROR_SOCKET_NONE:
-        message += "The socket is invalid";
+        message << "The socket is invalid";
         break;
       case LIBSSH2_ERROR_BANNER_SEND:
-        message += "Unable to send banner to remote host";
+        message << "Unable to send banner to remote host";
         break;
       case LIBSSH2_ERROR_KEX_FAILURE:
-        message += "Encryption key exchange with the remote host failed";
+        message << "Encryption key exchange with the remote host failed";
         break;
       case LIBSSH2_ERROR_SOCKET_SEND:
-        message += "Unable to send data on socket";
+        message << "Unable to send data on socket";
         break;
       case LIBSSH2_ERROR_SOCKET_DISCONNECT:
-        message += "The socket was disconnected";
+        message << "The socket was disconnected";
         break;
       case LIBSSH2_ERROR_PROTO:
-        message += "An invalid SSH protocol response was received on the socket";
+        message << "An invalid SSH protocol response was received on the socket";
         break;
       default:
-        message += error_code;
+        message << error_code;
         break;
     }
     finalize_libssh2();
-    throw BridgeException(message);
+    throw BridgeException(message.str());
   }
 }
 
@@ -961,37 +964,38 @@ void CCM::Bridge::establish_libssh2_connection(AuthenticationType authentication
 
   if (error_code) {
     // Determine error that occurred
-    std::string message("libssh2 Username and Password Authentication Failed: ");
+    std::stringstream message;
+    message << "libssh2 Username and Password Authentication Failed: ";
     switch (error_code) {
     case LIBSSH2_ERROR_ALLOC:
-      message += "An internal memory allocation call failed";
+      message << "An internal memory allocation call failed";
       break;
     case LIBSSH2_ERROR_SOCKET_SEND:
-      message += "Unable to send data on socket";
+      message << "Unable to send data on socket";
       break;
     case LIBSSH2_ERROR_SOCKET_TIMEOUT:
-      message += "Timed out waiting for response";
+      message << "Timed out waiting for response";
       break;
     case LIBSSH2_ERROR_PASSWORD_EXPIRED:
-      message += "Password has expired";
+      message << "Password has expired";
       break;
     case LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED:
-      message += "The username/public key combination was invalid";
+      message << "The username/public key combination was invalid";
       break;
     case LIBSSH2_ERROR_AUTHENTICATION_FAILED:
       // Ensure error message is displayed for the authentication type
       if (authentication_type == AuthenticationType::USERNAME_PASSWORD) {
-        message += "Invalid username/password";
+        message << "Invalid username/password";
       } else {
-        message += "Authentication using the supplied public key was not accepted";
+        message << "Authentication using the supplied public key was not accepted";
       }
       break;
     default:
-      message += error_code;
+      message << error_code;
       break;
     }
     finalize_libssh2();
-    throw BridgeException(message);
+    throw BridgeException(message.str());
   }
 }
 
@@ -1102,23 +1106,24 @@ std::string CCM::Bridge::execute_libssh2_command(const std::vector<std::string>&
   }
   if (error_code) {
     // Determine error that occurred
-      std::string message("libssh2 Command Execute Failed: ");
+      std::stringstream message;
+      message << "libssh2 Command Execute Failed: ";
       switch (error_code) {
         case LIBSSH2_ERROR_ALLOC:
-          message += "An internal memory allocation call failed";
+          message << "An internal memory allocation call failed";
           break;
         case LIBSSH2_ERROR_SOCKET_SEND:
-          message += "Unable to send data on socket";
+          message << "Unable to send data on socket";
           break;
         case LIBSSH2_ERROR_CHANNEL_REQUEST_DENIED:
-          message += "Request denied";
+          message << "Request denied";
           break;
         default:
-          message += error_code;
+          message << error_code;
           break;
       }
       finalize_libssh2();
-      throw BridgeException(message);
+      throw BridgeException(message.str());
   }
 
   // Get the terminal output, close the terminal and return the output

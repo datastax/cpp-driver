@@ -15,7 +15,9 @@
 */
 #include "socket.hpp"
 
-#ifdef __linux__
+#include <sstream>
+
+#ifndef _WIN32
 # include <arpa/inet.h>
 # include <cstring>
 # include <errno.h>
@@ -60,7 +62,7 @@ void Socket::initialize_sockets() {
 
 std::string Socket::get_error_message(int error_code) const {
   // Format the error code message using the default system language
-  std::string message("" + error_code);
+  std::stringstream message;
 #ifdef _WIN32
   LPVOID error_string;
   int size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
@@ -69,13 +71,14 @@ std::string Socket::get_error_message(int error_code) const {
 
   // Ensure the message could be retrieved and update the return message
   if (size) {
-    message = std::string((LPTSTR)error_string, size);
+    message << std::string((LPTSTR)error_string, size);
     LocalFree(error_string);
   }
 #else
-  message = std::string(strerror(error_code));
+  message << std::string(strerror(error_code));
 #endif
-  return message;
+  message << " [" << error_code << "]";
+  return message.str();
 }
 
 void Socket::synchronize(bool is_read, bool is_write) {

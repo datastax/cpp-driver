@@ -19,7 +19,7 @@
 #ifdef _WIN32
 # include <winsock2.h>
 # define SOCKET_HANDLE SOCKET
-#elif __linux__
+#else
 # define SOCKET_HANDLE int
 #endif
 
