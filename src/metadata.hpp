@@ -191,7 +191,7 @@ public:
                  const SharedRefPtr<const DataType>& data_type)
     : MetadataBase(name)
     , type_(type)
-    , position_(0)
+    , position_(-1)
     , data_type_(data_type)
     , is_reversed_(false) { }
 
