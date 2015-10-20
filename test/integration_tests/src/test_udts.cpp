@@ -62,7 +62,7 @@ private:
       update_schema();
       const CassKeyspaceMeta* keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta_.get(), test_utils::SIMPLE_KEYSPACE.c_str());
       BOOST_REQUIRE(keyspace_meta != NULL);
-      datatype = cass_keyspace_meta_type_by_name(keyspace_meta, udt_name.c_str());
+      datatype = cass_keyspace_meta_user_type_by_name(keyspace_meta, udt_name.c_str());
       if (datatype == NULL) {
         boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
       }
@@ -96,7 +96,7 @@ public:
     verify_user_type(udt_name);
     const CassKeyspaceMeta* keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta_.get(), test_utils::SIMPLE_KEYSPACE.c_str());
     BOOST_REQUIRE(keyspace_meta != NULL);
-    const CassDataType* datatype = cass_keyspace_meta_type_by_name(keyspace_meta, udt_name.c_str());
+    const CassDataType* datatype = cass_keyspace_meta_user_type_by_name(keyspace_meta, udt_name.c_str());
     BOOST_REQUIRE(datatype != NULL);
     return test_utils::CassUserTypePtr(cass_user_type_new_from_data_type(datatype));
   }

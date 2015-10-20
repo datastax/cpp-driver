@@ -325,7 +325,7 @@ void ControlConnection::on_event(EventResponse* response) {
                                                   response->target().to_string());
               break;
             case EventResponse::TYPE:
-              session_->metadata().drop_type(response->keyspace().to_string(),
+              session_->metadata().drop_user_type(response->keyspace().to_string(),
                                                  response->target().to_string());
               break;
           }
@@ -440,7 +440,7 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
     session->metadata().update_tables(static_cast<ResultResponse*>(responses[3].get()),
                                       static_cast<ResultResponse*>(responses[4].get()));
     if (control_connection->protocol_version_ >= 3) {
-      session->metadata().update_types(static_cast<ResultResponse*>(responses[5].get()));
+      session->metadata().update_user_types(static_cast<ResultResponse*>(responses[5].get()));
     }
 
     session->metadata().swap_to_back_and_update_front();
@@ -703,7 +703,7 @@ void ControlConnection::on_refresh_type(ControlConnection* control_connection,
               keyspace_and_type_names.first.c_str());
     return;
   }
-  control_connection->session_->metadata().update_types(result);
+  control_connection->session_->metadata().update_user_types(result);
 }
 
 bool ControlConnection::handle_query_invalid_response(Response* response) {

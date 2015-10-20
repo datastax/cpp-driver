@@ -39,7 +39,7 @@ void cass_schema_meta_free(const CassSchemaMeta* schema_meta) {
   delete schema_meta->from();
 }
 
-cass_uint32_t cass_schema_meta_version(const CassSchemaMeta* schema_meta) {
+cass_uint32_t cass_schema_meta_snapshot_version(const CassSchemaMeta* schema_meta) {
   return schema_meta->version();
 }
 
@@ -66,15 +66,15 @@ const CassTableMeta* cass_keyspace_meta_table_by_name_n(const CassKeyspaceMeta* 
   return CassTableMeta::to(keyspace_meta->get_table(std::string(table, table_length)));
 }
 
-const CassDataType* cass_keyspace_meta_type_by_name(const CassKeyspaceMeta* keyspace_meta,
-                                                const char* type) {
-  return CassDataType::to(keyspace_meta->get_type(type));
+const CassDataType* cass_keyspace_meta_user_type_by_name(const CassKeyspaceMeta* keyspace_meta,
+                                                         const char* type) {
+  return CassDataType::to(keyspace_meta->get_user_type(type));
 }
 
-const CassDataType* cass_keyspace_meta_type_by_name_n(const CassKeyspaceMeta* keyspace_meta,
+const CassDataType* cass_keyspace_meta_user_type_by_name_n(const CassKeyspaceMeta* keyspace_meta,
                                                   const char* type,
                                                   size_t type_length) {
-  return CassDataType::to(keyspace_meta->get_type(std::string(type, type_length)));
+  return CassDataType::to(keyspace_meta->get_user_type(std::string(type, type_length)));
 }
 
 void cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
@@ -199,8 +199,8 @@ CassIterator* cass_iterator_tables_from_keyspace_meta(const CassKeyspaceMeta* ke
   return CassIterator::to(keyspace_meta->iterator_tables());
 }
 
-CassIterator* cass_iterator_types_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta) {
-  return CassIterator::to(keyspace_meta->iterator_types());
+CassIterator* cass_iterator_user_types_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta) {
+  return CassIterator::to(keyspace_meta->iterator_user_types());
 }
 
 CassIterator* cass_iterator_fields_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta) {
@@ -237,7 +237,7 @@ const CassTableMeta* cass_iterator_get_table_meta(const CassIterator* iterator) 
           iterator->from())->table());
 }
 
-const CassDataType* cass_iterator_get_type_meta(const CassIterator* iterator) {
+const CassDataType* cass_iterator_get_user_type(const CassIterator* iterator) {
   if (iterator->type() != CASS_ITERATOR_TYPE_TYPE_META) {
     return NULL;
   }
@@ -297,14 +297,14 @@ const KeyspaceMetadata* Metadata::SchemaSnapshot::get_keyspace(const std::string
   return &i->second;
 }
 
-const UserType* Metadata::SchemaSnapshot::get_type(const std::string& keyspace_name,
-                                             const std::string& type_name) const
+const UserType* Metadata::SchemaSnapshot::get_user_type(const std::string& keyspace_name,
+                                                        const std::string& type_name) const
 {
   KeyspaceMetadata::Map::const_iterator i = keyspaces_->find(keyspace_name);
   if (i == keyspaces_->end()) {
     return NULL;
   }
-  return i->second.get_type(type_name);
+  return i->second.get_user_type(type_name);
 }
 
 Metadata::SchemaSnapshot Metadata::schema_snapshot() const {
@@ -340,14 +340,14 @@ void Metadata::update_tables(ResultResponse* tables_result, ResultResponse* colu
   }
 }
 
-void Metadata::update_types(ResultResponse* result) {
+void Metadata::update_user_types(ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_types(result);
+    updating_->update_user_types(result);
   } else {
-    updating_->update_types(result);
+    updating_->update_user_types(result);
   }
 }
 
@@ -373,14 +373,14 @@ void Metadata::drop_table(const std::string& keyspace_name, const std::string& t
   }
 }
 
-void Metadata::drop_type(const std::string& keyspace_name, const std::string& type_name) {
+void Metadata::drop_user_type(const std::string& keyspace_name, const std::string& type_name) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->drop_type(keyspace_name, type_name);
+    updating_->drop_user_type(keyspace_name, type_name);
   } else {
-    updating_->drop_type(keyspace_name, type_name);
+    updating_->drop_user_type(keyspace_name, type_name);
   }
 }
 
@@ -551,9 +551,9 @@ void KeyspaceMetadata::drop_table(const std::string& table_name) {
   tables_->erase(table_name);
 }
 
-const UserType* KeyspaceMetadata::get_type(const std::string& name) const {
-  TypeMap::const_iterator i = types_->find(name);
-  if (i == types_->end()) return NULL;
+const UserType* KeyspaceMetadata::get_user_type(const std::string& name) const {
+  UserTypeMap::const_iterator i = user_types_->find(name);
+  if (i == user_types_->end()) return NULL;
   return i->second.get();
 }
 
@@ -564,12 +564,12 @@ void KeyspaceMetadata::update(int version, const SharedRefPtr<RefBuffer>& buffer
   add_json_map_field(version, row, "strategy_options");
 }
 
-void KeyspaceMetadata::add_type(const SharedRefPtr<UserType>& user_type) {
-  (*types_)[user_type->type_name()] = user_type;
+void KeyspaceMetadata::add_user_type(const SharedRefPtr<UserType>& user_type) {
+  (*user_types_)[user_type->type_name()] = user_type;
 }
 
-void KeyspaceMetadata::drop_type(const std::string& type_name) {
-  types_->erase(type_name);
+void KeyspaceMetadata::drop_user_type(const std::string& type_name) {
+  user_types_->erase(type_name);
 }
 
 TableMetadata::TableMetadata(const std::string& name,
@@ -729,7 +729,7 @@ ColumnMetadata::ColumnMetadata(const std::string& name,
     position_ = value->as_int32();
   }
 
- value =  add_field(buffer, row, "validator");
+  value = add_field(buffer, row, "validator");
   if (value != NULL &&
       value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
     std::string validator(value->to_string());
@@ -764,7 +764,7 @@ void Metadata::InternalData::update_keyspaces(int version, ResultResponse* resul
     const Row* row = rows.row();
 
     if (!row->get_string_by_name("keyspace_name", &keyspace_name)) {
-      LOG_ERROR("Unable to column value for 'keyspace_name'");
+      LOG_ERROR("Unable to get column value for 'keyspace_name'");
       continue;
     }
 
@@ -790,7 +790,7 @@ void Metadata::InternalData::update_tables(int version, ResultResponse* tables_r
 
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
         !row->get_string_by_name("columnfamily_name", &columnfamily_name)) {
-      LOG_ERROR("Unable to column value for 'keyspace_name' or 'columnfamily_name'");
+      LOG_ERROR("Unable to get column value for 'keyspace_name' or 'columnfamily_name'");
       continue;
     }
     if (keyspace_name != temp_keyspace_name) {
@@ -803,7 +803,7 @@ void Metadata::InternalData::update_tables(int version, ResultResponse* tables_r
   update_columns(version, columns_result);
 }
 
-void Metadata::InternalData::update_types(ResultResponse* result) {
+void Metadata::InternalData::update_user_types(ResultResponse* result) {
   result->decode_first_row();
   ResultIterator rows(result);
 
@@ -814,7 +814,7 @@ void Metadata::InternalData::update_types(ResultResponse* result) {
 
     if (!row->get_string_by_name("keyspace_name", &keyspace_name) ||
         !row->get_string_by_name("type_name", &type_name)) {
-      LOG_ERROR("Unable to column value for 'keyspace_name' or 'type_name'");
+      LOG_ERROR("Unable to get column value for 'keyspace_name' or 'type_name'");
       continue;
     }
 
@@ -867,7 +867,7 @@ void Metadata::InternalData::update_types(ResultResponse* result) {
       fields.push_back(UserType::Field(field_name, data_type));
     }
 
-    get_or_create_keyspace(keyspace_name)->add_type(
+    get_or_create_keyspace(keyspace_name)->add_user_type(
           SharedRefPtr<UserType>(new UserType(keyspace_name, type_name, fields)));
   }
 }
@@ -882,10 +882,10 @@ void Metadata::InternalData::drop_table(const std::string& keyspace_name, const 
   i->second.drop_table(table_name);
 }
 
-void Metadata::InternalData::drop_type(const std::string& keyspace_name, const std::string& type_name) {
+void Metadata::InternalData::drop_user_type(const std::string& keyspace_name, const std::string& type_name) {
   KeyspaceMetadata::Map::iterator i = keyspaces_->find(keyspace_name);
   if (i == keyspaces_->end()) return;
-  i->second.drop_type(type_name);
+  i->second.drop_user_type(type_name);
 }
 
 void Metadata::InternalData::update_columns(int version, ResultResponse* result) {
@@ -906,7 +906,7 @@ void Metadata::InternalData::update_columns(int version, ResultResponse* result)
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
         !row->get_string_by_name("columnfamily_name", &temp_columnfamily_name) ||
         !row->get_string_by_name("column_name", &column_name)) {
-      LOG_ERROR("Unable to column value for 'keyspace_name', 'columnfamily_name' or 'column_name'");
+      LOG_ERROR("Unable to get column value for 'keyspace_name', 'columnfamily_name' or 'column_name'");
       continue;
     }
 

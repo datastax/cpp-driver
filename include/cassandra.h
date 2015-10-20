@@ -1553,7 +1553,7 @@ cass_schema_meta_free(const CassSchemaMeta* schema_meta);
  * @param[in] schema_meta
  */
 CASS_EXPORT cass_uint32_t
-cass_schema_meta_version(const CassSchemaMeta* schema_meta);
+cass_schema_meta_snapshot_version(const CassSchemaMeta* schema_meta);
 
 /**
  * Gets the keyspace metadata for the provided keyspace name.
@@ -1631,8 +1631,8 @@ cass_keyspace_meta_table_by_name_n(const CassKeyspaceMeta* keyspace_meta,
  * @return The data type for a user defined type. NULL if type does not exist.
  */
 CASS_EXPORT const CassDataType*
-cass_keyspace_meta_type_by_name(const CassKeyspaceMeta* keyspace_meta,
-                                const char* type);
+cass_keyspace_meta_user_type_by_name(const CassKeyspaceMeta* keyspace_meta,
+                                     const char* type);
 
 /**
  * Same as cass_keyspace_meta_type_by_name(), but with lengths for string
@@ -1648,9 +1648,9 @@ cass_keyspace_meta_type_by_name(const CassKeyspaceMeta* keyspace_meta,
  * @see cass_keyspace_meta_type_by_name()
  */
 CASS_EXPORT const CassDataType*
-cass_keyspace_meta_type_by_name_n(const CassKeyspaceMeta* keyspace_meta,
-                                  const char* type,
-                                  size_t type_length);
+cass_keyspace_meta_user_type_by_name_n(const CassKeyspaceMeta* keyspace_meta,
+                                       const char* type,
+                                       size_t type_length);
 
 /**
  * Gets the name of the keyspace.
@@ -6071,11 +6071,11 @@ cass_iterator_tables_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta);
  * @param[in] keyspace_meta
  * @return A new iterator that must be freed.
  *
- * @see cass_iterator_get_type_meta()
+ * @see cass_iterator_get_user_type()
  * @see cass_iterator_free()
  */
 CASS_EXPORT CassIterator*
-cass_iterator_types_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta);
+cass_iterator_user_types_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta);
 
 /**
  * Creates a new iterator for the specified keyspace metadata.
@@ -6294,7 +6294,7 @@ cass_iterator_get_table_meta(const CassIterator* iterator);
  * @return A type metadata entry
  */
 CASS_EXPORT const CassDataType*
-cass_iterator_get_type_meta(const CassIterator* iterator);
+cass_iterator_get_user_type(const CassIterator* iterator);
 
 /**
  * Gets the column metadata entry at the iterator's current position.
