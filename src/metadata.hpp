@@ -183,7 +183,7 @@ public:
   ColumnMetadata(const std::string& name)
     : MetadataBase(name)
     , type_(CASS_COLUMN_TYPE_REGULAR)
-    , position_(0)
+    , position_(-1)
     , is_reversed_(false) { }
 
   ColumnMetadata(const std::string& name,
