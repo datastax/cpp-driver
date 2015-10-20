@@ -251,7 +251,7 @@ class KeyspaceMetadata : public MetadataBase {
 public:
   typedef std::map<std::string, KeyspaceMetadata> Map;
   typedef CopyOnWritePtr<KeyspaceMetadata::Map> MapPtr;
-  typedef std::map<std::string, SharedRefPtr<UserType> > TypeMap;
+  typedef std::map<std::string, SharedRefPtr<UserType> > UserTypeMap;
 
   class TableIterator : public MetadataIteratorImpl<MapIteratorImpl<TableMetadata::Ptr> > {
   public:
@@ -270,7 +270,7 @@ public:
   KeyspaceMetadata(const std::string& name)
     : MetadataBase(name)
     , tables_(new TableMetadata::Map)
-    , types_(new TypeMap) { }
+    , user_types_(new UserTypeMap) { }
 
   void update(int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
@@ -280,17 +280,17 @@ public:
   void add_table(const TableMetadata::Ptr& table);
   void drop_table(const std::string& table_name);
 
-  Iterator* iterator_types() const { return new TypeIterator(*types_); }
-  const UserType* get_type(const std::string& type_name) const;
-  void add_type(const SharedRefPtr<UserType>& user_type);
-  void drop_type(const std::string& type_name);
+  Iterator* iterator_user_types() const { return new TypeIterator(*user_types_); }
+  const UserType* get_user_type(const std::string& type_name) const;
+  void add_user_type(const SharedRefPtr<UserType>& user_type);
+  void drop_user_type(const std::string& type_name);
 
   std::string strategy_class() const { return get_string_field("strategy_class"); }
   const Value* strategy_options() const { return get_field("strategy_options"); }
 
 private:
   CopyOnWritePtr<TableMetadata::Map> tables_;
-  CopyOnWritePtr<TypeMap> types_;
+  CopyOnWritePtr<UserTypeMap> user_types_;
 };
 
 class Metadata {
@@ -313,8 +313,8 @@ public:
     const KeyspaceMetadata* get_keyspace(const std::string& name) const;
     Iterator* iterator_keyspaces() const { return new KeyspaceIterator(*keyspaces_); }
 
-    const UserType* get_type(const std::string& keyspace_name,
-                             const std::string& type_name) const;
+    const UserType* get_user_type(const std::string& keyspace_name,
+                                  const std::string& type_name) const;
 
     void get_table_key_columns(const std::string& ks_name,
                                const std::string& cf_name,
@@ -342,11 +342,11 @@ public:
 
   void update_keyspaces(ResultResponse* result);
   void update_tables(ResultResponse* tables_result, ResultResponse* columns_result);
-  void update_types(ResultResponse* result);
+  void update_user_types(ResultResponse* result);
 
   void drop_keyspace(const std::string& keyspace_name);
   void drop_table(const std::string& keyspace_name, const std::string& table_name);
-  void drop_type(const std::string& keyspace_name, const std::string& type_name);
+  void drop_user_type(const std::string& keyspace_name, const std::string& type_name);
 
   // This clears and allows updates to the back buffer while preserving
   // the front buffer for snapshots.
@@ -380,11 +380,11 @@ private:
 
     void update_keyspaces(int version, ResultResponse* result, KeyspaceMetadata::Map& updates);
     void update_tables(int version, ResultResponse* tables_result, ResultResponse* columns_result);
-    void update_types(ResultResponse* result);
+    void update_user_types(ResultResponse* result);
 
     void drop_keyspace(const std::string& keyspace_name);
     void drop_table(const std::string& keyspace_name, const std::string& table_name);
-    void drop_type(const std::string& keyspace_name, const std::string& type_name);
+    void drop_user_type(const std::string& keyspace_name, const std::string& type_name);
 
     void clear() { keyspaces_->clear(); }
 

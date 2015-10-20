@@ -101,8 +101,8 @@ CassError insert_into_udt(CassSession* session) {
 
   keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta, "examples");
   if (keyspace_meta != NULL) {
-    udt_address = cass_keyspace_meta_type_by_name(keyspace_meta, "address");
-    udt_phone = cass_keyspace_meta_type_by_name(keyspace_meta, "phone_numbers");
+    udt_address = cass_keyspace_meta_user_type_by_name(keyspace_meta, "address");
+    udt_phone = cass_keyspace_meta_user_type_by_name(keyspace_meta, "phone_numbers");
   }
 
   if (udt_address != NULL && udt_phone != NULL) {

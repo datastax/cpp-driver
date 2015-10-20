@@ -84,13 +84,13 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
       schema_meta_ = cass_session_get_schema_meta(session);
 
       for (size_t i = 0;
-           i < 10 && cass_schema_meta_version(schema_meta_) == cass_schema_meta_version(old);
+           i < 10 && cass_schema_meta_snapshot_version(schema_meta_) == cass_schema_meta_snapshot_version(old);
            ++i) {
         boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
         cass_schema_meta_free(schema_meta_);
         schema_meta_ = cass_session_get_schema_meta(session);
       }
-      if (cass_schema_meta_version(schema_meta_) == cass_schema_meta_version(old)) {
+      if (cass_schema_meta_snapshot_version(schema_meta_) == cass_schema_meta_snapshot_version(old)) {
         boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
         BOOST_TEST_MESSAGE("Schema metadata was not refreshed or was not changed");
         boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_all_errors);

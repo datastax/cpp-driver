@@ -64,7 +64,7 @@ std::string get_contact_points_from_cluster(CassCluster* cluster) {
 std::vector<std::string> get_user_data_type_field_names(const CassSchemaMeta* schema_meta, const std::string& keyspace, const std::string& udt_name) {
   std::vector<std::string> udt_field_names;
   if (schema_meta) {
-    const cass::UserType* udt = schema_meta->get_type(keyspace, udt_name);
+    const cass::UserType* udt = schema_meta->get_user_type(keyspace, udt_name);
     if (udt) {
       for (cass::UserType::FieldVec::const_iterator it = udt->fields().begin(); it != udt->fields().end(); ++it) {
         udt_field_names.push_back((*it).name);
