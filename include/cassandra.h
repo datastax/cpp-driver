@@ -2152,7 +2152,7 @@ cass_statement_set_keyspace_n(CassStatement* statement,
 /**
  * Sets the statement's consistency level.
  *
- * <b>Default:</b> CASS_CONSISTENCY_ONE
+ * <b>Default:</b> CASS_CONSISTENCY_LOCAL_QUORUM
  *
  * @public @memberof CassStatement
  *

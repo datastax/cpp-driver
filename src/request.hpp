@@ -55,11 +55,13 @@ public:
     ENCODE_ERROR_PARAMETER_UNSET = -3
   };
 
+  static const CassConsistency DEFAULT_CONSISTENCY = CASS_CONSISTENCY_LOCAL_QUORUM;
+
   typedef std::map<const void*, Buffer> EncodingCache;
 
   Request(uint8_t opcode)
       : opcode_(opcode)
-      , consistency_(CASS_CONSISTENCY_QUORUM)
+      , consistency_(DEFAULT_CONSISTENCY)
       , serial_consistency_(CASS_CONSISTENCY_ANY)
       , timestamp_(CASS_INT64_MIN) { }
 
