@@ -142,7 +142,7 @@ public:
   MetadataBase(const std::string& name)
     : name_(name) { }
 
-  const std::string name() const { return name_; }
+  const std::string& name() const { return name_; }
 
   const Value* get_field(const std::string& name) const;
   std::string get_string_field(const std::string& name) const;
