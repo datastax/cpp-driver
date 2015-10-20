@@ -46,7 +46,7 @@ void cass_cluster_set_ssl(CassCluster* cluster,
 
 CassError cass_cluster_set_protocol_version(CassCluster* cluster,
                                             int protocol_version) {
-  if (protocol_version < 1 || protocol_version > 3) {
+  if (protocol_version < 1) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_protocol_version(protocol_version);
