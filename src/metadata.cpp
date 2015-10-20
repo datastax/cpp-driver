@@ -698,7 +698,10 @@ void TableMetadata::key_aliases(KeyAliases* output) const {
 
 ColumnMetadata::ColumnMetadata(const std::string& name,
                                int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row)
-  : MetadataBase(name) {
+  : MetadataBase(name)
+  , type_(CASS_COLUMN_TYPE_REGULAR)
+  , position_(-1)
+  , is_reversed_(false) {
   const Value* value;
 
   add_field(buffer, row, "keyspace_name");
