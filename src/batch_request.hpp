@@ -37,16 +37,11 @@ public:
 
   BatchRequest(uint8_t type_)
       : RoutableRequest(CQL_OPCODE_BATCH)
-      , type_(type_)
-      , consistency_(CASS_CONSISTENCY_ONE) {}
+      , type_(type_) { }
 
   uint8_t type() const { return type_; }
 
   const StatementList& statements() const { return statements_; }
-
-  int16_t consistency() const { return consistency_; }
-
-  void set_consistency(int16_t consistency) { consistency_ = consistency; }
 
   void add_statement(Statement* statement);
 
@@ -62,7 +57,6 @@ private:
 
   uint8_t type_;
   StatementList statements_;
-  int16_t consistency_;
   PreparedMap prepared_statements_;
 };
 
