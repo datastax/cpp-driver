@@ -141,10 +141,12 @@ std::string Address::to_string(bool with_port) const {
 
 int Address::compare(const Address& a) const {
   if (family() != a.family()) {
-    return family() - a.family();
+    return family() < a.family() ? -1 : 1;
   }
   if (family() == AF_INET) {
-    return (addr_in()->sin_addr.s_addr - a.addr_in()->sin_addr.s_addr);
+    if (addr_in()->sin_addr.s_addr != a.addr_in()->sin_addr.s_addr) {
+      return addr_in()->sin_addr.s_addr < a.addr_in()->sin_addr.s_addr ? -1 : 1;
+    }
   } else if (family() == AF_INET6) {
     return memcmp(&(addr_in6()->sin6_addr), &(a.addr_in6()->sin6_addr),
                   sizeof(addr_in6()->sin6_addr));
@@ -152,6 +154,7 @@ int Address::compare(const Address& a) const {
     assert(false);
     return -1;
   }
+  return 0;
 }
 
 }
