@@ -46,7 +46,7 @@ void cass_cluster_set_ssl(CassCluster* cluster,
 
 CassError cass_cluster_set_protocol_version(CassCluster* cluster,
                                             int protocol_version) {
-  if (protocol_version < 1 || protocol_version > 3) {
+  if (protocol_version < 1) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_protocol_version(protocol_version);
@@ -95,15 +95,8 @@ CassError cass_cluster_set_contact_points_n(CassCluster* cluster,
   if (contact_points_length == 0) {
     cluster->config().contact_points().clear();
   } else {
-    std::istringstream stream(
-          std::string(contact_points, contact_points_length));
-    while (!stream.eof()) {
-      std::string contact_point;
-      std::getline(stream, contact_point, ',');
-      if (!cass::trim(contact_point).empty()) {
-        cluster->config().contact_points().push_back(contact_point);
-      }
-    }
+    cass::explode(std::string(contact_points, contact_points_length),
+      cluster->config().contact_points());
   }
   return CASS_OK;
 }
@@ -307,14 +300,8 @@ void cass_cluster_set_whitelist_routing_hosts_n(CassCluster* cluster,
   if (hosts_length == 0) {
     cluster->config().whitelist_hosts().clear();
   } else {
-    std::istringstream stream(std::string(hosts, hosts_length));
-    while (!stream.eof()) {
-      std::string host;
-      std::getline(stream, host, ',');
-      if (!cass::trim(host).empty()) {
-        cluster->config().whitelist_hosts().push_back(host);
-      }
-    }
+    cass::explode(std::string(hosts, hosts_length),
+      cluster->config().whitelist_hosts());
   }
 }
 

@@ -23,11 +23,14 @@
 #include <stddef.h>
 #include <string>
 #include <string.h>
+#include <vector>
 
 namespace cass {
 
 class BufferPiece;
 class Value;
+
+typedef std::vector<std::string> ContactPointList;
 
 template<class From, class To>
 class IsConvertible {
@@ -45,9 +48,9 @@ class IsConvertible {
     static const bool value = sizeof(Helper::test(Helper::check())) == sizeof(Yes);
 };
 
-// copy_cast<> prevents incorrect code from being generated when two unrelated 
+// copy_cast<> prevents incorrect code from being generated when two unrelated
 // types reference the same memory location and strict aliasing is enabled.
-// The type "char*" is an exception and is allowed to alias any other 
+// The type "char*" is an exception and is allowed to alias any other
 // pointer type. This allows memcpy() to copy bytes from one type to the other
 // without violating strict aliasing and usually optimizes away on a modern
 // compiler (GCC, Clang, and MSVC).
@@ -70,8 +73,10 @@ inline size_t next_pow_2(size_t num) {
   }
   return next;
 }
- 
+
 std::string opcode_to_string(int opcode);
+
+void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter = ',');
 
 std::string& trim(std::string& str);
 
