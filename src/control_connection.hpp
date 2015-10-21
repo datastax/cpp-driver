@@ -210,7 +210,7 @@ private:
   Address current_host_address_;
   int protocol_version_;
   std::string last_connection_error_;
-  bool query_tokens_;
+  bool should_query_tokens_;
 
   static Address bind_any_ipv4_;
   static Address bind_any_ipv6_;
