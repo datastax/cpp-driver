@@ -17,7 +17,6 @@
 #ifndef __CASS_SESSION_HPP_INCLUDED__
 #define __CASS_SESSION_HPP_INCLUDED__
 
-#include "cluster_metadata.hpp"
 #include "config.hpp"
 #include "control_connection.hpp"
 #include "event_thread.hpp"
@@ -25,11 +24,11 @@
 #include "host.hpp"
 #include "io_worker.hpp"
 #include "load_balancing.hpp"
+#include "metadata.hpp"
 #include "metrics.hpp"
 #include "mpmc_queue.hpp"
 #include "ref_counted.hpp"
 #include "row.hpp"
-#include "schema_metadata.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
 
@@ -100,7 +99,7 @@ public:
   Future* prepare(const char* statement, size_t length);
   Future* execute(const RoutableRequest* statement);
 
-  const Schema* copy_schema() const { return cluster_meta_.copy_schema(); }
+  const Metadata& metadata() const { return metadata_; }
 
   int protocol_version() const {
     return control_connection_.protocol_version();
@@ -144,9 +143,7 @@ private:
   SharedRefPtr<Host> add_host(const Address& address);
   void purge_hosts(bool is_initial_connection);
 
-  ClusterMetadata& cluster_meta() {
-    return cluster_meta_;
-  }
+  Metadata& metadata() { return metadata_; }
 
   void on_control_connection_ready();
   void on_control_connection_error(CassError code, const std::string& message);
@@ -173,7 +170,7 @@ private:
 
   IOWorkerVec io_workers_;
   ScopedPtr<AsyncQueue<MPMCQueue<RequestHandler*> > > request_queue_;
-  ClusterMetadata cluster_meta_;
+  Metadata metadata_;
   ControlConnection control_connection_;
   bool current_host_mark_;
   int pending_resolve_count_;

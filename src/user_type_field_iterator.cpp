@@ -14,13 +14,13 @@
   limitations under the License.
 */
 
-#include "user_type_iterator.hpp"
+#include "user_type_field_iterator.hpp"
 
 #include "serialization.hpp"
 
 namespace cass {
 
-bool UserTypeIterator::next() {
+bool UserTypeFieldIterator::next() {
   if (next_ == end_) {
     return false;
   }
@@ -29,7 +29,7 @@ bool UserTypeIterator::next() {
   return true;
 }
 
-char* UserTypeIterator::decode_field(char* position) {
+char* UserTypeFieldIterator::decode_field(char* position) {
   int32_t size;
   char* buffer = decode_int32(position, size);
   value_ = Value(user_type_value_->protocol_version(), current_->type, buffer, size);

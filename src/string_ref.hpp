@@ -123,6 +123,10 @@ public:
     return !equals(ref);
   }
 
+  bool operator<(const StringRef& ref) const {
+    return compare(ref) < 0;
+  }
+
 private:
   template<class IsEqual>
   int compare(const StringRef& ref, IsEqual is_equal) const {
