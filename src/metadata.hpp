@@ -183,7 +183,7 @@ public:
   ColumnMetadata(const std::string& name)
     : MetadataBase(name)
     , type_(CASS_COLUMN_TYPE_REGULAR)
-    , position_(-1)
+    , position_(0)
     , is_reversed_(false) { }
 
   ColumnMetadata(const std::string& name,
@@ -191,7 +191,7 @@ public:
                  const SharedRefPtr<const DataType>& data_type)
     : MetadataBase(name)
     , type_(type)
-    , position_(-1)
+    , position_(0)
     , data_type_(data_type)
     , is_reversed_(false) { }
 
