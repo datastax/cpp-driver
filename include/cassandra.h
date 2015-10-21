@@ -1670,7 +1670,8 @@ cass_keyspace_meta_type_by_name_n(const CassKeyspaceMeta* keyspace_meta,
  *
  * @param[in] keyspace_meta
  * @param[in] name
- * @param[in] arguments
+ * @param[in] arguments A comma delimited list of CQL types (e.g "text,int,...")
+ * describing the function's signature.
  *
  * @return The data function for a user defined function. NULL if function does not exist.
  */
@@ -1708,7 +1709,8 @@ cass_keyspace_meta_function_by_name_n(const CassKeyspaceMeta* keyspace_meta,
  *
  * @param[in] keyspace_meta
  * @param[in] name
- * @param[in] arguments
+ * @param[in] arguments A comma delimited list of CQL types (e.g "text,int,...")
+ * describing the aggregate's signature.
  *
  * @return The data aggregate for a user defined aggregate. NULL if aggregate does not exist.
  */
@@ -1726,6 +1728,8 @@ cass_keyspace_meta_aggregate_by_name(const CassKeyspaceMeta* keyspace_meta,
  * @param[in] keyspace_meta
  * @param[in] name
  * @param[in] name_length
+ * @param[in] arguments
+ * @param[in] argument_length
  * @return same as cass_keyspace_meta_aggregate_by_name()
  *
  * @see cass_keyspace_meta_aggregate_by_name()
