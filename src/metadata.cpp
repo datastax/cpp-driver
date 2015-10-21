@@ -775,7 +775,7 @@ ColumnMetadata::ColumnMetadata(const std::string& name,
                                int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row)
   : MetadataBase(name)
   , type_(CASS_COLUMN_TYPE_REGULAR)
-  , position_(-1)
+  , position_(0)
   , is_reversed_(false) {
   const Value* value;
 
@@ -799,6 +799,8 @@ ColumnMetadata::ColumnMetadata(const std::string& name,
   }
 
   value = add_field(buffer, row, "component_index");
+  // For C* 2.0 to 2.2 this is "null" for single component partition keys
+  // so the default position of 0 works. C* 1.2 and below don't use this.
   if (value != NULL &&
       value->value_type() == CASS_VALUE_TYPE_INT) {
     position_ = value->as_int32();
