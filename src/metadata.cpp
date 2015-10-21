@@ -1289,7 +1289,7 @@ void Metadata::InternalData::update_functions(ResultResponse* result) {
     if (!row->get_string_by_name("keyspace_name", &keyspace_name) ||
         !row->get_string_by_name("function_name", &function_name) ||
         signature == NULL) {
-      LOG_ERROR("Unable to column value for 'keyspace_name', 'function_name' or 'signature'");
+      LOG_ERROR("Unable to get column value for 'keyspace_name', 'function_name' or 'signature'");
       continue;
     }
 
@@ -1314,7 +1314,7 @@ void Metadata::InternalData::update_aggregates(int version, ResultResponse* resu
     if (!row->get_string_by_name("keyspace_name", &keyspace_name) ||
         !row->get_string_by_name("aggregate_name", &aggregate_name) ||
         signature == NULL) {
-      LOG_ERROR("Unable to column value for 'keyspace_name', 'aggregate_name' or 'signature'");
+      LOG_ERROR("Unable to get column value for 'keyspace_name', 'aggregate_name' or 'signature'");
       continue;
     }
 

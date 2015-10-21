@@ -171,6 +171,16 @@ private:
       }
     }
 
+    StringRefVec arg_types_as_string_refs() const {
+      StringRefVec string_refs;
+      for (StringVec::const_iterator i = arg_types.begin(),
+           end = arg_types.end();
+           i != end; ++i) {
+        string_refs.push_back(StringRef(*i));
+      }
+      return string_refs;
+    }
+
     std::string keyspace;
     std::string function;
     StringVec arg_types;

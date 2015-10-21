@@ -736,8 +736,10 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
     query.append(" WHERE keyspace_name=? AND function_name=? AND signature=?");
   }
 
-  // TODO: Fix this logging statment
-  LOG_DEBUG("Refreshing function or aggregate %s", query.c_str());
+  LOG_DEBUG("Refreshing %s %s in keyspace %s",
+            is_aggregate ? "aggregate" : "function",
+            Metadata::full_function_name(function_name, arg_types).c_str(),
+            std::string(keyspace_name.data(), keyspace_name.length()).c_str());
 
   SharedRefPtr<QueryRequest> request(new QueryRequest(query, 3));
   SharedRefPtr<Collection> signature(new Collection(CASS_COLLECTION_TYPE_LIST, arg_types.size()));
@@ -765,10 +767,10 @@ void ControlConnection::on_refresh_function(ControlConnection* control_connectio
                                             Response* response) {
   ResultResponse* result = static_cast<ResultResponse*>(response);
   if (result->row_count() == 0) {
-    // TODO: Fix this error
-    LOG_ERROR("No row found for keyspace %s and function %s in system schema.",
+    LOG_ERROR("No row found for keyspace %s and %s %s",
               data.keyspace.c_str(),
-              data.function.c_str());
+              data.is_aggregate ? "aggregate" : "function",
+              Metadata::full_function_name(data.function, data.arg_types_as_string_refs()).c_str());
     return;
   }
   if (data.is_aggregate) {
