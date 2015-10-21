@@ -25,8 +25,6 @@ namespace cass {
 
 class WhitelistPolicy : public ChainedLoadBalancingPolicy {
 public:
-  typedef std::list<std::string> ContactPointList;
-
   WhitelistPolicy(LoadBalancingPolicy* child_policy,
                   const ContactPointList& hosts)
     : ChainedLoadBalancingPolicy(child_policy)

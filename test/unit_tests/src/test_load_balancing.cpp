@@ -820,7 +820,7 @@ BOOST_AUTO_TEST_CASE(simple)
   const int64_t num_hosts = 100;
   cass::HostMap hosts;
   populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
-  cass::WhitelistPolicy::ContactPointList whitelist_hosts;
+  cass::ContactPointList whitelist_hosts;
   whitelist_hosts.push_back("37.0.0.0");
   whitelist_hosts.push_back("83.0.0.0");
   cass::WhitelistPolicy policy(new cass::RoundRobinPolicy(), whitelist_hosts);

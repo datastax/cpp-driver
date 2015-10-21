@@ -36,8 +36,6 @@ void stderr_log_callback(const CassLogMessage* message, void* data);
 
 class Config {
 public:
-  typedef std::list<std::string> ContactPointList;
-
   Config()
       : port_(9042)
       , protocol_version_(4)

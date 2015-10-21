@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <functional>
+#include <sstream>
 
 namespace cass {
 
@@ -63,6 +64,17 @@ std::string opcode_to_string(int opcode) {
   };
   assert(false);
   return "";
+}
+
+void explode(const std::string& str, std::vector<std::string>& vec, const char delimiter /* = ',' */) {
+  std::istringstream stream(str);
+  while (!stream.eof()) {
+    std::string token;
+    std::getline(stream, token, delimiter);
+    if (!trim(token).empty()) {
+      vec.push_back(token);
+    }
+  }
 }
 
 std::string& trim(std::string& str) {
