@@ -298,7 +298,7 @@ endif()
 
 # Assign additional library requirements for Windows
 if(WIN32)
-  set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 ws2_32 userenv)
+  set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 crypt32 ws2_32 userenv)
 endif()
 
 #----------------------
@@ -611,7 +611,7 @@ if(CASS_BUILD_TESTS)
 
   # Add CCM bridge as a dependency for integration tests
   add_subdirectory("${PROJECT_SOURCE_DIR}/test/ccm_bridge")
-  set(CCM_BRIDGE_INCLUDES "${PROJECT_SOURCE_DIR}/test/ccm_bridge/include")
+  set(CCM_BRIDGE_INCLUDES "${PROJECT_SOURCE_DIR}/test/ccm_bridge/src")
 
   # Add the integration test project
   add_subdirectory(test/integration_tests)

@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "cassandra.h"
 #include "testing.hpp"
 #include "test_utils.hpp"
@@ -90,9 +86,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
         schema_ = cass_session_get_schema(session);
       }
       if (cass::get_schema_meta_from_keyspace(schema_, "system") == cass::get_schema_meta_from_keyspace(old, "system")) {
-        boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-        BOOST_TEST_MESSAGE("Schema metadata was not refreshed or was not changed");
-        boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_all_errors);
+        std::cout << "Schema metadata was not refreshed or was not changed" << std::endl;
       }
       cass_schema_free(old);
     } else {
@@ -529,6 +523,10 @@ BOOST_AUTO_TEST_CASE(disable) {
     test_utils::CassSchemaPtr schema(cass_session_get_schema(session));
     BOOST_CHECK(cass_schema_get_keyspace(schema.get(), "ks2") == NULL);
   }
+
+  // Drop the keyspace (ignore any and all errors)
+  test_utils::execute_query_with_error(session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % "ks1"));
+  test_utils::execute_query_with_error(session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % "ks2"));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

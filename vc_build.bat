@@ -1304,7 +1304,7 @@ REM @param log-filename Absolute path and filename for log output
 	)
 	ECHO done.
 	ECHO | SET /P=Building zlib ... 
-	!CMAKE! --build . >> "!ZLIB_LOG_FILENAME!" 2>&1
+	!CMAKE! --build . --config !BUILD_TYPE_RELEASE! >> "!ZLIB_LOG_FILENAME!" 2>&1
 	IF NOT !ERRORLEVEL! EQU 0 (
 		ECHO FAILED!
 		ECHO 	See!ZLIB_LOG_FILENAME! for more details
@@ -1312,7 +1312,7 @@ REM @param log-filename Absolute path and filename for log output
 	)
 	ECHO done.
 	ECHO | SET /P=Installing zlib ... 
-	!CMAKE! --build . --target install\fast >> "!ZLIB_LOG_FILENAME!" 2>&1
+	!CMAKE! --build . --config !BUILD_TYPE_RELEASE! --target install\fast >> "!ZLIB_LOG_FILENAME!" 2>&1
 	IF NOT !ERRORLEVEL! EQU 0 (
 		ECHO FAILED!
 		ECHO 	See !ZLIB_LOG_FILENAME! for more details
@@ -1374,7 +1374,7 @@ REM @param log-filename Absolute path and filename for log output
 	)
 	ECHO done.
 	ECHO | SET /P=Building libssh2 ... 
-	!CMAKE! --build . >> "!LIBSSH2_LOG_FILENAME!" 2>&1
+	!CMAKE! --build . --config !BUILD_TYPE_RELEASE! >> "!LIBSSH2_LOG_FILENAME!" 2>&1
 	IF NOT !ERRORLEVEL! EQU 0 (
 		ECHO FAILED!
 		ECHO 	See !LIBSSH2_LOG_FILENAME! for more details
@@ -1382,7 +1382,7 @@ REM @param log-filename Absolute path and filename for log output
 	)
 	ECHO done.
 	ECHO | SET /P=Installing libssh2 ... 
-	!CMAKE! --build . --target install >> "!LIBSSH2_LOG_FILENAME!" 2>&1
+	!CMAKE! --build . --config !BUILD_TYPE_RELEASE! --target install >> "!LIBSSH2_LOG_FILENAME!" 2>&1
 	IF NOT !ERRORLEVEL! EQU 0 (
 		ECHO FAILED!
 		ECHO 	See !LIBSSH2_LOG_FILENAME! for more details
@@ -1513,7 +1513,7 @@ REM @param log-filename Absolute path and filename for log output
 		EXIT /B
 	)
 	ECHO | SET /P=Building driver ... 
-	!CMAKE! --build . >> "!DRIVER_LOG_FILENAME!" 2>&1
+	!CMAKE! --build . --config !DRIVER_BUILD_TYPE! >> "!DRIVER_LOG_FILENAME!" 2>&1
 	IF NOT !ERRORLEVEL! EQU 0 (
 		ECHO FAILED!
 		ECHO 	See !DRIVER_LOG_FILENAME! for more details
@@ -1521,7 +1521,7 @@ REM @param log-filename Absolute path and filename for log output
 	)
 	ECHO done.
 	ECHO | SET /P=Installing driver ...
-	!CMAKE! --build . --target install >> "!DRIVER_LOG_FILENAME!" 2>&1
+	!CMAKE! --build . --config !DRIVER_BUILD_TYPE! --target install >> "!DRIVER_LOG_FILENAME!" 2>&1
 	IF NOT !ERRORLEVEL! EQU 0 (
 		ECHO FAILED!
 		ECHO 	See !DRIVER_LOG_FILENAME! for more details

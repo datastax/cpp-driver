@@ -52,6 +52,13 @@ void PolicyTool::create_schema(CassSession* session, int dc1, int dc2)
                             str(boost::format("CREATE TABLE %s (k int PRIMARY KEY, i int)") % test_utils::SIMPLE_TABLE));
 }
 
+void PolicyTool::drop_schema(CassSession* session) {
+  // Drop the keyspace (ignore any and all errors)
+  test_utils::execute_query_with_error(session,
+    str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+    % test_utils::SIMPLE_KEYSPACE));
+}
+
 void PolicyTool::init(CassSession* session, int n, CassConsistency cl, bool batch)
 {
   std::string query = str(boost::format("INSERT INTO %s (k, i) VALUES (0, 0)") % test_utils::SIMPLE_TABLE);

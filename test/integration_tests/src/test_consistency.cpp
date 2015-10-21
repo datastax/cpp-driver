@@ -14,11 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-# define BOOST_TEST_MODULE cassandra
-#endif
-
-#include "cql_ccm_bridge.hpp"
 #include "test_utils.hpp"
 #include "policy_tools.hpp"
 
@@ -29,9 +24,13 @@
 #include <boost/thread.hpp>
 
 struct ConsistencyTests {
-  ConsistencyTests() {
-    boost::debug::detect_memory_leaks(false);
-  }
+public:
+  boost::shared_ptr<CCM::Bridge> ccm;
+  std::string ip_prefix;
+
+  ConsistencyTests()
+    : ccm(new CCM::Bridge("config.txt"))
+    , ip_prefix(ccm->get_ip_prefix()) {}
 };
 
 BOOST_FIXTURE_TEST_SUITE(consistency, ConsistencyTests)
@@ -40,10 +39,11 @@ BOOST_AUTO_TEST_CASE(simple_two_nodes)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 2);
+  if (ccm->create_cluster(2)) {
+    ccm->start_cluster();
+  }
 
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 2, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 2, 0);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -80,16 +80,20 @@ BOOST_AUTO_TEST_CASE(simple_two_nodes)
     BOOST_CHECK_EQUAL(init_result, CASS_ERROR_SERVER_UNAVAILABLE);
     BOOST_CHECK_EQUAL(query_result, CASS_ERROR_SERVER_UNAVAILABLE);
   }
+
+  // Ensure the keyspace is dropped
+  policy_tool.drop_schema(session.get());
 }
 
 BOOST_AUTO_TEST_CASE(one_node_down)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
+  if (ccm->create_cluster(3)) {
+    ccm->start_cluster();
+  }
 
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 3, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 3, 0);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -104,8 +108,7 @@ BOOST_AUTO_TEST_CASE(one_node_down)
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
 
-  ccm->decommission(2);
-  boost::this_thread::sleep(boost::posix_time::seconds(20));	// wait for node to be down
+  ccm->decommission_node(2);
 
   {
     CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_ONE);	// Should work (N=2, RF=3)
@@ -131,16 +134,20 @@ BOOST_AUTO_TEST_CASE(one_node_down)
     BOOST_CHECK_EQUAL(init_result,  CASS_OK);
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
+
+  // Destroy the current cluster (chaotic tests; decommissioned nodes)
+  ccm->remove_cluster();
 }
 
 BOOST_AUTO_TEST_CASE(two_nodes_down)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
+  if (ccm->create_cluster(3)) {
+    ccm->start_cluster();
+  }
 
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 3, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 3, 0);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -155,9 +162,8 @@ BOOST_AUTO_TEST_CASE(two_nodes_down)
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
 
-  ccm->decommission(2);
-  ccm->decommission(3);
-  boost::this_thread::sleep(boost::posix_time::seconds(20));	// wait for nodes to be down
+  ccm->decommission_node(2);
+  ccm->decommission_node(3);
 
   {
     CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_ONE);	// Should work (N=1, RF=3)
@@ -177,6 +183,9 @@ BOOST_AUTO_TEST_CASE(two_nodes_down)
     BOOST_CHECK(init_result  != CASS_OK);
     BOOST_CHECK(query_result != CASS_OK);
   }
+
+  // Destroy the current cluster (chaotic tests; decommissioned nodes)
+  ccm->remove_cluster();
 }
 
 BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
@@ -186,10 +195,11 @@ BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
   cass_cluster_set_retry_policy(cluster.get(), downgrading_policy);
   cass_cluster_set_connection_heartbeat_interval(cluster.get(), 0);
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
+  if (ccm->create_cluster(3)) {
+    ccm->start_cluster();
+  }
 
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 3, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 3, 0);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -204,7 +214,7 @@ BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
 
-  ccm->pause(2);
+  ccm->pause_node(2);
 
   {
     CassError init_result;
@@ -219,7 +229,7 @@ BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
 
-  ccm->pause(3);
+  ccm->pause_node(3);
 
   {
     CassError init_result;
@@ -247,10 +257,13 @@ BOOST_AUTO_TEST_CASE(retry_policy_downgrading)
     BOOST_CHECK_EQUAL(query_result, CASS_OK);
   }
 
-  ccm->resume(2);
-  ccm->resume(3);
+  ccm->resume_node(2);
+  ccm->resume_node(3);
 
   cass_retry_policy_free(downgrading_policy);
+
+  // Ensure the keyspace is dropped
+  policy_tool.drop_schema(session.get());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
