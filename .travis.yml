@@ -1,45 +1,65 @@
 language: c++
+sudo: false
 compiler:
   - clang
   - gcc
+addons:
+  apt:
+    packages:
+      - libssl-dev
+      - libssh2-1-dev
+cache:
+  directories:
+    - ${HOME}/dependencies
 env:
+  global:
+    - BOOST_VERSION=1.59.0
+    - BOOST_FILE_VERSION=1_59_0
   matrix:
     - LIBUV_VERSION=0.10.x EXACT_LIBUV_VERSION=0.10.36
-    - LIBUV_VERSION=1.x EXACT_LIBUV_VERSION=1.7.4
-before_install:
-  - sudo add-apt-repository ppa:boost-latest/ppa -y
-  - sudo apt-get update -qq
-  - sudo apt-get install libboost1.55-all-dev libssl-dev libssh2-1-dev -qq
-  - wget -q http://dist.libuv.org/dist/v${EXACT_LIBUV_VERSION}/libuv-v${EXACT_LIBUV_VERSION}.tar.gz
+    - LIBUV_VERSION=1.x EXACT_LIBUV_VERSION=1.7.5
 install:
-  - tar xzf libuv-v${EXACT_LIBUV_VERSION}.tar.gz
-  - cd libuv-v${EXACT_LIBUV_VERSION}
-  - if [ "${LIBUV_VERSION}" == "0.10.x" ]; then
-      make;
-      mkdir -p ${PWD}/../lib/libuv-${LIBUV_VERSION}/lib;
-      cp libuv* ${PWD}/../lib/libuv-${LIBUV_VERSION}/lib;
-      cp -r include ${PWD}/../lib/libuv-${LIBUV_VERSION};
-      cd ${PWD}/../lib/libuv-${LIBUV_VERSION}/lib;
-      ln -s libuv.so libuv.so.0.10;
+  - if [ ! -d "${HOME}/dependencies/libuv-${LIBUV_VERSION}" ]; then
+      wget -q http://dist.libuv.org/dist/v${EXACT_LIBUV_VERSION}/libuv-v${EXACT_LIBUV_VERSION}.tar.gz;
+      tar xzf libuv-v${EXACT_LIBUV_VERSION}.tar.gz;
+      cd libuv-v${EXACT_LIBUV_VERSION};
+      if [ "${LIBUV_VERSION}" == "0.10.x" ]; then
+        make -j2;
+        mkdir -p ${HOME}/dependencies/libuv-${LIBUV_VERSION}/lib;
+        cp libuv* ${HOME}/dependencies/libuv-${LIBUV_VERSION}/lib;
+        cp -r include ${HOME}/dependencies/libuv-${LIBUV_VERSION};
+        cd ${HOME}/dependencies/libuv-${LIBUV_VERSION}/lib;
+        ln -s libuv.so libuv.so.0.10;
+        cd - 2&> /dev/null;
+      fi;
+      if [ "${LIBUV_VERSION}" == "1.x" ]; then
+        sh autogen.sh;
+        ./configure --prefix=${HOME}/dependencies/libuv-${LIBUV_VERSION};
+        make -j2 install;
+      fi;
+      cd - 2&> /dev/null
+    else echo "Using Cached libuv v${LIBUV_VERSION}. Dependency does not need to be re-compiled";
     fi
-  - if [ "${LIBUV_VERSION}" == "1.x" ]; then
-      sh autogen.sh;
-      ./configure --prefix=${PWD}/../lib/libuv-${LIBUV_VERSION};
-      make -s install;
+  - if [ ! -d "${HOME}/dependencies/boost_${BOOST_FILE_VERSION}" ]; then
+      wget -q http://sourceforge.net/projects/boost/files/boost/${BOOST_VERSION}/boost_${BOOST_FILE_VERSION}.tar.gz/download -O boost_${BOOST_FILE_VERSION}.tar.gz;
+      tar xzf boost_${BOOST_FILE_VERSION}.tar.gz;
+      cd boost_${BOOST_FILE_VERSION};
+      ./bootstrap.sh --with-libraries=atomic,chrono,date_time,log,program_options,random,system,thread,test --prefix=${HOME}/dependencies/boost_${BOOST_FILE_VERSION};
+      ./b2 -j2 install;
+      cd - 2&> /dev/null;
+    else echo "Using Cached Boost v${BOOST_VERSION}. Dependency does not need to be re-compiled";
     fi
   - cd ${TRAVIS_BUILD_DIR}
 before_script:
   - EXTRA_CXX_FLAGS=
-  - BUILD_EXAMPLES=ON
-  - BUILD_TESTS=ON
+  - EXTRA_C_FLAGS=
+  - USE_BOOST_ATOMIC=OFF
   - if [ "$CXX" == "clang++" ]; then
-      EXTRA_CXX_FLAGS="-Wno-unknown-warning-option";
-      BUILD_EXAMPLES=OFF;
-      BUILD_TESTS=OFF;
+      EXTRA_CXX_FLAGS="-Wno-unknown-warning-option -Wno-gnu-folding-constant -Wno-sign-compare";
+      EXTRA_C_FLAGS="-Wno-unknown-warning-option";
+      USE_BOOST_ATOMIC=ON;
     fi
-  - CXXFLAGS="${EXTRA_CXX_FLAGS}" cmake -DLIBUV_ROOT_DIR=lib/libuv-${LIBUV_VERSION}/ -DCASS_BUILD_STATIC=ON -DCASS_BUILD_EXAMPLES=${BUILD_EXAMPLES} -DCASS_BUILD_TESTS=${BUILD_TESTS} .
+  - CFLAGS="${EXTRA_C_FLAGS}" CXXFLAGS="${EXTRA_CXX_FLAGS}" cmake -DBOOST_ROOT_DIR=${HOME}/dependencies/boost_${BOOST_FILE_VERSION} -DLIBUV_ROOT_DIR=${HOME}/dependencies/libuv-${LIBUV_VERSION}/ -DCASS_BUILD_STATIC=ON -DCASS_BUILD_EXAMPLES=ON -DCASS_BUILD_TESTS=ON -DCASS_USE_BOOST_ATOMIC=${USE_BOOST_ATOMIC} .
 script:
-  - make
-  - if [ "$CXX" != "clang++" ]; then
-      test/unit_tests/cassandra_unit_tests;
-    fi
+  - make -j2
+  - test/unit_tests/cassandra_unit_tests;
