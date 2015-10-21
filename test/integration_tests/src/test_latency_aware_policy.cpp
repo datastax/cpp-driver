@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
 #include <boost/thread.hpp> // Sleep functionality
@@ -33,29 +29,30 @@
 
 struct LatencyAwarePolicyTest {
 public:
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm_;
+  boost::shared_ptr<CCM::Bridge> ccm_;
 
   LatencyAwarePolicyTest()
-    : configuration_(cql::get_ccm_bridge_configuration())
+    : ccm_(new CCM::Bridge("config.txt"))
     , cluster_(cass_cluster_new())
     , thread_() {
-    boost::debug::detect_memory_leaks(false);
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-
     uv_mutex_init(&lock_);
-    uv_cond_init(&condition_); 
+    uv_cond_init(&condition_);
+
+    // Create the cluster
+    if (ccm_->create_cluster(3)) {
+      ccm_->start_cluster();
+    }
 
     // Initialize the cluster for latency aware
     cass_cluster_set_reconnect_wait_time(cluster_.get(), 1);
     cass_cluster_set_connect_timeout(cluster_.get(), 240 * test_utils::ONE_SECOND_IN_MICROS);
     cass_cluster_set_request_timeout(cluster_.get(), 240 * test_utils::ONE_SECOND_IN_MICROS);
-    test_utils::initialize_contact_points(cluster_.get(), configuration_.ip_prefix(), 3, 0);
+    test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 3, 0);
     cass_cluster_set_latency_aware_routing(cluster_.get(), cass_true);
     cass_cluster_set_latency_aware_routing_settings(cluster_.get(), 1e6, 1, 1, 1, 1);
     cass_cluster_set_protocol_version(cluster_.get(), 1); // Protocol for this test doesn't matter so simply support all C* versions
 
-    // Create the cluster and connect
-    ccm_ = cql::cql_ccm_bridge_t::create_and_start(configuration_, "test", 3, 0);
+    // Connect to the cluster
     session_ = test_utils::create_session(cluster_.get());
   }
 
@@ -105,9 +102,9 @@ public:
    */
   void create_latency(int node, unsigned int latency) {
     // Add latency to the node
-    ccm_->pause(node);
+    ccm_->pause_node(node);
     boost::this_thread::sleep_for(boost::chrono::milliseconds(latency));
-    ccm_->resume(node);
+    ccm_->resume_node(node);
   }
 
   /**
@@ -130,7 +127,6 @@ public:
 
 private:
   static test_utils::CassSessionPtr session_;
-  const cql::cql_ccm_bridge_configuration_t& configuration_;
   test_utils::CassClusterPtr cluster_;
   static bool is_error_;
   static bool is_running_;
@@ -171,7 +167,7 @@ private:
         cass_future_error_message(future.get(), &message.data, &message.length);
 
         // Indicate error occurred
-        BOOST_TEST_MESSAGE(std::string(message.data, message.length) << "' (" << cass_error_desc(error_code) << ")");
+        std::cerr << std::string(message.data, message.length) << "' (" << cass_error_desc(error_code) << ")" << std::endl;
         is_error_ = true;
         is_running_ = false;
       }

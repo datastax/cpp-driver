@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include <algorithm>
 
 #if !defined(WIN32) && !defined(_WIN32)
@@ -44,9 +40,17 @@ struct StressTests : public test_utils::MultipleNodesTest {
     session = cass_session_new();
     test_utils::CassFuturePtr session_future(cass_session_connect(session, cluster));
     test_utils::wait_and_check_error(session_future.get());
+
+    test_utils::execute_query(session, "CREATE KEYSPACE tester WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 3};");
+    test_utils::execute_query(session, "USE tester;");
   }
 
   ~StressTests() {
+    // Drop the keyspace (ignore any and all errors)
+    test_utils::execute_query_with_error(session,
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+      % "tester"));
+
     cass_session_free(session);
   }
 
@@ -154,7 +158,7 @@ struct StressTests : public test_utils::MultipleNodesTest {
 
   bool kill_task() {
     boost::this_thread::sleep_for(boost::chrono::milliseconds(300));
-    ccm->kill(2);
+    ccm->kill_node(2);
     return true;
   }
 };
@@ -167,9 +171,6 @@ BOOST_FIXTURE_TEST_SUITE(stress, StressTests)
 
 BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
 {
-  test_utils::execute_query(session, "CREATE KEYSPACE tester WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 3};");
-  test_utils::execute_query(session, "USE tester;");
-
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
 
   test_utils::execute_query(session, str(boost::format(test_utils::CREATE_TABLE_TIME_SERIES) % table_name));
@@ -208,13 +209,13 @@ BOOST_AUTO_TEST_CASE(parallel_insert_and_select)
 
   boost::wait_for_all(futures.begin(), futures.end());
   BOOST_REQUIRE(std::find_if (futures.begin(), futures.end(), is_failed) == futures.end());
+
+  // Drop the keyspace (ignore any and all errors)
+  test_utils::execute_query_with_error(session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % "tester"));
 }
 
 BOOST_AUTO_TEST_CASE(parallel_insert_and_select_with_nodes_failing)
 {
-  test_utils::execute_query(session, "CREATE KEYSPACE tester WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 3};");
-  test_utils::execute_query(session, "USE tester;");
-
   std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
 
   test_utils::execute_query(session, str(boost::format(test_utils::CREATE_TABLE_TIME_SERIES) % table_name));

@@ -129,7 +129,7 @@ int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
 
     Buffer buf(buf_size);
 
-    size_t pos = buf.encode_uint16(0, consistency_);
+    size_t pos = buf.encode_uint16(0, consistency());
     if (version >= 3) {
       pos = buf.encode_byte(pos, flags);
 

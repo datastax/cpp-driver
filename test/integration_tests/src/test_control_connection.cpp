@@ -14,13 +14,8 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "testing.hpp"
 
-#include "cql_ccm_bridge.hpp"
 #include "test_utils.hpp"
 
 #include <boost/test/debug.hpp>
@@ -34,15 +29,19 @@
 #include <stdarg.h>
 
 struct ControlConnectionTests {
-  ControlConnectionTests() {
-    boost::debug::detect_memory_leaks(false);
-  }
+public:
+  boost::shared_ptr<CCM::Bridge> ccm;
+  std::string ip_prefix;
+
+  ControlConnectionTests()
+    : ccm(new CCM::Bridge("config.txt"))
+    , ip_prefix(ccm->get_ip_prefix()) {}
 
   void check_for_live_hosts(test_utils::CassSessionPtr session,
                             const std::set<std::string>& should_be_present) {
     std::set<std::string> hosts;
 
-    for (size_t i = 0; i < should_be_present.size() + 1; ++i) {
+    for (size_t i = 0; i < should_be_present.size() + 2; ++i) {
       const char* query = "SELECT * FROM system.schema_keyspaces";
       test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
       test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
@@ -51,7 +50,7 @@ struct ControlConnectionTests {
       } else {
         CassString message;
         cass_future_error_message(future.get(), &message.data, &message.length);
-        BOOST_TEST_MESSAGE("Failed to query host: " << std::string(message.data, message.length));
+        std::cerr << "Failed to query host: " << std::string(message.data, message.length) << std::endl;
       }
     }
 
@@ -98,10 +97,11 @@ BOOST_AUTO_TEST_CASE(connect_invalid_port)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 1);
+  if (ccm->create_cluster()) {
+    ccm->start_cluster();
+  }
 
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
 
   cass_cluster_set_port(cluster.get(), 9999); // Invalid port
 
@@ -114,87 +114,94 @@ BOOST_AUTO_TEST_CASE(reconnection)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 2);
+  if (ccm->create_cluster(2)) {
+    // Ensure the cluster data is cleared to eliminate bootstrapping errors
+    ccm->kill_cluster();
+    ccm->clear_cluster_data();
+  }
+  ccm->start_cluster();
 
   // Ensure RR policy
   cass_cluster_set_load_balance_round_robin(cluster.get());
 
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
   // Stop the node of the current control connection
-  ccm->stop(1);
+  ccm->stop_node(1);
 
   // Add a new node to make sure the node gets added on the new control connection to node 2
-  ccm->add_node(3);
-   // Allow this node to come up without node1
-  ccm->start(3, "-Dcassandra.consistent.rangemovement=false");
-  boost::this_thread::sleep_for(boost::chrono::seconds(10));
+  ccm->bootstrap_node("-Dcassandra.consistent.rangemovement=false"); // Allow this node to come up without node1
 
   // Stop the other node
-  ccm->stop(2);
+  ccm->stop_node(2);
 
-  check_for_live_hosts(session, build_single_ip(conf.ip_prefix(), 3));
+  check_for_live_hosts(session, build_single_ip(ip_prefix, 3));
+
+  // Destroy the current cluster (node was added)
+  ccm->remove_cluster();
 }
 
 BOOST_AUTO_TEST_CASE(topology_change)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 1);
+  if (ccm->create_cluster()) {
+    ccm->start_cluster();
+  }
 
   // Ensure RR policy
-  cass_cluster_set_load_balance_round_robin(cluster.get());;
+  cass_cluster_set_load_balance_round_robin(cluster.get());
 
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
   // Adding a new node will trigger a "NEW_NODE" event
-  ccm->bootstrap(2);
-  boost::this_thread::sleep_for(boost::chrono::seconds(10));
+  ccm->bootstrap_node();
 
-  std::set<std::string> should_be_present = build_ip_range(conf.ip_prefix(), 1, 2);
+  std::set<std::string> should_be_present = build_ip_range(ip_prefix, 1, 2);
   check_for_live_hosts(session, should_be_present);
 
   // Decommissioning a node will trigger a "REMOVED_NODE" event
-  ccm->decommission(2);
+  ccm->decommission_node(2);
 
-  should_be_present.erase(conf.ip_prefix() + "2");
+  should_be_present.erase(ip_prefix + "2");
   check_for_live_hosts(session, should_be_present);
+
+  // Destroy the current cluster (decommissioned node)
+  ccm->remove_cluster();
 }
 
 BOOST_AUTO_TEST_CASE(status_change)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 2);
+  if (ccm->create_cluster(2)) {
+    ccm->start_cluster();
+  }
 
   // Ensure RR policy
   cass_cluster_set_load_balance_round_robin(cluster.get());;
 
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
-  std::set<std::string> should_be_present = build_ip_range(conf.ip_prefix(), 1, 2);
+  std::set<std::string> should_be_present = build_ip_range(ip_prefix, 1, 2);
   check_for_live_hosts(session, should_be_present);
 
   // Stopping a node will trigger a "DOWN" event
-  ccm->stop(2);
+  ccm->stop_node(2);
 
-  should_be_present.erase(conf.ip_prefix() + "2");
+  should_be_present.erase(ip_prefix + "2");
   check_for_live_hosts(session, should_be_present);
 
   // Starting a node will trigger an "UP" event
-  ccm->start(2);
-  boost::this_thread::sleep_for(boost::chrono::seconds(10));
+  ccm->start_node(2);
 
-  should_be_present.insert(conf.ip_prefix() + "2");
+  should_be_present.insert(ip_prefix + "2");
   check_for_live_hosts(session, should_be_present);
 }
 
@@ -202,21 +209,22 @@ BOOST_AUTO_TEST_CASE(node_discovery)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
+  if (ccm->create_cluster(3)) {
+    ccm->start_cluster();
+  }
 
   // Ensure RR policy
   cass_cluster_set_load_balance_round_robin(cluster.get());;
 
   // Only add a single IP
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
   // Allow the nodes to be discovered
-  boost::this_thread::sleep_for(boost::chrono::seconds(20)); //TODO: Remove sleep and implement a pre-check
+  boost::this_thread::sleep_for(boost::chrono::seconds(10)); //TODO: Remove sleep and implement a pre-check
 
-  check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 3));
+  check_for_live_hosts(session, build_ip_range(ip_prefix, 1, 3));
 }
 
 BOOST_AUTO_TEST_CASE(node_discovery_invalid_ips)
@@ -226,9 +234,9 @@ BOOST_AUTO_TEST_CASE(node_discovery_invalid_ips)
   {
     test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-
-    const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
+    if (ccm->create_cluster(3)) {
+      ccm->start_cluster();
+    }
 
     // Ensure RR policy
     cass_cluster_set_load_balance_round_robin(cluster.get());;
@@ -237,15 +245,15 @@ BOOST_AUTO_TEST_CASE(node_discovery_invalid_ips)
     cass_cluster_set_contact_points(cluster.get(), "192.0.2.0,192.0.2.1,192.0.2.3");
 
     // Only add a single valid IP
-    test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
 
-    // Make sure the timout is very high for the initial invalid IPs
+    // Make sure the timeout is very high for the initial invalid IPs
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get(), NULL, 60 * test_utils::ONE_SECOND_IN_MICROS));
 
     // Allow the nodes to be discovered
-    boost::this_thread::sleep_for(boost::chrono::seconds(20)); //TODO: Remove sleep and implement a pre-check
+    boost::this_thread::sleep_for(boost::chrono::seconds(10)); //TODO: Remove sleep and implement a pre-check
 
-    check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 3));
+    check_for_live_hosts(session, build_ip_range(ip_prefix, 1, 3));
   }
 
   BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 3ul);
@@ -255,14 +263,15 @@ BOOST_AUTO_TEST_CASE(node_discovery_no_local_rows)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
+  if (ccm->create_cluster(3)) {
+    ccm->start_cluster();
+  }
 
   // Ensure RR policy
   cass_cluster_set_load_balance_round_robin(cluster.get());;
 
   // Only add a single valid IP
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
 
   {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
@@ -274,25 +283,25 @@ BOOST_AUTO_TEST_CASE(node_discovery_no_local_rows)
   // Allow the nodes to be discovered
   boost::this_thread::sleep_for(boost::chrono::seconds(10)); //TODO: Remove sleep and implement a pre-check
 
-  check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 3));
+  check_for_live_hosts(session, build_ip_range(ip_prefix, 1, 3));
 }
 
 BOOST_AUTO_TEST_CASE(node_discovery_no_rpc_addresss)
 {
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  test_utils::CassLog::reset("No rpc_address for host " + conf.ip_prefix() + "3 in system.peers on " + conf.ip_prefix() + "1. Ignoring this entry.");
+  test_utils::CassLog::reset("No rpc_address for host " + ip_prefix + "3 in system.peers on " + ip_prefix + "1. Ignoring this entry.");
 
   {
     test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-    const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
+    if (ccm->create_cluster(3)) {
+      ccm->start_cluster();
+    }
 
     // Ensure RR policy
     cass_cluster_set_load_balance_round_robin(cluster.get());;
 
     // Only add a single valid IP
-    test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
 
     // Make the 'rpc_address' null on all applicable hosts (1 and 2)
     {
@@ -300,7 +309,7 @@ BOOST_AUTO_TEST_CASE(node_discovery_no_rpc_addresss)
 
       for (int i = 0; i < 3; ++i) {
         std::ostringstream ss;
-        ss << "UPDATE system.peers SET rpc_address = null WHERE peer = '" << conf.ip_prefix() << "3'";
+        ss << "UPDATE system.peers SET rpc_address = null WHERE peer = '" << ip_prefix << "3'";
         test_utils::execute_query(session.get(), ss.str());
       }
     }
@@ -308,7 +317,7 @@ BOOST_AUTO_TEST_CASE(node_discovery_no_rpc_addresss)
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
     // This should only contain 2 address because one peer is ignored
-    check_for_live_hosts(session, build_ip_range(conf.ip_prefix(), 1, 2));
+    check_for_live_hosts(session, build_ip_range(ip_prefix, 1, 2));
   }
 
   BOOST_CHECK(test_utils::CassLog::message_count() > 0);
@@ -320,19 +329,21 @@ BOOST_AUTO_TEST_CASE(full_outage)
 
   const char* query = "SELECT * FROM system.local";
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 1);
+  if (ccm->create_cluster()) {
+    ccm->start_cluster();
+  }
 
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
   test_utils::execute_query(session.get(), query);
 
-  ccm->stop();
+  ccm->stop_cluster();
   BOOST_CHECK(test_utils::execute_query_with_error(session.get(), query) == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 
-  ccm->start();
+  ccm->start_cluster();
 
-  boost::this_thread::sleep_for(boost::chrono::seconds(10));
+  // Allow the nodes to be discovered
+  boost::this_thread::sleep_for(boost::chrono::seconds(10)); //TODO: Remove sleep and implement a pre-check
 
   test_utils::execute_query(session.get(), query);
 }
@@ -349,14 +360,15 @@ BOOST_AUTO_TEST_CASE(full_outage)
  */
 BOOST_AUTO_TEST_CASE(node_decommission)
 {
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  test_utils::CassLog::reset("Adding pool for host " + conf.ip_prefix());
+  test_utils::CassLog::reset("Adding pool for host " + ip_prefix);
 
   {
     test_utils::CassClusterPtr cluster(cass_cluster_new());
-    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 2);
+    if (ccm->create_cluster(2)) {
+      ccm->start_cluster();
+    }
 
-    test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 2, 0);
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 2, 0);
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
     // Wait for all hosts to be added to the pool; timeout after 10 seconds
@@ -366,13 +378,16 @@ BOOST_AUTO_TEST_CASE(node_decommission)
     }
     BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 2ul);
 
-    test_utils::CassLog::reset("Spawning new connection to host " + conf.ip_prefix() + "1");
-    ccm->decommission(1);
-    BOOST_TEST_MESSAGE("Node Decommissioned [" << conf.ip_prefix() << "1]: Sleeping for 30 seconds");
+    test_utils::CassLog::reset("Spawning new connection to host " + ip_prefix + "1");
+    ccm->decommission_node(1);
+    std::cout << "Node Decommissioned [" << ip_prefix << "1]: Sleeping for 30 seconds" << std::endl;
     boost::this_thread::sleep_for(boost::chrono::seconds(30));
   }
-  
+
   BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 0ul);
+
+  // Destroy the current cluster (decommissioned node)
+  ccm->remove_cluster();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

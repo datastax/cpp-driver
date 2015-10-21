@@ -11,15 +11,26 @@ endif()
 set(PROJECT_CCM_BRIDGE_LIB_NAME CCMBridge)
 project(${PROJECT_CCM_BRIDGE_LIB_NAME} C CXX)
 
+# Options
+option(CCM_VERBOSE_LOGGING "Disable/Enable CCM verbose console logging" OFF)
+if(CCM_VERBOSE_LOGGING)
+  add_definitions(-DCCM_VERBOSE_LOGGING)
+endif()
+option(OPENSSL_CLEANUP "Cleanup memory resources used by OpenSSL" ON)
+if(OPENSSL_CLEANUP)
+  include_directories(${OPENSSL_INCLUDE_DIR})
+  add_definitions(-DOPENSSL_CLEANUP)
+endif()
+
 # Constants
 set(CCM_BRIDGE_CONFIGURATION_FILE ${PROJECT_SOURCE_DIR}/data/config.txt) # CCM configuration file
 
 # Gather the header and source files
-file(GLOB CCM_BRIDGE_INC_FILES ${PROJECT_SOURCE_DIR}/include/*.hpp)
+file(GLOB CCM_BRIDGE_INC_FILES ${PROJECT_SOURCE_DIR}/src/*.hpp)
 file(GLOB CCM_BRIDGE_SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
 # Build up the include paths
-set(INTEGRATION_TESTS_INCLUDES ${PROJECT_SOURCE_DIR}/include
+set(INTEGRATION_TESTS_INCLUDES ${PROJECT_SOURCE_DIR}/src
   ${Boost_INCLUDE_DIRS}
   ${LIBSSH2_INCLUDE_DIRS})
 
@@ -32,11 +43,6 @@ set(INTEGRATION_TESTS_LIBS ${Boost_LIBRARIES}
   ${OPENSSL_LIBRARIES})
 if(ZLIB_FOUND)
   set(INTEGRATION_TESTS_LIBS ${INTEGRATION_TESTS_LIBS} ${ZLIB_LIBRARIES})
-endif()
-
-# Ensure the Boost logger can be utilized
-if(NOT Boost_LOG_FOUND)
-  add_definitions(-DCQL_NO_BOOST_LOG)
 endif()
 
 # Set platform conditional compilation flags

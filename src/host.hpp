@@ -74,7 +74,7 @@ public:
   void set_mark(bool mark) { mark_ = mark; }
 
   const std::string& rack() const { return rack_; }
-  const std::string& dc() const { return dc_; } 
+  const std::string& dc() const { return dc_; }
   void set_rack_and_dc(const std::string& rack, const std::string& dc) {
     rack_ = rack;
     dc_ = dc;
@@ -167,6 +167,7 @@ private:
 };
 
 typedef std::map<Address, SharedRefPtr<Host> > HostMap;
+typedef std::pair<Address, SharedRefPtr<Host> > HostPair;
 typedef std::vector<SharedRefPtr<Host> > HostVec;
 typedef CopyOnWritePtr<HostVec> CopyOnWriteHostVec;
 

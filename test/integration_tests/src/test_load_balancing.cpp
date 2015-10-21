@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
 #include <boost/lexical_cast.hpp>
@@ -29,14 +25,16 @@
 #include "test_utils.hpp"
 #include "policy_tools.hpp"
 
-#include "cql_ccm_bridge.hpp"
-
 #define MAX_RETRIES 50
 
 struct LoadBalancingTests {
-  LoadBalancingTests() {
-    boost::debug::detect_memory_leaks(false);
-  }
+public:
+  boost::shared_ptr<CCM::Bridge> ccm;
+  std::string ip_prefix;
+
+  LoadBalancingTests()
+    : ccm(new CCM::Bridge("config.txt"))
+    , ip_prefix(ccm->get_ip_prefix()) {}
 
   /**
    * Wait for the total number of connections established
@@ -61,12 +59,13 @@ BOOST_AUTO_TEST_CASE(round_robin)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
+  if (ccm->create_cluster(3)) {
+    ccm->start_cluster();
+  }
 
   cass_cluster_set_load_balance_round_robin(cluster.get());;
 
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
   wait_for_total_connections(session, 3);
@@ -77,33 +76,37 @@ BOOST_AUTO_TEST_CASE(round_robin)
   policy_tool.init(session.get(), 12, CASS_CONSISTENCY_ONE);
   policy_tool.query(session.get(), 12, CASS_CONSISTENCY_ONE);
 
-  std::string host1(conf.ip_prefix() + "1");
-  std::string host2(conf.ip_prefix() + "2");
-  std::string host3(conf.ip_prefix() + "3");
+  std::string host1(ip_prefix + "1");
+  std::string host2(ip_prefix + "2");
+  std::string host3(ip_prefix + "3");
 
   policy_tool.assert_queried(host1, 4);
   policy_tool.assert_queried(host2, 4);
   policy_tool.assert_queried(host3, 4);
 
   policy_tool.reset_coordinators();
-  ccm->stop(1);
+  ccm->stop_node(1);
 
   policy_tool.query(session.get(), 12, CASS_CONSISTENCY_ONE);
 
   policy_tool.assert_queried(host2, 6);
   policy_tool.assert_queried(host3, 6);
+
+  // Restart stopped nodes
+  ccm->start_node(1);
 }
 
 BOOST_AUTO_TEST_CASE(dc_aware)
 {
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 2, 1);
+  if (ccm->create_cluster(2, 1)) {
+    ccm->start_cluster();
+  }
 
   cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1", 1, cass_false);
 
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
   wait_for_total_connections(session, 3);
@@ -114,20 +117,24 @@ BOOST_AUTO_TEST_CASE(dc_aware)
   policy_tool.init(session.get(), 12, CASS_CONSISTENCY_EACH_QUORUM);
   policy_tool.query(session.get(), 12, CASS_CONSISTENCY_ONE);
 
-  std::string host1(conf.ip_prefix() + "1");
-  std::string host2(conf.ip_prefix() + "2");
-  std::string host3(conf.ip_prefix() + "3");
+  std::string host1(ip_prefix + "1");
+  std::string host2(ip_prefix + "2");
+  std::string host3(ip_prefix + "3");
 
   policy_tool.assert_queried(host1, 6);
   policy_tool.assert_queried(host2, 6);
 
   policy_tool.reset_coordinators();
-  ccm->stop(1);
-  ccm->stop(2);
+  ccm->stop_node(1);
+  ccm->stop_node(2);
 
   policy_tool.query(session.get(), 12, CASS_CONSISTENCY_ONE);
 
   policy_tool.assert_queried(host3, 12);
+
+  // Restart stopped nodes
+  ccm->start_node(1);
+  ccm->start_node(2);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

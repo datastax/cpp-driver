@@ -46,10 +46,10 @@ int get_port_from_cluster(CassCluster* cluster) {
 std::string get_contact_points_from_cluster(CassCluster* cluster) {
   std::string str;
 
-  const cass::Config::ContactPointList& contact_points
+  const ContactPointList& contact_points
       = cluster->config().contact_points();
 
-  for (cass::Config::ContactPointList::const_iterator it = contact_points.begin(),
+  for (ContactPointList::const_iterator it = contact_points.begin(),
        end = contact_points.end();
        it != end; ++it) {
     if (str.size() > 0) {
