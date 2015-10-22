@@ -38,6 +38,7 @@
 #define COMMENT "A TESTABLE COMMENT HERE"
 #define ALL_DATA_TYPES_TABLE_NAME "all"
 #define USER_DATA_TYPE_NAME "user_data_type"
+#define USER_DEFINED_FUNCTION_NAME "user_defined_function"
 
 /**
  * Schema Metadata Test Class
@@ -87,9 +88,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
         schema_meta_ = cass_session_get_schema_meta(session);
       }
       if (cass_schema_meta_snapshot_version(schema_meta_) == cass_schema_meta_snapshot_version(old)) {
-        boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-        BOOST_TEST_MESSAGE("Schema metadata was not refreshed or was not changed");
-        boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_all_errors);
+        std::cout << "Schema metadata was not refreshed or was not changed" << std::endl;
       }
       cass_schema_meta_free(old);
     } else {
@@ -132,6 +131,17 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     const CassColumnMeta* col_meta = cass_table_meta_column_by_name(schema_get_table(ks_name, table_name), col_name.c_str());
     BOOST_REQUIRE(col_meta);
     return col_meta;
+  }
+
+  const CassFunctionMeta* schema_get_function(const std::string& ks_name,
+                              const std::string& func_name,
+                              const std::vector<std::string>& func_types) {
+
+    const CassFunctionMeta* func_meta = cass_keyspace_meta_function_by_name(schema_get_keyspace(ks_name),
+      func_name.c_str(),
+      test_utils::implode(func_types, ',').c_str());
+    BOOST_REQUIRE(func_meta);
+    return func_meta;
   }
 
   void verify_fields(const test_utils::CassIteratorPtr& itr, const std::set<std::string>& expected_fields) {
@@ -451,6 +461,62 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     BOOST_REQUIRE_EQUAL_COLLECTIONS(udt_datatypes.begin(), udt_datatypes.end(), udt_field_names.begin(), udt_field_names.end());
   }
 
+  void verify_user_function(const std::string& ks_name,
+    const std::string& udf_name,
+    const std::vector<std::string>& udf_argument,
+    const std::vector<std::string> udf_value_types,
+    const std::string& udf_body,
+    const std::string udf_language,
+    const cass_bool_t is_called_on_null,
+    const CassValueType return_value_type) {
+    BOOST_REQUIRE_EQUAL(udf_argument.size(), udf_value_types.size());
+    const CassFunctionMeta* func_meta = schema_get_function(ks_name, udf_name, udf_value_types);
+    CassString func_meta_string_value;
+
+    // Function name
+    cass_function_meta_name(func_meta, &func_meta_string_value.data, &func_meta_string_value.length);
+    BOOST_CHECK(test_utils::Value<CassString>::equal(CassString(udf_name.c_str()), func_meta_string_value));
+
+    // Full Function name (includes datatypes of arguments)
+    std::stringstream udf_full_name;
+    udf_full_name << udf_name << "(" << test_utils::implode(udf_value_types, ',') << ")";
+    cass_function_meta_full_name(func_meta, &func_meta_string_value.data, &func_meta_string_value.length);
+    BOOST_CHECK(test_utils::Value<CassString>::equal(CassString(udf_full_name.str().c_str()), func_meta_string_value));
+
+    // Function body
+    cass_function_meta_body(func_meta, &func_meta_string_value.data, &func_meta_string_value.length);
+    BOOST_CHECK(test_utils::Value<CassString>::equal(CassString(udf_body.c_str()), func_meta_string_value));
+
+    // Function language
+    cass_function_meta_language(func_meta, &func_meta_string_value.data, &func_meta_string_value.length);
+    BOOST_CHECK(test_utils::Value<CassString>::equal(CassString(udf_language.c_str()), func_meta_string_value));
+
+    // Is function called on null input
+    BOOST_CHECK_EQUAL(is_called_on_null, cass_function_meta_called_on_null_input(func_meta));
+
+    // Function argument count
+    BOOST_CHECK_EQUAL(udf_value_types.size(), cass_function_meta_argument_count(func_meta));
+
+    // Function arguments (by index)
+    for (int i = 0; i < udf_argument.size(); ++i) {
+      const CassDataType* datatype;
+      cass_function_meta_argument(func_meta, i, &func_meta_string_value.data, &func_meta_string_value.length, &datatype);
+      BOOST_CHECK_EQUAL(udf_value_types[i].compare(std::string(test_utils::get_value_type(cass_data_type_type(datatype)))), 0);
+    }
+
+    // Function arguments (by name)
+    std::vector<std::string>::const_iterator value_iterator = udf_value_types.begin();
+    for (std::vector<std::string>::const_iterator iterator = udf_argument.begin(); iterator != udf_argument.end(); ++iterator) {
+      const CassDataType* datatype = cass_function_meta_argument_type_by_name(func_meta, (*iterator).c_str());
+      BOOST_CHECK_EQUAL((*value_iterator).compare(std::string(test_utils::get_value_type(cass_data_type_type(datatype)))), 0);
+      ++value_iterator;
+    }
+
+    // Function return type
+    const CassDataType* return_datatype = cass_function_meta_return_type(func_meta);
+    BOOST_CHECK_EQUAL(return_value_type, cass_data_type_type(return_datatype));
+  }
+
   void verify_user_data_type() {
     create_simple_strategy_keyspace();
     test_utils::execute_query(session, "USE " SIMPLE_STRATEGY_KEYSPACE_NAME);
@@ -474,6 +540,43 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     refresh_schema_meta();
     verify_user_type(SIMPLE_STRATEGY_KEYSPACE_NAME, USER_DATA_TYPE_NAME, udt_datatypes);
   }
+
+  void create_simple_strategy_function() {
+    test_utils::execute_query(session, str(boost::format("DROP FUNCTION IF EXISTS %s.%s")
+      % SIMPLE_STRATEGY_KEYSPACE_NAME
+      % USER_DEFINED_FUNCTION_NAME));
+    test_utils::execute_query(session,
+      str(boost::format("CREATE FUNCTION %s.%s(key int, val int) RETURNS NULL ON NULL INPUT RETURNS int LANGUAGE javascript AS 'key + val';")
+      % SIMPLE_STRATEGY_KEYSPACE_NAME
+      % USER_DEFINED_FUNCTION_NAME));
+    refresh_schema_meta();
+  }
+
+  void verify_user_defined_function() {
+    create_simple_strategy_keyspace();
+
+    // New UDF
+    create_simple_strategy_function();
+    std::vector<std::string> udf_arguments;
+    std::vector<std::string> udf_value_types;
+    udf_arguments.push_back("key");
+    udf_arguments.push_back("val");
+    udf_value_types.push_back(test_utils::get_value_type(CASS_VALUE_TYPE_INT));
+    udf_value_types.push_back(test_utils::get_value_type(CASS_VALUE_TYPE_INT));
+    refresh_schema_meta();
+    verify_user_function(SIMPLE_STRATEGY_KEYSPACE_NAME,
+      USER_DEFINED_FUNCTION_NAME, udf_arguments, udf_value_types,
+      "key + val",
+      "javascript", cass_false, CASS_VALUE_TYPE_INT);
+
+    // Drop UDF
+    test_utils::execute_query(session, str(boost::format("DROP FUNCTION %s.%s")
+      % SIMPLE_STRATEGY_KEYSPACE_NAME
+      % USER_DEFINED_FUNCTION_NAME));
+    refresh_schema_meta();
+    const CassFunctionMeta* func_meta = schema_get_function(SIMPLE_STRATEGY_KEYSPACE_NAME, USER_DEFINED_FUNCTION_NAME, udf_value_types);
+    BOOST_REQUIRE(func_meta != NULL);
+  }
 };
 
 BOOST_FIXTURE_TEST_SUITE(schema_metadata, TestSchemaMetadata)
@@ -485,8 +588,12 @@ BOOST_AUTO_TEST_CASE(simple) {
   verify_system_tables();// must be run first -- looking for "no other tables"
   verify_user_keyspace();
   verify_user_table();
-  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
+  if (version >= CCM::CassVersion("2.1.0")) {
     verify_user_data_type();
+  }
+  if (version >= CCM::CassVersion("2.2.0")) {
+    verify_user_defined_function();
+    //verify_user_defined_aggregate();
   }
 }
 
