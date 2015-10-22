@@ -17,6 +17,7 @@
 #include "cassandra.h"
 #include "testing.hpp"
 #include "test_utils.hpp"
+#include "metadata.hpp"
 
 #include <boost/test/unit_test.hpp>
 #include <boost/format.hpp>
@@ -46,15 +47,15 @@
  * schema metadata validation against.
  */
 struct TestSchemaMetadata : public test_utils::SingleSessionTest {
-  const CassSchema* schema_;
+  const CassSchemaMeta* schema_meta_;
 
   TestSchemaMetadata()
     : SingleSessionTest(1, 0)
-    , schema_(NULL) {}
+    , schema_meta_(NULL) {}
 
 	~TestSchemaMetadata() {
-    if (schema_) {
-      cass_schema_free(schema_);
+    if (schema_meta_) {
+      cass_schema_meta_free(schema_meta_);
 		}
 	}
 
@@ -74,23 +75,25 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
   }
 
   void refresh_schema_meta() {
-    if (schema_) {
-      const CassSchema* old(schema_);
-      schema_ = cass_session_get_schema(session);
+    if (schema_meta_) {
+      const CassSchemaMeta* old = schema_meta_;
+      schema_meta_ = cass_session_get_schema_meta(session);
 
       for (size_t i = 0;
-           i < 10 && cass::get_schema_meta_from_keyspace(schema_, "system") == cass::get_schema_meta_from_keyspace(old, "system");
+           i < 10 && cass_schema_meta_snapshot_version(schema_meta_) == cass_schema_meta_snapshot_version(old);
            ++i) {
         boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
-        cass_schema_free(schema_);
-        schema_ = cass_session_get_schema(session);
+        cass_schema_meta_free(schema_meta_);
+        schema_meta_ = cass_session_get_schema_meta(session);
       }
-      if (cass::get_schema_meta_from_keyspace(schema_, "system") == cass::get_schema_meta_from_keyspace(old, "system")) {
-        std::cout << "Schema metadata was not refreshed or was not changed" << std::endl;
+      if (cass_schema_meta_snapshot_version(schema_meta_) == cass_schema_meta_snapshot_version(old)) {
+        boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
+        BOOST_TEST_MESSAGE("Schema metadata was not refreshed or was not changed");
+        boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_all_errors);
       }
-      cass_schema_free(old);
+      cass_schema_meta_free(old);
     } else {
-      schema_ = cass_session_get_schema(session);
+      schema_meta_ = cass_session_get_schema_meta(session);
     }
 	}
 
@@ -110,44 +113,38 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     refresh_schema_meta();
 	}
 
-  const CassSchemaMeta* schema_get_keyspace(const std::string& ks_name) {
-    const CassSchemaMeta* ks_meta = cass_schema_get_keyspace(schema_, ks_name.c_str());
+  const CassKeyspaceMeta* schema_get_keyspace(const std::string& ks_name) {
+    const CassKeyspaceMeta* ks_meta = cass_schema_meta_keyspace_by_name(schema_meta_, ks_name.c_str());
     BOOST_REQUIRE(ks_meta);
     return ks_meta;
   }
 
-  const CassSchemaMeta* schema_get_table(const std::string& ks_name,
+  const CassTableMeta* schema_get_table(const std::string& ks_name,
                                      const std::string& table_name) {
-    const CassSchemaMeta* table_meta = cass_schema_meta_get_entry(schema_get_keyspace(ks_name), table_name.c_str());
+    const CassTableMeta* table_meta = cass_keyspace_meta_table_by_name(schema_get_keyspace(ks_name), table_name.c_str());
     BOOST_REQUIRE(table_meta);
     return table_meta;
   }
 
-  const CassSchemaMeta* schema_get_column(const std::string& ks_name,
+  const CassColumnMeta* schema_get_column(const std::string& ks_name,
                                       const std::string& table_name,
                                       const std::string& col_name) {
-    const CassSchemaMeta* col_meta = cass_schema_meta_get_entry(schema_get_table(ks_name, table_name), col_name.c_str());
+    const CassColumnMeta* col_meta = cass_table_meta_column_by_name(schema_get_table(ks_name, table_name), col_name.c_str());
     BOOST_REQUIRE(col_meta);
     return col_meta;
   }
 
-  void verify_fields(const CassSchemaMeta* meta, const std::set<std::string>& expected_fields) {
+  void verify_fields(const test_utils::CassIteratorPtr& itr, const std::set<std::string>& expected_fields) {
     // all fields present, nothing extra
     std::set<std::string> observed;
-    test_utils::CassIteratorPtr itr(cass_iterator_fields_from_schema_meta(meta));
     while (cass_iterator_next(itr.get())) {
-      const CassSchemaMetaField* field = cass_iterator_get_schema_meta_field(itr.get());
       CassString name;
-      cass_schema_meta_field_name(field, &name.data, &name.length);
+      cass_iterator_get_meta_field_name(itr.get(), &name.data, &name.length);
       observed.insert(std::string(name.data, name.length));
-      // can get same field by name as by iterator
-      BOOST_CHECK_EQUAL(cass_schema_meta_get_field(meta, std::string(name.data, name.length).c_str()), field);
     }
 
     BOOST_REQUIRE_EQUAL_COLLECTIONS(observed.begin(), observed.end(),
                                     expected_fields.begin(), expected_fields.end());
-
-    BOOST_CHECK(!cass_schema_meta_get_field(meta, "some bogus field"));
   }
 
 
@@ -203,15 +200,32 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     return fields;
   }
 
-  void verify_columns(const CassSchemaMeta* table_meta) {
-    test_utils::CassIteratorPtr itr(cass_iterator_from_schema_meta(table_meta));
+  void verify_fields_by_name(const CassKeyspaceMeta* keyspace_meta, const std::set<std::string>& fields) {
+    for (std::set<std::string>::iterator i = fields.begin(); i != fields.end(); ++i) {
+      BOOST_CHECK(cass_keyspace_meta_field_by_name(keyspace_meta, i->c_str()) != NULL);
+    }
+  }
+
+  void verify_fields_by_name(const CassTableMeta* table_meta, const std::set<std::string>& fields) {
+    for (std::set<std::string>::iterator i = fields.begin(); i != fields.end(); ++i) {
+      BOOST_CHECK(cass_table_meta_field_by_name(table_meta, i->c_str()) != NULL);
+    }
+  }
+
+  void verify_fields_by_name(const CassColumnMeta* column_meta, const std::set<std::string>& fields) {
+    for (std::set<std::string>::iterator i = fields.begin(); i != fields.end(); ++i) {
+      BOOST_CHECK(cass_column_meta_field_by_name(column_meta, i->c_str()) != NULL);
+    }
+  }
+
+  void verify_columns(const CassTableMeta* table_meta) {
+    test_utils::CassIteratorPtr itr(cass_iterator_columns_from_table_meta(table_meta));
     while (cass_iterator_next(itr.get())) {
-      const CassSchemaMeta* col_meta = cass_iterator_get_schema_meta(itr.get());
-      BOOST_REQUIRE_EQUAL(cass_schema_meta_type(col_meta), CASS_SCHEMA_META_TYPE_COLUMN);
-      verify_fields(col_meta, column_fields());
+      const CassColumnMeta* col_meta = cass_iterator_get_column_meta(itr.get());
+      verify_fields(test_utils::CassIteratorPtr(cass_iterator_fields_from_column_meta(col_meta)), column_fields());
+      verify_fields_by_name(col_meta, column_fields());
       // no entries at this level
-      BOOST_CHECK(!cass_iterator_from_schema_meta(col_meta));
-      BOOST_CHECK(!cass_schema_meta_get_entry(col_meta, "some bogus entry"));
+      BOOST_CHECK(!cass_column_meta_field_by_name(col_meta, "some bogus entry"));
     }
   }
 
@@ -275,16 +289,17 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
 
   void verify_table(const std::string& ks_name, const std::string& table_name,
                     const std::string& comment, const std::string& non_key_column) {
-    const CassSchemaMeta* table_meta = schema_get_table(SIMPLE_STRATEGY_KEYSPACE_NAME, ALL_DATA_TYPES_TABLE_NAME);
+    const CassTableMeta* table_meta = schema_get_table(SIMPLE_STRATEGY_KEYSPACE_NAME, ALL_DATA_TYPES_TABLE_NAME);
 
-    verify_fields(table_meta, table_fields());
-    verify_value(cass_schema_meta_field_value(cass_schema_meta_get_field(table_meta, "keyspace_name")), SIMPLE_STRATEGY_KEYSPACE_NAME);
-    verify_value(cass_schema_meta_field_value(cass_schema_meta_get_field(table_meta, "columnfamily_name")), ALL_DATA_TYPES_TABLE_NAME);
+    verify_fields(test_utils::CassIteratorPtr(cass_iterator_fields_from_table_meta(table_meta)), table_fields());
+    verify_fields_by_name(table_meta, table_fields());
+    verify_value(cass_table_meta_field_by_name(table_meta, "keyspace_name"), SIMPLE_STRATEGY_KEYSPACE_NAME);
+    verify_value(cass_table_meta_field_by_name(table_meta, "columnfamily_name"), ALL_DATA_TYPES_TABLE_NAME);
 
     // not going for every field, just making sure one of each type (fixed, list, map) is correctly added
-    verify_value(cass_schema_meta_field_value(cass_schema_meta_get_field(table_meta, "comment")), COMMENT);
+    verify_value(cass_table_meta_field_by_name(table_meta, "comment"), COMMENT);
 
-    const CassValue* value = cass_schema_meta_field_value(cass_schema_meta_get_field(table_meta, "compression_parameters"));
+    const CassValue* value = cass_table_meta_field_by_name(table_meta, "compression_parameters");
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_MAP);
     BOOST_REQUIRE_GE(cass_value_item_count(value), 1ul);
     test_utils::CassIteratorPtr itr(cass_iterator_from_map(value));
@@ -303,40 +318,40 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     BOOST_CHECK(param_found);
 
     if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
-      value = cass_schema_meta_field_value(cass_schema_meta_get_field(table_meta, "cf_id"));
+      value = cass_table_meta_field_by_name(table_meta, "cf_id");
       BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UUID);
     } else {
-      value = cass_schema_meta_field_value(cass_schema_meta_get_field(table_meta, "key_aliases"));
+      value = cass_table_meta_field_by_name(table_meta, "key_aliases");
       BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_LIST);
       BOOST_CHECK_GE(cass_value_item_count(value), 1ul);
     }
 
-    BOOST_CHECK(!cass_schema_meta_get_entry(table_meta, "some bogus entry"));
+    BOOST_CHECK(!cass_table_meta_column_by_name(table_meta, "some bogus entry"));
 
     verify_columns(table_meta);
 
     // known column
-    BOOST_REQUIRE(cass_schema_meta_get_entry(table_meta, non_key_column.c_str()));
+    BOOST_REQUIRE(cass_table_meta_column_by_name(table_meta, non_key_column.c_str()));
 
     // goes away
     if (version.major >= 2) {// dropping a column not supported in 1.2
       test_utils::execute_query(session, "ALTER TABLE "+table_name+" DROP "+non_key_column);
       refresh_schema_meta();
       table_meta = schema_get_table(SIMPLE_STRATEGY_KEYSPACE_NAME, ALL_DATA_TYPES_TABLE_NAME);
-      BOOST_CHECK(!cass_schema_meta_get_entry(table_meta, non_key_column.c_str()));
+      BOOST_CHECK(!cass_table_meta_column_by_name(table_meta, non_key_column.c_str()));
     }
 
     // new column
     test_utils::execute_query(session, "ALTER TABLE "+table_name+" ADD jkldsfafdjsklafajklsljkfds text");
     refresh_schema_meta();
     table_meta = schema_get_table(SIMPLE_STRATEGY_KEYSPACE_NAME, ALL_DATA_TYPES_TABLE_NAME);
-    BOOST_CHECK(cass_schema_meta_get_entry(table_meta, "jkldsfafdjsklafajklsljkfds"));
+    BOOST_CHECK(cass_table_meta_column_by_name(table_meta, "jkldsfafdjsklafajklsljkfds"));
 
     // drop table
     test_utils::execute_query(session, "DROP TABLE "+table_name);
     refresh_schema_meta();
-    const CassSchemaMeta* ks_meta = cass_schema_get_keyspace(schema_, SIMPLE_STRATEGY_KEYSPACE_NAME);
-    table_meta = cass_schema_meta_get_entry(ks_meta, ALL_DATA_TYPES_TABLE_NAME);
+    const CassKeyspaceMeta* ks_meta = cass_schema_meta_keyspace_by_name(schema_meta_, SIMPLE_STRATEGY_KEYSPACE_NAME);
+    table_meta = cass_keyspace_meta_table_by_name(ks_meta, ALL_DATA_TYPES_TABLE_NAME);
     BOOST_CHECK(!table_meta);
   }
 
@@ -355,14 +370,14 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
                        bool durable_writes,
                        const std::string& strategy_class,
                        const std::map<std::string, std::string>& strategy_options) {
-    const CassSchemaMeta* ks_meta = schema_get_keyspace(name);
-    BOOST_REQUIRE_EQUAL(cass_schema_meta_type(ks_meta), CASS_SCHEMA_META_TYPE_KEYSPACE);
-    verify_fields(ks_meta, keyspace_fields());
-    verify_value(cass_schema_meta_field_value(cass_schema_meta_get_field(ks_meta, "keyspace_name")), name);
-    verify_value(cass_schema_meta_field_value(cass_schema_meta_get_field(ks_meta, "durable_writes")), (cass_bool_t)durable_writes);
-    verify_value(cass_schema_meta_field_value(cass_schema_meta_get_field(ks_meta, "strategy_class")), strategy_class);
-    verify_value(cass_schema_meta_field_value(cass_schema_meta_get_field(ks_meta, "strategy_options")), strategy_options);
-    BOOST_CHECK(!cass_schema_meta_get_entry(ks_meta, "some bogus entry"));
+    const CassKeyspaceMeta* ks_meta = schema_get_keyspace(name);
+    verify_fields(test_utils::CassIteratorPtr(cass_iterator_fields_from_keyspace_meta(ks_meta)), keyspace_fields());
+    verify_fields_by_name(ks_meta, keyspace_fields());
+    verify_value(cass_keyspace_meta_field_by_name(ks_meta, "keyspace_name"), name);
+    verify_value(cass_keyspace_meta_field_by_name(ks_meta, "durable_writes"), (cass_bool_t)durable_writes);
+    verify_value(cass_keyspace_meta_field_by_name(ks_meta, "strategy_class"), strategy_class);
+    verify_value(cass_keyspace_meta_field_by_name(ks_meta, "strategy_options"), strategy_options);
+    BOOST_CHECK(!cass_keyspace_meta_table_by_name(ks_meta, "some bogus entry"));
   }
 
 
@@ -376,7 +391,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     strategy_options.insert(std::make_pair("replication_factor", "2"));
     verify_keyspace("system_traces", true, SIMPLE_STRATEGY_CLASS_NAME, strategy_options);
 
-    test_utils::CassIteratorPtr itr(cass_iterator_from_schema(schema_));
+    test_utils::CassIteratorPtr itr(cass_iterator_keyspaces_from_schema_meta(schema_meta_));
     size_t keyspace_count = 0;
     while (cass_iterator_next(itr.get())) ++keyspace_count;
     size_t number_of_default_keyspaces = 2;
@@ -407,7 +422,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     // keyspace goes away
     test_utils::execute_query(session, "DROP KEYSPACE " SIMPLE_STRATEGY_KEYSPACE_NAME);
     refresh_schema_meta();
-    BOOST_CHECK(!cass_schema_get_keyspace(schema_, SIMPLE_STRATEGY_KEYSPACE_NAME));
+    BOOST_CHECK(!cass_schema_meta_keyspace_by_name(schema_meta_, SIMPLE_STRATEGY_KEYSPACE_NAME));
 
     // nts
     create_network_topology_strategy_keyspace(3, 2, true);
@@ -432,7 +447,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
   void verify_user_type(const std::string& ks_name,
     const std::string& udt_name,
     const std::vector<std::string>& udt_datatypes) {
-    std::vector<std::string> udt_field_names = cass::get_user_data_type_field_names(schema_, ks_name, udt_name);
+    std::vector<std::string> udt_field_names = cass::get_user_data_type_field_names(schema_meta_, ks_name, udt_name);
     BOOST_REQUIRE_EQUAL_COLLECTIONS(udt_datatypes.begin(), udt_datatypes.end(), udt_field_names.begin(), udt_field_names.end());
   }
 
@@ -489,8 +504,8 @@ BOOST_AUTO_TEST_CASE(simple) {
 BOOST_AUTO_TEST_CASE(disable) {
   // Verify known keyspace
   {
-    test_utils::CassSchemaPtr schema(cass_session_get_schema(session));
-    BOOST_CHECK(cass_schema_get_keyspace(schema.get(), "system") != NULL);
+    test_utils::CassSchemaMetaPtr schema_meta(cass_session_get_schema_meta(session));
+    BOOST_CHECK(cass_schema_meta_keyspace_by_name(schema_meta.get(), "system") != NULL);
   }
 
   // Verify schema change event
@@ -498,8 +513,8 @@ BOOST_AUTO_TEST_CASE(disable) {
     test_utils::execute_query(session, "CREATE KEYSPACE ks1 WITH replication = "
                                        "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
     verify_keyspace_created("ks1");
-    test_utils::CassSchemaPtr schema(cass_session_get_schema(session));
-    BOOST_CHECK(cass_schema_get_keyspace(schema.get(), "ks1") != NULL);
+    test_utils::CassSchemaMetaPtr schema_meta(cass_session_get_schema_meta(session));
+    BOOST_CHECK(cass_schema_meta_keyspace_by_name(schema_meta.get(), "ks1") != NULL);
   }
 
   close_session();
@@ -511,8 +526,8 @@ BOOST_AUTO_TEST_CASE(disable) {
 
   // Verify known keyspace doesn't exist in metadata
   {
-    test_utils::CassSchemaPtr schema(cass_session_get_schema(session));
-    BOOST_CHECK(cass_schema_get_keyspace(schema.get(), "system") == NULL);
+    test_utils::CassSchemaMetaPtr schema_meta(cass_session_get_schema_meta(session));
+    BOOST_CHECK(cass_schema_meta_keyspace_by_name(schema_meta.get(), "system") == NULL);
   }
 
   // Verify schema change event didn't happen
@@ -520,8 +535,8 @@ BOOST_AUTO_TEST_CASE(disable) {
     test_utils::execute_query(session, "CREATE KEYSPACE ks2 WITH replication = "
                                        "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
     verify_keyspace_created("ks2");
-    test_utils::CassSchemaPtr schema(cass_session_get_schema(session));
-    BOOST_CHECK(cass_schema_get_keyspace(schema.get(), "ks2") == NULL);
+    test_utils::CassSchemaMetaPtr schema_meta(cass_session_get_schema_meta(session));
+    BOOST_CHECK(cass_schema_meta_keyspace_by_name(schema_meta.get(), "ks2") == NULL);
   }
 
   // Drop the keyspace (ignore any and all errors)

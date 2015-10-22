@@ -23,10 +23,10 @@
 #include "handler.hpp"
 #include "host.hpp"
 #include "load_balancing.hpp"
+#include "metadata.hpp"
 #include "request.hpp"
 #include "response.hpp"
 #include "retry_policy.hpp"
-#include "schema_metadata.hpp"
 #include "scoped_ptr.hpp"
 
 #include <string>
@@ -41,9 +41,9 @@ class Timer;
 
 class ResponseFuture : public Future {
 public:
-  ResponseFuture(const Schema& schema)
+  ResponseFuture(const Metadata& metadata)
       : Future(CASS_FUTURE_TYPE_RESPONSE)
-      , schema(schema) { }
+      , schema_metadata(metadata.schema_snapshot()) { }
 
   void set_response(Address address, const SharedRefPtr<Response>& response) {
     ScopedMutex lock(&mutex_);
@@ -79,7 +79,7 @@ public:
   }
 
   std::string statement;
-  Schema schema;
+  Metadata::SchemaSnapshot schema_metadata;
 
 private:
   Address address_;

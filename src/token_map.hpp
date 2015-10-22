@@ -22,7 +22,6 @@
 #include "host.hpp"
 #include "replication_strategy.hpp"
 #include "scoped_ptr.hpp"
-#include "schema_metadata.hpp"
 #include "string_ref.hpp"
 
 #include <map>

@@ -36,13 +36,13 @@ private:
   /**
    * Session schema metadata
    */
-  test_utils::CassSchemaPtr schema_;
+  test_utils::CassSchemaMetaPtr schema_meta_;
 
   /**
    * Update the session schema metadata
    */
   void update_schema() {
-    schema_ = test_utils::CassSchemaPtr(cass_session_get_schema(session));
+    schema_meta_ = test_utils::CassSchemaMetaPtr(cass_session_get_schema_meta(session));
   }
 
   /**
@@ -53,18 +53,21 @@ private:
   void verify_user_type(const std::string& udt_name) {
     std::vector<std::string> udt_field_names;
     unsigned int count = 0;
+    const CassDataType* datatype = NULL;
     while (udt_field_names.empty() && ++count <= 10) {
       update_schema();
-      udt_field_names = cass::get_user_data_type_field_names(schema_.get(), test_utils::SIMPLE_KEYSPACE.c_str(), udt_name);
-      if (udt_field_names.empty()) {
+      const CassKeyspaceMeta* keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta_.get(), test_utils::SIMPLE_KEYSPACE.c_str());
+      BOOST_REQUIRE(keyspace_meta != NULL);
+      datatype = cass_keyspace_meta_user_type_by_name(keyspace_meta, udt_name.c_str());
+      if (datatype == NULL) {
         boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
       }
     }
-    BOOST_REQUIRE(!udt_field_names.empty());
+    BOOST_REQUIRE(datatype != NULL);
   }
 
 public:
-  UDTTests() : test_utils::SingleSessionTest(1, 0), schema_(NULL) {
+  UDTTests() : test_utils::SingleSessionTest(1, 0), schema_meta_(NULL) {
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
   }
@@ -94,7 +97,9 @@ public:
    */
   test_utils::CassUserTypePtr new_udt(const std::string &udt_name) {
     verify_user_type(udt_name);
-    const CassDataType* datatype = cass_schema_get_udt(schema_.get(), test_utils::SIMPLE_KEYSPACE.c_str(), udt_name.c_str());
+    const CassKeyspaceMeta* keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta_.get(), test_utils::SIMPLE_KEYSPACE.c_str());
+    BOOST_REQUIRE(keyspace_meta != NULL);
+    const CassDataType* datatype = cass_keyspace_meta_user_type_by_name(keyspace_meta, udt_name.c_str());
     BOOST_REQUIRE(datatype != NULL);
     return test_utils::CassUserTypePtr(cass_user_type_new_from_data_type(datatype));
   }
@@ -126,7 +131,7 @@ public:
     // Ensure the value is a UDT and create the iterator for the validation
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UDT);
     BOOST_REQUIRE_EQUAL(cass_value_item_count(value), 2);
-    test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
+    test_utils::CassIteratorPtr iterator(cass_iterator_fields_from_user_type(value));
 
     // Verify alias field name
     BOOST_REQUIRE(cass_iterator_next(iterator.get()));
@@ -151,7 +156,7 @@ public:
   void verify_phone_udt(const CassValue* value, CassString expected_alias, CassString expected_number) {
     // Verify field names for phone UDT and create the iterator for validation
     verify_phone_udt_field_names(value);
-    test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
+    test_utils::CassIteratorPtr iterator(cass_iterator_fields_from_user_type(value));
 
     // Verify alias result
     BOOST_REQUIRE(cass_iterator_next(iterator.get()));
@@ -179,7 +184,7 @@ public:
     // Ensure the value is a UDT and create the iterator for the validation
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UDT);
     BOOST_REQUIRE_EQUAL(cass_value_item_count(value), 3);
-    test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
+    test_utils::CassIteratorPtr iterator(cass_iterator_fields_from_user_type(value));
 
     // Verify street field name
     BOOST_REQUIRE(cass_iterator_next(iterator.get()));
@@ -211,7 +216,7 @@ public:
   void verify_address_udt(const CassValue* value, CassString expected_street, cass_int32_t expected_zip, PhoneMap expected_phone_numbers) {
     // Verify field names for address UDT and create the iterator for validation
     verify_address_udt_field_names(value);
-    test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
+    test_utils::CassIteratorPtr iterator(cass_iterator_fields_from_user_type(value));
 
     // Verify street result
     BOOST_REQUIRE(cass_iterator_next(iterator.get()));
@@ -346,7 +351,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
       const CassValue* value = cass_row_get_column(row, 0);
       BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UDT);
       tester.verify_address_udt_field_names(value);
-      test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
+      test_utils::CassIteratorPtr iterator(cass_iterator_fields_from_user_type(value));
       // Verify street result
       BOOST_REQUIRE(cass_iterator_next(iterator.get()));
       const CassValue* street_value = cass_iterator_get_user_type_field_value(iterator.get());
@@ -478,7 +483,7 @@ BOOST_AUTO_TEST_CASE(text_types) {
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UDT);
 
     // Verify the parent key
-    test_utils::CassIteratorPtr iterator(cass_iterator_from_user_type(value));
+    test_utils::CassIteratorPtr iterator(cass_iterator_fields_from_user_type(value));
     BOOST_REQUIRE(cass_iterator_next(iterator.get()));
     const CassValue* name_value = cass_iterator_get_user_type_field_value(iterator.get());
     BOOST_REQUIRE_EQUAL(cass_value_type(name_value), CASS_VALUE_TYPE_VARCHAR);
@@ -493,7 +498,7 @@ BOOST_AUTO_TEST_CASE(text_types) {
     BOOST_REQUIRE_EQUAL(cass_value_item_count(value), 2);
 
     // Verify the values in the nested UDT
-    test_utils::CassIteratorPtr nested_iterator(cass_iterator_from_user_type(value));
+    test_utils::CassIteratorPtr nested_iterator(cass_iterator_fields_from_user_type(value));
     BOOST_REQUIRE(cass_iterator_next(nested_iterator.get()));
     const CassValue* value_value = cass_iterator_get_user_type_field_value(nested_iterator.get());
     BOOST_REQUIRE_EQUAL(cass_value_type(value_value), CASS_VALUE_TYPE_INT);

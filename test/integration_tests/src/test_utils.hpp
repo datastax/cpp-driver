@@ -365,10 +365,10 @@ struct Deleter<CassUuidGen> {
 };
 
 template<>
-struct Deleter<const CassSchema> {
-  void operator()(const CassSchema* ptr) {
+struct Deleter<const CassSchemaMeta> {
+  void operator()(const CassSchemaMeta* ptr) {
     if (ptr != NULL) {
-      cass_schema_free(ptr);
+      cass_schema_meta_free(ptr);
     }
   }
 };
@@ -402,7 +402,7 @@ typedef CassSharedPtr<CassUserType> CassUserTypePtr;
 typedef CassSharedPtr<const CassPrepared> CassPreparedPtr;
 typedef CassSharedPtr<CassBatch> CassBatchPtr;
 typedef CassSharedPtr<CassUuidGen> CassUuidGenPtr;
-typedef CassSharedPtr<const CassSchema> CassSchemaPtr;
+typedef CassSharedPtr<const CassSchemaMeta> CassSchemaMetaPtr;
 typedef CassSharedPtr<CassCustomPayload> CassCustomPayloadPtr;
 
 template<class T>
