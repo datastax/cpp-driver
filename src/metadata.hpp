@@ -194,7 +194,7 @@ public:
   FunctionMetadata(const std::string& name, const Value* signature,
                    const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
-  StringRef simple_name() const { return simple_name_; }
+  const std::string& simple_name() const { return simple_name_; }
   const Argument::Vec& args() const { return args_; }
   const DataType::Ptr& return_type() const { return return_type_; }
   StringRef body() const { return body_; }
@@ -204,7 +204,7 @@ public:
   const DataType* get_arg_type(StringRef name) const;
 
 private:
-  StringRef simple_name_;
+  std::string simple_name_;
   Argument::Vec args_;
   Argument::Map args_by_name_;
   DataType::Ptr return_type_;
