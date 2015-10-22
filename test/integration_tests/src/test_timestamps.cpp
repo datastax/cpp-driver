@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "test_utils.hpp"
 
 #include "cassandra.h"
@@ -38,6 +34,13 @@ struct TimestampsTest : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                            % test_utils::SIMPLE_KEYSPACE % "1"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+  }
+
+  ~TimestampsTest() {
+    // Drop the keyspace (ignore any and all errors)
+    test_utils::execute_query_with_error(session,
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+      % test_utils::SIMPLE_KEYSPACE));
   }
 
   CassStatementPtr create_insert_statement(const std::string table_name) {
@@ -85,7 +88,7 @@ BOOST_AUTO_TEST_SUITE(timestamps)
  */
 BOOST_AUTO_TEST_CASE(statement_and_batch)
 {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     TimestampsTest tester;
     std::string table_name("table_" + test_utils::generate_unique_str(tester.uuid_gen));
@@ -134,8 +137,7 @@ BOOST_AUTO_TEST_CASE(statement_and_batch)
       BOOST_CHECK_EQUAL(tester.get_timestamp(table_name, key2), 1234);
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping timestamps/statement_and_batch");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping timestamps/statement_and_batch" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
@@ -153,7 +155,7 @@ BOOST_AUTO_TEST_CASE(statement_and_batch)
  */
 BOOST_AUTO_TEST_CASE(generator)
 {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     TimestampsTest tester;
     cass::SharedRefPtr<TestTimestampGenerator> gen(new TestTimestampGenerator(1234));
@@ -208,8 +210,7 @@ BOOST_AUTO_TEST_CASE(generator)
       BOOST_CHECK_EQUAL(tester.get_timestamp(table_name, key2), 1234);
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping timestamps/generator");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping timestamps/generator" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
@@ -227,7 +228,7 @@ BOOST_AUTO_TEST_CASE(generator)
  */
 BOOST_AUTO_TEST_CASE(server_side)
 {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     TimestampsTest tester;
     // Server-side is the default timestamp generator
@@ -246,8 +247,7 @@ BOOST_AUTO_TEST_CASE(server_side)
 
     BOOST_CHECK_GE(tester.get_timestamp(table_name, key), static_cast<int64_t>(timestamp));
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping timestamps/server_side");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping timestamps/server_side" << std::endl;
     BOOST_REQUIRE(true);
   }
 }

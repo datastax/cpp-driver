@@ -92,14 +92,15 @@ void cass_uuid_string(CassUuid uuid, char* output) {
   size_t pos = 0;
   char encoded[16];
   cass::encode_uuid(encoded, uuid);
+  static const char half_byte_to_hex[] = { '0', '1', '2', '3', '4', '5', '6', '7',
+                                           '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
   for (size_t i = 0; i < 16; ++i) {
-    char buf[3] = { '\0' };
-    sprintf(buf, "%02x", static_cast<uint8_t>(encoded[i]));
     if (i == 4 || i == 6 || i == 8 || i == 10) {
       output[pos++] = '-';
     }
-    output[pos++] = buf[0];
-    output[pos++] = buf[1];
+    uint8_t byte = static_cast<uint8_t>(encoded[i]);
+    output[pos++] = half_byte_to_hex[(byte >> 4) & 0x0F];
+    output[pos++] = half_byte_to_hex[byte & 0x0F];
   }
   output[pos] = '\0';
 }
@@ -120,19 +121,37 @@ CassError cass_uuid_from_string_n(const char* str,
   const char* pos = str;
   char buf[16];
 
+  static const char hex_to_half_byte[256] = {
+    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+     0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  -1,  -1,  -1,  -1,  -1,  -1,
+    -1,  10,  11,  12,  13,  14,  15,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+    -1,  10,  11,  12,  13,  14,  15,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+    -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,
+  };
+
   if (str == NULL || str_length != 36) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
 
   for (size_t i = 0; i < 16; ++i) {
     if (*pos == '-') pos++;
-    unsigned int byte;
-    intptr_t bytes_left = str - pos;
-    if (bytes_left >= 2 || !isxdigit(*pos) || !isxdigit(*(pos + 1))) {
+    uint8_t p0 = static_cast<uint8_t>(pos[0]);
+    uint8_t p1 = static_cast<uint8_t>(pos[1]);
+    if (hex_to_half_byte[p0] == -1 || hex_to_half_byte[p1] == -1)  {
       return CASS_ERROR_LIB_BAD_PARAMS;
     }
-    sscanf(pos, "%2x", &byte);
-    buf[i] = static_cast<char>(byte);
+    buf[i] = (hex_to_half_byte[p0] << 4) + hex_to_half_byte[p1];
     pos += 2;
   }
 

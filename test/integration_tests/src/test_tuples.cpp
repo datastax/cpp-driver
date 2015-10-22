@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "test_utils.hpp"
 #include "cassandra.h"
 
@@ -110,6 +106,13 @@ public:
   TupleTests() : test_utils::SingleSessionTest(1, 0) {
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+  }
+
+  ~TupleTests() {
+    // Drop the keyspace (ignore any and all errors)
+    test_utils::execute_query_with_error(session,
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+      % test_utils::SIMPLE_KEYSPACE));
   }
 
   /**
@@ -317,7 +320,7 @@ BOOST_AUTO_TEST_SUITE(tuples)
  * @cassandra_version 2.1.x
  */
 BOOST_AUTO_TEST_CASE(read_write) {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     TupleTests tester;
     std::string create_table = "CREATE TABLE tuple_read_write(key int PRIMARY KEY, value frozen<tuple<int, text, float>>)";
@@ -424,8 +427,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
       BOOST_REQUIRE_EQUAL(test_utils::Value<cass_float_t>::get(cass_iterator_get_value(iterator.get()), &value_float), CASS_ERROR_LIB_NULL_VALUE);
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping tuples/read_write");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping tuples/read_write" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
@@ -442,7 +444,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
  * @cassandra_version 2.1.x
  */
 BOOST_AUTO_TEST_CASE(varying_size) {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     TupleTests tester;
 
@@ -511,8 +513,7 @@ BOOST_AUTO_TEST_CASE(varying_size) {
       }
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping tuples/varying_size");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping tuples/varying_size" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
@@ -529,7 +530,7 @@ BOOST_AUTO_TEST_CASE(varying_size) {
 * @cassandra_version 2.1.x
 */
 BOOST_AUTO_TEST_CASE(null) {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     TupleTests tester;
 
@@ -561,8 +562,7 @@ BOOST_AUTO_TEST_CASE(null) {
       }
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping tuples/null");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping tuples/null" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
@@ -578,7 +578,7 @@ BOOST_AUTO_TEST_CASE(null) {
 * @cassandra_version 2.1.x
 */
 BOOST_AUTO_TEST_CASE(invalid) {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     TupleTests tester;
     std::string create_table = "CREATE TABLE tuple_invalid(key int PRIMARY KEY, value frozen<tuple<int, text, float>>)";
@@ -620,8 +620,7 @@ BOOST_AUTO_TEST_CASE(invalid) {
                           CASS_ERROR_SERVER_INVALID_QUERY);
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping tuples/invalid");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping tuples/invalid" << std::endl;
     BOOST_REQUIRE(true);
   }
 }

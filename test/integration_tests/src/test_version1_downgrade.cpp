@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include <algorithm>
 
 #include <boost/test/unit_test.hpp>
@@ -32,20 +28,11 @@
 
 #include "cassandra.h"
 #include "test_utils.hpp"
-#include "cql_ccm_bridge.hpp"
 
-struct Version1DowngradeTests {
-  Version1DowngradeTests() {
-    boost::debug::detect_memory_leaks(false);
-  }
-};
+BOOST_AUTO_TEST_SUITE(version1_downgrade)
 
-BOOST_FIXTURE_TEST_SUITE(version1_downgrade, Version1DowngradeTests)
-
-//TODO: Add additional tests for v2 downgrade
 BOOST_AUTO_TEST_CASE(query_after_downgrade)
 {
-  test_utils::CassLog::set_output_log_level(CASS_LOG_DEBUG);
   test_utils::CassLog::reset("does not support protocol version 2. Trying protocol version 1...");
 
   size_t row_count;
@@ -53,11 +40,12 @@ BOOST_AUTO_TEST_CASE(query_after_downgrade)
   {
     test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-    const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration("config_v1.txt");
+    boost::shared_ptr<CCM::Bridge> ccm(new CCM::Bridge("config.txt"));
+    if (ccm->create_cluster()) {
+      ccm->start_cluster();
+    }
 
-    boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", 3);
-
-    test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 3, 0);
+    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
 
     cass_cluster_set_protocol_version(cluster.get(), 2);
 
