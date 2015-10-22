@@ -70,9 +70,9 @@ bool EventResponse::decode(int version, char* buffer, size_t size) {
 
     if (version <= 2) {
       // Version 1 and 2: ...<keyspace><table> ([string][string])
-      pos = decode_string(pos, &keyspace_, keyspace_size_);
-      decode_string(pos, &target_, target_size_);
-      schema_change_target_ = target_size_ == 0 ? KEYSPACE : TABLE;
+      pos = decode_string(pos, &keyspace_);
+      decode_string(pos, &target_);
+      schema_change_target_ = target_.size() == 0 ? KEYSPACE : TABLE;
     } else {
       // Version 3+: ...<target><options>
       // <target> = [string]
@@ -86,15 +86,23 @@ bool EventResponse::decode(int version, char* buffer, size_t size) {
         schema_change_target_ = TABLE;
       } else if (target == "TYPE") {
         schema_change_target_ = TYPE;
+      } else if (target == "FUNCTION") {
+        schema_change_target_ = FUNCTION;
+      } else if (target == "AGGREGATE") {
+        schema_change_target_ = AGGREGATE;
       } else {
         return false;
       }
 
-      pos = decode_string(pos, &keyspace_, keyspace_size_);
+      pos = decode_string(pos, &keyspace_);
 
       if (schema_change_target_ == TABLE ||
           schema_change_target_ == TYPE) {
-        decode_string(pos, &target_, target_size_);
+        decode_string(pos, &target_);
+      } else if (schema_change_target_ == FUNCTION ||
+                 schema_change_target_ == AGGREGATE) {
+        pos = decode_string(pos, &target_);
+        decode_stringlist(pos, arg_types_);
       }
     }
   } else {

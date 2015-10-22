@@ -152,7 +152,7 @@ private:
   }
 
   SharedRefPtr<DataType> decode_collection(CassValueType collection_type) {
-    DataTypeVec types;
+    DataType::Vec types;
     types.push_back(decode());
     if (collection_type == CASS_VALUE_TYPE_MAP) {
       types.push_back(decode());
@@ -185,7 +185,7 @@ private:
     uint16_t n;
     buffer_ = decode_uint16(buffer_, n);
 
-    DataTypeVec types;
+    DataType::Vec types;
     for (uint16_t i = 0; i < n; ++i) {
       types.push_back(decode());
     }

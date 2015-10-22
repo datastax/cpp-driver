@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_SUITE(type_parser)
 
 BOOST_AUTO_TEST_CASE(simple)
 {
-  cass::SharedRefPtr<cass::DataType> data_type;
+  cass::SharedRefPtr<const cass::DataType> data_type;
 
   data_type = cass::TypeParser::parse_one("org.apache.cassandra.db.marshal.InetAddressType");
   BOOST_CHECK(data_type->value_type() == CASS_VALUE_TYPE_INET);
@@ -37,8 +37,8 @@ BOOST_AUTO_TEST_CASE(simple)
   data_type = cass::TypeParser::parse_one("org.apache.cassandra.db.marshal.ListType(org.apache.cassandra.db.marshal.UTF8Type)");
   BOOST_REQUIRE(data_type->value_type() == CASS_VALUE_TYPE_LIST);
 
-  cass::SharedRefPtr<cass::CollectionType> collection
-      = static_cast<cass::SharedRefPtr<cass::CollectionType> >(data_type);
+  cass::SharedRefPtr<const cass::CollectionType> collection
+      = static_cast<cass::SharedRefPtr<const cass::CollectionType> >(data_type);
   BOOST_REQUIRE(collection->types().size() == 1);
   BOOST_CHECK(collection->types()[0]->value_type() == CASS_VALUE_TYPE_TEXT);
 }
@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE(invalid)
 
 BOOST_AUTO_TEST_CASE(udt)
 {
-  cass::SharedRefPtr<cass::DataType> data_type
+  cass::SharedRefPtr<const cass::DataType> data_type
       = cass::TypeParser::parse_one("org.apache.cassandra.db.marshal.UserType("
                                     "foo,61646472657373,"
                                     "737472656574:org.apache.cassandra.db.marshal.UTF8Type,"
@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(udt)
 
 BOOST_AUTO_TEST_CASE(tuple)
 {
-  cass::SharedRefPtr<cass::DataType> data_type
+  cass::SharedRefPtr<const cass::DataType> data_type
       = cass::TypeParser::parse_one("org.apache.cassandra.db.marshal.TupleType("
                                     "org.apache.cassandra.db.marshal.Int32Type,"
                                     "org.apache.cassandra.db.marshal.UTF8Type,"
@@ -146,7 +146,7 @@ BOOST_AUTO_TEST_CASE(tuple)
 
   BOOST_REQUIRE(data_type->value_type() == CASS_VALUE_TYPE_TUPLE);
 
-  cass::SharedRefPtr<cass::CollectionType> tuple = static_cast<cass::SharedRefPtr<cass::CollectionType> >(data_type);
+  cass::SharedRefPtr<const cass::CollectionType> tuple = static_cast<cass::SharedRefPtr<const cass::CollectionType> >(data_type);
 
   BOOST_REQUIRE(tuple->types().size() == 3);
 
@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE(tuple)
 
 BOOST_AUTO_TEST_CASE(nested_collections)
 {
-  cass::SharedRefPtr<cass::DataType> data_type
+  cass::SharedRefPtr<const cass::DataType> data_type
       = cass::TypeParser::parse_one("org.apache.cassandra.db.marshal.MapType("
                                     "org.apache.cassandra.db.marshal.UTF8Type,"
                                     "org.apache.cassandra.db.marshal.FrozenType("
@@ -166,8 +166,8 @@ BOOST_AUTO_TEST_CASE(nested_collections)
 
   BOOST_REQUIRE(data_type->value_type() == CASS_VALUE_TYPE_MAP);
 
-  cass::SharedRefPtr<cass::CollectionType> collection
-      = static_cast<cass::SharedRefPtr<cass::CollectionType> >(data_type);
+  cass::SharedRefPtr<const cass::CollectionType> collection
+      = static_cast<cass::SharedRefPtr<const cass::CollectionType> >(data_type);
 
   BOOST_REQUIRE(collection->types().size() == 2);
 
@@ -262,24 +262,24 @@ BOOST_AUTO_TEST_CASE(composite_with_collections)
   cass::ParseResult::CollectionMap::const_iterator i;
 
   i = result->collections().find("ab");
-  cass::SharedRefPtr<cass::CollectionType> collection;
+  cass::SharedRefPtr<const cass::CollectionType> collection;
   BOOST_REQUIRE(i != result->collections().end());
   BOOST_REQUIRE(i->second->value_type() == CASS_VALUE_TYPE_LIST);
-  collection = static_cast<cass::SharedRefPtr<cass::CollectionType> >(i->second);
+  collection = static_cast<cass::SharedRefPtr<const cass::CollectionType> >(i->second);
   BOOST_REQUIRE(collection->types().size() == 1);
   BOOST_CHECK(collection->types()[0]->value_type() == CASS_VALUE_TYPE_INT);
 
   i = result->collections().find("JKLMNO");
   BOOST_REQUIRE(i != result->collections().end());
   BOOST_CHECK(i->second->value_type() == CASS_VALUE_TYPE_SET);
-  collection = static_cast<cass::SharedRefPtr<cass::CollectionType> >(i->second);
+  collection = static_cast<cass::SharedRefPtr<const cass::CollectionType> >(i->second);
   BOOST_REQUIRE(collection->types().size() == 1);
   BOOST_CHECK(collection->types()[0]->value_type() == CASS_VALUE_TYPE_TEXT);
 
   i = result->collections().find("jklmno");
   BOOST_REQUIRE(i != result->collections().end());
   BOOST_CHECK(i->second->value_type() == CASS_VALUE_TYPE_MAP);
-  collection = static_cast<cass::SharedRefPtr<cass::CollectionType> >(i->second);
+  collection = static_cast<cass::SharedRefPtr<const cass::CollectionType> >(i->second);
   BOOST_REQUIRE(collection->types().size() == 2);
   BOOST_CHECK(collection->types()[0]->value_type() == CASS_VALUE_TYPE_TEXT);
   BOOST_CHECK(collection->types()[1]->value_type() == CASS_VALUE_TYPE_BIGINT);

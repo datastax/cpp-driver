@@ -174,6 +174,73 @@ protected:
   IteratorImpl impl_;
 };
 
+class FunctionMetadata : public MetadataBase, public RefCounted<FunctionMetadata> {
+public:
+  typedef SharedRefPtr<FunctionMetadata> Ptr;
+  typedef std::map<std::string, Ptr> Map;
+  typedef std::vector<Ptr> Vec;
+
+  struct Argument {
+    typedef std::vector<Argument> Vec;
+    typedef std::map<StringRef, DataType::Ptr> Map;
+
+    Argument(const StringRef& name, const DataType::Ptr& type)
+      : name(name)
+      , type(type) { }
+    StringRef name;
+    DataType::Ptr type;
+  };
+
+  FunctionMetadata(const std::string& name, const Value* signature,
+                   const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+
+  StringRef simple_name() const { return simple_name_; }
+  const Argument::Vec& args() const { return args_; }
+  const DataType::Ptr& return_type() const { return return_type_; }
+  StringRef body() const { return body_; }
+  StringRef language() const { return language_; }
+  bool called_on_null_input() const { return called_on_null_input_; }
+
+  const DataType* get_arg_type(StringRef name) const;
+
+private:
+  StringRef simple_name_;
+  Argument::Vec args_;
+  Argument::Map args_by_name_;
+  DataType::Ptr return_type_;
+  StringRef body_;
+  StringRef language_;
+  bool called_on_null_input_;
+};
+
+class AggregateMetadata : public MetadataBase, public RefCounted<AggregateMetadata> {
+public:
+  typedef SharedRefPtr<AggregateMetadata> Ptr;
+  typedef std::map<std::string, Ptr> Map;
+  typedef std::vector<Ptr> Vec;
+
+  AggregateMetadata(const std::string& name, const Value* signature,
+                    const FunctionMetadata::Map& functions,
+                    int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+
+  StringRef simple_name() const { return simple_name_; }
+  const DataType::Vec arg_types() const { return arg_types_; }
+  const DataType::Ptr& return_type() const { return return_type_; }
+  const DataType::Ptr& state_type() const { return state_type_; }
+  const FunctionMetadata::Ptr& state_func() const { return state_func_; }
+  const FunctionMetadata::Ptr& final_func() const { return final_func_; }
+  const Value& init_cond() const { return init_cond_; }
+
+private:
+  StringRef simple_name_;
+  DataType::Vec arg_types_;
+  DataType::Ptr return_type_;
+  DataType::Ptr state_type_;
+  FunctionMetadata::Ptr state_func_;
+  FunctionMetadata::Ptr final_func_;
+  Value init_cond_;
+};
+
 class ColumnMetadata : public MetadataBase, public RefCounted<ColumnMetadata> {
 public:
   typedef SharedRefPtr<ColumnMetadata> Ptr;
@@ -191,13 +258,13 @@ public:
 
   CassColumnType type() const { return type_; }
   int32_t position() const { return position_; }
-  const SharedRefPtr<DataType>& data_type() const { return data_type_; }
+  const SharedRefPtr<const DataType>& data_type() const { return data_type_; }
   bool is_reversed() const { return is_reversed_; }
 
 private:
   CassColumnType type_;
   int32_t position_;
-  SharedRefPtr<DataType> data_type_;
+  SharedRefPtr<const DataType> data_type_;
   bool is_reversed_;
 
 private:
@@ -267,12 +334,30 @@ public:
     const UserType* type() const { return impl_.item().get(); }
   };
 
+  class FunctionIterator : public MetadataIteratorImpl<MapIteratorImpl<FunctionMetadata::Ptr> > {
+  public:
+   FunctionIterator(const FunctionIterator::Collection& collection)
+     : MetadataIteratorImpl<MapIteratorImpl<FunctionMetadata::Ptr> >(CASS_ITERATOR_TYPE_FUNCTION_META, collection) { }
+    const FunctionMetadata* function() const { return impl_.item().get(); }
+  };
+
+  class AggregateIterator : public MetadataIteratorImpl<MapIteratorImpl<AggregateMetadata::Ptr> > {
+  public:
+   AggregateIterator(const AggregateIterator::Collection& collection)
+     : MetadataIteratorImpl<MapIteratorImpl<AggregateMetadata::Ptr> >(CASS_ITERATOR_TYPE_AGGREGATE_META, collection) { }
+    const AggregateMetadata* aggregate() const { return impl_.item().get(); }
+  };
+
   KeyspaceMetadata(const std::string& name)
     : MetadataBase(name)
     , tables_(new TableMetadata::Map)
-    , user_types_(new UserTypeMap) { }
+    , user_types_(new UserTypeMap)
+    , functions_(new FunctionMetadata::Map)
+    , aggregates_(new AggregateMetadata::Map) { }
 
   void update(int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+
+  const FunctionMetadata::Map& functions() const { return *functions_; }
 
   Iterator* iterator_tables() const { return new TableIterator(*tables_); }
   const TableMetadata* get_table(const std::string& table_name) const;
@@ -285,12 +370,24 @@ public:
   void add_user_type(const SharedRefPtr<UserType>& user_type);
   void drop_user_type(const std::string& type_name);
 
+  Iterator* iterator_functions() const { return new FunctionIterator(*functions_); }
+  const FunctionMetadata* get_function(const std::string& full_function_name) const;
+  void add_function(const FunctionMetadata::Ptr& function);
+  void drop_function(const std::string& full_function_name);
+
+  Iterator* iterator_aggregates() const { return new AggregateIterator(*aggregates_); }
+  const AggregateMetadata* get_aggregate(const std::string& full_aggregate_name) const;
+  void add_aggregate(const AggregateMetadata::Ptr& aggregate);
+  void drop_aggregate(const std::string& full_aggregate_name);
+
   std::string strategy_class() const { return get_string_field("strategy_class"); }
   const Value* strategy_options() const { return get_field("strategy_options"); }
 
 private:
   CopyOnWritePtr<TableMetadata::Map> tables_;
   CopyOnWritePtr<UserTypeMap> user_types_;
+  CopyOnWritePtr<FunctionMetadata::Map> functions_;
+  CopyOnWritePtr<AggregateMetadata::Map> aggregates_;
 };
 
 class Metadata {
@@ -320,11 +417,12 @@ public:
                                const std::string& cf_name,
                                std::vector<std::string>* output) const;
 
-
   private:
     uint32_t version_;
     KeyspaceMetadata::MapPtr keyspaces_;
   };
+
+  static std::string full_function_name(StringRef name, const StringRefVec& signature);
 
 public:
   Metadata()
@@ -343,10 +441,14 @@ public:
   void update_keyspaces(ResultResponse* result);
   void update_tables(ResultResponse* tables_result, ResultResponse* columns_result);
   void update_user_types(ResultResponse* result);
+  void update_functions(ResultResponse* result);
+  void update_aggregates(ResultResponse* result);
 
   void drop_keyspace(const std::string& keyspace_name);
   void drop_table(const std::string& keyspace_name, const std::string& table_name);
   void drop_user_type(const std::string& keyspace_name, const std::string& type_name);
+  void drop_function(const std::string& keyspace_name, const std::string& full_function_name);
+  void drop_aggregate(const std::string& keyspace_name, const std::string& full_aggregate_name);
 
   // This clears and allows updates to the back buffer while preserving
   // the front buffer for snapshots.
@@ -381,10 +483,14 @@ private:
     void update_keyspaces(int version, ResultResponse* result, KeyspaceMetadata::Map& updates);
     void update_tables(int version, ResultResponse* tables_result, ResultResponse* columns_result);
     void update_user_types(ResultResponse* result);
+    void update_functions(ResultResponse* result);
+    void update_aggregates(int version, ResultResponse* result);
 
     void drop_keyspace(const std::string& keyspace_name);
     void drop_table(const std::string& keyspace_name, const std::string& table_name);
     void drop_user_type(const std::string& keyspace_name, const std::string& type_name);
+    void drop_function(const std::string& keyspace_name, const std::string& full_function_name);
+    void drop_aggregate(const std::string& keyspace_name, const std::string& full_aggregate_name);
 
     void clear() { keyspaces_->clear(); }
 
