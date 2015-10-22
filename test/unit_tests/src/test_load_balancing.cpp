@@ -28,6 +28,7 @@
 #include "token_aware_policy.hpp"
 #include "token_map.hpp"
 #include "replication_strategy.hpp"
+#include "whitelist_policy.hpp"
 
 #include <boost/chrono.hpp>
 #include <boost/lexical_cast.hpp>
@@ -810,5 +811,30 @@ BOOST_AUTO_TEST_CASE(min_average_under_min_measured)
   BOOST_CHECK(policy.min_average() == -1);
 }
 
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(whitelist_lb)
+
+BOOST_AUTO_TEST_CASE(simple)
+{
+  const int64_t num_hosts = 100;
+  cass::HostMap hosts;
+  populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
+  cass::ContactPointList whitelist_hosts;
+  whitelist_hosts.push_back("37.0.0.0");
+  whitelist_hosts.push_back("83.0.0.0");
+  cass::WhitelistPolicy policy(new cass::RoundRobinPolicy(), whitelist_hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+
+  cass::TokenMap tokenMap;
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+
+  // Verify only hosts 37 and 83 are computed in the query plan
+  const size_t seq1[] = { 37, 83 };
+  verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
+  // The query plan should now be exhausted
+  cass::Address next_address;
+  BOOST_REQUIRE(!qp.get()->compute_next(&next_address));
+}
 
 BOOST_AUTO_TEST_SUITE_END()

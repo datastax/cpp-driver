@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "cassandra.h"
 #include "testing.hpp"
 #include "test_utils.hpp"
@@ -542,6 +538,10 @@ BOOST_AUTO_TEST_CASE(disable) {
     test_utils::CassSchemaMetaPtr schema_meta(cass_session_get_schema_meta(session));
     BOOST_CHECK(cass_schema_meta_keyspace_by_name(schema_meta.get(), "ks2") == NULL);
   }
+
+  // Drop the keyspace (ignore any and all errors)
+  test_utils::execute_query_with_error(session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % "ks1"));
+  test_utils::execute_query_with_error(session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % "ks2"));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

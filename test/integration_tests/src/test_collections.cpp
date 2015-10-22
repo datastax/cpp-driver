@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "cassandra.h"
 #include "test_utils.hpp"
 
@@ -194,6 +190,8 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
       }
       insert_collection_value<CassDecimal>(session.get(), type, CASS_VALUE_TYPE_DECIMAL,  values);
     }
+
+    drop_keyspace(session);
   }
 
   template<class K, class V>
@@ -394,6 +392,14 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
       values[test_utils::generate_time_uuid(uuid_gen)] = CassString("789");
       insert_map_value<CassUuid, CassString>(session.get(), CASS_VALUE_TYPE_UUID, CASS_VALUE_TYPE_VARCHAR, values);
     }
+
+    drop_keyspace(session);
+  }
+
+  void drop_keyspace(test_utils::CassSessionPtr session) {
+    test_utils::execute_query_with_error(session.get(),
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+        % test_utils::SIMPLE_KEYSPACE));
   }
 };
 

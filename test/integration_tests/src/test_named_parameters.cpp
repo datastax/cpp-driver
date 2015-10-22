@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "test_utils.hpp"
 #include "cassandra.h"
 
@@ -47,6 +43,13 @@ public:
   NamedParametersTests() : test_utils::SingleSessionTest(1, 0) {
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+  }
+
+  ~NamedParametersTests() {
+    // Drop the keyspace (ignore any and all errors)
+    test_utils::execute_query_with_error(session,
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+      % test_utils::SIMPLE_KEYSPACE));
   }
 
   /**
@@ -161,7 +164,7 @@ BOOST_AUTO_TEST_SUITE(named_parameters)
  * @cassandra_version 2.1.x
  */
 BOOST_AUTO_TEST_CASE(ordered_unordered_read_write) {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     NamedParametersTests tester;
     std::string create_table = "CREATE TABLE ordered_unordered_read_write(key int PRIMARY KEY, value_text text, value_uuid uuid, value_blob blob, value_list_floats list<float>)";
@@ -295,8 +298,7 @@ BOOST_AUTO_TEST_CASE(ordered_unordered_read_write) {
       BOOST_REQUIRE(test_utils::Value<CassUuid>::equal(value_uuid, uuid));
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping named_parameters/ordered_unordered_read_write");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping named_parameters/ordered_unordered_read_write" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
@@ -313,7 +315,7 @@ BOOST_AUTO_TEST_CASE(ordered_unordered_read_write) {
  * @cassandra_version 2.1.x
  */
 BOOST_AUTO_TEST_CASE(all_primitives) {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     NamedParametersTests tester;
     for (unsigned int i = 0; i < 2; ++i) {
@@ -372,8 +374,7 @@ BOOST_AUTO_TEST_CASE(all_primitives) {
       }
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping named_parameters/all_primitives");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping named_parameters/all_primitives" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
@@ -390,7 +391,7 @@ BOOST_AUTO_TEST_CASE(all_primitives) {
  * @cassandra_version 2.1.x
  */
 BOOST_AUTO_TEST_CASE(all_primitives_batched) {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     NamedParametersTests tester;
 
@@ -446,8 +447,7 @@ BOOST_AUTO_TEST_CASE(all_primitives_batched) {
       tester.insert_primitive_batch_value<CassUuid>(CASS_VALUE_TYPE_TIMEUUID, value, TOTAL_NUMBER_OF_BATCHES);
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping named_parameters/all_primitives");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping named_parameters/all_primitives" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
@@ -464,7 +464,7 @@ BOOST_AUTO_TEST_CASE(all_primitives_batched) {
  * @cassandra_version 2.1.x
  */
 BOOST_AUTO_TEST_CASE(invalid_name) {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     NamedParametersTests tester;
     std::string create_table = "CREATE TABLE named_parameter_invalid(key int PRIMARY KEY, value text)";
@@ -489,8 +489,7 @@ BOOST_AUTO_TEST_CASE(invalid_name) {
       BOOST_REQUIRE_EQUAL(test_utils::Value<CassString>::bind_by_name(statement.get(), "invalid_value_name", CassString("invalid")), CASS_ERROR_LIB_NAME_DOES_NOT_EXIST);
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping named_parameters/invalid");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping named_parameters/invalid" << std::endl;
     BOOST_REQUIRE(true);
   }
 }

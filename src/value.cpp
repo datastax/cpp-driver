@@ -16,6 +16,7 @@
 
 #include "value.hpp"
 
+#include "collection_iterator.hpp"
 #include "data_type.hpp"
 #include "external_types.hpp"
 #include "serialization.hpp"
@@ -208,6 +209,13 @@ Value::Value(int protocol_version,
   }
 }
 
+bool Value::as_bool() const {
+  assert(value_type() == CASS_VALUE_TYPE_BOOLEAN);
+  uint8_t value;
+  decode_byte(data_, value);
+  return value != 0;
+}
+
 int32_t Value::as_int32() const {
   assert(value_type() == CASS_VALUE_TYPE_INT);
   int32_t value;
@@ -221,6 +229,17 @@ CassUuid Value::as_uuid() const {
   decode_uuid(data_, &value);
   return value;
 
+}
+
+StringRefVec Value::as_stringlist() const {
+  assert((value_type() == CASS_VALUE_TYPE_LIST || value_type() == CASS_VALUE_TYPE_SET) &&
+         primary_value_type() == CASS_VALUE_TYPE_VARCHAR);
+  StringRefVec stringlist;
+  CollectionIterator iterator(this);
+  while (iterator.next()) {
+    stringlist.push_back(StringRef(iterator.value()->to_string_ref()));
+  }
+  return stringlist;
 }
 
 } // namespace cassandra

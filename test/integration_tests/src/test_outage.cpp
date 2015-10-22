@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include <algorithm>
 
 #if !defined(WIN32) && !defined(_WIN32)
@@ -62,6 +58,11 @@ struct OutageTests : public test_utils::MultipleNodesTest {
     test_utils::CassLog::set_output_log_level(CASS_LOG_DISABLED);
     printf("Warning! This test is going to take %d minutes\n", TEST_DURATION_SECS / 60);
     std::fill(nodes_states, nodes_states + NUM_NODES, UP);
+  }
+
+  ~OutageTests() {
+    // Destroy the current cluster (chaotic test; decommissioned nodes)
+    ccm->remove_cluster();
   }
 
   int random_int(int s, int e) {
@@ -128,19 +129,19 @@ struct OutageTests : public test_utils::MultipleNodesTest {
           if (--n == 0) {
             if (disableBinaryGossip) {
               if (random_int(1, 100) <= 50) {
-                ccm->gossip(i, false);
+                ccm->disable_node_binary_protocol(i);
                 nodes_states[i] = BINARY_DISABLED;
               } else {
-                ccm->gossip(i, false);
+                ccm->disable_node_gossip(i);
                 nodes_states[i] = GOSSIP_DISABLED;
               }
             } else if (random_int(1, 100) <= 50) {
-              ccm->decommission(i);
+              ccm->decommission_node(i);
               nodes_states[i] = REMOVED;
-              ccm->stop(i);
+              ccm->stop_node(i);
             } else {
               nodes_states[i] = DOWN;
-              ccm->stop(i);
+              ccm->stop_node(i);
             }
             break;
           }
@@ -152,16 +153,16 @@ struct OutageTests : public test_utils::MultipleNodesTest {
         if (nodes_states[i] == DOWN || nodes_states[i] == REMOVED) {
           if (--n == 0) {
             nodes_states[i] = UP;
-            ccm->start(i);
+            ccm->start_node(i);
             break;
           }
         } else if (nodes_states[i] == GOSSIP_DISABLED) {
            nodes_states[i] = UP;
-           ccm->gossip(i, true);
+           ccm->enable_node_gossip(i);
            break;
         } else if (nodes_states[i] == BINARY_DISABLED) {
            nodes_states[i] = UP;
-           ccm->gossip(i, true);
+           ccm->enable_node_binary_protocol(i);
            break;
         }
       }

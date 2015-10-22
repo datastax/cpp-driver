@@ -75,6 +75,8 @@ EXTERNAL_TYPE(cass::Metadata::SchemaSnapshot, CassSchemaMeta);
 EXTERNAL_TYPE(cass::KeyspaceMetadata, CassKeyspaceMeta);
 EXTERNAL_TYPE(cass::TableMetadata, CassTableMeta);
 EXTERNAL_TYPE(cass::ColumnMetadata, CassColumnMeta);
+EXTERNAL_TYPE(cass::FunctionMetadata, CassFunctionMeta);
+EXTERNAL_TYPE(cass::AggregateMetadata, CassAggregateMeta);
 EXTERNAL_TYPE(cass::UuidGen, CassUuidGen);
 EXTERNAL_TYPE(cass::Tuple, CassTuple);
 EXTERNAL_TYPE(cass::UserTypeValue, CassUserType);

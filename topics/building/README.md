@@ -1,9 +1,9 @@
 # Building
 
 ## Supported Platforms
-
-The driver is known to work on CentOS/RHEL 5/6/7, Mac OS X 10.8/10.9 (Mavericks
-and Yosemite), Ubuntu 12.04/14.04 LTS, and Windows 7 SP1 and above.
+The driver is known to work on CentOS/RHEL 5/6/7, Mac OS X 10.8/10.9/10.10/10.11
+(Moutain Lion, Mavericks, Yosemite, and El Capitan), Ubuntu 12.04/14.04 LTS, and
+Windows 7 SP1 and above.
 
 It has been built using GCC 4.1.2+, Clang 3.4+, and MSVC 2010/2012/2013/2015.
 
@@ -53,9 +53,9 @@ sudo rpm -i rpmforge-release-0.5.3-1.el5.rf.*.rpm
 ```bash
 sudo yum install automake cmake gcc-c++ git libtool openssl-devel wget
 pushd /tmp
-wget http://libuv.org/dist/v1.4.2/libuv-v1.4.2.tar.gz
-tar xzf libuv-v1.4.2.tar.gz
-pushd libuv-v1.4.2
+wget http://libuv.org/dist/v1.7.5/libuv-v1.7.5.tar.gz
+tar xzf libuv-v1.7.5.tar.gz
+pushd libuv-v1.7.5
 sh autogen.sh
 ./configure
 sudo make install
@@ -71,7 +71,17 @@ The driver has been built and tested using the Clang compiler provided by XCode
 brew install libuv cmake
 ```
 
-**NOTE:** The driver utilizes the OpenSSL library included with XCode.
+**NOTE:** The driver utilizes the OpenSSL library included with XCode unless
+          running XCode 7+.
+
+##### Additional Requirements for 10.11+ (El Capitan) and XCode 7+
+OpenSSL has been officially removed from the OS X SDK 10.11+ and requires
+additional configuration before building the driver.
+
+```bash
+brew install openssl
+brew link --force openssl
+```
 
 #### Ubuntu
 
@@ -120,9 +130,9 @@ proceeding.
 ```bash
 sudo yum install libssh2-devel
 pushd /tmp
-wget http://sourceforge.net/projects/boost/files/boost/1.57.0/boost_1_57_0.tar.gz/download -O boost_1_57_0.tar.gz
-tar xzf boost_1_57_0.tar.gz
-pushd boost_1_57_0
+wget http://sourceforge.net/projects/boost/files/boost/1.59.0/boost_1_59_0.tar.gz/download -O boost_1_59_0.tar.gz
+tar xzf boost_1_59_0.tar.gz
+pushd boost_1_59_0
 ./bootstrap.sh --with-libraries=atomic,chrono,date_time,log,program_options,random,regex,system,thread,test
 sudo ./b2 cxxflags="-fPIC" install
 popd

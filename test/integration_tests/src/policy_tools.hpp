@@ -41,6 +41,8 @@ struct PolicyTool {
   void create_schema(CassSession* session,
                      int dc1, int dc2);
 
+  void drop_schema(CassSession* session);
+
   void add_coordinator(std::string address);
 
   void assert_queried(std::string address, int n);

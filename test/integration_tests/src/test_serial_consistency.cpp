@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-# define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "test_utils.hpp"
 #include "policy_tools.hpp"
 
@@ -37,6 +33,13 @@ struct SerialConsistencyTests : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, "CREATE TABLE test (key text PRIMARY KEY, value int);");
   }
 
+  ~SerialConsistencyTests() {
+    // Drop the keyspace (ignore any and all errors)
+    test_utils::execute_query_with_error(session,
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+      % test_utils::SIMPLE_KEYSPACE));
+  }
+
   test_utils::CassFuturePtr insert_row(const std::string& key, int value, CassConsistency serial_consistency) {
     std::string insert_query = "INSERT INTO test (key, value) VALUES (?, ?) IF NOT EXISTS";
 
@@ -53,7 +56,7 @@ BOOST_AUTO_TEST_SUITE(serial_consistency)
 
 BOOST_AUTO_TEST_CASE(simple)
 {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if (version.major != 1) {
     SerialConsistencyTests tester;
     for (int i = 0; i < 2; ++i) {
@@ -67,15 +70,14 @@ BOOST_AUTO_TEST_CASE(simple)
       BOOST_REQUIRE_EQUAL(applied, i == 0 ? cass_true : cass_false);
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping serial_consistency/simple");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping serial_consistency/simple" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
 
 BOOST_AUTO_TEST_CASE(invalid)
 {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if (version.major != 1) {
     SerialConsistencyTests tester;
     test_utils::CassFuturePtr future = tester.insert_row("abc", 99, CASS_CONSISTENCY_ONE); // Invalid
@@ -87,8 +89,7 @@ BOOST_AUTO_TEST_CASE(invalid)
     cass_future_error_message(future.get(), &message.data, &message.length);
     BOOST_REQUIRE(strncmp(message.data, "Invalid consistency for conditional update. Must be one of SERIAL or LOCAL_SERIAL", message.length) == 0);
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping serial_consistency/invalid");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping serial_consistency/invalid" << std::endl;
     BOOST_REQUIRE(true);
   }
 }

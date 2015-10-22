@@ -20,8 +20,34 @@
 
 #include <boost/test/unit_test.hpp>
 
+/**
+ * Destroy all CCM clusters when starting and stopping the integration tests.
+ * This will only be run on startup and shutdown using the BOOST_GLOBAL_FIXTURE
+ * macro
+ */
+struct CCMCleanUp {
+public:
+  CCMCleanUp() {
+    std::cout << "Entering C/C++ Driver Integration Test Setup" << std::endl;
+    CCM::Bridge("config.txt").remove_all_clusters();
+  }
+
+  ~CCMCleanUp() {
+    std::cout << "Entering C/C++ Driver Integration Test Teardown" << std::endl;
+    CCM::Bridge("config.txt").remove_all_clusters();
+  }
+};
+BOOST_GLOBAL_FIXTURE(CCMCleanUp);
+
+/**
+ * Enable test case messages (display current test case being run)
+ */
+struct EnableTestCaseOutput {
+  EnableTestCaseOutput() {
+    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_test_units);
+  }
+};
+BOOST_GLOBAL_FIXTURE(EnableTestCaseOutput);
+
 using test_utils::CassLog;
-
-BOOST_GLOBAL_FIXTURE(CassLog)
-
-
+BOOST_GLOBAL_FIXTURE(CassLog);

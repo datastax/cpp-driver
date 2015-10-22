@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
 #include <boost/lexical_cast.hpp>
@@ -35,6 +31,13 @@ struct AsyncTests : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
   }
 
+  ~AsyncTests() {
+    // Drop the keyspace (ignore any and all errors)
+    test_utils::execute_query_with_error(session,
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+      % test_utils::SIMPLE_KEYSPACE));
+  }
+
   static std::vector<CassUuid> insert_async(CassSession* session,
                                             CassUuidGen* uuid_gen,
                                             const std::string& table_name,
@@ -50,7 +53,7 @@ struct AsyncTests : public test_utils::SingleSessionTest {
     for (size_t i = 0; i < num_concurrent_requests; ++i) {
       CassUuid id = test_utils::generate_time_uuid(uuid_gen);
       test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 3));
-      
+
       // Determine if bound parameters can be used based on C* version
       if (version.major == 1) {
         insert_query = str(boost::format("INSERT INTO %s (id, num, str) VALUES(%s, %s, 'row%s')") % table_name % test_utils::Value<CassUuid>::to_string(id) % i % i);

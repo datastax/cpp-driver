@@ -47,7 +47,9 @@ public:
   enum SchemaChangeTarget {
     KEYSPACE = 1,
     TABLE,
-    TYPE
+    TYPE,
+    FUNCTION,
+    AGGREGATE
   };
 
   EventResponse()
@@ -56,43 +58,19 @@ public:
       , topology_change_(0)
       , status_change_(0)
       , schema_change_(0)
-      , schema_change_target_(0)
-      , keyspace_(NULL)
-      , keyspace_size_(0)
-      , target_(NULL)
-      , target_size_(0) {}
+      , schema_change_target_(0) { }
 
   bool decode(int version, char* buffer, size_t size);
 
   int event_type() const { return event_type_; }
-
-  int topology_change() const {
-    return topology_change_;
-  }
-
-  int status_change() const {
-    return status_change_;
-  }
-
-  const Address& affected_node() const {
-    return affected_node_;
-  }
-
-  int schema_change() const {
-    return schema_change_;
-  }
-
-  int schema_change_target() const {
-    return schema_change_target_;
-  }
-
-  StringRef keyspace() const {
-    return StringRef(keyspace_, keyspace_size_);
-  }
-
-  StringRef target() const {
-    return StringRef(target_, target_size_);
-  }
+  int topology_change() const { return topology_change_; }
+  int status_change() const { return status_change_; }
+  const Address& affected_node() const { return affected_node_; }
+  int schema_change() const { return schema_change_; }
+  int schema_change_target() const { return schema_change_target_; }
+  StringRef keyspace() const { return keyspace_; }
+  StringRef target() const { return target_; }
+  const StringRefVec& arg_types() const { return arg_types_; }
 
 private:
   int event_type_;
@@ -103,10 +81,9 @@ private:
 
   int schema_change_;
   int schema_change_target_;
-  char* keyspace_;
-  size_t keyspace_size_;
-  char* target_;
-  size_t target_size_;
+  StringRef keyspace_;
+  StringRef target_;
+  StringRefVec arg_types_;
 };
 
 } // namespace cass

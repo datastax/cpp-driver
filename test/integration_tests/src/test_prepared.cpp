@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
 #include <boost/lexical_cast.hpp>
@@ -129,6 +125,13 @@ struct PreparedTests : public test_utils::SingleSessionTest {
       columns_ += ", tinyint_sample, smallint_sample, date_sample, time_sample";
       values_ += ", ?, ?, ?, ?";
     }
+  }
+
+  ~PreparedTests() {
+    // Drop the keyspace (ignore any and all errors)
+    test_utils::execute_query_with_error(session,
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+      % test_utils::SIMPLE_KEYSPACE));
   }
 
   void insert_all_types(CassSession* session, const CassPrepared* prepared, const AllTypes& all_types) {
