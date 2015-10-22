@@ -46,6 +46,25 @@ struct TimestampedAverage {
   uint64_t num_measured;
 };
 
+class VersionNumber {
+public:
+  VersionNumber()
+    : major_(0)
+    , minor_(0)
+    , patch_(0) { }
+
+  bool parse(const std::string& version);
+
+  int major() const { return major_; }
+  int minor() const { return minor_; }
+  int patch() const { return patch_; }
+
+private:
+  int major_;
+  int minor_;
+  int patch_;
+};
+
 class Host : public RefCounted<Host> {
 public:
   class StateListener {
@@ -83,6 +102,11 @@ public:
   const std::string& listen_address() const { return listen_address_; }
   void set_listen_address(const std::string& listen_address) {
     listen_address_ = listen_address;
+  }
+
+  const VersionNumber& cassandra_version() const { return cassandra_version_; }
+  void set_cassaandra_version(const VersionNumber& cassandra_version) {
+    cassandra_version_ = cassandra_version;
   }
 
   bool was_just_added() const { return state() == ADDED; }
@@ -157,6 +181,7 @@ private:
   bool mark_;
   Atomic<HostState> state_;
   std::string listen_address_;
+  VersionNumber cassandra_version_;
   std::string rack_;
   std::string dc_;
 

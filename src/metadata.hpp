@@ -250,7 +250,16 @@ public:
   ColumnMetadata(const std::string& name)
     : MetadataBase(name)
     , type_(CASS_COLUMN_TYPE_REGULAR)
-    , position_(-1)
+    , position_(0)
+    , is_reversed_(false) { }
+
+  ColumnMetadata(const std::string& name,
+                 CassColumnType type,
+                 const SharedRefPtr<const DataType>& data_type)
+    : MetadataBase(name)
+    , type_(type)
+    , position_(0)
+    , data_type_(data_type)
     , is_reversed_(false) { }
 
   ColumnMetadata(const std::string& name,
@@ -300,7 +309,7 @@ public:
   const ColumnMetadata::Ptr& get_or_create_column(const std::string& name);
   void add_column(const ColumnMetadata::Ptr& column);
   void clear_columns();
-  void build_keys();
+  void build_keys(const VersionNumber& cassandra_version);
   void key_aliases(KeyAliases* output) const;
 
 private:
@@ -401,11 +410,15 @@ public:
 
   class SchemaSnapshot {
   public:
-    SchemaSnapshot(uint32_t version, const KeyspaceMetadata::MapPtr& keyspaces)
+    SchemaSnapshot(uint32_t version,
+                   int protocol_version,
+                   const KeyspaceMetadata::MapPtr& keyspaces)
       : version_(version)
+      , protocol_version_(protocol_version)
       , keyspaces_(keyspaces) { }
 
     uint32_t version() const { return version_; }
+    int protocol_version() const { return protocol_version_; }
 
     const KeyspaceMetadata* get_keyspace(const std::string& name) const;
     Iterator* iterator_keyspaces() const { return new KeyspaceIterator(*keyspaces_); }
@@ -419,6 +432,7 @@ public:
 
   private:
     uint32_t version_;
+    int protocol_version_;
     KeyspaceMetadata::MapPtr keyspaces_;
   };
 
@@ -460,7 +474,13 @@ public:
 
   void clear();
 
-  void set_protocol_version(int version) { protocol_version_ = version; }
+  void set_protocol_version(int version) {
+    protocol_version_ = version;
+  }
+
+  void set_cassandra_version(const VersionNumber& cassandra_version) {
+    cassandra_version_ = cassandra_version;
+  }
 
   void set_partitioner(const std::string& partitioner_class) { token_map_.set_partitioner(partitioner_class); }
   void update_host(SharedRefPtr<Host>& host, const TokenStringList& tokens) { token_map_.update_host(host, tokens); }
@@ -481,7 +501,7 @@ private:
     const KeyspaceMetadata::MapPtr& keyspaces() const { return keyspaces_; }
 
     void update_keyspaces(int version, ResultResponse* result, KeyspaceMetadata::Map& updates);
-    void update_tables(int version, ResultResponse* tables_result, ResultResponse* columns_result);
+    void update_tables(int version, const VersionNumber& casandra_version, ResultResponse* tables_result, ResultResponse* columns_result);
     void update_user_types(ResultResponse* result);
     void update_functions(ResultResponse* result);
     void update_aggregates(int version, ResultResponse* result);
@@ -501,7 +521,7 @@ private:
     }
 
   private:
-    void update_columns(int version, ResultResponse* result);
+    void update_columns(int version, const VersionNumber& cassandra_version, ResultResponse* result);
 
     KeyspaceMetadata* get_or_create_keyspace(const std::string& name);
 
@@ -529,6 +549,8 @@ private:
   // Only used internally on a single thread, there's
   // no need for copy-on-write.
   int protocol_version_;
+  VersionNumber cassandra_version_;
+
 
 private:
   DISALLOW_COPY_AND_ASSIGN(Metadata);

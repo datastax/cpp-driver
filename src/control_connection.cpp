@@ -33,10 +33,10 @@
 #include <sstream>
 #include <vector>
 
-#define SELECT_LOCAL "SELECT data_center, rack FROM system.local WHERE key='local'"
-#define SELECT_LOCAL_TOKENS "SELECT data_center, rack, partitioner, tokens FROM system.local WHERE key='local'"
-#define SELECT_PEERS "SELECT peer, data_center, rack, rpc_address FROM system.peers"
-#define SELECT_PEERS_TOKENS "SELECT peer, data_center, rack, rpc_address, tokens FROM system.peers"
+#define SELECT_LOCAL "SELECT data_center, rack, release_version FROM system.local WHERE key='local'"
+#define SELECT_LOCAL_TOKENS "SELECT data_center, rack, release_version, partitioner, tokens FROM system.local WHERE key='local'"
+#define SELECT_PEERS "SELECT peer, data_center, rack, release_version, rpc_address FROM system.peers"
+#define SELECT_PEERS_TOKENS "SELECT peer, data_center, rack, release_version, rpc_address, tokens FROM system.peers"
 
 #define SELECT_KEYSPACES "SELECT * FROM system.schema_keyspaces"
 #define SELECT_COLUMN_FAMILIES "SELECT * FROM system.schema_columnfamilies"
@@ -401,6 +401,7 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
       if (local_result->row_count() > 0) {
         local_result->decode_first_row();
         control_connection->update_node_info(host, &local_result->first_row());
+        session->metadata().set_cassandra_version(host->cassandra_version());
       } else {
         LOG_WARN("No row found in %s's local system table",
                  connection->address_string().c_str());
@@ -590,6 +591,9 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
   std::string dc;
   row->get_string_by_name("data_center", &dc);
 
+  std::string release_version;
+  row->get_string_by_name("release_version", &release_version);
+
   // This value is not present in the "system.local" query
   v = row->get_by_name("peer");
   if (v != NULL) {
@@ -609,6 +613,15 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
     if (!host->was_just_added()) {
       session_->load_balancing_policy_->on_add(host);
     }
+  }
+
+  VersionNumber cassandra_version;
+  if (cassandra_version.parse(release_version)) {
+    host->set_cassaandra_version(cassandra_version);
+  } else {
+    LOG_WARN("Invalid release version string \"%s\" on host %s",
+             release_version.c_str(),
+             host->address().to_string().c_str());
   }
 
   if (should_query_tokens_) {
