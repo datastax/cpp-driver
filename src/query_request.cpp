@@ -123,8 +123,6 @@ int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs
   if (page_size() > 0) {
     paging_buf_size += sizeof(int32_t); // [int]
     flags |= CASS_QUERY_FLAG_PAGE_SIZE;
-  } else {
-
   }
 
   if (!paging_state().empty()) {
