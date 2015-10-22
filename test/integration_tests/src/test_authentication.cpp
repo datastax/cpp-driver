@@ -14,13 +14,8 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "cassandra.h"
 #include "test_utils.hpp"
-#include "cql_ccm_bridge.hpp"
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
@@ -33,16 +28,17 @@
 struct AthenticationTests {
   AthenticationTests()
     : cluster(cass_cluster_new())
-    , conf(cql::get_ccm_bridge_configuration())
-    , ccm(cql::cql_ccm_bridge_t::create(conf, "test")) {
-    boost::debug::detect_memory_leaks(false);
-    ccm->populate(1);
-    ccm->update_config("authenticator", "PasswordAuthenticator");
-    ccm->start(1, "-Dcassandra.superuser_setup_delay_ms=0");
-    test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+    , ccm(new CCM::Bridge("config.txt")) {
+    ccm->create_cluster();
+    ccm->kill_cluster();
+    ccm->update_cluster_configuration("authenticator", "PasswordAuthenticator");
+    ccm->start_cluster("-Dcassandra.superuser_setup_delay_ms=0");
+    test_utils::initialize_contact_points(cluster.get(), CCM::Bridge::get_ip_prefix("config.txt"), 1, 0);
+  }
 
-    // Sometimes the superuser will still not be setup
-    boost::this_thread::sleep_for(boost::chrono::seconds(1));
+  ~AthenticationTests() {
+    //TODO: Add name generation for simple auth tests
+    ccm->remove_cluster();
   }
 
   void auth(int protocol_version) {
@@ -72,8 +68,7 @@ struct AthenticationTests {
   }
 
   test_utils::CassClusterPtr cluster;
-  const cql::cql_ccm_bridge_configuration_t& conf;
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
+  boost::shared_ptr<CCM::Bridge> ccm;
 };
 
 BOOST_FIXTURE_TEST_SUITE(authentication, AthenticationTests)

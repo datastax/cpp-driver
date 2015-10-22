@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #ifdef _WIN32
 #   ifndef CASS_STATIC
 #      include <openssl/applink.c>
@@ -31,7 +27,6 @@
 #include <boost/format.hpp>
 
 #include "cassandra.h"
-#include "cql_ccm_bridge.hpp"
 #include "test_utils.hpp"
 
 #define CASSANDRA_PEM_CERTIFICATE_FILENAME "ssl/cassandra.pem"
@@ -42,7 +37,6 @@
 #define INVALID_DRIVER_PEM_CERTIFICATE_FILENAME "ssl/invalid/driver-invalid.pem"
 #define INVALID_DRIVER_PEM_PRIVATE_KEY_FILENAME "ssl/invalid/driver-private-invalid.pem"
 #define INVALID_DRIVER_PEM_PRIVATE_KEY_PASSWORD "invalid"
-#define CCM_CLUSTER_NAME "test"
 
 #define NUMBER_OF_ITERATIONS 4
 
@@ -55,13 +49,9 @@
  */
 struct TestSSL {
   /**
-   * CCM bridge configuration
-   */
-  const cql::cql_ccm_bridge_configuration_t& configuration_;
-  /**
    * CCM bridge instance for performing additional operations against cluster
    */
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm_;
+  boost::shared_ptr<CCM::Bridge> ccm_;
   /**
    * Cluster used for discovering nodes during the session connection
    */
@@ -108,13 +98,11 @@ struct TestSSL {
    * Constructor
    */
   TestSSL()
-      : configuration_(cql::get_ccm_bridge_configuration())
+      : ccm_(new CCM::Bridge("config.txt"))
       , cluster_(NULL)
       , connect_future_(NULL)
       , session_(NULL)
       , ssl_(NULL) {
-    boost::debug::detect_memory_leaks(false);
-
     //Load the PEM certificates and private keys
     cassandra_certificate_ = test_utils::load_ssl_certificate(CASSANDRA_PEM_CERTIFICATE_FILENAME);
     driver_certificate_ = test_utils::load_ssl_certificate(DRIVER_PEM_CERTIFICATE_FILENAME);
@@ -147,11 +135,11 @@ struct TestSSL {
    */
   void setup(bool is_ssl = true, bool is_client_authentication = false, bool is_failure = false, unsigned int nodes = 1, unsigned int protocol_version = 2) {
     //Create a n-node cluster
-    ccm_ = cql::cql_ccm_bridge_t::create_and_start(configuration_, CCM_CLUSTER_NAME, nodes, 0, is_ssl, is_client_authentication);
+    ccm_->create_cluster(nodes, 0, is_ssl, is_client_authentication);
 
     //Initialize the cpp-driver
     cluster_ = cass_cluster_new();
-    test_utils::initialize_contact_points(cluster_, configuration_.ip_prefix(), nodes, 0);
+    test_utils::initialize_contact_points(cluster_, ccm_->get_ip_prefix(), nodes, 0);
     cass_cluster_set_connect_timeout(cluster_, 10000);
     cass_cluster_set_request_timeout(cluster_, 10000);
     cass_cluster_set_num_threads_io(cluster_, 1);
@@ -204,7 +192,7 @@ struct TestSSL {
 
   /**
    * Create the SSL context; clean-up existing context if exists
-   */ 
+   */
   void create_ssl_context() {
     if (ssl_) {
       cass_ssl_free(ssl_);
@@ -339,7 +327,7 @@ BOOST_AUTO_TEST_CASE(connect) {
   test_normal_load();
   test_high_load();
   teardown();
-  
+
   create_ssl_context();
   cass_ssl_set_verify_flags(ssl_, CASS_SSL_VERIFY_PEER_IDENTITY);
   BOOST_REQUIRE_EQUAL(cass_ssl_add_trusted_cert_n(ssl_, cassandra_certificate_.data(), cassandra_certificate_.size()), CASS_OK);

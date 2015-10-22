@@ -1,22 +1,18 @@
 /*
-Copyright (c) 2014-2015 DataStax
+  Copyright (c) 2014-2015 DataStax
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+  http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
 */
-
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
@@ -29,14 +25,11 @@ limitations under the License.
 struct MetricsTest {
 public:
   test_utils::CassClusterPtr cluster_;
-  const cql::cql_ccm_bridge_configuration_t& configuration_;
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm_;
+  boost::shared_ptr<CCM::Bridge> ccm_;
 
   MetricsTest()
     : cluster_(cass_cluster_new())
-    , configuration_(cql::get_ccm_bridge_configuration()) {
-    boost::debug::detect_memory_leaks(false);
-  }
+    , ccm_(new CCM::Bridge("config.txt")) {}
 
   ~MetricsTest() {
     close_session();
@@ -120,32 +113,34 @@ BOOST_AUTO_TEST_CASE(connections) {
   cass_cluster_set_num_threads_io(cluster_.get(), 1);
   cass_cluster_set_core_connections_per_host(cluster_.get(), 1);
   cass_cluster_set_reconnect_wait_time(cluster_.get(), 10); // Low re-connect for node restart
-  test_utils::initialize_contact_points(cluster_.get(), configuration_.ip_prefix(), 3, 0);
-  ccm_ = cql::cql_ccm_bridge_t::create_and_start(configuration_, "test", 3, 0);
+  test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 3, 0);
+  if (ccm_->create_cluster(3)) {
+    ccm_->start_cluster();
+  }
   create_session();
   boost::this_thread::sleep_for(boost::chrono::seconds(1));
 
   CassMetrics metrics;
   get_metrics(&metrics);
   BOOST_CHECK_EQUAL(metrics.stats.total_connections, 3);
-  ccm_->stop(1);
+  ccm_->stop_node(1);
   get_metrics(&metrics);
   BOOST_CHECK_EQUAL(metrics.stats.total_connections, 2);
-  ccm_->stop(2);
+  ccm_->stop_node(2);
   get_metrics(&metrics);
   BOOST_CHECK_EQUAL(metrics.stats.total_connections, 1);
-  ccm_->stop(3);
+  ccm_->stop_node(3);
   get_metrics(&metrics);
   BOOST_CHECK_EQUAL(metrics.stats.total_connections, 0);
-  ccm_->start(1);
+  ccm_->start_node(1);
   boost::this_thread::sleep_for(boost::chrono::seconds(1));
   get_metrics(&metrics);
   BOOST_CHECK_EQUAL(metrics.stats.total_connections, 1);
-  ccm_->start(2);
+  ccm_->start_node(2);
   boost::this_thread::sleep_for(boost::chrono::seconds(1));
   get_metrics(&metrics);
   BOOST_CHECK_EQUAL(metrics.stats.total_connections, 2);
-  ccm_->start(3);
+  ccm_->start_node(3);
   boost::this_thread::sleep_for(boost::chrono::seconds(1));
   get_metrics(&metrics);
   BOOST_CHECK_EQUAL(metrics.stats.total_connections, 3);
@@ -164,13 +159,15 @@ BOOST_AUTO_TEST_CASE(connections) {
 BOOST_AUTO_TEST_CASE(timeouts) {
   CassMetrics metrics;
   cass_cluster_set_core_connections_per_host(cluster_.get(), 2);
-  test_utils::initialize_contact_points(cluster_.get(), configuration_.ip_prefix(), 2, 0);
+  test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 2, 0);
 
   /*
    * Check for connection timeouts
    */
   cass_cluster_set_connect_timeout(cluster_.get(), 0);
-  ccm_ = cql::cql_ccm_bridge_t::create_and_start(configuration_, "test", 2, 0);
+  if (ccm_->create_cluster(2)) {
+    ccm_->start_cluster();
+  }
   create_session(true);
   get_metrics(&metrics);
   BOOST_CHECK_GE(metrics.errors.connection_timeouts, 2);
@@ -178,7 +175,7 @@ BOOST_AUTO_TEST_CASE(timeouts) {
   /*
    * Check for pending request timeouts
    */
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major <= 2 && version.minor < 1) || version.major < 2) {
     // Limit the connections to one
     cass_cluster_set_core_connections_per_host(cluster_.get(), 1);
@@ -187,7 +184,9 @@ BOOST_AUTO_TEST_CASE(timeouts) {
     cass_cluster_set_connect_timeout(cluster_.get(), 100);
     // Make the number of pending requests really high to exceed the timeout
     cass_cluster_set_pending_requests_high_water_mark(cluster_.get(), 1000);
-    ccm_ = cql::cql_ccm_bridge_t::create_and_start(configuration_, "test", 2, 0);
+    if (ccm_->create_cluster(2)) {
+      ccm_->start_cluster();
+    }
     create_session(true);
 
     // Execute async queries to create pending request timeouts
@@ -205,9 +204,7 @@ BOOST_AUTO_TEST_CASE(timeouts) {
       metrics.errors.pending_request_timeouts == 0);
     BOOST_CHECK_GT(metrics.errors.pending_request_timeouts, 0);
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Skipping Pending Request Timeout for Cassandra v" << version.to_string());
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_warnings);
+    std::cout << "Skipping Pending Request Timeout for Cassandra v" << version.to_string() << std::endl;
   }
 
   /*
@@ -215,7 +212,9 @@ BOOST_AUTO_TEST_CASE(timeouts) {
    */
   cass_cluster_set_connect_timeout(cluster_.get(), 5 * test_utils::ONE_SECOND_IN_MICROS);
   cass_cluster_set_request_timeout(cluster_.get(), 0);
-  ccm_ = cql::cql_ccm_bridge_t::create_and_start(configuration_, "test", 1, 0);
+  if (ccm_->create_cluster()) {
+    ccm_->start_cluster();
+  }
   create_session(true);
   get_metrics(&metrics);
   BOOST_CHECK_GE(metrics.errors.request_timeouts, 1);
@@ -238,8 +237,10 @@ BOOST_AUTO_TEST_CASE(request_statistics) {
   //Create one connections per host
   cass_cluster_set_num_threads_io(cluster_.get(), 1);
   cass_cluster_set_core_connections_per_host(cluster_.get(), 1);
-  test_utils::initialize_contact_points(cluster_.get(), configuration_.ip_prefix(), 1, 0);
-  ccm_ = cql::cql_ccm_bridge_t::create_and_start(configuration_, "test", 1, 0);
+  test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 1, 0);
+  if (ccm_->create_cluster()) {
+    ccm_->start_cluster();
+  }
   create_session();
 
   CassMetrics metrics;

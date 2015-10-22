@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "test_utils.hpp"
 #include "testing.hpp"
 #include "cassandra.h"
@@ -74,6 +70,13 @@ public:
   UDTTests() : test_utils::SingleSessionTest(1, 0), schema_meta_(NULL) {
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+  }
+
+  ~UDTTests() {
+    // Drop the keyspace (ignore any and all errors)
+    test_utils::execute_query_with_error(session,
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+      % test_utils::SIMPLE_KEYSPACE));
   }
 
   /**
@@ -261,7 +264,7 @@ BOOST_AUTO_TEST_SUITE(udts)
  * @cassandra_version 2.1.x
  */
 BOOST_AUTO_TEST_CASE(read_write) {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     UDTTests tester;
     std::string create_table = "CREATE TABLE user (id uuid PRIMARY KEY, addr frozen<address>)";
@@ -364,8 +367,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
       BOOST_REQUIRE(cass_value_is_null(cass_iterator_get_user_type_field_value(iterator.get())));
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping udts/read_write");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping udts/read_write" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
@@ -381,7 +383,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
  * @cassandra_version 2.1.x
  */
 BOOST_AUTO_TEST_CASE(invalid) {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     UDTTests tester;
     std::string invalid_udt_missing_frozen_keyword = "CREATE TYPE invalid_udt (id uuid, address address)";
@@ -421,8 +423,7 @@ BOOST_AUTO_TEST_CASE(invalid) {
                           CASS_ERROR_SERVER_INVALID_QUERY);
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping udts/invalid");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping udts/invalid" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
@@ -439,7 +440,7 @@ BOOST_AUTO_TEST_CASE(invalid) {
 * @cassandra_version 2.1.x
 */
 BOOST_AUTO_TEST_CASE(text_types) {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
     UDTTests tester;
     std::string nested_type = "CREATE TYPE nested_type (value_1 int, value_2 int)";
@@ -510,8 +511,7 @@ BOOST_AUTO_TEST_CASE(text_types) {
     BOOST_REQUIRE_EQUAL(test_utils::Value<cass_int32_t>::get(value_value, &value_result), CASS_OK);
     BOOST_REQUIRE(test_utils::Value<cass_int32_t>::equal(value_result, 200));
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping udts/text_types");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping udts/text_types" << std::endl;
     BOOST_REQUIRE(true);
   }
 }

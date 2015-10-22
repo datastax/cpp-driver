@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
 
@@ -32,7 +28,7 @@ BOOST_AUTO_TEST_SUITE(warnings)
 
 BOOST_AUTO_TEST_CASE(aggregate_without_partition_key)
 {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
     WarningsTests tester;
     test_utils::CassStatementPtr statement(cass_statement_new("SELECT sum(gossip_generation) FROM system.local", 0));
@@ -41,8 +37,7 @@ BOOST_AUTO_TEST_CASE(aggregate_without_partition_key)
     BOOST_CHECK(cass_future_error_code(future.get()) == CASS_OK);
     BOOST_CHECK(test_utils::CassLog::message_count() > 0);
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping warnings/aggregate_without_partition_key");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping warnings/aggregate_without_partition_key" << std::endl;
     BOOST_REQUIRE(true);
   }
 }

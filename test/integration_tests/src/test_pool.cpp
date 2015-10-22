@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "cassandra.h"
 #include "test_utils.hpp"
 #include "cluster.hpp"
@@ -52,82 +48,91 @@ struct TestPool : public test_utils::MultipleNodesTest {
   }
 };
 
-BOOST_FIXTURE_TEST_SUITE(pool, TestPool)
+BOOST_AUTO_TEST_SUITE(pool)
 
 BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
 {
-  cass_cluster_set_num_threads_io(cluster, 1);
-  reinterpret_cast<cass::Cluster*>(cluster)->config().set_core_connections_per_host(0);// bypassing API param check
+  // Limit backpressure test to lower version of C* (difficult to produce in later versions deterministically)
+  CCM::CassVersion version = test_utils::get_version();
+  if ((version.major <= 2 && version.minor < 1) || version.major < 2) {
+    TestPool tester;
+    cass_cluster_set_num_threads_io(tester.cluster, 1);
+    reinterpret_cast<cass::Cluster*>(tester.cluster)->config().set_core_connections_per_host(0);// bypassing API param check
 
-  {
-    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+    {
+      test_utils::CassSessionPtr session(test_utils::create_session(tester.cluster));
 
-    test_utils::CassStatementPtr statement(cass_statement_new("SELECT * FROM system.local", 0));
+      test_utils::CassStatementPtr statement(cass_statement_new("SELECT * FROM system.local", 0));
 
-    // reject should come immediately
-    boost::chrono::steady_clock::time_point start = boost::chrono::steady_clock::now();
-    test_utils::CassFuturePtr future_reject(cass_session_execute(session.get(), statement.get()));
-    CassError code_reject = test_utils::wait_and_return_error(future_reject.get());
-    boost::chrono::steady_clock::time_point reject_time = boost::chrono::steady_clock::now();
-    boost::chrono::milliseconds reject_ms = boost::chrono::duration_cast<boost::chrono::milliseconds>(reject_time - start);
+      // reject should come immediately
+      boost::chrono::steady_clock::time_point start = boost::chrono::steady_clock::now();
+      test_utils::CassFuturePtr future_reject(cass_session_execute(session.get(), statement.get()));
+      CassError code_reject = test_utils::wait_and_return_error(future_reject.get());
+      boost::chrono::steady_clock::time_point reject_time = boost::chrono::steady_clock::now();
+      boost::chrono::milliseconds reject_ms = boost::chrono::duration_cast<boost::chrono::milliseconds>(reject_time - start);
 
-    BOOST_CHECK_LT(reject_ms.count(), 1);
-    BOOST_CHECK_EQUAL(code_reject, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
-  }
-
-  {
-    // one connection allowed
-    cass_cluster_set_num_threads_io(cluster, 1);
-    cass_cluster_set_core_connections_per_host(cluster, 1);
-    cass_cluster_set_max_connections_per_host(cluster, 1);
-
-    // becomes unwritable after two pending
-    const size_t pending_low_wm = 1;
-    const size_t pending_high_wm = 2;
-    cass_cluster_set_pending_requests_low_water_mark(cluster, pending_low_wm);
-    cass_cluster_set_pending_requests_high_water_mark(cluster, pending_high_wm);
-
-    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
-
-    test_utils::CassStatementPtr statement(cass_statement_new("SELECT * FROM system.local", 0));
-
-    // blow through streams until we get rejected
-    const size_t max_streams = 128;
-    size_t tries = 0;
-    size_t max_tries = 2*max_streams; // v[12] stream has 128 ids
-    std::vector<test_utils::CassFuturePtr> futures;
-    for (; tries < max_tries; ++tries) {
-      futures.push_back(test_utils::CassFuturePtr(cass_session_execute(session.get(), statement.get())));
-      if (cass_future_wait_timed(futures.back().get(), 1)) {
-        BOOST_REQUIRE_EQUAL(cass_future_error_code(futures.back().get()), CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
-        break;
-      }
+      BOOST_CHECK_LT(reject_ms.count(), 1);
+      BOOST_CHECK_EQUAL(code_reject, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
     }
 
-    BOOST_REQUIRE_GE(tries, max_streams + pending_high_wm + 1);
-    BOOST_REQUIRE_LT(tries, max_tries);
-    // wait for window to advance past low water mark
-    test_utils::wait_and_check_error(futures[pending_low_wm + (tries - max_streams)].get());
-    // now, should be writable again
-    test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
-    test_utils::wait_and_check_error(future.get());
+    {
+      // one connection allowed
+      cass_cluster_set_num_threads_io(tester.cluster, 1);
+      cass_cluster_set_core_connections_per_host(tester.cluster, 1);
+      cass_cluster_set_max_connections_per_host(tester.cluster, 1);
+
+      // becomes unwritable after two pending
+      const size_t pending_low_wm = 1;
+      const size_t pending_high_wm = 2;
+      cass_cluster_set_pending_requests_low_water_mark(tester.cluster, pending_low_wm);
+      cass_cluster_set_pending_requests_high_water_mark(tester.cluster, pending_high_wm);
+
+      test_utils::CassSessionPtr session(test_utils::create_session(tester.cluster));
+
+      test_utils::CassStatementPtr statement(cass_statement_new("SELECT * FROM system.local", 0));
+
+      // blow through streams until we get rejected
+      const size_t max_streams = 128;
+      size_t tries = 0;
+      size_t max_tries = 2*max_streams; // v[12] stream has 128 ids
+      std::vector<test_utils::CassFuturePtr> futures;
+      for (; tries < max_tries; ++tries) {
+        futures.push_back(test_utils::CassFuturePtr(cass_session_execute(session.get(), statement.get())));
+        if (cass_future_wait_timed(futures.back().get(), 1)) {
+          BOOST_REQUIRE_EQUAL(cass_future_error_code(futures.back().get()), CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+          break;
+        }
+      }
+
+      BOOST_REQUIRE_GE(tries, max_streams + pending_high_wm + 1);
+      BOOST_REQUIRE_LT(tries, max_tries);
+      // wait for window to advance past low water mark
+      test_utils::wait_and_check_error(futures[pending_low_wm + (tries - max_streams)].get());
+      // now, should be writable again
+      test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
+      test_utils::wait_and_check_error(future.get());
+    }
+  } else {
+    std::cout << "Difficult to Produce Backpressure for Cassandra v" << version.to_string() << ": Skipping pool/no_hosts_backpressure (use C* 1.x - 2.0.x)" << std::endl;
+    BOOST_REQUIRE(true);
   }
 }
 
 BOOST_AUTO_TEST_CASE(connection_spawn)
 {
-  const std::string SPAWN_MSG = "Spawning new connection to host " + conf.ip_prefix() + "1:9042";
+  TestPool tester;
+  const std::string SPAWN_MSG = "Spawning new connection to host " + tester.ccm->get_ip_prefix() + "1:9042";
   test_utils::CassLog::reset(SPAWN_MSG);
 
   test_utils::MultipleNodesTest inst(1, 0);
-  cass_cluster_set_num_threads_io(cluster, 1);
-  cass_cluster_set_core_connections_per_host(cluster, 1);
-  cass_cluster_set_max_connections_per_host(cluster, 2);
-  cass_cluster_set_max_concurrent_requests_threshold(cluster, 1);// start next connection soon
+  cass_cluster_set_num_threads_io(tester.cluster, 1);
+  cass_cluster_set_core_connections_per_host(tester.cluster, 1);
+  cass_cluster_set_max_connections_per_host(tester.cluster, 2);
+  cass_cluster_set_max_concurrent_requests_threshold(tester.cluster, 1);// start next connection soon
 
   // only one with no traffic
   {
-    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+    test_utils::CassSessionPtr session(test_utils::create_session(tester.cluster));
   }
   BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), 1u);
 
@@ -135,7 +140,7 @@ BOOST_AUTO_TEST_CASE(connection_spawn)
   test_utils::CassLog::reset(SPAWN_MSG);
   // exactly two with traffic
   {
-    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
+    test_utils::CassSessionPtr session(test_utils::create_session(tester.cluster));
 
     test_utils::CassStatementPtr statement(cass_statement_new("SELECT * FROM system.local", 0));
 
@@ -152,7 +157,7 @@ BOOST_AUTO_TEST_CASE(connection_spawn)
  * Data for performing the connection interruption
  */
 struct ConnectionInterruptionData {
-  cql::cql_ccm_bridge_t* ccm_ptr;
+  CCM::Bridge* ccm;
   int node;
   int duration;
   int delay;
@@ -167,9 +172,9 @@ static void connection_interruptions(void *data) {
   boost::posix_time::ptime start = boost::posix_time::second_clock::universal_time();
   ConnectionInterruptionData* ci_data = static_cast<ConnectionInterruptionData*>(data);
   while ((boost::posix_time::second_clock::universal_time() - start).total_seconds() < ci_data->duration) {
-    ci_data->ccm_ptr->pause(ci_data->node);
+    ci_data->ccm->pause_node(ci_data->node);
     boost::this_thread::sleep(boost::posix_time::seconds(ci_data->delay));
-    ci_data->ccm_ptr->resume(ci_data->node);
+    ci_data->ccm->resume_node(ci_data->node);
   }
 }
 
@@ -185,47 +190,61 @@ static void connection_interruptions(void *data) {
  * @jira_ticket CPP-253 [https://datastax-oss.atlassian.net/browse/CPP-253]
  */
 BOOST_AUTO_TEST_CASE(dont_recycle_pool_on_timeout) {
-  // Add a second node
-  ccm->bootstrap(2);
+  // Limit backpressure test to lower version of C* (difficult to produce in later versions deterministically)
+  CCM::CassVersion version = test_utils::get_version();
+  if ((version.major <= 2 && version.minor < 1) || version.major < 2) {
+    TestPool tester;
 
-  // Create the connection interruption data
-  ConnectionInterruptionData ci_data = { ccm.get(), 2, 0, 0 };
+    // Add a second node
+    tester.ccm->bootstrap_node();
 
-  test_utils::initialize_contact_points(cluster, conf.ip_prefix(), 2, 0);
-  cass_cluster_set_connect_timeout(cluster, 1000);
-  cass_cluster_set_num_threads_io(cluster, 32);
-  cass_cluster_set_core_connections_per_host(cluster, 4);
-  cass_cluster_set_load_balance_round_robin(cluster);
+    // Create the connection interruption data
+    ConnectionInterruptionData ci_data = { tester.ccm.get(), 2, 0, 0 };
 
-  // Create session during "connection interruptions"
-  test_utils::CassLog::reset("Host " + conf.ip_prefix() + "2 already present attempting to initiate immediate connection");
-  {
-    uv_thread_t connection_interruptions_thread;
-    ci_data.duration = 5;
-    uv_thread_create(&connection_interruptions_thread, connection_interruptions, &ci_data);
-    test_utils::CassSessionPtr session(test_utils::create_session(cluster));
-    uv_thread_join(&connection_interruptions_thread);
-    execute_system_query(60, session);
+    std::string ip_prefix = tester.ccm->get_ip_prefix();
+    test_utils::initialize_contact_points(tester.cluster, ip_prefix, 2, 0);
+    cass_cluster_set_connect_timeout(tester.cluster, 1000);
+    cass_cluster_set_num_threads_io(tester.cluster, 32);
+    cass_cluster_set_core_connections_per_host(tester.cluster, 4);
+    cass_cluster_set_load_balance_round_robin(tester.cluster);
+
+    // Create session during "connection interruptions"
+    test_utils::CassLog::reset("Host " + ip_prefix + "2 already present attempting to initiate immediate connection");
+    {
+      uv_thread_t connection_interruptions_thread;
+      ci_data.duration = 5;
+      uv_thread_create(&connection_interruptions_thread, connection_interruptions, &ci_data);
+      test_utils::CassSessionPtr session(test_utils::create_session(tester.cluster));
+      uv_thread_join(&connection_interruptions_thread);
+      tester.execute_system_query(60, session);
+    }
+    BOOST_CHECK_GE(test_utils::CassLog::message_count(), 1);
+
+    // Handle partial reconnects
+    cass_cluster_set_connection_idle_timeout(tester.cluster, 1);
+    cass_cluster_set_connection_heartbeat_interval(tester.cluster, 2);
+    test_utils::CassLog::reset("already present attempting to initiate immediate connection");
+    {
+      // Create the session ignore all connection errors
+      test_utils::CassSessionPtr session(cass_session_new());
+      test_utils::CassFuturePtr future(cass_session_connect(session.get(), tester.cluster));
+      cass_future_wait_timed(future.get(), test_utils::ONE_SECOND_IN_MICROS);
+      uv_thread_t connection_interruptions_thread;
+      ci_data.delay = 5;
+      ci_data.duration = 45;
+      uv_thread_create(&connection_interruptions_thread, connection_interruptions, &ci_data);
+      tester.execute_system_query(60, session);
+      uv_thread_join(&connection_interruptions_thread);
+    }
+    BOOST_CHECK_GE(test_utils::CassLog::message_count(), 1);
+
+    // Destroy the current cluster (node added)
+    tester.ccm->remove_cluster();
+  } else {
+    std::cout << "Difficult to Produce Don't Recycle Pool on Timeout for Cassandra v" << version.to_string() << ": Skipping pool/dont_recycle_pool_on_timeout (use C* 1.x - 2.0.x)" << std::endl;
+    BOOST_REQUIRE(true);
   }
-  BOOST_CHECK_GE(test_utils::CassLog::message_count(), 1);
 
-  // Handle partial reconnects
-  cass_cluster_set_connection_idle_timeout(cluster, 1);
-  cass_cluster_set_connection_heartbeat_interval(cluster, 2);
-  test_utils::CassLog::reset("already present attempting to initiate immediate connection");
-  {
-    // Create the session ignore all connection errors
-    test_utils::CassSessionPtr session(cass_session_new());
-    test_utils::CassFuturePtr future(cass_session_connect(session.get(), cluster));
-    cass_future_wait_timed(future.get(), test_utils::ONE_SECOND_IN_MICROS);
-    uv_thread_t connection_interruptions_thread;
-    ci_data.delay = 5;
-    ci_data.duration = 45;
-    uv_thread_create(&connection_interruptions_thread, connection_interruptions, &ci_data);
-    execute_system_query(60, session);
-    uv_thread_join(&connection_interruptions_thread);
-  }
-  BOOST_CHECK_GE(test_utils::CassLog::message_count(), 1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

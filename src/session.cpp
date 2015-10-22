@@ -34,7 +34,7 @@ CassSession* cass_session_new() {
 
 void cass_session_free(CassSession* session) {
   // This attempts to close the session because the joining will
-  // hang indefinately otherwise. This causes minimal delay
+  // hang indefinitely otherwise. This causes minimal delay
   // if the session is already closed.
   cass::SharedRefPtr<cass::Future> future(new cass::SessionFuture());
   session->close_async(future.get(), true);
@@ -408,8 +408,8 @@ void Session::on_event(const SessionEvent& event) {
     case SessionEvent::CONNECT: {
       int port = config_.port();
 
-      const Config::ContactPointList& contact_points = config_.contact_points();
-      for (Config::ContactPointList::const_iterator it = contact_points.begin(),
+      const ContactPointList& contact_points = config_.contact_points();
+      for (ContactPointList::const_iterator it = contact_points.begin(),
                                                     end = contact_points.end();
            it != end; ++it) {
         const std::string& seed = *it;
