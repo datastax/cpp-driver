@@ -1071,7 +1071,7 @@ FunctionMetadata::FunctionMetadata(const std::string& name, const Value* signatu
       value2->value_type() == CASS_VALUE_TYPE_LIST &&
       value2->primary_value_type() == CASS_VALUE_TYPE_VARCHAR) {
     CollectionIterator iterator1(value1);
-    CollectionIterator iterator2(value1);
+    CollectionIterator iterator2(value2);
     while (iterator1.next() && iterator2.next()) {
       StringRef arg_name(iterator1.value()->to_string_ref());
       DataType::Ptr arg_type(TypeParser::parse_one(iterator2.value()->to_string()));
@@ -1107,7 +1107,7 @@ FunctionMetadata::FunctionMetadata(const std::string& name, const Value* signatu
 
 const DataType* FunctionMetadata::get_arg_type(StringRef name) const {
   Argument::Map::const_iterator i = args_by_name_.find(name);
-  if (i != args_by_name_.end()) return NULL;
+  if (i == args_by_name_.end()) return NULL;
   return i->second.get();
 }
 
