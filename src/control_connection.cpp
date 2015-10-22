@@ -319,7 +319,7 @@ void ControlConnection::on_event(EventResponse* response) {
               refresh_function(response->keyspace(),
                                response->target(),
                                response->arg_types(),
-                               response->schema_change() == EventResponse::AGGREGATE);
+                               response->schema_change_target() == EventResponse::AGGREGATE);
               break;
           }
           break;
