@@ -230,8 +230,12 @@ namespace CCM {
 
     /**
      * Remove all the available clusters
+     * (default deletes generated bridge clusters)
+     *
+     * @param is_all If true all CCM clusters are removed; otherwise false to
+     *               delete bridge generated clusters (default: false)
      */
-    void remove_all_clusters();
+    void remove_all_clusters(bool is_all = false);
 
     /**
      * Start the active Cassandra cluster

@@ -496,10 +496,16 @@ void CCM::Bridge::remove_cluster(const std::string& cluster_name) {
   execute_ccm_command(remove_command);
 }
 
-void CCM::Bridge::remove_all_clusters() {
+void CCM::Bridge::remove_all_clusters(bool is_all /*= false*/) {
   // Iterate through all the available clusters
   std::vector<std::string> clusters = get_available_clusters();
   for (std::vector<std::string>::const_iterator iterator = clusters.begin(); iterator != clusters.end(); ++iterator) {
+    // Determine if the cluster should be removed
+    bool is_valid_cluster = is_all;
+    if (!is_valid_cluster &&
+       (*iterator).compare(0, cluster_prefix_.size(), cluster_prefix_) != 0) {
+      continue;
+    }
     remove_cluster(*iterator);
   }
 }
