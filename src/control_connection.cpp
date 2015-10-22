@@ -334,8 +334,8 @@ void ControlConnection::on_event(EventResponse* response) {
                                                   response->target().to_string());
               break;
             case EventResponse::TYPE:
-              session_->metadata().drop_type(response->keyspace().to_string(),
-                                             response->target().to_string());
+              session_->metadata().drop_user_type(response->keyspace().to_string(),
+                                                  response->target().to_string());
               break;
           }
           break;

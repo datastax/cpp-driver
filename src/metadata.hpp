@@ -351,7 +351,7 @@ public:
   KeyspaceMetadata(const std::string& name)
     : MetadataBase(name)
     , tables_(new TableMetadata::Map)
-    , types_(new TypeMap)
+    , user_types_(new UserTypeMap)
     , functions_(new FunctionMetadata::Map)
     , aggregates_(new AggregateMetadata::Map) { }
 
