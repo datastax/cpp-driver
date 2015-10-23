@@ -39,6 +39,8 @@
 #define ALL_DATA_TYPES_TABLE_NAME "all"
 #define USER_DATA_TYPE_NAME "user_data_type"
 #define USER_DEFINED_FUNCTION_NAME "user_defined_function"
+#define USER_DEFINED_AGGREGATE_NAME "user_defined_aggregate"
+#define USER_DEFINED_AGGREGATE_FINAL_FUNCTION_NAME "uda_udf_final"
 
 /**
  * Schema Metadata Test Class
@@ -144,6 +146,16 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     return func_meta;
   }
 
+  const CassAggregateMeta* schema_get_aggregate(const std::string& ks_name,
+                                const std::string& agg_name,
+                                const std::vector<std::string>& agg_types) {
+    const CassAggregateMeta* agg_meta = cass_keyspace_meta_aggregate_by_name(schema_get_keyspace(ks_name),
+      agg_name.c_str(),
+      test_utils::implode(agg_types, ',').c_str());
+    BOOST_REQUIRE(agg_meta);
+    return agg_meta;
+  }
+
   void verify_fields(const test_utils::CassIteratorPtr& itr, const std::set<std::string>& expected_fields) {
     // all fields present, nothing extra
     std::set<std::string> observed;
@@ -203,7 +215,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
       fields.insert("index_type");
       fields.insert("validator");
 
-      if (version.major == 2) {
+      if (version >= "2.0.0") {
         fields.insert("type");
       }
     }
@@ -268,7 +280,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
       fields.insert("type");
       fields.insert("value_alias");
 
-      if (version.major == 2) {
+      if (version >= "2.0.0") {
         fields.insert("default_time_to_live");
         fields.insert("dropped_columns");
         fields.erase("id");
@@ -278,7 +290,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
         fields.insert("memtable_flush_period_in_ms");
         fields.insert("speculative_retry");
 
-        if (version.minor >= 1) {
+        if (version >= "2.1.0") {
           fields.insert("cf_id");
           fields.insert("max_index_interval");
           fields.insert("min_index_interval");
@@ -286,7 +298,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
           fields.erase("replicate_on_write");
         }
 
-        if (version.minor >= 2) {
+        if (version >= "2.2.0") {
           fields.erase("column_aliases");
           fields.erase("key_aliases");
           fields.erase("value_alias");
@@ -327,7 +339,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     }
     BOOST_CHECK(param_found);
 
-    if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+    if (version >= "2.1.0") {
       value = cass_table_meta_field_by_name(table_meta, "cf_id");
       BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UUID);
     } else {
@@ -344,7 +356,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     BOOST_REQUIRE(cass_table_meta_column_by_name(table_meta, non_key_column.c_str()));
 
     // goes away
-    if (version.major >= 2) {// dropping a column not supported in 1.2
+    if (version >= "2.0.0") {// dropping a column not supported in 1.2
       test_utils::execute_query(session, "ALTER TABLE "+table_name+" DROP "+non_key_column);
       refresh_schema_meta();
       table_meta = schema_get_table(SIMPLE_STRATEGY_KEYSPACE_NAME, ALL_DATA_TYPES_TABLE_NAME);
@@ -405,7 +417,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     size_t keyspace_count = 0;
     while (cass_iterator_next(itr.get())) ++keyspace_count;
     size_t number_of_default_keyspaces = 2;
-    if (version.major == 2 && version.minor >= 2) {
+    if (version >= "2.2.0") {
       number_of_default_keyspaces = 4;
     }
     BOOST_CHECK_EQUAL(keyspace_count, number_of_default_keyspaces);
@@ -464,9 +476,9 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
   void verify_user_function(const std::string& ks_name,
     const std::string& udf_name,
     const std::vector<std::string>& udf_argument,
-    const std::vector<std::string> udf_value_types,
+    const std::vector<std::string>& udf_value_types,
     const std::string& udf_body,
-    const std::string udf_language,
+    const std::string& udf_language,
     const cass_bool_t is_called_on_null,
     const CassValueType return_value_type) {
     BOOST_REQUIRE_EQUAL(udf_argument.size(), udf_value_types.size());
@@ -517,6 +529,61 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     BOOST_CHECK_EQUAL(return_value_type, cass_data_type_type(return_datatype));
   }
 
+  template <class T>
+  void verify_user_aggregate(const std::string& ks_name,
+    const std::string& udf_name, std::string udf_final_name,
+    const std::string& uda_name, const std::vector<std::string>& uda_value_types,
+    const CassValueType return_value_type,
+    const CassValueType state_value_type,
+    T init_cond_value) {
+    const CassAggregateMeta* agg_meta = schema_get_aggregate(ks_name, uda_name, uda_value_types);
+    CassString agg_meta_string_value;
+
+    // Aggregate name
+    cass_aggregate_meta_name(agg_meta, &agg_meta_string_value.data, &agg_meta_string_value.length);
+    BOOST_CHECK(test_utils::Value<CassString>::equal(CassString(uda_name.c_str()), agg_meta_string_value));
+
+    // Full Aggregate name (includes datatypes of arguments)
+    std::stringstream uda_full_name;
+    uda_full_name << uda_name << "(" << test_utils::implode(uda_value_types, ',') << ")";
+    cass_aggregate_meta_full_name(agg_meta, &agg_meta_string_value.data, &agg_meta_string_value.length);
+    BOOST_CHECK(test_utils::Value<CassString>::equal(CassString(uda_full_name.str().c_str()), agg_meta_string_value));
+
+    // Aggregate argument count
+    BOOST_CHECK_EQUAL(uda_value_types.size(), cass_aggregate_meta_argument_count(agg_meta));
+
+    // Aggregate argument (indexes only)
+    for (int i = 0; i < uda_value_types.size(); ++i) {
+      const CassDataType* datatype = cass_aggregate_meta_argument_type(agg_meta, i);
+      BOOST_CHECK_EQUAL(uda_value_types[i].compare(std::string(test_utils::get_value_type(cass_data_type_type(datatype)))), 0);
+    }
+
+    // Aggregate return type
+    const CassDataType* return_datatype = cass_aggregate_meta_return_type(agg_meta);
+    BOOST_CHECK_EQUAL(return_value_type, cass_data_type_type(return_datatype));
+
+    // Aggregate state type
+    const CassDataType* state_datatype = cass_aggregate_meta_state_type(agg_meta);
+    BOOST_CHECK_EQUAL(state_value_type, cass_data_type_type(state_datatype));
+
+    // Aggregate state function
+    const CassFunctionMeta* func_meta = cass_aggregate_meta_state_func(agg_meta);
+    cass_function_meta_name(func_meta, &agg_meta_string_value.data, &agg_meta_string_value.length);
+    BOOST_CHECK(test_utils::Value<CassString>::equal(CassString(udf_name.c_str()), agg_meta_string_value));
+
+    // Aggregate final function
+    func_meta = cass_aggregate_meta_final_func(agg_meta);
+    cass_function_meta_name(func_meta, &agg_meta_string_value.data, &agg_meta_string_value.length);
+    BOOST_CHECK(test_utils::Value<CassString>::equal(CassString(udf_final_name.c_str()), agg_meta_string_value));
+
+    // Aggregate initial condition (type and value check)
+    const CassValue* agg_init_cond = cass_aggregate_meta_init_cond(agg_meta);
+    T agg_init_cond_value;
+    BOOST_CHECK(cass_value_type(agg_init_cond) == return_value_type);
+    BOOST_CHECK(test_utils::Value<T>::get(agg_init_cond, &agg_init_cond_value) == CASS_OK);
+    BOOST_REQUIRE(test_utils::Value<T>::equal(init_cond_value, agg_init_cond_value));
+  }
+
   void verify_user_data_type() {
     create_simple_strategy_keyspace();
     test_utils::execute_query(session, "USE " SIMPLE_STRATEGY_KEYSPACE_NAME);
@@ -541,32 +608,28 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     verify_user_type(SIMPLE_STRATEGY_KEYSPACE_NAME, USER_DATA_TYPE_NAME, udt_datatypes);
   }
 
-  void create_simple_strategy_function() {
-    test_utils::execute_query(session, str(boost::format("DROP FUNCTION IF EXISTS %s.%s")
-      % SIMPLE_STRATEGY_KEYSPACE_NAME
-      % USER_DEFINED_FUNCTION_NAME));
+  void create_simple_strategy_functions() {
     test_utils::execute_query(session,
-      str(boost::format("CREATE FUNCTION %s.%s(key int, val int) RETURNS NULL ON NULL INPUT RETURNS int LANGUAGE javascript AS 'key + val';")
+      str(boost::format("CREATE OR REPLACE FUNCTION %s.%s(rhs int, lhs int) RETURNS NULL ON NULL INPUT RETURNS int LANGUAGE javascript AS 'lhs + rhs';")
       % SIMPLE_STRATEGY_KEYSPACE_NAME
       % USER_DEFINED_FUNCTION_NAME));
-    refresh_schema_meta();
   }
 
   void verify_user_defined_function() {
     create_simple_strategy_keyspace();
 
     // New UDF
-    create_simple_strategy_function();
+    create_simple_strategy_functions();
     std::vector<std::string> udf_arguments;
     std::vector<std::string> udf_value_types;
-    udf_arguments.push_back("key");
-    udf_arguments.push_back("val");
+    udf_arguments.push_back("lhs");
+    udf_arguments.push_back("rhs");
     udf_value_types.push_back(test_utils::get_value_type(CASS_VALUE_TYPE_INT));
     udf_value_types.push_back(test_utils::get_value_type(CASS_VALUE_TYPE_INT));
     refresh_schema_meta();
     verify_user_function(SIMPLE_STRATEGY_KEYSPACE_NAME,
       USER_DEFINED_FUNCTION_NAME, udf_arguments, udf_value_types,
-      "key + val",
+      test_utils::implode(udf_arguments, '+', " ", " "),
       "javascript", cass_false, CASS_VALUE_TYPE_INT);
 
     // Drop UDF
@@ -576,6 +639,44 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     refresh_schema_meta();
     const CassFunctionMeta* func_meta = schema_get_function(SIMPLE_STRATEGY_KEYSPACE_NAME, USER_DEFINED_FUNCTION_NAME, udf_value_types);
     BOOST_REQUIRE(func_meta != NULL);
+  }
+
+  void create_simple_strategy_aggregate() {
+    create_simple_strategy_functions();
+    test_utils::execute_query(session,
+      str(boost::format("CREATE OR REPLACE FUNCTION %s.%s(val int) RETURNS NULL ON NULL INPUT RETURNS int LANGUAGE javascript AS 'val * val';")
+      % SIMPLE_STRATEGY_KEYSPACE_NAME
+      % USER_DEFINED_AGGREGATE_FINAL_FUNCTION_NAME));
+
+    test_utils::execute_query(session,
+      str(boost::format("CREATE OR REPLACE AGGREGATE %s.%s(int) SFUNC %s STYPE int FINALFUNC %s INITCOND 0")
+      % SIMPLE_STRATEGY_KEYSPACE_NAME
+      % USER_DEFINED_AGGREGATE_NAME
+      % USER_DEFINED_FUNCTION_NAME
+      % USER_DEFINED_AGGREGATE_FINAL_FUNCTION_NAME));
+  }
+
+  void verify_user_defined_aggregate() {
+    create_simple_strategy_keyspace();
+
+    // New UDA
+    create_simple_strategy_aggregate();
+    std::vector<std::string> uda_value_types;
+    uda_value_types.push_back(test_utils::get_value_type(CASS_VALUE_TYPE_INT));
+    refresh_schema_meta();
+    verify_user_aggregate<cass_int32_t>(SIMPLE_STRATEGY_KEYSPACE_NAME,
+      USER_DEFINED_FUNCTION_NAME, USER_DEFINED_AGGREGATE_FINAL_FUNCTION_NAME,
+      USER_DEFINED_AGGREGATE_NAME, uda_value_types,
+      CASS_VALUE_TYPE_INT, CASS_VALUE_TYPE_INT,
+      0);
+
+    // Drop UDA
+    test_utils::execute_query(session, str(boost::format("DROP AGGREGATE %s.%s")
+      % SIMPLE_STRATEGY_KEYSPACE_NAME
+      % USER_DEFINED_AGGREGATE_NAME));
+    refresh_schema_meta();
+    const CassAggregateMeta* agg_meta = schema_get_aggregate(SIMPLE_STRATEGY_KEYSPACE_NAME, USER_DEFINED_AGGREGATE_NAME, uda_value_types);
+    BOOST_REQUIRE(agg_meta != NULL);
   }
 };
 
@@ -588,12 +689,12 @@ BOOST_AUTO_TEST_CASE(simple) {
   verify_system_tables();// must be run first -- looking for "no other tables"
   verify_user_keyspace();
   verify_user_table();
-  if (version >= CCM::CassVersion("2.1.0")) {
+  if (version >= "2.1.0") {
     verify_user_data_type();
   }
-  if (version >= CCM::CassVersion("2.2.0")) {
+  if (version >= "2.2.0") {
     verify_user_defined_function();
-    //verify_user_defined_aggregate();
+    verify_user_defined_aggregate();
   }
 }
 
