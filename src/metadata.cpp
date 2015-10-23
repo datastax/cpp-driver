@@ -1146,7 +1146,8 @@ AggregateMetadata::AggregateMetadata(const std::string& name, const Value* signa
   value = add_field(buffer, row, "final_func");
   if (value != NULL &&
       value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-    StringRefVec final_func_signature(1, state_type_->to_string());
+    std::string state_type_string = state_type_->to_string();
+    StringRefVec final_func_signature(1, state_type_string);
     std::string full_final_func_name(Metadata::full_function_name(value->to_string(), final_func_signature));
     FunctionMetadata::Map::const_iterator i = functions.find(full_final_func_name);
     if (i != functions.end()) final_func_ = i->second;
@@ -1156,7 +1157,8 @@ AggregateMetadata::AggregateMetadata(const std::string& name, const Value* signa
   if (value != NULL &&
       value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
     StringRefVec state_func_signature;
-    state_func_signature.push_back(state_type_->to_string());
+    std::string state_type_string = state_type_->to_string();
+    state_func_signature.push_back(state_type_string);
     CollectionIterator iterator(signature);
     while (iterator.next()) {
       state_func_signature.push_back(iterator.value()->to_string_ref());
