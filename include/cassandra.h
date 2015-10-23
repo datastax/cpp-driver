@@ -146,7 +146,7 @@ typedef struct CassInet_ {
 } CassInet;
 
 /**
- * The size of a hexidecimal UUID string including a null terminator.
+ * The size of a hexadecimal UUID string including a null terminator.
  */
 #define CASS_UUID_STRING_LENGTH 37
 
@@ -283,7 +283,7 @@ typedef struct CassValue_ CassValue;
  * @struct CassDataType
  *
  * A data type used to describe a value, collection or
- * user defiend type.
+ * user defined type.
  */
 typedef struct CassDataType_ CassDataType;
 
@@ -1349,7 +1349,7 @@ cass_cluster_set_connection_heartbeat_interval(CassCluster* cluster,
 
 /**
  * Sets the amount of time a connection is allowed to be without a successful
- * hearbeat response before being terminated and scheduled for reconnection.
+ * heartbeat response before being terminated and scheduled for reconnection.
  *
  * <b>Default:</b> 60 seconds
  *
@@ -1925,7 +1925,7 @@ cass_table_meta_column(const CassTableMeta* table_meta,
                        size_t index);
 
 /**
- * Gets the number of columns for the table's paritition key.
+ * Gets the number of columns for the table's partition key.
  *
  * @public @memberof CassTableMeta
  *
@@ -2315,7 +2315,7 @@ cass_aggregate_meta_final_func(const CassAggregateMeta* aggregate_meta);
  * @public @memberof CassAggregateMeta
  *
  * @param[in] aggregate_meta
- * @return The value of the intial condidtion.
+ * @return The value of the initial condition.
  */
 CASS_EXPORT const CassValue*
 cass_aggregate_meta_init_cond(const CassAggregateMeta* aggregate_meta);
@@ -2561,7 +2561,7 @@ cass_future_get_result(CassFuture* future);
  *
  * @param[in] future
  * @return CassErrorResult instance if the request failed with a server error,
- * otherwise NULL if the request was sucessful or the failure was not caused by
+ * otherwise NULL if the request was successful or the failure was not caused by
  * a server error. The return instance must be freed using cass_error_result_free().
  *
  * @see cass_session_execute() and cass_session_execute_batch()
@@ -6137,7 +6137,7 @@ CASS_EXPORT CassConsistency
 cass_error_result_consistency(const CassErrorResult* error_result);
 
 /**
- * Gets the acutal number of recieved responses, recieved acknowlegements
+ * Gets the actual number of received responses, received acknowledgments
  * or alive nodes for following error result types, respectively:
  *
  * <ul>
@@ -6151,15 +6151,15 @@ cass_error_result_consistency(const CassErrorResult* error_result);
  * @public @memberof CassErrorResult
  *
  * @param[in] error_result
- * @return The actual received responses for a read timeout, actual recieved
- * acknowlegements for a write timeout or actual alive nodes for a unavailable
+ * @return The actual received responses for a read timeout, actual received
+ * acknowledgments for a write timeout or actual alive nodes for a unavailable
  * error. Undefined for other error result types.
  */
 CASS_EXPORT cass_int32_t
 cass_error_result_responses_received(const CassErrorResult* error_result);
 
 /**
- * Gets required responses, required acknowlegements or required alive nodes
+ * Gets required responses, required acknowledgments or required alive nodes
  * needed to successfully complete the request for following error result types,
  * respectively:
  *
@@ -6174,7 +6174,7 @@ cass_error_result_responses_received(const CassErrorResult* error_result);
  * @public @memberof CassErrorResult
  *
  * @param[in] error_result
- * @return The required responses for a read time, required acknowlegements
+ * @return The required responses for a read time, required acknowledgments
  * for a write timeout or required alive nodes for an unavailable error result.
  * Undefined for other error result types.
  */
@@ -6209,8 +6209,8 @@ cass_error_result_num_failures(const CassErrorResult* error_result);
  * @public @memberof CassErrorResult
  *
  * @param[in] error_result
- * @return cass_true if the data was present in the recieved responses when the
- * read timeout occured. Undefined for other error result types.
+ * @return cass_true if the data was present in the received responses when the
+ * read timeout occurred. Undefined for other error result types.
  */
 CASS_EXPORT cass_bool_t
 cass_error_result_data_present(const CassErrorResult* error_result);
@@ -7355,9 +7355,9 @@ cass_timestamp_gen_server_side_new();
 /**
  * Creates a new monotonically increasing timestamp generator. This generates
  * microsecond timestamps with the sub-millisecond part generated using a counter.
- * The implementation gaurantees that no more than 1000 timestamps will be generated
+ * The implementation guarantees that no more than 1000 timestamps will be generated
  * for a given clock tick even if shared by multiple session objects. If that rate is
- * excceeded then a warning is logged and timestamps stop incrementing until the next
+ * exceeded then a warning is logged and timestamps stop incrementing until the next
  * clock tick.
  *
  * <bold>Note:</bold> This generator is thread-safe and can be shared by multiple sessions.
@@ -7395,7 +7395,7 @@ cass_timestamp_gen_free(CassTimestampGen* timestamp_gen);
  * <ul>
  *   <li>On a read timeout, if enough replicas replied but data was not received.</li>
  *   <li>On a write timeout, if a timeout occurs while writing the distributed batch log</li>
- *   <li>On unavailble, it will move to the next host</li>
+ *   <li>On unavailable, it will move to the next host</li>
  * </ul>
  *
  * In all other cases the error will be returned.
