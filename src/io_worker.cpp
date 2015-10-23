@@ -32,15 +32,14 @@ IOWorker::IOWorker(Session* session)
     , config_(session->config())
     , metrics_(session->metrics())
     , protocol_version_(-1)
+    , keyspace_(new std::string)
     , pending_request_count_(0)
     , request_queue_(config_.queue_size_io()) {
   prepare_.data = this;
-  uv_mutex_init(&keyspace_mutex_);
   uv_mutex_init(&unavailable_addresses_mutex_);
 }
 
 IOWorker::~IOWorker() {
-  uv_mutex_destroy(&keyspace_mutex_);
   uv_mutex_destroy(&unavailable_addresses_mutex_);
 }
 
@@ -56,26 +55,8 @@ int IOWorker::init() {
   return rc;
 }
 
-std::string IOWorker::keyspace() {
-  // Not returned by reference on purpose. This memory can't be shared
-  // because it could be updated as a result of a "USE <keyspace" query.
-  ScopedMutex lock(&keyspace_mutex_);
-  return keyspace_;
-}
-
 void IOWorker::set_keyspace(const std::string& keyspace) {
-  ScopedMutex lock(&keyspace_mutex_);
-  keyspace_ = keyspace;
-}
-
-bool IOWorker::is_current_keyspace(const std::string& keyspace) {
-  // This mutex is locked on the query request path, but it should
-  // almost never have any contention. That could only happen when
-  // there is a "USE <keyspace>" query.  These *should* happen
-  // infrequently. This is preferred over IOWorker::keyspace()
-  // because it doesn't allocate memory.
-  ScopedMutex lock(&keyspace_mutex_);
-  return keyspace_ == keyspace;
+  keyspace_ = CopyOnWritePtr<std::string>(new std::string(keyspace));
 }
 
 void IOWorker::broadcast_keyspace_change(const std::string& keyspace) {

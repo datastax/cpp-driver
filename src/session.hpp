@@ -177,6 +177,8 @@ private:
   int pending_pool_count_;
   int pending_workers_count_;
   int current_io_worker_;
+
+  CopyOnWritePtr<std::string> keyspace_;
 };
 
 class SessionFuture : public Future {

@@ -140,7 +140,8 @@ Session::Session()
     , pending_resolve_count_(0)
     , pending_pool_count_(0)
     , pending_workers_count_(0)
-    , current_io_worker_(0) {
+    , current_io_worker_(0)
+    , keyspace_(new std::string){
   uv_mutex_init(&state_mutex_);
   uv_mutex_init(&hosts_mutex_);
 }
@@ -193,13 +194,15 @@ int Session::init() {
 void Session::broadcast_keyspace_change(const std::string& keyspace,
                                         const IOWorker* calling_io_worker) {
   // This can run on an IO worker thread. This is thread-safe because the IO workers
-  // vector never changes after initialization and IOWorker::set_keyspace() uses a mutex.
-  // This also means that calling "USE <keyspace>" frequently is an anti-pattern.
+  // vector never changes after initialization and IOWorker::set_keyspace() uses
+  // copy-on-write. This also means that calling "USE <keyspace>" frequently is an
+  // anti-pattern.
   for (IOWorkerVec::iterator it = io_workers_.begin(),
        end = io_workers_.end(); it != end; ++it) {
     if (*it == calling_io_worker) continue;
       (*it)->set_keyspace(keyspace);
   }
+  keyspace_ = CopyOnWritePtr<std::string>(new std::string(keyspace));
 }
 
 SharedRefPtr<Host> Session::get_host(const Address& address) {
@@ -660,11 +663,8 @@ void Session::on_execute(uv_async_t* data) {
 }
 
 QueryPlan* Session::new_query_plan(const Request* request, Request::EncodingCache* cache) {
-  std::string connected_keyspace;
-  if (!io_workers_.empty()) {
-    connected_keyspace = io_workers_[0]->keyspace();
-  }
-  return load_balancing_policy_->new_query_plan(connected_keyspace, request,
+  const CopyOnWritePtr<std::string> keyspace(keyspace_);
+  return load_balancing_policy_->new_query_plan(*keyspace, request,
                                                 metadata_.token_map(), cache);
 }
 

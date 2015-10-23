@@ -196,16 +196,16 @@ void Pool::set_is_available(bool is_available) {
 
 bool Pool::write(Connection* connection, RequestHandler* request_handler) {
   request_handler->set_pool(this);
-  if (io_worker_->is_current_keyspace(connection->keyspace())) {
+  if (*io_worker_->keyspace() == connection->keyspace()) {
     if (!connection->write(request_handler, false)) {
       return false;
     }
   } else {
     LOG_DEBUG("Setting keyspace %s on connection(%p) pool(%p)",
-              io_worker_->keyspace().c_str(),
+              io_worker_->keyspace()->c_str(),
               static_cast<void*>(connection),
               static_cast<void*>(this));
-    if (!connection->write(new SetKeyspaceHandler(connection, io_worker_->keyspace(),
+    if (!connection->write(new SetKeyspaceHandler(connection, *io_worker_->keyspace(),
                                                  request_handler), false)) {
       return false;
     }
@@ -247,7 +247,7 @@ void Pool::spawn_connection() {
     Connection* connection =
         new Connection(loop_, config_, metrics_,
                        address_,
-                       io_worker_->keyspace(),
+                       *io_worker_->keyspace(),
                        io_worker_->protocol_version(),
                        this);
 
