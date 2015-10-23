@@ -97,27 +97,7 @@ namespace CCM {
     bool operator ==(const std::string& version) {
       // Check version properties for equality (except extra property)
       CassVersion rhs(version);
-      if (major == rhs.major &&
-        minor == rhs.minor &&
-        patch == rhs.patch) {
-        return true;
-      }
-      return false;
-    }
-
-    /**
-     * Not equal comparison operator overload
-     *
-     * Determine if a Cassandra version is not equal to another Cassandra
-     * version
-     *
-     * NOTE: Extra property is not involved in comparison
-     *
-     * @param rhs Cassandra string version for compare
-     * @return True if LHS != RHS; false otherwise
-     */
-    bool operator !=(const std::string& version) {
-      return !(*this == version);
+      return (*this == rhs);
     }
 
     /**
@@ -133,6 +113,21 @@ namespace CCM {
      */
     bool operator !=(const CassVersion& rhs) {
       return !(*this == rhs);
+    }
+
+    /**
+     * Not equal comparison operator overload
+     *
+     * Determine if a Cassandra version is not equal to another Cassandra
+     * version
+     *
+     * NOTE: Extra property is not involved in comparison
+     *
+     * @param version Cassandra string version for compare
+     * @return True if LHS != RHS; false otherwise
+     */
+    bool operator !=(const std::string& version) {
+      return !(*this == version);
     }
 
     /**
@@ -160,6 +155,21 @@ namespace CCM {
     }
 
     /**
+     * Less-than comparison operator overload
+     *
+     * Determine if a Cassandra version is less-than another Cassandra version
+     *
+     * NOTE: Extra property is not involved in comparison
+     *
+     * @param version Cassandra string version for compare
+     * @return True if LHS < RHS; false otherwise
+     */
+    bool operator <(const std::string& version) {
+      CassVersion rhs(version);
+      return (*this < rhs);
+    }
+
+    /**
      * Greater-than comparison operator overload
      *
      * Determine if a Cassandra version is greater-than another Cassandra
@@ -171,7 +181,23 @@ namespace CCM {
      * @return True if LHS > RHS; false otherwise
      */
     bool operator >(const CassVersion& rhs) {
-      return (*this < rhs);
+      return (*this > rhs);
+    }
+
+    /**
+     * Greater-than comparison operator overload
+     *
+     * Determine if a Cassandra version is greater-than another Cassandra
+     * version
+     *
+     * NOTE: Extra property is not involved in comparison
+     *
+     * @param version Cassandra string version for compare
+     * @return True if LHS > RHS; false otherwise
+     */
+    bool operator >(const std::string& version) {
+      CassVersion rhs(version);
+      return (*this > rhs);
     }
 
     /**
@@ -190,6 +216,22 @@ namespace CCM {
     }
 
     /**
+     * Less-than or equal to comparison operator overload
+     *
+     * Determine if a Cassandra version is less-than or equal to another
+     * Cassandra version
+     *
+     * NOTE: Extra property is not involved in comparison
+     *
+     * @param version Cassandra string version for compare
+     * @return True if LHS <= RHS; false otherwise
+     */
+    bool operator <=(const std::string& version) {
+      CassVersion rhs(version);
+      return !(*this > rhs);
+    }
+
+    /**
      * Greater-than or equal to comparison operator overload
      *
      * Determine if a Cassandra version is greater-than or equal to another
@@ -201,6 +243,22 @@ namespace CCM {
      * @return True if LHS >= RHS; false otherwise
      */
     bool operator >=(const CassVersion& rhs) {
+      return !(*this < rhs);
+    }
+
+    /**
+     * Greater-than or equal to comparison operator overload
+     *
+     * Determine if a Cassandra version is greater-than or equal to another
+     * Cassandra version
+     *
+     * NOTE: Extra property is not involved in comparison
+     *
+     * @param version Cassandra string version for compare
+     * @return True if LHS >= RHS; false otherwise
+     */
+    bool operator >=(const std::string& version) {
+      CassVersion rhs(version);
       return !(*this < rhs);
     }
 
