@@ -1262,7 +1262,6 @@ void Metadata::InternalData::update_tables(int version, const VersionNumber& cas
 
   std::string keyspace_name;
   std::string columnfamily_name;
-  KeyspaceMetadata* keyspace;
 
   while (rows.next()) {
     std::string temp_keyspace_name;
@@ -1275,8 +1274,8 @@ void Metadata::InternalData::update_tables(int version, const VersionNumber& cas
     }
     if (keyspace_name != temp_keyspace_name) {
       keyspace_name = temp_keyspace_name;
-      keyspace = get_or_create_keyspace(keyspace_name);
     }
+    KeyspaceMetadata* keyspace = get_or_create_keyspace(keyspace_name);
     keyspace->add_table(TableMetadata::Ptr(new TableMetadata(columnfamily_name, version, buffer, row)));
   }
 
