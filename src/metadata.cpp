@@ -502,18 +502,15 @@ const UserType* Metadata::SchemaSnapshot::get_user_type(const std::string& keysp
 }
 
 std::string Metadata::full_function_name(StringRef name, const StringRefVec& signature) {
-  std::string full_name;
-  bool first = true;
-  full_name.append(name.begin(), name.end());
-  full_name.push_back('(');
+  std::string full_arguments;
   for (StringRefVec::const_iterator i = signature.begin(),
-       end = signature.end(); i != end; ++i) {
-    if (!first) full_name.push_back(',');
-    first = false;
-    full_name.append(i->begin(), i->end());
+    end = signature.end(); i != end; ++i) {
+    if (i != signature.begin()) full_arguments.push_back(',');
+    full_arguments.append(i->begin(), i->end());
   }
-  full_name.push_back(')');
-  return full_name;
+  std::string full_function_name(name.to_string());
+  append_arguments(full_function_name, full_arguments);
+  return full_function_name;
 }
 
 Metadata::SchemaSnapshot Metadata::schema_snapshot() const {
