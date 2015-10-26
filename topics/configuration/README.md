@@ -96,9 +96,9 @@ cass_cluster_set_latency_aware_routing_settings(cluster,
                                                 min_measured);
 ```
 
-### Whitelist Routing
+### Whitelist Filtering
 
-This routing policy ensures that only hosts from the provided whitelist will
+This policy ensures that only hosts from the provided whitelist filter will
 ever be used. Any host that is not contained within the whitelist will be
 considered ignored and a connection will not be established.  It can be used in
 conjunction with other load balancing and routing policies.
@@ -109,15 +109,15 @@ NOTE: Using this policy to limit the connections of the driver to a predefined
       DC aware in conjunction with the round robin load balancing policy.
 
 ```c
-/* Disable whitelist routing (this is the default setting) */
-cass_cluster_set_whitelist_routing(cluster, cass_false);
+/* Disable whitelist filtering (this is the default setting) */
+cass_cluster_set_whitelist_filtering(cluster, cass_false);
 
-/* Enable whitelist routing */
-cass_cluster_set_latency_aware_routing(cluster, cass_true);
+/* Enable whitelist filtering */
+cass_cluster_set_latency_aware_filtering(cluster, cass_true);
 
 /* Set the list of predefined hosts the driver is allowed to connect to */
-cass_cluster_set_whitelist_routing_hosts(cluster,
-                                         "127.0.0.1, 127.0.0.3, 127.0.0.5");
+cass_cluster_set_whitelist_filtering_hosts(cluster,
+                                           "127.0.0.1, 127.0.0.3, 127.0.0.5");
 ```
 
 ### Connection Heartbeats
