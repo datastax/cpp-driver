@@ -436,7 +436,7 @@ public:
     KeyspaceMetadata::MapPtr keyspaces_;
   };
 
-  static std::string full_function_name(StringRef name, const StringRefVec& signature);
+  static std::string full_function_name(const std::string& name, const StringVec& signature);
 
 public:
   Metadata()

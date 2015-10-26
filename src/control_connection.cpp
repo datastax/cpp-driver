@@ -751,7 +751,7 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
 
   LOG_DEBUG("Refreshing %s %s in keyspace %s",
             is_aggregate ? "aggregate" : "function",
-            Metadata::full_function_name(function_name, arg_types).c_str(),
+            Metadata::full_function_name(function_name.to_string(), to_strings(arg_types)).c_str(),
             std::string(keyspace_name.data(), keyspace_name.length()).c_str());
 
   SharedRefPtr<QueryRequest> request(new QueryRequest(query, 3));
@@ -783,7 +783,7 @@ void ControlConnection::on_refresh_function(ControlConnection* control_connectio
     LOG_ERROR("No row found for keyspace %s and %s %s",
               data.keyspace.c_str(),
               data.is_aggregate ? "aggregate" : "function",
-              Metadata::full_function_name(data.function, data.arg_types_as_string_refs()).c_str());
+              Metadata::full_function_name(data.function, data.arg_types).c_str());
     return;
   }
   if (data.is_aggregate) {

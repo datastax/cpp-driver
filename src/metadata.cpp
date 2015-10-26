@@ -31,7 +31,9 @@
 
 #include "third_party/rapidjson/rapidjson/document.h"
 
+#include <algorithm>
 #include <cmath>
+#include <ctype.h>
 
 static std::string& append_arguments(std::string& full_name, const std::string& arguments) {
   full_name.push_back('(');
@@ -40,7 +42,10 @@ static std::string& append_arguments(std::string& full_name, const std::string& 
   while (!stream.eof()) {
     std::string argument;
     std::getline(stream, argument, ',');
-    if (!cass::trim(argument).empty()) {
+    // Remove white-space
+    argument.erase(std::remove_if(argument.begin(), argument.end(), ::isspace),
+                   argument.end());
+    if (!argument.empty()) {
       if (!first) full_name.push_back(',');
       full_name.append(argument);
       first = false;
@@ -501,15 +506,21 @@ const UserType* Metadata::SchemaSnapshot::get_user_type(const std::string& keysp
   return i->second.get_user_type(type_name);
 }
 
-std::string Metadata::full_function_name(StringRef name, const StringRefVec& signature) {
-  std::string full_arguments;
-  for (StringRefVec::const_iterator i = signature.begin(),
-    end = signature.end(); i != end; ++i) {
-    if (i != signature.begin()) full_arguments.push_back(',');
-    full_arguments.append(i->begin(), i->end());
+std::string Metadata::full_function_name(const std::string& name, const StringVec& signature) {
+  std::string full_function_name(name);
+  full_function_name.push_back('(');
+  for (StringVec::const_iterator i = signature.begin(),
+       end = signature.end(); i != end; ++i) {
+    std::string argument(*i);
+    // Remove white-space
+    argument.erase(std::remove_if(argument.begin(), argument.end(), ::isspace),
+                   argument.end());
+    if (!argument.empty()) {
+      if (i != signature.begin()) full_function_name.push_back(',');
+      full_function_name.append(argument);
+    }
   }
-  std::string full_function_name(name.to_string());
-  append_arguments(full_function_name, full_arguments);
+  full_function_name.push_back(')');
   return full_function_name;
 }
 
@@ -1144,7 +1155,7 @@ AggregateMetadata::AggregateMetadata(const std::string& name, const Value* signa
   if (value != NULL &&
       value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
     std::string state_type_string = state_type_->to_string();
-    StringRefVec final_func_signature(1, state_type_string);
+    StringVec final_func_signature(1, state_type_string);
     std::string full_final_func_name(Metadata::full_function_name(value->to_string(), final_func_signature));
     FunctionMetadata::Map::const_iterator i = functions.find(full_final_func_name);
     if (i != functions.end()) final_func_ = i->second;
@@ -1153,12 +1164,12 @@ AggregateMetadata::AggregateMetadata(const std::string& name, const Value* signa
   value = add_field(buffer, row, "state_func");
   if (value != NULL &&
       value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-    StringRefVec state_func_signature;
+    StringVec state_func_signature;
     std::string state_type_string = state_type_->to_string();
     state_func_signature.push_back(state_type_string);
     CollectionIterator iterator(signature);
     while (iterator.next()) {
-      state_func_signature.push_back(iterator.value()->to_string_ref());
+      state_func_signature.push_back(iterator.value()->to_string());
     }
     std::string full_state_func_name(Metadata::full_function_name(value->to_string(), state_func_signature));
     FunctionMetadata::Map::const_iterator i = functions.find(full_state_func_name);

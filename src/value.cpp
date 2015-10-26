@@ -231,13 +231,13 @@ CassUuid Value::as_uuid() const {
 
 }
 
-StringRefVec Value::as_stringlist() const {
+StringVec Value::as_stringlist() const {
   assert((value_type() == CASS_VALUE_TYPE_LIST || value_type() == CASS_VALUE_TYPE_SET) &&
          primary_value_type() == CASS_VALUE_TYPE_VARCHAR);
-  StringRefVec stringlist;
+  StringVec stringlist;
   CollectionIterator iterator(this);
   while (iterator.next()) {
-    stringlist.push_back(StringRef(iterator.value()->to_string_ref()));
+    stringlist.push_back(iterator.value()->to_string());
   }
   return stringlist;
 }
