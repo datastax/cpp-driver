@@ -1890,17 +1890,6 @@ cass_table_meta_name(const CassTableMeta* table_meta,
                      size_t* name_length);
 
 /**
- * Gets the id of the table.
- *
- * @public @memberof CassTableMeta
- *
- * @param[in] table_meta
- * @return The UUID id of the table.
- */
-CASS_EXPORT CassUuid
-cass_table_meta_id(const CassTableMeta* table_meta);
-
-/**
  * Gets the total number of columns for the table.
  *
  * @public @memberof CassTableMeta

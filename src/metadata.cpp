@@ -166,10 +166,6 @@ void cass_table_meta_name(const CassTableMeta* table_meta,
   *name_length = table_meta->name().size();
 }
 
-CassUuid cass_table_meta_id(const CassTableMeta* table_meta) {
-  return table_meta->id();
-}
-
 const CassValue* cass_table_meta_field_by_name(const CassTableMeta* table_meta,
                                                const char* name) {
   return CassValue::to(table_meta->get_field(name));
@@ -858,16 +854,9 @@ void KeyspaceMetadata::drop_aggregate(const std::string& full_aggregate_name) {
 TableMetadata::TableMetadata(const std::string& name,
                              int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row)
   : MetadataBase(name) {
-  const Value* value;
-
   add_field(buffer, row, "keyspace_name");
   add_field(buffer, row, "columnfamily_name");
-
-  value = add_field(buffer, row, "cf_id");
-  if (value != NULL && value->value_type() == CASS_VALUE_TYPE_UUID) {
-    id_ = value->as_uuid();
-  }
-
+  add_field(buffer, row, "cf_id");
   add_field(buffer, row, "bloom_filter_fp_chance");
   add_field(buffer, row, "caching");
   add_field(buffer, row, "id");

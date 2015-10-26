@@ -299,7 +299,6 @@ public:
   TableMetadata(const std::string& name,
                 int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
-  CassUuid id() const { return id_; }
   const ColumnMetadata::Vec& columns() const { return columns_; }
   const ColumnMetadata::Vec& partition_key() const { return partition_key_; }
   const ColumnMetadata::Vec& clustering_key() const { return clustering_key_; }
@@ -313,7 +312,6 @@ public:
   void key_aliases(KeyAliases* output) const;
 
 private:
-  CassUuid id_;
   ColumnMetadata::Vec columns_;
   ColumnMetadata::Map columns_by_name_;
   ColumnMetadata::Vec partition_key_;
