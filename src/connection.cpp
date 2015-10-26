@@ -1069,13 +1069,6 @@ void Connection::PendingWriteSsl::flush() {
   if (!is_flushed_ && !buffers_.empty()) {
     SslSession* ssl_session = connection_->ssl_session_.get();
 
-    uv_bufs_.reserve(buffers_.size());
-
-    for (BufferVec::const_iterator it = buffers_.begin(),
-         end = buffers_.end(); it != end; ++it) {
-      uv_bufs_.push_back(uv_buf_init(const_cast<char*>(it->data()), it->size()));
-    }
-
     rb::RingBuffer::Position prev_pos = ssl_session->outgoing().write_position();
 
     encrypt();
