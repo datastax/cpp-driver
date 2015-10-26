@@ -223,7 +223,7 @@ public:
                     const FunctionMetadata::Map& functions,
                     int version, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
-  StringRef simple_name() const { return simple_name_; }
+  const std::string& simple_name() const { return simple_name_; }
   const DataType::Vec arg_types() const { return arg_types_; }
   const DataType::Ptr& return_type() const { return return_type_; }
   const DataType::Ptr& state_type() const { return state_type_; }
@@ -232,7 +232,7 @@ public:
   const Value& init_cond() const { return init_cond_; }
 
 private:
-  StringRef simple_name_;
+  std::string simple_name_;
   DataType::Vec arg_types_;
   DataType::Ptr return_type_;
   DataType::Ptr state_type_;
@@ -434,7 +434,7 @@ public:
     KeyspaceMetadata::MapPtr keyspaces_;
   };
 
-  static std::string full_function_name(StringRef name, const StringRefVec& signature);
+  static std::string full_function_name(const std::string& name, const StringVec& signature);
 
 public:
   Metadata()

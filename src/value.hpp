@@ -137,7 +137,7 @@ public:
   bool as_bool() const;
   int32_t as_int32() const;
   CassUuid as_uuid() const;
-  StringRefVec as_stringlist() const;
+  StringVec as_stringlist() const;
 
 private:
   int protocol_version_;

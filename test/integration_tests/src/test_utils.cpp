@@ -402,5 +402,23 @@ std::string load_ssl_certificate(const std::string filename) {
   return certificate;
 }
 
+std::string implode(const std::vector<std::string>& elements, const char delimiter /*= ' '*/,
+  const char* delimiter_prefix /*= NULL*/, const char* delimiter_suffix /*= NULL*/) {
+  std::string result;
+  for (std::vector<std::string>::const_iterator iterator = elements.begin(); iterator < elements.end(); ++iterator) {
+    result += *iterator;
+    if ((iterator + 1) != elements.end()) {
+      if (delimiter_prefix) {
+        result += delimiter_prefix;
+      }
+      result += delimiter;
+      if (delimiter_suffix) {
+        result += delimiter_suffix;
+      }
+    }
+  }
+  return result;
+}
+
 //-----------------------------------------------------------------------------------
 } // End of namespace test_utils

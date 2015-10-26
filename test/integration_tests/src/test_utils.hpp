@@ -1218,6 +1218,18 @@ std::string generate_random_string(unsigned int size = 1024);
  */
 std::string load_ssl_certificate(const std::string filename);
 
+/**
+ * Concatenate an array/vector into a string
+ *
+ * @param elements Array/Vector elements to concatenate
+ * @param delimiter Character to use between elements (default: <space>)
+ * @param delimiter_prefix Character to use before delimiter (default: <empty>)
+ * @param delimiter_suffix Character to use after delimiter (default: <empty>)
+ * @return A string representation of all the array/vector elements
+ */
+std::string implode(const std::vector<std::string>& elements, const char delimiter = ' ',
+  const char* delimiter_prefix = NULL, const char* delimiter_suffix = NULL);
+
 extern const char* CREATE_TABLE_ALL_TYPES;
 extern const char* CREATE_TABLE_ALL_TYPES_V4;
 extern const char* CREATE_TABLE_TIME_SERIES;

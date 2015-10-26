@@ -162,24 +162,8 @@ private:
                         bool is_aggregate)
       : keyspace(keyspace.to_string())
       , function(function.to_string())
-      , is_aggregate(is_aggregate) {
-      this->arg_types.reserve(arg_types.size());
-      for (StringRefVec::const_iterator i = arg_types.begin(),
-           end = arg_types.end();
-           i != end; ++i) {
-        this->arg_types.push_back(i->to_string());
-      }
-    }
-
-    StringRefVec arg_types_as_string_refs() const {
-      StringRefVec string_refs;
-      for (StringVec::const_iterator i = arg_types.begin(),
-           end = arg_types.end();
-           i != end; ++i) {
-        string_refs.push_back(StringRef(*i));
-      }
-      return string_refs;
-    }
+      , arg_types(to_strings(arg_types))
+      , is_aggregate(is_aggregate) { }
 
     std::string keyspace;
     std::string function;
