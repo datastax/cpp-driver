@@ -308,6 +308,17 @@ const CassDataType* cass_function_meta_return_type(const CassFunctionMeta* funct
   return CassDataType::to(function_meta->return_type().get());
 }
 
+const CassValue* cass_function_meta_field_by_name(const CassFunctionMeta* function_meta,
+                                                  const char* name) {
+  return CassValue::to(function_meta->get_field(name));
+}
+
+const CassValue* cass_function_meta_field_by_name_n(const CassFunctionMeta* function_meta,
+                                                    const char* name,
+                                                    size_t name_length) {
+  return CassValue::to(function_meta->get_field(std::string(name, name_length)));
+}
+
 void cass_aggregate_meta_name(const CassAggregateMeta* aggregate_meta,
                               const char** name,
                               size_t* name_length) {
@@ -352,6 +363,17 @@ const CassFunctionMeta* cass_aggregate_meta_final_func(const CassAggregateMeta* 
 
 const CassValue* cass_aggregate_meta_init_cond(const CassAggregateMeta* aggregate_meta) {
   return CassValue::to(&aggregate_meta->init_cond());
+}
+
+const CassValue* cass_aggregate_meta_field_by_name(const CassAggregateMeta* aggregate_meta,
+                                                   const char* name) {
+  return CassValue::to(aggregate_meta->get_field(name));
+}
+
+const CassValue* cass_aggregate_meta_field_by_name_n(const CassAggregateMeta* aggregate_meta,
+                                                     const char* name,
+                                                     size_t name_length) {
+  return CassValue::to(aggregate_meta->get_field(std::string(name, name_length)));
 }
 
 CassIterator* cass_iterator_keyspaces_from_schema_meta(const CassSchemaMeta* schema_meta) {

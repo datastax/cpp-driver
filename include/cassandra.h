@@ -1813,7 +1813,8 @@ cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
                         size_t* name_length);
 
 /**
- * Gets a metadata field for the provided name.
+ * Gets a metadata field for the provided name. Metadata fields allow direct
+ * access to the column data found in the underlying "keyspaces" metadata table.
  *
  * @public @memberof CassKeyspaceMeta
  *
@@ -1962,7 +1963,9 @@ cass_table_meta_clustering_key(const CassTableMeta* table_meta,
                                size_t index);
 
 /**
- * Gets a metadata field for the provided name.
+ * Gets a metadata field for the provided name. Metadata fields allow direct
+ * access to the column data found in the underlying "tables" metadata table.
+
  *
  * @public @memberof CassTableMeta
  *
@@ -2029,7 +2032,8 @@ CASS_EXPORT const CassDataType*
 cass_column_meta_data_type(const CassColumnMeta* column_meta);
 
 /**
- * Gets a metadata field for the provided name.
+ * Gets a metadata field for the provided name. Metadata fields allow direct
+ * access to the column data found in the underlying "columns" metadata table.
  *
  * @public @memberof CassColumnMeta
  *
@@ -2201,6 +2205,38 @@ CASS_EXPORT const CassDataType*
 cass_function_meta_return_type(const CassFunctionMeta* function_meta);
 
 /**
+ * Gets a metadata field for the provided name. Metadata fields allow direct
+ * access to the column data found in the underlying "functions" metadata table.
+ *
+ * @public @memberof CassFunctionMeta
+ *
+ * @param[in] function_meta
+ * @param[in] name
+ * @return A metadata field value. NULL if the field does not exist.
+ */
+CASS_EXPORT const CassValue*
+cass_function_meta_field_by_name(const CassFunctionMeta* function_meta,
+                                 const char* name);
+
+/**
+ * Same as cass_function_meta_field_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassFunctionMeta
+ *
+ * @param[in] function_meta
+ * @param[in] name
+ * @param[in] name_length
+ * @return same as cass_function_meta_field_by_name()
+ *
+ * @see cass_function_meta_field_by_name()
+ */
+CASS_EXPORT const CassValue*
+cass_function_meta_field_by_name_n(const CassFunctionMeta* function_meta,
+                                   const char* name,
+                                   size_t name_length);
+
+/**
  * Gets the name of the aggregate.
  *
  * @public @memberof CassAggregateMeta
@@ -2308,6 +2344,38 @@ cass_aggregate_meta_final_func(const CassAggregateMeta* aggregate_meta);
  */
 CASS_EXPORT const CassValue*
 cass_aggregate_meta_init_cond(const CassAggregateMeta* aggregate_meta);
+
+/**
+ * Gets a metadata field for the provided name. Metadata fields allow direct
+ * access to the column data found in the underlying "aggregates" metadata table.
+ *
+ * @public @memberof CassAggregateMeta
+ *
+ * @param[in] aggregate_meta
+ * @param[in] name
+ * @return A metadata field value. NULL if the field does not exist.
+ */
+CASS_EXPORT const CassValue*
+cass_aggregate_meta_field_by_name(const CassAggregateMeta* aggregate_meta,
+                                  const char* name);
+
+/**
+ * Same as cass_aggregate_meta_field_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassAggregateMeta
+ *
+ * @param[in] aggregate_meta
+ * @param[in] name
+ * @param[in] name_length
+ * @return same as cass_aggregate_meta_field_by_name()
+ *
+ * @see cass_aggregate_meta_field_by_name()
+ */
+CASS_EXPORT const CassValue*
+cass_aggregate_meta_field_by_name_n(const CassAggregateMeta* aggregate_meta,
+                                    const char* name,
+                                    size_t name_length);
 
 /***********************************************************************************
  *
@@ -6493,8 +6561,10 @@ CASS_EXPORT CassIterator*
 cass_iterator_aggregates_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta);
 
 /**
- * Creates a new iterator for the specified keyspace metadata.
- * This can be used to iterate over field entries.
+ * Creates a new fields iterator for the specified keyspace metadata. Metadata
+ * fields allow direct access to the column data found in the underlying
+ * "keyspaces" metadata table. This can be used to iterate those metadata
+ * field entries.
  *
  * @public @memberof CassKeyspaceMeta
  *
@@ -6524,8 +6594,10 @@ CASS_EXPORT CassIterator*
 cass_iterator_columns_from_table_meta(const CassTableMeta* table_meta);
 
 /**
- * Creates a new iterator for the specified table metadata.
- * This can be used to iterate over field entries.
+ * Creates a new fields iterator for the specified table metadata. Metadata
+ * fields allow direct access to the column data found in the underlying
+ * "tables" metadata table. This can be used to iterate those metadata
+ * field entries.
  *
  * @public @memberof CassTableMeta
  *
@@ -6540,8 +6612,10 @@ CASS_EXPORT CassIterator*
 cass_iterator_fields_from_table_meta(const CassTableMeta* table_meta);
 
 /**
- * Creates a new iterator for the specified column metadata.
- * This can be used to iterate over field entries.
+ * Creates a new fields iterator for the specified column metadata. Metadata
+ * fields allow direct access to the column data found in the underlying
+ * "columns" metadata table. This can be used to iterate those metadata
+ * field entries.
  *
  * @public @memberof CassColumnMeta
  *
@@ -6556,8 +6630,10 @@ CASS_EXPORT CassIterator*
 cass_iterator_fields_from_column_meta(const CassColumnMeta* column_meta);
 
 /**
- * Creates a new iterator for the specified function metadata.
- * This can be used to iterate over field entries.
+ * Creates a new fields iterator for the specified function metadata. Metadata
+ * fields allow direct access to the column data found in the underlying
+ * "functions" metadata table. This can be used to iterate those metadata
+ * field entries.
  *
  * @public @memberof CassColumnMeta
  *
@@ -6571,8 +6647,10 @@ CASS_EXPORT CassIterator*
 cass_iterator_fields_from_function_meta(const CassFunctionMeta* function_meta);
 
 /**
- * Creates a new iterator for the specified aggregate metadata.
- * This can be used to iterate over field entries.
+ * Creates a new fields iterator for the specified aggregate metadata. Metadata
+ * fields allow direct access to the column data found in the underlying
+ * "aggregates" metadata table. This can be used to iterate those metadata
+ * field entries.
  *
  * @public @memberof CassColumnMeta
  *
