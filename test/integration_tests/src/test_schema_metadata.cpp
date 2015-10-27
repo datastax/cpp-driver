@@ -244,8 +244,14 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     test_utils::CassIteratorPtr itr(cass_iterator_columns_from_table_meta(table_meta));
     while (cass_iterator_next(itr.get())) {
       const CassColumnMeta* col_meta = cass_iterator_get_column_meta(itr.get());
-      verify_fields(test_utils::CassIteratorPtr(cass_iterator_fields_from_column_meta(col_meta)), column_fields());
-      verify_fields_by_name(col_meta, column_fields());
+      CassColumnType col_type = cass_column_meta_type(col_meta);
+      // C* 1.2.0 columns won't have fields for partition and clustering key columns
+      if (version >= "2.0.0" ||
+          (col_type != CASS_COLUMN_TYPE_CLUSTERING_KEY &&
+           col_type != CASS_COLUMN_TYPE_PARTITION_KEY)) {
+        verify_fields(test_utils::CassIteratorPtr(cass_iterator_fields_from_column_meta(col_meta)), column_fields());
+        verify_fields_by_name(col_meta, column_fields());
+      }
       // no entries at this level
       BOOST_CHECK(!cass_column_meta_field_by_name(col_meta, "some bogus entry"));
     }
@@ -473,6 +479,46 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     BOOST_REQUIRE_EQUAL_COLLECTIONS(udt_datatypes.begin(), udt_datatypes.end(), udt_field_names.begin(), udt_field_names.end());
   }
 
+  void verify_partition_key(const CassTableMeta* table_meta,
+                            size_t index,
+                            const std::string& column_name) {
+    CassString actual_name;
+    const CassColumnMeta* column_meta = cass_table_meta_partition_key(table_meta, index);
+    cass_column_meta_name(column_meta, &actual_name.data, &actual_name.length);
+    BOOST_CHECK_EQUAL(std::string(actual_name.data, actual_name.length), column_name);
+    BOOST_CHECK_EQUAL(cass_column_meta_type(column_meta), CASS_COLUMN_TYPE_PARTITION_KEY);
+  }
+
+  void verify_clustering_key(const CassTableMeta* table_meta,
+                             size_t index,
+                             const std::string& column_name) {
+    CassString actual_name;
+    const CassColumnMeta* column_meta = cass_table_meta_clustering_key(table_meta, index);
+    cass_column_meta_name(column_meta, &actual_name.data, &actual_name.length);
+    BOOST_CHECK_EQUAL(std::string(actual_name.data, actual_name.length), column_name);
+    BOOST_CHECK_EQUAL(cass_column_meta_type(column_meta), CASS_COLUMN_TYPE_CLUSTERING_KEY);
+  }
+
+  void verify_column_order(const CassTableMeta* table_meta,
+                           size_t partition_key_size,
+                           size_t clustering_key_size,
+                           size_t column_count) {
+    size_t actual_column_count = cass_table_meta_column_count(table_meta);
+    BOOST_REQUIRE(partition_key_size + clustering_key_size <= actual_column_count);
+
+    size_t index = 0;
+    for (; index < partition_key_size; ++index) {
+      const CassColumnMeta* column_meta = cass_table_meta_column(table_meta, index);
+      BOOST_CHECK_EQUAL(cass_column_meta_type(column_meta), CASS_COLUMN_TYPE_PARTITION_KEY);
+    }
+    for (; index < clustering_key_size; ++index) {
+      const CassColumnMeta* column_meta = cass_table_meta_column(table_meta, index);
+      BOOST_CHECK_EQUAL(cass_column_meta_type(column_meta), CASS_COLUMN_TYPE_CLUSTERING_KEY);
+    }
+
+    BOOST_CHECK_EQUAL(actual_column_count, column_count);
+  }
+
   void verify_user_function(const std::string& ks_name,
     const std::string& udf_name,
     const std::vector<std::string>& udf_argument,
@@ -510,7 +556,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     BOOST_CHECK_EQUAL(udf_value_types.size(), cass_function_meta_argument_count(func_meta));
 
     // Function arguments (by index)
-    for (int i = 0; i < udf_argument.size(); ++i) {
+    for (size_t i = 0; i < udf_argument.size(); ++i) {
       const CassDataType* datatype;
       cass_function_meta_argument(func_meta, i, &func_meta_string_value.data, &func_meta_string_value.length, &datatype);
       BOOST_CHECK_EQUAL(udf_value_types[i].compare(std::string(test_utils::get_value_type(cass_data_type_type(datatype)))), 0);
@@ -553,7 +599,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     BOOST_CHECK_EQUAL(uda_value_types.size(), cass_aggregate_meta_argument_count(agg_meta));
 
     // Aggregate argument (indexes only)
-    for (int i = 0; i < uda_value_types.size(); ++i) {
+    for (size_t i = 0; i < uda_value_types.size(); ++i) {
       const CassDataType* datatype = cass_aggregate_meta_argument_type(agg_meta, i);
       BOOST_CHECK_EQUAL(uda_value_types[i].compare(std::string(test_utils::get_value_type(cass_data_type_type(datatype)))), 0);
     }
@@ -695,6 +741,100 @@ BOOST_AUTO_TEST_CASE(simple) {
   if (version >= "2.2.0") {
     verify_user_defined_function();
     verify_user_defined_aggregate();
+  }
+}
+
+/**
+ * Test column parition and clustering keys
+ *
+ * Verifies that the parition and clustering keys are properly
+ * categorized.
+ *
+ * @since 2.2.0
+ * @jira_ticket CPP-301
+ * @jira_ticket CPP-306
+ * @test_category schema
+ * @cassandra_version 1.2.x
+ */
+BOOST_AUTO_TEST_CASE(keys) {
+  test_utils::execute_query(session, "CREATE KEYSPACE keys WITH replication = "
+                                     "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE keys.single_parition_key (key text, value text, PRIMARY KEY(key))");
+    refresh_schema_meta();
+
+    const CassTableMeta* table_meta = schema_get_table("keys", "single_parition_key");
+
+    BOOST_REQUIRE(cass_table_meta_partition_key_count(table_meta) == 1);
+    verify_partition_key(table_meta, 0, "key");
+
+    verify_column_order(table_meta, 1, 0, 2);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE keys.composite_parition_key (key1 text, key2 text, value text, "
+                                       "PRIMARY KEY((key1, key2)))");
+    refresh_schema_meta();
+
+    const CassTableMeta* table_meta = schema_get_table("keys", "composite_parition_key");
+
+    BOOST_REQUIRE(cass_table_meta_partition_key_count(table_meta) == 2);
+    verify_partition_key(table_meta, 0, "key1");
+    verify_partition_key(table_meta, 1, "key2");
+
+    verify_column_order(table_meta, 2, 0, 3);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE keys.composite_key (key1 text, key2 text, value text, "
+                                       "PRIMARY KEY(key1, key2))");
+    refresh_schema_meta();
+
+    const CassTableMeta* table_meta = schema_get_table("keys", "composite_key");
+
+    BOOST_REQUIRE(cass_table_meta_partition_key_count(table_meta) == 1);
+    verify_partition_key(table_meta, 0, "key1");
+
+    BOOST_REQUIRE(cass_table_meta_clustering_key_count(table_meta) == 1);
+    verify_clustering_key(table_meta, 0, "key2");
+
+    verify_column_order(table_meta, 1, 1, 3);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE keys.composite_clustering_key (key1 text, key2 text, key3 text, value text, "
+                                       "PRIMARY KEY(key1, key2, key3))");
+    refresh_schema_meta();
+
+    const CassTableMeta* table_meta = schema_get_table("keys", "composite_clustering_key");
+
+    BOOST_REQUIRE(cass_table_meta_partition_key_count(table_meta) == 1);
+    verify_partition_key(table_meta, 0, "key1");
+
+    BOOST_REQUIRE(cass_table_meta_clustering_key_count(table_meta) == 2);
+    verify_clustering_key(table_meta, 0, "key2");
+    verify_clustering_key(table_meta, 1, "key3");
+
+    verify_column_order(table_meta, 1, 2, 4);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE keys.composite_parition_and_clustering_key (key1 text, key2 text, key3 text, key4 text, value text, "
+                                       "PRIMARY KEY((key1, key2), key3, key4))");
+    refresh_schema_meta();
+
+    const CassTableMeta* table_meta = schema_get_table("keys", "composite_parition_and_clustering_key");
+
+    BOOST_REQUIRE(cass_table_meta_partition_key_count(table_meta) == 2);
+    verify_partition_key(table_meta, 0, "key1");
+    verify_partition_key(table_meta, 1, "key2");
+
+    BOOST_REQUIRE(cass_table_meta_clustering_key_count(table_meta) == 2);
+    verify_clustering_key(table_meta, 0, "key3");
+    verify_clustering_key(table_meta, 1, "key4");
+
+    verify_column_order(table_meta, 2, 2, 5);
   }
 }
 
