@@ -47,11 +47,10 @@ struct ClusterInit {
 
   void prepare_alter_schema_version_session() {
     // Create a new session for altering node2 and node3 system tables
-    cass_cluster_set_whitelist_filtering(inst.cluster, cass_true);
     std::string ip_prefix = inst.ccm->get_ip_prefix();
     std::stringstream whitelist_hosts;
     whitelist_hosts << ip_prefix << "2," << ip_prefix << "3";
-    cass_cluster_set_whitelist_filtering_hosts(inst.cluster, whitelist_hosts.str().c_str());
+    cass_cluster_set_whitelist_filtering(inst.cluster, whitelist_hosts.str().c_str());
     schema_alter_session = cass_session_new();
     test_utils::CassFuturePtr connect_future(cass_session_connect(schema_alter_session, inst.cluster));
     test_utils::wait_and_check_error(connect_future.get());

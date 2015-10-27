@@ -1226,29 +1226,14 @@ cass_cluster_set_latency_aware_routing_settings(CassCluster* cluster,
                                                 cass_uint64_t min_measured);
 
 /**
- * Configures the cluster to use whitelist filtering or not.
+ * Sets/Appends whitelist hosts. The first call sets the whitelist hosts and
+ * any subsequent calls appends additional hosts. Passing an empty string will
+ * clear and disable the whitelist. White space is striped from the hosts.
  *
- * <b>Default:</b> cass_false (disabled).
- *
- * This routing policy composes the base routing policy, routing requests only
+ * This policy filters requests to all other policies, only allowing requests
  * to the hosts contained in the whitelist. Any host not in the whitelist will
  * be ignored and a connection will not be established. This policy is useful
  * for ensuring that the driver will only connect to a predefined set of hosts.
- *
- * @public @memberof CassCluster
- *
- * @param[in] cluster
- * @param[in] enabled
- */
-CASS_EXPORT void
-cass_cluster_set_whitelist_filtering(CassCluster* cluster,
-                                     cass_bool_t enabled);
-
-/**
- * Sets/Appends whitelist hosts. This *MUST* be set if whitelist filtering is
- * enabled. The first call sets the whitelist hosts and any subsequent calls
- * appends additional hosts. Passing an empty string will clear the whitelist
- * hosts. White space is striped from the hosts.
  *
  * Examples: "127.0.0.1" "127.0.0.1,127.0.0.2", "server1.domain.com"
  *
@@ -1261,8 +1246,8 @@ cass_cluster_set_whitelist_filtering(CassCluster* cluster,
  * this call.
  */
 CASS_EXPORT void
-cass_cluster_set_whitelist_filtering_hosts(CassCluster* cluster,
-                                           const char* hosts);
+cass_cluster_set_whitelist_filtering(CassCluster* cluster,
+                                     const char* hosts);
 
 /**
  * Same as cass_cluster_set_whitelist_filtering_hosts(), but with lengths for
@@ -1278,9 +1263,9 @@ cass_cluster_set_whitelist_filtering_hosts(CassCluster* cluster,
  * @see cass_cluster_set_whitelist_filtering_hosts()
  */
 CASS_EXPORT void
-cass_cluster_set_whitelist_filtering_hosts_n(CassCluster* cluster,
-                                             const char* hosts,
-                                             size_t hosts_length);
+cass_cluster_set_whitelist_filtering_n(CassCluster* cluster,
+                                       const char* hosts,
+                                       size_t hosts_length);
 
 /**
  * Enable/Disable Nagel's algorithm on connections.

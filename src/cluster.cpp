@@ -281,27 +281,22 @@ void cass_cluster_set_latency_aware_routing_settings(CassCluster* cluster,
 }
 
 void cass_cluster_set_whitelist_filtering(CassCluster* cluster,
-                                          cass_bool_t enabled) {
-  cluster->config().set_whitelist_filtering(enabled == cass_true);
-}
-
-void cass_cluster_set_whitelist_filtering_hosts(CassCluster* cluster,
-                                                const char* hosts) {
+                                          const char* hosts) {
   size_t hosts_length
       = hosts == NULL ? 0 : strlen(hosts);
-  cass_cluster_set_whitelist_filtering_hosts_n(cluster,
-                                               hosts,
-                                               hosts_length);
+  cass_cluster_set_whitelist_filtering_n(cluster,
+                                         hosts,
+                                         hosts_length);
 }
 
-void cass_cluster_set_whitelist_filtering_hosts_n(CassCluster* cluster,
-                                                  const char* hosts,
-                                                  size_t hosts_length) {
+void cass_cluster_set_whitelist_filtering_n(CassCluster* cluster,
+                                            const char* hosts,
+                                            size_t hosts_length) {
   if (hosts_length == 0) {
-    cluster->config().whitelist_filtering_hosts().clear();
+    cluster->config().whitelist().clear();
   } else {
     cass::explode(std::string(hosts, hosts_length),
-              cluster->config().whitelist_filtering_hosts());
+                  cluster->config().whitelist());
   }
 }
 

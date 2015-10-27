@@ -62,7 +62,6 @@ public:
       , load_balancing_policy_(new DCAwarePolicy())
       , token_aware_routing_(true)
       , latency_aware_routing_(false)
-      , whitelist_filtering_(false)
       , tcp_nodelay_enable_(true)
       , tcp_keepalive_enable_(false)
       , tcp_keepalive_delay_secs_(0)
@@ -229,10 +228,11 @@ public:
   }
 
   LoadBalancingPolicy* load_balancing_policy() const {
-    // base LBP can be augmented by special wrappers (whitelist, token aware, latency aware)
+    // The base LBP can be augmented by special wrappers (whitelist,
+    // token aware, latency aware)
     LoadBalancingPolicy* chain = load_balancing_policy_->new_instance();
-    if (whitelist_filtering()) {
-      chain = new WhitelistPolicy(chain, whitelist_filtering_hosts_);
+    if (!whitelist_.empty()) {
+      chain = new WhitelistPolicy(chain, whitelist_);
     }
     if (token_aware_routing()) {
       chain = new TokenAwarePolicy(chain);
@@ -266,12 +266,8 @@ public:
     latency_aware_routing_settings_ = settings;
   }
 
-  bool whitelist_filtering() const { return whitelist_filtering_; }
-
-  void set_whitelist_filtering(bool is_whitelist) { whitelist_filtering_ = is_whitelist; }
-
-  ContactPointList& whitelist_filtering_hosts() {
-    return whitelist_filtering_hosts_;
+  ContactPointList& whitelist() {
+    return whitelist_;
   }
 
   bool tcp_nodelay_enable() const { return tcp_nodelay_enable_; }
@@ -356,8 +352,7 @@ private:
   bool token_aware_routing_;
   bool latency_aware_routing_;
   LatencyAwarePolicy::Settings latency_aware_routing_settings_;
-  bool whitelist_filtering_;
-  ContactPointList whitelist_filtering_hosts_;
+  ContactPointList whitelist_;
   bool tcp_nodelay_enable_;
   bool tcp_keepalive_enable_;
   unsigned tcp_keepalive_delay_secs_;
