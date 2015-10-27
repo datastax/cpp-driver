@@ -12,88 +12,112 @@
 <table class="table table-striped table-hover table-condensed">
   <thead>
     <tr>
-      <th>Driver</th>
-      <th>Cassandra</th>
+      <th>Cassandra Type(s)</th>
+      <th>Driver Type</th>
       <th>Supported Versions</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td><code>cass_int32_t</code></td>
       <td><code>int</code></td>
+      <td><code>cass_int32_t</code></td>
       <td>1.2+</td>
     </tr>
 
     <tr>
-      <td><code>cass_int64_t</code></td>
       <td><code>bigint</code>, <code>counter</code>, <code>timestamp</code></td>
+      <td><code>cass_int64_t</code></td>
       <td>1.2+</td>
     </tr>
 
     <tr>
-      <td><code>cass_float_t</code></td>
       <td><code>float</code></td>
+      <td><code>cass_float_t</code></td>
       <td>1.2+</td>
     </tr>
 
     <tr>
-      <td><code>cass_double_t</code></td>
       <td><code>double</code></td>
+      <td><code>cass_double_t</code></td>
       <td>1.2+</td>
     </tr>
 
     <tr>
-      <td><code>cass_boot_t</code></td>
       <td><code>boolean</code></td>
+      <td><code>cass_boot_t</code></td>
       <td>1.2+</td>
     </tr>
 
     <tr>
-      <td><code>const char*</code></td>
       <td><code>ascii</code>, <code>text</code>, <code>varchar</code></td>
+      <td><code>const char*</code></td>
       <td>1.2+</td>
     </tr>
 
     <tr>
-      <td><code>const cass_byte_t*</code></td>
       <td><code>blob</code>, <code>varint</code></td>
+      <td><code>const cass_byte_t*</code></td>
       <td>1.2+</td>
     </tr>
 
     <tr>
-      <td><code>CassUuid</code></td>
       <td><code>uuid</code>, <code>timeuuid</code></td>
+      <td><code>CassUuid</code></td>
       <td>1.2+</td>
     </tr>
 
     <tr>
-      <td><code>CassInet</code></td>
       <td><code>inet</code></td>
+      <td><code>CassInet</code></td>
       <td>1.2+</td>
     </tr>
 
     <tr>
-      <td><code>const cass_byte_t* (varint) and a cass_int32_t (scale)</code></td>
       <td><code>decimal</code></td>
+      <td><code>const cass_byte_t* (varint) and a cass_int32_t (scale)</code></td>
       <td>1.2+</td>
     </tr>
 
     <tr>
-      <td><code>CassCollection</code></td>
       <td><code>list</code>, <code>map</code>, <code>set</code></td>
+      <td><code>CassCollection</code></td>
       <td>1.2+</td>
     </tr>
 
     <tr>
-      <td><code>CassTuple</code></td>
       <td><code>tuple</code></td>
+      <td><code>CassTuple</code></td>
       <td>2.1+</td>
     </tr>
 
     <tr>
+      <td><code>user defined type</code></td>
       <td><code>CassUserType</code></td>
-      <td><code>type</code></td>
       <td>2.1+</td>
+    </tr>
+
+    <tr>
+      <td><code>tinyint</code></td>
+      <td><code>cass_int8_t</code></td>
+      <td>2.2+</td>
+    </tr>
+
+    <tr>
+      <td><code>smallint</code></td>
+      <td><code>cass_int16_t</code></td>
+      <td>2.2+</td>
+    </tr>
+
+    <tr>
+      <td><code>date</code></td>
+      <td><code>cass_uint32_t</code></td>
+      <td>2.2+</td>
+    </tr>
+
+    <tr>
+      <td><code>time</code></td>
+      <td><code>cass_int64_t</code></td>
+      <td>2.2+</td>
     </tr>
 
   </tbody>

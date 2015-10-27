@@ -1,6 +1,14 @@
 # Consistency
 
-A setting that defines a successful write or read by the number of cluster replicas that acknowledge the write or respond to the read request, respectively.
+A setting that defines a successful write or read by the number of cluster
+replicas that acknowledge the write or respond to the read request,
+respectively.
+
+## Default consistency
+
+The default consistency is now `CASS_CONSISTENCY_LOCAL_QUORUM` for driver
+versions 2.2 and above it  was `CASS_CONSISTENCY_ONE` for all previous versions
+(2.1 and below).
 
 ## Consistency Levels
 
