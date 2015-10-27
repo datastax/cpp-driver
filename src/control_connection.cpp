@@ -461,6 +461,7 @@ void ControlConnection::on_query_meta_all(ControlConnection* control_connection,
       session->metadata().update_aggregates(static_cast<ResultResponse*>(responses[7].get()));
     }
     session->metadata().swap_to_back_and_update_front();
+    if (control_connection->should_query_tokens_) session->metadata().build();
   }
 
   if (is_initial_connection) {

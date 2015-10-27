@@ -696,7 +696,6 @@ void Metadata::swap_to_back_and_update_front() {
   }
   back_.clear();
   updating_ = &front_;
-  token_map_.build();
 }
 
 void Metadata::clear() {
