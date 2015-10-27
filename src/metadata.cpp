@@ -1322,7 +1322,7 @@ void Metadata::InternalData::update_tables(int version, const VersionNumber& cas
 
   std::string keyspace_name;
   std::string columnfamily_name;
-  KeyspaceMetadata* keyspace;
+  KeyspaceMetadata* keyspace = NULL;
 
   while (rows.next()) {
     std::string temp_keyspace_name;
@@ -1350,7 +1350,7 @@ void Metadata::InternalData::update_user_types(ResultResponse* result) {
   ResultIterator rows(result);
 
   std::string keyspace_name;
-  KeyspaceMetadata* keyspace;
+  KeyspaceMetadata* keyspace = NULL;
 
   while (rows.next()) {
     std::string temp_keyspace_name;
@@ -1429,7 +1429,7 @@ void Metadata::InternalData::update_functions(ResultResponse* result) {
   ResultIterator rows(result);
 
   std::string keyspace_name;
-  KeyspaceMetadata* keyspace;
+  KeyspaceMetadata* keyspace = NULL;
 
   while (rows.next()) {
     std::string temp_keyspace_name;
@@ -1462,7 +1462,7 @@ void Metadata::InternalData::update_aggregates(int version, ResultResponse* resu
   ResultIterator rows(result);
 
   std::string keyspace_name;
-  KeyspaceMetadata* keyspace;
+  KeyspaceMetadata* keyspace = NULL;
 
   while (rows.next()) {
     std::string temp_keyspace_name;
@@ -1526,7 +1526,7 @@ void Metadata::InternalData::update_columns(int version, const VersionNumber& ca
   std::string columnfamily_name;
   std::string column_name;
 
-  KeyspaceMetadata* keyspace;
+  KeyspaceMetadata* keyspace = NULL;
   TableMetadata::Ptr table;
 
   while (rows.next()) {
