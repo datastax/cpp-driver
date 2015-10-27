@@ -109,6 +109,7 @@ std::string get_replica(test_utils::CassSessionPtr session,
   // The query doesn't matter
   test_utils::CassStatementPtr statement(
         cass_statement_new("SELECT * FROM system.local", 1));
+  cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_ONE);
   cass_statement_bind_string_n(statement.get(), 0, value.data(), value.size());
   cass_statement_add_key_index(statement.get(), 0);
   cass_statement_set_keyspace(statement.get(), keyspace.c_str());
