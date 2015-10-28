@@ -1,3 +1,11 @@
+1.0.4
+===========
+October 29, 2015
+
+Other
+--------
+* Fixed `Address::compare()` issue that cause invalid comparisons for IPv4
+
 1.0.3
 ===========
 September 21, 2015
