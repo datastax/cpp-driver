@@ -148,6 +148,10 @@ public:
   std::string get_string_field(const std::string& name) const;
   Iterator* iterator_fields() const { return new MetadataFieldIterator(fields_); }
 
+  void swap_fields(MetadataBase& meta) {
+    fields_.swap(meta.fields_);
+  }
+
 protected:
   const Value* add_field(const SharedRefPtr<RefBuffer>& buffer, const Row* row, const std::string& name);
   void add_json_list_field(int version, const Row* row, const std::string& name);
@@ -254,11 +258,12 @@ public:
     , is_reversed_(false) { }
 
   ColumnMetadata(const std::string& name,
+                 int32_t position,
                  CassColumnType type,
                  const SharedRefPtr<const DataType>& data_type)
     : MetadataBase(name)
     , type_(type)
-    , position_(0)
+    , position_(position)
     , data_type_(data_type)
     , is_reversed_(false) { }
 
@@ -269,6 +274,7 @@ public:
   int32_t position() const { return position_; }
   const SharedRefPtr<const DataType>& data_type() const { return data_type_; }
   bool is_reversed() const { return is_reversed_; }
+
 
 private:
   CassColumnType type_;
@@ -308,7 +314,7 @@ public:
   const ColumnMetadata::Ptr& get_or_create_column(const std::string& name);
   void add_column(const ColumnMetadata::Ptr& column);
   void clear_columns();
-  void build_keys(const VersionNumber& cassandra_version);
+  void build_keys_and_sort(const VersionNumber& cassandra_version);
   void key_aliases(KeyAliases* output) const;
 
 private:
