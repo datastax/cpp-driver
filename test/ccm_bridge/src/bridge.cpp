@@ -38,6 +38,8 @@
 #define POPEN popen
 #define PCLOSE pclose
 #define READ read
+
+#include <unistd.h>
 #endif
 #include "bridge.hpp"
 

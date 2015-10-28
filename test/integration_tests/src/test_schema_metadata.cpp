@@ -156,6 +156,24 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     return agg_meta;
   }
 
+  void verify_function_dropped(const std::string& ks_name,
+                               const std::string& func_name,
+                               const std::vector<std::string>& func_types) {
+    const CassFunctionMeta* func_meta = cass_keyspace_meta_function_by_name(schema_get_keyspace(ks_name),
+                                                                            func_name.c_str(),
+                                                                            test_utils::implode(func_types, ',').c_str());
+    BOOST_CHECK(func_meta == NULL);
+  }
+
+  void verify_aggregate_dropped(const std::string& ks_name,
+                                const std::string& agg_name,
+                                const std::vector<std::string>& agg_types) {
+    const CassAggregateMeta* agg_meta = cass_keyspace_meta_aggregate_by_name(schema_get_keyspace(ks_name),
+                                                                             agg_name.c_str(),
+                                                                             test_utils::implode(agg_types, ',').c_str());
+    BOOST_CHECK(agg_meta == NULL);
+  }
+
   void verify_fields(const test_utils::CassIteratorPtr& itr, const std::set<std::string>& expected_fields) {
     // all fields present, nothing extra
     std::set<std::string> observed;
@@ -683,8 +701,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
       % SIMPLE_STRATEGY_KEYSPACE_NAME
       % USER_DEFINED_FUNCTION_NAME));
     refresh_schema_meta();
-    const CassFunctionMeta* func_meta = schema_get_function(SIMPLE_STRATEGY_KEYSPACE_NAME, USER_DEFINED_FUNCTION_NAME, udf_value_types);
-    BOOST_REQUIRE(func_meta != NULL);
+    verify_function_dropped(SIMPLE_STRATEGY_KEYSPACE_NAME, USER_DEFINED_FUNCTION_NAME, udf_value_types);
   }
 
   void create_simple_strategy_aggregate() {
@@ -721,8 +738,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
       % SIMPLE_STRATEGY_KEYSPACE_NAME
       % USER_DEFINED_AGGREGATE_NAME));
     refresh_schema_meta();
-    const CassAggregateMeta* agg_meta = schema_get_aggregate(SIMPLE_STRATEGY_KEYSPACE_NAME, USER_DEFINED_AGGREGATE_NAME, uda_value_types);
-    BOOST_REQUIRE(agg_meta != NULL);
+    verify_aggregate_dropped(SIMPLE_STRATEGY_KEYSPACE_NAME, USER_DEFINED_AGGREGATE_NAME, uda_value_types);
   }
 };
 

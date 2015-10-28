@@ -337,6 +337,16 @@ void ControlConnection::on_event(EventResponse* response) {
               session_->metadata().drop_user_type(response->keyspace().to_string(),
                                                   response->target().to_string());
               break;
+            case EventResponse::FUNCTION:
+              session_->metadata().drop_function(response->keyspace().to_string(),
+                                                 Metadata::full_function_name(response->target().to_string(),
+                                                                              to_strings(response->arg_types())));
+              break;
+            case EventResponse::AGGREGATE:
+              session_->metadata().drop_aggregate(response->keyspace().to_string(),
+                                                  Metadata::full_function_name(response->target().to_string(),
+                                                                               to_strings(response->arg_types())));
+              break;
           }
           break;
 

@@ -1469,7 +1469,7 @@ void Metadata::InternalData::update_aggregates(int version, ResultResponse* resu
     const Row* row = rows.row();
 
     const Value* signature = row->get_by_name("signature");
-    if (!row->get_string_by_name("keyspace_name", &keyspace_name) ||
+    if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
         !row->get_string_by_name("aggregate_name", &aggregate_name) ||
         signature == NULL) {
       LOG_ERROR("Unable to get column value for 'keyspace_name', 'aggregate_name' or 'signature'");
