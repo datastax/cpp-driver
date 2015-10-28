@@ -109,16 +109,14 @@ NOTE: Using this policy to limit the connections of the driver to a predefined
       DC aware in conjunction with the round robin load balancing policy.
 
 ```c
-/* Disable whitelist filtering (this is the default setting) */
-cass_cluster_set_whitelist_filtering(cluster, cass_false);
-
-/* Enable whitelist filtering */
-cass_cluster_set_latency_aware_filtering(cluster, cass_true);
-
 /* Set the list of predefined hosts the driver is allowed to connect to */
-cass_cluster_set_whitelist_filtering_hosts(cluster,
-                                           "127.0.0.1, 127.0.0.3, 127.0.0.5");
+cass_cluster_set_whitelist_filtering(cluster,
+                                     "127.0.0.1, 127.0.0.3, 127.0.0.5");
+
+/* The whitelist can be cleared (and disabled) by using an empty string */
+cass_cluster_set_whitelist_filtering(cluster, "");
 ```
+
 
 ### Connection Heartbeats
 

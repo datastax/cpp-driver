@@ -1,3 +1,29 @@
+2.2.0
+===========
+October 29, 2015
+
+Features
+--------
+* Refactored the schema metadata API (`CassSchema`) to use concrete types
+  (`CassKeyspaceMeta`, `CassTableMeta`, etc.) instead of the single
+  `CassSchemaMeta` type.
+* Added support for UDF/UDA schema metadata
+* Added support for whitelist filtering i.e. whitelist load balancing policy
+
+Other
+--------
+* Fixed `Address::compare()` issue that cause invalid comparisons for IPv4
+* Fixed issue that caused `StreamManager` to generate invalid stream IDs in
+  Windows release builds.
+* Fixed issue where `cass_cluster_set_protocol_version()` would return an error
+  for protocol versions higher than v3
+* Changed the default consistency from `CASS_CONSISTENCY_ONE` to
+  `CASS_CONSISTENCY_LOCAL_QUORUM`
+* When using prepared statements with protocol v4 (and higher) the driver will
+  use partition key metadata returned in the prepared response instead of using
+  schema metadata.
+* Improved the performance of UUID to string and UUID from string conversions
+
 2.2.0-beta1
 ===========
 September 21, 2015

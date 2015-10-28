@@ -7,15 +7,19 @@ created from a manually defined data type.
 
 ## Creating a UDT from Schema
 
-An [`CassSchema`] instance can be used to construct a new [`CassUserType`]. The
-[`CassSchema`] instance returns a [`CassDataType`] object which is used to
+An [`CassSchemaMeta`] instance can be used to construct a new [`CassUserType`]. The
+[`CassSchemaMeta`] instance returns a [`CassDataType`] object which is used to
 describe Cassandra types including UDTs, tuples, collections and all basic types
 (`int`, `bigint`, `uuid`, etc.).
 
 ```c
-CassSchema* schema = cass_session_get_schema(session);
+const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session);
 
-CassDataType* data_type = cass_schema_get_udt(schema, "keyspace", "typename");
+const CassKeyspaceMeta* keyspace_meta =
+  cass_schema_meta_keyspace_by_name("keyspace");
+
+const DataType* data_type =
+  cass_keyspace_meta_user_type_by_name(keyspace_meta, "typename");
 
 CassUserType* user_type = cass_user_type_new_from_data_type(data_type);
 
@@ -81,7 +85,7 @@ while (cass_iterator_next(udt_iterator)) {
 /* The UDT iterator needs to be freed */
 cass_iterator_free(udt_iterator);
 ```
-[`CassSchema`]: http://datastax.github.io/cpp-driver/api/CassSchema/
+[`CassSchemaMeta`]: http://datastax.github.io/cpp-driver/api/CassSchemaMeta/
 [`CassUserType`]: http://datastax.github.io/cpp-driver/api/CassUserType/
 [`CassDataType`]: http://datastax.github.io/cpp-driver/api/CassDataType/
 [`cass_session_get_schema()`]: http://datastax.github.io/cpp-driver/api/CassSession/#cass-session-get-schema
