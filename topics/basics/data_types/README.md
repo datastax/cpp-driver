@@ -18,7 +18,7 @@ CREATE TYPE person (name text,
 
 ## Retrieving an Existing Data Type
 
-**Important**: Any `const [CassDataType]*` object doesn't need to be freed. It's
+**Important**: Any `const [CassDataType]*` object doesn't need to be freed. Its
 lifetime is bound to the object it came from.
 
 UDT data types can be retrieved using a [`CassSchemaMeta`] object. The resulting
