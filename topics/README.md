@@ -150,7 +150,7 @@ Each I/O thread maintains a small number of connections for each node in the
 Cassandra cluster and each of those connections can handle several simultaneous
 requests using pipelining. Asynchronous I/O and pipelining together allow each
 connection to handle several (up to 128 requests with protocol v1/v2 and 32k with
-protocol v3) in-flight requests concurrently. This significantly reduces the
+protocol v3/v4) in-flight requests concurrently. This significantly reduces the
 number of connections required to be open to Cassandra and
 allows the driver to batch requests destined for the same node.
 
@@ -175,7 +175,6 @@ Here are some features that are missing from the C/C++ driver, but are included 
 - Event registration and notification
 - Callback interfaces for load balancing, authentication, reconnection and retry
 - Generic SASL authentication interface
-- [User Defined Type (UDT)](http://www.datastax.com/documentation/cql/3.1/cql/cql_reference/cqlRefUDType.html)
 
 [`cass_int32_t`]: http://datastax.github.io/cpp-driver/api/cassandra.h/#cass-int32-t
 [`cass_result_first_row()`]: http://datastax.github.io/cpp-driver/api/CassResult/#cass-result-first-row
