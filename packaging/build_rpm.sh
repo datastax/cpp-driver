@@ -12,7 +12,7 @@ function check_command {
 # 'redhat-rpm-config' needs to be installed for the 'debuginfo' package
 check_command "rpmbuild" "rpm-build"
 
-arch="amd64"
+arch="x86_64"
 if [[ ! -z $1 ]]; then
   arch=$1
 fi
