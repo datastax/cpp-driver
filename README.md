@@ -23,6 +23,19 @@ Cassandra's native protocol and Cassandra Query Language v3.
 - Whitelist load balancing policy
 - Default consistency has been changed from `ONE` to `LOCAL_QUORUM`
 
+## Upgrading from 2.0 or 2.1 to 2.2+
+
+The new schema metadata API in 2.2 required some breaking API changes.
+Applications that used the previous schema metadata API from 2.0 and 2.1 will
+require some small modifications to use the new API. More information about the
+new schema metadata API can be found in this
+[blog post](http://www.datastax.com/dev/blog/datastax-c-driver-2-2-ga-released).
+
+## Upgrading from 1.0 to 2.0+
+
+There were a couple breaking API changes between 1.0 and 2.0 that are documented
+[here](http://www.datastax.com/dev/blog/datastax-c-driver-2-0-released).
+
 ## Features
 - [Asynchronous API]
 - [Simple], [Prepared], and [Batch] statements
