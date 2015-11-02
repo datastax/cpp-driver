@@ -25,6 +25,7 @@
 #include "ssl.hpp"
 #include "timestamp_generator.hpp"
 #include "token_aware_policy.hpp"
+#include "whitelist_policy.hpp"
 
 #include <list>
 #include <string>
@@ -35,11 +36,9 @@ void stderr_log_callback(const CassLogMessage* message, void* data);
 
 class Config {
 public:
-  typedef std::list<std::string> ContactPointList;
-
   Config()
       : port_(9042)
-      , protocol_version_(3)
+      , protocol_version_(4)
       , thread_count_io_(1)
       , queue_size_io_(8192)
       , queue_size_event_(8192)
@@ -229,8 +228,12 @@ public:
   }
 
   LoadBalancingPolicy* load_balancing_policy() const {
-    // base LBP can be augmented by special wrappers (whitelist, token aware, latency aware)
+    // The base LBP can be augmented by special wrappers (whitelist,
+    // token aware, latency aware)
     LoadBalancingPolicy* chain = load_balancing_policy_->new_instance();
+    if (!whitelist_.empty()) {
+      chain = new WhitelistPolicy(chain, whitelist_);
+    }
     if (token_aware_routing()) {
       chain = new TokenAwarePolicy(chain);
     }
@@ -261,6 +264,10 @@ public:
 
   void set_latency_aware_routing_settings(const LatencyAwarePolicy::Settings& settings) {
     latency_aware_routing_settings_ = settings;
+  }
+
+  ContactPointList& whitelist() {
+    return whitelist_;
   }
 
   bool tcp_nodelay_enable() const { return tcp_nodelay_enable_; }
@@ -345,6 +352,7 @@ private:
   bool token_aware_routing_;
   bool latency_aware_routing_;
   LatencyAwarePolicy::Settings latency_aware_routing_settings_;
+  ContactPointList whitelist_;
   bool tcp_nodelay_enable_;
   bool tcp_keepalive_enable_;
   unsigned tcp_keepalive_delay_secs_;

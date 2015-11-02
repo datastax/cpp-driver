@@ -27,7 +27,7 @@
 namespace cass {
 
 int32_t Handler::encode(int version, int flags, BufferVec* bufs) {
-  if (version < 1 || version > 3) {
+  if (version < 1 || version > 4) {
     return Request::ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
   }
 
@@ -35,10 +35,16 @@ int32_t Handler::encode(int version, int flags, BufferVec* bufs) {
   bufs->push_back(Buffer()); // Placeholder
 
   const Request* req = request();
-  int32_t length = req->encode(version, this, bufs);
-  if (length < 0) {
-    return length;
+  int32_t length = 0;
+
+  if (version >= 4 && req->custom_payload()) {
+    flags |= CASS_FLAG_CUSTOM_PAYLOAD;
+    length += req->custom_payload()->encode(bufs);
   }
+
+  int32_t result = req->encode(version, this, bufs);
+  if (result < 0) return result;
+  length += result;
 
   const size_t header_size
       = (version >= 3) ? CASS_HEADER_SIZE_V3 : CASS_HEADER_SIZE_V1_AND_V2;
@@ -107,13 +113,15 @@ void Handler::set_state(Handler::State next_state) {
       break;
 
     case REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING:
-      assert((next_state == REQUEST_STATE_TIMEOUT || next_state == REQUEST_STATE_DONE) &&
+      assert((next_state == REQUEST_STATE_TIMEOUT ||
+              next_state == REQUEST_STATE_READ_BEFORE_WRITE) &&
              "Invalid request state after timeout (write outstanding)");
       state_ = next_state;
       break;
 
     case REQUEST_STATE_READ_BEFORE_WRITE:
-      assert((next_state == REQUEST_STATE_DONE || next_state == REQUEST_STATE_RETRY_WRITE_OUTSTANDING) &&
+      assert((next_state == REQUEST_STATE_DONE ||
+              next_state == REQUEST_STATE_RETRY_WRITE_OUTSTANDING) &&
              "Invalid request state after read before write");
       state_ = next_state;
       break;

@@ -23,6 +23,7 @@
 #include <stddef.h>
 #include <string>
 #include <string.h>
+#include <vector>
 
 namespace cass {
 
@@ -122,6 +123,10 @@ public:
     return !equals(ref);
   }
 
+  bool operator<(const StringRef& ref) const {
+    return compare(ref) < 0;
+  }
+
 private:
   template<class IsEqual>
   int compare(const StringRef& ref, IsEqual is_equal) const {
@@ -136,6 +141,20 @@ private:
   const char* ptr_;
   size_t length_;
 };
+
+typedef std::vector<std::string> StringVec;
+typedef std::vector<StringRef> StringRefVec;
+
+inline StringVec to_strings(const StringRefVec& refs) {
+  StringVec strings;
+  strings.reserve(refs.size());
+  for (StringRefVec::const_iterator i = refs.begin(), end = refs.end();
+       i != end;
+       ++i) {
+    strings.push_back(i->to_string());
+  }
+  return strings;
+}
 
 inline bool starts_with(const StringRef& input, const StringRef& target) {
   return input.length() >= target.length() &&

@@ -14,26 +14,23 @@
   limitations under the License.
 */
 
-#include "user_type_iterator.hpp"
+#ifdef STAND_ALONE
+#   define BOOST_TEST_MODULE cassandra
+#endif
 
-#include "serialization.hpp"
+#include "address.hpp"
 
-namespace cass {
+#include <boost/test/unit_test.hpp>
+#include <time.h>
 
-bool UserTypeIterator::next() {
-  if (next_ == end_) {
-    return false;
-  }
-  current_ = next_++;
-  position_ = decode_field(position_);
-  return true;
+BOOST_AUTO_TEST_SUITE(address)
+
+BOOST_AUTO_TEST_CASE(compare_ipv4)
+{
+  BOOST_CHECK(cass::Address("255.255.255.255", 9042).compare(cass::Address("0.0.0.0", 9042)) > 0);
+  BOOST_CHECK(cass::Address("0.0.0.0", 9042).compare(cass::Address("255.255.255.255", 9042)) < 0);
+  BOOST_CHECK(cass::Address("1.2.3.4", 9042).compare(cass::Address("1.2.3.4", 9042)) == 0);
 }
 
-char* UserTypeIterator::decode_field(char* position) {
-  int32_t size;
-  char* buffer = decode_int32(position, size);
-  value_ = Value(user_type_value_->protocol_version(), current_->type, buffer, size);
-  return size > 0 ? buffer + size : buffer;
-}
+BOOST_AUTO_TEST_SUITE_END()
 
-} // namespace cass

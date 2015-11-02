@@ -12,12 +12,12 @@ function check_command {
 # 'redhat-rpm-config' needs to be installed for the 'debuginfo' package
 check_command "rpmbuild" "rpm-build"
 
-arch="amd64"
+arch="x86_64"
 if [[ ! -z $1 ]]; then
   arch=$1
 fi
 
-version="2.1.0"
+version="2.2.0"
 base="cassandra-cpp-driver-$version"
 archive="$base.tar.gz"
 files="CMakeLists.txt cmake_uninstall.cmake.in include src README.md LICENSE.txt"

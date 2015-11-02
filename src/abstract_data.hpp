@@ -41,16 +41,18 @@ public:
   class Element {
   public:
     enum Type {
-      EMPTY,
+      UNSET,
+      NUL,
       BUFFER,
       COLLECTION
     };
 
     Element()
-      : type_(EMPTY) { }
+      : type_(UNSET) { }
 
-    Element(CassNull)
-      : type_(EMPTY) { }
+    Element(CassNull value)
+      : type_(NUL)
+      , buf_(cass::encode_with_length(value)) { }
 
     Element(const Buffer& buf)
       : type_(BUFFER)
@@ -60,8 +62,12 @@ public:
       : type_(COLLECTION)
       , collection_(collection) { }
 
-    bool is_empty() const {
-      return type_ == EMPTY || (type_ == BUFFER && buf_.size() == 0);
+    bool is_unset() const {
+      return type_ == UNSET || (type_ == BUFFER && buf_.size() == 0);
+    }
+
+    bool is_null() const {
+      return type_ == NUL;
     }
 
     size_t get_size(int version) const;
@@ -92,7 +98,10 @@ public:
     return CASS_OK;                                     \
   }
 
+  SET_TYPE(cass_int8_t)
+  SET_TYPE(cass_int16_t)
   SET_TYPE(cass_int32_t)
+  SET_TYPE(cass_uint32_t)
   SET_TYPE(cass_int64_t)
   SET_TYPE(cass_float_t)
   SET_TYPE(cass_double_t)

@@ -51,6 +51,24 @@ const char* CREATE_TABLE_ALL_TYPES =
     "timestamp_sample timestamp,"
     "inet_sample inet);";
 
+const char* CREATE_TABLE_ALL_TYPES_V4 =
+    "CREATE TABLE %s ("
+    "id uuid PRIMARY KEY,"
+    "text_sample text,"
+    "int_sample int,"
+    "bigint_sample bigint,"
+    "float_sample float,"
+    "double_sample double,"
+    "decimal_sample decimal,"
+    "blob_sample blob,"
+    "boolean_sample boolean,"
+    "timestamp_sample timestamp,"
+    "inet_sample inet,"
+    "tinyint_sample tinyint,"
+    "smallint_sample smallint,"
+    "date_sample date,"
+    "time_sample time);";
+
 const char* CREATE_TABLE_TIME_SERIES =
     "CREATE TABLE %s ("
     "id uuid,"
@@ -119,6 +137,10 @@ const char* get_value_type(CassValueType type) {
     case CASS_VALUE_TYPE_MAP: return "map";
     case CASS_VALUE_TYPE_SET: return "set";
     case CASS_VALUE_TYPE_TUPLE: return "tuple";
+    case CASS_VALUE_TYPE_SMALL_INT: return "smallint";
+    case CASS_VALUE_TYPE_TINY_INT: return "tinyint";
+    case CASS_VALUE_TYPE_DATE: return "date";
+    case CASS_VALUE_TYPE_TIME: return "time";
     default:
       assert(false && "Invalid value type");
       return "";
@@ -175,17 +197,18 @@ const char ALPHA_NUMERIC[] = { "01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJK
 
 //-----------------------------------------------------------------------------------
 
-CassVersion MultipleNodesTest::version;
+CCM::CassVersion MultipleNodesTest::version("0.0.0");
 
-MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version, bool isSSL /* = false */)
-  : conf(cql::get_ccm_bridge_configuration()) {
-  boost::debug::detect_memory_leaks(false);
-  ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", num_nodes_dc1, num_nodes_dc2, isSSL);
-  version.from_string(ccm->version().to_string());
+MultipleNodesTest::MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version, bool is_ssl /* = false */)
+  : ccm(new CCM::Bridge("config.txt")) {
+  if (ccm->create_cluster(num_nodes_dc1, num_nodes_dc2, is_ssl)) { // Only start the cluster if it wasn't the active cluster
+    ccm->start_cluster();
+  }
+  version = ccm->get_cassandra_version("config.txt");
 
   uuid_gen = cass_uuid_gen_new();
   cluster = cass_cluster_new();
-  initialize_contact_points(cluster, conf.ip_prefix(), num_nodes_dc1, num_nodes_dc2);
+  initialize_contact_points(cluster, ccm->get_ip_prefix(), num_nodes_dc1, num_nodes_dc2);
 
   cass_cluster_set_connect_timeout(cluster, 10 * ONE_SECOND_IN_MICROS);
   cass_cluster_set_request_timeout(cluster, 30 * ONE_SECOND_IN_MICROS);
@@ -201,10 +224,10 @@ MultipleNodesTest::~MultipleNodesTest() {
   cass_cluster_free(cluster);
 }
 
-SingleSessionTest::SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version, bool isSSL /* = false */)
-  : MultipleNodesTest(num_nodes_dc1, num_nodes_dc2, protocol_version, isSSL), session(NULL), ssl(NULL) {
+SingleSessionTest::SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version, bool is_ssl /* = false */)
+  : MultipleNodesTest(num_nodes_dc1, num_nodes_dc2, protocol_version, is_ssl), session(NULL), ssl(NULL) {
   //SSL verification flags must be set before establishing session
-  if (!isSSL) {
+  if (!is_ssl) {
     create_session();
   } else {
     ssl = cass_ssl_new();
@@ -323,7 +346,7 @@ std::string string_from_uuid(CassUuid uuid) {
   return std::string(buffer);
 }
 
-CassVersion get_version(CassSession* session /* = NULL */) {
+CCM::CassVersion get_version(CassSession* session /* = NULL */) {
   // Determine if we should get the version from C* or the configuration file
   std::string version_string;
   if (session) {
@@ -340,13 +363,11 @@ CassVersion get_version(CassSession* session /* = NULL */) {
     cass_value_get_string(value, &version_cass_string.data, &version_cass_string.length);
     version_string = std::string(version_cass_string.data, version_cass_string.length); // Needed for null termination
   } else {
-    // Get the version string from the configuration
-    const cql::cql_ccm_bridge_configuration_t& conf(cql::get_ccm_bridge_configuration());
-    version_string = std::string(conf.cassandara_version());
+    return CCM::Bridge::get_cassandra_version("config.txt");
   }
 
   // Return the version information
-  CassVersion version(version_string);
+  CCM::CassVersion version(version_string);
   return version;
 }
 
@@ -379,6 +400,24 @@ std::string load_ssl_certificate(const std::string filename) {
 
   std::string certificate(&bytes[0], file_size);
   return certificate;
+}
+
+std::string implode(const std::vector<std::string>& elements, const char delimiter /*= ' '*/,
+  const char* delimiter_prefix /*= NULL*/, const char* delimiter_suffix /*= NULL*/) {
+  std::string result;
+  for (std::vector<std::string>::const_iterator iterator = elements.begin(); iterator < elements.end(); ++iterator) {
+    result += *iterator;
+    if ((iterator + 1) != elements.end()) {
+      if (delimiter_prefix) {
+        result += delimiter_prefix;
+      }
+      result += delimiter;
+      if (delimiter_suffix) {
+        result += delimiter_suffix;
+      }
+    }
+  }
+  return result;
 }
 
 //-----------------------------------------------------------------------------------

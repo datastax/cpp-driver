@@ -19,9 +19,9 @@
 #include "address.hpp"
 #include "get_time.hpp"
 #include "logger.hpp"
+#include "metadata.hpp"
 #include "murmur3.hpp"
 #include "result_response.hpp"
-#include "schema_metadata.hpp"
 #include "external_types.hpp"
 
 namespace cass {
@@ -46,10 +46,10 @@ int get_port_from_cluster(CassCluster* cluster) {
 std::string get_contact_points_from_cluster(CassCluster* cluster) {
   std::string str;
 
-  const cass::Config::ContactPointList& contact_points
+  const ContactPointList& contact_points
       = cluster->config().contact_points();
 
-  for (cass::Config::ContactPointList::const_iterator it = contact_points.begin(),
+  for (ContactPointList::const_iterator it = contact_points.begin(),
        end = contact_points.end();
        it != end; ++it) {
     if (str.size() > 0) {
@@ -61,20 +61,10 @@ std::string get_contact_points_from_cluster(CassCluster* cluster) {
   return str;
 }
 
-CassSchemaMeta* get_schema_meta_from_keyspace(const CassSchema* schema, const std::string& keyspace) {
-  CassSchemaMeta* foundSchemaMeta = NULL;
-
-  if (schema) {
-    foundSchemaMeta = reinterpret_cast<CassSchemaMeta*>(const_cast<SchemaMetadata*>(schema->from()->get(keyspace)));
-  }
-
-  return foundSchemaMeta;
-}
-
-std::vector<std::string> get_user_data_type_field_names(const CassSchema* schema, const std::string& keyspace, const std::string& udt_name) {
+std::vector<std::string> get_user_data_type_field_names(const CassSchemaMeta* schema_meta, const std::string& keyspace, const std::string& udt_name) {
   std::vector<std::string> udt_field_names;
-  if (schema) {
-    SharedRefPtr<UserType> udt = schema->from()->get_user_type(keyspace, udt_name);
+  if (schema_meta) {
+    const cass::UserType* udt = schema_meta->get_user_type(keyspace, udt_name);
     if (udt) {
       for (cass::UserType::FieldVec::const_iterator it = udt->fields().begin(); it != udt->fields().end(); ++it) {
         udt_field_names.push_back((*it).name);

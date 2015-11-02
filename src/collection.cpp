@@ -55,7 +55,10 @@ const CassDataType* cass_collection_data_type(const CassCollection* collection) 
  }
 
 CASS_COLLECTION_APPEND(null, ZERO_PARAMS_(), cass::CassNull())
+CASS_COLLECTION_APPEND(int8, ONE_PARAM_(cass_int8_t value), value)
+CASS_COLLECTION_APPEND(int16, ONE_PARAM_(cass_int16_t value), value)
 CASS_COLLECTION_APPEND(int32, ONE_PARAM_(cass_int32_t value), value)
+CASS_COLLECTION_APPEND(uint32, ONE_PARAM_(cass_uint32_t value), value)
 CASS_COLLECTION_APPEND(int64, ONE_PARAM_(cass_int64_t value), value)
 CASS_COLLECTION_APPEND(float, ONE_PARAM_(cass_float_t value), value)
 CASS_COLLECTION_APPEND(double, ONE_PARAM_(cass_double_t value), value)

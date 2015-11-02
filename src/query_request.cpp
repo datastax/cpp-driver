@@ -23,7 +23,7 @@
 
 namespace cass {
 
-int32_t QueryRequest::encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const {
+int32_t QueryRequest::encode_batch(int version, BufferVec* bufs, Handler* handler) const {
   int32_t length = 0;
   const std::string& query(query_);
 
@@ -43,11 +43,13 @@ int32_t QueryRequest::encode_batch(int version, BufferVec* bufs, EncodingCache* 
       return ENCODE_ERROR_UNSUPPORTED_PROTOCOL;
     }
     buf.encode_uint16(pos, value_names_.size());
-    length += copy_buffers_with_names(version, bufs, cache);
+    length += copy_buffers_with_names(version, bufs, handler->encoding_cache());
   } else {
     buf.encode_uint16(pos, elements_count());
     if (elements_count() > 0) {
-      length += copy_buffers(version, bufs, cache);
+      int32_t result = copy_buffers(version, bufs, handler);
+      if (result < 0) return result;
+      length += result;
     }
   }
 
@@ -121,8 +123,6 @@ int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs
   if (page_size() > 0) {
     paging_buf_size += sizeof(int32_t); // [int]
     flags |= CASS_QUERY_FLAG_PAGE_SIZE;
-  } else {
-
   }
 
   if (!paging_state().empty()) {
@@ -136,8 +136,8 @@ int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs
   }
 
   if (version >= 3 && handler->timestamp() != CASS_INT64_MIN) {
-      paging_buf_size += sizeof(int64_t); // [long]
-      flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
+    paging_buf_size += sizeof(int64_t); // [long]
+    flags |= CASS_QUERY_FLAG_DEFAULT_TIMESTAMP;
   }
 
   {
@@ -158,7 +158,9 @@ int QueryRequest::internal_encode(int version, Handler* handler, BufferVec* bufs
       length += copy_buffers_with_names(version, bufs, handler->encoding_cache());
     } else if (elements_count() > 0) {
       buf.encode_uint16(pos, elements_count());
-      length += copy_buffers(version, bufs, handler->encoding_cache());
+      int32_t result = copy_buffers(version, bufs, handler);
+      if (result < 0) return result;
+      length += result;
     }
   }
 

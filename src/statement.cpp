@@ -111,6 +111,12 @@ CassError cass_statement_set_timestamp(CassStatement* statement,
   return CASS_OK;
 }
 
+CassError cass_statement_set_custom_payload(CassStatement* statement,
+                                            const CassCustomPayload* payload) {
+  statement->set_custom_payload(payload);
+  return CASS_OK;
+}
+
 #define CASS_STATEMENT_BIND(Name, Params, Value)                                \
   CassError cass_statement_bind_##Name(CassStatement* statement,                \
                                       size_t index Params) {                    \
@@ -127,8 +133,11 @@ CassError cass_statement_set_timestamp(CassStatement* statement,
   }
 
 CASS_STATEMENT_BIND(null, ZERO_PARAMS_(), cass::CassNull())
+CASS_STATEMENT_BIND(int8, ONE_PARAM_(cass_int8_t value), value)
+CASS_STATEMENT_BIND(int16, ONE_PARAM_(cass_int16_t value), value)
 CASS_STATEMENT_BIND(int32, ONE_PARAM_(cass_int32_t value), value)
-CASS_STATEMENT_BIND(int64, ONE_PARAM_(cass_int64_t) value, value)
+CASS_STATEMENT_BIND(uint32, ONE_PARAM_(cass_uint32_t value), value)
+CASS_STATEMENT_BIND(int64, ONE_PARAM_(cass_int64_t value), value)
 CASS_STATEMENT_BIND(float, ONE_PARAM_(cass_float_t value), value)
 CASS_STATEMENT_BIND(double, ONE_PARAM_(cass_double_t value), value)
 CASS_STATEMENT_BIND(bool, ONE_PARAM_(cass_bool_t value), value)
@@ -177,14 +186,21 @@ CassError cass_statement_bind_string_by_name_n(CassStatement* statement,
 
 namespace cass {
 
-int32_t Statement::copy_buffers(int version, BufferVec* bufs, EncodingCache* cache) const {
+int32_t Statement::copy_buffers(int version, BufferVec* bufs, Handler* handler) const {
   int32_t size = 0;
-  for (ElementVec::const_iterator i = elements().begin(),
-       end = elements().end(); i != end; ++i) {
-    if (!i->is_empty()) {
-      bufs->push_back(i->get_buffer_cached(version, cache, false));
+  for (size_t i = 0; i < elements().size(); ++i) {
+    const Element& element = elements()[i];
+    if (!element.is_unset()) {
+      bufs->push_back(element.get_buffer_cached(version, handler->encoding_cache(), false));
     } else  {
-      bufs->push_back(cass::encode_with_length(CassNull()));
+      if (version >= 4) {
+        bufs->push_back(cass::encode_with_length(CassUnset()));
+      } else {
+        std::stringstream ss;
+        ss << "Query parameter at index " << i << " was not set";
+        handler->on_error(CASS_ERROR_LIB_PARAMETER_UNSET, ss.str());
+        return Request::ENCODE_ERROR_PARAMETER_UNSET;
+      }
     }
     size += bufs->back().size();
   }
@@ -197,7 +213,7 @@ bool Statement::get_routing_key(std::string* routing_key, EncodingCache* cache) 
   if (key_indices_.size() == 1) {
       assert(key_indices_.front() < elements_count());
       const AbstractData::Element& element(elements()[key_indices_.front()]);
-      if (element.is_empty()) {
+      if (element.is_unset() || element.is_null()) {
         return false;
       }
       Buffer buf(element.get_buffer_cached(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION, cache, true));
@@ -210,7 +226,7 @@ bool Statement::get_routing_key(std::string* routing_key, EncodingCache* cache) 
          i != key_indices_.end(); ++i) {
       assert(*i < elements_count());
       const AbstractData::Element& element(elements()[*i]);
-      if (element.is_empty()) {
+      if (element.is_unset() || element.is_null()) {
         return false;
       }
       size_t size = element.get_size(CASS_HIGHEST_SUPPORTED_PROTOCOL_VERSION) - sizeof(int32_t);

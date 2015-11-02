@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include <algorithm>
 
 #if !defined(WIN32) && !defined(_WIN32)
@@ -27,7 +23,6 @@
 #include "cassandra.h"
 #include "testing.hpp"
 #include "test_utils.hpp"
-#include "cql_ccm_bridge.hpp"
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
@@ -114,6 +109,7 @@ std::string get_replica(test_utils::CassSessionPtr session,
   // The query doesn't matter
   test_utils::CassStatementPtr statement(
         cass_statement_new("SELECT * FROM system.local", 1));
+  cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_ONE);
   cass_statement_bind_string_n(statement.get(), 0, value.data(), value.size());
   cass_statement_add_key_index(statement.get(), 0);
   cass_statement_set_keyspace(statement.get(), keyspace.c_str());
@@ -140,13 +136,16 @@ BOOST_AUTO_TEST_CASE(simple)
 
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", rf);
+  boost::shared_ptr<CCM::Bridge> ccm(new CCM::Bridge("config.txt"));
+  if (ccm->create_cluster(rf)) {
+    ccm->start_cluster();
+  }
 
   cass_cluster_set_load_balance_round_robin(cluster.get());
   cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
 
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+  std::string ip_prefix = ccm->get_ip_prefix();
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -160,7 +159,7 @@ BOOST_AUTO_TEST_CASE(simple)
   for (size_t i = 0; i < rf; ++i)
   {
     TestTokenMap token_map;
-    token_map.build(conf.ip_prefix(), rf);
+    token_map.build(ip_prefix, rf);
 
     TestTokenMap::ReplicaSet replicas = get_replicas(rf, session, keyspace, value);
     BOOST_REQUIRE(replicas.size() == rf - i);
@@ -169,8 +168,13 @@ BOOST_AUTO_TEST_CASE(simple)
 
     if (i + 1 == rf) break;
 
-    ccm->stop(i + 1);
+    ccm->stop_node(i + 1);
   }
+
+  // Drop the keyspace (ignore any and all errors)
+  test_utils::execute_query_with_error(session.get(),
+    str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+    % keyspace));
 }
 
 bool intersects(const TestTokenMap::ReplicaSet& set1, const TestTokenMap::ReplicaSet& set2) {
@@ -188,13 +192,16 @@ BOOST_AUTO_TEST_CASE(network_topology)
 
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", rf, rf);
+  boost::shared_ptr<CCM::Bridge> ccm(new CCM::Bridge("config.txt"));
+  if (ccm->create_cluster(rf, rf)) {
+    ccm->start_cluster();
+  }
 
   cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1", rf, cass_false);
   cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
 
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+  std::string ip_prefix = ccm->get_ip_prefix();
+  test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -206,7 +213,7 @@ BOOST_AUTO_TEST_CASE(network_topology)
                                 keyspace % rf % rf));
 
   TestTokenMap token_map;
-  token_map.build(conf.ip_prefix(), 2 * rf);
+  token_map.build(ip_prefix, 2 * rf);
 
   // Using local nodes
   TestTokenMap::ReplicaSet replicas = get_replicas(rf, session, keyspace, value);
@@ -215,19 +222,24 @@ BOOST_AUTO_TEST_CASE(network_topology)
   BOOST_CHECK(replicas == local_replicas);
 
   // Still using local nodes
-  ccm->stop(1);
+  ccm->stop_node(1);
   replicas = get_replicas(rf, session, keyspace, value);
   BOOST_CHECK(replicas.size() == 1 && local_replicas.count(*replicas.begin()) > 0);
 
   // Using remote nodes
-  ccm->stop(2);
+  ccm->stop_node(2);
   replicas = get_replicas(rf, session, keyspace, value);
   BOOST_CHECK(replicas.size() > 0 && !intersects(replicas, local_replicas));
 
   // Using last of the remote nodes
-  ccm->stop(3);
+  ccm->stop_node(3);
   replicas = get_replicas(rf, session, keyspace, value);
   BOOST_CHECK(replicas.size() > 0 && !intersects(replicas, local_replicas));
+
+  // Drop the keyspace (ignore any and all errors)
+  test_utils::execute_query_with_error(session.get(),
+    str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+    % keyspace));
 }
 
 /**
@@ -246,13 +258,15 @@ BOOST_AUTO_TEST_CASE(single_entry_routing_key)
   const size_t rf = 2;
   test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-  const cql::cql_ccm_bridge_configuration_t& conf = cql::get_ccm_bridge_configuration();
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm = cql::cql_ccm_bridge_t::create_and_start(conf, "test", rf, rf);
+  boost::shared_ptr<CCM::Bridge> ccm(new CCM::Bridge("config.txt"));
+  if (ccm->create_cluster(rf, rf)) {
+    ccm->start_cluster();
+  }
 
   cass_cluster_set_load_balance_dc_aware(cluster.get(), "dc1", rf, cass_false);
   cass_cluster_set_token_aware_routing(cluster.get(), cass_true);
 
-  test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+  test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
 
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
@@ -272,7 +286,7 @@ BOOST_AUTO_TEST_CASE(single_entry_routing_key)
   test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
-  
+
   test_utils::CassCollectionPtr collection(cass_collection_new(CASS_COLLECTION_TYPE_MAP, 0));
   cass_statement_bind_collection(statement.get(), 0, collection.get());
   cass_statement_bind_string(statement.get(), 1, "cassandra cpp-driver");
@@ -280,6 +294,11 @@ BOOST_AUTO_TEST_CASE(single_entry_routing_key)
   test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
 
   test_utils::wait_and_check_error(future.get());
+
+  // Drop the keyspace (ignore any and all errors)
+  test_utils::execute_query_with_error(session.get(),
+    str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+    % keyspace));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

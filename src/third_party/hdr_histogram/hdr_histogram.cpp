@@ -23,21 +23,39 @@
 
 #include "hdr_histogram.hpp"
 
-inline int32_t hdr_clz64(uint64_t x) {
+/**
+ * Get the most significant bit set.
+ *
+ * The result is a one-based index, zero means no bits are set.
+ */
+inline int32_t hdr_bsr64(uint64_t x) {
 #if defined(_MSC_VER)
+  unsigned long index;
 #  if defined(_M_AMD64)
-  return (int32_t)__lzcnt64(x);
+  const char isNonzero = _BitScanReverse64(&index, x);
+  if (isNonzero)
+    return index + 1;
+  else
+    return 0;
 #  else
   // On 32-bit this needs to be split into two operations
-  int32_t lz = (int32_t)__lzcnt((unsigned long)(x >> 32));
-  if (lz == 32) {
+  char isNonzero = _BitScanReverse(&index, (unsigned long)(x >> 32));
+  if (isNonzero)
+    return index + 32 + 1;
+  else {
     // Scan the last 32 bits by truncating the 64-bit value
-    return (int32_t)__lzcnt((unsigned long)x) + 32;
+    isNonzero = _BitScanReverse(&index, (unsigned long)x);
+    if (isNonzero)
+      return index + 1;
+    else
+      return 0;
   }
-  return lz;
 #  endif
 #else
-  return (int32_t)__builtin_clzll(x);
+  if (x == 0)
+    return 0;
+  else
+    return 64 - (int32_t)__builtin_clzll(x);
 #endif
 }
 
@@ -132,7 +150,7 @@ static int64_t power(int64_t base, int64_t exp)
 
 static int32_t get_bucket_index(struct hdr_histogram* h, int64_t value)
 {
-    int32_t pow2ceiling = 64 - hdr_clz64(value | h->sub_bucket_mask); // smallest power of 2 containing value
+    int32_t pow2ceiling = hdr_bsr64(value | h->sub_bucket_mask); // smallest power of 2 containing value
     return pow2ceiling - (int32_t)h->unit_magnitude - (h->sub_bucket_half_count_magnitude + 1);
 }
 
@@ -798,7 +816,10 @@ bool _basic_iter_next(struct hdr_iter *iter)
         return false;
     }
 
-    move_next(iter);
+    if (!move_next(iter))
+    {
+      return false;
+    }
 
     return true;
 }

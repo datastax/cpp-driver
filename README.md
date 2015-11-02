@@ -13,24 +13,28 @@ Cassandra's native protocol and Cassandra Query Language v3.
 - Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 - IRC: [#datastax-drivers on `irc.freenode.net <http://freenode.net>`](http://webchat.freenode.net/?channels=datastax-drivers)
 
-## What's New in 2.1
+## What's New in 2.2
 
-- Support for Cassandra 2.1 (CQL protocol version 3)
-- [Tuples] and [UDTs]
-- [Nested collections]
-- [Retry policies]
-- [Client-side timestamps]
-- [Data types]
-- [Idle connection heartbeats]
-- [Support for disabling schema metadata]
+- Support for new Cassandra 2.2 datatypes: `tinyint`, `smallint`, `date` and
+  `time`
+- Support for custom payloads
+- Support for server-side warnings
+- UDF/UDA metadata
+- Whitelist load balancing policy
+- Default consistency has been changed from `ONE` to `LOCAL_QUORUM`
 
-More information about all the changes found in the 2.1 release can be found in
-[2.1 beta] and [2.1 GA] blog posts and in the [changelog](CHANGELOG.md).
+## Upgrading from 2.0 or 2.1 to 2.2+
 
-## Upgrading from 1.0 to 2.0
+The new schema metadata API in 2.2 required some breaking API changes.
+Applications that used the previous schema metadata API from 2.0 and 2.1 will
+require some small modifications to use the new API. More information about the
+new schema metadata API can be found in this
+[blog post](http://www.datastax.com/dev/blog/datastax-c-driver-2-2-ga-released).
 
-There were a couple breaking API changes between 1.0 and 2.0 that are
-documented [here](http://www.datastax.com/dev/blog/datastax-c-driver-2-0-released).
+## Upgrading from 1.0 to 2.0+
+
+There were a couple breaking API changes between 1.0 and 2.0 that are documented
+[here](http://www.datastax.com/dev/blog/datastax-c-driver-2-0-released).
 
 ## Features
 - [Asynchronous API]
@@ -46,6 +50,12 @@ documented [here](http://www.datastax.com/dev/blog/datastax-c-driver-2-0-release
 - [SSL]
 - [Latency-aware routing]
 - [Performance metrics]
+- [Tuples] and [UDTs]
+- [Nested collections]
+- [Retry policies]
+- [Client-side timestamps]
+- [Data types]
+- [Idle connection heartbeats]
 
 ## Examples
 There are several examples provided here: [examples](https://github.com/datastax/cpp-driver/tree/1.0/examples).

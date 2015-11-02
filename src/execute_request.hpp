@@ -54,7 +54,7 @@ private:
     return metadata_->get_column_definition(index).data_type;
   }
 
-  virtual int32_t encode_batch(int version, BufferVec* bufs, EncodingCache* cache) const;
+  virtual int32_t encode_batch(int version, BufferVec* bufs, Handler* handler) const;
 
 private:
   int encode(int version, Handler* handler, BufferVec* bufs) const;

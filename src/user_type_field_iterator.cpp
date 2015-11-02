@@ -14,23 +14,26 @@
   limitations under the License.
 */
 
-#ifndef CQL_CCM_LOGGER_H_
-#define CQL_CCM_LOGGER_H_
+#include "user_type_field_iterator.hpp"
 
-#ifdef CQL_NO_BOOST_LOG
-#include <iostream>
-    enum _cql_loglevel {
-        info,
-        warning,
-        error
-    };
+#include "serialization.hpp"
 
-    // ACHTUNG: this is obviously not thread safe.
-    // Whenever possible, Boost.Log should be used.
-    #define CQL_LOG(x) (x==info ? std::cout : std::cerr)
-#else
-    #include <boost/log/trivial.hpp>
-    #define CQL_LOG(x) BOOST_LOG_TRIVIAL(x)
-#endif
+namespace cass {
 
-#endif // CQL_CCM_LOGGER_H_
+bool UserTypeFieldIterator::next() {
+  if (next_ == end_) {
+    return false;
+  }
+  current_ = next_++;
+  position_ = decode_field(position_);
+  return true;
+}
+
+char* UserTypeFieldIterator::decode_field(char* position) {
+  int32_t size;
+  char* buffer = decode_int32(position, size);
+  value_ = Value(user_type_value_->protocol_version(), current_->type, buffer, size);
+  return size > 0 ? buffer + size : buffer;
+}
+
+} // namespace cass

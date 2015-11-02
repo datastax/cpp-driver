@@ -46,7 +46,7 @@ void cass_cluster_set_ssl(CassCluster* cluster,
 
 CassError cass_cluster_set_protocol_version(CassCluster* cluster,
                                             int protocol_version) {
-  if (protocol_version < 1 || protocol_version > 3) {
+  if (protocol_version < 1) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   cluster->config().set_protocol_version(protocol_version);
@@ -95,19 +95,11 @@ CassError cass_cluster_set_contact_points_n(CassCluster* cluster,
   if (contact_points_length == 0) {
     cluster->config().contact_points().clear();
   } else {
-    std::istringstream stream(
-          std::string(contact_points, contact_points_length));
-    while (!stream.eof()) {
-      std::string contact_point;
-      std::getline(stream, contact_point, ',');
-      if (!cass::trim(contact_point).empty()) {
-        cluster->config().contact_points().push_back(contact_point);
-      }
-    }
+    cass::explode(std::string(contact_points, contact_points_length),
+      cluster->config().contact_points());
   }
   return CASS_OK;
 }
-
 
 CassError cass_cluster_set_core_connections_per_host(CassCluster* cluster,
                                                      unsigned num_connections) {
@@ -286,6 +278,26 @@ void cass_cluster_set_latency_aware_routing_settings(CassCluster* cluster,
   settings.update_rate_ms = update_rate_ms;
   settings.min_measured = min_measured;
   cluster->config().set_latency_aware_routing_settings(settings);
+}
+
+void cass_cluster_set_whitelist_filtering(CassCluster* cluster,
+                                          const char* hosts) {
+  size_t hosts_length
+      = hosts == NULL ? 0 : strlen(hosts);
+  cass_cluster_set_whitelist_filtering_n(cluster,
+                                         hosts,
+                                         hosts_length);
+}
+
+void cass_cluster_set_whitelist_filtering_n(CassCluster* cluster,
+                                            const char* hosts,
+                                            size_t hosts_length) {
+  if (hosts_length == 0) {
+    cluster->config().whitelist().clear();
+  } else {
+    cass::explode(std::string(hosts, hosts_length),
+                  cluster->config().whitelist());
+  }
 }
 
 void cass_cluster_set_tcp_nodelay(CassCluster* cluster,

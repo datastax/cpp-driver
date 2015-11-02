@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "cassandra.h"
 #include "test_utils.hpp"
 
@@ -104,6 +100,29 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
 
     test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
 
+    if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+      {
+        std::vector<cass_int8_t> values;
+        for (cass_int8_t i = 1; i <= 3; ++i) values.push_back(i);
+        insert_collection_value<cass_int8_t>(session.get(), type, CASS_VALUE_TYPE_TINY_INT, values);
+      }
+      {
+        std::vector<cass_int16_t> values;
+        for (cass_int16_t i = 1; i <= 3; ++i) values.push_back(i);
+        insert_collection_value<cass_int16_t>(session.get(), type, CASS_VALUE_TYPE_SMALL_INT, values);
+      }
+      {
+        std::vector<CassDate> values;
+        cass_uint32_t min = test_utils::Value<CassDate>::min_value();
+        for (cass_uint32_t i = 0; i <= 3; ++i) values.push_back(min + i);
+        insert_collection_value<CassDate>(session.get(), type, CASS_VALUE_TYPE_DATE, values);
+      }
+      {
+        std::vector<CassTime> values;
+        for (cass_int64_t i = 0; i <= 3; ++i) values.push_back(i);
+        insert_collection_value<CassTime>(session.get(), type, CASS_VALUE_TYPE_TIME, values);
+      }
+    }
     {
       std::vector<cass_int32_t> values;
       for (cass_int32_t i = 1; i <= 3; ++i) values.push_back(i);
@@ -171,6 +190,8 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
       }
       insert_collection_value<CassDecimal>(session.get(), type, CASS_VALUE_TYPE_DECIMAL,  values);
     }
+
+    drop_keyspace(session);
   }
 
   template<class K, class V>
@@ -247,6 +268,38 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
                                                  % test_utils::SIMPLE_KEYSPACE % "1"));
 
     test_utils::execute_query(session.get(), str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+
+    if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+      {
+        std::map<cass_int8_t, cass_int8_t> values;
+        values[1] = 2;
+        values[3] = 4;
+        values[5] = 6;
+        insert_map_value<cass_int8_t, cass_int8_t>(session.get(), CASS_VALUE_TYPE_TINY_INT, CASS_VALUE_TYPE_TINY_INT, values);
+      }
+      {
+        std::map<cass_int16_t, cass_int16_t> values;
+        values[1] = 2;
+        values[3] = 4;
+        values[5] = 6;
+        insert_map_value<cass_int16_t, cass_int16_t>(session.get(), CASS_VALUE_TYPE_SMALL_INT, CASS_VALUE_TYPE_SMALL_INT, values);
+      }
+      {
+        std::map<CassDate, CassDate> values;
+        cass_uint32_t min = test_utils::Value<CassDate>::min_value();
+        values[min + 1] = min + 2;
+        values[min + 3] = min + 4;
+        values[min + 5] = min + 6;
+        insert_map_value<CassDate, CassDate>(session.get(), CASS_VALUE_TYPE_DATE, CASS_VALUE_TYPE_DATE, values);
+      }
+      {
+        std::map<CassTime, CassTime> values;
+        values[1] = 2;
+        values[3] = 4;
+        values[5] = 6;
+        insert_map_value<CassTime, CassTime>(session.get(), CASS_VALUE_TYPE_TIME, CASS_VALUE_TYPE_TIME, values);
+      }
+    }
 
     {
       std::map<cass_int32_t, cass_int32_t> values;
@@ -339,6 +392,14 @@ struct CollectionsTests : public test_utils::MultipleNodesTest {
       values[test_utils::generate_time_uuid(uuid_gen)] = CassString("789");
       insert_map_value<CassUuid, CassString>(session.get(), CASS_VALUE_TYPE_UUID, CASS_VALUE_TYPE_VARCHAR, values);
     }
+
+    drop_keyspace(session);
+  }
+
+  void drop_keyspace(test_utils::CassSessionPtr session) {
+    test_utils::execute_query_with_error(session.get(),
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+        % test_utils::SIMPLE_KEYSPACE));
   }
 };
 

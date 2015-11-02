@@ -34,7 +34,7 @@ CassSession* cass_session_new() {
 
 void cass_session_free(CassSession* session) {
   // This attempts to close the session because the joining will
-  // hang indefinately otherwise. This causes minimal delay
+  // hang indefinitely otherwise. This causes minimal delay
   // if the session is already closed.
   cass::SharedRefPtr<cass::Future> future(new cass::SessionFuture());
   session->close_async(future.get(), true);
@@ -92,11 +92,11 @@ CassFuture* cass_session_execute_batch(CassSession* session, const CassBatch* ba
   return CassFuture::to(session->execute(batch->from()));
 }
 
-const CassSchema* cass_session_get_schema(CassSession* session) {
-  return CassSchema::to(session->copy_schema());
+const CassSchemaMeta* cass_session_get_schema_meta(const CassSession* session) {
+  return CassSchemaMeta::to(new cass::Metadata::SchemaSnapshot(session->metadata().schema_snapshot()));
 }
 
-void  cass_session_get_metrics(CassSession* session,
+void  cass_session_get_metrics(const CassSession* session,
                                CassMetrics* metrics) {
   const cass::Metrics* internal_metrics = session->metrics();
 
@@ -163,7 +163,7 @@ void Session::clear(const Config& config) {
   }
   io_workers_.clear();
   request_queue_.reset();
-  cluster_meta_.clear();
+  metadata_.clear();
   control_connection_.clear();
   current_host_mark_ = true;
   pending_resolve_count_ = 0;
@@ -408,8 +408,8 @@ void Session::on_event(const SessionEvent& event) {
     case SessionEvent::CONNECT: {
       int port = config_.port();
 
-      const Config::ContactPointList& contact_points = config_.contact_points();
-      for (Config::ContactPointList::const_iterator it = contact_points.begin(),
+      const ContactPointList& contact_points = config_.contact_points();
+      for (ContactPointList::const_iterator it = contact_points.begin(),
                                                     end = contact_points.end();
            it != end; ++it) {
         const std::string& seed = *it;
@@ -510,7 +510,7 @@ Future* Session::prepare(const char* statement, size_t length) {
   PrepareRequest* prepare = new PrepareRequest();
   prepare->set_query(statement, length);
 
-  ResponseFuture* future = new ResponseFuture(cluster_meta_.schema());
+  ResponseFuture* future = new ResponseFuture(metadata_);
   future->inc_ref(); // External reference
   future->statement.assign(statement, length);
 
@@ -585,7 +585,7 @@ void Session::on_down(SharedRefPtr<Host> host) {
 }
 
 Future* Session::execute(const RoutableRequest* request) {
-  ResponseFuture* future = new ResponseFuture(cluster_meta_.schema());
+  ResponseFuture* future = new ResponseFuture(metadata_);
   future->inc_ref(); // External reference
 
   RetryPolicy* retry_policy
@@ -665,7 +665,7 @@ QueryPlan* Session::new_query_plan(const Request* request, Request::EncodingCach
     connected_keyspace = io_workers_[0]->keyspace();
   }
   return load_balancing_policy_->new_query_plan(connected_keyspace, request,
-                                                cluster_meta_.token_map(), cache);
+                                                metadata_.token_map(), cache);
 }
 
 } // namespace cass

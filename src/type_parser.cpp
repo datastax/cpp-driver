@@ -48,6 +48,7 @@ static CassValueType get_value_type(const std::string& str) {
 
       case 'B':
         if (type == "BooleanType") return CASS_VALUE_TYPE_BOOLEAN;
+        if (type == "ByteType") return CASS_VALUE_TYPE_TINY_INT;
         if (type == "BytesType") return CASS_VALUE_TYPE_BLOB;
         break;
 
@@ -75,7 +76,13 @@ static CassValueType get_value_type(const std::string& str) {
         if (type == "LongType") return CASS_VALUE_TYPE_BIGINT;
         break;
 
+      case 'S':
+        if (type == "ShortType") return CASS_VALUE_TYPE_SMALL_INT;
+        if (type == "SimpleDateType") return CASS_VALUE_TYPE_DATE;
+        break;
+
       case 'T':
+        if (type == "TimeType") return CASS_VALUE_TYPE_TIME;
         if (type == "TimestampType") return CASS_VALUE_TYPE_TIMESTAMP;
         if (type == "TimeUUIDType") return CASS_VALUE_TYPE_TIMEUUID;
         break;
@@ -144,14 +151,14 @@ bool TypeParser::is_tuple_type(const std::string& type) {
   return starts_with(type, TUPLE_TYPE);
 }
 
-SharedRefPtr<DataType> TypeParser::parse_one(const std::string& type) {
+SharedRefPtr<const DataType> TypeParser::parse_one(const std::string& type) {
   bool frozen = is_frozen(type);
 
   std::string class_name;
 
   if (is_reversed(type) || frozen) {
     if (!get_nested_class_name(type, &class_name)) {
-      return SharedRefPtr<DataType>();
+      return SharedRefPtr<const DataType>();
     }
   } else {
     class_name = type;
@@ -165,32 +172,32 @@ SharedRefPtr<DataType> TypeParser::parse_one(const std::string& type) {
   if (starts_with(next, LIST_TYPE)) {
     TypeParamsVec params;
     if (!parser.get_type_params(&params) || params.empty()) {
-      return SharedRefPtr<DataType>();
+      return SharedRefPtr<const DataType>();
     }
-    SharedRefPtr<DataType> element_type(parse_one(params[0]));
+    SharedRefPtr<const DataType> element_type(parse_one(params[0]));
     if (!element_type) {
-      return SharedRefPtr<DataType>();
+      return SharedRefPtr<const DataType>();
     }
     return CollectionType::list(element_type);
   } else if(starts_with(next, SET_TYPE)) {
     TypeParamsVec params;
     if (!parser.get_type_params(&params) || params.empty()) {
-      return SharedRefPtr<DataType>();
+      return SharedRefPtr<const DataType>();
     }
-    SharedRefPtr<DataType> element_type(parse_one(params[0]));
+    SharedRefPtr<const DataType> element_type(parse_one(params[0]));
     if (!element_type) {
-      return SharedRefPtr<DataType>();
+      return SharedRefPtr<const DataType>();
     }
     return CollectionType::set(element_type);
   } else if(starts_with(next, MAP_TYPE)) {
     TypeParamsVec params;
     if (!parser.get_type_params(&params) || params.size() < 2) {
-      return SharedRefPtr<DataType>();
+      return SharedRefPtr<const DataType>();
     }
-    SharedRefPtr<DataType> key_type(parse_one(params[0]));
-    SharedRefPtr<DataType> value_type(parse_one(params[1]));
+    SharedRefPtr<const DataType> key_type(parse_one(params[0]));
+    SharedRefPtr<const DataType> value_type(parse_one(params[1]));
     if (!key_type || !value_type) {
-      return SharedRefPtr<DataType>();
+      return SharedRefPtr<const DataType>();
     }
     return CollectionType::map(key_type, value_type);
   }
@@ -205,67 +212,67 @@ SharedRefPtr<DataType> TypeParser::parse_one(const std::string& type) {
 
     std::string keyspace;
     if (!parser.read_one(&keyspace)) {
-      return SharedRefPtr<DataType>();
+      return SharedRefPtr<const DataType>();
     }
     parser.skip_blank_and_comma();
 
     std::string hex;
     if (!parser.read_one(&hex)) {
-      return SharedRefPtr<DataType>();
+      return SharedRefPtr<const DataType>();
     }
 
     std::string type_name;
     if (!from_hex(hex, &type_name)) {
       LOG_ERROR("Invalid hex string \"%s\" for parameter", hex.c_str());
-      return SharedRefPtr<DataType>();
+      return SharedRefPtr<const DataType>();
     }
 
     if (keyspace.empty() || type_name.empty()) {
       LOG_ERROR("UDT has no keyspace or type name");
-      return SharedRefPtr<DataType>();
+      return SharedRefPtr<const DataType>();
     }
 
     parser.skip_blank_and_comma();
     NameAndTypeParamsVec raw_fields;
     if (!parser.get_name_and_type_params(&raw_fields)) {
-      return SharedRefPtr<DataType>();
+      return SharedRefPtr<const DataType>();
     }
 
     UserType::FieldVec fields;
     for (NameAndTypeParamsVec::const_iterator i = raw_fields.begin(),
          end = raw_fields.end(); i != end; ++i) {
-      SharedRefPtr<DataType> data_type = parse_one(i->second);
+      SharedRefPtr<const DataType> data_type = parse_one(i->second);
       if (!data_type) {
-        return SharedRefPtr<DataType>();
+        return SharedRefPtr<const DataType>();
       }
       fields.push_back(UserType::Field(i->first, data_type));
     }
 
-    return SharedRefPtr<DataType>(new UserType(keyspace, type_name, fields));
+    return SharedRefPtr<const DataType>(new UserType(keyspace, type_name, fields));
   }
 
   if (is_tuple_type(type)) {
     TypeParamsVec raw_types;
     if (!parser.get_type_params(&raw_types)) {
-      return SharedRefPtr<DataType>();
+      return SharedRefPtr<const DataType>();
     }
 
-    DataTypeVec types;
+    DataType::Vec types;
     for (TypeParamsVec::const_iterator i = raw_types.begin(),
          end = raw_types.end(); i != end; ++i) {
-      SharedRefPtr<DataType> data_type = parse_one(*i);
+      SharedRefPtr<const DataType> data_type = parse_one(*i);
       if (!data_type) {
-        return SharedRefPtr<DataType>();
+        return SharedRefPtr<const DataType>();
       }
       types.push_back(data_type);
     }
 
-    return SharedRefPtr<DataType>(new TupleType(types));
+    return SharedRefPtr<const DataType>(new TupleType(types));
   }
 
   CassValueType t = get_value_type(next);
-  return t == CASS_VALUE_TYPE_UNKNOWN ? SharedRefPtr<DataType>(new CustomType(next))
-                                      : SharedRefPtr<DataType>(new DataType(t));
+  return t == CASS_VALUE_TYPE_UNKNOWN ? SharedRefPtr<const DataType>(new CustomType(next))
+                                      : SharedRefPtr<const DataType>(new DataType(t));
 }
 
 SharedRefPtr<ParseResult> TypeParser::parse_with_composite(const std::string& type) {
@@ -275,7 +282,7 @@ SharedRefPtr<ParseResult> TypeParser::parse_with_composite(const std::string& ty
   parser.get_next_name(&next);
 
   if (!is_composite(next)) {
-    SharedRefPtr<DataType> data_type = parse_one(type);
+    SharedRefPtr<const DataType> data_type = parse_one(type);
     if (!data_type) {
       return SharedRefPtr<ParseResult>();
     }
@@ -308,7 +315,7 @@ SharedRefPtr<ParseResult> TypeParser::parse_with_composite(const std::string& ty
 
     for (NameAndTypeParamsVec::const_iterator i = params.begin(),
          end = params.end(); i != end; ++i) {
-      SharedRefPtr<DataType> data_type = parse_one(i->second);
+      SharedRefPtr<const DataType> data_type = parse_one(i->second);
       if (!data_type) {
         return SharedRefPtr<ParseResult>();
       }
@@ -316,10 +323,10 @@ SharedRefPtr<ParseResult> TypeParser::parse_with_composite(const std::string& ty
     }
   }
 
-  DataTypeVec types;
+  DataType::Vec types;
   ParseResult::ReversedVec reversed;
   for (size_t i = 0; i < count; ++i) {
-    SharedRefPtr<DataType> data_type = parse_one(sub_class_names[i]);
+    SharedRefPtr<const DataType> data_type = parse_one(sub_class_names[i]);
     if (!data_type) {
       return SharedRefPtr<ParseResult>();
     }
@@ -401,7 +408,7 @@ bool TypeParser::Parser::get_name_and_type_params(NameAndTypeParamsVec* params) 
     std::string name;
     if (!from_hex(hex, &name)) {
       LOG_ERROR("Invalid hex string \"%s\" for parameter", hex.c_str());
-      return SharedRefPtr<DataType>();
+      return SharedRefPtr<const DataType>();
     }
 
     skip_blank();

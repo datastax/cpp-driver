@@ -1,4 +1,59 @@
-2.1
+2.2.0
+===========
+October 29, 2015
+
+Features
+--------
+* Refactored the schema metadata API (`CassSchema`) to use concrete types
+  (`CassKeyspaceMeta`, `CassTableMeta`, etc.) instead of the single
+  `CassSchemaMeta` type.
+* Added support for UDF/UDA schema metadata
+* Added support for whitelist filtering i.e. whitelist load balancing policy
+
+Other
+--------
+* Fixed `Address::compare()` issue that cause invalid comparisons for IPv4
+* Fixed issue that caused `StreamManager` to generate invalid stream IDs in
+  Windows release builds.
+* Fixed issue where `cass_cluster_set_protocol_version()` would return an error
+  for protocol versions higher than v3
+* Changed the default consistency from `CASS_CONSISTENCY_ONE` to
+  `CASS_CONSISTENCY_LOCAL_QUORUM`
+* When using prepared statements with protocol v4 (and higher) the driver will
+  use partition key metadata returned in the prepared response instead of using
+  schema metadata.
+* Improved the performance of UUID to string and UUID from string conversions
+
+2.2.0-beta1
+===========
+September 21, 2015
+
+Features
+--------
+* Added support for Cassandra 2.2 data types `tinyint` and `smallint`
+  (`cass_int8_t` and `cass_int16_t`)
+* Added `cass_uint32_t` support for the Cassandra 2.2 `date` data type
+* Added functions to convert from Unix Epoch time (in seconds) to and from the
+  Cassandra `date` and `time` types
+* Added support for sending and recieving custom payloads to and from Cassandra
+* Added support for server-side warnings
+* Added new error response functions to handle the 'Read_failure', 'Write_failure',
+  'Function_failure', and 'Already_exists' errors
+
+Other
+--------
+* Fixed SSL ring buffer memory leak
+* Fixed potential memory issue caused by using named parameters
+* Fixed hanging issue when calling `cass_session_get_metrics()`
+* Fixed hanging issue caused by `cass::MPMCQueue` memory race
+* Fixed invalid state assertion in `cass::Handler`
+* Fixed UDTs with `text` fields
+* A value of `null` is no longer implictly used for unbound statement
+  parameters. An error is returned (`CASS_ERROR_LIB_PARAMETER_UNSET`) for
+  Cassandra 2.1 and earlier or the UNSET value is used for Cassandra 2.2 and
+  later
+
+2.1.0
 ===========
 August 11, 2015
 

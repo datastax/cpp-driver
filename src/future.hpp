@@ -150,53 +150,6 @@ private:
   DISALLOW_COPY_AND_ASSIGN(Future);
 };
 
-template <class T>
-class ResultFuture : public Future {
-public:
-  ResultFuture(FutureType type)
-      : Future(type) {}
-
-  ResultFuture(FutureType type, T* result)
-      : Future(type)
-      , result_(result) {}
-
-  void set_result(Address address, T* result) {
-    ScopedMutex lock(&mutex_);
-    address_ = address;
-    result_.reset(result);
-    internal_set(lock);
-  }
-
-  T* release_result() {
-    ScopedMutex lock(&mutex_);
-    internal_wait(lock);
-    return result_.release();
-  }
-
-  void set_error_with_host_address(Address address, CassError code, const std::string& message) {
-    ScopedMutex lock(&mutex_);
-    address_ = address;
-    internal_set_error(code, message, lock);
-  }
-
-  void set_error_with_result(Address address, T* result, CassError code, const std::string& message) {
-    ScopedMutex lock(&mutex_);
-    address_ = address;
-    result_.reset(result);
-    internal_set_error(code, message, lock);
-  }
-
-  Address get_host_address() {
-    ScopedMutex lock(&mutex_);
-    internal_wait(lock);
-    return address_;
-  }
-
-private:
-  Address address_;
-  ScopedPtr<T> result_;
-};
-
 } // namespace cass
 
 #endif

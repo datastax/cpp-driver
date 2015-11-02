@@ -35,6 +35,8 @@ class ResultIterator;
 
 class ResultResponse : public Response {
 public:
+  typedef std::vector<size_t> PKIndexVec;
+
   ResultResponse()
       : Response(CQL_OPCODE_RESULT)
       , protocol_version_(0)
@@ -74,12 +76,15 @@ public:
 
   const Row& first_row() const { return first_row_; }
 
+  const PKIndexVec& pk_indices() const { return pk_indices_; }
+
   bool decode(int version, char* input, size_t size);
 
   void decode_first_row();
 
 private:
-  char* decode_metadata(char* input, SharedRefPtr<ResultMetadata>* metadata);
+  char* decode_metadata(char* input, SharedRefPtr<ResultMetadata>* metadata,
+                        bool has_pk_indices = false);
 
   bool decode_rows(char* input);
 
@@ -103,6 +108,7 @@ private:
   int32_t row_count_;
   char* rows_;
   Row first_row_;
+  PKIndexVec pk_indices_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(ResultResponse);

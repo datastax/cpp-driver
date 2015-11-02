@@ -23,10 +23,10 @@
 #include "handler.hpp"
 #include "host.hpp"
 #include "load_balancing.hpp"
+#include "metadata.hpp"
 #include "request.hpp"
 #include "response.hpp"
 #include "retry_policy.hpp"
-#include "schema_metadata.hpp"
 #include "scoped_ptr.hpp"
 
 #include <string>
@@ -39,16 +39,53 @@ class IOWorker;
 class Pool;
 class Timer;
 
-class ResponseFuture : public ResultFuture<Response> {
+class ResponseFuture : public Future {
 public:
-  ResponseFuture(const Schema& schema)
-      : ResultFuture<Response>(CASS_FUTURE_TYPE_RESPONSE)
-      , schema(schema) {}
+  ResponseFuture(const Metadata& metadata)
+      : Future(CASS_FUTURE_TYPE_RESPONSE)
+      , schema_metadata(metadata.schema_snapshot()) { }
+
+  void set_response(Address address, const SharedRefPtr<Response>& response) {
+    ScopedMutex lock(&mutex_);
+    address_ = address;
+    response_ = response;
+    internal_set(lock);
+  }
+
+  const SharedRefPtr<Response>& response() {
+    ScopedMutex lock(&mutex_);
+    internal_wait(lock);
+    return response_;
+  }
+
+  void set_error_with_host_address(Address address, CassError code, const std::string& message) {
+    ScopedMutex lock(&mutex_);
+    address_ = address;
+    internal_set_error(code, message, lock);
+  }
+
+  void set_error_with_response(Address address, const SharedRefPtr<Response>& response,
+                               CassError code, const std::string& message) {
+    ScopedMutex lock(&mutex_);
+    address_ = address;
+    response_ = response;
+    internal_set_error(code, message, lock);
+  }
+
+  Address get_host_address() {
+    ScopedMutex lock(&mutex_);
+    internal_wait(lock);
+    return address_;
+  }
 
   std::string statement;
-  Schema schema;
+  Metadata::SchemaSnapshot schema_metadata;
 
+private:
+  Address address_;
+  SharedRefPtr<Response> response_;
 };
+
 
 class RequestHandler : public Handler {
 public:
@@ -88,11 +125,12 @@ public:
 
   bool is_host_up(const Address& address) const;
 
-  void set_response(Response* response);
+  void set_response(const SharedRefPtr<Response>& response);
 
 private:
   void set_error(CassError code, const std::string& message);
-  void set_error_with_error_response(Response* error, CassError code, const std::string& message);
+  void set_error_with_error_response(const SharedRefPtr<Response>& error,
+                                     CassError code, const std::string& message);
   void return_connection();
   void return_connection_and_finish();
 

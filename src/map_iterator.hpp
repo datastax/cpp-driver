@@ -35,12 +35,12 @@ public:
 
   virtual bool next();
 
-  const Value* key() {
+  const Value* key() const {
     assert(index_ >= 0 && index_ < count_);
     return &key_;
   }
 
-  const Value* value() {
+  const Value* value() const {
     assert(index_ >= 0 && index_ < count_);
     return &value_;
   }

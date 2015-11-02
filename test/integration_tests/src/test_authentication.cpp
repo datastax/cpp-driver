@@ -14,13 +14,8 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "cassandra.h"
 #include "test_utils.hpp"
-#include "cql_ccm_bridge.hpp"
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
@@ -33,16 +28,17 @@
 struct AthenticationTests {
   AthenticationTests()
     : cluster(cass_cluster_new())
-    , conf(cql::get_ccm_bridge_configuration())
-    , ccm(cql::cql_ccm_bridge_t::create(conf, "test")) {
-    boost::debug::detect_memory_leaks(false);
-    ccm->populate(1);
-    ccm->update_config("authenticator", "PasswordAuthenticator");
-    ccm->start(1, "-Dcassandra.superuser_setup_delay_ms=0");
-    test_utils::initialize_contact_points(cluster.get(), conf.ip_prefix(), 1, 0);
+    , ccm(new CCM::Bridge("config.txt")) {
+    ccm->create_cluster();
+    ccm->kill_cluster();
+    ccm->update_cluster_configuration("authenticator", "PasswordAuthenticator");
+    ccm->start_cluster("-Dcassandra.superuser_setup_delay_ms=0");
+    test_utils::initialize_contact_points(cluster.get(), CCM::Bridge::get_ip_prefix("config.txt"), 1, 0);
+  }
 
-    // Sometimes the superuser will still not be setup
-    boost::this_thread::sleep_for(boost::chrono::seconds(1));
+  ~AthenticationTests() {
+    //TODO: Add name generation for simple auth tests
+    ccm->remove_cluster();
   }
 
   void auth(int protocol_version) {
@@ -57,11 +53,10 @@ struct AthenticationTests {
     BOOST_CHECK(cass_result_row_count(result.get()) > 0);
   }
 
-  void invalid_credentials(int protocol_version, const char* username, 
+  void invalid_credentials(int protocol_version, const char* username,
                            const char* password, const char* expected_error,
                            CassError expected_code) {
     test_utils::CassLog::reset(expected_error);
-
     cass_cluster_set_protocol_version(cluster.get(), protocol_version);
     cass_cluster_set_credentials(cluster.get(), username, password);
     {
@@ -73,8 +68,7 @@ struct AthenticationTests {
   }
 
   test_utils::CassClusterPtr cluster;
-  const cql::cql_ccm_bridge_configuration_t& conf;
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
+  boost::shared_ptr<CCM::Bridge> ccm;
 };
 
 BOOST_FIXTURE_TEST_SUITE(authentication, AthenticationTests)
@@ -83,6 +77,8 @@ BOOST_AUTO_TEST_CASE(protocol_versions)
 {
   auth(1);
   auth(2);
+  auth(3);
+  auth(4);
 }
 
 BOOST_AUTO_TEST_CASE(empty_credentials)
@@ -91,9 +87,11 @@ BOOST_AUTO_TEST_CASE(empty_credentials)
   // auth is subject to major changes and this is just a simple form.
   // This test serves to characterize what is there presently.
   const char* expected_error
-      = "java.lang.AssertionError: org.apache.cassandra.exceptions.InvalidRequestException: Key may not be empty";
+      = "Key may not be empty";
   invalid_credentials(1, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
   invalid_credentials(2, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+  invalid_credentials(3, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+  invalid_credentials(4, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
 
 BOOST_AUTO_TEST_CASE(bad_credentials)
@@ -102,6 +100,8 @@ BOOST_AUTO_TEST_CASE(bad_credentials)
       = "had the following error on startup: Username and/or password are incorrect";
   invalid_credentials(1, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
   invalid_credentials(2, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
+  invalid_credentials(3, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
+  invalid_credentials(4, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

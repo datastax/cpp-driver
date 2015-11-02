@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include <algorithm>
 #include <cmath>
 
@@ -39,6 +35,13 @@ struct BasicTests : public test_utils::SingleSessionTest {
                                            % test_utils::SIMPLE_KEYSPACE % "1"));
 
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+  }
+
+  ~BasicTests() {
+    // Drop the keyspace (ignore any and all errors)
+    test_utils::execute_query_with_error(session,
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+        % test_utils::SIMPLE_KEYSPACE));
   }
 
   template <class T>
@@ -151,7 +154,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query);
       insert_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
-    
+
     BOOST_REQUIRE(cass_statement_bind_uuid(insert_statement.get(), 0, tweet_id) == CASS_OK);
     BOOST_REQUIRE(test_utils::Value<T>::bind(insert_statement.get(), 1, test_utils::Value<T>::min_value()) == CASS_OK);
     BOOST_REQUIRE(test_utils::Value<T>::bind(insert_statement.get(), 2, test_utils::Value<T>::max_value()) == CASS_OK);
@@ -247,7 +250,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query);
       insert_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
-    
+
     BOOST_REQUIRE(cass_statement_bind_uuid(insert_statement.get(), 0, tweet_id) == CASS_OK);
     BOOST_REQUIRE(cass_statement_bind_null(insert_statement.get(), 1) == CASS_OK);
     test_utils::CassFuturePtr insert_future(cass_session_execute(session, insert_statement.get()));
@@ -262,7 +265,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, select_query);
       select_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
-    
+
     BOOST_REQUIRE(cass_statement_bind_uuid(select_statement.get(), 0, tweet_id) == CASS_OK);
     test_utils::CassFuturePtr select_future(cass_session_execute(session, select_statement.get()));
     test_utils::wait_and_check_error(select_future.get());
@@ -329,6 +332,12 @@ BOOST_FIXTURE_TEST_SUITE(basics, BasicTests)
 
 BOOST_AUTO_TEST_CASE(basic_types)
 {
+  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+    insert_single_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, 123);
+    insert_single_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, 123);
+    insert_single_value<CassDate>(CASS_VALUE_TYPE_DATE, test_utils::Value<CassDate>::min_value() + 1u);
+    insert_single_value<CassTime>(CASS_VALUE_TYPE_TIME, 123);
+  }
   insert_single_value<cass_int32_t>(CASS_VALUE_TYPE_INT, 123);
 
   insert_single_value<cass_int64_t>(CASS_VALUE_TYPE_BIGINT, 1234567890);
@@ -383,6 +392,12 @@ BOOST_AUTO_TEST_CASE(basic_types)
 
 BOOST_AUTO_TEST_CASE(min_max)
 {
+  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+    insert_min_max_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT);
+    insert_min_max_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT);
+    insert_min_max_value<CassDate>(CASS_VALUE_TYPE_DATE);
+    insert_min_max_value<CassTime>(CASS_VALUE_TYPE_TIME);
+  }
   insert_min_max_value<cass_int32_t>(CASS_VALUE_TYPE_INT);
 
   insert_min_max_value<cass_int64_t>(CASS_VALUE_TYPE_BIGINT);
@@ -419,6 +434,12 @@ BOOST_AUTO_TEST_CASE(null)
   insert_null_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE);
   insert_null_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT);
   insert_null_value<cass_int32_t>(CASS_VALUE_TYPE_INT);
+  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+    insert_null_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT);
+    insert_null_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT);
+    insert_null_value<CassDate>(CASS_VALUE_TYPE_DATE);
+    insert_null_value<CassTime>(CASS_VALUE_TYPE_TIME);
+  }
   insert_null_value<CassString>(CASS_VALUE_TYPE_TEXT);
   insert_null_value<cass_int64_t>(CASS_VALUE_TYPE_TIMESTAMP);
   insert_null_value<CassUuid>(CASS_VALUE_TYPE_UUID);
@@ -599,16 +620,75 @@ BOOST_AUTO_TEST_CASE(empty_results)
   test_utils::execute_query(session, "INSERT INTO test (key, value) VALUES (0, 0)", &result);
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 0);
   BOOST_REQUIRE(is_result_empty(result.get()));
-  
+
   result.reset();
   test_utils::execute_query(session, "DELETE FROM test WHERE key=0", &result);
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 0);
   BOOST_REQUIRE(is_result_empty(result.get()));
-  
+
   result.reset();
   test_utils::execute_query(session, "SELECT * FROM test WHERE key=0", &result);
   BOOST_REQUIRE(cass_result_row_count(result.get()) == 0);
   BOOST_REQUIRE(is_result_empty(result.get()));
+}
+
+/**
+ * Unset Parameters
+ *
+ * This test ensures that unset paremeters return an error for C* 2.2 or less
+ * and correctly uses the UNSET values for C*2.2 or greater.
+ *
+ * @since 2.2.0-beta1
+ * @test_category basic
+ *
+ */
+BOOST_AUTO_TEST_CASE(unset_parameters)
+{
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
+
+  test_utils::execute_query(session,
+                            str(boost::format("CREATE TABLE %s (key text PRIMARY KEY, value text)") % table_name));
+
+  std::string insert_query = str(boost::format("INSERT INTO %s (key, value) VALUES(?, ?)") % table_name);
+  test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
+
+  // Determine if bound parameters can be used based on C* version
+  if (version.major == 1) {
+    test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query);
+    statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
+  }
+
+  // Insert known values
+  test_utils::execute_query(session,
+                            str(boost::format("INSERT INTO %s (key, value) VALUES ('key1', 'value1')") % table_name));
+
+  cass_statement_bind_string(statement.get(), 0, "key1");
+
+  // Don't bind the second parameter
+
+  test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
+
+  CassError rc = cass_future_error_code(future.get());
+
+  if (version.major >= 2 && version.minor >= 2) {
+    // C* 2.2+ uses the value UNSET and that makes this statement a no-op
+    BOOST_REQUIRE(rc == CASS_OK);
+  } else {
+    BOOST_REQUIRE(rc == CASS_ERROR_LIB_PARAMETER_UNSET);
+  }
+
+  test_utils::CassResultPtr result;
+  test_utils::execute_query(session,
+                            str(boost::format("SELECT * FROM %s") % table_name), &result);
+
+  // Check to make sure the known values are still present
+  CassString key;
+  CassString value;
+  const CassRow* row = cass_result_first_row(result.get());
+  test_utils::Value<CassString>::get(cass_row_get_column(row, 0), &key);
+  test_utils::Value<CassString>::get(cass_row_get_column(row, 1), &value);
+  BOOST_CHECK(test_utils::Value<CassString>::equal(key, CassString("key1")));
+  BOOST_CHECK(test_utils::Value<CassString>::equal(value, CassString("value1")));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

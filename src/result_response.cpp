@@ -23,7 +23,7 @@
 extern "C" {
 
 void cass_result_free(const CassResult* result) {
-  delete result->from();
+  result->dec_ref();
 }
 
 size_t cass_result_row_count(const CassResult* result) {
@@ -152,7 +152,7 @@ private:
   }
 
   SharedRefPtr<DataType> decode_collection(CassValueType collection_type) {
-    DataTypeVec types;
+    DataType::Vec types;
     types.push_back(decode());
     if (collection_type == CASS_VALUE_TYPE_MAP) {
       types.push_back(decode());
@@ -185,7 +185,7 @@ private:
     uint16_t n;
     buffer_ = decode_uint16(buffer_, n);
 
-    DataTypeVec types;
+    DataType::Vec types;
     for (uint16_t i = 0; i < n; ++i) {
       types.push_back(decode());
     }
@@ -229,12 +229,23 @@ bool ResultResponse::decode(int version, char* input, size_t size) {
   return false;
 }
 
-char* ResultResponse::decode_metadata(char* input, SharedRefPtr<ResultMetadata>* metadata) {
+char* ResultResponse::decode_metadata(char* input, SharedRefPtr<ResultMetadata>* metadata,
+                                      bool has_pk_indices) {
   int32_t flags = 0;
   char* buffer = decode_int32(input, flags);
 
   int32_t column_count = 0;
   buffer = decode_int32(buffer, column_count);
+
+  if (has_pk_indices) {
+    int32_t pk_count = 0;
+    buffer = decode_int32(buffer, pk_count);
+    for (int i = 0; i < pk_count; ++i) {
+      uint16_t pk_index = 0;
+      buffer = decode_uint16(buffer, pk_index);
+      pk_indices_.push_back(pk_index);
+    }
+  }
 
   if (flags & CASS_RESULT_FLAG_HAS_MORE_PAGES) {
     has_more_pages_ = true;
@@ -295,7 +306,7 @@ bool ResultResponse::decode_set_keyspace(char* input) {
 
 bool ResultResponse::decode_prepared(int version, char* input) {
   char* buffer = decode_string(input, &prepared_);
-  buffer = decode_metadata(buffer, &metadata_);
+  buffer = decode_metadata(buffer, &metadata_, version >= 4);
   if (version > 1) {
     decode_metadata(buffer, &result_metadata_);
   }

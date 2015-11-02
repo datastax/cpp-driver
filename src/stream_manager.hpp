@@ -110,9 +110,10 @@ private:
 #elif defined(_MSC_VER)
     unsigned long index;
 #  if defined(_M_AMD64)
-    assert(_BitScanForward64(&index, word) != 0);
+    _BitScanForward64(&index, word);
+
 #  else
-    assert(_BitScanForward(&index, word) != 0);
+    _BitScanForward(&index, word);
 #  endif
     return static_cast<int>(index);
 #else

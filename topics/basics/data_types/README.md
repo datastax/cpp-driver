@@ -18,25 +18,29 @@ CREATE TYPE person (name text,
 
 ## Retrieving an Existing Data Type
 
-**Important**: Any `const [CassDataType]*` object doesn't need to be freed. It's
+**Important**: Any `const [CassDataType]*` object doesn't need to be freed. Its
 lifetime is bound to the object it came from.
 
-UDT data types can be retrieved using a [`CassSchema`] object. The resulting
+UDT data types can be retrieved using a [`CassSchemaMeta`] object. The resulting
 data type object can be used to construct a new [`CassUserType`] object using
 [`cass_user_type_new_from_data_type()`].
 
 ```c
 /* Get schema object (this should be cached) */
-const CassSchema* schema = cass_session_get_schema(session);
+const CassSchemaMeta* schema_meta = cass_session_get_schema_meta(session);
+
+/* Get the keyspace for the user defined type. It doesn't need to be freed */
+const CassKeyspaceMeta* keyspace_meta =
+  cass_schema_meta_keyspace_by_name("examples");
 
 /* This data type object doesn't need to be freed */
 const DataType* person_data_type =
-  cass_schema_get_udt(schema, "keyspace", "person");
+  cass_keyspace_meta_user_type_by_name(keyspace_meta, "person");
 
 /* ... */
 
 /* Schema object must be freed */
-cass_schema_free(schema);
+cass_schema_meta_free(schema_meta);
 ```
 
 Data types can also be retrieved from [`CassResult`], [`CassPrepared`], and
@@ -127,7 +131,7 @@ cass_collection_free(phone_numbers);
 [`CassPrepared`]: http://datastax.github.io/cpp-driver/api/CassPrepared/
 [`CassResult`]: http://datastax.github.io/cpp-driver/api/CassResult/
 [`CassValue`]: http://datastax.github.io/cpp-driver/api/CassValue/
-[`CassSchema`]: http://datastax.github.io/cpp-driver/api/CassSchema/
+[`CassSchemaMeta`]: http://datastax.github.io/cpp-driver/api/CassSchemaMeta/
 [`cass_user_type_new_from_data_type()`]: http://datastax.github.io/cpp-driver/api/CassUserType/#cass-user-type-new-from-data-type
 [`cass_result_column_data_type()`]: http://datastax.github.io/cpp-driver/api/CassResult/#cass-result-column-data-type
 [`cass_prepared_parameter_data_type()`]: http://datastax.github.io/cpp-driver/api/CassPrepared/#cass-prepared-parameter-data-type

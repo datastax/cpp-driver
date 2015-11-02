@@ -34,7 +34,7 @@ class SchemaChangeHandler : public MultipleRequestHandler {
 public:
   SchemaChangeHandler(Connection* connection,
                       RequestHandler* request_handler,
-                      Response* response,
+                      const SharedRefPtr<Response>& response,
                       uint64_t elapsed = 0);
 
   void execute();
@@ -48,7 +48,7 @@ private:
   bool has_schema_agreement(const ResponseVec& responses);
 
   ScopedRefPtr<RequestHandler> request_handler_;
-  Response* request_response_;
+  SharedRefPtr<Response> request_response_;
   uint64_t start_ms_;
   uint64_t elapsed_ms_;
 };

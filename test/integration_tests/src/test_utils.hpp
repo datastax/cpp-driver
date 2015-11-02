@@ -35,9 +35,7 @@
 #include <uv.h>
 
 #include "cassandra.h"
-
-#include "cql_ccm_bridge.hpp"
-#include "cql_ccm_bridge_configuration.hpp"
+#include "bridge.hpp"
 
 #ifdef min
 #undef min
@@ -85,6 +83,20 @@ struct CassDecimal {
   cass_int32_t scale;
 };
 
+struct CassDate {
+  CassDate(cass_uint32_t date = 0)
+    : date(date) { }
+  operator cass_uint32_t() const { return date; }
+  cass_uint32_t date;
+};
+
+struct CassTime {
+  CassTime(cass_int64_t time = 0)
+    : time(time) { }
+  operator cass_int64_t() const { return time; }
+  cass_int64_t time;
+};
+
 inline bool operator<(const CassUuid& u1, const CassUuid& u2) {
   return u1.clock_seq_and_node < u2.clock_seq_and_node ||
          u1.time_and_version < u2.time_and_version;
@@ -116,7 +128,7 @@ extern const cass_duration_t ONE_SECOND_IN_MICROS;
 class CassLog{
 public:
   CassLog() {
-    // Set the maximum log level we'll just ignore anthing
+    // Set the maximum log level we'll just ignore anything
     // that's not relevant.
     cass_log_set_level(CASS_LOG_TRACE);
     cass_log_set_callback(CassLog::callback, &CassLog::log_data_);
@@ -353,10 +365,19 @@ struct Deleter<CassUuidGen> {
 };
 
 template<>
-struct Deleter<const CassSchema> {
-  void operator()(const CassSchema* ptr) {
+struct Deleter<const CassSchemaMeta> {
+  void operator()(const CassSchemaMeta* ptr) {
     if (ptr != NULL) {
-      cass_schema_free(ptr);
+      cass_schema_meta_free(ptr);
+    }
+  }
+};
+
+template<>
+struct Deleter<CassCustomPayload> {
+  void operator()(CassCustomPayload* ptr) {
+    if (ptr != NULL) {
+      cass_custom_payload_free(ptr);
     }
   }
 };
@@ -381,10 +402,109 @@ typedef CassSharedPtr<CassUserType> CassUserTypePtr;
 typedef CassSharedPtr<const CassPrepared> CassPreparedPtr;
 typedef CassSharedPtr<CassBatch> CassBatchPtr;
 typedef CassSharedPtr<CassUuidGen> CassUuidGenPtr;
-typedef CassSharedPtr<const CassSchema> CassSchemaPtr;
+typedef CassSharedPtr<const CassSchemaMeta> CassSchemaMetaPtr;
+typedef CassSharedPtr<CassCustomPayload> CassCustomPayloadPtr;
 
 template<class T>
 struct Value;
+
+template<>
+struct Value<cass_int8_t> {
+  static CassError bind(CassStatement* statement, size_t index, cass_int8_t value) {
+    return cass_statement_bind_int8(statement, index, value);
+  }
+
+  static CassError bind_by_name(CassStatement* statement, const char* name, cass_int8_t value) {
+    return cass_statement_bind_int8_by_name(statement, name, value);
+  }
+
+  static CassError append(CassCollection* collection, cass_int8_t value) {
+    return cass_collection_append_int8(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, cass_int8_t value) {
+    return cass_tuple_set_int8(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, cass_int8_t value) {
+    return cass_user_type_set_int8(user_type, index, value);
+  }
+
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, cass_int8_t value) {
+    return cass_user_type_set_int8_by_name(user_type, name, value);
+  }
+
+  static CassError get(const CassValue* value, cass_int8_t* output) {
+    return cass_value_get_int8(value, output);
+  }
+
+  static bool equal(cass_int8_t a, cass_int8_t b) {
+    return a == b;
+  }
+
+  static cass_int8_t min_value() {
+    return std::numeric_limits<cass_int8_t>::min();
+  }
+
+  static cass_int8_t max_value() {
+    return std::numeric_limits<cass_int8_t>::max();
+  }
+
+  static std::string to_string(cass_int8_t value) {
+    std::stringstream value_stream;
+    value_stream << static_cast<int>(value);
+    return value_stream.str();
+  }
+};
+
+template<>
+struct Value<cass_int16_t> {
+  static CassError bind(CassStatement* statement, size_t index, cass_int16_t value) {
+    return cass_statement_bind_int16(statement, index, value);
+  }
+
+  static CassError bind_by_name(CassStatement* statement, const char* name, cass_int16_t value) {
+    return cass_statement_bind_int16_by_name(statement, name, value);
+  }
+
+  static CassError append(CassCollection* collection, cass_int16_t value) {
+    return cass_collection_append_int16(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, cass_int16_t value) {
+    return cass_tuple_set_int16(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, cass_int16_t value) {
+    return cass_user_type_set_int16(user_type, index, value);
+  }
+
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, cass_int16_t value) {
+    return cass_user_type_set_int16_by_name(user_type, name, value);
+  }
+
+  static CassError get(const CassValue* value, cass_int16_t* output) {
+    return cass_value_get_int16(value, output);
+  }
+
+  static bool equal(cass_int16_t a, cass_int16_t b) {
+    return a == b;
+  }
+
+  static cass_int16_t min_value() {
+    return std::numeric_limits<cass_int16_t>::min();
+  }
+
+  static cass_int16_t max_value() {
+    return std::numeric_limits<cass_int16_t>::max();
+  }
+
+  static std::string to_string(cass_int16_t value) {
+    std::stringstream value_stream;
+    value_stream << value;
+    return value_stream.str();
+  }
+};
 
 template<>
 struct Value<cass_int32_t> {
@@ -406,6 +526,10 @@ struct Value<cass_int32_t> {
 
   static CassError user_type_set(CassUserType* user_type, size_t index, cass_int32_t value) {
     return cass_user_type_set_int32(user_type, index, value);
+  }
+
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, cass_int32_t value) {
+    return cass_user_type_set_int32_by_name(user_type, name, value);
   }
 
   static CassError get(const CassValue* value, cass_int32_t* output) {
@@ -432,6 +556,104 @@ struct Value<cass_int32_t> {
 };
 
 template<>
+struct Value<CassDate> {
+  static CassError bind(CassStatement* statement, size_t index, CassDate value) {
+    return cass_statement_bind_uint32(statement, index, value);
+  }
+
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassDate value) {
+    return cass_statement_bind_uint32_by_name(statement, name, value);
+  }
+
+  static CassError append(CassCollection* collection, CassDate value) {
+    return cass_collection_append_uint32(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, CassDate value) {
+    return cass_tuple_set_uint32(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, CassDate value) {
+    return cass_user_type_set_uint32(user_type, index, value);
+  }
+
+  static CassError get(const CassValue* value, CassDate* output) {
+    return cass_value_get_uint32(value, &output->date);
+  }
+
+  static bool equal(CassDate a, CassDate b) {
+    return a == b;
+  }
+
+  static CassDate min_value() {
+    return 2147483648u; // This is the minimum value supported by strftime()
+  }
+
+  static CassDate max_value() {
+    return 2147533357u; // This is the maximum value supported by strftime()
+  }
+
+  static std::string to_string(CassDate value) {
+    char temp[32];
+    time_t epoch_secs = static_cast<time_t>(cass_date_time_to_epoch(value, 0));
+    strftime(temp, sizeof(temp), "'%Y-%m-%d'", gmtime(&epoch_secs));
+    return temp;
+  }
+};
+
+template<>
+struct Value<CassTime> {
+  static CassError bind(CassStatement* statement, size_t index, CassTime value) {
+    return cass_statement_bind_int64(statement, index, value.time);
+  }
+
+  static CassError bind_by_name(CassStatement* statement, const char* name, CassTime value) {
+    return cass_statement_bind_int64_by_name(statement, name, value);
+  }
+
+  static CassError append(CassCollection* collection, CassTime value) {
+    return cass_collection_append_int64(collection, value);
+  }
+
+  static CassError tuple_set(CassTuple* tuple, size_t index, CassTime value) {
+    return cass_tuple_set_int64(tuple, index, value);
+  }
+
+  static CassError user_type_set(CassUserType* user_type, size_t index, CassTime value) {
+    return cass_user_type_set_int64(user_type, index, value);
+  }
+
+  static CassError get(const CassValue* value, CassTime* output) {
+    return cass_value_get_int64(value, &output->time);
+  }
+
+  static bool equal(CassTime a, CassTime b) {
+    return a == b;
+  }
+
+  static CassTime min_value() {
+    return 0;
+  }
+
+  static CassTime max_value() {
+    return 86399999999999;
+  }
+
+  static std::string to_string(CassTime value) {
+    char temp[32];
+    time_t epoch_secs = static_cast<time_t>(cass_date_time_to_epoch(0, value));
+    strftime(temp, sizeof(temp), "'%H:%M:%S", gmtime(&epoch_secs));
+    std::string str(temp);
+    cass_int64_t diff = value - epoch_secs * 1000000000;
+    sprintf(temp, "%09u", (unsigned int)diff);
+    str.append(".");
+    str.append(temp);
+    str.append("'");
+    return str;
+  }
+};
+
+template<>
 struct Value<cass_int64_t> {
   static CassError bind(CassStatement* statement, size_t index, cass_int64_t value) {
     return cass_statement_bind_int64(statement, index, value);
@@ -451,6 +673,10 @@ struct Value<cass_int64_t> {
 
   static CassError user_type_set(CassUserType* user_type, size_t index, cass_int64_t value) {
     return cass_user_type_set_int64(user_type, index, value);
+  }
+
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, cass_int64_t value) {
+    return cass_user_type_set_int64_by_name(user_type, name, value);
   }
 
   static CassError get(const CassValue* value, cass_int64_t* output) {
@@ -498,6 +724,10 @@ struct Value<cass_float_t> {
     return cass_user_type_set_float(user_type, index, value);
   }
 
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, cass_float_t value) {
+    return cass_user_type_set_float_by_name(user_type, name, value);
+  }
+
   static CassError get(const CassValue* value, cass_float_t* output) {
     return cass_value_get_float(value, output);
   }
@@ -541,6 +771,10 @@ struct Value<cass_double_t> {
 
   static CassError user_type_set(CassUserType* user_type, size_t index, cass_double_t value) {
     return cass_user_type_set_double(user_type, index, value);
+  }
+
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, cass_double_t value) {
+    return cass_user_type_set_double_by_name(user_type, name, value);
   }
 
   static CassError get(const CassValue* value, cass_double_t* output) {
@@ -588,6 +822,10 @@ struct Value<cass_bool_t> {
     return cass_user_type_set_bool(user_type, index, value);
   }
 
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, cass_bool_t value) {
+    return cass_user_type_set_bool_by_name(user_type, name, value);
+  }
+
   static CassError get(const CassValue* value, cass_bool_t* output) {
     return cass_value_get_bool(value, output);
   }
@@ -621,6 +859,10 @@ struct Value<CassString> {
 
   static CassError user_type_set(CassUserType* user_type, size_t index, CassString value) {
     return cass_user_type_set_string_n(user_type, index, value.data, value.length);
+  }
+
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, CassString value) {
+    return cass_user_type_set_string_by_name_n(user_type, name, strlen(name), value.data, value.length);
   }
 
   static CassError get(const CassValue* value, CassString* output) {
@@ -661,6 +903,10 @@ struct Value<CassBytes> {
     return cass_user_type_set_bytes(user_type, index, value.data, value.size);
   }
 
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, CassBytes value) {
+    return cass_user_type_set_bytes_by_name(user_type, name, value.data, value.size);
+  }
+
   static CassError get(const CassValue* value, CassBytes* output) {
     return cass_value_get_bytes(value, &output->data, &output->size);
   }
@@ -697,6 +943,10 @@ struct Value<CassInet> {
 
   static CassError user_type_set(CassUserType* user_type, size_t index, CassInet value) {
     return cass_user_type_set_inet(user_type, index, value);
+  }
+
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, CassInet value) {
+    return cass_user_type_set_inet_by_name(user_type, name, value);
   }
 
   static CassError get(const CassValue* value, CassInet* output) {
@@ -758,6 +1008,10 @@ struct Value<CassUuid> {
     return cass_user_type_set_uuid(user_type, index, value);
   }
 
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, CassUuid value) {
+    return cass_user_type_set_uuid_by_name(user_type, name, value);
+  }
+
   static CassError get(const CassValue* value, CassUuid* output) {
     return cass_value_get_uuid(value, output);
   }
@@ -810,6 +1064,10 @@ struct Value<CassDecimal> {
     return cass_user_type_set_decimal(user_type, index, value.varint, value.varint_size, value.scale);
   }
 
+  static CassError user_type_set_by_name(CassUserType* user_type, const char* name, CassDecimal value) {
+    return cass_user_type_set_decimal_by_name(user_type, name, value.varint, value.varint_size, value.scale);
+  }
+
   static CassError get(const CassValue* value, CassDecimal* output) {
     return cass_value_get_decimal(value, &output->varint, &output->varint_size, &output->scale);
   }
@@ -837,18 +1095,17 @@ struct Value<CassDecimal> {
     parametrized ctor. Derive from it to use it in your tests.
  */
 struct MultipleNodesTest {
-  MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 3, bool isSSL = false);
+  MultipleNodesTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 4, bool is_ssl = false);
   virtual ~MultipleNodesTest();
 
-  boost::shared_ptr<cql::cql_ccm_bridge_t> ccm;
-  static CassVersion version;
-  const cql::cql_ccm_bridge_configuration_t& conf;
+  boost::shared_ptr<CCM::Bridge> ccm;
+  static CCM::CassVersion version;
   CassUuidGen* uuid_gen;
   CassCluster* cluster;
 };
 
 struct SingleSessionTest : public MultipleNodesTest {
-  SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 3, bool isSSL = false);
+  SingleSessionTest(unsigned int num_nodes_dc1, unsigned int num_nodes_dc2, unsigned int protocol_version = 4, bool is_ssl = false);
   virtual ~SingleSessionTest();
   void create_session();
   void close_session();
@@ -945,7 +1202,7 @@ inline std::string generate_random_uuid_str(CassUuidGen* uuid_gen) {
  *                configuration file)
  * @return Cassandra version from session or configuration file
  */
-CassVersion get_version(CassSession* session = NULL);
+CCM::CassVersion get_version(CassSession* session = NULL);
 
 /*
  * Generate a random string of a certain size using alpha numeric characters
@@ -961,7 +1218,20 @@ std::string generate_random_string(unsigned int size = 1024);
  */
 std::string load_ssl_certificate(const std::string filename);
 
+/**
+ * Concatenate an array/vector into a string
+ *
+ * @param elements Array/Vector elements to concatenate
+ * @param delimiter Character to use between elements (default: <space>)
+ * @param delimiter_prefix Character to use before delimiter (default: <empty>)
+ * @param delimiter_suffix Character to use after delimiter (default: <empty>)
+ * @return A string representation of all the array/vector elements
+ */
+std::string implode(const std::vector<std::string>& elements, const char delimiter = ' ',
+  const char* delimiter_prefix = NULL, const char* delimiter_suffix = NULL);
+
 extern const char* CREATE_TABLE_ALL_TYPES;
+extern const char* CREATE_TABLE_ALL_TYPES_V4;
 extern const char* CREATE_TABLE_TIME_SERIES;
 extern const char* CREATE_TABLE_SIMPLE;
 

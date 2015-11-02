@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "cassandra.h"
 #include "test_utils.hpp"
 
@@ -39,6 +35,13 @@ struct BatchTests : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
     test_utils::execute_query(session, str(boost::format("CREATE TABLE %s (tweet_id int PRIMARY KEY, test_val text);") % SIMPLE_TABLE_NAME));
     test_utils::execute_query(session, str(boost::format("CREATE TABLE %s (tweet_id int PRIMARY KEY, test_val counter);") % COUNTER_TABLE_NAME));
+  }
+
+  ~BatchTests() {
+    // Drop the keyspace (ignore any and all errors)
+    test_utils::execute_query_with_error(session,
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+        % test_utils::SIMPLE_KEYSPACE));
   }
 
   void validate_results(int num_rows) {
@@ -68,7 +71,7 @@ BOOST_AUTO_TEST_SUITE(batch)
 
 BOOST_AUTO_TEST_CASE(prepared)
 {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if (version.major != 1) {
     BatchTests tester;
     test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
@@ -91,15 +94,14 @@ BOOST_AUTO_TEST_CASE(prepared)
 
     tester.validate_results(4);
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping batch/prepared");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping batch/prepared" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
 
 BOOST_AUTO_TEST_CASE(simple)
 {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if (version.major != 1) {
     BatchTests tester;
     test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
@@ -118,15 +120,14 @@ BOOST_AUTO_TEST_CASE(simple)
 
     tester.validate_results(4);
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping batch/simple");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping batch/simple" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
 
 BOOST_AUTO_TEST_CASE(mixed)
 {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if (version.major != 1) {
     BatchTests tester;
     test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
@@ -154,15 +155,14 @@ BOOST_AUTO_TEST_CASE(mixed)
 
     tester.validate_results(1000);
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping batch/mixed");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping batch/mixed" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
 
 BOOST_AUTO_TEST_CASE(invalid_batch_type)
 {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if (version.major != 1) {
     BatchTests tester;
     test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
@@ -178,15 +178,14 @@ BOOST_AUTO_TEST_CASE(invalid_batch_type)
     test_utils::CassFuturePtr update_future(cass_session_execute_batch(tester.session, batch.get()));
     BOOST_REQUIRE(cass_future_error_code(update_future.get()) == CASS_ERROR_SERVER_INVALID_QUERY);
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping batch/invalid_batch_type");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping batch/invalid_batch_type" << std::endl;
     BOOST_REQUIRE(true);
   }
 }
 
 BOOST_AUTO_TEST_CASE(counter_mixed)
 {
-  CassVersion version = test_utils::get_version();
+  CCM::CassVersion version = test_utils::get_version();
   if (version.major != 1) {
     BatchTests tester;
     test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_COUNTER));
@@ -238,8 +237,7 @@ BOOST_AUTO_TEST_CASE(counter_mixed)
       BOOST_REQUIRE(tweet_id == test_val);
     }
   } else {
-    boost::unit_test::unit_test_log_t::instance().set_threshold_level(boost::unit_test::log_messages);
-    BOOST_TEST_MESSAGE("Unsupported Test for Cassandra v" << version.to_string() << ": Skipping batch/counter_mixed");
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping batch/counter_mixed" << std::endl;
     BOOST_REQUIRE(true);
   }
 }

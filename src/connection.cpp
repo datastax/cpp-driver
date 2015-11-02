@@ -257,12 +257,16 @@ bool Connection::internal_write(Handler* handler, bool flush_immediately, bool r
   int32_t request_size = pending_write->write(handler);
   if (request_size < 0) {
     stream_manager_.release(stream);
-    if (request_size == Request::ENCODE_ERROR_BATCH_WITH_NAMED_VALUES) {
-      handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
-                        "Batches cannot contain queries with named values");
-    } else {
-      handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
-                        "Operation unsupported by this protocol version");
+    switch (request_size) {
+      case Request::ENCODE_ERROR_BATCH_WITH_NAMED_VALUES:
+      case Request::ENCODE_ERROR_PARAMETER_UNSET:
+        // Already handled
+        break;
+
+      default:
+        handler->on_error(CASS_ERROR_LIB_MESSAGE_ENCODE,
+                          "Operation unsupported by this protocol version");
+        break;
     }
     handler->dec_ref();
     return true; // Don't retry
@@ -1064,13 +1068,6 @@ void Connection::PendingWriteSsl::encrypt() {
 void Connection::PendingWriteSsl::flush() {
   if (!is_flushed_ && !buffers_.empty()) {
     SslSession* ssl_session = connection_->ssl_session_.get();
-
-    uv_bufs_.reserve(buffers_.size());
-
-    for (BufferVec::const_iterator it = buffers_.begin(),
-         end = buffers_.end(); it != end; ++it) {
-      uv_bufs_.push_back(uv_buf_init(const_cast<char*>(it->data()), it->size()));
-    }
 
     rb::RingBuffer::Position prev_pos = ssl_session->outgoing().write_position();
 

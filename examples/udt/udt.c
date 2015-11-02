@@ -33,7 +33,7 @@
 #include "cassandra.h"
 
 CassUuidGen* uuid_gen;
-const CassSchema* schema;
+const CassSchemaMeta* schema_meta;
 
 void print_error(CassFuture* future) {
   const char* message;
@@ -88,6 +88,7 @@ CassError insert_into_udt(CassSession* session) {
 
   CassUuid id;
   char id_str[CASS_UUID_STRING_LENGTH];
+  const CassKeyspaceMeta* keyspace_meta = NULL;
   const CassDataType* udt_address = NULL;
   const CassDataType* udt_phone = NULL;
 
@@ -98,8 +99,11 @@ CassError insert_into_udt(CassSession* session) {
   cass_uuid_gen_time(uuid_gen, &id);
   cass_uuid_string(id, id_str);
 
-  udt_address = cass_schema_get_udt(schema, "examples", "address");
-  udt_phone = cass_schema_get_udt(schema, "examples", "phone_numbers");
+  keyspace_meta = cass_schema_meta_keyspace_by_name(schema_meta, "examples");
+  if (keyspace_meta != NULL) {
+    udt_address = cass_keyspace_meta_user_type_by_name(keyspace_meta, "address");
+    udt_phone = cass_keyspace_meta_user_type_by_name(keyspace_meta, "phone_numbers");
+  }
 
   if (udt_address != NULL && udt_phone != NULL) {
     int i;
@@ -168,7 +172,7 @@ CassError select_from_udt(CassSession* session) {
       const CassRow* row = cass_iterator_get_row(rows);
       const CassValue* id_value = cass_row_get_column_by_name(row, "id");
       const CassValue* address_value = cass_row_get_column_by_name(row, "address");
-      CassIterator* fields = cass_iterator_from_user_type(address_value);
+      CassIterator* fields = cass_iterator_fields_from_user_type(address_value);
 
       cass_value_get_uuid(id_value, &id);
       cass_uuid_string(id, id_str);
@@ -197,7 +201,7 @@ CassError select_from_udt(CassSession* session) {
             CassIterator* phone_numbers = cass_iterator_from_collection(field_value);
             while (cass_iterator_next(phone_numbers)) {
               const CassValue* phone_value = cass_iterator_get_value(phone_numbers);
-              CassIterator* phone_fields = cass_iterator_from_user_type(phone_value);
+              CassIterator* phone_fields = cass_iterator_fields_from_user_type(phone_value);
               assert(cass_value_type(phone_value) == CASS_VALUE_TYPE_UDT);
               while (cass_iterator_next(phone_fields)) {
                 const CassValue* phone_number_value = cass_iterator_get_user_type_field_value(phone_fields);
@@ -240,7 +244,7 @@ int main() {
     return -1;
   }
 
-  schema = cass_session_get_schema(session);
+  schema_meta = cass_session_get_schema_meta(session);
 
   execute_query(session,
                 "CREATE KEYSPACE examples WITH replication = { \
@@ -266,7 +270,7 @@ int main() {
   cass_session_free(session);
 
   cass_uuid_gen_free(uuid_gen);
-  cass_schema_free(schema);
+  cass_schema_meta_free(schema_meta);
 
   return 0;
 }

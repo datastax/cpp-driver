@@ -58,6 +58,12 @@ CassError cass_batch_set_retry_policy(CassBatch* batch,
   return CASS_OK;
 }
 
+CassError cass_batch_set_custom_payload(CassBatch* batch,
+                                        const CassCustomPayload* payload) {
+  batch->set_custom_payload(payload);
+  return CASS_OK;
+}
+
 CassError cass_batch_add_statement(CassBatch* batch, CassStatement* statement) {
   batch->add_statement(statement);
   return CASS_OK;
@@ -92,9 +98,11 @@ int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
        end = statements_.end(); i != end; ++i) {
     const SharedRefPtr<Statement>& statement(*i);
     if (statement->has_names_for_values()) {
+      handler->on_error(CASS_ERROR_LIB_BAD_PARAMS,
+                        "Batches cannot contain queries with named values");
       return ENCODE_ERROR_BATCH_WITH_NAMED_VALUES;
     }
-    int32_t result = (*i)->encode_batch(version, bufs, handler->encoding_cache());
+    int32_t result = (*i)->encode_batch(version, bufs, handler);
     if (result < 0) {
       return result;
     }
@@ -121,7 +129,7 @@ int BatchRequest::encode(int version, Handler* handler, BufferVec* bufs) const {
 
     Buffer buf(buf_size);
 
-    size_t pos = buf.encode_uint16(0, consistency_);
+    size_t pos = buf.encode_uint16(0, consistency());
     if (version >= 3) {
       pos = buf.encode_byte(pos, flags);
 

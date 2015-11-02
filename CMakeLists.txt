@@ -16,7 +16,7 @@ endif()
 # Title the project and define the versioning
 project(${PROJECT_NAME_STR} C CXX)
 set(PROJECT_VERSION_MAJOR 2)
-set(PROJECT_VERSION_MINOR 1)
+set(PROJECT_VERSION_MINOR 2)
 set(PROJECT_VERSION_PATCH 0)
 set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 
@@ -29,12 +29,6 @@ if(32BIT)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -m32")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -m32")
-endif()
-
-# Shorten the source file pathing for log messages
-# TODO: Investigate if NMake works correctly on Windows (need to be able to detect generator used)
-if(NOT WIN32)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLOG_FILE_='\"$(subst ${CMAKE_SOURCE_DIR}/,,$(abspath $<))\"'")
 endif()
 
 # Dependency minimum version
@@ -304,7 +298,7 @@ endif()
 
 # Assign additional library requirements for Windows
 if(WIN32)
-  set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 ws2_32 userenv)
+  set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 crypt32 ws2_32 userenv)
 endif()
 
 #----------------------
@@ -448,19 +442,9 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # Clang/Intel specific compiler options
   # I disabled long-long warning because boost generates about 50 such warnings
-  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-unused-parameter -Wno-variadic-macros -Wno-zero-length-array")
-
-  # Detect if this is Apple's clang
-  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v ERROR_VARIABLE CASS_CLANG_VERSION_INFO)
-  if (CASS_CLANG_VERSION_INFO MATCHES "^Apple LLVM")
-    set(CASS_IS_APPLE_CLANG 1)
-  else()
-    set(CASS_IS_APPLE_CLANG 0)
-  endif()
-
-  if(NOT CASS_IS_APPLE_CLANG AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER "3.6")
-    set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedef ")
-  endif()
+  set(WARNING_COMPILER_FLAGS "-Wall -pedantic -Wextra -Wno-long-long -Wno-unused-parameter")
+  set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-variadic-macros -Wno-zero-length-array")
+  set(WARNING_COMPILER_FLAGS "${WARNING_COMPILER_FLAGS} -Wno-unused-local-typedef -Wno-unknown-warning-option")
 
   # OpenSSL is deprecated on later versions of Mac OS X. The long-term solution
   # is to provide a CommonCryto implementation.
@@ -537,6 +521,12 @@ endif()
 source_group("Source Files" FILES ${SRC_FILES})
 source_group("Header Files" FILES ${API_HEADER_FILES} ${INC_FILES})
 set(ALL_SOURCE_FILES ${SRC_FILES} ${API_HEADER_FILES} ${INC_FILES})
+
+# Shorten the source file pathing for log messages
+foreach(SRC_FILE ${SRC_FILES})
+  string(REPLACE "${CMAKE_SOURCE_DIR}/" "" LOG_FILE_ ${SRC_FILE})
+  set_source_files_properties(${SRC_FILE} PROPERTIES COMPILE_FLAGS -DLOG_FILE_=\\\"${LOG_FILE_}\\\")
+endforeach()
 
 # Create an object library for the driver (single build)
 if(NOT CMAKE_VERSION VERSION_LESS "2.8.8")
@@ -621,7 +611,7 @@ if(CASS_BUILD_TESTS)
 
   # Add CCM bridge as a dependency for integration tests
   add_subdirectory("${PROJECT_SOURCE_DIR}/test/ccm_bridge")
-  set(CCM_BRIDGE_INCLUDES "${PROJECT_SOURCE_DIR}/test/ccm_bridge/include")
+  set(CCM_BRIDGE_INCLUDES "${PROJECT_SOURCE_DIR}/test/ccm_bridge/src")
 
   # Add the integration test project
   add_subdirectory(test/integration_tests)
@@ -638,6 +628,7 @@ if(CASS_BUILD_EXAMPLES)
   add_subdirectory(examples/bind_by_name)
   add_subdirectory(examples/callbacks)
   add_subdirectory(examples/collections)
+  add_subdirectory(examples/date_time)
   add_subdirectory(examples/logging)
   add_subdirectory(examples/maps)
   add_subdirectory(examples/prepared)

@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include <algorithm>
 
 #include <boost/test/unit_test.hpp>
@@ -36,6 +32,13 @@ struct PreparedOutageTests : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                            % test_utils::SIMPLE_KEYSPACE % "2"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
+  }
+
+  ~PreparedOutageTests() {
+    // Drop the keyspace (ignore any and all errors)
+    test_utils::execute_query_with_error(session,
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+      % test_utils::SIMPLE_KEYSPACE));
   }
 };
 
@@ -74,12 +77,13 @@ BOOST_AUTO_TEST_CASE(reprepared_on_new_node)
     BOOST_REQUIRE(result_value == 17);
   }
 
-  ccm->stop(1);
-  ccm->start(1);
-  ccm->stop(2);
+  ccm->stop_node(1);
+  ccm->start_node(1);
+  ccm->stop_node(2);
 
   for (int i = 0; i < 10; ++i) {
     test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
+    BOOST_REQUIRE(cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_ONE) == CASS_OK);
     BOOST_REQUIRE(cass_statement_bind_string(statement.get(), 0, "456") == CASS_OK);
     test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
     test_utils::wait_and_check_error(future.get());
@@ -94,8 +98,8 @@ BOOST_AUTO_TEST_CASE(reprepared_on_new_node)
   }
 
   test_utils::execute_query(session, str(boost::format(insert_query) % table_name % "789" % 19));
-  ccm->start(2);
-  ccm->gossip(1, false);
+  ccm->start_node(2);
+  ccm->disable_node_gossip(1);
 
   for (int i = 0; i < 10; ++i) {
     test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
@@ -113,14 +117,14 @@ BOOST_AUTO_TEST_CASE(reprepared_on_new_node)
     BOOST_REQUIRE(result_value == 19);
   }
 
-  ccm->gossip(1, true);
-  ccm->gossip(2, false);
-  ccm->gossip(1, false);
+  ccm->enable_node_gossip(1);
+  ccm->disable_node_gossip(2);
+  ccm->disable_node_gossip(1);
 
   //Ensure the binary protocol is disabled before executing the inserts
   boost::this_thread::sleep_for(boost::chrono::seconds(5));
   test_utils::execute_query(session, str(boost::format(insert_query) % table_name % "123456789" % 20));
-  ccm->gossip(2, true);
+  ccm->enable_node_gossip(2);
 
 
   for (int i = 0; i < 10; ++i) {
@@ -138,6 +142,8 @@ BOOST_AUTO_TEST_CASE(reprepared_on_new_node)
     BOOST_REQUIRE(cass_value_get_int32(cass_row_get_column(row, 1), &result_value) == CASS_OK);
     BOOST_REQUIRE(result_value == 20);
   }
+
+  ccm->enable_node_gossip(1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

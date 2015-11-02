@@ -1,12 +1,24 @@
 # Consistency
 
-A setting that defines a successful write or read by the number of cluster replicas that acknowledge the write or respond to the read request, respectively.
+A setting that defines a successful write or read by the number of cluster
+replicas that acknowledge the write or respond to the read request,
+respectively.
+
+## Default consistency
+
+The default consistency is now `CASS_CONSISTENCY_LOCAL_QUORUM` for driver
+versions 2.2 and above. It was `CASS_CONSISTENCY_ONE` for all previous versions
+(2.1 and below).
 
 ## Consistency Levels
 
 ### Read and Write Consistency Levels
 
-The consistency level determines the number of replicas on which the read/write must respond/succeed before returning an acknowledgment to the client application. Descriptions and Usage scenarios for each read/write consistency level can be found [here](http://www.datastax.com/documentation/cassandra/2.0/cassandra/dml/dml_config_consistency_c.html).
+The consistency level determines the number of replicas on which the read/write
+must respond/succeed before returning an acknowledgment to the client
+application. Descriptions and Usage scenarios for each read/write consistency
+level can be found
+[here](http://www.datastax.com/documentation/cassandra/2.0/cassandra/dml/dml_config_consistency_c.html).
 
 <table class="table table-striped table-hover table-condensed">
   <thead>
@@ -77,7 +89,9 @@ The consistency level determines the number of replicas on which the read/write 
 
 ## Setting Consistency Level
 
-A ['CassStatement'](http://datastax.github.io/cpp-driver/api/CassFuture/) object can have its consistency level altered at anytime before the statement is executed by the session.
+A ['CassStatement'](http://datastax.github.io/cpp-driver/api/CassFuture/) object
+can have its consistency level altered at anytime before the statement is
+executed by the session.
 
 ```c
 /* Create a simple or prepared statment */
@@ -86,4 +100,5 @@ A ['CassStatement'](http://datastax.github.io/cpp-driver/api/CassFuture/) object
 cass_statement_set_consistency(statement, CASS_CONSISTENCY_QUORUM);
 ```
 
-**NOTE:** Consistency is ignored for `USE`, `TRUNCATE`, `CREATE` and `ALTER` statements, and some `CASS_CONSISTENCY_ANY` aren’t allowed in all situations.
+**NOTE:** Consistency is ignored for `USE`, `TRUNCATE`, `CREATE` and `ALTER`
+statements, and some `CASS_CONSISTENCY_ANY` aren’t allowed in all situations.

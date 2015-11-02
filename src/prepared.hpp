@@ -19,6 +19,7 @@
 
 #include "ref_counted.hpp"
 #include "result_response.hpp"
+#include "metadata.hpp"
 #include "scoped_ptr.hpp"
 
 #include <string>
@@ -27,20 +28,20 @@ namespace cass {
 
 class Prepared : public RefCounted<Prepared> {
 public:
-  Prepared(const ResultResponse* result,
+  Prepared(const SharedRefPtr<ResultResponse>& result,
            const std::string& statement,
-           const std::vector<std::string>& key_columns);
+           const Metadata::SchemaSnapshot& schema_metadata);
 
-  const ScopedPtr<const ResultResponse>& result() const { return result_; }
+  const SharedRefPtr<const ResultResponse>& result() const { return result_; }
   const std::string& id() const { return id_; }
   const std::string& statement() const { return statement_; }
-  const std::vector<size_t>& key_indices() const { return key_indices_; }
+  const ResultResponse::PKIndexVec& key_indices() const { return key_indices_; }
 
 private:
-  ScopedPtr<const ResultResponse> result_;
+  SharedRefPtr<const ResultResponse> result_;
   std::string id_;
   std::string statement_;
-  std::vector<size_t> key_indices_;
+  ResultResponse::PKIndexVec key_indices_;
 };
 
 } // namespace cass

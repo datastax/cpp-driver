@@ -108,6 +108,4 @@ Here are some of the items being scheduled for future enhancements.
 - Incorporate integration tests into Jenkins environment
 - Remove Boost Test Framework in Favor of Google Test Framework
 - Updates to CCM Bridge
- - Add SSH key support (extra security over plain text password)
- - Simply configuration files
  - Allow files to be copied over SSH established connection

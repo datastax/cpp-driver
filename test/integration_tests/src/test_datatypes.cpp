@@ -14,10 +14,6 @@
   limitations under the License.
 */
 
-#ifdef STAND_ALONE
-#   define BOOST_TEST_MODULE cassandra
-#endif
-
 #include "test_utils.hpp"
 #include "cassandra.h"
 
@@ -30,9 +26,16 @@ struct DataTypesTests : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
   }
 
+  ~DataTypesTests() {
+    // Drop the keyspace (ignore any and all errors)
+    test_utils::execute_query_with_error(session,
+      str(boost::format(test_utils::DROP_KEYSPACE_FORMAT)
+      % test_utils::SIMPLE_KEYSPACE));
+  }
+
   /**
    * Insert and validate a datatype
-   * 
+   *
    * @param value_type CassValueType to use for value
    * @param value Value to use
    */
@@ -143,6 +146,12 @@ BOOST_AUTO_TEST_CASE(read_write_primitives) {
   insert_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE, 3.141592653589793);
   insert_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT, 3.1415926f);
   insert_value<cass_int32_t>(CASS_VALUE_TYPE_INT, 123);
+  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+    insert_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, 123);
+    insert_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, 123);
+    insert_value<CassDate>(CASS_VALUE_TYPE_DATE, test_utils::Value<CassDate>::min_value() + 1u);
+    insert_value<CassTime>(CASS_VALUE_TYPE_TIME, 123);
+  }
 
   {
     CassUuid value = test_utils::generate_random_uuid(uuid_gen);

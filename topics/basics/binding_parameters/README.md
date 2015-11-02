@@ -29,25 +29,12 @@ cass_statement_bind_string_by_name(statement, "column1", "abc");
 cass_statement_free(statement);
 ```
 
-## Large Values
+## Unbound parameters
 
-The data of values bound to a statement are copied into the statement. That means that values bound to statements can be freed immediately after being bound. However, this might be problematic for large values so the driver provides `cass_statement_bind_custom()` which allocates a buffer where the large values can be directly stored avoiding an extra allocation and copy.
-
-```c
-/* Create a statement with two parameters */
-CassStatement* statement
-  = cass_statement_new("INSERT INTO table1 (column1, column2) VALUES (?, ?)", 2);
-
-cass_statement_bind_string(statement, 0, "abc");
-
-cass_byte_t* bytes;
-cass_statement_bind_custom(statement, 1, 8 * 1024 * 1024, &bytes);
-
-/* 'bytes' then can be used in the application to store a large value */
-
-/* Execute statment */
-
-```
+When using Cassandra 2.2+ the driver will send a special `unset` value for
+unbound parameters (leaving the unbound column unaffected). If using older
+versions of Cassandra (2.1 and below) the driver will return an error for
+unbound parameters.
 
 ## Constructing Collections
 

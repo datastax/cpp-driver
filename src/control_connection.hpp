@@ -153,6 +153,24 @@ private:
     bool is_new_node;
   };
 
+  struct RefreshFunctionData {
+    typedef std::vector<std::string> StringVec;
+
+    RefreshFunctionData(StringRef keyspace,
+                        StringRef function,
+                        const StringRefVec& arg_types,
+                        bool is_aggregate)
+      : keyspace(keyspace.to_string())
+      , function(function.to_string())
+      , arg_types(to_strings(arg_types))
+      , is_aggregate(is_aggregate) { }
+
+    std::string keyspace;
+    std::string function;
+    StringVec arg_types;
+    bool is_aggregate;
+  };
+
   void schedule_reconnect(uint64_t ms = 0);
   void reconnect(bool retry_current_host);
 
@@ -196,10 +214,18 @@ private:
                                const MultipleRequestHandler::ResponseVec& responses);
 
   void refresh_type(const StringRef& keyspace_name,
-                        const StringRef& type_name);
+                    const StringRef& type_name);
   static void on_refresh_type(ControlConnection* control_connection,
                               const std::pair<std::string, std::string>& keyspace_and_type_names,
                               Response* response);
+
+  void refresh_function(const StringRef& keyspace_name,
+                        const StringRef& function_name,
+                        const StringRefVec& arg_types,
+                        bool is_aggregate);
+  static void on_refresh_function(ControlConnection* control_connection,
+                                  const RefreshFunctionData& data,
+                                  Response* response);
 
 private:
   State state_;
@@ -210,7 +236,7 @@ private:
   Address current_host_address_;
   int protocol_version_;
   std::string last_connection_error_;
-  bool query_tokens_;
+  bool should_query_tokens_;
 
   static Address bind_any_ipv4_;
   static Address bind_any_ipv6_;
