@@ -1732,7 +1732,7 @@ cass_keyspace_meta_function_by_name(const CassKeyspaceMeta* keyspace_meta,
  * @param[in] name
  * @param[in] name_length
  * @param[in] arguments
- * @param[in] argument_length
+ * @param[in] arguments_length
  * @return same as cass_keyspace_meta_function_by_name()
  *
  * @see cass_keyspace_meta_function_by_name()
@@ -1771,7 +1771,7 @@ cass_keyspace_meta_aggregate_by_name(const CassKeyspaceMeta* keyspace_meta,
  * @param[in] name
  * @param[in] name_length
  * @param[in] arguments
- * @param[in] argument_length
+ * @param[in] arguments_length
  * @return same as cass_keyspace_meta_aggregate_by_name()
  *
  * @see cass_keyspace_meta_aggregate_by_name()
@@ -2136,7 +2136,7 @@ cass_function_meta_argument_count(const CassFunctionMeta* function_meta);
  * @param[in] function_meta
  * @param[in] index
  * @param[out] name
- * @param[out] name_lenght
+ * @param[out] name_length
  * @param[out] type
  * @return CASS_OK if successful, otherwise an error occurred
  */
@@ -2166,7 +2166,7 @@ cass_function_meta_argument_type_by_name(const CassFunctionMeta* function_meta,
  *
  * @public @memberof CassFunctionMeta
  *
- * @param[in] column_meta
+ * @param[in] function_meta
  * @param[in] name
  * @param[in] name_length
  * @return same as cass_function_meta_argument_type_by_name()
@@ -6139,7 +6139,7 @@ cass_result_paging_state_token(const CassResult* result,
  *
  * @public @memberof CassErrorResult
  *
- * @param[in] result
+ * @param[in] error_result
  */
 CASS_EXPORT void
 cass_error_result_free(const CassErrorResult* error_result);
@@ -6345,6 +6345,7 @@ cass_error_num_arg_types(const CassErrorResult* error_result);
  * @public @memberof CassErrorResult
  *
  * @param[in] error_result
+ * @param[in] index
  * @param[out] arg_type
  * @param[out] arg_type_length
  * @return CASS_OK if successful, otherwise error occurred
@@ -7393,7 +7394,7 @@ cass_uuid_from_string_n(const char* str,
  * Creates a new server-side timestamp generator. This generator allows Cassandra
  * to assign timestamps server-side.
  *
- * <bold>Note:</bold> This is the default timestamp generator.
+ * <b>Note:</b> This is the default timestamp generator.
  *
  * @public @memberof CassTimestampGen
  *
@@ -7412,7 +7413,7 @@ cass_timestamp_gen_server_side_new();
  * exceeded then a warning is logged and timestamps stop incrementing until the next
  * clock tick.
  *
- * <bold>Note:</bold> This generator is thread-safe and can be shared by multiple sessions.
+ * <b>Note:</b> This generator is thread-safe and can be shared by multiple sessions.
  *
  * @public @memberof CassTimestampGen
  *
