@@ -99,7 +99,7 @@ void NetworkTopologyStrategy::tokens_to_replicas(const TokenHostMap& primary, To
       }
 
       const size_t rf = rf_it->second;
-      size_t& replica_count_this_dc = replica_counts[dc] ;
+      size_t& replica_count_this_dc = replica_counts[dc];
       if (replica_count_this_dc >= rf) {
         continue;
       }
