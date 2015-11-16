@@ -81,15 +81,15 @@ CassDataType* cass_data_type_new_udt(size_t field_count) {
 }
 
 const CassDataType* cass_data_type_sub_data_type(const CassDataType* data_type,
-                                                     size_t index) {
+                                                 size_t index) {
   const cass::DataType* sub_type = NULL;
-  if (sub_type->is_collection() || sub_type->is_tuple()) {
+  if (data_type->is_collection() || data_type->is_tuple()) {
     const cass::SubTypesDataType* sub_types
         = static_cast<const cass::SubTypesDataType*>(data_type->from());
     if (index < sub_types->types().size()) {
       sub_type = sub_types->types()[index].get();
     }
-  } else if (sub_type->is_user_type()) {
+  } else if (data_type->is_user_type()) {
     const cass::UserType* user_type
         = static_cast<const cass::UserType*>(data_type->from());
     if (index < user_type->fields().size()) {
