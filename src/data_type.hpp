@@ -338,8 +338,7 @@ public:
   typedef CaseInsensitiveHashTable<Field>::EntryVec FieldVec;
 
   UserType()
-    : DataType(CASS_VALUE_TYPE_UDT)
-    , fields_(0) { }
+    : DataType(CASS_VALUE_TYPE_UDT) { }
 
   UserType(size_t field_count)
     : DataType(CASS_VALUE_TYPE_UDT)
