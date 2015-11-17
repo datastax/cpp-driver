@@ -36,8 +36,8 @@
 #endif
 
 // Windows Server 2003 or higher required to build because
-// Interlocked*64() intrinsics are used. The Boost implemenation 
-// of Atomic<> may offer better compatability and performance.
+// Interlocked*64() intrinsics are used. The Boost implementation 
+// of Atomic<> may offer better compatibility and performance.
 
 // This is often defined in the Visual Studio project settings
 // and may need to be updated to 0x0502.
@@ -51,6 +51,37 @@
 #include "macros.hpp"
 
 #include <assert.h>
+
+// 32-bit Windows compilation
+#ifndef _M_X64
+# pragma intrinsic(_InterlockedCompareExchange64)
+
+__inline __int64 _InterlockedExchangeAdd64(__int64 volatile *storage,
+                                           __int64 value) {
+  // Short circuit
+  if (value == 0) {
+    return *storage;
+  }
+
+  // Perform operation
+  __int64 old_value;
+  do {
+    old_value = *storage;
+  } while(_InterlockedCompareExchange64(storage, (*storage + value), *storage) != old_value);
+  return old_value;
+}
+
+__inline __int64 _InterlockedExchange64(__int64 volatile *storage,
+                                        __int64 value) {
+  __int64 ret = *storage;
+  _InterlockedCompareExchange64(storage, value, *storage);
+  return ret;
+}
+
+# define InterlockedCompareExchange64 _InterlockedCompareExchange64
+# define InterlockedExchangeAdd64 _InterlockedExchangeAdd64
+# define InterlockedExchange64 _InterlockedExchange64
+#endif
 
 namespace cass {
 

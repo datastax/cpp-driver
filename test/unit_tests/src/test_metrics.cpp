@@ -176,10 +176,17 @@ BOOST_AUTO_TEST_CASE(meter)
   }
 
   // Sleep can be off by as much as 10+ ms on most systems (or >10% for 100ms)
-  BOOST_CHECK_CLOSE(meter.mean_rate(), 10, 15.0);
-  BOOST_CHECK_CLOSE(meter.one_minute_rate(), 10, 15.0);
-  BOOST_CHECK_CLOSE(meter.five_minute_rate(), 10, 15.0);
-  BOOST_CHECK_CLOSE(meter.fifteen_minute_rate(), 10, 15.0);
+  double tolerance = 15.0;
+#ifdef _MSC_VER
+# ifndef _M_X64
+  // 32-bit metrics are slower on Windows (split operations)
+  tolerance *= 2.5;
+# endif
+#endif
+  BOOST_CHECK_CLOSE(meter.mean_rate(), 10, tolerance);
+  BOOST_CHECK_CLOSE(meter.one_minute_rate(), 10, tolerance);
+  BOOST_CHECK_CLOSE(meter.five_minute_rate(), 10, tolerance);
+  BOOST_CHECK_CLOSE(meter.fifteen_minute_rate(), 10, tolerance);
 }
 
 BOOST_AUTO_TEST_CASE(meter_threads)
@@ -199,10 +206,17 @@ BOOST_AUTO_TEST_CASE(meter_threads)
   }
 
   // Sleep can be off by as much as 10+ ms on most systems (or 10% for 100ms)
-  BOOST_CHECK_CLOSE(meter.mean_rate(), 10 * NUM_THREADS, 15.0);
-  BOOST_CHECK_CLOSE(meter.one_minute_rate(), 10 * NUM_THREADS, 15.0);
-  BOOST_CHECK_CLOSE(meter.five_minute_rate(), 10 * NUM_THREADS, 15.0);
-  BOOST_CHECK_CLOSE(meter.fifteen_minute_rate(), 10 * NUM_THREADS, 15.0);
+    double tolerance = 15.0;
+#ifdef _MSC_VER
+# ifndef _M_X64
+  // 32-bit metrics are slower on Windows (split operations)
+  tolerance *= 2.5;
+# endif
+#endif
+  BOOST_CHECK_CLOSE(meter.mean_rate(), 10 * NUM_THREADS, tolerance);
+  BOOST_CHECK_CLOSE(meter.one_minute_rate(), 10 * NUM_THREADS, tolerance);
+  BOOST_CHECK_CLOSE(meter.five_minute_rate(), 10 * NUM_THREADS, tolerance);
+  BOOST_CHECK_CLOSE(meter.fifteen_minute_rate(), 10 * NUM_THREADS, tolerance);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
