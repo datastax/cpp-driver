@@ -206,7 +206,9 @@ void CaseInsensitiveHashTable<T>::add_index(T* entry) {
 
 template<class T>
 void CaseInsensitiveHashTable<T>::reset(size_t capacity) {
-  if (capacity < entries_.capacity()) capacity = entries_.capacity();
+  if (capacity < entries_.capacity()) {
+    capacity = entries_.capacity();
+  }
   size_t index_capacity = next_pow_2(static_cast<size_t>(capacity / CASS_LOAD_FACTOR) + 1);
   std::fill(index_.begin(), index_.end(), static_cast<T*>(NULL)); // Clear the old entries
   index_.resize(index_capacity);
