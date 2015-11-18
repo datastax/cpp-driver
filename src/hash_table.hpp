@@ -166,9 +166,9 @@ size_t CaseInsensitiveHashTable<T>::get_indices(StringRef name, IndexVec* result
 template<class T>
 size_t CaseInsensitiveHashTable<T>::add(const T& entry) {
   size_t index = entries_.size();
-  size_t capcacity = entries_.capacity();
-  if (index >= capcacity) {
-    resize(2 * capcacity);
+  size_t capacity = entries_.capacity();
+  if (index >= capacity) {
+    resize(2 * capacity);
   }
   entries_.push_back(entry);
   T* back = &entries_.back();
@@ -206,6 +206,9 @@ void CaseInsensitiveHashTable<T>::add_index(T* entry) {
 
 template<class T>
 void CaseInsensitiveHashTable<T>::reset(size_t capacity) {
+  if (capacity < entries_.capacity()) {
+    capacity = entries_.capacity();
+  }
   size_t index_capacity = next_pow_2(static_cast<size_t>(capacity / CASS_LOAD_FACTOR) + 1);
   std::fill(index_.begin(), index_.end(), static_cast<T*>(NULL)); // Clear the old entries
   index_.resize(index_capacity);
