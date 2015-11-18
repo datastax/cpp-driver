@@ -55,32 +55,7 @@
 // 32-bit Windows compilation
 #ifndef _M_X64
 # pragma intrinsic(_InterlockedCompareExchange64)
-
-__inline __int64 _InterlockedExchangeAdd64(__int64 volatile *storage,
-                                           __int64 value) {
-  // Short circuit
-  if (value == 0) {
-    return *storage;
-  }
-
-  // Perform operation
-  __int64 old_value;
-  do {
-    old_value = *storage;
-  } while(_InterlockedCompareExchange64(storage, (*storage + value), *storage) != old_value);
-  return old_value;
-}
-
-__inline __int64 _InterlockedExchange64(__int64 volatile *storage,
-                                        __int64 value) {
-  __int64 ret = *storage;
-  _InterlockedCompareExchange64(storage, value, *storage);
-  return ret;
-}
-
 # define InterlockedCompareExchange64 _InterlockedCompareExchange64
-# define InterlockedExchangeAdd64 _InterlockedExchangeAdd64
-# define InterlockedExchange64 _InterlockedExchange64
 #endif
 
 namespace cass {
@@ -216,7 +191,13 @@ struct AtomicImpl<8, Signed> {
   typedef typename AtomicStorageType<8, Signed>::Type Type;
 
   static inline Type fetch_add(volatile Type& storage, Type value) {
+#ifdef _M_X64
     return static_cast<Type>(InterlockedExchangeAdd64((__int64*)&storage, (__int64)value));
+#else
+    Type old_value = storage;
+    while(!compare_exchange(storage, old_value, (old_value + value))) {}
+    return old_value;
+#endif
   }
 
   static inline Type fetch_sub(volatile Type& storage, Type value) {
@@ -225,7 +206,13 @@ struct AtomicImpl<8, Signed> {
   }
 
   static inline Type exchange(volatile Type& storage, Type value) {
+#ifdef _M_X64
     return static_cast<Type>(InterlockedExchange64((__int64*)&storage, (__int64)value));
+#else
+    Type ret = storage;
+    while(!compare_exchange(storage, ret, value)) {}
+    return ret;
+#endif
   }
 
   static inline bool compare_exchange(volatile Type& storage, Type& expected, Type desired) {
