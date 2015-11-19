@@ -375,7 +375,6 @@ macro(CassSetCompilerFlags)
     add_definitions(/wd4800) # Performance warning due to automatic compiler casting from int to bool
 
     # Add preprocessor definitions for proper compilation
-    add_definitions(-D_WIN32_WINNT=0x0501)      # Required for winsock (pre Windows XP wspiapi.h only)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)  # Remove warnings for not using safe functions (TODO: Fix codebase to be more secure for Visual Studio)
     add_definitions(-DNOMINMAX)                 # Does not define min/max macros
 
