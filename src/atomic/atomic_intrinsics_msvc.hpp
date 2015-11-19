@@ -36,8 +36,8 @@
 #endif
 
 // Windows Server 2003 or higher required to build because
-// Interlocked*64() intrinsics are used. The Boost implemenation 
-// of Atomic<> may offer better compatability and performance.
+// Interlocked*64() intrinsics are used. The Boost implementation 
+// of Atomic<> may offer better compatibility and performance.
 
 // This is often defined in the Visual Studio project settings
 // and may need to be updated to 0x0502.
@@ -51,6 +51,12 @@
 #include "macros.hpp"
 
 #include <assert.h>
+
+// 32-bit Windows compilation
+#ifndef _M_X64
+# pragma intrinsic(_InterlockedCompareExchange64)
+# define InterlockedCompareExchange64 _InterlockedCompareExchange64
+#endif
 
 namespace cass {
 
@@ -185,7 +191,13 @@ struct AtomicImpl<8, Signed> {
   typedef typename AtomicStorageType<8, Signed>::Type Type;
 
   static inline Type fetch_add(volatile Type& storage, Type value) {
+#ifdef _M_X64
     return static_cast<Type>(InterlockedExchangeAdd64((__int64*)&storage, (__int64)value));
+#else
+    Type old_value = storage;
+    while(!compare_exchange(storage, old_value, (old_value + value))) {}
+    return old_value;
+#endif
   }
 
   static inline Type fetch_sub(volatile Type& storage, Type value) {
@@ -194,7 +206,13 @@ struct AtomicImpl<8, Signed> {
   }
 
   static inline Type exchange(volatile Type& storage, Type value) {
+#ifdef _M_X64
     return static_cast<Type>(InterlockedExchange64((__int64*)&storage, (__int64)value));
+#else
+    Type ret = storage;
+    while(!compare_exchange(storage, ret, value)) {}
+    return ret;
+#endif
   }
 
   static inline bool compare_exchange(volatile Type& storage, Type& expected, Type desired) {
