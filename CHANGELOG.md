@@ -1,3 +1,13 @@
+2.2.1
+===========
+November 19, 2015
+
+Other
+--------
+* Fixed issue where cass_data_type_sub_data_type() was always referencing a
+  NULL pointer
+* Fixed cass::Atomic (intrinsic) for 32-bit MSVC
+
 2.2.0
 ===========
 October 29, 2015
