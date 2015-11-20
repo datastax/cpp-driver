@@ -15,6 +15,7 @@
 */
 #ifdef _WIN32
 // Local execution command
+#include <io.h>
 #define FILENO _fileno
 #define POPEN _popen
 #define PCLOSE _pclose
