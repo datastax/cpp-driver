@@ -9,6 +9,22 @@ function check_command {
   fi
 }
 
+function header_version {
+  read -d ''  version_script << 'EOF'
+  BEGIN { major="?"; minor="?"; patch="?" }
+  /CASS_VERSION_MAJOR/ { major=$3 }
+  /CASS_VERSION_MINOR/ { minor=$3 }
+  /CASS_VERSION_PATCH/ { patch=$3 }
+  END { printf "%s.%s.%s", major, minor, patch }
+EOF
+  version=$(grep '#define[ \t]\+CASS_VERSION_\(MAJOR\|MINOR\|PATCH\)' $1 | awk "$version_script")
+  if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Unable to extract version from $1"
+    exit 1
+  fi
+  echo "$version"
+}
+
 # 'redhat-rpm-config' needs to be installed for the 'debuginfo' package
 check_command "rpmbuild" "rpm-build"
 
@@ -17,7 +33,7 @@ if [[ ! -z $1 ]]; then
   arch=$1
 fi
 
-version="2.2.1"
+version=$(header_version "../include/cassandra.h")
 base="cassandra-cpp-driver-$version"
 archive="$base.tar.gz"
 files="CMakeLists.txt cmake_uninstall.cmake.in include src README.md LICENSE.txt"
