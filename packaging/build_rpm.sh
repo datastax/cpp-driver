@@ -38,6 +38,8 @@ base="cassandra-cpp-driver-$version"
 archive="$base.tar.gz"
 files="CMakeLists.txt cmake_uninstall.cmake.in include src README.md LICENSE.txt"
 
+echo "Building version $version"
+
 libuv_version=$(rpm -q --queryformat "%{VERSION}" libuv)
 
 if [[ -e $libuv_version ]]; then
