@@ -31,7 +31,7 @@ public:
       : Iterator(CASS_ITERATOR_TYPE_USER_TYPE_FIELD)
       , user_type_value_(user_type_value)
       , position_(user_type_value->data()) {
-    SharedRefPtr<const UserType> user_type(user_type_value->data_type());
+    UserType::ConstPtr user_type(user_type_value->data_type());
     next_ = user_type->fields().begin();
     end_ = user_type->fields().end();
   }

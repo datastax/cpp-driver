@@ -106,7 +106,7 @@ private:
     std::string table_name;
   };
 
-  struct QueryMetadataAllData {};
+  struct UnusedData {};
 
   template<class T>
   class ControlHandler : public Handler {
@@ -180,28 +180,32 @@ private:
   virtual void on_availability_change(Connection* connection) {}
   virtual void on_event(EventResponse* response);
 
-  //TODO: possibly reorder callback functions to pair with initiator
-  static void on_query_meta_all(ControlConnection* control_connection,
-                                const QueryMetadataAllData& data,
-                                const MultipleRequestHandler::ResponseVec& responses);
-  static void on_refresh_node_info(ControlConnection* control_connection,
-                                   const RefreshNodeData& data,
-                                   Response* response);
-  static void on_refresh_node_info_all(ControlConnection* control_connection,
-                                       const RefreshNodeData& data,
-                                       Response* response);
-  void on_local_query(ResponseMessage* response);
-  void on_peer_query(ResponseMessage* response);
   static void on_reconnect(Timer* timer);
 
   bool handle_query_invalid_response(Response* response);
   void handle_query_failure(CassError code, const std::string& message);
   void handle_query_timeout();
 
-  void query_meta_all();
+  void query_meta_hosts();
+  static void on_query_hosts(ControlConnection* control_connection,
+                             const UnusedData& data,
+                             const MultipleRequestHandler::ResponseVec& responses);
+
+  void query_meta_schema();
+  static void on_query_meta_schema(ControlConnection* control_connection,
+                                const UnusedData& data,
+                                const MultipleRequestHandler::ResponseVec& responses);
+
   void refresh_node_info(SharedRefPtr<Host> host,
                          bool is_new_node,
                          bool query_tokens = false);
+  static void on_refresh_node_info(ControlConnection* control_connection,
+                                   const RefreshNodeData& data,
+                                   Response* response);
+  static void on_refresh_node_info_all(ControlConnection* control_connection,
+                                       const RefreshNodeData& data,
+                                       Response* response);
+
   void update_node_info(SharedRefPtr<Host> host, const Row* row);
 
   void refresh_keyspace(const StringRef& keyspace_name);

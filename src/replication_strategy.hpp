@@ -37,9 +37,9 @@ public:
   static SharedRefPtr<ReplicationStrategy> from_keyspace_meta(const KeyspaceMetadata& ks_meta);
 
   ReplicationStrategy(const std::string& strategy_class)
-    : strategy_class_(strategy_class) {}
+    : strategy_class_(strategy_class) { }
 
-  virtual ~ReplicationStrategy() {}
+  virtual ~ReplicationStrategy() { }
   virtual bool equal(const KeyspaceMetadata& ks_meta) = 0;
   virtual void tokens_to_replicas(const TokenHostMap& primary, TokenReplicaMap* output) const = 0;
 
@@ -55,20 +55,16 @@ public:
   static const std::string STRATEGY_CLASS;
 
   NetworkTopologyStrategy(const std::string& strategy_class,
-                          const Value* strategy_options);
-  virtual ~NetworkTopologyStrategy() {}
+                          const DCReplicaCountMap& replication_factors)
+    : ReplicationStrategy(strategy_class)
+    , replication_factors_(replication_factors) { }
+
+  virtual ~NetworkTopologyStrategy() { }
 
   virtual bool equal(const KeyspaceMetadata& ks_meta);
   virtual void tokens_to_replicas(const TokenHostMap& primary, TokenReplicaMap* output) const;
 
-  // Testing only
-  NetworkTopologyStrategy(const std::string& strategy_class,
-                          const DCReplicaCountMap& replication_factors)
-    : ReplicationStrategy(strategy_class)
-    , replication_factors_(replication_factors) {}
-
 private:
-  static void build_dc_replicas(const Value* strategy_options, DCReplicaCountMap* dc_replicas);
   DCReplicaCountMap replication_factors_;
 };
 
@@ -78,20 +74,16 @@ public:
   static const std::string STRATEGY_CLASS;
 
   SimpleStrategy(const std::string& strategy_class,
-                 const Value* strategy_options);
-  virtual ~SimpleStrategy() {}
+                 size_t replication_factor)
+    : ReplicationStrategy(strategy_class)
+    , replication_factor_(replication_factor) { }
+
+  virtual ~SimpleStrategy() { }
 
   virtual bool equal(const KeyspaceMetadata& ks_meta);
   virtual void tokens_to_replicas(const TokenHostMap& primary, TokenReplicaMap* output) const;
 
-  // Testing only
-  SimpleStrategy(const std::string& strategy_class,
-                 size_t replication_factor)
-    : ReplicationStrategy(strategy_class)
-    , replication_factor_(replication_factor) {}
-
 private:
-  static size_t get_replication_factor(const Value* strategy_options);
   size_t replication_factor_;
 };
 
@@ -99,8 +91,8 @@ private:
 class NonReplicatedStrategy : public ReplicationStrategy {
 public:
   NonReplicatedStrategy(const std::string& strategy_class)
-    : ReplicationStrategy(strategy_class) {}
-  virtual ~NonReplicatedStrategy() {}
+    : ReplicationStrategy(strategy_class) { }
+  virtual ~NonReplicatedStrategy() { }
 
   virtual bool equal(const KeyspaceMetadata& ks_meta);
   virtual void tokens_to_replicas(const TokenHostMap& primary, TokenReplicaMap* output) const;

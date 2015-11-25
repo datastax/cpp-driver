@@ -38,7 +38,7 @@ struct ColumnDefinition : public HashTableEntry<ColumnDefinition> {
   StringRef name;
   StringRef keyspace;
   StringRef table;
-  SharedRefPtr<const DataType> data_type;
+  DataType::ConstPtr data_type;
 };
 
 class ResultMetadata : public RefCounted<ResultMetadata> {

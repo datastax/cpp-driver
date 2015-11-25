@@ -40,7 +40,7 @@ public:
     : data_type_(new TupleType())
     , items_(item_count) { }
 
-  explicit Tuple(const SharedRefPtr<const DataType>& data_type)
+  explicit Tuple(const DataType::ConstPtr& data_type)
     : data_type_(data_type)
     , items_(data_type_->types().size()) { }
 

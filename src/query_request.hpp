@@ -66,7 +66,7 @@ private:
   virtual size_t get_indices(StringRef name,
                              IndexVec* indices);
 
-  virtual const SharedRefPtr<const DataType>& get_type(size_t index) const {
+  virtual const DataType::ConstPtr& get_type(size_t index) const {
     return DataType::NIL;
   }
 
