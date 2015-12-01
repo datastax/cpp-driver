@@ -505,6 +505,10 @@ static const char* table_column_name(const cass::VersionNumber& cassandra_versio
   return cassandra_version >= VersionNumber(3, 0, 0) ? "table_name" : "columnfamily_name";
 }
 
+static const char* signature_column_name(const cass::VersionNumber& cassandra_version) {
+  return cassandra_version >= VersionNumber(3, 0, 0) ? "argument_types" : "signature";
+}
+
 template <class T>
 const T& as_const(const T& x) { return x; }
 
@@ -966,6 +970,8 @@ TableMetadata::TableMetadata(const MetadataConfig& config,
   if (config.cassandra_version >= VersionNumber(3, 0, 0)) {
     add_field(buffer, row, "dclocal_read_repair_chance");
     add_field(buffer, row, "crc_check_chance");
+    add_field(buffer, row, "compaction");
+    add_field(buffer, row, "compression");
     add_field(buffer, row, "extensions");
     add_field(buffer, row, "flags");
   } else {
@@ -1175,6 +1181,7 @@ void TableMetadata::key_aliases(const NativeDataTypes& native_types, KeyAliases*
 
 FunctionMetadata::FunctionMetadata(const MetadataConfig& config,
                                    const std::string& name, const Value* signature,
+                                   KeyspaceMetadata* keyspace,
                                    const SharedRefPtr<RefBuffer>& buffer, const Row* row)
   : MetadataBase(Metadata::full_function_name(name, signature->as_stringlist()))
   , simple_name_(name) {
@@ -1194,18 +1201,31 @@ FunctionMetadata::FunctionMetadata(const MetadataConfig& config,
       value2->primary_value_type() == CASS_VALUE_TYPE_VARCHAR) {
     CollectionIterator iterator1(value1);
     CollectionIterator iterator2(value2);
-    while (iterator1.next() && iterator2.next()) {
-      StringRef arg_name(iterator1.value()->to_string_ref());
-      DataType::ConstPtr arg_type(DataTypeClassNameParser::parse_one(iterator2.value()->to_string(), config.native_types));
-      args_.push_back(Argument(arg_name, arg_type));
-      args_by_name_[arg_name] = arg_type;
+    if (config.cassandra_version >= VersionNumber(3, 0, 0)) {
+      while (iterator1.next() && iterator2.next()) {
+        StringRef arg_name(iterator1.value()->to_string_ref());
+        DataType::ConstPtr arg_type(DataTypeCqlNameParser::parse(iterator2.value()->to_string(), config.native_types, keyspace));
+        args_.push_back(Argument(arg_name, arg_type));
+        args_by_name_[arg_name] = arg_type;
+      }
+    } else {
+      while (iterator1.next() && iterator2.next()) {
+        StringRef arg_name(iterator1.value()->to_string_ref());
+        DataType::ConstPtr arg_type(DataTypeClassNameParser::parse_one(iterator2.value()->to_string(), config.native_types));
+        args_.push_back(Argument(arg_name, arg_type));
+        args_by_name_[arg_name] = arg_type;
+      }
     }
   }
 
   value1 = add_field(buffer, row, "return_type");
   if (value1 != NULL &&
       value1->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-    return_type_ = DataTypeClassNameParser::parse_one(value1->to_string(), config.native_types);
+    if (config.cassandra_version >= VersionNumber(3, 0, 0)) {
+      return_type_ = DataTypeCqlNameParser::parse(value1->to_string(), config.native_types, keyspace);
+    } else {
+      return_type_ = DataTypeClassNameParser::parse_one(value1->to_string(), config.native_types);
+    }
   }
 
   value1 = add_field(buffer, row, "body");
@@ -1235,11 +1255,12 @@ const DataType* FunctionMetadata::get_arg_type(StringRef name) const {
 
 AggregateMetadata::AggregateMetadata(const MetadataConfig& config,
                                      const std::string& name, const Value* signature,
-                                     const FunctionMetadata::Map& functions,
+                                     KeyspaceMetadata* keyspace,
                                      const SharedRefPtr<RefBuffer>& buffer, const Row* row)
   : MetadataBase(Metadata::full_function_name(name, signature->as_stringlist()))
   , simple_name_(name) {
   const Value* value;
+  const FunctionMetadata::Map& functions = keyspace->functions();
 
   add_field(buffer, row, "keyspace_name");
   add_field(buffer, row, "aggregate_name");
@@ -1249,21 +1270,35 @@ AggregateMetadata::AggregateMetadata(const MetadataConfig& config,
       value->value_type() == CASS_VALUE_TYPE_LIST &&
       value->primary_value_type() == CASS_VALUE_TYPE_VARCHAR) {
     CollectionIterator iterator(value);
-    while (iterator.next()) {
-      arg_types_.push_back(DataTypeClassNameParser::parse_one(iterator.value()->to_string(), config.native_types));
+    if (config.cassandra_version >= VersionNumber(3, 0, 0)) {
+      while (iterator.next()) {
+        arg_types_.push_back(DataTypeCqlNameParser::parse(iterator.value()->to_string(), config.native_types, keyspace));
+      }
+    } else {
+      while (iterator.next()) {
+        arg_types_.push_back(DataTypeClassNameParser::parse_one(iterator.value()->to_string(), config.native_types));
+      }
     }
   }
 
   value = add_field(buffer, row, "return_type");
   if (value != NULL &&
       value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-    return_type_ = DataTypeClassNameParser::parse_one(value->to_string(), config.native_types);
+    if (config.cassandra_version >= VersionNumber(3, 0, 0)) {
+      return_type_ = DataTypeCqlNameParser::parse(value->to_string(), config.native_types, keyspace);
+    } else {
+      return_type_ = DataTypeClassNameParser::parse_one(value->to_string(), config.native_types);
+    }
   }
 
   value = add_field(buffer, row, "state_type");
   if (value != NULL &&
       value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-    state_type_ = DataTypeClassNameParser::parse_one(value->to_string(), config.native_types);
+    if (config.cassandra_version >= VersionNumber(3, 0, 0)) {
+      state_type_ = DataTypeCqlNameParser::parse(value->to_string(), config.native_types, keyspace);
+    } else {
+      state_type_ = DataTypeClassNameParser::parse_one(value->to_string(), config.native_types);
+    }
   }
 
   value = add_field(buffer, row, "final_func");
@@ -1291,9 +1326,15 @@ AggregateMetadata::AggregateMetadata(const MetadataConfig& config,
   }
 
   value = add_field(buffer, row, "initcond");
-  if (value != NULL &&
-      value->value_type() == CASS_VALUE_TYPE_BLOB) {
-    init_cond_ = Value(config.protocol_version, state_type_, value->data(), value->size());
+  if (value != NULL) {
+    if (value->value_type() == CASS_VALUE_TYPE_BLOB) {
+      init_cond_ = Value(config.protocol_version, state_type_, value->data(), value->size());
+    } else if (config.cassandra_version >= VersionNumber(3, 0, 0) &&
+               value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
+      init_cond_ = Value(config.protocol_version,
+                         config.native_types.by_cql_name("varchar"),
+                         value->data(), value->size());
+    }
   }
 }
 
@@ -1320,7 +1361,7 @@ ColumnMetadata::ColumnMetadata(const MetadataConfig& config,
       StringRef type = value->to_string_ref();
       if (type == "partition_key") {
         type_ = CASS_COLUMN_TYPE_PARTITION_KEY;
-      } else  if (type == "clustering_key") {
+      } else  if (type == "clustering") {
         type_ = CASS_COLUMN_TYPE_CLUSTERING_KEY;
       } else  if (type == "static") {
         type_ = CASS_COLUMN_TYPE_STATIC;
@@ -1353,6 +1394,8 @@ ColumnMetadata::ColumnMetadata(const MetadataConfig& config,
         type_ = CASS_COLUMN_TYPE_CLUSTERING_KEY;
       } else  if (type == "static") {
         type_ = CASS_COLUMN_TYPE_STATIC;
+      } else  if (type == "compact_value") {
+        type_ = CASS_COLUMN_TYPE_COMPACT_VALUE;
       } else {
         type_ = CASS_COLUMN_TYPE_REGULAR;
       }
@@ -1530,7 +1573,7 @@ void Metadata::InternalData::update_functions(const MetadataConfig& config,
     std::string function_name;
     const Row* row = rows.row();
 
-    const Value* signature = row->get_by_name("signature");
+    const Value* signature = row->get_by_name(signature_column_name(config.cassandra_version));
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
         !row->get_string_by_name("function_name", &function_name) ||
         signature == NULL) {
@@ -1543,7 +1586,10 @@ void Metadata::InternalData::update_functions(const MetadataConfig& config,
       keyspace = get_or_create_keyspace(keyspace_name);
     }
 
-    keyspace->add_function(FunctionMetadata::Ptr(new FunctionMetadata(config, function_name, signature, buffer, row)));
+    keyspace->add_function(FunctionMetadata::Ptr(new FunctionMetadata(config,
+                                                                      function_name, signature,
+                                                                      keyspace,
+                                                                      buffer, row)));
 
   }
 }
@@ -1562,7 +1608,7 @@ void Metadata::InternalData::update_aggregates(const MetadataConfig& config, Res
     std::string aggregate_name;
     const Row* row = rows.row();
 
-    const Value* signature = row->get_by_name("signature");
+    const Value* signature = row->get_by_name(signature_column_name(config.cassandra_version));
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
         !row->get_string_by_name("aggregate_name", &aggregate_name) ||
         signature == NULL) {
@@ -1576,7 +1622,8 @@ void Metadata::InternalData::update_aggregates(const MetadataConfig& config, Res
     }
 
     keyspace->add_aggregate(AggregateMetadata::Ptr(new AggregateMetadata(config,
-                                                                         aggregate_name, signature, keyspace->functions(),
+                                                                         aggregate_name, signature,
+                                                                         keyspace,
                                                                          buffer, row)));
   }
 }

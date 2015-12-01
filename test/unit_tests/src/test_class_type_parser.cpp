@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_SUITE(class_type_parser)
 
 BOOST_AUTO_TEST_CASE(simple)
 {
-  cass::SharedRefPtr<const cass::DataType> data_type;
+  cass::DataType::ConstPtr data_type;
 
   cass::NativeDataTypes native_types;
   native_types.init_class_names();
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(udt)
   cass::NativeDataTypes native_types;
   native_types.init_class_names();
 
-  cass::SharedRefPtr<const cass::DataType> data_type
+  cass::DataType::ConstPtr data_type
       = cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.UserType("
                                                  "foo,61646472657373,"
                                                  "737472656574:org.apache.cassandra.db.marshal.UTF8Type,"
@@ -151,7 +151,7 @@ BOOST_AUTO_TEST_CASE(tuple)
   cass::NativeDataTypes native_types;
   native_types.init_class_names();
 
-  cass::SharedRefPtr<const cass::DataType> data_type
+  cass::DataType::ConstPtr data_type
       = cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.TupleType("
                                                  "org.apache.cassandra.db.marshal.Int32Type,"
                                                  "org.apache.cassandra.db.marshal.UTF8Type,"
@@ -173,7 +173,7 @@ BOOST_AUTO_TEST_CASE(nested_collections)
   cass::NativeDataTypes native_types;
   native_types.init_class_names();
 
-  cass::SharedRefPtr<const cass::DataType> data_type
+  cass::DataType::ConstPtr data_type
       = cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.MapType("
                                                  "org.apache.cassandra.db.marshal.UTF8Type,"
                                                  "org.apache.cassandra.db.marshal.FrozenType("

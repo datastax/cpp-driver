@@ -64,6 +64,19 @@ namespace CCM {
       from_string(version_string);
     };
 
+    int compare(const CassVersion& rhs) {
+      if (major < rhs.major) return -1;
+      if (major > rhs.major) return  1;
+
+      if (minor < rhs.minor) return -1;
+      if (minor > rhs.minor) return  1;
+
+      if (patch < rhs.patch) return -1;
+      if (patch > rhs.patch) return  1;
+
+      return 0;
+    }
+
     /**
      * Equal comparison operator overload
      *
@@ -75,13 +88,7 @@ namespace CCM {
      * @return True if LHS == RHS; false otherwise
      */
     bool operator ==(const CassVersion& rhs) {
-      // Check version properties for equality (except extra property)
-      if (major == rhs.major &&
-        minor == rhs.minor &&
-        patch == rhs.patch) {
-        return true;
-      }
-      return false;
+      return compare(rhs) == 0;
     }
 
     /**
@@ -96,8 +103,7 @@ namespace CCM {
      */
     bool operator ==(const std::string& version) {
       // Check version properties for equality (except extra property)
-      CassVersion rhs(version);
-      return (*this == rhs);
+      return compare(CassVersion(version)) == 0;
     }
 
     /**
@@ -112,7 +118,7 @@ namespace CCM {
      * @return True if LHS != RHS; false otherwise
      */
     bool operator !=(const CassVersion& rhs) {
-      return !(*this == rhs);
+      return compare(rhs) != 0;
     }
 
     /**
@@ -127,7 +133,7 @@ namespace CCM {
      * @return True if LHS != RHS; false otherwise
      */
     bool operator !=(const std::string& version) {
-      return !(*this == version);
+      return compare(CassVersion(version)) != 0;
     }
 
     /**
@@ -141,17 +147,7 @@ namespace CCM {
      * @return True if LHS < RHS; false otherwise
      */
     bool operator <(const CassVersion& rhs) {
-      // Check version properties (except extra property)
-      if (major < rhs.major) {
-        return true;
-      }
-      if (minor < rhs.minor) {
-        return true;
-      }
-      if (patch < rhs.patch) {
-        return true;
-      }
-      return false;
+      return compare(rhs) < 0;
     }
 
     /**
@@ -165,8 +161,7 @@ namespace CCM {
      * @return True if LHS < RHS; false otherwise
      */
     bool operator <(const std::string& version) {
-      CassVersion rhs(version);
-      return (*this < rhs);
+      return compare(CassVersion(version)) < 0;
     }
 
     /**
@@ -181,7 +176,7 @@ namespace CCM {
      * @return True if LHS > RHS; false otherwise
      */
     bool operator >(const CassVersion& rhs) {
-      return (*this > rhs);
+      return compare(rhs) > 0;
     }
 
     /**
@@ -196,8 +191,7 @@ namespace CCM {
      * @return True if LHS > RHS; false otherwise
      */
     bool operator >(const std::string& version) {
-      CassVersion rhs(version);
-      return (*this > rhs);
+      return compare(CassVersion(version)) > 0;
     }
 
     /**
@@ -212,7 +206,7 @@ namespace CCM {
      * @return True if LHS <= RHS; false otherwise
      */
     bool operator <=(const CassVersion& rhs) {
-      return !(*this > rhs);
+      return compare(rhs) <= 0;
     }
 
     /**
@@ -227,8 +221,7 @@ namespace CCM {
      * @return True if LHS <= RHS; false otherwise
      */
     bool operator <=(const std::string& version) {
-      CassVersion rhs(version);
-      return !(*this > rhs);
+      return compare(CassVersion(version)) <= 0;
     }
 
     /**
@@ -243,7 +236,7 @@ namespace CCM {
      * @return True if LHS >= RHS; false otherwise
      */
     bool operator >=(const CassVersion& rhs) {
-      return !(*this < rhs);
+      return compare(rhs) >= 0;
     }
 
     /**
@@ -258,8 +251,7 @@ namespace CCM {
      * @return True if LHS >= RHS; false otherwise
      */
     bool operator >=(const std::string& version) {
-      CassVersion rhs(version);
-      return !(*this < rhs);
+      return compare(CassVersion(version)) >= 0;
     }
 
     /**

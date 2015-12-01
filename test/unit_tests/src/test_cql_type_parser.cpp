@@ -27,7 +27,7 @@ BOOST_AUTO_TEST_SUITE(cql_type_parser)
 
 BOOST_AUTO_TEST_CASE(simple)
 {
-  cass::SharedRefPtr<const cass::DataType> data_type;
+  cass::DataType::ConstPtr data_type;
 
   cass::NativeDataTypes native_types;
   native_types.init_cql_names();
@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE(simple)
 
 BOOST_AUTO_TEST_CASE(collections)
 {
-  cass::SharedRefPtr<const cass::DataType> data_type;
+  cass::DataType::ConstPtr data_type;
 
   cass::NativeDataTypes native_types;
   native_types.init_cql_names();
@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE(collections)
 
 BOOST_AUTO_TEST_CASE(tuple)
 {
-  cass::SharedRefPtr<const cass::DataType> data_type;
+  cass::DataType::ConstPtr data_type;
 
   cass::NativeDataTypes native_types;
   native_types.init_cql_names();
@@ -144,7 +144,7 @@ BOOST_AUTO_TEST_CASE(tuple)
 
 BOOST_AUTO_TEST_CASE(udt)
 {
-  cass::SharedRefPtr<const cass::DataType> data_type;
+  cass::DataType::ConstPtr data_type;
 
   cass::NativeDataTypes native_types;
   native_types.init_cql_names();
@@ -165,7 +165,7 @@ BOOST_AUTO_TEST_CASE(udt)
 
 BOOST_AUTO_TEST_CASE(frozen)
 {
-  cass::SharedRefPtr<const cass::DataType> data_type;
+  cass::DataType::ConstPtr data_type;
 
   cass::NativeDataTypes native_types;
   native_types.init_cql_names();
@@ -181,7 +181,7 @@ BOOST_AUTO_TEST_CASE(frozen)
 
 BOOST_AUTO_TEST_CASE(invalid)
 {
-  cass::SharedRefPtr<const cass::DataType> data_type;
+  cass::DataType::ConstPtr data_type;
 
   cass::NativeDataTypes native_types;
   native_types.init_cql_names();

@@ -208,6 +208,7 @@ public:
 
   FunctionMetadata(const MetadataConfig& config,
                    const std::string& name, const Value* signature,
+                   KeyspaceMetadata* keyspace,
                    const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
   const std::string& simple_name() const { return simple_name_; }
@@ -237,7 +238,7 @@ public:
 
   AggregateMetadata(const MetadataConfig& config,
                     const std::string& name, const Value* signature,
-                    const FunctionMetadata::Map& functions,
+                    KeyspaceMetadata* keyspace,
                     const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
   const std::string& simple_name() const { return simple_name_; }

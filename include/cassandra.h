@@ -557,7 +557,8 @@ typedef enum CassColumnType_ {
   CASS_COLUMN_TYPE_REGULAR,
   CASS_COLUMN_TYPE_PARTITION_KEY,
   CASS_COLUMN_TYPE_CLUSTERING_KEY,
-  CASS_COLUMN_TYPE_STATIC
+  CASS_COLUMN_TYPE_STATIC,
+  CASS_COLUMN_TYPE_COMPACT_VALUE
 } CassColumnType;
 
 typedef enum  CassErrorSource_ {
@@ -2321,6 +2322,9 @@ cass_aggregate_meta_final_func(const CassAggregateMeta* aggregate_meta);
 
 /**
  * Gets the initial condition value for the aggregate.
+ *
+ * <b>Note:</b> The value of the initial condition will always be
+ * a "varchar" type for Cassandra 3.0+.
  *
  * @public @memberof CassAggregateMeta
  *
