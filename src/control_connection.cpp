@@ -697,7 +697,13 @@ void ControlConnection::update_node_info(SharedRefPtr<Host> host, const Row* row
 }
 
 void ControlConnection::refresh_keyspace(const StringRef& keyspace_name) {
-  std::string query(SELECT_KEYSPACES_20);
+  std::string query;
+
+  if (session_->metadata().cassandra_version() >= VersionNumber(3, 0, 0)) {
+    query.assign(SELECT_KEYSPACES_30);
+  }  else {
+    query.assign(SELECT_KEYSPACES_20);
+  }
   query.append(" WHERE keyspace_name='")
        .append(keyspace_name.data(), keyspace_name.size())
        .append("'");
@@ -725,13 +731,26 @@ void ControlConnection::on_refresh_keyspace(ControlConnection* control_connectio
 
 void ControlConnection::refresh_table(const StringRef& keyspace_name,
                                       const StringRef& table_name) {
-  std::string cf_query(SELECT_COLUMN_FAMILIES_20);
-  cf_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
-          .append("' AND columnfamily_name='").append(table_name.data(), table_name.size()).append("'");
+  std::string cf_query;
+  std::string col_query;
 
-  std::string col_query(SELECT_COLUMNS_20);
-  col_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
-           .append("' AND columnfamily_name='").append(table_name.data(), table_name.size()).append("'");
+  if (session_->metadata().cassandra_version() >= VersionNumber(3, 0, 0)) {
+    cf_query.assign(SELECT_TABLES_30);
+    cf_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+        .append("' AND table_name='").append(table_name.data(), table_name.size()).append("'");
+
+    col_query.assign(SELECT_COLUMNS_30);
+    col_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+        .append("' AND table_name='").append(table_name.data(), table_name.size()).append("'");
+  } else {
+    cf_query.assign(SELECT_COLUMN_FAMILIES_20);
+    cf_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+        .append("' AND columnfamily_name='").append(table_name.data(), table_name.size()).append("'");
+
+    col_query.assign(SELECT_COLUMNS_20);
+    col_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+        .append("' AND columnfamily_name='").append(table_name.data(), table_name.size()).append("'");
+  }
 
   LOG_DEBUG("Refreshing table %s; %s", cf_query.c_str(), col_query.c_str());
 
@@ -762,7 +781,13 @@ void ControlConnection::on_refresh_table(ControlConnection* control_connection,
 void ControlConnection::refresh_type(const StringRef& keyspace_name,
                                      const StringRef& type_name) {
 
-  std::string query(SELECT_USERTYPES_21);
+  std::string query;
+  if (session_->metadata().cassandra_version() >= VersionNumber(3, 0, 0)) {
+    query.assign(SELECT_USERTYPES_30);
+  } else {
+    query.assign(SELECT_USERTYPES_21);
+  }
+
   query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
                 .append("' AND type_name='").append(type_name.data(), type_name.size()).append("'");
 
@@ -794,12 +819,22 @@ void ControlConnection::refresh_function(const StringRef& keyspace_name,
                                          bool is_aggregate) {
 
   std::string query;
-  if (is_aggregate) {
-    query.assign(SELECT_AGGREGATES_22);
-    query.append(" WHERE keyspace_name=? AND aggregate_name=? AND signature=?");
+  if (session_->metadata().cassandra_version() >= VersionNumber(3, 0, 0)) {
+    if (is_aggregate) {
+      query.assign(SELECT_AGGREGATES_30);
+      query.append(" WHERE keyspace_name=? AND aggregate_name=? AND argument_types=?");
+    } else {
+      query.assign(SELECT_FUNCTIONS_30);
+      query.append(" WHERE keyspace_name=? AND function_name=? AND argument_types=?");
+    }
   } else {
-    query.assign(SELECT_FUNCTIONS_22);
-    query.append(" WHERE keyspace_name=? AND function_name=? AND signature=?");
+    if (is_aggregate) {
+      query.assign(SELECT_AGGREGATES_22);
+      query.append(" WHERE keyspace_name=? AND aggregate_name=? AND signature=?");
+    } else {
+      query.assign(SELECT_FUNCTIONS_22);
+      query.append(" WHERE keyspace_name=? AND function_name=? AND signature=?");
+    }
   }
 
   LOG_DEBUG("Refreshing %s %s in keyspace %s",

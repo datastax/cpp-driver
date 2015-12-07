@@ -62,7 +62,7 @@ namespace CCM {
       , patch(0)
       , extra("") {
       from_string(version_string);
-    };
+    }
 
     int compare(const CassVersion& rhs) {
       if (major < rhs.major) return -1;
