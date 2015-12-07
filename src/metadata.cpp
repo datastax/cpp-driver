@@ -884,8 +884,8 @@ void KeyspaceMetadata::update(const MetadataConfig& config, const SharedRefPtr<R
     const Value* map = add_field(buffer, row, "replication");
     if (map != NULL &&
         map->value_type() == CASS_VALUE_TYPE_MAP &&
-        map->primary_value_type() == CASS_VALUE_TYPE_VARCHAR &&
-        map->secondary_value_type() == CASS_VALUE_TYPE_VARCHAR) {
+        is_string_type(map->primary_value_type()) &&
+        is_string_type(map->secondary_value_type())) {
       MapIterator iterator(map);
       while (iterator.next()) {
         const Value* key = iterator.key();
@@ -899,15 +899,15 @@ void KeyspaceMetadata::update(const MetadataConfig& config, const SharedRefPtr<R
   } else {
     const Value* value = add_field(buffer, row, "strategy_class");
     if (value != NULL &&
-        value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
+        is_string_type(value->value_type())) {
       strategy_class_ = value->to_string_ref();
     }
 
     const Value* map = add_json_map_field(config.protocol_version, row, "strategy_options");
     if (map != NULL &&
         map->value_type() == CASS_VALUE_TYPE_MAP &&
-        map->primary_value_type() == CASS_VALUE_TYPE_VARCHAR &&
-        map->secondary_value_type() == CASS_VALUE_TYPE_VARCHAR) {
+        is_string_type(map->primary_value_type()) &&
+        is_string_type(map->secondary_value_type())) {
       MapIterator iterator(map);
       while (iterator.next()) {
         const Value* key = iterator.key();
