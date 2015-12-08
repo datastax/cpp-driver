@@ -447,6 +447,8 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
     }
   }
 
+  session->purge_hosts(is_initial_connection);
+
   if (session->config().use_schema()) {
     control_connection->query_meta_schema();
   } else {
