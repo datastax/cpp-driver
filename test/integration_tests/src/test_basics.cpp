@@ -670,7 +670,7 @@ BOOST_AUTO_TEST_CASE(unset_parameters)
 
   CassError rc = cass_future_error_code(future.get());
 
-  if (version.major >= 2 && version.minor >= 2) {
+  if (version >= "2.2.0") {
     // C* 2.2+ uses the value UNSET and that makes this statement a no-op
     BOOST_REQUIRE(rc == CASS_OK);
   } else {

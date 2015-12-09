@@ -37,6 +37,7 @@
 #define SESSION_STRESS_NUMBER_OF_SHARED_SESSION_THREADS 8 //NOTE: Total threads will be (SESSION_STRESS_NUMBER_OF_SESSIONS / 4) * SESSION_STRESS_NUMBER_OF_SHARED_SESSION_THREADS
 #define SESSION_STRESS_CHAOS_NUMBER_OF_ITERATIONS 256
 #define SESSION_STRESS_NUMBER_OF_ITERATIONS 4 //NOTE: This effects sleep timer as well for async log messages
+#define SESSION_STRESS_NUMBER_OF_ALLOWED_NO_HOST_AVAILABLE_OCCURRENCES 2
 
 struct SessionTests {
 public:
@@ -504,12 +505,22 @@ void query_sessions(const SessionContainer& sessions) {
     uv_thread_join(&threads[n]);
   }
 
+  int no_host_count = 0;
   for (unsigned int n = 0; n < thread_count; ++n) {
     //Timeouts are OK (especially on the minor chaos test)
     CassError error_code = queries[n].error_code;
     if (error_code != CASS_OK && error_code != CASS_ERROR_LIB_REQUEST_TIMED_OUT) {
-      BOOST_FAIL("Error occurred during query '" << std::string(cass_error_desc(error_code)));
+      if (error_code == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE) {
+        ++no_host_count;
+      } else {
+        BOOST_FAIL("Error occurred during query '" << std::string(cass_error_desc(error_code)) << "' [" << error_code << "]");
+      }
     }
+  }
+
+  // Ensure that some hosts were available (chaos)
+  if (no_host_count > SESSION_STRESS_NUMBER_OF_ALLOWED_NO_HOST_AVAILABLE_OCCURRENCES) {
+    BOOST_FAIL("Unacceptable Limit of CASS_ERROR_LIB_NO_HOSTS_AVAILABLE Occurred: " << no_host_count << " > " << SESSION_STRESS_NUMBER_OF_ALLOWED_NO_HOST_AVAILABLE_OCCURRENCES);
   }
 }
 
@@ -605,7 +616,7 @@ BOOST_AUTO_TEST_CASE(stress)
       BOOST_CHECK_EQUAL(test_utils::CassLog::message_count(), quarter_sessions);
       BOOST_CHECK_EQUAL(sessions.count(), quarter_sessions);
 
-       //Query sessions over multiple threads
+      //Query sessions over multiple threads
       query_sessions(sessions);
 
       test_utils::CassLog::reset(SESSION_STRESS_CLOSED_LOG_MESSAGE);

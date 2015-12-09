@@ -138,6 +138,10 @@ public:
     log_data_.reset(msg);
   }
 
+  static void add(const std::string& msg) {
+    log_data_.add(msg);
+  }
+
   static size_t message_count();
 
   static void set_output_log_level(CassLogLevel log_level) {
@@ -152,12 +156,17 @@ private:
 
     void reset(const std::string& msg) {
       boost::lock_guard<LogData> l(*this);
-      message = msg;
+      messages.clear();
+      add(msg);
       message_count = 0;
     }
 
+    void add(const std::string& msg) {
+      messages.push_back(msg);
+    }
+
     boost::mutex m;
-    std::string message;
+    std::vector<std::string> messages;
     size_t message_count;
     CassLogLevel output_log_level;
   };
@@ -1229,6 +1238,25 @@ std::string load_ssl_certificate(const std::string filename);
  */
 std::string implode(const std::vector<std::string>& elements, const char delimiter = ' ',
   const char* delimiter_prefix = NULL, const char* delimiter_suffix = NULL);
+
+/**
+ * Wait for the driver to establish connection to a given node
+ *
+ * @param ip_prefix IPv4 prefix for node
+ * @param node Node to wait for
+ * @param total_attempts Total number of attempts to wait on connection
+ */
+void wait_for_node_connection(const std::string& ip_prefix, int node, int total_attempts = 10);
+
+/**
+ * Wait for the driver to establish connection to a given set of nodes
+ *
+ * @param ip_prefix IPv4 prefix for node(s)
+ * @param nodes List of nodes to wait for
+ * @param total_attempts Total number of attempts to wait on connection
+ *                       (default: 10)
+ */
+void wait_for_node_connections(const std::string& ip_prefix, std::vector<int> nodes, int total_attempts = 10);
 
 extern const char* CREATE_TABLE_ALL_TYPES;
 extern const char* CREATE_TABLE_ALL_TYPES_V4;

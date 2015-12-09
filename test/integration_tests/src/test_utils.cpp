@@ -108,9 +108,11 @@ void CassLog::callback(const CassLogMessage* message, void* data) {
             message->message);
   }
   boost::lock_guard<LogData> l(*log_data);
-  if (log_data->message.empty()) return;
-  if (str.find(log_data->message) != std::string::npos) {
-    log_data->message_count++;
+  if (log_data->messages.empty()) return;
+  for (std::vector<std::string>::const_iterator iterator = log_data->messages.begin(); iterator != log_data->messages.end(); ++iterator) {
+    if (str.find(*iterator) != std::string::npos) {
+      log_data->message_count++;
+    }
   }
 }
 
@@ -418,6 +420,31 @@ std::string implode(const std::vector<std::string>& elements, const char delimit
     }
   }
   return result;
+}
+
+void wait_for_node_connection(const std::string& ip_prefix, int node, int total_attempts /*= 10*/) {
+  std::vector<int> nodes;
+  nodes.push_back(node);
+  wait_for_node_connections(ip_prefix, nodes, total_attempts);
+}
+
+void wait_for_node_connections(const std::string& ip_prefix, std::vector<int> nodes, int total_attempts /*= 10*/) {
+  // Build the log messages to look for
+  for (std::vector<int>::const_iterator iterator = nodes.begin(); iterator != nodes.end(); ++iterator) {
+    std::stringstream log_message;
+    log_message << "Connected to host " << ip_prefix << *iterator;
+    if (iterator == nodes.begin()) {
+      test_utils::CassLog::reset(log_message.str().c_str());
+    } else {
+      test_utils::CassLog::add(log_message.str().c_str());
+    }
+  }
+
+  int num_of_attempts = 0;
+  while (num_of_attempts < total_attempts && test_utils::CassLog::message_count() < nodes.size()) {
+    boost::this_thread::sleep_for(boost::chrono::seconds(1));
+    ++num_of_attempts;
+  }
 }
 
 //-----------------------------------------------------------------------------------

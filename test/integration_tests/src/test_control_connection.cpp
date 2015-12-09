@@ -32,18 +32,21 @@ struct ControlConnectionTests {
 public:
   boost::shared_ptr<CCM::Bridge> ccm;
   std::string ip_prefix;
+  CCM::CassVersion version;
 
   ControlConnectionTests()
     : ccm(new CCM::Bridge("config.txt"))
-    , ip_prefix(ccm->get_ip_prefix()) {}
+    , ip_prefix(ccm->get_ip_prefix())
+    , version(test_utils::get_version()) {}
 
   void check_for_live_hosts(test_utils::CassSessionPtr session,
                             const std::set<std::string>& should_be_present) {
     std::set<std::string> hosts;
 
+    std::stringstream query;
+    query << "SELECT * FROM " << (version >= "3.0.0" ? "system_schema.keyspaces" : "system.schema_keyspaces");
     for (size_t i = 0; i < should_be_present.size() + 2; ++i) {
-      const char* query = "SELECT * FROM system.schema_keyspaces";
-      test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
+      test_utils::CassStatementPtr statement(cass_statement_new(query.str().c_str(), 0));
       test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
       if (cass_future_error_code(future.get()) ==  CASS_OK) {
         hosts.insert(cass::get_host_from_future(future.get()));
@@ -132,7 +135,8 @@ BOOST_AUTO_TEST_CASE(reconnection)
   ccm->stop_node(1);
 
   // Add a new node to make sure the node gets added on the new control connection to node 2
-  ccm->bootstrap_node("-Dcassandra.consistent.rangemovement=false"); // Allow this node to come up without node1
+  int node = ccm->bootstrap_node("-Dcassandra.consistent.rangemovement=false"); // Allow this node to come up without node1
+  test_utils::wait_for_node_connection(ip_prefix, node);
 
   // Stop the other node
   ccm->stop_node(2);
@@ -159,7 +163,8 @@ BOOST_AUTO_TEST_CASE(topology_change)
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
   // Adding a new node will trigger a "NEW_NODE" event
-  ccm->bootstrap_node();
+  int node = ccm->bootstrap_node();
+  test_utils::wait_for_node_connection(ip_prefix, node);
 
   std::set<std::string> should_be_present = build_ip_range(ip_prefix, 1, 2);
   check_for_live_hosts(session, should_be_present);
@@ -199,7 +204,8 @@ BOOST_AUTO_TEST_CASE(status_change)
   check_for_live_hosts(session, should_be_present);
 
   // Starting a node will trigger an "UP" event
-  ccm->start_node(2);
+  int node = ccm->start_node(2);
+  test_utils::wait_for_node_connection(ip_prefix, node);
 
   should_be_present.insert(ip_prefix + "2");
   check_for_live_hosts(session, should_be_present);
@@ -222,7 +228,7 @@ BOOST_AUTO_TEST_CASE(node_discovery)
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
   // Allow the nodes to be discovered
-  boost::this_thread::sleep_for(boost::chrono::seconds(10)); //TODO: Remove sleep and implement a pre-check
+  boost::this_thread::sleep_for(boost::chrono::seconds(20)); //TODO: Remove sleep and implement a pre-check
 
   check_for_live_hosts(session, build_ip_range(ip_prefix, 1, 3));
 }
@@ -251,7 +257,7 @@ BOOST_AUTO_TEST_CASE(node_discovery_invalid_ips)
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get(), NULL, 60 * test_utils::ONE_SECOND_IN_MICROS));
 
     // Allow the nodes to be discovered
-    boost::this_thread::sleep_for(boost::chrono::seconds(10)); //TODO: Remove sleep and implement a pre-check
+    boost::this_thread::sleep_for(boost::chrono::seconds(20)); //TODO: Remove sleep and implement a pre-check
 
     check_for_live_hosts(session, build_ip_range(ip_prefix, 1, 3));
   }
@@ -281,7 +287,7 @@ BOOST_AUTO_TEST_CASE(node_discovery_no_local_rows)
   test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
   // Allow the nodes to be discovered
-  boost::this_thread::sleep_for(boost::chrono::seconds(10)); //TODO: Remove sleep and implement a pre-check
+  boost::this_thread::sleep_for(boost::chrono::seconds(20)); //TODO: Remove sleep and implement a pre-check
 
   check_for_live_hosts(session, build_ip_range(ip_prefix, 1, 3));
 }
@@ -341,9 +347,7 @@ BOOST_AUTO_TEST_CASE(full_outage)
   BOOST_CHECK(test_utils::execute_query_with_error(session.get(), query) == CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 
   ccm->start_cluster();
-
-  // Allow the nodes to be discovered
-  boost::this_thread::sleep_for(boost::chrono::seconds(10)); //TODO: Remove sleep and implement a pre-check
+  test_utils::wait_for_node_connection(ip_prefix, 1);
 
   test_utils::execute_query(session.get(), query);
 }
