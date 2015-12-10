@@ -55,7 +55,7 @@ public:
     ENCODE_ERROR_PARAMETER_UNSET = -3
   };
 
-  static const CassConsistency DEFAULT_CONSISTENCY = CASS_CONSISTENCY_LOCAL_QUORUM;
+  static const CassConsistency DEFAULT_CONSISTENCY = CASS_CONSISTENCY_LOCAL_ONE;
 
   typedef std::map<const void*, Buffer> EncodingCache;
 
