@@ -143,7 +143,7 @@ public:
 protected:
   virtual size_t get_indices(StringRef name,
                              IndexVec* indices) = 0;
-  virtual const SharedRefPtr<const DataType>& get_type(size_t index) const = 0;
+  virtual const DataType::ConstPtr& get_type(size_t index) const = 0;
 
 private:
   template <class T>
@@ -152,7 +152,7 @@ private:
       return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
     }
     IsValidDataType<T> is_valid_type;
-    SharedRefPtr<const DataType> data_type(get_type(index));
+    DataType::ConstPtr data_type(get_type(index));
     if (data_type && !is_valid_type(value, data_type)) {
       return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
     }

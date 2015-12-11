@@ -50,7 +50,13 @@ public:
     test_utils::initialize_contact_points(cluster_.get(), ccm_->get_ip_prefix(), 3, 0);
     cass_cluster_set_latency_aware_routing(cluster_.get(), cass_true);
     cass_cluster_set_latency_aware_routing_settings(cluster_.get(), 1e6, 1, 1, 1, 1);
-    cass_cluster_set_protocol_version(cluster_.get(), 1); // Protocol for this test doesn't matter so simply support all C* versions
+    // Handle deprecated and removed protocol versions [CASSANDRA-10146]
+    // https://issues.apache.org/jira/browse/CASSANDRA-10146
+    int protocol_version = 1;
+    if (test_utils::get_version() >= "3.0.0") {
+      protocol_version = 3;
+    }
+    cass_cluster_set_protocol_version(cluster_.get(), protocol_version); // Protocol for this test doesn't matter so simply support all C* versions
 
     // Connect to the cluster
     session_ = test_utils::create_session(cluster_.get());

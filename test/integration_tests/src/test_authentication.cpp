@@ -17,6 +17,8 @@
 #include "cassandra.h"
 #include "test_utils.hpp"
 
+#include <sstream>
+
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
 #include <boost/lexical_cast.hpp>
@@ -28,7 +30,8 @@
 struct AthenticationTests {
   AthenticationTests()
     : cluster(cass_cluster_new())
-    , ccm(new CCM::Bridge("config.txt")) {
+    , ccm(new CCM::Bridge("config.txt"))
+    , version(test_utils::get_version()) {
     ccm->create_cluster();
     ccm->kill_cluster();
     ccm->update_cluster_configuration("authenticator", "PasswordAuthenticator");
@@ -48,7 +51,9 @@ struct AthenticationTests {
     test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
 
     test_utils::CassResultPtr result;
-    test_utils::execute_query(session.get(), "SELECT * FROM system.schema_keyspaces", &result);
+    std::stringstream query;
+    query << "SELECT * FROM " << (version >= "3.0.0" ? "system_schema.keyspaces" : "system.schema_keyspaces");
+    test_utils::execute_query(session.get(), query.str().c_str(), &result);
 
     BOOST_CHECK(cass_result_row_count(result.get()) > 0);
   }
@@ -69,14 +74,19 @@ struct AthenticationTests {
 
   test_utils::CassClusterPtr cluster;
   boost::shared_ptr<CCM::Bridge> ccm;
+  CCM::CassVersion version;
 };
 
 BOOST_FIXTURE_TEST_SUITE(authentication, AthenticationTests)
 
 BOOST_AUTO_TEST_CASE(protocol_versions)
 {
-  auth(1);
-  auth(2);
+  // Handle deprecated and removed protocol versions [CASSANDRA-10146]
+  // https://issues.apache.org/jira/browse/CASSANDRA-10146
+  if (version < "2.2.0") {
+    auth(1);
+    auth(2);
+  }
   auth(3);
   auth(4);
 }
@@ -88,8 +98,12 @@ BOOST_AUTO_TEST_CASE(empty_credentials)
   // This test serves to characterize what is there presently.
   const char* expected_error
       = "Key may not be empty";
-  invalid_credentials(1, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
-  invalid_credentials(2, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+  // Handle deprecated and removed protocol versions [CASSANDRA-10146]
+  // https://issues.apache.org/jira/browse/CASSANDRA-10146
+  if (version < "2.2.0") {
+    invalid_credentials(1, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+    invalid_credentials(2, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
+  }
   invalid_credentials(3, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
   invalid_credentials(4, "", "", expected_error, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
@@ -98,8 +112,12 @@ BOOST_AUTO_TEST_CASE(bad_credentials)
 {
   const char* expected_error
       = "had the following error on startup: Username and/or password are incorrect";
-  invalid_credentials(1, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
-  invalid_credentials(2, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
+  // Handle deprecated and removed protocol versions [CASSANDRA-10146]
+  // https://issues.apache.org/jira/browse/CASSANDRA-10146
+  if (version < "2.2.0") {
+    invalid_credentials(1, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
+    invalid_credentials(2, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
+  }
   invalid_credentials(3, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
   invalid_credentials(4, "invalid", "invalid", expected_error, CASS_ERROR_SERVER_BAD_CREDENTIALS);
 }

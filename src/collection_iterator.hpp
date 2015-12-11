@@ -67,7 +67,7 @@ public:
       : ValueIterator(CASS_ITERATOR_TYPE_TUPLE)
       , tuple_(tuple)
       , position_(tuple->data()) {
-    SharedRefPtr<const CollectionType> collection_type(tuple->data_type());
+    CollectionType::ConstPtr collection_type(tuple->data_type());
     next_ = collection_type->types().begin();
     end_ = collection_type->types().end();
   }

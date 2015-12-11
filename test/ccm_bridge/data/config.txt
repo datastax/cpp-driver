@@ -13,7 +13,7 @@
 #
 # Uncomment to specify Cassandra version
 ##
-#CASSANDRA_VERSION=2.2.3
+#CASSANDRA_VERSION=3.0.0
 ##
 # Flag to determine if Cassandra version should be obtained from ASF git
 #

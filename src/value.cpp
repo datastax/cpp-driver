@@ -183,7 +183,7 @@ CassValueType cass_value_secondary_sub_type(const CassValue* collection) {
 namespace cass {
 
 Value::Value(int protocol_version,
-             const SharedRefPtr<const DataType>& data_type,
+             const DataType::ConstPtr& data_type,
              char* data, int32_t size)
   : protocol_version_(protocol_version)
   , data_type_(data_type) {
@@ -199,7 +199,7 @@ Value::Value(int protocol_version,
       SharedRefPtr<const SubTypesDataType> sub_types(data_type);
       count_ = sub_types->types().size();
     } else if (data_type->is_user_type()) {
-      SharedRefPtr<const UserType> user_type(data_type);
+      UserType::ConstPtr user_type(data_type);
       count_ = user_type->fields().size();
     } else {
       count_ = 0;

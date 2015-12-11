@@ -41,7 +41,7 @@ public:
     items_.reserve(item_count);
   }
 
-  Collection(const SharedRefPtr<const CollectionType>& data_type,
+  Collection(const CollectionType::ConstPtr& data_type,
              size_t item_count)
     : data_type_(data_type) {
     items_.reserve(item_count);
@@ -51,7 +51,7 @@ public:
     return static_cast<CassCollectionType>(data_type_->value_type());
   }
 
-  const SharedRefPtr<const CollectionType>& data_type() const { return data_type_; }
+  const CollectionType::ConstPtr& data_type() const { return data_type_; }
   const BufferVec& items() const { return items_; }
 
 #define APPEND_TYPE(Type)                  \
@@ -129,7 +129,7 @@ private:
   void encode_items_uint16(char* buf) const;
 
 private:
-  SharedRefPtr<const CollectionType> data_type_;
+  CollectionType::ConstPtr data_type_;
   BufferVec items_;
 
 private:

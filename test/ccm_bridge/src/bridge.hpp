@@ -39,7 +39,7 @@ typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
 #endif
 
 // Default values
-#define DEFAULT_CASSANDRA_VERSION CassVersion("2.2.3")
+#define DEFAULT_CASSANDRA_VERSION CassVersion("3.0.0")
 #define DEFAULT_USE_ASFGIT false
 #define DEFAULT_CLUSTER_PREFIX "cpp-driver"
 #define DEFAULT_DEPLOYMENT DeploymentType::LOCAL

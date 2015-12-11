@@ -277,7 +277,7 @@ char* ResultResponse::decode_metadata(char* input, SharedRefPtr<ResultMetadata>*
       buffer = decode_string(buffer, &def.name);
 
       DataTypeDecoder type_decoder(buffer);
-      def.data_type = SharedRefPtr<const DataType>(type_decoder.decode());
+      def.data_type = DataType::ConstPtr(type_decoder.decode());
       buffer = type_decoder.buffer();
 
       (*metadata)->add(def);

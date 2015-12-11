@@ -65,10 +65,10 @@ inline bool equals_both_not_empty(const std::string& s1,
 
 class DataType : public RefCounted<DataType> {
 public:
-  typedef SharedRefPtr<const DataType> Ptr;
-  typedef std::vector<Ptr> Vec;
+  typedef SharedRefPtr<const DataType> ConstPtr;
+  typedef std::vector<ConstPtr> Vec;
 
-  static const SharedRefPtr<const DataType> NIL;
+  static const DataType::ConstPtr NIL;
 
   DataType(CassValueType value_type)
     : value_type_(value_type) { }
@@ -99,7 +99,7 @@ public:
     return value_type_ == CASS_VALUE_TYPE_CUSTOM;
   }
 
-  virtual bool equals(const SharedRefPtr<const DataType>& data_type) const {
+  virtual bool equals(const DataType::ConstPtr& data_type) const {
     switch (value_type_) {
       // "text" is an alias for  "varchar"
       case CASS_VALUE_TYPE_TEXT:
@@ -168,7 +168,7 @@ public:
     class_name_ = class_name;
   }
 
-  virtual bool equals(const SharedRefPtr<const DataType>& data_type) const {
+  virtual bool equals(const DataType::ConstPtr& data_type) const {
     assert(value_type() == CASS_VALUE_TYPE_CUSTOM);
     if (data_type->value_type() != CASS_VALUE_TYPE_CUSTOM) {
       return false;
@@ -221,6 +221,8 @@ protected:
 
 class CollectionType : public SubTypesDataType {
 public:
+  typedef SharedRefPtr<const CollectionType> ConstPtr;
+
   CollectionType(CassValueType collection_type)
     : SubTypesDataType(collection_type) { }
 
@@ -233,7 +235,7 @@ public:
   CollectionType(CassValueType collection_type, const DataType::Vec& types)
     : SubTypesDataType(collection_type, types) { }
 
-  virtual bool equals(const SharedRefPtr<const DataType>& data_type) const {
+  virtual bool equals(const DataType::ConstPtr& data_type) const {
     assert(value_type() == CASS_VALUE_TYPE_LIST ||
            value_type() == CASS_VALUE_TYPE_SET ||
            value_type() == CASS_VALUE_TYPE_MAP);
@@ -242,7 +244,7 @@ public:
       return false;
     }
 
-    const SharedRefPtr<const CollectionType>& collection_type(data_type);
+    const CollectionType::ConstPtr& collection_type(data_type);
 
     // Only compare sub-types if both have sub-types
     if(!types_.empty() && !collection_type->types_.empty()) {
@@ -264,36 +266,38 @@ public:
   }
 
 public:
-  static SharedRefPtr<const DataType> list(SharedRefPtr<const DataType> element_type) {
+  static DataType::ConstPtr list(DataType::ConstPtr element_type) {
     DataType::Vec types;
     types.push_back(element_type);
-    return SharedRefPtr<const DataType>(new CollectionType(CASS_VALUE_TYPE_LIST, types));
+    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_LIST, types));
   }
 
-  static SharedRefPtr<const DataType> set(SharedRefPtr<const DataType> element_type) {
+  static DataType::ConstPtr set(DataType::ConstPtr element_type) {
     DataType::Vec types;
     types.push_back(element_type);
-    return SharedRefPtr<const DataType>(new CollectionType(CASS_VALUE_TYPE_SET, types));
+    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_SET, types));
   }
 
-  static SharedRefPtr<const DataType> map(SharedRefPtr<const DataType> key_type,
-                                          SharedRefPtr<const DataType> value_type) {
+  static DataType::ConstPtr map(DataType::ConstPtr key_type,
+                                          DataType::ConstPtr value_type) {
     DataType::Vec types;
     types.push_back(key_type);
     types.push_back(value_type);
-    return SharedRefPtr<const DataType>(new CollectionType(CASS_VALUE_TYPE_MAP, types));
+    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_MAP, types));
   }
 };
 
 class TupleType : public SubTypesDataType {
 public:
+  typedef SharedRefPtr<const TupleType> ConstPtr;
+
   TupleType()
     : SubTypesDataType(CASS_VALUE_TYPE_TUPLE) { }
 
   TupleType(const DataType::Vec& types)
     : SubTypesDataType(CASS_VALUE_TYPE_TUPLE, types) { }
 
-  virtual bool equals(const SharedRefPtr<const DataType>& data_type) const {
+  virtual bool equals(const DataType::ConstPtr& data_type) const {
     assert(value_type() == CASS_VALUE_TYPE_TUPLE);
 
     if (value_type() != data_type->value_type()) {
@@ -322,17 +326,20 @@ public:
   }
 };
 
-
 class UserType : public DataType {
 public:
+  typedef SharedRefPtr<UserType> Ptr;
+  typedef SharedRefPtr<const UserType> ConstPtr;
+  typedef std::map<std::string, UserType::Ptr > Map;
+
   struct Field : public HashTableEntry<Field> {
     Field(const std::string& field_name,
-          const SharedRefPtr<const DataType>& type)
+          const DataType::ConstPtr& type)
       : name(field_name)
       , type(type) { }
 
     std::string name;
-    SharedRefPtr<const DataType> type;
+    DataType::ConstPtr type;
   };
 
   typedef CaseInsensitiveHashTable<Field>::EntryVec FieldVec;
@@ -343,6 +350,12 @@ public:
   UserType(size_t field_count)
     : DataType(CASS_VALUE_TYPE_UDT)
     , fields_(field_count) { }
+
+  UserType(const std::string& keyspace,
+           const std::string& type_name )
+    : DataType(CASS_VALUE_TYPE_UDT)
+    , keyspace_(keyspace)
+    , type_name_(type_name) { }
 
   UserType(const std::string& keyspace,
            const std::string& type_name,
@@ -370,17 +383,21 @@ public:
     return fields_.get_indices(name, result);
   }
 
-  void add_field(const std::string name, const SharedRefPtr<const DataType>& data_type) {
+  void add_field(const std::string name, const DataType::ConstPtr& data_type) {
     fields_.add(Field(name, data_type));
   }
 
-  virtual bool equals(const SharedRefPtr<const DataType>& data_type) const {
+  void set_fields(const FieldVec& fields) {
+    fields_.set_entries(fields);
+  }
+
+  virtual bool equals(const DataType::ConstPtr& data_type) const {
     assert(value_type() == CASS_VALUE_TYPE_UDT);
     if (data_type->value_type() != CASS_VALUE_TYPE_UDT) {
       return false;
     }
 
-    const SharedRefPtr<const UserType>& user_type(data_type);
+    const UserType::ConstPtr& user_type(data_type);
 
     if (!equals_both_not_empty(keyspace_, user_type->keyspace_)) {
       return false;
@@ -418,120 +435,134 @@ private:
   CaseInsensitiveHashTable<Field> fields_;
 };
 
+class NativeDataTypes {
+public:
+  void init_class_names();
+  const DataType::ConstPtr& by_class_name(const std::string& name) const;
+
+  void init_cql_names();
+  const DataType::ConstPtr& by_cql_name(const std::string& name) const;
+
+private:
+  typedef std::map<std::string, DataType::ConstPtr> DataTypeMap;
+  DataTypeMap by_class_names_;
+  DataTypeMap by_cql_names_;
+};
+
 template<class T>
 struct IsValidDataType;
 
 template<>
 struct IsValidDataType<CassNull> {
-  bool operator()(CassNull, const SharedRefPtr<const DataType>& data_type) const {
+  bool operator()(CassNull, const DataType::ConstPtr& data_type) const {
     return true;
   }
 };
 
 template<>
 struct IsValidDataType<cass_int8_t> {
-  bool operator()(cass_int8_t, const SharedRefPtr<const DataType>& data_type) const {
+  bool operator()(cass_int8_t, const DataType::ConstPtr& data_type) const {
     return data_type->value_type() == CASS_VALUE_TYPE_TINY_INT;
   }
 };
 
 template<>
 struct IsValidDataType<cass_int16_t> {
-  bool operator()(cass_int16_t, const SharedRefPtr<const DataType>& data_type) const {
+  bool operator()(cass_int16_t, const DataType::ConstPtr& data_type) const {
     return data_type->value_type() == CASS_VALUE_TYPE_SMALL_INT;
   }
 };
 
 template<>
 struct IsValidDataType<cass_int32_t> {
-  bool operator()(cass_int32_t, const SharedRefPtr<const DataType>& data_type) const {
+  bool operator()(cass_int32_t, const DataType::ConstPtr& data_type) const {
     return data_type->value_type() == CASS_VALUE_TYPE_INT;
   }
 };
 
 template<>
 struct IsValidDataType<cass_uint32_t> {
-  bool operator()(cass_uint32_t, const SharedRefPtr<const DataType>& data_type) const {
+  bool operator()(cass_uint32_t, const DataType::ConstPtr& data_type) const {
     return data_type->value_type() == CASS_VALUE_TYPE_DATE;
   }
 };
 
 template<>
 struct IsValidDataType<cass_int64_t> {
-  bool operator()(cass_int64_t, const SharedRefPtr<const DataType>& data_type) const {
+  bool operator()(cass_int64_t, const DataType::ConstPtr& data_type) const {
     return is_int64_type(data_type->value_type());
   }
 };
 
 template<>
 struct IsValidDataType<cass_float_t> {
-  bool operator()(cass_float_t, const SharedRefPtr<const DataType>& data_type) const {
+  bool operator()(cass_float_t, const DataType::ConstPtr& data_type) const {
     return data_type->value_type() == CASS_VALUE_TYPE_FLOAT;
   }
 };
 
 template<>
 struct IsValidDataType<cass_double_t> {
-  bool operator()(cass_double_t, const SharedRefPtr<const DataType>& data_type) const {
+  bool operator()(cass_double_t, const DataType::ConstPtr& data_type) const {
     return data_type->value_type() == CASS_VALUE_TYPE_DOUBLE;
   }
 };
 
 template<>
 struct IsValidDataType<cass_bool_t> {
-  bool operator()(cass_bool_t, const SharedRefPtr<const DataType>& data_type) const {
+  bool operator()(cass_bool_t, const DataType::ConstPtr& data_type) const {
     return data_type->value_type() == CASS_VALUE_TYPE_BOOLEAN;
   }
 };
 
 template<>
 struct IsValidDataType<CassString> {
-  bool operator()(CassString, const SharedRefPtr<const DataType>& data_type) const {
+  bool operator()(CassString, const DataType::ConstPtr& data_type) const {
     return is_string_type(data_type->value_type());
   }
 };
 
 template<>
 struct IsValidDataType<CassBytes> {
-  bool operator()(CassBytes, const SharedRefPtr<const DataType>& data_type) const {
+  bool operator()(CassBytes, const DataType::ConstPtr& data_type) const {
     return is_bytes_type(data_type->value_type());
   }
 };
 
 template<>
 struct IsValidDataType<CassUuid> {
-  bool operator()(CassUuid, const SharedRefPtr<const DataType>& data_type) const {
+  bool operator()(CassUuid, const DataType::ConstPtr& data_type) const {
     return is_uuid_type(data_type->value_type());
   }
 };
 
 template<>
 struct IsValidDataType<CassInet> {
-  bool operator()(CassInet, const SharedRefPtr<const DataType>& data_type) const {
+  bool operator()(CassInet, const DataType::ConstPtr& data_type) const {
     return data_type->value_type() == CASS_VALUE_TYPE_INET;
   }
 };
 
 template<>
 struct IsValidDataType<CassDecimal> {
-  bool operator()(CassDecimal, const SharedRefPtr<const DataType>& data_type) const {
+  bool operator()(CassDecimal, const DataType::ConstPtr& data_type) const {
     return data_type->value_type() == CASS_VALUE_TYPE_DECIMAL;
   }
 };
 
 template<>
 struct IsValidDataType<const Collection*> {
-  bool operator()(const Collection* value, const SharedRefPtr<const DataType>& data_type) const;
+  bool operator()(const Collection* value, const DataType::ConstPtr& data_type) const;
 };
 
 template<>
 struct IsValidDataType<const Tuple*> {
-  bool operator()(const Tuple* value, const SharedRefPtr<const DataType>& data_type) const;
+  bool operator()(const Tuple* value, const DataType::ConstPtr& data_type) const;
 };
 
 template<>
 struct IsValidDataType<const UserTypeValue*> {
-  bool operator()(const UserTypeValue* value, const SharedRefPtr<const DataType>& data_type) const;
+  bool operator()(const UserTypeValue* value, const DataType::ConstPtr& data_type) const;
 };
 
 } // namespace cass

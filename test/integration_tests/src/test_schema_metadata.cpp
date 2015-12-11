@@ -66,9 +66,10 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     test_utils::CassResultPtr result;
 
     for (int i = 0; i < 10; ++i) {
+      const char* system_schema_ks = version >= "3.0.0" ? "system_schema.keyspaces" : "system.schema_keyspaces";
       test_utils::execute_query(session,
                                 str(boost::format(
-                                      "SELECT * FROM system.schema_keyspaces WHERE keyspace_name = '%s'") % ks), &result);
+                                      "SELECT * FROM  %s WHERE keyspace_name = '%s'") % system_schema_ks % ks), &result);
       if (cass_result_row_count(result.get()) > 0) {
         return;
       }
@@ -85,7 +86,7 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
       for (size_t i = 0;
            i < 10 && cass_schema_meta_snapshot_version(schema_meta_) == cass_schema_meta_snapshot_version(old);
            ++i) {
-        boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
         cass_schema_meta_free(schema_meta_);
         schema_meta_ = cass_session_get_schema_meta(session);
       }
@@ -182,7 +183,6 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
       cass_iterator_get_meta_field_name(itr.get(), &name.data, &name.length);
       observed.insert(std::string(name.data, name.length));
     }
-
     BOOST_REQUIRE_EQUAL_COLLECTIONS(observed.begin(), observed.end(),
                                     expected_fields.begin(), expected_fields.end());
   }
@@ -224,17 +224,28 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
   const std::set<std::string>& column_fields() {
     static std::set<std::string> fields;
     if (fields.empty()) {
-      fields.insert("keyspace_name");
-      fields.insert("columnfamily_name");
-      fields.insert("column_name");
-      fields.insert("component_index");
-      fields.insert("index_name");
-      fields.insert("index_options");
-      fields.insert("index_type");
-      fields.insert("validator");
-
-      if (version >= "2.0.0") {
+      if (version >= "3.0.0") {
+        fields.insert("keyspace_name");
+        fields.insert("table_name");
+        fields.insert("column_name");
+        fields.insert("clustering_order");
+        fields.insert("column_name_bytes");
+        fields.insert("kind");
+        fields.insert("position");
         fields.insert("type");
+      } else {
+        fields.insert("keyspace_name");
+        fields.insert("columnfamily_name");
+        fields.insert("column_name");
+        fields.insert("component_index");
+        fields.insert("index_name");
+        fields.insert("index_options");
+        fields.insert("index_type");
+        fields.insert("validator");
+
+        if (version >= "2.0.0") {
+          fields.insert("type");
+        }
       }
     }
     return fields;
@@ -278,55 +289,77 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
   const std::set<std::string>& table_fields() {
     static std::set<std::string> fields;
     if (fields.empty()) {
-      fields.insert("keyspace_name");
-      fields.insert("columnfamily_name");
-      fields.insert("bloom_filter_fp_chance");
-      fields.insert("caching");
-      fields.insert("column_aliases");
-      fields.insert("comment");
-      fields.insert("compaction_strategy_class");
-      fields.insert("compaction_strategy_options");
-      fields.insert("comparator");
-      fields.insert("compression_parameters");
-      fields.insert("default_validator");
-      fields.insert("gc_grace_seconds");
-      fields.insert("id");
-      fields.insert("key_alias");
-      fields.insert("key_aliases");
-      fields.insert("key_validator");
-      fields.insert("local_read_repair_chance");
-      fields.insert("max_compaction_threshold");
-      fields.insert("min_compaction_threshold");
-      fields.insert("populate_io_cache_on_flush");
-      fields.insert("read_repair_chance");
-      fields.insert("replicate_on_write");
-      fields.insert("subcomparator");
-      fields.insert("type");
-      fields.insert("value_alias");
-
-      if (version >= "2.0.0") {
+      if (version >= "3.0.0") {
+        fields.insert("keyspace_name");
+        fields.insert("table_name");
+        fields.insert("bloom_filter_fp_chance");
+        fields.insert("caching");
+        fields.insert("comment");
+        fields.insert("compaction");
+        fields.insert("compression");
+        fields.insert("crc_check_chance");
+        fields.insert("dclocal_read_repair_chance");
         fields.insert("default_time_to_live");
-        fields.insert("dropped_columns");
-        fields.erase("id");
-        fields.insert("index_interval");
-        fields.insert("is_dense");
-        fields.erase("key_alias");
+        fields.insert("extensions");
+        fields.insert("flags");
+        fields.insert("gc_grace_seconds");
+        fields.insert("id");
+        fields.insert("max_index_interval");
         fields.insert("memtable_flush_period_in_ms");
+        fields.insert("min_index_interval");
+        fields.insert("read_repair_chance");
         fields.insert("speculative_retry");
+      } else {
+        fields.insert("keyspace_name");
+        fields.insert("columnfamily_name");
+        fields.insert("bloom_filter_fp_chance");
+        fields.insert("caching");
+        fields.insert("column_aliases");
+        fields.insert("comment");
+        fields.insert("compaction_strategy_class");
+        fields.insert("compaction_strategy_options");
+        fields.insert("comparator");
+        fields.insert("compression_parameters");
+        fields.insert("default_validator");
+        fields.insert("gc_grace_seconds");
+        fields.insert("id");
+        fields.insert("key_alias");
+        fields.insert("key_aliases");
+        fields.insert("key_validator");
+        fields.insert("local_read_repair_chance");
+        fields.insert("max_compaction_threshold");
+        fields.insert("min_compaction_threshold");
+        fields.insert("populate_io_cache_on_flush");
+        fields.insert("read_repair_chance");
+        fields.insert("replicate_on_write");
+        fields.insert("subcomparator");
+        fields.insert("type");
+        fields.insert("value_alias");
 
-        if (version >= "2.1.0") {
-          fields.insert("cf_id");
-          fields.insert("max_index_interval");
-          fields.insert("min_index_interval");
-          fields.erase("populate_io_cache_on_flush");
-          fields.erase("replicate_on_write");
-        }
+        if (version >= "2.0.0") {
+          fields.insert("default_time_to_live");
+          fields.insert("dropped_columns");
+          fields.erase("id");
+          fields.insert("index_interval");
+          fields.insert("is_dense");
+          fields.erase("key_alias");
+          fields.insert("memtable_flush_period_in_ms");
+          fields.insert("speculative_retry");
 
-        if (version >= "2.2.0") {
-          fields.erase("column_aliases");
-          fields.erase("key_aliases");
-          fields.erase("value_alias");
-          fields.erase("index_interval");
+          if (version >= "2.1.0") {
+            fields.insert("cf_id");
+            fields.insert("max_index_interval");
+            fields.insert("min_index_interval");
+            fields.erase("populate_io_cache_on_flush");
+            fields.erase("replicate_on_write");
+          }
+
+          if (version >= "2.2.0") {
+            fields.erase("column_aliases");
+            fields.erase("key_aliases");
+            fields.erase("value_alias");
+            fields.erase("index_interval");
+          }
         }
       }
     }
@@ -340,16 +373,18 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     verify_fields(test_utils::CassIteratorPtr(cass_iterator_fields_from_table_meta(table_meta)), table_fields());
     verify_fields_by_name(table_meta, table_fields());
     verify_value(cass_table_meta_field_by_name(table_meta, "keyspace_name"), SIMPLE_STRATEGY_KEYSPACE_NAME);
-    verify_value(cass_table_meta_field_by_name(table_meta, "columnfamily_name"), ALL_DATA_TYPES_TABLE_NAME);
+    verify_value(cass_table_meta_field_by_name(table_meta, version >= "3.0.0" ? "table_name" : "columnfamily_name"), ALL_DATA_TYPES_TABLE_NAME);
 
     // not going for every field, just making sure one of each type (fixed, list, map) is correctly added
     verify_value(cass_table_meta_field_by_name(table_meta, "comment"), COMMENT);
 
-    const CassValue* value = cass_table_meta_field_by_name(table_meta, "compression_parameters");
+
+    const CassValue* value = cass_table_meta_field_by_name(table_meta, version >= "3.0.0" ? "compression" : "compression_parameters");
+    BOOST_REQUIRE(value);
     BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_MAP);
     BOOST_REQUIRE_GE(cass_value_item_count(value), 1ul);
     test_utils::CassIteratorPtr itr(cass_iterator_from_map(value));
-    const std::string parameter = "sstable_compression";
+    const std::string parameter = version >= "3.0.0." ? "class" : "sstable_compression";
     bool param_found = false;
     while (cass_iterator_next(itr.get())) {
       value = cass_iterator_get_map_key(itr.get());
@@ -363,7 +398,10 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     }
     BOOST_CHECK(param_found);
 
-    if (version >= "2.1.0") {
+    if (version >= "3.0.0") {
+      value = cass_table_meta_field_by_name(table_meta, "id");
+      BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UUID);
+    } else if (version >= "2.1.0") {
       value = cass_table_meta_field_by_name(table_meta, "cf_id");
       BOOST_REQUIRE_EQUAL(cass_value_type(value), CASS_VALUE_TYPE_UUID);
     } else {
@@ -406,8 +444,12 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     if (fields.empty()) {
       fields.insert("keyspace_name");
       fields.insert("durable_writes");
-      fields.insert("strategy_class");
-      fields.insert("strategy_options");
+      if (version >= "3.0.0") {
+        fields.insert("replication");
+      } else {
+        fields.insert("strategy_class");
+        fields.insert("strategy_options");
+      }
     }
     return fields;
   }
@@ -420,9 +462,15 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     verify_fields(test_utils::CassIteratorPtr(cass_iterator_fields_from_keyspace_meta(ks_meta)), keyspace_fields());
     verify_fields_by_name(ks_meta, keyspace_fields());
     verify_value(cass_keyspace_meta_field_by_name(ks_meta, "keyspace_name"), name);
-    verify_value(cass_keyspace_meta_field_by_name(ks_meta, "durable_writes"), (cass_bool_t)durable_writes);
-    verify_value(cass_keyspace_meta_field_by_name(ks_meta, "strategy_class"), strategy_class);
-    verify_value(cass_keyspace_meta_field_by_name(ks_meta, "strategy_options"), strategy_options);
+    //verify_value(cass_keyspace_meta_field_by_name(ks_meta, "durable_writes"), (cass_bool_t)durable_writes);
+    if (version >= "3.0.0") {
+      std::map<std::string, std::string> replication(strategy_options);
+      replication["class"] = strategy_class;
+      verify_value(cass_keyspace_meta_field_by_name(ks_meta, "replication"), replication);
+    } else {
+      verify_value(cass_keyspace_meta_field_by_name(ks_meta, "strategy_class"), strategy_class);
+      verify_value(cass_keyspace_meta_field_by_name(ks_meta, "strategy_options"), strategy_options);
+    }
     BOOST_CHECK(!cass_keyspace_meta_table_by_name(ks_meta, "some bogus entry"));
   }
 
@@ -441,7 +489,9 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     size_t keyspace_count = 0;
     while (cass_iterator_next(itr.get())) ++keyspace_count;
     size_t number_of_default_keyspaces = 2;
-    if (version >= "2.2.0") {
+    if (version >= "3.0.0") {
+      number_of_default_keyspaces = 5;
+    } else if (version >= "2.2.0") {
       number_of_default_keyspaces = 4;
     }
     BOOST_CHECK_EQUAL(keyspace_count, number_of_default_keyspaces);
@@ -640,12 +690,23 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     cass_function_meta_name(func_meta, &agg_meta_string_value.data, &agg_meta_string_value.length);
     BOOST_CHECK(test_utils::Value<CassString>::equal(CassString(udf_final_name.c_str()), agg_meta_string_value));
 
-    // Aggregate initial condition (type and value check)
     const CassValue* agg_init_cond = cass_aggregate_meta_init_cond(agg_meta);
-    T agg_init_cond_value;
-    BOOST_CHECK(cass_value_type(agg_init_cond) == return_value_type);
-    BOOST_CHECK(test_utils::Value<T>::get(agg_init_cond, &agg_init_cond_value) == CASS_OK);
-    BOOST_REQUIRE(test_utils::Value<T>::equal(init_cond_value, agg_init_cond_value));
+    BOOST_REQUIRE(agg_init_cond);
+    // Aggregate initial condition (type and value check)
+    if (version >= "3.0.0") {
+      std::stringstream ss;
+      ss << init_cond_value;
+      std::string s(ss.str());
+      CassString agg_init_cond_value;
+      BOOST_CHECK(cass_value_type(agg_init_cond) == CASS_VALUE_TYPE_VARCHAR);
+      BOOST_CHECK(test_utils::Value<CassString>::get(agg_init_cond, &agg_init_cond_value) == CASS_OK);
+      BOOST_REQUIRE(test_utils::Value<CassString>::equal(CassString(s.data(), s.length()), agg_init_cond_value));
+    } else {
+      T agg_init_cond_value;
+      BOOST_CHECK(cass_value_type(agg_init_cond) == return_value_type);
+      BOOST_CHECK(test_utils::Value<T>::get(agg_init_cond, &agg_init_cond_value) == CASS_OK);
+      BOOST_REQUIRE(test_utils::Value<T>::equal(init_cond_value, agg_init_cond_value));
+    }
   }
 
   void verify_user_data_type() {
@@ -775,6 +836,7 @@ BOOST_AUTO_TEST_CASE(simple) {
 BOOST_AUTO_TEST_CASE(keys) {
   test_utils::execute_query(session, "CREATE KEYSPACE keys WITH replication = "
                                      "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+  refresh_schema_meta();
 
   {
     test_utils::execute_query(session, "CREATE TABLE keys.single_parition_key (key text, value text, PRIMARY KEY(key))");
@@ -782,7 +844,7 @@ BOOST_AUTO_TEST_CASE(keys) {
 
     const CassTableMeta* table_meta = schema_get_table("keys", "single_parition_key");
 
-    BOOST_REQUIRE(cass_table_meta_partition_key_count(table_meta) == 1);
+    BOOST_REQUIRE_EQUAL(cass_table_meta_partition_key_count(table_meta), 1);
     verify_partition_key(table_meta, 0, "key");
 
     verify_column_order(table_meta, 1, 0, 2);
@@ -795,7 +857,7 @@ BOOST_AUTO_TEST_CASE(keys) {
 
     const CassTableMeta* table_meta = schema_get_table("keys", "composite_parition_key");
 
-    BOOST_REQUIRE(cass_table_meta_partition_key_count(table_meta) == 2);
+    BOOST_REQUIRE_EQUAL(cass_table_meta_partition_key_count(table_meta), 2);
     verify_partition_key(table_meta, 0, "key1");
     verify_partition_key(table_meta, 1, "key2");
 
@@ -809,10 +871,10 @@ BOOST_AUTO_TEST_CASE(keys) {
 
     const CassTableMeta* table_meta = schema_get_table("keys", "composite_key");
 
-    BOOST_REQUIRE(cass_table_meta_partition_key_count(table_meta) == 1);
+    BOOST_REQUIRE_EQUAL(cass_table_meta_partition_key_count(table_meta), 1);
     verify_partition_key(table_meta, 0, "key1");
 
-    BOOST_REQUIRE(cass_table_meta_clustering_key_count(table_meta) == 1);
+    BOOST_REQUIRE_EQUAL(cass_table_meta_clustering_key_count(table_meta), 1);
     verify_clustering_key(table_meta, 0, "key2");
 
     verify_column_order(table_meta, 1, 1, 3);
@@ -825,10 +887,10 @@ BOOST_AUTO_TEST_CASE(keys) {
 
     const CassTableMeta* table_meta = schema_get_table("keys", "composite_clustering_key");
 
-    BOOST_REQUIRE(cass_table_meta_partition_key_count(table_meta) == 1);
+    BOOST_REQUIRE_EQUAL(cass_table_meta_partition_key_count(table_meta), 1);
     verify_partition_key(table_meta, 0, "key1");
 
-    BOOST_REQUIRE(cass_table_meta_clustering_key_count(table_meta) == 2);
+    BOOST_REQUIRE_EQUAL(cass_table_meta_clustering_key_count(table_meta), 2);
     verify_clustering_key(table_meta, 0, "key2");
     verify_clustering_key(table_meta, 1, "key3");
 
@@ -842,11 +904,11 @@ BOOST_AUTO_TEST_CASE(keys) {
 
     const CassTableMeta* table_meta = schema_get_table("keys", "composite_parition_and_clustering_key");
 
-    BOOST_REQUIRE(cass_table_meta_partition_key_count(table_meta) == 2);
+    BOOST_REQUIRE_EQUAL(cass_table_meta_partition_key_count(table_meta), 2);
     verify_partition_key(table_meta, 0, "key1");
     verify_partition_key(table_meta, 1, "key2");
 
-    BOOST_REQUIRE(cass_table_meta_clustering_key_count(table_meta) == 2);
+    BOOST_REQUIRE_EQUAL(cass_table_meta_clustering_key_count(table_meta), 2);
     verify_clustering_key(table_meta, 0, "key3");
     verify_clustering_key(table_meta, 1, "key4");
 
@@ -874,8 +936,10 @@ BOOST_AUTO_TEST_CASE(disable) {
 
   // Verify schema change event
   {
+    refresh_schema_meta();
     test_utils::execute_query(session, "CREATE KEYSPACE ks1 WITH replication = "
                                        "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+    refresh_schema_meta();
     verify_keyspace_created("ks1");
     test_utils::CassSchemaMetaPtr schema_meta(cass_session_get_schema_meta(session));
     BOOST_CHECK(cass_schema_meta_keyspace_by_name(schema_meta.get(), "ks1") != NULL);

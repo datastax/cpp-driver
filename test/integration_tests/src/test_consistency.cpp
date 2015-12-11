@@ -72,7 +72,13 @@ BOOST_AUTO_TEST_CASE(simple_two_nodes)
     CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_EACH_QUORUM);  // Should fail (EACH_QUORUM is incompatible with SimpleStrategy)
     CassError query_result = policy_tool.query_return_error(session.get(), 12, CASS_CONSISTENCY_EACH_QUORUM);  // Should fail (see above)
     BOOST_CHECK_EQUAL(init_result, CASS_OK); // TODO(mpenick): Shouldn't be CASS_OK?
-    BOOST_CHECK_EQUAL(query_result, CASS_ERROR_SERVER_INVALID_QUERY);
+    // Handle EACH_QUORUM read support added to C* v3.0.0 [CASSANDRA-9602]
+    // https://issues.apache.org/jira/browse/CASSANDRA-9602
+    if (test_utils::get_version() >= "3.0.0") {
+      BOOST_CHECK_EQUAL(query_result, CASS_OK);
+    } else {
+      BOOST_CHECK_EQUAL(query_result, CASS_ERROR_SERVER_INVALID_QUERY);
+    }
   }
   {
     CassError init_result  = policy_tool.init_return_error(session.get(),  12, CASS_CONSISTENCY_THREE);  // Should fail (N=2, RF=1)

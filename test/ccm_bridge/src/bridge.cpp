@@ -1331,6 +1331,11 @@ std::vector<std::string> CCM::Bridge::generate_create_updateconf_command(CassVer
     updateconf_command.push_back("enable_user_defined_functions:true");
   }
 
+  // Create Cassandra version specific updated (C* 3.0+)
+  if (cassandra_version >= CassVersion("3.0.0")) {
+    updateconf_command.push_back("enable_scripted_user_defined_functions:true");
+  }
+
   return updateconf_command;
 }
 

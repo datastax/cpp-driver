@@ -89,6 +89,8 @@ public:
   size_t add(const T& entry);
 
   const EntryVec& entries() const { return entries_; }
+  void set_entries(const EntryVec& entries);
+
   size_t size() const { return entries_.size(); }
 
 private:
@@ -114,10 +116,7 @@ CaseInsensitiveHashTable<T>::CaseInsensitiveHashTable(size_t capacity) {
 
 template<class T>
 CaseInsensitiveHashTable<T>::CaseInsensitiveHashTable(const EntryVec& entries) {
-  reset(entries.size());
-  for (size_t i = 0; i < entries.size(); ++i) {
-    add(entries[i]);
-  }
+  set_entries(entries);
 }
 
 template<class T>
@@ -175,6 +174,16 @@ size_t CaseInsensitiveHashTable<T>::add(const T& entry) {
   back->index = index;
   add_index(back);
   return index;
+}
+
+
+template<class T>
+void CaseInsensitiveHashTable<T>::set_entries(const EntryVec& entries) {
+  entries_.clear();
+  reset(entries.size());
+  for (size_t i = 0; i < entries.size(); ++i) {
+    add(entries[i]);
+  }
 }
 
 template<class T>

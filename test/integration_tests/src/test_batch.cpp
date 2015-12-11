@@ -137,7 +137,8 @@ BOOST_AUTO_TEST_CASE(mixed)
     test_utils::wait_and_check_error(prepared_future.get());
     test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
-    for (int x = 0; x < 1000; x++)
+    int batch_size = (version >= "2.2.0" ? 100 : 1000);
+    for (int x = 0; x < batch_size; x++)
     {
       test_utils::CassStatementPtr insert_statement;
       if (x % 2 == 0) {
@@ -153,7 +154,7 @@ BOOST_AUTO_TEST_CASE(mixed)
     test_utils::CassFuturePtr insert_future(cass_session_execute_batch(tester.session, batch.get()));
     test_utils::wait_and_check_error(insert_future.get());
 
-    tester.validate_results(1000);
+    tester.validate_results(batch_size);
   } else {
     std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping batch/mixed" << std::endl;
     BOOST_REQUIRE(true);
@@ -195,7 +196,8 @@ BOOST_AUTO_TEST_CASE(counter_mixed)
     test_utils::wait_and_check_error(prepared_future.get());
     test_utils::CassPreparedPtr prepared(cass_future_get_prepared(prepared_future.get()));
 
-    for (int x = 0; x < 1000; x++)
+    unsigned int batch_size = (version >= "2.2.0" ? 100 : 1000);
+    for (unsigned int x = 0; x < batch_size; x++)
     {
       test_utils::CassStatementPtr update_statement;
       if (x % 2 == 0) {
@@ -218,7 +220,7 @@ BOOST_AUTO_TEST_CASE(counter_mixed)
 
     test_utils::execute_query(tester.session, select_query, &result, CASS_CONSISTENCY_QUORUM);
 
-    BOOST_REQUIRE(cass_result_row_count(result.get()) == 1000);
+    BOOST_REQUIRE(cass_result_row_count(result.get()) == batch_size);
     BOOST_REQUIRE(cass_result_column_count(result.get()) == 2);
 
     test_utils::CassIteratorPtr iterator(cass_iterator_from_result(result.get()));

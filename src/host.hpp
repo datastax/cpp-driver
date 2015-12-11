@@ -53,6 +53,28 @@ public:
     , minor_(0)
     , patch_(0) { }
 
+  VersionNumber(int major, int minor, int patch)
+    : major_(major)
+    , minor_(minor)
+    , patch_(patch) { }
+
+  bool operator >=(const VersionNumber& other) const {
+    return compare(other) >= 0;
+  }
+
+  int compare(const VersionNumber& other) const {
+    if (major_ < other.major_) return -1;
+    if (major_ > other.major_) return  1;
+
+    if (minor_ < other.minor_) return -1;
+    if (minor_ > other.minor_) return  1;
+
+    if (patch_ < other.patch_) return -1;
+    if (patch_ > other.patch_) return  1;
+
+    return 0;
+  }
+
   bool parse(const std::string& version);
 
   int major() const { return major_; }

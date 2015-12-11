@@ -99,7 +99,6 @@ void TokenMap::clear() {
   token_map_.clear();
   keyspace_replica_map_.clear();
   keyspace_strategy_map_.clear();
-  partitioner_.reset();
 }
 
 void TokenMap::build() {

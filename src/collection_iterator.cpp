@@ -33,7 +33,7 @@ char* CollectionIterator::decode_value(char* position) {
   int32_t size;
   char* buffer = decode_size(protocol_version, position, size);
 
-  SharedRefPtr<const DataType> data_type;
+  DataType::ConstPtr data_type;
   if (collection_->value_type() == CASS_VALUE_TYPE_MAP) {
     data_type = (index_ % 2 == 0) ? collection_->primary_data_type()
                                   : collection_->secondary_data_type();

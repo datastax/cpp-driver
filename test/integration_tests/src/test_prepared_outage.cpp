@@ -126,7 +126,6 @@ BOOST_AUTO_TEST_CASE(reprepared_on_new_node)
   test_utils::execute_query(session, str(boost::format(insert_query) % table_name % "123456789" % 20));
   ccm->enable_node_gossip(2);
 
-
   for (int i = 0; i < 10; ++i) {
     test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
     BOOST_REQUIRE(cass_statement_set_consistency(statement.get(), CASS_CONSISTENCY_QUORUM) == CASS_OK);

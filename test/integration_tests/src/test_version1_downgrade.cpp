@@ -33,32 +33,38 @@ BOOST_AUTO_TEST_SUITE(version1_downgrade)
 
 BOOST_AUTO_TEST_CASE(query_after_downgrade)
 {
-  test_utils::CassLog::reset("does not support protocol version 2. Trying protocol version 1...");
+  CCM::CassVersion version = test_utils::get_version();
+  if (version < "2.0.0" ) {
+    test_utils::CassLog::reset("does not support protocol version 2. Trying protocol version 1...");
 
-  size_t row_count;
+    size_t row_count;
 
-  {
-    test_utils::CassClusterPtr cluster(cass_cluster_new());
+    {
+      test_utils::CassClusterPtr cluster(cass_cluster_new());
 
-    boost::shared_ptr<CCM::Bridge> ccm(new CCM::Bridge("config.txt"));
-    if (ccm->create_cluster()) {
-      ccm->start_cluster();
+      boost::shared_ptr<CCM::Bridge> ccm(new CCM::Bridge("config.txt"));
+      if (ccm->create_cluster()) {
+        ccm->start_cluster();
+      }
+
+      test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
+
+      cass_cluster_set_protocol_version(cluster.get(), 2);
+
+      test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+
+      test_utils::CassResultPtr result;
+      test_utils::execute_query(session.get(), "SELECT * FROM system.schema_keyspaces", &result);
+
+      row_count = cass_result_row_count(result.get());
     }
 
-    test_utils::initialize_contact_points(cluster.get(), ccm->get_ip_prefix(), 1, 0);
-
-    cass_cluster_set_protocol_version(cluster.get(), 2);
-
-    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
-
-    test_utils::CassResultPtr result;
-    test_utils::execute_query(session.get(), "SELECT * FROM system.schema_keyspaces", &result);
-
-    row_count = cass_result_row_count(result.get());
+    BOOST_CHECK(row_count > 0);
+    BOOST_CHECK(test_utils::CassLog::message_count() > 0);
+  } else {
+    std::cout << "Invalid Test for Cassandra v" << version.to_string() << ": Use Cassandra v1.2.x to test protocol v1 downgrade" << std::endl;
+    BOOST_REQUIRE(true);
   }
-
-  BOOST_CHECK(row_count > 0);
-  BOOST_CHECK(test_utils::CassLog::message_count() > 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

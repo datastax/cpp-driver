@@ -31,11 +31,11 @@ public:
       , size_(-1) { }
 
   Value(int protocol_version,
-        const SharedRefPtr<const DataType>& data_type,
+        const DataType::ConstPtr& data_type,
         char* data, int32_t size);
 
   Value(int protocol_version,
-        const SharedRefPtr<const DataType>& data_type,
+        const DataType::ConstPtr& data_type,
         int32_t count, char* data, int32_t size)
       : protocol_version_(protocol_version)
       , data_type_(data_type)
@@ -52,23 +52,23 @@ public:
     return data_type_->value_type();
   }
 
-  const SharedRefPtr<const DataType>& data_type() const {
+  const DataType::ConstPtr& data_type() const {
     return data_type_;
   }
 
   CassValueType primary_value_type() const {
-    const SharedRefPtr<const DataType>& primary(primary_data_type());
+    const DataType::ConstPtr& primary(primary_data_type());
     if (!primary) {
       return CASS_VALUE_TYPE_UNKNOWN;
     }
     return primary->value_type();
   }
 
-  const SharedRefPtr<const DataType>& primary_data_type() const {
+  const DataType::ConstPtr& primary_data_type() const {
     if (!data_type_ || !data_type_->is_collection()) {
       return DataType::NIL;
     }
-    const SharedRefPtr<const CollectionType>& collection_type(data_type_);
+    const CollectionType::ConstPtr& collection_type(data_type_);
     if (collection_type->types().size() < 1) {
       return DataType::NIL;
     }
@@ -76,18 +76,18 @@ public:
   }
 
   CassValueType secondary_value_type() const {
-    const SharedRefPtr<const DataType>& secondary(secondary_data_type());
+    const DataType::ConstPtr& secondary(secondary_data_type());
     if (!secondary) {
       return CASS_VALUE_TYPE_UNKNOWN;
     }
     return secondary->value_type();
   }
 
-  const SharedRefPtr<const DataType>& secondary_data_type() const {
+  const DataType::ConstPtr& secondary_data_type() const {
     if (!data_type_ || !data_type_->is_map()) {
       return DataType::NIL;
     }
-    const SharedRefPtr<const CollectionType>& collection_type(data_type_);
+    const CollectionType::ConstPtr& collection_type(data_type_);
     if (collection_type->types().size() < 2) {
       return DataType::NIL;
     }
@@ -141,7 +141,7 @@ public:
 
 private:
   int protocol_version_;
-  SharedRefPtr<const DataType> data_type_;
+  DataType::ConstPtr data_type_;
   int32_t count_;
 
   char* data_;
