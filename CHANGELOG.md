@@ -1,3 +1,18 @@
+2.2.2
+===========
+December 14, 2015
+
+Features
+--------
+* Added basic support for Cassandra 3.0. The driver supports Cassandra 3.0
+  schema metadata for keyspaces, tables, columns, user types, functions, and
+  aggregates.
+
+Other
+--------
+* Changed the default consistency from `CASS_CONSISTENCY_LOCAL_QUORUM` to
+  `CASS_CONSISTENCY_LOCAL_ONE`
+
 2.2.1
 ===========
 November 19, 2015
