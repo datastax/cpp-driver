@@ -52,7 +52,7 @@ SaslAuthenticator::SaslAuthenticator(const Address& host,
                                      void* data)
   : callbacks_(callbacks)
   , data_(data) {
-  auth_.data = NULL;
+  auth_.exchange_data = NULL;
   auth_.host.address_length = host.to_inet(auth_.host.address);
 }
 

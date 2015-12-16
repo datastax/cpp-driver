@@ -144,9 +144,11 @@ int main() {
     cass_future_free(close_future);
   } else {
     /* Handle error */
-    CassString message = cass_future_error_message(connect_future);
-    fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message.length,
-                                                        message.data);
+    const char* message;
+    size_t message_length;
+    cass_future_error_message(connect_future, &message, &message_length);
+    fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message_length,
+                                                        message);
   }
 
   cass_future_free(connect_future);

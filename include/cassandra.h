@@ -725,7 +725,7 @@ typedef void (*CassLogCallback)(const CassLogMessage* message,
  */
 typedef struct CassAuth_ {
   CassInet host; /**< The IP address of the server */
-  void* data; /**< User data for resources acquired during an exchange */
+  void* exchange_data; /**< User data for resources acquired during an exchange */
 } CassAuth;
 
 /**
