@@ -1269,6 +1269,118 @@ cass_cluster_set_whitelist_filtering_n(CassCluster* cluster,
                                        size_t hosts_length);
 
 /**
+ * Sets/Appends blacklist hosts. The first call sets the blacklist hosts and
+ * any subsequent calls appends additional hosts. Passing an empty string will
+ * clear and disable the blacklist. White space is striped from the hosts.
+ *
+ * This policy filters requests to all other policies, only allowing requests
+ * to the hosts not contained in the blacklist. Any host in the blacklist will
+ * be ignored and a connection will not be established. This policy is useful
+ * for ensuring that the driver will not connect to a predefined set of hosts.
+ *
+ * Examples: "127.0.0.1" "127.0.0.1,127.0.0.2", "server1.domain.com"
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] hosts A comma delimited list of addresses or names. An empty
+ * string will clear the blacklist hosts. The string is copied into the cluster
+ * configuration; the memory pointed to by this parameter can be freed after
+ * this call.
+ */
+CASS_EXPORT void
+cass_cluster_set_blacklist_filtering(CassCluster* cluster,
+                                     const char* hosts);
+
+/**
+ * Same as cass_cluster_set_blacklist_filtering_hosts(), but with lengths for
+ * string parameters.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] hosts
+ * @param[in] hosts_length
+ * @return same as cass_cluster_set_blacklist_filtering_hosts()
+ *
+ * @see cass_cluster_set_blacklist_filtering_hosts()
+ */
+CASS_EXPORT void
+cass_cluster_set_blacklist_filtering_n(CassCluster* cluster,
+                                       const char* hosts,
+                                       size_t hosts_length);
+
+/**
+ * Same as cass_cluster_set_whitelist_filtering(), but whitelist all hosts of a dc
+ *
+ * Examples: "dc1", "dc1,dc2"
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] dcs A comma delimited list of dcs. An empty
+ * string will clear the whitelist dcs. The string is copied into the cluster
+ * configuration; the memory pointed to by this parameter can be freed after
+ * this call.
+ */
+CASS_EXPORT void
+cass_cluster_set_whitelist_dc_filtering(CassCluster* cluster,
+                                        const char* dcs);
+
+/**
+ * Same as cass_cluster_set_whitelist_dc_filtering(), but with lengths for
+ * string parameters.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] hosts
+ * @param[in] hosts_length
+ * @return same as cass_cluster_set_whitelist_dc_filtering()
+ *
+ * @see cass_cluster_set_whitelist_dc_filtering()
+ */
+CASS_EXPORT void
+cass_cluster_set_whitelist_dc_filtering_n(CassCluster* cluster,
+                                          const char* dcs,
+                                          size_t hosts_length);
+
+/**
+ * Same as cass_cluster_set_blacklist_filtering(), but blacklist all hosts of a dc
+ *
+ * Examples: "dc1", "dc1,dc2"
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] dcs A comma delimited list of dcs. An empty
+ * string will clear the blacklist dcs. The string is copied into the cluster
+ * configuration; the memory pointed to by this parameter can be freed after
+ * this call.
+ */
+CASS_EXPORT void
+cass_cluster_set_blacklist_dc_filtering(CassCluster* cluster,
+                                        const char* dcs);
+
+/**
+ * Same as cass_cluster_set_blacklist_dc_filtering(), but with lengths for
+ * string parameters.
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] hosts
+ * @param[in] hosts_length
+ * @return same as cass_cluster_set_blacklist_dc_filtering()
+ *
+ * @see cass_cluster_set_blacklist_dc_filtering()
+ */
+CASS_EXPORT void
+cass_cluster_set_blacklist_dc_filtering_n(CassCluster* cluster,
+                                          const char* dcs,
+                                          size_t hosts_length);
+
+/**
  * Enable/Disable Nagel's algorithm on connections.
  *
  * <b>Default:</b> cass_true (disables Nagel's algorithm).

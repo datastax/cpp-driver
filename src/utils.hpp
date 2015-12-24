@@ -31,6 +31,7 @@ class BufferPiece;
 class Value;
 
 typedef std::vector<std::string> ContactPointList;
+typedef std::vector<std::string> DcList;
 
 template<class From, class To>
 class IsConvertible {
