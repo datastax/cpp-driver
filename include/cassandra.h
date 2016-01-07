@@ -4292,7 +4292,7 @@ cass_data_type_set_class_name_n(CassDataType* data_type,
  * @return Returns the number of sub-data types
  */
 CASS_EXPORT size_t
-cass_data_sub_type_count(const CassDataType* data_type);
+cass_data_type_sub_type_count(const CassDataType* data_type);
 
 /**
  * Gets the sub-data type of a UDT (user defined type), tuple or collection at

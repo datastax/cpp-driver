@@ -238,7 +238,7 @@ CassError cass_data_type_set_class_name_n(CassDataType* data_type,
   return CASS_OK;
 }
 
-size_t cass_data_sub_type_count(const CassDataType* data_type) {
+size_t cass_data_type_sub_type_count(const CassDataType* data_type) {
   if (data_type->is_collection() || data_type->is_tuple()) {
     const cass::SubTypesDataType* sub_types
         = static_cast<const cass::SubTypesDataType*>(data_type->from());
