@@ -53,7 +53,7 @@ sudo rpm -i rpmforge-release-0.5.3-1.el5.rf.*.rpm
 ```bash
 sudo yum install automake cmake gcc-c++ git libtool openssl-devel wget
 pushd /tmp
-wget http://libuv.org/dist/v1.7.5/libuv-v1.7.5.tar.gz
+wget http://dist.libuv.org/dist/v1.7.5/libuv-v1.7.5.tar.gz
 tar xzf libuv-v1.7.5.tar.gz
 pushd libuv-v1.7.5
 sh autogen.sh
