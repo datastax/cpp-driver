@@ -1376,8 +1376,8 @@ cass_cluster_set_retry_policy(CassCluster* cluster,
  * Enable/Disable retrieving and updating schema metadata. If disabled
  * this is allows the driver to skip over retrieving and updating schema
  * metadata, but it also disables the usage of token-aware routing and
- * cass_session_get_schema() will always return an empty object. This can be
- * useful for reducing the startup overhead of short-lived sessions.
+ * cass_session_get_schema_meta() will always return an empty object. This can
+ * be useful for reducing the startup overhead of short-lived sessions.
  *
  * <b>Default:</b> cass_true (enabled).
  *
@@ -1386,7 +1386,7 @@ cass_cluster_set_retry_policy(CassCluster* cluster,
  * @param[in] cluster
  * @param[in] enabled
  *
- * @see cass_session_get_schema()
+ * @see cass_session_get_schema_meta()
  * @see cass_cluster_set_token_aware_routing();
  */
 CASS_EXPORT void
