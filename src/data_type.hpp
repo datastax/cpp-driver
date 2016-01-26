@@ -238,7 +238,8 @@ public:
   virtual bool equals(const DataType::ConstPtr& data_type) const {
     assert(value_type() == CASS_VALUE_TYPE_LIST ||
            value_type() == CASS_VALUE_TYPE_SET ||
-           value_type() == CASS_VALUE_TYPE_MAP);
+           value_type() == CASS_VALUE_TYPE_MAP ||
+           value_type() == CASS_VALUE_TYPE_TUPLE);
 
     if (value_type() != data_type->value_type()) {
       return false;
