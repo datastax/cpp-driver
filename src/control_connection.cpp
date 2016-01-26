@@ -451,7 +451,7 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
 
   if (session->config().use_schema()) {
     control_connection->query_meta_schema();
-  } else {
+  } else if (is_initial_connection) {
     control_connection->state_ = CONTROL_STATE_READY;
     session->on_control_connection_ready();
     // Create a new query plan that considers all the new hosts from the
