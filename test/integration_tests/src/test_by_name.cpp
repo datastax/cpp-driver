@@ -24,6 +24,10 @@
 #include "cassandra.h"
 #include "test_utils.hpp"
 
+#define INSERT_BY_NAME "INSERT INTO by_name (key, a, b, c) VALUES (?, ?, ?, ?)"
+#define INSERT_BY_NAME_CASE_SENSITIVE "INSERT INTO by_name (key, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?)"
+#define INSERT_BY_NAME_NULL "INSERT INTO by_name (key, a, b, c, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?, ?, ?, ?)"
+
 struct ByNameTests : public test_utils::SingleSessionTest {
   ByNameTests() : test_utils::SingleSessionTest(1, 0) {
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
@@ -57,108 +61,148 @@ struct ByNameTests : public test_utils::SingleSessionTest {
     BOOST_REQUIRE(cass_result_row_count(result.get()) > 0);
     return result;
   }
+
+  void test_bind_and_get(test_utils::CassStatementPtr statement) {
+    CassUuid key = test_utils::generate_time_uuid(uuid_gen);
+
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_int32_by_name(statement.get(), "a", 9042), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_bool_by_name(statement.get(), "b", cass_true), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_string_by_name(statement.get(), "c", "xyz"), CASS_OK);
+
+    test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
+    test_utils::wait_and_check_error(future.get());
+
+    test_utils::CassResultPtr result = select_all_from_by_name();
+
+    const CassRow* row = cass_result_first_row(result.get());
+
+    const CassValue* value;
+
+    value = cass_row_get_column_by_name(row, "key");
+    BOOST_REQUIRE(value != NULL);
+
+    CassUuid result_key;
+    BOOST_REQUIRE_EQUAL(cass_value_get_uuid(value, &result_key), CASS_OK);
+    BOOST_CHECK(test_utils::Value<CassUuid>::equal(result_key, key));
+
+    value = cass_row_get_column_by_name(row, "a");
+    BOOST_REQUIRE(value != NULL);
+
+    cass_int32_t a;
+    BOOST_REQUIRE_EQUAL(cass_value_get_int32(value, &a), CASS_OK);
+    BOOST_CHECK_EQUAL(a, 9042);
+
+    value = cass_row_get_column_by_name(row, "b");
+    BOOST_REQUIRE(value != NULL);
+
+    cass_bool_t b;
+    BOOST_REQUIRE_EQUAL(cass_value_get_bool(value, &b), CASS_OK);
+    BOOST_CHECK_EQUAL(b, cass_true);
+
+    value = cass_row_get_column_by_name(row, "c");
+    BOOST_REQUIRE(value != NULL);
+
+    CassString c;
+    BOOST_REQUIRE_EQUAL(cass_value_get_string(value, &c.data, &c.length), CASS_OK);
+    BOOST_CHECK(test_utils::Value<CassString>::equal(c, "xyz"));
+  }
+
+  void test_bind_and_get_case_sensitive(test_utils::CassStatementPtr statement) {
+    CassUuid key = test_utils::generate_time_uuid(uuid_gen);
+
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"abc\"", 1.1f), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"ABC\"", 2.2f), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"aBc\"", 3.3f), CASS_OK);
+
+    test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
+    test_utils::wait_and_check_error(future.get());
+
+    test_utils::CassResultPtr result = select_all_from_by_name();
+
+    const CassRow* row = cass_result_first_row(result.get());
+
+    const CassValue* value;
+
+    value = cass_row_get_column_by_name(row, "key");
+    BOOST_REQUIRE(value != NULL);
+
+    CassUuid result_key;
+    BOOST_REQUIRE_EQUAL(cass_value_get_uuid(value, &result_key), CASS_OK);
+    BOOST_CHECK(test_utils::Value<CassUuid>::equal(result_key, key));
+
+    value = cass_row_get_column_by_name(row, "\"abc\"");
+    BOOST_REQUIRE(value != NULL);
+
+    cass_float_t abc;
+    BOOST_REQUIRE_EQUAL(cass_value_get_float(value, &abc), CASS_OK);
+    BOOST_CHECK(abc == 1.1f);
+
+    value = cass_row_get_column_by_name(row, "\"ABC\"");
+    BOOST_REQUIRE(value != NULL);
+
+    BOOST_REQUIRE_EQUAL(cass_value_get_float(value, &abc), CASS_OK);
+    BOOST_CHECK(abc == 2.2f);
+
+    value = cass_row_get_column_by_name(row, "\"aBc\"");
+    BOOST_REQUIRE(value != NULL);
+
+    BOOST_REQUIRE_EQUAL(cass_value_get_float(value, &abc), CASS_OK);
+    BOOST_CHECK(abc == 3.3f);
+  }
+
+  void test_null(test_utils::CassStatementPtr statement) {
+    CassUuid key = test_utils::generate_time_uuid(uuid_gen);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "a"), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "b"), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "c"), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "abc"), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "\"ABC\""), CASS_OK);
+    BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "\"aBc\""), CASS_OK);
+
+    test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
+    test_utils::wait_and_check_error(future.get());
+
+    test_utils::CassResultPtr result = select_all_from_by_name();
+    const CassRow* row = cass_result_first_row(result.get());
+
+    BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "a")));
+    BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "b")));
+    BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "c")));
+    BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "abc")));
+    BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "\"ABC\"")));
+    BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "\"aBc\"")));
+  }
 };
 
 BOOST_FIXTURE_TEST_SUITE(by_name, ByNameTests)
 
+BOOST_AUTO_TEST_CASE(bind_and_get_prepared)
+{
+  test_utils::CassPreparedPtr prepared = test_utils::prepare(session, INSERT_BY_NAME);
+  test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
+  test_bind_and_get(statement);
+}
+
 BOOST_AUTO_TEST_CASE(bind_and_get)
 {
-  test_utils::CassPreparedPtr prepared = test_utils::prepare(session, "INSERT INTO by_name (key, a, b, c) VALUES (?, ?, ?, ?)");
+  test_utils::CassStatementPtr statement(cass_statement_new(INSERT_BY_NAME, 4));
+  test_bind_and_get(statement);
+}
 
+BOOST_AUTO_TEST_CASE(bind_and_get_case_sensitive_prepared)
+{
+  test_utils::CassPreparedPtr prepared = test_utils::prepare(session, INSERT_BY_NAME_CASE_SENSITIVE);
   test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
-
-  CassUuid key = test_utils::generate_time_uuid(uuid_gen);
-
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_int32_by_name(statement.get(), "a", 9042), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_bool_by_name(statement.get(), "b", cass_true), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_string_by_name(statement.get(), "c", "xyz"), CASS_OK);
-
-  test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
-  test_utils::wait_and_check_error(future.get());
-
-  test_utils::CassResultPtr result = select_all_from_by_name();
-
-  const CassRow* row = cass_result_first_row(result.get());
-
-  const CassValue* value;
-
-  value = cass_row_get_column_by_name(row, "key");
-  BOOST_REQUIRE(value != NULL);
-
-  CassUuid result_key;
-  BOOST_REQUIRE_EQUAL(cass_value_get_uuid(value, &result_key), CASS_OK);
-  BOOST_CHECK(test_utils::Value<CassUuid>::equal(result_key, key));
-
-  value = cass_row_get_column_by_name(row, "a");
-  BOOST_REQUIRE(value != NULL);
-
-  cass_int32_t a;
-  BOOST_REQUIRE_EQUAL(cass_value_get_int32(value, &a), CASS_OK);
-  BOOST_CHECK_EQUAL(a, 9042);
-
-  value = cass_row_get_column_by_name(row, "b");
-  BOOST_REQUIRE(value != NULL);
-
-  cass_bool_t b;
-  BOOST_REQUIRE_EQUAL(cass_value_get_bool(value, &b), CASS_OK);
-  BOOST_CHECK_EQUAL(b, cass_true);
-
-  value = cass_row_get_column_by_name(row, "c");
-  BOOST_REQUIRE(value != NULL);
-
-  CassString c;
-  BOOST_REQUIRE_EQUAL(cass_value_get_string(value, &c.data, &c.length), CASS_OK);
-  BOOST_CHECK(test_utils::Value<CassString>::equal(c, "xyz"));
+  test_bind_and_get_case_sensitive(statement);
 }
 
 BOOST_AUTO_TEST_CASE(bind_and_get_case_sensitive)
 {
-  test_utils::CassPreparedPtr prepared = test_utils::prepare(session, "INSERT INTO by_name (key, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?)");
-
-  test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
-
-  CassUuid key = test_utils::generate_time_uuid(uuid_gen);
-
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"abc\"", 1.1f), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"ABC\"", 2.2f), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_float_by_name(statement.get(), "\"aBc\"", 3.3f), CASS_OK);
-
-  test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
-  test_utils::wait_and_check_error(future.get());
-
-  test_utils::CassResultPtr result = select_all_from_by_name();
-
-  const CassRow* row = cass_result_first_row(result.get());
-
-  const CassValue* value;
-
-  value = cass_row_get_column_by_name(row, "key");
-  BOOST_REQUIRE(value != NULL);
-
-  CassUuid result_key;
-  BOOST_REQUIRE_EQUAL(cass_value_get_uuid(value, &result_key), CASS_OK);
-  BOOST_CHECK(test_utils::Value<CassUuid>::equal(result_key, key));
-
-  value = cass_row_get_column_by_name(row, "\"abc\"");
-  BOOST_REQUIRE(value != NULL);
-
-  cass_float_t abc;
-  BOOST_REQUIRE_EQUAL(cass_value_get_float(value, &abc), CASS_OK);
-  BOOST_CHECK(abc == 1.1f);
-
-  value = cass_row_get_column_by_name(row, "\"ABC\"");
-  BOOST_REQUIRE(value != NULL);
-
-  BOOST_REQUIRE_EQUAL(cass_value_get_float(value, &abc), CASS_OK);
-  BOOST_CHECK(abc == 2.2f);
-
-  value = cass_row_get_column_by_name(row, "\"aBc\"");
-  BOOST_REQUIRE(value != NULL);
-
-  BOOST_REQUIRE_EQUAL(cass_value_get_float(value, &abc), CASS_OK);
-  BOOST_CHECK(abc == 3.3f);
+  test_utils::CassStatementPtr statement(cass_statement_new(INSERT_BY_NAME_CASE_SENSITIVE, 4));
+  test_bind_and_get_case_sensitive(statement);
 }
 
 BOOST_AUTO_TEST_CASE(bind_multiple_columns)
@@ -248,32 +292,17 @@ BOOST_AUTO_TEST_CASE(get_invalid_name)
   BOOST_CHECK(cass_row_get_column_by_name(row, "\"abC\"") == NULL);
 }
 
+BOOST_AUTO_TEST_CASE(null_prepared)
+{
+  test_utils::CassPreparedPtr prepared = test_utils::prepare(session, INSERT_BY_NAME_NULL);
+  test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
+  test_null(statement);
+}
+
 BOOST_AUTO_TEST_CASE(null)
 {
-  test_utils::CassPreparedPtr prepared = test_utils::prepare(session, "INSERT INTO by_name (key, a, b, c, abc, \"ABC\", \"aBc\") VALUES (?, ?, ?, ?, ?, ?, ?)");
-  test_utils::CassStatementPtr statement(cass_prepared_bind(prepared.get()));
-
-  CassUuid key = test_utils::generate_time_uuid(uuid_gen);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_uuid_by_name(statement.get(), "key", key), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "a"), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "b"), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "c"), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "abc"), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "\"ABC\""), CASS_OK);
-  BOOST_REQUIRE_EQUAL(cass_statement_bind_null_by_name(statement.get(), "\"aBc\""), CASS_OK);
-
-  test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
-  test_utils::wait_and_check_error(future.get());
-
-  test_utils::CassResultPtr result = select_all_from_by_name();
-  const CassRow* row = cass_result_first_row(result.get());
-
-  BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "a")));
-  BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "b")));
-  BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "c")));
-  BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "abc")));
-  BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "\"ABC\"")));
-  BOOST_CHECK(cass_value_is_null(cass_row_get_column_by_name(row, "\"aBc\"")));
+  test_utils::CassStatementPtr statement(cass_statement_new(INSERT_BY_NAME_NULL, 7));
+  test_null(statement);
 }
 
 /**

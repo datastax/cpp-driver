@@ -64,6 +64,9 @@ size_t QueryRequest::get_indices(StringRef name, IndexVec* indices) {
       // No more space left for new named values
       return 0;
     }
+    if (name.size() > 0 && name.front() == '"' && name.back() == '"') {
+      name = name.substr(1, name.size() - 2);
+    }
     indices->push_back(value_names_.add(ValueName(name.to_string())));
   }
 
