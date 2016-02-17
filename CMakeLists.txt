@@ -54,9 +54,6 @@ endif()
 # Dependency minimum version
 set(CASS_MINIMUM_BOOST_VERSION 1.55.0)
 
-# Constants
-set(MULTICORE_CORES_NUMBER "3" CACHE STRING "Number of cores (for multicore compilation)")
-
 # Options
 option(CASS_BUILD_SHARED "Build shared library" ON)
 option(CASS_BUILD_STATIC "Build static library" OFF)
@@ -392,9 +389,10 @@ endif()
 
 # Assign compiler specific flags
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-  # Determine if multicore compilation should be enabled and set
+  # Determine if multicore compilation should be enabled
   if(CASS_MULTICORE_COMPILATION)
-    add_definitions("/MP${MULTICORE_CORES_NUMBER}")
+    # Default multicore compilation with effective processors (see https://msdn.microsoft.com/en-us/library/bb385193.aspx)
+    add_definitions("/MP")
   endif()
 
   # Remove/Replace linker flags in the event they are present
