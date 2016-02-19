@@ -26,9 +26,11 @@
 #include <string>
 #include <vector>
 
+#ifdef CASS_USE_LIBSSH2
 // Forward declarations for libssh2
 typedef struct _LIBSSH2_SESSION LIBSSH2_SESSION;
 typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
+#endif
 
 #if defined(_MSC_VER)
 #  define CCM_BRIDGE_DEPRECATED(func) __declspec(deprecated) func
@@ -182,7 +184,7 @@ namespace CCM {
      * @param data_center_two_nodes Number of nodes for DC2 (default: 0)
      * @param is_ssl True if SSL should be enabled; false otherwise
      *               (default: false)
-     * @param is_client_authentiction True if client authentication should be
+     * @param is_client_authentication True if client authentication should be
      *                                enabled; false otherwise (default: false)
      * @return True if cluster was created or switched; false otherwise
      */
@@ -305,7 +307,7 @@ namespace CCM {
      * Decommission a node on the active Cassandra cluster
      *
      * @param node Node to decommission
-     * @return True if node was decommisioned; false otherwise
+     * @return True if node was decommissioned; false otherwise
      */
     bool decommission_node(unsigned int node);
 
@@ -446,7 +448,7 @@ namespace CCM {
      * NOTE: This method may check the status of the node multiple times
      *
      * @param node Node to check `DOWN` status
-     * @return True if node is no longer acceptting connections; false otherwise
+     * @return True if node is no longer accepting connections; false otherwise
      */
     bool is_node_down(unsigned int node);
 
@@ -461,6 +463,7 @@ namespace CCM {
     bool is_node_up(unsigned int node);
 
   private:
+#ifdef CASS_USE_LIBSSH2
     /**
      * SSH session handle for establishing connection
      */
@@ -469,6 +472,7 @@ namespace CCM {
      * SSH channel handle for interacting with the session
      */
     LIBSSH2_CHANNEL* channel_;
+#endif
     /**
      * Socket instance
      */
@@ -498,11 +502,13 @@ namespace CCM {
      */
     AuthenticationType authentication_type_;
     /**
-     * Host/IP address to use when establishing SSH connection for remote CCM
-     * command execution
+     * IP address to use when establishing SSH connection for remote CCM
+     * command execution and/or IP address to use for server connection IP
+     * generation
      */
     std::string host_;
 
+#ifdef CASS_USE_LIBSSH2
     /**
      * Initialize the socket
      *
@@ -565,6 +571,7 @@ namespace CCM {
      * @return Output from executed command
      */
     std::string execute_libssh2_command(const std::vector<std::string>& command);
+#endif
 
 	/**
      * Execute a local command
@@ -574,6 +581,7 @@ namespace CCM {
      */
     std::string execute_local_command(const std::vector<std::string>& command);
 
+#ifdef CASS_USE_LIBSSH2
     /**
      * Read the output (stdout and stderr) from the libssh2 terminal
      *
@@ -585,6 +593,7 @@ namespace CCM {
      * Finalize the libssh2 library usage and socket used by libssh2
      */
     void finalize_libssh2();
+#endif
 
     /**
      * Execute the CCM command

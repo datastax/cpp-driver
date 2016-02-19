@@ -13,6 +13,11 @@ if(POLICY CMP0042)
   cmake_policy(SET CMP0042 OLD)
 endif()
 
+# Force OLD style of implicitly dereferencing variables
+if(POLICY CMP0054)
+  cmake_policy(SET CMP0054 OLD)
+endif()
+
 # Title the project and define the versioning
 project(${PROJECT_NAME_STR} C CXX)
 
@@ -60,6 +65,8 @@ option(CASS_BUILD_STATIC "Build static library" OFF)
 option(CASS_BUILD_EXAMPLES "Build examples" OFF)
 option(CASS_BUILD_DOCS "Build documentation" OFF)
 option(CASS_BUILD_TESTS "Build tests" OFF)
+option(CASS_BUILD_INTEGRATION_TESTS "Build tests" OFF)
+option(CASS_BUILD_UNIT_TESTS "Build tests" OFF)
 option(CASS_INSTALL_HEADER "Install header file" ON)
 option(CASS_MULTICORE_COMPILATION "Enable multicore compilation" OFF)
 option(CASS_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
@@ -69,8 +76,18 @@ option(CASS_USE_OPENSSL "Use OpenSSL" ON)
 option(CASS_USE_TCMALLOC "Use tcmalloc" OFF)
 option(CASS_USE_SPARSEHASH "Use sparsehash" OFF)
 option(CASS_USE_ZLIB "Use zlib" OFF)
+option(CASS_USE_LIBSSH2 "Use libssh2 for integration tests" ON)
 
+# Handle testing dependencies
 if(CASS_BUILD_TESTS)
+  # Enable integration and unit tests for backwards compatibility
+  set(CASS_BUILD_INTEGRATION_TESTS ON)
+  set(CASS_BUILD_UNIT_TESTS ON)
+endif()
+if(CASS_BUILD_INTEGRATION_TESTS)
+  set(CASS_USE_OPENSSL ON) # Required for integration tests
+endif()
+if(CASS_BUILD_UNIT_TESTS)
   set(CASS_BUILD_STATIC ON) # Required for unit tests
 endif()
 
@@ -142,7 +159,7 @@ set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARY})
 #------------------------
 
 # Boost
-if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_TESTS)
+if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
   # Allow for boost directory to be specified on the command line
   set(ENV{BOOST_ROOT} "${PROJECT_SOURCE_DIR}/lib/boost/")
   if(BOOST_ROOT_DIR)
@@ -178,7 +195,7 @@ if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_TESTS)
   endif()
 
   # Ensure unit and integration test boost components exist
-  if(CASS_BUILD_TESTS)
+  if(CASS_BUILD_UNIT_TESTS OR CASS_BUILD_INTEGRATION_TESTS)
     find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono date_time filesystem log log_setup system regex thread unit_test_framework)
     if(NOT Boost_FOUND)
       message(FATAL_ERROR "Boost [chrono, date_time, filesystem, log, log_setup, system, regex, thread, and unit_test_framework] are required to build tests")
@@ -295,21 +312,24 @@ endif()
 #--------------------
 
 # libssh2
-if(CASS_BUILD_TESTS)
-  # Setup the root directory for libssh2
-  set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/" $ENV{LIBSSH2_ROOT})
-  set(LIBSSH2_ROOT ${LIBSSH2_ROOT} ${LIBSSH2_ROOT_DIR} $ENV{LIBSSH2_ROOT_DIR})
+if(CASS_BUILD_INTEGRATION_TESTS)
+  if(CASS_USE_LIBSSH2)
+    # Setup the root directory for libssh2
+    set(LIBSSH2_ROOT "${PROJECT_SOURCE_DIR}/lib/libssh2/" $ENV{LIBSSH2_ROOT})
+    set(LIBSSH2_ROOT ${LIBSSH2_ROOT} ${LIBSSH2_ROOT_DIR} $ENV{LIBSSH2_ROOT_DIR})
 
-  # Discover libssh2
-  find_package(LIBSSH2 REQUIRED)
-  if(NOT LIBSSH2_FOUND)
-    message(FATAL_ERROR "libssh2 are required to build tests")
-  endif()
-
-  # Assign test libraries (additional boost and libssh2 dependencies)
-  set(CASS_TEST_LIBS ${Boost_LIBRARIES} ${LIBSSH2_LIBRARIES})
-  if(UNIX)
-    set(CASS_TEST_LIBS ${CASS_TEST_LIBS} pthread)
+    # Discover libssh2
+    find_package(LIBSSH2 QUIET)
+    if(LIBSSH2_FOUND)
+      # Assign test libraries (additional boost and libssh2 dependencies)
+      set(CASS_TEST_LIBS ${Boost_LIBRARIES} ${LIBSSH2_LIBRARIES})
+      if(UNIX)
+        set(CASS_TEST_LIBS ${CASS_TEST_LIBS} pthread)
+      endif()
+      add_definitions(-DCASS_USE_LIBSSH2)
+    else()
+      message(STATUS "libssh2 is Unavailable: Building integration tests without libssh2 support")
+    endif()
   endif()
 endif()
 
@@ -400,8 +420,8 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   string(REPLACE "/INCREMENTAL" "/INCREMENTAL:NO" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
   # Create specific linker flags
+  set(WINDOWS_LINKER_FLAGS "/INCREMENTAL:NO /LTCG /NODEFAULTLIB:LIBCMT.LIB /NODEFAULTLIB:LIBCMTD.LIB")
   if(CASS_USE_STATIC_LIBS)
-    set(WINDOWS_LINKER_FLAGS "/INCREMENTAL:NO /LTCG /NODEFAULTLIB:LIBCMT.LIB /NODEFAULTLIB:LIBCMTD.LIB")
     set(PROJECT_CXX_LINKER_FLAGS "${WINDOWS_LINKER_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${WINDOWS_LINKER_FLAGS}")
   endif()
@@ -623,10 +643,11 @@ set(INSTALL_DLL_EXE_DIR "bin")
 #-----------------------------
 
 # Add the unit and integration tests to the build process
-if(CASS_BUILD_TESTS)
+if(CASS_BUILD_UNIT_TESTS)
   # Add the unit test project
   add_subdirectory(test/unit_tests)
-
+endif()
+if(CASS_BUILD_INTEGRATION_TESTS)
   # Add CCM bridge as a dependency for integration tests
   add_subdirectory("${PROJECT_SOURCE_DIR}/test/ccm_bridge")
   set(CCM_BRIDGE_INCLUDES "${PROJECT_SOURCE_DIR}/test/ccm_bridge/src")

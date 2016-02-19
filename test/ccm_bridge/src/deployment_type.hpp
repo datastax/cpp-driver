@@ -35,10 +35,12 @@ namespace CCM {
      * Local deployment type; commands are executed through local process
      */
     static const DeploymentType LOCAL;
+#ifdef CASS_USE_LIBSSH2
     /**
      * Remote deployment type; commands are executed though libssh2
      */
     static const DeploymentType REMOTE;
+#endif
 
     /**
      * Name of constant
