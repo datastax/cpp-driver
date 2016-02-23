@@ -21,10 +21,22 @@
 
 namespace cass {
 
-void MultipleRequestHandler::execute_query(const std::string& query) {
+bool MultipleRequestHandler::get_result_response(const ResponseMap& responses,
+                                                 const std::string& index,
+                                                 ResultResponse** response) {
+  ResponseMap::const_iterator it = responses.find(index);
+  if (it == responses.end() || it->second->opcode() != CQL_OPCODE_RESULT) {
+    return false;
+  }
+  *response = static_cast<ResultResponse*>(it->second.get());
+  return true;
+}
+
+void MultipleRequestHandler::execute_query(const std::string& index, const std::string& query) {
   if (has_errors_or_timeouts_) return;
-  responses_.push_back(SharedRefPtr<Response>());
-  SharedRefPtr<InternalHandler> handler(new InternalHandler(this, new QueryRequest(query), remaining_++));
+  responses_[index] = SharedRefPtr<Response>();
+  SharedRefPtr<InternalHandler> handler(new InternalHandler(this, new QueryRequest(query), index));
+  remaining_++;
   if (!connection_->write(handler.get())) {
     on_error(CASS_ERROR_LIB_NO_STREAMS, "No more streams available");
   }

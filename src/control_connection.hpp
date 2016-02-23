@@ -71,7 +71,7 @@ private:
   template<class T>
   class ControlMultipleRequestHandler : public MultipleRequestHandler {
   public:
-    typedef void (*ResponseCallback)(ControlConnection*, const T&, const MultipleRequestHandler::ResponseVec&);
+    typedef void (*ResponseCallback)(ControlConnection*, const T&, const MultipleRequestHandler::ResponseMap&);
 
     ControlMultipleRequestHandler(ControlConnection* control_connection,
                                   ResponseCallback response_callback,
@@ -81,7 +81,7 @@ private:
         , response_callback_(response_callback)
         , data_(data) {}
 
-    virtual void on_set(const MultipleRequestHandler::ResponseVec& responses);
+    virtual void on_set(const MultipleRequestHandler::ResponseMap& responses);
 
     virtual void on_error(CassError code, const std::string& message) {
       control_connection_->handle_query_failure(code, message);
@@ -189,12 +189,12 @@ private:
   void query_meta_hosts();
   static void on_query_hosts(ControlConnection* control_connection,
                              const UnusedData& data,
-                             const MultipleRequestHandler::ResponseVec& responses);
+                             const MultipleRequestHandler::ResponseMap& responses);
 
   void query_meta_schema();
   static void on_query_meta_schema(ControlConnection* control_connection,
                                 const UnusedData& data,
-                                const MultipleRequestHandler::ResponseVec& responses);
+                                const MultipleRequestHandler::ResponseMap& responses);
 
   void refresh_node_info(SharedRefPtr<Host> host,
                          bool is_new_node,
@@ -215,7 +215,7 @@ private:
                      const StringRef& table_name);
   static void on_refresh_table(ControlConnection* control_connection,
                                const RefreshTableData& data,
-                               const MultipleRequestHandler::ResponseVec& responses);
+                               const MultipleRequestHandler::ResponseMap& responses);
 
   void refresh_type(const StringRef& keyspace_name,
                     const StringRef& type_name);
