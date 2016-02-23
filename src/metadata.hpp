@@ -197,7 +197,6 @@ public:
 
   struct Argument {
     typedef std::vector<Argument> Vec;
-    typedef std::map<StringRef, DataType::ConstPtr> Map;
 
     Argument(const StringRef& name, const DataType::ConstPtr& type)
       : name(name)
@@ -223,12 +222,15 @@ public:
 private:
   std::string simple_name_;
   Argument::Vec args_;
-  Argument::Map args_by_name_;
   DataType::ConstPtr return_type_;
   StringRef body_;
   StringRef language_;
   bool called_on_null_input_;
 };
+
+inline bool operator==(const FunctionMetadata::Argument& a, StringRef b) {
+  return a.name == b;
+}
 
 class AggregateMetadata : public MetadataBase, public RefCounted<AggregateMetadata> {
 public:
@@ -262,7 +264,6 @@ private:
 class ColumnMetadata : public MetadataBase, public RefCounted<ColumnMetadata> {
 public:
   typedef SharedRefPtr<ColumnMetadata> Ptr;
-  typedef std::map<std::string, Ptr> Map;
   typedef std::vector<Ptr> Vec;
 
   ColumnMetadata(const std::string& name)
@@ -297,24 +298,23 @@ private:
   DISALLOW_COPY_AND_ASSIGN(ColumnMetadata);
 };
 
-class TableMetadata : public MetadataBase, public RefCounted<TableMetadata> {
+inline bool operator==(const ColumnMetadata::Ptr& a, const std::string& b) {
+  return a->name() == b;
+}
+
+class TableMetadataBase : public MetadataBase, public RefCounted<TableMetadataBase> {
 public:
-  typedef SharedRefPtr<TableMetadata> Ptr;
-  typedef std::map<std::string, Ptr> Map;
-  typedef std::vector<std::string> KeyAliases;
+  typedef SharedRefPtr<TableMetadataBase> Ptr;
 
   class ColumnIterator : public MetadataIteratorImpl<VecIteratorImpl<ColumnMetadata::Ptr> > {
   public:
-  ColumnIterator(const ColumnIterator::Collection& collection)
-    : MetadataIteratorImpl<VecIteratorImpl<ColumnMetadata::Ptr> >(CASS_ITERATOR_TYPE_COLUMN_META, collection) { }
+    ColumnIterator(const ColumnIterator::Collection& collection)
+      : MetadataIteratorImpl<VecIteratorImpl<ColumnMetadata::Ptr> >(CASS_ITERATOR_TYPE_COLUMN_META, collection) { }
     const ColumnMetadata* column() const { return impl_.item().get(); }
   };
 
-  TableMetadata(const std::string& name)
-    : MetadataBase(name) { }
-
-  TableMetadata(const MetadataConfig& config,
-                const std::string& name, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+  TableMetadataBase(const MetadataConfig& config,
+                    const std::string& name, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
   const ColumnMetadata::Vec& columns() const { return columns_; }
   const ColumnMetadata::Vec& partition_key() const { return partition_key_; }
@@ -322,20 +322,106 @@ public:
 
   Iterator* iterator_columns() const { return new ColumnIterator(columns_); }
   const ColumnMetadata* get_column(const std::string& name) const;
-  const ColumnMetadata::Ptr& get_or_create_column(const std::string& name);
   void add_column(const ColumnMetadata::Ptr& column);
   void clear_columns();
   void build_keys_and_sort(const MetadataConfig& config);
-  void key_aliases(const NativeDataTypes& native_types, KeyAliases* output) const;
 
-private:
+protected:
   ColumnMetadata::Vec columns_;
-  ColumnMetadata::Map columns_by_name_;
   ColumnMetadata::Vec partition_key_;
   ColumnMetadata::Vec clustering_key_;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(TableMetadata);
+  DISALLOW_COPY_AND_ASSIGN(TableMetadataBase);
+};
+
+class ViewMetadata : public TableMetadataBase {
+public:
+  typedef SharedRefPtr<ViewMetadata> Ptr;
+  typedef std::map<std::string, Ptr> Map;
+  typedef std::vector<Ptr> Vec;
+
+  static const ViewMetadata::Ptr NIL;
+
+  ViewMetadata(const MetadataConfig& config, const std::string& name,
+               const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+
+  const std::string& base_table_name() const { return base_table_name_; }
+
+private:
+  std::string base_table_name_;
+};
+
+class ViewIteratorBase : public Iterator {
+public:
+  ViewIteratorBase(CassIteratorType type)
+    : Iterator(type) { }
+
+  virtual ViewMetadata* view() const = 0;
+};
+
+class ViewIteratorVec : public ViewIteratorBase {
+public:
+  ViewIteratorVec(const ViewMetadata::Vec& views)
+    : ViewIteratorBase(CASS_ITERATOR_TYPE_MATERIALIZED_VIEW_META)
+    , impl_(views) { }
+
+  virtual ViewMetadata* view() const { return impl_.item().get(); }
+  virtual bool next() { return impl_.next(); }
+
+private:
+  VecIteratorImpl<ViewMetadata::Ptr> impl_;
+};
+
+class ViewIteratorMap : public ViewIteratorBase {
+public:
+  ViewIteratorMap(const ViewMetadata::Map& views)
+    : ViewIteratorBase(CASS_ITERATOR_TYPE_MATERIALIZED_VIEW_META)
+    , impl_(views) { }
+
+  virtual ViewMetadata* view() const { return impl_.item().get(); }
+  virtual bool next() { return impl_.next(); }
+
+private:
+  MapIteratorImpl<ViewMetadata::Ptr> impl_;
+};
+
+inline bool operator<(const ViewMetadata::Ptr& a, const ViewMetadata::Ptr& b) {
+  return a->name() < b->name();
+}
+
+inline  bool operator<(const ViewMetadata::Ptr& a, const std::string& b) {
+  return a->name() < b;
+}
+
+inline bool operator==(const ViewMetadata::Ptr& a, const ViewMetadata::Ptr& b) {
+  return a->name() == b->name();
+}
+
+class TableMetadata : public TableMetadataBase {
+public:
+  typedef SharedRefPtr<TableMetadata> Ptr;
+  typedef std::map<std::string, Ptr> Map;
+  typedef std::vector<Ptr> Vec;
+  typedef std::vector<std::string> KeyAliases;
+
+  static const TableMetadata::Ptr NIL;
+
+  TableMetadata(const MetadataConfig& config, const std::string& name,
+                const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+
+  const ViewMetadata::Vec& views() const { return views_; }
+
+  Iterator* iterator_views() const { return new ViewIteratorVec(views_); }
+  const ViewMetadata* get_view(const std::string& name) const;
+  void add_view(const ViewMetadata::Ptr& view);
+  void drop_view(const std::string& name);
+  void sort_views();
+
+  void key_aliases(const NativeDataTypes& native_types, KeyAliases* output) const;
+
+private:
+  ViewMetadata::Vec views_;
 };
 
 class KeyspaceMetadata : public MetadataBase {
@@ -348,7 +434,7 @@ public:
   public:
    TableIterator(const TableIterator::Collection& collection)
      : MetadataIteratorImpl<MapIteratorImpl<TableMetadata::Ptr> >(CASS_ITERATOR_TYPE_TABLE_META, collection) { }
-    const TableMetadata* table() const { return impl_.item().get(); }
+    const TableMetadata* table() const { return static_cast<TableMetadata*>(impl_.item().get()); }
   };
 
   class TypeIterator : public MetadataIteratorImpl<MapIteratorImpl<UserType::Ptr> > {
@@ -375,6 +461,7 @@ public:
   KeyspaceMetadata(const std::string& name)
     : MetadataBase(name)
     , tables_(new TableMetadata::Map)
+    , views_(new ViewMetadata::Map)
     , user_types_(new UserType::Map)
     , functions_(new FunctionMetadata::Map)
     , aggregates_(new AggregateMetadata::Map) { }
@@ -386,10 +473,16 @@ public:
   const UserType::Map& user_types() const { return *user_types_; }
 
   Iterator* iterator_tables() const { return new TableIterator(*tables_); }
-  const TableMetadata* get_table(const std::string& table_name) const;
-  const TableMetadata::Ptr& get_or_create_table(const std::string& name);
+  const TableMetadata* get_table(const std::string& name) const;
+  const TableMetadata::Ptr& get_table(const std::string& name);
   void add_table(const TableMetadata::Ptr& table);
-  void drop_table(const std::string& table_name);
+
+  Iterator* iterator_views() const { return new ViewIteratorMap(*views_); }
+  const ViewMetadata* get_view(const std::string& name) const;
+  const ViewMetadata::Ptr& get_view(const std::string& name);
+  void add_view(const ViewMetadata::Ptr& view);
+
+  void drop_table_or_view(const std::string& table_name);
 
   Iterator* iterator_user_types() const { return new TypeIterator(*user_types_); }
   const UserType* get_user_type(const std::string& type_name) const;
@@ -414,6 +507,7 @@ private:
   OptionsMap strategy_options_;
 
   CopyOnWritePtr<TableMetadata::Map> tables_;
+  CopyOnWritePtr<ViewMetadata::Map> views_;
   CopyOnWritePtr<UserType::Map> user_types_;
   CopyOnWritePtr<FunctionMetadata::Map> functions_;
   CopyOnWritePtr<AggregateMetadata::Map> aggregates_;
@@ -468,13 +562,15 @@ public:
   SchemaSnapshot schema_snapshot() const;
 
   void update_keyspaces(ResultResponse* result);
-  void update_tables(ResultResponse* tables_result, ResultResponse* columns_result);
+  void update_tables(ResultResponse* result);
+  void update_views(ResultResponse* result);
+  void update_columns(ResultResponse* result);
   void update_user_types(ResultResponse* result);
   void update_functions(ResultResponse* result);
   void update_aggregates(ResultResponse* result);
 
   void drop_keyspace(const std::string& keyspace_name);
-  void drop_table(const std::string& keyspace_name, const std::string& table_name);
+  void drop_table_or_view(const std::string& keyspace_name, const std::string& table_or_view_name);
   void drop_user_type(const std::string& keyspace_name, const std::string& type_name);
   void drop_function(const std::string& keyspace_name, const std::string& full_function_name);
   void drop_aggregate(const std::string& keyspace_name, const std::string& full_aggregate_name);
@@ -517,13 +613,15 @@ private:
     const KeyspaceMetadata::MapPtr& keyspaces() const { return keyspaces_; }
 
     void update_keyspaces(const MetadataConfig& config, ResultResponse* result, KeyspaceMetadata::Map& updates);
-    void update_tables(const MetadataConfig& config, ResultResponse* tables_result, ResultResponse* columns_result);
+    void update_tables(const MetadataConfig& config, ResultResponse* result);
+    void update_views(const MetadataConfig& config, ResultResponse* result);
+    void update_columns(const MetadataConfig& config, ResultResponse* result);
     void update_user_types(const MetadataConfig& config, ResultResponse* result);
     void update_functions(const MetadataConfig& config, ResultResponse* result);
     void update_aggregates(const MetadataConfig& config, ResultResponse* result);
 
     void drop_keyspace(const std::string& keyspace_name);
-    void drop_table(const std::string& keyspace_name, const std::string& table_name);
+    void drop_table_or_view(const std::string& keyspace_name, const std::string& table_or_view_name);
     void drop_user_type(const std::string& keyspace_name, const std::string& type_name);
     void drop_function(const std::string& keyspace_name, const std::string& full_function_name);
     void drop_aggregate(const std::string& keyspace_name, const std::string& full_aggregate_name);
@@ -537,8 +635,6 @@ private:
     }
 
   private:
-    void update_columns(const MetadataConfig& config, ResultResponse* result);
-
     KeyspaceMetadata* get_or_create_keyspace(const std::string& name);
 
   private:

@@ -42,6 +42,14 @@
 #define USER_DEFINED_AGGREGATE_NAME "user_defined_aggregate"
 #define USER_DEFINED_AGGREGATE_FINAL_FUNCTION_NAME "uda_udf_final"
 
+namespace std {
+
+std::ostream& operator<<(std::ostream& os, const CassString& str) {
+  return os << std::string(str.data, str.length);
+}
+
+} // namespace std
+
 /**
  * Schema Metadata Test Class
  *
@@ -437,6 +445,86 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     const CassKeyspaceMeta* ks_meta = cass_schema_meta_keyspace_by_name(schema_meta_, SIMPLE_STRATEGY_KEYSPACE_NAME);
     table_meta = cass_keyspace_meta_table_by_name(ks_meta, ALL_DATA_TYPES_TABLE_NAME);
     BOOST_CHECK(!table_meta);
+  }
+
+  void verify_materialized_view_count(const std::string& keyspace_name,
+                                      size_t count) {
+    const CassKeyspaceMeta* keyspace_meta = schema_get_keyspace("materialized_views");
+    test_utils::CassIteratorPtr iterator(cass_iterator_materialized_views_from_keyspace_meta(keyspace_meta));
+
+    size_t actual_count = 0;
+    while (cass_iterator_next(iterator.get())) {
+      actual_count++;
+    }
+    BOOST_CHECK_EQUAL(actual_count, count);
+
+  }
+
+  void verify_materialized_view(const CassMaterializedViewMeta* view,
+                                const std::string& view_name,
+                                const std::string& view_base_table_name,
+                                const std::string& view_columns,
+                                const std::string& view_partition_key,
+                                const std::string& view_clustering_key) {
+    BOOST_REQUIRE(view != NULL);
+
+    CassString name;
+    cass_materialized_view_meta_name(view, &name.data, &name.length);
+    BOOST_CHECK(name == CassString(view_name.c_str()));
+
+    CassString base_table_name;
+    cass_materialized_view_meta_base_table_name(view, &base_table_name.data, &base_table_name.length);
+    BOOST_CHECK(base_table_name == CassString(view_base_table_name.c_str()));
+
+    std::vector<std::string> columns;
+    cass::explode(view_columns, columns);
+    BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_column_count(view),  columns.size());
+
+    test_utils::CassIteratorPtr iterator(cass_iterator_columns_from_materialized_view_meta(view));
+    for (std::vector<std::string>::const_iterator i = columns.begin(),
+         end = columns.end(); i != end; ++i) {
+      BOOST_REQUIRE(cass_iterator_next(iterator.get()));
+      const CassColumnMeta* column = cass_iterator_get_column_meta(iterator.get());
+
+      CassString column_name;
+      cass_column_meta_name(column, &column_name.data, &column_name.length);
+
+      BOOST_CHECK(column_name == CassString(i->c_str()));
+    }
+    BOOST_CHECK(cass_iterator_next(iterator.get()) == cass_false);
+
+    for (size_t i = 0; i < columns.size(); ++i) {
+      const CassColumnMeta* column = cass_materialized_view_meta_column(view, i);
+
+      CassString column_name;
+      cass_column_meta_name(column, &column_name.data, &column_name.length);
+
+      BOOST_CHECK_EQUAL(column_name, CassString(columns[i].c_str()));
+    }
+
+    std::vector<std::string> partition_key;
+    cass::explode(view_partition_key, partition_key);
+    BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_partition_key_count(view), partition_key.size());
+    for (size_t i = 0; i < partition_key.size(); ++i) {
+      const CassColumnMeta* column = cass_materialized_view_meta_partition_key(view, i);
+
+      CassString column_name;
+      cass_column_meta_name(column, &column_name.data, &column_name.length);
+
+      BOOST_CHECK_EQUAL(column_name, CassString(partition_key[i].c_str()));
+    }
+
+    std::vector<std::string> clustering_key;
+    cass::explode(view_clustering_key, clustering_key);
+    BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_clustering_key_count(view), clustering_key.size());
+    for (size_t i = 0; i < clustering_key.size(); ++i) {
+      const CassColumnMeta* column = cass_materialized_view_meta_clustering_key(view, i);
+
+      CassString column_name;
+      cass_column_meta_name(column, &column_name.data, &column_name.length);
+
+      BOOST_CHECK_EQUAL(column_name, CassString(clustering_key[i].c_str()));
+    }
   }
 
   const std::set<std::string>& keyspace_fields() {
@@ -972,5 +1060,122 @@ BOOST_AUTO_TEST_CASE(disable) {
   test_utils::execute_query_with_error(session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % "ks2"));
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+/**
+ * @since 2.3.0
+ * @jira_ticket CPP-331
+ * @test_category schema
+ * @cassandra_version 3.0.x
+ */
+BOOST_AUTO_TEST_CASE(materialized_views) {
+  {
+    if (version < "3.0.0") return;
 
+    test_utils::execute_query(session, "CREATE KEYSPACE materialized_views WITH replication = "
+                                       "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+
+    test_utils::execute_query(session, "CREATE TABLE materialized_views.table1 (key1 text, value1 int, PRIMARY KEY(key1))");
+    test_utils::execute_query(session, "CREATE TABLE materialized_views.table2 (key1 text, key2 int, value1 int, PRIMARY KEY(key1, key2))");
+
+    refresh_schema_meta();
+
+    verify_materialized_view_count("materialized_views", 0);
+
+    const CassTableMeta* table_meta = schema_get_table("materialized_views", "table1");
+    BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 0);
+    BOOST_CHECK(cass_table_meta_materialized_view_by_name(table_meta, "invalid") == NULL);
+    BOOST_CHECK(cass_table_meta_materialized_view(table_meta, 0) == NULL);
+  }
+
+  // Simple materialized view
+  {
+    test_utils::execute_query(session, "CREATE MATERIALIZED VIEW materialized_views.view1 AS "
+                                       "SELECT key1 FROM materialized_views.table1 WHERE value1 IS NOT NULL "
+                                       "PRIMARY KEY(value1, key1)");
+    refresh_schema_meta();
+
+    verify_materialized_view_count("materialized_views", 1);
+
+    const CassTableMeta* table_meta = schema_get_table("materialized_views", "table1");
+    BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 1);
+
+    verify_materialized_view(cass_table_meta_materialized_view_by_name(table_meta, "view1"),
+                             "view1", "table1",
+                             "value1,key1", "value1", "key1");
+  }
+
+  // Materialized view with composite partition key
+  {
+    test_utils::execute_query(session, "CREATE MATERIALIZED VIEW materialized_views.view2 AS "
+                                       "SELECT key1 FROM materialized_views.table2 WHERE key2 IS NOT NULL AND value1 IS NOT NULL "
+                                       "PRIMARY KEY((value1, key2), key1)");
+
+    refresh_schema_meta();
+
+    verify_materialized_view_count("materialized_views", 2);
+
+    const CassTableMeta* table_meta = schema_get_table("materialized_views", "table2");
+    BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 1);
+
+    verify_materialized_view(cass_table_meta_materialized_view_by_name(table_meta, "view2"),
+                             "view2", "table2",
+                             "value1,key2,key1", "value1,key2", "key1");
+  }
+
+  // Materialized view with composite clustering key
+  {
+    test_utils::execute_query(session, "CREATE MATERIALIZED VIEW materialized_views.view3 AS "
+                                       "SELECT key1 FROM materialized_views.table2 WHERE key2 IS NOT NULL AND value1 IS NOT NULL "
+                                       "PRIMARY KEY(value1, key2, key1) "
+                                       "WITH CLUSTERING ORDER BY (key2 DESC)");
+
+    refresh_schema_meta();
+
+    verify_materialized_view_count("materialized_views", 3);
+
+    const CassTableMeta* table_meta = schema_get_table("materialized_views", "table2");
+    BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 2);
+
+    verify_materialized_view(cass_table_meta_materialized_view_by_name(table_meta, "view3"),
+                             "view3", "table2",
+                             "value1,key2,key1", "value1", "key2,key1");
+  }
+
+  // Iterator
+  {
+    const CassTableMeta* table_meta = schema_get_table("materialized_views", "table2");
+
+    test_utils::CassIteratorPtr iterator(cass_iterator_materialized_views_from_table_meta(table_meta));
+
+    while (cass_iterator_next(iterator.get())) {
+      const CassMaterializedViewMeta* view_meta = cass_iterator_get_materialized_view_meta(iterator.get());
+      BOOST_REQUIRE(view_meta != NULL);
+
+      CassString name;
+      cass_materialized_view_meta_name(view_meta, &name.data, &name.length);
+
+      if (name == CassString("view2")) {
+        verify_materialized_view(view_meta, "view2", "table2",
+                                 "value1,key2,key1", "value1,key2", "key1");
+      } else if (name == CassString("view3")) {
+        verify_materialized_view(view_meta, "view3", "table2",
+                                 "value1,key2,key1", "value1", "key2,key1");
+      } else {
+        BOOST_CHECK(false);
+      }
+    }
+  }
+
+  // Drop view
+  {
+    test_utils::execute_query(session, "DROP MATERIALIZED VIEW materialized_views.view2");
+
+    refresh_schema_meta();
+
+    verify_materialized_view_count("materialized_views", 2);
+
+    const CassTableMeta* table_meta = schema_get_table("materialized_views", "table2");
+    BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 1);
+  }
+}
+
+BOOST_AUTO_TEST_SUITE_END()

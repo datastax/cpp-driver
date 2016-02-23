@@ -74,6 +74,7 @@ EXTERNAL_TYPE(cass::SslContext, CassSsl);
 EXTERNAL_TYPE(cass::Metadata::SchemaSnapshot, CassSchemaMeta);
 EXTERNAL_TYPE(cass::KeyspaceMetadata, CassKeyspaceMeta);
 EXTERNAL_TYPE(cass::TableMetadata, CassTableMeta);
+EXTERNAL_TYPE(cass::ViewMetadata, CassMaterializedViewMeta);
 EXTERNAL_TYPE(cass::ColumnMetadata, CassColumnMeta);
 EXTERNAL_TYPE(cass::FunctionMetadata, CassFunctionMeta);
 EXTERNAL_TYPE(cass::AggregateMetadata, CassAggregateMeta);

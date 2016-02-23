@@ -65,8 +65,8 @@ bool from_hex(const std::string& hex, std::string* result) {
 }
 
 DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
-                                           const NativeDataTypes& native_types,
-                                           KeyspaceMetadata* keyspace) {
+                                                const NativeDataTypes& native_types,
+                                                KeyspaceMetadata* keyspace) {
   Parser parser(type, 0);
   std::string type_name;
   Parser::TypeParamsVec params;
