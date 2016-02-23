@@ -84,6 +84,8 @@ bool is_valid_cql_id(const std::string& str);
 
 std::string& to_cql_id(std::string& str);
 
+std::string& escape_id(std::string& str);
+
 } // namespace cass
 
 #endif

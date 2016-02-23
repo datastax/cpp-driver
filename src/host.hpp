@@ -62,6 +62,10 @@ public:
     return compare(other) >= 0;
   }
 
+  bool operator <(const VersionNumber& other) const {
+    return compare(other) < 0;
+  }
+
   int compare(const VersionNumber& other) const {
     if (major_ < other.major_) return -1;
     if (major_ > other.major_) return  1;

@@ -34,6 +34,8 @@
 
 namespace cass {
 
+class ColumnMetadata;
+class TableMetadata;
 class KeyspaceMetadata;
 class Row;
 class ResultResponse;
@@ -112,8 +114,8 @@ public:
     : name_(name) {}
 
   MetadataField(const std::string& name,
-                      const Value& value,
-                      const SharedRefPtr<RefBuffer>& buffer)
+                const Value& value,
+                const SharedRefPtr<RefBuffer>& buffer)
     : name_(name)
     , value_(value)
     , buffer_(buffer) {}
@@ -259,6 +261,43 @@ private:
   Value init_cond_;
 };
 
+class IndexMetadata : public MetadataBase, public RefCounted<IndexMetadata> {
+public:
+  typedef SharedRefPtr<IndexMetadata> Ptr;
+  typedef std::map<std::string, Ptr> Map;
+  typedef std::vector<Ptr> Vec;
+
+  CassIndexType type() const { return type_; }
+  const std::string& target() const { return target_; }
+  const Value* options() const { return options_; }
+
+  IndexMetadata(const std::string& index_name)
+    : MetadataBase(index_name) { }
+
+  static IndexMetadata::Ptr from_row(const std::string& index_name,
+                                     const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+  void update(StringRef index_type, const Value* options);
+
+  static IndexMetadata::Ptr from_legacy(const MetadataConfig& config,
+                                        const std::string& index_name, const ColumnMetadata* column,
+                                        const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+  void update_legacy(StringRef index_type, const ColumnMetadata* column, const Value* options);
+
+
+private:
+  static CassIndexType index_type_from_string(StringRef index_type);
+  static std::string target_from_legacy(const ColumnMetadata* column,
+                                        const Value* options);
+
+private:
+  CassIndexType type_;
+  std::string target_;
+  const Value* options_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(IndexMetadata);
+};
+
 class ColumnMetadata : public MetadataBase, public RefCounted<ColumnMetadata> {
 public:
   typedef SharedRefPtr<ColumnMetadata> Ptr;
@@ -282,6 +321,7 @@ public:
   ColumnMetadata(const MetadataConfig& config,
                  const std::string& name,
                  KeyspaceMetadata* keyspace,
+                 TableMetadata* table,
                  const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
   CassColumnType type() const { return type_; }
@@ -310,6 +350,13 @@ public:
     const ColumnMetadata* column() const { return impl_.item().get(); }
   };
 
+  class IndexIterator : public MetadataIteratorImpl<VecIteratorImpl<IndexMetadata::Ptr> > {
+  public:
+  IndexIterator(const IndexIterator::Collection& collection)
+    : MetadataIteratorImpl<VecIteratorImpl<IndexMetadata::Ptr> >(CASS_ITERATOR_TYPE_INDEX_META, collection) { }
+    const IndexMetadata* index() const { return impl_.item().get(); }
+  };
+
   TableMetadata(const std::string& name)
     : MetadataBase(name) { }
 
@@ -320,19 +367,27 @@ public:
   const ColumnMetadata::Vec& partition_key() const { return partition_key_; }
   const ColumnMetadata::Vec& clustering_key() const { return clustering_key_; }
 
+  const IndexMetadata::Vec& indexes() const { return indexes_; }
+
   Iterator* iterator_columns() const { return new ColumnIterator(columns_); }
   const ColumnMetadata* get_column(const std::string& name) const;
-  const ColumnMetadata::Ptr& get_or_create_column(const std::string& name);
   void add_column(const ColumnMetadata::Ptr& column);
   void clear_columns();
   void build_keys_and_sort(const MetadataConfig& config);
   void key_aliases(const NativeDataTypes& native_types, KeyAliases* output) const;
+
+  Iterator* iterator_indexes() const { return new IndexIterator(indexes_); }
+  const IndexMetadata* get_index(const std::string& name) const;
+  void add_index(const IndexMetadata::Ptr& index);
+  void clear_indexes();
 
 private:
   ColumnMetadata::Vec columns_;
   ColumnMetadata::Map columns_by_name_;
   ColumnMetadata::Vec partition_key_;
   ColumnMetadata::Vec clustering_key_;
+  IndexMetadata::Vec indexes_;
+  IndexMetadata::Map indexes_by_name_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(TableMetadata);
@@ -468,7 +523,9 @@ public:
   SchemaSnapshot schema_snapshot() const;
 
   void update_keyspaces(ResultResponse* result);
-  void update_tables(ResultResponse* tables_result, ResultResponse* columns_result);
+  void update_tables(ResultResponse* tables_result,
+                     ResultResponse* columns_result,
+                     ResultResponse* indexes_result);
   void update_user_types(ResultResponse* result);
   void update_functions(ResultResponse* result);
   void update_aggregates(ResultResponse* result);
@@ -517,7 +574,10 @@ private:
     const KeyspaceMetadata::MapPtr& keyspaces() const { return keyspaces_; }
 
     void update_keyspaces(const MetadataConfig& config, ResultResponse* result, KeyspaceMetadata::Map& updates);
-    void update_tables(const MetadataConfig& config, ResultResponse* tables_result, ResultResponse* columns_result);
+    void update_tables(const MetadataConfig& config,
+                       ResultResponse* tables_result,
+                       ResultResponse* columns_result,
+                       ResultResponse* indexes_result);
     void update_user_types(const MetadataConfig& config, ResultResponse* result);
     void update_functions(const MetadataConfig& config, ResultResponse* result);
     void update_aggregates(const MetadataConfig& config, ResultResponse* result);
@@ -538,6 +598,7 @@ private:
 
   private:
     void update_columns(const MetadataConfig& config, ResultResponse* result);
+    void update_indexes(const MetadataConfig& config, ResultResponse* result);
 
     KeyspaceMetadata* get_or_create_keyspace(const std::string& name);
 

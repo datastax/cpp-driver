@@ -42,6 +42,15 @@
 #define USER_DEFINED_AGGREGATE_NAME "user_defined_aggregate"
 #define USER_DEFINED_AGGREGATE_FINAL_FUNCTION_NAME "uda_udf_final"
 
+namespace std {
+
+std::ostream& operator<<(std::ostream& os, const std::pair<std::string, std::string>& p)
+{
+  return os << "(\"" << p.first << "\", \"" << p.second << "\")";
+}
+
+} // namespace std
+
 /**
  * Schema Metadata Test Class
  *
@@ -220,6 +229,46 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
       verify_value(cass_iterator_get_map_value(itr.get()), i->second);
     }
   }
+
+  void verify_index(const CassIndexMeta* index_meta,
+                    const std::string& index_name, CassIndexType index_type,
+                    const std::string& index_target, const std::map<std::string, std::string>& index_options) {
+    BOOST_REQUIRE(index_meta != NULL);
+
+    CassString name;
+    cass_index_meta_name(index_meta, &name.data, &name.length);
+    BOOST_CHECK(name == CassString(index_name.c_str()));
+
+    CassString target;
+    cass_index_meta_target(index_meta, &target.data, &target.length);
+    BOOST_CHECK(target == CassString(index_target.c_str()));
+
+    CassIndexType type = cass_index_meta_type(index_meta);
+    BOOST_CHECK(type == index_type);
+
+    const CassValue* options = cass_index_meta_options(index_meta);
+
+    if (cass_value_is_null(options)) {
+      BOOST_CHECK(index_options.empty());
+      return;
+    }
+
+    test_utils::CassIteratorPtr iterator(cass_iterator_from_map(options));
+
+    std::map<std::string, std::string> actual_index_options;
+    while (cass_iterator_next(iterator.get())) {
+      CassString k, v;
+      const CassValue* key = cass_iterator_get_map_key(iterator.get());
+      cass_value_get_string(key, &k.data, &k.length);
+      const CassValue* value = cass_iterator_get_map_value(iterator.get());
+      cass_value_get_string(value, &v.data, &v.length);
+      actual_index_options[std::string(k.data, k.length)] = std::string(v.data, v.length);
+    }
+
+    BOOST_CHECK_EQUAL_COLLECTIONS(actual_index_options.begin(), actual_index_options.end(),
+                                  index_options.begin(), index_options.end());
+  }
+
 
   const std::set<std::string>& column_fields() {
     static std::set<std::string> fields;
@@ -970,6 +1019,87 @@ BOOST_AUTO_TEST_CASE(disable) {
   // Drop the keyspace (ignore any and all errors)
   test_utils::execute_query_with_error(session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % "ks1"));
   test_utils::execute_query_with_error(session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % "ks2"));
+}
+
+
+/**
+ * Test secondary indexes
+ *
+ * Verifies that index metadata is correctly updated and returned.
+ *
+ * @since 2.3.0
+ * @jira_ticket CPP-321
+ * @test_category schema
+ * @cassandra_version 1.2.x
+ */
+BOOST_AUTO_TEST_CASE(indexes) {
+  {
+    test_utils::execute_query(session, "CREATE KEYSPACE indexes WITH replication = "
+                                       "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+
+    test_utils::execute_query(session, "CREATE TABLE indexes.table1 (key1 text, value1 int, value2 map<text, text>,  PRIMARY KEY(key1))");
+
+    refresh_schema_meta();
+    const CassTableMeta* table_meta = schema_get_table("indexes", "table1");
+
+    BOOST_CHECK(cass_table_meta_index_count(table_meta) == 0);
+    BOOST_CHECK(cass_table_meta_index_by_name(table_meta, "invalid") == NULL);
+    BOOST_CHECK(cass_table_meta_index(table_meta, 0) == NULL);
+  }
+
+  // Index
+  {
+    test_utils::execute_query(session, "CREATE INDEX index1 ON indexes.table1 (value1)");
+
+    refresh_schema_meta();
+    const CassTableMeta* table_meta = schema_get_table("indexes", "table1");
+
+    BOOST_REQUIRE(cass_table_meta_index_count(table_meta) == 1);
+    std::map<std::string, std::string> index_options;
+    if (version >= "3.0.0") {
+      index_options["target"] = "value1";
+    }
+    verify_index(cass_table_meta_index_by_name(table_meta, "index1"),
+                 "index1", CASS_INDEX_TYPE_COMPOSITES, "value1", index_options);
+    verify_index(cass_table_meta_index(table_meta, 0),
+                 "index1", CASS_INDEX_TYPE_COMPOSITES, "value1", index_options);
+  }
+
+  // Index on map keys
+  {
+    test_utils::execute_query(session, "CREATE INDEX index2 ON indexes.table1 (KEYS(value2))");
+
+    refresh_schema_meta();
+    const CassTableMeta* table_meta = schema_get_table("indexes", "table1");
+
+    BOOST_REQUIRE(cass_table_meta_index_count(table_meta) == 2);
+
+    std::map<std::string, std::string> index_options;
+    if (version >= "3.0.0") {
+      index_options["target"] = "keys(value2)";
+    } else {
+      index_options["index_keys"] = "";
+    }
+    verify_index(cass_table_meta_index_by_name(table_meta, "index2"),
+                 "index2", CASS_INDEX_TYPE_COMPOSITES, "keys(value2)", index_options);
+    verify_index(cass_table_meta_index(table_meta, 1),
+                 "index2", CASS_INDEX_TYPE_COMPOSITES, "keys(value2)", index_options);
+  }
+
+  // Iterator
+  {
+    const CassTableMeta* table_meta = schema_get_table("indexes", "table1");
+
+    test_utils::CassIteratorPtr iterator(cass_iterator_indexes_from_table_meta(table_meta));
+    while (cass_iterator_next(iterator.get())) {
+      const CassIndexMeta* index_meta = cass_iterator_get_index_meta(iterator.get());
+      BOOST_REQUIRE(index_meta != NULL);
+
+      CassString name;
+      cass_index_meta_name(index_meta, &name.data, &name.length);
+      BOOST_CHECK(name == CassString("index1") || name == CassString("index2"));
+    }
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

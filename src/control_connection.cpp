@@ -48,6 +48,7 @@
 #define SELECT_KEYSPACES_30 "SELECT * FROM system_schema.keyspaces"
 #define SELECT_TABLES_30 "SELECT * FROM system_schema.tables"
 #define SELECT_COLUMNS_30 "SELECT * FROM system_schema.columns"
+#define SELECT_INDEXES_30 "SELECT * FROM system_schema.indexes"
 #define SELECT_USERTYPES_30 "SELECT * FROM system_schema.types"
 #define SELECT_FUNCTIONS_30 "SELECT * FROM system_schema.functions"
 #define SELECT_AGGREGATES_30 "SELECT * FROM system_schema.aggregates"
@@ -470,6 +471,7 @@ void ControlConnection::query_meta_schema() {
     handler->execute_query("keyspaces", SELECT_KEYSPACES_30);
     handler->execute_query("tables", SELECT_TABLES_30);
     handler->execute_query("columns", SELECT_COLUMNS_30);
+    handler->execute_query("indexes", SELECT_INDEXES_30);
     handler->execute_query("user_types", SELECT_USERTYPES_30);
     handler->execute_query("functions", SELECT_FUNCTIONS_30);
     handler->execute_query("aggregates", SELECT_AGGREGATES_30);
@@ -510,7 +512,9 @@ void ControlConnection::on_query_meta_schema(ControlConnection* control_connecti
   if (MultipleRequestHandler::get_result_response(responses, "tables", &tables_result)) {
     ResultResponse* columns_result = NULL;
     MultipleRequestHandler::get_result_response(responses, "columns", &columns_result);
-    session->metadata().update_tables(tables_result, columns_result);
+    ResultResponse* indexes_result = NULL;
+    MultipleRequestHandler::get_result_response(responses, "indexes", &indexes_result);
+    session->metadata().update_tables(tables_result, columns_result, indexes_result);
   }
 
   ResultResponse* user_types_result;
@@ -749,6 +753,7 @@ void ControlConnection::refresh_table(const StringRef& keyspace_name,
                                       const StringRef& table_name) {
   std::string table_query;
   std::string column_query;
+  std::string index_query;
 
   if (session_->metadata().cassandra_version() >= VersionNumber(3, 0, 0)) {
     table_query.assign(SELECT_TABLES_30);
@@ -759,7 +764,11 @@ void ControlConnection::refresh_table(const StringRef& keyspace_name,
     column_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
         .append("' AND table_name='").append(table_name.data(), table_name.size()).append("'");
 
-    LOG_DEBUG("Refreshing table %s; %s", table_query.c_str(), column_query.c_str());
+    index_query.assign(SELECT_INDEXES_30);
+    index_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+        .append("' AND table_name='").append(table_name.data(), table_name.size()).append("'");
+
+    LOG_DEBUG("Refreshing table %s; %s; %s", table_query.c_str(), column_query.c_str(), index_query.c_str());
   } else {
     table_query.assign(SELECT_COLUMN_FAMILIES_20);
     table_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
@@ -778,6 +787,9 @@ void ControlConnection::refresh_table(const StringRef& keyspace_name,
                                                             RefreshTableData(keyspace_name.to_string(), table_name.to_string())));
   handler->execute_query("tables", table_query);
   handler->execute_query("columns", column_query);
+  if (!index_query.empty()) {
+    handler->execute_query("indexes", index_query);
+  }
 }
 
 void ControlConnection::on_refresh_table(ControlConnection* control_connection,
@@ -793,9 +805,11 @@ void ControlConnection::on_refresh_table(ControlConnection* control_connection,
 
   ResultResponse* columns_result = NULL;
   MultipleRequestHandler::get_result_response(responses, "columns", &columns_result);
+  ResultResponse* indexes_result = NULL;
+  MultipleRequestHandler::get_result_response(responses, "indexes", &indexes_result);
 
   Session* session = control_connection->session_;
-  session->metadata().update_tables(tables_result, columns_result);
+  session->metadata().update_tables(tables_result, columns_result, indexes_result);
 }
 
 
