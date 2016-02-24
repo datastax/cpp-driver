@@ -523,9 +523,9 @@ public:
   SchemaSnapshot schema_snapshot() const;
 
   void update_keyspaces(ResultResponse* result);
-  void update_tables(ResultResponse* tables_result,
-                     ResultResponse* columns_result,
-                     ResultResponse* indexes_result);
+  void update_tables(ResultResponse* result);
+  void update_columns(ResultResponse* result);
+  void update_indexes(ResultResponse* result);
   void update_user_types(ResultResponse* result);
   void update_functions(ResultResponse* result);
   void update_aggregates(ResultResponse* result);
@@ -574,10 +574,9 @@ private:
     const KeyspaceMetadata::MapPtr& keyspaces() const { return keyspaces_; }
 
     void update_keyspaces(const MetadataConfig& config, ResultResponse* result, KeyspaceMetadata::Map& updates);
-    void update_tables(const MetadataConfig& config,
-                       ResultResponse* tables_result,
-                       ResultResponse* columns_result,
-                       ResultResponse* indexes_result);
+    void update_tables(const MetadataConfig& config, ResultResponse* result);
+    void update_columns(const MetadataConfig& config, ResultResponse* result);
+    void update_indexes(const MetadataConfig& config, ResultResponse* result);
     void update_user_types(const MetadataConfig& config, ResultResponse* result);
     void update_functions(const MetadataConfig& config, ResultResponse* result);
     void update_aggregates(const MetadataConfig& config, ResultResponse* result);
@@ -597,8 +596,6 @@ private:
     }
 
   private:
-    void update_columns(const MetadataConfig& config, ResultResponse* result);
-    void update_indexes(const MetadataConfig& config, ResultResponse* result);
 
     KeyspaceMetadata* get_or_create_keyspace(const std::string& name);
 

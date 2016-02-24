@@ -510,11 +510,17 @@ void ControlConnection::on_query_meta_schema(ControlConnection* control_connecti
 
   ResultResponse* tables_result;
   if (MultipleRequestHandler::get_result_response(responses, "tables", &tables_result)) {
-    ResultResponse* columns_result = NULL;
-    MultipleRequestHandler::get_result_response(responses, "columns", &columns_result);
-    ResultResponse* indexes_result = NULL;
-    MultipleRequestHandler::get_result_response(responses, "indexes", &indexes_result);
-    session->metadata().update_tables(tables_result, columns_result, indexes_result);
+    session->metadata().update_tables(tables_result);
+  }
+
+  ResultResponse* columns_result;
+  if (MultipleRequestHandler::get_result_response(responses, "columns", &columns_result)) {
+    session->metadata().update_columns(columns_result);
+  }
+
+  ResultResponse* indexes_result;
+  if (MultipleRequestHandler::get_result_response(responses, "indexes", &indexes_result)) {
+    session->metadata().update_indexes(indexes_result);
   }
 
   ResultResponse* user_types_result;
@@ -803,13 +809,18 @@ void ControlConnection::on_refresh_table(ControlConnection* control_connection,
     return;
   }
 
-  ResultResponse* columns_result = NULL;
-  MultipleRequestHandler::get_result_response(responses, "columns", &columns_result);
-  ResultResponse* indexes_result = NULL;
-  MultipleRequestHandler::get_result_response(responses, "indexes", &indexes_result);
-
   Session* session = control_connection->session_;
-  session->metadata().update_tables(tables_result, columns_result, indexes_result);
+  session->metadata().update_tables(tables_result);
+
+  ResultResponse* columns_result;
+  if (MultipleRequestHandler::get_result_response(responses, "columns", &columns_result)) {
+    session->metadata().update_columns(columns_result);
+  }
+
+  ResultResponse* indexes_result;
+  if (MultipleRequestHandler::get_result_response(responses, "indexes", &indexes_result)) {
+    session->metadata().update_indexes(indexes_result);
+  }
 }
 
 

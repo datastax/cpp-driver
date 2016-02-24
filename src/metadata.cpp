@@ -27,7 +27,7 @@
 #include "row_iterator.hpp"
 #include "scoped_lock.hpp"
 #include "data_type_parser.hpp"
-#include "util.h"
+#include "utils.hpp"
 #include "value.hpp"
 
 #include "third_party/rapidjson/rapidjson/document.h"
@@ -660,16 +660,36 @@ void Metadata::update_keyspaces(ResultResponse* result) {
   }
 }
 
-void Metadata::update_tables(ResultResponse* tables_result,
-                             ResultResponse* columns_result,
-                             ResultResponse* indexes_result) {
+void Metadata::update_tables(ResultResponse* result) {
   schema_snapshot_version_++;
 
   if (is_front_buffer()) {
     ScopedMutex l(&mutex_);
-    updating_->update_tables(config_, tables_result, columns_result, indexes_result);
+    updating_->update_tables(config_, result);
   } else {
-    updating_->update_tables(config_, tables_result, columns_result, indexes_result);
+    updating_->update_tables(config_, result);
+  }
+}
+
+void Metadata::update_columns(ResultResponse* result) {
+  schema_snapshot_version_++;
+
+  if (is_front_buffer()) {
+    ScopedMutex l(&mutex_);
+    updating_->update_columns(config_, result);
+  } else {
+    updating_->update_columns(config_, result);
+  }
+}
+
+void Metadata::update_indexes(ResultResponse* result) {
+  schema_snapshot_version_++;
+
+  if (is_front_buffer()) {
+    ScopedMutex l(&mutex_);
+    updating_->update_indexes(config_, result);
+  } else {
+    updating_->update_indexes(config_, result);
   }
 }
 
@@ -1625,14 +1645,11 @@ void Metadata::InternalData::update_keyspaces(const MetadataConfig& config,
   }
 }
 
-void Metadata::InternalData::update_tables(const MetadataConfig& config,
-                                           ResultResponse* tables_result,
-                                           ResultResponse* columns_result,
-                                           ResultResponse* indexes_result) {
-  SharedRefPtr<RefBuffer> buffer = tables_result->buffer();
+void Metadata::InternalData::update_tables(const MetadataConfig& config, ResultResponse* result) {
+  SharedRefPtr<RefBuffer> buffer = result->buffer();
 
-  tables_result->decode_first_row();
-  ResultIterator rows(tables_result);
+  result->decode_first_row();
+  ResultIterator rows(result);
 
   std::string keyspace_name;
   std::string table_name;
@@ -1654,14 +1671,6 @@ void Metadata::InternalData::update_tables(const MetadataConfig& config,
     }
 
     keyspace->add_table(TableMetadata::Ptr(new TableMetadata(config, table_name, buffer, row)));
-  }
-
-  if (columns_result != NULL) {
-    update_columns(config, columns_result);
-  }
-
-  if (indexes_result != NULL) {
-    update_indexes(config, indexes_result);
   }
 }
 
