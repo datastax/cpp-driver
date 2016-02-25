@@ -65,6 +65,15 @@ cass_uint32_t cass_schema_meta_snapshot_version(const CassSchemaMeta* schema_met
   return schema_meta->version();
 }
 
+
+CassVersion cass_schema_meta_version(const CassSchemaMeta* schema_meta) {
+  CassVersion version;
+  version.major_version = schema_meta->cassandra_version().major();
+  version.minor_version = schema_meta->cassandra_version().minor();
+  version.patch_version = schema_meta->cassandra_version().patch();
+  return version;
+}
+
 const CassKeyspaceMeta* cass_schema_meta_keyspace_by_name(const CassSchemaMeta* schema_meta,
                                                const char* keyspace) {
   return CassKeyspaceMeta::to(schema_meta->get_keyspace(keyspace));
@@ -215,6 +224,14 @@ const CassColumnMeta* cass_table_meta_clustering_key(const CassTableMeta* table_
     return NULL;
   }
   return CassColumnMeta::to(table_meta->clustering_key()[index].get());
+}
+
+CassClusteringOrder cass_table_meta_clustering_key_order(const CassTableMeta* table_meta,
+                                                         size_t index) {
+  if (index >= table_meta->clustering_key_order().size()) {
+    return CASS_CLUSTERING_ORDER_NONE;
+  }
+  return table_meta->clustering_key_order()[index];
 }
 
 void cass_column_meta_name(const CassColumnMeta* column_meta,
@@ -567,6 +584,7 @@ Metadata::SchemaSnapshot Metadata::schema_snapshot() const {
   ScopedMutex l(&mutex_);
   return SchemaSnapshot(schema_snapshot_version_,
                         config_.protocol_version,
+                        config_.cassandra_version,
                         front_.keyspaces());
 }
 
@@ -771,7 +789,7 @@ void MetadataBase::add_json_list_field(int protocol_version, const Row* row, con
     return;
   }
 
-  Collection collection(CollectionType::list(SharedRefPtr<DataType>(new DataType(CASS_VALUE_TYPE_TEXT))),
+  Collection collection(CollectionType::list(SharedRefPtr<DataType>(new DataType(CASS_VALUE_TYPE_TEXT)), false),
                         d.Size());
   for (rapidjson::Value::ConstValueIterator i = d.Begin(); i != d.End(); ++i) {
     collection.append(cass::CassString(i->GetString(), i->GetStringLength()));
@@ -818,7 +836,8 @@ const Value* MetadataBase::add_json_map_field(int protocol_version, const Row* r
   }
 
   Collection collection(CollectionType::map(SharedRefPtr<DataType>(new DataType(CASS_VALUE_TYPE_TEXT)),
-                                            SharedRefPtr<DataType>(new DataType(CASS_VALUE_TYPE_TEXT))),
+                                            SharedRefPtr<DataType>(new DataType(CASS_VALUE_TYPE_TEXT)),
+                                            false),
                         2 * d.MemberCount());
   for (rapidjson::Value::ConstMemberIterator i = d.MemberBegin(); i != d.MemberEnd(); ++i) {
     collection.append(CassString(i->name.GetString(), i->name.GetStringLength()));
@@ -862,11 +881,12 @@ void KeyspaceMetadata::drop_table(const std::string& table_name) {
   tables_->erase(table_name);
 }
 
-const UserType::Ptr& KeyspaceMetadata::get_or_create_user_type(const std::string& name) {
+const UserType::Ptr& KeyspaceMetadata::get_or_create_user_type(const std::string& name, bool is_frozen) {
   UserType::Map::iterator i = user_types_->find(name);
   if (i == user_types_->end()) {
     i = user_types_->insert(std::make_pair(name,
-                                           UserType::Ptr(new UserType(MetadataBase::name(), name)))).first;
+                                           UserType::Ptr(new UserType(MetadataBase::name(), name,
+                                                                      is_frozen)))).first;
   }
   return i->second;
 }
@@ -1058,6 +1078,20 @@ void TableMetadata::build_keys_and_sort(const MetadataConfig& config) {
       } else if (column->type() == CASS_COLUMN_TYPE_CLUSTERING_KEY &&
                  column->position() >= 0 &&
                  static_cast<size_t>(column->position()) < clustering_key_.size()) {
+        const Value* value = column->get_field("clustering_order");
+        if (value != NULL ||
+            value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
+          StringRef clustering_order = value->to_string_ref();
+          if (clustering_order.iequals("asc")) {
+            clustering_key_order_.push_back(CASS_CLUSTERING_ORDER_ASC);
+          } else if (clustering_order.iequals("desc")) {
+            clustering_key_order_.push_back(CASS_CLUSTERING_ORDER_DESC);
+          } else {
+            LOG_WARN("Invalid cluster order, '%s', in columns metadata table",
+                     clustering_order.to_string().c_str());
+            clustering_key_order_.push_back(CASS_CLUSTERING_ORDER_NONE);
+          }
+        }
         clustering_key_[column->position()] = column;
       }
     }
@@ -1139,6 +1173,8 @@ void TableMetadata::build_keys_and_sort(const MetadataConfig& config) {
                                                                          clustering_key_.size(),
                                                                          CASS_COLUMN_TYPE_CLUSTERING_KEY,
                                                                          comparator->types()[i])));
+        clustering_key_order_.push_back(comparator->reversed()[i] ? CASS_CLUSTERING_ORDER_DESC
+                                                              : CASS_CLUSTERING_ORDER_ASC);
       }
     }
 
@@ -1554,7 +1590,7 @@ void Metadata::InternalData::update_user_types(const MetadataConfig& config, Res
       fields.push_back(UserType::Field(field_name, data_type));
     }
 
-    keyspace->get_or_create_user_type(type_name)->set_fields(fields);
+    keyspace->get_or_create_user_type(type_name, false)->set_fields(fields);
   }
 }
 

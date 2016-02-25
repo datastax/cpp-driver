@@ -326,6 +326,18 @@ typedef struct CassUserType_ CassUserType;
 typedef struct CassSsl_ CassSsl;
 
 /**
+ * @struct CassVersion
+ *
+ * Describes the version of the connected Cassandra cluster.
+ */
+
+typedef struct CassVersion_ {
+  int major_version;
+  int minor_version;
+  int patch_version;
+} CassVersion;
+
+/**
  * @struct CassSchemaMeta
  *
  * A snapshot of the schema's metadata.
@@ -500,6 +512,12 @@ typedef enum CassValueType_ {
   CASS_VALUE_TYPE_LAST_ENTRY
   /* @endcond */
 } CassValueType;
+
+typedef enum CassClusteringOrder_ {
+  CASS_CLUSTERING_ORDER_NONE,
+  CASS_CLUSTERING_ORDER_ASC,
+  CASS_CLUSTERING_ORDER_DESC
+} CassClusteringOrder;
 
 typedef enum CassCollectionType_ {
   CASS_COLLECTION_TYPE_LIST = CASS_VALUE_TYPE_LIST,
@@ -1606,9 +1624,23 @@ cass_schema_meta_free(const CassSchemaMeta* schema_meta);
  * @public @memberof CassSchemaMeta
  *
  * @param[in] schema_meta
+ *
+ * @return The snapshot version.
  */
 CASS_EXPORT cass_uint32_t
 cass_schema_meta_snapshot_version(const CassSchemaMeta* schema_meta);
+
+/**
+ * Gets the version of the connected Cassandra cluster.
+ *
+ * @public @memberof CassSchemaMeta
+ *
+ * @param[in] schema_meta
+ *
+ * @return Cassandra's version
+ */
+CASS_EXPORT CassVersion
+cass_schema_meta_version(const CassSchemaMeta* schema_meta);
 
 /**
  * Gets the keyspace metadata for the provided keyspace name.
@@ -1919,6 +1951,8 @@ cass_table_meta_partition_key_count(const CassTableMeta* table_meta);
  * @param[in] table_meta
  * @param[in] index
  * @return The metadata for a column. NULL returned if the index is out of range.
+ *
+ * @see cass_table_meta_partition_key_count()
  */
 CASS_EXPORT const CassColumnMeta*
 cass_table_meta_partition_key(const CassTableMeta* table_meta,
@@ -1943,10 +1977,28 @@ cass_table_meta_clustering_key_count(const CassTableMeta* table_meta);
  * @param[in] table_meta
  * @param[in] index
  * @return The metadata for a column. NULL returned if the index is out of range.
+ *
+ * @see cass_table_meta_clustering_key_count()
  */
 CASS_EXPORT const CassColumnMeta*
 cass_table_meta_clustering_key(const CassTableMeta* table_meta,
                                size_t index);
+
+/**
+ * Gets the clustering order column metadata for the provided index.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @param[in] index
+ * @return The clustering order for a column.
+ * CASS_CLUSTERING_ORDER_NONE returned if the index is out of range.
+ *
+ * @see cass_table_meta_clustering_key_count()
+ */
+CASS_EXPORT CassClusteringOrder
+cass_table_meta_clustering_key_order(const CassTableMeta* table_meta,
+                                     size_t index);
 
 /**
  * Gets a metadata field for the provided name. Metadata fields allow direct
@@ -4149,6 +4201,15 @@ cass_data_type_free(CassDataType* data_type);
  */
 CASS_EXPORT CassValueType
 cass_data_type_type(const CassDataType* data_type);
+
+/**
+ * Gets whether a data type is frozen.
+ *
+ * @param[in] data_type
+ * @return cass_true if the data type is frozen, otherwise cass_false.
+ */
+CASS_EXPORT cass_bool_t
+cass_data_type_is_frozen(const CassDataType* data_type);
 
 /**
  * Gets the type name of a UDT data type.

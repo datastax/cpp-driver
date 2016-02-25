@@ -302,6 +302,7 @@ public:
   typedef SharedRefPtr<TableMetadata> Ptr;
   typedef std::map<std::string, Ptr> Map;
   typedef std::vector<std::string> KeyAliases;
+  typedef std::vector<CassClusteringOrder> ClusteringOrderVec;
 
   class ColumnIterator : public MetadataIteratorImpl<VecIteratorImpl<ColumnMetadata::Ptr> > {
   public:
@@ -319,6 +320,7 @@ public:
   const ColumnMetadata::Vec& columns() const { return columns_; }
   const ColumnMetadata::Vec& partition_key() const { return partition_key_; }
   const ColumnMetadata::Vec& clustering_key() const { return clustering_key_; }
+  const ClusteringOrderVec& clustering_key_order() const { return clustering_key_order_; }
 
   Iterator* iterator_columns() const { return new ColumnIterator(columns_); }
   const ColumnMetadata* get_column(const std::string& name) const;
@@ -333,6 +335,7 @@ private:
   ColumnMetadata::Map columns_by_name_;
   ColumnMetadata::Vec partition_key_;
   ColumnMetadata::Vec clustering_key_;
+  ClusteringOrderVec clustering_key_order_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(TableMetadata);
@@ -393,7 +396,7 @@ public:
 
   Iterator* iterator_user_types() const { return new TypeIterator(*user_types_); }
   const UserType* get_user_type(const std::string& type_name) const;
-  const UserType::Ptr& get_or_create_user_type(const std::string& name);
+  const UserType::Ptr& get_or_create_user_type(const std::string& name, bool is_frozen);
   void drop_user_type(const std::string& type_name);
 
   Iterator* iterator_functions() const { return new FunctionIterator(*functions_); }
@@ -432,13 +435,16 @@ public:
   public:
     SchemaSnapshot(uint32_t version,
                    int protocol_version,
+                   const VersionNumber& cassandra_version,
                    const KeyspaceMetadata::MapPtr& keyspaces)
       : version_(version)
       , protocol_version_(protocol_version)
+      , cassandra_version_(cassandra_version)
       , keyspaces_(keyspaces) { }
 
     uint32_t version() const { return version_; }
     int protocol_version() const { return protocol_version_; }
+    VersionNumber cassandra_version() const { return cassandra_version_; }
 
     const KeyspaceMetadata* get_keyspace(const std::string& name) const;
     Iterator* iterator_keyspaces() const { return new KeyspaceIterator(*keyspaces_); }
@@ -449,6 +455,7 @@ public:
   private:
     uint32_t version_;
     int protocol_version_;
+    VersionNumber cassandra_version_;
     KeyspaceMetadata::MapPtr keyspaces_;
   };
 

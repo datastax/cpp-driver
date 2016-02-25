@@ -70,8 +70,9 @@ public:
 
   static const DataType::ConstPtr NIL;
 
-  DataType(CassValueType value_type)
-    : value_type_(value_type) { }
+  DataType(CassValueType value_type, bool is_frozen = false)
+    : value_type_(value_type)
+    , is_frozen_(is_frozen) { }
 
   virtual ~DataType() { }
 
@@ -83,21 +84,12 @@ public:
         value_type_ == CASS_VALUE_TYPE_SET;
   }
 
-  bool is_map() const  {
-    return value_type_ == CASS_VALUE_TYPE_MAP;
-  }
+  bool is_map() const  { return value_type_ == CASS_VALUE_TYPE_MAP; }
+  bool is_tuple() const { return value_type_ == CASS_VALUE_TYPE_TUPLE; }
+  bool is_user_type() const { return value_type_ == CASS_VALUE_TYPE_UDT; }
+  bool is_custom() const { return value_type_ == CASS_VALUE_TYPE_CUSTOM; }
 
-  bool is_tuple() const {
-    return value_type_ == CASS_VALUE_TYPE_TUPLE;
-  }
-
-  bool is_user_type() const {
-    return value_type_ == CASS_VALUE_TYPE_UDT;
-  }
-
-  bool is_custom() const {
-    return value_type_ == CASS_VALUE_TYPE_CUSTOM;
-  }
+  bool is_frozen() const { return is_frozen_; }
 
   virtual bool equals(const DataType::ConstPtr& data_type) const {
     switch (value_type_) {
@@ -148,6 +140,7 @@ public:
 private:
   int protocol_version_;
   CassValueType value_type_;
+  bool is_frozen_;
 
 private:
  DISALLOW_COPY_AND_ASSIGN(DataType);
@@ -189,13 +182,13 @@ private:
   std::string class_name_;
 };
 
-class SubTypesDataType : public DataType {
+class CompositeType : public DataType {
 public:
-  SubTypesDataType(CassValueType type)
-   : DataType(type) { }
+  CompositeType(CassValueType type, bool is_frozen)
+   : DataType(type, is_frozen) { }
 
-  SubTypesDataType(CassValueType type, const DataType::Vec& types)
-    : DataType(type)
+  CompositeType(CassValueType type, const DataType::Vec& types, bool is_frozen)
+    : DataType(type, is_frozen)
     , types_(types) { }
 
   DataType::Vec& types() { return types_; }
@@ -219,21 +212,24 @@ protected:
   DataType::Vec types_;
 };
 
-class CollectionType : public SubTypesDataType {
+class CollectionType : public CompositeType {
 public:
   typedef SharedRefPtr<const CollectionType> ConstPtr;
 
-  CollectionType(CassValueType collection_type)
-    : SubTypesDataType(collection_type) { }
+  CollectionType(CassValueType collection_type, bool is_frozen)
+    : CompositeType(collection_type, is_frozen) { }
 
   CollectionType(CassValueType collection_type,
-                 size_t types_count)
-    : SubTypesDataType(collection_type) {
+                 size_t types_count,
+                 bool is_frozen)
+    : CompositeType(collection_type, is_frozen) {
     types_.reserve(types_count);
   }
 
-  CollectionType(CassValueType collection_type, const DataType::Vec& types)
-    : SubTypesDataType(collection_type, types) { }
+  CollectionType(CassValueType collection_type,
+                 const DataType::Vec& types,
+                 bool is_frozen)
+    : CompositeType(collection_type, types, is_frozen) { }
 
   virtual bool equals(const DataType::ConstPtr& data_type) const {
     assert(value_type() == CASS_VALUE_TYPE_LIST ||
@@ -263,40 +259,44 @@ public:
   }
 
   virtual DataType* copy() const {
-    return new CollectionType(value_type(), types_);
+    return new CollectionType(value_type(), types_, is_frozen());
   }
 
 public:
-  static DataType::ConstPtr list(DataType::ConstPtr element_type) {
+  static DataType::ConstPtr list(DataType::ConstPtr element_type,
+                                 bool is_frozen) {
     DataType::Vec types;
     types.push_back(element_type);
-    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_LIST, types));
+    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_LIST, types, is_frozen));
   }
 
-  static DataType::ConstPtr set(DataType::ConstPtr element_type) {
+  static DataType::ConstPtr set(DataType::ConstPtr element_type,
+                                bool is_frozen) {
     DataType::Vec types;
     types.push_back(element_type);
-    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_SET, types));
+    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_SET, types, is_frozen));
   }
 
   static DataType::ConstPtr map(DataType::ConstPtr key_type,
-                                          DataType::ConstPtr value_type) {
+                                DataType::ConstPtr value_type,
+                                bool is_frozen) {
     DataType::Vec types;
     types.push_back(key_type);
     types.push_back(value_type);
-    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_MAP, types));
+    return DataType::ConstPtr(new CollectionType(CASS_VALUE_TYPE_MAP, types, is_frozen));
   }
 };
 
-class TupleType : public SubTypesDataType {
+class TupleType : public CompositeType {
 public:
   typedef SharedRefPtr<const TupleType> ConstPtr;
 
-  TupleType()
-    : SubTypesDataType(CASS_VALUE_TYPE_TUPLE) { }
+  TupleType(bool is_frozen)
+    : CompositeType(CASS_VALUE_TYPE_TUPLE, is_frozen) { }
 
-  TupleType(const DataType::Vec& types)
-    : SubTypesDataType(CASS_VALUE_TYPE_TUPLE, types) { }
+  TupleType(const DataType::Vec& types,
+            bool is_frozen)
+    : CompositeType(CASS_VALUE_TYPE_TUPLE, types, is_frozen) { }
 
   virtual bool equals(const DataType::ConstPtr& data_type) const {
     assert(value_type() == CASS_VALUE_TYPE_TUPLE);
@@ -323,7 +323,7 @@ public:
   }
 
   virtual DataType* copy() const {
-    return new TupleType(types_);
+    return new TupleType(types_, is_frozen());
   }
 };
 
@@ -345,23 +345,25 @@ public:
 
   typedef CaseInsensitiveHashTable<Field>::EntryVec FieldVec;
 
-  UserType()
-    : DataType(CASS_VALUE_TYPE_UDT) { }
+  UserType(bool is_frozen)
+    : DataType(CASS_VALUE_TYPE_UDT, is_frozen) { }
 
-  UserType(size_t field_count)
-    : DataType(CASS_VALUE_TYPE_UDT)
+  UserType(size_t field_count, bool is_frozen)
+    : DataType(CASS_VALUE_TYPE_UDT, is_frozen)
     , fields_(field_count) { }
 
   UserType(const std::string& keyspace,
-           const std::string& type_name )
-    : DataType(CASS_VALUE_TYPE_UDT)
+           const std::string& type_name,
+           bool is_frozen)
+    : DataType(CASS_VALUE_TYPE_UDT, is_frozen)
     , keyspace_(keyspace)
     , type_name_(type_name) { }
 
   UserType(const std::string& keyspace,
            const std::string& type_name,
-           const FieldVec& fields)
-    : DataType(CASS_VALUE_TYPE_UDT)
+           const FieldVec& fields,
+           bool is_frozen)
+    : DataType(CASS_VALUE_TYPE_UDT, is_frozen)
     , keyspace_(keyspace)
     , type_name_(type_name)
     , fields_(fields) { }
@@ -423,7 +425,7 @@ public:
   }
 
   virtual DataType* copy() const {
-    return new UserType(keyspace_, type_name_, fields_.entries());
+    return new UserType(keyspace_, type_name_, fields_.entries(), is_frozen());
   }
 
   virtual std::string to_string() const {

@@ -37,7 +37,7 @@ class UserTypeValue;
 class Tuple {
 public:
   explicit Tuple(size_t item_count)
-    : data_type_(new TupleType())
+    : data_type_(new TupleType(false))
     , items_(item_count) { }
 
   explicit Tuple(const DataType::ConstPtr& data_type)
