@@ -1332,7 +1332,7 @@ void TableMetadata::add_view(const ViewMetadata::Ptr& view) {
 }
 
 void TableMetadata::drop_view(const std::string& name) {
- ViewMetadata::Vec::const_iterator i = std::lower_bound(views_.begin(), views_.end(), name);
+ ViewMetadata::Vec::iterator i = std::lower_bound(views_.begin(), views_.end(), name);
   if (i != views_.end() &&  (*i)->name() == name) {
     views_.erase(i);
   }
