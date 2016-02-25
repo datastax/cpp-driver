@@ -1065,7 +1065,7 @@ void TableMetadata::build_keys_and_sort(const MetadataConfig& config) {
   // 2) Clustering keys
   // 3) Other columns
 
-  if (config.cassandra_version.major() >= 2) {
+  if (config.cassandra_version.major() > 2) {
     partition_key_.resize(get_column_count(columns_, CASS_COLUMN_TYPE_PARTITION_KEY));
     clustering_key_.resize(get_column_count(columns_, CASS_COLUMN_TYPE_CLUSTERING_KEY));
     for (ColumnMetadata::Vec::const_iterator i = columns_.begin(),
@@ -1079,7 +1079,7 @@ void TableMetadata::build_keys_and_sort(const MetadataConfig& config) {
                  column->position() >= 0 &&
                  static_cast<size_t>(column->position()) < clustering_key_.size()) {
         const Value* value = column->get_field("clustering_order");
-        if (value != NULL ||
+        if (value != NULL &&
             value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
           StringRef clustering_order = value->to_string_ref();
           if (clustering_order.iequals("asc")) {

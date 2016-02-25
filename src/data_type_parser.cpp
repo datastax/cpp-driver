@@ -143,7 +143,16 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
     return DataType::NIL;
   }
 
-  return keyspace->get_or_create_user_type(type_name, is_frozen);
+  UserType::ConstPtr user_type(keyspace->get_or_create_user_type(type_name, is_frozen));
+
+  if (user_type->is_frozen() != is_frozen) {
+    return UserType::Ptr(new UserType(user_type->keyspace(),
+                                      user_type->type_name(),
+                                      user_type->fields(),
+                                      is_frozen));
+  }
+
+  return user_type;
 }
 
 void DataTypeCqlNameParser::Parser::parse_type_name(std::string* name) {
@@ -366,7 +375,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, c
       fields.push_back(UserType::Field(i->first, data_type));
     }
 
-    return DataType::ConstPtr(new UserType(keyspace, type_name, fields, is_frozen));
+    return DataType::ConstPtr(new UserType(keyspace, type_name, fields, true));
   }
 
   if (is_tuple_type(type)) {
@@ -385,7 +394,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, c
       types.push_back(data_type);
     }
 
-    return DataType::ConstPtr(new TupleType(types, is_frozen));
+    return DataType::ConstPtr(new TupleType(types, true));
   }
 
   DataType::ConstPtr native_type(native_types.by_class_name(next));
