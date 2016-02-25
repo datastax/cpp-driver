@@ -110,7 +110,7 @@ bool is_valid_cql_id(const std::string& str) {
 }
 
 bool is_valid_lower_cql_id(const std::string& str) {
-  if (str.empty() || !is_lower_word_char(str.front())) {
+  if (str.empty() || !is_lower_word_char(str[0])) {
     return false;
   }
   if (str.size() > 1) {
