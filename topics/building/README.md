@@ -319,9 +319,6 @@ obtained and select from the following list:
 - Visual Studio 2015 (Windows SDK 10.0)
  - Boost v1.59 [32-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-14.0-32.exe/download)/[64-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-14.0-64.exe/download)
 
-**NOTE:** Ensure the Boost library directory structure is configured correctly
-by renaming the library directory to _lib_ (e.g. lib64-msvc-14.0 to lib).
-
 #### Building the Driver with the Tests
 
 ```dos
