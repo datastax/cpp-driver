@@ -66,8 +66,5 @@ source_group("Header Files" FILES ${CCM_BRIDGE_INC_FILES})
 add_library(CCMBridge STATIC ${CCM_BRIDGE_SRC_FILES} ${CCM_BRIDGE_INC_FILES} ${CCM_BRIDGE_CONFIGURATION_FILE})
 target_link_libraries(CCMBridge ${INTEGRATION_TESTS_LIBS})
 
-# Install the CCM bridge library
-install(TARGETS ${PROJECT_CCM_BRIDGE_LIB_NAME} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-
 # Copy data file to output directory
 configure_file(${CCM_BRIDGE_CONFIGURATION_FILE} ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
