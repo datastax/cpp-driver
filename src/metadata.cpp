@@ -1065,7 +1065,7 @@ void TableMetadata::build_keys_and_sort(const MetadataConfig& config) {
   // 2) Clustering keys
   // 3) Other columns
 
-  if (config.cassandra_version.major() > 2) {
+  if (config.cassandra_version.major() >= 2) {
     partition_key_.resize(get_column_count(columns_, CASS_COLUMN_TYPE_PARTITION_KEY));
     clustering_key_.resize(get_column_count(columns_, CASS_COLUMN_TYPE_CLUSTERING_KEY));
     for (ColumnMetadata::Vec::const_iterator i = columns_.begin(),
@@ -1078,21 +1078,9 @@ void TableMetadata::build_keys_and_sort(const MetadataConfig& config) {
       } else if (column->type() == CASS_COLUMN_TYPE_CLUSTERING_KEY &&
                  column->position() >= 0 &&
                  static_cast<size_t>(column->position()) < clustering_key_.size()) {
-        const Value* value = column->get_field("clustering_order");
-        if (value != NULL &&
-            value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-          StringRef clustering_order = value->to_string_ref();
-          if (clustering_order.iequals("asc")) {
-            clustering_key_order_.push_back(CASS_CLUSTERING_ORDER_ASC);
-          } else if (clustering_order.iequals("desc")) {
-            clustering_key_order_.push_back(CASS_CLUSTERING_ORDER_DESC);
-          } else {
-            LOG_WARN("Invalid cluster order, '%s', in columns metadata table",
-                     clustering_order.to_string().c_str());
-            clustering_key_order_.push_back(CASS_CLUSTERING_ORDER_NONE);
-          }
-        }
         clustering_key_[column->position()] = column;
+        clustering_key_order_.push_back(column->is_reversed() ? CASS_CLUSTERING_ORDER_DESC
+                                                              : CASS_CLUSTERING_ORDER_ASC);
       }
     }
 
@@ -1134,7 +1122,7 @@ void TableMetadata::build_keys_and_sort(const MetadataConfig& config) {
       }
     }
 
-    // Clustring key
+    // Clustering key
     {
       StringRefVec column_aliases;
       const Value* column_aliases_value = get_field("column_aliases");
@@ -1174,7 +1162,7 @@ void TableMetadata::build_keys_and_sort(const MetadataConfig& config) {
                                                                          CASS_COLUMN_TYPE_CLUSTERING_KEY,
                                                                          comparator->types()[i])));
         clustering_key_order_.push_back(comparator->reversed()[i] ? CASS_CLUSTERING_ORDER_DESC
-                                                              : CASS_CLUSTERING_ORDER_ASC);
+                                                                  : CASS_CLUSTERING_ORDER_ASC);
       }
     }
 
@@ -1380,7 +1368,8 @@ ColumnMetadata::ColumnMetadata(const MetadataConfig& config,
                                const SharedRefPtr<RefBuffer>& buffer, const Row* row)
   : MetadataBase(name)
   , type_(CASS_COLUMN_TYPE_REGULAR)
-  , position_(0) {
+  , position_(0)
+  , is_reversed_(false) {
   const Value* value;
 
   add_field(buffer, row, "keyspace_name");
@@ -1388,7 +1377,13 @@ ColumnMetadata::ColumnMetadata(const MetadataConfig& config,
   add_field(buffer, row, "column_name");
 
   if (config.cassandra_version >= VersionNumber(3, 0, 0)) {
-    add_field(buffer, row, "clustering_order");
+    value = add_field(buffer, row, "clustering_order");
+    if (value != NULL &&
+        value->value_type() == CASS_VALUE_TYPE_VARCHAR &&
+        value->to_string_ref().iequals("desc")) {
+      is_reversed_ = true;
+    }
+
     add_field(buffer, row, "column_name_bytes");
 
     value = add_field(buffer, row, "kind");
@@ -1450,6 +1445,7 @@ ColumnMetadata::ColumnMetadata(const MetadataConfig& config,
         value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
       std::string validator(value->to_string());
       data_type_ = DataTypeClassNameParser::parse_one(validator, config.native_types);
+      is_reversed_ = DataTypeClassNameParser::is_reversed(validator);
     }
 
     add_field(buffer, row, "index_name");

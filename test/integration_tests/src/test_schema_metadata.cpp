@@ -973,6 +973,8 @@ BOOST_AUTO_TEST_CASE(disable) {
 }
 
 /**
+ * Test Cassandra version.
+ *
  * @since 2.3.0
  * @jira_ticket CPP-332
  * @test_category schema
@@ -989,6 +991,10 @@ BOOST_AUTO_TEST_CASE(cassandra_version) {
 }
 
 /**
+ * Test clustering order.
+ *
+ * Verify that column clustering order is properly updated and returned.
+ *
  * @since 2.3.0
  * @jira_ticket CPP-332
  * @test_category schema
@@ -1010,7 +1016,7 @@ BOOST_AUTO_TEST_CASE(clustering_order) {
   }
 
   {
-    test_utils::execute_query(session, "CREATE TABLE clustering_order.composite_key (key1 text, key2 text, value text, "
+    test_utils::execute_query(session, "CREATE TABLE clustering_order.composite_key (key1 int, key2 text, value text, "
                                        "PRIMARY KEY(key1, key2))");
     refresh_schema_meta();
 
@@ -1074,6 +1080,10 @@ BOOST_AUTO_TEST_CASE(clustering_order) {
 }
 
 /**
+ * Test frozen types.
+ *
+ * Verify that frozen types are properly updated and returned.
+ *
  * @since 2.3.0
  * @jira_ticket CPP-332
  * @test_category schema
@@ -1186,10 +1196,8 @@ BOOST_AUTO_TEST_CASE(frozen_types) {
 
     const CassDataType* value_data_type = cass_data_type_sub_data_type(data_type, 1);
     BOOST_CHECK_EQUAL(cass_data_type_type(value_data_type), CASS_VALUE_TYPE_SET);
-    // Note: C* <= 3.0.0 assumes that everything inside of a tuple is frozen<>
-    if (version >= "3.0.0") {
-      BOOST_CHECK_EQUAL(cass_data_type_is_frozen(value_data_type), cass_true);
-    }
+    // Note: C* < 3.0.0 doesn't keep the frozen<> information for types inside UDTs
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(value_data_type), version < "3.0.0" ? cass_false : cass_true);
   }
 
   {
@@ -1238,17 +1246,13 @@ BOOST_AUTO_TEST_CASE(frozen_types) {
 
     key_data_type = cass_data_type_sub_data_type(data_type, 2);
     BOOST_CHECK_EQUAL(cass_data_type_type(key_data_type), CASS_VALUE_TYPE_SET);
-    // Note: C* <= 3.0.0 assumes that everything inside of a tuple is frozen<>
-    if (version >= "3.0.0") {
-      BOOST_CHECK_EQUAL(cass_data_type_is_frozen(key_data_type), cass_true);
-    }
+    // Note: C* < 3.0.0 doesn't keep the frozen<> information for types inside tuple<>
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(key_data_type), version < "3.0.0" ? cass_false : cass_true);
 
     value_data_type = cass_data_type_sub_data_type(data_type, 3);
     BOOST_CHECK_EQUAL(cass_data_type_type(value_data_type), CASS_VALUE_TYPE_LIST);
-    // Note: C* <= 3.0.0 assumes that everything inside of a tuple is frozen<>
-    if (version >= "3.0.0") {
-      BOOST_CHECK_EQUAL(cass_data_type_is_frozen(value_data_type), cass_true);
-    }
+    // Note: C* < 3.0.0 doesn't keep the frozen<> information for types inside tuple<>
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(value_data_type), version < "3.0.0" ? cass_false : cass_true);
   }
 }
 

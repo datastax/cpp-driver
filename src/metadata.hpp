@@ -268,7 +268,8 @@ public:
   ColumnMetadata(const std::string& name)
     : MetadataBase(name)
     , type_(CASS_COLUMN_TYPE_REGULAR)
-    , position_(0) { }
+    , position_(0)
+    , is_reversed_(false) { }
 
   ColumnMetadata(const std::string& name,
                  int32_t position,
@@ -277,7 +278,8 @@ public:
     : MetadataBase(name)
     , type_(type)
     , position_(position)
-    , data_type_(data_type) { }
+    , data_type_(data_type)
+    , is_reversed_(false) { }
 
   ColumnMetadata(const MetadataConfig& config,
                  const std::string& name,
@@ -287,11 +289,13 @@ public:
   CassColumnType type() const { return type_; }
   int32_t position() const { return position_; }
   const DataType::ConstPtr& data_type() const { return data_type_; }
+  bool is_reversed() const { return is_reversed_; }
 
 private:
   CassColumnType type_;
   int32_t position_;
   DataType::ConstPtr data_type_;
+  bool is_reversed_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(ColumnMetadata);
