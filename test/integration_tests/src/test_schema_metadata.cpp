@@ -1061,6 +1061,10 @@ BOOST_AUTO_TEST_CASE(disable) {
 }
 
 /**
+ * Test materialized views.
+ *
+ * Verifies that materialized view metadata is correctly updated and returned.
+ *
  * @since 2.3.0
  * @jira_ticket CPP-331
  * @test_category schema
