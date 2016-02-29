@@ -136,6 +136,7 @@ namespace cass {
 
 Session::Session()
     : state_(SESSION_STATE_CLOSED)
+    , connect_error_code_(CASS_OK)
     , current_host_mark_(true)
     , pending_resolve_count_(0)
     , pending_pool_count_(0)
@@ -256,6 +257,12 @@ bool Session::notify_ready_async() {
   return send_event_async(event);
 }
 
+bool Session::notify_keyspace_error_async() {
+  SessionEvent event;
+  event.type = SessionEvent::NOTIFY_KEYSPACE_ERROR;
+  return send_event_async(event);
+}
+
 bool Session::notify_worker_closed_async() {
   SessionEvent event;
   event.type = SessionEvent::NOTIFY_WORKER_CLOSED;
@@ -366,16 +373,20 @@ void Session::notify_connected() {
 }
 
 void Session::notify_connect_error(CassError code, const std::string& message) {
+  connect_error_code_ = code;
+  connect_error_message_ = message;
   ScopedMutex l(&state_mutex_);
   state_.store(SESSION_STATE_CLOSING, MEMORY_ORDER_RELAXED);
   internal_close();
-  connect_future_->set_error(code, message);
-  connect_future_.reset();
 }
 
 void Session::notify_closed() {
   ScopedMutex l(&state_mutex_);
   state_.store(SESSION_STATE_CLOSED, MEMORY_ORDER_RELAXED);
+  if (connect_future_) {
+    connect_future_->set_error(connect_error_code_, connect_error_message_);
+    connect_future_.reset();
+  }
   if (close_future_) {
     close_future_->set();
     close_future_.reset();
@@ -441,6 +452,15 @@ void Session::on_event(const SessionEvent& event) {
         LOG_DEBUG("Session pending pool count %d", pending_pool_count_);
       }
       break;
+
+    case SessionEvent::NOTIFY_KEYSPACE_ERROR: {
+      // Currently, this is only called when the keyspace does not exist
+      // and not for any other keyspace related errors.
+      const CopyOnWritePtr<std::string> keyspace(keyspace_);
+      notify_connect_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
+                           "Keyspace '" + *keyspace + "' does not exist");
+      break;
+    }
 
     case SessionEvent::NOTIFY_WORKER_CLOSED:
       if (--pending_workers_count_ == 0) {

@@ -29,10 +29,10 @@ namespace cass {
 SetKeyspaceHandler::SetKeyspaceHandler(Connection* connection,
                                        const std::string& keyspace,
                                        RequestHandler* request_handler)
-    : Handler(new QueryRequest("use \"" + keyspace + "\""))
-    , request_handler_(request_handler) {
-    set_connection(connection);
-  }
+  : Handler(new QueryRequest("USE \"" + keyspace + "\""))
+  , request_handler_(request_handler) {
+  set_connection(connection);
+}
 
 void SetKeyspaceHandler::on_set(ResponseMessage* response) {
   switch (response->opcode()) {
@@ -42,7 +42,7 @@ void SetKeyspaceHandler::on_set(ResponseMessage* response) {
     case CQL_OPCODE_ERROR:
       connection_->defunct();
       request_handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                         "Unable to set keyspace");
+                                 "Unable to set keyspace");
       break;
     default:
       break;
@@ -52,7 +52,7 @@ void SetKeyspaceHandler::on_set(ResponseMessage* response) {
 void SetKeyspaceHandler::on_error(CassError code, const std::string& message) {
   connection_->defunct();
   request_handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                     "Unable to set keyspace");
+                             "Unable to set keyspace");
 }
 
 void SetKeyspaceHandler::on_timeout() {
@@ -71,7 +71,7 @@ void SetKeyspaceHandler::on_result_response(ResponseMessage* response) {
   } else {
     connection_->defunct();
     request_handler_->on_error(CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE,
-                       "Unable to set keyspace");
+                               "Unable to set keyspace");
   }
 }
 

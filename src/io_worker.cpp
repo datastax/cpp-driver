@@ -166,7 +166,11 @@ void IOWorker::request_finished(RequestHandler* request_handler) {
 
 void IOWorker::notify_pool_ready(Pool* pool) {
   if (pool->is_initial_connection()) {
-    session_->notify_ready_async();
+    if (pool->is_keyspace_error()) {
+      session_->notify_keyspace_error_async();
+    } else {
+      session_->notify_ready_async();
+    }
   } else if (is_ready() && pool->is_ready()){
     session_->notify_up_async(pool->address());
   }

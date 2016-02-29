@@ -73,8 +73,6 @@ BOOST_AUTO_TEST_CASE(connect_invalid_keyspace)
 {
   test_utils::CassLog::reset("Received error response 'Keyspace 'invalid' does not exist");
 
-  CassError code;
-
   {
     test_utils::CassClusterPtr cluster(cass_cluster_new());
 
@@ -86,17 +84,11 @@ BOOST_AUTO_TEST_CASE(connect_invalid_keyspace)
 
     test_utils::CassSessionPtr session(cass_session_new());
     test_utils::CassFuturePtr connect_future(cass_session_connect_keyspace(session.get(), cluster.get(), "invalid"));
-
-    const char* query = "SELECT * FROM table";
-    test_utils::CassStatementPtr statement(cass_statement_new(query, 0));
-
-    test_utils::CassFuturePtr future(cass_session_execute(session.get(), statement.get()));
-
-    code = cass_future_error_code(future.get());
+    CassError code = cass_future_error_code(connect_future.get());
+    BOOST_CHECK_EQUAL(code, CASS_ERROR_LIB_UNABLE_TO_SET_KEYSPACE);
   }
 
   BOOST_CHECK(test_utils::CassLog::message_count() > 0);
-  BOOST_CHECK_EQUAL(code, CASS_ERROR_LIB_NO_HOSTS_AVAILABLE);
 }
 
 BOOST_AUTO_TEST_CASE(close_timeout_error)
