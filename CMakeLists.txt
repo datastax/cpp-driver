@@ -623,16 +623,24 @@ endif()
 
 # Determine if the library directory needs to be determined
 if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
-  # Properly assign lib or lib64 directory based on determined architecture
-  get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
-  if("${LIB64}" STREQUAL "TRUE")
-      set(LIBSUFFIX 64)
+  if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux" AND
+      ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr" OR
+       "${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr/local"))
+    if(EXISTS "/etc/debian_version")
+      set (CMAKE_INSTALL_LIBDIR "lib/${CMAKE_LIBRARY_ARCHITECTURE}")
+    elseif(EXISTS "/etc/redhat-release" OR EXISTS "/etc/fedora-release" OR
+           EXISTS "/etc/slackware-version" OR EXISTS "/etc/gentoo-release")
+      if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set (CMAKE_INSTALL_LIBDIR "lib64")
+      else()
+        set (CMAKE_INSTALL_LIBDIR "lib")
+      endif()
+    else()
+      set (CMAKE_INSTALL_LIBDIR "lib")
+    endif()
   else()
-      set(LIBSUFFIX "")
+    set (CMAKE_INSTALL_LIBDIR "lib")
   endif()
-
-  # Assign the library directory
-  set(CMAKE_INSTALL_LIBDIR "lib${LIBSUFFIX}")
 endif()
 
 # Create a binary directory executable and DLLs (windows only)

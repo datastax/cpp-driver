@@ -1045,7 +1045,7 @@ void TableMetadata::build_keys_and_sort(const MetadataConfig& config) {
   // 2) Clustering keys
   // 3) Other columns
 
-  if (config.cassandra_version.major() >= 2) {
+  if (config.cassandra_version.major_version() >= 2) {
     partition_key_.resize(get_column_count(columns_, CASS_COLUMN_TYPE_PARTITION_KEY));
     clustering_key_.resize(get_column_count(columns_, CASS_COLUMN_TYPE_CLUSTERING_KEY));
     for (ColumnMetadata::Vec::const_iterator i = columns_.begin(),
