@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_SUITE(serial_consistency)
 BOOST_AUTO_TEST_CASE(simple)
 {
   CCM::CassVersion version = test_utils::get_version();
-  if (version.major != 1) {
+  if (version.major_version != 1) {
     SerialConsistencyTests tester;
     for (int i = 0; i < 2; ++i) {
       test_utils::CassFuturePtr future = tester.insert_row("abc", 99, CASS_CONSISTENCY_SERIAL);
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(simple)
 BOOST_AUTO_TEST_CASE(invalid)
 {
   CCM::CassVersion version = test_utils::get_version();
-  if (version.major != 1) {
+  if (version.major_version != 1) {
     SerialConsistencyTests tester;
     test_utils::CassFuturePtr future = tester.insert_row("abc", 99, CASS_CONSISTENCY_ONE); // Invalid
 

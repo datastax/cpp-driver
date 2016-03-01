@@ -265,7 +265,7 @@ BOOST_AUTO_TEST_SUITE(udts)
  */
 BOOST_AUTO_TEST_CASE(read_write) {
   CCM::CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 1) || version.major_version >= 3) {
     UDTTests tester;
     std::string create_table = "CREATE TABLE user (id uuid PRIMARY KEY, addr frozen<address>)";
     std::string insert_query = "INSERT INTO user(id, addr) VALUES (?, ?)";
@@ -384,7 +384,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
  */
 BOOST_AUTO_TEST_CASE(invalid) {
   CCM::CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 1) || version.major_version >= 3) {
     UDTTests tester;
     std::string invalid_udt_missing_frozen_keyword = "CREATE TYPE invalid_udt (id uuid, address address)";
     std::string invalid_parent_udt = "CREATE TYPE invalid_udt (address frozen<address>)";
@@ -392,7 +392,7 @@ BOOST_AUTO_TEST_CASE(invalid) {
     std::string insert_query = "INSERT INTO invalid_udt_user(id, invalid) VALUES (?, ?)";
 
     {
-      if (version.major < 3) {
+      if (version.major_version < 3) {
         // Ensure UDT cannot be created when missing frozen keyword
         BOOST_REQUIRE_EQUAL(test_utils::execute_query_with_error(tester.session, invalid_udt_missing_frozen_keyword.c_str()), CASS_ERROR_SERVER_INVALID_QUERY);
       }
@@ -441,7 +441,7 @@ BOOST_AUTO_TEST_CASE(invalid) {
 */
 BOOST_AUTO_TEST_CASE(text_types) {
   CCM::CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 1) || version.major_version >= 3) {
     UDTTests tester;
     std::string nested_type = "CREATE TYPE nested_type (value_1 int, value_2 int)";
     std::string parent_type = "CREATE TYPE parent_type (name text, values frozen<nested_type>)";

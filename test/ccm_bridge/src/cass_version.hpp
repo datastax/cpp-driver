@@ -20,13 +20,6 @@
 #include <sstream>
 #include <string>
 
-#ifdef major
-# undef major
-#endif
-#ifdef minor
-# undef minor
-#endif
-
 namespace CCM {
 
   /**
@@ -37,15 +30,15 @@ namespace CCM {
     /**
      * Major portion of version number
      */
-    unsigned short major;
+    unsigned short major_version;
     /**
      * Minor portion of version number
      */
-    unsigned short minor;
+    unsigned short minor_version;
     /**
      * Patch portion of version number
      */
-    unsigned short patch;
+    unsigned short patch_version;
     /**
      * Extra portion of version number
      */
@@ -57,22 +50,22 @@ namespace CCM {
      * @param version_string String representation to convert
      */
     CassVersion(const std::string& version_string)
-      : major(0)
-      , minor(0)
-      , patch(0)
+      : major_version(0)
+      , minor_version(0)
+      , patch_version(0)
       , extra("") {
       from_string(version_string);
     }
 
     int compare(const CassVersion& rhs) {
-      if (major < rhs.major) return -1;
-      if (major > rhs.major) return  1;
+      if (major_version < rhs.major_version) return -1;
+      if (major_version > rhs.major_version) return  1;
 
-      if (minor < rhs.minor) return -1;
-      if (minor > rhs.minor) return  1;
+      if (minor_version < rhs.minor_version) return -1;
+      if (minor_version > rhs.minor_version) return  1;
 
-      if (patch < rhs.patch) return -1;
-      if (patch > rhs.patch) return  1;
+      if (patch_version < rhs.patch_version) return -1;
+      if (patch_version > rhs.patch_version) return  1;
 
       return 0;
     }
@@ -263,7 +256,7 @@ namespace CCM {
      */
     std::string to_string(bool is_extra_requested = true) {
       std::stringstream version_string;
-      version_string << major << "." << minor << "." << patch;
+      version_string << major_version << "." << minor_version << "." << patch_version;
       if (is_extra_requested && !extra.empty()) {
         version_string << "-" << extra;
       }
@@ -287,9 +280,9 @@ namespace CCM {
 
       // Convert to tokens and assign version parameters
       std::istringstream tokens(version);
-      if (tokens >> major) {
-        if (tokens >> minor) {
-          if (tokens >> patch) {
+      if (tokens >> major_version) {
+        if (tokens >> minor_version) {
+          if (tokens >> patch_version) {
             tokens >> extra;
           }
         }

@@ -50,7 +50,7 @@ struct DataTypesTests : public test_utils::SingleSessionTest {
     std::string insert_query = "INSERT INTO " + table_name + "(key, value) VALUES(? , ?)";
     test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
     // Determine if bound parameters can be used based on C* version
-    if (version.major == 1) {
+    if (version.major_version == 1) {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query);
       statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
@@ -146,7 +146,7 @@ BOOST_AUTO_TEST_CASE(read_write_primitives) {
   insert_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE, 3.141592653589793);
   insert_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT, 3.1415926f);
   insert_value<cass_int32_t>(CASS_VALUE_TYPE_INT, 123);
-  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
     insert_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, 123);
     insert_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, 123);
     insert_value<CassDate>(CASS_VALUE_TYPE_DATE, test_utils::Value<CassDate>::min_value() + 1u);

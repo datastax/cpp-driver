@@ -55,7 +55,7 @@ struct AsyncTests : public test_utils::SingleSessionTest {
       test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 3));
 
       // Determine if bound parameters can be used based on C* version
-      if (version.major == 1) {
+      if (version.major_version == 1) {
         insert_query = str(boost::format("INSERT INTO %s (id, num, str) VALUES(%s, %s, 'row%s')") % table_name % test_utils::Value<CassUuid>::to_string(id) % i % i);
         statement = test_utils::CassStatementPtr(cass_statement_new(insert_query.c_str(), 0));
       } else {

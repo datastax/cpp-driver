@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_SUITE(server_failures)
  */
  BOOST_AUTO_TEST_CASE(function_failure) {
   CCM::CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
     ServerFailuresTest tester;
     std::string create_table = "CREATE TABLE server_function_failures (id int PRIMARY KEY, value double)";
     std::string insert_query = "INSERT INTO server_function_failures(id, value) VALUES (?, ?)";
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_SUITE(server_failures)
  */
 BOOST_AUTO_TEST_CASE(already_exists) {
   CCM::CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
     ServerFailuresTest tester;
     std::string create_table = "CREATE TABLE already_exists_table (id int PRIMARY KEY, value double)";
     std::string create_keyspace = str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT) % test_utils::SIMPLE_KEYSPACE % "1");
