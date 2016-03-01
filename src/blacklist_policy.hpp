@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef __CASS_WHITELIST_POLICY_HPP_INCLUDED__
-#define __CASS_WHITELIST_POLICY_HPP_INCLUDED__
+#ifndef __CASS_BLACKLIST_POLICY_HPP_INCLUDED__
+#define __CASS_BLACKLIST_POLICY_HPP_INCLUDED__
 
 #include "load_balancing.hpp"
 #include "host.hpp"
@@ -24,17 +24,17 @@
 
 namespace cass {
 
-class WhitelistPolicy : public ListPolicy {
+class BlacklistPolicy : public ListPolicy {
 public:
-  WhitelistPolicy(LoadBalancingPolicy* child_policy,
+  BlacklistPolicy(LoadBalancingPolicy* child_policy,
                   const ContactPointList& hosts)
     : ListPolicy(child_policy)
-    , hosts_(hosts) {}
+    , hosts_ (hosts) {}
 
-  virtual ~WhitelistPolicy() {}
+  virtual ~BlacklistPolicy() {}
 
-  WhitelistPolicy* new_instance() {
-    return new WhitelistPolicy(child_policy_->new_instance(), hosts_);
+  BlacklistPolicy* new_instance() {
+    return new BlacklistPolicy(child_policy_->new_instance(), hosts_);
   }
 
 private:
@@ -43,7 +43,7 @@ private:
   ContactPointList hosts_;
 
 private:
-  DISALLOW_COPY_AND_ASSIGN(WhitelistPolicy);
+  DISALLOW_COPY_AND_ASSIGN(BlacklistPolicy);
 };
 
 } // namespace cass

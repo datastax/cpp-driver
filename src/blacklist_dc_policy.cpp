@@ -14,20 +14,19 @@
   limitations under the License.
 */
 
-#include "whitelist_policy.hpp"
+#include "blacklist_dc_policy.hpp"
 
 namespace cass {
 
-bool WhitelistPolicy::is_valid_host(const SharedRefPtr<Host>& host) const {
-  const std::string& host_address = host->address().to_string(false);
-  for (ContactPointList::const_iterator it = hosts_.begin(),
-                                                end = hosts_.end();
-       it != end; ++it) {
-    if (host_address.compare(*it) == 0) {
-      return true;
+bool BlacklistDCPolicy::is_valid_host(const SharedRefPtr<Host>& host) const {
+  const std::string& host_dc = host->dc();
+  for (DcList::const_iterator it = dcs_.begin(),
+      end = dcs_.end(); it != end; ++it) {
+    if (host_dc.compare(*it) == 0) {
+      return false;
     }
   }
-  return false;
+  return true;
 }
 
 } // namespace cass
