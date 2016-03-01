@@ -2124,18 +2124,16 @@ cass_materialized_view_meta_name(const CassMaterializedViewMeta* view_meta,
                                  size_t* name_length);
 
 /**
- * Gets the base table name of the view.
+ * Gets the base table of the view.
  *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
- * @param[out] name
- * @param[out] name_length
+ *
+ * @return The base table for the view.
  */
-CASS_EXPORT void
-cass_materialized_view_meta_base_table_name(const CassMaterializedViewMeta* view_meta,
-                                            const char** name,
-                                            size_t* name_length);
+CASS_EXPORT const CassTableMeta*
+cass_materialized_view_meta_base_table(const CassMaterializedViewMeta* view_meta);
 
 /**
  * Gets the total number of columns for the view.

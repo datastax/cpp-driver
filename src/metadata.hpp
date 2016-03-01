@@ -35,6 +35,7 @@
 namespace cass {
 
 class KeyspaceMetadata;
+class TableMetadata;
 class Row;
 class ResultResponse;
 
@@ -343,13 +344,20 @@ public:
 
   static const ViewMetadata::Ptr NIL;
 
-  ViewMetadata(const MetadataConfig& config, const std::string& name,
+  ViewMetadata(const MetadataConfig& config,
+               TableMetadata* table,
+               const std::string& name,
                const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
-  const std::string& base_table_name() const { return base_table_name_; }
+  const TableMetadata* base_table() const { return base_table_; }
+  TableMetadata* base_table() { return base_table_; }
 
 private:
-  std::string base_table_name_;
+  // This cannot be a reference counted pointer because it would cause a cycle.
+  // This is okay because the lifetime of the table will exceed the lifetime
+  // of a table's view. That is, a table's views will be removed when a table is
+  // removed.
+  TableMetadata* base_table_;
 };
 
 class ViewIteratorBase : public Iterator {

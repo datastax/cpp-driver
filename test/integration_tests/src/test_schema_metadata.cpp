@@ -472,8 +472,9 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     cass_materialized_view_meta_name(view, &name.data, &name.length);
     BOOST_CHECK(name == CassString(view_name.c_str()));
 
+    const CassTableMeta* base_table = cass_materialized_view_meta_base_table(view);
     CassString base_table_name;
-    cass_materialized_view_meta_base_table_name(view, &base_table_name.data, &base_table_name.length);
+    cass_table_meta_name(base_table, &base_table_name.data, &base_table_name.length);
     BOOST_CHECK(base_table_name == CassString(view_base_table_name.c_str()));
 
     std::vector<std::string> columns;
@@ -1169,17 +1170,33 @@ BOOST_AUTO_TEST_CASE(materialized_views) {
     }
   }
 
-  // Drop view
+  // Drop views
   {
+    const CassTableMeta* table_meta;
+
     test_utils::execute_query(session, "DROP MATERIALIZED VIEW materialized_views.view2");
 
     refresh_schema_meta();
 
     verify_materialized_view_count("materialized_views", 2);
 
-    const CassTableMeta* table_meta = schema_get_table("materialized_views", "table2");
+    table_meta = schema_get_table("materialized_views", "table2");
     BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 1);
+
+    test_utils::execute_query(session, "DROP MATERIALIZED VIEW materialized_views.view1");
+
+    refresh_schema_meta();
+
+    verify_materialized_view_count("materialized_views", 1);
+
+    table_meta = schema_get_table("materialized_views", "table1");
+    BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 0);
   }
+
+  // Note: Cassandra doesn't allow for dropping tables with active views.
+  // It's also difficult and unpredictable to get DROP TABLE/MATERIALIZE VIEW
+  // events to reorder so that the DROP TABLE event happens before the
+  // DROP MATERIALIZE VIEW event.
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -269,10 +269,8 @@ void cass_materialized_view_meta_name(const CassMaterializedViewMeta* view_meta,
   *name_length = view_meta->name().size();
 }
 
-void cass_materialized_view_meta_base_table_name(const CassMaterializedViewMeta* view_meta,
-                                                 const char** name, size_t* name_length) {
-  *name = view_meta->base_table_name().data();
-  *name_length = view_meta->base_table_name().size();
+const CassTableMeta* cass_materialized_view_meta_base_table(const CassMaterializedViewMeta* view_meta) {
+  return CassTableMeta::to(view_meta->base_table());
 }
 
 const CassValue* cass_materialized_view_meta_field_by_name(const CassMaterializedViewMeta* view_meta,
@@ -1023,11 +1021,25 @@ void KeyspaceMetadata::add_view(const ViewMetadata::Ptr& view) {
 }
 
 void KeyspaceMetadata::drop_table_or_view(const std::string& table_or_view_name) {
-  if (tables_->erase(table_or_view_name) == 0) {
-    ViewMetadata::Map::iterator i = views_->find(table_or_view_name);
-    views_->erase(i);
-    TableMetadata::Ptr table = get_table(i->second->base_table_name());
-    if (table) table->drop_view(table_or_view_name);
+  TableMetadata::Map::iterator table_it = tables_->find(table_or_view_name);
+  if (table_it != tables_->end()) { // The name is for a table, remove the
+                                    // table and views from keyspace
+    TableMetadata::Ptr table(table_it->second);
+    // Cassandra doesn't allow for tables to be dropped while it has active
+    // views, but it could be possible for the drop events to arrive out of
+    // order.
+    for (ViewMetadata::Vec::const_iterator i = table->views().begin(),
+         end = table->views().end(); i != end; ++i) {
+      views_->erase((*i)->name());
+    }
+    tables_->erase(table_it);
+  } else { // The name is for a view, remove the view from the table and keyspace
+    ViewMetadata::Map::iterator view_it = views_->find(table_or_view_name);
+    if (view_it != views_->end()) {
+      ViewMetadata::Ptr view(view_it->second);
+      view->base_table()->drop_view(table_or_view_name);
+      views_->erase(view_it);
+    }
   }
 }
 
@@ -1369,15 +1381,13 @@ void TableMetadata::key_aliases(const NativeDataTypes& native_types, KeyAliases*
 const ViewMetadata::Ptr ViewMetadata::NIL;
 
 ViewMetadata::ViewMetadata(const MetadataConfig& config,
+                           TableMetadata* table,
                            const std::string& name, const SharedRefPtr<RefBuffer>& buffer, const Row* row)
-  : TableMetadataBase(config, name, buffer, row) {
-  const Value* value;
+  : TableMetadataBase(config, name, buffer, row)
+  , base_table_(table) {
+  add_field(buffer, row, "keyspace_name");
   add_field(buffer, row, "view_name");
-  value = add_field(buffer, row, "base_table_name");
-  if (value != NULL &&
-      value->value_type() == CASS_VALUE_TYPE_VARCHAR) {
-    base_table_name_ = value->to_string();
-  }
+  add_field(buffer, row, "base_table_name");
   add_field(buffer, row, "base_table_id");
   add_field(buffer, row, "include_all_columns");
   add_field(buffer, row, "where_clause");
@@ -1690,11 +1700,12 @@ void Metadata::InternalData::update_views(const MetadataConfig& config,
 
   while (rows.next()) {
     std::string temp_keyspace_name;
+    std::string base_table_name;
     const Row* row = rows.row();
 
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
         !row->get_string_by_name("view_name", &view_name)) {
-      LOG_ERROR("Unable to get column value for 'keyspace_name' and 'view_name");
+      LOG_ERROR("Unable to get column value for 'keyspace_name' and 'view_name'");
       continue;
     }
 
@@ -1703,14 +1714,21 @@ void Metadata::InternalData::update_views(const MetadataConfig& config,
       keyspace = get_or_create_keyspace(keyspace_name);
     }
 
-    ViewMetadata::Ptr view(new ViewMetadata(config, view_name, buffer, row));
-    keyspace->add_view(view);
-
-    TableMetadata::Ptr table(keyspace->get_table(view->base_table_name()));
-    if (table) {
-      table->add_view(view);
-      updated_tables.push_back(table);
+    if (!row->get_string_by_name("base_table_name", &base_table_name)) {
+      LOG_ERROR("Unable to get column value for 'base_table_name'");
+      continue;
     }
+
+    TableMetadata::Ptr table(keyspace->get_table(base_table_name));
+    if (!table) {
+      LOG_ERROR("No table metadata for view with base table name '%s'", base_table_name.c_str());
+      continue;
+    }
+
+    ViewMetadata::Ptr view(new ViewMetadata(config, table.get(), view_name, buffer, row));
+    keyspace->add_view(view);
+    table->add_view(view);
+    updated_tables.push_back(table);
   }
 
   for (TableMetadata::Vec::iterator i = updated_tables.begin(),
