@@ -68,9 +68,9 @@ cass_uint32_t cass_schema_meta_snapshot_version(const CassSchemaMeta* schema_met
 
 CassVersion cass_schema_meta_version(const CassSchemaMeta* schema_meta) {
   CassVersion version;
-  version.major_version = schema_meta->cassandra_version().major();
-  version.minor_version = schema_meta->cassandra_version().minor();
-  version.patch_version = schema_meta->cassandra_version().patch();
+  version.major_version = schema_meta->cassandra_version().major_version();
+  version.minor_version = schema_meta->cassandra_version().minor_version();
+  version.patch_version = schema_meta->cassandra_version().patch_version();
   return version;
 }
 
