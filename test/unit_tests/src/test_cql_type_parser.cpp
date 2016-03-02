@@ -172,11 +172,25 @@ BOOST_AUTO_TEST_CASE(frozen)
 
   cass::KeyspaceMetadata keyspace("keyspace1");
 
-  data_type = cass::DataTypeCqlNameParser::parse("frozen<list<int>>", native_types, &keyspace);
-  BOOST_REQUIRE_EQUAL(data_type->value_type(), CASS_VALUE_TYPE_LIST);
-  cass::CollectionType::ConstPtr list = static_cast<cass::CollectionType::ConstPtr>(data_type);
-  BOOST_REQUIRE_EQUAL(list->types().size(), 1);
-  BOOST_CHECK_EQUAL(list->types()[0]->value_type(), CASS_VALUE_TYPE_INT);
+  {
+    data_type = cass::DataTypeCqlNameParser::parse("frozen<list<int>>", native_types, &keyspace);
+    BOOST_REQUIRE_EQUAL(data_type->value_type(), CASS_VALUE_TYPE_LIST);
+    cass::CollectionType::ConstPtr list = static_cast<cass::CollectionType::ConstPtr>(data_type);
+    BOOST_REQUIRE_EQUAL(list->types().size(), 1);
+    BOOST_CHECK(list->is_frozen());
+    BOOST_CHECK_EQUAL(list->types()[0]->value_type(), CASS_VALUE_TYPE_INT);
+  }
+
+  {
+    data_type = cass::DataTypeCqlNameParser::parse("list<frozen<list<int>>>", native_types, &keyspace);
+    BOOST_REQUIRE_EQUAL(data_type->value_type(), CASS_VALUE_TYPE_LIST);
+    cass::CollectionType::ConstPtr list = static_cast<cass::CollectionType::ConstPtr>(data_type);
+    BOOST_REQUIRE_EQUAL(list->types().size(), 1);
+    BOOST_CHECK(!list->is_frozen());
+
+    BOOST_CHECK_EQUAL(list->types()[0]->value_type(), CASS_VALUE_TYPE_LIST);
+    BOOST_CHECK(list->types()[0]->is_frozen());
+  }
 }
 
 BOOST_AUTO_TEST_CASE(invalid)

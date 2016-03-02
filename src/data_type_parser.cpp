@@ -65,8 +65,9 @@ bool from_hex(const std::string& hex, std::string* result) {
 }
 
 DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
-                                           const NativeDataTypes& native_types,
-                                           KeyspaceMetadata* keyspace) {
+                                                const NativeDataTypes& native_types,
+                                                KeyspaceMetadata* keyspace,
+                                                bool is_frozen) {
   Parser parser(type, 0);
   std::string type_name;
   Parser::TypeParamsVec params;
@@ -86,7 +87,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
       return DataType::NIL;
     }
     DataType::ConstPtr element_type = parse(params[0], native_types, keyspace);
-    return CollectionType::list(element_type);
+    return CollectionType::list(element_type, is_frozen);
   }
 
   if (type_name == "set") {
@@ -96,7 +97,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
       return DataType::NIL;
     }
     DataType::ConstPtr element_type = parse(params[0], native_types, keyspace);
-    return CollectionType::set(element_type);
+    return CollectionType::set(element_type, is_frozen);
   }
 
   if (type_name == "map") {
@@ -107,7 +108,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
     }
     DataType::ConstPtr key_type = parse(params[0], native_types, keyspace);
     DataType::ConstPtr value_type = parse(params[1], native_types, keyspace);
-    return CollectionType::map(key_type, value_type);
+    return CollectionType::map(key_type, value_type, is_frozen);
   }
 
   if (type_name == "tuple") {
@@ -122,7 +123,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
          i != end;  ++i) {
       types.push_back(parse(*i, native_types, keyspace));
     }
-    return DataType::ConstPtr(new TupleType(types));
+    return DataType::ConstPtr(new TupleType(types, is_frozen));
   }
 
   if (type_name == "frozen") {
@@ -131,7 +132,7 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
       LOG_ERROR("Expecting single parameter for frozen keyword %s", type.c_str());
       return DataType::NIL;
     }
-    return parse(params[0], native_types, keyspace);
+    return parse(params[0], native_types, keyspace, true);
   }
 
   if (type_name == "empty") {
@@ -142,7 +143,16 @@ DataType::ConstPtr DataTypeCqlNameParser::parse(const std::string& type,
     return DataType::NIL;
   }
 
-  return keyspace->get_or_create_user_type(type_name);
+  UserType::ConstPtr user_type(keyspace->get_or_create_user_type(type_name, is_frozen));
+
+  if (user_type->is_frozen() != is_frozen) {
+    return UserType::Ptr(new UserType(user_type->keyspace(),
+                                      user_type->type_name(),
+                                      user_type->fields(),
+                                      is_frozen));
+  }
+
+  return user_type;
 }
 
 void DataTypeCqlNameParser::Parser::parse_type_name(std::string* name) {
@@ -269,11 +279,11 @@ bool DataTypeClassNameParser::is_tuple_type(const std::string& type) {
 }
 
 DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, const NativeDataTypes& native_types) {
-  bool frozen = is_frozen(type);
+  bool is_frozen = DataTypeClassNameParser::is_frozen(type);
 
   std::string class_name;
 
-  if (is_reversed(type) || frozen) {
+  if (is_reversed(type) || is_frozen) {
     if (!get_nested_class_name(type, &class_name)) {
       return DataType::ConstPtr();
     }
@@ -295,7 +305,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, c
     if (!element_type) {
       return DataType::ConstPtr();
     }
-    return CollectionType::list(element_type);
+    return CollectionType::list(element_type, is_frozen);
   } else if(starts_with(next, SET_TYPE)) {
     TypeParamsVec params;
     if (!parser.get_type_params(&params) || params.empty()) {
@@ -305,7 +315,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, c
     if (!element_type) {
       return DataType::ConstPtr();
     }
-    return CollectionType::set(element_type);
+    return CollectionType::set(element_type, is_frozen);
   } else if(starts_with(next, MAP_TYPE)) {
     TypeParamsVec params;
     if (!parser.get_type_params(&params) || params.size() < 2) {
@@ -316,10 +326,10 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, c
     if (!key_type || !value_type) {
       return DataType::ConstPtr();
     }
-    return CollectionType::map(key_type, value_type);
+    return CollectionType::map(key_type, value_type, is_frozen);
   }
 
-  if (frozen) {
+  if (is_frozen) {
     LOG_WARN("Got a frozen type for something other than a collection, "
              "this driver might be too old for your version of Cassandra");
   }
@@ -365,7 +375,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, c
       fields.push_back(UserType::Field(i->first, data_type));
     }
 
-    return DataType::ConstPtr(new UserType(keyspace, type_name, fields));
+    return DataType::ConstPtr(new UserType(keyspace, type_name, fields, true));
   }
 
   if (is_tuple_type(type)) {
@@ -384,7 +394,7 @@ DataType::ConstPtr DataTypeClassNameParser::parse_one(const std::string& type, c
       types.push_back(data_type);
     }
 
-    return DataType::ConstPtr(new TupleType(types));
+    return DataType::ConstPtr(new TupleType(types, true));
   }
 
   DataType::ConstPtr native_type(native_types.by_class_name(next));

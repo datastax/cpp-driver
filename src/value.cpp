@@ -196,8 +196,8 @@ Value::Value(int protocol_version,
     }
   } else {
     if (data_type->is_tuple()) {
-      SharedRefPtr<const SubTypesDataType> sub_types(data_type);
-      count_ = sub_types->types().size();
+      SharedRefPtr<const CompositeType> composite_type(data_type);
+      count_ = composite_type->types().size();
     } else if (data_type->is_user_type()) {
       UserType::ConstPtr user_type(data_type);
       count_ = user_type->fields().size();
