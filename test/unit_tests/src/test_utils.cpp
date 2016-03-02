@@ -48,4 +48,21 @@ BOOST_AUTO_TEST_CASE(cql_id)
   BOOST_CHECK_EQUAL(cass::to_cql_id(s), std::string("!@#"));
 }
 
+BOOST_AUTO_TEST_CASE(escape_id)
+{
+  std::string s;
+
+  s = "abc";
+  BOOST_CHECK_EQUAL(cass::escape_id(s), std::string("abc"));
+
+  s = "aBc";
+  BOOST_CHECK_EQUAL(cass::escape_id(s), std::string("\"aBc\""));
+
+  s = "\"";
+  BOOST_CHECK_EQUAL(cass::escape_id(s), std::string("\"\"\"\""));
+
+  s = "a\"Bc";
+  BOOST_CHECK_EQUAL(cass::escape_id(s), std::string("\"a\"\"Bc\""));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

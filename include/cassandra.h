@@ -366,6 +366,13 @@ typedef struct CassTableMeta_ CassTableMeta;
 typedef struct CassColumnMeta_ CassColumnMeta;
 
 /**
+ * @struct CassIndexMeta
+ *
+ * Index metadata
+ */
+typedef struct CassIndexMeta_ CassIndexMeta;
+
+/**
  * @struct CassUuidGen
  *
  * A UUID generator object.
@@ -480,6 +487,21 @@ typedef enum CassWriteType_ {
   XX(CASS_WRITE_TYPE_BATCH_LOG, "BATCH_LOG") \
   XX(CASS_WRITE_TYPE_CAS, "CAS")
 
+typedef enum CassColumnType_ {
+  CASS_COLUMN_TYPE_REGULAR,
+  CASS_COLUMN_TYPE_PARTITION_KEY,
+  CASS_COLUMN_TYPE_CLUSTERING_KEY,
+  CASS_COLUMN_TYPE_STATIC,
+  CASS_COLUMN_TYPE_COMPACT_VALUE
+} CassColumnType;
+
+typedef enum CassIndexType_ {
+  CASS_INDEX_TYPE_UNKNOWN,
+  CASS_INDEX_TYPE_KEYS,
+  CASS_INDEX_TYPE_CUSTOM,
+  CASS_INDEX_TYPE_COMPOSITES
+} CassIndexType;
+
 typedef enum CassValueType_ {
   CASS_VALUE_TYPE_UNKNOWN   = 0xFFFF,
   CASS_VALUE_TYPE_CUSTOM    = 0x0000,
@@ -521,14 +543,14 @@ typedef enum CassClusteringOrder_ {
 
 typedef enum CassCollectionType_ {
   CASS_COLLECTION_TYPE_LIST = CASS_VALUE_TYPE_LIST,
-  CASS_COLLECTION_TYPE_MAP = CASS_VALUE_TYPE_MAP,
-  CASS_COLLECTION_TYPE_SET = CASS_VALUE_TYPE_SET
+  CASS_COLLECTION_TYPE_MAP  = CASS_VALUE_TYPE_MAP,
+  CASS_COLLECTION_TYPE_SET  = CASS_VALUE_TYPE_SET
 } CassCollectionType;
 
 typedef enum CassBatchType_ {
-  CASS_BATCH_TYPE_LOGGED   = 0,
-  CASS_BATCH_TYPE_UNLOGGED = 1,
-  CASS_BATCH_TYPE_COUNTER  = 2
+  CASS_BATCH_TYPE_LOGGED   = 0x00,
+  CASS_BATCH_TYPE_UNLOGGED = 0x01,
+  CASS_BATCH_TYPE_COUNTER  = 0x02
 } CassBatchType;
 
 typedef enum CassIteratorType_ {
@@ -544,7 +566,8 @@ typedef enum CassIteratorType_ {
   CASS_ITERATOR_TYPE_TYPE_META,
   CASS_ITERATOR_TYPE_FUNCTION_META,
   CASS_ITERATOR_TYPE_AGGREGATE_META,
-  CASS_ITERATOR_TYPE_COLUMN_META
+  CASS_ITERATOR_TYPE_COLUMN_META,
+  CASS_ITERATOR_TYPE_INDEX_META
 } CassIteratorType;
 
 #define CASS_LOG_LEVEL_MAP(XX) \
@@ -570,14 +593,6 @@ typedef enum CassSslVerifyFlags {
   CASS_SSL_VERIFY_PEER_CERT,
   CASS_SSL_VERIFY_PEER_IDENTITY
 } CassSslVerifyFlags;
-
-typedef enum CassColumnType_ {
-  CASS_COLUMN_TYPE_REGULAR,
-  CASS_COLUMN_TYPE_PARTITION_KEY,
-  CASS_COLUMN_TYPE_CLUSTERING_KEY,
-  CASS_COLUMN_TYPE_STATIC,
-  CASS_COLUMN_TYPE_COMPACT_VALUE
-} CassColumnType;
 
 typedef enum  CassErrorSource_ {
   CASS_ERROR_SOURCE_NONE,
@@ -2007,6 +2022,38 @@ cass_table_meta_column_by_name_n(const CassTableMeta* table_meta,
                                  size_t column_length);
 
 /**
+ * Gets the index metadata for the provided index name.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @param[in] index
+ *
+ * @return The metadata for a index. NULL if index does not exist.
+ */
+CASS_EXPORT const CassIndexMeta*
+cass_table_meta_index_by_name(const CassTableMeta* table_meta,
+                               const char* index);
+
+/**
+ * Same as cass_table_meta_index_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @param[in] index
+ * @param[in] index_length
+ * @return same as cass_table_meta_index_by_name()
+ *
+ * @see cass_table_meta_index_by_name()
+ */
+CASS_EXPORT const CassIndexMeta*
+cass_table_meta_index_by_name_n(const CassTableMeta* table_meta,
+                                 const char* index,
+                                 size_t index_length);
+
+/**
  * Gets the name of the table.
  *
  * @public @memberof CassTableMeta
@@ -2043,6 +2090,30 @@ cass_table_meta_column_count(const CassTableMeta* table_meta);
 CASS_EXPORT const CassColumnMeta*
 cass_table_meta_column(const CassTableMeta* table_meta,
                        size_t index);
+
+/**
+ * Gets the total number of indexes for the table.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @return The total index count.
+ */
+CASS_EXPORT size_t
+cass_table_meta_index_count(const CassTableMeta* table_meta);
+
+/**
+ * Gets the index metadata for the provided index.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @param[in] index
+ * @return The metadata for a index. NULL returned if the index is out of range.
+ */
+CASS_EXPORT const CassIndexMeta*
+cass_table_meta_index(const CassTableMeta* table_meta,
+                      size_t index);
 
 /**
  * Gets the number of columns for the table's partition key.
@@ -2210,6 +2281,88 @@ cass_column_meta_field_by_name(const CassColumnMeta* column_meta,
  */
 CASS_EXPORT const CassValue*
 cass_column_meta_field_by_name_n(const CassColumnMeta* column_meta,
+                                 const char* name,
+                                 size_t name_length);
+
+/**
+ * Gets the name of the index.
+ *
+ * @public @memberof CassIndexMeta
+ *
+ * @param[in] index_meta
+ * @param[out] name
+ * @param[out] name_length
+ */
+CASS_EXPORT void
+cass_index_meta_name(const CassIndexMeta* index_meta,
+                      const char** name,
+                      size_t* name_length);
+
+/**
+ * Gets the type of the index.
+ *
+ * @public @memberof CassIndexMeta
+ *
+ * @param[in] index_meta
+ * @return The index's type.
+ */
+CASS_EXPORT CassIndexType
+cass_index_meta_type(const CassIndexMeta* index_meta);
+
+/**
+ * Gets the target of the index.
+ *
+ * @public @memberof CassIndexMeta
+ *
+ * @param[in] index_meta
+ * @param[out] target
+ * @param[out] target_length
+ */
+CASS_EXPORT void
+cass_index_meta_target(const CassIndexMeta* index_meta,
+                       const char** target,
+                       size_t* target_length);
+
+/**
+ * Gets the options of the index.
+ *
+ * @public @memberof CassIndexMeta
+ *
+ * @param[in] index_meta
+ * @return The index's options.
+ */
+CASS_EXPORT const CassValue*
+cass_index_meta_options(const CassIndexMeta* index_meta);
+
+/**
+ * Gets a metadata field for the provided name. Metadata fields allow direct
+ * access to the index data found in the underlying "indexes" metadata table.
+ *
+ * @public @memberof CassIndexMeta
+ *
+ * @param[in] index_meta
+ * @param[in] name
+ * @return A metadata field value. NULL if the field does not exist.
+ */
+CASS_EXPORT const CassValue*
+cass_index_meta_field_by_name(const CassIndexMeta* index_meta,
+                               const char* name);
+
+/**
+ * Same as cass_index_meta_field_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassIndexMeta
+ *
+ * @param[in] index_meta
+ * @param[in] name
+ * @param[in] name_length
+ * @return same as cass_index_meta_field_by_name()
+ *
+ * @see cass_index_meta_field_by_name()
+ */
+CASS_EXPORT const CassValue*
+cass_index_meta_field_by_name_n(const CassIndexMeta* index_meta,
                                  const char* name,
                                  size_t name_length);
 
@@ -6785,6 +6938,21 @@ CASS_EXPORT CassIterator*
 cass_iterator_columns_from_table_meta(const CassTableMeta* table_meta);
 
 /**
+ * Creates a new iterator for the specified table metadata.
+ * This can be used to iterate over indexes.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_index_meta()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_indexes_from_table_meta(const CassTableMeta* table_meta);
+
+/**
  * Creates a new fields iterator for the specified table metadata. Metadata
  * fields allow direct access to the column data found in the underlying
  * "tables" metadata table. This can be used to iterate those metadata
@@ -6821,12 +6989,30 @@ CASS_EXPORT CassIterator*
 cass_iterator_fields_from_column_meta(const CassColumnMeta* column_meta);
 
 /**
+ * Creates a new fields iterator for the specified index metadata. Metadata
+ * fields allow direct access to the index data found in the underlying
+ * "indexes" metadata table. This can be used to iterate those metadata
+ * field entries.
+ *
+ * @public @memberof CassIndexMeta
+ *
+ * @param[in] index_meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_meta_field_name()
+ * @see cass_iterator_get_meta_field_value()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_fields_from_index_meta(const CassIndexMeta* index_meta);
+
+/**
  * Creates a new fields iterator for the specified function metadata. Metadata
  * fields allow direct access to the column data found in the underlying
  * "functions" metadata table. This can be used to iterate those metadata
  * field entries.
  *
- * @public @memberof CassColumnMeta
+ * @public @memberof CassFunctionMeta
  *
  * @param[in] function_meta
  * @return A new iterator that must be freed.
@@ -6843,7 +7029,7 @@ cass_iterator_fields_from_function_meta(const CassFunctionMeta* function_meta);
  * "aggregates" metadata table. This can be used to iterate those metadata
  * field entries.
  *
- * @public @memberof CassColumnMeta
+ * @public @memberof CassAggregateMeta
  *
  * @param[in] aggregate_meta
  * @return A new iterator that must be freed.
@@ -7051,6 +7237,20 @@ cass_iterator_get_aggregate_meta(const CassIterator* iterator);
  */
 CASS_EXPORT const CassColumnMeta*
 cass_iterator_get_column_meta(const CassIterator* iterator);
+
+/**
+ * Gets the index metadata entry at the iterator's current position.
+ *
+ * Calling cass_iterator_next() will invalidate the previous
+ * value returned by this method.
+ *
+ * @public @memberof CassIterator
+ *
+ * @param[in] iterator
+ * @return A index metadata entry
+ */
+CASS_EXPORT const CassIndexMeta*
+cass_iterator_get_index_meta(const CassIterator* iterator);
 
 /**
  * Gets the metadata field name at the iterator's current position.

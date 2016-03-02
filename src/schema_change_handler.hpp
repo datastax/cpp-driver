@@ -39,13 +39,13 @@ public:
 
   void execute();
 
-  virtual void on_set(const ResponseVec& responses);
+  virtual void on_set(const ResponseMap& responses);
   virtual void on_error(CassError code, const std::string& message);
   virtual void on_timeout();
   void on_closing();
 
 private:
-  bool has_schema_agreement(const ResponseVec& responses);
+  bool has_schema_agreement(const ResponseMap& responses);
 
   ScopedRefPtr<RequestHandler> request_handler_;
   SharedRefPtr<Response> request_response_;

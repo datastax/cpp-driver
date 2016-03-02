@@ -48,6 +48,7 @@
 #define SELECT_KEYSPACES_30 "SELECT * FROM system_schema.keyspaces"
 #define SELECT_TABLES_30 "SELECT * FROM system_schema.tables"
 #define SELECT_COLUMNS_30 "SELECT * FROM system_schema.columns"
+#define SELECT_INDEXES_30 "SELECT * FROM system_schema.indexes"
 #define SELECT_USERTYPES_30 "SELECT * FROM system_schema.types"
 #define SELECT_FUNCTIONS_30 "SELECT * FROM system_schema.functions"
 #define SELECT_AGGREGATES_30 "SELECT * FROM system_schema.aggregates"
@@ -369,13 +370,13 @@ void ControlConnection::on_event(EventResponse* response) {
 void ControlConnection::query_meta_hosts() {
   ScopedRefPtr<ControlMultipleRequestHandler<UnusedData> > handler(
         new ControlMultipleRequestHandler<UnusedData>(this, ControlConnection::on_query_hosts, UnusedData()));
-  handler->execute_query(SELECT_LOCAL_TOKENS);
-  handler->execute_query(SELECT_PEERS_TOKENS);
+  handler->execute_query("local", SELECT_LOCAL_TOKENS);
+  handler->execute_query("peers", SELECT_PEERS_TOKENS);
 }
 
 void ControlConnection::on_query_hosts(ControlConnection* control_connection,
                                        const UnusedData& data,
-                                       const MultipleRequestHandler::ResponseVec& responses) {
+                                       const MultipleRequestHandler::ResponseMap& responses) {
   Connection* connection = control_connection->connection_;
   if (connection == NULL) {
     return;
@@ -395,10 +396,9 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
     if (host) {
       host->set_mark(session->current_host_mark_);
 
-      ResultResponse* local_result =
-          static_cast<ResultResponse*>(responses[0].get());
-
-      if (local_result->row_count() > 0) {
+      ResultResponse* local_result;
+      if (MultipleRequestHandler::get_result_response(responses, "local", &local_result) &&
+          local_result->row_count() > 0) {
         local_result->decode_first_row();
         control_connection->update_node_info(host, &local_result->first_row());
         session->metadata().set_cassandra_version(host->cassandra_version());
@@ -417,32 +417,33 @@ void ControlConnection::on_query_hosts(ControlConnection* control_connection,
   }
 
   {
-    ResultResponse* peers_result =
-        static_cast<ResultResponse*>(responses[1].get());
-    peers_result->decode_first_row();
-    ResultIterator rows(peers_result);
-    while (rows.next()) {
-      Address address;
-      const Row* row = rows.row();
-      if (!determine_address_for_peer_host(connection->address(),
-                                           row->get_by_name("peer"),
-                                           row->get_by_name("rpc_address"),
-                                           &address)) {
-        continue;
-      }
+    ResultResponse* peers_result;
+    if (MultipleRequestHandler::get_result_response(responses, "peers", &peers_result)) {
+      peers_result->decode_first_row();
+      ResultIterator rows(peers_result);
+      while (rows.next()) {
+        Address address;
+        const Row* row = rows.row();
+        if (!determine_address_for_peer_host(connection->address(),
+                                             row->get_by_name("peer"),
+                                             row->get_by_name("rpc_address"),
+                                             &address)) {
+          continue;
+        }
 
-      SharedRefPtr<Host> host = session->get_host(address);
-      bool is_new = false;
-      if (!host) {
-        is_new = true;
-        host = session->add_host(address);
-      }
+        SharedRefPtr<Host> host = session->get_host(address);
+        bool is_new = false;
+        if (!host) {
+          is_new = true;
+          host = session->add_host(address);
+        }
 
-      host->set_mark(session->current_host_mark_);
+        host->set_mark(session->current_host_mark_);
 
-      control_connection->update_node_info(host, rows.row());
-      if (is_new && !is_initial_connection) {
-        session->on_add(host, false);
+        control_connection->update_node_info(host, rows.row());
+        if (is_new && !is_initial_connection) {
+          session->on_add(host, false);
+        }
       }
     }
   }
@@ -467,29 +468,30 @@ void ControlConnection::query_meta_schema() {
         new ControlMultipleRequestHandler<UnusedData>(this, ControlConnection::on_query_meta_schema, UnusedData()));
 
   if (session_->metadata().cassandra_version() >= VersionNumber(3, 0, 0)) {
-    handler->execute_query(SELECT_KEYSPACES_30);
-    handler->execute_query(SELECT_TABLES_30);
-    handler->execute_query(SELECT_COLUMNS_30);
-    handler->execute_query(SELECT_USERTYPES_30);
-    handler->execute_query(SELECT_FUNCTIONS_30);
-    handler->execute_query(SELECT_AGGREGATES_30);
+    handler->execute_query("keyspaces", SELECT_KEYSPACES_30);
+    handler->execute_query("tables", SELECT_TABLES_30);
+    handler->execute_query("columns", SELECT_COLUMNS_30);
+    handler->execute_query("indexes", SELECT_INDEXES_30);
+    handler->execute_query("user_types", SELECT_USERTYPES_30);
+    handler->execute_query("functions", SELECT_FUNCTIONS_30);
+    handler->execute_query("aggregates", SELECT_AGGREGATES_30);
   } else {
-    handler->execute_query(SELECT_KEYSPACES_20);
-    handler->execute_query(SELECT_COLUMN_FAMILIES_20);
-    handler->execute_query(SELECT_COLUMNS_20);
+    handler->execute_query("keyspaces", SELECT_KEYSPACES_20);
+    handler->execute_query("tables", SELECT_COLUMN_FAMILIES_20);
+    handler->execute_query("columns", SELECT_COLUMNS_20);
     if (session_->metadata().cassandra_version() >= VersionNumber(2, 1, 0)) {
-      handler->execute_query(SELECT_USERTYPES_21);
+      handler->execute_query("user_types", SELECT_USERTYPES_21);
     }
     if (session_->metadata().cassandra_version() >= VersionNumber(2, 2, 0)) {
-      handler->execute_query(SELECT_FUNCTIONS_22);
-      handler->execute_query(SELECT_AGGREGATES_22);
+      handler->execute_query("functions", SELECT_FUNCTIONS_22);
+      handler->execute_query("aggregates", SELECT_AGGREGATES_22);
     }
   }
 }
 
 void ControlConnection::on_query_meta_schema(ControlConnection* control_connection,
                                              const UnusedData& unused,
-                                             const MultipleRequestHandler::ResponseVec& responses) {
+                                             const MultipleRequestHandler::ResponseMap& responses) {
   Connection* connection = control_connection->connection_;
   if (connection == NULL) {
     return;
@@ -501,17 +503,39 @@ void ControlConnection::on_query_meta_schema(ControlConnection* control_connecti
 
   bool is_initial_connection = (control_connection->state_ == CONTROL_STATE_NEW);
 
-  session->metadata().update_keyspaces(static_cast<ResultResponse*>(responses[0].get()));
-  session->metadata().update_tables(static_cast<ResultResponse*>(responses[1].get()),
-      static_cast<ResultResponse*>(responses[2].get()));
-
-  if (session->metadata().cassandra_version() >= VersionNumber(2, 1, 0)) {
-    session->metadata().update_user_types(static_cast<ResultResponse*>(responses[3].get()));
+  ResultResponse* keyspaces_result;
+  if (MultipleRequestHandler::get_result_response(responses, "keyspaces", &keyspaces_result)) {
+    session->metadata().update_keyspaces(keyspaces_result);
   }
 
-  if (session->metadata().cassandra_version() >= VersionNumber(2, 2, 0)) {
-    session->metadata().update_functions(static_cast<ResultResponse*>(responses[4].get()));
-    session->metadata().update_aggregates(static_cast<ResultResponse*>(responses[5].get()));
+  ResultResponse* tables_result;
+  if (MultipleRequestHandler::get_result_response(responses, "tables", &tables_result)) {
+    session->metadata().update_tables(tables_result);
+  }
+
+  ResultResponse* columns_result;
+  if (MultipleRequestHandler::get_result_response(responses, "columns", &columns_result)) {
+    session->metadata().update_columns(columns_result);
+  }
+
+  ResultResponse* indexes_result;
+  if (MultipleRequestHandler::get_result_response(responses, "indexes", &indexes_result)) {
+    session->metadata().update_indexes(indexes_result);
+  }
+
+  ResultResponse* user_types_result;
+  if (MultipleRequestHandler::get_result_response(responses, "user_types", &user_types_result)) {
+    session->metadata().update_user_types(user_types_result);
+  }
+
+  ResultResponse* functions_result;
+  if (MultipleRequestHandler::get_result_response(responses, "functions", &functions_result)) {
+    session->metadata().update_functions(functions_result);
+  }
+
+  ResultResponse* aggregates_result;
+  if (MultipleRequestHandler::get_result_response(responses, "aggregates", &aggregates_result)) {
+    session->metadata().update_aggregates(aggregates_result);
   }
 
   session->metadata().swap_to_back_and_update_front();
@@ -733,50 +757,70 @@ void ControlConnection::on_refresh_keyspace(ControlConnection* control_connectio
 
 void ControlConnection::refresh_table(const StringRef& keyspace_name,
                                       const StringRef& table_name) {
-  std::string cf_query;
-  std::string col_query;
+  std::string table_query;
+  std::string column_query;
+  std::string index_query;
 
   if (session_->metadata().cassandra_version() >= VersionNumber(3, 0, 0)) {
-    cf_query.assign(SELECT_TABLES_30);
-    cf_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+    table_query.assign(SELECT_TABLES_30);
+    table_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
         .append("' AND table_name='").append(table_name.data(), table_name.size()).append("'");
 
-    col_query.assign(SELECT_COLUMNS_30);
-    col_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+    column_query.assign(SELECT_COLUMNS_30);
+    column_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
         .append("' AND table_name='").append(table_name.data(), table_name.size()).append("'");
+
+    index_query.assign(SELECT_INDEXES_30);
+    index_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+        .append("' AND table_name='").append(table_name.data(), table_name.size()).append("'");
+
+    LOG_DEBUG("Refreshing table %s; %s; %s", table_query.c_str(), column_query.c_str(), index_query.c_str());
   } else {
-    cf_query.assign(SELECT_COLUMN_FAMILIES_20);
-    cf_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+    table_query.assign(SELECT_COLUMN_FAMILIES_20);
+    table_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
         .append("' AND columnfamily_name='").append(table_name.data(), table_name.size()).append("'");
 
-    col_query.assign(SELECT_COLUMNS_20);
-    col_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+    column_query.assign(SELECT_COLUMNS_20);
+    column_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
         .append("' AND columnfamily_name='").append(table_name.data(), table_name.size()).append("'");
+
+    LOG_DEBUG("Refreshing table %s; %s", table_query.c_str(), column_query.c_str());
   }
-
-  LOG_DEBUG("Refreshing table %s; %s", cf_query.c_str(), col_query.c_str());
 
   ScopedRefPtr<ControlMultipleRequestHandler<RefreshTableData> > handler(
         new ControlMultipleRequestHandler<RefreshTableData>(this,
                                                             ControlConnection::on_refresh_table,
                                                             RefreshTableData(keyspace_name.to_string(), table_name.to_string())));
-  handler->execute_query(cf_query);
-  handler->execute_query(col_query);
+  handler->execute_query("tables", table_query);
+  handler->execute_query("columns", column_query);
+  if (!index_query.empty()) {
+    handler->execute_query("indexes", index_query);
+  }
 }
 
 void ControlConnection::on_refresh_table(ControlConnection* control_connection,
                                          const RefreshTableData& data,
-                                         const MultipleRequestHandler::ResponseVec& responses) {
-  ResultResponse* column_family_result = static_cast<ResultResponse*>(responses[0].get());
-  if (column_family_result->row_count() == 0) {
+                                         const MultipleRequestHandler::ResponseMap& responses) {
+  ResultResponse* tables_result;
+  if (!MultipleRequestHandler::get_result_response(responses, "tables", &tables_result) ||
+      tables_result->row_count() == 0) {
     LOG_ERROR("No row found for column family %s.%s in system schema table.",
               data.keyspace_name.c_str(), data.table_name.c_str());
     return;
   }
 
   Session* session = control_connection->session_;
-  session->metadata().update_tables(static_cast<ResultResponse*>(responses[0].get()),
-                                    static_cast<ResultResponse*>(responses[1].get()));
+  session->metadata().update_tables(tables_result);
+
+  ResultResponse* columns_result;
+  if (MultipleRequestHandler::get_result_response(responses, "columns", &columns_result)) {
+    session->metadata().update_columns(columns_result);
+  }
+
+  ResultResponse* indexes_result;
+  if (MultipleRequestHandler::get_result_response(responses, "indexes", &indexes_result)) {
+    session->metadata().update_indexes(indexes_result);
+  }
 }
 
 
@@ -945,11 +989,11 @@ void ControlConnection::on_reconnect(Timer* timer) {
 
 template<class T>
 void ControlConnection::ControlMultipleRequestHandler<T>::on_set(
-    const MultipleRequestHandler::ResponseVec& responses) {
+    const MultipleRequestHandler::ResponseMap& responses) {
   bool has_error = false;
-  for (MultipleRequestHandler::ResponseVec::const_iterator it = responses.begin(),
+  for (MultipleRequestHandler::ResponseMap::const_iterator it = responses.begin(),
        end = responses.end(); it != end; ++it) {
-    if (control_connection_->handle_query_invalid_response(it->get())) {
+    if (control_connection_->handle_query_invalid_response(it->second.get())) {
       has_error = true;
     }
   }
