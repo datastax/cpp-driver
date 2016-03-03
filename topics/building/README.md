@@ -22,7 +22,7 @@ dependencies being installed.
 ### Test Dependencies
 
 - [boost 1.55+](http://www.boost.org)
-- [libssh2](http://www.libssh2.org)
+- [libssh2](http://www.libssh2.org) (optional)
 
 ## Linux/OS X
 The driver has been built using both Clang (Ubuntu 12.04/14.04 and OS X) and GCC
@@ -211,11 +211,11 @@ Usage: VC_BUILD.BAT [OPTION...]
     --DEBUG                           Enable debug build
     --RELEASE                         Enable release build (default)
     --DISABLE-CLEAN                   Disable clean build
+    --DEPENDENCIES-ONLY               Build dependencies only
     --TARGET-COMPILER [version]       140, 120, 110, 100, or WINSDK
     --DISABLE-OPENSSL                 Disable OpenSSL support
     --ENABLE-EXAMPLES                 Enable example builds
     --ENABLE-PACKAGES [version]       Enable package generation (*)
-    --ENABLE-TESTS [boost-root-dir]   Enable test builds
     --ENABLE-ZLIB                     Enable zlib
     --GENERATE-SOLUTION               Generate Visual Studio solution (**)
     --INSTALL-DIR [install-dir]       Override installation directory
@@ -224,6 +224,16 @@ Usage: VC_BUILD.BAT [OPTION...]
     --X86                             Target 32-bit build (***)
     --X64                             Target 64-bit build (***)
     --USE-BOOST-ATOMIC                Use Boost atomic
+
+    Testing Arguments
+
+    --ENABLE-TESTS
+         [boost-root-dir]             Enable test builds
+    --ENABLE-INTEGRATION-TESTS
+         [boost-root-dir]             Enable integration tests build
+    --ENABLE-UNIT-TESTS
+         [boost-root-dir]             Enable unit tests build
+    --ENABLE-LIBSSH2                  Enable libssh2 (remote server testing)
 
     --HELP                            Display this message
 
@@ -308,9 +318,6 @@ obtained and select from the following list:
  - Boost v1.59 [32-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-12.0-32.exe/download)/[64-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-12.0-64.exe/download)
 - Visual Studio 2015 (Windows SDK 10.0)
  - Boost v1.59 [32-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-14.0-32.exe/download)/[64-bit](http://sourceforge.net/projects/boost/files/boost-binaries/1.59.0/boost_1_59_0-msvc-14.0-64.exe/download)
-
-**NOTE:** Ensure the Boost library directory structure is configured correctly
-by renaming the library directory to _lib_ (e.g. lib64-msvc-14.0 to lib).
 
 #### Building the Driver with the Tests
 

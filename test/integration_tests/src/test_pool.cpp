@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(no_hosts_backpressure)
 {
   // Limit backpressure test to lower version of C* (difficult to produce in later versions deterministically)
   CCM::CassVersion version = test_utils::get_version();
-  if ((version.major <= 2 && version.minor < 1) || version.major < 2) {
+  if ((version.major_version <= 2 && version.minor_version < 1) || version.major_version < 2) {
     TestPool tester;
     cass_cluster_set_num_threads_io(tester.cluster, 1);
     reinterpret_cast<cass::Cluster*>(tester.cluster)->config().set_core_connections_per_host(0);// bypassing API param check
@@ -192,7 +192,7 @@ static void connection_interruptions(void *data) {
 BOOST_AUTO_TEST_CASE(dont_recycle_pool_on_timeout) {
   // Limit backpressure test to lower version of C* (difficult to produce in later versions deterministically)
   CCM::CassVersion version = test_utils::get_version();
-  if ((version.major <= 2 && version.minor < 1) || version.major < 2) {
+  if ((version.major_version <= 2 && version.minor_version < 1) || version.major_version < 2) {
     TestPool tester;
 
     // Add a second node

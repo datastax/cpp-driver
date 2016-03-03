@@ -44,6 +44,7 @@
 #endif
 #include "bridge.hpp"
 
+#ifdef CASS_USE_LIBSSH2
 #include <libssh2.h>
 #define LIBSSH2_INIT_ALL 0
 #ifdef OPENSSL_CLEANUP
@@ -52,6 +53,12 @@
 # include <openssl/rand.h>
 # include <openssl/engine.h>
 # include <openssl/conf.h>
+#endif
+#else
+#ifdef _MSC_VER
+// ssize_t is defined in libssh2 and used by local command execution
+typedef SSIZE_T ssize_t;
+#endif
 #endif
 
 #include <ctype.h>
@@ -125,26 +132,33 @@ CCM::Bridge::Bridge(CassVersion cassandra_version /*= DEFAULT_CASSANDRA_VERSION*
   const std::string& password /*= DEFAULT_PASSWORD*/,
   const std::string& public_key /*= ""*/,
   const std::string& private_key /*= ""*/)
-  : session_(NULL)
-  , channel_(NULL)
-  , socket_(NULL)
+  : socket_(NULL)
   , cassandra_version_(cassandra_version)
   , use_asfgit_(use_asfgit)
   , cluster_prefix_(cluster_prefix)
-  , deployment_type_(deployment_type)
   , authentication_type_(authentication_type)
+#ifdef CASS_USE_LIBSSH2
+  , session_(NULL)
+  , channel_(NULL)
+  , deployment_type_(deployment_type)
   , host_(host) {
+#else
+  // Force local deployment only
+  , deployment_type_(DeploymentType::LOCAL)
+  , host_("127.0.0.1") {
+#endif
 #ifdef _WIN32
 # ifdef _DEBUG
   // Enable automatic execution of the memory leak detection upon exit
   _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 # endif
 #endif
+#ifdef CASS_USE_LIBSSH2
   // Determine if libssh2 needs to be initialized
-  if (deployment_type == DeploymentType::REMOTE) {
+  if (deployment_type_ == DeploymentType::REMOTE) {
     // Initialize the socket
     try {
-      initialize_socket(host, port);
+      initialize_socket(host_, port);
     } catch (SocketException &se) {
       // Re-throw the exception as a BridgeException
       finalize_libssh2();
@@ -155,20 +169,27 @@ CCM::Bridge::Bridge(CassVersion cassandra_version /*= DEFAULT_CASSANDRA_VERSION*
     initialize_libssh2();
 
     // Authenticate and establish the libssh2 connection
-    establish_libssh2_connection(authentication_type, username, password, public_key, private_key);
+    establish_libssh2_connection(authentication_type_, username, password, public_key, private_key);
   }
+#endif
 }
 
 CCM::Bridge::Bridge(const std::string& configuration_file)
-  : session_(NULL)
-  , channel_(NULL)
-  , socket_(NULL)
+  : socket_(NULL)
   , cassandra_version_(DEFAULT_CASSANDRA_VERSION)
   , use_asfgit_(DEFAULT_USE_ASFGIT)
   , cluster_prefix_(DEFAULT_CLUSTER_PREFIX)
-  , deployment_type_(DEFAULT_DEPLOYMENT)
   , authentication_type_(DEFAULT_AUTHENTICATION)
+#ifdef CASS_USE_LIBSSH2
+  , session_(NULL)
+  , channel_(NULL)
+  , deployment_type_(DEFAULT_DEPLOYMENT)
   , host_(DEFAULT_HOST) {
+#else
+  // Force local
+  , deployment_type_(DeploymentType::LOCAL)
+  , host_("127.0.0.1") {
+#endif
 
   // Initialize the default remote configuration settings
   short port = DEFAULT_REMOTE_DEPLOYMENT_PORT;
@@ -203,6 +224,7 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
               LOG_ERROR("Invalid Flag [" << value << "] for Use ASF git: Using default [" << DEFAULT_USE_ASFGIT << "]");
               use_asfgit_ = DEFAULT_USE_ASFGIT;
             }
+#ifdef CASS_USE_LIBSSH2
           } else if (key.compare(CCM_CONFIGURATION_KEY_DEPLOYMENT_TYPE) == 0) {
             // Determine the deployment type
             bool is_found = false;
@@ -216,6 +238,7 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
             if (!is_found) {
               LOG_ERROR("Invalid Deployment Type: Using default " << DEFAULT_DEPLOYMENT.to_string());
             }
+#endif
           } else if (key.compare(CCM_CONFIGURATION_KEY_AUTHENTICATION_TYPE) == 0) {
             // Determine the authentication type
             bool is_found = false;
@@ -229,8 +252,10 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
             if (!is_found) {
               LOG_ERROR("Invalid Authentication Type [" << value << "]: Using default " << DEFAULT_AUTHENTICATION.to_string());
             }
+#ifdef CASS_USE_LIBSSH2
           } else if (key.compare(CCM_CONFIGURATION_KEY_HOST) == 0) {
             host_ = value;
+#endif
           } else if (key.compare(CCM_CONFIGURATION_KEY_SSH_PORT) == 0) {
             //Convert the value
             std::stringstream valueStream(value);
@@ -240,6 +265,7 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
               LOG_ERROR("Invalid Port: Using default [" << DEFAULT_REMOTE_DEPLOYMENT_PORT << "]");
               port = DEFAULT_REMOTE_DEPLOYMENT_PORT;
             }
+#ifdef CASS_USE_LIBSSH2
           } else if (key.compare(CCM_CONFIGURATION_KEY_SSH_USERNAME) == 0) {
             username = value;
           } else if (key.compare(CCM_CONFIGURATION_KEY_SSH_PASSWORD) == 0) {
@@ -248,6 +274,7 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
             public_key = value;
           } else if (key.compare(CCM_CONFIGURATION_KEY_SSH_PRIVATE_KEY) == 0) {
             private_key = value;
+#endif
           } else {
             LOG_ERROR("Invalid Configuration Option: Key " << key << " with value " << value);
           }
@@ -265,6 +292,7 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
   LOG("Cassandra Version: " << cassandra_version_.to_string());
   LOG("Cluster Prefix: " << cluster_prefix_);
   LOG("Deployment Type: " << deployment_type_.to_string());
+#ifdef CASS_USE_LIBSSH2
   if (deployment_type_ == DeploymentType::REMOTE) {
     LOG("Authentication Type: " << authentication_type_.to_string());
     LOG("Port: " << port);
@@ -276,6 +304,7 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
       LOG("Private Key: " << private_key);
     }
   }
+#endif
 
 #ifdef _WIN32
 # ifdef _DEBUG
@@ -283,6 +312,7 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
   _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 # endif
 #endif
+#ifdef CASS_USE_LIBSSH2
   // Determine if libssh2 needs to be initialized
   if (deployment_type_ == DeploymentType::REMOTE) {
     // Initialize the socket
@@ -301,13 +331,16 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
     // Authenticate and establish the libssh2 connection
     establish_libssh2_connection(authentication_type_, username, password, public_key, private_key);
   }
+#endif
 }
 
 CCM::Bridge::~Bridge() {
+#ifdef CASS_USE_LIBSSH2
   if (deployment_type_ == DeploymentType::REMOTE) {
     close_libssh2_terminal();
     finalize_libssh2();
   }
+#endif
 }
 
 void CCM::Bridge::clear_cluster_data() {
@@ -519,6 +552,11 @@ bool  CCM::Bridge::start_cluster(std::vector<std::string> jvm_arguments /*= DEFA
   start_command.push_back("start");
   start_command.push_back("--wait-other-notice");
   start_command.push_back("--wait-for-binary-proto");
+#ifdef _WIN32
+  if (cassandra_version_ >= "2.2.4") {
+    start_command.push_back("--quiet-windows");
+  }
+#endif
   for (std::vector<std::string>::const_iterator iterator = jvm_arguments.begin(); iterator != jvm_arguments.end(); ++iterator) {
     std::string jvm_argument = trim(*iterator);
     if (!jvm_argument.empty()) {
@@ -718,6 +756,11 @@ bool CCM::Bridge::start_node(unsigned int node, std::vector<std::string> jvm_arg
   start_node_command.push_back("start");
   start_node_command.push_back("--wait-other-notice");
   start_node_command.push_back("--wait-for-binary-proto");
+#ifdef _WIN32
+  if (cassandra_version_ >= "2.2.4") {
+    start_node_command.push_back("--quiet-windows");
+  }
+#endif
   for (std::vector<std::string>::const_iterator iterator = jvm_arguments.begin(); iterator != jvm_arguments.end(); ++iterator) {
     std::string jvm_argument = trim(*iterator);
     if (!jvm_argument.empty()) {
@@ -874,6 +917,7 @@ bool CCM::Bridge::is_node_up(unsigned int node) {
   return false;
 }
 
+#ifdef CASS_USE_LIBSSH2
 void CCM::Bridge::initialize_socket(const std::string& host, short port) {
   // Initialize the socket
   socket_ = new Socket();
@@ -1140,6 +1184,7 @@ std::string CCM::Bridge::execute_libssh2_command(const std::vector<std::string>&
   close_libssh2_terminal();
   return output;
 }
+#endif
 
 std::string CCM::Bridge::execute_local_command(const std::vector<std::string>& command) {
   // Execute the command locally
@@ -1176,6 +1221,7 @@ std::string CCM::Bridge::execute_local_command(const std::vector<std::string>& c
   return output;
 }
 
+#ifdef CASS_USE_LIBSSH2
 std::string CCM::Bridge::read_libssh2_terminal() {
   ssize_t bytes_read_error_code = 0;
   char buffer[512];
@@ -1214,6 +1260,7 @@ std::string CCM::Bridge::read_libssh2_terminal() {
 
   return output;
 }
+#endif
 
 std::string CCM::Bridge::execute_ccm_command(const std::vector<std::string>& command) {
   // Create the CCM command
@@ -1226,9 +1273,12 @@ std::string CCM::Bridge::execute_ccm_command(const std::vector<std::string>& com
   std::string output;
   if (deployment_type_ == DeploymentType::LOCAL) {
     output = execute_local_command(ccm_command);
-  } else if (deployment_type_ == DeploymentType::REMOTE) {
+  }
+#ifdef CASS_USE_LIBSSH2
+  else if (deployment_type_ == DeploymentType::REMOTE) {
     output = execute_libssh2_command(ccm_command);
   }
+#endif
 
   if (!output.empty()) LOG(trim(output));
   return output;

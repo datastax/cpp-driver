@@ -98,7 +98,7 @@ struct StressTests : public test_utils::MultipleNodesTest {
   bool insert_task(const std::string& query, CassConsistency consistency, int rows_per_id) {
     bool is_successful = true;
     for (int i = 0; i < rows_per_id; ++i) {
-      if (version.major == 1) {
+      if (version.major_version == 1) {
         if (!create_and_execute_insert(query, consistency)) {
           is_successful = false;
         }

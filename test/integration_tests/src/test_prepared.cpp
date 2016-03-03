@@ -110,7 +110,7 @@ struct PreparedTests : public test_utils::SingleSessionTest {
     test_utils::execute_query(session, str(boost::format(test_utils::CREATE_KEYSPACE_SIMPLE_FORMAT)
                                            % test_utils::SIMPLE_KEYSPACE % "1"));
     test_utils::execute_query(session, str(boost::format("USE %s") % test_utils::SIMPLE_KEYSPACE));
-    if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+    if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
       test_utils::execute_query(session, str(boost::format(test_utils::CREATE_TABLE_ALL_TYPES_V4) % ALL_TYPE_TABLE_NAME));
       column_size_ = 15;
     } else {
@@ -121,7 +121,7 @@ struct PreparedTests : public test_utils::SingleSessionTest {
     columns_ = "id, text_sample, int_sample, bigint_sample, float_sample, double_sample, decimal_sample, "
       "blob_sample, boolean_sample, timestamp_sample, inet_sample";
     values_ = "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?";
-    if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+    if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
       columns_ += ", tinyint_sample, smallint_sample, date_sample, time_sample";
       values_ += ", ?, ?, ?, ?";
     }
@@ -152,7 +152,7 @@ struct PreparedTests : public test_utils::SingleSessionTest {
     cass_statement_bind_bool(statement.get(), 8, all_types.boolean_sample);
     cass_statement_bind_int64(statement.get(), 9, all_types.timestamp_sample);
     cass_statement_bind_inet(statement.get(), 10, all_types.inet_sample);
-    if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+    if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
       cass_statement_bind_int8(statement.get(), 11, all_types.tinyint_sample);
       cass_statement_bind_int16(statement.get(), 12, all_types.smallint_sample);
       cass_statement_bind_uint32(statement.get(), 13, all_types.date_sample.date);
@@ -199,7 +199,7 @@ struct PreparedTests : public test_utils::SingleSessionTest {
     BOOST_REQUIRE(cass_value_get_inet(cass_row_get_column(row, 10), &output.inet_sample) == CASS_OK);
     BOOST_REQUIRE(test_utils::Value<CassInet>::equal(input.inet_sample, output.inet_sample));
 
-    if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+    if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
       BOOST_REQUIRE(cass_value_get_int8(cass_row_get_column(row, 11), &output.tinyint_sample) == CASS_OK);
       BOOST_REQUIRE(test_utils::Value<cass_int8_t>::equal(input.tinyint_sample, output.tinyint_sample));
 
@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
   all_types[0].boolean_sample = cass_true;
   all_types[0].timestamp_sample = 1123200000;
   all_types[0].inet_sample = cass_inet_init_v4(address1);
-  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
     all_types[0].tinyint_sample = 37;
     all_types[0].smallint_sample = 456;
     all_types[0].date_sample = test_utils::Value<CassDate>::max_value();
@@ -273,7 +273,7 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
   all_types[1].boolean_sample = cass_false;
   all_types[1].timestamp_sample = 0;
   all_types[1].inet_sample = cass_inet_init_v4(address2);
-  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
     all_types[1].tinyint_sample = 0;
     all_types[1].smallint_sample = 0;
     all_types[1].date_sample = 0;
@@ -291,7 +291,7 @@ BOOST_AUTO_TEST_CASE(bound_all_types_different_values)
   all_types[2].boolean_sample = cass_true;
   all_types[2].timestamp_sample = -13462502400;
   all_types[2].inet_sample = cass_inet_init_v4(address3);
-  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
     all_types[2].tinyint_sample = 127;
     all_types[2].smallint_sample = 32767;
     all_types[2].date_sample = test_utils::Value<CassDate>::min_value();

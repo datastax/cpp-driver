@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_SUITE(batch)
 BOOST_AUTO_TEST_CASE(prepared)
 {
   CCM::CassVersion version = test_utils::get_version();
-  if (version.major != 1) {
+  if (version.major_version != 1) {
     BatchTests tester;
     test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
     std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(?, ?);") % BatchTests::SIMPLE_TABLE_NAME);
@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE(prepared)
 BOOST_AUTO_TEST_CASE(simple)
 {
   CCM::CassVersion version = test_utils::get_version();
-  if (version.major != 1) {
+  if (version.major_version != 1) {
     BatchTests tester;
     test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
     std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(?, ?);") % BatchTests::SIMPLE_TABLE_NAME);
@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE(simple)
 BOOST_AUTO_TEST_CASE(mixed)
 {
   CCM::CassVersion version = test_utils::get_version();
-  if (version.major != 1) {
+  if (version.major_version != 1) {
     BatchTests tester;
     test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
     std::string insert_query = str(boost::format("INSERT INTO %s (tweet_id, test_val) VALUES(?, ?);") % BatchTests::SIMPLE_TABLE_NAME);
@@ -164,7 +164,7 @@ BOOST_AUTO_TEST_CASE(mixed)
 BOOST_AUTO_TEST_CASE(invalid_batch_type)
 {
   CCM::CassVersion version = test_utils::get_version();
-  if (version.major != 1) {
+  if (version.major_version != 1) {
     BatchTests tester;
     test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_LOGGED));
     std::string update_query = str(boost::format("UPDATE %s SET test_val = test_val + ? WHERE tweet_id = ?;") % BatchTests::COUNTER_TABLE_NAME);
@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE(invalid_batch_type)
 BOOST_AUTO_TEST_CASE(counter_mixed)
 {
   CCM::CassVersion version = test_utils::get_version();
-  if (version.major != 1) {
+  if (version.major_version != 1) {
     BatchTests tester;
     test_utils::CassBatchPtr batch(cass_batch_new(CASS_BATCH_TYPE_COUNTER));
     std::string update_query = str(boost::format("UPDATE %s SET test_val = test_val + ? WHERE tweet_id = ?;") % BatchTests::COUNTER_TABLE_NAME);

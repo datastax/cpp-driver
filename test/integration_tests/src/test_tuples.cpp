@@ -321,7 +321,7 @@ BOOST_AUTO_TEST_SUITE(tuples)
  */
 BOOST_AUTO_TEST_CASE(read_write) {
   CCM::CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 1) || version.major_version >= 3) {
     TupleTests tester;
     std::string create_table = "CREATE TABLE tuple_read_write(key int PRIMARY KEY, value frozen<tuple<int, text, float>>)";
     std::string insert_query = "INSERT INTO tuple_read_write(key, value) VALUES (?, ?)";
@@ -445,7 +445,7 @@ BOOST_AUTO_TEST_CASE(read_write) {
  */
 BOOST_AUTO_TEST_CASE(varying_size) {
   CCM::CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 1) || version.major_version >= 3) {
     TupleTests tester;
 
     // Create some varying size tuple tests (primitives)
@@ -486,7 +486,7 @@ BOOST_AUTO_TEST_CASE(varying_size) {
           tester.insert_varying_sized_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE, 3.141592653589793, size, nested_collection_type);
           tester.insert_varying_sized_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT, 3.1415926f, size, nested_collection_type);
           tester.insert_varying_sized_value<cass_int32_t>(CASS_VALUE_TYPE_INT, 123, size, nested_collection_type);
-          if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+          if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
             tester.insert_varying_sized_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, 123, size, nested_collection_type);
             tester.insert_varying_sized_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, 123, size, nested_collection_type);
             tester.insert_varying_sized_value<CassDate>(CASS_VALUE_TYPE_DATE,
@@ -531,7 +531,7 @@ BOOST_AUTO_TEST_CASE(varying_size) {
 */
 BOOST_AUTO_TEST_CASE(null) {
   CCM::CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 1) || version.major_version >= 3) {
     TupleTests tester;
 
     // Create some varying size null tuple tests
@@ -553,7 +553,7 @@ BOOST_AUTO_TEST_CASE(null) {
         tester.insert_varying_sized_null_value<CassUuid>(CASS_VALUE_TYPE_UUID, size, nested_collection_type);
         tester.insert_varying_sized_null_value<CassInet>(CASS_VALUE_TYPE_INET, size, nested_collection_type);
         tester.insert_varying_sized_null_value<CassUuid>(CASS_VALUE_TYPE_TIMEUUID, size, nested_collection_type);
-        if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+        if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
           tester.insert_varying_sized_null_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, size, nested_collection_type);
           tester.insert_varying_sized_null_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, size, nested_collection_type);
           tester.insert_varying_sized_null_value<CassDate>(CASS_VALUE_TYPE_DATE, size, nested_collection_type);
@@ -579,7 +579,7 @@ BOOST_AUTO_TEST_CASE(null) {
 */
 BOOST_AUTO_TEST_CASE(invalid) {
   CCM::CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 1) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 1) || version.major_version >= 3) {
     TupleTests tester;
     std::string create_table = "CREATE TABLE tuple_invalid(key int PRIMARY KEY, value frozen<tuple<int, text, float>>)";
     std::string insert_query = "INSERT INTO tuple_invalid(key, value) VALUES (?, ?)";

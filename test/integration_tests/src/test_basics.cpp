@@ -62,7 +62,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
     test_utils::CassStatementPtr insert_statement(cass_statement_new(insert_query.c_str(), 2));
 
     // Determine if bound parameters can be used based on C* version
-    if (version.major == 1) {
+    if (version.major_version == 1) {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query);
       insert_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
@@ -77,7 +77,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
     test_utils::CassStatementPtr select_statement(cass_statement_new(select_query.c_str(), 1));
 
     // Determine if bound parameters can be used based on C* version
-    if (version.major == 1) {
+    if (version.major_version == 1) {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, select_query);
       select_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
@@ -150,7 +150,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
     test_utils::CassStatementPtr insert_statement(cass_statement_new(insert_query.c_str(), 3));
 
     // Determine if bound parameters can be used based on C* version
-    if (version.major == 1) {
+    if (version.major_version == 1) {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query);
       insert_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
@@ -166,7 +166,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
     test_utils::CassStatementPtr select_statement(cass_statement_new(select_query.c_str(), 1));
 
     // Determine if bound parameters can be used based on C* version
-    if (version.major == 1) {
+    if (version.major_version == 1) {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, select_query.c_str());
       select_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
@@ -246,7 +246,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
     test_utils::CassStatementPtr insert_statement(cass_statement_new(insert_query.c_str(), 2));
 
     // Determine if bound parameters can be used based on C* version
-    if (version.major == 1) {
+    if (version.major_version == 1) {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query);
       insert_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
@@ -261,7 +261,7 @@ struct BasicTests : public test_utils::SingleSessionTest {
     test_utils::CassStatementPtr select_statement(cass_statement_new(select_query.c_str(), 1));
 
     // Determine if bound parameters can be used based on C* version
-    if (version.major == 1) {
+    if (version.major_version == 1) {
       test_utils::CassPreparedPtr prepared = test_utils::prepare(session, select_query);
       select_statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
     }
@@ -332,7 +332,7 @@ BOOST_FIXTURE_TEST_SUITE(basics, BasicTests)
 
 BOOST_AUTO_TEST_CASE(basic_types)
 {
-  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
     insert_single_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT, 123);
     insert_single_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT, 123);
     insert_single_value<CassDate>(CASS_VALUE_TYPE_DATE, test_utils::Value<CassDate>::min_value() + 1u);
@@ -392,7 +392,7 @@ BOOST_AUTO_TEST_CASE(basic_types)
 
 BOOST_AUTO_TEST_CASE(min_max)
 {
-  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
     insert_min_max_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT);
     insert_min_max_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT);
     insert_min_max_value<CassDate>(CASS_VALUE_TYPE_DATE);
@@ -434,7 +434,7 @@ BOOST_AUTO_TEST_CASE(null)
   insert_null_value<cass_double_t>(CASS_VALUE_TYPE_DOUBLE);
   insert_null_value<cass_float_t>(CASS_VALUE_TYPE_FLOAT);
   insert_null_value<cass_int32_t>(CASS_VALUE_TYPE_INT);
-  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
     insert_null_value<cass_int8_t>(CASS_VALUE_TYPE_TINY_INT);
     insert_null_value<cass_int16_t>(CASS_VALUE_TYPE_SMALL_INT);
     insert_null_value<CassDate>(CASS_VALUE_TYPE_DATE);
@@ -493,7 +493,7 @@ BOOST_AUTO_TEST_CASE(counters)
     test_utils::CassStatementPtr statement(cass_statement_new(update_query.c_str(), 1));
 
     // Determine if bound parameters can be used based on C* version
-    if (version.major == 1) {
+    if (version.major_version == 1) {
       update_query = str(boost::format("UPDATE %s SET incdec = incdec %s %d WHERE tweet_id = %d;")
           % test_utils::SIMPLE_TABLE % ((i % 2) == 0 ? "-" : "+") % i % tweet_id);
       statement = test_utils::CassStatementPtr(cass_statement_new(update_query.c_str(), 0));
@@ -535,7 +535,7 @@ BOOST_AUTO_TEST_CASE(rows_in_rows_out)
       test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 4));
 
       // Determine if bound parameters can be used based on C* version
-      if (version.major == 1) {
+      if (version.major_version == 1) {
         std::string insert_query(boost::str(boost::format("INSERT INTO %s (tweet_id, t1, t2, t3) VALUES (%s, %s, %s, %s);") % test_utils::SIMPLE_TABLE
                                           % i % (i + 1) % (i + 2) % (i + 3)));
         statement = test_utils::CassStatementPtr(cass_statement_new(insert_query.c_str(), 0));
@@ -653,7 +653,7 @@ BOOST_AUTO_TEST_CASE(unset_parameters)
   test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
 
   // Determine if bound parameters can be used based on C* version
-  if (version.major == 1) {
+  if (version.major_version == 1) {
     test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query);
     statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
   }

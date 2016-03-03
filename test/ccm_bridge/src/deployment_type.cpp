@@ -21,7 +21,9 @@ using namespace CCM;
 
 // Constant value definitions for deployment type
 const DeploymentType DeploymentType::LOCAL("LOCAL", 0, "Local");
+#ifdef CASS_USE_LIBSSH2
 const DeploymentType DeploymentType::REMOTE("REMOTE", 1, "Remote");
+#endif
 
 // Static declarations for deployment type
 std::set<DeploymentType> DeploymentType::constants_;
@@ -41,7 +43,9 @@ const std::string& DeploymentType::to_string() const {
 const std::set<DeploymentType>& DeploymentType::get_constants() {
   if (constants_.empty()) {
     constants_.insert(LOCAL);
+#ifdef CASS_USE_LIBSSH2
     constants_.insert(REMOTE);
+#endif
   }
 
   return constants_;
