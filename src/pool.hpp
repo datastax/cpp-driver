@@ -66,9 +66,18 @@ public:
 
   const Address& address() const { return address_; }
 
+  Connection::ConnectionError connection_error() const { return connection_error_; }
+
   bool is_initial_connection() const { return is_initial_connection_; }
   bool is_ready() const { return state_ == POOL_STATE_READY; }
-  bool is_critical_failure() const { return is_critical_failure_; }
+  bool is_keyspace_error() const {
+    return connection_error_ == Connection::CONNECTION_ERROR_KEYSPACE;
+  }
+  bool is_critical_failure() const {
+    return connection_error_ == Connection::CONNECTION_ERROR_INVALID_PROTOCOL ||
+        connection_error_ == Connection::CONNECTION_ERROR_AUTH ||
+        connection_error_ == Connection::CONNECTION_ERROR_SSL;
+  }
   bool cancel_reconnect() const { return cancel_reconnect_; }
 
   void return_connection(Connection* connection);
@@ -106,13 +115,13 @@ private:
   Metrics* metrics_;
 
   PoolState state_;
+  Connection::ConnectionError connection_error_;
   ConnectionVec connections_;
   ConnectionSet connections_pending_;
   List<Handler> pending_requests_;
   int available_connection_count_;
   bool is_available_;
   bool is_initial_connection_;
-  bool is_critical_failure_;
   bool is_pending_flush_;
   bool cancel_reconnect_;
 

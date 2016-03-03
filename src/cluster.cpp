@@ -300,6 +300,66 @@ void cass_cluster_set_whitelist_filtering_n(CassCluster* cluster,
   }
 }
 
+void cass_cluster_set_blacklist_filtering(CassCluster* cluster,
+                                          const char* hosts) {
+  size_t hosts_length
+      = hosts == NULL ? 0 : strlen(hosts);
+  cass_cluster_set_blacklist_filtering_n(cluster,
+                                         hosts,
+                                         hosts_length);
+}
+
+void cass_cluster_set_blacklist_filtering_n(CassCluster* cluster,
+                                            const char* hosts,
+                                            size_t hosts_length) {
+  if (hosts_length == 0) {
+    cluster->config().blacklist().clear();
+  } else {
+    cass::explode(std::string(hosts, hosts_length),
+                  cluster->config().blacklist());
+  }
+}
+
+void cass_cluster_set_whitelist_dc_filtering(CassCluster* cluster,
+                                          const char* dcs) {
+  size_t dcs_length
+      = dcs == NULL ? 0 : strlen(dcs);
+  cass_cluster_set_whitelist_dc_filtering_n(cluster,
+                                         dcs,
+                                         dcs_length);
+}
+
+void cass_cluster_set_whitelist_dc_filtering_n(CassCluster* cluster,
+                                            const char* dcs,
+                                            size_t dcs_length) {
+  if (dcs_length == 0) {
+    cluster->config().whitelist_dc().clear();
+  } else {
+    cass::explode(std::string(dcs, dcs_length),
+                  cluster->config().whitelist_dc());
+  }
+}
+
+void cass_cluster_set_blacklist_dc_filtering(CassCluster* cluster,
+                                          const char* dcs) {
+  size_t dcs_length
+      = dcs == NULL ? 0 : strlen(dcs);
+  cass_cluster_set_blacklist_dc_filtering_n(cluster,
+                                         dcs,
+                                         dcs_length);
+}
+
+void cass_cluster_set_blacklist_dc_filtering_n(CassCluster* cluster,
+                                            const char* dcs,
+                                            size_t dcs_length) {
+  if (dcs_length == 0) {
+    cluster->config().blacklist_dc().clear();
+  } else {
+    cass::explode(std::string(dcs, dcs_length),
+                  cluster->config().blacklist_dc());
+  }
+}
+
 void cass_cluster_set_tcp_nodelay(CassCluster* cluster,
                                   cass_bool_t enabled) {
   cluster->config().set_tcp_nodelay(enabled == cass_true);

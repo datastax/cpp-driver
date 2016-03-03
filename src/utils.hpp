@@ -31,6 +31,7 @@ class BufferPiece;
 class Value;
 
 typedef std::vector<std::string> ContactPointList;
+typedef std::vector<std::string> DcList;
 
 template<class From, class To>
 class IsConvertible {
@@ -83,6 +84,8 @@ std::string& trim(std::string& str);
 bool is_valid_cql_id(const std::string& str);
 
 std::string& to_cql_id(std::string& str);
+
+std::string& escape_id(std::string& str);
 
 } // namespace cass
 

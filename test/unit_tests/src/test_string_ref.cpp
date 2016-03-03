@@ -72,6 +72,23 @@ BOOST_AUTO_TEST_CASE(substr)
   // More tests in "starts_with" and "ends_with"
 }
 
+BOOST_AUTO_TEST_CASE(find)
+{
+  cass::StringRef s("abcxyz");
+
+  BOOST_CHECK(s.find("") == 0);
+  BOOST_CHECK(s.find("abc") == 0);
+  BOOST_CHECK(s.find("xyz") == 3);
+  BOOST_CHECK(s.find("z") == 5);
+
+  BOOST_CHECK(s.find("invalid") == cass::StringRef::npos);
+  BOOST_CHECK(s.find("abcxyza") == cass::StringRef::npos);
+
+  BOOST_CHECK(s.find("") == 0);
+  BOOST_CHECK(cass::StringRef("").find("") == 0);
+}
+
+
 BOOST_AUTO_TEST_CASE(starts_with)
 {
   cass::StringRef s("abcxyz");

@@ -157,7 +157,7 @@ private:
     if (collection_type == CASS_VALUE_TYPE_MAP) {
       types.push_back(decode());
     }
-    return SharedRefPtr<DataType>(new CollectionType(collection_type, types));
+    return SharedRefPtr<DataType>(new CollectionType(collection_type, types, false));
   }
 
   SharedRefPtr<DataType> decode_user_type() {
@@ -178,7 +178,8 @@ private:
     }
     return SharedRefPtr<DataType>(new UserType(keyspace.to_string(),
                                                type_name.to_string(),
-                                               fields));
+                                               fields,
+                                               false));
   }
 
   SharedRefPtr<DataType> decode_tuple() {
@@ -189,7 +190,7 @@ private:
     for (uint16_t i = 0; i < n; ++i) {
       types.push_back(decode());
     }
-    return SharedRefPtr<DataType>(new TupleType(types));
+    return SharedRefPtr<DataType>(new TupleType(types, false));
   }
 
 private:

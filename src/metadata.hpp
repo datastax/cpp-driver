@@ -34,6 +34,8 @@
 
 namespace cass {
 
+class ColumnMetadata;
+class TableMetadata;
 class KeyspaceMetadata;
 class TableMetadata;
 class Row;
@@ -113,8 +115,8 @@ public:
     : name_(name) {}
 
   MetadataField(const std::string& name,
-                      const Value& value,
-                      const SharedRefPtr<RefBuffer>& buffer)
+                const Value& value,
+                const SharedRefPtr<RefBuffer>& buffer)
     : name_(name)
     , value_(value)
     , buffer_(buffer) {}
@@ -262,15 +264,54 @@ private:
   Value init_cond_;
 };
 
+class IndexMetadata : public MetadataBase, public RefCounted<IndexMetadata> {
+public:
+  typedef SharedRefPtr<IndexMetadata> Ptr;
+  typedef std::map<std::string, Ptr> Map;
+  typedef std::vector<Ptr> Vec;
+
+  CassIndexType type() const { return type_; }
+  const std::string& target() const { return target_; }
+  const Value* options() const { return options_; }
+
+  IndexMetadata(const std::string& index_name)
+    : MetadataBase(index_name) { }
+
+  static IndexMetadata::Ptr from_row(const std::string& index_name,
+                                     const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+  void update(StringRef index_type, const Value* options);
+
+  static IndexMetadata::Ptr from_legacy(const MetadataConfig& config,
+                                        const std::string& index_name, const ColumnMetadata* column,
+                                        const SharedRefPtr<RefBuffer>& buffer, const Row* row);
+  void update_legacy(StringRef index_type, const ColumnMetadata* column, const Value* options);
+
+
+private:
+  static CassIndexType index_type_from_string(StringRef index_type);
+  static std::string target_from_legacy(const ColumnMetadata* column,
+                                        const Value* options);
+
+private:
+  CassIndexType type_;
+  std::string target_;
+  const Value* options_;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(IndexMetadata);
+};
+
 class ColumnMetadata : public MetadataBase, public RefCounted<ColumnMetadata> {
 public:
   typedef SharedRefPtr<ColumnMetadata> Ptr;
+  typedef std::map<std::string, Ptr> Map;
   typedef std::vector<Ptr> Vec;
 
   ColumnMetadata(const std::string& name)
     : MetadataBase(name)
     , type_(CASS_COLUMN_TYPE_REGULAR)
-    , position_(0) { }
+    , position_(0)
+    , is_reversed_(false) { }
 
   ColumnMetadata(const std::string& name,
                  int32_t position,
@@ -279,7 +320,8 @@ public:
     : MetadataBase(name)
     , type_(type)
     , position_(position)
-    , data_type_(data_type) { }
+    , data_type_(data_type)
+    , is_reversed_(false) { }
 
   ColumnMetadata(const MetadataConfig& config,
                  const std::string& name,
@@ -289,11 +331,13 @@ public:
   CassColumnType type() const { return type_; }
   int32_t position() const { return position_; }
   const DataType::ConstPtr& data_type() const { return data_type_; }
+  bool is_reversed() const { return is_reversed_; }
 
 private:
   CassColumnType type_;
   int32_t position_;
   DataType::ConstPtr data_type_;
+  bool is_reversed_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(ColumnMetadata);
@@ -306,6 +350,7 @@ inline bool operator==(const ColumnMetadata::Ptr& a, const std::string& b) {
 class TableMetadataBase : public MetadataBase, public RefCounted<TableMetadataBase> {
 public:
   typedef SharedRefPtr<TableMetadataBase> Ptr;
+  typedef std::vector<CassClusteringOrder> ClusteringOrderVec;
 
   class ColumnIterator : public MetadataIteratorImpl<VecIteratorImpl<ColumnMetadata::Ptr> > {
   public:
@@ -320,6 +365,7 @@ public:
   const ColumnMetadata::Vec& columns() const { return columns_; }
   const ColumnMetadata::Vec& partition_key() const { return partition_key_; }
   const ColumnMetadata::Vec& clustering_key() const { return clustering_key_; }
+  const ClusteringOrderVec& clustering_key_order() const { return clustering_key_order_; }
 
   Iterator* iterator_columns() const { return new ColumnIterator(columns_); }
   const ColumnMetadata* get_column(const std::string& name) const;
@@ -329,8 +375,10 @@ public:
 
 protected:
   ColumnMetadata::Vec columns_;
+  ColumnMetadata::Map columns_by_name_;
   ColumnMetadata::Vec partition_key_;
   ColumnMetadata::Vec clustering_key_;
+  ClusteringOrderVec clustering_key_order_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(TableMetadataBase);
@@ -415,10 +463,18 @@ public:
 
   static const TableMetadata::Ptr NIL;
 
+  class IndexIterator : public MetadataIteratorImpl<VecIteratorImpl<IndexMetadata::Ptr> > {
+  public:
+  IndexIterator(const IndexIterator::Collection& collection)
+    : MetadataIteratorImpl<VecIteratorImpl<IndexMetadata::Ptr> >(CASS_ITERATOR_TYPE_INDEX_META, collection) { }
+    const IndexMetadata* index() const { return impl_.item().get(); }
+  };
+
   TableMetadata(const MetadataConfig& config, const std::string& name,
                 const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
   const ViewMetadata::Vec& views() const { return views_; }
+  const IndexMetadata::Vec& indexes() const { return indexes_; }
 
   Iterator* iterator_views() const { return new ViewIteratorVec(views_); }
   const ViewMetadata* get_view(const std::string& name) const;
@@ -426,10 +482,17 @@ public:
   void drop_view(const std::string& name);
   void sort_views();
 
+  Iterator* iterator_indexes() const { return new IndexIterator(indexes_); }
+  const IndexMetadata* get_index(const std::string& name) const;
+  void add_index(const IndexMetadata::Ptr& index);
+  void clear_indexes();
+
   void key_aliases(const NativeDataTypes& native_types, KeyAliases* output) const;
 
 private:
   ViewMetadata::Vec views_;
+  IndexMetadata::Vec indexes_;
+  IndexMetadata::Map indexes_by_name_;
 };
 
 class KeyspaceMetadata : public MetadataBase {
@@ -494,7 +557,7 @@ public:
 
   Iterator* iterator_user_types() const { return new TypeIterator(*user_types_); }
   const UserType* get_user_type(const std::string& type_name) const;
-  const UserType::Ptr& get_or_create_user_type(const std::string& name);
+  const UserType::Ptr& get_or_create_user_type(const std::string& name, bool is_frozen);
   void drop_user_type(const std::string& type_name);
 
   Iterator* iterator_functions() const { return new FunctionIterator(*functions_); }
@@ -534,13 +597,16 @@ public:
   public:
     SchemaSnapshot(uint32_t version,
                    int protocol_version,
+                   const VersionNumber& cassandra_version,
                    const KeyspaceMetadata::MapPtr& keyspaces)
       : version_(version)
       , protocol_version_(protocol_version)
+      , cassandra_version_(cassandra_version)
       , keyspaces_(keyspaces) { }
 
     uint32_t version() const { return version_; }
     int protocol_version() const { return protocol_version_; }
+    VersionNumber cassandra_version() const { return cassandra_version_; }
 
     const KeyspaceMetadata* get_keyspace(const std::string& name) const;
     Iterator* iterator_keyspaces() const { return new KeyspaceIterator(*keyspaces_); }
@@ -551,6 +617,7 @@ public:
   private:
     uint32_t version_;
     int protocol_version_;
+    VersionNumber cassandra_version_;
     KeyspaceMetadata::MapPtr keyspaces_;
   };
 
@@ -573,6 +640,7 @@ public:
   void update_tables(ResultResponse* result);
   void update_views(ResultResponse* result);
   void update_columns(ResultResponse* result);
+  void update_indexes(ResultResponse* result);
   void update_user_types(ResultResponse* result);
   void update_functions(ResultResponse* result);
   void update_aggregates(ResultResponse* result);
@@ -624,6 +692,8 @@ private:
     void update_tables(const MetadataConfig& config, ResultResponse* result);
     void update_views(const MetadataConfig& config, ResultResponse* result);
     void update_columns(const MetadataConfig& config, ResultResponse* result);
+    void update_legacy_indexes(const MetadataConfig& config, ResultResponse* result);
+    void update_indexes(const MetadataConfig& config, ResultResponse* result);
     void update_user_types(const MetadataConfig& config, ResultResponse* result);
     void update_functions(const MetadataConfig& config, ResultResponse* result);
     void update_aggregates(const MetadataConfig& config, ResultResponse* result);

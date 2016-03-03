@@ -89,19 +89,61 @@ std::string& trim(std::string& str) {
   return str;
 }
 
-static bool is_valid_cql_id_char(int c) {
+static bool is_word_char(int c) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+         (c >= '0' && c <= '9') || c == '_';
+}
+
+static bool is_lower_word_char(int c) {
+  return (c >= 'a' && c <= 'z') ||
          (c >= '0' && c <= '9') || c == '_';
 }
 
 bool is_valid_cql_id(const std::string& str) {
   for (std::string::const_iterator i = str.begin(),
        end = str.end(); i != end; ++i) {
-    if (!is_valid_cql_id_char(*i)) {
+    if (!is_word_char(*i)) {
       return false;
     }
   }
   return true;
+}
+
+bool is_valid_lower_cql_id(const std::string& str) {
+  if (str.empty() || !is_lower_word_char(str[0])) {
+    return false;
+  }
+  if (str.size() > 1) {
+    for (std::string::const_iterator i = str.begin() + 1,
+         end = str.end(); i != end; ++i) {
+      if (!is_lower_word_char(*i)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+std::string& quote_id(std::string& str) {
+  std::string temp(str);
+  str.clear();
+  str.push_back('"');
+  for (std::string::const_iterator i = temp.begin(),
+       end = temp.end(); i != end; ++i) {
+    if (*i == '"') {
+      str.push_back('"');
+      str.push_back('"');
+    } else {
+      str.push_back(*i);
+    }
+  }
+  str.push_back('"');
+
+  return str;
+}
+
+std::string& escape_id(std::string& str) {
+  return is_valid_lower_cql_id(str) ?  str : quote_id(str);
 }
 
 std::string& to_cql_id(std::string& str) {

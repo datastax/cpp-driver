@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(round_robin)
     ccm->start_cluster();
   }
 
-  cass_cluster_set_load_balance_round_robin(cluster.get());;
+  cass_cluster_set_load_balance_round_robin(cluster.get());
 
   test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
 
@@ -135,6 +135,117 @@ BOOST_AUTO_TEST_CASE(dc_aware)
   // Restart stopped nodes
   ccm->start_node(1);
   ccm->start_node(2);
+}
+
+BOOST_AUTO_TEST_CASE(blacklist)
+{
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+
+  if (ccm->create_cluster(2)) {
+    ccm->start_cluster();
+  }
+
+  std::string host1(ip_prefix + "1");
+  std::string host2(ip_prefix + "2");
+
+  // test with valid host
+  {
+    cass_cluster_set_blacklist_filtering(cluster.get(), host2.c_str());
+
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+    wait_for_total_connections(session, 1);
+
+    PolicyTool policy_tool;
+    policy_tool.create_schema(session.get(), 1);
+
+    policy_tool.init(session.get(), 12, CASS_CONSISTENCY_ONE);
+    policy_tool.query(session.get(), 12, CASS_CONSISTENCY_ONE);
+
+    policy_tool.assert_queried(host1, 12);
+
+    policy_tool.drop_schema(session.get());
+  }
+
+  // test reset blacklist
+  {
+    cass_cluster_set_blacklist_filtering(cluster.get(), "");
+
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+    wait_for_total_connections(session, 2);
+
+    PolicyTool policy_tool;
+    policy_tool.create_schema(session.get(), 1);
+
+    policy_tool.init(session.get(), 12, CASS_CONSISTENCY_ONE);
+    policy_tool.query(session.get(), 12, CASS_CONSISTENCY_ONE);
+
+    policy_tool.assert_queried(host1, 6);
+    policy_tool.assert_queried(host2, 6);
+  }
+}
+
+BOOST_AUTO_TEST_CASE(blacklist_dc)
+{
+  test_utils::CassClusterPtr cluster(cass_cluster_new());
+
+  if (ccm->create_cluster(2, 2)) {
+    ccm->start_cluster();
+  }
+
+  cass_cluster_set_load_balance_round_robin(cluster.get());
+
+  std::string host1(ip_prefix + "1");
+  std::string host2(ip_prefix + "2");
+  std::string host3(ip_prefix + "3");
+  std::string host4(ip_prefix + "4");
+
+  // test with valid dc
+  {
+    cass_cluster_set_blacklist_dc_filtering(cluster.get(), "dc2");
+
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+    wait_for_total_connections(session, 2);
+
+    PolicyTool policy_tool;
+    policy_tool.create_schema(session.get(), 1);
+
+    policy_tool.init(session.get(), 12, CASS_CONSISTENCY_EACH_QUORUM);
+    policy_tool.query(session.get(), 12, CASS_CONSISTENCY_ONE);
+
+    policy_tool.show_coordinators();
+    policy_tool.assert_queried(host1, 6);
+    policy_tool.assert_queried(host2, 6);
+    policy_tool.assert_queried(host3, 0);
+    policy_tool.assert_queried(host4, 0);
+
+    policy_tool.drop_schema(session.get());
+  }
+
+  // test reset blacklist
+  {
+    cass_cluster_set_blacklist_dc_filtering(cluster.get(), "");
+
+    test_utils::initialize_contact_points(cluster.get(), ip_prefix, 1, 0);
+
+    test_utils::CassSessionPtr session(test_utils::create_session(cluster.get()));
+    wait_for_total_connections(session, 4);
+
+    PolicyTool policy_tool;
+    policy_tool.create_schema(session.get(), 2);
+
+    policy_tool.init(session.get(), 12, CASS_CONSISTENCY_EACH_QUORUM);
+    policy_tool.query(session.get(), 12, CASS_CONSISTENCY_ONE);
+
+    policy_tool.show_coordinators();
+    policy_tool.assert_queried(host1, 3);
+    policy_tool.assert_queried(host2, 3);
+    policy_tool.assert_queried(host3, 3);
+    policy_tool.assert_queried(host4, 3);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -313,4 +313,27 @@ BOOST_AUTO_TEST_CASE(composite_with_collections)
   BOOST_CHECK(collection->types()[1]->value_type() == CASS_VALUE_TYPE_BIGINT);
 }
 
+BOOST_AUTO_TEST_CASE(frozen)
+{
+  cass::DataType::ConstPtr data_type;
+
+  cass::NativeDataTypes native_types;
+  native_types.init_class_names();
+
+  data_type = cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.FrozenType(org.apache.cassandra.db.marshal.ListType(org.apache.cassandra.db.marshal.UTF8Type))", native_types);
+  BOOST_REQUIRE(data_type->value_type() == CASS_VALUE_TYPE_LIST);
+  BOOST_CHECK(data_type->is_frozen());
+
+  data_type = cass::DataTypeClassNameParser::parse_one("org.apache.cassandra.db.marshal.ListType(org.apache.cassandra.db.marshal.FrozenType(org.apache.cassandra.db.marshal.ListType(org.apache.cassandra.db.marshal.UTF8Type)))", native_types);
+  BOOST_REQUIRE(data_type->value_type() == CASS_VALUE_TYPE_LIST);
+  BOOST_CHECK(!data_type->is_frozen());
+
+  cass::CollectionType::ConstPtr collection
+      = static_cast<cass::CollectionType::ConstPtr>(data_type);
+  BOOST_REQUIRE(collection->types().size() == 1);
+  BOOST_CHECK(collection->types()[0]->value_type() == CASS_VALUE_TYPE_LIST);
+  BOOST_CHECK(collection->types()[0]->is_frozen());
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()

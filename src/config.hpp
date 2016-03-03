@@ -26,6 +26,9 @@
 #include "timestamp_generator.hpp"
 #include "token_aware_policy.hpp"
 #include "whitelist_policy.hpp"
+#include "blacklist_policy.hpp"
+#include "whitelist_dc_policy.hpp"
+#include "blacklist_dc_policy.hpp"
 
 #include <list>
 #include <string>
@@ -231,8 +234,17 @@ public:
     // The base LBP can be augmented by special wrappers (whitelist,
     // token aware, latency aware)
     LoadBalancingPolicy* chain = load_balancing_policy_->new_instance();
+    if (!blacklist_.empty()) {
+      chain = new BlacklistPolicy(chain, blacklist_);
+    }
     if (!whitelist_.empty()) {
       chain = new WhitelistPolicy(chain, whitelist_);
+    }
+    if (!blacklist_dc_.empty()) {
+      chain = new BlacklistDCPolicy(chain, blacklist_dc_);
+    }
+    if (!whitelist_dc_.empty()) {
+      chain = new WhitelistDCPolicy(chain, whitelist_dc_);
     }
     if (token_aware_routing()) {
       chain = new TokenAwarePolicy(chain);
@@ -268,6 +280,18 @@ public:
 
   ContactPointList& whitelist() {
     return whitelist_;
+  }
+
+  ContactPointList& blacklist() {
+    return blacklist_;
+  }
+
+  DcList& whitelist_dc() {
+    return whitelist_dc_;
+  }
+
+  DcList& blacklist_dc() {
+    return blacklist_dc_;
   }
 
   bool tcp_nodelay_enable() const { return tcp_nodelay_enable_; }
@@ -353,6 +377,9 @@ private:
   bool latency_aware_routing_;
   LatencyAwarePolicy::Settings latency_aware_routing_settings_;
   ContactPointList whitelist_;
+  ContactPointList blacklist_;
+  DcList whitelist_dc_;
+  DcList blacklist_dc_;
   bool tcp_nodelay_enable_;
   bool tcp_keepalive_enable_;
   unsigned tcp_keepalive_delay_secs_;

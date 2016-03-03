@@ -76,10 +76,14 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
       ErrorResponse* error
           = static_cast<ErrorResponse*>(response->response_body().get());
       if (error->code() == CQL_ERROR_PROTOCOL_ERROR &&
-          error->message().to_string().find("Invalid or unsupported protocol version") != std::string::npos) {
+          error->message().find("Invalid or unsupported protocol version") != StringRef::npos) {
         connection_->notify_error(error->message().to_string(), CONNECTION_ERROR_INVALID_PROTOCOL);
       } else if (error->code() == CQL_ERROR_BAD_CREDENTIALS) {
         connection_->notify_error(error->message().to_string(), CONNECTION_ERROR_AUTH);
+      } else if (error->code() == CQL_ERROR_INVALID_QUERY &&
+                 error->message().find("Keyspace") == 0 &&
+                 error->message().find("does not exist") != StringRef::npos) {
+        connection_->notify_error("Received error response " + error->error_message(), CONNECTION_ERROR_KEYSPACE);
       } else {
         connection_->notify_error("Received error response " + error->error_message());
       }
@@ -743,7 +747,7 @@ void Connection::on_ready() {
   if (keyspace_.empty()) {
     notify_ready();
   } else {
-    write(new StartupHandler(this, new QueryRequest("use \"" + keyspace_ + "\"")));
+    write(new StartupHandler(this, new QueryRequest("USE \"" + keyspace_ + "\"")));
   }
 }
 

@@ -49,42 +49,46 @@ struct TimestampedAverage {
 class VersionNumber {
 public:
   VersionNumber()
-    : major_(0)
-    , minor_(0)
-    , patch_(0) { }
+    : major_version_(0)
+    , minor_version_(0)
+    , patch_version_(0) { }
 
-  VersionNumber(int major, int minor, int patch)
-    : major_(major)
-    , minor_(minor)
-    , patch_(patch) { }
+  VersionNumber(int major_version, int minor_version, int patch_version)
+    : major_version_(major_version)
+    , minor_version_(minor_version)
+    , patch_version_(patch_version) { }
 
   bool operator >=(const VersionNumber& other) const {
     return compare(other) >= 0;
   }
 
+  bool operator <(const VersionNumber& other) const {
+    return compare(other) < 0;
+  }
+
   int compare(const VersionNumber& other) const {
-    if (major_ < other.major_) return -1;
-    if (major_ > other.major_) return  1;
+    if (major_version_ < other.major_version_) return -1;
+    if (major_version_ > other.major_version_) return  1;
 
-    if (minor_ < other.minor_) return -1;
-    if (minor_ > other.minor_) return  1;
+    if (minor_version_ < other.minor_version_) return -1;
+    if (minor_version_ > other.minor_version_) return  1;
 
-    if (patch_ < other.patch_) return -1;
-    if (patch_ > other.patch_) return  1;
+    if (patch_version_ < other.patch_version_) return -1;
+    if (patch_version_ > other.patch_version_) return  1;
 
     return 0;
   }
 
   bool parse(const std::string& version);
 
-  int major() const { return major_; }
-  int minor() const { return minor_; }
-  int patch() const { return patch_; }
+  int major_version() const { return major_version_; }
+  int minor_version() const { return minor_version_; }
+  int patch_version() const { return patch_version_; }
 
 private:
-  int major_;
-  int minor_;
-  int patch_;
+  int major_version_;
+  int minor_version_;
+  int patch_version_;
 };
 
 class Host : public RefCounted<Host> {
