@@ -29,6 +29,9 @@
 #include "token_map.hpp"
 #include "replication_strategy.hpp"
 #include "whitelist_policy.hpp"
+#include "blacklist_policy.hpp"
+#include "whitelist_dc_policy.hpp"
+#include "blacklist_dc_policy.hpp"
 
 #include <boost/chrono.hpp>
 #include <boost/lexical_cast.hpp>
@@ -44,6 +47,7 @@ using std::string;
 
 const string LOCAL_DC = "local";
 const string REMOTE_DC = "remote";
+const string BACKUP_DC = "backup";
 
 #define VECTOR_FROM(t, a) std::vector<t>(a, a + sizeof(a)/sizeof(a[0]))
 
@@ -831,6 +835,78 @@ BOOST_AUTO_TEST_CASE(simple)
 
   // Verify only hosts 37 and 83 are computed in the query plan
   const size_t seq1[] = { 37, 83 };
+  verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
+  // The query plan should now be exhausted
+  cass::Address next_address;
+  BOOST_REQUIRE(!qp.get()->compute_next(&next_address));
+}
+
+BOOST_AUTO_TEST_CASE(dc)
+{
+  cass::HostMap hosts;
+  populate_hosts(3, "rack1", LOCAL_DC, &hosts);
+  populate_hosts(3, "rack1", BACKUP_DC, &hosts);
+  populate_hosts(3, "rack1", REMOTE_DC, &hosts);
+  cass::DcList whitelist_dcs;
+  whitelist_dcs.push_back(LOCAL_DC);
+  whitelist_dcs.push_back(REMOTE_DC);
+  cass::WhitelistDCPolicy policy(new cass::RoundRobinPolicy(), whitelist_dcs);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+
+  cass::TokenMap tokenMap;
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+
+  // Verify only hosts LOCAL_DC and REMOTE_DC are computed in the query plan
+  const size_t seq1[] = { 1, 2, 3, 7, 8, 9 };
+  verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
+  // The query plan should now be exhausted
+  cass::Address next_address;
+  BOOST_REQUIRE(!qp.get()->compute_next(&next_address));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(blacklist_lb)
+
+BOOST_AUTO_TEST_CASE(simple)
+{
+  const int64_t num_hosts = 5;
+  cass::HostMap hosts;
+  populate_hosts(num_hosts, "rack1", LOCAL_DC, &hosts);
+  cass::ContactPointList blacklist_hosts;
+  blacklist_hosts.push_back("2.0.0.0");
+  blacklist_hosts.push_back("3.0.0.0");
+  cass::BlacklistPolicy policy(new cass::RoundRobinPolicy(), blacklist_hosts);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+
+  cass::TokenMap tokenMap;
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+
+  // Verify only hosts 1, 4 and 5 are computed in the query plan
+  const size_t seq1[] = { 1, 4, 5 };
+  verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
+  // The query plan should now be exhausted
+  cass::Address next_address;
+  BOOST_REQUIRE(!qp.get()->compute_next(&next_address));
+}
+
+BOOST_AUTO_TEST_CASE(dc)
+{
+  cass::HostMap hosts;
+  populate_hosts(3, "rack1", LOCAL_DC, &hosts);
+  populate_hosts(3, "rack1", BACKUP_DC, &hosts);
+  populate_hosts(3, "rack1", REMOTE_DC, &hosts);
+  cass::DcList blacklist_dcs;
+  blacklist_dcs.push_back(LOCAL_DC);
+  blacklist_dcs.push_back(REMOTE_DC);
+  cass::BlacklistDCPolicy policy(new cass::RoundRobinPolicy(), blacklist_dcs);
+  policy.init(cass::SharedRefPtr<cass::Host>(), hosts);
+
+  cass::TokenMap tokenMap;
+  boost::scoped_ptr<cass::QueryPlan> qp(policy.new_query_plan("ks", NULL, tokenMap, NULL));
+
+  // Verify only hosts from BACKUP_DC are computed in the query plan
+  const size_t seq1[] = { 4, 5, 6 };
   verify_sequence(qp.get(), VECTOR_FROM(size_t, seq1));
   // The query plan should now be exhausted
   cass::Address next_address;

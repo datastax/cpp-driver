@@ -28,10 +28,11 @@ namespace cass {
 
 class Connection;
 class Response;
+class ResultResponse;
 
 class MultipleRequestHandler : public RefCounted<MultipleRequestHandler> {
 public:
-  typedef std::vector<SharedRefPtr<Response> > ResponseVec;
+  typedef std::map<std::string, SharedRefPtr<Response> > ResponseMap;
 
   MultipleRequestHandler(Connection* connection)
     : connection_(connection)
@@ -40,9 +41,13 @@ public:
 
   virtual ~MultipleRequestHandler() { }
 
-  void execute_query(const std::string& query);
+  static bool get_result_response(const ResponseMap& responses,
+                                  const std::string& index,
+                                  ResultResponse** response);
 
-  virtual void on_set(const ResponseVec& responses) = 0;
+  void execute_query(const std::string& index, const std::string& query);
+
+  virtual void on_set(const ResponseMap& responses) = 0;
   virtual void on_error(CassError code, const std::string& message) = 0;
   virtual void on_timeout() = 0;
 
@@ -53,7 +58,7 @@ public:
 private:
   class InternalHandler : public Handler {
   public:
-    InternalHandler(MultipleRequestHandler* parent, const Request* request, int index)
+    InternalHandler(MultipleRequestHandler* parent, const Request* request, const std::string& index)
       : Handler(request)
       , parent_(parent)
       , index_(index) { }
@@ -64,13 +69,13 @@ private:
 
   private:
     ScopedRefPtr<MultipleRequestHandler> parent_;
-    int index_;
+    std::string index_;
   };
 
   Connection* connection_;
   bool has_errors_or_timeouts_;
   int remaining_;
-  ResponseVec responses_;
+  ResponseMap responses_;
 };
 
 } // namespace cass

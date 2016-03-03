@@ -83,8 +83,9 @@ protected:
 class DataTypeCqlNameParser {
 public:
   static DataType::ConstPtr parse(const std::string& type,
-                             const NativeDataTypes& native_types,
-                             KeyspaceMetadata* keyspace);
+                                  const NativeDataTypes& native_types,
+                                  KeyspaceMetadata* keyspace,
+                                  bool is_frozen = false);
 
 private:
   class Parser : public ParserBase {

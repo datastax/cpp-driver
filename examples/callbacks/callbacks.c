@@ -36,26 +36,33 @@
 
 uv_mutex_t mutex;
 uv_cond_t cond;
+int exit_flag = 0;
 CassFuture* close_future = NULL;
 CassUuidGen* uuid_gen = NULL;
 
 void wait_exit() {
   uv_mutex_lock(&mutex);
-  while (close_future == NULL) {
+  while (exit_flag == 0) {
     uv_cond_wait(&cond, &mutex);
   }
   uv_mutex_unlock(&mutex);
-  cass_future_wait(close_future);
-  cass_future_free(close_future);
+  if (close_future) {
+    cass_future_wait(close_future);
+    cass_future_free(close_future);
+  }
 }
 
 void signal_exit(CassSession* session) {
   uv_mutex_lock(&mutex);
-  close_future = cass_session_close(session);
+  if (session) {
+    close_future = cass_session_close(session);
+  }
+  exit_flag = 1;
   uv_cond_signal(&cond);
   uv_mutex_unlock(&mutex);
 }
 
+void on_set_keyspace(CassFuture* future, void* data);
 void on_create_keyspace(CassFuture* future, void* data);
 void on_create_table(CassFuture* future, void* data);
 
@@ -79,7 +86,7 @@ CassCluster* create_cluster() {
 }
 
 void connect_session(CassSession* session, const CassCluster* cluster, CassFutureCallback callback) {
-  CassFuture* future = cass_session_connect_keyspace(session, cluster, "examples");
+  CassFuture* future = cass_session_connect(session, cluster);
   cass_future_set_callback(future, callback, session);
   cass_future_free(future);
 }
@@ -99,7 +106,7 @@ void on_session_connect(CassFuture* future, void* data) {
 
   if (code != CASS_OK) {
     print_error(future);
-    uv_cond_signal(&cond);
+    signal_exit(NULL);
     return;
   }
 
@@ -110,6 +117,17 @@ void on_session_connect(CassFuture* future, void* data) {
 }
 
 void on_create_keyspace(CassFuture* future, void* data) {
+  CassError code = cass_future_error_code(future);
+  if (code != CASS_OK) {
+    print_error(future);
+  }
+
+  execute_query((CassSession*)data,
+                "USE examples",
+                on_set_keyspace);
+}
+
+void on_set_keyspace(CassFuture* future, void* data) {
   CassError code = cass_future_error_code(future);
   if (code != CASS_OK) {
     print_error(future);

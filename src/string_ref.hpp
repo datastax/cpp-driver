@@ -99,6 +99,14 @@ public:
     return StringRef(ptr_ + pos, std::min(length_ - pos, length));
   }
 
+  size_t find(const StringRef& ref) const {
+    if (ref.length_ == 0) return 0;
+    if (length_ == 0) return npos;
+    const_iterator i = std::search(ptr_, ptr_ + length_, ref.ptr_, ref.ptr_ + ref.length_);
+    if (i == end()) return npos;
+    return i - begin();
+  }
+
   int compare(const StringRef& ref) const {
     return compare(ref, IsEqual());
   }

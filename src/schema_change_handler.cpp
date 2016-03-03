@@ -45,17 +45,17 @@ SchemaChangeHandler::SchemaChangeHandler(Connection* connection,
   , elapsed_ms_(elapsed) {}
 
 void SchemaChangeHandler::execute() {
-  execute_query("SELECT schema_version FROM system.local WHERE key='local'");
-  execute_query("SELECT peer, rpc_address, schema_version FROM system.peers");
+  execute_query("local", "SELECT schema_version FROM system.local WHERE key='local'");
+  execute_query("peers", "SELECT peer, rpc_address, schema_version FROM system.peers");
 }
 
-bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
+bool SchemaChangeHandler::has_schema_agreement(const ResponseMap& responses) {
   StringRef current_version;
 
-  ResultResponse* local_result =
-      static_cast<ResultResponse*>(responses[0].get());
+  ResultResponse* local_result;
 
-  if (local_result->row_count() > 0) {
+  if (MultipleRequestHandler::get_result_response(responses, "local", &local_result) &&
+      local_result->row_count() > 0) {
     local_result->decode_first_row();
 
     const Row* row = &local_result->first_row();
@@ -69,27 +69,28 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
               connection()->address_string().c_str());
   }
 
-  ResultResponse* peers_result =
-      static_cast<ResultResponse*>(responses[1].get());
-  peers_result->decode_first_row();
+  ResultResponse* peers_result;
+  if (MultipleRequestHandler::get_result_response(responses, "peers", &peers_result)) {
+    peers_result->decode_first_row();
 
-  ResultIterator rows(peers_result);
-  while (rows.next()) {
-    const Row* row = rows.row();
+    ResultIterator rows(peers_result);
+    while (rows.next()) {
+      const Row* row = rows.row();
 
-    Address address;
-    bool is_valid_address
-        = ControlConnection::determine_address_for_peer_host(connection()->address(),
-                                                             row->get_by_name("peer"),
-                                                             row->get_by_name("rpc_address"),
-                                                             &address);
+      Address address;
+      bool is_valid_address
+          = ControlConnection::determine_address_for_peer_host(connection()->address(),
+                                                               row->get_by_name("peer"),
+                                                               row->get_by_name("rpc_address"),
+                                                               &address);
 
-    if (is_valid_address && request_handler_->is_host_up(address)) {
-      const Value* v = row->get_by_name("schema_version");
-      if (!row->get_by_name("rpc_address")->is_null() && !v->is_null()) {
-        StringRef version(v->to_string_ref());
-        if (version != current_version) {
-          return false;
+      if (is_valid_address && request_handler_->is_host_up(address)) {
+        const Value* v = row->get_by_name("schema_version");
+        if (!row->get_by_name("rpc_address")->is_null() && !v->is_null()) {
+          StringRef version(v->to_string_ref());
+          if (version != current_version) {
+            return false;
+          }
         }
       }
     }
@@ -98,13 +99,13 @@ bool SchemaChangeHandler::has_schema_agreement(const ResponseVec& responses) {
   return true;
 }
 
-void SchemaChangeHandler::on_set(const ResponseVec& responses) {
+void SchemaChangeHandler::on_set(const ResponseMap& responses) {
   elapsed_ms_ += get_time_since_epoch_ms() - start_ms_;
 
   bool has_error = false;
-  for (MultipleRequestHandler::ResponseVec::const_iterator it = responses.begin(),
+  for (MultipleRequestHandler::ResponseMap::const_iterator it = responses.begin(),
        end = responses.end(); it != end; ++it) {
-    if (check_error_or_invalid_response("SchemaChangeHandler", CQL_OPCODE_RESULT, it->get())) {
+    if (check_error_or_invalid_response("SchemaChangeHandler", CQL_OPCODE_RESULT, it->second.get())) {
       has_error = true;
     }
   }

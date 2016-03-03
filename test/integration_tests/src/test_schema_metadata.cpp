@@ -42,6 +42,19 @@
 #define USER_DEFINED_AGGREGATE_NAME "user_defined_aggregate"
 #define USER_DEFINED_AGGREGATE_FINAL_FUNCTION_NAME "uda_udf_final"
 
+namespace std {
+
+std::ostream& operator<<(std::ostream& os, const CassString& str) {
+  return os << std::string(str.data, str.length);
+}
+
+std::ostream& operator<<(std::ostream& os, const std::pair<std::string, std::string>& p)
+{
+  return os << "(\"" << p.first << "\", \"" << p.second << "\")";
+}
+
+} // namespace std
+
 /**
  * Schema Metadata Test Class
  *
@@ -220,6 +233,46 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
       verify_value(cass_iterator_get_map_value(itr.get()), i->second);
     }
   }
+
+  void verify_index(const CassIndexMeta* index_meta,
+                    const std::string& index_name, CassIndexType index_type,
+                    const std::string& index_target, const std::map<std::string, std::string>& index_options) {
+    BOOST_REQUIRE(index_meta != NULL);
+
+    CassString name;
+    cass_index_meta_name(index_meta, &name.data, &name.length);
+    BOOST_CHECK(name == CassString(index_name.c_str()));
+
+    CassString target;
+    cass_index_meta_target(index_meta, &target.data, &target.length);
+    BOOST_CHECK(target == CassString(index_target.c_str()));
+
+    CassIndexType type = cass_index_meta_type(index_meta);
+    BOOST_CHECK(type == index_type);
+
+    const CassValue* options = cass_index_meta_options(index_meta);
+
+    if (cass_value_is_null(options)) {
+      BOOST_CHECK(index_options.empty());
+      return;
+    }
+
+    test_utils::CassIteratorPtr iterator(cass_iterator_from_map(options));
+
+    std::map<std::string, std::string> actual_index_options;
+    while (cass_iterator_next(iterator.get())) {
+      CassString k, v;
+      const CassValue* key = cass_iterator_get_map_key(iterator.get());
+      cass_value_get_string(key, &k.data, &k.length);
+      const CassValue* value = cass_iterator_get_map_value(iterator.get());
+      cass_value_get_string(value, &v.data, &v.length);
+      actual_index_options[std::string(k.data, k.length)] = std::string(v.data, v.length);
+    }
+
+    BOOST_CHECK_EQUAL_COLLECTIONS(actual_index_options.begin(), actual_index_options.end(),
+                                  index_options.begin(), index_options.end());
+  }
+
 
   const std::set<std::string>& column_fields() {
     static std::set<std::string> fields;
@@ -437,6 +490,87 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     const CassKeyspaceMeta* ks_meta = cass_schema_meta_keyspace_by_name(schema_meta_, SIMPLE_STRATEGY_KEYSPACE_NAME);
     table_meta = cass_keyspace_meta_table_by_name(ks_meta, ALL_DATA_TYPES_TABLE_NAME);
     BOOST_CHECK(!table_meta);
+  }
+
+  void verify_materialized_view_count(const std::string& keyspace_name,
+                                      size_t count) {
+    const CassKeyspaceMeta* keyspace_meta = schema_get_keyspace("materialized_views");
+    test_utils::CassIteratorPtr iterator(cass_iterator_materialized_views_from_keyspace_meta(keyspace_meta));
+
+    size_t actual_count = 0;
+    while (cass_iterator_next(iterator.get())) {
+      actual_count++;
+    }
+    BOOST_CHECK_EQUAL(actual_count, count);
+
+  }
+
+  void verify_materialized_view(const CassMaterializedViewMeta* view,
+                                const std::string& view_name,
+                                const std::string& view_base_table_name,
+                                const std::string& view_columns,
+                                const std::string& view_partition_key,
+                                const std::string& view_clustering_key) {
+    BOOST_REQUIRE(view != NULL);
+
+    CassString name;
+    cass_materialized_view_meta_name(view, &name.data, &name.length);
+    BOOST_CHECK(name == CassString(view_name.c_str()));
+
+    const CassTableMeta* base_table = cass_materialized_view_meta_base_table(view);
+    CassString base_table_name;
+    cass_table_meta_name(base_table, &base_table_name.data, &base_table_name.length);
+    BOOST_CHECK(base_table_name == CassString(view_base_table_name.c_str()));
+
+    std::vector<std::string> columns;
+    cass::explode(view_columns, columns);
+    BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_column_count(view),  columns.size());
+
+    test_utils::CassIteratorPtr iterator(cass_iterator_columns_from_materialized_view_meta(view));
+    for (std::vector<std::string>::const_iterator i = columns.begin(),
+         end = columns.end(); i != end; ++i) {
+      BOOST_REQUIRE(cass_iterator_next(iterator.get()));
+      const CassColumnMeta* column = cass_iterator_get_column_meta(iterator.get());
+
+      CassString column_name;
+      cass_column_meta_name(column, &column_name.data, &column_name.length);
+
+      BOOST_CHECK(column_name == CassString(i->c_str()));
+    }
+    BOOST_CHECK(cass_iterator_next(iterator.get()) == cass_false);
+
+    for (size_t i = 0; i < columns.size(); ++i) {
+      const CassColumnMeta* column = cass_materialized_view_meta_column(view, i);
+
+      CassString column_name;
+      cass_column_meta_name(column, &column_name.data, &column_name.length);
+
+      BOOST_CHECK_EQUAL(column_name, CassString(columns[i].c_str()));
+    }
+
+    std::vector<std::string> partition_key;
+    cass::explode(view_partition_key, partition_key);
+    BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_partition_key_count(view), partition_key.size());
+    for (size_t i = 0; i < partition_key.size(); ++i) {
+      const CassColumnMeta* column = cass_materialized_view_meta_partition_key(view, i);
+
+      CassString column_name;
+      cass_column_meta_name(column, &column_name.data, &column_name.length);
+
+      BOOST_CHECK_EQUAL(column_name, CassString(partition_key[i].c_str()));
+    }
+
+    std::vector<std::string> clustering_key;
+    cass::explode(view_clustering_key, clustering_key);
+    BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_clustering_key_count(view), clustering_key.size());
+    for (size_t i = 0; i < clustering_key.size(); ++i) {
+      const CassColumnMeta* column = cass_materialized_view_meta_clustering_key(view, i);
+
+      CassString column_name;
+      cass_column_meta_name(column, &column_name.data, &column_name.length);
+
+      BOOST_CHECK_EQUAL(column_name, CassString(clustering_key[i].c_str()));
+    }
   }
 
   const std::set<std::string>& keyspace_fields() {
@@ -972,5 +1106,506 @@ BOOST_AUTO_TEST_CASE(disable) {
   test_utils::execute_query_with_error(session, str(boost::format(test_utils::DROP_KEYSPACE_FORMAT) % "ks2"));
 }
 
-BOOST_AUTO_TEST_SUITE_END()
+/**
+ * Test Cassandra version.
+ *
+ * @since 2.3.0
+ * @jira_ticket CPP-332
+ * @test_category schema
+ * @cassandra_version 1.2.x
+ */
+BOOST_AUTO_TEST_CASE(cassandra_version) {
+  refresh_schema_meta();
 
+  CassVersion cass_version = cass_schema_meta_version(schema_meta_);
+
+  BOOST_CHECK(cass_version.major_version == version.major);
+  BOOST_CHECK(cass_version.minor_version == version.minor);
+  BOOST_CHECK(cass_version.patch_version == version.patch);
+}
+
+/**
+ * Test clustering order.
+ *
+ * Verify that column clustering order is properly updated and returned.
+ *
+ * @since 2.3.0
+ * @jira_ticket CPP-332
+ * @test_category schema
+ * @cassandra_version 1.2.x
+ */
+BOOST_AUTO_TEST_CASE(clustering_order) {
+  test_utils::execute_query(session, "CREATE KEYSPACE clustering_order WITH replication = "
+                                     "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+  refresh_schema_meta();
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE clustering_order.single_parition_key (key text, value text, PRIMARY KEY(key))");
+    refresh_schema_meta();
+
+    const CassTableMeta* table_meta = schema_get_table("clustering_order", "single_parition_key");
+
+    BOOST_REQUIRE_EQUAL(cass_table_meta_clustering_key_count(table_meta), 0);
+    BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 0), CASS_CLUSTERING_ORDER_NONE);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE clustering_order.composite_key (key1 int, key2 text, value text, "
+                                       "PRIMARY KEY(key1, key2))");
+    refresh_schema_meta();
+
+    const CassTableMeta* table_meta = schema_get_table("clustering_order", "composite_key");
+
+    BOOST_REQUIRE_EQUAL(cass_table_meta_clustering_key_count(table_meta), 1);
+    BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 0), CASS_CLUSTERING_ORDER_ASC);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE clustering_order.composite_clustering_key (key1 text, key2 text, key3 text, value text, "
+                                       "PRIMARY KEY(key1, key2, key3))");
+    refresh_schema_meta();
+
+    const CassTableMeta* table_meta = schema_get_table("clustering_order", "composite_clustering_key");
+
+    BOOST_REQUIRE_EQUAL(cass_table_meta_clustering_key_count(table_meta), 2);
+    BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 0), CASS_CLUSTERING_ORDER_ASC);
+    BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 1), CASS_CLUSTERING_ORDER_ASC);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE clustering_order.reversed_composite_key (key1 text, key2 text, value text, "
+                                       "PRIMARY KEY(key1, key2)) "
+                                       "WITH CLUSTERING ORDER BY (key2 DESC)");
+    refresh_schema_meta();
+
+    const CassTableMeta* table_meta = schema_get_table("clustering_order", "reversed_composite_key");
+
+    BOOST_REQUIRE_EQUAL(cass_table_meta_clustering_key_count(table_meta), 1);
+    BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 0), CASS_CLUSTERING_ORDER_DESC);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE clustering_order.reversed_composite_clustering_key (key1 text, key2 text, key3 text, value text, "
+                                       "PRIMARY KEY(key1, key2, key3))"
+                                       "WITH CLUSTERING ORDER BY (key2 DESC, key3 DESC)");
+    refresh_schema_meta();
+
+    const CassTableMeta* table_meta = schema_get_table("clustering_order", "reversed_composite_clustering_key");
+
+    BOOST_REQUIRE_EQUAL(cass_table_meta_clustering_key_count(table_meta), 2);
+    BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 0), CASS_CLUSTERING_ORDER_DESC);
+    BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 1), CASS_CLUSTERING_ORDER_DESC);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE clustering_order.mixed_composite_clustering_key ("
+                                       "key1 text, key2 text, key3 text, key4 text, value text, "
+                                       "PRIMARY KEY(key1, key2, key3, key4))"
+                                       "WITH CLUSTERING ORDER BY (key2 DESC, key3 ASC, key4 DESC)");
+    refresh_schema_meta();
+
+    const CassTableMeta* table_meta = schema_get_table("clustering_order", "mixed_composite_clustering_key");
+
+    BOOST_REQUIRE_EQUAL(cass_table_meta_clustering_key_count(table_meta), 3);
+    BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 0), CASS_CLUSTERING_ORDER_DESC);
+    BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 1), CASS_CLUSTERING_ORDER_ASC);
+    BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 2), CASS_CLUSTERING_ORDER_DESC);
+  }
+}
+
+/**
+ * Test frozen types.
+ *
+ * Verify that frozen types are properly updated and returned.
+ *
+ * @since 2.3.0
+ * @jira_ticket CPP-332
+ * @test_category schema
+ * @cassandra_version 2.1.x
+ */
+BOOST_AUTO_TEST_CASE(frozen_types) {
+  if (version < "2.1.0") return;
+
+  test_utils::execute_query(session, "CREATE KEYSPACE frozen_types WITH replication = "
+                                     "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+  refresh_schema_meta();
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE frozen_types.regular_map (key text PRIMARY KEY, value map<text, text>)");
+    refresh_schema_meta();
+
+    const CassColumnMeta* column_meta = schema_get_column("frozen_types", "regular_map", "value");
+    const CassDataType* data_type = cass_column_meta_data_type(column_meta);
+    BOOST_CHECK_EQUAL(cass_data_type_type(data_type), CASS_VALUE_TYPE_MAP);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(data_type), cass_false);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE frozen_types.frozen_map (key text PRIMARY KEY, value frozen<map<text, text>>)");
+    refresh_schema_meta();
+
+    const CassColumnMeta* column_meta = schema_get_column("frozen_types", "frozen_map", "value");
+    const CassDataType* data_type = cass_column_meta_data_type(column_meta);
+    BOOST_CHECK_EQUAL(cass_data_type_type(data_type), CASS_VALUE_TYPE_MAP);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(data_type), cass_true);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE frozen_types.regular_set (key text PRIMARY KEY, value set<text>)");
+    refresh_schema_meta();
+
+    const CassColumnMeta* column_meta = schema_get_column("frozen_types", "regular_set", "value");
+    const CassDataType* data_type = cass_column_meta_data_type(column_meta);
+    BOOST_CHECK_EQUAL(cass_data_type_type(data_type), CASS_VALUE_TYPE_SET);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(data_type), cass_false);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE frozen_types.frozen_set (key text PRIMARY KEY, value frozen<set<text>>)");
+    refresh_schema_meta();
+
+    const CassColumnMeta* column_meta = schema_get_column("frozen_types", "frozen_set", "value");
+    const CassDataType* data_type = cass_column_meta_data_type(column_meta);
+    BOOST_CHECK_EQUAL(cass_data_type_type(data_type), CASS_VALUE_TYPE_SET);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(data_type), cass_true);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE frozen_types.regular_list (key text PRIMARY KEY, value list<text>)");
+    refresh_schema_meta();
+
+    const CassColumnMeta* column_meta = schema_get_column("frozen_types", "regular_list", "value");
+    const CassDataType* data_type = cass_column_meta_data_type(column_meta);
+    BOOST_CHECK_EQUAL(cass_data_type_type(data_type), CASS_VALUE_TYPE_LIST);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(data_type), cass_false);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE frozen_types.frozen_list (key text PRIMARY KEY, value frozen<list<text>>)");
+    refresh_schema_meta();
+
+    const CassColumnMeta* column_meta = schema_get_column("frozen_types", "frozen_list", "value");
+    const CassDataType* data_type = cass_column_meta_data_type(column_meta);
+    BOOST_CHECK_EQUAL(cass_data_type_type(data_type), CASS_VALUE_TYPE_LIST);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(data_type), cass_true);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE frozen_types.regular_tuple (key text PRIMARY KEY, value tuple<text, int>)");
+    refresh_schema_meta();
+
+    const CassColumnMeta* column_meta = schema_get_column("frozen_types", "regular_tuple", "value");
+    const CassDataType* data_type = cass_column_meta_data_type(column_meta);
+    BOOST_CHECK_EQUAL(cass_data_type_type(data_type), CASS_VALUE_TYPE_TUPLE);
+    // Note: As of C* 3.0 tuples<> are always frozen
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(data_type), cass_true);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE frozen_types.frozen_tuple (key text PRIMARY KEY, value frozen<tuple<text, int>>)");
+    refresh_schema_meta();
+
+    const CassColumnMeta* column_meta = schema_get_column("frozen_types", "frozen_tuple", "value");
+    const CassDataType* data_type = cass_column_meta_data_type(column_meta);
+    BOOST_CHECK_EQUAL(cass_data_type_type(data_type), CASS_VALUE_TYPE_TUPLE);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(data_type), cass_true);
+  }
+
+  // Note: Non-frozen UDTs are not supported as of C* 3.0
+
+  {
+    test_utils::execute_query(session, "CREATE TYPE frozen_types.type1 (field1 text, field2 frozen<set<text>>)");
+    test_utils::execute_query(session, "CREATE TABLE frozen_types.frozen_udt (key text PRIMARY KEY, value frozen<type1>)");
+    refresh_schema_meta();
+
+    const CassColumnMeta* column_meta = schema_get_column("frozen_types", "frozen_udt", "value");
+    const CassDataType* data_type = cass_column_meta_data_type(column_meta);
+    BOOST_CHECK_EQUAL(cass_data_type_type(data_type), CASS_VALUE_TYPE_UDT);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(data_type), cass_true);
+    BOOST_REQUIRE_EQUAL(cass_data_type_sub_type_count(data_type), 2);
+
+    const CassDataType* key_data_type = cass_data_type_sub_data_type(data_type, 0);
+    BOOST_CHECK_EQUAL(cass_data_type_type(key_data_type), CASS_VALUE_TYPE_TEXT);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(key_data_type), cass_false);
+
+    const CassDataType* value_data_type = cass_data_type_sub_data_type(data_type, 1);
+    BOOST_CHECK_EQUAL(cass_data_type_type(value_data_type), CASS_VALUE_TYPE_SET);
+    // Note: C* < 3.0.0 doesn't keep the frozen<> information for types inside UDTs
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(value_data_type), version < "3.0.0" ? cass_false : cass_true);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE frozen_types.frozen_nested_map (key text PRIMARY KEY, "
+                                       "value map<frozen<set<text>>, frozen<list<text>>>)");
+    refresh_schema_meta();
+
+    const CassColumnMeta* column_meta = schema_get_column("frozen_types", "frozen_nested_map", "value");
+    const CassDataType* data_type = cass_column_meta_data_type(column_meta);
+
+    BOOST_CHECK_EQUAL(cass_data_type_type(data_type), CASS_VALUE_TYPE_MAP);
+    BOOST_REQUIRE_EQUAL(cass_data_type_sub_type_count(data_type), 2);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(data_type), cass_false);
+
+    const CassDataType* key_data_type = cass_data_type_sub_data_type(data_type, 0);
+    BOOST_CHECK_EQUAL(cass_data_type_type(key_data_type), CASS_VALUE_TYPE_SET);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(key_data_type), cass_true);
+
+    const CassDataType* value_data_type = cass_data_type_sub_data_type(data_type, 1);
+    BOOST_CHECK_EQUAL(cass_data_type_type(value_data_type), CASS_VALUE_TYPE_LIST);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(value_data_type), cass_true);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE frozen_types.frozen_nested_tuple (key text PRIMARY KEY, "
+                                       "value tuple<int, text, frozen<set<text>>, frozen<list<text>>>)");
+    refresh_schema_meta();
+
+    const CassColumnMeta* column_meta = schema_get_column("frozen_types", "frozen_nested_tuple", "value");
+    const CassDataType* data_type = cass_column_meta_data_type(column_meta);
+
+    BOOST_CHECK_EQUAL(cass_data_type_type(data_type), CASS_VALUE_TYPE_TUPLE);
+    BOOST_REQUIRE_EQUAL(cass_data_type_sub_type_count(data_type), 4);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(data_type), cass_true);
+
+    const CassDataType* key_data_type;
+    const CassDataType* value_data_type ;
+
+    key_data_type = cass_data_type_sub_data_type(data_type, 0);
+    BOOST_CHECK_EQUAL(cass_data_type_type(key_data_type), CASS_VALUE_TYPE_INT);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(key_data_type), cass_false);
+
+    value_data_type = cass_data_type_sub_data_type(data_type, 1);
+    BOOST_CHECK_EQUAL(cass_data_type_type(value_data_type), CASS_VALUE_TYPE_TEXT);
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(value_data_type), cass_false);
+
+    key_data_type = cass_data_type_sub_data_type(data_type, 2);
+    BOOST_CHECK_EQUAL(cass_data_type_type(key_data_type), CASS_VALUE_TYPE_SET);
+    // Note: C* < 3.0.0 doesn't keep the frozen<> information for types inside tuple<>
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(key_data_type), version < "3.0.0" ? cass_false : cass_true);
+
+    value_data_type = cass_data_type_sub_data_type(data_type, 3);
+    BOOST_CHECK_EQUAL(cass_data_type_type(value_data_type), CASS_VALUE_TYPE_LIST);
+    // Note: C* < 3.0.0 doesn't keep the frozen<> information for types inside tuple<>
+    BOOST_CHECK_EQUAL(cass_data_type_is_frozen(value_data_type), version < "3.0.0" ? cass_false : cass_true);
+  }
+}
+
+/**
+ * Test secondary indexes
+ *
+ * Verifies that index metadata is correctly updated and returned.
+ *
+ * @since 2.3.0
+ * @jira_ticket CPP-321
+ * @test_category schema
+ * @cassandra_version 1.2.x
+ */
+BOOST_AUTO_TEST_CASE(indexes) {
+  {
+    test_utils::execute_query(session, "CREATE KEYSPACE indexes WITH replication = "
+                                       "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+
+    test_utils::execute_query(session, "CREATE TABLE indexes.table1 (key1 text, value1 int, value2 map<text, text>,  PRIMARY KEY(key1))");
+
+    refresh_schema_meta();
+    const CassTableMeta* table_meta = schema_get_table("indexes", "table1");
+
+    BOOST_CHECK(cass_table_meta_index_count(table_meta) == 0);
+    BOOST_CHECK(cass_table_meta_index_by_name(table_meta, "invalid") == NULL);
+    BOOST_CHECK(cass_table_meta_index(table_meta, 0) == NULL);
+  }
+
+  // Index
+  {
+    test_utils::execute_query(session, "CREATE INDEX index1 ON indexes.table1 (value1)");
+
+    refresh_schema_meta();
+    const CassTableMeta* table_meta = schema_get_table("indexes", "table1");
+
+    BOOST_REQUIRE(cass_table_meta_index_count(table_meta) == 1);
+    std::map<std::string, std::string> index_options;
+    if (version >= "3.0.0") {
+      index_options["target"] = "value1";
+    }
+    verify_index(cass_table_meta_index_by_name(table_meta, "index1"),
+                 "index1", CASS_INDEX_TYPE_COMPOSITES, "value1", index_options);
+    verify_index(cass_table_meta_index(table_meta, 0),
+                 "index1", CASS_INDEX_TYPE_COMPOSITES, "value1", index_options);
+  }
+
+  // Index on map keys
+  {
+    test_utils::execute_query(session, "CREATE INDEX index2 ON indexes.table1 (KEYS(value2))");
+
+    refresh_schema_meta();
+    const CassTableMeta* table_meta = schema_get_table("indexes", "table1");
+
+    BOOST_REQUIRE(cass_table_meta_index_count(table_meta) == 2);
+
+    std::map<std::string, std::string> index_options;
+    if (version >= "3.0.0") {
+      index_options["target"] = "keys(value2)";
+    } else {
+      index_options["index_keys"] = "";
+    }
+    verify_index(cass_table_meta_index_by_name(table_meta, "index2"),
+                 "index2", CASS_INDEX_TYPE_COMPOSITES, "keys(value2)", index_options);
+    verify_index(cass_table_meta_index(table_meta, 1),
+                 "index2", CASS_INDEX_TYPE_COMPOSITES, "keys(value2)", index_options);
+  }
+
+  // Iterator
+  {
+    const CassTableMeta* table_meta = schema_get_table("indexes", "table1");
+
+    test_utils::CassIteratorPtr iterator(cass_iterator_indexes_from_table_meta(table_meta));
+    while (cass_iterator_next(iterator.get())) {
+      const CassIndexMeta* index_meta = cass_iterator_get_index_meta(iterator.get());
+      BOOST_REQUIRE(index_meta != NULL);
+
+      CassString name;
+      cass_index_meta_name(index_meta, &name.data, &name.length);
+      BOOST_CHECK(name == CassString("index1") || name == CassString("index2"));
+    }
+  }
+}
+
+/**
+ * Test materialized views.
+ *
+ * Verifies that materialized view metadata is correctly updated and returned.
+ *
+ * @since 2.3.0
+ * @jira_ticket CPP-331
+ * @test_category schema
+ * @cassandra_version 3.0.x
+ */
+BOOST_AUTO_TEST_CASE(materialized_views) {
+  {
+    if (version < "3.0.0") return;
+
+    test_utils::execute_query(session, "CREATE KEYSPACE materialized_views WITH replication = "
+                                       "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+
+    test_utils::execute_query(session, "CREATE TABLE materialized_views.table1 (key1 text, value1 int, PRIMARY KEY(key1))");
+    test_utils::execute_query(session, "CREATE TABLE materialized_views.table2 (key1 text, key2 int, value1 int, PRIMARY KEY(key1, key2))");
+
+    refresh_schema_meta();
+
+    verify_materialized_view_count("materialized_views", 0);
+
+    const CassTableMeta* table_meta = schema_get_table("materialized_views", "table1");
+    BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 0);
+    BOOST_CHECK(cass_table_meta_materialized_view_by_name(table_meta, "invalid") == NULL);
+    BOOST_CHECK(cass_table_meta_materialized_view(table_meta, 0) == NULL);
+  }
+
+  // Simple materialized view
+  {
+    test_utils::execute_query(session, "CREATE MATERIALIZED VIEW materialized_views.view1 AS "
+                                       "SELECT key1 FROM materialized_views.table1 WHERE value1 IS NOT NULL "
+                                       "PRIMARY KEY(value1, key1)");
+    refresh_schema_meta();
+
+    verify_materialized_view_count("materialized_views", 1);
+
+    const CassTableMeta* table_meta = schema_get_table("materialized_views", "table1");
+    BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 1);
+
+    verify_materialized_view(cass_table_meta_materialized_view_by_name(table_meta, "view1"),
+                             "view1", "table1",
+                             "value1,key1", "value1", "key1");
+  }
+
+  // Materialized view with composite partition key
+  {
+    test_utils::execute_query(session, "CREATE MATERIALIZED VIEW materialized_views.view2 AS "
+                                       "SELECT key1 FROM materialized_views.table2 WHERE key2 IS NOT NULL AND value1 IS NOT NULL "
+                                       "PRIMARY KEY((value1, key2), key1)");
+
+    refresh_schema_meta();
+
+    verify_materialized_view_count("materialized_views", 2);
+
+    const CassTableMeta* table_meta = schema_get_table("materialized_views", "table2");
+    BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 1);
+
+    verify_materialized_view(cass_table_meta_materialized_view_by_name(table_meta, "view2"),
+                             "view2", "table2",
+                             "value1,key2,key1", "value1,key2", "key1");
+  }
+
+  // Materialized view with composite clustering key
+  {
+    test_utils::execute_query(session, "CREATE MATERIALIZED VIEW materialized_views.view3 AS "
+                                       "SELECT key1 FROM materialized_views.table2 WHERE key2 IS NOT NULL AND value1 IS NOT NULL "
+                                       "PRIMARY KEY(value1, key2, key1) "
+                                       "WITH CLUSTERING ORDER BY (key2 DESC)");
+
+    refresh_schema_meta();
+
+    verify_materialized_view_count("materialized_views", 3);
+
+    const CassTableMeta* table_meta = schema_get_table("materialized_views", "table2");
+    BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 2);
+
+    verify_materialized_view(cass_table_meta_materialized_view_by_name(table_meta, "view3"),
+                             "view3", "table2",
+                             "value1,key2,key1", "value1", "key2,key1");
+  }
+
+  // Iterator
+  {
+    const CassTableMeta* table_meta = schema_get_table("materialized_views", "table2");
+
+    test_utils::CassIteratorPtr iterator(cass_iterator_materialized_views_from_table_meta(table_meta));
+
+    while (cass_iterator_next(iterator.get())) {
+      const CassMaterializedViewMeta* view_meta = cass_iterator_get_materialized_view_meta(iterator.get());
+      BOOST_REQUIRE(view_meta != NULL);
+
+      CassString name;
+      cass_materialized_view_meta_name(view_meta, &name.data, &name.length);
+
+      if (name == CassString("view2")) {
+        verify_materialized_view(view_meta, "view2", "table2",
+                                 "value1,key2,key1", "value1,key2", "key1");
+      } else if (name == CassString("view3")) {
+        verify_materialized_view(view_meta, "view3", "table2",
+                                 "value1,key2,key1", "value1", "key2,key1");
+      } else {
+        BOOST_CHECK(false);
+      }
+    }
+  }
+
+  // Drop views
+  {
+    const CassTableMeta* table_meta;
+
+    test_utils::execute_query(session, "DROP MATERIALIZED VIEW materialized_views.view2");
+
+    refresh_schema_meta();
+
+    verify_materialized_view_count("materialized_views", 2);
+
+    table_meta = schema_get_table("materialized_views", "table2");
+    BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 1);
+
+    test_utils::execute_query(session, "DROP MATERIALIZED VIEW materialized_views.view1");
+
+    refresh_schema_meta();
+
+    verify_materialized_view_count("materialized_views", 1);
+
+    table_meta = schema_get_table("materialized_views", "table1");
+    BOOST_CHECK(cass_table_meta_materialized_view_count(table_meta) == 0);
+  }
+
+  // Note: Cassandra doesn't allow for dropping tables with active views.
+  // It's also difficult and unpredictable to get DROP TABLE/MATERIALIZE VIEW
+  // events to reorder so that the DROP TABLE event happens before the
+  // DROP MATERIALIZE VIEW event.
+}
+
+BOOST_AUTO_TEST_SUITE_END()

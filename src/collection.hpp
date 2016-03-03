@@ -37,7 +37,7 @@ class Collection : public RefCounted<Collection> {
 public:
   Collection(CassCollectionType type,
              size_t item_count)
-    : data_type_(new CollectionType(static_cast<CassValueType>(type))) {
+    : data_type_(new CollectionType(static_cast<CassValueType>(type), false)) {
     items_.reserve(item_count);
   }
 

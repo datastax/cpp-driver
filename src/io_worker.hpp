@@ -20,6 +20,7 @@
 #include "address.hpp"
 #include "atomic.hpp"
 #include "async_queue.hpp"
+#include "copy_on_write_ptr.hpp"
 #include "constants.hpp"
 #include "event_thread.hpp"
 #include "logger.hpp"
@@ -84,10 +85,8 @@ public:
     protocol_version_.store(protocol_version);
   }
 
-  std::string keyspace();
+  const CopyOnWritePtr<std::string> keyspace() const { return keyspace_; }
   void set_keyspace(const std::string& keyspace);
-
-  bool is_current_keyspace(const std::string& keyspace);
   void broadcast_keyspace_change(const std::string& keyspace);
 
   void set_host_is_available(const Address& address, bool is_available);
@@ -141,8 +140,7 @@ private:
   Atomic<int> protocol_version_;
   uv_prepare_t prepare_;
 
-  std::string keyspace_;
-  uv_mutex_t keyspace_mutex_;
+  CopyOnWritePtr<std::string> keyspace_;
 
   AddressSet unavailable_addresses_;
   uv_mutex_t unavailable_addresses_mutex_;
