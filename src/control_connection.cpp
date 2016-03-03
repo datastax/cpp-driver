@@ -47,6 +47,7 @@
 
 #define SELECT_KEYSPACES_30 "SELECT * FROM system_schema.keyspaces"
 #define SELECT_TABLES_30 "SELECT * FROM system_schema.tables"
+#define SELECT_VIEWS_30 "SELECT * FROM system_schema.views"
 #define SELECT_COLUMNS_30 "SELECT * FROM system_schema.columns"
 #define SELECT_INDEXES_30 "SELECT * FROM system_schema.indexes"
 #define SELECT_USERTYPES_30 "SELECT * FROM system_schema.types"
@@ -317,7 +318,7 @@ void ControlConnection::on_event(EventResponse* response) {
               refresh_keyspace(response->keyspace());
               break;
             case EventResponse::TABLE:
-              refresh_table(response->keyspace(), response->target());
+              refresh_table_or_view(response->keyspace(), response->target());
               break;
             case EventResponse::TYPE:
               refresh_type(response->keyspace(), response->target());
@@ -338,8 +339,8 @@ void ControlConnection::on_event(EventResponse* response) {
               session_->metadata().drop_keyspace(response->keyspace().to_string());
               break;
             case EventResponse::TABLE:
-              session_->metadata().drop_table(response->keyspace().to_string(),
-                                                  response->target().to_string());
+              session_->metadata().drop_table_or_view(response->keyspace().to_string(),
+                                                      response->target().to_string());
               break;
             case EventResponse::TYPE:
               session_->metadata().drop_user_type(response->keyspace().to_string(),
@@ -470,6 +471,7 @@ void ControlConnection::query_meta_schema() {
   if (session_->metadata().cassandra_version() >= VersionNumber(3, 0, 0)) {
     handler->execute_query("keyspaces", SELECT_KEYSPACES_30);
     handler->execute_query("tables", SELECT_TABLES_30);
+    handler->execute_query("views", SELECT_VIEWS_30);
     handler->execute_query("columns", SELECT_COLUMNS_30);
     handler->execute_query("indexes", SELECT_INDEXES_30);
     handler->execute_query("user_types", SELECT_USERTYPES_30);
@@ -513,7 +515,12 @@ void ControlConnection::on_query_meta_schema(ControlConnection* control_connecti
     session->metadata().update_tables(tables_result);
   }
 
-  ResultResponse* columns_result;
+  ResultResponse* views_result;
+  if (MultipleRequestHandler::get_result_response(responses, "views", &views_result)) {
+    session->metadata().update_views(views_result);
+  }
+
+  ResultResponse* columns_result = NULL;
   if (MultipleRequestHandler::get_result_response(responses, "columns", &columns_result)) {
     session->metadata().update_columns(columns_result);
   }
@@ -755,62 +762,76 @@ void ControlConnection::on_refresh_keyspace(ControlConnection* control_connectio
   control_connection->session_->metadata().update_keyspaces(result);
 }
 
-void ControlConnection::refresh_table(const StringRef& keyspace_name,
-                                      const StringRef& table_name) {
+void ControlConnection::refresh_table_or_view(const StringRef& keyspace_name,
+                                              const StringRef& table_or_view_name) {
   std::string table_query;
+  std::string view_query;
   std::string column_query;
   std::string index_query;
 
   if (session_->metadata().cassandra_version() >= VersionNumber(3, 0, 0)) {
     table_query.assign(SELECT_TABLES_30);
     table_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
-        .append("' AND table_name='").append(table_name.data(), table_name.size()).append("'");
+        .append("' AND table_name='").append(table_or_view_name.data(), table_or_view_name.size()).append("'");
+
+    view_query.assign(SELECT_VIEWS_30);
+    view_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
+        .append("' AND view_name='").append(table_or_view_name.data(), table_or_view_name.size()).append("'");
 
     column_query.assign(SELECT_COLUMNS_30);
     column_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
-        .append("' AND table_name='").append(table_name.data(), table_name.size()).append("'");
+        .append("' AND table_name='").append(table_or_view_name.data(), table_or_view_name.size()).append("'");
 
     index_query.assign(SELECT_INDEXES_30);
     index_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
-        .append("' AND table_name='").append(table_name.data(), table_name.size()).append("'");
+        .append("' AND table_name='").append(table_or_view_name.data(), table_or_view_name.size()).append("'");
 
-    LOG_DEBUG("Refreshing table %s; %s; %s", table_query.c_str(), column_query.c_str(), index_query.c_str());
+    LOG_DEBUG("Refreshing table/view %s; %s; %s; %s", table_query.c_str(), view_query.c_str(),
+                                                      column_query.c_str(), index_query.c_str());
   } else {
     table_query.assign(SELECT_COLUMN_FAMILIES_20);
     table_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
-        .append("' AND columnfamily_name='").append(table_name.data(), table_name.size()).append("'");
+        .append("' AND columnfamily_name='").append(table_or_view_name.data(), table_or_view_name.size()).append("'");
 
     column_query.assign(SELECT_COLUMNS_20);
     column_query.append(" WHERE keyspace_name='").append(keyspace_name.data(), keyspace_name.size())
-        .append("' AND columnfamily_name='").append(table_name.data(), table_name.size()).append("'");
+        .append("' AND columnfamily_name='").append(table_or_view_name.data(), table_or_view_name.size()).append("'");
 
     LOG_DEBUG("Refreshing table %s; %s", table_query.c_str(), column_query.c_str());
   }
 
   ScopedRefPtr<ControlMultipleRequestHandler<RefreshTableData> > handler(
         new ControlMultipleRequestHandler<RefreshTableData>(this,
-                                                            ControlConnection::on_refresh_table,
-                                                            RefreshTableData(keyspace_name.to_string(), table_name.to_string())));
+                                                            ControlConnection::on_refresh_table_or_view,
+                                                            RefreshTableData(keyspace_name.to_string(), table_or_view_name.to_string())));
   handler->execute_query("tables", table_query);
+  if (!view_query.empty()) {
+    handler->execute_query("views", view_query);
+  }
   handler->execute_query("columns", column_query);
   if (!index_query.empty()) {
     handler->execute_query("indexes", index_query);
   }
 }
 
-void ControlConnection::on_refresh_table(ControlConnection* control_connection,
-                                         const RefreshTableData& data,
-                                         const MultipleRequestHandler::ResponseMap& responses) {
+void ControlConnection::on_refresh_table_or_view(ControlConnection* control_connection,
+                                                 const RefreshTableData& data,
+                                                 const MultipleRequestHandler::ResponseMap& responses) {
   ResultResponse* tables_result;
+  Session* session = control_connection->session_;
   if (!MultipleRequestHandler::get_result_response(responses, "tables", &tables_result) ||
       tables_result->row_count() == 0) {
-    LOG_ERROR("No row found for column family %s.%s in system schema table.",
-              data.keyspace_name.c_str(), data.table_name.c_str());
-    return;
+    ResultResponse* views_result;
+    if (!MultipleRequestHandler::get_result_response(responses, "views", &views_result) ||
+        views_result->row_count() == 0) {
+      LOG_ERROR("No row found for table (or view) %s.%s in system schema tables.",
+                data.keyspace_name.c_str(), data.table_or_view_name.c_str());
+      return;
+    }
+    session->metadata().update_views(views_result);
+  } else {
+    session->metadata().update_tables(tables_result);
   }
-
-  Session* session = control_connection->session_;
-  session->metadata().update_tables(tables_result);
 
   ResultResponse* columns_result;
   if (MultipleRequestHandler::get_result_response(responses, "columns", &columns_result)) {

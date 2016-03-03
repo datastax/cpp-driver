@@ -359,6 +359,13 @@ typedef struct CassKeyspaceMeta_ CassKeyspaceMeta;
 typedef struct CassTableMeta_ CassTableMeta;
 
 /**
+ * @struct CassMaterializedViewMeta
+ *
+ * MaterializedView metadata
+ */
+typedef struct CassMaterializedViewMeta_ CassMaterializedViewMeta;
+
+/**
  * @struct CassColumnMeta
  *
  * Column metadata
@@ -567,7 +574,8 @@ typedef enum CassIteratorType_ {
   CASS_ITERATOR_TYPE_FUNCTION_META,
   CASS_ITERATOR_TYPE_AGGREGATE_META,
   CASS_ITERATOR_TYPE_COLUMN_META,
-  CASS_ITERATOR_TYPE_INDEX_META
+  CASS_ITERATOR_TYPE_INDEX_META,
+  CASS_ITERATOR_TYPE_MATERIALIZED_VIEW_META
 } CassIteratorType;
 
 #define CASS_LOG_LEVEL_MAP(XX) \
@@ -1834,6 +1842,38 @@ cass_keyspace_meta_table_by_name_n(const CassKeyspaceMeta* keyspace_meta,
                                    size_t table_length);
 
 /**
+ * Gets the materialized view metadata for the provided view name.
+ *
+ * @public @memberof CassKeyspaceMeta
+ *
+ * @param[in] keyspace_meta
+ * @param[in] view
+ *
+ * @return The metadata for a view. NULL if view does not exist.
+ */
+CASS_EXPORT const CassMaterializedViewMeta*
+cass_keyspace_meta_materialized_view_by_name(const CassKeyspaceMeta* keyspace_meta,
+                                             const char* view);
+
+/**
+ * Same as cass_keyspace_meta_materialized_view_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassKeyspaceMeta
+ *
+ * @param[in] keyspace_meta
+ * @param[in] view
+ * @param[in] view_length
+ * @return same as cass_keyspace_meta_materialized_view_by_name()
+ *
+ * @see cass_keyspace_meta_materialized_view_by_name()
+ */
+CASS_EXPORT const CassMaterializedViewMeta*
+cass_keyspace_meta_materialized_view_by_name_n(const CassKeyspaceMeta* keyspace_meta,
+                                               const char* view,
+                                               size_t view_length);
+
+/**
  * Gets the data type for the provided type name.
  *
  * @public @memberof CassKeyspaceMeta
@@ -1990,6 +2030,20 @@ cass_keyspace_meta_field_by_name_n(const CassKeyspaceMeta* keyspace_meta,
                                    size_t name_length);
 
 /**
+ * Gets the name of the table.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @param[out] name
+ * @param[out] name_length
+ */
+CASS_EXPORT void
+cass_table_meta_name(const CassTableMeta* table_meta,
+                     const char** name,
+                     size_t* name_length);
+
+/**
  * Gets the column metadata for the provided column name.
  *
  * @public @memberof CassTableMeta
@@ -2020,6 +2074,30 @@ CASS_EXPORT const CassColumnMeta*
 cass_table_meta_column_by_name_n(const CassTableMeta* table_meta,
                                  const char* column,
                                  size_t column_length);
+
+/**
+ * Gets the total number of columns for the table.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @return The total column count.
+ */
+CASS_EXPORT size_t
+cass_table_meta_column_count(const CassTableMeta* table_meta);
+
+/**
+ * Gets the column metadata for the provided index.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @param[in] index
+ * @return The metadata for a column. NULL returned if the index is out of range.
+ */
+CASS_EXPORT const CassColumnMeta*
+cass_table_meta_column(const CassTableMeta* table_meta,
+                       size_t index);
 
 /**
  * Gets the index metadata for the provided index name.
@@ -2054,44 +2132,6 @@ cass_table_meta_index_by_name_n(const CassTableMeta* table_meta,
                                  size_t index_length);
 
 /**
- * Gets the name of the table.
- *
- * @public @memberof CassTableMeta
- *
- * @param[in] table_meta
- * @param[out] name
- * @param[out] name_length
- */
-CASS_EXPORT void
-cass_table_meta_name(const CassTableMeta* table_meta,
-                     const char** name,
-                     size_t* name_length);
-
-/**
- * Gets the total number of columns for the table.
- *
- * @public @memberof CassTableMeta
- *
- * @param[in] table_meta
- * @return The total column count.
- */
-CASS_EXPORT size_t
-cass_table_meta_column_count(const CassTableMeta* table_meta);
-
-/**
- * Gets the column metadata for the provided index.
- *
- * @public @memberof CassTableMeta
- *
- * @param[in] table_meta
- * @param[in] index
- * @return The metadata for a column. NULL returned if the index is out of range.
- */
-CASS_EXPORT const CassColumnMeta*
-cass_table_meta_column(const CassTableMeta* table_meta,
-                       size_t index);
-
-/**
  * Gets the total number of indexes for the table.
  *
  * @public @memberof CassTableMeta
@@ -2114,6 +2154,62 @@ cass_table_meta_index_count(const CassTableMeta* table_meta);
 CASS_EXPORT const CassIndexMeta*
 cass_table_meta_index(const CassTableMeta* table_meta,
                       size_t index);
+
+/**
+ * Gets the materialized view metadata for the provided view name.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @param[in] view
+ *
+ * @return The metadata for a view. NULL if view does not exist.
+ */
+CASS_EXPORT const CassMaterializedViewMeta*
+cass_table_meta_materialized_view_by_name(const CassTableMeta* table_meta,
+                                          const char* view);
+
+/**
+ * Same as cass_table_meta_materialized_view_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @param[in] view
+ * @param[in] view_length
+ * @return same as cass_table_meta_materialized_view_by_name()
+ *
+ * @see cass_table_meta_materialized_view_by_name()
+ */
+CASS_EXPORT const CassMaterializedViewMeta*
+cass_table_meta_materialized_view_by_name_n(const CassTableMeta* table_meta,
+                                            const char* view,
+                                            size_t view_length);
+
+/**
+ * Gets the total number of views for the table.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @return The total view count.
+ */
+CASS_EXPORT size_t
+cass_table_meta_materialized_view_count(const CassTableMeta* table_meta);
+
+/**
+ * Gets the materialized view metadata for the provided index.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] table_meta
+ * @param[in] index
+ * @return The metadata for a view. NULL returned if the index is out of range.
+ */
+CASS_EXPORT const CassMaterializedViewMeta*
+cass_table_meta_materialized_view(const CassTableMeta* table_meta,
+                                  size_t index);
 
 /**
  * Gets the number of columns for the table's partition key.
@@ -2215,6 +2311,169 @@ CASS_EXPORT const CassValue*
 cass_table_meta_field_by_name_n(const CassTableMeta* table_meta,
                                 const char* name,
                                 size_t name_length);
+
+/**
+ * Gets the column metadata for the provided column name.
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ * @param[in] column
+ *
+ * @return The metadata for a column. NULL if column does not exist.
+ */
+CASS_EXPORT const CassColumnMeta*
+cass_materialized_view_meta_column_by_name(const CassMaterializedViewMeta* view_meta,
+                                           const char* column);
+
+/**
+ * Same as cass_materialized_view_meta_column_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ * @param[in] column
+ * @param[in] column_length
+ * @return same as cass_materialized_view_meta_column_by_name()
+ *
+ * @see cass_materialized_view_meta_column_by_name()
+ */
+CASS_EXPORT const CassColumnMeta*
+cass_materialized_view_meta_column_by_name_n(const CassMaterializedViewMeta* view_meta,
+                                             const char* column,
+                                             size_t column_length);
+
+/**
+ * Gets the name of the view.
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ * @param[out] name
+ * @param[out] name_length
+ */
+CASS_EXPORT void
+cass_materialized_view_meta_name(const CassMaterializedViewMeta* view_meta,
+                                 const char** name,
+                                 size_t* name_length);
+
+/**
+ * Gets the base table of the view.
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ *
+ * @return The base table for the view.
+ */
+CASS_EXPORT const CassTableMeta*
+cass_materialized_view_meta_base_table(const CassMaterializedViewMeta* view_meta);
+
+/**
+ * Gets the total number of columns for the view.
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ * @return The total column count.
+ */
+CASS_EXPORT size_t
+cass_materialized_view_meta_column_count(const CassMaterializedViewMeta* view_meta);
+
+/**
+ * Gets the column metadata for the provided index.
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ * @param[in] index
+ * @return The metadata for a column. NULL returned if the index is out of range.
+ */
+CASS_EXPORT const CassColumnMeta*
+cass_materialized_view_meta_column(const CassMaterializedViewMeta* view_meta,
+                                   size_t index);
+
+/**
+ * Gets the number of columns for the view's partition key.
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ * @return The count for the number of columns in the partition key.
+ */
+CASS_EXPORT size_t
+cass_materialized_view_meta_partition_key_count(const CassMaterializedViewMeta* view_meta);
+
+/**
+ * Gets the partition key column metadata for the provided index.
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ * @param[in] index
+ * @return The metadata for a column. NULL returned if the index is out of range.
+ */
+CASS_EXPORT const CassColumnMeta*
+cass_materialized_view_meta_partition_key(const CassMaterializedViewMeta* view_meta,
+                                          size_t index);
+
+/**
+ * Gets the number of columns for the view's clustering key.
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ * @return The count for the number of columns in the clustering key.
+ */
+CASS_EXPORT size_t
+cass_materialized_view_meta_clustering_key_count(const CassMaterializedViewMeta* view_meta);
+
+/**
+ * Gets the clustering key column metadata for the provided index.
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ * @param[in] index
+ * @return The metadata for a column. NULL returned if the index is out of range.
+ */
+CASS_EXPORT const CassColumnMeta*
+cass_materialized_view_meta_clustering_key(const CassMaterializedViewMeta* view_meta,
+                                           size_t index);
+
+/**
+ * Gets a metadata field for the provided name. Metadata fields allow direct
+ * access to the column data found in the underlying "views" metadata view.
+
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ * @param[in] name
+ * @return A metadata field value. NULL if the field does not exist.
+ */
+CASS_EXPORT const CassValue*
+cass_materialized_view_meta_field_by_name(const CassMaterializedViewMeta* view_meta,
+                                          const char* name);
+
+/**
+ * Same as cass_materialized_view_meta_field_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ * @param[in] name
+ * @param[in] name_length
+ * @return same as cass_materialized_view_meta_field_by_name()
+ *
+ * @see cass_materialized_view_meta_field_by_name()
+ */
+CASS_EXPORT const CassValue*
+cass_materialized_view_meta_field_by_name_n(const CassMaterializedViewMeta* view_meta,
+                                            const char* name,
+                                            size_t name_length);
 
 /**
  * Gets the name of the column.
@@ -6861,6 +7120,21 @@ cass_iterator_tables_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta);
 
 /**
  * Creates a new iterator for the specified keyspace metadata.
+ * This can be used to iterate over views.
+ *
+ * @public @memberof CassKeyspaceMeta
+ *
+ * @param[in] keyspace_meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_materialized_view_meta()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_materialized_views_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta);
+
+/**
+ * Creates a new iterator for the specified keyspace metadata.
  * This can be used to iterate over types.
  *
  * @public @memberof CassKeyspaceMeta
@@ -6953,6 +7227,21 @@ CASS_EXPORT CassIterator*
 cass_iterator_indexes_from_table_meta(const CassTableMeta* table_meta);
 
 /**
+ * Creates a new iterator for the specified materialized view metadata.
+ * This can be used to iterate over columns.
+ *
+ * @public @memberof CassTableMeta
+ *
+ * @param[in] view_meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_materialized_view_meta()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_materialized_views_from_table_meta(const CassTableMeta* table_meta);
+
+/**
  * Creates a new fields iterator for the specified table metadata. Metadata
  * fields allow direct access to the column data found in the underlying
  * "tables" metadata table. This can be used to iterate those metadata
@@ -6969,6 +7258,39 @@ cass_iterator_indexes_from_table_meta(const CassTableMeta* table_meta);
  */
 CASS_EXPORT CassIterator*
 cass_iterator_fields_from_table_meta(const CassTableMeta* table_meta);
+
+/**
+ * Creates a new iterator for the specified materialized view metadata.
+ * This can be used to iterate over columns.
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_column_meta()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_columns_from_materialized_view_meta(const CassMaterializedViewMeta* view_meta);
+
+/**
+ * Creates a new fields iterator for the specified materialized view metadata.
+ * Metadata fields allow direct access to the column data found in the
+ * underlying "views" metadata view. This can be used to iterate those metadata
+ * field entries.
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ * @return A new iterator that must be freed.
+ *
+ * @see cass_iterator_get_meta_field_name()
+ * @see cass_iterator_get_meta_field_value()
+ * @see cass_iterator_free()
+ */
+CASS_EXPORT CassIterator*
+cass_iterator_fields_from_materialized_view_meta(const CassMaterializedViewMeta* view_meta);
 
 /**
  * Creates a new fields iterator for the specified column metadata. Metadata
@@ -7181,6 +7503,20 @@ cass_iterator_get_keyspace_meta(const CassIterator* iterator);
  */
 CASS_EXPORT const CassTableMeta*
 cass_iterator_get_table_meta(const CassIterator* iterator);
+
+/**
+ * Gets the materialized view metadata entry at the iterator's current position.
+ *
+ * Calling cass_iterator_next() will invalidate the previous
+ * value returned by this method.
+ *
+ * @public @memberof CassIterator
+ *
+ * @param[in] iterator
+ * @return A materialized view metadata entry
+ */
+CASS_EXPORT const CassMaterializedViewMeta*
+cass_iterator_get_materialized_view_meta(const CassIterator* iterator);
 
 /**
  * Gets the type metadata entry at the iterator's current position.

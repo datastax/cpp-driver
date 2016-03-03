@@ -101,9 +101,9 @@ private:
     RefreshTableData(const std::string& keyspace_name,
                      const std::string& table_name)
       : keyspace_name(keyspace_name)
-      , table_name(table_name) {}
+      , table_or_view_name(table_name) {}
     std::string keyspace_name;
-    std::string table_name;
+    std::string table_or_view_name;
   };
 
   struct UnusedData {};
@@ -211,9 +211,9 @@ private:
   void refresh_keyspace(const StringRef& keyspace_name);
   static void on_refresh_keyspace(ControlConnection* control_connection, const std::string& keyspace_name, Response* response);
 
-  void refresh_table(const StringRef& keyspace_name,
+  void refresh_table_or_view(const StringRef& keyspace_name,
                      const StringRef& table_name);
-  static void on_refresh_table(ControlConnection* control_connection,
+  static void on_refresh_table_or_view(ControlConnection* control_connection,
                                const RefreshTableData& data,
                                const MultipleRequestHandler::ResponseMap& responses);
 
