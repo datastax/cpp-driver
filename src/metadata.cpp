@@ -1957,9 +1957,10 @@ void Metadata::InternalData::update_columns(const MetadataConfig& config, Result
       }
       table_or_view_name = temp_table_or_view_name;
       table_or_view = TableMetadataBase::Ptr(keyspace->get_table(table_or_view_name));
-      if (!table_or_view)
-      table_or_view = TableMetadataBase::Ptr(keyspace->get_view(table_or_view_name));
-      if (!table_or_view) continue;
+      if (!table_or_view)  {
+        table_or_view = TableMetadataBase::Ptr(keyspace->get_view(table_or_view_name));
+        if (!table_or_view) continue;
+      }
       table_or_view->clear_columns();
     }
 
