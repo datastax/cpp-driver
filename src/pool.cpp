@@ -42,10 +42,10 @@ Pool::Pool(IOWorker* io_worker,
     , config_(io_worker->config())
     , metrics_(io_worker->metrics())
     , state_(POOL_STATE_NEW)
+    , connection_error_(Connection::CONNECTION_OK)
     , available_connection_count_(0)
     , is_available_(false)
     , is_initial_connection_(is_initial_connection)
-    , is_critical_failure_(false)
     , is_pending_flush_(false)
     , cancel_reconnect_(false) { }
 
@@ -196,16 +196,16 @@ void Pool::set_is_available(bool is_available) {
 
 bool Pool::write(Connection* connection, RequestHandler* request_handler) {
   request_handler->set_pool(this);
-  if (io_worker_->is_current_keyspace(connection->keyspace())) {
+  if (*io_worker_->keyspace() == connection->keyspace()) {
     if (!connection->write(request_handler, false)) {
       return false;
     }
   } else {
     LOG_DEBUG("Setting keyspace %s on connection(%p) pool(%p)",
-              io_worker_->keyspace().c_str(),
+              io_worker_->keyspace()->c_str(),
               static_cast<void*>(connection),
               static_cast<void*>(this));
-    if (!connection->write(new SetKeyspaceHandler(connection, io_worker_->keyspace(),
+    if (!connection->write(new SetKeyspaceHandler(connection, *io_worker_->keyspace(),
                                                  request_handler), false)) {
       return false;
     }
@@ -247,7 +247,7 @@ void Pool::spawn_connection() {
     Connection* connection =
         new Connection(loop_, config_, metrics_,
                        address_,
-                       io_worker_->keyspace(),
+                       *io_worker_->keyspace(),
                        io_worker_->protocol_version(),
                        this);
 
@@ -309,16 +309,18 @@ void Pool::on_close(Connection* connection) {
   if (connection->is_timeout_error() && !connections_.empty()) {
     if (!connect_timer.is_running()) {
       connect_timer.start(loop_,
-                             config_.reconnect_wait_time_ms(),
-                             this, on_partial_reconnect);
+                          config_.reconnect_wait_time_ms(),
+                          this, on_partial_reconnect);
     }
     maybe_notify_ready();
   } else if (connection->is_defunct()) {
     // If at least one connection has a critical failure then don't try to
-    // reconnect automatically.
-    if (connection->is_critical_failure()) {
-      is_critical_failure_ = true;
+    // reconnect automatically. Also, don't set the error to something else if
+    // it has already been set to something critical.
+    if (!is_critical_failure()) {
+      connection_error_ = connection->error_code();
     }
+
     close();
   } else {
     maybe_notify_ready();

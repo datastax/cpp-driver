@@ -52,13 +52,14 @@ struct SessionEvent {
     INVALID,
     CONNECT,
     NOTIFY_READY,
+    NOTIFY_KEYSPACE_ERROR,
     NOTIFY_WORKER_CLOSED,
     NOTIFY_UP,
     NOTIFY_DOWN
   };
 
   SessionEvent()
-    : type(INVALID) {}
+    : type(INVALID) { }
 
   Type type;
   Address address;
@@ -89,6 +90,7 @@ public:
   SharedRefPtr<Host> get_host(const Address& address);
 
   bool notify_ready_async();
+  bool notify_keyspace_error_async();
   bool notify_worker_closed_async();
   bool notify_up_async(const Address& address);
   bool notify_down_async(const Address& address);
@@ -162,6 +164,8 @@ private:
   Config config_;
   ScopedPtr<Metrics> metrics_;
   ScopedRefPtr<LoadBalancingPolicy> load_balancing_policy_;
+  CassError connect_error_code_;
+  std::string connect_error_message_;
   ScopedRefPtr<Future> connect_future_;
   ScopedRefPtr<Future> close_future_;
 
@@ -177,6 +181,8 @@ private:
   int pending_pool_count_;
   int pending_workers_count_;
   int current_io_worker_;
+
+  CopyOnWritePtr<std::string> keyspace_;
 };
 
 class SessionFuture : public Future {
