@@ -1119,9 +1119,9 @@ BOOST_AUTO_TEST_CASE(cassandra_version) {
 
   CassVersion cass_version = cass_schema_meta_version(schema_meta_);
 
-  BOOST_CHECK(cass_version.major_version == version.major);
-  BOOST_CHECK(cass_version.minor_version == version.minor);
-  BOOST_CHECK(cass_version.patch_version == version.patch);
+  BOOST_CHECK(cass_version.major_version == version.major_version);
+  BOOST_CHECK(cass_version.minor_version == version.minor_version);
+  BOOST_CHECK(cass_version.patch_version == version.patch_version);
 }
 
 /**
