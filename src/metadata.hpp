@@ -362,6 +362,8 @@ public:
   TableMetadataBase(const MetadataConfig& config,
                     const std::string& name, const SharedRefPtr<RefBuffer>& buffer, const Row* row);
 
+  virtual ~TableMetadataBase() { }
+
   const ColumnMetadata::Vec& columns() const { return columns_; }
   const ColumnMetadata::Vec& partition_key() const { return partition_key_; }
   const ColumnMetadata::Vec& clustering_key() const { return clustering_key_; }
