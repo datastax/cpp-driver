@@ -130,9 +130,9 @@ typedef cass_uint64_t cass_duration_t;
 #define CASS_INET_STRING_LENGTH 46
 
 /**
- * @struct CassInet
- *
  * IP address for either IPv4 or IPv6.
+ *
+ * @struct CassInet
  */
 typedef struct CassInet_ {
   /**
@@ -151,9 +151,9 @@ typedef struct CassInet_ {
 #define CASS_UUID_STRING_LENGTH 37
 
 /**
- * @struct CassUuid
- *
  * Version 1 (time-based) or version 4 (random) UUID.
+ *
+ * @struct CassUuid
  */
 typedef struct CassUuid_ {
   /**
@@ -177,158 +177,167 @@ typedef struct CassUuid_ {
 } CassUuid;
 
 /**
- * @struct CassCluster
- *
  * A cluster object describes the configuration of the Cassandra cluster and is used
  * to construct a session instance. Unlike other DataStax drivers the cluster object
  * does not maintain the control connection.
+ *
+ * @struct CassCluster
  */
 typedef struct CassCluster_ CassCluster;
 
 /**
- * @struct CassSession
- *
  * A session object is used to execute queries and maintains cluster state through
  * the control connection. The control connection is used to auto-discover nodes and
  * monitor cluster changes (topology and schema). Each session also maintains multiple
  * pools of connections to cluster nodes which are used to query the cluster.
  *
  * Instances of the session object are thread-safe to execute queries.
+ *
+ * @struct CassSession
  */
 typedef struct CassSession_ CassSession;
 
 /**
- * @struct CassStatement
- *
  * A statement object is an executable query. It represents either a regular
  * (adhoc) statement or a prepared statement. It maintains the queries' parameter
  * values along with query options (consistency level, paging state, etc.)
  *
  * <b>Note:</b> Parameters for regular queries are not supported by the binary protocol
  * version 1.
+ *
+ * @struct CassStatement
  */
 typedef struct CassStatement_ CassStatement;
 
 /**
- * @struct CassBatch
- *
  * A group of statements that are executed as a single batch.
  *
  * <b>Note:</b> Batches are not supported by the binary protocol version 1.
+ *
+ * @cassandra{2.0+}
+ *
+ * @struct CassBatch
  */
 typedef struct CassBatch_ CassBatch;
 
 /**
- * @struct CassFuture
- *
  * The future result of an operation.
  *
  * It can represent a result if the operation completed successfully or an
  * error if the operation failed. It can be waited on, polled or a callback
  * can be attached.
  *
+ * @struct CassFuture
  */
 typedef struct CassFuture_ CassFuture;
 
 /**
- * @struct CassPrepared
- *
  * A statement that has been prepared cluster-side (It has been pre-parsed
  * and cached).
  *
  * A prepared statement is read-only and it is thread-safe to concurrently
  * bind new statements.
+ *
+ * @struct CassPrepared
  */
 typedef struct CassPrepared_ CassPrepared;
 
 /**
- * @struct CassResult
- *
  * The result of a query.
  *
  * A result object is read-only and is thread-safe to read or iterate over
  * concurrently.
+ *
+ * @struct CassResult
  */
 typedef struct CassResult_ CassResult;
 
 /**
- * @struct CassErrorResult
- *
  * A error result of a request
+ *
+ * @struct CassErrorResult
  */
 typedef struct CassErrorResult_ CassErrorResult;
 
 /**
- * @struct CassIterator
- *
  * An object used to iterate over a group of rows, columns or collection values.
+ *
+ * @struct CassIterator
  */
 typedef struct CassIterator_ CassIterator;
 
 /**
- * @struct CassRow
- *
  * A collection of column values.
+ *
+ * @struct CassRow
  */
 typedef struct CassRow_ CassRow;
 
 /**
- * @struct CassValue
- *
  * A single primitive value or a collection of values.
+ *
+ * @struct CassValue
  */
 typedef struct CassValue_ CassValue;
 
 /**
- * @struct CassDataType
- *
  * A data type used to describe a value, collection or
  * user defined type.
+ *
+ * @struct CassDataType
  */
 typedef struct CassDataType_ CassDataType;
 
 /**
  * @struct CassFunctionMeta
+ *
+ * @cassandra{2.2+}
  */
 typedef struct CassFunctionMeta_ CassFunctionMeta;
 
 /**
  * @struct CassAggregateMeta
+ *
+ * @cassandra{2.2+}
  */
 typedef struct CassAggregateMeta_ CassAggregateMeta;
 
 /**
- * @struct CassCollection
- *
  *  A collection of values.
+ *
+ * @struct CassCollection
  */
 typedef struct CassCollection_ CassCollection;
 
 /**
+ * A tuple of values.
+ *
  * @struct CassTuple
  *
- *  A tuple of values.
+ * @cassandra{2.1+}
  */
 typedef struct CassTuple_ CassTuple;
 
 /**
+ * A user defined type.
+ *
  * @struct CassUserType
  *
- *  A user defined type.
+ * @cassandra{2.1+}
  */
 typedef struct CassUserType_ CassUserType;
 
 /**
- * @struct CassSsl
- *
  * Describes the SSL configuration of a cluster.
+ *
+ * @struct CassSsl
  */
 typedef struct CassSsl_ CassSsl;
 
 /**
- * @struct CassVersion
- *
  * Describes the version of the connected Cassandra cluster.
+ *
+ * @struct CassVersion
  */
 
 typedef struct CassVersion_ {
@@ -338,53 +347,55 @@ typedef struct CassVersion_ {
 } CassVersion;
 
 /**
- * @struct CassSchemaMeta
- *
  * A snapshot of the schema's metadata.
+ *
+ * @struct CassSchemaMeta
  */
 typedef struct CassSchemaMeta_ CassSchemaMeta;
 
 /**
- * @struct CassKeyspaceMeta
- *
  * Keyspace metadata
+ *
+ * @struct CassKeyspaceMeta
  */
 typedef struct CassKeyspaceMeta_ CassKeyspaceMeta;
 
 /**
- * @struct CassTableMeta
- *
  * Table metadata
+ *
+ * @struct CassTableMeta
  */
 typedef struct CassTableMeta_ CassTableMeta;
 
 /**
+ * MaterializedView metadata
+ *
  * @struct CassMaterializedViewMeta
  *
- * MaterializedView metadata
+ * @cassandra{3.0+}
  */
 typedef struct CassMaterializedViewMeta_ CassMaterializedViewMeta;
 
 /**
- * @struct CassColumnMeta
- *
  * Column metadata
+ *
+ * @struct CassColumnMeta
  */
 typedef struct CassColumnMeta_ CassColumnMeta;
 
 /**
- * @struct CassIndexMeta
- *
  * Index metadata
+ *
+ * @struct CassIndexMeta
  */
 typedef struct CassIndexMeta_ CassIndexMeta;
 
 /**
- * @struct CassUuidGen
- *
  * A UUID generator object.
  *
  * Instances of the UUID generator object are thread-safe to generate UUIDs.
+ *
+ * @struct CassUuidGen
  */
 typedef struct CassUuidGen_ CassUuidGen;
 
@@ -396,6 +407,7 @@ typedef struct CassUuidGen_ CassUuidGen;
  *
  * @struct CassTimestampGen
  *
+ * @cassandra{2.1+}
  */
 typedef struct CassTimestampGen_ CassTimestampGen;
 
@@ -406,13 +418,15 @@ typedef struct CassRetryPolicy_ CassRetryPolicy;
 
 /**
  * @struct CassCustomPayload
+ *
+ * @cassandra{2.2+}
  */
 typedef struct CassCustomPayload_ CassCustomPayload;
 
 /**
- * @struct CassMetrics
- *
  * A snapshot of the session's performance/diagnostic metrics.
+ *
+ * @struct CassMetrics
  */
 typedef struct CassMetrics_ {
   struct {
@@ -1812,6 +1826,20 @@ cass_schema_meta_keyspace_by_name_n(const CassSchemaMeta* schema_meta,
                                     size_t keyspace_length);
 
 /**
+ * Gets the name of the keyspace.
+ *
+ * @public @memberof CassKeyspaceMeta
+ *
+ * @param[in] keyspace_meta
+ * @param[out] name
+ * @param[out] name_length
+ */
+CASS_EXPORT void
+cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
+                        const char** name,
+                        size_t* name_length);
+
+/**
  * Gets the table metadata for the provided table name.
  *
  * @public @memberof CassKeyspaceMeta
@@ -2000,20 +2028,6 @@ cass_keyspace_meta_aggregate_by_name_n(const CassKeyspaceMeta* keyspace_meta,
                                        size_t name_length,
                                        const char* arguments,
                                        size_t arguments_length);
-
-/**
- * Gets the name of the keyspace.
- *
- * @public @memberof CassKeyspaceMeta
- *
- * @param[in] keyspace_meta
- * @param[out] name
- * @param[out] name_length
- */
-CASS_EXPORT void
-cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
-                        const char** name,
-                        size_t* name_length);
 
 /**
  * Gets a metadata field for the provided name. Metadata fields allow direct
@@ -4888,6 +4902,8 @@ cass_data_type_type(const CassDataType* data_type);
 
 /**
  * Gets whether a data type is frozen.
+ *
+ * @cassandra{2.1+}
  *
  * @param[in] data_type
  * @return cass_true if the data type is frozen, otherwise cass_false.
