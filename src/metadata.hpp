@@ -710,8 +710,8 @@ private:
 
     void swap(InternalData& other) {
       CopyOnWritePtr<KeyspaceMetadata::Map> temp = other.keyspaces_;
-      keyspaces_ = other.keyspaces_;
-      other.keyspaces_ = temp;
+      other.keyspaces_ = keyspaces_;
+      keyspaces_ = temp;
     }
 
   private:
