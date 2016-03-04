@@ -1846,6 +1846,8 @@ cass_keyspace_meta_table_by_name_n(const CassKeyspaceMeta* keyspace_meta,
 /**
  * Gets the materialized view metadata for the provided view name.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassKeyspaceMeta
  *
  * @param[in] keyspace_meta
@@ -1860,6 +1862,8 @@ cass_keyspace_meta_materialized_view_by_name(const CassKeyspaceMeta* keyspace_me
 /**
  * Same as cass_keyspace_meta_materialized_view_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassKeyspaceMeta
  *
@@ -2172,6 +2176,8 @@ cass_table_meta_index(const CassTableMeta* table_meta,
 /**
  * Gets the materialized view metadata for the provided view name.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassTableMeta
  *
  * @param[in] table_meta
@@ -2186,6 +2192,8 @@ cass_table_meta_materialized_view_by_name(const CassTableMeta* table_meta,
 /**
  * Same as cass_table_meta_materialized_view_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassTableMeta
  *
@@ -2204,6 +2212,8 @@ cass_table_meta_materialized_view_by_name_n(const CassTableMeta* table_meta,
 /**
  * Gets the total number of views for the table.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassTableMeta
  *
  * @param[in] table_meta
@@ -2214,6 +2224,8 @@ cass_table_meta_materialized_view_count(const CassTableMeta* table_meta);
 
 /**
  * Gets the materialized view metadata for the provided index.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassTableMeta
  *
@@ -2296,7 +2308,6 @@ cass_table_meta_clustering_key_order(const CassTableMeta* table_meta,
 /**
  * Gets a metadata field for the provided name. Metadata fields allow direct
  * access to the column data found in the underlying "tables" metadata table.
-
  *
  * @public @memberof CassTableMeta
  *
@@ -2329,6 +2340,8 @@ cass_table_meta_field_by_name_n(const CassTableMeta* table_meta,
 /**
  * Gets the column metadata for the provided column name.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
@@ -2343,6 +2356,8 @@ cass_materialized_view_meta_column_by_name(const CassMaterializedViewMeta* view_
 /**
  * Same as cass_materialized_view_meta_column_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassMaterializedViewMeta
  *
@@ -2361,6 +2376,8 @@ cass_materialized_view_meta_column_by_name_n(const CassMaterializedViewMeta* vie
 /**
  * Gets the name of the view.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
@@ -2375,6 +2392,8 @@ cass_materialized_view_meta_name(const CassMaterializedViewMeta* view_meta,
 /**
  * Gets the base table of the view.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
@@ -2387,6 +2406,8 @@ cass_materialized_view_meta_base_table(const CassMaterializedViewMeta* view_meta
 /**
  * Gets the total number of columns for the view.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
@@ -2397,6 +2418,8 @@ cass_materialized_view_meta_column_count(const CassMaterializedViewMeta* view_me
 
 /**
  * Gets the column metadata for the provided index.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassMaterializedViewMeta
  *
@@ -2411,6 +2434,8 @@ cass_materialized_view_meta_column(const CassMaterializedViewMeta* view_meta,
 /**
  * Gets the number of columns for the view's partition key.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
@@ -2421,6 +2446,8 @@ cass_materialized_view_meta_partition_key_count(const CassMaterializedViewMeta* 
 
 /**
  * Gets the partition key column metadata for the provided index.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassMaterializedViewMeta
  *
@@ -2435,6 +2462,8 @@ cass_materialized_view_meta_partition_key(const CassMaterializedViewMeta* view_m
 /**
  * Gets the number of columns for the view's clustering key.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
@@ -2445,6 +2474,8 @@ cass_materialized_view_meta_clustering_key_count(const CassMaterializedViewMeta*
 
 /**
  * Gets the clustering key column metadata for the provided index.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassMaterializedViewMeta
  *
@@ -2459,7 +2490,8 @@ cass_materialized_view_meta_clustering_key(const CassMaterializedViewMeta* view_
 /**
  * Gets a metadata field for the provided name. Metadata fields allow direct
  * access to the column data found in the underlying "views" metadata view.
-
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassMaterializedViewMeta
  *
@@ -2474,6 +2506,8 @@ cass_materialized_view_meta_field_by_name(const CassMaterializedViewMeta* view_m
 /**
  * Same as cass_materialized_view_meta_field_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassMaterializedViewMeta
  *
@@ -7448,6 +7482,8 @@ cass_iterator_tables_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta);
  * Creates a new iterator for the specified keyspace metadata.
  * This can be used to iterate over views.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassKeyspaceMeta
  *
  * @param[in] keyspace_meta
@@ -7562,6 +7598,8 @@ cass_iterator_indexes_from_table_meta(const CassTableMeta* table_meta);
  * Creates a new iterator for the specified materialized view metadata.
  * This can be used to iterate over columns.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassTableMeta
  *
  * @param[in] view_meta
@@ -7595,6 +7633,8 @@ cass_iterator_fields_from_table_meta(const CassTableMeta* table_meta);
  * Creates a new iterator for the specified materialized view metadata.
  * This can be used to iterate over columns.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
@@ -7611,6 +7651,8 @@ cass_iterator_columns_from_materialized_view_meta(const CassMaterializedViewMeta
  * Metadata fields allow direct access to the column data found in the
  * underlying "views" metadata view. This can be used to iterate those metadata
  * field entries.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassMaterializedViewMeta
  *
@@ -7849,6 +7891,8 @@ cass_iterator_get_table_meta(const CassIterator* iterator);
  *
  * Calling cass_iterator_next() will invalidate the previous
  * value returned by this method.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassIterator
  *
