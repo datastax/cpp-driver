@@ -226,7 +226,7 @@ BOOST_AUTO_TEST_CASE(get_invalid_name)
   test_utils::CassStatementPtr statement(cass_statement_new(insert_query.c_str(), 2));
 
   // Determine if bound parameters can be used based on C* version
-  if (version.major == 1) {
+  if (version.major_version == 1) {
     test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query.c_str());
     statement = test_utils::CassStatementPtr(cass_prepared_bind(prepared.get()));
   }

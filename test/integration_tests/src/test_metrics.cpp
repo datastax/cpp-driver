@@ -176,7 +176,7 @@ BOOST_AUTO_TEST_CASE(timeouts) {
    * Check for pending request timeouts
    */
   CCM::CassVersion version = test_utils::get_version();
-  if ((version.major <= 2 && version.minor < 1) || version.major < 2) {
+  if ((version.major_version <= 2 && version.minor_version < 1) || version.major_version < 2) {
     // Limit the connections to one
     cass_cluster_set_core_connections_per_host(cluster_.get(), 1);
     cass_cluster_set_max_connections_per_host(cluster_.get(), 1);

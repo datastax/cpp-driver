@@ -2245,7 +2245,7 @@ void Metadata::InternalData::update_legacy_indexes(const MetadataConfig& config,
         table->build_keys_and_sort(config);
       }
       table_name = temp_table;
-      table = TableMetadata::Ptr(keyspace->get_table(table_name));
+      table = keyspace->get_table(table_name);
       if (!table) continue;
       table->clear_indexes();
     }

@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_SUITE(custom_payload)
 BOOST_AUTO_TEST_CASE(simple)
 {
   CCM::CassVersion version = test_utils::get_version();
-  if ((version.major >= 2 && version.minor >= 2) || version.major >= 3) {
+  if ((version.major_version >= 2 && version.minor_version >= 2) || version.major_version >= 3) {
     boost::shared_ptr<CCM::Bridge> ccm(new CCM::Bridge("config.txt"));
     if (ccm->create_cluster()) {
       // Ensure the cluster is down before updating JVM argument

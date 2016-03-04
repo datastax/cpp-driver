@@ -1277,13 +1277,13 @@ cass_cluster_set_latency_aware_routing_settings(CassCluster* cluster,
  * be ignored and a connection will not be established. This policy is useful
  * for ensuring that the driver will only connect to a predefined set of hosts.
  *
- * Examples: "127.0.0.1" "127.0.0.1,127.0.0.2", "server1.domain.com"
+ * Examples: "127.0.0.1" "127.0.0.1,127.0.0.2"
  *
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] hosts A comma delimited list of addresses or names. An empty
- * string will clear the whitelist hosts. The string is copied into the cluster
+ * @param[in] hosts A comma delimited list of addresses. An empty string will
+ * clear the whitelist hosts. The string is copied into the cluster
  * configuration; the memory pointed to by this parameter can be freed after
  * this call.
  */
@@ -1319,13 +1319,13 @@ cass_cluster_set_whitelist_filtering_n(CassCluster* cluster,
  * be ignored and a connection will not be established. This policy is useful
  * for ensuring that the driver will not connect to a predefined set of hosts.
  *
- * Examples: "127.0.0.1" "127.0.0.1,127.0.0.2", "server1.domain.com"
+ * Examples: "127.0.0.1" "127.0.0.1,127.0.0.2"
  *
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] hosts A comma delimited list of addresses or names. An empty
- * string will clear the blacklist hosts. The string is copied into the cluster
+ * @param[in] hosts A comma delimited list of addresses. An empty string will
+ * clear the blacklist hosts. The string is copied into the cluster
  * configuration; the memory pointed to by this parameter can be freed after
  * this call.
  */
@@ -1359,10 +1359,9 @@ cass_cluster_set_blacklist_filtering_n(CassCluster* cluster,
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] dcs A comma delimited list of dcs. An empty
- * string will clear the whitelist dcs. The string is copied into the cluster
- * configuration; the memory pointed to by this parameter can be freed after
- * this call.
+ * @param[in] dcs A comma delimited list of dcs. An empty string will clear the
+ * whitelist dcs. The string is copied into the cluster configuration; the
+ * memory pointed to by this parameter can be freed after this call.
  */
 CASS_EXPORT void
 cass_cluster_set_whitelist_dc_filtering(CassCluster* cluster,
@@ -1394,10 +1393,9 @@ cass_cluster_set_whitelist_dc_filtering_n(CassCluster* cluster,
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] dcs A comma delimited list of dcs. An empty
- * string will clear the blacklist dcs. The string is copied into the cluster
- * configuration; the memory pointed to by this parameter can be freed after
- * this call.
+ * @param[in] dcs A comma delimited list of dcs. An empty string will clear the
+ * blacklist dcs. The string is copied into the cluster configuration; the
+ * memory pointed to by this parameter can be freed after this call.
  */
 CASS_EXPORT void
 cass_cluster_set_blacklist_dc_filtering(CassCluster* cluster,

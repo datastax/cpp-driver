@@ -96,7 +96,9 @@ cass_cluster_set_latency_aware_routing_settings(cluster,
                                                 min_measured);
 ```
 
-### Whitelist Filtering
+### Filtering
+
+#### Whitelist
 
 This policy ensures that only hosts from the provided whitelist filter will
 ever be used. Any host that is not contained within the whitelist will be
@@ -117,6 +119,40 @@ cass_cluster_set_whitelist_filtering(cluster,
 cass_cluster_set_whitelist_filtering(cluster, "");
 ```
 
+#### Blacklist
+
+This policy is the inverse of the whitelist policy where hosts provided in the
+blacklist filter will be ignored and a connection will not be established.
+
+```c
+/* Set the list of predefined hosts the driver is NOT allowed to connect to */
+cass_cluster_set_blacklist_filtering(cluster,
+                                     "127.0.0.1, 127.0.0.3, 127.0.0.5");
+
+/* The blacklist can be cleared (and disabled) by using an empty string */
+cass_cluster_set_blacklist_filtering(cluster, "");
+```
+
+#### Datacenter
+
+Filtering can also be performed on all hosts in a datacenter or multiple
+datacenters when using the whitelist/blacklist datacenter filtering polices.
+
+```c
+/* Set the list of predefined datacenters the driver is allowed to connect to */
+cass_cluster_set_whitelist_filtering(cluster, "dc2, dc4");
+
+/* The datacenter whitelist can be cleared/disabled by using an empty string */
+cass_cluster_set_whitelist_filtering(cluster, "");
+```
+
+```c
+/* Set the list of predefined datacenters the driver is NOT allowed to connect to */
+cass_cluster_set_blacklist_dc_filtering(cluster, "dc2, dc4");
+
+/* The datacenter blacklist can be cleared/disabled by using an empty string */
+cass_cluster_set_blacklist_dc_filtering(cluster, "");
+```
 
 ### Connection Heartbeats
 
