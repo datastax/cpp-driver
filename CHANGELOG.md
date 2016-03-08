@@ -1,3 +1,41 @@
+2.3.0
+===========
+March 14, 2016
+
+Features
+--------
+* Added support for materialized view schema metadata.
+* Added support for secondary index schema metadata.
+* Added cluster key order to table schema metadata via
+  `cass_table_meta_clustering_key_order()`.
+* Added frozen flag to `CassDataType` via `cass_data_type_is_frozen()`.
+* Added support getting the connected cluster''s Cassandra version via
+  `cass_schema_meta_version()`.
+* Added blacklist, whitelist DC, and blacklist DC load balancing policies.
+  Thanks to Walid Aitamer (waitamer).
+
+Other
+--------
+* Fixed the control connection to only become "ready" during the initial
+  connection process.
+* Fixed assertion in data type comparison for collection/tuple types.
+* Fixed reference count issue in `cass_collection_new_from_data_type()`
+* Fixed retry consistency levels for batches. Batches now correctly use the
+  downgraded consistency levels supplied from retry policies.
+* Fixed function name typo: `cass_data_sub_type_count()` to
+  `cass_data_type_sub_type_count()`. The old spelling is still present, but
+  deprecated.
+* Fixed `cass::VersionNumber` to handle tick-tock release version where only
+  "major.minor" are provided.
+* Fixed function `cass_session_connect_keyspace()` to correctly return an error
+  when the keyspace is invalid.
+* Fixed invalid logic in schema metadata swap method which could cause unecessary
+  copy-on-writes.
+* Fixed bottleneck in `cass::Session` by using copy-on-write instead of a
+  highly contended lock to track the current keyspace.
+* Changed "major/minor" to "major_version/minor_version" in `cass::VersionNumber` to
+  avoid naming conflicts on some platforms.
+
 2.2.2
 ===========
 December 14, 2015

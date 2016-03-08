@@ -51,8 +51,8 @@
  */
 
 #define CASS_VERSION_MAJOR 2
-#define CASS_VERSION_MINOR 2
-#define CASS_VERSION_PATCH 2
+#define CASS_VERSION_MINOR 3
+#define CASS_VERSION_PATCH 0
 #define CASS_VERSION_SUFFIX ""
 
 #ifdef __cplusplus
