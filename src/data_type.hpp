@@ -521,7 +521,8 @@ struct IsValidDataType<cass_bool_t> {
 template<>
 struct IsValidDataType<CassString> {
   bool operator()(CassString, const DataType::ConstPtr& data_type) const {
-    return is_string_type(data_type->value_type());
+    // Also allow "bytes" types to be bound as "string" types
+    return is_string_type(data_type->value_type()) || is_bytes_type(data_type->value_type());
   }
 };
 
