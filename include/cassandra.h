@@ -2502,6 +2502,22 @@ cass_materialized_view_meta_clustering_key(const CassMaterializedViewMeta* view_
                                            size_t index);
 
 /**
+ * Gets the clustering order column metadata for the provided index.
+ *
+ * @public @memberof CassMaterializedViewMeta
+ *
+ * @param[in] view_meta
+ * @param[in] index
+ * @return The clustering order for a column.
+ * CASS_CLUSTERING_ORDER_NONE returned if the index is out of range.
+ *
+ * @see cass_materialized_view_meta_clustering_key_count()
+ */
+CASS_EXPORT CassClusteringOrder
+cass_materialized_view_meta_clustering_key_order(const CassMaterializedViewMeta* view_meta,
+                                                 size_t index);
+
+/**
  * Gets a metadata field for the provided name. Metadata fields allow direct
  * access to the column data found in the underlying "views" metadata view.
  *

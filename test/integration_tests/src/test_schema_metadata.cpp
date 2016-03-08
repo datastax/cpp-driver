@@ -141,6 +141,13 @@ struct TestSchemaMetadata : public test_utils::SingleSessionTest {
     return table_meta;
   }
 
+  const CassMaterializedViewMeta* schema_get_view(const std::string& ks_name,
+                                                  const std::string& view_name) {
+    const CassMaterializedViewMeta* view_meta = cass_keyspace_meta_materialized_view_by_name(schema_get_keyspace(ks_name), view_name.c_str());
+    BOOST_REQUIRE(view_meta);
+    return view_meta;
+  }
+
   const CassColumnMeta* schema_get_column(const std::string& ks_name,
                                       const std::string& table_name,
                                       const std::string& col_name) {
@@ -1606,6 +1613,96 @@ BOOST_AUTO_TEST_CASE(materialized_views) {
   // It's also difficult and unpredictable to get DROP TABLE/MATERIALIZE VIEW
   // events to reorder so that the DROP TABLE event happens before the
   // DROP MATERIALIZE VIEW event.
+}
+
+/**
+ * Test materialized view clustering order.
+ *
+ * Verify that column clustering order is properly updated and returned.
+ *
+ * @since 2.3.0
+ * @jira_ticket CPP-332
+ * @test_category schema
+ * @cassandra_version 3.0.x
+ */
+BOOST_AUTO_TEST_CASE(materialized_view_clustering_order) {
+  if (version < "3.0.0") return;
+
+  {
+    test_utils::execute_query(session, "CREATE KEYSPACE materialized_view_clustering_order WITH replication = "
+                                       "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+
+    test_utils::execute_query(session, "CREATE TABLE materialized_view_clustering_order.table1 (key1 text, value1 text, PRIMARY KEY(key1))");
+    test_utils::execute_query(session, "CREATE TABLE materialized_view_clustering_order.table2 (key1 text, key2 text, value1 text, PRIMARY KEY(key1, key2))");
+
+    refresh_schema_meta();
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE MATERIALIZED VIEW materialized_view_clustering_order.composite_key AS "
+                                       "SELECT key1 FROM materialized_view_clustering_order.table1 WHERE value1 IS NOT NULL "
+                                       "PRIMARY KEY(value1, key1)");
+    refresh_schema_meta();
+
+    const CassMaterializedViewMeta* view_meta = schema_get_view("materialized_view_clustering_order", "composite_key");
+
+    BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_clustering_key_count(view_meta), 1);
+    BOOST_CHECK_EQUAL(cass_materialized_view_meta_clustering_key_order(view_meta, 0), CASS_CLUSTERING_ORDER_ASC);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE MATERIALIZED VIEW materialized_view_clustering_order.reversed_composite_key AS "
+                                       "SELECT key1 FROM materialized_view_clustering_order.table1 WHERE value1 IS NOT NULL "
+                                       "PRIMARY KEY(value1, key1)"
+                                       "WITH CLUSTERING ORDER BY (key1 DESC)");
+    refresh_schema_meta();
+
+    const CassMaterializedViewMeta* view_meta = schema_get_view("materialized_view_clustering_order", "reversed_composite_key");
+
+    BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_clustering_key_count(view_meta), 1);
+    BOOST_CHECK_EQUAL(cass_materialized_view_meta_clustering_key_order(view_meta, 0), CASS_CLUSTERING_ORDER_DESC);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE MATERIALIZED VIEW materialized_view_clustering_order.composite_clustering_key AS "
+                                       "SELECT key1 FROM materialized_view_clustering_order.table2 WHERE key2 IS NOT NULL AND value1 IS NOT NULL "
+                                       "PRIMARY KEY(value1, key2, key1)");
+    refresh_schema_meta();
+
+    const CassMaterializedViewMeta* view_meta = schema_get_view("materialized_view_clustering_order", "composite_clustering_key");
+
+    BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_clustering_key_count(view_meta), 2);
+    BOOST_CHECK_EQUAL(cass_materialized_view_meta_clustering_key_order(view_meta, 0), CASS_CLUSTERING_ORDER_ASC);
+    BOOST_CHECK_EQUAL(cass_materialized_view_meta_clustering_key_order(view_meta, 1), CASS_CLUSTERING_ORDER_ASC);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE MATERIALIZED VIEW materialized_view_clustering_order.reversed_composite_clustering_key AS "
+                                       "SELECT key1 FROM materialized_view_clustering_order.table2 WHERE key2 IS NOT NULL AND value1 IS NOT NULL "
+                                       "PRIMARY KEY(value1, key2, key1) "
+                                       "WITH CLUSTERING ORDER BY (key2 DESC, key1 DESC)");
+    refresh_schema_meta();
+
+    const CassMaterializedViewMeta* view_meta = schema_get_view("materialized_view_clustering_order", "reversed_composite_clustering_key");
+
+    BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_clustering_key_count(view_meta), 2);
+    BOOST_CHECK_EQUAL(cass_materialized_view_meta_clustering_key_order(view_meta, 0), CASS_CLUSTERING_ORDER_DESC);
+    BOOST_CHECK_EQUAL(cass_materialized_view_meta_clustering_key_order(view_meta, 1), CASS_CLUSTERING_ORDER_DESC);
+  }
+
+  {
+    test_utils::execute_query(session, "CREATE MATERIALIZED VIEW materialized_view_clustering_order.mixed_composite_clustering_key AS "
+                                       "SELECT key1 FROM materialized_view_clustering_order.table2 WHERE key2 IS NOT NULL AND value1 IS NOT NULL "
+                                       "PRIMARY KEY(value1, key2, key1) "
+                                       "WITH CLUSTERING ORDER BY (key2 DESC, key1 ASC)");
+    refresh_schema_meta();
+
+    const CassMaterializedViewMeta* view_meta = schema_get_view("materialized_view_clustering_order", "mixed_composite_clustering_key");
+
+    BOOST_REQUIRE_EQUAL(cass_materialized_view_meta_clustering_key_count(view_meta), 2);
+    BOOST_CHECK_EQUAL(cass_materialized_view_meta_clustering_key_order(view_meta, 0), CASS_CLUSTERING_ORDER_DESC);
+    BOOST_CHECK_EQUAL(cass_materialized_view_meta_clustering_key_order(view_meta, 1), CASS_CLUSTERING_ORDER_ASC);
+  }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
