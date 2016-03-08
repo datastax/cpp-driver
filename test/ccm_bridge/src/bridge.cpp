@@ -61,9 +61,11 @@ typedef SSIZE_T ssize_t;
 #endif
 #endif
 
+#include <errno.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <algorithm>
 #include <fstream>

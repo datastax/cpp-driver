@@ -256,7 +256,14 @@ namespace CCM {
      */
     std::string to_string(bool is_extra_requested = true) {
       std::stringstream version_string;
-      version_string << major_version << "." << minor_version << "." << patch_version;
+      // Determine if tick-tock release should be handled
+      if (*this > "3.0.0" && patch_version == 0) {
+        version_string << major_version << "." << minor_version;
+      } else {
+        version_string << major_version << "." << minor_version << "." << patch_version;
+      }
+
+      // Determine if the extra version information should be added
       if (is_extra_requested && !extra.empty()) {
         version_string << "-" << extra;
       }
