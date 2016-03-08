@@ -130,9 +130,9 @@ typedef cass_uint64_t cass_duration_t;
 #define CASS_INET_STRING_LENGTH 46
 
 /**
- * @struct CassInet
- *
  * IP address for either IPv4 or IPv6.
+ *
+ * @struct CassInet
  */
 typedef struct CassInet_ {
   /**
@@ -151,9 +151,9 @@ typedef struct CassInet_ {
 #define CASS_UUID_STRING_LENGTH 37
 
 /**
- * @struct CassUuid
- *
  * Version 1 (time-based) or version 4 (random) UUID.
+ *
+ * @struct CassUuid
  */
 typedef struct CassUuid_ {
   /**
@@ -177,158 +177,167 @@ typedef struct CassUuid_ {
 } CassUuid;
 
 /**
- * @struct CassCluster
- *
  * A cluster object describes the configuration of the Cassandra cluster and is used
  * to construct a session instance. Unlike other DataStax drivers the cluster object
  * does not maintain the control connection.
+ *
+ * @struct CassCluster
  */
 typedef struct CassCluster_ CassCluster;
 
 /**
- * @struct CassSession
- *
  * A session object is used to execute queries and maintains cluster state through
  * the control connection. The control connection is used to auto-discover nodes and
  * monitor cluster changes (topology and schema). Each session also maintains multiple
  * pools of connections to cluster nodes which are used to query the cluster.
  *
  * Instances of the session object are thread-safe to execute queries.
+ *
+ * @struct CassSession
  */
 typedef struct CassSession_ CassSession;
 
 /**
- * @struct CassStatement
- *
  * A statement object is an executable query. It represents either a regular
  * (adhoc) statement or a prepared statement. It maintains the queries' parameter
  * values along with query options (consistency level, paging state, etc.)
  *
  * <b>Note:</b> Parameters for regular queries are not supported by the binary protocol
  * version 1.
+ *
+ * @struct CassStatement
  */
 typedef struct CassStatement_ CassStatement;
 
 /**
- * @struct CassBatch
- *
  * A group of statements that are executed as a single batch.
  *
  * <b>Note:</b> Batches are not supported by the binary protocol version 1.
+ *
+ * @cassandra{2.0+}
+ *
+ * @struct CassBatch
  */
 typedef struct CassBatch_ CassBatch;
 
 /**
- * @struct CassFuture
- *
  * The future result of an operation.
  *
  * It can represent a result if the operation completed successfully or an
  * error if the operation failed. It can be waited on, polled or a callback
  * can be attached.
  *
+ * @struct CassFuture
  */
 typedef struct CassFuture_ CassFuture;
 
 /**
- * @struct CassPrepared
- *
  * A statement that has been prepared cluster-side (It has been pre-parsed
  * and cached).
  *
  * A prepared statement is read-only and it is thread-safe to concurrently
  * bind new statements.
+ *
+ * @struct CassPrepared
  */
 typedef struct CassPrepared_ CassPrepared;
 
 /**
- * @struct CassResult
- *
  * The result of a query.
  *
  * A result object is read-only and is thread-safe to read or iterate over
  * concurrently.
+ *
+ * @struct CassResult
  */
 typedef struct CassResult_ CassResult;
 
 /**
- * @struct CassErrorResult
- *
  * A error result of a request
+ *
+ * @struct CassErrorResult
  */
 typedef struct CassErrorResult_ CassErrorResult;
 
 /**
- * @struct CassIterator
- *
  * An object used to iterate over a group of rows, columns or collection values.
+ *
+ * @struct CassIterator
  */
 typedef struct CassIterator_ CassIterator;
 
 /**
- * @struct CassRow
- *
  * A collection of column values.
+ *
+ * @struct CassRow
  */
 typedef struct CassRow_ CassRow;
 
 /**
- * @struct CassValue
- *
  * A single primitive value or a collection of values.
+ *
+ * @struct CassValue
  */
 typedef struct CassValue_ CassValue;
 
 /**
- * @struct CassDataType
- *
  * A data type used to describe a value, collection or
  * user defined type.
+ *
+ * @struct CassDataType
  */
 typedef struct CassDataType_ CassDataType;
 
 /**
  * @struct CassFunctionMeta
+ *
+ * @cassandra{2.2+}
  */
 typedef struct CassFunctionMeta_ CassFunctionMeta;
 
 /**
  * @struct CassAggregateMeta
+ *
+ * @cassandra{2.2+}
  */
 typedef struct CassAggregateMeta_ CassAggregateMeta;
 
 /**
- * @struct CassCollection
- *
  *  A collection of values.
+ *
+ * @struct CassCollection
  */
 typedef struct CassCollection_ CassCollection;
 
 /**
+ * A tuple of values.
+ *
  * @struct CassTuple
  *
- *  A tuple of values.
+ * @cassandra{2.1+}
  */
 typedef struct CassTuple_ CassTuple;
 
 /**
+ * A user defined type.
+ *
  * @struct CassUserType
  *
- *  A user defined type.
+ * @cassandra{2.1+}
  */
 typedef struct CassUserType_ CassUserType;
 
 /**
- * @struct CassSsl
- *
  * Describes the SSL configuration of a cluster.
+ *
+ * @struct CassSsl
  */
 typedef struct CassSsl_ CassSsl;
 
 /**
- * @struct CassVersion
- *
  * Describes the version of the connected Cassandra cluster.
+ *
+ * @struct CassVersion
  */
 
 typedef struct CassVersion_ {
@@ -338,53 +347,55 @@ typedef struct CassVersion_ {
 } CassVersion;
 
 /**
- * @struct CassSchemaMeta
- *
  * A snapshot of the schema's metadata.
+ *
+ * @struct CassSchemaMeta
  */
 typedef struct CassSchemaMeta_ CassSchemaMeta;
 
 /**
- * @struct CassKeyspaceMeta
- *
  * Keyspace metadata
+ *
+ * @struct CassKeyspaceMeta
  */
 typedef struct CassKeyspaceMeta_ CassKeyspaceMeta;
 
 /**
- * @struct CassTableMeta
- *
  * Table metadata
+ *
+ * @struct CassTableMeta
  */
 typedef struct CassTableMeta_ CassTableMeta;
 
 /**
+ * MaterializedView metadata
+ *
  * @struct CassMaterializedViewMeta
  *
- * MaterializedView metadata
+ * @cassandra{3.0+}
  */
 typedef struct CassMaterializedViewMeta_ CassMaterializedViewMeta;
 
 /**
- * @struct CassColumnMeta
- *
  * Column metadata
+ *
+ * @struct CassColumnMeta
  */
 typedef struct CassColumnMeta_ CassColumnMeta;
 
 /**
- * @struct CassIndexMeta
- *
  * Index metadata
+ *
+ * @struct CassIndexMeta
  */
 typedef struct CassIndexMeta_ CassIndexMeta;
 
 /**
- * @struct CassUuidGen
- *
  * A UUID generator object.
  *
  * Instances of the UUID generator object are thread-safe to generate UUIDs.
+ *
+ * @struct CassUuidGen
  */
 typedef struct CassUuidGen_ CassUuidGen;
 
@@ -396,6 +407,7 @@ typedef struct CassUuidGen_ CassUuidGen;
  *
  * @struct CassTimestampGen
  *
+ * @cassandra{2.1+}
  */
 typedef struct CassTimestampGen_ CassTimestampGen;
 
@@ -406,13 +418,15 @@ typedef struct CassRetryPolicy_ CassRetryPolicy;
 
 /**
  * @struct CassCustomPayload
+ *
+ * @cassandra{2.2+}
  */
 typedef struct CassCustomPayload_ CassCustomPayload;
 
 /**
- * @struct CassMetrics
- *
  * A snapshot of the session's performance/diagnostic metrics.
+ *
+ * @struct CassMetrics
  */
 typedef struct CassMetrics_ {
   struct {
@@ -1455,6 +1469,8 @@ cass_cluster_set_tcp_keepalive(CassCluster* cluster,
  *
  * <b>Default:</b> server-side timestamp generator.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassCluster
  *
  * @param[in] cluster
@@ -1693,6 +1709,8 @@ cass_session_execute(CassSession* session,
 /**
  * Execute a batch statement.
  *
+ * @cassandra{2.0+}
+ *
  * @public @memberof CassSession
  *
  * @param[in] session
@@ -1808,6 +1826,20 @@ cass_schema_meta_keyspace_by_name_n(const CassSchemaMeta* schema_meta,
                                     size_t keyspace_length);
 
 /**
+ * Gets the name of the keyspace.
+ *
+ * @public @memberof CassKeyspaceMeta
+ *
+ * @param[in] keyspace_meta
+ * @param[out] name
+ * @param[out] name_length
+ */
+CASS_EXPORT void
+cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
+                        const char** name,
+                        size_t* name_length);
+
+/**
  * Gets the table metadata for the provided table name.
  *
  * @public @memberof CassKeyspaceMeta
@@ -1842,6 +1874,8 @@ cass_keyspace_meta_table_by_name_n(const CassKeyspaceMeta* keyspace_meta,
 /**
  * Gets the materialized view metadata for the provided view name.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassKeyspaceMeta
  *
  * @param[in] keyspace_meta
@@ -1856,6 +1890,8 @@ cass_keyspace_meta_materialized_view_by_name(const CassKeyspaceMeta* keyspace_me
 /**
  * Same as cass_keyspace_meta_materialized_view_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassKeyspaceMeta
  *
@@ -1874,6 +1910,8 @@ cass_keyspace_meta_materialized_view_by_name_n(const CassKeyspaceMeta* keyspace_
 /**
  * Gets the data type for the provided type name.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassKeyspaceMeta
  *
  * @param[in] keyspace_meta
@@ -1888,6 +1926,8 @@ cass_keyspace_meta_user_type_by_name(const CassKeyspaceMeta* keyspace_meta,
 /**
  * Same as cass_keyspace_meta_type_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassKeyspaceMeta
  *
@@ -1906,6 +1946,8 @@ cass_keyspace_meta_user_type_by_name_n(const CassKeyspaceMeta* keyspace_meta,
 /**
  * Gets the function metadata for the provided function name.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassKeyspaceMeta
  *
  * @param[in] keyspace_meta
@@ -1923,6 +1965,8 @@ cass_keyspace_meta_function_by_name(const CassKeyspaceMeta* keyspace_meta,
 /**
  * Same as cass_keyspace_meta_function_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassKeyspaceMeta
  *
@@ -1945,6 +1989,8 @@ cass_keyspace_meta_function_by_name_n(const CassKeyspaceMeta* keyspace_meta,
 /**
  * Gets the aggregate metadata for the provided aggregate name.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassKeyspaceMeta
  *
  * @param[in] keyspace_meta
@@ -1963,6 +2009,8 @@ cass_keyspace_meta_aggregate_by_name(const CassKeyspaceMeta* keyspace_meta,
  * Same as cass_keyspace_meta_aggregate_by_name(), but with lengths for string
  * parameters.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassKeyspaceMeta
  *
  * @param[in] keyspace_meta
@@ -1980,20 +2028,6 @@ cass_keyspace_meta_aggregate_by_name_n(const CassKeyspaceMeta* keyspace_meta,
                                        size_t name_length,
                                        const char* arguments,
                                        size_t arguments_length);
-
-/**
- * Gets the name of the keyspace.
- *
- * @public @memberof CassKeyspaceMeta
- *
- * @param[in] keyspace_meta
- * @param[out] name
- * @param[out] name_length
- */
-CASS_EXPORT void
-cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
-                        const char** name,
-                        size_t* name_length);
 
 /**
  * Gets a metadata field for the provided name. Metadata fields allow direct
@@ -2156,6 +2190,8 @@ cass_table_meta_index(const CassTableMeta* table_meta,
 /**
  * Gets the materialized view metadata for the provided view name.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassTableMeta
  *
  * @param[in] table_meta
@@ -2170,6 +2206,8 @@ cass_table_meta_materialized_view_by_name(const CassTableMeta* table_meta,
 /**
  * Same as cass_table_meta_materialized_view_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassTableMeta
  *
@@ -2188,6 +2226,8 @@ cass_table_meta_materialized_view_by_name_n(const CassTableMeta* table_meta,
 /**
  * Gets the total number of views for the table.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassTableMeta
  *
  * @param[in] table_meta
@@ -2198,6 +2238,8 @@ cass_table_meta_materialized_view_count(const CassTableMeta* table_meta);
 
 /**
  * Gets the materialized view metadata for the provided index.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassTableMeta
  *
@@ -2280,7 +2322,6 @@ cass_table_meta_clustering_key_order(const CassTableMeta* table_meta,
 /**
  * Gets a metadata field for the provided name. Metadata fields allow direct
  * access to the column data found in the underlying "tables" metadata table.
-
  *
  * @public @memberof CassTableMeta
  *
@@ -2313,6 +2354,8 @@ cass_table_meta_field_by_name_n(const CassTableMeta* table_meta,
 /**
  * Gets the column metadata for the provided column name.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
@@ -2327,6 +2370,8 @@ cass_materialized_view_meta_column_by_name(const CassMaterializedViewMeta* view_
 /**
  * Same as cass_materialized_view_meta_column_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassMaterializedViewMeta
  *
@@ -2345,6 +2390,8 @@ cass_materialized_view_meta_column_by_name_n(const CassMaterializedViewMeta* vie
 /**
  * Gets the name of the view.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
@@ -2359,6 +2406,8 @@ cass_materialized_view_meta_name(const CassMaterializedViewMeta* view_meta,
 /**
  * Gets the base table of the view.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
@@ -2371,6 +2420,8 @@ cass_materialized_view_meta_base_table(const CassMaterializedViewMeta* view_meta
 /**
  * Gets the total number of columns for the view.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
@@ -2381,6 +2432,8 @@ cass_materialized_view_meta_column_count(const CassMaterializedViewMeta* view_me
 
 /**
  * Gets the column metadata for the provided index.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassMaterializedViewMeta
  *
@@ -2395,6 +2448,8 @@ cass_materialized_view_meta_column(const CassMaterializedViewMeta* view_meta,
 /**
  * Gets the number of columns for the view's partition key.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
@@ -2405,6 +2460,8 @@ cass_materialized_view_meta_partition_key_count(const CassMaterializedViewMeta* 
 
 /**
  * Gets the partition key column metadata for the provided index.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassMaterializedViewMeta
  *
@@ -2419,6 +2476,8 @@ cass_materialized_view_meta_partition_key(const CassMaterializedViewMeta* view_m
 /**
  * Gets the number of columns for the view's clustering key.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
@@ -2429,6 +2488,8 @@ cass_materialized_view_meta_clustering_key_count(const CassMaterializedViewMeta*
 
 /**
  * Gets the clustering key column metadata for the provided index.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassMaterializedViewMeta
  *
@@ -2443,7 +2504,8 @@ cass_materialized_view_meta_clustering_key(const CassMaterializedViewMeta* view_
 /**
  * Gets a metadata field for the provided name. Metadata fields allow direct
  * access to the column data found in the underlying "views" metadata view.
-
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassMaterializedViewMeta
  *
@@ -2458,6 +2520,8 @@ cass_materialized_view_meta_field_by_name(const CassMaterializedViewMeta* view_m
 /**
  * Same as cass_materialized_view_meta_field_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassMaterializedViewMeta
  *
@@ -2626,6 +2690,8 @@ cass_index_meta_field_by_name_n(const CassIndexMeta* index_meta,
 /**
  * Gets the name of the function.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassFunctionMeta
  *
  * @param[in] function_meta
@@ -2642,6 +2708,8 @@ cass_function_meta_name(const CassFunctionMeta* function_meta,
  * function's name and the function's signature:
  * "name(type1 type2.. typeN)".
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassFunctionMeta
  *
  * @param[in] function_meta
@@ -2655,6 +2723,8 @@ cass_function_meta_full_name(const CassFunctionMeta* function_meta,
 
 /**
  * Gets the body of the function.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassFunctionMeta
  *
@@ -2670,6 +2740,8 @@ cass_function_meta_body(const CassFunctionMeta* function_meta,
 /**
  * Gets the language of the function.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassFunctionMeta
  *
  * @param[in] function_meta
@@ -2684,6 +2756,8 @@ cass_function_meta_language(const CassFunctionMeta* function_meta,
 /**
  * Gets whether a function is called on "null".
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassFunctionMeta
  *
  * @param[in] function_meta
@@ -2695,6 +2769,8 @@ cass_function_meta_called_on_null_input(const CassFunctionMeta* function_meta);
 /**
  * Gets the number of arguments this function takes.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassFunctionMeta
  *
  * @param[in] function_meta
@@ -2705,6 +2781,8 @@ cass_function_meta_argument_count(const CassFunctionMeta* function_meta);
 
 /**
  * Gets the function's argument name and type for the provided index.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassFunctionMeta
  *
@@ -2725,6 +2803,8 @@ cass_function_meta_argument(const CassFunctionMeta* function_meta,
 /**
  * Gets the function's argument and type for the provided name.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassFunctionMeta
  *
  * @param[in] function_meta
@@ -2738,6 +2818,8 @@ cass_function_meta_argument_type_by_name(const CassFunctionMeta* function_meta,
 /**
  * Same as cass_function_meta_argument_type_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassFunctionMeta
  *
@@ -2756,6 +2838,8 @@ cass_function_meta_argument_type_by_name_n(const CassFunctionMeta* function_meta
 /**
  * Gets the return type of the function.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassFunctionMeta
  *
  * @param[in] function_meta
@@ -2767,6 +2851,8 @@ cass_function_meta_return_type(const CassFunctionMeta* function_meta);
 /**
  * Gets a metadata field for the provided name. Metadata fields allow direct
  * access to the column data found in the underlying "functions" metadata table.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassFunctionMeta
  *
@@ -2781,6 +2867,8 @@ cass_function_meta_field_by_name(const CassFunctionMeta* function_meta,
 /**
  * Same as cass_function_meta_field_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassFunctionMeta
  *
@@ -2799,6 +2887,8 @@ cass_function_meta_field_by_name_n(const CassFunctionMeta* function_meta,
 /**
  * Gets the name of the aggregate.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassAggregateMeta
  *
  * @param[in] aggregate_meta
@@ -2815,6 +2905,8 @@ cass_aggregate_meta_name(const CassAggregateMeta* aggregate_meta,
  * aggregate's name and the aggregate's signature:
  * "name(type1 type2.. typeN)".
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassAggregateMeta
  *
  * @param[in] aggregate_meta
@@ -2829,6 +2921,8 @@ cass_aggregate_meta_full_name(const CassAggregateMeta* aggregate_meta,
 /**
  * Gets the number of arguments this aggregate takes.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassAggregateMeta
  *
  * @param[in] aggregate_meta
@@ -2839,6 +2933,8 @@ cass_aggregate_meta_argument_count(const CassAggregateMeta* aggregate_meta);
 
 /**
  * Gets the aggregate's argument type for the provided index.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassAggregateMeta
  *
@@ -2853,6 +2949,8 @@ cass_aggregate_meta_argument_type(const CassAggregateMeta* aggregate_meta,
 /**
  * Gets the return type of the aggregate.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassAggregateMeta
  *
  * @param[in] aggregate_meta
@@ -2863,6 +2961,8 @@ cass_aggregate_meta_return_type(const CassAggregateMeta* aggregate_meta);
 
 /**
  * Gets the state type of the aggregate.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassAggregateMeta
  *
@@ -2875,6 +2975,8 @@ cass_aggregate_meta_state_type(const CassAggregateMeta* aggregate_meta);
 /**
  * Gets the function metadata for the aggregate's state function.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassAggregateMeta
  *
  * @param[in] aggregate_meta
@@ -2886,6 +2988,8 @@ cass_aggregate_meta_state_func(const CassAggregateMeta* aggregate_meta);
 /**
  * Gets the function metadata for the aggregates's final function.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassAggregateMeta
  *
  * @param[in] aggregate_meta
@@ -2896,6 +3000,8 @@ cass_aggregate_meta_final_func(const CassAggregateMeta* aggregate_meta);
 
 /**
  * Gets the initial condition value for the aggregate.
+ *
+ * @cassandra{2.2+}
  *
  * <b>Note:</b> The value of the initial condition will always be
  * a "varchar" type for Cassandra 3.0+.
@@ -2912,6 +3018,8 @@ cass_aggregate_meta_init_cond(const CassAggregateMeta* aggregate_meta);
  * Gets a metadata field for the provided name. Metadata fields allow direct
  * access to the column data found in the underlying "aggregates" metadata table.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassAggregateMeta
  *
  * @param[in] aggregate_meta
@@ -2925,6 +3033,8 @@ cass_aggregate_meta_field_by_name(const CassAggregateMeta* aggregate_meta,
 /**
  * Same as cass_aggregate_meta_field_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassAggregateMeta
  *
@@ -3239,6 +3349,8 @@ cass_future_error_message(CassFuture* future,
  * Gets a the number of custom payload items from a response future. If the future is not
  * ready this method will wait for the future to be set.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassFuture
  *
  * @param[in] future
@@ -3250,6 +3362,8 @@ cass_future_custom_payload_item_count(CassFuture* future);
 /**
  * Gets a custom payload item from a response future at the specified index. If the future is not
  * ready this method will wait for the future to be set.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassFuture
  *
@@ -3394,6 +3508,8 @@ cass_statement_set_consistency(CassStatement* statement,
 /**
  * Sets the statement's serial consistency level.
  *
+ * @cassandra{2.0+}
+ *
  * <b>Default:</b> Not set
  *
  * @public @memberof CassStatement
@@ -3408,6 +3524,8 @@ cass_statement_set_serial_consistency(CassStatement* statement,
 
 /**
  * Sets the statement's page size.
+ *
+ * @cassandra{2.0+}
  *
  * <b>Default:</b> -1 (Disabled)
  *
@@ -3425,6 +3543,8 @@ cass_statement_set_paging_size(CassStatement* statement,
  * Sets the statement's paging state. This can be used to get the next page of
  * data in a multi-page query.
  *
+ * @cassandra{2.0+}
+ *
  * @public @memberof CassStatement
  *
  * @param[in] statement
@@ -3438,6 +3558,8 @@ cass_statement_set_paging_state(CassStatement* statement,
 /**
  * Sets the statement's paging state. This can be used to get the next page of
  * data in a multi-page query.
+ *
+ * @cassandra{2.0+}
  *
  * <b>Warning:</b> The paging state should not be exposed to or come from
  * untrusted environments. The paging state could be spoofed and potentially
@@ -3459,6 +3581,8 @@ cass_statement_set_paging_state_token(CassStatement* statement,
 
 /**
  * Sets the statement's timestamp.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassStatement
  *
@@ -3486,6 +3610,8 @@ cass_statement_set_retry_policy(CassStatement* statement,
 
 /**
  * Sets the statement's custom payload.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassStatement
  *
@@ -3547,6 +3673,8 @@ cass_statement_bind_null_by_name_n(CassStatement* statement,
 /**
  * Binds a "tinyint" to a query or bound statement at the specified index.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassStatement
  *
  * @param[in] statement
@@ -3561,6 +3689,8 @@ cass_statement_bind_int8(CassStatement* statement,
 
 /**
  * Binds a "tinyint" to all the values with the specified name.
+ *
+ * @cassandra{2.2+}
  *
  * This can only be used with statements created by
  * cass_prepared_bind().
@@ -3581,6 +3711,8 @@ cass_statement_bind_int8_by_name(CassStatement* statement,
  * Same as cass_statement_bind_int8_by_name(), but with lengths for string
  * parameters.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassStatement
  *
  * @param[in] statement
@@ -3600,6 +3732,8 @@ cass_statement_bind_int8_by_name_n(CassStatement* statement,
 /**
  * Binds an "smallint" to a query or bound statement at the specified index.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassStatement
  *
  * @param[in] statement
@@ -3614,6 +3748,8 @@ cass_statement_bind_int16(CassStatement* statement,
 
 /**
  * Binds an "smallint" to all the values with the specified name.
+ *
+ * @cassandra{2.2+}
  *
  * This can only be used with statements created by
  * cass_prepared_bind().
@@ -3633,6 +3769,8 @@ cass_statement_bind_int16_by_name(CassStatement* statement,
 /**
  * Same as cass_statement_bind_int16_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassStatement
  *
@@ -3706,6 +3844,8 @@ cass_statement_bind_int32_by_name_n(CassStatement* statement,
 /**
  * Binds a "date" to a query or bound statement at the specified index.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassStatement
  *
  * @param[in] statement
@@ -3720,6 +3860,8 @@ cass_statement_bind_uint32(CassStatement* statement,
 
 /**
  * Binds a "date" to all the values with the specified name.
+ *
+ * @cassandra{2.2+}
  *
  * This can only be used with statements created by
  * cass_prepared_bind().
@@ -3739,6 +3881,8 @@ cass_statement_bind_uint32_by_name(CassStatement* statement,
 /**
  * Same as cass_statement_bind_uint32_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassStatement
  *
@@ -4343,6 +4487,8 @@ cass_statement_bind_collection_by_name_n(CassStatement* statement,
 /**
  * Bind a "tuple" to a query or bound statement at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassStatement
  *
  * @param[in] statement
@@ -4357,6 +4503,8 @@ cass_statement_bind_tuple(CassStatement* statement,
 
 /**
  * Bind a "tuple" to all the values with the specified name.
+ *
+ * @cassandra{2.1+}
  *
  * This can only be used with statements created by
  * cass_prepared_bind().
@@ -4376,6 +4524,8 @@ cass_statement_bind_tuple_by_name(CassStatement* statement,
 /**
  * Same as cass_statement_bind_tuple_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassStatement
  *
@@ -4397,6 +4547,8 @@ cass_statement_bind_tuple_by_name_n(CassStatement* statement,
  * Bind a user defined type to a query or bound statement at the
  * specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassStatement
  *
  * @param[in] statement
@@ -4411,6 +4563,8 @@ cass_statement_bind_user_type(CassStatement* statement,
 /**
  * Bind a user defined type to a query or bound statement with the
  * specified name.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassStatement
  *
@@ -4427,6 +4581,8 @@ cass_statement_bind_user_type_by_name(CassStatement* statement,
 /**
  * Same as cass_statement_bind_user_type_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassStatement
  *
@@ -4546,6 +4702,8 @@ cass_prepared_parameter_data_type_by_name_n(const CassPrepared* prepared,
 /**
  * Creates a new batch statement with batch type.
  *
+ * @cassandra{2.0+}
+ *
  * @public @memberof CassBatch
  *
  * @param[in] type
@@ -4560,6 +4718,8 @@ cass_batch_new(CassBatchType type);
  * Frees a batch instance. Batches can be immediately freed after being
  * executed.
  *
+ * @cassandra{2.0+}
+ *
  * @public @memberof CassBatch
  *
  * @param[in] batch
@@ -4569,6 +4729,8 @@ cass_batch_free(CassBatch* batch);
 
 /**
  * Sets the batch's consistency level
+ *
+ * @cassandra{2.0+}
  *
  * @public @memberof CassBatch
  *
@@ -4582,6 +4744,8 @@ cass_batch_set_consistency(CassBatch* batch,
 
 /**
  * Sets the batch's serial consistency level.
+ *
+ * @cassandra{2.0+}
  *
  * <b>Default:</b> Not set
  *
@@ -4598,6 +4762,8 @@ cass_batch_set_serial_consistency(CassBatch* batch,
 /**
  * Sets the batch's timestamp.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassBatch
  *
  * @param[in] batch
@@ -4610,6 +4776,8 @@ cass_batch_set_timestamp(CassBatch* batch,
 
 /**
  * Sets the batch's retry policy.
+ *
+ * @cassandra{2.0+}
  *
  * @public @memberof CassBatch
  *
@@ -4624,6 +4792,8 @@ cass_batch_set_retry_policy(CassBatch* batch,
 /**
  * Sets the batch's custom payload.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassBatch
  *
  * @param[in] batch
@@ -4636,6 +4806,8 @@ cass_batch_set_custom_payload(CassBatch* batch,
 
 /**
  * Adds a statement to a batch.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassBatch
  *
@@ -4682,6 +4854,8 @@ cass_data_type_new_from_existing(const CassDataType* data_type);
 /**
  * Creates a new tuple data type.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassDataType
  *
  * @param[in] item_count The number of items in the tuple
@@ -4694,6 +4868,8 @@ cass_data_type_new_tuple(size_t item_count);
 
 /**
  * Creates a new UDT (user defined type) data type.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassDataType
  *
@@ -4726,6 +4902,8 @@ cass_data_type_type(const CassDataType* data_type);
 
 /**
  * Gets whether a data type is frozen.
+ *
+ * @cassandra{2.1+}
  *
  * @param[in] data_type
  * @return cass_true if the data type is frozen, otherwise cass_false.
@@ -4782,6 +4960,8 @@ cass_data_type_set_type_name_n(CassDataType* data_type,
  *
  * <b>Note:</b> Only valid for UDT data types.
  *
+ * @cassandra{2.1+}
+ *
  * @param[in] data_type
  * @param[out] keyspace
  * @param[out] keyspace_length
@@ -4797,6 +4977,8 @@ cass_data_type_keyspace(const CassDataType* data_type,
  *
  * <b>Note:</b> Only valid for UDT data types.
  *
+ * @cassandra{2.1+}
+ *
  * @param[in] data_type
  * @param[in] keyspace
  * @return CASS_OK if successful, otherwise an error occurred.
@@ -4808,6 +4990,8 @@ cass_data_type_set_keyspace(CassDataType* data_type,
 /**
  * Same as cass_data_type_set_keyspace(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassDataType
  *
@@ -4914,6 +5098,8 @@ cass_data_type_sub_data_type(const CassDataType* data_type,
  *
  * <b>Note:</b> Only valid for UDT data types.
  *
+ * @cassandra{2.1+}
+ *
  * @param[in] data_type
  * @param[in] name
  * @return Returns a reference to a child data type. Do not free this
@@ -4927,6 +5113,8 @@ cass_data_type_sub_data_type_by_name(const CassDataType* data_type,
 /**
  * Same as cass_data_type_sub_data_type_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassDataType
  *
@@ -4944,6 +5132,8 @@ cass_data_type_sub_data_type_by_name_n(const CassDataType* data_type,
 
 /**
  * Gets the sub-type name of a UDT (user defined type) at the specified index.
+ *
+ * @cassandra{2.1+}
  *
  * <b>Note:</b> Only valid for UDT data types.
  *
@@ -4977,6 +5167,8 @@ cass_data_type_add_sub_type(CassDataType* data_type,
  *
  * <b>Note:</b> Only valid for UDT data types.
  *
+ * @cassandra{2.1+}
+ *
  * @param[in] data_type
  * @param[in] name
  * @param[in] sub_data_type
@@ -4992,6 +5184,8 @@ cass_data_type_add_sub_type_by_name(CassDataType* data_type,
  * parameters.
  *
  * <b>Note:</b> Only valid for UDT data types.
+ *
+ * @cassandra{2.1+}
  *
  * @param[in] data_type
  * @param[in] name
@@ -5024,6 +5218,8 @@ cass_data_type_add_sub_value_type(CassDataType* data_type,
  *
  * <b>Note:</b> Only valid for UDT data types.
  *
+ * @cassandra{2.1+}
+ *
  * @param[in] data_type
  * @param[in] name
  * @param[in] sub_value_type
@@ -5039,6 +5235,8 @@ cass_data_type_add_sub_value_type_by_name(CassDataType* data_type,
  * parameters.
  *
  * <b>Note:</b> Only valid for UDT data types.
+ *
+ * @cassandra{2.1+}
  *
  * @param[in] data_type
  * @param[in] name
@@ -5111,6 +5309,8 @@ cass_collection_data_type(const CassCollection* collection);
 /**
  * Appends a "tinyint" to the collection.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassCollection
  *
  * @param[in] collection
@@ -5123,6 +5323,8 @@ cass_collection_append_int8(CassCollection* collection,
 
 /**
  * Appends an "smallint" to the collection.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassCollection
  *
@@ -5149,6 +5351,8 @@ cass_collection_append_int32(CassCollection* collection,
 
 /**
  * Appends a "date" to the collection.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassCollection
  *
@@ -5310,6 +5514,8 @@ cass_collection_append_decimal(CassCollection* collection,
 /**
  * Appends a "list", "map" or "set" to the collection.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassCollection
  *
  * @param[in] collection
@@ -5323,6 +5529,8 @@ cass_collection_append_collection(CassCollection* collection,
 /**
  * Appends a "tuple" to the collection.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassCollection
  *
  * @param[in] collection
@@ -5335,6 +5543,8 @@ cass_collection_append_tuple(CassCollection* collection,
 
 /**
  * Appends a "udt" to the collection.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassCollection
  *
@@ -5355,6 +5565,8 @@ cass_collection_append_user_type(CassCollection* collection,
 /**
  * Creates a new tuple.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassTuple
  *
  * @param[in] item_count The number of items in the tuple.
@@ -5367,6 +5579,8 @@ cass_tuple_new(size_t item_count);
 
 /**
  * Creates a new tuple from an existing data type.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassTuple
  *
@@ -5381,6 +5595,8 @@ cass_tuple_new_from_data_type(const CassDataType* data_type);
 /**
  * Frees a tuple instance.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassTuple
  *
  * @param[in] tuple
@@ -5391,6 +5607,8 @@ cass_tuple_free(CassTuple* tuple);
 /**
  * Gets the data type of a tuple.
  *
+ * @cassandra{2.1+}
+ *
  * @param[in] tuple
  * @return Returns a reference to the data type of the tuple. Do not free
  * this reference as it is bound to the lifetime of the tuple.
@@ -5400,6 +5618,8 @@ cass_tuple_data_type(const CassTuple* tuple);
 
 /**
  * Sets an null in a tuple at the specified index.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassTuple
  *
@@ -5412,6 +5632,8 @@ cass_tuple_set_null(CassTuple* tuple, size_t index);
 
 /**
  * Sets a "tinyint" in a tuple at the specified index.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassTuple
  *
@@ -5428,6 +5650,8 @@ cass_tuple_set_int8(CassTuple* tuple,
 /**
  * Sets an "smallint" in a tuple at the specified index.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassTuple
  *
  * @param[in] tuple
@@ -5443,6 +5667,8 @@ cass_tuple_set_int16(CassTuple* tuple,
 /**
  * Sets an "int" in a tuple at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassTuple
  *
  * @param[in] tuple
@@ -5457,6 +5683,8 @@ cass_tuple_set_int32(CassTuple* tuple,
 
 /**
  * Sets a "date" in a tuple at the specified index.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassTuple
  *
@@ -5474,6 +5702,8 @@ cass_tuple_set_uint32(CassTuple* tuple,
  * Sets a "bigint", "counter", "timestamp" or "time" in a tuple at the
  * specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassTuple
  *
  * @param[in] tuple
@@ -5488,6 +5718,8 @@ cass_tuple_set_int64(CassTuple* tuple,
 
 /**
  * Sets a "float" in a tuple at the specified index.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassTuple
  *
@@ -5504,6 +5736,8 @@ cass_tuple_set_float(CassTuple* tuple,
 /**
  * Sets a "double" in a tuple at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassTuple
  *
  * @param[in] tuple
@@ -5519,6 +5753,8 @@ cass_tuple_set_double(CassTuple* tuple,
 /**
  * Sets a "boolean" in a tuple at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassTuple
  *
  * @param[in] tuple
@@ -5533,6 +5769,8 @@ cass_tuple_set_bool(CassTuple* tuple,
 
 /**
  * Sets an "ascii", "text" or "varchar" in a tuple at the specified index.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassTuple
  *
@@ -5550,6 +5788,8 @@ cass_tuple_set_string(CassTuple* tuple,
 /**
  * Same as cass_tuple_set_string(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassTuple
  *
@@ -5570,6 +5810,8 @@ cass_tuple_set_string_n(CassTuple* tuple,
 /**
  * Sets a "blob", "varint" or "custom" in a tuple at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassTuple
  *
  * @param[in] tuple
@@ -5588,6 +5830,8 @@ cass_tuple_set_bytes(CassTuple* tuple,
 /**
  * Sets a "uuid" or "timeuuid" in a tuple at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassTuple
  *
  * @param[in] tuple
@@ -5603,6 +5847,8 @@ cass_tuple_set_uuid(CassTuple* tuple,
 /**
  * Sets an "inet" in a tuple at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassTuple
  *
  * @param[in] tuple
@@ -5617,6 +5863,8 @@ cass_tuple_set_inet(CassTuple* tuple,
 
 /**
  * Sets a "decimal" in a tuple at the specified index.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassTuple
  *
@@ -5638,6 +5886,8 @@ cass_tuple_set_decimal(CassTuple* tuple,
 /**
  * Sets a "list", "map" or "set" in a tuple at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassTuple
  *
  * @param[in] tuple
@@ -5653,6 +5903,8 @@ cass_tuple_set_collection(CassTuple* tuple,
 /**
  * Sets a "tuple" in a tuple at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassTuple
  *
  * @param[in] tuple
@@ -5667,6 +5919,8 @@ cass_tuple_set_tuple(CassTuple* tuple,
 
 /**
  * Sets a "udt" in a tuple at the specified index.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassTuple
  *
@@ -5689,6 +5943,8 @@ cass_tuple_set_user_type(CassTuple* tuple,
 /**
  * Creates a new user defined type from existing data type;
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] data_type
@@ -5703,6 +5959,8 @@ cass_user_type_new_from_data_type(const CassDataType* data_type);
 /**
  * Frees a user defined type instance.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -5712,6 +5970,8 @@ cass_user_type_free(CassUserType* user_type);
 
 /**
  * Gets the data type of a user defined type.
+ *
+ * @cassandra{2.1+}
  *
  * @param[in] user_type
  * @return Returns a reference to the data type of the user defined type.
@@ -5723,6 +5983,8 @@ cass_user_type_data_type(const CassUserType* user_type);
 
 /**
  * Sets a null in a user defined type at the specified index.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -5737,6 +5999,8 @@ cass_user_type_set_null(CassUserType* user_type,
 /**
  * Sets a null in a user defined type at the specified name.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -5750,6 +6014,8 @@ cass_user_type_set_null_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_null_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -5768,6 +6034,8 @@ cass_user_type_set_null_by_name_n(CassUserType* user_type,
 /**
  * Sets a "tinyint" in a user defined type at the specified index.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -5782,6 +6050,8 @@ cass_user_type_set_int8(CassUserType* user_type,
 
 /**
  * Sets a "tinyint" in a user defined type at the specified name.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassUserType
  *
@@ -5798,6 +6068,8 @@ cass_user_type_set_int8_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_int8_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassUserType
  *
@@ -5818,6 +6090,8 @@ cass_user_type_set_int8_by_name_n(CassUserType* user_type,
 /**
  * Sets an "smallint" in a user defined type at the specified index.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -5832,6 +6106,8 @@ cass_user_type_set_int16(CassUserType* user_type,
 
 /**
  * Sets an "smallint" in a user defined type at the specified name.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassUserType
  *
@@ -5848,6 +6124,8 @@ cass_user_type_set_int16_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_int16_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassUserType
  *
@@ -5868,6 +6146,8 @@ cass_user_type_set_int16_by_name_n(CassUserType* user_type,
 /**
  * Sets an "int" in a user defined type at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -5882,6 +6162,8 @@ cass_user_type_set_int32(CassUserType* user_type,
 
 /**
  * Sets an "int" in a user defined type at the specified name.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -5898,6 +6180,8 @@ cass_user_type_set_int32_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_int32_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -5918,6 +6202,8 @@ cass_user_type_set_int32_by_name_n(CassUserType* user_type,
 /**
  * Sets a "date" in a user defined type at the specified index.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -5932,6 +6218,8 @@ cass_user_type_set_uint32(CassUserType* user_type,
 
 /**
  * Sets a "date" in a user defined type at the specified name.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassUserType
  *
@@ -5948,6 +6236,8 @@ cass_user_type_set_uint32_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_uint32_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassUserType
  *
@@ -5970,6 +6260,8 @@ cass_user_type_set_uint32_by_name_n(CassUserType* user_type,
  * Sets an "bigint", "counter", "timestamp" or "time" in a
  * user defined type at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -5986,6 +6278,8 @@ cass_user_type_set_int64(CassUserType* user_type,
  * Sets an "bigint", "counter", "timestamp" or "time" in a
  * user defined type at the specified name.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -6001,6 +6295,8 @@ cass_user_type_set_int64_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_int64_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6021,6 +6317,8 @@ cass_user_type_set_int64_by_name_n(CassUserType* user_type,
 /**
  * Sets a "float" in a user defined type at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -6035,6 +6333,8 @@ cass_user_type_set_float(CassUserType* user_type,
 
 /**
  * Sets a "float" in a user defined type at the specified name.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6051,6 +6351,8 @@ cass_user_type_set_float_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_float_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6071,6 +6373,8 @@ cass_user_type_set_float_by_name_n(CassUserType* user_type,
 /**
  * Sets an "double" in a user defined type at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -6085,6 +6389,8 @@ cass_user_type_set_double(CassUserType* user_type,
 
 /**
  * Sets an "double" in a user defined type at the specified name.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6101,6 +6407,8 @@ cass_user_type_set_double_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_double_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6121,6 +6429,8 @@ cass_user_type_set_double_by_name_n(CassUserType* user_type,
 /**
  * Sets a "boolean" in a user defined type at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -6135,6 +6445,8 @@ cass_user_type_set_bool(CassUserType* user_type,
 
 /**
  * Sets a "boolean" in a user defined type at the specified name.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6151,6 +6463,8 @@ cass_user_type_set_bool_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_double_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6173,6 +6487,8 @@ cass_user_type_set_bool_by_name_n(CassUserType* user_type,
  * Sets an "ascii", "text" or "varchar" in a user defined type at the
  * specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -6188,6 +6504,8 @@ cass_user_type_set_string(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_string(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6209,6 +6527,8 @@ cass_user_type_set_string_n(CassUserType* user_type,
  * Sets an "ascii", "text" or "varchar" in a user defined type at the
  * specified name.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -6224,6 +6544,8 @@ cass_user_type_set_string_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_string_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6246,6 +6568,8 @@ cass_user_type_set_string_by_name_n(CassUserType* user_type,
 /**
  * Sets a "blob" "varint" or "custom" in a user defined type at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -6262,6 +6586,8 @@ cass_user_type_set_bytes(CassUserType* user_type,
 
 /**
  * Sets a "blob", "varint" or "custom" in a user defined type at the specified name.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6280,6 +6606,8 @@ cass_user_type_set_bytes_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_bytes_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6302,6 +6630,8 @@ cass_user_type_set_bytes_by_name_n(CassUserType* user_type,
 /**
  * Sets a "uuid" or "timeuuid" in a user defined type at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -6316,6 +6646,8 @@ cass_user_type_set_uuid(CassUserType* user_type,
 
 /**
  * Sets a "uuid" or "timeuuid" in a user defined type at the specified name.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6332,6 +6664,8 @@ cass_user_type_set_uuid_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_uuid_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6352,6 +6686,8 @@ cass_user_type_set_uuid_by_name_n(CassUserType* user_type,
 /**
  * Sets a "inet" in a user defined type at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -6366,6 +6702,8 @@ cass_user_type_set_inet(CassUserType* user_type,
 
 /**
  * Sets a "inet" in a user defined type at the specified name.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6382,6 +6720,8 @@ cass_user_type_set_inet_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_inet_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6402,6 +6742,8 @@ cass_user_type_set_inet_by_name_n(CassUserType* user_type,
 /**
  * Sets an "decimal" in a user defined type at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -6420,6 +6762,8 @@ cass_user_type_set_decimal(CassUserType* user_type,
 
 /**
  * Sets "decimal" in a user defined type at the specified name.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6440,6 +6784,8 @@ cass_user_type_set_decimal_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_decimal_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6465,6 +6811,8 @@ cass_user_type_set_decimal_by_name_n(CassUserType* user_type,
  * Sets a "list", "map" or "set" in a user defined type at the
  * specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -6481,6 +6829,8 @@ cass_user_type_set_collection(CassUserType* user_type,
  * Sets a "list", "map" or "set" in a user defined type at the
  * specified name.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -6496,6 +6846,8 @@ cass_user_type_set_collection_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_collection_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6516,6 +6868,8 @@ cass_user_type_set_collection_by_name_n(CassUserType* user_type,
 /**
  * Sets a "tuple" in a user defined type at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -6530,6 +6884,8 @@ cass_user_type_set_tuple(CassUserType* user_type,
 
 /**
  * Sets a "tuple" in a user defined type at the specified name.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6546,6 +6902,8 @@ cass_user_type_set_tuple_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_tuple_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6566,6 +6924,8 @@ cass_user_type_set_tuple_by_name_n(CassUserType* user_type,
 /**
  * Sets a user defined type in a user defined type at the specified index.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassUserType
  *
  * @param[in] user_type
@@ -6580,6 +6940,8 @@ cass_user_type_set_user_type(CassUserType* user_type,
 
 /**
  * Sets a user defined type in a user defined type at the specified name.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6596,6 +6958,8 @@ cass_user_type_set_user_type_by_name(CassUserType* user_type,
 /**
  * Same as cass_user_type_set_user_type_by_name(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassUserType
  *
@@ -6712,6 +7076,8 @@ cass_result_first_row(const CassResult* result);
 /**
  * Returns true if there are more pages.
  *
+ * @cassandra{2.0+}
+ *
  * @public @memberof CassResult
  *
  * @param[in] result
@@ -6728,6 +7094,8 @@ cass_result_has_more_pages(const CassResult* result);
  * <b>Warning:</b> The paging state should not be exposed to or come from
  * untrusted environments. The paging state could be spoofed and potentially
  * used to gain access to other data.
+ *
+ * @cassandra{2.0+}
  *
  * @public @memberof CassResult
  *
@@ -6929,6 +7297,8 @@ cass_error_result_table(const CassErrorResult* error_result,
  * Gets the affected function for the function failure error
  * (CASS_ERROR_SERVER_FUNCTION_FAILURE) result type.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassErrorResult
  *
  * @param[in] error_result
@@ -6945,6 +7315,8 @@ cass_error_result_function(const CassErrorResult* error_result,
  * Gets the number of argument types for the function failure error
  * (CASS_ERROR_SERVER_FUNCTION_FAILURE) result type.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassErrorResult
  *
  * @param[in] error_result
@@ -6956,6 +7328,8 @@ cass_error_num_arg_types(const CassErrorResult* error_result);
 /**
  * Gets the argument type at the specified index for the function failure
  * error (CASS_ERROR_SERVER_FUNCTION_FAILURE) result type.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassErrorResult
  *
@@ -7060,6 +7434,8 @@ cass_iterator_from_map(const CassValue* value);
  * Creates a new iterator for the specified tuple. This can be
  * used to iterate over values in a tuple.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassValue
  *
  * @param[in] value
@@ -7074,6 +7450,8 @@ cass_iterator_from_tuple(const CassValue* value);
 /**
  * Creates a new iterator for the specified user defined type. This can be
  * used to iterate over fields in a user defined type.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassValue
  *
@@ -7120,6 +7498,8 @@ cass_iterator_tables_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta);
  * Creates a new iterator for the specified keyspace metadata.
  * This can be used to iterate over views.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassKeyspaceMeta
  *
  * @param[in] keyspace_meta
@@ -7134,6 +7514,8 @@ cass_iterator_materialized_views_from_keyspace_meta(const CassKeyspaceMeta* keys
 /**
  * Creates a new iterator for the specified keyspace metadata.
  * This can be used to iterate over types.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassKeyspaceMeta
  *
@@ -7150,6 +7532,8 @@ cass_iterator_user_types_from_keyspace_meta(const CassKeyspaceMeta* keyspace_met
  * Creates a new iterator for the specified keyspace metadata.
  * This can be used to iterate over functions.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassKeyspaceMeta
  *
  * @param[in] keyspace_meta
@@ -7164,6 +7548,8 @@ cass_iterator_functions_from_keyspace_meta(const CassKeyspaceMeta* keyspace_meta
 /**
  * Creates a new iterator for the specified keyspace metadata.
  * This can be used to iterate over aggregates.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassKeyspaceMeta
  *
@@ -7228,6 +7614,8 @@ cass_iterator_indexes_from_table_meta(const CassTableMeta* table_meta);
  * Creates a new iterator for the specified materialized view metadata.
  * This can be used to iterate over columns.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassTableMeta
  *
  * @param[in] view_meta
@@ -7261,6 +7649,8 @@ cass_iterator_fields_from_table_meta(const CassTableMeta* table_meta);
  * Creates a new iterator for the specified materialized view metadata.
  * This can be used to iterate over columns.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassMaterializedViewMeta
  *
  * @param[in] view_meta
@@ -7277,6 +7667,8 @@ cass_iterator_columns_from_materialized_view_meta(const CassMaterializedViewMeta
  * Metadata fields allow direct access to the column data found in the
  * underlying "views" metadata view. This can be used to iterate those metadata
  * field entries.
+ *
+ * @cassandra{3.0+}
  *
  * @public @memberof CassMaterializedViewMeta
  *
@@ -7332,6 +7724,8 @@ cass_iterator_fields_from_index_meta(const CassIndexMeta* index_meta);
  * "functions" metadata table. This can be used to iterate those metadata
  * field entries.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassFunctionMeta
  *
  * @param[in] function_meta
@@ -7348,6 +7742,8 @@ cass_iterator_fields_from_function_meta(const CassFunctionMeta* function_meta);
  * fields allow direct access to the column data found in the underlying
  * "aggregates" metadata table. This can be used to iterate those metadata
  * field entries.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassAggregateMeta
  *
@@ -7448,6 +7844,8 @@ cass_iterator_get_map_value(const CassIterator* iterator);
  * Calling cass_iterator_next() will invalidate the previous
  * name returned by this method.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassIterator
  *
  * @param[in] iterator
@@ -7465,6 +7863,8 @@ cass_iterator_get_user_type_field_name(const CassIterator* iterator,
  *
  * Calling cass_iterator_next() will invalidate the previous
  * value returned by this method.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassIterator
  *
@@ -7508,6 +7908,8 @@ cass_iterator_get_table_meta(const CassIterator* iterator);
  * Calling cass_iterator_next() will invalidate the previous
  * value returned by this method.
  *
+ * @cassandra{3.0+}
+ *
  * @public @memberof CassIterator
  *
  * @param[in] iterator
@@ -7521,6 +7923,8 @@ cass_iterator_get_materialized_view_meta(const CassIterator* iterator);
  *
  * Calling cass_iterator_next() will invalidate the previous
  * value returned by this method.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassIterator
  *
@@ -7536,6 +7940,8 @@ cass_iterator_get_user_type(const CassIterator* iterator);
  * Calling cass_iterator_next() will invalidate the previous
  * value returned by this method.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassIterator
  *
  * @param[in] iterator
@@ -7549,6 +7955,8 @@ cass_iterator_get_function_meta(const CassIterator* iterator);
  *
  * Calling cass_iterator_next() will invalidate the previous
  * value returned by this method.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassIterator
  *
@@ -7692,6 +8100,8 @@ cass_value_data_type(const CassValue* value);
 /**
  * Gets an int8 for the specified value.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassValue
  *
  * @param[in] value
@@ -7704,6 +8114,8 @@ cass_value_get_int8(const CassValue* value,
 
 /**
  * Gets an int16 for the specified value.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassValue
  *
@@ -7730,6 +8142,8 @@ cass_value_get_int32(const CassValue* value,
 
 /**
  * Gets an uint32 for the specified value.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassValue
  *
@@ -8135,6 +8549,8 @@ cass_uuid_from_string_n(const char* str,
  *
  * <b>Note:</b> This is the default timestamp generator.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassTimestampGen
  *
  * @return Returns a timestamp generator that must be freed.
@@ -8154,6 +8570,8 @@ cass_timestamp_gen_server_side_new();
  *
  * <b>Note:</b> This generator is thread-safe and can be shared by multiple sessions.
  *
+ * @cassandra{2.1+}
+ *
  * @public @memberof CassTimestampGen
  *
  * @return Returns a timestamp generator that must be freed.
@@ -8165,6 +8583,8 @@ cass_timestamp_gen_monotonic_new();
 
 /**
  * Frees a timestamp generator instance.
+ *
+ * @cassandra{2.1+}
  *
  * @public @memberof CassTimestampGen
  *
@@ -8290,6 +8710,8 @@ cass_retry_policy_free(CassRetryPolicy* policy);
  *
  * @public @memberof CassCustomPayload
  *
+ * @cassandra{2.2+}
+ *
  * @return Returns a custom payload that must be freed.
  *
  * @see cass_custom_payload_free()
@@ -8300,6 +8722,8 @@ cass_custom_payload_new();
 /**
  * Frees a custom payload instance.
  *
+ * @cassandra{2.2+}
+ *
  * @public @memberof CassCustomPayload
  *
  * @param[in] payload
@@ -8309,6 +8733,8 @@ cass_custom_payload_free(CassCustomPayload* payload);
 
 /**
  * Sets an item to the custom payload.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassCustomPayload
  *
@@ -8326,6 +8752,8 @@ cass_custom_payload_set(CassCustomPayload* payload,
 /**
  * Same as cass_custom_payload_set(), but with lengths for string
  * parameters.
+ *
+ * @cassandra{2.2+}
  *
  * @public @memberof CassInet
  *
@@ -8543,6 +8971,8 @@ cass_inet_from_string_n(const char* str,
  * represents the number of days since the Epoch (1970-01-01) with the Epoch centered at
  * the value 2^31.
  *
+ * @cassandra{2.2+}
+ *
  * @param[in] epoch_secs
  * @return the number of days since the date -5877641-06-23
  */
@@ -8553,6 +8983,8 @@ cass_date_from_epoch(cass_int64_t epoch_secs);
  * Converts a unix timestamp (in seconds) to the Cassandra "time" type. The "time" type
  * represents the number of nanoseconds since midnight (range 0 to 86399999999999).
  *
+ * @cassandra{2.2+}
+ *
  * @param[in] epoch_secs
  * @return nanoseconds since midnight
  */
@@ -8561,6 +8993,8 @@ cass_time_from_epoch(cass_int64_t epoch_secs);
 
 /**
  * Combines the Cassandra "date" and "time" types to Epoch time in seconds.
+ *
+ * @cassandra{2.2+}
  *
  * @param[in] date
  * @param[in] time

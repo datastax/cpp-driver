@@ -86,6 +86,12 @@ const CassKeyspaceMeta* cass_schema_meta_keyspace_by_name_n(const CassSchemaMeta
   return CassKeyspaceMeta::to(schema_meta->get_keyspace(std::string(keyspace, keyspace_length)));
 }
 
+void cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
+                             const char** name, size_t* name_length) {
+  *name = keyspace_meta->name().data();
+  *name_length = keyspace_meta->name().size();
+}
+
 const CassTableMeta* cass_keyspace_meta_table_by_name(const CassKeyspaceMeta* keyspace_meta,
                                                       const char* table) {
   return CassTableMeta::to(keyspace_meta->get_table(table));
@@ -156,13 +162,6 @@ const CassAggregateMeta* cass_keyspace_meta_aggregate_by_name_n(const CassKeyspa
   std::string full_aggregate_name(name, name_length);
   return CassAggregateMeta::to(keyspace_meta->get_aggregate(
                                  append_arguments(full_aggregate_name, std::string(arguments, arguments_length))));
-}
-
-
-void cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
-                             const char** name, size_t* name_length) {
-  *name = keyspace_meta->name().data();
-  *name_length = keyspace_meta->name().size();
 }
 
 const CassValue* cass_keyspace_meta_field_by_name(const CassKeyspaceMeta* keyspace_meta,
