@@ -13,8 +13,9 @@ Cassandra's native protocol and Cassandra Query Language v3.
 - Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 - IRC: [#datastax-drivers on `irc.freenode.net <http://freenode.net>`](http://webchat.freenode.net/?channels=datastax-drivers)
 
-## What's New in 2.2
+## What's New in 2.2 and 2.3
 
+- Support for materialized view and secondary index metadata
 - Support for new Cassandra 2.2 datatypes: `tinyint`, `smallint`, `date` and
   `time`
 - Support for custom payloads
