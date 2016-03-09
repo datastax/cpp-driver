@@ -22,7 +22,9 @@ BuildRequires: libuv-devel >= %{libuv_version}
 BuildRequires: openssl-devel >= 0.9.8e
 
 %description
-C/C++ client driver for Apache Cassandra. This driver works exclusively with the Cassandra Query Language version 3 (CQL3) and Cassandra's Binary Protocol (version 1 and 2).
+A modern, feature-rich, and highly tunable C/C++ client library for Apache
+Cassandra using exclusively Cassandra's native protocol and Cassandra Query
+Language.
 
 %package devel
 Summary: Development libraries for ${name}
