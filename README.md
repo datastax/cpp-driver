@@ -58,6 +58,10 @@ There were a couple breaking API changes between 1.0 and 2.0 that are documented
 - [Data types]
 - [Idle connection heartbeats]
 
+## Feedback Requested
+
+**Help us focus our efforts!** [Provide your input](http://goo.gl/forms/ihKC5uEQr6) on the C/C++ Driver Platform and Runtime Survey (we kept it short).
+
 ## Examples
 There are several examples provided here: [examples](https://github.com/datastax/cpp-driver/tree/1.0/examples).
 
