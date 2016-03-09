@@ -13,7 +13,7 @@ class CassandraCppDriver < Formula
 
   def install
     mkdir 'build' do
-      system "cmake", "-DCMAKE_BUILD_TYPE=RELEASE", "-DCASS_BUILD_STATIC=ON", "-DCMAKE_INSTALL_PREFIX:PATH=#{prefix}", "-DCMAKE_INSTALL_LIBDIR=#{lib}", ".."
+      system "cmake", "-DCMAKE_BUILD_TYPE=RELEASE", "-DCASS_BUILD_STATIC=ON", "-DCASS_INSTALL_PKG_CONFIG=OFF", "-DCMAKE_INSTALL_PREFIX:PATH=#{prefix}", "-DCMAKE_INSTALL_LIBDIR=#{lib}", ".."
       system "make", "install"
     end
   end
