@@ -1218,6 +1218,21 @@ BOOST_AUTO_TEST_CASE(clustering_order) {
     BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 1), CASS_CLUSTERING_ORDER_ASC);
     BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 2), CASS_CLUSTERING_ORDER_DESC);
   }
+
+  {
+    test_utils::execute_query(session, "CREATE TABLE clustering_order.mixed_order_composite_clustering_key ("
+                                       "key1 text, key2 text, key3 text, key4 text, value text, "
+                                       "PRIMARY KEY(key1, key4, key3, key2))"
+                                       "WITH CLUSTERING ORDER BY (key4 DESC, key3 ASC, key2 ASC)");
+    refresh_schema_meta();
+
+    const CassTableMeta* table_meta = schema_get_table("clustering_order", "mixed_order_composite_clustering_key");
+
+    BOOST_REQUIRE_EQUAL(cass_table_meta_clustering_key_count(table_meta), 3);
+    BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 0), CASS_CLUSTERING_ORDER_DESC);
+    BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 1), CASS_CLUSTERING_ORDER_ASC);
+    BOOST_CHECK_EQUAL(cass_table_meta_clustering_key_order(table_meta, 2), CASS_CLUSTERING_ORDER_ASC);
+  }
 }
 
 /**
