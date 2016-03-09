@@ -68,6 +68,7 @@ option(CASS_BUILD_TESTS "Build tests" OFF)
 option(CASS_BUILD_INTEGRATION_TESTS "Build integration tests" OFF)
 option(CASS_BUILD_UNIT_TESTS "Build unit tests" OFF)
 option(CASS_INSTALL_HEADER "Install header file" ON)
+option(CASS_INSTALL_PKG_CONFIG "Install pkg-config file(s)" ON)
 option(CASS_MULTICORE_COMPILATION "Enable multicore compilation" OFF)
 option(CASS_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
 option(CASS_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
@@ -693,6 +694,18 @@ endif()
 #------------------
 # Install targets
 #------------------
+if(CASS_INSTALL_PKG_CONFIG)
+  if(NOT WIN32)
+    find_package(PkgConfig)
+    if(PKG_CONFIG_FOUND)
+      set(prefix ${CMAKE_INSTALL_PREFIX})
+      set(exec_prefix ${CMAKE_INSTALL_PREFIX})
+      set(libdir ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
+      set(includedir ${CMAKE_INSTALL_PREFIX}/include)
+      set(version ${PROJECT_VERSION_STRING})
+    endif()
+  endif()
+endif()
 
 # Determine if the header should be installed
 if(CASS_INSTALL_HEADER)
@@ -705,6 +718,15 @@ if(CASS_BUILD_SHARED)
     RUNTIME DESTINATION ${INSTALL_DLL_EXE_DIR}  # for dll/executable files
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for shared library
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static library
+  if(CASS_INSTALL_PKG_CONFIG)
+    if(NOT WIN32)
+      if(PKG_CONFIG_FOUND)
+        configure_file("${PROJECT_SOURCE_DIR}/packaging/cassandra.pc.in" "cassandra.pc" @ONLY)
+        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/cassandra.pc"
+          DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+      endif()
+    endif()
+  endif()
 endif()
 
 # Install the static library
@@ -713,6 +735,15 @@ if(CASS_BUILD_STATIC)
     RUNTIME DESTINATION ${INSTALL_DLL_EXE_DIR}  # for dll/executable files
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for shared library
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static library
+  if(CASS_INSTALL_PKG_CONFIG)
+    if(NOT WIN32)
+      if(PKG_CONFIG_FOUND)
+        configure_file("${PROJECT_SOURCE_DIR}/packaging/cassandra_static.pc.in" "cassandra_static.pc" @ONLY)
+        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/cassandra_static.pc"
+          DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+      endif()
+    endif()
+  endif()
 endif()
 
 #-------------------

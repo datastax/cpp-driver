@@ -22,7 +22,7 @@ override_dh_auto_install:
 	dh_auto_install
 
 override_dh_auto_configure:
-	dh_auto_configure -- -DCMAKE_BUILD_TYPE=RELEASE -DCASS_BUILD_STATIC=ON -DCMAKE_INSTALL_LIBDIR=/usr/lib
+	dh_auto_configure -- -DCMAKE_BUILD_TYPE=RELEASE -DCASS_BUILD_STATIC=ON -DCASS_INSTALL_PKG_CONFIG=OFF -DCMAKE_INSTALL_LIBDIR=/usr/lib
 
 override_dh_auto_build:
 	dh_auto_build -- -j$(NUMJOBS)
