@@ -1388,8 +1388,8 @@ cass_cluster_set_whitelist_dc_filtering(CassCluster* cluster,
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] hosts
- * @param[in] hosts_length
+ * @param[in] dcs
+ * @param[in] dcs_length
  * @return same as cass_cluster_set_whitelist_dc_filtering()
  *
  * @see cass_cluster_set_whitelist_dc_filtering()
@@ -1397,7 +1397,7 @@ cass_cluster_set_whitelist_dc_filtering(CassCluster* cluster,
 CASS_EXPORT void
 cass_cluster_set_whitelist_dc_filtering_n(CassCluster* cluster,
                                           const char* dcs,
-                                          size_t hosts_length);
+                                          size_t dcs_length);
 
 /**
  * Same as cass_cluster_set_blacklist_filtering(), but blacklist all hosts of a dc
@@ -1422,8 +1422,8 @@ cass_cluster_set_blacklist_dc_filtering(CassCluster* cluster,
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] hosts
- * @param[in] hosts_length
+ * @param[in] dcs
+ * @param[in] dcs_length
  * @return same as cass_cluster_set_blacklist_dc_filtering()
  *
  * @see cass_cluster_set_blacklist_dc_filtering()
@@ -1431,7 +1431,7 @@ cass_cluster_set_blacklist_dc_filtering(CassCluster* cluster,
 CASS_EXPORT void
 cass_cluster_set_blacklist_dc_filtering_n(CassCluster* cluster,
                                           const char* dcs,
-                                          size_t hosts_length);
+                                          size_t dcs_length);
 
 /**
  * Enable/Disable Nagel's algorithm on connections.
@@ -7634,7 +7634,7 @@ cass_iterator_indexes_from_table_meta(const CassTableMeta* table_meta);
  *
  * @public @memberof CassTableMeta
  *
- * @param[in] view_meta
+ * @param[in] table_meta
  * @return A new iterator that must be freed.
  *
  * @see cass_iterator_get_materialized_view_meta()
