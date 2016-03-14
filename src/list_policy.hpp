@@ -54,3 +54,4 @@ private:
 } // namespace cass
 
 #endif
+
