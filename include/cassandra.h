@@ -4823,7 +4823,7 @@ cass_batch_set_custom_payload(CassBatch* batch,
 /**
  * Adds a statement to a batch.
  *
- * @cassandra{2.1+}
+ * @cassandra{2.0+}
  *
  * @public @memberof CassBatch
  *
