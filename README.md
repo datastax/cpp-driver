@@ -13,15 +13,14 @@ Cassandra's native protocol and Cassandra Query Language v3.
 - Mailing List: https://groups.google.com/a/lists.datastax.com/forum/#!forum/cpp-driver-user
 - IRC: [#datastax-drivers on `irc.freenode.net <http://freenode.net>`](http://webchat.freenode.net/?channels=datastax-drivers)
 
-## What's New in 2.2
+## What's New in 2.3
 
-- Support for new Cassandra 2.2 datatypes: `tinyint`, `smallint`, `date` and
-  `time`
-- Support for custom payloads
-- Support for server-side warnings
-- UDF/UDA metadata
-- Whitelist load balancing policy
-- Default consistency has been changed from `ONE` to `LOCAL_QUORUM`
+- Support for materialized view and secondary index metadata
+- Support for clustering key order, `frozen<>` and Cassandra version metadata
+- Blacklist, whitelist DC, and blacklist DC load balancing policies
+
+More information about features included in 2.3 can be found in this [blog
+post](http://www.datastax.com/dev/blog/datastax-c-driver-2-3-ga-released).
 
 ## Upgrading from 2.0 or 2.1 to 2.2+
 
@@ -45,7 +44,6 @@ There were a couple breaking API changes between 1.0 and 2.0 that are documented
 - Automatic reconnection
 - Configurable [load balancing]
 - Works with any cluster size
-- Compatibility with binary protocol version 1 and 2
 - [Authentication]
 - [SSL]
 - [Latency-aware routing]
@@ -56,6 +54,33 @@ There were a couple breaking API changes between 1.0 and 2.0 that are documented
 - [Client-side timestamps]
 - [Data types]
 - [Idle connection heartbeats]
+
+## Compatibility
+
+This release is compatible with Apache Cassandra 1.2, 2.0, 2.1, and 2.2 and 3.0.
+
+A complete compatibility matrix for both Apache Cassandra and DataStax
+Enterprise can be found
+[here](https://docs.datastax.com/en/developer/driver-matrix/doc/common/driverMatrix.html?scroll=driverMatrix__cpp-driver-matrix).
+
+## Installation
+
+Binary packages are [available](http://downloads.datastax.com/cpp-driver/) for
+CentOS, Ubuntu and Windows. Packages for the dependencies, libuv (1.x) and OpenSSL, are also
+provided and can be found under the "dependencies" directory for each
+platform e.g. [CentOS 7](http://downloads.datastax.com/cpp-driver/centos/7/dependencies/),
+[Ubuntu 14.04](http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/),
+[Windows](http://downloads.datastax.com/cpp-driver/windows/dependencies/).
+
+*Note*: CentOS and Ubuntu use the version of OpenSSL provided with the
+distribution.
+
+The driver can also be [built from
+source](http://datastax.github.io/cpp-driver/topics/building/).
+
+## Feedback Requested
+
+**Help us focus our efforts!** [Provide your input](http://goo.gl/forms/ihKC5uEQr6) on the C/C++ Driver Platform and Runtime Survey (we kept it short).
 
 ## Examples
 There are several examples provided here: [examples](https://github.com/datastax/cpp-driver/tree/1.0/examples).
@@ -139,7 +164,7 @@ int main() {
 ```
 
 ## License
-Copyright (c) 2014-2015 DataStax
+Copyright (c) 2014-2016 DataStax
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

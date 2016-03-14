@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2014-2015 DataStax
+  Copyright (c) 2014-2016 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -51,8 +51,8 @@
  */
 
 #define CASS_VERSION_MAJOR 2
-#define CASS_VERSION_MINOR 2
-#define CASS_VERSION_PATCH 2
+#define CASS_VERSION_MINOR 3
+#define CASS_VERSION_PATCH 0
 #define CASS_VERSION_SUFFIX ""
 
 #ifdef __cplusplus
