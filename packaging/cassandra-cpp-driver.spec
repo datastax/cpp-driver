@@ -103,10 +103,6 @@ rm -rf %{buildroot}
 - patch release
 * Thu Apr 23 2015 Michael Penick <michael.penick@datastax.com> - 2.0.0-1
 - release
-* Mon May 18 2015 Michael Penick <michael.penick@datastax.com> - 1.0.2-1
-- patch release
-* Mon Mar 02 2015  Michael Penick <michael.penick@datastax.com> - 1.0.1-1
-- patch release
 * Tue Feb 03 2015 Michael Penick <michael.penick@datastax.com> - 1.0.0-1
 - release
 * Tue Dec 23 2014 Michael Penick <michael.penick@datastax.com> - 1.0.0rc1-1
