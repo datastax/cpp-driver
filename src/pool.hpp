@@ -27,6 +27,8 @@
 #include "scoped_ptr.hpp"
 #include "timer.hpp"
 
+#include <sparsehash/dense_hash_set>
+
 #include <algorithm>
 #include <functional>
 #include <set>
@@ -106,7 +108,7 @@ private:
   Connection* find_least_busy();
 
 private:
-  typedef std::set<Connection*> ConnectionSet;
+  typedef sparsehash::dense_hash_set<Connection*> ConnectionSet;
   typedef std::vector<Connection*> ConnectionVec;
 
   IOWorker* io_worker_;

@@ -18,6 +18,7 @@
 #define __CASS_HASH_INDEX_HPP_INCLUDED__
 
 #include "fixed_vector.hpp"
+#include "hash.hpp"
 #include "macros.hpp"
 #include "string_ref.hpp"
 #include "utils.hpp"
@@ -29,36 +30,6 @@
 #define CASS_LOAD_FACTOR 0.75
 
 namespace cass {
-
-#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
-#define FNV1_64_INIT 0xcbf29ce484222325ULL
-#define FNV1_64_PRIME 0x100000001b3ULL
-
-inline uint64_t fnv1a_hash_lower(StringRef s) {
-  uint64_t h = FNV1_64_INIT;
-  for(StringRef::const_iterator i = s.begin(), end = s.end(); i != end; ++i) {
-    h ^= static_cast<uint64_t>(static_cast<unsigned char>(::tolower(*i)));
-    h *= FNV1_64_PRIME;
-  }
-  return h;
-}
-
-#undef FNV1_64_INIT
-#undef FNV1_64_PRIME
-#else
-#define FNV1_32_INIT 0x811c9dc5
-#define FNV1_32_PRIME 0x01000193
-inline uint32_t fnv1a_hash_lower(StringRef s) {
-  uint32_t h = FNV1_32_INIT;
-  for(StringRef::const_iterator i = s.begin(), end = s.end(); i != end; ++i) {
-    h ^= static_cast<uint32_t>(static_cast<unsigned char>(::tolower(*i)));
-    h *= FNV1_32_PRIME;
-  }
-  return h;
-}
-#undef FNV1_32_INIT
-#undef FNV1_32_PRIME
-#endif
 
 typedef FixedVector<size_t, 4> IndexVec;
 
@@ -72,7 +43,6 @@ struct HashTableEntry {
   size_t index;
   T* next;
 };
-
 
 template<class T>
 class CaseInsensitiveHashTable {
@@ -129,7 +99,8 @@ size_t CaseInsensitiveHashTable<T>::get_indices(StringRef name, IndexVec* result
     name = name.substr(1, name.size() - 2);
   }
 
-  size_t h = fnv1a_hash_lower(name) & index_mask_;
+  size_t h = hash::fnv1a(name.data(),
+                         name.size(), ::tolower) & index_mask_;
 
   size_t start = h;
   while (index_[h] != NULL && !iequals(name, index_[h]->name)) {
@@ -188,7 +159,8 @@ void CaseInsensitiveHashTable<T>::set_entries(const EntryVec& entries) {
 
 template<class T>
 void CaseInsensitiveHashTable<T>::add_index(T* entry) {
-  size_t h = fnv1a_hash_lower(entry->name) & index_mask_;
+  size_t h = hash::fnv1a(entry->name.data(),
+                         entry->name.size(), ::tolower) & index_mask_;
 
   if (index_[h] == NULL) {
     index_[h] = entry;

@@ -47,7 +47,9 @@ Pool::Pool(IOWorker* io_worker,
     , is_available_(false)
     , is_initial_connection_(is_initial_connection)
     , is_pending_flush_(false)
-    , cancel_reconnect_(false) { }
+    , cancel_reconnect_(false) {
+  connections_pending_.set_empty_key(NULL);
+}
 
 Pool::~Pool() {
   LOG_DEBUG("Pool(%p) dtor with %u pending requests",

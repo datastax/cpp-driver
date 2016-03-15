@@ -153,6 +153,9 @@ int Address::compare(const Address& a) const {
   if (family() != a.family()) {
     return family() < a.family() ? -1 : 1;
   }
+  if (port() != a.port()) {
+    return port() < a.port() ? -1 : 1;
+  }
   if (family() == AF_INET) {
     if (addr_in()->sin_addr.s_addr != a.addr_in()->sin_addr.s_addr) {
       return addr_in()->sin_addr.s_addr < a.addr_in()->sin_addr.s_addr ? -1 : 1;

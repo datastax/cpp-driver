@@ -17,7 +17,10 @@
 #ifndef __CASS_ADDRESS_HPP_INCLUDED__
 #define __CASS_ADDRESS_HPP_INCLUDED__
 
+#include "hash.hpp"
 #include "utils.hpp"
+
+#include <sparsehash/dense_hash_set>
 
 #include <uv.h>
 #include <set>
@@ -78,7 +81,7 @@ private:
 };
 
 typedef std::vector<Address> AddressVec;
-typedef std::set<Address> AddressSet;
+typedef sparsehash::dense_hash_set<Address> AddressSet;
 
 inline bool operator<(const Address& a, const Address& b) {
   return a.compare(b) < 0;
@@ -93,5 +96,23 @@ inline std::ostream& operator<<(std::ostream& os, const Address& addr) {
 }
 
 } // namespace cass
+
+namespace std {
+
+template<>
+struct hash<cass::Address> {
+  std::size_t operator()(const cass::Address& a) const {
+    if (a.family() == AF_INET) {
+      return cass::hash::fnv1a(reinterpret_cast<const char*>(a.addr_in()),
+                               sizeof(struct sockaddr_in));
+    } else if (a.family() == AF_INET6) {
+      return cass::hash::fnv1a(reinterpret_cast<const char*>(a.addr_in6()),
+                               sizeof(struct sockaddr_in6));
+    }
+    return 0;
+  }
+};
+
+} // namespace std
 
 #endif
