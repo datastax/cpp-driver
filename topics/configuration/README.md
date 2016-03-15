@@ -140,10 +140,10 @@ datacenters when using the whitelist/blacklist datacenter filtering polices.
 
 ```c
 /* Set the list of predefined datacenters the driver is allowed to connect to */
-cass_cluster_set_whitelist_filtering(cluster, "dc2, dc4");
+cass_cluster_set_whitelist_dc_filtering(cluster, "dc2, dc4");
 
 /* The datacenter whitelist can be cleared/disabled by using an empty string */
-cass_cluster_set_whitelist_filtering(cluster, "");
+cass_cluster_set_whitelist_dc_filtering(cluster, "");
 ```
 
 ```c
