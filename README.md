@@ -17,7 +17,7 @@ Cassandra's native protocol and Cassandra Query Language v3.
 
 - Support for materialized view and secondary index metadata
 - Support for clustering key order, `frozen<>` and Cassandra version metadata
-- Blacklist, whitelist DC, and blacklist DC load balancing policies
+- [Blacklist], [whitelist DC], and [blacklist DC] load balancing policies
 
 More information about features included in 2.3 can be found in this [blog
 post](http://www.datastax.com/dev/blog/datastax-c-driver-2-3-ga-released).
@@ -201,3 +201,6 @@ limitations under the License.
 [Authentication]: http://datastax.github.io/cpp-driver/topics/security/#authentication
 [load balancing]: http://datastax.github.io/cpp-driver/topics/configuration/#load-balancing
 [SSL]: http://datastax.github.io/cpp-driver/topics/security/ssl/
+[Blacklist]: http://datastax.github.io/cpp-driver/topics/configuration/#blacklist
+[whitelist DC]: http://datastax.github.io/cpp-driver/topics/configuration/#datacenter
+[blacklist DC]: http://datastax.github.io/cpp-driver/topics/configuration/#datacenter
