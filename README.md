@@ -57,7 +57,7 @@ There were a couple breaking API changes between 1.0 and 2.0 that are documented
 
 ## Compatibility
 
-This release is compatible with Apache Cassandra 1.2, 2.0, 2.1, and 2.2 and 3.0.
+This release is compatible with Apache Cassandra 1.2, 2.0, 2.1, 2.2 and 3.0.
 
 A complete compatibility matrix for both Apache Cassandra and DataStax
 Enterprise can be found
@@ -66,8 +66,8 @@ Enterprise can be found
 ## Installation
 
 Binary packages are [available](http://downloads.datastax.com/cpp-driver/) for
-CentOS, Ubuntu and Windows. Packages for the dependencies, libuv (1.x) and OpenSSL, are also
-provided and can be found under the "dependencies" directory for each
+CentOS, Ubuntu and Windows. Packages for the driver's dependencies, libuv (1.x)
+and OpenSSL, are also provided under the `dependencies` directory for each
 platform e.g. [CentOS 7](http://downloads.datastax.com/cpp-driver/centos/7/dependencies/),
 [Ubuntu 14.04](http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/),
 [Windows](http://downloads.datastax.com/cpp-driver/windows/dependencies/).
