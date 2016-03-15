@@ -26,6 +26,12 @@ const AuthenticationType AuthenticationType::PUBLIC_KEY("PUBLIC_KEY", 1, "Public
 // Static declarations for authentication type
 std::set<AuthenticationType> AuthenticationType::constants_;
 
+AuthenticationType::AuthenticationType()
+ : name_("INVALID")
+ , ordinal_(-1)
+ , display_name_("Invalid authentication") {
+}
+
 const std::string& AuthenticationType::name() const {
   return name_;
 }

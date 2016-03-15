@@ -19,7 +19,7 @@ an example of the configuration file for use with the [CCM Cluster] VM.
 #
 # Uncomment to specify Cassandra version
 ##
-#CASSANDRA_VERSION=2.2.3
+#CASSANDRA_VERSION=3.4
 ##
 # Flag to determine if Cassandra version should be obtained from ASF git
 #
@@ -36,8 +36,27 @@ an example of the configuration file for use with the [CCM Cluster] VM.
 #DEPLOYMENT_TYPE=local
 
 ###############################################################################
+# DSE Options                                                                 #
+# Ensure USE_DSE=true to enable these options                                 #
+###############################################################################
+##
+# Flag to determine if DSE version should be loaded
+#
+# Uncomment to specify use of DSE
+##
+#USE_DSE=false
+##
+# DSE Deployment Version
+#
+# DSE version to deploy using CCM
+#
+# Uncomment to specify DSE version
+##
+#DSE_VERSION=4.8.5
+
+###############################################################################
 # SSH Options                                                                 #
-# Enusre DEPLOYMENT_TYPE=ssh to enable these options                          #
+# Enusre DEPLOYMENT_TYPE=remote to enable these options                       #
 ###############################################################################
 ##
 # SSH Port (Port)

@@ -57,6 +57,12 @@ namespace CCM {
       from_string(version_string);
     }
 
+    /**
+     * Compare Cassandra version
+     *
+     * @param rhs Cassandra version for compare
+     * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
+     */
     int compare(const CassVersion& rhs) {
       if (major_version < rhs.major_version) return -1;
       if (major_version > rhs.major_version) return  1;
@@ -254,7 +260,7 @@ namespace CCM {
      *                           string (iff !empty); false to disregard extra
      *                           field (default: true)
      */
-    std::string to_string(bool is_extra_requested = true) {
+    virtual std::string to_string(bool is_extra_requested = true) {
       std::stringstream version_string;
       // Determine if tick-tock release should be handled
       if (*this > "3.0.0" && patch_version == 0) {
@@ -294,6 +300,113 @@ namespace CCM {
           }
         }
       }
+    }
+  };
+
+  class DseVersion : public CassVersion {
+  public:
+    /**
+    * Create the CassVersion from a human readable string
+    *
+    * @param version_string String representation to convert
+    */
+    DseVersion(const std::string& version_string)
+      : CassVersion(version_string) {}
+
+    /**
+     * Convert the version into a human readable string
+     *
+     * @param is_extra_requested True if extra field should be added to version
+     *                           string (iff !empty); false to disregard extra
+     *                           field (default: true)
+     */
+    std::string to_string(bool is_extra_requested = true) {
+      std::stringstream version_string;
+      version_string << major_version << "." << minor_version << "." << patch_version;
+
+      // Determine if the extra version information should be added
+      if (is_extra_requested && !extra.empty()) {
+        version_string << "-" << extra;
+      }
+      return version_string.str();
+    }
+
+    CassVersion get_cass_version() {
+      // Map the DSE version to the appropriate Cassandra version
+      if (*this == "4.5.0" || *this == "4.5.1") {
+        return CassVersion("2.0.8-39");
+      } else if (*this == "4.5.2") {
+        return CassVersion("2.0.10-71");
+      } else if (*this == "4.5.3") {
+        return CassVersion("2.0.11-82");
+      } else if (*this == "4.5.4") {
+        return CassVersion("2.0.11-92");
+      } else if (*this == "4.5.5") {
+        return CassVersion("2.0.12-156");
+      } else if (*this == "4.5.6") {
+        return CassVersion("2.0.12-200");
+      } else if (*this == "4.5.7") {
+        return CassVersion("2.0.12-201");
+      } else if (*this == "4.5.8") {
+        return CassVersion("2.0.14-352");
+      } else if (*this == "4.5.9") {
+        return CassVersion("2.0.16-762");
+      } else if (*this == "4.6.0") {
+        return CassVersion("2.0.11-83");
+      } else if (*this == "4.6.1") {
+        return CassVersion("2.0.12-200");
+      } else if (*this == "4.6.2") {
+        return CassVersion("2.0.12-274");
+      } else if (*this == "4.6.3") {
+        return CassVersion("2.0.12-275");
+      } else if (*this == "4.6.4") {
+        return CassVersion("2.0.14-348");
+      } else if (*this == "4.6.5") {
+        return CassVersion("2.0.14-352");
+      } else if (*this == "4.6.6") {
+        return CassVersion("2.0.14-425");
+      } else if (*this == "4.6.7") {
+        return CassVersion("2.0.14-459");
+      } else if (*this == "4.6.8" || *this == "4.6.9") {
+        return CassVersion("2.0.16-678");
+      } else if (*this == "4.6.10") {
+        return CassVersion("2.0.16-762");
+      } else if (*this == "4.6.11") {
+        return CassVersion("2.0.17-858");
+      } else if (*this == "4.7.0") {
+        return CassVersion("2.1.5-469");
+      } else if (*this == "4.7.1" || *this == "4.7.2") {
+        return CassVersion("2.1.8-621");
+      } else if (*this == "4.7.3") {
+        return CassVersion("2.1.8-689");
+      } else if (*this == "4.7.4") {
+        return CassVersion("2.1.11-872");
+      } else if (*this == "4.7.5") {
+        return CassVersion("2.1.11-908");
+      } else if (*this == "4.7.6") {
+        return CassVersion("2.1.11-969");
+      } else if (*this == "4.7.7") {
+        return CassVersion("2.1.12-1049");
+      } else if (*this == "4.8.0") {
+        return CassVersion("2.1.9-791");
+      } else if (*this == "4.8.1") {
+        return CassVersion("2.1.11-872");
+      } else if (*this == "4.8.2") {
+        return CassVersion("2.1.11-908");
+      } else if (*this == "4.8.3") {
+        return CassVersion("2.1.11-969");
+      } else if (*this == "4.8.4") {
+        return CassVersion("2.1.12-1046");
+      } else if (*this == "4.8.5") {
+        return CassVersion("2.1.13-1131");
+      }
+      // Guess future releases of DSE
+      else if (*this >= "5.0.0") {
+        return CassVersion("3.0");
+      }
+
+      // DSE version does not correspond to a valid Cassandra version
+      return CassVersion("0.0.0");
     }
   };
 

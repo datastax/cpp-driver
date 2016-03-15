@@ -96,6 +96,12 @@ namespace CCM {
      */
     static std::set<DeploymentType>::iterator end();
 
+    /**
+     * Default constructor to handle issues with static initialization of
+     * constant deployment types
+     */
+    DeploymentType();
+
   private:
     /**
      * Deployment type constants
