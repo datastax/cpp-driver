@@ -53,6 +53,32 @@ an example of the configuration file for use with the [CCM Cluster] VM.
 # Uncomment to specify DSE version
 ##
 #DSE_VERSION=4.8.5
+##
+# CCM DSE Credentials Type (username_password|ini_file)
+#
+# Setting to indicate how DSE download through CCM should authenticate access
+#
+# Uncomment to specify DSE credentials type (defaults to username and password)
+##
+#DSE_CREDENTIALS_TYPE=username_password
+##
+# DSE Username (Username)
+#
+# Username for authenticating DSE download access
+#
+# Uncomment to specify DSE download access username
+##
+#DSE_USERNAME=
+##
+# DSE Password (Password)
+#
+# Password for authenticating DSE download access
+#
+# NOTE: This password is plain text
+#
+# Uncomment to specify DSE download access password
+##
+#DSE_PASSWORD=
 
 ###############################################################################
 # SSH Options                                                                 #
