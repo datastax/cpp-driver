@@ -306,10 +306,18 @@ namespace CCM {
   class DseVersion : public CassVersion {
   public:
     /**
-    * Create the CassVersion from a human readable string
-    *
-    * @param version_string String representation to convert
-    */
+     * Create the DseVersion from the CassVersion parent type
+     *
+     * @param version CassVersion to convert to DseVersion type
+     */
+    DseVersion(CassVersion version)
+      : CassVersion(version) {}
+
+    /**
+     * Create the CassVersion from a human readable string
+     *
+     * @param version_string String representation to convert
+     */
     DseVersion(const std::string& version_string)
       : CassVersion(version_string) {}
 

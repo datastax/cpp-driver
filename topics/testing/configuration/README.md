@@ -21,11 +21,11 @@ an example of the configuration file for use with the [CCM Cluster] VM.
 ##
 #CASSANDRA_VERSION=3.4
 ##
-# Flag to determine if Cassandra version should be obtained from ASF git
+# Flag to determine if Cassandra/DSE version should be obtained from ASF/GitHub
 #
-# Uncomment to specify use of ASF git
+# Uncomment to specify use of ASF/GitHub download
 ##
-#USE_ASFGIT=false
+#USE_GIT=false
 ##
 # CCM Deployment Type (local|remote)
 #

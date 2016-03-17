@@ -44,7 +44,7 @@ typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
 // Default values
 #define DEFAULT_CASSANDRA_VERSION CassVersion("3.4")
 #define DEFAULT_DSE_VERSION DseVersion("4.8.5")
-#define DEFAULT_USE_ASFGIT false
+#define DEFAULT_USE_GIT false
 #define DEFAULT_USE_DSE false
 #define DEFAULT_CLUSTER_PREFIX "cpp-driver"
 #define DEFAULT_DSE_CREDENTIALS DseCredentialsType::USERNAME_PASSWORD
@@ -99,10 +99,11 @@ namespace CCM {
      *
      * @param cassandra_version Cassandra version to use
      *                          (default: DEFAULT_CASSANDRA_VERSION)
-     * @param use_asfgit True if version should be obtained from ASF git; false
-     *                   otherwise (default: DEFAULT_USE_ASFGIT). Prepends
-     *                   `cassandra-` to version when creating cluster through
-     *                   CCM
+     * @param use_git True if version should be obtained from ASF/GitHub; false
+     *                otherwise (default: DEFAULT_USE_GIT). Prepends
+     *                `cassandra-` to version when creating cluster through CCM
+     *                if using Cassandra; otherwise passes version information
+     *                to CCM for git download of DSE.
      * @param use_dse True if CCM should load DSE for provided version; false
      *               otherwise (default: DEFAULT_USE_DSE)
      * @param cluster_prefix Prefix to use when creating a cluster name
@@ -132,7 +133,7 @@ namespace CCM {
      * @throws BridgeException
      */
     Bridge(CassVersion cassandra_version = DEFAULT_CASSANDRA_VERSION,
-      bool use_asfgit = DEFAULT_USE_ASFGIT,
+      bool use_git = DEFAULT_USE_GIT,
       bool use_dse = DEFAULT_USE_DSE,
       const std::string& cluster_prefix = DEFAULT_CLUSTER_PREFIX,
       DseCredentialsType dse_credentials_type = DEFAULT_DSE_CREDENTIALS,
@@ -523,9 +524,9 @@ namespace CCM {
      */
     DseVersion dse_version_;
     /**
-     * Flag to determine if Cassandra should be built from ASF git
+     * Flag to determine if Cassandra/DSE should be built from ASF/GitHub
      */
-    bool use_asfgit_;
+    bool use_git_;
     /**
      * Flag to determine if DSE is being used
      */

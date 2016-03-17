@@ -111,7 +111,7 @@ typedef SSIZE_T ssize_t;
 
 // Configuration file setting keys
 #define CCM_CONFIGURATION_KEY_CASSANDRA_VERSION "cassandra_version"
-#define CCM_CONFIGURATION_KEY_USE_ASFGIT "use_asfgit"
+#define CCM_CONFIGURATION_KEY_USE_GIT "use_git"
 #define CCM_CONFIGURATION_KEY_DEPLOYMENT_TYPE "deployment_type"
 #define CCM_CONFIGURATION_KEY_USE_DSE "use_dse"
 #define CCM_CONFIGURATION_KEY_DSE_VERSION "dse_version"
@@ -129,7 +129,7 @@ typedef SSIZE_T ssize_t;
 using namespace CCM;
 
 CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
-  bool use_asfgit /*= DEFAULT_USE_ASFGIT*/,
+  bool use_git /*= DEFAULT_USE_GIT*/,
   bool use_dse /*= DEFAULT_USE_DSE*/,
   const std::string& cluster_prefix /*= DEFAULT_CLUSTER_PREFIX*/,
   DseCredentialsType dse_credentials_type /*= DEFAULT_DSE_CREDENTIALS*/,
@@ -146,7 +146,7 @@ CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
   : socket_(NULL)
   , cassandra_version_(server_version)
   , dse_version_(DEFAULT_DSE_VERSION)
-  , use_asfgit_(use_asfgit)
+  , use_git_(use_git)
   , use_dse_(use_dse)
   , dse_credentials_type_(dse_credentials_type)
   , dse_username_(dse_username)
@@ -199,7 +199,7 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
   : socket_(NULL)
   , cassandra_version_(DEFAULT_CASSANDRA_VERSION)
   , dse_version_(DEFAULT_DSE_VERSION)
-  , use_asfgit_(DEFAULT_USE_ASFGIT)
+  , use_git_(DEFAULT_USE_GIT)
   , use_dse_(DEFAULT_USE_DSE)
   , dse_credentials_type_(DEFAULT_DSE_CREDENTIALS)
   , dse_username_("")
@@ -241,16 +241,16 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
           // Find and apply the configuration setting
           if (key.compare(CCM_CONFIGURATION_KEY_CASSANDRA_VERSION) == 0) {
             cassandra_version_ = CassVersion(value);
-          } else if (key.compare(CCM_CONFIGURATION_KEY_CASSANDRA_VERSION) == 0) {
+          } else if (key.compare(CCM_CONFIGURATION_KEY_DSE_VERSION) == 0) {
             dse_version_ = DseVersion(value);
-          } else if (key.compare(CCM_CONFIGURATION_KEY_USE_ASFGIT) == 0) {
+          } else if (key.compare(CCM_CONFIGURATION_KEY_USE_GIT) == 0) {
             //Convert the value
             std::stringstream valueStream(value);
-            if (!(valueStream >> std::boolalpha >> use_asfgit_).fail()) {
+            if (!(valueStream >> std::boolalpha >> use_git_).fail()) {
               continue;
             } else {
-              LOG_ERROR("Invalid Flag [" << value << "] for Use ASF git: Using default [" << DEFAULT_USE_ASFGIT << "]");
-              use_asfgit_ = DEFAULT_USE_ASFGIT;
+              LOG_ERROR("Invalid Flag [" << value << "] for Use git: Using default [" << DEFAULT_USE_GIT << "]");
+              use_git_ = DEFAULT_USE_GIT;
             }
           } else if (key.compare(CCM_CONFIGURATION_KEY_USE_DSE) == 0) {
             //Convert the value
@@ -512,14 +512,18 @@ bool CCM::Bridge::create_cluster(unsigned short data_center_one_nodes /*= 1*/,
     create_command.push_back("create");
     create_command.push_back("-v");
     if (use_dse_) {
-      create_command.push_back(dse_version_.to_string());
+      if (use_git_) {
+        create_command.push_back("git:" + dse_version_.to_string());
+      } else {
+        create_command.push_back(dse_version_.to_string());
+      }
       create_command.push_back("--dse");
       if (dse_credentials_type_ == DseCredentialsType::USERNAME_PASSWORD) {
         create_command.push_back("--dse-username=" + dse_username_);
         create_command.push_back("--dse-password=" + dse_password_);
       }
     } else {
-      if (use_asfgit_) {
+      if (use_git_) {
         create_command.push_back("git:cassandra-" + cassandra_version_.to_string());
       } else {
         create_command.push_back(cassandra_version_.to_string());
