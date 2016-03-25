@@ -17,9 +17,9 @@
 #ifndef __CASS_AUTH_HPP_INCLUDED__
 #define __CASS_AUTH_HPP_INCLUDED__
 
-#include "macros.hpp"
-#include "address.hpp"
 #include "buffer.hpp"
+#include "host.hpp"
+#include "macros.hpp"
 #include "ref_counted.hpp"
 
 #include <map>
@@ -44,10 +44,8 @@ public:
   Authenticator() {}
   virtual ~Authenticator() {}
 
-  virtual std::string initial_response() = 0;
-  // TODO(mpenick): Do these need to know the difference between a
-  // NULL token and an empty token?
-  virtual std::string evaluate_challenge(const std::string& challenge) = 0;
+  virtual bool initial_response(std::string* response) = 0;
+  virtual bool evaluate_challenge(const std::string& challenge, std::string* response) = 0;
   virtual void on_authenticate_success(const std::string& token) = 0;
 
 private:
@@ -63,8 +61,8 @@ public:
 
   virtual void get_credentials(Credentials* credentials);
 
-  virtual std::string initial_response();
-  virtual std::string evaluate_challenge(const std::string& challenge);
+  virtual bool initial_response(std::string* response);
+  virtual bool evaluate_challenge(const std::string& challenge, std::string* response);
   virtual void on_authenticate_success(const std::string& token);
 
 private:
@@ -79,8 +77,8 @@ public:
 
   virtual ~AuthProvider() {}
 
-  virtual V1Authenticator* new_authenticator_v1(const Address& host) const { return NULL; }
-  virtual Authenticator* new_authenticator(const Address& host) const { return NULL; }
+  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host) const { return NULL; }
+  virtual Authenticator* new_authenticator(const Host::ConstPtr& host) const { return NULL; }
 
 private:
   DISALLOW_COPY_AND_ASSIGN(AuthProvider);
@@ -88,12 +86,12 @@ private:
 
 class SaslAuthenticator : public Authenticator {
 public:
-  SaslAuthenticator(const Address& host, const CassAuthCallbacks* callbacks, void* data);
+  SaslAuthenticator(const Host::ConstPtr& host, const CassAuthCallbacks* callbacks, void* data);
 
   ~SaslAuthenticator();
 
-  virtual std::string initial_response();
-  virtual std::string evaluate_challenge(const std::string& challenge);
+  virtual bool initial_response(std::string* response);
+  virtual bool evaluate_challenge(const std::string& challenge, std::string* response);
   virtual void on_authenticate_success(const std::string& token);
 
 private:
@@ -108,8 +106,8 @@ public:
     : callbacks_(*callbacks)
     , data_(data) {}
 
-  virtual V1Authenticator* new_authenticator_v1(const Address& host) const { return NULL; }
-  virtual Authenticator* new_authenticator(const Address& host) const {
+  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host) const { return NULL; }
+  virtual Authenticator* new_authenticator(const Host::ConstPtr& host) const {
     return new SaslAuthenticator(host, &callbacks_, data_);
   }
 
@@ -125,11 +123,11 @@ public:
       : username_(username)
       , password_(password) {}
 
-  virtual V1Authenticator* new_authenticator_v1(const Address& host) const {
+  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host) const {
     return new PlainTextAuthenticator(username_, password_);
   }
 
-  virtual Authenticator* new_authenticator(const Address& host) const {
+  virtual Authenticator* new_authenticator(const Host::ConstPtr& host) const {
     return new PlainTextAuthenticator(username_, password_);
   }
 

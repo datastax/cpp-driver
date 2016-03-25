@@ -539,6 +539,9 @@ endif()
 set(SRC_FILES ${SRC_FILES}
   ${PROJECT_SOURCE_DIR}/src/third_party/hdr_histogram/hdr_histogram.cpp)
 
+set(SRC_FILES ${SRC_FILES}
+  ${PROJECT_SOURCE_DIR}/src/third_party/curl/hostcheck.cpp)
+
 # Determine if OpenSSL should be compiled in (or not)
 if(CASS_USE_OPENSSL)
   set(INC_FILES ${INC_FILES}

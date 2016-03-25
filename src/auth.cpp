@@ -18,6 +18,8 @@
 
 #include "cassandra.h"
 
+#include <algorithm>
+
 #define SASL_AUTH_INIT_RESPONSE_SIZE 128
 
 namespace cass {
@@ -28,32 +30,35 @@ void PlainTextAuthenticator::get_credentials(V1Authenticator::Credentials* crede
 
 }
 
-std::string PlainTextAuthenticator::initial_response() {
-  std::string token;
-  token.reserve(username_.size() + password_.size() + 2);
-  token.push_back(0);
-  token.append(username_);
-  token.push_back(0);
-  token.append(password_);
-  return token;
+bool PlainTextAuthenticator::initial_response(std::string* response) {
+  response->reserve(username_.size() + password_.size() + 2);
+  response->push_back(0);
+  response->append(username_);
+  response->push_back(0);
+  response->append(password_);
+  return true;
 }
 
-std::string PlainTextAuthenticator::evaluate_challenge(const std::string& challenge) {
-  // no-op
-  return std::string();
+bool PlainTextAuthenticator::evaluate_challenge(const std::string& challenge, std::string* response) {
+  return true;
 }
 
 void PlainTextAuthenticator::on_authenticate_success(const std::string& token) {
   // no-op
 }
 
-SaslAuthenticator::SaslAuthenticator(const Address& host,
+SaslAuthenticator::SaslAuthenticator(const Host::ConstPtr& host,
                                      const CassAuthCallbacks* callbacks,
                                      void* data)
   : callbacks_(callbacks)
   , data_(data) {
   auth_.exchange_data = NULL;
-  auth_.host.address_length = host.to_inet(auth_.host.address);
+  auth_.host.address_length = host->address().to_inet(auth_.host.address);
+
+  size_t length = std::min(static_cast<size_t>(CASS_HOSTNAME_LENGTH - 1),
+                           host->hostname().size());
+  memcpy(auth_.hostname, host->hostname().c_str(), length);
+  auth_.hostname[length] = '\0';
 }
 
 SaslAuthenticator::~SaslAuthenticator() {
@@ -62,43 +67,49 @@ SaslAuthenticator::~SaslAuthenticator() {
   }
 }
 
-std::string SaslAuthenticator::initial_response() {
+bool SaslAuthenticator::initial_response(std::string* response) {
   if (callbacks_->initial_callback == NULL) {
-    return std::string();
+    return true;
   }
 
-  std::string response(SASL_AUTH_INIT_RESPONSE_SIZE, '\0');
+  response->resize(SASL_AUTH_INIT_RESPONSE_SIZE, '\0');
   for (int i = 0; i < 2; ++i) {
     size_t size = callbacks_->initial_callback(&auth_, data_,
-                                               &response[0], response.size());
-    if(size <= response.size()) {
-      response.resize(size);
+                                               &(*response)[0], response->size());
+    if (size == CASS_AUTH_ERROR) return false;
+
+    if(size <= response->size()) {
+      response->resize(size);
       break;
     }
 
-    response.resize(size, '\0');
+    response->resize(size, '\0');
   }
-  return response;
+
+  return true;
 }
 
-std::string SaslAuthenticator::evaluate_challenge(const std::string& challenge) {
+bool SaslAuthenticator::evaluate_challenge(const std::string& challenge, std::string* response) {
   if (callbacks_->challenge_callback == NULL) {
-    return std::string();
+    return true;
   }
 
-  std::string response(SASL_AUTH_INIT_RESPONSE_SIZE, '\0');
+  response->resize(SASL_AUTH_INIT_RESPONSE_SIZE, '\0');
   for (int i = 0; i < 2; ++i) {
     size_t size = callbacks_->challenge_callback(&auth_, data_,
                                                  challenge.data(), challenge.size(),
-                                                 &response[0], response.size());
-    if(size <= response.size()) {
-      response.resize(size);
+                                                 &(*response)[0], response->size());
+    if (size == CASS_AUTH_ERROR) return false;
+
+    if(size <= response->size()) {
+      response->resize(size);
       break;
     }
 
-    response.resize(size, '\0');
+    response->resize(size, '\0');
   }
-  return response;
+
+  return true;
 }
 
 void SaslAuthenticator::on_authenticate_success(const std::string& token) {

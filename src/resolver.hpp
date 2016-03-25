@@ -24,9 +24,13 @@
 #include <sstream>
 
 #include "address.hpp"
+#include "ref_counted.hpp"
+#include "timer.hpp"
+#include "utils.hpp"
 
 namespace cass {
 
+template <class T>
 class Resolver {
 public:
   typedef void (*Callback)(Resolver*);
@@ -36,24 +40,31 @@ public:
     FAILED_BAD_PARAM,
     FAILED_UNSUPPORTED_ADDRESS_FAMILY,
     FAILED_UNABLE_TO_RESOLVE,
+    FAILED_TIMED_OUT,
     SUCCESS
   };
 
-  const std::string& host() { return host_; }
+  const std::string& hostname() { return hostname_; }
   int port() { return port_; }
   bool is_success() { return status_ == SUCCESS; }
+  bool is_timed_out() { return status_ == FAILED_TIMED_OUT; }
   Status status() { return status_; }
-  Address& address() { return address_; }
-  void* data() { return data_; }
+  const Address& address() const { return address_; }
+  T& data() { return data_; }
 
-  static void resolve(uv_loop_t* loop, const std::string& host, int port,
-                      void* data, Callback cb, struct addrinfo* hints = NULL) {
-    Resolver* resolver = new Resolver(host, port, data, cb);
+  static void resolve(uv_loop_t* loop, const std::string& hostname, int port,
+                      const T& data, Callback cb, uint64_t timeout,
+                      struct addrinfo* hints = NULL) {
+    Resolver* resolver = new Resolver(hostname, port, data, cb);
 
     std::ostringstream ss;
     ss << port;
 
-    int rc = uv_getaddrinfo(loop, &resolver->req_, on_resolve, host.c_str(),
+    if (timeout > 0) {
+      resolver->timer_.start(loop, timeout, resolver, on_timeout);
+    }
+
+    int rc = uv_getaddrinfo(loop, &resolver->req_, on_resolve, hostname.c_str(),
                             ss.str().c_str(), hints);
 
     if (rc != 0) {
@@ -68,12 +79,16 @@ private:
                          struct addrinfo* res) {
     Resolver* resolver = static_cast<Resolver*>(req->data);
 
-    if (status != 0) {
-      resolver->status_ = FAILED_UNABLE_TO_RESOLVE;
-    } else if (!resolver->address_.init(res->ai_addr)) {
-      resolver->status_ = FAILED_UNSUPPORTED_ADDRESS_FAMILY;
-    } else {
-      resolver->status_ = SUCCESS;
+    if (resolver->status_ == RESOLVING) { // A timeout may have happened
+      resolver->timer_.stop();
+
+      if (status != 0) {
+        resolver->status_ = FAILED_UNABLE_TO_RESOLVE;
+      } else if (!resolver->address_.init(res->ai_addr)) {
+        resolver->status_ = FAILED_UNSUPPORTED_ADDRESS_FAMILY;
+      } else {
+        resolver->status_ = SUCCESS;
+      }
     }
 
     resolver->cb_(resolver);
@@ -82,9 +97,15 @@ private:
     uv_freeaddrinfo(res);
   }
 
+  static void on_timeout(Timer* timer) {
+    Resolver* resolver = static_cast<Resolver*>(timer->data());
+    resolver->status_ = FAILED_TIMED_OUT;
+    uv_cancel(copy_cast<uv_getaddrinfo_t*, uv_req_t*>(&resolver->req_));
+  }
+
 private:
-  Resolver(const std::string& host, int port, void* data, Callback cb)
-      : host_(host)
+  Resolver(const std::string& hostname, int port, const T& data, Callback cb)
+      : hostname_(hostname)
       , port_(port)
       , status_(RESOLVING)
       , data_(data)
@@ -95,12 +116,168 @@ private:
   ~Resolver() {}
 
   uv_getaddrinfo_t req_;
-  std::string host_;
+  Timer timer_;
+  std::string hostname_;
   int port_;
   Status status_;
   Address address_;
-  void* data_;
+  T data_;
   Callback cb_;
+};
+
+template <class T>
+class NameResolver {
+public:
+  typedef void (*Callback)(NameResolver*);
+
+  enum Status {
+    RESOLVING,
+    FAILED_BAD_PARAM,
+    FAILED_UNABLE_TO_RESOLVE,
+    FAILED_TIMED_OUT,
+    SUCCESS
+  };
+
+  bool is_success() { return status_ == SUCCESS; }
+  bool is_timed_out() { return status_ == FAILED_TIMED_OUT; }
+  Status status() { return status_; }
+  const Address& address() const { return address_; }
+  const std::string& hostname() const { return hostname_; }
+  const std::string& service() const { return service_; }
+  T& data() { return data_; }
+
+  static void resolve(uv_loop_t* loop, const Address& address,
+                      const T& data, Callback cb, uint64_t timeout, int flags = 0) {
+    NameResolver* resolver = new NameResolver(address, data, cb);
+
+    if (timeout > 0) {
+      resolver->timer_.start(loop, timeout, resolver, on_timeout);
+    }
+
+    int rc = uv_getnameinfo(loop, &resolver->req_, on_resolve, address.addr(), flags);
+
+    if (rc != 0) {
+      resolver->status_ = FAILED_BAD_PARAM;
+      resolver->cb_(resolver);
+      delete resolver;
+    }
+  }
+
+private:
+  static void on_resolve(uv_getnameinfo_t* req, int status,
+                         const char* hostname, const char* service) {
+    NameResolver* resolver = static_cast<NameResolver*>(req->data);
+
+    if (resolver->status_ == RESOLVING) { // A timeout may have happened
+      resolver->timer_.stop();
+
+      if (status != 0) {
+        resolver->status_ = FAILED_UNABLE_TO_RESOLVE;
+      } else {
+        if (hostname != NULL) {
+          resolver->hostname_ = hostname;
+        }
+        if (service != NULL) {
+          resolver->service_ = service;
+        }
+        resolver->status_ = SUCCESS;
+      }
+    }
+
+    resolver->cb_(resolver);
+
+    delete resolver;
+  }
+
+  static void on_timeout(Timer* timer) {
+    NameResolver* resolver = static_cast<NameResolver*>(timer->data());
+    resolver->status_ = FAILED_TIMED_OUT;
+    uv_cancel(copy_cast<uv_getnameinfo_t*, uv_req_t*>(&resolver->req_));
+  }
+
+private:
+  NameResolver(const Address& address, const T& data, Callback cb)
+      : address_(address)
+      , status_(RESOLVING)
+      , data_(data)
+      , cb_(cb) {
+    req_.data = this;
+  }
+
+  ~NameResolver() {}
+
+  uv_getnameinfo_t req_;
+  Timer timer_;
+  Address address_;
+  Status status_;
+  std::string hostname_;
+  std::string service_;
+  T data_;
+  Callback cb_;
+};
+
+template <class T>
+class MultiResolver : public RefCounted<MultiResolver<T> > {
+public:
+  typedef SharedRefPtr<MultiResolver<T> > Ptr;
+  typedef Resolver<MultiResolver<T>*> Resolver;
+  typedef NameResolver<MultiResolver<T>*> NameResolver;
+
+  typedef void (*ResolveCallback)(Resolver* resolver);
+  typedef void (*ResolveNameCallback)(NameResolver* resolver);
+  typedef void (*FinishedCallback)(MultiResolver<T>* resolver);
+
+  MultiResolver(const T& data,
+                ResolveCallback resolve_cb,
+                ResolveNameCallback resolve_name_cb,
+                FinishedCallback finished_cb)
+    : data_(data)
+    , resolve_cb_(resolve_cb)
+    , resolve_name_cb_(resolve_name_cb)
+    , finished_cb_(finished_cb) { }
+
+  ~MultiResolver() {
+    if (finished_cb_) finished_cb_(this);
+  }
+
+  T& data() { return data_; }
+
+  void resolve(uv_loop_t* loop,
+               const std::string& host, int port,
+               uint64_t timeout, struct addrinfo* hints = NULL) {
+    this->inc_ref();
+    cass::Resolver<MultiResolver<T>*>::resolve(loop, host, port, this,
+                                               on_resolve, timeout, hints);
+  }
+
+  void resolve_name(uv_loop_t* loop,
+                    const Address& address,
+                    uint64_t timeout, int flags = 0) {
+    this->inc_ref();
+    cass::NameResolver<MultiResolver<T>*>::resolve(loop, address, this,
+                                                   on_resolve_name, timeout, flags);
+  }
+
+private:
+  static void on_resolve(Resolver* resolver) {
+    MultiResolver<T>* multi_resolver = resolver->data();
+    if (multi_resolver->resolve_cb_) multi_resolver->resolve_cb_(resolver);
+    multi_resolver->dec_ref();
+  }
+
+  static void on_resolve_name(NameResolver* resolver) {
+    MultiResolver<T>* multi_resolver = resolver->data();
+    if (multi_resolver->resolve_name_cb_) multi_resolver->resolve_name_cb_(resolver);
+    multi_resolver->dec_ref();
+  }
+
+private:
+  T data_;
+  ResolveCallback resolve_cb_;
+  ResolveNameCallback resolve_name_cb_;
+  FinishedCallback finished_cb_;
+
+  DISALLOW_COPY_AND_ASSIGN(MultiResolver);
 };
 
 } // namespace cass

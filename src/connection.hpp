@@ -17,10 +17,10 @@
 #ifndef __CASS_CONNECTION_HPP_INCLUDED__
 #define __CASS_CONNECTION_HPP_INCLUDED__
 
-#include "address.hpp"
 #include "buffer.hpp"
 #include "cassandra.h"
 #include "handler.hpp"
+#include "host.hpp"
 #include "list.hpp"
 #include "macros.hpp"
 #include "metrics.hpp"
@@ -95,7 +95,7 @@ public:
   Connection(uv_loop_t* loop,
              const Config& config,
              Metrics* metrics,
-             const Address& address,
+             const Host::ConstPtr& host,
              const std::string& keyspace,
              int protocol_version,
              Listener* listener);
@@ -110,9 +110,9 @@ public:
 
   const Config& config() const { return config_; }
   Metrics* metrics() { return metrics_; }
-  const Address& address() { return address_; }
-  const std::string& address_string() { return addr_string_; }
-  const std::string& keyspace() { return keyspace_; }
+  const Address& address() const { return host_->address(); }
+  const std::string& address_string() const { return host_->address_string(); }
+  const std::string& keyspace() const { return keyspace_; }
 
   void close();
   void defunct();
@@ -313,8 +313,7 @@ private:
   uv_loop_t* loop_;
   const Config& config_;
   Metrics* metrics_;
-  Address address_;
-  std::string addr_string_;
+  Host::ConstPtr host_;
   std::string keyspace_;
   const int protocol_version_;
   Listener* listener_;

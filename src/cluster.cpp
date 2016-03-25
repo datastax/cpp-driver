@@ -201,6 +201,11 @@ void cass_cluster_set_request_timeout(CassCluster* cluster,
   cluster->config().set_request_timeout(timeout_ms);
 }
 
+void cass_cluster_set_resolve_timeout(CassCluster* cluster,
+                                      unsigned timeout_ms) {
+  cluster->config().set_resolve_timeout(timeout_ms);
+}
+
 void cass_cluster_set_credentials(CassCluster* cluster,
                                   const char* username,
                                   const char* password) {
@@ -405,6 +410,11 @@ void cass_cluster_set_use_schema(CassCluster* cluster,
   if (enabled == cass_false) {
     cluster->config().set_token_aware_routing(false);
   }
+}
+
+void cass_cluster_set_use_hostname_resolution(CassCluster* cluster,
+                                              cass_bool_t enabled) {
+  cluster->config().set_use_hostname_resolution(enabled == cass_true);
 }
 
 void cass_cluster_free(CassCluster* cluster) {

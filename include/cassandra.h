@@ -597,9 +597,10 @@ typedef enum CassLogLevel_ {
 } CassLogLevel;
 
 typedef enum CassSslVerifyFlags {
-  CASS_SSL_VERIFY_NONE,
-  CASS_SSL_VERIFY_PEER_CERT,
-  CASS_SSL_VERIFY_PEER_IDENTITY
+  CASS_SSL_VERIFY_NONE              = 0x00,
+  CASS_SSL_VERIFY_PEER_CERT         = 0x01,
+  CASS_SSL_VERIFY_PEER_IDENTITY     = 0x02,
+  CASS_SSL_VERIFY_PEER_IDENTITY_DNS = 0x04
 } CassSslVerifyFlags;
 
 typedef enum  CassErrorSource_ {
@@ -721,12 +722,24 @@ typedef void (*CassLogCallback)(const CassLogMessage* message,
 
 
 /**
+ * Maximum length of a hostname.
+ */
+#define CASS_HOSTNAME_LENGTH 256
+
+/**
+ * A value to return from an authentication callback when an error occurs.
+ */
+#define CASS_AUTH_ERROR ((size_t)-1)
+
+/**
  * An authentication exchange.
  */
 typedef struct CassAuth_ {
   CassInet host; /**< The IP address of the server */
+  char hostname[CASS_HOSTNAME_LENGTH]; /** The hostname of the server */
   void* exchange_data; /**< User data for resources acquired during an exchange */
 } CassAuth;
+
 
 /**
  * A callback used to initiate an authentication exchange.
@@ -739,8 +752,8 @@ typedef struct CassAuth_ {
  * @param[in] data
  * @param[out] response
  * @param[out] response_size
- * @return The number of bytes copied into response or the required size
- * of the response array
+ * @return The number of bytes copied into response or the required size of the
+ * response array. Otherwise, return CASS_AUTH_ERROR if an error occured.
  */
 typedef size_t (*CassAuthInitalCallback)(CassAuth* auth,
                                          void* data,
@@ -761,8 +774,8 @@ typedef size_t (*CassAuthInitalCallback)(CassAuth* auth,
  * @param[in] challenge_size
  * @param[out] response
  * @param[out] response_size
- * @return The number of bytes copied into response or the required size
- * of the response array
+ * @return The number of bytes copied into response or the required size of the
+ * response array. Otherwise, return CASS_AUTH_ERROR if an error occured.
  */
 typedef size_t (*CassAuthChallengeCallback)(CassAuth* auth,
                                             void* data,
@@ -1187,6 +1200,20 @@ cass_cluster_set_connect_timeout(CassCluster* cluster,
  */
 CASS_EXPORT void
 cass_cluster_set_request_timeout(CassCluster* cluster,
+                                 unsigned timeout_ms);
+
+/**
+ * Sets the timeout for waiting for DNS name resolution.
+ *
+ * <b>Default:</b> 2000 milliseconds
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] timeout_ms Request timeout in milliseconds
+ */
+CASS_EXPORT void
+cass_cluster_set_resolve_timeout(CassCluster* cluster,
                                  unsigned timeout_ms);
 
 /**
@@ -1638,11 +1665,30 @@ cass_cluster_set_retry_policy(CassCluster* cluster,
  * @param[in] enabled
  *
  * @see cass_session_get_schema_meta()
- * @see cass_cluster_set_token_aware_routing();
+ * @see cass_cluster_set_token_aware_routing()
  */
 CASS_EXPORT void
 cass_cluster_set_use_schema(CassCluster* cluster,
                             cass_bool_t enabled);
+
+/**
+ * Enable/Disable retrieving hostnames for IP addresses using reverse IP lookup.
+ *
+ * This is useful for authentication (Kerberos) or encryption (SSL) services
+ * that require a valid hostname for verification.
+ *
+ * <b>Default:</b> cass_false (disabled).
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] enabled
+ *
+ * @see cass_cluster_set_resolve_timeout()
+ */
+CASS_EXPORT void
+cass_cluster_set_use_hostname_resolution(CassCluster* cluster,
+                                         cass_bool_t enabled);
 
 /***********************************************************************************
  *
@@ -3108,6 +3154,9 @@ cass_ssl_add_trusted_cert_n(CassSsl* ssl,
  * CASS_SSL_VERIFY_PEER_IDENTITY - IP address matches the certificate's
  * common name or one of its subject alternative names. This implies the
  * certificate is also present.
+ * CASS_SSL_VERIFY_PEER_IDENTITY_DNS - Hostname matches the certificate's
+ * common name or one of its subject alternative names. This implies the
+ * certificate is also present. Hostname resolution must also be enabled.
  *
  * <b>Default:</b> CASS_SSL_VERIFY_PEER_CERT
  *
@@ -3116,6 +3165,8 @@ cass_ssl_add_trusted_cert_n(CassSsl* ssl,
  * @param[in] ssl
  * @param[in] flags
  * @return CASS_OK if successful, otherwise an error occurred
+ *
+ * @see cass_cluster_set_use_hostname_resolution()
  */
 CASS_EXPORT void
 cass_ssl_set_verify_flags(CassSsl* ssl,
