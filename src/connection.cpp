@@ -90,9 +90,12 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
       break;
     }
 
-    case CQL_OPCODE_AUTHENTICATE:
-      connection_->on_authenticate();
+    case CQL_OPCODE_AUTHENTICATE: {
+      AuthenticateResponse* auth
+          = static_cast<AuthenticateResponse*>(response->response_body().get());
+      connection_->on_authenticate(auth->class_name());
       break;
+    }
 
     case CQL_OPCODE_AUTH_CHALLENGE:
       connection_->on_auth_challenge(
@@ -714,11 +717,11 @@ void Connection::on_connected() {
   write(new StartupHandler(this, new OptionsRequest()));
 }
 
-void Connection::on_authenticate() {
+void Connection::on_authenticate(const std::string& class_name) {
   if (protocol_version_ == 1) {
-    send_credentials();
+    send_credentials(class_name);
   } else {
-    send_initial_auth_response();
+    send_initial_auth_response(class_name);
   }
 }
 
@@ -850,19 +853,19 @@ void Connection::ssl_handshake() {
   }
 }
 
-void Connection::send_credentials() {
-  ScopedPtr<V1Authenticator> v1_auth(config_.auth_provider()->new_authenticator_v1(host_));
+void Connection::send_credentials(const std::string& class_name) {
+  ScopedPtr<V1Authenticator> v1_auth(config_.auth_provider()->new_authenticator_v1(host_, class_name));
   if (v1_auth) {
     V1Authenticator::Credentials credentials;
     v1_auth->get_credentials(&credentials);
     write(new StartupHandler(this, new CredentialsRequest(credentials)));
   } else {
-    send_initial_auth_response();
+    send_initial_auth_response(class_name);
   }
 }
 
-void Connection::send_initial_auth_response() {
-  SharedRefPtr<Authenticator> auth(config_.auth_provider()->new_authenticator(host_));
+void Connection::send_initial_auth_response(const std::string& class_name) {
+  SharedRefPtr<Authenticator> auth(config_.auth_provider()->new_authenticator(host_, class_name));
   if (!auth) {
     notify_error("Authentication required but no auth provider set", CONNECTION_ERROR_AUTH);
   } else {

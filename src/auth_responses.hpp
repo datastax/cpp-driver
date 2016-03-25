@@ -19,6 +19,7 @@
 
 #include "constants.hpp"
 #include "response.hpp"
+#include "string_ref.hpp"
 
 #include <string>
 
@@ -27,51 +28,40 @@ namespace cass {
 class AuthenticateResponse : public Response {
 public:
   AuthenticateResponse()
-    : Response(CQL_OPCODE_AUTHENTICATE)
-    , authenticator_(NULL)
-    , authenticator_size_(0) {}
+    : Response(CQL_OPCODE_AUTHENTICATE) { }
+
+  const std::string& class_name() const { return class_name_; }
 
   bool decode(int version, char* buffer, size_t size);
 
-  std::string authenticator() const {
-    return std::string(authenticator_, authenticator_size_);
-  }
-
 private:
-  char* authenticator_;
-  size_t authenticator_size_;
+  std::string class_name_;
 };
 
 class AuthChallengeResponse : public Response {
 public:
   AuthChallengeResponse()
-    : Response(CQL_OPCODE_AUTH_CHALLENGE)
-    , token_(NULL)
-    , token_size_(0) {}
+    : Response(CQL_OPCODE_AUTH_CHALLENGE) { }
 
-  std::string token() const { return std::string(token_, token_size_); }
+  const std::string& token() const { return token_; }
 
   bool decode(int version, char* buffer, size_t size);
 
 private:
-  char* token_;
-  size_t token_size_;
+  std::string token_;
 };
 
 class AuthSuccessResponse : public Response {
 public:
   AuthSuccessResponse()
-    : Response(CQL_OPCODE_AUTH_SUCCESS)
-    , token_(NULL)
-    , token_size_(0) {}
+    : Response(CQL_OPCODE_AUTH_SUCCESS) { }
 
-  std::string token() const { return std::string(token_, token_size_); }
+  const std::string& token() const { return token_; }
 
   bool decode(int version, char* buffer, size_t size);
 
 private:
-  char* token_;
-  size_t token_size_;
+  std::string token_;
 };
 
 } // namespace cass

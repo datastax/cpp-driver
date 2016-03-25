@@ -279,7 +279,7 @@ private:
 #endif
 
   void on_connected();
-  void on_authenticate();
+  void on_authenticate(const std::string& class_name);
   void on_auth_challenge(const AuthResponseRequest* auth_response, const std::string& token);
   void on_auth_success(const AuthResponseRequest* auth_response, const std::string& token);
   void on_ready();
@@ -293,8 +293,8 @@ private:
 
   void ssl_handshake();
 
-  void send_credentials();
-  void send_initial_auth_response();
+  void send_credentials(const std::string& class_name);
+  void send_initial_auth_response(const std::string& class_name);
 
   void restart_heartbeat_timer();
   static void on_heartbeat(Timer* timer);

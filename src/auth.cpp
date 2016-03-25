@@ -48,17 +48,17 @@ void PlainTextAuthenticator::on_authenticate_success(const std::string& token) {
 }
 
 SaslAuthenticator::SaslAuthenticator(const Host::ConstPtr& host,
+                                     const std::string& class_name,
                                      const CassAuthCallbacks* callbacks,
                                      void* data)
-  : callbacks_(callbacks)
+  : hostname_(host->hostname())
+  , class_name_(class_name)
+  , callbacks_(callbacks)
   , data_(data) {
-  auth_.exchange_data = NULL;
   auth_.host.address_length = host->address().to_inet(auth_.host.address);
-
-  size_t length = std::min(static_cast<size_t>(CASS_HOSTNAME_LENGTH - 1),
-                           host->hostname().size());
-  memcpy(auth_.hostname, host->hostname().c_str(), length);
-  auth_.hostname[length] = '\0';
+  auth_.hostname = hostname_.c_str();
+  auth_.class_name = class_name_.c_str();
+  auth_.exchange_data = NULL;
 }
 
 SaslAuthenticator::~SaslAuthenticator() {

@@ -720,12 +720,6 @@ typedef struct CassLogMessage_ {
 typedef void (*CassLogCallback)(const CassLogMessage* message,
                                 void* data);
 
-
-/**
- * Maximum length of a hostname.
- */
-#define CASS_HOSTNAME_LENGTH 256
-
 /**
  * A value to return from an authentication callback when an error occurs.
  */
@@ -736,7 +730,8 @@ typedef void (*CassLogCallback)(const CassLogMessage* message,
  */
 typedef struct CassAuth_ {
   CassInet host; /**< The IP address of the server */
-  char hostname[CASS_HOSTNAME_LENGTH]; /** The hostname of the server */
+  const char* hostname; /** The hostname of the server */
+  const char* class_name; /** The class name of the server's IAuthenticator */
   void* exchange_data; /**< User data for resources acquired during an exchange */
 } CassAuth;
 

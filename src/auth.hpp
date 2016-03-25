@@ -77,8 +77,8 @@ public:
 
   virtual ~AuthProvider() {}
 
-  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host) const { return NULL; }
-  virtual Authenticator* new_authenticator(const Host::ConstPtr& host) const { return NULL; }
+  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host, const std::string& class_name) const { return NULL; }
+  virtual Authenticator* new_authenticator(const Host::ConstPtr& host, const std::string& class_name) const { return NULL; }
 
 private:
   DISALLOW_COPY_AND_ASSIGN(AuthProvider);
@@ -86,7 +86,8 @@ private:
 
 class SaslAuthenticator : public Authenticator {
 public:
-  SaslAuthenticator(const Host::ConstPtr& host, const CassAuthCallbacks* callbacks, void* data);
+  SaslAuthenticator(const Host::ConstPtr& host, const std::string& class_name,
+                    const CassAuthCallbacks* callbacks, void* data);
 
   ~SaslAuthenticator();
 
@@ -95,6 +96,8 @@ public:
   virtual void on_authenticate_success(const std::string& token);
 
 private:
+  const std::string hostname_;
+  const std::string class_name_;
   CassAuth auth_;
   const CassAuthCallbacks* callbacks_;
   void* data_;
@@ -106,9 +109,9 @@ public:
     : callbacks_(*callbacks)
     , data_(data) {}
 
-  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host) const { return NULL; }
-  virtual Authenticator* new_authenticator(const Host::ConstPtr& host) const {
-    return new SaslAuthenticator(host, &callbacks_, data_);
+  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host, const std::string& class_name) const { return NULL; }
+  virtual Authenticator* new_authenticator(const Host::ConstPtr& host, const std::string& class_name) const {
+    return new SaslAuthenticator(host, class_name, &callbacks_, data_);
   }
 
 private:
@@ -123,11 +126,11 @@ public:
       : username_(username)
       , password_(password) {}
 
-  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host) const {
+  virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host, const std::string& class_name) const {
     return new PlainTextAuthenticator(username_, password_);
   }
 
-  virtual Authenticator* new_authenticator(const Host::ConstPtr& host) const {
+  virtual Authenticator* new_authenticator(const Host::ConstPtr& host, const std::string& class_name) const {
     return new PlainTextAuthenticator(username_, password_);
   }
 
