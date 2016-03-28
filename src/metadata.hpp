@@ -49,7 +49,7 @@ public:
 
   MapIteratorImpl(const Collection& map)
     : next_(map.begin())
-    , end_(map.end()) {}
+    , end_(map.end()) { }
 
   bool next() {
     if (next_ == end_) {
@@ -77,7 +77,7 @@ public:
 
   VecIteratorImpl(const Collection& vec)
     : next_(vec.begin())
-    , end_(vec.end()) {}
+    , end_(vec.end()) { }
 
   bool next() {
     if (next_ == end_) {
@@ -109,17 +109,17 @@ class MetadataField {
 public:
   typedef std::map<std::string, MetadataField> Map;
 
-  MetadataField() {}
+  MetadataField() { }
 
   MetadataField(const std::string& name)
-    : name_(name) {}
+    : name_(name) { }
 
   MetadataField(const std::string& name,
                 const Value& value,
                 const SharedRefPtr<RefBuffer>& buffer)
     : name_(name)
     , value_(value)
-    , buffer_(buffer) {}
+    , buffer_(buffer) { }
 
   const std::string& name() const {
     return name_;
@@ -141,7 +141,7 @@ public:
 
   MetadataFieldIterator(const Map& map)
     : Iterator(CASS_ITERATOR_TYPE_META_FIELD)
-    , impl_(map) {}
+    , impl_(map) { }
 
   virtual bool next() { return impl_.next(); }
   const MetadataField* field() const { return &impl_.item(); }
@@ -184,7 +184,7 @@ public:
 
   MetadataIteratorImpl(CassIteratorType type, const Collection& colleciton)
     : Iterator(type)
-    , impl_(colleciton) {}
+    , impl_(colleciton) { }
 
   virtual bool next() { return impl_.next(); }
 
@@ -275,7 +275,9 @@ public:
   const Value* options() const { return options_; }
 
   IndexMetadata(const std::string& index_name)
-    : MetadataBase(index_name) { }
+    : MetadataBase(index_name)
+    , type_(CASS_INDEX_TYPE_UNKNOWN)
+    , options_(NULL) { }
 
   static IndexMetadata::Ptr from_row(const std::string& index_name,
                                      const SharedRefPtr<RefBuffer>& buffer, const Row* row);
