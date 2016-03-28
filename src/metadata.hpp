@@ -272,12 +272,11 @@ public:
 
   CassIndexType type() const { return type_; }
   const std::string& target() const { return target_; }
-  const Value* options() const { return options_; }
+  const Value* options() const { return &options_; }
 
   IndexMetadata(const std::string& index_name)
     : MetadataBase(index_name)
-    , type_(CASS_INDEX_TYPE_UNKNOWN)
-    , options_(NULL) { }
+    , type_(CASS_INDEX_TYPE_UNKNOWN) { }
 
   static IndexMetadata::Ptr from_row(const std::string& index_name,
                                      const SharedRefPtr<RefBuffer>& buffer, const Row* row);
@@ -297,7 +296,7 @@ private:
 private:
   CassIndexType type_;
   std::string target_;
-  const Value* options_;
+  Value options_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(IndexMetadata);
@@ -503,7 +502,6 @@ class KeyspaceMetadata : public MetadataBase {
 public:
   typedef std::map<std::string, KeyspaceMetadata> Map;
   typedef CopyOnWritePtr<KeyspaceMetadata::Map> MapPtr;
-  typedef std::map<StringRef, StringRef> OptionsMap;
 
   class TableIterator : public MetadataIteratorImpl<MapIteratorImpl<TableMetadata::Ptr> > {
   public:
@@ -575,11 +573,11 @@ public:
   void drop_aggregate(const std::string& full_aggregate_name);
 
   StringRef strategy_class() const { return strategy_class_; }
-  const OptionsMap& strategy_options() const { return strategy_options_; }
+  const Value* strategy_options() const { return &strategy_options_; }
 
 private:
   StringRef strategy_class_;
-  OptionsMap strategy_options_;
+  Value strategy_options_;
 
   CopyOnWritePtr<TableMetadata::Map> tables_;
   CopyOnWritePtr<ViewMetadata::Map> views_;

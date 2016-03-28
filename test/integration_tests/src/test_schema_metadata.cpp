@@ -1747,6 +1747,7 @@ BOOST_AUTO_TEST_CASE(duplicate_table_name) {
 
   test_utils::execute_query(session, "CREATE INDEX index1 ON test15.table1 (value1)");
 
+  close_session();
   create_session();
 
   refresh_schema_meta();

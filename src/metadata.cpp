@@ -1189,8 +1189,8 @@ void KeyspaceMetadata::update(const MetadataConfig& config, const SharedRefPtr<R
         if (key->to_string_ref() == "class") {
           strategy_class_ = value->to_string_ref();
         }
-        strategy_options_[key->to_string_ref()] = value->to_string_ref();
       }
+      strategy_options_ = *map;
     }
   } else {
     const Value* value = add_field(buffer, row, "strategy_class");
@@ -1198,18 +1198,9 @@ void KeyspaceMetadata::update(const MetadataConfig& config, const SharedRefPtr<R
         is_string_type(value->value_type())) {
       strategy_class_ = value->to_string_ref();
     }
-
     const Value* map = add_json_map_field(config.protocol_version, row, "strategy_options");
-    if (map != NULL &&
-        map->value_type() == CASS_VALUE_TYPE_MAP &&
-        is_string_type(map->primary_value_type()) &&
-        is_string_type(map->secondary_value_type())) {
-      MapIterator iterator(map);
-      while (iterator.next()) {
-        const Value* key = iterator.key();
-        const Value* value  = iterator.value();
-        strategy_options_[key->to_string_ref()] = value->to_string_ref();
-      }
+    if (map != NULL) {
+      strategy_options_ = *map;
     }
   }
 }
@@ -1720,7 +1711,7 @@ void IndexMetadata::update(StringRef kind, const Value* options) {
     }
   }
 
-  options_ = options;
+  options_ = *options;
 }
 
 IndexMetadata::Ptr IndexMetadata::from_legacy(const MetadataConfig& config,
@@ -1746,7 +1737,7 @@ IndexMetadata::Ptr IndexMetadata::from_legacy(const MetadataConfig& config,
 void IndexMetadata::update_legacy(StringRef index_type, const ColumnMetadata* column, const Value* options) {
   type_ = index_type_from_string(index_type);
   target_ = target_from_legacy(column, options);
-  options_ = options;
+  options_ = *options;
 }
 
 std::string IndexMetadata::target_from_legacy(const ColumnMetadata* column,

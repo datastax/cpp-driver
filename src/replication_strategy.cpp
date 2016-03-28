@@ -27,25 +27,32 @@
 
 namespace cass {
 
-static void build_dc_replicas(const KeyspaceMetadata::OptionsMap& strategy_options,
+static void build_dc_replicas(const KeyspaceMetadata& ks_meta,
                               NetworkTopologyStrategy::DCReplicaCountMap* output) {
-  for (KeyspaceMetadata::OptionsMap::const_iterator i = strategy_options.begin(),
-       end = strategy_options.end();
-       i != end; ++i) {
-    if (i->first != "class") {
-      size_t replication_factor = strtoul(i->second.to_string().c_str(), NULL, 10);
-      if (replication_factor > 0) {
-        (*output)[i->first.to_string()] = replication_factor;
+  const Value* strategy_options = ks_meta.strategy_options();
+  if (strategy_options->is_map()) {
+    MapIterator iterator(strategy_options);
+    while (iterator.next()) {
+      if (iterator.key()->to_string_ref() != "class") {
+        size_t replication_factor = strtoul(iterator.value()->to_string().c_str(), NULL, 10);
+        if (replication_factor > 0) {
+          (*output)[iterator.key()->to_string()] = replication_factor;
+        }
       }
     }
   }
 }
 
-static size_t get_replication_factor(const KeyspaceMetadata::OptionsMap& strategy_options) {
+static size_t get_replication_factor(const KeyspaceMetadata& ks_meta) {
   size_t replication_factor = 0;
-  KeyspaceMetadata::OptionsMap::const_iterator i = strategy_options.find("replication_factor");
-  if (i != strategy_options.end()) {
-    replication_factor = strtoul(i->second.to_string().c_str(), NULL, 10);
+  const Value* strategy_options = ks_meta.strategy_options();
+  if (strategy_options->is_map()) {
+    MapIterator iterator(strategy_options);
+    while (iterator.next()) {
+      if (iterator.key()->to_string_ref() == "replication_factor") {
+        replication_factor = strtoul(iterator.value()->to_string().c_str(), NULL, 10);
+      }
+    }
   }
   if (replication_factor == 0) {
     LOG_WARN("Replication factor of 0");
@@ -60,11 +67,11 @@ SharedRefPtr<ReplicationStrategy> ReplicationStrategy::from_keyspace_meta(const 
   SharedRefPtr<ReplicationStrategy> strategy;
   if (ends_with(strategy_class, NetworkTopologyStrategy::STRATEGY_CLASS)) {
     NetworkTopologyStrategy::DCReplicaCountMap replication_factors;
-    build_dc_replicas(ks_meta.strategy_options(), &replication_factors);
+    build_dc_replicas(ks_meta, &replication_factors);
     return SharedRefPtr<ReplicationStrategy>(new NetworkTopologyStrategy(strategy_class.to_string(),
                                                                          replication_factors));
   } else if (ends_with(strategy_class, SimpleStrategy::STRATEGY_CLASS)) {
-    size_t replication_factor = get_replication_factor(ks_meta.strategy_options());
+    size_t replication_factor = get_replication_factor(ks_meta);
     return SharedRefPtr<ReplicationStrategy>(new SimpleStrategy(strategy_class.to_string(), replication_factor));
   } else {
     return SharedRefPtr<ReplicationStrategy>(new NonReplicatedStrategy(strategy_class.to_string()));
@@ -76,7 +83,7 @@ const std::string NetworkTopologyStrategy::STRATEGY_CLASS("NetworkTopologyStrate
 bool NetworkTopologyStrategy::equal(const KeyspaceMetadata& ks_meta) {
   if (ks_meta.strategy_class() != strategy_class_) return false;
   DCReplicaCountMap temp_rfs;
-  build_dc_replicas(ks_meta.strategy_options(), &temp_rfs);
+  build_dc_replicas(ks_meta, &temp_rfs);
   return replication_factors_ == temp_rfs;
 }
 
@@ -161,7 +168,7 @@ const std::string SimpleStrategy::STRATEGY_CLASS("SimpleStrategy");
 
 bool SimpleStrategy::equal(const KeyspaceMetadata& ks_meta) {
   if (ks_meta.strategy_class() != strategy_class_) return false;
-  return replication_factor_ == get_replication_factor(ks_meta.strategy_options());
+  return replication_factor_ == get_replication_factor(ks_meta);
 }
 
 void SimpleStrategy::tokens_to_replicas(const TokenHostMap& primary, TokenReplicaMap* output) const {
