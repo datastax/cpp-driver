@@ -17,12 +17,8 @@
 #ifndef __CASS_LOGGER_HPP_INCLUDED__
 #define __CASS_LOGGER_HPP_INCLUDED__
 
-#include "async_queue.hpp"
 #include "cassandra.h"
 #include "get_time.hpp"
-#include "loop_thread.hpp"
-#include "mpmc_queue.hpp"
-#include "scoped_ptr.hpp"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -43,7 +39,7 @@ public:
 
   static CassLogLevel log_level() { return log_level_; }
 
-  ATTR_FORMAT(5, 6)                                                  \
+  ATTR_FORMAT(5, 6)
   static void log(CassLogLevel severity,
                    const char* file, int line, const char* function,
                    const char* format, ...) {

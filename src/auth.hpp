@@ -29,8 +29,8 @@ namespace cass {
 
 class V1Authenticator {
 public:
-  V1Authenticator() {}
-  virtual ~V1Authenticator() {}
+  V1Authenticator() { }
+  virtual ~V1Authenticator() { }
 
   typedef std::map<std::string, std::string> Credentials;
   virtual void get_credentials(Credentials* credentials) = 0;
@@ -41,8 +41,8 @@ private:
 
 class Authenticator : public RefCounted<Authenticator> {
 public:
-  Authenticator() {}
-  virtual ~Authenticator() {}
+  Authenticator() { }
+  virtual ~Authenticator() { }
 
   virtual bool initial_response(std::string* response) = 0;
   virtual bool evaluate_challenge(const std::string& challenge, std::string* response) = 0;
@@ -57,7 +57,7 @@ public:
   PlainTextAuthenticator(const std::string& username,
                          const std::string& password)
       : username_(username)
-      , password_(password) {}
+      , password_(password) { }
 
   virtual void get_credentials(Credentials* credentials);
 
@@ -73,9 +73,9 @@ private:
 class AuthProvider : public RefCounted<AuthProvider> {
 public:
   AuthProvider()
-    : RefCounted<AuthProvider>() {}
+    : RefCounted<AuthProvider>() { }
 
-  virtual ~AuthProvider() {}
+  virtual ~AuthProvider() { }
 
   virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host, const std::string& class_name) const { return NULL; }
   virtual Authenticator* new_authenticator(const Host::ConstPtr& host, const std::string& class_name) const { return NULL; }
@@ -87,7 +87,7 @@ private:
 class SaslAuthenticator : public Authenticator {
 public:
   SaslAuthenticator(const Host::ConstPtr& host, const std::string& class_name,
-                    const CassAuthCallbacks* callbacks, void* data);
+                    const CassAuthExchangeCallbacks* callbacks, void* data);
 
   ~SaslAuthenticator();
 
@@ -98,24 +98,34 @@ public:
 private:
   const std::string hostname_;
   const std::string class_name_;
-  CassAuth auth_;
-  const CassAuthCallbacks* callbacks_;
+  CassAuthExchange auth_;
+  const CassAuthExchangeCallbacks* callbacks_;
   void* data_;
 };
 
 class SaslAuthProvider : public AuthProvider {
 public:
-  SaslAuthProvider(const CassAuthCallbacks* callbacks, void* data)
-    : callbacks_(*callbacks)
-    , data_(data) {}
+  SaslAuthProvider(const CassAuthExchangeCallbacks* exchange_callbacks,
+                   CassAuthCleanupCallback cleanup_callback,
+                   void* data)
+    : exchange_callbacks_(*exchange_callbacks)
+    , cleanup_callback_(cleanup_callback)
+    , data_(data) { }
+
+  ~SaslAuthProvider() {
+    if (cleanup_callback_ != NULL) {
+      cleanup_callback_(data_);
+    }
+  }
 
   virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host, const std::string& class_name) const { return NULL; }
   virtual Authenticator* new_authenticator(const Host::ConstPtr& host, const std::string& class_name) const {
-    return new SaslAuthenticator(host, class_name, &callbacks_, data_);
+    return new SaslAuthenticator(host, class_name, &exchange_callbacks_, data_);
   }
 
 private:
-  const CassAuthCallbacks callbacks_;
+  const CassAuthExchangeCallbacks exchange_callbacks_;
+  CassAuthCleanupCallback cleanup_callback_;
   void* data_;
 };
 
@@ -124,7 +134,7 @@ public:
   PlainTextAuthProvider(const std::string& username,
                          const std::string& password)
       : username_(username)
-      , password_(password) {}
+      , password_(password) { }
 
   virtual V1Authenticator* new_authenticator_v1(const Host::ConstPtr& host, const std::string& class_name) const {
     return new PlainTextAuthenticator(username_, password_);

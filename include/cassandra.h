@@ -733,7 +733,7 @@ typedef struct CassAuth_ {
   const char* hostname; /** The hostname of the server */
   const char* class_name; /** The class name of the server's IAuthenticator */
   void* exchange_data; /**< User data for resources acquired during an exchange */
-} CassAuth;
+} CassAuthExchange;
 
 
 /**
@@ -750,10 +750,10 @@ typedef struct CassAuth_ {
  * @return The number of bytes copied into response or the required size of the
  * response array. Otherwise, return CASS_AUTH_ERROR if an error occured.
  */
-typedef size_t (*CassAuthInitalCallback)(CassAuth* auth,
-                                         void* data,
-                                         char* response,
-                                         size_t response_size);
+typedef size_t (*CassAuthExchangeInitalCallback)(CassAuthExchange* auth,
+                                                 void* data,
+                                                 char* response,
+                                                 size_t response_size);
 
 /**
  * A callback used when an authentication challenge initiated
@@ -772,12 +772,12 @@ typedef size_t (*CassAuthInitalCallback)(CassAuth* auth,
  * @return The number of bytes copied into response or the required size of the
  * response array. Otherwise, return CASS_AUTH_ERROR if an error occured.
  */
-typedef size_t (*CassAuthChallengeCallback)(CassAuth* auth,
-                                            void* data,
-                                            const char* challenge,
-                                            size_t challenge_size,
-                                            char* response,
-                                            size_t response_size);
+typedef size_t (*CassAuthExchangeChallengeCallback)(CassAuthExchange* auth,
+                                                    void* data,
+                                                    const char* challenge,
+                                                    size_t challenge_size,
+                                                    char* response,
+                                                    size_t response_size);
 /**
  * A callback used to indicate the success of the authentication
  * exchange.
@@ -787,10 +787,10 @@ typedef size_t (*CassAuthChallengeCallback)(CassAuth* auth,
  * @param[in] token
  * @param[in] token_size
  */
-typedef void (*CassAuthSuccessCallback)(CassAuth* auth,
-                                        void* data,
-                                        const char* token,
-                                        size_t token_size);
+typedef void (*CassAuthExchangeSuccessCallback)(CassAuthExchange* auth,
+                                                void* data,
+                                                const char* token,
+                                                size_t token_size);
 /**
  * A callback used to cleanup resources that were acquired during
  * the process of the authentication exchange. This is called after
@@ -799,18 +799,26 @@ typedef void (*CassAuthSuccessCallback)(CassAuth* auth,
  * @param[in] auth
  * @param[in] data
  */
-typedef void (*CassAuthCleanupCallback)(CassAuth* auth,
-                                        void* data);
+typedef void (*CassAuthExchangeCleanupCallback)(CassAuthExchange* auth,
+                                                void* data);
+
+
+/**
+ * A callback used to cleanup resources.
+ *
+ * @param[in] data
+ */
+typedef void (*CassAuthCleanupCallback)(void* data);
 
 /**
  * Authentication callbacks
  */
-typedef struct CassAuthCallbacks_ {
-  CassAuthInitalCallback initial_callback;
-  CassAuthChallengeCallback challenge_callback;
-  CassAuthSuccessCallback success_callback;
-  CassAuthCleanupCallback cleanup_callback;
-} CassAuthCallbacks;
+typedef struct CassAuthExchangeCallbacks_ {
+  CassAuthExchangeInitalCallback initial_callback;
+  CassAuthExchangeChallengeCallback challenge_callback;
+  CassAuthExchangeSuccessCallback success_callback;
+  CassAuthExchangeCleanupCallback cleanup_callback;
+} CassAuthExchangeCallbacks;
 
 /***********************************************************************************
  *
@@ -919,9 +927,10 @@ cass_cluster_set_ssl(CassCluster* cluster,
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_auth_callbacks(CassCluster* cluster,
-                                const CassAuthCallbacks* callbacks,
-                                void* data);
+cass_cluster_set_authentication_callbacks(CassCluster* cluster,
+                                          const CassAuthExchangeCallbacks* exchange_callbacks,
+                                          CassAuthCleanupCallback cleanup_callback,
+                                          void* data);
 
 /**
  * Sets the protocol version. This will automatically downgrade to the lowest

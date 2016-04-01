@@ -49,7 +49,7 @@ void PlainTextAuthenticator::on_authenticate_success(const std::string& token) {
 
 SaslAuthenticator::SaslAuthenticator(const Host::ConstPtr& host,
                                      const std::string& class_name,
-                                     const CassAuthCallbacks* callbacks,
+                                     const CassAuthExchangeCallbacks* callbacks,
                                      void* data)
   : hostname_(host->hostname())
   , class_name_(class_name)

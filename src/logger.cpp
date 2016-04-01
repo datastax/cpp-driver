@@ -16,8 +16,6 @@
 
 #include "logger.hpp"
 
-#include <uv.h>
-
 extern "C" {
 
 void cass_log_cleanup() {

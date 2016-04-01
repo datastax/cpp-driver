@@ -35,7 +35,7 @@ typedef struct Credentials_ {
   const char* username;
 } Credentials;
 
-size_t on_auth_initial(CassAuth* auth,
+size_t on_auth_initial(CassAuthExchange* auth,
                        void* data,
                        char* response,
                        size_t response_size) {
@@ -74,7 +74,7 @@ size_t on_auth_initial(CassAuth* auth,
   return size;
 }
 
-size_t on_auth_challenge(CassAuth* auth,
+size_t on_auth_challenge(CassAuthExchange* auth,
                          void* data,
                          const char* challenge,
                          size_t challenge_size,
@@ -87,7 +87,7 @@ size_t on_auth_challenge(CassAuth* auth,
   return 0;
 }
 
-void on_auth_success(CassAuth* auth,
+void on_auth_success(CassAuthExchange* auth,
                      void* data,
                      const char* token,
                      size_t token_size ) {
@@ -97,7 +97,7 @@ void on_auth_success(CassAuth* auth,
    */
 }
 
-void on_auth_cleanup(CassAuth* auth, void* data) {
+void on_auth_cleanup(CassAuthExchange* auth, void* data) {
   /*
    * No resources cleanup is necessary for plain text authentication, but
    * this is used to cleanup resources acquired during the authentication
@@ -112,7 +112,7 @@ int main() {
   CassSession* session = cass_session_new();
 
   /* Setup authentication callbacks and credentials */
-  CassAuthCallbacks auth_callbacks = {
+  CassAuthExchangeCallbacks auth_callbacks = {
     on_auth_initial,
     on_auth_challenge,
     on_auth_success,
@@ -128,7 +128,7 @@ int main() {
   cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
 
   /* Set custom authentication callbacks and credentials */
-  cass_cluster_set_auth_callbacks(cluster, &auth_callbacks, &credentials);
+  cass_cluster_set_authentication_callbacks(cluster, &auth_callbacks, &credentials);
 
   /* Provide the cluster object as configuration to connect the session */
   connect_future = cass_session_connect(session, cluster);

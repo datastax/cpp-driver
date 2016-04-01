@@ -376,10 +376,11 @@ void cass_cluster_set_tcp_keepalive(CassCluster* cluster,
   cluster->config().set_tcp_keepalive(enabled == cass_true, delay_secs);
 }
 
-CassError cass_cluster_set_auth_callbacks(CassCluster* cluster,
-                                          const CassAuthCallbacks* callbacks,
+CassError cass_cluster_set_authentication_callbacks(CassCluster* cluster,
+                                          const CassAuthExchangeCallbacks* exchange_callbacks,
+                                          CassAuthCleanupCallback cleanup_callback,
                                           void* data) {
-  cluster->config().set_auth_provider(new cass::SaslAuthProvider(callbacks, data));
+  cluster->config().set_auth_provider(new cass::SaslAuthProvider(exchange_callbacks, cleanup_callback, data));
   return CASS_OK;
 }
 
