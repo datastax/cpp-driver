@@ -36,9 +36,7 @@ typedef struct Credentials_ {
 } Credentials;
 
 size_t on_auth_initial(CassAuthExchange* auth,
-                       void* data,
-                       char* response,
-                       size_t response_size) {
+                       void* data) {
   /*
    * This callback is used to initiate a request to begin an authentication
    * exchange. Required resources can be acquired and initialized here.
@@ -60,9 +58,7 @@ size_t on_auth_initial(CassAuthExchange* auth,
   size_t password_size = strlen(credentials->password);
   size_t size = username_size + password_size + 2;
 
-  if (response_size < size) {
-    return size;
-  }
+  char* response = cass_authenticator_response(auth, size);
 
   /* Credentials are prefixed with '\0' */
   response[0] = '\0';
@@ -76,10 +72,8 @@ size_t on_auth_initial(CassAuthExchange* auth,
 
 size_t on_auth_challenge(CassAuthExchange* auth,
                          void* data,
-                         const char* challenge,
-                         size_t challenge_size,
-                         char* response,
-                         size_t response_size) {
+                         const char* token,
+                         size_t token_size) {
   /*
    * Not used for plain text authentication, but this is to be used
    * for handling an authentication challenge initiated by the server.
@@ -128,7 +122,7 @@ int main() {
   cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
 
   /* Set custom authentication callbacks and credentials */
-  cass_cluster_set_authentication_callbacks(cluster, &auth_callbacks, &credentials);
+  cass_cluster_set_authenticator_callbacks(cluster, &auth_callbacks, &credentials);
 
   /* Provide the cluster object as configuration to connect the session */
   connect_future = cass_session_connect(session, cluster);

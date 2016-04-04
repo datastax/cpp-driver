@@ -15,12 +15,68 @@
 */
 
 #include "auth.hpp"
+#include "external_types.hpp"
 
 #include "cassandra.h"
 
 #include <algorithm>
 
-#define SASL_AUTH_INIT_RESPONSE_SIZE 128
+extern "C" {
+
+void cass_authenticator_address(const CassAuthenticator* auth,
+                                CassInet* address) {
+  address->address_length = auth->address().to_inet(address->address);
+}
+
+const char* cass_authenticator_hostname(const CassAuthenticator* auth,
+                                        size_t* length) {
+  if (length != NULL) *length = auth->hostname().length();
+  return auth->hostname().c_str();
+}
+
+const char* cass_authenticator_class_name(const CassAuthenticator* auth,
+                                          size_t* length) {
+  if (length != NULL) *length = auth->class_name().length();
+  return auth->class_name().c_str();
+}
+
+void* cass_authenticator_exchange_data(CassAuthenticator* auth) {
+  return auth->exchange_data();
+}
+
+void cass_authenticator_set_exchange_data(CassAuthenticator* auth, void* exchange_data) {
+  auth->set_exchange_data(exchange_data);
+}
+
+char* cass_authenticator_response(CassAuthenticator* auth, size_t size) {
+  std::string* response = auth->response();
+
+  if (response != NULL) {
+    response->resize(size, 0);
+    return &(*response)[0];
+  }
+
+  return NULL;
+}
+
+void cass_authenticator_set_response(CassAuthenticator* auth,
+                                     const char* response, size_t response_size) {
+  if (auth->response() != NULL) {
+    auth->response()->assign(response, response_size);
+  }
+}
+
+void cass_authenticator_set_error(CassAuthenticator* auth,
+                                  const char* message) {
+  cass_authenticator_set_error_n(auth, message, strlen(message));
+}
+
+void cass_authenticator_set_error_n(CassAuthenticator* auth,
+                                    const char* message, size_t message_length) {
+  auth->set_error(std::string(message, message_length));
+}
+
+} // extern "C"
 
 namespace cass {
 
@@ -39,84 +95,65 @@ bool PlainTextAuthenticator::initial_response(std::string* response) {
   return true;
 }
 
-bool PlainTextAuthenticator::evaluate_challenge(const std::string& challenge, std::string* response) {
+bool PlainTextAuthenticator::evaluate_challenge(const std::string& token, std::string* response) {
+  // no-op
   return true;
 }
 
-void PlainTextAuthenticator::on_authenticate_success(const std::string& token) {
+bool PlainTextAuthenticator::success(const std::string& token) {
   // no-op
+  return true;
 }
 
-SaslAuthenticator::SaslAuthenticator(const Host::ConstPtr& host,
-                                     const std::string& class_name,
-                                     const CassAuthExchangeCallbacks* callbacks,
-                                     void* data)
-  : hostname_(host->hostname())
+ExternalAuthenticator::ExternalAuthenticator(const Host::ConstPtr& host,
+                                             const std::string& class_name,
+                                             const CassAuthenticatorCallbacks* callbacks,
+                                             void* data)
+  : address_(host->address())
+  , hostname_(host->hostname())
   , class_name_(class_name)
+  , response_(NULL)
   , callbacks_(callbacks)
-  , data_(data) {
-  auth_.host.address_length = host->address().to_inet(auth_.host.address);
-  auth_.hostname = hostname_.c_str();
-  auth_.class_name = class_name_.c_str();
-  auth_.exchange_data = NULL;
-}
+  , data_(data)
+  , exchange_data_(NULL) { }
 
-SaslAuthenticator::~SaslAuthenticator() {
+ExternalAuthenticator::~ExternalAuthenticator() {
+  response_ = NULL;
   if (callbacks_->cleanup_callback != NULL) {
-    callbacks_->cleanup_callback(&auth_, data_);
+    callbacks_->cleanup_callback(CassAuthenticator::to(this), data_);
   }
 }
 
-bool SaslAuthenticator::initial_response(std::string* response) {
+bool ExternalAuthenticator::initial_response(std::string* response) {
   if (callbacks_->initial_callback == NULL) {
     return true;
   }
-
-  response->resize(SASL_AUTH_INIT_RESPONSE_SIZE, '\0');
-  for (int i = 0; i < 2; ++i) {
-    size_t size = callbacks_->initial_callback(&auth_, data_,
-                                               &(*response)[0], response->size());
-    if (size == CASS_AUTH_ERROR) return false;
-
-    if(size <= response->size()) {
-      response->resize(size);
-      break;
-    }
-
-    response->resize(size, '\0');
-  }
-
-  return true;
+  response_ = response;
+  error_.clear();
+  callbacks_->initial_callback(CassAuthenticator::to(this), data_);
+  return error_.empty();
 }
 
-bool SaslAuthenticator::evaluate_challenge(const std::string& challenge, std::string* response) {
+bool ExternalAuthenticator::evaluate_challenge(const std::string& token, std::string* response) {
   if (callbacks_->challenge_callback == NULL) {
     return true;
   }
-
-  response->resize(SASL_AUTH_INIT_RESPONSE_SIZE, '\0');
-  for (int i = 0; i < 2; ++i) {
-    size_t size = callbacks_->challenge_callback(&auth_, data_,
-                                                 challenge.data(), challenge.size(),
-                                                 &(*response)[0], response->size());
-    if (size == CASS_AUTH_ERROR) return false;
-
-    if(size <= response->size()) {
-      response->resize(size);
-      break;
-    }
-
-    response->resize(size, '\0');
-  }
-
-  return true;
+  response_ = response;
+  error_.clear();
+  callbacks_->challenge_callback(CassAuthenticator::to(this), data_,
+                                 token.data(), token.size());
+  return error_.empty();
 }
 
-void SaslAuthenticator::on_authenticate_success(const std::string& token) {
-  if (callbacks_->success_callback != NULL) {
-    callbacks_->success_callback(&auth_, data_,
-                                 token.data(), token.size());
+bool ExternalAuthenticator::success(const std::string& token) {
+  if (callbacks_->success_callback == NULL) {
+    return true;
   }
+  response_ = NULL;
+  error_.clear();
+  callbacks_->success_callback(CassAuthenticator::to(this), data_,
+                               token.data(), token.size());
+  return error_.empty();
 }
 
 } // namespace cass

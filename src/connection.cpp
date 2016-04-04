@@ -729,7 +729,7 @@ void Connection::on_auth_challenge(const AuthResponseRequest* request,
                                    const std::string& token) {
   std::string response;
   if (!request->auth()->evaluate_challenge(token, &response)) {
-    notify_error("Failed evaluating challenge token", CONNECTION_ERROR_AUTH);
+    notify_error("Failed evaluating challenge token: " + request->auth()->error(), CONNECTION_ERROR_AUTH);
     return;
   }
   AuthResponseRequest* auth_response = new AuthResponseRequest(response,
@@ -739,7 +739,10 @@ void Connection::on_auth_challenge(const AuthResponseRequest* request,
 
 void Connection::on_auth_success(const AuthResponseRequest* request,
                                  const std::string& token) {
-  request->auth()->on_authenticate_success(token);
+  if (!request->auth()->success(token)) {
+    notify_error("Failed evaluating success token: " + request->auth()->error(), CONNECTION_ERROR_AUTH);
+    return;
+  }
   on_ready();
 }
 
@@ -871,7 +874,7 @@ void Connection::send_initial_auth_response(const std::string& class_name) {
   } else {
     std::string response;
     if (!auth->initial_response(&response)) {
-      notify_error("Failed creating initial response token", CONNECTION_ERROR_AUTH);
+      notify_error("Failed creating initial response token: " + auth->error(), CONNECTION_ERROR_AUTH);
       return;
     }
     AuthResponseRequest* auth_response = new AuthResponseRequest(response, auth);

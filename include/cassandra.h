@@ -721,76 +721,57 @@ typedef void (*CassLogCallback)(const CassLogMessage* message,
                                 void* data);
 
 /**
- * A value to return from an authentication callback when an error occurs.
+ * An authenticator.
  */
-#define CASS_AUTH_ERROR ((size_t)-1)
-
-/**
- * An authentication exchange.
- */
-typedef struct CassAuth_ {
-  CassInet host; /**< The IP address of the server */
-  const char* hostname; /** The hostname of the server */
-  const char* class_name; /** The class name of the server's IAuthenticator */
-  void* exchange_data; /**< User data for resources acquired during an exchange */
-} CassAuthExchange;
+typedef struct CassAuthenticator_ CassAuthenticator;
 
 
 /**
  * A callback used to initiate an authentication exchange.
  *
- * If the number of bytes exceeds response_size then immediately
- * return the number of required bytes. The callback will then
- * be recalled with a new buffer of the correct size.
+ * Use cass_authenticator_set_response() to set the response token.
+ *
+ * Use cass_authenticator_set_error() if an error occured during initialization.
  *
  * @param[in] auth
  * @param[in] data
- * @param[out] response
- * @param[out] response_size
- * @return The number of bytes copied into response or the required size of the
- * response array. Otherwise, return CASS_AUTH_ERROR if an error occured.
  */
-typedef size_t (*CassAuthExchangeInitalCallback)(CassAuthExchange* auth,
-                                                 void* data,
-                                                 char* response,
-                                                 size_t response_size);
+typedef void (*CassAuthenticatorInitalCallback)(CassAuthenticator* auth,
+                                                void* data);
 
 /**
  * A callback used when an authentication challenge initiated
  * by the server.
  *
- * If the number of bytes exceeds response_size then immediately
- * return the number of required bytes. The callback will then
- * be recalled with a new buffer of the correct size.
+ * Use cass_authenticator_set_response() to set the response token.
  *
- * @param[in] auth
- * @param[in] data
- * @param[in] challenge
- * @param[in] challenge_size
- * @param[out] response
- * @param[out] response_size
- * @return The number of bytes copied into response or the required size of the
- * response array. Otherwise, return CASS_AUTH_ERROR if an error occured.
- */
-typedef size_t (*CassAuthExchangeChallengeCallback)(CassAuthExchange* auth,
-                                                    void* data,
-                                                    const char* challenge,
-                                                    size_t challenge_size,
-                                                    char* response,
-                                                    size_t response_size);
-/**
- * A callback used to indicate the success of the authentication
- * exchange.
+ * Use cass_authenticator_set_error() if an error occured during the challenge.
  *
  * @param[in] auth
  * @param[in] data
  * @param[in] token
  * @param[in] token_size
  */
-typedef void (*CassAuthExchangeSuccessCallback)(CassAuthExchange* auth,
-                                                void* data,
-                                                const char* token,
-                                                size_t token_size);
+typedef void (*CassAuthenticatorChallengeCallback)(CassAuthenticator* auth,
+                                                   void* data,
+                                                   const char* token,
+                                                   size_t token_size);
+/**
+ * A callback used to indicate the success of the authentication
+ * exchange.
+ *
+ * Use cass_authenticator_set_error() if an error occured while evaluating
+ * the success token.
+ *
+ * @param[in] auth
+ * @param[in] data
+ * @param[in] token
+ * @param[in] token_size
+ */
+typedef void (*CassAuthenticatorSuccessCallback)(CassAuthenticator* auth,
+                                                 void* data,
+                                                 const char* token,
+                                                 size_t token_size);
 /**
  * A callback used to cleanup resources that were acquired during
  * the process of the authentication exchange. This is called after
@@ -799,8 +780,8 @@ typedef void (*CassAuthExchangeSuccessCallback)(CassAuthExchange* auth,
  * @param[in] auth
  * @param[in] data
  */
-typedef void (*CassAuthExchangeCleanupCallback)(CassAuthExchange* auth,
-                                                void* data);
+typedef void (*CassAuthenticatorCleanupCallback)(CassAuthenticator* auth,
+                                                 void* data);
 
 
 /**
@@ -808,17 +789,17 @@ typedef void (*CassAuthExchangeCleanupCallback)(CassAuthExchange* auth,
  *
  * @param[in] data
  */
-typedef void (*CassAuthCleanupCallback)(void* data);
+typedef void (*CassAuthenticatorDataCleanupCallback)(void* data);
 
 /**
- * Authentication callbacks
+ * Authenticator callbacks
  */
-typedef struct CassAuthExchangeCallbacks_ {
-  CassAuthExchangeInitalCallback initial_callback;
-  CassAuthExchangeChallengeCallback challenge_callback;
-  CassAuthExchangeSuccessCallback success_callback;
-  CassAuthExchangeCleanupCallback cleanup_callback;
-} CassAuthExchangeCallbacks;
+typedef struct CassAuthenticatorCallbacks_ {
+  CassAuthenticatorInitalCallback initial_callback;
+  CassAuthenticatorChallengeCallback challenge_callback;
+  CassAuthenticatorSuccessCallback success_callback;
+  CassAuthenticatorCleanupCallback cleanup_callback;
+} CassAuthenticatorCallbacks;
 
 /***********************************************************************************
  *
@@ -917,7 +898,7 @@ cass_cluster_set_ssl(CassCluster* cluster,
                      CassSsl* ssl);
 
 /**
- * Sets custom authentication callbacks
+ * Sets custom authenticator
  *
  * @public @memberof CassCluster
  *
@@ -927,10 +908,10 @@ cass_cluster_set_ssl(CassCluster* cluster,
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_cluster_set_authentication_callbacks(CassCluster* cluster,
-                                          const CassAuthExchangeCallbacks* exchange_callbacks,
-                                          CassAuthCleanupCallback cleanup_callback,
-                                          void* data);
+cass_cluster_set_authenticator_callbacks(CassCluster* cluster,
+                                         const CassAuthenticatorCallbacks* exchange_callbacks,
+                                         CassAuthenticatorDataCleanupCallback cleanup_callback,
+                                         void* data);
 
 /**
  * Sets the protocol version. This will automatically downgrade to the lowest
@@ -3246,6 +3227,135 @@ cass_ssl_set_private_key_n(CassSsl* ssl,
                            size_t key_length,
                            const char* password,
                            size_t password_length);
+
+/***********************************************************************************
+ *
+ * Authenticator
+ *
+ ************************************************************************************/
+
+/**
+ * Gets the IP address of the host being authenticated.
+ *
+ * @param[in] auth
+ * @param[out] address
+ *
+ * @public @memberof CassAuthenticator
+ */
+CASS_EXPORT void
+cass_authenticator_address(const CassAuthenticator* auth,
+                           CassInet* address);
+
+/**
+ * Gets the hostname of the host being authenticated.
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @param[out] length
+ * @return A null-terminated string.
+ */
+CASS_EXPORT const char*
+cass_authenticator_hostname(const CassAuthenticator* auth,
+                            size_t* length);
+
+/**
+ * Gets the class name for the server-side IAuthentication implementation.
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @param[out] length
+ * @return A null-terminated string.
+ */
+CASS_EXPORT const char*
+cass_authenticator_class_name(const CassAuthenticator* auth,
+                              size_t* length);
+
+/**
+ * Gets the user data created during the authenticator exchange. This
+ * is set using cass_authenticator_set_exchange_data().
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @return User specified exchange data previously set by
+ * cass_authenticator_set_exchange_data().
+ *
+ * @see cass_authenticator_set_exchange_data()
+ */
+CASS_EXPORT void*
+cass_authenticator_exchange_data(CassAuthenticator* auth);
+
+/**
+ * Sets the user data to be used during the authenticator exchange.
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @param[in] exchange_data
+ *
+ * @see cass_authenticator_exchange_data()
+ */
+CASS_EXPORT void
+cass_authenticator_set_exchange_data(CassAuthenticator* auth,
+                                     void* exchange_data);
+
+/**
+ * Gets a response token buffer of the provided size.
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @param[in] size
+ * @return A buffer to copy the response token.
+ */
+CASS_EXPORT char*
+cass_authenticator_response(CassAuthenticator* auth,
+                            size_t size);
+
+/**
+ * Sets the response token.
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @param[in] response
+ * @param[in] response_size
+ */
+CASS_EXPORT void
+cass_authenticator_set_response(CassAuthenticator* auth,
+                                const char* response,
+                                size_t response_size);
+
+/**
+ * Sets an error for the authenticator exchange.
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @param[in] message
+ */
+CASS_EXPORT void
+cass_authenticator_set_error(CassAuthenticator* auth,
+                             const char* message);
+
+/**
+ * Same as cass_authenticator_set_error_n(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @param[in] message
+ * @param[in] message_length
+ *
+ * @see cass_authenticator_set_error()
+ */
+CASS_EXPORT void
+cass_authenticator_set_error_n(CassAuthenticator* auth,
+                               const char* message,
+                               size_t message_length);
 
 /***********************************************************************************
  *
