@@ -1236,7 +1236,7 @@ REM                               install; false otherwise
 REM @param log-filename Absolute path and filename for log output
 :BUILDLIBUV [source-directory] [install-directory] [target-architecture] [library-type] [is-windows-sdk-build] [is-clean-after-install] [log-filename]
 	REM Create library variables from arguments
-	SET LIBUV_SOURCE_DIRECTORY=%~1"
+	SET "LIBUV_SOURCE_DIRECTORY=%~1"
 	SHIFT
 	SET "LIBUV_INSTALL_DIRECTORY=%~1"
 	SHIFT
