@@ -18,7 +18,6 @@
 #define __DSE_EXTERNAL_TYPES_HPP_INCLUDED__
 
 #include "dse.h"
-#include "cluster.hpp"
 
 // This abstraction allows us to separate internal types from the
 // external opaque pointers that we expose.
@@ -37,8 +36,6 @@ struct External : public In {
   }
 
 extern "C" {
-
-EXTERNAL_TYPE(dse::Cluster, DseCluster);
 
 }
 

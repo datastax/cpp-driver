@@ -46,7 +46,7 @@
 /**
  * @file include/dse.h
  *
- * C/C++ driver for DataStax Enterprise.
+ * C/C++ Driver Extensions for DataStax Enterprise
  */
 
 #define DSE_VERSION_MAJOR 1
@@ -58,18 +58,71 @@
 extern "C" {
 #endif
 
-/**
+/***********************************************************************************
  *
- */
-typedef struct DseCluster_ DseCluster;
+ * Cluster
+ *
+ ***********************************************************************************/
 
 /**
  *
  */
 DSE_EXPORT CassError
-dse_cluster_set_gssapi_authentication(DseCluster* cluster,
-                                      const char* service,
-                                      const char* principle);
+cass_cluster_set_dse_gssapi_authenticator(CassCluster* cluster,
+                                          const char* service,
+                                          const char* principal);
+
+/**
+ *
+ */
+DSE_EXPORT CassError
+cass_cluster_set_dse_gssapi_authenticator_n(CassCluster* cluster,
+                                            const char* service,
+                                            size_t service_length,
+                                            const char* principal,
+                                            size_t principal_length);
+
+/**
+ *
+ */
+DSE_EXPORT CassError
+cass_cluster_set_dse_plaintext_authenticator(CassCluster* cluster,
+                                             const char* username,
+                                             const char* password);
+
+/**
+ *
+ */
+DSE_EXPORT CassError
+cass_cluster_set_dse_plaintext_authenticator_n(CassCluster* cluster,
+                                               const char* username,
+                                               size_t username_length,
+                                               const char* password,
+                                               size_t password_length);
+
+/***********************************************************************************
+ *
+ * GSSAPI Authentication
+ *
+ ***********************************************************************************/
+
+/**
+ *
+ */
+typedef void (*DseGssapiAuthenticatorLockCallback)(void* data);
+
+/**
+ *
+ */
+typedef void (*DseGssapiAuthenticatorUnockCallback)(void* data);
+
+/**
+ *
+ */
+DSE_EXPORT CassError
+dse_gssapi_authenticator_set_lock_callbacks(DseGssapiAuthenticatorLockCallback lock_callback,
+                                            DseGssapiAuthenticatorUnockCallback unlock_callback,
+                                            void* data);
 
 #ifdef __cplusplus
 } /* extern "C" */
