@@ -16,6 +16,8 @@
 
 cmake_minimum_required(VERSION 2.6.4)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
+
 set(PROJECT_NAME_STRING dse)
 set(PROJECT_LIB_NAME ${PROJECT_NAME_STRING})
 set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
@@ -52,12 +54,24 @@ set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${P
 
 message(STATUS "Project version: ${PROJECT_VERSION_STRING}")
 
+option(DSE_BUILD_EXAMPLES "Build examples" OFF)
 option(DSE_BUILD_SHARED "Build shared library" ON)
 option(DSE_BUILD_STATIC "Build static library" OFF)
 option(DSE_INSTALL_HEADER "Install header file" ON)
+option(DSE_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
+
+# Determine which driver target should be used as a dependency
+set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME})
+if(DSE_USE_STATIC_LIBS)
+  set(DSE_BUILD_STATIC ON)
+  set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME_STATIC})
+endif()
 
 set(CPP_DRIVER_DIR "${PROJECT_SOURCE_DIR}/cpp-driver")
+set(CPP_DRIVER_INCLUDE_DIR "${CPP_DRIVER_DIR}/include")
 set(CPP_DRIVER_SOURCE_DIR "${CPP_DRIVER_DIR}/src")
+
+add_subdirectory(${CPP_DRIVER_DIR})
 
 # Build up the include paths
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
@@ -66,9 +80,10 @@ set(DSE_INCLUDES ${DSE_INCLUDES} ${PROJECT_SOURCE_DIR}/src)
 
 set(DSE_LIBS ${DSE_LIBS} cassandra)
 
-include_directories(${CPP_DRIVER_SOURCE_DIR})
-
-add_subdirectory(${CPP_DRIVER_DIR})
+# Kerberos
+find_package(Kerberos REQUIRED)
+set(DSE_INCLUDES ${DSE_INCLUDES} ${LIBKRB5_INCLUDE_DIR})
+set(DSE_LIBS ${DSE_LIBS} ${LIBKRB5_LIBRARY})
 
 #------------------------------
 # DSE static and shared
@@ -78,17 +93,17 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
-file(GLOB API_HEADER_FILES ${PROJECT_SOURCE_DIR}/include/*.h)
-file(GLOB INC_FILES ${PROJECT_SOURCE_DIR}/src/*.hpp)
-file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
+file(GLOB DSE_API_HEADER_FILES ${PROJECT_SOURCE_DIR}/include/*.h)
+file(GLOB DSE_INC_FILES ${PROJECT_SOURCE_DIR}/src/*.hpp)
+file(GLOB DSE_SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
-source_group("Source Files" FILES ${SRC_FILES})
-source_group("Header Files" FILES ${API_HEADER_FILES} ${INC_FILES})
-set(ALL_SOURCE_FILES ${SRC_FILES} ${API_HEADER_FILES} ${INC_FILES})
+source_group("Source Files" FILES ${DSE_SRC_FILES})
+source_group("Header Files" FILES ${DSE_API_HEADER_FILES} ${DSE_INC_FILES})
+set(DSE_ALL_SOURCE_FILES ${DSE_SRC_FILES} ${DSE_API_HEADER_FILES} ${DSE_INC_FILES})
 
 # Create an object library for the driver (single build)
 if(NOT CMAKE_VERSION VERSION_LESS "2.8.8")
-  add_library(cpp-driver-dse OBJECT ${ALL_SOURCE_FILES})
+  add_library(cpp-driver-dse OBJECT ${DSE_ALL_SOURCE_FILES})
   if(NOT WIN32)
     set_property(TARGET cpp-driver-dse PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -fPIC")
   endif()
@@ -100,13 +115,15 @@ endif()
 
 # Assign the include directories
 include_directories(${DSE_INCLUDES})
+include_directories(${CPP_DRIVER_SOURCE_DIR})
+include_directories(${CPP_DRIVER_INCLUDE_DIR})
 
 # Determine if the dynamic/shared library should be built
 if(DSE_BUILD_SHARED)
   if(CMAKE_VERSION VERSION_LESS "2.8.8")
-    add_library(${PROJECT_LIB_NAME} SHARED ${ALL_SOURCE_FILES})
+    add_library(${PROJECT_LIB_NAME} SHARED ${DSE_ALL_SOURCE_FILES})
   else()
-    add_library(${PROJECT_LIB_NAME} SHARED $<TARGET_OBJECTS:cpp-driver>)
+    add_library(${PROJECT_LIB_NAME} SHARED $<TARGET_OBJECTS:cpp-driver-dse>)
   endif()
   target_link_libraries(${PROJECT_LIB_NAME} ${DSE_LIBS})
   set_target_properties(${PROJECT_LIB_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME})
@@ -120,9 +137,9 @@ endif()
 # Determine if the static library should be built
 if(DSE_BUILD_STATIC)
   if(CMAKE_VERSION VERSION_LESS "2.8.8")
-    add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${ALL_SOURCE_FILES})
+    add_library(${PROJECT_LIB_NAME_STATIC} STATIC ${DSE_ALL_SOURCE_FILES})
   else()
-    add_library(${PROJECT_LIB_NAME_STATIC} STATIC $<TARGET_OBJECTS:cpp-driver>)
+    add_library(${PROJECT_LIB_NAME_STATIC} STATIC $<TARGET_OBJECTS:cpp-driver-dse>)
   endif()
   target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${LIBS})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
@@ -135,6 +152,15 @@ if(DSE_BUILD_STATIC)
   if(DSE_USE_STATIC_LIBS)
     set(TEST_CXX_FLAGS "${TEST_CXX_FLAGS} -DDSE_STATIC")
   endif()
+endif()
+
+#-----------
+# Examples
+#-----------
+
+if(DSE_BUILD_EXAMPLES)
+  add_subdirectory(examples/plaintext)
+  add_subdirectory(examples/gssapi)
 endif()
 
 #-------------------------------------
@@ -172,7 +198,7 @@ set(INSTALL_DLL_EXE_DIR "bin")
 
 # Determine if the header should be installed
 if(DSE_INSTALL_HEADER)
-  install(FILES ${API_HEADER_FILES} DESTINATION "include")
+  install(FILES ${DSE_API_HEADER_FILES} DESTINATION "include")
 endif()
 
 # Install the dynamic/shared library
