@@ -3924,7 +3924,7 @@ cass_statement_bind_null(CassStatement* statement,
  * Binds a null to all the values with the specified name.
  *
  * This can only be used with statements created by
- * cass_prepared_bind().
+ * cass_prepared_bind() when using Cassandra 2.0 or earlier.
  *
  * @public @memberof CassStatement
  *
@@ -3975,9 +3975,6 @@ cass_statement_bind_int8(CassStatement* statement,
  * Binds a "tinyint" to all the values with the specified name.
  *
  * @cassandra{2.2+}
- *
- * This can only be used with statements created by
- * cass_prepared_bind().
  *
  * @public @memberof CassStatement
  *
@@ -4035,9 +4032,6 @@ cass_statement_bind_int16(CassStatement* statement,
  *
  * @cassandra{2.2+}
  *
- * This can only be used with statements created by
- * cass_prepared_bind().
- *
  * @public @memberof CassStatement
  *
  * @param[in] statement
@@ -4091,7 +4085,7 @@ cass_statement_bind_int32(CassStatement* statement,
  * Binds an "int" to all the values with the specified name.
  *
  * This can only be used with statements created by
- * cass_prepared_bind().
+ * cass_prepared_bind() when using Cassandra 2.0 or earlier.
  *
  * @public @memberof CassStatement
  *
@@ -4146,9 +4140,6 @@ cass_statement_bind_uint32(CassStatement* statement,
  * Binds a "date" to all the values with the specified name.
  *
  * @cassandra{2.2+}
- *
- * This can only be used with statements created by
- * cass_prepared_bind().
  *
  * @public @memberof CassStatement
  *
@@ -4205,7 +4196,7 @@ cass_statement_bind_int64(CassStatement* statement,
  * with the specified name.
  *
  * This can only be used with statements created by
- * cass_prepared_bind().
+ * cass_prepared_bind() when using Cassandra 2.0 or earlier.
  *
  * @public @memberof CassStatement
  *
@@ -4258,7 +4249,7 @@ cass_statement_bind_float(CassStatement* statement,
  * Binds a "float" to all the values with the specified name.
  *
  * This can only be used with statements created by
- * cass_prepared_bind().
+ * cass_prepared_bind() when using Cassandra 2.0 or earlier.
  *
  * @public @memberof CassStatement
  *
@@ -4311,7 +4302,7 @@ cass_statement_bind_double(CassStatement* statement,
  * Binds a "double" to all the values with the specified name.
  *
  * This can only be used with statements created by
- * cass_prepared_bind().
+ * cass_prepared_bind() when using Cassandra 2.0 or earlier.
  *
  * @public @memberof CassStatement
  *
@@ -4364,7 +4355,7 @@ cass_statement_bind_bool(CassStatement* statement,
  * Binds a "boolean" to all the values with the specified name.
  *
  * This can only be used with statements created by
- * cass_prepared_bind().
+ * cass_prepared_bind() when using Cassandra 2.0 or earlier.
  *
  * @public @memberof CassStatement
  *
@@ -4440,7 +4431,7 @@ cass_statement_bind_string_n(CassStatement* statement,
  * with the specified name.
  *
  * This can only be used with statements created by
- * cass_prepared_bind().
+ * cass_prepared_bind() when using Cassandra 2.0 or earlier.
  *
  * @public @memberof CassStatement
  *
@@ -4500,7 +4491,7 @@ cass_statement_bind_bytes(CassStatement* statement,
  * specified name.
  *
  * This can only be used with statements created by
- * cass_prepared_bind().
+ * cass_prepared_bind() when using Cassandra 2.0 or earlier.
  *
  * @public @memberof CassStatement
  *
@@ -4540,6 +4531,94 @@ cass_statement_bind_bytes_by_name_n(CassStatement* statement,
                                     size_t value_size);
 
 /**
+ * Binds a "custom" to a query or bound statement at the specified index.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] class_name
+ * @param[in] value The value is copied into the statement object; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @param[in] value_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_custom(CassStatement* statement,
+                           size_t index,
+                           const char* class_name,
+                           const cass_byte_t* value,
+                           size_t value_size);
+/**
+ * Same as cass_statement_bind_custom(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] index
+ * @param[in] class_name
+ * @param[in] class_name_length
+ * @param[in] value The value is copied into the statement object; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @param[in] value_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_custom_n(CassStatement* statement,
+                             size_t index,
+                             const char* class_name,
+                             size_t class_name_length,
+                             const cass_byte_t* value,
+                             size_t value_size);
+
+/**
+ * Binds a "custom" to all the values with the specified name.
+ *
+ * This can only be used with statements created by
+ * cass_prepared_bind() when using Cassandra 2.0 or earlier.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] value The value is copied into the statement object; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @param[in] value_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_bind_custom_by_name(CassStatement* statement,
+                                   const char* name,
+                                   const char* class_name,
+                                   const cass_byte_t* value,
+                                   size_t value_size);
+
+/**
+ * Same as cass_statement_bind_custom_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] value
+ * @param[in] value_size
+ * @return same as cass_statement_bind_custom_by_name()
+ *
+ * @see cass_statement_bind_custom_by_name()
+ */
+CASS_EXPORT CassError
+cass_statement_bind_custom_by_name_n(CassStatement* statement,
+                                     const char* name,
+                                     size_t name_length,
+                                     const char* class_name,
+                                     size_t class_name_length,
+                                     const cass_byte_t* value,
+                                     size_t value_size);
+
+/**
  * Binds a "uuid" or "timeuuid" to a query or bound statement at the specified index.
  *
  * @public @memberof CassStatement
@@ -4559,7 +4638,7 @@ cass_statement_bind_uuid(CassStatement* statement,
  * with the specified name.
  *
  * This can only be used with statements created by
- * cass_prepared_bind().
+ * cass_prepared_bind() when using Cassandra 2.0 or earlier.
  *
  * @public @memberof CassStatement
  *
@@ -4612,7 +4691,7 @@ cass_statement_bind_inet(CassStatement* statement,
  * Binds an "inet" to all the values with the specified name.
  *
  * This can only be used with statements created by
- * cass_prepared_bind().
+ * cass_prepared_bind() when using Cassandra 2.0 or earlier.
  *
  * @public @memberof CassStatement
  *
@@ -4670,7 +4749,7 @@ cass_statement_bind_decimal(CassStatement* statement,
  * Binds a "decimal" to all the values with the specified name.
  *
  * This can only be used with statements created by
- * cass_prepared_bind().
+ * cass_prepared_bind() when using Cassandra 2.0 or earlier.
  *
  * @public @memberof CassStatement
  *
@@ -4734,7 +4813,7 @@ cass_statement_bind_collection(CassStatement* statement,
  * specified name.
  *
  * This can only be used with statements created by
- * cass_prepared_bind().
+ * cass_prepared_bind() when using Cassandra 2.0 or earlier.
  *
  * @public @memberof CassStatement
  *
@@ -4789,9 +4868,6 @@ cass_statement_bind_tuple(CassStatement* statement,
  * Bind a "tuple" to all the values with the specified name.
  *
  * @cassandra{2.1+}
- *
- * This can only be used with statements created by
- * cass_prepared_bind().
  *
  * @public @memberof CassStatement
  *
@@ -5752,6 +5828,46 @@ cass_collection_append_bytes(CassCollection* collection,
                              size_t value_size);
 
 /**
+ * Appends a "custom" to the collection.
+ *
+ * @public @memberof CassCollection
+ *
+ * @param[in] collection
+ * @param[in] class_name
+ * @param[in] value The value is copied into the collection object; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @param[in] value_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_collection_append_custom(CassCollection* collection,
+                              const char* class_name,
+                              const cass_byte_t* value,
+                              size_t value_size);
+
+/**
+ * Same as cass_collection_append_custom(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassCollection
+ *
+ * @param[in] collection
+ * @param[in] class_name
+ * @param[in] class_name_length
+ * @param[in] value
+ * @param[in] value_length
+ * @return same as cass_collection_append_custom()
+ *
+ * @see cass_collection_append_custom()
+ */
+CASS_EXPORT CassError
+cass_collection_append_custom_n(CassCollection* collection,
+                                const char* class_name,
+                                size_t class_name_length,
+                                const cass_byte_t* value,
+                                size_t value_size);
+
+/**
  * Appends a "uuid" or "timeuuid"  to the collection.
  *
  * @public @memberof CassCollection
@@ -6110,6 +6226,50 @@ cass_tuple_set_bytes(CassTuple* tuple,
                      size_t index,
                      const cass_byte_t* value,
                      size_t value_size);
+
+/**
+ * Sets a "custom" in a tuple at the specified index.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] class_name
+ * @param[in] value The value is copied into the tuple object; the
+ * memory pointed to by this parameter can be freed after this call.
+ * @param[in] value_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_tuple_set_custom(CassTuple* tuple,
+                      size_t index,
+                      const char* class_name,
+                      const cass_byte_t* value,
+                      size_t value_size);
+
+/**
+ * Same as cass_tuple_set_custom(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassTuple
+ *
+ * @param[in] tuple
+ * @param[in] index
+ * @param[in] class_name
+ * @param[in] class_name_length
+ * @param[in] value
+ * @param[in] value_length
+ * @return same as cass_tuple_set_custom()
+ *
+ * @see cass_tuple_set_custom()
+ */
+CASS_EXPORT CassError
+cass_tuple_set_custom_n(CassTuple* tuple,
+                        size_t index,
+                        const char* class_name,
+                        size_t class_name_length,
+                        const cass_byte_t* value,
+                        size_t value_size);
 
 /**
  * Sets a "uuid" or "timeuuid" in a tuple at the specified index.
@@ -6910,6 +7070,94 @@ cass_user_type_set_bytes_by_name_n(CassUserType* user_type,
                                    size_t name_length,
                                    const cass_byte_t* value,
                                    size_t value_size);
+
+/**
+ * Sets a "custom" in a user defined type at the specified index.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] index
+ * @param[in] class_name
+ * @param[in] value
+ * @param[in] value_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_custom(CassUserType* user_type,
+                          size_t index,
+                          const char* class_name,
+                          const cass_byte_t* value,
+                          size_t value_size);
+
+/**
+ * Same as cass_user_type_set_custom(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] index
+ * @param[in] class_name
+ * @param[in] class_name_length
+ * @param[in] value
+ * @param[in] value_size
+ * @return same as cass_user_type_set_custom()
+ *
+ * @see cass_user_type_set_custom()
+ */
+CASS_EXPORT CassError
+cass_user_type_set_custom_n(CassUserType* user_type,
+                            size_t index,
+                            const char* class_name,
+                            size_t class_name_length,
+                            const cass_byte_t* value,
+                            size_t value_size);
+
+/**
+ * Sets a "custom" in a user defined type at the specified name.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] class_name
+ * @param[in] value
+ * @param[in] value_size
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_user_type_set_custom_by_name(CassUserType* user_type,
+                                  const char* name,
+                                  const char* class_name,
+                                  const cass_byte_t* value,
+                                  size_t value_size);
+
+/**
+ * Same as cass_user_type_set_custom_by_name(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassUserType
+ *
+ * @param[in] user_type
+ * @param[in] name
+ * @param[in] name_length
+ * @param[in] class_name
+ * @param[in] class_name_length
+ * @param[in] value
+ * @param[in] value_size
+ * @return same as cass_user_type_set_custom_by_name()
+ *
+ * @see cass_user_type_set_custom_by_name()
+ */
+CASS_EXPORT CassError
+cass_user_type_set_custom_by_name_n(CassUserType* user_type,
+                                    const char* name,
+                                    size_t name_length,
+                                    const char* class_name,
+                                    size_t class_name_length,
+                                    const cass_byte_t* value,
+                                    size_t value_size);
 
 /**
  * Sets a "uuid" or "timeuuid" in a user defined type at the specified index.

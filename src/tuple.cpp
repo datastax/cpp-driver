@@ -78,16 +78,35 @@ CASS_TUPLE_SET(decimal,
 CassError cass_tuple_set_string(CassTuple* tuple,
                                 size_t index,
                                 const char* value) {
-  tuple->set(index, cass::CassString(value, strlen(value)));
-  return CASS_OK;
+  return tuple->set(index, cass::CassString(value, strlen(value)));
 }
 
 CassError cass_tuple_set_string_n(CassTuple* tuple,
                                   size_t index,
                                   const char* value,
                                   size_t value_length) {
-  tuple->set(index, cass::CassString(value, value_length));
-  return CASS_OK;
+  return tuple->set(index, cass::CassString(value, value_length));
+}
+
+CassError cass_tuple_set_custom(CassTuple* tuple,
+                                size_t index,
+                                const char* class_name,
+                                const cass_byte_t* value,
+                                size_t value_size) {
+  return tuple->set(index,
+                    cass::CassCustom(cass::StringRef(class_name),
+                                     value, value_size));
+}
+
+CassError cass_tuple_set_custom_n(CassTuple* tuple,
+                                  size_t index,
+                                  const char* class_name,
+                                  size_t class_name_length,
+                                  const cass_byte_t* value,
+                                  size_t value_size) {
+  return tuple->set(index,
+                    cass::CassCustom(cass::StringRef(class_name, class_name_length),
+                                     value, value_size));
 }
 
 } // extern "C"

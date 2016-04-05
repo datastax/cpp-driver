@@ -104,6 +104,13 @@ inline Buffer encode_with_length(CassBytes value) {
   return buf;
 }
 
+inline Buffer encode_with_length(CassCustom value) {
+  Buffer buf(sizeof(int32_t) + value.size);
+  size_t pos = buf.encode_int32(0, value.size);
+  buf.copy(pos, reinterpret_cast<const char*>(value.data), value.size);
+  return buf;
+}
+
 inline Buffer encode_with_length(CassUuid value) {
   Buffer buf(sizeof(int32_t) + sizeof(CassUuid));
   size_t pos = buf.encode_int32(0, sizeof(CassUuid));
@@ -181,6 +188,12 @@ inline Buffer encode(CassString value) {
 }
 
 inline Buffer encode(CassBytes value) {
+  Buffer buf(value.size);
+  buf.copy(0, reinterpret_cast<const char*>(value.data), value.size);
+  return buf;
+}
+
+inline Buffer encode(CassCustom value) {
   Buffer buf(value.size);
   buf.copy(0, reinterpret_cast<const char*>(value.data), value.size);
   return buf;

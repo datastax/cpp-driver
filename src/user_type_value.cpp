@@ -109,4 +109,47 @@ CassError cass_user_type_set_string_by_name_n(CassUserType* user_type,
                         cass::CassString(value, value_length));
 }
 
+CassError cass_user_type_set_custom(CassUserType* user_type,
+                                    size_t index,
+                                    const char* class_name,
+                                    const cass_byte_t* value,
+                                    size_t value_size) {
+  return user_type->set(index,
+                        cass::CassCustom(cass::StringRef(class_name),
+                                         value, value_size));
+}
+
+CassError cass_user_type_set_custom_n(CassUserType* user_type,
+                                      size_t index,
+                                      const char* class_name,
+                                      size_t class_name_length,
+                                      const cass_byte_t* value,
+                                      size_t value_size) {
+  return user_type->set(index,
+                        cass::CassCustom(cass::StringRef(class_name, class_name_length),
+                                         value, value_size));
+}
+
+CassError cass_user_type_set_custom_by_name(CassUserType* user_type,
+                                            const char* name,
+                                            const char* class_name,
+                                            const cass_byte_t* value,
+                                            size_t value_size) {
+  return user_type->set(cass::StringRef(name),
+                        cass::CassCustom(cass::StringRef(class_name),
+                                         value, value_size));
+}
+
+CassError cass_user_type_set_custom_by_name_n(CassUserType* user_type,
+                                              const char* name,
+                                              size_t name_length,
+                                              const char* class_name,
+                                              size_t class_name_length,
+                                              const cass_byte_t* value,
+                                              size_t value_size) {
+  return user_type->set(cass::StringRef(name, name_length),
+                        cass::CassCustom(cass::StringRef(class_name, class_name_length),
+                                         value, value_size));
+}
+
 } // extern "C"

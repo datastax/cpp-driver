@@ -64,6 +64,7 @@ public:
   SET_TYPE(cass_bool_t)
   SET_TYPE(CassString)
   SET_TYPE(CassBytes)
+  SET_TYPE(CassCustom)
   SET_TYPE(CassUuid)
   SET_TYPE(CassInet)
   SET_TYPE(CassDecimal)
