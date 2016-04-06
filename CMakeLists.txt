@@ -77,13 +77,14 @@ add_subdirectory(${CPP_DRIVER_DIR})
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(DSE_INCLUDES ${DSE_INCLUDES} ${PROJECT_INCLUDE_DIR})
 set(DSE_INCLUDES ${DSE_INCLUDES} ${PROJECT_SOURCE_DIR}/src)
+set(DSE_INCLUDES ${DSE_INCLUDES} ${LIBUV_INCLUDE_DIR})
 
 set(DSE_LIBS ${DSE_LIBS} cassandra)
 
 # Kerberos
 find_package(Kerberos REQUIRED)
-set(DSE_INCLUDES ${DSE_INCLUDES} ${LIBKRB5_INCLUDE_DIR})
-set(DSE_LIBS ${DSE_LIBS} ${LIBKRB5_LIBRARY})
+set(DSE_INCLUDES ${DSE_INCLUDES} ${KERBEROS_INCLUDE_DIR})
+set(DSE_LIBS ${DSE_LIBS} ${KERBEROS_LIBRARIES})
 
 #------------------------------
 # DSE static and shared
@@ -117,6 +118,9 @@ endif()
 include_directories(${DSE_INCLUDES})
 include_directories(${CPP_DRIVER_SOURCE_DIR})
 include_directories(${CPP_DRIVER_INCLUDE_DIR})
+
+# Additional project definitions
+add_definitions(-DNOMINMAX)
 
 # Determine if the dynamic/shared library should be built
 if(DSE_BUILD_SHARED)

@@ -1,16 +1,54 @@
 include(FindPackageHandleStandardArgs)
 
-find_path(LIBKRB5_INCLUDE_DIR
-  NAMES gssapi.h
-  HINTS ${_LIBKRB5_INCLUDEDIR} ${_LIBKRB5_ROOT_HINTS_AND_PATHS}
+set(_KERBEROS_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/kerberos/")
+set(_KERBEROS_ROOT_HINTS ${KERBEROS_ROOT_DIR} $ENV{KERBEROS_ROOT_DIR})
+if(NOT WIN32)
+  set(_KERBEROS_ROOT_PATHS "${_KERBEROS_ROOT_PATHS}" "/usr/" "/usr/local/")
+else()
+  if(CMAKE_CL_64)
+    set(_KERBEROS_SDK_PROGRAMFILES "$ENV{PROGRAMW6432}")
+  else()
+    set(_PF86 "PROGRAMFILES(X86)")
+    set(_KERBEROS_SDK_PROGRAMFILES "$ENV{${_PF86}}")
+  endif()
+  set(_KERBEROS_SDK "MIT/Kerberos")
+  set(_KERBEROS_ROOT_PATHS "${_KERBEROS_ROOT_PATHS}" "${_KERBEROS_SDK_PROGRAMFILES}/${_KERBEROS_SDK}")
+  message(STATUS "KERBEROS ROOT: ${_KERBEROS_ROOT_PATHS}")
+endif()
+set(_KERBEROS_ROOT_HINTS_AND_PATHS HINTS
+  HINTS ${_KERBEROS_ROOT_PATHS}
+  PATHS ${_KERBEROS_ROOT_HINTS})
+
+find_path(GSSAPI_INCLUDE_DIR
+    NAMES gssapi/gssapi.h
+    HINTS ${_KERBEROS_INCLUDEDIR} ${_KERBEROS_ROOT_HINTS_AND_PATHS}
+    PATH_SUFFIXES include)
+
+find_path(KERBEROS_INCLUDE_DIR
+  NAMES krb5.h
+  HINTS ${_KERBEROS_INCLUDEDIR} ${_KERBEROS_ROOT_HINTS_AND_PATHS}
   PATH_SUFFIXES include)
 
-find_library(LIBKRB5_LIBRARY
-  NAMES krb5 libkrb5
-  HINTS ${_LIBKRB5_LIBDIR} ${_LIBKRB5_ROOT_HINTS_AND_PATHS}
-  PATH_SUFFIXES lib)
+find_library(KERBEROS_LIBRARY
+  NAMES krb5 libkrb5 krb5_32 krb5_64
+  HINTS ${_KERBEROS_LIBDIR} ${_KERBEROS_ROOT_HINTS_AND_PATHS}
+  PATH_SUFFIXES lib lib/i386 lib/amd64)
 
-find_package_handle_standard_args(KerberosV5 "Could NOT find krb5, try to set the path to the krb5 root folder in the system variable LIBKRB5_ROOT_DIR"
-  LIBKRB5_LIBRARY
-  LIBKRB5_INCLUDE_DIR)
-mark_as_advanced(LIBKRB5_LIBRARY LIBKRB5_INCLUDE_DIR)
+mark_as_advanced(GSSAPI_INCLUDE_DIR KERBEROS_LIBRARIES KERBEROS_INCLUDE_DIR)
+
+if(WIN32)
+  find_library(GSSAPI_LIBRARY
+    NAMES gssapi32 gssapi64
+    HINTS ${_KERBEROS_LIBDIR} ${_KERBEROS_ROOT_HINTS_AND_PATHS}
+    PATH_SUFFIXES lib lib/i386 lib/amd64)
+
+  mark_as_advanced(GSSAPI_LIBRARY)
+  set(KERBEROS_LIBRARIES ${GSSAPI_LIBRARY} ${KERBEROS_LIBRARY})
+endif()
+
+find_package_handle_standard_args(Kerberos
+  REQUIRED_VARS
+    KERBEROS_LIBRARIES
+    KERBEROS_INCLUDE_DIR
+  FAIL_MESSAGE
+    "Could NOT find krb5, try to set the path to the krb5 root folder in the system variable KERBEROS_ROOT_DIR")

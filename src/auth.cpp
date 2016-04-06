@@ -166,9 +166,9 @@ public:
   };
 
   enum Result {
-    ERROR,
-    CONTINUE,
-    COMPLETE
+    RESULT_ERROR,
+    RESULT_CONTINUE,
+    RESULT_COMPLETE
   };
 
   enum Type {
@@ -253,7 +253,7 @@ GssapiAuthenticator::Result GssapiAuthenticator::init(const std::string& service
   if (GSS_ERROR(maj_stat)) {
     error_.assign("Failed to import server name (gss_import_name()): " +
                   display_status(maj_stat, min_stat));
-    return ERROR;
+    return RESULT_ERROR;
   }
 
   if (!principal.empty()) {
@@ -273,7 +273,7 @@ GssapiAuthenticator::Result GssapiAuthenticator::init(const std::string& service
     if (GSS_ERROR(maj_stat)) {
       error_.assign("Failed to import principal name (gss_import_name()): " +
                     display_status(maj_stat, min_stat));
-      return ERROR;
+      return RESULT_ERROR;
     }
 
     GssapiAuthenticatorData::lock();
@@ -289,18 +289,18 @@ GssapiAuthenticator::Result GssapiAuthenticator::init(const std::string& service
     if (GSS_ERROR(maj_stat)) {
       error_.assign("Failed to acquire principal credentials (gss_acquire_cred()): " +
                     display_status(maj_stat, min_stat));
-      return ERROR;
+      return RESULT_ERROR;
     }
   }
 
-  return COMPLETE;
+  return RESULT_COMPLETE;
 }
 
 GssapiAuthenticator::Result GssapiAuthenticator::negotiate(gss_buffer_t challenge_token) {
   OM_uint32 maj_stat;
   OM_uint32 min_stat;
   GssapiBuffer output_token;
-  Result result = ERROR;
+  Result result = RESULT_ERROR;
 
   GssapiAuthenticatorData::lock();
   maj_stat = gss_init_sec_context(&min_stat,
@@ -320,16 +320,16 @@ GssapiAuthenticator::Result GssapiAuthenticator::negotiate(gss_buffer_t challeng
   if (maj_stat != GSS_S_COMPLETE && maj_stat != GSS_S_CONTINUE_NEEDED) {
     error_.assign("Failed to initalize security context (gss_init_sec_context()): " +
                   display_status(maj_stat, min_stat));
-    return ERROR;
+    return RESULT_ERROR;
   }
 
-  result = (maj_stat == GSS_S_COMPLETE) ? COMPLETE : CONTINUE;
+  result = (maj_stat == GSS_S_COMPLETE) ? RESULT_COMPLETE : RESULT_CONTINUE;
 
   if (!output_token.is_empty()) {
     response_.assign(output_token.data(), output_token.length());
   }
 
-  if (result == COMPLETE) {
+  if (result == RESULT_COMPLETE) {
     GssapiName user;
 
     GssapiAuthenticatorData::lock();
@@ -342,7 +342,7 @@ GssapiAuthenticator::Result GssapiAuthenticator::negotiate(gss_buffer_t challeng
     if (GSS_ERROR(maj_stat)) {
       error_.assign("Failed to inquire security context for user principal (gss_inquire_context()): " +
                     display_status(maj_stat, min_stat));
-      return ERROR;
+      return RESULT_ERROR;
     }
 
     GssapiBuffer user_token;
@@ -357,7 +357,7 @@ GssapiAuthenticator::Result GssapiAuthenticator::negotiate(gss_buffer_t challeng
     if (GSS_ERROR(maj_stat)) {
       error_.assign("Failed to get display name for user principle (gss_inquire_context()): " +
                     display_status(maj_stat, min_stat));
-      return ERROR;
+      return RESULT_ERROR;
     } else {
       username_.assign(user_token.data(), user_token.length());
       state_ = AUTHENTICATION;
@@ -389,11 +389,11 @@ GssapiAuthenticator::Result GssapiAuthenticator::authenticate(gss_buffer_t chall
   if (GSS_ERROR(maj_stat)) {
     error_.assign("Failed to get unwrap challenge token (gss_unwrap()): " +
                   display_status(maj_stat, min_stat));
-    return ERROR;
+    return RESULT_ERROR;
   }
 
   if (output_token.length() != 4) {
-    return ERROR;
+    return RESULT_ERROR;
   }
 
   qop = output_token.value()[0];
@@ -448,7 +448,7 @@ GssapiAuthenticator::Result GssapiAuthenticator::authenticate(gss_buffer_t chall
   if (GSS_ERROR(maj_stat)) {
     error_.assign("Failed to get wrape response token (gss_wrap()): " +
                   display_status(maj_stat, min_stat));
-    return ERROR;
+    return RESULT_ERROR;
   }
 
   if (!output_token.is_empty()) {
@@ -457,7 +457,7 @@ GssapiAuthenticator::Result GssapiAuthenticator::authenticate(gss_buffer_t chall
 
   state_ = AUTHENTICATED;
 
-  return COMPLETE;
+  return RESULT_COMPLETE;
 }
 
 std::string GssapiAuthenticator::display_status(OM_uint32 maj, OM_uint32 min) {
@@ -518,7 +518,7 @@ std::string GssapiAuthenticator::display_status(OM_uint32 maj, OM_uint32 min) {
 }
 
 GssapiAuthenticator::Result GssapiAuthenticator::process(const char* token, size_t token_length) {
-  Result result = ERROR;
+  Result result = RESULT_ERROR;
   gss_buffer_desc challenge_token = GSS_C_EMPTY_BUFFER;
 
   response_.clear();
@@ -592,7 +592,7 @@ void GssapiAuthenticatorData::on_initial(CassAuthenticator* auth, void* data) {
     cass_authenticator_set_exchange_data(auth, static_cast<void*>(gssapi_auth));
 
     if (gssapi_auth->init(service,
-                          gssapi_auth_data->principal()) == GssapiAuthenticator::ERROR) {
+                          gssapi_auth_data->principal()) == GssapiAuthenticator::RESULT_ERROR) {
       std::string error("Unable to intialize GSSAPI: ");
       error.append(gssapi_auth->error());
       cass_authenticator_set_error_n(auth, error.data(), error.length());
@@ -619,13 +619,13 @@ void GssapiAuthenticatorData::on_challenge(CassAuthenticator* auth, void* data,
       = static_cast<GssapiAuthenticator*>(cass_authenticator_exchange_data(auth));
 
   if (gssapi == cass::StringRef(token, token_size)) {
-    if (gssapi_auth->process("", 0) == GssapiAuthenticator::ERROR) {
+    if (gssapi_auth->process("", 0) == GssapiAuthenticator::RESULT_ERROR) {
       std::string error("GSSAPI initial handshake failed: ");
       error.append(gssapi_auth->error());
       cass_authenticator_set_error_n(auth, error.data(), error.length());
     }
   } else {
-    if (gssapi_auth->process(token, token_size) == GssapiAuthenticator::ERROR) {
+    if (gssapi_auth->process(token, token_size) == GssapiAuthenticator::RESULT_ERROR) {
       std::string error("GSSAPI challenge handshake failed: ");
       error.append(gssapi_auth->error());
       cass_authenticator_set_error_n(auth, error.data(), error.length());
