@@ -1680,14 +1680,17 @@ cass_cluster_set_use_schema(CassCluster* cluster,
  *
  * <b>Default:</b> cass_false (disabled).
  *
+ * <b>Important:</b> Not implemented if using libuv 0.1x or earlier
+ *
  * @public @memberof CassCluster
  *
  * @param[in] cluster
  * @param[in] enabled
+ * @return CASS_OK if successful, otherwise an error occurred
  *
  * @see cass_cluster_set_resolve_timeout()
  */
-CASS_EXPORT void
+CASS_EXPORT CassError
 cass_cluster_set_use_hostname_resolution(CassCluster* cluster,
                                          cass_bool_t enabled);
 
@@ -3526,7 +3529,7 @@ cass_future_ready(CassFuture* future);
 /**
  * Wait for the future to be set with either a result or error.
  *
- * Important: Do not wait in a future callback. Waiting in a future
+ * <b>Important:</b> Do not wait in a future callback. Waiting in a future
  * callback will cause a deadlock.
  *
  * @public @memberof CassFuture

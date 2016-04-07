@@ -127,9 +127,9 @@ private:
   virtual void on_event(const SessionEvent& event);
 
   static void on_resolve(MultiResolver<Session*>::Resolver* resolver);
-  static void on_resolve_name(MultiResolver<Session*>::NameResolver* resolver);
   static void on_resolve_done(MultiResolver<Session*>* resolver);
 
+#if UV_VERSION_MAJOR >= 1
   struct ResolveNameData {
     ResolveNameData(Session* session,
                     const SharedRefPtr<Host>& host,
@@ -143,7 +143,9 @@ private:
   };
   typedef NameResolver<ResolveNameData> NameResolver;
 
+  static void on_resolve_name(MultiResolver<Session*>::NameResolver* resolver);
   static void on_add_resolve_name(NameResolver* resolver);
+#endif
 
 #if UV_VERSION_MAJOR == 0
   static void on_execute(uv_async_t* data, int status);

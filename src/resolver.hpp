@@ -125,6 +125,8 @@ private:
   Callback cb_;
 };
 
+
+#if UV_VERSION_MAJOR >= 1
 template <class T>
 class NameResolver {
 public:
@@ -215,25 +217,34 @@ private:
   T data_;
   Callback cb_;
 };
+#endif
 
 template <class T>
 class MultiResolver : public RefCounted<MultiResolver<T> > {
 public:
   typedef SharedRefPtr<MultiResolver<T> > Ptr;
-  typedef Resolver<MultiResolver<T>*> Resolver;
-  typedef NameResolver<MultiResolver<T>*> NameResolver;
 
+  typedef Resolver<MultiResolver<T>*> Resolver;
   typedef void (*ResolveCallback)(Resolver* resolver);
+
+#if UV_VERSION_MAJOR >= 1
+  typedef NameResolver<MultiResolver<T>*> NameResolver;
   typedef void (*ResolveNameCallback)(NameResolver* resolver);
+#endif
+
   typedef void (*FinishedCallback)(MultiResolver<T>* resolver);
 
   MultiResolver(const T& data,
                 ResolveCallback resolve_cb,
+#if UV_VERSION_MAJOR >= 1
                 ResolveNameCallback resolve_name_cb,
+#endif
                 FinishedCallback finished_cb)
     : data_(data)
     , resolve_cb_(resolve_cb)
+#if UV_VERSION_MAJOR >= 1
     , resolve_name_cb_(resolve_name_cb)
+#endif
     , finished_cb_(finished_cb) { }
 
   ~MultiResolver() {
@@ -250,6 +261,7 @@ public:
                                                on_resolve, timeout, hints);
   }
 
+#if UV_VERSION_MAJOR >= 1
   void resolve_name(uv_loop_t* loop,
                     const Address& address,
                     uint64_t timeout, int flags = 0) {
@@ -257,6 +269,7 @@ public:
     cass::NameResolver<MultiResolver<T>*>::resolve(loop, address, this,
                                                    on_resolve_name, timeout, flags);
   }
+#endif
 
 private:
   static void on_resolve(Resolver* resolver) {
@@ -265,16 +278,20 @@ private:
     multi_resolver->dec_ref();
   }
 
+#if UV_VERSION_MAJOR >= 1
   static void on_resolve_name(NameResolver* resolver) {
     MultiResolver<T>* multi_resolver = resolver->data();
     if (multi_resolver->resolve_name_cb_) multi_resolver->resolve_name_cb_(resolver);
     multi_resolver->dec_ref();
   }
+#endif
 
 private:
   T data_;
   ResolveCallback resolve_cb_;
+#if UV_VERSION_MAJOR >= 1
   ResolveNameCallback resolve_name_cb_;
+#endif
   FinishedCallback finished_cb_;
 
   DISALLOW_COPY_AND_ASSIGN(MultiResolver);

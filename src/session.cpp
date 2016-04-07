@@ -420,7 +420,11 @@ void Session::on_event(const SessionEvent& event) {
       int port = config_.port();
 
       MultiResolver<Session*>::Ptr resolver(
-            new MultiResolver<Session*>(this, on_resolve, on_resolve_name, on_resolve_done));
+            new MultiResolver<Session*>(this, on_resolve,
+#if UV_VERSION_MAJOR >= 1
+                                        on_resolve_name,
+#endif
+                                        on_resolve_done));
 
       const ContactPointList& contact_points = config_.contact_points();
       for (ContactPointList::const_iterator it = contact_points.begin(),
@@ -429,11 +433,15 @@ void Session::on_event(const SessionEvent& event) {
         const std::string& seed = *it;
         Address address;
         if (Address::from_string(seed, port, &address)) {
+#if UV_VERSION_MAJOR >= 1
           if (config_.use_hostname_resolution()) {
             resolver->resolve_name(loop(), address, config_.resolve_timeout_ms());
           } else {
+#endif
             add_host(address);
+#if UV_VERSION_MAJOR >= 1
           }
+#endif
         } else {
           resolver->resolve(loop(), seed, port, config_.resolve_timeout_ms());
         }
@@ -483,20 +491,6 @@ void Session::on_event(const SessionEvent& event) {
   }
 }
 
- void Session::on_resolve_name(MultiResolver<Session*>::NameResolver* resolver) {
-  Session* session = resolver->data()->data();
-  if (resolver->is_success()) {
-    SharedRefPtr<Host> host = session->add_host(resolver->address());
-    host->set_hostname(resolver->hostname());
-  } else if (resolver->is_timed_out()) {
-    LOG_ERROR("Timed out attempting to resolve hostname for host %s\n",
-              resolver->address().to_string().c_str());
-  } else {
-    LOG_ERROR("Unable to resolve hostname for host %s\n",
-              resolver->address().to_string().c_str());
-  }
- }
-
 void Session::on_resolve(MultiResolver<Session*>::Resolver* resolver) {
   Session* session = resolver->data()->data();
   if (resolver->is_success()) {
@@ -525,6 +519,21 @@ void Session::execute(RequestHandler* request_handler) {
   }
 }
 
+#if UV_VERSION_MAJOR >= 1
+void Session::on_resolve_name(MultiResolver<Session*>::NameResolver* resolver) {
+  Session* session = resolver->data()->data();
+  if (resolver->is_success()) {
+    SharedRefPtr<Host> host = session->add_host(resolver->address());
+    host->set_hostname(resolver->hostname());
+  } else if (resolver->is_timed_out()) {
+    LOG_ERROR("Timed out attempting to resolve hostname for host %s\n",
+              resolver->address().to_string().c_str());
+  } else {
+    LOG_ERROR("Unable to resolve hostname for host %s\n",
+              resolver->address().to_string().c_str());
+  }
+}
+
 void Session::on_add_resolve_name(NameResolver* resolver) {
   ResolveNameData& data = resolver->data();
   if (resolver->is_success() && !resolver->hostname().empty()) {
@@ -532,6 +541,7 @@ void Session::on_add_resolve_name(NameResolver* resolver) {
   }
   data.session->internal_on_add(data.host, data.is_initial_connection);
 }
+#endif
 
 void Session::on_control_connection_ready() {
   // No hosts lock necessary (only called on session thread and read-only)
@@ -572,14 +582,18 @@ Future* Session::prepare(const char* statement, size_t length) {
 }
 
 void Session::on_add(SharedRefPtr<Host> host, bool is_initial_connection) {
+#if UV_VERSION_MAJOR >= 1
   if (config_.use_hostname_resolution() && host->hostname().empty()) {
     NameResolver::resolve(loop(),
                           host->address(),
                           ResolveNameData(this, host, is_initial_connection),
                           on_add_resolve_name, config_.resolve_timeout_ms());
   } else {
+#endif
     internal_on_add(host, is_initial_connection);
+#if UV_VERSION_MAJOR >= 1
   }
+#endif
 }
 
 void Session::internal_on_add(SharedRefPtr<Host> host, bool is_initial_connection) {
