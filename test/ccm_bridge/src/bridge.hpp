@@ -20,6 +20,7 @@
 #include "bridge_exception.hpp"
 #include "cass_version.hpp"
 #include "deployment_type.hpp"
+#include "dse_credentials_type.hpp"
 #include "socket.hpp"
 
 #include <map>
@@ -41,9 +42,12 @@ typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
 #endif
 
 // Default values
-#define DEFAULT_CASSANDRA_VERSION CassVersion("3.0.0")
-#define DEFAULT_USE_ASFGIT false
+#define DEFAULT_CASSANDRA_VERSION CassVersion("3.4")
+#define DEFAULT_DSE_VERSION DseVersion("4.8.5")
+#define DEFAULT_USE_GIT false
+#define DEFAULT_USE_DSE false
 #define DEFAULT_CLUSTER_PREFIX "cpp-driver"
+#define DEFAULT_DSE_CREDENTIALS DseCredentialsType::USERNAME_PASSWORD
 #define DEFAULT_DEPLOYMENT DeploymentType::LOCAL
 #define DEFAULT_AUTHENTICATION AuthenticationType::USERNAME_PASSWORD
 #define DEFAULT_HOST "127.0.0.1"
@@ -95,11 +99,21 @@ namespace CCM {
      *
      * @param cassandra_version Cassandra version to use
      *                          (default: DEFAULT_CASSANDRA_VERSION)
-     * @param use_asfgit True if version should be obtained from ASF git; false
-     *                otherwise (default: DEFAULT_USE_ASFGIT). Prepends
-          *           `cassandra-` to version when creating cluster through CCM
+     * @param use_git True if version should be obtained from ASF/GitHub; false
+     *                otherwise (default: DEFAULT_USE_GIT). Prepends
+     *                `cassandra-` to version when creating cluster through CCM
+     *                if using Cassandra; otherwise passes version information
+     *                to CCM for git download of DSE.
+     * @param use_dse True if CCM should load DSE for provided version; false
+     *               otherwise (default: DEFAULT_USE_DSE)
      * @param cluster_prefix Prefix to use when creating a cluster name
      *                       (default: DEFAULT_CLUSTER_PREFIX)
+     * @param dse_credentials_type Username|Password/INI file credentials
+     *                             (default: DEFAULT_DSE_CREDENTIALS)
+     * @param dse_username Username for DSE download authentication; empty if
+     *                     using INI file credentials (default: Empty)
+     * @param dse_password Password for DSE download authentication; empty if
+     *                     using INI file credentials (default: Empty)
      * @param deployment_type Local|Remote deployment (execute command locally
      *                        or remote (default: DEFAULT_DEPLOYMENT)
      * @param authentication_type Username|Password/Public key authentication
@@ -119,8 +133,12 @@ namespace CCM {
      * @throws BridgeException
      */
     Bridge(CassVersion cassandra_version = DEFAULT_CASSANDRA_VERSION,
-      bool use_asfgit = DEFAULT_USE_ASFGIT,
+      bool use_git = DEFAULT_USE_GIT,
+      bool use_dse = DEFAULT_USE_DSE,
       const std::string& cluster_prefix = DEFAULT_CLUSTER_PREFIX,
+      DseCredentialsType dse_credentials_type = DEFAULT_DSE_CREDENTIALS,
+      const std::string& dse_username = "",
+      const std::string& dse_password = "",
       DeploymentType deployment_type = DEFAULT_DEPLOYMENT,
       AuthenticationType authentication_type = DEFAULT_AUTHENTICATION,
       const std::string& host = DEFAULT_HOST,
@@ -278,8 +296,10 @@ namespace CCM {
      *
      * @param key Key to update
      * @param value Value to apply to key configuration
+     * @param is_dse True if key/value pair should update the dse.yaml file;
+     *               otherwise false (default: false)
      */
-    void update_cluster_configuration(const std::string& key, const std::string& value);
+    void update_cluster_configuration(const std::string& key, const std::string& value, bool is_dse = false);
 
     /**
      * Add a node on the active Cassandra cluster
@@ -435,6 +455,24 @@ namespace CCM {
     CCM_BRIDGE_DEPRECATED(static CassVersion get_cassandra_version(const std::string& configuration_file));
 
     /**
+     * Get the DSE version from the active cluster
+     *
+     * @return DSE version
+     * @throws BridgeException
+     */
+    DseVersion get_dse_version();
+
+    /**
+     * Get the DSE version indicated in the configuration file
+     *
+     * @param configuration_file Full path to configuration file
+     * @return DSE version from the configuration file
+     * @deprecated Configuration file will be removed after new test framework
+     *             is fully implemented
+     */
+    CCM_BRIDGE_DEPRECATED(static DseVersion get_dse_version(const std::string& configuration_file));
+
+    /**
      * Check to see if a node has been decommissioned
      *
      * @param node Node to check `DECOMMISSION` status
@@ -482,9 +520,17 @@ namespace CCM {
      */
     CassVersion cassandra_version_;
     /**
-     * Flag to determine if Cassandra should be built from ASF git
+     * DSE version to use
      */
-    bool use_asfgit_;
+    DseVersion dse_version_;
+    /**
+     * Flag to determine if Cassandra/DSE should be built from ASF/GitHub
+     */
+    bool use_git_;
+    /**
+     * Flag to determine if DSE is being used
+     */
+    bool use_dse_;
     /**
      * Cluster prefix to apply to cluster name during create command
      */
@@ -501,6 +547,20 @@ namespace CCM {
      * Flag to indicate how SSH authentication should be established
      */
     AuthenticationType authentication_type_;
+    /**
+     * DSE credentials type (username|password/INI file)
+     *
+     * Flag to indicate how DSE credentials should be obtained
+     */
+    DseCredentialsType dse_credentials_type_;
+    /**
+     * Username to use when authenticating download access for DSE
+     */
+    std::string dse_username_;
+    /**
+     * Password to use when authenticating download access for DSE
+     */
+    std::string dse_password_;
     /**
      * IP address to use when establishing SSH connection for remote CCM
      * command execution and/or IP address to use for server connection IP

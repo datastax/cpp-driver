@@ -13,8 +13,8 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-#ifndef __CCM_AUTHENTICATION_TYPE_HPP__
-#define __CCM_AUTHENTICATION_TYPE_HPP__
+#ifndef __CCM_DSE_CREDENTIALS_TYPE_HPP__
+#define __CCM_DSE_CREDENTIALS_TYPE_HPP__
 
 #include <set>
 #include <string>
@@ -22,25 +22,26 @@
 namespace CCM {
 
   /**
-   * Authentication type indicating how SSH authentication should be handled
+   * DSE credential stype indicating how authentication for DSE downloads is
+   * performed through CCM
    */
-  class AuthenticationType {
+  class DseCredentialsType {
   public:
     /**
-     * Iterator for authentication type constants
+     * Iterator for DSE credentials type constants
      */
-    typedef std::set<AuthenticationType>::iterator iterator;
+    typedef std::set<DseCredentialsType>::iterator iterator;
 
     /**
-     * Username/Password authentication type; SSH process is authenticated via
-     * plain text username and password
+     * Username/Password credentials type; DSE download process is authenticated
+     * via plain text username and password
      */
-    static const AuthenticationType USERNAME_PASSWORD;
+    static const DseCredentialsType USERNAME_PASSWORD;
     /**
-     * Public key authentication type; SSH process is authenticated via public
-     * key
+     * File credentials type; DSE download process is authenticated via the
+     * CCM DSE credentials default file location (e.g. ~/.ccm/.dse.ini)
      */
-    static const AuthenticationType PUBLIC_KEY;
+    static const DseCredentialsType INI_FILE;
 
     /**
      * Name of constant
@@ -57,7 +58,7 @@ namespace CCM {
     /**
      * Get the display name
      *
-     * @return Display name of authentication type
+     * @return Display name of DSE credentials type
      */
     const std::string& to_string() const;
 
@@ -67,14 +68,14 @@ namespace CCM {
      * @param object Right hand side comparison object
      * @return True if LHS < RHS; false otherwise
      */
-    bool operator<(const AuthenticationType& object) const;
+    bool operator<(const DseCredentialsType& object) const;
     /**
      * Equal to
      *
      * @param object Right hand side comparison object
      * @return True if LHS == RHS; false otherwise
      */
-    bool operator==(const AuthenticationType& object) const;
+    bool operator==(const DseCredentialsType& object) const;
     /**
      * Equal to (case-incentive string comparison)
      *
@@ -84,29 +85,29 @@ namespace CCM {
     bool operator==(const std::string& object) const;
 
     /**
-     * First item in the authentication constants
+     * First item in the DSE credentials constants
      *
      * @return Iterator pointing to the first element in the set
      */
-    static std::set<AuthenticationType>::iterator begin();
+    static std::set<DseCredentialsType>::iterator begin();
     /**
-     * Last item in the authentication constants
+     * Last item in the DSE credentials constants
      *
      * @return Iterator pointing to the last element in the set
      */
-    static std::set<AuthenticationType>::iterator end();
+    static std::set<DseCredentialsType>::iterator end();
 
     /**
      * Default constructor to handle issues with static initialization of
-     * constant authentication types
+     * constant DSE credentials types
      */
-    AuthenticationType();
+    DseCredentialsType();
 
   private:
     /**
-     * Authentication type constants
+     * DSE credentials type constants
      */
-    static std::set<AuthenticationType> constants_;
+    static std::set<DseCredentialsType> constants_;
     /**
      * Name of constant
      */
@@ -123,18 +124,18 @@ namespace CCM {
     /**
      * Constructor
      *
-     * @param name Name for authentication type
-     * @param display_name Display name for authentication type
+     * @param name Name for DSE credentials type
+     * @param display_name Display name for DSE credentials type
      */
-    AuthenticationType(const std::string& name, int ordinal, const std::string& display_name);
+    DseCredentialsType(const std::string& name, int ordinal, const std::string& display_name);
     /**
-     * Get the authentication type constants
+     * Get the DSE credential type constants
      *
-     * @return List of authentication type constants
+     * @return List of DSE credentials type constants
      */
-    static const std::set<AuthenticationType>& get_constants();
+    static const std::set<DseCredentialsType>& get_constants();
   };
 
 }
 
-#endif // __CCM_AUTHENTICATION_TYPE_HPP__
+#endif // __CCM_DSE_CREDENTIALS_TYPE_HPP__

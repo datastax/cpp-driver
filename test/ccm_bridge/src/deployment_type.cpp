@@ -28,6 +28,12 @@ const DeploymentType DeploymentType::REMOTE("REMOTE", 1, "Remote");
 // Static declarations for deployment type
 std::set<DeploymentType> DeploymentType::constants_;
 
+DeploymentType::DeploymentType()
+ : name_("INVALID")
+ , ordinal_(-1)
+ , display_name_("Invalid deployment") {
+}
+
 const std::string& DeploymentType::name() const {
   return name_;
 }

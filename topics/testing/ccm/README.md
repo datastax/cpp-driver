@@ -5,9 +5,9 @@ a repeatable testing environment [Vagrant] can be utilized to start and stop a
 [Virtual Box] VM for integration testing.
 
 ## CCM Cluster by way of Vagrant and Virtual Box
-CCM Cluster is a 64-bit Ubuntu 12.04 VM. This VM comes configured with ant,
-git, maven, python, CCM, JDK v1.7 Update (Latest), and Java Cryptography
-Extension (JCE) Unlimited Strength Jurisdiction Policy Files v7
+CCM Cluster is a 64-bit Ubuntu 14.04 VM. This VM comes configured with ant,
+git, maven, python, CCM, JDK v1.8 Update (Latest), and Java Cryptography
+Extension (JCE) Unlimited Strength Jurisdiction Policy Files v8
 
 **NOTE:** The JCE is required for Secure Sockets Layer (SSL) testing.
 
@@ -19,14 +19,13 @@ The VM contains the following specifications:
 - Hostname: ccm-cluster
 - Username: vagrant
 - Password: vagrant
-- 6 NICs
+- 6 Network Interfaces Cards (NICs)
  - Node 1: 192.168.33.11
  - Node 2: 192.168.33.12
  - Node 3: 192.168.33.13
  - Node 4: 192.168.33.14
  - Node 5: 192.168.33.15
  - Node 6: 192.168.33.16
-
 
 ```ruby
 # -*- mode: ruby -*-
@@ -43,14 +42,14 @@ CCM_PROVISION_SCRIPT = <<EOF
 printf "Installing System Packages ...\n"
 #Add JDK repository and update packages
 add-apt-repository ppa:webupd8team/java -y > /dev/null 2>&1
-apt-get update -y -qq
+apt-get update -qq
 
 #Auto accept the the Java license aggreement
 echo debconf shared/accepted-oracle-license-v1-1 select true | sudo debconf-set-selections
 echo debconf shared/accepted-oracle-license-v1-1 seen true | sudo debconf-set-selections
 
 #Install the packages
-apt-get install ant git maven oracle-java7-installer oracle-java7-unlimited-jce-policy python-dev python-pip -y -qq
+apt-get install ant git maven oracle-java8-installer oracle-java8-unlimited-jce-policy python-dev python-pip -qq
 
 #Install CCM and its dependencies
 printf "Installing CCM and its dependencies ...\n"
@@ -76,8 +75,8 @@ EOF
 #     - Node 6: 192.168.33.16
 ##
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  # Create Ubuntu 12.04 LTS VM
-  config.vm.box = "ubuntu/precise64"
+  # Create Ubuntu 14.04 LTS VM
+  config.vm.box = "ubuntu/trusty64"
 
   # Define the hostname and IP addresses (6 node cluster)
   config.vm.define "ccm-cluster" do |ccm_cluster|
