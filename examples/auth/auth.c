@@ -35,7 +35,7 @@ typedef struct Credentials_ {
   const char* username;
 } Credentials;
 
-size_t on_auth_initial(CassAuthExchange* auth,
+void on_auth_initial(CassAuthenticator* auth,
                        void* data) {
   /*
    * This callback is used to initiate a request to begin an authentication
@@ -66,22 +66,19 @@ size_t on_auth_initial(CassAuthExchange* auth,
 
   response[username_size + 1] = '\0';
   memcpy(response + username_size + 2, credentials->password, password_size);
-
-  return size;
 }
 
-size_t on_auth_challenge(CassAuthExchange* auth,
-                         void* data,
-                         const char* token,
-                         size_t token_size) {
+void on_auth_challenge(CassAuthenticator* auth,
+                       void* data,
+                       const char* token,
+                       size_t token_size) {
   /*
    * Not used for plain text authentication, but this is to be used
    * for handling an authentication challenge initiated by the server.
    */
-  return 0;
 }
 
-void on_auth_success(CassAuthExchange* auth,
+void on_auth_success(CassAuthenticator* auth,
                      void* data,
                      const char* token,
                      size_t token_size ) {
@@ -91,7 +88,7 @@ void on_auth_success(CassAuthExchange* auth,
    */
 }
 
-void on_auth_cleanup(CassAuthExchange* auth, void* data) {
+void on_auth_cleanup(CassAuthenticator* auth, void* data) {
   /*
    * No resources cleanup is necessary for plain text authentication, but
    * this is used to cleanup resources acquired during the authentication
@@ -106,7 +103,7 @@ int main() {
   CassSession* session = cass_session_new();
 
   /* Setup authentication callbacks and credentials */
-  CassAuthExchangeCallbacks auth_callbacks = {
+  CassAuthenticatorCallbacks auth_callbacks = {
     on_auth_initial,
     on_auth_challenge,
     on_auth_success,
@@ -122,7 +119,10 @@ int main() {
   cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
 
   /* Set custom authentication callbacks and credentials */
-  cass_cluster_set_authenticator_callbacks(cluster, &auth_callbacks, &credentials);
+  cass_cluster_set_authenticator_callbacks(cluster,
+                                           &auth_callbacks,
+                                           NULL,
+                                           &credentials);
 
   /* Provide the cluster object as configuration to connect the session */
   connect_future = cass_session_connect(session, cluster);
