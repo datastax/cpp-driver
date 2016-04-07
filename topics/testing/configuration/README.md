@@ -19,13 +19,13 @@ an example of the configuration file for use with the [CCM Cluster] VM.
 #
 # Uncomment to specify Cassandra version
 ##
-#CASSANDRA_VERSION=2.2.3
+#CASSANDRA_VERSION=3.4
 ##
-# Flag to determine if Cassandra version should be obtained from ASF git
+# Flag to determine if Cassandra/DSE version should be obtained from ASF/GitHub
 #
-# Uncomment to specify use of ASF git
+# Uncomment to specify use of ASF/GitHub download
 ##
-#USE_ASFGIT=false
+#USE_GIT=false
 ##
 # CCM Deployment Type (local|remote)
 #
@@ -36,8 +36,53 @@ an example of the configuration file for use with the [CCM Cluster] VM.
 #DEPLOYMENT_TYPE=local
 
 ###############################################################################
+# DSE Options                                                                 #
+# Ensure USE_DSE=true to enable these options                                 #
+###############################################################################
+##
+# Flag to determine if DSE version should be loaded
+#
+# Uncomment to specify use of DSE
+##
+#USE_DSE=false
+##
+# DSE Deployment Version
+#
+# DSE version to deploy using CCM
+#
+# Uncomment to specify DSE version
+##
+#DSE_VERSION=4.8.5
+##
+# CCM DSE Credentials Type (username_password|ini_file)
+#
+# Setting to indicate how DSE download through CCM should authenticate access
+#
+# Uncomment to specify DSE credentials type (defaults to username and password)
+##
+#DSE_CREDENTIALS_TYPE=username_password
+##
+# DSE Username (Username)
+#
+# Username for authenticating DSE download access
+#
+# Uncomment to specify DSE download access username
+##
+#DSE_USERNAME=
+##
+# DSE Password (Password)
+#
+# Password for authenticating DSE download access
+#
+# NOTE: This password is plain text
+#
+# Uncomment to specify DSE download access password
+##
+#DSE_PASSWORD=
+
+###############################################################################
 # SSH Options                                                                 #
-# Enusre DEPLOYMENT_TYPE=ssh to enable these options                          #
+# Enusre DEPLOYMENT_TYPE=remote to enable these options                       #
 ###############################################################################
 ##
 # SSH Port (Port)

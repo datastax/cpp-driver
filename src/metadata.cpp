@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2014-2015 DataStax
+  Copyright (c) 2014-2016 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -86,6 +86,12 @@ const CassKeyspaceMeta* cass_schema_meta_keyspace_by_name_n(const CassSchemaMeta
   return CassKeyspaceMeta::to(schema_meta->get_keyspace(std::string(keyspace, keyspace_length)));
 }
 
+void cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
+                             const char** name, size_t* name_length) {
+  *name = keyspace_meta->name().data();
+  *name_length = keyspace_meta->name().size();
+}
+
 const CassTableMeta* cass_keyspace_meta_table_by_name(const CassKeyspaceMeta* keyspace_meta,
                                                       const char* table) {
   return CassTableMeta::to(keyspace_meta->get_table(table));
@@ -156,13 +162,6 @@ const CassAggregateMeta* cass_keyspace_meta_aggregate_by_name_n(const CassKeyspa
   std::string full_aggregate_name(name, name_length);
   return CassAggregateMeta::to(keyspace_meta->get_aggregate(
                                  append_arguments(full_aggregate_name, std::string(arguments, arguments_length))));
-}
-
-
-void cass_keyspace_meta_name(const CassKeyspaceMeta* keyspace_meta,
-                             const char** name, size_t* name_length) {
-  *name = keyspace_meta->name().data();
-  *name_length = keyspace_meta->name().size();
 }
 
 const CassValue* cass_keyspace_meta_field_by_name(const CassKeyspaceMeta* keyspace_meta,
@@ -357,6 +356,14 @@ const CassColumnMeta* cass_materialized_view_meta_clustering_key(const CassMater
     return NULL;
   }
   return CassColumnMeta::to(view_meta->clustering_key()[index].get());
+}
+
+CassClusteringOrder cass_materialized_view_meta_clustering_key_order(const CassMaterializedViewMeta* view_meta,
+                                                                     size_t index) {
+  if (index >= view_meta->clustering_key_order().size()) {
+    return CASS_CLUSTERING_ORDER_NONE;
+  }
+  return view_meta->clustering_key_order()[index];
 }
 
 void cass_column_meta_name(const CassColumnMeta* column_meta,
@@ -1325,6 +1332,7 @@ void TableMetadataBase::build_keys_and_sort(const MetadataConfig& config) {
   if (config.cassandra_version.major_version() >= 2) {
     partition_key_.resize(get_column_count(columns_, CASS_COLUMN_TYPE_PARTITION_KEY));
     clustering_key_.resize(get_column_count(columns_, CASS_COLUMN_TYPE_CLUSTERING_KEY));
+    clustering_key_order_.resize(clustering_key_.size(), CASS_CLUSTERING_ORDER_NONE);
     for (ColumnMetadata::Vec::const_iterator i = columns_.begin(),
          end = columns_.end(); i != end; ++i) {
       ColumnMetadata::Ptr column(*i);
@@ -1336,8 +1344,8 @@ void TableMetadataBase::build_keys_and_sort(const MetadataConfig& config) {
                  column->position() >= 0 &&
                  static_cast<size_t>(column->position()) < clustering_key_.size()) {
         clustering_key_[column->position()] = column;
-        clustering_key_order_.push_back(column->is_reversed() ? CASS_CLUSTERING_ORDER_DESC
-                                                              : CASS_CLUSTERING_ORDER_ASC);
+        clustering_key_order_[column->position()] = column->is_reversed() ? CASS_CLUSTERING_ORDER_DESC
+                                                                          : CASS_CLUSTERING_ORDER_ASC;
       }
     }
 

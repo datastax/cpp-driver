@@ -1,10 +1,15 @@
 # Testing
-Before proceeding ensure the tests were built using the build procedures found [here](http://datastax.github.io/cpp-driver/topics/building/#test-dependencies-and-building-tests-not-required)
+Before proceeding ensure the tests were built using the [build procedures].
 
 Each test performs a [setup](#setup-cassandra), [execute](#execute-test), and
 [teardown](#teardown-cassandra). This ensures that each test has a clean and
 consistent run against the Apache Cassandra instance during the execution
-phase.
+phase. Cluster instances are maintained for the entire duration of the test
+unless the test is chaotic at which point the cluster will be destroyed at the
+end.
+
+Most of the tests performed will utilize a single node cluster; however a
+cluster may be as large as nine nodes depending on the test being performed.
 
 ## Execution Sequences
 ### Setup Cassandra
@@ -67,7 +72,7 @@ phase.
                                              |                                |
                                    /---------+----------\                     |
                                    | Cassandra Cluster  |                     |
-                                   |                    |     Perform Test    |
+                                   | (or DSE)           |     Perform Test    |
                                    |                    +<--------------------+
                                    |                    |
                                    | {s}                |
@@ -94,8 +99,8 @@ phase.
          | |                             | |                              | |<--------------------------| |
          | |                             | |                              | |           Destroy Cluster | |
          | |                             | |                              | |<--------------------------+++
-         | |                             | |  Cassandra Cluster Destroyed | |                            :
-         | | Cassandra Cluster Destrored | |<-----------------------------+++                            :
+         | |                             | |            Cluster Destroyed | |                            :
+         | |           Cluster Destrored | |<-----------------------------+++                            :
          +++<----------------------------+++                               :                             :
           :                               :                                :                             :
           :                               :                                :                             :
@@ -109,3 +114,5 @@ Here are some of the items being scheduled for future enhancements.
 - Remove Boost Test Framework in Favor of Google Test Framework
 - Updates to CCM Bridge
  - Allow files to be copied over SSH established connection
+
+[build procedures]: (http://datastax.github.io/cpp-driver/topics/building/#test-dependencies-and-building-tests-not-required)

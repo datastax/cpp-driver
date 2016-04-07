@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2014-2015 DataStax
+  Copyright (c) 2014-2016 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -676,6 +676,53 @@ BOOST_AUTO_TEST_CASE(unset_parameters)
   } else {
     BOOST_REQUIRE(rc == CASS_ERROR_LIB_PARAMETER_UNSET);
   }
+
+  test_utils::CassResultPtr result;
+  test_utils::execute_query(session,
+                            str(boost::format("SELECT * FROM %s") % table_name), &result);
+
+  // Check to make sure the known values are still present
+  CassString key;
+  CassString value;
+  const CassRow* row = cass_result_first_row(result.get());
+  test_utils::Value<CassString>::get(cass_row_get_column(row, 0), &key);
+  test_utils::Value<CassString>::get(cass_row_get_column(row, 1), &value);
+  BOOST_CHECK(test_utils::Value<CassString>::equal(key, CassString("key1")));
+  BOOST_CHECK(test_utils::Value<CassString>::equal(value, CassString("value1")));
+}
+
+/**
+ * Bind a blob as a string (char*).
+ *
+ * Verify that a "blob" can be bound using the string function. This was
+ * allowed in previous versions of the driver.
+ *
+ * @since 2.3
+ * @test_category basic
+ *
+ */
+BOOST_AUTO_TEST_CASE(bind_blob_as_string)
+{
+  std::string table_name = str(boost::format("table_%s") % test_utils::generate_unique_str(uuid_gen));
+
+  test_utils::execute_query(session,
+                            str(boost::format("CREATE TABLE %s (key text PRIMARY KEY, value blob)") % table_name));
+
+  std::string insert_query = str(boost::format("INSERT INTO %s (key, value) VALUES(?, ?)") % table_name);
+
+  // Prepared needed to validate bind type information
+  test_utils::CassPreparedPtr prepared = test_utils::prepare(session, insert_query);
+  test_utils::CassStatementPtr statement(test_utils::CassStatementPtr(cass_prepared_bind(prepared.get())));
+
+  BOOST_CHECK_EQUAL(cass_statement_bind_string(statement.get(), 0, "key1"), CASS_OK);
+
+  // Verify that a blob can be bound as a string
+  BOOST_CHECK_EQUAL(cass_statement_bind_string(statement.get(), 1, "value1"), CASS_OK);
+
+  test_utils::CassFuturePtr future(cass_session_execute(session, statement.get()));
+
+  CassError rc = cass_future_error_code(future.get());
+  BOOST_REQUIRE(rc == CASS_OK);
 
   test_utils::CassResultPtr result;
   test_utils::execute_query(session,

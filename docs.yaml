@@ -21,10 +21,13 @@ sections:
       TYPEDEF_HIDES_STRUCT = YES
       EXTRACT_ALL = YES
       INLINE_SOURCES = NO
+      ALIASES = cassandra{1}="<b>Requires Cassandra:</b> \1"
 
 versions:
-  - name: v2.2
+  - name: v2.3
     ref: HEAD
+  - name: v2.2
+    ref: b4bb435129bab533612fa2caf194555fa943f925
   - name: v2.1
     ref: 2c97015988e0a9e9342b233db5f37ca9386e4d7d
   - name: v2.0

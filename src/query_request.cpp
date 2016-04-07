@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2014-2015 DataStax
+  Copyright (c) 2014-2016 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -63,6 +63,9 @@ size_t QueryRequest::get_indices(StringRef name, IndexVec* indices) {
     if (value_names_.size() > elements_count()) {
       // No more space left for new named values
       return 0;
+    }
+    if (name.size() > 0 && name.front() == '"' && name.back() == '"') {
+      name = name.substr(1, name.size() - 2);
     }
     indices->push_back(value_names_.add(ValueName(name.to_string())));
   }

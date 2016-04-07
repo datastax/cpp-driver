@@ -118,8 +118,8 @@ SET LIBSSH2_BRANCH_TAG_VERSION=libssh2-1.7.0
 SET LIBSSH2_PACKAGE_VERSION=1.7.0
 SET OPENSSL_REPOSITORY_URL=https://github.com/openssl/openssl.git
 SET OPENSSL_DIRECTORY=openssl
-SET OPENSSL_BRANCH_TAG_VERSION=OpenSSL_1_0_2f
-SET OPENSSL_PACKAGE_VERSION=1.0.2f
+SET OPENSSL_BRANCH_TAG_VERSION=OpenSSL_1_0_2g
+SET OPENSSL_PACKAGE_VERSION=1.0.2g
 SET ZLIB_REPOSITORY_URL=https://github.com/madler/zlib.git
 SET ZLIB_DIRECTORY=zlib
 SET ZLIB_BRANCH_TAG_VERSION=v1.2.8
@@ -1236,7 +1236,7 @@ REM                               install; false otherwise
 REM @param log-filename Absolute path and filename for log output
 :BUILDLIBUV [source-directory] [install-directory] [target-architecture] [library-type] [is-windows-sdk-build] [is-clean-after-install] [log-filename]
 	REM Create library variables from arguments
-	SET LIBUV_SOURCE_DIRECTORY=%~1"
+	SET "LIBUV_SOURCE_DIRECTORY=%~1"
 	SHIFT
 	SET "LIBUV_INSTALL_DIRECTORY=%~1"
 	SHIFT

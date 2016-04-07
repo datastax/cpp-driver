@@ -1,5 +1,7 @@
 # The `date` and `time` Types
 
+**Note**: Cassandra 2.2+ is required.
+
 The driver currently uses raw types to handle `date` and `time` because date
 and time handling is often very application specific in C/C++. It currently
 provides methods to handle converting Epoch (January 1, 1970) time in seconds

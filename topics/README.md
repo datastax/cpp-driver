@@ -2,7 +2,17 @@
 
 ## Installation
 
-Binary packages are [available](http://downloads.datastax.com/cpp-driver/) (CentOS, Ubuntu, and Windows) or the driver can be [built from source](http://datastax.github.io/cpp-driver/topics/building/).
+CentOS, Ubuntu and Windows. Packages for the dependencies, libuv (1.x) and OpenSSL, are also
+provided and can be found under the "dependencies" directory for each
+platform e.g. [CentOS 7](http://downloads.datastax.com/cpp-driver/centos/7/dependencies/),
+[Ubuntu 14.04](http://downloads.datastax.com/cpp-driver/ubuntu/14.04/dependencies/),
+[Windows](http://downloads.datastax.com/cpp-driver/windows/dependencies/).
+
+*Note*: CentOS and Ubuntu use the version of OpenSSL provided with the
+distribution.
+
+The driver can also be [built from
+source](http://datastax.github.io/cpp-driver/topics/building/).
 
 ## Connecting
 

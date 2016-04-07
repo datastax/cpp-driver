@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2014-2015 DataStax
+  Copyright (c) 2014-2016 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -521,7 +521,8 @@ struct IsValidDataType<cass_bool_t> {
 template<>
 struct IsValidDataType<CassString> {
   bool operator()(CassString, const DataType::ConstPtr& data_type) const {
-    return is_string_type(data_type->value_type());
+    // Also allow "bytes" types to be bound as "string" types
+    return is_string_type(data_type->value_type()) || is_bytes_type(data_type->value_type());
   }
 };
 

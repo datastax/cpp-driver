@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2014-2015 DataStax
+  Copyright (c) 2014-2016 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -25,6 +25,12 @@ const AuthenticationType AuthenticationType::PUBLIC_KEY("PUBLIC_KEY", 1, "Public
 
 // Static declarations for authentication type
 std::set<AuthenticationType> AuthenticationType::constants_;
+
+AuthenticationType::AuthenticationType()
+ : name_("INVALID")
+ , ordinal_(-1)
+ , display_name_("Invalid authentication") {
+}
 
 const std::string& AuthenticationType::name() const {
   return name_;

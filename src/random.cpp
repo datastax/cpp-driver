@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2014-2015 DataStax
+  Copyright (c) 2014-2016 DataStax
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ namespace cass {
 
 #define STRERROR_BUFSIZE_ 256
 
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || !defined(_GNU_SOURCE) || !defined(__GLIBC__)
 #define STRERROR_R_(errno, buf, bufsize) (strerror_r(errno, buf, bufsize), buf)
 #else
 #define STRERROR_R_(errno, buf, bufsize) strerror_r(errno, buf, bufsize)

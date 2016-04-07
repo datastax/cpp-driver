@@ -1,5 +1,7 @@
 # Tuples
 
+**Note**: Cassandra 2.1+ is required.
+
 Tuples are fixed-length sets of values. They are similar to UDTs in that they
 can contain different types of values, but unlike UDTs tuples can only be
 accessed by position and not by name.
