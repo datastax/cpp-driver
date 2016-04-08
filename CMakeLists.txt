@@ -29,6 +29,8 @@ endif()
 project(${PROJECT_NAME_STRING} C CXX)
 
 # Title the project and define the versioning
+set(PROJECT_DISPLAY_NAME "DataStax C/C++ DSE Driver")
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Retrieve version from header file
 set(PROJECT_VERSION_HEADER_FILE "${PROJECT_SOURCE_DIR}/include/dse.h")
@@ -40,7 +42,6 @@ file(STRINGS ${PROJECT_VERSION_HEADER_FILE} PROJECT_VERSION_PARTS
 string(REGEX MATCH "DSE_VERSION_MAJOR[ \t]+[0-9]+" PROJECT_VERSION_MAJOR  ${PROJECT_VERSION_PARTS})
 string(REGEX MATCH "DSE_VERSION_MINOR[ \t]+[0-9]+" PROJECT_VERSION_MINOR  ${PROJECT_VERSION_PARTS})
 string(REGEX MATCH "DSE_VERSION_PATCH[ \t]+[0-9]+" PROJECT_VERSION_PATCH  ${PROJECT_VERSION_PARTS})
-
 if(NOT PROJECT_VERSION_MAJOR OR NOT PROJECT_VERSION_MINOR OR NOT PROJECT_VERSION_PATCH)
   message(FATAL_ERROR "Unable to retrieve project version from ${PROJECT_VERSION_HEADER_FILE}")
 endif()
@@ -49,16 +50,17 @@ endif()
 string(REGEX REPLACE "DSE_VERSION_MAJOR[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_MAJOR  ${PROJECT_VERSION_MAJOR})
 string(REGEX REPLACE "DSE_VERSION_MINOR[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_MINOR  ${PROJECT_VERSION_MINOR})
 string(REGEX REPLACE "DSE_VERSION_PATCH[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_PATCH  ${PROJECT_VERSION_PATCH})
-
 set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
-
 message(STATUS "Project version: ${PROJECT_VERSION_STRING}")
 
-option(DSE_BUILD_EXAMPLES "Build examples" OFF)
+# Project options
 option(DSE_BUILD_SHARED "Build shared library" ON)
 option(DSE_BUILD_STATIC "Build static library" OFF)
 option(DSE_INSTALL_HEADER "Install header file" ON)
 option(DSE_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
+option(DSE_BUILD_EXAMPLES "Build examples" OFF)
+option(DSE_BUILD_INTEGRATION_TESTS "Build the integration tests" OFF)
+option(DSE_BUILD_UNIT_TESTS "Build the unit tests" OFF)
 
 # Determine which driver target should be used as a dependency
 set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME})
@@ -67,11 +69,20 @@ if(DSE_USE_STATIC_LIBS)
   set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME_STATIC})
 endif()
 
+# Build the Cassandra C/C++ driver submodule
 set(CPP_DRIVER_DIR "${PROJECT_SOURCE_DIR}/cpp-driver")
 set(CPP_DRIVER_INCLUDE_DIR "${CPP_DRIVER_DIR}/include")
 set(CPP_DRIVER_SOURCE_DIR "${CPP_DRIVER_DIR}/src")
-
+if(NOT EXISTS "${CPP_DRIVER_DIR}/CMakeLists.txt")
+    find_package(Git REQUIRED)
+    execute_process(COMMAND git submodule update --init --recursive
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        OUTPUT_QUIET)
+endif()
 add_subdirectory(${CPP_DRIVER_DIR})
+set_property(TARGET cassandra PROPERTY FOLDER "Driver/Cassandra")
+set_property(TARGET cassandra_static PROPERTY FOLDER "Driver/Cassandra")
+set_property(TARGET cpp-driver PROPERTY FOLDER "Driver/Cassandra")
 
 # Build up the include paths
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
@@ -108,6 +119,7 @@ if(NOT CMAKE_VERSION VERSION_LESS "2.8.8")
   if(NOT WIN32)
     set_property(TARGET cpp-driver-dse PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -fPIC")
   endif()
+  set_property(TARGET cpp-driver-dse PROPERTY FOLDER "Driver/DSE")
 
   # Build both shared and static libraries
   set(DSE_BUILD_SHARED ON)
@@ -136,6 +148,7 @@ if(DSE_BUILD_SHARED)
   set_property(
     TARGET ${PROJECT_LIB_NAME}
     APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DDSE_BUILDING")
+  set_property(TARGET ${PROJECT_LIB_NAME} PROPERTY FOLDER "Driver/DSE")
 endif()
 
 # Determine if the static library should be built
@@ -151,6 +164,7 @@ if(DSE_BUILD_STATIC)
   set_property(
     TARGET ${PROJECT_LIB_NAME_STATIC}
     APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DDSE_STATIC")
+  set_property(TARGET ${PROJECT_LIB_NAME_STATIC} PROPERTY FOLDER "Driver/DSE")
 
   # Update the test flags to indicate the use of the static library
   if(DSE_USE_STATIC_LIBS)
@@ -165,6 +179,13 @@ endif()
 if(DSE_BUILD_EXAMPLES)
   add_subdirectory(examples/plaintext)
   add_subdirectory(examples/gssapi)
+endif()
+
+#--------
+# Tests
+#--------
+if (DSE_BUILD_INTEGRATION_TESTS OR DSE_BUILD_UNIT_TESTS)
+  add_subdirectory(tests)
 endif()
 
 #-------------------------------------
