@@ -403,7 +403,7 @@ private:
     }
     sk_GENERAL_NAME_pop_free(names, GENERAL_NAME_free);
 
-    return NO_MATCH;
+    return result;
   }
 };
 

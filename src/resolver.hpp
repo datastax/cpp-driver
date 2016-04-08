@@ -224,11 +224,11 @@ class MultiResolver : public RefCounted<MultiResolver<T> > {
 public:
   typedef SharedRefPtr<MultiResolver<T> > Ptr;
 
-  typedef Resolver<MultiResolver<T>*> Resolver;
+  typedef cass::Resolver<MultiResolver<T>*> Resolver;
   typedef void (*ResolveCallback)(Resolver* resolver);
 
 #if UV_VERSION_MAJOR >= 1
-  typedef NameResolver<MultiResolver<T>*> NameResolver;
+  typedef cass::NameResolver<MultiResolver<T>*> NameResolver;
   typedef void (*ResolveNameCallback)(NameResolver* resolver);
 #endif
 

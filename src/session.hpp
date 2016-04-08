@@ -141,7 +141,7 @@ private:
     SharedRefPtr<Host> host;
     bool is_initial_connection;
   };
-  typedef NameResolver<ResolveNameData> NameResolver;
+  typedef cass::NameResolver<ResolveNameData> NameResolver;
 
   static void on_resolve_name(MultiResolver<Session*>::NameResolver* resolver);
   static void on_add_resolve_name(NameResolver* resolver);

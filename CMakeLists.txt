@@ -18,6 +18,11 @@ if(POLICY CMP0054)
   cmake_policy(SET CMP0054 OLD)
 endif()
 
+# Force OLD style of project versioning variables
+if(POLICY CMP0048)
+  cmake_policy(SET CMP0048 OLD)
+endif()
+
 # Title the project and define the versioning
 project(${PROJECT_NAME_STR} C CXX)
 
