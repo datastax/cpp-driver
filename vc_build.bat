@@ -1,5 +1,5 @@
 @ECHO OFF
-REM Copyright 2016 DataStax
+REM Copyright 2014-2016 DataStax
 REM
 REM Licensed under the Apache License, Version 2.0 (the "License");
 REM you may not use this file except in compliance with the License.
@@ -110,8 +110,8 @@ SET BOOST_DIRECTORY=boost
 SET BOOST_BRANCH_TAG_VERSION=boost-1.59.0
 SET LIBUV_REPOSITORY_URL=https://github.com/libuv/libuv.git
 SET LIBUV_DIRECTORY=libuv
-SET LIBUV_BRANCH_TAG_VERSION=v1.8.0
-SET LIBUV_PACKAGE_VERSION=1.8.0
+SET LIBUV_BRANCH_TAG_VERSION=v1.9.0
+SET LIBUV_PACKAGE_VERSION=1.9.0
 SET GYP_REPOSITORY_URL=https://chromium.googlesource.com/external/gyp.git
 SET LIBSSH2_REPOSITORY_URL=https://github.com/libssh2/libssh2.git
 SET LIBSSH2_DIRECTORY=libssh2
@@ -493,30 +493,32 @@ IF NOT DEFINED PYTHON_FOUND (
 )
 
 REM Ensure Kerberos SDK is available
-SET "KERBEROS_SDK_DIRECTORY=!PROGRAMFILES!\MIT\Kerberos"
-IF !TARGET_ARCHITECTURE! EQU !ARCHITECTURE_32BIT! (
-  IF !SYSTEM_ARCHITECTURE! EQU !ARCHITECTURE_64BIT! (
-    SET "KERBEROS_SDK_DIRECTORY=!PROGRAMFILES(X86)!\MIT\Kerberos"
+IF !BUILD_DEPENDENCIES_ONLY! EQU !FALSE! (
+  SET "KERBEROS_SDK_DIRECTORY=!PROGRAMFILES!\MIT\Kerberos"
+  IF !TARGET_ARCHITECTURE! EQU !ARCHITECTURE_32BIT! (
+    IF !SYSTEM_ARCHITECTURE! EQU !ARCHITECTURE_64BIT! (
+      SET "KERBEROS_SDK_DIRECTORY=!PROGRAMFILES(X86)!\MIT\Kerberos"
+    )
   )
-)
-IF !TARGET_ARCHITECTURE! EQU !ARCHITECTURE_32BIT! (
-  SET KERBEROS_SDK_LIBRARY_DIRECTORY=!LIBRARY_BINARY_DIRECTORY!\i386
-  SET "DOWNLOAD_URL_KERBEROS=http://web.mit.edu/kerberos/dist/kfw/4.0/kfw-4.0.1-i386.msi"
-) ELSE (
-  SET KERBEROS_SDK_LIBRARY_DIRECTORY=!LIBRARY_BINARY_DIRECTORY!\amd64
-  SET "DOWNLOAD_URL_KERBEROS=http://web.mit.edu/kerberos/dist/kfw/4.0/kfw-4.0.1-amd64.msi"
-)
-SET "KERBEROS_SDK_INCLUDE_DIRECTORY=!KERBEROS_SDK_DIRECTORY!\!LIBRARY_INCLUDE_DIRECTORY!"
-SET "KERBEROS_SDK_LIBRARY_DIRECTORY=!KERBEROS_SDK_DIRECTORY!\!KERBEROS_SDK_LIBRARY_DIRECTORY!"
-SET INVALID_KERBEROS_SDK_INSTALLATION=!FALSE!
-IF NOT EXIST "!KERBEROS_SDK_INCLUDE_DIRECTORY!" SET INVALID_KERBEROS_SDK_INSTALLATION=!TRUE!
-IF NOT EXIST "!KERBEROS_SDK_LIBRARY_DIRECTORY!" SET INVALID_KERBEROS_SDK_INSTALLATION=!TRUE!
-IF !INVALID_KERBEROS_SDK_INSTALLATION! EQU !TRUE! (
-  ECHO Unable to Locate Kerberos SDK Installation: Kerberos installation is required
-  ECHO	!DOWNLOAD_URL_KERBEROS!
-  CHOICE /N /T 15 /D N /M "Would you like to download Kerberos now?"
-  IF !ERRORLEVEL! EQU !YES! START !DOWNLOAD_URL_KERBEROS!
-  EXIT /B !EXIT_CODE_INVALID_BUILD_DEPENDENCY_VERSION!
+  IF !TARGET_ARCHITECTURE! EQU !ARCHITECTURE_32BIT! (
+    SET KERBEROS_SDK_LIBRARY_DIRECTORY=!LIBRARY_BINARY_DIRECTORY!\i386
+    SET "DOWNLOAD_URL_KERBEROS=http://web.mit.edu/kerberos/dist/kfw/4.0/kfw-4.0.1-i386.msi"
+  ) ELSE (
+    SET KERBEROS_SDK_LIBRARY_DIRECTORY=!LIBRARY_BINARY_DIRECTORY!\amd64
+    SET "DOWNLOAD_URL_KERBEROS=http://web.mit.edu/kerberos/dist/kfw/4.0/kfw-4.0.1-amd64.msi"
+  )
+  SET "KERBEROS_SDK_INCLUDE_DIRECTORY=!KERBEROS_SDK_DIRECTORY!\!LIBRARY_INCLUDE_DIRECTORY!"
+  SET "KERBEROS_SDK_LIBRARY_DIRECTORY=!KERBEROS_SDK_DIRECTORY!\!KERBEROS_SDK_LIBRARY_DIRECTORY!"
+  SET INVALID_KERBEROS_SDK_INSTALLATION=!FALSE!
+  IF NOT EXIST "!KERBEROS_SDK_INCLUDE_DIRECTORY!" SET INVALID_KERBEROS_SDK_INSTALLATION=!TRUE!
+  IF NOT EXIST "!KERBEROS_SDK_LIBRARY_DIRECTORY!" SET INVALID_KERBEROS_SDK_INSTALLATION=!TRUE!
+  IF !INVALID_KERBEROS_SDK_INSTALLATION! EQU !TRUE! (
+    ECHO Unable to Locate Kerberos SDK Installation: Kerberos installation is required
+    ECHO	!DOWNLOAD_URL_KERBEROS!
+    CHOICE /N /T 15 /D N /M "Would you like to download Kerberos now?"
+    IF !ERRORLEVEL! EQU !YES! START !DOWNLOAD_URL_KERBEROS!
+    EXIT /B !EXIT_CODE_INVALID_BUILD_DEPENDENCY_VERSION!
+  )
 )
 
 REM Determine if we should allow the user to choose compiler version
@@ -721,6 +723,39 @@ IF NOT EXIST "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" (
   !GIT! clone --depth 1 --branch !LIBUV_BRANCH_TAG_VERSION! --single-branch !LIBUV_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" >> "!LOG_LIBUV_BUILD!" 2>&1
   IF !ERRORLEVEL! EQU 0 (
     ECHO done.
+    IF "!LIBUV_BRANCH_TAG_VERSION!" == "v1.9.0" (
+      ECHO index 77c935a..21e847c 100644>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO --- a/src/win/fs-event.c>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO +++ b/src/win/fs-event.c>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO @@ -66,11 +66,13 @@ static void uv_fs_event_queue_readdirchanges^(uv_loop_t* loop,>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO  static void uv_relative_path^(const WCHAR* filename,>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO                               const WCHAR* dir,>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO                               WCHAR** relpath^) {>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO +  size_t filenamelen;>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO +  size_t relpathlen;>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO    size_t dirlen = wcslen^(dir^);>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO    if ^(dirlen ^> 0 ^&^& dir[dirlen - 1] == '\\'^)>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO      dirlen--;>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO -  size_t filenamelen = wcslen^(filename^);>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO -  size_t relpathlen = filenamelen - dirlen - 1;>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO +  filenamelen = wcslen^(filename^);>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO +  relpathlen = filenamelen - dirlen - 1;>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO    *relpath = uv__malloc^(^(relpathlen + 1^) * sizeof^(WCHAR^)^);>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO    if ^(^^!*relpath^)>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO      uv_fatal_error^(ERROR_OUTOFMEMORY, ^"uv__malloc^"^);>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      ECHO Applying patch for libuv !LIBUV_BRANCH_TAG_VERSION! > "!LOG_LIBUV_BUILD!"
+      ECHO | SET /P=Applying patch for libuv !LIBUV_BRANCH_TAG_VERSION! ... 
+      PUSHD "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!"
+      !GIT! apply --reject --ignore-whitespace --whitespace=nowarn "..\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
+      IF !ERRORLEVEL! EQU 0 (
+        ECHO done.
+        POPD
+      ) ELSE (
+        ECHO FAILED!
+        ECHO 	See !LOG_LIBUV_BUILD! for more details
+        EXIT /B !EXIT_CODE_CLONE_FAILED!
+      )
+    )
     REM Clone GYP (libuv dependency) to correctly use googlesource URL
     ECHO. >> "!LOG_LIBUV_BUILD!"
     ECHO Cloning gyp >> "!LOG_LIBUV_BUILD!"
@@ -1085,8 +1120,8 @@ REM Display the help message and exit with error code
   ECHO.
   ECHO     Testing Arguments
   ECHO.
-  ECHO     !ARGUMENT_ENABLE_INTEGRATION_TESTS!             Enable integration tests build
-  ECHO     !ARGUMENT_ENABLE_UNIT_TESTS!             Enable unit tests build
+  ECHO     !ARGUMENT_ENABLE_INTEGRATION_TESTS!        Enable integration tests build
+  ECHO     !ARGUMENT_ENABLE_UNIT_TESTS!               Enable unit tests build
   ECHO     !ARGUMENT_ENABLE_LIBSSH2!                  Enable libssh2 ^(remote server testing^)
   ECHO.
   ECHO     !ARGUMENT_HELP!                            Display this message
