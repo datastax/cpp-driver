@@ -1,0 +1,7 @@
+SHA: d225acc90bc3a8c420a9bcd1f033033c1ccd7fe0
+URL: https://github.com/google/googletest/tree/d225acc
+Commit Date: 2016/03/16
+
+Source files were "fused" using the script available in the project repo
+
+googletest/scripts/fuse_gtest_files.py [GTEST_ROOT_DIR] OUTPUT_DIR

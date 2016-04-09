@@ -62,14 +62,8 @@ option(DSE_BUILD_EXAMPLES "Build examples" OFF)
 option(DSE_BUILD_INTEGRATION_TESTS "Build the integration tests" OFF)
 option(DSE_BUILD_UNIT_TESTS "Build the unit tests" OFF)
 
-# Determine which driver target should be used as a dependency
-set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME})
-if(DSE_USE_STATIC_LIBS)
-  set(DSE_BUILD_STATIC ON)
-  set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME_STATIC})
-endif()
-
 # Build the Cassandra C/C++ driver submodule
+SET(CASS_USE_OPENSSL ON CACHE BOOL "Build with OpenSSL support" FORCE)
 set(CPP_DRIVER_DIR "${PROJECT_SOURCE_DIR}/cpp-driver")
 set(CPP_DRIVER_INCLUDE_DIR "${CPP_DRIVER_DIR}/include")
 set(CPP_DRIVER_SOURCE_DIR "${CPP_DRIVER_DIR}/src")
@@ -79,18 +73,29 @@ if(NOT EXISTS "${CPP_DRIVER_DIR}/CMakeLists.txt")
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         OUTPUT_QUIET)
 endif()
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CPP_DRIVER_DIR}/cmake/modules/")
 add_subdirectory(${CPP_DRIVER_DIR})
 set_property(TARGET cassandra PROPERTY FOLDER "Driver/Cassandra")
 set_property(TARGET cassandra_static PROPERTY FOLDER "Driver/Cassandra")
 set_property(TARGET cpp-driver PROPERTY FOLDER "Driver/Cassandra")
+set(DSE_LIBS ${CASS_LIBS})
 
 # Build up the include paths
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(DSE_INCLUDES ${DSE_INCLUDES} ${PROJECT_INCLUDE_DIR})
 set(DSE_INCLUDES ${DSE_INCLUDES} ${PROJECT_SOURCE_DIR}/src)
 set(DSE_INCLUDES ${DSE_INCLUDES} ${LIBUV_INCLUDE_DIR})
+set(DSE_INCLUDES ${DSE_INCLUDES} ${OPENSSL_INCLUDE_DIR})
 
-set(DSE_LIBS ${DSE_LIBS} cassandra)
+# Determine which driver target should be used as a dependency
+if(DSE_USE_STATIC_LIBS)
+  set(DSE_BUILD_STATIC ON)
+  set(DSE_LIBS ${DSE_LIBS} cassandra_static)
+  set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME_STATIC})
+else()
+  set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME})
+  set(DSE_LIBS ${DSE_LIBS} cassandra)
+endif()
 
 # Kerberos
 find_package(Kerberos REQUIRED)
@@ -158,7 +163,7 @@ if(DSE_BUILD_STATIC)
   else()
     add_library(${PROJECT_LIB_NAME_STATIC} STATIC $<TARGET_OBJECTS:cpp-driver-dse>)
   endif()
-  target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${LIBS})
+  target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${DSE_LIBS})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
   set_property(
