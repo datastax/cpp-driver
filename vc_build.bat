@@ -110,8 +110,8 @@ SET BOOST_DIRECTORY=boost
 SET BOOST_BRANCH_TAG_VERSION=boost-1.59.0
 SET LIBUV_REPOSITORY_URL=https://github.com/libuv/libuv.git
 SET LIBUV_DIRECTORY=libuv
-SET LIBUV_BRANCH_TAG_VERSION=v1.9.0
-SET LIBUV_PACKAGE_VERSION=1.9.0
+SET LIBUV_BRANCH_TAG_VERSION=v1.8.0
+SET LIBUV_PACKAGE_VERSION=1.8.0
 SET GYP_REPOSITORY_URL=https://chromium.googlesource.com/external/gyp.git
 SET LIBSSH2_REPOSITORY_URL=https://github.com/libssh2/libssh2.git
 SET LIBSSH2_DIRECTORY=libssh2
@@ -723,39 +723,6 @@ IF NOT EXIST "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" (
   !GIT! clone --depth 1 --branch !LIBUV_BRANCH_TAG_VERSION! --single-branch !LIBUV_REPOSITORY_URL! "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!" >> "!LOG_LIBUV_BUILD!" 2>&1
   IF !ERRORLEVEL! EQU 0 (
     ECHO done.
-    IF "!LIBUV_BRANCH_TAG_VERSION!" == "v1.9.0" (
-      ECHO index 77c935a..21e847c 100644>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO --- a/src/win/fs-event.c>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO +++ b/src/win/fs-event.c>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO @@ -66,11 +66,13 @@ static void uv_fs_event_queue_readdirchanges^(uv_loop_t* loop,>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO  static void uv_relative_path^(const WCHAR* filename,>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO                               const WCHAR* dir,>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO                               WCHAR** relpath^) {>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO +  size_t filenamelen;>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO +  size_t relpathlen;>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO    size_t dirlen = wcslen^(dir^);>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO    if ^(dirlen ^> 0 ^&^& dir[dirlen - 1] == '\\'^)>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO      dirlen--;>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO -  size_t filenamelen = wcslen^(filename^);>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO -  size_t relpathlen = filenamelen - dirlen - 1;>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO +  filenamelen = wcslen^(filename^);>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO +  relpathlen = filenamelen - dirlen - 1;>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO    *relpath = uv__malloc^(^(relpathlen + 1^) * sizeof^(WCHAR^)^);>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO    if ^(^^!*relpath^)>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO      uv_fatal_error^(ERROR_OUTOFMEMORY, ^"uv__malloc^"^);>>"!DEPENDENCIES_SOURCE_DIRECTORY!\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      ECHO Applying patch for libuv !LIBUV_BRANCH_TAG_VERSION! > "!LOG_LIBUV_BUILD!"
-      ECHO | SET /P=Applying patch for libuv !LIBUV_BRANCH_TAG_VERSION! ... 
-      PUSHD "!DEPENDENCIES_SOURCE_DIRECTORY!\!LIBUV_DIRECTORY!"
-      !GIT! apply --reject --ignore-whitespace --whitespace=nowarn "..\libuv_!LIBUV_BRANCH_TAG_VERSION!.patch"
-      IF !ERRORLEVEL! EQU 0 (
-        ECHO done.
-        POPD
-      ) ELSE (
-        ECHO FAILED!
-        ECHO 	See !LOG_LIBUV_BUILD! for more details
-        EXIT /B !EXIT_CODE_CLONE_FAILED!
-      )
-    )
     REM Clone GYP (libuv dependency) to correctly use googlesource URL
     ECHO. >> "!LOG_LIBUV_BUILD!"
     ECHO Cloning gyp >> "!LOG_LIBUV_BUILD!"
