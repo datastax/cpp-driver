@@ -5376,7 +5376,7 @@ cass_data_type_set_keyspace_n(CassDataType* data_type,
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 CASS_EXPORT CassError
-cass_data_type_class_name(CassDataType* data_type,
+cass_data_type_class_name(const CassDataType* data_type,
                           const char** class_name,
                           size_t* class_name_length);
 

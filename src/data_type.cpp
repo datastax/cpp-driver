@@ -205,15 +205,15 @@ CassError cass_data_type_set_keyspace_n(CassDataType* data_type,
   return CASS_OK;
 }
 
-CassError cass_data_type_class_name(CassDataType* data_type,
+CassError cass_data_type_class_name(const CassDataType* data_type,
                                     const char** class_name,
                                     size_t* class_name_length) {
   if (!data_type->is_custom()) {
     return CASS_ERROR_LIB_INVALID_VALUE_TYPE;
   }
 
-  cass::CustomType* custom_type
-      = static_cast<cass::CustomType*>(data_type->from());
+  const cass::CustomType* custom_type
+      = static_cast<const cass::CustomType*>(data_type->from());
 
   *class_name = custom_type->class_name().data();
   *class_name_length = custom_type->class_name().size();
