@@ -63,7 +63,7 @@ option(DSE_BUILD_INTEGRATION_TESTS "Build the integration tests" OFF)
 option(DSE_BUILD_UNIT_TESTS "Build the unit tests" OFF)
 
 # Build the Cassandra C/C++ driver submodule
-SET(CASS_USE_OPENSSL ON CACHE BOOL "Build with OpenSSL support" FORCE)
+set(CASS_USE_OPENSSL ON CACHE BOOL "Build with OpenSSL support" FORCE)
 set(CPP_DRIVER_DIR "${PROJECT_SOURCE_DIR}/cpp-driver")
 set(CPP_DRIVER_INCLUDE_DIR "${CPP_DRIVER_DIR}/include")
 set(CPP_DRIVER_SOURCE_DIR "${CPP_DRIVER_DIR}/src")
