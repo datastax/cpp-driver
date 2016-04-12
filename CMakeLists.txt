@@ -27,7 +27,7 @@ endif()
 get_directory_property(HAS_PARENT_DIRECTORY PARENT_DIRECTORY)
 set(CASS_IS_SUBPROJECT FALSE CACHE BOOL "Flag to determine if project is a sub-project" FORCE)
 if(HAS_PARENT_DIRECTORY)
-  set(CASS_IS_SUBPROJECT TRUE CACHE BOOL FORCE)
+  set(CASS_IS_SUBPROJECT TRUE CACHE BOOL "Flag to determine if project is a sub-project" FORCE)
 endif()
 
 # Title the project and define the versioning
