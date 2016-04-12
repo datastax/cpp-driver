@@ -39,7 +39,7 @@ struct TimestampedAverage {
   TimestampedAverage()
     : average(-1)
     , timestamp(0)
-    , num_measured(0) {}
+    , num_measured(0) { }
 
   int64_t average;
   uint64_t timestamp;
@@ -93,9 +93,12 @@ private:
 
 class Host : public RefCounted<Host> {
 public:
+  typedef SharedRefPtr<Host> Ptr;
+  typedef SharedRefPtr<const Host> ConstPtr;
+
   class StateListener {
   public:
-    virtual ~StateListener() {}
+    virtual ~StateListener() { }
     virtual void on_add(const SharedRefPtr<Host>& host) = 0;
     virtual void on_remove(const SharedRefPtr<Host>& host) = 0;
     virtual void on_up(const SharedRefPtr<Host>& host) = 0;
@@ -111,12 +114,24 @@ public:
   Host(const Address& address, bool mark)
       : address_(address)
       , mark_(mark)
-      , state_(ADDED) {}
+      , state_(ADDED)
+      , address_string_(address.to_string()) { }
 
   const Address& address() const { return address_; }
+  const std::string& address_string() const { return address_string_; }
 
   bool mark() const { return mark_; }
   void set_mark(bool mark) { mark_ = mark; }
+
+  const std::string hostname() const { return hostname_; }
+  void set_hostname(const std::string& hostname) {
+    if (!hostname.empty() && hostname[hostname.size() - 1] == '.') {
+      // Strip off trailing dot for hostcheck comparison
+      hostname_ = hostname.substr(0, hostname.size() - 1);
+    } else {
+      hostname_ = hostname;
+    }
+  }
 
   const std::string& rack() const { return rack_; }
   const std::string& dc() const { return dc_; }
@@ -144,7 +159,7 @@ public:
 
   std::string to_string() const {
     std::ostringstream ss;
-    ss << address_.to_string();
+    ss << address_string_;
     if (!rack_.empty() || !dc_.empty()) {
       ss << " [" << rack_ << ':' << dc_ << "]";
     }
@@ -176,7 +191,7 @@ private:
   public:
     LatencyTracker(uint64_t scale_ns, uint64_t threshold_to_account)
       : scale_ns_(scale_ns)
-      , threshold_to_account_(threshold_to_account) {}
+      , threshold_to_account_(threshold_to_account) { }
 
     void update(uint64_t latency_ns);
 
@@ -206,8 +221,10 @@ private:
   Address address_;
   bool mark_;
   Atomic<HostState> state_;
+  std::string address_string_;
   std::string listen_address_;
   VersionNumber cassandra_version_;
+  std::string hostname_;
   std::string rack_;
   std::string dc_;
 

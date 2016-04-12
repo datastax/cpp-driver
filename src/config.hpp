@@ -58,6 +58,7 @@ public:
       , pending_requests_low_water_mark_(pending_requests_high_water_mark_ / 2)
       , connect_timeout_ms_(5000)
       , request_timeout_ms_(12000)
+      , resolve_timeout_ms_(2000)
       , log_level_(CASS_LOG_WARN)
       , log_callback_(stderr_log_callback)
       , log_data_(NULL)
@@ -72,7 +73,8 @@ public:
       , connection_heartbeat_interval_secs_(30)
       , timestamp_gen_(new ServerSideTimestampGenerator())
       , retry_policy_(new DefaultRetryPolicy())
-      , use_schema_(true) { }
+      , use_schema_(true)
+      , use_hostname_resolution_(false) { }
 
   unsigned thread_count_io() const { return thread_count_io_; }
 
@@ -184,6 +186,12 @@ public:
     request_timeout_ms_ = timeout_ms;
   }
 
+  unsigned resolve_timeout_ms() const { return resolve_timeout_ms_; }
+
+  void set_resolve_timeout(unsigned timeout_ms) {
+    resolve_timeout_ms_ = timeout_ms;
+  }
+
   const ContactPointList& contact_points() const {
     return contact_points_;
   }
@@ -222,8 +230,7 @@ public:
   const SharedRefPtr<AuthProvider>& auth_provider() const { return auth_provider_; }
 
   void set_auth_provider(AuthProvider* auth_provider) {
-    if (auth_provider == NULL) return;
-    auth_provider_.reset(auth_provider);
+    auth_provider_.reset(auth_provider == NULL ? new AuthProvider() : auth_provider);
   }
 
   void set_credentials(const std::string& username, const std::string& password) {
@@ -347,6 +354,11 @@ public:
     use_schema_ = enable;
   }
 
+  bool use_hostname_resolution() const { return use_hostname_resolution_; }
+  void set_use_hostname_resolution(bool enable) {
+    use_hostname_resolution_ = enable;
+  }
+
 private:
   int port_;
   int protocol_version_;
@@ -367,6 +379,7 @@ private:
   unsigned pending_requests_low_water_mark_;
   unsigned connect_timeout_ms_;
   unsigned request_timeout_ms_;
+  unsigned resolve_timeout_ms_;
   CassLogLevel log_level_;
   CassLogCallback log_callback_;
   void* log_data_;
@@ -388,6 +401,7 @@ private:
   SharedRefPtr<TimestampGenerator> timestamp_gen_;
   SharedRefPtr<RetryPolicy> retry_policy_;
   bool use_schema_;
+  bool use_hostname_resolution_;
 };
 
 } // namespace cass

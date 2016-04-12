@@ -17,9 +17,11 @@
 #include "ssl.hpp"
 
 #include "logger.hpp"
-#include "ssl/ring_buffer_bio.hpp"
-#include "string_ref.hpp"
 #include "utils.hpp"
+
+#include "ssl/ring_buffer_bio.hpp"
+
+#include "third_party/curl/hostcheck.hpp"
 
 #include <openssl/crypto.h>
 #include <openssl/err.h>
@@ -241,18 +243,24 @@ public:
     NO_SAN_PRESENT
   };
 
-  static Result match(X509* cert, const Address& addr) {
-    Result result = match_subject_alt_names(cert, addr);
+  static Result match(X509* cert, const Host::ConstPtr& host) {
+    Result result = match_subject_alt_names_ipadd(cert, host->address());
     if (result == NO_SAN_PRESENT) {
-      result = match_common_name(cert, addr);
+      result = match_common_name_ipaddr(cert, host->address_string());
+    }
+    return result;
+  }
+
+  static Result match_dns(X509* cert, const Host::ConstPtr& host) {
+    Result result = match_subject_alt_names_dns(cert, host->hostname());
+    if (result == NO_SAN_PRESENT) {
+      result = match_common_name_dns(cert, host->hostname());
     }
     return result;
   }
 
 private:
-  static Result match_common_name(X509* cert, const Address& addr) {
-    std::string addr_str = addr.to_string();
-
+  static Result match_common_name_ipaddr(X509* cert, const std::string& address) {
     X509_NAME* name = X509_get_subject_name(cert);
     if (name == NULL) {
       return INVALID_CERT;
@@ -266,8 +274,16 @@ private:
       }
 
       ASN1_STRING* str = X509_NAME_ENTRY_get_data(name_entry);
-      StringRef common_name(reinterpret_cast<char*>(ASN1_STRING_data(str)), ASN1_STRING_length(str));
-      if (iequals(common_name, addr_str)) {
+      if (str == NULL) {
+        return INVALID_CERT;
+      }
+
+      const char* common_name = reinterpret_cast<char*>(ASN1_STRING_data(str));
+      if (strlen(common_name) != static_cast<size_t>(ASN1_STRING_length(str))) {
+        return INVALID_CERT;
+      }
+
+      if (address == common_name) {
         return MATCH;
       }
     }
@@ -275,7 +291,39 @@ private:
     return NO_MATCH;
   }
 
-  static Result match_subject_alt_names(X509* cert, const Address& addr) {
+  static Result match_common_name_dns(X509* cert, const std::string& hostname) {
+    X509_NAME* name = X509_get_subject_name(cert);
+    if (name == NULL) {
+      return INVALID_CERT;
+    }
+
+    int i = -1;
+    while ((i = X509_NAME_get_index_by_NID(name, NID_commonName, i)) > 0) {
+      X509_NAME_ENTRY* name_entry = X509_NAME_get_entry(name, i);
+      if (name_entry == NULL) {
+        return INVALID_CERT;
+      }
+
+      ASN1_STRING* str = X509_NAME_ENTRY_get_data(name_entry);
+      if (str == NULL) {
+        return INVALID_CERT;
+      }
+
+      const char* common_name = reinterpret_cast<char*>(ASN1_STRING_data(str));
+      if (strlen(common_name) != static_cast<size_t>(ASN1_STRING_length(str))) {
+        return INVALID_CERT;
+      }
+
+      // Using Curl's hostcheck because this could be error prone to rewrite
+      if (Curl_cert_hostcheck(common_name, hostname.c_str())) {
+        return MATCH;
+      }
+    }
+
+    return NO_MATCH;
+  }
+
+  static Result match_subject_alt_names_ipadd(X509* cert, const Address& addr) {
     char addr_buf[16];
     size_t addr_buf_size;
     if (addr.family() == AF_INET) {
@@ -292,32 +340,77 @@ private:
       return NO_SAN_PRESENT;
     }
 
+    Result result = NO_MATCH;
     for (int i = 0; i < sk_GENERAL_NAME_num(names); ++i) {
       GENERAL_NAME* name = sk_GENERAL_NAME_value(names, i);
 
       if (name->type == GEN_IPADD){
         ASN1_STRING* str = name->d.iPAddress;
+        if (str == NULL) {
+          result = INVALID_CERT;
+          break;
+        }
+
         unsigned char* ip = ASN1_STRING_data(str);
         int ip_len = ASN1_STRING_length(str);
         if (ip_len != 4 && ip_len != 16) {
-          return INVALID_CERT;
+          result = INVALID_CERT;
+          break;
         }
+
         if (static_cast<size_t>(ip_len) == addr_buf_size &&
             memcmp(ip, addr_buf, addr_buf_size) == 0) {
-          return MATCH;
+          result = MATCH;
+          break;
         }
       }
     }
     sk_GENERAL_NAME_pop_free(names, GENERAL_NAME_free);
 
-    return NO_MATCH;
+    return result;
+  }
+
+  static Result match_subject_alt_names_dns(X509* cert, const std::string& hostname) {
+    STACK_OF(GENERAL_NAME)* names
+      = static_cast<STACK_OF(GENERAL_NAME)*>(X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL));
+    if (names == NULL) {
+      return NO_SAN_PRESENT;
+    }
+
+    Result result = NO_MATCH;
+    for (int i = 0; i < sk_GENERAL_NAME_num(names); ++i) {
+      GENERAL_NAME* name = sk_GENERAL_NAME_value(names, i);
+
+      if (name->type == GEN_DNS){
+        ASN1_STRING* str = name->d.dNSName;
+        if (str == NULL) {
+          result = INVALID_CERT;
+          break;
+        }
+
+        const char* common_name = reinterpret_cast<char*>(ASN1_STRING_data(str));
+        if (strlen(common_name) != static_cast<size_t>(ASN1_STRING_length(str))) {
+          result = INVALID_CERT;
+          break;
+        }
+
+        // Using Curl's hostcheck because this could be error prone to rewrite
+        if (Curl_cert_hostcheck(common_name, hostname.c_str())) {
+          result = MATCH;
+          break;
+        }
+      }
+    }
+    sk_GENERAL_NAME_pop_free(names, GENERAL_NAME_free);
+
+    return result;
   }
 };
 
-OpenSslSession::OpenSslSession(const Address& address,
+OpenSslSession::OpenSslSession(const Host::ConstPtr& host,
                                int flags,
                                SSL_CTX* ssl_ctx)
-  : SslSession(address, flags)
+  : SslSession(host, flags)
   , ssl_(SSL_new(ssl_ctx))
   , incoming_bio_(rb::RingBufferBio::create(&incoming_))
   , outgoing_bio_(rb::RingBufferBio::create(&outgoing_)) {
@@ -358,11 +451,26 @@ void OpenSslSession::verify() {
     }
   }
 
-  if (verify_flags_ & CASS_SSL_VERIFY_PEER_IDENTITY) {
-    // We can only match IP address because that's what
-    // Cassandra has in system local/peers tables
+  if (verify_flags_ & CASS_SSL_VERIFY_PEER_IDENTITY) { // Match using IP addresses
+    switch (OpenSslVerifyIdentity::match(peer_cert, host_)) {
+      case OpenSslVerifyIdentity::MATCH:
+        // Success
+        break;
 
-    switch (OpenSslVerifyIdentity::match(peer_cert, addr_)) {
+      case OpenSslVerifyIdentity::INVALID_CERT:
+        error_code_ = CASS_ERROR_SSL_INVALID_PEER_CERT;
+        error_message_ = "Peer certificate has malformed name field(s)";
+        X509_free(peer_cert);
+        return;
+
+      default:
+        error_code_ = CASS_ERROR_SSL_IDENTITY_MISMATCH;
+        error_message_ = "Peer certificate subject name does not match";
+        X509_free(peer_cert);
+        return;
+    }
+  } else if (verify_flags_ & CASS_SSL_VERIFY_PEER_IDENTITY_DNS) { // Match using hostnames (including wildcards)
+    switch (OpenSslVerifyIdentity::match_dns(peer_cert, host_)) {
       case OpenSslVerifyIdentity::MATCH:
         // Success
         break;
@@ -414,8 +522,8 @@ OpenSslContext::~OpenSslContext() {
   SSL_CTX_free(ssl_ctx_);
 }
 
-SslSession* OpenSslContext::create_session(const Address& address ) {
-  return new OpenSslSession(address, verify_flags_, ssl_ctx_);
+SslSession* OpenSslContext::create_session(const Host::ConstPtr& host) {
+  return new OpenSslSession(host, verify_flags_, ssl_ctx_);
 }
 
 CassError OpenSslContext::add_trusted_cert(const char* cert,

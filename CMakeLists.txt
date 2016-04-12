@@ -18,6 +18,11 @@ if(POLICY CMP0054)
   cmake_policy(SET CMP0054 OLD)
 endif()
 
+# Force OLD style of project versioning variables
+if(POLICY CMP0048)
+  cmake_policy(SET CMP0048 OLD)
+endif()
+
 # Title the project and define the versioning
 project(${PROJECT_NAME_STR} C CXX)
 
@@ -154,6 +159,7 @@ find_package_handle_standard_args(Libuv "Could NOT find libuv, try to set the pa
 # Assign libuv include and libraries
 set(CASS_INCLUDES ${CASS_INCLUDES} ${LIBUV_INCLUDE_DIR})
 set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARY})
+set(LIBUV_LIBRARY ${LIBUV_LIBRARY} PARENT_SCOPE)
 
 #------------------------
 # Optional Dependencies
@@ -287,6 +293,8 @@ if(CASS_USE_ZLIB)
     # Assign zlib properties
     set(CASS_INCLUDES ${CASS_INCLUDES} ${ZLIB_INCLUDE_DIRS})
     set(CASS_LIBS ${CASS_LIBS} ${ZLIB_LIBRARIES})
+    set(ZLIB_FOUND ${ZLIB_FOUND} PARENT_SCOPE)
+    set(ZLIB_LIBRARIES ${ZLIB_LIBRARIES} PARENT_SCOPE)
   else()
     message(WARNING "Could not find zlib, try to set the path to zlib root folder in the system variable ZLIB_ROOT_DIR")
     message(WARNING "zlib libraries will not be linked into build")
@@ -306,6 +314,8 @@ if(CASS_USE_OPENSSL)
   find_package(OpenSSL REQUIRED)
   set(CASS_INCLUDES ${CASS_INCLUDES} ${OPENSSL_INCLUDE_DIR})
   set(CASS_LIBS ${CASS_LIBS} ${OPENSSL_LIBRARIES})
+  set(OPENSSL_FOUND ${OPENSSL_FOUND} PARENT_SCOPE)
+  set(OPENSSL_LIBRARIES ${OPENSSL_LIBRARIES} PARENT_SCOPE)
 endif()
 
 #--------------------
@@ -540,6 +550,9 @@ endif()
 set(SRC_FILES ${SRC_FILES}
   ${PROJECT_SOURCE_DIR}/src/third_party/hdr_histogram/hdr_histogram.cpp)
 
+set(SRC_FILES ${SRC_FILES}
+  ${PROJECT_SOURCE_DIR}/src/third_party/curl/hostcheck.cpp)
+
 # Determine if OpenSSL should be compiled in (or not)
 if(CASS_USE_OPENSSL)
   set(INC_FILES ${INC_FILES}
@@ -618,6 +631,9 @@ if(CASS_BUILD_STATIC)
   endif()
 endif()
 
+# Allow libraries to be available for parent projects
+set(CASS_LIBS ${CASS_LIBS} PARENT_SCOPE)
+
 #-------------------------------------
 # Directory installation information
 #-------------------------------------
@@ -671,6 +687,7 @@ endif()
 
 if(CASS_BUILD_EXAMPLES)
   add_subdirectory(examples/async)
+  add_subdirectory(examples/auth)
   add_subdirectory(examples/basic)
   add_subdirectory(examples/batch)
   add_subdirectory(examples/bind_by_name)

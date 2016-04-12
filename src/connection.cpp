@@ -90,9 +90,12 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
       break;
     }
 
-    case CQL_OPCODE_AUTHENTICATE:
-      connection_->on_authenticate();
+    case CQL_OPCODE_AUTHENTICATE: {
+      AuthenticateResponse* auth
+          = static_cast<AuthenticateResponse*>(response->response_body().get());
+      connection_->on_authenticate(auth->class_name());
       break;
+    }
 
     case CQL_OPCODE_AUTH_CHALLENGE:
       connection_->on_auth_challenge(
@@ -175,7 +178,7 @@ void Connection::HeartbeatHandler::on_timeout() {
 Connection::Connection(uv_loop_t* loop,
                        const Config& config,
                        Metrics* metrics,
-                       const Address& address,
+                       const Host::ConstPtr& host,
                        const std::string& keyspace,
                        int protocol_version,
                        Listener* listener)
@@ -186,8 +189,7 @@ Connection::Connection(uv_loop_t* loop,
     , loop_(loop)
     , config_(config)
     , metrics_(metrics)
-    , address_(address)
-    , addr_string_(address.to_string())
+    , host_(host)
     , keyspace_(keyspace)
     , protocol_version_(protocol_version)
     , listener_(listener)
@@ -212,7 +214,7 @@ Connection::Connection(uv_loop_t* loop,
 
   SslContext* ssl_context = config_.ssl_context();
   if (ssl_context != NULL) {
-    ssl_session_.reset(ssl_context->create_session(address_));
+    ssl_session_.reset(ssl_context->create_session(host));
   }
 }
 
@@ -230,7 +232,7 @@ void Connection::connect() {
     set_state(CONNECTION_STATE_CONNECTING);
     connect_timer_.start(loop_, config_.connect_timeout_ms(), this,
                          on_connect_timeout);
-    Connector::connect(&socket_, address_, this, on_connect);
+    Connector::connect(&socket_, host_->address(), this, on_connect);
   }
 }
 
@@ -281,7 +283,7 @@ bool Connection::internal_write(Handler* handler, bool flush_immediately, bool r
     LOG_WARN("Exceeded write bytes water mark (current: %u water mark: %u) on connection to host %s",
              static_cast<unsigned int>(pending_writes_size_),
              config_.write_bytes_high_water_mark(),
-             addr_string_.c_str());
+             host_->address_string().c_str());
     metrics_->exceeded_write_bytes_water_mark.inc();
     set_state(CONNECTION_STATE_OVERWHELMED);
   }
@@ -440,7 +442,7 @@ void Connection::consume(char* input, size_t size) {
                 static_cast<int>(response->stream()),
                 static_cast<unsigned int>(size),
                 static_cast<unsigned int>(remaining),
-                addr_string_.c_str());
+                host_->address_string().c_str());
 
       if (response->stream() < 0) {
         if (response->opcode() == CQL_OPCODE_EVENT) {
@@ -514,7 +516,7 @@ void Connection::on_connect(Connector* connector) {
   }
 
   if (connector->status() == 0) {
-    LOG_DEBUG("Connected to host %s", connection->addr_string_.c_str());
+    LOG_DEBUG("Connected to host %s", connection->host_->address_string().c_str());
 
     if (connection->ssl_session_) {
       uv_read_start(copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_),
@@ -535,7 +537,7 @@ void Connection::on_connect(Connector* connector) {
     LOG_ERROR("Connect error '%s' on host %s",
               UV_ERRSTR(connector->status(),
                         connection->loop_),
-              connection->addr_string_.c_str() );
+              connection->host_->address_string().c_str() );
     connection->notify_error("Unable to connect");
   }
 }
@@ -550,7 +552,7 @@ void Connection::on_close(uv_handle_t* handle) {
   Connection* connection = static_cast<Connection*>(handle->data);
 
   LOG_DEBUG("Connection to host %s closed",
-            connection->addr_string_.c_str());
+            connection->host_->address_string().c_str());
 
   cleanup_pending_handlers(&connection->pending_reads_);
 
@@ -622,7 +624,7 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, const uv_buf_t* buf
 #endif
       LOG_ERROR("Read error '%s' on host %s",
                 UV_ERRSTR(nread, connection->loop_),
-                connection->addr_string_.c_str());
+                connection->host_->address_string().c_str());
     }
     connection->defunct();
 
@@ -675,7 +677,7 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
 #endif
       LOG_ERROR("Read error '%s' on host %s",
                 UV_ERRSTR(nread, connection->loop_),
-                connection->addr_string_.c_str());
+                connection->host_->address_string().c_str());
     }
     connection->defunct();
     return;
@@ -701,7 +703,7 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
 void Connection::on_timeout(Timer* timer) {
   Handler* handler = static_cast<Handler*>(timer->data());
   Connection* connection = handler->connection();
-  LOG_INFO("Request timed out to host %s", connection->addr_string_.c_str());
+  LOG_INFO("Request timed out to host %s", connection->host_->address_string().c_str());
   // TODO (mpenick): We need to handle the case where we have too many
   // timeout requests and we run out of stream ids. The java-driver
   // uses a threshold to defunct the connection.
@@ -715,25 +717,32 @@ void Connection::on_connected() {
   write(new StartupHandler(this, new OptionsRequest()));
 }
 
-void Connection::on_authenticate() {
+void Connection::on_authenticate(const std::string& class_name) {
   if (protocol_version_ == 1) {
-    send_credentials();
+    send_credentials(class_name);
   } else {
-    send_initial_auth_response();
+    send_initial_auth_response(class_name);
   }
 }
 
 void Connection::on_auth_challenge(const AuthResponseRequest* request,
                                    const std::string& token) {
-  AuthResponseRequest* auth_response
-      = new AuthResponseRequest(request->auth()->evaluate_challenge(token),
-                                request->auth());
+  std::string response;
+  if (!request->auth()->evaluate_challenge(token, &response)) {
+    notify_error("Failed evaluating challenge token: " + request->auth()->error(), CONNECTION_ERROR_AUTH);
+    return;
+  }
+  AuthResponseRequest* auth_response = new AuthResponseRequest(response,
+                                                               request->auth());
   write(new StartupHandler(this, auth_response));
 }
 
 void Connection::on_auth_success(const AuthResponseRequest* request,
                                  const std::string& token) {
-  request->auth()->on_authenticate_success(token);
+  if (!request->auth()->success(token)) {
+    notify_error("Failed evaluating success token: " + request->auth()->error(), CONNECTION_ERROR_AUTH);
+    return;
+  }
   on_ready();
 }
 
@@ -792,7 +801,7 @@ void Connection::notify_error(const std::string& message, ConnectionError code) 
 
     case CONNECTION_ERROR_INVALID_PROTOCOL:
       LOG_WARN("Host %s received invalid protocol response %s",
-               addr_string_.c_str(), message.c_str());
+               host_->address_string().c_str(), message.c_str());
       break;
 
     case CONNECTION_ERROR_SSL:
@@ -811,10 +820,10 @@ void Connection::notify_error(const std::string& message, ConnectionError code) 
 void Connection::log_error(const std::string& error) {
   if (state_ == CONNECTION_STATE_READY) {
     LOG_ERROR("Host %s had the following error: %s",
-              addr_string_.c_str(), error.c_str());
+              host_->address_string().c_str(), error.c_str());
   } else {
     LOG_ERROR("Host %s had the following error on startup: %s",
-              addr_string_.c_str(), error.c_str());
+              host_->address_string().c_str(), error.c_str());
   }
   defunct();
 }
@@ -847,25 +856,28 @@ void Connection::ssl_handshake() {
   }
 }
 
-void Connection::send_credentials() {
-  ScopedPtr<V1Authenticator> v1_auth(config_.auth_provider()->new_authenticator_v1(address_));
+void Connection::send_credentials(const std::string& class_name) {
+  ScopedPtr<V1Authenticator> v1_auth(config_.auth_provider()->new_authenticator_v1(host_, class_name));
   if (v1_auth) {
     V1Authenticator::Credentials credentials;
     v1_auth->get_credentials(&credentials);
     write(new StartupHandler(this, new CredentialsRequest(credentials)));
   } else {
-    send_initial_auth_response();
+    send_initial_auth_response(class_name);
   }
 }
 
-void Connection::send_initial_auth_response() {
-  SharedRefPtr<Authenticator> auth(
-        config_.auth_provider()->new_authenticator(address_));
+void Connection::send_initial_auth_response(const std::string& class_name) {
+  SharedRefPtr<Authenticator> auth(config_.auth_provider()->new_authenticator(host_, class_name));
   if (!auth) {
     notify_error("Authentication required but no auth provider set", CONNECTION_ERROR_AUTH);
   } else {
-    AuthResponseRequest* auth_response
-        = new AuthResponseRequest(auth->initial_response(), auth);
+    std::string response;
+    if (!auth->initial_response(&response)) {
+      notify_error("Failed creating initial response token: " + auth->error(), CONNECTION_ERROR_AUTH);
+      return;
+    }
+    AuthResponseRequest* auth_response = new AuthResponseRequest(response, auth);
     write(new StartupHandler(this, auth_response));
   }
 }

@@ -114,8 +114,8 @@ ControlConnection::ControlConnection()
   , protocol_version_(0)
   , should_query_tokens_(false) {}
 
-const SharedRefPtr<Host> ControlConnection::connected_host() const {
-  return session_->get_host(current_host_address_);
+const SharedRefPtr<Host>& ControlConnection::connected_host() const {
+  return current_host_;
 }
 
 void ControlConnection::clear() {
@@ -169,7 +169,8 @@ void ControlConnection::reconnect(bool retry_current_host) {
   }
 
   if (!retry_current_host) {
-    if (!query_plan_->compute_next(&current_host_address_)) {
+    current_host_ = query_plan_->compute_next();
+    if (!current_host_) {
       if (state_ == CONTROL_STATE_READY) {
         schedule_reconnect(1000); // TODO(mpenick): Configurable?
       } else {
@@ -187,7 +188,7 @@ void ControlConnection::reconnect(bool retry_current_host) {
   connection_ = new Connection(session_->loop(),
                                session_->config(),
                                session_->metrics(),
-                               current_host_address_,
+                               current_host_,
                                "", // No keyspace
                                protocol_version_,
                                this);

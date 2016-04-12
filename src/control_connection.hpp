@@ -57,7 +57,7 @@ public:
     return protocol_version_;
   }
 
-  const SharedRefPtr<Host> connected_host() const;
+  const SharedRefPtr<Host>& connected_host() const;
 
   void clear();
 
@@ -237,7 +237,7 @@ private:
   Connection* connection_;
   Timer reconnect_timer_;
   ScopedPtr<QueryPlan> query_plan_;
-  Address current_host_address_;
+  Host::Ptr current_host_;
   int protocol_version_;
   std::string last_connection_error_;
   bool should_query_tokens_;

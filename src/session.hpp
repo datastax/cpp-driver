@@ -28,6 +28,7 @@
 #include "metrics.hpp"
 #include "mpmc_queue.hpp"
 #include "ref_counted.hpp"
+#include "resolver.hpp"
 #include "row.hpp"
 #include "scoped_lock.hpp"
 #include "scoped_ptr.hpp"
@@ -44,7 +45,6 @@ namespace cass {
 class RequestHandler;
 class Future;
 class IOWorker;
-class Resolver;
 class Request;
 
 struct SessionEvent {
@@ -126,7 +126,26 @@ private:
   virtual void on_after_run();
   virtual void on_event(const SessionEvent& event);
 
-  static void on_resolve(Resolver* resolver);
+  static void on_resolve(MultiResolver<Session*>::Resolver* resolver);
+  static void on_resolve_done(MultiResolver<Session*>* resolver);
+
+#if UV_VERSION_MAJOR >= 1
+  struct ResolveNameData {
+    ResolveNameData(Session* session,
+                    const SharedRefPtr<Host>& host,
+                    bool is_initial_connection)
+      : session(session)
+      , host(host)
+      , is_initial_connection(is_initial_connection) { }
+    Session* session;
+    SharedRefPtr<Host> host;
+    bool is_initial_connection;
+  };
+  typedef cass::NameResolver<ResolveNameData> NameResolver;
+
+  static void on_resolve_name(MultiResolver<Session*>::NameResolver* resolver);
+  static void on_add_resolve_name(NameResolver* resolver);
+#endif
 
 #if UV_VERSION_MAJOR == 0
   static void on_execute(uv_async_t* data, int status);
@@ -151,6 +170,8 @@ private:
   void on_control_connection_error(CassError code, const std::string& message);
 
   void on_add(SharedRefPtr<Host> host, bool is_initial_connection);
+  void internal_on_add(SharedRefPtr<Host> host, bool is_initial_connection);
+
   void on_remove(SharedRefPtr<Host> host);
   void on_up(SharedRefPtr<Host> host);
   void on_down(SharedRefPtr<Host> host);
@@ -177,7 +198,6 @@ private:
   Metadata metadata_;
   ControlConnection control_connection_;
   bool current_host_mark_;
-  int pending_resolve_count_;
   int pending_pool_count_;
   int pending_workers_count_;
   int current_io_worker_;

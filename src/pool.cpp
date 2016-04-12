@@ -34,10 +34,10 @@ static bool least_busy_comp(Connection* a, Connection* b) {
 }
 
 Pool::Pool(IOWorker* io_worker,
-           const Address& address,
+           const Host::ConstPtr& host,
            bool is_initial_connection)
     : io_worker_(io_worker)
-    , address_(address)
+    , host_(host)
     , loop_(io_worker->loop())
     , config_(io_worker->config())
     , metrics_(io_worker->metrics())
@@ -67,7 +67,7 @@ void Pool::connect() {
   if (state_ == POOL_STATE_NEW ||
       state_ == POOL_STATE_WAITING_TO_CONNECT) {
     LOG_DEBUG("Connect %s pool(%p)",
-              address_.to_string().c_str(), static_cast<void*>(this));
+              host_->address_string().c_str(), static_cast<void*>(this));
 
     connect_timer.stop(); // There could be a delayed connect waiting
 
@@ -159,7 +159,7 @@ void Pool::add_pending_request(RequestHandler* request_handler) {
     LOG_DEBUG("%u request%s pending on %s pool(%p)",
               static_cast<unsigned int>(pending_requests_.size() + 1),
               pending_requests_.size() > 0 ? "s":"",
-              address_.to_string().c_str(),
+              host_->address_string().c_str(),
               static_cast<void*>(this));
   }
 
@@ -167,7 +167,7 @@ void Pool::add_pending_request(RequestHandler* request_handler) {
     LOG_WARN("Exceeded pending requests water mark (current: %u water mark: %u) for host %s",
              static_cast<unsigned int>(pending_requests_.size()),
              config_.pending_requests_high_water_mark(),
-             address_.to_string().c_str());
+             host_->address_string().c_str());
     set_is_available(false);
     metrics_->exceeded_pending_requests_water_mark.inc();
   }
@@ -183,12 +183,12 @@ void Pool::set_is_available(bool is_available) {
     if (!is_available_ &&
         available_connection_count_ > 0 &&
         pending_requests_.size() < config_.pending_requests_low_water_mark()) {
-      io_worker_->set_host_is_available(address_, true);
+      io_worker_->set_host_is_available(host_->address(), true);
       is_available_ = true;
     }
   } else {
     if (is_available_) {
-      io_worker_->set_host_is_available(address_, false);
+      io_worker_->set_host_is_available(host_->address(), false);
       is_available_ = false;
     }
   }
@@ -246,12 +246,12 @@ void Pool::spawn_connection() {
   if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
     Connection* connection =
         new Connection(loop_, config_, metrics_,
-                       address_,
+                       host_,
                        *io_worker_->keyspace(),
                        io_worker_->protocol_version(),
                        this);
 
-    LOG_INFO("Spawning new connection to host %s", address_.to_string(true).c_str());
+    LOG_INFO("Spawning new connection to host %s", host_->address_string().c_str());
     connection->connect();
 
     connections_pending_.insert(connection);
@@ -353,7 +353,7 @@ void Pool::on_pending_request_timeout(Timer* timer) {
   request_handler->next_host();
   request_handler->retry();
   LOG_DEBUG("Timeout waiting for connection to %s pool(%p)",
-            pool->address_.to_string().c_str(),
+            pool->host_->address_string().c_str(),
             static_cast<void*>(pool));
   pool->maybe_close();
 }

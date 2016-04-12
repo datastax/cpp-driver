@@ -21,3 +21,7 @@ License: BSD-3-clause
 Files: src/third_party/rapidjson/*
 Copyright: Copyright (C) 2011 Milo Yip
 License: MIT
+
+Files: src/third_party/curl/*
+Copyright: Copyright (C) 1998 - 2012, Daniel Stenberg, <daniel@haxx.se>, et al.
+License: MIT

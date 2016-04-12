@@ -21,7 +21,9 @@
 namespace cass {
 
 bool AuthenticateResponse::decode(int version, char* buffer, size_t size) {
-  decode_string(buffer, &authenticator_, authenticator_size_);
+  StringRef class_name;
+  decode_string(buffer, &class_name);
+  class_name_ = class_name.to_string();
   return true;
 }
 
@@ -29,7 +31,9 @@ bool cass::AuthChallengeResponse::decode(int version, char* buffer, size_t size)
   if (version < 2) {
     return false;
   }
-  decode_bytes(buffer, &token_, token_size_);
+  StringRef token;
+  decode_bytes(buffer, &token);
+  token_ = token.to_string();
   return true;
 }
 
@@ -37,7 +41,9 @@ bool cass::AuthSuccessResponse::decode(int version, char* buffer, size_t size) {
   if (version < 2) {
     return false;
   }
-  decode_bytes(buffer, &token_, token_size_);
+  StringRef token;
+  decode_bytes(buffer, &token);
+  token_ = token.to_string();
   return true;
 }
 

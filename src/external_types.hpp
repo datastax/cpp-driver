@@ -17,6 +17,7 @@
 #ifndef __CASS_EXTERNAL_TYPES_HPP_INCLUDED__
 #define __CASS_EXTERNAL_TYPES_HPP_INCLUDED__
 
+#include "auth.hpp"
 #include "cassandra.h"
 #include "batch_request.hpp"
 #include "cluster.hpp"
@@ -71,6 +72,7 @@ EXTERNAL_TYPE(cass::Iterator, CassIterator);
 EXTERNAL_TYPE(cass::Row, CassRow);
 EXTERNAL_TYPE(cass::Value, CassValue);
 EXTERNAL_TYPE(cass::SslContext, CassSsl);
+EXTERNAL_TYPE(cass::ExternalAuthenticator, CassAuthenticator);
 EXTERNAL_TYPE(cass::Metadata::SchemaSnapshot, CassSchemaMeta);
 EXTERNAL_TYPE(cass::KeyspaceMetadata, CassKeyspaceMeta);
 EXTERNAL_TYPE(cass::TableMetadata, CassTableMeta);

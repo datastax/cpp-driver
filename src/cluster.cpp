@@ -96,7 +96,7 @@ CassError cass_cluster_set_contact_points_n(CassCluster* cluster,
     cluster->config().contact_points().clear();
   } else {
     cass::explode(std::string(contact_points, contact_points_length),
-      cluster->config().contact_points());
+                  cluster->config().contact_points());
   }
   return CASS_OK;
 }
@@ -201,6 +201,11 @@ void cass_cluster_set_request_timeout(CassCluster* cluster,
   cluster->config().set_request_timeout(timeout_ms);
 }
 
+void cass_cluster_set_resolve_timeout(CassCluster* cluster,
+                                      unsigned timeout_ms) {
+  cluster->config().set_resolve_timeout(timeout_ms);
+}
+
 void cass_cluster_set_credentials(CassCluster* cluster,
                                   const char* username,
                                   const char* password) {
@@ -237,10 +242,10 @@ CassError cass_cluster_set_load_balance_dc_aware(CassCluster* cluster,
 }
 
 CassError cass_cluster_set_load_balance_dc_aware_n(CassCluster* cluster,
-                                                 const char* local_dc,
-                                                 size_t local_dc_length,
-                                                 unsigned used_hosts_per_remote_dc,
-                                                 cass_bool_t allow_remote_dcs_for_local_cl) {
+                                                   const char* local_dc,
+                                                   size_t local_dc_length,
+                                                   unsigned used_hosts_per_remote_dc,
+                                                   cass_bool_t allow_remote_dcs_for_local_cl) {
   if (local_dc == NULL || local_dc_length == 0) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
@@ -321,17 +326,17 @@ void cass_cluster_set_blacklist_filtering_n(CassCluster* cluster,
 }
 
 void cass_cluster_set_whitelist_dc_filtering(CassCluster* cluster,
-                                          const char* dcs) {
+                                             const char* dcs) {
   size_t dcs_length
       = dcs == NULL ? 0 : strlen(dcs);
   cass_cluster_set_whitelist_dc_filtering_n(cluster,
-                                         dcs,
-                                         dcs_length);
+                                            dcs,
+                                            dcs_length);
 }
 
 void cass_cluster_set_whitelist_dc_filtering_n(CassCluster* cluster,
-                                            const char* dcs,
-                                            size_t dcs_length) {
+                                               const char* dcs,
+                                               size_t dcs_length) {
   if (dcs_length == 0) {
     cluster->config().whitelist_dc().clear();
   } else {
@@ -341,17 +346,17 @@ void cass_cluster_set_whitelist_dc_filtering_n(CassCluster* cluster,
 }
 
 void cass_cluster_set_blacklist_dc_filtering(CassCluster* cluster,
-                                          const char* dcs) {
+                                             const char* dcs) {
   size_t dcs_length
       = dcs == NULL ? 0 : strlen(dcs);
   cass_cluster_set_blacklist_dc_filtering_n(cluster,
-                                         dcs,
-                                         dcs_length);
+                                            dcs,
+                                            dcs_length);
 }
 
 void cass_cluster_set_blacklist_dc_filtering_n(CassCluster* cluster,
-                                            const char* dcs,
-                                            size_t dcs_length) {
+                                               const char* dcs,
+                                               size_t dcs_length) {
   if (dcs_length == 0) {
     cluster->config().blacklist_dc().clear();
   } else {
@@ -371,13 +376,21 @@ void cass_cluster_set_tcp_keepalive(CassCluster* cluster,
   cluster->config().set_tcp_keepalive(enabled == cass_true, delay_secs);
 }
 
+CassError cass_cluster_set_authenticator_callbacks(CassCluster* cluster,
+                                                   const CassAuthenticatorCallbacks* exchange_callbacks,
+                                                   CassAuthenticatorDataCleanupCallback cleanup_callback,
+                                                   void* data) {
+  cluster->config().set_auth_provider(new cass::ExternalAuthProvider(exchange_callbacks, cleanup_callback, data));
+  return CASS_OK;
+}
+
 void cass_cluster_set_connection_heartbeat_interval(CassCluster* cluster,
-                                               unsigned interval_secs) {
+                                                    unsigned interval_secs) {
   cluster->config().set_connection_heartbeat_interval_secs(interval_secs);
 }
 
 void cass_cluster_set_connection_idle_timeout(CassCluster* cluster,
-                                               unsigned timeout_secs) {
+                                              unsigned timeout_secs) {
   cluster->config().set_connection_idle_timeout_secs(timeout_secs);
 }
 
@@ -398,6 +411,16 @@ void cass_cluster_set_use_schema(CassCluster* cluster,
   if (enabled == cass_false) {
     cluster->config().set_token_aware_routing(false);
   }
+}
+
+CassError cass_cluster_set_use_hostname_resolution(CassCluster* cluster,
+                                              cass_bool_t enabled) {
+#if UV_VERSION_MAJOR >= 1
+  cluster->config().set_use_hostname_resolution(enabled == cass_true);
+  return CASS_OK;
+#else
+  return CASS_ERROR_LIB_NOT_IMPLEMENTED;
+#endif
 }
 
 void cass_cluster_free(CassCluster* cluster) {

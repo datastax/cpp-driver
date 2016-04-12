@@ -19,6 +19,7 @@
 
 #include "cassandra.h"
 #include "connection.hpp"
+#include "host.hpp"
 #include "metrics.hpp"
 #include "ref_counted.hpp"
 #include "request.hpp"
@@ -50,7 +51,7 @@ public:
   };
 
   Pool(IOWorker* io_worker,
-       const Address& address,
+       const Host::ConstPtr& host,
        bool is_initial_connection);
   virtual ~Pool();
 
@@ -64,7 +65,7 @@ public:
   void wait_for_connection(RequestHandler* request_handler);
   Connection* borrow_connection();
 
-  const Address& address() const { return address_; }
+  const Host::ConstPtr& host() const { return host_; }
 
   Connection::ConnectionError connection_error() const { return connection_error_; }
 
@@ -109,7 +110,7 @@ private:
   typedef std::vector<Connection*> ConnectionVec;
 
   IOWorker* io_worker_;
-  Address address_;
+  Host::ConstPtr host_;
   uv_loop_t* loop_;
   const Config& config_;
   Metrics* metrics_;

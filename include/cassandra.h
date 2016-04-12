@@ -611,9 +611,10 @@ typedef enum CassLogLevel_ {
 } CassLogLevel;
 
 typedef enum CassSslVerifyFlags {
-  CASS_SSL_VERIFY_NONE,
-  CASS_SSL_VERIFY_PEER_CERT,
-  CASS_SSL_VERIFY_PEER_IDENTITY
+  CASS_SSL_VERIFY_NONE              = 0x00,
+  CASS_SSL_VERIFY_PEER_CERT         = 0x01,
+  CASS_SSL_VERIFY_PEER_IDENTITY     = 0x02,
+  CASS_SSL_VERIFY_PEER_IDENTITY_DNS = 0x04
 } CassSslVerifyFlags;
 
 typedef enum  CassErrorSource_ {
@@ -733,6 +734,87 @@ typedef struct CassLogMessage_ {
 typedef void (*CassLogCallback)(const CassLogMessage* message,
                                 void* data);
 
+/**
+ * An authenticator.
+ */
+typedef struct CassAuthenticator_ CassAuthenticator;
+
+
+/**
+ * A callback used to initiate an authentication exchange.
+ *
+ * Use cass_authenticator_set_response() to set the response token.
+ *
+ * Use cass_authenticator_set_error() if an error occured during initialization.
+ *
+ * @param[in] auth
+ * @param[in] data
+ */
+typedef void (*CassAuthenticatorInitalCallback)(CassAuthenticator* auth,
+                                                void* data);
+
+/**
+ * A callback used when an authentication challenge initiated
+ * by the server.
+ *
+ * Use cass_authenticator_set_response() to set the response token.
+ *
+ * Use cass_authenticator_set_error() if an error occured during the challenge.
+ *
+ * @param[in] auth
+ * @param[in] data
+ * @param[in] token
+ * @param[in] token_size
+ */
+typedef void (*CassAuthenticatorChallengeCallback)(CassAuthenticator* auth,
+                                                   void* data,
+                                                   const char* token,
+                                                   size_t token_size);
+/**
+ * A callback used to indicate the success of the authentication
+ * exchange.
+ *
+ * Use cass_authenticator_set_error() if an error occured while evaluating
+ * the success token.
+ *
+ * @param[in] auth
+ * @param[in] data
+ * @param[in] token
+ * @param[in] token_size
+ */
+typedef void (*CassAuthenticatorSuccessCallback)(CassAuthenticator* auth,
+                                                 void* data,
+                                                 const char* token,
+                                                 size_t token_size);
+/**
+ * A callback used to cleanup resources that were acquired during
+ * the process of the authentication exchange. This is called after
+ * the termination of the exchange regardless of the outcome.
+ *
+ * @param[in] auth
+ * @param[in] data
+ */
+typedef void (*CassAuthenticatorCleanupCallback)(CassAuthenticator* auth,
+                                                 void* data);
+
+
+/**
+ * A callback used to cleanup resources.
+ *
+ * @param[in] data
+ */
+typedef void (*CassAuthenticatorDataCleanupCallback)(void* data);
+
+/**
+ * Authenticator callbacks
+ */
+typedef struct CassAuthenticatorCallbacks_ {
+  CassAuthenticatorInitalCallback initial_callback;
+  CassAuthenticatorChallengeCallback challenge_callback;
+  CassAuthenticatorSuccessCallback success_callback;
+  CassAuthenticatorCleanupCallback cleanup_callback;
+} CassAuthenticatorCallbacks;
+
 /***********************************************************************************
  *
  * Cluster
@@ -828,6 +910,22 @@ cass_cluster_set_port(CassCluster* cluster,
 CASS_EXPORT void
 cass_cluster_set_ssl(CassCluster* cluster,
                      CassSsl* ssl);
+
+/**
+ * Sets custom authenticator
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] callbacks
+ * @param[in] data
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_cluster_set_authenticator_callbacks(CassCluster* cluster,
+                                         const CassAuthenticatorCallbacks* exchange_callbacks,
+                                         CassAuthenticatorDataCleanupCallback cleanup_callback,
+                                         void* data);
 
 /**
  * Sets the protocol version. This will automatically downgrade to the lowest
@@ -1101,6 +1199,20 @@ cass_cluster_set_connect_timeout(CassCluster* cluster,
  */
 CASS_EXPORT void
 cass_cluster_set_request_timeout(CassCluster* cluster,
+                                 unsigned timeout_ms);
+
+/**
+ * Sets the timeout for waiting for DNS name resolution.
+ *
+ * <b>Default:</b> 2000 milliseconds
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] timeout_ms Request timeout in milliseconds
+ */
+CASS_EXPORT void
+cass_cluster_set_resolve_timeout(CassCluster* cluster,
                                  unsigned timeout_ms);
 
 /**
@@ -1554,11 +1666,33 @@ cass_cluster_set_retry_policy(CassCluster* cluster,
  * @param[in] enabled
  *
  * @see cass_session_get_schema_meta()
- * @see cass_cluster_set_token_aware_routing();
+ * @see cass_cluster_set_token_aware_routing()
  */
 CASS_EXPORT void
 cass_cluster_set_use_schema(CassCluster* cluster,
                             cass_bool_t enabled);
+
+/**
+ * Enable/Disable retrieving hostnames for IP addresses using reverse IP lookup.
+ *
+ * This is useful for authentication (Kerberos) or encryption (SSL) services
+ * that require a valid hostname for verification.
+ *
+ * <b>Default:</b> cass_false (disabled).
+ *
+ * <b>Important:</b> Not implemented if using libuv 0.1x or earlier
+ *
+ * @public @memberof CassCluster
+ *
+ * @param[in] cluster
+ * @param[in] enabled
+ * @return CASS_OK if successful, otherwise an error occurred
+ *
+ * @see cass_cluster_set_resolve_timeout()
+ */
+CASS_EXPORT CassError
+cass_cluster_set_use_hostname_resolution(CassCluster* cluster,
+                                         cass_bool_t enabled);
 
 /***********************************************************************************
  *
@@ -3134,6 +3268,9 @@ cass_ssl_add_trusted_cert_n(CassSsl* ssl,
  * CASS_SSL_VERIFY_PEER_IDENTITY - IP address matches the certificate's
  * common name or one of its subject alternative names. This implies the
  * certificate is also present.
+ * CASS_SSL_VERIFY_PEER_IDENTITY_DNS - Hostname matches the certificate's
+ * common name or one of its subject alternative names. This implies the
+ * certificate is also present. Hostname resolution must also be enabled.
  *
  * <b>Default:</b> CASS_SSL_VERIFY_PEER_CERT
  *
@@ -3142,6 +3279,8 @@ cass_ssl_add_trusted_cert_n(CassSsl* ssl,
  * @param[in] ssl
  * @param[in] flags
  * @return CASS_OK if successful, otherwise an error occurred
+ *
+ * @see cass_cluster_set_use_hostname_resolution()
  */
 CASS_EXPORT void
 cass_ssl_set_verify_flags(CassSsl* ssl,
@@ -3220,6 +3359,135 @@ cass_ssl_set_private_key_n(CassSsl* ssl,
 
 /***********************************************************************************
  *
+ * Authenticator
+ *
+ ************************************************************************************/
+
+/**
+ * Gets the IP address of the host being authenticated.
+ *
+ * @param[in] auth
+ * @param[out] address
+ *
+ * @public @memberof CassAuthenticator
+ */
+CASS_EXPORT void
+cass_authenticator_address(const CassAuthenticator* auth,
+                           CassInet* address);
+
+/**
+ * Gets the hostname of the host being authenticated.
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @param[out] length
+ * @return A null-terminated string.
+ */
+CASS_EXPORT const char*
+cass_authenticator_hostname(const CassAuthenticator* auth,
+                            size_t* length);
+
+/**
+ * Gets the class name for the server-side IAuthentication implementation.
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @param[out] length
+ * @return A null-terminated string.
+ */
+CASS_EXPORT const char*
+cass_authenticator_class_name(const CassAuthenticator* auth,
+                              size_t* length);
+
+/**
+ * Gets the user data created during the authenticator exchange. This
+ * is set using cass_authenticator_set_exchange_data().
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @return User specified exchange data previously set by
+ * cass_authenticator_set_exchange_data().
+ *
+ * @see cass_authenticator_set_exchange_data()
+ */
+CASS_EXPORT void*
+cass_authenticator_exchange_data(CassAuthenticator* auth);
+
+/**
+ * Sets the user data to be used during the authenticator exchange.
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @param[in] exchange_data
+ *
+ * @see cass_authenticator_exchange_data()
+ */
+CASS_EXPORT void
+cass_authenticator_set_exchange_data(CassAuthenticator* auth,
+                                     void* exchange_data);
+
+/**
+ * Gets a response token buffer of the provided size.
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @param[in] size
+ * @return A buffer to copy the response token.
+ */
+CASS_EXPORT char*
+cass_authenticator_response(CassAuthenticator* auth,
+                            size_t size);
+
+/**
+ * Sets the response token.
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @param[in] response
+ * @param[in] response_size
+ */
+CASS_EXPORT void
+cass_authenticator_set_response(CassAuthenticator* auth,
+                                const char* response,
+                                size_t response_size);
+
+/**
+ * Sets an error for the authenticator exchange.
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @param[in] message
+ */
+CASS_EXPORT void
+cass_authenticator_set_error(CassAuthenticator* auth,
+                             const char* message);
+
+/**
+ * Same as cass_authenticator_set_error_n(), but with lengths for string
+ * parameters.
+ *
+ * @public @memberof CassAuthenticator
+ *
+ * @param[in] auth
+ * @param[in] message
+ * @param[in] message_length
+ *
+ * @see cass_authenticator_set_error()
+ */
+CASS_EXPORT void
+cass_authenticator_set_error_n(CassAuthenticator* auth,
+                               const char* message,
+                               size_t message_length);
+
+/***********************************************************************************
+ *
  * Future
  *
  ***********************************************************************************/
@@ -3261,7 +3529,7 @@ cass_future_ready(CassFuture* future);
 /**
  * Wait for the future to be set with either a result or error.
  *
- * Important: Do not wait in a future callback. Waiting in a future
+ * <b>Important:</b> Do not wait in a future callback. Waiting in a future
  * callback will cause a deadlock.
  *
  * @public @memberof CassFuture
