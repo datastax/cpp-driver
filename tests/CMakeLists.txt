@@ -65,6 +65,9 @@ if(MSVC AND MSVC_VERSION EQUAL 1700)
   # VS 2012     11           1700            std::tr1::tuple + _VARIADIC_MAX=10
   # VS 2013     12           1800            std::tr1::tuple
   add_definitions(-D_VARIADIC_MAX=10)
+else()
+  find_package(Threads REQUIRED)
+  set(GOOGLE_TEST_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
 #------------------------------
@@ -149,8 +152,9 @@ if(DSE_BUILD_INTEGRATION_TESTS)
   endif()
   target_link_libraries(${INTEGRATION_TESTS_NAME}
     ${CCM_BRIDGE_LIBRARIES}
+    ${GOOGLE_TEST_LIBRARIES}
     ${DSE_LIBS}
-    ${PROJECT_LIB_NAME_STATIC})
+    ${PROJECT_LIB_NAME_TARGET})
   set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY PROJECT_LABEL ${INTEGRATION_TESTS_DISPLAY_NAME})
   set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY FOLDER "Tests")
 endif()
@@ -185,9 +189,10 @@ if(DSE_BUILD_UNIT_TESTS)
   else()
     target_include_directories(${UNIT_TESTS_NAME} PUBLIC ${UNIT_TESTS_SOURCE_DIR})
   endif()
-  target_link_libraries(${INTEGRATION_TESTS_NAME}
+  target_link_libraries(${UNIT_TESTS_NAME}
+    ${GOOGLE_TEST_LIBRARIES}
     ${DSE_LIBS}
-    ${PROJECT_LIB_NAME_STATIC})
+    ${PROJECT_LIB_NAME_TARGET})
   set_property(TARGET ${UNIT_TESTS_NAME} PROPERTY PROJECT_LABEL ${UNIT_TESTS_DISPLAY_NAME})
   set_property(TARGET ${UNIT_TESTS_NAME} PROPERTY FOLDER "Tests")
 

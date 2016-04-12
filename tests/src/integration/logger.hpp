@@ -115,3 +115,4 @@ namespace driver {
 }
 
 #endif // __LOGGER_HPP__
+

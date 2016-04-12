@@ -142,3 +142,4 @@ void driver::Logger::mkdir(std::string path) {
   uv_fs_req_cleanup(&request);
   uv_loop_close(loop);
 }
+
