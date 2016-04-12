@@ -13,15 +13,11 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
+#ifndef __VALUES_HPP__
+#define __VALUES_HPP__
 
-#ifndef __DSE_CLUSTER_HPP_INCLUDED__
-#define __DSE_CLUSTER_HPP_INCLUDED__
+#include "values/integer.hpp"
+#include "values/uuid.hpp"
+#include "values/varchar.hpp"
 
-namespace dse {
-
-  class Cluster {
-  };
-
-} // namespace dse
-
-#endif
+#endif //__VALUES_HPP__
