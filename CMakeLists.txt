@@ -23,6 +23,13 @@ if(POLICY CMP0048)
   cmake_policy(SET CMP0048 OLD)
 endif()
 
+# Determine if project is being used as a subproject
+get_directory_property(HAS_PARENT_DIRECTORY PARENT_DIRECTORY)
+set(CASS_IS_SUBPROJECT FALSE CACHE BOOL "Flag to determine if project is a sub-project" FORCE)
+if(HAS_PARENT_DIRECTORY)
+  set(CASS_IS_SUBPROJECT TRUE CACHE BOOL FORCE)
+endif()
+
 # Title the project and define the versioning
 project(${PROJECT_NAME_STR} C CXX)
 
@@ -159,7 +166,9 @@ find_package_handle_standard_args(Libuv "Could NOT find libuv, try to set the pa
 # Assign libuv include and libraries
 set(CASS_INCLUDES ${CASS_INCLUDES} ${LIBUV_INCLUDE_DIR})
 set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARY})
-set(LIBUV_LIBRARY ${LIBUV_LIBRARY} PARENT_SCOPE)
+if(CASS_IS_SUBPROJECT)
+  set(LIBUV_LIBRARY ${LIBUV_LIBRARY} PARENT_SCOPE)
+endif()
 
 #------------------------
 # Optional Dependencies
@@ -293,8 +302,10 @@ if(CASS_USE_ZLIB)
     # Assign zlib properties
     set(CASS_INCLUDES ${CASS_INCLUDES} ${ZLIB_INCLUDE_DIRS})
     set(CASS_LIBS ${CASS_LIBS} ${ZLIB_LIBRARIES})
-    set(ZLIB_FOUND ${ZLIB_FOUND} PARENT_SCOPE)
-    set(ZLIB_LIBRARIES ${ZLIB_LIBRARIES} PARENT_SCOPE)
+    if(CASS_IS_SUBPROJECT)
+      set(ZLIB_FOUND ${ZLIB_FOUND} PARENT_SCOPE)
+      set(ZLIB_LIBRARIES ${ZLIB_LIBRARIES} PARENT_SCOPE)
+    endif()
   else()
     message(WARNING "Could not find zlib, try to set the path to zlib root folder in the system variable ZLIB_ROOT_DIR")
     message(WARNING "zlib libraries will not be linked into build")
@@ -314,8 +325,10 @@ if(CASS_USE_OPENSSL)
   find_package(OpenSSL REQUIRED)
   set(CASS_INCLUDES ${CASS_INCLUDES} ${OPENSSL_INCLUDE_DIR})
   set(CASS_LIBS ${CASS_LIBS} ${OPENSSL_LIBRARIES})
-  set(OPENSSL_FOUND ${OPENSSL_FOUND} PARENT_SCOPE)
-  set(OPENSSL_LIBRARIES ${OPENSSL_LIBRARIES} PARENT_SCOPE)
+  if(CASS_IS_SUBPROJECT)
+    set(OPENSSL_FOUND ${OPENSSL_FOUND} PARENT_SCOPE)
+    set(OPENSSL_LIBRARIES ${OPENSSL_LIBRARIES} PARENT_SCOPE)
+  endif()
 endif()
 
 #--------------------
@@ -632,7 +645,9 @@ if(CASS_BUILD_STATIC)
 endif()
 
 # Allow libraries to be available for parent projects
-set(CASS_LIBS ${CASS_LIBS} PARENT_SCOPE)
+if(CASS_IS_SUBPROJECT)
+  set(CASS_LIBS ${CASS_LIBS} PARENT_SCOPE)
+endif()
 
 #-------------------------------------
 # Directory installation information
