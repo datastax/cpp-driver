@@ -16,6 +16,7 @@
 #ifndef __OPTIONS_HPP__
 #define __OPTIONS_HPP__
 #include "bridge.hpp"
+#include "smart_ptr.hpp"
 
 #include <string>
 
@@ -159,6 +160,13 @@ public:
    * @return Private key for remote deployment
    */
   static const std::string& private_key();
+
+  /**
+   * Get a CCM instance based on the options
+   *
+   * @return CCM instance
+   */
+  static SmartPtr<CCM::Bridge> ccm();
 
 private:
   /**

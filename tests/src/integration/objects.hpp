@@ -32,7 +32,6 @@
 namespace driver {
   namespace object {
 
-
     /**
      * Deleter class for driver object CassCollection
      */

@@ -65,6 +65,11 @@ namespace driver {
         : cluster_(cass_cluster_new()) {}
 
       /**
+       * Destroy the cluster
+       */
+      virtual ~Cluster() {};
+
+      /**
        * Build/Create the cluster
        *
        * @return Cluster object
@@ -88,6 +93,24 @@ namespace driver {
       }
 
       /**
+       * Enable/Disable the use of hostname resolution
+       *
+       * This is useful for authentication (Kerberos) or encryption (SSL)
+       * services that require a valid hostname for verification.
+       *
+       * NOTE: Not available if using libuv 0.10.x or earlier
+       *
+       * @param enable True if hostname resolution should be enable; false
+       *               otherwise (default: false)
+       * @return Cluster object
+       */
+      Cluster& with_hostname_resolution(cass_bool_t enable = cass_false) {
+        EXPECT_EQ(CASS_OK, cass_cluster_set_use_hostname_resolution(cluster_.get(),
+          enable));
+        return *this;
+      }
+
+      /**
        * Assign the use of a particular binary protocol version; driver will
        * automatically downgrade to the lowest server supported version on
        * connection
@@ -95,9 +118,9 @@ namespace driver {
        * @param protocol_version Binary protocol version
        * @return Cluster object
        */
-      Cluster& with_protocol_version(size_t protocol_version) {
+      Cluster& with_protocol_version(int protocol_version) {
         EXPECT_EQ(CASS_OK, cass_cluster_set_protocol_version(cluster_.get(),
-          static_cast<int>(protocol_version)));
+          protocol_version));
         return *this;
       }
 
@@ -110,6 +133,7 @@ namespace driver {
        * can be useful for reducing the startup overhead of short-lived sessions
        *
        * @param enable True if schema metada should be enabled; false otherwise
+       *               (default: true)
        * @return Cluster object
        */
       Cluster& with_schema_metadata(cass_bool_t enable = cass_true) {
@@ -122,25 +146,14 @@ namespace driver {
        * synchronously
        *
        * @param keyspace Keyspace to use (default: None)
-       * @param assert_ok True if error code for future should be asserted
-       *                  CASS_OK; false otherwise (default: true)
        * @return Session object
+       * @throws Session::Exception If session could not be established
        */
-      shared::SessionPtr connect(const std::string& keyspace = "", bool assert_ok = true) {
-        shared::SessionPtr session = new Session(cass_session_new());
-        SmartPtr<Future> connect_future;
-        if (keyspace.empty()) {
-          connect_future = new Future(cass_session_connect(session->session_.get(),
-            cluster_.get()));
-        } else {
-          connect_future = new Future(cass_session_connect_keyspace(session->session_.get(),
-            cluster_.get(), keyspace.c_str()));
-        }
-        connect_future->wait(assert_ok);
-        return session;
+      shared::SessionPtr connect(const std::string& keyspace = "") {
+        return Session::connect(cluster_.get(), keyspace); 
       }
 
-    private:
+    protected:
       /**
        * Cluster driver reference object
        */

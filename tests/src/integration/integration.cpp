@@ -20,9 +20,18 @@
 #include <cstdarg>
 #include <iostream>
 #include <sstream>
+#include <fcntl.h>
+#include <sys/stat.h>
 #ifndef _WIN32
 # include <time.h>
 #endif
+
+#ifdef _WIN32
+# define FILE_MODE 0
+#else
+# define FILE_MODE S_IRWXU | S_IRWXG | S_IROTH
+#endif
+#define FILE_PATH_SIZE 1024
 
 #define TRIM_DELIMETERS " \f\n\r\t\v"
 #define FORMAT_BUFFER_SIZE 10240
@@ -40,9 +49,13 @@ Integration::Integration()
   , replication_factor_(0)
   , number_dc1_nodes_(1)
   , number_dc2_nodes_(0)
+  , contact_points_("")
   , is_client_authentication_(false)
   , is_ssl_(false)
-  , is_schema_metadata_(false) {
+  , is_schema_metadata_(false)
+  , create_keyspace_query_("")
+  , is_ccm_start_requested_(true)
+  , is_session_requested_(true) {
   // Get the name of the test and the case/suite it belongs to
   const testing::TestInfo* test_information = testing::UnitTest::GetInstance()->current_test_info();
   test_case_name_ = test_information->test_case_name();
@@ -55,7 +68,9 @@ Integration::Integration()
 }
 
 Integration::~Integration() {
-  session_->close();
+  if (session_.get()) {
+    session_->close();
+  }
 }
 
 void Integration::SetUp() {
@@ -87,9 +102,9 @@ void Integration::SetUp() {
     }
     replication_strategy << replication_factor_;
   }
-  std::string create_keyspace_query = format_string(SIMPLE_KEYSPACE_FORMAT,
-                                      keyspace_name_.c_str(),
-                                      replication_strategy.str().c_str());
+  create_keyspace_query_ = format_string(SIMPLE_KEYSPACE_FORMAT,
+                                         keyspace_name_.c_str(),
+                                         replication_strategy.str().c_str());
 
   try {
     //Create and start the CCM cluster (if not already created)
@@ -105,25 +120,23 @@ void Integration::SetUp() {
       number_dc2_nodes_,
       is_ssl_,
       is_client_authentication_)) {
-      ccm_->start_cluster();
+      if (is_ccm_start_requested_) {
+        ccm_->start_cluster();
+      }
     }
 
-    // Create the cluster configuration and establish the session connection
-    std::string contact_points = generate_contact_points(ccm_->get_ip_prefix(), number_dc1_nodes_ + number_dc2_nodes_);
-    cluster_ = Cluster::build()
-      .with_contact_points(contact_points)
-      .with_schema_metadata(is_schema_metadata_ ? cass_true : cass_false);
-    session_ = cluster_.connect();
-    CHECK_FAILURE
+    // Generate the default contact points
+    contact_points_ = generate_contact_points(ccm_->get_ip_prefix(),
+                      number_dc1_nodes_ + number_dc2_nodes_);
 
-    // Create the keyspace for the integration test
-    session_->execute(create_keyspace_query);
-    CHECK_FAILURE
-
-    // Update the session to use the new keyspace by default
-    std::stringstream use_keyspace_query;
-    use_keyspace_query << "USE " << keyspace_name_;
-    session_->execute(use_keyspace_query.str());
+    // Determine if the session connection should be established
+    if (is_session_requested_) {
+      // Create the cluster configuration and establish the session connection
+      cluster_ = Cluster::build()
+        .with_contact_points(contact_points_)
+        .with_schema_metadata(is_schema_metadata_ ? cass_true : cass_false);
+      connect(cluster_);
+    }
   } catch (CCM::BridgeException be) {
     // Issue creating the CCM bridge instance (force failure)
     FAIL() << be.what();
@@ -132,9 +145,26 @@ void Integration::SetUp() {
 
 void Integration::TearDown() {
   // Drop keyspace for integration test (may or may have not been created)
+  if (session_.get()) {
+    std::stringstream use_keyspace_query;
+    use_keyspace_query << "DROP KEYSPACE " << keyspace_name_;
+    session_->execute(use_keyspace_query.str(), CASS_CONSISTENCY_ANY, false);
+  }
+}
+
+void Integration::connect(Cluster cluster) {
+  // Establish the session connection
+  session_ = cluster.connect();
+  CHECK_FAILURE;
+
+  // Create the keyspace for the integration test
+  session_->execute(create_keyspace_query_);
+  CHECK_FAILURE;
+
+  // Update the session to use the new keyspace by default
   std::stringstream use_keyspace_query;
-  use_keyspace_query << "DROP KEYSPACE " << keyspace_name_;
-  session_->execute(use_keyspace_query.str(), CASS_CONSISTENCY_ANY, false);
+  use_keyspace_query << "USE " << keyspace_name_;
+  session_->execute(use_keyspace_query.str());
 }
 
 std::string Integration::generate_contact_points(const std::string& ip_prefix,
@@ -238,3 +268,27 @@ void Integration::msleep(unsigned int milliseconds) {
   }
 #endif
 }
+
+std::string Integration::cwd() {
+  char cwd[FILE_PATH_SIZE] = { 0 };
+  size_t cwd_length = sizeof(cwd);
+  uv_cwd(cwd, &cwd_length);
+  return std::string(cwd, cwd_length);
+}
+
+bool Integration::file_exists(const std::string& filename) {
+  uv_fs_t request;
+  int error_code = uv_fs_open(NULL, &request, filename.c_str(), O_RDONLY, 0, NULL);
+  uv_fs_req_cleanup(&request);
+  return error_code != UV_ENOENT;
+}
+
+void Integration::mkdir(const std::string& path) {
+  // Create a synchronous libuv file system call to create the path
+  uv_loop_t* loop = uv_default_loop();
+  uv_fs_t request;
+  uv_fs_mkdir(loop, &request, path.c_str(), FILE_MODE, NULL);
+  uv_run(loop, UV_RUN_DEFAULT);
+  uv_fs_req_cleanup(&request);
+}
+

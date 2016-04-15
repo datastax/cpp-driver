@@ -135,11 +135,11 @@ void Logger::log(const CassLogMessage* log, void* data) {
 
 void driver::Logger::mkdir(std::string path) {
   // Create a synchronous libuv file system call to create the path
-  uv_loop_t* loop = uv_default_loop();
+  uv_loop_t loop;
   uv_fs_t request;
-  uv_fs_mkdir(loop, &request, path.c_str(), FILE_MODE, NULL);
-  uv_run(loop, UV_RUN_DEFAULT);
+  uv_loop_init(&loop);
+  uv_fs_mkdir(&loop, &request, path.c_str(), FILE_MODE, NULL);
+  uv_run(&loop, UV_RUN_DEFAULT);
   uv_fs_req_cleanup(&request);
-  uv_loop_close(loop);
+  uv_loop_close(&loop);
 }
-

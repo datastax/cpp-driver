@@ -15,9 +15,17 @@
 ##
 
 # Project options
+option(INTEGRATION_VERBOSE_LOGGING "Disable/Enable verbose integration tests console logging" OFF)
+if(INTEGRATION_VERBOSE_LOGGING)
+  add_definitions(-DINTEGRATION_VERBOSE_LOGGING)
+endif()
+option(CCM_VERBOSE_LOGGING "Disable/Enable verbose CCM console logging" OFF)
+if(CCM_VERBOSE_LOGGING)
+  add_definitions(-DCCM_VERBOSE_LOGGING)
+endif()
 if(WIN32)
-  option(DSE_USE_VISUAL_LEAK_DETECTOR "Use Visual Leak Detector" OFF)
-  if(DSE_USE_VISUAL_LEAK_DETECTOR)
+  option(USE_VISUAL_LEAK_DETECTOR "Use Visual Leak Detector" OFF)
+  if(USE_VISUAL_LEAK_DETECTOR)
     add_definitions(-DUSE_VISUAL_LEAK_DETECTOR)
   endif()
 endif()
@@ -157,6 +165,9 @@ if(DSE_BUILD_INTEGRATION_TESTS)
     ${PROJECT_LIB_NAME_TARGET})
   set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY PROJECT_LABEL ${INTEGRATION_TESTS_DISPLAY_NAME})
   set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY FOLDER "Tests")
+
+  # Copy data file to output directory
+configure_file(embedded-ads.jar ${CMAKE_BINARY_DIR} COPYONLY)
 endif()
 
 #------------------------------
