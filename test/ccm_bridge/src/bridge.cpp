@@ -695,6 +695,13 @@ bool CCM::Bridge::switch_cluster(const std::string& cluster_name) {
   return false;
 }
 
+void CCM::Bridge::update_cluster_configuration(std::vector<std::string> key_value_pairs, bool is_dse /*= false*/) {
+  // Create the update configuration command
+  key_value_pairs.insert(key_value_pairs.begin(), (is_dse ? "updatedseconf" : "updateconf"));
+  execute_ccm_command(key_value_pairs);
+
+}
+
 void CCM::Bridge::update_cluster_configuration(const std::string& key, const std::string& value, bool is_dse /*= false*/) {
   // Create the configuration to be updated
   std::stringstream configuration;

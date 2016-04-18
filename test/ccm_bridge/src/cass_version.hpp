@@ -263,7 +263,7 @@ namespace CCM {
     virtual std::string to_string(bool is_extra_requested = true) {
       std::stringstream version_string;
       // Determine if tick-tock release should be handled
-      if (*this > "3.0.0" && patch_version == 0) {
+      if (*this > "3.0.0" && patch_version == 0 && extra.empty()) {
         version_string << major_version << "." << minor_version;
       } else {
         version_string << major_version << "." << minor_version << "." << patch_version;
@@ -407,6 +407,8 @@ namespace CCM {
         return CassVersion("2.1.12-1046");
       } else if (*this == "4.8.5") {
         return CassVersion("2.1.13-1131");
+      } else if (*this == "4.8.6") {
+        return CassVersion("2.1.13-1218");
       }
       // Guess future releases of DSE
       else if (*this >= "5.0.0") {

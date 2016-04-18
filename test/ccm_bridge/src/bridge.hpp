@@ -294,6 +294,15 @@ namespace CCM {
     /**
      * Update the cluster configuration
      *
+     * @param key_value_pairs Key:Value to update
+     * @param is_dse True if key/value pair should update the dse.yaml file;
+     *               otherwise false (default: false)
+     */
+    void update_cluster_configuration(std::vector<std::string> key_value_pairs, bool is_dse = false);
+
+    /**
+     * Update the cluster configuration
+     *
      * @param key Key to update
      * @param value Value to apply to key configuration
      * @param is_dse True if key/value pair should update the dse.yaml file;
@@ -633,7 +642,7 @@ namespace CCM {
     std::string execute_libssh2_command(const std::vector<std::string>& command);
 #endif
 
-	/**
+    /**
      * Execute a local command
      *
      * @param command Command array to execute ([0] = command, [1-n] arguments)
