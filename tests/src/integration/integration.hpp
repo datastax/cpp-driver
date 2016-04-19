@@ -27,6 +27,7 @@
 #include "bridge.hpp"
 #include "logger.hpp"
 #include "objects.hpp"
+#include "utils.hpp"
 #include "values.hpp"
 
 #if defined(_WIN32) && defined(_DEBUG) && !defined(USE_VISUAL_LEAK_DETECTOR)
@@ -48,22 +49,6 @@
 # define PATH_SEPARATOR "/"
 #endif
 
-// Create simple console logging functions
-#define PREFIX_LOG std::cout
-#define PREFIX_MESSAGE "Integration Tests: "
-#define SUFFIX_LOG std::endl
-#ifdef INTEGRATION_VERBOSE_LOGGING
-# define LOG(message) PREFIX_LOG << PREFIX_MESSAGE << message << SUFFIX_LOG
-# define LOG_WARN(message) PREFIX_LOG << PREFIX_MESSAGE << "WARN: " << message << SUFFIX_LOG
-#else
-# define LOG_DISABLED do {} while (false)
-# define LOG(message) LOG_DISABLED
-# define LOG_WARN(message) LOG_DISABLED
-#endif
-#define LOG_ERROR(message) PREFIX_LOG << PREFIX_MESSAGE << "ERROR: " \
-                           << __FILE__ << "(" << __LINE__ << "): " \
-                           << message << SUFFIX_LOG
-
 #define SKIP_TEST(message) \
   std::cout << "[ SKIPPED  ] " << message << std::endl; \
   return;
@@ -75,8 +60,9 @@
 
 #define CHECK_VERSION(version) \
   if (server_version_ < #version) { \
-    SKIP_TEST("Unsupported for server version " \
-              << server_version_.to_string()) \
+    SKIP_TEST("Unsupported for Server Version " \
+              << server_version_.to_string() << ": Server version " \
+              << #version << "+ is required") \
   }
 
 #define CHECK_CONTINUE(flag, message) \
@@ -84,8 +70,8 @@
 
 #define SELECT_ALL_SYSTEM_LOCAL_CQL "SELECT * FROM system.local"
 
-using namespace driver;
-using namespace driver::object;
+using namespace test;
+using namespace test::driver;
 
 /**
  * Statement type enumeration to use for specifying type of statement to use
@@ -124,7 +110,7 @@ protected:
   /**
    * Handle for interacting with CCM
    */
-  SmartPtr<CCM::Bridge> ccm_;
+  SharedPtr<CCM::Bridge> ccm_;
   /**
    * Logger instance for handling driver log messages
    */
@@ -136,7 +122,7 @@ protected:
   /**
    * Connected database session
    */
-  shared::SessionPtr session_;
+  Session session_;
   /**
    * Generated keyspace name for the integration test
    */
@@ -148,7 +134,7 @@ protected:
   /**
    * UUID generator
    */
-  shared::UuidGenPtr uuid_generator_;
+  UuidGen uuid_generator_;
   /**
    * Version of Cassandra/DSE the session is connected to
    */
@@ -227,7 +213,7 @@ protected:
    * @return Comma delimited IP address (e.g. contact points)
    */
   std::string generate_contact_points(const std::string& ip_prefix,
-      size_t number_of_nodes) const;
+    size_t number_of_nodes);
 
   /**
    * Variable argument string formatter
@@ -237,22 +223,15 @@ protected:
    */
   std::string format_string(const char* format, ...) const;
 
+protected:
   /**
-   * Convert a string to lowercase
+   * Get the current working directory
    *
-   * @param input String to convert to lowercase
+   * @return Current working directory
    */
-  std::string to_lower(const std::string& input);
-
-  /**
-   * Concatenate an array/vector into a string
-   *
-   * @param elements Array/Vector elements to concatenate
-   * @param delimiter Character to use between elements (default: <space>)
-   * @return A string representation of all the array/vector elements
-   */
-  std::string implode(const std::vector<std::string>& elements,
-      const char delimiter = ' ') const;
+  inline static std::string cwd() {
+    return Utils::cwd();
+  }
 
   /**
    * Split a string into an array/vector
@@ -261,8 +240,50 @@ protected:
    * @param delimiter Character to use split into elements (default: <space>)
    * @return An array/vector representation of the string
    */
-  std::vector<std::string> explode(const std::string& input,
-      const char delimiter = ' ');
+  inline static std::vector<std::string> explode(const std::string& input,
+    const char delimiter = ' ') {
+    return Utils::explode(input, delimiter);
+  }
+
+  /**
+   * Check to see if a file exists
+   *
+   * @param filename Absolute/Relative filename
+   * @return True if file exists; false otherwise
+   */
+  inline static bool file_exists(const std::string& filename) {
+    return test::Utils::file_exists(filename);
+  }
+
+  /**
+   * Concatenate an array/vector into a string
+   *
+   * @param elements Array/Vector elements to concatenate
+   * @param delimiter Character to use between elements (default: <space>)
+   * @return A string representation of all the array/vector elements
+   */
+  inline static std::string implode(const std::vector<std::string>& elements,
+    const char delimiter = ' ') {
+    return test::Utils::implode(elements, delimiter);
+  }
+
+  /**
+   * Create the directory from a path
+   *
+   * @param path Directory/Path to create
+   */
+  inline static void mkdir(const std::string& path) {
+    test::Utils::mkdir(path);
+  }
+
+  /**
+   * Cross platform millisecond granularity sleep
+   *
+   * @param milliseconds Time in milliseconds to sleep
+   */
+  inline static void msleep(unsigned int milliseconds) {
+    test::Utils::msleep(milliseconds);
+  }
 
   /**
    * Replace all occurrences of a string from the input string
@@ -272,23 +293,19 @@ protected:
    * @param to String to replace with
    * @return Input string with replacement
    */
-  std::string replace_all(const std::string& input,
-      const std::string& from, const std::string& to) const;
+  inline static std::string replace_all(const std::string& input,
+    const std::string& from, const std::string& to) {
+    return test::Utils::replace_all(input, from, to);
+  }
 
-private:
   /**
-  * Keyspace creation query (generated via SetUp)
-  */
-  std::string create_keyspace_query_;
-
-// TODO: Properly implement these (and others) as utilities
-public:
-  /**
-   * Cross platform millisecond granularity sleep
+   * Convert a string to lowercase
    *
-   * @param milliseconds Time in milliseconds to sleep
+   * @param input String to convert to lowercase
    */
-  static void msleep(unsigned int milliseconds);
+  inline static std::string to_lower(const std::string& input) {
+    return test::Utils::to_lower(input);
+  }
 
   /**
    * Remove the leading and trailing whitespace from a string
@@ -296,29 +313,15 @@ public:
    * @param input String to trim
    * @return Trimmed string
    */
-  static std::string trim(const std::string& input);
+  inline static std::string trim(const std::string& input) {
+    return test::Utils::trim(input);
+  }
 
+private:
   /**
-   * Get the current working directory
-   *
-   * @return Current working directory
+   * Keyspace creation query (generated via SetUp)
    */
-  static std::string cwd();
-
-  /**
-   * Check to see if a file exists
-   *
-   * @param filename Absolute/Relative filename
-   * @return True if file exists; false otherwise
-   */
-  static bool file_exists(const std::string& filename);
-
-  /**
-   * Create the directory from a path
-   *
-   * @param path Directory/Path to create
-   */
-  static void mkdir(const std::string& path);
+  std::string create_keyspace_query_;
 };
 
 #endif //__INTEGRATION_HPP__

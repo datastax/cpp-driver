@@ -16,7 +16,7 @@
 #ifndef __OPTIONS_HPP__
 #define __OPTIONS_HPP__
 #include "bridge.hpp"
-#include "smart_ptr.hpp"
+#include "shared_ptr.hpp"
 
 #include <string>
 
@@ -166,7 +166,7 @@ public:
    *
    * @return CCM instance
    */
-  static SmartPtr<CCM::Bridge> ccm();
+  static SharedPtr<CCM::Bridge> ccm();
 
 private:
   /**

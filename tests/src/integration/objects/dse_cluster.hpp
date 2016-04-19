@@ -13,63 +13,71 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-#ifndef __DRIVER_OBJECT_DSE_CLUSTER_HPP__
-#define __DRIVER_OBJECT_DSE_CLUSTER_HPP__
+#ifndef __TEST_DSE_CLUSTER_HPP__
+#define __TEST_DSE_CLUSTER_HPP__
 #include "objects/cluster.hpp"
 
 #include "dse.h"
 
+namespace test {
 namespace driver {
-  namespace object {
 
-    /**
-     * Wrapped cluster object (builder) for DSE extras
-     */
-    class DseCluster : public Cluster {
-    public:
-      /**
-       * Create the DSE cluster for the builder object
-       */
-      DseCluster()
-        : Cluster() {}
+/**
+ * Wrapped cluster object (builder) for DSE extras
+ */
+class DseCluster : public Cluster {
+public:
+  /**
+   * Create the DSE cluster for the builder object
+   */
+  DseCluster()
+    : Cluster() {}
 
-      /**
-       * Destroy the DSE cluster
-       */
-      virtual ~DseCluster() {};
+  /**
+   * Destroy the DSE cluster
+   */
+  virtual ~DseCluster() {};
 
-      /**
-       * Build/Create the DSE cluster
-       *
-       * @return DSE cluster object
-       */
-      static DseCluster build() {
-        return DseCluster();
-      }
-
-      /**
-       * Enable GSSAPI/SASL authentication
-       *
-       * @param service Name of the service
-       * @param principal Principal for the server
-       * @return DSE cluster object
-       */
-      DseCluster& with_gssapi_authenticator(const std::string& service,
-        const std::string& principal) {
-        EXPECT_EQ(CASS_OK, cass_cluster_set_dse_gssapi_authenticator(cluster_.get(),
-          service.c_str(), principal.c_str()));
-        return *this;
-      }
-    };
-
-    // Create scoped and shared pointers for the wrapped object
-    namespace scoped {
-      typedef cass::ScopedPtr<DseCluster> DseClusterPtr;
-    }
-    namespace shared {
-      typedef SmartPtr<DseCluster> DseClusterPtr;
-    }
+  /**
+   * Build/Create the DSE cluster
+   *
+   * @return DSE cluster object
+   */
+  static DseCluster build() {
+    return DseCluster();
   }
-}
 
-#endif // __DRIVER_OBJECT_DSE_CLUSTER_HPP__
+  /**
+   * Enable GSSAPI/SASL authentication
+   *
+   * @param service Name of the service
+   * @param principal Principal for the server
+   * @return DSE cluster object
+   */
+  DseCluster& with_gssapi_authenticator(const std::string& service,
+    const std::string& principal) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_dse_gssapi_authenticator(get(),
+      service.c_str(), principal.c_str()));
+    return *this;
+  }
+
+  /**
+   * Enable plain text authentication
+   *
+   * @param username Username to authenticate
+   * @param password Password for username
+   * @return DSE cluster object
+   */
+  DseCluster& with_plaintext_authenticator(const std::string& username,
+    const std::string& password) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_dse_plaintext_authenticator(get(),
+      username.c_str(), password.c_str()));
+    return *this;
+  }
+
+};
+
+} // namespace driver
+} // namespace test
+
+#endif // __TEST_DSE_CLUSTER_HPP__

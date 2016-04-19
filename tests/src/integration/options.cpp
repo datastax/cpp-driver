@@ -377,7 +377,7 @@ const std::string& Options::private_key() {
   return private_key_;
 }
 
-SmartPtr<CCM::Bridge> Options::ccm() {
+SharedPtr<CCM::Bridge> Options::ccm() {
   return new CCM::Bridge( \
     Options::server_version(), Options::use_git(), \
     Options::is_dse(), Options::cluster_prefix(), \

@@ -13,8 +13,8 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-#ifndef __SMART_PTR_HPP__
-#define __SMART_PTR_HPP__
+#ifndef __SHARED_PTR_HPP__
+#define __SHARED_PTR_HPP__
 #include "scoped_ptr.hpp"
 #include "ref_counted.hpp"
 
@@ -48,43 +48,17 @@ private:
 };
 
 /**
- * Smart pointer for object references
+ * Shared pointer for object references
  */
 template<typename T, class D = cass::DefaultDeleter<T> >
-class SmartPtr {
+class SharedPtr {
 public:
-  SmartPtr(T* ptr = NULL)
+  SharedPtr(T* ptr = NULL)
     : object_(NULL) {
     if (ptr) {
-      // Create the reference object
-      object_ = new ObjectRef<T, D>(ptr);
-      object_->inc_ref();
+      ObjectRef<T, D>* object_ref = new ObjectRef<T, D>(ptr);
+      object_ = cass::SharedRefPtr<ObjectRef<T, D> >(object_ref);
     }
-  }
-
-  ~SmartPtr() {
-    if (object_) {
-      object_->dec_ref();
-    }
-  }
-
-  SmartPtr(const SmartPtr& object)
-    : object_(object.object_) {
-    if (object_) {
-      object_->inc_ref();
-    }
-  }
-
-  SmartPtr& operator=(const SmartPtr& object) {
-    ObjectRef<T,D>* const old = object_;
-    object_ = object.object_;
-    if (object_) {
-      object_->inc_ref();
-    }
-    if (old) {
-      old->dec_ref();
-    }
-    return *this;
   }
 
   T* operator->() {
@@ -93,6 +67,10 @@ public:
 
   T& operator*() {
     return *get();
+  }
+
+  operator bool() const {
+    return object_;
   }
 
   /**
@@ -111,7 +89,7 @@ private:
   /**
    * Object reference
    */
-  ObjectRef<T, D>* object_;
+  cass::SharedRefPtr<ObjectRef<T, D> > object_;
 };
 
-#endif // __SMART_PTR_HPP__
+#endif // __SHARED_PTR_HPP__

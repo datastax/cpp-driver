@@ -14,511 +14,22 @@
   limitations under the License.
 */
 #include "dse_integration.hpp"
-#include "options.hpp"
-
-#include "scoped_lock.hpp"
-
-#include <cstdlib>
-#include <exception>
-#include <string>
-#ifdef _WIN32
-# define putenv _putenv
-#endif
+#include "embedded_ads.hpp"
 
 //TODO: Update test to work with remote deployments
 #ifdef _WIN32
-#define CHECK_FOR_KERBEROS_SKIPPED_TEST \
-  SKIP_TEST("This test cannot currently run on Windows");
+# define CHECK_FOR_KERBEROS_SKIPPED_TEST \
+    SKIP_TEST("This test cannot currently run on Windows");
 #else
-#define CHECK_FOR_KERBEROS_SKIPPED_TEST \
-  if (Options::deployment_type() == CCM::DeploymentType::REMOTE) { \
-    SKIP_TEST("This test cannot currently run using remote deployment"); \
-  }
+# include "options.hpp"
+# define CHECK_FOR_KERBEROS_SKIPPED_TEST \
+    if (Options::deployment_type() == CCM::DeploymentType::REMOTE) { \
+      SKIP_TEST("This test cannot currently run using remote deployment"); \
+    }
 #endif
-
-// Defines for ADS configuration
-#define EMBEDDED_ADS_JAR_FILENAME "embedded-ads.jar"
-#define EMBEDDED_ADS_CONFIGURATION_DIRECTORY "ads_config"
-#define EMBEDDED_ADS_CONFIGURATION_FILE "krb5.conf"
-#define CASSANDRA_KEYTAB_ADS_CONFIGURATION_FILE "cassandra.keytab"
-#define DSE_KEYTAB_ADS_CONFIGURATION_FILE "dse.keytab"
-#define DSE_USER_KEYTAB_ADS_CONFIGURATION_FILE "dseuser.keytab"
-#define UNKNOWN_KEYTAB_ADS_CONFIGURATION_FILE "unknown.keytab"
-#define REALM "DATASTAX.COM"
-#define DSE_SERVICE_PRINCIPAL "dse/_HOST@DATASTAX.COM"
-#define CASSANDRA_USER "cassandra"
-#define CASSANDRA_USER_PRINCIPAL "cassandra@DATASTAX.COM"
-#define DSE_USER "dseuser"
-#define DSE_USER_PRINCIPAL "dseuser@DATASTAX.COM"
-#define UNKNOWN "unknown"
-#define UNKNOWN_PRINCIPAL "unknown@DATASTAX.COM"
-
-#define OUTPUT_BUFFER_SIZE 10240
 
 /**
- * Embedded ADS for easily authenticating with DSE using Kerberos
- */
-class EmbeddedADS {
-public:
-  /**
-  * Exception mechanism for the socket class
-  */
-  class Exception : public std::exception {
-  public:
-#ifdef _WIN32
-    /**
-     * @param message Exception message
-     */
-    Exception(const std::string &message) : std::exception(message.c_str()) {}
-#else
-    /**
-     * @param message Exception message
-     */
-    Exception(const std::string& message) : message_(message) {}
-    ~Exception() throw() {}
-
-    /**
-     * Get the exception message
-     *
-     * @return Exception message
-     */
-    const char* what() const throw() { return message_.c_str(); }
-
-  private:
-    /**
-     * Message to display for exception
-     */
-    std::string message_;
-#endif
-  };
-
-  /**
-   * @throws EmbeddedADS::Exception If applications are not available to operate the ADS
-   *                        properly
-   */
-  EmbeddedADS() {
-    //TODO: Update test to work with remote deployments
-#ifdef _WIN32
-    // Unable to execute ADS locally and use remote DSE cluster
-    throw Exception("ADS Server will not be Created: Must run locally with DSE cluster");
-#endif
-    if (Options::deployment_type() == CCM::DeploymentType::REMOTE) {
-      throw Exception("ADS Server will not be Created: Must run locally with DSE cluster");
-    }
-
-    // Initialize the mutex
-    uv_mutex_init(&mutex_);
-
-    // Check to see if all applications and files are available for ADS
-    bool is_useable = true;
-    std::string message;
-    if (!is_java_available()) {
-      is_useable = false;
-      message += "Java";
-    }
-    if (!is_kerberos_client_available()) {
-      is_useable = false;
-      if (!message.empty()) {
-        message += " and ";
-      }
-      message += "Kerberos clients (kinit/kdestroy)";
-    }
-    if (!Integration::file_exists(EMBEDDED_ADS_JAR_FILENAME)) {
-      is_useable = false;
-      if (!message.empty()) {
-        message += " and ";
-      }
-      message += "embedded ADS JAR file";
-    }
-
-    if (!is_useable) {
-      message = "Unable to Create ADS Server: Missing " + message;
-      throw Exception(message);
-    }
-  }
-
-  ~EmbeddedADS() {
-    terminate_process();
-    uv_mutex_destroy(&mutex_);
-  }
-
-  /**
-   * Start the ADS process
-   */
-  void start_process() {
-    uv_thread_create(&thread_, EmbeddedADS::process_start, NULL);
-  }
-
-  /**
-   * Terminate the ADS process
-   */
-  void terminate_process() {
-    uv_process_kill(&process_, SIGTERM);
-    uv_thread_join(&thread_);
-  }
-
-  /**
-   * Flag to determine if the ADS process is fully initialized
-   *
-   * @return True is ADS is initialized; false otherwise
-   */
-  static bool is_initialized() {
-    return is_initialized_;
-  }
-
-  /**
-   * Get the configuration director being used by the ADS process
-   *
-   * @return Absolute path to the ADS configuration directory; empty string
-   *         indicates ADS was not started properly
-   */
-  static std::string get_configuration_directory() {
-    return configuration_directory_;
-  }
-
-  /**
-   * Get the configuration file being used by the ADS process
-   *
-   * @return Absolute path to the ADS configuration file; empty string indicates
-   *         ADS was not started properly
-   */
-  static std::string get_configuration_file() {
-    return configuration_file_;
-  }
-
-  /**
-   * Get the Cassandra keytab configuration file being used by the ADS process
-   *
-   * @return Absolute path to the Cassandra keytab configuration file; empty
-   *         string indicates ADS was not started properly
-   */
-  static std::string get_cassandra_keytab_file() {
-    return cassandra_keytab_file_;
-  }
-
-  /**
-   * Get the DSE keytab configuration file being used by the ADS process
-   *
-   * @return Absolute path to the DSE keytab configuration file; empty
-   *         string indicates ADS was not started properly
-   */
-  static std::string get_dse_keytab_file() {
-    return dse_keytab_file_;
-  }
-
-  /**
-   * Get the DSE user keytab configuration file being used by the ADS process
-   *
-   * @return Absolute path to the DSE user keytab configuration file; empty
-   *         string indicates ADS was not started properly
-   */
-  static std::string get_dseuser_keytab_file() {
-    return dseuser_keytab_file_;
-  }
-
-  /**
-   * Get the unknown keytab configuration file being used by the ADS process
-   *
-   * @return Absolute path to the unknown keytab configuration file; empty
-   *         string indicates ADS was not started properly
-   */
-  static std::string get_unknown_keytab_file() {
-    return unknown_keytab_file_;
-  }
-
-  /**
-   * Acquire a ticket into the cache of the ADS for a given principal and keytab
-   * file
-   *
-   * @param principal Principal identity
-   * @param keytab_file Filename of keytabl to use
-   */
-  void acquire_ticket(const std::string& principal, const std::string& keytab_file) {
-    char* args[6];
-    args[0] = const_cast<char*>("kinit");
-    args[1] = const_cast<char*>("-k");
-    args[2] = const_cast<char*>("-t");
-    args[3] = const_cast<char*>(keytab_file.c_str());
-    args[4] = const_cast<char*>(principal.c_str());
-    args[5] = NULL;
-    execute_command(args);
-  }
-
-  /**
-   * Destroy all tickets in the cache
-   */
-  void destroy_tickets() {
-    char* args[3];
-    args[0] = const_cast<char*>("kdestroy");
-    args[1] = const_cast<char*>("-A");
-    args[2] = NULL;
-    execute_command(args);
-  }
-
-private:
-  /**
-   * Thread for the ADS process to execute in
-   */
-  uv_thread_t thread_;
-  /**
-   * Mutex for process piped buffer allocation and reads
-   */
-  static uv_mutex_t mutex_;
-  /**
-   * Information regarding spawned process
-   */
-  static uv_process_t process_;
-  /**
-   * ADS configuration directory
-   */
-  static std::string configuration_directory_;
-  /**
-   * KRB5_CONFIG configuration file
-   */
-  static std::string configuration_file_;
-  /**
-   * Cassandra keytab configuration file
-   */
-  static std::string cassandra_keytab_file_;
-  /**
-   * DSE keytab configuration file
-   */
-  static std::string dse_keytab_file_;
-  /**
-   * DSE user keytab configuration file
-   */
-  static std::string dseuser_keytab_file_;
-  /**
-   * Unknown keytab configuration file
-   */
-  static std::string unknown_keytab_file_;
-  /**
-   * Flag to determine if the ADS process is initialized
-   */
-  static bool is_initialized_;
-
-  /**
-   * Execute a command while supplying the KRB5_CONFIG to the ADS server
-   * configuration file
-   *
-   * @param Process and arguments to execute
-   * @return Error code returned from executing command
-   */
-  static int execute_command(char* args[]) {
-    // Create the loop
-    uv_loop_t loop;
-    uv_loop_init(&loop);
-    uv_process_options_t options = { 0 };
-
-    // Create the options for reading information from the spawn pipes
-    uv_pipe_t standard_output;
-    uv_pipe_t error_output;
-    uv_pipe_init(&loop, &standard_output, 0);
-    uv_pipe_init(&loop, &error_output, 0);
-    uv_stdio_container_t stdio[3];
-    options.stdio_count = 3;
-    options.stdio = stdio;
-    options.stdio[0].flags = UV_IGNORE;
-    options.stdio[1].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-    options.stdio[1].data.stream = (uv_stream_t*) &standard_output;
-    options.stdio[2].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-    options.stdio[2].data.stream = (uv_stream_t*) &error_output;
-
-    // Create the options for the process
-    options.args = args;
-    options.exit_cb = EmbeddedADS::process_exit;
-    options.file = args[0];
-
-    // Start the process and process loop (if spawned)
-    uv_process_t process;
-    int error_code = uv_spawn(&loop, &process, &options);
-    if (error_code == 0) {
-      LOG("Launched " << args[0] << " with ID " << process_.pid);
-
-      // Start the output thread loops
-      uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_output), EmbeddedADS::output_allocation, EmbeddedADS::process_read);
-      uv_read_start(reinterpret_cast<uv_stream_t*>(&error_output), EmbeddedADS::output_allocation, EmbeddedADS::process_read);
-
-      // Start the process loop
-      uv_run(&loop, UV_RUN_DEFAULT);
-      uv_loop_close(&loop);
-    }
-    return error_code;
-  }
-
-  /**
-   * Check to see if Java is available in order to execute the ADS process
-   *
-   * @return True is Java is available; false otherwise
-   */
-  static bool is_java_available() {
-    char* args[3];
-    args[0] = const_cast<char*>("java");
-    args[1] = const_cast<char*>("-help");
-    args[2] = NULL;
-    return (execute_command(args) == 0);
-  }
-
-  /**
-   * Check to see if the Kerberos client binaries are available in order to
-   * properly execute request for the ADS
-   *
-   * @return True is kinit and kdestroy are available; false otherwise
-   */
-  static bool is_kerberos_client_available() {
-    // kinit
-    char* kinit_args[3];
-    kinit_args[0] = const_cast<char*>("kinit");
-    kinit_args[1] = const_cast<char*>("--help");
-    kinit_args[2] = NULL;
-    bool is_kinit_available = (execute_command(kinit_args) == 0);
-
-    // kdestroy
-    char* kdestroy_args[3];
-    kdestroy_args[0] = const_cast<char*>("kdestroy");
-    kdestroy_args[1] = const_cast<char*>("--help");
-    kdestroy_args[2] = NULL;
-    bool is_kdestroy_available = (execute_command(kdestroy_args) == 0);
-
-    return (is_kinit_available && is_kdestroy_available);
-  }
-
-  /**
-   * uv_thread_create callback for executing the ADS process
-   *
-   * @param arg UNUSED
-   */
-  static void process_start(void* arg) {
-    // Create the configuration directory for the ADS
-    Integration::mkdir(EMBEDDED_ADS_CONFIGURATION_DIRECTORY);
-
-    // Initialize the loop and process arguments
-    uv_loop_t loop;
-    uv_loop_init(&loop);
-    uv_process_options_t options = { 0 };
-    char* args[7];
-    args[0] = const_cast<char*>("java");
-    args[1] = const_cast<char*>("-jar");
-    args[2] = const_cast<char*>(EMBEDDED_ADS_JAR_FILENAME);
-    args[3] = const_cast<char*>("-k");
-    args[4] = const_cast<char*>("--confdir");
-    args[5] = const_cast<char*>(EMBEDDED_ADS_CONFIGURATION_DIRECTORY);
-    args[6] = NULL;
-
-    // Create the options for reading information from the spawn pipes
-    uv_pipe_t standard_output;
-    uv_pipe_t error_output;
-    uv_pipe_init(&loop, &standard_output, 0);
-    uv_pipe_init(&loop, &error_output, 0);
-    uv_stdio_container_t stdio[3];
-    options.stdio_count = 3;
-    options.stdio = stdio;
-    options.stdio[0].flags = UV_IGNORE;
-    options.stdio[1].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-    options.stdio[1].data.stream = (uv_stream_t*) &standard_output;
-    options.stdio[2].flags = static_cast<uv_stdio_flags>(UV_CREATE_PIPE | UV_WRITABLE_PIPE);
-    options.stdio[2].data.stream = (uv_stream_t*) &error_output;
-
-    // Create the options for the process
-    options.args = args;
-    options.exit_cb = EmbeddedADS::process_exit;
-    options.file = args[0];
-
-    // Start the process
-    int error_code = uv_spawn(&loop, &process_, &options);
-    if (error_code == 0) {
-      LOG("Launched " << args[0] << " with ID " << process_.pid);
-
-      // Start the output thread loops
-      uv_read_start(reinterpret_cast<uv_stream_t*>(&standard_output), EmbeddedADS::output_allocation, EmbeddedADS::process_read);
-      uv_read_start(reinterpret_cast<uv_stream_t*>(&error_output), EmbeddedADS::output_allocation, EmbeddedADS::process_read);
-
-      // Indicate the ADS configurations
-      configuration_directory_ = Integration::cwd() + PATH_SEPARATOR
-        + EMBEDDED_ADS_CONFIGURATION_DIRECTORY + PATH_SEPARATOR;
-      configuration_file_ = configuration_directory_ + EMBEDDED_ADS_CONFIGURATION_FILE;
-      cassandra_keytab_file_ = configuration_directory_ + CASSANDRA_KEYTAB_ADS_CONFIGURATION_FILE;
-      dse_keytab_file_ = configuration_directory_ + DSE_KEYTAB_ADS_CONFIGURATION_FILE;
-      dseuser_keytab_file_ = configuration_directory_ + DSE_USER_KEYTAB_ADS_CONFIGURATION_FILE;
-      unknown_keytab_file_ = configuration_directory_ + UNKNOWN_KEYTAB_ADS_CONFIGURATION_FILE;
-
-      // Inject the configuration environment variable
-      std::string krb5_config_environment = "KRB5_CONFIG=" + configuration_file_;
-      putenv(const_cast<char*>(krb5_config_environment.c_str()));
-
-      // Start the process loop
-      uv_run(&loop, UV_RUN_DEFAULT);
-      uv_loop_close(&loop);
-    } else {
-      LOG_ERROR(uv_strerror(error_code));
-    }
-  }
-
-  /**
-   * uv_spawn callback for handling the completion of the process
-   *
-   * @param process Process
-   * @param error_code Error/Exit code
-   * @param term_signal Terminating signal
-   */
-  static void process_exit(uv_process_t* process, int64_t error_code, int term_signal) {
-    cass::ScopedMutex lock(&mutex_);
-    LOG("Process " << process->pid << " Terminated: " << error_code);
-    uv_close(reinterpret_cast<uv_handle_t*>(process), NULL);
-  }
-
-  /**
-   * uv_read_start callback for allocating memory for the buffer in the pipe
-   *
-   * @param handle Handle information for the pipe being read
-   * @param suggessted_size Suggested size for the buffer
-   * @param buffer Buffer to allocate bytes for
-   */
-  static void output_allocation(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buffer) {
-    cass::ScopedMutex lock(&mutex_);
-    buffer->base = new char[OUTPUT_BUFFER_SIZE];
-    buffer->len = OUTPUT_BUFFER_SIZE;
-  }
-
-  /**
-   * uv_read_start callback for processing the buffer in the pipe
-   *
-   * @param stream Stream to process (stdout/stderr)
-   * @param buffer_length Length of the buffer
-   * @param buffer Buffer to process
-   */
-  static void process_read(uv_stream_t* stream, ssize_t buffer_length, const uv_buf_t* buffer) {
-    cass::ScopedMutex lock(&mutex_);
-    if (buffer_length > 0) {
-      // Process the buffer and determine if the ADS is finished initializing
-      std::string message(buffer->base, buffer_length);
-      if (!is_initialized_ && message.find("Principal Initialization Complete") != std::string::npos) {
-        Integration::msleep(10000); // TODO: Not 100% ready; need to add a better check mechanism
-        is_initialized_ = true;
-      }
-      LOG(Integration::trim(message));
-    } else if (buffer_length < 0) {
-      uv_close(reinterpret_cast<uv_handle_t*>(stream), NULL);
-    }
-
-    // Clean up the memory allocated
-    delete[] buffer->base;
-  }
-};
-
-// Initialize static variables
-uv_process_t EmbeddedADS::process_ = { 0 };
-uv_mutex_t EmbeddedADS::mutex_ = { 0 };
-std::string EmbeddedADS::configuration_directory_ = "";
-std::string EmbeddedADS::configuration_file_ = "";
-std::string EmbeddedADS::cassandra_keytab_file_ = "";
-std::string EmbeddedADS::dse_keytab_file_ = "";
-std::string EmbeddedADS::dseuser_keytab_file_ = "";
-std::string EmbeddedADS::unknown_keytab_file_ = "";
-bool EmbeddedADS::is_initialized_ = false;
-
-/**
- * Authorization integration tests
+ * Authentication integration tests
  */
 class AuthIntegrationTest : public DseIntegration {
 public:
@@ -532,7 +43,7 @@ public:
       }
       LOG("ADS is Initialized and Ready");
       is_ads_available_ = true;
-    } catch (EmbeddedADS::Exception &e) {
+    } catch (test::Exception &e) {
       LOG_ERROR(e.what());
     }
   }
@@ -565,8 +76,10 @@ public:
   }
 
   void TearDown() {
-    // Remove all the cached authorization tickets
-    ads_->destroy_tickets();
+    if (is_ads_available_) {
+      // Remove all the cached authentication tickets
+      ads_->destroy_tickets();
+    }
   }
 
 protected:
@@ -577,51 +90,65 @@ protected:
 
   /**
    * Configure the DSE cluster for use with the ADS
+   *
+   * @param is_kerberos True if Kerberos configuration should be enabled; false
+   *                    otherwise (default: true)
    */
-  void configure_dse_cluster() {
-    // Ensure the ADS is available
-    if (is_ads_available_) {
-      // Ensure the cluster is stopped
-      ccm_->stop_cluster();
+  void configure_dse_cluster(bool is_kerberos = true) {
+    // Ensure the cluster is stopped
+    ccm_->stop_cluster();
 
+    // Configure the default authentication options
+    std::vector<std::string> update_dse_configuration;
+    if (server_version_ >= "5.0.0") {
+      ccm_->update_cluster_configuration("authenticator",
+        "com.datastax.bdp.cassandra.auth.DseAuthenticator");
+      update_dse_configuration.push_back("authentication_options.enabled:true");
+    }
+
+    // Determine if Kerberos functionality should be configured
+    std::vector<std::string> jvm_arguments;
+    if (is_kerberos && is_ads_available_) {
       // Configure the cluster for use with the ADS
-      std::vector<std::string> update_dse_configuration;
-      if (server_version_ < "5.0.0") {
-        ccm_->update_cluster_configuration("authenticator",
-            "com.datastax.bdp.cassandra.auth.KerberosAuthenticator");
-      } else {
-        ccm_->update_cluster_configuration("authenticator",
-            "com.datastax.bdp.cassandra.auth.DseAuthenticator");
-        update_dse_configuration.push_back("authentication_options.enabled:true");
+      if (server_version_ >= "5.0.0") {
         update_dse_configuration.push_back("authentication_options.default_scheme:kerberos");
         update_dse_configuration.push_back("authentication_options.scheme_permissions:true");
         update_dse_configuration.push_back("authentication_options.allow_digest_with_kerberos:true");
-        update_dse_configuration.push_back("authentication_options.plain_text_without_ssl:warn");
         update_dse_configuration.push_back("authentication_options.transitional_mode:disabled");
+      } else {
+        ccm_->update_cluster_configuration("authenticator",
+          "com.datastax.bdp.cassandra.auth.KerberosAuthenticator");
       }
       update_dse_configuration.push_back("kerberos_options.service_principal:"
-          + std::string(DSE_SERVICE_PRINCIPAL));
+        + std::string(DSE_SERVICE_PRINCIPAL));
       update_dse_configuration.push_back("kerberos_options.keytab:"
-          + ads_->get_dse_keytab_file());
+        + ads_->get_dse_keytab_file());
       update_dse_configuration.push_back("kerberos_options.qop:auth");
-      ccm_->update_cluster_configuration(update_dse_configuration, true);
 
-      // Start the cluster
-      std::vector<std::string> jvm_arguments;
       jvm_arguments.push_back("-Dcassandra.superuser_setup_delay_ms=0");
       jvm_arguments.push_back("-Djava.security.krb5.conf="
-          + ads_->get_configuration_file());
-      ccm_->start_cluster(jvm_arguments);
+        + ads_->get_configuration_file());
+    } else {
+      if (server_version_ >= "5.0.0") {
+        update_dse_configuration.push_back("authentication_options.default_scheme:internal");
+        update_dse_configuration.push_back("authentication_options.plain_text_without_ssl:allow");
+      }
     }
+    ccm_->update_cluster_configuration(update_dse_configuration, true);
+
+    // Start the cluster
+    ccm_->start_cluster(jvm_arguments);
+    msleep(5000); // DSE may not be 100% available (even though port is available)
   }
 
   /**
-   * Establish a connection to the server and query the system table
+   * Establish a connection to the server and query the system table using
+   * Kerberos/GSSAPI authentication
    *
    * @param principal Principal identity
    * @throws Session::Exception If session could not be established
    */
-  void connect_and_query_system_table(const std::string& principal) {
+  void connect_using_kerberos_and_query_system_table(const std::string& principal) {
     // Update the CCM configuration for use with the ADS
     configure_dse_cluster();
 
@@ -631,21 +158,46 @@ protected:
       .with_contact_points(contact_points_)
       .with_schema_metadata(cass_false)
       .with_hostname_resolution(cass_true);
-    connect(cluster);
+    Session session = cluster.connect();
 
     // Execute a simple query to ensure authentication
-    session_->execute(SELECT_ALL_SYSTEM_LOCAL_CQL);
+    session.execute(SELECT_ALL_SYSTEM_LOCAL_CQL);
+  }
+
+  /**
+   * Establish a connection to the server and query the system table using
+   * DSE internal authentication
+   *
+   * @param username Username to authenticate
+   * @param password Password for username
+   * @throws Session::Exception If session could not be established
+   */
+  void connect_using_internal_authentication_and_query_system_table(
+      const std::string& username, const std::string& password) {
+    // Update the CCM configuration for use with internal authentication
+    configure_dse_cluster(false);
+
+    // Build the cluster configuration and establish the session connection
+    Cluster cluster = DseCluster::build()
+      .with_plaintext_authenticator(username, password)
+      .with_contact_points(contact_points_)
+      .with_schema_metadata(cass_false)
+      .with_hostname_resolution(cass_true);
+    Session session = cluster.connect();
+
+    // Execute a simple query to ensure authentication
+    session.execute(SELECT_ALL_SYSTEM_LOCAL_CQL);
   }
 
 protected:
   /**
    * ADS instance
    */
-  static SmartPtr<EmbeddedADS> ads_;
+  static SharedPtr<EmbeddedADS> ads_;
 };
 
 // Initialize static variables
-SmartPtr<EmbeddedADS> AuthIntegrationTest::ads_;
+SharedPtr<EmbeddedADS> AuthIntegrationTest::ads_;
 bool AuthIntegrationTest::is_ads_available_ = false;
 
 /**
@@ -665,7 +217,7 @@ TEST_F(AuthIntegrationTest, KerberosAuthentication) {
 
   // Acquire a key for the Cassandra user, connect, and query the system table
   ads_->acquire_ticket(CASSANDRA_USER_PRINCIPAL, ads_->get_cassandra_keytab_file());
-  connect_and_query_system_table(CASSANDRA_USER_PRINCIPAL);
+  connect_using_kerberos_and_query_system_table(CASSANDRA_USER_PRINCIPAL);
 }
 
 /**
@@ -690,7 +242,7 @@ TEST_F(AuthIntegrationTest, KerberosAuthenticationFailureBadCredentials) {
   // Attempt to connect and ensure failed connection
   bool is_session_failure = false;
   try {
-    connect_and_query_system_table(UNKNOWN_PRINCIPAL);
+    connect_using_kerberos_and_query_system_table(UNKNOWN_PRINCIPAL);
   } catch (Session::Exception &se) {
     LOG(se.what());
     ASSERT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, se.error_code())
@@ -719,7 +271,60 @@ TEST_F(AuthIntegrationTest, KerberosAuthenticationFailureNoTicket) {
   // Attempt to connect and ensure failed connection
   bool is_session_failure = false;
   try {
-    connect_and_query_system_table(CASSANDRA_USER_PRINCIPAL);
+    connect_using_kerberos_and_query_system_table(CASSANDRA_USER_PRINCIPAL);
+  } catch (Session::Exception &se) {
+    LOG(se.what());
+    ASSERT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, se.error_code())
+      << "Error code is not 'Bad credentials'";
+    is_session_failure = true;
+  }
+  ASSERT_EQ(true, is_session_failure) << "Session connection established";
+}
+
+/**
+ * Perform connection to DSE using internal authentication
+ *
+ * This test will perform a connection to a DSE server using DSE internal
+ * authentication against a single node cluster and execute a simple query.
+ *
+ * @jira_ticket CPP-350
+ * @test_category dse:auth
+ * @since 1.0.0
+ * @dse_version 5.0.0
+ * @expect_result Successful connection and query execution
+ */
+TEST_F(AuthIntegrationTest, InternalAuthentication) {
+  CHECK_VERSION(5.0.0);
+  CHECK_FOR_KERBEROS_SKIPPED_TEST;
+  CHECK_FAILURE;
+
+  // Connect, and query the system table
+  connect_using_internal_authentication_and_query_system_table(CASSANDRA_USER, CASSANDRA_PASSWORD);
+}
+
+/**
+ * Perform a failing connection to DSE with bad credentials using internal
+ * authentication
+ *
+ * This test will perform a connection to a DSE server using DSE internal
+ * authentication against a single node cluster where an attempt is made to
+ * authenticate a user with bad credentials.
+ *
+ * @jira_ticket CPP-350
+ * @test_category dse:auth
+ * @since 1.0.0
+ * @dse_version 5.0.0
+ * @expected_result Connection is unsuccessful; Bad credentials
+ */
+TEST_F(AuthIntegrationTest, InternalAuthenticationFailure) {
+  CHECK_VERSION(5.0.0)
+  CHECK_FOR_KERBEROS_SKIPPED_TEST;
+  CHECK_FAILURE;
+
+  // Attempt to connect and ensure failed connection
+  bool is_session_failure = false;
+  try {
+    connect_using_internal_authentication_and_query_system_table("invalid", "invalid");
   } catch (Session::Exception &se) {
     LOG(se.what());
     ASSERT_EQ(CASS_ERROR_SERVER_BAD_CREDENTIALS, se.error_code())
