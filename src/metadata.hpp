@@ -49,7 +49,7 @@ public:
 
   MapIteratorImpl(const Collection& map)
     : next_(map.begin())
-    , end_(map.end()) {}
+    , end_(map.end()) { }
 
   bool next() {
     if (next_ == end_) {
@@ -77,7 +77,7 @@ public:
 
   VecIteratorImpl(const Collection& vec)
     : next_(vec.begin())
-    , end_(vec.end()) {}
+    , end_(vec.end()) { }
 
   bool next() {
     if (next_ == end_) {
@@ -109,17 +109,17 @@ class MetadataField {
 public:
   typedef std::map<std::string, MetadataField> Map;
 
-  MetadataField() {}
+  MetadataField() { }
 
   MetadataField(const std::string& name)
-    : name_(name) {}
+    : name_(name) { }
 
   MetadataField(const std::string& name,
                 const Value& value,
                 const SharedRefPtr<RefBuffer>& buffer)
     : name_(name)
     , value_(value)
-    , buffer_(buffer) {}
+    , buffer_(buffer) { }
 
   const std::string& name() const {
     return name_;
@@ -141,7 +141,7 @@ public:
 
   MetadataFieldIterator(const Map& map)
     : Iterator(CASS_ITERATOR_TYPE_META_FIELD)
-    , impl_(map) {}
+    , impl_(map) { }
 
   virtual bool next() { return impl_.next(); }
   const MetadataField* field() const { return &impl_.item(); }
@@ -184,7 +184,7 @@ public:
 
   MetadataIteratorImpl(CassIteratorType type, const Collection& colleciton)
     : Iterator(type)
-    , impl_(colleciton) {}
+    , impl_(colleciton) { }
 
   virtual bool next() { return impl_.next(); }
 
@@ -272,10 +272,11 @@ public:
 
   CassIndexType type() const { return type_; }
   const std::string& target() const { return target_; }
-  const Value* options() const { return options_; }
+  const Value* options() const { return &options_; }
 
   IndexMetadata(const std::string& index_name)
-    : MetadataBase(index_name) { }
+    : MetadataBase(index_name)
+    , type_(CASS_INDEX_TYPE_UNKNOWN) { }
 
   static IndexMetadata::Ptr from_row(const std::string& index_name,
                                      const SharedRefPtr<RefBuffer>& buffer, const Row* row);
@@ -295,7 +296,7 @@ private:
 private:
   CassIndexType type_;
   std::string target_;
-  const Value* options_;
+  Value options_;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(IndexMetadata);
@@ -501,7 +502,6 @@ class KeyspaceMetadata : public MetadataBase {
 public:
   typedef std::map<std::string, KeyspaceMetadata> Map;
   typedef CopyOnWritePtr<KeyspaceMetadata::Map> MapPtr;
-  typedef std::map<StringRef, StringRef> OptionsMap;
 
   class TableIterator : public MetadataIteratorImpl<MapIteratorImpl<TableMetadata::Ptr> > {
   public:
@@ -573,11 +573,11 @@ public:
   void drop_aggregate(const std::string& full_aggregate_name);
 
   StringRef strategy_class() const { return strategy_class_; }
-  const OptionsMap& strategy_options() const { return strategy_options_; }
+  const Value* strategy_options() const { return &strategy_options_; }
 
 private:
   StringRef strategy_class_;
-  OptionsMap strategy_options_;
+  Value strategy_options_;
 
   CopyOnWritePtr<TableMetadata::Map> tables_;
   CopyOnWritePtr<ViewMetadata::Map> views_;

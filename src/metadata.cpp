@@ -1189,8 +1189,8 @@ void KeyspaceMetadata::update(const MetadataConfig& config, const SharedRefPtr<R
         if (key->to_string_ref() == "class") {
           strategy_class_ = value->to_string_ref();
         }
-        strategy_options_[key->to_string_ref()] = value->to_string_ref();
       }
+      strategy_options_ = *map;
     }
   } else {
     const Value* value = add_field(buffer, row, "strategy_class");
@@ -1198,18 +1198,9 @@ void KeyspaceMetadata::update(const MetadataConfig& config, const SharedRefPtr<R
         is_string_type(value->value_type())) {
       strategy_class_ = value->to_string_ref();
     }
-
     const Value* map = add_json_map_field(config.protocol_version, row, "strategy_options");
-    if (map != NULL &&
-        map->value_type() == CASS_VALUE_TYPE_MAP &&
-        is_string_type(map->primary_value_type()) &&
-        is_string_type(map->secondary_value_type())) {
-      MapIterator iterator(map);
-      while (iterator.next()) {
-        const Value* key = iterator.key();
-        const Value* value  = iterator.value();
-        strategy_options_[key->to_string_ref()] = value->to_string_ref();
-      }
+    if (map != NULL) {
+      strategy_options_ = *map;
     }
   }
 }
@@ -1303,8 +1294,9 @@ const ColumnMetadata* TableMetadataBase::get_column(const std::string& name) con
 }
 
 void TableMetadataBase::add_column(const ColumnMetadata::Ptr& column) {
-  columns_.push_back(column);
-  columns_by_name_[column->name()] = column;
+  if (columns_by_name_.insert(std::make_pair(column->name(), column)).second) {
+    columns_.push_back(column);
+  }
 }
 
 void TableMetadataBase::clear_columns() {
@@ -1522,8 +1514,9 @@ const IndexMetadata* TableMetadata::get_index(const std::string& name) const {
 }
 
 void TableMetadata::add_index(const IndexMetadata::Ptr& index) {
-  indexes_.push_back(index);
-  indexes_by_name_[index->name()] = index;
+  if (indexes_by_name_.insert(std::make_pair(index->name(), index)).second) {
+    indexes_.push_back(index);
+  }
 }
 
 void TableMetadata::clear_indexes() {
@@ -1718,7 +1711,7 @@ void IndexMetadata::update(StringRef kind, const Value* options) {
     }
   }
 
-  options_ = options;
+  options_ = *options;
 }
 
 IndexMetadata::Ptr IndexMetadata::from_legacy(const MetadataConfig& config,
@@ -1744,7 +1737,7 @@ IndexMetadata::Ptr IndexMetadata::from_legacy(const MetadataConfig& config,
 void IndexMetadata::update_legacy(StringRef index_type, const ColumnMetadata* column, const Value* options) {
   type_ = index_type_from_string(index_type);
   target_ = target_from_legacy(column, options);
-  options_ = options;
+  options_ = *options;
 }
 
 std::string IndexMetadata::target_from_legacy(const ColumnMetadata* column,
@@ -2189,6 +2182,7 @@ void Metadata::InternalData::update_columns(const MetadataConfig& config, Result
     if (keyspace_name != temp_keyspace_name) {
       keyspace_name = temp_keyspace_name;
       keyspace = get_or_create_keyspace(keyspace_name);
+      table_or_view_name.clear();
     }
 
     if (table_or_view_name != temp_table_or_view_name) {
@@ -2231,11 +2225,11 @@ void Metadata::InternalData::update_legacy_indexes(const MetadataConfig& config,
 
   while (rows.next()) {
     std::string temp_keyspace_name;
-    std::string temp_table;
+    std::string temp_table_name;
     const Row* row = rows.row();
 
     if (!row->get_string_by_name("keyspace_name", &temp_keyspace_name) ||
-        !row->get_string_by_name(table_column_name(config.cassandra_version), &temp_table) ||
+        !row->get_string_by_name(table_column_name(config.cassandra_version), &temp_table_name) ||
         !row->get_string_by_name("column_name", &column_name)) {
       LOG_ERROR("Unable to get column value for 'keyspace_name', '%s' or 'column_name'",
                 table_column_name(config.cassandra_version));
@@ -2245,14 +2239,11 @@ void Metadata::InternalData::update_legacy_indexes(const MetadataConfig& config,
     if (keyspace_name != temp_keyspace_name) {
       keyspace_name = temp_keyspace_name;
       keyspace = get_or_create_keyspace(keyspace_name);
+      table_name.clear();
     }
 
-    if (table_name != temp_table) {
-      // Build keys for the previous table
-      if (table) {
-        table->build_keys_and_sort(config);
-      }
-      table_name = temp_table;
+    if (table_name != temp_table_name) {
+      table_name = temp_table_name;
       table = keyspace->get_table(table_name);
       if (!table) continue;
       table->clear_indexes();
@@ -2300,13 +2291,10 @@ void Metadata::InternalData::update_indexes(const MetadataConfig& config, Result
     if (keyspace_name != temp_keyspace_name) {
       keyspace_name = temp_keyspace_name;
       keyspace = get_or_create_keyspace(keyspace_name);
+      table_name.clear();
     }
 
     if (table_name != temp_table_name) {
-      // Build keys for the previous table
-      if (table) {
-        table->build_keys_and_sort(config);
-      }
       table_name = temp_table_name;
       table = keyspace->get_table(table_name);
       if (!table) continue;

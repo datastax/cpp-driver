@@ -1720,4 +1720,49 @@ BOOST_AUTO_TEST_CASE(materialized_view_clustering_order) {
   }
 }
 
+/**
+ * Test duplicate table name in mulitple keyspaces.
+ *
+ * Verifies the case where two tables have the same name and their keyspaces
+ * are adjacent. There was an issue where columns and indexes from the second
+ * table would be added to previous keyspace's table.
+ *
+ * @since 2.3.0
+ * @jira_ticket CPP-348
+ * @test_category schema
+ * @cassandra_version 1.2.x
+ */
+BOOST_AUTO_TEST_CASE(duplicate_table_name) {
+  test_utils::execute_query(session, "CREATE KEYSPACE test14 WITH replication = "
+                                     "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+
+  test_utils::execute_query(session, "CREATE TABLE test14.table1 (key1 TEXT PRIMARY KEY, value1 INT)" );
+
+  test_utils::execute_query(session, "CREATE INDEX index1 ON test14.table1 (value1)");
+
+  test_utils::execute_query(session, "CREATE KEYSPACE test15 WITH replication = "
+                                     "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+
+  test_utils::execute_query(session, "CREATE TABLE test15.table1 (key1 TEXT PRIMARY KEY, value1 INT)" );
+
+  test_utils::execute_query(session, "CREATE INDEX index1 ON test15.table1 (value1)");
+
+  close_session();
+  create_session();
+
+  refresh_schema_meta();
+
+  {
+    const CassTableMeta* table_meta = schema_get_table("test14", "table1");
+    BOOST_CHECK(cass_table_meta_column_by_name(table_meta, "key1") != NULL);
+    BOOST_CHECK(cass_table_meta_index_by_name(table_meta, "index1") != NULL);
+  }
+
+  {
+    const CassTableMeta* table_meta = schema_get_table("test15", "table1");
+    BOOST_CHECK(cass_table_meta_column_by_name(table_meta, "key1") != NULL);
+    BOOST_CHECK(cass_table_meta_index_by_name(table_meta, "index1") != NULL);
+  }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
