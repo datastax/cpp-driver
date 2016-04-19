@@ -148,6 +148,8 @@ private:
 
 class CustomType : public DataType {
 public:
+  typedef SharedRefPtr<const CustomType> ConstPtr;
+
   CustomType()
     : DataType(CASS_VALUE_TYPE_CUSTOM) { }
 
@@ -530,6 +532,15 @@ template<>
 struct IsValidDataType<CassBytes> {
   bool operator()(CassBytes, const DataType::ConstPtr& data_type) const {
     return is_bytes_type(data_type->value_type());
+  }
+};
+
+template<>
+struct IsValidDataType<CassCustom> {
+  bool operator()(const CassCustom& custom, const DataType::ConstPtr& data_type) const {
+    if (!data_type->is_custom()) return false;
+    CustomType::ConstPtr custom_type(data_type);
+    return custom.class_name == custom_type->class_name();
   }
 };
 

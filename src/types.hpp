@@ -18,6 +18,7 @@
 #define __CASS_TYPES_HPP_INCLUDED__
 
 #include "cassandra.h"
+#include "string_ref.hpp"
 
 namespace cass {
 
@@ -28,6 +29,16 @@ struct CassUnset { };
 struct CassBytes {
   CassBytes(const cass_byte_t* data, size_t size)
     : data(data), size(size) { }
+  const cass_byte_t* data;
+  size_t size;
+};
+
+struct CassCustom {
+  CassCustom(StringRef class_name,
+             const cass_byte_t* data, size_t size)
+    : class_name(class_name)
+    , data(data), size(size) { }
+  StringRef class_name;
   const cass_byte_t* data;
   size_t size;
 };

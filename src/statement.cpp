@@ -182,6 +182,49 @@ CassError cass_statement_bind_string_by_name_n(CassStatement* statement,
                         cass::CassString(value, strlen(value)));
 }
 
+CassError cass_statement_bind_custom(CassStatement* statement,
+                                     size_t index,
+                                     const char* class_name,
+                                     const cass_byte_t* value,
+                                     size_t value_size) {
+  return statement->set(index,
+                        cass::CassCustom(cass::StringRef(class_name),
+                                         value, value_size));
+}
+
+CassError cass_statement_bind_custom_n(CassStatement* statement,
+                                       size_t index,
+                                       const char* class_name,
+                                       size_t class_name_length,
+                                       const cass_byte_t* value,
+                                       size_t value_size) {
+  return statement->set(index,
+                        cass::CassCustom(cass::StringRef(class_name, class_name_length),
+                                         value, value_size));
+}
+
+CassError cass_statement_bind_custom_by_name(CassStatement* statement,
+                                             const char* name,
+                                             const char* class_name,
+                                             const cass_byte_t* value,
+                                             size_t value_size) {
+  return statement->set(cass::StringRef(name),
+                        cass::CassCustom(cass::StringRef(class_name),
+                                         value, value_size));
+}
+
+CassError cass_statement_bind_custom_by_name_n(CassStatement* statement,
+                                               const char* name,
+                                               size_t name_length,
+                                               const char* class_name,
+                                               size_t class_name_length,
+                                               const cass_byte_t* value,
+                                               size_t value_size) {
+  return statement->set(cass::StringRef(name, name_length),
+                        cass::CassCustom(cass::StringRef(class_name, class_name_length),
+                                         value, value_size));
+}
+
 } // extern "C"
 
 namespace cass {

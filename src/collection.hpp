@@ -71,6 +71,7 @@ public:
   APPEND_TYPE(cass_bool_t)
   APPEND_TYPE(CassString)
   APPEND_TYPE(CassBytes)
+  APPEND_TYPE(CassCustom)
   APPEND_TYPE(CassUuid)
   APPEND_TYPE(CassInet)
   APPEND_TYPE(CassDecimal)
