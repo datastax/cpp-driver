@@ -21,7 +21,7 @@ namespace cass {
 
 class NoSslSession : public SslSession {
 public:
-  NoSslSession(const Address& address);
+  NoSslSession(const Host::ConstPtr& host);
 
   virtual bool is_handshake_done() const { return false; }
   virtual void do_handshake() {}
@@ -34,7 +34,7 @@ public:
 class NoSslContext : public SslContext {
 public:
 
-  virtual SslSession* create_session(const Address& address);
+  virtual SslSession* create_session(const Host::ConstPtr& host);
 
   virtual CassError add_trusted_cert(const char* cert, size_t cert_length);
   virtual CassError set_cert(const char* cert, size_t cert_length);
