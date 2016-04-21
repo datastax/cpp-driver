@@ -19,6 +19,8 @@
 
 #include "dse.h"
 
+#include "graph.hpp"
+
 // This abstraction allows us to separate internal types from the
 // external opaque pointers that we expose.
 template <typename In, typename Ex>
@@ -36,6 +38,13 @@ struct External : public In {
   }
 
 extern "C" {
+
+EXTERNAL_TYPE(dse::GraphOptions, DseGraphOptions);
+EXTERNAL_TYPE(dse::GraphStatement, DseGraphStatement);
+EXTERNAL_TYPE(dse::GraphArray, DseGraphArray);
+EXTERNAL_TYPE(dse::GraphObject, DseGraphObject);
+EXTERNAL_TYPE(dse::GraphResultSet, DseGraphResultSet);
+EXTERNAL_TYPE(dse::GraphResult, DseGraphResult);
 
 }
 
