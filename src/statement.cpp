@@ -44,6 +44,10 @@ CassStatement* cass_statement_new_n(const char* query,
   return CassStatement::to(query_request);
 }
 
+CassError cass_statement_reset_parameters(CassStatement* statement, size_t count) {
+  statement->reset(count);
+  return CASS_OK;
+}
 
 CassError cass_statement_add_key_index(CassStatement* statement, size_t index) {
   if (statement->kind() != CASS_BATCH_KIND_QUERY) return CASS_ERROR_LIB_BAD_PARAMS;
