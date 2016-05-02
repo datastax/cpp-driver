@@ -58,12 +58,34 @@
 extern "C" {
 #endif
 
+/**
+ * @struct DseGraphObject
+ */
 typedef struct DseGraphOptions_ DseGraphOptions;
+
+/**
+ * @struct DseGraphStatement
+ */
 typedef struct DseGraphStatement_ DseGraphStatement;
+
+/**
+ * @struct DseGraphObject
+ */
 typedef struct DseGraphObject_ DseGraphObject;
+
+/**
+ * @struct DseGraphArray
+ */
 typedef struct DseGraphArray_ DseGraphArray;
+
+/**
+ * @struct DseGraphResultSet
+ */
 typedef struct DseGraphResultSet_ DseGraphResultSet;
 
+/**
+ *
+ */
 typedef enum DseGraphResultType_ {
   DSE_GRAPH_RESULT_TYPE_NULL,
   DSE_GRAPH_RESULT_TYPE_BOOL,
@@ -73,8 +95,14 @@ typedef enum DseGraphResultType_ {
   DSE_GRAPH_RESULT_TYPE_ARRAY
 } DseGraphResultType;
 
+/**
+ * @struct DseGraphResult
+ */
 typedef struct DseGraphResult_ DseGraphResult;
 
+/**
+ * @struct DseGraphEdgeResult
+ */
 typedef struct DseGraphEdgeResult_ {
   const DseGraphResult* id;
   const DseGraphResult* label;
@@ -86,6 +114,9 @@ typedef struct DseGraphEdgeResult_ {
   const DseGraphResult* out_vertex_label;
 } DseGraphEdgeResult;
 
+/**
+ * @struct DseGraphVertexResult
+ */
 typedef struct DseGraphVertexResult_ {
   const DseGraphResult* id;
   const DseGraphResult* label;
@@ -93,6 +124,9 @@ typedef struct DseGraphVertexResult_ {
   const DseGraphResult* properties;
 } DseGraphVertexResult;
 
+/**
+ * @struct DseGraphPathResult
+ */
 typedef struct DseGraphPathResult_ {
   const DseGraphResult* labels;
   const DseGraphResult* objects;
@@ -146,6 +180,17 @@ cass_cluster_set_dse_plaintext_authenticator_n(CassCluster* cluster,
  *
  ***********************************************************************************/
 
+/**
+ * Execute a graph statement.
+ *
+ * @public @memberof CassSession
+ *
+ * @param[in] session
+ * @param[in] statement
+ * @return A future that must be freed.
+ *
+ * @see cass_future_get_dse_graph_resultset()
+ */
 DSE_EXPORT CassFuture*
 cass_session_execute_dse_graph(CassSession* session,
                                const DseGraphStatement* statement);
@@ -156,6 +201,18 @@ cass_session_execute_dse_graph(CassSession* session,
  *
  ***********************************************************************************/
 
+/**
+ * Gets the graph result set of a successful future. If the future is not ready this method will
+ * wait for the future to be set.
+ *
+ * @public @memberof CassFuture
+ *
+ * @param[in] future
+ * @return DseGraphResultSet instance if successful, otherwise NULL for error. The return instance
+ * must be freed using dse_graph_resultset_free().
+ *
+ * @see cass_session_execute_dse_graph()
+ */
 DSE_EXPORT DseGraphResultSet*
 cass_future_get_dse_graph_resultset(CassFuture* future);
 
@@ -165,32 +222,94 @@ cass_future_get_dse_graph_resultset(CassFuture* future);
  *
  ***********************************************************************************/
 
+/**
+ * Creates a new instance of graph options
+ *
+ * @public @memberof DseGraphOptions
+ *
+ * @return Returns a instance of grpah options that must be freed.
+ *
+ * @see dse_graph_options_free()
+ */
 DSE_EXPORT DseGraphOptions*
 dse_graph_options_new();
 
+/**
+ * Frees a graph options instance.
+ *
+ * @public @memberof DseGraphOptions
+ *
+ * @param[in] options
+ */
 DSE_EXPORT void
 dse_graph_options_free(DseGraphOptions* options);
 
+/**
+ * Set the graph language.
+ *
+ * Default:
+ *
+ * @public @memberof DseGraphOptions
+ *
+ * @param[in] options
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_options_set_graph_language(DseGraphOptions* options,
                                      const char* language);
 
+/**
+ *
+ * @public @memberof DseGraphOptions
+ *
+ * @param[in] options
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
 DSE_EXPORT CassError
 dse_graph_options_set_graph_language_n(DseGraphOptions* options,
                                        const char* language, size_t language_length);
 
+/**
+ *
+ * @public @memberof DseGraphOptions
+ *
+ * @param[in] options
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
 DSE_EXPORT CassError
 dse_graph_options_set_graph_source(DseGraphOptions* options,
                                    const char* source);
 
+/**
+ *
+ * @public @memberof DseGraphOptions
+ *
+ * @param[in] options
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
 DSE_EXPORT CassError
 dse_graph_options_set_graph_source_n(DseGraphOptions* options,
                                      const char* source, size_t source_length);
 
+/**
+ *
+ * @public @memberof DseGraphOptions
+ *
+ * @param[in] options
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
 DSE_EXPORT CassError
 dse_graph_options_set_graph_name(DseGraphOptions* options,
                                  const char* name);
 
+/**
+ *
+ * @public @memberof DseGraphOptions
+ *
+ * @param[in] options
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
 DSE_EXPORT CassError
 dse_graph_options_set_graph_name_n(DseGraphOptions* options,
                                    const char* name, size_t name_length);
@@ -201,25 +320,33 @@ dse_graph_options_set_graph_name_n(DseGraphOptions* options,
  *
  ***********************************************************************************/
 
+/**
+ *
+ */
 DSE_EXPORT DseGraphStatement*
 dse_graph_statement_new(const char* query,
                         const DseGraphOptions* options);
 
+/**
+ *
+ */
 DSE_EXPORT DseGraphStatement*
 dse_graph_statement_new_n(const char* query,
                           size_t query_length,
                           const DseGraphOptions* options);
 
+/**
+ *
+ */
 DSE_EXPORT void
 dse_graph_statement_free(DseGraphStatement* statement);
 
-DSE_EXPORT CassError
-dse_graph_statement_set_options(DseGraphStatement* statement,
-                                const DseGraphOptions* options);
-
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_statement_set_parameters(DseGraphStatement* statement,
-                                   const DseGraphObject* parameters);
+                                   const DseGraphObject* params);
 
 /***********************************************************************************
  *
@@ -227,76 +354,124 @@ dse_graph_statement_set_parameters(DseGraphStatement* statement,
  *
  ***********************************************************************************/
 
+/**
+ *
+ */
 DSE_EXPORT DseGraphObject*
 dse_graph_object_new();
 
+/**
+ *
+ */
 DSE_EXPORT void
 dse_graph_object_free(DseGraphObject* object);
 
+/**
+ *
+ */
 DSE_EXPORT void
 dse_graph_object_reset(DseGraphObject* object);
 
+/**
+ *
+ */
 DSE_EXPORT void
 dse_graph_object_finish(DseGraphObject* object);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_null(DseGraphObject* object,
                           const char* name);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_null_n(DseGraphObject* object,
                             const char* name,
                             size_t name_length);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_bool(DseGraphObject* object,
                           const char* name,
                           cass_bool_t value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_bool_n(DseGraphObject* object,
                             const char* name,
                             size_t name_length,
                             cass_bool_t value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_int32(DseGraphObject* object,
                            const char* name,
                            cass_int32_t value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_int32_n(DseGraphObject* object,
                              const char* name,
                              size_t name_length,
                              cass_int32_t value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_int64(DseGraphObject* object,
                            const char* name,
                            cass_int64_t value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_int64_n(DseGraphObject* object,
                              const char* name,
                              size_t name_length,
                              cass_int64_t value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_double(DseGraphObject* object,
                             const char* name,
                             cass_double_t value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_double_n(DseGraphObject* object,
                               const char* name,
                               size_t name_length,
                               cass_double_t value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_string(DseGraphObject* object,
                             const char* name,
                             const char* value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_string_n(DseGraphObject* object,
                               const char* name,
@@ -304,22 +479,34 @@ dse_graph_object_add_string_n(DseGraphObject* object,
                               const char* value,
                               size_t value_length);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_object(DseGraphObject* object,
                             const char* name,
                             const DseGraphObject* value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_object_n(DseGraphObject* object,
                               const char* name,
                               size_t name_length,
                               const DseGraphObject* value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_array(DseGraphObject* object,
                            const char* name,
                            const DseGraphArray* value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_object_add_array_n(DseGraphObject* object,
                              const char* name,
@@ -332,50 +519,89 @@ dse_graph_object_add_array_n(DseGraphObject* object,
  *
  ***********************************************************************************/
 
+/**
+ *
+ */
 DSE_EXPORT DseGraphArray*
 dse_graph_array_new();
 
+/**
+ *
+ */
 DSE_EXPORT void
 dse_graph_array_free(DseGraphArray* array);
 
+/**
+ *
+ */
 DSE_EXPORT void
 dse_graph_array_reset(DseGraphObject* array);
 
+/**
+ *
+ */
 DSE_EXPORT void
 dse_graph_array_finish(DseGraphObject* array);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_array_add_null(DseGraphArray* array);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_array_add_bool(DseGraphArray* array,
                           cass_bool_t value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_array_add_int32(DseGraphArray* array,
                            cass_int32_t value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_array_add_int64(DseGraphArray* array,
                            cass_int64_t value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_array_add_double(DseGraphArray* array,
                             cass_double_t value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_array_add_string(DseGraphArray* array,
                             const char* value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_array_add_string_n(DseGraphArray* array,
                             const char* value,
                              size_t value_length);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_array_add_object(DseGraphArray* array,
                            const DseGraphObject* value);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_array_add_array(DseGraphArray* array,
                           const DseGraphArray* value);
@@ -386,12 +612,21 @@ dse_graph_array_add_array(DseGraphArray* array,
  *
  ***********************************************************************************/
 
+/**
+ *
+ */
 DSE_EXPORT void
 dse_graph_resultset_free(DseGraphResultSet* resultset);
 
+/**
+ *
+ */
 DSE_EXPORT size_t
 dse_graph_resultset_count(DseGraphResultSet* resultset);
 
+/**
+ *
+ */
 DSE_EXPORT const DseGraphResult*
 dse_graph_resultset_next(DseGraphResultSet* resultset);
 
@@ -401,73 +636,136 @@ dse_graph_resultset_next(DseGraphResultSet* resultset);
  *
  ***********************************************************************************/
 
+/**
+ *
+ */
 DSE_EXPORT DseGraphResultType
 dse_graph_result_type(const DseGraphResult* result);
 
+/**
+ *
+ */
 DSE_EXPORT cass_bool_t
 dse_graph_result_is_bool(const DseGraphResult* result);
 
+/**
+ *
+ */
 DSE_EXPORT cass_bool_t
 dse_graph_result_is_int32(const DseGraphResult* result);
 
+/**
+ *
+ */
 DSE_EXPORT cass_bool_t
 dse_graph_result_is_int64(const DseGraphResult* result);
 
+/**
+ *
+ */
 DSE_EXPORT cass_bool_t
 dse_graph_result_is_double(const DseGraphResult* result);
 
+/**
+ *
+ */
 DSE_EXPORT cass_bool_t
 dse_graph_result_is_string(const DseGraphResult* result);
 
+/**
+ *
+ */
 DSE_EXPORT cass_bool_t
 dse_graph_result_is_object(const DseGraphResult* result);
 
+/**
+ *
+ */
 DSE_EXPORT cass_bool_t
 dse_graph_result_is_array(const DseGraphResult* result);
 
+/**
+ *
+ */
 DSE_EXPORT cass_bool_t
 dse_graph_result_get_bool(const DseGraphResult* result);
 
+/**
+ *
+ */
 DSE_EXPORT cass_int32_t
 dse_graph_result_get_int32(const DseGraphResult* result);
 
+/**
+ *
+ */
 DSE_EXPORT cass_int64_t
 dse_graph_result_get_int64(const DseGraphResult* result);
 
+/**
+ *
+ */
 DSE_EXPORT cass_double_t
 dse_graph_result_get_double(const DseGraphResult* result);
 
+/**
+ *
+ */
 DSE_EXPORT const char*
 dse_graph_result_get_string(const DseGraphResult* result,
                             size_t* length);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_result_as_edge(const DseGraphResult* result,
                          DseGraphEdgeResult* edge);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_result_as_vertex(const DseGraphResult* result,
                            DseGraphVertexResult* vertex);
 
+/**
+ *
+ */
 DSE_EXPORT CassError
 dse_graph_result_as_path(const DseGraphResult* result,
                          DseGraphPathResult* path);
 
+/**
+ *
+ */
 DSE_EXPORT size_t
 dse_graph_result_member_count(const DseGraphResult* result);
 
+/**
+ *
+ */
 DSE_EXPORT const char*
 dse_graph_result_member_key(const DseGraphResult* result,
                             size_t index,
                             size_t* length);
 
+/**
+ *
+ */
 DSE_EXPORT const DseGraphResult*
 dse_graph_result_member_value(const DseGraphResult* result,
                               size_t index);
 
+/**
+ *
+ */
 DSE_EXPORT size_t
 dse_graph_result_element_count(const DseGraphResult* result);
 
+/**
+ *
+ */
 DSE_EXPORT const DseGraphResult*
 dse_graph_result_element(const DseGraphResult* result,
                          size_t index);

@@ -25,7 +25,6 @@
 
 #include "scoped_ptr.hpp"
 
-#include <assert.h>
 #include <string>
 #include <vector>
 
@@ -44,41 +43,37 @@ class GraphStatement;
 class GraphOptions {
 public:
   GraphOptions()
-    : graph_language_(DSE_GRAPH_DEFAULT_LANGUAGE)
-    , graph_source_(DSE_GRAPH_DEFAULT_SOURCE) { }
+    : payload_(cass_custom_payload_new()) {
+    set_graph_language(DSE_GRAPH_DEFAULT_LANGUAGE);
+    set_graph_source(DSE_GRAPH_DEFAULT_SOURCE);
+  }
+
+  ~GraphOptions() {
+    cass_custom_payload_free(payload_);
+  }
+
+  CassCustomPayload* payload() const { return payload_; }
 
   void set_graph_language(const std::string& graph_language) {
-    graph_language_ = graph_language;
+    cass_custom_payload_set_n(payload_,
+                              DSE_GRAPH_OPTION_LANGUAGE_KEY, sizeof(DSE_GRAPH_OPTION_LANGUAGE_KEY) - 1,
+                              reinterpret_cast<const cass_byte_t*>(graph_language.data()), graph_language.size());
   }
 
   void set_graph_source(const std::string& graph_source) {
-    graph_source_ = graph_source;
+    cass_custom_payload_set_n(payload_,
+                              DSE_GRAPH_OPTION_SOURCE_KEY, sizeof(DSE_GRAPH_OPTION_SOURCE_KEY) - 1,
+                              reinterpret_cast<const cass_byte_t*>(graph_source.data()), graph_source.size());
   }
 
   void set_graph_name(const std::string& graph_name) {
-    graph_name_ = graph_name;
-  }
-
-  CassCustomPayload* build_payload(bool is_system_query) const {
-    CassCustomPayload* payload = cass_custom_payload_new();
-    cass_custom_payload_set_n(payload,
-                              DSE_GRAPH_OPTION_LANGUAGE_KEY, sizeof(DSE_GRAPH_OPTION_LANGUAGE_KEY) - 1,
-                              reinterpret_cast<const cass_byte_t*>(graph_language_.data()), graph_language_.size());
-    cass_custom_payload_set_n(payload,
-                              DSE_GRAPH_OPTION_SOURCE_KEY, sizeof(DSE_GRAPH_OPTION_SOURCE_KEY) - 1,
-                              reinterpret_cast<const cass_byte_t*>(graph_source_.data()), graph_source_.size());
-    if (!graph_name_.empty() && !is_system_query) {
-      cass_custom_payload_set_n(payload,
-                                DSE_GRAPH_OPTION_NAME_KEY, sizeof(DSE_GRAPH_OPTION_NAME_KEY) - 1,
-                                reinterpret_cast<const cass_byte_t*>(graph_name_.data()), graph_name_.size());
-    }
-    return payload;
+    cass_custom_payload_set_n(payload_,
+                              DSE_GRAPH_OPTION_NAME_KEY, sizeof(DSE_GRAPH_OPTION_NAME_KEY) - 1,
+                              reinterpret_cast<const cass_byte_t*>(graph_name.data()), graph_name.size());
   }
 
 private:
-  std::string graph_language_;
-  std::string graph_source_;
-  std::string graph_name_;
+  CassCustomPayload* payload_;
 };
 
 class GraphWriter : private rapidjson::Writer<rapidjson::StringBuffer> {
@@ -158,48 +153,35 @@ public:
   GraphStatement(const char* query, size_t length,
                  const GraphOptions* options)
     : query_(query, length)
-    , has_parameters_(false)
-    , is_system_query_(false)
-    , wrapped_(cass_statement_new_n(query, length, 0))
-    , payload_(NULL) {
-    set_options(options);
+    , wrapped_(cass_statement_new_n(query, length, 0)) {
+    if (options != NULL) {
+      cass_statement_set_custom_payload(wrapped_, options->payload());
+    } else {
+      GraphOptions default_options;
+      cass_statement_set_custom_payload(wrapped_, default_options.payload());
+    }
   }
 
   ~GraphStatement() {
     cass_statement_free(wrapped_);
-    cass_custom_payload_free(payload_);
   }
 
   const CassStatement* wrapped() const { return wrapped_; }
 
-  void set_options(const GraphOptions* options) {
-    if (payload_ != NULL) cass_custom_payload_free(payload_);
-    if (options != NULL) {
-      payload_ = options->build_payload(is_system_query_);
+  CassError set_parameters(const GraphObject* params) {
+    if (params != NULL) {
+      cass_statement_reset_parameters(wrapped_, 1);
+      return cass_statement_bind_string_n(wrapped_, 0,
+                                          params->data(), params->length());
     } else {
-      GraphOptions default_options;
-      payload_ = default_options.build_payload(is_system_query_);
+      cass_statement_reset_parameters(wrapped_, 0);
+      return CASS_OK;
     }
-    cass_statement_set_custom_payload(wrapped_, payload_);
-  }
-
-  CassError set_parameters(const GraphObject* parameters) {
-    if (!has_parameters_) {
-      if (wrapped_ != NULL) cass_statement_free(wrapped_);
-      wrapped_ = cass_statement_new_n(query_.data(), query_.size(), 1);
-      cass_statement_set_custom_payload(wrapped_, payload_);
-    }
-    return cass_statement_bind_string_n(wrapped_, 0,
-                                        parameters->data(),
-                                        parameters->length());
   }
 
 private:
   std::string query_;
-  bool has_parameters_;
-  bool is_system_query_;
   CassStatement* wrapped_;
-  CassCustomPayload* payload_;
 };
 
 typedef rapidjson::Value GraphResult;

@@ -75,31 +75,27 @@ CassError dse_graph_options_set_graph_name_n(DseGraphOptions* options,
 
 DseGraphStatement* dse_graph_statement_new(const char* query,
                                            const DseGraphOptions* options) {
-  return dse_graph_statement_new_n(query, strlen(query), options);
+  return dse_graph_statement_new_n(query, strlen(query),
+                                   options);
 }
 
 DseGraphStatement* dse_graph_statement_new_n(const char* query,
                                              size_t query_length,
                                              const DseGraphOptions* options) {
-  return DseGraphStatement::to(new dse::GraphStatement(query, query_length, options));
+  return DseGraphStatement::to(new dse::GraphStatement(query, query_length,
+                                                       options));
 }
 
 void dse_graph_statement_free(DseGraphStatement* statement) {
   delete statement->from();
 }
 
-CassError dse_graph_statement_set_options(DseGraphStatement* statement,
-                                          const DseGraphOptions* options) {
-  statement->set_options(options);
-  return CASS_OK;
-}
-
 CassError dse_graph_statement_set_parameters(DseGraphStatement* statement,
-                                             const DseGraphObject* parameters) {
-  if (!parameters->is_complete()) {
+                                             const DseGraphObject* params) {
+  if (params != NULL && !params->is_complete()) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  return statement->set_parameters(parameters);
+  return statement->set_parameters(params);
 }
 
 DseGraphObject* dse_graph_object_new() {
