@@ -168,11 +168,11 @@ public:
 
   const CassStatement* wrapped() const { return wrapped_; }
 
-  CassError set_parameters(const GraphObject* params) {
-    if (params != NULL) {
+  CassError bind_values(const GraphObject* values) {
+    if (values != NULL) {
       cass_statement_reset_parameters(wrapped_, 1);
       return cass_statement_bind_string_n(wrapped_, 0,
-                                          params->data(), params->length());
+                                          values->data(), values->length());
     } else {
       cass_statement_reset_parameters(wrapped_, 0);
       return CASS_OK;

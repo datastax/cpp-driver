@@ -90,12 +90,12 @@ void dse_graph_statement_free(DseGraphStatement* statement) {
   delete statement->from();
 }
 
-CassError dse_graph_statement_set_parameters(DseGraphStatement* statement,
-                                             const DseGraphObject* params) {
-  if (params != NULL && !params->is_complete()) {
+CassError dse_graph_statement_bind_values(DseGraphStatement* statement,
+                                          const DseGraphObject* values) {
+  if (values != NULL && !values->is_complete()) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  return statement->set_parameters(params);
+  return statement->bind_values(values);
 }
 
 DseGraphObject* dse_graph_object_new() {

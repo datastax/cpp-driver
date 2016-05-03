@@ -33,13 +33,6 @@
 #include <string.h>
 #include <unistd.h>
 
-void print_error(CassFuture* future) {
-  const char* message;
-  size_t message_length;
-  cass_future_error_message(future, &message, &message_length);
-  fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
-}
-
 #define GRAPH_MAKE_STRICT \
   "schema.config().option('graph.schema_mode').set(com.datastax.bdp.graph.api.model.Schema.Mode.Production)"
 
@@ -67,6 +60,13 @@ void print_error(CassFuture* future) {
   "josh.addEdge('created', ripple, 'weight', 1.0f);" \
   "josh.addEdge('created', lop, 'weight', 0.4f);" \
   "peter.addEdge('created', lop, 'weight', 0.2f);"
+
+void print_error(CassFuture* future) {
+  const char* message;
+  size_t message_length;
+  cass_future_error_message(future, &message, &message_length);
+  fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
+}
 
 void print_indented(int indent, const char* format, ...) {
   printf("%*s", indent, "");
@@ -148,13 +148,13 @@ void print_graph_resultset(DseGraphResultSet* resultset) {
 cass_bool_t execute_graph_query(CassSession* session,
                                 const char* query,
                                 const DseGraphOptions* options,
-                                const DseGraphObject* params,
+                                const DseGraphObject* values,
                                 DseGraphResultSet** resultset) {
   cass_bool_t is_success = cass_false;
   CassFuture* future;
   DseGraphStatement* statement = dse_graph_statement_new(query, options);
 
-  dse_graph_statement_set_parameters(statement, params);
+  dse_graph_statement_bind_values(statement, values);
 
   future = cass_session_execute_dse_graph(session, statement);
 
@@ -178,20 +178,20 @@ cass_bool_t execute_graph_query(CassSession* session,
 cass_bool_t create_graph(CassSession* session, const char* name) {
   size_t i;
   cass_bool_t is_success = cass_false;
-  DseGraphObject* params = dse_graph_object_new();
+  DseGraphObject* values = dse_graph_object_new();
 
-  dse_graph_object_add_string(params, "name", name);
-  dse_graph_object_finish(params);
+  dse_graph_object_add_string(values, "name", name);
+  dse_graph_object_finish(values);
 
   if (execute_graph_query(session,
                           "system.graph(name).drop();" \
                           "system.graph(name).ifNotExists().create()",
-                          NULL, params, NULL)) {
+                          NULL, values, NULL)) {
     for  (i = 0; i < 10; ++i) {
       DseGraphResultSet* resultset;
       if (execute_graph_query(session,
                               "system.graph(name).exists()",
-                              NULL, params, &resultset)) {
+                              NULL, values, &resultset)) {
         if (dse_graph_resultset_count(resultset) > 0) {
           const DseGraphResult* result = dse_graph_resultset_next(resultset);
           if (dse_graph_result_is_bool(result) && dse_graph_result_get_bool(result)) {
@@ -206,16 +206,16 @@ cass_bool_t create_graph(CassSession* session, const char* name) {
     }
   }
 
-  dse_graph_object_free(params);
+  dse_graph_object_free(values);
   return is_success;
 }
 
 void execute_graph_query_and_print(CassSession* session,
                                    const char* query,
                                    const DseGraphOptions* options,
-                                   const DseGraphObject* params) {
+                                   const DseGraphObject* values) {
   DseGraphResultSet* resultset;
-  if (execute_graph_query(session, query, options, params, &resultset)) {
+  if (execute_graph_query(session, query, options, values, &resultset)) {
     print_graph_resultset(resultset);
     dse_graph_resultset_free(resultset);
   }
@@ -249,7 +249,7 @@ int main() {
       printf("Who does 'marko' know?\n");
       execute_graph_query_and_print(session, "g.V().has('name','marko').out('knows').values('name')", options, NULL);
 
-      printf("What vertices is 'marko' connected to?\n");
+      printf("What vertices are connected to 'marko'?\n");
       execute_graph_query_and_print(session, "g.V().has('name', 'marko').out('knows')", options, NULL);
     }
 
