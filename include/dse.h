@@ -54,10 +54,6 @@
 #define DSE_VERSION_PATCH 0
 #define DSE_VERSION_SUFFIX "alpha"
 
-#define DSE_POINT_TYPE       "org.apache.cassandra.db.marshal.PointType"
-#define DSE_LINE_STRING_TYPE "org.apache.cassandra.db.marshal.LineStringType"
-#define DSE_POLYGON_TYPE     "org.apache.cassandra.db.marshal.PolygonType"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -149,9 +145,6 @@ cass_statement_bind_dse_point(CassStatement* statement,
 /**
  * Binds a point to all the values with the specified name.
  *
- * This can only be used with statements created by
- * cass_prepared_bind() when using Cassandra 2.0 or earlier.
- *
  * @public @memberof CassStatement
  *
  * @param[in] statement
@@ -203,9 +196,6 @@ cass_statement_bind_dse_line_string(CassStatement* statement,
 /**
  * Binds a line string to all the values with the specified name.
  *
- * This can only be used with statements created by
- * cass_prepared_bind() when using Cassandra 2.0 or earlier.
- *
  * @public @memberof CassStatement
  *
  * @param[in] statement
@@ -254,9 +244,6 @@ cass_statement_bind_dse_polygon(CassStatement* statement,
 
 /**
  * Binds a polygon to all the values with the specified name.
- *
- * This can only be used with statements created by
- * cass_prepared_bind() when using Cassandra 2.0 or earlier.
  *
  * @public @memberof CassStatement
  *
@@ -348,7 +335,8 @@ DSE_EXPORT void
 dse_line_string_reset(DseLineString* line_string);
 
 /**
- * Reserves enough memory to contain the provide number of points.
+ * Reserves enough memory to contain the provided number of points. This can
+ * be use to reduce memory allocations, but it is not required.
  *
  * @public @memberof DseLineString
  *
@@ -489,7 +477,8 @@ DSE_EXPORT void
 dse_polygon_reset(DsePolygon* polygon);
 
 /**
- * Reserves enough memory to contain the provided number rings and points.
+ * Reserves enough memory to contain the provided number rings and points. This can
+ * be use to reduce memory allocations, but it is not required.
  *
  * @public @memberof DsePolygon
  *

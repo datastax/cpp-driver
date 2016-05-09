@@ -105,9 +105,8 @@ private:
 public:
   PolygonIterator()
     : state_(STATE_DONE)
-    , rings_(NULL)
-    , rings_end_(NULL)
     , position_(NULL)
+    , rings_end_(NULL)
     , byte_order_(WKB_BYTE_ORDER_LITTLE_ENDIAN)
     , num_rings_(0) { }
 
@@ -115,12 +114,12 @@ public:
   State state() const { return state_; }
 
   void reset(cass_uint32_t num_rings,
-             const cass_byte_t* rings, const cass_byte_t* rings_end,
+             const cass_byte_t* rings_begin,
+             const cass_byte_t* rings_end,
              WkbByteOrder byte_order) {
     state_ = STATE_NUM_POINTS;
-    rings_ = rings;
+    position_ = rings_begin;
     rings_end_ = rings_end;
-    position_ = rings;
     points_end_ = NULL;
     byte_order_ = byte_order;
     num_rings_ = num_rings;
@@ -155,9 +154,8 @@ public:
 
 private:
   State state_;
-  const cass_byte_t* rings_;
-  const cass_byte_t* rings_end_;
   const cass_byte_t* position_;
+  const cass_byte_t* rings_end_;
   const cass_byte_t* points_end_;
   WkbByteOrder byte_order_;
   cass_uint32_t num_rings_;

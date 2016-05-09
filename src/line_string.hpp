@@ -69,22 +69,20 @@ private:
 class LineSegmentIterator {
 public:
   LineSegmentIterator()
-    : points_(NULL)
+    : position_(NULL)
     , points_end_(NULL)
-    , position_(NULL)
     , byte_order_(WKB_BYTE_ORDER_LITTLE_ENDIAN)
     , num_points_(0) { }
 
   cass_uint32_t num_points() const { return num_points_; }
 
   void reset(cass_uint32_t num_points,
-             const cass_byte_t* points,
+             const cass_byte_t* points_begin,
              const cass_byte_t* points_end,
              WkbByteOrder byte_order) {
     num_points_ = num_points;
-    points_ = points;
+    position_ = points_begin;
     points_end_ = points_end;
-    position_ = points;
     byte_order_ = byte_order;
   }
 
@@ -100,9 +98,8 @@ public:
   }
 
 private:
-  const cass_byte_t* points_;
-  const cass_byte_t* points_end_;
   const cass_byte_t* position_;
+  const cass_byte_t* points_end_;
   WkbByteOrder byte_order_;
   cass_uint32_t num_points_;
 };
