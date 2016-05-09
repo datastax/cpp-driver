@@ -13,41 +13,42 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-#ifndef __DRIVER_OBJECT_ITERATOR_HPP__
-#define __DRIVER_OBJECT_ITERATOR_HPP__
+#ifndef __TEST_ITERATOR_HPP__
+#define __TEST_ITERATOR_HPP__
 #include "cassandra.h"
 
-#include "smart_ptr.hpp"
+#include "objects/object_base.hpp"
 
 #include <gtest/gtest.h>
 
+namespace test {
 namespace driver {
-  namespace object {
 
-    /**
-     * Deleter class for driver object CassIterator
-     */
-    class IteratorDeleter {
-    public:
-      void operator()(CassIterator* iterator) {
-        if (iterator) {
-          cass_iterator_free(iterator);
-        }
-      }
-    };
+class Iterator : public Object<CassIterator, cass_iterator_free> {
+public:
+  /**
+   * Create the empty iterator object
+   */
+  Iterator() {}
 
-    // Create scoped and shared pointers for the native driver object
-    namespace scoped {
-      namespace native {
-        typedef cass::ScopedPtr<CassIterator, IteratorDeleter> IteratorPtr;
-      }
-    }
-    namespace shared {
-      namespace native {
-        typedef SmartPtr<CassIterator, IteratorDeleter> IteratorPtr;
-      }
-    }
-  }
-}
+  /**
+   * Create the iterator object from the native driver object
+   *
+   * @param iterator Native driver object
+   */
+  Iterator(CassIterator* iterator)
+    : Object<CassIterator, cass_iterator_free>(iterator) {}
 
-#endif // __DRIVER_OBJECT_ITERATOR_HPP__
+  /**
+   * Create the future object from a shared reference
+   *
+   * @param future Shared reference
+   */
+  Iterator(Ptr iterator)
+    : Object<CassIterator, cass_iterator_free>(iterator) {}
+};
+
+} // namespace driver
+} // namespace test
+
+#endif // __TEST_ITERATOR_HPP__

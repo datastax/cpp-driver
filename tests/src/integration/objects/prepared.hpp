@@ -13,126 +13,89 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-#ifndef __DRIVER_OBJECT_PREPARED_HPP__
-#define __DRIVER_OBJECT_PREPARED_HPP__
+#ifndef __TEST_PREPARED_HPP__
+#define __TEST_PREPARED_HPP__
 #include "cassandra.h"
+
+#include "objects/object_base.hpp"
 
 #include "objects/statement.hpp"
 
-#include "smart_ptr.hpp"
-
+namespace test {
 namespace driver {
-  namespace object {
 
-    /**
-     * Deleter class for driver object CassPrepared
-     */
-    class PreparedDeleter {
-    public:
-      void operator()(const CassPrepared* prepared) {
-        if (prepared) {
-          cass_prepared_free(prepared);
-        }
-      }
-    };
+/**
+ * Wrapped prepared object
+ */
+class Prepared : public Object<const CassPrepared, cass_prepared_free> {
+public:
+  /**
+   * Create the prepared object from the native driver object
+   *
+   * @param prepared Native driver object
+   */
+  Prepared(const CassPrepared* prepared)
+    : Object<const CassPrepared, cass_prepared_free>(prepared) {}
 
-    // Create scoped and shared pointers for the native driver object
-    namespace scoped {
-      namespace native {
-        typedef cass::ScopedPtr<const CassPrepared, PreparedDeleter> PreparedPtr;
-      }
-    }
-    namespace shared {
-      namespace native {
-        typedef SmartPtr<const CassPrepared, PreparedDeleter> PreparedPtr;
-      }
-    }
+  /**
+   * Create the prepared object from a shared reference
+   *
+   * @param prepared Shared reference
+   */
+  Prepared(Ptr prepared)
+    : Object<const CassPrepared, cass_prepared_free>(prepared) {}
 
-    /**
-     * Wrapped prepared object
-     */
-    class Prepared {
-    public:
-      /**
-       * Create the prepared object from the native driver object
-       *
-       * @param prepared Native driver object
-       */
-      Prepared(const CassPrepared* prepared)
-        : prepared_(prepared) {}
-
-      /**
-       * Create the prepared object from a shared reference
-       *
-       * @param prepared Shared reference
-       */
-      Prepared(shared::native::PreparedPtr prepared)
-        : prepared_(prepared) {}
-
-      /**
-       * Bind the prepared object and create a statement
-       *
-       * @return Statement
-       */
-      shared::StatementPtr bind() {
-        return new Statement(cass_prepared_bind(prepared_.get()));
-      }
-
-      /**
-       * Get the data type for a given column index
-       *
-       * @param index The column index to retrieve the data type
-       * @return Data type at the specified column index
-       */
-      const CassDataType* data_type(size_t index) {
-        return cass_prepared_parameter_data_type(prepared_.get(), index);
-      }
-
-      /**
-       * Get the data type for a given column name
-       *
-       * @param name The column name to retrieve the data type
-       * @return Data type at the specified column name
-       */
-      const CassDataType* data_type(const std::string& name) {
-        return cass_prepared_parameter_data_type_by_name(prepared_.get(), name.c_str());
-      }
-
-      /**
-       * Get the value type for a given column index
-       *
-       * @param index The column index to retrieve the value type
-       * @return Value type at the specified column index
-       */
-      CassValueType value_type(size_t index) {
-        return cass_data_type_type(data_type(index));
-      }
-
-      /**
-       * Get the value type for a given column name
-       *
-       * @param name The column name to retrieve the value type
-       * @return Value type at the specified column index
-       */
-      CassValueType value_type(const std::string& name) {
-        return cass_data_type_type(data_type(name));
-      }
-
-    private:
-      /**
-       * Prepared driver reference object
-       */
-      shared::native::PreparedPtr prepared_;
-    };
-
-    // Create scoped and shared pointers for the wrapped object
-    namespace scoped {
-      typedef cass::ScopedPtr<Prepared> PreparedPtr;
-    }
-    namespace shared {
-      typedef SmartPtr<Prepared> PreparedPtr;
-    }
+  /**
+   * Bind the prepared object and create a statement
+   *
+   * @return Statement
+   */
+  Statement bind() {
+    return Statement(cass_prepared_bind(get()));
   }
-}
 
-#endif // __DRIVER_OBJECT_PREPARED_HPP__
+  /**
+   * Get the data type for a given column index
+   *
+   * @param index The column index to retrieve the data type
+   * @return Data type at the specified column index
+   */
+  const CassDataType* data_type(size_t index) {
+    return cass_prepared_parameter_data_type(get(), index);
+  }
+
+  /**
+   * Get the data type for a given column name
+   *
+   * @param name The column name to retrieve the data type
+   * @return Data type at the specified column name
+   */
+  const CassDataType* data_type(const std::string& name) {
+    return cass_prepared_parameter_data_type_by_name(get(), name.c_str());
+  }
+
+  /**
+   * Get the value type for a given column index
+   *
+   * @param index The column index to retrieve the value type
+   * @return Value type at the specified column index
+   */
+  CassValueType value_type(size_t index) {
+    return cass_data_type_type(data_type(index));
+  }
+
+  /**
+   * Get the value type for a given column name
+   *
+   * @param name The column name to retrieve the value type
+   * @return Value type at the specified column index
+   */
+  CassValueType value_type(const std::string& name) {
+    return cass_data_type_type(data_type(name));
+  }
+};
+
+} // namespace driver
+} // namespace test
+
+#endif // __TEST_PREPARED_HPP__

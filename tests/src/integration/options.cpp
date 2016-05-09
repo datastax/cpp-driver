@@ -21,8 +21,8 @@
 #include <algorithm>
 #include <iostream>
 
-#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.4")
-#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("4.8.5")
+#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.5")
+#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("4.8.6")
 
 // Initialize the defaults for all the options
 bool Options::is_initialized_ = false;
@@ -375,6 +375,18 @@ const std::string& Options::public_key() {
 
 const std::string& Options::private_key() {
   return private_key_;
+}
+
+SharedPtr<CCM::Bridge> Options::ccm() {
+  return new CCM::Bridge( \
+    Options::server_version(), Options::use_git(), \
+    Options::is_dse(), Options::cluster_prefix(), \
+    Options::dse_credentials(), \
+    Options::dse_username(), Options::dse_password(), \
+    Options::deployment_type(), Options::authentication_type(), \
+    Options::host(), Options::port(), \
+    Options::username(), Options::password(), \
+    Options::public_key(), Options::private_key());
 }
 
 Options::Options() {

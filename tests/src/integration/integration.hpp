@@ -16,9 +16,21 @@
 #ifndef __INTEGRATION_HPP__
 #define __INTEGRATION_HPP__
 
-// TODO: Remove forced VLD define (move the CMake)
-#define CASS_USE_VISUAL_LEAK_DETECTOR
-#if defined(_WIN32) && defined(_DEBUG) && !defined(CASS_USE_VISUAL_LEAK_DETECTOR)
+#include <gtest/gtest.h>
+
+#include <iostream>
+#include <string>
+#include <vector>
+
+#include "cassandra.h"
+
+#include "bridge.hpp"
+#include "logger.hpp"
+#include "objects.hpp"
+#include "utils.hpp"
+#include "values.hpp"
+
+#if defined(_WIN32) && defined(_DEBUG) && !defined(USE_VISUAL_LEAK_DETECTOR)
 // Enable memory leak detection
 # define _CRTDBG_MAP_ALLOC
 # include <stdlib.h>
@@ -31,17 +43,15 @@
 # endif
 #endif
 
-#include <gtest/gtest.h>
+#ifdef _WIN32
+# define PATH_SEPARATOR "\\"
+#else
+# define PATH_SEPARATOR "/"
+#endif
 
-#include <string>
-#include <vector>
-
-#include "dse.h"
-
-#include "bridge.hpp"
-#include "logger.hpp"
-#include "objects.hpp"
-#include "values.hpp"
+#define SKIP_TEST(message) \
+  std::cout << "[ SKIPPED  ] " << message << std::endl; \
+  return;
 
 #define CHECK_FAILURE \
   if (HasFailure()) { \
@@ -50,13 +60,18 @@
 
 #define CHECK_VERSION(version) \
   if (server_version_ < #version) { \
-    std::cout << "[ SKIPPED  ] Unsupported for server version " \
-              << server_version_.to_string() << std::endl; \
-    return; \
+    SKIP_TEST("Unsupported for Server Version " \
+              << server_version_.to_string() << ": Server version " \
+              << #version << "+ is required") \
   }
 
-using namespace driver;
-using namespace driver::object;
+#define CHECK_CONTINUE(flag, message) \
+  ASSERT_TRUE(flag) << message; \
+
+#define SELECT_ALL_SYSTEM_LOCAL_CQL "SELECT * FROM system.local"
+
+using namespace test;
+using namespace test::driver;
 
 /**
  * Statement type enumeration to use for specifying type of statement to use
@@ -95,7 +110,7 @@ protected:
   /**
    * Handle for interacting with CCM
    */
-  SmartPtr<CCM::Bridge> ccm_;
+  SharedPtr<CCM::Bridge> ccm_;
   /**
    * Logger instance for handling driver log messages
    */
@@ -107,7 +122,7 @@ protected:
   /**
    * Connected database session
    */
-  shared::SessionPtr session_;
+  Session session_;
   /**
    * Generated keyspace name for the integration test
    */
@@ -119,7 +134,7 @@ protected:
   /**
    * UUID generator
    */
-  shared::UuidGenPtr uuid_generator_;
+  UuidGen uuid_generator_;
   /**
    * Version of Cassandra/DSE the session is connected to
    */
@@ -140,6 +155,10 @@ protected:
    */
   unsigned short replication_factor_;
   /**
+   * Default contact points generated based on the number of nodes requested
+   */
+  std::string contact_points_;
+  /**
    * Setting for client authentication. True if client authentication should be
    * enabled; false otherwise.
    * (DEFAULT: false)
@@ -157,6 +176,34 @@ protected:
    * (DEFAULT: false)
    */
   bool is_schema_metadata_;
+  /**
+   * Setting to determine if CCM cluster should be started. True if CCM cluster
+   * should be started; false otherwise.
+   * (DEFAULT: true)
+   */
+  bool is_ccm_start_requested_;
+  /**
+   * Setting to determine if session connection should be established. True if
+   * session connection should be established; false otherwise.
+   * (DEFAULT: true)
+   */
+  bool is_session_requested_;
+  /**
+   * Name of the test case/suite
+   */
+  std::string test_case_name_;
+  /**
+   * Name of the test
+   */
+  std::string test_name_;
+
+  /**
+   * Create the cluster configuration and establish the session connection using
+   * provided cluster object.
+   *
+   * @param cluster Cluster object to use when creating session connection
+   */
+  void connect(Cluster cluster);
 
   /**
    * Generate the contact points for the cluster
@@ -166,7 +213,7 @@ protected:
    * @return Comma delimited IP address (e.g. contact points)
    */
   std::string generate_contact_points(const std::string& ip_prefix,
-      size_t number_of_nodes) const;
+    size_t number_of_nodes);
 
   /**
    * Variable argument string formatter
@@ -176,30 +223,15 @@ protected:
    */
   std::string format_string(const char* format, ...) const;
 
+protected:
   /**
-   * Convert a string to lowercase
+   * Get the current working directory
    *
-   * @param input String to convert to lowercase
+   * @return Current working directory
    */
-  std::string to_lower(const std::string& input);
-
-  /**
-   * Remove the leading and trailing whitespace from a string
-   *
-   * @param input String to trim
-   * @return Trimmed string
-   */
-  std::string trim(const std::string& input);
-
-  /**
-   * Concatenate an array/vector into a string
-   *
-   * @param elements Array/Vector elements to concatenate
-   * @param delimiter Character to use between elements (default: <space>)
-   * @return A string representation of all the array/vector elements
-   */
-  std::string implode(const std::vector<std::string>& elements,
-      const char delimiter = ' ') const;
+  inline static std::string cwd() {
+    return Utils::cwd();
+  }
 
   /**
    * Split a string into an array/vector
@@ -208,8 +240,50 @@ protected:
    * @param delimiter Character to use split into elements (default: <space>)
    * @return An array/vector representation of the string
    */
-  std::vector<std::string> explode(const std::string& input,
-      const char delimiter = ' ');
+  inline static std::vector<std::string> explode(const std::string& input,
+    const char delimiter = ' ') {
+    return Utils::explode(input, delimiter);
+  }
+
+  /**
+   * Check to see if a file exists
+   *
+   * @param filename Absolute/Relative filename
+   * @return True if file exists; false otherwise
+   */
+  inline static bool file_exists(const std::string& filename) {
+    return test::Utils::file_exists(filename);
+  }
+
+  /**
+   * Concatenate an array/vector into a string
+   *
+   * @param elements Array/Vector elements to concatenate
+   * @param delimiter Character to use between elements (default: <space>)
+   * @return A string representation of all the array/vector elements
+   */
+  inline static std::string implode(const std::vector<std::string>& elements,
+    const char delimiter = ' ') {
+    return test::Utils::implode(elements, delimiter);
+  }
+
+  /**
+   * Create the directory from a path
+   *
+   * @param path Directory/Path to create
+   */
+  inline static void mkdir(const std::string& path) {
+    test::Utils::mkdir(path);
+  }
+
+  /**
+   * Cross platform millisecond granularity sleep
+   *
+   * @param milliseconds Time in milliseconds to sleep
+   */
+  inline static void msleep(unsigned int milliseconds) {
+    test::Utils::msleep(milliseconds);
+  }
 
   /**
    * Replace all occurrences of a string from the input string
@@ -219,25 +293,35 @@ protected:
    * @param to String to replace with
    * @return Input string with replacement
    */
-  std::string replace_all(const std::string& input,
-      const std::string& from, const std::string& to) const;
+  inline static std::string replace_all(const std::string& input,
+    const std::string& from, const std::string& to) {
+    return test::Utils::replace_all(input, from, to);
+  }
 
   /**
-   * Cross platform millisecond granularity sleep
+   * Convert a string to lowercase
    *
-   * @param milliseconds Time in milliseconds to sleep
+   * @param input String to convert to lowercase
    */
-  void msleep(unsigned int milliseconds);
+  inline static std::string to_lower(const std::string& input) {
+    return test::Utils::to_lower(input);
+  }
 
-protected:
   /**
-   * Name of the test case/suite
+   * Remove the leading and trailing whitespace from a string
+   *
+   * @param input String to trim
+   * @return Trimmed string
    */
-  std::string test_case_name_;
+  inline static std::string trim(const std::string& input) {
+    return test::Utils::trim(input);
+  }
+
+private:
   /**
-   * Name of the test
+   * Keyspace creation query (generated via SetUp)
    */
-  std::string test_name_;
+  std::string create_keyspace_query_;
 };
 
 #endif //__INTEGRATION_HPP__

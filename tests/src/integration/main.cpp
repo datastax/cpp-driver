@@ -129,26 +129,12 @@ class BootstrapListener : public testing::EmptyTestEventListener {
     }
     std::cout << std::endl;
     Options::print_settings();
-    CCM::Bridge(Options::server_version(), Options::use_git(),
-      Options::is_dse(), Options::cluster_prefix(),
-      Options::dse_credentials(),
-      Options::dse_username(), Options::dse_password(),
-      Options::deployment_type(), Options::authentication_type(),
-      Options::host(), Options::port(),
-      Options::username(), Options::password(),
-      Options::public_key(), Options::private_key()).remove_all_clusters();
+    Options::ccm()->remove_all_clusters();
   }
 
   void OnTestProgramEnd(const testing::UnitTest& unit_test) {
     std::cout << "Finishing DataStax C/C++ Driver Integration Test" << std::endl;
-    CCM::Bridge(Options::server_version(), Options::use_git(),
-      Options::is_dse(), Options::cluster_prefix(),
-      Options::dse_credentials(),
-      Options::dse_username(), Options::dse_password(),
-      Options::deployment_type(), Options::authentication_type(),
-      Options::host(), Options::port(),
-      Options::username(), Options::password(),
-      Options::public_key(), Options::private_key()).remove_all_clusters();
+    Options::ccm()->remove_all_clusters();
   }
 };
 

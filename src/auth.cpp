@@ -83,6 +83,7 @@ void PlaintextAuthenticatorData::on_challenge(CassAuthenticator* auth, void* dat
     response[username_size + 1] = '\0';
     memcpy(response + username_size + 2, plaintext_auth->password_.c_str(), password_size);
 
+    return;
   }
 
   std::string error("Unexpected token returned during plaintext challenge '");
