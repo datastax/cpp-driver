@@ -34,6 +34,9 @@ typedef std::vector<std::string> ContactPointList;
 typedef std::vector<std::string> DcList;
 
 template<class From, class To>
+#if _MSC_VER && !__INTEL_COMPILER
+class IsConvertible : public std::is_convertible<From, To> {
+#else
 class IsConvertible {
   private:
     typedef char Yes;
@@ -47,6 +50,7 @@ class IsConvertible {
 
   public:
     static const bool value = sizeof(Helper::test(Helper::check())) == sizeof(Yes);
+#endif
 };
 
 // copy_cast<> prevents incorrect code from being generated when two unrelated

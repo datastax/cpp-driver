@@ -89,7 +89,7 @@ install:
         # Determine if Boost should be installed (cached)
         If (!(Test-Path -Path "$($env:BOOST_LIBRARYDIR)")) {
           # Download and extract the dependency (silently due to amount of files)
-          Start-FileDownload "$($env:TEST_DEPENDENCIES_DOWNLOAD_URL_PREFIX)/boost/$($env:BOOST_VERSION)/$($env:BOOST_ARCHIVE)"
+          Start-FileDownload "$($env:TEST_DEPENDENCIES_DOWNLOAD_URL_PREFIX)/boost/$($env:BOOST_VERSION)/$($env:BOOST_ARCHIVE)" -FileName $env:BOOST_ARCHIVE
           Write-Output "Extracting Boost v$($env:BOOST_VERSION) for $($env:CMAKE_GENERATOR)$($env:CMAKE_GENERATOR_SUFFIX)"
           7z x $env:BOOST_ARCHIVE > $NULL
 
@@ -101,7 +101,8 @@ install:
       # Determine if libssh2 should be installed (cached)
       If (!(Test-Path -Path "libssh2-$($env:LIBSSH2_VERSION)")) {
         # Download and extract the dependency
-        Start-FileDownload "$($env:DOWNLOADS_URL_PREFIX)/libssh2/v$($env:LIBSSH2_VERSION)/$($env:LIBSSH2_ARCHIVE)"
+        #Start-FileDownload "$($env:DOWNLOADS_URL_PREFIX)/libssh2/v$($env:LIBSSH2_VERSION)/$($env:LIBSSH2_ARCHIVE)" -FileName $env:LIBSSH2_ARCHIVE
+        Start-FileDownload "$($env:TEST_DEPENDENCIES_DOWNLOAD_URL_PREFIX)/libssh2/$($env:LIBSSH2_VERSION)/$($env:LIBSSH2_ARCHIVE)" -FileName $env:LIBSSH2_ARCHIVE
         7z -o"libssh2-$($env:LIBSSH2_VERSION)" x $env:LIBSSH2_ARCHIVE
 
         # Delete the binary archive
@@ -111,7 +112,8 @@ install:
       # Determine if libuv should be installed (cached)
       If (!(Test-Path -Path "libuv-$($env:LIBUV_VERSION)")) {
         # Download and extract the dependency
-        Start-FileDownload "$($env:DOWNLOADS_URL_PREFIX)/libuv/v$($env:LIBUV_VERSION)/$($env:LIBUV_ARCHIVE)"
+        #Start-FileDownload "$($env:DOWNLOADS_URL_PREFIX)/libuv/v$($env:LIBUV_VERSION)/$($env:LIBUV_ARCHIVE)" -FileName $env:LIBUV_ARCHIVE
+        Start-FileDownload "$($env:TEST_DEPENDENCIES_DOWNLOAD_URL_PREFIX)/libuv/$($env:LIBUV_VERSION)/$($env:LIBUV_ARCHIVE)" -FileName $env:LIBUV_ARCHIVE
         7z -o"libuv-$($env:LIBUV_VERSION)" x $env:LIBUV_ARCHIVE
 
         # Only keep the static libraries
@@ -126,7 +128,8 @@ install:
       # Determine if OpenSSL should be installed (cached)
       If (!(Test-Path -Path "openssl-$($env:OPENSSL_VERSION)")) {
         # Download and extract the dependency
-        Start-FileDownload "$($env:DOWNLOADS_URL_PREFIX)/openssl/v$($env:OPENSSL_VERSION)/$($env:OPENSSL_ARCHIVE)"
+        #Start-FileDownload "$($env:DOWNLOADS_URL_PREFIX)/openssl/v$($env:OPENSSL_VERSION)/$($env:OPENSSL_ARCHIVE)" -FileName $env:OPENSSL_ARCHIVE
+        Start-FileDownload "$($env:TEST_DEPENDENCIES_DOWNLOAD_URL_PREFIX)/openssl/$($env:OPENSSL_VERSION)/$($env:OPENSSL_ARCHIVE)" -FileName $env:OPENSSL_ARCHIVE
         7z -o"openssl-$($env:OPENSSL_VERSION)" x $env:OPENSSL_ARCHIVE
 
         # Only keep the static libaries
