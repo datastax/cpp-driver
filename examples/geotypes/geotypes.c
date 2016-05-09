@@ -122,56 +122,6 @@ void select_point(CassSession* session, const char* key) {
   cass_statement_free(statement);
 }
 
-void insert_circle(CassSession* session, const char* key,
-                   cass_double_t x, cass_double_t y,
-                   cass_double_t radius) {
-  CassFuture* future = NULL;
-  CassStatement* statement
-      = cass_statement_new("INSERT INTO examples.geotypes "
-                           "(key, circle) VALUES (?, ?)", 2);
-
-  cass_statement_bind_string(statement, 0, key);
-  cass_statement_bind_dse_circle(statement, 1, x, y, radius);
-
-  future = cass_session_execute(session, statement);
-
-  if (cass_future_error_code(future) != CASS_OK) {
-    print_error(future);
-  }
-
-  cass_future_free(future);
-  cass_statement_free(statement);
-}
-
-void select_circle(CassSession* session, const char* key) {
-  CassFuture* future = NULL;
-  CassStatement* statement
-      = cass_statement_new("SELECT circle FROM examples.geotypes WHERE key = ?", 1);
-
-  cass_statement_bind_string(statement, 0, key);
-
-  future = cass_session_execute(session, statement);
-
-  if (cass_future_error_code(future) == CASS_OK) {
-    cass_double_t x = 0.0, y = 0.0, radius = 0.0;
-    const CassResult* result = cass_future_get_result(future);
-    if (result && cass_result_column_count(result) > 0) {
-      const CassRow* row = cass_result_first_row(result);
-      const CassValue* value = cass_row_get_column_by_name(row, "circle");
-
-      cass_value_get_dse_circle(value, &x, &y, &radius);
-      printf("%s : CIRCLE((%.1f %.1f), %.1f)\n", key, x, y, radius);
-
-      cass_result_free(result);
-    }
-  } else {
-    print_error(future);
-  }
-
-  cass_future_free(future);
-  cass_statement_free(statement);
-}
-
 void insert_line_string(CassSession* session, const char* key, int num_points, ...) {
   int i;
   va_list args;
@@ -203,6 +153,7 @@ void insert_line_string(CassSession* session, const char* key, int num_points, .
   }
 
   cass_future_free(future);
+  dse_line_string_free(line_string);
   cass_statement_free(statement);
 }
 
@@ -282,6 +233,7 @@ void insert_polygon(CassSession* session, const char* key, int num_rings, ...) {
   }
 
   cass_future_free(future);
+  dse_polygon_free(polygon);
   cass_statement_free(statement);
 }
 
@@ -351,15 +303,11 @@ int main() {
   execute_query(session, "CREATE TABLE IF NOT EXISTS examples.geotypes ("
                          "key text PRIMARY KEY, "
                          "point 'PointType', "
-                         "circle 'CircleType', "
                          "linestring 'LineStringType', "
                          "polygon 'PolygonType')");
 
   insert_point(session, "pnt1", 0.1, 0.1);
   select_point(session, "pnt1");
-
-  insert_circle(session, "circ1", 0.2, 0.2, 3.0);
-  select_circle(session, "circ1");
 
   insert_line_string(session, "lnstr1", 0);
   select_line_string(session, "lnstr1");

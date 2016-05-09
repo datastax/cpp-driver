@@ -32,23 +32,6 @@ inline Bytes encode_point(cass_double_t x, cass_double_t y) {
   return bytes;
 }
 
-inline Bytes encode_circle(cass_double_t x, cass_double_t y,
-                           cass_double_t radius) {
-  Bytes bytes;
-
-  bytes.reserve(WKB_HEADER_SIZE +       // Header
-                sizeof(cass_double_t) + // X
-                sizeof(cass_double_t) + // Y
-                sizeof(cass_double_t)); // Radius
-
-  encode_header_append(WKB_GEOMETRY_TYPE_CIRCLE, bytes);
-  encode_append(x, bytes);
-  encode_append(x, bytes);
-  encode_append(radius, bytes);
-
-  return bytes;
-}
-
 } // namespace dse
 
 extern "C" {
@@ -76,36 +59,6 @@ CassError cass_statement_bind_dse_point_by_name_n(CassStatement* statement,
   return cass_statement_bind_custom_by_name_n(statement,
                                               name, name_length,
                                               DSE_POINT_TYPE, sizeof(DSE_POINT_TYPE) - 1,
-                                              bytes.data(), bytes.size());
-}
-
-
-CassError cass_statement_bind_dse_circle(CassStatement* statement,
-                                         size_t index,
-                                         cass_double_t x, cass_double_t y,
-                                         cass_double_t radius) {
-  dse::Bytes bytes = dse::encode_circle(x, y, radius);
-  return cass_statement_bind_custom(statement, index, DSE_CIRCLE_TYPE,
-                                    bytes.data(), bytes.size());
-}
-
-CassError cass_statement_bind_dse_circle_by_name(CassStatement* statement,
-                                                 const char* name,
-                                                 cass_double_t x, cass_double_t y,
-                                                 cass_double_t radius) {
-  return cass_statement_bind_dse_circle_by_name_n(statement,
-                                                  name, strlen(name),
-                                                  x, y, radius);
-}
-
-CassError cass_statement_bind_dse_circle_by_name_n(CassStatement* statement,
-                                                   const char* name, size_t name_length,
-                                                   cass_double_t x, cass_double_t y,
-                                                   cass_double_t radius) {
-  dse::Bytes bytes = dse::encode_circle(x, y, radius);
-  return cass_statement_bind_custom_by_name_n(statement,
-                                              name, name_length,
-                                              DSE_CIRCLE_TYPE, sizeof(DSE_CIRCLE_TYPE) - 1,
                                               bytes.data(), bytes.size());
 }
 

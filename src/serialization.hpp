@@ -22,6 +22,7 @@
 #include "macros.hpp"
 
 #include <assert.h>
+#include <stdint.h>
 #include <string.h>
 #include <vector>
 
@@ -38,8 +39,7 @@ enum WkbGeometryType {
   WKB_GEOMETRY_TYPE_MULTIPOINT = 4,
   WKB_GEOMETRY_TYPE_MULTILINESTRING = 5,
   WKB_GEOMETRY_TYPE_MULTIPOLYGON = 6,
-  WKB_GEOMETRY_TYPE_GEOMETRYCOLLECTION = 7,
-  WKB_GEOMETRY_TYPE_CIRCLE = 101
+  WKB_GEOMETRY_TYPE_GEOMETRYCOLLECTION = 7
 };
 
 enum WkbByteOrder {

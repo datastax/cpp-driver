@@ -55,7 +55,6 @@
 #define DSE_VERSION_SUFFIX "alpha"
 
 #define DSE_POINT_TYPE       "org.apache.cassandra.db.marshal.PointType"
-#define DSE_CIRCLE_TYPE      "org.apache.cassandra.db.marshal.CircleType"
 #define DSE_LINE_STRING_TYPE "org.apache.cassandra.db.marshal.LineStringType"
 #define DSE_POLYGON_TYPE     "org.apache.cassandra.db.marshal.PolygonType"
 
@@ -187,67 +186,6 @@ cass_statement_bind_dse_point_by_name_n(CassStatement* statement,
                                         cass_double_t x, cass_double_t y);
 
 /**
- * Binds circle to a query or bound statement at the specified index.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] index
- * @param[in] x
- * @param[in] y
- * @param[in] radius
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-DSE_EXPORT CassError
-cass_statement_bind_dse_circle(CassStatement* statement,
-                               size_t index,
-                               cass_double_t x, cass_double_t y,
-                               cass_double_t radius);
-
-/**
- * Binds a circle to all the values with the specified name.
- *
- * This can only be used with statements created by
- * cass_prepared_bind() when using Cassandra 2.0 or earlier.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] name
- * @param[in] x
- * @param[in] y
- * @param[in] radius
- * @return CASS_OK if successful, otherwise an error occurred.
- */
-DSE_EXPORT CassError
-cass_statement_bind_dse_circle_by_name(CassStatement* statement,
-                                       const char* name,
-                                       cass_double_t x, cass_double_t y,
-                                       cass_double_t radius);
-
-/**
- * Same as cass_statement_bind_dse_circle_by_name(), but with lengths for string
- * parameters.
- *
- * @public @memberof CassStatement
- *
- * @param[in] statement
- * @param[in] name
- * @param[in] name_length
- * @param[in] x
- * @param[in] y
- * @param[in] radius
- * @return same as cass_statement_bind_dse_circle_by_name()
- *
- * @see cass_statement_bind_dse_circle_by_name()
- */
-DSE_EXPORT CassError
-cass_statement_bind_dse_circle_by_name_n(CassStatement* statement,
-                                         const char* name, size_t name_length,
-                                         cass_double_t x, cass_double_t y,
-                                         cass_double_t radius);
-
-/**
  * Binds line string to a query or bound statement at the specified index.
  *
  * @public @memberof CassStatement
@@ -370,22 +308,6 @@ cass_statement_bind_dse_polygon_by_name_n(CassStatement* statement,
 DSE_EXPORT CassError
 cass_value_get_dse_point(const CassValue* value,
                          cass_double_t* x, cass_double_t* y);
-
-/**
- * Gets a circle for the specified value.
- *
- * @public @memberof CassValue
- *
- * @param[in] value
- * @param[out] x
- * @param[out] y
- * @param[out] radius
- * @return CASS_OK if successful, otherwise error occurred
- */
-DSE_EXPORT CassError
-cass_value_get_dse_circle(const CassValue* value,
-                          cass_double_t* x, cass_double_t* y,
-                          cass_double_t* radius);
 
 /***********************************************************************************
  *
