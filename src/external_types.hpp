@@ -19,6 +19,9 @@
 
 #include "dse.h"
 
+#include "line_string.hpp"
+#include "polygon.hpp"
+
 // This abstraction allows us to separate internal types from the
 // external opaque pointers that we expose.
 template <typename In, typename Ex>
@@ -36,6 +39,11 @@ struct External : public In {
   }
 
 extern "C" {
+
+EXTERNAL_TYPE(dse::LineSegment, DseLineString);
+EXTERNAL_TYPE(dse::LineSegmentIterator, DseLineStringIterator);
+EXTERNAL_TYPE(dse::Polygon, DsePolygon);
+EXTERNAL_TYPE(dse::PolygonIterator, DsePolygonIterator);
 
 }
 

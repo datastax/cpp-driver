@@ -195,6 +195,7 @@ endif()
 if(DSE_BUILD_EXAMPLES)
   add_subdirectory(examples/plaintext)
   add_subdirectory(examples/gssapi)
+  add_subdirectory(examples/geotypes)
 endif()
 
 #--------
