@@ -30,6 +30,12 @@ namespace driver {
 class Prepared : public Object<const CassPrepared, cass_prepared_free> {
 public:
   /**
+   * Create the empty prepared object
+   */
+  Prepared()
+    : Object<const CassPrepared, cass_prepared_free>() {}
+
+  /**
    * Create the prepared object from the native driver object
    *
    * @param prepared Native driver object

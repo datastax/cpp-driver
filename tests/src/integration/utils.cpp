@@ -35,6 +35,13 @@
 
 #define TRIM_DELIMETERS " \f\n\r\t\v"
 
+// Constant and static initialization
+#ifdef _WIN32
+const char test::Utils::PATH_SEPARATOR = '\\';
+#else
+const char test::Utils::PATH_SEPARATOR = '/';
+#endif
+
 std::string test::Utils::cwd() {
   char cwd[FILE_PATH_SIZE] = { 0 };
   size_t cwd_length = sizeof(cwd);

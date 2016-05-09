@@ -400,8 +400,8 @@ private:
       uv_read_start(reinterpret_cast<uv_stream_t*>(&error_output), EmbeddedADS::output_allocation, EmbeddedADS::process_read);
 
       // Indicate the ADS configurations
-      configuration_directory_ = Utils::cwd() + PATH_SEPARATOR
-        + EMBEDDED_ADS_CONFIGURATION_DIRECTORY + PATH_SEPARATOR;
+      configuration_directory_ = Utils::cwd() + Utils::PATH_SEPARATOR
+        + EMBEDDED_ADS_CONFIGURATION_DIRECTORY + Utils::PATH_SEPARATOR;
       configuration_file_ = configuration_directory_ + EMBEDDED_ADS_CONFIGURATION_FILE;
       cassandra_keytab_file_ = configuration_directory_ + CASSANDRA_KEYTAB_ADS_CONFIGURATION_FILE;
       dse_keytab_file_ = configuration_directory_ + DSE_KEYTAB_ADS_CONFIGURATION_FILE;

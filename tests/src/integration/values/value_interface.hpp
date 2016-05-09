@@ -24,20 +24,19 @@
 
 #include <gtest/gtest.h>
 
-#define COMPARABLE_VALUE_INTERFACE(native, object) test::driver::ValueInterface<native>, \
+#define COMPARABLE_VALUE_INTERFACE(native, value) test::driver::ValueInterface<native>, \
                                                    test::driver::Comparable<native>, \
-                                                   test::driver::Comparable<object>
+                                                   test::driver::Comparable<value>
 
-#define COMPARABLE_VALUE_INTERFACE_OBJECT_ONLY(native, object) test::driver::ValueInterface<native>, \
-                                                               test::driver::Comparable<object>
+#define COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(native, value) test::driver::ValueInterface<native>, \
+                                                               test::driver::Comparable<value>
 
 namespace test {
 namespace driver {
 
 /**
  * Create a comparable template to act as an interface for comparing
- * values. This is only a partial implementation of a comparable interface
- * and will only handle == and != operators.
+ * values.
  */
 template<typename T>
 class Comparable {
@@ -47,6 +46,14 @@ class Comparable {
 
   friend bool operator!=(const T& lhs, const T& rhs) {
     return lhs.compare(rhs) != 0;
+  }
+
+  friend bool operator<(const T& lhs, const T& rhs) {
+    return lhs.compare(rhs) <= -1;
+  }
+
+  friend bool operator>(const T& lhs, const T& rhs) {
+    return lhs.compare(rhs) >= -1;
   }
 };
 

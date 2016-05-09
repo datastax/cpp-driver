@@ -62,8 +62,7 @@ public:
    */
   template<typename T>
   void bind(size_t index, T value) {
-    ASSERT_TRUE(object_) << "Invalid Statement: Statement should not be null";
-    value.statement_bind(get(), index);
+    value.statement_bind(*this, index);
   }
 };
 

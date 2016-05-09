@@ -13,11 +13,22 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-#ifndef __DSE_OBJECTS_HPP__
-#define __DSE_OBJECTS_HPP__
-#include "dse.h"
+#ifndef __PRETTY_PRINT_HPP__
+#define __PRETTY_PRINT_HPP__
+#include "cassandra.h"
 
-#include "objects.hpp"
-#include "objects/dse_cluster.hpp"
+#include <ostream>
 
-#endif // __DSE_OBJECTS_HPP__
+/*********************************************************
+ * Teach Google test how to print values from the driver *
+ ********************************************************/
+
+/**
+ * Pretty print CassError values
+ *
+ * @param error_code CassError value to pretty print
+ * @param output_stream Output stream to pretty print value to
+ */
+void PrintTo(CassError error_code, std::ostream* output_stream);
+
+#endif // __PRETTY_PRINT_HPP__

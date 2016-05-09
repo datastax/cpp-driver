@@ -30,25 +30,6 @@
 #include "utils.hpp"
 #include "values.hpp"
 
-#if defined(_WIN32) && defined(_DEBUG) && !defined(USE_VISUAL_LEAK_DETECTOR)
-// Enable memory leak detection
-# define _CRTDBG_MAP_ALLOC
-# include <stdlib.h>
-# include <crtdbg.h>
-
-// Enable memory leak detection for new operator
-# ifndef DBG_NEW
-#   define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
-#   define new DBG_NEW
-# endif
-#endif
-
-#ifdef _WIN32
-# define PATH_SEPARATOR "\\"
-#else
-# define PATH_SEPARATOR "/"
-#endif
-
 #define SKIP_TEST(message) \
   std::cout << "[ SKIPPED  ] " << message << std::endl; \
   return;
@@ -59,9 +40,9 @@
   }
 
 #define CHECK_VERSION(version) \
-  if (server_version_ < #version) { \
+  if (this->server_version_ < #version) { \
     SKIP_TEST("Unsupported for Server Version " \
-              << server_version_.to_string() << ": Server version " \
+              << this->server_version_.to_string() << ": Server version " \
               << #version << "+ is required") \
   }
 

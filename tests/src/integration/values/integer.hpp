@@ -25,7 +25,7 @@ namespace driver {
 /**
  * Integer wrapped value
  */
-class Integer : public COMPARABLE_VALUE_INTERFACE_OBJECT_ONLY(cass_int32_t, Integer) {
+class Integer : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(cass_int32_t, Integer) {
 public:
   Integer(cass_int32_t integer)
     : integer_(integer) {

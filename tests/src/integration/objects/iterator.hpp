@@ -29,7 +29,8 @@ public:
   /**
    * Create the empty iterator object
    */
-  Iterator() {}
+  Iterator()
+    : Object<CassIterator, cass_iterator_free>() {}
 
   /**
    * Create the iterator object from the native driver object

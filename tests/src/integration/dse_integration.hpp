@@ -20,6 +20,7 @@
 #include "dse.h"
 
 #include "dse_objects.hpp"
+#include "dse_values.hpp"
 
 /**
  * Extended class to provide common integration test functionality for DSE
