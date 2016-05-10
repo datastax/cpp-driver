@@ -1737,7 +1737,8 @@ cass_session_free(CassSession* session);
  * @public @memberof CassSession
  *
  * @param[in] session
- * @param[in] cluster
+ * @param[in] cluster The cluster configuration is copied into the session and
+ * is immutable after connection.
  * @return A future that must be freed.
  *
  * @see cass_session_close()
@@ -1752,7 +1753,8 @@ cass_session_connect(CassSession* session,
  * @public @memberof CassSession
  *
  * @param[in] session
- * @param[in] cluster
+ * @param[in] cluster The cluster configuration is copied into the session and
+ * is immutable after connection.
  * @param[in] keyspace
  * @return A future that must be freed.
  *
