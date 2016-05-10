@@ -142,20 +142,20 @@ public:
   }
 
   size_t encode_string_list(size_t offset, const std::vector<std::string>& value) {
-    size_t pos = encode_uint16(offset, value.size());
+    size_t pos = encode_uint16(offset, static_cast<uint16_t>(value.size()));
     for (std::vector<std::string>::const_iterator it = value.begin(),
          end = value.end(); it != end; ++it) {
-      pos = encode_string(pos, it->data(), it->size());
+      pos = encode_string(pos, it->data(), static_cast<uint16_t>(it->size()));
     }
     return pos;
   }
 
   size_t encode_string_map(size_t offset, const std::map<std::string, std::string>& value) {
-    size_t pos = encode_uint16(offset, value.size());
+    size_t pos = encode_uint16(offset, static_cast<uint16_t>(value.size()));
     for (std::map<std::string, std::string>::const_iterator it = value.begin();
          it != value.end(); ++it) {
-      pos = encode_string(pos, it->first.c_str(), it->first.size());
-      pos = encode_string(pos, it->second.c_str(), it->second.size());
+      pos = encode_string(pos, it->first.c_str(), static_cast<uint16_t>(it->first.size()));
+      pos = encode_string(pos, it->second.c_str(), static_cast<uint16_t>(it->second.size()));
     }
     return pos;
   }

@@ -40,7 +40,7 @@ template <class T>
 class StreamManager {
 public:
   StreamManager(int protocol_version)
-      : max_streams_(1 << (num_bytes_for_stream(protocol_version) * 8 - 1))
+      : max_streams_(static_cast<size_t>(1) << (num_bytes_for_stream(protocol_version) * 8 - 1))
       , num_words_(max_streams_ / NUM_BITS_PER_WORD)
       , offset_(0)
       , words_(new word_t[num_words_]) {
