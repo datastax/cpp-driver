@@ -278,11 +278,11 @@ void dse_graph_array_free(DseGraphArray* array) {
   delete array->from();
 }
 
-void dse_graph_array_reset(DseGraphObject* array) {
+void dse_graph_array_reset(DseGraphArray* array) {
   array->reset();
 }
 
-void dse_graph_array_finish(DseGraphObject* array) {
+void dse_graph_array_finish(DseGraphArray* array) {
   array->finish();
 }
 

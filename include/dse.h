@@ -756,7 +756,7 @@ dse_graph_array_free(DseGraphArray* array);
  * @param[in] array
  */
 DSE_EXPORT void
-dse_graph_array_reset(DseGraphObject* array);
+dse_graph_array_reset(DseGraphArray* array);
 
 /**
  * Finish a graph array. This function must be called before adding an array to
@@ -767,7 +767,7 @@ dse_graph_array_reset(DseGraphObject* array);
  * @param[in] array
  */
 DSE_EXPORT void
-dse_graph_array_finish(DseGraphObject* array);
+dse_graph_array_finish(DseGraphArray* array);
 
 /**
  * Add null to an array.
@@ -791,7 +791,7 @@ dse_graph_array_add_null(DseGraphArray* array);
  */
 DSE_EXPORT CassError
 dse_graph_array_add_bool(DseGraphArray* array,
-                          cass_bool_t value);
+                         cass_bool_t value);
 
 /**
  * Add integer (32-bit) to an array.
@@ -804,7 +804,7 @@ dse_graph_array_add_bool(DseGraphArray* array,
  */
 DSE_EXPORT CassError
 dse_graph_array_add_int32(DseGraphArray* array,
-                           cass_int32_t value);
+                          cass_int32_t value);
 
 /**
  * Add integer (64-bit) to an array.
@@ -817,7 +817,7 @@ dse_graph_array_add_int32(DseGraphArray* array,
  */
 DSE_EXPORT CassError
 dse_graph_array_add_int64(DseGraphArray* array,
-                           cass_int64_t value);
+                          cass_int64_t value);
 
 /**
  * Add double to an array.
@@ -830,7 +830,7 @@ dse_graph_array_add_int64(DseGraphArray* array,
  */
 DSE_EXPORT CassError
 dse_graph_array_add_double(DseGraphArray* array,
-                            cass_double_t value);
+                           cass_double_t value);
 
 /**
  * Add string to an array.
@@ -843,7 +843,7 @@ dse_graph_array_add_double(DseGraphArray* array,
  */
 DSE_EXPORT CassError
 dse_graph_array_add_string(DseGraphArray* array,
-                            const char* value);
+                           const char* value);
 
 /**
  * Same as dse_graph_array_add_string(), but with lengths for string
@@ -858,7 +858,7 @@ dse_graph_array_add_string(DseGraphArray* array,
  */
 DSE_EXPORT CassError
 dse_graph_array_add_string_n(DseGraphArray* array,
-                            const char* value,
+                             const char* value,
                              size_t value_length);
 
 /**
