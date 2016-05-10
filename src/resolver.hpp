@@ -49,7 +49,7 @@ public:
   bool is_success() { return status_ == SUCCESS; }
   bool is_timed_out() { return status_ == FAILED_TIMED_OUT; }
   Status status() { return status_; }
-  const std::vector<Address>& addresses() const { return addresses_; }
+  const AddressVec& addresses() const { return addresses_; }
   T& data() { return data_; }
 
   static void resolve(uv_loop_t* loop, const std::string& hostname, int port,
@@ -134,7 +134,7 @@ private:
   std::string hostname_;
   int port_;
   Status status_;
-  std::vector<Address> addresses_;
+  AddressVec addresses_;
   T data_;
   Callback cb_;
 };
