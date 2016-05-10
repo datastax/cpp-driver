@@ -3715,6 +3715,19 @@ cass_statement_new_n(const char* query,
                      size_t parameter_count);
 
 /**
+ * Clear and/or resize the statement's parameters.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] count
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+cass_statement_reset_parameters(CassStatement* statement,
+                                 size_t count);
+
+/**
  * Frees a statement instance. Statements can be immediately freed after
  * being prepared, executed or added to a batch.
  *
