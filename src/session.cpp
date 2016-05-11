@@ -397,8 +397,8 @@ void Session::close_handles() {
 }
 
 void Session::on_run() {
-  LOG_INFO("Creating %u IO worker threads",
-           static_cast<unsigned int>(io_workers_.size()));
+  LOG_DEBUG("Creating %u IO worker threads",
+            static_cast<unsigned int>(io_workers_.size()));
 
   for (IOWorkerVec::iterator it = io_workers_.begin(), end = io_workers_.end();
        it != end; ++it) {

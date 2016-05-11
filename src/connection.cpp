@@ -75,18 +75,18 @@ void Connection::StartupHandler::on_set(ResponseMessage* response) {
     case CQL_OPCODE_ERROR: {
       ErrorResponse* error
           = static_cast<ErrorResponse*>(response->response_body().get());
+      ConnectionError error_code = CONNECTION_ERROR_GENERIC;
       if (error->code() == CQL_ERROR_PROTOCOL_ERROR &&
           error->message().find("Invalid or unsupported protocol version") != StringRef::npos) {
-        connection_->notify_error(error->message().to_string(), CONNECTION_ERROR_INVALID_PROTOCOL);
+        error_code = CONNECTION_ERROR_INVALID_PROTOCOL;
       } else if (error->code() == CQL_ERROR_BAD_CREDENTIALS) {
-        connection_->notify_error(error->message().to_string(), CONNECTION_ERROR_AUTH);
+        error_code = CONNECTION_ERROR_AUTH;
       } else if (error->code() == CQL_ERROR_INVALID_QUERY &&
                  error->message().find("Keyspace") == 0 &&
                  error->message().find("does not exist") != StringRef::npos) {
-        connection_->notify_error("Received error response " + error->error_message(), CONNECTION_ERROR_KEYSPACE);
-      } else {
-        connection_->notify_error("Received error response " + error->error_message());
+        error_code = CONNECTION_ERROR_KEYSPACE;
       }
+      connection_->notify_error("Received error response " + error->error_message(), error_code);
       break;
     }
 
@@ -516,7 +516,9 @@ void Connection::on_connect(Connector* connector) {
   }
 
   if (connector->status() == 0) {
-    LOG_DEBUG("Connected to host %s", connection->host_->address_string().c_str());
+    LOG_DEBUG("Connected to host %s on connection(%p)",
+              connection->host_->address_string().c_str(),
+              static_cast<void*>(connection));
 
     if (connection->ssl_session_) {
       uv_read_start(copy_cast<uv_tcp_t*, uv_stream_t*>(&connection->socket_),
@@ -534,11 +536,9 @@ void Connection::on_connect(Connector* connector) {
       connection->on_connected();
     }
   } else {
-    LOG_ERROR("Connect error '%s' on host %s",
-              UV_ERRSTR(connector->status(),
-                        connection->loop_),
-              connection->host_->address_string().c_str() );
-    connection->notify_error("Unable to connect");
+    connection->notify_error("Connect error '" +
+                             std::string(UV_ERRSTR(connector->status(), connection->loop_)) +
+                             "'");
   }
 }
 
@@ -551,7 +551,8 @@ void Connection::on_connect_timeout(Timer* timer) {
 void Connection::on_close(uv_handle_t* handle) {
   Connection* connection = static_cast<Connection*>(handle->data);
 
-  LOG_DEBUG("Connection to host %s closed",
+  LOG_DEBUG("Connection(%p) to host %s closed",
+            static_cast<void*>(connection),
             connection->host_->address_string().c_str());
 
   cleanup_pending_handlers(&connection->pending_reads_);
@@ -622,11 +623,12 @@ void Connection::on_read(uv_stream_t* client, ssize_t nread, const uv_buf_t* buf
 #else
     if (nread != UV_EOF) {
 #endif
-      LOG_ERROR("Read error '%s' on host %s",
-                UV_ERRSTR(nread, connection->loop_),
-                connection->host_->address_string().c_str());
+      connection->notify_error("Read error '" +
+                               std::string(UV_ERRSTR(nread, connection->loop_)) +
+                               "'");
+    } else {
+      connection->defunct();
     }
-    connection->defunct();
 
 #if UV_VERSION_MAJOR == 0
     connection->internal_reuse_buffer(buf);
@@ -675,11 +677,12 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
 #else
     if (nread != UV_EOF) {
 #endif
-      LOG_ERROR("Read error '%s' on host %s",
-                UV_ERRSTR(nread, connection->loop_),
-                connection->host_->address_string().c_str());
+      connection->notify_error("Read error '" +
+                               std::string(UV_ERRSTR(nread, connection->loop_)) +
+                               "'");
+    } else {
+      connection->defunct();
     }
-    connection->defunct();
     return;
   }
 
@@ -703,7 +706,9 @@ void Connection::on_read_ssl(uv_stream_t* client, ssize_t nread, const uv_buf_t*
 void Connection::on_timeout(Timer* timer) {
   Handler* handler = static_cast<Handler*>(timer->data());
   Connection* connection = handler->connection();
-  LOG_INFO("Request timed out to host %s", connection->host_->address_string().c_str());
+  LOG_INFO("Request timed out to host %s on connection(%p)",
+           connection->host_->address_string().c_str(),
+           static_cast<void*>(connection));
   // TODO (mpenick): We need to handle the case where we have too many
   // timeout requests and we run out of stream ids. The java-driver
   // uses a threshold to defunct the connection.
@@ -791,39 +796,15 @@ void Connection::notify_ready() {
 }
 
 void Connection::notify_error(const std::string& message, ConnectionError code) {
+  assert(code != CONNECTION_OK && "Notified error without an error");
+  LOG_DEBUG("Lost connection(%p) to host %s with the following error: %s",
+            static_cast<void*>(this),
+            host_->address_string().c_str(),
+            message.c_str());
   error_message_ = message;
   error_code_ = code;
-
-  switch (code) {
-    case CONNECTION_OK:
-      assert(false && "Notified error without an error");
-      return;
-
-    case CONNECTION_ERROR_INVALID_PROTOCOL:
-      LOG_WARN("Host %s received invalid protocol response %s",
-               host_->address_string().c_str(), message.c_str());
-      break;
-
-    case CONNECTION_ERROR_SSL:
-      ssl_error_code_ = ssl_session_->error_code();
-      log_error(message);
-      break;
-
-    default:
-      log_error(message);
-      break;
-  }
-
-  defunct();
-}
-
-void Connection::log_error(const std::string& error) {
-  if (state_ == CONNECTION_STATE_READY) {
-    LOG_ERROR("Host %s had the following error: %s",
-              host_->address_string().c_str(), error.c_str());
-  } else {
-    LOG_ERROR("Host %s had the following error on startup: %s",
-              host_->address_string().c_str(), error.c_str());
+  if (code == Connection::CONNECTION_ERROR_SSL) {
+    ssl_error_code_ = ssl_session_->error_code();
   }
   defunct();
 }

@@ -210,10 +210,6 @@ void ControlConnection::on_ready(Connection* connection) {
 void ControlConnection::on_close(Connection* connection) {
   bool retry_current_host = false;
 
-  if (state_ != CONTROL_STATE_CLOSED) {
-    LOG_WARN("Lost control connection on host %s", connection->address_string().c_str());
-  }
-
   // This pointer to the connection is no longer valid once it's closed
   connection_ = NULL;
 
@@ -241,6 +237,21 @@ void ControlConnection::on_close(Connection* connection) {
       session_->on_control_connection_error(connection->ssl_error_code(),
                                             connection->error_message());
       return;
+    }
+  }
+
+  // Don't log if the control connection is closing/closed or retrying because of
+  // an invalid protocol error.
+  if (state_ != CONTROL_STATE_CLOSED && !retry_current_host) {
+    // Log only as an error if it's the initial attempt
+    if (state_ == CONTROL_STATE_NEW) {
+      LOG_ERROR("Unable to establish a control connection to host %s because of the following error: %s",
+                connection->address_string().c_str(),
+                connection->error_message().c_str());
+    } else {
+      LOG_WARN("Lost control connection to host %s with the following error: %s",
+               connection->address_string().c_str(),
+               connection->error_message().c_str());
     }
   }
 

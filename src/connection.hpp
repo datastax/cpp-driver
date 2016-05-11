@@ -289,7 +289,6 @@ private:
 
   void notify_ready();
   void notify_error(const std::string& message, ConnectionError code = CONNECTION_ERROR_GENERIC);
-  void log_error(const std::string& error);
 
   void ssl_handshake();
 
