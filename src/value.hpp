@@ -30,10 +30,19 @@ public:
       , count_(0)
       , size_(-1) { }
 
+  // Used for "null" values
+  Value(const DataType::ConstPtr& data_type)
+      : protocol_version_(0)
+      , data_type_(data_type)
+      , count_(0)
+      , size_(-1) { }
+
+  // Used for regular values or collections
   Value(int protocol_version,
         const DataType::ConstPtr& data_type,
         char* data, int32_t size);
 
+  // Used for schema metadata collections (converted from JSON)
   Value(int protocol_version,
         const DataType::ConstPtr& data_type,
         int32_t count, char* data, int32_t size)

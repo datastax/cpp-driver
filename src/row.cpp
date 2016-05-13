@@ -63,7 +63,7 @@ char* decode_row(char* rows, const ResultResponse* result, OutputValueVec& outpu
       output.push_back(Value(protocol_version, def.data_type, buffer, size));
       buffer += size;
     } else { // null value
-      output.push_back(Value());
+      output.push_back(Value(def.data_type));
     }
   }
   return buffer;
