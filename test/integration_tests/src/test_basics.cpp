@@ -277,6 +277,13 @@ struct BasicTests : public test_utils::SingleSessionTest {
     // Ensure the test value is NULL
     const CassValue* column_value = cass_row_get_column(cass_result_first_row(result.get()), 1);
     BOOST_REQUIRE(cass_value_is_null(column_value));
+    // Handle text alias case
+    CassValueType check_type = type;
+    if (type == CASS_VALUE_TYPE_TEXT) {
+      check_type = CASS_VALUE_TYPE_VARCHAR;
+    }
+    BOOST_REQUIRE_EQUAL(check_type, cass_data_type_type(cass_value_data_type(column_value)));
+    BOOST_REQUIRE_EQUAL(check_type, cass_value_type(column_value));
     T value;
     BOOST_REQUIRE(test_utils::Value<T>::get(column_value, &value) == CASS_ERROR_LIB_NULL_VALUE);
 
