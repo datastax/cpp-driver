@@ -248,6 +248,12 @@ void ControlConnection::on_close(Connection* connection) {
 }
 
 void ControlConnection::on_event(EventResponse* response) {
+  // Only process events after an initial set of hosts and schema have been
+  // established. Adding a host from an UP/NEW_NODE event before the initial
+  // set will cause the driver to hang waiting for an invalid pending pool
+  // count.
+  if (state_ != CONTROL_STATE_READY) return;
+
   switch (response->event_type()) {
     case CASS_EVENT_TOPOLOGY_CHANGE: {
       std::string address_str = response->affected_node().to_string();
