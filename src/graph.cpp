@@ -246,7 +246,7 @@ CassError dse_graph_object_add_object_n(DseGraphObject* object,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   object->add_key(name, name_length);
-  object->add_writer(value);
+  object->add_writer(value, rapidjson::kObjectType);
   return CASS_OK;
 }
 
@@ -266,7 +266,7 @@ CassError dse_graph_object_add_array_n(DseGraphObject* object,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   object->add_key(name, name_length);
-  object->add_writer(value);
+  object->add_writer(value, rapidjson::kArrayType);
   return CASS_OK;
 }
 
@@ -350,7 +350,7 @@ CassError dse_graph_array_add_object(DseGraphArray* array,
   if (array->is_complete() || !value->is_complete()) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  array->add_writer(value);
+  array->add_writer(value, rapidjson::kObjectType);
   return CASS_OK;
 }
 
@@ -359,7 +359,7 @@ CassError dse_graph_array_add_array(DseGraphArray* array,
   if (array->is_complete() || !value->is_complete()) {
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
-  array->add_writer(value);
+  array->add_writer(value, rapidjson::kArrayType);
   return CASS_OK;
 }
 

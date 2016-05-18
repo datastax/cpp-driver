@@ -94,8 +94,9 @@ public:
   void add_string(const char* string, size_t length) { String(string, length); }
   void add_key(const char* key, size_t length) { Key(key, length); }
 
-  bool add_writer(const GraphWriter* writer) {
+  bool add_writer(const GraphWriter* writer, rapidjson::Type type) {
     size_t length = writer->buffer_.GetSize();
+    Prefix(type);
     memcpy(os_->Push(length), writer->buffer_.GetString(), length);
     return true;
   }
