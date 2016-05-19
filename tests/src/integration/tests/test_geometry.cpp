@@ -25,8 +25,8 @@ public:
   void SetUp() {
     CHECK_VERSION(5.0.0);
 
-    // Call the parent setup class
-    Integration::SetUp();
+    // Call the parent setup function
+    DseIntegration::SetUp();
 
     // Assign the primary key table name
     table_name_primary_key_ = table_name_ + GEOMETRY_PRIMARY_KEY_TABLE_SUFFIX;
@@ -133,11 +133,13 @@ TYPED_TEST_P(GeometryIntegrationTest, SimpleStatement) {
     this->assert_and_validate_geo_type(id, value);
 
     // Insert the geo type as the primary key executed by a CQL query string
-    this->session_.execute(this->format_string(GEOMETRY_INSERT_FORMAT,
-      this->table_name_primary_key_.c_str(), value.cql_value().c_str(), id.cql_value().c_str()));
+    if (!value.is_null()) {
+      this->session_.execute(this->format_string(GEOMETRY_INSERT_FORMAT,
+        this->table_name_primary_key_.c_str(), value.cql_value().c_str(), id.cql_value().c_str()));
 
-    // Assert/Validate the id where the geo type is the primary key
-    this->assert_and_validate_geo_type_primary_key(value, id);
+      // Assert/Validate the id where the geo type is the primary key
+      this->assert_and_validate_geo_type_primary_key(value, id);
+    }
 
     // Insert the geo type executed by a bounded statement
     Statement statement(this->insert_query_, 2);
@@ -150,13 +152,15 @@ TYPED_TEST_P(GeometryIntegrationTest, SimpleStatement) {
     this->assert_and_validate_geo_type(id, value);
 
     // Insert the geo type as the primary key executed by a bounded statement
-    statement = Statement(this->insert_query_primary_key_, 2);
-    statement.bind<TypeParam>(0, value);
-    statement.bind<TimeUuid>(1, id);
-    this->session_.execute(statement);
+    if (!value.is_null()) {
+      statement = Statement(this->insert_query_primary_key_, 2);
+      statement.bind<TypeParam>(0, value);
+      statement.bind<TimeUuid>(1, id);
+      this->session_.execute(statement);
 
-    // Assert/Validate the id where the geo type is the primary key
-    this->assert_and_validate_geo_type_primary_key(value, id);
+      // Assert/Validate the id where the geo type is the primary key
+      this->assert_and_validate_geo_type_primary_key(value, id);
+    }
   }
 }
 
@@ -192,13 +196,15 @@ TYPED_TEST_P(GeometryIntegrationTest, PreparedStatement) {
     this->assert_and_validate_geo_type(id, value);
 
     // Bind the time UUID and geo type where geo type is the primary key
-    statement = this->prepared_statement_primary_key_.bind();
-    statement.bind<TypeParam>(0, value);
-    statement.bind<TimeUuid>(1, id);
-    this->session_.execute(statement);
+    if (!value.is_null()) {
+      statement = this->prepared_statement_primary_key_.bind();
+      statement.bind<TypeParam>(0, value);
+      statement.bind<TimeUuid>(1, id);
+      this->session_.execute(statement);
 
-    // Assert/Validate the id where the geo type is the primary key
-    this->assert_and_validate_geo_type_primary_key(value, id);
+      // Assert/Validate the id where the geo type is the primary key
+      this->assert_and_validate_geo_type_primary_key(value, id);
+    }
   }
 }
 
@@ -223,7 +229,8 @@ INSTANTIATE_TYPED_TEST_CASE_P(Geometry, GeometryIntegrationTest, GeoTypes);
 const test::driver::DsePoint GEOMETRY_POINTS[] = {
   test::driver::DsePoint(0.0, 0.0),
   test::driver::DsePoint(2.0, 4.0),
-  test::driver::DsePoint(-1.2, -100.0)
+  test::driver::DsePoint(-1.2, -100.0),
+  test::driver::DsePoint() // NULL point
 };
 template<> const std::vector<test::driver::DsePoint> GeometryIntegrationTest<test::driver::DsePoint>::values_(
   GEOMETRY_POINTS,
@@ -244,7 +251,8 @@ const test::driver::DseLineString GEOMETRY_LINE_STRING[] = {
   test::driver::DseLineString("0.0 0.0, 1.0 1.0"),
   test::driver::DseLineString("1.0 3.0, 2.0 6.0, 3.0 9.0"),
   test::driver::DseLineString("-1.2 -100.0, 0.99 3.0"),
-  test::driver::DseLineString()
+  test::driver::DseLineString("LINESTRING EMPTY"),
+  test::driver::DseLineString() // NULL line string
 };
 template<> const std::vector<test::driver::DseLineString> GeometryIntegrationTest<test::driver::DseLineString>::values_(
   GEOMETRY_LINE_STRING,
@@ -264,8 +272,9 @@ template<> const std::vector<test::driver::DseLineString> GeometryIntegrationTes
 const test::driver::DsePolygon GEOMETRY_POLYGON[] = {
   test::driver::DsePolygon("(1.0 3.0, 3.0 1.0, 3.0 6.0, 1.0 3.0)"),
   test::driver::DsePolygon("(0.0 10.0, 10.0 0.0, 10.0 10.0, 0.0 10.0), \
-                     (6.0 7.0, 3.0 9.0, 9.0 9.0, 6.0 7.0)"),
-  test::driver::DsePolygon()
+                            (6.0 7.0, 3.0 9.0, 9.0 9.0, 6.0 7.0)"),
+  test::driver::DsePolygon("POLYGON EMPTY"),
+  test::driver::DsePolygon() // NULL polygon
 };
 template<> const std::vector<test::driver::DsePolygon> GeometryIntegrationTest<test::driver::DsePolygon>::values_(
   GEOMETRY_POLYGON,

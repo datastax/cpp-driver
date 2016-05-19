@@ -79,8 +79,9 @@ public:
    *               otherwise (default: false)
    * @return Cluster object
    */
-  Cluster& with_hostname_resolution(cass_bool_t enable = cass_false) {
-    EXPECT_EQ(CASS_OK, cass_cluster_set_use_hostname_resolution(get(), enable));
+  Cluster& with_hostname_resolution(bool enable = true) {
+    EXPECT_EQ(CASS_OK, cass_cluster_set_use_hostname_resolution(get(),
+      (enable == true ? cass_true : cass_false)));
     return *this;
   }
 
@@ -110,8 +111,8 @@ public:
    *               (default: true)
    * @return Cluster object
    */
-  Cluster& with_schema_metadata(cass_bool_t enable = cass_true) {
-    cass_cluster_set_use_schema(get(), enable);
+  Cluster& with_schema_metadata(bool enable = true) {
+    cass_cluster_set_use_schema(get(), (enable == true ? cass_true : cass_false));
     return *this;
   }
 

@@ -91,7 +91,7 @@ public:
   /**
    * Get the number of columns from the result
    *
-   * @return The number of columns in the result; 0 if result is NULL
+   * @return The number of columns in the result
    */
   size_t column_count() {
     return cass_result_column_count(get());
@@ -100,7 +100,7 @@ public:
   /**
    * Get the first row from the result
    *
-   * @return The first row; NULL if result is NULL;
+   * @return The first row
    */
   const CassRow* first_row() {
     return cass_result_first_row(get());
@@ -109,7 +109,7 @@ public:
   /**
    * Get the number of rows from the result
    *
-   * @return The number of rows in the result; 0 if result is NULL
+   * @return The number of rows in the result
    */
   size_t row_count() {
     return cass_result_row_count(get());

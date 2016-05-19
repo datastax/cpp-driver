@@ -43,8 +43,6 @@ public:
 
   /**
    * Create the default session object
-   *
-   * @param session Native driver object
    */
   Session()
     : Object<CassSession, cass_session_free>(cass_session_new()) {}
@@ -67,10 +65,13 @@ public:
 
   /**
    * Close the active session
+   *
+   * @param assert_ok True if error code for future should be asserted
+   *                  CASS_OK; false otherwise (default: true)
    */
-  void close() {
+  void close(bool assert_ok = true) {
     Future close_future = cass_session_close(get());
-    close_future.wait();
+    close_future.wait(assert_ok);
   }
 
   /**
@@ -115,7 +116,7 @@ public:
     Statement statement(cass_statement_new(query.c_str(), 0));
     EXPECT_EQ(CASS_OK, cass_statement_set_consistency(statement.get(),
       consistency));
-    return execute(statement);
+    return execute(statement, assert_ok);
   }
 
   /**
@@ -168,7 +169,7 @@ public:
     return Prepared(cass_future_get_prepared(prepare_future.get()));
   }
 
-private:
+protected:
   /**
    * Create a new session and establish a connection to the server;
    * synchronously

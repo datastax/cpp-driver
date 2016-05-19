@@ -17,19 +17,18 @@
 #define __TEST_VALUE_INTERFACE_HPP__
 #include "cassandra.h"
 
-#include "objects.hpp"
-
-
 #include <string>
+
+#include "objects/statement.hpp"
 
 #include <gtest/gtest.h>
 
 #define COMPARABLE_VALUE_INTERFACE(native, value) test::driver::ValueInterface<native>, \
-                                                   test::driver::Comparable<native>, \
-                                                   test::driver::Comparable<value>
+                                                  test::driver::Comparable<native>, \
+                                                  test::driver::Comparable<value>
 
 #define COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(native, value) test::driver::ValueInterface<native>, \
-                                                               test::driver::Comparable<value>
+                                                             test::driver::Comparable<value>
 
 namespace test {
 namespace driver {
@@ -93,6 +92,13 @@ public:
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
   virtual int compare(const T& rhs) const = 0;
+
+  /**
+   * Determine if the value is NULL (or unassigned)
+   *
+   * @return True if value is NULL; false otherwise
+   */
+  virtual bool is_null() const = 0;
 
   /**
    * Bind the value to a statement at the given index

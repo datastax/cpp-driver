@@ -74,7 +74,6 @@ public:
       username.c_str(), password.c_str()));
     return *this;
   }
-
 };
 
 } // namespace driver
