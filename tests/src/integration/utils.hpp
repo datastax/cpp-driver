@@ -1,0 +1,130 @@
+/*
+  Copyright (c) 2014-2016 DataStax
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+#ifndef __TEST_UTILS_HPP__
+#define __TEST_UTILS_HPP__
+#include <string>
+#include <vector>
+
+#include "exception.hpp"
+
+// Create simple console logging functions
+#define PREFIX_LOG std::cout
+#define PREFIX_MESSAGE "Integration Tests: "
+#define SUFFIX_LOG std::endl
+#ifdef INTEGRATION_VERBOSE_LOGGING
+# define LOG(message) PREFIX_LOG << PREFIX_MESSAGE << message << SUFFIX_LOG
+# define LOG_WARN(message) PREFIX_LOG << PREFIX_MESSAGE << "WARN: " << message << SUFFIX_LOG
+#else
+# define LOG_DISABLED do {} while (false)
+# define LOG(message) LOG_DISABLED
+# define LOG_WARN(message) LOG_DISABLED
+#endif
+#define LOG_ERROR(message) PREFIX_LOG << PREFIX_MESSAGE << "ERROR: " \
+                           << __FILE__ << "(" << __LINE__ << "): " \
+                           << message << SUFFIX_LOG
+
+namespace test {
+
+/**
+ * Base class to provide common integration test functionality
+ */
+class Utils {
+public:
+  /**
+   * Path separator
+   */
+  static const char PATH_SEPARATOR;
+
+  /**
+   * Get the current working directory
+   *
+   * @return Current working directory
+   */
+  static std::string cwd();
+
+  /**
+   * Split a string into an array/vector
+   *
+   * @param input String to convert to array/vector
+   * @param delimiter Character to use split into elements (default: <space>)
+   * @return An array/vector representation of the string
+   */
+  static std::vector<std::string> explode(const std::string& input,
+    const char delimiter = ' ');
+
+  /**
+   * Check to see if a file exists
+   *
+   * @param filename Absolute/Relative filename
+   * @return True if file exists; false otherwise
+   */
+  static bool file_exists(const std::string& filename);
+
+  /**
+   * Concatenate an array/vector into a string
+   *
+   * @param elements Array/Vector elements to concatenate
+   * @param delimiter Character to use between elements (default: <space>)
+   * @return A string representation of all the array/vector elements
+   */
+  static std::string implode(const std::vector<std::string>& elements,
+    const char delimiter = ' ');
+
+  /**
+   * Create the directory from a path
+   *
+   * @param path Directory/Path to create
+   * @throws test::Exception If there was an issue creating directory
+   */
+  static void mkdir(const std::string& path);
+
+  /**
+   * Cross platform millisecond granularity sleep
+   *
+   * @param milliseconds Time in milliseconds to sleep
+   */
+  static void msleep(unsigned int milliseconds);
+
+  /**
+   * Replace all occurrences of a string from the input string
+   *
+   * @param input String having occurrences being replaced
+   * @param from String to find for replacement
+   * @param to String to replace with
+   * @return Input string with replacement
+   */
+  static std::string replace_all(const std::string& input,
+    const std::string& from, const std::string& to);
+
+  /**
+   * Convert a string to lowercase
+   *
+   * @param input String to convert to lowercase
+   */
+  static std::string to_lower(const std::string& input);
+
+  /**
+   * Remove the leading and trailing whitespace from a string
+   *
+   * @param input String to trim
+   * @return Trimmed string
+   */
+  static std::string trim(const std::string& input);
+};
+
+} // namespace test
+
+#endif //__TEST_UTILS_HPP__

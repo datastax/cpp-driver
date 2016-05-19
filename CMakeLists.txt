@@ -15,6 +15,7 @@
 ##
 
 cmake_minimum_required(VERSION 2.6.4)
+set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
@@ -196,6 +197,7 @@ if(DSE_BUILD_EXAMPLES)
   add_subdirectory(examples/plaintext)
   add_subdirectory(examples/gssapi)
   add_subdirectory(examples/graph)
+  add_subdirectory(examples/geotypes)
 endif()
 
 #--------

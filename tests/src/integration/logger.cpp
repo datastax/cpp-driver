@@ -1,36 +1,36 @@
 /*
-Copyright (c) 2014-2016 DataStax
+  Copyright (c) 2014-2016 DataStax
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+  http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
 */
 #include "logger.hpp"
+#include "integration.hpp"
 
 #include "cassandra.h"
 #include "scoped_lock.hpp"
 
 #include <ctime>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 
-using namespace driver;
+using namespace test::driver;
 
 #define LOGGER_DIRECTORY "log"
 #ifdef _WIN32
-# define PATH_SEPARATOR "\\"
 # define FILE_MODE 0
 # define LOCALTIME(tm, time) localtime_s(tm, time)
 #else
-# define PATH_SEPARATOR "/"
 # define FILE_MODE S_IRWXU | S_IRWXG | S_IROTH
 # define LOCALTIME(tm, time) localtime_r(time, tm)
 #endif
@@ -40,38 +40,35 @@ uv_mutex_t Logger::mutex_;
 std::vector<std::string> Logger::search_criteria_;
 size_t Logger::count_ = 0;
 
-Logger::Logger() {
-  initialize();
-}
+Logger::Logger() {}
 
-Logger::Logger(const std::string& test_case, const std::string& test_name) {
-  // Create the logger directory (ignore all errors)
-  std::string path = std::string(LOGGER_DIRECTORY) + PATH_SEPARATOR + test_case;
-  mkdir(LOGGER_DIRECTORY);
-  mkdir(path);
-
-  // Create the relative file name for the test and the associated stream
-  std::string filename = path + PATH_SEPARATOR + test_name + ".log";
-  output_ = new std::fstream(filename.c_str(), std::fstream::out | std::fstream::trunc);
-
-  // Initialize the driver logger callback
-  if (!output_->fail()) {
-    initialize(output_.get());
-  } else {
-    std::cerr << "Unable to Create Log File: " << filename << std::endl;
-    initialize();
+Logger::~Logger() {
+  if (output_.is_open()) {
+    output_.close();
   }
 }
 
-void Logger::add_critera(const std::string& criteria) {
-  search_criteria_.push_back(criteria);
-}
+void Logger::initialize(const std::string& test_case, const std::string& test_name) {
+  // Create the logger directory
+  std::string path = std::string(LOGGER_DIRECTORY) + Utils::PATH_SEPARATOR + test_case;
+  path = Utils::replace_all(path, "_", std::string(1, Utils::PATH_SEPARATOR));
+  std::vector<std::string> path_tokens = Utils::explode(path, Utils::PATH_SEPARATOR);
+  std::string mkdir_path;
+  for (std::vector<std::string>::const_iterator iterator = path_tokens.begin();
+    iterator < path_tokens.end(); ++iterator) {
+    mkdir_path += *iterator + Utils::PATH_SEPARATOR;
+    Utils::mkdir(mkdir_path);
+  }
 
-size_t Logger::get_count() {
-  return count_;
-}
+  // Create the relative file name for the test and the associated stream
+  std::string filename = path + Utils::PATH_SEPARATOR + test_name + ".log";
+  output_.open(filename.c_str(), std::fstream::out | std::fstream::trunc);
 
-void Logger::initialize(std::fstream* output /*= NULL*/) {
+  // Initialize the driver logger callback
+  if (output_.fail()) {
+    LOG_ERROR("Unable to Create Log File: " << filename);
+  }
+
   // Create the mutex for callback operations (thread safety)
   uv_mutex_init(&mutex_);
 
@@ -81,7 +78,15 @@ void Logger::initialize(std::fstream* output /*= NULL*/) {
 
   // Set the maximum driver log level to capture all logs messages
   cass_log_set_level(CASS_LOG_TRACE);
-  cass_log_set_callback(Logger::log, output);
+  cass_log_set_callback(Logger::log, &output_);
+}
+
+void Logger::add_critera(const std::string& criteria) {
+  search_criteria_.push_back(criteria);
+}
+
+size_t Logger::get_count() {
+  return count_;
 }
 
 void Logger::log(const CassLogMessage* log, void* data) {
@@ -114,7 +119,7 @@ void Logger::log(const CassLogMessage* log, void* data) {
     time << (date_time.tm_hour < 10 ? "0" : "") << date_time.tm_hour << ":"
       << (date_time.tm_min < 10 ? "0" : "") << date_time.tm_min << ":"
       << (date_time.tm_sec < 10 ? "0" : "") << date_time.tm_sec << "."
-      << milliseconds;
+      << std::setfill('0') << std::setw(3) << milliseconds;
 
     // Create the formatted log message and output to the file
     std::string severity = cass_log_level_string(log->severity);
@@ -132,14 +137,3 @@ void Logger::log(const CassLogMessage* log, void* data) {
     }
   }
 }
-
-void driver::Logger::mkdir(std::string path) {
-  // Create a synchronous libuv file system call to create the path
-  uv_loop_t* loop = uv_default_loop();
-  uv_fs_t request;
-  uv_fs_mkdir(loop, &request, path.c_str(), FILE_MODE, NULL);
-  uv_run(loop, UV_RUN_DEFAULT);
-  uv_fs_req_cleanup(&request);
-  uv_loop_close(loop);
-}
-

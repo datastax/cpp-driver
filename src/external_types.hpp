@@ -20,6 +20,8 @@
 #include "dse.h"
 
 #include "graph.hpp"
+#include "line_string.hpp"
+#include "polygon.hpp"
 
 // This abstraction allows us to separate internal types from the
 // external opaque pointers that we expose.
@@ -45,6 +47,10 @@ EXTERNAL_TYPE(dse::GraphArray, DseGraphArray);
 EXTERNAL_TYPE(dse::GraphObject, DseGraphObject);
 EXTERNAL_TYPE(dse::GraphResultSet, DseGraphResultSet);
 EXTERNAL_TYPE(dse::GraphResult, DseGraphResult);
+EXTERNAL_TYPE(dse::LineSegment, DseLineString);
+EXTERNAL_TYPE(dse::LineSegmentIterator, DseLineStringIterator);
+EXTERNAL_TYPE(dse::Polygon, DsePolygon);
+EXTERNAL_TYPE(dse::PolygonIterator, DsePolygonIterator);
 
 }
 
