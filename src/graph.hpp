@@ -87,12 +87,18 @@ public:
   bool is_complete() const { return IsComplete(); }
 
   void add_null() { Null(); }
-  void add_bool(cass_bool_t value) { Bool(value); }
+  void add_bool(cass_bool_t value) { Bool(value != cass_false); }
   void add_int32(cass_int32_t value) { Int(value); }
-  void add_int64(cass_int32_t value) { Int64(value); }
+  void add_int64(cass_int64_t value) { Int64(value); }
   void add_double(cass_double_t value) { Double(value); }
-  void add_string(const char* string, size_t length) { String(string, length); }
-  void add_key(const char* key, size_t length) { Key(key, length); }
+
+  void add_string(const char* string, size_t length) {
+    String(string, static_cast<rapidjson::SizeType>(length));
+  }
+
+  void add_key(const char* key, size_t length) {
+    Key(key, static_cast<rapidjson::SizeType>(length));
+  }
 
   bool add_writer(const GraphWriter* writer, rapidjson::Type type) {
     size_t length = writer->buffer_.GetSize();

@@ -31,7 +31,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+
+#ifdef _WIN32
+# include <windows.h>
+#endif
+#define GRAPH_ALLOW_SCANS \
+  "schema.config().option('graph.allow_scan').set('true')"
 
 #define GRAPH_MAKE_STRICT \
   "schema.config().option('graph.schema_mode').set(com.datastax.bdp.graph.api.model.Schema.Mode.Production)"
@@ -200,7 +205,11 @@ cass_bool_t create_graph(CassSession* session, const char* name) {
             break;
           }
         }
+#ifndef _WIN32
         sleep(1);
+#else
+        Sleep(1000);
+#endif
         dse_graph_resultset_free(resultset);
       }
     }
@@ -242,6 +251,7 @@ int main() {
     dse_graph_options_set_graph_name(options, "classic");
 
     if (create_graph(session, "classic")) {
+      execute_graph_query(session, GRAPH_ALLOW_SCANS, options, NULL, NULL);
       execute_graph_query(session, GRAPH_MAKE_STRICT, options, NULL, NULL);
       execute_graph_query(session, GRAPH_SCHEMA, options, NULL, NULL);
       execute_graph_query(session, GRAPH_DATA, options, NULL, NULL);

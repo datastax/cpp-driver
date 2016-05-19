@@ -385,6 +385,10 @@ DseGraphResultType dse_graph_result_type(const DseGraphResult* result) {
     case rapidjson::kObjectType: return DSE_GRAPH_RESULT_TYPE_OBJECT;
     case rapidjson::kArrayType: return DSE_GRAPH_RESULT_TYPE_ARRAY;
   }
+
+  // Path should never be executed
+  assert(false);
+  return DSE_GRAPH_RESULT_TYPE_NULL;
 }
 
 cass_bool_t dse_graph_result_is_bool(const DseGraphResult* result) {
