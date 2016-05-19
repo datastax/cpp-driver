@@ -126,6 +126,19 @@ typedef SSIZE_T ssize_t;
 #define CCM_CONFIGURATION_KEY_SSH_PUBLIC_KEY "ssh_public_key"
 #define CCM_CONFIGURATION_KEY_SSH_PRIVATE_KEY "ssh_private_key"
 
+// Workload value initialization
+const std::string DSE_WORKLOADS[] = {
+  "cassandra",
+  "cfs",
+  "dsefs",
+  "graph",
+  "hadoop",
+  "solr",
+  "spark"
+};
+const std::vector<std::string> CCM::Bridge::dse_workloads_(DSE_WORKLOADS,
+  DSE_WORKLOADS + sizeof(DSE_WORKLOADS) / sizeof(DSE_WORKLOADS[0]));
+
 using namespace CCM;
 
 CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
@@ -1015,6 +1028,57 @@ DseVersion CCM::Bridge::get_dse_version(const std::string& configuration_file) {
 
   // Return the DSE version
   return dse_version;
+}
+
+bool CCM::Bridge::set_dse_workload(unsigned int node, DseWorkload workload, bool is_kill /*= false */) {
+  // Determine if the node is currently active/up
+  bool was_node_active = false;
+  if (!is_node_down(node)) {
+    LOG("Stopping Active Node to Set Workload: " dse_workloads_[workload]
+      << " workload on node " << node);
+    stop_node(node, is_kill);
+    was_node_active = true;
+  }
+
+  // Create the node DSE workload command and execute
+  std::vector<std::string> dse_workload_command;
+  dse_workload_command.push_back(generate_node_name(node));
+  dse_workload_command.push_back("setworkload");
+  dse_workload_command.push_back(dse_workloads_[workload]);
+  execute_ccm_command(dse_workload_command);
+
+  // Determine if the node should be restarted
+  if (was_node_active) {
+    LOG("Restarting Node to Apply Workload: " dse_workloads_[workload]
+      << " workload on node " << node);
+    start_node(node);
+  }
+
+  return was_node_active;
+}
+
+bool CCM::Bridge::set_dse_workload(DseWorkload workload, bool is_kill /*= false */) {
+  // Determine if the cluster is currently active/up
+  bool was_cluster_active = false;
+  if (!is_cluster_down()) {
+    LOG("Stopping Active Cluster to Set Workload: " dse_workloads_[workload] << " workload");
+    stop_cluster(is_kill);
+    was_cluster_active = true;
+  }
+
+  // Iterate over each node and set the DSE workload
+  ClusterStatus status = cluster_status();
+  for (unsigned int i = 1; i <= status.node_count; ++i) {
+    set_dse_workload(i, workload);
+  }
+
+  // Determine if the cluster should be restarted
+  if (was_cluster_active) {
+    LOG("Restarting Cluster to Apply Workload: " dse_workloads_[workload] << " workload");
+    start_cluster();
+  }
+
+  return was_cluster_active;
 }
 
 bool CCM::Bridge::is_node_decommissioned(unsigned int node) {
