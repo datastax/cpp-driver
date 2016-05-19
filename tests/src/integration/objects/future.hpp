@@ -34,7 +34,8 @@ public:
   /**
    * Create the empty future object
    */
-  Future() {}
+  Future()
+    : Object<CassFuture, cass_future_free>() {}
 
   /**
    * Create the future object from the native driver object

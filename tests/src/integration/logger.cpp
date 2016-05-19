@@ -1,17 +1,17 @@
 /*
-Copyright (c) 2014-2016 DataStax
+  Copyright (c) 2014-2016 DataStax
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+  http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
 */
 #include "logger.hpp"
 #include "integration.hpp"
@@ -28,11 +28,9 @@ using namespace test::driver;
 
 #define LOGGER_DIRECTORY "log"
 #ifdef _WIN32
-# define PATH_SEPARATOR "\\"
 # define FILE_MODE 0
 # define LOCALTIME(tm, time) localtime_s(tm, time)
 #else
-# define PATH_SEPARATOR "/"
 # define FILE_MODE S_IRWXU | S_IRWXG | S_IROTH
 # define LOCALTIME(tm, time) localtime_r(time, tm)
 #endif
@@ -51,13 +49,19 @@ Logger::~Logger() {
 }
 
 void Logger::initialize(const std::string& test_case, const std::string& test_name) {
-    // Create the logger directory (ignore all errors)
-  std::string path = std::string(LOGGER_DIRECTORY) + PATH_SEPARATOR + test_case;
-  Utils::mkdir(LOGGER_DIRECTORY);
-  Utils::mkdir(path);
+  // Create the logger directory
+  std::string path = std::string(LOGGER_DIRECTORY) + Utils::PATH_SEPARATOR + test_case;
+  path = Utils::replace_all(path, "_", std::string(1, Utils::PATH_SEPARATOR));
+  std::vector<std::string> path_tokens = Utils::explode(path, Utils::PATH_SEPARATOR);
+  std::string mkdir_path;
+  for (std::vector<std::string>::const_iterator iterator = path_tokens.begin();
+    iterator < path_tokens.end(); ++iterator) {
+    mkdir_path += *iterator + Utils::PATH_SEPARATOR;
+    Utils::mkdir(mkdir_path);
+  }
 
   // Create the relative file name for the test and the associated stream
-  std::string filename = path + PATH_SEPARATOR + test_name + ".log";
+  std::string filename = path + Utils::PATH_SEPARATOR + test_name + ".log";
   output_.open(filename.c_str(), std::fstream::out | std::fstream::trunc);
 
   // Initialize the driver logger callback

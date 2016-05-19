@@ -13,8 +13,8 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-#ifndef __DRIVER_OBJECT_OBJECTS_HPP__
-#define __DRIVER_OBJECT_OBJECTS_HPP__
+#ifndef __TEST_OBJECTS_HPP__
+#define __TEST_OBJECTS_HPP__
 #include "cassandra.h"
 
 #include "objects/cluster.hpp"
@@ -27,4 +27,4 @@
 #include "objects/statement.hpp"
 #include "objects/uuid_gen.hpp"
 
-#endif // __DRIVER_OBJECT_OBJECTS_HPP__
+#endif // __TEST_OBJECTS_HPP__

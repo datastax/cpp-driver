@@ -13,11 +13,11 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-#ifndef __VALUES_HPP__
-#define __VALUES_HPP__
+#ifndef __TEST_VALUES_HPP__
+#define __TEST_VALUES_HPP__
 
 #include "values/integer.hpp"
 #include "values/uuid.hpp"
 #include "values/varchar.hpp"
 
-#endif //__VALUES_HPP__
+#endif //__TEST_VALUES_HPP__

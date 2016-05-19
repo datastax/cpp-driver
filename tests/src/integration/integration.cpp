@@ -44,8 +44,32 @@ Integration::Integration()
   , is_session_requested_(true) {
   // Get the name of the test and the case/suite it belongs to
   const testing::TestInfo* test_information = testing::UnitTest::GetInstance()->current_test_info();
-  test_case_name_ = test_information->test_case_name();
   test_name_ = test_information->name();
+
+  // Determine if this is a typed test (e.g. ends in a number)
+  const char* type_param = test_information->type_param();
+  if (type_param) {
+    std::vector<std::string> tokens = explode(test_information->test_case_name(), '/');
+    for (std::vector<std::string>::const_iterator iterator = tokens.begin();
+      iterator < tokens.end(); ++iterator) {
+      std::string token = *iterator;
+
+      // Determine if we are looking at the last token
+      if ((iterator + 1) == tokens.end()) {
+        size_t number = 0;
+        std::stringstream tokenStream(token);
+        if (!(tokenStream >> number).fail()) {
+          std::vector<std::string> type_param_tokens = explode(type_param, ':');
+          size_t size = type_param_tokens.size();
+          test_case_name_ += type_param_tokens[size - 1];
+        }
+      } else {
+        test_case_name_ += token + "_";
+      }
+    }
+  } else {
+    test_case_name_ = test_information->test_case_name();
+  }
 
   // Determine if file logging should be enabled for the integration tests
   if (Options::log_tests()) {
@@ -56,7 +80,7 @@ Integration::Integration()
 Integration::~Integration() {
   try {
     session_.close();
-  } catch (test::Exception& e) {}
+  } catch (...) {}
 }
 
 void Integration::SetUp() {
@@ -135,7 +159,7 @@ void Integration::TearDown() {
   use_keyspace_query << "DROP KEYSPACE " << keyspace_name_;
   try {
     session_.execute(use_keyspace_query.str(), CASS_CONSISTENCY_ANY, false);
-  } catch (test::Exception& e) {}
+  } catch (...) {}
 }
 
 void Integration::connect(Cluster cluster) {
@@ -178,3 +202,4 @@ std::string Integration::format_string(const char* format, ...) const {
   // Return the formatted string
   return buffer;
 }
+

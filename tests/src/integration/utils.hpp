@@ -44,6 +44,11 @@ namespace test {
 class Utils {
 public:
   /**
+   * Path separator
+   */
+  static const char PATH_SEPARATOR;
+
+  /**
    * Get the current working directory
    *
    * @return Current working directory
