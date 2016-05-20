@@ -111,7 +111,10 @@ void CassLog::callback(const CassLogMessage* message, void* data) {
   if (log_data->messages.empty()) return;
   for (std::vector<std::string>::const_iterator iterator = log_data->messages.begin(); iterator != log_data->messages.end(); ++iterator) {
     if (str.find(*iterator) != std::string::npos) {
-      log_data->message_count++;
+      if (log_data_.expected_log_level_ == CASS_LOG_DISABLED ||
+          message->severity == log_data_.expected_log_level_) {
+        log_data->message_count++;
+      }
     }
   }
 }
