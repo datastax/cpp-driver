@@ -92,6 +92,42 @@ struct ClusterStatus {
 
 namespace CCM {
 
+  /**
+   * Enumeration for a DSE workload
+   */
+  enum DseWorkload {
+    /**
+     * Cassandra
+     */
+    DSE_WORKLOAD_CASSANDRA = 0,
+    /**
+     * CFS - Cassandra file system (Hadoop Distributed File System (HDFS)
+     * replacement
+     */
+    DSE_WORKLOAD_CFS,
+    /**
+     * DSEFS - DataStax Enterprise file system (Spark streaming and Write Ahead
+     * Logging (WAL))
+     */
+    DSE_WORKLOAD_DSEFS,
+    /**
+     * Graph
+     */
+    DSE_WORKLOAD_GRAPH,
+    /**
+     * Hadoop
+     */
+    DSE_WORKLOAD_HADOOP,
+    /**
+     * Solr
+     */
+    DSE_WORKLOAD_SOLR,
+    /**
+     * Spark
+     */
+    DSE_WORKLOAD_SPARK
+  };
+
   class Bridge {
   public:
     /**
@@ -482,6 +518,33 @@ namespace CCM {
     CCM_BRIDGE_DEPRECATED(static DseVersion get_dse_version(const std::string& configuration_file));
 
     /**
+     * Set the DSE workload on a node
+     *
+     * NOTE: This operation should be performed before starting the node;
+     *       otherwise the node will be stopped and restarted
+     *
+     * @param node Node to set DSE workload on
+     * @param workload Workload to be set
+     * @param is_kill True if forced termination requested; false otherwise
+     *                (default: false)
+     * @return True if node was restarted; false otherwise
+     */
+    bool set_dse_workload(unsigned int node, DseWorkload workload, bool is_kill = false);
+
+    /**
+     * Set the DSE workload on the cluster
+     *
+     * NOTE: This operation should be performed before starting the cluster;
+     *       otherwise the cluster will be stopped and restarted
+     *
+     * @param workload Workload to be set
+     * @param is_kill True if forced termination requested; false otherwise
+     *                (default: false)
+     * @return True if cluster was restarted; false otherwise
+     */
+    bool set_dse_workload(DseWorkload workload, bool is_kill = false);
+
+    /**
      * Check to see if a node has been decommissioned
      *
      * @param node Node to check `DECOMMISSION` status
@@ -576,6 +639,10 @@ namespace CCM {
      * generation
      */
     std::string host_;
+    /**
+     * Workload values to use when setting the workload via CCM
+     */
+    static const std::vector<std::string> dse_workloads_;
 
 #ifdef CASS_USE_LIBSSH2
     /**
