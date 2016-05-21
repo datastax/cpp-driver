@@ -42,7 +42,7 @@ Pool::Pool(IOWorker* io_worker,
     , config_(io_worker->config())
     , metrics_(io_worker->metrics())
     , state_(POOL_STATE_NEW)
-    , connection_error_(Connection::CONNECTION_OK)
+    , error_code_(Connection::CONNECTION_OK)
     , available_connection_count_(0)
     , is_available_(false)
     , is_initial_connection_(is_initial_connection)
@@ -50,9 +50,9 @@ Pool::Pool(IOWorker* io_worker,
     , cancel_reconnect_(false) { }
 
 Pool::~Pool() {
-  LOG_DEBUG("Pool dtor with %u pending requests pool(%p)",
-            static_cast<unsigned int>(pending_requests_.size()),
-            static_cast<void*>(this));
+  LOG_DEBUG("Pool(%p) dtor with %u pending requests",
+            static_cast<void*>(this),
+            static_cast<unsigned int>(pending_requests_.size()));
   while (!pending_requests_.is_empty()) {
     RequestHandler* request_handler
         = static_cast<RequestHandler*>(pending_requests_.front());
@@ -66,8 +66,9 @@ Pool::~Pool() {
 void Pool::connect() {
   if (state_ == POOL_STATE_NEW ||
       state_ == POOL_STATE_WAITING_TO_CONNECT) {
-    LOG_DEBUG("Connect %s pool(%p)",
-              host_->address_string().c_str(), static_cast<void*>(this));
+    LOG_DEBUG("Connect pool(%p) for host %s",
+              static_cast<void*>(this),
+              host_->address_string().c_str());
 
     connect_timer.stop(); // There could be a delayed connect waiting
 
@@ -90,7 +91,9 @@ void Pool::delayed_connect() {
 
 void Pool::close(bool cancel_reconnect) {
   if (state_ != POOL_STATE_CLOSING && state_ != POOL_STATE_CLOSED) {
-    LOG_DEBUG("Closing pool(%p)", static_cast<void*>(this));
+    LOG_DEBUG("Closing pool(%p) for host %s",
+              static_cast<void*>(this),
+              host_->address_string().c_str());
 
     connect_timer.stop();
 
@@ -229,6 +232,9 @@ void Pool::maybe_notify_ready() {
   // This will notify ready even if all the connections fail.
   // it is up to the holder to inspect state
   if (state_ == POOL_STATE_CONNECTING && connections_pending_.empty()) {
+    LOG_DEBUG("Pool(%p) connected to host %s",
+              static_cast<void*>(this),
+              host_->address_string().c_str());
     state_ = POOL_STATE_READY;
     io_worker_->notify_pool_ready(this);
   }
@@ -237,6 +243,10 @@ void Pool::maybe_notify_ready() {
 void Pool::maybe_close() {
   if (state_ == POOL_STATE_CLOSING && connections_.empty() &&
       connections_pending_.empty()) {
+
+    LOG_DEBUG("Pool(%p) closed connections to host %s",
+              static_cast<void*>(this),
+              host_->address_string().c_str());
     state_ = POOL_STATE_CLOSED;
     io_worker_->notify_pool_closed(this);
   }
@@ -251,7 +261,9 @@ void Pool::spawn_connection() {
                        io_worker_->protocol_version(),
                        this);
 
-    LOG_INFO("Spawning new connection to host %s", host_->address_string().c_str());
+    LOG_DEBUG("Spawning new connection to host %s for pool(%p)",
+              host_->address_string().c_str(),
+              static_cast<void*>(this));
     connection->connect();
 
     connections_pending_.insert(connection);
@@ -314,11 +326,30 @@ void Pool::on_close(Connection* connection) {
     }
     maybe_notify_ready();
   } else if (connection->is_defunct()) {
+    // Log only the first connection failure as an error or warning.
+    if (state_ != POOL_STATE_CLOSING) {
+      // Log as an error if the connection pool was either estabilished or
+      // it's the first attempt, otherwise log as a warning.
+      if (state_ == POOL_STATE_READY) {
+        LOG_ERROR("Closing established connection pool to host %s because of the following error: %s",
+                 host_->address_string().c_str(),
+                 connection->error_message().c_str());
+      } else if (is_initial_connection_) {
+        LOG_ERROR("Connection pool was unable to connect to host %s because of the following error: %s",
+                  host_->address_string().c_str(),
+                  connection->error_message().c_str());
+      } else {
+        LOG_WARN("Connection pool was unable to reconnect to host %s because of the following error: %s",
+                 host_->address_string().c_str(),
+                 connection->error_message().c_str());
+      }
+    }
+
     // If at least one connection has a critical failure then don't try to
     // reconnect automatically. Also, don't set the error to something else if
     // it has already been set to something critical.
     if (!is_critical_failure()) {
-      connection_error_ = connection->error_code();
+      error_code_ = connection->error_code();
     }
 
     close();

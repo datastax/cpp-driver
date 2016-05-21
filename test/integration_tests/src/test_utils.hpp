@@ -136,6 +136,7 @@ public:
 
   static void reset(const std::string& msg) {
     log_data_.reset(msg);
+    log_data_.expected_log_level_ = CASS_LOG_DISABLED;
   }
 
   static void add(const std::string& msg) {
@@ -148,10 +149,15 @@ public:
     log_data_.output_log_level = log_level;
   }
 
+  static void set_expected_log_level(CassLogLevel log_level) {
+    log_data_.expected_log_level_ = log_level;
+  }
+
 private:
   struct LogData : public boost::basic_lockable_adapter<boost::mutex> {
     LogData()
       : message_count(0)
+      , expected_log_level_(CASS_LOG_DISABLED)
       , output_log_level(CASS_LOG_DISABLED) {}
 
     void reset(const std::string& msg) {
@@ -168,6 +174,7 @@ private:
     boost::mutex m;
     std::vector<std::string> messages;
     size_t message_count;
+    CassLogLevel expected_log_level_;
     CassLogLevel output_log_level;
   };
 

@@ -112,8 +112,9 @@ void IOWorker::add_pool(const Host::ConstPtr& host, bool is_initial_connection) 
 
   PoolMap::iterator it = pools_.find(address);
   if (it == pools_.end()) {
-    LOG_INFO("Adding pool for host %s io_worker(%p)",
-             host->address_string().c_str(), static_cast<void*>(this));
+    LOG_DEBUG("Adding pool for host %s io_worker(%p)",
+              host->address_string().c_str(),
+              static_cast<void*>(this));
 
     set_host_is_available(address, false);
 
@@ -123,8 +124,9 @@ void IOWorker::add_pool(const Host::ConstPtr& host, bool is_initial_connection) 
   } else  {
     // We could have a connection that's waiting to reconnect. In that case,
     // this will start to connect immediately.
-    LOG_DEBUG("Host %s already present attempting to initiate immediate connection",
-              host->address_string().c_str());
+    LOG_DEBUG("Host %s already present attempting to initiate immediate connection for io_worker(%p)",
+              host->address_string().c_str(),
+              static_cast<void*>(this));
     it->second->connect();
   }
 }
@@ -142,7 +144,7 @@ void IOWorker::retry(RequestHandler* request_handler) {
     return;
   }
 
-  PoolMap::iterator it = pools_.find(address);
+  PoolMap::const_iterator it = pools_.find(address);
   if (it != pools_.end() && it->second->is_ready()) {
     const SharedRefPtr<Pool>& pool = it->second;
     Connection* connection = pool->borrow_connection();
@@ -179,15 +181,14 @@ void IOWorker::notify_pool_ready(Pool* pool) {
 }
 
 void IOWorker::notify_pool_closed(Pool* pool) {
-  Host::ConstPtr host = pool->host(); // Not a reference on purpose
-
+  Host::ConstPtr host = pool->host();
   bool is_critical_failure = pool->is_critical_failure();
   bool cancel_reconnect = pool->cancel_reconnect();
 
-  LOG_INFO("Pool for host %s closed: pool(%p) io_worker(%p)",
-           host->address_string().c_str(),
-           static_cast<void*>(pool),
-           static_cast<void*>(this));
+  LOG_DEBUG("Pool for host %s closed: pool(%p) io_worker(%p)",
+            host->address_string().c_str(),
+            static_cast<void*>(pool),
+            static_cast<void*>(this));
 
   // All non-shared pointers to this pool are invalid after this call
   // and it must be done before maybe_notify_closed().
@@ -240,7 +241,6 @@ void IOWorker::close_handles() {
   request_queue_.close_handles();
   uv_prepare_stop(&prepare_);
   uv_close(copy_cast<uv_prepare_t*, uv_handle_t*>(&prepare_), NULL);
-  LOG_DEBUG("Active handles following close: %d", loop()->active_handles);
 }
 
 void IOWorker::on_event(const IOWorkerEvent& event) {
@@ -255,7 +255,7 @@ void IOWorker::on_event(const IOWorkerEvent& event) {
     case IOWorkerEvent::REMOVE_POOL: {
       PoolMap::iterator it = pools_.find(address);
       if (it != pools_.end()) {
-        LOG_DEBUG("REMOVE_POOL event for %s closing pool(%p) io_worker(%p)",
+        LOG_DEBUG("Remove pool event for %s closing pool(%p) io_worker(%p)",
                   event.host->address_string().c_str(),
                   static_cast<void*>(it->second.get()),
                   static_cast<void*>(this));
@@ -309,9 +309,10 @@ void IOWorker::on_prepare(uv_prepare_t* prepare) {
 
 void IOWorker::schedule_reconnect(const Host::ConstPtr& host) {
   if (pools_.count(host->address()) == 0) {
-    LOG_DEBUG("Scheduling reconnect for host %s io_worker(%p)",
-              host->address_string().c_str(),
-              static_cast<void*>(this));
+    LOG_INFO("Scheduling reconnect for host %s in %u ms on io_worker(%p)",
+             host->address_string().c_str(),
+             config_.reconnect_wait_time_ms(),
+             static_cast<void*>(this));
     SharedRefPtr<Pool> pool(new Pool(this, host, false));
     pools_[host->address()] = pool;
     pool->delayed_connect();
