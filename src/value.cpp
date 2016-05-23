@@ -210,21 +210,22 @@ Value::Value(int protocol_version,
 }
 
 bool Value::as_bool() const {
-  assert(value_type() == CASS_VALUE_TYPE_BOOLEAN);
+  assert(!is_null() && value_type() == CASS_VALUE_TYPE_BOOLEAN);
   uint8_t value;
   decode_byte(data_, value);
   return value != 0;
 }
 
 int32_t Value::as_int32() const {
-  assert(value_type() == CASS_VALUE_TYPE_INT);
+  assert(!is_null() && value_type() == CASS_VALUE_TYPE_INT);
   int32_t value;
   decode_int32(data_, value);
   return value;
 }
 
 CassUuid Value::as_uuid() const {
-  assert(value_type() == CASS_VALUE_TYPE_UUID || value_type() == CASS_VALUE_TYPE_TIMEUUID);
+  assert(!is_null() && (value_type() == CASS_VALUE_TYPE_UUID ||
+                        value_type() == CASS_VALUE_TYPE_TIMEUUID));
   CassUuid value;
   decode_uuid(data_, &value);
   return value;
@@ -232,7 +233,8 @@ CassUuid Value::as_uuid() const {
 }
 
 StringVec Value::as_stringlist() const {
-  assert((value_type() == CASS_VALUE_TYPE_LIST || value_type() == CASS_VALUE_TYPE_SET) &&
+  assert(!is_null() && (value_type() == CASS_VALUE_TYPE_LIST ||
+                        value_type() == CASS_VALUE_TYPE_SET) &&
          primary_value_type() == CASS_VALUE_TYPE_VARCHAR);
   StringVec stringlist;
   CollectionIterator iterator(this);

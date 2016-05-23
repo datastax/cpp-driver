@@ -997,10 +997,11 @@ const Value* MetadataBase::add_field(const SharedRefPtr<RefBuffer>& buffer, cons
   if (value == NULL) return NULL;
   if (value->size() <= 0) {
     fields_[name] = MetadataField(name);
+    return NULL; // Return NULL for "null" columns
   } else {
     fields_[name] = MetadataField(name, *value, buffer);
+    return value;
   }
-  return value;
 }
 
 void MetadataBase::add_field(const SharedRefPtr<RefBuffer>& buffer, const Value& value, const std::string& name) {
