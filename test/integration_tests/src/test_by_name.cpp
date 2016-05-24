@@ -188,8 +188,13 @@ BOOST_AUTO_TEST_CASE(bind_and_get_prepared)
 
 BOOST_AUTO_TEST_CASE(bind_and_get)
 {
-  test_utils::CassStatementPtr statement(cass_statement_new(INSERT_BY_NAME, 4));
-  test_bind_and_get(statement);
+  if (version >= "2.1.0") {
+    test_utils::CassStatementPtr statement(cass_statement_new(INSERT_BY_NAME, 4));
+    test_bind_and_get(statement);
+  } else {
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping by_name/bind_and_get" << std::endl;
+    BOOST_REQUIRE(true);
+  }
 }
 
 BOOST_AUTO_TEST_CASE(bind_and_get_case_sensitive_prepared)
@@ -201,8 +206,13 @@ BOOST_AUTO_TEST_CASE(bind_and_get_case_sensitive_prepared)
 
 BOOST_AUTO_TEST_CASE(bind_and_get_case_sensitive)
 {
-  test_utils::CassStatementPtr statement(cass_statement_new(INSERT_BY_NAME_CASE_SENSITIVE, 4));
-  test_bind_and_get_case_sensitive(statement);
+  if (version >= "2.1.0") {
+    test_utils::CassStatementPtr statement(cass_statement_new(INSERT_BY_NAME_CASE_SENSITIVE, 4));
+    test_bind_and_get_case_sensitive(statement);
+  } else {
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping by_name/bind_and_get_case_sensitive" << std::endl;
+    BOOST_REQUIRE(true);
+  }
 }
 
 BOOST_AUTO_TEST_CASE(bind_multiple_columns)
@@ -301,8 +311,13 @@ BOOST_AUTO_TEST_CASE(null_prepared)
 
 BOOST_AUTO_TEST_CASE(null)
 {
-  test_utils::CassStatementPtr statement(cass_statement_new(INSERT_BY_NAME_NULL, 7));
-  test_null(statement);
+  if (version >= "2.1.0") {
+    test_utils::CassStatementPtr statement(cass_statement_new(INSERT_BY_NAME_NULL, 7));
+    test_null(statement);
+  } else {
+    std::cout << "Unsupported Test for Cassandra v" << version.to_string() << ": Skipping by_name/null" << std::endl;
+    BOOST_REQUIRE(true);
+  }
 }
 
 /**

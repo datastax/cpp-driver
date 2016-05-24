@@ -111,7 +111,7 @@ BOOST_AUTO_TEST_CASE(empty_credentials)
 BOOST_AUTO_TEST_CASE(bad_credentials)
 {
   const char* expected_error
-      = "had the following error on startup: Username and/or password are incorrect";
+      = "Username and/or password are incorrect";
   // Handle deprecated and removed protocol versions [CASSANDRA-10146]
   // https://issues.apache.org/jira/browse/CASSANDRA-10146
   if (version < "2.2.0") {

@@ -216,7 +216,6 @@ BOOST_AUTO_TEST_CASE(blacklist_dc)
     policy_tool.init(session.get(), 12, CASS_CONSISTENCY_EACH_QUORUM);
     policy_tool.query(session.get(), 12, CASS_CONSISTENCY_ONE);
 
-    policy_tool.show_coordinators();
     policy_tool.assert_queried(host1, 6);
     policy_tool.assert_queried(host2, 6);
     policy_tool.assert_queried(host3, 0);
@@ -240,7 +239,6 @@ BOOST_AUTO_TEST_CASE(blacklist_dc)
     policy_tool.init(session.get(), 12, CASS_CONSISTENCY_EACH_QUORUM);
     policy_tool.query(session.get(), 12, CASS_CONSISTENCY_ONE);
 
-    policy_tool.show_coordinators();
     policy_tool.assert_queried(host1, 3);
     policy_tool.assert_queried(host2, 3);
     policy_tool.assert_queried(host3, 3);

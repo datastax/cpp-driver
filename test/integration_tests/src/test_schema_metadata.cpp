@@ -1455,25 +1455,27 @@ BOOST_AUTO_TEST_CASE(indexes) {
                  "index1", CASS_INDEX_TYPE_COMPOSITES, "value1", index_options);
   }
 
-  // Index on map keys
+  // Index on map keys (C* >= 2.1)
   {
-    test_utils::execute_query(session, "CREATE INDEX index2 ON indexes.table1 (KEYS(value2))");
+    if (version >= "2.1.0") {
+      test_utils::execute_query(session, "CREATE INDEX index2 ON indexes.table1 (KEYS(value2))");
 
-    refresh_schema_meta();
-    const CassTableMeta* table_meta = schema_get_table("indexes", "table1");
+      refresh_schema_meta();
+      const CassTableMeta* table_meta = schema_get_table("indexes", "table1");
 
-    BOOST_REQUIRE(cass_table_meta_index_count(table_meta) == 2);
+      BOOST_REQUIRE(cass_table_meta_index_count(table_meta) == 2);
 
-    std::map<std::string, std::string> index_options;
-    if (version >= "3.0.0") {
-      index_options["target"] = "keys(value2)";
-    } else {
-      index_options["index_keys"] = "";
+      std::map<std::string, std::string> index_options;
+      if (version >= "3.0.0") {
+        index_options["target"] = "keys(value2)";
+      } else {
+        index_options["index_keys"] = "";
+      }
+      verify_index(cass_table_meta_index_by_name(table_meta, "index2"),
+        "index2", CASS_INDEX_TYPE_COMPOSITES, "keys(value2)", index_options);
+      verify_index(cass_table_meta_index(table_meta, 1),
+        "index2", CASS_INDEX_TYPE_COMPOSITES, "keys(value2)", index_options);
     }
-    verify_index(cass_table_meta_index_by_name(table_meta, "index2"),
-                 "index2", CASS_INDEX_TYPE_COMPOSITES, "keys(value2)", index_options);
-    verify_index(cass_table_meta_index(table_meta, 1),
-                 "index2", CASS_INDEX_TYPE_COMPOSITES, "keys(value2)", index_options);
   }
 
   // Iterator
