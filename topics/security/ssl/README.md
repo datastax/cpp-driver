@@ -90,6 +90,7 @@ keytool -exportcert -rfc -noprompt \
 ```
 
 The trusted certificate can then be loaded using the following code:
+
 ```c
 int load_trusted_cert_file(const char* file, CassSsl* ssl) {
   CassError rc;

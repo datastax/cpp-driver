@@ -710,7 +710,7 @@ typedef void (*CassFutureCallback)(CassFuture* future,
 /**
  * Maximum size of a log message
  */
-#define CASS_LOG_MAX_MESSAGE_SIZE 256
+#define CASS_LOG_MAX_MESSAGE_SIZE 1024
 
 /**
  * A log message.
