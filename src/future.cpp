@@ -96,6 +96,7 @@ const CassErrorResult* cass_future_get_error_result(CassFuture* future) {
       static_cast<cass::ResponseFuture*>(future->from());
 
   if (!response_future->is_error()) return NULL;
+  if (!response_future->response()) return NULL;
 
   cass::SharedRefPtr<cass::ErrorResponse> error_result(response_future->response());
   error_result->inc_ref();
