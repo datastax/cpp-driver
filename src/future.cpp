@@ -64,7 +64,7 @@ const CassResult* cass_future_get_result(CassFuture* future) {
     result->decode_first_row();
   }
 
-  result->inc_ref();
+  if (result) result->inc_ref();
 
   return CassResult::to(result.get());
 }
@@ -82,7 +82,7 @@ const CassPrepared* cass_future_get_prepared(CassFuture* future) {
   if (result && result->kind() == CASS_RESULT_KIND_PREPARED) {
     cass::Prepared* prepared =
         new cass::Prepared(result, response_future->statement, response_future->schema_metadata);
-    prepared->inc_ref();
+    if (prepared) prepared->inc_ref();
     return CassPrepared::to(prepared);
   }
   return NULL;
@@ -96,10 +96,9 @@ const CassErrorResult* cass_future_get_error_result(CassFuture* future) {
       static_cast<cass::ResponseFuture*>(future->from());
 
   if (!response_future->is_error()) return NULL;
-  if (!response_future->response()) return NULL;
 
   cass::SharedRefPtr<cass::ErrorResponse> error_result(response_future->response());
-  error_result->inc_ref();
+  if (error_result) error_result->inc_ref();
   return CassErrorResult::to(error_result.get());
 }
 
@@ -146,17 +145,20 @@ CassError cass_future_custom_payload_item(CassFuture* future,
   }
   cass::SharedRefPtr<cass::Response> response(
         static_cast<cass::ResponseFuture*>(future->from())->response());
-  const cass::Response::CustomPayloadVec& custom_payload
-      = response->custom_payload();
-  if (index >= custom_payload.size()) {
-    return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
+  if (response) {
+    const cass::Response::CustomPayloadVec& custom_payload =
+          response->custom_payload();
+    if (index >= custom_payload.size()) {
+      return CASS_ERROR_LIB_INDEX_OUT_OF_BOUNDS;
+    }
+    const cass::Response::CustomPayloadItem& item = custom_payload[index];
+    *name = item.name.data();
+    *name_length = item.name.size();
+    *value = reinterpret_cast<const cass_byte_t*>(item.value.data());
+    *value_size = item.value.size();
+    return CASS_OK;
   }
-  const cass::Response::CustomPayloadItem& item = custom_payload[index];
-  *name = item.name.data();
-  *name_length = item.name.size();
-  *value = reinterpret_cast<const cass_byte_t*>(item.value.data());
-  *value_size = item.value.size();
-  return CASS_OK;
+  return CASS_ERROR_LIB_INTERNAL_ERROR;
 }
 
 } // extern "C"
