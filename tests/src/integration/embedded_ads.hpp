@@ -17,7 +17,7 @@
 #define __TEST_EMBEDDED_ADS_HPP__
 #include "exception.hpp"
 #include "options.hpp"
-#include "utils.hpp"
+#include "test_utils.hpp"
 
 #include "scoped_lock.hpp"
 
@@ -68,9 +68,11 @@ public:
     // Unable to execute ADS locally and use remote DSE cluster
     throw Exception("ADS Server will not be Created: Must run locally with DSE cluster");
 #endif
+#ifdef CASS_USE_LIBSSH2
     if (Options::deployment_type() == CCM::DeploymentType::REMOTE) {
       throw Exception("ADS Server will not be Created: Must run locally with DSE cluster");
     }
+#endif
 
     // Initialize the mutex
     uv_mutex_init(&mutex_);

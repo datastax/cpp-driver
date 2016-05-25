@@ -27,7 +27,8 @@
 #include "bridge.hpp"
 #include "logger.hpp"
 #include "objects.hpp"
-#include "utils.hpp"
+#include "pretty_print.hpp"
+#include "test_utils.hpp"
 #include "values.hpp"
 
 #define SKIP_TEST(message) \
@@ -136,6 +137,10 @@ protected:
    */
   unsigned short replication_factor_;
   /**
+   * Replication configuration strategy
+   */
+  std::string replication_strategy_;
+  /**
    * Default contact points generated based on the number of nodes requested
    */
   std::string contact_points_;
@@ -170,6 +175,10 @@ protected:
    */
   bool is_session_requested_;
   /**
+   * Workload to apply to the cluster
+   */
+  CCM::DseWorkload dse_workload_;
+  /**
    * Name of the test case/suite
    */
   std::string test_case_name_;
@@ -179,12 +188,17 @@ protected:
   std::string test_name_;
 
   /**
-   * Create the cluster configuration and establish the session connection using
-   * provided cluster object.
+   * Establish the session connection using provided cluster object.
    *
    * @param cluster Cluster object to use when creating session connection
    */
-  void connect(Cluster cluster);
+  virtual void connect(Cluster cluster);
+
+  /**
+   * Create the cluster configuration and establish the session connection using
+   * provided cluster object.
+   */
+  virtual void connect();
 
   /**
    * Generate the contact points for the cluster

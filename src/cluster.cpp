@@ -14,10 +14,10 @@
   limitations under the License.
 */
 
+#include "dse.h"
+
 #include "auth.hpp"
 #include "cluster.hpp"
-
-#include "dse.h"
 
 static void dse_plaintext_authenticator_cleanup(void* data) {
   delete static_cast<dse::PlaintextAuthenticatorData*>(data);

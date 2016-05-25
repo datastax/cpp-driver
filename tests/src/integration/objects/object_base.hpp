@@ -93,6 +93,16 @@ public:
     return object_.get() != NULL;
   }
 
+  /**
+   * Conversion operator for determining if the pointer used for the object is
+   * valid
+   *
+   * @return True if object pointer is valid; false otherwise
+   */
+  operator bool() {
+    return object_.get() != NULL;
+  }
+
 protected:
   /**
    * Create an empty object

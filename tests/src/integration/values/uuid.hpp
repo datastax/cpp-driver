@@ -16,6 +16,8 @@
 #ifndef __TEST_UUID_HPP__
 #define __TEST_UUID_HPP__
 #include "value_interface.hpp"
+#include "exception.hpp"
+#include "test_utils.hpp"
 
 #ifdef min
 #undef min
@@ -32,22 +34,44 @@ namespace driver {
  */
 class Uuid : public COMPARABLE_VALUE_INTERFACE(CassUuid, Uuid) {
 public:
-  Uuid(CassUuid uuid)
-    : uuid_(uuid) {
+  Uuid()
+    : is_null_(true) {
     set_uuid_string();
   }
 
-  Uuid(const CassValue* value) {
+  Uuid(CassUuid uuid)
+    : uuid_(uuid)
+    , is_null_(false) {
+    set_uuid_string();
+  }
+
+  Uuid(const CassValue* value)
+    : is_null_(false) {
     initialize(value);
     set_uuid_string();
   }
 
-  Uuid(const std::string& value) {
-    EXPECT_EQ(CASS_OK, cass_uuid_from_string(value.c_str(), &uuid_));
+  Uuid(const std::string& value)
+    : is_null_(false) {
+    std::string value_trim = Utils::trim(value);
+    bool is_valid = true;
+
+    // Determine if the value is NULL or valid (default is 0 otherwise)
+    if (value_trim.empty() ||
+      value_trim.compare("null") == 0) {
+      is_null_ = true;
+    } else if (cass_uuid_from_string(value_trim.c_str(), &uuid_) != CASS_OK) {
+      is_valid = false;
+    }
+
     set_uuid_string();
+    if (!is_valid) {
+      LOG_ERROR("Invalid UUID " << value_trim << ": Using default " << str());
+    }
   }
 
-  Uuid(const CassRow* row, size_t column_index) {
+  Uuid(const CassRow* row, size_t column_index)
+    : is_null_(false) {
     initialize(row, column_index);
     set_uuid_string();
   }
@@ -87,11 +111,20 @@ public:
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
   virtual int compare(const Uuid& rhs) const {
+    if (is_null_ && rhs.is_null_) return 0;
     return compare(rhs.uuid_);
   }
 
   void statement_bind(Statement statement, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_uuid(statement.get(), index, uuid_));
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_statement_bind_null(statement.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK, cass_statement_bind_uuid(statement.get(), index, uuid_));
+    }
+  }
+
+  bool is_null() const {
+    return is_null_;
   }
 
   virtual std::string str() const {
@@ -124,11 +157,10 @@ protected:
    * Native driver value as string
    */
   std::string uuid_string_;
-
   /**
-   * Enable default constructor for inherited class
+   * Flag to determine if value is NULL
    */
-  Uuid() {}
+  bool is_null_;
 
   virtual void initialize(const CassValue* value) {
     // Ensure the value types
@@ -142,8 +174,13 @@ protected:
       << "Invalid Data Type: Value->DataType is not a UUID";
 
     // Get the UUID
-    ASSERT_EQ(CASS_OK, cass_value_get_uuid(value, &uuid_))
-      << "Unable to Get Uuid: Invalid error code returned";
+    if (cass_value_is_null(value)) {
+      is_null_ = true;
+    } else {
+      ASSERT_EQ(CASS_OK, cass_value_get_uuid(value, &uuid_))
+        << "Unable to Get Uuid: Invalid error code returned";
+      is_null_ = false;
+    }
   }
 
   virtual void initialize(const CassRow* row, size_t column_index) {
@@ -155,9 +192,13 @@ protected:
    * Set the string value of the UUID
    */
   void set_uuid_string() {
-    char buffer[CASS_UUID_STRING_LENGTH];
-    cass_uuid_string(uuid_, buffer);
-    uuid_string_ = buffer;
+    if (is_null_) {
+      uuid_string_ = "null";
+    } else {
+      char buffer[CASS_UUID_STRING_LENGTH];
+      cass_uuid_string(uuid_, buffer);
+      uuid_string_ = buffer;
+    }
   }
 };
 
@@ -166,10 +207,15 @@ protected:
  */
 class TimeUuid : public Uuid {
 public:
+  TimeUuid()
+    : Uuid() {}
+
   TimeUuid(CassUuid uuid)
     : Uuid(uuid) {}
 
-  TimeUuid(const CassValue* value) {
+  TimeUuid(const CassValue* value)
+    : Uuid() {
+    is_null_ = false;
     initialize(value);
     set_uuid_string();
   }
@@ -177,7 +223,9 @@ public:
   TimeUuid(const std::string& value)
     : Uuid(value) {}
 
-  TimeUuid(const CassRow* row, size_t column_index) {
+  TimeUuid(const CassRow* row, size_t column_index)
+    : Uuid() {
+    is_null_ = false;
     initialize(row, column_index);
     set_uuid_string();
   }
@@ -232,8 +280,13 @@ protected:
       << "Invalid Data Type: Value->DataType is not a time UUID";
 
     // Get the time UUID
-    ASSERT_EQ(CASS_OK, cass_value_get_uuid(value, &uuid_))
-      << "Unable to Get Uuid: Invalid error code returned";
+    if (cass_value_is_null(value)) {
+      is_null_ = true;
+    } else {
+      ASSERT_EQ(CASS_OK, cass_value_get_uuid(value, &uuid_))
+        << "Unable to Get Uuid: Invalid error code returned";
+      is_null_ = false;
+    }
   }
 
   void initialize(const CassRow* row, size_t column_index) {

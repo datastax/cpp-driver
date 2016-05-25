@@ -20,6 +20,7 @@
 #include "dse.h"
 
 #include "dse_objects.hpp"
+#include "dse_pretty_print.hpp"
 #include "dse_values.hpp"
 
 /**
@@ -27,6 +28,30 @@
  * tests
  */
 class DseIntegration : public Integration {
+public:
+
+  DseIntegration();
+
+  virtual void SetUp();
+
+  /**
+   * Establish the session connection using provided cluster object.
+   *
+   * @param cluster Cluster object to use when creating session connection
+   */
+  virtual void connect(Cluster cluster);
+
+  /**
+   * Create the cluster configuration and establish the session connection using
+   * provided cluster object.
+   */
+  virtual void connect();
+
+protected:
+  /**
+   * Connected database DSE session
+   */
+  DseSession dse_session_;
 };
 
 #endif //__DSE_INTEGRATION_HPP__

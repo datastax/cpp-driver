@@ -74,6 +74,15 @@ public:
   static bool file_exists(const std::string& filename);
 
   /**
+   * Indent a string that is delimited by newline characters
+   *
+   * @param input String to indent
+   * @param indent Number of characters/spaces to indent
+   * @return Indented string
+   */
+  static std::string indent(const std::string& input, unsigned int indent);
+
+  /**
    * Concatenate an array/vector into a string
    *
    * @param elements Array/Vector elements to concatenate
@@ -108,6 +117,18 @@ public:
    */
   static std::string replace_all(const std::string& input,
     const std::string& from, const std::string& to);
+
+  /**
+   * Reduce/Shorten a multi-line string into a single line string
+   *
+   * @param input String to reduce/shorten
+   * @param add_space_after_newline True if space should be used as a
+   *                                replacement for the newline character; false
+   *                                otherwise
+   * @return Single line string converted from multi-line string
+   */
+  static std::string shorten(const std::string& input,
+    bool add_space_after_newline = true);
 
   /**
    * Convert a string to lowercase

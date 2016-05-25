@@ -13,7 +13,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-#include "utils.hpp"
+#include "test_utils.hpp"
 
 #include "exception.hpp"
 
@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <fcntl.h>
+#include <iomanip>
 #include <sstream>
 #ifndef _WIN32
 # include <time.h>
@@ -67,6 +68,21 @@ bool test::Utils::file_exists(const std::string& filename) {
   int error_code = uv_fs_open(NULL, &request, filename.c_str(), O_RDONLY, 0, NULL);
   uv_fs_req_cleanup(&request);
   return error_code != UV_ENOENT;
+}
+
+std::string test::Utils::indent(const std::string& input, unsigned int indent) {
+  std::stringstream output;
+
+  // Iterate over each line in the input string and indent
+  std::vector<std::string> lines = explode(input, '\n');
+  for (std::vector<std::string>::iterator iterator = lines.begin();
+    iterator < lines.end(); ++iterator) {
+    output << std::setw(indent) << "" << *iterator;
+    if ((iterator + 1) != lines.end()) {
+      output << std::endl;
+    }
+  }
+  return output.str();
 }
 
 std::string test::Utils::implode(const std::vector<std::string>& elements,
@@ -125,6 +141,25 @@ std::string test::Utils::replace_all(const std::string& input,
     // Handle the case where 'to' is a substring of 'from'
     position += to.length();
   }
+  return result;
+}
+
+std::string test::Utils::shorten(const std::string& input,
+  bool add_space_after_newline /*= true*/) {
+  std::string result = input;
+
+  // Iterate over each trim delimiter
+  std::string delimiters = TRIM_DELIMETERS;
+  for (std::string::iterator iterator = delimiters.begin();
+    iterator < delimiters.end(); ++iterator) {
+    // Replace the trim delimiter with empty string (space if EOL)
+    std::string delimiter(1, *iterator);
+    std::string newline_replacement = add_space_after_newline ? " " : "";
+    std::string replacement = delimiter.compare("\n") == 0 ? newline_replacement : "";
+    result = replace_all(result, delimiter, replacement);
+  }
+
+  // Return the single line string
   return result;
 }
 

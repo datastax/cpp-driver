@@ -22,12 +22,13 @@
 
 #define FORMAT_BUFFER_SIZE 10240
 #define KEYSPACE_MAXIMUM_LENGTH 48
-#define SIMPLE_KEYSPACE_FORMAT "CREATE KEYSPACE %s WITH replication = { 'class': %s }"
+#define SIMPLE_KEYSPACE_FORMAT "CREATE KEYSPACE %s WITH replication = %s"
+#define REPLICATION_STRATEGY "{ 'class': %s }"
 #define SELECT_SERVER_VERSION "SELECT release_version FROM system.local"
 
 Integration::Integration()
   : ccm_(NULL)
-  , session_(NULL)
+  , session_()
   , keyspace_name_("")
   , table_name_("")
   , uuid_generator_()
@@ -35,13 +36,15 @@ Integration::Integration()
   , replication_factor_(0)
   , number_dc1_nodes_(1)
   , number_dc2_nodes_(0)
+  , replication_strategy_("")
   , contact_points_("")
   , is_client_authentication_(false)
   , is_ssl_(false)
   , is_schema_metadata_(false)
   , create_keyspace_query_("")
   , is_ccm_start_requested_(true)
-  , is_session_requested_(true) {
+  , is_session_requested_(true)
+  , dse_workload_(CCM::DseWorkload::DSE_WORKLOAD_CASSANDRA) {
   // Get the name of the test and the case/suite it belongs to
   const testing::TestInfo* test_information = testing::UnitTest::GetInstance()->current_test_info();
   test_name_ = test_information->name();
@@ -79,7 +82,7 @@ Integration::Integration()
 
 Integration::~Integration() {
   try {
-    session_.close();
+    session_.close(false);
   } catch (...) {}
 }
 
@@ -98,9 +101,9 @@ void Integration::SetUp() {
   // Generate the table name
   table_name_ = to_lower(test_name_);
 
-  // Determine the replication strategy and generate the keyspace query
+  // Determine the replication strategy
   std::stringstream replication_strategy;
-  if (number_dc1_nodes_ > 0) {
+  if (number_dc2_nodes_ > 0) {
     replication_strategy << "'NetworkTopologyStrategy', 'dc1': " <<
                             number_dc1_nodes_ << ", " <<
                             "'dc2': " << number_dc2_nodes_;
@@ -112,9 +115,13 @@ void Integration::SetUp() {
     }
     replication_strategy << replication_factor_;
   }
+  replication_strategy_ = format_string(REPLICATION_STRATEGY,
+                                        replication_strategy.str().c_str());
+
+  // Generate the keyspace query
   create_keyspace_query_ = format_string(SIMPLE_KEYSPACE_FORMAT,
                                          keyspace_name_.c_str(),
-                                         replication_strategy.str().c_str());
+                                         replication_strategy_.c_str());
 
   try {
     //Create and start the CCM cluster (if not already created)
@@ -140,12 +147,8 @@ void Integration::SetUp() {
                       number_dc1_nodes_ + number_dc2_nodes_);
 
     // Determine if the session connection should be established
-    if (is_session_requested_) {
-      // Create the cluster configuration and establish the session connection
-      cluster_ = Cluster::build()
-        .with_contact_points(contact_points_)
-        .with_schema_metadata(is_schema_metadata_ ? cass_true : cass_false);
-      connect(cluster_);
+    if (is_session_requested_ && is_ccm_start_requested_) {
+      connect();
     }
   } catch (CCM::BridgeException be) {
     // Issue creating the CCM bridge instance (force failure)
@@ -175,6 +178,14 @@ void Integration::connect(Cluster cluster) {
   std::stringstream use_keyspace_query;
   use_keyspace_query << "USE " << keyspace_name_;
   session_.execute(use_keyspace_query.str());
+}
+
+void Integration::connect() {
+  // Create the cluster configuration and establish the session connection
+  cluster_ = Cluster::build()
+    .with_contact_points(contact_points_)
+    .with_schema_metadata(is_schema_metadata_ ? cass_true : cass_false);
+  connect(cluster_);
 }
 
 std::string Integration::generate_contact_points(const std::string& ip_prefix,

@@ -19,7 +19,7 @@
 
 #include "objects/object_base.hpp"
 
-#include "values.hpp"
+#include "values/uuid.hpp"
 
 namespace test {
 namespace driver {

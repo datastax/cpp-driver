@@ -15,13 +15,14 @@
 */
 #include "dse_integration.hpp"
 #include "embedded_ads.hpp"
+#include "options.hpp"
+
 
 //TODO: Update test to work with remote deployments
 #ifdef _WIN32
 # define CHECK_FOR_KERBEROS_SKIPPED_TEST \
     SKIP_TEST("This test cannot currently run on Windows");
 #else
-# include "options.hpp"
 # define CHECK_FOR_KERBEROS_SKIPPED_TEST \
     if (Options::deployment_type() == CCM::DeploymentType::REMOTE) { \
       SKIP_TEST("This test cannot currently run using remote deployment"); \
@@ -59,20 +60,22 @@ public:
 
   void SetUp() {
     //TODO: Update test to work with remote deployments
-  // Ensure test can run for current configuration
+    // Ensure test can run for current configuration
 #ifdef _WIN32
     return;
 #endif
+#ifdef CASS_USE_LIBSSH2
     if (Options::deployment_type() == CCM::DeploymentType::REMOTE) {
       return;
     }
+#endif
     CHECK_CONTINUE(ads_->is_initialized(),
         "Correct missing components for proper ADS launching");
 
-    // Call the parent setup class (override the CCM startup and session connection)
+    // Call the parent setup function (override startup and session connection)
     is_ccm_start_requested_ = false;
     is_session_requested_ = false;
-    Integration::SetUp();
+    DseIntegration::SetUp();
   }
 
   void TearDown() {
@@ -209,7 +212,7 @@ bool AuthIntegrationTest::is_ads_available_ = false;
  * @jira_ticket CPP-350
  * @test_category dse:auth
  * @since 1.0.0
- * @expect_result Successful connection and query execution
+ * @expected_result Successful connection and query execution
  */
 TEST_F(AuthIntegrationTest, KerberosAuthentication) {
   CHECK_FOR_KERBEROS_SKIPPED_TEST;
@@ -291,7 +294,7 @@ TEST_F(AuthIntegrationTest, KerberosAuthenticationFailureNoTicket) {
  * @test_category dse:auth
  * @since 1.0.0
  * @dse_version 5.0.0
- * @expect_result Successful connection and query execution
+ * @expected_result Successful connection and query execution
  */
 TEST_F(AuthIntegrationTest, InternalAuthentication) {
   CHECK_VERSION(5.0.0);

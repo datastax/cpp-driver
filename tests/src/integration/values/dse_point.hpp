@@ -38,18 +38,26 @@ public:
       : test::Exception(message) {};
   };
 
-  DsePoint(cass_double_t x, cass_double_t y) {
+  DsePoint()
+    : is_null_(true) {
+    set_point_string();
+  }
+
+  DsePoint(cass_double_t x, cass_double_t y)
+    : is_null_(false) {
     point_.x = x;
     point_.y = y;
     set_point_string();
   }
 
   DsePoint(Point point)
-    : point_(point) {
+    : point_(point)
+    , is_null_(false) {
     set_point_string();
   }
 
-  DsePoint(const CassValue* value) {
+  DsePoint(const CassValue* value)
+    : is_null_(false) {
     initialize(value);
     set_point_string();
   }
@@ -57,11 +65,17 @@ public:
   /**
    * @throws DsePoint::Exception
    */
-  DsePoint(const std::string& value) {
-    //Convert the value
-    if (!value.empty()) {
+  DsePoint(const std::string& value)
+    : is_null_(false) {
+    std::string value_trim = Utils::trim(Utils::to_lower(value));
+
+    // Determine if the value is NULL or valid
+    if (value_trim.empty() ||
+      value_trim.compare("null") == 0) {
+      is_null_ = true;
+    } else {
       // Strip all value information markup for a DSE point
-      std::string point_value = Utils::replace_all(value, "POINT", "");
+      std::string point_value = Utils::replace_all(value_trim, "point", "");
       point_value = Utils::replace_all(point_value, "(", "");
       point_value = Utils::trim(Utils::replace_all(point_value, ")", ""));
 
@@ -86,10 +100,12 @@ public:
         throw Exception(message.str());
       }
     }
+
     set_point_string();
   }
 
-  DsePoint(const CassRow* row, size_t column_index) {
+  DsePoint(const CassRow* row, size_t column_index)
+    : is_null_(false) {
     initialize(row, column_index);
     set_point_string();
   }
@@ -103,6 +119,9 @@ public:
   }
 
   std::string cql_value() const {
+    if (is_null_) {
+      return point_string_;
+    }
     return "'POINT(" + point_string_ + ")'";
   }
 
@@ -129,11 +148,20 @@ public:
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
   int compare(const DsePoint& rhs) const {
+    if (is_null_ && rhs.is_null_) return 0;
     return compare(rhs.point_);
   }
 
   void statement_bind(Statement statement, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_dse_point(statement.get(), index, point_.x, point_.y));
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_statement_bind_null(statement.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK, cass_statement_bind_dse_point(statement.get(), index, point_.x, point_.y));
+    }
+  }
+
+  bool is_null() const {
+    return is_null_;
   }
 
   std::string str() const {
@@ -157,6 +185,10 @@ private:
    * Wrapped native driver value as string
    */
   std::string point_string_;
+  /**
+   * Flag to determine if value is NULL
+   */
+  bool is_null_;
 
   void initialize(const CassValue* value) {
     // Ensure the value types
@@ -169,9 +201,13 @@ private:
     ASSERT_EQ(CASS_VALUE_TYPE_CUSTOM, value_type)
       << "Invalid Data Type: Value->DataType is not a DSE point (custom)";
 
-    // Get the DSE type
-    ASSERT_EQ(CASS_OK, cass_value_get_dse_point(value, &point_.x, &point_.y))
-      << "Unable to Get DSE Point: Invalid error code returned";
+    // Get the DSE point type
+    if (cass_value_is_null(value)) {
+      is_null_ = true;
+    } else {
+      ASSERT_EQ(CASS_OK, cass_value_get_dse_point(value, &point_.x, &point_.y))
+        << "Unable to Get DSE Point: Invalid error code returned";
+    }
   }
 
   void initialize(const CassRow* row, size_t column_index) {
@@ -183,9 +219,13 @@ private:
    * Set the string value of the DSE point
    */
   void set_point_string() {
-    std::stringstream point_string;
-    point_string << point_.x << " " << point_.y;
-    point_string_ = point_string.str();
+    if (is_null_) {
+      point_string_ = "null";
+    } else {
+      std::stringstream point_string;
+      point_string << point_.x << " " << point_.y;
+      point_string_ = point_string.str();
+    }
   }
 };
 

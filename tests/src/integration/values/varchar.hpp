@@ -25,18 +25,36 @@ namespace driver {
  */
 class Varchar : public COMPARABLE_VALUE_INTERFACE(std::string, Varchar) {
 public:
-  Varchar(std::string varchar)
-    : varchar_(varchar) {}
-
-  Varchar(const char* varchar)
-    : varchar_(varchar) {}
-
-  Varchar(const CassValue* value) {
-    initialize(value);
+  Varchar()
+    : varchar_("")
+    , is_null_(true) {
+    update_value_if_null();
   }
 
-  Varchar(const CassRow* row, size_t column_index) {
+  Varchar(const std::string& varchar)
+    : varchar_(varchar)
+    , is_null_(false) {
+
+    // Determine if the value is NULL
+    if (varchar.compare("null") == 0) {
+      is_null_ = true;
+    }
+
+    update_value_if_null();
+  }
+
+  Varchar(const CassValue* value)
+    : varchar_("")
+    , is_null_(false) {
+    initialize(value);
+    update_value_if_null();
+  }
+
+  Varchar(const CassRow* row, size_t column_index)
+    : varchar_("")
+    , is_null_(false) {
     initialize(row, column_index);
+    update_value_if_null();
   }
 
   virtual const char* c_str() const {
@@ -48,6 +66,7 @@ public:
   }
 
   virtual std::string cql_value() const {
+    if (is_null_) return varchar_;
     return "'" + varchar_ + "'";
   }
 
@@ -68,11 +87,20 @@ public:
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
   virtual int compare(const Varchar& rhs) const {
+    if (is_null_ && rhs.is_null_) return 0;
     return compare(rhs.varchar_);
   }
 
   void statement_bind(Statement statement, size_t index) {
-    ASSERT_EQ(CASS_OK, cass_statement_bind_string(statement.get(), index, varchar_.c_str()));
+    if (is_null_) {
+      ASSERT_EQ(CASS_OK, cass_statement_bind_null(statement.get(), index));
+    } else {
+      ASSERT_EQ(CASS_OK, cass_statement_bind_string(statement.get(), index, varchar_.c_str()));
+    }
+  }
+
+  virtual bool is_null() const {
+    return is_null_;
   }
 
   virtual std::string str() const {
@@ -87,11 +115,24 @@ public:
     return CASS_VALUE_TYPE_VARCHAR;
   }
 
+  /**
+   * Update the value if value is NULL; sets native driver value appropriately
+   */
+  virtual void update_value_if_null() {
+    if (is_null_) {
+      varchar_ = "null";
+    }
+  }
+
 protected:
   /**
    * Native driver value
    */
   std::string varchar_;
+  /**
+   * Flag to determine if value is NULL
+   */
+  bool is_null_;
 
   virtual void initialize(const CassValue* value) {
     // Ensure the value types
@@ -105,11 +146,16 @@ protected:
       << "Invalid Data Type: Value->DataType is not a Varchar";
 
     // Get the Varchar
-    const char* string = NULL;
-    size_t length;
-    ASSERT_EQ(CASS_OK, cass_value_get_string(value, &string, &length))
-      << "Unable to Get Varchar: Invalid error code returned";
-    varchar_ = std::string(string, length);
+    if (cass_value_is_null(value)) {
+      is_null_ = true;
+    } else {
+      const char* string = NULL;
+      size_t length;
+      ASSERT_EQ(CASS_OK, cass_value_get_string(value, &string, &length))
+        << "Unable to Get Varchar: Invalid error code returned";
+      varchar_ = std::string(string, length);
+      is_null_ = false;
+    }
   }
 
   virtual void initialize(const CassRow* row, size_t column_index) {
@@ -131,6 +177,9 @@ public:
 
   Text(const CassValue* value)
     : Varchar(value) {}
+
+  Text(Varchar varchar)
+    : Varchar(varchar) {}
 
   Text(const CassRow* row, size_t column_index)
     : Varchar(row, column_index) {}
