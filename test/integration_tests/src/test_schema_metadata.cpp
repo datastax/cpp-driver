@@ -1413,6 +1413,94 @@ BOOST_AUTO_TEST_CASE(frozen_types) {
 }
 
 /**
+ * Ensure UDA/UDF lookups are possible against C* 2.2+
+ *
+ * This test will ensure that UDA and UDF metadata can be accessed through the
+ * by_name lookup methods. C* 2.2.x does not augment the arguments or return
+ * types of collections with the frozen<> where C* 3.x does. This tests ensures
+ * that regardless of the version of C*, lookup is still possible given the
+ * correct arguments (frozen<> or not) for aggregates and functions.
+ *
+ * @test_category functions
+ * @since 2.4.0
+ * @expected_result UDA and UDF can be looked up correctly
+ */
+BOOST_AUTO_TEST_CASE(lookup) {
+  if (version < "2.1.0") return;
+
+  test_utils::execute_query(session, "CREATE KEYSPACE lookup WITH replication = "
+    "{ 'class' : 'SimpleStrategy', 'replication_factor' : 3 }");
+  refresh_schema_meta();
+
+  // See https://docs.datastax.com/en/cql/3.3/cql/cql_using/useCreateUDF.html
+  // and https://docs.datastax.com/en/cql/3.3/cql/cql_using/useCreateUDA.html
+  {
+    // Frozen added to arguments and return types in C* 3.0.0 by default for collections
+    test_utils::execute_query(session, "CREATE OR REPLACE FUNCTION lookup.avg_state(state tuple<int, bigint>, val int) "
+      "CALLED ON NULL INPUT RETURNS tuple<int, bigint> "
+      "LANGUAGE java AS 'if (val !=null) { state.setInt(0, state.getInt(0) + 1); state.setLong(1, state.getLong(1) + val.intValue()); } return state;'");
+    refresh_schema_meta();
+
+    // Create the function arguments for the avg_state function
+    std::string func_args = "tuple<int, bigint>";
+    if (version >= "3.0.0") {
+      // Argument data stored in C* 3.0.0 is frozen<tuple<int, bigint>>, int
+      func_args = "frozen<" + func_args + ">";
+    }
+    func_args += ", int";
+
+    // Ensure the function can be looked up and validate arguments and return
+    const CassFunctionMeta* func_meta = cass_keyspace_meta_function_by_name(
+      schema_get_keyspace("lookup"),
+      "avg_state",
+      func_args.c_str());
+    BOOST_REQUIRE(func_meta);
+    const CassDataType* datatype = cass_function_meta_argument_type_by_name(func_meta, "state");
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_TUPLE, cass_data_type_type(datatype));
+    BOOST_CHECK(cass_data_type_is_frozen(datatype));
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_INT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 0)));
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_BIGINT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 1)));
+    datatype = cass_function_meta_argument_type_by_name(func_meta, "val");
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_INT, cass_data_type_type(datatype));
+    datatype = cass_function_meta_return_type(func_meta);
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_TUPLE, cass_data_type_type(datatype));
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_INT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 0)));
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_BIGINT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 1)));
+
+    test_utils::execute_query(session, "CREATE OR REPLACE FUNCTION lookup.avg_final(state tuple<int, bigint>) "
+      "CALLED ON NULL INPUT RETURNS double "
+      "LANGUAGE java AS 'double r = 0; if (state.getInt(0) == 0) return null; r = state.getLong(1); r /= state.getInt(0); return Double.valueOf(r);'");
+    test_utils::execute_query(session, "CREATE AGGREGATE IF NOT EXISTS lookup.average (int) "
+      "SFUNC avg_state STYPE tuple<int, bigint> "
+      "FINALFUNC avg_final INITCOND (0, 0);");
+    refresh_schema_meta();
+
+    // Ensure the aggregate can be looked up and validated
+    const CassAggregateMeta* agg_meta = cass_keyspace_meta_aggregate_by_name(
+      schema_get_keyspace("lookup"),
+      "average",
+      "int");
+    BOOST_REQUIRE(agg_meta);
+    datatype = cass_aggregate_meta_argument_type(agg_meta, 0);
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_INT, cass_data_type_type(datatype));
+    datatype = cass_aggregate_meta_state_type(agg_meta);
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_TUPLE, cass_data_type_type(datatype));
+    BOOST_CHECK(cass_data_type_is_frozen(datatype));
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_INT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 0)));
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_BIGINT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 1)));
+    datatype = cass_aggregate_meta_return_type(agg_meta);
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_DOUBLE, cass_data_type_type(datatype));
+    func_meta = cass_aggregate_meta_state_func(agg_meta);
+    BOOST_CHECK_EQUAL(1, cass_function_meta_argument_count(func_meta));
+    datatype = cass_function_meta_argument_type_by_name(func_meta, "state");
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_TUPLE, cass_data_type_type(datatype));
+    BOOST_CHECK(cass_data_type_is_frozen(datatype));
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_INT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 0)));
+    BOOST_CHECK_EQUAL(CASS_VALUE_TYPE_BIGINT, cass_data_type_type(cass_data_type_sub_data_type(datatype, 1)));
+  }
+}
+
+/**
  * Test secondary indexes
  *
  * Verifies that index metadata is correctly updated and returned.
