@@ -35,7 +35,7 @@ include(FindPackageHandleStandardArgs)
 # Input: CASS_INCLUDES and CASS_LIBS
 # Output: CASS_INCLUDES and CASS_LIBS
 #------------------------
-function(CassUseLibuv)
+macro(CassUseLibuv)
   # Setup the paths and hints for libuv
   set(_LIBUV_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/libuv/")
   set(_LIBUV_ROOT_HINTS ${LIBUV_ROOT_DIR} $ENV{LIBUV_ROOT_DIR})
@@ -60,9 +60,9 @@ function(CassUseLibuv)
     LIBUV_INCLUDE_DIR)
 
   # Assign libuv include and libraries
-  set(CASS_INCLUDES ${CASS_INCLUDES} ${LIBUV_INCLUDE_DIR} PARENT_SCOPE)
-  set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARY} PARENT_SCOPE)
-endfunction()
+  set(CASS_INCLUDES ${CASS_INCLUDES} ${LIBUV_INCLUDE_DIR})
+  set(CASS_LIBS ${CASS_LIBS} ${LIBUV_LIBRARY})
+endmacro()
 
 #------------------------
 # Optional Dependencies
@@ -79,7 +79,7 @@ set(CASS_MINIMUM_BOOST_VERSION 1.55.0)
 # Input: CASS_USE_STATIC_LIBS, CASS_USE_BOOST_ATOMIC, CASS_INCLUDES, CASS_LIBS
 # Output: CASS_INCLUDES and CASS_LIBS
 #------------------------
-function(CassUseBoost)
+macro(CassUseBoost)
 
   # Allow for boost directory to be specified on the command line
   set(ENV{BOOST_ROOT} "${PROJECT_SOURCE_DIR}/lib/boost/")
@@ -111,8 +111,8 @@ function(CassUseBoost)
     endif()
 
     # Assign Boost include and libraries
-    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS} PARENT_SCOPE)
-    set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES} PARENT_SCOPE)
+    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
+    set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES})
   endif()
 
   # Determine if Boost components are available for test executables
@@ -123,8 +123,8 @@ function(CassUseBoost)
     endif()
 
     # Assign Boost include and libraries
-    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS} PARENT_SCOPE)
-    set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES} PARENT_SCOPE)
+    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
+    set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES})
   endif()
 
   # Determine if additional Boost definitions are required for driver/executables
@@ -138,7 +138,7 @@ function(CassUseBoost)
     # Handle redefinition warning of BOOST_NO_CXX11_RVALUE_REFERENCES
     add_definitions(-DBOOST_NO_CXX11_RVALUE_REFERENCES)
   endif()
-endfunction()
+endmacro()
 
 #------------------------
 # CassUseSparseHash
@@ -148,7 +148,7 @@ endfunction()
 # Input: CASS_INCLUDES
 # Output: CASS_INCLUDES
 #------------------------
-function(CassUseSparseHash)
+macro(CassUseSparseHash)
   # Setup the paths and hints for sparsehash
   set(_SPARSEHASH_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/sparsehash/")
   set(_SPARSEHASH_ROOT_HINTS ${SPARSEHASH_ROOT_DIR} $ENV{SPARSEHASH_ROOT_DIR})
@@ -167,12 +167,12 @@ function(CassUseSparseHash)
   find_package_handle_standard_args(SparseJash "Could NOT find sparsehash, try to set the path to the sparsehash root folder in the system variable SPARSEHASH_ROOT_DIR"
     SPARSEHASH_INCLUDE_DIR)
 
-  set(CASS_INCLUDES ${CASS_INCLUDES} ${SPARSEHASH_INCLUDE_DIR} PARENT_SCOPE)
+  set(CASS_INCLUDES ${CASS_INCLUDES} ${SPARSEHASH_INCLUDE_DIR})
 
   if (SPARSEHASH_INCLUDE_DIR)
     add_definitions("-DCASS_USE_SPARSEHASH")
   endif()
-endfunction()
+endmacro()
 
 #------------------------
 # CassUseOpenSSL
@@ -182,7 +182,7 @@ endfunction()
 # Input: CASS_INCLUDES and CASS_LIBS
 # Output: CASS_INCLUDES and CASS_LIBS
 #------------------------
-function(CassUseOpenSSL)
+macro(CassUseOpenSSL)
   # Setup the paths and hints for OpenSSL
   set(_OPENSSL_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/openssl/")
   set(_OPENSSL_ROOT_HINTS ${OPENSSL_ROOT_DIR} $ENV{OPENSSL_ROOT_DIR})
@@ -193,9 +193,9 @@ function(CassUseOpenSSL)
   # Discover OpenSSL and assign OpenSSL include and libraries
   find_package(OpenSSL REQUIRED)
 
-  set(CASS_INCLUDES ${CASS_INCLUDES} ${OPENSSL_INCLUDE_DIR} PARENT_SCOPE)
-  set(CASS_LIBS ${CASS_LIBS} ${OPENSSL_LIBRARIES} PARENT_SCOPE)
-endfunction()
+  set(CASS_INCLUDES ${CASS_INCLUDES} ${OPENSSL_INCLUDE_DIR})
+  set(CASS_LIBS ${CASS_LIBS} ${OPENSSL_LIBRARIES})
+endmacro()
 
 #------------------------
 # CassUseTcmalloc
@@ -205,7 +205,7 @@ endfunction()
 # Input: CASS_LIBS
 # Output: CASS_LIBS
 #------------------------
-function(CassUseTcmalloc)
+macro(CassUseTcmalloc)
   # Setup the paths and hints for gperftools
   set(_GPERFTOOLS_ROOT_PATHS "${PROJECT_SOURCE_DIR}/lib/gperftools/")
   set(_GPERFTOOLS_ROOT_HINTS ${GPERFTOOLS_ROOT_DIR} $ENV{GPERFTOOLS_ROOT_DIR})
@@ -225,8 +225,8 @@ function(CassUseTcmalloc)
     GPERFLIBRARY_LIBRARY)
 
   # Assign gperftools (tcmalloc) library
-  set(CASS_LIBS ${CASS_LIBS} ${GPERFLIBRARY_LIBRARY} PARENT_SCOPE)
-endfunction()
+  set(CASS_LIBS ${CASS_LIBS} ${GPERFLIBRARY_LIBRARY})
+endmacro()
 
 #------------------------
 # CassUseZlib
@@ -236,7 +236,7 @@ endfunction()
 # Input: CASS_INCLUDES and CASS_LIBS
 # Output: CASS_INCLUDES and CASS_LIBS
 #------------------------
-function(CassUseZlib)
+macro(CassUseZlib)
   # Setup the root directory for zlib
   set(ZLIB_ROOT "${PROJECT_SOURCE_DIR}/lib/zlib/")
   set(ZLIB_ROOT ${ZLIB_ROOT} ${ZLIB_ROOT_DIR} $ENV{ZLIB_ROOT_DIR})
@@ -250,13 +250,13 @@ function(CassUseZlib)
     endif()
 
     # Assign zlib properties
-    set(CASS_INCLUDES ${CASS_INCLUDES} ${ZLIB_INCLUDE_DIRS} PARENT_SCOPE)
-    set(CASS_LIBS ${CASS_LIBS} ${ZLIB_LIBRARIES} PARENT_SCOPE)
+    set(CASS_INCLUDES ${CASS_INCLUDES} ${ZLIB_INCLUDE_DIRS})
+    set(CASS_LIBS ${CASS_LIBS} ${ZLIB_LIBRARIES})
   else()
     message(WARNING "Could not find zlib, try to set the path to zlib root folder in the system variable ZLIB_ROOT_DIR")
     message(WARNING "zlib libraries will not be linked into build")
   endif()
-endfunction()
+endmacro()
 
 #-------------------
 # Compiler Flags
@@ -272,10 +272,10 @@ endfunction()
 # Output: CASS_USE_STD_ATOMIC, CASS_DRIVER_CXX_FLAGS, CASS_TEST_CXX_FLAGS and
 # CASS_EXAMPLE_C_FLAGS
 #------------------------
-function(CassSetCompilerFlags)
+macro(CassSetCompilerFlags)
   # Determine if all GNU extensions should be enabled
   if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE" PARENT_SCOPE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
   endif()
 
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR
@@ -293,7 +293,7 @@ function(CassSetCompilerFlags)
       # Version determined from: https://gcc.gnu.org/wiki/Atomic/GCCMM
       if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "4.7" OR
          CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "4.7")
-        set(CASS_USE_STD_ATOMIC ON PARENT_SCOPE)
+        set(CASS_USE_STD_ATOMIC ON)
       endif()
     endif()
   elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -302,14 +302,14 @@ function(CassSetCompilerFlags)
     # support.
     if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "3.1" OR
        CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "3.1")
-     set(CASS_USE_STD_ATOMIC ON PARENT_SCOPE)
+     set(CASS_USE_STD_ATOMIC ON)
     endif()
   elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     # Version determined from https://msdn.microsoft.com/en-us/library/hh874894
     # VS2012+/VS 11.0+/WindowsSDK v8.0+
     if(MSVC_VERSION GREATER 1700 OR
        MSVC_VERSION EQUAL 1700)
-      set(CASS_USE_STD_ATOMIC ON PARENT_SCOPE)
+      set(CASS_USE_STD_ATOMIC ON)
     endif()
   endif()
 
@@ -335,10 +335,10 @@ function(CassSetCompilerFlags)
     string(REPLACE "/INCREMENTAL" "/INCREMENTAL:NO" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
     # Create specific linker flags
-    set(WINDOWS_LINKER_FLAGS "/INCREMENTAL:NO /LTCG /NODEFAULTLIB:LIBCMT.LIB /NODEFAULTLIB:LIBCMTD.LIB" PARENT_SCOPE)
+    set(WINDOWS_LINKER_FLAGS "/INCREMENTAL:NO /LTCG /NODEFAULTLIB:LIBCMT.LIB /NODEFAULTLIB:LIBCMTD.LIB")
     if(CASS_USE_STATIC_LIBS)
-      set(PROJECT_CXX_LINKER_FLAGS "${WINDOWS_LINKER_FLAGS}" PARENT_SCOPE)
-      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${WINDOWS_LINKER_FLAGS}" PARENT_SCOPE)
+      set(PROJECT_CXX_LINKER_FLAGS "${WINDOWS_LINKER_FLAGS}")
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${WINDOWS_LINKER_FLAGS}")
     endif()
 
     # On Visual C++ -pedantic flag is not used,
@@ -357,9 +357,9 @@ function(CassSetCompilerFlags)
     add_definitions(-DNOMINMAX)                 # Does not define min/max macros
 
     # Create the project, example, and test flags
-    set(CASS_DRIVER_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}" PARENT_SCOPE)
-    set(CASS_EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}" PARENT_SCOPE)
-    set(CASS_TEST_CXX_FLAGS "${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}" PARENT_SCOPE)
+    set(CASS_DRIVER_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+    set(CASS_EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
+    set(CASS_TEST_CXX_FLAGS "${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
   elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     # GCC specific compiler options
     # I disabled long-long warning because boost generates about 50 such warnings
@@ -383,9 +383,9 @@ function(CassSetCompilerFlags)
       set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -std=c++11")
     endif()
 
-    set(CASS_DRIVER_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} -Werror" PARENT_SCOPE)
-    set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}" PARENT_SCOPE)
-    set(CASS_EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}" PARENT_SCOPE)
+    set(CASS_DRIVER_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} -Werror")
+    set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+    set(CASS_EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_COMPILER_FLAGS}")
   elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     # Clang/Intel specific compiler options
     # I disabled long-long warning because boost generates about 50 such warnings
@@ -406,13 +406,13 @@ function(CassSetCompilerFlags)
       set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -std=c++11")
     endif()
 
-    set(CASS_DRIVER_CXX_FLAGS " ${CMAKE_CXX_FLAGS} ${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} -Werror" PARENT_SCOPE)
-    set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}" PARENT_SCOPE)
-    set(CASS_EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 ${WARNING_COMPILER_FLAGS}" PARENT_SCOPE)
+    set(CASS_DRIVER_CXX_FLAGS " ${CMAKE_CXX_FLAGS} ${CASS_DRIVER_CXX_FLAGS} ${WARNING_COMPILER_FLAGS} -Werror")
+    set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} ${WARNING_COMPILER_FLAGS}")
+    set(CASS_EXAMPLE_C_FLAGS "${CMAKE_C_FLAGS} -std=c89 ${WARNING_COMPILER_FLAGS}")
   else()
     message(FATAL_ERROR "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
   endif()
-endfunction()
+endmacro()
 
 #-------------------
 # Internal Includes and Source Files
@@ -426,12 +426,12 @@ endfunction()
 # Input: CASS_INCLUDES
 # Output: CASS_INCLUDES
 #------------------------
-function(CassAddIncludes)
+macro(CassAddIncludes)
   set(INCLUDES ${CASS_INCLUDES} ${CASS_SOURCE_DIR}/include)
   set(INCLUDES ${INCLUDES} ${CASS_SOURCE_DIR}/src)
   set(INCLUDES ${INCLUDES} ${CASS_SOURCE_DIR}/src/ssl)
-  set(CASS_INCLUDES ${INCLUDES} ${CASS_SOURCE_DIR}/src/third_party/rapidjson PARENT_SCOPE)
-endfunction()
+  set(CASS_INCLUDES ${INCLUDES} ${CASS_SOURCE_DIR}/src/third_party/rapidjson)
+endmacro()
 
 #------------------------
 # CassFindSourceFiles
@@ -442,7 +442,7 @@ endfunction()
 # CASS_USE_OPENSSL
 # Output: CASS_ALL_FILES
 #------------------------
-function(CassFindSourceFiles)
+macro(CassFindSourceFiles)
   file(GLOB API_HEADER_FILES ${CASS_SOURCE_DIR}/include/*.h)
   file(GLOB INC_FILES ${CASS_SOURCE_DIR}/src/*.hpp)
   file(GLOB SRC_FILES ${CASS_SOURCE_DIR}/src/*.cpp)
@@ -488,11 +488,11 @@ function(CassFindSourceFiles)
       ${CASS_SOURCE_DIR}/src/ssl/ssl_no_impl.cpp)
   endif()
 
-  set(CASS_ALL_FILES ${SRC_FILES} ${API_HEADER_FILES} ${INC_FILES} PARENT_SCOPE)
+  set(CASS_ALL_FILES ${SRC_FILES} ${API_HEADER_FILES} ${INC_FILES})
 
   # Shorten the source file pathing for log messages
   foreach(SRC_FILE ${SRC_FILES})
     string(REPLACE "${CMAKE_SOURCE_DIR}/" "" LOG_FILE_ ${SRC_FILE})
     set_source_files_properties(${SRC_FILE} PROPERTIES COMPILE_FLAGS -DLOG_FILE_=\\\"${LOG_FILE_}\\\")
   endforeach()
-endfunction()
+endmacro()
