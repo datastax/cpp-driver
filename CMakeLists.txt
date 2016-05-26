@@ -1,20 +1,5 @@
 cmake_minimum_required(VERSION 2.6.4)
 
-# TODO: Figure out Mac OS X rpath
-if(POLICY CMP0042)
-  cmake_policy(SET CMP0042 OLD)
-endif()
-
-# Force OLD style of implicitly dereferencing variables
-if(POLICY CMP0054)
-  cmake_policy(SET CMP0054 OLD)
-endif()
-
-# Force OLD style of project versioning variables
-if(POLICY CMP0048)
-  cmake_policy(SET CMP0048 OLD)
-endif()
-
 # Ensure functions/modules are available
 include(FindPackageHandleStandardArgs)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")

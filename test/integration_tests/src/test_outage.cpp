@@ -22,15 +22,10 @@
 
 #include <boost/test/unit_test.hpp>
 #include <boost/test/debug.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/cstdint.hpp>
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
-#include <boost/thread/thread.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/bind.hpp>
-#include <boost/chrono.hpp>
-#include <boost/atomic.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 
@@ -223,14 +218,14 @@ BOOST_AUTO_TEST_CASE(test)
 
   test_utils::execute_query(session.get(), str(boost::format(test_utils::CREATE_TABLE_TIME_SERIES) % table_name));
 
-  boost::unique_future<bool> client_future
-      = boost::async(boost::launch::async, boost::bind(&OutageTests::client_thread, this, session.get(), table_name));
+  boost::BOOST_THREAD_FUTURE<bool> client_future =
+      boost::async(boost::launch::async, boost::bind(&OutageTests::client_thread, this, session.get(), table_name));
 
   timer.expires_from_now(boost::posix_time::seconds(2));
   timer.async_wait(boost::bind(&OutageTests::handle_timeout, this, _1));
 
-  boost::unique_future<void> outage_future
-      = boost::async(boost::launch::async, boost::bind(&OutageTests::outage_thread, this));
+  boost::BOOST_THREAD_FUTURE<void> outage_future =
+      boost::async(boost::launch::async, boost::bind(&OutageTests::outage_thread, this));
 
   BOOST_CHECK(client_future.get());
   io_service.stop();

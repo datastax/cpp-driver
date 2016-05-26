@@ -1,5 +1,20 @@
 cmake_minimum_required(VERSION 2.6.4)
 
+# TODO: Figure out Mac OS X rpath
+if(POLICY CMP0042)
+  cmake_policy(SET CMP0042 OLD)
+endif()
+
+# Force OLD style of implicitly dereferencing variables
+if(POLICY CMP0054)
+  cmake_policy(SET CMP0054 OLD)
+endif()
+
+# Force OLD style of project versioning variables
+if(POLICY CMP0048)
+  cmake_policy(SET CMP0048 OLD)
+endif()
+
 #---------------
 # Dependencies
 #---------------
@@ -79,15 +94,24 @@ function(CassUseBoost)
   set(Boost_USE_STATIC_RUNTIME OFF)
   set(Boost_USE_MULTITHREADED ON)
   add_definitions(-DBOOST_THREAD_USES_MOVE)
-  add_definitions(-DBOOST_THREAD_PROVIDES_FUTURE_CTOR_ALLOCATORS)
-  add_definitions(-DBOOST_NO_CXX11_SMART_PTR)
-  add_definitions(-DBOOST_NO_CXX11_VARIADIC_TEMPLATES)
 
   # Ensure the driver components exist (optional)
   if(CASS_USE_BOOST_ATOMIC)
     find_package(Boost ${CASS_MINIMUM_BOOST_VERSION})
     if(NOT Boost_INCLUDE_DIR)
       message(FATAL_ERROR "Boost headers required to build driver because of -DCASS_USE_BOOST_ATOMIC=On")
+    endif()
+
+    # Assign Boost include and libraries
+    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS} PARENT_SCOPE)
+    set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES} PARENT_SCOPE)
+  endif()
+
+  # Determine if Boost components are available for test executables
+  if(CASS_BUILD_UNIT_TESTS OR CASS_BUILD_INTEGRATION_TESTS)
+    find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono date_time filesystem log log_setup system regex thread unit_test_framework)
+    if(NOT Boost_FOUND)
+      message(FATAL_ERROR "Boost [chrono, date_time, filesystem, log, log_setup, system, regex, thread, and unit_test_framework] are required to build tests")
     endif()
 
     # Assign Boost include and libraries
@@ -105,18 +129,6 @@ function(CassUseBoost)
   else()
     # Handle redefinition warning of BOOST_NO_CXX11_RVALUE_REFERENCES
     add_definitions(-DBOOST_NO_CXX11_RVALUE_REFERENCES)
-  endif()
-
-  # Determine if Boost components are available for test executables
-  if(CASS_BUILD_UNIT_TESTS OR CASS_BUILD_INTEGRATION_TESTS)
-    find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono date_time filesystem log log_setup system regex thread unit_test_framework)
-    if(NOT Boost_FOUND)
-      message(FATAL_ERROR "Boost [chrono, date_time, filesystem, log, log_setup, system, regex, thread, and unit_test_framework] are required to build tests")
-    endif()
-
-    # Assign Boost include and libraries
-    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS} PARENT_SCOPE)
-    set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES} PARENT_SCOPE)
   endif()
 endfunction()
 
