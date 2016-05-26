@@ -1,3 +1,30 @@
+2.4.0
+===========
+May 26, 2016
+
+Features
+--------
+* Added the ability to add a custom SASL authenticator
+* Added reverse DNS lookup for IP addresses which can be enabled using
+ `cass_cluster_set_use_hostname_resolution()`.
+* Added a DNS resolve timeout that can be set using
+  `cass_cluster_set_resolve_timeout()`.
+* Added the ability for SSL peer identity to be verified by hostname.
+  (`CASS_SSL_VERIFY_PEER_IDENTITY_DNS`)
+* Added the ability to bind/set/append custom types with a class name.
+* Added `CassStatement` function to clear/resize parameters
+  `cass_statement_reset_parameters()`.
+
+Other
+--------
+* Fixed crash caused by tables with the same name in adjacent keyspaces.
+* Fixed an invalid memory read in processing strategy options metadata.
+* Fixed issue where `null` values didn''t have proper datatypes.
+* Fixed issue where an "UP" event could cause the session connection process
+  to hang.
+* Reduced reconnection log chatter at the `CASS_LOG_ERROR` level. A failed
+  reconnection attempt is only logged one time as an error.
+
 2.3.0
 ===========
 March 14, 2016
