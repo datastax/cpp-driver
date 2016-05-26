@@ -13,7 +13,8 @@ file(GLOB UNIT_TESTS_SRC_FILES ${PROJECT_SOURCE_DIR}/test/unit_tests/src/*.cpp)
 
 # Build up the include paths
 set(UNIT_TESTS_INCLUDES ${PROJECT_INCLUDE_DIR}
-  "${PROJECT_SOURCE_DIR}/src"
+  ${PROJECT_SOURCE_DIR}/src
+  ${CASS_INCLUDES}
   ${Boost_INCLUDE_DIRS}
   ${LIBUV_INCLUDE_DIR})
 

@@ -1,14 +1,5 @@
 cmake_minimum_required(VERSION 2.6.4)
 
-# Ensure functions/modules are available
-include(FindPackageHandleStandardArgs)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
-include(CppDriver)
-
-set(PROJECT_NAME_STR cassandra)
-set(PROJECT_LIB_NAME ${PROJECT_NAME_STR})
-set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
-
 # TODO: Figure out Mac OS X rpath
 if(POLICY CMP0042)
   cmake_policy(SET CMP0042 OLD)
@@ -23,6 +14,15 @@ endif()
 if(POLICY CMP0048)
   cmake_policy(SET CMP0048 OLD)
 endif()
+
+# Ensure functions/modules are available
+include(FindPackageHandleStandardArgs)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
+include(CppDriver)
+
+set(PROJECT_NAME_STR cassandra)
+set(PROJECT_LIB_NAME ${PROJECT_NAME_STR})
+set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
 
 # Determine if project is being used as a subproject
 get_directory_property(HAS_PARENT_DIRECTORY PARENT_DIRECTORY)
@@ -137,17 +137,6 @@ CassUseLibuv()
 # Boost
 if(CASS_USE_BOOST_ATOMIC OR CASS_BUILD_INTEGRATION_TESTS OR CASS_BUILD_UNIT_TESTS)
   CassUseBoost()
-
-  if(CASS_BUILD_UNIT_TESTS OR CASS_BUILD_INTEGRATION_TESTS)
-    find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono date_time filesystem log log_setup system regex thread unit_test_framework)
-    if(NOT Boost_FOUND)
-      message(FATAL_ERROR "Boost [chrono, date_time, filesystem, log, log_setup, system, regex, thread, and unit_test_framework] are required to build tests")
-    endif()
-
-    # Assign Boost include and libraries
-    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS})
-    set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES})
-  endif()
 endif()
 
 # Sparsehash

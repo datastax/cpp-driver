@@ -53,10 +53,11 @@ set(CASS_MINIMUM_BOOST_VERSION 1.55.0)
 #
 # Add includes, libraries, define flags required for using Boost.
 #
-# Input: CASS_USE_STATIC_LIBS CASS_USE_BOOST_ATOMIC, CASS_INCLUDES, CASS_LIBS
+# Input: CASS_USE_STATIC_LIBS, CASS_USE_BOOST_ATOMIC, CASS_INCLUDES, CASS_LIBS
 # Output: CASS_INCLUDES and CASS_LIBS
 #------------------------
 function(CassUseBoost)
+
   # Allow for boost directory to be specified on the command line
   set(ENV{BOOST_ROOT} "${PROJECT_SOURCE_DIR}/lib/boost/")
   if(BOOST_ROOT_DIR)
@@ -78,6 +79,9 @@ function(CassUseBoost)
   set(Boost_USE_STATIC_RUNTIME OFF)
   set(Boost_USE_MULTITHREADED ON)
   add_definitions(-DBOOST_THREAD_USES_MOVE)
+  add_definitions(-DBOOST_THREAD_PROVIDES_FUTURE_CTOR_ALLOCATORS)
+  add_definitions(-DBOOST_NO_CXX11_SMART_PTR)
+  add_definitions(-DBOOST_NO_CXX11_VARIADIC_TEMPLATES)
 
   # Ensure the driver components exist (optional)
   if(CASS_USE_BOOST_ATOMIC)
@@ -101,6 +105,18 @@ function(CassUseBoost)
   else()
     # Handle redefinition warning of BOOST_NO_CXX11_RVALUE_REFERENCES
     add_definitions(-DBOOST_NO_CXX11_RVALUE_REFERENCES)
+  endif()
+
+  # Determine if Boost components are available for test executables
+  if(CASS_BUILD_UNIT_TESTS OR CASS_BUILD_INTEGRATION_TESTS)
+    find_package(Boost ${CASS_MINIMUM_BOOST_VERSION} COMPONENTS chrono date_time filesystem log log_setup system regex thread unit_test_framework)
+    if(NOT Boost_FOUND)
+      message(FATAL_ERROR "Boost [chrono, date_time, filesystem, log, log_setup, system, regex, thread, and unit_test_framework] are required to build tests")
+    endif()
+
+    # Assign Boost include and libraries
+    set(CASS_INCLUDES ${CASS_INCLUDES} ${Boost_INCLUDE_DIRS} PARENT_SCOPE)
+    set(CASS_LIBS ${CASS_LIBS} ${Boost_LIBRARIES} PARENT_SCOPE)
   endif()
 endfunction()
 
