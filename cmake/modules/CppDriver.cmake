@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.6.4)
 
+#-----------
+# Policies
+#-----------
 # TODO: Figure out Mac OS X rpath
 if(POLICY CMP0042)
   cmake_policy(SET CMP0042 OLD)
@@ -14,6 +17,11 @@ endif()
 if(POLICY CMP0048)
   cmake_policy(SET CMP0048 OLD)
 endif()
+
+#-----------
+# Includes
+#-----------
+include(FindPackageHandleStandardArgs)
 
 #---------------
 # Dependencies

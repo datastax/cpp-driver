@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.6.4)
 
 # Ensure functions/modules are available
-include(FindPackageHandleStandardArgs)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 include(CppDriver)
 
