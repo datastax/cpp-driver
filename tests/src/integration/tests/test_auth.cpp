@@ -22,11 +22,13 @@
 #ifdef _WIN32
 # define CHECK_FOR_KERBEROS_SKIPPED_TEST \
     SKIP_TEST("This test cannot currently run on Windows");
-#else
+#elif defined(CASS_USE_LIBSSH2)
 # define CHECK_FOR_KERBEROS_SKIPPED_TEST \
     if (Options::deployment_type() == CCM::DeploymentType::REMOTE) { \
       SKIP_TEST("This test cannot currently run using remote deployment"); \
     }
+#else
+# define CHECK_FOR_KERBEROS_SKIPPED_TEST ((void)0)
 #endif
 
 /**

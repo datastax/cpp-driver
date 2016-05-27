@@ -15,13 +15,13 @@ namespace driver {
 /**
  * Wrapped DSE graph options object
  */
-class DseGraphOptions : public Object<::DseGraphOptions, dse_graph_options_free> {
+class DseGraphOptions : public Object< ::DseGraphOptions, dse_graph_options_free> {
 public:
   /**
    * Create the empty DSE graph options object
    */
   DseGraphOptions()
-    : Object<::DseGraphOptions, dse_graph_options_free>(dse_graph_options_new()) {}
+    : Object< ::DseGraphOptions, dse_graph_options_free>(dse_graph_options_new()) {}
 
   /**
    * Create the DSE graph options object from the native driver DSE graph
@@ -30,7 +30,7 @@ public:
    * @param options Native driver object
    */
   DseGraphOptions(::DseGraphOptions* options)
-    : Object<::DseGraphOptions, dse_graph_options_free>(options) {}
+    : Object< ::DseGraphOptions, dse_graph_options_free>(options) {}
 
   /**
    * Create the DSE graph options object from the shared reference
@@ -38,7 +38,7 @@ public:
    * @param options Shared reference
    */
   DseGraphOptions(Ptr options)
-    : Object<::DseGraphOptions, dse_graph_options_free>(options) {}
+    : Object< ::DseGraphOptions, dse_graph_options_free>(options) {}
 
   /**
    * Set the language to use when applied to a DSE graph statement

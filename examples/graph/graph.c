@@ -33,7 +33,9 @@
 #include <string.h>
 
 #ifdef _WIN32
-# include <windows.h>
+  #include <windows.h>
+#else
+  #include <unistd.h>
 #endif
 #define GRAPH_ALLOW_SCANS \
   "schema.config().option('graph.allow_scan').set('true')"

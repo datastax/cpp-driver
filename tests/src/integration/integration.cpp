@@ -33,18 +33,18 @@ Integration::Integration()
   , table_name_("")
   , uuid_generator_()
   , server_version_(Options::server_version())
-  , replication_factor_(0)
   , number_dc1_nodes_(1)
   , number_dc2_nodes_(0)
+  , replication_factor_(0)
   , replication_strategy_("")
   , contact_points_("")
   , is_client_authentication_(false)
   , is_ssl_(false)
   , is_schema_metadata_(false)
-  , create_keyspace_query_("")
   , is_ccm_start_requested_(true)
   , is_session_requested_(true)
-  , dse_workload_(CCM::DseWorkload::DSE_WORKLOAD_CASSANDRA) {
+  , dse_workload_(CCM::DSE_WORKLOAD_CASSANDRA)
+  , create_keyspace_query_("") {
   // Get the name of the test and the case/suite it belongs to
   const testing::TestInfo* test_information = testing::UnitTest::GetInstance()->current_test_info();
   test_name_ = test_information->name();

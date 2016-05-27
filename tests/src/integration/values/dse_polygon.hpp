@@ -17,8 +17,8 @@ namespace driver {
  */
 class DsePolygon : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(std::vector<DseLineString>, DsePolygon) {
 public:
-  typedef Object<::DsePolygon, dse_polygon_free> Native;
-  typedef Object<::DsePolygonIterator, dse_polygon_iterator_free> Iterator;
+  typedef Object< ::DsePolygon, dse_polygon_free> Native;
+  typedef Object< ::DsePolygonIterator, dse_polygon_iterator_free> Iterator;
 
   DsePolygon()
     : is_null_(true) {

@@ -84,7 +84,7 @@ protected:
     Statement select_statement(select_query_, 1);
     select_statement.bind<TimeUuid>(0, id);
     Result result = session_.execute(select_statement);
-    ASSERT_EQ(1, result.row_count());
+    ASSERT_EQ(1u, result.row_count());
     ASSERT_EQ(value, C(result.first_row(), 0));
   }
 
@@ -98,7 +98,7 @@ protected:
     Statement select_statement(select_query_primary_key_, 1);
     select_statement.bind<C>(0, value);
     Result result = session_.execute(select_statement);
-    ASSERT_EQ(1, result.row_count());
+    ASSERT_EQ(1u, result.row_count());
     ASSERT_EQ(id, TimeUuid(result.first_row(), 0));
   }
 };

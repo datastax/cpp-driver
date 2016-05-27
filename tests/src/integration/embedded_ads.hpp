@@ -276,7 +276,7 @@ private:
     // Create the loop
     uv_loop_t loop;
     uv_loop_init(&loop);
-    uv_process_options_t options = { 0 };
+    uv_process_options_t options = { };
 
     // Create the options for reading information from the spawn pipes
     uv_pipe_t standard_output;
@@ -363,7 +363,8 @@ private:
     // Initialize the loop and process arguments
     uv_loop_t loop;
     uv_loop_init(&loop);
-    uv_process_options_t options = { 0 };
+    uv_process_options_t options = { };
+
     char* args[7];
     args[0] = const_cast<char*>("java");
     args[1] = const_cast<char*>("-jar");
@@ -475,8 +476,8 @@ private:
 };
 
 // Initialize static variables
-uv_process_t EmbeddedADS::process_ = { 0 };
-uv_mutex_t EmbeddedADS::mutex_ = { 0 };
+uv_process_t EmbeddedADS::process_ = { };
+uv_mutex_t EmbeddedADS::mutex_ = { };
 std::string EmbeddedADS::configuration_directory_ = "";
 std::string EmbeddedADS::configuration_file_ = "";
 std::string EmbeddedADS::cassandra_keytab_file_ = "";

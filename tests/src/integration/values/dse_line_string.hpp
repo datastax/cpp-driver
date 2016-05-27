@@ -18,8 +18,8 @@ namespace driver {
  */
 class DseLineString : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(std::vector<DsePoint>, DseLineString) {
 public:
-  typedef Object<::DseLineString, dse_line_string_free> Native;
-  typedef Object<::DseLineStringIterator, dse_line_string_iterator_free> Iterator;
+  typedef Object< ::DseLineString, dse_line_string_free> Native;
+  typedef Object< ::DseLineStringIterator, dse_line_string_iterator_free> Iterator;
 
   DseLineString()
     : is_null_(true) {

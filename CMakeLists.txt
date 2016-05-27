@@ -17,17 +17,22 @@
 cmake_minimum_required(VERSION 2.6.4)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
-
 set(PROJECT_NAME_STRING dse)
 set(PROJECT_LIB_NAME ${PROJECT_NAME_STRING})
 set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
 
-if(POLICY CMP0042)
-  cmake_policy(SET CMP0042 OLD)
-endif()
-
 project(${PROJECT_NAME_STRING} C CXX)
+
+set(CPP_DRIVER_DIR "${PROJECT_SOURCE_DIR}/cpp-driver")
+set(CPP_DRIVER_INCLUDE_DIR "${CPP_DRIVER_DIR}/include")
+set(CPP_DRIVER_SOURCE_DIR "${CPP_DRIVER_DIR}/src")
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CPP_DRIVER_DIR}/cmake/modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake/modules/)
+
+include(CppDriver)
+
+CassPolicies()
 
 # Title the project and define the versioning
 set(PROJECT_DISPLAY_NAME "DataStax C/C++ DSE Driver")
@@ -54,26 +59,6 @@ string(REGEX REPLACE "DSE_VERSION_PATCH[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_PAT
 set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 message(STATUS "Project version: ${PROJECT_VERSION_STRING}")
 
-# Project options
-option(DSE_BUILD_SHARED "Build shared library" ON)
-option(DSE_BUILD_STATIC "Build static library" OFF)
-option(DSE_INSTALL_HEADER "Install header file" ON)
-option(DSE_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
-option(DSE_BUILD_EXAMPLES "Build examples" OFF)
-option(DSE_BUILD_INTEGRATION_TESTS "Build the integration tests" OFF)
-option(DSE_BUILD_UNIT_TESTS "Build the unit tests" OFF)
-
-# Build the Cassandra C/C++ driver submodule
-if(DSE_BUILD_STATIC)
-  set(CASS_BUILD_STATIC ON CACHE BOOL "Build Cassandra driver static library" FORCE)
-endif()
-if(DSE_USE_STATIC_LIBS)
-  set(CASS_USE_STATIC_LIBS ON CACHE BOOL "Link static libraries when building Cassandra driver static executables" FORCE)
-endif()
-set(CASS_USE_OPENSSL ON CACHE BOOL "Build with OpenSSL support" FORCE)
-set(CPP_DRIVER_DIR "${PROJECT_SOURCE_DIR}/cpp-driver")
-set(CPP_DRIVER_INCLUDE_DIR "${CPP_DRIVER_DIR}/include")
-set(CPP_DRIVER_SOURCE_DIR "${CPP_DRIVER_DIR}/src")
 set(CPP_DRIVER_THIRD_PARTY_SOURCE_DIR "${CPP_DRIVER_SOURCE_DIR}/third_party")
 set(RAPID_JSON_INCLUDE_DIR "${CPP_DRIVER_THIRD_PARTY_SOURCE_DIR}/rapidjson")
 if(NOT EXISTS "${CPP_DRIVER_DIR}/CMakeLists.txt")
@@ -82,21 +67,80 @@ if(NOT EXISTS "${CPP_DRIVER_DIR}/CMakeLists.txt")
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         OUTPUT_QUIET)
 endif()
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CPP_DRIVER_DIR}/cmake/modules/")
-add_subdirectory(${CPP_DRIVER_DIR})
-set_property(TARGET cassandra PROPERTY FOLDER "Driver/Cassandra")
-if(NOT CMAKE_VERSION VERSION_LESS "2.8.8")
-  set_property(TARGET cpp-driver PROPERTY FOLDER "Driver/Cassandra")
+
+# Project options
+option(DSE_BUILD_SHARED "Build shared library" ON)
+option(DSE_BUILD_STATIC "Build static library" OFF)
+option(DSE_INSTALL_HEADER "Install header file" ON)
+option(DSE_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
+option(DSE_BUILD_EXAMPLES "Build examples" OFF)
+option(DSE_BUILD_INTEGRATION_TESTS "Build the integration tests" OFF)
+option(DSE_BUILD_UNIT_TESTS "Build the unit tests" OFF)
+option(DSE_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
+option(DSE_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
+option(DSE_USE_OPENSSL "Use OpenSSL" ON)
+option(DSE_USE_TCMALLOC "Use tcmalloc" OFF)
+option(DSE_USE_SPARSEHASH "Use sparsehash" OFF)
+
+set(CASS_USE_BOOST_ATOMIC ${DSE_USE_BOOST_ATOMIC})
+set(CASS_USE_STD_ATOMIC ${DSE_USE_STD_ATOMIC})
+set(CASS_USE_OPENSSL ${DSE_USE_OPENSSL})
+set(CASS_USE_TCMALLOC ${DSE_USE_TCMALLOC})
+set(CASS_USE_SPARSEHASH ${DSE_USE_SPARSEHASH})
+
+set(CASS_SOURCE_DIR ${PROJECT_SOURCE_DIR}/cpp-driver)
+
+#---------------
+# Dependencies
+#---------------
+
+CassUseLibuv()
+
+#------------------------
+# Optional Dependencies
+#------------------------
+
+# Boost
+if(CASS_USE_BOOST_ATOMIC)
+  CassUseBoost()
 endif()
-set(DSE_LIBS ${CASS_LIBS})
+
+# Sparsehash
+if(CASS_USE_SPARSEHASH)
+  CassUseSparshHash()
+endif()
+
+
+# OpenSSL
+if(CASS_USE_OPENSSL)
+  CassUseOpenSSL()
+endif()
+
+# tcmalloc
+if(CASS_USE_TCMALLOC)
+  CassUseTcmalloc()
+endif()
+
+# zlib
+if(CASS_USE_ZLIB)
+  CassUseZlib()
+endif()
+
+CassSetCompilerFlags()
+CassAddIncludes()
+CassFindSourceFiles()
 
 # Build up the include paths
+set(DSE_INCLUDES ${CASS_INCLUDES})
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(DSE_INCLUDES ${DSE_INCLUDES} ${PROJECT_INCLUDE_DIR})
 set(DSE_INCLUDES ${DSE_INCLUDES} ${PROJECT_SOURCE_DIR}/src)
 set(DSE_INCLUDES ${DSE_INCLUDES} ${RAPID_JSON_INCLUDE_DIR})
 set(DSE_INCLUDES ${DSE_INCLUDES} ${LIBUV_INCLUDE_DIR})
 set(DSE_INCLUDES ${DSE_INCLUDES} ${OPENSSL_INCLUDE_DIR})
+
+# Build up libraries
+set(DSE_LIBS ${CASS_LIBS})
 
 # Determine which driver target should be used as a dependency
 if(DSE_USE_STATIC_LIBS)
@@ -117,9 +161,18 @@ find_package(Kerberos REQUIRED)
 set(DSE_INCLUDES ${DSE_INCLUDES} ${KERBEROS_INCLUDE_DIR})
 set(DSE_LIBS ${DSE_LIBS} ${KERBEROS_LIBRARIES})
 
+# Build up compiler flags
+set(PROJECT_CXX_FLAGS ${CASS_DRIVER_CXX_FLAGS})
+set(TEST_CXX_FLAGS ${CASS_TEST_CXX_FLAGS})
+
 #------------------------------
 # DSE static and shared
 #------------------------------
+
+# Copy "cassandra.h"
+configure_file(${PROJECT_SOURCE_DIR}/cpp-driver/include/cassandra.h
+               ${PROJECT_SOURCE_DIR}/include/dse/cassandra.h
+               COPYONLY)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
@@ -131,7 +184,9 @@ file(GLOB DSE_SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
 source_group("Source Files" FILES ${DSE_SRC_FILES})
 source_group("Header Files" FILES ${DSE_API_HEADER_FILES} ${DSE_INC_FILES})
-set(DSE_ALL_SOURCE_FILES ${DSE_SRC_FILES} ${DSE_API_HEADER_FILES} ${DSE_INC_FILES})
+set(DSE_ALL_SOURCE_FILES
+  ${DSE_SRC_FILES} ${DSE_API_HEADER_FILES}
+  ${DSE_INC_FILES} ${CASS_ALL_SOURCE_FILES})
 
 # Create an object library for the driver (single build)
 if(NOT CMAKE_VERSION VERSION_LESS "2.8.8")
@@ -245,7 +300,8 @@ set(INSTALL_DLL_EXE_DIR "bin")
 
 # Determine if the header should be installed
 if(DSE_INSTALL_HEADER)
-  install(FILES ${DSE_API_HEADER_FILES} DESTINATION "include")
+  install(DIRECTORY include/dse DESTINATION include FILES_MATCHING PATTERN "*.h")
+  install(DIRECTORY include DESTINATION include FILES_MATCHING PATTERN "*.h")
 endif()
 
 # Install the dynamic/shared library

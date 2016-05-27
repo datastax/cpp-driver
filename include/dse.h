@@ -17,7 +17,7 @@
 #ifndef __DSE_H_INCLUDED__
 #define __DSE_H_INCLUDED__
 
-#include <cassandra.h>
+#include <dse/cassandra.h>
 
 #if !defined(DSE_STATIC)
 #  if (defined(WIN32) || defined(_WIN32))
