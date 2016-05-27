@@ -156,17 +156,17 @@ CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
   const std::string& password /*= DEFAULT_PASSWORD*/,
   const std::string& public_key /*= ""*/,
   const std::string& private_key /*= ""*/)
-  : socket_(NULL)
-  , cassandra_version_(server_version)
+  : cassandra_version_(server_version)
   , dse_version_(DEFAULT_DSE_VERSION)
   , use_git_(use_git)
   , use_dse_(use_dse)
+  , cluster_prefix_(cluster_prefix)
+  , authentication_type_(authentication_type)
   , dse_credentials_type_(dse_credentials_type)
   , dse_username_(dse_username)
   , dse_password_(dse_password)
-  , cluster_prefix_(cluster_prefix)
-  , authentication_type_(authentication_type)
 #ifdef CASS_USE_LIBSSH2
+  , socket_(NULL)
   , session_(NULL)
   , channel_(NULL)
   , deployment_type_(deployment_type)
@@ -209,17 +209,15 @@ CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
 }
 
 CCM::Bridge::Bridge(const std::string& configuration_file)
-  : socket_(NULL)
-  , cassandra_version_(DEFAULT_CASSANDRA_VERSION)
+  : cassandra_version_(DEFAULT_CASSANDRA_VERSION)
   , dse_version_(DEFAULT_DSE_VERSION)
   , use_git_(DEFAULT_USE_GIT)
   , use_dse_(DEFAULT_USE_DSE)
-  , dse_credentials_type_(DEFAULT_DSE_CREDENTIALS)
-  , dse_username_("")
-  , dse_password_("")
   , cluster_prefix_(DEFAULT_CLUSTER_PREFIX)
   , authentication_type_(DEFAULT_AUTHENTICATION)
+  , dse_credentials_type_(DEFAULT_DSE_CREDENTIALS)
 #ifdef CASS_USE_LIBSSH2
+  , socket_(NULL)
   , session_(NULL)
   , channel_(NULL)
   , deployment_type_(DEFAULT_DEPLOYMENT)
@@ -1692,11 +1690,11 @@ void CCM::Bridge::msleep(unsigned int milliseconds) {
   Sleep(milliseconds);
 #else
   //Convert the milliseconds into a proper timespec structure
-  struct timespec requested = { 0 };
   time_t seconds = static_cast<int>(milliseconds / 1000);
   long int nanoseconds = static_cast<long int>((milliseconds - (seconds * 1000)) * 1000000);
 
   //Assign the requested time and perform sleep
+  struct timespec requested;
   requested.tv_sec = seconds;
   requested.tv_nsec = nanoseconds;
   while (nanosleep(&requested, &requested) == -1) {

@@ -1,27 +1,30 @@
 cmake_minimum_required(VERSION 2.6.4)
 
 #-----------
-# Policies
-#-----------
-# TODO: Figure out Mac OS X rpath
-if(POLICY CMP0042)
-  cmake_policy(SET CMP0042 OLD)
-endif()
-
-# Force OLD style of implicitly dereferencing variables
-if(POLICY CMP0054)
-  cmake_policy(SET CMP0054 OLD)
-endif()
-
-# Force OLD style of project versioning variables
-if(POLICY CMP0048)
-  cmake_policy(SET CMP0048 OLD)
-endif()
-
-#-----------
 # Includes
 #-----------
 include(FindPackageHandleStandardArgs)
+
+#-----------
+# Policies
+#-----------
+
+macro(CassPolicies)
+  # TODO: Figure out Mac OS X rpath
+  if(POLICY CMP0042)
+    cmake_policy(SET CMP0042 OLD)
+  endif()
+
+  # Force OLD style of implicitly dereferencing variables
+  if(POLICY CMP0054)
+    cmake_policy(SET CMP0054 OLD)
+  endif()
+
+  # Force OLD style of project versioning variables
+  if(POLICY CMP0048)
+    cmake_policy(SET CMP0048 OLD)
+  endif()
+endmacro()
 
 #---------------
 # Dependencies
@@ -440,7 +443,7 @@ endmacro()
 #
 # Input: CASS_SOURCE_DIR, CASS_USE_BOOST_ATOMIC, CASS_USE_STD_ATOMIC and
 # CASS_USE_OPENSSL
-# Output: CASS_ALL_FILES
+# Output: CASS_ALL_SOURCE_FILES
 #------------------------
 macro(CassFindSourceFiles)
   file(GLOB API_HEADER_FILES ${CASS_SOURCE_DIR}/include/*.h)
@@ -488,7 +491,7 @@ macro(CassFindSourceFiles)
       ${CASS_SOURCE_DIR}/src/ssl/ssl_no_impl.cpp)
   endif()
 
-  set(CASS_ALL_FILES ${SRC_FILES} ${API_HEADER_FILES} ${INC_FILES})
+  set(CASS_ALL_SOURCE_FILES ${SRC_FILES} ${API_HEADER_FILES} ${INC_FILES})
 
   # Shorten the source file pathing for log messages
   foreach(SRC_FILE ${SRC_FILES})

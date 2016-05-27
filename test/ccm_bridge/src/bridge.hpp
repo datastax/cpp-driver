@@ -573,20 +573,6 @@ namespace CCM {
     bool is_node_up(unsigned int node);
 
   private:
-#ifdef CASS_USE_LIBSSH2
-    /**
-     * SSH session handle for establishing connection
-     */
-    LIBSSH2_SESSION* session_;
-    /**
-     * SSH channel handle for interacting with the session
-     */
-    LIBSSH2_CHANNEL* channel_;
-#endif
-    /**
-     * Socket instance
-     */
-    Socket* socket_;
     /**
      * Cassandra version to use
      */
@@ -608,12 +594,6 @@ namespace CCM {
      */
     std::string cluster_prefix_;
     /**
-     * Deployment type (local|ssh)
-     *
-     * Flag to indicate how CCM commands should be executed
-     */
-    DeploymentType deployment_type_;
-    /**
      * Authentication type (username|password/public key)
      *
      * Flag to indicate how SSH authentication should be established
@@ -634,11 +614,31 @@ namespace CCM {
      */
     std::string dse_password_;
     /**
+     * Deployment type (local|ssh)
+     *
+     * Flag to indicate how CCM commands should be executed
+     */
+    DeploymentType deployment_type_;
+    /**
      * IP address to use when establishing SSH connection for remote CCM
      * command execution and/or IP address to use for server connection IP
      * generation
      */
     std::string host_;
+#ifdef CASS_USE_LIBSSH2
+    /**
+     * SSH session handle for establishing connection
+     */
+    LIBSSH2_SESSION* session_;
+    /**
+     * SSH channel handle for interacting with the session
+     */
+    LIBSSH2_CHANNEL* channel_;
+    /**
+     * Socket instance
+     */
+    Socket* socket_;
+#endif
     /**
      * Workload values to use when setting the workload via CCM
      */
