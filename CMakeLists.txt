@@ -172,11 +172,6 @@ if(CASS_BUILD_INTEGRATION_TESTS)
   endif()
 endif()
 
-# Assign additional library requirements for Windows
-if(WIN32)
-  set(CASS_LIBS ${CASS_LIBS} iphlpapi psapi wsock32 crypt32 ws2_32 userenv)
-endif()
-
 #----------------------
 # Generating API docs
 #----------------------
