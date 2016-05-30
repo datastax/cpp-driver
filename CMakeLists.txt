@@ -23,16 +23,27 @@ set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
 
 project(${PROJECT_NAME_STRING} C CXX)
 
-set(CPP_DRIVER_DIR "${PROJECT_SOURCE_DIR}/cpp-driver")
-set(CPP_DRIVER_INCLUDE_DIR "${CPP_DRIVER_DIR}/include")
-set(CPP_DRIVER_SOURCE_DIR "${CPP_DRIVER_DIR}/src")
+set(CASS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/cpp-driver")
+set(CPP_DRIVER_INCLUDE_DIR "${CASS_SOURCE_DIR}/include")
+set(CPP_DRIVER_SOURCE_DIR "${CASS_SOURCE_DIR}/src")
+set(CPP_DRIVER_THIRD_PARTY_SOURCE_DIR "${CPP_DRIVER_SOURCE_DIR}/third_party")
+set(RAPID_JSON_INCLUDE_DIR "${CPP_DRIVER_THIRD_PARTY_SOURCE_DIR}/rapidjson")
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CPP_DRIVER_DIR}/cmake/modules/")
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake/modules/)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CASS_SOURCE_DIR}/cmake/modules/")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
+
+# Determine if the submodule should be initialized
+if(NOT EXISTS "${CASS_SOURCE_DIR}/CMakeLists.txt")
+    find_package(Git REQUIRED)
+    execute_process(COMMAND git submodule update --init --recursive
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        OUTPUT_QUIET)
+endif()
 
 include(CppDriver)
 
 CassPolicies()
+CassCheckPlatform()
 
 # Title the project and define the versioning
 set(PROJECT_DISPLAY_NAME "DataStax C/C++ DSE Driver")
@@ -59,15 +70,6 @@ string(REGEX REPLACE "DSE_VERSION_PATCH[ \t]+([0-9]+)" "\\1" PROJECT_VERSION_PAT
 set(PROJECT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
 message(STATUS "Project version: ${PROJECT_VERSION_STRING}")
 
-set(CPP_DRIVER_THIRD_PARTY_SOURCE_DIR "${CPP_DRIVER_SOURCE_DIR}/third_party")
-set(RAPID_JSON_INCLUDE_DIR "${CPP_DRIVER_THIRD_PARTY_SOURCE_DIR}/rapidjson")
-if(NOT EXISTS "${CPP_DRIVER_DIR}/CMakeLists.txt")
-    find_package(Git REQUIRED)
-    execute_process(COMMAND git submodule update --init --recursive
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        OUTPUT_QUIET)
-endif()
-
 # Project options
 option(DSE_BUILD_SHARED "Build shared library" ON)
 option(DSE_BUILD_STATIC "Build static library" OFF)
@@ -81,14 +83,24 @@ option(DSE_USE_STD_ATOMIC "Use C++11 atomics library" OFF)
 option(DSE_USE_OPENSSL "Use OpenSSL" ON)
 option(DSE_USE_TCMALLOC "Use tcmalloc" OFF)
 option(DSE_USE_SPARSEHASH "Use sparsehash" OFF)
+option(DSE_USE_ZLIB "Use zlib" OFF)
+option(DSE_USE_LIBSSH2 "Use libssh2" OFF)
 
+# Determine which driver target should be used as a dependency
+set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME})
+if(DSE_USE_STATIC_LIBS)
+  set(DSE_BUILD_STATIC ON)
+  set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME_STATIC})
+endif()
+
+set(CASS_USE_STATIC_LIBS ${DSE_USE_STATIC_LIBS})
 set(CASS_USE_BOOST_ATOMIC ${DSE_USE_BOOST_ATOMIC})
 set(CASS_USE_STD_ATOMIC ${DSE_USE_STD_ATOMIC})
 set(CASS_USE_OPENSSL ${DSE_USE_OPENSSL})
 set(CASS_USE_TCMALLOC ${DSE_USE_TCMALLOC})
 set(CASS_USE_SPARSEHASH ${DSE_USE_SPARSEHASH})
-
-set(CASS_SOURCE_DIR ${PROJECT_SOURCE_DIR}/cpp-driver)
+set(CASS_USE_ZLIB ${DSE_USE_ZLIB})
+set(CASS_USE_LIBSSH2 ${DSE_USE_LIBSSH2})
 
 #---------------
 # Dependencies
@@ -129,6 +141,8 @@ endif()
 CassSetCompilerFlags()
 CassAddIncludes()
 CassFindSourceFiles()
+source_group("Source Files\\Cassandra" FILES ${SRC_FILES})
+source_group("Header Files\\Cassandra" FILES ${API_HEADER_FILES} ${INC_FILES})
 
 # Build up the include paths
 set(DSE_INCLUDES ${CASS_INCLUDES})
@@ -141,20 +155,6 @@ set(DSE_INCLUDES ${DSE_INCLUDES} ${OPENSSL_INCLUDE_DIR})
 
 # Build up libraries
 set(DSE_LIBS ${CASS_LIBS})
-
-# Determine which driver target should be used as a dependency
-if(DSE_USE_STATIC_LIBS)
-  set(DSE_BUILD_STATIC ON)
-  set(DSE_LIBS ${DSE_LIBS} cassandra_static)
-  set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME_STATIC})
-  set_property(TARGET cassandra_static PROPERTY COMPILE_FLAGS "-fPIC")
-else()
-  set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME})
-  set(DSE_LIBS ${DSE_LIBS} cassandra)
-endif()
-if(DSE_BUILD_STATIC)
-  set_property(TARGET cassandra_static PROPERTY FOLDER "Driver/Cassandra")
-endif()
 
 # Kerberos
 find_package(Kerberos REQUIRED)
@@ -236,6 +236,7 @@ if(DSE_BUILD_STATIC)
   target_link_libraries(${PROJECT_LIB_NAME_STATIC} ${DSE_LIBS})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES OUTPUT_NAME ${PROJECT_LIB_NAME_STATIC})
   set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES VERSION ${PROJECT_VERSION_STRING} SOVERSION ${PROJECT_VERSION_MAJOR})
+  set_target_properties(${PROJECT_LIB_NAME_STATIC} PROPERTIES LINK_FLAGS "${PROJECT_CXX_LINKER_FLAGS}")
   set_property(
     TARGET ${PROJECT_LIB_NAME_STATIC}
     APPEND PROPERTY COMPILE_FLAGS "${PROJECT_CXX_FLAGS} -DDSE_STATIC")
@@ -301,7 +302,7 @@ set(INSTALL_DLL_EXE_DIR "bin")
 # Determine if the header should be installed
 if(DSE_INSTALL_HEADER)
   install(DIRECTORY include/dse DESTINATION include FILES_MATCHING PATTERN "*.h")
-  install(DIRECTORY include DESTINATION include FILES_MATCHING PATTERN "*.h")
+  install(FILES ${DSE_API_HEADER_FILES} DESTINATION "include") 
 endif()
 
 # Install the dynamic/shared library
