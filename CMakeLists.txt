@@ -2,23 +2,18 @@ cmake_minimum_required(VERSION 2.6.4)
 
 # Ensure functions/modules are available
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
-include(CppDriver)
-
-CassPolicies()
 
 set(PROJECT_NAME_STR cassandra)
 set(PROJECT_LIB_NAME ${PROJECT_NAME_STR})
 set(PROJECT_LIB_NAME_STATIC "${PROJECT_LIB_NAME}_static")
 
-# Determine if project is being used as a subproject
-get_directory_property(HAS_PARENT_DIRECTORY PARENT_DIRECTORY)
-set(CASS_IS_SUBPROJECT FALSE CACHE BOOL "Flag to determine if project is a sub-project" FORCE)
-if(HAS_PARENT_DIRECTORY)
-  set(CASS_IS_SUBPROJECT TRUE CACHE BOOL "Flag to determine if project is a sub-project" FORCE)
-endif()
-
 # Title the project and define the versioning
 project(${PROJECT_NAME_STR} C CXX)
+
+include(CppDriver)
+
+CassPolicies()
+CassCheckPlatform()
 
 #------------------------
 # Project Version
@@ -96,18 +91,6 @@ endif()
 # Ensure the driver is configured to build
 if(NOT CASS_BUILD_SHARED AND NOT CASS_BUILD_STATIC)
   message(FATAL_ERROR "Driver is not Configured to Build: Ensure shared and/or static library is enabled")
-endif()
-
-# Ensure Windows platform is supported
-if(WIN32)
-  if(CMAKE_SYSTEM_VERSION GREATER 5.2 OR
-     CMAKE_SYSTEM_VERSION EQUAL 5.2)
-    add_definitions(-D_WIN32_WINNT=0x502)
-  else()
-    string(REPLACE "." "" WINDOWS_VERSION ${CMAKE_SYSTEM_VERSION})
-    string(REGEX REPLACE "([0-9])" "0\\1" WINDOWS_VERSION ${WINDOWS_VERSION})
-    message(FATAL_ERROR "Unable to build driver: Unsupported Windows platform 0x${WINDOWS_VERSION}")
-  endif()
 endif()
 
 #---------------
@@ -251,11 +234,6 @@ if(CASS_BUILD_STATIC)
   if(CASS_USE_STATIC_LIBS)
     set(CASS_TEST_CXX_FLAGS "${CASS_TEST_CXX_FLAGS} -DCASS_STATIC")
   endif()
-endif()
-
-# Allow libraries to be available for parent projects
-if(CASS_IS_SUBPROJECT)
-  set(CASS_LIBS ${CASS_LIBS} PARENT_SCOPE)
 endif()
 
 #-------------------------------------

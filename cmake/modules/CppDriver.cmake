@@ -15,14 +15,29 @@ macro(CassPolicies)
     cmake_policy(SET CMP0042 OLD)
   endif()
 
-  # Force OLD style of implicitly dereferencing variables
-  if(POLICY CMP0054)
-    cmake_policy(SET CMP0054 OLD)
-  endif()
-
   # Force OLD style of project versioning variables
   if(POLICY CMP0048)
     cmake_policy(SET CMP0048 OLD)
+  endif()
+endmacro()
+
+#------------------------
+# CassCheckPlatform
+#
+# Check to ensure the platform is valid for the driver
+#
+#------------------------
+macro(CassCheckPlatform)
+  # Ensure Windows platform is supported
+  if(WIN32)
+    if(CMAKE_SYSTEM_VERSION GREATER 5.2 OR
+       CMAKE_SYSTEM_VERSION EQUAL 5.2)
+      add_definitions(-D_WIN32_WINNT=0x502)
+    else()
+      string(REPLACE "." "" WINDOWS_VERSION ${CMAKE_SYSTEM_VERSION})
+      string(REGEX REPLACE "([0-9])" "0\\1" WINDOWS_VERSION ${WINDOWS_VERSION})
+      message(FATAL_ERROR "Unable to build driver: Unsupported Windows platform 0x${WINDOWS_VERSION}")
+    endif()
   endif()
 endmacro()
 
@@ -276,6 +291,11 @@ endmacro()
 # CASS_EXAMPLE_C_FLAGS
 #------------------------
 macro(CassSetCompilerFlags)
+  # Force OLD style of implicitly dereferencing variables
+  if(POLICY CMP0054)
+    cmake_policy(SET CMP0054 OLD)
+  endif()
+
   # Determine if all GNU extensions should be enabled
   if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
