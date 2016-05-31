@@ -74,6 +74,7 @@ message(STATUS "Project version: ${PROJECT_VERSION_STRING}")
 option(DSE_BUILD_SHARED "Build shared library" ON)
 option(DSE_BUILD_STATIC "Build static library" OFF)
 option(DSE_INSTALL_HEADER "Install header file" ON)
+option(DSE_INSTALL_PKG_CONFIG "Install pkg-config file(s)" ON)
 option(DSE_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
 option(DSE_BUILD_EXAMPLES "Build examples" OFF)
 option(DSE_BUILD_INTEGRATION_TESTS "Build the integration tests" OFF)
@@ -299,10 +300,23 @@ set(INSTALL_DLL_EXE_DIR "bin")
 # Install targets
 #------------------------------
 
+if(DSE_INSTALL_PKG_CONFIG)
+  if(NOT WIN32)
+    find_package(PkgConfig)
+    if(PKG_CONFIG_FOUND)
+      set(prefix ${CMAKE_INSTALL_PREFIX})
+      set(exec_prefix ${CMAKE_INSTALL_PREFIX})
+      set(libdir ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
+      set(includedir ${CMAKE_INSTALL_PREFIX}/include)
+      set(version ${PROJECT_VERSION_STRING})
+    endif()
+  endif()
+endif()
+
 # Determine if the header should be installed
 if(DSE_INSTALL_HEADER)
   install(DIRECTORY include/dse DESTINATION include FILES_MATCHING PATTERN "*.h")
-  install(FILES ${DSE_API_HEADER_FILES} DESTINATION "include") 
+  install(FILES ${DSE_API_HEADER_FILES} DESTINATION "include")
 endif()
 
 # Install the dynamic/shared library
@@ -311,4 +325,29 @@ if(DSE_BUILD_SHARED)
     RUNTIME DESTINATION ${INSTALL_DLL_EXE_DIR}  # for dll/executable files
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for shared library
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static library
+  if(DSE_INSTALL_PKG_CONFIG)
+    if(NOT WIN32)
+      if(PKG_CONFIG_FOUND)
+        configure_file("${PROJECT_SOURCE_DIR}/packaging/dse.pc.in" "dse.pc" @ONLY)
+        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/dse.pc"
+          DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+      endif()
+    endif()
+  endif()
+endif()
+
+if(DSE_BUILD_STATIC)
+  install(TARGETS ${PROJECT_LIB_NAME_STATIC}
+    RUNTIME DESTINATION ${INSTALL_DLL_EXE_DIR}  # for dll/executable files
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # for shared library
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # for static library
+  if(DSE_INSTALL_PKG_CONFIG)
+    if(NOT WIN32)
+      if(PKG_CONFIG_FOUND)
+        configure_file("${PROJECT_SOURCE_DIR}/packaging/dse_static.pc.in" "dse_static.pc" @ONLY)
+        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/dse_static.pc"
+          DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+      endif()
+    endif()
+  endif()
 endif()

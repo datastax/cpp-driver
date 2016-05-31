@@ -1,0 +1,11 @@
+prefix=/usr
+exec_prefix=${prefix}
+libdir=${prefix}/lib/@DEB_HOST_MULTIARCH@
+includedir=${prefix}/include
+
+Name: dse
+Description: C/C++ client driver for DataStax Enterprise
+Version: @DEB_VERSION_UPSTREAM@
+Libs: -L${libdir} -ldse
+Cflags:
+URL: https://github.com/datastax/cpp-driver-dse/

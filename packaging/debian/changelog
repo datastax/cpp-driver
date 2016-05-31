@@ -1,0 +1,5 @@
+dse-cpp-driver (0.0.1-1) stable; urgency=low
+
+  * Initial release
+
+ -- Michael Penick <michael.penick@datastax.com>  Tue, 01 Jun 2016 14:36:00 -0700
