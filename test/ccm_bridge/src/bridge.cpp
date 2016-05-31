@@ -166,11 +166,11 @@ CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
   , dse_username_(dse_username)
   , dse_password_(dse_password)
 #ifdef CASS_USE_LIBSSH2
-  , socket_(NULL)
+  , deployment_type_(deployment_type)
+  , host_(host)
   , session_(NULL)
   , channel_(NULL)
-  , deployment_type_(deployment_type)
-  , host_(host) {
+  , socket_(NULL) {
 #else
   // Force local deployment only
   , deployment_type_(DeploymentType::LOCAL)
@@ -217,11 +217,11 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
   , authentication_type_(DEFAULT_AUTHENTICATION)
   , dse_credentials_type_(DEFAULT_DSE_CREDENTIALS)
 #ifdef CASS_USE_LIBSSH2
-  , socket_(NULL)
+  , deployment_type_(DEFAULT_DEPLOYMENT)
+  , host_(DEFAULT_HOST)
   , session_(NULL)
   , channel_(NULL)
-  , deployment_type_(DEFAULT_DEPLOYMENT)
-  , host_(DEFAULT_HOST) {
+  , socket_(NULL) {
 #else
   // Force local
   , deployment_type_(DeploymentType::LOCAL)
@@ -1293,7 +1293,7 @@ void CCM::Bridge::close_libssh2_terminal() {
     }
     if (error_code == 0) {
       char* exit_signal = NULL;
-      int exit_code = libssh2_channel_get_exit_status(channel_);
+      libssh2_channel_get_exit_status(channel_);
       libssh2_channel_get_exit_signal(channel_, &exit_signal, NULL, NULL, NULL, NULL, NULL);
       if (exit_signal) {
         LOG_ERROR("libssh2 Unable to Close Channel: " << exit_signal);
