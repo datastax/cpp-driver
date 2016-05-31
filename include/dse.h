@@ -1,17 +1,5 @@
 /*
   Copyright (c) 2014-2016 DataStax
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-  http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
 */
 
 #ifndef __DSE_H_INCLUDED__
@@ -46,7 +34,7 @@
 /**
  * @file include/dse.h
  *
- * C/C++ Driver Extensions for DataStax Enterprise
+ * C/C++ Driver for DataStax Enterprise
  */
 
 #define DSE_VERSION_MAJOR 1
@@ -525,7 +513,7 @@ dse_graph_object_add_bool(DseGraphObject* object,
                           cass_bool_t value);
 
 /**
- * Same as dse_graph_array_add_bool(), but with lengths for string
+ * Same as dse_graph_object_add_bool(), but with lengths for string
  * parameters.
  *
  * @public @memberof DseGraphObject
@@ -1709,14 +1697,14 @@ typedef void (*DseGssapiAuthenticatorLockCallback)(void* data);
 /**
  *
  */
-typedef void (*DseGssapiAuthenticatorUnockCallback)(void* data);
+typedef void (*DseGssapiAuthenticatorUnlockCallback)(void* data);
 
 /**
  *
  */
 DSE_EXPORT CassError
 dse_gssapi_authenticator_set_lock_callbacks(DseGssapiAuthenticatorLockCallback lock_callback,
-                                            DseGssapiAuthenticatorUnockCallback unlock_callback,
+                                            DseGssapiAuthenticatorUnlockCallback unlock_callback,
                                             void* data);
 
 #ifdef __cplusplus

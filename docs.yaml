@@ -1,0 +1,28 @@
+title:  C/C++ Driver for DataStax Enterprise
+summary: A C/C++ Driver built for DataStax Enterprise
+homepage: http://datastax.github.io/cpp-driver-dse/
+sections:
+  - title:    Topics
+    prefix:   /topics
+    type:     markdown
+    files:   'topics/**/*.md'
+
+  - title:     API docs
+    prefix:    /api
+    type:      doxygen
+    directory: 'include'
+    config: |
+      PREDEFINED = DSE_EXPORT=
+      EXCLUDE_SYMBOLS = XX* DSE_DEPRECATED
+      ENABLE_PREPROCESSING = YES
+      MACRO_EXPANSION = YES
+      EXPAND_ONLY_PREDEF = NO
+      SKIP_FUNCTION_MACROS = YES
+      TYPEDEF_HIDES_STRUCT = YES
+      EXTRACT_ALL = YES
+      INLINE_SOURCES = NO
+      ALIASES = dse{1}="<b>Requires DSE:</b> \1"
+
+versions:
+  - name: v1.0
+    ref: HEAD

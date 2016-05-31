@@ -1,17 +1,5 @@
 /*
   Copyright (c) 2014-2016 DataStax
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-  http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
 */
 
 #include "auth.hpp"
@@ -40,7 +28,7 @@ static void dse_gssapi_authenticator_nop_unlock(void* data) { }
 extern "C" {
 
 CassError dse_gssapi_authenticator_set_lock_callbacks(DseGssapiAuthenticatorLockCallback lock_callback,
-                                                      DseGssapiAuthenticatorUnockCallback unlock_callback,
+                                                      DseGssapiAuthenticatorUnlockCallback unlock_callback,
                                                       void* data) {
   return dse::GssapiAuthenticatorData::set_lock_callbacks(lock_callback, unlock_callback, data);
 }
@@ -546,7 +534,7 @@ GssapiAuthenticator::Result GssapiAuthenticator::process(const char* token, size
 }
 
 CassError GssapiAuthenticatorData::set_lock_callbacks(DseGssapiAuthenticatorLockCallback lock_callback,
-                                                      DseGssapiAuthenticatorUnockCallback unlock_callback,
+                                                      DseGssapiAuthenticatorUnlockCallback unlock_callback,
                                                       void* data) {
   if (lock_callback == NULL || unlock_callback == NULL || data_ == NULL) {
     lock_callback_ = dse_gssapi_authenticator_nop_lock;
@@ -652,7 +640,7 @@ CassAuthenticatorCallbacks GssapiAuthenticatorData::callbacks_ = {
 };
 
 DseGssapiAuthenticatorLockCallback GssapiAuthenticatorData::lock_callback_ = dse_gssapi_authenticator_nop_lock;
-DseGssapiAuthenticatorUnockCallback GssapiAuthenticatorData::unlock_callback_ = dse_gssapi_authenticator_nop_unlock;
+DseGssapiAuthenticatorUnlockCallback GssapiAuthenticatorData::unlock_callback_ = dse_gssapi_authenticator_nop_unlock;
 void* GssapiAuthenticatorData::data_ = NULL;
 
 } // namespace dse
