@@ -11,7 +11,7 @@ SSL can be rather cumbersome to setup; if assistance is required please use the 
 
 ### Generating the Cassandra Public and Private Keys
 
-The most secure method of setting up SSL is to verify that DNS or IP address used to connect to the server matches identity information found in the SSL certificate. This helps to prevent man-in-the-middle attacks. Cassandra uses IP addresses internally so that's the only supported information for identity verification. That means that the IP address of the Cassandra server where the certficate is installed needs to be present in either the certficate's common name (CN) or one of its subject alternative names (SANs). It's possible to create the certficate without either, but then it will not be possible to verify the server's identity. Although this is not as secure, it eases the deployment of SSL by allowing the same certficate to be deployed across the entire Cassandra cluster.
+The most secure method of setting up SSL is to verify that DNS or IP address used to connect to the server matches identity information found in the SSL certificate. This helps to prevent man-in-the-middle attacks. Cassandra uses IP addresses internally so those can be used directly for verification or a domain name can be used via reverse DNS (PTR record). That means that the IP address or domain name of the Cassandra server where the certficate is installed needs to be present in either the certficate's common name (CN) or one of its subject alternative names (SANs). It's possible to create the certficate without either, but then it will not be possible to verify the server's identity. Although this is not as secure, it eases the deployment of SSL by allowing the same certficate to be deployed across the entire Cassandra cluster.
 
 To generate a public/private key pair with the IP address in the CN field use the following:
 
@@ -21,7 +21,7 @@ keytool -genkeypair -noprompt -keyalg RSA -validity 36500 \
   -keystore keystore.jks \
   -storepass <keystore password> \
   -keypass <key password> \
-  -dname "CN=<IP address goes here>, OU=Drivers and Tools, O=DataStax Inc., L=Santa Clara, ST=California, C=US"
+  -dname "CN=<IP address or domain name goes here>, OU=Drivers and Tools, O=DataStax Inc., L=Santa Clara, ST=California, C=US"
 ```
 
 If SAN is preferred use this command:
@@ -32,7 +32,7 @@ keytool -genkeypair -noprompt -keyalg RSA -validity 36500 \
   -keystore keystore.jks \
   -storepass <keystore password> \
   -keypass <key password> \
-  -ext SAN="<IP address goes here>" \
+  -ext SAN="<IP address or domain name goes here>" \
   -dname "CN=node1.datastax.com, OU=Drivers and Tools, O=DataStax Inc., L=Santa Clara, ST=California, C=US"
 ```
 
@@ -133,13 +133,26 @@ cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_NONE);
 
 #### Enabling Cassandra identity verification
 
-If a unique certificate has been generated for each Cassandra node with the IP address in the CN or SAN fields, identity verification will also need to be enabled.
+If a unique certificate has been generated for each Cassandra node with the IP address or domain name in the CN or SAN fields, identity verification will also need to be enabled.
 
 **NOTE:** This is disabled by default.
 
 ```c
-// Add identity verification flag: CASS_SSL_VERIFY_PEER_IDENTITY
+// Add identity verification flag: CASS_SSL_VERIFY_PEER_IDENTITY (IP address)
 cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_PEER_CERT | CASS_SSL_VERIFY_PEER_IDENTITY);
+
+// Or use: CASS_SSL_VERIFY_PEER_IDENTITY_DNS (domain name)
+cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_PEER_CERT | CASS_SSL_VERIFY_PEER_IDENTITY_DNS);
+```
+
+If using a domain name to verify the peer's identity then hostname resolution
+(reverse DNS) needs to be enabled:
+
+**NOTE:** This is also disabled by default.
+
+```c
+// Enable reverse DNS
+cass_cluster_set_use_hostname_resolution(cluster, cass_true);
 ```
 
 ### Using Cassandra and the C/C++ driver with client-side certificates
