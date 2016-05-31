@@ -63,8 +63,8 @@ int main() {
 
 ### Building against the DSE driver
 
-Your application will need to link against the `dse` library which will is
-`dse.so` (`dse_static.a` for static linking) on OS X or Linux and `dse.lib` on
+Your application will need to link against the `dse` library which is `dse.so`
+(or `dse_static.a` for static linking) on OS X or Linux and `dse.lib` on
 Windows. Here's how you would link on OS X or Linux using Clang.
 
 ```
@@ -291,7 +291,7 @@ int main() {
 
 ### Parameter values
 
-Query parameters are bound using a `CassGraphObject`. Parameter values are added
+Query parameters are bound using a `DseGraphObject`. Parameter values are added
 by name using the `dse_graph_object_add_<type>()` functions.
 
 ```c
@@ -319,10 +319,10 @@ dse_graph_object_free(values);
 
 ### Handling results
 
-Graph queries return a `DseGraphResultSet` which is able to iterator over the
-set of results. The lifetime of `DseGraphResult` objects are bound the containing
-result set. `DseGraphResult` objects are invalidated with each call to
-`dse_graph_resultset_next()`.
+Graph queries return a `DseGraphResultSet` which is able to iterate over the
+set of results. The lifetime of `DseGraphResult` objects are bound to the
+containing result set. `DseGraphResult` objects are invalidated with each call
+to `dse_graph_resultset_next()`.
 
 ```c
 /* ... */
@@ -358,7 +358,7 @@ if (dse_graph_result_is_double(result)) {
 }
 
 if (dse_graph_result_is_array(result)) {
-  /* The count can be used to iterator over the elements in an array */
+  /* The count can be used to iterate over the elements in an array */
   size_t i, count = dse_graph_result_element_count(result);
   for (i = 0; i < count; ++i) {
     const DseGraphResult* element = dse_graph_result_element(result, i);
@@ -368,7 +368,7 @@ if (dse_graph_result_is_array(result)) {
 }
 
 if (dse_graph_result_is_object(result)) {
-  /* The count can be used to iterator over the members in an object */
+  /* The count can be used to iterate over the members in an object */
   size_t i, count = dse_graph_result_member_count(result);
   for (i = 0; i < count; ++i) {
     const char* key = dse_graph_result_member_key(result, i, NULL);
