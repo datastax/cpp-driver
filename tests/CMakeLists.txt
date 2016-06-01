@@ -83,8 +83,8 @@ endif()
 #------------------------------
 if(DSE_BUILD_INTEGRATION_TESTS)
   # Add CCM bridge functionality from the Cassandra driver
-  set(CCM_BRIDGE_DIR ${CPP_DRIVER_DIR}/test/ccm_bridge)
-  set(CCM_BRIDGE_SOURCE_DIR ${CPP_DRIVER_DIR}/test/ccm_bridge/src)
+  set(CCM_BRIDGE_DIR ${CASS_SOURCE_DIR}/test/ccm_bridge)
+  set(CCM_BRIDGE_SOURCE_DIR ${CCM_BRIDGE_DIR}/src)
   file(GLOB CCM_BRIDGE_HEADER_FILES ${CCM_BRIDGE_SOURCE_DIR}/*.hpp)
   file(GLOB CCM_BRIDGE_SOURCE_FILES ${CCM_BRIDGE_SOURCE_DIR}/*.cpp)
   if(CASS_USE_LIBSSH2)
@@ -168,6 +168,7 @@ if(DSE_BUILD_INTEGRATION_TESTS)
     ${PROJECT_LIB_NAME_TARGET})
   set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY PROJECT_LABEL ${INTEGRATION_TESTS_DISPLAY_NAME})
   set_property(TARGET ${INTEGRATION_TESTS_NAME} PROPERTY FOLDER "Tests")
+  set_property(TARGET ${INTEGRATION_TESTS_NAME} APPEND PROPERTY COMPILE_FLAGS ${TEST_CXX_FLAGS})
 
   # Copy data file to output directory
 configure_file(embedded-ads.jar ${CMAKE_BINARY_DIR} COPYONLY)
@@ -209,8 +210,9 @@ if(DSE_BUILD_UNIT_TESTS)
     ${PROJECT_LIB_NAME_TARGET})
   set_property(TARGET ${UNIT_TESTS_NAME} PROPERTY PROJECT_LABEL ${UNIT_TESTS_DISPLAY_NAME})
   set_property(TARGET ${UNIT_TESTS_NAME} PROPERTY FOLDER "Tests")
+  set_property(TARGET ${UNIT_TESTS_NAME} APPEND PROPERTY COMPILE_FLAGS ${TEST_CXX_FLAGS})
 
-  # Add the unit tests to be execute by ctest (see CMake BUILD_TESTING)
+  # Add the unit tests to be executed by ctest (see CMake BUILD_TESTING)
   add_test(${UNIT_TESTS_DISPLAY_NAME} ${UNIT_TESTS_NAME}
     COMMAND ${UNIT_TESTS_NAME})
   set_tests_properties(${UNIT_TESTS_DISPLAY_NAME} PROPERTIES TIMEOUT 5)

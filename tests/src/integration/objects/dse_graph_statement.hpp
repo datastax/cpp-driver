@@ -18,7 +18,7 @@ namespace driver {
 /**
  * Wrapped DSE graph statement object
  */
-class DseGraphStatement : public Object<::DseGraphStatement, dse_graph_statement_free> {
+class DseGraphStatement : public Object< ::DseGraphStatement, dse_graph_statement_free> {
 public:
   /**
    * Create the DSE graph statement object from the native driver DSE graph
@@ -27,7 +27,7 @@ public:
    * @param statement Native driver object
    */
   DseGraphStatement(::DseGraphStatement* statement)
-    : Object<::DseGraphStatement, dse_graph_statement_free>(statement) {}
+    : Object< ::DseGraphStatement, dse_graph_statement_free>(statement) {}
 
   /**
    * Create the DSE graph statement object from the shared reference
@@ -35,7 +35,7 @@ public:
    * @param statement Shared reference
    */
   DseGraphStatement(Ptr statement)
-    : Object<::DseGraphStatement, dse_graph_statement_free>(statement) {}
+    : Object< ::DseGraphStatement, dse_graph_statement_free>(statement) {}
 
   /**
    * Create the statement object from a query without options
@@ -43,7 +43,7 @@ public:
    * @param query Query to create statement from
    */
   DseGraphStatement(const std::string& query)
-    : Object<::DseGraphStatement, dse_graph_statement_free>(
+    : Object< ::DseGraphStatement, dse_graph_statement_free>(
         dse_graph_statement_new(query.c_str(), NULL)) {}
 
   /**
@@ -53,7 +53,7 @@ public:
    * @param options Graph options to apply to the graph statement
    */
   DseGraphStatement(const std::string& query, DseGraphOptions options)
-    : Object<::DseGraphStatement, dse_graph_statement_free>(
+    : Object< ::DseGraphStatement, dse_graph_statement_free>(
         dse_graph_statement_new(query.c_str(), options.get())) {}
 
   /**

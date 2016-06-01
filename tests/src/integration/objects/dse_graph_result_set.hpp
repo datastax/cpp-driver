@@ -18,7 +18,7 @@ namespace driver {
 /**
  * Wrapped DSE graph result set object
  */
-class DseGraphResultSet : public Object<::DseGraphResultSet, dse_graph_resultset_free> {
+class DseGraphResultSet : public Object< ::DseGraphResultSet, dse_graph_resultset_free> {
 public:
   class Exception : public test::Exception {
   public:
@@ -33,7 +33,7 @@ public:
    * @param result_set Native driver object
    */
   DseGraphResultSet(::DseGraphResultSet* result_set)
-    : Object<::DseGraphResultSet, dse_graph_resultset_free>(result_set)
+    : Object< ::DseGraphResultSet, dse_graph_resultset_free>(result_set)
     , index_(0) {}
 
   /**
@@ -42,7 +42,7 @@ public:
    * @param result_set Shared reference
    */
   DseGraphResultSet(Ptr result_set)
-    : Object<::DseGraphResultSet, dse_graph_resultset_free>(result_set)
+    : Object< ::DseGraphResultSet, dse_graph_resultset_free>(result_set)
     , index_(0) {}
 
   /**
@@ -51,7 +51,7 @@ public:
    * @param future Wrapped driver object
    */
   DseGraphResultSet(Future future)
-    : Object<::DseGraphResultSet, dse_graph_resultset_free>(
+    : Object< ::DseGraphResultSet, dse_graph_resultset_free>(
         cass_future_get_dse_graph_resultset(future.get()))
     , future_(future)
     , index_(0) {}

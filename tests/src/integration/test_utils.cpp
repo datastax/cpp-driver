@@ -119,7 +119,7 @@ void test::Utils::msleep(unsigned int milliseconds) {
   Sleep(milliseconds);
 #else
   //Convert the milliseconds into a proper timespec structure
-  struct timespec requested = { 0 };
+  struct timespec requested;
   time_t seconds = static_cast<int>(milliseconds / 1000);
   long int nanoseconds = static_cast<long int>((milliseconds - (seconds * 1000)) * 1000000);
 

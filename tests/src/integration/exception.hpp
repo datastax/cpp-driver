@@ -67,7 +67,7 @@ public:
    *
    * @return Error code
    */
-  const CassError error_code() const { return error_code_; }
+  CassError error_code() const { return error_code_; }
 
 private:
   /**

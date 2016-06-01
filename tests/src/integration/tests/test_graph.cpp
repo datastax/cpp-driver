@@ -78,7 +78,7 @@ public:
     // Initialize the graph data for the current cluster (only once)
     if (!is_graph_initialized_) {
       // Assign DSE graph workload, start the cluster, and establish connection
-      if (!ccm_->set_dse_workload(CCM::DseWorkload::DSE_WORKLOAD_GRAPH)) {
+      if (!ccm_->set_dse_workload(CCM::DSE_WORKLOAD_GRAPH)) {
         ccm_->start_cluster();
       }
 
@@ -93,7 +93,7 @@ public:
   static void TearDownTestCase() {
     // Reset the DSE workload on the cluster
     if (is_graph_initialized_) {
-      Options::ccm()->set_dse_workload(CCM::DseWorkload::DSE_WORKLOAD_CASSANDRA);
+      Options::ccm()->set_dse_workload(CCM::DSE_WORKLOAD_CASSANDRA);
     }
   }
 
@@ -315,7 +315,7 @@ TEST_F(GraphIntegrationTest, GraphExists) {
   // Execute the graph statement and ensure the graph exists
   test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_statement);
   CHECK_FAILURE;
-  ASSERT_EQ(1, result_set.count());
+  ASSERT_EQ(1u, result_set.count());
   test::driver::DseGraphResult result = result_set.next();
   ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_BOOL, result.type());
   ASSERT_TRUE(result.is_type<Boolean>());
@@ -428,7 +428,7 @@ TEST_F(GraphIntegrationTest, RetrieveEdges) {
   // Execute the graph statement and ensure the edges were retrieved (validate)
   test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_statement);
   CHECK_FAILURE;
-  ASSERT_EQ(4, result_set.count());
+  ASSERT_EQ(4u, result_set.count());
   for (size_t i = 0; i < 4; ++i) {
     test::driver::DseGraphResult result = result_set.next();
     test::driver::DseGraphEdge edge = result.edge();
@@ -469,7 +469,7 @@ TEST_F(GraphIntegrationTest, RetrieveVertices) {
   // Execute the graph statement and ensure the vertices were retrieved (validate)
   test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_statement);
   CHECK_FAILURE;
-  ASSERT_EQ(2, result_set.count());
+  ASSERT_EQ(2u, result_set.count());
   for (size_t i = 0; i < 2; ++i) {
     test::driver::DseGraphResult result = result_set.next();
     test::driver::DseGraphVertex vertex = result.vertex();
@@ -517,7 +517,7 @@ TEST_F(GraphIntegrationTest, RetrievePaths) {
   // Execute the graph statement and ensure the vertices were retrieved (validate)
   test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_statement);
   CHECK_FAILURE;
-  ASSERT_EQ(2, result_set.count());
+  ASSERT_EQ(2u, result_set.count());
   for (size_t i = 0; i < 2; ++i) {
     test::driver::DseGraphResult result = result_set.next();
     test::driver::DseGraphPath path = result.path();
@@ -526,19 +526,21 @@ TEST_F(GraphIntegrationTest, RetrievePaths) {
     // Ensure the labels are organized as expected
     test::driver::DseGraphResult labels = path.labels();
     ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_ARRAY, labels.type());
-    ASSERT_EQ(5, labels.element_count());
+    ASSERT_EQ(5u, labels.element_count());
     std::string labels_values = Utils::shorten(labels.str(), false);
     labels_values = Utils::replace_all(labels_values, "\"", "");
     ASSERT_EQ("[[a],[b],[c,d],[e,f,g],[h]]", labels_values);
 
     // Ensure the objects matches what is expected from the paths
     test::driver::DseGraphResult objects = path.objects();
-    ASSERT_EQ(5, objects.element_count());
+    ASSERT_EQ(5u, objects.element_count());
     test::driver::DseGraphVertex marko = objects.element(0).vertex();
     CHECK_FAILURE;
     test::driver::DseGraphEdge knows = objects.element(1).edge();
+    (void)knows;
     CHECK_FAILURE;
     test::driver::DseGraphVertex josh = objects.element(2).vertex();
+    (void)josh;
     CHECK_FAILURE;
     test::driver::DseGraphEdge created = objects.element(3).edge();
     CHECK_FAILURE;
@@ -549,14 +551,14 @@ TEST_F(GraphIntegrationTest, RetrievePaths) {
     ASSERT_EQ("person", marko.label().value<std::string>());
     ASSERT_EQ("vertex", marko.type().value<std::string>());
     test::driver::DseGraphResult marko_properties = marko.properties();
-    ASSERT_EQ(2, marko_properties.member_count());
+    ASSERT_EQ(2u, marko_properties.member_count());
     for (size_t j = 0; j < 2; ++j) {
       test::driver::DseGraphResult property = marko_properties.member(j);
       ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_ARRAY, property.type());
-      ASSERT_EQ(1, property.element_count());
+      ASSERT_EQ(1u, property.element_count());
       property = property.element(0);
       ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_OBJECT, property.type());
-      ASSERT_EQ(2, property.member_count());
+      ASSERT_EQ(2u, property.member_count());
 
       // Ensure the name is "marko" and the age is 29
       bool marko_property_asserted = false;
@@ -583,7 +585,7 @@ TEST_F(GraphIntegrationTest, RetrievePaths) {
     // Get properties for the created edge to compare with software name
     test::driver::DseGraphResult created_property = created.properties();
     ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_OBJECT, created_property.type());
-    ASSERT_EQ(1, created_property.member_count());
+    ASSERT_EQ(1u, created_property.member_count());
     ASSERT_EQ("weight", created_property.key(0));
     created_property = created_property.member(0);
     ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_NUMBER, created_property.type());
@@ -592,14 +594,14 @@ TEST_F(GraphIntegrationTest, RetrievePaths) {
 
     // Validate software (should contain different values for each result set)
     test::driver::DseGraphResult software_properties = software.properties();
-    ASSERT_EQ(2, software_properties.member_count());
+    ASSERT_EQ(2u, software_properties.member_count());
     for (size_t j = 0; j < 2; ++j) {
       test::driver::DseGraphResult property = software_properties.member(j);
       ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_ARRAY, property.type());
-      ASSERT_EQ(1, property.element_count());
+      ASSERT_EQ(1u, property.element_count());
       property = property.element(0);
       ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_OBJECT, property.type());
-      ASSERT_EQ(2, property.member_count());
+      ASSERT_EQ(2u, property.member_count());
 
       // Ensure the software name is "lop" or "ripple" (in that order)
       if (marko_properties.key(j).compare("name") == 0) {

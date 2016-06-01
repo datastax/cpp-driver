@@ -58,8 +58,8 @@ public:
    * @param future Wrapped driver object
    */
   Result(Future future)
-    : future_(future)
-    , Object<const CassResult, cass_result_free>(future.result()) {}
+    : Object<const CassResult, cass_result_free>(future.result())
+    , future_(future) {}
 
   /**
    * Get the error code from the future
