@@ -741,6 +741,8 @@ typedef void (*CassLogCallback)(const CassLogMessage* message,
 
 /**
  * An authenticator.
+ *
+ * @struct CassAuthenticator
  */
 typedef struct CassAuthenticator_ CassAuthenticator;
 
@@ -922,7 +924,8 @@ cass_cluster_set_ssl(CassCluster* cluster,
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] callbacks
+ * @param[in] exchange_callbacks
+ * @param[in] cleanup_callback
  * @param[in] data
  * @return CASS_OK if successful, otherwise an error occurred.
  */
@@ -4602,6 +4605,7 @@ cass_statement_bind_custom_n(CassStatement* statement,
  *
  * @param[in] statement
  * @param[in] name
+ * @param[in] class_name
  * @param[in] value The value is copied into the statement object; the
  * memory pointed to by this parameter can be freed after this call.
  * @param[in] value_size
@@ -4623,6 +4627,8 @@ cass_statement_bind_custom_by_name(CassStatement* statement,
  * @param[in] statement
  * @param[in] name
  * @param[in] name_length
+ * @param[in] class_name
+ * @param[in] class_name_length
  * @param[in] value
  * @param[in] value_size
  * @return same as cass_statement_bind_custom_by_name()
@@ -5875,7 +5881,7 @@ cass_collection_append_custom(CassCollection* collection,
  * @param[in] class_name
  * @param[in] class_name_length
  * @param[in] value
- * @param[in] value_length
+ * @param[in] value_size
  * @return same as cass_collection_append_custom()
  *
  * @see cass_collection_append_custom()
@@ -6278,7 +6284,7 @@ cass_tuple_set_custom(CassTuple* tuple,
  * @param[in] class_name
  * @param[in] class_name_length
  * @param[in] value
- * @param[in] value_length
+ * @param[in] value_size
  * @return same as cass_tuple_set_custom()
  *
  * @see cass_tuple_set_custom()
