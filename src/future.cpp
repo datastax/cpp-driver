@@ -62,9 +62,8 @@ const CassResult* cass_future_get_result(CassFuture* future) {
 
   if (result) {
     result->decode_first_row();
+    result->inc_ref();
   }
-
-  if (result) result->inc_ref();
 
   return CassResult::to(result.get());
 }
