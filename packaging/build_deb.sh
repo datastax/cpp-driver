@@ -33,7 +33,7 @@ release=1
 dist=$(lsb_release -s -c)
 base="cassandra-cpp-driver-$version"
 archive="$base.tar.gz"
-files="CMakeLists.txt cmake_uninstall.cmake.in include src"
+files="CMakeLists.txt cmake cmake_uninstall.cmake.in include src"
 
 echo "Building version $version"
 
