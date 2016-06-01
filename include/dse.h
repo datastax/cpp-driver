@@ -875,7 +875,7 @@ dse_graph_array_add_string_n(DseGraphArray* array,
  * @public @memberof DseGraphArray
  *
  * @param[in] array
- * @param[in] valeu
+ * @param[in] value
  * @return CASS_OK if successful, otherwise an error occurred.
  */
 DSE_EXPORT CassError
@@ -1098,6 +1098,7 @@ dse_graph_result_get_string(const DseGraphResult* result,
  * @public @memberof DseGraphResult
  *
  * @param[in] result
+ * @param[out] edge
  * @return CASS_OK if successful, otherwise an error occurred.
  *
  */
@@ -1111,6 +1112,7 @@ dse_graph_result_as_edge(const DseGraphResult* result,
  * @public @memberof DseGraphResult
  *
  * @param[in] result
+ * @param[out] vertex
  * @return CASS_OK if successful, otherwise an error occurred.
  *
  */
@@ -1124,6 +1126,7 @@ dse_graph_result_as_vertex(const DseGraphResult* result,
  * @public @memberof DseGraphResult
  *
  * @param[in] result
+ * @param[out] path
  * @return CASS_OK if successful, otherwise an error occurred.
  *
  */
@@ -1149,6 +1152,8 @@ dse_graph_result_member_count(const DseGraphResult* result);
  * @public @memberof DseGraphResult
  *
  * @param[in] result
+ * @param[in] index
+ * @param[out] length
  * @return The string key of the member.
  *
  */
@@ -1163,6 +1168,7 @@ dse_graph_result_member_key(const DseGraphResult* result,
  * @public @memberof DseGraphResult
  *
  * @param[in] result
+ * @param[in] index
  * @return The result value of the member.
  *
  */
@@ -1188,6 +1194,7 @@ dse_graph_result_element_count(const DseGraphResult* result);
  * @public @memberof DseGraphResult
  *
  * @param[in] result
+ * @param[in] index
  * @return The result value.
  *
  */

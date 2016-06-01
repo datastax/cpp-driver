@@ -77,6 +77,7 @@ option(DSE_INSTALL_HEADER "Install header file" ON)
 option(DSE_INSTALL_PKG_CONFIG "Install pkg-config file(s)" ON)
 option(DSE_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
 option(DSE_BUILD_EXAMPLES "Build examples" OFF)
+option(DSE_BUILD_DOCS "Build documentation" OFF)
 option(DSE_BUILD_INTEGRATION_TESTS "Build the integration tests" OFF)
 option(DSE_BUILD_UNIT_TESTS "Build the unit tests" OFF)
 option(DSE_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
@@ -165,6 +166,22 @@ set(DSE_LIBS ${DSE_LIBS} ${KERBEROS_LIBRARIES})
 # Build up compiler flags
 set(PROJECT_CXX_FLAGS ${CASS_DRIVER_CXX_FLAGS})
 set(TEST_CXX_FLAGS ${CASS_TEST_CXX_FLAGS})
+
+#----------------------
+# Generating API docs
+#----------------------
+
+# Doxygen
+if(DSE_BUILD_DOCS)
+  find_package(Doxygen)
+  if(DOXYGEN_FOUND)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+    add_custom_target(docs
+      ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      COMMENT "Generating API documentation with Doxygen" VERBATIM)
+  endif()
+endif()
 
 #------------------------------
 # DSE static and shared
