@@ -444,9 +444,9 @@ BOOST_AUTO_TEST_CASE(massive_number_of_prepares)
 
 
 #if BOOST_VERSION < 105700
-  CONTAINER<boost::unique_future<CassPreparedMovable> > prepare_futures;
+  CONTAINER<boost::BOOST_THREAD_FUTURE<CassPreparedMovable> > prepare_futures;
 #else
-  CONTAINER<boost::unique_future<test_utils::CassPreparedPtr> > prepare_futures;
+  CONTAINER<boost::BOOST_THREAD_FUTURE<test_utils::CassPreparedPtr> > prepare_futures;
 #endif
 
   std::vector<CassUuid> tweet_ids;

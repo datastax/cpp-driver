@@ -34,7 +34,8 @@ cass_statement_free(statement);
 When using Cassandra 2.2+ the driver will send a special `unset` value for
 unbound parameters (leaving the unbound column unaffected). If using older
 versions of Cassandra (2.1 and below) the driver will return an error for
-unbound parameters.
+unbound parameters. Calling `cass_statement_reset_parameters()` will unbind (or
+resize) a statement's parameters.
 
 ## Constructing Collections
 
@@ -82,6 +83,12 @@ cass_collection_free(map);
 
 When using Cassandra 2.1+ it is possible to nest collections. A collection can
 be added to another collection using [`cass_collection_append_collection()`].
+
+## Custom types
+
+Custom types can be bound using either the `cass_statement_bind_bytes[_by_name]()` or the
+`cass_statement_bind_custom[by_name]()` functions. The latter validates the class
+name of the custom type matches the class name of the type being bound.
 
 [`cass_collection_append_collection()`]:
 http://datastax.github.io/cpp-driver/api/CassCollection/#cass-collection-append-collection

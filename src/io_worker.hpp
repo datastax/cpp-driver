@@ -50,7 +50,9 @@ struct IOWorkerEvent {
   };
 
   IOWorkerEvent()
-    : type(INVALID) {}
+    : type(INVALID)
+    , is_initial_connection(false)
+    , cancel_reconnect(false) {}
 
   Type type;
   Host::ConstPtr host;
