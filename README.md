@@ -19,7 +19,7 @@ Cassandra's native protocol and Cassandra Query Language v3.
 - Support for materialized view and secondary index metadata
 - Support for clustering key order, `frozen<>` and Cassandra version metadata
 - [Blacklist], [whitelist DC], and [blacklist DC] load balancing policies
-- Custom [authenticators]
+- [Custom] authenticators
 - [Reverse DNS] with SSL peer identity verification support
 
 More information about features included in 2.3 can be found in this [blog
@@ -207,5 +207,5 @@ limitations under the License.
 [Blacklist]: http://datastax.github.io/cpp-driver/topics/configuration/#blacklist
 [whitelist DC]: http://datastax.github.io/cpp-driver/topics/configuration/#datacenter
 [blacklist DC]: http://datastax.github.io/cpp-driver/topics/configuration/#datacenter
-[authenticators]: http://datastax.github.io/cpp-driver/topics/security/#custom
+[Custom]: http://datastax.github.io/cpp-driver/topics/security/#custom
 [Reverse DNS]: http://datastax.github.io/cpp-driver/topics/security/ssl/#enabling-cassandra-identity-verification
