@@ -157,7 +157,7 @@ CassError cass_future_custom_payload_item(CassFuture* future,
     *value_size = item.value.size();
     return CASS_OK;
   }
-  return CASS_ERROR_LIB_INTERNAL_ERROR;
+  return CASS_ERROR_LIB_NO_CUSTOM_PAYLOAD;
 }
 
 } // extern "C"
