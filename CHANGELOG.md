@@ -1,3 +1,12 @@
+2.4.1
+===========
+June 9, 2016
+
+Other
+--------
+* Fixed issue where `cass_future_get_result()` and similiar methods would
+  dereference a NULL pointer if a future is set to an error.
+
 2.4.0
 ===========
 June 1, 2016

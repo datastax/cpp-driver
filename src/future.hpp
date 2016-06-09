@@ -82,8 +82,6 @@ public:
     return internal_wait_for(lock, timeout_us);
   }
 
-  bool is_error() { return get_error() != NULL; }
-
   Error* get_error() {
     ScopedMutex lock(&mutex_);
     internal_wait(lock);
