@@ -63,7 +63,8 @@ public:
       : opcode_(opcode)
       , consistency_(DEFAULT_CONSISTENCY)
       , serial_consistency_(CASS_CONSISTENCY_ANY)
-      , timestamp_(CASS_INT64_MIN) { }
+      , timestamp_(CASS_INT64_MIN)
+      , request_timeout_ms_(CASS_UINT64_MAX) { }
 
   virtual ~Request() { }
 
@@ -82,6 +83,12 @@ public:
   int64_t timestamp() const { return timestamp_; }
 
   void set_timestamp(int64_t timestamp) { timestamp_ = timestamp; }
+
+  uint64_t request_timeout_ms() const { return request_timeout_ms_; }
+
+  void set_request_timeout_ms(uint64_t request_timeout_ms) {
+    request_timeout_ms_ = request_timeout_ms;
+  }
 
   RetryPolicy* retry_policy() const {
     return retry_policy_.get();
@@ -106,6 +113,7 @@ private:
   CassConsistency consistency_;
   CassConsistency serial_consistency_;
   int64_t timestamp_;
+  uint64_t request_timeout_ms_;
   SharedRefPtr<RetryPolicy> retry_policy_;
   SharedRefPtr<const CustomPayload> custom_payload_;
 

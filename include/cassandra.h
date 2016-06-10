@@ -3902,6 +3902,20 @@ CASS_EXPORT CassError
 cass_statement_set_timestamp(CassStatement* statement,
                              cass_int64_t timestamp);
 
+/**
+ * Sets the statement's timeout for waiting for a response from a node.
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] timeout_ms Request timeout in milliseconds
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_request_timeout()
+ */
+CASS_EXPORT CassError
+cass_statement_set_request_timeout(CassStatement* statement,
+                                   unsigned timeout_ms);
 
 /**
  * Sets the statement's retry policy.
@@ -5160,6 +5174,21 @@ cass_batch_set_serial_consistency(CassBatch* batch,
 CASS_EXPORT CassError
 cass_batch_set_timestamp(CassBatch* batch,
                          cass_int64_t timestamp);
+
+/**
+ * Sets the batch's timeout for waiting for a response from a node.
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] timeout_ms Request timeout in milliseconds
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_request_timeout()
+ */
+CASS_EXPORT CassError
+cass_batch_set_request_timeout(CassBatch* batch,
+                               unsigned timeout_ms);
 
 /**
  * Sets the batch's retry policy.

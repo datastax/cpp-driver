@@ -293,7 +293,7 @@ bool Connection::internal_write(Handler* handler, bool flush_immediately, bool r
 
   handler->set_state(Handler::REQUEST_STATE_WRITING);
   handler->start_timer(loop_,
-                       config_.request_timeout_ms(),
+                       handler->request_timeout_ms(config_),
                        handler,
                        Connection::on_timeout);
 
