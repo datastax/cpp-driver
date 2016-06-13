@@ -29,6 +29,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <time.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -191,8 +192,9 @@ cass_bool_t create_graph(CassSession* session, const char* name) {
   dse_graph_object_finish(values);
 
   if (execute_graph_query(session,
-                          "system.graph(name).drop();" \
-                          "system.graph(name).ifNotExists().create()",
+                          "graph = system.graph(name);" \
+                          "if (graph.exists()) graph.drop();" \
+                          "graph.create();",
                           NULL, values, NULL)) {
     for  (i = 0; i < 10; ++i) {
       DseGraphResultSet* resultset;
