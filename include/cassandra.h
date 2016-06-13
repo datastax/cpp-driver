@@ -9351,7 +9351,7 @@ cass_custom_payload_set(CassCustomPayload* payload,
  *
  * @cassandra{2.2+}
  *
- * @public @memberof CassInet
+ * @public @memberof CassCustomPayload
  *
  * @param[in] payload
  * @param[in] name
@@ -9365,6 +9365,38 @@ cass_custom_payload_set_n(CassCustomPayload* payload,
                           size_t name_length,
                           const cass_byte_t* value,
                           size_t value_size);
+
+/**
+ * Removes an item from the custom payload.
+ *
+ * @cassandra{2.2+}
+ *
+ * @public @memberof CassCustomPayload
+ *
+ * @param[in] payload
+ * @param[in] name
+ */
+CASS_EXPORT void
+cass_custom_payload_remove(CassCustomPayload* payload,
+                           const char* name);
+
+/**
+ * Same as cass_custom_payload_set(), but with lengths for string
+ * parameters.
+ *
+ * @cassandra{2.2+}
+ *
+ * @public @memberof CassCustomPayload
+ *
+ * @param[in] payload
+ * @param[in] name
+ * @param[in] name_length
+ */
+CASS_EXPORT void
+cass_custom_payload_remove_n(CassCustomPayload* payload,
+                             const char* name,
+                             size_t name_length);
+
 
 /***********************************************************************************
  *

@@ -41,6 +41,10 @@ public:
   void set(const char* name, size_t name_length,
            const uint8_t* value, size_t value_size);
 
+  void remove(const char* name, size_t name_length) {
+    items_.erase(std::string(name, name_length));
+  }
+
   int32_t encode(BufferVec* bufs) const;
 
 private:
