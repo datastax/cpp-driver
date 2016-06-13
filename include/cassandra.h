@@ -111,6 +111,8 @@ typedef long long cass_int64_t;
 typedef unsigned long long cass_uint64_t;
 #endif
 
+#define CASS_UINT64_MAX 18446744073709551615ULL
+
 typedef cass_uint8_t cass_byte_t;
 typedef cass_uint64_t cass_duration_t;
 
@@ -1204,7 +1206,7 @@ cass_cluster_set_connect_timeout(CassCluster* cluster,
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] timeout_ms Request timeout in milliseconds
+ * @param[in] timeout_ms Request timeout in milliseconds. Use 0 for no timeout.
  */
 CASS_EXPORT void
 cass_cluster_set_request_timeout(CassCluster* cluster,
@@ -3905,17 +3907,20 @@ cass_statement_set_timestamp(CassStatement* statement,
 /**
  * Sets the statement's timeout for waiting for a response from a node.
  *
+ * <b>Default:</b> Disabled (use the cluster-level request timeout)
+ *
  * @public @memberof CassStatement
  *
  * @param[in] statement
- * @param[in] timeout_ms Request timeout in milliseconds
+ * @param[in] timeout_ms Request timeout in milliseconds. Use 0 for no timeout
+ * or CASS_UINT64_MAX to disable (to use the cluster-level request timeout).
  * @return CASS_OK if successful, otherwise an error occurred.
  *
  * @see cass_cluster_set_request_timeout()
  */
 CASS_EXPORT CassError
 cass_statement_set_request_timeout(CassStatement* statement,
-                                   unsigned timeout_ms);
+                                   cass_uint64_t timeout_ms);
 
 /**
  * Sets the statement's retry policy.
@@ -5178,17 +5183,20 @@ cass_batch_set_timestamp(CassBatch* batch,
 /**
  * Sets the batch's timeout for waiting for a response from a node.
  *
+ * <b>Default:</b> Disabled (use the cluster-level request timeout)
+ *
  * @public @memberof CassBatch
  *
  * @param[in] batch
- * @param[in] timeout_ms Request timeout in milliseconds
+ * @param[in] timeout_ms Request timeout in milliseconds. Use 0 for no timeout
+ * or CASS_UINT64_MAX to disable (to use the cluster-level request timeout).
  * @return CASS_OK if successful, otherwise an error occurred.
  *
  * @see cass_cluster_set_request_timeout()
  */
 CASS_EXPORT CassError
 cass_batch_set_request_timeout(CassBatch* batch,
-                               unsigned timeout_ms);
+                               cass_uint64_t timeout_ms);
 
 /**
  * Sets the batch's retry policy.

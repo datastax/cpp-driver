@@ -18,6 +18,7 @@
 #define __CASS_REQUEST_HPP_INCLUDED__
 
 #include "buffer.hpp"
+#include "cassandra.h"
 #include "constants.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
@@ -64,7 +65,7 @@ public:
       , consistency_(DEFAULT_CONSISTENCY)
       , serial_consistency_(CASS_CONSISTENCY_ANY)
       , timestamp_(CASS_INT64_MIN)
-      , request_timeout_ms_(CASS_UINT64_MAX) { }
+      , request_timeout_ms_(CASS_UINT64_MAX) { } // Disabled (use the cluster-level timeout)
 
   virtual ~Request() { }
 

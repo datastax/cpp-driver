@@ -117,7 +117,7 @@ CassError cass_statement_set_timestamp(CassStatement* statement,
 
 CassError
 cass_statement_set_request_timeout(CassStatement* statement,
-                                   unsigned timeout_ms) {
+                                   cass_uint64_t timeout_ms) {
   statement->set_request_timeout_ms(timeout_ms);
   return CASS_OK;
 }

@@ -53,7 +53,7 @@ CassError cass_batch_set_timestamp(CassBatch* batch,
 }
 
 CassError cass_batch_set_request_timeout(CassBatch *batch,
-                                         unsigned timeout_ms) {
+                                         cass_uint64_t timeout_ms) {
   batch->set_request_timeout_ms(timeout_ms);
   return CASS_OK;
 }
