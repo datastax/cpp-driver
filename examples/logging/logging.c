@@ -74,9 +74,6 @@ int main(int argc, char* argv[]) {
   CassSession* session = NULL;
   CassFuture* close_future = NULL;
   char* hosts = "127.0.0.1";
-  if (argc > 1) {
-    hosts = argv[1];
-  }
 
   FILE* log_file = fopen("driver.log", "w+");
   if (log_file == NULL) {
@@ -87,6 +84,9 @@ int main(int argc, char* argv[]) {
   cass_log_set_level(CASS_LOG_INFO);
   cass_log_set_callback(on_log, (void*)log_file);
 
+  if (argc > 1) {
+    hosts = argv[1];
+  }
   cluster = create_cluster(hosts);
   session = cass_session_new();
 

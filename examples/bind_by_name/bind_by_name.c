@@ -183,15 +183,16 @@ int main(int argc, char* argv[]) {
   const CassPrepared* insert_prepared = NULL;
   const CassPrepared* select_prepared = NULL;
   char* hosts = "127.0.0.1";
-  if (argc > 1) {
-    hosts = argv[1];
-  }
-  cluster = create_cluster(hosts);
 
   const char* insert_query
     = "INSERT INTO examples.basic (key, bln, flt, dbl, i32, i64) VALUES (?, ?, ?, ?, ?, ?);";
   const char* select_query
     = "SELECT * FROM examples.basic WHERE key = ?";
+
+  if (argc > 1) {
+    hosts = argv[1];
+  }
+  cluster = create_cluster(hosts);
 
   if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);

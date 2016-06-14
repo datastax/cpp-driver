@@ -102,9 +102,6 @@ int main(int argc, char* argv[]) {
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
   char* hosts = "127.0.0.1,127.0.0.2,127.0.0.3";
-  if (argc > 1) {
-    hosts = argv[1];
-  }
 
   /* Setup authentication callbacks and credentials */
   CassAuthenticatorCallbacks auth_callbacks = {
@@ -120,6 +117,9 @@ int main(int argc, char* argv[]) {
   };
 
   /* Add contact points */
+  if (argc > 1) {
+    hosts = argv[1];
+  }
   cass_cluster_set_contact_points(cluster, hosts);
 
   /* Set custom authentication callbacks and credentials */

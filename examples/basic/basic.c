@@ -161,13 +161,14 @@ int main(int argc, char* argv[]) {
   CassSession* session = cass_session_new();
   CassFuture* close_future = NULL;
   char* hosts = "127.0.0.1";
+
+  Basic input = { cass_true, 0.001f, 0.0002, 1, 2 };
+  Basic output;
+
   if (argc > 1) {
     hosts = argv[1];
   }
   cluster = create_cluster(hosts);
-
-  Basic input = { cass_true, 0.001f, 0.0002, 1, 2 };
-  Basic output;
 
   if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);

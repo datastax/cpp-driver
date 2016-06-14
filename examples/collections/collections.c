@@ -162,14 +162,15 @@ int main(int argc, char* argv[]) {
   CassSession* session = cass_session_new();
   CassFuture* close_future = NULL;
   char* hosts = "127.0.0.1";
-  if (argc > 1) {
-    hosts = argv[1];
-  }
-  cluster = create_cluster(hosts);
 
   const char* items[] = { "apple", "orange", "banana", "mango", NULL };
 
   cass_cluster_set_protocol_version(cluster, 2);
+
+  if (argc > 1) {
+    hosts = argv[1];
+  }
+  cluster = create_cluster(hosts);
 
   if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);

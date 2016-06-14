@@ -154,12 +154,13 @@ int main(int argc, char* argv[]) {
   CassFuture* close_future = NULL;
   const CassPrepared* prepared = NULL;
   char* hosts = "127.0.0.1";
+
+  Pair pairs[] = { {"a", "1"}, {"b", "2"}, { NULL, NULL} };
+
   if (argc > 1) {
     hosts = argv[1];
   }
   cluster = create_cluster(hosts);
-
-  Pair pairs[] = { {"a", "1"}, {"b", "2"}, { NULL, NULL} };
 
   if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);
