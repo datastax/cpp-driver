@@ -49,9 +49,9 @@ void print_error(CassFuture* future) {
   fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
 }
 
-CassCluster* create_cluster() {
+CassCluster* create_cluster(const char* hosts) {
   CassCluster* cluster = cass_cluster_new();
-  cass_cluster_set_contact_points(cluster, "127.0.0.1");
+  cass_cluster_set_contact_points(cluster, hosts);
   return cluster;
 }
 
@@ -165,12 +165,17 @@ CassError select_from_log(CassSession* session, const char* key) {
   return rc;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
   CassUuidGen* uuid_gen = cass_uuid_gen_new();
-  CassCluster* cluster = create_cluster();
+  CassCluster* cluster = NULL;
   CassSession* session = cass_session_new();
   CassFuture* close_future = NULL;
   CassUuid uuid;
+  char* hosts = "127.0.0.1";
+  if (argc > 1) {
+    hosts = argv[1];
+  }
+  cluster = create_cluster(hosts);
 
   if (connect_session(session, cluster) != CASS_OK) {
     cass_cluster_free(cluster);

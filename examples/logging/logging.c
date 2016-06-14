@@ -39,9 +39,9 @@ void print_error(CassFuture* future) {
   fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
 }
 
-CassCluster* create_cluster() {
+CassCluster* create_cluster(const char* hosts) {
   CassCluster* cluster = cass_cluster_new();
-  cass_cluster_set_contact_points(cluster, "127.0.0.1");
+  cass_cluster_set_contact_points(cluster, hosts);
   return cluster;
 }
 
@@ -69,10 +69,14 @@ void on_log(const CassLogMessage* message, void* data) {
           message->message);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
   CassCluster* cluster = NULL;
   CassSession* session = NULL;
   CassFuture* close_future = NULL;
+  char* hosts = "127.0.0.1";
+  if (argc > 1) {
+    hosts = argv[1];
+  }
 
   FILE* log_file = fopen("driver.log", "w+");
   if (log_file == NULL) {
@@ -83,7 +87,7 @@ int main() {
   cass_log_set_level(CASS_LOG_INFO);
   cass_log_set_callback(on_log, (void*)log_file);
 
-  cluster = create_cluster();
+  cluster = create_cluster(hosts);
   session = cass_session_new();
 
   if (connect_session(session, cluster) != CASS_OK) {

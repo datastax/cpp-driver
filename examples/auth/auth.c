@@ -96,11 +96,15 @@ void on_auth_cleanup(CassAuthenticator* auth, void* data) {
    */
 }
 
-int main() {
+int main(int argc, char* argv[]) {
   /* Setup and connect to cluster */
   CassFuture* connect_future = NULL;
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
+  char* hosts = "127.0.0.1,127.0.0.2,127.0.0.3";
+  if (argc > 1) {
+    hosts = argv[1];
+  }
 
   /* Setup authentication callbacks and credentials */
   CassAuthenticatorCallbacks auth_callbacks = {
@@ -116,7 +120,7 @@ int main() {
   };
 
   /* Add contact points */
-  cass_cluster_set_contact_points(cluster, "127.0.0.1,127.0.0.2,127.0.0.3");
+  cass_cluster_set_contact_points(cluster, hosts);
 
   /* Set custom authentication callbacks and credentials */
   cass_cluster_set_authenticator_callbacks(cluster,

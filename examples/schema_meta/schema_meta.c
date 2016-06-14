@@ -126,11 +126,15 @@ CassError execute_query(CassSession* session, const char* query) {
   return rc;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
   CassFuture* connect_future = NULL;
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
-  cass_cluster_set_contact_points(cluster, "127.0.0.1");
+  char* hosts = "127.0.0.1";
+  if (argc > 1) {
+    hosts = argv[1];
+  }
+  cass_cluster_set_contact_points(cluster, hosts);
 
   connect_future = cass_session_connect(session, cluster);
 

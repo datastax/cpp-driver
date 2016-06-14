@@ -44,9 +44,9 @@ void print_error(CassFuture* future) {
   fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
 }
 
-CassCluster* create_cluster() {
+CassCluster* create_cluster(const char* hosts) {
   CassCluster* cluster = cass_cluster_new();
-  cass_cluster_set_contact_points(cluster, "127.0.0.1");
+  cass_cluster_set_contact_points(cluster, hosts);
   return cluster;
 }
 
@@ -163,10 +163,15 @@ CassError select_from_maps(CassSession* session, const char* key) {
   return rc;
 }
 
-int main() {
-  CassCluster* cluster = create_cluster();
+int main(int argc, char* argv[]) {
+  CassCluster* cluster = NULL;
   CassSession* session = cass_session_new();
   CassFuture* close_future = NULL;
+  char* hosts = "127.0.0.1";
+  if (argc > 1) {
+    hosts = argv[1];
+  }
+  cluster = create_cluster(hosts);
 
   const Pair items[] = { { "apple", 1 }, { "orange", 2 }, { "banana", 3 }, { "mango", 4 }, { NULL, 0 } };
 

@@ -28,14 +28,18 @@
 #include <stdio.h>
 #include <cassandra.h>
 
-int main() {
+int main(int argc, char* argv[]) {
   /* Setup and connect to cluster */
   CassFuture* connect_future = NULL;
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
+  char* hosts = "127.0.0.1";
+  if (argc > 1) {
+    hosts = argv[1];
+  }
 
   /* Add contact points */
-  cass_cluster_set_contact_points(cluster, "127.0.0.1");
+  cass_cluster_set_contact_points(cluster, hosts);
 
   /* Provide the cluster object as configuration to connect the session */
   connect_future = cass_session_connect(session, cluster);

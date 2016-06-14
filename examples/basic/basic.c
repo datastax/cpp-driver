@@ -49,9 +49,9 @@ void print_error(CassFuture* future) {
   fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
 }
 
-CassCluster* create_cluster() {
+CassCluster* create_cluster(const char* hosts) {
   CassCluster* cluster = cass_cluster_new();
-  cass_cluster_set_contact_points(cluster, "127.0.0.1");
+  cass_cluster_set_contact_points(cluster, hosts);
   return cluster;
 }
 
@@ -156,10 +156,15 @@ CassError select_from_basic(CassSession* session, const char* key, Basic* basic)
   return rc;
 }
 
-int main() {
-  CassCluster* cluster = create_cluster();
+int main(int argc, char* argv[]) {
+  CassCluster* cluster = NULL;
   CassSession* session = cass_session_new();
   CassFuture* close_future = NULL;
+  char* hosts = "127.0.0.1";
+  if (argc > 1) {
+    hosts = argv[1];
+  }
+  cluster = create_cluster(hosts);
 
   Basic input = { cass_true, 0.001f, 0.0002, 1, 2 };
   Basic output;

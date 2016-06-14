@@ -46,9 +46,9 @@ void print_error(CassFuture* future) {
   fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
 }
 
-CassCluster* create_cluster() {
+CassCluster* create_cluster(const char* hosts) {
   CassCluster* cluster = cass_cluster_new();
-  cass_cluster_set_contact_points(cluster, "127.0.0.1");
+  cass_cluster_set_contact_points(cluster, hosts);
   return cluster;
 }
 
@@ -148,11 +148,16 @@ CassError insert_into_batch_with_prepared(CassSession* session, const CassPrepar
 }
 
 
-int main() {
-  CassCluster* cluster = create_cluster();
+int main(int argc, char* argv[]) {
+  CassCluster* cluster = NULL;
   CassSession* session = cass_session_new();
   CassFuture* close_future = NULL;
   const CassPrepared* prepared = NULL;
+  char* hosts = "127.0.0.1";
+  if (argc > 1) {
+    hosts = argv[1];
+  }
+  cluster = create_cluster(hosts);
 
   Pair pairs[] = { {"a", "1"}, {"b", "2"}, { NULL, NULL} };
 
