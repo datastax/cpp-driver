@@ -42,10 +42,11 @@ typedef struct _LIBSSH2_CHANNEL LIBSSH2_CHANNEL;
 #endif
 
 // Default values
-#define DEFAULT_CASSANDRA_VERSION CassVersion("3.4")
-#define DEFAULT_DSE_VERSION DseVersion("4.8.5")
+#define DEFAULT_CASSANDRA_VERSION CassVersion("3.7")
+#define DEFAULT_DSE_VERSION DseVersion("4.8.8")
 #define DEFAULT_USE_GIT false
 #define DEFAULT_USE_DSE false
+#define DEFAULT_DSE_WORKLOAD DSE_WORKLOAD_CASSANDRA
 #define DEFAULT_CLUSTER_PREFIX "cpp-driver"
 #define DEFAULT_DSE_CREDENTIALS DseCredentialsType::USERNAME_PASSWORD
 #define DEFAULT_DEPLOYMENT DeploymentType::LOCAL
@@ -139,9 +140,15 @@ namespace CCM {
      *                otherwise (default: DEFAULT_USE_GIT). Prepends
      *                `cassandra-` to version when creating cluster through CCM
      *                if using Cassandra; otherwise passes version information
-     *                to CCM for git download of DSE.
+     *                to CCM for git download of DSE. Set branch_tag to
+     *                override default action.
+     * @param branch_tag Branch/Tag to use when use_git is enabled
+     *                   (default: Empty). This value is independent of the
+     *                   version specified.
      * @param use_dse True if CCM should load DSE for provided version; false
      *               otherwise (default: DEFAULT_USE_DSE)
+     * @param dse_workload DSE workload to utilize
+     *                     (default: DSE_WORKLOAD_CASSANDRA)
      * @param cluster_prefix Prefix to use when creating a cluster name
      *                       (default: DEFAULT_CLUSTER_PREFIX)
      * @param dse_credentials_type Username|Password/INI file credentials
@@ -170,7 +177,9 @@ namespace CCM {
      */
     Bridge(CassVersion cassandra_version = DEFAULT_CASSANDRA_VERSION,
       bool use_git = DEFAULT_USE_GIT,
+      const std::string& branch_tag = "",
       bool use_dse = DEFAULT_USE_DSE,
+      DseWorkload dse_workload = DSE_WORKLOAD_CASSANDRA,
       const std::string& cluster_prefix = DEFAULT_CLUSTER_PREFIX,
       DseCredentialsType dse_credentials_type = DEFAULT_DSE_CREDENTIALS,
       const std::string& dse_username = "",
@@ -586,9 +595,17 @@ namespace CCM {
      */
     bool use_git_;
     /**
+     * Branch/Tag to retrieve from ASF/GitHub
+     */
+    std::string branch_tag_;
+    /**
      * Flag to determine if DSE is being used
      */
     bool use_dse_;
+    /**
+     * Workload to apply to the DSE cluster
+     */
+    DseWorkload dse_workload_;
     /**
      * Cluster prefix to apply to cluster name during create command
      */
