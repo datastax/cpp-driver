@@ -136,7 +136,7 @@ cass_int64_t cass_time_from_epoch(cass_int64_t epoch_secs) {
 }
 
 cass_int64_t cass_date_time_to_epoch(cass_uint32_t date, cass_int64_t time) {
-  return (date - CASS_DATE_EPOCH) * NUM_SECONDS_PER_DAY +
+  return (static_cast<cass_uint64_t>(date) - CASS_DATE_EPOCH) * NUM_SECONDS_PER_DAY +
       time / CASS_TIME_NANOSECONDS_PER_SECOND;
 }
 

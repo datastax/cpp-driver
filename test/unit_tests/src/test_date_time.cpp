@@ -23,6 +23,8 @@
 #include <boost/test/unit_test.hpp>
 #include <time.h>
 
+#define CASS_DATE_EPOCH 2147483648U
+
 BOOST_AUTO_TEST_SUITE(date_time)
 
 BOOST_AUTO_TEST_CASE(simple)
@@ -35,9 +37,9 @@ BOOST_AUTO_TEST_CASE(simple)
 
 BOOST_AUTO_TEST_CASE(date)
 {
-  BOOST_CHECK(cass_date_from_epoch(0) ==2147483648u);
-  BOOST_CHECK(cass_date_from_epoch(24 * 3600) ==2147483649u);
-  BOOST_CHECK(cass_date_from_epoch(2 * 24 * 3600) ==2147483650u);
+  BOOST_CHECK_EQUAL(cass_date_from_epoch(0), CASS_DATE_EPOCH);
+  BOOST_CHECK_EQUAL(cass_date_from_epoch(24 * 3600), CASS_DATE_EPOCH + 1);
+  BOOST_CHECK_EQUAL(cass_date_from_epoch(2 * 24 * 3600), CASS_DATE_EPOCH + 2);
 }
 
 BOOST_AUTO_TEST_CASE(time)
@@ -47,6 +49,13 @@ BOOST_AUTO_TEST_CASE(time)
   cass_int64_t actual = cass_time_from_epoch(now);
   cass_int64_t expected = 1000000000LL * (tm->tm_hour * 3600  + 60 * tm->tm_min + tm->tm_sec);
   BOOST_CHECK(actual == expected);
+}
+
+BOOST_AUTO_TEST_CASE(date_time_to_epoc)
+{
+  BOOST_CHECK_EQUAL(cass_date_time_to_epoch(CASS_DATE_EPOCH, 0), 0L); // Epoch
+  BOOST_CHECK_EQUAL(cass_date_time_to_epoch(CASS_DATE_EPOCH - 1, 0), -24L * 3600L); // Epoch - 1 day
+  BOOST_CHECK_EQUAL(cass_date_time_to_epoch(CASS_DATE_EPOCH + 1, 0), 24L * 3600L); // Epoch + 1 day
 }
 
 BOOST_AUTO_TEST_SUITE_END()
