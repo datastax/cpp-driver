@@ -52,6 +52,24 @@ protected:
    * Connected database DSE session
    */
   DseSession dse_session_;
+
+  /**
+   * Create the graph using the specified replication strategy
+   *
+   * @param graph_name Name of the graph to create
+   * @param graph_strategy Replication strategy to apply to graph
+   * @see replication_factor_
+   */
+  void DseIntegration::create_graph(const std::string& graph_name,
+    const std::string& replication_strategy);
+
+  /**
+   * Create the graph using the test name and default replication strategy
+   *
+   * @see test_name_
+   * @see replication_strategy_
+   */
+  void DseIntegration::create_graph();
 };
 
 #endif //__DSE_INTEGRATION_HPP__
