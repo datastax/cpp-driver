@@ -104,9 +104,9 @@ void print_error(CassFuture* future) {
   fprintf(stderr, "Error: %.*s\n", (int)message_length, message);
 }
 
-CassCluster* create_cluster() {
+CassCluster* create_cluster(const char* hosts) {
   CassCluster* cluster = cass_cluster_new();
-  cass_cluster_set_contact_points(cluster, "127.0.0.1");
+  cass_cluster_set_contact_points(cluster, hosts);
   cass_cluster_set_credentials(cluster, "cassandra", "cassandra");
   cass_cluster_set_num_threads_io(cluster, NUM_IO_WORKER_THREADS);
   cass_cluster_set_queue_size_io(cluster, 10000);
@@ -295,19 +295,23 @@ void run_select_queries(void* data) {
   status_notify(&status);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
   int i;
   CassMetrics metrics;
   uv_thread_t threads[NUM_THREADS];
   CassCluster* cluster = NULL;
   CassSession* session = NULL;
   CassFuture* close_future = NULL;
+  char* hosts = "127.0.0.1";
+  if (argc > 1) {
+    hosts = argv[1];
+  }
 
   status_init(&status, NUM_THREADS);
 
   cass_log_set_level(CASS_LOG_INFO);
 
-  cluster = create_cluster();
+  cluster = create_cluster(hosts);
   uuid_gen = cass_uuid_gen_new();
   session = cass_session_new();
 

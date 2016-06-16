@@ -62,14 +62,18 @@ int load_trusted_cert_file(const char* file, CassSsl* ssl) {
   return 1;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
   /* Setup and connect to cluster */
   CassFuture* connect_future = NULL;
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
   CassSsl* ssl = cass_ssl_new();
+  char* hosts = "127.0.0.1";
+  if (argc > 1) {
+    hosts = argv[1];
+  }
 
-  cass_cluster_set_contact_points(cluster, "127.0.0.1");
+  cass_cluster_set_contact_points(cluster, hosts);
 
   /* Only verify the certification and not the identity */
   cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_PEER_CERT);
@@ -118,7 +122,7 @@ int main() {
       cass_future_error_message(result_future, &message, &message_length);
       fprintf(stderr, "Unable to run query: '%.*s'\n", (int)message_length,
                                                             message);
-    } 
+    }
 
     cass_statement_free(statement);
     cass_future_free(result_future);

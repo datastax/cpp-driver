@@ -112,6 +112,7 @@ typedef SSIZE_T ssize_t;
 // Configuration file setting keys
 #define CCM_CONFIGURATION_KEY_CASSANDRA_VERSION "cassandra_version"
 #define CCM_CONFIGURATION_KEY_USE_GIT "use_git"
+#define CCM_CONFIGURATION_KEY_BRANCH_TAG "branch_tag"
 #define CCM_CONFIGURATION_KEY_DEPLOYMENT_TYPE "deployment_type"
 #define CCM_CONFIGURATION_KEY_USE_DSE "use_dse"
 #define CCM_CONFIGURATION_KEY_DSE_VERSION "dse_version"
@@ -143,7 +144,9 @@ using namespace CCM;
 
 CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
   bool use_git /*= DEFAULT_USE_GIT*/,
+  const std::string& branch_tag /* ""*/,
   bool use_dse /*= DEFAULT_USE_DSE*/,
+  DseWorkload dse_workload /*= DEFAULT_DSE_WORKLOAD*/,
   const std::string& cluster_prefix /*= DEFAULT_CLUSTER_PREFIX*/,
   DseCredentialsType dse_credentials_type /*= DEFAULT_DSE_CREDENTIALS*/,
   const std::string& dse_username /*= ""*/,
@@ -159,7 +162,9 @@ CCM::Bridge::Bridge(CassVersion server_version /*= DEFAULT_CASSANDRA_VERSION*/,
   : cassandra_version_(server_version)
   , dse_version_(DEFAULT_DSE_VERSION)
   , use_git_(use_git)
+  , branch_tag_(branch_tag)
   , use_dse_(use_dse)
+  , dse_workload_(dse_workload)
   , cluster_prefix_(cluster_prefix)
   , authentication_type_(authentication_type)
   , dse_credentials_type_(dse_credentials_type)
@@ -213,6 +218,7 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
   , dse_version_(DEFAULT_DSE_VERSION)
   , use_git_(DEFAULT_USE_GIT)
   , use_dse_(DEFAULT_USE_DSE)
+  , dse_workload_(DEFAULT_DSE_WORKLOAD)
   , cluster_prefix_(DEFAULT_CLUSTER_PREFIX)
   , authentication_type_(DEFAULT_AUTHENTICATION)
   , dse_credentials_type_(DEFAULT_DSE_CREDENTIALS)
@@ -263,6 +269,8 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
               LOG_ERROR("Invalid Flag [" << value << "] for Use git: Using default [" << DEFAULT_USE_GIT << "]");
               use_git_ = DEFAULT_USE_GIT;
             }
+          } else if (key.compare(CCM_CONFIGURATION_KEY_BRANCH_TAG) == 0) {
+            branch_tag_ = value;
           } else if (key.compare(CCM_CONFIGURATION_KEY_USE_DSE) == 0) {
             //Convert the value
             std::stringstream valueStream(value);
@@ -363,6 +371,9 @@ CCM::Bridge::Bridge(const std::string& configuration_file)
   LOG("Cassandra Version: " << cassandra_version_.to_string());
   if (use_dse_) {
     LOG("DSE Version: " << dse_version_.to_string());
+  }
+  if (use_git_ && !branch_tag_.empty()) {
+    LOG("  Branch/Tag: " << branch_tag_);
   }
   LOG("Cluster Prefix: " << cluster_prefix_);
   LOG("Deployment Type: " << deployment_type_.to_string());
@@ -512,6 +523,9 @@ bool CCM::Bridge::create_cluster(unsigned short data_center_one_nodes /*= 1*/,
   // Generate the cluster name and determine if it needs to be created
   std::string active_cluster_name = get_active_cluster();
   std::string cluster_name = generate_cluster_name(cassandra_version_, data_center_one_nodes, data_center_two_node, is_ssl, is_client_authentication);
+  if (use_dse_ && dse_workload_ != DSE_WORKLOAD_CASSANDRA) {
+    cluster_name.append("-").append(dse_workloads_[dse_workload_]);
+  }
   if (!switch_cluster(cluster_name)) {
     // Ensure any active cluster is stopped
     if (!get_active_cluster().empty()) {
@@ -524,7 +538,11 @@ bool CCM::Bridge::create_cluster(unsigned short data_center_one_nodes /*= 1*/,
     create_command.push_back("-v");
     if (use_dse_) {
       if (use_git_) {
-        create_command.push_back("git:" + dse_version_.to_string());
+        if (branch_tag_.empty()) {
+          create_command.push_back("git:" + dse_version_.to_string());
+        } else {
+          create_command.push_back("git:" + branch_tag_);
+        }
       } else {
         create_command.push_back(dse_version_.to_string());
       }
@@ -535,7 +553,11 @@ bool CCM::Bridge::create_cluster(unsigned short data_center_one_nodes /*= 1*/,
       }
     } else {
       if (use_git_) {
-        create_command.push_back("git:cassandra-" + cassandra_version_.to_string());
+        if (branch_tag_.empty()) {
+          create_command.push_back("git:cassandra-" + cassandra_version_.to_string());
+        } else {
+          create_command.push_back("git:" + branch_tag_);
+        }
       } else {
         create_command.push_back(cassandra_version_.to_string());
       }
@@ -569,6 +591,11 @@ bool CCM::Bridge::create_cluster(unsigned short data_center_one_nodes /*= 1*/,
     populate_command.push_back("-i");
     populate_command.push_back(cluster_ip_prefix);
     execute_ccm_command(populate_command);
+
+    // Set the DSE workload (if applicable)
+    if (use_dse_ && dse_workload_ != DSE_WORKLOAD_CASSANDRA) {
+      set_dse_workload(dse_workload_);
+    }
   }
 
   // Indicate if the cluster was created or switched
@@ -1029,10 +1056,13 @@ DseVersion CCM::Bridge::get_dse_version(const std::string& configuration_file) {
 }
 
 bool CCM::Bridge::set_dse_workload(unsigned int node, DseWorkload workload, bool is_kill /*= false */) {
+  // Update the member variable
+  dse_workload_ = workload;
+
   // Determine if the node is currently active/up
   bool was_node_active = false;
   if (!is_node_down(node)) {
-    LOG("Stopping Active Node to Set Workload: " dse_workloads_[workload]
+    LOG("Stopping Active Node to Set Workload: " << dse_workloads_[workload]
       << " workload on node " << node);
     stop_node(node, is_kill);
     was_node_active = true;
@@ -1047,7 +1077,7 @@ bool CCM::Bridge::set_dse_workload(unsigned int node, DseWorkload workload, bool
 
   // Determine if the node should be restarted
   if (was_node_active) {
-    LOG("Restarting Node to Apply Workload: " dse_workloads_[workload]
+    LOG("Restarting Node to Apply Workload: " << dse_workloads_[workload]
       << " workload on node " << node);
     start_node(node);
   }
@@ -1059,7 +1089,7 @@ bool CCM::Bridge::set_dse_workload(DseWorkload workload, bool is_kill /*= false 
   // Determine if the cluster is currently active/up
   bool was_cluster_active = false;
   if (!is_cluster_down()) {
-    LOG("Stopping Active Cluster to Set Workload: " dse_workloads_[workload] << " workload");
+    LOG("Stopping Active Cluster to Set Workload: " << dse_workloads_[workload] << " workload");
     stop_cluster(is_kill);
     was_cluster_active = true;
   }
@@ -1072,7 +1102,7 @@ bool CCM::Bridge::set_dse_workload(DseWorkload workload, bool is_kill /*= false 
 
   // Determine if the cluster should be restarted
   if (was_cluster_active) {
-    LOG("Restarting Cluster to Apply Workload: " dse_workloads_[workload] << " workload");
+    LOG("Restarting Cluster to Apply Workload: " << dse_workloads_[workload] << " workload");
     start_cluster();
   }
 
