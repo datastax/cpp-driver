@@ -69,6 +69,7 @@ option(DSE_INSTALL_PKG_CONFIG "Install pkg-config file(s)" ON)
 option(DSE_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
 option(DSE_BUILD_EXAMPLES "Build examples" OFF)
 option(DSE_BUILD_DOCS "Build documentation" OFF)
+option(DSE_BUILD_TESTS "Build tests" OFF)
 option(DSE_BUILD_INTEGRATION_TESTS "Build the integration tests" OFF)
 option(DSE_BUILD_UNIT_TESTS "Build the unit tests" OFF)
 option(DSE_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
@@ -78,6 +79,12 @@ option(DSE_USE_TCMALLOC "Use tcmalloc" OFF)
 option(DSE_USE_SPARSEHASH "Use sparsehash" OFF)
 option(DSE_USE_ZLIB "Use zlib" OFF)
 option(DSE_USE_LIBSSH2 "Use libssh2" OFF)
+
+if(DSE_BUILD_TESTS)
+  # Enable integration and unit tests
+  set(DSE_BUILD_INTEGRATION_TESTS ON)
+  set(DSE_BUILD_UNIT_TESTS ON)
+endif()
 
 # Determine which driver target should be used as a dependency
 set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME})

@@ -37,7 +37,7 @@
 /**
  * @file include/dse.h
  *
- * C/C++ Driver for DataStax Enterprise
+ * C/C++ DataStax Enterprise Driver
  */
 
 #define DSE_VERSION_MAJOR 1

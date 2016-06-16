@@ -4,7 +4,7 @@ Name:    dse-cpp-driver
 Epoch:   1
 Version: %{driver_version}
 Release: 1%{?dist}
-Summary: DataStax C/C++ Driver for DataStax Enterprise
+Summary: DataStax C/C++ DataStax Enterprise Driver
 
 Group: Development/Tools
 License: Apache 2.0
