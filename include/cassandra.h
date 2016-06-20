@@ -111,6 +111,8 @@ typedef long long cass_int64_t;
 typedef unsigned long long cass_uint64_t;
 #endif
 
+#define CASS_UINT64_MAX 18446744073709551615ULL
+
 typedef cass_uint8_t cass_byte_t;
 typedef cass_uint64_t cass_duration_t;
 
@@ -1204,7 +1206,7 @@ cass_cluster_set_connect_timeout(CassCluster* cluster,
  * @public @memberof CassCluster
  *
  * @param[in] cluster
- * @param[in] timeout_ms Request timeout in milliseconds
+ * @param[in] timeout_ms Request timeout in milliseconds. Use 0 for no timeout.
  */
 CASS_EXPORT void
 cass_cluster_set_request_timeout(CassCluster* cluster,
@@ -3902,6 +3904,23 @@ CASS_EXPORT CassError
 cass_statement_set_timestamp(CassStatement* statement,
                              cass_int64_t timestamp);
 
+/**
+ * Sets the statement's timeout for waiting for a response from a node.
+ *
+ * <b>Default:</b> Disabled (use the cluster-level request timeout)
+ *
+ * @public @memberof CassStatement
+ *
+ * @param[in] statement
+ * @param[in] timeout_ms Request timeout in milliseconds. Use 0 for no timeout
+ * or CASS_UINT64_MAX to disable (to use the cluster-level request timeout).
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_request_timeout()
+ */
+CASS_EXPORT CassError
+cass_statement_set_request_timeout(CassStatement* statement,
+                                   cass_uint64_t timeout_ms);
 
 /**
  * Sets the statement's retry policy.
@@ -5160,6 +5179,24 @@ cass_batch_set_serial_consistency(CassBatch* batch,
 CASS_EXPORT CassError
 cass_batch_set_timestamp(CassBatch* batch,
                          cass_int64_t timestamp);
+
+/**
+ * Sets the batch's timeout for waiting for a response from a node.
+ *
+ * <b>Default:</b> Disabled (use the cluster-level request timeout)
+ *
+ * @public @memberof CassBatch
+ *
+ * @param[in] batch
+ * @param[in] timeout_ms Request timeout in milliseconds. Use 0 for no timeout
+ * or CASS_UINT64_MAX to disable (to use the cluster-level request timeout).
+ * @return CASS_OK if successful, otherwise an error occurred.
+ *
+ * @see cass_cluster_set_request_timeout()
+ */
+CASS_EXPORT CassError
+cass_batch_set_request_timeout(CassBatch* batch,
+                               cass_uint64_t timeout_ms);
 
 /**
  * Sets the batch's retry policy.
@@ -9314,7 +9351,7 @@ cass_custom_payload_set(CassCustomPayload* payload,
  *
  * @cassandra{2.2+}
  *
- * @public @memberof CassInet
+ * @public @memberof CassCustomPayload
  *
  * @param[in] payload
  * @param[in] name
@@ -9328,6 +9365,38 @@ cass_custom_payload_set_n(CassCustomPayload* payload,
                           size_t name_length,
                           const cass_byte_t* value,
                           size_t value_size);
+
+/**
+ * Removes an item from the custom payload.
+ *
+ * @cassandra{2.2+}
+ *
+ * @public @memberof CassCustomPayload
+ *
+ * @param[in] payload
+ * @param[in] name
+ */
+CASS_EXPORT void
+cass_custom_payload_remove(CassCustomPayload* payload,
+                           const char* name);
+
+/**
+ * Same as cass_custom_payload_set(), but with lengths for string
+ * parameters.
+ *
+ * @cassandra{2.2+}
+ *
+ * @public @memberof CassCustomPayload
+ *
+ * @param[in] payload
+ * @param[in] name
+ * @param[in] name_length
+ */
+CASS_EXPORT void
+cass_custom_payload_remove_n(CassCustomPayload* payload,
+                             const char* name,
+                             size_t name_length);
+
 
 /***********************************************************************************
  *

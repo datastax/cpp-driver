@@ -52,6 +52,12 @@ CassError cass_batch_set_timestamp(CassBatch* batch,
   return CASS_OK;
 }
 
+CassError cass_batch_set_request_timeout(CassBatch *batch,
+                                         cass_uint64_t timeout_ms) {
+  batch->set_request_timeout_ms(timeout_ms);
+  return CASS_OK;
+}
+
 CassError cass_batch_set_retry_policy(CassBatch* batch,
                                       CassRetryPolicy* retry_policy) {
   batch->set_retry_policy(retry_policy);

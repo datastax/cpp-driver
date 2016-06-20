@@ -140,6 +140,15 @@ void Handler::set_state(Handler::State next_state) {
       assert(false && "Invalid request state");
       break;
   }
+
+}
+
+uint64_t Handler::request_timeout_ms(const Config& config) const {
+  uint64_t request_timeout_ms = request_->request_timeout_ms();
+  if (request_timeout_ms == CASS_UINT64_MAX) {
+    return config.request_timeout_ms();
+  }
+  return request_timeout_ms;
 }
 
 } // namespace cass

@@ -18,6 +18,7 @@
 #define __CASS_REQUEST_HPP_INCLUDED__
 
 #include "buffer.hpp"
+#include "cassandra.h"
 #include "constants.hpp"
 #include "macros.hpp"
 #include "ref_counted.hpp"
@@ -39,6 +40,10 @@ public:
 
   void set(const char* name, size_t name_length,
            const uint8_t* value, size_t value_size);
+
+  void remove(const char* name, size_t name_length) {
+    items_.erase(std::string(name, name_length));
+  }
 
   int32_t encode(BufferVec* bufs) const;
 
@@ -63,7 +68,8 @@ public:
       : opcode_(opcode)
       , consistency_(DEFAULT_CONSISTENCY)
       , serial_consistency_(CASS_CONSISTENCY_ANY)
-      , timestamp_(CASS_INT64_MIN) { }
+      , timestamp_(CASS_INT64_MIN)
+      , request_timeout_ms_(CASS_UINT64_MAX) { } // Disabled (use the cluster-level timeout)
 
   virtual ~Request() { }
 
@@ -82,6 +88,12 @@ public:
   int64_t timestamp() const { return timestamp_; }
 
   void set_timestamp(int64_t timestamp) { timestamp_ = timestamp; }
+
+  uint64_t request_timeout_ms() const { return request_timeout_ms_; }
+
+  void set_request_timeout_ms(uint64_t request_timeout_ms) {
+    request_timeout_ms_ = request_timeout_ms;
+  }
 
   RetryPolicy* retry_policy() const {
     return retry_policy_.get();
@@ -106,6 +118,7 @@ private:
   CassConsistency consistency_;
   CassConsistency serial_consistency_;
   int64_t timestamp_;
+  uint64_t request_timeout_ms_;
   SharedRefPtr<RetryPolicy> retry_policy_;
   SharedRefPtr<const CustomPayload> custom_payload_;
 

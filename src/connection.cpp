@@ -258,7 +258,7 @@ bool Connection::internal_write(Handler* handler, bool flush_immediately, bool r
     }
   }
 
-  PendingWriteBase* pending_write = pending_writes_.back();
+  PendingWriteBase *pending_write = pending_writes_.back();
 
   int32_t request_size = pending_write->write(handler);
   if (request_size < 0) {
@@ -292,10 +292,13 @@ bool Connection::internal_write(Handler* handler, bool flush_immediately, bool r
             opcode_to_string(handler->request()->opcode()).c_str(), stream);
 
   handler->set_state(Handler::REQUEST_STATE_WRITING);
-  handler->start_timer(loop_,
-                       config_.request_timeout_ms(),
-                       handler,
-                       Connection::on_timeout);
+  uint64_t request_timeout_ms = handler->request_timeout_ms(config_);
+  if (request_timeout_ms > 0) { // 0 means no timeout
+    handler->start_timer(loop_,
+                         request_timeout_ms,
+                         handler,
+                         Connection::on_timeout);
+  }
 
   if (flush_immediately) {
     pending_write->flush();

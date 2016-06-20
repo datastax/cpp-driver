@@ -115,6 +115,13 @@ CassError cass_statement_set_timestamp(CassStatement* statement,
   return CASS_OK;
 }
 
+CassError
+cass_statement_set_request_timeout(CassStatement* statement,
+                                   cass_uint64_t timeout_ms) {
+  statement->set_request_timeout_ms(timeout_ms);
+  return CASS_OK;
+}
+
 CassError cass_statement_set_custom_payload(CassStatement* statement,
                                             const CassCustomPayload* payload) {
   statement->set_custom_payload(payload);
