@@ -29,6 +29,9 @@
   "josh.addEdge('created', lop, 'weight', 0.4f);" \
   "peter.addEdge('created', lop, 'weight', 0.2f);"
 
+#define GRAPH_SLEEP_FORMAT \
+  "java.util.concurrent.TimeUnit.MILLISECONDS.sleep(%dL);"
+
 #define BIG_INTEGER_VALUE test::driver::BigInteger::max()
 #define BIG_INTEGER_NAMED_PARAMETER "big_integer_value"
 #define BOOLEAN_VALUE test::driver::Boolean(cass_true)
@@ -566,4 +569,92 @@ TEST_F(GraphIntegrationTest, RetrievePaths) {
       }
     }
   }
+}
+
+/**
+ * Perform graph statement execution to ensure client timeouts are respected
+ *
+ * This test will create a graph statement that uses request timeout options
+ * and validates client side timeouts.
+ *
+ * (1) By nature of the implementation of request timeout, the core driver per
+ *     request timeout is also tested in this test case.
+ *
+ * @jira_ticket CPP-300
+ * @jira_ticket CPP-371
+ * @test_category dse:graph
+ * @since 1.0.0
+ * @expected_result Graph request client timeouts will be honored
+ */
+TEST_F(GraphIntegrationTest, ClientRequestTimeout) {
+  CHECK_VERSION(5.0.0);
+  CHECK_FAILURE;
+
+  // Create a graph statement that will execute longer than the client request
+  std::string graph_ms_sleep = format_string(GRAPH_SLEEP_FORMAT, 35000);
+  test::driver::DseGraphOptions graph_options;
+  graph_options.set_timeout(500);
+  start_timer();
+  test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_ms_sleep,
+    graph_options, false);
+  ASSERT_LE(stop_timer(), 600ull);
+  ASSERT_EQ(CASS_ERROR_LIB_REQUEST_TIMED_OUT, result_set.error_code());
+
+  // Utilize a different request timeout to validate per statement timeouts
+  graph_options.set_timeout(1000);
+  start_timer();
+  result_set = dse_session_.execute(graph_ms_sleep, graph_options, false);
+  ASSERT_LE(stop_timer(), 1100ull);
+  ASSERT_EQ(CASS_ERROR_LIB_REQUEST_TIMED_OUT, result_set.error_code());
+}
+
+/**
+ * Perform graph statement execution to ensure server timeouts are respected
+ *
+ * This test will create a graph statement that uses the default and specified
+ * request timeout options to validate server side timeouts (e.g. driver timeout
+ * is infinite).
+ *
+ * (1) By nature of the implementation of request timeout, the core driver per
+ *     request timeout is also tested in this test case.
+ * (2) By resetting the value of the request timer, the core driver
+ *     implementation of removing a custom item from the payload is also being
+ *     tested.
+ *
+ * @jira_ticket CPP-300
+ * @jira_ticket CPP-371
+ * @jira_ticket CPP-377
+ * @test_category dse:graph
+ * @since 1.0.0
+ * @expected_result Graph request server timeouts will be honored
+ */
+TEST_F(GraphIntegrationTest, ServerRequestTimeout) {
+  CHECK_VERSION(5.0.0);
+  CHECK_FAILURE;
+
+  // Create the graph (with traversal timeout)
+  create_graph("PT1.243S");
+  CHECK_FAILURE;
+
+  // Create a graph statement that will execute longer than the server request
+  // default request timeout
+  test::driver::DseGraphOptions graph_options;
+  graph_options.set_name(test_name_);
+  std::string graph_ms_sleep = format_string(GRAPH_SLEEP_FORMAT, 35000);
+  test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_ms_sleep,
+    graph_options, false);
+  ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
+  ASSERT_TRUE(contains(result_set.error_message(), "1243 ms"));
+
+  // Test with request timeout set
+  graph_options.set_timeout(15000);
+  result_set = dse_session_.execute(graph_ms_sleep, graph_options, false);
+  ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
+  ASSERT_TRUE(contains(result_set.error_message(), "1243 ms"));
+
+  // Test with reset of timeout (remove custom item from payload CPP-377)
+  graph_options.set_timeout(0);
+  result_set = dse_session_.execute(graph_ms_sleep, graph_options, false);
+  ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
+  ASSERT_TRUE(contains(result_set.error_message(), "1243 ms"));
 }

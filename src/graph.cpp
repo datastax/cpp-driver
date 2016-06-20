@@ -6,6 +6,7 @@
 
 #include "external_types.hpp"
 
+#include <serialization.hpp> // cass::encode_int64()
 #include <assert.h>
 
 static const DseGraphResult* find_member(const DseGraphResult* result,
@@ -74,6 +75,13 @@ CassError dse_graph_options_set_graph_name(DseGraphOptions* options,
 CassError dse_graph_options_set_graph_name_n(DseGraphOptions* options,
                                              const char* name, size_t name_length) {
   options->set_graph_name(std::string(name, name_length));
+  return CASS_OK;
+}
+
+CassError dse_graph_options_set_request_timeout(DseGraphOptions* options,
+                                                cass_int64_t timeout_ms) {
+  if (timeout_ms < 0) return CASS_ERROR_LIB_BAD_PARAMS;
+  options->set_request_timeout_ms(timeout_ms);
   return CASS_OK;
 }
 
@@ -533,6 +541,23 @@ const DseGraphResult* dse_graph_result_element(const DseGraphResult* result,
 } // extern "C"
 
 namespace dse {
+
+void GraphOptions::set_request_timeout_ms(int64_t timeout_ms) {
+  request_timeout_ms_ = timeout_ms;
+  if (timeout_ms > 0) {
+    std::string value(sizeof(timeout_ms), 0);
+    cass::encode_int64(&value[0], timeout_ms);
+    cass_custom_payload_set_n(payload_,
+                              DSE_GRAPH_REQUEST_TIMEOUT,
+                              sizeof(DSE_GRAPH_REQUEST_TIMEOUT) - 1,
+                              reinterpret_cast<const cass_byte_t *>(value.data()),
+                              value.size());
+  } else {
+    cass_custom_payload_remove_n(payload_,
+                                 DSE_GRAPH_REQUEST_TIMEOUT,
+                                 sizeof(DSE_GRAPH_REQUEST_TIMEOUT) - 1);
+  }
+}
 
 const GraphResult* GraphResultSet::next() {
   if (cass_iterator_next(rows_)) {
