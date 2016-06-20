@@ -22,7 +22,7 @@
 #define DSE_GRAPH_REQUEST_TIMEOUT     "request-timeout"
 
 #define DSE_GRAPH_DEFAULT_LANGUAGE "gremlin-groovy"
-#define DSE_GRAPH_DEFAULT_SOURCE "default"
+#define DSE_GRAPH_DEFAULT_SOURCE   "g"
 
 
 namespace dse {

@@ -97,6 +97,13 @@ public:
   static bool use_git();
 
   /**
+   * Get the branch/tag to use for ASF/GitHub
+   *
+   * @return Branch/Tag
+   */
+  static const std::string& branch_tag();
+
+  /**
    * Get the cluster prefix to use for the CCM clusters (e.g. cpp-driver)
    *
    * @return Cluster prefix
@@ -186,9 +193,13 @@ private:
    */
   static bool is_dse_;
   /**
-   * Flag to determine if Cassandra should be built from ASF git
+   * Flag to determine if Cassandra should be built from ASF git (github if DSE)
    */
   static bool use_git_;
+  /**
+   * Branch/Tag name to use if value is present
+   */
+  static std::string branch_tag_;
   /**
    * Cluster prefix to apply to cluster name during create command
    */

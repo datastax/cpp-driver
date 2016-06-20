@@ -49,6 +49,14 @@ public:
   static const char PATH_SEPARATOR;
 
   /**
+   * Get the address of an object
+   *
+   * @return Address of object
+   */
+  template <typename T>
+  T* addressof(T& value);
+
+  /**
    * Get the current working directory
    *
    * @return Current working directory
