@@ -125,8 +125,10 @@ void Integration::SetUp() {
 
   try {
     //Create and start the CCM cluster (if not already created)
-    ccm_ = new CCM::Bridge(server_version_, Options::use_git(),
-      Options::is_dse(), Options::cluster_prefix(),
+    ccm_ = new CCM::Bridge(server_version_,
+      Options::use_git(), Options::branch_tag(),
+      Options::is_dse(), dse_workload_,
+      Options::cluster_prefix(),
       Options::dse_credentials(),
       Options::dse_username(), Options::dse_password(),
       Options::deployment_type(), Options::authentication_type(),
@@ -169,6 +171,16 @@ void Integration::connect(Cluster cluster) {
   // Establish the session connection
   session_ = cluster.connect();
   CHECK_FAILURE;
+
+  // Update the server version if branch_tag was specified
+  if (Options::use_git() && !Options::branch_tag().empty()) {
+    if (Options::is_dse()) {
+      server_version_ = ccm_->get_dse_version();
+    } else {
+      server_version_ = ccm_->get_cassandra_version();
+    }
+    LOG("Branch/Tag Option was Used: Retrieved server version is " << server_version_.to_string());
+  }
 
   // Create the keyspace for the integration test
   session_.execute(create_keyspace_query_);

@@ -4,19 +4,6 @@
 #include "dse_integration.hpp"
 #include "options.hpp"
 
-#include <limits>
-
-#define GRAPH_NAME "dse_cpp_driver"
-
-#define GRAPH_CREATE \
-  "system.graph(name).option('graph.replication_config').set(replication).ifNotExists().create()"
-
-#define GRAPH_ALLOW_SCANS \
-  "schema.config().option('graph.allow_scan').set('true')"
-
-#define GRAPH_ENABLE_STRICT \
-  "schema.config().option('graph.schema_mode').set(com.datastax.bdp.graph.api.model.Schema.Mode.Production)"
-
 #define GRAPH_SCHEMA \
   "schema.propertyKey('name').Text().ifNotExists().create();" \
   "schema.propertyKey('age').Int().ifNotExists().create();" \
@@ -42,16 +29,13 @@
   "josh.addEdge('created', lop, 'weight', 0.4f);" \
   "peter.addEdge('created', lop, 'weight', 0.2f);"
 
-#define MAX_SIGNED_DOUBLE std::numeric_limits<cass_double_t>::max()
-#define MAX_SIGNED_INTEGER std::numeric_limits<cass_int32_t>::max()
-#define MIN_SIGNED_BIG_INTEGER std::numeric_limits<cass_int64_t>::min()
-#define BIG_INTEGER_VALUE test::driver::BigInteger(MIN_SIGNED_BIG_INTEGER)
+#define BIG_INTEGER_VALUE test::driver::BigInteger::max()
 #define BIG_INTEGER_NAMED_PARAMETER "big_integer_value"
 #define BOOLEAN_VALUE test::driver::Boolean(cass_true)
 #define BOOLEAN_NAMED_PARAMETER "boolean_value"
-#define DOUBLE_VALUE test::driver::Double(MAX_SIGNED_DOUBLE)
+#define DOUBLE_VALUE test::driver::Double::max()
 #define DOUBLE_NAMED_PARAMETER "double_value"
-#define INTEGER_VALUE test::driver::Integer(MAX_SIGNED_INTEGER)
+#define INTEGER_VALUE test::driver::Integer::max()
 #define INTEGER_NAMED_PARAMETER "integer_value"
 #define NULL_VALUE test::driver::Varchar()
 #define NULL_DATA_TYPE test::driver::Varchar
@@ -71,48 +55,9 @@ public:
   void SetUp() {
     CHECK_VERSION(5.0.0);
 
-    // Call the parent setup function (override the CCM startup)
-    is_ccm_start_requested_ = false;
+    // Call the parent setup function
+    dse_workload_ = CCM::DSE_WORKLOAD_GRAPH;
     DseIntegration::SetUp();
-
-    // Initialize the graph data for the current cluster (only once)
-    if (!is_graph_initialized_) {
-      // Assign DSE graph workload, start the cluster, and establish connection
-      if (!ccm_->set_dse_workload(CCM::DSE_WORKLOAD_GRAPH)) {
-        ccm_->start_cluster();
-      }
-
-      // Indicate the graph/data has been initialized
-      is_graph_initialized_ = true;
-    }
-
-    // Establish connection to server (e.g. create session)
-    connect();
-  }
-
-  static void TearDownTestCase() {
-    // Reset the DSE workload on the cluster
-    if (is_graph_initialized_) {
-      Options::ccm()->set_dse_workload(CCM::DSE_WORKLOAD_CASSANDRA);
-    }
-  }
-
-  /**
-   * Create the graph using the specified replication factor
-   *
-   * @param graph_name Name of the graph to create
-   * @see replication_factor_
-   */
-  void create_graph(const std::string& graph_name) {
-    // Create the graph statement using the pre-determined replication config
-    test::driver::DseGraphObject graph_object;
-    graph_object.add<std::string>("name", graph_name);
-    graph_object.add<std::string>("replication", replication_strategy_);
-    test::driver::DseGraphStatement graph_statement(GRAPH_CREATE);
-    graph_statement.bind(graph_object);
-
-    // Execute the graph statement and ensure it was created
-    dse_session_.execute(graph_statement);
   }
 
   /**
@@ -127,10 +72,10 @@ public:
     // Initialize the graph pre-populated data
     test::driver::DseGraphOptions options;
     options.set_name(graph_name);
-    dse_session_.execute(GRAPH_ALLOW_SCANS, options);
-    dse_session_.execute(GRAPH_ENABLE_STRICT, options);
     dse_session_.execute(GRAPH_SCHEMA, options);
+    CHECK_FAILURE;
     dse_session_.execute(GRAPH_DATA, options);
+    CHECK_FAILURE;
   }
 
   /**
@@ -221,11 +166,6 @@ public:
 
 private:
   /**
-   * Flag to determine if the graph workload has been initialized
-   */
-  static bool is_graph_initialized_;
-
-  /**
    * Generate the member key string from the named parameter
    *
    * @param key Member key for the named parameter
@@ -282,9 +222,6 @@ private:
   }
 };
 
-// Initialize static variables
-bool GraphIntegrationTest::is_graph_initialized_ = false;
-
 /**
  * Perform simple graph statement execution - Check for existing graph
  *
@@ -302,7 +239,8 @@ TEST_F(GraphIntegrationTest, GraphExists) {
   CHECK_FAILURE;
 
   // Create the graph
-  create_graph(test_name_);
+  create_graph();
+  CHECK_FAILURE;
 
   // Create the graph statement to see if the default graph exists
   test::driver::DseGraphObject graph_object;
@@ -416,8 +354,10 @@ TEST_F(GraphIntegrationTest, RetrieveEdges) {
   CHECK_FAILURE;
 
   // Create the graph
-  create_graph(test_name_);
+  create_graph();
+  CHECK_FAILURE;
   populate_classic_graph(test_name_);
+  CHECK_FAILURE;
 
   // Create the graph statement to see who created what
   test::driver::DseGraphOptions graph_options;
@@ -457,8 +397,10 @@ TEST_F(GraphIntegrationTest, RetrieveVertices) {
   CHECK_FAILURE;
 
   // Create the graph
-  create_graph(test_name_);
+  create_graph();
+  CHECK_FAILURE;
   populate_classic_graph(test_name_);
+  CHECK_FAILURE;
 
   // Create the graph statement to see who Marko knows
   test::driver::DseGraphOptions graph_options;
@@ -497,8 +439,10 @@ TEST_F(GraphIntegrationTest, RetrievePaths) {
   CHECK_FAILURE;
 
   // Create the graph
-  create_graph(test_name_);
+  create_graph();
+  CHECK_FAILURE;
   populate_classic_graph(test_name_);
+  CHECK_FAILURE;
 
   /*
    * Create the graph statement to find all path traversals for a person whom

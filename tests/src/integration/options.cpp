@@ -14,6 +14,7 @@
   limitations under the License.
 */
 #include "options.hpp"
+#include "test_utils.hpp"
 
 #include "authentication_type.hpp"
 #include "deployment_type.hpp"
@@ -21,8 +22,8 @@
 #include <algorithm>
 #include <iostream>
 
-#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.6")
-#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("4.8.7")
+#define DEFAULT_OPTIONS_CASSSANDRA_VERSION CCM::CassVersion("3.7")
+#define DEFAULT_OPTIONS_DSE_VERSION CCM::DseVersion("4.8.8")
 
 // Initialize the defaults for all the options
 bool Options::is_initialized_ = false;
@@ -30,9 +31,10 @@ bool Options::is_log_tests_ = true;
 CCM::CassVersion Options::server_version_ = DEFAULT_OPTIONS_CASSSANDRA_VERSION;
 bool Options::is_dse_ = false;
 bool Options::use_git_ = false;
+std::string Options::branch_tag_;
 std::string Options::cluster_prefix_ = "cpp-driver";
-std::string Options::dse_username_ = "";
-std::string Options::dse_password_ = "";
+std::string Options::dse_username_;
+std::string Options::dse_password_;
 std::string Options::host_ = "127.0.0.1";
 short Options::port_ = 22;
 std::string Options::username_ = "vagrant";
@@ -117,6 +119,9 @@ bool Options::initialize(int argc, char* argv[]) {
         }
       } else if (key.compare("--git") == 0) {
         use_git_ = true;
+        if (!value.empty()) {
+          branch_tag_ = value;
+        }
       } else if (key.compare("--prefix") == 0) {
         if (!value.empty()) {
           cluster_prefix_ = value;
@@ -240,6 +245,8 @@ void Options::print_help() {
     << "Password to use for DSE download authentication." << std::endl;
   std::cout << "  --git" << std::endl << "      "
     << "Indicate Cassandra/DSE server download should be obtained from ASF/GitHub." << std::endl;
+  std::cout << "  --git=[BRANCH_OR_TAG]" << std::endl << "      "
+    << "Indicate Cassandra/DSE server branch/tag should be obtained from ASF/GitHub." << std::endl;
   std::cout << "  --prefix=[PREFIX]" << std::endl << "      "
     << "CCM cluster prefix. The default is " << cluster_prefix() << "." << std::endl;
 #ifdef CASS_USE_LIBSSH2
@@ -283,6 +290,9 @@ void Options::print_settings() {
   }
   if (use_git()) {
     std::cout << "      Using " << (is_dse() ? "GitHub" : "ASF") << " repository" << std::endl;
+    if (!branch_tag_.empty()) {
+      std::cout << "          Using branch/tag: " << branch_tag_ << std::endl;
+    }
   }
   std::cout << "  CCM Cluster Prefix: " << cluster_prefix() << std::endl;
 #ifdef CASS_USE_LIBSSH2
@@ -333,6 +343,10 @@ bool Options::use_git() {
   return use_git_;
 }
 
+const std::string& Options::branch_tag() {
+  return branch_tag_;
+}
+
 const std::string& Options::cluster_prefix() {
   return cluster_prefix_;
 }
@@ -379,8 +393,10 @@ const std::string& Options::private_key() {
 
 SharedPtr<CCM::Bridge> Options::ccm() {
   return new CCM::Bridge( \
-    Options::server_version(), Options::use_git(), \
-    Options::is_dse(), Options::cluster_prefix(), \
+    Options::server_version(),
+    Options::use_git(), Options::branch_tag(), \
+    Options::is_dse(), CCM::DSE_WORKLOAD_CASSANDRA, \
+    Options::cluster_prefix(), \
     Options::dse_credentials(), \
     Options::dse_username(), Options::dse_password(), \
     Options::deployment_type(), Options::authentication_type(), \
@@ -393,22 +409,12 @@ Options::Options() {
 }
 
 std::string Options::to_lower(const std::string& input) {
-  std::string lowercase = input;
-  std::transform(lowercase.begin(), lowercase.end(), lowercase.begin(), ::tolower);
-  return lowercase;
+  return test::Utils::to_lower(input);
 }
 
 std::vector<std::string> Options::explode(const std::string& input,
   const char delimiter /*= ' '*/) {
-  // Iterate over the input line and parse the tokens
-  std::vector<std::string> result;
-  std::istringstream parser(input);
-  for (std::string token; std::getline(parser, token, delimiter);) {
-    if (!token.empty()) {
-      result.push_back(token);
-    }
-  }
-  return result;
+  return test::Utils::explode(input, delimiter);
 }
 
 bool Options::bool_value(const std::string& value) {

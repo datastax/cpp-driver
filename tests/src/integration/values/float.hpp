@@ -13,8 +13,8 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-#ifndef __TEST_DOUBLE_HPP__
-#define __TEST_DOUBLE_HPP__
+#ifndef __TEST_FLOAT_HPP__
+#define __TEST_FLOAT_HPP__
 #include "value_interface.hpp"
 #include "test_utils.hpp"
 
@@ -32,31 +32,31 @@ namespace test {
 namespace driver {
 
 /**
- * Double wrapped value
+ * Float wrapped value
  */
-class Double : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(cass_double_t, Double) {
+class Float : public COMPARABLE_VALUE_INTERFACE_VALUE_ONLY(cass_float_t, Float) {
 public:
-  Double()
-    : double_(0.0)
+  Float()
+    : float_(0.0f)
     , is_null_(true) {
-    set_double_string();
+    set_float_string();
   }
 
-  Double(cass_double_t double_value)
-    : double_(double_value)
+  Float(cass_float_t float_value)
+    : float_(float_value)
     , is_null_(false) {
-    set_double_string();
+    set_float_string();
   }
 
-  Double(const CassValue* value)
-    : double_(0.0)
+  Float(const CassValue* value)
+    : float_(0.0f)
     , is_null_(false) {
     initialize(value);
-    set_double_string();
+    set_float_string();
   }
 
-  Double(const std::string& value)
-    : double_(0.0)
+  Float(const std::string& value)
+    : float_(0.0f)
     , is_null_(false) {
     std::string value_trim = Utils::trim(value);
 
@@ -67,63 +67,63 @@ public:
     } else {
       //Convert the value
       std::stringstream valueStream(value_trim);
-      if ((valueStream >> double_).fail()) {
-        LOG_ERROR("Invalid Double " << value_trim << ": Using default "
-          << double_);
+      if ((valueStream >> float_).fail()) {
+        LOG_ERROR("Invalid Float " << value_trim << ": Using default "
+          << float_);
       }
     }
 
-    set_double_string();
+    set_float_string();
   }
 
-  Double(const CassRow* row, size_t column_index)
-    : double_(0.0)
+  Float(const CassRow* row, size_t column_index)
+    : float_(0.0f)
     , is_null_(false) {
     initialize(row, column_index);
-    set_double_string();
+    set_float_string();
   }
 
   const char* c_str() const {
-    return double_string_.c_str();
+    return float_string_.c_str();
   }
 
   std::string cql_type() const {
-    return std::string("double");
+    return std::string("float");
   }
 
   std::string cql_value() const {
-    return double_string_;
+    return float_string_;
   }
 
   /**
-   * Comparison operation for driver doubles
+   * Comparison operation for driver floats
    *
    * @param rhs Right hand side to compare
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
-  int compare(const cass_double_t& rhs) const {
-    if (double_ < rhs) return -1;
-    if (double_ > rhs) return 1;
+  int compare(const cass_float_t& rhs) const {
+    if (float_ < rhs) return -1;
+    if (float_ > rhs) return 1;
 
     return 0;
   }
 
   /**
-   * Comparison operation for driver doubles
+   * Comparison operation for driver floats
    *
    * @param rhs Right hand side to compare
    * @return -1 if LHS < RHS, 1 if LHS > RHS, and 0 if equal
    */
-  int compare(const Double& rhs) const {
+  int compare(const Float& rhs) const {
     if (is_null_ && rhs.is_null_) return 0;
-    return compare(rhs.double_);
+    return compare(rhs.float_);
   }
 
   void statement_bind(Statement statement, size_t index) {
     if (is_null_) {
       ASSERT_EQ(CASS_OK, cass_statement_bind_null(statement.get(), index));
     } else {
-      ASSERT_EQ(CASS_OK, cass_statement_bind_double(statement.get(), index, double_));
+      ASSERT_EQ(CASS_OK, cass_statement_bind_float(statement.get(), index, float_));
     }
   }
 
@@ -132,44 +132,44 @@ public:
   }
 
   /**
-   * Get the minimum value allowed for a double
+   * Get the minimum value allowed for a float
    *
-   * @return Minimum value for double
+   * @return Minimum value for float
    */
-  static Double min() {
-    return Double(std::numeric_limits<cass_double_t>::min());
+  static Float min() {
+    return Float(std::numeric_limits<cass_float_t>::min());
   }
 
   /**
-   * Get the maximum value allowed for a double
+   * Get the maximum value allowed for a float
    *
-   * @return Maximum value for double
+   * @return Maximum value for float
    */
-  static Double max() {
-    return Double(std::numeric_limits<cass_double_t>::max());
+  static Float max() {
+    return Float(std::numeric_limits<cass_float_t>::max());
   }
 
   std::string str() const {
-    return double_string_;
+    return float_string_;
   }
 
-  cass_double_t value() const {
-    return double_;
+  cass_float_t value() const {
+    return float_;
   }
 
   CassValueType value_type() const {
-    return CASS_VALUE_TYPE_DOUBLE;
+    return CASS_VALUE_TYPE_FLOAT;
   }
 
 protected:
   /**
    * Native driver value
    */
-  cass_double_t double_;
+  cass_float_t float_;
   /**
    * Native driver value as string
    */
-  std::string double_string_;
+  std::string float_string_;
   /**
    * Flag to determine if value is NULL
    */
@@ -179,19 +179,19 @@ protected:
     // Ensure the value types
     ASSERT_TRUE(value != NULL) << "Invalid CassValue: Value should not be null";
     CassValueType value_type = cass_value_type(value);
-    ASSERT_EQ(CASS_VALUE_TYPE_DOUBLE, value_type)
-      << "Invalid Value Type: Value is not a double [" << value_type << "]";
+    ASSERT_EQ(CASS_VALUE_TYPE_FLOAT, value_type)
+      << "Invalid Value Type: Value is not a float [" << value_type << "]";
     const CassDataType* data_type = cass_value_data_type(value);
     value_type = cass_data_type_type(data_type);
-    ASSERT_EQ(CASS_VALUE_TYPE_DOUBLE, value_type)
-      << "Invalid Data Type: Value->DataType is not a double";
+    ASSERT_EQ(CASS_VALUE_TYPE_FLOAT, value_type)
+      << "Invalid Data Type: Value->DataType is not a float";
 
-    // Get the double
+    // Get the float
     if (cass_value_is_null(value)) {
       is_null_ = true;
     } else {
-      ASSERT_EQ(CASS_OK, cass_value_get_double(value, &double_))
-        << "Unable to Get Double: Invalid error code returned";
+      ASSERT_EQ(CASS_OK, cass_value_get_float(value, &float_))
+        << "Unable to Get Float: Invalid error code returned";
       is_null_ = false;
     }
   }
@@ -202,15 +202,15 @@ protected:
   }
 
   /**
-   * Set the string value of the double
+   * Set the string value of the float
    */
-  void set_double_string() {
+  void set_float_string() {
     if (is_null_) {
-      double_string_ = "null";
+      float_string_ = "null";
     } else {
-      std::stringstream double_string;
-      double_string << double_;
-      double_string_ = double_string.str();
+      std::stringstream float_string;
+      float_string << float_;
+      float_string_ = float_string.str();
     }
   }
 };
@@ -218,4 +218,4 @@ protected:
 } // namespace driver
 } // namespace test
 
-#endif // __TEST_DOUBLE_HPP__
+#endif // __TEST_FLOAT_HPP__
