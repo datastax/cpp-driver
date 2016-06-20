@@ -5,7 +5,9 @@
 
 #define GRAPH_CREATE \
   "system.graph(name).option('graph.replication_config').set(replication)" \
-  ".option('graph.system_replication_config').set(replication).ifNotExists().create();"
+  ".option('graph.system_replication_config').set(replication)" \
+  ".option('graph.traversal_sources.g.evaluation_timeout').set(duration)" \
+  ".ifNotExists().create();"
 
 #define GRAPH_ALLOW_SCANS \
   "schema.config().option('graph.allow_scan').set('true')"
@@ -38,11 +40,13 @@ void DseIntegration::connect() {
 }
 
 void DseIntegration::create_graph(const std::string& graph_name,
-  const std::string& replication_strategy) {
+  const std::string& replication_strategy,
+  const std::string& duration) {
     // Create the graph statement using the pre-determined replication config
     test::driver::DseGraphObject graph_object;
     graph_object.add<std::string>("name", graph_name);
     graph_object.add<std::string>("replication", replication_strategy);
+    graph_object.add<std::string>("duration", duration);
     test::driver::DseGraphStatement graph_statement(GRAPH_CREATE);
     graph_statement.bind(graph_object);
     CHECK_FAILURE;
@@ -60,6 +64,6 @@ void DseIntegration::create_graph(const std::string& graph_name,
     CHECK_FAILURE;
   }
 
-void DseIntegration::create_graph() {
-  create_graph(test_name_, replication_strategy_);
+void DseIntegration::create_graph(const std::string& duration /*= "PT30S"*/) {
+  create_graph(test_name_, replication_strategy_, duration);
 }

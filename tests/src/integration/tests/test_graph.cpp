@@ -29,6 +29,9 @@
   "josh.addEdge('created', lop, 'weight', 0.4f);" \
   "peter.addEdge('created', lop, 'weight', 0.2f);"
 
+#define GRAPH_SLEEP_FORMAT \
+  "java.util.concurrent.TimeUnit.MILLISECONDS.sleep(%dL);"
+
 #define BIG_INTEGER_VALUE test::driver::BigInteger::max()
 #define BIG_INTEGER_NAMED_PARAMETER "big_integer_value"
 #define BOOLEAN_VALUE test::driver::Boolean(cass_true)
@@ -566,4 +569,65 @@ TEST_F(GraphIntegrationTest, RetrievePaths) {
       }
     }
   }
+}
+
+/**
+ * Perform graph statement execution to ensure client timeouts are respected
+ *
+ * This test will create a graph statement that uses request timeout options
+ * and validates client side timeouts.
+ *
+ * @jira_ticket CPP-371
+ * @test_category dse:graph
+ * @since 1.0.0
+ * @expected_result Graph request client timeouts will be honored
+ */
+TEST_F(GraphIntegrationTest, ClientRequestTimeout) {
+  CHECK_VERSION(5.0.0);
+  CHECK_FAILURE;
+
+  // Create a graph statement that will execute longer than the client request
+  std::string graph_ms_sleep = format_string(GRAPH_SLEEP_FORMAT, 2000);
+  test::driver::DseGraphOptions graph_options;
+  graph_options.set_timeout(1000);
+  test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_ms_sleep,
+    graph_options, false);
+  ASSERT_EQ(CASS_ERROR_LIB_REQUEST_TIMED_OUT, result_set.error_code());
+}
+
+/**
+ * Perform graph statement execution to ensure server timeouts are respected
+ *
+ * This test will create a graph statement that uses the default and specified
+ * request timeout options to validate server side timeouts (e.g. driver timeout
+ * is infinite).
+ *
+ * @jira_ticket CPP-371
+ * @test_category dse:graph
+ * @since 1.0.0
+ * @expected_result Graph request server timeouts will be honored
+ */
+TEST_F(GraphIntegrationTest, ServerRequestTimeout) {
+  CHECK_VERSION(5.0.0);
+  CHECK_FAILURE;
+
+  // Create the graph (with traversal timeout)
+  create_graph("PT1.243S");
+  CHECK_FAILURE;
+
+  // Create a graph statement that will execute longer than the server request
+  // default request timeout
+  test::driver::DseGraphOptions graph_options;
+  graph_options.set_name(test_name_);
+  std::string graph_ms_sleep = format_string(GRAPH_SLEEP_FORMAT, 35000);
+  test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_ms_sleep,
+    graph_options, false);
+  ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
+  ASSERT_TRUE(contains(result_set.error_message(), "1243 ms"));
+
+  // Test with request timeout set
+  graph_options.set_timeout(15000);
+  result_set = dse_session_.execute(graph_ms_sleep, graph_options, false);
+  ASSERT_EQ(CASS_ERROR_SERVER_INVALID_QUERY, result_set.error_code());
+  ASSERT_TRUE(contains(result_set.error_message(), "1243 ms"));
 }

@@ -229,6 +229,18 @@ protected:
   }
 
   /**
+   * Determine if a string contains another string
+   *
+   * @param input String being evaluated
+   * @param search String to find
+   * @return True if string is contained in other string; false otherwise
+   */
+  inline static bool contains(const std::string& input,
+    const std::string& search) {
+    return Utils::contains(input, search);
+  }
+
+  /**
    * Split a string into an array/vector
    *
    * @param input String to convert to array/vector

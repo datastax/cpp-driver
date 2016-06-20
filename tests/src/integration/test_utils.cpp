@@ -48,6 +48,10 @@ T* test::Utils::addressof(T& value) {
   return reinterpret_cast<T*>(&const_cast<char&>(reinterpret_cast<const volatile char&>(value)));
 }
 
+bool test::Utils::contains(const std::string& input, const std::string& search) {
+  return input.find(search) != std::string::npos ? true : false;
+}
+
 std::string test::Utils::cwd() {
   char cwd[FILE_PATH_SIZE] = { 0 };
   size_t cwd_length = sizeof(cwd);
