@@ -44,7 +44,8 @@ Integration::Integration()
   , is_ccm_start_requested_(true)
   , is_session_requested_(true)
   , dse_workload_(CCM::DSE_WORKLOAD_CASSANDRA)
-  , create_keyspace_query_("") {
+  , create_keyspace_query_("")
+  , start_time_(0ull) {
   // Get the name of the test and the case/suite it belongs to
   const testing::TestInfo* test_information = testing::UnitTest::GetInstance()->current_test_info();
   test_name_ = test_information->name();
