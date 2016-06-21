@@ -29,6 +29,12 @@
   "josh.addEdge('created', lop, 'weight', 0.4f);" \
   "peter.addEdge('created', lop, 'weight', 0.2f);"
 
+#define GRAPH_ADD_VERTEX_FORMAT \
+  "graph.addVertex(label, '%s', 'name', '%s', '%s', %d);"
+
+#define GRAPH_SELECT_VERTEX_TIMESTAMP_FORMAT \
+  "SELECT WRITETIME(\"~~vertex_exists\") FROM \"%s\".%s_p WHERE community_id=%d;"
+
 #define GRAPH_SLEEP_FORMAT \
   "java.util.concurrent.TimeUnit.MILLISECONDS.sleep(%dL);"
 
@@ -568,6 +574,65 @@ TEST_F(GraphIntegrationTest, RetrievePaths) {
         }
       }
     }
+  }
+}
+
+/**
+ * Perform graph statement execution with a specified timestamp
+ *
+ * This test will create a graph, populate that graph with the classic graph
+ * structure example and execute a graph statement using a specified timestamp
+ * to retrieve and validate the timestamp the graph result set.
+ *
+ * @jira_ticket CPP-375
+ * @test_category dse:graph
+ * @since 1.0.0
+ * @expected_result Graph timestamp set will be validated
+ */
+TEST_F(GraphIntegrationTest, Timestamp) {
+  CHECK_VERSION(5.0.0);
+  CHECK_FAILURE;
+
+  // Create the graph
+  create_graph();
+  CHECK_FAILURE;
+  populate_classic_graph(test_name_);
+  CHECK_FAILURE;
+
+  // Create the statement with a timestamp
+  std::string add_vertex = format_string(GRAPH_ADD_VERTEX_FORMAT, "person",
+    "michael", "age", 27);
+  cass_int64_t expected_timestamp = 1270110600000;
+  test::driver::DseGraphOptions graph_options;
+  graph_options.set_name(test_name_);
+  test::driver::DseGraphStatement graph_statement(add_vertex, graph_options);
+  graph_statement.set_timestamp(expected_timestamp);
+  test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_statement,
+    graph_options);
+
+  // Get the community id from the vertex insert and create the select statement
+  test::driver::DseGraphResult id = result_set.next();
+  ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_OBJECT, id.type());
+  id = id.member(0);
+  ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_OBJECT, id.type());
+  size_t community_id_index = 0;
+  for (size_t i = 0; i < id.member_count(); ++i) {
+    if (id.key(i).compare("community_id") == 0) {
+      community_id_index = i;
+    }
+  }
+  id = id.member(community_id_index);
+  ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_NUMBER, id.type());
+  test::driver::BigInteger community_id = id.value<test::driver::BigInteger>();
+  std::string select_timestamp = format_string(GRAPH_SELECT_VERTEX_TIMESTAMP_FORMAT,
+    test_name_.c_str(), "person", community_id.value());
+
+  // Validate the timestamp from the graph inserted timestamp (+1 from insert)
+  expected_timestamp += 1l;
+  test::driver::Rows rows = session_.execute(select_timestamp).rows();
+  while (const CassRow* row = rows.next()) {
+    test::driver::BigInteger timestamp(row, 0);
+    ASSERT_EQ(expected_timestamp, timestamp);
   }
 }
 
