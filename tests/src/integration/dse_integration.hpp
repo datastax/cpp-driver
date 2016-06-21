@@ -61,7 +61,7 @@ protected:
    * @param duration Maximum duration to wait for a traversal to evaluate
    * @see replication_factor_
    */
-  void DseIntegration::create_graph(const std::string& graph_name,
+  void create_graph(const std::string& graph_name,
     const std::string& replication_strategy,
     const std::string& duration);
 
@@ -73,7 +73,7 @@ protected:
    * @see test_name_
    * @see replication_strategy_
    */
-  void DseIntegration::create_graph(const std::string& duration = "PT30S");
+  void create_graph(const std::string& duration = "PT30S");
 };
 
 #endif //__DSE_INTEGRATION_HPP__
