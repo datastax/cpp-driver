@@ -66,6 +66,15 @@ public:
   void set_name(const std::string& name) {
     ASSERT_EQ(CASS_OK, dse_graph_options_set_graph_name(get(), name.c_str()));
   }
+
+  /**
+   * Set the graph timeout to use when applied to a DSE graph statement
+   *
+   * @param name Graph timeout (in milliseconds) to apply
+   */
+  void set_timeout(cass_int64_t timemout) {
+    ASSERT_EQ(CASS_OK, dse_graph_options_set_request_timeout(get(), timemout));
+  }
 };
 
 } // namespace driver

@@ -218,6 +218,36 @@ protected:
    */
   std::string format_string(const char* format, ...) const;
 
+  /**
+   * Calculate the elapsed time in milliseconds
+   *
+   * @return Elapsed time in milliseconds
+   */
+  inline uint64_t elapsed_time() {
+    if (start_time_ > 0) {
+      return (uv_hrtime() - start_time_) / 1000000UL;
+    }
+    return 0;
+  }
+
+  /**
+   * Start the timer to calculate the elapsed time
+   */
+  inline void start_timer() {
+    start_time_ = uv_hrtime();
+  }
+
+  /**
+   * Stop the timer - Calculate the elapsed time and reset the timer
+   *
+   * @return Elapsed time in milliseconds
+   */
+  inline uint64_t stop_timer() {
+    uint64_t duration = elapsed_time();
+    start_time_ = 0ull;
+    return duration;
+  }
+
 protected:
   /**
    * Get the current working directory
@@ -226,6 +256,18 @@ protected:
    */
   inline static std::string cwd() {
     return Utils::cwd();
+  }
+
+  /**
+   * Determine if a string contains another string
+   *
+   * @param input String being evaluated
+   * @param search String to find
+   * @return True if string is contained in other string; false otherwise
+   */
+  inline static bool contains(const std::string& input,
+    const std::string& search) {
+    return Utils::contains(input, search);
   }
 
   /**
@@ -247,7 +289,7 @@ protected:
    * @return True if file exists; false otherwise
    */
   inline static bool file_exists(const std::string& filename) {
-    return test::Utils::file_exists(filename);
+    return Utils::file_exists(filename);
   }
 
   /**
@@ -259,7 +301,7 @@ protected:
    */
   inline static std::string implode(const std::vector<std::string>& elements,
     const char delimiter = ' ') {
-    return test::Utils::implode(elements, delimiter);
+    return Utils::implode(elements, delimiter);
   }
 
   /**
@@ -268,7 +310,7 @@ protected:
    * @param path Directory/Path to create
    */
   inline static void mkdir(const std::string& path) {
-    test::Utils::mkdir(path);
+    Utils::mkdir(path);
   }
 
   /**
@@ -277,7 +319,7 @@ protected:
    * @param milliseconds Time in milliseconds to sleep
    */
   inline static void msleep(unsigned int milliseconds) {
-    test::Utils::msleep(milliseconds);
+    Utils::msleep(milliseconds);
   }
 
   /**
@@ -290,7 +332,7 @@ protected:
    */
   inline static std::string replace_all(const std::string& input,
     const std::string& from, const std::string& to) {
-    return test::Utils::replace_all(input, from, to);
+    return Utils::replace_all(input, from, to);
   }
 
   /**
@@ -299,7 +341,7 @@ protected:
    * @param input String to convert to lowercase
    */
   inline static std::string to_lower(const std::string& input) {
-    return test::Utils::to_lower(input);
+    return Utils::to_lower(input);
   }
 
   /**
@@ -309,7 +351,7 @@ protected:
    * @return Trimmed string
    */
   inline static std::string trim(const std::string& input) {
-    return test::Utils::trim(input);
+    return Utils::trim(input);
   }
 
 private:
@@ -317,6 +359,10 @@ private:
    * Keyspace creation query (generated via SetUp)
    */
   std::string create_keyspace_query_;
+  /**
+   * High-resolution real time when the timer was started (in nanoseconds)
+   */
+  uint64_t start_time_;
 };
 
 #endif //__INTEGRATION_HPP__

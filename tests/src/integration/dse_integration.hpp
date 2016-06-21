@@ -52,6 +52,28 @@ protected:
    * Connected database DSE session
    */
   DseSession dse_session_;
+
+  /**
+   * Create the graph using the specified replication strategy
+   *
+   * @param graph_name Name of the graph to create
+   * @param replication_strategy Replication strategy to apply to graph
+   * @param duration Maximum duration to wait for a traversal to evaluate
+   * @see replication_factor_
+   */
+  void DseIntegration::create_graph(const std::string& graph_name,
+    const std::string& replication_strategy,
+    const std::string& duration);
+
+  /**
+   * Create the graph using the test name and default replication strategy
+   *
+   * @param duration Maximum duration to wait for a traversal to evaluate
+   *                 (default: PT30S; 30 seconds)
+   * @see test_name_
+   * @see replication_strategy_
+   */
+  void DseIntegration::create_graph(const std::string& duration = "PT30S");
 };
 
 #endif //__DSE_INTEGRATION_HPP__

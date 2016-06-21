@@ -43,6 +43,15 @@ const char test::Utils::PATH_SEPARATOR = '\\';
 const char test::Utils::PATH_SEPARATOR = '/';
 #endif
 
+template<typename T>
+T* test::Utils::addressof(T& value) {
+  return reinterpret_cast<T*>(&const_cast<char&>(reinterpret_cast<const volatile char&>(value)));
+}
+
+bool test::Utils::contains(const std::string& input, const std::string& search) {
+  return input.find(search) != std::string::npos ? true : false;
+}
+
 std::string test::Utils::cwd() {
   char cwd[FILE_PATH_SIZE] = { 0 };
   size_t cwd_length = sizeof(cwd);

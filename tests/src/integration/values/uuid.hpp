@@ -19,6 +19,8 @@
 #include "exception.hpp"
 #include "test_utils.hpp"
 
+#include <limits>
+
 #ifdef min
 #undef min
 #endif
@@ -125,6 +127,36 @@ public:
 
   bool is_null() const {
     return is_null_;
+  }
+
+  /**
+   * Get the minimum value allowed for a UUID
+   *
+   * @return Minimum value for UUID
+   */
+  static Uuid min() {
+    // Create the minimum native driver value for UUID
+    CassUuid value;
+    value.clock_seq_and_node = 0;
+    value.time_and_version = 0;
+
+    // Return the wrapped value
+    return Uuid(value);
+  }
+
+  /**
+   * Get the maximum value allowed for a UUID
+   *
+   * @return Maximum value for UUID
+   */
+  static Uuid max() {
+    // Create the maximum native driver value for UUID
+    CassUuid value;
+    value.clock_seq_and_node = std::numeric_limits<cass_uint64_t>::max();
+    value.time_and_version = std::numeric_limits<cass_uint64_t>::max();
+
+    // Return the wrapped value
+    return Uuid(value);
   }
 
   virtual std::string str() const {

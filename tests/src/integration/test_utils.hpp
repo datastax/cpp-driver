@@ -49,6 +49,23 @@ public:
   static const char PATH_SEPARATOR;
 
   /**
+   * Get the address of an object
+   *
+   * @return Address of object
+   */
+  template <typename T>
+  T* addressof(T& value);
+
+  /**
+   * Determine if a string contains another string
+   *
+   * @param input String being evaluated
+   * @param search String to find
+   * @return True if string is contained in other string; false otherwise
+   */
+  static bool contains(const std::string& input, const std::string& search);
+
+  /**
    * Get the current working directory
    *
    * @return Current working directory

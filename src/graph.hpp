@@ -21,9 +21,10 @@
 #define DSE_GRAPH_OPTION_NAME_KEY              "graph-name"
 #define DSE_GRAPH_OPTION_READ_CONSISTENCY_KEY  "graph-read-consistency"
 #define DSE_GRAPH_OPTION_WRITE_CONSISTENCY_KEY "graph-write-consistency"
+#define DSE_GRAPH_REQUEST_TIMEOUT              "request-timeout"
 
 #define DSE_GRAPH_DEFAULT_LANGUAGE "gremlin-groovy"
-#define DSE_GRAPH_DEFAULT_SOURCE "default"
+#define DSE_GRAPH_DEFAULT_SOURCE   "g"
 
 
 namespace dse {
@@ -33,7 +34,8 @@ class GraphStatement;
 class GraphOptions {
 public:
   GraphOptions()
-    : payload_(cass_custom_payload_new()) {
+    : payload_(cass_custom_payload_new())
+    , request_timeout_ms_(0) {
     set_graph_language(DSE_GRAPH_DEFAULT_LANGUAGE);
     set_graph_source(DSE_GRAPH_DEFAULT_SOURCE);
   }
@@ -76,8 +78,13 @@ public:
                               reinterpret_cast<const cass_byte_t*>(name), strlen(name));
   }
 
+  int64_t request_timeout_ms() const { return request_timeout_ms_; }
+
+  void set_request_timeout_ms(int64_t timeout_ms);
+
 private:
   CassCustomPayload* payload_;
+  int64_t request_timeout_ms_;
 };
 
 class GraphWriter : private rapidjson::Writer<rapidjson::StringBuffer> {
@@ -167,9 +174,13 @@ public:
     , wrapped_(cass_statement_new_n(query, length, 0)) {
     if (options != NULL) {
       cass_statement_set_custom_payload(wrapped_, options->payload());
+      cass_statement_set_request_timeout(wrapped_,
+                                         static_cast<cass_uint64_t>(options->request_timeout_ms()));
     } else {
       GraphOptions default_options;
       cass_statement_set_custom_payload(wrapped_, default_options.payload());
+      cass_statement_set_request_timeout(wrapped_,
+                                         static_cast<cass_uint64_t>(default_options.request_timeout_ms()));
     }
   }
 

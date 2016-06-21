@@ -387,6 +387,23 @@ DSE_EXPORT CassError
 dse_graph_options_set_write_consistency(DseGraphOptions* options,
                                         CassConsistency consistency);
 
+/**
+ * Set the request timeout used by graph queries. Only use this if you want
+ * graph queries to wait less than the server's default timeout (defined in
+ * "dse.yaml")
+ *
+ * <b>Default:</b> 0 (wait for the coordinator to response or timeout)
+ *
+ * @public @memberof DseGraphOptions
+ *
+ * @param[in] options
+ * @param[in] timeout_ms
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+dse_graph_options_set_request_timeout(DseGraphOptions* options,
+                                      cass_int64_t timeout_ms);
+
 /***********************************************************************************
  *
  * Graph Statement
