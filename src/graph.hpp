@@ -19,7 +19,6 @@
 #define DSE_GRAPH_OPTION_LANGUAGE_KEY          "graph-language"
 #define DSE_GRAPH_OPTION_SOURCE_KEY            "graph-source"
 #define DSE_GRAPH_OPTION_NAME_KEY              "graph-name"
-#define DSE_GRAPH_OPTION_NAME_KEY              "graph-name"
 #define DSE_GRAPH_OPTION_READ_CONSISTENCY_KEY  "graph-read-consistency"
 #define DSE_GRAPH_OPTION_WRITE_CONSISTENCY_KEY "graph-write-consistency"
 
