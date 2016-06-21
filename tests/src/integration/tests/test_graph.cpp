@@ -4,31 +4,6 @@
 #include "dse_integration.hpp"
 #include "options.hpp"
 
-#define GRAPH_SCHEMA \
-  "schema.propertyKey('name').Text().ifNotExists().create();" \
-  "schema.propertyKey('age').Int().ifNotExists().create();" \
-  "schema.propertyKey('lang').Text().ifNotExists().create();" \
-  "schema.propertyKey('weight').Float().ifNotExists().create();" \
-  "schema.vertexLabel('person').properties('name', 'age').ifNotExists().create();" \
-  "schema.vertexLabel('software').properties('name', 'lang').ifNotExists().create();" \
-  "schema.edgeLabel('created').properties('weight').connection('person', 'software').ifNotExists().create();" \
-  "schema.edgeLabel('created').connection('software', 'software').add();" \
-  "schema.edgeLabel('knows').properties('weight').connection('person', 'person').ifNotExists().create();"
-
-#define GRAPH_DATA \
-  "Vertex marko = graph.addVertex(label, 'person', 'name', 'marko', 'age', 29);" \
-  "Vertex vadas = graph.addVertex(label, 'person', 'name', 'vadas', 'age', 27);" \
-  "Vertex lop = graph.addVertex(label, 'software', 'name', 'lop', 'lang', 'java');" \
-  "Vertex josh = graph.addVertex(label, 'person', 'name', 'josh', 'age', 32);" \
-  "Vertex ripple = graph.addVertex(label, 'software', 'name', 'ripple', 'lang', 'java');" \
-  "Vertex peter = graph.addVertex(label, 'person', 'name', 'peter', 'age', 35);" \
-  "marko.addEdge('knows', vadas, 'weight', 0.5f);" \
-  "marko.addEdge('knows', josh, 'weight', 1.0f);" \
-  "marko.addEdge('created', lop, 'weight', 0.4f);" \
-  "josh.addEdge('created', ripple, 'weight', 1.0f);" \
-  "josh.addEdge('created', lop, 'weight', 0.4f);" \
-  "peter.addEdge('created', lop, 'weight', 0.2f);"
-
 #define GRAPH_ADD_VERTEX_FORMAT \
   "graph.addVertex(label, '%s', 'name', '%s', '%s', %d);"
 
@@ -67,24 +42,6 @@ public:
     // Call the parent setup function
     dse_workload_ = CCM::DSE_WORKLOAD_GRAPH;
     DseIntegration::SetUp();
-  }
-
-  /**
-   * Populate the graph with the classic graph structure examples used in the
-   * TinkerPop documentation.
-   *
-   * @see http://tinkerpop.apache.org/docs/3.1.0-incubating/#intro
-   *
-   * @param graph_name Name of the graph to initialize
-   */
-  void populate_classic_graph(const std::string& graph_name) {
-    // Initialize the graph pre-populated data
-    test::driver::DseGraphOptions options;
-    options.set_name(graph_name);
-    dse_session_.execute(GRAPH_SCHEMA, options);
-    CHECK_FAILURE;
-    dse_session_.execute(GRAPH_DATA, options);
-    CHECK_FAILURE;
   }
 
   /**

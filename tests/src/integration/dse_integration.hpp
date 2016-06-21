@@ -74,6 +74,16 @@ protected:
    * @see replication_strategy_
    */
   void create_graph(const std::string& duration = "PT30S");
+
+  /**
+   * Populate the graph with the classic graph structure examples used in the
+   * TinkerPop documentation.
+   *
+   * @see http://tinkerpop.apache.org/docs/3.1.0-incubating/#intro
+   *
+   * @param graph_name Name of the graph to initialize
+   */
+  void populate_classic_graph(const std::string& graph_name);
 };
 
 #endif //__DSE_INTEGRATION_HPP__
