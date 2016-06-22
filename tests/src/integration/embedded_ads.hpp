@@ -274,15 +274,25 @@ private:
    */
   static int execute_command(char* args[]) {
     // Create the loop
+#if UV_VERSION_MAJOR == 0
+    uv_loop_t* loop = uv_loop_new();
+#else
     uv_loop_t loop;
     uv_loop_init(&loop);
+#endif
     uv_process_options_t options;
+    memset(&options, 0, sizeof(uv_process_options_t));
 
     // Create the options for reading information from the spawn pipes
     uv_pipe_t standard_output;
     uv_pipe_t error_output;
+#if UV_VERSION_MAJOR == 0
+    uv_pipe_init(loop, &standard_output, 0);
+    uv_pipe_init(loop, &error_output, 0);
+#else
     uv_pipe_init(&loop, &standard_output, 0);
     uv_pipe_init(&loop, &error_output, 0);
+#endif
     uv_stdio_container_t stdio[3];
     options.stdio_count = 3;
     options.stdio = stdio;
@@ -299,7 +309,13 @@ private:
 
     // Start the process and process loop (if spawned)
     uv_process_t process;
+#if UV_VERSION_MAJOR == 0
+    int error_code = uv_spawn(loop, &process, options);
+    uv_err_t error = uv_last_error(loop);
+    error_code = error.code;
+#else
     int error_code = uv_spawn(&loop, &process, &options);
+#endif
     if (error_code == 0) {
       LOG("Launched " << args[0] << " with ID " << process_.pid);
 
@@ -308,8 +324,13 @@ private:
       uv_read_start(reinterpret_cast<uv_stream_t*>(&error_output), EmbeddedADS::output_allocation, EmbeddedADS::process_read);
 
       // Start the process loop
+#if UV_VERSION_MAJOR == 0
+      uv_run(loop, UV_RUN_DEFAULT);
+      uv_loop_delete(loop);
+#else
       uv_run(&loop, UV_RUN_DEFAULT);
       uv_loop_close(&loop);
+#endif
     }
     return error_code;
   }
@@ -361,9 +382,14 @@ private:
     Utils::mkdir(EMBEDDED_ADS_CONFIGURATION_DIRECTORY);
 
     // Initialize the loop and process arguments
+#if UV_VERSION_MAJOR == 0
+    uv_loop_t* loop = uv_loop_new();
+#else
     uv_loop_t loop;
     uv_loop_init(&loop);
+#endif
     uv_process_options_t options;
+    memset(&options, 0, sizeof(uv_process_options_t));
 
     char* args[7];
     args[0] = const_cast<char*>("java");
@@ -377,8 +403,13 @@ private:
     // Create the options for reading information from the spawn pipes
     uv_pipe_t standard_output;
     uv_pipe_t error_output;
+#if UV_VERSION_MAJOR == 0
+    uv_pipe_init(loop, &standard_output, 0);
+    uv_pipe_init(loop, &error_output, 0);
+#else
     uv_pipe_init(&loop, &standard_output, 0);
     uv_pipe_init(&loop, &error_output, 0);
+#endif
     uv_stdio_container_t stdio[3];
     options.stdio_count = 3;
     options.stdio = stdio;
@@ -394,7 +425,13 @@ private:
     options.file = args[0];
 
     // Start the process
+#if UV_VERSION_MAJOR == 0
+    int error_code = uv_spawn(loop, &process_, options);
+    uv_err_t error = uv_last_error(loop);
+    error_code = error.code;
+#else
     int error_code = uv_spawn(&loop, &process_, &options);
+#endif
     if (error_code == 0) {
       LOG("Launched " << args[0] << " with ID " << process_.pid);
 
@@ -416,10 +453,19 @@ private:
       putenv(const_cast<char*>(krb5_config_environment.c_str()));
 
       // Start the process loop
+#if UV_VERSION_MAJOR == 0
+      uv_run(loop, UV_RUN_DEFAULT);
+      uv_loop_delete(loop);
+#else
       uv_run(&loop, UV_RUN_DEFAULT);
       uv_loop_close(&loop);
+#endif
     } else {
+#if UV_VERSION_MAJOR == 0
+      LOG_ERROR(uv_strerror(error));
+#else
       LOG_ERROR(uv_strerror(error_code));
+#endif
     }
   }
 
@@ -430,23 +476,39 @@ private:
    * @param error_code Error/Exit code
    * @param term_signal Terminating signal
    */
+#if UV_VERSION_MAJOR == 0
+  static void process_exit(uv_process_t* process, int error_code, int term_signal) {
+#else
   static void process_exit(uv_process_t* process, int64_t error_code, int term_signal) {
+#endif
     cass::ScopedMutex lock(&mutex_);
     LOG("Process " << process->pid << " Terminated: " << error_code);
     uv_close(reinterpret_cast<uv_handle_t*>(process), NULL);
   }
 
+#if UV_VERSION_MAJOR == 0
   /**
    * uv_read_start callback for allocating memory for the buffer in the pipe
    *
    * @param handle Handle information for the pipe being read
-   * @param suggessted_size Suggested size for the buffer
+   * @param suggested_size Suggested size for the buffer
+   */
+  static uv_buf_t output_allocation(uv_handle_t* handle, size_t suggested_size) {
+    cass::ScopedMutex lock(&mutex_);
+    return uv_buf_init(new char[suggested_size], suggested_size);
+#else
+  /**
+   * uv_read_start callback for allocating memory for the buffer in the pipe
+   *
+   * @param handle Handle information for the pipe being read
+   * @param suggested_size Suggested size for the buffer
    * @param buffer Buffer to allocate bytes for
    */
   static void output_allocation(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buffer) {
     cass::ScopedMutex lock(&mutex_);
     buffer->base = new char[OUTPUT_BUFFER_SIZE];
     buffer->len = OUTPUT_BUFFER_SIZE;
+#endif
   }
 
   /**
@@ -456,22 +518,38 @@ private:
    * @param buffer_length Length of the buffer
    * @param buffer Buffer to process
    */
+#if UV_VERSION_MAJOR == 0
+  static void process_read(uv_stream_t* stream, ssize_t buffer_length, uv_buf_t buffer) {
+#else
   static void process_read(uv_stream_t* stream, ssize_t buffer_length, const uv_buf_t* buffer) {
+#endif
     cass::ScopedMutex lock(&mutex_);
     if (buffer_length > 0) {
       // Process the buffer and determine if the ADS is finished initializing
+#if UV_VERSION_MAJOR == 0
+      std::string message(buffer.base, buffer_length);
+#else
       std::string message(buffer->base, buffer_length);
+#endif
       if (!is_initialized_ && message.find("Principal Initialization Complete") != std::string::npos) {
         Utils::msleep(10000); // TODO: Not 100% ready; need to add a better check mechanism
         is_initialized_ = true;
       }
       LOG(Utils::trim(message));
     } else if (buffer_length < 0) {
+#if UV_VERSION_MAJOR == 0
+      uv_err_t error = uv_last_error(stream->loop);
+      if (error.code == UV_EOF) // uv_close if UV_EOF
+#endif
       uv_close(reinterpret_cast<uv_handle_t*>(stream), NULL);
     }
 
     // Clean up the memory allocated
+#if UV_VERSION_MAJOR == 0
+    delete[] buffer.base;
+#else
     delete[] buffer->base;
+#endif
   }
 };
 
