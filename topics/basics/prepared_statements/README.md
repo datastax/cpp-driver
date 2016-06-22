@@ -19,7 +19,7 @@ if (rc != CASS_OK) {
 }
 
 /* Get the prepared object from the future */
-const CassPrepared* prepared = cass_future_get_prepared(prepared_future);
+const CassPrepared* prepared = cass_future_get_prepared(prepare_future);
 
 /* The future can be freed immediately after getting the prepared object */
 cass_future_free(prepare_future);
