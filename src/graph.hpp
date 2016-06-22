@@ -16,10 +16,12 @@
 #include <string>
 #include <vector>
 
-#define DSE_GRAPH_OPTION_LANGUAGE_KEY "graph-language"
-#define DSE_GRAPH_OPTION_SOURCE_KEY   "graph-source"
-#define DSE_GRAPH_OPTION_NAME_KEY     "graph-name"
-#define DSE_GRAPH_REQUEST_TIMEOUT     "request-timeout"
+#define DSE_GRAPH_OPTION_LANGUAGE_KEY          "graph-language"
+#define DSE_GRAPH_OPTION_SOURCE_KEY            "graph-source"
+#define DSE_GRAPH_OPTION_NAME_KEY              "graph-name"
+#define DSE_GRAPH_OPTION_READ_CONSISTENCY_KEY  "graph-read-consistency"
+#define DSE_GRAPH_OPTION_WRITE_CONSISTENCY_KEY "graph-write-consistency"
+#define DSE_GRAPH_REQUEST_TIMEOUT              "request-timeout"
 
 #define DSE_GRAPH_DEFAULT_LANGUAGE "gremlin-groovy"
 #define DSE_GRAPH_DEFAULT_SOURCE   "g"
@@ -60,6 +62,20 @@ public:
     cass_custom_payload_set_n(payload_,
                               DSE_GRAPH_OPTION_NAME_KEY, sizeof(DSE_GRAPH_OPTION_NAME_KEY) - 1,
                               reinterpret_cast<const cass_byte_t*>(graph_name.data()), graph_name.size());
+  }
+
+  void set_graph_read_consistency(CassConsistency consistency) {
+    const char* name = cass_consistency_string(consistency);
+    cass_custom_payload_set_n(payload_,
+                              DSE_GRAPH_OPTION_READ_CONSISTENCY_KEY, sizeof(DSE_GRAPH_OPTION_READ_CONSISTENCY_KEY) - 1,
+                              reinterpret_cast<const cass_byte_t*>(name), strlen(name));
+  }
+
+  void set_graph_write_consistency(CassConsistency consistency) {
+    const char* name = cass_consistency_string(consistency);
+    cass_custom_payload_set_n(payload_,
+                              DSE_GRAPH_OPTION_WRITE_CONSISTENCY_KEY, sizeof(DSE_GRAPH_OPTION_WRITE_CONSISTENCY_KEY) - 1,
+                              reinterpret_cast<const cass_byte_t*>(name), strlen(name));
   }
 
   int64_t request_timeout_ms() const { return request_timeout_ms_; }
@@ -183,6 +199,10 @@ public:
       cass_statement_reset_parameters(wrapped_, 0);
       return CASS_OK;
     }
+  }
+
+  CassError set_timestamp(int64_t timestamp) {
+    return cass_statement_set_timestamp(wrapped_, timestamp);
   }
 
 private:

@@ -18,17 +18,22 @@
 #include "options.hpp"
 
 
-//TODO: Update test to work with remote deployments
-#ifdef _WIN32
+#if UV_VERSION_MAJOR == 0
 # define CHECK_FOR_KERBEROS_SKIPPED_TEST \
-    SKIP_TEST("This test cannot currently run on Windows");
-#elif defined(CASS_USE_LIBSSH2)
-# define CHECK_FOR_KERBEROS_SKIPPED_TEST \
-    if (Options::deployment_type() == CCM::DeploymentType::REMOTE) { \
-      SKIP_TEST("This test cannot currently run using remote deployment"); \
-    }
+    SKIP_TEST("Test requires libuv v1.x+: Hostname resolution required");
 #else
-# define CHECK_FOR_KERBEROS_SKIPPED_TEST ((void)0)
+//TODO: Update test to work with remote deployments
+# ifdef _WIN32
+#   define CHECK_FOR_KERBEROS_SKIPPED_TEST \
+      SKIP_TEST("Test cannot currently run on Windows");
+# elif defined(CASS_USE_LIBSSH2)
+#   define CHECK_FOR_KERBEROS_SKIPPED_TEST \
+      if (Options::deployment_type() == CCM::DeploymentType::REMOTE) { \
+        SKIP_TEST("Test cannot currently run using remote deployment"); \
+      }
+# else
+#   define CHECK_FOR_KERBEROS_SKIPPED_TEST ((void)0)
+# endif
 #endif
 
 /**
@@ -37,6 +42,8 @@
 class AuthIntegrationTest : public DseIntegration {
 public:
   static void SetUpTestCase() {
+    CHECK_FOR_KERBEROS_SKIPPED_TEST;
+
     try {
       ads_ = new EmbeddedADS();
       ads_->start_process();
@@ -61,6 +68,7 @@ public:
   }
 
   void SetUp() {
+    CHECK_FOR_KERBEROS_SKIPPED_TEST;
     //TODO: Update test to work with remote deployments
     // Ensure test can run for current configuration
 #ifdef _WIN32
@@ -161,8 +169,10 @@ protected:
     Cluster cluster = DseCluster::build()
       .with_gssapi_authenticator("dse", principal)
       .with_contact_points(contact_points_)
-      .with_schema_metadata(cass_false)
-      .with_hostname_resolution(cass_true);
+#if UV_VERSION_MAJOR > 0
+      .with_hostname_resolution(cass_true) // hostname resolution is not available in libuv 0.10.x
+#endif
+      .with_schema_metadata(cass_false);
     Session session = cluster.connect();
 
     // Execute a simple query to ensure authentication
@@ -338,3 +348,4 @@ TEST_F(AuthIntegrationTest, InternalAuthenticationFailure) {
   }
   ASSERT_EQ(true, is_session_failure) << "Session connection established";
 }
+

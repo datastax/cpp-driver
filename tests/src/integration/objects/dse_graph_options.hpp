@@ -50,15 +50,6 @@ public:
   }
 
   /**
-   * Set the traversal source to use when applied to a DSE graph statement
-   *
-   * @param source Traversal source to apply
-   */
-  void set_source(const std::string& source) {
-    ASSERT_EQ(CASS_OK, dse_graph_options_set_graph_source(get(), source.c_str()));
-  }
-
-  /**
    * Set the graph name to use when applied to a DSE graph statement
    *
    * @param name Graph name to apply
@@ -68,12 +59,39 @@ public:
   }
 
   /**
+   * Set the read consistency used by graph queries
+   *
+   * @param consistency Consistency to apply
+   */
+  void set_read_consistency(const CassConsistency consistency) {
+    ASSERT_EQ(CASS_OK, dse_graph_options_set_read_consistency(get(), consistency));
+  }
+
+  /**
+   * Set the traversal source to use when applied to a DSE graph statement
+   *
+   * @param source Traversal source to apply
+   */
+  void set_source(const std::string& source) {
+    ASSERT_EQ(CASS_OK, dse_graph_options_set_graph_source(get(), source.c_str()));
+  }
+
+  /**
    * Set the graph timeout to use when applied to a DSE graph statement
    *
    * @param name Graph timeout (in milliseconds) to apply
    */
-  void set_timeout(cass_int64_t timemout) {
+  void set_timeout(const cass_int64_t timemout) {
     ASSERT_EQ(CASS_OK, dse_graph_options_set_request_timeout(get(), timemout));
+  }
+
+  /**
+   * Set the write consistency used by graph queries
+   *
+   * @param consistency Consistency to apply
+   */
+  void set_write_consistency(const CassConsistency consistency) {
+    ASSERT_EQ(CASS_OK, dse_graph_options_set_write_consistency(get(), consistency));
   }
 };
 

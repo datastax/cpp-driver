@@ -78,6 +78,18 @@ CassError dse_graph_options_set_graph_name_n(DseGraphOptions* options,
   return CASS_OK;
 }
 
+CassError dse_graph_options_set_read_consistency(DseGraphOptions* options,
+                                                 CassConsistency consistency) {
+  options->set_graph_read_consistency(consistency);
+  return CASS_OK;
+}
+
+CassError dse_graph_options_set_write_consistency(DseGraphOptions* options,
+                                                  CassConsistency consistency) {
+  options->set_graph_write_consistency(consistency);
+  return CASS_OK;
+}
+
 CassError dse_graph_options_set_request_timeout(DseGraphOptions* options,
                                                 cass_int64_t timeout_ms) {
   if (timeout_ms < 0) return CASS_ERROR_LIB_BAD_PARAMS;
@@ -108,6 +120,11 @@ CassError dse_graph_statement_bind_values(DseGraphStatement* statement,
     return CASS_ERROR_LIB_BAD_PARAMS;
   }
   return statement->bind_values(values);
+}
+
+CassError dse_graph_statement_set_timestamp(DseGraphStatement* statement,
+                                            cass_int64_t timestamp) {
+  return statement->set_timestamp(timestamp);
 }
 
 DseGraphObject* dse_graph_object_new() {

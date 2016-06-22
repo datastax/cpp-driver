@@ -362,6 +362,32 @@ dse_graph_options_set_graph_name_n(DseGraphOptions* options,
                                    const char* name, size_t name_length);
 
 /**
+ * Set the read consistency used by graph queries.
+ *
+ * @public @memberof DseGraphOptions
+ *
+ * @param[in] options
+ * @param[in] consistency
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+dse_graph_options_set_read_consistency(DseGraphOptions* options,
+                                       CassConsistency consistency);
+
+/**
+ * Set the write consistency used by graph queries.
+ *
+ * @public @memberof DseGraphOptions
+ *
+ * @param[in] options
+ * @param[in] consistency
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+DSE_EXPORT CassError
+dse_graph_options_set_write_consistency(DseGraphOptions* options,
+                                        CassConsistency consistency);
+
+/**
  * Set the request timeout used by graph queries. Only use this if you want
  * graph queries to wait less than the server's default timeout (defined in
  * "dse.yaml")
@@ -437,6 +463,20 @@ dse_graph_statement_free(DseGraphStatement* statement);
 DSE_EXPORT CassError
 dse_graph_statement_bind_values(DseGraphStatement* statement,
                                 const DseGraphObject* values);
+
+
+/**
+ * Sets the graph statement's timestamp.
+ *
+ * @public @memberof DseGraphStatement
+ *
+ * @param[in] statement
+ * @param[in] timestamp
+ * @return CASS_OK if successful, otherwise an error occurred.
+ */
+CASS_EXPORT CassError
+dse_graph_statement_set_timestamp(DseGraphStatement* statement,
+                                  cass_int64_t timestamp);
 
 /***********************************************************************************
  *

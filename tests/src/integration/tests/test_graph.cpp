@@ -4,30 +4,11 @@
 #include "dse_integration.hpp"
 #include "options.hpp"
 
-#define GRAPH_SCHEMA \
-  "schema.propertyKey('name').Text().ifNotExists().create();" \
-  "schema.propertyKey('age').Int().ifNotExists().create();" \
-  "schema.propertyKey('lang').Text().ifNotExists().create();" \
-  "schema.propertyKey('weight').Float().ifNotExists().create();" \
-  "schema.vertexLabel('person').properties('name', 'age').ifNotExists().create();" \
-  "schema.vertexLabel('software').properties('name', 'lang').ifNotExists().create();" \
-  "schema.edgeLabel('created').properties('weight').connection('person', 'software').ifNotExists().create();" \
-  "schema.edgeLabel('created').connection('software', 'software').add();" \
-  "schema.edgeLabel('knows').properties('weight').connection('person', 'person').ifNotExists().create();"
+#define GRAPH_ADD_VERTEX_FORMAT \
+  "graph.addVertex(label, '%s', 'name', '%s', '%s', %d);"
 
-#define GRAPH_DATA \
-  "Vertex marko = graph.addVertex(label, 'person', 'name', 'marko', 'age', 29);" \
-  "Vertex vadas = graph.addVertex(label, 'person', 'name', 'vadas', 'age', 27);" \
-  "Vertex lop = graph.addVertex(label, 'software', 'name', 'lop', 'lang', 'java');" \
-  "Vertex josh = graph.addVertex(label, 'person', 'name', 'josh', 'age', 32);" \
-  "Vertex ripple = graph.addVertex(label, 'software', 'name', 'ripple', 'lang', 'java');" \
-  "Vertex peter = graph.addVertex(label, 'person', 'name', 'peter', 'age', 35);" \
-  "marko.addEdge('knows', vadas, 'weight', 0.5f);" \
-  "marko.addEdge('knows', josh, 'weight', 1.0f);" \
-  "marko.addEdge('created', lop, 'weight', 0.4f);" \
-  "josh.addEdge('created', ripple, 'weight', 1.0f);" \
-  "josh.addEdge('created', lop, 'weight', 0.4f);" \
-  "peter.addEdge('created', lop, 'weight', 0.2f);"
+#define GRAPH_SELECT_VERTEX_TIMESTAMP_FORMAT \
+  "SELECT WRITETIME(\"~~vertex_exists\") FROM \"%s\".%s_p WHERE community_id=%d;"
 
 #define GRAPH_SLEEP_FORMAT \
   "java.util.concurrent.TimeUnit.MILLISECONDS.sleep(%dL);"
@@ -61,24 +42,6 @@ public:
     // Call the parent setup function
     dse_workload_ = CCM::DSE_WORKLOAD_GRAPH;
     DseIntegration::SetUp();
-  }
-
-  /**
-   * Populate the graph with the classic graph structure examples used in the
-   * TinkerPop documentation.
-   *
-   * @see http://tinkerpop.apache.org/docs/3.1.0-incubating/#intro
-   *
-   * @param graph_name Name of the graph to initialize
-   */
-  void populate_classic_graph(const std::string& graph_name) {
-    // Initialize the graph pre-populated data
-    test::driver::DseGraphOptions options;
-    options.set_name(graph_name);
-    dse_session_.execute(GRAPH_SCHEMA, options);
-    CHECK_FAILURE;
-    dse_session_.execute(GRAPH_DATA, options);
-    CHECK_FAILURE;
   }
 
   /**
@@ -569,6 +532,63 @@ TEST_F(GraphIntegrationTest, RetrievePaths) {
       }
     }
   }
+}
+
+/**
+ * Perform graph statement execution with a specified timestamp
+ *
+ * This test will create a graph, populate that graph with the classic graph
+ * structure example and execute a graph statement using a specified timestamp
+ * to retrieve and validate the timestamp the graph result set.
+ *
+ * @jira_ticket CPP-375
+ * @test_category dse:graph
+ * @since 1.0.0
+ * @expected_result Graph timestamp set will be validated
+ */
+TEST_F(GraphIntegrationTest, Timestamp) {
+  CHECK_VERSION(5.0.0);
+  CHECK_FAILURE;
+
+  // Create the graph
+  create_graph();
+  CHECK_FAILURE;
+  populate_classic_graph(test_name_);
+  CHECK_FAILURE;
+
+  // Create the statement with a timestamp
+  std::string add_vertex = format_string(GRAPH_ADD_VERTEX_FORMAT, "person",
+    "michael", "age", 27);
+  cass_int64_t expected_timestamp = 1270110600000;
+  test::driver::DseGraphOptions graph_options;
+  graph_options.set_name(test_name_);
+  test::driver::DseGraphStatement graph_statement(add_vertex, graph_options);
+  graph_statement.set_timestamp(expected_timestamp);
+  test::driver::DseGraphResultSet result_set = dse_session_.execute(graph_statement,
+    graph_options);
+
+  // Get the community id from the vertex insert and create the select statement
+  test::driver::DseGraphResult id = result_set.next();
+  ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_OBJECT, id.type());
+  id = id.member(0);
+  ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_OBJECT, id.type());
+  size_t community_id_index = 0;
+  for (size_t i = 0; i < id.member_count(); ++i) {
+    if (id.key(i).compare("community_id") == 0) {
+      community_id_index = i;
+    }
+  }
+  id = id.member(community_id_index);
+  ASSERT_EQ(DSE_GRAPH_RESULT_TYPE_NUMBER, id.type());
+  test::driver::BigInteger community_id = id.value<test::driver::BigInteger>();
+  std::string select_timestamp = format_string(GRAPH_SELECT_VERTEX_TIMESTAMP_FORMAT,
+    test_name_.c_str(), "person", community_id.value());
+
+  // Validate the timestamp from the graph inserted timestamp (+1 from insert)
+  expected_timestamp += 1l;
+  const CassRow* row = session_.execute(select_timestamp).first_row();
+  test::driver::BigInteger timestamp(row, 0);
+  ASSERT_EQ(expected_timestamp, timestamp);
 }
 
 /**

@@ -65,6 +65,15 @@ public:
     object.finish();
     ASSERT_EQ(CASS_OK, dse_graph_statement_bind_values(get(), object.get()));
   }
+
+  /**
+   * Sets the graph statement's timestamp
+   *
+   * @param timestamp Timestamp (in milliseconds since EPOCH) to apply
+   */
+  void set_timestamp(cass_int64_t timestamp) {
+    ASSERT_EQ(CASS_OK, dse_graph_statement_set_timestamp(get(), timestamp));
+  }
 };
 
 } // namespace driver

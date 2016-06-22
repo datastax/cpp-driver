@@ -55,7 +55,11 @@ bool test::Utils::contains(const std::string& input, const std::string& search) 
 std::string test::Utils::cwd() {
   char cwd[FILE_PATH_SIZE] = { 0 };
   size_t cwd_length = sizeof(cwd);
+#if UV_VERSION_MAJOR == 0
+  uv_cwd(cwd, cwd_length);
+#else
   uv_cwd(cwd, &cwd_length);
+#endif
   return std::string(cwd, cwd_length);
 }
 
@@ -74,7 +78,15 @@ std::vector<std::string> test::Utils::explode(const std::string& input,
 
 bool test::Utils::file_exists(const std::string& filename) {
   uv_fs_t request;
+#if UV_VERSION_MAJOR == 0
+  uv_loop_t* loop = uv_loop_new();
+  int error_code = uv_fs_open(loop, &request, filename.c_str(), O_RDONLY, 0, NULL);
+  uv_err_t error = uv_last_error(loop);
+  error_code = error.code;
+  uv_loop_delete(loop);
+#else
   int error_code = uv_fs_open(NULL, &request, filename.c_str(), O_RDONLY, 0, NULL);
+#endif
   uv_fs_req_cleanup(&request);
   return error_code != UV_ENOENT;
 }
@@ -117,8 +129,16 @@ void test::Utils::mkdir(const std::string& path) {
   uv_fs_req_cleanup(&request);
 
   // Determine if there was an issue creating the directory
+#if UV_VERSION_MAJOR == 0
+  uv_err_t error = uv_last_error(loop);
+  error_code = error.code;
+#endif
   if (error_code != 0 && error_code != UV_EEXIST) {
+#if UV_VERSION_MAJOR == 0
+    std::string error_message = uv_strerror(error);
+#else
     std::string error_message = uv_strerror(error_code);
+#endif
     throw test::Exception("Unable to Create Directory: " + error_message);
   }
 }
