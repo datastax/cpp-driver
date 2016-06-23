@@ -1,3 +1,17 @@
+2.4.2
+===========
+June 24, 2016
+
+Features
+--------
+* Added the per-request timeouts to statement and batch
+* Added the ability to remove custom payload items
+
+Other
+--------
+* Fixed issue where cass_date_time_to_epoch() unable to handle dates before
+  Cassandra date epoch (value: 2147483648)
+
 2.4.1
 ===========
 June 9, 2016

@@ -18,7 +18,7 @@ environment:
   BOOST_VERSION: 1.59.0
   LIBSSH2_VERSION: 1.7.0
   LIBUV_VERSION: 1.8.0
-  OPENSSL_VERSION: 1.0.2f
+  OPENSSL_VERSION: 1.0.2h
   DOWNLOADS_URL_PREFIX: http://downloads.datastax.com/cpp-driver/windows/dependencies
   TEST_DEPENDENCIES_DOWNLOAD_URL_PREFIX: https://raw.githubusercontent.com/mikefero/cpp-driver-msvc-libs/master
   DEPENDENCIES_LOCATION_PREFIX: C:/projects/dependencies/libs
@@ -183,7 +183,7 @@ after_build:
       Push-AppveyorArtifact build/test/unit_tests/$env:CONFIGURATION/cassandra_unit_tests.exe -DeploymentName "DataStax C/C++ Driver Unit Tests"
 
 test_script:
-  - ps: Start-Process -FilePath "build/test/unit_tests/$env:CONFIGURATION/cassandra_unit_tests.exe" -ArgumentList "--log_format=XML --log_sink=unit_tests-boost-results.xml --log_level=test_suite --report_level=no" -Wait -NoNewWindow
+  - ps: Start-Process -FilePath "build/test/unit_tests/$env:CONFIGURATION/cassandra_unit_tests.exe" -ArgumentList "--run_test=!metrics/meter* --log_format=XML --log_sink=unit_tests-boost-results.xml --log_level=test_suite --report_level=no" -Wait -NoNewWindow
 
 on_finish:
   - ps: |
