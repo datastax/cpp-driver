@@ -1,5 +1,8 @@
 /*
-  Copyright (c) 2014-2016 DataStax
+  Copyright (c) 2016 DataStax, Inc.
+
+  This software can be used solely with DataStax Enterprise. Please consult the
+  license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
 
 #ifndef __DSE_H_INCLUDED__
@@ -34,13 +37,13 @@
 /**
  * @file include/dse.h
  *
- * C/C++ Driver for DataStax Enterprise
+ * C/C++ DataStax Enterprise Driver
  */
 
 #define DSE_VERSION_MAJOR 1
 #define DSE_VERSION_MINOR 0
 #define DSE_VERSION_PATCH 0
-#define DSE_VERSION_SUFFIX "eap1"
+#define DSE_VERSION_SUFFIX "rc1"
 
 #ifdef __cplusplus
 extern "C" {

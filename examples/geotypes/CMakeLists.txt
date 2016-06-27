@@ -1,3 +1,9 @@
+##
+# Copyright (c) 2016 DataStax, Inc.
+#
+# This software can be used solely with DataStax Enterprise. Please consult the
+# license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
+##
 cmake_minimum_required(VERSION 2.6.4)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ".")

@@ -1,17 +1,8 @@
 ##
-# Copyright (c) 2014-2016 DataStax
+# Copyright (c) 2016 DataStax, Inc.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# This software can be used solely with DataStax Enterprise. Please consult the
+# license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 ##
 
 cmake_minimum_required(VERSION 2.6.4)
@@ -78,6 +69,7 @@ option(DSE_INSTALL_PKG_CONFIG "Install pkg-config file(s)" ON)
 option(DSE_USE_STATIC_LIBS "Link static libraries when building executables" OFF)
 option(DSE_BUILD_EXAMPLES "Build examples" OFF)
 option(DSE_BUILD_DOCS "Build documentation" OFF)
+option(DSE_BUILD_TESTS "Build tests" OFF)
 option(DSE_BUILD_INTEGRATION_TESTS "Build the integration tests" OFF)
 option(DSE_BUILD_UNIT_TESTS "Build the unit tests" OFF)
 option(DSE_USE_BOOST_ATOMIC "Use Boost atomics library" OFF)
@@ -87,6 +79,12 @@ option(DSE_USE_TCMALLOC "Use tcmalloc" OFF)
 option(DSE_USE_SPARSEHASH "Use sparsehash" OFF)
 option(DSE_USE_ZLIB "Use zlib" OFF)
 option(DSE_USE_LIBSSH2 "Use libssh2" OFF)
+
+if(DSE_BUILD_TESTS)
+  # Enable integration and unit tests
+  set(DSE_BUILD_INTEGRATION_TESTS ON)
+  set(DSE_BUILD_UNIT_TESTS ON)
+endif()
 
 # Determine which driver target should be used as a dependency
 set(PROJECT_LIB_NAME_TARGET ${PROJECT_LIB_NAME})

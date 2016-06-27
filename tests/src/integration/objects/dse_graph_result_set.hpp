@@ -1,6 +1,10 @@
 /*
-  Copyright (c) 2014-2016 DataStax
+  Copyright (c) 2016 DataStax, Inc.
+
+  This software can be used solely with DataStax Enterprise. Please consult the
+  license at http://www.datastax.com/terms/datastax-dse-driver-license-terms
 */
+
 #ifndef __TEST_DSE_GRAPH_RESULT_SET_HPP__
 #define __TEST_DSE_GRAPH_RESULT_SET_HPP__
 #include "dse.h"
