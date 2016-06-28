@@ -2,14 +2,7 @@
 
 ## Installation
 
-Building and installing the C/C++ DataStax Enterprise Driver is similar to the
-core C/C++ driver. The directions for building and installing the core driver
-can be found [here](/building/). In addition to the core driver's dependencies
-the DSE driver also requires Kerberos:
-
-* Ubuntu requires the package `libkrb5-dev`
-* RHEL (CentOS) requires the package `krb5-devel`
-* Windows requires [Kerberos for Windows] to be installed
+Directions for installing the driver can be found [here](/installation).
 
 ## Upgrading From The Core C/C++ Driver
 
@@ -78,4 +71,3 @@ Studio project by adding them to project's properties under `Configuration
 Properties/Linker/Input/Additional Dependencies`.
 
 [cpp-driver]: http://datastax.github.io/cpp-driver/
-[Kerberos for Windows]: http://web.mit.edu/kerberos/dist/index.html

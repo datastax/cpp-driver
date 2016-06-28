@@ -117,6 +117,63 @@ int main() {
 }
 ```
 
+## Data types
+
+Supported data types can be found in the [DSE Graph documentation]. In the RC
+version of the driver there are some known limitations for some data types:
+
+<table class="table table-striped table-hover table-condensed">
+  <thead>
+    <tr>
+      <th>DSE Graph Data Type</th>
+      <th>Limitations</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>blob</code></td>
+      <td>Returned as a base64 string</td>
+    </tr>
+    <tr>
+      <td><code>decimal</code></td>
+      <td>Truncated to a double precision floating point number or may not be handled</td>
+    </tr>
+    <tr>
+      <td><code>duration</code></td>
+      <td>Returned as a string using this format: https://en.wikipedia.org/wiki/ISO_8601#Durations</td>
+    </tr>
+    <tr>
+      <td><code>inet</code></td>
+      <td>Returned as a string</td>
+    </tr>
+    <tr>
+      <td><code>varint</code></td>
+      <td>Truncated to a double precision floating point number, 64-bit integer, or may not be handled</td>
+    </tr>
+    <tr>
+      <td><code>linestring</code></td>
+      <td>Returned as a string using Well-known text (https://en.wikipedia.org/wiki/Well-known_text)</td>
+    </tr>
+    <tr>
+      <td><code>point</code></td>
+      <td>Returned as a string using Well-known text (https://en.wikipedia.org/wiki/Well-known_text)</td>
+    </tr>
+    <tr>
+      <td><code>polygon</code></td>
+      <td>Returned as a string using Well-known text (https://en.wikipedia.org/wiki/Well-known_text)</td>
+    </tr>
+    <tr>
+      <td><code>timestamp</code></td>
+      <td>Returned as a string using this format: https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations</td>
+    </tr>
+    <tr>
+      <td><code>uuid</code></td>
+      <td>Returned as a string</td>
+    </tr>
+  </tbody>
+</table>
+
+
 ## Parameter values
 
 Query parameters are bound using a `DseGraphObject`. Parameter values are added
@@ -206,3 +263,5 @@ if (dse_graph_result_is_object(result)) {
   }
 }
 ```
+
+[DSE Graph documentation]: http://docs.datastax.com/en/datastax_enterprise/5.0/datastax_enterprise/graph/reference/refDSEGraphDataTypes.html
