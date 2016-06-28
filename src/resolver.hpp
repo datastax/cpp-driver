@@ -49,7 +49,7 @@ public:
   bool is_success() { return status_ == SUCCESS; }
   bool is_timed_out() { return status_ == FAILED_TIMED_OUT; }
   Status status() { return status_; }
-  const Address& address() const { return address_; }
+  const AddressVec& addresses() const { return addresses_; }
   T& data() { return data_; }
 
   static void resolve(uv_loop_t* loop, const std::string& hostname, int port,
@@ -84,7 +84,7 @@ private:
 
       if (status != 0) {
         resolver->status_ = FAILED_UNABLE_TO_RESOLVE;
-      } else if (!resolver->address_.init(res->ai_addr)) {
+      } else if (!resolver->init_addresses(res)) {
         resolver->status_ = FAILED_UNSUPPORTED_ADDRESS_FAMILY;
       } else {
         resolver->status_ = SUCCESS;
@@ -104,6 +104,20 @@ private:
   }
 
 private:
+  bool init_addresses(struct addrinfo* res) {
+    bool status = false;
+    do {
+      Address address;
+      if (address.init(res->ai_addr)) {
+        addresses_.push_back(address);
+        status = true;
+      }
+      res = res->ai_next;
+    } while(res);
+    return status;
+  }
+
+private:
   Resolver(const std::string& hostname, int port, const T& data, Callback cb)
       : hostname_(hostname)
       , port_(port)
@@ -120,7 +134,7 @@ private:
   std::string hostname_;
   int port_;
   Status status_;
-  Address address_;
+  AddressVec addresses_;
   T data_;
   Callback cb_;
 };

@@ -494,8 +494,11 @@ void Session::on_event(const SessionEvent& event) {
 void Session::on_resolve(MultiResolver<Session*>::Resolver* resolver) {
   Session* session = resolver->data()->data();
   if (resolver->is_success()) {
-    SharedRefPtr<Host> host = session->add_host(resolver->address());
-    host->set_hostname(resolver->hostname());
+    AddressVec addresses = resolver->addresses();
+    for (AddressVec::iterator it = addresses.begin(); it != addresses.end(); ++it) {
+      SharedRefPtr<Host> host = session->add_host(*it);
+      host->set_hostname(resolver->hostname());
+    }
   } else if (resolver->is_timed_out()) {
     LOG_ERROR("Timed out attempting to resolve address for %s:%d\n",
               resolver->hostname().c_str(), resolver->port());
