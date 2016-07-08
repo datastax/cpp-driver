@@ -17,12 +17,38 @@
 #ifndef __CASS_LOOP_THREAD_HPP_INCLUDED__
 #define __CASS_LOOP_THREAD_HPP_INCLUDED__
 
+#include "cassconfig.hpp"
+#include "logger.hpp"
 #include "macros.hpp"
 
 #include <assert.h>
 #include <uv.h>
 
+#if !defined(_WIN32)
+#include <signal.h>
+#endif
+
 namespace cass {
+
+#if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
+static int block_sigpipe() {
+  sigset_t set;
+  sigemptyset(&set);
+  sigaddset(&set, SIGPIPE);
+  return pthread_sigmask(SIG_BLOCK, &set, NULL);
+}
+
+static void consume_blocked_sigpipe() {
+  sigset_t set;
+  sigemptyset(&set);
+  sigaddset(&set, SIGPIPE);
+  struct timespec ts = { 0, 0 };
+  int num = sigtimedwait(&set, NULL, &ts);
+  if (num > 0) {
+    LOG_WARN("Caught and ignored SIGPIPE on loop thread");
+  }
+}
+#endif
 
 class LoopThread {
 public:
@@ -34,9 +60,9 @@ public:
 #endif
       , is_joinable_(false) {}
 
-  virtual ~LoopThread() { 
+  virtual ~LoopThread() {
 #if UV_VERSION_MAJOR == 0
-    uv_loop_delete(loop_); 
+    uv_loop_delete(loop_);
 #else
     if (is_loop_initialized_) {
       uv_loop_close(&loop_);
@@ -52,18 +78,21 @@ public:
     is_loop_initialized_ = true;
 #endif
 
-#if !defined(_WIN32)
-    rc = uv_signal_init(loop(), &sigpipe_);
+#if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
+    rc = block_sigpipe();
     if (rc != 0) return rc;
-    rc = uv_signal_start(&sigpipe_, on_signal, SIGPIPE);
+    rc = uv_prepare_init(loop(), &prepare_);
+    if (rc != 0) return rc;
+    rc = uv_prepare_start(&prepare_, on_prepare);
+    if (rc != 0) return rc;
 #endif
     return rc;
   }
 
   void close_handles() {
-#if !defined(_WIN32)
-    uv_signal_stop(&sigpipe_);
-    uv_close(copy_cast<uv_signal_t*, uv_handle_t*>(&sigpipe_), NULL);
+#if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
+    uv_prepare_stop(&prepare_);
+    uv_close(copy_cast<uv_prepare_t*, uv_handle_t*>(&prepare_), NULL);
 #endif
   }
 
@@ -100,12 +129,6 @@ private:
     thread->on_after_run();
   }
 
-#if !defined(_WIN32)
-  static void on_signal(uv_signal_t* signal, int signum) {
-    // Ignore SIGPIPE
-  }
-#endif
-
 #if UV_VERSION_MAJOR == 0
   uv_loop_t* loop_;
 #else
@@ -113,12 +136,23 @@ private:
   bool is_loop_initialized_;
 #endif
 
+#if defined(HAVE_SIGTIMEDWAIT) && !defined(HAVE_NOSIGPIPE)
+
+#if UV_VERSION_MAJOR == 0
+  static void on_prepare(uv_prepare_t *prepare, int status) {
+     consume_blocked_sigpipe();
+  }
+#else
+  static void on_prepare(uv_prepare_t *prepare) {
+    consume_blocked_sigpipe();
+  }
+#endif
+
+  uv_prepare_t prepare_;
+#endif
+
   uv_thread_t thread_;
   bool is_joinable_;
-
-#if !defined(_WIN32)
-  uv_signal_t sigpipe_;
-#endif
 };
 
 } // namespace cass

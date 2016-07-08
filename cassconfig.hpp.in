@@ -1,0 +1,10 @@
+#ifndef __CASSANDRA_CONFIG_HPP_INCLUDED__
+#define __CASSANDRA_CONFIG_HPP_INCLUDED__
+
+#cmakedefine HAVE_OPENSSL
+#cmakedefine HAVE_STD_ATOMIC
+#cmakedefine HAVE_BOOST_ATOMIC
+#cmakedefine HAVE_NOSIGPIPE
+#cmakedefine HAVE_SIGTIMEDWAIT
+
+#endif

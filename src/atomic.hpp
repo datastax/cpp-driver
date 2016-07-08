@@ -17,9 +17,11 @@
 #ifndef __CASS_ATOMIC_HPP_INCLUDED__
 #define __CASS_ATOMIC_HPP_INCLUDED__
 
-#if defined(CASS_USE_BOOST_ATOMIC)
+#include "cassconfig.hpp"
+
+#if defined(HAVE_BOOST_ATOMIC)
 #include "atomic/atomic_boost.hpp"
-#elif defined(CASS_USE_STD_ATOMIC)
+#elif defined(HAVE_STD_ATOMIC)
 #include "atomic/atomic_std.hpp"
 #else
 #include "atomic/atomic_intrinsics.hpp"
