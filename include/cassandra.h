@@ -760,8 +760,8 @@ typedef struct CassAuthenticator_ CassAuthenticator;
  * @param[in] auth
  * @param[in] data
  */
-typedef void (*CassAuthenticatorInitalCallback)(CassAuthenticator* auth,
-                                                void* data);
+typedef void (*CassAuthenticatorInitialCallback)(CassAuthenticator* auth,
+                                                 void* data);
 
 /**
  * A callback used when an authentication challenge initiated
@@ -819,7 +819,7 @@ typedef void (*CassAuthenticatorDataCleanupCallback)(void* data);
  * Authenticator callbacks
  */
 typedef struct CassAuthenticatorCallbacks_ {
-  CassAuthenticatorInitalCallback initial_callback;
+  CassAuthenticatorInitialCallback initial_callback;
   CassAuthenticatorChallengeCallback challenge_callback;
   CassAuthenticatorSuccessCallback success_callback;
   CassAuthenticatorCleanupCallback cleanup_callback;
