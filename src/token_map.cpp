@@ -140,6 +140,10 @@ void TokenMap::update_host(SharedRefPtr<Host>& host, const TokenStringList& toke
     token_map_[partitioner_->token_from_string_ref(*i)] = host;
   }
   mapped_addresses_.insert(host->address());
+  // This should not be done for every host, 
+  // it should be done only once at the end of the row/node loop when getting schema , 
+  // to lower the cost/complexity
+  // it takes >200ms on the client a vnode cluster of 10 nodes, so if you run it 10 times => 2s
   map_replicas();
 }
 

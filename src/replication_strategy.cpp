@@ -101,6 +101,7 @@ static DCRackMap racks_in_dcs(const TokenHostMap& token_hosts) {
   return racks;
 }
 
+  // @TODO: this method is unreadable, and seems too complex for what it does
 void NetworkTopologyStrategy::tokens_to_replicas(const TokenHostMap& primary, TokenReplicaMap* output) const {
   DCRackMap racks = racks_in_dcs(primary);
 
