@@ -248,7 +248,8 @@ if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
     if(EXISTS "/etc/debian_version")
       set (CMAKE_INSTALL_LIBDIR "lib/${CMAKE_LIBRARY_ARCHITECTURE}")
     elseif(EXISTS "/etc/redhat-release" OR EXISTS "/etc/fedora-release" OR
-           EXISTS "/etc/slackware-version" OR EXISTS "/etc/gentoo-release")
+           EXISTS "/etc/slackware-version" OR EXISTS "/etc/gentoo-release" OR
+           EXISTS "/etc/os-release")
       if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         set (CMAKE_INSTALL_LIBDIR "lib64")
       else()
